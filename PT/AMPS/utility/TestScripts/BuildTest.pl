@@ -16,7 +16,7 @@ if ($hostname_full =~ m/stampede/) {
 }
 
 my $Pleiades = 'pleiades';
-if($hostname_full =~ m/pfe(.*)\.nas\.nasa\.gov/){
+if($hostname_full =~ m/pfe(.*)\.nas\.nasa\.gov/) {
   $hostname = $Pleiades;
 }
 
@@ -25,7 +25,7 @@ if($hostname_full =~ m/yslogin(.*)/){
   $hostname = $Yellowstone;
 }
 
-if($hostname_full =~ m/srbwks2014-0079.engin.umich.edu/){
+if($hostname_full =~ m/srbwks2014-0079.engin.umich.edu/) {
   $hostname = "valeriy";
 }
 
@@ -34,6 +34,7 @@ my $path="MakefileTest";
 
 #table of the nightly tests
 my $fTable="$path/Table";
+
 #content of the table
 my @Table=read_content($fTable);
 
@@ -59,13 +60,12 @@ my $fFinal="Makefile.test";
 my @Final;
 my @FinalApps;
 
-
 #parameters of tests
 my $Name;
 my $Keys;
 my $CustomRefSolutionPaths;
 my $Outs;
-my $Refs;
+my ($Refs,$ExeptionCodes);
 my $Time;
 my $TimeTotal = 0;
 my $TimeLimit = 115;
@@ -79,17 +79,16 @@ my $PathName;
 my $HostNameFlag=0;
 
 #process table with test description
-
 while (@Table) {
   my $refTable;
   my $refTars;
 
-  ($refTable,$Name,$Time,$Keys,$CustomRefSolutionPaths,$Outs,$refTars,$Refs) = get_next_test(@Table);
+  ($refTable,$Name,$Time,$Keys,$CustomRefSolutionPaths,$Outs,$refTars,$Refs,$ExeptionCodes) = get_next_test(@Table);
 
   @Table   = @$refTable;
   @Tars = @$refTars;
   $PathName=$Name;
-  if($Name=~ m/(.*)\/(.*)$/){$Name=$2;}
+  if ($Name=~ m/(.*)\/(.*)$/) {$Name=$2;}
   $Outs="test_$Name" unless($Outs);
   next unless($Name);
   $TimeTotal+=$Time;
@@ -102,13 +101,21 @@ while (@Table) {
   for (my $i = 0; $i<=@Base-1; $i++) {
     #general part with all tests
     if ($Base[$i]=~m/<APP.*?>/) {
-      $Final[$i]=$Final[$i].$Base[$i];
+      
+      if ($Base[$i]=~m/MAKE/) {
+        $Final[$i]=$Final[$i]."\nifneq (\$(TEST<APP>-EXEPTIONCODE),SKIP)\n".$Base[$i]."endif";
+      }
+      else {
+        $Final[$i]=$Final[$i].$Base[$i];
+      }
+            
       $Final[$i]=~s/<APP>/$Name/g;
       $Final[$i]=~s/<APPPATH>/$PathName/g;
       $Final[$i]=~s/<APPKEYS>/$Keys/g;
       $Final[$i]=~s/<APPCUSTOMREFSOLUTIONPATHS>/$CustomRefSolutionPaths/g;
       $Final[$i]=~s/<APPOUTS>/$Outs/g;
       $Final[$i]=~s/<APPREF>/$Refs/g;
+      $Final[$i]=~s/<APPEXEPTIONCODE>/$ExeptionCodes/g;
     }
     else {
       if ($Base[$i]=~m/<HOST.*?>/ ) {
@@ -193,6 +200,7 @@ sub get_next_test{
   #test description
   my $Name=''; my $Keys=''; my $CustomRefSolutionPaths=''; my $Outs=''; my $Time=0;
   my $Refs='';
+  my $ExeptionCodes='';
 
   #target block flag
   my $iTar='';
@@ -229,6 +237,7 @@ sub get_next_test{
       elsif ($line =~ m/CustomRefSolutionPaths=(.*)/) {$CustomRefSolutionPaths="$CustomRefSolutionPaths$1,," if($1);}
       elsif ($line =~ m/Outs=(.*)/) {$Outs="$Outs$1,," if($1);}
       elsif ($line =~ m/Ref=(.*)/) {$Refs="$Refs$1,," if($1);}  
+      elsif ($line =~ m/ExeptionCode=(.*)/) {$ExeptionCodes="$ExeptionCodes$1,," if($1);}
 
       #non-generic target description header
       elsif ($line =~ m/Compile=(.*)/) {
@@ -269,6 +278,8 @@ sub get_next_test{
     my @Run     = split(/,,/,$Tars[2])if($Tars[2]);$Tars[2]='';
     my @Check   = split(/,,/,$Tars[3])if($Tars[3]);$Tars[3]='';
     my @Refs    = split(/,,/,$Refs)   if($Refs);   $Refs   ='';
+    my @ExeptionCodes    = split(/,,/,$ExeptionCodes)   if($ExeptionCodes);   $ExeptionCodes   ='';
+
 
     unless ($ErrorRead) {
       #process parameters for this machine
@@ -308,6 +319,23 @@ sub get_next_test{
           $Refs=$Refs."\n\nifeq (\$(COMPILE.c),$Compiler)\nTEST".$TestName."-REF=[$nRef]\nendif\n";
         }
       }
+      
+      #process Elexptions
+      foreach my $ExeptionCode (@ExeptionCodes) {
+        $ExeptionCode  = process_option($ExeptionCode);
+
+        #the individual exeption code is requested for this machine
+        if ($ExeptionCode) {
+          my ($Code,$Compiler,$TestName); 
+
+          $ExeptionCode=~s/[}{]/ /g;
+          ($Code,$Compiler)=split(' ',$ExeptionCode); 
+
+          $TestName=$Name;
+          if ($TestName=~ m/(.*)\/(.*)$/) {$TestName=$2;}
+          $ExeptionCodes=$ExeptionCodes."\n\nifeq (\$(COMPILE.c),$Compiler)\nTEST".$TestName."-EXEPTIONCODE=$Code\nendif\n";
+        }
+      }
 
       #process targets
       foreach my $Tar (@Compile){
@@ -331,11 +359,11 @@ sub get_next_test{
       }
 
     }
-    (\@_,$Name,$Time,$Keys,$CustomRefSolutionPaths,$Outs,\@Tars,$Refs);
+    (\@_,$Name,$Time,$Keys,$CustomRefSolutionPaths,$Outs,\@Tars,$Refs,$ExeptionCodes);
   }
   else {
     @Tars=('',0,'','','');
-    (\@_,'','','',\@Tars,$Refs);
+    (\@_,'','','',\@Tars,$Refs,$ExeptionCodes);
   }
 }
 
