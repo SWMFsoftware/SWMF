@@ -319,7 +319,7 @@ void PIC::Mover::MoveParticles() {
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-      StartTime=MPI_Wtime();
+      double StartTime=MPI_Wtime();
 #endif
 
     block=node->block;
@@ -349,8 +349,7 @@ void PIC::Mover::MoveParticles() {
     }
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-    EndTime=MPI_Wtime();
-    node->ParallelLoadMeasure+=EndTime-StartTime;
+    node->ParallelLoadMeasure+=MPI_Wtime()-StartTime;
 #endif
 }
 #else
