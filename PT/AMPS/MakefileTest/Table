@@ -36,6 +36,10 @@ If Compile|Rundir|Run|Check is absent or empty, the default target is used
 Target is considered empty if it is no more than one line, 
 i.e. ">>>" is empty (see Mars test), but ">>>\n>>>" is non-empty 
 (though it is blank) and will be used for substituting the default target.
+
+If a line starts with '>>>' is it added into the approptiate target of the Makefile.test 
+started with a 'TAB'. If a line starts with '<<<' the 'TAB' is omitted.  
+
 ===============================================================================
 
 #>
@@ -333,8 +337,12 @@ Check=
 <#
 -------------------------------------------------------------------------------
 #>
-Time=2
 Name=test/kameleon-reader@@(0+valeriy)
+Time=2
+
+ExeptionCode=SKIP{pgcc}
+ExeptionCode=SKIP{gcc}
+
 Keys=-boost-path=/Users/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/KAMELEON @@(0+valeriy)
 <#
 -------------------------------------------------------------------------------
@@ -536,10 +544,13 @@ Run=
 Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy)
 Time=26
 
+ExeptionCode=SKIP{pgcc}
+
 Keys=-model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/Users/ccmc/boost/lib -compiler-option=-I/Users/ccmc/boost/include@@(0+valeriy)
 CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeriy) 
+
+
 Compile=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 >>>./Config.pl -application=test/cg-pproc-test-on -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--onKEYS} 
 >>>@cd utility/PostProcess; make
@@ -547,28 +558,22 @@ Compile=
 >>>@($(MAKE) -j8 amps)
 >>>./Config.pl -openmp=off
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
-<<<endif
 
 Rundir=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_rundir..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 >>>@rm -rf   $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@mkdir -p $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@mv amps  $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@mv srcTemp/main/kernels.tm $(TESTCG-PostProcess--Read-Trajectories--onDIR)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_rundir... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
-<<<endif
 
 Run=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_run..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 >>>@echo Test test_CG-PostProcess--Read-Trajectories--on has started: `date`
 >>>-@cd ${TESTCG-PostProcess--Read-Trajectories--onDIR};${TESTMPIRUN1} ./amps
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_run... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
-<<<endif
 
 Check=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_check..." >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 >>>@${TESTCG-PostProcess--Read-Trajectories--onDIR}/../utility/ReduceFile.pl ${TESTCG-PostProcess--Read-Trajectories--onDIR}/Virtis.map.dat 10
@@ -596,17 +601,18 @@ Check=
 
 >>>@ls -l test_CG-PostProcess--Read-Trajectories--on.diff
 >>>@echo Test test_CG-PostProcess--Read-Trajectories--on has finished: `date`
-<<<endif
 <#
 -------------------------------------------------------------------------------
 #>
 Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy) 
 Time=2
 
+ExeptionCode=SKIP{pgcc}
+
 Keys=-model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/Users/ccmc/boost/lib -compiler-option=-I/Users/ccmc/boost/include@@(0+valeriy)
 CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeriy) 
+
 Compile=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 >>> ./Config.pl -application=test/cg-pproc-test -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--offKEYS}
 >>>@cd utility/PostProcess; make
@@ -614,28 +620,22 @@ Compile=
 >>>@($(MAKE) -j8 amps)
 >>>./Config.pl -openmp=off
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
-<<<endif
 
 Rundir=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_rundir..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 >>>@rm -rf   $(TESTCG-PostProcess--Read-Trajectories--offDIR)
 >>>@mkdir -p $(TESTCG-PostProcess--Read-Trajectories--offDIR)
 >>>@mv amps  $(TESTCG-PostProcess--Read-Trajectories--offDIR)
 >>>@mv srcTemp/main/kernels.tm $(TESTCG-PostProcess--Read-Trajectories--offDIR)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_rundir... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
-<<<endif
 
 Run=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_run..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 >>>@echo Test test_CG-PostProcess--Read-Trajectories--off has started: `date`
 >>>-@cd ${TESTCG-PostProcess--Read-Trajectories--offDIR};${TESTMPIRUN1} ./amps 
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_run... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
-<<<endif
 
 Check=
-<<<ifneq ($(COMPILER_FLAG)$(HOST_FLAG),TRUETRUE)
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_check..." >> test_CG-PostProcess--Read-Trajectories--off.diff
 
 >>>@${TESTCG-PostProcess--Read-Trajectories--offDIR}/../utility/ReduceFile.pl ${TESTCG-PostProcess--Read-Trajectories--offDIR}/Virtis.map.dat 10
@@ -649,7 +649,6 @@ Check=
 
 >>>ls -l test_CG-PostProcess--Read-Trajectories--off.diff
 >>>@echo Test test_CG-PostProcess--Read-Trajectories--off has finished: `date`
-<<<endif
 <#
 -------------------------------------------------------------------------------
 #>
@@ -749,6 +748,9 @@ Check=
 #>
 Name=CCMC-Individual_Trajectories--KAMELEON@@(0+valeriy)
 Time=4
+
+ExeptionCode=SKIP{pgcc}
+ExeptionCode=SKIP{gcc}
 
 Compile=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON_compile..." > test_CCMC-Individual_Trajectories--KAMELEON.diff
