@@ -783,6 +783,9 @@ Check=
 Name=CCMC-Individual_Trajectories--KAMELEON-multifile@@(0+valeriy)
 Time=4
 
+ExeptionCode=SKIP{pgcc}
+ExeptionCode=SKIP{gcc}
+
 Compile=
 >>>@echo "test_CCMC-Individual_Trajectories--KAMELEON-multifile_compile..." > test_CCMC-Individual_Trajectories--KAMELEON-multifile.diff
 >>>./Config.pl -application=test/CCMC-Individual_Trajectories--kameleon-multifile -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC/MULTI-FILE -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/CCMC/MULTI-FILE  -boost-path=/Users/ccmc/boost -kameleon-path=/Users/ccmc/Kameleon-plus -link-option=-lc++  -amps-test=on 
