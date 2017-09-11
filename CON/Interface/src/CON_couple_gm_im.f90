@@ -16,7 +16,7 @@ module CON_couple_gm_im
   !USES:
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_integer, transfer_real_array, &
-       transfer_string, transfer_string_array
+       transfer_real, transfer_string, transfer_string_array
 
   use GM_wrapper, ONLY: GM_get_for_im, GM_get_for_im_line, &
        GM_get_for_im_trace, GM_satinit_for_im, GM_get_sat_for_im, &
@@ -154,6 +154,9 @@ contains
       ! Buffer for satellite locations
       real, allocatable :: SatPos_DII(:,:,:)
 
+      ! Buffer for scalar Kp
+      real :: BufferKp
+      
       ! Buffer for satellite names
       character(len=100), allocatable:: NameSat_I(:)
 
@@ -175,11 +178,14 @@ contains
       allocate(Buffer_IIV(iSize,jSize,nVarGmIm))
       ! All GM processors participate in calculating the integrals
       if(is_proc(GM_)) &
-           call GM_get_for_im(Buffer_IIV, iSize, jSize, nVarGmIm, NameVar)
+           call GM_get_for_im(Buffer_IIV, BufferKp, &
+           iSize, jSize, nVarGmIm, NameVar)
       ! The integrals are available on GM root only
       call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
+      call transfer_real(GM_,IM_, BufferKp)
       if(is_proc0(IM_)) &
-           call IM_put_from_gm(Buffer_IIV, iSize, jSize, nVarGmIm, NameVar)
+           call IM_put_from_gm(Buffer_IIV, BufferKp, &
+           iSize, jSize, nVarGmIm, NameVar)
       deallocate(Buffer_IIV)
 
       !\
