@@ -103,13 +103,13 @@ void PIC::Mover::MoveParticles() {
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #if _PIC__OPENMP_THREAD_SPLIT_MODE_  == _PIC__OPENMP_THREAD_SPLIT_MODE__BLOCKS_  //OpenMP + job splitting over blocks
 //**************************  OpenMP + MPI + block's splitting *********************************
-#pragma omp parallel for schedule(dynamic,1) default (none) private (node,FirstCellParticleTable,block,StartTime,EndTime,i,j,k,s,ptr,LocalTimeStep,ParticleList)  \
+#pragma omp parallel for schedule(dynamic,1) default (none) private (node,FirstCellParticleTable,block,i,j,k,s,ptr,LocalTimeStep,ParticleList)  \
   shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks,PIC::Mesh::mesh)
   for (int nLocalNode=0;nLocalNode<DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-      dobule StartTime=MPI_Wtime();
+      double StartTime=MPI_Wtime();
 #endif
 
     block=node->block;
@@ -150,7 +150,7 @@ void PIC::Mover::MoveParticles() {
   int LoadBalancingMeasureOffset=PIC::Mesh::cDataBlockAMR::LoadBalancingMeasureOffset;
 
   //loop through all particles
-#pragma omp parallel for schedule(dynamic,1) default (none) private (node,block,StartTime,EndTime,i,j,k,s,ptr,LocalTimeStep,ParticleList)  \
+#pragma omp parallel for schedule(dynamic,1) default (none) private (node,block,i,j,k,s,ptr,LocalTimeStep,ParticleList)  \
   shared (DomainBlockDecomposition::BlockTable,DomainBlockDecomposition::nLocalBlocks,PIC::Mesh::mesh,LoadBalancingMeasureOffset)
   for (int cnt=0;cnt<DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;cnt++) {
     int nLocalNode,ii=cnt;
@@ -168,7 +168,7 @@ void PIC::Mover::MoveParticles() {
     node=DomainBlockDecomposition::BlockTable[nLocalNode];
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-      StartTime=MPI_Wtime();
+      double StartTime=MPI_Wtime();
 #endif
 
     block=node->block;
@@ -184,10 +184,8 @@ void PIC::Mover::MoveParticles() {
     }
 
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
-    EndTime=MPI_Wtime();
-
     int thread=omp_get_thread_num();
-    *(thread+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+=EndTime-StartTime;
+    *(thread+(double*)(block->GetAssociatedDataBufferPointer()+LoadBalancingMeasureOffset))+==MPI_Wtime()-StartTime;
 #endif
 }
 
