@@ -2,10 +2,12 @@
 
 
 #include "pic.h"
+#include "Exosphere.dfn"
+#include "Exosphere.h"
 
 PIC::Mesh::cDatumWeighted PIC::Mover::GuidingCenter::Sampling::DatumTotalKineticEnergy(1,"\"Total kinetic energy [J]\"", true);
 
-void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec){
+void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec) {
 
   //compute total kinetic energy for the given particle
   // V^2 = Vguide_paral^2 + (Vguide_perp+Vgyr)^2
@@ -17,38 +19,46 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
   double m0=PIC::MolecularData::GetMass(spec); 
   //guiding center motion
   double Vguide[3]={0.0,0.0,0.0};
-  PIC::ParticleBuffer::GetV(Vguide,(PIC::ParticleBuffer::byte*)ParticleData);
-#if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
-  exit(__LINE__,__FILE__,"ERROR:not implemented");
-#else
-  KinEnergy+=0.5*m0*(Vguide[0]*Vguide[0]+
-		     Vguide[1]*Vguide[1]+
-		     Vguide[2]*Vguide[2]);
-#endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
-  //gyration energy
-  //magnetic moment
-  double mu= PIC::ParticleBuffer::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
-  // also get the magnetic field at particle location
-  double AbsB=0,x[3]={0.0,0.0,0.0},B[3]={0.0,0.0,0.0};
-  static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
-
-  PIC::ParticleBuffer::GetX(x,(PIC::ParticleBuffer::byte*)ParticleData);
-  node=PIC::Mesh::Search::FindBlock(x);
-
-  PIC::CPLR::InitInterpolationStencil(x,node);
-  PIC::CPLR::GetBackgroundMagneticField(B);
-  AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5) + 1E-15;
-#if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
-  exit(__LINE__,__FILE__,"ERROR:not implemented");
-#else
-  KinEnergy+= AbsB*mu;
-#endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
-
-  *((double*)(SamplingBuffer+DatumTotalKineticEnergy.offset))+=
-	      //TotalKineticEnergyOffset))+=
-    LocalParticleWeight*KinEnergy;
   
+  //the function can be executed only the the offset for the particle magnetic moment is defined
+  if (_PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_!=-1) {
+    PIC::ParticleBuffer::GetV(Vguide,(PIC::ParticleBuffer::byte*)ParticleData);
+
+    #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+    exit(__LINE__,__FILE__,"ERROR:not implemented");
+    #else
+    KinEnergy+=0.5*m0*(Vguide[0]*Vguide[0]+
+           Vguide[1]*Vguide[1]+
+           Vguide[2]*Vguide[2]);
+    #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+
+    //gyration energy
+    //magnetic moment
+    double mu= PIC::ParticleBuffer::GetMagneticMoment((PIC::ParticleBuffer::byte*)ParticleData);
+    // also get the magnetic field at particle location
+    double AbsB=0,x[3]={0.0,0.0,0.0},B[3]={0.0,0.0,0.0};
+    static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL;
+
+    PIC::ParticleBuffer::GetX(x,(PIC::ParticleBuffer::byte*)ParticleData);
+    node=PIC::Mesh::Search::FindBlock(x);
+
+    PIC::CPLR::InitInterpolationStencil(x,node);
+    PIC::CPLR::GetBackgroundMagneticField(B);
+    AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5) + 1E-15;
+
+    #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+    exit(__LINE__,__FILE__,"ERROR:not implemented");
+    #else
+    KinEnergy+= AbsB*mu;
+    #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+
+    *((double*)(SamplingBuffer+DatumTotalKineticEnergy.offset))+=
+          //TotalKineticEnergyOffset))+=
+      LocalParticleWeight*KinEnergy;
+  }
 }
+
+
 void PIC::Mover::GuidingCenter::Init_BeforeParser(){
   // add TotalKineticEnergy to the list of sampled data
   PIC::IndividualModelSampling::DataSampledList.push_back(&Sampling::DatumTotalKineticEnergy);
@@ -60,45 +70,50 @@ void PIC::Mover::GuidingCenter::Init(){
 }
 
 
-void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,
-						       double *x, double *v,
-						       long int ptr, 
-						       void *node){
+void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,double *x, double *v,long int ptr, void *node) {
   //magnetic moment:
   // mu       = p_{perp}^2 / (2*m0*B)
   // p_{perp} = gamma*m0*v_{perp}
   //---------------------------------------------------------------
   
   // get the magnetic field
-    double B[3]={0.0,0.0,0.0}, AbsB=0.0;
-#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__OFF_ 
-  exit(__LINE__,__FILE__,"not implemented");
-#else 
-  PIC::CPLR::InitInterpolationStencil(x,(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node);
-  PIC::CPLR::GetBackgroundMagneticField(B);
-  //  PIC::CPLR::GetBackgroundMagneticFieldMagnitude(AbsB);
-  AbsB=pow(B[0]*B[0]+B[1]*B[1]+B[2]*B[2],0.5) + 1E-15;
-#endif//_PIC_COUPLER_MODE_
+  double B[3]={0.0,0.0,0.0}, AbsB=0.0;
+
+
+  //the function can be executed only the the offset for the particle magnetic moment is defined
+  if (_PIC_PARTICLE_DATA__MAGNETIC_MOMENT_OFFSET_!=-1) {
+    // get the magnetic field
+    switch (_PIC_COUPLER_MODE_) {
+    case _PIC_COUPLER_MODE__OFF_ :
+      exit(__LINE__,__FILE__,"not implemented");
+
+    default:
+      PIC::CPLR::InitInterpolationStencil(x,(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*)node);
+      PIC::CPLR::GetBackgroundMagneticField(B);
+      AbsB=Vector3D::Length(B)+1E-15;
+    }
   
-  // compute magnetic moment
-  double v_par, v2, gamma2, m0, mu=0.0;
-  double b[3] = {B[0]/AbsB, B[1]/AbsB, B[2]/AbsB};
-  if(AbsB > 0.0){
-    v_par  = v[0]*b[0]+v[1]*b[1]+v[2]*b[2];
-    v2     = v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
-#if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
-    gamma2 = 1.0 / (1.0 - v2/SpeedOfLight/SpeedOfLight);
-#else
-    gamma2 = 1.0;
-#endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_
-    m0     = PIC::MolecularData::GetMass(spec); 
-    mu     = 0.5 * gamma2 * m0 * (v2-v_par*v_par) / AbsB;
+    // compute magnetic moment
+    double v_par, v2, gamma2, m0, mu=0.0;
+    double b[3] = {B[0]/AbsB, B[1]/AbsB, B[2]/AbsB};
+
+    if (AbsB > 0.0) {
+      v_par  = v[0]*b[0]+v[1]*b[1]+v[2]*b[2];
+      v2     = v[0]*v[0]+v[1]*v[1]+v[2]*v[2];
+  #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
+      gamma2 = 1.0 / (1.0 - v2/SpeedOfLight/SpeedOfLight);
+  #else
+      gamma2 = 1.0;
+  #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_
+      m0     = PIC::MolecularData::GetMass(spec);
+      mu     = 0.5 * gamma2 * m0 * (v2-v_par*v_par) / AbsB;
+    }
+
+    // change the veolcity so it is aligned with magnetic field
+    // and set the magnetic moment's value
+    v[0] = v_par * b[0]; v[1] = v_par * b[1]; v[2] = v_par * b[2];
+    PIC::ParticleBuffer::SetMagneticMoment(mu, ptr);
   }
-  
-  // change the veolcity so it is aligned with magnetic field
-  // and set the magnetic moment's value
-  v[0] = v_par * b[0]; v[1] = v_par * b[1]; v[2] = v_par * b[2];
-  PIC::ParticleBuffer::SetMagneticMoment(mu, ptr);
 }
 
 void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
@@ -417,8 +432,42 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   
 #endif //_PIC_SYMMETRY_MODE_ == _PIC_SYMMETRY_MODE__AXIAL_ 
 
-  newNode=PIC::Mesh::Search::FindBlock(xFinal);
 
+
+  //interaction with the faces of the block and internal surfaces
+  //check whether the particle trajectory is intersected the spherical body
+#if _TARGET_ID_(_TARGET_) != _TARGET_NONE__ID_
+  double rFinal2;
+
+  //if the particle is inside the sphere -> apply the boundary condition procedure
+  if ((rFinal2=xFinal[0]*xFinal[0]+xFinal[1]*xFinal[1]+xFinal[2]*xFinal[2])<_RADIUS_(_TARGET_)*_RADIUS_(_TARGET_)) {
+    double r=sqrt(rFinal2);
+    int code;
+
+    static cInternalSphericalData_UserDefined::fParticleSphereInteraction ParticleSphereInteraction=
+        ((cInternalSphericalData*)(PIC::Mesh::mesh.InternalBoundaryList.front().BoundaryElement))->ParticleSphereInteraction;
+    static void* BoundaryElement=PIC::Mesh::mesh.InternalBoundaryList.front().BoundaryElement;
+
+    //move the particle location at the surface of the sphere
+    for (int idim=0;idim<DIM;idim++) xFinal[idim]*=_RADIUS_(_TARGET_)/r;
+
+    //determine the block of the particle location
+    newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+
+    //apply the boundary condition
+    code=ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,BoundaryElement);
+
+    if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
+      PIC::ParticleBuffer::DeleteParticle(ptr);
+      return _PARTICLE_LEFT_THE_DOMAIN_;
+    }
+  }
+  else {
+    newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+  }
+#else
+  newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
+#endif //_TARGET_ == _TARGET_NONE_
     
   //advance the particle's position and velocity
   //interaction with the faces of the block and internal surfaces
