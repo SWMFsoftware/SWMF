@@ -195,21 +195,43 @@ value is 5 seconds.
 !!!!!!!!!!!!!!!!! PHYSICS PARAMETERS  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="COMPOSITION">
-	<parameter name="FractionH" type="real" default="0.7"/>
-	<parameter name="FractionO" type="real" default="0.3"/>
+  <parameter name="NameCompModel" type="string"  case="upper" default="FIXED"
+	     input="select">
+    <option name="FIXED"/>
+    <option name="YOUNG"/>
+  </parameter>
+  <if expr="$NameCompModel eq 'FIXED'">
+    <parameter name="FractionH" type="real" default="0.7"/>
+    <parameter name="FractionO" type="real" default="0.3"/>
+  </if>
+  <if expr="$NameCompModel eq 'YOUNG'">
+    <parameter name="F107" type="real"/>
+  </if>
 
 #COMPOSITION
+FIXED                   NameCompModel  
 0.7      		FractionH
 0.3      		FractionO
 
+#COMPOSITION
+YOUNG                   NameCompModel  
+128.3                   F107
+
 When RCM is coupled with a single fluid MHD code, the boundary conditions
 obtained from GM do not determine the composition of the plasma.
-This command sets the assumed fraction of H+ and O+. 
-The two need to add up to 1.0. The combined global-inner magnetospheric 
-dynamics strongly depends on these values. Coupling with a multi-ion
-MHD code removes this adjustable parameter.
+This command sets the assumed fraction of H+ and O+.   The combined global-inner
+magnetospheric dynamics strongly depends on these values.
+NameCompModel selects the model used to set the composition.  If "FIXED" is
+chosen, the fraction of O+ and H+ must be given as the next two parameters.
+The two need to add up to 1.0.
+If NameCompModel is set to "YOUNG", the Young et al., 1982, JGR, Vol. 87 No. A11
+empirical relationship is used to set composition dynamically.
+This relationship sets the composition via Kp index (obtained via coupling
+with the GM component) and the F10.7 proxy for solar EUV flux.  If this model
+is selected, F10.7 flux must be given as a parameter.
+Coupling with a multi-ion MHD code removes this adjustable parameter.  Default
+action is to used the FIXED composition with 70\% H+.
 
-Default values are shown.
 </command>
 	
 <command name="CHARGEEXCHANGE">

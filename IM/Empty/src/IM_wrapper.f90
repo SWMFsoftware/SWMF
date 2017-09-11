@@ -171,9 +171,10 @@ contains
 
   !============================================================================
 
-  subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
+  subroutine IM_put_from_gm(Buffer_IIV,BufferKp,iSizeIn,jSizeIn,nVarIn,NameVar)
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
+    real,    intent(in) :: BufferKp
     real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
     character (len=*),intent(in)       :: NameVar
 

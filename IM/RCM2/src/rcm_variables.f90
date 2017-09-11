@@ -48,7 +48,9 @@ module Rcm_variables
     ! SWMF: set initial values for composition and charge exchange information
     real(rprec) :: x_h=0.70, x_o=1.00-0.70
     logical     :: L_dktime = .TRUE.
-    real(rprec) :: sunspot_number=125., f107=169., doy=90.
+    real(rprec) :: sunspot_number=125., f107=169., doy=90., f107young=0.0, kpYoung=0.0
+    character(len=5) :: NameCompModel = 'FIXED'
+
 !          comment: allow doy to be floating in case will want to use fractionals
 !                   later (stanislav, 6/15/2003).
 

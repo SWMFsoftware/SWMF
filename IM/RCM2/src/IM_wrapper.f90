@@ -39,9 +39,8 @@ contains
          DoRestart, iDtRcm, iDtPlot, asci_flag, nFilesPlot, iDnPlot, &
          plot_area, plot_var, plot_format, UseEventPlotName, &
          x_h, x_o, L_dktime, sunspot_number, f107, doy, &
-         ipot, ibnd_type, &
-         precipitation_tau, &
-         UseDecay, DecayTimescale
+         ipot, ibnd_type, precipitation_tau, UseDecay, DecayTimescale, &
+         NameCompModel, F107young
     use ModReadParam
     use ModUtilities, ONLY: fix_dir_name, check_dir, lower_case
 
@@ -146,8 +145,15 @@ contains
 
              end do
           case("#COMPOSITION")
-             call read_var('FractionH',FractionH)
-             call read_var('FractionO',FractionO)
+             call read_var('NameCompModel', NameCompModel)
+             if(NameCompModel .eq. 'FIXED') then
+                call read_var('FractionH',FractionH)
+                call read_var('FractionO',FractionO)
+             else if(NameCompModel .eq. 'YOUNG')then
+                call read_var('F107', f107Young)
+             else
+                call CON_stop('IM: Unrecognized NameCompModel:'//NameCompModel)
+             end if
              x_h=FractionH; x_o=FractionO
           case("#CHARGEEXCHANGE")
              call read_var('UseChargeExchange',L_dktime)
@@ -510,13 +516,14 @@ contains
 
   !============================================================================
 
-  subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
+  subroutine IM_put_from_gm(Buffer_IIV,BufferKp,iSizeIn,jSizeIn,nVarIn,NameVar)
 
     use RCM_variables
 
     character (len=*),parameter :: NameSub='IM_put_from_gm'
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
+    real,    intent(in) :: BufferKp
     real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
     character (len=*),intent(in)       :: NameVar
 
@@ -607,6 +614,9 @@ contains
 
     endif
 
+    ! Save Kp if Buffer has non-negative value:
+     kpYoung = max(0.0,BufferKp)
+    
   contains
 
     !==========================================================================

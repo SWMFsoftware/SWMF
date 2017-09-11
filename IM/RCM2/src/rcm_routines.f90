@@ -3356,14 +3356,41 @@ end do
 END SUBROUTINE Move_plasma_grid_NEW
 !
 !
-      SUBROUTINE Rcm_plasma_bc (iflag, i_where)
+SUBROUTINE young_comp (kp,f107,fracH, fracHe, fracO)
+
+!
+!-------------------------------------------------------------------------
+!    Determine plasma sheet composition using the Young et al. empirical 
+!    relationship based on Kp and F10.7 (first and second arguments, 
+!    respectively) as give by *Young et al.* [JGR, 1982, Vol. 87 No. A11]
+!
+!    Returns fraction of total number density that is Hydrogen, 
+!    Helium, and Oxygen.
+!-------------------------------------------------------------------------
+!
+
+  real, intent(in):: kp, f107
+  real, intent(out):: fracH, fracHe, fracO
+  real:: ratOH, ratHeH
+
+  
+
+    ratOH = 4.5E-2 * exp(0.17*kp + 0.01*f107) ! Eq. 5, pg. 9088
+    ratHeH= 0.618182*ratOH*exp(-0.24*kp - 0.011*f107) + 0.011*ratOH
+    fracH = 1.0 / (1.0 + ratHeH + ratOH)
+    fracHe= ratHeH * fracH
+    fracO = ratOH  * fracH
+
+END SUBROUTINE young_comp
+
+SUBROUTINE Rcm_plasma_bc (iflag, i_where)
       USE Rcm_variables, ONLY : n_gc, isize, jsize, kcsize, iesize, &
                                 alamc, etac, ikflavc, eeta, xmass, &
                                 vm, Re, pi, imin_j, density, temperature,&
                                 densityHp, densityOp, temperatureHp, temperatureOp, &
-                                kmin, kmax, &
-                                iprec, rprec, &
-                                x_h, x_o,DoMultiFluidGMCoupling, NameRcmDir
+                                kmin, kmax, iprec, rprec, &
+                                x_h, x_o,DoMultiFluidGMCoupling, NameRcmDir, &
+                                NameCompModel, KpYoung, F107Young
       IMPLICIT NONE
       INTEGER(iprec), INTENT (IN) :: iflag, i_where
 !
@@ -3399,17 +3426,45 @@ END SUBROUTINE Move_plasma_grid_NEW
 !
       REAL (rprec), PARAMETER :: a_conv = 6.371E+6/1.0E-9/1.0E-6
       REAL (rprec) :: a_factor, b_factor, s1, s2, s3, denom, pressure_rcm, density_rcm, &
-           densityHp_rcm,pressureHp_rcm,densityOp_rcm,pressureOp_rcm
+           densityHp_rcm,pressureHp_rcm,densityOp_rcm,pressureOp_rcm, x_he
       INTEGER (iprec) :: unit_debug=59
       LOGICAL :: Flag_found_kuse, Flag_correct_ok (isize,jsize,iesize)=.TRUE.
-!
 
+      logical :: DoTest, DoTestMe
+      character(len=*), parameter :: NameSub = 'Rcm_plasma_bc'
+      !
+
+      ! Set test flags:
+      call CON_set_do_test(NameSub, DoTest, DoTestMe)
+      
       IF (iflag /= 2 .AND. iflag /= 3) call CON_STOP('IFLAG IN PLASMA_BC')
       IF (i_where /= 1 .AND. i_where /= 2) call CON_STOP('I_WHERE IN PLASMA_BC')
       kappa_e   = 6
       kappa_i   = 6
 !
 !     
+      ! If using the Young et al. composition model, calculate
+      ! partial densities for H+, O+.
+      if(NameCompModel .eq. "YOUNG")then
+         ! Clip Kp and F107 to remain in reasonable range:
+         F107Young = max(min(F107Young,230.),115.0)
+         KpYoung   = max(min(KpYoung,   7.5),  0.5)
+
+         call young_comp(KpYoung, F107Young, x_h, x_he, x_o)
+
+         ! No He+ fluids in RCM; Fold He+ into H+:
+         x_h = x_h + x_he
+      end if
+
+      ! Print debug information:
+      if(DoTestMe)then
+         write(*,*) 'IM: Composition information'
+         write(*,*) 'IM: Model = '//NameCompModel
+         write(*,*) 'IM: Kp, F107 = ', KpYoung, F107Young
+         write(*,*) 'IM: Fraction H+ =', x_h
+         write(*,*) 'IM: Fraction O+ =', x_o
+      end if
+      
       ! Using "density" from MHD, set partial number densities for species
       ! and their "temperatures" (average energies):
 
