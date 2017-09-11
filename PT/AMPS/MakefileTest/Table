@@ -555,7 +555,7 @@ Compile=
 >>>./Config.pl -application=test/cg-pproc-test-on -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--onKEYS} 
 >>>@cd utility/PostProcess; make
 >>>@rm -rf srcTemp
->>>@($(MAKE) -j8 amps)
+>>>-@($(MAKE) -j8 amps)
 >>>./Config.pl -openmp=off
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
@@ -617,7 +617,7 @@ Compile=
 >>> ./Config.pl -application=test/cg-pproc-test -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--offKEYS}
 >>>@cd utility/PostProcess; make
 >>>@rm -rf srcTemp
->>>@($(MAKE) -j8 amps)
+>>>-@($(MAKE) -j8 amps)
 >>>./Config.pl -openmp=off
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
 
