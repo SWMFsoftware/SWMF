@@ -370,6 +370,7 @@ T			UseBorisCorrection
 
 ! Number density fractions for H+ and O+. Has to add up to 1.0
 #COMPOSITION
+FIXED			 NameCompModel
 0.9                      FractionH
 0.1                      FractionO
 

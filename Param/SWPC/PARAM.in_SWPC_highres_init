@@ -391,10 +391,10 @@ T			UseBorisCorrection
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
-! Number density fractions for H+ and O+. Has to add up to 1.0
+! Use the Young et al. formula to set composition dynamically:
 #COMPOSITION
-0.9                      FractionH
-0.1                      FractionO
+YOUNG			 NameCompModel
+178.0			 F107
 
 ! Decay for RCM particle densities
 #DECAY
