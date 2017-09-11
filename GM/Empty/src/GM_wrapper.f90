@@ -156,10 +156,11 @@ contains
   end subroutine GM_synchronize_refinement
 
   !==============================================================================
-  subroutine GM_get_for_im(Buffer_IIV,iSize,jSize,nVar,NameVar)
+  subroutine GM_get_for_im(Buffer_IIV,BufferKp,iSize,jSize,nVar,NameVar)
     implicit none
 
     integer, intent(in) :: iSize,jSize,nVar
+    real, intent(out)   :: BufferKp
     real, intent(out), dimension(iSize,jSize,nVar) :: Buffer_IIV
     character (len=*), intent(in) :: NameVar
 
