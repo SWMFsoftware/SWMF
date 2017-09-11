@@ -466,15 +466,16 @@ contains
 
   !==========================================================================
 
-  subroutine GM_get_for_im(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVar)
+  subroutine GM_get_for_im(Buffer_IIV,KpOut,iSizeIn,jSizeIn,nVar,NameVar)
 
     use ModProcMH, ONLY: iProc
     use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
          InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
          HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, xEnd_, CLOSEDRAY
+    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
 
     integer,          intent(in) :: iSizeIn, jSizeIn, nVar
-    real,             intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVar)
+    real,             intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVar), KpOut
     character(len=*), intent(in) :: NameVar
 
     real :: Radius
@@ -556,6 +557,14 @@ contains
 
     deallocate(RayIntegral_VII, RayResult_VII)
 
+    ! If Kp is being calculated, share it.  Otherwise, share -1.
+    if(DoCalcKp) then
+       KpOut = Kp
+    else
+       KpOut = -1
+    endif
+   
+    
     if (iProc == 0) then
        ! Output before processing
        if(DoTestTec)call write_integrated_data_tec

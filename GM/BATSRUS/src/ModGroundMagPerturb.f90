@@ -52,14 +52,14 @@ module ModGroundMagPerturb
   real, allocatable:: MagOut_VII(:,:,:)
 
   ! Public geomagnetic indices variables:
-  logical, public :: DoWriteIndices = .false.
+  logical, public :: DoWriteIndices=.false., DoCalcKp=.false., DoCalcAe=.false.
   logical, public :: IsFirstCalc=.true., IsSecondCalc=.true.
   integer, public :: iSizeKpWindow = 0 ! Size of MagHistory_II
   integer, public, parameter    :: nKpMag = 24, nAeMag = 24
   real,    public, allocatable  :: MagHistory_DII(:,:,:)  ! Mag time history.
+  real,    public               :: Kp=0.0, AeIndex_I(4)   ! Resulting indices
 
   ! Private geomagnetic indices variables:
-  logical :: DoCalcKp = .false., DoCalcAe = .false.
   integer :: nIndexMag = 0  ! Total number of mags required by indices.
   integer :: iUnitIndices   ! File IO unit for indices file.
   real, parameter    :: KpLat = 60.0           ! Synthetic Kp geomag. latitude.
@@ -68,7 +68,6 @@ module ModGroundMagPerturb
   real, allocatable  :: LatIndex_I(:), LonIndex_I(:) ! Lat/Lon of geoindex mags
   real               :: XyzKp_DI(3, nKpMag)    ! Locations of Kp mags, SMG.
   real               :: XyzAe_DI(3, nAeMag)    ! Locations of AE mags, SMG.
-  real               :: Kp=0.0, AeIndex_I(4)   ! Resulting indices.
   integer            :: kIndex_I(nKpMag)       ! Local k-index.
 
   ! K-index is evaluated over a rolling time window, typically three hours.
