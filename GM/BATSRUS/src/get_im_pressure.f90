@@ -1,6 +1,5 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
 !==========================================================================
 module ModImPressure
@@ -70,7 +69,8 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
   use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
   use ModAdvance,  ONLY : State_VGB, RhoUz_, Bx_, Bz_
   use ModB0,       ONLY: B0_DGB
-  use ModMultiFluid, ONLY : IonFirst_, IonLast_, iFluid
+  use ModMultiFluid, ONLY: iFluid
+  use ModVarIndexes, ONLY: IonFirst_, IonLast_, IsMhd
   implicit none
 
   integer, intent(in)  :: iBlock
@@ -167,33 +167,35 @@ subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
         LonWeight2 = 1 - LonWeight1
 
         if(all( IM_p( (/iLat1,iLat2/), (/iLon1, iLon2/) ) > 0.0 ))then
-           pIm_IC(1,i,j,k) = Si2No_V(UnitP_)*( &
-                LonWeight1 * ( LatWeight1*IM_p(iLat1,iLon1) &
-                +              LatWeight2*IM_p(iLat2,iLon1) ) + &
-                LonWeight2 * ( LatWeight1*IM_p(iLat1,iLon2) &
-                +              LatWeight2*IM_p(iLat2,iLon2) ) )
-           RhoIm_IC(1,i,j,k) = Si2No_V(UnitRho_)*( &
-                LonWeight1 * ( LatWeight1*IM_dens(iLat1,iLon1) &
-                +              LatWeight2*IM_dens(iLat2,iLon1) ) + &
-                LonWeight2 * ( LatWeight1*IM_dens(iLat1,iLon2) &
-                +              LatWeight2*IM_dens(iLat2,iLon2) ) )
+           if(IsMhd)then
+              pIm_IC(1,i,j,k) = Si2No_V(UnitP_)*( &
+                   LonWeight1 * ( LatWeight1*IM_p(iLat1,iLon1) &
+                   +              LatWeight2*IM_p(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_p(iLat1,iLon2) &
+                   +              LatWeight2*IM_p(iLat2,iLon2) ) )
+              RhoIm_IC(1,i,j,k) = Si2No_V(UnitRho_)*( &
+                   LonWeight1 * ( LatWeight1*IM_dens(iLat1,iLon1) &
+                   +              LatWeight2*IM_dens(iLat2,iLon1) ) + &
+                   LonWeight2 * ( LatWeight1*IM_dens(iLat1,iLon2) &
+                   +              LatWeight2*IM_dens(iLat2,iLon2) ) )
+           end if
            if(DoMultiFluidIMCoupling)then
-              pIm_IC(2,i,j,k) = Si2No_V(UnitP_)*( &
+              pIm_IC(IonFirst_,i,j,k) = Si2No_V(UnitP_)*( &
                    LonWeight1 * ( LatWeight1*IM_Hpp(iLat1,iLon1) &
                    +              LatWeight2*IM_Hpp(iLat2,iLon1) ) + &
                    LonWeight2 * ( LatWeight1*IM_Hpp(iLat1,iLon2) &
                    +              LatWeight2*IM_Hpp(iLat2,iLon2) ) )
-              RhoIm_IC(2,i,j,k) = Si2No_V(UnitRho_)*( &
+              RhoIm_IC(IonFirst_,i,j,k) = Si2No_V(UnitRho_)*( &
                    LonWeight1 * ( LatWeight1*IM_Hpdens(iLat1,iLon1) &
                    +              LatWeight2*IM_Hpdens(iLat2,iLon1) ) + &
                    LonWeight2 * ( LatWeight1*IM_Hpdens(iLat1,iLon2) &
                    +              LatWeight2*IM_Hpdens(iLat2,iLon2) ) )
-              pIm_IC(3,i,j,k) = Si2No_V(UnitP_)*( &
+              pIm_IC(iIonSecond,i,j,k) = Si2No_V(UnitP_)*( &
                    LonWeight1 * ( LatWeight1*IM_Opp(iLat1,iLon1) &
                    +              LatWeight2*IM_Opp(iLat2,iLon1) ) + &
                    LonWeight2 * ( LatWeight1*IM_Opp(iLat1,iLon2) &
                    +              LatWeight2*IM_Opp(iLat2,iLon2) ) )
-              RhoIm_IC(3,i,j,k) = Si2No_V(UnitRho_)*( &
+              RhoIm_IC(iIonSecond,i,j,k) = Si2No_V(UnitRho_)*( &
                    LonWeight1 * ( LatWeight1*IM_Opdens(iLat1,iLon1) &
                    +              LatWeight2*IM_Opdens(iLat2,iLon1) ) + &
                    LonWeight2 * ( LatWeight1*IM_Opdens(iLat1,iLon2) &
