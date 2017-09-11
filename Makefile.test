@@ -19,14 +19,15 @@ test_help:
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
-	@echo "    test_psie		       (run PS/DGCPM-IE/RIM coupling test)"
-	@echo "    test_psgmie		       (run PS/DGCPM-IE/Ridley_serial-GM/BATS-R-US coupling test)"
+	@echo "    test_psie		      (run PS/DGCPM-IE/RIM coupling test)"
+	@echo "    test_psgmie		      (run PS/DGCPM-IE/Ridley_serial-GM/BATS-R-US coupling test)"
 	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_esmf                  (run ESMF_SWMF test)"
 	@echo "    test_ccmc                  (run CCMC test)"
 	@echo "    test_ccmc_small            (run small version of CCMC test)"
 	@echo "    test_swpc                  (run GM-IE-IM test as used by SWPC)"
 	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
+	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
 	@echo "    test1                      (run GM-IE-PW test)"
 	@echo "    test2                      (run SC-IH + IH-GM test )"
 	@echo "    test3                      (run GM-IE-IM test)"
@@ -56,6 +57,7 @@ test:
 	-@(${MAKE} test_ps)
 	-@(${MAKE} test_ccmc_small)
 	-@(${MAKE} test_swpc)
+	-@(${MAKE} test_swpc_multiion)
 	-@(${MAKE} test1)
 	-@(${MAKE} test4)
 	-@(${MAKE} test5)
@@ -383,7 +385,7 @@ test1:
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
-	./Config.pl -g=GM:8,8,8,700,100 -o=GM:u=Default,e=Mhd,PW:Earth
+	./Config.pl -g=GM:8,8,8,700,100,IE:91,181 -o=GM:u=Default,e=Mhd,PW:Earth
 	${MAKE} SWMF
 	make PIDL
 
@@ -518,7 +520,7 @@ test3:
 
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd
 	${MAKE} SWMF
 	make PIDL
 
@@ -619,7 +621,7 @@ test_swpc:
 
 test_swpc_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:8,8,8,400,1 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd
 	${MAKE} SWMF
 	make PIDL
 
@@ -695,7 +697,7 @@ test_swpc_multiion:
 
 test_swpc_multiion_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,1 -o=GM:u=Default,e=MhdIons
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MultiIon
 	${MAKE} SWMF
 	make PIDL
 
@@ -768,7 +770,7 @@ test4:
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
-	./Config.pl -g=GM:8,8,8,600,1 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,600,1,IE:91,181 -o=GM:u=Default,e=Mhd
 	${MAKE} SWMF
 	make PIDL
 
@@ -887,7 +889,7 @@ test6:
 
 test6_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CRCM
-	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=Mhd,IM:EarthHO
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd,IM:EarthHO
 	${MAKE} SWMF
 	make PIDL
 
@@ -1003,7 +1005,7 @@ test8:
 
 test8_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,100 -o=GM:u=Default,e=MhdIons
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdIons
 	${MAKE} SWMF
 	make PIDL
 
@@ -1471,7 +1473,7 @@ test_ccmc:
 
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:6,6,6,3800,1
+	./Config.pl -g=GM:6,6,6,3800,1,IE:91,181
 	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
 	${MAKE} SWMF
 	make PIDL
@@ -1546,7 +1548,7 @@ test_ccmc_small:
 
 test_ccmc_small_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:6,6,6,800,1
+	./Config.pl -g=GM:6,6,6,800,1,IE:91,181
 	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
 	${MAKE} SWMF
 	make PIDL
@@ -1610,7 +1612,7 @@ test_ramscb:
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
-	./Config.pl -g=GM:8,8,8,800,800 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,800,800,IE:91,181 -o=GM:u=Default,e=Mhd
 	${MAKE} SWMF
 	make PIDL
 
