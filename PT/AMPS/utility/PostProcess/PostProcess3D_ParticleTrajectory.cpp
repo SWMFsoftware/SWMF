@@ -223,7 +223,7 @@ void cPostProcess3D::cParticleTrajectory::InitLoadBufferFile_boost(const char *f
   char FullName[50000]; 
   int nTrajectoryInFile=0;// number of traj in this individual datafile
   //get the full name of the data file and open the file
-  sprintf(FullName,"%s/%s",path,fname);
+  sprintf(FullName,"%s/%s\0",path,fname);
   printf("%s\n",FullName);
   printf("InitLoadBufferFile\n");
   
