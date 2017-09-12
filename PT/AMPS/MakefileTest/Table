@@ -523,6 +523,38 @@ Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-p
 -------------------------------------------------------------------------------
 
 #>
+Name=Legacy_2dCG@@(0+valeriy+pleiades)
+Time=8
+
+Compile=
+>>>@echo "test AMPS_Legacy 2D_CG case..." 
+>>>@cvs co AMPS_Legacy
+>>>@cd AMPS_Legacy/;./getmakefile -project dsmc -mdir main/;make 
+
+
+
+Rundir=
+>>>@echo "test AMPS_Legacy 2D_CG case...compiled"
+
+
+Run=
+>>>@echo "test AMPS_Legacy 2D_CG case...start run..."
+>>>-@cd AMPS_Legacy/2d_CG/;${TESTMPIRUN4} ../dsmc.run CG.input.dust.mix 
+>>>@echo "test AMPS_Legacy 2D_CG case...run... done"
+
+Check=
+>>>@echo "test AMPS_Legacy 2D_CG case...check..."
+>>>@utility/ReduceFile.pl AMPS_Legacy/2d_CG/F2.CO2.dsmc.dat 10
+>>>@utility/ReduceFile.pl AMPS_Legacy/2d_CG/F2.H2O.dsmc.dat 10
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 AMPS_Legacy/2d_CG/F2.CO2.dsmc.dat.Reduced.Step=10         \
+>>>AMPS_Legacy/output/test_2D_CG/F2.CO2.dsmc.dat.Reduced.Step=10  >> test_Legacy_2dCG.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 AMPS_Legacy/2d_CG/F2.H2O.dsmc.dat.Reduced.Step=10         \
+>>>AMPS_Legacy/output/test_2D_CG/F2.H2O.dsmc.dat.Reduced.Step=10  >> test_Legacy_2dCG.diff
+>>>@ls -l  test_Legacy_2dCG.diff
+
+<#
+-------------------------------------------------------------------------------
+#>
 Name=SEP3D
 Time=2
 
