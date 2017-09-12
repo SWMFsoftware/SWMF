@@ -578,13 +578,15 @@ Run=
 <#
 -------------------------------------------------------------------------------
 #>
-Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy)
+Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy+pleiades)
 Time=26
 
 ExeptionCode=SKIP{pgcc}
 
 Keys=-model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/Users/ccmc/boost/lib -compiler-option=-I/Users/ccmc/boost/include@@(0+valeriy)
+Keys=-model-data-path=/nobackup/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/nobackup/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/nobackup/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/nasa/pkgsrc/sles12/2016Q4/views/boost/1.62/lib@@(0+pleiades)
 CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeriy) 
+CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+pleiades) 
 
 
 Compile=
@@ -643,13 +645,15 @@ Check=
 <#
 -------------------------------------------------------------------------------
 #>
-Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy) 
+Name=CG-PostProcess--Read-Trajectories--off@@(0+valeriy+pleiades) 
 Time=2
 
 ExeptionCode=SKIP{pgcc}
 
 Keys=-model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/Users/ccmc/boost/lib -compiler-option=-I/Users/ccmc/boost/include@@(0+valeriy)
+Keys=-model-data-path=/nobackup/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/nobackup/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/nobackup/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/nasa/pkgsrc/sles12/2016Q4/views/boost/1.62/lib@@(0+pleiades)
 CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeriy) 
+CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+pleiades) 
 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
