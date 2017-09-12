@@ -589,11 +589,13 @@ CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeri
 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile..." >> test_CG-PostProcess--Read-Trajectories--on.diff
+>>>@cp Makefile Makefile.bak
 >>>./Config.pl -application=test/cg-pproc-test-on -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--onKEYS} 
 >>>@cd utility/PostProcess; make
 >>>@rm -rf srcTemp
 >>>-@($(MAKE) -j8 amps)
 >>>./Config.pl -openmp=off
+>>>@mv Makefile.bak Makefile 
 >>>@echo "test_CG-PostProcess--Read-Trajectories--on_compile... done" >> test_CG-PostProcess--Read-Trajectories--on.diff
 
 Rundir=
@@ -651,11 +653,13 @@ CustomRefSolutionPaths=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS@@(0+valeri
 
 Compile=
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile..." >> test_CG-PostProcess--Read-Trajectories--off.diff
+>>>@cp Makefile Makefile.bak
 >>> ./Config.pl -application=test/cg-pproc-test -amps-test=on -openmp=on ${TESTCG-PostProcess--Read-Trajectories--offKEYS}
 >>>@cd utility/PostProcess; make
 >>>@rm -rf srcTemp
 >>>-@($(MAKE) -j8 amps)
 >>>./Config.pl -openmp=off
+>>>@mv Makefile.bak Makefile
 >>>@echo "test_CG-PostProcess--Read-Trajectories--off_compile... done" >> test_CG-PostProcess--Read-Trajectories--off.diff
 
 Rundir=
