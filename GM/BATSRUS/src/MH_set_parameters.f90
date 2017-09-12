@@ -3584,6 +3584,9 @@ contains
           end do
        end if
 
+       if (boris_cLight_factor /=1 .or. cLightDim > 0) &
+            StringParam = trim(StringParam)//' clight'
+
        ! Replace '{default}' with StringParam
        plot_pars1 = plot_pars(iFile)
        plot_pars(iFile) = plot_pars1(1:l-1)//trim(adjustl(StringParam))// &
