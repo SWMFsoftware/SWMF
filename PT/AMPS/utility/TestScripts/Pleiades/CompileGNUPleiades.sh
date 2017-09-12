@@ -8,6 +8,7 @@ set WorkDir = /nobackup/`whoami`
 module purge;
 module load gcc/6.2                         
 module load mpi-sgi;
+module load boost/1.62
 
 echo -n "Compiling GNU....."                 
 cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           
