@@ -538,11 +538,11 @@ Rundir=
 
 Run=
 >>>@echo "test_Legacy_2dCG_run..." >> test_Legacy_2dCG.diff 
+>>>@echo Test test_Legacy_2dCG has started: `date`
 >>>-@cd AMPS_Legacy/2d_CG/;${TESTMPIRUN4} ../dsmc.run CG.input.dust.mix 
 >>>@echo "test_Legacy_2dCG_run... done" >> test_Legacy_2dCG.diff 
 
 Check=
-
 >>>@echo "test_Legacy_2dCG_check..." >> test_Legacy_2dCG.diff 
 >>>@utility/ReduceFile.pl AMPS_Legacy/2d_CG/F2.CO2.dsmc.dat 10
 >>>@utility/ReduceFile.pl AMPS_Legacy/2d_CG/F2.H2O.dsmc.dat 10
@@ -555,6 +555,7 @@ Check=
 >>>@ls -l  test_Legacy_2dCG-CO2.diff 
 >>>@ls -l  test_Legacy_2dCG-H2O.diff
 >>>@ls -l  test_Legacy_2dCG.diff
+>>>@echo Test test_Legacy_2dCG has finished: `date`
 
 <#
 -------------------------------------------------------------------------------
