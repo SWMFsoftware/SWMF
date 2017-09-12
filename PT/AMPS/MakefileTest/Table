@@ -527,29 +527,33 @@ Name=Legacy_2dCG@@(0+valeriy+pleiades)
 Time=8
 
 Compile=
->>>@echo "test AMPS_Legacy 2D_CG case..." 
+>>>@echo "test_Legacy_2dCG_compile..." > test_Legacy_2dCG.diff
 >>>@cvs co AMPS_Legacy
 >>>@cd AMPS_Legacy/;./getmakefile -project dsmc -mdir main/;make 
-
-
+>>>@echo "test_Legacy_2dCG_compile... done" >> test_Legacy_2dCG.diff
 
 Rundir=
->>>@echo "test AMPS_Legacy 2D_CG case...compiled"
-
+>>>@echo "test_Legacy_2dCG_rundir..." >> test_Legacy_2dCG.diff 
+>>>@echo "test_Legacy_2dCG_rundir... done" >> test_Legacy_2dCG.diff
 
 Run=
->>>@echo "test AMPS_Legacy 2D_CG case...start run..."
+>>>@echo "test_Legacy_2dCG_run..." >> test_Legacy_2dCG.diff 
 >>>-@cd AMPS_Legacy/2d_CG/;${TESTMPIRUN4} ../dsmc.run CG.input.dust.mix 
->>>@echo "test AMPS_Legacy 2D_CG case...run... done"
+>>>@echo "test_Legacy_2dCG_run... done" >> test_Legacy_2dCG.diff 
 
 Check=
->>>@echo "test AMPS_Legacy 2D_CG case...check..."
+
+>>>@echo "test_Legacy_2dCG_check..." >> test_Legacy_2dCG.diff 
 >>>@utility/ReduceFile.pl AMPS_Legacy/2d_CG/F2.CO2.dsmc.dat 10
 >>>@utility/ReduceFile.pl AMPS_Legacy/2d_CG/F2.H2O.dsmc.dat 10
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 AMPS_Legacy/2d_CG/F2.CO2.dsmc.dat.Reduced.Step=10         \
->>>AMPS_Legacy/output/test_2D_CG/F2.CO2.dsmc.dat.Reduced.Step=10  >> test_Legacy_2dCG.diff
+>>>AMPS_Legacy/output/test_2D_CG/F2.CO2.dsmc.dat.Reduced.Step=10  > test_Legacy_2dCG-CO2.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 AMPS_Legacy/2d_CG/F2.H2O.dsmc.dat.Reduced.Step=10         \
->>>AMPS_Legacy/output/test_2D_CG/F2.H2O.dsmc.dat.Reduced.Step=10  >> test_Legacy_2dCG.diff
+>>>AMPS_Legacy/output/test_2D_CG/F2.H2O.dsmc.dat.Reduced.Step=10  > test_Legacy_2dCG-H2O.diff
+
+>>>@cat test_Legacy_2dCG-CO2.diff test_Legacy_2dCG-H2O.diff > test_Legacy_2dCG.diff
+>>>@ls -l  test_Legacy_2dCG-CO2.diff 
+>>>@ls -l  test_Legacy_2dCG-H2O.diff
 >>>@ls -l  test_Legacy_2dCG.diff
 
 <#
