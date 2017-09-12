@@ -470,8 +470,8 @@ void cPostProcess3D::cParticleTrajectory::WriteIndividualTrajectory(int LineBegi
    
   double d[nDataPoint*nVar];
   double *ptr=d;
-  bool NotEndOfFile;
-  while (NotEndOfFile=(std::getline(infile,line)) ){
+ 
+  while (std::getline(infile,line)){
     cnt++;
     if (cnt>LineBegin && cnt<LineEnd) {
       std::stringstream ss(line);
@@ -480,7 +480,8 @@ void cPostProcess3D::cParticleTrajectory::WriteIndividualTrajectory(int LineBegi
     if (cnt>=LineEnd) break;
   }
   
-  if(cnt==LineEnd || !NotEndOfFile) fwrite(d,sizeof(double),nDataPoint*nVar,fBinaryOut);
+  // if !infile is true, the end of file is reached 
+  if(cnt==LineEnd || !infile) fwrite(d,sizeof(double),nDataPoint*nVar,fBinaryOut);
 }
 
 void cPostProcess3D::cParticleTrajectory::LoadIndividualTrajData(cIndividualTrajectoryData &traj, int iTraj){
