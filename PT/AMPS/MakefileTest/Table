@@ -937,7 +937,7 @@ Name=test/Mover-Boris@@(0+stampede+pleiades)
 Time=7
 
 Ref=2{gcc}@@(0+pleiades)
-Ref=2{pgcc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 Ref=2{gcc}@@(0+stampede)
 Ref=3{icc}@@(0+pleiades)
 
@@ -990,7 +990,7 @@ Name=test/Mover-Boris-relativistic@@(0+stampede+pleiades)
 Time=5
 
 Ref=2{gcc}@@(0+pleiades)
-Ref=2{pgcc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 Ref=2{gcc}@@(0+stampede)
 Ref=3{icc}@@(0+pleiades)
 
@@ -1208,6 +1208,7 @@ Time=17
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 Ref=3{gcc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 Ref=3{gcc}@@(0+stampede)
 Ref=2{pgcc}@@(0+valeriy)
 
