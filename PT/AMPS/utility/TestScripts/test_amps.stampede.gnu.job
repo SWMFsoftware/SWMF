@@ -7,7 +7,7 @@
 #SBATCH -o test_gnu.out  # Name of stdout output file(%j expands to jobId)
 #SBATCH -e %j.err        # Name of stderr output file(%j expands to jobId)
 
-#SBATCH -p development   # submit to the 'large' queue for jobs > 256 nodes
+#SBATCH -p normal        # submit to the 'large' queue for jobs > 256 nodes
 #SBATCH -N 1             # Total number of nodes requested (16 cores/node)
 #SBATCH -n 8             # Total number of mpi tasks requested
 #SBATCH -t 02:00:00      # Run time (hh:mm:ss) - 1.5 hours
@@ -17,9 +17,8 @@
 
 # run AMPS tests compiled with GNU
 cd GNU/AMPS
-module purge
-module load gcc/7.1.0
-make test_run MPIRUN=/usr/local/bin/ibrun 2>&1 test_amps.log
+module load gcc
+make test_run MPIRUN=/usr/local/bin/ibrun > test_amps.log
 cd ../..
 cat test_gnu.out >> GNU/AMPS/test_amps.log
 echo Done > AmpsTestDone
