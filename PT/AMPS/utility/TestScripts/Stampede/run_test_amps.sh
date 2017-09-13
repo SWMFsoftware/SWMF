@@ -98,15 +98,15 @@ cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 #source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_gnu.valeriy <#
 
 #>Pleiades>Yellowstone>Stampede ###############
-module purge;                               
+                               
 
 #>Pleiades ####################################
 #module load gcc/4.9.2                        #
 #module load mpi-sgi;                        <#
 
 #>Stampede ####################################
-module load gcc/4.9.1                        #
-module load mvapich2/2.1                    
+module load gcc                               #
+
 
 #>GNUAll ######################################
 cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
@@ -120,15 +120,15 @@ make test_compile >>& test_amps.log
 #source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_intel.valeriy <#
 
 #>Pleiades>Yellowstone>Stampede ###############
-module purge;                               
+                               
 
 #>Pleiades ####################################
 #module load comp-intel/2016.2.181;           #
 #module load mpi-sgi/mpt;                    <#
 
 #>Stampede ####################################
-module load intel/15.0.2;                    #
-module load mvapich2/2.1;                   
+module load intel                             #
+                   
 
 
 #>IntelAll ####################################
