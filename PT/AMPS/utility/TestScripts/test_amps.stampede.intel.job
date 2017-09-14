@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/csh 
 #----------------------------------------------------
 # Job script for nightly AMPS tests on 
 # TACC's Stampede system.
@@ -18,7 +18,7 @@
 # run AMPS tests compiled with Intel
 cd Intel/AMPS
 module load intel
-make test_run MPIRUN=/usr/local/bin/ibrun >> test_amps.log
+make test_run TESTMPIRUN4="/usr/local/bin/ibrun -n 4" TESTMPIRUN1="/usr/local/bin/ibrun -n 1" MPIRUN="/usr/local/bin/ibrun" >>& test_amps.log
 cd ../..
-cat test_intel.out >> Intel/AMPS/test_amps.log
+
 echo Done > AmpsTestDone
