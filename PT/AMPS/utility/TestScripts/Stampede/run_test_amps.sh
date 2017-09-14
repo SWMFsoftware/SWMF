@@ -91,85 +91,21 @@ cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 #./Config.pl -install -compiler=pgf90,pgccmpicxx      >& test_amps.log    <#
 
 # compile AMPS tests
+cd $WorkDir/Tmp_AMPS_test
+rm -rf AmpsCompilingGNUComplete
+rm -rf AmpsCompilingIntelComplete
 
-# GNU compiler
+$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Stampede/CompileGNUPStampede.sh  & 
+$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Stampede/CompileIntelStampede.sh  &
 
-#>Valeriy ######################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_gnu.valeriy <#
-
-#>Pleiades>Yellowstone>Stampede ###############
-                               
-
-#>Pleiades ####################################
-#module load gcc/4.9.2                        #
-#module load mpi-sgi;                        <#
-
-#>Stampede ####################################
-module load gcc                               #
-
-
-#>GNUAll ######################################
-cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-make test_compile >>& test_amps.log         
-
-
-
-# Intel compiler 
-
-#>Valeriy ########################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_intel.valeriy <#
-
-#>Pleiades>Yellowstone>Stampede ###############
-                               
-
-#>Pleiades ####################################
-#module load comp-intel/2016.2.181;           #
-#module load mpi-sgi/mpt;                    <#
-
-#>Stampede ####################################
-module load intel                             #
-                   
-
-
-#>IntelAll ####################################
-cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-make test_compile >>& test_amps.log         
-
-# PGI compiler
-
-#>Pleiades>Yellowstone ########################
-#module purge;                               <#
-
-#>Pleiades ####################################
-#module load comp-pgi/15.3;                   #
-#module load mpi-sgi/mpt.2.12r16             <#
-
-
-#>PGIAll ######################################
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#make test_compile >>& test_amps.log         <#
-
+#Waite compileing is compiling is finished
+#waite untill all compilation is complete
+while ((! -f AmpsCompilingIntelComplete) || (! -f AmpsCompilingGNUComplete))
+  sleep 60
+end
 
 # Run test
-
-# Super computers
-
-#>Pleiades ####################################
-#cd $WorkDir/Tmp_AMPS_test                    #
-#set time = "`date -d 'now + 1 minute'`"      #
-#foreach job (test_amps.*.job)                #
-#  while ("`date`" !~ "$time")                #
-#  end                                        #
-#  /PBS/bin/qsub $job                         #
-#  set time = "`date -d 'now + 121 minute'`"  #
-#end                                         <#
-#>Stampede ####################################
 set submit = '/usr/bin/sbatch'              
-#>Stampede ####################################
-echo OUTPUT__BEFORE_JOB_SUBMITTING >> test_amps.log
-
-
-cd $WorkDir/Tmp_AMPS_test                    #
 
 foreach job (test_amps.*.job)                #
   sbatch $job 
@@ -178,21 +114,10 @@ foreach job (test_amps.*.job)                #
     sleep 60
   end
 
-  sleep 180
+  sleep 300 
   rm -f AmpsTestDone
-
-
-
-
-# sleep 7260
-
-
-# echo "$submit $job"|at now+$delay minutes  #
-# @ delay = $delay + 121                     #
 end                                         
 
-
-echo OUTPUT__AFTER_JOB_SUBMITTING >> test_amps.log
 
 #>Yellowstone #################################
 #/usr/bin/bsub < test_amps.job               <#
