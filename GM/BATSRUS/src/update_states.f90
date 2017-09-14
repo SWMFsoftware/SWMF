@@ -7,7 +7,7 @@ subroutine update_states(iBlock)
   use ModMain
   use ModAdvance
   use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP
-  use BATL_lib, ONLY: Xyz_DGB
+  use BATL_lib, ONLY: Xyz_DGB, CellVolume_GB
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
        update_heatflux_collisionless
   use ModUserInterface ! user_update_states
@@ -50,12 +50,12 @@ subroutine update_states(iBlock)
           'Z fluxes L,R =',Flux_VZ(VARtest,Itest,Jtest,Ktest),&
           Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
      write(*,'(2x,a,es23.15)')'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
-     write(*,'(2x,a,es23.15)')'fluxes=',Flux_VX(VARtest,Itest,Jtest,Ktest) &
+     write(*,'(2x,a,es23.15)')'fluxes=',(Flux_VX(VARtest,Itest,Jtest,Ktest) &
           -Flux_VX(VARtest,Itest+1,Jtest,Ktest)                        &
           +Flux_VY(VARtest,Itest,Jtest,Ktest)                          &
           -Flux_VY(VARtest,Itest,Jtest+1,Ktest)                        &
           +Flux_VZ(VARtest,Itest,Jtest,Ktest)                          &
-          -Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
+          -Flux_VZ(VARtest,Itest,Jtest,Ktest+1) )/CellVolume_GB(i,j,k,iBlock)
   end if
 
   if(UseUserUpdateStates)then
