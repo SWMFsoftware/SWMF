@@ -127,7 +127,7 @@ contains
 
        if (DoTestCell) then
           do iIon = 1, nIonFluid
-             write(*,'(1x,2a,10es20.12)') NameSub,' iIon   =', iIon
+             write(*,'(1x,2a,i3)')        NameSub,' iIon   =', iIon
              write(*,'(1x,2a,10es20.12)') NameSub,' uIon_D =', &
                   State_V(iRhoUxIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
                   State_V(iRhoUyIon_I(iIOn))/State_V(iRhoIon_I(iIon)), &
