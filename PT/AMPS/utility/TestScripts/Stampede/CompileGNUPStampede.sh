@@ -2,7 +2,7 @@
 
 set WorkDir = $SCRATCH
 
-module load gcc/7.1.0
+module load gcc 
 
 echo -n "Compiling GNU....."                 
 

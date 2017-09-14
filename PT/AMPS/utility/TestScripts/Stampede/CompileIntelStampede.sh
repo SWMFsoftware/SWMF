@@ -2,7 +2,7 @@
 
 set WorkDir = $SCRATCH 
 
-module load intel/17.0.4 
+module load intel
 
 echo -n "Compiling Intel....."                 
 cd $WorkDir/Tmp_AMPS_test/Intel/AMPS           
