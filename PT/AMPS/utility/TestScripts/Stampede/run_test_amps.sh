@@ -40,7 +40,7 @@ set WorkDir = $HOME
 #set WorkDir =         <#
 
 #>Stampede #############
- set WorkDir = $WORK 
+set WorkDir = $SCRATCH  
 
 # Go to your home directory
 cd $WorkDir
