@@ -16,7 +16,7 @@
 
 double ChargeExchange::LindsayStebbings::LifeTime(int spec,double* vParticle,double* vPlasma,double PlasmaTemperature,double PlasmaNumberDensity) {
   // for notation see Lindsay & Stebbings, JGR, vol. 110, A12213, 2005
-  double a1 =4.15,a2=0.531,a3=67.3,v2,energy,sigma,c;
+  double a1 =4.15,a2=0.531,a3=67.3,v2=0.0,energy,sigma,c;
 
   // this model is for atomic hydrogen and three charge exchange species only
   if ((spec != _H_SPEC_) && (spec != _H_ENA_V1_SPEC_) && (spec != _H_ENA_V2_SPEC_) && (spec != _H_ENA_V3_SPEC_)) return 1.0E+100;
