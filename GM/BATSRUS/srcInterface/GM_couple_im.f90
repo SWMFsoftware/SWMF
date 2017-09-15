@@ -46,7 +46,7 @@ module GM_couple_im
   real, save, dimension(:,:), allocatable :: &
        MHD_SUM_vol, MHD_tmp, &
        MHD_SUM_rho, MHD_HpRho, MHD_OpRho, &
-       MHD_SUM_p, MHD_SUM_ppar, MHD_HpP, MHD_OpP, &
+       MHD_SUM_p, MHD_HpP, MHD_OpP, &
        MHD_Beq, &
        MHD_Xeq, &
        MHD_Yeq, &
@@ -724,9 +724,6 @@ contains
     if(DoMultiFluidIMCoupling)then
        if(NameVar /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
-    else if(DoAnisoPressureIMCoupling)then
-       if(NameVar /= 'p:rho:ppar:bmin') &
-            call CON_stop(NameSub//' invalid NameVar='//NameVar)
     else
        if(NameVar /= 'p:rho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
@@ -777,12 +774,6 @@ contains
        IM_Opdens = Buffer_IIV(:,:,Odens_)
     endif
 
-    ! for anisotropic pressure
-    if(DoAnisoPressureIMCoupling)then
-       IM_ppar = Buffer_IIV(:,:,parpres_)
-       IM_bmin = Buffer_IIV(:,:,bmin_)
-    end if
-
     if(DoTest)call write_IMvars_tec  ! TecPlot output
     if(DoTest)call write_IMvars_idl  ! IDL     output
 
@@ -804,10 +795,6 @@ contains
               &"IM pressure", "IM density", &                                   
               &"IM Hp pressure", "IM Hp density", &                             
               &"IM Op pressure", "IM Op density"'
-      else if(DoAnisoPressureIMCoupling)then
-         write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
-              &"IM pressure", "IM density", &
-              &"IM parallel pressure", "IM minimum B"'
       else
          write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat",&                
               &"IM pressure", "IM density"'
@@ -822,9 +809,6 @@ contains
                write(UNITTMP_,'(2i4,8G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
                     IM_p(i,j),IM_dens(i,j), &
                     IM_Hpp(i,j),IM_Hpdens(i,j),IM_Opp(i,j), IM_Opdens(i,j)
-            else if(DoAnisoPressureIMCoupling)then
-               write(UNITTMP_,'(2i4,6G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
-                    IM_p(i,j),IM_dens(i,j),IM_ppar(i,j),IM_bmin(i,j)
             else
                write(UNITTMP_,'(2i4,4G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i), &
                     IM_p(i,j),IM_dens(i,j)
@@ -849,8 +833,6 @@ contains
       write(UNITTMP_,'(3i4)')            jSizeIn,iSizeIn
       if(DoMultiFluidIMCoupling)then
          write(UNITTMP_,'(a79)')'Lon Lat p rho Hpp Hprho Opp Oprho'
-      else if(DoAnisoPressureIMCoupling)then
-         write(UNITTMP_,'(a79)')'Lon Lat p rho ppar bmin'
       else
          write(UNITTMP_,'(a79)')'Lon Lat p rho'
       endif
@@ -860,10 +842,6 @@ contains
                write(UNITTMP_,'(100(1pe18.10))') &
                     IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j), &
                     IM_Hpp(i,j), IM_Hpdens(i,j), IM_Opp(i,j), IM_Opdens(i,j)
-            else if(DoAnisoPressureIMCoupling)then
-               write(UNITTMP_,'(100(1pe18.10))') &
-                    IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j), &
-                    IM_ppar(i,j), IM_bmin(i,j)
             else
                write(UNITTMP_,'(100(1pe18.10))') &
                     IM_lon(j),IM_lat(i),IM_p(i,j),IM_dens(i,j)
@@ -899,10 +877,6 @@ contains
        if(allocated(MHD_HpP))          deallocate(MHD_HpP)
        if(allocated(MHD_OpRho))        deallocate(MHD_OpRho)
        if(allocated(MHD_OpP))          deallocate(MHD_OpP)
-    end if
-
-    if(DoAnisoPressureIMCoupling)then
-       if(allocated(MHD_SUM_ppar))       deallocate(MHD_SUM_ppar)
     end if
 
     iSize = iSizeIn
@@ -951,12 +925,6 @@ contains
        allocate( MHD_Opp(isize,jsize), stat=iError )
        call alloc_check(iError,"MHD_Opp")
        MHD_Opp = 0.
-    end if
-
-    if(DoAnisoPressureIMCoupling)then
-       allocate( MHD_SUM_ppar(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_SUM_ppar")
-       MHD_SUM_ppar = 0.
     end if
 
     allocate( MHD_Beq(isize,jsize), stat=iError )
@@ -1008,12 +976,6 @@ contains
             ', "MHD Hp`r", "MHD Hp p", "MHD Hp T"', &
             ', "MHD Op`r", "MHD Op p", "MHD Op T", "Beq"', &
             ', "FluxError"'
-    else if(DoAnisoPressureIMCoupling)then  
-       write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
-            ', "Xeq", "Yeq"', &
-            ', "Volume", "Volume**(-2/3)"', &
-            ', "MHD `r", "MHD p", "MHD ppar", "MHD T", "Beq"', &
-            ', "FluxError"'
     else
        write(UNITTMP_,'(a)') 'VARIABLES="J", "I", "Lon", "Lat", "Lat Boundary (I)"', &
             ', "Xeq", "Yeq"', &
@@ -1051,13 +1013,6 @@ contains
                   MHD_Hprho(i,j), MHD_Hpp(i,j), tmpHpT, &
                   MHD_Oprho(i,j), MHD_Opp(i,j), tmpOpT,MHD_Beq(i,j), &
                   MHD_Fluxerror(i,j)
-          else if(DoAnisoPressureIMCoupling)then
-             write(UNITTMP_,'(2i4,13G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i),&
-                  MHD_lat_boundary(j), &
-                  MHD_Xeq(i,j),MHD_Yeq(i,j), &
-                  tmpV1,tmpV2, &
-                  MHD_SUM_rho(i,j),MHD_SUM_p(i,j),MHD_SUM_ppar(i,j),tmpT,MHD_Beq(i,j), &
-                  MHD_Fluxerror(i,j)
           else
              write(UNITTMP_,'(2i4,12G14.6)') j2,i,IM_lon(j)+lonShift,IM_lat(i),&
                   MHD_lat_boundary(j), &
@@ -1092,61 +1047,31 @@ contains
     write(UNITTMP_,'(i7,1pe13.5,3i3)') n_step,time_simulation,2,1,7
     write(UNITTMP_,'(3i4)')            jSize+1,iSize
     write(UNITTMP_,'(100(1pe13.5))')   0.0
-    if(DoAnisoPressureIMCoupling)then
-       write(UNITTMP_,'(a79)') 'Lon Lat Xeq Yeq vol rho p ppar Beq FluxError nothing'
-       do i=isize,1,-1
-          do j=1,jsize
-             write(UNITTMP_,'(100(1pe18.10))') &
-                  IM_lon(j),       &
-                  IM_lat(i),       &
-                  MHD_Xeq(i,j),     &
-                  MHD_Yeq(i,j),     &
-                  MHD_SUM_vol(i,j), &
-                  MHD_SUM_rho(i,j), &
-                  MHD_SUM_p(i,j),   &
-                  MHD_SUM_ppar(i,j), &
-                  MHD_Beq(i,j),     &
-                  MHD_FluxError(i,j)
-          end do
+    write(UNITTMP_,'(a79)') 'Lon Lat Xeq Yeq vol rho p Beq FluxError nothing'
+    do i=isize,1,-1
+       do j=1,jsize
           write(UNITTMP_,'(100(1pe18.10))') &
-               IM_lon(1)+360.0, &
+               IM_lon(j),       &
                IM_lat(i),       &
-               MHD_Xeq(i,1),     &
-               MHD_Yeq(i,1),     &
-               MHD_SUM_vol(i,1), &
-               MHD_SUM_rho(i,1), &
-               MHD_SUM_p(i,1),   &
-               MHD_SUM_ppar(i,1), &
-               MHD_Beq(i,1),     &
-               MHD_FluxError(i,1)               
+               MHD_Xeq(i,j),     &
+               MHD_Yeq(i,j),     &
+               MHD_SUM_vol(i,j), &
+               MHD_SUM_rho(i,j), &
+               MHD_SUM_p(i,j),   &
+               MHD_Beq(i,j),     &
+               MHD_FluxError(i,j)
        end do
-    else
-       write(UNITTMP_,'(a79)') 'Lon Lat Xeq Yeq vol rho p Beq FluxError nothing'
-       do i=isize,1,-1
-          do j=1,jsize
-             write(UNITTMP_,'(100(1pe18.10))') &
-                  IM_lon(j),       &
-                  IM_lat(i),       &
-                  MHD_Xeq(i,j),     &
-                  MHD_Yeq(i,j),     &
-                  MHD_SUM_vol(i,j), &
-                  MHD_SUM_rho(i,j), &
-                  MHD_SUM_p(i,j),   &
-                  MHD_Beq(i,j),     &
-                  MHD_FluxError(i,j)
-          end do
-          write(UNITTMP_,'(100(1pe18.10))') &
-               IM_lon(1)+360.0, &
-               IM_lat(i),       &
-               MHD_Xeq(i,1),     &
-               MHD_Yeq(i,1),     &
-               MHD_SUM_vol(i,1), &
-               MHD_SUM_rho(i,1), &
-               MHD_SUM_p(i,1),   &
-               MHD_Beq(i,1),     &
-               MHD_FluxError(i,1)               
-       end do
-    end if
+       write(UNITTMP_,'(100(1pe18.10))') &
+            IM_lon(1)+360.0, &
+            IM_lat(i),       &
+            MHD_Xeq(i,1),     &
+            MHD_Yeq(i,1),     &
+            MHD_SUM_vol(i,1), &
+            MHD_SUM_rho(i,1), &
+            MHD_SUM_p(i,1),   &
+            MHD_Beq(i,1),     &
+            MHD_FluxError(i,1)               
+    end do
     CLOSE(UNITTMP_)
 
   end subroutine write_integrated_data_idl
@@ -1166,11 +1091,6 @@ contains
           MHD_Oprho = MHD_Oprho/MHD_SUM_vol
           MHD_Hpp   = MHD_Hpp/MHD_SUM_vol
           MHD_Opp   = MHD_Opp/MHD_SUM_vol
-       end where
-    end if
-    if(DoAnisoPressureIMCoupling)then
-       where(MHD_SUM_vol>0.)
-          MHD_SUM_ppar = MHD_SUM_ppar/MHD_SUM_vol
        end where
     end if
 
@@ -1302,8 +1222,6 @@ contains
           MHD_HpP  (1:i-1,j) = -1.
           MHD_OpP  (1:i-1,j) = -1.
        endif
-       if(DoAnisoPressureIMCoupling) &
-            MHD_SUM_ppar(1:i-1,j) = -1.
     end do
 
     ! Dimensionalize values
@@ -1332,13 +1250,6 @@ contains
           MHD_OpRho = -1.
           MHD_HpP   = -1.
           MHD_OpP   = -1.
-       end where
-    end if
-    if(DoAnisoPressureIMCoupling)then
-       where(MHD_SUM_vol > 0.)
-          MHD_SUM_ppar = MHD_SUM_ppar * No2Si_V(UnitP_)
-       elsewhere
-          MHD_SUM_ppar = -1.
        end where
     end if
 
