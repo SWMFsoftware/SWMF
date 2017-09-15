@@ -259,6 +259,7 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
         #if _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ == _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_
         StoppingPower=GetStoppingPower(x,v,spec,cell,node);
         #else
+        StoppingPower=0.0; //StoppingPower is set to make CRAY C++ compiler happy
         exit(__LINE__,__FILE__,"Error: something is wrong. This function should not be called when _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_ != _PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL__STOPPING_POWER_");
         #endif //_PIC_BACKGROUND_ATMOSPHERE__COLLISION_MODEL_
 

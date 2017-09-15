@@ -4214,6 +4214,7 @@ namespace PIC {
           #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
           DATAFILE::GetBackgroundElectricField(t,Stencil.cell[iStencil], Time);
           #else
+          t[0]=0.0; //t[0] is set to make CRAY C++ compiler happy
           exit(__LINE__,__FILE__,"not implemented");
           #endif
 
@@ -4243,6 +4244,7 @@ namespace PIC {
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundMagneticField(t,Stencil.cell[iStencil], Time);
          #else
+         t[0]=0.0; //t[0] is set to make CRAY C++ compiler happy
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
@@ -4286,6 +4288,7 @@ namespace PIC {
          DATAFILE::GetBackgroundMagneticFieldGradient(t,Stencil.cell[iStencil], Time);
 
          #else
+         t[0]=0.0; //t[0] is set to make CRAY C++ compiler happy
          exit(__LINE__,__FILE__,"not implemented");
          #endif //_PIC_COUPLER_MODE_ 
 
@@ -4440,6 +4443,7 @@ namespace PIC {
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundPlasmaVelocity(t,Stencil.cell[iStencil], Time);
          #else
+         t[0]=0.0; //t[0] is set to make CRAY C++ compiler happy
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
@@ -4583,6 +4587,7 @@ namespace PIC {
          #elif _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__DATAFILE_
          DATAFILE::GetBackgroundFieldsVector(tE,tB,Stencil.cell[iStencil], Time);
          #else
+         tE[0]=0.0,tB[0]=0.0; //tE[0] and tB[0] are set to make CRAY C++ compiler happy
          exit(__LINE__,__FILE__,"not implemented");
          #endif
 
