@@ -528,12 +528,12 @@ contains
     character (len=*),intent(in)       :: NameVar
 
     integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6, &
-         HpRho_=7, HpP_=8, OpRho_=9, OpP_=10
+         HpRho_=5, HpP_=6, OpRho_=7, OpP_=8
     logical :: DoTest, DoTestMe
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
-    if(nVarIn > 6)DoMultiFluidGMCoupling = .true.
+    DoMultiFluidGMCoupling = nVarIn > 6
     if(DoTest)write(*,*)NameSub,' starting with NameVar=',NameVar
     if(DoTest) call write_data
 
@@ -541,7 +541,7 @@ contains
        if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     else
-       if(NameVar /= 'vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp') &
+       if(NameVar /= 'vol:z0x:z0y:bmin:Hprho:Oprho:Hpp:Opp') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     end if
 
@@ -567,21 +567,11 @@ contains
     xmin(1:isize,1:jsize) = Buffer_IIV(:,:,z0x_)
     ymin(1:isize,1:jsize) = Buffer_IIV(:,:,z0y_)
     bmin(1:isize,1:jsize) = Buffer_IIV(:,:,bmin_)
-    density(1:isize,1:jsize) = Buffer_IIV(:,:,rho_)/xmass(2)/1.0E+6 ! in cm-3
-    pressure(1:isize,1:jsize) = Buffer_IIV(:,:,p_)
-    where(Buffer_IIV(:,:,rho_) /= 0.0) 
-       temperature (1:iSize,1:jSize) = &
-            Buffer_IIV(:,:,p_)/(Buffer_IIV(:,:,rho_)/xmass(2))/1.6E-19 ! in K
-    elsewhere
-       temperature (1:iSize,1:jSize) =5000.0
-    end where
 
     call wrap_around_ghostcells(vm,isize,jsize,n_gc)
     call wrap_around_ghostcells(xmin,isize,jsize,n_gc)
     call wrap_around_ghostcells(ymin,isize,jsize,n_gc)
     call wrap_around_ghostcells(bmin,isize,jsize,n_gc)
-    call wrap_around_ghostcells(density, isize, jsize, n_gc)
-    call wrap_around_ghostcells(temperature, isize, jsize, n_gc)
 
     if(DoMultiFluidGMCoupling)then
        ! MultiFluid                                                                       
@@ -612,10 +602,32 @@ contains
        call wrap_around_ghostcells(temperatureHp, isize, jsize, n_gc)
        call wrap_around_ghostcells(temperatureOp, isize, jsize, n_gc)
 
+       ! Calculate total mass, pressure and some kind of temperature for backward compatibility
+       density = densityHp + densityOp
+       pressure(1:isize,1:jsize) = pressureHp(1:isize,1:jsize) + pressureOp(1:isize,1:jsize)
+       where(Buffer_IIV(:,:,rho_) /= 0.0)
+          temperature(1:isize,1:jsize) = &
+                (Buffer_IIV(:,:,Hpp_)+Buffer_IIV(:,:,Opp_)) &
+                /((Buffer_IIV(:,:,Hprho_) + Buffer_IIV(:,:,Oprho_))/xmass(2))/1.6E-19
+       elsewhere
+          temperature(1:iSize,1:jSize) =5000.0
+       end where
+    else
+       density(1:isize,1:jsize) = Buffer_IIV(:,:,rho_)/xmass(2)/1.0E+6 ! in cm-3
+       pressure(1:isize,1:jsize) = Buffer_IIV(:,:,p_)
+       where(Buffer_IIV(:,:,rho_) /= 0.0) 
+          temperature(1:iSize,1:jSize) = &
+               Buffer_IIV(:,:,p_)/(Buffer_IIV(:,:,rho_)/xmass(2))/1.6E-19 ! in K
+       elsewhere
+          temperature(1:iSize,1:jSize) =5000.0
+       end where
     endif
 
+    call wrap_around_ghostcells(density, isize, jsize, n_gc)
+    call wrap_around_ghostcells(temperature, isize, jsize, n_gc)
+
     ! Save Kp if Buffer has non-negative value:
-     kpYoung = max(0.0,BufferKp)
+    kpYoung = max(0.0,BufferKp)
     
   contains
 
@@ -640,7 +652,7 @@ contains
       else
          write(UnitTmp_,'(a)') &
               'VARIABLES="J", "I", "vol", "z0x", "z0y", "bmin",&           
-              & "rho","p","Hprho","Hpp","Oprho","Opp"'
+              & "Hprho","Hpp","Oprho","Opp"'
       end if
       write(UnitTmp_,'(a,i4,a,i4,a)') &
            'ZONE T="SAVE", I=',jsize,', J=',isize,', K=1, F=POINT'
@@ -651,13 +663,11 @@ contains
                  Buffer_IIV(i,j,bmin_),Buffer_IIV(i,j,rho_),Buffer_IIV(i,j,p_)
          else
             !multi-fluid                                                                
-            write(UnitTmp_,'(2i4,8G14.6)') j,i, &
+            write(UnitTmp_,'(2i4,6G14.6)') j,i, &
                  Buffer_IIV(i,j,vol_), &
                  Buffer_IIV(i,j,z0x_), &
                  Buffer_IIV(i,j,z0y_), &
                  Buffer_IIV(i,j,bmin_), &
-                 Buffer_IIV(i,j,rho_), &
-                 Buffer_IIV(i,j,p_), &
                  Buffer_IIV(i,j,Hprho_), &
                  Buffer_IIV(i,j,Hpp_), &
                  Buffer_IIV(i,j,Oprho_), &

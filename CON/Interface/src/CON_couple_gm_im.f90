@@ -165,8 +165,8 @@ contains
       if(DoTest)write(*,*)NameSubSub,' starting, iProc=', i_proc()
 
       if(DoMultiFluidIMCoupling) then
-         NameVar='vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp'
-         nVarGmIm = 10
+         NameVar='vol:z0x:z0y:bmin:Hprho:Oprho:Hpp:Opp'
+         nVarGmIm = 8
       else
          NameVar='vol:z0x:z0y:bmin:rho:p'
          nVarGmIm = 6

@@ -485,7 +485,7 @@ contains
     !--------------------------------------------------------------------------
 
     if(DoMultiFluidIMCoupling)then
-       if(NameVar /= 'vol:z0x:z0y:bmin:rho:p:Hprho:Oprho:Hpp:Opp') &
+       if(NameVar /= 'vol:z0x:z0y:bmin:Hprho:Oprho:Hpp:Opp') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     else
        if(NameVar /= 'vol:z0x:z0y:bmin:rho:p') &
@@ -523,10 +523,6 @@ contains
           MHD_OpRho= RayResult_VII(OpRhoInvB_,:,:)
           MHD_HpP= RayResult_VII(HpPInvB_,:,:)
           MHD_OpP= RayResult_VII(OpPInvB_,:,:)
-
-          MHD_SUM_rho = MHD_HpRho + MHD_OpRho
-          MHD_SUM_p   = MHD_HpP + MHD_OpP
-
        end if
        ! Put impossible values if the ray is not closed
        if(.not.DoMultiFluidIMCoupling)then
@@ -543,8 +539,6 @@ contains
              MHD_Xeq     = NoValue
              MHD_Yeq     = NoValue
              MHD_SUM_vol = 0.0
-             MHD_SUM_rho = 0.0
-             MHD_SUM_p   = 0.0
              MHD_Hprho = 0.0
              MHD_Oprho = 0.0
              MHD_HpP   = 0.0
@@ -588,12 +582,10 @@ contains
           Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
        else
           ! the index is not continuous as in ModRayTrace                
-          Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
-          Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
-          Buffer_IIV(:,:,HpRhoInvB_+2) = MHD_HpRho
-          Buffer_IIV(:,:,OpRhoInvB_+2) = MHD_Oprho
-          Buffer_IIV(:,:,HpPInvB_+2)   = MHD_HpP
-          Buffer_IIV(:,:,OpPInvB_+2)   = MHD_OpP
+          Buffer_IIV(:,:,HpRhoInvB_) = MHD_HpRho
+          Buffer_IIV(:,:,OpRhoInvB_) = MHD_Oprho
+          Buffer_IIV(:,:,HpPInvB_)   = MHD_HpP
+          Buffer_IIV(:,:,OpPInvB_)   = MHD_OpP
        end if
 
     end if
@@ -864,8 +856,6 @@ contains
 
     if(allocated(MHD_lat_boundary)) deallocate(MHD_lat_boundary)
     if(allocated(MHD_SUM_vol))      deallocate(MHD_SUM_vol)
-    if(allocated(MHD_SUM_rho))      deallocate(MHD_SUM_rho)
-    if(allocated(MHD_SUM_p))        deallocate(MHD_SUM_p)
     if(allocated(MHD_tmp))          deallocate(MHD_tmp)
     if(allocated(MHD_Beq))          deallocate(MHD_Beq)
     if(allocated(MHD_Xeq))          deallocate(MHD_Xeq)
@@ -877,6 +867,9 @@ contains
        if(allocated(MHD_HpP))          deallocate(MHD_HpP)
        if(allocated(MHD_OpRho))        deallocate(MHD_OpRho)
        if(allocated(MHD_OpP))          deallocate(MHD_OpP)
+    else
+       if(allocated(MHD_SUM_rho))      deallocate(MHD_SUM_rho)
+       if(allocated(MHD_SUM_p))        deallocate(MHD_SUM_p)
     end if
 
     iSize = iSizeIn
@@ -901,30 +894,17 @@ contains
     call alloc_check(iError,"MHD_SUM_vol")
     MHD_SUM_vol = 0.
 
-    allocate( MHD_SUM_rho(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_SUM_rho")
-    MHD_SUM_rho = 0.
-
-    allocate( MHD_SUM_p(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_SUM_p")
-    MHD_SUM_p = 0.
-
     if(DoMultiFluidIMCoupling)then
-       allocate( MHD_Hprho(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_Hprho")
+       allocate( MHD_Hprho(isize,jsize), MHD_Oprho(isize,jsize), &
+            MHD_Hpp(isize,jsize), MHD_Opp(isize,jsize))
        MHD_Hprho = 0.
-
-       allocate( MHD_Oprho(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_Oprho")
        MHD_Oprho = 0.
-
-       allocate( MHD_Hpp(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_Hpp")
        MHD_Hpp = 0.
-
-       allocate( MHD_Opp(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_Opp")
        MHD_Opp = 0.
+    else
+       allocate(MHD_SUM_rho(isize,jsize), MHD_SUM_p(isize,jsize))
+       MHD_SUM_rho = 0.
+       MHD_SUM_p = 0.
     end if
 
     allocate( MHD_Beq(isize,jsize), stat=iError )
@@ -989,15 +969,16 @@ contains
        do j2=1,jsize+1
           j=j2; if(j2==jsize+1) j=1
           lonShift=0.; if(j2==jsize+1) lonShift=360.
-          tmpT=-1.; if(MHD_SUM_rho(i,j)>0.) &
-               tmpT = ((MHD_SUM_p(i,j)*Si2No_V(UnitP_))/(MHD_SUM_rho(i,j)*Si2No_V(UnitRho_))) &
-               * No2Si_V(UnitTemperature_)
           if(DoMultiFluidIMCoupling)then
              tmpHpT=-1.; if(MHD_Hprho(i,j)>0.) &
                   tmpHpT = ((MHD_Hpp(i,j)*Si2No_V(UnitP_))/(MHD_Hprho(i,j)*Si2No_V(UnitRho_))) &
                   * No2Si_V(UnitTemperature_)
              tmpOpT=-1.; if(MHD_Oprho(i,j)>0.) &
                   tmpOpT = ((MHD_Opp(i,j)*Si2No_V(UnitP_))/(MHD_Oprho(i,j)*Si2No_V(UnitRho_))) &
+                  * No2Si_V(UnitTemperature_)
+          else
+             tmpT=-1.; if(MHD_SUM_rho(i,j)>0.) &
+                  tmpT = ((MHD_SUM_p(i,j)*Si2No_V(UnitP_))/(MHD_SUM_rho(i,j)*Si2No_V(UnitRho_))) &
                   * No2Si_V(UnitTemperature_)
           end if
           tmpV1=0.; if(MHD_SUM_vol(i,j)>0.) &
@@ -1009,7 +990,6 @@ contains
                   MHD_lat_boundary(j), &
                   MHD_Xeq(i,j),MHD_Yeq(i,j), &
                   tmpV1,tmpV2, &
-                  MHD_SUM_rho(i,j),MHD_SUM_p(i,j),tmpT,&
                   MHD_Hprho(i,j), MHD_Hpp(i,j), tmpHpT, &
                   MHD_Oprho(i,j), MHD_Opp(i,j), tmpOpT,MHD_Beq(i,j), &
                   MHD_Fluxerror(i,j)
@@ -1081,16 +1061,17 @@ contains
 
     integer :: iLoc_I(1),iEquator,iNorthPole
 
-    where(MHD_SUM_vol>0.)
-       MHD_SUM_p   = MHD_SUM_p/MHD_SUM_vol
-       MHD_SUM_rho = MHD_SUM_rho/MHD_SUM_vol
-    end where
     if(DoMultiFluidIMCoupling)then
        where(MHD_SUM_vol>0.)
           MHD_Hprho = MHD_Hprho/MHD_SUM_vol
           MHD_Oprho = MHD_Oprho/MHD_SUM_vol
           MHD_Hpp   = MHD_Hpp/MHD_SUM_vol
           MHD_Opp   = MHD_Opp/MHD_SUM_vol
+       end where
+    else
+       where(MHD_SUM_vol>0.)
+          MHD_SUM_p   = MHD_SUM_p/MHD_SUM_vol
+          MHD_SUM_rho = MHD_SUM_rho/MHD_SUM_vol
        end where
     end if
 
@@ -1214,13 +1195,14 @@ contains
        MHD_Xeq    (1:i-1,j) = MHD_Xeq(i,j)
        MHD_Yeq    (1:i-1,j) = MHD_Yeq(i,j)
        MHD_SUM_vol(1:i-1,j) = -1.       
-       MHD_SUM_rho(1:i-1,j) = -1.
-       MHD_SUM_p  (1:i-1,j) = -1.
        if(DoMultiFluidIMCoupling)then
           MHD_HpRho(1:i-1,j) = -1.
           MHD_OpRho(1:i-1,j) = -1.
           MHD_HpP  (1:i-1,j) = -1.
           MHD_OpP  (1:i-1,j) = -1.
+       else
+          MHD_SUM_rho(1:i-1,j) = -1.
+          MHD_SUM_p  (1:i-1,j) = -1.
        endif
     end do
 
@@ -1230,26 +1212,29 @@ contains
     ! used in RCM, so only the magnetic unit is converted to SI units.
     ! Similarly Xeq and Yeq (equatorial crossing coords) remain in 
     ! normalized units.
-    where(MHD_SUM_vol > 0.)
-       MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
-       MHD_SUM_rho = MHD_SUM_rho * No2Si_V(UnitRho_)
-       MHD_SUM_p   = MHD_SUM_p   * No2Si_V(UnitP_)
-    elsewhere
-       MHD_SUM_vol = -1.
-       MHD_SUM_rho = -1.
-       MHD_SUM_p   = -1.
-    end where
     if(DoMultiFluidIMCoupling)then
        where(MHD_SUM_vol > 0.)
+          MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
           MHD_HpRho = MHD_HpRho * No2Si_V(UnitRho_)
           MHD_OpRho = MHD_OpRho * No2Si_V(UnitRho_)
           MHD_HpP   = MHD_HpP * No2Si_V(UnitP_)
           MHD_OpP   = MHD_OpP * No2Si_V(UnitP_)
        elsewhere
+          MHD_SUM_vol = -1.
           MHD_HpRho = -1.
           MHD_OpRho = -1.
           MHD_HpP   = -1.
           MHD_OpP   = -1.
+       end where
+    else
+       where(MHD_SUM_vol > 0.)
+          MHD_SUM_vol = MHD_SUM_vol / No2Si_V(UnitB_)
+          MHD_SUM_rho = MHD_SUM_rho * No2Si_V(UnitRho_)
+          MHD_SUM_p   = MHD_SUM_p   * No2Si_V(UnitP_)
+       elsewhere
+          MHD_SUM_vol = -1.
+          MHD_SUM_rho = -1.
+          MHD_SUM_p   = -1.
        end where
     end if
 
