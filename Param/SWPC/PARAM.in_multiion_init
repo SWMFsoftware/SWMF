@@ -346,8 +346,7 @@ IMCOUPLINGSMOOTH
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
 1e-5			pMinDim [nPa] H+
-1e-5			pMinDim [nPa] P+
-1e-5			pMinDim     extra for MhdIons
+1e-5			pMinDim [nPa] O+
 
 #SAVEPLOT
 4                       nPlotFiles
@@ -387,11 +386,6 @@ T			UseBorisCorrection
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IM ---------------------------------------------------------------
-
-! Composition is taken from multifluid MHD
-COMPOSITION
-0.9                      FractionH
-0.1                      FractionO
 
 ! Decay for RCM particle densities
 #DECAY
