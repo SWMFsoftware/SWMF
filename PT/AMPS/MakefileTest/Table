@@ -526,6 +526,8 @@ Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-p
 Name=Legacy_2dCG@@(0+valeriy+pleiades)
 Time=8
 
+ExeptionCode=SKIP{pgcc}@@(0+valeriy)
+
 Compile=
 >>>@echo "test_Legacy_2dCG_compile..." > test_Legacy_2dCG.diff
 >>>@cvs co AMPS_Legacy
