@@ -706,7 +706,7 @@ Time=9
 Compile=
 >>>@echo "test_CG-VIRTIS-Inversion-Legacy_compile..." >> test_CG-VIRTIS-Inversion-Legacy.diff
 >>>@cp Makefile Makefile.bak
->>>cd /Volumes/scratch/Yinsi/Nicolas/AMPS_IlluminationLOS;./ampsConfig.pl -input cg.input
+>>>cd /Volumes/Data01/Legacy/CG-VIRTIS-Inversion-Legacy;./ampsConfig.pl -input cg.input
 >>>@mv Makefile.bak Makefile
 >>>@echo "test_CG-VIRTIS-Inversion-Legacy_compile... done" >> test_CG-VIRTIS-Inversion-Legacy.diff
 
@@ -716,19 +716,19 @@ Rundir=
 
 Run=
 >>>@echo "test_CG-VIRTIS-Inversion-Legacy_run..." >> test_CG-VIRTIS-Inversion-Legacy.diff
->>>-@cd /Volumes/scratch/Yinsi/Nicolas/AMPS_IlluminationLOS;mpirun -np 8 ./amps
->>>-@cd /Volumes/scratch/Yinsi/Nicolas/VIRTIS_matlab_test;matlab -nojvm -nodisplay -nosplash -r "run Optimization_LOS_script.m;" 
+>>>-@cd /Volumes/Data01/Legacy/CG-VIRTIS-Inversion-Legacy;mpirun -np 8 ./amps
+>>>-@cd /Volumes/Data01/Legacy/VIRTIS_matlab_test;matlab -nojvm -nodisplay -nosplash -r "run Optimization_LOS_script.m;" 
 >>>@echo "test_CG-VIRTIS-Inversion-Legacy_run... done" >> test_CG-VIRTIS-Inversion-Legacy.diff
 
 Check=
 >>>@echo "test_CG-VIRTIS-Inversion-Legacy_check..." >> test_CG-VIRTIS-Inversion-Legacy.diff
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/scratch/Yinsi/Nicolas/AMPS_IlluminationLOS/Cmatrix.dat         \
->>>/Volumes/scratch/Yinsi/Nicolas/AMPS_IlluminationLOS/Cmatrix_ref.dat > test_CG-VIRTIS-Inversion-Legacy_Cmatrix.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/Data01/Legacy/CG-VIRTIS-Inversion-Legacy/Cmatrix.dat         \
+>>>/Volumes/Data01/Legacy/CG-VIRTIS-Inversion-Legacy/Cmatrix_ref.dat > test_CG-VIRTIS-Inversion-Legacy_Cmatrix.diff
 
 >>>ls -l test_CG-VIRTIS-Inversion-Legacy_Cmatrix.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/scratch/Yinsi/Nicolas/VIRTIS_matlab_test/x.dat \
->>>/Volumes/scratch/Yinsi/Nicolas/VIRTIS_matlab_test/x_ref.dat > test_CG-VIRTIS-Inversion-Legacy_matlab.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/Data01/Legacy/VIRTIS_matlab_test/x.dat \
+>>>/Volumes/Data01/Legacy/VIRTIS_matlab_test/x_ref.dat > test_CG-VIRTIS-Inversion-Legacy_matlab.diff
 >>>ls -l test_CG-VIRTIS-Inversion-Legacy_matlab.diff
 
 >>>@cat test_CG-VIRTIS-Inversion-Legacy_Cmatrix.diff > test_CG-VIRTIS-Inversion-Legacy.diff 
@@ -744,7 +744,7 @@ Time=5
 Compile=
 >>>@echo "test_CG-DFMS-Inversion-Legacy_compile..." >> test_CG-DFMS-Inversion-Legacy.diff
 >>>@cp Makefile Makefile.bak
->>>cd /Volumes/scratch/Yinsi/Nicolas/AMPS_CMatrix;./ampsConfig.pl -input cg.input
+>>>cd /Volumes/Data01/Legacy/CG-DFMS-Inversion-Legacy;./ampsConfig.pl -input cg.input
 >>>@mv Makefile.bak Makefile
 >>>@echo "test_CG-DFMS-Inversion-Legacy_compile... done" >> test_CG-DFMS-Inversion-Legacy.diff
 
@@ -754,18 +754,18 @@ Rundir=
 
 Run=
 >>>@echo "test_CG-DFMS-Inversion-Legacy_run..." >> test_CG-DFMS-Inversion-Legacy.diff
->>>-@cd /Volumes/scratch/Yinsi/Nicolas/AMPS_CMatrix;mpirun -np 8 ./amps 
->>>-@cd /Volumes/scratch/Yinsi/Nicolas/DFMS_matlab_test;matlab -nojvm -nodisplay -nosplash -r "run LM_harm_V5_noFig.m;"
+>>>-@cd /Volumes/Data01/Legacy/CG-DFMS-Inversion-Legacy;mpirun -np 8 ./amps 
+>>>-@cd /Volumes/Data01/Legacy/DFMS_matlab_test;matlab -nojvm -nodisplay -nosplash -r "run LM_harm_V5_noFig.m;"
 >>>@echo "test_CG-DFMS-Inversion-Legacy_run... done" >> test_CG-DFMS-Inversion-Legacy.diff
 
 Check=
 >>>@echo "test_CG-DFMS-Inversion-Legacy_check..." >> test_CG-DFMS-Inversion-Legacy.diff
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/scratch/Yinsi/Nicolas/AMPS_CMatrix/Cmatrix.dat         \
->>>/Volumes/scratch/Yinsi/Nicolas/AMPS_CMatrix/Cmatrix_ref.dat > test_CG-DFMS-Inversion-Legacy_Cmatrix.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/Data01/Legacy/CG-DFMS-Inversion-Legacy/Cmatrix.dat         \
+>>>/Volumes/Data01/Legacy/CG-DFMS-Inversion-Legacy/Cmatrix_ref.dat > test_CG-DFMS-Inversion-Legacy_Cmatrix.diff
 >>>ls -l test_CG-DFMS-Inversion-Legacy_Cmatrix.diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/scratch/Yinsi/Nicolas/DFMS_matlab_test/Activity_nDev16.txt         \
->>>/Volumes/scratch/Yinsi/Nicolas/DFMS_matlab_test/Activity_nDev16_ref.txt > test_CG-DFMS-Inversion-Legacy_matlab.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 /Volumes/Data01/Legacy/DFMS_matlab_test/Activity_nDev16.txt         \
+>>>/Volumes/Data01/Legacy/DFMS_matlab_test/Activity_nDev16_ref.txt > test_CG-DFMS-Inversion-Legacy_matlab.diff
 >>>ls -l test_CG-DFMS-Inversion-Legacy_matlab.diff
 
 >>>@cat test_CG-DFMS-Inversion-Legacy_Cmatrix.diff > test_CG-DFMS-Inversion-Legacy.diff 
