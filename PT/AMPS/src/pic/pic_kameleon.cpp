@@ -92,7 +92,7 @@ void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<
     sprintf(DataFileFullName,"%s/%s",PIC::CPLR::DATAFILE::path,fname);
     long status = kameleon.open(DataFileFullName);
 
-    printf("Loading file: %s...\n",DataFileFullName);
+    if (PIC::ThisThread==0) printf("$PREFIX: Loading file: %s\n",DataFileFullName);
 
     if (status != ccmc::FileReader::OK) exit(__LINE__, __FILE__, "ERROR: could'nt open Kameleon file");
     //allocate the interpolator and read the data file
