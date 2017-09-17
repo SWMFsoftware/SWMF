@@ -77,6 +77,11 @@ pro set_default_values
   common ask_param, $
      doask
   doask=0
+  
+; behavior on error: 0: stop in the unit (for debug), 2=return to main
+  common debug_param, $
+     onerror
+  onerror=2
 
   common fits_param, $
      noresize
@@ -420,6 +425,8 @@ pro read_data
 ;
 ;===========================================================================
 
+  common debug_param & on_error, onerror
+
   common ask_param, doask
   common getpict_param
   common plot_data
@@ -564,6 +571,8 @@ pro plot_data
 ;
 ;===========================================================================
 
+  common debug_param & on_error, onerror
+
   common getpict_param
   common plot_param
   common plotfunc_param
@@ -679,7 +688,7 @@ pro animate_data
 ;
 ;===========================================================================
 
-  on_error, 2
+  common debug_param & on_error, onerror
 
   common animate_param
   common getpict_param
@@ -1022,6 +1031,8 @@ pro slice_data
 ; slicedir=...   ; select slice direction (1, 2 or 3) (optional)
 ; slice_data
 
+  common debug_param & on_error, onerror
+
   common slice_param
   common ask_param
   common getpict_param
@@ -1258,7 +1269,7 @@ pro slice_data_restore
   ; restore the 3D state after slice_data
   ; this can be useful is slice_data crashed
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common slice_param
@@ -1279,7 +1290,7 @@ pro read_log_data
 ; Calculate and store log time into the logtime, logtime1 and logtime2
 ; arrays. The time units are set by timeunit.
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common getlog_param
   common log_data
@@ -1326,6 +1337,8 @@ end
 ;=============================================================================
 pro plot_log_data
 
+  common debug_param & on_error, onerror
+
   common ask_param
   common plotlog_param
   common log_data
@@ -1346,13 +1359,15 @@ end
 ;=============================================================================
 function reform2,x
 
+  common debug_param & on_error, onerror
+
   ;; Remove all degenerate dimensions from x
 
   if n_elements(x) lt 2 then return,x
 
-  siz=size(x)
-  siz=siz(1:siz(0))
-  return,reform(x,siz(where(siz gt 1)))
+  siz = size(x)
+  siz = siz(1:siz(0))
+  return, reform(x, siz(where(siz gt 1)))
 
 end
 
@@ -1364,6 +1379,8 @@ function log_time,wlog,wlognames,timeunit
 ; If the log file contains date and time, calculate time relative to
 ; the beginning of the first day. 
 ; This algorithm works only if the whole file is in the same month.
+
+  common debug_param & on_error, onerror
 
   nwlog = n_elements(wlognames)
   hours = 0.0*wlog(*,0)
@@ -1474,34 +1491,38 @@ end
 ;=============================================================================
 function log_func, wlog, varnames, varname, error
 
-    error = 0
-    ivar  = where(strlowcase(varnames) eq strlowcase(varname)) & ivar = ivar(0)
-    ; Variable is found, return with array
-    if ivar ge 0 then return, wlog(*,ivar)
+  common debug_param & on_error, onerror
 
-    ; Try calculating temperature or pressure
-    if varname eq 'T' then begin
+  error = 0
+  ivar  = where(strlowcase(varnames) eq strlowcase(varname)) & ivar = ivar(0)
+                                ; Variable is found, return with array
+  if ivar ge 0 then return, wlog(*,ivar)
+
+                                ; Try calculating temperature or pressure
+  if varname eq 'T' then begin
                                 ; Convert p[nPa]/n[/cc] to T[eV]
-        ivar = where( varnames eq 'p')   & ivar = ivar(0)
-        jvar = where( varnames eq 'rho') & jvar = jvar(0)
-        if ivar ge 0 and jvar ge 0 then $
-          return,6241.5*wlog(*,ivar)/wlog(*,jvar)
+     ivar = where( varnames eq 'p')   & ivar = ivar(0)
+     jvar = where( varnames eq 'rho') & jvar = jvar(0)
+     if ivar ge 0 and jvar ge 0 then $
+        return,6241.5*wlog(*,ivar)/wlog(*,jvar)
 
-    endif else if varname eq 'p' then begin
+  endif else if varname eq 'p' then begin
                                 ; Convert T[eV]*n[/cc] to p[nPa] to T[eV]
-        ivar = where( varnames eq 'T')   & ivar = ivar(0)
-        jvar = where( varnames eq 'rho') & jvar = jvar(0)
-        if ivar ge 0 and jvar ge 0 then $
-          return, wlog(*,ivar)*wlog(*,jvar)/6241.5
-    endif
+     ivar = where( varnames eq 'T')   & ivar = ivar(0)
+     jvar = where( varnames eq 'rho') & jvar = jvar(0)
+     if ivar ge 0 and jvar ge 0 then $
+        return, wlog(*,ivar)*wlog(*,jvar)/6241.5
+  endif
 
-    error = 1
-    return,0*wlog(*,0)
-    
+  error = 1
+  return,0*wlog(*,0)
+  
 end
 
 ;=============================================================================
 pro black_background
+
+  common debug_param & on_error, onerror
 
   !p.background =   0
   !p.color      = 255
@@ -1511,6 +1532,8 @@ end
 ;=============================================================================
 pro white_background
 
+  common debug_param & on_error, onerror
+
   !p.background = 255
   !p.color      =   0
 
@@ -1518,7 +1541,7 @@ end
 ;=============================================================================
 pro open_file,unit,filename,filetype
 
-   on_error,2
+   common debug_param & on_error, onerror
 
    i = strpos(filename,'.gz')
    if i gt 0 then begin
@@ -1544,9 +1567,9 @@ end
 ;=============================================================================
 pro get_file_types
 
-  common getpict_param
+  common debug_param & on_error, onerror
 
-  on_error,2
+  common getpict_param
 
   filetypes    = strarr(nfile)
   npictinfiles = intarr(nfile)
@@ -1628,11 +1651,11 @@ end
 ;=============================================================================
 pro show_head, ifile
 
+  common debug_param & on_error, onerror
+
   common ask_param
   common getpict_param
   common file_head
-
-  on_error,2
 
   print,   'filename   = ',filenames(ifile), format="(a,a)"
   print,   'filetype   = ',filetypes(ifile), format="(a,a)"
@@ -1655,7 +1678,7 @@ end
 ;=============================================================================
 pro get_file_head, unit, filename, filetype, pictsize=pictsize
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common file_head
 
@@ -1769,6 +1792,8 @@ end
 
 ;=============================================================================
 pro get_pict_hdf, filename, npict, error, getdata
+
+  common debug_param & on_error, onerror
 
   common file_head
   common plot_data
@@ -2006,6 +2031,8 @@ end
 ;=============================================================================
 pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
 
+  common debug_param & on_error, onerror
+
   GroupName = H5G_GET_OBJ_NAME_BY_IDX(group_id,iGroup)
   name= GroupName
   if iSpecies ge 0 then $
@@ -2028,7 +2055,7 @@ end
 ;=============================================================================
 pro get_pict, unit, filename, filetype, npict, error
   
-  on_error,2
+  common debug_param & on_error, onerror
 
   if filetype eq 'IPIC3D' then begin 
      error=0
@@ -2087,6 +2114,8 @@ end
 ;=============================================================================
 pro get_pict_log, unit
 
+  common debug_param & on_error, onerror
+
   common plot_data
   common file_head
 
@@ -2101,7 +2130,7 @@ end
 ;=============================================================================
 pro get_pict_asc,unit,npict
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common file_head
@@ -2154,7 +2183,7 @@ end
 ;=============================================================================
 pro get_pict_bin,unit,npict
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common file_head
@@ -2208,7 +2237,7 @@ end
 ;=============================================================================
 pro get_pict_real,unit,npict
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common file_head
   common plot_data
@@ -2262,7 +2291,7 @@ end
 ;=============================================================================
 pro asknum,prompt,var,doask
 
-   on_error,2
+   common debug_param & on_error, onerror
 
    if var eq 0 then read,PROMPT=prompt+'? ',var $
    else begin
@@ -2277,7 +2306,7 @@ end
 ;=============================================================================
 pro askstr,prompt,var,doask
 
-   on_error,2
+   common debug_param & on_error, onerror
 
    if var eq '' then read,PROMPT=prompt+'? ',var $
    else begin
@@ -2300,7 +2329,7 @@ pro string_to_array,s,a,n,sep,arraysyntax=arraysyntax, wildcard=wildcard
 ; If n is defined, fill up the rest of the array with the last defined element
 ; If n is defined but smaller than the number of elements in s, print a warning
 
-on_error,2
+common debug_param & on_error, onerror
 
 if keyword_set(wildcard) and stregex(s, '[?*[]', /boolean) then begin
    spawn,'/bin/ls '+s, a
@@ -2390,7 +2419,7 @@ pro arr2arr,a,n
 ; extend it to an array of n elements.
 ; If a has more elements than n, reduce the number of elements to n.
 
-on_error,2
+common debug_param & on_error, onerror
 
 k = n_elements(a)
 if      k gt n then a = a(0:n-1) $                    ; truncate array
@@ -2405,7 +2434,7 @@ pro read_plot_param
   common plotfunc_param
   common file_head, ndim
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   ;; Determine dimension of plots based on cut or ndim,
   ;; calculate reduced cut0 array by eliminating degenerate dimensions
@@ -2454,7 +2483,7 @@ end
 ;===========================================================================
 pro read_transform_param
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common ask_param
   common file_head
@@ -2558,80 +2587,88 @@ end
 ;===========================================================================
 pro getvectors,nvector,vectors
 
-if nvector eq 0 then begin
-    print,'Vector variables to transform for WREG'
-    asknum,'nvector',nvector,doask
-    if nvector gt 0 then begin
+  common debug_param & on_error, onerror
+
+
+  if nvector eq 0 then begin
+     print,'Vector variables to transform for WREG'
+     asknum,'nvector',nvector,doask
+     if nvector gt 0 then begin
         vectors=intarr(nvector)
         read,PROMPT='Indices of first components in w? ',vectors
-    endif
-endif
+     endif
+  endif
 
 end
 
 ;===========================================================================
 pro do_my_transform,ifile,variables,x,w,xreg,wreg,usereg
 
-; this transformation is useful for plotting RCM files in the
-; equatorial plane
+  ;; this transformation is useful for plotting RCM files in the
+  ;; equatorial plane
 
-; copy x and y coordinates from w to x
-x = w(*,*,0:1)
+  common debug_param & on_error, onerror
 
-; change coordinate names
-variables(0:1) = ['x','y']
+  ;; copy x and y coordinates from w to x
+  x = w(*,*,0:1)
 
-; use x and w (not xreg and wreg)
-usereg = 0
+  ;; change coordinate names
+  variables(0:1) = ['x','y']
 
-; Another example: convert 2nd and 3rd indexes from radian to degrees in 3D
-; check first if the conversion has been done already
-;if max(x(*,*,*,1:2)) lt 10.0 then $
-;  x(*,*,*,1:2) = x(*,*,*,1:2)*180/!pi
+  ;; use x and w (not xreg and wreg)
+  usereg = 0
+
+  ;; Another example: convert 2nd and 3rd indexes from radian to degrees in 3D
+  ;; check first if the conversion has been done already
+  ;if max(x(*,*,*,1:2)) lt 10.0 then $
+  ;  x(*,*,*,1:2) = x(*,*,*,1:2)*180/!pi
 
 end
 
 ;===========================================================================
 pro do_transform,ifile
 
-; transfrom x, w eithr in-place or to xreg, wreg
+  ;; transfrom x, w eithr in-place or to xreg, wreg
 
-common ask_param, doask
-common file_head ; gencoord
-common plot_data
-common transform_param
+  common debug_param & on_error, onerror
 
-usereg = (transform eq 'unpolar') or $
-  (gencoord and (transform eq 'polar' or transform eq 'regular' $
-                 or transform eq 'sphere'))
 
-if dotransform eq 'n' and (not usereg or keyword_set(wreg)) then return
+  common ask_param, doask
+  common file_head              ; gencoord
+  common plot_data
+  common transform_param
 
-if transform eq 'my' or transform eq 'm' then $
-  do_my_transform,ifile,variables,x,w,xreg,wreg,usereg $
-else if usereg then case transform of
-    'regular': make_regular_grid
-    'polar'  :begin
+  usereg = (transform eq 'unpolar') or $
+           (gencoord and (transform eq 'polar' or transform eq 'regular' $
+                          or transform eq 'sphere'))
+
+  if dotransform eq 'n' and (not usereg or keyword_set(wreg)) then return
+
+  if transform eq 'my' or transform eq 'm' then $
+     do_my_transform,ifile,variables,x,w,xreg,wreg,usereg $
+  else if usereg then case transform of
+     'regular': make_regular_grid
+     'polar'  :begin
         make_polar_grid
         variables(0:1)=['r','phi']
-    end
-    'sphere' :begin
+     end
+     'sphere' :begin
         make_sphere_grid
         variables(0:2)=['r','theta','phi']
-    end
-    'unpolar':begin
+     end
+     'unpolar':begin
         make_unpolar_grid
         variables(0:1)=['x','y']
-    end
-    else     :print,'Unknown value for transform:',transform
-endcase
+     end
+     else     :print,'Unknown value for transform:',transform
+  endcase
 
 end
 
 ;===========================================================================
 pro read_limits
 
-   on_error,2
+   common debug_param & on_error, onerror
    
    common ask_param, doask
    common plotfunc_param
@@ -2658,7 +2695,7 @@ end
 ;===========================================================================
 pro get_limits,first
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common ask_param, doask
   common plot_data
@@ -2700,21 +2737,22 @@ end
 ;==============================================================================
 function get_grid_data,x,y,data,nxreg,xreglimits,triangles,wregpad
 
-return, griddata(x,y,data,$
-        dimension=nxreg,$
-	start=xreglimits(0:1),$
-	delta=[(xreglimits(2)-xreglimits(0))/(nxreg(0)-1),  $
-               (xreglimits(3)-xreglimits(1))/(nxreg(1)-1)] ,$
-        triangles=triangles,$
+  common debug_param & on_error, onerror
+
+  return, griddata(x,y,data,$
+                   dimension=nxreg,$
+                   start=xreglimits(0:1),$
+                   delta=[(xreglimits(2)-xreglimits(0))/(nxreg(0)-1),  $
+                          (xreglimits(3)-xreglimits(1))/(nxreg(1)-1)] ,$
+                   triangles=triangles,$
 ;        method='NearestNeighbor',$
 ;        method='Linear',$
-        method='InverseDistance',$
-       smoothing=0.5,$
-       max_per_sector=4, $
-        missing=wregpad $
-        )
+                   method='InverseDistance',$
+                   smoothing=0.5,$
+                   max_per_sector=4, $
+                   missing=wregpad $
+                  )
 end
-
 
 ;===========================================================================
 pro make_regular_grid
@@ -2733,279 +2771,289 @@ pro make_regular_grid
 ;
 ;    qreg(*,*)=trigrid(x(*,*,0),x(*,*,1),q,triangles,[0,0],xreglimits)
 
-   on_error,2
+  common debug_param & on_error, onerror
 
-   common plot_data
-   common transform_param
-   common file_head;  nw
+  common plot_data
+  common transform_param
+  common file_head              ;  nw
 
-   ;; Floating underflow is not a real error, the message is suppressed
-   err=check_math(1,1)
+  ;; Floating underflow is not a real error, the message is suppressed
+  err=check_math(1,1)
 
-   xx=x(*,*,0)
-   yy=x(*,*,1)
+  xx=x(*,*,0)
+  yy=x(*,*,1)
 
-   ;; Test distribution. If you uncomment the next lines you can
-   ;; take a look at the different "shock wave" representation
-   ;; on your grid for the 0-th variable (usually rho)
-   ;; for i=0L,n_elements(xx)-1 do $
-   ;;   if abs(xx(i))-0.2*abs(yy(i)) gt 0.01 then $
-   ;;       w(i,*,0)=2. else w(i,*,0)=1.
+  ;; Test distribution. If you uncomment the next lines you can
+  ;; take a look at the different "shock wave" representation
+  ;; on your grid for the 0-th variable (usually rho)
+  ;; for i=0L,n_elements(xx)-1 do $
+  ;;   if abs(xx(i))-0.2*abs(yy(i)) gt 0.01 then $
+  ;;       w(i,*,0)=2. else w(i,*,0)=1.
 
-   ;; Check if nxreg==nxreg_old and xreglimits==xreglimits_old and x==x_old
-   newx=1
-   nrectan=0
-   if symmtri ne 1 and symmtri ne 2 then $
-   if n_elements(nxreg_old) eq n_elements(nxreg) then $
-   if max(abs(nxreg_old-nxreg)) eq 0 then $
-   if n_elements(xreglimits) eq n_elements(xreglimits_old) then $
-   if max(abs(xreglimits-xreglimits_old)) eq 0 then $
-   if n_elements(x_old) eq n_elements(x) then $
-   if max(abs(x_old-x)) eq 0 then newx=0
+  ;; Check if nxreg==nxreg_old and xreglimits==xreglimits_old and x==x_old
+  newx=1
+  nrectan=0
+  if symmtri ne 1 and symmtri ne 2 then $
+     if n_elements(nxreg_old) eq n_elements(nxreg) then $
+        if max(abs(nxreg_old-nxreg)) eq 0 then $
+           if n_elements(xreglimits) eq n_elements(xreglimits_old) then $
+              if max(abs(xreglimits-xreglimits_old)) eq 0 then $
+                 if n_elements(x_old) eq n_elements(x) then $
+                    if max(abs(x_old-x)) eq 0 then newx=0
 
-   if xreglimits(0) eq xreglimits(2) then begin
-      xreglimits(0)=min(xx) & xreglimits(2)=max(xx)
-   endif
-   if xreglimits(1) eq xreglimits(3) then begin
-      xreglimits(1)=min(yy) & xreglimits(3)=max(yy)
-   endif
+  if xreglimits(0) eq xreglimits(2) then begin
+     xreglimits(0)=min(xx) & xreglimits(2)=max(xx)
+  endif
+  if xreglimits(1) eq xreglimits(3) then begin
+     xreglimits(1)=min(yy) & xreglimits(3)=max(yy)
+  endif
 
-   if newx then begin
-      print,'Triangulating...'
-      x_old=x
-      nxreg_old=nxreg
-      xreglimits_old=xreglimits
+  if newx then begin
+     print,'Triangulating...'
+     x_old=x
+     nxreg_old=nxreg
+     xreglimits_old=xreglimits
 
-      triangulate,float(xx),float(yy),triangles
+     triangulate,float(xx),float(yy),triangles
 
-      ; calculate conjugate triangulation and rectangles if required
-      if symmtri eq 1 or symmtri eq 2 then $
-          symm_triangles,xx,yy,triangles,$
-                         triangconj,ntriangles,rectangles,nrectan
+                                ; calculate conjugate triangulation and rectangles if required
+     if symmtri eq 1 or symmtri eq 2 then $
+        symm_triangles,xx,yy,triangles,$
+                       triangconj,ntriangles,rectangles,nrectan
 
-      xreg=dblarr(nxreg(0),nxreg(1),2)
-      dx=(xreglimits(2)-xreglimits(0))/(nxreg(0)-1)
-      dy=(xreglimits(3)-xreglimits(1))/(nxreg(1)-1)
-      for i=0,nxreg(1)-1 do xreg(*,i,0)=dx*indgen(nxreg(0))+xreglimits(0)
-      for i=0,nxreg(0)-1 do xreg(i,*,1)=dy*indgen(nxreg(1))+xreglimits(1)
+     xreg=dblarr(nxreg(0),nxreg(1),2)
+     dx=(xreglimits(2)-xreglimits(0))/(nxreg(0)-1)
+     dy=(xreglimits(3)-xreglimits(1))/(nxreg(1)-1)
+     for i=0,nxreg(1)-1 do xreg(*,i,0)=dx*indgen(nxreg(0))+xreglimits(0)
+     for i=0,nxreg(0)-1 do xreg(i,*,1)=dy*indgen(nxreg(1))+xreglimits(1)
 
-   endif
-   if n_elements(wregpad) ne nw then begin
-      wregpad=dblarr(nw)
-      for iw=0,nw-1 do begin
-         wmax=max(w(*,*,iw))
-         wmin=min(w(*,*,iw))
-         if wmax*wmin lt 0 then wregpad(iw)=0 $
-         else                   wregpad(iw)=wmin-0.1*(wmax-wmin)
-      endfor
-   endif
+  endif
+  if n_elements(wregpad) ne nw then begin
+     wregpad=dblarr(nw)
+     for iw=0,nw-1 do begin
+        wmax=max(w(*,*,iw))
+        wmin=min(w(*,*,iw))
+        if wmax*wmin lt 0 then wregpad(iw)=0 $
+        else                   wregpad(iw)=wmin-0.1*(wmax-wmin)
+     endfor
+  endif
 
-   wreg=dblarr(nxreg(0),nxreg(1),nw)
+  wreg=dblarr(nxreg(0),nxreg(1),nw)
 
-   case 1 of
+  case 1 of
 
-   symmtri eq 3: for iw=0,nw-1 do $
-      wreg(*,*,iw)=get_grid_data(xx, yy, reform(w(*,*,iw)), nxreg,xreglimits,$
-                                 triangles, wregpad(iw))
+     symmtri eq 3: for iw=0,nw-1 do $
+        wreg(*,*,iw)=get_grid_data(xx, yy, reform(w(*,*,iw)), nxreg,xreglimits,$
+                                   triangles, wregpad(iw))
 
-   symmtri eq 0 or (symmtri lt 3 and nrectan eq 0): for iw=0,nw-1 do $
-      wreg(*,*,iw)=trigrid(xx,yy,w(*,*,iw),triangles, $
-           [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1),missing=wregpad(iw))
+     symmtri eq 0 or (symmtri lt 3 and nrectan eq 0): for iw=0,nw-1 do $
+        wreg(*,*,iw)=trigrid(xx,yy,w(*,*,iw),triangles, $
+                             [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1),missing=wregpad(iw))
 
-   symmtri eq 1 and nrectan gt 0: $
-      fit_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
-           triangles,ntriangles,rectangles
+     symmtri eq 1 and nrectan gt 0: $
+        fit_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
+                      triangles,ntriangles,rectangles
 
-   symmtri eq 2 and nrectan gt 0: $
-      average_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
-           triangles,triangconj
+     symmtri eq 2 and nrectan gt 0: $
+        average_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
+                          triangles,triangconj
 
-   endcase
+  endcase
 
-   err=check_math(0,0)
-   ;Floating underflow is not a real error, the message is suppressed
-   if err ne 32 and err ne 0 then print,'Math error in regulargrid:',err
+  err=check_math(0,0)
+                                ;Floating underflow is not a real error, the message is suppressed
+  if err ne 32 and err ne 0 then print,'Math error in regulargrid:',err
 
 end
 
 ;==============================================================================
 pro symm_triangles,xx,yy,triangles,$
-         triangconj,ntriangles,rectangles,nrectan
+                   triangconj,ntriangles,rectangles,nrectan
 
-   ntriangles=n_elements(triangles(0,*))
-   print,'Triangulation includes ',ntriangles, '  triangles'
-   print,'Checking triangulation ...'
+  common debug_param & on_error, onerror
 
-   npoints=n_elements(xx)
 
-   dist=dblarr(npoints-1)
-   for i=0L,npoints-2 do $
-      dist(i)=(xx(i+1)-xx(i))^2+(yy(i+1)-yy(i))^2
-   dist2=min(dist)
-   rectangles=lonarr(3,ntriangles)
-   ;Structure of the rectangles array:
-   ;If(rectangles(0,i)=1 then the Ith triangle from the triangles array
-   ;is rectangular one
-   tmp1=lonarr(3) & nrec_tri=0
-   for i=0L,ntriangles-1 do begin
-      if abs((xx(triangles(0,i))-xx(triangles(1,i)))*$
-         (xx(triangles(1,i))-xx(triangles(2,i)))+$
-         (yy(triangles(0,i))-yy(triangles(1,i)))*$
-         (yy(triangles(1,i))-yy(triangles(2,i)))) lt 0.00001*dist2 $
-      then begin
-	 rectangles(0,i)=1
-         tmp1(0)=triangles(1,i)
-         if xx(triangles(0,i)) lt xx(triangles(2,i)) then begin
-            tmp1(1)=triangles(0,i)
-            tmp1(2)=triangles(2,i)
-         endif else begin
-            tmp1(1)=triangles(2,i)
-            tmp1(2)=triangles(0,i)
-         endelse
-         for j=0,2 do triangles(j,i)=tmp1(j)
-      endif
+  ntriangles=n_elements(triangles(0,*))
+  print,'Triangulation includes ',ntriangles, '  triangles'
+  print,'Checking triangulation ...'
 
-      if abs((xx(triangles(0,i))-xx(triangles(1,i)))*$
-         (xx(triangles(0,i))-xx(triangles(2,i)))+$
-         (yy(triangles(0,i))-yy(triangles(1,i)))*$
-         (yy(triangles(0,i))-yy(triangles(2,i)))) lt 0.00001*dist2 $
-      then begin
-         rectangles(0,i)=1
-         tmp1(0)=triangles(0,i)
-         if xx(triangles(1,i)) lt xx(triangles(2,i)) then begin
-            tmp1(1)=triangles(1,i)
-            tmp1(2)=triangles(2,i)
-         endif else begin
-            tmp1(1)=triangles(2,i)
-            tmp1(2)=triangles(1,i)
-         endelse
-         for j=0,2 do triangles(j,i)=tmp1(j)
-      endif
+  npoints=n_elements(xx)
 
-      if abs((xx(triangles(0,i))-xx(triangles(2,i)))*$
-         (xx(triangles(1,i))-xx(triangles(2,i)))+$
-         (yy(triangles(0,i))-yy(triangles(2,i)))*$
-         (yy(triangles(1,i))-yy(triangles(2,i)))) lt 0.00001*dist2 $
-      then begin
-         rectangles(0,i)=1
-         tmp1(0)=triangles(2,i)
-         if xx(triangles(0,i)) lt xx(triangles(1,i)) then begin
-            tmp1(1)=triangles(0,i)
-            tmp1(2)=triangles(1,i)
-         endif else begin
-            tmp1(1)=triangles(1,i)
-            tmp1(2)=triangles(0,i)
-         endelse
-         for j=0,2 do triangles(j,i)=tmp1(j)
-      endif
-   endfor
-   ;Rectangles(1,i) is not equal to zero if the ith rectangular triandgle
-   ;has a common long side with the jth rectangular triangle. In this case
-   ;rectangles(2,i)=j
-   nrectan=0L
-   for i=0L,ntriangles-1 do begin
+  dist=dblarr(npoints-1)
+  for i=0L,npoints-2 do $
+     dist(i)=(xx(i+1)-xx(i))^2+(yy(i+1)-yy(i))^2
+  dist2=min(dist)
+  rectangles=lonarr(3,ntriangles)
+  ;; Structure of the rectangles array:
+  ;; If(rectangles(0,i)=1 then the Ith triangle from the triangles array
+  ;; is rectangular one
+  tmp1=lonarr(3) & nrec_tri=0
+  for i=0L,ntriangles-1 do begin
+     if abs((xx(triangles(0,i))-xx(triangles(1,i)))*$
+            (xx(triangles(1,i))-xx(triangles(2,i)))+$
+            (yy(triangles(0,i))-yy(triangles(1,i)))*$
+            (yy(triangles(1,i))-yy(triangles(2,i)))) lt 0.00001*dist2 $
+     then begin
+        rectangles(0,i)=1
+        tmp1(0)=triangles(1,i)
+        if xx(triangles(0,i)) lt xx(triangles(2,i)) then begin
+           tmp1(1)=triangles(0,i)
+           tmp1(2)=triangles(2,i)
+        endif else begin
+           tmp1(1)=triangles(2,i)
+           tmp1(2)=triangles(0,i)
+        endelse
+        for j=0,2 do triangles(j,i)=tmp1(j)
+     endif
+
+     if abs((xx(triangles(0,i))-xx(triangles(1,i)))*$
+            (xx(triangles(0,i))-xx(triangles(2,i)))+$
+            (yy(triangles(0,i))-yy(triangles(1,i)))*$
+            (yy(triangles(0,i))-yy(triangles(2,i)))) lt 0.00001*dist2 $
+     then begin
+        rectangles(0,i)=1
+        tmp1(0)=triangles(0,i)
+        if xx(triangles(1,i)) lt xx(triangles(2,i)) then begin
+           tmp1(1)=triangles(1,i)
+           tmp1(2)=triangles(2,i)
+        endif else begin
+           tmp1(1)=triangles(2,i)
+           tmp1(2)=triangles(1,i)
+        endelse
+        for j=0,2 do triangles(j,i)=tmp1(j)
+     endif
+
+     if abs((xx(triangles(0,i))-xx(triangles(2,i)))*$
+            (xx(triangles(1,i))-xx(triangles(2,i)))+$
+            (yy(triangles(0,i))-yy(triangles(2,i)))*$
+            (yy(triangles(1,i))-yy(triangles(2,i)))) lt 0.00001*dist2 $
+     then begin
+        rectangles(0,i)=1
+        tmp1(0)=triangles(2,i)
+        if xx(triangles(0,i)) lt xx(triangles(1,i)) then begin
+           tmp1(1)=triangles(0,i)
+           tmp1(2)=triangles(1,i)
+        endif else begin
+           tmp1(1)=triangles(1,i)
+           tmp1(2)=triangles(0,i)
+        endelse
+        for j=0,2 do triangles(j,i)=tmp1(j)
+     endif
+  endfor
+                                ;Rectangles(1,i) is not equal to zero if the ith rectangular triandgle
+                                ;has a common long side with the jth rectangular triangle. In this case
+                                ;rectangles(2,i)=j
+  nrectan=0L
+  for i=0L,ntriangles-1 do begin
      if rectangles(0,i) gt 0 then begin
         nrec_tri=nrec_tri+1
         if rectangles(1,i) eq 0 then begin
-        for j=i+1L,ntriangles-1 do begin
-           if rectangles(0,j) gt 0 then $
-           if triangles(1,i) eq triangles(1,j) then $
-           if triangles(2,i) eq triangles(2,j) then begin
-              nrectan=nrectan+1
-              rectangles(1,i)=1
-              rectangles(2,i)=j
-              rectangles(1,j)=1
-              rectangles(2,j)=i
-              goto,out
-           endif
-        endfor
-        out:
+           for j=i+1L,ntriangles-1 do begin
+              if rectangles(0,j) gt 0 then $
+                 if triangles(1,i) eq triangles(1,j) then $
+                    if triangles(2,i) eq triangles(2,j) then begin
+                 nrectan=nrectan+1
+                 rectangles(1,i)=1
+                 rectangles(2,i)=j
+                 rectangles(1,j)=1
+                 rectangles(2,j)=i
+                 goto,out
+              endif
+           endfor
+           out:
         endif
      endif
-   endfor
+  endfor
 
-   if nrectan ne 0  then begin
-      print,'Among    ',nrec_tri, '  rectangular triangles'
-      print,'there are',nrectan, '   pairs which have common circumcircle'
-      tmp2=lonarr(4)
-      ndiag1=0
-      ndiag2=0
-      triangconj=lonarr(3,ntriangles)
-      for i=0L,ntriangles-1 do begin
-         if rectangles(1,i) eq 1 then begin
-            if rectangles(2,i) gt i then begin
-               for j=0,2 do tmp2(j)=triangles(j,i)
-               tmp2(3)=triangles(0,rectangles(2,i))
-               if yy(tmp2(1)) lt yy(tmp2(2)) then ndiag1=ndiag1+1 else $
-                  ndiag2=ndiag2+1
-               triangconj(0,i)=tmp2(1)
-               triangconj(1,i)=tmp2(0)
-               triangconj(2,i)=tmp2(3)
-               triangconj(0,rectangles(2,i))=tmp2(2)
-               triangconj(1,rectangles(2,i))=tmp2(0)
-               triangconj(2,rectangles(2,i))=tmp2(3)
-            endif
-         endif else for j=0,2 do triangconj(j,i)=triangles(j,i)
-      endfor
-      print,' Among them ',ndiag1, ' are formed by the triangles,'
-      print,' having the common side which is oriented as /////'
-      print,' and ',ndiag2, ' have the triangles common side,'
-      print,' oriented as \\\\\'
-      print,' Calculating the conjugated triangulation ...'
-   endif
+  if nrectan ne 0  then begin
+     print,'Among    ',nrec_tri, '  rectangular triangles'
+     print,'there are',nrectan, '   pairs which have common circumcircle'
+     tmp2=lonarr(4)
+     ndiag1=0
+     ndiag2=0
+     triangconj=lonarr(3,ntriangles)
+     for i=0L,ntriangles-1 do begin
+        if rectangles(1,i) eq 1 then begin
+           if rectangles(2,i) gt i then begin
+              for j=0,2 do tmp2(j)=triangles(j,i)
+              tmp2(3)=triangles(0,rectangles(2,i))
+              if yy(tmp2(1)) lt yy(tmp2(2)) then ndiag1=ndiag1+1 else $
+                 ndiag2=ndiag2+1
+              triangconj(0,i)=tmp2(1)
+              triangconj(1,i)=tmp2(0)
+              triangconj(2,i)=tmp2(3)
+              triangconj(0,rectangles(2,i))=tmp2(2)
+              triangconj(1,rectangles(2,i))=tmp2(0)
+              triangconj(2,rectangles(2,i))=tmp2(3)
+           endif
+        endif else for j=0,2 do triangconj(j,i)=triangles(j,i)
+     endfor
+     print,' Among them ',ndiag1, ' are formed by the triangles,'
+     print,' having the common side which is oriented as /////'
+     print,' and ',ndiag2, ' have the triangles common side,'
+     print,' oriented as \\\\\'
+     print,' Calculating the conjugated triangulation ...'
+  endif
 
 end
 
 ;==============================================================================
 pro fit_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
-        triangles,ntriangles,rectangles
+                  triangles,ntriangles,rectangles
 
-   tmp2=lonarr(4)
+  common debug_param & on_error, onerror
 
-   for iw=0,nw-1 do begin
-      data=reform(w(*,*,iw))
-      print,'Calculating the fitting triangulization for iw=',iw
-      for i=0L,ntriangles-1 do begin
-         if rectangles(1,i) eq 1 then begin
-            if rectangles(2,i) gt i then begin
-               tmp2(0:2)=triangles(0:2,i)
-               tmp2(3)  =triangles(0,rectangles(2,i))
-               if abs(data(tmp2(0))-data(tmp2(3))) lt $
-                  abs(data(tmp2(1))-data(tmp2(2))) then begin
-                  triangles(0,i)=tmp2(1)
-                  triangles(1,i)=tmp2(0)
-                  triangles(2,i)=tmp2(3)
-                  triangles(0,rectangles(2,i))=tmp2(2)
-                  triangles(1,rectangles(2,i))=tmp2(0)
-                  triangles(2,rectangles(2,i))=tmp2(3)
-               endif
-            endif
-         endif
-      endfor
-      wreg(*,*,iw)=trigrid(xx,yy,data,triangles, $
-         [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1),missing=wregpad(iw))
-   endfor
-   print,'Using fitted triangulation'
+  tmp2=lonarr(4)
+
+  for iw=0,nw-1 do begin
+     data=reform(w(*,*,iw))
+     print,'Calculating the fitting triangulization for iw=',iw
+     for i=0L,ntriangles-1 do begin
+        if rectangles(1,i) eq 1 then begin
+           if rectangles(2,i) gt i then begin
+              tmp2(0:2)=triangles(0:2,i)
+              tmp2(3)  =triangles(0,rectangles(2,i))
+              if abs(data(tmp2(0))-data(tmp2(3))) lt $
+                 abs(data(tmp2(1))-data(tmp2(2))) then begin
+                 triangles(0,i)=tmp2(1)
+                 triangles(1,i)=tmp2(0)
+                 triangles(2,i)=tmp2(3)
+                 triangles(0,rectangles(2,i))=tmp2(2)
+                 triangles(1,rectangles(2,i))=tmp2(0)
+                 triangles(2,rectangles(2,i))=tmp2(3)
+              endif
+           endif
+        endif
+     endfor
+     wreg(*,*,iw)=trigrid(xx,yy,data,triangles, $
+                          [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1),missing=wregpad(iw))
+  endfor
+  print,'Using fitted triangulation'
 end
 
 ;==============================================================================
 pro average_triangles,w,wreg,wregpad,nw,xx,yy,nxreg,xreglimits,$
-        triangles,triangconj
+                      triangles,triangconj
 
-   wconj=dblarr(nxreg(0),nxreg(1))
+  common debug_param & on_error, onerror
 
-   for iw=0,nw-1 do begin
-      ; Calculate wreg with original triangulation
-      wreg(*,*,iw)=trigrid(xx,yy,w(*,*,iw),triangles, $
-            [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1),missing=wregpad(iw))
 
-      ; Calculate wconj with conjugated triangulation
-      wconj       =trigrid(xx,yy,w(*,*,iw),triangconj, $
-            [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1),missing=wregpad(iw))
+  wconj=dblarr(nxreg(0),nxreg(1))
 
-      wreg(*,*,iw) = 0.5*(wreg(*,*,iw) + wconj)
-   endfor
-   print,'Using averaged conjugated triangulation'
+  for iw=0,nw-1 do begin
+     ;; Calculate wreg with original triangulation
+     wreg(*,*,iw)=trigrid(xx,yy,w(*,*,iw),triangles, $
+                          [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1), $
+                          missing=wregpad(iw))
+
+     ;; Calculate wconj with conjugated triangulation
+     wconj = trigrid(xx,yy,w(*,*,iw),triangconj, $
+                     [0.,0.],xreglimits,nx=nxreg(0),ny=nxreg(1), $
+                     missing=wregpad(iw))
+
+     wreg(*,*,iw) = 0.5*(wreg(*,*,iw) + wconj)
+  endfor
+  print,'Using averaged conjugated triangulation'
 
 end
 ;===========================================================================
@@ -3014,7 +3062,7 @@ pro make_polar_grid
 ;  Transform 2D or 3D grid and vector variables 
 ;  from Cartesian to cylindrical components
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common file_head  ; ndim
 
@@ -3033,7 +3081,7 @@ pro make_polar_grid2
 ;  Transform 2D grid and vector variables 
 ;  from x and y to radial and phi components
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common vector_param
@@ -3068,7 +3116,7 @@ pro make_polar_grid3
 ;
 ;    Transform 3D vector variables from x,y,z to radial,phi,z components
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common vector_param
@@ -3098,7 +3146,7 @@ pro make_sphere_grid
 ;
 ;    Transform vector variables from x,y,z to radial,phi,z components
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common vector_param
@@ -3148,7 +3196,7 @@ pro make_unpolar_grid
 ;
 ; Transform 2D and 3D vector variables cylindrical to Cartesian components
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common file_head ; ndim
 
@@ -3170,7 +3218,7 @@ pro make_unpolar_grid2
 ;    Transform 2D grid (and vector variables)
 ;    from radial and phi to x and y components
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common vector_param
@@ -3202,7 +3250,7 @@ pro make_unpolar_grid3
 ;  Transform 3D grid (and vector variables)
 ;  from radial, phi,z to x, y, z components
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plot_data
   common vector_param
@@ -3228,7 +3276,8 @@ end
 ;===========================================================================
 pro getaxes,ndim,x,xx,yy,zz,cut,cut0,rSlice,plotdim,variables
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
+
   case ndim of
      1: xx=x
      2: begin
@@ -3307,6 +3356,8 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
 
   ;; Also calculate convenient constants ti0, cs0 ... for typical formulas.
   ;; See file "defaults" for definitions and usage
+
+  common debug_param & on_error, onerror
 
   common file_head
   common phys_units
@@ -3488,6 +3539,8 @@ end
 pro show_units
 ;===========================================================================
 
+  common debug_param & on_error, onerror
+
   common file_head
   common phys_units
   common phys_convert
@@ -3525,7 +3578,7 @@ end
 ;===========================================================================
 pro get_func,ifunc,x,w
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   common plotfunc_param
   common plot_param
@@ -3554,7 +3607,7 @@ end
 ;===========================================================================
 pro plot_func
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   common transform_param, usereg
   common plot_data
@@ -4132,7 +4185,7 @@ end
 ;===========================================================================
 pro putbottom,multix,multiy,ix,iy,info,nx,it,time
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   t    = round(time)
   sec  = t mod 60
@@ -4190,7 +4243,7 @@ end
 ;===========================================================================
 pro putheader,multix,multiy,ix,iy,ninfo,headline,nx
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   if ninfo lt 1 then return
   info=strtrim(headline,2)
@@ -4205,7 +4258,7 @@ function diff1,a,x
 ; using 2nd order centered differencing
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   siz=size(a)
   ndim=siz(0)
@@ -4239,7 +4292,7 @@ function laplace,a,x,y,z
 ; Take Laplace of "a" in 1 or 2D with respect to "x" (and "y") if present.
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   siz=size(a)
   ndim=siz(0)
@@ -4278,7 +4331,7 @@ function laplace2,a,x,y
 ; Take Laplace of "a" in 2D with respect to "x" and "y" (if present).
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   siz=size(a)
   ndim=siz(0)
@@ -4325,7 +4378,7 @@ function laplace3,a,x,y,z
 ; Take Laplace of "a" in 2D with respect to "x", "y" and "z" (if present).
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   siz=size(a)
   ndim=siz(0)
@@ -4385,7 +4438,7 @@ function diff2,direction,a,x
 ; using 2nd order centered differencing
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   siz=size(a)
   ndim=siz(0)
@@ -4445,7 +4498,7 @@ function diff4,direction,a,x
 ; using 4th order centered differencing
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   siz=size(a)
   if siz(0) ne 2 then begin
@@ -4494,7 +4547,7 @@ function diff3,direction,a,x
 ; using IDL's 1D deriv() function
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   siz=size(a)
   if siz(0) ne 2 then begin
@@ -4516,7 +4569,7 @@ function minmod,a,b
 ;
 ; Calculate minmod limited slope of a and b slopes
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   ;; get sign of a
   if a gt 0 then s=1 else s=-1
@@ -4533,69 +4586,71 @@ function symmdiff,direction,a,x,y,report=report,anti=anti
 ;
 ;=========================================================================
 
-; If x is not present, the grid is taken to be Cartesian
-if n_elements(x) eq 0 then return, symmdiffreg(direction,a)
+  common debug_param & on_error, onerror
 
-if not keyword_set(report) then report = 0
+  ;; If x is not present, the grid is taken to be Cartesian
+  if n_elements(x) eq 0 then return, symmdiffreg(direction,a)
 
-diff=a*0
+  if not keyword_set(report) then report = 0
 
-e = exp(1.0d0)
-sorting = x + e*y
-sortsym = x - e*y
-n = n_elements(x)
+  diff=a*0
 
-if direction eq 1 then begin
-   signx = -1.0 & signy = +1.0
-endif else begin
-   signx = +1.0 & signy = -1.0
-endelse
+  e = exp(1.0d0)
+  sorting = x + e*y
+  sortsym = x - e*y
+  n = n_elements(x)
 
-for i=0,n-1 do begin
-    if diff(i) eq 0 then begin
+  if direction eq 1 then begin
+     signx = -1.0 & signy = +1.0
+  endif else begin
+     signx = +1.0 & signy = -1.0
+  endelse
+
+  for i=0,n-1 do begin
+     if diff(i) eq 0 then begin
         xi = x(i)
         yi = y(i)   
         sortsymi = sortsym(i)
         j  = n/2
         dj = j
-        ;print,'i,x,y,sortsymi=',i,xi,yi,sortsymi
-        ;print,'n,j,dj=',n,j,dj
+                                ;print,'i,x,y,sortsymi=',i,xi,yi,sortsymi
+                                ;print,'n,j,dj=',n,j,dj
         last = 0
         fail = 0
         while abs(x(j)-signx*xi) gt 1e-6 or abs(y(j)-signy*yi) gt 1e-6 do begin
-            if last then begin
-                fail = 1
-                break
-            endif
-            
-             ;print,'j,dj,sorting=',j,dj,sorting(j)
+           if last then begin
+              fail = 1
+              break
+           endif
+           
+                                ;print,'j,dj,sorting=',j,dj,sorting(j)
 
-            if dj eq 1 then last = 1 else dj = (dj+1)/2
+           if dj eq 1 then last = 1 else dj = (dj+1)/2
 
-            if sortsymi le sorting(j) then j = j - dj else j = j + dj
+           if sortsymi le sorting(j) then j = j - dj else j = j + dj
 
-            if j lt 0 then j = 0
-            if j ge n then j = n - 1
+           if j lt 0 then j = 0
+           if j ge n then j = n - 1
 
         endwhile 
 
-        ;print,'solution j,x,y,sort=',j,x(j),y(j),sorting(j)
+                                ;print,'solution j,x,y,sort=',j,x(j),y(j),sorting(j)
 
         if fail then begin
-            print,'error in symdiff: incorrect number of mirror points'
-            print,'i,j,dj,last=',i,j,dj,last
-            print,'xi,yi=',xi,yi
-            if j ge 0 and j lt n then print,'xj,yj=',x(j),y(j)
-            diff(i)=1e30
-            retall
+           print,'error in symdiff: incorrect number of mirror points'
+           print,'i,j,dj,last=',i,j,dj,last
+           print,'xi,yi=',xi,yi
+           if j ge 0 and j lt n then print,'xj,yj=',x(j),y(j)
+           diff(i)=1e30
+           retall
         endif else begin
-            if keyword_set(anti) then diff(i)= a(i)+a(j) else diff(i)= a(i)-a(j)
-            diff(j)=-diff(i)
-            if report and abs(diff(i)) gt report then print,"i,x,y,diff=",i,xi,yi,diff(i)
+           if keyword_set(anti) then diff(i)= a(i)+a(j) else diff(i)= a(i)-a(j)
+           diff(j)=-diff(i)
+           if report and abs(diff(i)) gt report then print,"i,x,y,diff=",i,xi,yi,diff(i)
         endelse
-    endif
-endfor
-return,diff
+     endif
+  endfor
+  return,diff
 
 end
 ;===========================================================================
@@ -4605,7 +4660,7 @@ function symmdiffreg,direction,a
 ; "direction"
 ;
 ;===========================================================================
-  on_error,2
+  common debug_param & on_error, onerror
 
   if not keyword_set(report) then report = 0
 
@@ -4656,17 +4711,19 @@ function filledge,a
 
 ; On the edges use copy of closest cells
 
-siz=size(a)
-n1=siz(1)
-n2=siz(2)
+  common debug_param & on_error, onerror
 
-result=a
-result(0,*)   =result(1,*)
-result(*,0)   =result(*,1)
-result(n1-1,*)=result(n1-2,*)
-result(*,n2-1)=result(*,n2-2)
+  siz=size(a)
+  n1=siz(1)
+  n2=siz(2)
 
-return,result
+  result=a
+  result(0,*)   =result(1,*)
+  result(*,0)   =result(*,1)
+  result(n1-1,*)=result(n1-2,*)
+  result(*,n2-1)=result(*,n2-2)
+
+  return,result
 end
 
 ;===========================================================================
@@ -4676,41 +4733,42 @@ pro gengrid,name,x,y,xc,yc,vol2,u,v
 ; cell volumes. Check for array sizes of the optional u,v arguments.
 ; The name of the calling function is shown for error messages.
 ;===========================================================================
+  common debug_param & on_error, onerror
 
-siz=size(x)
-if siz(0) ne 2 then begin
-   print,'Function ',name,' is for 2D arrays only'
-   retall
-endif
+  siz=size(x)
+  if siz(0) ne 2 then begin
+     print,'Function ',name,' is for 2D arrays only'
+     retall
+  endif
 
-n1=siz(1)
-n2=siz(2)
+  n1=siz(1)
+  n2=siz(2)
 
-error=''
-siz=size(y)
-if siz(0) ne 2 or siz(1) ne n1 or siz(2) ne n2 then error='2nd coord'
-if keyword_set(u) then begin
-   siz=size(u)
-   if siz(0) ne 2 or siz(1) ne n1 or siz(2) ne n2 then error='1st func'
-endif
-if keyword_set(v) then begin
-   siz=size(v)
-   if siz(0) ne 2 or siz(1) ne n1 or siz(2) ne n2 then error='2nd func'
-endif
-if error ne '' then begin
-  print,'In function ',name,' the first argument does not match the ',error,'.'
-  retall
-endif
+  error=''
+  siz=size(y)
+  if siz(0) ne 2 or siz(1) ne n1 or siz(2) ne n2 then error='2nd coord'
+  if keyword_set(u) then begin
+     siz=size(u)
+     if siz(0) ne 2 or siz(1) ne n1 or siz(2) ne n2 then error='1st func'
+  endif
+  if keyword_set(v) then begin
+     siz=size(v)
+     if siz(0) ne 2 or siz(1) ne n1 or siz(2) ne n2 then error='2nd func'
+  endif
+  if error ne '' then begin
+     print,'In function ',name,' the first argument does not match the ',error
+     retall
+  endif
 
 ; Coordinates for cell corners
-xc=(x(0:n1-2,0:n2-2)+x(0:n1-2,1:n2-1)+x(1:n1-1,0:n2-2)+x(1:n1-1,1:n2-1))/4
-yc=(y(0:n1-2,0:n2-2)+y(0:n1-2,1:n2-1)+y(1:n1-1,0:n2-2)+y(1:n1-1,1:n2-1))/4
+  xc=(x(0:n1-2,0:n2-2)+x(0:n1-2,1:n2-1)+x(1:n1-1,0:n2-2)+x(1:n1-1,1:n2-1))/4
+  yc=(y(0:n1-2,0:n2-2)+y(0:n1-2,1:n2-1)+y(1:n1-1,0:n2-2)+y(1:n1-1,1:n2-1))/4
 
 ; Calculate 2*volume=(diagonal_1 X diagonal_2)
-vol2=dblarr(n1,n2)+1
-vol2(1:n1-2,1:n2-2)= $
- ((xc(1:n1-2,1:n2-2)-xc(0:n1-3,0:n2-3))*(yc(0:n1-3,1:n2-2)-yc(1:n1-2,0:n2-3)) $
- -(yc(1:n1-2,1:n2-2)-yc(0:n1-3,0:n2-3))*(xc(0:n1-3,1:n2-2)-xc(1:n1-2,0:n2-3)))
+  vol2=dblarr(n1,n2)+1
+  vol2(1:n1-2,1:n2-2)= $
+     ((xc(1:n1-2,1:n2-2)-xc(0:n1-3,0:n2-3))*(yc(0:n1-3,1:n2-2)-yc(1:n1-2,0:n2-3)) $
+      -(yc(1:n1-2,1:n2-2)-yc(0:n1-3,0:n2-3))*(xc(0:n1-3,1:n2-2)-xc(1:n1-2,0:n2-3)))
 
 end
 
@@ -4723,17 +4781,19 @@ function intedge,f,xc
 ; edge values are 0-s.
 ;===========================================================================
 
-siz=size(f)
-n1=siz(1)
-n2=siz(2)
+  common debug_param & on_error, onerror
 
-intf=dblarr(n1,n2)
-intf(1:n1-2,1:n2-2)=-(xc(1:n1-2,1:n2-2)-xc(0:n1-3,1:n2-2))*f(1:n1-2,2:n2-1) $
-                    -(xc(1:n1-2,0:n2-3)-xc(1:n1-2,1:n2-2))*f(2:n1-1,1:n2-2) $
-                    -(xc(0:n1-3,0:n2-3)-xc(1:n1-2,0:n2-3))*f(1:n1-2,0:n2-3) $
-                    -(xc(0:n1-3,1:n2-2)-xc(0:n1-3,0:n2-3))*f(0:n1-3,1:n2-2)
+  siz=size(f)
+  n1=siz(1)
+  n2=siz(2)
 
-return,intf
+  intf=dblarr(n1,n2)
+  intf(1:n1-2,1:n2-2)=-(xc(1:n1-2,1:n2-2)-xc(0:n1-3,1:n2-2))*f(1:n1-2,2:n2-1) $
+                      -(xc(1:n1-2,0:n2-3)-xc(1:n1-2,1:n2-2))*f(2:n1-1,1:n2-2) $
+                      -(xc(0:n1-3,0:n2-3)-xc(1:n1-2,0:n2-3))*f(1:n1-2,0:n2-3) $
+                      -(xc(0:n1-3,1:n2-2)-xc(0:n1-3,0:n2-3))*f(0:n1-3,1:n2-2)
+
+  return,intf
 
 end
 
@@ -4746,22 +4806,24 @@ function intedge_rz,f,rc,zc
 ;
 ;===========================================================================
 
-siz=size(f)
-n1=siz(1)
-n2=siz(2)
+  common debug_param & on_error, onerror
 
-intf=dblarr(n1,n2)
-intf(1:n1-2,1:n2-2)= $
-    -f(1:n1-2,2:n2-1)*(rc(1:n1-2,1:n2-2)+rc(0:n1-3,1:n2-2)) $
-                     *(zc(1:n1-2,1:n2-2)-zc(0:n1-3,1:n2-2)) $
-    -f(2:n1-1,1:n2-2)*(rc(1:n1-2,0:n2-3)+rc(1:n1-2,1:n2-2)) $
-                     *(zc(1:n1-2,0:n2-3)-zc(1:n1-2,1:n2-2)) $
-    -f(1:n1-2,0:n2-3)*(rc(0:n1-3,0:n2-3)+rc(1:n1-2,0:n2-3)) $
-                     *(zc(0:n1-3,0:n2-3)-zc(1:n1-2,0:n2-3)) $
-    -f(0:n1-3,1:n2-2)*(rc(0:n1-3,1:n2-2)+rc(0:n1-3,0:n2-3)) $
-                     *(zc(0:n1-3,1:n2-2)-zc(0:n1-3,0:n2-3))
+  siz=size(f)
+  n1=siz(1)
+  n2=siz(2)
 
-return,intf
+  intf=dblarr(n1,n2)
+  intf(1:n1-2,1:n2-2)= $
+     -f(1:n1-2,2:n2-1)*(rc(1:n1-2,1:n2-2)+rc(0:n1-3,1:n2-2)) $
+     *(zc(1:n1-2,1:n2-2)-zc(0:n1-3,1:n2-2)) $
+     -f(2:n1-1,1:n2-2)*(rc(1:n1-2,0:n2-3)+rc(1:n1-2,1:n2-2)) $
+     *(zc(1:n1-2,0:n2-3)-zc(1:n1-2,1:n2-2)) $
+     -f(1:n1-2,0:n2-3)*(rc(0:n1-3,0:n2-3)+rc(1:n1-2,0:n2-3)) $
+     *(zc(0:n1-3,0:n2-3)-zc(1:n1-2,0:n2-3)) $
+     -f(0:n1-3,1:n2-2)*(rc(0:n1-3,1:n2-2)+rc(0:n1-3,0:n2-3)) $
+     *(zc(0:n1-3,1:n2-2)-zc(0:n1-3,0:n2-3))
+
+  return,intf
 
 end
 
@@ -4778,16 +4840,18 @@ function grad_2d,idir,f,x,y
 ; copies of inner neighbors.
 ;===========================================================================
 
-if n_elements(idir) eq 0 or n_elements(f) eq 0 $
-   or n_elements(x) eq 0 or n_elements(y) eq 0 then begin
-   print,'Missing arguments in function grad'
-   retall
-endif
+  common debug_param & on_error, onerror
 
-gengrid,'grad',x,y,xc,yc,vol2,f
+  if n_elements(idir) eq 0 or n_elements(f) eq 0 $
+     or n_elements(x) eq 0 or n_elements(y) eq 0 then begin
+     print,'Missing arguments in function grad'
+     retall
+  endif
 
-if idir eq 1 then return,filledge( intedge(f,yc)/vol2) $
-else              return,filledge(-intedge(f,xc)/vol2)
+  gengrid,'grad',x,y,xc,yc,vol2,f
+
+  if idir eq 1 then return,filledge( intedge(f,yc)/vol2) $
+  else              return,filledge(-intedge(f,xc)/vol2)
 
 end
 
@@ -4805,16 +4869,18 @@ function grad_rz,idir,f,r,z
 ; copies of inner neighbors.
 ;===========================================================================
 
-if n_elements(ndir) eq 0 or n_elements(f) eq 0 $
-   or n_elements(r) eq 0 or n_elements(z) eq 0 then begin
-   print,'Missing arguments in function grad_rz'
-   retall
-endif
+  common debug_param & on_error, onerror
 
-gengrid,'grad_rz',r,z,rc,zc,vol2,f
+  if n_elements(ndir) eq 0 or n_elements(f) eq 0 $
+     or n_elements(r) eq 0 or n_elements(z) eq 0 then begin
+     print,'Missing arguments in function grad_rz'
+     retall
+  endif
 
-if idir eq 1 then return,filledge( (intedge_rz(f,rc,zc)/vol2 - f)/2/r ) $
-else              return,filledge( -intedge(f,rc^2)/vol2/2/r)
+  gengrid,'grad_rz',r,z,rc,zc,vol2,f
+
+  if idir eq 1 then return,filledge( (intedge_rz(f,rc,zc)/vol2 - f)/2/r ) $
+  else              return,filledge( -intedge(f,rc^2)/vol2/2/r)
 
 end
 
@@ -4831,15 +4897,17 @@ function div,u,v,x,y
 ; copies of inner neighbors.
 ;===========================================================================
 
-if n_elements(u) eq 0 or n_elements(v) eq 0 $
-   or n_elements(x) eq 0 or n_elements(y) eq 0 then begin
-   print,'Missing arguments in function div'
-   retall
-endif
+  common debug_param & on_error, onerror
 
-gengrid,'div',x,y,xc,yc,vol2,u,v
+  if n_elements(u) eq 0 or n_elements(v) eq 0 $
+     or n_elements(x) eq 0 or n_elements(y) eq 0 then begin
+     print,'Missing arguments in function div'
+     retall
+  endif
 
-return,filledge((intedge(u,yc)-intedge(v,xc))/vol2)
+  gengrid,'div',x,y,xc,yc,vol2,u,v
+
+  return,filledge((intedge(u,yc)-intedge(v,xc))/vol2)
 
 end
 
@@ -4857,15 +4925,17 @@ function div_rz,u,v,r,z
 ; copies of inner neighbors.
 ;===========================================================================
 
-if n_elements(u) eq 0 or n_elements(v) eq 0 $
-   or n_elements(r) eq 0 or n_elements(z) eq 0 then begin
-   print,'Missing arguments in function div_rz'
-   retall
-endif
+  common debug_param & on_error, onerror
 
-gengrid,'div_rz',r,z,rc,zc,vol2,u,v
+  if n_elements(u) eq 0 or n_elements(v) eq 0 $
+     or n_elements(r) eq 0 or n_elements(z) eq 0 then begin
+     print,'Missing arguments in function div_rz'
+     retall
+  endif
 
-return,filledge(((intedge_rz(u,rc,zc)-intedge(v,rc^2))/vol2 + u)/2/r)
+  gengrid,'div_rz',r,z,rc,zc,vol2,u,v
+
+  return,filledge(((intedge_rz(u,rc,zc)-intedge(v,rc^2))/vol2 + u)/2/r)
 
 end
 
@@ -4878,15 +4948,17 @@ function curl,u,v,x,y
 ;
 ;===========================================================================
 
-if n_elements(u) eq 0 or n_elements(v) eq 0 $
-   or n_elements(x) eq 0 or n_elements(y) eq 0 then begin
-   print,'Missing arguments in function curl'
-   retall
-endif
+  common debug_param & on_error, onerror
 
-gengrid,'curl',x,y,xc,yc,vol2,u,v
+  if n_elements(u) eq 0 or n_elements(v) eq 0 $
+     or n_elements(x) eq 0 or n_elements(y) eq 0 then begin
+     print,'Missing arguments in function curl'
+     retall
+  endif
 
-return,filledge((intedge(u,xc)+intedge(v,yc))/vol2)
+  gengrid,'curl',x,y,xc,yc,vol2,u,v
+
+  return,filledge((intedge(u,xc)+intedge(v,yc))/vol2)
 
 end
 
@@ -4900,16 +4972,17 @@ function curl_rz,u,v,r,z
 ; See also comments for the div_rz function on edge average and edge cells.
 ;
 ;===========================================================================
+  common debug_param & on_error, onerror
 
-if n_elements(u) eq 0 or n_elements(v) eq 0 $
-   or n_elements(r) eq 0 or n_elements(z) eq 0 then begin
-   print,'Missing arguments in function curl_rz'
-   retall
-endif
+  if n_elements(u) eq 0 or n_elements(v) eq 0 $
+     or n_elements(r) eq 0 or n_elements(z) eq 0 then begin
+     print,'Missing arguments in function curl_rz'
+     retall
+  endif
 
-gengrid,'curl',r,z,rc,zc,vol2,u,v
+  gengrid,'curl',r,z,rc,zc,vol2,u,v
 
-return,filledge(-((intedge_rz(v,rc,zc)+intedge(u,rc^2))/vol2 - v)/2/r)
+  return,filledge(-((intedge_rz(v,rc,zc)+intedge(u,rc^2))/vol2 - v)/2/r)
 
 end
 
@@ -4924,42 +4997,44 @@ function quadruplet,nx,x0,x1,dx,ny,y0,y1,dy,nz,z0,z1,dz,nw,w0,w1,dw
 ;        velpos(*,*)=x(quadruplet(100,0,99,4,100,30,69,2,2,0,1,1))
 ;===========================================================================
 
-if keyword_set(dx) then begin
-   checkdim,1,nx,x0,x1,dx
-   all=lindgen(x1+1)
-   sub=all(x0:x1)
-   ind=sub(where(sub mod dx eq x0 mod dx))
-end
-if keyword_set(dy) then begin
-   checkdim,2,ny,y0,y1,dy
-   ixs=ind
-   all=lindgen(y1+1)
-   sub=all(y0:y1)
-   iys=sub(where(sub mod dy eq y0 mod dy))
-   ind=(ixs # (0*iys+1)) + ((0*ixs+nx) # iys)
-end
-if keyword_set(dz) then begin
-   checkdim,3,nz,z0,z1,dz
-   ixys=ind
-   nxy=long(nx)*long(ny)
-   all=lindgen(z1+1)
-   sub=all(z0:z1)
-   izs=sub(where(sub mod dz eq z0 mod dz))
-   ind=lonarr(n_elements(ixs),n_elements(iys),n_elements(izs))
-   for iz=0,n_elements(izs)-1 do ind(*,*,iz)=ixys + izs(iz)*nxy
-end
-if keyword_set(dw) then begin
-   checkdim,4,nw,w0,w1,dw
-   ixyzs=ind
-   nxyz=long(nx)*long(ny)*long(nz)
-   all=lindgen(w1+1)
-   sub=all(w0:w1)
-   iws=sub(where(sub mod dw eq w0 mod dw))
-   ind=lonarr(n_elements(ixs),n_elements(iys),n_elements(izs),n_elements(iws))
-   for iw=0,n_elements(iws)-1 do ind(*,*,*,iw)=ixyzs + iws(iw)*nxyz
-end
+  common debug_param & on_error, onerror
 
-return,ind
+  if keyword_set(dx) then begin
+     checkdim,1,nx,x0,x1,dx
+     all=lindgen(x1+1)
+     sub=all(x0:x1)
+     ind=sub(where(sub mod dx eq x0 mod dx))
+  end
+  if keyword_set(dy) then begin
+     checkdim,2,ny,y0,y1,dy
+     ixs=ind
+     all=lindgen(y1+1)
+     sub=all(y0:y1)
+     iys=sub(where(sub mod dy eq y0 mod dy))
+     ind=(ixs # (0*iys+1)) + ((0*ixs+nx) # iys)
+  end
+  if keyword_set(dz) then begin
+     checkdim,3,nz,z0,z1,dz
+     ixys=ind
+     nxy=long(nx)*long(ny)
+     all=lindgen(z1+1)
+     sub=all(z0:z1)
+     izs=sub(where(sub mod dz eq z0 mod dz))
+     ind=lonarr(n_elements(ixs),n_elements(iys),n_elements(izs))
+     for iz=0,n_elements(izs)-1 do ind(*,*,iz)=ixys + izs(iz)*nxy
+  end
+  if keyword_set(dw) then begin
+     checkdim,4,nw,w0,w1,dw
+     ixyzs=ind
+     nxyz=long(nx)*long(ny)*long(nz)
+     all=lindgen(w1+1)
+     sub=all(w0:w1)
+     iws=sub(where(sub mod dw eq w0 mod dw))
+     ind=lonarr(n_elements(ixs),n_elements(iys),n_elements(izs),n_elements(iws))
+     for iw=0,n_elements(iws)-1 do ind(*,*,*,iw)=ixyzs + iws(iw)*nxyz
+  end
+
+  return,ind
 end
 
 ;===========================================================================
@@ -4978,20 +5053,22 @@ function triplet,x0,x1,dx,y0,y1,dy,z0,z1,dz,w0,w1,dw
 ;
 ;===========================================================================
 
-if keyword_set(dw) then $
-   return,quadruplet(x1+1,x0,x1,dx,y1+1,y0,y1,dy,z1+1,z0,z1,dz,w1+1,w0,w1,dw)
+  common debug_param & on_error, onerror
 
-if keyword_set(dz) then $
-   return,quadruplet(x1+1,x0,x1,dx,y1+1,y0,y1,dy,z1+1,z0,z1,dz)
+  if keyword_set(dw) then $
+     return,quadruplet(x1+1,x0,x1,dx,y1+1,y0,y1,dy,z1+1,z0,z1,dz,w1+1,w0,w1,dw)
 
-if keyword_set(dy) then $
-   return,quadruplet(x1+1,x0,x1,dx,y1+1,y0,y1,dy)
+  if keyword_set(dz) then $
+     return,quadruplet(x1+1,x0,x1,dx,y1+1,y0,y1,dy,z1+1,z0,z1,dz)
 
-if keyword_set(dx) then $
-   return,quadruplet(x1+1,x0,x1,dx)
+  if keyword_set(dy) then $
+     return,quadruplet(x1+1,x0,x1,dx,y1+1,y0,y1,dy)
 
-print,'Error in TRIPLET: All strides are 0!'
-retall
+  if keyword_set(dx) then $
+     return,quadruplet(x1+1,x0,x1,dx)
+
+  print,'Error in TRIPLET: All strides are 0!'
+  retall
 
 end
 
@@ -5007,8 +5084,7 @@ function coarsen,a,boxsize,fd=fd
 ; If /fd is set then use finite difference coarsening:
 ; extract every n1-th element in dimension 1, every n2-th in dim 2 etc.
 
-
-  on_error,2
+  common debug_param & on_error, onerror
 
   if(n_elements(a) eq 0 or n_elements(boxsize) eq 0)then begin
      print,'Calling sequence is: array_co=coarse(array, boxsize, /fd)'
@@ -5094,29 +5170,30 @@ pro checkdim,idim,nx,x0,x1,dx
 
 ; Check quadruplet for conditions nx>x1>=x0>=0 and dx>0
 ;===========================================================================
+  common debug_param & on_error, onerror
 
-   if nx le 0 then begin
-      print,'Size must be positive for dimension',idim
-      retall
-   endif
-   if x1 ge nx then begin
-      print,'Maximum index must be less than size for dimension',idim
-      retall
-   endif
-   if x0 lt 0 then begin
-      print,'Minimum index must be greater than 0 for dimension',idim
-      retall
-   endif
-   if x0 gt x1 then begin
-      print,'Minimum index must be less than maximum index for dimension',idim
-      retall
-   endif
-   if dx le 0 then begin
-      print,'Stride must be a positive integer for dimension',idim
-      retall
-   endif
+  if nx le 0 then begin
+     print,'Size must be positive for dimension',idim
+     retall
+  endif
+  if x1 ge nx then begin
+     print,'Maximum index must be less than size for dimension',idim
+     retall
+  endif
+  if x0 lt 0 then begin
+     print,'Minimum index must be greater than 0 for dimension',idim
+     retall
+  endif
+  if x0 gt x1 then begin
+     print,'Minimum index must be less than maximum index for dimension',idim
+     retall
+  endif
+  if dx le 0 then begin
+     print,'Stride must be a positive integer for dimension',idim
+     retall
+  endif
 
-return
+  return
 end
 
 ;===================================================================
@@ -5124,7 +5201,7 @@ pro plot_grid,x,y,lines=lines,xstyle=xstyle,ystyle=ystyle,polar=polar,$
               xrange=xrange,yrange=yrange,noorigin=noorigin
 ;===================================================================
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   if not keyword_set(x) then begin
      print,'Usage: plot_grid, x [,y] [,/lines] [,/polar]',$
@@ -5227,7 +5304,7 @@ pro compare,w0,w1,wnames
 ; relative difference in the 1st norm.
 ;==========================================
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   sizew0=size(w0)
   sizew1=size(w1)
@@ -5305,6 +5382,8 @@ function rel_error, w1, w2, iws, fd=fd
 ;
 ; If the /fd keyword is set, use finite difference coarsening.
 
+  common debug_param & on_error, onerror
+
   if n_elements(w1) le n_elements(w2) then begin
      w     = w1
      wref  = w2
@@ -5377,6 +5456,9 @@ function rel_errors, w0, w1, w2, w3, w4, w5, ivar=ivar, ratio=ratio, fd=fd
   ; If /fd keyword is set, use finite difference style coarsening.
   ;    The default is finite volume style coarsening.
 
+
+  common debug_param & on_error, onerror
+
   n = lonarr(6)
   n(0) = n_elements(w0)
   n(1) = n_elements(w1)
@@ -5430,7 +5512,7 @@ pro get_log, source, wlog, wlognames, logtime, timeunit, verbose=verbose
 ; If verbose is present set show verbose information.
 ; If versbose is a string, attach it to 'wlog' in the verbose info.
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   if not keyword_set(source) then begin
      print, $
@@ -5598,6 +5680,8 @@ pro plot_log
 ; Show the legends (default are the file names) at the position given by
 ; legendpos array (xmin, xmax, ymin, ymax in a [0,1]x[0,1] box).
 ; Set the optional variables to zero to get the default behavior.
+
+  common debug_param & on_error, onerror
 
   common log_data, $
      timeunit, $
@@ -5857,7 +5941,7 @@ pro rms_logfiles,logfilename,varname,tmin=tmin,tmax=tmax,verbose=verbose
 ; Print the rms deviation between two logfiles for variables in varname.
 ; If varname is not present, show rms for all variables.
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
                     verbose=verbose
@@ -5877,7 +5961,7 @@ pro interpol_logfiles,logfilename,var0,var1,varname,time,tmin=tmin,tmax=tmax,$
 ; Interpolate variables between two logfiles for variables in varname.
 ; If varname is not present, interpolate all variables.
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   string_to_array,logfilename,logfilenames,nfile
 
@@ -5895,7 +5979,7 @@ pro interpol_log,wlog0,wlog1,var0,var1,varname,varnames0,varnames1,time,$
 ; Interpolate the variables listed in varname to the time of wlog0
 ; between tmin and tmax. 
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   string_to_array,varname,varnames,nvar
 
@@ -5990,6 +6074,9 @@ pro set_space, nb, spacex, spacey, sizes, nx = nx, ny = ny
 ;
 ; This has been adapted to allow the user to define how many objects
 ;   are in the x and y direction on Jan 2, 1998
+
+
+  common debug_param & on_error, onerror
 
   sizes = {bs:0.0, nbx:0, nby:0, xoff:0.0, yoff:0.0, xf:0.0, yf:0.0, $
            ppp: nb, spacex:spacex, spacey:spacey}
@@ -6109,6 +6196,8 @@ pro set_position, sizes, xipos, yipos, pos, rect = rect, $
 ;
 ; modified to make rectangles on Jan 2, 1998
 
+  common debug_param & on_error, onerror
+
   nb = sizes.ppp
   spacex = sizes.spacex
   spacey = sizes.spacey
@@ -6165,79 +6254,84 @@ pro plot_color_bar, pos, maxmin
 
 ; plot color bar based on the current color table
 
-xrange=!x.range & yrange=!y.range & !x.range=0 & !y.range=0
+  common debug_param & on_error, onerror
 
-maxi = max(maxmin)
-mini = min(maxmin)
+  xrange=!x.range & yrange=!y.range & !x.range=0 & !y.range=0
 
-array = findgen(10,256)
-for i=0,9 do array(i,*) = findgen(256)/(256-1)*(maxi-mini) + mini
+  maxi = max(maxmin)
+  mini = min(maxmin)
 
-levels=(findgen(60)-1)/(58-1)*(maxi-mini)+mini
+  array = findgen(10,256)
+  for i=0,9 do array(i,*) = findgen(256)/(256-1)*(maxi-mini) + mini
 
-; The !5 in the title makes sure that the fonts produced later
-; will look the same every time when saved into eps/ps file.
+  levels=(findgen(60)-1)/(58-1)*(maxi-mini)+mini
 
-contour, array, /noerase, /cell_fill, xstyle = 5, ystyle = 5, $
-  levels = levels, pos=pos, title='!5 '
+;; The !5 in the title makes sure that the fonts produced later
+;; will look the same every time when saved into eps/ps file.
 
-plot, maxmin, /noerase, pos = pos, xstyle=1, ystyle=1, /nodata,$
-  xtickname = [' ',' '], xticks = 1, xminor=1  , $
-  ytickname = strarr(60) + ' ', yticklen = 0.25, $
-  title=' ', xtitle=' ',ytitle=' '
-axis, 1, ystyle=1, /nodata, yax=1, charsize=0.9*(!p.charsize > 1.), $
-  ytitle=' ', ytickname = strarr(60)
+  contour, array, /noerase, /cell_fill, xstyle = 5, ystyle = 5, $
+           levels = levels, pos=pos, title='!5 '
 
-!x.range=xrange & !y.range=yrange
+  plot, maxmin, /noerase, pos = pos, xstyle=1, ystyle=1, /nodata,$
+        xtickname = [' ',' '], xticks = 1, xminor=1  , $
+        ytickname = strarr(60) + ' ', yticklen = 0.25, $
+        title=' ', xtitle=' ',ytitle=' '
+  axis, 1, ystyle=1, /nodata, yax=1, charsize=0.9*(!p.charsize > 1.), $
+        ytitle=' ', ytickname = strarr(60)
+
+  !x.range=xrange & !y.range=yrange
 
 end
 
 ;============================================================================
 pro makect, color
 
-; Create color table corresponding to color='mid','blue','red','rwb','bwr'
+  ;; Create color table corresponding to color='mid','blue','red','rwb','bwr'
 
-common colors
+  common debug_param & on_error, onerror
 
-; Get number of colors
-n=!d.table_size
-if n lt 10 or n gt 256 then n=256
 
-r = fltarr(n)
-g = fltarr(n)
-b = fltarr(n)
+  common colors
 
-if not keyword_set(color) then begin
+  ;; Get number of colors
+  n=!d.table_size
+  if n lt 10 or n gt 256 then n=256
 
-    print,'red   - white to red'
-    print,'blue  - white to blue'
-    print,'rwb   - red white blue'
-    print,'bwr   - blue white red'
-    print,'mid   - blue green white yellow red'
+  r = fltarr(n)
+  g = fltarr(n)
+  b = fltarr(n)
 
-    color = ''
-    read,'Enter color table from list above : ', color
+  if not keyword_set(color) then begin
 
-endif
+     print,'red   - white to red'
+     print,'blue  - white to blue'
+     print,'rwb   - red white blue'
+     print,'bwr   - blue white red'
+     print,'mid   - blue green white yellow red'
 
-color = strlowcase(color)
+     color = ''
+     read,'Enter color table from list above : ', color
 
-; Set read, green, blue to values normalized to the 0.0 -- 1.0 range.
+  endif
 
-case color of
-    'red' : begin
+  color = strlowcase(color)
+
+  ;; Set read, green, blue to values normalized to the 0.0 -- 1.0 range.
+
+  case color of
+     'red' : begin
         r(*) = 1.
         g(*) = 1. - findgen(n)/(n-1)
         b(*) = 1. - findgen(n)/(n-1)
-    end
+     end
 
-    'blue' : begin
+     'blue' : begin
         r(*) = 1. - findgen(n)/(n-1)
         b(*) = 1.
         g(*) = 1. - findgen(n)/(n-1)
-    end
+     end
 
-    'rwb' : begin
+     'rwb' : begin
         half=n/2
         r(0:half-1) = 1.
         g(0:half-1) = findgen(half)/(half-1)
@@ -6246,9 +6340,9 @@ case color of
         r(half:n-1) = 1. - findgen(n-half)/(n-half-1)
         g(half:n-1) = 1. - findgen(n-half)/(n-half-1)
         b(half:n-1) = 1.
-    end
+     end
 
-    'bwr' : begin
+     'bwr' : begin
         half=n/2
         b(0:half-1) = 1.
         g(0:half-1) = findgen(half)/(half-1)
@@ -6257,9 +6351,9 @@ case color of
         b(half:n-1) = 1. - findgen(n-half)/(n-half-1)
         g(half:n-1) = 1. - findgen(n-half)/(n-half-1)
         r(half:n-1) = 1.
-    end
+     end
 
-    'mid' : begin
+     'mid' : begin
         r(0:n/3-1)     = 0.0
         r(n/3:n/2-1)   = findgen(n/2-n/3)/(n/2-n/3-1)
         r(n/2:n-1)     = 1.0
@@ -6272,36 +6366,36 @@ case color of
         g(n/3:2*n/3-1)  = 1.
         g(2*n/3:n-1)    = 1. - findgen(n-2*n/3)/(n-2*n/3-1)
         
-    end
+     end
 
-    else : begin
+     else : begin
         print, "Unknown value for color=",color
         r(*) = findgen(n)
         g(*) = findgen(n)
         b(*) = findgen(n)
-    end
+     end
 
-endcase
+  endcase
 
-r(0) = 0.0
-g(0) = 0.0
-b(0) = 0.0
+  r(0) = 0.0
+  g(0) = 0.0
+  b(0) = 0.0
 
-r(n-1) = 1.0
-g(n-1) = 1.0
-b(n-1) = 1.0
+  r(n-1) = 1.0
+  g(n-1) = 1.0
+  b(n-1) = 1.0
 
-r=255*r
-g=255*g
-b=255*b
+  r=255*r
+  g=255*g
+  b=255*b
 
-r_orig = r
-g_orig = g
-b_orig = b
-r_curr = r_orig
-g_curr = g_orig
-b_curr = b_orig
-tvlct,r,g,b
+  r_orig = r
+  g_orig = g
+  b_orig = b
+  r_curr = r_orig
+  g_curr = g_orig
+  b_curr = b_orig
+  tvlct,r,g,b
 
 end
 
@@ -6310,7 +6404,7 @@ pro save_pict, filename, headline, varname, w, x, $
                it, time, eqpar, ndim=ndim, gencoord=gencoord, $
                filetype=filetype, append=append
 
-  on_error,2
+  common debug_param & on_error, onerror
 
   if n_elements(filename) eq 0 or n_elements(headline) eq 0 or $
      n_elements(varname) eq 0 or n_elements(w) eq 0 then begin
@@ -6409,6 +6503,8 @@ end
 ;=============================================================================
 pro save_log, filename, headline, varname, array, format=format
 
+  common debug_param & on_error, onerror
+
   unit=1
   close, unit
 
@@ -6434,7 +6530,9 @@ end
 ;==============================================================================
 pro reset_axis
 
-  !x.tickname=strarr(60)
-  !y.tickname=strarr(60)
+  common debug_param & on_error, onerror
+
+  !x.tickname = strarr(60)
+  !y.tickname = strarr(60)
 
 end

@@ -47,109 +47,112 @@ function funcdef,xx,w,func
 ;
 ;===========================================================================
 
+  common debug_param & on_error, onerror
+
   ;; Define various functions of the basic MHD variables
   ;; The functions names are evaluated in lower case
-  functiondef = strlowcase(transpose([ $
-                ['mxB'    , 'rho*ux+(bb*ux-(ux*bx+uy*by+uz*bz)*bx)/c0^2'], $ ; Boris momenta
-                ['myB'    , 'rho*uy+(bb*uy-(ux*bx+uy*by+uz*bz)*by)/c0^2'], $
-                ['mzB'    , 'rho*uz+(bb*uz-(ux*bx+uy*by+uz*bz)*bz)/c0^2'], $
-                ['mx'       , 'rho*ux'                                  ], $ ; momenta
-                ['my'       , 'rho*uy'                                  ], $
-                ['mz'       , 'rho*uz'                                  ], $
-                ['uH'       , 'uH0*sqrt({jx}^2+{jy}^2+{jz}^2)/rho'      ], $ ; Hall velocity
-                ['uHx'      , 'uH0*{jx}/rho'                            ], $
-                ['uHy'      , 'uH0*{jy}/rho'                            ], $ 
-                ['uHz'      , 'uH0*{jz}/rho'                            ], $ 
-                ['uex'      , 'ux-uH0*{jx}/rho'                         ], $ ; electron velocity
-                ['uey'      , 'uy-uH0*{jy}/rho'                         ], $ 
-                ['uez'      , 'uz-uH0*{jz}/rho'                         ], $ 
-                ['ue'       , 'sqrt({uex}^2+{uey}^2+{uez}^2)'           ], $
-                ['j'        , 'sqrt({jx}^2+{jy}^2+{jz}^2)'              ], $ ; current density
-                ['divbxy'   , 'div(bx,by,x,y)'                          ], $ ; div(B) in 2D
-                ['divb1xy'  , 'div({b1x},{b1y},x,y)'                    ], $ ; div(B1) in 2D
-                ['Ex'       , 'by*uz-uy*bz'                             ], $ ; electric field
-                ['Ey'       , 'bz*ux-uz*bx'                             ], $
-                ['Ez'       , 'bx*uy-ux*by'                             ], $
-                ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'           ], $ ; energy density
-                ['pbeta'    , '2*mu0*p/bb'                              ], $ ; plasma beta
-                ['s'        , 'p/rho^gamma'                             ], $ ; entropy
-                ['Ti'       , 'ti0*p/rho'                               ], $ ; ion temperature [K]
-                ['Te'       , 'ti0*{pe}/rho'                            ], $ ; electron temp. [K]
-                ['calfvenx' , 'bx/sqrt(rho*mu0A)'                       ], $ ; Alfven velocity
-                ['calfveny' , 'by/sqrt(rho*mu0A)'                       ], $
-                ['calfvenz' , 'bz/sqrt(rho*mu0A)'                       ], $
-                ['calfven'  , 'b /sqrt(rho*mu0A)'                       ], $
-                ['Malfvenx' , 'ux/bx*sqrt(rho*mu0A)'                    ], $ ; Alfven Mach number
-                ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                    ], $
-                ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                    ], $
-                ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                    ], $
-                ['csound'   , 'sqrt(gs*p/rho)'                          ], $ ; ion sound speed
-                ['csounde'  , 'sqrt(gs*pe/rho*mi/me)'                   ], $ ; electron sound speed
-                ['mach'     , 'u /sqrt(gs*p/rho)'                       ], $ ; Mach number
-                ['machx'    , 'ux/sqrt(gs*p/rho)'                       ], $
-                ['machy'    , 'uy/sqrt(gs*p/rho)'                       ], $
-                ['machz'    , 'uz/sqrt(gs*p/rho)'                       ], $
-                ['cfast'    , 'sqrt(cc/rho)'                            ], $ ; fast magnetosonic speed
-                ['cfastx'   , 'sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'   ], $
-                ['cfasty'   , 'sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'   ], $
-                ['cfastz'   , 'sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'   ], $
-                ['cslowx'   , 'sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'   ], $ ; slow speed
-                ['cslowy'   , 'sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'   ], $
-                ['cslowz'   , 'sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'   ], $
-                ['Mfast'    , 'sqrt(rho*uu/cc)'                         ], $ ; fast Mach number
-                ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'], $
-                ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'], $
-                ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'], $
-                ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'], $ ; slow Mach number
-                ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'], $
-                ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'], $
-                ['uth'      , 'sqrt(cs0*p/rho)'                         ], $ ; ion thermal speed
-                ['uthe'     , 'sqrt(cs0*{pe}/rho*mi/me)'                ], $ ; electron thermal speed
-                ['omegapi'  , 'op0*sqrt(rho)'                           ], $ ; ion plasma frequency
-                ['omegape'  , 'op0*sqrt(rho*mi/me)'                     ], $ ; electron plasma freq.
-                ['omegaci'  , 'oc0*b'                                   ], $ ; ion gyro frequency
-                ['omegace'  , 'oc0*b*mi/me'                             ], $ ; electron gyro freq.
-                ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'               ], $ ; gyro radius  
-                ['rgSI'     , 'rg0*sqrt(p/rho)/(b>1e-30)*xSI'           ], $ ; gyro radius in SI
-                ['rgyroe'   , 'rg0*sqrt(p/rho*me/mi)/(b>1e-30)'         ], $ ; electron gyro radius  
-                ['rgeSI'    , 'rg0*sqrt(p/rho*me/mi)/(b>1e-30)*xSI'     ], $ ; electron gyro radius in SI
-                ['dinertial', 'di0/sqrt(rho)'                           ], $ ; inertial length
-                ['diSI'     ,' di0/sqrt(rho)*xSI'                       ], $ ; ion inertial length in SI
-                ['skindepth',' di0/sqrt(rho*mi/me)'                     ], $ ; electron skin depth
-                ['deSI'     ,' di0/sqrt(rho*mi/me)*xSI'                 ], $ ; electron skin depth in SI
-                ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $ ; Debye length
-                ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ], $ ; Debye length in SI
-                ['ni'       , '{rhos1}/mi'                              ], $ ; ion number density
-                ['ne'       , '{rhos0}/me'                              ], $ ; electron number density
-                ['qtot'     , 'qi*{ni}+qe*{ne}'                         ], $ ; total charge
-                ['jpx'      , 'qi*{ni}*{uxs1}+qe*{ne}*{uxs0}'           ], $ ; jx from particles
-                ['jpy'      , 'qi*{ni}*{uys1}+qe*{ne}*{uys0}'           ], $ ; jy from particles
-                ['jpz'      , 'qi*{ni}*{uzs1}+qe*{ne}*{uzs0}'           ], $ ; jz from particles
-                ['jp'       , 'sqrt({jpx}^2+{jpy}^2+{jpz}^2)'           ], $ ; j from particles 
-                ['jppar'    , '({jpx}*{bx}+{jpy}*{by}+{jpz}*{bz})/b'    ], $ ; j parallel to field line
-                ['jpperp'   , 'sqrt({jp}^2-{jppar}^2)'                  ], $ ; j perpendicular to field line
-                ['jpxbx'    , '{jpy}*{bz}-{jpz}*{by}'                   ], $ ; (j x b)_x
-                ['jpxby'    , '{jpz}*{bx}-{jpx}*{bz}'                   ], $ ; (j x b)_y
-                ['jpxbz'    , '{jpx}*{by}-{jpy}*{bx}'                   ], $ ; (j x b)_z
-                ['p11S0'    , '{pXXS0}*x1^2+{pyyS0}*y1^2+{pzzS0}*z1^2+2*({pxyS0}*x1*y1+{pxzS0}*x1*z1+{pyzS0}*y1*z1)'], $;
-                ['p22S0'    , '{pXXS0}*x2^2+{pyyS0}*y2^2+{pzzS0}*z2^2+2*({pxyS0}*x2*y2+{pxzS0}*x2*z2+{pyzS0}*y2*z2)'], $;
-                ['p33S0'    , '{pXXS0}*x3^2+{pyyS0}*y3^2+{pzzS0}*z3^2+2*({pxyS0}*x3*y3+{pxzS0}*x3*z3+{pyzS0}*y3*z3)'], $;
-                ['p12S0'    , '{pXXS0}*x1*x2+{pyyS0}*y1*y2+{pzzS0}*z1*z2+{pxyS0}*(x1*y2+y1*x2)+{pxzS0}*(x1*z2+z1*x2)+{pyzS0}*(y1*z2+z1*y2)'], $;
-                ['p13S0'    , '{pXXS0}*x1*x3+{pyyS0}*y1*y3+{pzzS0}*z1*z3+{pxyS0}*(x1*y3+y1*x3)+{pxzS0}*(x1*z3+z1*x3)+{pyzS0}*(y1*z3+z1*y3)'], $;
-                ['p23S0'    , '{pXXS0}*x2*x3+{pyyS0}*y2*y3+{pzzS0}*z2*z3+{pxyS0}*(x2*y3+y2*x3)+{pxzS0}*(x2*z3+z2*x3)+{pyzS0}*(y2*z3+z2*y3)'], $;
-                ['p11S1'    , '{pXXS1}*x1^2+{pyyS1}*y1^2+{pzzS1}*z1^2+2*({pxyS1}*x1*y1+{pxzS1}*x1*z1+{pyzS1}*y1*z1)'], $;
-                ['p22S1'    , '{pXXS1}*x2^2+{pyyS1}*y2^2+{pzzS1}*z2^2+2*({pxyS1}*x2*y2+{pxzS1}*x2*z2+{pyzS1}*y2*z2)'], $;
-                ['p33S1'    , '{pXXS1}*x3^2+{pyyS1}*y3^2+{pzzS1}*z3^2+2*({pxyS1}*x3*y3+{pxzS1}*x3*z3+{pyzS1}*y3*z3)'], $;
-                ['p12S1'    , '{pXXS1}*x1*x2+{pyyS1}*y1*y2+{pzzS1}*z1*z2+{pxyS1}*(x1*y2+y1*x2)+{pxzS1}*(x1*z2+z1*x2)+{pyzS1}*(y1*z2+z1*y2)'], $;
-                ['p13S1'    , '{pXXS1}*x1*x3+{pyyS1}*y1*y3+{pzzS1}*z1*z3+{pxyS1}*(x1*y3+y1*x3)+{pxzS1}*(x1*z3+z1*x3)+{pyzS1}*(y1*z3+z1*y3)'], $;
-                ['p23S1'    , '{pXXS1}*x2*x3+{pyyS1}*y2*y3+{pzzS1}*z2*z3+{pxyS1}*(x2*y3+y2*x3)+{pxzS1}*(x2*z3+z2*x3)+{pyzS1}*(y2*z3+z2*y3)']  $;
-                                     ]))
+  functiondef = $
+     strlowcase(transpose([ $
+     ['mxB'    , 'rho*ux+(bb*ux-(ux*bx+uy*by+uz*bz)*bx)/c0^2'], $ ; Boris momenta
+     ['myB'    , 'rho*uy+(bb*uy-(ux*bx+uy*by+uz*bz)*by)/c0^2'], $
+     ['mzB'    , 'rho*uz+(bb*uz-(ux*bx+uy*by+uz*bz)*bz)/c0^2'], $
+     ['mx'       , 'rho*ux'                                  ], $ ; momenta
+     ['my'       , 'rho*uy'                                  ], $
+     ['mz'       , 'rho*uz'                                  ], $
+     ['uH'       , 'uH0*sqrt({jx}^2+{jy}^2+{jz}^2)/rho'      ], $ ; Hall velocity
+     ['uHx'      , 'uH0*{jx}/rho'                            ], $
+     ['uHy'      , 'uH0*{jy}/rho'                            ], $ 
+     ['uHz'      , 'uH0*{jz}/rho'                            ], $ 
+     ['uex'      , 'ux-uH0*{jx}/rho'                         ], $ ; electron velocity
+     ['uey'      , 'uy-uH0*{jy}/rho'                         ], $ 
+     ['uez'      , 'uz-uH0*{jz}/rho'                         ], $ 
+     ['ue'       , 'sqrt({uex}^2+{uey}^2+{uez}^2)'           ], $
+     ['j'        , 'sqrt({jx}^2+{jy}^2+{jz}^2)'              ], $            ; current density
+     ['divbxy'   , 'div(bx,by,x,y)'                          ], $            ; div(B) in 2D
+     ['divb1xy'  , 'div({b1x},{b1y},x,y)'                    ], $            ; div(B1) in 2D
+     ['Ex'       , 'by*uz-uy*bz'                             ], $            ; electric field
+     ['Ey'       , 'bz*ux-uz*bx'                             ], $
+     ['Ez'       , 'bx*uy-ux*by'                             ], $
+     ['e'        , 'p/(gamma-1)+0.5*(rho*uu + bb)'           ], $            ; energy density
+     ['pbeta'    , '2*mu0*p/bb'                              ], $            ; plasma beta
+     ['s'        , 'p/rho^gamma'                             ], $            ; entropy
+     ['Ti'       , 'ti0*p/rho'                               ], $            ; ion temperature [K]
+     ['Te'       , 'ti0*{pe}/rho'                            ], $            ; electron temp. [K]
+     ['calfvenx' , 'bx/sqrt(rho*mu0A)'                       ], $            ; Alfven velocity
+     ['calfveny' , 'by/sqrt(rho*mu0A)'                       ], $
+     ['calfvenz' , 'bz/sqrt(rho*mu0A)'                       ], $
+     ['calfven'  , 'b /sqrt(rho*mu0A)'                       ], $
+     ['Malfvenx' , 'ux/bx*sqrt(rho*mu0A)'                    ], $ ; Alfven Mach number
+     ['Malfveny' , 'uy/by*sqrt(rho*mu0A)'                    ], $
+     ['Malfvenz' , 'uz/bz*sqrt(rho*mu0A)'                    ], $
+     ['Malfven'  , 'u /b *sqrt(rho*mu0A)'                    ], $
+     ['csound'   , 'sqrt(gs*p/rho)'                          ], $            ; ion sound speed
+     ['csounde'  , 'sqrt(gs*pe/rho*mi/me)'                   ], $            ; electron sound speed
+     ['mach'     , 'u /sqrt(gs*p/rho)'                       ], $            ; Mach number
+     ['machx'    , 'ux/sqrt(gs*p/rho)'                       ], $
+     ['machy'    , 'uy/sqrt(gs*p/rho)'                       ], $
+     ['machz'    , 'uz/sqrt(gs*p/rho)'                       ], $
+     ['cfast'    , 'sqrt(cc/rho)'                            ], $ ; fast magnetosonic speed
+     ['cfastx'   , 'sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'   ], $
+     ['cfasty'   , 'sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'   ], $
+     ['cfastz'   , 'sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'   ], $
+     ['cslowx'   , 'sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'   ], $ ; slow speed
+     ['cslowy'   , 'sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'   ], $
+     ['cslowz'   , 'sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'   ], $
+     ['Mfast'    , 'sqrt(rho*uu/cc)'                         ], $ ; fast Mach number
+     ['Mfastx'   , 'ux/sqrt((cc+sqrt(cc^2-c4*p*bx^2))/2/rho)'], $
+     ['Mfasty'   , 'uy/sqrt((cc+sqrt(cc^2-c4*p*by^2))/2/rho)'], $
+     ['Mfastz'   , 'uz/sqrt((cc+sqrt(cc^2-c4*p*bz^2))/2/rho)'], $
+     ['Mslowx'   , 'ux/sqrt((cc-sqrt(cc^2-c4*p*bx^2))/2/rho)'], $ ; slow Mach number
+     ['Mslowy'   , 'uy/sqrt((cc-sqrt(cc^2-c4*p*by^2))/2/rho)'], $
+     ['Mslowz'   , 'uz/sqrt((cc-sqrt(cc^2-c4*p*bz^2))/2/rho)'], $
+     ['uth'      , 'sqrt(cs0*p/rho)'                         ], $            ; ion thermal speed
+     ['uthe'     , 'sqrt(cs0*{pe}/rho*mi/me)'                ], $            ; electron thermal speed
+     ['omegapi'  , 'op0*sqrt(rho)'                           ], $            ; ion plasma frequency
+     ['omegape'  , 'op0*sqrt(rho*mi/me)'                     ], $            ; electron plasma freq.
+     ['omegaci'  , 'oc0*b'                                   ], $            ; ion gyro frequency
+     ['omegace'  , 'oc0*b*mi/me'                             ], $            ; electron gyro freq.
+     ['rgyro'    , 'rg0*sqrt(p/rho)/(b>1e-30)'               ], $            ; gyro radius  
+     ['rgSI'     , 'rg0*sqrt(p/rho)/(b>1e-30)*xSI'           ], $            ; gyro radius in SI
+     ['rgyroe'   , 'rg0*sqrt(p/rho*me/mi)/(b>1e-30)'         ], $            ; electron gyro radius  
+     ['rgeSI'    , 'rg0*sqrt(p/rho*me/mi)/(b>1e-30)*xSI'     ], $            ; electron gyro radius in SI
+     ['dinertial', 'di0/sqrt(rho)'                           ], $            ; inertial length
+     ['diSI'     ,' di0/sqrt(rho)*xSI'                       ], $            ; ion inertial length in SI
+     ['skindepth',' di0/sqrt(rho*mi/me)'                     ], $            ; electron skin depth
+     ['deSI'     ,' di0/sqrt(rho*mi/me)*xSI'                 ], $            ; electron skin depth in SI
+     ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $            ; Debye length
+     ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ], $            ; Debye length in SI
+     ['ni'       , '{rhos1}/mi'                              ], $            ; ion number density
+     ['ne'       , '{rhos0}/me'                              ], $            ; electron number density
+     ['qtot'     , 'qi*{ni}+qe*{ne}'                         ], $            ; total charge
+     ['jpx'      , 'qi*{ni}*{uxs1}+qe*{ne}*{uxs0}'           ], $            ; jx from particles
+     ['jpy'      , 'qi*{ni}*{uys1}+qe*{ne}*{uys0}'           ], $            ; jy from particles
+     ['jpz'      , 'qi*{ni}*{uzs1}+qe*{ne}*{uzs0}'           ], $            ; jz from particles
+     ['jp'       , 'sqrt({jpx}^2+{jpy}^2+{jpz}^2)'           ], $            ; j from particles 
+     ['jppar'    , '({jpx}*{bx}+{jpy}*{by}+{jpz}*{bz})/b'    ], $            ; j parallel to field line
+     ['jpperp'   , 'sqrt({jp}^2-{jppar}^2)'                  ], $            ; j perpendicular to field line
+     ['jpxbx'    , '{jpy}*{bz}-{jpz}*{by}'                   ], $            ; (j x b)_x
+     ['jpxby'    , '{jpz}*{bx}-{jpx}*{bz}'                   ], $            ; (j x b)_y
+     ['jpxbz'    , '{jpx}*{by}-{jpy}*{bx}'                   ], $            ; (j x b)_z
+     ['p11S0'    , '{pXXS0}*x1^2+{pyyS0}*y1^2+{pzzS0}*z1^2+2*({pxyS0}*x1*y1+{pxzS0}*x1*z1+{pyzS0}*y1*z1)'], $           ;
+     ['p22S0'    , '{pXXS0}*x2^2+{pyyS0}*y2^2+{pzzS0}*z2^2+2*({pxyS0}*x2*y2+{pxzS0}*x2*z2+{pyzS0}*y2*z2)'], $           ;
+     ['p33S0'    , '{pXXS0}*x3^2+{pyyS0}*y3^2+{pzzS0}*z3^2+2*({pxyS0}*x3*y3+{pxzS0}*x3*z3+{pyzS0}*y3*z3)'], $           ;
+     ['p12S0'    , '{pXXS0}*x1*x2+{pyyS0}*y1*y2+{pzzS0}*z1*z2+{pxyS0}*(x1*y2+y1*x2)+{pxzS0}*(x1*z2+z1*x2)+{pyzS0}*(y1*z2+z1*y2)'], $ ;
+     ['p13S0'    , '{pXXS0}*x1*x3+{pyyS0}*y1*y3+{pzzS0}*z1*z3+{pxyS0}*(x1*y3+y1*x3)+{pxzS0}*(x1*z3+z1*x3)+{pyzS0}*(y1*z3+z1*y3)'], $ ;
+     ['p23S0'    , '{pXXS0}*x2*x3+{pyyS0}*y2*y3+{pzzS0}*z2*z3+{pxyS0}*(x2*y3+y2*x3)+{pxzS0}*(x2*z3+z2*x3)+{pyzS0}*(y2*z3+z2*y3)'], $ ;
+     ['p11S1'    , '{pXXS1}*x1^2+{pyyS1}*y1^2+{pzzS1}*z1^2+2*({pxyS1}*x1*y1+{pxzS1}*x1*z1+{pyzS1}*y1*z1)'], $           ;
+     ['p22S1'    , '{pXXS1}*x2^2+{pyyS1}*y2^2+{pzzS1}*z2^2+2*({pxyS1}*x2*y2+{pxzS1}*x2*z2+{pyzS1}*y2*z2)'], $           ;
+     ['p33S1'    , '{pXXS1}*x3^2+{pyyS1}*y3^2+{pzzS1}*z3^2+2*({pxyS1}*x3*y3+{pxzS1}*x3*z3+{pyzS1}*y3*z3)'], $           ;
+     ['p12S1'    , '{pXXS1}*x1*x2+{pyyS1}*y1*y2+{pzzS1}*z1*z2+{pxyS1}*(x1*y2+y1*x2)+{pxzS1}*(x1*z2+z1*x2)+{pyzS1}*(y1*z2+z1*y2)'], $ ;
+     ['p13S1'    , '{pXXS1}*x1*x3+{pyyS1}*y1*y3+{pzzS1}*z1*z3+{pxyS1}*(x1*y3+y1*x3)+{pxzS1}*(x1*z3+z1*x3)+{pyzS1}*(y1*z3+z1*y3)'], $ ;
+     ['p23S1'    , '{pXXS1}*x2*x3+{pyyS1}*y2*y3+{pzzS1}*z2*z3+{pxyS1}*(x2*y3+y2*x3)+{pxzS1}*(x2*z3+z2*x3)+{pyzS1}*(y2*z3+z2*y3)']  $ ;
+                          ]))
 
   common file_head
   common phys_units
   common phys_convert
   common phys_const
-  common plot_param  ; rcut, vec0
+  common plot_param             ; rcut, vec0
 
   if n_elements(xx) eq 0 or n_elements(w) eq 0 then begin
      print,'ERROR in funcdef: xx or w are not defined'
@@ -321,11 +324,11 @@ function funcdef,xx,w,func
   ;; Calculate x1, x2, ..., z3 field aligned basis vectors if needed
   if stregex(f,'p[123][123]') ge 0 then begin
      x0 = vec0(0)      & y0 = vec0(1)       & z0 = vec0(2)     ; vec0 from common phys_convert
-     x1 = bx/(b>1e-30) & y1 = by/(b>1e-30)  & z1 = bz/(b>1e-30); vec1 = (bx, by, bz)/b
-     x2 = y0*z1-z0*y1  & y2 = z0*x1-x0*z1   & z2 = x0*y1-y0*x1 ; vec2 = vec0 x vec1 / norm
-     z3 = sqrt(x2^2 + y2^2 + z2^2) > 1e-30                     ; use z3 for normalization
-     x2 /= z3          & y2 /= z3           & z2 /= z3         ; normalize vec2
-     x3 = y1*z2-z1*y2  & y3 = z1*x2-x1*z2   & z3 = x1*y2-y1*x2 ; vec3 = vec1 x vec2
+     x1 = bx/(b>1e-30) & y1 = by/(b>1e-30)  & z1 = bz/(b>1e-30) ; vec1 = (bx, by, bz)/b
+     x2 = y0*z1-z0*y1  & y2 = z0*x1-x0*z1   & z2 = x0*y1-y0*x1  ; vec2 = vec0 x vec1 / norm
+     z3 = sqrt(x2^2 + y2^2 + z2^2) > 1e-30                      ; use z3 for normalization
+     x2 /= z3          & y2 /= z3           & z2 /= z3          ; normalize vec2
+     x3 = y1*z2-z1*y2  & y3 = z1*x2-x1*z2   & z3 = x1*y2-y1*x2  ; vec3 = vec1 x vec2
   endif
 
   ;; Add functions to the basic variable list

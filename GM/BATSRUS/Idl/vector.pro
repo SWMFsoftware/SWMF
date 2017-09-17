@@ -84,6 +84,8 @@ PRO STREAMLINE,U,V,XX,YY,NVECS=nvecs,X0=x0,$
 ;       05/16/07- G. Toth extracted from existing code.
 ;-
 
+  common debug_param & on_error, onerror
+
 ; normalize vectors
   norm = sqrt(u^2+v^2+1.e-30) & u1 = u/norm & v1 = v/norm
 
@@ -241,7 +243,7 @@ PRO VECTOR,U,V,XX,YY,NVECS=nvecs,MAXVAL=maxval,LENGTH=length,HEAD=head,$
 
 ;Return to caller if an error occurs
 ;
-  on_error,2
+  common debug_param & on_error, onerror
 
   common colors                 
 

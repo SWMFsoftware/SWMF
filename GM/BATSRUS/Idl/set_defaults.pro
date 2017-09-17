@@ -3,6 +3,7 @@ set_default_values
 ; these common statements make all the variables accessible
 ; interactively.
 
+common debug_param
 common ask_param
 common getpict_param
 common plotfunc_param
