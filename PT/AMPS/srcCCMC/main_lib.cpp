@@ -379,7 +379,7 @@ void amps_init() {
 	  double xCenter,dx;
 
 	  xCenter=0.5*(PIC::CCMC::Domain::xmax[idim]+PIC::CCMC::Domain::xmin[idim]);
-	  dx=0.8*(PIC::CCMC::Domain::xmax[idim]-PIC::CCMC::Domain::xmin[idim]);
+	  dx=0.99999*(PIC::CCMC::Domain::xmax[idim]-PIC::CCMC::Domain::xmin[idim]);
 
 	  PIC::CCMC::Domain::xmin[idim]=xCenter-0.5*dx;
 	  PIC::CCMC::Domain::xmax[idim]=xCenter+0.5*dx;
@@ -400,7 +400,7 @@ void amps_init() {
 		PIC::Mesh::mesh.readMeshFile("mesh.msh");
 	}
 
-	PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
+//PIC::Mesh::mesh.outputMeshTECPLOT("mesh.dat");
 
 	PIC::Mesh::mesh.memoryAllocationReport();
 	PIC::Mesh::mesh.GetMeshTreeStatistics();
