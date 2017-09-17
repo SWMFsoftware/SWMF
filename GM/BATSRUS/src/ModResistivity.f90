@@ -238,7 +238,7 @@ contains
 
     use ModConst,   ONLY: cProtonMass, cElectronCharge
     use ModPhysics, ONLY: No2Si_V, UnitB_, UnitRho_, UnitTemperature_
-    use ModAdvance, ONLY: State_VGB, Rho_, P_, Bx_, Bz_
+    use ModAdvance, ONLY: State_VGB, Rho_, P_
     use ModB0,      ONLY: B0_DGB
     use ModMain,    ONLY: UseB0
 
@@ -263,12 +263,6 @@ contains
        EtaSi = EtaPerpSpitzerSi &
             / ( No2Si_V(UnitTemperature_)* &
             State_VGB(P_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**1.5
-
-       ! Take into account the dependence on the B field:
-       !    Eta' = Eta*(1 + [B*mp/(rho*e*Eta)]^2)
-       EtaSi = EtaSi * (1.0 + Coef*sum( &
-            (State_VGB(Bx_:Bz_,i,j,k,iBlock)+B0_DG(:,i,j,k))**2) &
-            / (State_VGB(Rho_,i,j,k,iBlock)*EtaSi)**2)
 
        ! Normalize Eta_G
        Eta_G(i,j,k) = EtaSi*Si2NoEta
