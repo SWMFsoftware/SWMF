@@ -49,6 +49,9 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _SAMPLING_DISTRIBUTION_FUNCTION_ON_    1
 #define _SAMPLING_DISTRIBUTION_FUNCTION_OFF_   0
 
+//enable the particle trajectory integration backward in time 
+#define _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_   0
+#define _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__DISABLED_  1
 
 //in case OpenMP is used: set individual particles, cells, or blocks to separate processors
 #define _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_   0
