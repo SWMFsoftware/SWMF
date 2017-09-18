@@ -1642,6 +1642,8 @@ test_fivemoment_alfven_check:
 	ls -l test_fivemoment_alfven.diff
 
 test_fivemoment_shock:
+	@echo "test_fivemoment_shock_compile..." > test_fivemoment_alfven.diff
+	$(MAKE) test_fivemoment_shock_compile
 	@echo "test_fivemoment_shock_rundir..." >> test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_rundir
 	@echo "test_fivemoment_shock_run..." >> test_fivemoment_shock.diff
@@ -1649,6 +1651,11 @@ test_fivemoment_shock:
 	@echo "test_fivemoment_shock_check..." >> test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_fivemoment_shock_compile:
+	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,10,1
+	$(MAKE) BATSRUS
+	make PIDL
 
 test_fivemoment_shock_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/FIVEMOMENT/PARAM.in.shock PARAM.in
