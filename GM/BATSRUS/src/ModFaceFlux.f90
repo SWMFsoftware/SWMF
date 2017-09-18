@@ -199,8 +199,8 @@ contains
        end if
     case('#CLIGHTWARNING')
        call read_var('DoClightWarning', DoClightWarning)
-        if (DoClightWarning) &
-             call read_var('FactorClightWarning', FactorClightWarning)
+       if (DoClightWarning) &
+            call read_var('FactorClightWarning', FactorClightWarning)
     end select
 
   end subroutine face_flux_set_parameters
@@ -1363,12 +1363,12 @@ contains
        Flux_V(Ex_:Ez_) = &
             0.5*(FluxLeft_V(Ex_:Ez_) + FluxRight_V(Ex_:Ez_) &
             - CLight*(StateRightCons_V(Ex_:Ez_) &
-            -       StateLeftCons_V(Ex_:Ez_)))
+            -         StateLeftCons_V(Ex_:Ez_)))
 
        Flux_V(HypE_) = &
             0.5*(FluxLeft_V(HypE_) + FluxRight_V(HypE_) &
             - CLight*(StateRightCons_V(HypE_) &
-            -       StateLeftCons_V(HypE_)))
+            -         StateLeftCons_V(HypE_)))
     end if
 
     ! Calculate neutral fluxes one-by-one
@@ -2316,7 +2316,7 @@ contains
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
 
     use ModMultiFluid
-    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp2, UseResistivePlanet
+    use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
     use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy
     use ModWaves
@@ -2514,10 +2514,10 @@ contains
        if(UseHyperbolicDivb)then
           Hyp  = State_V(Hyp_)
 
-          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + Normal_D*Hyp
-          Flux_V(Hyp_)    = SpeedHyp2*Bn
+          Flux_V(Bx_:Bz_) = Flux_V(Bx_:Bz_) + SpeedHyp*Normal_D*Hyp
+          Flux_V(Hyp_)    = SpeedHyp*Bn
 
-          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + Bn*Hyp
+          if(IsMhd) Flux_V(Energy_) = Flux_V(Energy_) + SpeedHyp*Bn*Hyp
        elseif(Hyp_ > 1)then
           Flux_V(Hyp_) = 0.0
        end if

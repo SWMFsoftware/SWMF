@@ -617,10 +617,8 @@ contains
     Oop(1:3,1:3,1:3) = 0.0
 
     ! Hyperbolic cleaning uses SpeedHyp velocity
-    if(UseHyperbolicDivb .and. SpeedHypDim > 0)then
-       SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
-       SpeedHyp2 = SpeedHyp**2
-    end if
+    if(UseHyperbolicDivb .and. SpeedHypDim > 0) &
+         SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
   end subroutine set_physics_constants
 
@@ -1027,12 +1025,9 @@ contains
 
     if(Hyp_ > 1)then
        ! Set the scalar field Phi used in hyperbolic cleaning
-       UnitUser_V(Hyp_) = No2Io_V(UnitB_)*No2Io_V(UnitU_)
-       NameUnitUserTec_V(Hyp_) = &
-            trim(NameTecUnit_V(UnitB_)) // trim(NameTecUnit_V(UnitU_))
-
-       NameUnitUserIdl_V(Hyp_) = &
-            trim(NameIdlUnit_V(UnitB_)) // trim(NameIdlUnit_V(UnitU_))
+       UnitUser_V(Hyp_) = No2Io_V(UnitB_)
+       NameUnitUserTec_V(Hyp_) = NameTecUnit_V(UnitB_)
+       NameUnitUserIdl_V(Hyp_) = NameIdlUnit_V(UnitB_)
     end if
 
     if(SignB_ > 1)then

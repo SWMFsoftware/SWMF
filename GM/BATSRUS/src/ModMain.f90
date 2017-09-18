@@ -179,7 +179,7 @@ module ModMain
   logical :: UseProjection    = .false.
   logical :: UseConstrainB    = .false.
   logical :: UseHyperbolicDivb= .false.
-  real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0, SpeedHyp2 = 1.0
+  real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
   
   !\
