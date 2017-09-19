@@ -4,6 +4,7 @@
 
 use strict;
 use warnings;
+use Cwd;
 use POSIX qw(strftime);
 use List::Util qw(first);
 
@@ -155,6 +156,55 @@ while ($line=<InputFile>) {
       die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
     }
   }
+  
+  #sample the phase space  of injected particles at the boundary of the domain that can reach the near Earth region
+  elsif ($InputLine eq "SAMPLEINJECTIONPHASESPACE") {
+    ($s0,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($s0 eq "ON")  {
+      ampsConfigLib::ChangeValueOfVariable("bool Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::ActiveFlag","true","main/DomainBoundaryParticlePropertyTable.cpp");
+      
+      while (defined $InputComment) {
+        ($s0,$InputComment)=split(' ',$InputComment,2);
+      
+        if ($s0 eq "NOUTPUTCYCLES") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          
+          ampsConfigLib::ChangeValueOfVariable("int Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::LastActiveOutputCycleNumber",$s0,"main/DomainBoundaryParticlePropertyTable.cpp");      
+        }
+        elsif ($s0 eq "OCCUPIEDPHASESPACETABLEFRACTION") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          
+          ampsConfigLib::ChangeValueOfVariable("double Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::OccupiedPhaseSpaceTableFraction",$s0,"main/DomainBoundaryParticlePropertyTable.cpp");               
+        }
+        elsif ($s0 eq "RESETPARTICLEBUFFER") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          
+          if ($s0 eq "ON") {
+            ampsConfigLib::ChangeValueOfVariable("bool Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::LastActiveOutputCycleResetParticleBuffer","true","main/DomainBoundaryParticlePropertyTable.cpp"); 
+          }
+          elsif ($s0 eq "OFF") {
+            ampsConfigLib::ChangeValueOfVariable("bool Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::LastActiveOutputCycleResetParticleBuffer","false","main/DomainBoundaryParticlePropertyTable.cpp");
+          } 
+          else {
+            warn("Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled");
+            die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+          }
+        }
+        else {
+          warn("Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled");
+          die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }     
+      }
+    }
+    elsif ($s0 eq "OFF") {
+      ampsConfigLib::ChangeValueOfVariable("bool Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::ActiveFlag","false","main/DomainBoundaryParticlePropertyTable.cpp");
+    }
+    else {
+      warn("Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled");
+      die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+    }
+  } 
   
   #the number, locations, energy range, and the number of the ebergy intervals used in the spherical sampling surfaces 
   elsif ($InputLine eq "SPHERICALSHELLS") {

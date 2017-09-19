@@ -75,6 +75,12 @@ MoverIntegratorMode=Boris !GuidingCenter !Boris-relativistic
 
   TrajectoryTracing=off
 
+  define _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_  _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_
+
+! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_BOUNDARY_INJECTION_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node) 
+
+  define _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_ _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_
+
   define _PIC_NIGHTLY_TEST__REDUCE_RESOLUTION_MODE_ _PIC_MODE_OFF_
 
   define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
@@ -124,7 +130,7 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 
 
 ! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) PIC::Mover::Boris(ptr,LocalTimeStep,node)
-define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Earth::ParticleMover(ptr,LocalTimeStep,node)
+! define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Earth::ParticleMover(ptr,LocalTimeStep,node)
 
 
 !the mesh resoution close to Europa
@@ -171,6 +177,12 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Ear
   GCR=off  
   SEP=on
   Electron=off 
+
+  SampleInjectionPhaseSpace=on \\ 
+    nOutputCycles=3 \\ 
+    OccupiedPhaseSpaceTableFraction=0.2 \\
+    ResetParticleBuffer=on !on, off   
+    
 
   SphericalShells=on \\  
     x=300.0E3+_RADIUS_(_TARGET_),400.0E3+_RADIUS_(_TARGET_), \\ 
