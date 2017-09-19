@@ -6,11 +6,11 @@
 
 #include <cmath>
 
+#include "ccmc.dfn"
+
 #include "pic.h"
 #include "Exosphere.h"
 #include "constants.h"
-
-#include "ccmc.dfn"
 
 namespace CCMC {
   using namespace Exosphere;
