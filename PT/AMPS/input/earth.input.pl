@@ -111,6 +111,19 @@ while ($line=<InputFile>) {
       die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
     }     
   }
+  elsif ($InputLine eq "ELECTRON") {
+    ($s0,$s1)=split(' ',$InputComment,2);
+
+    if ($s0 eq "ON") {
+      ampsConfigLib::RedefineMacro("_PIC_EARTH_ELECTRON__MODE_","_PIC_MODE_ON_","main/Earth.dfn");
+    }
+    elsif($s0 eq "OFF") {
+      ampsConfigLib::RedefineMacro("_PIC_EARTH_ELECTRON__MODE_","_PIC_MODE_OFF_","main/Earth.dfn");
+    }
+    else {
+      die "Cannot recognize line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+    }
+  }
   
   #sampling of the gyro-radius and gyro-frecuency in the computational domain
   elsif ($InputLine eq "PARTICLEDATASAMPLINGMODE") {
