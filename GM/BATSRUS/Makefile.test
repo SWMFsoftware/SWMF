@@ -1642,7 +1642,7 @@ test_fivemoment_alfven_check:
 	ls -l test_fivemoment_alfven.diff
 
 test_fivemoment_shock:
-	@echo "test_fivemoment_shock_compile..." > test_fivemoment_alfven.diff
+	@echo "test_fivemoment_shock_compile..." > test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_compile
 	@echo "test_fivemoment_shock_rundir..." >> test_fivemoment_shock.diff
 	$(MAKE) test_fivemoment_shock_rundir
