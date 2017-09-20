@@ -926,7 +926,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
         if(r2Cur<=R2_raytrace)then
 
-           if(NameVectorField /= 'B')then
+           ! Trace down to the surface
+           if(NameVectorField /= 'B' .or. R2_raytrace<=1.0)then
               XyzInOut_D = XyzCur_D
               iFace=ray_iono_
               EXIT FOLLOW
