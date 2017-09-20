@@ -989,9 +989,6 @@ Check=
 Name=test/Mover-Boris@@(0+valeriy)
 Time=7
 
-Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
-
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
 Compile=
@@ -1041,9 +1038,6 @@ Check=
 #>
 Name=test/Mover-Boris-relativistic@@(0+valeriy)
 Time=5
-
-Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
