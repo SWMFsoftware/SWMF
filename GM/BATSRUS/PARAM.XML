@@ -6676,7 +6676,7 @@ components. It can also be used to create plot files with open-closed
 field line information. There are two algorithms implemented for integrating 
 rays and for tracing rays.
 
-By default UseRaytrace oarameter is true if there is magnetic field in the 
+By default UseRaytrace parameter is true if there is magnetic field in the 
 equation module. The parameter can be set to false to save memory allocation.
 
 If UseAccurateTrace is false (default), the block-wise algorithm is used,
