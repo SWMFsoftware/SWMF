@@ -3122,10 +3122,11 @@ contains
        UseRotatingFrame = .true.
     end if
 
-    ! Update check does not work with Runge-Kutta schemes
+    ! Update check does not work with Runge-Kutta explicit schemes
     ! because the final update is a linear combination of all stages.
-    if(.not.UseHalfStep) UseUpdateCheck = .false.
-
+    if(.not.UseHalfStep .and. .not.UseImplicit) UseUpdateCheck = .false.
+    
+    
     ! Use first order prolongation for the first stage of high 
     ! resolution change.
     if(UseHighResChange) nOrderProlong = 1
