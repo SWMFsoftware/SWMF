@@ -928,10 +928,6 @@ Check=
 Name=test/Mover-guiding-center@@(0+valeriy) 
 Time=3
 
-Ref=2{icc}@@(0+valeriy)
-Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
-
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
