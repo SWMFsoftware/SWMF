@@ -157,11 +157,11 @@ module SP_ModGrid
   ! 4th index - local block number
   real, allocatable:: Distribution_IIB(:,:,:)
   ! scale with respect to Momentum and log(Momentum)
-  real, target:: MomentumScale_I(nMomentumBin)
-  real, target:: LogMomentumScale_I(nMomentumBin)
-  real, target:: EnergyScale_I(nMomentumBin)
-  real, target:: LogEnergyScale_I(nMomentumBin)
-  real, target:: DMomentumOverDEnergy_I(nMomentumBin)
+  real:: MomentumScale_I(nMomentumBin)
+  real:: LogMomentumScale_I(nMomentumBin)
+  real:: EnergyScale_I(nMomentumBin)
+  real:: LogEnergyScale_I(nMomentumBin)
+  real:: DMomentumOverDEnergy_I(nMomentumBin)
   !----------------------------------------------------------------------------
   ! Coordinate system and geometry
   character(len=3) :: TypeCoordSystem = 'HGR'
