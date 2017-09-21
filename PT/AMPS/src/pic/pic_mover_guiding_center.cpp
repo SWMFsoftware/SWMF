@@ -27,9 +27,7 @@ void PIC::Mover::GuidingCenter::Sampling::SampleParticleData(char* ParticleData,
     #if _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
     exit(__LINE__,__FILE__,"ERROR:not implemented");
     #else
-    KinEnergy+=0.5*m0*(Vguide[0]*Vguide[0]+
-           Vguide[1]*Vguide[1]+
-           Vguide[2]*Vguide[2]);
+    KinEnergy+=0.5*m0*(Vguide[0]*Vguide[0]+Vguide[1]*Vguide[1]+Vguide[2]*Vguide[2]);
     #endif //_PIC_PARTICLE_MOVER__RELATIVITY_MODE_ == _PIC_MODE_ON_
 
     //gyration energy
@@ -224,8 +222,7 @@ void PIC::Mover::GuidingCenter::GuidingCenterMotion_default(
   //parallel force
 #if _PIC__IDEAL_MHD_MODE_ == _PIC_MODE_ON_
   // in this case E = - V \cross B => E_{\paral} = E*b = 0
-  ForceParal_LOC = 
-   -mu/gamma * (gradAbsB[0]*b[0]+gradAbsB[1]*b[1]+gradAbsB[2]*b[2]);
+  ForceParal_LOC = -mu/gamma * (gradAbsB[0]*b[0]+gradAbsB[1]*b[1]+gradAbsB[2]*b[2]);
 #else
   ForceParal_LOC = 
     q * (E[0]*b[0]+E[1]*b[1]+E[2]*b[2]) - 
@@ -252,7 +249,7 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
   PIC::ParticleBuffer::byte *ParticleData;
   double AbsBInit=0.0, bInit[3]={0.0,0.0,0.0};
   double vInit[  3]={0.0,0.0,0.0}, pInit  =0.0, xInit[  3]={0.0,0.0,0.0};
-  double AbsBMiddle=0.0, bMiddle[3]={0.0};
+  double AbsBMiddle=0.0, bMiddle[3]={0.0,0.0,0.0};
   double vMiddle[3]={0.0,0.0,0.0}, pMiddle=0.0, xMiddle[3]={0.0,0.0,0.0};
   double vFinal[ 3]={0.0,0.0,0.0}, pFinal =0.0, xFinal[ 3]={0.0,0.0,0.0};
 //  double c2 = SpeedOfLight*SpeedOfLight;
@@ -304,8 +301,8 @@ int PIC::Mover::GuidingCenter::Mover_SecondOrder(long int ptr, double dtTotal,cT
 #endif
 
   misc = pow(vInit[0]*vInit[0]+vInit[1]*vInit[1]+vInit[2]*vInit[2],0.5);
-  if(vInit[0]*bInit[0]+vInit[1]*bInit[1]+vInit[2]*bInit[2] < 0)
-    misc *= -1.0;
+  if(vInit[0]*bInit[0]+vInit[1]*bInit[1]+vInit[2]*bInit[2] < 0) misc *= -1.0;
+
   vInit[0] = misc * bInit[0];
   vInit[1] = misc * bInit[1];
   vInit[2] = misc * bInit[2];
