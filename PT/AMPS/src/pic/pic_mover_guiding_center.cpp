@@ -71,6 +71,10 @@ void PIC::Mover::GuidingCenter::Init(){
 
 
 void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,double *x, double *v,long int ptr, void *node) {
+  PIC::Mover::GuidingCenter::InitiateMagneticMoment(spec,x,v,PIC::ParticleBuffer::GetParticleDataPointer(ptr),node);
+}
+
+void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,double *x, double *v,PIC::ParticleBuffer::byte *ParticleData, void *node) {
   //magnetic moment:
   // mu       = p_{perp}^2 / (2*m0*B)
   // p_{perp} = gamma*m0*v_{perp}
@@ -112,7 +116,7 @@ void PIC::Mover::GuidingCenter::InitiateMagneticMoment(int spec,double *x, doubl
     // change the veolcity so it is aligned with magnetic field
     // and set the magnetic moment's value
     v[0] = v_par * b[0]; v[1] = v_par * b[1]; v[2] = v_par * b[2];
-    PIC::ParticleBuffer::SetMagneticMoment(mu, ptr);
+    PIC::ParticleBuffer::SetMagneticMoment(mu, ParticleData);
   }
 }
 
