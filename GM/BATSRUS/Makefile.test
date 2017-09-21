@@ -85,6 +85,10 @@ test_help:
 	@echo "    test_earthsph              (run spherical Earth test)"
 	@echo "    test_eosgodunov            (run EOS/Godunov test)"
 	@echo "    test_fluxemergence         (run flux emergence test)"
+	@echo "    test_fivemoment            (run all 5-moment tests)"
+	@echo "    test_fivemoment_alfven     (run 5-moment Alven wave test)"
+	@echo "    test_fivemoment_shock      (run 5-moment shock wave test)"
+	@echo "    test_fivemoment_langmuir   (run 5-moment Langmuir wave test)"
 	@echo "    test_func                  (run functionality tests)"
 	@echo "    test_graydiffusion         (run gray-diffusion set test)"
 	@echo "    test_hallmhd               (run Hall MHD test)"
@@ -1623,7 +1627,7 @@ test_fivemoment_alfven:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_alfven_compile:
-	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,10,1
+	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,20,1
 	$(MAKE) BATSRUS
 	make PIDL
 
@@ -1653,7 +1657,7 @@ test_fivemoment_shock:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_fivemoment_shock_compile:
-	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,10,1
+	./Config.pl -u=Waves -e=FiveMoment -g=100,1,1,20,1
 	$(MAKE) BATSRUS
 	make PIDL
 
