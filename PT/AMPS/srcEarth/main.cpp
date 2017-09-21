@@ -49,14 +49,46 @@ int main(int argc,char **argv) {
 
 
 #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
-  int nTotalIterations = 100;
+  int nTotalIterations = 0;
 #else
   int nTotalIterations = 100000001;
 #endif
 
-  //time step
+  //time step with the backward integration integration
+  if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::ActiveFlag==true) {
+    PIC::Mover::BackwardTimeIntegrationMode=_PIC_MODE_ON_;
+    Earth::CutoffRigidity::DomainBoundaryParticleProperty::EnableSampleParticleProperty=true;
+
+    //particles will be injected only in the near Earth's region
+    Earth::BoundingBoxInjection::BoundaryInjectionMode=false;
+    Earth::CutoffRigidity::ParticleInjector::ParticleInjectionMode=true;
+
+    for (long int niter=0;(niter<nTotalIterations)&&(LastDataOutputFileNumber<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::LastActiveOutputCycleNumber);niter++) {
+      amps_time_step();
+
+      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+        PIC::RequiredSampleLength*=2;
+        if (PIC::RequiredSampleLength>50000) PIC::RequiredSampleLength=50000;
+
+
+        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+        if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
+      }
+    }
+
+    Earth::CutoffRigidity::DomainBoundaryParticleProperty::Gather();
+    Earth::CutoffRigidity::DomainBoundaryParticleProperty::SmoothSampleTable();
+    PIC::Mover::BackwardTimeIntegrationMode=_PIC_MODE_OFF_;
+
+    //partices will be injected from the boundary of the domain
+    Earth::BoundingBoxInjection::BoundaryInjectionMode=true;
+    Earth::CutoffRigidity::ParticleInjector::ParticleInjectionMode=false;
+    Earth::CutoffRigidity::DomainBoundaryParticleProperty::ApplyInjectionPhaseSpaceLimiting=true;
+    Earth::CutoffRigidity::DomainBoundaryParticleProperty::EnableSampleParticleProperty=false;
+  }
+
+  //time step with the forward integration
   for (long int niter=0;niter<nTotalIterations;niter++) {
-    
     amps_time_step();
     
     if (PIC::Mesh::mesh.ThisThread==0) {
@@ -76,7 +108,6 @@ int main(int argc,char **argv) {
        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
        if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
      }
-
   }
   
   
