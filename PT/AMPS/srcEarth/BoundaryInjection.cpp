@@ -11,6 +11,8 @@
 #include "pic.h"
 #include "Earth.h"
 
+//enable/disable injection of the particles from the boundary of the computational domain
+bool Earth::BoundingBoxInjection::BoundaryInjectionMode=true;
 
 bool Earth::BoundingBoxInjection::InjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
  bool ExternalFaces[6];
@@ -24,6 +26,7 @@ bool Earth::BoundingBoxInjection::InjectionIndicator(cTreeNodeAMR<PIC::Mesh::cDa
      for (spec=0;spec<PIC::nTotalSpecies;spec++) {
        if (_PIC_EARTH_SEP__MODE_==_PIC_MODE_ON_) ModelParticlesInjectionRate+=SEP::InjectionRate(spec,nface,startNode);
        if (_PIC_EARTH_GCR__MODE_==_PIC_MODE_ON_) ModelParticlesInjectionRate+=GCR::InjectionRate(spec,nface,startNode);
+       if (_PIC_EARTH_ELECTRON__MODE_==_PIC_MODE_ON_) ModelParticlesInjectionRate+=Electrons::InjectionRate(spec,nface,startNode);
 
        if (ModelParticlesInjectionRate>0.0) return true;
      }
@@ -44,7 +47,7 @@ long int Earth::BoundingBoxInjection::InjectionProcessor(int spec,cTreeNodeAMR<P
  double v[3];
  double ModelParticlesInjectionRate;
 
- if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_) {
+ if ((Earth::CutoffRigidity::DomainBoundaryParticleProperty::ApplyInjectionPhaseSpaceLimiting==true)&&(PIC::Mesh::mesh.ExternalBoundaryBlock(startNode,ExternalFaces)==_EXTERNAL_BOUNDARY_BLOCK_)) {
    ParticleWeight=startNode->block->GetLocalParticleWeight(spec);
    LocalTimeStep=startNode->block->GetLocalTimeStep(spec);
 
@@ -53,16 +56,10 @@ long int Earth::BoundingBoxInjection::InjectionProcessor(int spec,cTreeNodeAMR<P
      startNode->GetExternalNormal(ExternalNormal,nface);
      TimeCounter=0.0;
 
-/*       //injection boundary conditions: -x -> inflow, other -> open boundary
-     if (-ExternalNormal[0]<0.9) {
-       nInjectedParticles+=PIC::BC::ExternalBoundary::OpenFlow::InjectBlock(spec,startNode,nface);
-       continue;
-     }*/
-
-
-     for (int nModel=0;nModel<2;nModel++)  {
+     for (int nModel=0;nModel<3;nModel++)  {
        //nModel==0 -> SEP
        //nModel==1 -> GCR
+       //nModel==2 -> Electrons
 
        switch (nModel) {
        case 0:
@@ -70,6 +67,9 @@ long int Earth::BoundingBoxInjection::InjectionProcessor(int spec,cTreeNodeAMR<P
          break;
        case 1:
          ModelParticlesInjectionRate=(_PIC_EARTH_GCR__MODE_==_PIC_MODE_ON_) ? GCR::InjectionRate(spec,nface,startNode) : 0.0;
+         break;
+       case 2:
+         ModelParticlesInjectionRate=(_PIC_EARTH_ELECTRON__MODE_==_PIC_MODE_ON_) ? Electrons::InjectionRate(spec,nface,startNode) : 0.0;
          break;
        default:
          exit(__LINE__,__FILE__,"Error: the option is not recognized");
@@ -86,23 +86,48 @@ long int Earth::BoundingBoxInjection::InjectionProcessor(int spec,cTreeNodeAMR<P
            //generate the new particle position on the face
            for (idim=0,c0=rnd(),c1=rnd();idim<DIM;idim++) x[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim];
 
-           //generate a particle
-           newParticle=PIC::ParticleBuffer::GetNewParticle();
-           newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
-           PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
-           nInjectedParticles++;
+/*           //shift the particle one cell inside the domain
+           x[0]-=ExternalNormal[0]*(startNode->xmax[0]-startNode->xmin[0])/_BLOCK_CELLS_X_;
+           x[1]-=ExternalNormal[1]*(startNode->xmax[1]-startNode->xmin[1])/_BLOCK_CELLS_Y_;
+           x[2]-=ExternalNormal[2]*(startNode->xmax[2]-startNode->xmin[2])/_BLOCK_CELLS_Z_;*/
+
+
+
+           //generate a new particle properties
+           PIC::ParticleBuffer::byte tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+           PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
 
            //generate particles' velocity
            switch (nModel) {
            case 0:
-             SEP::GetNewParticle(newParticleData,x,spec,nface,startNode,ExternalNormal);
+             SEP::GetNewParticle(tempParticleData,x,spec,nface,startNode,ExternalNormal);
              break;
            case 1:
-             GCR::GetNewParticle(newParticleData,x,spec,nface,startNode,ExternalNormal);
+             GCR::GetNewParticle(tempParticleData,x,spec,nface,startNode,ExternalNormal);
+             break;
+           case 2:
+             Electrons::GetNewParticle(tempParticleData,x,spec,nface,startNode,ExternalNormal);
              break;
            default:
              exit(__LINE__,__FILE__,"Error: the option is not recognized");
            }
+
+           //apply the injection phase space limiting condition
+           if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::ApplyInjectionPhaseSpaceLimiting==true) {
+             double *v;
+
+             v=PIC::ParticleBuffer::GetV(tempParticleData);
+
+             if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::TestInjectedParticleProperties(spec,x,v,nface)==false) continue;
+           }
+
+           //generate a new particle
+           newParticle=PIC::ParticleBuffer::GetNewParticle();
+           newParticleData=PIC::ParticleBuffer::GetParticleDataPointer(newParticle);
+
+           PIC::ParticleBuffer::CloneParticle(newParticleData,(PIC::ParticleBuffer::byte*)tempParticleData);
+           PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticleData);
+           nInjectedParticles++;
 
            PIC::ParticleBuffer::SetX(x,newParticleData);
            PIC::ParticleBuffer::SetI(spec,newParticleData);
@@ -143,6 +168,7 @@ double Earth::BoundingBoxInjection::InjectionRate(int spec,cTreeNodeAMR<PIC::Mes
 
       if (_PIC_EARTH_SEP__MODE_==_PIC_MODE_ON_) ModelParticlesInjectionRate+=SEP::InjectionRate(spec,nface,startNode)*BlockSurfaceArea;
       if (_PIC_EARTH_GCR__MODE_==_PIC_MODE_ON_) ModelParticlesInjectionRate+=GCR::InjectionRate(spec,nface,startNode)*BlockSurfaceArea;
+      if (_PIC_EARTH_ELECTRON__MODE_==_PIC_MODE_ON_) ModelParticlesInjectionRate+=Electrons::InjectionRate(spec,nface,startNode)*BlockSurfaceArea;
     }
   }
 
