@@ -1198,6 +1198,9 @@ namespace PIC {
   extern double *ParticleCharacteristicSpeedTable;
   double GetParticleCharacteristicSpeed(int spec);
 
+  //definition of the user-defined function used for geenrating of the initial locations of the tacked particles
+  extern void (*UserDefinedInitialParticleDistribution)(int);
+
   //constants
   namespace DEF {
     namespace SOURCE {
@@ -1206,6 +1209,7 @@ namespace PIC {
         const int Table=1;
         const int Quadrilateral=2;
         const int Circle=3;
+        const int UserDefinedFunction=4;
       }
 
       namespace SHPERE {
@@ -3286,7 +3290,9 @@ namespace PIC {
 
   namespace Mover {
 
-//    #include "UserDefinition.PIC.Mover.h"
+    //perform backward time integraion of the tarticle trajectory;
+    //if BackwardTimeIntegrationMode==_PIC_MODE_ON_ the particle trajectory will be integrated backward in time
+    extern int BackwardTimeIntegrationMode;
 
     //the return codes of the moving procedures
     #define _PARTICLE_REJECTED_ON_THE_FACE_ -1
@@ -3297,34 +3303,29 @@ namespace PIC {
 
     namespace Sampling {
       namespace Errors {
-         extern std::vector<int> RemovedModelParticles;
-         extern std::vector<double> ModelParticleRemovingRate;
-         extern std::vector<std::string> ErrorLineID;
+        extern std::vector<int> RemovedModelParticles;
+        extern std::vector<double> ModelParticleRemovingRate;
+        extern std::vector<std::string> ErrorLineID;
 
-         extern int ErrorDetectionFlag;
+        extern int ErrorDetectionFlag;
 
-         void Init();
-         void PrintData();
-         void AddRemovedParticleData(double Rate, int spec, int line,const char *fname);
-         void AddRemovedParticleData(double Rate, int nRemovedParticles, int spec, std::string &FullLineID);
-         void AddRemovedParticleData(double Rate, int spec, std::string &ErrorID);
+        void Init();
+        void PrintData();
+        void AddRemovedParticleData(double Rate, int spec, int line,const char *fname);
+        void AddRemovedParticleData(double Rate, int nRemovedParticles, int spec, std::string &FullLineID);
+        void AddRemovedParticleData(double Rate, int spec, std::string &ErrorID);
       }
     }
 
     namespace FieldLine {
-
       // procedure that returns parameters of the guiding center motion
-      void GuidingCenterMotion(double *Vguide_perp,    double &ForceParal,
-                               double &BAbsoluteValue, double *BDirection,
-                               double *PParal,
-			       int spec,long int ptr,double *x,double *v);
+      void GuidingCenterMotion(double *Vguide_perp,double &ForceParal,double &BAbsoluteValue, double *BDirection,double *PParal,int spec,long int ptr,double *x,double *v);
+
       //mover itself
-      int Mover_SecondOrder(long int ptr, double Dt,
-                            cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+      int Mover_SecondOrder(long int ptr, double Dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     }
 
     namespace GuidingCenter{
-
       namespace Sampling {
 	      extern PIC::Mesh::cDatumWeighted DatumTotalKineticEnergy;
 	      void SampleParticleData(char* ParticleData, double LocalParticleWeight, char* SamplingBuffer, int spec);
@@ -3342,7 +3343,6 @@ namespace PIC {
 
 
     namespace Relativistic {
-
       int Boris(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     }
 
