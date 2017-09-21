@@ -14,6 +14,8 @@
 PIC::Mover::fProcessOutsideDomainParticles PIC::Mover::ProcessOutsideDomainParticles=NULL;
 PIC::Mover::fProcessTriangleCutFaceIntersection PIC::Mover::ProcessTriangleCutFaceIntersection=NULL;
 
+int PIC::Mover::BackwardTimeIntegrationMode=_PIC_MODE_OFF_;
+
 
 //====================================================
 //init the particle mover
