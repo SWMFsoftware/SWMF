@@ -4,8 +4,8 @@
 module ModEnergy
 
   use ModProcMH,     ONLY: iProc
-  use ModMain,       ONLY: BlkTest,iTest,jTest,kTest,ProcTest
-  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, p_, Pe_, IsMhd
+  use ModMain,       ONLY: BlkTest, iTest, jTest, kTest, ProcTest
+  use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
        iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
@@ -30,6 +30,11 @@ module ModEnergy
   public:: calc_old_pressure        ! eold -> pold (ModPartImplicit)
   public:: calc_old_energy          ! pold -> eold (ModPartImplicit)
   public:: correctP                 ! obsolete method for CT and projection
+
+  ! It is possible to add the hyperbolic scalar energy to the total energy 
+  ! (Tricco & Price 2012, J. Comput. Phys. 231, 7214).
+  ! Experiments so far do not show any benefit, but the code is preserved.
+  logical, parameter:: UseHypEnergy = .false.
 
 contains
 
@@ -112,6 +117,21 @@ contains
                   0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
           end if
        end do; end do; end do
+
+       if(Hyp_ > 1 .and. UseHypEnergy)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(IsConserv_CB(i,j,k,iBlock)) then
+                State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                     - GammaMinus1_I(iFluid)*0.5 * &
+                     State_VGB(Hyp_,i,j,k,iBlock)**2
+             else
+                Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) + &
+                     0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+             end if
+          end do; end do; end do
+       endif
+
     end do FLUIDLOOP
 
     ! Make sure pressure used for energy is larger than floor value
@@ -149,6 +169,15 @@ contains
                - GammaMinus1_I(iFluid)*0.5* &
                sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
+
+       if(Hyp_ > 1 .and. UseHypEnergy)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
+                  - GammaMinus1_I(iFluid)*0.5* &
+                  StateOld_VCB(Hyp_,i,j,k,iBlock)**2
+          end do; end do; end do
+       end if
+
     end do
 
   end subroutine calc_old_pressure
@@ -188,6 +217,14 @@ contains
                0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
 
+       if(Hyp_ > 1 .and. UseHypEnergy)then
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
+                  EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
+                  0.5*StateOld_VCB(Hyp_,i,j,k,iBlock)**2
+          end do; end do; end do
+       end if
+          
     end do
 
   end subroutine calc_old_energy
@@ -230,11 +267,20 @@ contains
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
+       ! Subtract magnetic energy
        do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
           State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
                - GammaMinus1_I(iFluid)*0.5* &
                sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
+
+       if(Hyp_ > 1 .and. UseHypEnergy)then
+          ! Subtract energy associated with the Hyp scalar
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             State_VGB(iP,i,j,k,iBlock) = State_VGB(iP,i,j,k,iBlock) &
+                  - GammaMinus1_I(iFluid)*0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+          end do; end do; end do
+       end if
     end do
 
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
@@ -287,6 +333,14 @@ contains
                Energy_GBI(i,j,k,iBlock,iFluid) + &
                0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
+
+       if(Hyp_ > 1 .and. UseHypEnergy)then
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+             Energy_GBI(i,j,k,iBlock,iFluid) = &
+                  Energy_GBI(i,j,k,iBlock,iFluid) + &
+                  0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+          end do; end do; end do
+       end if
 
     end do
 
@@ -357,6 +411,12 @@ contains
                      + 0.5*sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2) &
                      /State_VGB(Rho_,i,j,k,iBlock) + &
                      0.5*sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
+
+                if(Hyp_ > 1 .and. UseHypEnergy) &
+                     Energy_GBI(i,j,k,iBlock,iFluid) = &
+                     Energy_GBI(i,j,k,iBlock,iFluid) & 
+                     + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
+
              end if
           end do; end do; end do
        else
