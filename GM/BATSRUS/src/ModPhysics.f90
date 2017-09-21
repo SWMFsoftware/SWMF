@@ -200,7 +200,7 @@ module ModPhysics
   character (len=20) :: TypeIoUnit = "PLANETARY"
 
   ! Named indexes for I/O variable units
-  integer, parameter :: nIoUnit = 19
+  integer, parameter :: nIoUnit = 18
 
   integer, parameter :: UnitX_           = 1
   integer, parameter :: UnitU_           = 2
@@ -219,8 +219,7 @@ module ModPhysics
   integer, parameter :: UnitAngle_       = 15
   integer, parameter :: UnitMass_        = 16
   integer, parameter :: UnitCharge_      = 17
-  integer, parameter :: UnitHypE_        = 18
-  integer, parameter :: UnitUnity_       = 19
+  integer, parameter :: UnitUnity_       = 18
 
   ! Conversion between units: e.g. VarSi = VarNo*No2Si_V(UnitVar_)
   ! The following should always be true: No2Si_V*Si2Io_V = No2Io_V
@@ -695,7 +694,6 @@ contains
     No2Si_V(UnitMass_)       = No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3    ! kg
     No2Si_V(UnitCharge_)     = No2Si_V(UnitJ_)/No2Si_V(UnitU_) &       ! C
          *No2Si_V(UnitX_)**3
-    No2Si_V(UnitHypE_)       = No2Si_V(UnitElectric_)*No2Si_V(UnitU_)  ! V/s
     No2Si_V(UnitUnity_)      = 1.0   ! Fallback conversion for undefined units
 
     !\
@@ -734,7 +732,6 @@ contains
     NameTecUnit_V(UnitPoynting_)    = '[J m^-^2 s^-^1]'
     NameTecUnit_V(UnitJ_)           = '[A/m^2]'       
     NameTecUnit_V(UnitElectric_)    = '[V/m]'          
-    NameTecUnit_V(UnitHypE_)        = '[V/s]'
     NameTecUnit_V(UnitTemperature_) = '[K]'             
     NameTecUnit_V(UnitDivB_)        = '[T/m]'           
     NameTecUnit_V(UnitAngle_)       = '[rad]'
@@ -753,7 +750,6 @@ contains
     NameIdlUnit_V(UnitPoynting_)    = 'J/m2s'
     NameIdlUnit_V(UnitJ_)           = 'A/m2'       
     NameIdlUnit_V(UnitElectric_)    = 'V/m'          
-    NameIdlUnit_V(UnitHypE_)        = 'V/s'
     NameIdlUnit_V(Unittemperature_) = 'K'             
     NameIdlUnit_V(UnitDivB_)        = 'T/m'           
     NameIdlUnit_V(UnitAngle_)       = 'rad'
@@ -895,7 +891,7 @@ contains
        case('mx','my','mz','ux','uy','uz')
           iUnitCons_V(iVar) = UnitRhoU_
           iUnitPrim_V(iVar) = UnitU_
-       case('bx','by','bz')
+       case('bx','by','bz','hyp')
           iUnitCons_V(iVar) = UnitB_
           iUnitPrim_V(iVar) = UnitB_
        case('p','pe', 'ppar')
@@ -904,12 +900,9 @@ contains
        case('e', 'ew', 'ehot', 'eint')
           iUnitCons_V(iVar) = UnitEnergyDens_
           iUnitPrim_V(iVar) = UnitEnergyDens_
-       case('ex', 'ey', 'ez','hyp')
+       case('ex', 'ey', 'ez','hype')
           iUnitCons_V(iVar) = UnitElectric_
           iUnitPrim_V(iVar) = UnitElectric_
-       case('hype')
-          iUnitCons_V(iVar) = UnitHypE_
-          iUnitPrim_V(iVar) = UnitHypE_
        case default
           if(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
              iUnitCons_V(iVar) = UnitEnergyDens_
@@ -959,9 +952,9 @@ contains
 
     if(HypE_ > 1) then
        ! Set the scalar field Psi used in hyperbolic constraint of electric field
-       UnitUser_V(HypE_)          = No2Io_V(UnitHypE_)
-       NameUnitUserTec_V(HypE_)   = NameTecUnit_V(UnitHypE_)
-       NameUnitUserIdl_V(HypE_)   = NameIdlUnit_V(UnitHypE_)
+       UnitUser_V(HypE_)          = No2Io_V(UnitElectric_)
+       NameUnitUserTec_V(HypE_)   = NameTecUnit_V(UnitElectric_)
+       NameUnitUserIdl_V(HypE_)   = NameIdlUnit_V(UnitElectric_)
     end if
 
     do iFluid = 1, nFluid

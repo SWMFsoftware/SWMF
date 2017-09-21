@@ -710,10 +710,10 @@ contains
     end if
 
     if(UseEfield)then
-       ! Add total charge density source term for HypE scalar
+       ! Add total charge density source term for HypE scalar: c/eps0 = c^3
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          Source_VC(HypE_,i,j,k) = C2light**2 * &
+          Source_VC(HypE_,i,j,k) = Clight*C2light * &
                sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargePerMass_I)
        end do; end do; end do
 

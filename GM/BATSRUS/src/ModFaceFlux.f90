@@ -2902,7 +2902,7 @@ contains
 
     subroutine get_electro_magnetic_flux
 
-      use ModPhysics, ONLY: C2light
+      use ModPhysics, ONLY: Clight, C2light
 
       real:: Ex, Ey, Ez
       !----------------------------------------------------------------------
@@ -2919,8 +2919,11 @@ contains
       Flux_V(Ey_) = -C2light*(NormalZ*Bx - NormalX*Bz)
       Flux_V(Ez_) = -C2light*(NormalX*By - NormalY*Bx)
 
-      Flux_V(Ex_:Ez_) = Flux_V(Ex_:Ez_) + Normal_D*State_V(HypE_)
-      Flux_V(HypE_) = C2light*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
+      ! dE/dt + c*grad PhiE ...
+      Flux_V(Ex_:Ez_) = Flux_V(Ex_:Ez_) + Clight*Normal_D*State_V(HypE_)
+
+      ! Flux part of dPhiE/dt + c*(div E - chargedensity/eps0) 
+      Flux_V(HypE_) = Clight*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
 
       if(DoTestCell)then
          write(*,'(a,3es13.5)')'ChargeDens_I    =', &
