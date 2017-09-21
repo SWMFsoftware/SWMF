@@ -13,7 +13,7 @@ void PIC::Mover::BorisSplitAcceleration_default(double *accl, double *rotation, 
    *             \_simple_/ \_ gyroscopic _/
    * acceleration due to Lorentz Force only is considered 
    **********************************************************************/
-  double accl_LOCAL[3]={0.0}, rotation_LOCAL[3]={0.0};
+  double accl_LOCAL[3]={0.0,0.0,0.0}, rotation_LOCAL[3]={0.0,0.0,0.0};
   
 //#if _FORCE_LORENTZ_MODE_ == _PIC_MODE_ON_
   // find electro-magnetic field
@@ -106,7 +106,6 @@ void PIC::Mover::BorisSplitAcceleration_default(double *accl, double *rotation, 
 
 int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
-  double dtTemp;
   PIC::ParticleBuffer::byte *ParticleData;
   double vInit[3],xInit[3]={0.0,0.0,0.0},vFinal[3],xFinal[3],xminBlock[3],xmaxBlock[3];
   int idim,i,j,k,spec;
@@ -173,16 +172,28 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
    * h        =-0.5*dt*\Omega                                     *
    * s        = 2*h/(1+|h|^2)                                     *
    ****************************************************************/
-  double u[3]={0.0}, U[3]={0.0};
-  dtTemp=dtTotal/2.0;
-  u[0]=vInit[0]+dtTemp*acclInit[0];
-  u[1]=vInit[1]+dtTemp*acclInit[1];
-  u[2]=vInit[2]+dtTemp*acclInit[2];
+  double u[3]={0.0,0.0,0.0}, U[3]={0.0,0.0,0.0},dtTempOverTwo,dtTemp;
+
+  #if _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_ == _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_
+  switch (BackwardTimeIntegrationMode) {
+  case _PIC_MODE_ON_ :
+    dtTemp=-dtTotal,dtTempOverTwo=-dtTotal/2.0;
+    break;
+  default:
+    dtTemp=dtTotal,dtTempOverTwo=dtTotal/2.0;
+  }
+  #else
+  dtTemp=dtTotal,dtTempOverTwo=dtTotal/2.0;
+  #endif
+
+  u[0]=vInit[0]+dtTempOverTwo*acclInit[0];
+  u[1]=vInit[1]+dtTempOverTwo*acclInit[1];
+  u[2]=vInit[2]+dtTempOverTwo*acclInit[2];
 
   double h[3];
-  h[0]=-dtTemp*rotInit[0];
-  h[1]=-dtTemp*rotInit[1];
-  h[2]=-dtTemp*rotInit[2];
+  h[0]=-dtTempOverTwo*rotInit[0];
+  h[1]=-dtTempOverTwo*rotInit[1];
+  h[2]=-dtTempOverTwo*rotInit[2];
   double h2 = h[0]*h[0]+h[1]*h[1]+h[2]*h[2];
   double uh = u[0]*h[0]+u[1]*h[1]+u[2]*h[2];
 
@@ -191,13 +202,13 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
   U[2] = ( (1-h2)*u[2] + 2*(u[0]*h[1]-h[0]*u[1]+uh*h[2]) ) / (1+h2);
 
 
-  vFinal[0]=U[0]+dtTemp*acclInit[0];
-  vFinal[1]=U[1]+dtTemp*acclInit[1];
-  vFinal[2]=U[2]+dtTemp*acclInit[2];
+  vFinal[0]=U[0]+dtTempOverTwo*acclInit[0];
+  vFinal[1]=U[1]+dtTempOverTwo*acclInit[1];
+  vFinal[2]=U[2]+dtTempOverTwo*acclInit[2];
 
-  xFinal[0]=xInit[0]+dtTotal*vFinal[0];
-  xFinal[1]=xInit[1]+dtTotal*vFinal[1];
-  xFinal[2]=xInit[2]+dtTotal*vFinal[2];
+  xFinal[0]=xInit[0]+dtTemp*vFinal[0];
+  xFinal[1]=xInit[1]+dtTemp*vFinal[1];
+  xFinal[2]=xInit[2]+dtTemp*vFinal[2];
   
   
 
