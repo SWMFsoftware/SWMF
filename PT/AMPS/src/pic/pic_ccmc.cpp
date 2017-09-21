@@ -18,6 +18,9 @@ vector<PIC::CCMC::ParticleInjection::cInjectionDescriptor> PIC::CCMC::ParticleIn
 char PIC::CCMC::Parser::ControlFileName[_MAX_STRING_LENGTH_PIC_]="ccmc.InjectionLocation.dat";
 char PIC::CCMC::BackgroundDataFileName[_MAX_STRING_LENGTH_PIC_]="amps.Background.data.cdf";
 
+//definition of the user-defined function used for geenrating of the initial locations of the tacked particles
+void (*PIC::CCMC::UserDefinedInitialParticleDistribution)(int)=NULL;
+
 //maximum trajectory integration time
 double PIC::CCMC::MaxTrajectoryIntegrationTime=-1.0;
 
@@ -501,7 +504,12 @@ void PIC::CCMC::LoadParticles() {
   PIC::ParticleBuffer::SetParticleAllocated((PIC::ParticleBuffer::byte*)tempParticleData);
 
   for (spec=0;spec<PIC::nTotalSpecies;spec++) for (iInjectionEntry=0;iInjectionEntry<ParticleInjection::InjectionDescriptorList.size();iInjectionEntry++) {
-    for (np=0;np<ParticleInjection::InjectionDescriptorList[iInjectionEntry].nTestParticles;np++) {
+    if (ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Type==PIC::CCMC::DEF::SOURCE::TYPE::UserDefinedFunction) {
+      //call the user-defined function for distributing of the initial particle locations
+      //definition of the user-defined function used for geenrating of the initial locations of the tacked particles
+      UserDefinedInitialParticleDistribution(spec);
+    }
+    else for (np=0;np<ParticleInjection::InjectionDescriptorList[iInjectionEntry].nTestParticles;np++) {
       static cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* t=NULL;
 
       //generate the location
@@ -511,7 +519,6 @@ void PIC::CCMC::LoadParticles() {
         break;
 
       case PIC::CCMC::DEF::SOURCE::TYPE::Sphere:
-
         //verify the the origin of the sphere is inside the domain
         for (idim=0;idim<3;idim++) {
           if ((ParticleInjection::InjectionDescriptorList[iInjectionEntry].SpatialDistribution.Spherical.Origin[idim]<PIC::Mesh::mesh.rootTree->xmin[idim])  ||
