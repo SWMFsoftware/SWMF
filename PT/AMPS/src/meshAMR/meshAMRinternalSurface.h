@@ -46,6 +46,8 @@ public:
   long int Temp_ID;
   #endif
 
+  bool ActiveFlag; //used to prevent multiple de-allocation/re-allocation of the descriptior from the stack
+
   void cleanDataBuffer() {
     BondaryType=_INTERNAL_BOUNDARY_TYPE_UNDEFINED_;
     BoundaryElement=NULL,nextInternalBCelement=NULL;
@@ -57,6 +59,7 @@ public:
 
   cInternalBoundaryConditionsDescriptor() {
     cleanDataBuffer();
+    ActiveFlag=false;
   }
 };
 

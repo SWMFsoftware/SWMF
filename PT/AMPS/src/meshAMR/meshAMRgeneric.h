@@ -269,6 +269,8 @@ public:
   long int Temp_ID;
   #endif
 
+  bool ActiveFlag; //used to prevent repeatable de-allocation of the block from the stack
+
   //descriptor of the cut-face list
   struct cCutFaceListDescriptor {
     cCutFaceListDescriptor* next;
@@ -280,6 +282,7 @@ public:
   cCutFaceListDescriptor*  neibCutFaceListDescriptorList_temp;
 
   cTreeNodeAMR() {
+    ActiveFlag=false;
     block=NULL,upNode=NULL;
     Temp_ID=-1;
     neibCutFaceListDescriptorList=NULL,neibCutFaceListDescriptorList_temp=NULL;

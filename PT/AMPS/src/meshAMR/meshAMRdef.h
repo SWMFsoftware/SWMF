@@ -17,6 +17,7 @@
 
 #include "global.h"
 #include "constants.h"
+#include "specfunc.h"
 
 #ifndef _AMR_MESH_DEFINITION_
 #define _AMR_MESH_DEFINITION_
@@ -441,7 +442,7 @@ public:
   long int usedElements() {return elementStackPointer;}
 
 
-  T* newElement() {
+  T* newElement(bool ForceElementNumberLimit=true) {
     T* res;
 
     if (sizeof(T)==0) return NULL;
@@ -455,9 +456,11 @@ public:
     res=elementStackList[elementStackBank][offset];
     elementStackPointer++;
 
-    if (usedElements()>_MAX_MESH_ELEMENT_NUMBER_) exit(__LINE__,__FILE__,"The number of the requster mesh elements exeeds the limit -> increase _MESH_ELEMENTS_NUMBERING_BITS_ "); 
+    if ((ForceElementNumberLimit==true)&&(usedElements()>_MAX_MESH_ELEMENT_NUMBER_)) exit(__LINE__,__FILE__,"The number of the requster mesh elements exeeds the limit -> increase _MESH_ELEMENTS_NUMBERING_BITS_ ");
 
+    if (res->ActiveFlag==true) exit(__LINE__,__FILE__,"Error: the stack element is re-allocated second time");
 
+    res->ActiveFlag=true;
     res->cleanDataBuffer();
 
     #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
@@ -470,6 +473,9 @@ public:
   void deleteElement(T* delElement) {
     if (sizeof(T)==0) return;
 
+    if (delElement->ActiveFlag==false) exit(__LINE__,__FILE__,"Error: the stack element is de-allocated second time");
+
+    delElement->ActiveFlag=false;
     delElement->cleanDataBuffer();
 
     if (elementStackPointer==0) {
@@ -564,6 +570,9 @@ public:
 
     if (cAMRstack <T>::usedElements()>_MAX_MESH_ELEMENT_NUMBER_) cAMRexit::exit(__LINE__,__FILE__,"The number of the requested mesh elements exeeds the limit -> increase _MESH_ELEMENTS_NUMBERING_BITS_ ");
 
+    if (res->ActiveFlag==true) exit(__LINE__,__FILE__,"Error: the stack element is re-allocated second time");
+
+    res->ActiveFlag=true;
     res->cleanDataBuffer();
 
     #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
