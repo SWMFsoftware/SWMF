@@ -55,7 +55,8 @@ subroutine update_states(iBlock)
           +Flux_VY(VARtest,Itest,Jtest,Ktest)                          &
           -Flux_VY(VARtest,Itest,Jtest+1,Ktest)                        &
           +Flux_VZ(VARtest,Itest,Jtest,Ktest)                          &
-          -Flux_VZ(VARtest,Itest,Jtest,Ktest+1) )/CellVolume_GB(i,j,k,iBlock)
+          -Flux_VZ(VARtest,Itest,Jtest,Ktest+1) )                      &
+          /CellVolume_GB(iTest,jTest,kTest,BlkTest)
   end if
 
   if(UseUserUpdateStates)then
