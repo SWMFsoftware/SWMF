@@ -8,7 +8,7 @@ module ModPhysics
        cProtonMass, cElectronCharge, cGyroElectron, cLightSpeed, &
        cRadiation, cGravitation, cAU, cBoltzmann, cMu, cRadToDeg
   use ModMain, ONLY: body2_, SolidBc_, xMinBc_, zMaxBc_, &
-       Coord1MinBc_, Coord3MaxBc_ 
+       Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
   implicit none
   save
@@ -866,7 +866,6 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModVarIndexes
     use ModMultiFluid
-    use ModUtilities, ONLY: lower_case
 
     integer :: iVar
     character (len=len(NameVar_V)) :: NameVar
@@ -875,8 +874,7 @@ contains
 
     ! Set mapping from state variable indices to unit conversion array indices
     do iVar = 1, nVar
-       NameVar = NameVar_V(iVar)
-       call lower_case(NameVar)
+       NameVar = NameVarLower_V(iVar)
        call extract_fluid_name(NameVar)
        select case(NameVar)
        case('rho', &
