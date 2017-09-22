@@ -1081,6 +1081,9 @@ public:
   //the stream for output of the mesh diagnisotic information
   FILE *DiagnospticMessageStream;
 
+  //parallel mesh generation flag;
+  bool ParallelMeshGenerationFlag;
+
   //the function that calculates the interpolation coefficients to get an interpolated value for the block's nodes
   //return the number of the interpolation coefficients that was used in the stencil. if the return value <=0 -> the operation is not succesful
   typedef int (*cGetCornerNodesInterpolationCoefficients)(double *x,double *CoefficientsList,cCornerNode **InterpolationStencil,cTreeNodeAMR<cBlockAMR>* startNode,int nMaxCoefficients);
@@ -1545,17 +1548,8 @@ public:
       int idim=0;
       dx=0.0; //add the place for break point for debbuger purposes
 
-/*
-      *DiagnospticMessageStream << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << std::endl;
-      for (idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << std::endl;
-*/
-
       fprintf(DiagnospticMessageStream,"$PREFIX:Error: a point is out pf the box (file=%s, line=%i)!!!!!!\n",__FILE__,__LINE__);
       for (idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"$PREFIX:idim=%i, x[idim]=%e, xmin[idim]=%e, xmax[idim]=%e\n",idim,x[idim],startNode->xmin[idim],startNode->xmax[idim]);
-
-
-//      exit(__LINE__,__FILE__);
-
 
       if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
       else return -1;
@@ -1567,10 +1561,6 @@ public:
 
     if (_MESH_DIMENSION_>=2) {
       if ((x[1]<startNode->xmin[1])||(startNode->xmax[1]<x[1])) {
-/*
-        *DiagnospticMessageStream << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << std::endl;
-        for (int idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << std::endl;
-*/
 
         fprintf(DiagnospticMessageStream,"$PREFIX:Error: a point is out pf the box (file=%s, line=%i)!!!!!!\n",__FILE__,__LINE__);
         for (int idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"$PREFIX:idim=%i, x[idim]=%e, xmin[idim]=%e, xmax[idim]=%e\n",idim,x[idim],startNode->xmin[idim],startNode->xmax[idim]);
@@ -1588,15 +1578,8 @@ public:
 
     if (_MESH_DIMENSION_==3) {
       if ((x[2]<startNode->xmin[2])||(startNode->xmax[2]<x[2])) {
-/*
-        *DiagnospticMessageStream << "$PREFIX:Error: a point is out pf the box (file=" << __FILE__ << ", line=" << __LINE__ << ")!!!!!!" << std::endl;
-        for (int idim=0;idim<_MESH_DIMENSION_;idim++) *DiagnospticMessageStream << "$PREFIX:idim=" << idim << ", x[idim]=" << x[idim] << ", xmin[idim]=" << startNode->xmin[idim] << ", xmax[idim]=" << startNode->xmax[idim] << std::endl;
-*/
-
         fprintf(DiagnospticMessageStream,"$PREFIX:Error: a point is out pf the box (file=%s, line=%i)!!!!!!\n",__FILE__,__LINE__);
         for (int idim=0;idim<_MESH_DIMENSION_;idim++) fprintf(DiagnospticMessageStream,"$PREFIX:idim=%i, x[idim]=%e, xmin[idim]=%e, xmax[idim]=%e\n",idim,x[idim],startNode->xmin[idim],startNode->xmax[idim]);
-
-
 
         if (ExitFlag==true) exit(__LINE__,__FILE__,"x is outside of the block");
         else return -1;
@@ -1613,8 +1596,7 @@ public:
  
 
   //the constructor
-  void init (double *xMin,double *xMax,double (*localResolutionFunction)(double*)) {
-//    int i,j,k,nd,idim;
+  void init(double *xMin,double *xMax,double (*localResolutionFunction)(double*)) {
     int i,idim;
 
     //check the number of bits reserved to store the number of connection's of a corner node
@@ -1762,60 +1744,52 @@ public:
     #endif
 
     //init the MPI variables
-
-//##########  DEBUG  ###################
-
-//    ThisThread=0,nTotalThreads=3;
-
-//###########  END DEBUG ###############
-
-
-#if _AMR_PARALLEL_MODE_ == _AMR_PARALLEL_MODE_ON_
     int MPIinitFlag;
-    MPI_Initialized(&MPIinitFlag);
 
-    if (MPIinitFlag==true) {
-      MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
-      MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
+    switch (_AMR_PARALLEL_MODE_) {
+    case _AMR_PARALLEL_MODE_ON_:
+      MPI_Initialized(&MPIinitFlag);
+
+      if (MPIinitFlag==true) {
+        MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+        MPI_Comm_size(MPI_GLOBAL_COMMUNICATOR,&nTotalThreads);
+      }
+      else exit(__LINE__,__FILE__,"Error: MPI is not initialized");
+
+      ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
+
+      #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+      DomainBoundaryLayerNodesList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
+      #endif
+
+      ParallelSendRecvMap=new bool*[nTotalThreads];
+      ParallelSendRecvMap[0]=new bool [nTotalThreads*nTotalThreads];
+
+
+      for (int thread=0;thread<nTotalThreads;thread++) {
+        ParallelNodesDistributionList[thread]=NULL;
+        DomainBoundaryLayerNodesList[thread]=NULL;
+
+        ParallelSendRecvMap[thread]=ParallelSendRecvMap[0]+thread*nTotalThreads;
+        for (i=0;i<nTotalThreads;i++) ParallelSendRecvMap[thread][i]=false;
+      }
+      break;
+    case _AMR_PARALLEL_MODE_OFF_:
+      ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[1];
+      ParallelNodesDistributionList[0]=NULL;
+
+      #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
+      DomainBoundaryLayerNodesList=NULL;
+      #endif
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the option is unknown");
     }
-    else exit(__LINE__,__FILE__,"Error: MPI is not initialized");
-
-    ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
-
-    #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
-    DomainBoundaryLayerNodesList=new cTreeNodeAMR<cBlockAMR>*[nTotalThreads];
-    #endif
-
-    ParallelSendRecvMap=new bool*[nTotalThreads];
-    ParallelSendRecvMap[0]=new bool [nTotalThreads*nTotalThreads];
-
-
-    for (int thread=0;thread<nTotalThreads;thread++) {
-      ParallelNodesDistributionList[thread]=NULL;
-      DomainBoundaryLayerNodesList[thread]=NULL;
-
-      ParallelSendRecvMap[thread]=ParallelSendRecvMap[0]+thread*nTotalThreads;
-      for (i=0;i<nTotalThreads;i++) ParallelSendRecvMap[thread][i]=false;
-    }
-#else
-    ParallelNodesDistributionList=new cTreeNodeAMR<cBlockAMR>*[1];
-    ParallelNodesDistributionList[0]=NULL;
-
-    #if _AMR_PARALLEL_DATA_EXCHANGE_MODE_ == _AMR_PARALLEL_DATA_EXCHANGE_MODE__DOMAIN_BOUNDARY_LAYER_
-    DomainBoundaryLayerNodesList=NULL;
-    #endif
-#endif
 
   }  
 
-/*
-  cMeshAMRgeneric (double *xMin,double *xMax,double (*localResolutionFunction)(double*)) {
-    init(xMin,xMax,localResolutionFunction);
-  }
-*/
 
-
-  cMeshAMRgeneric (){
+  cMeshAMRgeneric() {
     for (int idim=0;idim<_MESH_DIMENSION_;idim++) _MESH_AMR_XMAX_[idim]=0.0,_MESH_AMR_XMIN_[idim]=0.0;
 
      //set the default value for the 'interpolation functions'
@@ -1831,6 +1805,9 @@ public:
 
      //the counter of any mesh modifications or rebalancing 
      nMeshModificationCounter=0;
+
+     //default value of the parallel mesh generation flag
+     ParallelMeshGenerationFlag=false;
 
      //set up the tree and the root block
      rootBlock=NULL;
