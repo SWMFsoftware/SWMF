@@ -6040,16 +6040,67 @@ if (CallsCounter==83) {
         #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
         if ((CutCellSurfaceLocalResolution!=NULL)&&(startNode->FirstTriangleCutFace!=NULL)) {
           CutCell::cTriangleFaceDescriptor* t;
+          int cnt=0;
 
-          for (t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next) {
+          #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+          static int nThreadsOpenMP=-1;
+          static double *requredResolutionTable=NULL;
+          int iThreadOpenMP;
+
+          if (requredResolutionTable==NULL) {
+            #pragma omp parallel default (none) shared (nThreadsOpenMP)
+            {
+              #pragma omp single
+              {
+              nThreadsOpenMP=omp_get_num_threads();
+              }
+            }
+
+            requredResolutionTable=new double [nThreadsOpenMP];
+          }
+
+          for (iThreadOpenMP=0;iThreadOpenMP<nThreadsOpenMP;iThreadOpenMP++) requredResolutionTable[iThreadOpenMP]=requredResolution;
+
+          #pragma omp parallel default(none) private (t,c,iThreadOpenMP,cnt) firstprivate(cnt,startNode) shared (requredResolutionTable,nThreadsOpenMP)
+          {
+            #pragma omp single
+            {
+              for (cnt=0,t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next,cnt++) if ((cnt%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
+                 #pragma omp task default (none) firstprivate (node)
+                {
+                  iThreadOpenMP=omp_get_thread_num();
+                  c=CutCellSurfaceLocalResolution(t->TriangleFace);
+                  if (c<requredResolutionTable[iThreadOpenMP]) requredResolutionTable[iThreadOpenMP]=c;
+                }
+              }
+            }
+          }
+
+          //get the minimum requested resolution
+          for (iThreadOpenMP=1,requredResolution=requredResolutionTable[0];iThreadOpenMP<nThreadsOpenMP;iThreadOpenMP++) {
+            if (requredResolution>requredResolutionTable[iThreadOpenMP]) requredResolution=requredResolutionTable[iThreadOpenMP];
+          }
+          #else //_COMPILATION_MODE__HYBRID_
+          for (cnt=0,t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next,cnt++) if ((cnt%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
             c=CutCellSurfaceLocalResolution(t->TriangleFace);
             if (c<requredResolution) requredResolution=c;
           }
+          #endif //_COMPILATION_MODE__HYBRID_
+
+          //combine min requsted resolution determined by all MPI processes
+          if (ParallelMeshGenerationFlag==true) {
+            double Table[nTotalThreads];
+
+            MPI_Gather(&requredResolution,1,MPI_DOUBLE,Table,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+            if (ThisThread==0) for (int thread=0;thread<nTotalThreads;thread++) if (Table[thread]<requredResolution) requredResolution=Table[thread];
+            MPI_Bcast(&requredResolution,1,MPI_DOUBLE,0,MPI_GLOBAL_COMMUNICATOR);
+          }
         }
-        #endif
+        #endif //_AMR__CUT_CELL__MODE_
+
 
         #if _AMR_ENFORCE_CELL_RESOLUTION_MODE_ == _AMR_ENFORCE_CELL_RESOLUTION_MODE_ON_
-        if (c<characteristicBlockSize_min) exit(__LINE__,__FILE__,"The required resolution is smaller than the minimum resolution allowed for the mesh. Increase the value of _MAX_REFINMENT_LEVEL_");
+        if (requredResolution<characteristicBlockSize_min) exit(__LINE__,__FILE__,"The required resolution is smaller than the minimum resolution allowed for the mesh. Increase the value of _MAX_REFINMENT_LEVEL_");
         #endif
       }  
 
@@ -6057,36 +6108,7 @@ if (CallsCounter==83) {
 
       //the block is split if 1. the cell size exceeds the required one and 2. the root block has to be split (startNode->upNode==NULL)
       if ((requredResolution<characteristicBlockSize)||(startNode->upNode==NULL)) {
-
-//################## DEBUG #####################
-static long int ncheckMeshConsistencyCalls=0;
-
-ncheckMeshConsistencyCalls++;
-
-/*
-if (ncheckMeshConsistencyCalls==38) {
-  *DiagnospticMessageStream << __LINE__ << std::endl;
-}
-*/
-
-//checkMeshConsistency(rootTree);
-//checkMeshConsistency(startNode);
-//#################  END DEBUG #################
-
-
-
-
         res=splitTreeNode(startNode);
-
-
-
-
-//################## DEBUG #####################
-//checkMeshConsistency(rootTree);
-//#################  END DEBUG #################
-
-
-
 
       } 
     }
