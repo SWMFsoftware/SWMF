@@ -501,9 +501,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('NameTestVar', NameTestVar, IsLowerCase=.true.)
         VarTest = -1
         do iTestVar =1,nVar
-           NameVar = NameVar_V(iTestVar)
-           call lower_case(NameVar)
-           if (NameTestVar /= NameVar) CYCLE
+           if (NameTestVar /= NameVarLower_V(iTestVar)) CYCLE
            VarTest = iTestVar
            EXIT
         end do
@@ -1442,7 +1440,8 @@ subroutine MH_set_parameters(TypeAction)
         if(.not.is_first_session())CYCLE READPARAM
         call read_b0_param(NameCommand)
 
-     case("#HYPERBOLICDIVE")
+     case("#HYPERBOLICDIVE", "#CORRECTELECTRONFLUID", "#CORRECTEFIELD", &
+          "#STRINGVARDIFFUSECMAX")
         call read_ion_electron_param(NameCommand)
 
      case("#HYPERBOLICDIVB")
@@ -1676,7 +1675,8 @@ subroutine MH_set_parameters(TypeAction)
      case("#RESTARTVARIABLES")
         ! This reads the names of the variables saved in the input
         ! restart file. 
-        call read_var('NameVarRestartRead', NameVarRestartRead)
+        call read_var('NameVarRestartRead', NameVarRestartRead, &
+             IsLowerCase=.true.)
         IsReadNameVarRestart = .true.
 
      case("#RESTARTWITHFULLB")
@@ -2354,6 +2354,8 @@ contains
     character(len=3):: NameWave
     integer :: iMaterial
     character(len=2):: NameMaterial
+
+    character(len(NameVar_V)) :: NameVar
     !-------------------------------------------------------------------------
 
     ! Fix the NameVar_V string for waves
@@ -2374,6 +2376,13 @@ contains
 
     ! space separated NameVar string containing all variable names
     call join_string(nVar, NameVar_V, NameVarCouple)
+
+    ! convert NameVar_V to NameVarLower_V
+    do iVar = 1, nVar+nFluid
+       NameVar = NameVar_V(iVar)
+       call lower_case(NameVar)
+       NameVarLower_V(iVar) = NameVar
+    end do
 
   end subroutine set_namevar
 
