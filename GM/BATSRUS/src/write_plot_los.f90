@@ -808,6 +808,7 @@ contains
   !============================================================================
   subroutine add_segment(Ds, XyzLos_D)
 
+    use ModMain,        ONLY: NameVarLower_V
     use ModAdvance,     ONLY: UseElectronPressure, UseIdealEos
     use ModInterpolate, ONLY: interpolate_vector, interpolate_scalar
     use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
@@ -1048,8 +1049,7 @@ contains
 
           ! check if the variable is standard state variable
           do jVar = 1, nVar
-             NameTemp = NameVar_V(jVar)
-             call lower_case(NameTemp)
+             NameTemp = NameVarLower_V(jVar)
 
              if(NameTemp /= NameVar) CYCLE
 

@@ -299,7 +299,7 @@ subroutine set_logvar( &
   use ModMPI
   use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
        iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
-       UseRotatingFrame,UseB0
+       UseRotatingFrame,UseB0, NameVarLower_V
   use ModPhysics,    ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
        ElectronPressureRatio
   use ModVarIndexes
@@ -943,8 +943,7 @@ contains
        call lower_case(NameLogVarLower)
 
        do jVar = 1, nVar
-          NameVar = NameVar_V(jVar)
-          call lower_case(NameVar)
+          NameVar = NameVarLower_V(jVar)
           if(NameVar /= NameLogVarLower) CYCLE
           LogVar_I(iVarTot) = StateIntegral_V(jVar)/DomainVolume
           RETURN
@@ -1076,8 +1075,7 @@ contains
        NameLogVarLower = NameLogVar_I(iVar)
        call lower_case(NameLogVarLower)
        do jVar = 1, nVar
-          NameVar = NameVar_V(jVar)
-          call lower_case(NameVar)
+          NameVar = NameVarLower_V(jVar)
           if(NameVar /= NameLogVarLower) CYCLE
           LogVar_I(iVarTot) = StateSat_V(jVar)
           RETURN
@@ -1097,7 +1095,6 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
 
   use ModPhysics
   use ModVarIndexes, ONLY: NameVar_V, UnitUser_V
-  use ModUtilities, ONLY: lower_case
   use ModIO, ONLY: lNameLogVar
   implicit none
 
@@ -1192,8 +1189,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
 
      case default
         do jVar = 1, nVar
-           NameVar = NameVar_V(jVar)
-           call lower_case(NameVar)
+           NameVar = NameVarLower_V(jVar)
            if(NameLogVar /= NameVar) CYCLE
            LogVar_I(iVarTot)=LogVar_I(iVarTot)*UnitUser_V(jVar)
            EXIT

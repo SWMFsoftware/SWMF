@@ -1690,8 +1690,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case default
         ! Check if the name is one of the state variable names
         do jVar = 1, nVar
-           NameVar = NameVar_V(jVar)
-           call lower_case(NameVar)
+           NameVar = NameVarLower_V(jVar)
            if(NamePlotVar /= NameVar) CYCLE
            PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBLK)
            if(DefaultState_V(jVar) > cTiny) &
@@ -1830,8 +1829,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         ! DEFAULT CASE
      case default
         do jVar = 1, nVar
-           NameVar = NameVar_V(jVar)
-           call lower_case(NameVar)
+           NameVar = NameVarLower_V(jVar)
            if(NamePlotVar /= NameVar) CYCLE
            PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*UnitUser_V(jVar)
            if(DefaultState_V(jVar)>cTiny)&
@@ -2144,8 +2142,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
         ! Try to find the plot variable among the basic variables
         do iVar = 1, nVar
-           NameVar = NameVar_V(iVar)
-           call lower_case(NameVar)
+           NameVar = NameVarLower_V(iVar)
            if(NameVar == NamePlotVar)then
               NameUnit = NameUnitUserTec_V(iVar)
               EXIT
@@ -2265,8 +2262,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
 
         ! Try to find the plot variable among the basic variables
         do iVar = 1, nVar
-           NameVar = NameVar_V(iVar)
-           call lower_case(NameVar)
+           NameVar = NameVarLower_V(iVar)
            if(NameVar == NamePlotVar)then
               NameUnit = NameUnitUserIdl_V(iVar)                            
               EXIT

@@ -352,4 +352,7 @@ module ModMain
   character(len=200):: NameVarComp2
   real, pointer     :: StateComp2_VGB(:,:,:,:,:)
 
+  ! The lower case names of the variables used in i/o
+  character(len(NameVar_V)) :: NameVarLower_V(nVar+nFluid)
+
 end module ModMain

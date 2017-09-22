@@ -46,9 +46,10 @@ contains
   !===========================================================================
   subroutine read_time_step_control_param(NameCommand)
 
+    use ModMain,       ONLY: NameVarLower_V
     use ModReadParam
     use ModVarIndexes, ONLY: nVar, NameVar_V
-    use ModUtilities,  ONLY: lower_case, split_string
+    use ModUtilities,  ONLY: split_string
 
     character(len=*), intent(in):: NameCommand
 
@@ -83,8 +84,7 @@ contains
        allocate( iVarControl_I(nVarControl), VarRatio_I(nVarControl) )
        do iControl=1, nVarControl
           do iVar = 1, nVar
-             NameVar = NameVar_V(iVar)
-             call lower_case(NameVar)
+             NameVar = NameVarLower_V(iVar)
              if( NameVar == NameVarControl_I(iControl) ) EXIT
           end do
           if(iVar > nVar)call stop_mpi(NameSub//' invalid NameVarControl='//&

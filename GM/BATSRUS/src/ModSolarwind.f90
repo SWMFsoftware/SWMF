@@ -89,7 +89,7 @@ contains
 
     use ModProcMH
     use ModMain, ONLY: lVerbose, StartTime, Time_Simulation, &
-         iStartTime_I, UseStrict, TypeCoordSystem
+         iStartTime_I, UseStrict, TypeCoordSystem, NameVarLower_V
     use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
          SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
          nVectorVar, iVectorVar_I
@@ -221,8 +221,7 @@ contains
                 UseTemperature  = .true.
              case  default
                 do jVar=1, nVar
-                   NameVar = NameVar_V(jVar)
-                   call lower_case(NameVar)
+                   NameVar = NameVarLower_V(jVar)
                    if(NameVar /=String) CYCLE
                    iVarInput_V(iVar)=jVar
                 end do

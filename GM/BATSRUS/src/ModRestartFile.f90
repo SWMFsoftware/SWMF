@@ -1214,8 +1214,7 @@ contains
   
     use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V
     use ModAdvance,    ONLY: UseElectronPressure
-    use ModMain,       ONLY: UseStrict
-    use ModUtilities,  ONLY: lower_case
+    use ModMain,       ONLY: UseStrict, NameVarLower_V
 
     integer :: i, j, k, iVar, iVarRead, iBlock, iVarPeRestart
     integer :: iVarMatch_V(nVar) = 0
@@ -1253,10 +1252,8 @@ contains
     ! the corresponding variable in the restart file
     MATCHLOOP: do iVar = 1,nVar 
        do iVarRead = 1, nVarRestart
-          NameVar        = NameVar_V(iVar)
+          NameVar        = NameVarLower_V(iVar)
           NameVarRestart = NameVarRestart_V(iVarRead)
-          call lower_case(NameVar)
-          call lower_case(NameVarRestart)
           if (NameVar == NameVarRestart) then
              iVarMatch_V(iVar) = iVarRead
              CYCLE MATCHLOOP
@@ -1275,8 +1272,7 @@ contains
           NameVarTo   = NameVarRestartTo_V(iVarMapping)
 
           do iVar = 1, nVar
-             NameVar = NameVar_V(iVar)
-             call lower_case(NameVar)
+             NameVar = NameVarLower_V(iVar)
              if (NameVarTo == NameVar) then
                 iVarTo_I(iVarMapping) = iVar
                 CYCLE
@@ -1285,7 +1281,6 @@ contains
 
           do iVarRead = 1, nVarRestart
              NameVarRestart = NameVarRestart_V(iVarRead)
-             call lower_case(NameVarRestart)
              if (NameVarFrom == NameVarRestart) then
                 iVarFrom_I(iVarMapping) = iVarRead
                 CYCLE
