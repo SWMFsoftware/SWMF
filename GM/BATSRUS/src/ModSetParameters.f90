@@ -89,7 +89,7 @@ subroutine MH_set_parameters(TypeAction)
 
   use ModViscosity, ONLY: UseViscosity, viscosity_read_param, viscosity_init
   use ModPIC, ONLY: pic_read_param, pic_init_region, UsePic
-  use ModIonElectron, ONLY: read_ion_electron_param
+  use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I
   use ModFaceBoundary, ONLY: read_face_boundary_param
   !CORONA SPECIFIC PARAMETERS
   use EEE_ModMain, ONLY: EEE_set_parameters
@@ -1441,7 +1441,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_b0_param(NameCommand)
 
      case("#HYPERBOLICDIVE", "#CORRECTELECTRONFLUID", "#CORRECTEFIELD", &
-          "#STRINGVARDIFFUSECMAX")
+          "#STRINGVARUSECMAX")
         call read_ion_electron_param(NameCommand)
 
      case("#HYPERBOLICDIVB")
@@ -3174,6 +3174,13 @@ contains
 
     UseHighOrderAMR = UseHighOrderAMR .and. DoAmr
     IsFirstCheck = .false.
+
+    if (.not. allocated(iVarUseCmax_I) .and. UseEfield) then
+       allocate(iVarUseCmax_I(4))
+       ! The electric field should diffuse with Cmax by default in the five
+       ! moment simulation.
+       iVarUseCmax_I = (/Ex_, Ey_, Ez_, HypE_/)
+    end if
 
   end subroutine correct_parameters
 
