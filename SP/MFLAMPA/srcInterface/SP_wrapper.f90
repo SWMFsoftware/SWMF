@@ -73,8 +73,7 @@ contains
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
     !--------------------------------------------------------------------------
-    call run(TimeSimulationLimit)
-    TimeSimulation = TimeSimulationLimit
+    call run(TimeSimulation,TimeSimulationLimit)
   end subroutine SP_run
 
   !========================================================================

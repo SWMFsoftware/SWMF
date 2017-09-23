@@ -11,6 +11,9 @@ module SP_ModMain
   use SP_ModWrite, ONLY: &
        set_write_param, write_output, NamePlotDir
 
+  use SP_ModReadMhData, ONLY: &
+       set_read_mh_data_param, read_mh_data, DoReadMhData
+
   use SP_ModGrid, ONLY: &
        nVar, &
        X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
@@ -99,6 +102,8 @@ contains
           call read_var('DoRun',DoRun)
        case('#SAVEPLOT')
           call set_write_param
+       case('#READMHDATA')
+          call set_read_mh_data_param
        case('#COORDSYSTEM',"#COORDINATESYSTEM")
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
@@ -119,21 +124,46 @@ contains
     ! initialize the model
     real, intent(in):: TimeStart
     character(LEN=*),parameter:: NameSub='SP:initialize'
+    logical:: IsLast
     !--------------------------------------------------------------------------
     iIterGlobal = 0
     TimeGlobal = TimeStart
     call init_advance_const
     call init_grid
+    if(DoReadMhData)then
+       call read_mh_data(DataInputTime, IsLast)
+       if(IsLast)then
+          call CON_stop(NameSub//&
+               ": only one time layer of mh data input files provided, can't run simulation")
+       end if
+    end if
   end subroutine initialize
 
   !============================================================================
 
-  subroutine run(TimeLimit)
+  subroutine run(TimeInOut, TimeLimit)
     ! advance the solution in time
-    real, intent(in):: TimeLimit
+    real, intent(inout):: TimeInOut
+    real, intent(in)   :: TimeLimit
+    logical, save:: IsLast = .false.
     !------------------------------
+    if(DoReadMhData)then
+       if(IsLast)then
+          TimeInOut = TimeLimit
+          RETURN
+       end if
+       ! copy old state
+       State_VIB((/RhoOld_,BOld_/), :, 1:nBlock) = &
+            State_VIB((/Rho_,B_/),  :, 1:nBlock)
+       call read_mh_data(DataInputTime, IsLast)
+       TimeInOut = DataInputTime
+    else
+       TimeInOut = TimeLimit
+    end if
+
     if(DataInputTime <= TimeGlobal)&
-         RETURN
+       RETURN
+
     call fix_grid_consistency
     if(DoRun) &
          ! run the model
