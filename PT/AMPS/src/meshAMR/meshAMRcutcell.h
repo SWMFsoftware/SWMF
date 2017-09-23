@@ -722,14 +722,14 @@ unsigned long int GetTriangulationSignature();
     cTriangleFaceDescriptor *next,*prev;
 
     int Temp_ID;
-    bool ActiveFlag;
+//    bool ActiveFlag;
 
     void cleanDataBuffer() {
       TriangleFace=NULL,Temp_ID=-1,next=NULL,prev=NULL;
     }
 
     cTriangleFaceDescriptor() {
-      ActiveFlag=false;
+//      ActiveFlag=false;
       cleanDataBuffer();
     }
   };
