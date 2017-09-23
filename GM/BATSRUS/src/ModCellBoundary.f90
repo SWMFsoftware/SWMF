@@ -26,15 +26,14 @@ contains
     ! Set ghost cells values in State_VG based on TypeCellBc_I.
     ! TypeBcIn can override the boundary condition defined in TypeCellBc_I
 
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_, Hyp_, p_, iRho_I, DefaultState_V, &
-         NameVar_V, ScalarFirst_, ScalarLast_, WaveFirst_, WaveLast_
+    use ModVarIndexes
     use BATL_size, ONLY: nI, nJ, nK, MaxDim, nDim
-
+    use ModAdvance,ONLY: UseEfield
     use ModProcMH, ONLY: iProc
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
-         UseHyperbolicDivb, &
-         UseUserOuterBcs, TypeCellBc_I, time_accurate, time_loop, &
+         UseHyperbolicDivb,                                        &
+         UseUserOuterBcs, TypeCellBc_I, time_accurate, time_loop,  &
          BlkTest, ProcTest, iTest, jTest, kTest, DimTest
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
@@ -224,7 +223,9 @@ contains
                call set_fixed_bc(p_, p_, (/pOutflow/) )
           if(UseHyperbolicDivb) &
                call set_fixed_bc(Hyp_, Hyp_, (/0.0/) )
-          if(UseRadDiffusion) &
+          if(UseEfield)         &
+               call set_fixed_bc(HypE_, HypE_, (/0.0/) )
+          if(UseRadDiffusion)   &
                call set_radiation_outflow_bc(WaveFirst_, WaveLast_, iSide)
 
        case('float_semi', 'outflow_semi')
