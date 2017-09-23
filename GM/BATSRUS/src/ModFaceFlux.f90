@@ -49,7 +49,7 @@ module ModFaceFlux
        get_heat_flux, get_ion_heat_flux
 
   use ModResistivity, ONLY: UseResistiveFlux, Eta_GB
-
+  use ModIonElectron, ONLY: iVarUseCmax_I
   use ModVarIndexes
   use ModMultiFluid
   use ModNumConst
@@ -1360,15 +1360,11 @@ contains
     end if
 
     if (UseEfield) then
-       Flux_V(Ex_:Ez_) = &
-            0.5*(FluxLeft_V(Ex_:Ez_) + FluxRight_V(Ex_:Ez_) &
-            - CLight*(StateRightCons_V(Ex_:Ez_) &
-            -         StateLeftCons_V(Ex_:Ez_)))
-
-       Flux_V(HypE_) = &
-            0.5*(FluxLeft_V(HypE_) + FluxRight_V(HypE_) &
-            - CLight*(StateRightCons_V(HypE_) &
-            -         StateLeftCons_V(HypE_)))
+       Cmax = max(Cmax, clight)
+       Flux_V(iVarUseCmax_I) = &
+            0.5*(FluxLeft_V(iVarUseCmax_I) + FluxRight_V(iVarUseCmax_I) &
+            - Cmax*(StateRightCons_V(iVarUseCmax_I)                     &
+            -       StateLeftCons_V(iVarUseCmax_I)))
     end if
 
     ! Calculate neutral fluxes one-by-one
