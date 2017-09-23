@@ -23,7 +23,7 @@
 !                       String specifies the input unit of length.
 !                       Options are: rPlanet, rBody, rSun, cAU, Si.
 !                       In case String='Si', the third parameter is
-!                       read, allowing any value in Si units to be chosen.       
+!                       read, allowing any value in Si units to be chosen. 
 ! ======================================================================
 module ModUser
 
@@ -39,7 +39,7 @@ module ModUser
        IMPLEMENTED9 => user_update_states
 
   use ModSize,       ONLY: x_, y_, z_
-  use ModVarIndexes, ONLY: nVar
+  use ModVarIndexes
 
   include 'user_module.h' !list of public methods
 
@@ -296,7 +296,7 @@ contains
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, Xyz_DGB
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
-         UseElectronPressure, UseAnisoPressure
+         UseElectronPressure, UseAnisoPressure, UseEfield
     use ModMultiFluid, ONLY: iRho_I, iUx_I, iUy_I, iUz_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
     use ModProcMH,   ONLY: iProc
@@ -308,7 +308,9 @@ contains
     use ModConst,    ONLY: cProtonMass, rSun, cAu, RotationPeriodSun
     use BATL_lib,    ONLY: nDim, CoordMax_D, CoordMin_D, IsPeriodic_D, &
          CellSize_DB
-    use ModInitialState, ONLY: get_initial_state
+    use ModInitialState,  ONLY: get_initial_state
+    use ModIonElectron,   ONLY: correct_electronfluid_efield , &
+         DoCorrectElectronFluid, DoCorrectEfield
 
     integer, intent(in) :: iBlock
 
@@ -651,6 +653,11 @@ contains
           end do
           deallocate(State_G)
        end if
+
+       if (UseEfield .and. DoCorrectElectronFluid) &
+            call correct_electronfluid_efield(State_VGB(:,:,:,:,iBlock), &
+            1, nI, 1, nJ, 1, nK, iBlock, DoHallCurrentIn=.true.,         &
+            DoGradPeIn=.false., DoCorrectEfieldIn=DoCorrectEfield)
 
     case('GEM')
        !write(*,*)'GEM problem set up'
