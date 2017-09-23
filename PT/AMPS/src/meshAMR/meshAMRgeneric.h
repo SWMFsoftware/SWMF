@@ -28,8 +28,6 @@
 #include <vector>
 
 
-
-
 #include "meshAMRdef.h"
 
 
@@ -47,10 +45,9 @@
 #include "meshAMRcutcell.h"
 #include "meshNASTRAN.h"
 
-
 #include "specfunc.h"
 #include "mpichannel.h"
-
+#include "flagtable.h"
 
 //define the boolian macro variables used in the mesh 
 #define _AMR_FALSE_ 0
@@ -8012,44 +8009,62 @@ nMPIops++;
 
     //check all boundary faces for intersection with the block
     //check all boundary faces for intersection with the block
-        double xmin[3],xmax[3];
+    double xmin[3],xmax[3];
 
-        xmin[0]=startNode->xmin[0]-(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
-        xmin[1]=startNode->xmin[1]-(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
-        xmin[2]=startNode->xmin[2]-(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+    xmin[0]=startNode->xmin[0]-(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+    xmin[1]=startNode->xmin[1]-(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+    xmin[2]=startNode->xmin[2]-(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
 
-        xmax[0]=startNode->xmax[0]+(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
-        xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
-        xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
+    xmax[0]=startNode->xmax[0]+(startNode->xmax[0]-startNode->xmin[0])/double(_BLOCK_CELLS_X_)*double(_GHOST_CELLS_X_);
+    xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
+    xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
 
-    for (t=BoundaryFaces;t!=NULL;t=t->next) {
+    //create a table to storing the result of checking of the intersection checks
+    static cBitwiseFlagTable IntersectionFlagTable(100);
+    int cnt;
+
+    IntersectionFlagTable.flush();
+
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
+    for (cnt=0,t=BoundaryFaces;t!=NULL;t=t->next,cnt++) if ((cnt%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
       if (t->TriangleFace->BlockIntersection(xmin,xmax,EPS)==true) {
         //the block is intersected by the face
-        CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
-
-        startNodeBoundaryDescriptor->TriangleFace=t->TriangleFace;
-
-        startNodeBoundaryDescriptor->prev=NULL,startNodeBoundaryDescriptor->next=startNode->FirstTriangleCutFace;
-        if (startNode->FirstTriangleCutFace!=NULL) startNode->FirstTriangleCutFace->prev=startNodeBoundaryDescriptor;
-        startNode->FirstTriangleCutFace=startNodeBoundaryDescriptor;
-
-
-
-/*
-        //DEBUG BEGIN
-        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
-        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
-        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
-        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
-        t->TriangleFace->BlockIntersection(startNode->xmin,startNode->xmax,EPS);
-        //DEBUG END
-*/
-
-
-
-
-
+        IntersectionFlagTable.SetFlag(true,cnt);
       }
+    }
+    #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    #pragma omp parallel default (none) shared (BoundaryFaces,nTotalThreads,ThisThread,ParallelMeshGenerationFlag,xmin,xmax,EPS) ptivate (t)
+    {
+      #pragma omp single {
+        int cnt=0;
+
+        for (t=BoundaryFaces;t!=NULL;t=t->next,cnt++) if ((cnt%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
+          #pragma omp task default (none) shared (xmin,xmax,EPS) firstprivate (t,cnt)
+          {
+            if (t->TriangleFace->BlockIntersection(xmin,xmax,EPS)==true) {
+              IntersectionFlagTable.SetFlag(true,cnt);
+            }
+          }
+        }
+      }
+    }
+    #else
+    #error The option is unknown
+    #endif
+
+    if (ParallelMeshGenerationFlag==true) {
+      IntersectionFlagTable.Gather();
+    }
+
+    for (cnt=0,t=BoundaryFaces;t!=NULL;t=t->next,cnt++) if (IntersectionFlagTable.Test(cnt)==true) {
+      //the block is intersected by the face
+      CutCell::cTriangleFaceDescriptor *startNodeBoundaryDescriptor=CutCell::BoundaryTriangleFaceDescriptor.newElement();
+
+      startNodeBoundaryDescriptor->TriangleFace=t->TriangleFace;
+
+      startNodeBoundaryDescriptor->prev=NULL,startNodeBoundaryDescriptor->next=startNode->FirstTriangleCutFace;
+      if (startNode->FirstTriangleCutFace!=NULL) startNode->FirstTriangleCutFace->prev=startNodeBoundaryDescriptor;
+      startNode->FirstTriangleCutFace=startNodeBoundaryDescriptor;
     }
   }
 
