@@ -22,25 +22,57 @@ module ModIonElectron
   public:: ion_electron_source_impl
   public:: ion_electron_init_point_impl
   public:: read_ion_electron_param
+  public:: correct_electronfluid_efield
 
   real, public:: HypEDecay = 0.1
+
+  logical,public :: DoCorrectElectronFluid = .false.
+  logical,public :: DoCorrectEfield        = .false.
   
   ! calculate analytic Jacobian for point-implicit scheme
   logical, parameter:: IsAnalyticJacobian = .true.
+
+  integer, allocatable, public :: iVarUseCmax_I(:)
 
 contains
   !===========================================================================
   subroutine read_ion_electron_param(NameCommand)
 
+    use ModMain,      ONLY: NameVarLower_V
     use ModReadParam, ONLY: read_var
+    use ModUtilities, ONLY: split_string
 
     character(len=*), intent(in):: NameCommand
+
+    integer :: iVar, jVar, nVarUseCmax
+    character(len=200)        :: StringVarUseCmax
+    character(len(NameVar_V)) :: NameVarUseCmax_I(nVar)
 
     character(len=*), parameter:: NameSub = 'read_ion_electron_param'
     !------------------------------------------------------------------------
     select case(NameCommand)
     case("#HYPERBOLICDIVE")
        call read_var('HypEDecay', HypEDecay)
+    case("#CORRECTELECTRONFLUID")
+       call read_var('DoCorrectElectronFluid', DoCorrectElectronFluid)
+    case("#CORRECTEFIELD")
+       call read_var('DoCorrectEfield', DoCorrectEfield)
+    case("#STRINGVARUSECMAX")
+       if(allocated(iVarUseCmax_I)) deallocate(iVarUseCmax_I)
+       call read_var('StringVarUseCmax', StringVarUseCmax, IsLowerCase=.true.)
+       if (StringVarUseCmax == 'all') then
+          allocate(iVarUseCmax_I(nVar))
+          iVarUseCmax_I = (/(iVar, iVar = 1, nVar)/)
+       else
+          call split_string(StringVarUseCmax, NameVarUseCmax_I, nVarUseCmax)
+          allocate(iVarUseCmax_I(nVarUseCmax))
+          do iVar = 1, nVarUseCmax;
+             do jVar = 1, nVar
+                if (NameVarUseCmax_I(iVar) == NameVarLower_V(jVar)) &
+                     iVarUseCmax_I(iVar) = jVar
+             end do
+          end do
+       end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
@@ -242,5 +274,172 @@ contains
     end do
 
   end subroutine ion_electron_init_point_impl
+
+  !===========================================================================
+  subroutine correct_electronfluid_efield(State_VG, iMin, iMax, jMin, jMax, &
+       kMin, kMax, iBlock, DoHallCurrentIn, DoGradPeIn, DoCorrectEfieldIn)
+
+    ! The subroutine will correct the electron fluid and electric field
+    ! based on the Hall MHD case.
+
+    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
+    use ModMultiFluid, ONLY: iPIon_I
+    use ModCellGradient,   ONLY: calc_gradient
+    use ModCurrent,        ONLY: get_current
+
+    real,    intent(inout) :: State_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in)    :: iMin, iMax, jMin, jMax, kMin, kMax
+    integer, intent(in)    :: iBlock
+    logical, optional, intent(in) :: DoHallCurrentIn, DoGradPeIn
+    logical, optional, intent(in) :: DoCorrectEfieldIn
+
+    integer :: i,j,k
+    real    :: Current_D(3), GradPe_D(3)
+    real, allocatable :: GradPe_DG(:,:,:,:)
+    logical :: DoHallCurrent, DoGradPe, DoCorrectEfield
+
+    integer, parameter :: ElecFluid_   = nIonFluid - nElectronFluid + 1
+
+    logical :: DoTest, DoTestMe, DoTestCell
+
+    character (len=*), parameter :: NameSub = 'correct_electronfluid_efield'
+    !------------------------------------------------------------------------
+
+    if(iProc == ProcTest .and. iBlock == BlkTest) then
+       call set_oktest(NameSub,DoTest,DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
+
+    ! only single electron fluid is supported at this moment
+    if(nElectronFluid /= 1) &
+         call stop_mpi(NameSub//' only nElectronFluid = 1 is supported')
+
+    if(.not. allocated(GradPe_DG)) &
+         allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+
+    if (present(DoHallCurrentIn)) then
+       DoHallCurrent = DoHallCurrentIn
+    else
+       DoHallCurrent = .false.
+    end if
+
+    if (present(DoGradPeIn)) then
+       DoGradPe = DoGradPeIn
+    else
+       DoGradPe = .false.
+    end if
+
+    if (present(DoCorrectEfieldIn)) then
+       DoCorrectEfield = DoCorrectEfield
+    else
+       DoCorrectEfield = .false.
+    end if
+
+    if (DoGradPe) then
+       call calc_gradient(iBlock, State_VG(iPIon_I(ElecFluid_),:,:,:), nG, &
+            GradPe_DG)
+    else
+       GradPe_DG = 0.0
+    end if
+
+    do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+       DoTestCell = DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest
+
+       if (DoHallCurrent .and. true_cell(i,j,k,iBlock)) then
+          call get_current(i,j,k,iBlock,Current_D)
+       else
+          Current_D = 0.0
+       end if
+
+       GradPe_D = GradPe_DG(:,i,j,k)
+
+       call correct_electronfluid_efield_cell(State_VG(nVar,i,j,k), &
+            Current_D, GradPe_D, DoCorrectEfield, DoTestCell)
+    end do; end do; end do
+
+  end subroutine correct_electronfluid_efield
+
+  !===========================================================================
+  subroutine correct_electronfluid_efield_cell(State_V, Current_D, GradPe_D, &
+       DoCorrectEfield, DoTest)
+
+    use ModPhysics,        ONLY: ElectronCharge
+    use ModCoordTransform, ONLY: cross_product
+
+    real,    intent(inout) :: State_V(nVar)
+    real,    intent(in)    :: Current_D(3)
+    real,    intent(in)    :: GradPe_D(3)
+    logical, intent(in)    :: DoCorrectEfield
+    logical, intent(in)    :: DoTest
+
+    integer :: iIonFluid, iVar
+    real    :: nElec, uElec_D(3), Bfield_D(3), Efield_D(3)
+    real    :: nIon_I(nIonFluid), uIon_DI(3, nIonFluid), uPlus_D(3)
+    real    :: StateOld_V(nVar)
+
+    integer, parameter :: TrueIonLast_ = nIonFluid - nElectronFluid
+    integer, parameter :: ElecFluid_   = TrueIonLast_ + 1
+    integer, parameter :: ElecUx_ = iRhoUxIon_I(ElecFluid_),  &
+         ElecUz_ = iRhoUzIon_I(ElecFluid_)
+
+    character (len=*), parameter :: &
+         NameSub = 'correct_electronfluid_efield_cell'
+    !------------------------------------------------------------------------
+
+    ! save the old state_V for testing
+    StateOld_V = State_V
+
+    ! calculate the number density for each fluid, including the electron fluid
+    nIon_I = State_V(iRhoIon_I)/MassIon_I
+
+    ! calculate the velocity for each fluid, including the electron fluid
+    uIon_DI(x_,:) = State_V(iRhoUxIon_I)/State_V(iRhoIon_I)
+    uIon_DI(y_,:) = State_V(iRhoUyIon_I)/State_V(iRhoIon_I)
+    uIon_DI(z_,:) = State_V(iRhoUzIon_I)/State_V(iRhoIon_I)
+
+    nElec = sum(nIon_I(1:TrueIonLast_)*ChargeIon_I(1:TrueIonLast_))
+
+    ! charge average ion velocity
+    uPlus_D = 0.0
+    do iIonFluid=1,TrueIonLast_
+       uPlus_D(:) = uPlus_D(:) + nIon_I(iIonFluid)*uIon_DI(:,iIonFluid) &
+            *ChargeIon_I(iIonFluid)/nElec
+    end do
+
+    ! electron velocity = uPlus + u_H, uH = -j/ne/e
+    uElec_D  = uPlus_D - Current_D/nElec/ElectronCharge
+
+    ! calculate the electric field E = -ue x B - gradpe/ne/e
+    Bfield_D = State_V(Bx_:Bz_)
+    Efield_D = -cross_product(uElec_D,Bfield_D) - GradPe_D/nElec/ElectronCharge
+
+    ! correct the electron mass density and velocity
+    State_V(iRhoIon_I(ElecFluid_))  = nElec*MassFluid_I(ElecFluid_)
+    State_V(ElecUx_:ElecUz_)        = State_V(iRhoIon_I(ElecFluid_))*uElec_D
+
+    ! correct the electric field
+    if (DoCorrectEfield) State_V(Ex_:Ez_) = Efield_D
+
+    if (DoTest) then
+       write(*,'(1x,2a,10es13.5)')  NameSub, ' MassIon_I   =', MassIon_I
+       write(*,'(1x,2a,10es13.5)')  NameSub, ' ChargeIon_I =', ChargeIon_I
+       write(*,'(1x,2a,10es20.12)') NameSub, ' nIon_I      =', nIon_I
+       do iIonFluid=1,TrueIonLast_
+          write(*,'(1x,2a,i2, 10es20.12)') NameSub, ' iIon, uIon_D=', &
+               iIonfluid, uIon_DI(:,iIonFluid)
+       end do
+       write(*,'(1x,2a,3es20.12)')  NameSub, ' uPlus_D     =', uPlus_D
+       write(*,'(1x,2a,3es20.12)')  NameSub, ' Current_D   =', Current_D
+       write(*,'(1x,2a,3es20.12)')  NameSub, ' uElec_D     =', uElec_D
+       write(*,'(1x,2a,3es20.12)')  NameSub, ' Bfield_D    =', Bfield_D
+       write(*,'(1x,2a,3es20.12)')  NameSub, ' Efield_D    =', Efield_D
+       write(*,*) NameSub, ' NameVar, State_V (old/new) ='
+       do iVar = 1, nVar
+          write(*,'(1x,1a,3es20.12)') &
+               NameVar_V(iVar), StateOld_V(iVar), State_V(iVar)
+       end do
+    end if
+  end subroutine correct_electronfluid_efield_cell
 
 end module ModIonElectron
