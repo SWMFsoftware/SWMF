@@ -332,7 +332,7 @@ contains
     end if
 
     if (present(DoCorrectEfieldIn)) then
-       DoCorrectEfield = DoCorrectEfield
+       DoCorrectEfield = DoCorrectEfieldIn
     else
        DoCorrectEfield = .false.
     end if
@@ -355,7 +355,7 @@ contains
 
        GradPe_D = GradPe_DG(:,i,j,k)
 
-       call correct_electronfluid_efield_cell(State_VG(nVar,i,j,k), &
+       call correct_electronfluid_efield_cell(State_VG(:,i,j,k), &
             Current_D, GradPe_D, DoCorrectEfield, DoTestCell)
     end do; end do; end do
 
@@ -423,6 +423,7 @@ contains
     if (DoCorrectEfield) State_V(Ex_:Ez_) = Efield_D
 
     if (DoTest) then
+       write(*,*) NameSub, ' DoCorrectEfield =', DoCorrectEfield
        write(*,'(1x,2a,10es13.5)')  NameSub, ' MassIon_I   =', MassIon_I
        write(*,'(1x,2a,10es13.5)')  NameSub, ' ChargeIon_I =', ChargeIon_I
        write(*,'(1x,2a,10es20.12)') NameSub, ' nIon_I      =', nIon_I
