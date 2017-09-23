@@ -7966,8 +7966,22 @@ nMPIops++;
       xmax[1]=startNode->xmax[1]+(startNode->xmax[1]-startNode->xmin[1])/double(_BLOCK_CELLS_Y_)*double(_GHOST_CELLS_Y_);
       xmax[2]=startNode->xmax[2]+(startNode->xmax[2]-startNode->xmin[2])/double(_BLOCK_CELLS_Z_)*double(_GHOST_CELLS_Z_);
 
+      //create a table to storing the result of checking of the intersection checks
+      cBitwiseFlagTable IntersectionFlagTable(CutCell::nBoundaryTriangleFaces);
+
+      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+      #pragma omp parallel for schedule(dynamic,1) default (none) shared(nTotalThreads,ThisThread,ParallelMeshGenerationFlag,IntersectionFlagTable,CutCell::nBoundaryTriangleFace,xmin,xmax,EPS)
+      #endif
+      for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if ((nface%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
+        IntersectionFlagTable.SetFlag(CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS),nface);
+      }
+
+      if (ParallelMeshGenerationFlag==true) {
+        IntersectionFlagTable.Gather();
+      }
+
       for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) {
-        if (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
+        if (IntersectionFlagTable.Test(nface)==true) { /// if (CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS)==true) {
           //the block is intersected by the face
           CutCell::cTriangleFaceDescriptor *t=CutCell::BoundaryTriangleFaceDescriptor.newElement();
 
@@ -7980,7 +7994,6 @@ nMPIops++;
       }
     }
     else for (nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) DistributeBoundaryCutBlocks(startNode->downNode[nDownNode]);
-
   }
 
 
