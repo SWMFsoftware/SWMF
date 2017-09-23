@@ -123,12 +123,14 @@ contains
     use ModCoordTransform, ONLY: cross_product
     use ModMultiFluid,     ONLY: nIonFluid, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iRhoUxIon_I, iRhoUzIon_I
+    use ModCurrent,        ONLY: get_current
+    use ModPhysics,        ONLY: ElectronCharge
 
     integer, intent(in):: iBlock
 
     integer:: i, j, k, iIonFluid, iUx, iUz
     real :: nIon_I(nIonFluid), nElec
-    real:: b_D(3), u_D(3)
+    real:: b_D(3), uPlus_D(3), uElec_D(3), Current_D(3)
     !----------------------------------------------------------------------
     if(.not.allocated(Efield_DGB))then
        allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -140,7 +142,7 @@ contains
        RETURN
     end if
 
-    do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not. true_cell(i,j,k,iBlock))then
           Efield_DGB(:,i,j,k,iBlock) = 0.0
           CYCLE
@@ -151,26 +153,31 @@ contains
        if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
 
        if (nIonFluid == 1) then
-          u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
+          nElec = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
+          uPlus_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) &
                /State_VGB(Rho_,i,j,k,iBlock)
        elseif (nIonFluid > 1) then
-          u_D = 0.0
-          nIon_I = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
-          nElec  = sum(nIon_I*ChargeIon_I)
-          ! u_D is the charge average ion velocity
+          uPlus_D = 0.0
+          nIon_I  = State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I
+          nElec   = sum(nIon_I*ChargeIon_I)
+          ! uPlus_D is the charge average ion velocity
           do iIonFluid = 1,nIonFluid
              iUx = iRhoUxIon_I(iIonFluid)
              iUz = iRhoUzIon_I(iIonFluid)
-             u_D = u_D + State_VGB(iUx:iUz,i,j,k,iBlock)        &
-                  /State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock) &
+             uPlus_D = uPlus_D + State_VGB(iUx:iUz,i,j,k,iBlock) &
+                  /State_VGB(iRhoIon_I(iIonFluid),i,j,k,iBlock)  &
                   *nIon_I(iIonFluid)*ChargeIon_I(iIonFluid)/nElec
           end do
        else
           call stop_mpi('get_electric_field_block: check nIonFluid')
        end if
+
+       call get_current(i,j,k,iBlock,Current_D)
+
+       uElec_D = uPlus_D - Current_D/nElec/ElectronCharge
              
-       ! E = - u x B
-       Efield_DGB(:,i,j,k,iBlock) = -cross_product(u_D, b_D)
+       ! E = - ue x B
+       Efield_DGB(:,i,j,k,iBlock) = -cross_product(uElec_D, b_D)
 
     end do; end do; end do
 
