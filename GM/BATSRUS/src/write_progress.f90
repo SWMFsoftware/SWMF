@@ -60,15 +60,16 @@ subroutine write_runtime_values()
   use ModIO,        ONLY: iUnitOut, write_prefix
   use ModProcMH,    ONLY: iProc, nProc
   use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
-  use ModAdvance,   ONLY: FluxType
+  use ModAdvance,   ONLY: FluxType, UseEfield
   use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax
   use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, UseSplitSemiImplicit, &
        TypeSemiImplicit
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
   use ModFaceFlux,   ONLY: TypeFluxNeutral
-  use CON_planet,   ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
+  use CON_planet,    ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
        RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
        IonosphereHeight
+  use ModIonElectron,ONLY: iVarUseCmax_I
   use ModMpi
   use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK, nLevelMin, nLevelMax,&
        IsLogRadius, IsGenRadius
@@ -274,6 +275,11 @@ subroutine write_runtime_values()
      call write_prefix
      write(iUnitOut,'(10X,a,f10.4)') &
           "   with simple Boris correction, factor =", boris_cLIGHT_factor
+  end if
+  if(UseEfield) then
+     call write_prefix
+     write(iUnitOut,'(10x,100a)') &
+          "UseEfield, vars that diffuse with Cmax: ", NameVar_V(iVarUseCmax_I)
   end if
 
   call write_prefix; write(iUnitOut,*)
