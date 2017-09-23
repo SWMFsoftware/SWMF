@@ -298,7 +298,8 @@ contains
     real, allocatable :: GradPe_DG(:,:,:,:)
     logical :: DoHallCurrent, DoGradPe, DoCorrectEfield
 
-    integer, parameter :: ElecFluid_   = nIonFluid - nElectronFluid + 1
+    integer, parameter :: ElecFluid_ = &
+         min(nIonFluid-nElectronFluid+1, nIonFluid)
 
     logical :: DoTest, DoTestMe, DoTestCell
 
@@ -379,7 +380,7 @@ contains
     real    :: StateOld_V(nVar)
 
     integer, parameter :: TrueIonLast_ = nIonFluid - nElectronFluid
-    integer, parameter :: ElecFluid_   = TrueIonLast_ + 1
+    integer, parameter :: ElecFluid_   = min(TrueIonLast_ + 1, nIonFluid)
     integer, parameter :: ElecUx_ = iRhoUxIon_I(ElecFluid_),  &
          ElecUz_ = iRhoUzIon_I(ElecFluid_)
 
