@@ -55,6 +55,10 @@ public:
     }
   }
 
+  void flush() {
+    for (int thread=0;thread<nThreadsOpenMP;thread++) for (int i=0;i<FlagTableLength[thread];i++) FlagTable[thread][i]=0;
+  }
+
   void SetDefaultParameters() {
     //allocate the tables
     nThreadsOpenMP=1;
