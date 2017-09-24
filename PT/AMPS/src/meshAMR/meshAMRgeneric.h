@@ -6058,12 +6058,12 @@ if (CallsCounter==83) {
 
           for (iThreadOpenMP=0;iThreadOpenMP<nThreadsOpenMP;iThreadOpenMP++) requredResolutionTable[iThreadOpenMP]=requredResolution;
 
-          #pragma omp parallel default(none) private (t,c,iThreadOpenMP,cnt) firstprivate(cnt,startNode) shared (requredResolutionTable,nThreadsOpenMP)
+          #pragma omp parallel default(none) private (t,c,iThreadOpenMP,cnt) firstprivate(startNode) shared (requredResolutionTable,nThreadsOpenMP)
           {
             #pragma omp single
             {
               for (cnt=0,t=startNode->FirstTriangleCutFace;t!=NULL;t=t->next,cnt++) if ((cnt%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
-                 #pragma omp task default (none) firstprivate (node)
+                 #pragma omp task default (none) firstprivate (t) private (iThreadOpenMP,c) shared (requredResolutionTable) 
                 {
                   iThreadOpenMP=omp_get_thread_num();
                   c=CutCellSurfaceLocalResolution(t->TriangleFace);
@@ -7967,7 +7967,7 @@ nMPIops++;
       cBitwiseFlagTable IntersectionFlagTable(CutCell::nBoundaryTriangleFaces);
 
       #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-      #pragma omp parallel for schedule(dynamic,1) default (none) shared(nTotalThreads,ThisThread,ParallelMeshGenerationFlag,IntersectionFlagTable,CutCell::nBoundaryTriangleFace,xmin,xmax,EPS)
+      #pragma omp parallel for schedule(dynamic,1) default (none) shared(nTotalThreads,ThisThread,ParallelMeshGenerationFlag,IntersectionFlagTable,xmin,xmax,EPS)
       #endif
       for (nface=0;nface<CutCell::nBoundaryTriangleFaces;nface++) if ((nface%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
         IntersectionFlagTable.SetFlag(CutCell::BoundaryTriangleFaces[nface].BlockIntersection(xmin,xmax,EPS),nface);
@@ -8033,13 +8033,14 @@ nMPIops++;
       }
     }
     #elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    #pragma omp parallel default (none) shared (BoundaryFaces,nTotalThreads,ThisThread,ParallelMeshGenerationFlag,xmin,xmax,EPS) ptivate (t)
+    #pragma omp parallel default (none) shared (xmax,xmin,BoundaryFaces,IntersectionFlagTable) private (t)
     {
-      #pragma omp single {
+      #pragma omp single 
+      {
         int cnt=0;
 
         for (t=BoundaryFaces;t!=NULL;t=t->next,cnt++) if ((cnt%nTotalThreads==ThisThread)||(ParallelMeshGenerationFlag==false)) {
-          #pragma omp task default (none) shared (xmin,xmax,EPS) firstprivate (t,cnt)
+          #pragma omp task default (none) shared (xmin,xmax,IntersectionFlagTable) firstprivate (t,cnt)
           {
             if (t->TriangleFace->BlockIntersection(xmin,xmax,EPS)==true) {
               IntersectionFlagTable.SetFlag(true,cnt);
