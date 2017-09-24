@@ -127,7 +127,10 @@ contains
 
 
     ! get the value of SC and IH boundary as set in SP
-    call SP_get_domain_boundary(RSc, RIh)
+    if(is_proc0(SP_))&
+         call SP_get_domain_boundary(RSc, RIh)
+    call MPI_Bcast(Rsc, 1, MPI_REAL, i_proc0(SP_), i_comm(), iError)
+    
 
     if(use_comp(SC_))then  
        ! Set pair SC-SP
