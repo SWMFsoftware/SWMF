@@ -4863,6 +4863,49 @@ namespace PIC {
         void Inject();
       }
 
+      //periodic boundary conditions
+      namespace Periodic {
+        //the original requested limits of the compulational domain
+        extern double xminOriginal[3],xmaxOriginal[3];
+
+        //the actual limits of the computational part (without "ghost" block) of the dimain
+        extern double xminDomain[3],xmaxDomain[3];
+
+        //the period length in each dimention
+        extern double L[3];
+
+        //the tables of 'ghost' blocks
+        struct cBlockPairTable {
+          cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *GhostBlock;
+          cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *RealBlock;
+        };
+
+        extern int BlockPairTableLength;
+        extern cBlockPairTable *BlockPairTable;
+
+        //the structure used to communication between MPI processes
+        extern CMPI_channel pipe;
+
+        //functions for exchanging of the information between the real and ghost blocks
+        void ExchangeBlockDataMPI(cBlockPairTable& BlockPair);
+        void ExchangeBlockDataLocal(cBlockPairTable& BlockPair);
+
+        //get the number of the ghost blocks
+        int GetGhostBlockTotalNumber();
+
+        //get requested minimum resolution at the outer boundary of the computational domain
+        double GetMinRequestedBoundaryResoluton();
+
+        //manager of the information update between the real and ghost blocks
+        void UpdateData();
+
+        //Modified local resolution function that is actually used in the mesh generation and accounts for creating the 'ghost' blocks
+        double ModifiedLocalResolution(double* x);
+
+        //init the boundary conditions manager and the mesh that will be used in the simulation
+        void Init(double* xmin,double* xmax,double (*localResuestedResolutionFunction)(double*));
+      }
+
     }
 
     namespace InternalBoundary {
