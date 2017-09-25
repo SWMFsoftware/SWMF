@@ -316,32 +316,22 @@ contains
     if(nElectronFluid /= 1) &
          call stop_mpi(NameSub//' only nElectronFluid = 1 is supported')
 
-    if(.not. allocated(GradPe_DG)) &
-         allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+    DoHallCurrent = .false.
+    if (present(DoHallCurrentIn)) DoHallCurrent = DoHallCurrentIn
 
-    if (present(DoHallCurrentIn)) then
-       DoHallCurrent = DoHallCurrentIn
-    else
-       DoHallCurrent = .false.
-    end if
+    DoGradPe = .false.
+    if (present(DoGradPeIn)) DoGradPe = DoGradPeIn
 
-    if (present(DoGradPeIn)) then
-       DoGradPe = DoGradPeIn
-    else
-       DoGradPe = .false.
-    end if
-
-    if (present(DoCorrectEfieldIn)) then
-       DoCorrectEfield = DoCorrectEfieldIn
-    else
-       DoCorrectEfield = .false.
-    end if
+    DoCorrectEfield = .false.
+    if (present(DoCorrectEfieldIn)) DoCorrectEfield = DoCorrectEfieldIn
 
     if (DoGradPe) then
+       if(.not. allocated(GradPe_DG)) &
+            allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
        call calc_gradient(iBlock, State_VG(iPIon_I(ElecFluid_),:,:,:), nG, &
             GradPe_DG)
     else
-       GradPe_DG = 0.0
+       GradPe_D = 0.0
     end if
 
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -352,12 +342,13 @@ contains
        else
           Current_D = 0.0
        end if
-
-       GradPe_D = GradPe_DG(:,i,j,k)
+       if (DoGradPe) GradPe_D = GradPe_DG(:,i,j,k)
 
        call correct_electronfluid_efield_cell(State_VG(:,i,j,k), &
             Current_D, GradPe_D, DoCorrectEfield, DoTestCell)
     end do; end do; end do
+
+    if (allocated(GradPe_DG)) deallocate(GradPe_DG)
 
   end subroutine correct_electronfluid_efield
 
