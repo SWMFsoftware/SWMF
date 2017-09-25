@@ -57,7 +57,7 @@ contains
        call read_var('DoCorrectElectronFluid', DoCorrectElectronFluid)
     case("#CORRECTEFIELD")
        call read_var('DoCorrectEfield', DoCorrectEfield)
-    case("#STRINGVARUSECMAX")
+    case("#CMAXDIFFUSION")
        if(allocated(iVarUseCmax_I)) deallocate(iVarUseCmax_I)
        call read_var('StringVarUseCmax', StringVarUseCmax, IsLowerCase=.true.)
        if (StringVarUseCmax == 'all') then
