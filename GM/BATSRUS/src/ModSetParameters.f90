@@ -1441,7 +1441,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_b0_param(NameCommand)
 
      case("#HYPERBOLICDIVE", "#CORRECTELECTRONFLUID", "#CORRECTEFIELD", &
-          "#STRINGVARUSECMAX")
+          "#CMAXDIFFUSION")
         call read_ion_electron_param(NameCommand)
 
      case("#HYPERBOLICDIVB")
@@ -2348,14 +2348,10 @@ contains
 
   subroutine set_namevar
 
-    use ModUtilities, ONLY: join_string
-
     integer :: iWave
     character(len=3):: NameWave
     integer :: iMaterial
     character(len=2):: NameMaterial
-
-    character(len(NameVar_V)) :: NameVar
     !-------------------------------------------------------------------------
 
     ! Fix the NameVar_V string for waves
@@ -2377,11 +2373,10 @@ contains
     ! space separated NameVar string containing all variable names
     call join_string(nVar, NameVar_V, NameVarCouple)
 
-    ! convert NameVar_V to NameVarLower_V
+    ! convert NameVar_V to NameVarLower_V (lower case)
     do iVar = 1, nVar+nFluid
-       NameVar = NameVar_V(iVar)
-       call lower_case(NameVar)
-       NameVarLower_V(iVar) = NameVar
+       NameVarLower_V(iVar) = NameVar_V(iVar)
+       call lower_case(NameVarLower_V(iVar))
     end do
 
   end subroutine set_namevar

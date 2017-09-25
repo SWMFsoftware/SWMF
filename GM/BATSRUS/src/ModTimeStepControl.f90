@@ -48,13 +48,13 @@ contains
 
     use ModMain,       ONLY: NameVarLower_V
     use ModReadParam
-    use ModVarIndexes, ONLY: nVar, NameVar_V
+    use ModVarIndexes, ONLY: nVar
     use ModUtilities,  ONLY: split_string
 
     character(len=*), intent(in):: NameCommand
 
     integer :: iControl, iVar
-    character(len=100):: NameVar, NameVarControl
+    character(len=100):: NameVarControl
     character(len=20) :: NameVarControl_I(nVar)
 
     character(len=*), parameter:: NameSub='read_time_step_control_param'
@@ -84,11 +84,10 @@ contains
        allocate( iVarControl_I(nVarControl), VarRatio_I(nVarControl) )
        do iControl=1, nVarControl
           do iVar = 1, nVar
-             NameVar = NameVarLower_V(iVar)
-             if( NameVar == NameVarControl_I(iControl) ) EXIT
+             if(NameVarLower_V(iVar) == NameVarControl_I(iControl)) EXIT
           end do
           if(iVar > nVar)call stop_mpi(NameSub//' invalid NameVarControl='//&
-               NameVarControl)
+               NameVarControl_I(iControl))
           iVarControl_I(iControl) = iVar
        end do
     case("#CHECKTIMESTEP")

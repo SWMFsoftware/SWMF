@@ -110,7 +110,7 @@ contains
 
     ! One line of input
     character (len=100) :: line
-    character (len=10) :: String, NameVar
+    character (len=20) :: String
 
     real    :: TmpData_V(nVar)
     integer :: iTime_I(nTimeVar)
@@ -221,15 +221,11 @@ contains
                 UseTemperature  = .true.
              case  default
                 do jVar=1, nVar
-                   NameVar = NameVarLower_V(jVar)
-                   if(NameVar /=String) CYCLE
-                   iVarInput_V(iVar)=jVar
+                   if(NameVarLower_V(jVar) == String) EXIT
                 end do
-                if(iVarInput_V(iVar)==0.)then
-                   write(*,*)NameSub,': unknown solarwind variable',&
-                        iVar, String
-                   call stop_mpi(NameSub//' wrong solarwind variables')
-                end if
+                if(jVar > nVar) call stop_mpi(NameSub// &
+                     ': unknown solarwind variable='//trim(String))
+                iVarInput_V(iVar) = jVar
              end select
           end do
        end if

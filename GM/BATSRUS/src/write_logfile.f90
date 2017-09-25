@@ -439,7 +439,7 @@ contains
     real :: Convert_DD(3,3)
 
     integer :: jVar
-    character(len=lNameLogVar) :: NameVar, NameLogVarLower
+    character(len=lNameLogVar) :: NameLogVarLower
     !------------------------------------------------------------------------
 
     select case(NameLogVar)
@@ -943,8 +943,7 @@ contains
        call lower_case(NameLogVarLower)
 
        do jVar = 1, nVar
-          NameVar = NameVarLower_V(jVar)
-          if(NameVar /= NameLogVarLower) CYCLE
+          if(NameVarLower_V(jVar) /= NameLogVarLower) CYCLE
           LogVar_I(iVarTot) = StateIntegral_V(jVar)/DomainVolume
           RETURN
        end do
@@ -976,7 +975,7 @@ contains
     use ModIO, ONLY : lNameLogVar
     
     integer :: jVar
-    character(len=lNameLogVar) :: NameVar, NameLogVarLower
+    character(len=lNameLogVar) :: NameLogVarLower
 
     !-------------------------------------------------------------------------
     if (iProc/=0) RETURN
@@ -1075,8 +1074,7 @@ contains
        NameLogVarLower = NameLogVar_I(iVar)
        call lower_case(NameLogVarLower)
        do jVar = 1, nVar
-          NameVar = NameVarLower_V(jVar)
-          if(NameVar /= NameLogVarLower) CYCLE
+          if(NameVarLower_V(jVar) /= NameLogVarLower) CYCLE
           LogVar_I(iVarTot) = StateSat_V(jVar)
           RETURN
        end do
@@ -1094,7 +1092,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      LogR_I,nLogTot,LogVar_I)
 
   use ModPhysics
-  use ModVarIndexes, ONLY: NameVar_V, UnitUser_V
+  use ModVarIndexes, ONLY: UnitUser_V
   use ModIO, ONLY: lNameLogVar
   implicit none
 
@@ -1103,7 +1101,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
   real, intent(inout) :: LogVar_I(nLogTot)
   real, intent(in) :: LogR_I(nLogR)
 
-  character (len=lNameLogVar) :: NameLogVar, NameVar
+  character (len=lNameLogVar) :: NameLogVar
   integer :: iVar, iVarTot, jVar
   !-------------------------------------------------------------------------
 
@@ -1189,8 +1187,7 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
 
      case default
         do jVar = 1, nVar
-           NameVar = NameVarLower_V(jVar)
-           if(NameLogVar /= NameVar) CYCLE
+           if(NameVarLower_V(jVar) /= NameLogVar) CYCLE
            LogVar_I(iVarTot)=LogVar_I(iVarTot)*UnitUser_V(jVar)
            EXIT
         end do

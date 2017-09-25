@@ -1220,7 +1220,6 @@ contains
     integer :: iVarMatch_V(nVar) = 0
     logical :: UseElectronPressureRestart = .false.
 
-    character(len=20)    :: NameVarRestart, NameVar, NameVarFrom, NameVarTo
     integer              :: iVarMapping
     integer, allocatable :: iVarFrom_I(:), iVarTo_I(:)
 
@@ -1252,9 +1251,7 @@ contains
     ! the corresponding variable in the restart file
     MATCHLOOP: do iVar = 1,nVar 
        do iVarRead = 1, nVarRestart
-          NameVar        = NameVarLower_V(iVar)
-          NameVarRestart = NameVarRestart_V(iVarRead)
-          if (NameVar == NameVarRestart) then
+          if (NameVarLower_V(iVar) == NameVarRestart_V(iVarRead)) then
              iVarMatch_V(iVar) = iVarRead
              CYCLE MATCHLOOP
           end if
@@ -1268,25 +1265,15 @@ contains
        allocate(iVarTo_I(nVarRestartMapping))
 
        do iVarMapping = 1, nVarRestartMapping
-          NameVarFrom = NameVarRestartFrom_V(iVarMapping)
-          NameVarTo   = NameVarRestartTo_V(iVarMapping)
-
           do iVar = 1, nVar
-             NameVar = NameVarLower_V(iVar)
-             if (NameVarTo == NameVar) then
-                iVarTo_I(iVarMapping) = iVar
-                CYCLE
-             end if
+             if (NameVarRestartTo_V(iVarMapping) == NameVarLower_V(iVar)) &
+                  iVarTo_I(iVarMapping) = iVar
           end do
-
           do iVarRead = 1, nVarRestart
-             NameVarRestart = NameVarRestart_V(iVarRead)
-             if (NameVarFrom == NameVarRestart) then
-                iVarFrom_I(iVarMapping) = iVarRead
-                CYCLE
-             end if
+             if (NameVarRestartFrom_V(iVarMapping) &
+                  == NameVarRestart_V(iVarRead)) &
+                  iVarFrom_I(iVarMapping) = iVarRead
           end do
-
           iVarMatch_V(iVarTo_I(iVarMapping)) = iVarFrom_I(iVarMapping)
        end do
     end if
@@ -1295,11 +1282,10 @@ contains
        write(*,*) 'Mapping information:'
        do iVar = 1, nVar
           if (iVarMatch_V(iVar) <=0) CYCLE
-          NameVar        = NameVar_V(iVar)
-          NameVarRestart = NameVarRestart_V(iVarMatch_V(iVar))
           write(*,'(1x, A, A1, I2, A1, 3x, A, 3x, A, A1, I2, A1)')       &
-               trim(NameVarRestart), '(', iVarMatch_V(iVar), ')', '==>', &
-               trim(NameVar),        '(', iVar, ')'
+               trim(NameVarRestart_V(iVarMatch_V(iVar))), &
+               '(', iVarMatch_V(iVar), ')', '==>', &
+               trim(NameVar_V(iVar)), '(', iVar, ')'
        end do
     end if
 

@@ -1044,7 +1044,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   real, intent(out)   :: plotvar_inBody(nPlotVar)
   logical, intent(out):: plotvar_useBody(nPlotVar)
 
-  character (len=10)  :: String, NamePlotVar, NameVar
+  character (len=10)  :: String, NamePlotVar
 
   real:: tmp1Var, tmp2Var
   real, allocatable :: J_DC(:,:,:,:)
@@ -1690,8 +1690,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case default
         ! Check if the name is one of the state variable names
         do jVar = 1, nVar
-           NameVar = NameVarLower_V(jVar)
-           if(NamePlotVar /= NameVar) CYCLE
+           if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
            PlotVar(:,:,:,iVar) = State_VGB(jVar,:,:,:,iBLK)
            if(DefaultState_V(jVar) > cTiny) &
                 plotvar_inBody(iVar) = FaceState_VI(jVar,body1_)
@@ -1725,7 +1724,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   use ModProcMH
   use ModMain, ONLY: BlkTest, ProcTest
   use ModPhysics
-  use ModVarIndexes, ONLY: NameVar_V, UnitUser_V, DefaultState_V
+  use ModVarIndexes, ONLY: UnitUser_V, DefaultState_V
   use ModNumConst, ONLY: cTiny
   use ModUtilities,  ONLY: lower_case
   use ModMultiFluid, ONLY: extract_fluid_name
@@ -1738,7 +1737,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   real, intent(inout) :: plotVar(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
   real, intent(inout) :: plotVar_inBody(nPlotVar)
 
-  character (len=10)  :: String, NamePlotVar, NameVar
+  character (len=10)  :: String, NamePlotVar
 
   integer :: iVar, jVar
   logical :: DoTest,DoTestMe
@@ -1829,8 +1828,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
         ! DEFAULT CASE
      case default
         do jVar = 1, nVar
-           NameVar = NameVarLower_V(jVar)
-           if(NamePlotVar /= NameVar) CYCLE
+           if(NamePlotVar /= NameVarLower_V(jVar)) CYCLE
            PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*UnitUser_V(jVar)
            if(DefaultState_V(jVar)>cTiny)&
                 plotvar_inBody(iVar) = plotvar_inBody(iVar)*UnitUser_V(jVar)
@@ -1848,7 +1846,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_dimensional, plot_type1
-  use ModVarIndexes, ONLY: NameVar_V, NameUnitUserTec_V, IsMhd
+  use ModVarIndexes, ONLY: NameUnitUserTec_V, IsMhd
   use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
   use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
   use BATL_lib,      ONLY: nDim
@@ -1862,7 +1860,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   character (len=1500), intent(out) :: StringVarTec 
 
   character (len=20) :: NameTecFluid
-  character (len=10) :: String, NamePlotVar, NameVar, NameTecVar, NameUnit
+  character (len=10) :: String, NamePlotVar, NameTecVar, NameUnit
   integer            :: iPlotVar, iVar, i
   !---------------------------------------------------------------------------
   !\
@@ -2142,11 +2140,9 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
         ! Try to find the plot variable among the basic variables
         do iVar = 1, nVar
-           NameVar = NameVarLower_V(iVar)
-           if(NameVar == NamePlotVar)then
-              NameUnit = NameUnitUserTec_V(iVar)
-              EXIT
-           end if
+           if(NamePlotVar /= NameVarLower_V(iVar)) CYCLE
+           NameUnit = NameUnitUserTec_V(iVar)
+           EXIT
         end do
      end select
 
@@ -2170,7 +2166,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
-  use ModVarIndexes, ONLY: NameVar_V, NameUnitUserIdl_V
+  use ModVarIndexes, ONLY: NameUnitUserIdl_V
   use ModMultiFluid, ONLY: extract_fluid_name
   implicit none
 
@@ -2184,7 +2180,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
   ! set the unit description strings based on the plot variable names
   ! for plot  file iFile
 
-  character (len=10) :: String, NamePlotVar, NameVar, NameUnit
+  character (len=10) :: String, NamePlotVar, NameUnit
   integer            :: iPlotVar, iVar
   !---------------------------------------------------------------------------
 
@@ -2262,11 +2258,9 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
 
         ! Try to find the plot variable among the basic variables
         do iVar = 1, nVar
-           NameVar = NameVarLower_V(iVar)
-           if(NameVar == NamePlotVar)then
-              NameUnit = NameUnitUserIdl_V(iVar)                            
-              EXIT
-           end if
+           if(NamePlotVar /= NameVarLower_V(iVar)) CYCLE
+           NameUnit = NameUnitUserIdl_V(iVar)                            
+           EXIT
         end do
      end select
      ! Append the unit string for this variable to the output string

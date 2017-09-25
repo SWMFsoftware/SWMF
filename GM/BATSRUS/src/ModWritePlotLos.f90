@@ -814,7 +814,7 @@ contains
     use ModMultifluid,  ONLY: UseMultiIon, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iPIon_I
     use ModPhysics,     ONLY: AverageIonCharge, PePerPtotal
-    use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_, NameVar_V
+    use ModVarIndexes,  ONLY: nVar, Rho_, Pe_, p_
     use BATL_lib,       ONLY: xyz_to_coord, MinIJK_D, MaxIJK_D
     use ModUserInterface ! user_set_plot_var
 
@@ -842,8 +842,6 @@ contains
     real, allocatable, save:: PlotVar_GV(:,:,:,:)
     logical :: StateInterpolateDone = .false.
     integer :: jVar
-    character (len=10)  ::  NameTemp
-
 
     ! Added for EUV synth and sph geometry
     real :: GenLos_D(3)
@@ -1049,9 +1047,7 @@ contains
 
           ! check if the variable is standard state variable
           do jVar = 1, nVar
-             NameTemp = NameVarLower_V(jVar)
-
-             if(NameTemp /= NameVar) CYCLE
+             if(NameVarLower_V(jVar) /= NameVar) CYCLE
 
              if (.not. StateInterpolateDone) then
                 State_V = interpolate_vector(State_VGB(:,:,:,:,iBlock), &
