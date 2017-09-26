@@ -3664,13 +3664,14 @@ contains
               - (3*Ppar + GammaPe)*InvRho*Alfven2Normal &
               + GammaPe*InvRho**2*(4*Ppar*BnInvB2 &
               - 3*Ppar - Pperp*BnInvB2)*BnInvB2)))
+         if(DoTestCell) write(*,*) NameSub,' AnisoP, Sound2, Fast2, Discr=', &
+              Sound2, Fast2, Discr
       else
          Fast2  = Sound2 + Alfven2
          Discr  = sqrt(max(0.0, Fast2**2 - 4*Sound2*Alfven2Normal))
+         if(DoTestCell) write(*,*) NameSub,' Sound2, Fast2, Discr        =', &
+              Sound2, Fast2, Discr
       endif
-
-      if(DoTestCell) &
-           write(*,*) NameSub,' Fast2, Discr                =', Fast2, Discr
 
       if(Fast2 + Discr < 0.0)then
          write(*,*)NameSub, &
