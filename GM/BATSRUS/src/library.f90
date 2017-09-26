@@ -1045,7 +1045,11 @@ subroutine find_test_cell
   if (DoBroadcast) then
 
      call MPI_Bcast(XyzTestCell_D, 3, MPI_REAL, ProcTest, iComm, iError)
-
+     if(.not.coord_test)then
+        xTest = XyzTestCell_D(1)
+        yTest = XyzTestCell_D(2)
+        zTest = XyzTestCell_D(3)
+     end if
      if(iProc == ProcTest .and. UseTestCell .and. lVerbose>0)then
         write(*,*)
         write(*,*)'Selected test cell, true_cell=', true_cell(iTest,jTest,kTest,BlkTest)
@@ -1101,34 +1105,6 @@ subroutine find_test_cell
 
 end subroutine find_test_cell
 
-!=============================================================================
-
-subroutine xyz_to_peblk(x, y, z, iPe, iBlock, DoFindCell, i, j, k)
-
-  ! Find the processor (iPe) and block (iBlock) for position x, y, z
-  ! If DoFindCell is true then the cell indexes i, j, k are returned too.
-
-  use BATL_lib, ONLY: MaxDim, find_grid_block
-
-  implicit none
-
-  real,    intent(in) :: x, y, z
-  integer, intent(out):: iPE, iBlock
-  logical, intent(in) :: DoFindCell
-  integer, intent(out):: i, j, k
-
-  ! Variables for BATL
-  integer:: iCell_D(MaxDim)
-
-  character(len=*), parameter:: NameSub = 'xyz_to_peblk'
-  !----------------------------------------------------------------------
-
-  call find_grid_block( (/x,y,z/), iPe, iBlock, iCell_D)
-  i = iCell_D(1)
-  j = iCell_D(2)
-  k = iCell_D(3)
-
-end subroutine xyz_to_peblk
 !=============================================================================
 subroutine fill_edge_corner(Array_G)
 
