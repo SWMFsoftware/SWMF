@@ -19,7 +19,7 @@ subroutine ray_trace_accurate
   use ModAdvance,     ONLY: State_VGB, Bx_, Bz_
   use ModB0,          ONLY: B0_DGB
   use ModGeometry,    ONLY: r_BLK, true_cell
-  use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
+  use BATL_lib,       ONLY: Xyz_DGB, message_pass_cell
   use ModMpi
 
   implicit none
@@ -78,10 +78,9 @@ subroutine ray_trace_accurate
         if(Unused_B(iBlock))CYCLE
 
         oktest_ray = okTest .and. &
-             all(Xyz_DGB(:,i,j,k,iBlock)==(/ xTest, yTest, zTest/))
+             all( (/i,j,k,iBlock/)==(/iTest,jTest,kTest,BLKTest/) )
 
         do iRay=1,2
-
            ! Short cut for inner and false cells
            if(R_BLK(i,j,k,iBlock) < rIonosphere .or. &
                 .not.true_cell(i,j,k,iBlock))then
@@ -185,6 +184,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   use ModGeometry, ONLY: XyzStart_BLK, CellSize_DB
   use ModProcMH
   use ModKind
+  use BATL_lib, ONLY: find_grid_block
 
   use ModMpi
   implicit none
@@ -298,8 +298,8 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
                  CYCLE GETRAY
               else
                  ! Find block for the received ray
-                 call xyz_to_peblk(XyzRay_D(1),XyzRay_D(2),XyzRay_D(3),&
-                      jProc,iBlockRay,.false.,i,j,k)
+                 call find_grid_block(XyzRay_D,jProc,iBlockRay)
+                 
                  if(jProc /= iProc)call stop_mpi(&
                       'GM_ERROR in ray_trace: Recvd ray is not in this PE')
 
@@ -372,9 +372,7 @@ contains
        case(ray_block_)
 
           ! Find the new PE and block for the current position
-
-          call xyz_to_peblk(XyzRay_D(1),XyzRay_D(2),XyzRay_D(3),&
-               jProc,jBlock,.false.,i,j,k)
+          call find_grid_block(XyzRay_D,jProc,jBlock)
 
           if(jProc /= iProc)then
              ! Send ray to the next processor and return from here
@@ -398,7 +396,7 @@ contains
           else
              write(*,*)'ERROR for follow_this_ray, iProc=',iProc
              write(*,*)'ERROR iBlockRay=jBlock=',iBlockRay,jBlock
-             write(*,*)'ERROR for iStart_D    =',iStart_D
+             write(*,*)'ERROR iStart_D, iProcStart =',iStart_D, iProcStart
              write(*,*)'ERROR for XyzRay_D    =',XyzRay_D
              write(*,*)'XyzStart_BLK, Dx_BLK  =',XyzStart_BLK(:,jBlock),&
                   CellSize_DB(x_,jBlock)
@@ -542,6 +540,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
   ! Also return Length increased by the length of the ray in this block.
   !
   ! Return iFace = 1..6 if the ray hit the east,west,south,north,bot,top walls
+  ! Return ray_block_   if the ray hit the block boundary
   ! Return ray_iono_    if the ray hit the ionosphere
   ! Return ray_loop_    if the ray did not hit anything 
   ! Return ray_body_    if the ray goes into or is inside a body
@@ -926,8 +925,8 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
 
         if(r2Cur<=R2_raytrace)then
 
-           ! Trace down to the surface
-           if(NameVectorField /= 'B' .or. R2_raytrace<=1.0)then
+           ! If inside surface, then tracing is finished
+           if(NameVectorField /= 'B' .or. r2Cur<rIonosphere*rIonosphere)then
               XyzInOut_D = XyzCur_D
               iFace=ray_iono_
               EXIT FOLLOW
@@ -1479,7 +1478,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModB0,      ONLY: B0_DGB
   use ModProcMH
   use ModMpi
-  use BATL_lib,          ONLY: message_pass_cell
+  use BATL_lib,          ONLY: message_pass_cell, find_grid_block
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
   use ModUtilities,      ONLY: check_allocate
@@ -1524,7 +1523,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   oktest_ray = .false.
 
   ! Initialize some basic variables
-  R_raytrace      = rBody
+  R_raytrace      = max(rBody, rIonosphere)
   R2_raytrace     = R_raytrace**2
 
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
@@ -1621,8 +1620,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
         Xyz_D = matmul(GmSm_DD,Xyz_D)
 
         ! Find processor and block for the location
-        call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
-             iProcFound, iBlockFound, .true., i, j, k)
+        call find_grid_block(Xyz_D,iProcFound,iBlockFound)
 
         ! If location is on this PE, follow and integrate ray
         if(iProc == iProcFound)then
@@ -1680,6 +1678,8 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModMpi
   use ModUtilities,      ONLY: check_allocate
   use ModMultiFluid
+  use BATL_lib,          ONLY: find_grid_block
+  
   implicit none
 
   !INPUT ARGUMENTS:
@@ -1711,7 +1711,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   oktest_ray = .false.
 
   ! Initialize some basic variables
-  R_raytrace      = rBody
+  R_raytrace      = max(rBody, rIonosphere)
   R2_raytrace     = R_raytrace**2
 
   DoIntegrateRay = index(NameVar, 'InvB') > 0 .or. index(NameVar, 'Z0') > 0
@@ -1772,8 +1772,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
      Xyz_D=XyzPt_DI(:,iPt)
 
      ! Find processor and block for the location
-     call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
-          iProcFound, iBlockFound, .true., i, j, k)
+     call find_grid_block(Xyz_D,iProcFound,iBlockFound)
 
      ! If location is on this PE, follow and integrate ray
      if(iProc == iProcFound)then
@@ -2105,7 +2104,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModMain, ONLY: x_, y_, z_, nI, nJ, nK, Unused_B
   use CON_ray_trace, ONLY: ray_init
   use CON_axes, ONLY: transform_matrix
-  use ModRaytrace, ONLY: oktest_ray, R_raytrace, R2_raytrace, &
+  use ModRaytrace, ONLY: oktest_ray, rIonosphere, R_raytrace, R2_raytrace, &
        DoIntegrateRay, DoExtractRay, DoTraceRay, DoMapRay, &
        DoExtractState, DoExtractUnitSi, &
        DoExtractBGradB1, bGradB1_DGB, &
@@ -2120,7 +2119,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   use ModMpi
   use ModGeometry,       ONLY: CellSize_DB
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
-  use BATL_lib,          ONLY: message_pass_cell, &
+  use BATL_lib,          ONLY: message_pass_cell, find_grid_block, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModCoordTransform, ONLY: xyz_to_sph
   use ModMessagePass,    ONLY: exchange_messages
@@ -2171,7 +2170,7 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
   oktest_ray = .false.
 
   ! Initialize some basic variables
-  R_raytrace   = rBody
+  R_raytrace   = max(rBody, rIonosphere)
   R2_raytrace  = R_raytrace**2
 
   DoIntegrateRay = .false.
@@ -2287,9 +2286,8 @@ subroutine trace_ray_equator(nRadius, nLon, Radius_I, Longitude_I, &
         ! Convert SM position to GM (Note: these are identical for ideal axes)
         Xyz_D = matmul(GmSm_DD, XyzSm_D)
 
-        ! Find processor and block for the location
-        call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
-             iProcFound, iBlockFound, .true., i, j, k)
+        ! Find processor and block for the location       
+        call find_grid_block(Xyz_D,iProcFound,iBlockFound)
 
         ! If location is on this PE, follow and integrate ray
         if(iProc == iProcFound)then
@@ -2441,7 +2439,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
 
   use ModProcMH,   ONLY: iProc, iComm
   use ModRayTrace, ONLY: DoTraceRay, DoMapRay, DoIntegrateRay, DoExtractRay, &
-       CpuTimeStartRay, oktest_ray, &
+       CpuTimeStartRay, oktest_ray, rIonosphere, &
        nRay_D, NameVectorField, R_Raytrace, R2_Raytrace, Bxyz_DGB
   use CON_ray_trace, ONLY: ray_init
   use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUz_, Bx_, By_, Bz_
@@ -2450,6 +2448,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   use ModPhysics,  ONLY: rBody
   use ModGeometry, ONLY: CellSize_DB, x_, y_, z_
   use ModMpi,      ONLY: MPI_WTIME
+  use BATL_lib,    ONLY: find_grid_block
 
   implicit none
 
@@ -2471,7 +2470,8 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
 
   ! Initialize R_raytrace, R2_raytrace
   oktest_ray = .false.
-  R_raytrace   = rBody
+  R_raytrace   = max(rBody,rIonosphere)
+  !R_raytrace  = rBody 
   R2_raytrace  = R_raytrace**2
 
   DoTraceRay     = .false.
@@ -2535,8 +2535,7 @@ subroutine ray_lines(nLine, IsParallel_I, Xyz_DI)
   do iLine = 1, nLine
      Xyz_D = Xyz_DI(:,iLine)
 
-     call xyz_to_peblk(Xyz_D(1), Xyz_D(2), Xyz_D(3), &
-          iProcFound, iBlockFound, .true., i, j, k)
+     call find_grid_block(Xyz_D,iProcFound,iBlockFound)
 
      if(iProc == iProcFound)then
         if(DoTest)write(*,*)NameSub,' follows ray ',iLine,&
