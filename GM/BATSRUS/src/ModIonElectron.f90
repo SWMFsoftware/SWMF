@@ -66,12 +66,15 @@ contains
        else
           call split_string(StringVarUseCmax, NameVarUseCmax_I, nVarUseCmax)
           allocate(iVarUseCmax_I(nVarUseCmax))
+          iVarUseCmax_I = -1
           do iVar = 1, nVarUseCmax;
              do jVar = 1, nVar
                 if (NameVarUseCmax_I(iVar) == NameVarLower_V(jVar)) &
                      iVarUseCmax_I(iVar) = jVar
              end do
           end do
+          if(any(iVarUseCmax_I == -1)) &
+               call stop_mpi(NameSub//': incorrect vars in '//NameCommand)
        end if
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
