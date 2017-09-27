@@ -719,7 +719,7 @@ contains
     integer :: nCell_D(3)
     real    :: SphMin_D(3), SphMax_D(3), dSph_D(3)
 
-    ! Variables for interpolating from a IH_BATSRUS block to a buffer grid point
+    ! Variables for interpolating from a grid block to a buffer grid point
 
     ! Store complete interpolated state vector
     real :: StateInPoint_V(nVar)
@@ -750,9 +750,7 @@ contains
 
 
     integer   :: iPhiNew, iBlock, iPe, iR, iPhi, iTheta
-    integer   :: iFound, jFound, kFound
-    real      :: x, y, z, r, theta, phi
-    integer   :: iCell_D(3)
+    real      :: r, theta, phi
 
     ! Variables for testing 
     integer :: i, j ,k
@@ -798,19 +796,15 @@ contains
        Theta =  SphMin_D(BuffTheta_) + (real(iTheta)-0.5)*dSph_D(BuffTheta_)
 
        ! Convert to xyz
-       call sph_to_xyz(r, Theta, Phi, x, y, z)
+       call sph_to_xyz(r, Theta, Phi, XyzBuffer_D)
 
        ! Find the block and PE in the IH_BATSRUS grid
-       call find_grid_block( (/x,y,z/), iPe, iBlock, iCell_D)
-       iFound = iCell_D(1)
-       jFound = iCell_D(2)
-       kFound = iCell_D(3)
+       call find_grid_block(XyzBuffer_D, iPe, iBlock)
 
        ! Check if this block belongs to this processor
        if (iProc /= iPe) CYCLE
 
        ! Convert buffer grid point coordinate to IH_BATSRUS generalized coords
-       XyzBuffer_D = (/x,y,z/)
        call xyz_to_coord(XyzBuffer_D, CoordBuffer_D)
 
        ! Buffer grid point position normalized by the grid spacing
@@ -961,10 +955,10 @@ contains
     use IH_ModPhysics, ONLY: UnitEnergyDens_
     use IH_ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, WaveFirst_, &
          WaveLast_, Pe_, Ppar_, Ehot_
-    use IH_ModMain,    ONLY: UseB0, nDim
+    use IH_ModMain,    ONLY: UseB0
 
     use CON_router, ONLY: IndexPtrType, WeightPtrType
-    use CON_coupler,ONLY: OH_, iVar_V, DoCoupleVar_V, &
+    use CON_coupler,ONLY: iVar_V, DoCoupleVar_V, &
          RhoCouple_, RhoUxCouple_, &
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_, PeCouple_, PparCouple_,&
          WaveFirstCouple_, WaveLastCouple_, Bfield_, Wave_, AnisoPressure_, &
@@ -996,7 +990,6 @@ contains
 
     ! 'Safety' parameter, to keep the coupler toolkit unchanged
     ! Useless, to my mind.
-    integer, parameter:: Get4_ = OH_
     !--------------------------------------------------------------------------
     ! get variable indices in buffer
     iRhoCouple       = iVar_V(RhoCouple_)
@@ -1147,14 +1140,13 @@ contains
          WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_
     use IH_ModMain,       ONLY: UseB0
     use IH_BATL_lib,      ONLY: Xyz_DGB
-    use CON_coupler,   ONLY: SC_, iVar_V, DoCoupleVar_V,&
+    use CON_coupler,   ONLY: iVar_V, DoCoupleVar_V,&
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
          PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_, &
          PparCouple_, WaveFirstCouple_, WaveLastCouple_, &
          Bfield_, Wave_, AnisoPressure_, CollisionlessHeatFlux_, &
          ElectronPressure_
     use CON_router, ONLY: IndexPtrType, WeightPtrType
-    use CON_coupler,ONLY: SC_
 
     !INPUT ARGUMENTS:
     integer,intent(in)               :: nPartial,iGetStart,nVar
@@ -1184,7 +1176,6 @@ contains
          BuffX_,           &
          BuffZ_
 
-    integer, parameter:: Get4_ = SC_
     !--------------------------------------------------------------------------
     ! get variable indices in buffer
     iRhoCouple       = iVar_V(RhoCouple_)
@@ -1531,7 +1522,7 @@ contains
        nVar)
     !USES:
     use CON_router,    ONLY: IndexPtrType, WeightPtrType
-    use CON_coupler,   ONLY: OH_, iVar_V, DoCoupleVar_V, &
+    use CON_coupler,   ONLY: iVar_V, DoCoupleVar_V, &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
          PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_, &
          PparCouple_, WaveFirstCouple_, WaveLastCouple_, &
@@ -1582,7 +1573,6 @@ contains
          iWaveLastCouple,  &
          iEhotCouple
 
-    integer, parameter:: PutFrom_ = OH_
     !--------------------------------------------------------------------------
     ! get variable indices in buffer
     iRhoCouple       = iVar_V(RhoCouple_)
@@ -1721,12 +1711,11 @@ contains
     !USES:
     use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_
     use IH_ModB0,      ONLY: B0_DGB
-    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_,UnitP_,UnitRhoU_,UnitB_,UnitX_
+    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_,UnitP_,UnitRhoU_,UnitB_
     use CON_router
     use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
          Density_, Pressure_, Momentum_, BField_, &
          RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, BxCouple_, BzCouple_
-    use IH_BATL_lib, ONLY: Xyz_DGB, xyz_to_coord, coord_to_xyz, IsCartesianGrid
     use IH_ModMain,  ONLY: UseB0
 
     !INPUT ARGUMENTS:
