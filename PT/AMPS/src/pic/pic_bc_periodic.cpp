@@ -67,7 +67,10 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
 
         //shift location of the particle
         x=PIC::ParticleBuffer::GetX(ptr);
-        for (idim=0;idim<3;idim++) x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
+
+        for (idim=0;idim<3;idim++) if ((x[idim]<xminOriginal[idim])||(x[idim]>xmaxOriginal[idim])) {
+          x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
+        }
 
         NextPtr=PIC::ParticleBuffer::GetNext(ptr);
       }
@@ -161,7 +164,9 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
 
           //shift location of the particle
           x=PIC::ParticleBuffer::GetX((PIC::ParticleBuffer::byte *)tempParticleData);
-          for (int idim=0;idim<3;idim++) x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
+          for (int idim=0;idim<3;idim++) if ((x[idim]<xminOriginal[idim])||(x[idim]>xmaxOriginal[idim])) {
+            x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
+          }
 
           //generate a new particle
           NewParticle=PIC::ParticleBuffer::GetNewParticle(RealBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
