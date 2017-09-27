@@ -700,7 +700,8 @@ contains
          CollisionlessHeatFlux_
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModInterpolate,    ONLY: trilinear
-    use IH_BATL_lib,          ONLY: xyz_to_coord, CoordMin_DB, CellSize_DB, nDim
+    use IH_BATL_lib,       ONLY: &
+         find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB, nDim
 
     !INPUT ARGUMENTS:
     ! Buffer size and limits
