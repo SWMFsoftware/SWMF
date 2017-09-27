@@ -133,10 +133,11 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
         PIC::ParticleBuffer::DeleteParticle(ptr);
         ptr=NextPtr;
       }
+   
+      GhostBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
     }
 
     pipe.send(ParticleSendCompleteSignal);
-    GhostBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
   }
   else {
     //recieve particles
@@ -162,7 +163,7 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
           x=PIC::ParticleBuffer::GetX((PIC::ParticleBuffer::byte *)tempParticleData);
           for (int idim=0;idim<3;idim++) x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
 
-          //generate a new particles
+          //generate a new particle
           NewParticle=PIC::ParticleBuffer::GetNewParticle(RealBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
           PIC::ParticleBuffer::CloneParticle(PIC::ParticleBuffer::GetParticleDataPointer(NewParticle),(PIC::ParticleBuffer::byte *)tempParticleData);
           break;
