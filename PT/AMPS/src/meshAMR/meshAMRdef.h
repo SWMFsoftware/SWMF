@@ -22,12 +22,6 @@
 #ifndef _AMR_MESH_DEFINITION_
 #define _AMR_MESH_DEFINITION_
 
-/*
-#define Pi 3.14159265358979323846264338327950288419716939937510582
-#define sqrtPi 1.7724538509055160272981674833411
-#define PiTimes2 6.28318530717958647692528676655900576839433879875021
-*/
-
 #define _ON_AMR_MESH_    1
 #define _OFF_AMR_MESH_   0
 
@@ -200,37 +194,36 @@ using namespace std;
 //the exist function with printing of the error message
 class cAMRexit {
 public:
-void exit(const long int nline, const char* fname,const char* msg=NULL) {
-  char str[1000];
-  int mpiInitFlag,ThisThread;
+  void exit(const long int nline, const char* fname,const char* msg=NULL) {
+    char str[1000];
+    int mpiInitFlag,ThisThread;
 
+    if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
+    else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,fname,msg);
 
-  if (msg==NULL) sprintf(str," exit: line=%ld, file=%s\n",nline,fname);
-  else sprintf(str," exit: line=%ld, file=%s, message=%s\n",nline,fname,msg);
+    FILE* errorlog=fopen("$ERROR","a+");
 
-  FILE* errorlog=fopen("$ERROR","a+");
+    time_t TimeValue=time(0);
+    tm *ct=localtime(&TimeValue);
 
-  time_t TimeValue=time(0);
-  tm *ct=localtime(&TimeValue);
+    MPI_Initialized(&mpiInitFlag);
 
-  MPI_Initialized(&mpiInitFlag);
+    if (mpiInitFlag==true)  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
+    else ThisThread=0;
 
-  if (mpiInitFlag==true)  MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&ThisThread);
-  else ThisThread=0;
+    fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+    fprintf(errorlog,"file=%s, line=%ld\n",fname,nline);
+    fprintf(errorlog,"%s\n\n",msg);
 
-  fprintf(errorlog,"Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-  fprintf(errorlog,"file=%s, line=%ld\n",fname,nline);
-  fprintf(errorlog,"%s\n\n",msg);
+    printf("$PREFIX:Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+    printf("$PREFIX:file=%s, line=%ld\n",fname,nline);
+    printf("$PREFIX:%s\n\n",msg);
 
-  printf("$PREFIX:Thread=%i: (%i/%i %i:%i:%i)\n",ThisThread,ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
-  printf("$PREFIX:file=%s, line=%ld\n",fname,nline);
-  printf("$PREFIX:%s\n\n",msg);
+    fclose(errorlog);
+    ::exit(1);
+  }
 
-  fclose(errorlog);
-  ::exit(1);
-}
-
-virtual ~cAMRexit() { }
+  virtual ~cAMRexit() { }
 };
 
 //the stack class to store the data structure of the mesh
@@ -312,8 +305,6 @@ public:
     elementStackPointer=0;
   }
  
-
-
   //get the entry pointer and counting number
   long int GetEntryCountingNumber(T* ptr) {
     long int nMemoryBank,res=-1;
@@ -412,9 +403,6 @@ public:
   }
    
 
-
-
-
   void init() {
     clear();
     initMemoryBlock();
@@ -504,51 +492,52 @@ public:
 
   long int getAllocatedMemory() {
     T t;
-	return cAMRstack <T>::dataBufferListSize*(sizeof(T)+sizeof(T*)+sizeof(char)*t.AssociatedDataLength());
+
+    return cAMRstack <T>::dataBufferListSize*(sizeof(T)+sizeof(T*)+sizeof(char)*t.AssociatedDataLength());
   }
 
   void initMemoryBlock() {
-	T t;
+    T t;
 
     if (t.AssociatedDataLength()!=0) {
       long int i=0,j=0;
 
-	  //check available space in the dataBufferList list: if needed increment the size of 'elementStackList' and 'dataBufferList'
-	  if (cAMRstack <T>::dataBufferListPointer==cAMRstack <T>::dataBufferListSize) {
-	    char** tmpDataList=new char*[cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_];
-	    char*** tmpStackList=new char**[cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_];
+      //check available space in the dataBufferList list: if needed increment the size of 'elementStackList' and 'dataBufferList'
+      if (cAMRstack <T>::dataBufferListPointer==cAMRstack <T>::dataBufferListSize) {
+        char** tmpDataList=new char*[cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_];
+        char*** tmpStackList=new char**[cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_];
 
-	    cAMRstack <T>::MemoryAllocation+=sizeof(char*)*(cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_);
-	    cAMRstack <T>::MemoryAllocation+=sizeof(char**)*(cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_);
+        cAMRstack <T>::MemoryAllocation+=sizeof(char*)*(cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_);
+        cAMRstack <T>::MemoryAllocation+=sizeof(char**)*(cAMRstack <T>::dataBufferListSize+_STACK_DEFAULT_BUFFER_LIST_SIZE_);
 
-	    //copy the content of the old lists to the new ones
-	    if (associatedDataBufferList!=NULL) for (;i<cAMRstack <T>::dataBufferListSize;i++) tmpDataList[i]=associatedDataBufferList[i],tmpStackList[i]=associatedDataStackList[i];
-	    for (j=0;j<_STACK_DEFAULT_BUFFER_LIST_SIZE_;j++,i++) tmpDataList[i]=NULL,tmpStackList[i]=NULL;
+        //copy the content of the old lists to the new ones
+        if (associatedDataBufferList!=NULL) for (;i<cAMRstack <T>::dataBufferListSize;i++) tmpDataList[i]=associatedDataBufferList[i],tmpStackList[i]=associatedDataStackList[i];
+        for (j=0;j<_STACK_DEFAULT_BUFFER_LIST_SIZE_;j++,i++) tmpDataList[i]=NULL,tmpStackList[i]=NULL;
 
-	    if (associatedDataBufferList!=NULL) {
-	      delete [] associatedDataBufferList;
-	      delete [] associatedDataStackList;
+        if (associatedDataBufferList!=NULL) {
+          delete [] associatedDataBufferList;
+          delete [] associatedDataStackList;
 
-	      cAMRstack <T>::MemoryAllocation-=(sizeof(char*)+sizeof(char**))*cAMRstack <T>::dataBufferListSize;
-	    }
+          cAMRstack <T>::MemoryAllocation-=(sizeof(char*)+sizeof(char**))*cAMRstack <T>::dataBufferListSize;
+        }
 
-	    associatedDataBufferList=tmpDataList;
-	    associatedDataStackList=tmpStackList;
-	  }
+        associatedDataBufferList=tmpDataList;
+        associatedDataStackList=tmpStackList;
+      }
 
-	  //allocate a new memory chunk for the element's data and update the stack list
-	  long int offset=t.AssociatedDataLength();
+      //allocate a new memory chunk for the element's data and update the stack list
+      long int offset=t.AssociatedDataLength();
 
-	  associatedDataBufferList[cAMRstack <T>::dataBufferListPointer]=new char[_STACK_DEFAULT_BUFFER_BUNK_SIZE_*offset];
-	  associatedDataStackList[cAMRstack <T>::dataBufferListPointer]=new char*[_STACK_DEFAULT_BUFFER_BUNK_SIZE_];
+      associatedDataBufferList[cAMRstack <T>::dataBufferListPointer]=new char[_STACK_DEFAULT_BUFFER_BUNK_SIZE_*offset];
+      associatedDataStackList[cAMRstack <T>::dataBufferListPointer]=new char*[_STACK_DEFAULT_BUFFER_BUNK_SIZE_];
 
-	  cAMRstack <T>::MemoryAllocation+=(offset*sizeof(char)+sizeof(char*))*_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
+      cAMRstack <T>::MemoryAllocation+=(offset*sizeof(char)+sizeof(char*))*_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
 
-	  for (i=0;i<_STACK_DEFAULT_BUFFER_BUNK_SIZE_;i++) associatedDataStackList[cAMRstack <T>::dataBufferListPointer][i]=associatedDataBufferList[cAMRstack <T>::dataBufferListPointer]+i*offset;
-	}
+      for (i=0;i<_STACK_DEFAULT_BUFFER_BUNK_SIZE_;i++) associatedDataStackList[cAMRstack <T>::dataBufferListPointer][i]=associatedDataBufferList[cAMRstack <T>::dataBufferListPointer]+i*offset;
+    }
 
-   //init the buffer for the stack object itself
-   cAMRstack <T>::initMemoryBlock() ;
+    //init the buffer for the stack object itself
+    cAMRstack <T>::initMemoryBlock() ;
   }
 
 
@@ -578,22 +567,6 @@ public:
     #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
     res->Temp_ID=cAMRstack <T>::Temp_ID_counter++;
     #endif
-
-
-
-
-//================   DEBUG =========================
-/*
-
-    int t;
-    MPI_Comm_rank(MPI_GLOBAL_COMMUNICATOR,&t);
-
-    if (t==3) if ((res->Temp_ID==2708279)||(res->Temp_ID==536172)) {
-      cout << __FILE__ << __LINE__ << endl;
-    }
-*/
-//================ END DEBUG =======================
-
 
     return res;
   }
@@ -630,21 +603,19 @@ public:
   }
 
   void explicitConstructor() {
-	associatedDataStackList=NULL;
-	associatedDataBufferList=NULL;
+    associatedDataStackList=NULL;
+    associatedDataBufferList=NULL;
 
-	cAMRstack <T>::explicitConstructor();
+    cAMRstack <T>::explicitConstructor();
   }
 
 
    cAssociatedDataAMRstack() : cAMRstack<T>() {
-	 explicitConstructor();
+      explicitConstructor();
    }
 
    void deleteElement(T* delElement) {
-
-
-	 if (delElement->AssociatedDataLength()!=0) {
+     if (delElement->AssociatedDataLength()!=0) {
        long int elementStackBank,offset;
        long int localElementStackPointer=cAMRstack<T>::elementStackPointer-1;
 
@@ -652,13 +623,10 @@ public:
        offset=localElementStackPointer-elementStackBank*_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
 
        associatedDataStackList[elementStackBank][offset]=delElement->GetAssociatedDataBufferPointer();
-	 }
+     }
 
-
-
-
-	 cAMRstack<T>::deleteElement(delElement);
-	 delElement->SetAssociatedDataBufferPointer(NULL);
+     cAMRstack<T>::deleteElement(delElement);
+     delElement->SetAssociatedDataBufferPointer(NULL);
    }
 
    //save and load the allocation of the stack
@@ -674,7 +642,7 @@ public:
 
 };
 
-//the heap class to store the data structure of the mesh: the data are stored linearly, no data can be deleter from the heap
+//the heap class to store the data structure of the mesh: the data are stored linearly, no data can be deleted from the heap
 template<class T>
 class cAMRheap : public cAMRexit {
 public:
@@ -728,14 +696,9 @@ public:
     dataBufferList[dataBufferListPointer]=new T[_STACK_DEFAULT_BUFFER_BUNK_SIZE_];
     MemoryAllocation+=sizeof(T)*_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
 
-
     nMaxElements+=_STACK_DEFAULT_BUFFER_BUNK_SIZE_;
     dataBufferListPointer++;
   }
-
-
-
-
 
   //get the entry pointer and counting number
   long int GetEntryCountingNumber(T* ptr) {
@@ -788,9 +751,7 @@ public:
     fwrite(&dataBufferListSize,sizeof(long int),1,fout);
     fwrite(&dataBufferListPointer,sizeof(long int),1,fout);
 
-
     exit(__LINE__,__FILE__,"Check the implementetion!");
-
   }
 
 
@@ -816,9 +777,6 @@ public:
 
     exit(__LINE__,__FILE__,"Check the implementation");
   }
-
-
-
 
 
   void init() {
