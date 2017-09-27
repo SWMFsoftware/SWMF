@@ -422,8 +422,11 @@ contains
        write(UnitTmp_,'(a,i6,a,i6,a,i6,a)') &
             'ZONE T="STRUCTURED GRID", I=', &
             n1,', J=',n2,', K=',n3,', F=POINT'
-       write(UnitTmp_,'(a,i8,a)') 'AUXDATA ITER="', nStep, '"'
+       write(UnitTmp_,'(a,i8,a)')      'AUXDATA ITER="', nStep, '"'
        write(UnitTmp_,'(a,es18.10,a)') 'AUXDATA TIMESIM="', Time, '"'
+       write(UnitTmp_,'(a,i3,a)')      'AUXDATA NDIM="', nDimOut, '"'
+       write(UnitTmp_,'(a,i3,a)')      'AUXDATA NPARAM="', nParam, '"'
+       write(UnitTmp_,'(a,i3,a)')      'AUXDATA NVAR="', nVar, '"'
        do i = 1, nParam
           write(UnitTmp_,'(a,es18.10,a)') &
                'AUXDATA '//trim(NameVar_I(nDim+nVar+i))//'="', Param_I(i), '"'
@@ -574,7 +577,8 @@ contains
     logical            :: IsCartesian
     real(Real4_), allocatable:: Param4_I(:), Coord4_ID(:,:), Var4_IV(:,:)
     real,         allocatable:: Param_I(:),  Coord_ID(:,:),  Var_IV(:,:)
-
+    real    :: TecIndex_I(3)
+    integer :: nTecIndex
     integer :: i, j, k, iDim, iVar, n
 
     ! Remember these values after reading header
@@ -613,6 +617,14 @@ contains
     ! Read coordinates and variables into suitable 2D arrays
     allocate(Coord_ID(n1*n2*n3, nDim), Var_IV(n1*n2*n3, nVar))
     select case(TypeFile)
+    case('tec')
+       nTecIndex = count(n_D>1, 1)
+       n = 0
+       do k = 1, n3; do j = 1, n2; do i = 1, n1
+          n = n + 1
+          read(iUnit, *, ERR=77, END=77) &
+               TecIndex_I(1:nTecIndex), Coord_ID(n, :), Var_IV(n, :)
+       end do; end do; end do
     case('ascii', 'formatted')
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
@@ -695,6 +707,8 @@ contains
   contains
     !==========================================================================
     subroutine read_header
+      character(len=100):: StringMisc
+      logical:: DoAddSpace
 
       n_D = 1
       select case(TypeFile)
@@ -709,6 +723,48 @@ contains
             read(iUnit, *    , ERR=77, END=77) Param_I
          end if
          read(iUnit, '(a)', ERR=77, END=77) NameVar
+      case('tec')
+         open(iUnit, file=NameFile, status='old', ERR=66)
+         ! read NameVar into StringHeader 
+         read(iUnit,'(a)') StringHeader
+         ! read n_D
+         read(iUnit,'(a28,i6)', ADVANCE="NO")StringMisc, n_D(1)
+         read(iUnit, '(a4,i6)', ADVANCE="NO")StringMisc, n_D(2)
+         read(iUnit, '(a4,i6)'              )StringMisc, n_D(3)
+         ! read nStep, Time, nDim, nParam, nVar
+         read(iUnit,'(a14,i8)')     StringMisc, nStep
+         read(iUnit,'(a17,es18.10)')StringMisc, Time
+         read(iUnit,'(a14,i3)')     StringMisc, nDim
+         read(iUnit,'(a16,i3)')     StringMisc, nParam
+         read(iUnit,'(a14,i3)')     StringMisc, nVar
+         ! read Param_I
+         do i = 1, nParam
+            read(iUnit,'(a)') StringMisc
+            read(StringMisc(len_trim(StringMisc)-19:len_trim(StringMisc)-1),&
+                 '(es18.10)') Param_I(i)
+         end do
+
+         ! NameVar is stored in the header => process it
+         DoAddSpace = .false.
+         NameVar = ''
+         n = 11 + 5 * count(n_D>1, 1)
+         do i = n, len_trim(StringHeader)
+            select case(StringHeader(i:i))
+            case('"',' ',',')
+               DoAddSpace = .true.
+            case default
+               if(DoAddSpace)then
+                  NameVar = trim(NameVar)//' '//StringHeader(i:i)
+                  DoAddSpace = .false.
+               else
+                  NameVar = trim(NameVar)//StringHeader(i:i)
+               end if
+            end select
+         end do
+
+         ! reset header
+         StringHeader = ''
+
       case('real8')
          open(iUnit, file=NameFile, status='old', form='unformatted', ERR=66)
 
@@ -767,7 +823,7 @@ contains
 
 66    if(.not.present(iErrorOut)) call CON_stop(NameSub // &
            ' could not open '//trim(TypeFile)//' file=' // trim(NameFile))
-      
+
       iErrorOut = 1
       RETURN
 
