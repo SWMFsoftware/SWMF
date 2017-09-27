@@ -751,6 +751,7 @@ contains
     integer   :: iPhiNew, iBlock, iPe, iR, iPhi, iTheta
     integer   :: iFound, jFound, kFound
     real      :: x, y, z, r, theta, phi
+    integer   :: iCell_D(3)
 
     ! Variables for testing 
     integer :: i, j ,k
@@ -799,7 +800,10 @@ contains
        call sph_to_xyz(r, Theta, Phi, x, y, z)
 
        ! Find the block and PE in the IH_BATSRUS grid
-       call IH_xyz_to_peblk(x,y,z,iPe,iBlock, .FALSE., iFound, jFound, kFound)
+       call find_grid_block( (/x,y,z/), iPe, iBlock, iCell_D)
+       iFound = iCell_D(1)
+       jFound = iCell_D(2)
+       kFound = iCell_D(3)
 
        ! Check if this block belongs to this processor
        if (iProc /= iPe) CYCLE
