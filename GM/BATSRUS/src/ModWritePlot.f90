@@ -2252,6 +2252,8 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         NameUnit = NameIdlUnit_V(UnitX_)
      case('dvol')
         NameUnit = trim(NameIdlUnit_V(UnitX_))//'3'
+     case('eta','visco')
+        NameUnit = 'm2/s'
      case default
         ! Set default or user defined unit
         NameUnit = NameUnitUserIdl_I(iPlotVar)
