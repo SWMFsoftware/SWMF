@@ -1,0 +1,214 @@
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Test Ganymede run of steady state ideal MHD G8 flyby
+MhdHypPe equation set.
+face-based innerBC
+
+#PLANET
+Ganymede		NamePlanet
+2634000			RadiusPlanet [m]
+1.4819E+23		MassPlanet   [kg]
+0.0			OmegaPlanet  [radian/s]
+0.0			TiltRotation [degree]
+DIPOLE			TypeBField
+4.3764                  MagAxisThetaGeo [degree]
+289.1550                MagAxisPhiGeo   [degree]
+-718.8961E-9            DipoleStrength  [T]
+
+Alternative description
+DIPOLE
+175.63                  MagAxisThetaGeo [degree]
+109.162                 MagAxisPhiGeo   [degree]
+718.895E-9              DipoleStrength  [T]
+
+#ROTATION
+F			UseRotation
+
+#TIMEACCURATE
+F			DoTimeAccurate
+
+#SAVERESTART
+F			DoSaveRestart
+60000			DnSaveRestart
+-1.0			DtSaveRestart
+
+#PROGRESS
+1			DnShowProgressShort
+10			DnShowProgressLong
+
+#HYPERBOLICDIVB
+T                       UseHyperbolicDivb
+150.0                   SpeedHypDim
+0.1                     HypDecay
+
+#COORDSYSTEM
+GSE			TypeCoordinate
+
+#BODY
+T			UseBody
+0.5			rBody      [rPlanet]
+3.5			rCurrents  [rPlanet]
+39			BodyNDim   [/cc]
+2.32e5			BodyTDim   [K]
+
+! use BodyNDim, BodyTDim only, rbody as a parameter for plot
+#BODY
+F			
+
+#SOLARWIND
+4.0			SwNDim   [/cc]
+5.7367e7		SwTDim   [K] (3.8nPa/(1.38e-23*2/cc))/1.2
+140.0			SwUxDim  [km/s]
+0.0			SwUyDim  [km/s]
+0.0			SwUzDim  [km/s]
+-10.0			SwBxDim  [nT]
+-6.0			SwByDim  [nT]
+-86.0			SwBzDim  [nT]
+
+#PLASMA
+14.0			FluidMass [amu]
+1.0                     AverageIonCharge [e]
+1.0/5.0                 ElectronTemperatureRatio
+
+#KRYLOV
+GMRES			TypeKrylov  (GMRES, BICGSTAB, CG)
+nul             	TypeInitKrylov (nul, old, explicit, scaled)
+0.001          		ErrorMaxKrylov
+200             	MaxMatvecKrylov
+
+#MINIMUMPRESSURE
+0.001			pMinDim
+0.001			PeMinDim for electron pressure
+
+#MINIMUMDENSITY
+0.1			RhoMinDim
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0			nConservCrit
+
+#RESTARTOUTFILE
+one                     TypeRestartOutFile
+
+! Grid structure info
+#INCLUDE
+Param/GANYMEDE/Grid
+
+----------------BC-----------------
+#OUTERBOUNDARY
+fixedb1			TypeCellBc1
+none			TypeCellBc2
+periodic		TypeCellBc3
+periodic		TypeCellBc4
+periodic		TypeCellBc5
+periodic		TypeCellBc6
+
+#BOXBOUNDARY
+fixed			TypeBcXmin
+fixed			TypeBcXmax
+float			TypeBcYmin
+float			TypeBcYmax
+float			TypeBcZmin
+float			TypeBcZmax
+
+#BOUNDARYSTATE
+coord1min solid		StringBoundary
+550.0	  		BoundaryStateDim_V Rho
+0.0                     BoundaryStateDim_V Ux
+0.0                     BoundaryStateDim_V Uy
+0.0                     BoundaryStateDim_V Uz
+0.0                     BoundaryStateDim_V Bx
+0.0                     BoundaryStateDim_V By
+0.0                     BoundaryStateDim_V Bz
+0.0                     BoundaryStateDim_V Hyp
+0.025			BoundaryStateDim_V Pe
+0.125			BoundaryStateDim_V p
+
+#SOLIDSTATE
+T                       UseSolidState
+user                    TypeBcSolid
+sphere                  TypeSolidGeometry
+1.0                     rSolid
+5e-3			SolidLimitDt
+
+-------------end BC--------------
+
+#RESISTIVITY
+T			UseResistivity
+user			TypeResistivity
+0.0			Eta0Si
+
+#USERFLAGS
+T                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN --------------------
+
+#RESISTIVEPLANET
+-1			PlanetDensitySI
+-1                      PlanetPressureSI
+1.0                     PlanetRadius
+5                       nResistivPoints
+1.05                    Radius
+0.0                     Resistivity
+0.95                    Radius
+6e11			Resistivity
+0.6                     Radius
+6e11			Resistivity
+0.52                    Radius
+6e9			Resistivity
+0.50		        Radius
+0.0		        Resistivity
+
+#USERINPUTEND ----------------------
+
+#TIMESTEPPING
+2			nStage
+0.8			CflExlp
+
+#SCHEME
+2                       nOrder (1 or 2)
+Sokolov                 TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3                     TypeLimiter
+1.2                     LimiterBeta
+
+#SEMIIMPLICIT
+T			UseSemiImplicit
+resistivity		TypeSemiImplicit
+
+#SAVEINITIAL
+T	
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEPLOT
+1			nPlotFiles
+y=0 VAR idl             StringPlot
+10                   	DnSavePlot
+-1.                     DtSavePlot
+-1.                     Dx
+{MHD} b1x b1y b1z eta absdivb dt dx     NameVars
+{default}                       NamePars
+
+#STOP
+10			MaxIteration
+-1.0			tSimulationMax
