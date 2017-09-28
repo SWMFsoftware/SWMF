@@ -21,8 +21,8 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #GRID
-2                  	nRootBlockX
-2                     	nRootBlockY
+1                  	nRootBlockX
+1                     	nRootBlockY
 1                     	nRootBlockZ
 -0.5                 	xMin
 +0.5                 	xMax
@@ -126,17 +126,17 @@ T			DoSaveInitial
 
 #SAVEPLOT
 2
-1d mhd idl              StringPlot
+1d mhd idl_ascii	StringPlot
 -1			DnOutput
-0.01			DtOutput
+0.1			DtOutput
 0.			DxOutput
 z=0 MHD idl             StringPlot
 -1			DnOutput
-0.01			DtOutput
+0.1			DtOutput
 0.			DxOutput
 
 #STOP
 -1			MaxIteration
-0.5			tSimulationMax
+1.0			tSimulationMax
 
 1.2566			tSimulationMax
