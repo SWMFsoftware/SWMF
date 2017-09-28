@@ -10,8 +10,8 @@ module ModIonElectron
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB
-  use ModMultiFluid, ONLY: nIonFluid, &
-       iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I, &
+  use ModMultiFluid, ONLY: nIonFluid, nTrueIon, Electron_, &
+       iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,   &
        ChargePerMass_I, MassIon_I, ChargeIon_I
   use BATL_lib,    ONLY: nI, nJ, nK, x_, y_, z_
 
@@ -301,9 +301,6 @@ contains
     real, allocatable :: GradPe_DG(:,:,:,:)
     logical :: DoHallCurrent, DoGradPe, DoCorrectEfield
 
-    integer, parameter :: ElecFluid_ = &
-         min(nIonFluid-nElectronFluid+1, nIonFluid)
-
     logical :: DoTest, DoTestMe, DoTestCell
 
     character (len=*), parameter :: NameSub = 'correct_electronfluid_efield'
@@ -331,7 +328,7 @@ contains
     if (DoGradPe) then
        if(.not. allocated(GradPe_DG)) &
             allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-       call calc_gradient(iBlock, State_VG(iPIon_I(ElecFluid_),:,:,:), nG, &
+       call calc_gradient(iBlock, State_VG(iPIon_I(Electron_),:,:,:), nG, &
             GradPe_DG)
     else
        GradPe_D = 0.0
@@ -369,14 +366,12 @@ contains
     logical, intent(in)    :: DoTest
 
     integer :: iIonFluid, iVar
-    real    :: nElec, uElec_D(3), Bfield_D(3), Efield_D(3)
-    real    :: nIon_I(nIonFluid), uIon_DI(3, nIonFluid), uPlus_D(3)
+    real    :: nElec, InvElectronDens, uElec_D(3), Bfield_D(3), Efield_D(3)
+    real    :: uPlus_D(3)
     real    :: StateOld_V(nVar)
 
-    integer, parameter :: TrueIonLast_ = nIonFluid - nElectronFluid
-    integer, parameter :: ElecFluid_   = min(TrueIonLast_ + 1, nIonFluid)
-    integer, parameter :: ElecUx_ = iRhoUxIon_I(ElecFluid_),  &
-         ElecUz_ = iRhoUzIon_I(ElecFluid_)
+    integer, parameter :: ElecUx_ = iRhoUxIon_I(Electron_),  &
+         ElecUz_ = iRhoUzIon_I(Electron_)
 
     character (len=*), parameter :: &
          NameSub = 'correct_electronfluid_efield_cell'
@@ -385,33 +380,31 @@ contains
     ! save the old state_V for testing
     StateOld_V = State_V
 
-    ! calculate the number density for each fluid, including the electron fluid
-    nIon_I = State_V(iRhoIon_I)/MassIon_I
+    ! inv of electron charge density = 1/(e*ne)
+    InvElectronDens = 1.0/sum( &
+         ChargePerMass_I(1:nTrueIon)*State_V(iRhoIon_I(1:nTrueIon)) )
 
-    ! calculate the velocity for each fluid, including the electron fluid
-    uIon_DI(x_,:) = State_V(iRhoUxIon_I)/State_V(iRhoIon_I)
-    uIon_DI(y_,:) = State_V(iRhoUyIon_I)/State_V(iRhoIon_I)
-    uIon_DI(z_,:) = State_V(iRhoUzIon_I)/State_V(iRhoIon_I)
-
-    nElec = sum(nIon_I(1:TrueIonLast_)*ChargeIon_I(1:TrueIonLast_))
+    ! electron number density
+    nElec = ElectronCharge/InvElectronDens
 
     ! charge average ion velocity
-    uPlus_D = 0.0
-    do iIonFluid=1,TrueIonLast_
-       uPlus_D(:) = uPlus_D(:) + nIon_I(iIonFluid)*uIon_DI(:,iIonFluid) &
-            *ChargeIon_I(iIonFluid)/nElec
-    end do
+    uPlus_D(x_) = InvElectronDens*sum(ChargePerMass_I(1:nTrueIon) &
+         *State_V(iRhoUxIon_I(1:nTrueIon)))
+    uPlus_D(y_) = InvElectronDens*sum(ChargePerMass_I(1:nTrueIon) &
+         *State_V(iRhoUyIon_I(1:nTrueIon)))
+    uPlus_D(z_) = InvElectronDens*sum(ChargePerMass_I(1:nTrueIon) &
+         *State_V(iRhoUzIon_I(1:nTrueIon)))
 
     ! electron velocity = uPlus + u_H, uH = -j/ne/e
-    uElec_D  = uPlus_D - Current_D/nElec/ElectronCharge
+    uElec_D  = uPlus_D - Current_D*InvElectronDens
 
     ! calculate the electric field E = -ue x B - gradpe/ne/e
     Bfield_D = State_V(Bx_:Bz_)
-    Efield_D = -cross_product(uElec_D,Bfield_D) - GradPe_D/nElec/ElectronCharge
+    Efield_D = -cross_product(uElec_D,Bfield_D) - GradPe_D*InvElectronDens
 
     ! correct the electron mass density and velocity
-    State_V(iRhoIon_I(ElecFluid_))  = nElec*MassFluid_I(ElecFluid_)
-    State_V(ElecUx_:ElecUz_)        = State_V(iRhoIon_I(ElecFluid_))*uElec_D
+    State_V(iRhoIon_I(Electron_))  = nElec*MassFluid_I(Electron_)
+    State_V(ElecUx_:ElecUz_)       = State_V(iRhoIon_I(Electron_))*uElec_D
 
     ! correct the electric field
     if (DoCorrectEfield) State_V(Ex_:Ez_) = Efield_D
@@ -420,11 +413,6 @@ contains
        write(*,*) NameSub, ' DoCorrectEfield =', DoCorrectEfield
        write(*,'(1x,2a,10es13.5)')  NameSub, ' MassIon_I   =', MassIon_I
        write(*,'(1x,2a,10es13.5)')  NameSub, ' ChargeIon_I =', ChargeIon_I
-       write(*,'(1x,2a,10es20.12)') NameSub, ' nIon_I      =', nIon_I
-       do iIonFluid=1,TrueIonLast_
-          write(*,'(1x,2a,i2, 10es20.12)') NameSub, ' iIon, uIon_D=', &
-               iIonfluid, uIon_DI(:,iIonFluid)
-       end do
        write(*,'(1x,2a,3es20.12)')  NameSub, ' uPlus_D     =', uPlus_D
        write(*,'(1x,2a,3es20.12)')  NameSub, ' Current_D   =', Current_D
        write(*,'(1x,2a,3es20.12)')  NameSub, ' uElec_D     =', uElec_D
