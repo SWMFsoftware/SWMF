@@ -11,7 +11,6 @@ module ModFaceFlux
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
        UseIonHeatConduction, DoThinCurrentSheet
   use ModMain,       ONLY: UseBorisSimple, UseBoris => boris_correction
-  use ModMultiFluid, ONLY: UseMultiIon, nIonFluid, UseNeutralFluid
   use ModGeometry,   ONLY: true_cell
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
@@ -3484,13 +3483,11 @@ contains
 
       integer:: jFluid, iVar
 
-      integer :: TrueIonLast_ = nIonFluid-nElectronFluid
-
       character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
       !------------------------------------------------------------------------
 
       if(DoTestCell) then
-         write(*,*) NameSub,' TrueIonLast_ =', TrueIonLast_
+         write(*,*) NameSub,' nTrueIon     =', nTrueIon
          write(*,*) NameSub,' State_V, B0  ='
          do ivar=1,nVar
             write(*,'(a8,a1,es13.5)') NameVar_V(iVar),'=',State_V(iVar)
@@ -3509,8 +3506,7 @@ contains
       if(DoTestCell) write(*,*) & 
            NameSub,' Initial Sound2              =', Sound2
 
-      do jFluid = 2, TrueIonLast_
-         ! TrueIonLast_ is the last index for the ions in nIonFluid
+      do jFluid = 2, nTrueIon
          Rho1= State_V(iRhoIon_I(jFluid))
          Rho = Rho + Rho1
          ! The (approximate) fast speed fromula for multi-ion MHD
@@ -3562,17 +3558,17 @@ contains
          GammaPe = 0.0 ! possibly needed for aniso pressure
       endif
 
-      if(UseEfield) then
+      if(UseEfield .and. .not. UseAnisoPressure) then
          ! total electron pressure
-         GammaPe = sum(Gamma_I(TrueIonLast_+1:nIonFluid) &
-              *State_V(iPIon_I(TrueIonLast_+1:nIonFluid)) )
+         GammaPe = sum(Gamma_I(Electron_:nIonFluid) &
+              *State_V(iPIon_I(Electron_:nIonFluid)) )
 
          if(nIonFluid-nElectronFluid > 1) then
             ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
-            MultiIonFactor = Rho*sum(  &
-                 ChargeDens_I(1:TrueIonLast_)**2       &
-                 /State_V(iRhoIon_I(1:TrueIonLast_)) ) &
-                 /sum(ChargeDens_I(1:TrueIonLast_))**2
+            MultiIonFactor = Rho*sum(             &
+                 ChargeDens_I(1:nTrueIon)**2      &
+                 /State_V(iRhoIon_I(1:nTrueIon)) )&
+                 /sum(ChargeDens_I(1:nTrueIon))**2
          else
             MultiIonFactor = 1
          end if
