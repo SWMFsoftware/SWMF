@@ -18,7 +18,13 @@ module ModMultiFluid
   integer, parameter :: NeutralFirst_ = min(IonLast_+1, 100*(B_-U_)+1)
 
   ! This has to be at least 1 even if there are no ion fluids
-  integer, parameter :: nIonFluid   = IonLast_ - IonFirst_ + 1
+  integer, parameter :: nIonFluid = IonLast_ - IonFirst_ + 1
+
+  ! The number of true ion fluids if UseEfield
+  integer, parameter :: nTrueIon  = nIonFluid - nElectronFluid
+
+  ! Index points to the first electron fluid if UseEfield
+  integer, parameter :: Electron_ = min(nTrueIon+1,nIonFluid)
 
   integer, parameter :: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
   integer, parameter :: iUy_I(nFluid) = iRhoUy_I(1:nFluid)
