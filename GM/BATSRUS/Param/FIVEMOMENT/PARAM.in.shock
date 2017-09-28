@@ -38,7 +38,7 @@ NONE			TypeIoUnit
 NONE			TypeNormalization
 
 #LIGHTSPEED
-50.0			cLightDim
+1.0			cLightDim
 
 #PLASMA
 0.1			IonMass
@@ -52,39 +52,39 @@ NONE			TypeNormalization
 0.0			Ux
 0.0			Uy
 0.0			Uz
-0.0			Bx
-0.01			By
+0.75e-2			Bx
+1.0e-2			By
 0.0			Bz
 0.0			Ex
 0.0			Ey
 0.0			Ez
 0.0			HypE
-1.0			P
+0.5e-4			P
 1.0/100.0		eRho
 0.0			eUx
 0.0			eUy
 0.0			eUz
-1.0			eP
+0.5e-4			eP
 0.125			Rho  Right
 0.0			Ux
 0.0			Uy
 0.0			Uz
-0.0			Bx
-0.01			By
+0.75e-2			Bx
+-1.0e-2			By
 0.0			Bz
 0.0			Ex
 0.0			Ey
 0.0			Ez
 0.0			HypE
-0.1			P
+0.05e-4			P
 0.125/100.0		eRho
 0.0			eUx
 0.0			eUy
 0.0			eUz
-0.1			eP
+0.05e-4			eP
 
 #GRID
-16                  	nRootBlockX
+8                  	nRootBlockX
 1                     	nRootBlockY
 1                     	nRootBlockZ
 -0.5                 	xMin
@@ -95,8 +95,8 @@ NONE			TypeNormalization
  1.                   	zMax
 
 #OUTERBOUNDARY
-none                    TypeBcEast
-none                    TypeBcWest
+float                    TypeBcEast
+float                    TypeBcWest
 float                   TypeBcSouth
 float                   TypeBcNorth
 float                   TypeBcBottom
@@ -129,11 +129,11 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1
-1d mhd idl              StringPlot
+1d mhd idl_ascii	StringPlot
 -1			DnOutput
-0.0005			DtOutput
+0.1			DtOutput
 0.			DxOutput
 
 #STOP
 -1			MaxIteration
-0.02			tSimulationMax
+2.0			tSimulationMax
