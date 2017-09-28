@@ -42,6 +42,7 @@ test:
 	-@($(MAKE) test_marsfluids)
 	-@($(MAKE) test_venus)
 	-@($(MAKE) test_mercurysph)
+	-@($(MAKE) test_ganymede)
 	-@($(MAKE) test_saturn)
 	-@($(MAKE) test_comet)
 	-@($(MAKE) test_cometfluids)
@@ -99,6 +100,7 @@ test_help:
 	@echo "    test_mars_start            (run first mars test)"
 	@echo "    test_mars_restart          (run mars restart test)"
 	@echo "    test_mercurysph            (run Mercury test)"
+	@echo "    test_ganymede              (run Ganymede test)"
 	@echo "    test_marsfluids            (run marsfluids tests)"
 	@echo "    test_marsfluids_start      (run first marsfluids test)"
 	@echo "    test_marsfluids_restart    (run marsfluids restart test)"
@@ -108,11 +110,11 @@ test_help:
 	@echo "    test_multiion              (run multi-ion test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
 	@echo "    test_partsteady            (run part steady test)"
-	@echo "    test_region2d	      (run 2D BATL region test)"
+	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_saturn                (run Saturn test)"
 	@echo "    test_shocktube             (run shocktube test)"
 	@echo "    test_shockramp             (run shockramp test)"
-	@echo "    test_spectrum	      (run spectrum post-processing test)"
+	@echo "    test_spectrum              (run spectrum post-processing test)"
 	@echo "    test_titan                 (run Titan tests)"
 	@echo "    test_titan_start           (run first Titan test)"
 	@echo "    test_titan_restart         (run titan restart test)"
@@ -1146,6 +1148,7 @@ test_saturn_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_saturn.diff)
 	ls -l test_saturn.diff
 
+
 ### TESTS FOR MODELING MERCURY ###
 
 test_mercurysph:
@@ -1191,6 +1194,44 @@ test_mercurysph_check:
 		${TESTDIR}/RESULTS/GM/ref_3d.dat \
 		${TESTDIR}/RESULTS/GM/3d.dat >> test_mercurysph.diff)
 	ls -l test_mercurysph.diff
+
+
+### TESTS FOR MODELING GANYMEDE ###
+
+test_ganymede:
+	@echo "test_ganymede_compile..." > test_ganymede.diff
+	$(MAKE) test_ganymede_compile
+	@echo "test_ganymede_rundir..." >> test_ganymede.diff
+	$(MAKE) test_ganymede_rundir
+	@echo "test_ganymede_run..." >> test_ganymede.diff
+	$(MAKE) test_ganymede_run
+	@echo "test_ganymede_check..." >> test_ganymede.diff
+	$(MAKE) test_ganymede_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_ganymede_compile:
+	./Config.pl -u=Ganymede -e=MhdHypPe -g=8,8,8,400,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_ganymede_rundir: test_rundir
+	cd ${TESTDIR}; \
+	cp Param/GANYMEDE/PARAM.in .; \
+	#./TestParam.pl -n=1 ${TESTDIR}/PARAM.in
+
+test_ganymede_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}/GM; ./pTEC g
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
+
+# Sort the files by numerical values of the first three columns (coordinates)
+SORT = sort -k1 -k2 -k3 -n
+
+test_ganymede_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+		Param/GANYMEDE/TestOutput/REFlog_n000000.log \
+		${TESTDIR}/RESULTS/GM/log_n000000.log > test_ganymede.diff)
+	ls -l test_ganymede.diff
 
 
 ### TESTS FOR MODELING COMET6SP ###
