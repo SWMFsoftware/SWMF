@@ -1637,12 +1637,13 @@ test_fivemoment_alfven_rundir: test_rundir
 
 test_fivemoment_alfven_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_alfven_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
-		Param/FIVEMOMENT/TestOutput/alfven_ref.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment_alfven.diff)
+		Param/FIVEMOMENT/TestOutput/alfven_ref.out     \
+		${TESTDIR}/RESULTS/GM/1d*t00024640_*out        \
+		> test_fivemoment_alfven.diff)
 	ls -l test_fivemoment_alfven.diff
 
 test_fivemoment_shock:
@@ -1667,12 +1668,13 @@ test_fivemoment_shock_rundir: test_rundir
 
 test_fivemoment_shock_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_shock_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
-		Param/FIVEMOMENT/TestOutput/shock_ref.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment_shock.diff)
+		Param/FIVEMOMENT/TestOutput/shock_ref.out \
+		${TESTDIR}/RESULTS/GM/1d*t00000002*out >  \
+		test_fivemoment_shock.diff)
 	ls -l test_fivemoment_shock.diff
 
 test_fivemoment_langmuir:
@@ -1697,12 +1699,13 @@ test_fivemoment_langmuir_rundir: test_rundir
 
 test_fivemoment_langmuir_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -o RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_langmuir_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
-		Param/FIVEMOMENT/TestOutput/langmuir_ref.log \
-		${TESTDIR}/RESULTS/GM/log_n000000.log > test_fivemoment_langmuir.diff)
+		Param/FIVEMOMENT/TestOutput/langmuir_ref.out \
+		${TESTDIR}/RESULTS/GM/1d*t00000001*out       \
+		> test_fivemoment_langmuir.diff)
 	ls -l test_fivemoment_langmuir.diff
 
 ### TEST FOR L1 to BC PROPAGATION ############################################
