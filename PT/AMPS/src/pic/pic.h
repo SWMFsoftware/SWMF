@@ -2358,9 +2358,41 @@ namespace PIC {
     //the class that contains the run information for the cell's corners
     class cDataCornerNode : public cBasicCornerNode {
     public:
-      bool ActiveFlag;
+      //parameters that defines the parameters of the associated data used for sampling and code running
+       static int totalAssociatedDataLength;
 
-      cDataCornerNode() {
+       char *associatedDataPointer;
+       bool ActiveFlag;
+
+       inline int AssociatedDataLength() {
+         return totalAssociatedDataLength;
+       }
+
+       void SetAssociatedDataBufferPointer(char* ptr) {
+         associatedDataPointer=ptr;
+       }
+
+       inline char* GetAssociatedDataBufferPointer() {
+         return associatedDataPointer;
+       }
+
+       //print data stored in the 'corner' nodes
+       void PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread);
+       void PrintVariableList(FILE* fout,int DataSetNumber);
+
+       //clean the sampling buffers
+       void cleanDataBuffer() {
+         cBasicCornerNode::cleanDataBuffer();
+
+         int i,length=totalAssociatedDataLength/sizeof(double);
+         double *ptr;
+         for (i=0,ptr=(double*)associatedDataPointer;i<length;i++,ptr++) *ptr=0.0;
+
+         if (totalAssociatedDataLength%sizeof(double)) exit(__LINE__,__FILE__,"Error: the cell internal buffers contains data different from double");
+       }
+
+      cDataCornerNode() : cBasicCornerNode() {
+        associatedDataPointer=NULL;
         ActiveFlag=false;
       }
     };
@@ -2960,7 +2992,7 @@ namespace PIC {
 
     //reserve memoty in a cell associated data buffer for non-sampling data
     typedef int (*fRequestStaticCellData)(int);
-    extern vector<fRequestStaticCellData> RequestStaticCellData;
+    extern vector<fRequestStaticCellData> RequestStaticCellData,RequestStaticCellCornerData;
 
     //the list of user defined sampling procedures
     typedef void (*fSamplingProcedure)();
