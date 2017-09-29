@@ -165,8 +165,7 @@ subroutine update_states_MHD(iBlock)
 
   call update_explicit
 
-  if(UseMultiIon .and. (UseSingleIonVelocity .or. UseSingleIonTemperature) &
-       .and. .not.UsePointImplicit) then
+  if(UseMultiIon .and. (UseSingleIonVelocity .or. UseSingleIonTemperature)) then
 
      call fix_multi_ion_update(iBlock)
      call calc_energy_cell(iBlock)
