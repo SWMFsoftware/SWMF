@@ -24,7 +24,7 @@ double PIC::BC::ExternalBoundary::Periodic::xmaxDomain[3]={0.0,0.0,0.0};
 double PIC::BC::ExternalBoundary::Periodic::L[3]={0.0,0.0,0.0};
 
 double PIC::BC::ExternalBoundary::Periodic::HighestBoundaryResolution;
-double PIC::BC::ExternalBoundary::Periodic::BoundaryDx[3]; //extension length outside the oringal user requested domain
+double PIC::BC::ExternalBoundary::Periodic::BoundaryDx[3]={0.0,0.0,0.0}; //extension length outside the oringal user requested domain
 PIC::BC::ExternalBoundary::Periodic::fUserResolutionFunction PIC::BC::ExternalBoundary::Periodic::localUserResolutionFunction=NULL;
 
 PIC::BC::ExternalBoundary::Periodic::cBlockPairTable *PIC::BC::ExternalBoundary::Periodic::BlockPairTable=NULL;
@@ -112,10 +112,6 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
   double dx[3]; //displacement from RealBlock to GhostBlock
   for (int iDim=0; iDim<3; iDim++) dx[iDim]=RealBlock->xmin[iDim]-GhostBlock->xmin[iDim];
 
-  pipe.openSend(0);
-  pipe.openRecv(0);
-  int pipeLastRecvThread=0;
-
   //the list of signals
   const int NewCellCoordinatesSignal=0;
   const int NewParticelDataSignal=1;
@@ -192,7 +188,7 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
 }
 
 
-cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * GhostPtr) {
+cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* GhostPtr) {
   double  xGhostCenter[3], xTrueCenter[3];
 
   // find location of the center of the true block                                                                                            
@@ -217,6 +213,9 @@ void PIC::BC::ExternalBoundary::Periodic::Init(double* xmin,double* xmax,double 
 
   //init the pipe for message exchange between MPI processes
   pipe.init(1000000);
+
+  pipe.openSend(0);
+  pipe.openRecv(0);
 
   //save the initial and modified domain limits
   for (idim=0;idim<3;idim++) {
