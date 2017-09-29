@@ -64,6 +64,7 @@ subroutine write_runtime_values()
   use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax
   use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, UseSplitSemiImplicit, &
        TypeSemiImplicit
+  use ModPointImplicit, ONLY: UsePointImplicit
   use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
   use ModFaceFlux,   ONLY: TypeFluxNeutral
   use CON_planet,    ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
@@ -258,6 +259,10 @@ subroutine write_runtime_values()
              trim(TypeSemiImplicit)
      end if
   endif
+  if(UsePointImplicit)then
+     call write_prefix
+     write(iUnitOut,'(10X,a)') 'Point-implicit time stepping'
+  end if
 
   call write_prefix; write(iUnitOut,'(10x,a,i1)')   '    nStage: ', nStage
   call write_prefix
