@@ -523,10 +523,11 @@ Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-p
 -------------------------------------------------------------------------------
 
 #>
-Name=Legacy_2dCG@@(0+valeriy+pleiades)
+Name=Legacy_2dCG@@(0+valeriy)
 Time=8
 
 ExeptionCode=SKIP{pgcc}@@(0+valeriy)
+ExeptionCode=SKIP{gcc}@@(0+valeriy)
 
 Compile=
 >>>@echo "test_Legacy_2dCG_compile..." > test_Legacy_2dCG.diff
@@ -958,10 +959,6 @@ Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
 Ref=8{pgcc}@@(0+valeriy)
 
-Ref=5{gcc}@@(0+pleiades)
-Ref=6{icc}@@(0+pleiades)
-Ref=7{pgcc}@@(0+pleiades)
-
 Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Guiding-Center@@(0+stampede)
 Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Guiding-Center@@(0+pleiades)
 
@@ -1007,10 +1004,7 @@ Check=
 Name=test/Mover-Boris@@(0+stampede+pleiades)
 Time=7
 
-Ref=2{gcc}@@(0+pleiades)
-Ref=7{pgcc}@@(0+pleiades)
 Ref=2{gcc}@@(0+stampede)
-Ref=3{icc}@@(0+pleiades)
 
 Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
 Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
@@ -1057,10 +1051,7 @@ Check=
 Name=test/Mover-Boris-relativistic@@(0+stampede+pleiades)
 Time=5
 
-Ref=2{gcc}@@(0+pleiades)
-Ref=7{pgcc}@@(0+pleiades)
 Ref=2{gcc}@@(0+stampede)
-Ref=3{icc}@@(0+pleiades)
 
 Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
 Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
