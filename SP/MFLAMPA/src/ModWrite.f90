@@ -212,6 +212,8 @@ contains
   contains
     subroutine process_mh
       ! process variables to plot
+      ! NOTE: for iKindData == MH1D_ certain variables are always printed:
+      !       Rho_, T_, Ux_:Uz_, Bx_:Bz_
       integer:: iVar, iVarPlot
       !----------------------
       ! reset
@@ -226,18 +228,21 @@ contains
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! plasma density ----------
-      if(index(StringPlot,' rho ') > 0)then
+      if(index(StringPlot,' rho ') > 0 .or. &
+           File_I(iFile)%iKindData == MH1D_)then
          File_I(iFile) % DoPlot_V(Rho_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! temperature -------------
-      if(index(StringPlot,' temp ')> 0)then
+      if(index(StringPlot,' temp ') > 0 .or. &
+           File_I(iFile)%iKindData == MH1D_)then
          File_I(iFile) % DoPlot_V(T_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! velocity ----------------
       if(index(StringPlot,' ux ')> 0 .or. index(StringPlot,' uy ')> 0 .or. &
-           index(StringPlot,' uz ')> 0)then
+           index(StringPlot,' uz ')> 0 .or.  &
+           File_I(iFile)%iKindData == MH1D_)then
          File_I(iFile) % DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
       end if
@@ -247,7 +252,8 @@ contains
       end if
       ! magnetic field ----------
       if(index(StringPlot,' bx ')> 0 .or. index(StringPlot,' by ')> 0 .or. &
-           index(StringPlot,' bz ')> 0)then
+           index(StringPlot,' bz ')> 0 .or. &
+           File_I(iFile)%iKindData == MH1D_)then
          File_I(iFile) % DoPlot_V((/Bx_, By_, Bz_/)) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
       end if

@@ -124,18 +124,13 @@ contains
     ! initialize the model
     real, intent(in):: TimeStart
     character(LEN=*),parameter:: NameSub='SP:initialize'
-    logical:: IsLast
     !--------------------------------------------------------------------------
     iIterGlobal = 0
     TimeGlobal = TimeStart
     call init_advance_const
     call init_grid
     if(DoReadMhData)then
-       call read_mh_data(DataInputTime, IsLast)
-       if(IsLast)then
-          call CON_stop(NameSub//&
-               ": only one time layer of mh data input files provided, can't run simulation")
-       end if
+       call read_mh_data(DataInputTime)
     end if
   end subroutine initialize
 
@@ -145,17 +140,15 @@ contains
     ! advance the solution in time
     real, intent(inout):: TimeInOut
     real, intent(in)   :: TimeLimit
-    logical, save:: IsLast = .false.
     !------------------------------
     if(DoReadMhData)then
-       if(IsLast)then
-          TimeInOut = TimeLimit
-          RETURN
-       end if
+       !\
+       ! Read the background data from file
+       !/
        ! copy old state
        State_VIB((/RhoOld_,BOld_/), :, 1:nBlock) = &
             State_VIB((/Rho_,B_/),  :, 1:nBlock)
-       call read_mh_data(DataInputTime, IsLast)
+       call read_mh_data(DataInputTime)
        TimeInOut = DataInputTime
     else
        TimeInOut = TimeLimit

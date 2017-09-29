@@ -108,43 +108,45 @@ module SP_ModGrid
   ! Number of variables in the state vector and their identifications
   integer, parameter:: nVar = 18
   integer, parameter:: &
+       !\
+       !------- The following variables MUST be in CONTIGUOUS  order ----------
+       !------- as this is used in subroutine read_mh_data --------------------
+       !------- DO NOT CHANGE WITHOUT CAREFULL CONSIDERATION !!! --------------
        X_     = 1, & ! 
        Y_     = 2, & ! Cartesian coordinates
        Z_     = 3, & ! 
-       D_     = 4, & ! Distance to the next particle
-       S_     = 5, & ! Distance from the beginning of the line
-       ! Current values
-       Rho_   = 6, & ! Background plasma density
-       T_     = 7, & ! Background temperature
-       Ux_    = 8, &
-       Uy_    = 9, &
-       Uz_    =10, &
-       U_     =11, &
-       Bx_    =12, & !
-       By_    =13, & ! Background magnetic field
-       Bz_    =14, & !
+       Rho_   = 4, & ! Background plasma density
+       T_     = 5, & ! Background temperature
+       Ux_    = 6, &
+       Uy_    = 7, &
+       Uz_    = 8, &
+       Bx_    = 9, & !
+       By_    =10, & ! Background magnetic field
+       Bz_    =11, & !
+       !-----------------------------------------------------------------------
+       D_     =12, & ! Distance to the next particle
+       S_     =13, & ! Distance from the beginning of the line
+       U_     =14, &
        B_     =15, & ! Magnitude of magnetic field
-       ! Old values
        RhoOld_=16, & ! Background plasma density
        BOld_  =17, & ! Magnitude of magnetic field
-       ! derived values
        EFlux_ =18    ! Integrated particle flux
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
        'X     ', &
        'Y     ', &
        'Z     ', &
-       'D     ', &
-       'S     ', &
        'Rho   ', &
        'T     ', &
        'Ux    ', &
        'Uy    ', &
        'Uz    ', &
-       'U     ', &
        'Bx    ', &
        'By    ', &
        'Bz    ', &
+       'D     ', &
+       'S     ', &
+       'U     ', &
        'B     ', &
        'RhoOld', &
        'BOld  ', &

@@ -45,7 +45,11 @@ module SP_ModReadMhData
   character (len=4)  :: NameFormat
   character (len=20) :: TypeFile
 
-  real,allocatable:: Buffer_II(:,:)
+  integer, parameter:: nReadVar = 11
+  
+  ! buffer is larger than the data needed to be read in the case 
+  ! the input file has additional data
+  real:: Buffer_II(nVar,nParticle)
 
   real:: TimeRead, TimeReadStart, TimeReadMax, DtRead
   integer:: iIterRead, iIterReadStart, DnRead
@@ -80,9 +84,6 @@ contains
     TimeRead = TimeReadStart
     iIterRead= iIterReadStart
 
-    ! max time
-    call read_var('TimeReadMax', TimeReadMax)
-
     ! time step
     call read_var('DtRead', DtRead)
     call read_var('DnRead', DnRead)
@@ -96,77 +97,60 @@ contains
     case default
        call CON_stop(NameSub//': input format was not set in PARAM.in')
     end select
-
-    allocate(Buffer_II(14,nParticle))
   end subroutine set_read_mh_data_param
 
   !============================================================================
 
-  subroutine read_mh_data(TimeOut, IsLast)
+  subroutine read_mh_data(TimeOut)
     real,    intent(out):: TimeOut
-    logical, intent(out):: IsLast
-    ! write the output data
-!    real,    intent(in):: Time ! current time
-!    integer, intent(in):: iIter! current iteration
+    ! read 1D MH data, which are produced by write_mh_1d n ModWrite
+    ! separate file is read for each field line, name format is (usually)
+    ! MH_data_<iLon>_<iLat>_n<iIter>.{out/dat}
+    !------------------------------------------------------------------------
+    ! name of the input file
+    character(len=100):: NameFile
+    ! loop variables
+    integer:: iBlock, iParticle, iVarPlot
+    ! indexes of corresponding node, latitude and longitude
+    integer:: iNode, iLat, iLon
+    ! number of particles saved in the input file
+    integer:: nParticleInput
+    ! string of variable names as read from the input file
+    character(len=300):: NameVar
+    !------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       iNode = iNode_B(iBlock)
+       call get_node_indexes(iNode, iLon, iLat)
 
-    
-      ! write output with 1D MH data in the format to be read by IDL/TECPLOT;
-      ! separate file is created for each field line, name format is
-      ! MH_data_<iLon>_<iLat>_n<iIter>.{out/dat}
-      !------------------------------------------------------------------------
-      ! name of the output file
-      character(len=100):: NameFile
-      ! loop variables
-      integer:: iBlock, iParticle, iVarPlot
-      ! indexes of corresponding node, latitude and longitude
-      integer:: iNode, iLat, iLon, n
-!!      ! index of first/last particle on the field line
-!!      integer:: iFirst, iLast
-!!      ! for better readability
-!!      integer:: nVarPlot
-character(len=300):: NameVar
-      !------------------------------------------------------------------------
-      do iBlock = 1, nBlock
-         iNode = iNode_B(iBlock)
-         call get_node_indexes(iNode, iLon, iLat)
+       ! set the file name
+       write(NameFile,'(a,i3.3,a,i3.3,a,i8.8,a,i6.6,a)') &
+            trim(NameInputDir)//trim(NameFileBase)//'_',iLon,'_',iLat,&
+            '_t',floor(TimeRead),'_n',iIterRead, NameFormat
+       
+       ! read the header first
+       call read_plot_file(&
+            NameFile = NameFile,&
+            TypeFileIn = TypeFile,&
+            NameVarOut = NameVar,&
+            n1out = nParticleInput)
+       
+       ! read the data itself
+       call read_plot_file(&
+            NameFile = NameFile,&
+            TypeFileIn = TypeFile,&
+            VarOut_VI = Buffer_II)
 
-         ! set the file name
-         write(NameFile,'(a,i3.3,a,i3.3,a,i8.8,a,i6.6,a)') &
-              trim(NameInputDir)//trim(NameFileBase)//'_',iLon,'_',iLat,&
-              '_t',floor(TimeRead),'_n',iIterRead, NameFormat
-
-         ! read the header first
-         call read_plot_file(&
-              NameFile = NameFile,&
-              TypeFileIn = TypeFile,&
-              NameVarOut = NameVar,&
-              n1out = n)
-
-         !\
-         ! DETERMINE ORDER
-         !/
-
-         ! read the data itself
-         call read_plot_file(&
-              NameFile = NameFile,&
-              TypeFileIn = TypeFile,&
-              VarOut_VI = Buffer_II)
-
-         State_VIB(&
-              (/X_,Y_,Z_,S_,Rho_,T_,Ux_,Uy_,Uz_,U_,Bx_,By_,Bz_,B_/),&
-              :,iBlock) = Buffer_II(:,1:n)
+         State_VIB(1:nReadVar, 1:nParticleInput, iBlock) = &
+              Buffer_II(1:nReadVar, 1:nParticleInput)
 
          iGridLocal_IB(Begin_,iBlock) = 1
-         iGridLocal_IB(End_,iBlock) = n
+         iGridLocal_IB(End_,  iBlock) = nParticleInput
       end do
 
       ! advance read time and iteration
-      TimeRead = TimeRead + DtRead
+      TimeRead  = TimeRead  + DtRead
       iIterRead = iIterRead + DnRead
-
       TimeOut = TimeRead
-
-      IsLast = TimeRead > TimeReadMax
 
     end subroutine read_mh_data
 
