@@ -86,8 +86,7 @@ contains
     real :: QePerQtotal
 
     ! Variables for multi-ion MHD
-    real :: InvElectronDens, uPlus_D(3), U_D(3), ChargeDens_I(nIonFluid)
-    real, dimension(nTrueIon) :: InvRho_I, Ux_I, Uy_I, Uz_I
+    real :: InvElectronDens, uPlus_D(3), U_D(3)
 
     logical :: DoTest, DoTestMe
 
