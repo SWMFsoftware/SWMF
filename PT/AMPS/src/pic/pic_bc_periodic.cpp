@@ -23,7 +23,10 @@ double PIC::BC::ExternalBoundary::Periodic::xmaxDomain[3]={0.0,0.0,0.0};
 //the period length in each dimention
 double PIC::BC::ExternalBoundary::Periodic::L[3]={0.0,0.0,0.0};
 
-//the table of the correspondence of the 'ghost' and 'real' blocks
+double PIC::BC::ExternalBoundary::Periodic::HighestBoundaryResolution;
+double PIC::BC::ExternalBoundary::Periodic::BoundaryDx[3]; //extension length outside the oringal user requested domain
+PIC::BC::ExternalBoundary::Periodic::fUserResolutionFunction PIC::BC::ExternalBoundary::Periodic::localUserResolutionFunction=NULL;
+
 PIC::BC::ExternalBoundary::Periodic::cBlockPairTable *PIC::BC::ExternalBoundary::Periodic::BlockPairTable=NULL;
 int PIC::BC::ExternalBoundary::Periodic::BlockPairTableLength=0;
 
@@ -36,7 +39,10 @@ void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
 
   //loop through all block pairs
   for (iBlockPair=0;iBlockPair<BlockPairTableLength;iBlockPair++) {
-    if ( ((GhostBlockThread=BlockPairTable[iBlockPair].GhostBlock->Thread)==PIC::ThisThread) || ((RealBlockThread=BlockPairTable[iBlockPair].RealBlock->Thread)==PIC::ThisThread) ) {
+    GhostBlockThread=BlockPairTable[iBlockPair].GhostBlock->Thread;
+    RealBlockThread=BlockPairTable[iBlockPair].RealBlock->Thread;
+
+    if ((GhostBlockThread==PIC::ThisThread)||(RealBlockThread==PIC::ThisThread)) {
       if (GhostBlockThread==RealBlockThread) {
         ExchangeBlockDataLocal(BlockPairTable[iBlockPair]);
       }
@@ -55,31 +61,30 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *GhostBlock=BlockPair.GhostBlock;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *RealBlock=BlockPair.RealBlock;
-
+  
+  double dx[3]; //displacement from realblock to ghostbloock
+  for (int i=0;i<3;i++) dx[i]=RealBlock->xmin[i]-GhostBlock->xmin[i];
+  
   //attach particle list from the 'ghost' block to the 'real block'
   for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) if ((ptr=GhostBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)])!=-1) {
     //find the last particle in the block
     NextPtr=PIC::ParticleBuffer::GetNext(ptr);
 
+    //shift the location of the first particle
+    for (idim=0,x=PIC::ParticleBuffer::GetX(ptr);idim<3;idim++) x[idim]+=dx[idim];
+
     if (NextPtr!=-1) {
+      //the list containes more than one particle => process them
       do {
         ptr=NextPtr;
 
         //shift location of the particle
-        x=PIC::ParticleBuffer::GetX(ptr);
+        for (idim=0,x=PIC::ParticleBuffer::GetX(ptr);idim<3;idim++) x[idim]+=dx[idim];
 
-        for (idim=0;idim<3;idim++) if ((x[idim]<xminOriginal[idim])||(x[idim]>xmaxOriginal[idim])) {
-          x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
-        }
-
+        //get the next particle in the list
         NextPtr=PIC::ParticleBuffer::GetNext(ptr);
       }
       while (NextPtr!=-1);
-    }
-    else {
-      //shift location of the particle
-      x=PIC::ParticleBuffer::GetX(ptr);
-      for (idim=0;idim<3;idim++) x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
     }
 
     //reconnect the lists
@@ -94,7 +99,6 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
   }
 }
 
-
 void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& BlockPair) {
   int i,j,k;
   long int ptr,NewParticle,NextPtr;
@@ -104,6 +108,9 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *GhostBlock=BlockPair.GhostBlock;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *RealBlock=BlockPair.RealBlock;
+
+  double dx[3]; //displacement from RealBlock to GhostBlock
+  for (int iDim=0; iDim<3; iDim++) dx[iDim]=RealBlock->xmin[iDim]-GhostBlock->xmin[iDim];
 
   pipe.openSend(0);
   pipe.openRecv(0);
@@ -130,7 +137,6 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
       while (ptr!=-1) {
         pipe.send(NewParticelDataSignal);
         pipe.send((char*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
-
 
         NextPtr=PIC::ParticleBuffer::GetNext(ptr);
         PIC::ParticleBuffer::DeleteParticle(ptr);
@@ -164,9 +170,7 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
 
           //shift location of the particle
           x=PIC::ParticleBuffer::GetX((PIC::ParticleBuffer::byte *)tempParticleData);
-          for (int idim=0;idim<3;idim++) if ((x[idim]<xminOriginal[idim])||(x[idim]>xmaxOriginal[idim])) {
-            x[idim]=(x[idim]+L[idim]<xmaxOriginal[idim]) ? x[idim]+L[idim] : x[idim]-L[idim];
-          }
+          for (int idim=0;idim<3;idim++) x[idim]+=dx[idim];
 
           //generate a new particle
           NewParticle=PIC::ParticleBuffer::GetNewParticle(RealBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
@@ -187,8 +191,28 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
   pipe.flush();
 }
 
+
+cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * GhostPtr) {
+  double  xGhostCenter[3], xTrueCenter[3];
+
+  // find location of the center of the true block                                                                                            
+  for (int i=0;i<3;i++) {
+    xGhostCenter[i]=0.5*(GhostPtr->xmin[i]+GhostPtr->xmax[i]);
+    xTrueCenter[i]=xGhostCenter[i];
+
+    if (xGhostCenter[i]>xmaxOriginal[i]) {
+      xTrueCenter[i]-=L[i];
+    }
+    else if (xGhostCenter[i]<xminOriginal[i]) {
+      xTrueCenter[i]+=L[i];
+    }
+  }
+
+  return PIC::Mesh::mesh.findTreeNode(xTrueCenter);
+}
+
 //Initialize the periodic boundary manager
-void PIC::BC::ExternalBoundary::Periodic::Init(double* xmin,double* xmax,double (*localResuestedResolutionFunction)(double*)) {
+void PIC::BC::ExternalBoundary::Periodic::Init(double* xmin,double* xmax,double (*localRequestedResolutionFunction)(double*)) {
   int idim;
 
   //init the pipe for message exchange between MPI processes
@@ -200,12 +224,138 @@ void PIC::BC::ExternalBoundary::Periodic::Init(double* xmin,double* xmax,double 
     L[idim]=xmax[idim]-xmin[idim];
   }
 
-  //initiate the mesh
+  localUserResolutionFunction=localRequestedResolutionFunction;
+  GetBoundaryExtensionLength();
+  
 
+  if (PIC::ThisThread==0) printf("$PREFIX: BoundaryDx: ");
+
+  for (idim=0;idim<3;idim++) {
+    xminDomain[idim]= xminOriginal[idim]-BoundaryDx[idim];
+    xmaxDomain[idim]= xmaxOriginal[idim]+BoundaryDx[idim];
+    if (PIC::ThisThread==0) printf(" %f ",BoundaryDx[idim]);
+  }
+
+  if (PIC::ThisThread==0) printf("\n");
+  
+  //initiate the mesh  
+  PIC::Mesh::mesh.init(xminDomain,xmaxDomain,ModifiedLocalResolution);
+}
+
+void PIC::BC::ExternalBoundary::Periodic::InitBlockPairTable(){
+  std::vector<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *> GhostBlockVector;
+  
+  PopulateGhostBlockVector(GhostBlockVector,NULL);
+  BlockPairTableLength=GhostBlockVector.size();
+
+  printf("$PREFIX: Ghost block pair number: %d\n",BlockPairTableLength);
+  BlockPairTable = new cBlockPairTable[BlockPairTableLength];
+
+  //populate the blockpair                                                                                        
+  for (int iPair=0; iPair<BlockPairTableLength; iPair++) {
+    BlockPairTable[iPair].GhostBlock = GhostBlockVector[iPair];
+    BlockPairTable[iPair].RealBlock = findCorrespondingRealBlock(BlockPairTable[iPair].GhostBlock);
+  }
 }
 
 
+double PIC::BC::ExternalBoundary::Periodic::ModifiedLocalResolution(double* x) {
+  for (int iDim=0;iDim<3;iDim++) {
+    if ((x[iDim]<xminDomain[iDim]+2*BoundaryDx[iDim]) || (x[iDim]>xmaxDomain[iDim]-2*BoundaryDx[iDim])) return HighestBoundaryResolution;
+  }
 
+  return localUserResolutionFunction(x);
+}
+
+double PIC::BC::ExternalBoundary::Periodic::GetHighestRequestedBoundaryResolution(int SamplingPoints) {
+  double xTest[3],x0[3],e0[3],e1[3],de0=0.0,de1=0.0,c0,c1,locRes,res=xmaxOriginal[0]-xminOriginal[0];
+  int iface,i,j,idim,iTest;
+
+  //select the number of test points in each dimentions
+  int nTotalTests=(SamplingPoints>25) ? SamplingPoints : 1024;
+
+  //geometry information
+  static const double FaceX0Table[6][3]={{0,0,0},{1,0,0}, {0,0,0},{0,1,0}, {0,0,0},{0,0,1}};
+  static const double FaceE0Table[6][3]={{0,1,0},{1,1,0}, {1,0,0},{1,1,0}, {1,0,0},{1,0,1}};
+  static const double FaceE1Table[6][3]={{0,0,1},{1,0,1}, {0,0,1},{0,1,1}, {0,1,0},{0,1,1}};
+
+  double dxOriginal[3]={xmaxOriginal[0]-xminOriginal[0],xmaxOriginal[1]-xminOriginal[1],xmaxOriginal[2]-xminOriginal[2]};
+
+  for (iface=0;iface<6;iface++) {
+    for (idim=0;idim<3;idim++) {
+      x0[idim]=xminOriginal[idim]+FaceX0Table[iface][idim]*dxOriginal[idim];
+
+      e0[idim]=xminOriginal[idim]+FaceE0Table[iface][idim]*dxOriginal[idim]-x0[idim];
+      de0+=pow(e0[idim],2);
+
+      e1[idim]=xminOriginal[idim]+FaceE1Table[iface][idim]*dxOriginal[idim]-x0[idim];
+      de1+=pow(e1[idim],2);
+    }
+
+    de0=sqrt(de0);
+    de1=sqrt(de1);
+
+    for (iTest=0;iTest<nTotalTests;iTest++) {
+      //get the test location
+      for (idim=0,c0=rnd(),c1=rnd();idim<3;idim++) xTest[idim]=x0[idim]+c0*e0[idim]+c1*e1[idim];
+
+      //get local requster resolution
+      locRes=localUserResolutionFunction(xTest);
+      if (locRes<res) res=locRes;
+    }
+  }
+
+  return res;
+}
+
+
+void PIC::BC::ExternalBoundary::Periodic::GetBoundaryExtensionLength() {
+  double level[3];
+  int nBlkArr[3]={_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_};
+  double dx[3];
+
+  HighestBoundaryResolution = PIC::BC::ExternalBoundary::Periodic::GetHighestRequestedBoundaryResolution(1024);
+
+
+  for (int i=0;i<3;i++){
+    dx[i]=(xmaxOriginal[i]-xminOriginal[i])/nBlkArr[i];
+  }
+
+  double rCell = sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
+  for (int i=0;i<3;i++) dx[i]/=rCell;
+
+  for (int iDim=0;iDim<3;iDim++){
+    level[iDim]=log2((xmaxOriginal[iDim]-xminOriginal[iDim]+2.*HighestBoundaryResolution*dx[iDim]*nBlkArr[iDim])/(2.*HighestBoundaryResolution*dx[iDim]*nBlkArr[iDim]));
+  }
+
+  double maxLevel= *std::max_element(level,level+3);
+  int nLevel=(int)ceil(maxLevel);
+
+  printf("$PREFIX: max level at boundary:%d\n",nLevel);
+
+  for(int i=0;i<3;i++){
+    BoundaryDx[i]=(xmaxOriginal[i]-xminOriginal[i])/(pow(2.,nLevel)-1.)/2.;
+  }
+}
+
+
+void PIC::BC::ExternalBoundary::Periodic::PopulateGhostBlockVector(std::vector<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *> &BlockVector, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * startNode=NULL){
+  int NullNodeNum=0;
+
+  if (startNode==NULL) startNode=PIC::Mesh::mesh.rootTree;
+
+  for (int i=0;i<8;i++){
+    if (startNode->downNode[i]!=NULL) {
+      PIC::BC::ExternalBoundary::Periodic::PopulateGhostBlockVector(BlockVector,startNode->downNode[i]);
+    }else{
+      NullNodeNum++;
+    }
+  }
+
+  if (NullNodeNum==8 && PIC::Mesh::mesh.ExternalBoundaryBlock(startNode)==_EXTERNAL_BOUNDARY_BLOCK_){
+    BlockVector.push_back(startNode);
+  }
+}
 
 
 

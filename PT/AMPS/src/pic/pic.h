@@ -4906,6 +4906,12 @@ namespace PIC {
         //the period length in each dimention
         extern double L[3];
 
+        //the highest resolution along the requested boundary of the domain
+        extern double HighestBoundaryResolution;
+
+        //extension length outside the oringal user requested domain
+        extern double BoundaryDx[3];
+
         //the tables of 'ghost' blocks
         struct cBlockPairTable {
           cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *GhostBlock;
@@ -4918,18 +4924,28 @@ namespace PIC {
         //the structure used to communication between MPI processes
         extern CMPI_channel pipe;
 
+        //init the list of the ghost blocks
+        void InitBlockPairTable();
+
         //functions for exchanging of the information between the real and ghost blocks
         void ExchangeBlockDataMPI(cBlockPairTable& BlockPair);
         void ExchangeBlockDataLocal(cBlockPairTable& BlockPair);
 
-        //get the number of the ghost blocks
-        int GetGhostBlockTotalNumber();
+        // populate the vector with pointers to ghost blocks.
+        void PopulateGhostBlockVector(std::vector<cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *> &BlockVector, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * startNode);
+
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* findCorrespondingRealBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * GhostPtr);
 
         //get requested minimum resolution at the outer boundary of the computational domain
-        double GetMinRequestedBoundaryResoluton();
+        double GetHighestRequestedBoundaryResolution(int SamplingPoints);
+        void GetBoundaryExtensionLength();
 
         //manager of the information update between the real and ghost blocks
         void UpdateData();
+
+        //pointer to user-defined local resolution function
+        typedef double (*fUserResolutionFunction)(double*);
+        extern fUserResolutionFunction localUserResolutionFunction;
 
         //Modified local resolution function that is actually used in the mesh generation and accounts for creating the 'ghost' blocks
         double ModifiedLocalResolution(double* x);
