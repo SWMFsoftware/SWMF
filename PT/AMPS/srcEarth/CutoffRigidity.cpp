@@ -18,6 +18,9 @@ long int Earth::CutoffRigidity::InitialRigidityOffset=-1;
 long int Earth::CutoffRigidity::InitialLocationOffset=-1;
 double*** Earth::CutoffRigidity::CutoffRigidityTable=NULL;
 
+//enable/disable the particle injection procedure
+bool Earth::CutoffRigidity::ParticleInjector::ParticleInjectionMode=true;
+
 
 void Earth::CutoffRigidity::Init_BeforeParser() {
   if (SampleRigidityMode==true) {
@@ -54,9 +57,6 @@ void Earth::CutoffRigidity::AllocateCutoffRigidityTable() {
   }
 }
 
-int Earth::CutoffRigidity::ReversedTimeRelativisticBoris(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
-  return PIC::Mover::Relativistic::Boris(ptr,-dtTotal,startNode);
-}
 
 //process model particles that leaves the computational domain
 int Earth::CutoffRigidity::ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
@@ -65,17 +65,21 @@ int Earth::CutoffRigidity::ProcessOutsideDomainParticles(long int ptr,double* xI
   int spec;
   PIC::ParticleBuffer::byte *ParticleData;
 
-  ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-
-  spec=PIC::ParticleBuffer::GetI(ParticleData);
-  x=(double*)(ParticleData+InitialLocationOffset);
-  Rigidity=*((double*)(ParticleData+InitialRigidityOffset));
-
-  //get dooedinates of the point of origin of the particle
-  Earth::Planet->GetSurfaceElementProjectionIndex(x,iZenith,iAzimuth);
-
   //update the rigidity data
-  if ((CutoffRigidityTable[spec][iZenith][iAzimuth]<0.0)||(CutoffRigidityTable[spec][iZenith][iAzimuth]>Rigidity)) CutoffRigidityTable[spec][iZenith][iAzimuth]=Rigidity;
+  if (SampleRigidityMode==true) {
+    ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+    spec=PIC::ParticleBuffer::GetI(ParticleData);
+    x=(double*)(ParticleData+InitialLocationOffset);
+
+    //get coordinates of the point of origin of the particle
+    Earth::Planet->GetSurfaceElementProjectionIndex(x,iZenith,iAzimuth);
+
+    Rigidity=*((double*)(ParticleData+InitialRigidityOffset));
+    if ((CutoffRigidityTable[spec][iZenith][iAzimuth]<0.0)||(CutoffRigidityTable[spec][iZenith][iAzimuth]>Rigidity)) CutoffRigidityTable[spec][iZenith][iAzimuth]=Rigidity;
+  }
+
+  //register the particle velocity vector
+  DomainBoundaryParticleProperty::RegisterParticleProperties(PIC::ParticleBuffer::GetI(ptr),xInit,vInit,nIntersectionFace);
 
   return _PARTICLE_DELETED_ON_THE_FACE_;
 }
@@ -122,16 +126,18 @@ void Earth::CutoffRigidity::OutputDataFile::PrintDataStateVector(FILE* fout,long
 }
 
 //injection rate of the test particles when calculate the cut-off rigidity
-double Earth::CutoffRigidity::ParticleInjector::GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {return 1.0;}
+double Earth::CutoffRigidity::ParticleInjector::GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer) {return 1.0E14;}
 
 //generate a new particle
 bool Earth::CutoffRigidity::ParticleInjector::GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
-    double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
-    double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,
-    int BoundaryElementType,void *BoundaryElement) {
+  double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,
+  double sphereRadius,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &startNode,int BoundaryElementType,void *BoundaryElement) {
 
   int idim;
   double ExternalNormal[3];
+
+  //if the injection model is disabled => exit from the procedure
+  if (ParticleInjectionMode==false) return false;
 
   //Generate new particle position
   Vector3D::Distribution::Uniform(ExternalNormal);
@@ -160,7 +166,11 @@ bool Earth::CutoffRigidity::ParticleInjector::GenerateParticleProperties(int spe
   mass=PIC::MolecularData::GetMass(spec);
   charge=PIC::MolecularData::GetElectricCharge(spec);
 
-  energy=Earth::CutoffRigidity::RigidityTestMinEnergy+rnd()*(RigidityTestMaxEnergy-RigidityTestMinEnergy);
+  static double logRigidityTestMinEnergy=log(RigidityTestMinEnergy);
+  static double logRigidityTestMaxEnergy=log(RigidityTestMaxEnergy);
+
+  energy=exp(logRigidityTestMinEnergy+rnd()*(logRigidityTestMaxEnergy-logRigidityTestMinEnergy));
+
   speed=Relativistic::E2Speed(energy,mass);
   momentum=Relativistic::Speed2Momentum(speed,mass);
 
@@ -172,8 +182,10 @@ bool Earth::CutoffRigidity::ParticleInjector::GenerateParticleProperties(int spe
   }
 
   //save the initial location, and rigidity of the particle
-  *((double*)(tempParticleData+InitialRigidityOffset))=rigidity;
-  memcpy((tempParticleData+InitialLocationOffset),v_IAU_OBJECT,3*sizeof(double));
+  if (SampleRigidityMode==true) {
+    *((double*)(tempParticleData+InitialRigidityOffset))=rigidity;
+    memcpy((tempParticleData+InitialLocationOffset),v_IAU_OBJECT,3*sizeof(double));
+  }
 
   return true;
 }
