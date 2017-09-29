@@ -166,7 +166,18 @@ int Earth::ParticleMover(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDa
   int res,iShell;
 
   PIC::ParticleBuffer::GetX(xInit,ptr);
-  res=PIC::Mover::Relativistic::Boris(ptr,dtTotal,startNode);
+
+
+
+  switch (PIC::ParticleBuffer::GetI(ptr)) {
+  case _ELECTRON_SPEC_:
+//    res=PIC::Mover::GuidingCenter::Mover_SecondOrder(ptr,dtTotal,startNode);
+res=PIC::Mover::Relativistic::Boris(ptr,dtTotal,startNode);
+
+    break;
+  default:
+    res=PIC::Mover::Relativistic::Boris(ptr,dtTotal,startNode);
+  }
 
   if ((Sampling::SamplingMode==true)&&(res==_PARTICLE_MOTION_FINISHED_)) {
     //trajectory integration was successfully completed
@@ -443,4 +454,7 @@ void Earth::Init() {
   //init source models of SEP and GCR
   if (_PIC_EARTH_SEP__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::SEP::Init();
   if (_PIC_EARTH_GCR__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::GCR::Init();
+  if (_PIC_EARTH_ELECTRON__MODE_==_PIC_MODE_ON_) BoundingBoxInjection::Electrons::Init();
 }
+
+
