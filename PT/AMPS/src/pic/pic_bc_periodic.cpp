@@ -135,7 +135,7 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
         pipe.send((char*)PIC::ParticleBuffer::GetParticleDataPointer(ptr),PIC::ParticleBuffer::ParticleDataLength);
 
         NextPtr=PIC::ParticleBuffer::GetNext(ptr);
-        PIC::ParticleBuffer::DeleteParticle(ptr);
+        PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(ptr,true);
         ptr=NextPtr;
       }
    
@@ -351,7 +351,7 @@ void PIC::BC::ExternalBoundary::Periodic::PopulateGhostBlockVector(std::vector<c
     }
   }
 
-  if (NullNodeNum==8 && PIC::Mesh::mesh.ExternalBoundaryBlock(startNode)==_EXTERNAL_BOUNDARY_BLOCK_){
+  if ((NullNodeNum==8)&&(PIC::Mesh::mesh.ExternalBoundaryBlock(startNode)==_EXTERNAL_BOUNDARY_BLOCK_)) {
     BlockVector.push_back(startNode);
   }
 }
