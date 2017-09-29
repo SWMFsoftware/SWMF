@@ -181,7 +181,7 @@ void amps_init_mesh() {
  //register the sphere
  static const bool SphereInsideDomain=true;
  
- if (SphereInsideDomain) {
+ if (SphereInsideDomain==true) {
    double sx0[3]={0.0,0.0,0.0};
    cInternalBoundaryConditionsDescriptor SphereDescriptor;
    cInternalSphericalData *Sphere;
@@ -207,6 +207,10 @@ void amps_init_mesh() {
    Sphere->PrintSurfaceData("SpheraData.dat",0);
    Sphere->localResolution=localSphericalSurfaceResolution;
    Sphere->faceat=0;
+
+   //set the injection function used in modeling of the cutoff rigidity
+   Sphere->InjectionRate=Exosphere::SourceProcesses::totalProductionRate; 
+   Sphere->InjectionBoundaryCondition=Exosphere::SourceProcesses::InjectionBoundaryModel; ///sphereParticleInjection;
    
    Sphere->Allocate<cInternalSphericalData>(PIC::nTotalSpecies,PIC::BC::InternalBoundary::Sphere::TotalSurfaceElementNumber,_EXOSPHERE__SOURCE_MAX_ID_VALUE_,Sphere);
 
@@ -302,6 +306,17 @@ void amps_init_mesh() {
  
  //init the volume of the cells'
  PIC::Mesh::mesh.InitCellMeasure();
+
+
+ //init the datastructure for registering of the velocity vectors of the particles that cross the boundary of the domain
+ Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate();
+ Earth::CutoffRigidity::DomainBoundaryParticleProperty::Init();
+
+ //turn on the reverse time integraion of the particle trajectory
+ PIC::Mover::BackwardTimeIntegrationMode=_PIC_MODE_ON_;
+
+ //catch particles that leaves the domain
+ PIC::Mover::ProcessOutsideDomainParticles=Earth::CutoffRigidity::ProcessOutsideDomainParticles;
 
 /*
  //print out the mesh file
