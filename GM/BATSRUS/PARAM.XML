@@ -1621,9 +1621,9 @@ of the polar boundary where the outflow is defined.
 	</if>
 #CPCPBOUNDARY
 T                       UseCpcpBc  (rest is read if true)
-28.0                    Rho0Cpcp   [amu/cc] for 1st ion
+28.0                    Rho0Cpcp   [amu/cc] for 1st ion fluid/species
 0.1                     RhoPerCpcp [amu/cc / kV]
-8.0			Rho0Cpcp   [amu/cc] for 2nd ion
+8.0			Rho0Cpcp   [amu/cc] for 2nd ion fluid/species
 0.3			RhoPerCpcp [amu/cc / kV]
 
 NOTE: For this feature the inner boundary type has to
@@ -1634,7 +1634,7 @@ the cross polar cap potential (CPCP) in a linear fashion:
 
 RhoBc = Rho0Cpcp[i] + RhoPerCpcp[i] * Cpcp
 
-where i is the index of the ion fluid, 
+where i is the index of the ion fluid or ion species, 
 RhoBc and Rho0Cpcp are in I/O units (typically amu/cc), 
 the Cpcp is given in [kV], and the RhoPerCpcp factor 
 is in density units per kV. 
