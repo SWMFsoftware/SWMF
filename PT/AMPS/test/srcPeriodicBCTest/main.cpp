@@ -155,100 +155,43 @@ int main(int argc,char **argv) {
   PIC::ParticleWeightTimeStep::LocalTimeStep=localTimeStep;
   PIC::ParticleWeightTimeStep::initTimeStep();
 
-  printf("test1\n");
-
-PIC::Mesh::mesh.outputMeshTECPLOT("mesh_test.dat");
-
-
-  /*
+  if (PIC::ThisThread==0) printf("test1\n");
   PIC::Mesh::mesh.outputMeshTECPLOT("mesh_test.dat");
-  
-  int nExternalLeafBlks;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> ** GhostBlockArray=NewExternalLeafBlockArray(nExternalLeafBlks);
-  
-  printf("nExternalLeafBlks:%d\n",nExternalLeafBlks);
 
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> ** TrueBlockArray=CorrespondingTrueBlockArray(nExternalLeafBlks, xmin, xmax, extensionDx, GhostBlockArray);
-  */
   PIC::BC::ExternalBoundary::Periodic::InitBlockPairTable();
 
-  /*
-  printf("GhostBlockArray[0]->xmin[0],GhostBlockArray[0]->xmin[1],GhostBlockArray[0]->xmin[2]:%f,%f,%f\n", GhostBlockArray[0]->xmin[0],GhostBlockArray[0]->xmin[1],GhostBlockArray[0]->xmin[2]);
-  printf("GhostBlockArray[0]->xmax[0],GhostBlockArray[0]->xmax[1],GhostBlockArray[0]->xmax[2]:%f,%f,%f\n", GhostBlockArray[0]->xmax[0],GhostBlockArray[0]->xmax[1],GhostBlockArray[0]->xmax[2]);
 
-  printf("TrueBlockArray[0]->xmin[0],TrueBlockArray[0]->xmin[1],TrueBlockArray[0]->xmin[2]:%f,%f,%f\n", TrueBlockArray[0]->xmin[0],TrueBlockArray[0]->xmin[1],TrueBlockArray[0]->xmin[2]);
-  printf("TrueBlockArray[0]->xmax[0],TrueBlockArray[0]->xmax[1],TrueBlockArray[0]->xmax[2]:%f,%f,%f\n", TrueBlockArray[0]->xmax[0],TrueBlockArray[0]->xmax[1],TrueBlockArray[0]->xmax[2]);
-
-
-  
-  printf("GhostBlockArray[1001]->xmin[0],GhostBlockArray[1001]->xmin[1],GhostBlockArray[1001]->xmin[2]:%f,%f,%f\n", GhostBlockArray[1001]->xmin[0],GhostBlockArray[1001]->xmin[1],GhostBlockArray[1001]->xmin[2]);
-  printf("GhostBlockArray[1001]->xmax[0],GhostBlockArray[1001]->xmax[1],GhostBlockArray[1001]->xmax[2]:%f,%f,%f\n", GhostBlockArray[1001]->xmax[0],GhostBlockArray[1001]->xmax[1],GhostBlockArray[1001]->xmax[2]);
-
-  printf("TrueBlockArray[1001]->xmin[0],TrueBlockArray[1001]->xmin[1],TrueBlockArray[1001]->xmin[2]:%f,%f,%f\n", TrueBlockArray[1001]->xmin[0],TrueBlockArray[1001]->xmin[1],TrueBlockArray[1001]->xmin[2]);
-  printf("TrueBlockArray[1001]->xmax[0],TrueBlockArray[1001]->xmax[1],TrueBlockArray[1001]->xmax[2]:%f,%f,%f\n", TrueBlockArray[1001]->xmax[0],TrueBlockArray[1001]->xmax[1],TrueBlockArray[1001]->xmax[2]);
-  printf("diff:%f,%f,%f", abs(TrueBlockArray[1001]->xmax[0]-GhostBlockArray[1001]->xmax[0]), abs(TrueBlockArray[1001]->xmax[1]-GhostBlockArray[1001]->xmax[1]), abs(TrueBlockArray[1001]->xmax[2]-GhostBlockArray[1001]->xmax[2]));
-  */
-  //newParticle=PIC::ParticleBuffer::GetNewParticle();
-  
   
   double v[10][3]={{-1.0, 0.0, 0.0},{0.0,1.0,0.0},{0.0,-1.0,0.0},{1.0,0.0,0.0},{0.0,0.0,1.0},{0.0,0.0,-1.0},{-1,-1,0},{-1,-1,-1},{1,1,1},{0.8,0.8,-1}};
-double xparticle[10][3]={{-0.8,0,0},{0.0,1.9,0.0},{0.0,-2.5,0.0},{2.9,0.0,0.0},{0.0,0.0,2.9},{0.0,0.0,-3.5},{-0.9,-2.9,-3},{-0.9,-2.9,-3.9},{2.9,1.9,2.9},{2.9,1.9,2.9}};
+  double xparticle[10][3]={{-0.8,0,0},{0.0,1.9,0.0},{0.0,-2.5,0.0},{2.9,0.0,0.0},{0.0,0.0,2.9},{0.0,0.0,-3.5},{-0.9,-2.9,-3},{-0.9,-2.9,-3.9},{2.9,1.9,2.9},{2.9,1.9,2.9}};
   int s,i,j,k;
 
 
   int parSize=10;
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* newNode[parSize];
-  long int newParticle[parSize];
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* newNode;
+  long int newParticle;
 
-  printf("test2\n");
-//  PIC::ParticleBuffer::Init(10000);
+  if (PIC::ThisThread==0) printf("test2\n");
  
   for (int iPar=0;iPar<parSize; iPar++ ){
-  newNode[iPar]=PIC::Mesh::mesh.findTreeNode(xparticle[iPar]);
-  // if(newNode->Thread==PIC::ThisThread){    
-  PIC::Mesh::mesh.fingCellIndex(xparticle[iPar],i,j,k,newNode[iPar]); 
+    newNode=PIC::Mesh::mesh.findTreeNode(xparticle[iPar]);
+
+    if (newNode->Thread==PIC::ThisThread) {
+      PIC::Mesh::mesh.fingCellIndex(xparticle[iPar],i,j,k,newNode);
   
-  newParticle[iPar]=PIC::ParticleBuffer::GetNewParticle(newNode[iPar]->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
-  
-  PIC::ParticleBuffer::SetV(v[iPar],newParticle[iPar]);
-  PIC::ParticleBuffer::SetX(xparticle[iPar],newParticle[iPar]);
-  PIC::ParticleBuffer::SetI(0,newParticle[iPar]);
-  }
-    //  }
-
-
-  /*  double xminUser[3], xmaxUser[3];
-  for (int iDim=0; iDim<3; iDim++){
-    xminUser[iDim]=xmin[iDim]+extensionDx[iDim];
-    xmaxUser[iDim]=xmax[iDim]-extensionDx[iDim];
-  }
-  */
-    int nMoved=0;
-    for (int iter=0; iter<10; iter++){
-      double vtemp[3],xtemp[3];
-
-    /* if (nMoved!=0){
-      findXLocation(xtemp,xminUser,xmaxUser);
-      newNode=PIC::Mesh::mesh.findTreeNode(xtemp);
-      PIC::Mesh::mesh.fingCellIndex(xtemp,i,j,k,newNode);
       newParticle=PIC::ParticleBuffer::GetNewParticle(newNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+
+      PIC::ParticleBuffer::SetV(v[iPar],newParticle);
+      PIC::ParticleBuffer::SetX(xparticle[iPar],newParticle);
+      PIC::ParticleBuffer::SetI(0,newParticle);
     }
-    */
-      for (int iPar=0;iPar<parSize; iPar++ ){
-	s=PIC::ParticleBuffer::GetI(newParticle[iPar]);
-	PIC::ParticleBuffer::GetV(vtemp,newParticle[iPar]);
-	PIC::ParticleBuffer::GetX(xtemp,newParticle[iPar]);
-	
-       
-	printf("iPar:%d, iter:%d, v:%f,%f,%f\n",iPar,iter,vtemp[0],vtemp[1],vtemp[2]);
-	printf("iPar:%d, iter:%d, x:%f,%f,%f\n",iPar,iter,xtemp[0],xtemp[1],xtemp[2]);
-      }
-      
-  // nMoved=MoveParticleFromGhostBlock(TrueBlockArray, GhostBlockArray, nExternalLeafBlks);
-  
-  PIC::BC::ExternalBoundary::Periodic::UpdateData();
-  PIC::TimeStep();
-}
+  }
+
+
+  for (int iter=0; iter<10; iter++) {
+    PIC::BC::ExternalBoundary::Periodic::UpdateData();
+    PIC::TimeStep();
+  }
   
   MPI_Finalize();
   cout << "End of the run" << endl;
