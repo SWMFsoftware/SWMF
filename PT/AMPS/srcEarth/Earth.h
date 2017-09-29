@@ -19,6 +19,7 @@ using namespace std;
 #endif
 
 
+#include "flagtable.h"
 #include "constants.h"
 #include "Earth.dfn"
 
@@ -66,7 +67,7 @@ public:
 namespace Earth {
   using namespace Exosphere;
   
-  //that fucntion that created the SampledDataRecoveryTable
+  //the function that created the SampledDataRecoveryTable
   void DataRecoveryManager(list<pair<string,list<int> > >&,int,int);
 
   //composition table of the GCR composition
@@ -151,6 +152,8 @@ namespace Earth {
     }
 
     namespace ParticleInjector {
+      extern bool ParticleInjectionMode; //enable/disable the injection model
+
       double GetTotalProductionRate(int spec,int BoundaryElementType,void *SphereDataPointer);
       bool GenerateParticleProperties(int spec,PIC::ParticleBuffer::byte* tempParticleData,double *x_SO_OBJECT,
           double *x_IAU_OBJECT,double *v_SO_OBJECT,double *v_IAU_OBJECT,double *sphereX0,double sphereRadius,
@@ -169,12 +172,48 @@ namespace Earth {
     //process particles that leaves that computational domain
     int ProcessOutsideDomainParticles(long int ptr,double* xInit,double* vInit,int nIntersectionFace,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
 
-    //reversed time particle integration procedure
-    int ReversedTimeRelativisticBoris(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
-
-    //init the cutoff sampling model
+   //init the cutoff sampling model
     void AllocateCutoffRigidityTable();
     void Init_BeforeParser();
+
+    namespace DomainBoundaryParticleProperty {
+      //the strucure for sampling of the distribution function of particles that can reach the near Earth's region
+      extern double logEmin,logEmax;
+      extern int nLogEnergyLevels,nAzimuthIntervals,nCosZenithIntervals;
+      extern double dCosZenithAngle,dAzimuthAngle,dLogE;
+
+      //frame of reference related to the faces
+      const static double e0FaceFrame[6][3]={{0.0,1.0,0.0},{0.0,1.0,0.0}, {1.0,0.0,0.0},{1.0,0.0,0.0}, {1.0,0.0,0.0},{1.0,0.0,0.0}};
+      const static double e1FaceFrame[6][3]={{0.0,0.0,1.0},{0.0,0.0,1.0}, {0.0,0.0,1.0},{0.0,0.0,1.0}, {0.0,1.0,0.0},{0.0,1.0,0.0}};
+      const static double InternalFaceNorm[6][3]={{1.0,0.0,0.0},{-1.0,0.0,0.0}, {0.0,1.0,0.0},{0.0,-1.0,0.0}, {0.0,0.0,1.0},{0.0,0.0,-1.0}};
+
+      namespace SamplingParameters {
+        extern bool ActiveFlag; //defined whether sampling of the phaswe space is turned on
+        extern int LastActiveOutputCycleNumber; //the number of output cycles during which the phase space is sampled
+        extern bool LastActiveOutputCycleResetParticleBuffer; //the flag defined whether the particle buffer need to be reset at the end of sampling of the phase space
+        extern double OccupiedPhaseSpaceTableFraction; //thelower limit of the fraction of the phase space table
+      }
+
+      extern bool ApplyInjectionPhaseSpaceLimiting;
+      extern bool EnableSampleParticleProperty;
+
+      void RegisterParticleProperties(int spec,double *x,double *v,int iface);
+      bool TestInjectedParticleProperties(int spec,double *x,double *v,int iface);
+      void SmoothSampleTable();
+
+      void Allocate();
+      int GetVelocityVectorIndex(int spec,double *v,int iface);
+
+      const int SampleMaskNumberPerSpatialDirection=4;
+      extern cBitwiseFlagTable SampleTable[PIC::nTotalSpecies][6][SampleMaskNumberPerSpatialDirection][SampleMaskNumberPerSpatialDirection];
+      extern double dX[6][2]; //spatial size corresponding to SampleTable
+
+      //exchange the table among all processors
+      void Gather();
+
+      //init the model
+      void Init();
+    }
   }
 
   //impulse source of the energetic particles
@@ -213,6 +252,8 @@ namespace Earth {
     //Energy limis of the injected particles
     const double minEnergy=1.0*MeV2J;
     const double maxEnergy=1.0E4*MeV2J;
+
+    extern bool BoundaryInjectionMode;
 
     //the list of the faces located on the domain boundary through which particles can be injected
     extern cBoundaryFaceDescriptor *BoundaryFaceDescriptor;
