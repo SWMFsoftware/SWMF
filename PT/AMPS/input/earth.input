@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H_PLUS1 H_PLUS2 H_PLUS3 H_PLUS4 H_PLUS5 H_PLUS6 H_PLUS7  
+SpeciesList=h_plus !Electron 
 
 ErrorLog=error.log
 Prefix=AMPS
@@ -42,13 +42,13 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=file(batsrus) !file(tecplot) !!!ices !!off, ices, swmf
+CouplerMode=T96 !!!file(batsrus) !file(tecplot) !!!ices !!off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
 ParticleWeightCorrectionMode=on
 
-MoverIntegratorMode=Boris-relativistic
+MoverIntegratorMode=Boris-relativistic !GuidingCenter !Boris-relativistic
 
 #endmain
 
@@ -60,7 +60,7 @@ MoverIntegratorMode=Boris-relativistic
 #endUserDefinitions
 
 #General
-  ReferenceInjectionParticleNumber=10 
+  ReferenceInjectionParticleNumber=100 
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
@@ -77,7 +77,17 @@ MoverIntegratorMode=Boris-relativistic
 
   define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
   define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
-  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_OFF_
+!  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
+
+ !!!define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node) Earth::Sampling::ParticleData::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)
+
+  define _PIC_OUTPUT__DRIFT_VELOCITY__MODE_ _PIC_MODE_ON_
+  define _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE_  _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__LINEAR_
+
+  define _PIC_DEBUGGER_MODE_ _PIC_DEBUGGER_MODE_ON_
+  define _PIC_DEBUGGER_MODE__CHECK_FINITE_NUMBER_ _PIC_DEBUGGER_MODE_ON_
+! define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
 !  define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_(x,v,spec,ParticleData) Europa::ParticleTracker::TrajectoryTrackingCondition(x,v,spec,ParticleData)
 
 define _PIC_DEBUGGER_MODE_  _PIC_DEBUGGER_MODE_ON_ 
@@ -85,8 +95,10 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 
   define _PIC_SYMMETRY_MODE_ _PIC_SYMMETRY_MODE__NONE_
 
+!  define _PIC_PARTICLE_MOVER__RELATIVITY_MODE_ _PIC_MODE_ON_
 
-  RecoverMacroscopicSampledData=on \\ !!off  \\ !!on, off
+
+  RecoverMacroscopicSampledData=off \\ !!off  \\ !!on, off
     execution=stop \\ ! continue \\ !stop \\ !stop,continue
     file=pic.SamplingDataRestart.out=7.dat \\
     \\ !function=Earth::DataRecoveryManager \\
@@ -117,7 +129,7 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Ear
 ! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__FULL_
 ! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 
-define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
+!define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__SAMPLING_DATA_RESTART_FILE_
 
 #endGeneral
 
@@ -154,8 +166,9 @@ define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA
 #endSampling
 
 #block ../input/earth.input.pl
-  GCR=on
-  SEP=off
+  GCR=off  
+  SEP=on
+  Electron=off 
 
   SphericalShells=on \\  
     x=300.0E3+_RADIUS_(_TARGET_),400.0E3+_RADIUS_(_TARGET_), \\ 
@@ -187,8 +200,8 @@ define _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_ _PIC_OUTPUT_MACROSCOPIC_FLOW_DATA
 !  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE_ _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA__MODE__ON_
 !  define _PIC__USER_DEFINED__CLEAN_SAMPLING_DATA_() Europa::Sampling::FlushSamplingDataBuffers()
 
-  define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
-  define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2) Exosphere::ChemicalModel::PhotochemicalModelProcessor(t0,t1,t2) ! Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
+! define _PIC_PHOTOLYTIC_REACTIONS_MODE_ _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
+! define _PIC_PHOTOLYTIC_REACTIONS__REACTION_PROCESSOR_(t0,t1,t2) Exosphere::ChemicalModel::PhotochemicalModelProcessor(t0,t1,t2) ! Europa::LossProcesses::ExospherePhotoionizationReactionProcessor(t0,t1,t2,t3,t4,t5,t6)
 !  define _PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(t0,t1,t2,t3,t4) Europa::LossProcesses::ExospherePhotoionizationLifeTime(t0,t1,t2,t3,t4)
 
   define _EXOSPHERE__ORBIT_CALCUALTION__MODE_ _PIC_MODE_ON_
