@@ -140,6 +140,7 @@ contains
     ! advance the solution in time
     real, intent(inout):: TimeInOut
     real, intent(in)   :: TimeLimit
+    logical, save:: IsFirstCall = .true.
     !------------------------------
     if(DoReadMhData)then
        !\
@@ -158,6 +159,14 @@ contains
        RETURN
 
     call fix_grid_consistency
+
+    if(IsFirstCall)then
+       ! print the initial state
+       call write_output(TimeGlobal, iIterGlobal, &
+            IsInitialOutput = .true.)
+       IsFirstCall = .false.
+    end if
+
     if(DoRun) &
          ! run the model
          call advance(min(DataInputTime,TimeLimit))

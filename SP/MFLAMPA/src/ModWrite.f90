@@ -302,20 +302,37 @@ contains
 
   !============================================================================
 
-  subroutine write_output(Time, iIter)
+  subroutine write_output(Time, iIter, IsInitialOutput)
     ! write the output data
     real,    intent(in):: Time ! current time
     integer, intent(in):: iIter! current iteration
+    logical, intent(in), optional:: IsInitialOutput
 
     ! loop variables
     integer:: iFile
+    integer:: iKindData
+
+    logical:: IsInitialOutputLocal
 
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
-    if(nFile == 0) RETURN
+    ! check whether this is a call for initial output
+    if(present(IsInitialOutput))then
+       IsInitialOutputLocal = IsInitialOutput
+    else
+       IsInitialOutputLocal = .false.
+    end if
 
+    if(nFile == 0) RETURN
+    
     do iFile = 1, nFile
-       select case(File_I(iFile) % iKindData)
+       iKindData = File_I(iFile) % iKindData
+
+       ! during initial call only background 1D data is printed
+       if(IsInitialOutputLocal .and. iKindData /= MH1D_)&
+            iKindData = -1
+           
+       select case(iKindData)
        case(MH1D_)
           call write_mh_1d
        case(MH2D_)
