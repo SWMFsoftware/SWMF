@@ -105,7 +105,7 @@ contains
     real,    intent(out):: TimeOut
     ! read 1D MH data, which are produced by write_mh_1d n ModWrite
     ! separate file is read for each field line, name format is (usually)
-    ! MH_data_<iLon>_<iLat>_n<iIter>.{out/dat}
+    ! MH_data_<iLon>_<iLat>_t<ddhhmmss>_n<iIter>.{out/dat}
     !------------------------------------------------------------------------
     ! name of the input file
     character(len=100):: NameFile
@@ -117,15 +117,18 @@ contains
     integer:: nParticleInput
     ! string of variable names as read from the input file
     character(len=300):: NameVar
+    ! timestamp
+    character(len=8):: StringTime
     !------------------------------------------------------------------------
     do iBlock = 1, nBlock
        iNode = iNode_B(iBlock)
        call get_node_indexes(iNode, iLon, iLat)
 
        ! set the file name
-       write(NameFile,'(a,i3.3,a,i3.3,a,i8.8,a,i6.6,a)') &
+       call get_time_string(TimeRead, StringTime)
+       write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
             trim(NameInputDir)//trim(NameFileBase)//'_',iLon,'_',iLat,&
-            '_t',floor(TimeRead),'_n',iIterRead, NameFormat
+            '_t'//StringTime//'_n',iIterRead, NameFormat
        
        ! read the header first
        call read_plot_file(&
@@ -153,5 +156,25 @@ contains
       TimeOut = TimeRead
 
     end subroutine read_mh_data
+
+  !==========================================================================
+
+  subroutine get_time_string(Time, StringTime)
+    ! the subroutine converts real variable Time into a string,
+    ! the structure of the string is 'ddhhmmss', 
+    ! i.e shows number of days, hours, minutes and seconds 
+    ! after the beginning of the simulation
+    real,             intent(in) :: Time
+    character(len=8), intent(out):: StringTime
+    !--------------------------------------------------------------------------
+    ! This is the value if the time is too large
+    StringTime = '99999999'
+    if(Time < 100.0*86400) &
+         write(StringTime,'(i2.2,i2.2,i2.2,i2.2)') &
+         int(                  Time          /86400.), & ! # days
+         int((Time-(86400.*int(Time/86400.)))/ 3600.), & ! # hours
+         int((Time-( 3600.*int(Time/ 3600.)))/   60.), & ! # minutes
+         int( Time-(   60.*int(Time/   60.)))            ! # seconds
+  end subroutine get_time_string
 
 end module SP_ModReadMhData

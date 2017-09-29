@@ -351,7 +351,7 @@ contains
     subroutine write_mh_1d
       ! write output with 1D MH data in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
-      ! MH_data_<iLon>_<iLat>_n<iIter>.{out/dat}
+      ! MH_data_<iLon>_<iLat>_n<ddhhmmss>_n<iIter>.{out/dat}
       !------------------------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
@@ -363,6 +363,8 @@ contains
       integer:: iFirst, iLast
       ! for better readability
       integer:: nVarPlot
+      ! timestamp
+      character(len=8):: StringTime
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile) % nVarPlot
       do iBlock = 1, nBlock
@@ -370,9 +372,10 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
-         write(NameFile,'(a,i3.3,a,i3.3,a,i8.8,a,i6.6,a)') &
+         call get_time_string(Time, StringTime)
+         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
               trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
-              '_t',floor(Time),'_n',iIter,&
+              '_t'//StringTime//'_n',iIter,&
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
@@ -412,7 +415,7 @@ contains
       use CON_comp_param, ONLY: SP_
       ! write output with 2D MH data in the format to be read by IDL/TECPLOT;
       ! single file is created for all field lines, name format is
-      ! MH_data_R=<Radius [AU]>_n<iIter>.{out/dat}
+      ! MH_data_R=<Radius [AU]>_t<ddhhmmss>_n<iIter>.{out/dat}
       !------------------------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
@@ -434,6 +437,8 @@ contains
       integer:: iError
       ! skip a field line if it fails to reach radius of output sphere
       logical:: DoPrint_I(nNode)
+      ! timestamp
+      character(len=8):: StringTime
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile) % nVarPlot
       ! reset the output buffer
@@ -448,10 +453,11 @@ contains
          iNode = iNode_B(iBlock)
 
          ! set the file name
-         write(NameFile,'(a,i4.4,f0.2,a,i8.8,a,i6.6,a)') &
+         call get_time_string(Time, StringTime)
+         write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
               trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
               File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
-              '_t',floor(Time),'_n', iIter, File_I(iFile) % NameFormat
+              '_t'//StringTime//'_n', iIter, File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
          iFirst = iGridLocal_IB(Begin_, iBlock)
@@ -666,7 +672,7 @@ contains
     subroutine write_distr_1d
       ! write file with distribution in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
-      ! Distribution_<iLon>_<iLat>_n<iIter>.{out/dat}
+      ! Distribution_<iLon>_<iLat>_t<ddhhmmss>_n<iIter>.{out/dat}
       !------------------------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
@@ -679,6 +685,8 @@ contains
       ! scale and conversion factor
       real:: Scale_I(nMomentumBin), Factor_I(nMomentumBin)
       real:: Unity_I(nMomentumBin) = 1.0
+      ! timestamp
+      character(len=8):: StringTime
       !------------------------------------------------------------------------
       select case(File_I(iFile) % iScale)
       case(MomentumScale_)
@@ -693,9 +701,10 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
-         write(NameFile,'(a,i3.3,a,i3.3,a,i8.8,a,i6.6,a)') &
+         call get_time_string(Time, StringTime)
+         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
               trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
-              '_t',floor(Time),'_n',iIter,&
+              '_t'//StringTime//'_n',iIter,&
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
@@ -729,5 +738,25 @@ contains
     end subroutine write_distr_1d
 
   end subroutine write_output
+
+  !==========================================================================
+
+  subroutine get_time_string(Time, StringTime)
+    ! the subroutine converts real variable Time into a string,
+    ! the structure of the string is 'ddhhmmss', 
+    ! i.e shows number of days, hours, minutes and seconds 
+    ! after the beginning of the simulation
+    real,             intent(in) :: Time
+    character(len=8), intent(out):: StringTime
+    !--------------------------------------------------------------------------
+    ! This is the value if the time is too large
+    StringTime = '99999999'
+    if(Time < 100.0*86400) &
+         write(StringTime,'(i2.2,i2.2,i2.2,i2.2)') &
+         int(                  Time          /86400.), & ! # days
+         int((Time-(86400.*int(Time/86400.)))/ 3600.), & ! # hours
+         int((Time-( 3600.*int(Time/ 3600.)))/   60.), & ! # minutes
+         int( Time-(   60.*int(Time/   60.)))            ! # seconds
+  end subroutine get_time_string
 
 end module SP_ModWrite
