@@ -6,7 +6,8 @@ module ModFaceBoundary
 
   use ModVarIndexes, ONLY: nVar
   use ModMultiFluid, ONLY: nIonFluid
-  use ModNumConst, ONLY: cDegToRad
+  use ModAdvance,    ONLY: nSpecies
+  use ModNumConst,   ONLY: cDegToRad
 
   implicit none
 
@@ -54,9 +55,12 @@ module ModFaceBoundary
   ! Polar boundary conditions are applied above this latitude only
   real :: PolarLatitude = 0.0, PolarTheta = 90.0*cDegToRad
 
+  ! Number of densities (ion fluids or ion species)
+  integer, parameter:: nIonDensity = max(nIonFluid, nSpecies)
+
   ! CPCP dependent density function at the inner boundary
   logical:: UseCpcpBc = .false.
-  real:: Rho0Cpcp_I(nIonFluid) = 18.0, RhoPerCpcp_I(nIonFluid) = 0.2
+  real:: Rho0Cpcp_I(nIonDensity) = 18.0, RhoPerCpcp_I(nIonDensity) = 0.2
 
   ! Shall we make B1_radial = 0 at the inner boundary?
   logical:: DoReflectInnerB1 = .false.
@@ -71,6 +75,8 @@ contains
     use ModPhysics,    ONLY: PolarNDim_I, PolarTDim_I, PolarUDim_I
 
     character(len=*), intent(in):: NameCommand
+
+    integer:: iDensity
 
     character(len=*), parameter:: NameSub = 'read_face_boundary_param'
     !----------------------------------------------------------------------
@@ -96,9 +102,9 @@ contains
     case("#CPCPBOUNDARY")
        call read_var('UseCpcpBc', UseCpcpBc)
        if(UseCpcpBc)then
-          do iFluid = 1, nIonFluid
-             call read_var('Rho0Cpcp',   Rho0Cpcp_I(iFluid))
-             call read_var('RhoPerCpcp', RhoPerCpcp_I(iFluid))
+          do iDensity = 1, nIonDensity
+             call read_var('Rho0Cpcp',   Rho0Cpcp_I(iDensity))
+             call read_var('RhoPerCpcp', RhoPerCpcp_I(iDensity))
           end do
        end if
     case("#MAGNETICINNERBOUNDARY")
@@ -217,7 +223,7 @@ contains
     real :: GmToSmg_DD(3,3), CoordSm_D(3), Cos2PolarTheta
 
     ! External function for ionosphere
-    real:: RhoCpcp_I(nIonFluid)
+    real:: RhoCpcp_I(nIonDensity)
 
     character (len=*), parameter :: NameSub = 'set_face_bc'
     logical :: DoTest, DoTestMe
@@ -629,8 +635,14 @@ contains
             end where
 
             ! Apply CPCP dependent density if required
-            if(UseCpcpBc .and. UseIe) &
-                 VarsGhostFace_V(iRhoIon_I) = RhoCpcp_I
+            if(UseCpcpBc .and. UseIe)then
+               if(UseMultiSpecies)then
+                  VarsGhostFace_V(SpeciesFirst_:SpeciesLast_) = RhoCpcp_I(1:nSpecies)
+                  VarsGhostFace_V(Rho_) = sum(RhoCpcp_I(1:nSpecies))
+               else
+                  VarsGhostFace_V(iRhoIon_I) = RhoCpcp_I(1:nIonFluid)
+               end if
+            end if
 
             ! Set pressures, including electron pressure, to float.
             VarsGhostFace_V(iP_I) = VarsTrueFace_V(iP_I)
