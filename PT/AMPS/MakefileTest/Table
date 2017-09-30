@@ -521,6 +521,14 @@ Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-p
 <#
 
 -------------------------------------------------------------------------------
+#>
+Name=test/Periodic-BC@@(0+valeriy)  
+Time=6
+
+Outs=amps.TrajectoryTracking.out=0.s=0.H2O 
+<#
+
+-------------------------------------------------------------------------------
 
 #>
 Name=Legacy_2dCG@@(0+valeriy)
