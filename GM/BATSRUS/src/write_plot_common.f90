@@ -1274,7 +1274,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
         PlotVar(:,:,:,iVar) = State_VGB(Bz_,:,:,:,iBLK)
      case('pperp')
         PlotVar(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBLK) & 
-             -State_VGB(Ppar_,:,:,:,iBLK))/2.0
+             -State_VGB(iPpar_,:,:,:,iBLK))/2.0
 
      case('gradpex','gradpey', 'gradpez', 'gradper')
 
