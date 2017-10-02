@@ -1,0 +1,27 @@
+
+
+#include input/ccmc.input
+
+#main
+  ErrorLog=PT/amps_error.log
+  DiagnosticStream=PT
+  OutputDirectory=PT/plots
+
+  ForceRepeatableSimulationPath=on ! on,off
+  StdoutErrorLog=off !on,off -> print out error message on the screen
+
+  TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
+  CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
+
+  MoverIntegratorMode=GuidingCenter !!Boris !GuidingCenter !Boris-relativistic
+#endmain
+
+#block ../input/ccmc.pl
+  SimulationMode= IndividualParticlesOnly !EntireFlow, IndividualParticleOnly
+  InjectionLocationFile=ccmc.InjectionLocation.dat
+#endblock
+
+#interface
+  cell_centered_linear_interpolation_mode=swmf 
+  cell_centered_linear_interpolation_src=default
+#endinterface
