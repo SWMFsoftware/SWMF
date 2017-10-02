@@ -18,7 +18,7 @@ subroutine ray_trace
   use ModMain,     ONLY: n_step, iNewGrid, iNewDecomposition, &
        time_simulation, TypeCoordSystem
   use CON_axes,    ONLY: transform_matrix
-  use ModRaytrace, ONLY: init_mod_raytrace, GmSm_DD, &
+  use ModRaytrace, ONLY: init_mod_raytrace, GmSm_DD, rIonosphere, &
        UseAccurateTrace, DnRaytrace, r_Raytrace, R2_Raytrace
   use ModPhysics,  ONLY: rBody
   implicit none
@@ -49,8 +49,8 @@ subroutine ray_trace
 
   call init_mod_raytrace
 
-  ! Initialize R_raytrace, R2_raytrace to body radius
-  R_raytrace  = rBody
+  ! Initialize R_raytrace, R2_raytrace to max(body radius, ionosphere radius)
+  R_raytrace  = max(rBody,rIonosphere)
   R2_raytrace = R_raytrace**2
 
   ! Transformation matrix between the SM(G) and GM coordinates
