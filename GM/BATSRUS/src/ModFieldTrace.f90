@@ -78,9 +78,10 @@ subroutine ray_trace_accurate
         if(Unused_B(iBlock))CYCLE
 
         oktest_ray = okTest .and. &
-             all( (/i,j,k,iBlock/)==(/iTest,jTest,kTest,BLKTest/) )
+             all( (/i,j,k,iBlock,iProc/)== &
+             (/iTest,jTest,kTest,BLKTest,ProcTest/) )
 
-        do iRay=1,2
+        do iRay = 1,2
            ! Short cut for inner and false cells
            if(R_BLK(i,j,k,iBlock) < rIonosphere .or. &
                 .not.true_cell(i,j,k,iBlock))then
@@ -397,7 +398,7 @@ contains
              write(*,*)'ERROR for follow_this_ray, iProc=',iProc
              write(*,*)'ERROR iBlockRay=jBlock=',iBlockRay,jBlock
              write(*,*)'ERROR iStart_D, iProcStart =',iStart_D, iProcStart
-             write(*,*)'ERROR for XyzRay_D    =',XyzRay_D
+             write(*,*)'ERROR for XyzRay_D, iRay    =',XyzRay_D, iRay
              write(*,*)'XyzStart_BLK, Dx_BLK  =',XyzStart_BLK(:,jBlock),&
                   CellSize_DB(x_,jBlock)
              call stop_mpi(&
