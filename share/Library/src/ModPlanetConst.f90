@@ -210,7 +210,8 @@ contains
 
      TypeBFieldPlanet_I(Jupiter_)        = "DIPOLE"                
      DipoleStrengthPlanet_I(Jupiter_)    = 428000.0e-9             ! [ T]
-                                       
+     bAxisThetaPlanet_I(Jupiter_)        = 0.0 * cDegToRad         ! [rad]
+     bAxisPhiPlanet_I(Jupiter_)          = 0.0 * cDegToRad         ! [rad]
      IonoHeightPlanet_I(Jupiter_)        = 1000.0e+3               ! [ m]
    
      !\                               
