@@ -15,6 +15,11 @@ module ModBoundaryGeometry
   ! boundary index (SolidBc_ = -3)
   integer, parameter :: domain_ = -10
 
+  ! Boundary parameter for SolidState
+  character(len=15) :: TypeSolidGeometry = 'none'
+  real :: rSolid = -1
+  real :: SolidLimitDt = 0
+
 contains
 
   !============================================================================
@@ -35,7 +40,7 @@ contains
   subroutine read_boundary_geometry_param(NameCommand)
 
     use ModMain,      ONLY: UseSolidState, TypeCellBc_I, TypeFaceBc_I
-    use ModMain,      ONLY: Coord1MinBc_, xMinBc_
+    use ModMain,      ONLY: Coord1MinBc_, xMinBc_, solidBc_
     use ModReadParam, ONLY: read_var
     use BATL_size,    ONLY: nDim
     
@@ -48,6 +53,23 @@ contains
     select case(NameCommand)
     case("#SOLIDSTATE")
        call read_var('UseSolidState', UseSolidState)
+       if(UseSolidState)then
+          call read_var('TypeBcSolid',TypeFaceBc_I(solidBc_))
+          call read_var('TypeSolidGeometry',TypeSolidGeometry)
+
+          select case(TypeSolidGeometry)
+          case("sphere")
+             call read_var('rSolid',rSolid)
+          case("user")
+             !?
+          case default
+             call stop_mpi(NameSub//': Command='//NameCommand//&
+                  ', Geometry type='//TypeSolidGeometry//&
+                  ' has not been implemented!')
+          end select
+
+          call read_var('SolidLimitDt',SolidLimitDt)
+       end if
     case("#OUTERBOUNDARY")
        do i = Coord1MinBc_, 2*nDim
           call read_var('TypeCellBc', TypeCellBc_I(i))
@@ -56,14 +78,6 @@ contains
        do i = xMinBc_, xMinBc_-1+2*nDim
           call read_var('TypeFaceBc', TypeFaceBc_I(i))
        end do
-       
-    !case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &
-    !      "#MAGNETICINNERBOUNDARY")
-    !    call read_face_boundary_param(NameCommand)
-
-    !case("#EXTRABOUNDARY")
-
-    !case("#USERBOUNDARY")
 
     case default
        call stop_mpi(NameSub//' unknown command='//NameCommand)
@@ -78,7 +92,7 @@ contains
     use ModMain, ONLY: Body1, body1_, body2_, &
          UseBody2, UseExtraBoundary, UseSolidState, &
          ProcTest, BlkTest, iTest, jTest, kTest, TypeFaceBc_I, &
-         xMinBc_, xMaxBc_, yMinBc_, yMaxBc_, zMinBc_, zMaxBc_
+         xMinBc_, xMaxBc_, yMinBc_, yMaxBc_, zMinBc_, zMaxBc_, solidBc_
     use ModGeometry, ONLY: &
          R_BLK, R2_BLK, Rmin2_BLK, Body_BLK, &
          far_field_BCs_BLK, true_blk, true_cell,&
@@ -88,6 +102,7 @@ contains
          iProc, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
          Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
+    use ModAdvance, ONLY: time_BLK
 
     implicit none
 
@@ -141,10 +156,28 @@ contains
     ! Reset for every level of refinement                               
     iBoundary_GB(:,:,:,iBlock) = domain_
 
-    ! Solid and extra boundary
-    if( (.not.DoSolveSolid .and. UseSolidState) .or. UseExtraBoundary) &
-       call user_set_boundary_cells(iBlock)
+    ! Extra boundary
+    if(UseExtraBoundary) call user_set_boundary_cells(iBlock)
 
+    ! Set boundary type and timestep inside body for solidBC
+    if(UseSolidState) then
+       if(.not. DoSolveSolid) then
+          select case(TypeSolidGeometry)
+          case('sphere')
+             where( R_BLK(:,:,:,iBlock) < rSolid)&
+                  iBoundary_GB(:,:,:,iBlock) = solidBc_
+             where( R_BLK(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
+                  time_BLK(:,:,:,iBlock) = 0.0        
+          end select
+       else ! DoSolveSolid=.TRUE.
+          select case(TypeSolidGeometry)
+          case('sphere')
+             where( R_BLK(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
+                  time_BLK(:,:,:,iBlock) = SolidLimitDt
+          end select
+       end if
+    end if
+    
     ! Set iBoundary_GB for body1 and body2 (always face boundary)            
     if(UseBody2) then
        where( R2_BLK(:,:,:,iBlock) < rbody2) &
