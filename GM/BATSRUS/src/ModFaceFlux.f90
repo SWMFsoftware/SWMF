@@ -1180,7 +1180,7 @@ contains
        ! Calculate 1/(n_e * e)
        if(UseMultiIon)then
           InvElectronDens = BiermannCoeff/(0.5* &
-               sum((StateLeft_V(iRhoIon_I)+StateRight_V(iRhoIon_I))&
+               sum((StateLeft_V(iRhoIon_I) + StateRight_V(iRhoIon_I))&
                *ChargeIon_I/MassIon_I))
        else
           InvElectronDens = BiermannCoeff &
@@ -2703,7 +2703,7 @@ contains
          ! Calculate charge density averaged velocity U*Plus
 
          ! calculate charge densities
-         ChargeDens_I    = ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+         ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
          InvElectronDens = 1.0/sum(ChargeDens_I)
 
          Ux_I  = State_V(iUxIon_I)
@@ -2850,7 +2850,7 @@ contains
       !-----------------------------------------------------------------------
 
       ! calculate number densities
-      ChargeDens_I    = ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+      ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
       InvElectronDens = 1.0/sum(ChargeDens_I)
 
       ! calculate positive charge velocity
@@ -2922,7 +2922,7 @@ contains
 
       if(DoTestCell)then
          write(*,'(a,3es13.5)')'ChargeDens_I    =', &
-              ChargeIon_I * State_V(iRhoIon_I) / MassIon_I
+              ChargePerMass_I*State_V(iRhoIon_I)
          write(*,'(a,3es13.5)')'Normal_D        =', Normal_D
          write(*,'(a,3es13.5)')'Bx,By,Bz        =', Bx,By,Bz
          write(*,'(a,3es13.5)')'Ex,Ey,Ez        =', Ex,Ey,Ez
@@ -3531,7 +3531,7 @@ contains
          ! The Alfven velocity and the electron pressure are multiplied
          ! with a Factor >= 1 in multi-ion MHD.
          ! UseMultiIon = .false. for the five moment case.
-         ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
+         ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
          MultiIonFactor = &
               Rho*sum(ChargeDens_I**2/State_V(iRhoIon_I))/sum(ChargeDens_I)**2
 
@@ -3563,8 +3563,8 @@ contains
          GammaPe = sum(Gamma_I(Electron_:nIonFluid) &
               *State_V(iPIon_I(Electron_:nIonFluid)) )
 
-         if(nIonFluid-nElectronFluid > 1) then
-            ChargeDens_I = ChargeIon_I*State_V(iRhoIon_I)/MassIon_I
+         if(nTrueIon > 1) then
+            ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
             MultiIonFactor = Rho*sum(             &
                  ChargeDens_I(1:nTrueIon)**2      &
                  /State_V(iRhoIon_I(1:nTrueIon)) )&
