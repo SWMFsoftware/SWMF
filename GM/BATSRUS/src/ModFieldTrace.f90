@@ -924,10 +924,10 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      if(DoCheckInnerBc)then
         r2Cur = sum(XyzCur_D**2)
 
-        if(r2Cur<=R2_raytrace)then
+        if(r2Cur <= R2_raytrace)then
 
            ! If inside surface, then tracing is finished
-           if(NameVectorField /= 'B' .or. r2Cur<rIonosphere*rIonosphere)then
+           if(NameVectorField /= 'B' .or. r2Cur < rIonosphere**2)then
               XyzInOut_D = XyzCur_D
               iFace=ray_iono_
               EXIT FOLLOW
