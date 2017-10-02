@@ -1330,6 +1330,27 @@ There are no default values. The boundary name(s)/index(es) and primitive
 state values must be given.
 </command>
 
+<command name="SOLIDSTATE">
+         <parameter name="UseSolidState" type="logical"/>
+         <parameter name="TypeBcSolid" type="character"/>
+	 <parameter name="TypeSolidGeometry" type="character"/>
+	 <parameter name="rSolid" type="real"/>
+	 <parameter name="SolidLimitDt type="real"/>
+
+#SOLIDSTATE
+F			UseSolidState (rest read if true)
+user			TypeBcSolid
+sphere			TypeSolidGeometry
+1.0			rSolid
+5e-3			SolidLimitDt
+
+This command sets the solid boundary parameters. Solid boundary is one type of 
+face boundary. Currently it works only for a sphere geometry with radius 
+rSolid. The timestep inside solid body is set to SolidLimitDt.
+
+Default is UseSolidState=.false.
+</command>
+
 <command name="OUTFLOWPRESSURE">
 	<parameter name="UseOutflowPressure" type="logical" default="F"/>
 	<parameter name="pOutflowSi" type="real" min="0" defaulte="1e5"
