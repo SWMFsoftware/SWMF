@@ -101,7 +101,7 @@ subroutine set_ics(iBlock)
               end do
 
            elseif(.not.UseShockTube)then
-              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MinBc_)  
+              State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MaxBc_)  
            else
               if( (Xyz_DGB(x_,i,j,k,iBlock)-ShockPosition) &
                    < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
