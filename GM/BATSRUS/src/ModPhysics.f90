@@ -335,9 +335,9 @@ contains
             *Si2No_V(UnitMass_)/Si2No_V(UnitCharge_)
     end if
 
-    ! Set the charge for electron fluid (last ion fluid) to -1.0 if not set
-    if(UseEfield .and. ChargeIon_I(nIonFluid) > 0.0) &
-         ChargeIon_I(nIonFluid) = -1.0
+    ! Set the charge for electron fluid(s) to -1.0 if not set
+    if(UseEfield .and. ChargeIon_I(Electron_) > 0.0) &
+         ChargeIon_I(Electron_:) = -1.0
 
     ! Electron charge in normalized units (actually it is proton charge/mass)
     ! This is useful in formulas like n_s q_s (u_s - u_+) x B 
