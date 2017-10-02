@@ -1879,7 +1879,7 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('ElectronTemperatureRatio', ElectronTemperatureRatio)
         ElectronPressureRatio = ElectronTemperatureRatio
 
-        !averageioncharge is only useful when there is only one ion
+        ! AverageIonCharge is only useful when there is only one ion
         if(nIonFluid==1 .and. .not. UseMultiSpecies)then  
            AverageIonCharge = ChargeIon_I(1)
            ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
@@ -1934,10 +1934,17 @@ subroutine MH_set_parameters(TypeAction)
            call read_var('rBody', rBody)
            if(NameThisComp=='GM')&
                 call read_var('rCurrents' ,Rcurrents)
-           do iFluid = IonFirst_, nFluid
-              call read_var('BodyNDim', BodyNDim_I(iFluid))
-              call read_var('BodyTDim', BodyTDim_I(iFluid))
-           end do
+           if(UseMultiSpecies)then
+              do iSpecies = 1, nSpecies
+                 call read_var('BodyNDim', BodyNSpeciesDim_I(iSpecies))
+              end do
+              call read_var('BodyTDim', BodyTDim_I(1))
+           else
+              do iFluid = IonFirst_, nFluid
+                 call read_var('BodyNDim', BodyNDim_I(iFluid))
+                 call read_var('BodyTDim', BodyTDim_I(iFluid))
+              end do
+           end if
         end if
 
      case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &

@@ -10,10 +10,12 @@ module ModPhysics
   use ModMain, ONLY: body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
+  use ModAdvance, ONLY: nSpecies
+
   implicit none
   save
 
-  ! default gamma value
+  ! default adiabatic index value
   real, parameter:: Gamma0 = 5./3.
 
   ! adiabatic index (gamma) and derived values for fluids
@@ -138,6 +140,9 @@ module ModPhysics
   real, dimension(nFluid) :: &
        BodyRho_I = 1.0, BodyP_I = 1.0, &
        PolarRho_I= 1.0, PolarP_I= 1.0, PolarU_I=0.0
+
+  ! Number and mass densities for multi-species equations
+  real, dimension(nSpecies):: BodyNSpeciesDim_I = -1.0, BodyRhoSpecies_I = -1.0
 
   ! Density ratio of major and minor ions/neutrals (e.g. in the solar wind)
   real :: LowDensityRatio = 0.0001
@@ -414,10 +419,18 @@ contains
     SW_rho_dim = SW_rho*No2Io_V(UnitRho_)
     SW_p_dim   = SW_p*No2Io_V(UnitP_)
 
-    ! The normalized quantities extend to the first MHD fluid too
-    BodyRho_I(IonFirst_:) = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
-    BodyP_I(IonFirst_:)   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I &
-         * Io2No_V(UnitTemperature_)
+    if(UseMultiSpecies)then
+       ! Species body densities
+       BodyRhoSpecies_I = BodyNSpeciesDim_I*Io2No_V(UnitN_)*MassSpecies_V
+       BodyRho_I(1) = sum(BodyRhoSpecies_I)
+       BodyP_I(1)   = sum(BodyNSpeciesDim_I)*Io2No_V(UnitN_) &
+            *BodyTDim_I(1)*Io2No_V(UnitTemperature_)
+    else
+       ! The normalized quantities extend to the first MHD fluid too
+       BodyRho_I(IonFirst_:) = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I
+       BodyP_I(IonFirst_:)   = BodyNDim_I*Io2No_V(UnitN_)*BodyTDim_I &
+            * Io2No_V(UnitTemperature_)
+    end if
 
     PolarRho_I(IonFirst_:) = PolarNDim_I*Io2No_V(UnitN_)*MassFluid_I
     PolarP_I(IonFirst_:)   = PolarNDim_I*Io2No_V(UnitN_)*PolarTDim_I &
@@ -452,15 +465,19 @@ contains
        FaceState_VI(:,iBoundary)=DefaultState_V(1:nVar)
     end do
 
-    !For bodies:
+    ! For bodies:
     FaceState_VI(iRho_I, Body1_) = BodyRho_I
     FaceState_VI(iP_I,   Body1_) = BodyP_I
 
     if(UseMultiSpecies)then
-       FaceState_VI(SpeciesFirst_, Body1_) = &
-            BodyRho_I(1)*(1.0 - LowDensityRatio*(SpeciesLast_-SpeciesFirst_))
-       FaceState_VI(SpeciesFirst_+1:SpeciesLast_, Body1_) = &
-            LowDensityRatio*BodyRho_I(1)
+       if(BodyRhoSpecies_I(1) > 0.0)then
+          FaceState_VI(SpeciesFirst_:SpeciesLast_,Body1_) = BodyRhoSpecies_I
+       else
+          FaceState_VI(SpeciesFirst_,Body1_) = &
+               BodyRho_I(1)*(1.0 - LowDensityRatio*(nSpecies - 1))
+          FaceState_VI(SpeciesFirst_+1:SpeciesLast_,Body1_) = &
+               LowDensityRatio*BodyRho_I(1)
+       end if
     endif
 
     if(UseElectronPressure)then
@@ -499,7 +516,7 @@ contains
 
        if (UseMultiSpecies) then
           FaceState_VI(SpeciesFirst_, xMinBc_:zMaxBc_) = &
-               SW_rho*(1 - LowDensityRatio * (SpeciesLast_-SpeciesFirst_))
+               SW_rho*(1 - LowDensityRatio*(nSpecies - 1))
           FaceState_VI(SpeciesFirst_+1:SpeciesLast_, xMinBc_:zMaxBc_) = &
                LowDensityRatio*Sw_rho
        endif

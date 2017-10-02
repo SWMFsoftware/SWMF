@@ -7393,6 +7393,14 @@ T			UseBody (rest of parameters read if true)
 0.01			BodyNDim (/cc) for fluid 2
 300.0			BodyTDim (K)   for fluid 2
 
+#BODY
+T			UseBody (rest of parameters read if true)
+3.0			rBody (user units)
+4.0			rCurrents (only read for GM component)
+1.0			BodyNDim (/cc) for species 1
+0.01			BodyNDim (/cc) for species 2
+300.0			BodyTDim (K)
+
 Note that the #BODY command is most useful for Cartesian grids so that a sphere
 can be cut out as the inner boundary.
 For spherical grids the cell based boundary at the minimum radius
@@ -7409,9 +7417,11 @@ the GM-IE coupling. This only matters if BATSRUS is running as GM
 and it is coupled to IE.
 
 The BodyNDim and BodyTDim parameters define the number density and temperature
-inside the body. For multifluid MHD the number density and temperature
-are given for all the fluids. The exact effect of these parameters depends 
-on the settings in the #INNERBOUNDARY command.
+inside the body, respectively. For multifluid MHD the number density and 
+temperature are given for all the fluids. For multispecies MHD the number
+density is given for all species followed by the (common) temperature.
+The exact effect of these parameters depends on the settings 
+in the #INNERBOUNDARY command.
 
 The default values depend on the component: 
 For GM rBody=3, rCurrents=4, BodyNDim = 5/cc and BodyTDim = 25000 K. 
