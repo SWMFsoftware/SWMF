@@ -25,13 +25,6 @@ T			UseGravity
 0.1			yTest
 0.1			zTest
 
-#BODY
-T			UseBody
-1.0294464		rBody
-1.0        		rCurrents
-1.0e6                 	BodyNDim
-300                 	BodyTDim
-
 #TIMEACCURATE
 F			DoTimeAccurate
 
