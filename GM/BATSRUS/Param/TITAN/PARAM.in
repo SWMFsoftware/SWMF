@@ -36,7 +36,8 @@ T			body1
 1.0e6                 	BodyNDim  H2p
 1.0e6                 	BodyNDim  MHCp
 1.0e6                 	BodyNDim  HHCp
-300                 	BodyTDim  HNIp
+1.0e6                 	BodyNDim  HNIp
+300                 	BodyTDim
 
 #TIMEACCURATE
 F			DoTimeAccurate
