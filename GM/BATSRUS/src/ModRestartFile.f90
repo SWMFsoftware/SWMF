@@ -364,7 +364,7 @@ contains
          sw_uz_dim, sw_bx_dim, sw_by_dim, sw_bz_dim, &
          TypeIoUnit, TypeNormalization, No2Si_V, Io2Si_V, No2Io_V, &
          UnitX_, UnitU_, UnitRho_, &
-         rBody, rCurrents, BodyNDim_I, BodyTDim_I, &
+         rBody, rCurrents, BodyNDim_I, BodyNSpeciesDim_I, BodyTDim_I, &
          rBody2, xBody2, yBody2, zBody2, rCurrentsBody2, &
          UseBody2Orbit, OrbitPeriod, &
          RhoDimBody2, tDimBody2, &
@@ -373,6 +373,7 @@ contains
     ! If nFluid or IonFirst_ is taken directly from ModVarIndexes, 
     ! the PGF90 compiler fails.
     use ModVarIndexes, ONLY: NameEquation
+    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
 
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, &
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
@@ -382,7 +383,7 @@ contains
     use ModIO,       ONLY: NameMaxTimeUnit
     use BATL_lib,    ONLY: nRoot_D
 
-    integer :: iFluid, iDim
+    integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
 
     character(len=*), parameter:: NameSub='write_restart_header'
@@ -538,10 +539,18 @@ contains
        write(UnitTmp_,'(es22.15,a18)') rBody, 'rBody'
        if(NameThisComp=='GM') &
             write(UnitTmp_,'(es22.15,a18)') rCurrents, 'rCurrents'
-       do iFluid = IonFirst_, nFluid
-          write(UnitTmp_,'(es22.15,a18)') BodyNDim_I(iFluid), 'BodyNDim'
-          write(UnitTmp_,'(es22.15,a18)') BodyTDim_I(iFluid), 'BodyTDim'
-       end do
+       if(UseMultiSpecies)then
+          do iSpecies = 1, nSpecies
+             write(UnitTmp_,'(es22.15,a18)') &
+                  BodyNSpeciesDim_I(iSpecies), 'BodyNDim'
+          end do
+          write(UnitTmp_,'(es22.15,a18)') BodyTDim_I(IonFirst_), 'BodyTDim'
+       else
+          do iFluid = IonFirst_, nFluid
+             write(UnitTmp_,'(es22.15,a18)') BodyNDim_I(iFluid), 'BodyNDim'
+             write(UnitTmp_,'(es22.15,a18)') BodyTDim_I(iFluid), 'BodyTDim'
+          end do
+       end if
        write(UnitTmp_,*)
     end if
 
