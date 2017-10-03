@@ -424,7 +424,7 @@ contains
        BodyRhoSpecies_I = BodyNSpeciesDim_I*Io2No_V(UnitN_)*MassSpecies_V
        BodyRho_I(1) = sum(BodyRhoSpecies_I)
        BodyP_I(1)   = sum(BodyNSpeciesDim_I)*Io2No_V(UnitN_) &
-            *BodyTDim_I(1)*Io2No_V(UnitTemperature_)
+            *BodyTDim_I(IonFirst_)*Io2No_V(UnitTemperature_)
     else
        ! The normalized quantities extend to the first MHD fluid too
        BodyRho_I(IonFirst_:) = BodyNDim_I*Io2No_V(UnitN_)*MassFluid_I

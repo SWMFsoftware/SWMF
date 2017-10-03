@@ -1938,7 +1938,7 @@ subroutine MH_set_parameters(TypeAction)
               do iSpecies = 1, nSpecies
                  call read_var('BodyNDim', BodyNSpeciesDim_I(iSpecies))
               end do
-              call read_var('BodyTDim', BodyTDim_I(1))
+              call read_var('BodyTDim', BodyTDim_I(IonFirst_))
            else
               do iFluid = IonFirst_, nFluid
                  call read_var('BodyNDim', BodyNDim_I(iFluid))
