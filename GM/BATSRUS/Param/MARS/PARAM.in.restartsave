@@ -25,12 +25,16 @@ Param/MARS/Grid
 0.1			yTest
 0.1			zTest
 
+! The densities will be overwritten by the Mars user module
 #BODY
-T			UseBody
-1.0294464		rBody
-1.0        		rCurrents
-1.0e6                 	BodyNDim
-300                 	BodyTDim
+T                       UseBody
+1.0294464               rBody
+1.0                     rCurrents
+1.0e6                   BodyNDim Hp
+1.0e6                   BodyNDim O2p
+1.0e6                   BodyNDim Op
+1.0e6			BodyNDim CO2p
+300.0                   BodyTDim
 
 #TIMEACCURATE
 F			DoTimeAccurate

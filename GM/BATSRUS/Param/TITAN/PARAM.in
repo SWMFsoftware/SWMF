@@ -24,12 +24,19 @@ Param/TITAN/Grid
 3			nLevelArea
 initial			NameArea
 
+
+! These densities are overwritten by the Titan user module
 #BODY
 T			body1
 1.281553		Rbody
 1.0        		Rcurrents
-1.0e6                 	Body_Rho_Dim
-300                 	Body_T_dim
+1.0e6                 	BodyNDim  Lp
+1.0e6                 	BodyNDim  Mp
+1.0e6                 	BodyNDim  H1p
+1.0e6                 	BodyNDim  H2p
+1.0e6                 	BodyNDim  MHCp
+1.0e6                 	BodyNDim  HHCp
+300                 	BodyTDim  HNIp
 
 #TIMEACCURATE
 F			DoTimeAccurate

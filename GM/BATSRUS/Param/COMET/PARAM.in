@@ -52,11 +52,16 @@ Linde                   FluxType
 minmod                  LimiterType
 
 #BODY
-T                       UseBody (rest of parameters read if true)
+T			UseBody (rest of parameters read if true)
 1.e-5			rBody
-.0                     rCurrents
-5.0e4                     BodyRhoDim (/ccm) density for fixed BC for rho_BLK
-200.0                 BodyTDim (K) temperature for fixed BC for P_BLK
+.0			rCurrents
+5.0e4			BodyNDim H2Op
+1e-6			BodyNDim Hp
+500/19			BodyNDim H3Op
+500/17			BodyNDim OHp
+500/16			BodyNDim Op
+500/28			BodyNDim COp
+200.0                 	BodyTDim (K) temperature for fixed BC
 
 #USERFLAGS
 F            			UseUserInnerBcs

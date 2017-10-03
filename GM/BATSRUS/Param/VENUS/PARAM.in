@@ -26,13 +26,16 @@ Param/VENUS/Grid
 2			nLevelArea
 initial			NameArea
 
+! The denisities are overwritten in the Venus ModUser file
 #BODY
 T			body1
 1.0231328486450759	Rbody
 1.0        		Rcurrents
-1.0e6                 	Body_Rho_Dim
-300                 	Body_T_dim
-
+1.0e6                 	BodyNDim Hp
+1.0e6                 	BodyNDim CO2p
+1.0e6                 	BodyNDim O2p
+1.0e6                 	BodyNDim Op
+300.0                 	BodyTdim
 
 #TIMEACCURATE
 F			DoTimeAccurate
