@@ -862,6 +862,14 @@ Time=2
 Name=test/Individual_Trajectories--Boris 
 Time=4
 
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+Ref=8{pgcc}@@(0+valeriy)
+
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
+
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+stampede)
@@ -871,8 +879,8 @@ CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/O
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>${TESTIndividual_Trajectories--BorisCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories.dat.ref_np`ls ${TESTIndividual_Trajectories--BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--Boris.diff
->>>@ls -l test_Individual_Trajectories--Boris.diff
+>>>${TESTIndividual_Trajectories--BorisCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTIndividual_Trajectories--Boris-REF).ref_np`ls ${TESTIndividual_Trajectories--BorisDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--Boris$(TESTIndividual_Trajectories--Boris-REF).diff
+>>>@ls -l test_Individual_Trajectories--Boris$(TESTIndividual_Trajectories--Boris-REF).diff
 >>>@echo Test test_Individual_Trajectories--Boris has finished: `date`
 <#
 
@@ -880,6 +888,14 @@ Check=
 #>
 Name=test/Individual_Trajectories--Boris-relativistic 
 Time=4
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+Ref=8{pgcc}@@(0+valeriy)
+
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+pleiades)
@@ -890,8 +906,8 @@ CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/O
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>${TESTIndividual_Trajectories--Boris-relativisticCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories.dat.ref_np`ls ${TESTIndividual_Trajectories--Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--Boris-relativistic.diff
->>>@ls -l test_Individual_Trajectories--Boris-relativistic.diff
+>>>${TESTIndividual_Trajectories--Boris-relativisticCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTIndividual_Trajectories--Boris-relativistic-REF).ref_np`ls ${TESTIndividual_Trajectories--Boris-relativisticDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--Boris-relativistic$(TESTIndividual_Trajectories--Boris-relativistic-REF).diff
+>>>@ls -l test_Individual_Trajectories--Boris-relativistic$(TESTIndividual_Trajectories--Boris-relativistic-REF).diff
 >>>@echo Test test_Individual_Trajectories--Boris-relativistic has finished: `date`
 <#
 
@@ -899,6 +915,14 @@ Check=
 #>
 Name=test/Individual_Trajectories--guiding-center 
 Time=4
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+Ref=8{pgcc}@@(0+valeriy)
+
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER  -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER  -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER@@(0+pleiades)
@@ -909,8 +933,8 @@ CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/O
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>${TESTIndividual_Trajectories--guiding-centerCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories.dat.ref_np`ls ${TESTIndividual_Trajectories--guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--guiding-center.diff
->>>@ls -l test_Individual_Trajectories--guiding-center.diff
+>>>${TESTIndividual_Trajectories--guiding-centerCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(Individual_Trajectories--guiding-center-REF).ref_np`ls ${TESTIndividual_Trajectories--guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--guiding-center$(TESTIndividual_Trajectories--guiding-center-REF).diff
+>>>@ls -l test_Individual_Trajectories--guiding-center$(TESTIndividual_Trajectories--guiding-center-REF).diff
 >>>@echo Test test_Individual_Trajectories--guiding-center has finished: `date`
 <#
 
@@ -942,7 +966,7 @@ Run=
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--guiding-center--KAMELEONDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>${TESTIndividual_Trajectories--guiding-center--KAMELEONCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories.dat.ref_np`ls ${TESTIndividual_Trajectories--guiding-center--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--guiding-center--KAMELEON.diff
+>>>${TESTIndividual_Trajectories--guiding-center--KAMELEONCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories\[2].ref_np`ls ${TESTIndividual_Trajectories--guiding-center--KAMELEONDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--guiding-center--KAMELEON.diff
 >>>@ls -l test_Individual_Trajectories--guiding-center--KAMELEON.diff
 >>>@echo Test test_Individual_Trajectories--guiding-center--KAMELEON has finished: `date`
 <#
