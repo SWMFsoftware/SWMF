@@ -13,6 +13,7 @@ module SP_ModAdvance
   use SP_ModGrid, ONLY: &
        X_, Y_, Z_, D_, Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
        Begin_, End_, Shock_, ShockOld_, EFlux_,&
+       Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        nBlock, &
        State_VIB, Distribution_IIB, iGridLocal_IB, &
        MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
@@ -176,36 +177,96 @@ contains
 
   !===========================================================================
 
-  subroutine get_integral_energy_flux
-    ! compute integrated flux of SEP at each particle on all lines
-
-    integer:: iBlock, iParticle, iBin ! loop variables
+  subroutine get_integral_flux
+    ! compute the total (simulated) integral flux of particles as well as
+    ! particle flux in the 6 GOES channels; also compute total energy flux
+    !------------------------------------------------------------------------
+    integer:: iBlock, iParticle, iBin, iFlux ! loop variables
     real   :: EFlux ! the value of energy flux
+    real   :: EChannel_I(6) ! energy limits of GOES channels
+    real   :: dFlux, dFlux1 ! increments
+    real   :: Flux, Flux_I(6) ! the value of particle flux
     real   :: Norm  ! normalization factor
     !-------------------------------------------------------------------------
+    ! energy limits of GOES channels
+    EChannel_I = (/5,10,30,50,60,100/) * energy_in('MeV')
+    ! reset values
+    EFlux = 0.0
+    Flux_I= 0.0
+    Norm  = 0.0
     do iBlock = 1, nBlock
        do iParticle = &
-            iGridLocal_IB(Begin_,iBlock), &
-            iGridLocal_IB(End_,  iBlock)
-          EFlux = 0.0
-          Norm  = 0.0
+            iGridLocal_IB(Begin_, iBlock), &
+            iGridLocal_IB(End_, iBlock)
+          !\
+          ! Integration loop with midpoint rule
+          !/
           do iBin = 1, nMomentumBin - 1
+             ! the flux increment from iBin
+             dFlux = 0.5 * &
+                  (EnergyScale_I(iBin+1) - EnergyScale_I(iBin)) * (&
+                  Distribution_IIB(iBin,  iParticle,iBlock)*&
+                  MomentumScale_I(iBin)**2 &
+                  +&
+                  Distribution_IIB(iBin+1,iParticle,iBlock)*&
+                  MomentumScale_I(iBin+1)**2)
+
+             ! increase the total flux
+             Flux = Flux + dFlux
+
+             ! increase FOES channels' fluxes
+             do iFlux = 1, 6
+                ! check whether reached the channel's cut-off level
+                if(EnergyScale_I(iBin+1) < EChannel_I(iFlux))&
+                     CYCLE
+
+                if(EnergyScale_I(iBin+1) >= EChannel_I(iFlux))then
+                   Flux_I(iFlux) = Flux_I(iFlux) + dFlux
+                else
+                   ! channel cutoff level is often in the middle of a bin;
+                   ! compute partial flux increment
+                   dFlux1 =&
+                        ((-0.50*(EnergyScale_I(iBin) + EChannel_I(iFlux)) + &
+                        EnergyScale_I(iBin+1) )*&
+                        Distribution_IIB(iBin,iParticle,iBlock)*&
+                        MomentumScale_I(iBin)**2  &
+                        -0.50*(EnergyScale_I(iBin)-EChannel_I(iFlux))*&
+                        Distribution_IIB(iBin+1,iParticle,iBlock)*&
+                        MomentumScale_I(iBin+1)**2)*&
+                        (EnergyScale_I(iBin)-EChannel_I(iFlux))/&
+                        (EnergyScale_I(iBin+1)-EnergyScale_I(iBin))
+                   Flux_I(iFlux) = Flux_I(iFlux) + dFlux1
+                end if
+             end do
+
+             ! increase total energy flux
              EFlux = EFlux + 0.5 * &
                   (EnergyScale_I(iBin+1) - EnergyScale_I(iBin)) * (&
                   Distribution_IIB(iBin,  iParticle,iBlock)*&
-                  EnergyScale_I(iBin) &
+                  EnergyScale_I(iBin) * &
+                  MomentumScale_I(iBin)**2 &
                   +&
                   Distribution_IIB(iBin+1,iParticle,iBlock)*&
-                  EnergyScale_I(iBin+1))
+                  EnergyScale_I(iBin+1) * &
+                  MomentumScale_I(iBin+1)**2)
+
+             ! normalization factor
              Norm = Norm + 0.5 * &
                   (MomentumScale_I(iBin+1) - MomentumScale_I(iBin)) * (&
-                  Distribution_IIB(iBin,  iParticle, iBlock) + &
-                  Distribution_IIB(iBin+1,iParticle, iBlock))
+                  Distribution_IIB(iBin,  iParticle, iBlock) * &
+                  MomentumScale_I(iBin)**2 &
+                  + &
+                  Distribution_IIB(iBin+1,iParticle, iBlock) * &
+                  MomentumScale_I(iBin+1)**2)
           end do
-          State_VIB(EFlux_, iParticle, iBlock) = EFlux / Norm
+
+          ! store the results
+          State_VIB(Flux0_,        iParticle, iBlock) = Flux        / Norm
+          State_VIB(Flux1_:Flux6_, iParticle, iBlock) = Flux_I(1:6) / Norm
+          State_VIB(EFlux_,        iParticle, iBlock) = EFlux       / Norm
        end do
     end do
-  end subroutine get_integral_energy_flux
+  end subroutine get_integral_flux
 
   !============================================================================
 
@@ -430,8 +491,8 @@ contains
           
        end do
     end do
-    ! compute energy flux
-    call get_integral_energy_flux
+    
+    call get_integral_flux
   end subroutine advance
   
 end module SP_ModAdvance

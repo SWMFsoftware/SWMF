@@ -16,6 +16,7 @@ module SP_ModWrite
        DMomentumOverDEnergy_I, &
        Proc_, Begin_, End_, X_, Y_, Z_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
+       Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
@@ -262,9 +263,10 @@ contains
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! energy flux -------------
-      if(index(StringPlot,' eflux ')> 0)then
+      if(index(StringPlot,' flux ')> 0)then
          File_I(iFile) % DoPlot_V(EFlux_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+         File_I(iFile) % DoPlot_V(Flux0_:Flux6_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 8
       end if
       !--------------------------
       ! indices in the state vector

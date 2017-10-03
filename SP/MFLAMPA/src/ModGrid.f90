@@ -24,6 +24,7 @@ module SP_ModGrid
   public:: Begin_, End_, Shock_, ShockOld_
   public:: nVar, X_, Y_, Z_, D_, S_
   public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_, EFlux_
+  public:: Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
   public:: NameVar_V
   public:: TypeCoordSystem
 
@@ -106,7 +107,7 @@ module SP_ModGrid
   real, allocatable:: State_VIB(:,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar = 18
+  integer, parameter:: nVar = 25
   integer, parameter:: &
        !\
        !------- The following variables MUST be in CONTIGUOUS  order ----------
@@ -130,27 +131,42 @@ module SP_ModGrid
        B_     =15, & ! Magnitude of magnetic field
        RhoOld_=16, & ! Background plasma density
        BOld_  =17, & ! Magnitude of magnetic field
-       EFlux_ =18    ! Integrated particle flux
+       Flux0_ =18, & ! Total integral (simulated) particle flux
+       Flux1_ =19, & ! Integral particle flux >  5 MeV (GOES Channel 1)
+       Flux2_ =20, & ! Integral particle flux > 10 MeV (GOES Channel 2)
+       Flux3_ =21, & ! Integral particle flux > 30 MeV (GOES Channel 3)
+       Flux4_ =22, & ! Integral particle flux > 50 MeV (GOES Channel 4)
+       Flux5_ =23, & ! Integral particle flux > 60 MeV (GOES Channel 5)
+       Flux6_ =24, & ! Integral particle flux >100 MeV (GOES Channel 6)
+       EFlux_ =25    ! Total integral energy flux
+
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
-       'X     ', &
-       'Y     ', &
-       'Z     ', &
-       'Rho   ', &
-       'T     ', &
-       'Ux    ', &
-       'Uy    ', &
-       'Uz    ', &
-       'Bx    ', &
-       'By    ', &
-       'Bz    ', &
-       'D     ', &
-       'S     ', &
-       'U     ', &
-       'B     ', &
-       'RhoOld', &
-       'BOld  ', &
-       'EFlux '  /)
+       'X         ', &
+       'Y         ', &
+       'Z         ', &
+       'Rho       ', &
+       'T         ', &
+       'Ux        ', &
+       'Uy        ', &
+       'Uz        ', &
+       'Bx        ', &
+       'By        ', &
+       'Bz        ', &
+       'D         ', &
+       'S         ', &
+       'U         ', &
+       'B         ', &
+       'RhoOld    ', &
+       'BOld      ', &
+       'Flux Total', &
+       'Flux GOES1', &
+       'Flux GOES2', &
+       'Flux GOES3', &
+       'Flux GOES4', &
+       'Flux GOES5', &
+       'Flux GOES6', &
+       'EFlux     '  /)
   !----------------------------------------------------------------------------
   ! Distribution vector;
   ! Number of bins in the distribution is set in ModSize
