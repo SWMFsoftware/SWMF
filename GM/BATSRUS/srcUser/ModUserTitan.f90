@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 module ModUser
   ! This is the user module for Titan
@@ -19,6 +19,8 @@ module ModUser
        IMPLEMENTED9 => user_set_resistivity,            &        
        IMPLEMENTED10 => user_get_log_var
 
+  use ModPhysics, ONLY: BodyRhoSpecies_I
+  use ModAdvance, ONLY: nSpecies
 
   include 'user_module.h' !list of public methods
 
@@ -34,7 +36,7 @@ module ModUser
 
   integer, parameter :: MaxSpecies=7
 
-  integer :: nSpecies=7, nNuSpecies=10
+  integer :: nNuSpecies=10
 
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 2.5
@@ -117,7 +119,6 @@ module ModUser
        HNuSpecies_I, BodynDenNuSpdim_I,&
        BodynDenNuSpecies_I   
 
-  real, dimension(MaxSpecies):: BodyRhoSpecies_I
   integer, parameter :: & ! other numbers
        em_=-1 ,&
        hv_=-2   
@@ -839,7 +840,7 @@ contains
 
   end subroutine user_sources
 
-  !==============================================================================
+  !============================================================================
   subroutine user_init_session
     use ModSize, ONLY: nDim
     use ModMain, ONLY: Body1_, ExtraBc_, &
@@ -1052,18 +1053,20 @@ contains
 !    write(*,*)'cPi=', cPi
 !    write(*,*)'SZATitan_I',SZATitan_I
 !    write(*,*)'cosSZA_I',cosSZA_I
-    CosSZA_I=cos(SZATitan_I*cPi/180.0)
-    cosSZAB_I =cos(SZABTitan_I*cPi/180.0)     
+    CosSZA_I  = cos(SZATitan_I*cPi/180.0)
+    cosSZAB_I = cos(SZABTitan_I*cPi/180.0)     
+
+    if(UseCosSZA)then
+       BodyNSpeciesDim_I = tmp_ion(1:nSpecies,1)
+    else
+       BodyNSpeciesDim_I = BodyRhoSpecies_dim_II(:,1)
+    end if
+    BodyRhoSpecies_I = BodyNSpeciesDim_I*Io2No_V(UnitN_)*MassSpecies_V
     do iSpecies =1, nSpecies
-       BodyRhoSpecies_I(iSpecies)=BodyRhoSpecies_dim_II(iSpecies,1)&
-            *MassSpecies_V(rho_+iSpecies)/No2Io_V(UnitN_)
        coefSZAB_II(iSpecies,:)=BodyRhoSpecies_dim_II(iSpecies,:)&
             /BodyRhoSpecies_dim_II(iSpecies,1)
     end do
-    if(UseCosSZA)then
-       BodyRhoSpecies_I(:)=tmp_ion(1:nSpecies,1)*&
-            MassSpecies_V(SpeciesFirst_:SpeciesLast_)/No2Io_V(UnitN_)
-    end if
+
     if(oktest_me)then
        write(*,*)'tmp_ion(:,1)=',tmp_ion(1:nSpecies,1)
        write(*,*)'BodyRhoSpecies_dim_II(iSpecies,1)=',&

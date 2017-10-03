@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 module ModUser
   ! This is the user module for Venus
@@ -19,6 +19,9 @@ module ModUser
        IMPLEMENTED9 => user_set_resistivity,            &        
        IMPLEMENTED10=> user_get_log_var
 
+  use ModPhysics, ONLY: BodyRhoSpecies_I
+  use ModAdvance, ONLY: nSpecies
+
   include 'user_module.h' !list of public methods
 
   !\
@@ -35,7 +38,7 @@ module ModUser
   ! Venus stuff
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=3,  &
        MaxReactions=10
-  integer :: nSpecies=4, nNuSpecies=3
+  integer :: nNuSpecies=3
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK,MaxNuSpecies) :: &
        nDenNuSpecies_CBI    !number density of neutral Species
 
@@ -113,7 +116,6 @@ module ModUser
 
 
   real:: Altitude0=100.0e3 !altitude correspondint to neutral density
-  real, dimension(MaxSpecies):: BodyRhoSpecies_I
   integer, parameter :: & ! other numbers
        em_=-1 ,&
        hv_=-2   
@@ -648,9 +650,8 @@ contains
     end do
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Rvenus
-    BodyRho_I(1) = sum(BodyRhoSpecies_I(1:MaxSpecies))
-    BodyP_I(1)   = sum(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassSpecies_I(1:MaxSpecies))*kTp0
+    BodyRho_I(1) = sum(BodyRhoSpecies_I)
+    BodyP_I(1)   = sum(BodyRhoSpecies_I/MassSpecies_I)*kTp0
 
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
@@ -981,30 +982,31 @@ contains
     Productrate0 = max(exp(-Optdep), 1.0e-5)
     Productrate = Productrate0
 
-    BodyRhoSpecies_I(Hp_)=SW_rho*0.1
+    BodyRhoSpecies_I(Hp_) = SW_rho*0.1
 
-    BodyRhoSpecies_I(CO2p_)= Rate_I(CO2_hv__CO2p_em_)*Productrate*&
+    BodyRhoSpecies_I(CO2p_) = Rate_I(CO2_hv__CO2p_em_)*Productrate*&
          BodynDenNuSpecies_I(CO2_)/BodynDenNuSpecies_I(O_)/&
          (Rate_I(CO2p_O__O2p_CO_)+Rate_I(CO2p_O__Op_CO2_))
-    BodyRhoSpecies_I(Op_)= (Rate_I(O_hv__Op_em_)*Productrate+&
+
+    BodyRhoSpecies_I(Op_) = (Rate_I(O_hv__Op_em_)*Productrate+&
          Rate_I(CO2p_O__Op_CO2_)*BodyRhoSpecies_I(CO2p_))&
          *BodynDenNuSpecies_I(O_)/(BodynDenNuSpecies_I(CO2_)+3.0e5)/&
          Rate_I(Op_CO2__O2p_CO_)
-    BodyRhoSpecies_I(O2p_)= SQRT((BodynDenNuSpecies_I(O_)*&
+
+    BodyRhoSpecies_I(O2p_) = sqrt((BodynDenNuSpecies_I(O_)*&
          BodyRhoSpecies_I(CO2p_)*Rate_I(CO2p_O__O2p_CO_)+ &
          BodynDenNuSpecies_I(CO2_)*BodyRhoSpecies_I(Op_)*&
          Rate_I(Op_CO2__O2p_CO_))/Rate_I(O2p_em__O_O_))
-    BodyRhoSpecies_I(:)=BodyRhoSpecies_I(:)*&
-         MassSpecies_I(:)
+
+    BodyRhoSpecies_I = BodyRhoSpecies_I*MassSpecies_I
 
     if(oktest.and.iProc==1)then
        write(*,*)'crosssection=	',CrossSection_I, 'optdep=', Optdep
        write(*,*)'producationrate0=',Productrate0
        write(*,*)'hnuspecies_I=',HNuSpecies_I(1:nNuSpecies)
        write(*,*)' set parameters of Mars: BodyRhoSpecies_I(i)=',&
-            BodyRhoSpecies_I(1:nSpecies)
-       write(*,*)'neutral density=', &
-            BodynDenNuSpecies_I(:)
+            BodyRhoSpecies_I
+       write(*,*)'neutral density=', BodynDenNuSpecies_I
        write(*,*)'nu0=',nu0
        write(*,*)'Rate_I=', Rate_I
        write(*,*)'Rate_dim_I=', Ratedim_I       
@@ -1043,9 +1045,9 @@ contains
 
     VarsGhostFace_V(rhoO2p_) = BodyRhoSpecies_I(O2p_)*sqrt(cosSZA)
 
-    VarsGhostFace_V(rhoCO2p_)=BodyRhoSpecies_I(CO2p_)*cosSZA
+    VarsGhostFace_V(rhoCO2p_)= BodyRhoSpecies_I(CO2p_)*cosSZA
 
-    VarsGhostFace_V(rhoHp_)=SW_rho*0.3
+    VarsGhostFace_V(rhoHp_)  = SW_rho*0.3
 
     VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies))
     VarsGhostFace_V(P_)=sum(VarsGhostFace_V(rho_+1:rho_+MaxSpecies)&

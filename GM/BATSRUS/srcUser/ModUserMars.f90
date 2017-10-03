@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !========================================================================
 module ModUser
   ! This is the user module for Mars 
@@ -9,6 +9,8 @@ module ModUser
   use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_, &
        SpeciesFirst_, SpeciesLast_
   use ModAdvance,    ONLY: nSpecies
+  use ModPhysics,    ONLY: BodyRhoSpecies_I
+
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -59,8 +61,7 @@ module ModUser
   real:: totalNumRho, totalLossRho,totalSourceRho, totalLossNumRho, &
        totalSourceNumRho, totalLossx, totalLossNumx
 
-  real,  dimension(1:nI, 1:nJ, 1:nK, nBLK) :: &
-       MaxSiSpecies_CB,  MaxLiSpecies_CB
+  real,  dimension(nI,nJ,nK,nBLK) :: MaxSiSpecies_CB,  MaxLiSpecies_CB
   common /TimeBlock/ MaxSiSpecies_CB,  MaxLiSpecies_CB
 
   real,  dimension(1:nI, 1:nJ, 1:nK, nBLK) :: &
@@ -126,7 +127,6 @@ module ModUser
        BodynDenNuSpDim_I=(/1.1593e12, 3.2278e9, 1.1307e7, 1.951e4, &
        1.5248e3, 9.4936e5, 5.2695e8, 2.2258e11/)
 
-  real, dimension(MaxSpecies):: BodyRhoSpecies_I
   integer, parameter :: & ! other numbers
        em_=-1 ,&
        hv_=-2   
@@ -565,7 +565,7 @@ contains
 
 
        totalNumRho=sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
-            /MassSpecies_I(1:nSpecies))
+            /MassSpecies_I)
        MaxSLSpecies_CB(i,j,k,iBlock)=1.0e-3
 
        Productrate= Productrate_CB(i,j,k,iBlock)
@@ -855,9 +855,8 @@ contains
     end do
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Mars
-    BodyRho_I(1) = sum(BodyRhoSpecies_I(1:MaxSpecies))
-    BodyP_I(1)   = sum(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassSpecies_I(1:MaxSpecies))*kTp0
+    BodyRho_I(1) = sum(BodyRhoSpecies_I)
+    BodyP_I(1)   = sum(BodyRhoSpecies_I/MassSpecies_I)*kTp0
 
     FaceState_VI(rho_,body1_)=BodyRho_I(1)
     FaceState_VI(rhoHp_:rhoCO2p_,body1_) = BodyRhoSpecies_I
@@ -1250,27 +1249,26 @@ contains
     end if
 
     !ion density at the body
-    BodyRhoSpecies_I(Hp_)=SW_rho*0.3
+    BodyRhoSpecies_I(Hp_) = SW_rho*0.3
 
-    BodyRhoSpecies_I(CO2p_)= Rate_I(CO2_hv__CO2p_em_)*Productrate0*&
+    BodyRhoSpecies_I(CO2p_) = Rate_I(CO2_hv__CO2p_em_)*Productrate0*&
          BodynDenNuSpecies_I(CO2_)/BodynDenNuSpecies_I(O_)/&
          (Rate_I(CO2p_O__O2p_CO_)+Rate_I(CO2p_O__Op_CO2_))
-    BodyRhoSpecies_I(Op_)= (Rate_I(O_hv__Op_em_)*Productrate0+&
+    BodyRhoSpecies_I(Op_) = (Rate_I(O_hv__Op_em_)*Productrate0+&
          Rate_I(CO2p_O__Op_CO2_)*BodyRhoSpecies_I(CO2p_))&
          *BodynDenNuSpecies_I(O_)/(BodynDenNuSpecies_I(CO2_)+3.0e5)/&
          Rate_I(Op_CO2__O2p_CO_)
-    BodyRhoSpecies_I(O2p_)= SQRT((BodynDenNuSpecies_I(O_)*&
+    BodyRhoSpecies_I(O2p_) = SQRT((BodynDenNuSpecies_I(O_)*&
          BodyRhoSpecies_I(CO2p_)*Rate_I(CO2p_O__O2p_CO_)+ &
          BodynDenNuSpecies_I(CO2_)*BodyRhoSpecies_I(Op_)*&
          Rate_I(Op_CO2__O2p_CO_))/Rate_I(O2p_em__O_O_))
-    BodyRhoSpecies_I(:)=BodyRhoSpecies_I(:)*&
-         MassSpecies_I(:)
+
+    BodyRhoSpecies_I = BodyRhoSpecies_I*MassSpecies_I
 
     if(DoTest)then
        write(*,*)' set parameters of Mars: BodyRhoSpecies_I(i)=',&
-            BodyRhoSpecies_I(1:nSpecies)
-       write(*,*)'neutral density=', &
-            BodynDenNuSpecies_I(:)
+            BodyRhoSpecies_I
+       write(*,*)'neutral density=', BodynDenNuSpecies_I
        write(*,*)'nu0=',nu0
        write(*,*)'Rate_I=', Rate_I
        write(*,*)'Rate_dim_I=', Ratedim_I       
