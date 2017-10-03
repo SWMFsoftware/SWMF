@@ -129,9 +129,6 @@ contains
     TimeGlobal = TimeStart
     call init_advance_const
     call init_grid
-    if(DoReadMhData)then
-       call read_mh_data(DataInputTime)
-    end if
   end subroutine initialize
 
   !============================================================================

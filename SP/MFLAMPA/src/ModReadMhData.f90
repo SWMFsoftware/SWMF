@@ -115,11 +115,13 @@ contains
     integer:: iNode, iLat, iLon
     ! number of particles saved in the input file
     integer:: nParticleInput
-    ! string of variable names as read from the input file
-    character(len=300):: NameVar
     ! timestamp
     character(len=8):: StringTime
     !------------------------------------------------------------------------
+    ! the simulation time corresponding to the input file
+    TimeOut = TimeRead
+
+    ! read the data
     do iBlock = 1, nBlock
        iNode = iNode_B(iBlock)
        call get_node_indexes(iNode, iLon, iLat)
@@ -129,33 +131,26 @@ contains
        write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
             trim(NameInputDir)//trim(NameFileBase)//'_',iLon,'_',iLat,&
             '_t'//StringTime//'_n',iIterRead, NameFormat
-       
+
        ! read the header first
        call read_plot_file(&
-            NameFile = NameFile,&
+            NameFile   = NameFile,&
             TypeFileIn = TypeFile,&
-            NameVarOut = NameVar,&
-            n1out = nParticleInput)
-       
-       ! read the data itself
-       call read_plot_file(&
-            NameFile = NameFile,&
-            TypeFileIn = TypeFile,&
-            VarOut_VI = Buffer_II)
+            n1out      = nParticleInput,&
+            VarOut_VI  = Buffer_II)
 
-         State_VIB(1:nReadVar, 1:nParticleInput, iBlock) = &
-              Buffer_II(1:nReadVar, 1:nParticleInput)
+       State_VIB(1:nReadVar, 1:nParticleInput, iBlock) = &
+            Buffer_II(1:nReadVar, 1:nParticleInput)
 
-         iGridLocal_IB(Begin_,iBlock) = 1
-         iGridLocal_IB(End_,  iBlock) = nParticleInput
-      end do
+       iGridLocal_IB(Begin_,iBlock) = 1
+       iGridLocal_IB(End_,  iBlock) = nParticleInput
+    end do
 
-      ! advance read time and iteration
-      TimeRead  = TimeRead  + DtRead
-      iIterRead = iIterRead + DnRead
-      TimeOut = TimeRead
+    ! advance read time and iteration
+    TimeRead  = TimeRead  + DtRead
+    iIterRead = iIterRead + DnRead
 
-    end subroutine read_mh_data
+  end subroutine read_mh_data
 
   !==========================================================================
 
