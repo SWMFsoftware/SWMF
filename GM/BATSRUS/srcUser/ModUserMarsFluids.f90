@@ -38,9 +38,8 @@ module ModUser
   ! Radius within which the point implicit scheme should be used
   real :: rPointImplicit = 4.0
 
-  !Mars stuff etc
+  ! Mars stuff etc
 
-  !logical ::  UseMultiSpecies=.true.
   integer, parameter :: MaxSpecies=nIonFluid, MaxNuSpecies=9,  &
        MaxReactions=11, nNuSpecies = 3
 
@@ -77,7 +76,7 @@ module ModUser
        Ratedim_I=(/ 2.47e-7, 8.89e-8, 1.64e-10, 1.1e-9, &
        9.60e-11, 7.38e-8, 3.1e-7, 5.084e-10, 6.4e-10, 5.58e-8, 0.0 /)  !cm^3 s^(-1)
 
-  integer, parameter :: &! order of ion species
+  integer, parameter :: &! order of ion fluids
        Hp_  =1, &
        O2p_ =2, &
        Op_  =3, &
@@ -85,11 +84,6 @@ module ModUser
 
   real, dimension(nNuSpecies)::  &
        MassNeutral_I=(/44., 16., 1. /)  !atm
-
-  !  MassSpecies_I(Hp_)=1	 !atm
-  !  MassSpecies_I(CO2p_)=44     !atm
-  !  MassSpecies_I(O2p_)=32      !atm
-  !  MassSpecies_I(Op_)=16       !atm
 
   integer, parameter :: & ! order of Neutral species
        CO2_=1 ,&
@@ -128,7 +122,7 @@ module ModUser
   !       BodynDenNuSpDim_I=(/1.1593e12, 3.2278e9, 1.1307e7, 1.951e4, &
   !       1.5248e3, 9.4936e5, 5.2695e8, 2.2258e11, 3.71e4/)
 
-  real, dimension(nIonFluid):: BodyRhoSpecies_I
+  real:: BodyRhoIon_I(nIonFluid)
   integer, parameter :: & ! other numbers
        em_=-1 ,&
        hv_=-2   
@@ -803,22 +797,19 @@ contains
 
     call set_multiSp_ICs  
     !    Rbody = 1.0 + 140.0e3/Mars
-    BodyRho_I(1) = sum(BodyRhoSpecies_I(1:MaxSpecies))
-    !BodyRho_I(2:nFluid)=BodyRhoSpecies_I(1:MaxSpecies)
-    BodyP_I(1)   =sum(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassIon_I)*Ti_body
+    BodyRho_I(1)      = sum(BodyRhoIon_I)
+    !BodyRho_I(2:nFluid)=BodyRhoIon_I
+    BodyP_I(1)        = sum(BodyRhoIon_I/MassIon_I)*Ti_body
+    BodyP_I(2:nFluid) = Ti_body*(BodyRhoIon_I/MassIon_I)
 
-    BodyP_I(2:nFluid)=Ti_body*(BodyRhoSpecies_I(1:MaxSpecies)&
-         /MassIon_I)
-
-    FaceState_VI(rho_,body1_)=BodyRho_I(1)
-    FaceState_VI(iRhoIon_I,body1_) = BodyRhoSpecies_I
-    FaceState_VI(P_,body1_)=BodyP_I(1)
+    FaceState_VI(rho_,body1_)      = BodyRho_I(1)
+    FaceState_VI(iRhoIon_I,body1_) = BodyRhoIon_I
+    FaceState_VI(P_,body1_)        = BodyP_I(1)
 
     if(UseElectronPressure)then
        do iBoundary=xMinBc_, zMaxBc_
-          FaceState_VI(Pe_, iBoundary)=sw_p
-          FaceState_VI(P_, iBoundary)=sw_p
+          FaceState_VI(Pe_, iBoundary) = sw_p
+          FaceState_VI(P_, iBoundary)  = sw_p
        end do
        FaceState_VI(P_,body1_)=BodyP_I(1)       
        FaceState_VI(Pe_,body1_)=BodyP_I(1)
@@ -1540,25 +1531,25 @@ contains
     end if
 
     !ion density at the body
-    BodyRhoSpecies_I(Hp_)=SW_rho*0.3
+    BodyRhoIon_I(Hp_)=SW_rho*0.3
 
-    BodyRhoSpecies_I(CO2p_)= Rate_I(CO2_hv__CO2p_em_)*Productrate0*&
+    BodyRhoIon_I(CO2p_)= Rate_I(CO2_hv__CO2p_em_)*Productrate0*&
          BodynDenNuSpecies_I(CO2_)/BodynDenNuSpecies_I(O_)/&
          (Rate_I(CO2p_O__O2p_CO_)+Rate_I(CO2p_O__Op_CO2_))
-    !BodyRhoSpecies_I(Op_)= (Rate_I(O_hv__Op_em_)*Productrate0+&
-    !     Rate_I(CO2p_O__Op_CO2_)*BodyRhoSpecies_I(CO2p_))&
+    !BodyRhoIon_I(Op_)= (Rate_I(O_hv__Op_em_)*Productrate0+&
+    !     Rate_I(CO2p_O__Op_CO2_)*BodyRhoIon_I(CO2p_))&
     !     *BodynDenNuSpecies_I(O_)/(BodynDenNuSpecies_I(CO2_)+3.0e5)/&
     !     Rate_I(Op_CO2__O2p_CO_)
-    BodyRhoSpecies_I(Op_)= ((Rate_I(O_hv__Op_em_)*Productrate0+&
-         Rate_I(CO2p_O__Op_CO2_)*BodyRhoSpecies_I(CO2p_))&
+    BodyRhoIon_I(Op_)= ((Rate_I(O_hv__Op_em_)*Productrate0+&
+         Rate_I(CO2p_O__Op_CO2_)*BodyRhoIon_I(CO2p_))&
          *BodynDenNuSpecies_I(O_)+Rate_I(CO2_hv__Op_CO_em_)*&
          BodynDenNuSpecies_I(CO2_))/(BodynDenNuSpecies_I(CO2_)+3.0e5)/&
          Rate_I(Op_CO2__O2p_CO_)
-    BodyRhoSpecies_I(O2p_)= SQRT((BodynDenNuSpecies_I(O_)*&
-         BodyRhoSpecies_I(CO2p_)*Rate_I(CO2p_O__O2p_CO_)+ &
-         BodynDenNuSpecies_I(CO2_)*BodyRhoSpecies_I(Op_)*&
+    BodyRhoIon_I(O2p_)= SQRT((BodynDenNuSpecies_I(O_)*&
+         BodyRhoIon_I(CO2p_)*Rate_I(CO2p_O__O2p_CO_)+ &
+         BodynDenNuSpecies_I(CO2_)*BodyRhoIon_I(Op_)*&
          Rate_I(Op_CO2__O2p_CO_))/Rate_I(O2p_em__O_O_))
-    BodyRhoSpecies_I = BodyRhoSpecies_I*MassIon_I
+    BodyRhoIon_I = BodyRhoIon_I*MassIon_I
 
     do iFluid=1,nIonFluid
        ReducedMassNeutral2_II(iFluid,:)=1/&
@@ -1572,8 +1563,8 @@ contains
 
 
     if(oktest)then
-       write(*,*)' set parameters of Mars: BodyRhoSpecies_I(i)=',&
-            BodyRhoSpecies_I(1:nIonFluid)
+       write(*,*)' set parameters of Mars: BodyRhoIon_I(i)=',&
+            BodyRhoIon_I(1:nIonFluid)
        write(*,*)'neutral density=', &
             BodynDenNuSpecies_I
        write(*,*)'nu0=',nu0
@@ -1834,11 +1825,11 @@ contains
     !Apply boundary conditions
     cosSZA=(0.5+sign(0.5,XFace)) * XFace/max(RFace,1.0e-3) + 1.0e-3
 
-    VarsGhostFace_V(OpRho_)  = BodyRhoSpecies_I(Op_) *cosSZA
+    VarsGhostFace_V(OpRho_)  = BodyRhoIon_I(Op_) *cosSZA
 
-    VarsGhostFace_V(O2pRho_) = BodyRhoSpecies_I(O2p_)*sqrt(cosSZA)
+    VarsGhostFace_V(O2pRho_) = BodyRhoIon_I(O2p_)*sqrt(cosSZA)
 
-    VarsGhostFace_V(CO2pRho_)= BodyRhoSpecies_I(CO2p_)*cosSZA
+    VarsGhostFace_V(CO2pRho_)= BodyRhoIon_I(CO2p_)*cosSZA
 
     VarsGhostFace_V(HpRho_)  = SW_rho*0.3
     VarsGhostFace_V(rho_) = sum(VarsGhostFace_V(iRhoIon_I))    
