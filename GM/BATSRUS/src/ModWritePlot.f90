@@ -79,7 +79,6 @@ subroutine write_plot_common(iFile)
   ! or I/O units.
   logical:: DoSaveGenCoord
   real   :: CoordUnit
-  real   :: PlotRange_I(6)  ! plot range adjusted
 
   ! Indices and coordinates
   integer :: iBLK,i,j,k,l,iVar, H5Index, iProcFound, iBlockFound
@@ -417,7 +416,7 @@ subroutine write_plot_common(iFile)
            call write_tecplot_data(iBlk, nPlotvar, Plotvar)
         case('idl')
            call write_plot_idl(iFile,iBLK,nplotvar,plotvar, &
-                DoSaveGenCoord, CoordUnit, xmin, xmax, ymin, ymax, zmin, zmax, &
+                DoSaveGenCoord, CoordUnit, xmin, xmax, ymin, ymax, zmin, zmax,&
                 dxblk, dyblk, dzblk, nBLKcells)
         case('hdf')
            call write_var_hdf5(iFile, plot_type1(1:3), iBLK,H5Index, &
@@ -1860,7 +1859,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   character (len=1500), intent(out) :: StringVarTec 
 
   character (len=20) :: NameTecFluid
-  character (len=10) :: String, NamePlotVar, NameTecVar, NameUnit
+  character (len=20) :: String, NamePlotVar, NameTecVar, NameUnit
   integer            :: iPlotVar, iVar, i
   !---------------------------------------------------------------------------
   !\
@@ -1973,6 +1972,12 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameUnit   = NameTecUnit_V(UnitEnergydens_)
      case('p','pth')
         NameTecVar = 'p'//NameTecFluid
+        NameUnit   = NameTecUnit_V(UnitP_)
+     case('ppar')
+        NameTecVar = 'ppar'//NameTecFluid
+        NameUnit   = NameTecUnit_V(UnitP_)
+     case('pperp')
+        NameTecVar = 'pperp'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitP_)
      case('n')
         NameTecVar = 'n'//NameTecFluid
@@ -2213,7 +2218,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
         NameUnit = NameIdlUnit_V(UnitB_)
      case('e','ew','erad')
         NameUnit = NameIdlUnit_V(UnitEnergydens_)
-     case('p','pth')
+     case('p','pth','pperp')
         NameUnit = NameIdlUnit_V(UnitP_)
      case('n')
         NameUnit = NameIdlUnit_V(UnitN_)
