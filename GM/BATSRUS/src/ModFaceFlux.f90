@@ -3558,20 +3558,17 @@ contains
          GammaPe = 0.0 ! possibly needed for aniso pressure
       endif
 
-      if(UseEfield .and. .not. UseAnisoPressure) then
+      if(UseEfield) then
          ! total electron pressure
-         GammaPe = sum(Gamma_I(Electron_:nIonFluid) &
+         if (.not. UseAnisoPressure) &
+              GammaPe = sum(Gamma_I(Electron_:nIonFluid) &
               *State_V(iPIon_I(Electron_:nIonFluid)) )
 
-         if(nTrueIon > 1) then
-            ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
-            MultiIonFactor = Rho*sum(             &
-                 ChargeDens_I(1:nTrueIon)**2      &
-                 /State_V(iRhoIon_I(1:nTrueIon)) )&
-                 /sum(ChargeDens_I(1:nTrueIon))**2
-         else
-            MultiIonFactor = 1
-         end if
+         ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
+         MultiIonFactor = Rho*sum(              &
+              ChargeDens_I(1:nTrueIon)**2       &
+              /State_V(iRhoIon_I(1:nTrueIon)) ) &
+              /sum(ChargeDens_I(1:nTrueIon))**2
 
          GammaPe = GammaPe*MultiIonFactor
          Sound2  = Sound2 + GammaPe*InvRho
