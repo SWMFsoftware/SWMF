@@ -894,16 +894,10 @@ contains
        NameVar = NameVarLower_V(iVar)
        call extract_fluid_name(NameVar)
        select case(NameVar)
-       case('rho', &
-            'h', 'hp', 'hpsw', 'h2p', 'sw', 'iono', &
-            'o', 'op', 'o2p',  'he', 'ohp', 'n',  &
-            'cop', 'co2p',  'h2O', 'h2Op', 'h3Op',  &
-            'mp', 'lp', 'mhcp', 'hhcp', 'hnip', &
-            'neu1', 'neu2', 'neu3', 'neu4', &
-            'pui1', 'pui2', 'pui3', 'pui4')
+       case('rho')
           iUnitCons_V(iVar) = UnitRho_
           iUnitPrim_V(iVar) = UnitRho_
-       case('mx','my','mz','ux','uy','uz')
+       case('mx','my','mz','rhoux','rhouy','rhouz')
           iUnitCons_V(iVar) = UnitRhoU_
           iUnitPrim_V(iVar) = UnitU_
        case('bx','by','bz','hyp')
@@ -919,7 +913,10 @@ contains
           iUnitCons_V(iVar) = UnitElectric_
           iUnitPrim_V(iVar) = UnitElectric_
        case default
-          if(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
+          if(iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_)then
+             iUnitCons_V(iVar) = UnitRho_
+             iUnitPrim_V(iVar) = UnitRho_
+          elseif(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
              iUnitCons_V(iVar) = UnitEnergyDens_
              iUnitPrim_V(iVar) = UnitEnergyDens_
           else
