@@ -125,9 +125,9 @@ CouplerMode=KMAG  !off !!!ices !!off, ices, swmf
 
   SPICE=on !!!!off!, off
   SpiceKernels="NAIF/naif0010.tls", "NAIF/de430.bsp", "NAIF/pck00010.tpc", "NAIF/sat375.bsp", \\
-  "OTHER/Saturn.SSO.tf"
+  "OTHER/Saturn.SSO.tf", "OTHER/GSE.tf" 
 
-  SimulationStartTime=2016-09-01T00:00:00
+  SimulationStartTime=2017-01-01T00:00:00
 
 
   addPhysicalModelHeader=MOP.h
@@ -137,4 +137,3 @@ CouplerMode=KMAG  !off !!!ices !!off, ices, swmf
   
 #endblock
 
-#end
