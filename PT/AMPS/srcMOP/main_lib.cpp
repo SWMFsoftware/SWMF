@@ -136,11 +136,11 @@ void InitBackgroundFields() {
                 //save E and B
                 for (idim=0;idim<3;idim++) {
                   if (PIC::CPLR::DATAFILE::Offset::MagneticField.active==true) {
-                    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.offset+idim*sizeof(double)))=B[idim];
+                    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+idim*sizeof(double)))=B[idim];
                   }
 
                   if (PIC::CPLR::DATAFILE::Offset::ElectricField.active==true) {
-                    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.offset+idim*sizeof(double)))=E[idim];
+                    *((double*)(offset+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+idim*sizeof(double)))=E[idim];
                   }
                 }
               }
