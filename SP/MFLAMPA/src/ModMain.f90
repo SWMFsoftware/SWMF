@@ -152,11 +152,14 @@ contains
        TimeInOut = TimeLimit
     end if
 
-    if(DataInputTime <= TimeGlobal)&
-       RETURN
-
+    !\
+    ! recompute the derived variables, e.g. magnitude of velocity etc.
+    !/
     call fix_grid_consistency
 
+    !\
+    ! write the initial background state to the output file
+    !/
     if(IsFirstCall)then
        ! print the initial state
        call write_output(TimeGlobal, iIterGlobal, &
@@ -164,9 +167,16 @@ contains
        IsFirstCall = .false.
     end if
 
+    !\
+    ! if no new background data loaded, don't advance in time
+    !/
+    if(DataInputTime <= TimeGlobal)&
+         RETURN
+
     if(DoRun) &
          ! run the model
          call advance(min(DataInputTime,TimeLimit))
+
     ! update time & iteration counters
     iIterGlobal = iIterGlobal + 1
     TimeGlobal = min(DataInputTime,TimeLimit)
