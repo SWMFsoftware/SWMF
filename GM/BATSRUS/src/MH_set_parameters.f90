@@ -3663,7 +3663,9 @@ contains
        StringAnisoPrimitive    = trim(StringAnisoPrimitive)//' '//       &
             trim(NameFluid_I(iFluid))//'Pperp'
        StringAnisoConservative = trim(StringAnisoConservative)//' '//    &
-            trim(NameFluid_I(iFluid))//' P Ppar Pperp'
+            trim(NameFluid_I(iFluid))//'P '    //                        &
+            trim(NameFluid_I(iFluid))//'Ppar ' //                        &
+            trim(NameFluid_I(iFluid))//'Pperp'
     enddo
 
   end subroutine get_stringaniso
