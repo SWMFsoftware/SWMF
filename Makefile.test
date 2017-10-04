@@ -28,6 +28,7 @@ test_help:
 	@echo "    test_swpc                  (run GM-IE-IM test as used by SWPC)"
 	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
 	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
+	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
 	@echo "    test1                      (run GM-IE-PW test)"
 	@echo "    test2                      (run SC-IH + IH-GM test )"
 	@echo "    test3                      (run GM-IE-IM test)"
@@ -678,7 +679,7 @@ test_swpc_check:
 		> test_swpc_rb.diff)
 	ls -l test_swpc_*.diff
 
-### test_swpc_build and test_swpc_multiion: GM+IE+IM ###
+### test_swpc_multiion: GM+IE+IM ###
 
 test_swpc_multiion:
 	@echo "test_swpc_multiion_compile..." > test_swpc_multiion_gm.diff
@@ -745,6 +746,75 @@ test_swpc_multiion_check:
 		Param/SWPC/TestOutputMultiIon/it140410_000200_000.idl \
 		>> test_swpc_multiion_ie.diff)
 	ls -l test_swpc_multiion_*.diff
+
+
+### test_swpc_multispecies: GM+IE+IM ###
+
+test_swpc_multispecies:
+	@echo "test_swpc_multispecies_compile..." > test_swpc_multispecies_gm.diff
+	@echo "test_swpc_multispecies_compile..." > test_swpc_multispecies_ie.diff
+	${MAKE} test_swpc_multispecies_compile
+	@echo "test_swpc_multispecies_rundir..." >> test_swpc_multispecies_gm.diff
+	@echo "test_swpc_multispecies_rundir..." >> test_swpc_multispecies_ie.diff
+	${MAKE} test_swpc_multispecies_rundir
+	@echo "test_swpc_multispecies_run..." >> test_swpc_multispecies_gm.diff
+	@echo "test_swpc_multispecies_run..." >> test_swpc_multispecies_ie.diff
+	${MAKE} test_swpc_multispecies_run
+	@echo "test_swpc_multispecies_check..." >> test_swpc_multispecies_gm.diff
+	@echo "test_swpc_multispecies_check..." >> test_swpc_multispecies_ie.diff
+	${MAKE} test_swpc_multispecies_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_swpc_multispecies_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdHpOp
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_multispecies_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cp ${TESTDIR}/LAYOUT.in_test_multispecies ${TESTDIR}/LAYOUT.in
+	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_multispecies_init
+	cp ${TESTDIR}/PARAM.in_multispecies_init ${TESTDIR}/PARAM.in
+
+test_swpc_multispecies_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+	cd ${TESTDIR}; ./PostProc.pl -noptec
+
+test_swpc_multispecies_restart:
+	cd ${TESTDIR}; cp PARAM.in_multispecies_restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+
+test_swpc_multispecies_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/log_e20140410-000000.log \
+		Param/SWPC/TestOutputMultispecies/log_e20140410-000000.log \
+		> test_swpc_multispecies_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000000.mag \
+		Param/SWPC/TestOutputMultispecies/magnetometers_e20140410-000000.mag \
+		>> test_swpc_multispecies_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000200.out \
+		Param/SWPC/TestOutputMultispecies/mag_grid_e20140410-000200.out \
+		>> test_swpc_multispecies_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000000.log \
+		Param/SWPC/TestOutputMultispecies/geoindex_e20140410-000000.log \
+		>> test_swpc_multispecies_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000000.log \
+		Param/SWPC/TestOutputMultispecies/IE_t140410_000000.log \
+		> test_swpc_multispecies_ie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000200_000.idl \
+		Param/SWPC/TestOutputMultispecies/it140410_000200_000.idl \
+		>> test_swpc_multispecies_ie.diff)
+	ls -l test_swpc_multispecies_*.diff
 
 
 ### Test4: GM+IE+HEIDI ###############
