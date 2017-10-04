@@ -2561,20 +2561,23 @@ subroutine write_plot_line(iFile)
 
   use ModProcMH,   ONLY: iComm, iProc
   use ModRayTrace, ONLY: NameVectorField, DoExtractState, DoExtractUnitSi
-  use ModVarIndexes,ONLY: nVar, NamePrimitiveVar, NamePrimitiveVarTec
-  use ModIO,       ONLY: StringDateOrTime, &
+  use ModVarIndexes,ONLY: nVar, NamePrimitiveVar
+  use ModIO,       ONLY: StringDateOrTime, nplotvarmax,            &
        NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
   use ModMain,     ONLY: n_step, time_accurate, time_simulation
   use ModIoUnit,   ONLY: UnitTmp_
-  use ModUtilities,ONLY: open_file, close_file
+  use ModUtilities,ONLY: open_file, close_file, split_string
   use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
   implicit none
 
   integer, intent(in) :: iFile ! The file index of the plot file
 
-  character(len=100) :: NameFile, NameStart, NameVar, StringTitle
+  character(len=100) :: NameFile, NameStart, StringTitle
+  character(len=10)  :: NameVarPrimitive_V(nplotvarmax) = ''
+  character(len=1500):: NameVar
+  integer            :: nPlotVarTmp
   integer            :: nLineFile, nStateVar, nPlotVar
   integer            :: iPoint, nPoint, iPointNext, nPoint1
 
@@ -2688,8 +2691,15 @@ subroutine write_plot_line(iFile)
      end if
   case('tec')
      IsIdl = .false.
-     NameVar = '"X", "Y", "Z"'
-     if(DoExtractState)NameVar = trim(NameVar)//' ,'//NamePrimitiveVarTec
+     if(DoExtractState) then
+        call split_string(NamePrimitiveVar, nplotvarmax, NameVarPrimitive_V, &
+             nPlotVarTmp, UseArraySyntaxIn=.true.)
+        if (nPlotVarTmp /= nVar .and. iProc == 0) &
+             call stop_mpi(NameSub//': nPlotVarTmp must be the same as nVar')
+        call get_tec_variables(iFile, nPlotVarTmp, NameVarPrimitive_V, NameVar)
+     else
+        NameVar = '"X", "Y", "Z"'
+     end if
      if(.not.IsSingleLine)NameVar = trim(NameVar)//', "Index"'
      NameVar = trim(NameVar)//', "Length"'
   case default
