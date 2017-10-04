@@ -57,7 +57,6 @@ module GM_couple_im
 
   integer :: iError
 
-  integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
 
   logical :: DoTestTec, DoTestIdl
 
@@ -293,7 +292,7 @@ contains
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
     use ModMain,          ONLY: UseB0, nBlock
     use ModPhysics,       ONLY: No2Si_V, UnitB_
-    use ModVarIndexes,    ONLY: nVar, Bx_, By_, Bz_
+    use ModVarIndexes,    ONLY: nVar, Bx_, Bz_
     use ModB0,            ONLY: get_b0
     use ModMPI
 
@@ -304,7 +303,7 @@ contains
 
     !Internal variables
     real ::SatRay_D(3)
-    real :: StateSat_V(0:nVar+3), B0Sat_D(3), B2
+    real :: StateSat_V(0:nVar+3), B0Sat_D(3)
     integer :: iSat
 
     character (len=*), parameter :: NameSub='GM_get_sat_for_im'
@@ -716,6 +715,9 @@ contains
     if(DoMultiFluidIMCoupling)then
        if(NameVar /= 'p:rho:Hpp:Opp:Hprho:Oprho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
+    else if(DoAnisoPressureIMCoupling)then
+       if(NameVar /= 'p:rho:ppar:bmin') &
+            call CON_stop(NameSub//' invalid NameVar='//NameVar)
     else
        if(NameVar /= 'p:rho') &
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
@@ -765,6 +767,12 @@ contains
        IM_Hpdens = Buffer_IIV(:,:,Hdens_)
        IM_Opdens = Buffer_IIV(:,:,Odens_)
     endif
+
+    ! for anisotropic pressure                                                                                       
+    if(DoAnisoPressureIMCoupling)then
+       IM_ppar = Buffer_IIV(:,:,parpres_)
+       IM_bmin = Buffer_IIV(:,:,bmin_)
+    end if
 
     if(DoTest)call write_IMvars_tec  ! TecPlot output
     if(DoTest)call write_IMvars_idl  ! IDL     output
