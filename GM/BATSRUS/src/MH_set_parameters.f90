@@ -186,6 +186,9 @@ subroutine MH_set_parameters(TypeAction)
   integer :: iTestVar, iError
   character(len=10) :: NameTestVar, NameVar
 
+  character(len=200) :: StringAnisoPrimitive    = ''
+  character(len=200) :: StringAnisoConservative = ''
+
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp
 
@@ -664,6 +667,7 @@ subroutine MH_set_parameters(TypeAction)
      case("#SAVELOGFILE")
         call read_var('DoSaveLogfile',save_logfile)
         if(save_logfile)then
+        if (UseAnisoPressure) call get_stringaniso
            nfile=max(nfile,logfile_)
            call read_var('StringLog',log_string)
            call read_var('DnSaveLogfile',dn_output(logfile_))
@@ -677,11 +681,13 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(log_string,'RAW')>0 .or. index(log_string,'raw')>0)then
               plot_dimensional(logfile_) = index(log_string,'RAW')>0
               log_time='step time'
-              log_vars='dt '//NameConservativeVar//' Pmin Pmax'
+              log_vars='dt '//NameConservativeVar// &
+                   trim(StringAnisoConservative)//' Pmin Pmax'
            elseif(index(log_string,'MHD')>0 .or. index(log_string,'mhd')>0)then
               plot_dimensional(logfile_) = index(log_string,'MHD')>0
               log_time='step date time'
-              log_vars=NameConservativeVar//' Pmin Pmax'
+              log_vars=NameConservativeVar//trim(StringAnisoConservative)// &
+                   ' Pmin Pmax'
            elseif(index(log_string,'FLX')>0 .or. index(log_string,'flx')>0)then
               plot_dimensional(logfile_) = index(log_string,'FLX')>0
               log_time='step date time'
@@ -989,6 +995,7 @@ subroutine MH_set_parameters(TypeAction)
 
            ! Plot variables
            if(index(plot_string,'VAR')>0 .or. index(plot_string,'var')>0 )then
+              if (UseAnisoPressure) call get_stringaniso
               plot_var='var'
               plot_dimensional(iFile) = index(plot_string,'VAR')>0
               call read_var('NameVars', NamePlotVar)
@@ -1003,10 +1010,11 @@ subroutine MH_set_parameters(TypeAction)
                  select case(NamePlotVar(l1+1:l2-1))
                  case('MHD', 'mhd')
                     NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVar//  &
-                         ' jx jy jz ' //trim(NamePlotVar(l2+1:))
+                         trim(StringAnisoPrimitive)//' jx jy jz ' //      &
+                         trim(NamePlotVar(l2+1:))
                  case('HD', 'hd')
                     NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVar//  &
-                         trim(NamePlotVar(l2+1:))
+                         trim(StringAnisoPrimitive)//trim(NamePlotVar(l2+1:))
                  case default
                     call stop_mpi(NameSub// &
                          ': unknown {name} ='//NamePlotVar(l1:l2))
@@ -1029,17 +1037,19 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'RAW')>0.or.index(plot_string,'raw')>0)then
               plot_var='raw'
               plot_dimensional(iFile)=index(plot_string,'RAW')>0
-              plot_vars(iFile) = NameConservativeVar//' p b1x b1y b1z absdivB'
+              plot_vars(iFile) = NameConservativeVar// &
+                   trim(StringAnisoConservative)//' p b1x b1y b1z absdivB'
               plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'MHD')>0.or.index(plot_string,'mhd')>0)then
               plot_var='mhd'
               plot_dimensional(iFile) = index(plot_string,'MHD')>0
-              plot_vars(iFile) = NamePrimitiveVar//' jx jy jz'
+              plot_vars(iFile) = NamePrimitiveVar//         &
+                   trim(StringAnisoPrimitive)//' jx jy jz'
               plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'HD')>0.or.index(plot_string,'hd')>0)then
               plot_var='hd'
               plot_dimensional(iFile) = index(plot_string,'HD')>0
-              plot_vars(iFile) = NamePrimitiveVar
+              plot_vars(iFile) = NamePrimitiveVar//trim(StringAnisoPrimitive)
               plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'ALL')>0.or.index(plot_string,'all')>0)then
               ! This is intended for restart with a different dimensionality
@@ -1050,7 +1060,8 @@ subroutine MH_set_parameters(TypeAction)
            elseif(index(plot_string,'FUL')>0.or.index(plot_string,'ful')>0)then
               plot_var='ful'
               plot_dimensional(iFile) = index(plot_string,'FUL')>0
-              plot_vars(iFile) = NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
+              plot_vars(iFile) = NamePrimitiveVar//      &
+                   trim(StringAnisoPrimitive)//' b1x b1y b1z e jx jy jz'
               plot_pars(iFile) = '{default}'
            elseif(index(plot_string,'FLX')>0.or.index(plot_string,'flx')>0)then
               plot_var='flx'
@@ -3635,6 +3646,27 @@ contains
     call sort_quick(nVar,iVarSmoothReal_V,iVarSmoothIndex_I)
 
   end subroutine sort_smooth_indicator
+  !============================================================================
+  subroutine get_stringaniso
+
+    integer :: iFluid
+
+    ! re-initialize the two string
+    StringAnisoPrimitive    = ''
+    StringAnisoConservative = ''
+
+    ! No need to include the fluid name for the first fluid
+    StringAnisoPrimitive    = trim(StringAnisoPrimitive)   //' Pperp'
+    StringAnisoConservative = trim(StringAnisoConservative)//' P Ppar Pperp'
+
+    do iFluid = 2,nIonFluid
+       StringAnisoPrimitive    = trim(StringAnisoPrimitive)//' '//       &
+            trim(NameFluid_I(iFluid))//'Pperp'
+       StringAnisoConservative = trim(StringAnisoConservative)//' '//    &
+            trim(NameFluid_I(iFluid))//' P Ppar Pperp'
+    enddo
+
+  end subroutine get_stringaniso
   !============================================================================
 
 end subroutine MH_set_parameters
