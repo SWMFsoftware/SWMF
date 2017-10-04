@@ -105,6 +105,8 @@ Module ModIO
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
   real, dimension(6,MaxFile) :: plot_range=0. 
+  ! plot range for the current file
+  real :: PlotRange_I(6)
 
   ! x, y, z point for arbitrary slice plotting
   real, dimension(3,MaxFile) :: plot_point=-99999.
