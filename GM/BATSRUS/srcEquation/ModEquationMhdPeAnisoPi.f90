@@ -82,16 +82,16 @@ module ModVarIndexes
 
   ! The space separated list of nVar conservative variables for plotting
   character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz ppar p e'
+       'rho mx my mz bx by bz e'
 
   ! The space separated list of nVar primitive variables for plotting
   character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz pe ppar p pperp'
+       'rho ux uy uz bx by bz pe ppar p'
 
   ! The space separated list of nVar primitive variables for TECplot output
   character(len=*), parameter :: NamePrimitiveVarTec = &
        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z"' // &
-       '"Pe", "p_par", "p", "p_perp"'
+       '"Pe", "p_par", "p"'
 
   ! Names of the user units for IDL and TECPlot output
   character(len=20) :: &
