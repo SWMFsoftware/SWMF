@@ -64,6 +64,8 @@ double MOP::GetLocalMeshResolution(double *x) {
     exit(__LINE__,__FILE__,"Error: not implemented");
   }
 
+  if (_PIC_NIGHTLY_TEST__REDUCE_RESOLUTION_MODE_==_PIC_MODE_ON_) res*=_PIC_NIGHTLY_TEST__GRID_RESOLUTION_MULTIPLIER_;  
+
   return res;
 }
 
