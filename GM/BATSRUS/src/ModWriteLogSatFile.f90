@@ -311,7 +311,7 @@ subroutine set_logvar( &
   use ModSatelliteFile, ONLY: XyzSat_DI
   use ModIO, ONLY: write_myname, lNameLogVar
   use ModMultiFluid, ONLY: UseMultiIon,  iFluid, &
-       iRho, iP, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
+       iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
 
   implicit none
 
@@ -479,6 +479,14 @@ contains
           tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
                State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK) / &
                State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+       end do
+       LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
+    case('pperp')
+       do iBLK=1,nBlock
+          if (Unused_B(iBLK)) CYCLE
+          tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
+               ( 3*State_VGB(iP,1:nI,1:nJ,1:nK,iBLK) &
+               -State_VGB(iPpar,1:nI,1:nJ,1:nK,iBLK) )/2
        end do
        LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
     case('ekinx')
@@ -1021,7 +1029,7 @@ contains
     case('p')
        LogVar_I(iVarTot) = StateSat_V(iP)
     case('pperp')
-       LogVar_I(iVarTot) = (3*StateSat_V(iP)-StateSat_V(Ppar_))/2.0
+       LogVar_I(iVarTot) = (3*StateSat_V(iP)-StateSat_V(iPpar))/2.0
     case('ux')
        LogVar_I(iVarTot) = StateSat_V(iRhoUx)/StateSat_V(iRho)
     case('uy')
