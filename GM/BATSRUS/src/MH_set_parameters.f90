@@ -1626,6 +1626,9 @@ subroutine MH_set_parameters(TypeAction)
         call read_var('DoChangeRestartVariables',DoChangeRestartVariables)
 
      case("#SPECIFYRESTARTVARMAPPING")
+        ! If users specify restart variables mapping, DoChangeRestartVariables
+        ! should be set to true.
+        DoChangeRestartVariables = .true.
         call read_var('DoSpecifyRestartVarMapping',DoSpecifyRestartVarMapping)
         if (DoSpecifyRestartVarMapping) then
            if (allocated(NameVarRestartFrom_V))  &
