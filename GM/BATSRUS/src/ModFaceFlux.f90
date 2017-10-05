@@ -3560,12 +3560,16 @@ contains
 
       if(UseEfield) then
          ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
-         ! MultiIonFactor is used to correct Alfven2/Alfven2Normal, it must
-         ! be calculated first, even for single ion fluid.
-         MultiIonFactor = Rho*sum(              &
-              ChargeDens_I(1:nTrueIon)**2       &
-              /State_V(iRhoIon_I(1:nTrueIon)) ) &
-              /sum(ChargeDens_I(1:nTrueIon))**2
+         ! MultiIonFactor is used to correct Alfven2/Alfven2Normal, 
+         ! it must be calculated first, even for single ion fluid.
+         if(nTrueIon > 1)then
+            MultiIonFactor = Rho*sum(              &
+                 ChargeDens_I(1:nTrueIon)**2       &
+                 /State_V(iRhoIon_I(1:nTrueIon)) ) &
+                 /sum(ChargeDens_I(1:nTrueIon))**2
+         else
+            MultiIonFactor = 1.0
+         end if
 
          ! Added electron pressure to Sound2 for the five moment equation.
          ! GammaPe = 0.0 for the six moment equation.
