@@ -220,7 +220,7 @@ subroutine follow_ray(iRayIn,i_D,XyzIn_D)
   logical :: IsParallel
 
   integer, parameter :: MaxCount = 1000
-  integer :: iFace, iCount, jProc, jBlock, i, j, k
+  integer :: iFace, iCount, jProc, jBlock
 
   logical :: DoneAll
   integer :: iCountRay = 0
@@ -1246,7 +1246,7 @@ contains
     use CON_line_extract, ONLY: line_put
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitB_, iUnitPrim_V
     use ModAdvance, ONLY: State_VGB, nVar, &
-         Bx_, Bz_, Ppar_
+         Bx_, Bz_
     use ModMain, ONLY: UseB0
     use ModB0,   ONLY: get_b0
     use ModRaytrace, ONLY: DoExtractBGradB1, bGradB1_DGB, &
@@ -1475,14 +1475,13 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
        UseB0
   use ModPhysics, ONLY: rBody
-  use ModAdvance, ONLY: nVar, State_VGB, Ppar_, Bx_, Bz_
+  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, nSpecies
   use ModB0,      ONLY: B0_DGB
   use ModProcMH
   use ModMpi
   use BATL_lib,          ONLY: message_pass_cell, find_grid_block
   use ModNumConst,       ONLY: cDegToRad, cTiny
   use ModCoordTransform, ONLY: sph_to_xyz
-  use ModUtilities,      ONLY: check_allocate
   use CON_line_extract,  ONLY: line_init, line_collect, line_clean
   use CON_planet,        ONLY: DipoleStrength
   use ModMultiFluid
@@ -1509,6 +1508,10 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   integer :: iProcFound, iBlockFound, i, j, k
   integer :: nStateVar
   integer :: iError
+
+  ! Variables for multispecies coupling
+  real :: NumDens_I(nSpecies)
+
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'integrate_ray_accurate'
   !-------------------------------------------------------------------------
@@ -1564,17 +1567,27 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
      do iBlock = 1, nBlock
         if(Unused_B(iBlock)) CYCLE
         do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-           do iFluid = 1, nIonFluid
-              Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)
-              Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iPIon_I(iFluid), i,j,k,iBlock)
-           end do
+           if(UseMultiSpecies)then
+              ! Set the densities
+              Extra_VGB(1:3:2,i,j,k,iBlock) = State_VGB(SpeciesFirst_:SpeciesFirst_+1,i,j,k,iBlock)
+              ! Calculate number densities for all species
+              NumDens_I = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)/MassSpecies_V
+              ! Calculte fraction relative to the total number density
+              NumDens_I = NumDens_I/sum(NumDens_I)
+              ! Store the pressures of the 1st and 2nd species
+              Extra_VGB(2:4:2,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:min(2,nSpecies))
+           else
+              do iFluid = 1, min(2,nIonFluid)
+                 Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)
+                 Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iPIon_I(iFluid),i,j,k,iBlock)
+              end do
+           end if
         end do; end do; end do
      end do
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nLat,nLon), &
-          RayResult_VII(nRayIntegral,nLat,nLon), STAT=iError)
-     call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
+          RayResult_VII(nRayIntegral,nLat,nLon))
      RayIntegral_VII = 0.0
      RayResult_VII   = 0.0
 
@@ -1673,11 +1686,10 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
        UseB0, Unused_B
   use ModPhysics,        ONLY: rBody
-  use ModAdvance,        ONLY: nVar, State_VGB, Ppar_, Bx_, Bz_
+  use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_
   use ModB0,             ONLY: B0_DGB
   use ModProcMH
   use ModMpi
-  use ModUtilities,      ONLY: check_allocate
   use ModMultiFluid
   use BATL_lib,          ONLY: find_grid_block
   
@@ -1757,8 +1769,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nRay_D(1),nRay_D(2)), &
-          RayResult_VII(nRayIntegral,nRay_D(1),nRay_D(2)), STAT=iError)
-     call check_allocate(iError,NameSub//' RayIntegral_VII,RayResult_VII')
+          RayResult_VII(nRayIntegral,nRay_D(1),nRay_D(2)))
      RayIntegral_VII = 0.0
      RayResult_VII   = 0.0
 
@@ -2381,7 +2392,7 @@ subroutine test_ray_integral
   if(iProc==0)then
 
      ! Take logarithm of field line volume for better plotting ?
-     RayResult_VII(InvB_,:,:)=alog10(RayResult_VII(InvB_,:,:)+cTiny)
+     RayResult_VII(InvB_,:,:) = alog10(RayResult_VII(InvB_,:,:)+cTiny)
 
      call open_file(file='test_ray_integral.dat')
      write(UNITTMP_,"(a79)")'test-ray-integral_var22'
