@@ -1510,7 +1510,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   integer :: iError
 
   ! Variables for multispecies coupling
-  real :: NumDens_I(nSpecies)
+  real, allocatable :: NumDens_I(:)
 
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'integrate_ray_accurate'
@@ -1563,6 +1563,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   end do
 
   if(DoIntegrateRay)then
+     if(UseMultiSpecies) allocate(NumDens_I(nSpecies))
      ! Copy density and pressure into Extra_VGB
      do iBlock = 1, nBlock
         if(Unused_B(iBlock)) CYCLE
@@ -1575,7 +1576,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
               ! Calculte fraction relative to the total number density
               NumDens_I = NumDens_I/sum(NumDens_I)
               ! Store the pressures of the 1st and 2nd species
-              Extra_VGB(2:4:2,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:min(2,nSpecies))
+              Extra_VGB(2:4:2,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:2)
            else
               do iFluid = 1, min(2,nIonFluid)
                  Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)
@@ -1584,6 +1585,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
            end if
         end do; end do; end do
      end do
+     if(UseMultiSpecies) deallocate(NumDens_I)
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nLat,nLon), &
