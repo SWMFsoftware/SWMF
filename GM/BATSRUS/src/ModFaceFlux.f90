@@ -3559,19 +3559,22 @@ contains
       endif
 
       if(UseEfield) then
-         ! total electron pressure
-         if (.not. UseAnisoPressure) &
-              GammaPe = sum(Gamma_I(Electron_:nIonFluid) &
-              *State_V(iPIon_I(Electron_:nIonFluid)) )
-
          ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
+         ! MultiIonFactor is used to correct Alfven2/Alfven2Normal, it must
+         ! be calculated first, even for single ion fluid.
          MultiIonFactor = Rho*sum(              &
               ChargeDens_I(1:nTrueIon)**2       &
               /State_V(iRhoIon_I(1:nTrueIon)) ) &
               /sum(ChargeDens_I(1:nTrueIon))**2
 
-         GammaPe = GammaPe*MultiIonFactor
-         Sound2  = Sound2 + GammaPe*InvRho
+         ! Added electron pressure to Sound2 for the five moment equation.
+         ! GammaPe = 0.0 for the six moment equation.
+         if (.not. UseAnisoPressure) then
+            GammaPe = sum(Gamma_I(Electron_:nIonFluid) &
+                 *State_V(iPIon_I(Electron_:nIonFluid)) )
+            GammaPe = GammaPe*MultiIonFactor
+            Sound2  = Sound2 + GammaPe*InvRho
+         end if
 
          if(DoTestCell) then
             write(*,*) NameSub,' UseEfield, MultiIonFactor   =', MultiIonFactor
