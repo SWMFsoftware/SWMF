@@ -2004,6 +2004,7 @@ namespace PIC {
 
   namespace Mesh {
     class cDataCenterNode;
+    class cDataCornerNode;
 
     //get the AMR tree signature
     unsigned int GetMeshTreeSignature(void *startNode,int nline,const char* fname);
@@ -2084,8 +2085,6 @@ namespace PIC {
     extern int sampledExternalDataRelativeOffset;
     extern int sampleSetDataLength;
     
-    
-    
     //user defiend functions for printing the 'center node' data into an output file
     typedef void (*fPrintVariableListCenterNode)(FILE* fout,int DataSetNumber);
     typedef void (*fPrintDataCenterNode)(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,cDataCenterNode *CenterNode);
@@ -2094,6 +2093,13 @@ namespace PIC {
     extern vector<fPrintVariableListCenterNode> PrintVariableListCenterNode;
     extern vector<fPrintDataCenterNode> PrintDataCenterNode;
     extern vector<fInterpolateCenterNode> InterpolateCenterNode;
+
+    //user defined function for printing the 'corner' node data into a file
+    typedef void (*fPrintVariableListCornerNode)(FILE* fout,int DataSetNumber);
+    typedef void (*fPrintDataCornerNode)(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CornerNodeThread,cDataCornerNode *CornerNode);
+
+    extern vector<fPrintVariableListCornerNode> PrintVariableListCornerNode;
+    extern vector<fPrintDataCornerNode> PrintDataCornerNode;
 
     void AddVaraibleListFunction(fPrintVariableListCenterNode f);
     
