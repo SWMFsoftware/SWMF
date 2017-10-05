@@ -2074,7 +2074,7 @@ if (nLoopCycle>100) {
           if (cv>0.0) {
             dt=-cx/cv;
 
-            if ((dtIntersection<0.0)||(dt<dtIntersection)) {
+            if ( ((dtIntersection<0.0)||(dt<dtIntersection)) && (dt>0.0) ) {
               double cE0=0.0,cE1=0.0;
 
               for (idim=0;idim<3;idim++) {
@@ -2322,16 +2322,16 @@ if (nLoopCycle>100) {
         break;
       case _INTERNAL_BOUNDARY_TYPE_BODY_OF_ROTATION_:
         Nucleus=(cInternalRotationBodyData*)(InternalBoundaryDescriptor->BoundaryElement);
-	Nucleus->GetSphereGeometricalParameters(x0Nucleus,lNucleus,xmin,xmax);
+        Nucleus->GetSphereGeometricalParameters(x0Nucleus,lNucleus,xmin,xmax);
 
-
-	exit(__LINE__,__FILE__,"calculation of the time of flight is not implemented");
+        exit(__LINE__,__FILE__,"calculation of the time of flight is not implemented");
 
 
         Nucleus->SurfaceCurve(rSurface,xInit[0]);
-	if(xmin<=xInit[0] && xmax>=xInit[0] && rSurface>sqrt(xInit[1]*xInit[1]+xInit[2]*xInit[2])) {
-	  //the particle is inside the nucleus                                                                                                                  
-	  PIC::ParticleBuffer::DeleteParticle(ptr);
+
+        if(xmin<=xInit[0] && xmax>=xInit[0] && rSurface>sqrt(xInit[1]*xInit[1]+xInit[2]*xInit[2])) {
+          //the particle is inside the nucleus
+          PIC::ParticleBuffer::DeleteParticle(ptr);
           return _PARTICLE_LEFT_THE_DOMAIN_;
         }
 
@@ -2358,7 +2358,7 @@ if (nLoopCycle>100) {
       double TimeOfFlight;
       double xLocalIntersection[2],xIntersection[3];
 
-      PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
+      if (CutCell::nBoundaryTriangleFaces>0) PIC::Mesh::IrregularSurface::CutFaceAccessCounter::IncrementCounter();
 
       for (int ipass=0;ipass<2;ipass++)  {
         cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>::cCutFaceListDescriptor* D;
@@ -2928,7 +2928,7 @@ exit(__LINE__,__FILE__,"not implemented");
            if (cv>0.0) {
              dt=-cx/cv;
 
-             if ((dtIntersection<0.0)||(dt<dtIntersection)) {
+             if ( ((dtIntersection<0.0)||(dt<dtIntersection)) && (dt>0.0) ) {
                double cE0=0.0,cE1=0.0;
 
                for (idim=0;idim<3;idim++) {
