@@ -25,14 +25,14 @@ setenv KMP_AFFINITY disabled
 cd Intel/AMPS
 module purge
 module load comp-intel/2016.2.181 mpi-sgi tecplot/2017r2 boost/1.62
-make test_run TESTMPIRUN4="mpiexec -n 4 dplace -s1 -c 0-3"  TESTMPIRUN1="mpiexec -n 1 dplace omplace -s1 -c 0"  MPIRUN="mpiexec -n 8 dplace -s1 -c 0-7" >>& test_amps.log &
+make test_run TESTMPIRUN4="mpiexec -n 4 dplace -s1 -c 0-3"  TESTMPIRUN1="mpiexec -n 1 dplace omplace -c 0"  MPIRUN="mpiexec -n 8 dplace -s1 -c 0-7" >>& test_amps.log &
 cd ../..
 
 #AMPS/utility/TestScripts/Pleiades/RunPGIPleiades.sh test_run &
 cd PGI/AMPS
 module purge
 module load comp-pgi/17.1 mpi-sgi/mpt tecplot/2017r2 boost/1.62
-make test_run TESTMPIRUN4="mpiexec -n 4 dplace -s1 -c 8-11" TESTMPIRUN1="mpiexec -n 1 dplace omplace -s1 -c 8"  MPIRUN="mpiexec -n 8 dplace -s1 -c 8-15" >>& test_amps.log &
+make test_run TESTMPIRUN4="mpiexec -n 4 dplace -s1 -c 8-11" TESTMPIRUN1="mpiexec -n 1 dplace omplace -c 8"  MPIRUN="mpiexec -n 8 dplace -s1 -c 8-15" >>& test_amps.log &
 cd ../..
 
 
@@ -40,7 +40,7 @@ cd ../..
 cd GNU/AMPS
 module purge
 module load gcc/6.2 mpi-sgi tecplot/2017r2 boost/1.62
-make test_run TESTMPIRUN4="mpiexec -n 4 dplace -s1 -c 16-19" TESTMPIRUN1="mpiexec -n 1 dplace omplace -s1 -c 16"  MPIRUN="mpiexec -n 8 dplace -s1 -c 16-23" >>& test_amps.log &
+make test_run TESTMPIRUN4="mpiexec -n 4 dplace -s1 -c 16-19" TESTMPIRUN1="mpiexec -n 1 dplace omplace -c 16"  MPIRUN="mpiexec -n 8 dplace -s1 -c 16-23" >>& test_amps.log &
 cd ../..
 
 wait
