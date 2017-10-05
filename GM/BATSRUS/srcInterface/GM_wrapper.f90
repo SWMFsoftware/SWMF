@@ -56,7 +56,6 @@ module GM_wrapper
   public:: GM_get_for_im            ! for RCM
   public:: GM_satinit_for_im        ! initialize satellite
   public:: GM_get_sat_for_im        ! get satellite info
-  public:: GM_get_multi_for_im      ! check if multifluid is used
   public:: GM_put_from_im           ! from IM
   !^CMP END IM
 
