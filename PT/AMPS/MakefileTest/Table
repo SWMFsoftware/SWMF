@@ -952,7 +952,7 @@ CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/O
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>${TESTIndividual_Trajectories--guiding-centerCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(Individual_Trajectories--guiding-center-REF).ref_np`ls ${TESTIndividual_Trajectories--guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--guiding-center$(TESTIndividual_Trajectories--guiding-center-REF).diff
+>>>${TESTIndividual_Trajectories--guiding-centerCUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTIndividual_Trajectories--guiding-center-REF).ref_np`ls ${TESTIndividual_Trajectories--guiding-centerDIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--guiding-center$(TESTIndividual_Trajectories--guiding-center-REF).diff
 >>>@ls -l test_Individual_Trajectories--guiding-center$(TESTIndividual_Trajectories--guiding-center-REF).diff
 >>>@echo Test test_Individual_Trajectories--guiding-center has finished: `date`
 <#
