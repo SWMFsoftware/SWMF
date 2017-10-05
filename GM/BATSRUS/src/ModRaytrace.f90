@@ -297,17 +297,22 @@ contains
   subroutine init_mod_raytrace
 
     use ModAdvance, ONLY: UseElectronPressure
-    use ModMultiFluid, ONLY: nIonFluid
+    use ModMain,    ONLY: DoMultiFluidIMCoupling
 
     ! True if ray array is still to be initialized
     logical :: DoInitRay = .true.
-
     !------------------------------------------------------------------------
 
     if(allocated(ray)) RETURN
 
     ! Determine number of flow variable integrals
-    nExtraIntegral = 2*nIonFluid  ! rho, p for each ion fluid
+    if(DoMultiFluidIMCoupling)then
+       ! H+ and O+ densities pressures
+       nExtraIntegral = 4
+    else
+       ! total density and pressure
+       nExtraIntegral = 2
+    end if
 
     if(UseElectronPressure)then
        nExtraIntegral = nExtraIntegral + 1
