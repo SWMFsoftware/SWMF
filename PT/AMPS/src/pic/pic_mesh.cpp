@@ -88,6 +88,10 @@ vector<PIC::Mesh::fPrintVariableListCenterNode> PIC::Mesh::PrintVariableListCent
 vector<PIC::Mesh::fPrintDataCenterNode> PIC::Mesh::PrintDataCenterNode;
 vector<PIC::Mesh::fInterpolateCenterNode> PIC::Mesh::InterpolateCenterNode;
 
+//the user defined fucntion for output of the 'corener' data into a file
+vector<PIC::Mesh::fPrintVariableListCornerNode> PIC::Mesh::PrintVariableListCornerNode;
+vector<PIC::Mesh::fPrintDataCornerNode> PIC::Mesh::PrintDataCornerNode;
+
 void PIC::Mesh::AddVaraibleListFunction(fPrintVariableListCenterNode f) {
   PrintVariableListCenterNode.push_back(f);
 } 
@@ -100,10 +104,16 @@ void PIC::Mesh::SetCellSamplingDataRequest() {
 
 //print the corner node data
 void PIC::Mesh::cDataCornerNode::PrintVariableList(FILE* fout,int DataSetNumber) {
-
+  //print the user defind 'corner node' data
+  vector<fPrintVariableListCornerNode>::iterator fptr;
+  for (fptr=PrintVariableListCornerNode.begin();fptr!=PrintVariableListCornerNode.end();fptr++) (*fptr)(fout,DataSetNumber);
 }
 
-void PIC::Mesh::cDataCornerNode::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread) {
+void PIC::Mesh::cDataCornerNode::PrintData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CornerNodeThread) {
+  //print the user defind 'center node' data
+  vector<fPrintDataCornerNode>::iterator fptr;
+
+  for (fptr=PrintDataCornerNode.begin();fptr!=PrintDataCornerNode.end();fptr++) (*fptr)(fout,DataSetNumber,pipe,CornerNodeThread,this);
 
 }
 
