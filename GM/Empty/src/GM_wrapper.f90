@@ -256,14 +256,6 @@ contains
   end subroutine GM_get_sat_for_im_crcm
 
   !==============================================================================
-  subroutine GM_get_multi_for_im(DoMultiFluidIM)
-    implicit none
-
-    logical, intent(out) :: DoMultiFluidIM
-
-  end subroutine GM_get_multi_for_im
-
-  !==============================================================================
   subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, &
        nPointLine)
 
@@ -538,9 +530,9 @@ contains
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
     integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
 
-    real,    intent(in), optional:: Data_VI(:,:)    ! Recv data array
-    integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
-    real, intent(out), allocatable, optional:: Pos_DI(:,:)               ! Position vectors
+    real,    intent(in), optional:: Data_VI(:,:)           ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)       ! Order of data
+    real, intent(out), allocatable, optional:: Pos_DI(:,:) ! Position vectors
 
     character(len=*), parameter :: NameSub='GM_put_from_pc'
     !--------------------------------------------------------------------------
@@ -553,15 +545,7 @@ end module GM_wrapper
 
 !==============================================================================
 
-! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
-subroutine calc_inner_bc_velocity
-  call CON_stop('calc_inner_bc_velocity: '// &
-       'GM_ERROR: empty version cannot be used!')
-end subroutine calc_inner_bc_velocity
-
-!==============================================================================
-
-! This subroutine is only needed because of SC|IH/BATSRUS/src/set_outer_BCs.f90
+! This subroutine is only needed because of SC|IH/BATSRUS/src/ModCellBoundary
 subroutine read_ih_buffer(y, z, State_V)
 
   real, intent(in) :: y, z
@@ -574,7 +558,7 @@ end subroutine read_ih_buffer
 
 !==============================================================================
 
-! This subroutine is only needed because of SC|IH/BATSRUS/src/set_BCs.f90
+! This subroutine is only needed because of SC|IH/BATSRUS/src/ModFaceBoundary
 subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
 
   implicit none
@@ -587,21 +571,6 @@ subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
   call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
 
 end subroutine read_pw_buffer
-
-!==============================================================================
-
-! This function is only needed because of IH/BATSRUS/src/write_logfile
-real function logvar_ionosphere()
-  call CON_stop('logvar_ionosphere: GM_ERROR: empty version cannot be used!')
-  logvar_ionosphere = -777.77
-end function logvar_ionosphere
-
-!=============================================================================
-
-subroutine map_inner_bc_jouleheating
-  call CON_stop('map_inner_bc_jouleheating: '// &
-       'GM_ERROR: empty version cannot be used!')
-end subroutine map_inner_bc_jouleheating
 
 !=============================================================================
 
