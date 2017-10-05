@@ -302,15 +302,17 @@ public:
   template<class T> inline void recv(T& data,int thread) {
     T* t;
 
-    t=(recvPointer<T>(1,thread));
+    t=recvPointer<T>(1,thread);
     data=*t;
   }
 
-   template<class T> inline void recv(T* data,int nrecv,int thread) {
+  template<class T> inline void recv(T* data,int nrecv,int thread) {
     T* t;
 
-    t=recvPointer<T>(nrecv,thread);
-    memcpy(data,t,nrecv*sizeof(T));
+    if (nrecv!=0) {
+      t=recvPointer<T>(nrecv,thread);
+      memcpy(data,t,nrecv*sizeof(T));
+    }
   } 
 
   template<class T> inline T recv(int thread) {
