@@ -96,7 +96,8 @@ module ModMain
   real    :: RhoMinDimIm        = -1.0
 
   logical :: UseRaytrace            = UseB
-  logical :: DoMultiFluidIMCoupling = .false.
+  logical :: DoMultiFluidIMCoupling = &
+       IonLast_ > IonFirst_ .or. SpeciesLast_ > SpeciesFirst_
   logical :: DoAnisoPressureIMCoupling = .false.
 
   ! Single space separated NameVar string containing all the variable
