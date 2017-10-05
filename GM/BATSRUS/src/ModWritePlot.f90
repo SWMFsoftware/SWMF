@@ -1367,7 +1367,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('enumz')
         PlotVar(1:nI,1:nJ,1:nK,iVar) =  EzNum_CB(:,:,:,iBLK)
      case('ex')
-        call get_electric_field_block(iBLK)
+        call get_electric_field_block(iBLK, DoHallCurrentIn = .true.)
         PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(1,1:nI,1:nJ,1:nK,iBLK)
      case('ey')
         PlotVar(1:nI,1:nJ,1:nK,iVar) = Efield_DGB(2,1:nI,1:nJ,1:nK,iBLK)
