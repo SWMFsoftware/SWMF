@@ -1830,7 +1830,8 @@ end subroutine integrate_ray_accurate_1d
 
 subroutine plot_ray_equator(iFile)
 
-  use ModMain, ONLY: n_step, time_accurate, Time_Simulation, TypeCoordSystem
+  use ModMain, ONLY: n_step, time_accurate, Time_Simulation, TypeCoordSystem, &
+       NamePrimitive_V
   use ModIo,   ONLY: StringDateOrTime, NamePlotDir, &
        plot_range, plot_type, TypeFile_I
   use ModAdvance, ONLY: nVar, Ux_, Uz_, Bx_, Bz_
@@ -1842,7 +1843,6 @@ subroutine plot_ray_equator(iFile)
   use CON_axes,          ONLY: transform_matrix
   use ModNumConst,       ONLY: cDegToRad
   use ModInterpolate,    ONLY: fit_parabola
-  use ModVarIndexes,     ONLY: NamePrimitiveVar
   use ModUtilities,      ONLY: split_string, open_file, close_file
 
   implicit none
@@ -2069,7 +2069,7 @@ subroutine plot_ray_equator(iFile)
      Name_I(1) = 'x'
      Name_I(2) = 'y'
      Name_I(3) = 'z'
-     call split_string(NamePrimitiveVar, Name_I(4:nVar+3))
+     Name_I(4:nVar+3) = NamePrimitive_V
      do iVar = 3+Bx_, 3+Bz_
         Name_I(iVar) = trim(Name_I(iVar))//'SM'
      end do
@@ -2590,13 +2590,14 @@ subroutine write_plot_line(iFile)
 
   use ModProcMH,   ONLY: iComm, iProc
   use ModRayTrace, ONLY: NameVectorField, DoExtractState, DoExtractUnitSi
-  use ModVarIndexes,ONLY: nVar, NamePrimitiveVar
+  use ModVarIndexes,ONLY: nVar
   use ModIO,       ONLY: StringDateOrTime, nplotvarmax,            &
        NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
-  use ModMain,     ONLY: n_step, time_accurate, time_simulation
+  use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
+       NamePrimitive_V
   use ModIoUnit,   ONLY: UnitTmp_
-  use ModUtilities,ONLY: open_file, close_file, split_string
+  use ModUtilities,ONLY: open_file, close_file, split_string, join_string
   use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
   implicit none
@@ -2604,8 +2605,7 @@ subroutine write_plot_line(iFile)
   integer, intent(in) :: iFile ! The file index of the plot file
 
   character(len=100) :: NameFile, NameStart, StringTitle
-  character(len=10)  :: NameVarPrimitive_V(nplotvarmax) = ''
-  character(len=1500):: NameVar
+  character(len=1500):: NameVar, StringPrimitive
   integer            :: nPlotVarTmp
   integer            :: nLineFile, nStateVar, nPlotVar
   integer            :: iPoint, nPoint, iPointNext, nPoint1
@@ -2711,8 +2711,10 @@ subroutine write_plot_line(iFile)
   case('idl')
      IsIdl = .true.
      NameVar = 'Length x y z'
-     if(DoExtractState) &
-          NameVar = trim(NameVar)//' '//NamePrimitiveVar
+     if(DoExtractState) then
+        call join_string(nVar,NamePrimitive_V,StringPrimitive)
+        NameVar = trim(NameVar)//' '//StringPrimitive
+     end if
      if(IsSingleLine)then
         NameVar = trim(NameVar)//' iLine'
      else
@@ -2721,11 +2723,9 @@ subroutine write_plot_line(iFile)
   case('tec')
      IsIdl = .false.
      if(DoExtractState) then
-        call split_string(NamePrimitiveVar, nplotvarmax, NameVarPrimitive_V, &
-             nPlotVarTmp, UseArraySyntaxIn=.true.)
         if (nPlotVarTmp /= nVar .and. iProc == 0) &
              call stop_mpi(NameSub//': nPlotVarTmp must be the same as nVar')
-        call get_tec_variables(iFile, nPlotVarTmp, NameVarPrimitive_V, NameVar)
+        call get_tec_variables(iFile, nPlotVarTmp, NamePrimitive_V, NameVar)
      else
         NameVar = '"X", "Y", "Z"'
      end if
