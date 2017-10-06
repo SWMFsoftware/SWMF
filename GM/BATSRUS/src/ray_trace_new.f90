@@ -28,11 +28,13 @@ subroutine ray_trace_accurate
   integer :: i, j, k, iBlock, iRay
 
   ! Testing and timing
-  logical :: okTest, okTestMe, okTime, okTimeMe
-
+  logical :: DoTest, DoTestMe, DoTime, DoTimeMe
+  character(len=*), parameter:: NameSub = 'ray_trace_accurate'
   !----------------------------------------------------------------------------
+  call set_oktest(NameSub, DoTest, DoTestMe)
+  call set_oktest('time_ray_trace', DoTime, DoTimeMe)
 
-  call set_oktest('ray_trace',okTest,okTestMe)
+  if(DoTestMe)write(*,*) NameSub,' starting'
 
   ! Initialize constants
   DoTraceRay     = .true.
@@ -45,8 +47,7 @@ subroutine ray_trace_accurate
   ! (Re)initialize CON_ray_trace
   call ray_init(iComm)
 
-  call set_oktest('time_ray_trace',okTime,okTimeMe)
-  if(okTime)call timing_reset('ray_pass',2)
+  if(DoTime) call timing_reset('ray_pass', 2)
 
   ! Copy magnetic field into Bxyz_DGB
   do iBlock = 1, nBlock; if(Unused_B(iBlock))CYCLE
@@ -63,10 +64,10 @@ subroutine ray_trace_accurate
   end if
 
   ! Initial values
-  ray=NORAY
+  ray = NORAY
 
-  if(okTestMe)write(*,*)'rayface normalized B'
-  if(okTime.and.iProc==0)then
+  if(DoTestMe)write(*,*)'rayface normalized B'
+  if(DoTime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'setup and normalization:'
      call timing_show('ray_trace',1)
   end if
@@ -77,7 +78,7 @@ subroutine ray_trace_accurate
      do iBlock = 1, nBlock
         if(Unused_B(iBlock))CYCLE
 
-        oktest_ray = okTest .and. &
+        oktest_ray = DoTest .and. &
              all( (/i,j,k,iBlock,iProc/)== &
              (/iTest,jTest,kTest,BLKTest,ProcTest/) )
 
@@ -120,15 +121,15 @@ subroutine ray_trace_accurate
      end do; end do; end do
   end do
 
-  if(okTestMe)write(*,*)'ray lat, lon, status=',&
+  if(DoTestMe)write(*,*)'ray lat, lon, status=',&
        ray(:,:,iTest,jTest,kTest,BlkTest)
 
-  if(okTime.and.iProc==0)then
+  if(DoTime.and.iProc==0)then
      write(*,'(a)',ADVANCE='NO') 'Total ray tracing time:'
-     call timing_show('ray_trace',1)
+     call timing_show('ray_trace', 1)
   end if
 
-  if(okTestMe)write(*,*)'ray_trace completed.'
+  if(DoTestMe)write(*,*) NameSub,' finished'
 
 end subroutine ray_trace_accurate
 
@@ -865,9 +866,7 @@ subroutine follow_ray_block(iStart_D,iRay,iBlock,XyzInOut_D,Length,iFace)
      if(UseOldMethodOfRayTrace .and. IsCartesianGrid)then
         dLength = abs(dl)*sqrt( sum((bNormMid_D*Dxyz_D)**2) )
      else
-        dLength = sqrt( (abs(XyzCur_D(1)-XyzIni_D(1)))**2 &
-             +          (abs(XyzCur_D(2)-XyzIni_D(2)))**2 &
-             +          (abs(XyzCur_D(3)-XyzIni_D(3)))**2 )
+        dLength = sqrt( sum((XyzCur_D - XyzIni_D)**2) )
      end if
 
      ! Update ray length
@@ -1688,7 +1687,7 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
        UseB0, Unused_B
   use ModPhysics,        ONLY: rBody
-  use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_
+  use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, nSpecies
   use ModB0,             ONLY: B0_DGB
   use ModProcMH
   use ModMpi
@@ -1714,6 +1713,10 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   integer :: iProcFound, iBlockFound, i, j, k, iBlock
   integer :: nStateVar
   integer :: iError
+
+  ! Variables for multispecies coupling
+  real, allocatable :: NumDens_I(:)
+
   logical :: DoTest, DoTestMe
   character(len=*), parameter :: NameSub = 'integrate_ray_accurate_1d'
   !-------------------------------------------------------------------------
@@ -1758,16 +1761,29 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   end do
 
   if(DoIntegrateRay)then
+     if(UseMultiSpecies) allocate(NumDens_I(nSpecies))
      ! Copy density and pressure into Extra_VGB
      do iBlock = 1, nBlock
         if(Unused_B(iBlock)) CYCLE
         do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-           do iFluid = 1, nIonFluid
-              Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
-              Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
-           end do
+           if(UseMultiSpecies)then
+              ! Set the densities
+              Extra_VGB(1:3:2,i,j,k,iBlock) = State_VGB(SpeciesFirst_:SpeciesFirst_+1,i,j,k,iBlock)
+              ! Calculate number densities for all species
+              NumDens_I = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)/MassSpecies_V
+              ! Calculte fraction relative to the total number density
+              NumDens_I = NumDens_I/sum(NumDens_I)
+              ! Store the pressures of the 1st and 2nd species
+              Extra_VGB(2:4:2,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:2)
+           else
+              do iFluid = 1, min(2,nIonFluid)
+                 Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
+                 Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
+              end do
+           end if
         end do; end do; end do
      end do
+     if(UseMultiSpecies) deallocate(NumDens_I)
 
      allocate(&
           RayIntegral_VII(nRayIntegral,nRay_D(1),nRay_D(2)), &
@@ -2903,20 +2919,24 @@ subroutine lcb_plot(iFile)
   real :: XyzIono_D(3), Xyz_D(3)
   real :: Smg2Gsm_DD(3,3) = i_DD
   real, allocatable :: PlotVar_VI(:,:), XyzPt_DI(:,:), zPt_I(:)
-  logical :: Map1,Map2, Odd, Skip, SaveIntegrals
+  logical :: Map1, Map2, Odd, Skip, SaveIntegrals
 
   logical :: DoTest, DoTestMe
   character (len=*), parameter :: NameSub='lcb_plot'
   !--------------------------------------------------------------------------
-  call CON_set_do_test(NameSub,DoTest, DoTestMe)
-  if(DoTest)write(*,*)NameSub,': starting'
+  call set_oktest(NameSub, DoTest, DoTestMe)
+  if(DoTestMe)write(*,*)NameSub, &
+       ': starting for iFile=', iFile,' type=',plot_type(iFile)
 
   ! Extract grid info from plot_range (see MH_set_parameters for plot_type lcb)
-  Radius = plot_range(1, iFile)
-  nLon   = plot_range(2, iFile)
+  Radius = plot_range(1,iFile)
+  nLon   = plot_range(2,iFile)
 
   SaveIntegrals=.false.
   if(index(plot_type(iFile),'int')>0) SaveIntegrals=.true.
+
+  if(DoTestMe)write(*,*)NameSub, 'Radius, nLon, SaveIntegrals=', &
+       Radius, nLon, SaveIntegrals
 
   !Use a value of 1. for these plots.
   RadiusIono = 1.
@@ -2975,11 +2995,15 @@ subroutine lcb_plot(iFile)
               XyzPt_DI(:,i) = matmul(Smg2Gsm_DD,XyzPt_DI(:,i))
            end do
 
-           call integrate_ray_accurate_1d(nPts, XyzPt_DI, 'InvB,RhoInvB,pInvB,extract_I')
+           if(SaveIntegrals)then
+              call integrate_ray_accurate_1d(nPts, XyzPt_DI, 'InvB,RhoInvB,pInvB,extract_I')
+           else
+              call integrate_ray_accurate_1d(nPts, XyzPt_DI, 'extract_I')
+           endif
 
            if(iProc == 0)then
 
-              Integrals = -1.
+              if(SaveIntegrals) Integrals = -1.
               
               call line_get(nVarOut, nPoint)
               if(nPoint>0)then
@@ -3005,14 +3029,16 @@ subroutine lcb_plot(iFile)
                           if(Map1 .and. Map2)then
                              iLC=k/2
                              jStart=iStart; jMid=iMid; jEnd=iEnd
-                             Integrals(1) = &
-                                  sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
-                             Integrals(2) = &
-                                  sum(RayResult_VII(RhoInvB_,:,iLC))/ &
-                                  sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitRho_)
-                             Integrals(3) = &
-                                  sum(RayResult_VII(  pInvB_,:,iLC))/ &
-                                  sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitP_)
+                             if(SaveIntegrals)then
+                                Integrals(1) = &
+                                     sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
+                                Integrals(2) = &
+                                     sum(RayResult_VII(RhoInvB_,:,iLC))/ &
+                                     sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitRho_)
+                                Integrals(3) = &
+                                     sum(RayResult_VII(  pInvB_,:,iLC))/ &
+                                     sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitP_)
+                             end if
                           end if
                        else
                           iEnd = iPoint-1
@@ -3043,14 +3069,16 @@ subroutine lcb_plot(iFile)
                     if(Map1 .and. Map2)then
                        iLC=k/2
                        jStart=iStart; jMid=iMid; jEnd=iEnd
-                       Integrals(1) = &
-                            sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
-                       Integrals(2) = &
-                            sum(RayResult_VII(RhoInvB_,:,iLC))/ &
-                            sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitRho_)
-                       Integrals(3) = &
-                            sum(RayResult_VII(  pInvB_,:,iLC))/ &
-                            sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitP_)
+                       if(SaveIntegrals)then
+                          Integrals(1) = &
+                               sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitX_)/No2Si_V(UnitB_)
+                          Integrals(2) = &
+                               sum(RayResult_VII(RhoInvB_,:,iLC))/ &
+                               sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitRho_)
+                          Integrals(3) = &
+                               sum(RayResult_VII(  pInvB_,:,iLC))/ &
+                               sum(RayResult_VII(   InvB_,:,iLC)) * No2Si_V(UnitP_)
+                       end if
                     end if
                  end if
 
