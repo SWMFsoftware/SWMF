@@ -190,6 +190,8 @@ int main(int argc,char **argv) {
 
   for (int iter=0; iter<10; iter++) {
     PIC::BC::ExternalBoundary::Periodic::UpdateData();
+    PIC::Mesh::mesh.ParallelBlockDataExchange();
+
     PIC::TimeStep();
   }
   
