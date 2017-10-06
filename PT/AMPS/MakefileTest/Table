@@ -620,7 +620,7 @@ Name=CG-PostProcess--Read-Trajectories--on@@(0+valeriy+pleiades)
 Time=26
 
 ExeptionCode=SKIP{pgcc}
-ExeptionCode=SKIP{gcc}@@(0+valeriy)
+ExeptionCode=SKIP{gcc}@@(0+valeriy+pleiades)
 
 Keys=-model-data-path=/Users/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/Users/ccmc/boost/lib -compiler-option=-I/Users/ccmc/boost/include@@(0+valeriy)
 Keys=-model-data-path=/nobackup/vtenishe/AMPS_DATA_TEST/CG-POST-PROCESS -spice-path=/home3/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/nobackup/vtenishe/SPICE/Kernels/ROSETTA/kernels -link-option=./utility/PostProcess/pproc.a,-lboost_iostreams,-L/nasa/pkgsrc/sles12/2016Q4/views/boost/1.62/lib -compiler-option=-I/nasa/pkgsrc/sles12/2016Q4/views/boost/1.62/include@@(0+pleiades)
