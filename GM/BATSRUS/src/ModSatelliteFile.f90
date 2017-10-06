@@ -76,9 +76,9 @@ contains
     use ModIO,        ONLY: nFile, MaxFile, Satellite_, plot_dimensional, &
          Dn_Output, Dt_Output, plot_type, NamePlotDir, TypeCoordPlot_I
     use ModUtilities, ONLY: check_dir
-    use ModVarIndexes,ONLY: NamePrimitiveVar
     use ModReadParam, ONLY: read_var
-
+    use ModMain,      ONLY: NamePrimitiveVarPlot
+    
     character(len=*), intent(in) :: NameCommand
 
     integer :: iSat, iFile
@@ -130,14 +130,14 @@ contains
              satellite_var='mhd'
              plot_dimensional(iFile)= index(StringSatellite,'MHD')>0
              TimeSat_I(iSat) = 'step date'
-             StringSatVar_I(iSat)=NamePrimitiveVar//' jx jy jz'
+             StringSatVar_I(iSat)=NamePrimitiveVarPlot//' jx jy jz'
           elseif(index(StringSatellite,'FUL')>0 .or. &
                index(StringSatellite,'ful')>0)then
              satellite_var='ful'
              plot_dimensional(ifile)= index(StringSatellite,'FUL')>0
              TimeSat_I(iSat) = 'step date'
              StringSatVar_I(iSat)=&
-                  NamePrimitiveVar//' b1x b1y b1z e jx jy jz'
+                  NamePrimitiveVarPlot//' b1x b1y b1z e jx jy jz'
           else
              call stop_mpi(&
                   'Variable definition (mhd,ful,var) missing' &
