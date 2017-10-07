@@ -3,8 +3,6 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 # pTEC: Post process output files for use in tecplot
 #    - combine all *.tec files into one file per iteration
-#    - combine all spherical (sp*.tec) into one file
-#         for each iteration and process with PostSPH.exe
 #    - run preplot to make a tecplot binary file and remove intermediate files.
 #
 
@@ -12,75 +10,30 @@
 if ( $1 == 'help' || $1 == '-h' || $1 == '-help' || $1 == '--help' ) then
    echo "Usage:"
    echo ""
-   echo "pTEC [p,r,g,S,T,A,b=BASENAME]"
+   echo "pTEC [p|g] [r,b=BASENAME]"
    echo ""
    echo "The order of flags does not matter.  A maximum of 6 flags can be used.       "
    echo ""
-   echo "- No arguement default to 'T'. See below.                                    "
-   echo "- If 'S' then spherical tecplot files are processed.                         "
-   echo "- If 'T' then 2D and 3D tecplot files are processed.                         "
-   echo "- If 'A' then both file types are processed.                                 "
    echo "- If 'p' and preplot is available in the PATH then it will also be run.      "
    echo "     - If 'r' is also specified, the .dat file will be deleted after preplot."
    echo "- If 'g' is specified, the .dat file will be gzip'd (independant of 'p')     "
    echo "- If 'b=BASENAME' then only files starting with the path BASENAME are        "
    echo "     processed.                                                              "
    echo "     - To process all files in the IO2 directory use 'b=IO2/'   not 'b=IO2'  "
-   echo "     - If 'b=' is not used 'T' and 'S' files are processed in IO2/ and       "
    echo ""
    echo "Examples:"
    echo ""
    echo "pTEC"
    echo "pTEC p"
    echo "pTEC p r"
-   echo "pTEC S"
-   echo "pTEC S g"
-   echo "pTEC S b=IO2/"
-   echo "pTEC p r S b=IO2/spN"
-   echo "pTEC T g b=run_1/IO2_save/"
-   echo "pTEC A"
-   echo "pTEC p r A"
-   echo "pTEC A g"
+   echo "pTEC g"
+   echo "pTEC b=IO2/"
+   echo "pTEC p r b=IO2/y=0"
    echo ""
    exit
 endif
 
 # Setup which portions of script should be run
-set SPH=0
-set TEC=0
-
-if ( "$1" == "A" || \
-     "$2" == "A" || \
-     "$3" == "A" || \
-     "$4" == "A" || \
-     "$5" == "A" || \
-     "$6" == "A"     ) then
-  set SPH=1
-  set TEC=1
-endif
-
-if ( "$1" == "T" || \
-     "$2" == "T" || \
-     "$3" == "T" || \
-     "$4" == "T" || \
-     "$5" == "T" || \
-     "$6" == "T"     ) then
-  set TEC=1
-endif
-
-if ( "$1" == "S" || \
-     "$2" == "S" || \
-     "$3" == "S" || \
-     "$4" == "S" || \
-     "$5" == "S" || \
-     "$6" == "S"     ) then
-  set SPH=1
-endif
-
-# Check to make sure that at least one T,S flag has been set.
-# If not set TEC=1 (on) as the default.
-
-if ( $TEC == 0 && $SPH == 0 ) set TEC=1
 
 set Preplot=0
 if ( "$1" == "p" || \
@@ -112,26 +65,18 @@ if ( "$1" == "g" || \
   set GZIP=1
 endif
 
-# if b= is used to set the directory and files to process
-# then load BASENAMEin.  Otherwise, set it below because it
-# must be different for S and Tec files.
-#if ( $ALL == 0 ) then
-   if ( "$1" =~ b=* ) set BASENAMEin = `echo $1 | sed s/b=//`
-   if ( "$2" =~ b=* ) set BASENAMEin = `echo $2 | sed s/b=//`
-   if ( "$3" =~ b=* ) set BASENAMEin = `echo $3 | sed s/b=//`
-   if ( "$4" =~ b=* ) set BASENAMEin = `echo $4 | sed s/b=//`
-   if ( "$5" =~ b=* ) set BASENAMEin = `echo $5 | sed s/b=//`
-   if ( "$6" =~ b=* ) set BASENAMEin = `echo $6 | sed s/b=//`
-#endif
-if($?BASENAMEin == 0)then
-    set BaseSet = 0
-else
-    set BaseSet = 1
-endif
+# if b=PATTERN is used to set the directory and files to process
+# then overwrite the default BASENAME
+set BASENAME = './IO2/'
+
+if ( "$1" =~ b=* ) set BASENAME = `echo $1 | sed s/b=//`
+if ( "$2" =~ b=* ) set BASENAME = `echo $2 | sed s/b=//`
+if ( "$3" =~ b=* ) set BASENAME = `echo $3 | sed s/b=//`
+if ( "$4" =~ b=* ) set BASENAME = `echo $4 | sed s/b=//`
+if ( "$5" =~ b=* ) set BASENAME = `echo $5 | sed s/b=//`
+if ( "$6" =~ b=* ) set BASENAME = `echo $6 | sed s/b=//`
 
 # set the current path location so that we can return here
-# at various stages
-
 set dd = `pwd`
 
 # Make sure that we can overwrite any existing files
@@ -139,26 +84,18 @@ unset noclobber
 
 # Check to make sure that preplot can be found in the path somewhere
 set ppFound=0
-  if ( $Preplot == 1) then
-     (which preplot | grep -v 'Command not found' > .tmp1) >&/dev/null
-     if (!(-z .tmp1)) then
-        echo "--Using preplot from "`cat .tmp1`
-        set ppFound=1
-     else
-        echo "Cannot find preplot in path, ignoring 'p' option"
-     endif
-     rm -f .tmp1
-  endif
+if ( $Preplot == 1) then
+   (which preplot | grep -v 'Command not found' > .tmp1) >&/dev/null
+   if (!(-z .tmp1)) then
+      echo "--Using preplot from "`cat .tmp1`
+      set ppFound=1
+   else
+      echo "Cannot find preplot in path, ignoring 'p' option"
+   endif
+   rm -f .tmp1
+endif
 
 ############################################### IO2 begin ###########
-if ( $TEC == 1 ) then
-
-if ( $BaseSet == 0 ) then
-   set BASENAME = './IO2/'
-else
-   set BASENAME = ${BASENAMEin}
-endif
-set BASENAME=${BASENAME}.tmp
 
 # Process BASENAME to get directory part and filename part.
 set d  = `dirname ${BASENAME}`
@@ -222,70 +159,9 @@ endif
 echo '========================================================================'
 
 cd ${dd}
-endif
 ############################################### IO2 end #############
 
-############################################### spherical begin #####
-if ( $SPH == 1 ) then
-
-if ( $BaseSet == 0 ) then
-   set BASENAME = './IO2/'
-else
-   set BASENAME = ${BASENAMEin}
-endif
-set BASENAME=${BASENAME}.tmp
-
-# Process BASENAME to get directory part and filename part.
-set d  = `dirname ${BASENAME}`
-set ff = `basename ${BASENAME} .tmp`
-if (${ff} == .tmp) then
-   set ff = './'
-endif
-
-echo '========================================================================'
-echo 'Beginning processing of spherical slice files ...                       '
-echo '--Working in directory: '${d}'/   on files: '${ff}'*.S '${ff}'*.tec'
-
-# First check to see if PostSPH.exe is compiled and located in the
-# current working directory.  If so, use that version.  If not check to 
-# see if it exists in the path.  If it does use the path version, 
-# otherwise, exit.
-if (!(-x PostSPH.exe)) then
-    (which PostSPH.exe | grep -v 'Command not found' > .tmp1) >&/dev/null
-    if (!(-z .tmp1)) then
-	  echo "--PostSPH.exe not available here, using from: "`cat .tmp1`
-          set exe = "PostSPH.exe"
-    else
-	 echo "***PostSPH.exe not available, please make PSPH.  Exiting ..."
-	 exit
-    endif
-else
-    set exe = $dd/"PostSPH.exe"
-endif
-rm -f .tmp1
-
-# Go to the directory where the run is supposed to be processed and
-# proceed with processing the files
-cd ${d}
-touch ${ff}TMP.S
-foreach i (${ff}*.S)
-    if (!( ${i} == ${ff}TMP.S )) then
-        set f = `basename $i .S`
-        echo '   working on '${f}' ...'
-        cat ${f}_*.tec > inputfile.DAT
-        ${exe} < ${f}.S >> PostSPH.log
-        rm -f inputfile.DAT
-        mv outputfileN.DAT ${f}.dat
-        rm -f $i
-        rm -f ${f}_*.tec
-    endif
-end
-rm -f ${ff}TMP.S
-if ( $Remove == 1 ) then
-    rm -f PostSPH.log
-endif
-
-# preplot files
+# preplot or gzip files
 if ( $ppFound == 1 ) then
     echo 'Beginning preplot ...'
     echo '--Working in directory: '${d}'/   on files: '${ff}'*.dat'
