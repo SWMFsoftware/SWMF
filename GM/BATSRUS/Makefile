@@ -35,7 +35,6 @@ help:
 	@echo '    CRASH   (Code for Radiative Shock Hydrodynamics)'
 	@echo '    NOMPI   (NOMPI library for compilation without MPI)'
 	@echo '    PIDL    (PostIDL.exe creates 1 .out file from local .idl files)'
-	@echo '    PSPH    (PostSPH.exe creates spherical tec file from sph*.tec files)'
 	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
 	@echo '    EARTH_TRAJ (EARTH_TRAJ.exe creates Earth trajectory file for heliosphere)'
 	@echo '    TIME_CONV (TIME_CONV.exe converts the Carrington time to the usual one)'
@@ -109,12 +108,6 @@ PIDL:
 	@echo Program PostIDL has been brought up to date.
 	@echo ' '
 
-PSPH:
-	cd srcPostProc; $(MAKE) PSPH
-	@echo ' '
-	@echo Program PostSPH has been brought up to date.
-	@echo ' '
-
 SNAPSHOT:
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd srcPostProc; make SNAPSHOT
@@ -148,7 +141,6 @@ rundir:
 	cd ${RUNDIR}/${COMPONENT}; \
 		mkdir restartIN restartOUT IO2; \
 		ln -s ${BINDIR}/PostIDL.exe .; \
-		ln -s ${BINDIR}/PostSPH.exe .; \
 		cp    ${SCRIPTDIR}/pIDL .; \
 		cp    ${GMDIR}/Scripts/TEC/pTEC .; \
 		ln -s ${GMDIR}/Param .

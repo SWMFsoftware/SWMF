@@ -22,12 +22,6 @@ SPECTRUM:
 	rm -f ./SPECTRUM.exe
 	ln -s ${BINDIR}/SPECTRUM.exe .
 
-${BINDIR}/PostSPH.exe:	PostSPH.o
-	${LINK.f90} -o ${BINDIR}/PostSPH.exe PostSPH.o ${Lflag1}
-
-PSPH:
-	make ${BINDIR}/PostSPH.exe
-
 ${BINDIR}/SNAPSHOT.exe: ${LIBSHARE} select_snapshot.o
 	${LINK.f90} -o ${BINDIR}/SNAPSHOT.exe select_snapshot.o -L${LIBDIR} -lSHARE ${Lflag2}
 
