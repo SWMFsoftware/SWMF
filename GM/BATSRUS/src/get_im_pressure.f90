@@ -443,7 +443,7 @@ subroutine apply_im_pressure
               State_VGB(iDens_I,i,j,k,iBlock) = &
                    max(RhoMinIm, Factor*( &
                    TauCoupleIM*State_VGB(iDens_I,i,j,k,iBlock)&
-                   + RhoIm_IC(i:,1,2,3)))
+                   + RhoIm_IC(:,i,j,k)))
            end do; end do; end do
         end if
      end if
