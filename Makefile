@@ -23,7 +23,7 @@ default : SWMF
 #
 # Make all common used executables.
 #
-ALL : SWMF PIDL PSPH EARTH_TRAJ
+ALL : SWMF PIDL EARTH_TRAJ
 
 #
 #       Definition of OS, component versions and directory structure
@@ -71,10 +71,9 @@ help:
 	@#^CMP END IE
 	@#^CMP IF GM BEGIN
 	@echo '    PIDL        (bin/PostIDL.exe post-processes *.idl files)'
-	@echo '    PSPH        (bin/PostSPH.exe post-processes sph*.tec files)'
 	@echo '    SNAPSHOT    (SNAPSHOT.exe extract snapshots from *.outs movies)'
 	@echo '    EARTH_TRAJ  (bin/EARTH_TRAJ.exe generates Earth trajectory)'
-	@echo '    ALL         (make SWMF PIDL PSPH EARTH_TRAJ)'
+	@echo '    ALL         (make SWMF PIDL EARTH_TRAJ)'
 	@#^CMP END GM
 	@echo ' '
 	@echo ' '
@@ -213,10 +212,6 @@ NOMPI: ENV_CHECK
 #^CMP IF GM BEGIN
 #	Post processing codes for BATSRUS plot files
 #
-PSPH:	ENV_CHECK
-	cd GM/BATSRUS; $(MAKE) PSPH
-	@echo ' '
-
 PIDL:	ENV_CHECK
 	cd ${SHAREDIR}; $(MAKE) PIDL
 	@echo ' '
