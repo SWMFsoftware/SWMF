@@ -13,8 +13,7 @@ subroutine write_plot_common(iFile)
        XyzMin_D,XyzMax_D, true_cell, TypeGeometry, LogRGen_I, CellSize1Min
   use ModPhysics, ONLY: No2Io_V, UnitX_, rBody, ThetaTilt
   use ModIO
-  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, close_sph_hdf5_plot, &
-       init_sph_hdf5_plot,init_hdf5_plot
+  use ModHdf5, ONLY: write_plot_hdf5, write_var_hdf5, init_hdf5_plot
   use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_, io_unit_new
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
@@ -25,8 +24,7 @@ subroutine write_plot_common(iFile)
        rRound0, rRound1, SqrtNDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
-  use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell,&
-       write_plot_sph
+  use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
   use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
   use ModWriteTecplot, ONLY: lRecConnect, &
        write_tecplot_head, write_tecplot_data, write_tecplot_connect
@@ -55,8 +53,8 @@ subroutine write_plot_common(iFile)
   integer :: nplotvar
   character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
 
-  ! True for spherical/ geospherical plots
-  logical:: IsSphPlot, DoPlotShell, DoPlotBox
+  ! True for shell / box plots
+  logical:: DoPlotShell, DoPlotBox
 
   ! Equation parameters
   integer, parameter :: MaxParam = 100
@@ -81,16 +79,13 @@ subroutine write_plot_common(iFile)
   real   :: CoordUnit
 
   ! Indices and coordinates
-  integer :: iBLK,i,j,k,l,iVar, H5Index, iProcFound, iBlockFound
-  integer :: ntheta, nphi
+  integer :: iBLK,i,j,k,iVar, H5Index, iProcFound, iBlockFound
   real :: xmin,xmax,ymin,ymax,zmin,zmax
-  real :: rplot
   real :: dxblk,dyblk,dzblk
 
   real :: dxPEmin(3),dxGLOBALmin(3)
   integer :: nPEcells, nBLKcells, nGLOBALcells
   integer :: nPEcellsN,nPEcellsS,nBLKcellsN, nBLKcellsS
-  integer :: nGLOBALcellsN,nGLOBALcellsS
 
   integer :: iTime_I(7), iDim, iParam
 
@@ -218,7 +213,6 @@ subroutine write_plot_common(iFile)
   end if
 
   ! Spherical slices are special cases:
-  IsSphPlot   = plot_type1(1:3) == 'sph'
   DoPlotShell = plot_type1(1:3) == 'shl'
   DoPlotBox   = plot_type1(1:3) == 'box'
 
@@ -278,19 +272,6 @@ subroutine write_plot_common(iFile)
   elseif(DoPlotShell)then
      ! Initialize the shell grid for this file
      call init_plot_shell(iFile, nPlotVar)
-  elseif(IsSphPlot)then
-     ! Put hemisphere info into the filename: the 3rd character of type
-     l = len_trim(NamePlotDir) + 3
-     if(plot_form(iFile)=='hdf') then
-        filename = trim(NameSnapshot)//".batl"
-     else
-        ! two files for the northern and southern hemispheres
-        filename_n = trim(NameSnapshot)//trim(NameProc); filename_n(l:l) = "N"
-        filename_s = trim(NameSnapshot)//trim(NameProc); filename_s(l:l) = "S"
-        ! open the files
-        call open_file(UnitTmp_,  FILE=filename_n, form=TypeForm)
-        call open_file(UnitTmp2_, FILE=filename_s, form=TypeForm)
-     end if
   elseif(plot_form(iFile)=='tec')then
      ! Open two files for connectivity and data
      filename_n = trim(NameSnapshot)//"_1"//trim(NameProc)
@@ -307,27 +288,7 @@ subroutine write_plot_common(iFile)
      call open_file(FILE=filename, form=TypeForm)
   end if
 
-  if (IsSphPlot) then
-     if (plot_form(iFile) == 'hdf') then
-        nphi   = 360.0/plot_dx(3,iFile)
-        rplot  = PlotRange_I(1)
-        ntheta = 2+180.0/plot_dx(2,iFile)
-        call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
-             unitstr_IDL)
-        call init_sph_hdf5_plot(nPlotVar, filename, plotVarNames, NamePlotUnit_V, nTheta,&
-             nPhi, rplot)
-        call barrier_mpi
-     else
-        nphi   = 360.0/plot_dx(3,iFile)
-        rplot  = PlotRange_I(1)
-        ntheta = 1 + 180.0/plot_dx(2,iFile)
-     end if
-
-     if(oktest_me) write(*,*) NameSub,': nTheta, nPhi=', ntheta, nphi
-     IsNonCartesianPlot = .true.
-  else
-     IsNonCartesianPlot = .not.IsCartesianGrid
-  end if
+  IsNonCartesianPlot = .not.IsCartesianGrid
 
   if (DoPlotShell) IsNonCartesianPlot = .true.
   if (DoPlotBox) IsNonCartesianPlot = .false.
@@ -374,7 +335,7 @@ subroutine write_plot_common(iFile)
   if(plot_type1(1:3)=='blk') &
        call find_grid_block(plot_point(:,iFile), iProcFound, iBlockFound)
 
-  if (plot_form(iFile) == 'hdf' .and. .not. IsSphPlot) then
+  if (plot_form(iFile) == 'hdf') then
      call init_hdf5_plot(iFile, plot_type1(1:3),  &
           nplotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
           dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
@@ -391,17 +352,7 @@ subroutine write_plot_common(iFile)
      if (plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
           iFile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
 
-     if (IsSphPlot) then
-        call write_plot_sph(iFile,iBLK,nplotvar,plotvar, &
-             ntheta,nphi,rplot,plotvarnames,H5Index, nBLKcellsN,nBLKcellsS)
-        dxblk=1.0
-        if(plot_form(iFile) == 'hdf') then
-           dyblk=180.0/real(ntheta)
-        else
-           dyblk=180.0/real(ntheta-1)
-        end if
-        dzblk=360.0/real(nphi)
-     else if (DoPlotShell) then
+     if (DoPlotShell) then
         call set_plot_shell(iBLK, nPlotvar, Plotvar)
      else if (DoPlotBox) then
         call set_plot_box(iBLK, nPlotvar, Plotvar)
@@ -430,12 +381,7 @@ subroutine write_plot_common(iFile)
      if (plot_form(iFile)=='idl' .and. .not.DoPlotShell .and. .not.DoPlotBox) &
           then
    	! Update number of cells per processor
-        if (IsSphPlot) then
-      	   nPEcellsN = nPEcellsN + nBLKcellsN
-      	   nPEcellsS = nPEcellsS + nBLKcellsS
-        else
-      	   nPEcells = nPEcells + nBLKcells
-        end if
+        nPEcells = nPEcells + nBLKcells
 
    	! Find smallest cell size in the plotting region
    	dxPEmin(1)=min(dxPEmin(1),dxblk)
@@ -451,16 +397,12 @@ subroutine write_plot_common(iFile)
   select case(plot_form(iFile))
   case('hdf')
 
-     if (isSphPlot) then
-        call close_sph_hdf5_plot(nPlotVar)
-     else
-        call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
-             unitstr_IDL)       
-        call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
-             NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
-             IsSphPlot, plot_dimensional(iFile), &
-             xmin, xmax, ymin, ymax, zmin, zmax)
-     end if
+     call get_idl_units(iFile, nplotvar,plotvarnames, NamePlotUnit_V, &
+          unitstr_IDL)       
+     call write_plot_hdf5(filename, plot_type1(1:3), plotVarNames, &
+          NamePlotUnit_V, nPlotVar, NotACut, IsNonCartesianPlot, &
+          .false., plot_dimensional(iFile), &
+          xmin, xmax, ymin, ymax, zmin, zmax)
 
      RETURN
   case('tec','tcp')
@@ -486,7 +428,7 @@ subroutine write_plot_common(iFile)
   if(DoPlotBox) RETURN
 
   ! Write files for tecplot format
-  if(plot_form(iFile)=='tec' .and. .not.IsSphPlot)then
+  if(plot_form(iFile)=='tec')then
 
      if(.not.allocated(PlotVarNodes_VNB)) then 
         allocate(PlotVarNodes_VNB(nplotvarmax,nI+1,nJ+1,nK+1,nBlock))
@@ -531,7 +473,7 @@ subroutine write_plot_common(iFile)
      deallocate(PlotVarNodes_VNB)
   end if
 
-  if(plot_form(iFile) == 'idl' .and. .not. IsSphPlot .and. nPeCells == 0) then
+  if(plot_form(iFile) == 'idl' .and. nPeCells == 0) then
      call close_file(status = 'DELETE')
   else
      call close_file
@@ -541,33 +483,18 @@ subroutine write_plot_common(iFile)
   if(plot_form(iFile)=='tcp') &
        call write_tecplot_head(trim(NameSnapshot)//"_0.tec", unitstr_TEC)
 
-  if(IsSphPlot .or. plot_form(iFile)=='tec') call close_file(UnitTmp2_)
+  if(plot_form(iFile)=='tec') call close_file(UnitTmp2_)
 
   if(DoSaveOneTecFile) call close_file(iUnit)
 
   !! START IDL
   if (plot_form(iFile)=='idl')then
      ! Find smallest cell size and total number of cells
-     if (.not. IsSphPlot) then
-        call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
-        call MPI_reduce(nPEcells,nGLOBALcells,1,MPI_INTEGER,MPI_SUM,0, &
-             iComm,iError)
-     else
-        call MPI_reduce(nPEcellsN,nGLOBALcellsN,1,MPI_INTEGER,MPI_SUM,0, &
-             iComm,iError)
-        call MPI_reduce(nPEcellsS,nGLOBALcellsS,1,MPI_INTEGER,MPI_SUM,0, &
-             iComm,iError)
-        dxGLOBALmin = dxPEmin
-     end if
+     call MPI_reduce(dxPEmin,dxGLOBALmin,3,MPI_REAL,MPI_MIN,0,iComm,iError)
+     call MPI_reduce(nPEcells,nGLOBALcells,1,MPI_INTEGER,MPI_SUM,0, &
+          iComm,iError)
 
-     if(oktest_me) then
-        if (IsSphPlot) then
-           write(*,*)NameSub,' North: nGLOBALcells=',nGLOBALcellsN
-           write(*,*)NameSub,' South: nGLOBALcells=',nGLOBALcellsS
-        else
-           write(*,*)NameSub,' dxPEmin,nPEcells=',dxPEmin,nPEcells
-        end if
-     end if
+     if(oktest_me) write(*,*)NameSub,' dxPEmin,nPEcells=',dxPEmin,nPEcells
   end if
   !! END IDL
 
@@ -576,165 +503,136 @@ subroutine write_plot_common(iFile)
 
      select case(plot_form(iFile))
      case('tec','tcp')
-        if (IsSphPlot) then
-           filename = trim(NameSnapshot) // ".S"
-        else  
-           filename = trim(NameSnapshot) // ".T"
-        end if
+        filename = trim(NameSnapshot) // ".T"
      case('idl')
         filename = trim(NameSnapshot) // ".h"
      end select
 
-     ! For spherical plots there are two files for north and south hemispheres
-     ! For other cases, EXIT when i=2
-     do i = 1, 2
+     call open_file(FILE=filename)
 
-        if (i == 2 .and. .not. IsSphPlot) EXIT
+     select case(plot_form(iFile))
+     case('tec','tcp')
+        write(UnitTmp_,'(a)')filename
+        write(UnitTmp_,'(i8,a)')nProc,' nProc'
+        write(UnitTmp_,'(i8,a)')n_step,' n_step'
+        write(UnitTmp_,'(1pe18.10,a)')time_simulation,' t'
+        write(UnitTmp_,'(a)')trim(unitstr_TEC)
+        call get_date_time(iTime_I)
+        write(UnitTmp_,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
+        write(UnitTmp_,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
+             ' thetatilt[deg] phitilt[deg]'
+     case('idl')
+        write(UnitTmp_,'(a)') '#HEADFILE'
+        write(UnitTmp_,'(a)') filename
+        write(UnitTmp_,'(i8,16x,a)') nProc, 'nProc'        
+        write(UnitTmp_,'(l8,16x,a)') IsBinary, 'IsBinary'
+        if(IsBinary) &
+             write(UnitTmp_,'(i8,16x,a)')nByteReal, 'nByteReal'
+        write(UnitTmp_,*)
 
-        if(IsSphPlot)then
-           ! Put hemisphere info into the filename: the 3rd character of type
-           l = len_trim(NamePlotDir) + 3
-           if (i==1) then
-              filename(l:l) = 'N'        ! do the notthern hemisphere
-              nGLOBALcells = nGLOBALcellsN
-           else
-              filename(l:l) = 'S'        ! do the southern hemisphere
-              nGLOBALcells = nGLOBALcellsS
-           end if
+        write(UnitTmp_,'(a)') '#NDIM'
+        write(UnitTmp_,'(i8,16x,a)') nDim, 'nDim'        
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#GRIDBLOCKSIZE'
+        do iDim = 1, nDim
+           write(UnitTmp_,'(i8,16x,a,i1)') nIJK_D(iDim), 'BlockSize', iDim
+        enddo
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#ROOTBLOCK'
+        do iDim = 1, nDim
+           write(UnitTmp_,'(i8,16x,a,i1)') nRoot_D(iDim), 'nRootBlock', iDim
+        enddo
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#GRIDGEOMETRYLIMIT'
+        write(UnitTmp_,'(a,4x,a)') TypeGeometry, 'TypeGeometry'
+        if(index(TypeGeometry,'genr') > 0)then
+           write(UnitTmp_,'(i8,16x,a)') size(LogRGen_I), 'nRgen'
+           write(UnitTmp_,'(es13.5,"           LogRgen")') LogRGen_I
         end if
-        call open_file(FILE=filename)
+        if(TypeGeometry == 'roundcube')then
+           write(UnitTmp_,'(es13.5,11x,a)') rRound0,  'rRound0'
+           write(UnitTmp_,'(es13.5,11x,a)') rRound1,  'rRound1'
+           write(UnitTmp_,'(es13.5,11x,a)') SqrtNDim, 'SqrtNDim'
+        end if
+        do iDim = 1, nDim
+           write(UnitTmp_,'(es13.5,11x,a,i1)') XyzMin_D(iDim),'XyzMin',iDim
+           write(UnitTmp_,'(es13.5,11x,a,i1)') XyzMax_D(iDim),'XyzMax',iDim
+        enddo
+        write(UnitTmp_,*)
 
-        select case(plot_form(iFile))
-        case('tec','tcp')
-           write(UnitTmp_,'(a)')filename
-           write(UnitTmp_,'(i8,a)')nProc,' nProc'
-           write(UnitTmp_,'(i8,a)')n_step,' n_step'
-           write(UnitTmp_,'(1pe18.10,a)')time_simulation,' t'
+        write(UnitTmp_,'(a)') '#PERIODIC'
+        do iDim = 1, nDim
+           write(UnitTmp_,'(l8,16x,a,i1)') &
+                IsPeriodic_D(iDim), 'IsPeriodic', iDim
+        enddo
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#NSTEP'
+        write(UnitTmp_,'(i8,16x,a)')n_step, 'nStep'
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#TIMESIMULATION'
+        write(UnitTmp_,'(1pe18.10,6x,a)')time_simulation, 'TimeSimulation'
+        write(UnitTmp_,*)        
+
+        write(UnitTmp_,'(a)') '#NCELL'
+        write(UnitTmp_,'(i10,14x,a)') nGLOBALcells, 'nCellPlot'
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#CELLSIZE'
+        do iDim = 1, nDim
+           write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                DxGlobalMin(iDim)*CoordUnit, 'CellSizeMin',iDim
+        enddo
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#PLOTRANGE'
+        do iDim = 1, nDim
+           write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
+                PlotRange_I(2*iDim-1)*CoordUnit, 'Coord', iDim, 'Min'
+           write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
+                PlotRange_I(2*iDim)*CoordUnit, 'Coord', iDim, 'Max'
+        enddo
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
+        do iDim = 1, nDim
+           write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
+                plot_dx(iDim,iFile)*CoordUnit, 'DxSavePlot', iDim
+        enddo
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#SCALARPARAM'
+        write(UnitTmp_,'(i8,16x,a)') nParam, 'nParam'
+        do iParam = 1, nParam
+           write(UnitTmp_,'(es13.5,11x,a)') &
+                Param_I(iParam), NameParam_I(iParam)
+        enddo
+        write(UnitTmp_,*)
+
+        write(UnitTmp_,'(a)') '#PLOTVARIABLE'
+        write(UnitTmp_,'(i8,16x,a)') nplotvar, 'nPlotVar'
+        write(UnitTmp_,'(a)')trim(allnames)
+        if(TypeFile_I(iFile) == 'tec' .or. TypeFile_I(iFile) == 'tcp')then
+           call get_tec_variables(iFile, nplotvar, plotvarnames, &
+                unitstr_TEC)
            write(UnitTmp_,'(a)')trim(unitstr_TEC)
-           if(IsSphPlot)  &
-                write(UnitTmp_,'(2(1pe13.5),a)') plot_dx(2:3,iFile),' plot_dx'
-           call get_date_time(iTime_I)
-           write(UnitTmp_,*) iTime_I(1:7),' year mo dy hr mn sc msc'        
-           write(UnitTmp_,'(2(1pe13.5),a)') thetaTilt*cRadToDeg, 0.0,  &
-                ' thetatilt[deg] phitilt[deg]'
-           if (IsSphPlot) then
-              write(UnitTmp_,'(es13.5,a)')rplot,' rplot'
-              if (i==1) write(UnitTmp_,'(a)')'Northern Hemisphere'
-              if (i==2) write(UnitTmp_,'(a)')'Southern Hemisphere'
-           end if
-        case('idl')
-           write(UnitTmp_,'(a)') '#HEADFILE'
-           write(UnitTmp_,'(a)') filename
-           write(UnitTmp_,'(i8,16x,a)') nProc, 'nProc'        
-           write(UnitTmp_,'(l8,16x,a)') IsBinary, 'IsBinary'
-           if(IsBinary) &
-                write(UnitTmp_,'(i8,16x,a)')nByteReal, 'nByteReal'
-           write(UnitTmp_,*)
+        elseif( unitstr_IDL == '') then
+           write(UnitTmp_,'(a)')'normalized units'
+        else
+           write(UnitTmp_,'(a)')trim(unitstr_IDL)
+        endif
+        write(UnitTmp_,*)
 
-           write(UnitTmp_,'(a)') '#NDIM'
-           write(UnitTmp_,'(i8,16x,a)') nDim, 'nDim'        
-           write(UnitTmp_,*)
+        write(UnitTmp_,'(a)') '#OUTPUTFORMAT'
+        write(UnitTmp_,'(a)')TypeFile_I(iFile)
+        write(UnitTmp_,*)
 
-           write(UnitTmp_,'(a)') '#GRIDBLOCKSIZE'
-           do iDim = 1, nDim
-              write(UnitTmp_,'(i8,16x,a,i1)') nIJK_D(iDim), 'BlockSize', iDim
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#ROOTBLOCK'
-           do iDim = 1, nDim
-              write(UnitTmp_,'(i8,16x,a,i1)') nRoot_D(iDim), 'nRootBlock', iDim
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#GRIDGEOMETRYLIMIT'
-           write(UnitTmp_,'(a,4x,a)') TypeGeometry, 'TypeGeometry'
-           if(index(TypeGeometry,'genr') > 0)then
-              write(UnitTmp_,'(i8,16x,a)') size(LogRGen_I), 'nRgen'
-              write(UnitTmp_,'(es13.5,"           LogRgen")') LogRGen_I
-           end if
-           if(TypeGeometry == 'roundcube')then
-              write(UnitTmp_,'(es13.5,11x,a)') rRound0,  'rRound0'
-              write(UnitTmp_,'(es13.5,11x,a)') rRound1,  'rRound1'
-              write(UnitTmp_,'(es13.5,11x,a)') SqrtNDim, 'SqrtNDim'
-           end if
-           do iDim = 1, nDim
-              write(UnitTmp_,'(es13.5,11x,a,i1)') XyzMin_D(iDim),'XyzMin',iDim
-              write(UnitTmp_,'(es13.5,11x,a,i1)') XyzMax_D(iDim),'XyzMax',iDim
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#PERIODIC'
-           do iDim = 1, nDim
-              write(UnitTmp_,'(l8,16x,a,i1)') &
-                   IsPeriodic_D(iDim), 'IsPeriodic', iDim
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#NSTEP'
-           write(UnitTmp_,'(i8,16x,a)')n_step, 'nStep'
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#TIMESIMULATION'
-           write(UnitTmp_,'(1pe18.10,6x,a)')time_simulation, 'TimeSimulation'
-           write(UnitTmp_,*)        
-
-           write(UnitTmp_,'(a)') '#NCELL'
-           write(UnitTmp_,'(i10,14x,a)') nGLOBALcells, 'nCellPlot'
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#CELLSIZE'
-           do iDim = 1, nDim
-              write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
-                   DxGlobalMin(iDim)*CoordUnit, 'CellSizeMin',iDim
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#PLOTRANGE'
-           do iDim = 1, nDim
-              write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
-                   PlotRange_I(2*iDim-1)*CoordUnit, 'Coord', iDim, 'Min'
-              write(UnitTmp_,'(1pe18.10,6x,a,i1,a)') &
-                   PlotRange_I(2*iDim)*CoordUnit, 'Coord', iDim, 'Max'
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#PLOTRESOLUTION'
-           do iDim = 1, nDim
-              write(UnitTmp_,'(1pe18.10,6x,a,i1)') &
-                   plot_dx(iDim,iFile)*CoordUnit, 'DxSavePlot', iDim
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#SCALARPARAM'
-           write(UnitTmp_,'(i8,16x,a)') nParam, 'nParam'
-           do iParam = 1, nParam
-              write(UnitTmp_,'(es13.5,11x,a)') &
-                   Param_I(iParam), NameParam_I(iParam)
-           enddo
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#PLOTVARIABLE'
-           write(UnitTmp_,'(i8,16x,a)') nplotvar, 'nPlotVar'
-           write(UnitTmp_,'(a)')trim(allnames)
-           if(TypeFile_I(iFile) == 'tec' .or. TypeFile_I(iFile) == 'tcp')then
-              call get_tec_variables(iFile, nplotvar, plotvarnames, &
-                   unitstr_TEC)
-              write(UnitTmp_,'(a)')trim(unitstr_TEC)
-           elseif( unitstr_IDL == '') then
-              write(UnitTmp_,'(a)')'normalized units'
-           else
-              write(UnitTmp_,'(a)')trim(unitstr_IDL)
-           endif
-           write(UnitTmp_,*)
-
-           write(UnitTmp_,'(a)') '#OUTPUTFORMAT'
-           write(UnitTmp_,'(a)')TypeFile_I(iFile)
-           write(UnitTmp_,*)
-
-        end select
-        call close_file
-     end do
+     end select
+     call close_file
 
   end if
 
@@ -1860,7 +1758,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
 
   character (len=20) :: NameTecFluid
   character (len=20) :: String, NamePlotVar, NameTecVar, NameUnit
-  integer            :: iPlotVar, iVar, i
+  integer            :: iPlotVar, iVar
   !---------------------------------------------------------------------------
   !\
   ! This routine takes the plot_var information and loads the header file with
@@ -1884,19 +1782,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         StringVarTec = 'VARIABLES ="R", "Lon", "Lat'
      end if
 
-  elseif(plot_type1(1:3) == 'sph') then
-
-     if (plot_dimensional(iFile)) then
-        StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
-             // '", "Y ' // trim(NameTecUnit_V(UnitX_)) &
-             // '", "Z ' // trim(NameTecUnit_V(UnitX_)) &
-             // '", "`q [degree]", "`f[degree]'
-     else
-        StringVarTec = 'VARIABLES = "X", "Y", "Z", "`q", "`f'
-     end if
-
   else
-
      if (plot_dimensional(iFile)) then
         StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
              // '", "Y ' // trim(NameTecUnit_V(UnitX_))
@@ -1916,27 +1802,23 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
      String = NamePlotVar
      call extract_fluid_name(String)
      NameTecFluid = ''
-     if(iFluid > 1 .or. .not. IsMhd)then
-        do i = 1, len_trim(NameFluid)
-           NameTecFluid(2*i-1:2*i) = '^'//NameFluid(i:i)
-        end do
-     end if
+     if(iFluid > 1 .or. .not. IsMhd) NameTecFluid = '^'//NameFluid
 
      ! Default value for NameUnit is empty string
      NameUnit = ''
 
      select case(String)
      case('rho') 
-        NameTecVar = '`r'//NameTecFluid
+        NameTecVar = 'Rho'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRho_)
      case('rhoux','mx') 
-        NameTecVar = '`r U_x'//NameTecFluid
+        NameTecVar = 'Rho U_x'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('rhouy','my') 
-        NameTecVar = '`r U_y'//NameTecFluid
+        NameTecVar = 'Rho U_y'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('rhouz','mz') 
-        NameTecVar = '`r U_z'//NameTecFluid
+        NameTecVar = 'Rho U_z'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('bx') 
         NameTecVar = 'B_x'
@@ -1971,13 +1853,13 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'E'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitEnergydens_)
      case('p','pth')
-        NameTecVar = 'p'//NameTecFluid
+        NameTecVar = 'P'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitP_)
      case('ppar')
-        NameTecVar = 'ppar'//NameTecFluid
+        NameTecVar = 'P_par'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitP_)
      case('pperp')
-        NameTecVar = 'pperp'//NameTecFluid
+        NameTecVar = 'P_perp'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitP_)
      case('n')
         NameTecVar = 'n'//NameTecFluid
@@ -2004,7 +1886,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'U_r'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitU_)
      case('rhour','mr') 
-        NameTecVar = '`r U_r'//NameTecFluid
+        NameTecVar = 'Rho U_r'//NameTecFluid
         NameUnit   = NameTecUnit_V(UnitRhoU_)
      case('br') 
         NameTecVar = 'B_r'
@@ -2094,22 +1976,22 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
         NameTecVar = 'S_r'
         NameUnit   = NameTecUnit_V(UnitPoynting_)
      case('b2ur')
-        NameTecVar = 'B^2/`u_0 U_r'
+        NameTecVar = 'B^2/mu_0 U_r'
         NameUnit   = NameTecUnit_V(UnitPoynting_)                
      case('divb', 'divb_cd', 'divb_ct', 'absdivb')
-        NameTecVar = '~Q~7B'
+        NameTecVar = 'div B'
         NameUnit   = NameTecUnit_V(UnitDivB_)
      case('theta1')
-        NameTecVar = '`q_1'
+        NameTecVar = 'theta_1'
         NameUnit   = NameTecUnit_V(UnitAngle_)
      case('phi1')
-        NameTecVar = '`f_1'
+        NameTecVar = 'phi_1'
         NameUnit   = NameTecUnit_V(UnitAngle_)
      case('theta2')
-        NameTecVar = '`q_2'
+        NameTecVar = 'theta_2'
         NameUnit   = NameTecUnit_V(UnitAngle_)
      case('phi2')
-        NameTecVar = '`f_2'
+        NameTecVar = 'phi_2'
         NameUnit   = NameTecUnit_V(UnitAngle_)
      case('status')
         NameTecVar = 'Status'
@@ -2195,7 +2077,7 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
      RETURN
   end if
 
-  if(plot_type1(1:3) == 'sph' .or. plot_type1(1:3) == 'shl') then
+  if(plot_type1(1:3) == 'shl') then
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' deg deg'
   else
      StringUnitIdl = trim(NameIdlUnit_V(UnitX_))//' '//&
