@@ -3650,7 +3650,6 @@ No magnetometer grid file is saved by default.
 				<option name="x=0" />
 				<option name="y=0" default="T" />
 				<option name="z=0" />
-				<option name="sphere" value="sph" />
 				<option name="shell"  value="shl" />
 				<option name="box" />
 				<option name="los" />
@@ -3727,8 +3726,6 @@ No magnetometer grid file is saved by default.
 			<parameter name="yPoint"  type="real" />
 			<parameter name="zPoint"  type="real" />
 		</if>
-		<parameter name="Radius" type="real" min="0" default="10"
-			if="$plotarea =~ /\bsph\b/" />
                 <if expr="$plotarea =~ /\blos\b/">
 			<parameter name="ObsPosX" type="real" default="-215"/>
 			<parameter name="ObsPosY" type="real" default="0"/>
@@ -3815,7 +3812,7 @@ No magnetometer grid file is saved by default.
 			<parameter name="zAngle" type="real" min="-360" max="360" default="0"/>
 		</if>		
 		<parameter name="DxSavePlot" type="real" min="-1.0" default="-1.0"
-	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|sph|shl|los|rfr|lin|eqr|eqb)\b/)" />
+	if="($plotform=~/\bidl/ and $plotarea!~/\b(box|shl|los|rfr|lin|eqr|eqb)\b/)" />
 		<if expr="$plotvar =~ /\bvar\b/i">
 			<parameter name="NameVars" type="string" length="200"/>
 			<parameter name="NamePars" type="string" length="200" default="{default}"/>
@@ -3856,10 +3853,6 @@ cut ray idl_real8	StringPlot ! 3D cut plot with raytrace info
 -10.			Coord3MinCut    
 10.			Coord3MaxCut    
 -1.			DxSavePlot ! unstructured grid (for IDL plots)
-sph flx idl_ascii	StringPlot ! spherical surface plot
--1			DnSavePlot
-100.			DtSavePlot
-4.			Radius     ! of spherical surface
 los tbl idl_real4       StringPlot ! line of sight plot using table
 -1			DnSavePlot
 100.			DtSavePlot
@@ -4021,7 +4014,6 @@ cut   - 3D, 2D or 1D cut along (curvilinear) coordinates (IDL and TCP)
         or a 2D rectangular cut (node based Tecplot)
 dpl   - cut at dipole 'equator', uses PLOTRANGE to clip plot
 slc   - 2D slice defined with a point and normal, uses PLOTRANGE to clip plot
-sph   - spherical surface cut at the given radius
 shl   - spherical shell in given coordinate system (1, 2 or 3D)
 box   - cartesian box in given coordinate system (1, 2, or 3D)
 los   - line of sight integrated plot
@@ -4100,8 +4092,7 @@ from the parameter file in this order:
  xAngle, yAngle, zAngle  if PlotArea is 'box' (given in degrees)
  xPoint yPoint zPoint	 if PlotArea is 'slc', or 'blk'
  xNormal yNormal zNormal if PlotArea is 'slc'
- DxSavePlot		 if PlotForm is 'idl' and PlotArea is not sph/los/lin/eqr/eqb
- Radius                  if PlotArea is 'sph'
+ DxSavePlot		 if PlotForm is 'idl' and PlotArea is not box/shl/los/rfr/lin/eqr/eqb
  NameVars		 if PlotVar  is 'var' or 'VAR'
  NamePars		 if PlotVar  is 'var' or 'VAR'
 \end{verbatim}
@@ -4162,14 +4153,12 @@ edges parallel to the Z axis.
   0.0			yNormal
   1.0			zNormal
 \end{verbatim}
-The DxSavePlot parameter determines the grid resolution for 
-IDL files:
+The DxSavePlot parameter determines the grid resolution for IDL files:
 \begin{verbatim}
   positive value - uniform grid with cell size DxSavePlot in first coordinate
   0.	         - uniform grid with smallest cell in the plotting area
  -1.	         - unstructured grid with original AMR cells
 \end{verbatim}
-The Radius parameter is the radius of the spherical cut for PlotArea='sph'
 
 The line-of-sight (PlotArea 'los') plots calculate integrals along the
 lines of sight of some quantity and create a 2D Cartesian square
@@ -4256,8 +4245,6 @@ where extension is 'tec' for the TEC/TCP and 'idl' for the IDL file formats.
 The PlotNumber goes from 1 to nPlotFilr in the order of the files in PARAM.in.
 The TIMESTAMP contains time step, simulation time or date-time information
 depending on the settings in the #SAVEPLOTNAME command.
-Spherical plot area 'sph' creates two files per processor starting with
-'spN' and 'spS' for the northern and southern hemispheres, respectively.
 
 After all processors wrote their plot files, processor 0 writes a small 
 ASCII header file named as
@@ -4267,7 +4254,6 @@ ASCII header file named as
 where headextension is:
 \begin{verbatim}
            'T' for TEC/TCP file format
-           'S' for TEC and plot_area 'sph' 
            'h' for IDL file format       
 \end{verbatim}
 
@@ -4285,7 +4271,6 @@ one or two coordinates, the shell becomes a 2D or 1D slice
 (for example 2D Lon-Lat, r-Lon, r-Lat surfaces, or 1D circle at fixed latitude,
 or a radial line with fixed longitude and latitude).
 The output is a single file in IDL or Tecplot format.
-This capability is to replace the 'sph' plot type. 
 
 The box plot area ('box') can be used to extract a Cartesian box
 defined by the center position and the size (length of the edges) 
