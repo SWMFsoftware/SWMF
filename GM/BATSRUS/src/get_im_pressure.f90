@@ -305,7 +305,7 @@ subroutine apply_im_pressure
 
   integer :: iLastPIm = -1, iLastGrid = -1
   integer :: iIonSecond, nIons
-  integer :: i, j, k, iBlock
+  integer :: i, j, k, iBlock, nDensity
   integer, allocatable:: iDens_I(:)
 
   character (len=*), parameter :: NameSub='apply_im_pressure'
@@ -359,16 +359,20 @@ subroutine apply_im_pressure
   if (DoMultiFluidIMCoupling)then
      ! Number of fluids: 1 for multispecies, 2 for multiion, 3 for MHD-ions
      nIons = iIonSecond
-     ! Set array of density indexes: 3 values for multispecies, nIons for multifluid
-     if(UseMultiSpecies)then
-        allocate(iDens_I(3))
-        iDens_I = (/ Rho_, SpeciesFirst_, SpeciesFirst_+1/)
-     else
-        allocate(iDens_I(nIons))
-        iDens_I = iRho_I(1:nIons)
-     end if
   else
      nIons = 1
+  end if
+
+
+  ! Set array of density indexes: 3 values for multispecies, nIons for multifluid
+  if(UseMultiSpecies)then
+     nDensity = 3
+     allocate(iDens_I(nDensity))
+     iDens_I = (/ Rho_, SpeciesFirst_, SpeciesFirst_+1/)
+  else
+     nDensity = nIons
+     allocate(iDens_I(nDensity))
+     iDens_I = iRho_I(1:nIons)
   end if
 
   do iBlock = 1, nBlock
@@ -419,7 +423,7 @@ subroutine apply_im_pressure
               State_VGB(iDens_I,i,j,k,iBlock) = max( RhoMinIm, &
                    State_VGB(iDens_I,i,j,k,iBlock) &
                    + Factor * TauCoeffIm_C(i,j,k) &
-                   * (RhoIm_IC(:,i,j,k) - State_VGB(iDens_I,i,j,k,iBlock)))
+                   * (RhoIm_IC(1:nDensity,i,j,k) - State_VGB(iDens_I,i,j,k,iBlock)))
            end do; end do; end do
         end if
      else
@@ -443,7 +447,7 @@ subroutine apply_im_pressure
               State_VGB(iDens_I,i,j,k,iBlock) = &
                    max(RhoMinIm, Factor*( &
                    TauCoupleIM*State_VGB(iDens_I,i,j,k,iBlock)&
-                   + RhoIm_IC(:,i,j,k)))
+                   + RhoIm_IC(1:nDensity,i,j,k)))
            end do; end do; end do
         end if
      end if
