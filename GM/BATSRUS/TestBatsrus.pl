@@ -181,16 +181,14 @@ if(-f "Makefile"){
 	}
 	# Compile postprocessing executables if necessary
 	my @plottype=@{$select{"Plottype"}};
-	foreach my $PLT ("IDL","SPH"){
-	    if(not -f "src/Post$PLT.exe" and 
-	       not -f "bin/Post$PLT.exe" and 
-	       not "../../bin/Post$PLT.exe"){
-		print "Compiling Post$PLT.exe...\n";
-		&execute("make P$PLT");
-		warn "WARNING: Post$PLT.exe could not be compiled".
-			" with make P$PLT\n"
-		    unless -x "src/Post$PLT.exe" or -x "bin/Post$PLT.exe";
-	    }
+	if(not -f "src/PostIDL.exe" and 
+	   not -f "bin/PostIDL.exe" and 
+	   not "../../bin/PostIDL.exe"){
+	    print "Compiling PostIDL.exe...\n";
+	    &execute("make PIDL");
+	    warn "WARNING: PostIDL.exe could not be compiled".
+		" with make PIDL\n"
+		unless -x "src/PostIDL.exe" or -x "bin/PostIDL.exe";
 	}
     }
     chdir $rundir;
@@ -326,11 +324,7 @@ sub do_test{
 	}
 	if(grep /\.T$/, @dir){
 	    print "    Post Processing TEC files.\n";
-	    &execute("./pTEC p r T >> ../log.$num");
-	}
-	if(grep /\.S$/, @dir){
-	    print "    Post Processing TEC SPH files.\n";
-	    &execute("./pTEC p r S >> ../log.$num");
+	    &execute("./pTEC p r >> ../log.$num");
 	}
 	chdir "..";
 
