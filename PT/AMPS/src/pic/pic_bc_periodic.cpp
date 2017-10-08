@@ -51,6 +51,9 @@ void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
       }
     }
   }
+
+  //update the associated data in the subdomain 'boundary layer' of blocks
+  PIC::Mesh::mesh.ParallelBlockDataExchange();
 }
 
 //process the data update for the 'ghost' block
