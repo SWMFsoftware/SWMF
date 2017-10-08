@@ -1,12 +1,28 @@
 #SAVEPLOT
-2                       nplotfiles
-sph FLX idl             plot_string
+2                       nPlotFile
+shl FLX idl             StringPlot
 #INCLUDE
 Plots
-4.                      rPlot
-sph FLX tec             plot_string
+GSM			TypeCoordPlot
+4.0			rMin
+4.0			rMax
+0.			LonMin
+360.			LonMax
+10.			dLon    ! only read if LonMin /= LonMax
+-90.			LatMin
+90.			LatMax
+10.			dLat    ! only read if LatMin /= LatMax
+shl FLX tec             StringPlot
 #INCLUDE
 Plots
-4.                      rPlot
+GEO			TypeCoordPlot
+4.0			rMin
+8.0			rMax
+0.5			dR
+0.			LonMin
+360.			LonMax
+10.			dLon    ! only read if LonMin /= LonMax
+0.			LatMin
+0.			LatMax
 
 #END
