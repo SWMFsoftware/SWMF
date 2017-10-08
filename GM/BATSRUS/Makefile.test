@@ -41,7 +41,7 @@ test:
 	-@($(MAKE) test_mars)
 	-@($(MAKE) test_marsfluids)
 	-@($(MAKE) test_venus)
-	-@($(MAKE) test_mercurysph)
+	-@($(MAKE) test_mercuryspuh)
 	-@($(MAKE) test_ganymede)
 	-@($(MAKE) test_saturn)
 	-@($(MAKE) test_comet)
@@ -818,7 +818,7 @@ test_func:
 test_func_compile:
 	./Config.pl -u=Default -e=Mhd -g=8,8,8,720,70
 	$(MAKE) BATSRUS
-	make PIDL PSPH
+	make PIDL
 
 test_func_run: test_rundir
 	./TestSuite.pl -r='${MPIRUN} ' -d=${TESTDIR} func
@@ -1181,16 +1181,16 @@ test_mercurysph_run:
 SORT = sort -k1 -k2 -k3 -n
 
 test_mercurysph_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6 \
 		Param/MERCURY/TestOutput/REFlog_n000000.log \
 		${TESTDIR}/RESULTS/GM/log_n000000.log > test_mercurysph.diff)
-	gunzip -c Param/MERCURY/TestOutput/REF3d__var_2_n0000100.dat.gz | ${SORT} \
+	-gunzip -c Param/MERCURY/TestOutput/REF3d__var_2_n0000100.dat.gz | ${SORT} \
 	        | grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/ref_3d.dat
-	gunzip -c ${TESTDIR}/RESULTS/GM/3d__var_2_n00000100.dat.gz | ${SORT} \
+	-gunzip -c ${TESTDIR}/RESULTS/GM/3d__var_2_n00000100.dat.gz | ${SORT} \
 		| grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/3d.dat
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
 		${TESTDIR}/RESULTS/GM/ref_3d.dat \
 		${TESTDIR}/RESULTS/GM/3d.dat >> test_mercurysph.diff)
 	ls -l test_mercurysph.diff
@@ -1390,7 +1390,7 @@ test_amr:
 test_amr_compile:
 	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
 	$(MAKE) BATSRUS
-	make PIDL PSPH
+	make PIDL
 
 test_amr_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1423,7 +1423,7 @@ test_amrsph:
 test_amrsph_compile:
 	./Config.pl -e=Mhd -u=Default -g=4,4,4,4000,1
 	$(MAKE) BATSRUS
-	make PIDL PSPH
+	make PIDL
 
 test_amrsph_rundir: test_rundir
 	cd ${TESTDIR}; \
@@ -1469,12 +1469,12 @@ test_2bodyplot_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -g -M RESULTS
 
 test_2bodyplot_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6 \
 		Param/2BODYPLOT/TestOutput/REFlog_n000001.log \
 		${TESTDIR}/RESULTS/GM/log_n000001.log > test_2bodyplot.diff)
 	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.out.gz \
 		> ${TESTDIR}/RESULTS/GM/ref_y=0.out
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
 		${TESTDIR}/RESULTS/GM/y=0_var_*9_*.out \
 		${TESTDIR}/RESULTS/GM/ref_y=0.out >> test_2bodyplot.diff)
 	gunzip -c Param/2BODYPLOT/TestOutput/REFy*.dat.gz | ${SORT} \
@@ -1483,7 +1483,7 @@ test_2bodyplot_check:
 	gunzip -c ${TESTDIR}/RESULTS/GM/y=0_ful_*9_*.dat.gz | ${SORT} \
 		| grep -v AUXDATA \
 		> ${TESTDIR}/RESULTS/GM/y=0.dat
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-6\
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-6\
 		${TESTDIR}/RESULTS/GM/ref_y=0.dat \
 		${TESTDIR}/RESULTS/GM/y=0.dat >> test_2bodyplot.diff)
 	ls -l test_2bodyplot.diff
