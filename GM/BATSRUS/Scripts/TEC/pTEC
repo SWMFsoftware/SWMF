@@ -98,6 +98,7 @@ endif
 ############################################### IO2 begin ###########
 
 # Process BASENAME to get directory part and filename part.
+set BASENAME=${BASENAME}.tmp
 set d  = `dirname ${BASENAME}`
 set ff = `basename ${BASENAME} .tmp`
 if (${ff} == .tmp) then
