@@ -51,8 +51,7 @@ void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
       }
     }
   }
-
-  //update the associated data in the subdomain 'boundary layer' of blocks
+  //exchange info between ghost cells
   PIC::Mesh::mesh.ParallelBlockDataExchange();
 }
 
@@ -223,6 +222,7 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
   PIC::Mesh::cDataCenterNode *CenterNodeGhostBlock,*CenterNodeRealBlock;
   PIC::Mesh::cDataCornerNode *CornerNodeGhostBlock,*CornerNodeRealBlock;
 
+ 
   if (GhostBlockThread==PIC::ThisThread) {
     pipe.RedirectRecvBuffer(RealBlockThread);
 
@@ -230,13 +230,22 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
     for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
       CenterNodeGhostBlock=GhostBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
       pipe.recv((char*)(CenterNodeGhostBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength,RealBlockThread);
+      if (((double*)CenterNodeGhostBlock->GetAssociatedDataBufferPointer())[0]<0.0) {
+	printf("recv number:%f\n",((double*)CenterNodeGhostBlock->GetAssociatedDataBufferPointer())[0]);
+        printf("i,j,k:%d,%d,%d\n",i,j,k);
+        printf("xmin:%f,%f,%f\n",GhostBlock->xmin[0],GhostBlock->xmin[1],GhostBlock->xmin[2]);
+        printf("xmax:%f,%f,%f\n",GhostBlock->xmax[0],GhostBlock->xmax[1],GhostBlock->xmax[2]);
+      }
+      // ((double*)CenterNodeGhostBlock->GetAssociatedDataBufferPointer())[0]=10.0;
+
     }
 
     //recv 'corner' nodes
-    for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
+    /*for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
       CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
       pipe.recv((char*)(CornerNodeGhostBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,RealBlockThread);
     }
+    */
   }
   else if (RealBlockThread==PIC::ThisThread) {
     pipe.RedirectSendBuffer(GhostBlockThread);
@@ -244,14 +253,20 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
     //send 'center' nodes
     for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
       CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+      if (((double*)CenterNodeRealBlock->GetAssociatedDataBufferPointer())[0]<0.0) {
+	printf("i,j,k:%d,%d,%d\n",i,j,k);
+	printf("xmin:%f,%f,%f\n",RealBlock->xmin[0],RealBlock->xmin[1],RealBlock->xmin[2]);
+	printf("xmax:%f,%f,%f\n",RealBlock->xmax[0],RealBlock->xmax[1],RealBlock->xmax[2]);
+      }
       pipe.send((char*)(CenterNodeRealBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
     }
 
     //send 'corner' nodes
-    for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
+    /* for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
       CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
       pipe.send((char*)(CornerNodeRealBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
     }
+    */
   }
 
   //flush the pipe
@@ -385,27 +400,48 @@ void PIC::BC::ExternalBoundary::Periodic::GetBoundaryExtensionLength() {
   double dx[3];
 
   HighestBoundaryResolution = PIC::BC::ExternalBoundary::Periodic::GetHighestRequestedBoundaryResolution(1024);
-
+  printf("Highest Boundary Resolution1:%f\n", HighestBoundaryResolution);
 
   for (int i=0;i<3;i++){
     dx[i]=(xmaxOriginal[i]-xminOriginal[i])/nBlkArr[i];
   }
 
   double rCell = sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
-  for (int i=0;i<3;i++) dx[i]/=rCell;
-
-  for (int iDim=0;iDim<3;iDim++){
-    level[iDim]=log2((xmaxOriginal[iDim]-xminOriginal[iDim]+2.*HighestBoundaryResolution*dx[iDim]*nBlkArr[iDim])/(2.*HighestBoundaryResolution*dx[iDim]*nBlkArr[iDim]));
+  
+  
+  /*
+    for (int iDim=0;iDim<3;iDim++){
+    level[iDim]=log2((xmaxOriginal[iDim]-xminOriginal[iDim]+2.*HighestBoundaryResolution*dx[iDim]*nBlkArr[iDim])/(2*HighestBoundaryResolution*dx[iDim]*nBlkArr[iDim]));
   }
+  */
+  //double maxLevel= *std::max_element(level,level+3);
+  int nLevel=ceil(log2(rCell/HighestBoundaryResolution))-1;
 
-  double maxLevel= *std::max_element(level,level+3);
-  int nLevel=(int)ceil(maxLevel);
+  bool levelFind=false;
+  printf("$PREFIX: max level in user requested domain:%d\n",nLevel);
 
-  printf("$PREFIX: max level at boundary:%d\n",nLevel);
-
-  for(int i=0;i<3;i++){
-    BoundaryDx[i]=(xmaxOriginal[i]-xminOriginal[i])/(pow(2.,nLevel)-1.)/2.;
+  for (int iLevel=nLevel-1;iLevel<nLevel+2;iLevel++){
+    for(int i=0;i<3;i++){
+      BoundaryDx[i]=(xmaxOriginal[i]-xminOriginal[i])/(pow(2.,iLevel)-1.)/2;
+      dx[i]=BoundaryDx[i]/nBlkArr[i];
+    }
+    
+    double HighestBoundaryResolutionCopy = sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
+    printf("Highest Boundary Resolution2:%f\n", HighestBoundaryResolutionCopy);
+    for (int i=0;i<3;i++){
+      dx[i]=(xmaxOriginal[i]-xminOriginal[i]+2*BoundaryDx[i])/nBlkArr[i];
+    }
+    rCell = sqrt(dx[0]*dx[0]+dx[1]*dx[1]+dx[2]*dx[2]);
+    int BoundaryLevel=ceil(log2(rCell/HighestBoundaryResolutionCopy));
+    int UserLevel=ceil(log2(rCell/HighestBoundaryResolution));
+    printf("$PREFIX: max level at boundary 2:%d\n",BoundaryLevel);
+    printf("$PREFIX: User max level at boundary:%d\n",UserLevel);
+    if (BoundaryLevel==UserLevel){
+      levelFind=true;
+      break;
+    }
   }
+  if (levelFind==false) exit(__LINE__,__FILE__,"Error: please change block number to power of 2.");
 }
 
 
