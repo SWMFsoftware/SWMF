@@ -11,7 +11,7 @@ module SP_ModAdvance
   use SP_ModSize, ONLY: iParticleMin, iParticleMax, nMomentumBin, nDim
 
   use SP_ModGrid, ONLY: &
-       X_, Y_, Z_, D_, Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
+       X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
        Begin_, End_, Shock_, ShockOld_, EFlux_,&
        Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        nBlock, &
@@ -73,6 +73,7 @@ module SP_ModAdvance
   ! variables shared between subroutines in this module
   integer:: iBegin, iEnd, iBlock, iShock
   real, dimension(iParticleMin:iParticleMax):: Rho_I, RhoOld_I, U_I, T_I
+  real, dimension(iParticleMin:iParticleMax):: DLogRho_I
   real, dimension(iParticleMin:iParticleMax):: Radius_I, B_I,   BOld_I
   real, dimension(iParticleMin:iParticleMax):: FermiFirst_I
   !-----------------------------
@@ -154,25 +155,22 @@ contains
     ! find location of a shock wave on every field line
     !--------------------------------------------------------------------------
     ! loop variable
-    integer:: iBlock, iShockOld, iEnd
+    integer:: iSearchMin, iSearchMax
     !--------------------------------------------------------------------------
     if(.not.DoTraceShock)then
-       iGridLocal_IB(Shock_, 1:nBlock) = iGridLocal_IB(Begin_, 1:nBlock)
+       iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Begin_, iBlock)
        RETURN
     end if
-    ! go over field lines and find the shock location for each one
-    do iBlock = 1, nBlock
-       ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
-       ! shock never moves back
-       iShockOld = iGridLocal_IB(ShockOld_, iBlock)
-       iEnd      = iGridLocal_IB(End_, iBlock)
-       iGridLocal_IB(Shock_, iBlock) = iShockOld - 1 + maxloc(&
-            log(&
-            State_VIB(Rho_,iShockOld  :iEnd-1,iBlock)/ &
-            State_VIB(Rho_,iShockOld+1:iEnd  ,iBlock)   ) &
-            / State_VIB(D_,iShockOld  :iEnd-1,iBlock),&
-            1, MASK = Radius_I(iShockOld:iEnd-1) > 2.0)
-    end do
+
+    ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
+    ! shock never moves back
+    iSearchMin= max(iGridLocal_IB(ShockOld_, iBlock), &
+         iGridLocal_IB(Begin_, iBlock) + nWidth )
+    iSearchMax= iGridLocal_IB(End_, iBlock) - nWidth - 1
+    iGridLocal_IB(Shock_, iBlock) = iSearchMin - 1 + maxloc(&
+         DLogRho_I(iSearchMin       :iSearchMax) - &
+         DLogRho_I(iSearchMin+nWidth:iSearchMax+nWidth),&
+         1, MASK = Radius_I(iSearchMin:iSearchMax) > 1.2)
   end subroutine get_shock_location
 
   !===========================================================================
@@ -291,12 +289,49 @@ contains
   subroutine steepen_shock
     ! change the density profile near the shock front so it becomes steeper
     ! for the current line
+    integer:: iParticle ! loop variable
+    real   :: DLogRhoBackground, DLogRhoExcess, Misc, Length
     !--------------------------------------------------------------------------
+    ! compute the background value of DLogRho as average in the upstream 
+    DLogRhoBackground = 0.0
+    do iParticle = iShock+nWidth+1, iEnd-1
+       DLogRhoBackground = DLogRhoBackground + &
+            0.5 * (DLogRho_I(iParticle) + DLogRho_I(iParticle+1)) * &
+            State_VIB(D_, iParticle, iBlock)
+    end do
+    DLogRhoBackground = DLogRhoBackground / &
+         (State_VIB(S_,iEnd,iBlock)-State_VIB(S_,iShock+nWidth+1,iBlock))
+
+    ! find the excess of DLogRho within the shock compared to background
+    ! averaged over length
+    DLogRhoExcess = 0.0
+    Length = 0.0
+    do iParticle = iShock - nWidth, iShock + nWidth - 1
+       Misc = 0.5 * (DLogRho_I(iParticle) + DLogRho_I(iParticle+1)) - &
+            DLogRhoBackground
+       if(Misc > 0.0)then
+          DLogRhoExcess = DLogRhoExcess + &
+               Misc * State_VIB(D_, iParticle, iBlock)
+          Length = Length + State_VIB(D_, iParticle, iBlock)
+       end if
+    end do
+
+    ! check for zero excess
+    if(DLogRhoExcess == 0.0)&
+         RETURN
+    ! otherwise, get the averaged value
+    DLogRhoExcess = DLogRhoExcess / Length
+
+    ! apply the result within the shock width
+    DLogRho_I(iShock-nWidth:iShock+nWidth) = min(&
+         DLogRhoBackground, &
+         DLogRho_I(iShock-nWidth:iShock+nWidth))
+    DLogRho_I(iShock) = DLogRhoExcess + DLogRhoBackground
+    
+    ! also, sharpen the magnitude of the magnetic field
     ! post shock part
-    Rho_I(iShock+1-nWidth:iShock+1) = maxval(Rho_I(iShock+1-nWidth:iShock+1))
     B_I(  iShock+1-nWidth:iShock+1) = maxval(B_I(  iShock+1-nWidth:iShock+1))
     ! pre shock part
-    Rho_I(iShock+1:iShock+nWidth) = minval(Rho_I(iShock+1:iShock+nWidth))
     B_I(  iShock+1:iShock+nWidth) = minval(B_I(  iShock+1:iShock+nWidth))
   end subroutine steepen_shock
 
@@ -324,7 +359,6 @@ contains
 
   subroutine set_diffusion
     ! set diffusion coefficient for the current line
-    integer:: i
     !--------------------------------------------------------------------------
     DOuter_I(iBegin:iEnd) = B_I(iBegin:iEnd)
     if(.not.UseRealDiffusionUpstream)then
@@ -337,7 +371,7 @@ contains
     else
        ! diffusion is different up- and down-stream
        ! Sokolov et al. 2004, paragraphs before and after eq (4)
-       where(Radius_I(iBegin:iEnd) > 1.1 * Radius_I(iShock))
+       where(Radius_I(iBegin:iEnd) > 0.9 * Radius_I(iShock))
           ! upstream:
           DInnerInj_I(iBegin:iEnd) = &
                0.2/3.0 * Radius_I(iBegin:iEnd) / RSun * &
@@ -352,6 +386,7 @@ contains
                min(1.0, 1.0/0.9 * Radius_I(iBegin:iEnd)/Radius_I(iShock))
        end where
     end if
+
     ! set the boundary condition for diffusion
     Distribution_IIB(2:nMomentumBin, iBegin, iBlock) = &
          Distribution_IIB(1, iBegin, iBlock) * &
@@ -363,10 +398,8 @@ contains
   subroutine set_fermi_first_order
     ! first order Fermi acceleration for the current line
     !--------------------------------------------------------------------------
-    FermiFirst_I(iBegin:iEnd) = log(&
-         Rho_I(   iBegin:iEnd) / &
-         RhoOld_I(iBegin:iEnd)    ) / (3*DLogMomentum)
-  end subroutine set_fermi_first_order
+    FermiFirst_I(iBegin:iEnd) = DLogRho_I(iBegin:iEnd) / (3*DLogMomentum)
+ end subroutine set_fermi_first_order
 
   !===========================================================================
 
@@ -389,33 +422,37 @@ contains
        call set_initial_condition
     end if
 
-    ! identify shock in the data
-    call get_shock_location
-
     ! the full time step
     DtFull = TimeLimit - TimeGlobal
     ! go line by line and advance the solution
     do iBlock = 1, nBlock
-       ! find how far shock has travelled on this line: nProgress
-       iShock    = iGridLocal_IB(Shock_,   iBlock)
-       iShockOld = iGridLocal_IB(ShockOld_,iBlock)
-       nProgress = MAX(1, iShock - iShockOld)
-       iShockOld = MIN(iShockOld, iShock-1)
-       iGridLocal_IB(ShockOld_,iBlock) = iShockOld
+
        ! the active particles on the line
        iBegin = iGridLocal_IB(Begin_, iBlock)
        iEnd   = iGridLocal_IB(End_, iBlock)
        ! various data along the line
        Radius_I(iBegin:iEnd) = &
             sqrt(sum(State_VIB(X_:Z_, iBegin:iEnd, iBlock)**2, 1))
-       U_I(     iBegin:iEnd) = State_VIB(U_,     iBegin:iEnd,iBlock)
-       T_I(     iBegin:iEnd) = State_VIB(T_,     iBegin:iEnd,iBlock)
-       BOld_I(  iBegin:iEnd) = State_VIB(BOld_,  iBegin:iEnd,iBlock)
-       RhoOld_I(iBegin:iEnd) = State_VIB(RhoOld_,iBegin:iEnd,iBlock)
+       Rho_I(    iBegin:iEnd) = State_VIB(Rho_,   iBegin:iEnd,iBlock)
+       U_I(      iBegin:iEnd) = State_VIB(U_,     iBegin:iEnd,iBlock)
+       T_I(      iBegin:iEnd) = State_VIB(T_,     iBegin:iEnd,iBlock)
+       BOld_I(   iBegin:iEnd) = State_VIB(BOld_,  iBegin:iEnd,iBlock)
+       RhoOld_I( iBegin:iEnd) = State_VIB(RhoOld_,iBegin:iEnd,iBlock)
+       DLogRho_I(iBegin:iEnd) = log(Rho_I(iBegin:iEnd)/RhoOld_I(iBegin:iEnd))
+
+       ! identify shock in the data
+       call get_shock_location
+       ! find how far shock has travelled on this line: nProgress
+       iShock    = iGridLocal_IB(Shock_,   iBlock)
+       iShockOld = iGridLocal_IB(ShockOld_,iBlock)
+       nProgress = MAX(1, iShock - iShockOld)
+       iShockOld = MIN(iShockOld, iShock-1)
+       iGridLocal_IB(ShockOld_,iBlock) = iShock
 
        ! each particles shock has crossed should be
        ! processed separately => reduce the time step
        DtProgress = DtFull / nProgress
+
        ! go over each crossed particle
        do iProgress = 1, nProgress
           ! account for change in the background up to the current moment
@@ -423,6 +460,9 @@ contains
           Rho_I(iBegin:iEnd) = State_VIB(RhoOld_,iBegin:iEnd,iBlock) +Alpha *&
                (State_VIB(Rho_,  iBegin:iEnd,iBlock) - &
                State_VIB(RhoOld_,iBegin:iEnd,iBlock))
+
+          DLogRho_I(iBegin:iEnd)=log(Rho_I(iBegin:iEnd)/RhoOld_I(iBegin:iEnd))
+
           B_I(iBegin:iEnd) = State_VIB(BOld_,iBegin:iEnd,iBlock) + Alpha*&
                (State_VIB(B_,  iBegin:iEnd,iBlock) - &
                State_VIB(BOld_,iBegin:iEnd,iBlock))
@@ -473,7 +513,7 @@ contains
                      TotalEnergyInj/&
                      momentum_to_energy(Momentum*MomentumInj,NameParticle)
                 if(UseRealDiffusionUpstream)then
-                   where(Radius_I(iBegin:iEnd) > Radius_I(iShock)*1.1)
+                   where(Radius_I(iBegin:iEnd) > 0.9*Radius_I(iShock))
                       ! upstream:
                       DInner_I(iBegin:iEnd) = &
                            DInner_I(iBegin:iEnd) / Momentum**(2.0/3)
