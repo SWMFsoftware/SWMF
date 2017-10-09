@@ -397,7 +397,10 @@ void PropagateCenterData(double * v, int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlo
 
         //PIC::CPLR::InitInterpolationStencil(xInterpolate,startNode);
         //PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(xInterpolate,startNode);
-        PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInterpolate,startNode);
+
+        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *tempNode=PIC::Mesh::mesh.findTreeNode(xInterpolate,startNode);
+        PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInterpolate,tempNode);
+
         int iStencil;
         double currentInterpolation[nVars];
         for (int iVar=0; iVar<nVars; iVar++) currentInterpolation[iVar]=0.0;
