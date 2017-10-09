@@ -14,10 +14,12 @@ module SP_ModWrite
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, Begin_, End_, X_, Y_, Z_, Bx_, By_, Bz_, &
+       Proc_, Begin_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
        Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V
+
+  use SP_ModAdvance, ONLY: DoTraceShock
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
@@ -174,6 +176,9 @@ contains
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
                   'ParticleIndex '//trim(File_I(iFile) % NameVarPlot)
+             if(DoTraceShock)&
+                  File_I(iFile) % NameVarPlot = &
+                  trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
           case(MH2D_)
              call process_mh
              ! prepare the output data container
@@ -365,6 +370,9 @@ contains
       integer:: iFirst, iLast
       ! for better readability
       integer:: nVarPlot
+      ! shock location
+      integer:: iShock
+      real   :: RShock
       ! timestamp
       character(len=8):: StringTime
       !------------------------------------------------------------------------
@@ -393,6 +401,9 @@ contains
             end do
          end do
 
+         ! shock location
+         iShock = iGridLocal_IB(Shock_,iBlock)
+         RShock = sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
          ! print data to file
          call save_plot_file(&
               NameFile     = NameFile, &
@@ -404,7 +415,11 @@ contains
               CoordMaxIn_D = (/real(iLast)/), &
               NameVarIn    = File_I(iFile) % NameVarPlot, &
               VarIn_VI     = &
-              File_I(iFile) % Buffer_II(1:nVarPlot,iFirst:iLast)&
+              File_I(iFile) % Buffer_II(1:nVarPlot,iFirst:iLast),&
+              ! additionally print the shock location both as
+              ! index and radial distance
+              ParamIn_I    = pack(&
+              (/real(iShock), RShock/),DoTraceShock)&
               )
       end do
     end subroutine write_mh_1d
