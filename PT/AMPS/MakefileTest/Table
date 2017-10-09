@@ -552,9 +552,73 @@ Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-p
 Name=test/Periodic-BC@@(0+valeriy)  
 Time=6
 
-Outs=amps.TrajectoryTracking.out=0.s=0.H2O 
+Check=
+>>>@echo "test_Periodic-BC_check..." >> test_Periodic-BC.diff
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test0-wave-init-updated.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test0-wave-init-updated.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test0-wave-init-updated.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test0-wave50.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test0-wave50.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test0-wave50.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test1-wave-init-updated.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test1-wave-init-updated.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test1-wave-init-updated.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test1-wave50.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test1-wave50.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test1-wave50.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test2-wave-init-updated.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test2-wave-init-updated.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test2-wave-init-updated.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test2-wave50.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test2-wave50.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test2-wave50.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test3-wave-init-updated.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test3-wave-init-updated.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test3-wave-init-updated.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/test3-wave50.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/test3-wave50.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/test3-wave50.dat.Reduced.Step=10.dat
+
+>>>@${TESTPeriodic-BCDIR}/../utility/ReduceFile.pl ${TESTPeriodic-BCDIR}/PT/plots/amps.TrajectoryTracking.out=19.s=0.H2O.dat 10
+>>>@mv ${TESTPeriodic-BCDIR}/PT/plots/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10 ${TESTPeriodic-BCDIR}/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.dat
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test0-wave-init-updated.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test0-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test1-wave-init-updated.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test1-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test2-wave-init-updated.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test2-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test3-wave-init-updated.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test3-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test0-wave50.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test0-wave50.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test1-wave50.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test1-wave50.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test2-wave50.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test2-wave50.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test3-wave50.dat.Reduced.Step=10.dat      \
+>>>output/test_Periodic-BC/test3-wave50.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--wave.diff
+>>>@ls -l test_Periodic-BC--wave.diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.dat  \
+>>>output/test_Periodic-BC/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--particle.diff
+>>>@ls -l test_Periodic-BC--particle.diff
+
+
+>>>@cat test_Periodic-BC--wave.diff  test_Periodic-BC--particle.diff > test_Periodic-BC.diff 
+
+>>>@ls -l test_Periodic-BC.diff
+
 <#
 
+-------------------------------------------------------------------------------
+#>
+Name=test/Periodic-BC-NonUniform@@(0+valeriy)  
+Time=6
+
+Outs=amps.TrajectoryTracking.out=0.s=0.H2O 
+<#
 -------------------------------------------------------------------------------
 
 #>
