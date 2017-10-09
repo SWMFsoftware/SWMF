@@ -56,7 +56,7 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
 
   NastranSurfaceUserData=on
   
-  BlockCells=5,5,5
+  BlockCells=8,8,8
   GhostCells=2,2,2
 
   NastranSurfaceUserData=on !!!on, off
@@ -68,11 +68,19 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__CHEMISTRY_  _PIC_MODE_ON_
   define _PIC_PARTICLE_TRACKER__TRACKING_CONDITION_MODE__DYNAMICS_  _PIC_MODE_ON_ 
 
+  define _TEST_MESH_MODE_ _UNIFORM_MESH_
 #endGeneral
+
+#interface
+  cell_centered_linear_interpolation_mode=amps
+  cell_centered_linear_interpolation_src=default
+#endinterface
 
 #block ../exosphere.pl !process the data block with the setting of the exospehre model 
   SPICE=off !on, off
   define _TARGET_ _CG_
+
+  addPhysicalModelHeader=PeriodicBCTest.dfn
 #endblock
 
 #end
