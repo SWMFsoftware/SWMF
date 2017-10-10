@@ -116,7 +116,7 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
     }
 #else
     //CharacteristicSpeed=5.0e2*sqrt(PIC::MolecularData::GetMass(_H2O_SPEC_)/PIC::MolecularData::GetMass(spec));
-    CharacteristicSpeed=1.0;
+    CharacteristicSpeed=100.0;
 #if _PIC_PHOTOLYTIC_REACTIONS_MODE_ == _PIC_PHOTOLYTIC_REACTIONS_MODE_ON_
     if (spec==_H_SPEC_) CharacteristicSpeed*=30.0;
     if (spec==_O_SPEC_) CharacteristicSpeed*=10.0;
@@ -225,7 +225,7 @@ void countNumbers(){
 
 }
 
-void InitCenterData(int ipass,int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+void InitCenterData(int ipass,int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode, double * waveCenter, double * waveNumber, double waveWidth) {
  
   //loop through all points
   //create the list of the points
@@ -240,8 +240,8 @@ void InitCenterData(int ipass,int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
   const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
   const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
   */
-  const int iMin=0,iMax=_BLOCK_CELLS_X_-1;                                                           
-  const int jMin=0,jMax=_BLOCK_CELLS_Y_-1;                                                           
+  const int iMin=0,iMax=_BLOCK_CELLS_X_-1;
+  const int jMin=0,jMax=_BLOCK_CELLS_Y_-1;                                                 
   const int kMin=0,kMax=_BLOCK_CELLS_Z_-1; 
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
@@ -249,9 +249,11 @@ void InitCenterData(int ipass,int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
     double *xNodeMax=startNode->xmax;
     double xLOCAL[3];
     int ii,jj;
+    /*
     double waveCenter[3]={1,0,0};
     double waveNumber[3]={1,0,0};
     double waveWidth=2.0;
+    */
     bool externalBlockFlag=false;
     if (PIC::Mesh::mesh.ExternalBoundaryBlock(startNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
       externalBlockFlag=true; 
@@ -301,7 +303,7 @@ void InitCenterData(int ipass,int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
     }
   }//if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) 
   else {
-    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) InitCenterData(ipass,nVars,startNode->downNode[nDownNode]);
+    for (int nDownNode=0;nDownNode<(1<<3);nDownNode++) if (startNode->downNode[nDownNode]!=NULL) InitCenterData(ipass,nVars,startNode->downNode[nDownNode],waveCenter, waveNumber, waveWidth);
   }
   
 }
@@ -321,8 +323,8 @@ void PropagateCenterData(double * v, int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlo
   const int jMin=-_GHOST_CELLS_Y_,jMax=_GHOST_CELLS_Y_+_BLOCK_CELLS_Y_-1;
   const int kMin=-_GHOST_CELLS_Z_,kMax=_GHOST_CELLS_Z_+_BLOCK_CELLS_Z_-1;
   */
-  const int iMin=0,iMax=_BLOCK_CELLS_X_-1;                                                           
-  const int jMin=0,jMax=_BLOCK_CELLS_Y_-1;                                                           
+  const int iMin=0,iMax=_BLOCK_CELLS_X_-1;                                                 
+  const int jMin=0,jMax=_BLOCK_CELLS_Y_-1;
   const int kMin=0,kMax=_BLOCK_CELLS_Z_-1; 
 
   
@@ -334,9 +336,7 @@ void PropagateCenterData(double * v, int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlo
     double *xNodeMax=startNode->xmax;
     double xLOCAL[3];
     int ii,jj;
-    double waveCenter[3]={1,0,0};
-    double waveNumber[3]={1,0,0};
-    double waveWidth=2.0;
+   
 
     if (startNode->block!=NULL) {
       for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
@@ -353,11 +353,13 @@ void PropagateCenterData(double * v, int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlo
         double xInterpolate[3];
         //find the location of the corresponding point at previous time step
         for (int iDim=0; iDim<3; iDim++) xInterpolate[iDim]=xLOCAL[iDim]-v[iDim]*PIC::ParticleWeightTimeStep::GlobalTimeStep[0];
-	    
+	
+	cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *tempNode=PIC::Mesh::mesh.findTreeNode(xInterpolate,startNode);
+
 	   
         //PIC::CPLR::InitInterpolationStencil(xInterpolate,startNode);
         //PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(xInterpolate,startNode);
-        PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInterpolate,startNode); 
+        PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInterpolate,tempNode); 
         int iStencil;
         double currentInterpolation[nVars];
         for (int iVar=0; iVar<nVars; iVar++) currentInterpolation[iVar]=0.0;
@@ -397,10 +399,7 @@ void PropagateCenterData(double * v, int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlo
 
         //PIC::CPLR::InitInterpolationStencil(xInterpolate,startNode);
         //PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(xInterpolate,startNode);
-
-        cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *tempNode=PIC::Mesh::mesh.findTreeNode(xInterpolate,startNode);
-        PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInterpolate,tempNode);
-
+        PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInterpolate,startNode);
         int iStencil;
         double currentInterpolation[nVars];
         for (int iVar=0; iVar<nVars; iVar++) currentInterpolation[iVar]=0.0;
@@ -431,6 +430,57 @@ void PropagateCenterData(double * v, int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlo
 }
 
 
+void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, double waveWidth, double *vProp){
+    //init center wave data
+  InitCenterData(0,nVars,PIC::Mesh::mesh.rootTree, waveCenter, waveNumber, waveWidth);
+  InitCenterData(1,nVars,PIC::Mesh::mesh.rootTree, waveCenter, waveNumber, waveWidth);
+ 
+  
+
+  PIC::Mesh::mesh.ParallelBlockDataExchange();
+   
+  char wave_init_fname[STRING_LENGTH];
+  sprintf(wave_init_fname,"test%d-wave-init.dat",iTest);   
+
+  PIC::Mesh::mesh.outputMeshDataTECPLOT(wave_init_fname,0);
+
+  PIC::BC::ExternalBoundary::Periodic::UpdateData();
+ 
+  sprintf(wave_init_fname,"test%d-wave-init-updated.dat",iTest);
+  PIC::Mesh::mesh.outputMeshDataTECPLOT(wave_init_fname,0);
+  
+  
+  for (int iter=0; iter<51; iter++) {
+    //  PIC::BC::ExternalBoundary::Periodic::UpdateData();
+    
+    PropagateCenterData(vProp,nVars,PIC::Mesh::mesh.rootTree);
+
+    int temp=CurrentCenterNodeOffset;
+    CurrentCenterNodeOffset=NextCenterNodeOffset;
+    NextCenterNodeOffset=temp;
+
+    temp=CurrentCornerNodeOffset;
+    CurrentCornerNodeOffset=NextCornerNodeOffset;
+    NextCornerNodeOffset=temp;
+
+    PIC::BC::ExternalBoundary::Periodic::UpdateData();
+//    PIC::Mesh::mesh.ParallelBlockDataExchange();
+
+    if (iter%50==0){
+      char wave_fname[STRING_LENGTH];
+      sprintf(wave_fname,"test%d-wave%d.dat",iTest,iter);
+      PIC::Mesh::mesh.outputMeshDataTECPLOT(wave_fname,0);
+    }
+    
+    PIC::TimeStep();
+  }
+
+  
+
+
+}
+
+
 int main(int argc,char **argv) {
   PIC::InitMPI();
   PIC::Init_BeforeParser();
@@ -438,6 +488,14 @@ int main(int argc,char **argv) {
   int nVars=1; //number of variables in center associated data
   int RelativeOffset=0;
   
+#if _TEST_MESH_MODE_==_NONUNIFORM_MESH_
+  printf("non-uniform mesh!\n");
+#endif
+#if _TEST_MESH_MODE_==_UNIFORM_MESH_
+  printf("uniform mesh!\n");
+#endif
+
+
   CurrentCenterNodeOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
   PIC::Mesh::cDataCenterNode::totalAssociatedDataLength+=nVars*sizeof(double);
   NextCenterNodeOffset=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
@@ -544,28 +602,18 @@ int main(int argc,char **argv) {
   PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(1,1.0);
   
   
-  //init center wave data
-  InitCenterData(0,nVars,PIC::Mesh::mesh.rootTree);
-  InitCenterData(1,nVars,PIC::Mesh::mesh.rootTree);
-
-  printf("nExternalBlock:%d\n",nExternalBlock);
  
+  
   PIC::Mesh::AddVaraibleListFunction(PrintCenterNodeVariableList);
   PIC::Mesh::PrintDataCenterNode.push_back(PrintCenterNodeData);
   PIC::Mesh::InterpolateCenterNode.push_back(InterpolateCenterNode);
 
   PIC::Mesh::PrintVariableListCornerNode.push_back(PrintCornerNodeVariableList);
   PIC::Mesh::PrintDataCornerNode.push_back(PrintCornerNodeData);
-
+ 
 
   // countNumbers();
 
-  PIC::Mesh::mesh.ParallelBlockDataExchange();
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("wave-init.dat",0);
-
-  PIC::BC::ExternalBoundary::Periodic::UpdateData();
- 
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("wave-init-1.dat",0);
   
   for (int iPar=0;iPar<parSize; iPar++ ){
     newNode=PIC::Mesh::mesh.findTreeNode(xparticle[iPar]);
@@ -583,32 +631,17 @@ int main(int argc,char **argv) {
   
   printf("test3\n");
   
-  double vPropagate[]={1.0,0.0,0.0};
-  for (int iter=0; iter<51; iter++) {
-    //  PIC::BC::ExternalBoundary::Periodic::UpdateData();
+  int nTest=4;
+  double waveCenter[][3]={{1.0,0.0,0.0},{0.0,-0.5,0.0},{0.0,0.0,-0.5},{1.0,-0.5,-0.5}};
+  double waveNumber[][3]={{1.0,0.0,0.0},{0.0,-1.0,0.0},{0.0,0.0,-1.0},{4./sqrt(16.+25.+49),5./sqrt(16.+25.+49),7./sqrt(16.+25.+49)}};
+  double vProp[][3]={{1.0,0.0,0.0},{0.0,-1.0,0.0},{0.0,0.0,-1.0},{4./sqrt(16.+25.+49),5./sqrt(16.+25.+49),7./sqrt(16.+25.+49)}};
+  double waveWidth=2;
+
+  for (int iTest=0; iTest<nTest; iTest++){
     
-    PropagateCenterData(vPropagate,nVars,PIC::Mesh::mesh.rootTree);
-
-    int temp=CurrentCenterNodeOffset;
-    CurrentCenterNodeOffset=NextCenterNodeOffset;
-    NextCenterNodeOffset=temp;
-
-    temp=CurrentCornerNodeOffset;
-    CurrentCornerNodeOffset=NextCornerNodeOffset;
-    NextCornerNodeOffset=temp;
-
-    PIC::BC::ExternalBoundary::Periodic::UpdateData();
-//    PIC::Mesh::mesh.ParallelBlockDataExchange();
-
-    if (iter%10==0){
-      char wave_fname[STRING_LENGTH];
-      sprintf(wave_fname,"wave%d.dat",iter);
-      PIC::Mesh::mesh.outputMeshDataTECPLOT(wave_fname,0);
-    }
-    
-    PIC::TimeStep();
-  }
+    test_wave(iTest,nVars, waveCenter[iTest], waveNumber[iTest], waveWidth, vProp[iTest]);
   
+  }
   MPI_Finalize();
   cout << "End of the run" << endl;
 
