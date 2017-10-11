@@ -1198,10 +1198,10 @@ contains
   subroutine user_init_session
 
     use ModProcMH,      ONLY: iProc, iComm
-    use ModVarIndexes,  ONLY: Rho_, UnitUser_V, Te0_
+    use ModVarIndexes,  ONLY: Rho_, Te0_
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
     use ModPhysics,     ONLY: &
-         No2Io_V, UnitX_, Si2No_V, UnitN_, UnitTemperature_
+         No2Io_V, UnitX_, Si2No_V, UnitN_, UnitTemperature_, UnitUser_V
     use ModConst,       ONLY: cHPlanckEV, cEVToK
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI, DoAdvectWaves
     use ModIo,          ONLY: restart

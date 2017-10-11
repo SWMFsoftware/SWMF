@@ -847,7 +847,7 @@ contains
          Coord1MinBc_, Coord3MaxBc_, xMinBc_, zMaxBc_
     use ModPhysics
     use ModVarIndexes, ONLY: ScalarFirst_,ScalarLast_, &
-         rhoUx_, rhoUz_,  UnitUser_V
+         rhoUx_, rhoUz_
     integer::iBoundary
     !--------------------------------------------------------------------------
     !For Outer Boundaries
