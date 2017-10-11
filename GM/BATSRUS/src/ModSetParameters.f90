@@ -2359,6 +2359,7 @@ contains
     character(len=50) :: NamePrimitive, NamePrimitivePlot, NameConservative
     character(len=50) :: String, NameFluid
     character(len=500):: StringConservative, StringPrimitivePlot
+    character(len=500):: StringPrimitiveOrig
     !-------------------------------------------------------------------------
 
     ! Fix the NameVar_V string for waves
@@ -2475,8 +2476,13 @@ contains
             trim(NamePrimitivePlot)
     end do
 
+    ! combine the string array into a space separated list of nVar primitive
+    ! variables
+    call join_string(nVar, NamePrimitive_V, StringPrimitiveOrig)
+
     if(allocated(NameConservativeVarPlot)) deallocate(NameConservativeVarPlot)
     if(allocated(NamePrimitiveVarPlot))    deallocate(NamePrimitiveVarPlot)
+    if(allocated(NamePrimitiveVarOrig))    deallocate(NamePrimitiveVarOrig)
 
     ! The first character of StringConservative/StringPrimitivePlot is
     ! a space...
@@ -2486,9 +2492,15 @@ contains
     allocate(character(lConservative) ::NameConservativeVarPlot)
     allocate(character(lPrimitive)    ::NamePrimitiveVarPlot)
 
+    ! The first character of StringPrimitiveOrig is not a space
+    allocate(character(len_trim(StringPrimitiveOrig)) :: NamePrimitiveVarOrig)
+
     ! Remove leading/tailing spaces
     NameConservativeVarPlot = adjustl(trim(StringConservative))
     NamePrimitiveVarPlot    = adjustl(trim(StringPrimitivePlot))
+
+    ! Remove tailing spaces
+    NamePrimitiveVarOrig    = trim(StringPrimitiveOrig)
 
   end subroutine set_namevar
 
