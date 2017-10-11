@@ -343,7 +343,8 @@ contains
 
     use ModProcMH,     ONLY: iProc
     use ModMain,       ONLY: Time_Simulation, TypeCoordSystem
-    use ModVarIndexes, ONLY: NamePrimitiveVar, Bx_, Bz_
+    use ModVarIndexes, ONLY: Bx_, Bz_
+    use ModIO,         ONLY: NamePrimitiveVarOrig
     use CON_comp_param,   ONLY: lNameVersion
     use CON_world,        ONLY: get_comp_info
     use CON_line_extract, ONLY: line_get, line_clean
@@ -388,7 +389,7 @@ contains
 
     ! The variables to be passed: line index, length along line, 
     ! coordinatess and primitive variables. Total is 5 + nVar.
-    NameVar = 'iLine Length x y z '//NamePrimitiveVar
+    NameVar = 'iLine Length x y z '//NamePrimitiveVarOrig
     if(DoExtractBGradB1) NameVar = trim(NameVar)//' bgradb1x bgradb1y bgradb1z'
 
     call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)

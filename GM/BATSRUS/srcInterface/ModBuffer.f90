@@ -269,10 +269,11 @@ subroutine plot_buffer(iFile)
   use ModNumConst,   ONLY: cDegToRad
   use ModAdvance,    ONLY: &
        UseElectronPressure, UseAnisoPressure
-  use ModVarIndexes, ONLY: NamePrimitiveVar, &
+  use ModVarIndexes, ONLY: &
        nVar,Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
        WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
        UseMultiSpecies, SignB_, Ehot_
+  use ModIO,            ONLY: NamePrimitiveVarOrig
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModMain,          ONLY: StartTime, Time_Simulation, x_, y_, z_, n_step
   use ModMain, ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D, BuffR_
@@ -338,7 +339,7 @@ subroutine plot_buffer(iFile)
           StringHeaderIn=&
           'SC-IH interface, longitude and latitude are in deg, other in SI',&
           NameVarIn    = &
-          'Long Lat x y z '//NamePrimitiveVar//' R',&
+          'Long Lat x y z '//NamePrimitiveVarOrig//' R',&
           nDimIn=2,      &
           nStepIn=n_step, TimeIn=Time_Simulation,&
           ParamIn_I=(/R*No2Si_V(UnitX_)/), &
