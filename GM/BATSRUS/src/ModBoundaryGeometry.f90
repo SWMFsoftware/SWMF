@@ -156,8 +156,9 @@ contains
     ! Reset for every level of refinement                               
     iBoundary_GB(:,:,:,iBlock) = domain_
 
-    ! Extra boundary
-    if(UseExtraBoundary) call user_set_boundary_cells(iBlock)
+    ! User solid boundary or extra boundary
+    if((.not.DoSolveSolid .and.UseSolidState .and.TypeSolidGeometry=='user') &
+         .or. UseExtraBoundary) call user_set_boundary_cells(iBlock)
 
     ! Set boundary type and timestep inside body for solidBC
     if(UseSolidState) then
