@@ -37,7 +37,6 @@ module ModUser
 
   !Venus stuff etc
 
-  !logical ::  UseMultiSpecies=.true.
   logical :: UseChapman= .false.
   integer, parameter :: MaxSpecies=nIonFluid, MaxNuSpecies=5,  &
        MaxReactions=10, nNuSpecies=3

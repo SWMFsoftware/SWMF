@@ -130,12 +130,8 @@ contains
           DoInitialize = .True.
 
        case("#MultiSP")		!ini rates hardwired in parameters.
-          !         call read_var('UseMultiSpecies',UseMultiSpecies)
-          !nNuSpecies<6 doesn't work for this version yet
-          !         if(UseMultiSpecies)then
           call read_var('nSpecies'  , nSpecies  )
           call read_var('nNuSpecies', nNuSpecies)
-          !	 endif
 
        case('#USERINPUTEND')
           if(iProc==0.and.lVerbose > 0)then
@@ -189,8 +185,6 @@ contains
     Unr=Unr_km*1E3
     lambda = Unr/ionization_rate	!in meters 
     ! should be lambda water(5.4e-7), but this is the same with 1sp model.
-
-    !    if(UseMultiSpecies) mbar = NuMassSp_I(H2O_)
 
     !convert to real solar distance value
     IoniRate_I = IoniRate_I*ionization_rate*1e6
@@ -298,7 +292,7 @@ contains
     ! and the corresponding calls can be removed.
 
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
-    use ModVarIndexes, ONLY: UseMultiSpecies
+    use ModAdvance, ONLY: UseMultiSpecies
 
     integer, intent(in) :: iBlock
 
@@ -551,7 +545,7 @@ contains
   subroutine user_update_states(iBlock)
     use ModVarIndexes
     use ModSize
-    use ModAdvance, ONLY: State_VGB
+    use ModAdvance, ONLY: State_VGB, UseMultiSpecies
     use ModMain
     use ModPhysics, ONLY: cBoltzmann, No2Si_V, UnitN_, UnitP_
     use CON_planet,  ONLY: NamePlanet
