@@ -125,6 +125,7 @@ function funcdef,xx,w,func
      ['ni'       , '{rhos1}/mi'                              ], $            ; ion number density
      ['ne'       , '{rhos0}/me'                              ], $            ; electron number density
      ['qtot'     , 'qi*{ni}+qe*{ne}'                         ], $            ; total charge
+     ['dqtot'    ,  '{qtot}-div({ex},{ey},x,y)*eps0'         ], $            ; error in net charge
      ['jpx'      , 'qi*{ni}*{uxs1}+qe*{ne}*{uxs0}'           ], $            ; jx from particles
      ['jpy'      , 'qi*{ni}*{uys1}+qe*{ne}*{uys0}'           ], $            ; jy from particles
      ['jpz'      , 'qi*{ni}*{uzs1}+qe*{ne}*{uzs0}'           ], $            ; jz from particles
@@ -177,6 +178,9 @@ function funcdef,xx,w,func
 
   ;; Define gamma for the sound speed = sqrt(gs*p/rho) with units
   gs = gamma*cs0
+
+  ;; Define electric permittivity of vacuum
+  eps0 = 1/(mu0*c0^2)
 
   ;; Variable names
   if n_elements(variables) eq 0 then variables=strarr(ndim+nw+neqpar)
