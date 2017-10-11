@@ -1100,7 +1100,6 @@ subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
      LogR_I,nLogTot,LogVar_I)
 
   use ModPhysics
-  use ModVarIndexes, ONLY: UnitUser_V
   use ModIO, ONLY: lNameLogVar
   implicit none
 

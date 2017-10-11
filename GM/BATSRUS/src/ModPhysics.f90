@@ -238,6 +238,15 @@ module ModPhysics
   character (len=20), dimension(nIoUnit) :: &
        NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
 
+
+
+  ! Names of the user units for IDL and TECPlot output
+  character(len=20) :: &
+       NameUnitUserIdl_V(nVar+1) = '', NameUnitUserTec_V(nVar+1) = ''
+
+  ! The user defined units for the variables
+  real :: UnitUser_V(nVar+1) = 1.0
+
   ! Some strange logical used in calc_heat_flux
   logical :: UseDefaultUnits = .false.
 

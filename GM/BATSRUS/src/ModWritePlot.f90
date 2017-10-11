@@ -1621,7 +1621,7 @@ subroutine dimensionalize_plotvar(iBlk, iPlotFile, nPlotVar, plotvarnames, &
   use ModProcMH
   use ModMain, ONLY: BlkTest, ProcTest
   use ModPhysics
-  use ModVarIndexes, ONLY: UnitUser_V, DefaultState_V
+  use ModVarIndexes, ONLY: DefaultState_V
   use ModNumConst, ONLY: cTiny
   use ModUtilities,  ONLY: lower_case
   use ModMultiFluid, ONLY: extract_fluid_name
@@ -1743,7 +1743,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_dimensional, plot_type1
-  use ModVarIndexes, ONLY: NameUnitUserTec_V, IsMhd
+  use ModVarIndexes, ONLY: IsMhd
   use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
   use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
   use BATL_lib,      ONLY: nDim
@@ -2053,7 +2053,6 @@ subroutine get_idl_units(iFile, nPlotVar, NamePlotVar_V, NamePlotUnit_V, &
   use ModPhysics
   use ModUtilities,  ONLY: lower_case
   use ModIO,         ONLY: plot_type1, plot_dimensional, NameUnitUserIdl_I
-  use ModVarIndexes, ONLY: NameUnitUserIdl_V
   use ModMultiFluid, ONLY: extract_fluid_name
   implicit none
 
