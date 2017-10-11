@@ -28,7 +28,6 @@ module GM_couple_im
   public:: GM_get_for_im            ! for IM/RCM
   public:: GM_satinit_for_im        ! initialize satellite
   public:: GM_get_sat_for_im        ! get satellite info
-  public:: GM_get_multi_for_im      ! check if multifluid is used
   public:: GM_put_from_im           ! from IM
 
   character(len=*), parameter :: NameMod='GM_couple_im'
@@ -660,26 +659,6 @@ contains
     end do
 
   end subroutine GM_get_sat_for_im
-
-  !==========================================================================
-
-  subroutine GM_get_multi_for_im(DoMultiFluidIM)
-
-    !This subroutine return the logical value of DoMultiFluidIMCoupling        
-
-    use ModMain,   ONLY: DoMultiFluidIMCoupling
-
-    !Subroutine Arguments:                                                      
-    logical,           intent(out) :: DoMultiFluidIM
-    !--------------------------------------------------------------------------  
-
-    if (DoMultiFluidIMCoupling) then
-       DoMultiFluidIM = .true.
-    else
-       DoMultiFluidIM = .false.
-    endif
-
-  end subroutine GM_get_multi_for_im
 
   !==========================================================================
 
