@@ -894,7 +894,8 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
   use ModVarIndexes
   use ModAdvance, ONLY : time_BLK, &
        State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
-       ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure
+       ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
+       UseMultiSpecies
   use ModLoadBalance, ONLY: iTypeBalance_A
   use ModB0, ONLY: B0_DGB
   use ModGeometry
@@ -1030,7 +1031,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('rho')
         PlotVar(:,:,:,iVar) = State_VGB(iRho,:,:,:,iBLK)
         plotvar_inBody(iVar) = BodyRho_I(iFluid)
-        ! If Body2 is used, then see if it is in block and use other those values
+        ! If Body2 is used, set Rho=RhoBody2 inside it
         if(UseBody2)then
            if(rMin2_BLK(iBlk) < rBody2) plotvar_inBody(iVar) = RhoBody2
         end if
@@ -1090,7 +1091,7 @@ subroutine set_plotvar(iBLK,iPlotFile,nplotvar,plotvarnames,plotvar,&
      case('p','pth')
         PlotVar(:,:,:,iVar) = State_VGB(iP,:,:,:,iBLK)
         plotvar_inBody(iVar) = BodyP_I(iFluid)
-        ! If Body2 is used, then see if it is in block and use other those values
+        ! If Body2 is used, set p=pBody2 inside it
         if(UseBody2)then
            if(rMin2_BLK(iBlk) < rBody2) plotvar_inBody(iVar) = pBody2
         end if

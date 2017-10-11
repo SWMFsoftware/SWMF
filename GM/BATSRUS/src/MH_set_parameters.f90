@@ -110,8 +110,7 @@ subroutine MH_set_parameters(TypeAction)
   use ModUser, ONLY: NameUserModule, VersionUserModule
   use ModUserInterface ! user_read_inputs, user_init_session
   use ModConserveFlux, ONLY: DoConserveFlux
-  use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, SpeciesFirst_, &
-       SpeciesLast_
+  use ModVarIndexes, ONLY: MassSpecies_V, SpeciesFirst_, SpeciesLast_
   use BATL_lib, ONLY: Dim2_, Dim3_, &
        create_grid, set_high_geometry, get_region_indexes, &
        rRound0, rRound1
@@ -139,7 +138,7 @@ subroutine MH_set_parameters(TypeAction)
 
   ! Temporary variables
   logical :: DoEcho=.false.
-  integer :: nVarRead=0, nVarEquationRead = 0
+  integer :: nVarEquationRead = 0
   character (len=lStringLine) :: NameEquationRead="?"
   logical :: IsReadNameVarRestart = .false.
   character(len=lStringLine) :: NameVarRestartRead  =''
@@ -182,7 +181,7 @@ subroutine MH_set_parameters(TypeAction)
   real    :: BoundaryStateDim_V(1:nVar)
 
   integer :: iTestVar, iError
-  character(len=10) :: NameTestVar, NameVar
+  character(len=10) :: NameTestVar
 
   !-------------------------------------------------------------------------
   NameSub(1:2) = NameThisComp

@@ -418,9 +418,10 @@ contains
     !==========================================================================
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
-      use ModPhysics, ONLY : xBody2,yBody2,zBody2
-      use ModPhysics, ONLY : FaceState_VI,Si2No_V,No2Si_V,UnitX_,UnitN_, &
-           UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_,OrbitPeriod, &
+      use ModPhysics, ONLY: xBody2, yBody2, zBody2
+      use ModAdvance, ONLY: UseMultiSpecies
+      use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
+           UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, OrbitPeriod, &
            UseOutflowPressure, pOutflow
       use ModMain
       use ModMultiFluid
@@ -522,9 +523,10 @@ contains
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
       case('reflect','reflectb','reflectall')
-         ! reflect the normal component of B1 (reflect/reflectall) or full B (reflectb)
+         ! reflect the normal component of B1 (reflect/reflectall)
+         ! or full B (reflectb)
          ! reflect the normal component of the velocities for reflectall
-         ! reflect the full velocity vectors for reflect and reflectb (linetied)
+         ! reflect the full velocity vectors for reflect and reflectb 
 
          ! Apply floating condition on densities and pressures
          VarsGhostFace_V          =  VarsTrueFace_V
@@ -637,7 +639,8 @@ contains
             ! Apply CPCP dependent density if required
             if(UseCpcpBc .and. UseIe)then
                if(UseMultiSpecies)then
-                  VarsGhostFace_V(SpeciesFirst_:SpeciesLast_) = RhoCpcp_I(1:nSpecies)
+                  VarsGhostFace_V(SpeciesFirst_:SpeciesLast_) = &
+                       RhoCpcp_I(1:nSpecies)
                   VarsGhostFace_V(Rho_) = sum(RhoCpcp_I(1:nSpecies))
                else
                   VarsGhostFace_V(iRhoIon_I) = RhoCpcp_I(1:nIonFluid)

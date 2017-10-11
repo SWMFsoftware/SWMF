@@ -979,12 +979,12 @@ contains
   !==========================================================================
   subroutine set_sat_var
 
+    use ModAdvance,   ONLY: UseMultiSpecies
     use ModUtilities, ONLY: lower_case
-    use ModIO, ONLY : lNameLogVar
+    use ModIO,        ONLY : lNameLogVar
     
     integer :: jVar
     character(len=lNameLogVar) :: NameLogVarLower
-
     !-------------------------------------------------------------------------
     if (iProc/=0) RETURN
 

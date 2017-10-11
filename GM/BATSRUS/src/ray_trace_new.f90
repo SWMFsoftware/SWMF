@@ -1474,7 +1474,7 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
   use ModMain,    ONLY: nBlock, Unused_B, Time_Simulation, TypeCoordSystem, &
        UseB0
   use ModPhysics, ONLY: rBody
-  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, nSpecies
+  use ModAdvance, ONLY: nVar, State_VGB, Bx_, Bz_, UseMultiSpecies, nSpecies
   use ModB0,      ONLY: B0_DGB
   use ModProcMH
   use ModMpi
@@ -1569,17 +1569,22 @@ subroutine integrate_ray_accurate(nLat, nLon, Lat_I, Lon_I, Radius, NameVar)
         do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
            if(UseMultiSpecies)then
               ! Set the densities
-              Extra_VGB(1:3:2,i,j,k,iBlock) = State_VGB(SpeciesFirst_:SpeciesFirst_+1,i,j,k,iBlock)
+              Extra_VGB(1:3:2,i,j,k,iBlock) = &
+                   State_VGB(SpeciesFirst_:SpeciesFirst_+1,i,j,k,iBlock)
               ! Calculate number densities for all species
-              NumDens_I = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)/MassSpecies_V
+              NumDens_I = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)&
+                   /MassSpecies_V
               ! Calculte fraction relative to the total number density
               NumDens_I = NumDens_I/sum(NumDens_I)
               ! Store the pressures of the 1st and 2nd species
-              Extra_VGB(2:4:2,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:2)
+              Extra_VGB(2:4:2,i,j,k,iBlock) = &
+                   State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:2)
            else
               do iFluid = 1, min(2,nIonFluid)
-                 Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)
-                 Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iPIon_I(iFluid),i,j,k,iBlock)
+                 Extra_VGB(2*iFluid-1,i,j,k,iBlock) = &
+                      State_VGB(iRhoIon_I(iFluid),i,j,k,iBlock)
+                 Extra_VGB(2*iFluid  ,i,j,k,iBlock) = &
+                      State_VGB(iPIon_I(iFluid),i,j,k,iBlock)
               end do
            end if
         end do; end do; end do
@@ -1687,7 +1692,8 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
   use ModMain,           ONLY: nBlock, Time_Simulation, TypeCoordSystem, &
        UseB0, Unused_B
   use ModPhysics,        ONLY: rBody
-  use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, nSpecies
+  use ModAdvance,        ONLY: nVar, State_VGB, Bx_, Bz_, &
+       UseMultiSpecies, nSpecies
   use ModB0,             ONLY: B0_DGB
   use ModProcMH
   use ModMpi
@@ -1768,17 +1774,22 @@ subroutine integrate_ray_accurate_1d(nPts, XyzPt_DI, NameVar)
         do k = MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
            if(UseMultiSpecies)then
               ! Set the densities
-              Extra_VGB(1:3:2,i,j,k,iBlock) = State_VGB(SpeciesFirst_:SpeciesFirst_+1,i,j,k,iBlock)
+              Extra_VGB(1:3:2,i,j,k,iBlock) = &
+                   State_VGB(SpeciesFirst_:SpeciesFirst_+1,i,j,k,iBlock)
               ! Calculate number densities for all species
-              NumDens_I = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock)/MassSpecies_V
+              NumDens_I = State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock) &
+                   /MassSpecies_V
               ! Calculte fraction relative to the total number density
               NumDens_I = NumDens_I/sum(NumDens_I)
               ! Store the pressures of the 1st and 2nd species
-              Extra_VGB(2:4:2,i,j,k,iBlock) = State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:2)
+              Extra_VGB(2:4:2,i,j,k,iBlock) = &
+                   State_VGB(p_,i,j,k,iBlock)*NumDens_I(1:2)
            else
               do iFluid = 1, min(2,nIonFluid)
-                 Extra_VGB(2*iFluid-1,i,j,k,iBlock) = State_VGB(iRho_I(iFluid),i,j,k,iBlock)
-                 Extra_VGB(2*iFluid  ,i,j,k,iBlock) = State_VGB(iP_I(iFluid), i,j,k,iBlock)
+                 Extra_VGB(2*iFluid-1,i,j,k,iBlock) = &
+                      State_VGB(iRho_I(iFluid),i,j,k,iBlock)
+                 Extra_VGB(2*iFluid  ,i,j,k,iBlock) = &
+                      State_VGB(iP_I(iFluid), i,j,k,iBlock)
               end do
            end if
         end do; end do; end do
@@ -1843,7 +1854,7 @@ subroutine plot_ray_equator(iFile)
   use CON_axes,          ONLY: transform_matrix
   use ModNumConst,       ONLY: cDegToRad
   use ModInterpolate,    ONLY: fit_parabola
-  use ModUtilities,      ONLY: split_string, open_file, close_file
+  use ModUtilities,      ONLY: open_file, close_file
 
   implicit none
 
@@ -2591,13 +2602,13 @@ subroutine write_plot_line(iFile)
   use ModProcMH,   ONLY: iComm, iProc
   use ModRayTrace, ONLY: NameVectorField, DoExtractState, DoExtractUnitSi
   use ModVarIndexes,ONLY: nVar
-  use ModIO,       ONLY: StringDateOrTime, nplotvarmax,            &
+  use ModIO,       ONLY: StringDateOrTime,            &
        NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
   use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
        NamePrimitive_V
   use ModIoUnit,   ONLY: UnitTmp_
-  use ModUtilities,ONLY: open_file, close_file, split_string, join_string
+  use ModUtilities,ONLY: open_file, close_file, join_string
   use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
 
   implicit none

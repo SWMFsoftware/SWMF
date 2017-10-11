@@ -122,13 +122,15 @@ contains
 
     use ModProcMH,  ONLY: iProc
     use ModKind,    ONLY: nByteReal
-    use ModMain,    ONLY: nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate, &
+    use ModMain,    ONLY: &
+         nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
-         DoReplaceDensity, UseSingleIonVelocity, UseSingleIonTemperature
+         DoReplaceDensity, UseSingleIonVelocity, UseSingleIonTemperature, &
+         UseMultiSpecies
     use ModMultiFluid, ONLY: UseMultiIon, iRho_I, nFluid
     use ModGeometry,ONLY: True_Blk, True_Cell
-    use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, SpeciesLast_, &
+    use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V, NameVar_V
     use ModEnergy, ONLY: calc_energy_cell
     use ModPhysics, ONLY: RhoMin_I
@@ -199,9 +201,9 @@ contains
        EpsPointImpl_V = EpsPointImpl
 
        ! This call should allocate and set the iVarPointImpl_I index array.
-       ! If IsPointImplMatrixSet=.true. is set then the dS/dU matrix is analytic.
+       ! If IsPointImplMatrixSet=T is set then the dS/dU matrix is analytic.
        ! If IsPointImplMatrixSet is not true, then nVarPointImplNum and 
-       ! the iVarPointImplNum_I index array may be set with the number and indexes
+       ! iVarPointImplNum_I index array may be set with the number and indexes
        ! of point implicit variables that require numerical derivatives 
        ! for setting dS/dU. This is a subset of the iVarPointImpl_I variables.
        ! Finally, init_point_implicit  may also modify the EpsPointImpl and 

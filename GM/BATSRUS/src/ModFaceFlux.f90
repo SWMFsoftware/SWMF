@@ -1082,7 +1082,7 @@ contains
   subroutine get_numerical_flux(Flux_V)
 
     use ModWaves, ONLY: UseWavePressure
-    use ModAdvance, ONLY: DoReplaceDensity, State_VGB
+    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed

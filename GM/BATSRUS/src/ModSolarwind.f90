@@ -93,7 +93,7 @@ contains
     use ModPhysics, ONLY: SW_Bx_dim, SW_By_dim, SW_Bz_dim, &
          SW_Ux_dim, SW_Uy_dim, SW_Uz_dim, SW_n_dim, SW_T_dim, &
          nVectorVar, iVectorVar_I
-
+    use ModAdvance, ONLY: UseMultiSpecies
     use ModIoUnit, ONLY: UnitTmp_
     use ModNumConst, ONLY: cDegToRad, cHalfPi
     use ModConst, ONLY: cDay => cSecondPerDay
@@ -420,7 +420,8 @@ contains
 
   subroutine normalize_solar_wind_data
 
-    use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+    use ModAdvance, ONLY: &
+         UseElectronPressure, UseAnisoPressure, UseMultiSpecies
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
          LowDensityRatio, ElectronPressureRatio

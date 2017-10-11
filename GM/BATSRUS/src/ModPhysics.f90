@@ -10,7 +10,7 @@ module ModPhysics
   use ModMain, ONLY: body2_, SolidBc_, xMinBc_, zMaxBc_, &
        Coord1MinBc_, Coord3MaxBc_ , NameVarLower_V
   use ModVarIndexes, ONLY: nVar, nFluid, IonFirst_, SpeciesFirst_, SpeciesLast_
-  use ModAdvance, ONLY: nSpecies
+  use ModAdvance, ONLY: UseMultiSpecies, nSpecies
 
   implicit none
   save

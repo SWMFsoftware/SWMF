@@ -129,8 +129,7 @@ contains
   !=========================================================================
   subroutine set_ion_mass_per_charge(iBlock)
 
-    use ModAdvance, ONLY: State_VGB, UseIdealEos
-    use ModVarIndexes, ONLY: UseMultiSpecies
+    use ModAdvance, ONLY: State_VGB, UseIdealEos, UseMultiSpecies
     use ModMultiFluid, ONLY: UseMultiIon
 
     ! Set IonMassPerCharge_G based on average mass
@@ -155,9 +154,9 @@ contains
 
   subroutine set_ion_mass_per_charge_point(State_V, IonMassPerChargeOut)
 
-    use ModAdvance,    ONLY: UseIdealEos
+    use ModAdvance,    ONLY: UseIdealEos, UseMultiSpecies
     use ModVarIndexes, ONLY: nVar, Rho_, &
-         UseMultiSpecies, SpeciesFirst_, SpeciesLast_, MassSpecies_V
+         SpeciesFirst_, SpeciesLast_, MassSpecies_V
     use ModMultiFluid, ONLY: UseMultiIon, iRhoIon_I, MassIon_I,ChargeIon_I
     use ModPhysics,    ONLY: IonMassPerCharge
     use ModUserInterface
