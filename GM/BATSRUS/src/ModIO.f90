@@ -150,6 +150,11 @@ Module ModIO
 
   logical :: DoSaveOneTecFileOrig = .false., DoSaveOneTecFile
 
+  ! The space separated list of nVar primitive variables
+  character(len=:), allocatable :: NamePrimitiveVarOrig
+
+  ! The space separated list of primitive/conservative variables for plotting
+  character(len=:), allocatable :: NamePrimitiveVarPlot, NameConservativeVarPlot
 contains
 
   !===========================================================================
