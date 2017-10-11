@@ -36,7 +36,7 @@ contains
 
   subroutine GM_get_for_pc_init(nParamInt, nParamReal, iParam_I, Param_I)
 
-    use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, Pe_, Bx_, &
+    use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, Pe_, Bx_, Ex_, &
          SpeciesFirst_, SpeciesLast_, nVar
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iRhoUxIon_I, iPparIon_I, iPIon_I
@@ -57,9 +57,9 @@ contains
     if(.not.present(iParam_I))then
        ! nDim, nRegion
        ! nVar, nIonFluid, nSpecies
-       ! iPe, iBx
+       ! iPe, iBx, iEx
        ! (iRho, iRhoUx, iPpar, iP) for each ion fluid
-       nParamInt = 7 + nIonFluid*4
+       nParamInt = 8 + nIonFluid*4
 
        ! Charge and mass per species/fluid
        ! XyzMin_D + LenPic_D + Dxzy_D + R_DD = 18 variables for each region
@@ -71,8 +71,8 @@ contains
     end if
 
     ! Set the integer parameters
-    iParam_I(1:7) = (/nDim, nRegionPic, nVar, nIonFluid, nSpecies, Pe_, Bx_/)
-    n = 8
+    iParam_I(1:8) = (/nDim, nRegionPic, nVar, nIonFluid, nSpecies, Pe_, Bx_, Ex_/)
+    n = 9
     iParam_I(n:n+nIonFluid-1) = iRhoIon_I;   n = n + nIonFluid
     iParam_I(n:n+nIonFluid-1) = iRhoUxIon_I; n = n + nIonFluid
     iParam_I(n:n+nIonFluid-1) = iPparIon_I;  n = n + nIonFluid
@@ -234,12 +234,12 @@ contains
   subroutine GM_get_regions(NameVar, nVar, nPoint, Pos_DI, Data_VI, iPoint_I)
     use BATL_lib,     ONLY: nDim, Xyz_DGB, nBlock, Unused_B, &
          nI, nJ, nK
-    use ModPIC,       ONLY: XyzPic0_DI, DxyzPic_DI, LenPic_DI, & 
+    use ModPIC,       ONLY: DxyzPic_DI, LenPic_DI, & 
          nRegionPic, nGhostPic, mhd_to_pic_vec
     use ModPhysics,   ONLY: No2Si_V, UnitX_, Si2No_V, iUnitCons_V
     use ModMain,      ONLY: UseB0, UseHyperbolicDivB
     use ModB0,        ONLY: B0_DGB
-    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_
+    use ModAdvance,   ONLY: State_VGB, Bx_, Bz_, Hyp_, HypE_
     use ModMultiFluid,ONLY: nIonFluid
     use ModEnergy,    ONLY: calc_energy
     use ModVarIndexes,ONLY: DefaultState_V
@@ -254,7 +254,7 @@ contains
     integer, intent(in), optional:: iPoint_I(nPoint)! Order of data
 
     logical :: DoCountOnly
-    integer :: i, j, k, iBlock, iPoint, iRegion, iVar, iFluid
+    integer :: i, j, k, iBlock, iPoint, iRegion, iVar
     real    :: XyzMinRegion_D(nDim), XyzMaxRegion_D(nDim) 
 
     real    :: State_V(nVar)
@@ -289,7 +289,6 @@ contains
 
        XyzMinRegion_D = (nGhostPic + 0.9)*DxyzPic_DI(:,iRegion)  
 
-
        do iBlock=1, nBlock
           if(Unused_B(iBlock)) CYCLE
           
@@ -313,18 +312,21 @@ contains
 
                 State_V = State_VGB(:,i,j,k,iBlock)
                 do iVar = 1, nVar
-                   if(UseHyperbolicDivB .and. iVar==Hyp_) CYCLE
+                   ! Skip hyperbolic scalar variables
+                   if(UseHyperbolicDivB .and. iVar==Hyp_)  CYCLE
+                   if(HypE_ > 1         .and. iVar==Hype_) CYCLE
                    State_VGB(iVar,i,j,k,iBlock) = &
                         Data_VI(iVar,iPoint_I(iPoint))*Si2No_V(iUnitCons_V(iVar))
                 end do
                 if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
 
-
                 do iVar = 1, nVar
+                   ! Check for positivity
                    if(DefaultState_V(iVar) > 0 .and. State_VGB(iVar,i,j,k,iBlock) <= 0) then
+                      ! Use original MHD state if PC state is not positive
                       State_VGB(:,i,j,k,iBlock) = State_V
-                      exit
+                      EXIT
                    endif
                 enddo                
                 

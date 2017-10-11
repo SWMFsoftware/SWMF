@@ -176,7 +176,7 @@ class InterfaceFluid
   
  public:
   // These variables are also used in PSKOutput.h
-  int *iRho_I, *iRhoUx_I, *iRhoUy_I, *iRhoUz_I, iBx,iBy,iBz,
+  int *iRho_I, *iRhoUx_I, *iRhoUy_I, *iRhoUz_I, iBx,iBy,iBz, iEx,iEy,iEz,
     iPe,*iPpar_I,*iP_I,iJx,iJy,iJz, *iUx_I, *iUy_I, *iUz_I, iRhoTotal;
 
   int nBCLayer;
@@ -1236,7 +1236,11 @@ class InterfaceFluid
     iBy      = iBx + 1;
     iBz      = iBy + 1;
 
-    int n = 7;
+    iEx      = paramint[7] = 1;
+    iEy      = iEx + 1;
+    iEz      = iEy + 1;
+
+    int n = 8;
     if(useMultiSpecies){
       // MultiSpecies. Densities of each species are known. Total velocity 
       // and total pressure are known. 
