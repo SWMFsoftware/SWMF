@@ -36,11 +36,11 @@ contains
 
   subroutine GM_get_for_pc_init(nParamInt, nParamReal, iParam_I, Param_I)
 
-    use ModVarIndexes, ONLY: UseMultiSpecies, MassSpecies_V, Pe_, Bx_, Ex_, &
+    use ModVarIndexes, ONLY: MassSpecies_V, Pe_, Bx_, Ex_, &
          SpeciesFirst_, SpeciesLast_, nVar
     use ModMultiFluid, ONLY: nIonFluid, MassIon_I, ChargeIon_I, &
          iRhoIon_I, iRhoUxIon_I, iPparIon_I, iPIon_I
-    use ModAdvance,    ONLY: nSpecies
+    use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
     use ModPhysics,    ONLY: No2Si_V, UnitX_, PePerPtotal, rPlanetSi
     use ModPIC,        ONLY: XyzMinPic_DI, nRegionPiC, &
          DxyzPic_DI, xUnitPicSi, uUnitPicSi, mUnitPicSi, LenPic_DI, R_DDI

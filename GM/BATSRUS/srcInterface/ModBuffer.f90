@@ -76,11 +76,10 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
        MaxDim, x_, y_, z_,&
        TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
   use ModAdvance,    ONLY: &
-       UseElectronPressure, UseAnisoPressure
+       UseElectronPressure, UseAnisoPressure, UseMultiSpecies
   use ModVarIndexes, ONLY: &
        Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
-       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
-       UseMultiSpecies, SignB_, Ehot_
+       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, SignB_, Ehot_
   use CON_coupler,   ONLY: &
        Grid_C, &
        Bfield_, ElectronPressure_, AnisoPressure_, Wave_,&
@@ -263,16 +262,15 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
        0, nThetaBuff+1, NormSph_D, DoExtrapolate=.true.)
 
 end subroutine interpolate_from_global_buffer
-!==============================
+!=============================================================================
 subroutine plot_buffer(iFile)
   use ModPlotFile, ONLY: save_plot_file
   use ModNumConst,   ONLY: cDegToRad
   use ModAdvance,    ONLY: &
        UseElectronPressure, UseAnisoPressure
   use ModVarIndexes, ONLY: &
-       nVar,Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
-       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, &
-       UseMultiSpecies, SignB_, Ehot_
+       nVar, Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
+       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, SignB_, Ehot_
   use ModIO,            ONLY: NamePrimitiveVarOrig
   use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
   use ModMain,          ONLY: StartTime, Time_Simulation, x_, y_, z_, n_step

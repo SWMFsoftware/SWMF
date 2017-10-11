@@ -8,7 +8,8 @@ subroutine read_pw_buffer(CoordIn_D, nVarIn, State_V)
   use CON_axes,          ONLY: transform_matrix
   use ModMain,           ONLY: TypeCoordSystem, Time_Simulation
   use ModVarIndexes,     ONLY: Rho_, Ux_, Uy_, Uz_, &
-       SpeciesFirst_, SpeciesLast_, UseMultiSpecies, IsMhd
+       SpeciesFirst_, SpeciesLast_, IsMhd
+  use ModAdvance,        ONLY: UseMultiSpecies
   use ModMultiFluid,     ONLY: UseMultiIon, nIonFluid, &
        iRhoIon_I, iUxIon_I, iUyIon_I, iUzIon_I
   use GM_couple_pw

@@ -87,8 +87,8 @@ contains
 
     use CON_coupler, ONLY: PW_, Grid_C
     use ModMain, ONLY: x_, y_,z_, TypeCoordSystem, Time_Simulation
-    use ModVarIndexes, ONLY: UseMultiSpecies, SpeciesFirst_, &
-         SpeciesLast_, NameVar_V
+    use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, NameVar_V
+    use ModAdvance,    ONLY: UseMultiSpecies
     use ModMultiFluid, ONLY: UseMultiIon, nIonFluid
     use ModPhysics, ONLY: Si2No_V, UnitRho_, UnitU_, rCurrents
     use ModNumConst, ONLY: cTwoPi,cHalfPi
