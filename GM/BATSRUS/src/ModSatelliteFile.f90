@@ -77,7 +77,7 @@ contains
          Dn_Output, Dt_Output, plot_type, NamePlotDir, TypeCoordPlot_I
     use ModUtilities, ONLY: check_dir
     use ModReadParam, ONLY: read_var
-    use ModMain,      ONLY: NamePrimitiveVarPlot
+    use ModIO,        ONLY: NamePrimitiveVarPlot
     
     character(len=*), intent(in) :: NameCommand
 
