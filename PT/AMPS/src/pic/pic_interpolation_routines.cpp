@@ -11,10 +11,11 @@
 #include "pic.h"
 
 PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::CellCentered::StencilTable=NULL;
+PIC::InterpolationRoutines::CornerBased::cStencil* PIC::InterpolationRoutines::CornerBased::StencilTable=NULL;
+
 int PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::iBlockFoundCurrent=0;
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::BlockFound[PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::nBlockFoundMax];
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::last=NULL;
-
 
 // macro switch is needed in the case some other interpolation is used
 // and interface function is not compiled
@@ -31,6 +32,7 @@ void PIC::InterpolationRoutines::Init() {
 
   //init the stencil table
   CellCentered::StencilTable=new CellCentered::cStencil[PIC::nTotalThreadsOpenMP];
+  CornerBased::StencilTable=new CornerBased::cStencil[PIC::nTotalThreadsOpenMP];
 }
 
 //determine stencil for the cell centered piecewise constant interpolation

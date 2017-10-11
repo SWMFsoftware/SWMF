@@ -3593,39 +3593,50 @@ namespace PIC {
 
   //interpolation routines
   namespace InterpolationRoutines {
+    //the maximum number of the elements in the interpolation stencil
+    const int nMaxStencilLength=64;
 
+    template <class T>
+    class cStencilGeneric {
+    public:
+      int Length;
+      double Weight[nMaxStencilLength];
+      T* cell[nMaxStencilLength];
+
+      void flush() {
+        Length=0;
+        for (int i=0;i<nMaxStencilLength;i++) Weight[i]=0.0,cell[i]=NULL;
+      }
+
+      void print() {
+        printf("Length=%i, weight:",Length);
+        for (int i=0;i<Length;i++) printf (" %e[%i]",Weight[i],i);
+        printf("\n");
+      }
+
+      void AddCell(double w,T* c) {
+        if (Length==nMaxStencilLength) exit(__LINE__,__FILE__,"Error: the stencil length exeeds 'nMaxStencilLength'. Need to increase 'nMaxStencilLength'");
+
+        Weight[Length]=w;
+        cell[Length]=c;
+        Length++;
+      }
+
+      cStencilGeneric() {flush();}
+    };
+
+    //corner based interpolation routines
+    namespace CornerBased {
+      typedef PIC::InterpolationRoutines::cStencilGeneric<PIC::Mesh::cDataCornerNode> cStencil;
+      extern cStencil* StencilTable;
+
+      //interpolation functions
+      cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
+    }
+
+    //cell center interpolation routines
     namespace CellCentered {
-      //the maximum number of the elements in the interpolation stencil
-      const int nMaxStencilLength=64;
-
-      class cStencil {
-      public:
-        int Length;
-        double Weight[nMaxStencilLength];
-        PIC::Mesh::cDataCenterNode* cell[nMaxStencilLength];
-
-        void flush() {
-          Length=0;
-          for (int i=0;i<nMaxStencilLength;i++) Weight[i]=0.0,cell[i]=NULL;
-        }
-
-        void print() {
-          printf("Length=%i, weight:",Length);
-          for (int i=0;i<Length;i++) printf (" %e[%i]",Weight[i],i);
-          printf("\n");  
-        }
-
-        void AddCell(double w,PIC::Mesh::cDataCenterNode* c) {
-          if (Length==nMaxStencilLength) exit(__LINE__,__FILE__,"Error: the stencil length exeeds 'nMaxStencilLength'. Need to increase 'nMaxStencilLength'");
-
-          Weight[Length]=w;
-          cell[Length]=c;
-          Length++;
-        }
-
-        cStencil() {flush();}
-      };
-
+      typedef PIC::InterpolationRoutines::cStencilGeneric<PIC::Mesh::cDataCenterNode> cStencil;
       extern cStencil* StencilTable;
 
       //types of the cell ceneterd interpolating rourines implemented in AMPS
