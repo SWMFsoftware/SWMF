@@ -353,9 +353,8 @@ module ModMain
   character(len=200):: NameVarComp2
   real, pointer     :: StateComp2_VGB(:,:,:,:,:)
 
-  ! The lower case names of the variables used in i/o
-  character(len=10) :: NameVarLower_V(nVar+nFluid)
-  character(len=10) :: NamePrimitive_V(nVar)
-  character(len=:), allocatable:: NamePrimitiveVarPlot, NameConservativeVarPlot
+  ! The lower case names of the variables and the primitive var names
+  character(len=len(NameVar_V)) :: NameVarLower_V(nVar+nFluid)
+  character(len=len(NameVar_V)) :: NamePrimitive_V(nVar)
 
 end module ModMain
