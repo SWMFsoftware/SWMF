@@ -361,7 +361,7 @@ GEO			TypeCoordPlot
 10.			dLon
 0.			LatMin
 0.			LatMax
-lcb nul tec             StringPlot  !last closed field line plots with integrals
+lcb nul tec             StringPlot  !last closed field line plots
 -1                      DnSavePlot  !Tecplot (ONLY!)
 300.                    DtSavePlot
 5.                      Radius
