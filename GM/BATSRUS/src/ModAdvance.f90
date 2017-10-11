@@ -21,7 +21,8 @@ module ModAdvance
   ! Numerical flux type
   character (len=10) :: FluxType
 
-  ! Number of species in multi-species equations
+  ! Logical and number of species for multi-species equations
+  logical, parameter:: UseMultiSpecies = SpeciesFirst_ > 1
   integer, parameter:: nSpecies = SpeciesLast_ - SpeciesFirst_ + 1
 
   ! Named index for electron pressure and velocity
