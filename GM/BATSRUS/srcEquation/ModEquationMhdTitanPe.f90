@@ -1,9 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
   use ModSingleFluid
-  use ModExtraVariables,Redefine1 => Pe_
+  use ModExtraVariables,           & 
+       Redefine1 => Pe_,           &
+       Redefine2 => SpeciesFirst_, &
+       Redefine3 => SpeciesLast_,  &
+       Redefine4 => MassSpecies_V
 
   implicit none
 
@@ -90,25 +95,6 @@ module ModVarIndexes
        'p   ', & ! p_
        'e   ' /) ! Energy_
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'rho Lp Mp H1p H2p MHCp HHCp HNIp mx my mz bx by bz pe e'
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'rho Lp Mp H1p H2p MHCp HHCp HNIp ux uy uz bx by bz pe p'
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "L+", "M+", "H1+", "H2+", "MHC+", "HHC+", "HNI+", ' // &
-       '"U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "pe" "p"'
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+1) = '', NameUnitUserTec_V(nVar+1) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+1) = 1.0
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
@@ -117,7 +103,6 @@ module ModVarIndexes
   integer, parameter :: ScalarFirst_ = RhoLp_, ScalarLast_ = RhoHNIp_
 
   ! Species
-  logical, parameter :: UseMultiSpecies = .true.
   integer, parameter :: SpeciesFirst_   = RhoLp_
   integer, parameter :: SpeciesLast_    = RhoHNIp_
 

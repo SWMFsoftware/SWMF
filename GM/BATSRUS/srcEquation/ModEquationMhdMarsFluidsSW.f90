@@ -170,48 +170,9 @@ module ModVarIndexes
        'CO2pE   ', & ! CO2pEnergy_
        'HpE     '/)  ! HpEnergy_ 
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz E '// &
-       'HpswRho HpswMx HpswMy HpswMz HpswE '// &
-       'O2pRho O2pMx O2pMy O2pMz O2pE '// &
-       'OpRho OpMx OpMy OpMz OpE '// &
-       'CO2pRho CO2pMx CO2pMy CO2pMz CO2pE '//&
-       'HpRho HpMx HpMy HpMz HpE'
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz P ' // &
-       'HpswRho HpswUx HpswUy HpswUz HpswP '// &
-       'O2pRho O2pUx O2pUy O2pUz O2pP '// &
-       'OpRho OpUx OpUy OpUz OpP '// &
-       'CO2pRho CO2pUx CO2pUy CO2pUz CO2pP '//&
-       'HpRho HpUx HpUy HpUz HpP'
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", ' // &
-       '"`r^H^+sw", "U_x^H^+sw", "U_y^H^+sw", "U_z^H^+sw", "P^H^+sw", ' // &
-       '"`r^O2^+", "U_x^O2^+", "U_y^O2^+", "U_z^O2^+", "P^O2^+" ' // &
-       '"`r^O^+", "U_x^O^+", "U_y^O^+", "U_z^O^+", "P^O^+" '// &
-       '"`r^CO2^+", "U_x^CO2^+", "U_y^CO2^+", "U_z^CO2^+", "P^CO2^+" '//&
-       '"`r^H^+", "U_x^H^+", "U_y^H^+", "U_z^H^+", "P^H^+"'
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=80) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-  ! There are no multi-species
-  logical, parameter :: UseMultiSpecies = .false.
-
-  ! Declare the following variables to satisfy the compiler
-  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
-  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 end module ModVarIndexes

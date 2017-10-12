@@ -119,39 +119,9 @@ module ModVarIndexes
        'SwE    ', & ! SwEnergy_
        'IonoE  ' /) ! IonoEnergy_
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz E '// &
-       'SwRho SwMx SwMy SwMz SwE '// &
-       'IonoRho IonoMx IonoMy IonoMz IonoE'
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz P '// &
-       'SwRho SwUx SwUy SwUz SwP '// &
-       'IonoRho IonoUx IonoUy IonoUz IonoP'
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", ' // &
-       '"`r^SwH^+", "U_x^SwH^+", "U_y^SwH^+", "U_z^SwH^+", "P^SwH^+", ' // &
-       '"`r^IonoH^+", "U_x^IonoH^+", "U_y^IonoH^+", "U_z^IonoH^+", "P^IonoH^+"'
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-  ! There are no multi-species
-  logical, parameter :: UseMultiSpecies = .false.
-
-  ! Declare the following variables to satisfy the compiler
-  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
-  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 end module ModVarIndexes

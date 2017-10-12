@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
   use ModSingleFluid
@@ -97,35 +98,11 @@ module ModVarIndexes
        'P   ', & ! p_
        'E   '/)  ! Energy_
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz Hyp Pe Ew EInt E'
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz Hyp M(3) Pe I(01) EInt P'
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "Hyp", "Pe", "I", "EInt", "p"'
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! Advected are the three level sets and the extra internal energy
   ! Note that the variable Hyp is not advected with velocity
   integer, parameter :: ScalarFirst_ = MaterialFirst_, ScalarLast_ = ExtraEint_
 
-  ! There are no multi-species
-  logical, parameter :: UseMultiSpecies = .false.
-
-  ! Declare the following variables to satisfy the compiler
-  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
-  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
   integer, parameter :: iRho_I(nFluid)   = (/Rho_/)
   integer, parameter :: iRhoUx_I(nFluid) = (/RhoUx_/)
   integer, parameter :: iRhoUy_I(nFluid) = (/RhoUy_/)

@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModVarIndexes
 
@@ -91,33 +92,9 @@ module ModVarIndexes
        'e     ', & ! Energy_
        'NeuE  ' /) ! NeuEnergy_
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz e NeuRho NeuMx NeuMy NeuMz NeuE'
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz p NeuRho NeuUx NeuUy NeuUz NeuP'
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", "`r^n", "U^n_x", "U^n_y", "U^n_z", "P^n" '
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-  ! There are no multi-species
-  logical, parameter :: UseMultiSpecies = .false.
-
-  ! Declare the following variables to satisfy the compiler
-  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
-  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 end module ModVarIndexes

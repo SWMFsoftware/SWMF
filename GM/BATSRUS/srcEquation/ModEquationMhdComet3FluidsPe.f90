@@ -140,43 +140,10 @@ module ModVarIndexes
        'HpE    ', & ! HpEnergy_
        'H2OpE  ' /) ! H2OpEnergy_
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz E '// &
-       'SwRho SwMx SwMy SwMz SwE '// &
-       'HpRho HpMx HpMy HpMz HpE '// &
-       'H2OpRho H2OpMx H2OpMy H2OpMz H2OpE '
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz Pe P ' // &
-       'SwRho SwUx SwUy SwUz SwP '// &
-       'HpRho HpUx HpUy HpUz HpP '// &
-       'H2OpRho H2OpUx H2OpUy H2OpUz H2OpP '
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p_e", "p",' // &
-       '"`r^SW^+", "U_x^SW^+", "U_y^SW^+", "U_z^SW^+", "P^SW^+"'// &
-       '"`r^H^+", "U_x^H^+", "U_y^H^+", "U_z^H^+", "P^H^+"'// &
-       '"`r^H2O^+", "U_x^H2O^+", "U_y^H2O^+", "U_z^H2O^+", "P^H2O^+"'
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! There are no extra scalars (Pe has its own flux)
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-  ! There are no multi-species
-  logical, parameter :: UseMultiSpecies = .false.
-
-  ! Declare the following variables to satisfy the compiler
-  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
-  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 end module ModVarIndexes
 

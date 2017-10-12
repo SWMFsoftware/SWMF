@@ -98,25 +98,6 @@ module ModVarIndexes
        'p   ', & ! p_
        'e   ' /) ! Energy_
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz sign ehot ew pe ppar p e'
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz sign ehot I(02) pe ppar p'
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", ' // &
-       '"Sign", "Ehot", "p_e", "p_par", "p"'
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+1) = '', NameUnitUserTec_V(nVar+1) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+1) = 1.0
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
@@ -124,12 +105,6 @@ module ModVarIndexes
   ! There is one scalar
   integer, parameter :: ScalarFirst_ = SignB_, ScalarLast_ = SignB_
 
-  ! There are no multi-species
-  logical, parameter :: UseMultiSpecies = .false.
-
-  ! Declare the following variables to satisfy the compiler
-  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
-  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 end module ModVarIndexes
 

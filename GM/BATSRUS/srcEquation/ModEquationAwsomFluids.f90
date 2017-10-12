@@ -121,28 +121,6 @@ module ModVarIndexes
        'E      ', & ! Energy_
        'He2pE  ' /) ! He2pEnergy_
 
-  ! The space separated list of nVar conservative variables for plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'rho mx my mz bx by bz pe ehot ew E '// &
-       'He2pRho He2pMx He2pMy He2pMz He2pE'
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'rho ux uy uz bx by bz pe ehot I(02) p '// &
-       'He2pRho He2pUx He2pUy He2pUz He2pP'
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", '// &
-       '"p_e", "Ehot", "Ew", "p", '// &
-       '"`r^He2^+", "U_x^He2^+", "U_y^He2^+", "U_z^He2^+", "P^He2^+"'
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
-
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! Primitive variable names
   integer, parameter :: U_ = RhoU_, Ux_ = RhoUx_, Uy_ = RhoUy_, Uz_ = RhoUz_
@@ -150,12 +128,6 @@ module ModVarIndexes
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
-  ! There are no multi-species
-  logical, parameter :: UseMultiSpecies = .false.
-
-  ! Declare the following variables to satisfy the compiler
-  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
-  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 end module ModVarIndexes
 
