@@ -636,4 +636,85 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
   return PIC::InterpolationRoutines::CellCentered::StencilTable+ThreadOpenMP;
 }
 
+//init stencil for the corner based interpolation
+PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::CornerBased::InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+  int iStencil,jStencil,kStencil,iX[3],nd,idim;
+  double w,xLoc[3],xStencil[3],dx[3],xMinNode[3],xMaxNode[3];
+  PIC::Mesh::cDataCornerNode* CornerNode;
+  PIC::Mesh::cDataBlockAMR *block;
 
+  memcpy(xMinNode,node->xmin,3*sizeof(double));
+  memcpy(xMaxNode,node->xmax,3*sizeof(double));
+
+  //the size of the cells
+  dx[0]=(xMaxNode[0]-xMinNode[0])/_BLOCK_CELLS_X_;
+  dx[1]=(xMaxNode[1]-xMinNode[1])/_BLOCK_CELLS_Y_;
+  dx[2]=(xMaxNode[2]-xMinNode[2])/_BLOCK_CELLS_Z_;
+
+  //get the local coordinate for the interpolation point location
+  for (idim=0;idim<3;idim++) {
+    xLoc[idim]=(x[idim]-xMinNode[idim])/dx[idim];
+
+    if ((xLoc[idim]<0.0)||(xLoc[idim]>1.0)) exit(__LINE__,__FILE__,"Error: the point is out of block");
+
+    iX[idim]=(int)(xLoc[idim]);
+    xLoc[idim]-=iX[idim];
+  }
+
+  //build interpolation stencil
+  #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+  int ThreadOpenMP=omp_get_thread_num();
+  #else
+  int ThreadOpenMP=0;
+  #endif
+
+  PIC::InterpolationRoutines::CornerBased::cStencil& Stencil=PIC::InterpolationRoutines::CornerBased::StencilTable[ThreadOpenMP];
+  Stencil.flush();
+
+  //return an empty stencil if the block is not allocated
+  if ((block=node->block)==NULL) return PIC::InterpolationRoutines::CornerBased::StencilTable+ThreadOpenMP;
+
+  for (iStencil=0;iStencil<2;iStencil++) for (jStencil=0;jStencil<2;jStencil++) for (kStencil=0;kStencil<2;kStencil++) {
+    //get the local ID of the 'corner node'
+    nd=PIC::Mesh::mesh.getCornerNodeLocalNumber(iStencil+iX[0],jStencil+iX[1],kStencil+iX[2]);
+    CornerNode=block->GetCornerNode(nd);
+
+    if (CornerNode!=NULL) {
+      switch (iStencil+2*jStencil+4*kStencil) {
+      case 0+0*2+0*4:
+        w=(1.0-xLoc[0])*(1.0-xLoc[1])*(1.0-xLoc[2]);
+        break;
+      case 1+0*2+0*4:
+        w=xLoc[0]*(1.0-xLoc[1])*(1.0-xLoc[2]);
+        break;
+      case 0+1*2+0*4:
+        w=(1.0-xLoc[0])*xLoc[1]*(1.0-xLoc[2]);
+        break;
+      case 1+1*2+0*4:
+        w=xLoc[0]*xLoc[1]*(1.0-xLoc[2]);
+        break;
+
+      case 0+0*2+1*4:
+        w=(1.0-xLoc[0])*(1.0-xLoc[1])*xLoc[2];
+        break;
+      case 1+0*2+1*4:
+        w=xLoc[0]*(1.0-xLoc[1])*xLoc[2];
+        break;
+      case 0+1*2+1*4:
+        w=(1.0-xLoc[0])*xLoc[1]*xLoc[2];
+        break;
+      case 1+1*2+1*4:
+        w=xLoc[0]*xLoc[1]*xLoc[2];
+        break;
+
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is not defined");
+      }
+
+      Stencil.AddCell(w,CornerNode);
+    }
+  }
+
+  Stencil.Normalize();
+  return PIC::InterpolationRoutines::CornerBased::StencilTable+ThreadOpenMP;
+}

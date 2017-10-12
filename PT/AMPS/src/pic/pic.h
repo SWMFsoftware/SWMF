@@ -3622,6 +3622,15 @@ namespace PIC {
         Length++;
       }
 
+      void Normalize() {
+        double norm=0.0;
+        int i;
+
+        for (i=0;i<Length;i++) norm+=Weight[i];
+
+        if (norm>0.0) for (i=0;i<Length;i++) Weight[i]/=norm;
+      }
+
       cStencilGeneric() {flush();}
     };
 
