@@ -344,8 +344,8 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
 
     // IMPORTANT NOTE: iIndexes_II has an extra index per cell which is
     // a processor ID => need one more index in addition to nIndexes
-    int iIndexes_II[(DIM+1+1)*PIC::InterpolationRoutines::CellCentered::nMaxStencilLength];
-    double WeightStencil[PIC::InterpolationRoutines::CellCentered::nMaxStencilLength];
+    int iIndexes_II[(DIM+1+1)*PIC::InterpolationRoutines::nMaxStencilLength];
+    double WeightStencil[PIC::InterpolationRoutines::nMaxStencilLength];
     int IsSecondOrder;
     int UseGhostCell=1;
     int nCellStencil;
