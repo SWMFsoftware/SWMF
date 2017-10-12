@@ -28,4 +28,8 @@ module ModExtraVariables
   integer, parameter :: nMaterial = 1
   integer, parameter :: MaterialFirst_ = 1, MaterialLast_ = 1
 
+  ! The named index range for species and their masses
+  integer, parameter :: SpeciesFirst_ = 1, SpeciesLast_ = 1
+  real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
+
 end module ModExtraVariables
