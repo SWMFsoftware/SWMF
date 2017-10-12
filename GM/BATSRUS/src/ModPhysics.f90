@@ -19,19 +19,19 @@ module ModPhysics
   real, parameter:: Gamma0 = 5./3.
 
   ! adiabatic index (gamma) and derived values for fluids
-  real:: Gamma_I(nFluid)          = 5./3.
-  real:: GammaMinus1_I(nFluid)    = 5./3. - 1.0
-  real:: InvGammaMinus1_I(nFluid) = 1.0/(5./3. - 1.0)
+  real:: Gamma_I(nFluid)          = Gamma0
+  real:: GammaMinus1_I(nFluid)    = Gamma0 - 1.0
+  real:: InvGammaMinus1_I(nFluid) = 1.0/(Gamma0 - 1.0)
 
   ! adiabatic index (gamma) and derived values for the first/total fluid
-  real :: Gamma          = 5./3.
-  real :: GammaMinus1    = 5./3. - 1.0
-  real :: InvGammaMinus1 = 1.0/(5./3. - 1.0)
+  real :: Gamma          = Gamma0
+  real :: GammaMinus1    = Gamma0 - 1.0
+  real :: InvGammaMinus1 = 1.0/(Gamma0 - 1.0)
 
   ! adiabatic index (gamma) and derived values for electrons
-  real :: GammaElectron          = 5./3.
-  real :: GammaElectronMinus1    = 5./3. - 1.0
-  real :: InvGammaElectronMinus1 = 1.0/(5./3. - 1.0)
+  real :: GammaElectron          = Gamma0
+  real :: GammaElectronMinus1    = Gamma0 - 1.0
+  real :: InvGammaElectronMinus1 = 1.0/(Gamma0 - 1.0)
 
   ! gamma of the waves
   real:: GammaWave = 1.5
@@ -239,13 +239,13 @@ module ModPhysics
        NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
 
 
-
-  ! Names of the user units for IDL and TECPlot output
+  ! Names of the user (I/O) units for IDL and TECPlot output 
+  ! for all variables including energies
   character(len=20) :: &
-       NameUnitUserIdl_V(nVar+1) = '', NameUnitUserTec_V(nVar+1) = ''
+       NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
 
-  ! The user defined units for the variables
-  real :: UnitUser_V(nVar+1) = 1.0
+  ! The user defined units for the variables including energies
+  real :: UnitUser_V(nVar+nFluid) = 1.0
 
   ! Some strange logical used in calc_heat_flux
   logical :: UseDefaultUnits = .false.
