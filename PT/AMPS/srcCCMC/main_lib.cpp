@@ -481,7 +481,18 @@ void amps_init() {
   PIC::ParticleWeightTimeStep::initTimeStep();
 
   //init particle weight
-  for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+  for (int s=0;s<PIC::nTotalSpecies;s++) {
+    switch (_CCMC_CALCULATION_MODE_) {
+    case _CCMC_CALCULATION_MODE__ENTIRE_FLOW_:
+      PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
+      break;
+    case _CCMC_CALCULATION_MODE__INDIVIDUAL_PARTICLES_ONLY_:
+      PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,1.0);
+      break;
+    default:
+      exit(__LINE__,__FILE__,"Error: the option is unknown");
+    }
+  }
 
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   if (PIC::Mesh::mesh.ThisThread==0) cout << "The mesh is generated" << endl;
