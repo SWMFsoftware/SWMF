@@ -2617,7 +2617,6 @@ subroutine write_plot_line(iFile)
 
   character(len=100) :: NameFile, NameStart, StringTitle
   character(len=1500):: NameVar, StringPrimitive
-  integer            :: nPlotVarTmp
   integer            :: nLineFile, nStateVar, nPlotVar
   integer            :: iPoint, nPoint, iPointNext, nPoint1
 
@@ -2734,9 +2733,7 @@ subroutine write_plot_line(iFile)
   case('tec')
      IsIdl = .false.
      if(DoExtractState) then
-        if (nPlotVarTmp /= nVar .and. iProc == 0) &
-             call stop_mpi(NameSub//': nPlotVarTmp must be the same as nVar')
-        call get_tec_variables(iFile, nPlotVarTmp, NamePrimitive_V, NameVar)
+        call get_tec_variables(iFile, nVar, NamePrimitive_V, NameVar)
      else
         NameVar = '"X", "Y", "Z"'
      end if
