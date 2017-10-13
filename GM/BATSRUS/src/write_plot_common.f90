@@ -1754,7 +1754,7 @@ subroutine get_tec_variables(iFile, nPlotVar, NamePlotVar_V, StringVarTec)
   ! Arguments
 
   integer, intent(in)              :: nPlotVar, iFile
-  character (len=10), intent(in)   :: NamePlotVar_V(nPlotVar)
+  character (len=*), intent(in)    :: NamePlotVar_V(nPlotVar)
   character (len=1500), intent(out) :: StringVarTec 
 
   character (len=20) :: NameTecFluid
