@@ -30,15 +30,13 @@ test_help:
 	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
 	@echo "    test1                      (run GM-IE-PW test)"
-	@echo "    test2                      (run SC-IH + IH-GM test )"
-	@echo "    test3                      (run GM-IE-IM test)"
+	@echo "    test2                      (run multifluid GM-IM coupling test)"
 	@echo "    test4                      (run GM-IE-HEIDI test)"
 	@echo "    test5                      (run EE-SC test)"
 	@echo "    test6                      (run GM-IE-CRCM test)"
 	@echo "    test7                      (run IH-OH test)"
-	@echo "    test8                      (run multifluid GM-IM coupling test)"
+	@echo "    test8                      (run Thread SC-IH coupling test)"
 	@echo "    test9                      (run Chromo SC-IH coupling test)"
-	@echo "    test9th                    (run SC-IH with thread BC test)"
 	@echo "    test10                     (run 3T solar wind test)"
 	@echo "    test11                     (run GM-PT coupler test)"
 	@echo "    test12                     (run GM-PC tests)"
@@ -65,8 +63,8 @@ test:
 	-@(${MAKE} test5)
 	-@(${MAKE} test6)
 	-@(${MAKE} test7)
+	-@(${MAKE} test8)
 	-@(${MAKE} test9)
-	-@(${MAKE} test9th)
 	-@(${MAKE} test10)
 	-@(${MAKE} test12)
 	-@(${MAKE} test13)
@@ -159,7 +157,7 @@ test_cz_check:
 	ls -ltr test_cz.diff
 
 #### Polarwind test ###
-#
+
 test_pw:
 	@echo "starting..." > test_pw.diff
 	@echo "test_pw_compile..." >> test_pw.diff
@@ -196,7 +194,7 @@ test_pw_check:
 
 
 #### Plasmasphere model: DGCPM test ###
-#
+
 test_ps:
 	@echo "starting..." > test_ps.diff
 	@echo "test_ps_compile..." >> test_ps.diff
@@ -241,7 +239,7 @@ test_ps_check:
 
 
 #### Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
-#
+
 test_psie:
 	@echo "starting..." > test_psie.diff
 	@echo "test_psie_compile..." >> test_psie.diff
@@ -286,7 +284,7 @@ test_psie_check:
 	ls -ltr test_psie*.diff
 	
 #### Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
-#
+
 test_psgmie:
 	@echo "starting..." > test_psgmie.diff
 	@echo "test_psgmie_compile..." >> test_psgmie.diff
@@ -317,7 +315,7 @@ test_psgmie_check:
 	ls -ltr test_psgmie*.diff
 
 #### Radiation belt model test ###
-#
+
 test_rb:
 	@echo "starting..." > test_rb.diff
 	@echo "test_rb_compile..." >> test_rb.diff
@@ -364,7 +362,7 @@ test_rb_check:
 	ls -l test_rb_sat.diff
 
 ### Test1: PW+IE+GM ###
-#
+
 test1:
 	@echo "test1_compile..." > test1_gm.diff
 	@echo "test1_compile..." > test1_ie.diff
@@ -434,154 +432,84 @@ test1_check:
 		>> test1_ie.diff)
 	ls -l test1_*.diff
 
-### test2: SC+IH+GM test ###
+### Test2: GM+IE+RCM with multifluid GM-IM coupling ###
 
-test2:
-	@echo "test2_compile..." > test2_sc.diff
-	@echo "test2_compile..." > test2_ih.diff
+test2:  
+	@echo "test2_compile..." > test2_gm_multi.diff
+	@echo "test2_compile..." > test2_ie.diff	
+	@echo "test2_compile..." > test2_im_rcm_multi.diff
 	${MAKE} test2_compile
-	@echo "test2_rundir..." >> test2_sc.diff
-	@echo "test2_rundir..." >> test2_ih.diff
+	@echo "test2_rundir..." >> test2_gm_multi.diff
+	@echo "test2_rundir..." >> test2_ie.diff
+	@echo "test2_rundir..." >> test2_im_rcm_multi.diff
 	${MAKE} test2_rundir
-	@echo "test2_run..." >> test2_sc.diff
-	@echo "test2_run..." >> test2_ih.diff
+	@echo "test2_run..." >> test2_gm_multi.diff
+	@echo "test2_run..." >> test2_ie.diff
+	@echo "test2_run..." >> test2_im_rcm_multi.diff
 	${MAKE} test2_run
-	@echo "test2_check..." >> test2_sc.diff
-	@echo "test2_check..." >> test2_ih.diff
+	@echo "test2_restart..." >> test2_gm_multi.diff
+	@echo "test2_restart..." >> test2_ie.diff
+	@echo "test2_restart..." >> test2_im_rcm_multi.diff
+	${MAKE} test2_restart
+	@echo "test2_check..." >> test2_gm_multi.diff
+	@echo "test2_check..." >> test2_ie.diff
+	@echo "test2_check..." >> test2_im_rcm_multi.diff
 	${MAKE} test2_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test2_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,GM/BATSRUS
-	./Config.pl -o=SC:u=Sc,e=MhdCorona,IH:u=Ih,e=Mhd,GM:u=Default,e=Mhd
-	./Config.pl -g=SC:4,4,4,6200,1,IH:8,8,8,400,1,GM:8,8,8,700,1
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdIons
 	${MAKE} SWMF
-	make PIDL EARTH_TRAJ
+	make PIDL
 
 test2_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.SCIH ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
-	cd ${TESTDIR}/IH; cp Param/EARTH_TRAJ.in .; \
-		${BINDIR}/EARTH_TRAJ.exe > earth_traj.dat
+	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
 
 test2_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/start
-	cp Param/PARAM.in.test.IHGM ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.IHGM ${TESTDIR}/LAYOUT.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS/restart
 
-test2_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/start/SC/log_n000001.log \
-		output/test2/SC_log_n000001.log \
-		> test2_sc.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/start/IH/log_n000001.log \
-		output/test2/IH_log_n000001.log \
-		> test2_ih.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/start/IH/sat_earth_traj_n000000.sat \
-		output/test2/IH_sat_earth_traj_n000000.sat \
-		>> test2_ih.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/restart/GM/log_n000001.log \
-		output/test2/GM_log_n000001.log \
-		> test2_gm.diff)
-	ls -l test2_*.diff
-
-### Test3: GM+IE+IM ###
-
-test3:
-	@echo "test3_compile..." > test3_gm.diff
-	@echo "test3_compile..." > test3_ie.diff
-	@echo "test3_compile..." > test3_im_rcm.diff
-	${MAKE} test3_compile
-	@echo "test3_rundir..." >> test3_gm.diff
-	@echo "test3_rundir..." >> test3_ie.diff
-	@echo "test3_rundir..." >> test3_im_rcm.diff
-	${MAKE} test3_rundir
-	@echo "test3_run..." >> test3_gm.diff
-	@echo "test3_run..." >> test3_ie.diff
-	@echo "test3_run..." >> test3_im_rcm.diff
-	${MAKE} test3_run
-	@echo "test3_restart..." >> test3_gm.diff
-	@echo "test3_restart..." >> test3_ie.diff
-	@echo "test3_restart..." >> test3_im_rcm.diff
-	${MAKE} test3_restart
-	@echo "test3_check..." >> test3_gm.diff
-	@echo "test3_check..." >> test3_ie.diff
-	@echo "test3_check..." >> test3_im_rcm.diff
-	${MAKE} test3_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test3_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd
-	${MAKE} SWMF
-	make PIDL
-
-test3_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.GMIEIM ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
-
-test3_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
-# Note: The RCM .dat file is copied to .txt to avoid conversion to .plt
-test3_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIM PARAM.in
+test2_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIERCM_Multi PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
 		mv runlog_restart RESULTS
 
-test3_check:
+test2_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test3/GM_log_n000001.log \
-		> test3_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=5e-5 \
-		${TESTDIR}/RESULTS/GM/magnetometers_n00000000.mag \
-		output/test3/magnetometers_n00000000.mag \
-		>> test3_gm.diff)
+		output/test2/GM_log_n000001.log \
+		> test2_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/geoindex_n00000000.log \
-		output/test3/GM_geoindex.log \
-		>> test3_gm.diff)
+		${TESTDIR}/RESULTS/GM/magnetometers_n*.mag \
+		output/test2/magnetometers.mag \
+		>> test2_gm_multi.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/geoindex_n*.log \
+		output/test2/GM_geoindex.log \
+		>> test2_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
-                ${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
-                output/test3/GM_restart_geoindex.txt \
-                >> test3_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
-                ${TESTDIR}/RESULTS/GM/mag_grid_n5_124.outs \
-                output/test3/GM_gridmags_ascii.outs \
-                >> test3_gm.diff)
+		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
+		output/test2/GM_restart_geoindex.txt \
+		>> test2_gm_multi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
-		output/test3/IE.log \
-		> test3_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
-		${TESTDIR}/RESULTS/IE/it000321_104520_000.idl \
-		output/test3/IE_it000321_104520_000.idl \
-		>> test3_ie.diff)
-	gunzip -c output/test3/IM_2d__max_t00000020.dat.gz \
+		output/test2/IE.log \
+		> test2_ie.diff) 
+	gunzip -c output/test2/IM_2d__max_t00000020.dat.gz \
 		> ${TESTDIR}/RESULTS/IM/t20.dat
-# Remove date stamp from tecplot files
-	cd ${TESTDIR}/RESULTS/IM; \
+	cd ${TESTDIR}/RESULTS/IM;\
 		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/t20.txt \
 		${TESTDIR}/RESULTS/IM/t20.dat \
-		> test3_im_rcm.diff)
-	ls -l test3_*.diff
+		> test2_im_rcm_multi.diff)
+	ls -l test2_*.diff
 
 ### test_swpc_build and test_swpc: GM+IE+IM+RB ###
 
@@ -1056,84 +984,67 @@ test7_check:
 	ls -l test7_*.diff
 
 
-### Test8: GM+IE+RCM with multifluid GM-IM coupling ###
+### test8: SC + IH with Threaded-Field-Line boundary condition test ###
 
-test8:  
-	@echo "test8_compile..." > test8_gm_multi.diff
-	@echo "test8_compile..." > test8_ie.diff	
-	@echo "test8_compile..." > test8_im_rcm_multi.diff
+test8:
+	@echo "test8_compile..." > test8_sc_thread.diff
+	@echo "test8_compile..." > test8_ih.diff
 	${MAKE} test8_compile
-	@echo "test8_rundir..." >> test8_gm_multi.diff
-	@echo "test8_rundir..." >> test8_ie.diff
-	@echo "test8_rundir..." >> test8_im_rcm_multi.diff
+	@echo "test8_rundir..." >> test8_sc_thread.diff
+	@echo "test8_rundir..." >> test8_ih.diff
 	${MAKE} test8_rundir
-	@echo "test8_run..." >> test8_gm_multi.diff
-	@echo "test8_run..." >> test8_ie.diff
-	@echo "test8_run..." >> test8_im_rcm_multi.diff
+	@echo "test8_run..." >> test8_sc_thread.diff
+	@echo "test8_run..." >> test8_ih.diff
 	${MAKE} test8_run
-	@echo "test8_restart..." >> test8_gm_multi.diff
-	@echo "test8_restart..." >> test8_ie.diff
-	@echo "test8_restart..." >> test8_im_rcm_multi.diff
+	@echo "test8_restart..." >> test8_sc_thread.diff
+	@echo "test8_restart..." >> test8_ih.diff
 	${MAKE} test8_restart
-	@echo "test8_check..." >> test8_gm_multi.diff
-	@echo "test8_check..." >> test8_ie.diff
-	@echo "test8_check..." >> test8_im_rcm_multi.diff
+	@echo "test8_check..." >> test8_sc_thread.diff
+	@echo "test8_check..." >> test8_ih.diff
 	${MAKE} test8_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test8_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdIons
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
 
 test8_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
+	cp Param/PARAM.in.test.SCIH_threadbc ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 
 test8_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl
 
 test8_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIERCM_Multi PARAM.in
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_threadbc PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}/IM/plots/; cp 2d__max_t00000020.dat t20.txt
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; \
-		mv runlog_restart RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test8_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test8/GM_log_n000001.log \
-		> test8_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/magnetometers_n*.mag \
-		output/test8/magnetometers.mag \
-		>> test8_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/geoindex_n*.log \
-		output/test8/GM_geoindex.log \
-		>> test8_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
-		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
-		output/test8/GM_restart_geoindex.txt \
-		>> test8_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
-		output/test8/IE.log \
-		> test8_ie.diff) 
-	gunzip -c output/test8/IM_2d__max_t00000020.dat.gz \
-		> ${TESTDIR}/RESULTS/IM/t20.dat
-	cd ${TESTDIR}/RESULTS/IM;\
-		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/t20.txt \
-		${TESTDIR}/RESULTS/IM/t20.dat \
-		> test8_im_rcm_multi.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test8/SC_log_n000000.log \
+		> test8_sc_thread.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test8/IH_log_n000000.log \
+		> test8_ih.diff)
 	ls -l test8_*.diff
+
+test8_update:
+	cp -f ${TESTDIR}/RESULTS/SC/log_n000000.log \
+		output/test8/SC_log_n000000.log 
+	cp -f ${TESTDIR}/RESULTS/IH/log_n000000.log \
+		output/test8/IH_log_n000000.log
+	${MAKE} test8_check
 
 ### test9: Chromospheric SC + IH with Alfven waves test ###
 
@@ -1189,68 +1100,6 @@ test9_check:
 		output/test9/IH_log_n000000.log \
 		> test9_ih.diff)
 	ls -l test9_*.diff
-
-### test9th: SC + IH with Threaded-Field-Line boundary condition test ###
-
-test9th:
-	@echo "test9th_compile..." > test9th_sc_thread.diff
-	@echo "test9th_compile..." > test9th_ih.diff
-	${MAKE} test9th_compile
-	@echo "test9th_rundir..." >> test9th_sc_thread.diff
-	@echo "test9th_rundir..." >> test9th_ih.diff
-	${MAKE} test9th_rundir
-	@echo "test9th_run..." >> test9th_sc_thread.diff
-	@echo "test9th_run..." >> test9th_ih.diff
-	${MAKE} test9th_run
-	@echo "test9th_restart..." >> test9th_sc_thread.diff
-	@echo "test9th_restart..." >> test9th_ih.diff
-	${MAKE} test9th_restart
-	@echo "test9th_check..." >> test9th_sc_thread.diff
-	@echo "test9th_check..." >> test9th_ih.diff
-	${MAKE} test9th_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test9th_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
-	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1
-	${MAKE} SWMF
-	make PIDL
-
-test9th_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.SCIH_threadbc ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
-
-test9th_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
-test9th_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_threadbc PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
-
-test9th_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
-		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		output/test9th/SC_log_n000000.log \
-		> test9th_sc_thread.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IH/log_n000000.log \
-		output/test9th/IH_log_n000000.log \
-		> test9th_ih.diff)
-	ls -l test9th_*.diff
-
-test9th_update:
-	cp -f ${TESTDIR}/RESULTS/SC/log_n000000.log \
-		output/test9th/SC_log_n000000.log 
-	cp -f ${TESTDIR}/RESULTS/IH/log_n000000.log \
-		output/test9th/IH_log_n000000.log
-	${MAKE} test9th_check
 
 ### test10: Global Solar Wind Model with three temperatures and Alfven waves
 
