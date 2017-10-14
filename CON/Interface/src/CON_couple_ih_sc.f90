@@ -21,23 +21,19 @@ module CON_couple_ih_sc
   use CON_coupler
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
 
-  use SC_wrapper, ONLY: &
-       SC_get_for_global_buffer
-
-  use IH_wrapper, ONLY: &
-       IH_match_ibc, &
-       IH_set_buffer_grid_get_info, &
-       IH_save_global_buffer
-
-  use IH_ModBuffer, ONLY: &
-       IH_nVarCouple    => nVarCouple, &
-       IH_iVar_V        => iVar_V, &
-       IH_DoCoupleVar_V => DoCoupleVar_V
-
-  use SC_ModBuffer, ONLY: &
-       SC_nVarCouple    => nVarCouple, &
-       SC_iVar_V        => iVar_V, &
+  use SC_wrapper, ONLY:                  &
+       SC_get_for_global_buffer,         &
+       SC_nVarCouple    => nVarCouple,   &
+       SC_iVar_V        => iVar_V,       &
        SC_DoCoupleVar_V => DoCoupleVar_V
+
+  use IH_wrapper, ONLY:                  &
+       IH_match_ibc,                     &
+       IH_set_buffer_grid_get_info,      &
+       IH_save_global_buffer,            &
+       IH_nVarCouple    => nVarCouple,   &
+       IH_iVar_V        => iVar_V,       &
+       IH_DoCoupleVar_V => DoCoupleVar_V
 
   implicit none
   private !except

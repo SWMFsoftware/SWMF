@@ -6,6 +6,8 @@ module IH_wrapper
   use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
 
+  use IH_ModBuffer
+
   implicit none
 
   private ! except
@@ -19,6 +21,9 @@ module IH_wrapper
 
   ! Global buffer coupling
   public:: IH_get_for_global_buffer
+
+  ! spherical buffer coupling from IH_ModBuffer (why?)
+  public:: nVarCouple, iVar_V, DoCoupleVar_V
 
   ! Coupling toolkit
   public:: IH_synchronize_refinement

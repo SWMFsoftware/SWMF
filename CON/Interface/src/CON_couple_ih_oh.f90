@@ -22,19 +22,15 @@ module CON_couple_ih_oh
   use CON_transfer_data, ONLY: transfer_real_array, transfer_integer
 
   use IH_wrapper, ONLY: &
-       IH_get_for_global_buffer
-
-  use OH_wrapper, ONLY: &
-       OH_match_ibc, &
-       OH_set_buffer_grid_get_info, &
-       OH_save_global_buffer
-
-  use IH_ModBuffer, ONLY: &
+       IH_get_for_global_buffer, &
        IH_nVarCouple    => nVarCouple, &
        IH_iVar_V        => iVar_V, &
        IH_DoCoupleVar_V => DoCoupleVar_V
 
-  use OH_ModBuffer, ONLY: &
+  use OH_wrapper, ONLY: &
+       OH_match_ibc, &
+       OH_set_buffer_grid_get_info, &
+       OH_save_global_buffer, &
        OH_nVarCouple    => nVarCouple, &
        OH_iVar_V        => iVar_V, &
        OH_DoCoupleVar_V => DoCoupleVar_V

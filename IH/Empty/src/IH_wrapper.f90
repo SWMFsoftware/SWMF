@@ -6,6 +6,8 @@ module IH_wrapper
   use CON_domain_decomposition
   ! Wrapper for an "empty" Inner Heliosphere (IH) component
 
+  use CON_coupler, ONLY:nVarIndexCouple, nCoupleVarGroup
+
   implicit none
 
   private ! except
@@ -19,6 +21,10 @@ module IH_wrapper
 
   ! Global buffer coupling
   public:: IH_get_for_global_buffer
+
+  integer, public:: nVarCouple
+  integer, public:: iVar_V(nVarIndexCouple)
+  logical, public:: DoCoupleVar_V(nCoupleVarGroup)
 
   ! Coupling toolkit
   public:: IH_synchronize_refinement
@@ -513,11 +519,3 @@ end module IH_wrapper
 
 !==============================================================================
 
-module IH_ModBuffer
-
-  use CON_coupler, ONLY:nVarIndexCouple, nCoupleVarGroup
-  integer, public:: nVarCouple
-  integer, public:: iVar_V(nVarIndexCouple)
-  logical, public:: DoCoupleVar_V(nCoupleVarGroup)
-
-end module IH_ModBuffer
