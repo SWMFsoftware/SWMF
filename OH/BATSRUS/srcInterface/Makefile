@@ -41,7 +41,7 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f  	ModGridDescriptor.f90\
+	rm -f ModGridDescriptor.f90 \
 	ModBuffer.f90 \
 	update_lagrangian_grid.f90 \
 	ModRadioWaveImage.f90 \
