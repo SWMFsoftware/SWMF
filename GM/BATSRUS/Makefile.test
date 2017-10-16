@@ -1210,7 +1210,7 @@ test_ganymede:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ganymede_compile:
-	./Config.pl -u=Ganymede -e=MhdHypPe -g=8,8,8,400,1
+	./Config.pl -u=Ganymede -e=MhdHypPe -g=8,8,8,700,1
 	$(MAKE) BATSRUS
 	make PIDL
 
