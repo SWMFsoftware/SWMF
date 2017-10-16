@@ -85,7 +85,7 @@ module SP_ModAdvance
   !-----------------------------
   real:: MachAlfven
   !-----------------------------
-  integer:: nWidth = 10
+  integer:: nWidth = 50
   !-----------------------------
   logical:: UseRealDiffusionUpstream = .true.
   logical:: DoTraceShock = .true., UseDiffusion = .true.
@@ -156,6 +156,7 @@ contains
     !--------------------------------------------------------------------------
     ! loop variable
     integer:: iSearchMin, iSearchMax
+    integer:: iShockCandidate
     !--------------------------------------------------------------------------
     if(.not.DoTraceShock)then
        iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Begin_, iBlock)
@@ -167,10 +168,12 @@ contains
     iSearchMin= max(iGridLocal_IB(ShockOld_, iBlock), &
          iGridLocal_IB(Begin_, iBlock) + nWidth )
     iSearchMax= iGridLocal_IB(End_, iBlock) - nWidth - 1
-    iGridLocal_IB(Shock_, iBlock) = iSearchMin - 1 + maxloc(&
-         DLogRho_I(iSearchMin       :iSearchMax) - &
-         DLogRho_I(iSearchMin+nWidth:iSearchMax+nWidth),&
+    iShockCandidate = iSearchMin - 1 + maxloc(&
+         DLogRho_I(iSearchMin:iSearchMax),&
          1, MASK = Radius_I(iSearchMin:iSearchMax) > 1.2)
+
+    if(DLogRho_I(iShockCandidate) > 0.0)&
+         iGridLocal_IB(Shock_, iBlock) = iShockCandidate
   end subroutine get_shock_location
 
   !===========================================================================
@@ -294,13 +297,6 @@ contains
     !--------------------------------------------------------------------------
     ! compute the background value of DLogRho as average in the upstream 
     DLogRhoBackground = 0.0
-    do iParticle = iShock+nWidth+1, iEnd-1
-       DLogRhoBackground = DLogRhoBackground + &
-            0.5 * (DLogRho_I(iParticle) + DLogRho_I(iParticle+1)) * &
-            State_VIB(D_, iParticle, iBlock)
-    end do
-    DLogRhoBackground = DLogRhoBackground / &
-         (State_VIB(S_,iEnd,iBlock)-State_VIB(S_,iShock+nWidth+1,iBlock))
 
     ! find the excess of DLogRho within the shock compared to background
     ! averaged over length
@@ -442,6 +438,7 @@ contains
 
        ! identify shock in the data
        call get_shock_location
+
        ! find how far shock has travelled on this line: nProgress
        iShock    = iGridLocal_IB(Shock_,   iBlock)
        iShockOld = iGridLocal_IB(ShockOld_,iBlock)
