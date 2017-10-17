@@ -47,6 +47,7 @@ void communicateNodeBC(int nx, int ny, int nz, arr3_double vector, int bcFaceXri
 
 // PARTICLES
 void communicateNode_P(int nx, int ny, int nz, double*** vector, const VirtualTopology3D * vct, EMfields3D *EMf);
+void communicateNode_P(int nx, int ny, int nz, double***** vector, const VirtualTopology3D * vct, EMfields3D *EMf);
 
 void communicateNodeBoxStencilBC(int nx, int ny, int nz, arr3_double vector, int bcFaceXright, int bcFaceXleft, int bcFaceYright, int bcFaceYleft, int bcFaceZright, int bcFaceZleft, const VirtualTopology3D * vct, EMfields3D *EMf);
 
@@ -71,10 +72,13 @@ void communicateCenterBoxStencilBC_P(int nx, int ny, int nz, arr3_double vector,
 
 
 void communicateInterp(int nx, int ny, int nz, double*** vector, const VirtualTopology3D * vct, EMfields3D *EMf);
+void communicateInterp(int nx, int ny, int nz, double***** vector, const VirtualTopology3D * vct, EMfields3D *EMf);
+
 void addCorner(int nx, int ny, int nz, double ***vector,const VirtualTopology3D * vct);
 void addEdgeX(int nx, int ny, int nz, double ***vector, const VirtualTopology3D * vct);
 void addEdgeY(int nx, int ny, int nz, double ***vector, const VirtualTopology3D * vct);
 void addEdgeZ(int nx, int ny, int nz, double ***vector, const VirtualTopology3D * vct);
 void addFace(int nx, int ny, int nz, double ***vector, const VirtualTopology3D * vct);
+void addBoundaryM(int nx, int ny, int nz, int ngp, int nRot, double *****vector, const VirtualTopology3D * vct);
 
 #endif
