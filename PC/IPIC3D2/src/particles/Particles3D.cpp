@@ -168,6 +168,7 @@ void Particles3D::MaxwellianFromFluid(Field* EMf){
       }
 }
 
+
 inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
 {
   /*
@@ -229,6 +230,35 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
       }
 }
 
+
+void Particles3D::correctWeight(Field *EMf)
+{
+  // Modify the weights of the electrons based on the
+  // difference of div(E) and netcharge on nodes. 
+  
+  if(ns!=0) return;
+  const double  invFourPI =1./(16*atan(1.0));
+  double ratio;
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      SpeciesParticle* pcl = &_pcls[pidx];
+
+      const double xp = pcl->get_x();
+      const double yp = pcl->get_y();
+      const double zp = pcl->get_z();
+      const double qi = pcl->get_q();
+      
+      const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
+      const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
+      const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));
+
+      ratio =
+	(1-(EMf->getRHOn(ix,iy,iz) - invFourPI*EMf->getdivEn(ix,iy,iz))
+	 /EMf->getRHOns(ix,iy,iz,ns));
+      pcl->set_q(qi*ratio);
+    }  
+}
+
+
 inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const double Y, const double Z,double *U, double *V, double *W)
 {
   double harvest, prob, theta, Uth;
@@ -251,6 +281,7 @@ inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const 
     harvest =   RANDNUM;
     theta = 2.0*M_PI*harvest;
     Uth = col->getFluidUth(X, Y, Z, ns);
+    
     (*U) = col->getFluidUx(X, Y, Z, ns) + Uth * prob * cos(theta);
     // v = Y velocity
     (*V) = col->getFluidUy(X, Y, Z, ns) + Uth * prob * sin(theta);
@@ -260,6 +291,7 @@ inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const 
     harvest =   RANDNUM;
     theta = 2.0 * M_PI * harvest;
     (*W) = col->getFluidUz(X, Y, Z, ns) + Uth * prob * cos(theta);
+    
   }
 }
 
@@ -944,6 +976,110 @@ void Particles3D::mover_PC_AoS(Field * EMf)
     if (vct->getCartesian_rank() == 0 && doSubCycling) {
       cout << "***AoS MOVER species " << ns << " *** Avg." << (double)subcycle_sum/((double)getNOP()) << " sub-cycles   ****" << endl;
     }
+  }
+}
+
+
+
+
+void Particles3D::mover_PC_AoS_explicit(Field * EMf)
+{
+  
+  
+#pragma omp parallel
+  {
+    convertParticlesToAoS();
+
+    const_arr4_pfloat fieldForPcls = EMf->get_fieldForPcls();
+
+    const double dto2 = .5 * dt, qdto2mc = qom * dto2 / c;
+#pragma omp for schedule(static)
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      // copy the particle
+      SpeciesParticle* pcl = &_pcls[pidx];
+      ALIGNED(pcl);
+
+      // positions: t = t_n+1/2 stage
+      const double xorig = pcl->get_x();
+      const double yorig = pcl->get_y();
+      const double zorig = pcl->get_z();
+
+      const double invVolqi = pcl->get_q()*grid->getInvVOL();
+
+      // velocities: t = t_n stage
+      const double uorig = pcl->get_u();
+      const double vorig = pcl->get_v();
+      const double worig = pcl->get_w();
+      double xavg = xorig;
+      double yavg = yorig;
+      double zavg = zorig;
+      double uavg, vavg, wavg;
+
+
+      // compute weights for field components
+      //
+      double weights[8] ALLOC_ALIGNED;
+      int cx,cy,cz;
+      grid->get_safe_cell_and_weights(xavg,yavg,zavg,cx,cy,cz,weights);
+
+      const double* field_components[8] ALLOC_ALIGNED;
+      get_field_components_for_cell(field_components,fieldForPcls,cx,cy,cz);
+
+      double sampled_field[8] ALLOC_ALIGNED;
+      for(int i=0;i<8;i++) sampled_field[i]=0;
+      double& Bxl=sampled_field[0];
+      double& Byl=sampled_field[1];
+      double& Bzl=sampled_field[2];
+      double& Exl=sampled_field[0+DFIELD_3or4];
+      double& Eyl=sampled_field[1+DFIELD_3or4];
+      double& Ezl=sampled_field[2+DFIELD_3or4];
+      const int num_field_components=2*DFIELD_3or4;
+      for(int c=0; c<8; c++)
+	{
+	  const double* field_components_c=field_components[c];
+	  ASSUME_ALIGNED(field_components_c);
+	  const double weights_c = weights[c];
+#pragma simd
+	  for(int i=0; i<num_field_components; i++)
+	    {
+	      sampled_field[i] += weights_c*field_components_c[i];
+	    }
+	}
+      const double Omx = qdto2mc*Bxl;
+      const double Omy = qdto2mc*Byl;
+      const double Omz = qdto2mc*Bzl;
+
+      // end interpolation
+      const pfloat omsq = (Omx * Omx + Omy * Omy + Omz * Omz);
+      const pfloat denom = 1.0 / (1.0 + omsq);
+      // solve the position equation
+      const pfloat ut = uorig + qdto2mc * Exl;
+      const pfloat vt = vorig + qdto2mc * Eyl;
+      const pfloat wt = worig + qdto2mc * Ezl;
+      //const pfloat udotb = ut * Bxl + vt * Byl + wt * Bzl;
+      const pfloat udotOm = ut * Omx + vt * Omy + wt * Omz;
+      // solve the velocity equation
+      uavg = (ut + (vt * Omz - wt * Omy + udotOm * Omx)) * denom;
+      vavg = (vt + (wt * Omx - ut * Omz + udotOm * Omy)) * denom;
+      wavg = (wt + (ut * Omy - vt * Omx + udotOm * Omz)) * denom;
+
+      const double unp1 = 2.0 * uavg - uorig;
+      const double vnp1 = 2.0 * vavg - vorig;
+      const double wnp1 = 2.0 * wavg - worig;
+      
+
+      // Now, velocities are at n+1 stage, positions are at n+1+1/2 stage
+      pcl->set_x(xorig + unp1 * dt);
+      pcl->set_y(yorig + vnp1 * dt);
+      pcl->set_z(zorig + wnp1 * dt);
+      pcl->set_u(unp1);
+      pcl->set_v(vnp1);
+      pcl->set_w(wnp1);
+
+      //cout<<" xnew = "<<xorig + uavg*dt<<endl;
+      
+    }// END OF ALL THE PARTICLES
+
   }
 }
 

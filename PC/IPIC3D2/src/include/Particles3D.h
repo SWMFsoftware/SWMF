@@ -59,6 +59,7 @@ class Particles3D:public Particles3Dcomm {
       */
     void constantVelocity(double vel, int dim, Field * EMf);
     /** Initial condition: uniform in space and maxwellian in velocity */
+    void correctWeight(EMfields3D *EMf);
     void maxwellian(Field * EMf);
     /** Initial condition: uniform in space and maxwellian in velocity with velocity from Null Point currents */
     void maxwellianNullPoints(Field * EMf);
@@ -90,6 +91,7 @@ class Particles3D:public Particles3Dcomm {
     void mover_PC(Field * EMf);
     /** array-of-structs version of mover_PC */
     void mover_PC_AoS(Field * EMf);
+    void mover_PC_AoS_explicit(Field * EMf);
     /** Relativistic array-of-structs version of mover_PC with adaptive Subcycling and PC*/
     void mover_PC_AoS_Relativistic(Field * EMf);
     /* vectorized version of previous */
