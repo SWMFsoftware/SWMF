@@ -160,6 +160,57 @@ inline type **** newArray4(size_t sz1, size_t sz2, size_t sz3, size_t sz4)
   return arr;
 }
 
+template <class type>
+inline type ***** newArray5(size_t sz1, size_t sz2, size_t sz3, size_t sz4, size_t sz5)
+{
+  type *****arr = AlignedAlloc(type****, sz1); //(new type ***[sz1]);
+  type ****ptr = newArray4<type>(sz1*sz2, sz3, sz4, sz5);
+  for (size_t i = 0; i < sz1; i++) {
+    arr[i] = ptr;
+    ptr += sz2;
+  }
+  return arr;
+}
+
+template <class type>
+inline type ****** newArray6(size_t sz1, size_t sz2, size_t sz3, size_t sz4, size_t sz5, size_t sz6)
+{
+  type ******arr = AlignedAlloc(type*****, sz1); //(new type ***[sz1]);
+  type *****ptr = newArray5<type>(sz1*sz2, sz3, sz4, sz5, sz6);
+  for (size_t i = 0; i < sz1; i++) {
+    arr[i] = ptr;
+    ptr += sz2;
+  }
+  return arr;
+}
+
+template <class type>
+inline type ******* newArray7(size_t sz1, size_t sz2, size_t sz3, size_t sz4,
+			      size_t sz5, size_t sz6, size_t sz7)
+{
+  type *******arr = AlignedAlloc(type******, sz1); //(new type ***[sz1]);
+  type ******ptr = newArray6<type>(sz1*sz2, sz3, sz4, sz5, sz6, sz7);
+  for (size_t i = 0; i < sz1; i++) {
+    arr[i] = ptr;
+    ptr += sz2;
+  }
+  return arr;
+}
+
+template <class type>
+inline type ******** newArray8(size_t sz1, size_t sz2, size_t sz3, size_t sz4,
+			       size_t sz5, size_t sz6, size_t sz7, size_t sz8)
+{
+  type ********arr = AlignedAlloc(type*******, sz1); //(new type ***[sz1]);
+  type *******ptr = newArray7<type>(sz1*sz2, sz3, sz4, sz5, sz6, sz7, sz8);
+  for (size_t i = 0; i < sz1; i++) {
+    arr[i] = ptr;
+    ptr += sz2;
+  }
+  return arr;
+}
+
+
 // build chained pointer hierarchy for pre-existing bottom level
 //
 template <class type>
@@ -210,6 +261,16 @@ template < class type > inline void delArray3(type *** arr)
 { delArray2(arr[0]); AlignedFree(arr); }
 template < class type > inline void delArray4(type **** arr)
 { delArray3(arr[0]); AlignedFree(arr); }
+template < class type > inline void delArray5(type ***** arr)
+{ delArray4(arr[0]); AlignedFree(arr); }
+template < class type > inline void delArray6(type ***** arr)
+{ delArray5(arr[0]); AlignedFree(arr); }
+template < class type > inline void delArray7(type ***** arr)
+{ delArray6(arr[0]); AlignedFree(arr); }
+template < class type > inline void delArray8(type ***** arr)
+{ delArray7(arr[0]); AlignedFree(arr); }
+
+
 //
 // versions with dummy dimensions (for backwards compatibility)
 //
@@ -219,10 +280,19 @@ template <class type> inline void delArr2(type ** arr, size_t sz1)
 { delArray2(arr); }
 template <class type> inline void delArr3(type *** arr, size_t sz1, size_t sz2)
 { delArray3(arr); }
-template <class type> inline void delArr4(type **** arr,
-  size_t sz1, size_t sz2, size_t sz3)
-{ delArray3(arr); }
-  
+template <class type> inline void delArr4(type **** arr, size_t sz1, size_t sz2, size_t sz3)
+{ delArray4(arr); }
+template <class type> inline void delArr5(type **** arr, size_t sz1, size_t sz2, size_t sz3, size_t sz4)
+{ delArray5(arr); }
+template <class type> inline void delArr6(type **** arr, size_t sz1, size_t sz2, size_t sz3, size_t sz4, size_t sz5)
+{ delArray6(arr); }
+template <class type> inline void delArr7(type **** arr, size_t sz1, size_t sz2, size_t sz3, size_t sz4, size_t sz5, size_t sz6)
+{ delArray7(arr); }
+template <class type> inline void delArr8(type **** arr, size_t sz1, size_t sz2, size_t sz3, size_t sz4, size_t sz5, size_t sz6, size_t sz7)
+{ delArray8(arr); }
+
+
+
 namespace iPic3D
 {
   // underlying 1-dimensional array class for arrays
@@ -906,6 +976,10 @@ namespace iPic3D
 // convert itself to a type***, since it overrides its methods,
 // so the user must use an explicit conversion routine.
 // to a ***
+#define newArr8(type,sz1,sz2,sz3,sz4,sz5,sz6,sz7,sz8) newArray8<type>((sz1),(sz2),(sz3),(sz4),(sz5),(sz6),(sz7),(sz8))
+#define newArr7(type,sz1,sz2,sz3,sz4,sz5,sz6,sz7) newArray7<type>((sz1),(sz2),(sz3),(sz4),(sz5),(sz6),(sz7))
+#define newArr6(type,sz1,sz2,sz3,sz4,sz5,sz6) newArray6<type>((sz1),(sz2),(sz3),(sz4),(sz5),(sz6))
+#define newArr5(type,sz1,sz2,sz3,sz4,sz5) newArray5<type>((sz1),(sz2),(sz3),(sz4),(sz5))
 #define newArr4(type,sz1,sz2,sz3,sz4) newArray4<type>((sz1),(sz2),(sz3),(sz4))
 #define newArr3(type,sz1,sz2,sz3) newArray3<type>((sz1),(sz2),(sz3))
 #define newArr2(type,sz1,sz2) newArray2<type>((sz1),(sz2))
