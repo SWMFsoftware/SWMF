@@ -4,3 +4,9 @@ build*
 .settings
 Debug*
 CVS
+*.o
+*.exe
+*#
+*~
+PARAM.in
+run*
