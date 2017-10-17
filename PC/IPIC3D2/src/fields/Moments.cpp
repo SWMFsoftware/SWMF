@@ -34,3 +34,8 @@ void Moments10::set_to_zero()
   //}
 }
 
+void Moments13::set_to_zero()
+{
+  arr.setall(0);
+}
+
