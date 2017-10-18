@@ -19,14 +19,14 @@ subroutine write_plot_common(iFile)
   use ModMpi
   use ModUtilities, ONLY: split_string, join_string, open_file, close_file
   use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
-       message_pass_node, average_grid_node, find_grid_block, &
-       IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim, &
+       message_pass_node, message_pass_cell, average_grid_node, &
+       find_grid_block, IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim, &
        rRound0, rRound1, SqrtNDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
   use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
   use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
-  use ModWriteTecplot, ONLY: lRecConnect, &
+  use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, &
        write_tecplot_head, write_tecplot_data, write_tecplot_connect
 
   implicit none
@@ -48,26 +48,27 @@ subroutine write_plot_common(iFile)
   logical :: PlotVar_useBody(nplotvarmax)
   real, allocatable :: PlotVarNodes_VNB(:,:,:,:,:)
   real, allocatable :: PlotXYZNodes_DNB(:,:,:,:,:)
+  real, allocatable :: PlotVar_VGB(:,:,:,:,:)
 
   character (len=lNameVar) :: plotvarnames(nplotvarmax) = ''
   integer :: nplotvar
   character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
 
   ! True for shell / box plots
-  logical:: DoPlotShell, DoPlotBox
-
+  logical:: DoPlotShell, DoPlotBox, DoPassPlotVar
+  
   ! Equation parameters
   integer, parameter :: MaxParam = 100
   real               :: Param_I(MaxParam)
   character (len=10) :: NameParam_I(MaxParam)
   integer :: nParam
 
-  character (LEN=500) :: allnames
-  character (LEN=1500) :: unitstr_TEC
-  character (LEN=500) ::unitstr_IDL
-  character (len=80) :: filename_n, filename_s, filename_h
-  character (len=80) :: NameSnapshot, NameProc
-  character (len=20) :: TypeForm
+  character (Len=500)  :: allnames
+  character (Len=1500) :: unitstr_TEC
+  character (Len=500)  :: unitstr_IDL
+  character (len=80)   :: filename_n, filename_s, filename_h
+  character (len=80)   :: NameSnapshot, NameProc
+  character (len=20)   :: TypeForm
 
   logical:: IsBinary
 
@@ -89,7 +90,7 @@ subroutine write_plot_common(iFile)
 
   integer :: iTime_I(7), iDim, iParam
 
-  character(len=10) :: NamePlotVar
+  character (len=10) :: NamePlotVar
 
   ! Event date for filename
   character (len=3)  :: NameExt
@@ -113,17 +114,14 @@ subroutine write_plot_common(iFile)
   unitstr_TEC = ''
   unitstr_IDL = ''
 
-  plot_type1=plot_type(iFile)
-  plot_vars1=plot_vars(iFile)
+  plot_type1 = plot_type(iFile)
+  plot_vars1 = plot_vars(iFile)
   PlotRange_I = plot_range(:,iFile)
 
   ! DoSaveOneTecFile = T only works for 3D tecplot file right now
   DoSaveOneTecFile = DoSaveOneTecFileOrig .and. &
        (plot_type1(1:3)=='3d_' .and. plot_form(iFile)=='tec' &
        .or. plot_form(iFile)=='tcp')
-
-  if(oktest_me)write(*,*)'iFile=',iFile,' plot_type=',plot_type1, &
-       ' form = ',plot_form(iFile), ' DoSaveOneTecFile =', DoSaveOneTecFile
 
   call split_string(plot_vars1, nplotvarmax, plotvarnames, nplotvar, &
        UseArraySyntaxIn=.true.)
@@ -147,14 +145,18 @@ subroutine write_plot_common(iFile)
         CoordUnit = No2Io_V(UnitX_)
      end if
   end if
-
+  
   if(oktest_me) then
-     write(*,*) NameSub, ' ', plot_vars1
-     write(*,*) NameSub, ' ', nplotvar, plotvarnames(1:nplotvar)
-     write(*,*) NameSub, ' ', plot_dx(:,iFile)
-     write(*,*) NameSub, ' ', PlotRange_I
-     write(*,*) NameSub, ' ', plot_type1
-     write(*,*) NameSub, ' ', plot_form(iFile)
+     write(*,*) NameSub
+     write(*,*) 'iFile =', iFile
+     write(*,*) 'plot_var =', plot_vars1
+     write(*,*) 'nplotvar = ', nplotvar
+     write(*,*) 'varnames = ', plotvarnames(1:nplotvar)
+     write(*,*) 'plot_dx = ', plot_dx(:,iFile)
+     write(*,*) 'plot_range = ', PlotRange_I
+     write(*,*) 'plot_type =  ', plot_type1
+     write(*,*) 'form =  ', plot_form(iFile)
+     write(*,*) 'DoSaveOneTecFile =', DoSaveOneTecFile
   end if
 
   ! Construct the file name
@@ -341,21 +343,65 @@ subroutine write_plot_common(iFile)
           dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut)
   end if
 
+
+  ! True if message passing is needed for interpolating non-primitive variables
+  ! in the ghost cells
+  DoPassPlotVar = DoPlotShell .or. DoPlotBox .or. &
+       plot_form(iFile)=='tcp' .and. nPlotDim < nDim
+  
+  if(DoPassPlotVar) &
+       allocate(PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+  
+  ! Block loop stage I: copy plotvar to plotvar_VGB and do message pass to
+  ! fill in the ghost cell values
   do iBLK = 1, nBlock
      if(Unused_B(iBLK))CYCLE
 
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
-     call set_plotvar(iBLK, iFile-plot_, nPlotVar, plotvarnames, plotvar, &
+     call set_plotvar(iBLK, iFile-plot_, nPlotVar, plotvarnames, PlotVar, &
           plotvar_inBody,plotvar_useBody)
 
-     if (plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
-          iFile-plot_,nplotvar,plotvarnames,plotvar,plotvar_inBody)
+     if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
+          iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
 
-     if (DoPlotShell) then
-        call set_plot_shell(iBLK, nPlotvar, Plotvar)
+     if(DoPassPlotVar) then
+        ! Copy plotvar for each block into a single array for message passing
+        do iVar = 1 , nPlotVar
+           PlotVar_VGB(iVar,:,:,:,iBLK) = PlotVar(:,:,:,iVar)
+        end do
+     end if
+               
+  end do ! Block loop stage I
+  
+  ! Pass plotting variables for ghost cell values
+  if(DoPassPlotVar) call message_pass_cell(nplotvar,PlotVar_VGB)
+
+  ! Block loop stage II: overwrite plotvar with plotvar_VGB that contains
+  ! correct ghost cell values and then write plot file; if not needed, then
+  ! just set the plot variables and write to files. This duplicates the work
+  ! for calculating plot variables, but gives correct output for derived vars.
+  do iBLK = 1, nBlock
+     if(Unused_B(iBLK))CYCLE
+
+     if(DoPassPlotVar) then
+        do iVar = 1 , nPlotVar
+           PlotVar(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBLK)
+        end do
+     else
+        if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
+
+        call set_plotvar(iBLK, iFile-plot_, nPlotVar, plotvarnames, PlotVar, &
+             plotvar_inBody,plotvar_useBody)
+        
+        if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
+             iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
+     end if
+     
+     if(DoPlotShell) then
+        call set_plot_shell(iBLK, nPlotvar, PlotVar)
      else if (DoPlotBox) then
-        call set_plot_box(iBLK, nPlotvar, Plotvar)
+        call set_plot_box(iBLK, nPlotvar, PlotVar)
      else
         select case(plot_form(iFile))
         case('tec')
@@ -364,14 +410,14 @@ subroutine write_plot_common(iFile)
                 .and. iProc == iProcFound .and. iBlk==iBlockFound) &
                 PlotVarBlk = PlotVar
         case('tcp')
-           call write_tecplot_data(iBlk, nPlotvar, Plotvar)
+           call write_tecplot_data(iBlk, nPlotvar, PlotVar)
         case('idl')
-           call write_plot_idl(iFile,iBLK,nplotvar,plotvar, &
+           call write_plot_idl(iFile,iBLK,nplotvar,PlotVar, &
                 DoSaveGenCoord, CoordUnit, xmin, xmax, ymin, ymax, zmin, zmax,&
                 dxblk, dyblk, dzblk, nBLKcells)
         case('hdf')
            call write_var_hdf5(iFile, plot_type1(1:3), iBLK,H5Index, &
-                nplotvar, plotvar, xmin, xmax, ymin, ymax, zmin, zmax, &
+                nplotvar, PlotVar, xmin, xmax, ymin, ymax, zmin, zmax, &
                 dxblk, dyblk, dzblk, IsNonCartesianPlot, NotACut, nBLKcells, &
                 H5Advance)
            if (H5Advance) H5Index = H5Index+1
@@ -391,7 +437,9 @@ subroutine write_plot_common(iFile)
 
      if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
-  end do ! iBLK
+  end do ! Block loop stage II
+
+  if(allocated(PlotVar_VGB)) deallocate(PlotVar_VGB)
 
   ! Write the HDF5 output file and return
   select case(plot_form(iFile))
@@ -416,7 +464,7 @@ subroutine write_plot_common(iFile)
   case('idl')
      call get_idl_units(iFile, nplotvar, plotvarnames, NamePlotUnit_V, &
           unitstr_IDL)
-     if(oktest .and. iProc==0) write(*,*)unitstr_IDL
+     if(oktest .and. iProc==0) write(*,*) unitstr_IDL
      if(DoPlotShell) call write_plot_shell(iFile, nPlotVar, &
           plotvarnames, unitstr_IDL, trim(NameSnapshot)//'.out')
      if(DoPlotBox) call write_plot_box(iFile, nPlotVar, &
@@ -426,7 +474,7 @@ subroutine write_plot_common(iFile)
   ! Done writing shell plot
   if(DoPlotShell) RETURN
   if(DoPlotBox) RETURN
-
+  
   ! Write files for tecplot format
   if(plot_form(iFile)=='tec')then
 
