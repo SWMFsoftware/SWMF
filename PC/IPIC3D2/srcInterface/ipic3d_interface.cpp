@@ -120,6 +120,13 @@ int ipic3d_finalize_init_(){
   // now we should have all the the infomation
   for(int i = 0; i < nIPIC; i++){     
     SimRun[i]->Init(0, dummy, timenow);
+    double dt = 1e10, dt0;
+
+    // dt is needed for mass matrix calculation. 
+    dt0 = SimRun[i]->calSIDt();
+    if(dt0 < dt) dt = dt0;
+    SimRun[i]->setSIDt(dt,false);
+    
     SimRun[i]->CalculateMoments();   
     iSimCycle[i] = SimRun[i]->FirstCycle();
     SimRun[i]->WriteOutput(iSimCycle[i],true);
@@ -159,8 +166,8 @@ int ipic3d_run_(double *time){
    timing_stop("PC: CalculateBField");
    
    timing_start("PC: GatherMoments");  
-   if (!b_err) SimRun[i]->CalculateMoments();
-   timing_stop("PC: GatherMoments");  
+   if (!b_err) SimRun[i]->CalculateMoments(true);
+   timing_stop("PC: GatherMoments");
    
     if (b_err) {
       iSimCycle[i] = SimRun[i]->LastCycle() + 1;      
@@ -171,8 +178,6 @@ int ipic3d_run_(double *time){
     timing_start("PC: WriteOutput");  
     SimRun[i]->WriteOutput(iSimCycle[i]+1);
     timing_stop("PC: WriteOutput");
-    
-    SimRun[i]->WriteConserved(iSimCycle[i]+1);
  
     iSimCycle[i]++;    
   }

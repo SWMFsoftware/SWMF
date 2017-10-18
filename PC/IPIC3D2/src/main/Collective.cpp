@@ -1487,6 +1487,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   boundarySmoothFactor = 1.0;
   nBoundarySmooth = 1; 
 
+  // Test EM wave
+  doTestEMWave = false;
+  
   last_cycle = -1; 
 
   dt = 0;
@@ -1552,7 +1555,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   SaveDirName = "PC/plots";
   FieldOutputCycle = 0;
   ParticlesOutputCycle = 0; 
-  DiagnosticsOutputCycle = 10; 
+  DiagnosticsOutputCycle = 1; 
   wmethod            = "idl";
 
   // processors
@@ -1599,6 +1602,13 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   isPeriodicY = false;
   isPeriodicZ = false;
 
+  useECSIM = false;
+  useAccurateJ = false;
+  useGradRho = true;
+  useExplicitMover = false; 
+  
+  doCorrectWeight = false;  
+
   while(*param){
     get_next_command(param,&Command);
     if( Command == "#NSYNC" && Case == "BATSRUS"){
@@ -1619,6 +1629,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     else if( Command == "#INJECT" && !RESTART1){
       read_var(param,"Vinj", &Vinj);
     }
+    else if( Command == "#CORRECTWEIGHT"){
+      read_var(param,"doCorrectWeight", &doCorrectWeight);
+    }
     else if( Command == "#PARAMS"){
       read_var(param,"th",           &th);
       read_var(param,"c",            &c);
@@ -1630,6 +1643,28 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       innerSmoothFactor = Smooth;
       boundarySmoothFactor = Smooth;
     }
+    else if( Command == "#EMWAVE"){
+      read_var(param,"doTestEMWave",           &doTestEMWave);
+      double temp, ctwoPi;
+      ctwoPi = 8*atan(1.0);       
+      if(doTestEMWave){
+	// Lx is in SI unit.
+	read_var(param,"Lx",           &temp);
+	waveVec_D[x_] = ctwoPi/temp;
+	if(temp > 1e10) waveVec_D[x_] = 0;
+	read_var(param,"Ly",           &temp);
+	waveVec_D[y_] = ctwoPi/temp;
+	if(temp > 1e10) waveVec_D[y_] = 0;
+	read_var(param,"Lz",           &temp);
+	waveVec_D[z_] = ctwoPi/temp;
+	if(temp > 1e10) waveVec_D[z_] = 0;
+	
+	read_var(param,"Phase",        &phase0);
+	read_var(param, "AmplEx",      &amplE_D[x_]);
+	read_var(param, "AmplEy",      &amplE_D[y_]);
+	read_var(param, "AmplEz",      &amplE_D[z_]);
+      }
+    }
     else if( Command == "#SMOOTH"){
       read_var(param,"doSmoothAll",          &doSmoothAll);
       read_var(param,"nSmooth",              &SmoothNiter);
@@ -1639,6 +1674,21 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	read_var(param,"nBoundarySmooth",    &nBoundarySmooth);
       }
       Smooth = innerSmoothFactor;
+    }
+    else if( Command == "#ENERGYCONSERVING"){
+      read_var(param, "useECSIM", &useECSIM);
+      if(useECSIM){
+	useAccurateJ = true;
+	useGradRho = false;
+	useExplicitMover = true;
+	th = 0.5; 
+      }
+    }
+    else if( Command == "#DISCRETIZATION"){
+      read_var(param, "useGradRho", &useGradRho);
+      read_var(param, "useAccurateJ", &useAccurateJ);
+      read_var(param, "useExplicitMover", &useExplicitMover);
+      read_var(param,"th",           &th);
     }
     else if( Command == "#POISSON"){
       bool doCorrection;
@@ -2074,6 +2124,18 @@ void Collective::PostProcParam() {
     v0[is] = 0;
     w0[is] = 0; 
   }
+
+
+  // Checking parameters.
+  if(0==MPIdata::get_rank()){
+    if(useECSIM && useGradRho)
+      eprintf("Error: useECSIM and useGradRho can not be true at the same time!!");
+    if(useECSIM && !useExplicitMover)
+      eprintf("Error: the explicit mover should be used for energy conserving scheme!!");
+    if(!useECSIM && useExplicitMover)
+      eprintf("Error: the explicit mover only works for energy conserving scheme!!");
+  }
+
 }
 
 #endif

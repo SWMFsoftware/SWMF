@@ -117,6 +117,7 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Jxh  (nxn, nyn, nzn),
   Jyh  (nxn, nyn, nzn),
   Jzh  (nxn, nyn, nzn),
+  divEn(nxn, nyn, nzn),  
   //
   // species-specific quantities
   //
@@ -125,6 +126,9 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Jxs   (ns, nxn, nyn, nzn),
   Jys   (ns, nxn, nyn, nzn),
   Jzs   (ns, nxn, nyn, nzn),
+  Jxsh  (ns, nxn, nyn, nzn),
+  Jysh  (ns, nxn, nyn, nzn),
+  Jzsh  (ns, nxn, nyn, nzn),
   pXXsn (ns, nxn, nyn, nzn),
   pXYsn (ns, nxn, nyn, nzn),
   pXZsn (ns, nxn, nyn, nzn),
@@ -139,7 +143,8 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Bzc  (nxc, nyc, nzc),
   rhoc (nxc, nyc, nzc),
   rhoh (nxc, nyc, nzc),
-
+  divEc(nxc,nyc,nzc),
+  
   // temporary arrays
   //
   tempXC (nxc, nyc, nzc),
@@ -200,6 +205,9 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Jy_ext(nxn,nyn,nzn),
   Jz_ext(nxn,nyn,nzn)
 {
+  // Define mass matrix.
+  M_GII = newArr5(double, nxn, nyn, nzn, 3*3*3, 9);
+
   // External imposed fields
   //
   B1x = col->getB1x();
@@ -297,9 +305,11 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
     sizeMomentsArray = omp_get_max_threads();
   }
   moments10Array = new Moments10*[sizeMomentsArray];
+  moments13Array = new Moments13*[sizeMomentsArray];
   for(int i=0;i<sizeMomentsArray;i++)
   {
     moments10Array[i] = new Moments10(nxn,nyn,nzn);
+    moments13Array[i] = new Moments13(nxn,nyn,nzn);
   }
     
     
@@ -380,6 +390,90 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
     MPI_Type_indexed(4, blocklengthN, displacementsN, MPI_DOUBLE, &cornertypeN);
     MPI_Type_commit(&cornertypeN);
 
+
+
+    //---------------------- Data type for Mass Matrix.   Begin------------------
+    const int nDouble = 27*9;
+    //For face exchange on X dir
+    MPI_Type_vector((nyc-2),(nzc-2)*nDouble,nzc*nDouble, MPI_DOUBLE, &yzFacetypeMC);
+    MPI_Type_commit(&yzFacetypeMC);
+    
+    //For face exchange on Y dir
+    MPI_Type_hvector((nxc-2),(nzc-2)*nDouble,(nDouble*nzc*nyc*sizeof(double)), MPI_DOUBLE, &xzFacetypeMC);
+    MPI_Type_commit(&xzFacetypeMC);
+
+    MPI_Type_vector((nyc-2), nDouble, nzc*nDouble, MPI_DOUBLE, &yEdgetypeMC);
+    MPI_Type_commit(&yEdgetypeMC);
+    
+    //For face exchangeg on Z dir
+    MPI_Type_hvector((nxc-2), 1, (nDouble*nzc*nyc*sizeof(double)), yEdgetypeMC, &xyFacetypeMC);
+    MPI_Type_commit(&xyFacetypeMC);
+    
+    //2 yEdgeType can be merged into one message
+    MPI_Type_hvector(2, 1, nDouble*(nzc-1)*sizeof(double), yEdgetypeMC, &yEdgetypeMC2);
+    MPI_Type_commit(&yEdgetypeMC2);
+    
+    MPI_Type_contiguous((nzc-2)*nDouble,MPI_DOUBLE, &zEdgetypeMC);
+    MPI_Type_commit(&zEdgetypeMC);
+    
+    MPI_Type_hvector(2, (nzc-2)*nDouble,nDouble*(nxc-1)*(nyc*nzc)*sizeof(double), MPI_DOUBLE, &zEdgetypeMC2);
+    MPI_Type_commit(&zEdgetypeMC2);
+    
+    MPI_Type_vector((nxc-2), nDouble, nDouble*nyc*nzc, MPI_DOUBLE, &xEdgetypeMC);
+    MPI_Type_commit(&xEdgetypeMC);
+    MPI_Type_hvector(2, 1, nDouble*(nyc-1)*nzc*sizeof(double), xEdgetypeMC, &xEdgetypeMC2);
+    MPI_Type_commit(&xEdgetypeMC2);
+    
+    //corner used to communicate in x direction
+    int blocklengthMC[]={nDouble,nDouble,nDouble,nDouble};
+    int displacementsMC[]={0,(nzc-1)*nDouble,(nyc-1)*nzc*nDouble,(nyc*nzc-1)*nDouble};
+    MPI_Type_indexed(4, blocklengthMC, displacementsMC, MPI_DOUBLE, &cornertypeMC);
+    MPI_Type_commit(&cornertypeMC);
+
+    //For face exchange on X dir
+    MPI_Type_vector((nyn-2),(nzn-2)*nDouble,nzn*nDouble, MPI_DOUBLE, &yzFacetypeMN);
+    MPI_Type_commit(&yzFacetypeMN);
+
+    //For face exchange on Y dir
+    MPI_Type_hvector((nxn-2),(nzn-2)*nDouble,(nDouble*nzn*nyn*sizeof(double)), MPI_DOUBLE, &xzFacetypeMN);
+    MPI_Type_commit(&xzFacetypeMN);
+
+    MPI_Type_vector((nyn-2), nDouble, nDouble*nzn, MPI_DOUBLE, &yEdgetypeMN);
+    MPI_Type_commit(&yEdgetypeMN);
+
+    //For face exchangeg on Z dir
+    MPI_Type_hvector((nxn-2), 1, (nDouble*nzn*nyn*sizeof(double)), yEdgetypeMN, &xyFacetypeMN);
+    MPI_Type_commit(&xyFacetypeMN);
+
+    //2 yEdgeType can be merged into one message
+    MPI_Type_hvector(2, 1,nDouble*(nzn-1)*sizeof(double), yEdgetypeMN, &yEdgetypeMN2);
+    MPI_Type_commit(&yEdgetypeMN2);
+
+    MPI_Type_contiguous((nzn-2)*nDouble,MPI_DOUBLE, &zEdgetypeMN);
+    MPI_Type_commit(&zEdgetypeMN);
+
+    MPI_Type_hvector(2, (nzn-2)*nDouble, nDouble*(nxn-1)*(nyn*nzn)*sizeof(double), MPI_DOUBLE, &zEdgetypeMN2);
+    MPI_Type_commit(&zEdgetypeMN2);
+
+    MPI_Type_vector((nxn-2), nDouble, nDouble*nyn*nzn, MPI_DOUBLE, &xEdgetypeMN);
+    MPI_Type_commit(&xEdgetypeMN);
+    MPI_Type_hvector(2, 1, nDouble*(nyn-1)*nzn*sizeof(double), xEdgetypeMN, &xEdgetypeMN2);
+    MPI_Type_commit(&xEdgetypeMN2);
+
+    //corner used to communicate in x direction
+    int blocklengthMN[]={nDouble,nDouble,nDouble,nDouble};
+    int displacementsMN[]={0,(nzn-1)*nDouble,(nyn-1)*nzn*nDouble,(nyn*nzn-1)*nDouble};
+    MPI_Type_indexed(4, blocklengthMN, displacementsMN, MPI_DOUBLE, &cornertypeMN);
+    MPI_Type_commit(&cornertypeMN);
+    //---------------------- Data type for Mass Matrix.   End------------------
+
+
+
+
+
+
+
+    
     if (col->getWriteMethod() == "pvtk" || col->getWriteMethod() == "nbcvtk"){
     	//test Endian
     	int TestEndian = 1;
@@ -414,30 +508,53 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
 
 }
 void EMfields3D::freeDataType(){
-	MPI_Type_free(&yzFacetypeC);
-    MPI_Type_free(&xzFacetypeC);
-    MPI_Type_free(&xyFacetypeC);
-    MPI_Type_free(&xEdgetypeC);
-    MPI_Type_free(&yEdgetypeC);
-    MPI_Type_free(&zEdgetypeC);
-    MPI_Type_free(&xEdgetypeC2);
-    MPI_Type_free(&yEdgetypeC2);
-    MPI_Type_free(&zEdgetypeC2);
-    MPI_Type_free(&cornertypeC);
+  MPI_Type_free(&yzFacetypeC);
+  MPI_Type_free(&xzFacetypeC);
+  MPI_Type_free(&xyFacetypeC);
+  MPI_Type_free(&xEdgetypeC);
+  MPI_Type_free(&yEdgetypeC);
+  MPI_Type_free(&zEdgetypeC);
+  MPI_Type_free(&xEdgetypeC2);
+  MPI_Type_free(&yEdgetypeC2);
+  MPI_Type_free(&zEdgetypeC2);
+  MPI_Type_free(&cornertypeC);
 
-    MPI_Type_free(&yzFacetypeN);
-    MPI_Type_free(&xzFacetypeN);
-    MPI_Type_free(&xyFacetypeN);
-    MPI_Type_free(&xEdgetypeN);
-    MPI_Type_free(&yEdgetypeN);
-    MPI_Type_free(&zEdgetypeN);
-    MPI_Type_free(&xEdgetypeN2);
-    MPI_Type_free(&yEdgetypeN2);
-    MPI_Type_free(&zEdgetypeN2);
-    MPI_Type_free(&cornertypeN);
+  MPI_Type_free(&yzFacetypeN);
+  MPI_Type_free(&xzFacetypeN);
+  MPI_Type_free(&xyFacetypeN);
+  MPI_Type_free(&xEdgetypeN);
+  MPI_Type_free(&yEdgetypeN);
+  MPI_Type_free(&zEdgetypeN);
+  MPI_Type_free(&xEdgetypeN2);
+  MPI_Type_free(&yEdgetypeN2);
+  MPI_Type_free(&zEdgetypeN2);
+  MPI_Type_free(&cornertypeN);
 
-    //MPI_Type_free(&procview);
-    //MPI_Type_free(&xyzcomp);
+  MPI_Type_free(&yzFacetypeMC);
+  MPI_Type_free(&xzFacetypeMC);
+  MPI_Type_free(&xyFacetypeMC);
+  MPI_Type_free(&xEdgetypeMC);
+  MPI_Type_free(&yEdgetypeMC);
+  MPI_Type_free(&zEdgetypeMC);
+  MPI_Type_free(&xEdgetypeMC2);
+  MPI_Type_free(&yEdgetypeMC2);
+  MPI_Type_free(&zEdgetypeMC2);
+  MPI_Type_free(&cornertypeMC);
+
+  MPI_Type_free(&yzFacetypeMN);
+  MPI_Type_free(&xzFacetypeMN);
+  MPI_Type_free(&xyFacetypeMN);
+  MPI_Type_free(&xEdgetypeMN);
+  MPI_Type_free(&yEdgetypeMN);
+  MPI_Type_free(&zEdgetypeMN);
+  MPI_Type_free(&xEdgetypeMN2);
+  MPI_Type_free(&yEdgetypeMN2);
+  MPI_Type_free(&zEdgetypeMN2);
+  MPI_Type_free(&cornertypeMN);
+
+  
+  //MPI_Type_free(&procview);
+  //MPI_Type_free(&xyzcomp);
 }
 
 // This was Particles3Dcomm::interpP2G()
@@ -862,8 +979,48 @@ void EMfields3D::sumMoments(const Particles3Dcomm* part)
   }
 }
 
-void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
+void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part, bool doCalcMomentsOnly)
 {
+  const Collective *col = &get_col();
+  bool useAccurateJ = col->getuseAccurateJ() && (!doCalcMomentsOnly);
+  const VirtualTopology3D *vct = &get_vct();
+
+  bool doTestEMWave = false;
+
+  #ifdef BATSRUS
+  doTestEMWave = col->getdoTestEMWave();
+  #endif
+  
+  if(doTestEMWave){
+    for (int species_idx = 0; species_idx < ns; species_idx++)
+      {
+	const Particles3Dcomm& pcls = part[species_idx];
+	assert_eq(pcls.get_particleType(), ParticleType::AoS);
+	const int is = pcls.get_species_num();
+	// Use eqValue() to set these arrays to zero!! -- Yuxi
+	for(int i=0;i<nxn;i++)
+	  for(int j=0;j<nyn;j++)
+	    for(int k=0;k<nzn;k++)
+	      {
+		rhons[is][i][j][k] = 0; 
+		Jxs  [is][i][j][k] = 0; 
+		Jys  [is][i][j][k] = 0; 
+		Jzs  [is][i][j][k] = 0; 
+		pXXsn[is][i][j][k] = 0; 
+		pXYsn[is][i][j][k] = 0; 
+		pXZsn[is][i][j][k] = 0; 
+		pYYsn[is][i][j][k] = 0; 
+		pYZsn[is][i][j][k] = 0; 
+		pZZsn[is][i][j][k] = 0;
+		Jxh[i][j][k] = 0;
+		Jyh[i][j][k] = 0;
+		Jzh[i][j][k] = 0;
+	      }
+      }
+    return;
+  }
+
+
   const Grid *grid = &get_grid();
 
   const double inv_dx = 1.0 / dx;
@@ -912,6 +1069,23 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
     }
   }
 #endif
+
+
+  // Used when 'useAccurateJ' is true.
+  double weights_III[2][2][2];
+  double alpha_DD[nDimMax][nDimMax];
+  set_fieldForPcls();
+  const_arr4_pfloat fieldForPcls = get_fieldForPcls();    
+  if(useAccurateJ){
+  for(int i1 = 0; i1 < nxn; i1++ )
+    for(int j1 = 0; j1 < nyn; j1++)
+      for(int k1 = 0; k1 < nzn; k1++)
+	for(int gp = 0; gp < 27; gp++)
+	  for(int iR = 0; iR < 9; iR++)
+	    M_GII[i1][j1][k1][gp][iR] = 0;
+  }
+
+
   
 #pragma omp parallel
   {
@@ -925,8 +1099,8 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
     const int nop = pcls.getNOP();
 
     int thread_num = omp_get_thread_num();
-    Moments10& speciesMoments10 = fetch_moments10Array(thread_num);
-    arr4_double moments = speciesMoments10.fetch_arr();
+    Moments13& speciesMoments13 = fetch_moments13Array(thread_num);
+    arr4_double moments = speciesMoments13.fetch_arr();
     //
     // moments.setmode(ompmode::mine);
     // moments.setall(0.);
@@ -935,13 +1109,22 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
     int moments1dsize = moments.get_size();
     for(int i=0; i<moments1dsize; i++) moments1d[i]=0;
     //
-    #pragma omp barrier
-    #pragma omp for
+
+    int dChunk = nxc-2; 
+    for(int iChunk = 1; iChunk <= nxc - 2; iChunk+=dChunk){
+#pragma omp barrier
+#pragma omp for
     for (int pidx = 0; pidx < nop; pidx++)
     {
       const SpeciesParticle& pcl = pcls.get_pcl(pidx);
       // compute the quadratic moments of velocity
       //
+      const double xp = pcl.get_x();
+      const int iCell = 1 + int (floor((xp - xstart) * inv_dx));
+      if(iCell>= iChunk && iCell<iChunk+dChunk){
+      
+      const double yp = pcl.get_y();
+      const double zp = pcl.get_z();
       const double ui=pcl.get_u();
       const double vi=pcl.get_v();
       const double wi=pcl.get_w();
@@ -951,7 +1134,8 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
       const double vvi=vi*vi;
       const double vwi=vi*wi;
       const double wwi=wi*wi;
-      double velmoments[10];
+      double velmoments[13];
+
       velmoments[0] = 1.;
       velmoments[1] = ui;
       velmoments[2] = vi;
@@ -962,19 +1146,23 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
       velmoments[7] = vvi;
       velmoments[8] = vwi;
       velmoments[9] = wwi;
+      velmoments[10]= 0 ;
+      velmoments[11]= 0 ;
+      velmoments[12]= 0 ;
 
+      
       //
       // Compute the weights to distribute the moments
       //
-      const int ix = 2 + int (floor((pcl.get_x() - xstart) * inv_dx));
-      const int iy = 2 + int (floor((pcl.get_y() - ystart) * inv_dy));
-      const int iz = 2 + int (floor((pcl.get_z() - zstart) * inv_dz));
-      const double xi0   = pcl.get_x() - grid->getXN(ix-1);
-      const double eta0  = pcl.get_y() - grid->getYN(iy-1);
-      const double zeta0 = pcl.get_z() - grid->getZN(iz-1);
-      const double xi1   = grid->getXN(ix) - pcl.get_x();
-      const double eta1  = grid->getYN(iy) - pcl.get_y();
-      const double zeta1 = grid->getZN(iz) - pcl.get_z();
+      const int ix = 2 + int (floor((xp - xstart) * inv_dx));
+      const int iy = 2 + int (floor((yp - ystart) * inv_dy));
+      const int iz = 2 + int (floor((zp - zstart) * inv_dz));
+      const double xi0   = xp - grid->getXN(ix-1);
+      const double eta0  = yp - grid->getYN(iy-1);
+      const double zeta0 = zp - grid->getZN(iz-1);
+      const double xi1   = grid->getXN(ix) - xp;
+      const double eta1  = grid->getYN(iy) - yp;
+      const double zeta1 = grid->getZN(iz) - zp;
       const double qi = pcl.get_q();
       const double invVOLqi = invVOL*qi;
       const double weight0 = invVOLqi * xi0;
@@ -992,15 +1180,120 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
       weights[5] = weight10*zeta1; // weight101
       weights[6] = weight11*zeta0; // weight110
       weights[7] = weight11*zeta1; // weight111
-      //weights[0] = xi0 * eta0 * zeta0 * qi * invVOL; // weight000
-      //weights[1] = xi0 * eta0 * zeta1 * qi * invVOL; // weight001
-      //weights[2] = xi0 * eta1 * zeta0 * qi * invVOL; // weight010
-      //weights[3] = xi0 * eta1 * zeta1 * qi * invVOL; // weight011
-      //weights[4] = xi1 * eta0 * zeta0 * qi * invVOL; // weight100
-      //weights[5] = xi1 * eta0 * zeta1 * qi * invVOL; // weight101
-      //weights[6] = xi1 * eta1 * zeta0 * qi * invVOL; // weight110
-      //weights[7] = xi1 * eta1 * zeta1 * qi * invVOL; // weight111
 
+
+      if(useAccurateJ){
+	// The following calculations should be replaced by 'weights' -- Yuxi
+	weights_III[0][0][0] = xi1 * eta1 * zeta1 * invVOL;
+	weights_III[0][0][1] = xi1 * eta1 * zeta0 * invVOL;
+	weights_III[0][1][0] = xi1 * eta0 * zeta1 * invVOL; 
+	weights_III[0][1][1] = xi1 * eta0 * zeta0 * invVOL;
+	weights_III[1][0][0] = xi0 * eta1 * zeta1 * invVOL;
+	weights_III[1][0][1] = xi0 * eta1 * zeta0 * invVOL;
+	weights_III[1][1][0] = xi0 * eta0 * zeta1 * invVOL;
+	weights_III[1][1][1] = xi0 * eta0 * zeta0 * invVOL;	
+	
+	const double dto2 = .5 * dt, qdto2mc = qom[is] * dto2 / c;
+
+	// Change the name 'weights'!!! It is also used outside the 'useAccurateJ' scope!!! -- Yuxi
+	double weights[8] ALLOC_ALIGNED;
+	int cx,cy,cz;
+
+	// It seems the particle is always 'safe' at current stage? -Yuxi
+	grid->get_safe_cell_and_weights(xp,yp,zp, cx,cy,cz,weights);
+
+	const double* field_components[8] ALLOC_ALIGNED;
+	get_field_components_for_cell(field_components,fieldForPcls,cx,cy,cz);
+
+	double sampled_field[8] ALLOC_ALIGNED;
+	for(int i=0;i<8;i++) sampled_field[i]=0;
+	double& Bxl=sampled_field[0];
+	double& Byl=sampled_field[1];
+	double& Bzl=sampled_field[2];
+	
+	const int num_field_components=2*DFIELD_3or4;
+	for(int c=0; c<8; c++)
+	  {
+	    const double* field_components_c=field_components[c];
+	    ASSUME_ALIGNED(field_components_c);
+	    const double weights_c = weights[c];
+#pragma simd
+	    for(int i=0; i<num_field_components; i++)
+	      {
+		sampled_field[i] += weights_c*field_components_c[i];
+	      }
+	  }
+
+	const double Omx = qdto2mc*Bxl;
+	const double Omy = qdto2mc*Byl;
+	const double Omz = qdto2mc*Bzl;
+
+	// end interpolation
+	const pfloat omsq = (Omx * Omx + Omy * Omy + Omz * Omz);
+	const pfloat denom = 1.0 / (1.0 + omsq);
+
+	const pfloat udotOm = ui * Omx + vi * Omy + wi * Omz;
+	// solve the velocity equation
+	velmoments[10] = (ui + (vi * Omz - wi * Omy + udotOm * Omx)) * denom;
+	velmoments[11] = (vi + (wi * Omx - ui * Omz + udotOm * Omy)) * denom;
+	velmoments[12] = (wi + (ui * Omy - vi * Omx + udotOm * Omz)) * denom;
+
+	// Assemble rotation matrix alpha_DD = Rot_DD*beta*q
+
+	const double c0 = denom*invVOLqi*qdto2mc;
+	alpha_DD[x_][x_] = (    1 + Omx*Omx)*c0;
+	alpha_DD[x_][y_] = (  Omz + Omx*Omy)*c0;
+	alpha_DD[x_][z_] = ( -Omy + Omx*Omz)*c0;
+	alpha_DD[y_][x_] = ( -Omz + Omx*Omy)*c0;
+	alpha_DD[y_][y_] = (    1 + Omy*Omy)*c0;
+	alpha_DD[y_][z_] = (  Omx + Omy*Omz)*c0;
+	alpha_DD[z_][x_] = (  Omy + Omx*Omz)*c0;
+	alpha_DD[z_][y_] = ( -Omx + Omy*Omz)*c0;
+	alpha_DD[z_][z_] = (    1 + Omz*Omz)*c0;
+
+	int count = 0; 	
+	int ip, jp, kp; // Indexes for g'
+	double wg, wgp, weight; //W_pg, W_pg'
+
+	const int iMin = ix - 1;
+	const int jMin = iy - 1;
+	const int kMin = iz - 1;
+	const int iMax = ix + 1;
+	const int jMax = iy + 1;
+	const int kMax = iz + 1;
+
+	int gp = -1; 
+	for(int i1 = iMin; i1 < iMax; i1++ )
+	  for(int j1 = jMin; j1 < jMax; j1++)
+	    for(int k1 = kMin; k1 < kMax; k1++){
+	      wg = weights_III[i1-ix+1][j1-iy+1][k1-iz+1];
+	      for(int i2 = iMin; i2 < iMax; i2++){
+		ip = i2 - i1 + 1;
+		if(ip > 0){		
+		  for(int j2 = jMin; j2 < jMax; j2++){
+		    jp = j2 - j1 + 1;
+		     for(int k2 = kMin; k2 < kMax; k2++){
+		      kp = k2 - k1 + 1;
+		      weight = wg*weights_III[i2-ix+1][j2-iy+1][k2-iz+1];
+		      gp = ip*9 + jp*3 + kp;
+		      M_GII[i1][j1][k1][gp][0] += alpha_DD[0][0]*weight;
+		      M_GII[i1][j1][k1][gp][1] += alpha_DD[0][1]*weight;
+		      M_GII[i1][j1][k1][gp][2] += alpha_DD[0][2]*weight;                                    
+		      M_GII[i1][j1][k1][gp][3] += alpha_DD[1][0]*weight;
+		      M_GII[i1][j1][k1][gp][4] += alpha_DD[1][1]*weight;
+		      M_GII[i1][j1][k1][gp][5] += alpha_DD[1][2]*weight;                                    
+		      M_GII[i1][j1][k1][gp][6] += alpha_DD[2][0]*weight;
+		      M_GII[i1][j1][k1][gp][7] += alpha_DD[2][1]*weight;
+		      M_GII[i1][j1][k1][gp][8] += alpha_DD[2][2]*weight;                                    
+		     } // k2		  	      		  
+		  } // j2                            
+		}// if (ip > 0)
+	      }// i2
+	    } //k1
+
+      } // useAccurateJ
+      
+      
       // add particle to moments
       {
         arr1_double_fetch momentsArray[8];
@@ -1017,15 +1310,47 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
         momentsArray[6] = moments11[iz  ]; // moments110 
         momentsArray[7] = moments11[iz-1]; // moments111 
 
-        for(int m=0; m<10; m++)
-        for(int c=0; c<8; c++)
-        {
-          momentsArray[c][m] += velmoments[m]*weights[c];
-        }
+        for(int m=0; m<13; m++)
+	  for(int c=0; c<8; c++)
+	    {
+	      momentsArray[c][m] += velmoments[m]*weights[c];
+	    }
       }
-    }
+      }
+    } // pidx 
+    } // iChunk
    
 
+    if(useAccurateJ){
+      int gps, gpr; // gp_send, gp_receive
+      for(int i1 = 1; i1 < nxn-1; i1++)
+	for(int j1 = 1; j1 < nyn-1; j1++)
+	  for(int k1 = 1; k1 < nzn-1; k1++){
+	    const int ip = 2, ipr = 0; 	    
+	    const int ir = i1 + ip - 1;
+	      for(int jp = 0; jp < 3; jp++){
+		const int jr = j1 + jp - 1;
+		const int jpr = 2 - jp;
+		for(int kp = 0; kp < 3; kp++){
+		    const int kr = k1 + kp - 1;
+		    const int kpr = 2 - kp;
+		    gpr = jpr*3 + kpr; // gpr = ipr*9 + jpr*3 + kpr
+		    gps = 18 + jp*3 + kp; // gps = ip*9+jp*3+kp
+		    
+		    M_GII[ir][jr][kr][gpr][0] = M_GII[i1][j1][k1][gps][0];
+		    M_GII[ir][jr][kr][gpr][1] = M_GII[i1][j1][k1][gps][1];
+		    M_GII[ir][jr][kr][gpr][2] = M_GII[i1][j1][k1][gps][2];
+		    M_GII[ir][jr][kr][gpr][3] = M_GII[i1][j1][k1][gps][3];
+		    M_GII[ir][jr][kr][gpr][4] = M_GII[i1][j1][k1][gps][4];
+		    M_GII[ir][jr][kr][gpr][5] = M_GII[i1][j1][k1][gps][5];
+		    M_GII[ir][jr][kr][gpr][6] = M_GII[i1][j1][k1][gps][6];
+		    M_GII[ir][jr][kr][gpr][7] = M_GII[i1][j1][k1][gps][7];
+		    M_GII[ir][jr][kr][gpr][8] = M_GII[i1][j1][k1][gps][8];		    
+		}
+	      }
+	      } 
+    }
+    
     // reduction
    
 
@@ -1033,7 +1358,7 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
     //
     for(int thread_num=0;thread_num<get_sizeMomentsArray();thread_num++)
     {
-      arr4_double moments = fetch_moments10Array(thread_num).fetch_arr();
+      arr4_double moments = fetch_moments13Array(thread_num).fetch_arr();
       #pragma omp for collapse(2)
       for(int i=0;i<nxn;i++)
       for(int j=0;j<nyn;j++)
@@ -1049,14 +1374,23 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part)
         pYYsn[is][i][j][k] += invVOL*moments[i][j][k][7];
         pYZsn[is][i][j][k] += invVOL*moments[i][j][k][8];
         pZZsn[is][i][j][k] += invVOL*moments[i][j][k][9];
+        Jxsh [is][i][j][k] += invVOL*moments[i][j][k][10];
+        Jysh [is][i][j][k] += invVOL*moments[i][j][k][11];
+        Jzsh [is][i][j][k] += invVOL*moments[i][j][k][12];
       }
     }
     
   }
   }
+
   for (int i = 0; i < ns; i++)
   {
     communicateGhostP2G(i);
+  }
+  
+  if(col->getuseAccurateJ()){
+    communicateInterp(nxn, nyn, nzn, M_GII, vct,this);
+    communicateNode_P(nxn, nyn, nzn, M_GII, vct, this);
   }
 }
 
@@ -2207,7 +2541,7 @@ void EMfields3D::calculateE(int cycle)
     cout << "*** E CALCULATION ***" << endl;
 
   // Solve dE = E^{n+1} - E^{n} instead E^{n+1}
-  bool doSolveForChange = col->getCase()=="BATSRUS";
+  bool doSolveForChange = col->getCase()=="BATSRUS";  
   //doSolveForChange = false;
   
   array3_double divE     (nxc, nyc, nzc);
@@ -2228,7 +2562,7 @@ void EMfields3D::calculateE(int cycle)
   eqValue(0.0, gradPHIX, nxn, nyn, nzn);
   eqValue(0.0, gradPHIY, nxn, nyn, nzn);
   eqValue(0.0, gradPHIZ, nxn, nyn, nzn);
-
+  
   if(doSolveForChange)
     eqValue(0.0, dxkrylov, n3SolveNode);
 
@@ -2237,7 +2571,7 @@ void EMfields3D::calculateE(int cycle)
 		double *xkrylovPoisson = new double[nSolveCell];
 		double *bkrylovPoisson = new double[nSolveCell];
 		eqValue(0.0, xkrylovPoisson, nSolveCell);
-
+		
 		grid->divN2C(divE, Ex, Ey, Ez);
 		scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
 		sum(divE, tempC, nxc, nyc, nzc);
@@ -2285,10 +2619,11 @@ void EMfields3D::calculateE(int cycle)
   
   // solve A.xKrylob = bKrylov for x being the change in E field (dE)
   GMRES(&Field::MaxwellImage, xkrylov, n3SolveNode,
-	bkrylov, 20, 200, GMREStol,doSolveForChange, this);
+	bkrylov, 100, 200, GMREStol,doSolveForChange, this);
 
   // move from krylov space to physical space: Eth = dE
   solver2phys(Exth,Eyth,Ezth,xkrylov,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
+
 
   if(doSolveForChange){
     // Caclulate the fully implicit solution E* = E_n + dE
@@ -2303,15 +2638,25 @@ void EMfields3D::calculateE(int cycle)
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
   #endif
 
+
   // apply smoothing to Eth
   smoothE();
 
-  // E_n+1 = 1/theta*E* -(1.0-theta)/theta*E_n = [ E* + (theta - 1)E ] / theta  (extrapolation for theta<1 ?)
+  // E_n+1 = 1/theta*E* -(1.0-theta)/theta*E_n = [ E* + (theta - 1)E ] / theta  
   // E = 1/theta*Eth -(1.0-theta)/theta*E = [ Eth + (theta - 1)E ] / theta
   // for theta=1 (usual setting): E = Eth
   addscale(1 / th, -(1.0 - th) / th, Ex, Exth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ey, Eyth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ez, Ezth, nxn, nyn, nzn);
+
+  
+  #ifdef BATSRUS
+  // Apply BATSRUS boundary condition to E_n+1.
+  // It is not necessary for theta == 1.
+  if(col->getCase()=="BATSRUS") fixE_BATSRUS(Ex,Ey,Ez,false);
+  #endif
+
+
   
   // communicate so the interpolation can have good values
   communicateNodeBC(nxn, nyn, nzn, Exth, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
@@ -2326,12 +2671,19 @@ void EMfields3D::calculateE(int cycle)
     OpenBoundaryInflowE(Exth, Eyth, Ezth, nxn, nyn, nzn);
     OpenBoundaryInflowE(Ex, Ey, Ez, nxn, nyn, nzn);
   }
+
+  // Calculate and store div(E)
+  grid->divN2C(divEc, Ex, Ey, Ez);
+  communicateCenterBC(nxc, nyc, nzc, divEc, 2, 2, 2, 2, 2, 2, vct, this);
+  grid->interpC2N(divEn, divEc);
+  
   
   // deallocate temporary arrays
   delete[]xkrylov;
   delete[]bkrylov;
   if(doSolveForChange) delete[] dxkrylov;
 }
+
 
 /*! Calculate sorgent for Maxwell solver */
 void EMfields3D::MaxwellSource(double *bkrylov)
@@ -2377,6 +2729,7 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   scale(temp2X, Jxh, -FourPI / c, nxn, nyn, nzn);
   scale(temp2Y, Jyh, -FourPI / c, nxn, nyn, nzn);
   scale(temp2Z, Jzh, -FourPI / c, nxn, nyn, nzn);
+
   
   /* -- dipole SOURCE version using J_ext,This is not initialized, causing program crash over 2048 processes
   addscale(-FourPI/c,temp2X,Jx_ext,nxn,nyn,nzn);
@@ -2391,12 +2744,15 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   scale(temp2Y, delt, nxn, nyn, nzn);
   scale(temp2Z, delt, nxn, nyn, nzn);
 
-  communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
-  grid->gradC2N(tempX, tempY, tempZ, rhoh);
+
+  if (get_col().getuseGradRho()){
+    communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
+    grid->gradC2N(tempX, tempY, tempZ, rhoh);
   
-  scale(tempX, -delt * delt * FourPI, nxn, nyn, nzn);
-  scale(tempY, -delt * delt * FourPI, nxn, nyn, nzn);
-  scale(tempZ, -delt * delt * FourPI, nxn, nyn, nzn);
+    scale(tempX, -delt * delt * FourPI, nxn, nyn, nzn);
+    scale(tempY, -delt * delt * FourPI, nxn, nyn, nzn);
+    scale(tempZ, -delt * delt * FourPI, nxn, nyn, nzn);
+  }
   // sum E, past values
   sum(tempX, Ex, nxn, nyn, nzn);
   sum(tempY, Ey, nxn, nyn, nzn);
@@ -2405,7 +2761,7 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   sum(tempX, temp2X, nxn, nyn, nzn);
   sum(tempY, temp2Y, nxn, nyn, nzn);
   sum(tempZ, temp2Z, nxn, nyn, nzn);
-
+  
   if (get_col().getCase()!="BATSRUS"){
     // Boundary condition in the known term
     // boundary condition: Xleft
@@ -2431,6 +2787,7 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   // physical space -> Krylov space
   phys2solver(bkrylov, tempX, tempY, tempZ, inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);  
 }
+
 
 /*! Mapping of Maxwell image to give to solver */
 //
@@ -2513,8 +2870,8 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   eqValue(0.0, Dy, nxn, nyn, nzn);
   eqValue(0.0, Dz, nxn, nyn, nzn);
   // move from krylov space to physical space
-  solver2phys(vectX,vectY,vectZ,vector,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
-
+  solver2phys(vectX,vectY,vectZ,vector,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);  
+  
   #ifdef BATSRUS
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(vectX,vectY,vectZ,doSolveForChange);
   #endif
@@ -2522,31 +2879,43 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   grid->lapN2N(imageX, vectX,this);
   grid->lapN2N(imageY, vectY,this);
   grid->lapN2N(imageZ, vectZ,this);
-  neg(imageX, nxn, nyn, nzn);
-  neg(imageY, nxn, nyn, nzn);
-  neg(imageZ, nxn, nyn, nzn);
-  // grad(div(mu dot E(n + theta)) mu dot E(n + theta) = D
-  MUdot(Dx, Dy, Dz, vectX, vectY, vectZ);
-
-  grid->divN2C(divC, Dx, Dy, Dz);
-  // communicate you should put BC 
-  // think about the Physics 
-  // communicateCenterBC(nxc,nyc,nzc,divC,1,1,1,1,1,1,vct);
-  
-
-  communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
-
-  grid->gradC2N(tempX, tempY, tempZ, divC);
-
-  // -lap(E(n +theta)) - grad(div(mu dot E(n + theta))
-  sub(imageX, tempX, nxn, nyn, nzn);
-  sub(imageY, tempY, nxn, nyn, nzn);
-  sub(imageZ, tempZ, nxn, nyn, nzn);
 
   // scale delt*delt
-  scale(imageX, delt * delt, nxn, nyn, nzn);
-  scale(imageY, delt * delt, nxn, nyn, nzn);
-  scale(imageZ, delt * delt, nxn, nyn, nzn);
+  scale(imageX, -delt * delt, nxn, nyn, nzn);
+  scale(imageY, -delt * delt, nxn, nyn, nzn);
+  scale(imageZ, -delt * delt, nxn, nyn, nzn);
+
+  MUdot(Dx, Dy, Dz, vectX, vectY, vectZ);
+
+
+  if(col->getuseGradRho()){
+    grid->divN2C(divC, Dx, Dy, Dz);
+  
+    communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
+
+    grid->gradC2N(tempX, tempY, tempZ, divC);
+    
+    scale(tempX, -delt*delt, nxn, nyn, nzn);
+    scale(tempY, -delt*delt, nxn, nyn, nzn);
+    scale(tempZ, -delt*delt, nxn, nyn, nzn);
+
+    sum(imageX, tempX, nxn, nyn, nzn);
+    sum(imageY, tempY, nxn, nyn, nzn);
+    sum(imageZ, tempZ, nxn, nyn, nzn);
+  }else{
+    // Apply grad(div(E)) term.
+    grid->divN2C(divC, vectX, vectY, vectZ);    
+    communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
+    grid->gradC2N(tempX, tempY, tempZ, divC);
+    
+    scale(tempX, delt*delt, nxn, nyn, nzn);
+    scale(tempY, delt*delt, nxn, nyn, nzn);
+    scale(tempZ, delt*delt, nxn, nyn, nzn);
+
+    sum(imageX, tempX, nxn, nyn, nzn);
+    sum(imageY, tempY, nxn, nyn, nzn);
+    sum(imageZ, tempZ, nxn, nyn, nzn);
+ }
 
   // -lap(E(n +theta)) - grad(div(mu dot E(n + theta)) + eps dot E(n + theta)
   sum(imageX, Dx, nxn, nyn, nzn);
@@ -2556,6 +2925,11 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   sum(imageX, vectX, nxn, nyn, nzn);
   sum(imageY, vectY, nxn, nyn, nzn);
   sum(imageZ, vectZ, nxn, nyn, nzn);
+
+  communicateNodeBC(nxn, nyn, nzn, imageX, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
+  communicateNodeBC(nxn, nyn, nzn, imageY, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
+  communicateNodeBC(nxn, nyn, nzn, imageZ, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+
 
   if(col->getCase() !="BATSRUS"){
     // boundary condition: Xleft
@@ -2583,13 +2957,17 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
 
   // move from physical space to krylov space
   phys2solver(im, imageX, imageY, imageZ,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
+
 }
+
+
 
 /*! Calculate PI dot (vectX, vectY, vectZ) */
 void EMfields3D::PIdot(arr3_double PIdotX, arr3_double PIdotY, arr3_double PIdotZ, const_arr3_double vectX, const_arr3_double vectY, const_arr3_double vectZ, int ns)
 {
   const Grid *grid = &get_grid();
   double beta, edotb, omcx, omcy, omcz, denom;
+
   beta = .5 * qom[ns] * dt / c;
   for (int i = 1; i < nxn - 1; i++)
     for (int j = 1; j < nyn - 1; j++)
@@ -2597,6 +2975,7 @@ void EMfields3D::PIdot(arr3_double PIdotX, arr3_double PIdotY, arr3_double PIdot
         omcx = beta * (Bxn[i][j][k] + Bx_ext[i][j][k]);
         omcy = beta * (Byn[i][j][k] + By_ext[i][j][k]);
         omcz = beta * (Bzn[i][j][k] + Bz_ext[i][j][k]);
+
         edotb = vectX.get(i,j,k) * omcx + vectY.get(i,j,k) * omcy + vectZ.get(i,j,k) * omcz;
         denom = 1 / (1.0 + omcx * omcx + omcy * omcy + omcz * omcz);
         PIdotX.fetch(i,j,k) += (vectX.get(i,j,k) + (vectY.get(i,j,k) * omcz - vectZ.get(i,j,k) * omcy + edotb * omcx)) * denom;
@@ -2606,10 +2985,52 @@ void EMfields3D::PIdot(arr3_double PIdotX, arr3_double PIdotY, arr3_double PIdot
 }
 /*! Calculate MU dot (vectX, vectY, vectZ) */
 void EMfields3D::MUdot(arr3_double MUdotX, arr3_double MUdotY, arr3_double MUdotZ,
-  const_arr3_double vectX, const_arr3_double vectY, const_arr3_double vectZ)
+  arr3_double vectX, arr3_double vectY, arr3_double vectZ)
 {
   const Grid *grid = &get_grid();
+  const Collective *col = &get_col();
+  const VirtualTopology3D *vct = &get_vct();
   double beta, edotb, omcx, omcy, omcz, denom;
+
+  if(col->getuseAccurateJ()){
+
+    communicateNodeBC(nxn, nyn, nzn, vectX, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
+    communicateNodeBC(nxn, nyn, nzn, vectY, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
+    communicateNodeBC(nxn, nyn, nzn, vectZ, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+
+    double c0 = FourPI/c*delt;
+    
+    for (int i = 1; i < nxn - 1; i++)
+      for (int j = 1; j < nyn - 1; j++)
+	for (int k = 1; k < nzn - 1; k++) {
+	  MUdotX[i][j][k] = 0.0;
+	  MUdotY[i][j][k] = 0.0;
+	  MUdotZ[i][j][k] = 0.0;	  
+	  int gp; // g' 
+	  for(int i2 = i-1; i2 <= i+1; i2++)
+	    for(int j2 = j-1; j2 <= j+1; j2++)
+	      for(int k2 = k-1; k2 <= k+1; k2++){
+		gp = (i2-i+1)*9+(j2-j+1)*3+k2-k+1;
+		MUdotX[i][j][k] +=
+		  (vectX[i2][j2][k2]*M_GII[i][j][k][gp][0] +
+		  vectY[i2][j2][k2]*M_GII[i][j][k][gp][1] +
+		   vectZ[i2][j2][k2]*M_GII[i][j][k][gp][2])*c0; 
+
+		MUdotY[i][j][k] +=
+		  (vectX[i2][j2][k2]*M_GII[i][j][k][gp][3] +
+		  vectY[i2][j2][k2]*M_GII[i][j][k][gp][4] +
+		   vectZ[i2][j2][k2]*M_GII[i][j][k][gp][5])*c0; 
+		  
+		MUdotZ[i][j][k] +=
+		  (vectX[i2][j2][k2]*M_GII[i][j][k][gp][6] +
+		  vectY[i2][j2][k2]*M_GII[i][j][k][gp][7] +
+		   vectZ[i2][j2][k2]*M_GII[i][j][k][gp][8])*c0;		
+	      }
+	}
+    return;
+  }
+
+  
   for (int i = 1; i < nxn - 1; i++)
     for (int j = 1; j < nyn - 1; j++)
       for (int k = 1; k < nzn - 1; k++) {
@@ -2624,14 +3045,14 @@ void EMfields3D::MUdot(arr3_double MUdotX, arr3_double MUdotY, arr3_double MUdot
         for (int k = 1; k < nzn - 1; k++) {
           omcx = beta * (Bxn[i][j][k] + Bx_ext[i][j][k]);
           omcy = beta * (Byn[i][j][k] + By_ext[i][j][k]);
-          omcz = beta * (Bzn[i][j][k] + Bz_ext[i][j][k]);
+          omcz = beta * (Bzn[i][j][k] + Bz_ext[i][j][k]);	  
           edotb = vectX.get(i,j,k) * omcx + vectY.get(i,j,k) * omcy + vectZ.get(i,j,k) * omcz;
           denom = FourPI / 2 * delt * dt / c * qom[is] * rhons[is][i][j][k] / (1.0 + omcx * omcx + omcy * omcy + omcz * omcz);
           MUdotX.fetch(i,j,k) += (vectX.get(i,j,k) + (vectY.get(i,j,k) * omcz - vectZ.get(i,j,k) * omcy + edotb * omcx)) * denom;
           MUdotY.fetch(i,j,k) += (vectY.get(i,j,k) + (vectZ.get(i,j,k) * omcx - vectX.get(i,j,k) * omcz + edotb * omcy)) * denom;
           MUdotZ.fetch(i,j,k) += (vectZ.get(i,j,k) + (vectX.get(i,j,k) * omcy - vectY.get(i,j,k) * omcx + edotb * omcz)) * denom;
         }
-  }
+  }  
 }
 /* Interpolation smoothing: Smoothing (vector must already have ghost cells) TO MAKE SMOOTH value as to be different from 1.0 type = 0 --> center based vector ; type = 1 --> node based vector ; */
 void EMfields3D::smooth(arr3_double vector, int type)
@@ -2640,7 +3061,7 @@ void EMfields3D::smooth(arr3_double vector, int type)
   const Collective *col = &get_col();
 #ifdef BATSRUS
   if(!col->getdoSmoothAll()) return;
-#endif
+#endif  
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
 
@@ -2713,9 +3134,6 @@ void EMfields3D::smoothE()
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Exth, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Eyth, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
       communicateNodeBoxStencilBC(nxn, nyn, nzn, Ezth, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
-      #ifdef BATSRUS
-      //if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
-      #endif 
       
       // Exth
       for (int i = 1; i < nxn - 1; i++)
@@ -2781,9 +3199,6 @@ void EMfields3D::smoothE()
     communicateNodeBoxStencilBC(nxn, nyn, nzn, Exth, col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
     communicateNodeBoxStencilBC(nxn, nyn, nzn, Eyth, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
     communicateNodeBoxStencilBC(nxn, nyn, nzn, Ezth, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
-#ifdef BATSRUS
-    //    fixE_BATSRUS(Exth,Eyth,Ezth,false);
-#endif
   }
   
   delArr3(temp, nxn, nyn);  
@@ -3227,9 +3642,9 @@ void EMfields3D::set_fieldForPcls()
     fieldForPcls[i][j][k][0] = (pfloat) (Bxn[i][j][k] + Bx_ext[i][j][k]);
     fieldForPcls[i][j][k][1] = (pfloat) (Byn[i][j][k] + By_ext[i][j][k]);
     fieldForPcls[i][j][k][2] = (pfloat) (Bzn[i][j][k] + Bz_ext[i][j][k]);
-    fieldForPcls[i][j][k][0+DFIELD_3or4] = (pfloat) Ex[i][j][k];
-    fieldForPcls[i][j][k][1+DFIELD_3or4] = (pfloat) Ey[i][j][k];
-    fieldForPcls[i][j][k][2+DFIELD_3or4] = (pfloat) Ez[i][j][k];
+    fieldForPcls[i][j][k][0+DFIELD_3or4] = (pfloat) Exth[i][j][k];
+    fieldForPcls[i][j][k][1+DFIELD_3or4] = (pfloat) Eyth[i][j][k];
+    fieldForPcls[i][j][k][2+DFIELD_3or4] = (pfloat) Ezth[i][j][k];
   }
 }
 
@@ -3371,14 +3786,26 @@ void EMfields3D::calculateHatFunctions()
   const Grid *grid = &get_grid();
   const Collective *col = &get_col();
   // smoothing
-  smooth(rhoc, 0);
-  // calculate j hat
-
+  smooth(rhoc,0);
+    
 #ifdef BATSRUS
+  // calculate j hat
+  if(col->getdoTestEMWave()){
+    eqValue(0, Jxh, nxn, nyn, nzn);
+    eqValue(0, Jyh, nxn, nyn, nzn);
+    eqValue(0, Jzh, nxn, nyn, nzn);
+    eqValue(0, rhoh, nxc, nyc, nzc);
+    return;
+  }
+  
   if(get_col().getCase()=="BATSRUS")
     for (int is=0; is < ns; is++){
 
-      // Pass Jxs[is] is better!! -Yuxi
+      if(get_col().getuseAccurateJ() && col->getnIsotropic()>=0){
+	eprintf("Error: Rotation of Jxsh/Jysh/Jzsh at boundary has not been implemented!!!");
+      }
+      
+      // Pass Jxs[is] is better!! -Yuxi      
       fixVarBCnode(Jxs,&Collective::getFluidJx<int>,col->getnIsotropic(),is);
       fixVarBCnode(Jys,&Collective::getFluidJy<int>,col->getnIsotropic(),is);
       fixVarBCnode(Jzs,&Collective::getFluidJz<int>,col->getnIsotropic(),is);
@@ -3390,28 +3817,49 @@ void EMfields3D::calculateHatFunctions()
       fixVarBCnode(pZZsn,&Collective::getFluidPzz<int>,col->getnIsotropic(),is);
     }
 #endif
-  
-  for (int is=0; is < ns; is++){
-    grid->divSymmTensorN2C(tempXC, tempYC, tempZC, pXXsn, pXYsn, pXZsn, pYYsn, pYZsn, pZZsn, is);
 
-    scale(tempXC, -dt / 2.0, nxc, nyc, nzc);
-    scale(tempYC, -dt / 2.0, nxc, nyc, nzc);
-    scale(tempZC, -dt / 2.0, nxc, nyc, nzc);
-    // communicate before interpolating
-    communicateCenterBC_P(nxc, nyc, nzc, tempXC, 2, 2, 2, 2, 2, 2, vct, this);
-    communicateCenterBC_P(nxc, nyc, nzc, tempYC, 2, 2, 2, 2, 2, 2, vct, this);
-    communicateCenterBC_P(nxc, nyc, nzc, tempZC, 2, 2, 2, 2, 2, 2, vct, this);
+  if(col->getuseAccurateJ()){
+    eqValue(0, Jxh, nxn, nyn, nzn);
+    eqValue(0, Jyh, nxn, nyn, nzn);
+    eqValue(0, Jzh, nxn, nyn, nzn);
 
-    grid->interpC2N(tempXN, tempXC);
-    grid->interpC2N(tempYN, tempYC);
-    grid->interpC2N(tempZN, tempZC);
-    sum(tempXN, Jxs, nxn, nyn, nzn, is);
-    sum(tempYN, Jys, nxn, nyn, nzn, is);
-    sum(tempZN, Jzs, nxn, nyn, nzn, is);
+    for(int is = 0; is < ns; is++){
+      sum(Jxh, Jxsh, nxn, nyn, nzn, is);
+      sum(Jyh, Jysh, nxn, nyn, nzn, is);
+      sum(Jzh, Jzsh, nxn, nyn, nzn, is);
+    }
 
-    // PIDOT
-    PIdot(Jxh, Jyh, Jzh, tempXN, tempYN, tempZN, is);
 
+  }else{
+    for (int is=0; is < ns; is++){
+      grid->divSymmTensorN2C(tempXC, tempYC, tempZC, pXXsn, pXYsn, pXZsn, pYYsn, pYZsn, pZZsn, is);
+
+      scale(tempXC, -dt / 2.0, nxc, nyc, nzc);
+      scale(tempYC, -dt / 2.0, nxc, nyc, nzc);
+      scale(tempZC, -dt / 2.0, nxc, nyc, nzc);
+      // communicate before interpolating
+      communicateCenterBC_P(nxc, nyc, nzc, tempXC, 2, 2, 2, 2, 2, 2, vct, this);
+      communicateCenterBC_P(nxc, nyc, nzc, tempYC, 2, 2, 2, 2, 2, 2, vct, this);
+      communicateCenterBC_P(nxc, nyc, nzc, tempZC, 2, 2, 2, 2, 2, 2, vct, this);
+
+      grid->interpC2N(tempXN, tempXC);
+      grid->interpC2N(tempYN, tempYC);
+      grid->interpC2N(tempZN, tempZC);
+
+      if(col->getuseExplicitMover()){
+	eqValue(0.0, tempXN, nxn, nyn, nzn);
+	eqValue(0.0, tempYN, nxn, nyn, nzn);
+	eqValue(0.0, tempZN, nxn, nyn, nzn);
+      }
+      
+      sum(tempXN, Jxs, nxn, nyn, nzn, is);
+      sum(tempYN, Jys, nxn, nyn, nzn, is);
+      sum(tempZN, Jzs, nxn, nyn, nzn, is);
+
+      // PIDOT
+      PIdot(Jxh, Jyh, Jzh, tempXN, tempYN, tempZN, is);
+
+    }
   }
   
   // smooth j
@@ -3424,6 +3872,7 @@ void EMfields3D::calculateHatFunctions()
   scale(tempXC, -dt * th, nxc, nyc, nzc);
   sum(tempXC, rhoc, nxc, nyc, nzc);
   eq(rhoh, tempXC, nxc, nyc, nzc);
+
   // communicate rhoh
   communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
   #ifdef BATSRUS
@@ -3457,6 +3906,9 @@ void EMfields3D::interpDensitiesN2C()
 {
   // do we need communication or not really?
   get_grid().interpN2C(rhoc, rhon);
+
+  for (int is = 0; is < ns; is++)
+    get_grid().interpN2C(rhocs, is, rhons);
 }
 /*! communicate ghost for grid -> Particles interpolation */
 void EMfields3D::communicateGhostP2G(int ns)
@@ -3476,9 +3928,12 @@ void EMfields3D::communicateGhostP2G(int ns)
   double ***moment7 = convert_to_arr3(pYYsn[ns]);
   double ***moment8 = convert_to_arr3(pYZsn[ns]);
   double ***moment9 = convert_to_arr3(pZZsn[ns]);
-  // add the values for the shared nodes
-  // Call NonBlocking Halo Exchange + Interpolation
+  double ***moment10;
+  double ***moment11;
+  double ***moment12;
 
+  // add the values for the shared nodes
+  // Call NonBlocking Halo Exchange + Interpolation  
   communicateInterp(nxn, nyn, nzn, moment0, vct,this);
   communicateInterp(nxn, nyn, nzn, moment1, vct,this);
   communicateInterp(nxn, nyn, nzn, moment2, vct,this);
@@ -3489,6 +3944,17 @@ void EMfields3D::communicateGhostP2G(int ns)
   communicateInterp(nxn, nyn, nzn, moment7, vct,this);
   communicateInterp(nxn, nyn, nzn, moment8, vct,this);
   communicateInterp(nxn, nyn, nzn, moment9, vct,this);
+
+  if(get_col().getuseAccurateJ()){
+    moment10 = convert_to_arr3(Jxsh[ns]);
+    moment11 = convert_to_arr3(Jysh[ns]);
+    moment12 = convert_to_arr3(Jzsh[ns]);
+    
+    communicateInterp(nxn, nyn, nzn, moment10, vct,this);
+    communicateInterp(nxn, nyn, nzn, moment11, vct,this);
+    communicateInterp(nxn, nyn, nzn, moment12, vct,this);
+  }
+  
   if(get_col().getCase()=="BATSRUS"){
     // setFluidBC_P is already called at the beginning of each iteration
     // to set BC for IPIC3D. Here, at the end of iteration, it is called
@@ -3511,7 +3977,14 @@ void EMfields3D::communicateGhostP2G(int ns)
   communicateNode_P(nxn, nyn, nzn, moment6, vct, this);
   communicateNode_P(nxn, nyn, nzn, moment7, vct, this);
   communicateNode_P(nxn, nyn, nzn, moment8, vct, this);
-  communicateNode_P(nxn, nyn, nzn, moment9, vct, this);
+  communicateNode_P(nxn, nyn, nzn, moment9, vct, this);    
+
+  if(get_col().getuseAccurateJ()){
+    communicateNode_P(nxn, nyn, nzn, moment10, vct, this);
+    communicateNode_P(nxn, nyn, nzn, moment11, vct, this);
+    communicateNode_P(nxn, nyn, nzn, moment12, vct, this);    
+  }
+  
 }
 
 /*! communicate ghost for grid -> Particles interpolation */
@@ -3572,6 +4045,9 @@ void EMfields3D::setZeroPrimaryMoments() {
           pYYsn[kk][i][j][k] = 0.0;
           pYZsn[kk][i][j][k] = 0.0;
           pZZsn[kk][i][j][k] = 0.0;
+	  Jxsh [kk][i][j][k] = 0.0;
+          Jysh [kk][i][j][k] = 0.0;
+          Jzsh [kk][i][j][k] = 0.0;
         }
 
 }
@@ -3745,7 +4221,7 @@ void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
     // interpolate from cell centers to nodes (corners of cells)
     for (int is=0 ; is<ns; is++)
       grid->interpN2Cfull(rhocs[is],rhons[is]);
-
+      
     // copy over Electric and Magnetic fields
     SyncWithFluid(col,grid,vct);
 
@@ -3809,12 +4285,13 @@ void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
 	   }
 	 } // for 
  }
- 
+
 void EMfields3D::setFluidBC_P(int is)
 {
   const VirtualTopology3D *vct = &get_vct();
   const Collective *col = &get_col();
   const double signq = qom[is]/(fabs(qom[is]));
+
   if (vct->getXleft_neighbor_P() == MPI_PROC_NULL ) {
     for (int i = 1; i < nyn - 1; i++)
       for (int k = 1; k < nzn - 1; k++)
@@ -3920,16 +4397,73 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
 {
   int minDn;
   string funcName="EMfields3D::SyncWithFluid";
-  
-  // loop over cell centers and fill in magnetic and electric fields
-  for (int i=0; i < nxn; i++)
-    for (int j=0; j < nyn; j++)
-      for (int k=0; k < nzn; k++)
-	{
-	  col->setFluidFieldsNode(&fluidEx[i][j][k],&fluidEy[i][j][k],&fluidEz[i][j][k],
-				  &fluidBxn[i][j][k],&fluidByn[i][j][k],&fluidBzn[i][j][k],i,j,k);
-	}
 
+  // bool doTestPart = false;
+
+  // if(doTestPart){
+  //   double ip0 = 10, ip1=20;
+
+  //   double q0 = 8e-3;
+
+  //   double E0 = 0.5*q0/(dx*dy*dz)*dx*FourPI;
+    
+  //   for (int i=0; i < nxn; i++)
+  //     for (int j=0; j < nyn; j++)
+  // 	for (int k=0; k < nzn; k++){
+  // 	  fluidEx[i][j][k] = 0;
+  // 	  if(i < ip0 || i > ip1) fluidEx[i][j][k] = E0;
+  // 	  if(i > ip0 && i < ip1) fluidEx[i][j][k] = -E0;
+
+	  
+  // 	  fluidEy[i][j][k] = 0;
+  // 	  fluidEz[i][j][k] = 0;
+  // 	  fluidBxn[i][j][k] = 0;
+  // 	  fluidByn[i][j][k] = 0;
+  // 	  fluidBzn[i][j][k] = 0;
+  // 	}
+    
+  // }
+
+  if(col->getdoTestEMWave()){
+    double k_D[3], E0_D[3], phi0;
+    int x_=0, y_=1, z_=2;
+    
+    for(int i=0; i<3; i++){
+      k_D[i] = col->getwaveVec_D(i);
+      E0_D[i] = col->getamplE_D(i);
+    }
+
+    phi0 = col->getphase0deg()*FourPI/360.0;
+    
+    double k0 = sqrt(k_D[x_]*k_D[x_] + k_D[y_]*k_D[y_] + k_D[z_]*k_D[z_]);
+    for (int i=0; i < nxn; i++)
+      for (int j=0; j < nyn; j++)
+	for (int k=0; k < nzn; k++){
+	  double xn, yn, zn, kdotx;
+	  xn = grid->getXN(i,j,k);
+	  yn = grid->getYN(i,j,k);
+	  zn = grid->getZN(i,j,k);
+	  kdotx = xn*k_D[x_] + yn*k_D[y_] + zn*k_D[z_];
+
+	  fluidEx[i][j][k] = E0_D[x_]*sin(kdotx + phi0);
+	  fluidEy[i][j][k] = E0_D[y_]*sin(kdotx + phi0);
+	  fluidEz[i][j][k] = E0_D[z_]*sin(kdotx + phi0);
+	  fluidBxn[i][j][k] = (k_D[y_]*fluidEz[i][j][k] - k_D[z_]*fluidEy[i][j][k])/k0;
+	  fluidByn[i][j][k] = (k_D[z_]*fluidEx[i][j][k] - k_D[x_]*fluidEz[i][j][k])/k0;
+	  fluidBzn[i][j][k] = (k_D[x_]*fluidEy[i][j][k] - k_D[y_]*fluidEx[i][j][k])/k0;	  	 
+	}
+    
+  }else{
+  
+    // loop over cell centers and fill in magnetic and electric fields
+    for (int i=0; i < nxn; i++)
+      for (int j=0; j < nyn; j++)
+	for (int k=0; k < nzn; k++)
+	  {
+	    col->setFluidFieldsNode(&fluidEx[i][j][k],&fluidEy[i][j][k],&fluidEz[i][j][k],
+				    &fluidBxn[i][j][k],&fluidByn[i][j][k],&fluidBzn[i][j][k],i,j,k);
+	  }
+  }
   // interpolate from cell centers to nodes (corners of cells)
   grid->interpN2Cfull(fluidExc,fluidEx);
   grid->interpN2Cfull(fluidEyc,fluidEy);
@@ -4384,7 +4918,8 @@ double EMfields3D::calDtMax(double dx, double dy, double dz, double dt){
 	for(int k=1; k<nzn-1; k++){
 	  p0 = (pXXsn[is][i][j][k] + pYYsn[is][i][j][k] + pZZsn[is][i][j][k])/3;
 	  rho0 = rhons[is][i][j][k];
-	  uthLocal = max(uthLocal, sqrt(p0/rho0));
+	  if(rho0 !=0)
+	    uthLocal = max(uthLocal, sqrt(p0/rho0));
 	}
 
     double uth;          
@@ -4703,11 +5238,91 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       value = calPyz(is,i,j,k,isFluidP);
     }
     value *= No2OutP;
+  }else if(var.substr(0,3)=="jxh"){
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += Jxsh[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = Jxsh[is][i][j][k];
+    }
+    value *= No2OutJ;
+  }else if(var.substr(0,3)=="jyh"){
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += Jysh[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = Jysh[is][i][j][k];
+    }
+    value *= No2OutJ;
+  }else if(var.substr(0,3)=="jzh"){
+    if(var.size()==3){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += Jzsh[is][i][j][k];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = Jzsh[is][i][j][k];
+    }
+    value *= No2OutJ;
+  }else if(var.substr(0,3)=="uxh"){
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+    value = 0; 
+    if(rhons[is][i][j][k] != 0)
+      value = Jxsh[is][i][j][k]/rhons[is][i][j][k];
+    value *= No2OutV;
+  }else if(var.substr(0,3)=="uyh"){
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+    value = 0; 
+    if(rhons[is][i][j][k] != 0)
+      value = Jysh[is][i][j][k]/rhons[is][i][j][k];
+    value *= No2OutV;
+  }else if(var.substr(0,3)=="uzh"){
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+        value = 0; 
+    if(rhons[is][i][j][k] != 0)
+      value = Jzsh[is][i][j][k]/rhons[is][i][j][k];
+    value *= No2OutV;
   }else if(var.substr(0,2)=="jx"){
     if(var.size()==2){
       value = 0;
       for(int is=0; is<ns; is++){
-	// Check!!!!! --Yuxi
 	value += Jxs[is][i][j][k];
       }      
     }else{
@@ -4724,7 +5339,6 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     if(var.size()==2){
       value = 0;
       for(int is=0; is<ns; is++){
-	// Check!!!!! --Yuxi
 	value += Jys[is][i][j][k];
       }      
     }else{
@@ -4741,7 +5355,6 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     if(var.size()==2){
       value = 0;
       for(int is=0; is<ns; is++){
-	// Check!!!!! --Yuxi
 	value += Jzs[is][i][j][k];
       }      
     }else{
@@ -4761,7 +5374,9 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     pos = var.find_first_of("0123456789");
     ss<<var.substr(pos);
     ss>>is;
-    value = Jxs[is][i][j][k]/rhons[is][i][j][k];
+    value = 0; 
+    if(rhons[is][i][j][k] != 0)
+      value = Jxs[is][i][j][k]/rhons[is][i][j][k];
     value *= No2OutV;
   }else if(var.substr(0,2)=="uy"){
     string::size_type pos;
@@ -4770,7 +5385,9 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     pos = var.find_first_of("0123456789");
     ss<<var.substr(pos);
     ss>>is;
-    value = Jys[is][i][j][k]/rhons[is][i][j][k];
+    value = 0; 
+    if(rhons[is][i][j][k] != 0)
+      value = Jys[is][i][j][k]/rhons[is][i][j][k];
     value *= No2OutV;
   }else if(var.substr(0,2)=="uz"){
     string::size_type pos;
@@ -4779,7 +5396,9 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     pos = var.find_first_of("0123456789");
     ss<<var.substr(pos);
     ss>>is;
-    value = Jzs[is][i][j][k]/rhons[is][i][j][k];
+    value = 0; 
+    if(rhons[is][i][j][k] != 0)
+      value = Jzs[is][i][j][k]/rhons[is][i][j][k];
     value *= No2OutV;
   }else if(var.substr(0,2)=="Ex"){
     value = Ex[i][j][k];
@@ -6887,12 +7506,12 @@ double EMfields3D::getBenergy(void) {
   double Bxt = 0.0;
   double Byt = 0.0;
   double Bzt = 0.0;
-  for (int i = 1; i < nxn - 2; i++)
-    for (int j = 1; j < nyn - 2; j++)
-      for (int k = 1; k < nzn - 2; k++){
-        Bxt = Bxn[i][j][k]+Bx_ext[i][j][k];
-        Byt = Byn[i][j][k]+By_ext[i][j][k];
-        Bzt = Bzn[i][j][k]+Bz_ext[i][j][k];
+  for (int i = 1; i < nxc - 1; i++)
+    for (int j = 1; j < nyc - 1; j++)
+      for (int k = 1; k < nzc - 1; k++){
+        Bxt = Bxc[i][j][k];
+        Byt = Byc[i][j][k];
+        Bzt = Bzc[i][j][k];
         localBenergy += .5*dx*dy*dz*(Bxt*Bxt + Byt*Byt + Bzt*Bzt)/(FourPI);
       }
 
@@ -6906,8 +7525,10 @@ double EMfields3D::getBulkEnergy(int is) {
   double totalBenergy = 0.0;
   for (int i = 1; i < nxn - 2; i++)
     for (int j = 1; j < nyn - 2; j++)
-      for (int k = 1; k < nzn - 2; k++)
-        localBenergy += .5 * dx * dy * dz * (Jxs[is][i][j][k] * Jxs[is][i][j][k] + Jys[is][i][j][k] * Jys[is][i][j][k] + Jzs[is][i][j][k] * Jzs[is][i][j][k]) / (rhons[is][i][j][k]);
+      for (int k = 1; k < nzn - 2; k++){
+	if(rhons[is][i][j][k] !=0)
+	  localBenergy += .5 * dx * dy * dz * (Jxs[is][i][j][k] * Jxs[is][i][j][k] + Jys[is][i][j][k] * Jys[is][i][j][k] + Jzs[is][i][j][k] * Jzs[is][i][j][k]) / (rhons[is][i][j][k]);
+      }
 
   MPI_Allreduce(&localBenergy, &totalBenergy, 1, MPI_DOUBLE, MPI_SUM, (&get_vct())->getFieldComm());
   return (totalBenergy);
@@ -6924,6 +7545,9 @@ EMfields3D::~EMfields3D() {
   delete [] qom;
   delete [] rhoINIT;
   for(int i=0;i<sizeMomentsArray;i++) { delete moments10Array[i]; }
+  for(int i=0;i<sizeMomentsArray;i++) { delete moments13Array[i]; }
   delete [] moments10Array;
+  delete [] moments13Array;
+  delArr5(M_GII, nxn, nyn, nzn, 27);
   freeDataType();
 }

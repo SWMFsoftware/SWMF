@@ -181,4 +181,42 @@ in this direction and the parameter above will be ignored.
 
 </command>
 
+
+
+<command name="EMWAVE">
+	 <parameter name="doTestEMWave" type="logical" default="F"/>
+	 <parameter name="Lx" type="real" />
+	 <parameter name="Ly" type="real" />
+	 <parameter name="Lz" type="real" />
+	 <parameter name="Phase" type="real"/>
+	 <parameter name="AmplEx" type="real" />
+	 <parameter name="AmplEy" type="real" />
+	 <parameter name="AmplEz" type="real" />
+
+#EMWAVE
+T                     doTestEMWave
+1.0                   Lx
+1e99                  Ly
+2.0                   Lz
+30                    Phase
+2.0                   AmplEx
+1.0                   AmplEy
+0                     AmplEz
+
+If doTestEMWave is true, a EM field will be initialized as a pure EM wave, and 
+the feed back from particles will be ignored. The E field lengths Lx, Ly and Lz
+are in SI unit. The wave vector (for example, 2*pi/Lx) will be set to 0
+if the corresponding wave length is larger than 1e10. The unit of the
+initial phase 'Phase' is 'degree'. The E fields are initialized as:
+
+E = (AmplEx, AmplEy, AmplEz)*sin(k*x + Phase*deg2rad)
+
+The magnetic field is set from B = k/|k| x E.
+
+
+
+
+</command>
+
+
 </commandList>

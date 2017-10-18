@@ -67,7 +67,7 @@ namespace iPic3D {
 	     stringstream *param = NULL, int iIPIC = 0, int *paramint = NULL,
 	     double *griddim = NULL, double *paramreal = NULL,
 	     stringstream *ss = NULL, bool doCoupling=false);
-    void CalculateMoments();
+    void CalculateMoments(bool doCorrectWeights = false);
     void CalculateField(int cycle);
     bool ParticlesMover();
     void CalculateB();

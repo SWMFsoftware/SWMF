@@ -59,7 +59,7 @@ class Particles3D:public Particles3Dcomm {
       */
     void constantVelocity(double vel, int dim, Field * EMf);
     /** Initial condition: uniform in space and maxwellian in velocity */
-    void correctWeight(EMfields3D *EMf);
+    void correctWeight(Field *EMf);
     void maxwellian(Field * EMf);
     /** Initial condition: uniform in space and maxwellian in velocity with velocity from Null Point currents */
     void maxwellianNullPoints(Field * EMf);

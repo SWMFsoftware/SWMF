@@ -173,6 +173,10 @@ class InterfaceFluid
   double fixedDt; // In SI unit
 
   bool isPeriodicX, isPeriodicY, isPeriodicZ; // Use periodic BC in one direction?
+
+  // Variables for test setup.
+  bool doTestEMWave;
+  double waveVec_D[3], phase0, amplE_D[3]; 
   
  public:
   // These variables are also used in PSKOutput.h
@@ -323,6 +327,7 @@ class InterfaceFluid
     Jnorm = Qnorm/(Lnorm*Lnorm*Lnorm);
   
     if(thisrank == 0) {
+      cout.precision(15);
       cout<<"============= Normalization factors ============="<<endl;
       cout<<"Mnorm   = "<<Mnorm<<endl;
       cout<<"Unorm   = "<<Unorm<<endl;
@@ -1114,7 +1119,6 @@ class InterfaceFluid
 	P *= getFluidRhoNum(x,y,z,is)/Numit;
       }      
     }
-
     return(P);
   }
   
@@ -1188,7 +1192,7 @@ class InterfaceFluid
   				 double *Ex, double *Ey, double *Ez, 
   				 double *Bx, double *By, double *Bz, 
   				 const int ii,const int jj, const int kk)
-  {
+  {       
     if(doGetFromGM(ii,jj,kk)){
       int i,j,k;
       i=ii;j=jj;k=kk;
@@ -1199,7 +1203,7 @@ class InterfaceFluid
       // Ue = Ui - J/ne
       (*Ex) = (getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBy] - getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBz]);
       (*Ey) = (getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBz] - getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBx]);
-      (*Ez) = (getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBx] - getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBy]);
+      (*Ez) = (getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBx] - getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBy]);      
       (*Bx) = State_GV[i][j][k][iBx];
       (*By) = State_GV[i][j][k][iBy];
       (*Bz) = State_GV[i][j][k][iBz];
@@ -1338,7 +1342,7 @@ class InterfaceFluid
     // Electron pressure ratio: Pe/Ptotal
     PeRatio   = paramreal[n++];
     Lnorm     = paramreal[n++]; 	
-    Unorm     = paramreal[n++];	
+    Unorm     = paramreal[n++];
     Mnorm     = paramreal[n++];
     rPlanetSi = paramreal[n++];
     MhdNo2SiL = paramreal[n++];
@@ -1446,10 +1450,11 @@ class InterfaceFluid
 	      for(int iVar=0; iVar < nVarFluid; iVar++){
 		int idx; 
 		idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
-		State_GV[i][j][k][iVar] = state_I[idx];
-	      }
+		State_GV[i][j][k][iVar] = state_I[idx];				
+	      }	      
 	      ii++;
 
+	      
 	      // Convert vectors from MHD coordinates to PIC coordinates----------
 	      for (int iVec = 0; iVec<nVec; iVec++){
 		int idx0, idx1;
@@ -2268,7 +2273,11 @@ class InterfaceFluid
   bool getdoSmoothAll()const{return doSmoothAll;};
   double getMiSpecies(int i)const{return MoMi_S[i];};
   double getcLightSI()const{return Unorm/100;/*Unorm is in cgs unit*/};
-
+  
+  bool getdoTestEMWave()const{return doTestEMWave;};
+  double getwaveVec_D(int i)const{return waveVec_D[i]/Si2NoL;};
+  double getphase0deg()const{return phase0;};
+  double getamplE_D(int i)const{return amplE_D[i];};
 
   // Replace these functions. --Yuxi
     /** return min X for fluid grid without ghostcell */  

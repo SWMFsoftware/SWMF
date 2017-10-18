@@ -19,7 +19,7 @@ T			DoTimeAccurate
 GM			NameCompMaster
 PC			NameCompSlave
 -1			DnCouple
-0.7			DtCouple
+0.5			DtCouple
 
 #COUPLETIME
 GM                      NameComp
@@ -263,9 +263,10 @@ z=0 all idl_ascii       StringPlot
 
 
 #TIMESTEPPING
-F					UseSWMFDt
-F					UseFixedDt
-0.5					CflLimit
+T					UseSWMFDt
+
+#ENERGYCONSERVING
+T
 
 #PARTICLES
 10					Particles per cell in X
@@ -299,7 +300,7 @@ cut particles1 ascii planet		StringPlot
 PC/plots				SaveDirName
 1					FieldOutputCycle
 0					ParticlesOutputCycle
-0					DiagnosticsOutputCycle
+1					DiagnosticsOutputCycle
 shdf5					WriteMethod
 
 #END_COMP PC -----------------------------------------------------------------

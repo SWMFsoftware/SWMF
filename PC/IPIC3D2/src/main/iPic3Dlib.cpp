@@ -261,6 +261,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 
   // Initial Condition for PARTICLES if you are not starting from RESTART
   if (restart_status == 0) {
+
     for (int i = 0; i < ns; i++)
     {
       if      (col->getCase()=="ForceFree") part[i].force_free(EMf);
@@ -272,9 +273,9 @@ int c_Solver::Init(int argc, char **argv, double inittime,
       else if (col->getCase()=="GEMDoubleHarris")  	part[i].maxwellianDoubleHarris(EMf);
       else                                  part[i].maxwellian(EMf);
       part[i].reserve_remaining_particle_IDs();
-    }
+    }    
   }
-
+  
   //allocate test particles if any
   nstestpart = col->getNsTestPart();
   if(nstestpart>0){
@@ -346,10 +347,6 @@ int c_Solver::Init(int argc, char **argv, double inittime,
     }
   }
 
-  
-  
-  
-
   Qremoved = new double[ns];
 
   my_clock = new Timing(myrank);
@@ -357,7 +354,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   return 0;
 }
 
-void c_Solver::CalculateMoments() {
+void c_Solver::CalculateMoments(bool doCorrectWeights) {
 
   timeTasks_set_main_task(TimeTasks::MOMENTS);
 
@@ -395,10 +392,22 @@ void c_Solver::CalculateMoments() {
         convertParticlesToSoA();
         EMf->sumMoments(part);
         break;
-      case Parameters::AoS:
+      case Parameters::AoS
+	:
         EMf->setZeroPrimaryMoments();
-        convertParticlesToAoS();
-        EMf->sumMoments_AoS(part);
+	EMf->setZeroDerivedMoments();
+        convertParticlesToAoS();		
+
+	if(col->getdoCorrectWeight() && doCorrectWeights){
+	  // Do not correct weights at the initialization stage.
+	  EMf->sumMoments_AoS(part, true);	
+	  EMf->sumOverSpecies();
+	  EMf->interpDensitiesN2C();	
+	  part[0].correctWeight(EMf);
+	  EMf->setZeroPrimaryMoments();
+	}
+       
+	EMf->sumMoments_AoS(part);
         break;
       case Parameters::AoSintr:
         EMf->setZeroPrimaryMoments();
@@ -424,6 +433,11 @@ void c_Solver::CalculateMoments() {
   
   EMf->interpDensitiesN2C();
 
+
+
+
+
+  
 #ifdef BATSRUS
   EMf->calculateFluidPressure();
 #endif
@@ -484,7 +498,11 @@ bool c_Solver::ParticlesMover()
           part[i].mover_PC(EMf);
           break;
         case Parameters::AoS:
-          part[i].mover_PC_AoS(EMf);
+	  if(col->getuseExplicitMover()){
+	    part[i].mover_PC_AoS_explicit(EMf);
+	  }else{
+	    part[i].mover_PC_AoS(EMf);
+	  }
           break;
         case Parameters::AoS_Relativistic:
 	  part[i].mover_PC_AoS_Relativistic(EMf);
@@ -585,7 +603,7 @@ void c_Solver::WriteOutput(int cycle, bool doForceOutput) {
   if(col->getWriteMethod()=="pvtk" && col->getFieldOutputCycle()>0 && (cycle%col->getFieldOutputCycle()==0 || cycle==first_cycle)){
     WriteFieldsVTK(grid, EMf, col, vct, "B + E + Je + Ji + rho",cycle, fieldwritebuffer);
   }
-
+  WriteConserved(cycle);    
 #else
 
     WriteConserved(cycle);
@@ -720,7 +738,7 @@ void c_Solver::WriteRestart(int cycle)
 
 // write the conserved quantities
 void c_Solver::WriteConserved(int cycle) {
-  if(col->getDiagnosticsOutputCycle() > 0 && cycle % col->getDiagnosticsOutputCycle() == 0)
+  if((col->getDiagnosticsOutputCycle() > 0 && cycle % col->getDiagnosticsOutputCycle() == 0) || cycle==0)
   {
     Eenergy = EMf->getEenergy();
     Benergy = EMf->getBenergy();

@@ -87,7 +87,7 @@ class Collective
     void save();
 
     // accessors
-    //
+    //    
     int getDim()const{ return (dim); }
     double getLx()const{ return (Lx); }
     double getLy()const{ return (Ly); }
@@ -202,6 +202,11 @@ class Collective
     bool particle_output_is_off()const;
     bool testparticle_output_is_off()const;
     bool field_output_is_off()const;
+
+    bool getuseGradRho()const{return useGradRho;};
+    bool getuseAccurateJ()const{return useAccurateJ;};
+    bool getuseExplicitMover()const{return useExplicitMover;};
+    bool getdoCorrectWeight()const{return doCorrectWeight;}
     
     /*! Boundary condition selection for BCFace for the electric field components */
     int bcEx[6], bcEy[6], bcEz[6];
@@ -425,6 +430,29 @@ class Collective
     /*! Call Finalize() at end of program execution (true by default) */
     bool CallFinalize;
 
+    // Change particle weight so that div(E) - 4*pi*rho ~ 0
+    bool doCorrectWeight;
+
+
+    // Energy Conserving Semi-Implicit Mothod is developed based
+    // Lapenta [2016] (JCP). 
+    bool useECSIM; 
+    
+    // 'AccurateJ' means the current at the half time stage. It is
+    // used for energy conserving scheme. See Lapenta [2016] (JCP)
+    // for details.
+    bool useAccurateJ;
+
+    // useGradRho = true: use grad(net_charge) in the equation for E.
+    // useGradRho = false: use grad(div(E)) in the equation for E.
+    // For energy conserving scheme, useGradRho should be false.
+    bool useGradRho;
+
+    // useExplicitMover = true: it is assumed the particle location is at the
+    // half time stage, and an explicit particle mover will be used. 
+    bool useExplicitMover; 
+
+    
 
 #ifdef BATSRUS
  public:    

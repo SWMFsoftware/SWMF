@@ -38,6 +38,7 @@ const int DFIELD_3or4=4; // 4 pads with garbage but is needed for alignment
 
 class Particles3Dcomm;
 class Moments10;
+class Moments13;
 class EMfields3D                // :public Field
 {
   public:
@@ -106,7 +107,7 @@ class EMfields3D                // :public Field
       const_arr3_double vectX, const_arr3_double vectY, const_arr3_double vectZ, int ns);
     /*! Calculate the three components of mu (implicit permeattivity) cross image vector */
     void MUdot(arr3_double MUdotX, arr3_double MUdotY, arr3_double MUdotZ,
-      const_arr3_double vectX, const_arr3_double vectY, const_arr3_double vectZ);
+	       arr3_double vectX, arr3_double vectY, arr3_double vectZ);
     /*! Calculate rho hat, Jx hat, Jy hat, Jz hat */
     void calculateHatFunctions();
 
@@ -136,7 +137,7 @@ class EMfields3D                // :public Field
     void communicateGhostP2G(int ns);
     /*! sum moments (interp_P2G) versions */
     void sumMoments(const Particles3Dcomm* part);
-    void sumMoments_AoS(const Particles3Dcomm* part);
+    void sumMoments_AoS(const Particles3Dcomm* part, bool doCalcMomentsOnly=false);
     void sumMoments_AoS_intr(const Particles3Dcomm* part);
     void sumMoments_vectorized(const Particles3Dcomm* part);
     void sumMoments_vectorized_AoS(const Particles3Dcomm* part);
@@ -234,7 +235,14 @@ class EMfields3D                // :public Field
     arr4_double getRHOns(){return rhons;}
     arr4_double getRHOcs(){return rhocs;}
 
+    // Net charge density
+    inline double getRHOn(int X,int Y,int Z)const{return rhon.get(X,Y,Z);}
+    inline double getRHOc(int X,int Y,int Z)const{return rhoc.get(X,Y,Z);}
 
+    // div(E)
+    inline double getdivEc(int X,int Y,int Z)const{return divEc.get(X,Y,Z);}
+    inline double getdivEn(int X,int Y,int Z)const{return divEn.get(X,Y,Z);}
+    
     double getBx_ext(int X, int Y, int Z) const{return Bx_ext.get(X,Y,Z);}
     double getBy_ext(int X, int Y, int Z) const{return By_ext.get(X,Y,Z);}
     double getBz_ext(int X, int Y, int Z) const{return Bz_ext.get(X,Y,Z);}
@@ -297,6 +305,12 @@ class EMfields3D                // :public Field
       assert_lt(i,sizeMomentsArray);
       return *(moments10Array[i]);
     }
+    Moments13& fetch_moments13Array(int i){
+      assert_le(0,i);
+      assert_lt(i,sizeMomentsArray);
+      return *(moments13Array[i]);
+    }
+
     int get_sizeMomentsArray() { return sizeMomentsArray; }
 
     /*! print electromagnetic fields info */
@@ -304,16 +318,76 @@ class EMfields3D                // :public Field
     
     
     //get MPI Derived Datatype
-    MPI_Datatype getYZFacetype(bool isCenterFlag){return isCenterFlag ?yzFacetypeC : yzFacetypeN;}
-    MPI_Datatype getXZFacetype(bool isCenterFlag){return isCenterFlag ?xzFacetypeC : xzFacetypeN;}
-    MPI_Datatype getXYFacetype(bool isCenterFlag){return isCenterFlag ?xyFacetypeC : xyFacetypeN;}
-    MPI_Datatype getXEdgetype(bool isCenterFlag){return  isCenterFlag ?xEdgetypeC : xEdgetypeN;}
-    MPI_Datatype getYEdgetype(bool isCenterFlag){return  isCenterFlag ?yEdgetypeC : yEdgetypeN;}
-    MPI_Datatype getZEdgetype(bool isCenterFlag){return  isCenterFlag ?zEdgetypeC : zEdgetypeN;}
-    MPI_Datatype getXEdgetype2(bool isCenterFlag){return  isCenterFlag ?xEdgetypeC2 : xEdgetypeN2;}
-    MPI_Datatype getYEdgetype2(bool isCenterFlag){return  isCenterFlag ?yEdgetypeC2 : yEdgetypeN2;}
-    MPI_Datatype getZEdgetype2(bool isCenterFlag){return  isCenterFlag ?zEdgetypeC2 : zEdgetypeN2;}
-    MPI_Datatype getCornertype(bool isCenterFlag){return  isCenterFlag ?cornertypeC : cornertypeN;}
+    MPI_Datatype getYZFacetype(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return isCenterFlag ?yzFacetypeMC : yzFacetypeMN;
+      else
+	return isCenterFlag ?yzFacetypeC : yzFacetypeN;
+    }
+    MPI_Datatype getXZFacetype(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return isCenterFlag ?xzFacetypeMC : xzFacetypeMN;
+      else
+	return isCenterFlag ?xzFacetypeC : xzFacetypeN;
+    }
+    MPI_Datatype getXYFacetype(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return isCenterFlag ?xyFacetypeMC : xyFacetypeMN;
+      else
+	return isCenterFlag ?xyFacetypeC : xyFacetypeN;
+    }
+    MPI_Datatype getXEdgetype(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return  isCenterFlag ?xEdgetypeMC : xEdgetypeMN;
+      else
+	return  isCenterFlag ?xEdgetypeC : xEdgetypeN;
+    }
+    MPI_Datatype getYEdgetype(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return  isCenterFlag ?yEdgetypeMC : yEdgetypeMN;
+      else
+	return  isCenterFlag ?yEdgetypeC : yEdgetypeN;
+    }
+    MPI_Datatype getZEdgetype(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return  isCenterFlag ?zEdgetypeMC : zEdgetypeMN;
+      else
+	return  isCenterFlag ?zEdgetypeC : zEdgetypeN;
+    }
+    MPI_Datatype getXEdgetype2(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return  isCenterFlag ?xEdgetypeMC2 : xEdgetypeMN2;
+      else
+	return  isCenterFlag ?xEdgetypeC2 : xEdgetypeN2;
+    }
+    MPI_Datatype getYEdgetype2(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return  isCenterFlag ?yEdgetypeMC2 : yEdgetypeMN2;
+      else
+	return  isCenterFlag ?yEdgetypeC2 : yEdgetypeN2;
+    }
+    MPI_Datatype getZEdgetype2(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return  isCenterFlag ?zEdgetypeMC2 : zEdgetypeMN2;
+      else
+	return  isCenterFlag ?zEdgetypeC2 : zEdgetypeN2;
+    }
+    MPI_Datatype getCornertype(bool isCenterFlag, bool isMassMatrix)
+    {
+      if(isMassMatrix)
+	return  isCenterFlag ?cornertypeMC : cornertypeMN;
+      else
+	return  isCenterFlag ?cornertypeC : cornertypeN;
+    }
 
 
 
@@ -458,11 +532,16 @@ class EMfields3D                // :public Field
     /* temporary arrays for summing moments */
     int sizeMomentsArray;
     Moments10 **moments10Array;
+    Moments13 **moments13Array;
+    
 
     // *******************************************************************************
     // *********** SOURCES **
     // *******************************************************************************
 
+    array3_double divEc;
+    array3_double divEn;
+    
     /*! Charge density, defined on central points of the cell */
     array3_double rhoc;
     /*! Charge density, defined on nodes */
@@ -486,12 +565,28 @@ class EMfields3D                // :public Field
     array3_double Jyh;
     array3_double Jzh;
 
+
+    // Eight dimensional matrix: nx * ny * nz * nx * ny * nz * 3 * 3.
+    // The second 'G' can be reduced to 3 * 3 * 3 since other terms are
+    // always zero. So the final size is :nx * ny * nz * 3 * 3 * 3 * 3 * 3.
+    // Where nx, ny and nz are the nodes number in each direction. 
+    double ***** M_GII;
+
+    static const int nDimMax=3;
+    static const int x_=0, y_=1, z_=2;
+    
     // species-specific current densities defined on nodes
     //
     array4_double Jxs;
     array4_double Jys;
     array4_double Jzs;
 
+    // Rotated J
+    array4_double Jxsh;
+    array4_double Jysh;
+    array4_double Jzsh;
+
+    
     // magnetic field components defined on nodes
     //
     array3_double   Bx_ext;
@@ -583,6 +678,32 @@ class EMfields3D                // :public Field
     MPI_Datatype yEdgetypeN2;
     MPI_Datatype zEdgetypeN2;
     MPI_Datatype cornertypeN;
+
+    // MPI Derived Datatype for Node Halo Exchange for mass matrix.
+    // 'Cell center' mode communication. 
+    MPI_Datatype yzFacetypeMC;
+    MPI_Datatype xzFacetypeMC;
+    MPI_Datatype xyFacetypeMC;
+    MPI_Datatype xEdgetypeMC;
+    MPI_Datatype yEdgetypeMC;
+    MPI_Datatype zEdgetypeMC;
+    MPI_Datatype xEdgetypeMC2;
+    MPI_Datatype yEdgetypeMC2;
+    MPI_Datatype zEdgetypeMC2;
+    MPI_Datatype cornertypeMC;
+    // Nodes. 
+    MPI_Datatype yzFacetypeMN;
+    MPI_Datatype xzFacetypeMN;
+    MPI_Datatype xyFacetypeMN;
+    MPI_Datatype xEdgetypeMN;
+    MPI_Datatype yEdgetypeMN;
+    MPI_Datatype zEdgetypeMN;
+    MPI_Datatype xEdgetypeMN2;
+    MPI_Datatype yEdgetypeMN2;
+    MPI_Datatype zEdgetypeMN2;
+    MPI_Datatype cornertypeMN;
+
+
     
     //for VTK output
     MPI_Datatype  procviewXYZ,xyzcomp,procview,ghosttype;
@@ -596,8 +717,7 @@ class EMfields3D                // :public Field
     void OpenBoundaryInflowEImage(arr3_double imageX, arr3_double imageY, arr3_double imageZ,
       const_arr3_double vectorX, const_arr3_double vectorY, const_arr3_double vectorZ,
       int nx, int ny, int nz);
-
-
+    
     /* Used for MHD-IPIC3D coupling. Begin */
 #define minval6(a,b,c,d,e,f) min(a,min(b,min(c,min(d,min(e,f)))))
 
