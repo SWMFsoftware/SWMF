@@ -59,7 +59,6 @@ class Particles3D:public Particles3Dcomm {
       */
     void constantVelocity(double vel, int dim, Field * EMf);
     /** Initial condition: uniform in space and maxwellian in velocity */
-    void correctWeight(Field *EMf);
     void maxwellian(Field * EMf);
     /** Initial condition: uniform in space and maxwellian in velocity with velocity from Null Point currents */
     void maxwellianNullPoints(Field * EMf);
@@ -104,6 +103,8 @@ class Particles3D:public Particles3Dcomm {
     void mover_PC_vectorized(Field * EMf);
     /** relativistic mover with a Predictor-Corrector scheme */
     int mover_relativistic(Field * EMf);
+    // Correct the weights of electrons. 
+    void correctWeight(Field *EMf);
    private:
     /** repopulate particles in a single cell */
     void populate_cell_with_particles(int i, int j, int k, double q,

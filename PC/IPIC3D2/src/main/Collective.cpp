@@ -190,6 +190,13 @@ void Collective::ReadInput(string inputfile) {
     RestartOutputCycle = config.read < int >("RestartOutputCycle",5000);
     DiagnosticsOutputCycle = config.read < int >("DiagnosticsOutputCycle", FieldOutputCycle);
     CallFinalize = config.read < bool >("CallFinalize", true);
+
+
+    // Energy conserving method related commands.
+    useECSIM = config.read< bool >("useECSIM", false);
+    useAccurateJ = config.read< bool >("useAccurateJ", false);
+    useGradRho = config.read< bool >("useGradRho", true);
+    useExplicitMover = config.read< bool >("useExplicitMover", false);
   }
 
   //read everything from input file, if restart is true, overwrite the setting - bug fixing

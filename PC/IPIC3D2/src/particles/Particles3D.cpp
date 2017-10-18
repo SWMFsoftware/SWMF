@@ -231,34 +231,6 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
 }
 
 
-void Particles3D::correctWeight(Field *EMf)
-{
-  // Modify the weights of the electrons based on the
-  // difference of div(E) and netcharge on nodes. 
-  
-  if(ns!=0) return;
-  const double  invFourPI =1./(16*atan(1.0));
-  double ratio;
-    for (int pidx = 0; pidx < getNOP(); pidx++) {
-      SpeciesParticle* pcl = &_pcls[pidx];
-
-      const double xp = pcl->get_x();
-      const double yp = pcl->get_y();
-      const double zp = pcl->get_z();
-      const double qi = pcl->get_q();
-      
-      const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
-      const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
-      const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));
-
-      ratio =
-	(1-(EMf->getRHOn(ix,iy,iz) - invFourPI*EMf->getdivEn(ix,iy,iz))
-	 /EMf->getRHOns(ix,iy,iz,ns));
-      pcl->set_q(qi*ratio);
-    }  
-}
-
-
 inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const double Y, const double Z,double *U, double *V, double *W)
 {
   double harvest, prob, theta, Uth;
@@ -2709,3 +2681,31 @@ double Particles3D::deleteParticlesInsideSphere2DPlaneXZ(double R, double x_cent
   }
   return(Q_removed);
 }
+
+void Particles3D::correctWeight(Field *EMf)
+{
+  // Modify the weights of the electrons based on the
+  // difference of div(E) and netcharge on nodes. 
+  
+  if(ns!=0) return;
+  const double  invFourPI =1./(16*atan(1.0));
+  double ratio;
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      SpeciesParticle* pcl = &_pcls[pidx];
+
+      const double xp = pcl->get_x();
+      const double yp = pcl->get_y();
+      const double zp = pcl->get_z();
+      const double qi = pcl->get_q();
+      
+      const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
+      const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
+      const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));
+
+      ratio =
+	(1-(EMf->getRHOn(ix,iy,iz) - invFourPI*EMf->getdivEn(ix,iy,iz))
+	 /EMf->getRHOns(ix,iy,iz,ns));
+      pcl->set_q(qi*ratio);
+    }  
+}
+
