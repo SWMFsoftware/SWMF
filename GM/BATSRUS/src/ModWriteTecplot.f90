@@ -37,14 +37,14 @@ module ModWriteTecplot
 
   character(len=23), public :: textDateTime
   character(len=22), public :: textNandT
-  character, public, parameter:: CharNewLine = char(10)
-  integer,   public:: lRecConnect = 2**nDim*11+1
+  character, public, parameter :: CharNewLine = char(10)
+  integer,   public :: lRecConnect = 2**nDim*11+1
+
+  ! Dimensionality of plot
+  integer, public :: nPlotDim = nDim
   
   ! Local variables
   character (len=23) :: textDateTime0
-
-  ! Dimensionality of plot
-  integer:: nPlotDim = nDim
 
   ! Index limits inside the block based on the cut
   integer:: IjkMin_D(3), IjkMax_D(3)
