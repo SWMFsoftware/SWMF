@@ -119,14 +119,7 @@ int ipic3d_finalize_init_(){
 
   // now we should have all the the infomation
   for(int i = 0; i < nIPIC; i++){     
-    SimRun[i]->Init(0, dummy, timenow);
-    double dt = 1e10, dt0;
-
-    // dt is needed for mass matrix calculation. 
-    dt0 = SimRun[i]->calSIDt();
-    if(dt0 < dt) dt = dt0;
-    SimRun[i]->setSIDt(dt,false);
-    
+    SimRun[i]->Init(0, dummy, timenow);    
     SimRun[i]->CalculateMoments();   
     iSimCycle[i] = SimRun[i]->FirstCycle();
     SimRun[i]->WriteOutput(iSimCycle[i],true);
@@ -152,6 +145,18 @@ int ipic3d_run_(double *time){
    timing_start("PC: SyncWithFluid");  
    SimRun[i]->SyncWithFluid(iSimCycle[i]);
    timing_stop("PC: SyncWithFluid");
+
+   if(iSimCycle[i]==0){
+     // iSimCycle[i]==0 is true for the first iteration when the PIC code
+     // stars from scratch (NOT from restart files.). When CalculateMoments
+     // is called during the finalization stage, dt is still unknow, and
+     // the mass matrix, which is used for ECSIM, is not correct. So
+     // CalculateMoments should be called again to calculate mass matrix
+     // for this case. 
+     timing_start("PC: GatherMoments");  
+     SimRun[i]->CalculateMoments();
+     timing_stop("PC: GatherMoments");     
+   }
 
    timing_start("PC: CalculateField");  
    SimRun[i]->CalculateField(iSimCycle[i]);
