@@ -108,11 +108,6 @@ g rbody			NamePars
 #RESTART
 T			DoRrestart
 
-#SOLVER
-1.0e-8			CGtol : CG solver stopping criterium tolerance
-1.0e-8 			GMREStol : GMRES solver stopping criterium tolerance
-3			NiterMover : mover predictor corrector iteration
-
 #SAVEPLOT
 PC/plots		SaveDirName
 1			FieldOutputCycle

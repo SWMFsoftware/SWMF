@@ -213,10 +213,30 @@ E = (AmplEx, AmplEy, AmplEz)*sin(k*x + Phase*deg2rad)
 
 The magnetic field is set from B = k/|k| x E.
 
-
-
-
 </command>
 
+<command name="SOLVER">
+  <parameter name="GMREStol" type="real"  default="1e-8"/>
+  <parameter name="nGMRESRestart" type="integer"  default="100"/>
+  <parameter name="NiterMover" type="integer"  default="3"/>
+  
+#SOLVER
+1e-8                   GMREStol
+100                    nGMRESRestart
+3                      NiterMover
+
+
+These parameters control the field solver and the particle mover. 'GMREStol' is
+the tolerance of the GMRES E field solver, which will restart every
+'nGMRESRestart' cycles. The maximum iteration number of the implicit particle
+mover is 'NiterMover'.
+
+Note:
+1) The tolerance for the CG iteration used to be included in this command. It
+is removed because CG is not used anymore.
+2) The tolerance of the Poisson solver is hard coded so far. It's default value
+is 0.1.
+
+</command>
 
 </commandList>

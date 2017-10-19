@@ -274,9 +274,9 @@ T
 1					Particles per cell in Z
 
 #SOLVER
-1.0e-6					CGtol : CG solver stopping criterium tolerance
-1.0e-6					GMREStol : GMRES solver stopping criterium tolerance
-3					NiterMover : mover predictor corrector iteration
+1.0e-6					GMREStol
+100					nGMRESRestart
+3					NiterMover 
 
 
 #SAVEIDL

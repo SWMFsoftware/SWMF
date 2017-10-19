@@ -229,11 +229,6 @@ g rbody			NamePars
 20			Particles per cell in Y Region 2
 1			Particles per cell in Z Region 2
 
-#SOLVER
-1.0e-8			CGtol : CG solver stopping criterium tolerance
-1.0e-8 			GMREStol : GMRES solver stopping criterium tolerance
-3			NiterMover : mover predictor corrector iteration
-
 #SAVEPLOT
 PC/plots		SaveDirName
 1			FieldOutputCycle

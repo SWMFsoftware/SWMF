@@ -175,6 +175,7 @@ void Collective::ReadInput(string inputfile) {
     // take the tolerance of the solvers
     CGtol = config.read < double >("CGtol",1e-3);
     GMREStol = config.read < double >("GMREStol",1e-3);
+    nGMRESRestart = config.read < int >("nGMRESRestart",100);
     NiterMover = config.read < int >("NiterMover",3);
     // take the injection of the particless
     Vinj = config.read < double >("Vinj",0.0);
@@ -1504,10 +1505,12 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Test particles. Not available for coupling so far. 
   nstestpart = 0;
 
+
+  CGtol      = 1.0e-8;
   
   // #SOLVER
-  CGtol      = 1.0e-8;
   GMREStol   = 1.0e-8;
+  nGMRESRestart = 100; 
   NiterMover = 3;
 
   //------------------------------------------------
@@ -1778,10 +1781,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     //   }
     // }
     else if( Command == "#SOLVER"){
-      read_var(param,"CGtol", &CGtol);
       read_var(param,"GMREStol", &GMREStol);
-      read_var(param,"NiterMover", &NiterMover);
-
+      read_var(param,"nGMRESRestart", &nGMRESRestart);
+      read_var(param,"NiterMover", &NiterMover);      
     }
     else if( Command == "#SAVEPLOT"){
       read_var(param,"SaveDirName",            &SaveDirName);

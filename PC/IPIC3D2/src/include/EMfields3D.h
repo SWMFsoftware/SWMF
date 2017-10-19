@@ -653,6 +653,8 @@ class EMfields3D                // :public Field
     double CGtol;
     /*! GMRES tolerance criterium for stopping iterations */
     double GMREStol;
+    // Restart cycle of GMRES.
+    int nGMRESRestart;
 
 
     //MPI Derived Datatype for Center Halo Exchange

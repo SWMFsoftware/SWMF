@@ -192,6 +192,7 @@ class Collective
     double getVinj()const{ return (Vinj); }
     double getCGtol()const{ return (CGtol); }
     double getGMREStol()const{ return (GMREStol); }
+    double get_nGMRESRestart()const{ return (nGMRESRestart); }
     int getNiterMover()const{ return (NiterMover); }
     int getFieldOutputCycle()const{ return (FieldOutputCycle); }
     int getParticlesOutputCycle()const{ return (ParticlesOutputCycle); }
@@ -411,6 +412,8 @@ class Collective
     double GMREStol;
     /*! mover predictor correcto iteration */
     int NiterMover;
+    /* The restart cycle for GMRES field solver */
+    int nGMRESRestart;
 
     /*! Output for field */
     int FieldOutputCycle;

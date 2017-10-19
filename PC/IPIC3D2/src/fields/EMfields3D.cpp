@@ -231,6 +231,7 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   }
   CGtol = col->getCGtol();
   GMREStol = col->getGMREStol();
+  nGMRESRestart = col->get_nGMRESRestart();
   qom = new double[ns];
   for (int i = 0; i < ns; i++)
     qom[i] = col->getQOM(i);
@@ -2578,15 +2579,9 @@ void EMfields3D::calculateE(int cycle)
 		// move to krylov space
 		phys2solver(bkrylovPoisson, divE, icMinSolve,icMaxSolve,
 			    jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
-		// use conjugate gradient first
-		//if (!CG(xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2), bkrylovPoisson, 3000, CGtol, &Field::PoissonImage, this)) {
-		  	  //if (vct->getCartesian_rank() == 0)
-					//cout << "CG not Converged. Trying with GMRes. Consider to increase the number of the CG iterations" << endl;
-		  //eqValue(0.0, xkrylovPoisson, (nxc - 2) * (nyc - 2) * (nzc - 2));
 		  if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING using GMRes***" << endl;
-		  GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, 20, 200, PoissonTol,false, this);
+		  GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, nGMRESRestart, 200, PoissonTol,false, this);
 
-		  //}
 		  solver2phys(PHI, xkrylovPoisson, icMinSolve,icMaxSolve,
 			      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
 #ifdef BATSRUS
@@ -2619,7 +2614,7 @@ void EMfields3D::calculateE(int cycle)
   
   // solve A.xKrylob = bKrylov for x being the change in E field (dE)
   GMRES(&Field::MaxwellImage, xkrylov, n3SolveNode,
-	bkrylov, 100, 200, GMREStol,doSolveForChange, this);
+	bkrylov, nGMRESRestart, 200, GMREStol,doSolveForChange, this);
 
   // move from krylov space to physical space: Eth = dE
   solver2phys(Exth,Eyth,Ezth,xkrylov,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
