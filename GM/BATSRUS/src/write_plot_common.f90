@@ -54,7 +54,7 @@ subroutine write_plot_common(iFile)
   integer :: nplotvar
   character(len=lNameVar) :: NamePlotUnit_V(nplotvarmax)
 
-  ! True for shell / box plots
+  ! True for shell / box plots and tcp cuts
   logical:: DoPlotShell, DoPlotBox, DoPassPlotVar
   
   ! Equation parameters
@@ -345,37 +345,39 @@ subroutine write_plot_common(iFile)
 
 
   ! True if message passing is needed for interpolating non-primitive variables
-  ! in the ghost cells
+  ! using the ghost cells.
   DoPassPlotVar = DoPlotShell .or. DoPlotBox .or. &
        plot_form(iFile)=='tcp' .and. nPlotDim < nDim
   
-  if(DoPassPlotVar) &
-       allocate(PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+  if(DoPassPlotVar)then
+     ! Calculate plot variables for all blocks and store them into 
+     ! PlotVar_VGB which will be message passed to fill in ghost cells.
+     allocate(PlotVar_VGB(nPlotVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
   
-  ! Block loop stage I: copy plotvar to plotvar_VGB and do message pass to
-  ! fill in the ghost cell values
-  do iBLK = 1, nBlock
-     if(Unused_B(iBLK))CYCLE
+     ! Block loop stage I: copy plotvar to plotvar_VGB and do message pass to
+     ! fill in the ghost cell values
+     do iBLK = 1, nBlock
+        if(Unused_B(iBLK))CYCLE
 
-     if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
+        ! Use true signed magnetic field in plots
+        if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
+        
+        call set_plotvar(iBLK, iFile-plot_, nPlotVar, plotvarnames, PlotVar, &
+             plotvar_inBody,plotvar_useBody)
 
-     call set_plotvar(iBLK, iFile-plot_, nPlotVar, plotvarnames, PlotVar, &
-          plotvar_inBody,plotvar_useBody)
+        if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
+             iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
 
-     if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
-          iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
-
-     if(DoPassPlotVar) then
         ! Copy plotvar for each block into a single array for message passing
         do iVar = 1 , nPlotVar
            PlotVar_VGB(iVar,:,:,:,iBLK) = PlotVar(:,:,:,iVar)
         end do
-     end if
                
-  end do ! Block loop stage I
+     end do
   
-  ! Pass plotting variables for ghost cell values
-  if(DoPassPlotVar) call message_pass_cell(nplotvar,PlotVar_VGB)
+     ! Pass plotting variables to fill ghost cell values
+     call message_pass_cell(nPlotvar, PlotVar_VGB)
+  end if
 
   ! Block loop stage II: overwrite plotvar with plotvar_VGB that contains
   ! correct ghost cell values and then write plot file; if not needed, then
@@ -385,15 +387,19 @@ subroutine write_plot_common(iFile)
      if(Unused_B(iBLK))CYCLE
 
      if(DoPassPlotVar) then
+        ! Copy precalculated plot variables including ghost cells
         do iVar = 1 , nPlotVar
            PlotVar(:,:,:,iVar) = PlotVar_VGB(iVar,:,:,:,iBLK)
         end do
      else
+        ! Use signed magnetic field in plots
         if(SignB_>1 .and. DoThinCurrentSheet) call reverse_field(iBLK)
 
+        ! Set plot variable for this block
         call set_plotvar(iBLK, iFile-plot_, nPlotVar, plotvarnames, PlotVar, &
              plotvar_inBody,plotvar_useBody)
-        
+
+        ! Dimensionalize plot variables
         if(plot_dimensional(iFile)) call dimensionalize_plotvar(iBLK, &
              iFile-plot_,nplotvar,plotvarnames,PlotVar,plotvar_inBody)
      end if
