@@ -3255,7 +3255,14 @@ contains
              UnRight= maxval(UnRight_I(1:nIonFluid))
           end if
 
-          if(UseBoris)then
+          if(UseBoris .or. (UseEfield .and. nTrueIon ==1))then
+             ! In the five- and six-moment case, we should use Boris speed for
+             ! numerical diffusion for single ion case. For multi-ion five- and
+             ! six-moment we should call the UseBorisSimple correction in 
+             ! get_mhd_speed. 
+             ! In the five- and six-moment case, we should NOT call Boris 
+             ! flux, as the Maxwell's equation already contains the 
+             ! displacement current.
              call get_boris_speed             
           else
              call get_mhd_speed
@@ -3371,8 +3378,14 @@ contains
       real :: GammaA2, GammaU2
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
       !-----------------------------------------------------------------------
+      ! No explicit formula for multi-ion fluids
+      if (nTrueIon > 1) call stop_mpi &
+           ('get_boris_speed should not be called with multi-ion fluids')
+
       InvRho = 1.0/State_V(Rho_)
-      p = State_V(p_)
+      ! iPIon_I = p_ for single ion MHD case. iPIon_I is need to add the 
+      ! electron pressure(s) for single ion five- and six-moment case.
+      p = sum(State_V(iPIon_I))
       FullBx = State_V(Bx_) + B0x
       FullBy = State_V(By_) + B0y
       FullBz = State_V(Bz_) + B0z
@@ -3381,7 +3394,9 @@ contains
 
       ! Calculate sound speed squared
       if(UseAnisoPressure .and. FullB2 > 0)then
-         Ppar  = State_V(Ppar_)
+         ! iPparIon_I = Ppar_ for single ion MHD case. iPparIon_I is need to 
+         ! add the electron pressure(s) for single ion six-moment case.
+         Ppar  = sum(State_V(iPparIon_I))
          Pperp = (3*p - Ppar)/2.
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
@@ -3392,8 +3407,10 @@ contains
       ! Add contribution of electron pressure
       if(UseElectronPressure)then
          GammaPe = GammaElectron*State_V(Pe_)
-         Sound2 = Sound2 + InvRho*GammaPe
+         Sound2  = Sound2 + InvRho*GammaPe
       else
+         ! For five- and six-moment, Pe should be 0 because electron pressure
+         ! has already been added.
          GammaPe = 0.0
       end if
 
@@ -3710,7 +3727,7 @@ contains
       end if
 
       ! Fast speed multipled by the face area
-      if(UseBorisSimple)then
+      if(UseBorisSimple .or. (UseEfield))then
          Fast = sqrt( 0.5*(Fast2 + Discr) &
               /       (1.0 + Alfven2*Inv_C2light) )
       else
