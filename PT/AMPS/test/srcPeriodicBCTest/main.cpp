@@ -126,7 +126,9 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 #endif
 
     CellSize=startNode->GetCharacteristicCellSize();
-    return 0.3*CellSize/CharacteristicSpeed;
+    //return 0.3*CellSize/CharacteristicSpeed;
+
+    return 1.0E-2;
 }
 
 
@@ -260,7 +262,7 @@ void InitCenterData(int ipass,int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> 
       nExternalBlock++;
     }
     
-    if (startNode->block!=NULL) {
+    if ((startNode->Thread==PIC::ThisThread)&&(startNode->block!=NULL)) {
       for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
         //the interpolation location
         xLOCAL[0]=xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i);
@@ -338,7 +340,7 @@ void PropagateCenterData(double * v, int nVars, cTreeNodeAMR<PIC::Mesh::cDataBlo
     int ii,jj;
    
 
-    if (startNode->block!=NULL) {
+    if ((startNode->Thread==PIC::ThisThread)&&(startNode->block!=NULL)) {
       for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
         //the interpolation location
         xLOCAL[0]=xNodeMin[0]+(xNodeMax[0]-xNodeMin[0])/_BLOCK_CELLS_X_*(0.5+i);
@@ -451,8 +453,6 @@ void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, d
   
   
   for (int iter=0; iter<51; iter++) {
-    //  PIC::BC::ExternalBoundary::Periodic::UpdateData();
-    
     PropagateCenterData(vProp,nVars,PIC::Mesh::mesh.rootTree);
 
     int temp=CurrentCenterNodeOffset;
@@ -464,9 +464,8 @@ void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, d
     NextCornerNodeOffset=temp;
 
     PIC::BC::ExternalBoundary::Periodic::UpdateData();
-//    PIC::Mesh::mesh.ParallelBlockDataExchange();
 
-    if (iter%50==0){
+    if (iter%5==0){
       char wave_fname[STRING_LENGTH];
       sprintf(wave_fname,"test%d-wave%d.dat",iTest,iter);
       PIC::Mesh::mesh.outputMeshDataTECPLOT(wave_fname,0);
