@@ -197,8 +197,8 @@ void GMRES(FIELD_IMAGE FunctionImage, double *xkrylov, int xkrylovlen,
     if (initial_error <= rho_tol) {
       if (is_output_thread())
       {
-        printf("GMRES converged at restart # %d; iteration #%d with error: %g\n",
-          itr, k,  initial_error / rho_tol * tol);
+        printf("GMRES converged at restart # %d; iteration #%d; total iteration #%d; with error: %g\n",
+	       itr, k, itr*m+k, initial_error / rho_tol * tol);
       }
       break;
     }
