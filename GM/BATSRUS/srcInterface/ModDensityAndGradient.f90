@@ -8,7 +8,6 @@ module ModDensityAndGradient
   !USES:
   use MH_domain_decomposition
   use CON_global_message_pass
-  use CON_integrator
   use ModMain, ONLY: MaxDim
   use ModProcMH, ONLY:iComm
   use ModMpi
@@ -45,7 +44,9 @@ contains
     ! on the numeric grid size
     !
     integer,intent(in)::nRay
-    integer::iError
+    !\
+    !Misc
+    integer :: nU_I(2), iError
  
     call timing_start('get_plasma_density')
     if(DoInit)then
@@ -53,13 +54,24 @@ contains
        call set_standard_grid_descriptor(&
             MH_DomainDecomposition,GridDescriptor=MhGrid)
    
-       call init_router_for_vector(&
-            NameVector=NameVector,&
-            SourceGD=MhGrid,&
-            LineDD=LineDD,&
-            LineGD=LineGrid,&
-            Router=Router)
-       call check_if_can_integrate(NameVector)
+       nU_I=ubound_vector(NameVector)
+       call init_decomposition(LineDD,&
+            compid_grid(MhGrid%DD%Ptr),1,&
+            IsLocal=.true.)
+       call get_root_decomposition(&
+            LineDD,&                 !GridDescroptor to be constructed
+            iRootMapDim_D=(/1/),&!The block amount, along each direction(D)
+            XyzMin_D=(/cHalf/),&      !Minimal gen. coordinates, along each D 
+            XyzMax_D=(/cHalf+nU_I(2)/),& !Maximal gen. coordinates, along each D
+            nCells_D=(/nU_I(2)/))
+       call set_standard_grid_descriptor(LineDD,&
+            GridDescriptor=LineGrid)
+       call init_router(&
+            MhGrid,& !GridDesctriptor for the source field (in) 
+            LineGrid,&   !GirdDescriptor,save,intent(out)
+            Router,&   !resulting router, intent(out)
+            nIndexTarget=1)
+       DoInit=.false.
     end if
  
     call set_router(& 
