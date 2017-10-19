@@ -51,7 +51,8 @@ void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
       }
     }
   }
-  //exchange info between ghost cells
+
+  //update the associated data in the subdomain 'boundary layer' of blocks
   PIC::Mesh::mesh.ParallelBlockDataExchange();
 }
 
@@ -230,22 +231,13 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
     for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
       CenterNodeGhostBlock=GhostBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
       pipe.recv((char*)(CenterNodeGhostBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength,RealBlockThread);
-      if (((double*)CenterNodeGhostBlock->GetAssociatedDataBufferPointer())[0]<0.0) {
-	printf("recv number:%f\n",((double*)CenterNodeGhostBlock->GetAssociatedDataBufferPointer())[0]);
-        printf("i,j,k:%d,%d,%d\n",i,j,k);
-        printf("xmin:%f,%f,%f\n",GhostBlock->xmin[0],GhostBlock->xmin[1],GhostBlock->xmin[2]);
-        printf("xmax:%f,%f,%f\n",GhostBlock->xmax[0],GhostBlock->xmax[1],GhostBlock->xmax[2]);
-      }
-      // ((double*)CenterNodeGhostBlock->GetAssociatedDataBufferPointer())[0]=10.0;
-
     }
 
     //recv 'corner' nodes
-    /*for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
+    for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
       CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
       pipe.recv((char*)(CornerNodeGhostBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,RealBlockThread);
     }
-    */
   }
   else if (RealBlockThread==PIC::ThisThread) {
     pipe.RedirectSendBuffer(GhostBlockThread);
@@ -253,20 +245,14 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
     //send 'center' nodes
     for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
       CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
-      if (((double*)CenterNodeRealBlock->GetAssociatedDataBufferPointer())[0]<0.0) {
-	printf("i,j,k:%d,%d,%d\n",i,j,k);
-	printf("xmin:%f,%f,%f\n",RealBlock->xmin[0],RealBlock->xmin[1],RealBlock->xmin[2]);
-	printf("xmax:%f,%f,%f\n",RealBlock->xmax[0],RealBlock->xmax[1],RealBlock->xmax[2]);
-      }
       pipe.send((char*)(CenterNodeRealBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
     }
 
     //send 'corner' nodes
-    /* for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
+    for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
       CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
       pipe.send((char*)(CornerNodeRealBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
     }
-    */
   }
 
   //flush the pipe
