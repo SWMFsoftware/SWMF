@@ -1331,11 +1331,13 @@ state values must be given.
 </command>
 
 <command name="SOLIDSTATE">
-         <parameter name="UseSolidState" type="logical"/>
-         <parameter name="TypeBcSolid" type="character"/>
-	 <parameter name="TypeSolidGeometry" type="character"/>
-	 <parameter name="rSolid" type="real"/>
-	 <parameter name="SolidLimitDt type="real"/>
+  <parameter name="UseSolidState" type="logical"/>
+  <if expr="$UseSolidState">
+    <parameter name="TypeBcSolid" type="character"/>
+    <parameter name="TypeSolidGeometry" type="character"/>
+    <parameter name="rSolid" type="real"/>
+    <parameter name="SolidLimitDt" type="real"/>
+  </if>
 
 #SOLIDSTATE
 F			UseSolidState (rest read if true)
