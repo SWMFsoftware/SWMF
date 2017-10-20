@@ -3332,8 +3332,8 @@ contains
              call error_report( &
                   'get_speed_max: Clihgt is smaller than maxval(Cmax_I)', &
                   maxval(Cmax_I(iFluidMin:iFluidMax)), iError, .true.)
-             if(time_accurate) call stop_mpi &
-                  ('get_speed_max: Clihgt is smaller than maxval(Cmax_I)')
+             !if(time_accurate) call stop_mpi &
+             !     ('get_speed_max: Clihgt is smaller than maxval(Cmax_I)')
           end if
        end if
 
