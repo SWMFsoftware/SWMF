@@ -118,7 +118,7 @@ the next session. Parameters from previous sessions are carried over,
 so only the changes relative to the previous session need to be given.
 
 <command name="RUN">
-
+	 <set name="_STOP" type="logical" value="F"/>
 #RUN
 
 The #RUN command does not have any parameters. It signals the end
