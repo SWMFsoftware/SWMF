@@ -20,6 +20,18 @@
 namespace Comet {
   using namespace Exosphere;
 
+  //determine the field of view map for each output 
+  extern bool OutputFieldViewMapMode;
+
+  namespace Mesh {
+    extern char name[_MAX_STRING_LENGTH_PIC_];
+    extern double ConversionFactor;
+     
+    const int FormatCodeNAS=0;
+    const int FormatCodeCEA=1;
+    extern int Format;
+  }
+   
   unsigned int GetParticleSurfaceElement(PIC::ParticleBuffer::byte *ParticleDataStart);
   void SetParticleSurfaceElement(int SurfaceElement,PIC::ParticleBuffer::byte *ParticleDataStart);
 
