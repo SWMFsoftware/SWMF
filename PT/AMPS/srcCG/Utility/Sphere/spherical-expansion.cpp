@@ -12,7 +12,7 @@
 #include "../../../src/general/rnd.h"
 #include "../../../src/general/specfunc.h"
 
-const double Flux=1.0;
+const double Flux=4.0;
 const double MaxAltitude=20.0E3;
 const double R0=1.73E3;
 const double Temp=200.0;
@@ -180,17 +180,19 @@ int main() {
 
   //output sampled results 
   printf("Mean Generated Speed=%e\n",MeanGeneratedSpeed/nTotalTests); 
-  printf("VAIABLES=\"r\", \"Altitude\", \"Density\", \"Total Flux\", \"Mean Speed\"\n");
+  printf("VAIABLES=\"r\", \"Altitude\", \"Density\", \"Total Flux\", \"Total Theoretical Flux\", \"Mean Speed\" \n");
 
   for (i=0;i<nRadialIntervals;i++) {
     double Volume=4.0/3.0*Pi*(pow(R0+(i+1)*dr,3)-pow(R0+i*dr,3));
 
-    printf("%e %e %e %e %e\n",R0+(i+0.5)*dr,(i+0.5)*dr,SamplingBufferDensity[i]/SamplingTime/Volume,SamplingBufferFlux[i]/SamplingTime/Volume,SamplingBufferFlux[i]/SamplingBufferDensity[i]);
+    printf("%e %e %e %e %e %e\n",R0+(i+0.5)*dr,(i+0.5)*dr,SamplingBufferDensity[i]/SamplingTime/Volume,
+        SamplingBufferFlux[i]/SamplingTime/Volume /* *(4.0*Pi*pow(R0+(i+0.5)*dr,2))*/, Flux*4.0*Pi*pow(R0,2)/(4.0*Pi*pow(R0+(i+0.5)*dr,2)),
+        SamplingBufferFlux[i]/SamplingBufferDensity[i]);
   }
 
   //evaluate the density, velocity, and flux with a Monte Carlo technique 
   double A,r2,cosTheta,SpeedSample=0.0,DensitySample,FluxSample,ll[3];  
-  double xSample[3]={0.0,0.0,18.6E3}; //IMPORTANT: the pont of sampling is on the POSITIVE Z-AXIS 
+  double xSample[3]={0.0,0.0,5.0E3}; //IMPORTANT: the pont of sampling is on the POSITIVE Z-AXIS
 
   DensitySample=0.0,FluxSample=0.0;
   A=Flux*2.0*pow(beta,4)/Pi;
