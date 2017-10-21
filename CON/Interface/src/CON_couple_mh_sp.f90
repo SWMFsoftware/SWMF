@@ -25,13 +25,15 @@ module CON_couple_mh_sp
        IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&!^CMP IF IH
        IH_get_scatter_line, IH_add_to_line, IH_n_particle,& !^CMP IF IH
        IH_LineDD, IH_line_interface_point, &                !^CMP IF IH
-       IH_get_particle_indexes, IH_get_particle_coords      !^CMP IF IH
+       IH_get_particle_indexes, IH_get_particle_coords,&    !^CMP IF IH
+       IH_check_use_particles                               !^CMP IF IH
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
        SC_get_scatter_line, SC_n_particle, SC_LineDD, &     !^CMP IF SC
        SC_line_interface_point,&                            !^CMP IF SC
-       SC_get_particle_indexes, SC_get_particle_coords      !^CMP IF IH
+       SC_get_particle_indexes, SC_get_particle_coords,&    !^CMP IF SC
+       SC_check_use_particles                               !^CMP IF SC
 
   use CON_global_message_pass
   use CON_axes
@@ -134,6 +136,7 @@ contains
 
     if(use_comp(SC_))then  
        ! Set pair SC-SP
+       call SC_check_use_particles()
        call set_couple_var_info(SC_, SP_)
        call set_standard_grid_descriptor(SC_,GridDescriptor=&
             SC_GridDescriptor)
@@ -160,6 +163,7 @@ contains
 
     if(use_comp(IH_))then
        ! Set pair IH-SP
+       call IH_check_use_particles()
        call set_couple_var_info(IH_, SP_)
        call set_standard_grid_descriptor(IH_,GridDescriptor=&
             IH_GridDescriptor)

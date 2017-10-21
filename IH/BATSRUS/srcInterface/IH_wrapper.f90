@@ -44,6 +44,7 @@ module IH_wrapper
   public:: IH_find_points
 
   ! Coupling with SP
+  public:: IH_check_use_particles
   public:: IH_get_for_sp
   public:: IH_extract_line
   public:: IH_add_to_line
@@ -1709,6 +1710,15 @@ contains
     end if
 
   end subroutine IH_put_from_mh
+
+  !============================================================================
+
+  subroutine IH_check_use_particles
+    use IH_ModMain, ONLY: UseParticles
+    if(.not.UseParticles)&
+         call CON_stop("Particle line isn't set in the PARAM file,"//&
+         " add #PARTICLELINE section")
+  end subroutine IH_check_use_particles
 
   !============================================================================
 
