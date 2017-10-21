@@ -511,6 +511,48 @@ while ($line=<InputFile>) {
     ### END Of EndOfMission###
   }
 
+  #set up the mesh 
+ elsif ($InputLine eq "MESH") {
+  my ($s0,$s1);
+  
+  chomp($line);
+  $line=~s/[=():,]/ /g;  
+  ($s0,$line)=split(' ',$line,2); 
+  
+  while (defined $InputLine) {
+    ($InputLine,$InputComment)=split(' ',$InputComment,2);
+    ($s0,$line)=split(' ',$line,2);
+    
+    if ($InputLine eq "NAME") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ($s0,$line)=split(' ',$line,2);
+      
+      ampsConfigLib::ChangeValueOfVariable("char Comet::Mesh::name\\[_MAX_STRING_LENGTH_PIC_\\]","\"".$s0."\"","main/Comet.cpp");      
+    }
+    elsif ($InputLine eq "CONVERSIONFACTOR") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ($s0,$line)=split(' ',$line,2);
+      
+      ampsConfigLib::ChangeValueOfVariable("double Comet::Mesh::ConversionFactor",$s0,"main/Comet.cpp");           
+    }
+    elsif ($InputLine eq "FORMAT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      ($s0,$line)=split(' ',$line,2);
+
+      if ($InputLine eq "NAS") {
+        ampsConfigLib::ChangeValueOfVariable("int Comet::Mesh::Format","Comet::Mesh::FormatCodeNAS","main/Comet.cpp");
+      }  
+      elsif ($InputLine eq "CEA") {   
+        ampsConfigLib::ChangeValueOfVariable("int Comet::Mesh::Format","Comet::Mesh::FormatCodeCEA","main/Comet.cpp");
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";       
+      }  
+    } 
+  }
+ } 
+
   #redefine a value of a macro 
   elsif ($InputLine eq "DEFINE") {
     my ($macro,$value,$s0,$s1);
