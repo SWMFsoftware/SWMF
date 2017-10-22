@@ -17,8 +17,12 @@ include Makefile.RULES
 
 OBJECTS = \
 	ModAdvance.o \
+	ModAdvanceExplicit.o \
+	ModAdvectPoints.o \
 	ModAMR.o \
 	ModB0.o \
+	ModBatsrusMethods.o \
+	ModBatsrusUtility.o \
 	ModBatlInterface.o \
 	ModBlockData.o \
 	ModBorisCorrection.o \
@@ -28,31 +32,34 @@ OBJECTS = \
 	ModCellGradient.o \
 	ModCharacteristic.o \
 	ModChromosphere.o \
+	ModCleanDivB.o \
 	ModCoarseAxis.o \
 	ModConserveFlux.o \
+	ModConstrainDivB.o \
 	ModCoronalHeating.o \
-	ModCT.o \
 	ModCurrent.o \
-	ModFaceBoundary.o \
-	ModFieldLineThread.o \
-	ModImplicit.o \
-	ModImplHypre.o \
-	ModExtraVariables.o \
-	ModHeatConduction.o \
 	ModEnergy.o \
 	ModElectricField.o \
 	ModEquation.o \
 	ModExpansionFactors.o \
+	ModExtraVariables.o \
+	ModFaceBoundary.o \
 	ModFaceFlux.o \
 	ModFaceGradient.o \
 	ModFaceValue.o \
-	ModParticleFieldLine.o \
+	ModFieldLineThread.o \
+	ModFieldTrace.o \
+	ModFixAxisCells.o \
 	ModGeometry.o \
 	ModGroundMagPerturb.o \
 	ModHallResist.o \
 	ModHdf5.o \
+	ModHeatConduction.o \
 	ModHeatFluxCollisionless.o \
 	ModIeCoupling.o \
+	ModImCoupling.o \
+	ModImplicit.o \
+	ModImplHypre.o \
 	ModIO.o \
 	ModIonElectron.o \
 	ModLaserHeating.o \
@@ -64,21 +71,24 @@ OBJECTS = \
 	ModMultiIon.o \
 	ModNodes.o \
 	ModParallel.o \
+	ModParticleFieldLine.o \
 	ModPartImplicit.o \
 	ModPartSteady.o \
-	ModPIC.o \
 	ModPhysics.o \
-	ModPlotShell.o \
+	ModPIC.o \
 	ModPlotBox.o \
+	ModPlotShell.o \
 	ModPointImplicit.o \
 	ModProcMH.o \
+	ModProjectDivB.o \
 	ModRadDiffusion.o \
 	ModRadiativeCooling.o \
-	ModRaytrace.o \
-	ModRestartFile.o \
 	ModResistivity.o \
+	ModRestartFile.o \
 	ModSatelliteFile.o \
 	ModSemiImplicit.o \
+	ModSetInitialCondition.o \
+	ModSetParameters.o \
 	ModSingleFluid.o \
 	ModSize.o \
 	ModSolarwind.o \
@@ -90,18 +100,6 @@ OBJECTS = \
 	ModViscosity.o \
 	ModWaves.o \
 	ModWriteTecplot.o \
-	ModBatsrusMethods.o \
-	ModSetParameters.o \
-	ModAdvectPoints.o \
-	ModCleanDivB.o \
-	ModConstrainDivB.o \
-	ModAdvanceExplicit.o \
-	ModFixAxisCells.o \
-	ModImCoupling.o \
-	ModBatsrusUtility.o \
-	ModProjectDivB.o \
-	ModFieldTrace.o \
-	ModSetInitialCondition.o \
 	ModUpdateState.o \
 	ModWriteLogSatFile.o \
 	ModWritePlot.o \
