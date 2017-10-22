@@ -1,6 +1,378 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+
+module ModProject
+
+  use ModSize, ONLY: nI, nJ, nK, nBlock, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+
+  use ModProcMH, ONLY: iProc, nProc, iComm
+  use ModMain, ONLY: Unused_B
+  use ModGeometry, ONLY: true_BLK, true_cell
+  use ModMpi
+
+  implicit none
+  save
+  !\
+  ! Parameters for projection scheme:
+  !
+  ! proj_method determines the iterative scheme to be used
+  ! if proj_method='cg'       then Conjugate Gradient method is used
+  !                           (this is only good for symmetric matrices!)
+  !    proj_method='bicgstab' then BiConjugate Gradient method is used
+  !
+  ! proj_typestop determines the stopping condition for the iterations.
+  ! if proj_typestop='rel' then sum((div B)**2) is reduced by a factor 
+  !    proj_divbcoeff
+  ! if proj_typestop='max' then |div B| is kept below a limit determeined by 
+  !    proj_divbcoeff and
+  !    proj_divbconst 
+  !    if proj_divbcoeff>0 then 
+  !       |div B|< proj_divbcoeff * divbmax_0  
+  !          where divbmax_0 is the max(|div B|) after the first time step
+  !    otherwise
+  !       |div B|< proj_divbconst
+  ! 
+  ! proj_matvecmax is an upper limit on matrix-vector products for iterations
+  !
+  ! proj_boundtype determines the boundary conditions for the Poisson equation
+  ! if proj_boundtype='zero' : phi=0 in ghost cells outside of comput. domain
+  !
+  !/
+
+  character (len=10):: proj_method   ='cg        '
+  character (len=3)::  proj_typestop ='rel'
+  real ::              proj_divbcoeff=0.1
+  real ::              proj_divbconst=0.0
+  integer ::           proj_matvecmax=50
+  character (len=10):: proj_boundtype='zero'
+
+  ! Counter for matrix vector multiplications, and for errors of solver
+
+  integer :: nmatvectotal, poissonerror
+
+  ! Minimum value for divB (a small number)
+
+  real, parameter :: divbmin=1E-10
+
+  ! Maximum value for divB (absolute or relative)
+  real :: DivbMax
+
+contains
+  subroutine set_BLK(qa,qb)
+
+    ! Set qa=qb for all used blocks, where qb is a scalar
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(out) :: qa
+    real, intent(in) :: qb
+
+    ! Local variables:
+    integer:: iBLK
+
+    !---------------------------------------------------------------------------
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK))then
+             qa(1:nI,1:nJ,1:nK,iBLK)=qb
+          else
+             where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
+                  qa(1:nI,1:nJ,1:nK,iBLK)=qb
+          end if
+       end if
+    end do
+
+  end subroutine set_BLK
+
+  !=============================================================================
+  subroutine eq_BLK(qa,qb)
+
+    ! Do qa=qb for all used blocks
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock):: qa,qb
+    intent(out) :: qa
+    intent(in)  :: qb
+
+    ! Local variables:
+    integer:: iBLK
+
+    !---------------------------------------------------------------------------
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK))then
+             qa(1:nI,1:nJ,1:nK,iBLK)= qb(1:nI,1:nJ,1:nK,iBLK)
+          else
+             where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
+                  qa(1:nI,1:nJ,1:nK,iBLK)= qb(1:nI,1:nJ,1:nK,iBLK)
+          end if
+
+       end if
+    end do
+
+  end subroutine eq_BLK
+
+  !=============================================================================
+  subroutine add_BLK(qa,qb)
+
+    ! Do qa=qa+qb for all used blocks
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa, qb
+    intent(inout) :: qa
+    intent(in)    :: qb
+
+    ! Local variables:
+    integer:: iBLK
+
+    !---------------------------------------------------------------------------
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK))then
+             qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qa(1:nI,1:nJ,1:nK,iBLK)+qb(1:nI,1:nJ,1:nK,iBLK)
+          else
+             where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
+                  qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qa(1:nI,1:nJ,1:nK,iBLK)+qb(1:nI,1:nJ,1:nK,iBLK)
+          end if
+       end if
+    end do
+
+  end subroutine add_BLK
+
+  !=============================================================================
+  subroutine sub_BLK(qa,qb)
+
+    ! Do qa=qa-qb for all used blocks
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa, qb
+    intent(inout) :: qa
+    intent(in)    :: qb
+
+    ! Local variables:
+    integer:: iBLK
+
+    !---------------------------------------------------------------------------
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK))then
+             qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qa(1:nI,1:nJ,1:nK,iBLK)-qb(1:nI,1:nJ,1:nK,iBLK)
+          else
+             where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
+                  qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qa(1:nI,1:nJ,1:nK,iBLK)-qb(1:nI,1:nJ,1:nK,iBLK)
+          end if
+       end if
+    end do
+
+  end subroutine sub_BLK
+
+  !=============================================================================
+  subroutine eq_plus_BLK(qa,qb,qc)
+
+    ! Do qa=qb+qc for all used blocks
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa,qb,qc
+    intent(out) :: qa
+    intent(in)  :: qb,qc
+
+    ! Local variables:
+    integer:: iBLK
+
+    !---------------------------------------------------------------------------
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK))then
+             qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qb(1:nI,1:nJ,1:nK,iBLK)+qc(1:nI,1:nJ,1:nK,iBLK)
+          else
+             where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
+                  qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qb(1:nI,1:nJ,1:nK,iBLK)+qc(1:nI,1:nJ,1:nK,iBLK)
+          end if
+       end if
+    end do
+
+
+  end subroutine eq_plus_BLK
+
+  !=============================================================================
+  subroutine add_times_BLK(qa,qb,qc)
+
+    ! Do qa=qa+qb*qc for all used blocks, where qb is a scalar
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa,qc
+    intent(inout) :: qa
+    intent(in)    :: qc
+
+    real, intent(in) :: qb
+
+    ! Local variables:
+    integer:: iBLK
+
+    !---------------------------------------------------------------------------
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK))then
+             qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qa(1:nI,1:nJ,1:nK,iBLK)+qb*qc(1:nI,1:nJ,1:nK,iBLK)
+          else
+             where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
+                  qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qa(1:nI,1:nJ,1:nK,iBLK)+qb*qc(1:nI,1:nJ,1:nK,iBLK)
+          end if
+       end if
+    end do
+
+
+  end subroutine add_times_BLK
+
+  !=============================================================================
+  subroutine eq_plus_times_BLK(qa,qb,qc,qd)
+
+    ! Do qa=qb+qc*qd for all used blocks, where qc is a scalar
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: qa,qb,qd
+    intent(inout) :: qa
+    intent(in)    :: qb
+    intent(inout) :: qd
+
+    real, intent(in) :: qc
+
+    ! Local variables:
+    integer:: iBLK
+
+    !---------------------------------------------------------------------------
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK))then
+             qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qb(1:nI,1:nJ,1:nK,iBLK)+qc*qd(1:nI,1:nJ,1:nK,iBLK)
+          else
+             where(true_cell(1:nI,1:nJ,1:nK,iBLK)) &
+                  qa(1:nI,1:nJ,1:nK,iBLK)= &
+                  qb(1:nI,1:nJ,1:nK,iBLK)+qc*qd(1:nI,1:nJ,1:nK,iBLK)
+          end if
+       end if
+    end do
+
+  end subroutine eq_plus_times_BLK
+
+  !=============================================================================
+  real function dot_product_BLK(qa,qb)
+
+    ! Return qa.qb=sum(qa*qb) for all used blocks
+
+    ! Arguments
+
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(in) :: qa,qb
+
+    ! Local variables:
+    real    :: qproduct, qproduct_all
+    integer :: iBLK, iError
+
+    logical :: oktest, oktest_me
+
+    !---------------------------------------------------------------------------
+
+    call set_oktest('dot_product_BLK',oktest, oktest_me)
+
+    qproduct=0.0
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK)) then
+             qproduct=qproduct + &
+                  sum(qa(1:nI,1:nJ,1:nK,iBLK)*qb(1:nI,1:nJ,1:nK,iBLK))
+          else
+             qproduct=qproduct + &
+                  sum(qa(1:nI,1:nJ,1:nK,iBLK)*qb(1:nI,1:nJ,1:nK,iBLK),&
+                  MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
+          end if
+       end if
+    end do
+
+    if(nProc>1)then
+       call MPI_allreduce(qproduct, qproduct_all, 1,  MPI_REAL, MPI_SUM, &
+            iComm, iError)
+       dot_product_BLK=qproduct_all
+       if(oktest)write(*,*)'me,product,product_all:',&
+            iProc,qproduct,qproduct_all
+    else
+       dot_product_BLK=qproduct
+       if(oktest)write(*,*)'me,qproduct:',iProc,qproduct
+    end if
+
+  end function dot_product_BLK
+
+  !=============================================================================
+  real function sum_BLK(qnum,qa)
+
+    ! Return sum(qa) for all used blocks and true cells
+    ! Do for each processor separately if qnum=1, otherwise add them all
+
+    ! Arguments
+
+    integer, intent(in) :: qnum
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), intent(in) :: qa
+
+    ! Local variables:
+    real    :: qsum, qsum_all
+    integer :: iBLK, iError
+
+    logical :: oktest, oktest_me
+
+    !---------------------------------------------------------------------------
+
+    call set_oktest('sum_BLK',oktest, oktest_me)
+
+    qsum=0.0
+
+    do iBLK=1,nBlock
+       if(.not.Unused_B(iBLK)) then
+          if(true_BLK(iBLK)) then
+             qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBLK))
+          else
+             qsum=qsum + sum(qa(1:nI,1:nJ,1:nK,iBLK), &
+                  MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
+          end if
+       end if
+    end do
+
+    if(qnum>1)then
+       call MPI_allreduce(qsum, qsum_all, 1,  MPI_REAL, MPI_SUM, &
+            iComm, iError)
+       sum_BLK=qsum_all
+       if(oktest)write(*,*)'me,sum,sum_all:',iProc,qsum,qsum_all
+    else
+       sum_BLK=qsum
+       if(oktest)write(*,*)'me,qsum:',iProc,qsum
+    end if
+
+  end function sum_BLK
+
+end module ModProject
 
 
 !=============================================================================
@@ -676,3 +1048,539 @@ subroutine proj_correction(phi)
   end if
 
 end subroutine proj_correction
+
+
+! The CG-algorithm is implemented as shown on page 12 of the thesis
+! "Preconditioning for sparse matrices with applications."
+! Auke van der Ploeg, University of Groningen, 1994.
+! Rewritten to F90 by G. Toth based on the F77 subroutine in src/conjgrad.f 
+! Rewritten by G. Toth for BATS-R-US code to be used with MPI, 2000.
+!
+! This subroutine determines the solution of A.QX=RHS, where
+! the matrix-vector multiplication with A is performed by 
+! the subroutine 'proj_matvec'.
+!
+! !! If the matrix is not symmetric positive definite, CG is likely to fail.
+!
+subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
+  use ModProcMH
+  use ModMain, ONLY :nBLK
+  use ModAdvance, ONLY : tmp1_BLK,tmp2_BLK
+  use ModProject
+  implicit none
+
+  ! Arguments
+
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
+       intent(inout) :: rhs
+  !        on input:  right-hand side vector.
+  !        on output: residual vector.
+
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
+       intent(out):: qx
+  !        on output: solution vector.
+
+  integer, intent(inout) :: iter
+  !       on input:  maximum number of iterations to be performed.
+  !       on output: actual  number of iterations done.
+
+  real, intent(inout) :: tol
+  !       on input:  required (relative) 2-norm or maximum norm of residual
+  !       on output: achieved (relative) 2-norm or maximum norm of residual
+
+  character (len=3), intent(in) :: typestop
+  !       Determine stopping criterion (||.|| denotes the 2-norm):
+  !       typestop='rel'    -- relative stopping crit.: ||res|| <= tol*||res0||
+  !       typestop='abs'    -- absolute stopping crit.: ||res|| <= tol
+  !       typestop='max'    -- maximum  stopping crit.: max(abs(res)) <= tol
+
+  integer, intent(out)   :: info
+  !       Gives reason for returning:
+  !     abs(info)=  0 - solution found satisfying given tolerance.
+  !                 1 - iteration aborted due to division by very small value.
+  !                 2 - no convergence within maximum number of iterations.
+  !                 3 - initial guess satisfies the stopping criterion.
+  !    sign(info)=  + - residual decreased
+  !                 - - residual did not reduce
+
+  ! Local variables
+
+  integer ::itr,matv
+  real :: rho,rhonew,res,res0,bet,alf,assumedzero
+
+  logical :: oktest, oktest_me
+
+  ! external Functions:
+
+  real :: maxval_abs_BLK
+
+  !---------------------------------------------------------------------------
+
+  call set_oktest('proj_cg',oktest, oktest_me)
+
+  if(oktest_me)write(*,*)'Proj_CG: tol, iter=',tol,iter
+
+  !Debug
+  !call show_BLK('rhs',rhs)
+
+  assumedzero=1.E-16; itr=0; matv=0
+  call set_BLK(qx,0.0)
+
+  if (typestop/='rel'.and.typestop/='abs'.and.typestop/='max') &
+       call stop_mpi('Error in CG: typestop='//typestop// &
+       ' should be one of rel/abs/max.')
+
+  if(oktest_me) write(*,*)'n gives the number of CG-iterations.'
+
+  ! rho=||rhs||
+  rho=sqrt(dot_product_BLK(rhs,rhs))
+
+  res0=rho
+  if (typestop=='max') res0=maxval_abs_BLK(nProc,rhs)
+  !DEBUG
+  !write(*,*)'res0:',res0,' rhs:',rhs
+
+  res=res0
+
+  assumedzero = assumedzero*res0
+
+  if (oktest_me) then
+     if (typestop=='max') then
+        write(*,*)'n:',itr,' Maximum norm initial residual:',res0
+     else
+        write(*,*)'n:',itr,' 2-norm initial residual:',res0
+     end IF
+  end if
+
+  if (res0<divbmin .or. (typestop/='rel'.and.res0<=tol)) then
+     info = 3
+  else
+     ! Initialize rho and tmp1_BLK=Z
+     rho=rho*rho
+     call eq_BLK(tmp1_BLK,rhs)
+
+     ! Do iteration
+     do
+        ! AZ=A.Z
+        call proj_matvec(tmp1_BLK,tmp2_BLK)
+        matv=matv+1
+
+        !Debug
+        !write(*,*)'Z =tmp1_BLK=',tmp1_BLK(:,:,:,1:2)
+        !write(*,*)'AZ=tmp2_BLK=',tmp2_BLK(:,:,:,1:2)
+        !call stop_mpi('Debug')
+
+        ! alf=A.AZ
+        alf=dot_product_BLK(tmp1_BLK,tmp2_BLK)
+
+        if(oktest_me)write(*,*)'alf=',alf
+        !Debug
+        !call show_BLK('Z',tmp1_BLK)
+        !call show_BLK('AZ',tmp2_BLK)
+        !call stop_mpi('Debug')
+        if (abs(alf)<=assumedzero**2) then
+           info = 1
+           exit
+        end if
+        alf=rho/alf
+        if(oktest_me)write(*,*)'alf=',alf
+
+        call add_times_BLK(qx,alf,tmp1_BLK)
+        call add_times_BLK(rhs,-alf,tmp2_BLK)
+
+        ! rhonew=||rhs||
+        rhonew=sqrt(dot_product_BLK(rhs,rhs))
+        if(oktest_me)write(*,*)'rhonew=',rhonew
+
+        select case(typestop)
+        case('max')
+           res=maxval_abs_BLK(nProc,rhs)
+
+        case('rel')
+           res=rhonew/res0
+
+        case('abs')
+           res=rhonew
+        end select
+        rhonew=rhonew*rhonew
+
+        itr=itr+1
+        if (oktest_me) &
+             write(*,*)'n:',itr,' ',typestop,'. norm of residual:',res
+
+        if (res<=tol) then
+           info = 0
+           exit
+        end if
+        if (itr>=iter) then
+           info = 2
+           exit
+        end if
+        if (rho<=assumedzero**2) then
+           info = 1
+           exit
+        end if
+
+        bet=rhonew/rho
+        if(oktest_me)write(*,*)'bet=',bet
+
+        call eq_plus_times_BLK(tmp1_BLK,rhs,bet,tmp1_BLK)
+
+        if (oktest_me) write(*,*)'alf,bet,rho,rhonew:',alf,bet,rho,rhonew
+        rho=rhonew
+     end do
+  end if
+
+  ! return number of iterations and achieved residual
+  iter=itr
+  tol =res
+  if((typestop=='rel'.and.res>1.0).or.(typestop/='rel'.and.res>res0))info=-info
+
+  ! report results
+  if(oktest_me)then
+     write(*,*)'Total Number of CG-iterations:',itr
+     write(*,*)'Number of matrix-vector mult.:',matv
+     select case(abs(info))
+     case(0)
+        write(*,*)'Successful iteration, norm of res. is:',tol
+     case(1)
+        write(*,*)'Iteration aborted due to division by a'
+        write(*,*)'very small value.' 
+     case(2)
+        write(*,*)'Stopping crit. not fulfilled within given'
+        write(*,*)'maximum number of iterations.'
+     case(3)
+        write(*,*)'Initial guess for the solution satisfies'
+        write(*,*)'given stopping criterion.' 
+     case default
+        write(*,*)'Impossible value for info:',info
+     end select
+     if(info<0)write(*,*)'The residual did not reduce'
+  endif
+
+end subroutine proj_cg
+
+! Simple BiCGstab(\ell=1) iterative method
+! Modified by G.Toth from the \ell<=2 version written
+! by M.A.Botchev, Jan.'98. 
+! Further modified for the BATS-R-US code (2000) by G. Toth
+!
+! This is the "vanilla" version of BiCGstab(\ell) as described
+! in PhD thesis of D.R.Fokkema, Chapter 3.  It includes two enhancements 
+! to BiCGstab(\ell) proposed by G.Sleijpen and H.van der Vorst in
+! 1) G.Sleijpen and H.van der Vorst "Maintaining convergence 
+!    properties of BiCGstab methods in finite precision arithmetic",
+!    Numerical Algorithms, 10, 1995, pp.203-223
+! 2) G.Sleijpen and H.van der Vorst "Reliable updated residuals in
+!    hybrid BiCG methods", Computing, 56, 1996, 141-163
+!
+! {{ This code is based on:
+! subroutine bistbl v1.0 1995
+!
+! Copyright (c) 1995 by D.R. Fokkema.
+! Permission to copy all or part of this work is granted,
+! provided that the copies are not made or distributed
+! for resale, and that the copyright notice and this
+! notice are retained.  }}
+!
+! This subroutine determines the solution of A.QX=RHS, where
+! the matrix-vector multiplication with A is performed by
+! the subroutine 'proj_matvec'. For symmetric matrix use the more efficient
+! proj_cg algorithm!
+!
+subroutine proj_bicgstab(rhs,qx,iter,tol,typestop,info)
+  use ModProcMH
+  use ModMain, ONLY :nBLK
+  use ModAdvance, ONLY : tmp1_BLK,tmp2_BLK
+  use ModProject
+  implicit none
+
+  ! Arguments
+
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(inout) :: rhs
+  !        on input:  right-hand side vector.
+  !        on output: residual vector.
+
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(out):: qx
+  !       on output: solution vector.
+
+  integer, intent(inout) :: iter
+  !       on input:  maximum number of iterations to be performed.
+  !       on output: actual  number of iterations done.
+
+  real, intent(inout) :: tol
+  !       on input:  required (relative) 2-norm or maximum norm of residual
+  !       on output: achieved (relative) 2-norm or maximum norm of residual
+
+  character (len=3), intent(in) :: typestop
+  !      Determine stopping criterion (||.|| denotes the 2-norm):
+  !      typestop='rel'    -- relative stopping crit.: ||res|| <= tol*||res0||
+  !      typestop='abs'    -- absolute stopping crit.: ||res|| <= tol
+  !      typestop='max'    -- maximum  stopping crit.: max(abs(res)) <= tol
+
+  ! NOTE for typestop='rel' and 'abs': 
+  !            To save computational work, the value of 
+  !            residual norm used to check the convergence inside the main 
+  !            iterative loop is computed from 
+  !            projections, i.e. it can be smaller than the true residual norm
+  !            (it may happen when e.g. the 'matrix-free' approach is used).
+  !            Thus, it is possible that the true residual does NOT satisfy
+  !            the stopping criterion ('rel' or 'abs').
+  !            The true residual norm (or residual reduction) is reported on 
+  !            output in parameter TOL -- this can be changed to save 1 MATVEC
+  !            (see comments at the end of the subroutine)
+
+  integer, intent(out)   :: info
+  !       Gives reason for returning:
+  !     abs(info)=  0 - solution found satisfying given tolerance.
+  !                 1 - iteration aborted due to division by very small value.
+  !                 2 - no convergence within maximum number of iterations.
+  !                 3 - initial guess satisfies the stopping criterion.
+  !    sign(info)=  + - residual decreased
+  !                 - - residual did not reduce
+
+
+  ! Local parameters
+
+  integer, parameter :: qz_=1,zz_=3,y0_=5,yl_=6,qy_=7
+
+  ! Local variables (2 vectors are needed in addition to tmp1_BLK=r and tmp2_BLK=u:
+
+  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK):: &
+       bicg_r1, bicg_u1
+
+  real :: rwork(2,7)
+
+  logical GoOn, rcmp, xpdt
+  integer nmv
+  real alpha, beta, omega, rho0, rho1, sigma
+  real varrho, hatgamma
+  real assumedzero, rnrm0, rnrm, rnrmMax0, rnrmMax
+  real mxnrmx, mxnrmr, kappa0, kappal
+
+  logical :: oktest, oktest_me
+
+  ! External function:
+
+  real :: maxval_abs_BLK
+
+  !---------------------------------------------------------------------------
+  call set_oktest('proj_bicgstab',oktest, oktest_me)
+
+  if(oktest_me)write(*,*)'Proj_BiCGSTAB tol,iter:',tol,iter
+
+  info = 0
+
+  if (tol<=0.0) call stop_mpi('Error in Proj_BiCGSTAB: tolerance < 0')
+  if (iter<=1)  call stop_mpi('Error in Proj_BiCGSTAB: maxmatvec < 2')
+
+  !
+  !     --- Initialize first residual
+  !
+  assumedzero = 1.e-16
+  call eq_BLK(tmp1_BLK,rhs)
+  call set_BLK(qx,0.0)
+
+  nmv = 0
+  !
+  !     --- Initialize iteration loop
+  !
+
+  rnrm0 = sqrt( dot_product_BLK(tmp1_BLK,tmp1_BLK))
+
+  rnrm = rnrm0
+  if(oktest_me) print *,'initial rnrm:',rnrm
+
+  mxnrmx = rnrm0
+  mxnrmr = rnrm0
+  rcmp = .false.
+  xpdt = .false.
+
+  alpha = 0.0
+  omega = 1.0
+  sigma = 1.0
+  rho0 =  1.0
+  !
+  !     --- Iterate
+  !
+  select case(typestop)
+  case('rel')
+     GoOn = rnrm>tol*rnrm0 .and. nmv<iter
+     assumedzero = assumedzero*rnrm0
+     rnrmMax = 0
+     rnrmMax0 = 0
+
+  case('abs')
+     GoOn = rnrm>tol       .and. nmv<iter
+     assumedzero = assumedzero*rnrm0
+     rnrmMax = 0
+     rnrmMax0 = 0
+
+  case('max')
+     rnrmMax0 = maxval_abs_BLK(nProc,tmp1_BLK)
+     rnrmMax  = rnrmMax0
+     if(oktest_me) print *,'initial rnrmMax:',rnrmMax
+     GoOn = rnrmMax>tol    .and. nmv<iter
+     assumedzero = assumedzero*rnrmMax
+  case default
+     call stop_mpi('Error in Proj_BiCGSTAB: unknown typestop value')
+  end select
+
+  if (.not.GoOn) then
+     if(oktest_me) print *,'Proj_BiCGSTAB: nothing to do. info = ',info
+     iter = nmv
+     info = 3
+     return
+  end if
+
+  do while (GoOn)
+     !
+     !     =====================
+     !     --- The BiCG part ---
+     !     =====================
+     !
+     rho0 = -omega*rho0
+
+     rho1 = dot_product_BLK(rhs,tmp1_BLK)
+
+     if (abs(rho0)<assumedzero**2) then
+        info = 1
+        return
+     endif
+     beta = alpha*(rho1/rho0)
+     rho0 = rho1
+     call eq_plus_times_BLK(tmp2_BLK,tmp1_BLK,-beta,tmp2_BLK)
+
+     call proj_matvec(tmp2_BLK,bicg_u1)
+     nmv = nmv+1
+
+     !DEBUG
+     !write(*,*)'u =',tmp2_BLK(1:nI,1:nJ,1:nK,BLKtest)
+     !write(*,*)'u1=',bicg_u1(1:nI,1:nJ,1:nK,BLKtest)
+
+     sigma=dot_product_BLK(rhs,bicg_u1)
+
+     if (abs(sigma)<assumedzero**2) then
+        info = 1
+        return
+     endif
+
+     alpha = rho1/sigma
+     call add_times_BLK(qx,alpha,tmp2_BLK)
+
+     call add_times_BLK(tmp1_BLK,-alpha,bicg_u1)
+
+     call proj_matvec(tmp1_BLK,bicg_r1)
+     nmv = nmv+1
+
+     rnrm = sqrt( dot_product_BLK(tmp1_BLK,tmp1_BLK) )
+
+     mxnrmx = max (mxnrmx, rnrm)
+     mxnrmr = max (mxnrmr, rnrm)
+
+     !DEBUG
+     !write(*,*)'rho0, rho1, beta, sigma, alpha, rnrm:',&
+     !     rho0, rho1, beta, sigma, alpha, rnrm
+
+     !
+     !  ==================================
+     !  --- The convex polynomial part ---
+     !  ================================== 
+     !
+     !    --- Z = R'R a 2 by 2 matrix
+     ! i=1,j=0
+     rwork(1,1) = dot_product_BLK(tmp1_BLK,tmp1_BLK)
+
+     ! i=1,j=1
+     rwork(2,1) = dot_product_BLK(bicg_r1,tmp1_BLK)
+     rwork(1,2) = rwork(2,1) 
+
+     ! i=2,j=1
+     rwork(2,2) = dot_product_BLK(bicg_r1,bicg_r1)
+
+     !
+     !   --- tilde r0 and tilde rl (small vectors)
+     !
+     rwork(1:2,zz_:zz_+1)   = rwork(1:2,qz_:qz_+1)
+     rwork(1,y0_) = -1.0
+     rwork(2,y0_) = 0.0
+
+     rwork(1,yl_) = 0.0
+     rwork(2,yl_) = -1.0
+     !
+     !   --- Convex combination
+     !
+     rwork(1:2,qy_) = rwork(1,yl_)*rwork(1:2,qz_) + &
+          rwork(2,yl_)*rwork(1:2,qz_+1)
+
+     kappal = sqrt( sum( rwork(1:2,yl_)*rwork(1:2,qy_) ) )
+
+     rwork(1:2,qy_) = rwork(1,y0_)*rwork(1:2,qz_) + &
+          rwork(2,y0_)*rwork(1:2,qz_+1)
+
+     kappa0 = sqrt( sum( rwork(1:2,y0_)*rwork(1:2,qy_) ) )
+
+     varrho = sum( rwork(1:2,yl_)*rwork(1:2,qy_) )  
+     varrho = varrho / (kappa0*kappal)
+
+     hatgamma = sign(1.0,varrho)*max(abs(varrho),0.7) * (kappa0/kappal)
+
+     rwork(1:2,y0_) = -hatgamma*rwork(1:2,yl_) + rwork(1:2,y0_)
+
+     !
+     !    --- Update
+     !
+     omega = rwork(2,y0_)
+
+     call add_times_BLK(tmp2_BLK,-omega,bicg_u1)
+
+     call add_times_BLK(qx,omega,tmp1_BLK)
+
+     call add_times_BLK(tmp1_BLK,-omega,bicg_r1)
+
+     rwork(1:2,qy_) = rwork(1,y0_)*rwork(1:2,qz_) + &
+          rwork(2,y0_)*rwork(1:2,qz_+1)
+
+     rnrm = sqrt( sum( rwork(1:2,y0_)*rwork(1:2,qy_) ) )
+
+     select case(typestop)
+     case('rel')
+        GoOn = rnrm>tol*rnrm0 .and. nmv<iter
+        if(oktest_me) print *, nmv,' matvecs, ', ' ||rn||/||r0|| =',rnrm/rnrm0
+
+     case('abs')
+        GoOn = rnrm>tol       .and. nmv<iter
+        if(oktest_me) print *, nmv,' matvecs, ||rn|| =',rnrm
+
+     case('max')
+        rnrmMax = maxval_abs_BLK(nProc,tmp1_BLK)
+        GoOn = rnrmMax>tol    .and. nmv<iter
+        if(oktest_me) print *, nmv,' matvecs, max(rn) =',rnrmMax
+     end select
+
+  end do
+  !
+  !     =========================
+  !     --- End of iterations ---
+  !     =========================
+
+  select case(typestop)
+  case('rel')
+     if (rnrm>tol*rnrm0) info = 2
+     tol = rnrm/rnrm0
+
+  case('abs')
+     if (rnrm>tol) info = 2
+     tol = rnrm
+
+  case('max')
+     if (rnrmMax>tol) info = 2
+     tol = rnrmMax
+  end select
+
+  if((typestop/='max'.and.rnrm>rnrm0).or.(typestop=='max'.and.rnrmMax&
+       >rnrmMax0)) info=-info
+
+  iter = nmv
+
+end subroutine proj_bicgstab
