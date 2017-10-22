@@ -49,9 +49,7 @@ subroutine write_plot_radiowave(iFile)
   integer :: i, iFreq, iPixel, jPixel
   real :: XPixel, XPixelSize, YPixel, YPixelSize, nRay
   real :: XLower, YLower, XUpper, YUpper
-  real :: ImagePlaneDiagRadius, RadiusCr, DensityCr
-  real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
-  real, parameter :: DensityAtSolarSurface = 3.3452e-16 ! g/cm^3
+  real :: ImagePlaneDiagRadius
   character (LEN=120) :: allnames, StringHeadLine, strFreq
   character (LEN=500) :: unitstr_TEC, unitstr_IDL
   character (LEN=4) :: file_extension
@@ -168,20 +166,13 @@ subroutine write_plot_radiowave(iFile)
   do iFreq = 1, nFreq
      ! Calculate approximate radius of the  critical surface around the sun
      ! from the frequency
-     DensityCr = cPi*cProtonMass*cElectronMass*1e6* &
-          (RadioFrequency_I(iFreq)/ProtonChargeSGSe)**2
-     if (oktest_me) write(*,*) 'DensityCr = ', DensityCr
-     RadiusCr = sqrt(DensityAtSolarSurface/DensityCr)
-     if (oktest_me) write(*,*) 'RadiusCritical = ', RadiusCr
      ImagePlaneDiagRadius = sqrt(HalfImageRangeX**2 + HalfImageRangeY**2)
-     rIntegration = ceiling(max(ImagePlaneDiagRadius+1.0, RadiusCr+1.0, 5.0))
+     rIntegration = ceiling(max(ImagePlaneDiagRadius+1.0, 5.0))
 
      if (oktest_me) write(*,*) 'rIntegration = ', rIntegration
 
      if (iProc .eq. 0) write(*,*) 'RAYTRACE START: RadioFrequency = ', &
           RadioFrequency_I(iFreq)
-     if (iProc .eq. 0) write(*,*) 'RAYTRACE START: DensityCr = ', DensityCr
-     if (iProc .eq. 0) write(*,*) 'RAYTRACE START: RadiusCr = ', RadiusCr
      if (iProc .eq. 0) write(*,*) 'RAYTRACE START: ImagePlaneDiagRadius = ', &
           ImagePlaneDiagRadius 
      if (iProc .eq. 0) write(*,*) 'RAYTRACE START: rIntegration = ', &
@@ -192,16 +183,6 @@ subroutine write_plot_radiowave(iFile)
           nXPixel, nYPixel, Intensity_III(:,:,iFreq))
 
      if (iProc .eq. 0) write(*,*) 'RAYTRACE END'
-     !if (iProc .eq. 0) then
-     !   do iPixel = 1, nXPixel
-     !      XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
-     !      do jPixel = 1, nYPixel
-     !         YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
-     !         write(*,fmt="(30(E14.6))") XPixel, YPixel, &
-     !              Intensity_III(jPixel,iPixel,1:nFreq)
-     !      end do
-     !   end do
-     !end if
   end do
 
   if (DoTiming) call timing_stop('rfr_raytrace_loop')
