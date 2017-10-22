@@ -72,7 +72,6 @@ OBJECTS = \
 	ModPlotBox.o \
 	ModPointImplicit.o \
 	ModProcMH.o \
-	ModProject.o \
 	ModRadDiffusion.o \
 	ModRadiativeCooling.o \
 	ModRaytrace.o \
@@ -91,34 +90,26 @@ OBJECTS = \
 	ModViscosity.o \
 	ModWaves.o \
 	ModWriteTecplot.o \
-	BATS_methods.o \
-	MH_set_parameters.o \
-	advect_points.o \
-	clean_divb.o \
-	constrain_B.o \
-	explicit.o \
-	fix_axis_cells.o \
-	get_im_pressure.o \
-	library.o \
-	project_B.o \
-	proj_bicgstab.o \
-	proj_cg.o \
-	ray_trace.o \
-	ray_trace_new.o \
-	ray_pass.o \
-	rotate.o \
-	set_ICs.o \
-	update_states.o \
-	update_states_MHD.o \
-	user_interface.o \
-	write_logfile.o \
-	write_plot_common.o \
-	write_plot_idl.o \
-	write_plot_tec.o \
-	write_plot_los.o \
-	write_plot_particle.o \
-	write_plot_radiowave.o \
-	write_progress.o
+	ModBatsrusMethods.o \
+	ModSetParameters.o \
+	ModAdvectPoints.o \
+	ModCleanDivB.o \
+	ModConstrainDivB.o \
+	ModAdvanceExplicit.o \
+	ModFixAxisCells.o \
+	ModImCoupling.o \
+	ModBatsrusUtility.o \
+	ModProjectDivB.o \
+	ModFieldTrace.o \
+	ModSetInitialCondition.o \
+	ModUpdateState.o \
+	ModWriteLogSatFile.o \
+	ModWritePlot.o \
+	ModWritePlotIdl.o \
+	ModWritePlotLos.o \
+	ModWritePlotRadioWave.o \
+	ModWriteProgress.o \
+	user_interface.o
 
 # Default user module
 ModUser.f90:
