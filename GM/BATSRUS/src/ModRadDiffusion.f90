@@ -424,8 +424,8 @@ contains
     use BATL_lib,    ONLY: message_pass_cell, IsCartesian, IsRzGeometry, &
          CellSize_DB, CellFace_DFB, CellVolume_B
     use BATL_size,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModAdvance,  ONLY: State_VGB, UseElectronPressure, nWave, WaveFirst_, &
-         WaveLast_, Source_VCB
+    use ModAdvance,  ONLY: State_VGB, StateOld_VGB, UseElectronPressure, &
+         nWave, WaveFirst_, WaveLast_, Source_VCB
     use ModConst,    ONLY: cBoltzmann
     use ModImplicit, ONLY: &
          nVarSemiAll, nBlockSemi, iBlockFromSemi_B, &

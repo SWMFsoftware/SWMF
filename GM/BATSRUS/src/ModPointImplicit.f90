@@ -125,7 +125,7 @@ contains
     use ModMain,    ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
-    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VCB, Source_VC, Time_Blk, &
+    use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
          DoReplaceDensity, UseSingleIonVelocity, UseSingleIonTemperature, &
          UseMultiSpecies
     use ModMultiFluid, ONLY: UseMultiIon, iRho_I, nFluid
@@ -259,7 +259,7 @@ contains
     ! (this is a steady state preserving scheme).
     do k=1,nK; do j=1,nJ; do i=1,nI; do iIVar = 1,nVarPointImpl
        iVar = iVarPointImpl_I(iIvar)
-       State_VGB(iVar,i,j,k,iBlock) = StateOld_VCB(iVar,i,j,k,iBlock)
+       State_VGB(iVar,i,j,k,iBlock) = StateOld_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
 
     ! Calculate unperturbed source for right hand side 
@@ -378,7 +378,7 @@ contains
        ! The right hand side is Uexpl - Uold + Sold
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           Rhs_I(iIVar) = StateExpl_VC(iVar,i,j,k) &
-               - StateOld_VCB(iVar,i,j,k,iBlock) &
+               - StateOld_VGB(iVar,i,j,k,iBlock) &
                + DtCell * Source_VC(iVar,i,j,k)
        end do
 
@@ -397,12 +397,12 @@ contains
        if (DoTestCell) then
           write(*,*) NameSub,' DtCell  =', DtCell
           write(*,*) NameSub,&
-               ' StateExpl_VC, StateOld_VCB, Source_VC, initial Rhs_I      ='
+               ' StateExpl_VC, StateOld_VGB, Source_VC, initial Rhs_I      ='
           do iIVar = 1, nVarPointImpl
              iVar = iVarPointImpl_I(iIVar)
              write(*,'(a,100es15.6)') NameVar_V(iVar),                    &
              StateExpl_VC(iVar,iTest,jTest,kTest),                        &
-                  StateOld_VCB(iVar,iTest,jTest,kTest,BlkTest),           &
+                  StateOld_VGB(iVar,iTest,jTest,kTest,BlkTest),           &
                   Source_VC(iVar,iTest,jTest,kTest),                      &
                   Rhs_I(iIvar)
           end do
@@ -431,7 +431,7 @@ contains
        ! Update: U^n+1 = U^n + dU
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           State_VGB(iVar,i,j,k,iBlock) =&
-               StateOld_VCB(iVar,i,j,k,iBlock) + Rhs_I(iIVar)
+               StateOld_VGB(iVar,i,j,k,iBlock) + Rhs_I(iIVar)
        end do
 
        ! Set minimum density.                                          
@@ -472,7 +472,7 @@ contains
        do iIVar = 1, nVarPointImpl
           iVar = iVarPointImpl_I(iIVar)
           write(*,'(a,3es15.6, f9.3)') NameVar_V(iVar),           &
-               StateOld_VCB(iVar,iTest,jTest,kTest,iBlock), &
+               StateOld_VGB(iVar,iTest,jTest,kTest,iBlock), &
                StateExpl_VC(iVar,iTest,jTest,kTest),        &
                State_VGB(iVar,iTest,jTest,kTest,iBlock)
        end do

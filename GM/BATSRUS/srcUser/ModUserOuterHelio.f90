@@ -816,7 +816,7 @@ contains
 
   subroutine user_update_states(iBlock)
 
-    use ModAdvance, ONLY: StateOld_VCB, State_VGB, EnergyOld_CBI, Energy_GBI
+    use ModAdvance, ONLY: StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
     use ModGeometry, ONLY: rMin_BLK
 
     integer,intent(in):: iBlock
@@ -830,7 +830,7 @@ contains
 
        ! Set neutrals back to previous state
        do k=1, nK; do j=1, nJ; do i=1, nI
-          State_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) = StateOld_VCB(NeuRho_:Ne4P_,i,j,k,iBlock) 
+          State_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) = StateOld_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) 
           Energy_GBI(i,j,k,iBlock,2:) = EnergyOld_CBI(i,j,k,iBlock,2:)
        end do; end do; end do
        
@@ -848,7 +848,7 @@ contains
           call calc_time_dep_sw(i,j,k,iBlock)
        else
           ! Retain initial condition if time dependent solar wind is not used
-          State_VGB(Rho_:p_,i,j,k,iBlock) = StateOld_VCB(Rho_:p_,i,j,k,iBlock) 
+          State_VGB(Rho_:p_,i,j,k,iBlock) = StateOld_VGB(Rho_:p_,i,j,k,iBlock) 
           Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1)
        endif
 

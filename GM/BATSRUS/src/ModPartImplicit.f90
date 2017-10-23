@@ -366,7 +366,7 @@ contains
          test_string, iTest, jTest, kTest, ProcTest, VarTest
     use ModVarIndexes, ONLY: Rho_
     use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
-    use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
+    use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
     use ModCoarseAxis,ONLY:UseCoarseAxis, coarsen_axis_cells
@@ -546,7 +546,7 @@ contains
          n_prev,dt_prev,ImplCoeff
 
     if(.not.UseBDF2)then
-       ! Save the current state into ImplOld_VCB so that StateOld_VCB 
+       ! Save the current state into ImplOld_VCB so that StateOld_VGB 
        ! can be restored. 
        ! The implicit blocks haven't been updated, so save current state
        do iBlockImpl = 1, nBlockImpl
@@ -563,7 +563,7 @@ contains
        n_prev  = n_step
        dt_prev = dt
 
-       ! Save the current state into ImplOld_VCB so that StateOld_VCB 
+       ! Save the current state into ImplOld_VCB so that StateOld_VGB 
        ! can be restored. 
        ! The implicit blocks haven't been updated, so save current state
        do iBlockImpl=1,nBlockImpl
@@ -691,14 +691,14 @@ contains
     ! Restore StateOld and EnergyOld in the implicit blocks
     do iBlockImpl=1,nBlockImpl
        iBlock=iBlockFromImpl_B(iBlockImpl)
-       StateOld_VCB(:,:,:,:,iBlock) = ImplOld_VCB(:,:,:,:,iBlock)
+       StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock) = ImplOld_VCB(:,:,:,:,iBlock)
 
        if(UseImplicitEnergy) then
           do iFluid = 1, nFluid
              call select_fluid
              EnergyOld_CBI(:,:,:,iBlock,iFluid) = ImplOld_VCB(iP,:,:,:,iBlock)
           end do
-          call calc_old_pressure(iBlock) ! restore StateOld_VCB(P_...)
+          call calc_old_pressure(iBlock) ! restore StateOld_VGB(P_...)
        else
           call calc_old_energy(iBlock) ! restore EnergyOld_CBI
        end if
@@ -712,9 +712,9 @@ contains
           ! Check p and rho
           tmp1_BLK(1:nI,1:nJ,1:nK,iBlock)=&
                min(State_VGB(P_,1:nI,1:nJ,1:nK,iBlock) / &
-               StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock), &
+               StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock), &
                State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) / &
-               StateOld_VCB(Rho_,1:nI,1:nJ,1:nK,iBlock) )
+               StateOld_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) )
        end do
 
        if(index(Test_String, 'updatecheck') > 0)then
@@ -723,7 +723,7 @@ contains
              i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
              write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
              write(*,*) 'x,y,z =', Xyz_DGB(:,i,j,k,iBlock)
-             write(*,*) 'RhoOld,pOld=', StateOld_VCB((/Rho_,P_/),i,j,k,iBlock)
+             write(*,*) 'RhoOld,pOld=', StateOld_VGB((/Rho_,P_/),i,j,k,iBlock)
              write(*,*) 'RhoNew,pNew=', State_VGB((/Rho_,P_/),i,j,k,iBlock)
              write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
           end if
@@ -739,7 +739,8 @@ contains
           ! Reset the state variable, the energy and set time_BLK variable to 0
           do iBlock = 1,nBlock
              if(Unused_B(iBlock)) CYCLE
-             State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = StateOld_VCB(:,:,:,:,iBlock)
+             State_VGB(:,1:nI,1:nJ,1:nK,iBlock) &
+                  = StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock)
              Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)= EnergyOld_CBI(:,:,:,iBlock,:)
              time_BLK(1:nI,1:nJ,1:nK,iBlock)    = 0.0
           end do

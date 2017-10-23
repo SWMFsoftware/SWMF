@@ -18,7 +18,7 @@ module ModPartSteady
   use ModParallel,   ONLY: NOBLK, NeiLev, NeiPe, NeiBlk
   use ModAdvance,    ONLY: iTypeAdvance_B, iTypeAdvance_BP, &
        SkippedBlock_, SteadyBlock_, SteadyBoundBlock_, ExplBlock_, &
-       State_VGB, StateOld_VCB
+       State_VGB, StateOld_VGB
   use BATL_lib,      ONLY: Unused_B, Unused_BP
 
   use ModMpi
@@ -112,7 +112,7 @@ contains
              ! Normalize maximum change to relative and absolute limits
              dState_V(iVar) = max(dState_V(iVar), &
                   + abs(State_VGB(iVar,i,j,k,iBlock) &
-                  -     StateOld_VCB(iVar,i,j,k,iBlock)) &
+                  -     StateOld_VGB(iVar,i,j,k,iBlock)) &
                   / (RelativeEps_V(iVar) * abs(State_VGB(iVar,i,j,k,iBlock)) &
                   +  AbsoluteEps_V(iVar)))
           end do

@@ -529,7 +529,7 @@ contains
          DtFixed, DtFixedOrig, UseDtFixed, Time_Simulation, &
          DtLimit, DtLimitOrig, UseDtLimit, UseLocalTimeStep
     use ModAdvance,  ONLY: Rho_, p_, &
-         State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI, time_BLK
+         State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI, time_BLK
     use ModPhysics,  ONLY: No2Si_V, UnitT_
     use ModGeometry, ONLY: true_cell
     use ModProcMH,   ONLY: nProc, iComm
@@ -559,7 +559,7 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(true_cell(i,j,k,iBlock))then
              VarRatio_I = State_VGB(iVarControl_I,i,j,k,iBlock) &
-                  /    StateOld_VCB(iVarControl_I,i,j,k,iBlock)
+                  /    StateOld_VGB(iVarControl_I,i,j,k,iBlock)
              RelativeChangeMin = min(RelativeChangeMin, minval(VarRatio_I))
              RelativeChangeMax = max(RelativeChangeMax, maxval(VarRatio_I))
           end if
@@ -587,7 +587,8 @@ contains
        ! Reset the state variable, the energy and set time_BLK variable to 0
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          State_VGB(:,1:nI,1:nJ,1:nK,iBlock)  = StateOld_VCB(:,:,:,:,iBlock)
+          State_VGB(:,1:nI,1:nJ,1:nK,iBlock)  &
+               = StateOld_VGB(:,1:nI,1:nJ,1:nK,iBlock)
           Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:) = EnergyOld_CBI(:,:,:,iBlock,:)
           time_BLK(1:nI,1:nJ,1:nK,iBlock)     = 0.0
        end do

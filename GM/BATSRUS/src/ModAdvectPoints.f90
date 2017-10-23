@@ -164,7 +164,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
   use ModProcMH, ONLY: iProc
   use ModVarIndexes, ONLY: nVar
   use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B, BlkTest, ProcTest
-  use ModAdvance, ONLY: State_VGB, StateOld_VCB
+  use ModAdvance, ONLY: State_VGB, StateOld_VGB
   use ModParallel, ONLY: NeiLev
   use ModGeometry, ONLY: XyzStart_BLK
   use ModCurrent, ONLY: get_current
@@ -333,7 +333,7 @@ subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
                  if(WeightOldState > 0.0) &
                       StateCurrent_V(1:nState) = StateCurrent_V(1:nState) + &
                       WeightXyz * WeightOldState * &
-                      StateOld_VCB(iVarMin:iStateMax,i,j,k,iBlock)
+                      StateOld_VGB(iVarMin:iStateMax,i,j,k,iBlock)
 
                  ! Add contibutions from the current state if required
                  if(WeightOldState < 1.0) &
@@ -365,7 +365,7 @@ subroutine advect_test
 
   use ModProcMH,   ONLY: iProc
   use ModMain,     ONLY: nI, nJ, nK, nBlock, Dt
-  use ModAdvance,  ONLY: StateOld_VCB, State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_
+  use ModAdvance,  ONLY: StateOld_VGB, State_VGB, Rho_, RhoUx_, RhoUy_, RhoUz_
   use ModGeometry, ONLY: x2
   use BATL_lib,    ONLY: Xyz_DGB, x_, z_
   use ModNumConst, ONLY: cTwoPi
@@ -413,7 +413,7 @@ subroutine advect_test
 
      call timing_step(iStep)
 
-     StateOld_VCB(Rho_:RhoUz_,:,:,:,1:nBlock) = &
+     StateOld_VGB(Rho_:RhoUz_,1:nI,1:nJ,1:nK,1:nBlock) = &
           State_VGB(Rho_:RhoUz_,1:nI,1:nJ,1:nK,1:nBlock)
 
      State_VGB(RhoUx_,:,:,:,1:nBlock) = -(Xyz_DGB(z_,:,:,:,1:nBlock) - Time*Uz)

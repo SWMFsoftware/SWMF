@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 subroutine update_states(iBlock)
@@ -59,6 +59,12 @@ subroutine update_states(iBlock)
           /CellVolume_GB(iTest,jTest,kTest,BlkTest)
   end if
 
+  ! Note must copy state to old state only if iStage is 1.
+  if(iStage==1) then
+     StateOld_VGB(:,:,:,:,iBlock) = State_VGB(:,:,:,:,iBlock)
+     EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
+  end if
+
   if(UseUserUpdateStates)then
      call user_update_states(iBlock)
   else
@@ -69,28 +75,28 @@ subroutine update_states(iBlock)
      call update_heatflux_collisionless(iBlock)
      if(UseBufferGrid) call fix_buffer_grid(iBlock)
   end if
-  if(index(test_string,'fixrho ')>0) &
-       State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(Rho_,:,:,:,iBlock)
-
+  if(index(test_string,'fixrho ')>0)   State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock) &
+       =                            StateOld_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixrho ')>0)   State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)&
-       =                            StateOld_VCB(Rho_,:,:,:,iBlock)
+       =                            StateOld_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixrhoux ')>0) State_VGB(RhoUx_,1:nI,1:nJ,1:nK,iBlock)&
-       =                            StateOld_VCB(RhoUx_,:,:,:,iBlock)
+       =                            StateOld_VGB(RhoUx_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixrhouy ')>0) State_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)&
-       =                            StateOld_VCB(RhoUy_,:,:,:,iBlock)
+       =                            StateOld_VGB(RhoUy_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixrhouz ')>0) State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)&
-       =                            StateOld_VCB(RhoUz_,:,:,:,iBlock)
+       =                            StateOld_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixbx ')>0)    State_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)&
-       =                            StateOld_VCB(Bx_,:,:,:,iBlock)
+       =                            StateOld_VGB(Bx_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixby ')>0)    State_VGB(By_,1:nI,1:nJ,1:nK,iBlock)&
-       =                            StateOld_VCB(By_,:,:,:,iBlock)
+       =                            StateOld_VGB(By_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixbz ')>0)    State_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)&
-       =                            StateOld_VCB(Bz_,:,:,:,iBlock)
+       =                            StateOld_VGB(Bz_,1:nI,1:nJ,1:nK,iBlock)
   if(index(test_string,'fixe ')>0 .or. index(test_string,'fixp ')>0) then
      Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)=EnergyOld_CBI(:,:,:,iBlock,:)
      do iFluid=1, nFluid
         call select_fluid
-        State_VGB(iP,1:nI,1:nJ,1:nK,iBlock)=StateOld_VCB(iP,:,:,:,iBlock)
+        State_VGB(iP,1:nI,1:nJ,1:nK,iBlock) &
+             = StateOld_VGB(iP,1:nI,1:nJ,1:nK,iBlock)
      end do
   endif
 
@@ -101,7 +107,7 @@ subroutine update_states(iBlock)
              abs(Xyz_DGB(y_,i,j,k,iBlock)-Ytest)+ &
              abs(Xyz_DGB(z_,i,j,k,iBlock)-Ztest) < 1.1 ) CYCLE
 
-        State_VGB(:,i,j,k,iBlock)  = StateOld_VCB(:,i,j,k,iBlock)
+        State_VGB(:,i,j,k,iBlock)  = StateOld_VGB(:,i,j,k,iBlock)
         Energy_GBI(i,j,k,iBlock,:) = EnergyOld_CBI(i,j,k,iBlock,:)
      end do; end do; end do
   end if
@@ -234,33 +240,33 @@ subroutine update_check
                     ! Do not check minor species if not necessary
                     if(UseMultiSpecies .and. &
                          iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
-                         .and. StateOld_VCB(iVar,i,j,k,iBlock) &
+                         .and. StateOld_VGB(iVar,i,j,k,iBlock) &
                          < SpeciesPercentCheck*0.01*&
-                         StateOld_VCB(Rho_,i,j,k,iBlock)) CYCLE
+                         StateOld_VGB(Rho_,i,j,k,iBlock)) CYCLE
 
                     percent_chg_rho(1) = &
                          max(percent_chg_rho(1), 100*abs( min(0.,&
                          (State_VGB(iVar,i,j,k,iBlock)- &
-                         StateOld_VCB(iVar,i,j,k,iBlock)) &
-                         /StateOld_VCB(iVar,i,j,k,iBlock) ) ) )
+                         StateOld_VGB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
                     percent_chg_rho(2) = &
                          max(percent_chg_rho(2), 100*abs( max(0.,&
                          (State_VGB(iVar,i,j,k,iBlock)- &
-                         StateOld_VCB(iVar,i,j,k,iBlock)) &
-                         /StateOld_VCB(iVar,i,j,k,iBlock) ) ) )
+                         StateOld_VGB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
                  end do
               end do; end do; end do
            end if
            percent_chg_p(1) = &
                 max(percent_chg_p(1), 100. * abs( min( 0., minval( &
                 (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)- &
-                StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock)) &
-                /StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
+                StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock)) &
+                /StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
            percent_chg_p(2) = &
                 max(percent_chg_p(2), 100. * abs( max( 0., maxval( &
                 (State_VGB(P_,1:nI,1:nJ,1:nK,iBlock)- &
-                StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock)) &
-                /StateOld_VCB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
+                StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock)) &
+                /StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
         end do
         if(oktest)then
            ! Find location of maximum change
@@ -277,16 +283,16 @@ subroutine update_check
 
                     if(UseMultiSpecies .and. &
                          iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
-                         .and. StateOld_VCB(iVar,i,j,k,iBlock) &
+                         .and. StateOld_VGB(iVar,i,j,k,iBlock) &
                          < SpeciesPercentCheck*0.01*&
-                         StateOld_VCB(Rho_,i,j,k,iBlock)) CYCLE
+                         StateOld_VGB(Rho_,i,j,k,iBlock)) CYCLE
                     
                     if(iVar == p_)then
                        if(pChangeMax_I(1) > percent_max_p(1) .and. &
                             1e-4 > abs(pChangeMax_I(1) - 100. * abs( &
                             (   State_VGB(P_,i,j,k,iBlock)- &
-                            StateOld_VCB (P_,i,j,k,iBlock)) &
-                            /StateOld_VCB(P_,i,j,k,iBlock) ))) &
+                            StateOld_VGB (P_,i,j,k,iBlock)) &
+                            /StateOld_VGB(P_,i,j,k,iBlock) ))) &
                             write(*,format)NameSub//' nStep=',n_step,&
                             ' max p drop=',pChangeMax_I(1),&
                             '% at x,y,z=',&
@@ -296,8 +302,8 @@ subroutine update_check
                        if(pChangeMax_I(2) > percent_max_p(2) .and. &
                             1e-4 > abs(pChangeMax_I(2) - 100. * abs( &
                             (   State_VGB(P_,i,j,k,iBlock)- &
-                            StateOld_VCB (P_,i,j,k,iBlock)) &
-                            /StateOld_VCB(P_,i,j,k,iBlock)  ))) &
+                            StateOld_VGB (P_,i,j,k,iBlock)) &
+                            /StateOld_VGB(P_,i,j,k,iBlock)  ))) &
                             write(*,format)NameSub//' nStep=',n_step,&
                             ' max p increase=',&
                             pChangeMax_I(2), &
@@ -310,8 +316,8 @@ subroutine update_check
                     if(RhoChangeMax_I(1) > percent_max_rho(1) .and. &
                          1e-4 > abs(RhoChangeMax_I(1) - 100*abs( &
                          (State_VGB(iVar,i,j,k,iBlock)- &
-                         StateOld_VCB(iVar,i,j,k,iBlock)) &
-                         /StateOld_VCB(iVar,i,j,k,iBlock) ))) &
+                         StateOld_VGB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VGB(iVar,i,j,k,iBlock) ))) &
                          write(*,format)NameSub//' nStep=',n_step,&
                          ' max '//trim(NameVar_V(iVar))//' drop=', &
                          RhoChangeMax_I(1), &
@@ -321,8 +327,8 @@ subroutine update_check
                     if(RhoChangeMax_I(2) > percent_max_rho(2) .and. &
                          1e-4 > abs(RhoChangeMax_I(2) - 100*abs( &
                          (State_VGB(iVar,i,j,k,iBlock)- &
-                         StateOld_VCB(iVar,i,j,k,iBlock)) &
-                         /StateOld_VCB(iVar,i,j,k,iBlock) ))) &
+                         StateOld_VGB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VGB(iVar,i,j,k,iBlock) ))) &
                          write(*,format)NameSub//' nStep=',n_step,&
                          ' max '//trim(NameVar_V(iVar))//' increase=',&
                          RhoChangeMax_I(2), &
@@ -408,31 +414,31 @@ subroutine update_check
 
                     if(UseMultiSpecies .and. &
                          iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_ &
-                         .and. StateOld_VCB(iVar,i,j,k,iBlock) < &
+                         .and. StateOld_VGB(iVar,i,j,k,iBlock) < &
                          SpeciesPercentCheck*0.01*&
-                         StateOld_VCB(Rho_,i,j,k,iBlock)) CYCLE
+                         StateOld_VGB(Rho_,i,j,k,iBlock)) CYCLE
 
                     percent_chg_rho(1) = max(percent_chg_rho(1), &
                          0.1 + 100. * abs( min( 0., &
                          (State_VGB(iVar,i,j,k,iBlock)-&
-                         StateOld_VCB(iVar,i,j,k,iBlock)) &
-                         /StateOld_VCB(iVar,i,j,k,iBlock) ) ) )
+                         StateOld_VGB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
 
                     percent_chg_rho(2) = max(percent_chg_rho(2), &
                          0.1 + 100. * abs( max( 0., &
                          (State_VGB(iVar,i,j,k,iBlock)-&
-                         StateOld_VCB(iVar,i,j,k,iBlock)) &
-                         /StateOld_VCB(iVar,i,j,k,iBlock) ) ) )
+                         StateOld_VGB(iVar,i,j,k,iBlock)) &
+                         /StateOld_VGB(iVar,i,j,k,iBlock) ) ) )
                  end do
               end if
               percent_chg_p(1) = 0.1 + 100. * abs( min( 0., &
                    (State_VGB(P_,i,j,k,iBlock)-&
-                   StateOld_VCB(P_,i,j,k,iBlock)) &
-                   /StateOld_VCB(P_,i,j,k,iBlock) ) )
+                   StateOld_VGB(P_,i,j,k,iBlock)) &
+                   /StateOld_VGB(P_,i,j,k,iBlock) ) )
               percent_chg_p(2) = 0.1 + 100. * abs( max( 0., &
                    (State_VGB(P_,i,j,k,iBlock)-&
-                   StateOld_VCB(P_,i,j,k,iBlock)) &
-                   /StateOld_VCB(P_,i,j,k,iBlock) ) )
+                   StateOld_VGB(P_,i,j,k,iBlock)) &
+                   /StateOld_VGB(P_,i,j,k,iBlock) ) )
               time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
               time_fraction_p   = 1.0 / maxval(percent_chg_p  /percent_max_p  )
               if (time_fraction_rho < 1. .or. time_fraction_p < 1.) then
@@ -454,8 +460,8 @@ subroutine update_check
                          '  time_fraction=',time_fraction
                     write(*,*) &
                          iProc,' ',iBlock,' ',i,' ',j,' ',k,' OLD:  ', &
-                         NameVar_V(1),'=',StateOld_VCB(1,i,j,k,iBlock),'    ',&
-                         NameVar_V(nVar),' ', StateOld_VCB(nVar,i,j,k,iBlock)
+                         NameVar_V(1),'=',StateOld_VGB(1,i,j,k,iBlock),'    ',&
+                         NameVar_V(nVar),' ', StateOld_VGB(nVar,i,j,k,iBlock)
                     write(*,*) &
                          iProc,' ',iBlock,' ',i,' ',j,' ',k,' BAD:', &
                          ' ', NameVar_V(1),'=',State_VGB(1,i,j,k,iBlock), &
@@ -504,44 +510,44 @@ subroutine update_check
               if(.not.true_cell(i,j,k,iBlock))cycle
               if (abs(100. * abs( min( 0., &
                    (State_VGB(Rho_,i,j,k,iBlock)-&
-                   StateOld_VCB(Rho_,i,j,k,iBlock)) &
-                   /StateOld_VCB(Rho_,i,j,k,iBlock) ) )-&
+                   StateOld_VGB(Rho_,i,j,k,iBlock)) &
+                   /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
                    PercentChangeMax(1))<cTiny*PercentChangeMax(1))&
                    write(*,*)'Maximum decrease in density at X Y Z=',&
                    Xyz_DGB(:,i,j,k,iBlock),&
-                   ': rho_old = ',StateOld_VCB(Rho_,i,j,k,iBlock),&
+                   ': rho_old = ',StateOld_VGB(Rho_,i,j,k,iBlock),&
                    ' rho_new = ',State_VGB(Rho_,i,j,k,iBlock)
                  
               if (abs(100. * abs( max( 0., &
                    (State_VGB(Rho_,i,j,k,iBlock)-&
-                   StateOld_VCB(Rho_,i,j,k,iBlock)) &
-                   /StateOld_VCB(Rho_,i,j,k,iBlock) ) )-&
+                   StateOld_VGB(Rho_,i,j,k,iBlock)) &
+                   /StateOld_VGB(Rho_,i,j,k,iBlock) ) )-&
                    PercentChangeMax(2))<cTiny*PercentChangeMax(2))&
                    write(*,*)'Maximum increase in density at the point',&
                    Xyz_DGB(:,i,j,k,iBlock),&
                    'is: rho_old = ',&
-                   StateOld_VCB(Rho_,i,j,k,iBlock),&
+                   StateOld_VGB(Rho_,i,j,k,iBlock),&
                    'rho_new=',State_VGB(Rho_,i,j,k,iBlock)
 
               if (abs(100. * abs( min( 0., &
                    (State_VGB(p_,i,j,k,iBlock)-&
-                   StateOld_VCB(p_,i,j,k,iBlock)) &
-                   /StateOld_VCB(p_,i,j,k,iBlock) ) )-&
+                   StateOld_VGB(p_,i,j,k,iBlock)) &
+                   /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
                    PercentChangeMax(3))<cTiny*PercentChangeMax(3))&
                    write(*,*)'Maximum decrease in',NameVar_V(p_), &
                    'at the point',&
                    Xyz_DGB(:,i,j,k,iBlock),&
-                   'is: valeu_old = ',StateOld_VCB(P_,i,j,k,iBlock),&
+                   'is: valeu_old = ',StateOld_VGB(P_,i,j,k,iBlock),&
                    'value_new=',State_VGB(p_,i,j,k,iBlock)
               if (abs(100. * abs( max( 0., &
                    (State_VGB(p_,i,j,k,iBlock)-&
-                   StateOld_VCB(p_,i,j,k,iBlock)) &
-                   /StateOld_VCB(p_,i,j,k,iBlock) ) )-&
+                   StateOld_VGB(p_,i,j,k,iBlock)) &
+                   /StateOld_VGB(p_,i,j,k,iBlock) ) )-&
                    PercentChangeMax(4))<cTiny*PercentChangeMax(4))&
                    write(*,*)'Maximum increase in',NameVar_V(p_), &
                    'at the point',&
                    Xyz_DGB(:,i,j,k,iBlock),&
-                   'is: value_old = ',StateOld_VCB(p_,i,j,k,iBlock),&
+                   'is: value_old = ',StateOld_VGB(p_,i,j,k,iBlock),&
                    'value_new=',State_VGB(p_,i,j,k,iBlock)
            end do; end do; end do
         end do
@@ -623,47 +629,47 @@ contains
     if(DoTestCell)then
        write(*,*)NameSub,' IsConserv    =',IsConserv
        write(*,*)NameSub,' initial state=',State_VGB(:,i,j,k,iBlock)
-       write(*,*)NameSub,' old     state=',StateOld_VCB(:,i,j,k,iBlock)
+       write(*,*)NameSub,' old     state=',StateOld_VGB(:,i,j,k,iBlock)
     end if
 
     if(boris_correction .and. nFluid==1) then
 
        ! Convert old state
        fullBx = B0_DC(x_,i,j,k) + &
-            StateOld_VCB(Bx_,i,j,k,iBlock)
+            StateOld_VGB(Bx_,i,j,k,iBlock)
        fullBy = B0_DC(y_,i,j,k) + &
-            StateOld_VCB(By_,i,j,k,iBlock)
+            StateOld_VGB(By_,i,j,k,iBlock)
        fullBz = B0_DC(z_,i,j,k) + &
-            StateOld_VCB(Bz_,i,j,k,iBlock)
+            StateOld_VGB(Bz_,i,j,k,iBlock)
        fullBB = fullBx**2 + fullBy**2 + fullBz**2
        rhoc2  = &
-            StateOld_VCB(rho_,i,j,k,iBlock)*c2LIGHT
-       UdotBc2= (StateOld_VCB(rhoUx_,i,j,k,iBlock)*fullBx + &
-            StateOld_VCB(rhoUy_,i,j,k,iBlock)*fullBy + &
-            StateOld_VCB(rhoUz_,i,j,k,iBlock)*fullBz)/rhoc2
+            StateOld_VGB(rho_,i,j,k,iBlock)*c2LIGHT
+       UdotBc2= (StateOld_VGB(rhoUx_,i,j,k,iBlock)*fullBx + &
+            StateOld_VGB(rhoUy_,i,j,k,iBlock)*fullBy + &
+            StateOld_VGB(rhoUz_,i,j,k,iBlock)*fullBz)/rhoc2
        gA2_Boris=1.+fullBB/rhoc2
 
 
        ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 
        !            = rhoU + (U B^2 - B U.B)/c^2
        !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
-       rhoUx_o_Boris = StateOld_VCB(rhoUx_,i,j,k,iBlock)*ga2_Boris - &
+       rhoUx_o_Boris = StateOld_VGB(rhoUx_,i,j,k,iBlock)*ga2_Boris - &
             fullBx*UdotBc2
-       rhoUy_o_Boris = StateOld_VCB(rhoUy_,i,j,k,iBlock)*ga2_Boris - &
+       rhoUy_o_Boris = StateOld_VGB(rhoUy_,i,j,k,iBlock)*ga2_Boris - &
             fullBy*UdotBc2
-       rhoUz_o_Boris = StateOld_VCB(rhoUz_,i,j,k,iBlock)*ga2_Boris - &
+       rhoUz_o_Boris = StateOld_VGB(rhoUz_,i,j,k,iBlock)*ga2_Boris - &
             fullBz*UdotBc2
 
        if(IsConserv)then
           ! e_boris = e + 0.5/c^2 * (V x B)^2
           E_o_Boris = EnergyOld_CBI(i,j,k,iBlock,1) + (0.5/c2LIGHT)*( &
-               ((StateOld_VCB(rhoUy_,i,j,k,iBlock)*fullBz     &
-               -StateOld_VCB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
-               +(StateOld_VCB(rhoUx_,i,j,k,iBlock)*fullBz     &
-               -StateOld_VCB(rhoUz_,i,j,k,iBlock)*fullBx)**2 &
-               +(StateOld_VCB(rhoUx_,i,j,k,iBlock)*fullBy     &
-               -StateOld_VCB(rhoUy_,i,j,k,iBlock)*fullBx)**2 &
-               )/StateOld_VCB(rho_,i,j,k,iBlock)**2                 )
+               ((StateOld_VGB(rhoUy_,i,j,k,iBlock)*fullBz     &
+               -StateOld_VGB(rhoUz_,i,j,k,iBlock)*fullBy)**2 &
+               +(StateOld_VGB(rhoUx_,i,j,k,iBlock)*fullBz     &
+               -StateOld_VGB(rhoUz_,i,j,k,iBlock)*fullBx)**2 &
+               +(StateOld_VGB(rhoUx_,i,j,k,iBlock)*fullBy     &
+               -StateOld_VGB(rhoUy_,i,j,k,iBlock)*fullBx)**2 &
+               )/StateOld_VGB(rho_,i,j,k,iBlock)**2                 )
        end if
 
        ! Convert current state
@@ -701,10 +707,10 @@ contains
        !For possible extension to multifluid
        !State_VGB(iRho_I,i,j,k,iBlock) = &
        !     (   time_fraction) *   State_VGB(iRho_I,i,j,k,iBlock) + &
-       !     (1.0-time_fraction) * StateOld_VCB(iRho_I,i,j,k,iBlock)
+       !     (1.0-time_fraction) * StateOld_VGB(iRho_I,i,j,k,iBlock)
        State_VGB(rho_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(rho_,i,j,k,iBlock) + &
-            (1.0-time_fraction) * StateOld_VCB(rho_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VGB(rho_,i,j,k,iBlock)
        rhoUx_Boris = &
             (   time_fraction) * rhoUx_Boris + &
             (1.0-time_fraction) * rhoUx_o_Boris
@@ -716,13 +722,13 @@ contains
             (1.0-time_fraction) * rhoUz_o_Boris
        State_VGB(Bx_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(Bx_,i,j,k,iBlock) + &
-            (1.0-time_fraction) * StateOld_VCB(Bx_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VGB(Bx_,i,j,k,iBlock)
        State_VGB(By_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(By_,i,j,k,iBlock) + &
-            (1.0-time_fraction) * StateOld_VCB(By_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VGB(By_,i,j,k,iBlock)
        State_VGB(Bz_,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(Bz_,i,j,k,iBlock) + &
-            (1.0-time_fraction) * StateOld_VCB(Bz_,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VGB(Bz_,i,j,k,iBlock)
 
        ! Convert Back
        fullBx = B0_DC(x_,i,j,k) + State_VGB(Bx_,i,j,k,iBlock)
@@ -762,11 +768,11 @@ contains
                Energy_GBI(i,j,k,iBlock,1) =  Energy_GBI(i,j,k,iBlock,1) - &
                (0.5/time_fraction - 0.5)*&
                ((State_VGB(Bx_,i,j,k,iBlock) - &
-               StateOld_VCB(Bx_,i,j,k,iBlock))**2 +&
+               StateOld_VGB(Bx_,i,j,k,iBlock))**2 +&
                (State_VGB(By_,i,j,k,iBlock) - &
-               StateOld_VCB(By_,i,j,k,iBlock))**2 +&
+               StateOld_VGB(By_,i,j,k,iBlock))**2 +&
                (State_VGB(Bz_,i,j,k,iBlock) - &
-               StateOld_VCB(Bz_,i,j,k,iBlock))**2 )
+               StateOld_VGB(Bz_,i,j,k,iBlock))**2 )
 
           call calc_pressure(i,i,j,j,k,k,iBlock,1,1)
 
@@ -775,12 +781,12 @@ contains
           ! For possible extension to multifluid
           !State_VGB(iP_I,i,j,k,iBlock) = &
           !     (   time_fraction) *   State_VGB(iP_I,i,j,k,iBlock) + &
-          !     (1.0-time_fraction) * StateOld_VCB(iP_I,i,j,k,iBlock)
+          !     (1.0-time_fraction) * StateOld_VGB(iP_I,i,j,k,iBlock)
           !call calc_energy_point(i,j,k,iBlock)
 
           State_VGB(p_,i,j,k,iBlock) = &
                (   time_fraction) *   State_VGB(p_,i,j,k,iBlock) + &
-               (1.0-time_fraction) * StateOld_VCB(p_,i,j,k,iBlock)
+               (1.0-time_fraction) * StateOld_VGB(p_,i,j,k,iBlock)
 
           call calc_energy(i,i,j,j,k,k,iBlock,1,1)
        end if
@@ -788,7 +794,7 @@ contains
 
        State_VGB(1:nVar,i,j,k,iBlock) = &
             (   time_fraction) *   State_VGB(1:nVar,i,j,k,iBlock) + &
-            (1.0-time_fraction) * StateOld_VCB(1:nVar,i,j,k,iBlock)
+            (1.0-time_fraction) * StateOld_VGB(1:nVar,i,j,k,iBlock)
        if(IsConserv)then
           Energy_GBI(i,j,k,iBlock,:) = &
                (   time_fraction) *   Energy_GBI(i,j,k,iBlock,:) + &
@@ -800,7 +806,7 @@ contains
                   Energy_GBI(i,j,k,iBlock,1) - &
                   (0.5/time_fraction - 0.5)*&
                   sum((State_VGB(Bx_:Bz_,i,j,k,iBlock) - &
-                  StateOld_VCB(Bx_:Bz_,i,j,k,iBlock))**2)
+                  StateOld_VGB(Bx_:Bz_,i,j,k,iBlock))**2)
           end if
 
           call calc_pressure_point(i,j,k,iBlock)
@@ -1040,14 +1046,7 @@ subroutine update_states_MHD(iBlock)
 
   !\
   ! Update the new solution state and calc residuals for the mth stage.
-  ! Note must copy state to old state only if m is 1.
   !/
-
-  if(iStage==1) then
-     StateOld_VCB(1:nVar,1:nI,1:nJ,1:nK,iBlock) = & 
-          State_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlock)
-     EnergyOld_CBI(:,:,:,iBlock,:) = Energy_GBI(1:nI,1:nJ,1:nK,iBlock,:)
-  end if
 
   ! Nothing to do if time step is zero
   if(time_accurate .and. Dt == 0.0) RETURN
@@ -1250,20 +1249,20 @@ contains
     !--------------------------------------------------------------------------
 
     if(boris_correction) then
-       ! Convert StateOld_VCB and State_VGB from classical MHD variables
+       ! Convert StateOld_VGB and State_VGB from classical MHD variables
        ! to semi-relativistic MHD variable
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           if(UseB0)then
-             call mhd_to_boris(StateOld_VCB(:,i,j,k,iBlock), &
+             call mhd_to_boris(StateOld_VGB(:,i,j,k,iBlock), &
                   EnergyOld_CBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
              ! State_VGB is not used in 1-stage and HalfStep schemes
              if(.not.UseHalfStep .and. nStage > 1) &
                   call mhd_to_boris(State_VGB(:,i,j,k,iBlock), &
                   Energy_GBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
           else
-             call mhd_to_boris(StateOld_VCB(:,i,j,k,iBlock), &
+             call mhd_to_boris(StateOld_VGB(:,i,j,k,iBlock), &
                   EnergyOld_CBI(i,j,k,iBlock,1))
              ! State_VGB is not used in 1-stage and HalfStep schemes
              if(.not.UseHalfStep .and. nStage > 1) &
@@ -1288,14 +1287,14 @@ contains
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           if(UseB0)then
-             call mhd_to_boris_simple(StateOld_VCB(:,i,j,k,iBlock), &
+             call mhd_to_boris_simple(StateOld_VGB(:,i,j,k,iBlock), &
                   B0_DGB(:,i,j,k,iBlock))
              ! State_VGB is not used in 1-stage and HalfStep schemes
              if(.not.UseHalfStep .and. nStage > 1) &
                   call mhd_to_boris_simple(State_VGB(:,i,j,k,iBlock), &
                   B0_DGB(:,i,j,k,iBlock))
           else
-             call mhd_to_boris_simple(StateOld_VCB(:,i,j,k,iBlock))
+             call mhd_to_boris_simple(StateOld_VGB(:,i,j,k,iBlock))
              ! State_VGB is not used in 1-stage and HalfStep schemes
              if(.not.UseHalfStep .and. nStage > 1) &
                   call mhd_to_boris_simple(State_VGB(:,i,j,k,iBlock))
@@ -1314,8 +1313,8 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          StateOld_VCB(Pe_,i,j,k,iBlock) = &
-               StateOld_VCB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
+          StateOld_VGB(Pe_,i,j,k,iBlock) = &
+               StateOld_VGB(Pe_,i,j,k,iBlock)**(1/GammaElectron)
           ! State_VGB is not used in 1-stage and HalfStep schemes
           if(.not.UseHalfStep .and. nStage > 1) &
                State_VGB(Pe_,i,j,k,iBlock) = &
@@ -1329,7 +1328,7 @@ contains
        ! Update state variables starting from level n (=old) state
        do k=1,nK; do j=1,nJ; do i=1,nI
           State_VGB(:,i,j,k,iBlock) = &
-               StateOld_VCB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
+               StateOld_VGB(:,i,j,k,iBlock) + Source_VC(1:nVar,i,j,k)
        end do; end do; end do
 
        ! Update energy variables
@@ -1383,7 +1382,7 @@ contains
           do k=1,nK; do j=1,nJ; do i=1,nI
              Rk4_VCB(:,i,j,k,iBlock) = Rk4_VCB(:,i,j,k,iBlock) &
                   + State_VGB(:,i,j,k,iBlock) &
-                  - 4*StateOld_VCB(:,i,j,k,iBlock)
+                  - 4*StateOld_VGB(:,i,j,k,iBlock)
           end do; end do; end do
           do iFluid = 1, nFluid; do k=1,nK; do j=1,nJ; do i=1,nI
              Rk4_CBI(i,j,k,iBlock,iFluid) = Rk4_CBI(i,j,k,iBlock,iFluid) &
@@ -1423,7 +1422,7 @@ contains
        ! Interpolate state variables
        do k=1,nK; do j=1,nJ; do i=1,nI
           State_VGB(:,i,j,k,iBlock) = &
-               Coeff1*StateOld_VCB(:,i,j,k,iBlock) + &
+               Coeff1*StateOld_VGB(:,i,j,k,iBlock) + &
                Coeff2*State_VGB(:,i,j,k,iBlock)
        end do; end do; end do
 
@@ -1442,18 +1441,18 @@ contains
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     if(boris_correction) then
-       ! Convert StateOld_VCB and State_VGB back from 
+       ! Convert StateOld_VGB and State_VGB back from 
        ! semi-relativistic to classical MHD variables
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           if(UseB0)then
-             call boris_to_mhd(StateOld_VCB(:,i,j,k,iBlock), &
+             call boris_to_mhd(StateOld_VGB(:,i,j,k,iBlock), &
                   EnergyOld_CBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
              call boris_to_mhd(State_VGB(:,i,j,k,iBlock), &
                   Energy_GBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
           else
-             call boris_to_mhd(StateOld_VCB(:,i,j,k,iBlock), &
+             call boris_to_mhd(StateOld_VGB(:,i,j,k,iBlock), &
                   EnergyOld_CBI(i,j,k,iBlock,1))
              call boris_to_mhd(State_VGB(:,i,j,k,iBlock), &
                   Energy_GBI(i,j,k,iBlock,1))
@@ -1467,18 +1466,18 @@ contains
     endif
 
     if(UseBorisSimple .and. IsMhd) then
-       ! Convert mometum in StateOld_VCB and State_VGB back from 
+       ! Convert mometum in StateOld_VGB and State_VGB back from 
        ! enhanced momentum
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           if(UseB0)then
-             call boris_simple_to_mhd(StateOld_VCB(:,i,j,k,iBlock), &
+             call boris_simple_to_mhd(StateOld_VGB(:,i,j,k,iBlock), &
                   B0_DGB(:,i,j,k,iBlock))
              call boris_simple_to_mhd(State_VGB(:,i,j,k,iBlock), &
                   B0_DGB(:,i,j,k,iBlock))
           else
-             call boris_simple_to_mhd(StateOld_VCB(:,i,j,k,iBlock))
+             call boris_simple_to_mhd(StateOld_VGB(:,i,j,k,iBlock))
              call boris_simple_to_mhd(State_VGB(:,i,j,k,iBlock))
           end if
        end do; end do; end do
@@ -1495,8 +1494,8 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          StateOld_VCB(Pe_,i,j,k,iBlock) = &
-               StateOld_VCB(Pe_,i,j,k,iBlock)**GammaElectron
+          StateOld_VGB(Pe_,i,j,k,iBlock) = &
+               StateOld_VGB(Pe_,i,j,k,iBlock)**GammaElectron
           State_VGB(Pe_,i,j,k,iBlock) = &
                State_VGB(Pe_,i,j,k,iBlock)**GammaElectron
        end do; end do; end do
@@ -1604,9 +1603,9 @@ contains
        ! if(DtLocal < 1e-15) CYCLE
        Source_VCB(iVarSemi_,i,j,k,iBlock) = &
             State_VGB(iVarSemi_,i,j,k,iBlock) - &
-            StateOld_VCB(iVarSemi_,i,j,k,iBlock)
+            StateOld_VGB(iVarSemi_,i,j,k,iBlock)
        State_VGB(iVarSemi_,i,j,k,iBlock) = &
-            StateOld_VCB(iVarSemi_,i,j,k,iBlock)
+            StateOld_VGB(iVarSemi_,i,j,k,iBlock)
     end do; end do; end do
   end subroutine deduct_expl_source
   !----------------------------------------------------------------------

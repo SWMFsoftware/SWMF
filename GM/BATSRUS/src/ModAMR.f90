@@ -249,7 +249,7 @@ contains
     use ModMain,       ONLY: nBlock, UseB0, UseUserAmr, Unused_B, &
          DoThinCurrentSheet
     use ModGeometry,   ONLY: r_BLK, true_cell
-    use ModAdvance,    ONLY: State_VGB, StateOld_VCB, &
+    use ModAdvance,    ONLY: State_VGB, StateOld_VGB, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_, By_, Bz_, P_
     use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: No2Io_V, UnitU_, UnitJ_, UnitP_, &
@@ -491,14 +491,14 @@ contains
            RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, POld_C    
       !-----------------------------------------------------------------------
       do k=1,nK; do j=1,nJ; do i=1,nI
-         RhoOld_C(i,j,k)  = StateOld_VCB(rho_,i,j,k,iBlock)
-         RhoUxOld_C(i,j,k)= StateOld_VCB(rhoUx_,i,j,k,iBlock)
-         RhoUyOld_C(i,j,k)= StateOld_VCB(rhoUy_,i,j,k,iBlock)
-         RhoUzOld_C(i,j,k)= StateOld_VCB(rhoUz_,i,j,k,iBlock)
-         BxOld_C(i,j,k)   = StateOld_VCB(Bx_,i,j,k,iBlock)
-         ByOld_C(i,j,k)   = StateOld_VCB(By_,i,j,k,iBlock)
-         BzOld_C(i,j,k)   = StateOld_VCB(Bz_,i,j,k,iBlock)
-         POld_C(i,j,k)    = StateOld_VCB(P_,i,j,k,iBlock)
+         RhoOld_C(i,j,k)  = StateOld_VGB(rho_,i,j,k,iBlock)
+         RhoUxOld_C(i,j,k)= StateOld_VGB(rhoUx_,i,j,k,iBlock)
+         RhoUyOld_C(i,j,k)= StateOld_VGB(rhoUy_,i,j,k,iBlock)
+         RhoUzOld_C(i,j,k)= StateOld_VGB(rhoUz_,i,j,k,iBlock)
+         BxOld_C(i,j,k)   = StateOld_VGB(Bx_,i,j,k,iBlock)
+         ByOld_C(i,j,k)   = StateOld_VGB(By_,i,j,k,iBlock)
+         BzOld_C(i,j,k)   = StateOld_VGB(Bz_,i,j,k,iBlock)
+         POld_C(i,j,k)    = StateOld_VGB(P_,i,j,k,iBlock)
       end do; end do; end do
 
       select case(NameCrit)

@@ -85,7 +85,7 @@ module ModAdvance
   !\
   ! Block cell-centered MHD solution old state
   !/
-  real, allocatable :: StateOld_VCB(:,:,:,:,:)
+  real, allocatable :: StateOld_VGB(:,:,:,:,:)
   real, allocatable :: EnergyOld_CBI(:,:,:,:,:)
 
   !\
@@ -220,7 +220,7 @@ contains
     end if
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(Energy_GBI(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock,nFluid))
-    allocate(StateOld_VCB(nVar,nI,nJ,nK,MaxBlock))
+    allocate(StateOld_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(EnergyOld_CBI(nI,nJ,nK,MaxBlock,nFluid))
     allocate(tmp1_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -267,7 +267,7 @@ contains
 
     if(allocated(State_VGB))       deallocate(State_VGB)
     if(allocated(Energy_GBI))      deallocate(Energy_GBI)
-    if(allocated(StateOld_VCB))    deallocate(StateOld_VCB)
+    if(allocated(StateOld_VGB))    deallocate(StateOld_VGB)
     if(allocated(EnergyOld_CBI))   deallocate(EnergyOld_CBI)
     if(allocated(tmp1_BLK))        deallocate(tmp1_BLK)
     if(allocated(tmp2_BLK))        deallocate(tmp2_BLK)

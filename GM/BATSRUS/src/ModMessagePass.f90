@@ -228,7 +228,7 @@ contains
 
     ! Do not update solution in the domain covered by the buffer grid
 
-    use ModAdvance, ONLY: State_VGB, StateOld_VCB, Energy_GBI, EnergyOld_CBI
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB, Energy_GBI, EnergyOld_CBI
     use BATL_lib, ONLY: nI, nJ, nK
 
     integer, intent(in):: iBlock
@@ -239,7 +239,7 @@ contains
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
        State_VGB(:,i,j,k,iBlock) = &
-            StateOld_VCB(:,i,j,k,iBlock)
+            StateOld_VGB(:,i,j,k,iBlock)
        Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
     end do; end do; end do
 

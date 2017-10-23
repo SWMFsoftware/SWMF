@@ -10,7 +10,7 @@ module ModEnergy
        iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &
        select_fluid, MassFluid_I, iRho_I, iRhoIon_I, MassIon_I, ChargeIon_I
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VCB, EnergyOld_CBI,&
+  use ModAdvance,    ONLY: State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&
        UseNonConservative, nConservCrit, IsConserv_CB, UseElectronPressure
   use ModPhysics,    ONLY: GammaMinus1_I, InvGammaMinus1_I, InvGammaMinus1, &
        pMin_I, PeMin, Tmin_I, TeMin
@@ -155,26 +155,26 @@ contains
     do iFluid = 1, nFluid
        call select_fluid
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          StateOld_VCB(iP, i, j, k,iBlock) = &
+          StateOld_VGB(iP, i, j, k,iBlock) = &
                GammaMinus1_I(iFluid)*                           &
                ( EnergyOld_CBI(i,j,k,iBlock,iFluid) - 0.5 *     &
-               sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
-               /StateOld_VCB(iRho,i,j,k,iBlock) )
+               sum(StateOld_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2) &
+               /StateOld_VGB(iRho,i,j,k,iBlock) )
        end do; end do; end do
 
        if(iFluid > 1 .or. .not. IsMhd) CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
+          StateOld_VGB(iP,i,j,k,iBlock) = StateOld_VGB(iP,i,j,k,iBlock) &
                - GammaMinus1_I(iFluid)*0.5* &
-               sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
+               sum(StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
 
        if(Hyp_ > 1 .and. UseHypEnergy)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             StateOld_VCB(iP,i,j,k,iBlock) = StateOld_VCB(iP,i,j,k,iBlock) &
+             StateOld_VGB(iP,i,j,k,iBlock) = StateOld_VGB(iP,i,j,k,iBlock) &
                   - GammaMinus1_I(iFluid)*0.5* &
-                  StateOld_VCB(Hyp_,i,j,k,iBlock)**2
+                  StateOld_VGB(Hyp_,i,j,k,iBlock)**2
           end do; end do; end do
        end if
 
@@ -198,13 +198,13 @@ contains
        call select_fluid
        ! Calculate thermal plus kinetic energy
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if (StateOld_VCB(iRho,i,j,k,iBlock) <= 0.0)then
+          if (StateOld_VGB(iRho,i,j,k,iBlock) <= 0.0)then
              EnergyOld_CBI(i,j,k,iBlock,iFluid) = 0.0
           else
              EnergyOld_CBI(i,j,k,iBlock,iFluid) =                 &
-                  InvGammaMinus1_I(iFluid)*StateOld_VCB(iP,i,j,k,iBlock) &
-                  + 0.5*(sum(StateOld_VCB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
-                  StateOld_VCB(iRho,i,j,k,iBlock))
+                  InvGammaMinus1_I(iFluid)*StateOld_VGB(iP,i,j,k,iBlock) &
+                  + 0.5*(sum(StateOld_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)**2)/&
+                  StateOld_VGB(iRho,i,j,k,iBlock))
           end if
        end do; end do; end do
 
@@ -214,14 +214,14 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
                EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-               0.5*sum(StateOld_VCB(Bx_:Bz_,i,j,k,iBlock)**2)
+               0.5*sum(StateOld_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
        end do; end do; end do
 
        if(Hyp_ > 1 .and. UseHypEnergy)then
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              EnergyOld_CBI(i,j,k,iBlock,iFluid) = &
                   EnergyOld_CBI(i,j,k,iBlock,iFluid) + &
-                  0.5*StateOld_VCB(Hyp_,i,j,k,iBlock)**2
+                  0.5*StateOld_VGB(Hyp_,i,j,k,iBlock)**2
           end do; end do; end do
        end if
           
