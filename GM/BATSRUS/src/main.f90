@@ -310,7 +310,9 @@ end subroutine CON_set_do_test
 !============================================================================
 ! The subroutines and functions below are defined in srcInterface for SWMF. 
 !============================================================================
-
+subroutine update_grad_density
+  call stop_mpi('ERROR: update_grad_density is for SWMF')
+end subroutine update_grad_density
 !============================================================================
 subroutine get_ray_bunch_intensity
   call stop_mpi('ERROR: get_ray_bunch_intensity is for SWMF')
