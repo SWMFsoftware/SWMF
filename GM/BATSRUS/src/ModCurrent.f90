@@ -9,6 +9,215 @@ module ModCurrent
   implicit none
 
 contains
+  !==============================================================================
+
+  subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
+       iVarMin, iVarMax, StateCurrent_V)
+
+    ! Interpolate the (new and/or old) state vector from iVarMin to iVarMax and 
+    ! the current (if iVarMax=nVar+3) for input position 
+    ! XyzIn_D given in Cartesian coordinates. The interpolated state 
+    ! is second order accurate everywhere except where there is a 
+    ! resolution change in more than one direction for the cell centers 
+    ! surrounding the given position. In these exceptional cases the 
+    ! interpolated state is first order accurate. The interpolation algorithm
+    ! is based on trilinear interpolation, but it is generalized for
+    ! trapezoidal hexahedrons.
+
+    use ModProcMH, ONLY: iProc
+    use ModVarIndexes, ONLY: nVar
+    use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B, BlkTest, ProcTest
+    use ModAdvance, ONLY: State_VGB, StateOld_VGB
+    use ModParallel, ONLY: NeiLev
+    use ModGeometry, ONLY: XyzStart_BLK
+    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, xyz_to_coord
+
+    ! Weight of the old state in the interpolation
+    real, intent(in)  :: WeightOldState
+
+    ! Input position is in generalized coordinates
+    real, intent(in)  :: XyzIn_D(3)
+
+    ! Block index range (typically 1:nBlock or iBlock:iBlock)
+    integer, intent(in) :: iBlockMin, iBlockMax
+
+    ! Do we need to calculate currents
+    integer, intent(in) :: iVarMin, iVarMax
+
+    ! Weight and interpolated state at the input position
+    real, intent(out) :: StateCurrent_V(0:iVarMax-iVarMin+1)
+
+    ! Local variables
+
+    ! Maximum index for state variable and number of state variables
+    integer :: iStateMax, nState
+
+    ! Position in generalized coordinates
+    real :: Xyz_D(3)
+
+    ! Cell size and buffer size for current block
+    real,    dimension(3) :: Dxyz_D, DxyzInv_D, DxyzLo_D, DxyzHi_D
+
+    ! Position of cell center to the lower index direction
+    integer, dimension(3) :: IjkLo_D 
+
+    ! Position of point and current cell center
+    real :: x, y, z, xI, yJ, zK
+
+    ! Bilinear weights
+    real    :: WeightX,WeightY,WeightZ,WeightXyz
+
+    ! Dimension, cell, block index and MPI error code
+    integer :: iDim,i,j,k,iLo,jLo,kLo,iHi,jHi,kHi,iBlock
+
+    ! Current at the cell center
+    real:: Current_D(3)
+
+    ! Testing
+    logical :: DoTest, DoTestMe
+    !----------------------------------------------------------------------------
+    if(iProc == ProcTest .and. iBlockMin <= BlkTest .and. iBlockMax >= BlkTest)then
+       call set_oktest('get_point_data', DoTest, DoTestMe)
+    else
+       DoTest = .false.; DoTestMe = .false.
+    end if
+
+    ! Calculate maximum index and the number of state variables
+    iStateMax = min(iVarMax, nVar)
+    nState    = iStateMax - iVarMin + 1
+
+    ! Convert to generalized coordinates if necessary
+    if(IsCartesianGrid)then
+       Xyz_D = XyzIn_D
+    else
+       call xyz_to_coord(XyzIn_D, Xyz_D)
+    end if
+
+    ! Set state and weight to zero, so MPI_reduce will add it up right
+    StateCurrent_V = 0.0
+
+    ! Loop through all blocks
+    BLOCK: do iBlock = iBlockMin, iBlockMax
+       if(Unused_B(iBlock)) CYCLE
+
+       if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
+
+       ! Put cell size of current block into an array
+       Dxyz_D = CellSize_DB(:,iBlock)
+
+       ! Set buffer zone according to relative size of neighboring block
+       do iDim = 1, 3
+          ! Block at the lower index side
+          select case(NeiLev(2*iDim-1,iBlock))
+          case(1)
+             DxyzLo_D(iDim) = 1.5*Dxyz_D(iDim)
+          case(-1)
+             DxyzLo_D(iDim) = 0.75*Dxyz_D(iDim)
+          case default
+             DxyzLo_D(iDim) = Dxyz_D(iDim)
+          end select
+          ! Check if point is inside the buffer zone on the lower side
+          if(Xyz_D(iDim)<XyzStart_BLK(iDim,iBlock) - DxyzLo_D(iDim)) CYCLE BLOCK
+
+          ! Block at the upper index side
+          select case(NeiLev(2*iDim,iBlock))
+          case(1)
+             DxyzHi_D(iDim) = 1.5*Dxyz_D(iDim)
+          case(-1)
+             DxyzHi_D(iDim) = 0.75*Dxyz_D(iDim)
+          case default
+             DxyzHi_D(iDim) = Dxyz_D(iDim)
+          end select
+          ! Check if point is inside the buffer zone on the upper side
+          if(Xyz_D(iDim) > XyzStart_BLK(iDim,iBlock) + &
+               (nIJK_D(iDim)-1)*Dxyz_D(iDim) + DxyzHi_D(iDim)) CYCLE BLOCK
+       end do
+
+       ! Find closest cell center indexes towards the lower index direction
+       IjkLo_D = floor((Xyz_D - XyzStart_BLK(:,iBlock))/Dxyz_D)+1
+
+       ! Set the size of the box for bilinear interpolation
+
+       ! At resolution change the box size is the sum
+       ! average of the cell size of the neighboring blocks
+
+       ! Also make sure that IjkLo_D is not out of bounds
+       do iDim = 1,3
+          if(IjkLo_D(iDim) < 1)then
+             IjkLo_D(iDim)   = 0
+             DxyzInv_D(iDim) = 1/DxyzLo_D(iDim)
+          elseif(IjkLo_D(iDim) >= nIJK_D(iDim))then
+             IjkLo_D(iDim)   = nIJK_D(iDim)
+             DxyzInv_D(iDim) = 1/DxyzHi_D(iDim)
+          else
+             DxyzInv_D(iDim) = 1/Dxyz_D(iDim)
+          end if
+       end do
+
+       if(DoTest)then
+          write(*,*)'Point found at iProc,iBlock,iLo,jLo,kLo=',&
+               iProc,iBlock,IjkLo_D
+          write(*,*)'iProc, XyzStart_BLK,Dx=', iProc, &
+               XyzStart_BLK(:,iBlock), Dxyz_D(1)
+       end if
+
+       ! Set the index range for the physical cells
+       iLo = max(IjkLo_D(1),1)
+       jLo = max(IjkLo_D(2),1)
+       kLo = max(IjkLo_D(3),1)
+       iHi = min(IjkLo_D(1)+1,nI)
+       jHi = min(IjkLo_D(2)+1,nJ)
+       kHi = min(IjkLo_D(3)+1,nK)
+
+       ! Put the point position into scalars
+       x = Xyz_D(1); y = Xyz_D(2); z = Xyz_D(3)
+
+       ! Loop through the physical cells to add up their contribution
+       do k = kLo, kHi
+          zK = XyzStart_BLK(3,iBlock) + (k-1)*Dxyz_D(3)
+          WeightZ = 1 - DxyzInv_D(3)*abs(z-zK)
+          do j = jLo, jHi
+             yJ = XyzStart_BLK(2,iBlock) + (j-1)*Dxyz_D(2)
+             WeightY = 1 - DxyzInv_D(2)*abs(y-yJ)
+             do i = iLo, iHi
+                xI = XyzStart_BLK(1,iBlock) + (i-1)*Dxyz_D(1)
+                WeightX = 1 - DxyzInv_D(1)*abs(x-xI)
+
+                WeightXyz = WeightX*WeightY*WeightZ
+
+                if(WeightXyz>0.0)then
+                   ! Add up the weight
+                   StateCurrent_V(0) = StateCurrent_V(0) + WeightXyz
+
+                   ! Add contibutions from the old state if required
+                   if(WeightOldState > 0.0) &
+                        StateCurrent_V(1:nState) = StateCurrent_V(1:nState) + &
+                        WeightXyz * WeightOldState * &
+                        StateOld_VGB(iVarMin:iStateMax,i,j,k,iBlock)
+
+                   ! Add contibutions from the current state if required
+                   if(WeightOldState < 1.0) &
+                        StateCurrent_V(1:nState) = StateCurrent_V(1:nState) + &
+                        WeightXyz * (1 - WeightOldState) * &
+                        State_VGB(iVarMin:iStateMax,i,j,k,iBlock)
+
+                   ! The current is always based on the new state
+                   if(iVarMax == nVar + 3)then
+                      call get_current(i, j, k, iBlock, Current_D)
+                      StateCurrent_V(nState+1:nState+3) = &
+                           StateCurrent_V(nState+1:nState+3) &
+                           + WeightXyz * Current_D
+                   end if
+
+                   if(DoTest)write(*,*)'Contribution iProc,i,j,k,WeightXyz=',&
+                        iProc,i,j,k,WeightXyz
+                end if
+             end do
+          end do
+       end do
+    end do BLOCK
+
+  end subroutine get_point_data
   !============================================================================
 
   subroutine get_current(i, j, k, iBlock, Current_D, nOrderResChange, &
