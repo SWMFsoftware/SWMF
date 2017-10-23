@@ -17,7 +17,7 @@ module SP_wrapper
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, &
        CoordMin_DI, DataInputTime, &
-       Block_, Proc_, Begin_, End_, &
+       Block_, Proc_, Begin_, End_, Shock_, ShockOld_, &
        X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
@@ -506,6 +506,10 @@ contains
           iEnd   = iGridLocal_IB(End_,   iBlock)
           iGridLocal_IB(Begin_, iBlock) = 1
           iGridLocal_IB(End_,   iBlock) = iEndNew
+          iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Shock_, iBlock) + &
+               iEndNew - iEnd
+          iGridLocal_IB(ShockOld_, iBlock) = iGridLocal_IB(ShockOld_, iBlock)+&
+               iEndNew - iEnd
           State_VIB(:, 1:iEndNew, iBlock) = &
                State_VIB(:, iBegin:iEnd, iBlock)
           Distribution_IIB(:,1:iEndNew, iBlock) = &
