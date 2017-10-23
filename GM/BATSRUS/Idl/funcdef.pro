@@ -125,7 +125,7 @@ function funcdef,xx,w,func
      ['ni'       , '{rhos1}/mi'                              ], $            ; ion number density
      ['ne'       , '{rhos0}/me'                              ], $            ; electron number density
      ['qtot'     , 'qi*{ni}+qe*{ne}'                         ], $            ; total charge
-     ['dqtot'    ,  '{qtot}-div({ex},{ey},x,y)*eps0'         ], $            ; error in net charge
+     ['dqtot'    , '{qtot}-div({ex},{ey},x,y)*eps0'          ], $            ; error in net charge
      ['jpx'      , 'qi*{ni}*{uxs1}+qe*{ne}*{uxs0}'           ], $            ; jx from particles
      ['jpy'      , 'qi*{ni}*{uys1}+qe*{ne}*{uys0}'           ], $            ; jy from particles
      ['jpz'      , 'qi*{ni}*{uzs1}+qe*{ne}*{uzs0}'           ], $            ; jz from particles
