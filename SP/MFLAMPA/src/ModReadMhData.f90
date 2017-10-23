@@ -45,7 +45,7 @@ module SP_ModReadMhData
   character (len=4)  :: NameFormat
   character (len=20) :: TypeFile
 
-  integer, parameter:: nReadVar = 11
+  integer, parameter:: nReadVar = 12
   
   ! buffer is larger than the data needed to be read in the case 
   ! the input file has additional data
@@ -73,7 +73,8 @@ contains
     ! the input directory
     call read_var('NameInputDir', NameInputDir)
     ! ADD "/" IF NOT PRESENT
-        
+    if(NameInputDir(len_trim(NameInputDir):len_trim(NameInputDir))/='/')&
+         NameInputDir = trim(NameInputDir) // '/'
     !
     call read_var('TypeFile', TypeFile)
 
@@ -92,7 +93,8 @@ contains
     select case(trim(TypeFile))
     case('tec')
        NameFormat='.dat'
-    case('idl')
+    case('idl','ascii')
+       TypeFile = 'ascii'
        NameFormat='.out'
     case default
        call CON_stop(NameSub//': input format was not set in PARAM.in')
