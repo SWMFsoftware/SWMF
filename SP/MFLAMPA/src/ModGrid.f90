@@ -12,7 +12,7 @@ module SP_ModGrid
   private ! except
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
-  public:: fix_grid_consistency
+  public:: fix_grid_consistency, reset_lagrangian_id
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
@@ -22,7 +22,7 @@ module SP_ModGrid
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
   public:: Begin_, End_, Shock_, ShockOld_
-  public:: nVar, X_, Y_, Z_, D_, S_
+  public:: nVar, X_, Y_, Z_, D_, S_, LagrID_
   public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_, EFlux_
   public:: Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
   public:: NameVar_V
@@ -107,41 +107,43 @@ module SP_ModGrid
   real, allocatable:: State_VIB(:,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar = 25
+  integer, parameter:: nVar = 26
   integer, parameter:: &
        !\
        !------- The following variables MUST be in CONTIGUOUS  order ----------
        !------- as this is used in subroutine read_mh_data --------------------
        !------- DO NOT CHANGE WITHOUT CAREFULL CONSIDERATION !!! --------------
-       X_     = 1, & ! 
-       Y_     = 2, & ! Cartesian coordinates
-       Z_     = 3, & ! 
-       Rho_   = 4, & ! Background plasma density
-       T_     = 5, & ! Background temperature
-       Ux_    = 6, &
-       Uy_    = 7, &
-       Uz_    = 8, &
-       Bx_    = 9, & !
-       By_    =10, & ! Background magnetic field
-       Bz_    =11, & !
+       LagrID_= 1, & ! Lagrangian id
+       X_     = 2, & ! 
+       Y_     = 3, & ! Cartesian coordinates
+       Z_     = 4, & ! 
+       Rho_   = 5, & ! Background plasma density
+       T_     = 6, & ! Background temperature
+       Ux_    = 7, &
+       Uy_    = 8, &
+       Uz_    = 9, &
+       Bx_    =10, & !
+       By_    =11, & ! Background magnetic field
+       Bz_    =12, & !
        !-----------------------------------------------------------------------
-       D_     =12, & ! Distance to the next particle
-       S_     =13, & ! Distance from the beginning of the line
-       U_     =14, &
-       B_     =15, & ! Magnitude of magnetic field
-       RhoOld_=16, & ! Background plasma density
-       BOld_  =17, & ! Magnitude of magnetic field
-       Flux0_ =18, & ! Total integral (simulated) particle flux
-       Flux1_ =19, & ! Integral particle flux >  5 MeV (GOES Channel 1)
-       Flux2_ =20, & ! Integral particle flux > 10 MeV (GOES Channel 2)
-       Flux3_ =21, & ! Integral particle flux > 30 MeV (GOES Channel 3)
-       Flux4_ =22, & ! Integral particle flux > 50 MeV (GOES Channel 4)
-       Flux5_ =23, & ! Integral particle flux > 60 MeV (GOES Channel 5)
-       Flux6_ =24, & ! Integral particle flux >100 MeV (GOES Channel 6)
-       EFlux_ =25    ! Total integral energy flux
+       D_     =13, & ! Distance to the next particle
+       S_     =14, & ! Distance from the beginning of the line
+       U_     =15, &
+       B_     =16, & ! Magnitude of magnetic field
+       RhoOld_=17, & ! Background plasma density
+       BOld_  =18, & ! Magnitude of magnetic field
+       Flux0_ =19, & ! Total integral (simulated) particle flux
+       Flux1_ =20, & ! Integral particle flux >  5 MeV (GOES Channel 1)
+       Flux2_ =21, & ! Integral particle flux > 10 MeV (GOES Channel 2)
+       Flux3_ =22, & ! Integral particle flux > 30 MeV (GOES Channel 3)
+       Flux4_ =23, & ! Integral particle flux > 50 MeV (GOES Channel 4)
+       Flux5_ =24, & ! Integral particle flux > 60 MeV (GOES Channel 5)
+       Flux6_ =25, & ! Integral particle flux >100 MeV (GOES Channel 6)
+       EFlux_ =26    ! Total integral energy flux
 
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
+       'LagrID    ', &
        'X         ', &
        'Y         ', &
        'Z         ', &
@@ -354,7 +356,7 @@ contains
              State_VIB(S_, iParticle, iBlock) = &
                   State_VIB(S_, iParticle-1, iBlock) + &
                   State_VIB(D_, iParticle-1, iBlock)
-          end if
+          end if          
        end do
        ! location of shock
        if(iGridLocal_IB(ShockOld_, iBlock) < iParticleMin)&
@@ -363,6 +365,21 @@ contains
             iGridLocal_IB(Shock_, iBlock)   = iBegin
     end do
   end subroutine fix_grid_consistency
+
+  !============================================================================
+
+  subroutine reset_lagrangian_id
+    ! reset lagrangian id equal to current values of 1-based index of particles
+    integer:: iBlock, iBegin, iEnd, iParticle
+    !--------------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       iBegin = iGridLocal_IB(Begin_,iBlock)
+       iEnd   = iGridLocal_IB(End_,  iBlock)
+       do iParticle = iBegin, iEnd
+          State_VIB(LagrID_, iParticle, iBlock) = iParticle
+       end do
+    end do
+  end subroutine reset_lagrangian_id
 
   !============================================================================
 

@@ -458,11 +458,11 @@ contains
        if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
             call CON_stop(NameSub//': Incorrect message pass')
 
-       if(.not.PutInBuffer .and. is_in_buffer(Coord_DI(X_:Z_, iPut)) )&
+       if(.not.PutInBuffer .and. is_in_buffer(Coord_DI(1:nDim, iPut)) )&
             CYCLE
 
        ! put coordinates
-       State_VIB(X_:Z_, iParticle, iBlock) = Coord_DI(X_:Z_, iPut)
+       State_VIB(X_:Z_, iParticle, iBlock) = Coord_DI(1:nDim, iPut)
        iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
        iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
     end do

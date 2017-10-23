@@ -24,8 +24,8 @@ module SP_ModMain
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, &
        CoordMin_DI, TypeCoordSystem,&
-       set_grid_param, init_grid, get_node_indexes, fix_grid_consistency!, &
-       !set_lagrangian_coordinates
+       set_grid_param, init_grid, get_node_indexes, fix_grid_consistency, &
+       reset_lagrangian_id
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
@@ -163,7 +163,7 @@ contains
     ! write the initial background state to the output file
     !/
     if(IsFirstCall)then
-       !call set_lagrangian_coordinates
+       call reset_lagrangian_id
        ! print the initial state
        call write_output(TimeGlobal, iIterGlobal, &
             IsInitialOutput = .true.)

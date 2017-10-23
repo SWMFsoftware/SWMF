@@ -15,7 +15,7 @@ module SP_ModWrite
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
        Proc_, Begin_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, &
-       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
+       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, EFlux_, &
        Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V
 
@@ -175,7 +175,7 @@ contains
                   File_I(iFile)%nVarPlot, iParticleMin:iParticleMax))
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
-                  'ParticleIndex '//trim(File_I(iFile) % NameVarPlot)
+                  'I '//trim(File_I(iFile) % NameVarPlot)
              if(DoTraceShock)&
                   File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
@@ -231,6 +231,12 @@ contains
       ! distance along line -----
       if(index(StringPlot,' dist ') > 0)then
          File_I(iFile) % DoPlot_V(S_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      ! lagrangian coord along line -----
+      if(index(StringPlot,' lagr ') > 0 .or. &
+           File_I(iFile)%iKindData == MH1D_)then
+         File_I(iFile) % DoPlot_V(LagrID_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! plasma density ----------
