@@ -71,7 +71,7 @@ contains
   !==============================================================================
   subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
-    use ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Ux_, Uz_, &
+    use ModAdvance, ONLY: Rho_, RhoUz_, Ux_, Uz_, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModCurrent, ONLY: get_point_data
     use BATL_lib,   ONLY: nBlock, nProc, iComm
