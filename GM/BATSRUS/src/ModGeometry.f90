@@ -52,6 +52,9 @@ module ModGeometry
   ! true cells are cells that are not inside a body
   logical, allocatable :: true_cell(:,:,:,:)
 
+  ! Number of true cells (collected for processor 0)
+  integer :: nTrueCells = -1
+
   ! True for blocks next to the cell based boundaries
   logical :: far_field_BCs_BLK(MaxBlock)
 
@@ -207,4 +210,23 @@ contains
 
   end subroutine set_block_jacobian_cell
  
+  !============================================================================
+
+  subroutine count_true_cells
+
+    use BATL_lib, ONLY: nI, nJ, nK, nBlock, Unused_B, iComm
+    use ModMpi
+
+    integer :: iBlock, iError
+    !----------------------------------------------------------------------------
+
+    nTrueCells=0
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       nTrueCells = nTrueCells + count(true_cell(1:nI,1:nJ,1:nK,iBlock))
+    end do
+    call MPI_reduce_integer_scalar(nTrueCells, MPI_SUM, 0, iComm, iError)
+
+  end subroutine count_true_cells
+
 end module ModGeometry
