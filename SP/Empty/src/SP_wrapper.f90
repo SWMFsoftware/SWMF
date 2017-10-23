@@ -22,6 +22,7 @@ module SP_wrapper
   public:: SP_put_from_sc
   public:: SP_put_from_ih
   public:: SP_put_line
+  public:: SP_adjust_lines
   public:: SP_interface_point_coords_for_ih
   public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
@@ -207,5 +208,10 @@ contains
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_copy_old_state
-
+  !===========================
+  subroutine SP_adjust_lines
+    character(len=*), parameter:: NameSub='SP_adjust_lines'
+    !---------------------------------------------------------------
+    call CON_stop('SP:'//NameSub//': cannot call the empty version')
+  end subroutine SP_adjust_lines
 end module SP_wrapper
