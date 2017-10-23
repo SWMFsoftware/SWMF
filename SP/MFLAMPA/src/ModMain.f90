@@ -22,8 +22,10 @@ module SP_ModMain
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
+       Distribution_IIB, &
        CoordMin_DI, TypeCoordSystem,&
-       set_grid_param, init_grid, get_node_indexes, fix_grid_consistency
+       set_grid_param, init_grid, get_node_indexes, fix_grid_consistency!, &
+       !set_lagrangian_coordinates
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
@@ -55,7 +57,7 @@ module SP_ModMain
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       CoordMin_DI, TypeCoordSystem,& 
+       Distribution_IIB, CoordMin_DI, TypeCoordSystem,& 
        get_node_indexes
 
   ! Methods and variables from ModWrite
@@ -161,6 +163,7 @@ contains
     ! write the initial background state to the output file
     !/
     if(IsFirstCall)then
+       !call set_lagrangian_coordinates
        ! print the initial state
        call write_output(TimeGlobal, iIterGlobal, &
             IsInitialOutput = .true.)

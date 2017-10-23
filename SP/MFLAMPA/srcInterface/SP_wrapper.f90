@@ -14,7 +14,8 @@ module SP_wrapper
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
-       iGridGlobal_IA, iGridLocal_IB, State_VIB, iNode_B, TypeCoordSystem, &
+       iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
+       iNode_B, TypeCoordSystem, &
        CoordMin_DI, DataInputTime, &
        Block_, Proc_, Begin_, End_, &
        X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
@@ -50,6 +51,7 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
   public:: SP_put_line
+  public:: SP_adjust_lines
   public:: SP_get_grid_descriptor_param
   public:: SP_get_domain_boundary
   public:: SP_put_r_min
@@ -465,6 +467,53 @@ contains
        iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
     end do
   end subroutine SP_put_line
+
+  !===================================================================
+
+  subroutine SP_adjust_lines
+    ! once new geometry of lines has been put, account for some particles
+    ! exiting the domain (can happen both at the beginning and the end)
+    integer:: iParticle, iBlock, iBegin, iEnd, iEndNew ! loop variables
+    logical:: IsMissingCurr, IsMissingPrev
+    real   :: R2
+    !--------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       iBegin = iGridLocal_IB(Begin_,iBlock)
+       iEnd   = iGridLocal_IB(End_,  iBlock)
+       IsMissingPrev = all(State_VIB(X_:Z_,iBegin,iBlock)==0.0)
+       R2 = sum(State_VIB(X_:Z_,iBegin,iBlock)**2)
+       do iParticle = iBegin + 1, iEnd
+          IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
+          if(IsMissingCurr .and. R2 > RBufferMin**2)then
+             iGridLocal_IB(End_,  iBlock) = iParticle - 1
+             EXIT
+          end if
+          
+          if(.not.IsMissingCurr)then
+             R2 = sum(State_VIB(X_:Z_,iParticle,iBlock)**2)
+             if(IsMissingPrev)then
+                iGridLocal_IB(Begin_,  iBlock) = iParticle
+             end if
+          end if
+          IsMissingPrev = IsMissingCurr
+       end do
+       ! adjust data storage
+       iEndNew= iGridLocal_IB(End_, iBlock) - &
+            (iGridLocal_IB(Begin_, iBlock) - 1)
+       if(  iGridLocal_IB(Begin_,iBlock) /= 1 .or.&
+            iGridLocal_IB(End_,  iBlock) /= iEndNew)then
+          iBegin = iGridLocal_IB(Begin_, iBlock)
+          iEnd   = iGridLocal_IB(End_,   iBlock)
+          iGridLocal_IB(Begin_, iBlock) = 1
+          iGridLocal_IB(End_,   iBlock) = iEndNew
+          State_VIB(:, 1:iEndNew, iBlock) = &
+               State_VIB(:, iBegin:iEnd, iBlock)
+          Distribution_IIB(:,1:iEndNew, iBlock) = &
+               Distribution_IIB(:,iBegin:iEnd, iBlock)
+       end if
+    end do
+  end subroutine SP_adjust_lines
+
   !===================================================================
 
   subroutine SP_get_grid_descriptor_param(&
@@ -482,9 +531,9 @@ contains
   subroutine SP_copy_old_state
     ! copy current state to old state for all field lines
     integer:: iBegin, iEnd, iBlock
-    integer, parameter:: nVarReset  = 8
+    integer, parameter:: nVarReset  = 11
     integer, parameter:: &
-         VarReset_I(nVarReset) = (/Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
+         VarReset_I(nVarReset) = (/X_,Y_,Z_,Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
        iBegin = iGridLocal_IB(Begin_,iBlock)
