@@ -184,7 +184,7 @@ g
 3			Particles per cell in Z
 
 #SOLVER
-1.0e-4			GMREStol
+1.0e-8			GMREStol
 100			nGMRESRestart
 3			NiterMover 
 
