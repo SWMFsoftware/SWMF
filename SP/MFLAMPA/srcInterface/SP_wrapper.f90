@@ -9,14 +9,14 @@ module SP_wrapper
   use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
   use SP_ModMain, ONLY: &
        run, initialize, finalize, check, read_param,&
-       get_node_indexes, &
+       get_node_indexes, append_particles, &
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, &
-       CoordMin_DI, DataInputTime, &
+       Length_I, CoordMin_DI, DataInputTime, &
        Block_, Proc_, Begin_, End_, Shock_, ShockOld_, &
        X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use CON_comp_info
@@ -320,6 +320,7 @@ contains
        ! Xyz0 = Xyz1 + Alpha * Dir1 and R0 = RMin =>
        Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
        CoordMin_DI(:,iBlock) = Xyz1_D + Alpha * Dir1_D
+       Length_I(iBlock) = abs(Alpha)
     end do
   end subroutine SP_put_r_min
 
@@ -516,7 +517,9 @@ contains
                Distribution_IIB(:,iBegin:iEnd, iBlock)
        end if
     end do
-  end subroutine SP_adjust_lines
+    ! may need to add particles to the beginning of lines
+    call append_particles
+ end subroutine SP_adjust_lines
 
   !===================================================================
 

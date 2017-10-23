@@ -175,7 +175,7 @@ contains
                   File_I(iFile)%nVarPlot, iParticleMin:iParticleMax))
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
-                  'I '//trim(File_I(iFile) % NameVarPlot)
+                  'ParticleID '//trim(File_I(iFile) % NameVarPlot)
              if(DoTraceShock)&
                   File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)//' iShock RShock'

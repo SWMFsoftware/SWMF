@@ -23,9 +23,9 @@ module SP_ModMain
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, &
-       CoordMin_DI, TypeCoordSystem,&
+       Length_I, CoordMin_DI, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency, &
-       reset_lagrangian_id
+       reset_lagrangian_id, append_particles
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
@@ -57,8 +57,8 @@ module SP_ModMain
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       Distribution_IIB, CoordMin_DI, TypeCoordSystem,& 
-       get_node_indexes
+       Distribution_IIB, Length_I, CoordMin_DI, TypeCoordSystem,& 
+       get_node_indexes, append_particles
 
   ! Methods and variables from ModWrite
 

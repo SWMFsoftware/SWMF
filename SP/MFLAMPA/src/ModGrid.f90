@@ -12,12 +12,12 @@ module SP_ModGrid
   private ! except
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
-  public:: fix_grid_consistency, reset_lagrangian_id
+  public:: fix_grid_consistency, reset_lagrangian_id, append_particles
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
-  public:: CoordMin_DI
+  public:: CoordMin_DI, Length_I
   public:: State_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
@@ -416,6 +416,7 @@ contains
     !appends a new particle at the beginning of lines if necessary
     integer:: iBlock
     real:: DistanceToMin, Alpha
+    real, parameter:: cTol = 1E-06
 
     character(len=*), parameter:: NameSub = 'append_particles'
     !--------------------------------------------------------------------
@@ -439,12 +440,14 @@ contains
        Distribution_IIB(     :,2:iGridLocal_IB(End_, iBlock)+1, iBlock) = &
             Distribution_IIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
        iGridLocal_IB(End_, iBlock) = iGridLocal_IB(End_, iBlock) + 1
-       ! compute new coordinates
-       ! TO BE CHANGED: NOW NEW PARTICLE IS ON THE LINE CONNECTING 
-       ! THE CURRENT BEGINNING WITH MIN 
-       Alpha = Length_I(iBlock) / DistanceToMin
-       State_VIB(X_:Z_, 1, iBlock) = Alpha * CoordMin_DI(:,iBlock) + &
-            (1 - Alpha) * State_VIB(X_:Z_, 2, iBlock)
+       ! put the new particle just above the lower boundary
+       State_VIB(X_:Z_,  1, iBlock) = CoordMin_DI(:,iBlock) * (1.0 + cTol)
+       State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
+       ! for old values of background parameters use extrapolation
+       Alpha = DistanceToMin / (DistanceToMin + State_VIB(D_, 2, iBlock))
+       State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
+            (Alpha+1) * State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
+            -Alpha    * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
     end do
   end subroutine append_particles
 
