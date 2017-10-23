@@ -160,7 +160,7 @@ subroutine write_plot_radiowave(iFile)
   Intensity_III = 0.0
 
   if (DoTiming) call timing_start('rfr_raytrace_loop')
-
+  call update_grad_density
   do iFreq = 1, nFreq
      ! Calculate approximate radius of the  critical surface around the sun
      ! from the frequency

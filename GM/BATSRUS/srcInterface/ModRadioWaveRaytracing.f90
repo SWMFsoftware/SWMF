@@ -7,10 +7,9 @@ module ModRadioWaveRaytracing
   use ModCoordTransform
   use CON_global_vector, ONLY: associate_with_global_vector
   use ModDensityAndGradient, ONLY: NameVector, &
-       GradDensity_DI, Density_I, DeltaSNew_I, EnergyDeposition_I
+       GradDensity_DI, Density_I, DeltaSNew_I
   use ModPhysics, ONLY : No2Si_V, UnitRho_, UnitX_
   use ModProcMH, ONLY: iProc
-!  use ModAbsorption, ONLY: AbsorptionCoeff_I
   use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MaxDim
   use ModMain,     ONLY: TypeCellBc_I
 
