@@ -659,6 +659,7 @@ contains
 
     end if
     call timing_stop(NameSub)
+
   end subroutine calc_kp
 
   !===========================================================================
@@ -729,6 +730,7 @@ contains
     end if
 
     call timing_stop(NameSub)
+
   end subroutine calc_ae
   !================================================================
   subroutine check_mag_input_file
@@ -914,7 +916,7 @@ contains
     nMagNow = iEnd-iStart
 
     ! If writing new files every time, no initialization needed.
-    if(TypeFileNow /= 'single')return
+    if(TypeFileNow /= 'single') RETURN
 
     if(IsLogName_e)then
        ! Event date added to magnetic perturbation file name
