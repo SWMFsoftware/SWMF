@@ -408,12 +408,12 @@ contains
 
     !Modules
     use ModProcMH,        ONLY: iProc
-    use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, &
-         gm_trace_sat
+    use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
     use ModMain,          ONLY: UseB0, nBlock
     use ModPhysics,       ONLY: No2Si_V, UnitB_
     use ModVarIndexes,    ONLY: nVar, Bx_, By_, Bz_
     use ModB0,            ONLY: get_b0
+    use ModCurrent,       ONLY: get_point_data
     use ModMPI
 
     !Arguments

@@ -293,6 +293,7 @@ contains
     use ModPhysics,       ONLY: No2Si_V, UnitB_
     use ModVarIndexes,    ONLY: nVar, Bx_, Bz_
     use ModB0,            ONLY: get_b0
+    use ModCurrent,       ONLY: get_point_data
     use ModMPI
 
     !Arguments

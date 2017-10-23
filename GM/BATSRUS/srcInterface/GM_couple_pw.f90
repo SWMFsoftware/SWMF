@@ -49,8 +49,9 @@ contains
     use ModVarIndexes, ONLY: p_
     use ModMain,       ONLY: nBlock
     use ModProcMH,     ONLY: nProc, iComm
+    use ModPhysics,    ONLY: No2Si_V, UnitP_
+    use ModCurrent,    ONLY: get_point_data
     use ModMpi
-    use ModPhysics, ONLY: No2Si_V, UnitP_
 
     integer,intent(in)  :: nTotalLine
     real,   intent(out) :: Buffer_I(nTotalLine)
