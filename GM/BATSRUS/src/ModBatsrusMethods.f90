@@ -14,6 +14,7 @@ subroutine BATS_setup
   use ModAMR,      ONLY: nRefineLevelIC
   use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
   use ModParallel, ONLY: init_mod_parallel
+  use ModWriteProgress, ONLY: write_progress, write_runtime_values
 
   implicit none
 
@@ -398,6 +399,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Enthalpy_
   use ModLoadBalance, ONLY: load_balance_blocks
   use ModBoundaryGeometry, ONLY: fix_geometry
+  use ModWriteProgress, ONLY: write_timeaccurate
+
   implicit none
 
   !INPUT ARGUMENTS:

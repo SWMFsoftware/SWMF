@@ -307,11 +307,6 @@ module ModMain
   logical:: UseSolidState            = .false.
 
   !\
-  ! Number of true cells locally and globally
-  !/
-  integer :: nTrueCells, nTrueCellsALL
-
-  !\
   ! Logical controlling the use of the laser heating.
   !/
   logical :: UseLaserHeating = .false.

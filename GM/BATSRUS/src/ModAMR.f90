@@ -63,10 +63,11 @@ contains
 
     use ModProcMH
     use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
-         lVerbose, UseB, Dt_BLK, nTrueCellsALL, &
+         lVerbose, UseB, Dt_BLK, &
          iNewGrid, iNewDecomposition, UseHighOrderAMR, time_loop, &
          UseLocalTimeStep
-    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell
+    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
+         count_true_cells
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
          nVar, State_VGB, &
          SkippedBlock_ !!!
@@ -200,7 +201,7 @@ contains
        call write_prefix; write(iUnitOut,*) &
             '|  AMR:  Total number of cells       = ', nBlockALL*nIJK
        call write_prefix; write(iUnitOut,*) &
-            '|  AMR:  Total number of true cells  = ', nTrueCellsALL
+            '|  AMR:  Total number of true cells  = ', nTrueCells
        call write_prefix; write(iUnitOut,*) &
             '  AMR:   Min and max AMR levels      = ', nLevelMin, nLevelMax
        if(IsLogRadius .or. IsGenRadius)then

@@ -13,6 +13,7 @@ program BATSRUS
        IsLastRead, &
        lVerbose, &
        dn_timing, UseTiming, UseTimingAll, iUnitTiming
+  use ModWriteProgress, ONLY: write_progress
   use ModRestartFile, ONLY: NameRestartInDir
   use CON_planet, ONLY: init_planet_const, set_planet_defaults
 

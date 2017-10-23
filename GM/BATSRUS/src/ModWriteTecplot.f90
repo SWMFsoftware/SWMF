@@ -603,7 +603,8 @@ contains
     use ModMain, ONLY : nI,nJ,nK, &
          nBlockALL, time_accurate,n_step, &
          nOrder, UseRotatingBc,           &
-         TypeCoordSystem, CodeVersion, nTrueCellsALL
+         TypeCoordSystem, CodeVersion
+    use ModGeometry, ONLY: nTrueCells
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
     use ModMain, ONLY: boris_correction
     use ModPhysics, ONLY : &
@@ -655,7 +656,7 @@ contains
     write(iUnitHere,'(a,a,a)') 'AUXDATA CELLS="',trim(adjustl(stmp)),'"'
 
     !CELLSUSED
-    write(stmp,'(i12)')nTrueCellsALL
+    write(stmp,'(i12)')nTrueCells
     write(iUnitHere,'(a,a,a)') 'AUXDATA CELLSUSED="',trim(adjustl(stmp)),'"'
 
     !CODEVERSION
@@ -746,6 +747,7 @@ contains
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: n_step, time_accurate
     use ModIO, ONLY: StringDateOrTime
+    use ModGeometry, ONLY: count_true_cells
 
     integer :: iTime0_I(7),iTime_I(7)
     character (len=80) :: format
