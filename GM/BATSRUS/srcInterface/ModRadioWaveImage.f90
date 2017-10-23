@@ -65,54 +65,53 @@ contains !=========================================================
          Density_I, GradDensity_DI, DeltaSNew_I
 
     implicit none
-
-    real, intent(in) :: XyzObserver_D(3)          
+    !INPUTS
     ! Observer's position
+    real, intent(in) :: XyzObserver_D(3)          
+ 
     real, intent(in) :: RadioFrequency
-    real, intent(in) :: ImageRange_I(4)        
     ! (x0, y0, x1, y1), i.e. (XLower, YLower, XUpper, YUpper)
-    real, intent(in) :: rIntegration           
+    real, intent(in) :: ImageRange_I(4)        
     ! Radius of "integration sphere"
-    integer, intent(in) ::  nXPixel, nYPixel   
+    real, intent(in) :: rIntegration           
     ! Dimensions of the raster in pixels
-    real, dimension(nYPixel,nXPixel), intent(out) :: Intensity_II          
+    integer, intent(in) ::  nXPixel, nYPixel   
     ! The result of emissivity integration
-    logical, dimension(nYPixel*nXPixel) :: ExcludeRay_I   
+    real, dimension(nXPixel,nYPixel), intent(out) :: Intensity_II          
     ! A ray is excluded from processing if it is .true.
-    real, dimension(nYPixel,nXPixel) :: XPixel_II, YPixel_II   
+    logical, dimension(nYPixel*nXPixel) :: ExcludeRay_I   
     ! Pixel coordinates INSIDE of the image plane
+    real, dimension(nXPixel,nYPixel) :: XPixel_II, YPixel_II  
+    ! Unity vector normal to image plane 
     real :: Normal_D(3)                                          
-    ! Unity vector normal to image plane
     real :: ZAxisOrt_D(3) = (/0, 0, 1/)
-    real :: Tau_D(3), Xi_D(3)                                   
     ! Image plane inner Cartesian orts
+    real :: Tau_D(3), Xi_D(3)                                   
     real :: XyzObservLen
-    real, dimension(3,nYPixel,nXPixel) :: XyzPixel_DII          
     ! SGI pixel coordinates
-    real, dimension(3,nYPixel,nXPixel) :: Slope_DII  
-    ! SGI unity slope vectors for all the line-of-sights pointing at
-    ! the pixels 
-    real, dimension(nYPixel,nXPixel) :: ObservToIntSphereDist_II  
-    ! Distance from the radiotelescope to the integration sphere
-    real, dimension(nYPixel,nXPixel) :: ObservToIntSphere2_II  
-    ! Squared distance from the radiotelescope to the integration sphere
-    real, dimension(3,nYPixel,nXPixel) :: Position_DII        ! 
-    real, dimension(nYPixel*nXPixel) :: SolarDistSqr_I
+    real, dimension(3,nYPixel,nXPixel) :: XyzPixel_DII
+    ! SGI unity slope vectors for all the line-of-sights pointing at 
+    ! the pixels          
+    real, dimension(3,nYPixel,nXPixel) :: Slope_DII
+    ! Distance from the radiotelescope to the integration sphere  
+    real :: ObservToIntSphereDist
+   
+    real, dimension(3,nXPixel,nYPixel) :: Position_DII        ! 
+    real, dimension(nXPixel*nYPixel) :: SolarDistSqr_I
     real :: XPixelDel, YPixelDel    
     real :: SlopeUnscaled_D(3)
     real :: XLower, XUpper, YLower, YUpper
     real, dimension(3,nXPixel*nYPixel) :: Slope_DI
     real, pointer, dimension(:,:) :: Position_DI
-    real, dimension(nXPixel*nYPixel) :: Intensity_I, RayPath_I,DeltaS_I
-    logical, dimension(nXPixel*nYPixel) :: RayFlag_I         
+    real, dimension(nXPixel*nYPixel) :: Intensity_I, DeltaS_I
     !.true. if a ray is OK; .false. otherwise
     ! Must be set to .true. before a call to ray_path() with new value of nRay
-    real :: Tolerance = 0.01, DeltaS = 1.0
+    logical, dimension(nXPixel*nYPixel) :: RayFlag_I         
+    real,parameter :: Tolerance = 0.01, DeltaS = 1.0
     real :: DensityCr 
-    real :: MinRayPath
     real :: rIntegrationSqr
     integer :: nRay, nIteration, i, j, nRayInsideIntSphere
-    integer, dimension(nXPixel*nYPixel) :: RayInsideIntSphere_I
+    logical :: IsRayInsideIntSphere_I(nXPixel*nYPixel)
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
     logical, save :: DoAllocate = .true.
     !------------------------------------
@@ -123,7 +122,7 @@ contains !=========================================================
     nRay = nXPixel*nYPixel  
 
     !
-    ! Calculate the critical density from the frequency
+    ! Calculate the critical density from the frequency, in CGS
     !
     DensityCr = cPi*cProtonMass*cElectronMass*1e6 &
          *(RadioFrequency/ProtonChargeSGSe)**2
@@ -137,13 +136,13 @@ contains !=========================================================
     YUpper = ImageRange_I(4)
     XPixelDel = (XUpper - XLower)/nXPixel
     YPixelDel = (YUpper - YLower)/nYPixel
-    XPixel_II(1,:) = (/ (XLower + (real(j)-0.5)*XPixelDel, j = 1, nXPixel) /)
-    do i = 2, nXPixel
-       XPixel_II(i,:) = XPixel_II(1,:)
+    XPixel_II(:,1) = (/ (XLower + (real(i) - 0.5)*XPixelDel, i = 1, nXPixel) /)
+    do j = 2, nYPixel
+       XPixel_II(:,j) = XPixel_II(:,1)
     end do
-    YPixel_II(:,1) = (/ (YLower + (real(j)-0.5)*YPixelDel, j = 1, nYPixel) /)
-    do i = 2, nYPixel
-       YPixel_II(:,i) = YPixel_II(:,1)
+    YPixel_II(1,:) = (/ (YLower + (real(j) - 0.5)*YPixelDel, j = 1, nYPixel) /)
+    do i = 2, nXPixel
+       YPixel_II(i,:) = YPixel_II(1,:)
     end do
 
     !
@@ -158,8 +157,8 @@ contains !=========================================================
     !
     ! Calculate coordinates of all the pixels in the SGI
     !
-    do i = 1, nYPixel
-       do j = 1, nXPixel
+    do j = 1, nYPixel
+       do i = 1, nXPixel
           XyzPixel_DII(:,i,j) = XPixel_II(i,j)*Tau_D + YPixel_II(i,j)*Xi_D
           SlopeUnscaled_D = XyzPixel_DII(:,i,j) - XyzObserver_D
           Slope_DII(:,i,j) = SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) ! v
@@ -170,16 +169,20 @@ contains !=========================================================
     ! Find the points on the integration sphere where it intersects
     ! with the straight "rays" 
     !
-    do i = 1, nYPixel
-       do j = 1, nXPixel
-          ObservToIntSphereDist_II(i,j) = -sum(XyzObserver_D*Slope_DII(:,i,j))&
-               - sqrt(sum((Slope_DII(:,i,j)*rIntegration)**2) &
-               - sum(cross_product(Slope_DII(:,i,j), XyzObserver_D)**2))
-          ObservToIntSphere2_II(i,j) = -sum(XyzObserver_D*Slope_DII(:,i,j)) + &
-               sqrt(sum((Slope_DII(:,i,j)*rIntegration)**2) &
-               - sum(cross_product(Slope_DII(:,i,j), XyzObserver_D)**2))
+    do j = 1, nYPixel
+       do i = 1, nXPixel
+          !\
+          ! Solve a duadratic equation,
+          !|| XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
+          !or  ObservToIntSphereDist**2 + 
+          !  + 2*ObservToIntSphereDist*XyzObs_D
+          !  + XyzObservLen**2 - rIntegration**2 = 0
+          !/  
+          ObservToIntSphereDist = -sum(XyzObserver_D*Slope_DII(:,i,j))&
+               - sqrt(rIntegration**2 - XyzObservLen**2 &
+               + sum(Slope_DII(:,i,j)*XyzObserver_D)**2)
           Position_DII(:,i,j) = XyzObserver_D &
-               + Slope_DII(:,i,j)*ObservToIntSphereDist_II(i,j)
+               + Slope_DII(:,i,j)*ObservToIntSphereDist
        end do
     end do
 
@@ -203,38 +206,24 @@ contains !=========================================================
     Slope_DI = reshape(Slope_DII, (/3, nRay/))
     Intensity_I = 0
     RayFlag_I = .false.
-    !NewEntry = .true.
     ExcludeRay_I = .false.
-    RayInsideIntSphere_I = 1
+    IsRayInsideIntSphere_I = .true.
     DeltaS_I = DeltaS
-    RayPath_I = 0
-    nIteration = 0
     rIntegrationSqr = rIntegration**2 + 0.01
-
-    MinRayPath = 0.0
     nRayInsideIntSphere = nRay
 
     do while(nRayInsideIntSphere .gt. 0)
-       nIteration = nIteration + 1
-
-       !write(*,*) 'ray_bunch_intensity(): nIteration = ', nIteration
-
        SolarDistSqr_I = sum(Position_DI**2,1)
-       where(SolarDistSqr_I .gt. rIntegrationSqr) 
-          RayInsideIntSphere_I = 0
-          ExcludeRay_I = .true.
-       end where
+       ExcludeRay_I = SolarDistSqr_I .gt. rIntegrationSqr 
+          IsRayInsideIntSphere_I = .not.ExcludeRay_I
 
-       nRayInsideIntSphere = sum(RayInsideIntSphere_I)
+       nRayInsideIntSphere = count(IsRayInsideIntSphere_I)
 
        call ray_path(get_plasma_density, nRay, ExcludeRay_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCr, Intensity_I, RayFlag_I)
-       RayPath_I = RayPath_I + DeltaS_I
-       MinRayPath = minval(RayPath_I)
-
     end do
 
-    Intensity_II = reshape(Intensity_I, (/nYPixel,nXPixel/))
+    Intensity_II = reshape(Intensity_I, (/nXPixel,nYPixel/))
 
   end subroutine ray_bunch_intensity
 
@@ -248,20 +237,18 @@ subroutine get_ray_bunch_intensity(XyzObserver_D, RadioFrequency, &
   use ModRadioWaveImage, ONLY: ray_bunch_intensity
 
   implicit none
-
-  real, intent(in) :: XyzObserver_D(3)          
   ! Observer position
+  real, intent(in) :: XyzObserver_D(3)          
   real, intent(in) :: RadioFrequency  
-  real, intent(in) :: ImageRange_I(4)         
   ! (x0, y0, x1, y1), i.e. (XLower, YLower, XUpper, YUpper)
-  real, intent(in) :: rIntegration           
+  real, intent(in) :: ImageRange_I(4)         
   ! Radius of "integration sphere"
-  integer, intent(in) ::  nXPixel, nYPixel   
-  ! Dimensions of the raster in pixels
+  real, intent(in) :: rIntegration           
+ ! Dimensions of the raster in pixels
+  integer, intent(in) ::  nXPixel, nYPixel  
+  ! The result from emissivity integration 
   real, dimension(nYPixel,nXPixel), intent(out) :: Intensity_II          
-  ! The result from emissivity integration
-
+  !--------------------------------
   call ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
        rIntegration, nXPixel, nYPixel, Intensity_II)
-
 end subroutine get_ray_bunch_intensity
