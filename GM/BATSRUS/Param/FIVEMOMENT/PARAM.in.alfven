@@ -104,7 +104,7 @@ Uz  = 0
 0.0			Phase
 
 #WAVE
-14			ElUy_ = Uey = Uy  since Jy=0
+15			ElUy_ = Uey = Uy  since Jy=0
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
@@ -113,7 +113,7 @@ Uz  = 0
 0.0			Phase
 
 #WAVE
-15			ElUz_ = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi) 
+16			ElUz_ = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi) 
 10000.0			Width       = 2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
 6.2831852e-05		Amplitude     2e-5*pi
 10000.0			LambdaX
