@@ -423,6 +423,7 @@ contains
       use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
            UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, OrbitPeriod, &
            UseOutflowPressure, pOutflow
+      use ModCurrent, ONLY: get_point_data
       use ModMain
       use ModMultiFluid
       use CON_planet_field, ONLY: get_planet_field, map_planet_field

@@ -304,7 +304,8 @@ subroutine set_logvar( &
        ElectronPressureRatio
   use ModVarIndexes
   use ModAdvance,    ONLY: tmp1_BLK, tmp2_BLK, State_VGB, Energy_GBI, DivB1_GB
-  use ModB0, ONLY:  B0_DGB, get_b0
+  use ModCurrent,    ONLY: get_point_data
+  use ModB0,         ONLY: B0_DGB, get_b0
   use ModGeometry,   ONLY: R_BLK, x1, x2, y1, y2, z1, z2, DomainVolume
   use ModRaytrace,   ONLY: ray
   use ModSatelliteFile, ONLY: get_satellite_ray
@@ -1627,11 +1628,11 @@ end subroutine collect_satellite_data
 
 subroutine satellite_test
 
-  use ModProcMH, ONLY: iProc
   use ModVarIndexes
-  use ModMain,     ONLY: nBlock,xTest,yTest,zTest
-  use ModAdvance,  ONLY: State_VGB
-  use BATL_lib,    ONLY: Xyz_DGB, x_, y_, z_
+  use ModMain,         ONLY: xTest, yTest, zTest
+  use ModAdvance,      ONLY: State_VGB
+  use ModCurrent,      ONLY: get_point_data
+  use BATL_lib,        ONLY: Xyz_DGB, x_, y_, z_, nBlock, iProc
   implicit none
   real :: State_V(0:nVar+3)
 
