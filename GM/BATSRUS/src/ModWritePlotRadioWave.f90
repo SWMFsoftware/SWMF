@@ -47,7 +47,7 @@ subroutine write_plot_radiowave(iFile)
   integer :: nFreq
   ! Number of frequencies read from StringRadioFrequency_I(iFile)
   integer :: i, iFreq, iPixel, jPixel
-  real :: XPixel, XPixelSize, YPixel, YPixelSize, nRay
+  real :: XPixel, XPixelSize, YPixel, YPixelSize
   real :: XLower, YLower, XUpper, YUpper
   real :: ImagePlaneDiagRadius
   character (LEN=120) :: allnames, StringHeadLine, strFreq
@@ -75,8 +75,6 @@ subroutine write_plot_radiowave(iFile)
   HalfImageRangeY = 0.5*Y_Size_Image(iFile)
   ImageRange_I = (/-HalfImageRangeX, -HalfImageRangeY, &
        HalfImageRangeX, HalfImageRangeY/)
-  nRay = nXPixel*nYPixel
-
   !
   ! Determine the image plane inner coordinates of pixel centers
   !
@@ -158,7 +156,7 @@ subroutine write_plot_radiowave(iFile)
      if(oktest .and. iProc==0) write(*,*) unitstr_IDL
   end select
 
-  allocate(Intensity_III(nYPixel,nXPixel,nFreq))
+  allocate(Intensity_III(nXPixel,nYPixel,nFreq))
   Intensity_III = 0.0
 
   if (DoTiming) call timing_start('rfr_raytrace_loop')
@@ -232,12 +230,13 @@ subroutine write_plot_radiowave(iFile)
         write(UnitTmp_,*) 'ZONE T="RFR Image"', &
              ', I=',nXPixel,', J=',nYPixel,', F=POINT'
         ! Write point values
-        do iPixel = 1, nXPixel
-           XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
-           do jPixel = 1, nYPixel
-              YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
+        do jPixel = 1, nYPixel
+           YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
+           do iPixel = 1, nXPixel
+              XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
+ 
               write(UnitTmp_,fmt="(30(E14.6))") XPixel, YPixel, &
-                   Intensity_III(jPixel,iPixel,1:nFreq)
+                   Intensity_III(iPixel,jPixel,1:nFreq)
            end do
         end do
 
@@ -261,12 +260,13 @@ subroutine write_plot_radiowave(iFile)
         write(UnitTmp_,"(a)") allnames
 
         ! Data
-        do iPixel = 1, nXPixel
-           XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
-           do jPixel = 1, nYPixel
-              YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
+        do jPixel = 1, nYPixel
+           YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
+
+           do iPixel = 1, nXPixel
+              XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
               write(UnitTmp_,fmt="(30(1pe13.5))") &
-                   XPixel, YPixel, Intensity_III(jPixel,iPixel,1:nFreq)
+                   XPixel, YPixel, Intensity_III(iPixel,jPixel,1:nFreq)
            end do
         end do
      end select
