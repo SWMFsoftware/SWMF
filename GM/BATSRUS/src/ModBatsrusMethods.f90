@@ -377,6 +377,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
        UseElectronPressure
+  use ModAdvectPoints, ONLY: advect_all_points
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
   use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
