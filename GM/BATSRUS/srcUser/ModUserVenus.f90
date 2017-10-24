@@ -1025,9 +1025,8 @@ contains
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    real:: XFace,YFace,ZFace, rFace, rFace2
-    ! real:: v_phi(3) 
-    real:: cosSZA 
+    real:: zFace, yFace, zFace, rFace, rFace2
+    real:: CosSZA 
     real:: uDotR, bDotR
     !--------------------------------------------------------------------------
 
@@ -1038,7 +1037,7 @@ contains
     rFace2 = XFace**2 + YFace**2 + ZFace**2
     rFace  = sqrt(rFace2)
 
-    !Apply boundary conditions
+    ! Apply boundary conditions
     cosSZA = (0.5+sign(0.5,XFace)) * XFace/max(rFace,1.0e-3) + 1.0e-3
 
     VarsGhostFace_V(rhoOp_) =  BodyRhoSpecies_I(Op_) *cosSZA
@@ -1075,12 +1074,6 @@ contains
     case('default')
        write(*,*)'unknown type of user inner bcs'
     end select
-
-    ! Apply corotation?
-    !if (UseRotatingBcHere) then
-    !   call calc_corotation_velocities(FaceCoords_D, v_phi)
-    !   VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*v_phi
-    !end if
 
   end subroutine user_set_face_boundary
 

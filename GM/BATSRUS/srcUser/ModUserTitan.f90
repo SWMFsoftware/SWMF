@@ -1205,14 +1205,6 @@ contains
        write(*,*)'unknown type of user inner bcs'
     end select
 
-    !\
-    ! Apply corotation?
-    !/
-    !if (UseRotatingBcHere) then
-    !   call calc_corotation_velocities(FaceCoords_D, v_phi)
-    !   VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_)  + 2*v_phi
-    !end if
-
   end subroutine user_set_face_boundary
 
   !============================================================================

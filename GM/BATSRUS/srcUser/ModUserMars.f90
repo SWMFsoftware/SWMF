@@ -1282,13 +1282,13 @@ contains
 
     use ModMain,       ONLY: UseRotatingBc, ExtraBc_, Body1_, xMinBc_
     use ModVarIndexes, ONLY: nVar, RhoOp_, RhoO2p_, RhoCO2p_, RhoHp_
-    use ModPhysics,    ONLY: SW_rho, FaceState_VI
+    use ModPhysics,    ONLY: SW_rho, FaceState_VI, calc_corotation_velocity
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, iBoundary
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
     real:: XFace,YFace,ZFace,rFace,rFace2
-    real:: v_phi(3)
+    real:: uRot_D(3)
     real:: cosSZA 
     real:: uDotR
     character (len=*), parameter :: NameSub = 'user_set_face_boundary'
@@ -1334,12 +1334,11 @@ contains
 
     ! Apply corotation?
     if (UseRotatingBc) then
-       call calc_corotation_velocities(FaceCoords_D, v_phi)
-       VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*v_phi
+       call calc_corotation_velocity(FaceCoords_D, uRot_D)
+       VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*uRot_D
     end if
 
   end subroutine user_set_face_boundary
-
 
   !============================================================================
 

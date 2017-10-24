@@ -1315,24 +1315,22 @@ contains
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    real:: XFace,YFace,ZFace, rFace, rFace2
-    real:: v_phi(3)
-    real:: cosSZA
-    real,dimension(1:MaxSpecies) :: coefx
+    real :: xFace, yFace, zFace, rFace, rFace2
+    real :: CosSZA
+    real :: Coefx(MaxSpecies)
     real :: dtm, dtmp1
     integer :: m
     real:: uDotR, bDotR
-
     !--------------------------------------------------------------------------
-    XFace = FaceCoords_D(1)
-    YFace = FaceCoords_D(2)
-    ZFace = FaceCoords_D(3)
+    xFace = FaceCoords_D(1)
+    yFace = FaceCoords_D(2)
+    zFace = FaceCoords_D(3)
 
     rFace2 = XFace**2 + YFace**2 + ZFace**2
     rFace  = sqrt(rFace2)
 
     !Apply boundary conditions
-    cosSZA = (XFace*SX0 + YFace*SY0 + ZFace*SZ0)/max(RFace,1.0e-3)
+    cosSZA = (xFace*SX0 + yFace*SY0 + zFace*SZ0)/max(RFace,1.0e-3)
 
     if(.not.UseCosSZA)then
        coefx=1.0
@@ -1388,14 +1386,6 @@ contains
     case('default')
        write(*,*)'unknown type of user inner bcs'
     end select
-
-    !\
-    ! Apply corotation?
-    !/
-    !if (UseRotatingBcHere) then
-    !   call calc_corotation_velocities(FaceCoords_D, v_phi)
-    !   VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_)  + 2*v_phi
-    !end if
 
   end subroutine user_set_face_boundary
 

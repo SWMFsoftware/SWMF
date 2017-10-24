@@ -1319,14 +1319,14 @@ contains
     use ModVarIndexes, ONLY: nVar, OpRho_, O2pRho_, CO2pRho_, HpRho_, HpP_,&
          O2pP_, OpP_, CO2pP_, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModPhysics,    ONLY: SW_rho, SW_p, SW_T_dim, ElectronPressureRatio, &
-         FaceState_VI
+         FaceState_VI, calc_corotation_velocity
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, &
          iFace, jFace, kFace, iBoundary, iBlockBc
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
     real:: XFace,YFace,ZFace,rFace,rFace2
-    real:: v_phi(3)
+    real:: uRot_D(3)
     real:: cosSZA 
     real:: uDotR_I(nFluid), bDotR
     integer:: i,j,k
@@ -1408,10 +1408,10 @@ contains
 
     ! Apply corotation?
     if (UseRotatingBc) then
-       call calc_corotation_velocities(FaceCoords_D, v_phi)
-       VarsGhostFace_V(iRhoUx_I) = VarsGhostFace_V(iRhoUx_I) + 2*v_phi(1)
-       VarsGhostFace_V(iRhoUy_I) = VarsGhostFace_V(iRhoUy_I) + 2*v_phi(2)
-       VarsGhostFace_V(iRhoUz_I) = VarsGhostFace_V(iRhoUz_I) + 2*v_phi(3)
+       call calc_corotation_velocity(FaceCoords_D, uRot_D)
+       VarsGhostFace_V(iRhoUx_I) = VarsGhostFace_V(iRhoUx_I) + 2*uRot_D(1)
+       VarsGhostFace_V(iRhoUy_I) = VarsGhostFace_V(iRhoUy_I) + 2*uRot_D(2)
+       VarsGhostFace_V(iRhoUz_I) = VarsGhostFace_V(iRhoUz_I) + 2*uRot_D(3)
     end if
 
   end subroutine user_set_face_boundary
