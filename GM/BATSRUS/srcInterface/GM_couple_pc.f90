@@ -94,14 +94,19 @@ contains
           Param_I(n) = 0.0; n = n+1
           Param_I(n:n+1) = DxyzPic_DI(x_,iRegion)*No2Si_V(UnitX_); n = n+2
        end if
+       
        if(nDim > 2) then
           Param_I(n) = XyzMinPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
           Param_I(n) = LenPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
           Param_I(n) = DxyzPic_DI(z_,iRegion)*No2Si_V(UnitX_); n = n+1
        else
-          ! Single cell in Z direction with dz = max(dx, dy)
           Param_I(n)     = 0.0; n = n+1
-          Param_I(n:n+1) = maxval(DxyzPic_DI(x_:y_,iRegion))*No2Si_V(UnitX_); n = n+2
+          if(nDim > 1) then
+             ! Single cell in Z direction with dz = max(dx, dy)
+             Param_I(n:n+1) = maxval(DxyzPic_DI(x_:y_,iRegion))*No2Si_V(UnitX_); n = n+2
+          else
+             Param_I(n:n+1) = DxyzPic_DI(x_,iRegion)*No2Si_V(UnitX_); n = n+2
+          endif
        endif
 
        ! The rotation matrix
@@ -226,7 +231,7 @@ contains
        end if
 
        Data_VI(1:nVar,iPoint) = State_V*No2Si_V(iUnitCons_V)
-
+       
     end do
 
   end subroutine GM_get_for_pc
@@ -320,11 +325,11 @@ contains
                 end do
                 if(UseB0) State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
                      State_VGB(Bx_:Bz_,i,j,k,iBlock) - B0_DGB(:,i,j,k,iBlock)
-
+                
                 do iVar = 1, nVar
                    ! Check for positivity
                    if(DefaultState_V(iVar) > 0 .and. State_VGB(iVar,i,j,k,iBlock) <= 0) then
-                      ! Use original MHD state if PC state is not positive
+                      ! Use original MHD state if PC state is not positive                      
                       State_VGB(:,i,j,k,iBlock) = State_V
                       EXIT
                    endif
