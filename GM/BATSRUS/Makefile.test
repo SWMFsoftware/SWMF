@@ -41,7 +41,7 @@ test:
 	-@($(MAKE) test_mars)
 	-@($(MAKE) test_marsfluids)
 	-@($(MAKE) test_venus)
-	-@($(MAKE) test_mercuryspuh)
+	-@($(MAKE) test_mercurysph)
 	-@($(MAKE) test_ganymede)
 	-@($(MAKE) test_saturn)
 	-@($(MAKE) test_comet)
