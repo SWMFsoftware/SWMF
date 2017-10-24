@@ -664,7 +664,7 @@ contains
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
     use ModGeometry,ONLY: r_BLK, Rmin_BLK
     use ModB0,      ONLY: B0_DGB
-    use ModPhysics, ONLY: Si2No_V, UnitT_, rBody
+    use ModPhysics, ONLY: Si2No_V, UnitT_, rBody, calc_corotation_velocity
     use ModEnergy,  ONLY: calc_energy_cell
     use BATL_lib,   ONLY: Xyz_DGB
 
@@ -715,7 +715,7 @@ contains
 
           ! Add rotational velocity if required
           if (UseRotatingBc) then
-             call calc_corotation_velocities(Xyz_D, uRot_D)
+             call calc_corotation_velocity(Xyz_D, uRot_D)
              uIono_D = uIono_D + uRot_D
           end if
 

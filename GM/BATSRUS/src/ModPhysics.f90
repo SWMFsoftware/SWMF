@@ -1082,52 +1082,45 @@ contains
 
   end subroutine init_vector_variables
 
+  !===========================================================================
+
+  subroutine calc_corotation_velocity(Xyz_D, uRot_D)
+
+    ! Calculates cartesian corotation velocity uRot_D at
+    ! location Xyz_D. The angular velocity depends on the component
+    ! and possibly also on simulation time.
+    !-------------------------------------------------------------------------
+
+    use CON_axes,          ONLY: get_axes
+    use ModCoordTransform, ONLY: cross_product
+    use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
+
+    real, intent(in) :: Xyz_D(3)
+    real, intent(out):: uRot_D(3)
+
+    real, save:: Omega_D(3)
+    logical   :: IsUninitialized = .true.
+
+    !------------------------------------------------------------------------
+    select case(TypeCoordSystem)
+    case('HGI')
+       ! In the HGI system the Solar angular velocity vector points towards +Z
+       Omega_D = (/ 0., 0., OmegaBody /)
+    case('GSE')
+       if(IsUninitialized)then
+          call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
+          Omega_D = OmegaBody * Omega_D
+          IsUninitialized = .false.
+       end if
+    case('GSM')
+       ! GSM system, Omega_D may be changing
+       call get_axes(Time_Simulation, RotAxisGsmOut_D=Omega_D)
+       Omega_D = OmegaBody*Omega_D
+    end select
+
+    ! The corotation velocity is u = Omega x R
+    uRot_D = cross_product(Omega_D, Xyz_D)
+
+  end subroutine calc_corotation_velocity
 
 end module ModPhysics
-
-!!! to be merged into module above
-
-subroutine calc_corotation_velocities(Xyz_D, uRot_D)
-  !-------------------------------------------------------------------------
-  !\
-  ! This routine calculates cartesian corotation velocity uRot_D as a
-  ! function of the cartesian coordinates Xyz_D
-  !/
-  !-------------------------------------------------------------------------
-
-  use CON_axes,          ONLY: get_axes
-  use ModCoordTransform, ONLY: cross_product
-  use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
-  use ModPhysics,        ONLY: OmegaBody
-  use ModNumConst
-  implicit none
-
-  real, intent(in) :: Xyz_D(3)
-  real, intent(out):: uRot_D(3)
-
-  real, save:: Omega_D(3)
-  logical   :: IsUninitialized = .true.
-
-  !------------------------------------------------------------------------
-  select case(TypeCoordSystem)
-  case('HGI')
-     ! In the HGI system the Solar angular velocity vector points towards +Z
-     Omega_D = (/ 0., 0., OmegaBody /)
-  case('GSE')
-     if(IsUninitialized)then
-        call get_axes(Time_Simulation, RotAxisGseOut_D=Omega_D)
-        Omega_D = OmegaBody * Omega_D
-        IsUninitialized = .false.
-     end if
-  case('GSM')
-     ! GSM system, Omega_D may be changing
-     call get_axes(Time_Simulation,RotAxisGsmOut_D=Omega_D)
-     Omega_D = OmegaBody*Omega_D
-  end select
-
-  ! The corotation velocity is u = Omega x R
-
-  uRot_D = cross_product(Omega_D, Xyz_D)
-
-end subroutine calc_corotation_velocities
-

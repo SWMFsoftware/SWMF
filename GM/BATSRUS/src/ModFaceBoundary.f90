@@ -418,7 +418,7 @@ contains
     !==========================================================================
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
 
-      use ModPhysics, ONLY: xBody2, yBody2, zBody2
+      use ModPhysics, ONLY: xBody2, yBody2, zBody2, calc_corotation_velocity
       use ModAdvance, ONLY: UseMultiSpecies
       use ModPhysics, ONLY: FaceState_VI, Si2No_V, No2Si_V, UnitX_, UnitN_, &
            UnitU_, UnitTemperature_, UnitJ_, UnitPoynting_, OrbitPeriod, &
@@ -992,7 +992,8 @@ contains
             VarsGhostFace_V(iUz_I) = 2*uIono_D(z_) + VarsGhostFace_V(iUz_I)
 
          case default
-            call stop_mpi('Coupling with IE is not compatible with TypeFaceBc_I=' &
+            call stop_mpi(NameSub// &
+                 ': Coupling with IE is not compatible with TypeFaceBc_I=' &
                  //TypeBc)
          end select
       end if
@@ -1000,12 +1001,8 @@ contains
 
       if (UseRotatingBc .and. iBoundary==Body1_) then
 
-         !\
-         ! The program is called which calculates the cartesian corotation 
-         ! velocity vector uRot_D as a function of the radius-vector
-         ! "FaceCoords"
-         !/
-         call calc_corotation_velocities(FaceCoords_D, uRot_D)
+         ! Calculate corotation velocity uRot_D at position FaceCoords
+         call calc_corotation_velocity(FaceCoords_D, uRot_D)
 
          select case(TypeBc)
          case('reflect','linetied', &
