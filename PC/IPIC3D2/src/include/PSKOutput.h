@@ -885,10 +885,12 @@ public:
 
     const int nVar             = _col->getnVarFluid();
     const int nIon             = _col->getnIon();
+    const int nFluid           = _col->get_nFluid();
     const bool useAnisoP       = _col->getUseAnisoP();
     const bool useMhdPe        = _col->getUseMhdPe();
     const bool useMultiFluid   = _col->getUseMultiFluid();
     const bool useMultiSpecies = _col->getUseMultiSpecies();
+    const bool useElectronFluid= _col->get_useElectronFluid();
           
     assert_eq(nVar, nVarIn);
 
@@ -901,7 +903,7 @@ public:
     double QoMe, Rhoe, Uxe, Uye, Uze, Pe;
     double Rho, Trace;
     double PeXX, PeYY, PeZZ, PeXY, PeXZ, PeYZ, PiXX, PiYY, PiZZ, PiXY, PiXZ, PiYZ;
-    double PtXX, PtYY, PtZZ, PtXY, PtXZ, PtYZ, BX, BY, BZ;
+    double PtXX, PtYY, PtZZ, PtXY, PtXZ, PtYZ, BX, BY, BZ, Ex, Ey, Ez; 
     double PitXX, PitYY, PitZZ, PitXY, PitXZ, PitYZ;
     double Mx, My, Mz; // Total momentum.
     double Mix, Miy, Miz; // Momentum of i species.
@@ -924,8 +926,6 @@ public:
     for(int i = 0; i<nPoint*nDim; i++){
       Xyz_I[i] *= _col->getSi2NoL();
     }
-
-
 
     for(int iPoint = 0; iPoint < nPoint; iPoint++){
       double mhd_D[3],pic_D[3];
@@ -952,166 +952,216 @@ public:
 	const double w110 = weight_I[6];
 	const double w111 = weight_I[7];
 
-	n = iPoint*nVar;	
-
-	// Electron
-	QoMe = _col->getQOM(0);
-	Rhoe = weightedValue(_field->getRHOns(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe;
-	//cout<<"ix = "<<ix<<" iy = "<<iy<<" iz = "<<iz<<" rhoe = "<<Rhoe<<endl;
-	if(fabs(Rhoe)>0){
-	  Uxe  = weightedValue(_field->getJxs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
-	  Uye  = weightedValue(_field->getJys(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
-	  Uze  = weightedValue(_field->getJzs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
-	}else{
-	  Uxe  = 0;
-	  Uye  = 0;
-	  Uze  = 0;
-	}
-	PeXX  = weightedValue(Pxx,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
-	PeYY  = weightedValue(Pyy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
-	PeZZ  = weightedValue(Pzz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
-	Pe   = (PeXX + PeYY + PeZZ)/3.0;
-	PeXY = weightedValue(Pxy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
-	PeXZ = weightedValue(Pxz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
-	PeYZ = weightedValue(Pyz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
-	
-	BX  = weightedValue(_field->getBx(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
-	BY  = weightedValue(_field->getBy(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
-	BZ  = weightedValue(_field->getBz(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
-	
+	n = iPoint*nVar;
 	for (int i=0; i<nVar; i++){
 	  // The variable for hyperbolic clean, is not known by iPIC3D,
 	  // but it is needed to be passed back. So data_I need to be
 	  // initilized.
 	  data_I[n + i] = 0;
 	}
-	
+
+	BX  = weightedValue(_field->getBx(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	BY  = weightedValue(_field->getBy(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	BZ  = weightedValue(_field->getBz(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+		
 	data_I[n + _col->iBx] = BX; 
 	data_I[n + _col->iBy] = BY;
 	data_I[n + _col->iBz] = BZ;
-	if(useMhdPe)data_I[n + _col->iPe] = Pe;
-	
-	Rho  = Rhoe;
-	PtXX = PeXX;
-	PtYY = PeYY;
-	PtZZ = PeZZ;
-	PtXY = PeXY;
-	PtXZ = PeXZ;
-	PtYZ = PeYZ;
-	Mx   = Rhoe*Uxe;
-	My   = Rhoe*Uye;
-	Mz   = Rhoe*Uze;
-	
-	int iSpecies;
-	for(int iIon=0; iIon<nIon; ++iIon){
-	  iSpecies = iIon + 1; // iSpecies = 0 is electron.	  
-	  QoMi = _col->getQOM(iSpecies);
-	  Rhoi = weightedValue(_field->getRHOns(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi;
-	  if(fabs(Rhoi)>0){
-	    Uxi  = weightedValue(_field->getJxs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
-	    Uyi  = weightedValue(_field->getJys(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
-	    Uzi  = weightedValue(_field->getJzs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
-	  }else{
-	    Uxi  = 0;
-	    Uyi  = 0;
-	    Uzi  = 0;
-	  }
-	  PiXX  = weightedValue(Pxx,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	  PiYY  = weightedValue(Pyy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	  PiZZ  = weightedValue(Pzz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	  Pi   = (PiXX + PiYY + PiZZ)/3.0;
-	  PiXY = weightedValue(Pxy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	  PiXZ = weightedValue(Pxz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	  PiYZ = weightedValue(Pyz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
 
-	  Mix = Rhoi*Uxi;
-	  Miy = Rhoi*Uyi;
-	  Miz = Rhoi*Uzi;
+	if(useElectronFluid){
+	  Ex  = weightedValue(_field->getEx(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	  Ey  = weightedValue(_field->getEy(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	  Ez  = weightedValue(_field->getEz(),ix,iy,iz,w000,w001,w010,w011,w100,w101,w110,w111);
+	  data_I[n + _col->iEx] = Ex; 
+	  data_I[n + _col->iEy] = Ey;
+	  data_I[n + _col->iEz] = Ez;
 
-	  // Sum to total density/pressure.
-	  Rho  += Rhoi;
-	  PtXX += PiXX;
-	  PtYY += PiYY;
-	  PtZZ += PiZZ;
-	  PtXY += PiXY;
-	  PtXZ += PiXZ;
-	  PtYZ += PiYZ;
-	  Mx   += Mix;
-	  My   += Miy;
-	  Mz   += Miz;
+	  for(int iFluid=0; iFluid<nFluid; ++iFluid){
+	    QoMi = _col->getQOM(iFluid);
+	    Rhoi = weightedValue(_field->getRHOns(),ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi;
+	    if(fabs(Rhoi)>0){
+	      Uxi  = weightedValue(_field->getJxs(),ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	      Uyi  = weightedValue(_field->getJys(),ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	      Uzi  = weightedValue(_field->getJzs(),ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	    }else{
+	      Uxi  = 0;
+	      Uyi  = 0;
+	      Uzi  = 0;
+	    }
+	    PiXX  = weightedValue(Pxx,ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiYY  = weightedValue(Pyy,ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiZZ  = weightedValue(Pzz,ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111);
+	    Pi   = (PiXX + PiYY + PiZZ)/3.0;
+	    PiXY = weightedValue(Pxy,ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiXZ = weightedValue(Pxz,ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiYZ = weightedValue(Pyz,ix,iy,iz,iFluid,w000,w001,w010,w011,w100,w101,w110,w111);
 
-	  // Density
-	  if(useMultiFluid || useMultiSpecies){
-	    data_I[n + _col->iRho_I[iIon]] = Rhoi;	  
-	  }else{
-	    // Only one ion species.Rho = Rhoi + Rhoe
-	    data_I[n + _col->iRho_I[iIon]] = Rho;	  
-	  }
 
-	  // Pressure.
-	  if(useMultiFluid){
-	    // ONLY works for iso pressure so far!!!!!
-	    data_I[n + _col->iP_I[iIon]] = Pi;
-	    if(useAnisoP) {
-	      cout<<"Multi-fluid model can not work with aniso pressure now!!"
-		  <<endl;
-	      abort();
+	    Mix = Rhoi*Uxi;
+	    Miy = Rhoi*Uyi;
+	    Miz = Rhoi*Uzi;
+
+	    data_I[n + _col->iRho_I[iFluid]] = Rhoi;
+
+	    data_I[n + _col->iRhoUx_I[iFluid]]  = Mix;
+	    data_I[n + _col->iRhoUy_I[iFluid]]  = Miy;
+	    data_I[n + _col->iRhoUz_I[iFluid]]  = Miz; 
+
+	    data_I[n + _col->iP_I[iFluid]] = Pi;
+	    if(useAnisoP){
+	      data_I[n + _col->iPpar_I[0]]
+		= (BX*PiXX*BX + BY*PiYY*BY + BZ*PiZZ*BZ +
+		   2.0*BX*PiXY*BY + 2.0*BX*PiXZ*BZ +
+		   2.0*BY*PiYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);	    
 	    }
 	  }
+	}else{
 
-	  // Momentum.
-	  if(useMultiFluid){
-	    data_I[n + _col->iRhoUx_I[iIon]]  = Mix;
-	    data_I[n + _col->iRhoUy_I[iIon]]  = Miy;
-	    data_I[n + _col->iRhoUz_I[iIon]]  = Miz; 
+	  // Electron
+	  QoMe = _col->getQOM(0);
+	  Rhoe = weightedValue(_field->getRHOns(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe;
+	  //cout<<"ix = "<<ix<<" iy = "<<iy<<" iz = "<<iz<<" rhoe = "<<Rhoe<<endl;
+	  if(fabs(Rhoe)>0){
+	    Uxe  = weightedValue(_field->getJxs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	    Uye  = weightedValue(_field->getJys(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	    Uze  = weightedValue(_field->getJzs(),ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMe*Rhoe);
+	  }else{
+	    Uxe  = 0;
+	    Uye  = 0;
+	    Uze  = 0;
 	  }
-	  
-	}// iIon
-
-	// Do not includes electron density. The total density passed
-	// in MHD side is useless, so it doesnot matter whether Rho include
-	// electron or not. -- Yuxi
-	if(useMultiSpecies)
-	  data_I[n + _col->iRhoTotal] = Rho - Rhoe; 
+	  PeXX  = weightedValue(Pxx,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PeYY  = weightedValue(Pyy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PeZZ  = weightedValue(Pzz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	  Pe   = (PeXX + PeYY + PeZZ)/3.0;
+	  PeXY = weightedValue(Pxy,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PeXZ = weightedValue(Pxz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
+	  PeYZ = weightedValue(Pyz,ix,iy,iz,0,w000,w001,w010,w011,w100,w101,w110,w111);
 	
-	// Momentum
-	if(!useMultiFluid){
-	  // Include electron momentum.
-	  data_I[n + _col->iRhoUx_I[0]]  = Mx;
-	  data_I[n + _col->iRhoUy_I[0]]  = My;
-	  data_I[n + _col->iRhoUz_I[0]]  = Mz; 
-	}
+	  if(useMhdPe)data_I[n + _col->iPe] = Pe;
+	
+	  Rho  = Rhoe;
+	  PtXX = PeXX;
+	  PtYY = PeYY;
+	  PtZZ = PeZZ;
+	  PtXY = PeXY;
+	  PtXZ = PeXZ;
+	  PtYZ = PeYZ;
+	  Mx   = Rhoe*Uxe;
+	  My   = Rhoe*Uye;
+	  Mz   = Rhoe*Uze;
+	
+	  int iSpecies;
+	  for(int iIon=0; iIon<nIon; ++iIon){
+	    iSpecies = iIon + 1; // iSpecies = 0 is electron.	  
+	    QoMi = _col->getQOM(iSpecies);
+	    Rhoi = weightedValue(_field->getRHOns(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMi;
+	    if(fabs(Rhoi)>0){
+	      Uxi  = weightedValue(_field->getJxs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	      Uyi  = weightedValue(_field->getJys(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	      Uzi  = weightedValue(_field->getJzs(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/(QoMi*Rhoi);
+	    }else{
+	      Uxi  = 0;
+	      Uyi  = 0;
+	      Uzi  = 0;
+	    }
+	    PiXX  = weightedValue(Pxx,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiYY  = weightedValue(Pyy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiZZ  = weightedValue(Pzz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	    Pi   = (PiXX + PiYY + PiZZ)/3.0;
+	    PiXY = weightedValue(Pxy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiXZ = weightedValue(Pxz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	    PiYZ = weightedValue(Pyz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
 
+	    Mix = Rhoi*Uxi;
+	    Miy = Rhoi*Uyi;
+	    Miz = Rhoi*Uzi;
 
-	//Sum of ion pressure.
-	PitXX = PtXX - PeXX;
-	PitYY = PtYY - PeYY;
-	PitZZ = PtZZ - PeZZ;
-	PitXY = PtXY - PeXY;
-	PitXZ = PtXZ - PeXZ;
-	PitYZ = PtYZ - PeYZ;
+	    // Sum to total density/pressure.
+	    Rho  += Rhoi;
+	    PtXX += PiXX;
+	    PtYY += PiYY;
+	    PtZZ += PiZZ;
+	    PtXY += PiXY;
+	    PtXZ += PiXZ;
+	    PtYZ += PiYZ;
+	    Mx   += Mix;
+	    My   += Miy;
+	    Mz   += Miz;
 
-	// Pressure
-	if(!useMultiFluid){
-	  // AnisoP
-	  if(useAnisoP){
-	    if(useMhdPe)
-	      data_I[n + _col->iPpar_I[0]]
-		= (BX*PitXX*BX + BY*PitYY*BY + BZ*PitZZ*BZ +
-		   2.0*BX*PitXY*BY + 2.0*BX*PitXZ*BZ +
-		   2.0*BY*PitYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);
-	    else
-	      data_I[n + _col->iPpar_I[0]]
-		= (BX*PtXX*BX + BY*PtYY*BY + BZ*PtZZ*BZ +
-		   2.0*BX*PtXY*BY + 2.0*BX*PtXZ*BZ +
-		   2.0*BY*PtYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);	    
-	  }// useAnisoP
+	    // Density
+	    if(useMultiFluid || useMultiSpecies){
+	      data_I[n + _col->iRho_I[iIon]] = Rhoi;	  
+	    }else{
+	      // Only one ion species.Rho = Rhoi + Rhoe
+	      data_I[n + _col->iRho_I[iIon]] = Rho;	  
+	    }
 
-	  // Isotropic Pressure. 
-	  if(useMhdPe) data_I[n + _col->iP_I[0]]  = (PitXX + PitYY + PitZZ)/3;
-	  else data_I[n + _col->iP_I[0]]  = (PtXX + PtYY + PtZZ)/3;
-	}
+	    // Pressure.
+	    if(useMultiFluid){
+	      // ONLY works for iso pressure so far!!!!!
+	      data_I[n + _col->iP_I[iIon]] = Pi;
+	      if(useAnisoP) {
+		cout<<"Multi-fluid model can not work with aniso pressure now!!"
+		    <<endl;
+		abort();
+	      }
+	    }
 
+	    // Momentum.
+	    if(useMultiFluid){
+	      data_I[n + _col->iRhoUx_I[iIon]]  = Mix;
+	      data_I[n + _col->iRhoUy_I[iIon]]  = Miy;
+	      data_I[n + _col->iRhoUz_I[iIon]]  = Miz; 
+	    }
+	  
+	  }// iIon
+
+	  // Do not includes electron density. The total density passed
+	  // in MHD side is useless, so it doesnot matter whether Rho include
+	  // electron or not. -- Yuxi
+	  if(useMultiSpecies)
+	    data_I[n + _col->iRhoTotal] = Rho - Rhoe; 
+	
+	  // Momentum
+	  if(!useMultiFluid && !useElectronFluid){
+	    // Include electron momentum.
+	    data_I[n + _col->iRhoUx_I[0]]  = Mx;
+	    data_I[n + _col->iRhoUy_I[0]]  = My;
+	    data_I[n + _col->iRhoUz_I[0]]  = Mz; 
+	  }
+
+	  //Sum of ion pressure.
+	  PitXX = PtXX - PeXX;
+	  PitYY = PtYY - PeYY;
+	  PitZZ = PtZZ - PeZZ;
+	  PitXY = PtXY - PeXY;
+	  PitXZ = PtXZ - PeXZ;
+	  PitYZ = PtYZ - PeYZ;
+
+	  // Pressure
+	  if(!useMultiFluid && !useElectronFluid){
+	    // AnisoP
+	    if(useAnisoP){
+	      if(useMhdPe)
+		data_I[n + _col->iPpar_I[0]]
+		  = (BX*PitXX*BX + BY*PitYY*BY + BZ*PitZZ*BZ +
+		     2.0*BX*PitXY*BY + 2.0*BX*PitXZ*BZ +
+		     2.0*BY*PitYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);
+	      else
+		data_I[n + _col->iPpar_I[0]]
+		  = (BX*PtXX*BX + BY*PtYY*BY + BZ*PtZZ*BZ +
+		     2.0*BX*PtXY*BY + 2.0*BX*PtXZ*BZ +
+		     2.0*BY*PtYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);	    
+	    }// useAnisoP
+
+	    // Isotropic Pressure. 
+	    if(useMhdPe) data_I[n + _col->iP_I[0]]  = (PitXX + PitYY + PitZZ)/3;
+	    else data_I[n + _col->iP_I[0]]  = (PtXX + PtYY + PtZZ)/3;
+	  }
+	}// useElectronFluid is true or false
+
+	
 	// Convert to SI units
 	for (int iVar=0; iVar<nVar; ++iVar){
 	  data_I[n+iVar] *= _col->getNo2Si_V(iVar);

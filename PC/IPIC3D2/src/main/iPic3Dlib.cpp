@@ -1425,9 +1425,16 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     int nScalar = ns + 2;       
     outFile<<"#SCALARPARAM\n";
     outFile<<nScalar<<"\t nParam\n";
-    outFile<<col->getMiSpecies(0)<<"\t me\n";
-    for(int iSpecies=1; iSpecies<ns; iSpecies++){
-      outFile<<col->getMiSpecies(iSpecies)<<"\t m"<<iSpecies<<"\n";
+
+    if(col->get_useElectronFluid()){
+      for(int iSpecies=0; iSpecies<ns; iSpecies++){
+	outFile<<col->getMiSpecies(iSpecies)<<"\t m"<<iSpecies<<"\n";
+      }
+    }else{
+      outFile<<col->getMiSpecies(0)<<"\t me\n";
+      for(int iSpecies=1; iSpecies<ns; iSpecies++){
+	outFile<<col->getMiSpecies(iSpecies)<<"\t m"<<iSpecies<<"\n";
+      }
     }
     outFile<<col->getcLightSI()<<"\t cLight\n";
     outFile<<col->getrPlanet()<<"\t rPlanet\n";

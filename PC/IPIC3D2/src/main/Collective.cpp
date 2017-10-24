@@ -1619,6 +1619,10 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   
   doCorrectWeight = false;  
 
+  // The way to set the value of qom is very wired. Change it. --Yuxi
+  qom = new double[1];
+  qom[0] = -777; 
+  
   while(*param){
     get_next_command(param,&Command);
     if( Command == "#NSYNC" && Case == "BATSRUS"){
@@ -1732,7 +1736,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	     Case == "BATSRUS" &&
 	     !RESTART1 ){
       // iones info comes from BATSRUS
-      qom = new double[1];
       read_var(param,"qom", &qom[0]);
     }
     else if( Command == "#PARTICLES" && 

@@ -72,8 +72,25 @@ class InterfaceFluid
   double ****Bc_GD;    // cell centered B 
   double ****State_GV; // node centered state variables
 
-  int nVarFluid, nIonFluid, nSpecies, nIon, nVarCoupling;
-  bool useMultiSpecies, useMultiFluid;
+  // Number of variables passing between MHD and PIC. 
+  int nVarFluid;
+
+  // Number of fluid at the MHD side. One 'fluid' has its own density,
+  // velocity and pressure. Electron can be one fluid. 
+  int nFluid;
+
+  // Number of ion fluid at the MHD side. 
+  int nIonFluid;
+
+  // Number of species at the MHD side. One 'species' only has its own density.
+  int nSpecies;
+  
+  // Total number of ion/electron species exit in the fluid code. 
+  int nIon;
+
+  int nVarCoupling;
+  
+  bool useMultiSpecies, useMultiFluid, useElectronFluid;
 
   // storage for starting/ending physical (not include ghost cell)
   // cell indexes of this processor
@@ -94,7 +111,7 @@ class InterfaceFluid
   double invtUnitPic;   // 1/tUnitPic 
   double *Si2No_V; // array storing unit conversion factors
   double *No2Si_V; // array storing inverse unit conversion factors
-  double Si2NoM, Si2NoV, Si2NoRho, Si2NoB, Si2NoP, Si2NoJ, Si2NoL;
+  double Si2NoM, Si2NoV, Si2NoRho, Si2NoB, Si2NoP, Si2NoJ, Si2NoL, Si2NoE;
   double No2SiV, No2SiL;
   double MhdNo2SiL; // Length in BATSRUS normalized unit -> Si
   double Lnorm, Unorm, Mnorm, Qnorm; // normalization units for length, velocity, mass and charge
@@ -348,6 +365,7 @@ class InterfaceFluid
     Si2NoP   = 10.0;   // [Pa] -> [Ba]
     Si2NoJ   = 1.0e-5; // [T/m]/mu0 -> [G/cm] c_CGS/4pi and
     Si2NoL   = 100;    // [m] ->[cm] 1.0/100.0*sqrt(1e9); 
+    Si2NoE   = 1e6; // 1 V/m = 1e6  statV/cm/c. 'c' is the speed of light in cgs unit.  
     
     // Normalization: CGS -> non dimensional cgs    
     Si2NoRho /= RHOnorm;
@@ -356,6 +374,7 @@ class InterfaceFluid
     Si2NoP   /= Pnorm;
     Si2NoJ   /= Jnorm;
     Si2NoL   /= Lnorm;
+    Si2NoE   /= (Bnorm*Unorm);
 
     Si2NoM = Si2NoRho*Si2NoV;
 
@@ -365,18 +384,26 @@ class InterfaceFluid
     Si2No_V[iBx] = Si2NoB;
     Si2No_V[iBy] = Si2NoB;
     Si2No_V[iBz] = Si2NoB;
+
+
     Si2No_V[iJx] = Si2NoJ;
     Si2No_V[iJy] = Si2NoJ;
     Si2No_V[iJz] = Si2NoJ;
+
+    Si2No_V[iEx] = Si2NoE;
+    Si2No_V[iEy] = Si2NoE;
+    Si2No_V[iEz] = Si2NoE; 
+
     if(useMhdPe)Si2No_V[iPe] = Si2NoP;
     if(useMultiSpecies) Si2No_V[iRhoTotal] = Si2NoRho;
-    for(int iIon=0; iIon<nIon; ++iIon){
-      Si2No_V[iRho_I[iIon]]     = Si2NoRho;
-      Si2No_V[iRhoUx_I[iIon]]   = Si2NoM;
-      Si2No_V[iRhoUy_I[iIon]]   = Si2NoM;
-      Si2No_V[iRhoUz_I[iIon]]   = Si2NoM;
-      Si2No_V[iP_I[iIon]]       = Si2NoP;
-      if(useAnisoP)Si2No_V[iPpar_I[iIon]] = Si2NoP;
+    
+    for(int iFluid=0; iFluid<nFluid; ++iFluid){
+      Si2No_V[iRho_I[iFluid]]     = Si2NoRho;
+      Si2No_V[iRhoUx_I[iFluid]]   = Si2NoM;
+      Si2No_V[iRhoUy_I[iFluid]]   = Si2NoM;
+      Si2No_V[iRhoUz_I[iFluid]]   = Si2NoM;
+      Si2No_V[iP_I[iFluid]]       = Si2NoP;
+      if(useAnisoP)Si2No_V[iPpar_I[iFluid]] = Si2NoP;
     }
 
     // Get back to SI units
@@ -421,21 +448,21 @@ class InterfaceFluid
 	  if(doGetFromGM(i,j,k)){
 	    if(useMultiSpecies){
 	      Rhot=0;
-	      for(int iIon=0; iIon<nIon; ++iIon){
+	      for(int iFluid=0; iFluid<nFluid; ++iFluid){
 		// Rho = sum(Rhoi) + Rhoe;
 		Rhot +=
-		  State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi_S[0]/MoMi_S[iIon+1]);
-	      }// iIon
+		  State_GV[i][j][k][iRho_I[iFluid]]*(1+MoMi_S[0]/MoMi_S[iFluid+1]);
+	      }// iFluid
 
 	      State_GV[i][j][k][iUx_I[0]] /= Rhot;
 	      State_GV[i][j][k][iUy_I[0]] /= Rhot;
 	      State_GV[i][j][k][iUz_I[0]] /= Rhot;	  
 	    }else{
-	      for(int iIon=0; iIon<nIon; ++iIon){
-		State_GV[i][j][k][iUx_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-		State_GV[i][j][k][iUy_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-		State_GV[i][j][k][iUz_I[iIon]] /= State_GV[i][j][k][iRho_I[iIon]];
-	      }// iIon
+	      for(int iFluid=0; iFluid<nFluid; ++iFluid){
+		State_GV[i][j][k][iUx_I[iFluid]] /= State_GV[i][j][k][iRho_I[iFluid]];
+		State_GV[i][j][k][iUy_I[iFluid]] /= State_GV[i][j][k][iRho_I[iFluid]];
+		State_GV[i][j][k][iUz_I[iFluid]] /= State_GV[i][j][k][iRho_I[iFluid]];
+	      }// iFluid
 	    } // else
 	  }
 	}
@@ -963,8 +990,10 @@ class InterfaceFluid
     {
       // Assume qe = -qi;
       double U,Rho,J, Rhoit, Qit, Rhot;
-      
-      if(useMultiFluid){
+
+      if(useElectronFluid){
+	getInterpolatedValue(x,y,z,&U, iU_I[is]);      
+      }else if(useMultiFluid){
 	if(is==0){
 	  // Electron
 	  /** Ue = (J - sum(ni*qi*Ui))/(ne*qe) 
@@ -1044,7 +1073,11 @@ class InterfaceFluid
 	abort();	
       }
 
-
+      if(useElectronFluid){
+	cout<<" Error: setFluidanisoUth is suspecious!!!!!"<<endl;
+	abort();	
+      }
+      
       Norm_  = 0;
       Perp1_ = 1;
       Perp2_ = 2;
@@ -1091,8 +1124,9 @@ class InterfaceFluid
     inline double getFluidP(const Type x, const Type y,const Type z, const int is)const{
     double P, Pe, Pi;
 
-    
-    if(useMultiFluid){
+    if(useElectronFluid){
+      getInterpolatedValue(x,y,z,&P,iP_I[is]); 
+    }else if(useMultiFluid){
       // Multi-fluid.
       if(is==0)
 	getInterpolatedValue(x,y,z,&P,iPe); // Electron
@@ -1115,7 +1149,7 @@ class InterfaceFluid
 	Numit = 0; // Number of all ions.
 	for(int iIon=0; iIon<nIon; ++iIon)
 	  Numit += getFluidRhoNum(x,y,z,iIon+1);
-
+	
 	P *= getFluidRhoNum(x,y,z,is)/Numit;
       }      
     }
@@ -1131,6 +1165,13 @@ class InterfaceFluid
       cout<<" getFluidPpar has not implemented for multifluid/multispecies!!"<<endl;
       abort();      
     }
+
+    if(useElectronFluid){
+      cout<<" getFluidPpar is suspecious!!"<<endl;
+      abort();
+    }
+
+    
     if(useMhdPe){
       if(is==0) getInterpolatedValue(x,y,z,&P,iPe); // Electron
       if(is==1) getInterpolatedValue(x,y,z,&P,iPpar_I[0]); //Ion
@@ -1165,7 +1206,10 @@ class InterfaceFluid
     inline double getFluidRhoNum(const Type x,const Type  y, const Type z, const int is)const{
     double Rho, NumDens;
     
-    if(useMultiFluid || useMultiSpecies){
+    if(useElectronFluid){
+      getInterpolatedValue(x,y,z,&Rho,iRho_I[is]);
+      NumDens = Rho/MoMi_S[is];	      
+    }else if(useMultiFluid || useMultiSpecies){
       if(is == 0){
 	// Electron
 	NumDens = 0; 
@@ -1201,9 +1245,18 @@ class InterfaceFluid
 
       //cout<<"mhd: E = - Ue x B"<<endl;
       // Ue = Ui - J/ne
-      (*Ex) = (getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBy] - getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBz]);
-      (*Ey) = (getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBz] - getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBx]);
-      (*Ez) = (getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBx] - getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBy]);      
+      if(useElectronFluid){
+      (*Ex) = State_GV[i][j][k][iEx];
+      (*Ey) = State_GV[i][j][k][iEy];
+      (*Ez) = State_GV[i][j][k][iEz];      
+      }else{
+	(*Ex) = (getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBy] -
+		 getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBz]);
+	(*Ey) = (getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBz] -
+		 getFluidUz(ii,jj,kk,0)*State_GV[i][j][k][iBx]);
+	(*Ez) = (getFluidUy(ii,jj,kk,0)*State_GV[i][j][k][iBx] -
+		 getFluidUx(ii,jj,kk,0)*State_GV[i][j][k][iBy]);
+      }
       (*Bx) = State_GV[i][j][k][iBx];
       (*By) = State_GV[i][j][k][iBy];
       (*Bz) = State_GV[i][j][k][iBz];
@@ -1216,23 +1269,8 @@ class InterfaceFluid
 
     nDim       = paramint[0];
     nVarFluid   = paramint[2]; 
-    nIonFluid   = paramint[3];
-    nSpecies    = paramint[4];      
-    nS          = nIonFluid + nSpecies; // nFluid+nSpecies-1+1 (electrons)
-    nIon        = nS - 1;
-    nVarCoupling= nVarFluid + 3; // nVarFluid + (Jx, Jy, Jz)
-    useMultiFluid   = nIonFluid > 1;
-    useMultiSpecies = nSpecies > 1;
-    
-    iRho_I   = new int[nIon];
-    iRhoUx_I = new int[nIon];
-    iRhoUy_I = new int[nIon];
-    iRhoUz_I = new int[nIon];
-    iUx_I    = new int[nIon];
-    iUy_I    = new int[nIon];
-    iUz_I    = new int[nIon];
-    iPpar_I  = new int[nIon];
-    iP_I     = new int[nIon];      
+    nFluid   = paramint[3];
+    nSpecies    = paramint[4];
 
     // c++ index starts from 0. So, minus 1. 
     iPe      = paramint[5] - 1;
@@ -1240,9 +1278,36 @@ class InterfaceFluid
     iBy      = iBx + 1;
     iBz      = iBy + 1;
 
-    iEx      = paramint[7] = 1;
+    iEx      = paramint[7] - 1;
     iEy      = iEx + 1;
     iEz      = iEy + 1;
+
+    useElectronFluid = iEx > 1;
+
+    if(useElectronFluid){
+      nIonFluid = -1; // Do not distinguish between electrons and ions.
+      nIon = -1; 
+      nS = nFluid; 
+    }else{
+      nIonFluid = nFluid;
+      nIon = nFluid + nSpecies - 1; // Assuming one electron species. 
+      nS = nIon + 1; // + electron
+    }
+    
+    useMultiFluid   = nIonFluid > 1;
+    useMultiSpecies = nSpecies > 1;
+    
+    nVarCoupling= nVarFluid + 3; // nVarFluid + (Jx, Jy, Jz)
+    
+    iRho_I   = new int[nFluid];
+    iRhoUx_I = new int[nFluid];
+    iRhoUy_I = new int[nFluid];
+    iRhoUz_I = new int[nFluid];
+    iUx_I    = new int[nFluid];
+    iUy_I    = new int[nFluid];
+    iUz_I    = new int[nFluid];
+    iPpar_I  = new int[nFluid];
+    iP_I     = new int[nFluid];      
 
     int n = 8;
     if(useMultiSpecies){
@@ -1265,27 +1330,30 @@ class InterfaceFluid
 	iP_I[iIon]        = iP_I[0];
       }      
     }else{
-      // Single fluid or multi-fluid. 
-      for (int iIon = 0; iIon < nIon; ++iIon)
-	iRho_I[iIon]     = paramint[n++] - 1;
-      for (int iIon = 0; iIon < nIon; ++iIon){
-	iRhoUx_I[iIon]   = paramint[n++] - 1;  iUx_I[iIon]  = iRhoUx_I[iIon];
-	iRhoUy_I[iIon]   = iRhoUx_I[iIon] + 1; iUy_I[iIon]  = iRhoUy_I[iIon];
-	iRhoUz_I[iIon]   = iRhoUx_I[iIon] + 2; iUz_I[iIon]  = iRhoUz_I[iIon];
+      // Not multi-species
+      for (int iFluid = 0; iFluid < nFluid; ++iFluid)
+	iRho_I[iFluid]     = paramint[n++] - 1;
+      for (int iFluid = 0; iFluid < nFluid; ++iFluid){
+	iRhoUx_I[iFluid]   = paramint[n++] - 1;  iUx_I[iFluid]  = iRhoUx_I[iFluid];
+	iRhoUy_I[iFluid]   = iRhoUx_I[iFluid] + 1; iUy_I[iFluid]  = iRhoUy_I[iFluid];
+	iRhoUz_I[iFluid]   = iRhoUx_I[iFluid] + 2; iUz_I[iFluid]  = iRhoUz_I[iFluid];
       }
-      for (int iIon = 0; iIon < nIon; ++iIon)
-	iPpar_I[iIon]    = paramint[n++] - 1;
-      for (int iIon = 0; iIon < nIon; ++iIon)
-	iP_I[iIon]       = paramint[n++] - 1;
+
+      for (int iFluid = 0; iFluid < nFluid; ++iFluid)
+	iPpar_I[iFluid]    = paramint[n++] - 1;
+      for (int iFluid = 0; iFluid < nFluid; ++iFluid)
+	iP_I[iFluid]       = paramint[n++] - 1;
     }
 
-    nVec = nIon + 1;
+    nVec = nFluid + 1;    
+    if(useElectronFluid) nVec ++; // + E field.
     if(nVec>nVecMax){
       if(myrank==0) cout<<"Error: nVec > nVecMax!!!!"<<endl;
       MPI_Abort(MPI_COMM_MYSIM,iErr);
     }
-    for (int iVec = 0; iVec<nIon; iVec++) vecIdxStart_I[iVec] = iRhoUx_I[iVec];
-    vecIdxStart_I[nVec-1] = iBx;
+    for (int iVec = 0; iVec<nFluid; iVec++) vecIdxStart_I[iVec] = iRhoUx_I[iVec];
+    vecIdxStart_I[nFluid] = iBx;
+    if(useElectronFluid) vecIdxStart_I[nFluid+1] = iEx;
 
     // See GM/BATSRUS/src/ModExtraVariables.f90. 
     useAnisoP = iPpar_I[0] != 0;
@@ -1330,15 +1398,22 @@ class InterfaceFluid
     QoQi_S = new double[nS];
     MoMi_S = new double[nS];
 
-    // electron charge is always -1
-    QoQi_S[0] = -1.0;
 
     /** Do not change the order of the following lines. */
-    n = 0; 
-    for(int i = 1; i < nS; ++i){
-      QoQi_S[i] = paramreal[n++];
-      MoMi_S[i] = paramreal[n++];
+    n = 0;
+    if(useElectronFluid){
+      for(int i = 0; i < nS; ++i){
+	QoQi_S[i] = paramreal[n++];
+	MoMi_S[i] = paramreal[n++];
+      }      
+    }else{
+      QoQi_S[0] = -1.0;
+      for(int i = 1; i < nS; ++i){
+	QoQi_S[i] = paramreal[n++];
+	MoMi_S[i] = paramreal[n++];
+      }      
     }
+    
     // Electron pressure ratio: Pe/Ptotal
     PeRatio   = paramreal[n++];
     Lnorm     = paramreal[n++]; 	
@@ -1355,7 +1430,7 @@ class InterfaceFluid
     
     InitData();
     ReNormLength();
-    checkParam();
+    checkParam();    
   }
 
   /** Check the parameters passed or calculated from BATSRUS*/
@@ -1368,16 +1443,18 @@ class InterfaceFluid
     assert_ge(dx_D[1],0.0);
     assert_ge(dx_D[2],0.0);
 
-    assert_eq(QoQi_S[0],-1.0*QoQi_S[1]);
-    for(int iIon = 1; iIon<nIon; ++iIon){
-      if(QoQi_S[iIon+1] != QoQi_S[1]){
-	cout<<" So far, -qe = qi1 = qi2 = qi3... is assumed. QoQi_S[1]= "
-	    <<QoQi_S[1]<<" and QoQi_S["<<iIon+1<<"]= "<<QoQi_S[iIon+1]
-	    <<" are not valided!!"<<endl;
-	abort();
+    if(!useElectronFluid){
+      assert_eq(QoQi_S[0],-1.0*QoQi_S[1]);
+      for(int iIon = 1; iIon<nIon; ++iIon){
+	if(QoQi_S[iIon+1] != QoQi_S[1]){
+	  cout<<" So far, -qe = qi1 = qi2 = qi3... is assumed. QoQi_S[1]= "
+	      <<QoQi_S[1]<<" and QoQi_S["<<iIon+1<<"]= "<<QoQi_S[iIon+1]
+	      <<" are not valided!!"<<endl;
+	  abort();
+	}
       }
     }
-
+    
     if(useMultiFluid && !useMhdPe) {
       cout<<" Use multi-fluid but do not use electron pressure. This case is not supported so far!!!"<<endl;
       abort();
@@ -1678,12 +1755,13 @@ class InterfaceFluid
   void PrintInterfaceFluid(){
 
     if(thisrank == 0){
-      cout << "nS = " << nS <<endl;
-      cout << "Sum all particle masses = " << SumMass <<endl;
+      cout <<" nS = " << nS <<endl;
+      cout <<" Sum all particle masses = " << SumMass <<endl;
       cout << "useMultiFluid   = "<<useMultiFluid
-	   <<" nIonFluid = "<<nIonFluid<<endl;
-      cout << "useMultiSpecies = "<<useMultiSpecies
+	   <<" nFluid = "<<nFluid<<endl;
+      cout <<" useMultiSpecies = "<<useMultiSpecies
 	   <<" nSpecies ="<<nSpecies<<endl;
+      cout <<" useElectronFluid = "<<useElectronFluid<<endl;
       for(int is=0; is < nS; is++){
           cout << "Q/Qi[" << is << "] = "<< QoQi_S[is] << endl;
           cout << "M/Mi[" << is << "] = "<< MoMi_S[is] << endl;
@@ -1693,6 +1771,7 @@ class InterfaceFluid
       cout << " Si2NoRho = " << Si2NoRho << endl;
       cout << " Si2NoV   = " << Si2NoV   << endl;
       cout << " Si2NoB   = " << Si2NoB   << endl;
+      cout << " Si2NoE   = " << Si2NoE   << endl;
       cout << " Si2NoP   = " << Si2NoP   << endl;
       cout << " Si2NoJ   = " << Si2NoJ   << endl;
       cout << " Si2NoL   = " << Si2NoL << endl;
@@ -1925,8 +2004,9 @@ class InterfaceFluid
     npcely = new int[nS];
     npcelz = new int[nS];
 
-    // electron
-    MoMi_S[0] = QoQi_S[0]/qom_el;
+    if(!useElectronFluid){
+      MoMi_S[0] = QoQi_S[0]/qom_el;
+    }
  
     //iones
     for(int is = 0; is < nS; is++){
@@ -1950,7 +2030,7 @@ class InterfaceFluid
         cout << "Q/Qi[" << is << "] = "<< QoQi_S[is] << endl;
         cout << "M/Mi[" << is << "] = "<< MoMi_S[is] << endl;
       }
-      if(!useMhdPe)cout << "Pe/Ptotal = " << PeRatio<<endl;      
+      if(!useMhdPe && !useElectronFluid)cout << "Pe/Ptotal = " << PeRatio<<endl;      
       //cout << "===================================" << endl;
     }	
   
@@ -1996,6 +2076,7 @@ class InterfaceFluid
 
   bool getUseMultiFluid()const{return(useMultiFluid);}
   bool getUseMultiSpecies()const{return(useMultiSpecies);}
+  bool get_useElectronFluid()const{return useElectronFluid;}
   
   /** Get convertion factor to from IPIC3D internal units */
   inline double getNo2Si_V(int idx){return(No2Si_V[idx]);}
@@ -2219,8 +2300,8 @@ class InterfaceFluid
   int getnDim()const{return(nDim);}
 
   int getnVarFluid()const{return(nVarFluid);}
-
   int getnIon()const{return(nIon);}
+  int get_nFluid()const{return(nFluid);}
 
   double getSi2NoL()const{return(Si2NoL);}
   double getNo2SiL()const{return(No2SiL);}
