@@ -796,6 +796,7 @@ contains
     use ModGroundMagPerturb, ONLY: DoSaveMags, &
          DoSaveGridmag, write_magnetometers, DoWriteIndices, &
          write_geoindices
+    use ModParticleFieldLine, ONLY: write_plot_particle
     use ModMessagePass, ONLY: exchange_messages
 
     integer :: iSat
