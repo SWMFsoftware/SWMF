@@ -540,12 +540,12 @@ contains
     end if
 
     if (cType(3:5) == "MAG") then
-       write(iOutputUnit_,"(I7,A1,a)") iOff+5, " ", "Magnetic Latitude"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+6, " ", "Magnetic Longitude"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+8, " ", "B.F. East"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+9, " ", "B.F. North"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+10, " ", "B.F. Vertical"
-       write(iOutputUnit_,"(I7,A1,a)") iOff+11, " ", "B.F. Magnitude"
+       write(iOutputUnit_,"(I7,A1,a)") 4, " ", "Magnetic Latitude"
+       write(iOutputUnit_,"(I7,A1,a)") 5, " ", "Magnetic Longitude"
+       write(iOutputUnit_,"(I7,A1,a)") 6, " ", "B.F. East"
+       write(iOutputUnit_,"(I7,A1,a)") 7, " ", "B.F. North"
+       write(iOutputUnit_,"(I7,A1,a)") 8, " ", "B.F. Vertical"
+       write(iOutputUnit_,"(I7,A1,a)") 9, " ", "B.F. Magnitude"
     end if
 
     if (cType(3:5) == "GEL") then
