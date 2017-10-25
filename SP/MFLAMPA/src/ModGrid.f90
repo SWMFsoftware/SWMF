@@ -12,7 +12,7 @@ module SP_ModGrid
   private ! except
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
-  public:: fix_grid_consistency, reset_lagrangian_id, append_particles
+  public:: fix_grid_consistency, append_particles
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
@@ -314,9 +314,11 @@ contains
           CoordOrigin_DA(:, iNode) = &
                (/ROrigin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
           iBlock = iGridGlobal_IA(Block_, iNode)
-          if(iProc == iGridGlobal_IA(Proc_, iNode))&
-               call rlonlat_to_xyz(&
-               CoordOrigin_DA(:,iNode), State_VIB(X_:Z_,1,iBlock))
+          if(iProc == iGridGlobal_IA(Proc_, iNode))then
+             call rlonlat_to_xyz(&
+                  CoordOrigin_DA(:,iNode), State_VIB(X_:Z_,1,iBlock))
+             State_VIB(LagrID_,1,iBlock) = 1
+          end if
        end do
     end do
   end subroutine init_grid
@@ -368,20 +370,6 @@ contains
 
   !============================================================================
 
-  subroutine reset_lagrangian_id
-    ! reset lagrangian id equal to current values of 1-based index of particles
-    integer:: iBlock, iBegin, iEnd, iParticle
-    !--------------------------------------------------------------------------
-    do iBlock = 1, nBlock
-       iBegin = iGridLocal_IB(Begin_,iBlock)
-       iEnd   = iGridLocal_IB(End_,  iBlock)
-       do iParticle = iBegin, iEnd
-          State_VIB(LagrID_, iParticle, iBlock) = iParticle
-       end do
-    end do
-  end subroutine reset_lagrangian_id
-
-  !============================================================================
 
   subroutine get_node_indexes(iNodeIn, iLonOut, iLatOut)
     ! return angular grid's indexes corresponding to this node

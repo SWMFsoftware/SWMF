@@ -16,7 +16,7 @@ module SP_ModMain
 
   use SP_ModGrid, ONLY: &
        nVar, &
-       X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
+       LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_, Shock_, ShockOld_, &
        LatMin, LatMax, LonMin, LonMax, &
@@ -25,7 +25,7 @@ module SP_ModMain
        Distribution_IIB, &
        Length_I, CoordMin_DI, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency, &
-       reset_lagrangian_id, append_particles
+       append_particles
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
@@ -51,7 +51,7 @@ module SP_ModMain
   ! Methods and variables from ModGrid
   public:: &
        nVar, &
-       X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
+       LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_, Shock_, ShockOld_, &
        LatMin, LatMax, LonMin, LonMax, &
@@ -163,7 +163,6 @@ contains
     ! write the initial background state to the output file
     !/
     if(IsFirstCall)then
-       call reset_lagrangian_id
        ! print the initial state
        call write_output(TimeGlobal, iIterGlobal, &
             IsInitialOutput = .true.)

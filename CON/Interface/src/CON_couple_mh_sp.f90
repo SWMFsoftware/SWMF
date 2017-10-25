@@ -30,8 +30,8 @@ module CON_couple_mh_sp
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
-       SC_get_scatter_line, SC_n_particle, SC_LineDD, &     !^CMP IF SC
-       SC_line_interface_point,&                            !^CMP IF SC
+       SC_get_scatter_line, SC_add_to_line, SC_n_particle,& !^CMP IF SC
+       SC_LineDD, SC_line_interface_point,&                 !^CMP IF SC
        SC_get_particle_indexes, SC_get_particle_coords,&    !^CMP IF SC
        SC_check_use_particles                               !^CMP IF SC
 
@@ -40,12 +40,13 @@ module CON_couple_mh_sp
 
   use SP_wrapper, ONLY: &
        SP_put_from_sc, SP_put_from_ih, SP_put_input_time, &
-       SP_put_line, SP_n_particle, &
+       SP_put_line, SP_n_particle, SP_synchronize_grid, &
        SP_get_grid_descriptor_param, &
        SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
        SP_interface_point_coords_for_ih_extract, &
-       SP_copy_old_state, SP_adjust_lines
+       SP_copy_old_state, SP_adjust_lines, SP_get_particle_index, &
+       SP_get_cell_index
 
   implicit none
   
@@ -290,7 +291,7 @@ contains
               interface_point_coords= SP_interface_point_coords_for_ih_extract, &
               mapping               = mapping_sp_to_IH, &
               interpolate           = interpolation_amr_gc) 
-         call synchronize_router_target_to_source(RouterIHSp)
+         call synchronize_router_target_to_source(RouterIhSp)
          if(is_proc(IH_))then
             nLength = nlength_buffer_source(RouterIhSp)
             call IH_extract_line(&
@@ -438,12 +439,13 @@ contains
     real,    intent(out):: CoordOut_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
     
-    integer:: iIndex_I(2), iParticle
+    integer:: iIndex_I(2), iParticle, iCell
     !------------------------------------------
     IsInterfacePoint = .true.
     iParticle = nint(XyzIn_D(1))
     call SC_get_particle_indexes(iParticle, iIndex_I)
-    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iIndex_I(2),1,1/))
+    call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
+    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
   end subroutine mapping_line_sc_to_sp
   !==================================================================!
   subroutine mapping_line_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
@@ -455,12 +457,13 @@ contains
     real,    intent(out):: CoordOut_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
     
-    integer:: iIndex_I(2), iParticle
+    integer:: iIndex_I(2), iParticle, iCell
     !------------------------------------------
     IsInterfacePoint = .true.
     iParticle = nint(XyzIn_D(1))
     call IH_get_particle_indexes(iParticle, iIndex_I)
-    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iIndex_I(2),1,1/))
+    call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
+    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
   end subroutine mapping_line_ih_to_sp
   !==================================================================!
   subroutine mapping_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
@@ -527,6 +530,19 @@ contains
     call SP_put_line(IH_,1, Buff_II, iIndex_II)
   end subroutine SP_put_line_from_ih
   !==================================================================!
+  subroutine fix_buffer(nLength, Buffer_II)
+    integer, intent(in):: nLength
+    real, intent(inout):: Buffer_II(nAux,nLength)
+    integer:: i, iIndexIn, iLine, iIndexOut
+    !---------------------------------------------------------------
+    do i = 1, nLength
+       iLine    = nint(Buffer_II(1,i))
+       iIndexIn = nint(Buffer_II(2,i))
+       call SP_get_particle_index(iLine, iIndexIn, iIndexOut)
+       Buffer_II(2,i) = real(iIndexOut)
+    end do
+  end subroutine fix_buffer
+  !==================================================================!
   !^CMP IF IH BEGIN
   subroutine couple_ih_sp(DataInputTime)     
 
@@ -548,6 +564,7 @@ contains
 
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)
+    call SP_synchronize_grid(RouterIhSp%iCommUnion)
 
     if(is_proc(IH_))then
        call set_semi_router_from_source(&
@@ -568,7 +585,7 @@ contains
          fill_buffer = IH_get_line_for_sp_and_transform, &
          apply_buffer= SP_put_line_from_ih)
     if(is_proc(SP_))then
-       call SP_adjust_lines
+       call SP_adjust_lines(IH_)
        call set_semi_router_from_target(&
             GridDescriptorSource  = IH_GridDescriptor, &
             GridDescriptorTarget  = SP_LocalGD, &
@@ -577,6 +594,9 @@ contains
             interface_point_coords= SP_interface_point_coords_for_ih, &
             mapping               = mapping_sp_to_ih, &
             interpolate           = interpolation_amr_gc)
+       nLength = nlength_buffer_target(RouterIhSp)
+       call fix_buffer(nLength,&
+            RouterIhSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
     end if
     call synchronize_router_target_to_source(RouterIhSp)
     
@@ -598,7 +618,7 @@ contains
     call global_message_pass(RouterIhSp, &
          nVar = nVarBuffer, &
          fill_buffer = IH_get_for_sp_and_transform, &
-              apply_buffer= SP_put_from_ih)
+         apply_buffer= SP_put_from_ih)
     !    if(is_proc(SP_))then
     !       call SP_put_input_time(DataInputTime)
     !    end if
@@ -675,6 +695,8 @@ contains
 
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
+    call SP_synchronize_grid(RouterScSp%iCommUnion)
+
     if(is_proc(SC_))then
        call set_semi_router_from_source(&
             GridDescriptorSource = SC_LocalLineGD,         &
@@ -694,7 +716,7 @@ contains
          fill_buffer = SC_get_line_for_sp_and_transform, &
          apply_buffer= SP_put_line_from_sc)
     if(is_proc(SP_))then
-       call SP_adjust_lines
+       call SP_adjust_lines(SC_)
        call set_semi_router_from_target(&
             GridDescriptorSource  = SC_GridDescriptor, &
             GridDescriptorTarget  = SP_LocalGD, &
@@ -703,9 +725,22 @@ contains
             interface_point_coords= SP_interface_point_coords_for_sc, &
             mapping               = mapping_sp_to_sc, &
             interpolate           = interpolation_amr_gc)
+       nLength = nlength_buffer_target(RouterScSp)
+       call fix_buffer(nLength,&
+            RouterScSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
     end if
     call synchronize_router_target_to_source(RouterScSp)
     if(is_proc(SC_))then
+       nLength = nlength_buffer_source(RouterScSp)
+       call SC_add_to_line(&
+            nParticle = nLength,&
+            Xyz_DI    =  RouterScSp%BufferSource_II(&
+            1:nDim, 1:nLength), &
+            nIndex    = nAux,   &
+            iIndex_II = nint(RouterScSp%BufferSource_II(&
+            nDim+1:nDim+nAux, 1:nLength)),&      
+            UseInputInGenCoord = .true.,&
+            DoReplace = .true.)
        call update_semi_router_at_source(RouterScSp,&
             SC_GridDescriptor,interpolation_amr_gc)
     end if

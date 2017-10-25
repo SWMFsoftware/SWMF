@@ -18,7 +18,7 @@ module SP_wrapper
        iNode_B, TypeCoordSystem, &
        Length_I, CoordMin_DI, DataInputTime, &
        Block_, Proc_, Begin_, End_, Shock_, ShockOld_, &
-       X_, Y_, Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
+       LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -28,7 +28,8 @@ module SP_wrapper
        Density_, RhoCouple_, Pressure_, PCouple_, &
        Momentum_, RhoUxCouple_, RhoUzCouple_, &
        BField_, BxCouple_, BzCouple_
-  use CON_world, ONLY: is_proc0
+  use ModMpi
+  use CON_world, ONLY: is_proc0, is_proc
   use CON_comp_param, ONLY: SP_, SC_, IH_
 
   implicit none
@@ -51,6 +52,9 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
   public:: SP_put_line
+  public:: SP_synchronize_grid
+  public:: SP_get_cell_index
+  public:: SP_get_particle_index
   public:: SP_adjust_lines
   public:: SP_get_grid_descriptor_param
   public:: SP_get_domain_boundary
@@ -61,6 +65,9 @@ module SP_wrapper
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple = 'rho p mx my mz bx by bz'
+
+  ! offset between LagrID and particle cell index
+  integer:: iOffsetToLagrID_A(nNode) = 0
 
 contains
   !========================
@@ -342,6 +349,7 @@ contains
     logical,intent(out)  :: IsInterfacePoint
     !---------------------------------------------------------------
     integer:: iParticle, iBlock
+    real:: R2
     logical:: IsSc
     character(len=100):: StringError
     character(len=*), parameter:: NameSub='SP_interface_point_coords'
@@ -360,18 +368,21 @@ contains
 
     iParticle = iIndex_I(1)
     iBlock    = iIndex_I(4)
-    ! first, check whether the particle is within bounds
+    ! first, check whether the particle is within bounds and within the domain
+    R2 = sum(State_VIB(X_:Z_,iParticle,iBlock)**2)
     IsInterfacePoint = &
          iParticle >= iGridLocal_IB(Begin_,iBlock) .and. &
-         iParticle <= iGridLocal_IB(End_,iBlock)
+         iParticle <= iGridLocal_IB(End_,  iBlock) .and. &
+         R2 >= RMin**2 .and. R2 < RMax**2
     ! second, check whether the particle is within the appropriate domain
     if(IsInterfacePoint)&
          IsInterfacePoint = &
          is_in_buffer(State_VIB(X_:Z_, iParticle, iBlock)) .and. SendBuffer .or.&
-         .not.(IsSc.eqv.sum(State_VIB(X_:Z_,iParticle,iBlock)**2)>RBufferMax**2)
-    ! lastly, fix coordinates
-    if(IsInterfacePoint)&
-         Xyz_D = State_VIB(X_:Z_, iParticle, iBlock)
+         .not.(IsSc.eqv.R2>RBufferMax**2)
+    ! lastly, fix coordinates and index
+    if(IsInterfacePoint)then
+       Xyz_D = State_VIB(X_:Z_, iParticle, iBlock)
+    end if
   end subroutine SP_interface_point_coords
 
   !===================================================================
@@ -440,7 +451,7 @@ contains
     ! loop variables
     integer:: iPut, iBlock, iNode
     ! indices of the particle
-    integer:: iLine, iParticle
+    integer:: iLine, iParticle, iLagrID
     logical:: PutInBuffer
 
     character(len=*), parameter:: NameSub='SP_put_line'
@@ -448,9 +459,10 @@ contains
     PutInBuffer = iComp == SC_
     ! store passed particles
     do iPut = 1, nPut
-       iBlock = iIndex_II(4, iPut)
-       iLine  = iNode_B(iBlock)
+       iBlock    = iIndex_II(4, iPut)
+       iLine     = iNode_B(iBlock)
        iParticle = iIndex_II(1, iPut)
+       iLagrID   = iIndex_II(1, iPut) + iOffsetToLagrID_A(iLine)
 
        if(iParticle < iParticleMin)&
             call CON_stop(NameSub//': particle index is below limit')
@@ -463,7 +475,8 @@ contains
             CYCLE
 
        ! put coordinates
-       State_VIB(X_:Z_, iParticle, iBlock) = Coord_DI(1:nDim, iPut)
+       State_VIB(LagrID_,iParticle, iBlock) = real(iLagrID)
+       State_VIB(X_:Z_,  iParticle, iBlock) = Coord_DI(1:nDim, iPut)
        iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
        iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
     end do
@@ -471,13 +484,30 @@ contains
 
   !===================================================================
 
-  subroutine SP_adjust_lines
+  subroutine SP_adjust_lines(iComp)
+    integer, intent(in):: iComp
     ! once new geometry of lines has been put, account for some particles
     ! exiting the domain (can happen both at the beginning and the end)
-    integer:: iParticle, iBlock, iBegin, iEnd, iEndNew ! loop variables
+    integer:: iParticle, iBlock, iNode, iBegin, iEnd, iEndNew ! loop variables
     logical:: IsMissingCurr, IsMissingPrev
+    logical:: IsSc
     real   :: R2
+    
+    character(len=*), parameter:: NameSub = "SP_adjust_lines"
+    character(len=100):: StringError
     !--------------------------------------------------------------------
+    ! determine the calling component
+    select case(iComp)
+    case(SC_)
+       IsSc = .true.
+    case(IH_)
+       IsSc = .false.
+    case default
+       write(StringError,'(a,i2)') &
+            ": isn't implemented for interface with component ", iComp
+       call CON_stop(NameSub//StringError)
+    end select
+
     do iBlock = 1, nBlock
        iBegin = iGridLocal_IB(Begin_,iBlock)
        iEnd   = iGridLocal_IB(End_,  iBlock)
@@ -485,11 +515,13 @@ contains
        R2 = sum(State_VIB(X_:Z_,iBegin,iBlock)**2)
        do iParticle = iBegin + 1, iEnd
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
+
           if(IsMissingCurr .and. R2 > RBufferMin**2)then
-             iGridLocal_IB(End_,  iBlock) = iParticle - 1
+             if(.not.IsSc)&
+                  iGridLocal_IB(End_,  iBlock) = iParticle - 1
              EXIT
           end if
-          
+
           if(.not.IsMissingCurr)then
              R2 = sum(State_VIB(X_:Z_,iParticle,iBlock)**2)
              if(IsMissingPrev)then
@@ -516,10 +548,55 @@ contains
           Distribution_IIB(:,1:iEndNew, iBlock) = &
                Distribution_IIB(:,iBegin:iEnd, iBlock)
        end if
+
     end do
     ! may need to add particles to the beginning of lines
-    call append_particles
- end subroutine SP_adjust_lines
+    if(IsSc) call append_particles
+  end subroutine SP_adjust_lines
+
+  !===================================================================
+
+  subroutine SP_synchronize_grid(iCommSync)
+    ! synchronize offsets between LagrID and particle cell index
+    integer, intent(in):: iCommSync
+    integer:: iBlock, iNode, iError
+    !----------------------------------------------------------------
+    ! reset values of offsets on all processors
+    iOffsetToLagrID_A = 0
+
+    if(is_proc(SP_))then
+       ! each SP proc updates its own part of iOffsetLagrID_A
+       do iBlock = 1, nBlock
+          iNode = iNode_B(iBlock)
+          iOffsetToLagrID_A(iNode) = &
+               nint(State_VIB(LagrID_,1, iBlock)) - 1
+       end do
+    end if
+
+    ! update on all processors
+    call MPI_Allreduce(MPI_IN_PLACE, iOffsetToLagrID_A, nNode, &
+         MPI_INTEGER, MPI_SUM, iCommSync, iError)
+  end subroutine SP_synchronize_grid
+
+  !===================================================================
+
+  subroutine SP_get_cell_index(iNode, iLagrID, iCell)
+    ! finds cell index that corresponds to provided lagrangian index
+    integer, intent(in) :: iNode
+    integer, intent(in) :: iLagrID
+    integer, intent(out):: iCell
+    !----------------------------------------------------------------
+    iCell = iLagrID - iOffsetToLagrID_A(iNode)
+  end subroutine SP_get_cell_index
+  !===================================================================
+
+  subroutine SP_get_particle_index(iNode, iParticle, iLagrID)
+    ! finds cell index that corresponds to provided lagrangian index
+    integer, intent(in) :: iNode, iParticle
+    integer, intent(out):: iLagrID
+    !----------------------------------------------------------------
+    iLagrID  = iParticle + iOffsetToLagrID_A(iNode)
+  end subroutine SP_get_particle_index
 
   !===================================================================
 
