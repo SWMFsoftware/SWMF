@@ -195,9 +195,10 @@ sub set_planet{
 
     print "Configuring GITM for $Planet!!\n"; 
 
-    &shell_command("rm -f ModPlanet.f90 ModPlanet.o planet.f90");
+    &shell_command("rm -f ModPlanet.f90 ModPlanet.o planet.f90 user.f90");
     &shell_command("ln -s Mod$Planet.f90 ModPlanet.f90");
     &shell_command("ln -s $Planet.f90 planet.f90");
+    &shell_command("ln -s user$Planet.f90 user.f90");
 
     my $file;
     foreach $file (glob("*.$Planet.f90")) {
