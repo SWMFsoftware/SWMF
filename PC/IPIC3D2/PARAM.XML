@@ -239,4 +239,28 @@ is 0.1.
 
 </command>
 
+<command name="ENERGYCONSERVING">
+  <parameter name="useECSIM" type="logical" default="F"/>
+  
+#ENERGYCONSERVING
+T                        useECSIM
+
+If useECSIM is true, then the Energy Conserving Semi-Implicit Method (ECSIM)
+(Lapenta, JCP, 2016) will be used.
+
+</command>
+
+<command name="CORRECTWEIGHT">
+  <parameter name="doCorrectWeight" type="logical" default="F"/>
+  
+#CORRECTWEIGHT
+T                        useECSIM
+
+If doCorrectWeight is true, at the end of each iteration, after the update
+of the EM field and particles, the weights of the electrons will be corrected
+to reduce the difference between div(E) and 4*pi*rho, where rho is the net
+charge. (We may need to change this command in the near future. --Yuxi)
+
+</command>
+
 </commandList>
