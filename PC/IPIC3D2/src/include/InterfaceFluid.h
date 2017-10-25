@@ -1527,7 +1527,7 @@ class InterfaceFluid
 	      for(int iVar=0; iVar < nVarFluid; iVar++){
 		int idx; 
 		idx = iVar + nVarFluid*(iPoint_I[ii] - 1);
-		State_GV[i][j][k][iVar] = state_I[idx];				
+		State_GV[i][j][k][iVar] = state_I[idx];		
 	      }	      
 	      ii++;
 
@@ -1551,15 +1551,25 @@ class InterfaceFluid
 	  }
 	}// i j k 
 
-    if(doSetData && nDim==2){
-      // Fill in the data in the ignored dimension. 
+    if(doSetData && nDim<3){
+      // Fill in the data in the ignored dimension.
+      if(nDim==1){
+	int j0 = 0;      
+	for(i = iMin; i < iMax; i++)
+	  for(j = 1; j < nynLG; j++)
+	    for(k = kMin; k < kMax; k++)
+	      for( int iVar=0; iVar < nVarFluid; iVar++){
+		State_GV[i][j][k][iVar] = State_GV[i][j0][k][iVar];
+	      }      
+      }
+      
       int k0 = 0;      
       for(i = iMin; i < iMax; i++)
-	for(j = jMin; j < jMax; j++)
+	for(j = iMin; j < nynLG; j++)
 	  for(k = 1; k < nznLG; k++)
 	    for( int iVar=0; iVar < nVarFluid; iVar++){
 	      State_GV[i][j][k][iVar] = State_GV[i][j][k0][iVar];
-	    }
+	    }      
     }
     
   }
