@@ -16,7 +16,7 @@ module ModDensityAndGradient
   implicit none
   private !Except
   logical,save :: DoInit=.true., DoInitDensityArr = .true.
-  character(LEN=10),save::NameVector
+  character(LEN=10), save :: NameVector
   type(RouterType),save::Router
   type(GridDescriptorType),save::LineGrid,MhGrid
   type(DomainDecompositionType),save::LineDD

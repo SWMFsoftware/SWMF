@@ -2,16 +2,16 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !This code is a copyright protected software (c) 2002- University of Michigan
 module ModRadioWaveRaytracing
-
-  use ModNumConst
   use ModCoordTransform
   use CON_global_vector, ONLY: associate_with_global_vector
-  use ModDensityAndGradient, ONLY: NameVector, &
+  use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
        GradDensity_DI, Density_I, DeltaSNew_I
-  use ModPhysics, ONLY : No2Si_V, UnitRho_, UnitX_
-  use ModProcMH, ONLY: iProc
-  use ModGeometry, ONLY: XyzMin_D, XyzMax_D, MaxDim
-  use ModMain,     ONLY: TypeCellBc_I
+  use ModPhysics, ONLY   : No2Si_V, UnitRho_, UnitX_
+  use ModProcMH, ONLY    : iProc
+  use BATL_geometry, ONLY: CoordMin_D, CoordMax_D, &
+       IsCartesianGrid, xyz_to_coord, coord_to_xyz
+  use BATL_size, ONLY    : MaxDim
+  use ModMain,     ONLY  : TypeCellBc_I
 
   implicit none
 
@@ -21,14 +21,14 @@ module ModRadioWaveRaytracing
 
 contains !=========================================================
 
-  subroutine ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
-       DeltaS_I, ToleranceInit, DensityCr, Intensity_I, IsBehindCr_I)
+  subroutine ray_path(nRay, UnusedRay_I, Slope_DI, &
+       DeltaS_I, ToleranceInit, DensityCr, Intensity_I)
 
     !
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
-    ! specified by its Cartesian Position_DI and its direction cosines 
-    ! Slope_DI. The subroutine calculates new Position_DI, which is 
+    ! specified by its Cartesian Xyz_DI and its direction cosines 
+    ! Slope_DI. The subroutine calculates new Xyz_DI, which is 
     ! DeltaS_I away from the initial position. It calculates the intensity
     ! along the step as emissivity multiplied by DeltaS and adds this to the
     ! Intensity_I. Thus, after series of calls to ray_path(), the Intensity_I
@@ -38,7 +38,7 @@ contains !=========================================================
     ! permittivity \epsilon. The \epsilon, in turn, is a function of the 
     ! plasma density. The external subprogram, get_plasma_density(),
     ! provides the plasma Density_I along with its gradient, GradDensity_DI,
-    ! at the Position_DI. The \epsilon can be calculated as
+    ! at the Xyz_DI. The \epsilon can be calculated as
     !         1 - Density_I/DensityCr, 
     ! where DensityCr is the "critical" plasma density at which the dielectric
     ! permittivity \epsilon falls down to zero. The value of DensityCr is
@@ -65,8 +65,8 @@ contains !=========================================================
     !
     ! get_plasma_density():  external subroutine that returns the plasma
     !     Density_I and its gradient GradDensity_DI. It also provides the
-    !     recommended step size DeltaSNew_I and asserts the IsBehindCr_I (sets
-    !     it to .true.) for a ray should it (illegally) penetrate into the
+    !     recommended step size DeltaSNew_I and asserts the UnusedRay_i (sets
+    !     it to .true.) for a ray, should it (illegally) penetrate into the
     !     region with "negative" dielectric permittivity.
     ! nRay:           number of rays being processed.
     ! UnusedRay_I:  the caller program can use this logical array to stop
@@ -76,7 +76,7 @@ contains !=========================================================
     !     subsequent calls to ray_path(). Before the first call to ray_path()
     !     all the elements of UnusedRay_I should be set to .false.; then all
     !     the rays will be processed.
-    ! Position_DI:    Cartesian position vectors of the rays.
+    ! Xyz_DI:    Cartesian position vectors of the rays.
     ! Slope_DI:       Direction cosines of the rays.
     ! DeltaS_I:       Current step values for the rays. Set the elements of
     !     Delta_I to some reasonable value, say, 1.0. The DeltaS_I elements
@@ -96,13 +96,6 @@ contains !=========================================================
     !     each element of the Intensity_I is incremented by the integral along
     !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
     !     the first call to the ray_path().
-    ! IsBehindCr_I:      the .true. elements of this logical array indicate that
-    !     the corresponding rays penetrated into the "prohibited" region of
-    !     space with the plasma density above its critical value. Normally, it
-    !     should never happen. However, in case the algorithm made such an
-    !     error, the flagged rays should be considered as "bad" and thrown
-    !     away from the resultant Intensity_I. Set all the elements of
-    !     IsBehindCr_I to .false. before calling ray_path() for the first time.
     ! 
     ! Written by Leonid Benkevitch.
     !
@@ -110,25 +103,15 @@ contains !=========================================================
 
     implicit none
 
-    interface
-       subroutine get_plasma_density(nRay)
-         implicit none
-         integer,intent(in) :: nRay
-       end subroutine get_plasma_density
-    end interface
-
     integer, intent(in) :: nRay   ! # of pixels in the raster
     real,    intent(inout), dimension(3,nRay) :: Slope_DI
     real,    intent(inout), dimension(nRay) :: Intensity_I, DeltaS_I
     real,    intent(in) ::  ToleranceInit, DensityCr
 
-    ! .true. if a ray is OK, .false. otherwise:
-    logical, intent(inout), dimension(nRay):: IsBehindCr_I
-
     ! a ray is excluded from processing if it is .true. 
     logical, intent(inout), dimension(nRay) :: UnusedRay_I   
 
-    logical, save:: IsNewEntry = .true.
+    logical, save :: IsNewEntry = .true.
    
     integer, parameter :: nSplitDeltaS = 2
 
@@ -137,7 +120,8 @@ contains !=========================================================
     real,    save, dimension(3)       :: StepX_D, StepY_D, RelGradRefrInx_D 
     real,    save, dimension(3)       :: GradDielPerm_D, PositionHalfBack_D
 
-    real, save, pointer, dimension(:,:) :: Position_DI
+    real, save, pointer                 :: Coord_DI(:,:)
+    real, save, allocatable             :: Xyz_DI(:,:)
     real, save, pointer, dimension(:)   :: DistanceToCritSurf_I
 
     ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
@@ -152,9 +136,8 @@ contains !=========================================================
     real :: GradDielPermSqr, GradEpsDotSlope
     real :: ParabLen
     real, save :: &
-         Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1, StepMin=1
+         Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1.0, StepMin = 1.0
     
-    integer, save :: nCall=0
     integer:: iRay, iDim
 
     character(LEN=20),save:: TypeBoundaryDown_D(MaxDim), TypeBoundaryUp_D(MaxDim)
@@ -162,12 +145,12 @@ contains !=========================================================
 
     if (IsNewEntry) then
        IsNewEntry = .false.
-       call associate_with_global_vector(Position_DI,NameVector)
+       call associate_with_global_vector(Coord_DI,NameVector)
        allocate(DistanceToCritSurf_I(nRay))
-       DistanceToCritSurf_I = cZero
+       DistanceToCritSurf_I = 0.0
        allocate(IsOKRay_I(nRay))
        IsOKRay_I = .true.
-       DensityCrInv = cOne/DensityCr
+       DensityCrInv = 1.0/DensityCr
 
        !  minimum ten points between a vacuum and a critical surface and
        !  minimum 10 points over 1 rad of the curvature
@@ -190,20 +173,40 @@ contains !=========================================================
           
     end if
 
-    nCall = nCall + 1
-   
-
     !Start the predictor step of the GIRARD scheme: 
     do iRay = 1, nRay
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
-       Position_DI(:,iRay) = Position_DI(:,iRay) + &
-            Slope_DI(:,iRay)*cHalf*DeltaS_I(iRay) 
-       ! Now Position_DI moved by 1/2 DeltaS !!!
-       call check_bc
+       if(IsCartesianGrid)then
+          Xyz_DI(:, iRay)= Coord_DI(:,iRay)
+       else
+          call coord_to_xyz(Coord_DI(:,iRay), Xyz_DI(:, iRay))
+       end if
+       Xyz_DI(:,iRay) = Xyz_DI(:,iRay) + &
+            Slope_DI(:,iRay)*0.50*DeltaS_I(iRay)
+       if(IsCartesianGrid)then
+          Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+       else
+          call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+       end if
+       ! Now Xyz_DI moved by 1/2 DeltaS !!!
+       call check_bc(iRay)
+       if(UnusedRay_I(iRay))then
+          !\
+          !Ray end is behind the boundary of the computational domain
+          !Push the end point backward
+          !/
+          Xyz_DI(:,iRay) = Xyz_DI(:,iRay) - &
+               Slope_DI(:,iRay)*0.50*DeltaS_I(iRay)
+          if(IsCartesianGrid)then
+             Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+          else
+             call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+          end if
+       end if
     end do
 
     !
-    ! The following routine collects the density values at the Position_DI
+    ! The following routine collects the density values at the Xyz_DI
     ! from all relevant processors
     !
 
@@ -211,20 +214,23 @@ contains !=========================================================
     
     
     !In making radio images this is a bad pixel which should be further processed 
-    IsBehindCr_I = Density_I>= DensityCr.and..not.UnusedRay_I
-    UnusedRay_I = UnusedRay_I .or. IsBehindCr_I ! "bad rays" are done
+    UnusedRay_I = UnusedRay_I .or.  Density_I >= DensityCr ! "bad rays" are done
     
     do iRay = 1, nRay
 
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
+       if(IsCartesianGrid)then
+          Xyz_DI(:, iRay)= Coord_DI(:,iRay)
+       else
+          call coord_to_xyz(Coord_DI(:,iRay), Xyz_DI(:, iRay))
+       end if
 
-
-       HalfDeltaS = cHalf*DeltaS_I(iRay)
+       HalfDeltaS = 0.50*DeltaS_I(iRay)
        ! Original Position (at an integer point):
-       PositionHalfBack_D = Position_DI(:,iRay) - Slope_DI(:,iRay)*HalfDeltaS
+       PositionHalfBack_D = Xyz_DI(:,iRay) - Slope_DI(:,iRay)*HalfDeltaS
        Dens2DensCr = Density_I(iRay)*DensityCrInv
 
-       DielPerm = cOne - Dens2DensCr
+       DielPerm = 1.0 - Dens2DensCr
        GradDielPerm_D = -GradDensity_DI(:,iRay)*DensityCrInv
        GradDielPermSqr = sum(GradDielPerm_D**2)
 
@@ -234,11 +240,11 @@ contains !=========================================================
 
        !Check positivity:
        if( DielPermHalfBack<=0.0)then
-          IsBehindCr_I(iRay) = .true.
+          UnusedRay_I(iRay) = .true.
           CYCLE
        end if
 
-       Curv = (cHalf*HalfDeltaS/DielPermHalfBack)**2* &
+       Curv = (0.50*HalfDeltaS/DielPermHalfBack)**2* &
             (GradDielPermSqr - GradEpsDotSlope**2)
        !The curvature squared characterizes the magnitude of
        !the tranverse gradient of the dielectric permittivity
@@ -256,7 +262,11 @@ contains !=========================================================
           if (Curv .ge. ToleranceSqr) then
              DeltaS_I(iRay) = 0.99 * &
                   DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
-             Position_DI(:,iRay) = PositionHalfBack_D
+             if(IsCartesianGrid)then
+                Coord_DI(:,iRay) = PositionHalfBack_D
+             else
+                call xyz_to_coord(PositionHalfBack_D, Coord_DI(:,iRay))
+             end if
              CYCLE
           end if
 
@@ -276,9 +286,13 @@ contains !=========================================================
              DistanceToCritSurf_I(iRay) = DielPermHalfBack  &
                   /sqrt(GradDielPermSqr)
              DeltaS_I(iRay) =  max(&
-                  cHalf*Tolerance*DistanceToCritSurf_I(iRay),&
+                  0.50*Tolerance*DistanceToCritSurf_I(iRay),&
                   StepMin)
-             Position_DI(:,iRay) = PositionHalfBack_D
+             if(IsCartesianGrid)then
+                Coord_DI(:,iRay) = PositionHalfBack_D
+             else
+                call xyz_to_coord(PositionHalfBack_D, Coord_DI(:,iRay))
+             end if
              CYCLE
           end if
 
@@ -311,7 +325,7 @@ contains !=========================================================
           !     parabola plane, pointing at the opposite parabola branch, and
           !     with the length equal the distance from PositionHalfBack_D to
           !     the opposite branch of parabola.
-          ! The parabolic reflection is just a replacement of the Position_DI
+          ! The parabolic reflection is just a replacement of the Xyz_DI
           ! with the symmetric point at the opposite branch of parabola, and 
           ! changing the "incident" direction Slope_DI to the "departing" ray
           ! direction according to Snell law.
@@ -336,8 +350,25 @@ contains !=========================================================
 
           StepY_D = 4*StepY_D*LCosAl*DielPermHalfBack 
 
-          Position_DI(:,iRay) = PositionHalfBack_D + StepY_D
-
+          Xyz_DI(:,iRay) = PositionHalfBack_D + StepY_D
+          if(IsCartesianGrid)then
+             Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+          else
+             call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+          end if
+          call check_bc(iRay)
+          if(UnusedRay_I(iRay))then
+             !\
+             !Ray end is behind the boundary of the computational domain
+             !Push the end point backward
+             !/
+             Xyz_DI(:,iRay) = PositionHalfBack_D
+             if(IsCartesianGrid)then
+                Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+             else
+                call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+             end if
+          end if
           !
           ! Step_X is in the direction of - grad \epsilon,
           ! whose vector is of the length of 1/L.
@@ -350,27 +381,12 @@ contains !=========================================================
 
           ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
           Intensity_I(iRay) = Intensity_I(iRay)  &
-               + ParabLen*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
-          ! else
-          !    EnergyDeposition_I(iRay) = Intensity_I(iRay) * &
-          !         ParabLen * AbsorptionCoeff_I(iRay)
-          !    if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
-          !       !Mark this ray as if it is behind the critical surface
-          !       EnergyDeposition_I(iRay) = Intensity_I(iRay)
-          !       UnusedRay_I(iRay) = .true.
-          !       Intensity_I(iRay) = 0.0
-          !       IsBehindCr_I(iRay) = .true.
-          !       CYCLE
-          !    end if
-          !    Intensity_I(iRay) = Intensity_I(iRay) * &
-          !         (1 - ParabLen * AbsorptionCoeff_I(iRay)) 
-          ! end if
-
+               + ParabLen*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
        else 
 
           ! Make a step using Boris' algorithm
 
-          Coef=cHalf*HalfDeltaS/(cOne - Dens2DensCr)
+          Coef = 0.50*HalfDeltaS/(1.0 - Dens2DensCr)
           RelGradRefrInx_D = Coef*GradDielPerm_D    
           ! grad(n) = grad(eps(i+1/2))/(2*eps(i+1/2))
 
@@ -387,14 +403,31 @@ contains !=========================================================
           Slope_DI(:,iRay) = Slope_DI(:,iRay) &
                + Coef*cross_product(Slope1_D, Omega_D)
 
-          Position_DI(:,iRay) = Position_DI(:,iRay) &
+          Xyz_DI(:,iRay) = Xyz_DI(:,iRay) &
                + Slope_DI(:,iRay)*HalfDeltaS
+          if(IsCartesianGrid)then
+             Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+          else
+             call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+          end if
+          call check_bc(iRay)
+          if(UnusedRay_I(iRay))then
+             !\
+             !Ray end is behind the boundary of the computational domain
+             !Push the end point backward
+             !/
+             Xyz_DI(:,iRay) = Xyz_DI(:,iRay)&
+               - Slope_DI(:,iRay)*HalfDeltaS
+             if(IsCartesianGrid)then
+                Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+             else
+                call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+             end if
+          end if
           Intensity_I(iRay) = Intensity_I(iRay) &
-               + DeltaS_I(iRay)*(Dens2DensCr**2)*(cHalf - Dens2DensCr)**2
+               + DeltaS_I(iRay)*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
        end if
-
-       call check_bc
-
+       if(UnusedRay_I(iRay))CYCLE
        !
        !   The code below makes gradual increases of the DeltaS up to the value
        ! specified in DeltaSNew. The smooth step increase is required so as
@@ -451,29 +484,11 @@ contains !=========================================================
     end do
   contains
     !==================
-    subroutine check_bc
-      integer::iDim
-      do iDim = 1, MaxDim
-         if(Position_DI(iDim, iRay) < XyzMin_D(iDim))then
-            if(TypeBoundaryDown_D(iDim)=='reflect')then
-               Position_DI(iDim, iRay) = &
-                    2 * XyzMin_D(iDim) -  Position_DI(iDim, iRay)
-               Slope_DI(iDim, iRay) = - Slope_DI(iDim, iRay)
-            else
-               UnusedRay_I(iRay) = .true.
-               return
-            end if
-         else if(Position_DI(iDim, iRay) > XyzMax_D(iDim))then
-            if(TypeBoundaryUp_D(iDim)=='reflect')then
-               Position_DI(iDim, iRay) = &
-                    2 * XyzMax_D(iDim) -  Position_DI(iDim, iRay)
-               Slope_DI(iDim, iRay) = - Slope_DI(iDim, iRay)
-            else
-               UnusedRay_I(iRay) = .true.
-               return
-            end if
-         end if
-      end do
+    subroutine check_bc(iRay)
+      integer, intent(in)::iRay
+      !------------
+      UnusedRay_I(iRay) = any(Coord_DI(:,iRay) < CoordMin_D).or.&
+           any(Coord_DI(:,iRay) > CoordMax_D)
     end subroutine check_bc
     !====================
   end subroutine ray_path
