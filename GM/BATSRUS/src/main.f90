@@ -13,6 +13,7 @@ program BATSRUS
        IsLastRead, &
        lVerbose, &
        dn_timing, UseTiming, UseTimingAll, iUnitTiming
+  use ModSetParameters, ONLY: set_parameters
   use ModWriteProgress, ONLY: write_progress
   use ModRestartFile, ONLY: NameRestartInDir
   use CON_planet, ONLY: init_planet_const, set_planet_defaults
@@ -84,8 +85,8 @@ program BATSRUS
      !\
      ! Set and check input parameters for this session
      !/
-     call MH_set_parameters('READ')
-     call MH_set_parameters('CHECK')
+     call set_parameters('READ')
+     call set_parameters('CHECK')
 
      !\
      ! Test string is read, so set the test flags now
