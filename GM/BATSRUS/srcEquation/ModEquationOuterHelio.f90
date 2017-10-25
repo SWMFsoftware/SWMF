@@ -149,33 +149,6 @@ module ModVarIndexes
         'Ne3E  ', & ! Ne3Energy_
         'Ne4E  ' /) ! Ne4Energy_
 
-   ! The space separated list of nVar conservative variables for  plotting
-   character(len=*), parameter :: NameConservativeVar = &
-        'Rho Mx My Mz Bx By Bz e NeuRho NeuMx NeuMy ' // &
-        'NeuMz NeuE Ne2Rho Ne2Mx Ne2My Ne2Mz Ne2E Ne3Rho ' // &
-        'Ne3Mx Ne3My Ne3Mz Ne3E Ne4Rho Ne4Mx Ne4My Ne4Mz Ne4E'
-
-   ! The space separated list of nVar primitive variables for plotting
-   character(len=*), parameter :: NamePrimitiveVar = &
-        'Rho Ux Uy Uz Bx By Bz p NeuRho NeuUx NeuUy NeuUz ' // &
-        'NeuP Ne2Rho Ne2Ux Ne2Uy Ne2Uz Ne2P Ne3Rho Ne3Ux ' //  &
-        'Ne3Uy Ne3Uz Ne3P Ne4Rho Ne4Ux Ne4Uy Ne4Uz Ne4P'
-
-   ! The space separated list of nVar primitive variables for TECplot output
-   character(len=*), parameter :: NamePrimitiveVarTec = &
-        '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "p", ' // &
-        '"NeuRho", "NeuUx", "NeuUy", "NeuUz", "NeuP", "Ne2Rho", ' // &
-        '"Ne2Ux", "Ne2Uy", "Ne2Uz", "Ne2P", "Ne3Rho", "Ne3Ux", ' // &
-        '"Ne3Uy", "Ne3Uz", "Ne3P", "Ne4Rho", "Ne4Ux", ' // &
-        '"Ne4Uy", "Ne4Uz", "Ne4P"'
-
-   ! Names of the user units for IDL and TECPlot output
-   character(len=20) :: &
-        NameUnitUserIdl_V(nVar+nFluid) = '', &
-        NameUnitUserTec_V(nVar +nFluid) = ''
-
-   ! The user defined units for the variables
-
    ! There are no extra scalars
    integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
 
