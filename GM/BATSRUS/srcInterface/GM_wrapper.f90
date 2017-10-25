@@ -89,6 +89,7 @@ contains
 
     use CON_comp_info
     use ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
+    use ModSetParameters, ONLY: set_parameters
     use ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use ModMain, ONLY : CodeVersion, NameThisComp, &
          time_accurate, time_simulation, StartTime, iStartTime_I, UseRotatingBc
@@ -123,7 +124,7 @@ contains
        NameRestartInDir(1:2)  = NameThisComp
        NameRestartOutDir(1:2) = NameThisComp
     case('READ')
-       call MH_set_parameters('READ')
+       call set_parameters('READ')
     case('CHECK')
        call get_time( &
             DoTimeAccurateOut = time_accurate, &
@@ -135,7 +136,7 @@ contains
             UseRotationOut = UseRotatingBc)
        call time_real_to_int(StartTime,iStartTime_I)
 
-       call MH_set_parameters('CHECK')
+       call set_parameters('CHECK')
     case('STDOUT')
        iUnitOut=STDOUT_
        if(iProc==0)then
