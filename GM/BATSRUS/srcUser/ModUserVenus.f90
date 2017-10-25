@@ -1025,7 +1025,7 @@ contains
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    real:: zFace, yFace, zFace, rFace, rFace2
+    real:: xFace, yFace, zFace, rFace, rFace2
     real:: CosSZA 
     real:: uDotR, bDotR
     !--------------------------------------------------------------------------
