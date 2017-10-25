@@ -14,6 +14,7 @@ module ModAMR
   public:: init_mod_amr
   public:: clean_mod_amr
   public:: do_amr
+  public:: set_levels
 
   ! Local and global refinement/coarsening and neighbor parameters.
 
@@ -606,5 +607,14 @@ contains
     end subroutine trace_transient
   end subroutine amr_criteria
   !============================================================================
+  subroutine set_levels
+
+    use BATL_lib, ONLY: iTree_IA, MinLevel_, MaxLevel_
+
+    iTree_IA(MinLevel_,:) = min_block_level
+    iTree_IA(MaxLevel_,:) = max_block_level
+
+  end subroutine set_levels
+  !=======================================================================
 
 end module ModAMR
