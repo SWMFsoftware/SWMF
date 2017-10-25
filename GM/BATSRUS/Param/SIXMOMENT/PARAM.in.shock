@@ -1,0 +1,143 @@
+#ECHO
+T                       DoEcho
+
+#TESTXYZ
+0.01
+0.0
+0.0
+
+#TESTVAR
+2			Ux
+
+#UPDATECHECK
+F
+
+TEST
+update_states update_states_mhd
+
+#DESCRIPTION
+Five-moment test	StringDescription
+
+#USERMODULE
+Waves and GEM, Yingjuan Ma
+1.30			VersionUserModule
+
+#CHECKGRIDSIZE
+     100                              nI
+       1                              nJ
+       1                              nK
+      10                     MinBlockALL
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#LIGHTSPEED
+1.0			cLightDim
+
+#PLASMA
+0.1			IonMass
+0.001			ElectronMass
+1.0			IonCharge
+-1.0			ElectronCharge
+1.0			ElectronTemperatureRatio
+
+#SHOCKTUBE
+1.0			Rho Left
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.75e-2			Bx
+1.0e-2			By
+0.0			Bz
+0.0			Ex
+0.0			Ey
+0.0			Ez
+0.0			HypE
+0.5e-4			Ppar
+0.5e-4			P
+1.0/100.0		eRho
+0.0			eUx
+0.0			eUy
+0.0			eUz
+0.5e-4			ePpar
+0.5e-4			eP
+0.125			Rho  Right
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.75e-2			Bx
+-1.0e-2			By
+0.0			Bz
+0.0			Ex
+0.0			Ey
+0.0			Ez
+0.0			HypE
+0.05e-4			Ppar
+0.05e-4			P
+0.125/100.0		eRho
+0.0			eUx
+0.0			eUy
+0.0			eUz
+0.05e-4			ePpar
+0.05e-4			eP
+
+#GRID
+8                  	nRootBlockX
+1                     	nRootBlockY
+1                     	nRootBlockZ
+-0.5                 	xMin
++0.5                 	xMax
+-1.                   	yMin
+ 1.                   	yMax
+-1.                   	zMin
+ 1.                   	zMax
+
+#OUTERBOUNDARY
+float                    TypeBcEast
+float                    TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+mc			TypeLimiter
+1.5			BetaLimiter
+
+TIMESTEPPING
+3			nStage
+0.8			CflExpl
+
+#SAVERESTART
+F			DoSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+raw			StringLog
+10			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1
+1d mhd idl_ascii	StringPlot
+-1			DnOutput
+0.1			DtOutput
+0.			DxOutput
+
+#STOP
+-1			MaxIteration
+10.0			tSimulationMax
