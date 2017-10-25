@@ -59,7 +59,7 @@ contains !=========================================================
     ! Written by Leonid Benkevitch.
     !
     !
-
+    use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord
     use ModMain,ONLY:NameThisComp
     use ModDensityAndGradient,ONLY: get_plasma_density, NameVector, &
          Density_I, GradDensity_DI, DeltaSNew_I
@@ -70,57 +70,103 @@ contains !=========================================================
     real, intent(in) :: XyzObserver_D(3)          
  
     real, intent(in) :: RadioFrequency
-    ! (x0, y0, x1, y1), i.e. (XLower, YLower, XUpper, YUpper)
+    ! (XLower, YLower, XUpper, YUpper)
     real, intent(in) :: ImageRange_I(4)        
     ! Radius of "integration sphere"
     real, intent(in) :: rIntegration           
     ! Dimensions of the raster in pixels
-    integer, intent(in) ::  nXPixel, nYPixel   
+    integer, intent(in) ::  nXPixel, nYPixel
+    !\
+    ! OUTPUTS  
     ! The result of emissivity integration
     real, dimension(nXPixel,nYPixel), intent(out) :: Intensity_II          
-    ! A ray is excluded from processing if it is .true.
-    logical, dimension(nYPixel*nXPixel) :: ExcludeRay_I   
-    ! Pixel coordinates INSIDE of the image plane
+    !/
+                            
+    !\
+    !Misc functions of inputs 
+    !/     
+    real :: XyzObservLen !=sqrt(sum(XyzObs_D**2))
+    !\
+    !Frequency related:
+    real :: DensityCr !In GGSE
+    !\
+    ! Same as ImageRange_I(4)
+    real :: XLower, XUpper, YLower, YUpper
+    !\
+    ! rIntegration related vars:
+    real :: rIntegrationSqr !=rIntegration**2 + Eps
+    !\
+    !nPixel related:
+
+    integer :: nRay !=nXPixelX*nYPixel
+
+    !\
+    !Pixel grid
+    !/ 
+    real :: DxPixel, DyPixel 
+    ! Pixel coordinates INSIDE the image plane
     real, dimension(nXPixel,nYPixel) :: XPixel_II, YPixel_II  
-    ! Unity vector normal to image plane 
+    ! Unity vector normal to the image plane 
     real :: Normal_D(3)                                          
     real :: ZAxisOrt_D(3) = (/0, 0, 1/)
     ! Image plane inner Cartesian orts
-    real :: Tau_D(3), Xi_D(3)                                   
-    real :: XyzObservLen
-    ! SGI pixel coordinates
-    real, dimension(3,nYPixel,nXPixel) :: XyzPixel_DII
-    ! SGI unity slope vectors for all the line-of-sights pointing at 
+    real :: Tau_D(3), Xi_D(3) 
+    !\
+    ! Pixel 3D Cartesian coordinates
+    real, dimension(3) :: XyzPixel_D
+
+    !\
+    ! Initial directions of rays
+    !/
+    ! Unity slope vectors for all the line-of-sights pointing at 
     ! the pixels          
-    real, dimension(3,nYPixel,nXPixel) :: Slope_DII
+    real :: SlopeUnscaled_D(3), Slope_DI(3,nXPixel*nYPixel)
+    !\
     ! Distance from the radiotelescope to the integration sphere  
     real :: ObservToIntSphereDist
-   
-    real, dimension(3,nXPixel,nYPixel) :: Position_DII        ! 
-    real, dimension(nXPixel*nYPixel) :: SolarDistSqr_I
-    real :: XPixelDel, YPixelDel    
-    real :: SlopeUnscaled_D(3)
-    real :: XLower, XUpper, YLower, YUpper
-    real, dimension(3,nXPixel*nYPixel) :: Slope_DI
+    !\
+    ! Intersection point of the line of sight with the integration sphere
+    !/
+    real :: XyzAtIntSphere_D(3)
+
+    !\
+    ! Global vector: generalized coordinates of the ray endpoints
+    !/
+    
+
+    real, dimension(nXPixel*nYPixel) :: SolarDistSqr_I   
+  
     real, pointer, dimension(:,:) :: Position_DI
+   !\
+    ! A ray is excluded from processing if it is .true.
+    logical, dimension(nYPixel*nXPixel) :: UnusedRay_I
     real, dimension(nXPixel*nYPixel) :: Intensity_I, DeltaS_I
-    !.true. if a ray is OK; .false. otherwise
-    ! Must be set to .true. before a call to ray_path() with new value of nRay
-    logical, dimension(nXPixel*nYPixel) :: RayFlag_I         
+    !\
+    ! Parameters
     real,parameter :: Tolerance = 0.01, DeltaS = 1.0
-    real :: DensityCr 
-    real :: rIntegrationSqr
-    integer :: nRay, nIteration, i, j, nRayInsideIntSphere
-    logical :: IsRayInsideIntSphere_I(nXPixel*nYPixel)
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
     logical, save :: DoAllocate = .true.
+    !\
+    !Loop variables
+    integer ::  i, j, iRay 
     !------------------------------------
 
     !
     ! Total number of rays and pixels in the raster
     !
     nRay = nXPixel*nYPixel  
-
+    !
+    ! Initial allocation of the global vector of ray positions
+    ! and other dynamic arrays
+    !
+    if(DoAllocate)then
+       DoAllocate=.false.
+       ! Symbolic name of the global vector:
+       NameVector = NameThisComp//'_Pos_DI'
+       call allocate_vector(NameVector, 3, nRay)
+       call associate_with_global_vector(Position_DI, NameVector)
+       allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
+    end if
     !
     ! Calculate the critical density from the frequency, in CGS
     !
@@ -134,13 +180,13 @@ contains !=========================================================
     YLower = ImageRange_I(2)
     XUpper = ImageRange_I(3)
     YUpper = ImageRange_I(4)
-    XPixelDel = (XUpper - XLower)/nXPixel
-    YPixelDel = (YUpper - YLower)/nYPixel
-    XPixel_II(:,1) = (/ (XLower + (real(i) - 0.5)*XPixelDel, i = 1, nXPixel) /)
+    DxPixel = (XUpper - XLower)/nXPixel
+    DyPixel = (YUpper - YLower)/nYPixel
+    XPixel_II(:,1) = (/ (XLower + (real(i) - 0.5)*DxPixel, i = 1, nXPixel) /)
     do j = 2, nYPixel
        XPixel_II(:,j) = XPixel_II(:,1)
     end do
-    YPixel_II(1,:) = (/ (YLower + (real(j) - 0.5)*YPixelDel, j = 1, nYPixel) /)
+    YPixel_II(1,:) = (/ (YLower + (real(j) - 0.5)*DyPixel, j = 1, nYPixel) /)
     do i = 2, nXPixel
        YPixel_II(i,:) = YPixel_II(1,:)
     end do
@@ -157,20 +203,19 @@ contains !=========================================================
     !
     ! Calculate coordinates of all the pixels in the SGI
     !
+    iRay = 0
     do j = 1, nYPixel
        do i = 1, nXPixel
-          XyzPixel_DII(:,i,j) = XPixel_II(i,j)*Tau_D + YPixel_II(i,j)*Xi_D
-          SlopeUnscaled_D = XyzPixel_DII(:,i,j) - XyzObserver_D
-          Slope_DII(:,i,j) = SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) ! v
-       end do
-    end do
+          XyzPixel_D = XPixel_II(i,j)*Tau_D + YPixel_II(i,j)*Xi_D
+          SlopeUnscaled_D = XyzPixel_D - XyzObserver_D
+          iRay = iRay + 1
+          Slope_DI(:,iRay) = SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
 
-    !
-    ! Find the points on the integration sphere where it intersects
-    ! with the straight "rays" 
-    !
-    do j = 1, nYPixel
-       do i = 1, nXPixel
+          !\
+          ! Find the points on the integration sphere where it intersects
+          ! with the straight "rays" 
+          !/
+    
           !\
           ! Solve a duadratic equation,
           !|| XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
@@ -178,49 +223,31 @@ contains !=========================================================
           !  + 2*ObservToIntSphereDist*XyzObs_D
           !  + XyzObservLen**2 - rIntegration**2 = 0
           !/  
-          ObservToIntSphereDist = -sum(XyzObserver_D*Slope_DII(:,i,j))&
+          ObservToIntSphereDist = -sum(XyzObserver_D*Slope_DI(:,iRay))&
                - sqrt(rIntegration**2 - XyzObservLen**2 &
-               + sum(Slope_DII(:,i,j)*XyzObserver_D)**2)
-          Position_DII(:,i,j) = XyzObserver_D &
-               + Slope_DII(:,i,j)*ObservToIntSphereDist
+               + sum(Slope_DI(:,iRay)*XyzObserver_D)**2)
+          XyzAtIntSphere_D = XyzObserver_D &
+               + Slope_DI(:,iRay)*ObservToIntSphereDist
+          if(IsCartesianGrid)then
+             Position_DI(:,iRay) = XyzAtIntSphere_D 
+          else
+             call xyz_to_coord(XyzAtIntSphere_D, Position_DI(:,iRay))
+          end if
        end do
     end do
-
-    !
-    ! Initial allocation of the global vector of ray positions
-    ! and other dynamic arrays
-    !
-    if(DoAllocate)then
-       DoAllocate=.false.
-       ! Symbolic name of the global vector:
-       NameVector = NameThisComp//'_Pos_DI'
-       call allocate_vector(NameVector, 3, nRay)
-       call associate_with_global_vector(Position_DI, NameVector)
-       allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
-    end if
-
     !
     ! Do emissivity integration inside of the integration sphere 
     !
-    Position_DI = reshape(Position_DII, (/3, nRay/))
-    Slope_DI = reshape(Slope_DII, (/3, nRay/))
     Intensity_I = 0
-    RayFlag_I = .false.
-    ExcludeRay_I = .false.
-    IsRayInsideIntSphere_I = .true.
+    UnusedRay_I = .false.
     DeltaS_I = DeltaS
     rIntegrationSqr = rIntegration**2 + 0.01
-    nRayInsideIntSphere = nRay
-
-    do while(nRayInsideIntSphere .gt. 0)
+    do while(.not.all(UnusedRay_I))
        SolarDistSqr_I = sum(Position_DI**2,1)
-       ExcludeRay_I = SolarDistSqr_I .gt. rIntegrationSqr 
-          IsRayInsideIntSphere_I = .not.ExcludeRay_I
+       UnusedRay_I = UnusedRay_I.or.SolarDistSqr_I .gt. rIntegrationSqr 
 
-       nRayInsideIntSphere = count(IsRayInsideIntSphere_I)
-
-       call ray_path(get_plasma_density, nRay, ExcludeRay_I, Slope_DI, &
-            DeltaS_I, Tolerance, DensityCr, Intensity_I, RayFlag_I)
+       call ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
+            DeltaS_I, Tolerance, DensityCr, Intensity_I)
     end do
 
     Intensity_II = reshape(Intensity_I, (/nXPixel,nYPixel/))
