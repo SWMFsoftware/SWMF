@@ -122,15 +122,7 @@ module ModUser
   ! B. Zieger commented out 05/17/2012
   ! specified by use statement in MH_set_parameters
 
-  !real :: TNeutralsISW_dim=0.0, &
-  !     RhoNeutralsISW=0.0, RhoNeutralsISW_dim=0.0 , &
-  !     PNeutralsISW=0.0  , PNeutralsISW_dim=0.0  , &
-  !     UxNeutralsISW=0.0 , UxNeutralsISW_dim=0.0 , &
-  !     UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
-  !     UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 ,  &
-  !     mNeutralsmp, mNeutrals
-
-  real :: mNeutralsmp, mNeutrals
+  real :: mNeutrals
 
   real, dimension(0:1) :: &
        RhoNeutralsISW_t,  &
@@ -217,13 +209,6 @@ contains
           call read_var('VLISW_Bx_dim' ,VLISW_Bx_dim)
           call read_var('VLISW_By_dim' ,VLISW_By_dim)
           call read_var('VLISW_Bz_dim' ,VLISW_Bz_dim)
-       case("#NEUTRALS")
-          call read_var('RhoNeutralsISW_dim' ,RhoNeutralsISW_dim)
-          call read_var('TNeutralsISW_dim' ,TNeutralsISW_dim)
-          call read_var('UxNeutralsISW_dim' ,UxNeutralsISW_dim)
-          call read_var('UyNeutralsISW_dim' ,UyNeutralsISW_dim)
-          call read_var('UzNeutralsISW_dim' ,UzNeutralsISW_dim)
-          call read_var('mNeutralsmp',mNeutralsmp)
 	case("#PICKUPION3")
           call read_var('Pu3_rho_dim',Pu3_rho_dim)
           call read_var('Pu3_T_dim'  ,Pu3_T_dim)
@@ -578,7 +563,7 @@ contains
        SinTheta = sqrt(x**2+y**2)/r
 
        ! for the neutrals thetaN angle is relative to the X axis
-       ! thetaN = atan(sqrt(y**2+z**2)/(x+1e-6))
+       ! thetaN = atan(sqrt(y**2+z**2)/(x+cTiny))
        ! sinThetaN=sqrt(y**2+z**2)/r
        ! lambda = 4.0
        !so pra iniciar eu fixei lambda como 4.0 
@@ -827,7 +812,7 @@ contains
     !  normalization of SWH and VLISW and Neutrals
 
     VLISW_a_dim    = No2Io_V(UnitU_)*(VLISW_T_dim/SWH_T_dim)
-    VLISW_p_dim1    = No2Io_V(UnitP_)*inv_g &
+    VLISW_p_dim1    = No2Io_V(UnitP_)/Gamma &
          *(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
 
     ! Pressure of plasma = 2*T_ion*rho_ion
@@ -871,14 +856,14 @@ contains
     !/
 
     RhoNeutralsISW = RhoNeutralsISW_dim*Io2No_V(UnitRho_)
-    PNeutralsISW_dim = No2Io_V(UnitP_)*inv_g*(RhoNeutralsISW_dim/SWH_rho_dim)*(TNeutralsISW_dim /SWH_T_dim)
+    PNeutralsISW_dim = No2Io_V(UnitP_)/Gamma*(RhoNeutralsISW_dim/SWH_rho_dim)*(TNeutralsISW_dim /SWH_T_dim)
 
     !PNeutralsISW1 = PNeutralsISW_dim*Io2No_V(UnitP_)
     PNeutralsISW = TNeutralsISW_dim*Io2No_V(UnitTemperature_)*RhoNeutralsISW 
     UxNeutralsISW  = UxNeutralsISW_dim*Io2No_V(UnitU_)
     UyNeutralsISW  = UyNeutralsISW_dim*Io2No_V(UnitU_)
     UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
-    mNeutrals    = mNeutralsmp*cProtonMass
+    mNeutrals    = mProtonMass*cProtonMass
 
     ! set strings for writing Tecplot output
     !/
@@ -1007,14 +992,14 @@ contains
 
     real, dimension(nFluid) :: &
          Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
-         UThS_I, URelS_I, URelSdim_I, UStar_I, Sigma_I, Rate_I, &
+         UThS_I, URelS_I, URelSdim_I, UStar_I=0, Sigma_I, Rate_I=0, &
          UStarM_I, SigmaN_I, RateN_I, &
          I0xp_I, I0px_I, I2xp_I, I2px_I, &
          JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
          Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
     !For PU3
     real, dimension(nFluid) :: &
-         URelSPu3_I, URelSPu3dim_I, UStarPu3_I, SigmaPu3_I, RatePu3_I, &
+         URelSPu3_I, URelSPu3dim_I, UStarPu3_I=0, SigmaPu3_I, RatePu3_I=0, &
          UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, &
          I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
          Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
@@ -1174,8 +1159,7 @@ contains
 
 
        !missing factor of 4/pi on the UthS_I speed?
-       UStarM_I(SWH_)=0.
-       UStarM_I(Pu3_)=0.
+       UStarM_I = 1.0
        UStarM_I(Neu_)  = sqrt(URelSdim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(SWH_)))
        UStarM_I(Ne2_)  = sqrt(URelSdim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(SWH_)))
        UStarM_I(Ne3_)  = sqrt(URelSdim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(SWH_)))
@@ -1183,8 +1167,7 @@ contains
 
        !For PU3
 
-       UStarMPu3_I(SWH_)=0.
-       UStarMPu3_I(Pu3_)=0.
+       UStarMPu3_I = 1.
        UStarMPu3_I(Neu_)  = sqrt(URelSPu3dim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(PU3_)))
        UStarMPu3_I(Ne2_)  = sqrt(URelSPu3dim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(PU3_)))
        UStarMPu3_I(Ne3_)  = sqrt(URelSPu3dim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(PU3_)))
@@ -1347,7 +1330,7 @@ contains
        !For PUI's
        I0xpu3_I = RateNPu3_I! no neutral -> pu3 for now, and this notation doesn't make much sense, would be another pu pop
        I0pu3x_I = RateNPu3_I
-       I2xpu3_I =  RatePu3_I*(UStarPu3_I/UStarMPu3_I)*UThS_I(PU3_)/No2Si_V(UnitU_)**2
+       I2xpu3_I = RatePu3_I*(UStarPu3_I/UStarMPu3_I)*UThS_I(PU3_)/No2Si_V(UnitU_)**2
        I2pu3x_I = RatePu3_I*(UStarPu3_I/UStarMPu3_I)*UThS_I/No2Si_V(UnitU_)**2
        ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
        !For SW  
@@ -1709,25 +1692,22 @@ contains
          Ne4Rho_,Ne4RhoUx_,Ne4RhoUy_,Ne4RhoUz_,Ne4P_
 
 
-    use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, EpsPointImpl_V
+    use ModPointImplicit, ONLY: &
+         iVarPointImpl_I, IsPointImplMatrixSet, EpsPointImpl_V
     !------------------------------------------------------------------------
 
     ! Allocate and set iVarPointImpl_I
-    ! In this example there are 3 implicit variables
+    ! All the fluid (4 neutral fluid and 2 ion) variables are implicit 
 
+    allocate(iVarPointImpl_I(30))
 
-    ! All the neutrals momenta and plasma are implicit 
-    ! (4 neutral fluid and 2 ion)
-
-    !commented out to avoid user implicit terms
-    !allocate(iVarPointImpl_I(20))
-
-    ! iVarPointImpl_I = (/SWHRho_,SWHRhoUx_, SWHRhoUy_, SWHRhoUz_,SWHP_, &
-    !     Pu3Rho_, Pu3RhoUx_, Pu3RhoUy_, Pu3RhoUz_, Pu3P_, &
-    !     NeuRho_, NeuRhoUx_, NeuRhoUy_, NeuRhoUz_, NeuP_, &
-    !     Ne2Rho_, Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_, Ne2P_, &
-    !     Ne3Rho_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_, &
-    !     Ne4Rho_, Ne4RhoUx_, Ne4RhoUy_, Ne4RhoUz_, Ne4P_ /)
+    iVarPointImpl_I = &
+         (/SWHRho_,SWHRhoUx_, SWHRhoUy_, SWHRhoUz_,SWHP_, &
+         Pu3Rho_, Pu3RhoUx_, Pu3RhoUy_, Pu3RhoUz_, Pu3P_, &
+         NeuRho_, NeuRhoUx_, NeuRhoUy_, NeuRhoUz_, NeuP_, &
+         Ne2Rho_, Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_, Ne2P_, &
+         Ne3Rho_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_, &
+         Ne4Rho_, Ne4RhoUx_, Ne4RhoUy_, Ne4RhoUz_, Ne4P_ /)
 
 
     ! Because the second and third populations of neutrals have initially 
@@ -1738,7 +1718,7 @@ contains
     ! Tell the point implicit scheme if dS/dU will be set analytically
     ! If this is set to true the DsDu_VVC matrix has to be set.
 
-    !IsPointImplMatrixSet = .false.
+    IsPointImplMatrixSet = .false.
 
   end subroutine user_init_point_implicit
 
