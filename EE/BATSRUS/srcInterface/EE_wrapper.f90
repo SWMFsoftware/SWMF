@@ -35,6 +35,7 @@ contains
     use CON_physics, ONLY: get_time
     use EE_ModProcMH
     use EE_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
+    use EE_ModSetParameters, ONLY: set_parameters
     use EE_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use EE_ModMain, ONLY : CodeVersion, NameThisComp, &
          time_accurate, time_simulation, StartTime, iStartTime_I
@@ -66,7 +67,7 @@ contains
        NameRestartInDir(1:2)  = NameThisComp
        NameRestartOutDir(1:2) = NameThisComp
     case('READ')
-       call EE_set_parameters('READ')
+       call set_parameters('READ')
     case('CHECK')
        call get_time( &
             DoTimeAccurateOut = time_accurate, &
@@ -74,7 +75,7 @@ contains
             tStartOut         = StartTime)
        call time_real_to_int(StartTime, iStartTime_I)
 
-       call EE_set_parameters('CHECK')
+       call set_parameters('CHECK')
     case('STDOUT')
        iUnitOut=STDOUT_
        if(iProc==0)then

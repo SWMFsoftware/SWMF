@@ -98,6 +98,7 @@ contains
     use CON_comp_info
     use IH_ModProcMH
     use IH_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
+    use IH_ModSetParameters, ONLY: set_parameters
     use IH_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
     use IH_ModMain, ONLY : CodeVersion, NameThisComp, &
          time_accurate, time_simulation, StartTime, iStartTime_I
@@ -137,7 +138,7 @@ contains
             tStartOut         = StartTime)
        call time_real_to_int(StartTime,iStartTime_I)
 
-       call IH_set_parameters(TypeAction)
+       call set_parameters(TypeAction)
     case('STDOUT')
        iUnitOut=STDOUT_
        if(iProc==0)then
