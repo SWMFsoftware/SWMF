@@ -1037,7 +1037,7 @@ contains
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iIndexReg_II(:,:)
 
-    character(len=100):: StringError
+    character(len=500):: StringError
     character(len=*), parameter:: NameSub = 'add_to_particle_line'
     !----------------------------------------------------------------------
     StateReg_VI => Particle_I(KindReg_)%State_VI
