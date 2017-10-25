@@ -65,6 +65,7 @@ contains
     ! set_amr_criteria
     use ModAdvance, ONLY : nVar, State_VGB
     use ModLoadBalance, ONLY: load_balance
+    use ModAMR, ONLY: set_levels
 
     !LOCAL VARIABLES:
     character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -148,7 +149,7 @@ contains
     use ModMain,        ONLY: UseB0
     use ModB0,          ONLY: set_b0_reschange
     use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
-    use ModAMR,         ONLY: do_amr
+    use ModAMR,         ONLY: do_amr, set_levels
     use ModLoadBalance, ONLY: load_balance
 
     use ModUserInterface ! user_initial_perturbation, user_action
