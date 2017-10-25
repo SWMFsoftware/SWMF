@@ -126,13 +126,12 @@ contains
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate, &
          iTest, jTest, kTest, ProcTest, BlkTest, Test_String
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
-         DoReplaceDensity, UseSingleIonVelocity, UseSingleIonTemperature, &
+         DoReplaceDensity, &
          UseMultiSpecies
-    use ModMultiFluid, ONLY: UseMultiIon, iRho_I, nFluid
+    use ModMultiFluid, ONLY: iRho_I, nFluid
     use ModGeometry,ONLY: True_Blk, True_Cell
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V, NameVar_V
-    use ModEnergy, ONLY: calc_energy_cell
     use ModPhysics, ONLY: RhoMin_I
 
     integer, intent(in) :: iBlock
@@ -455,15 +454,6 @@ contains
        !call timing_stop('pointimplupdate')
 
     end do; end do; end do
-
-    ! Make ion velocities and/or temperatures equal if requested
-    if(UseMultiIon .and. (UseSingleIonVelocity.or.UseSingleIonTemperature)) &
-         call fix_multi_ion_update(iBlock)
-
-    !call timing_start('pointimplenergy')
-    ! Make sure that energy is consistent
-    call calc_energy_cell(iBlock)
-    !call timing_stop('pointimplenergy')
 
     if(DoTestMe)then
        write(*,*) NameSub, ':'
