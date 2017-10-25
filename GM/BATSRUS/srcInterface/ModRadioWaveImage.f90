@@ -1,11 +1,9 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModRadioWaveImage
-
-  use ModNumConst
-  use ModConst
-  use ModCoordTransform
-  use ModRadioWaveRaytracing
+  use ModConst, ONLY: cPi, cElectronMass, cProtonMass
+  use ModCoordTransform, ONLY: cross_product
+  use ModRadioWaveRaytracing, ONLY: ray_path
   use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector
 
   implicit none
@@ -61,7 +59,7 @@ contains !=========================================================
     !
     use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord
     use ModMain,ONLY:NameThisComp
-    use ModDensityAndGradient,ONLY: get_plasma_density, NameVector, &
+    use ModDensityAndGradient,ONLY: NameVector, &
          Density_I, GradDensity_DI, DeltaSNew_I
 
     implicit none
@@ -198,6 +196,7 @@ contains !=========================================================
     XyzObservLen = sqrt(sum(XyzObserver_D**2))
     Normal_D = XyzObserver_D/XyzObservLen
     Tau_D = cross_product(ZAxisOrt_D, Normal_D)
+    Tau_D = Tau_D/sqrt(sum(Tau_D**2))
     Xi_D = cross_product(Normal_D, Tau_D)
 
     !
@@ -246,8 +245,8 @@ contains !=========================================================
        SolarDistSqr_I = sum(Position_DI**2,1)
        UnusedRay_I = UnusedRay_I.or.SolarDistSqr_I .gt. rIntegrationSqr 
 
-!!!       call ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
-!!!            DeltaS_I, Tolerance, DensityCr, Intensity_I)
+       call ray_path(nRay, UnusedRay_I, Slope_DI, &
+            DeltaS_I, Tolerance, DensityCr, Intensity_I)
     end do
 
     Intensity_II = reshape(Intensity_I, (/nXPixel,nYPixel/))
