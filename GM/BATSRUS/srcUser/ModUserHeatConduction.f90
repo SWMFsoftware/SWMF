@@ -244,6 +244,8 @@ contains
 
   subroutine user_update_states(iBlock)
 
+    use ModUpdateState, ONLY: update_state_normal
+
     use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC, &
          State_VGB, UseElectronPressure
     use ModEnergy,     ONLY: calc_energy_cell
@@ -260,8 +262,8 @@ contains
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
 
-    ! No call to update_states_MHD to nullify the effect of the hydro solver
-    ! call update_states_MHD(iBlock)
+    ! No call to update_state_normal to nullify the effect of the hydro solver
+    ! call update_state_normal(iBlock)
     if(TypeProblem == 'parcond' .and. .not.UseSemiImplicit)then
        if(UseElectronPressure)then
           Flux_VX(1:Pe_-1,:,:,:) = 0.0; Flux_VX(Pe_+1:nVar+1,:,:,:) = 0.0
@@ -274,11 +276,11 @@ contains
           Flux_VZ(1:nVar,:,:,:) = 0.0
           Source_VC(1:nVar,:,:,:) = 0.0
        end if
-       call update_states_MHD(iBlock)
+       call update_state_normal(iBlock)
     end if
 
     if(TypeProblem == 'lowrie')then
-       call update_states_MHD(iBlock)
+       call update_state_normal(iBlock)
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           ! At this point Pe=(Gamma-1)*Ee with the ideal gamma Gamma.

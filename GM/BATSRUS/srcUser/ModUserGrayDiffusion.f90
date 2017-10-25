@@ -298,6 +298,8 @@ contains
 
   subroutine user_update_states(iBlock)
 
+    use ModUpdateState, ONLY: update_state_normal
+
     use ModSize,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, p_, ExtraEint_, &
          UseNonConservative, IsConserv_CB, &
@@ -331,7 +333,7 @@ contains
        end do; end do; end do
     end if
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI

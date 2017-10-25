@@ -99,8 +99,6 @@ module ModUser
 contains
 
   !========================================================================
-  !  SUBROUTINE user_read_inputs
-  !========================================================================
   subroutine user_read_inputs
 
     use ModMain
@@ -283,8 +281,6 @@ contains
   end subroutine user_init_point_implicit
 
   !========================================================================
-  !  SUBROUTINE user_calc_sources
-  !========================================================================
   subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
@@ -333,8 +329,6 @@ contains
 
   end subroutine user_impl_source_sgl
 
-  !========================================================================
-  !  SUBROUTINE user_impl_source_multi
   !========================================================================
   subroutine user_impl_source_multi(iBlock)
 
@@ -538,11 +532,10 @@ contains
 
   end subroutine user_impl_source_multi
 
-
-  !========================================================================
-  !  SUBROUTINE user_update_states(iBlock)
   !========================================================================
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB, UseMultiSpecies
@@ -557,7 +550,7 @@ contains
     integer:: i,j,k
     real :: Pthmin_VC
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
     !\
     ! Begin update check of temperature::
     !/

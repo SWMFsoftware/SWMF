@@ -49,8 +49,7 @@ contains
     character(len=*), parameter :: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
 
-    ! No call to update_states_MHD to nullify the effect of the hydro solver
-    ! call update_states_MHD(iBlock)
+    ! No call to update_states_normal to nullify the effect of the hydro solver
 
   end subroutine user_update_states
 

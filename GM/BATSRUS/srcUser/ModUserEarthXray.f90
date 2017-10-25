@@ -162,6 +162,8 @@ contains
 
   !===========================================================================
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
@@ -176,7 +178,7 @@ contains
     !\
     ! do the normal update states
     !/
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     !\
     ! Now compute the sum of the state variables (we will divide by the number of

@@ -1325,6 +1325,8 @@ contains
   !============================================================================
 
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,    ONLY: nVar, Flux_VX, Flux_VY, Flux_VZ, Source_VC
     use ModVarIndexes
 
@@ -1345,7 +1347,7 @@ contains
        end if
     end do
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
   end subroutine user_update_states
 

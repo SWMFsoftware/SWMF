@@ -26,8 +26,6 @@ module ModUser
 contains
 
   !========================================================================
-  !  SUBROUTINE user_read_inputs
-  !========================================================================
   subroutine user_read_inputs
 
     use ModMain
@@ -80,9 +78,6 @@ contains
 
   end subroutine user_read_inputs
  
-
-  !========================================================================
-  !  SUBROUTINE user_set_ICs
   !========================================================================
   subroutine user_set_ICs(iBlock)
 
@@ -141,9 +136,6 @@ contains
 
   end subroutine user_set_ICs
 
-
-  !========================================================================
-  !  SUBROUTINE user_calc_sources
   !========================================================================
   subroutine user_calc_sources(iBlock)
 
@@ -229,11 +221,10 @@ contains
 
   end subroutine user_calc_sources
 
-
-  !========================================================================
-  !  SUBROUTINE user_update_states(iBlock)
   !========================================================================
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
@@ -244,7 +235,7 @@ contains
 
     real :: Tmin = 50.0 !! Minimum ion temperature (Europa's nightside surface temperature)
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     ! Force minimum temperature:
     ! If the temperature is less than the prescribed minimum 'Tmin',
@@ -260,12 +251,7 @@ contains
 
   end subroutine user_update_states
 
-
   !========================================================================
-  !  SUBROUTINE user_set_face_boundary(VarsGhostFace_V)
-  !========================================================================
-
-  ! This is the comet version!!
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModSize,       ONLY: nDim,2,4,6

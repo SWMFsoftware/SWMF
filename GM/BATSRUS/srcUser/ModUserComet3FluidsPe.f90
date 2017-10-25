@@ -1562,6 +1562,8 @@ contains
   !========================================================================
 
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics,  ONLY: SW_N, LowDensityRatio, cBoltzmann, ElectronPressureRatio, Si2No_V, &
          No2Si_V, UnitN_, UnitP_!, UnitB_
@@ -1576,7 +1578,7 @@ contains
 
     !----------------------------------------------------------------------
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     ! Enforce minimum temperature (pressure), Tmin, if temperatures Ti_IC or Te_C are below
 

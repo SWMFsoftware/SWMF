@@ -606,6 +606,8 @@ contains
   !==========================================================================
 
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModVarIndexes, ONLY: rho_, p_, ExtraEInt_
     use ModAdvance,    ONLY: State_VGB
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, UnitRho_, UnitP_, &
@@ -624,7 +626,7 @@ contains
     MassDensFloor  = NumberDensFloor*1e6*cProtonMass*Si2No_V(UnitRho_)
     EnergyFloor    = MassDensFloor*No2Si_V(UnitRho_)/rstari*2000.
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     do k = 1,nK; do j=1,nJ; do i=1,nI
        ! check if the density or pressure is below the minimum value

@@ -590,10 +590,12 @@ contains
 
   subroutine user_update_states(iBlock)
 
+    use ModUpdateState, ONLY: update_state_normal
+
     integer, intent(in) :: iBlock
     !--------------------------------------------------------------------------
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     ! REB model calls face gradient calculation, reset block logical
     ! so that the Te block will be re-calculated next pass

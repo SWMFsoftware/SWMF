@@ -119,6 +119,8 @@ contains
   end subroutine user_set_ics
   !============================================================================
    subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
      use ModVarIndexes
      use ModSize
      use ModAdvance
@@ -139,7 +141,7 @@ contains
     if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
        write(*,*) NameSub,' : negative wave energy before MHD'
     end if
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
     if(any(State_VGB(WaveFirst_:WaveLast_,:,:,:,iBlock)<0.0)) then
        write(*,*) NameSub, ': negative wave energy after MHD'
     end if

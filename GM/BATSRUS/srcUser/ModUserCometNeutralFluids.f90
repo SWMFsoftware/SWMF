@@ -1460,6 +1460,8 @@ subroutine read_shape_file
 
  !=================================================================================
 subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics,  ONLY: cBoltzmann, Si2No_V, &
          No2Si_V, UnitN_, UnitP_
@@ -1471,7 +1473,7 @@ subroutine user_update_states(iBlock)
 
     !----------------------------------------------------------------------                                                                                
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     ! Enforce a constant Ht pressure                                                                                                                       
 

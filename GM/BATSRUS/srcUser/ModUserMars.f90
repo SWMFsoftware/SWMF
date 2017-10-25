@@ -470,9 +470,7 @@ contains
     ! routine is called for each block separately so that the user would typically
     ! need only to code the source term calculation for a single block (in other
     ! words inside the the k,j,i loop below).  As with all user subroutines, the
-    ! variables declared in ModUser are available here.  Again, as with other
-    ! user subroutines DO NOT MODIFY ANY GLOBAL VARIABLE DEFINED IN THE MODULES
-    ! INCLUDED IN THIS SUBROUTINE UNLESS SPECIFIED!!
+    ! variables declared in ModUser are available here.  
     !
     ! The user should load the global variables:
     !      Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,SE,SP,SEw
@@ -1032,11 +1030,12 @@ contains
   end subroutine user_set_ICs
 
   !========================================================================
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !THIS SUBROUTINE calculate the scale height of ion and neutal species and 
-  !intial boundary value of ion species
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
   subroutine set_multiSp_ICs
+
+    ! calculate the scale height of ion and neutal species and 
+    ! intial boundary value of ion species
+
     use ModMain
     use ModConst
     use ModIO

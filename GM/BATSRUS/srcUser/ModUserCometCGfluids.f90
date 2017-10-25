@@ -2897,6 +2897,8 @@ contains
   !========================================================================
 
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,  ONLY: State_VGB, Energy_GBI
     use ModPhysics,  ONLY: SW_Rho, Sw_N, LowDensityRatio, &
          cBoltzmann, ElectronPressureRatio, &
@@ -2926,7 +2928,7 @@ contains
        DoTest=.false.; DoTestMe=.false.
     end if
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     if (DoTestMe) &
          write(*,*) NameSub, ' before user term =', &

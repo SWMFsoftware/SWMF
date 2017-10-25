@@ -816,6 +816,8 @@ contains
 
   subroutine user_update_states(iBlock)
 
+    use ModUpdateState, ONLY: update_state_normal
+
     use ModAdvance, ONLY: StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
     use ModGeometry, ONLY: rMin_BLK
 
@@ -824,7 +826,7 @@ contains
     integer:: i, j, k
 
     !------------------------------------------------------------------
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     if(DoFreezeNeutral)then
 

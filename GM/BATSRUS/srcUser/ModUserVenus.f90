@@ -1272,6 +1272,8 @@ contains
   end subroutine user_set_resistivity
 
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
@@ -1281,7 +1283,7 @@ contains
     integer:: i,j,k
     real :: kTe
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     !\
     ! Begin update check of temperature::

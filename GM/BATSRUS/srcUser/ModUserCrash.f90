@@ -732,6 +732,8 @@ contains
 
   subroutine user_update_states(iBlock)
 
+    use ModUpdateState, ONLY: update_state_normal
+
     use ModMain,     ONLY: iStage
     use ModSize,     ONLY: nI, nJ, nK
     use ModAdvance,  ONLY: State_VGB, p_, ExtraEint_, &
@@ -784,7 +786,7 @@ contains
     end if
 
 
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
@@ -800,12 +802,12 @@ contains
 
        if(IsConserv)then
           ! Single temperature:
-          !   From update_states_MHD, we obtained p^*, e^* with ideal gamma
+          !   From update_state_normal, we obtained p^*, e^* with ideal gamma
           !   and ExtraEInt^* with pure advection.
           !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
           !   Total internal energy Eint^n+1 = p^*/(Gamma-1) + ExtraEInt^*
           ! Two temperature:
-          !   From update_states_MHD, we obtained Pe^*, e^* with ideal gamma
+          !   From update_state_normal, we obtained Pe^*, e^* with ideal gamma
           !   and ExtraEInt^* with pure advection.
           !   Total energy density E^n+1  = e^* + ExtraEInt^* is conserved.
           !   Electron internal energy Eint^n+1 = Pe^*/(Gamma-1) + ExtraEInt^*

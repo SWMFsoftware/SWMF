@@ -100,8 +100,6 @@ module ModUser
 contains
 
   !========================================================================
-  !  SUBROUTINE user_read_inputs
-  !========================================================================
   subroutine user_read_inputs
 
     use ModMain
@@ -462,9 +460,6 @@ endif
 
   end subroutine user_init_point_implicit
 
-
-  !========================================================================
-  !  SUBROUTINE user_calc_sources
   !========================================================================
   subroutine user_calc_sources(iBlock)
 
@@ -855,9 +850,9 @@ endif
   end subroutine user_impl_source
 
   !========================================================================
-  !  SUBROUTINE user_update_states(iBlock)
-  !========================================================================
   subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
     use ModVarIndexes
     use ModSize
     use ModAdvance, ONLY: State_VGB
@@ -865,8 +860,8 @@ endif
     use ModEnergy
     integer,intent(in):: iBlock
     integer:: i,j,k
-
-    call update_states_MHD(iBlock)
+    !----------------------------------------------------------------------
+    call update_states_normal(iBlock)
 
     !\
     ! Begin update check of temperature::

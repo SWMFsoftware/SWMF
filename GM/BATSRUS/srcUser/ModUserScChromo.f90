@@ -1180,6 +1180,8 @@ contains
 
   subroutine user_update_states(iBlock)
 
+    use ModUpdateState, ONLY: update_state_normal
+
     use ModGeometry, ONLY: true_cell, R_BLK, true_BLK
 
     integer,intent(in):: iBlock
@@ -1191,7 +1193,7 @@ contains
           true_BLK(iBlock) = .false.
        end if
     end if
-    call update_states_MHD(iBlock)
+    call update_state_normal(iBlock)
 
   end subroutine user_update_states
 
