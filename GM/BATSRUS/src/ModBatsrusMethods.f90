@@ -799,6 +799,8 @@ contains
          DoSaveGridmag, write_magnetometers, DoWriteIndices, &
          write_geoindices
     use ModParticleFieldLine, ONLY: write_plot_particle
+    use ModWritePlotLos, ONLY: write_plot_los
+    use ModWriteTecplot, ONLY: assign_node_numbers
     use ModMessagePass, ONLY: exchange_messages
 
     integer :: iSat
@@ -899,7 +901,6 @@ contains
              call assign_node_numbers
              DoAssignNodeNumbers = .false.
           end if
-
 
           if(  index(plot_type(ifile),'ray')>0 .or. &
                index(plot_vars(ifile),'status')>0) call ray_trace

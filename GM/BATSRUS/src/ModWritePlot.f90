@@ -18,16 +18,19 @@ subroutine write_plot_common(iFile)
   use ModNumConst, ONLY: cRadToDeg
   use ModMpi
   use ModUtilities, ONLY: split_string, join_string, open_file, close_file
-  use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
-       message_pass_node, message_pass_cell, average_grid_node, &
-       find_grid_block, IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, nDim, &
-       rRound0, rRound1, SqrtNDim
   use ModAdvance, ONLY : State_VGB
   use ModVarIndexes, ONLY: SignB_
   use ModPlotShell, ONLY: init_plot_shell, set_plot_shell, write_plot_shell
   use ModPlotBox, ONLY: init_plot_box, set_plot_box, write_plot_box
+  use ModWritePlotIdl, ONLY: write_plot_idl
   use ModWriteTecplot, ONLY: lRecConnect, nPlotDim, &
-       write_tecplot_head, write_tecplot_data, write_tecplot_connect
+       write_tecplot_head, write_tecplot_data, write_tecplot_connect, &
+       write_tecplot_node_data
+
+  use BATL_lib, ONLY: calc_error_amr_criteria, write_tree_file, &
+       message_pass_node, message_pass_cell, average_grid_node, &
+       find_grid_block, IsCartesianGrid, Xyz_DNB, nRoot_D, IsPeriodic_D, &
+       nDim, rRound0, rRound1, SqrtNDim
 
   implicit none
 
@@ -500,9 +503,9 @@ subroutine write_plot_common(iFile)
      end do
 
      if(IsCartesianGrid)then
-        call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
-             Xyz_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax,     &
-             iUnit)
+        call write_tecplot_node_data(&
+             iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
+             Xyz_DNB, unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax, iUnit)
      else
         ! Fix "hanging" nodes so they lie precisely on the same plane 
         ! as "non-hanging" nodes. This is needed for non-Cartesian grids.
@@ -517,9 +520,9 @@ subroutine write_plot_common(iFile)
            where(abs(PlotXYZNodes_DNB(:,:,:,:,iBlk)) < 1e-10) &
                 PlotXYZNodes_DNB(:,:,:,:,iBlk) = 0.
         end do
-        call write_plot_tec(iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, &
-             PlotXYZNodes_DNB, unitstr_TEC, xMin, xMax, yMin, yMax,        &
-             zMin, zMax, iUnit)
+        call write_tecplot_node_data(&
+             iFile, nPlotVar, PlotVarBlk, PlotVarNodes_VNB, PlotXYZNodes_DNB, &
+             unitstr_TEC, xMin, xMax, yMin, yMax, zMin, zMax, iUnit)
 
         deallocate(PlotXYZNodes_DNB)
      end if
