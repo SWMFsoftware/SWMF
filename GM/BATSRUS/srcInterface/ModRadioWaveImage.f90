@@ -246,8 +246,8 @@ contains !=========================================================
        SolarDistSqr_I = sum(Position_DI**2,1)
        UnusedRay_I = UnusedRay_I.or.SolarDistSqr_I .gt. rIntegrationSqr 
 
-       call ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
-            DeltaS_I, Tolerance, DensityCr, Intensity_I)
+!!!       call ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
+!!!            DeltaS_I, Tolerance, DensityCr, Intensity_I)
     end do
 
     Intensity_II = reshape(Intensity_I, (/nXPixel,nYPixel/))
