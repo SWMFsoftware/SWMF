@@ -1696,6 +1696,11 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	useGradRho = false;
 	useExplicitMover = true;
 	th = 0.5; 
+      }else{
+	useAccurateJ = false;
+	useGradRho = true;
+	useExplicitMover = false;
+	th = 1; 	
       }
     }
     else if( Command == "#DISCRETIZATION"){
