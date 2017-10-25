@@ -1,0 +1,9 @@
+test:
+	make test_earth
+	make test_mars
+
+test_earth:
+	./srcData/test_earth.sh
+
+test_mars:
+	./srcData/test_mars.sh
