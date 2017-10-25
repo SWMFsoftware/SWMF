@@ -11,21 +11,10 @@ module ModVarIndexes
 
   save
 
-  ! This equation module contains the standard MHD equations + 4 neutrals
-  character (len=*), parameter :: NameEquation='MHD and four neutrals'
+  ! This equation module contains the standard MHD equations + PUI + 4 neutrals
+  character (len=*), parameter :: NameEquation='MHD + PUI and four neutrals'
 
-  ! The variables numbered from 1 to nVar are:
-  !
-  ! 1. defined in set_ICs.
-  ! 2. prolonged and restricted in AMR
-  ! 3. saved into the restart file
-  ! 4. sent and recieved in the exchange message
-  ! 5. filled in the outer ghostcells by set_outer_bcs
-  ! 5. integrated by subroutine integrate_all for saving to logfile
-  ! 6. should be updated by advance_*
-
-  integer, parameter :: nVar = 38 !C.P. edited
-
+  integer, parameter :: nVar = 38
 
   ! 1 tot ion fluid, 2 single ion fluids and 4 neutral fluids
   integer, parameter :: nFluid    = 7
@@ -37,7 +26,7 @@ module ModVarIndexes
 
   ! All is total ion fluid, SWH is the Solar wind hydrogen fluid, Pu3
   ! are pick up ions produced in region 3 (see mod user), 
-  ! and Neu, Ne# are neutrals produced in the correspondign region
+  ! and Neu, Ne2, Ne3, Ne4 are neutrals produced in the corresponding regions
 
   character (len=3), parameter :: &
        NameFluid_I(nFluid) = (/'All', 'SWH', 'Pu3', 'Neu', 'Ne2', 'Ne3', 'Ne4'/) 
@@ -45,7 +34,7 @@ module ModVarIndexes
   ! Named indexes for State_VGB and other variables
   ! These indexes should go subsequently, from 1 to nVar+nFluid.
   ! The energies are handled as an extra variable, so that we can use
-  ! both conservative and non-conservative scheme and switch between  them.
+  ! both conservative and non-conservative scheme and switch between them.
   integer, parameter :: &
        Rho_       =  1,          &
        RhoUx_     =  2, Ux_ = 2, &
@@ -95,18 +84,16 @@ module ModVarIndexes
        Ne3Energy_ = nVar+6, &
        Ne4Energy_ = nVar+7
 
-
-  ! is this name dependent on the first 
   ! This allows to calculate RhoUx_ as RhoU_+x_ and so on.
   integer, parameter :: U_ = Ux_ - 1, RhoU_ = RhoUx_-1, B_ = Bx_-1
 
-  ! These arrays are useful for multifluid
+  ! These arrays are needed for multifluid
   integer, parameter :: &
-       iRho_I(nFluid)   = (/ Rho_,  SWHRho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_ /),   &
+       iRho_I(nFluid)   = (/ Rho_,   SWHRho_,   Pu3Rho_,   NeuRho_,    Ne2Rho_,   Ne3Rho_,   Ne4Rho_   /), &
        iRhoUx_I(nFluid) = (/ RhoUx_, SWHRhoUx_, Pu3RhoUx_, NeuRhoUx_,  Ne2RhoUx_, Ne3RhoUx_, Ne4RhoUx_ /), &
        iRhoUy_I(nFluid) = (/ RhoUy_, SWHRhoUy_, Pu3RhoUy_, NeuRhoUy_,  Ne2RhoUy_, Ne3RhoUy_, Ne4RhoUy_ /), &
        iRhoUz_I(nFluid) = (/ RhoUz_, SWHRhoUz_, Pu3RhoUz_, NeuRhoUz_,  Ne2RhoUz_, Ne3RhoUz_, Ne4RhoUz_ /), &
-       iP_I(nFluid)     = (/ P_,  SWHP_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ /)
+       iP_I(nFluid)     = (/ P_,     SWHP_,     Pu3P_,     NeuP_,      Ne2P_,     Ne3P_,     Ne4P_ /)
 
   integer, parameter :: iPparIon_I(IonFirst_:IonLast_) = (/1,2/)
 
@@ -176,41 +163,7 @@ module ModVarIndexes
        'Ne3E  ', & ! Ne3Energy_
        'Ne4E  ' /) ! Ne4Energy_
 
-  ! The space separated list of nVar conservative variables for  plotting
-  character(len=*), parameter :: NameConservativeVar = &
-       'Rho Mx My Mz Bx By Bz E ' // &
-       'SWHRho SWHMx SWHMy SWHMz SWHE Pu3Rho Pu3Mx Pu3My Pu3Mz Pu3E ' // &
-       'NeuRho NeuMx NeuMy NeuMz NeuE Ne2Rho Ne2Mx Ne2My Ne2Mz Ne2E ' // &
-       'Ne3Rho Ne3Mx Ne3My Ne3Mz Ne3E Ne4Rho Ne4Mx Ne4My Ne4Mz Ne4E' 
-
-
-  ! The space separated list of nVar primitive variables for plotting
-  character(len=*), parameter :: NamePrimitiveVar = &
-       'Rho Ux Uy Uz Bx By Bz P ' // &
-       'SWHRho SWHUx SWHUy SWHUz SWHP Pu3Rho Pu3Ux Pu3Uy Pu3Uz Pu3P ' // & 
-       'NeuRho NeuUx NeuUy NeuUz NeuP Ne2Rho Ne2Ux Ne2Uy Ne2Uz Ne2P ' // &
-       'Ne3Rho Ne3Ux Ne3Uy Ne3Uz Ne3P Ne4Rho Ne4Ux Ne4Uy Ne4Uz Ne4P'
-
-
-  ! The space separated list of nVar primitive variables for TECplot output
-  character(len=*), parameter :: NamePrimitiveVarTec = &
-       '"`r", "U_x", "U_y", "U_z", "B_x", "B_y", "B_z", "P", ' // &
-       '"SWHRho", "SWHUx", "SWHUy", "SWHUz", "SWHP", ' // &
-       '"Pu3Rho", "Pu3Ux", "Pu3Uy", "Pu3Uz", "Pu3P", ' // &
-       '"NeuRho", "NeuUx", "NeuUy", "NeuUz", "NeuP", "Ne2Rho", ' // &
-       '"Ne2Ux", "Ne2Uy", "Ne2Uz", "Ne2P", "Ne3Rho", "Ne3Ux", ' // &
-       '"Ne3Uy", "Ne3Uz", "Ne3P", "Ne4Rho", "Ne4Ux", ' // &
-       '"Ne4Uy", "Ne4Uz", "Ne4P" '
-
-  ! Names of the user units for IDL and TECPlot output
-  character(len=20) :: &
-       NameUnitUserIdl_V(nVar+nFluid) = '', &
-       NameUnitUserTec_V(nVar +nFluid) = ''
-
-  ! The user defined units for the variables
-
   ! There are no extra scalars
   integer, parameter :: ScalarFirst_ = 2, ScalarLast_ = 1
-
 
 end module ModVarIndexes
