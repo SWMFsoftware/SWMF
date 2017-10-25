@@ -1,0 +1,217 @@
+#ECHO
+T			DoEcho
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+TEST
+calc_face_flux
+SAVEPLOTALL
+
+#LIGHTSPEED
+1.0
+
+#GRID
+10			nRootBlockX
+10			nRootBlockY
+1			nRootBlockZ
+-80.0/3			xMin
+ 80.0/3			xMax
+-20.0			yMin
+ 20.0			yMax
+-0.05			zMin
+ 0.05			zMax
+
+#PLASMA
+1.0			IonMass
+1.0/1000			ElectronMass
+1.0			IonCharge
+-1.0			ElectronCharge
+1.0			ElectronTemperatureRatio
+
+#UNIFORMSTATE
+1.0			Rho
+0.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+0.04			By
+0.0			Bz
+0.0			Ex
+0.0			Ey
+0.0			Ez
+0.0			HypE
+4.5e-4/2			Ppar
+4.5e-4/2			P
+1.0/1000			ElRho
+0.0			ElUx
+0.0			ElUy
+0.0			ElUz
+4.5e-4/2			ElPpar
+4.5e-4/2			ElP
+
+#SHOCKPOSITION
+0.0                     ShockPosition
+4.0/3                     ShockSlope
+
+#USERFLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN -----------------
+
+#WAVE
+1			Rho
+300.0			Width
+0.1			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+270.0			Phase
+
+#WAVE
+2			Ux
+300.0			Width
+0.005			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+270.0			Phase
+
+#WAVE
+6			By
+300.0			Width
+0.004			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+270.0			Phase
+
+#WAVE
+12			Ppar
+300.0			Width
+4.5e-5/2			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+270.0			Phase
+
+#WAVE
+13			P
+300.0			Width
+3.75e-5			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+270.0			Phase
+
+#WAVE
+18			ePpar
+300.0			Width
+4.5e-5/2			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+270.0			Phase
+
+#WAVE
+19			eP
+300.0			Width
+3.75e-5			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+270.0			Phase
+
+
+#USERINPUTEND ---------------------
+
+#CORRECTELECTRONFLUID
+T
+
+#CORRECTEFIELD
+T
+
+CMAXDIFFUSION
+all
+
+#OUTERBOUNDARY
+periodic	xMinBc
+periodic	xMaxBc
+periodic	yMinBc
+periodic	yMaxBc
+float		zMinBc
+float		zMaxBc
+
+TIMESTEPPING
+3		nStage
+0.8		CflExpl
+
+#SCHEME
+2		nOrder
+Rusanov		TypeFlux
+mc3		TypeLimiter
+1.5		LimiterBeta
+
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#PLOTFILENAME
+second		NameMaxTimeUnit
+
+#SAVEINITIAL
+T		DoSaveInitial
+
+#SAVEBINARY
+F
+
+#SAVEPLOT
+3		nPlotfil
+1d var idl	PlotString
+-1              DnSavePlot
+1.0             DtSavePlot
+0.0             DxSavePlot
+{mhd}
+{default}
+y=0 var idl	PlotString
+-1              DnSavePlot
+1.0             DtSavePlot
+0.0             DxSavePlot
+{mhd}
+{default}
+z=0 var idl	PlotString
+-1              DnSavePlot
+1.0             DtSavePlot
+0.0		DxSavePlot
+{mhd}
+{default}
+
+#STOP
+1		MaxIteration
+640.0		tSimulationMax
