@@ -28,6 +28,8 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
   use BATL_lib, ONLY: message_pass_face, IsAnyAxis
   use ModResistivity, ONLY: set_resistivity, UseResistivity
   use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Enthalpy_
+  use ModUpdateState, ONLY: update_check, update_state
+
   implicit none
 
   logical, intent(in) :: DoCalcTimestep
@@ -145,9 +147,9 @@ subroutine advance_expl(DoCalcTimestep, iStageMax)
              .and. DoCalcTimestep) call calc_timestep(iBlock)
 
         ! Update solution state in each cell.
-        call timing_start('update_states')
-        call update_states(iBlock)
-        call timing_stop('update_states')
+        call timing_start('update_state')
+        call update_state(iBlock)
+        call timing_stop('update_state')
 
         if(DoCalcElectricField .and. iStage == nStage) &
              call calc_electric_field(iBlock)

@@ -400,6 +400,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModLoadBalance, ONLY: load_balance_blocks
   use ModBoundaryGeometry, ONLY: fix_geometry
   use ModWriteProgress, ONLY: write_timeaccurate
+  use ModUpdateState, ONLY: select_conservative, update_b0, update_te0, &
+       fix_anisotropy
 
   implicit none
 
@@ -407,11 +409,10 @@ subroutine BATS_advance(TimeSimulationLimit)
   real, intent(in) :: TimeSimulationLimit ! simulation time not to be exceeded
 
   ! Local variables
-  character(len=*), parameter :: NameSub = 'BATS_advance'
+  real :: AmrTime = 0
 
   logical :: DoTest, DoTestMe
-
-  real :: AmrTime = 0
+  character(len=*), parameter :: NameSub = 'BATS_advance'
   !---------------------------------------------------------------------------
   ! Check if time limit is reached (to be safe)
   if(Time_Simulation >= TimeSimulationLimit) RETURN

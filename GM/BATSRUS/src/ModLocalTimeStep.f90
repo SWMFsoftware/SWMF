@@ -72,6 +72,7 @@ contains
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
+    use ModUpdateState,ONLY: update_state
     use BATL_lib,      ONLY: Unused_B, min_tree_level,  &
          message_pass_cell, store_face_flux, apply_flux_correction
 
@@ -228,9 +229,9 @@ contains
           call calc_source(iBlock)
 
           ! Update state
-          call timing_start('update_states')
-          call update_states(iBlock)
-          call timing_stop('update_states')
+          call timing_start('update_state')
+          call update_state(iBlock)
+          call timing_stop('update_state')
 
           ! Need something like update_check in the future.
 
