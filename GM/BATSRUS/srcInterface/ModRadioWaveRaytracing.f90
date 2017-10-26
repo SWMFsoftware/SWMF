@@ -146,6 +146,8 @@ contains !=========================================================
     if (IsNewEntry) then
        IsNewEntry = .false.
        call associate_with_global_vector(Coord_DI,NameVector)
+       allocate(Xyz_DI(MaxDim,nRay))
+       Xyz_DI(MaxDim,nRay) = 0.0
        allocate(DistanceToCritSurf_I(nRay))
        DistanceToCritSurf_I = 0.0
        allocate(IsOKRay_I(nRay))
