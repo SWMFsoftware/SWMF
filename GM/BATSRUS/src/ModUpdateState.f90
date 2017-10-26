@@ -299,12 +299,15 @@ contains
        elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
           call update_point_implicit(iBlock, multi_ion_source_impl, &
                multi_ion_init_point_impl)
-          ! Make ion temperatures equal if requested
-          if(UseSingleIonTemperature) call fix_multi_ion_update(iBlock)
        elseif(UseUserSource) then
           call update_point_implicit(iBlock, user_calc_sources, &
                user_init_point_implicit)
        end if
+
+       ! Make ion temperatures equal if requested
+       if(UseMultiIon .and. &
+            (UseSingleIonVelocity .or. UseSingleIonTemperature)) &
+            call fix_multi_ion_update(iBlock)
 
        ! Make sure that energy is consistent
        call calc_energy_cell(iBlock)
