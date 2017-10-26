@@ -167,6 +167,7 @@ contains
     end if
   end subroutine put_density_value
 end module ModDensityAndGradient
+!==============================
 subroutine update_grad_density
   use ModDensityAndGradient
   use BATL_lib, ONLY: &
@@ -198,7 +199,6 @@ subroutine update_grad_density
   end do
   ! fill ghost celss via message pass
   call message_pass_cell(&
-                                !           nG              = 1, &
        State_GB        = Density_GB, &
        nProlongOrderIn = 1)
 

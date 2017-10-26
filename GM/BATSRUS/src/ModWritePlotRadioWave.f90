@@ -99,9 +99,6 @@ subroutine write_plot_radiowave(iFile)
      end if
   end do
 
-  if (iProc .eq. 0) write(*,*) 'Preved 4'
-
-
   if (oktest .and. (iProc .eq. 0)) then
      write(*,*) 'XyzObserv_D     =', XyzObserv_D
      write(*,*) 'ImageRange_I   =', ImageRange_I, &
@@ -148,11 +145,9 @@ subroutine write_plot_radiowave(iFile)
   ! Get the headers that contain variable names and units
   select case(plot_form(ifile))
   case('tec')
-     !call get_TEC_rfr_variables(ifile,nplotvar,plotvarnames,unitstr_TEC)
      unitstr_TEC = 'VARIABLES = "X", "Y",'//strFreq
      if(oktest .and. iProc==0) write(*,*) unitstr_TEC
   case('idl')
-     !call get_IDL_rfr_units(ifile,nplotvar,plotvarnames,unitstr_IDL)
      if(oktest .and. iProc==0) write(*,*) unitstr_IDL
   end select
 
