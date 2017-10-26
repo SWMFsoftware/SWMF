@@ -103,4 +103,13 @@ dist:
 	    share util src srcData srcDoc srcGlow srcIDL srcInterface \
 	    srcPython srcMake srcSphereAB srcUser Copyright
 
-include Makefile.test #^CFG IF TESTING
+test:
+	make test_gitm_earth
+	make test_gitm_mars
+
+test_gitm_earth:
+	./srcData/test_earth.sh
+
+test_gitm_mars:
+	./srcData/test_mars.sh
+
