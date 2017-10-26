@@ -5477,7 +5477,8 @@ function rel_error, w1, w2, iws, fd=fd
   ; Coarsen wref if necessary (only in the spatial indexes)
   nx    = s(1:ndim)
   nxref = sref(1:ndim)
-  if max(nxref gt nx) then wref = coarsen(wref, [nxref/nx, 1], fd=fd)
+
+  if max(nxref gt nx) then wref = coarsen(wref, [round(float(nxref)/nx), 1], fd=fd)
 
   error = double(0.0)
   for iw = 0, nw-1 do begin
