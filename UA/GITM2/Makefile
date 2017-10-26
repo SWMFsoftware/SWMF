@@ -74,6 +74,7 @@ allclean:
 	@cd $(MAINDIR);  make distclean
 	@cd srcInterface;make distclean
 	rm -f *~ srcData/UAM.in
+	if [ -h srcData ]; then rm -f srcData; fi
 #
 #       Create run directories
 #
