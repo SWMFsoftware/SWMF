@@ -584,8 +584,10 @@ contains
          nVar = 3, &
          fill_buffer = IH_get_line_for_sp_and_transform, &
          apply_buffer= SP_put_line_from_ih)
+    if(is_proc(SP_))&
+         call SP_adjust_lines(IH_)
+    call SP_synchronize_grid(RouterIhSp%iCommUnion)
     if(is_proc(SP_))then
-       call SP_adjust_lines(IH_)
        call set_semi_router_from_target(&
             GridDescriptorSource  = IH_GridDescriptor, &
             GridDescriptorTarget  = SP_LocalGD, &
@@ -715,8 +717,10 @@ contains
          nVar = 3, &
          fill_buffer = SC_get_line_for_sp_and_transform, &
          apply_buffer= SP_put_line_from_sc)
+    if(is_proc(SP_))&
+         call SP_adjust_lines(SC_)
+    call SP_synchronize_grid(RouterScSp%iCommUnion)
     if(is_proc(SP_))then
-       call SP_adjust_lines(SC_)
        call set_semi_router_from_target(&
             GridDescriptorSource  = SC_GridDescriptor, &
             GridDescriptorTarget  = SP_LocalGD, &
