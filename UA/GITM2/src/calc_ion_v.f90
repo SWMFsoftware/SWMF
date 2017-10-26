@@ -83,7 +83,7 @@ subroutine calc_ion_v(iBlock)
 
   do iDir = 1, 3
      ForcePerp(:,:,:,iDir) = Force(:,:,:,iDir) - &
-          ForceDotB(:,:,:,iDir) * B0(:,:,:,iDir,iBlock) / &
+          ForceDotB(:,:,:) * B0(:,:,:,iDir,iBlock) / &
           B0(:,:,:,iMag_,iBlock)**2
   enddo
 
