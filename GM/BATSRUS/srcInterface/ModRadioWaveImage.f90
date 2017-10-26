@@ -273,7 +273,7 @@ subroutine get_ray_bunch_intensity(XyzObserver_D, RadioFrequency, &
  ! Dimensions of the raster in pixels
   integer, intent(in) ::  nXPixel, nYPixel  
   ! The result from emissivity integration 
-  real, dimension(nYPixel,nXPixel), intent(out) :: Intensity_II          
+  real, dimension(nXPixel,nYPixel), intent(out) :: Intensity_II          
   !--------------------------------
   call ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
        rIntegration, nXPixel, nYPixel, Intensity_II)
