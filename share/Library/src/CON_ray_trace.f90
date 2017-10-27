@@ -380,7 +380,8 @@ contains
 
     ! Check if all PE-s are done
     DoneAll = DoneMe .and. (Recv % nRay == 0)
-    call MPI_allreduce(MPI_IN_PLACE, DoneAll, 1, MPI_LOGICAL, MPI_LAND, &
+    if(nProc > 1)&
+         call MPI_allreduce(MPI_IN_PLACE, DoneAll, 1, MPI_LOGICAL, MPI_LAND, &
          iComm, iError)
 
   end subroutine ray_exchange

@@ -470,7 +470,8 @@ contains
 
           ! In order to do MPI_allreduce with MPI_SUM, the default value of 
           ! iTypeBalance_A=0. The skipped blocks also have 0 type value.
-          call MPI_allreduce(MPI_IN_PLACE, iTypeBalance_A, MaxNode, &
+          if(nProc > 1)&
+               call MPI_allreduce(MPI_IN_PLACE, iTypeBalance_A, MaxNode, &
                MPI_INTEGER, MPI_SUM, iComm, iError)
 
           ! Find all different block types that occur 

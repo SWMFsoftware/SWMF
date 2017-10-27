@@ -29,7 +29,7 @@ module SP_wrapper
        Momentum_, RhoUxCouple_, RhoUzCouple_, &
        BField_, BxCouple_, BzCouple_
   use ModMpi
-  use CON_world, ONLY: is_proc0, is_proc
+  use CON_world, ONLY: is_proc0, is_proc, n_proc
   use CON_comp_param, ONLY: SP_, SC_, IH_
 
   implicit none
@@ -574,8 +574,10 @@ contains
     end if
 
     ! update on all processors
-    call MPI_Allreduce(MPI_IN_PLACE, iOffsetToLagrID_A, nNode, &
-         MPI_INTEGER, MPI_SUM, iCommSync, iError)
+    if(n_proc() > 1)then
+       call MPI_Allreduce(MPI_IN_PLACE, iOffsetToLagrID_A, nNode, &
+            MPI_INTEGER, MPI_SUM, iCommSync, iError)
+    end if
   end subroutine SP_synchronize_grid
 
   !===================================================================

@@ -10,7 +10,7 @@ module SP_ModWrite
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
-       iComm, &
+       iComm, nProc, &
        nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
@@ -519,20 +519,22 @@ contains
       end do
       
       ! gather interpolated data on the source processor
-      if(is_proc0(SP_))then
-         call MPI_Reduce(MPI_IN_PLACE, File_I(iFile) % Buffer_II, &
-              nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
-              i_proc0(SP_), iComm, iError)
-         call MPI_Reduce(MPI_IN_PLACE, DoPrint_I, &
-              nNode, MPI_Logical, MPI_Land, &
-              i_proc0(SP_), iComm, iError)
-      else
-         call MPI_Reduce(File_I(iFile) % Buffer_II, File_I(iFile) % Buffer_II,&
-              nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
-              i_proc0(SP_), iComm, iError)
-         call MPI_Reduce(DoPrint_I, DoPrint_I, &
-              nNode, MPI_Logical, MPI_Land, &
-              i_proc0(SP_), iComm, iError)
+      if(nProc > 1)then
+         if(is_proc0(SP_))then
+            call MPI_Reduce(MPI_IN_PLACE, File_I(iFile) % Buffer_II, &
+                 nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
+                 i_proc0(SP_), iComm, iError)
+            call MPI_Reduce(MPI_IN_PLACE, DoPrint_I, &
+                 nNode, MPI_Logical, MPI_Land, &
+                 i_proc0(SP_), iComm, iError)
+         else
+            call MPI_Reduce(File_I(iFile) % Buffer_II, File_I(iFile) % Buffer_II,&
+                 nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
+                 i_proc0(SP_), iComm, iError)
+            call MPI_Reduce(DoPrint_I, DoPrint_I, &
+                 nNode, MPI_Logical, MPI_Land, &
+                 i_proc0(SP_), iComm, iError)
+         end if
       end if
 
       if(is_proc0(SP_))&

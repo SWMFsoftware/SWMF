@@ -203,7 +203,8 @@ contains
 
     if(DoSourceSum)then
        if(UseAllReduce)then
-          call MPI_allreduce(MPI_IN_PLACE, iData_I, nData, MPI_INTEGER, &
+          if(n_proc() > 1)&
+               call MPI_allreduce(MPI_IN_PLACE, iData_I, nData, MPI_INTEGER, &
                MPI_SUM, i_comm(iCompSource), iError)
        else
           call MPI_reduce_integer_array(iData_I, nData, &
@@ -284,7 +285,8 @@ contains
 
     if(DoSourceSum)then
        if(UseAllReduce)then
-          call MPI_allreduce(MPI_IN_PLACE, iData, 1, MPI_INTEGER, &
+          if(n_proc() > 1)&
+               call MPI_allreduce(MPI_IN_PLACE, iData, 1, MPI_INTEGER, &
                MPI_SUM, i_comm(iCompSource), iError)
        else
           call MPI_reduce_integer_scalar(iData, &
@@ -327,7 +329,8 @@ contains
 
     if(DoSourceSum)then
        if(UseAllReduce)then
-          call MPI_allreduce(MPI_IN_PLACE, Data_I, nData, MPI_REAL, MPI_SUM, &
+          if(n_proc() > 1)&
+               call MPI_allreduce(MPI_IN_PLACE,Data_I,nData,MPI_REAL,MPI_SUM, &
                i_comm(iCompSource), iError)
        else
           call MPI_reduce_real_array(Data_I, nData, MPI_SUM, 0, &
@@ -369,7 +372,8 @@ contains
 
     if(DoSourceSum)then
        if(UseAllReduce)then
-          call MPI_allreduce(MPI_IN_PLACE, Data, 1, MPI_REAL, MPI_SUM, &
+          if(n_proc() > 1)&
+               call MPI_allreduce(MPI_IN_PLACE, Data, 1, MPI_REAL, MPI_SUM, &
                i_comm(iCompSource), iError)
        else
           call MPI_reduce_real_scalar(Data, MPI_SUM, 0, &
