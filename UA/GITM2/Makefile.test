@@ -37,45 +37,42 @@ test_rundir:
 
 ### EARTH GITM TEST ###
 
-test_earth:
-	@echo "test_earth_1d..." > test_earth.diff
-	$(MAKE) test_earth_1d
-	@echo "test_earth_eclipse..." >> test_earth.diff
-	$(MAKE) test_earth_eclipse
-	@echo "test_earth_3d..." >> test_earth.diff
-	$(MAKE) test_earth_3d
+test_gitm_earth:
+	$(MAKE) test_gitm_earth_1d
+	$(MAKE) test_gitm_earth_eclipse
+	$(MAKE) test_gitm_earth_3d
 
-test_earth_1d:
-	@echo "test_earth_1d_compile..." > test_1d.diff
-	$(MAKE) test_earth_1d_compile
-	@echo "test_earth_1d_rundir..." >> test_1d.diff
-	$(MAKE) test_earth_1d_rundir
-	@echo "test_earth_1d_run..." >> test_1d.diff
-	$(MAKE) test_earth_1d_run
-	@echo "test_earth_1d_check..." >> test_1d.diff
-	$(MAKE) test_earth_1d_check
+test_gitm_earth_1d:
+	@echo "test_gitm_earth_1d_compile..." > test_gitm_earth_1d.diff
+	$(MAKE) test_gitm_earth_1d_compile
+	@echo "test_gitm_earth_1d_rundir..." >> test_gitm_earth_1d.diff
+	$(MAKE) test_gitm_earth_1d_rundir
+	@echo "test_gitm_earth_1d_run..." >> test_gitm_earth_1d.diff
+	$(MAKE) test_gitm_earth_1d_run
+	@echo "test_gitm_earth_1d_check..." >> test_gitm_earth_1d.diff
+	$(MAKE) test_gitm_earth_1d_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
-test_earth_eclipse:
-	@echo "test_earth_eclipse_compile..." > test_eclipse.diff
-	$(MAKE) test_earth_eclipse_compile
-	@echo "test_earth_eclipse_rundir..." >> test_eclipse.diff
-	$(MAKE) test_earth_eclipse_rundir
-	@echo "test_earth_eclipse_run..." >> test_eclipse.diff
-	$(MAKE) test_earth_eclipse_run
-	@echo "test_earth_eclipse_check..." >> test_eclipse.diff
-	$(MAKE) test_earth_eclipse_check
+test_gitm_earth_eclipse:
+	@echo "test_gitm_earth_eclipse_compile..." > test_gitm_earth_eclipse.diff
+	$(MAKE) test_gitm_earth_eclipse_compile
+	@echo "test_gitm_earth_eclipse_rundir..." >> test_gitm_earth_eclipse.diff
+	$(MAKE) test_gitm_earth_eclipse_rundir
+	@echo "test_gitm_earth_eclipse_run..." >> test_gitm_earth_eclipse.diff
+	$(MAKE) test_gitm_earth_eclipse_run
+	@echo "test_gitm_earth_eclipse_check..." >> test_gitm_earth_eclipse.diff
+	$(MAKE) test_gitm_earth_eclipse_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
-test_earth_3d:
-	@echo "test_earth_3d_compile..." > test_3d.diff
-	$(MAKE) test_earth_3d_compile
-	@echo "test_earth_3d_rundir..." >> test_3d.diff
-	$(MAKE) test_earth_3d_rundir
-	@echo "test_earth_3d_run..." >> test_3d.diff
-	$(MAKE) test_earth_3d_run
-	@echo "test_earth_3d_check..." >> test_3d.diff
-	$(MAKE) test_earth_3d_check
+test_gitm_earth_3d:
+	@echo "test_gitm_earth_3d_compile..." > test_gitm_earth_3d.diff
+	$(MAKE) test_gitm_earth_3d_compile
+	@echo "test_gitm_earth_3d_rundir..." >> test_gitm_earth_3d.diff
+	$(MAKE) test_gitm_earth_3d_rundir
+	@echo "test_gitm_earth_3d_run..." >> test_gitm_earth_3d.diff
+	$(MAKE) test_gitm_earth_3d_run
+	@echo "test_gitm_earth_3d_check..." >> test_gitm_earth_3d.diff
+	$(MAKE) test_gitm_earth_3d_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 # ----------------------------------------------------
@@ -83,136 +80,134 @@ test_earth_3d:
 # ----------------------------------------------------
 
 # Plain 1D
-test_earth_1d_compile:
+test_gitm_earth_1d_compile:
 	./Config.pl -Earth -g=1,1,50,4
 	$(MAKE) GITM
 
-test_earth_1d_rundir:
+test_gitm_earth_1d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 
-test_earth_1d_run:
+test_gitm_earth_1d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.1d ./UAM.in
 	cd ${TESTDIR}; ${MPIRUN} -np 1 ./GITM.exe > runlog_earth_1d
 
-test_earth_1d_check:
+test_gitm_earth_1d_check:
 	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000004.1d.dat \
-		> test_earth_1d.diff)
-	ls -l test_earth_1d.diff
+		> test_gitm_earth_1d.diff)
+	ls -l test_gitm_earth_1d.diff
 
 # Eclipse 1D
-test_earth_eclipse_compile:
+test_gitm_earth_eclipse_compile:
 	./Config.pl -Earth -g=1,1,50,4
 	$(MAKE) GITM
 
-test_earth_eclipse_rundir:
+test_gitm_earth_eclipse_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 
-test_earth_eclipse_run:
+test_gitm_earth_eclipse_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.eclipse ./UAM.in
 	cd ${TESTDIR}; ${MPIRUN} -np 1 ./GITM.exe > runlog_earth_eclipse
 
-test_earth_eclipse_check:
+test_gitm_earth_eclipse_check:
 	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000002.eclipse.dat \
-		> test_earth_eclipse.diff)
-	ls -l test_earth_eclipse.diff
+		> test_gitm_earth_eclipse.diff)
+	ls -l test_gitm_earth_eclipse.diff
 
 # ----------------------------------------------------
 # 3D tests
 # ----------------------------------------------------
 
-test_earth_3d_compile:
+test_gitm_earth_3d_compile:
 	./Config.pl -Earth -g=9,9,50,4
 	$(MAKE) GITM
 
-test_earth_3d_rundir:
+test_gitm_earth_3d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 
-test_earth_3d_run:
+test_gitm_earth_3d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.3d ./UAM.in
 	cd ${TESTDIR}; ${MPIRUN} -np 4 ./GITM.exe
 
-test_earth_3d_check:
+test_gitm_earth_3d_check:
 	(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log00000002.dat ${TESTDIR}/UA/DataIn/log00000002.3d.dat \
-		> test_earth_3d.diff)
-	ls -l test_earth_3d.diff
+		> test_gitm_earth_3d.diff)
+	ls -l test_gitm_earth_3d.diff
 
 ### MARS GITM TEST ###
 
-test_mars:
-	@echo "test_mars_1d..." > test_mars.diff
-	make test_mars_1d
-	@echo "test_mars_3d..." >> test_mars.diff
-	make test_mars_3d
+test_gitm_mars:
+	make test_gitm_mars_1d
+	make test_gitm_mars_3d
 
-test_mars_1d:
-	@echo "test_mars_1d_compile..." > test_1d.diff
-	$(MAKE) test_mars_1d_compile
-	@echo "test_mars_1d_rundir..." >> test_1d.diff
-	$(MAKE) test_mars_1d_rundir
-	@echo "test_mars_1d_run..." >> test_1d.diff
-	$(MAKE) test_mars_1d_run
-	@echo "test_mars_1d_check..." >> test_1d.diff
-	$(MAKE) test_mars_1d_check
+test_gitm_mars_1d:
+	@echo "test_gitm_mars_1d_compile..." > test_gitm_mars_1d.diff
+	$(MAKE) test_gitm_mars_1d_compile
+	@echo "test_gitm_mars_1d_rundir..." >> test_gitm_mars_1d.diff
+	$(MAKE) test_gitm_mars_1d_rundir
+	@echo "test_gitm_mars_1d_run..." >> test_gitm_mars_1d.diff
+	$(MAKE) test_gitm_mars_1d_run
+	@echo "test_gitm_mars_1d_check..." >> test_gitm_mars_1d.diff
+	$(MAKE) test_gitm_mars_1d_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
-test_mars_3d:
-	@echo "test_mars_3d_compile..." > test_3d.diff
-	$(MAKE) test_mars_3d_compile
-	@echo "test_mars_3d_rundir..." >> test_3d.diff
-	$(MAKE) test_mars_3d_rundir
-	@echo "test_mars_3d_run..." >> test_3d.diff
-	$(MAKE) test_mars_3d_run
-	@echo "test_mars_3d_check..." >> test_3d.diff
-	$(MAKE) test_mars_3d_check
+test_gitm_mars_3d:
+	@echo "test_gitm_mars_3d_compile..." > test_gitm_mars_3d.diff
+	$(MAKE) test_gitm_mars_3d_compile
+	@echo "test_gitm_mars_3d_rundir..." >> test_gitm_mars_3d.diff
+	$(MAKE) test_gitm_mars_3d_rundir
+	@echo "test_gitm_mars_3d_run..." >> test_gitm_mars_3d.diff
+	$(MAKE) test_gitm_mars_3d_run
+	@echo "test_gitm_mars_3d_check..." >> test_gitm_mars_3d.diff
+	$(MAKE) test_gitm_mars_3d_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 # ----------------------------------------------------
 # 1D tests
 # ----------------------------------------------------
 
-test_mars_1d_compile:
+test_gitm_mars_1d_compile:
 	./Config.pl -Mars -g=1,1,120,4
 	$(MAKE) GITM
 
-test_mars_1d_rundir:
+test_gitm_mars_1d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 
-test_mars_1d_run:
+test_gitm_mars_1d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.mars.in.1d ./UAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_mars_1d
 
-test_mars_1d_check:
+test_gitm_mars_1d_check:
 	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000002.1d.dat.mars \
-		> test_mars_1d.diff)
-	ls -l test_mars_1d.diff
+		> test_gitm_mars_1d.diff)
+	ls -l test_gitm_mars_1d.diff
 
 # ----------------------------------------------------
 # 3D tests
 # ----------------------------------------------------
 
-test_mars_3d_compile:
+test_gitm_mars_3d_compile:
 	./Config.pl -Mars -g=8,4,120,4
 	$(MAKE) GITM
 
-test_mars_3d_rundir:
+test_gitm_mars_3d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 
-test_mars_3d_run:
+test_gitm_mars_3d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.mars.in.3d ./UAM.in
 	cd ${TESTDIR}; ${MPIRUN} -np 4 ./GITM.exe > runlog_mars_3d
 
-test_mars_3d_check:
+test_gitm_mars_3d_check:
 	(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000002.3d.dat.mars \
-		> test_mars_3d.diff)
-	ls -l test_mars_3d.diff
+		> test_gitm_mars_3d.diff)
+	ls -l test_gitm_mars_3d.diff
 
