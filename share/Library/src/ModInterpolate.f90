@@ -134,11 +134,11 @@ contains
     case(1)
        if(present(iCell_D))then
           interpolate_vector = linear_vector( a_VC, nVar, &
-               Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate, &
+               Min_D(1), Max_D(1), x_D, x_I, DoExtrapolate, &
                iCell_D(1), Dist_D(1))
        else
           interpolate_vector = linear_vector( a_VC, nVar, &
-               Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate)
+               Min_D(1), Max_D(1), x_D, x_I, DoExtrapolate)
        end if
     case(2)
        interpolate_vector = bilinear_vector( a_VC, nVar, &
@@ -202,7 +202,7 @@ contains
   end function linear_scalar
 
   !=========================================================================
-  function linear_vector(a_VI, nVar, iMin, iMax, x, x_I, DoExtrapolate, &
+  function linear_vector(a_VI, nVar, iMin, iMax, x_D, x_I, DoExtrapolate, &
        iCell, Dist)
 
     ! Calculate linear interpolation of a_VI(nVar,iMin:iMax) at position x
@@ -213,7 +213,7 @@ contains
     integer, intent(in):: nVar, iMin, iMax
     real,    intent(in):: a_VI(nVar,iMin:iMax)
 
-    real,    intent(in), optional :: x
+    real,    intent(in), optional :: x_D(1)
     real,    intent(in), optional :: x_I(iMin:)
     logical, intent(in), optional :: DoExtrapolate
     integer, intent(in), optional :: iCell
@@ -239,7 +239,7 @@ contains
     else
 
        ! Locate the point Xyz_D on the grid
-       call find_cell(iMin, iMax, x, i1, Dx1, x_I, DoExtrapolate, &
+       call find_cell(iMin, iMax, x_D(1), i1, Dx1, x_I, DoExtrapolate, &
             "Called from "//NameSub)
 
        ! Calculate the remaining cell indices and interpolation weights
