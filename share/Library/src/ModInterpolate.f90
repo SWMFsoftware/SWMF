@@ -89,8 +89,7 @@ contains
     case(1)
        if(present(iCell_D))then
           interpolate_scalar = linear_scalar( a_C, &
-            Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate, &
-            iCell_D(1), Dist_D(1))
+            Min_D(1), Max_D(1), x_D(1), iCell=iCell_D(1), Dist=Dist_D(1))
        else
           interpolate_scalar = linear_scalar( a_C, &
             Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate)
@@ -134,8 +133,7 @@ contains
     case(1)
        if(present(iCell_D))then
           interpolate_vector = linear_vector( a_VC, nVar, &
-               Min_D(1), Max_D(1), DoExtrapolate=DoExtrapolate, &
-               iCell=iCell_D(1), Dist=Dist_D(1))
+               Min_D(1), Max_D(1), iCell=iCell_D(1), Dist=Dist_D(1))
        else
           interpolate_vector = linear_vector( a_VC, nVar, &
                Min_D(1), Max_D(1), x_D(1), x_I, DoExtrapolate)
@@ -197,7 +195,7 @@ contains
     end if
 
     ! Perform interpolation (or extrapolation)
-    linear_scalar = (Dx2)*a_I(i1) + Dx1*a_I(i2)
+    linear_scalar = Dx2*a_I(i1) + Dx1*a_I(i2)
 
   end function linear_scalar
 
@@ -248,7 +246,7 @@ contains
     end if
 
     ! Perform interpolation (or extrapolation) for multiple variables
-    linear_vector = (Dx2)*a_VI(:,i1) + Dx1*a_VI(:,i2)
+    linear_vector = Dx2*a_VI(:,i1) + Dx1*a_VI(:,i2)
 
   end function linear_vector
 
