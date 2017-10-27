@@ -432,8 +432,8 @@ contains
          call set_block_field2(&
               iBlock    = iBlock, &
               nVar      = 1, &
-              Field1_VG = CosBR2_GB, &
-              Field_VG  = CosBR_GB)
+              Field1_VG = CosBR2_GB(:,:,:,iBlock), &
+              Field_VG  = CosBR_GB(:,:,:,iBlock))
          ! compute gradient
          call calc_gradient(iBlock, CosBR_GB(:,:,:,iBlock), nG, &
               GradCosBR_DGB(:,:,:,:,iBlock))
