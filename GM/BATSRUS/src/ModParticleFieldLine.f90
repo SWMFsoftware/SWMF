@@ -22,7 +22,7 @@ module ModParticleFieldLine
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
   use ModPhysics, ONLY: rBody
-
+  use ModCellGradient, ONLY: GradCosBR_DGB => GradVar_DGB
   implicit none
   SAVE
 
@@ -117,14 +117,6 @@ module ModParticleFieldLine
   ! may need to apply corrections during line tracing
   logical:: UseCorrection=.false.
   real:: RCorrectionMin = 0.0, RCorrectionMax = Huge(1.0)
-
-  !\
-  ! Cosine between direction of the field and radial direction: for correcting
-  ! the line's direction to prevent it from closing
-  !/
-  integer, parameter :: nG = 1
-  real, allocatable:: CosBR_GB(:,:,:,:), CosBR2_GB(:,:,:,:), &
-       GradCosBR_DGB(:,:,:,:,:)
 
   !\
   ! initialization related info
@@ -250,6 +242,7 @@ contains
        iIndexStart_II,&
        UseInputInGenCoord)
     use BATL_geometry, ONLY: coord_to_xyz
+    use ModCellGradient, ONLY: get_grad_dgb
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -292,6 +285,11 @@ contains
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iIndexReg_II(:,:)
 
+    !\
+    ! Cosine between direction of the field and radial direction: for correcting
+    ! the line's direction to prevent it from closing
+    !/
+    real, allocatable:: CosBR_CB(:,:,:,:)
     character(len=*), parameter:: NameSub='extract_particle_line'
     !----------------------------------------------------------------------
     ! set pointers to parameters of end particles
@@ -308,14 +306,9 @@ contains
     !\
     ! allocate containers for cosine of angle between B and radial direction
     !/
-    allocate(CosBR_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, MaxBlock))
-    CosBR_GB = 0.0
-    allocate(CosBR2_GB(MinI:MaxI, MinJ:MaxJ, MinK:MaxK, MaxBlock))
-    CosBR2_GB = 0.0
-    allocate(GradCosBR_DGB(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-         1-nG*kDim_:nK+nG*kDim_,MaxBlock))
-    GradCosBR_DGB = 0.0
-    call compute_grad_cosbr
+    allocate(CosBR_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+    call compute_cosbr
+    call get_grad_dgb(CosBR_CB)
 
     !\
     ! Trace field lines
@@ -392,16 +385,14 @@ contains
 
     !\
     ! free space
-    deallocate(CosBR_GB, CosBR2_GB, GradCosBR_DGB)
+    deallocate(CosBR_CB)
   contains
     !========================================================================
-    subroutine compute_grad_cosbr()
-      use BATL_pass_cell, ONLY: message_pass_cell
+    subroutine compute_cosbr()
       use ModMain, ONLY: UseB0
       use ModB0, ONLY: B0_DGB
       use ModGeometry, ONLY: R_BLK
       use ModCellGradient, ONLY: calc_gradient
-      use ModFaceGradient, ONLY: set_block_field2
       integer :: iBlock, i, j, k ! loop variables
       real    :: XyzCell_D(nDim), BCell_D(nDim)
       !------------------------------------------------------------------------
@@ -413,38 +404,14 @@ contains
             Bcell_D = State_VGB(Bx_:B_+nDim,i,j,k,iBlock)
             if(UseB0)BCell_D = Bcell_D + B0_DGB(1:nDim,i,j,k,iBlock)
             if(any(BCell_D /= 0.0) .and. R_BLK(i,j,k,iBlock) > 0.0)then
-               CosBR_GB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
+               CosBR_CB(i,j,k,iBlock) = sum(Bcell_D*XyzCell_D) / &
                     (sqrt(sum(BCell_D**2))*R_BLK(i,j,k,iBlock))
             else
-               CosBR_GB(i,j,k,iBlock) = 0.0
+               CosBR_CB(i,j,k,iBlock) = 0.0
             end if
          end do; end do; end do
       end do
-      ! fill ghost celss via message pass
-      call message_pass_cell(&
-           !           nG              = 1, &
-           State_GB        = CosBR_GB, &
-           nProlongOrderIn = 1)
-
-      do iBlock = 1, nBlock
-         if(Unused_B(iBlock))CYCLE
-         ! correct ghost cells
-         call set_block_field2(&
-              iBlock    = iBlock, &
-              nVar      = 1, &
-              Field1_VG = CosBR2_GB(:,:,:,iBlock), &
-              Field_VG  = CosBR_GB(:,:,:,iBlock))
-         ! compute gradient
-         call calc_gradient(iBlock, CosBR_GB(:,:,:,iBlock), nG, &
-              GradCosBR_DGB(:,:,:,:,iBlock))
-      end do
-      ! fill ghost cells for gradient via message pass
-      call message_pass_cell(&
-           nVar            = nDim,&
-           nG              = 1, &
-           State_VGB       = GradCosBR_DGB, &
-           nProlongOrderIn = 1)
-    end subroutine compute_grad_cosbr
+    end subroutine compute_cosbr
     !========================================================================
     subroutine start_line(XyzStart_D, iIndexStart_I)
       real,    intent(inout):: XyzStart_D(MaxDim)
