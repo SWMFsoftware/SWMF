@@ -1272,6 +1272,9 @@ subroutine get_iVar(NameVar, iVar)
   ! Initialize iVar
   iVar = -1
 
+  ! In case NameVar is in upper case...
+  call lower_case(NameVar)
+
   ! Remove the fluid name first
   call extract_fluid_name(NameVar)
 
