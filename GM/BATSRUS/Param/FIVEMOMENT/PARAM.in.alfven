@@ -86,7 +86,7 @@ Bz  = 0
 Uz  = 0
 
 #WAVE
-6			By_       = Ampl*cos(2pi/LambdaX*x)
+By			By_       = Ampl*cos(2pi/LambdaX*x)
 10000.0			Width
 0.1			Amplitude = 0.1
 10000.0			LambdaX   = 1e4
@@ -95,7 +95,7 @@ Uz  = 0
 0.0			Phase
 
 #WAVE
-3			Uy_ = cA * By / Bx
+Uy			Uy_ = cA * By / Bx
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
@@ -104,7 +104,7 @@ Uz  = 0
 0.0			Phase
 
 #WAVE
-15			ElUy_ = Uey = Uy  since Jy=0
+ElUy			ElUy_ = Uey = Uy  since Jy=0
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
@@ -113,7 +113,7 @@ Uz  = 0
 0.0			Phase
 
 #WAVE
-16			ElUz_ = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi) 
+ElUz			ElUz_ = Uez = Uz - Jz/(n*e) = -dBy/dx / (Rho/Mi) 
 10000.0			Width       = 2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
 6.2831852e-05		Amplitude     2e-5*pi
 10000.0			LambdaX
@@ -122,7 +122,7 @@ Uz  = 0
 -90.0			Phase       sin(x) = cos(x-90)
 
 #WAVE
-9			Ey_  = -Uez * Bx = -2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
+Ey			Ey_  = -Uez * Bx = -2pi/LambdaX*Ampl*sin(2pi/LambdaX*x)
 10000.0			Width
 -6.2831852e-05		Amplitude 2e-4*pi
 10000.0			LambdaX
@@ -131,7 +131,7 @@ Uz  = 0
 -90.0			Phase
 
 #WAVE
-10			Ez_ = +Uey * Bx
+Ez			Ez_ = +Uey * Bx
 10000.0			Width
 0.1			Amplitude
 10000.0			LambdaX
