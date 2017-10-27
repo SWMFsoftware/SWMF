@@ -86,7 +86,6 @@ test_earth_3d:
 test_earth_1d_compile:
 	./Config.pl -Earth -g=1,1,50,4
 	$(MAKE) GITM
-#	make PIDL
 
 test_earth_1d_rundir:
 	rm -rf ${TESTDIR}
@@ -94,23 +93,18 @@ test_earth_1d_rundir:
 
 test_earth_1d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.1d ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_1d
-	cd ${TESTDIR}; ${MPIRUN} ./pGITM
-	cd ${TESTDIR}; mkdir results_1d
-	cd ${TESTDIR}; mv ./data/* ./results_1d/
+	cd ${TESTDIR}; ${MPIRUN} -np 1 ./GITM.exe > runlog_earth_1d
 
 test_earth_1d_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t \
-		srcData/log0000000?.1d.dat \
-		${TESTDIR}/results_1d/log0000000?.dat \
-		>& ${TESTDIR}/results_1d/test_1d.diff)
-	ls -l ${TESTDIR}/results_1d/test_1d.diff
+	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000004.1d.dat \
+		> test_earth_1d.diff)
+	ls -l test_earth_1d.diff
 
 # Eclipse 1D
 test_earth_eclipse_compile:
 	./Config.pl -Earth -g=1,1,50,4
 	$(MAKE) GITM
-#	make PIDL
 
 test_earth_eclipse_rundir:
 	rm -rf ${TESTDIR}
@@ -118,17 +112,13 @@ test_earth_eclipse_rundir:
 
 test_earth_eclipse_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.eclipse ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_eclipse
-	cd ${TESTDIR}; ${MPIRUN} ./pGITM
-	cd ${TESTDIR}; mkdir results_eclipse
-	cd ${TESTDIR}; mv ./data/* ./results_eclipse/
+	cd ${TESTDIR}; ${MPIRUN} -np 1 ./GITM.exe > runlog_earth_eclipse
 
 test_earth_eclipse_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t \
-		srcData/log0000000?.eclipse.dat \
-		${TESTDIR}/results_eclipse/log0000000?.dat \
-		>& ${TESTDIR}/results_eclipse/test_eclipse.diff)
-	ls -l ${TESTDIR}/results_eclipse/test_eclipse.diff
+	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000002.eclipse.dat \
+		> test_earth_eclipse.diff)
+	ls -l test_earth_eclipse.diff
 
 # ----------------------------------------------------
 # 3D tests
@@ -137,7 +127,6 @@ test_earth_eclipse_check:
 test_earth_3d_compile:
 	./Config.pl -Earth -g=9,9,50,4
 	$(MAKE) GITM
-#	make PIDL
 
 test_earth_3d_rundir:
 	rm -rf ${TESTDIR}
@@ -145,17 +134,13 @@ test_earth_3d_rundir:
 
 test_earth_3d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.3d ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_3d
-	cd ${TESTDIR}; ${MPIRUN} ./pGITM
-	cd ${TESTDIR}; mkdir results_3d
-	cd ${TESTDIR}; mv ./data/* ./results_3d/
+	cd ${TESTDIR}; ${MPIRUN} -np 4 ./GITM.exe
 
 test_earth_3d_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t \
-		srcData/log00000002.3d.dat \
-		${TESTDIR}/results_3d/log00000002.dat \
-		>& ${TESTDIR}/results_3d/test_3d.diff)
-	ls -l ${TESTDIR}/results_3d/test_3d.diff
+	(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/UA/data/log00000002.dat ${TESTDIR}/UA/DataIn/log00000002.3d.dat \
+		> test_earth_3d.diff)
+	ls -l test_earth_3d.diff
 
 ### MARS GITM TEST ###
 
@@ -194,26 +179,20 @@ test_mars_3d:
 test_mars_1d_compile:
 	./Config.pl -Mars -g=1,1,120,4
 	$(MAKE) GITM
-#	make PIDL
 
 test_mars_1d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 
 test_mars_1d_run:
-	cd ${TESTDIR}; cp ./DataIn/UAM.Mars1D.in ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_1d
-	cd ${TESTDIR}; ${MPIRUN} ./pGITM
-	cd ${TESTDIR}; mkdir results_1d
-	cd ${TESTDIR}; mv ./data/* ./results_1d/
+	cd ${TESTDIR}; cp ./DataIn/UAM.mars.in.1d ./UAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_mars_1d
 
 test_mars_1d_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		./results_1d/log0000000?.dat ./DataIn/log00000000?.1d.dat \
-		> ./results_1d/test_1d.diff)
-	diff ./results_1d/run_information.txt ./DataIn/run_information.txt >> ./results_1d/test_1d.diff
-	cd results_1d ; idl < ../DataIn/idl_input.1d
-	ls -l test_1d.diff
+	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000002.1d.dat.mars \
+		> test_mars_1d.diff)
+	ls -l test_mars_1d.diff
 
 # ----------------------------------------------------
 # 3D tests
@@ -222,24 +201,18 @@ test_mars_1d_check:
 test_mars_3d_compile:
 	./Config.pl -Mars -g=8,4,120,4
 	$(MAKE) GITM
-#	make PIDL
 
 test_mars_3d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR}
 
 test_mars_3d_run:
-	cd ${TESTDIR}; cp ./DataIn/UAM.Mars3D.in ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_1d
-	cd ${TESTDIR}; ${MPIRUN} ./pGITM
-	cd ${TESTDIR}; mkdir results_3d
-	cd ${TESTDIR}; mv ./data/* ./results_3d/
+	cd ${TESTDIR}; cp ./DataIn/UAM.mars.in.3d ./UAM.in
+	cd ${TESTDIR}; ${MPIRUN} -np 4 ./GITM.exe > runlog_mars_3d
 
 test_mars_3d_check:
-	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		./data/log0000000?.dat ./DataIn/log00000000?.3d.dat \
-		> ./results_3d/test_3d.diff)
-	diff ./results_3d/run_information.txt UA/DataIn/run_information.3d.txt >> ./results_3d/test_3d.diff
-	cd results_3d ; idl < ../DataIn/idl_input.1d
-	ls -l test_3d.diff
+	(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/UA/data/log0000000?.dat ${TESTDIR}/UA/DataIn/log00000002.3d.dat.mars \
+		> test_mars_3d.diff)
+	ls -l test_mars_3d.diff
 

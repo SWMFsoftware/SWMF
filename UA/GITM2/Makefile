@@ -2,6 +2,7 @@
 default : GITM
 
 include Makefile.def
+include Makefile.test
 
 ABDIR   = srcSphereAB
 EIEDIR  = ${EMPIRICALIEDIR}
@@ -104,14 +105,4 @@ dist:
 	tar cvzf gitm_`date "+%y%m%d"`.tgz Makefile* Config.pl get_info.pl \
 	    share util src srcData srcDoc srcGlow srcIDL srcInterface \
 	    srcPython srcMake srcSphereAB srcUser Copyright
-
-test:
-	make test_gitm_earth
-	make test_gitm_mars
-
-test_gitm_earth:
-	./srcData/test_earth.sh
-
-test_gitm_mars:
-	./srcData/test_mars.sh
 
