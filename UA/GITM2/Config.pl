@@ -210,7 +210,8 @@ sub set_planet{
 
     chdir "..";
 
-    &shell_command("cd srcData ; cp UAM.in.$Planet UAM.in");
+    &shell_command("cd srcData ; cp UAM.in.$Planet UAM.in") 
+	if -e "srcData/UAM.in.$Planet";
 
     if($Planet eq 'Earth'){
           $nLon = 9;
