@@ -57,7 +57,7 @@ contains !=========================================================
     ! Written by Leonid Benkevitch.
     !
     !
-    use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord
+    use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord, coord_to_xyz
     use ModMain,ONLY:NameThisComp
     use ModDensityAndGradient,ONLY: NameVector, &
          Density_I, GradDensity_DI, DeltaSNew_I
@@ -132,9 +132,9 @@ contains !=========================================================
     !/
     
 
-    real, dimension(nXPixel*nYPixel) :: SolarDistSqr_I   
+    real :: SolarDistSqr, Xyz_D(3)   
   
-    real, pointer, dimension(:,:) :: Position_DI
+    real, pointer, dimension(:,:) :: Coord_DI
    !\
     ! A ray is excluded from processing if it is .true.
     logical, dimension(nYPixel*nXPixel) :: UnusedRay_I
@@ -162,7 +162,7 @@ contains !=========================================================
        ! Symbolic name of the global vector:
        NameVector = NameThisComp//'_Pos_DI'
        call allocate_vector(NameVector, 3, nRay)
-       call associate_with_global_vector(Position_DI, NameVector)
+       call associate_with_global_vector(Coord_DI, NameVector)
        allocate(Density_I(nRay), GradDensity_DI(3,nRay),DeltaSNew_I(nRay))
     end if
     !
@@ -228,9 +228,9 @@ contains !=========================================================
           XyzAtIntSphere_D = XyzObserver_D &
                + Slope_DI(:,iRay)*ObservToIntSphereDist
           if(IsCartesianGrid)then
-             Position_DI(:,iRay) = XyzAtIntSphere_D 
+             Coord_DI(:,iRay) = XyzAtIntSphere_D 
           else
-             call xyz_to_coord(XyzAtIntSphere_D, Position_DI(:,iRay))
+             call xyz_to_coord(XyzAtIntSphere_D, Coord_DI(:,iRay))
           end if
        end do
     end do
@@ -242,17 +242,26 @@ contains !=========================================================
     DeltaS_I = DeltaS
     rIntegrationSqr = rIntegration**2 + 0.01
     do while(.not.all(UnusedRay_I))
-       SolarDistSqr_I = sum(Position_DI**2,1)
-       UnusedRay_I = UnusedRay_I.or.SolarDistSqr_I .gt. rIntegrationSqr 
-
+       !\
+       ! Advance rays through one step.
        call ray_path(nRay, UnusedRay_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCr, Intensity_I)
+       !Exclude rays which are out the integration sphere
+       RAYS:do iRay = 1, nRay
+          if(UnusedRay_I(iRay))CYCLE RAYS
+          if(IsCartesianGrid)then
+             SolarDistSqr = sum(Coord_DI(:,iRay)**2)
+          else
+             call coord_to_xyz(Coord_DI(:,iRay),Xyz_D)
+             SolarDistSqr = sum(Xyz_D**2)
+          end if
+          UnusedRay_I(iRay) = SolarDistSqr .gt. rIntegrationSqr
+       end do RAYS
     end do
 
     Intensity_II = reshape(Intensity_I, (/nXPixel,nYPixel/))
 
   end subroutine ray_bunch_intensity
-
 end module ModRadioWaveImage
 
 !================================================
