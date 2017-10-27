@@ -92,11 +92,11 @@ module ModUser
   real, dimension(nVar)    :: CoeffX_V = 0.0, CoeffY_V = 0.0, CoeffZ_V = 0.0
 
   ! For updating selected variables 
-  character (len=30)    :: VarsUpdate
+  character (len=200)   :: VarsUpdate
   integer, parameter    :: nVarsUpdateMax = 20
   integer               :: nVarsUpdate
-  character(len=2)      :: VarsUpdate_I(nVarsUpdateMax)
-  integer               :: iVarsUpdate_I(nVarsUpdateMax) = 0
+  character(len=10)     :: VarsUpdate_I(nVarsUpdateMax)
+  integer, allocatable  :: iVarsUpdate_I(:)
 
   ! Enable user units of length in input file
   logical           :: UseUserInputUnitx = .false.
@@ -126,6 +126,7 @@ contains
 
     character(len=100) :: NameCommand
     character(len=500) :: StringVar
+    character(len=10)  :: NameVar
     !-------------------------------------------------------------------------
 
     do
@@ -163,7 +164,8 @@ contains
           !    ampl*exp(-(r/d)^2)*cos(0.25*pi*r/d) for r/d < 2
           ! where d = k.(x-xCenter) and k = 1/lambda
           UseUserICs  = .true.
-          call read_var('iVar',      iVar)
+          call read_var('NameVar',   NameVar)
+          call get_iVar(NameVar, iVar)
           call read_var('Amplitude', Ampl_V(iVar))
           call read_var('LambdaX',   LambdaX)
           call read_var('LambdaY',   LambdaY)
@@ -185,13 +187,17 @@ contains
              iPower_V(iVar) = -2
           end if
 
+          if (iProc == 0) write(*,*) 'Setting GAUSSIAN or TOPHAT for iVar =', &
+               iVar, ', NameVar =', NameVar_V(iVar)
+
        case('#SHOCKRAMP')
           call read_var('DoShockramp', DoShockramp)
           UseUserOuterBcs = DoShockramp
 
        case('#WAVE','#WAVE2','#WAVE4', '#WAVE6')
           UseUserICs  = .true.
-          call read_var('iVar', iVar)
+          call read_var('NameVar',   NameVar)
+          call get_iVar(NameVar, iVar)
           call read_var('Width', Width)
           call read_var('Amplitude', Amplitude)
           call read_var('LambdaX', LambdaX)
@@ -216,6 +222,9 @@ contains
           KxWave_V(iVar) = max(0.0, cTwoPi/LambdaX)          
           KyWave_V(iVar) = max(0.0, cTwoPi/LambdaY)          
           KzWave_V(iVar) = max(0.0, cTwoPi/LambdaZ)
+
+          if (iProc == 0) write(*,*) 'Setting wave for iVar =', iVar, &
+               ', NameVar =', NameVar_V(iVar)
 
        case('#USERINPUTUNITX')
           ! This option controls the normalization of the unit of length
@@ -254,7 +263,8 @@ contains
           ! Read parameters for a power profile. Power is a postive or
           ! negative integer or zero (linear profile).
           UseUserICs  = .true.
-          call read_var('iVar',    iVar)
+          call read_var('NameVar',   NameVar)
+          call get_iVar(NameVar, iVar)
           call read_var('CoeffX',  CoeffX_V(iVar))
           call read_var('nPowerX', nPowerX_V(iVar))
           if(nDim > 1) call read_var('CoeffY',  CoeffY_V(iVar))
@@ -264,21 +274,35 @@ contains
 
           UserProblem = 'PowerProfile'
           IsPowerProfile_V(iVar) = .true.
+
+          if (iProc == 0) write(*,*) 'Setting POWERPROFILE for iVar =', &
+               iVar, ', NameVar =', NameVar_V(iVar)
           
        case('#PIPEFLOW')
           call read_var('DoPipeFlow',DoPipeFlow)
           if(DoPipeFlow) UserProblem = 'PipeFlow'
 
        case('#UPDATEVAR')
+          UseUserUpdateStates = .true.
+
           ! Only the states of the specified variables are updated
           call read_var('VarsUpdate', VarsUpdate)
 
-          call split_string(VarsUpdate, nVarsUpdateMax, VarsUpdate_I, nVarsUpdate)
+          call split_string(VarsUpdate, nVarsUpdateMax, VarsUpdate_I, &
+               nVarsUpdate)
+
+          if (allocated(iVarsUpdate_I)) deallocate(iVarsUpdate_I)
+          allocate(iVarsUpdate_I(nVarsUpdate))
+
           do iVar = 1, nVarsUpdate
-             read(VarsUpdate_I(iVar),*) iVarsUpdate_I(iVar)
+             call get_iVar(VarsUpdate_I(iVar), iVarsUpdate_I(iVar))
           end do
-          
-          UseUserUpdateStates = .true.
+
+          if (iProc == 0) then
+             write(*,*) 'Only update vars =', NameVar_V(iVarsUpdate_I)
+             write(*,*) 'Indexes          =', iVarsUpdate_I
+          end if
+
        case('#USERINPUTEND')
           if(iProc==0) write(*,*)'USERINPUTEND'
           EXIT
