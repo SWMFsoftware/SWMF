@@ -235,7 +235,7 @@ inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const 
 {
   double harvest, prob, theta, Uth;
 
-  if(col->getUseAnisoP() && ns > 0){
+  if(col->getUseAnisoP() && (ns > 0 || col->get_useElectronFluid())){
     double rand1, rand2, rand3, rand4;
     rand1 = RANDNUM;
     rand2 = RANDNUM;

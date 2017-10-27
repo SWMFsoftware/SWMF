@@ -1009,10 +1009,10 @@ public:
 
 	    data_I[n + _col->iP_I[iFluid]] = Pi;
 	    if(useAnisoP){
-	      data_I[n + _col->iPpar_I[0]]
+	      data_I[n + _col->iPpar_I[iFluid]]
 		= (BX*PiXX*BX + BY*PiYY*BY + BZ*PiZZ*BZ +
 		   2.0*BX*PiXY*BY + 2.0*BX*PiXZ*BZ +
-		   2.0*BY*PiYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);	    
+		   2.0*BY*PiYZ*BZ)/(BX*BX+BY*BY+BZ*BZ);
 	    }
 	  }
 	}else{

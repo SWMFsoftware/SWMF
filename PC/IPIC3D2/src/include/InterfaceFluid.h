@@ -914,37 +914,143 @@ class InterfaceFluid
   /** get Pxx from fluid */
   template <typename Type>	
     inline double getFluidPxx(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*(getFluidP(x,y,z,is)/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUx(x,y,z,is),2)));
+    double Pxx;
+    if(useAnisoP){
+      double Bx, By, Bz, Bt2, Ppar, P, Pperp; 
+      getInterpolatedValue(x,y,z,&Bx,iBx);	
+      getInterpolatedValue(x,y,z,&By,iBy);	
+      getInterpolatedValue(x,y,z,&Bz,iBz);
+      Bt2 = Bx*Bx + By*By + Bz*Bz;
+
+      Ppar = getFluidPpar(x,y,z,is);
+      P    = getFluidP(x,y,z,is);
+      Pperp = 0.5*(3.0*P - Ppar);
+
+      Pxx = Pperp + (Ppar - Pperp)*Bx*Bx/Bt2;
+      
+    }else{
+      Pxx = getFluidP(x,y,z,is);
+    }
+    return(QoQi_S[is]*(Pxx/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUx(x,y,z,is),2)));
   }
   
   /** get Pyy from fluid */
   template <typename Type>	
     inline double getFluidPyy(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*(getFluidP(x,y,z,is)/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUy(x,y,z,is),2)));
+    double Pyy; 
+    if(useAnisoP){
+      double Bx, By, Bz, Bt2, Ppar, P, Pperp; 
+      getInterpolatedValue(x,y,z,&Bx,iBx);	
+      getInterpolatedValue(x,y,z,&By,iBy);	
+      getInterpolatedValue(x,y,z,&Bz,iBz);
+      Bt2 = Bx*Bx + By*By + Bz*Bz;
+
+      Ppar = getFluidPpar(x,y,z,is);
+      P    = getFluidP(x,y,z,is);
+      Pperp = 0.5*(3.0*P - Ppar);
+
+      Pyy = Pperp + (Ppar - Pperp)*By*By/Bt2;      
+    }else{
+      Pyy = getFluidP(x,y,z,is);
+    }
+    return(QoQi_S[is]*(Pyy/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUy(x,y,z,is),2)));	
   }
   
   /** get Pzz from fluid */
   template <typename Type>	
     inline double getFluidPzz(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*(getFluidP(x,y,z,is)/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUz(x,y,z,is),2)));
+    double Pzz;
+    if(useAnisoP){
+      double Bx, By, Bz, Bt2, Ppar, P, Pperp; 
+      getInterpolatedValue(x,y,z,&Bx,iBx);	
+      getInterpolatedValue(x,y,z,&By,iBy);	
+      getInterpolatedValue(x,y,z,&Bz,iBz);
+      Bt2 = Bx*Bx + By*By + Bz*Bz;
+
+      Ppar = getFluidPpar(x,y,z,is);
+      P    = getFluidP(x,y,z,is);
+      Pperp = 0.5*(3.0*P - Ppar);
+
+      Pzz = Pperp + (Ppar - Pperp)*Bz*Bz/Bt2;
+      
+    }else{
+      Pzz = getFluidP(x,y,z,is);
+    }
+
+    return(QoQi_S[is]*(Pzz/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUz(x,y,z,is),2)));
+    
   }
   
   /** get Pxy from fluid */
   template <typename Type>	
     inline double getFluidPxy(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUy(x,y,z,is));
+    double Pxy;
+    if(useAnisoP){
+      double Bx, By, Bz, Bt2, Ppar, P, Pperp; 
+      getInterpolatedValue(x,y,z,&Bx,iBx);	
+      getInterpolatedValue(x,y,z,&By,iBy);	
+      getInterpolatedValue(x,y,z,&Bz,iBz);
+      Bt2 = Bx*Bx + By*By + Bz*Bz;
+
+      Ppar = getFluidPpar(x,y,z,is);
+      P    = getFluidP(x,y,z,is);
+      Pperp = 0.5*(3.0*P - Ppar);
+
+      Pxy = (Ppar - Pperp)*Bx*By/Bt2;
+      
+    }else{
+      Pxy = 0; 
+    }
+
+    return(QoQi_S[is]*(Pxy/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUy(x,y,z,is)));
   }
   
   /** get Pxz from fluid */
   template <typename Type>	
     inline double getFluidPxz(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUz(x,y,z,is));
+    double Pxz;
+    if(useAnisoP){
+      double Bx, By, Bz, Bt2, Ppar, P, Pperp; 
+      getInterpolatedValue(x,y,z,&Bx,iBx);	
+      getInterpolatedValue(x,y,z,&By,iBy);	
+      getInterpolatedValue(x,y,z,&Bz,iBz);
+      Bt2 = Bx*Bx + By*By + Bz*Bz;
+
+      Ppar = getFluidPpar(x,y,z,is);
+      P    = getFluidP(x,y,z,is);
+      Pperp = 0.5*(3.0*P - Ppar);
+
+      Pxz = (Ppar - Pperp)*Bx*Bz/Bt2;
+      
+    }else{
+      Pxz = 0; 
+    }
+
+    return(QoQi_S[is]*(Pxz/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUz(x,y,z,is)));
   }
   
   /** get Pyz from fluid */
   template <typename Type>	
     inline double getFluidPyz(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*getFluidRhoNum(x,y,z,is)*getFluidUy(x,y,z,is)*getFluidUz(x,y,z,is));
+    double Pyz;
+    if(useAnisoP){
+      double Bx, By, Bz, Bt2, Ppar, P, Pperp; 
+      getInterpolatedValue(x,y,z,&Bx,iBx);	
+      getInterpolatedValue(x,y,z,&By,iBy);	
+      getInterpolatedValue(x,y,z,&Bz,iBz);
+      Bt2 = Bx*Bx + By*By + Bz*Bz;
+
+      Ppar = getFluidPpar(x,y,z,is);
+      P    = getFluidP(x,y,z,is);
+      Pperp = 0.5*(3.0*P - Ppar);
+
+      Pyz = (Ppar - Pperp)*By*Bz/Bt2;
+      
+    }else{
+      Pyz = 0; 
+    }
+
+    return(QoQi_S[is]*(Pyz/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUy(x,y,z,is)*getFluidUz(x,y,z,is)));
   }
   
   /** get Jx from fluid */
@@ -1062,7 +1168,7 @@ class InterfaceFluid
 				 const double rand3, const double rand4, 
 				 const int is)const
     {
-      double Rho, Bx,By,Bz,B,P,Ppar,Pperp,Uthperp,Uthpar,Uthperp1, Uthperp2;
+      double Bx,By,Bz,B,P,Ppar,Pperp,Uthperp,Uthpar,Uthperp1, Uthperp2;
       double harvest, prob, theta;
       double **norm_DD;
       // indexes for the norm_DD matix
@@ -1070,11 +1176,6 @@ class InterfaceFluid
 
       if(useMultiFluid || useMultiSpecies){
 	cout<<" setFluidanisoUth has not implemented for multifluid/multispecies!!!"<<endl;
-	abort();	
-      }
-
-      if(useElectronFluid){
-	cout<<" Error: setFluidanisoUth is suspecious!!!!!"<<endl;
 	abort();	
       }
       
@@ -1085,8 +1186,8 @@ class InterfaceFluid
       Y_ = 1;
       Z_ = 2;
 
-      // Get rho and B at the particle position
-      getInterpolatedValue(x,y,z,&Rho,iRho_I[0]);	
+      // Get number density and B at the particle position
+      double ni = getFluidRhoNum(x,y,z,is);
       getInterpolatedValue(x,y,z,&Bx,iBx);	
       getInterpolatedValue(x,y,z,&By,iBy);	
       getInterpolatedValue(x,y,z,&Bz,iBz);	
@@ -1099,14 +1200,14 @@ class InterfaceFluid
       // Get 3 vertors spaning the vector space
       norm_DD = MagneticBaseVectors(Bx,By,Bz);
   
-      //Get the termail verlocity's
+      //Get the thermal verlocities
       prob  = sqrt(-2.0*log(1.0-.999999999*rand1));
       theta = 2.0*M_PI*rand2;
-      Uthpar = sqrt(Ppar*SumMass/(MoMi_S[is]*Rho))*prob*cos(theta);
+      Uthpar = sqrt(Ppar/(MoMi_S[is]*ni))*prob*cos(theta);
   
       prob  = sqrt(-2.0*log(1.0-.999999999*rand3));
       theta = 2.0*M_PI*rand4;
-      Uthperp  = sqrt(Pperp*SumMass/(MoMi_S[is]*Rho))*prob;
+      Uthperp  = sqrt(Pperp/(MoMi_S[is]*ni))*prob;
       Uthperp1 = Uthperp*cos(theta);
       Uthperp2 = Uthperp*sin(theta);
   
@@ -1167,12 +1268,8 @@ class InterfaceFluid
     }
 
     if(useElectronFluid){
-      cout<<" getFluidPpar is suspecious!!"<<endl;
-      abort();
-    }
-
-    
-    if(useMhdPe){
+      getInterpolatedValue(x,y,z,&P,iPpar_I[is]);          
+    }else if(useMhdPe){
       if(is==0) getInterpolatedValue(x,y,z,&P,iPe); // Electron
       if(is==1) getInterpolatedValue(x,y,z,&P,iPpar_I[0]); //Ion
     }else{
