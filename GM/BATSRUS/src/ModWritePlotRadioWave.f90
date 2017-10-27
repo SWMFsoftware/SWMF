@@ -20,7 +20,10 @@ subroutine write_plot_radiowave(iFile)
   use ModIO
   use ModUtilities, ONLY: open_file, close_file
   use ModIoUnit, ONLY: UnitTmp_
-
+  use ModCellGradient, ONLY: get_grad_dgb
+  use ModAdvance, ONLY: State_VGB
+  use ModVarIndexes, ONLY: Rho_
+  use BATL_lib, ONLY:  nI, nJ, nK
   implicit none
 
   !
@@ -155,7 +158,9 @@ subroutine write_plot_radiowave(iFile)
   Intensity_III = 0.0
 
   if (DoTiming) call timing_start('rfr_raytrace_loop')
-  call update_grad_density
+  !\
+  !Get density gradient
+  call get_grad_dgb(State_VGB(Rho_,1:nI,1:nJ,1:nK,:))
   do iFreq = 1, nFreq
      ! Calculate approximate radius of the  critical surface around the sun
      ! from the frequency

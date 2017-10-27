@@ -11,22 +11,18 @@ module ModDensityAndGradient
   use ModMain, ONLY: MaxDim
   use ModProcMH, ONLY:iComm
   use ModMpi
-  use ModAdvance, ONLY: State_VGB
-  use ModVarIndexes, ONLY: Rho_
   implicit none
   private !Except
-  logical,save :: DoInit=.true., DoInitDensityArr = .true.
+  logical,save :: DoInit=.true.
   character(LEN=10), save :: NameVector
   type(RouterType),save::Router
   type(GridDescriptorType),save::LineGrid,MhGrid
   type(DomainDecompositionType),save::LineDD
   real,allocatable,save,dimension(:)::Density_I,DeltaSNew_I
   real,allocatable,save,dimension(:,:)::GradDensity_DI
-  real, allocatable, save :: GradDensity_DGB(:,:,:,:,:)
-  real, allocatable,save, dimension(:,:,:,:)::Density_GB, DensityAux_GB
+
   !PUBLIC MEMBERS:
-  public::get_plasma_density,NameVector,GradDensity_DI,Density_I,DeltaSNew_I,&
-       GradDensity_DGB, Density_GB, DensityAux_GB, DoInitDensityArr
+  public::get_plasma_density,NameVector,GradDensity_DI,Density_I,DeltaSNew_I
   !EOP
 
 contains
@@ -90,6 +86,9 @@ contains
   subroutine get_density_local(&
        nPartial,iGetStart,Get,W,State_V,nVar)
     !USES:
+    use ModAdvance, ONLY: State_VGB
+    use ModVarIndexes, ONLY: Rho_
+    use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB
     use ModGeometry,ONLY: CellSize_DB, x_, y_, z_
     use ModPhysics, ONLY: No2Si_V, UnitRho_
     use CON_router
@@ -167,57 +166,3 @@ contains
     end if
   end subroutine put_density_value
 end module ModDensityAndGradient
-!==============================
-subroutine update_grad_density
-  use ModDensityAndGradient
-  use BATL_lib, ONLY: &
-       MaxDim, nDim, jDim_, kDim_, Unused_B, &
-       CellSize_DB, Xyz_DGB, CellVolume_GB, &
-       MinI,MinJ,MinK, MaxI,MaxJ,MaxK, MaxBlock, nI, nJ, nK, nBlock
-  use BATL_pass_cell, ONLY: message_pass_cell
-  use ModCellGradient, ONLY: calc_gradient
-  use ModFaceGradient, ONLY: set_block_field2
-  use ModAdvance, ONLY: State_VGB
-  use ModVarIndexes, ONLY: Rho_
-  integer, parameter :: nG = 1
-  integer:: iBlock
-  !------------------
-  if(DoInitDensityArr)then
-     DoInitDensityArr = .false.
-     allocate(GradDensity_DGB(nDim,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
-          1-nG*kDim_:nK+nG*kDim_,MaxBlock))
-     GradDensity_DGB = 0.0
-     allocate(Density_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:MaxBlock))
-     Density_GB = 0.0
-     allocate(DensityAux_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:MaxBlock))
-     DensityAux_GB = 0.0       
-  end if
-  do iBlock = 1, nBlock
-     if(Unused_B(iBlock))CYCLE
-     Density_GB(1:nI,1:nJ,1:nK,iBlock) = &
-          State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)
-  end do
-  ! fill ghost celss via message pass
-  call message_pass_cell(&
-       State_GB        = Density_GB, &
-       nProlongOrderIn = 1)
-
-  do iBlock = 1, nBlock
-     if(Unused_B(iBlock))CYCLE
-     ! correct ghost cells
-     call set_block_field2(&
-          iBlock    = iBlock, &
-          nVar      = 1, &
-          Field1_VG = DensityAux_GB, &
-          Field_VG  = Density_GB)
-     ! compute gradient
-     call calc_gradient(iBlock, Density_GB(:,:,:,iBlock), nG, &
-          GradDensity_DGB(:,:,:,:,iBlock))
-  end do
-  ! fill ghost cells for gradient via message pass
-  call message_pass_cell(&
-       nVar            = nDim,&
-       nG              = 1, &
-       State_VGB       = GradDensity_DGB, &
-       nProlongOrderIn = 1)
-end subroutine update_grad_density
