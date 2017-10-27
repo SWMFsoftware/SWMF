@@ -1254,3 +1254,61 @@ subroutine get_time_string
 
 end subroutine get_time_string
 
+!=========================================================================
+subroutine get_iVar(NameVar, iVar)
+
+  use ModMain,       ONLY: NameVarLower_V
+  use ModVarIndexes, ONLY: NameFluid_I, nVar
+  use ModMultiFluid, ONLY: extract_fluid_name, iFluid
+  use ModUtilities,  ONLY: lower_case
+
+  character(len=10), intent(inout) :: NameVar
+  integer,intent(out)              :: iVar
+
+  integer :: iVarLoop, iError
+  character(len=*), parameter :: NameSub = 'get_iVar'
+  !---------------------------------------------------------------------------
+
+  ! Initialize iVar
+  iVar = -1
+
+  ! Remove the fluid name first
+  call extract_fluid_name(NameVar)
+
+  ! In case the user specifies ux/uy/uz instead of mx/my/mz
+  select case(NameVar)
+  case('ux')
+     NameVar = 'mx'
+  case('uy')
+     NameVar = 'my'
+  case('uz')
+     NameVar = 'mz'
+  end select
+
+  ! Put back the fluid name
+  if (iFluid /= 1) NameVar=trim(NameFluid_I(iFluid))//trim(NameVar)
+
+  ! The first character in NameFluid_I is in upper case...
+  call lower_case(NameVar)
+
+  ! Find NameVar in NameVarLower_V if it is there
+  do iVarLoop =1,nVar
+     if (NameVar /= NameVarLower_V(iVarLoop)) CYCLE
+     iVar = iVarLoop
+     EXIT
+  end do
+
+  if(iVar < 0) then
+     ! Try reading iVar as an index.
+     read(NameVar,*,iostat=iError) iVar
+
+     ! If it is not an integer and not one of the element in NameVarLower_V
+     if (iError /= 0) call stop_mpi(NameSub//': unknown NameVar =' &
+          //trim(NameVar))
+  end if
+
+  ! iVar must be within 1 and nVar
+  if (iVar < 0 .or. iVar > nVar) call stop_mpi(NameSub//': check NameVar, ' &
+       //'iVar is not within 1 and nVar???')
+
+end subroutine get_iVar
