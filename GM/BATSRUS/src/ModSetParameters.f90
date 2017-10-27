@@ -505,20 +505,7 @@ contains
 
        case("#TESTVAR")
           call read_var('NameTestVar', NameTestVar, IsLowerCase=.true.)
-          VarTest = -1
-          do iTestVar =1,nVar
-             if (NameTestVar /= NameVarLower_V(iTestVar)) CYCLE
-             VarTest = iTestVar
-             EXIT
-          end do
-          ! Try reading VarTest as an index.
-          if(VarTest < 0) then
-             read(NameTestVar,*,iostat=iError) VarTest
-             if (iError /= 0) call stop_mpi(NameSub//': unknown NameTestVar =' &
-                  //trim(NameTestVar))
-          end if
-          ! Make sure VarTest is in a valid range
-          VarTest = max(1, min(nVar, VarTest))
+          call get_iVar(NameTestVar, VarTest)
 
        case("#TESTDIM")
           call read_var('iDimTest ',DIMtest)
