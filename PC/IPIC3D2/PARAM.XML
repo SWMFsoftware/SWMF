@@ -263,4 +263,41 @@ charge. (We may need to change this command in the near future. --Yuxi)
 
 </command>
 
+
+<command name="TIMESTEPPING">
+  <parameter name="useSWMFDt" type="logical" default="T"/>
+  <parameter name="useFixedDt" type="logical" default="F"/>
+  <parameter name="CFL/dt" type="real" >
+    
+#TIMESTEPPING
+T                useSWMFDt
+
+#TIMESTEPPING
+F                useSWMFDt
+F                useFixedDt
+0.4              CFL
+
+#TIMESTEPPING
+F                useSWMFDt
+T                useFixedDt
+0.4              dt (SI unit)
+
+The three possible ways to use this command is listed above. If useSWMFDt is ture,
+the PIC code will use the the timestep obtained from SWMF, which is the coupling
+period. When useSWMFDt is false, the third command sets a fixed
+time step or a CFL number if useFixedDt is true or false, respectively.    
+
+</command>
+
+<command name="ELECTRON">
+  <parameter name="qom" type="real" >
+
+#ELECTRON
+-100                     qom
+
+This command sets the charge per mass in normalized unit for electrons.
+It will be ignored when PIC is coupled with five-moment or six-moment MHD.
+    
+</command>
+
 </commandList>
