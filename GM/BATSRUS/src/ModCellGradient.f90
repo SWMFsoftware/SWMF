@@ -508,6 +508,11 @@ contains
   end subroutine calc_gradient3
   !=======================
   subroutine get_grad_dgb(Var_CB, GradVarInOut_DGB)
+    ! Unless GradVarInOut_DGB is provided, the result is stored
+    ! in the public array GradVar_DGB, which can be used for interpolation
+    ! outside of this module
+    ! CAUTION: you may omit GradVarInOut_DGB ONLY(!) if you can guarantee that 
+    ! get_grad_dgb isn't called again before you use GradVar_DGB
     use BATL_pass_cell, ONLY: message_pass_cell
     use ModFaceGradient, ONLY: set_block_field2
     !INPUT
