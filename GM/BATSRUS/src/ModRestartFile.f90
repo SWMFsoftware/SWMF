@@ -30,7 +30,7 @@ module ModRestartFile
        IsCartesian, IsCartesianGrid, IsGenRadius, &
        IsRoundCube, rRound0, rRound1
   use ModBlockData, ONLY: write_block_restart_files, read_block_restart_files
-
+  use ModWritePlot, ONLY: reverse_field
   implicit none
 
   private ! except

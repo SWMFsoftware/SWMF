@@ -11,7 +11,7 @@ module ModWritePlot
   public:: write_plot         ! write IDL, Tecplot, shell or box plot
   public:: adjust_plot_range  ! adjust the range of cut plots
   public:: set_plot_scalars   ! 
-
+  public:: reverse_field
 contains
 
   subroutine write_plot(iFile)
