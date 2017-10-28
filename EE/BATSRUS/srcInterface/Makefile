@@ -12,7 +12,6 @@ OBJECTS = \
 	ModBuffer.o \
 	ModRadioWaveImage.o \
 	ModGridDescriptor.o \
-	ModRadioWaveRaytracing.o \
 	ModDensityAndGradient.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
