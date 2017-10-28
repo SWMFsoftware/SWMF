@@ -53,8 +53,8 @@ subroutine write_plot_radiowave(iFile)
   real :: XPixel, XPixelSize, YPixel, YPixelSize
   real :: XLower, YLower, XUpper, YUpper
   real :: ImagePlaneDiagRadius
-  character (LEN=120) :: allnames, StringHeadLine, strFreq
-  character (LEN=500) :: unitstr_TEC, unitstr_IDL
+  character (LEN=120) :: StringHeadLine, strFreq
+  character (LEN=500) :: unitstr_TEC
   character (LEN=4) :: file_extension
   character (LEN=40) :: file_format
   logical :: oktest, oktest_me, DoTiming, DoTimingMe
@@ -117,7 +117,6 @@ subroutine write_plot_radiowave(iFile)
   end if
 
   unitstr_TEC = ''
-  unitstr_IDL = ''
 
   plot_type1=plot_type(ifile)
   plot_vars1 = plot_vars(ifile)
@@ -150,8 +149,6 @@ subroutine write_plot_radiowave(iFile)
   case('tec')
      unitstr_TEC = 'VARIABLES = "X", "Y",'//strFreq
      if(oktest .and. iProc==0) write(*,*) unitstr_TEC
-  case('idl')
-     if(oktest .and. iProc==0) write(*,*) unitstr_IDL
   end select
 
   allocate(Intensity_III(nXPixel,nYPixel,nFreq))
@@ -248,16 +245,13 @@ subroutine write_plot_radiowave(iFile)
         ! 2 in the next line means 2 dimensional plot, 1 in the next line
         !  is for a 2D cut, in other words one dimension is left out)
         write(UnitTmp_,"(i7,1pe13.5,3i3)") &
-             n_step, time_simulation, 2, neqpar, nplotvar
+             n_step, time_simulation, 2, 0, nFreq
 
         ! Grid size
         write(UnitTmp_,"(2i4)") nXPixel, nYPixel
 
-        ! Equation parameters
-        ! write(UnitTmp_,"(100(1pe13.5))") eqpar(1:neqpar)
-
         ! Coordinate, variable and equation parameter names
-        write(UnitTmp_,"(a)") allnames
+        write(UnitTmp_,"(a)")  'X  Y '//strFreq
 
         ! Data
         do jPixel = 1, nYPixel

@@ -1033,6 +1033,10 @@ test8_check:
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test8/SC_log_n000000.log \
 		> test8_sc_thread.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
+		${TESTDIR}/RESULTS/SC/rfr_rwi_4_t00000140_n0000200.out \
+		output/test8/SC_rfr.ref \
+		>> test8_sc_thread.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test8/IH_log_n000000.log \
