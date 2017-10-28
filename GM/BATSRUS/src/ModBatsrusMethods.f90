@@ -280,6 +280,7 @@ subroutine BATS_init_session
        UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
        UseProjection, UseConstrainB, UseParticles, UseLocalTimeStepNew
   use ModCT,   ONLY: DoInitConstrainB
+  use ModProjectDivB, ONLY: project_divb
   use ModHallResist, ONLY: UseHallResist, init_hall_resist, UseBiermannBattery
   use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
   use ModRadDiffusion, ONLY: init_rad_diffusion
@@ -353,7 +354,7 @@ subroutine BATS_init_session
   ! Make sure that ghost cells are up to date
   call exchange_messages
 
-  if(UseProjection)call project_B
+  if(UseProjection)call project_divb
 
   call BATS_save_files('INITIAL')
 
@@ -404,6 +405,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModWriteProgress, ONLY: write_timeaccurate
   use ModUpdateState, ONLY: select_conservative, update_b0, update_te0, &
        fix_anisotropy
+  use ModProjectDivb, ONLY: project_divb
 
   implicit none
 
@@ -550,8 +552,7 @@ subroutine BATS_advance(TimeSimulationLimit)
           call update_b0
   end if
 
-  if (UseProjection) call project_B
-
+  if (UseProjection) call project_divb
 
   ! AmrTime is the time to do AMR.
   if(DoAmr .and. AmrTime < DtAmr) AmrTime = DtAmr
@@ -582,7 +583,7 @@ subroutine BATS_advance(TimeSimulationLimit)
              '>>>>>>>>>>>>>>>>>>>> AMR <<<<<<<<<<<<<<<<<<<<'
      end if
 
-     if (UseProjection) call project_B
+     if (UseProjection) call project_divb
 
      ! Write plotfiles after AMR if required
      if(save_plots_amr)call BATS_save_files('AMRPLOTS')
@@ -601,6 +602,7 @@ subroutine BATS_init_constrain_b
   use ModProcMH
   use ModMain, ONLY: lVerbose, x_, y_, z_, nBlock
   use ModCT, ONLY : DoInitConstrainB
+  use ModProjectDivB, ONLY: proj_get_divb, project_divb
   use ModNumConst, ONLY: cTiny
   use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
   use ModIO, ONLY: write_prefix, iUnitOut
@@ -649,7 +651,7 @@ subroutine BATS_init_constrain_b
      end if
 
      ! Do the projection with UseConstrainB true
-     call project_B
+     call project_divb
 
      ! Check and report the accuracy of the projection
      call proj_get_divb(tmp1_BLK)

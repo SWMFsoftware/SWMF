@@ -30,7 +30,7 @@ contains
     use ModPartImplicit, ONLY: read_part_impl_param, init_mod_part_impl
     use ModImplHypre, ONLY: hypre_read_param
     use ModPhysics
-    use ModProject
+    use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModCT, ONLY : init_mod_ct, DoInitConstrainB
     use ModBlockData, ONLY: clean_block_data
     use BATL_lib, ONLY: read_amr_criteria, read_region_param, &
@@ -1458,13 +1458,6 @@ contains
 
        case("#PROJECTION")
           if(.not.UseB)CYCLE READPARAM
-          call read_var('TypeProjectIter' ,proj_method)
-          call read_var('TypeProjectStop' ,proj_typestop)
-          call read_var('RelativeLimit'   ,proj_divbcoeff)
-          call read_var('AbsoluteLimit'   ,proj_divbconst)
-          call read_var('MaxMatvec'       ,proj_matvecmax)
-          ! Make sure that DivbMax is recalculated
-          DivbMax = -1.0
 
        case("#CORRECTP")
           call read_var('pRatioLow',Pratio_lo)
