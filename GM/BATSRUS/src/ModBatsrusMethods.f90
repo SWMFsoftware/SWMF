@@ -379,6 +379,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModPhysics, ONLY : No2Si_V, UnitT_
   use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
        UseElectronPressure
+  use ModAdvanceExplicit, ONLY: advance_explicit
   use ModAdvectPoints, ONLY: advect_all_points
   use ModPartSteady, ONLY: UsePartSteady, IsSteadyState, &
        part_steady_select, part_steady_switch
@@ -463,7 +464,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   elseif(UseLocalTimeStep .and. n_step > 1 .and. time_accurate) then
      call advance_localstep(TimeSimulationLimit)
   else
-     call advance_expl(.true., -1)
+     call advance_explicit(.true., -1)
   endif
 
   if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)

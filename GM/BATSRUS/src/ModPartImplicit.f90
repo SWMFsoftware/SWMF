@@ -369,6 +369,7 @@ contains
     use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&
          time_BlK, tmp1_BLK, iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_, UseUpdateCheck, DoFixAxis
+    use ModAdvanceExplicit, ONLY: advance_explicit
     use ModCoarseAxis,ONLY:UseCoarseAxis, coarsen_axis_cells
     use ModPhysics, ONLY : No2Si_V, UnitT_
     use ModPointImplicit, ONLY: UsePointImplicit
@@ -477,7 +478,7 @@ contains
           HallCmaxFactor = 1.0
        endif
 
-       call advance_expl(.true., -1) 
+       call advance_explicit(.true., -1) 
 
        if(UseHallResist) HallCmaxFactor = HallCmaxFactorOrig
 
@@ -2043,7 +2044,8 @@ contains
     ! otherwise return              Res_VCB = Var_VCB(t+DtExpl)
 
     use ModMain
-    use ModAdvance, ONLY : FluxType,time_BLK
+    use ModAdvance, ONLY : FluxType, time_BLK
+    use ModAdvanceExplicit, ONLY: advance_explicit
     use ModMessagePass, ONLY: exchange_messages
     use ModMpi
 
@@ -2094,7 +2096,7 @@ contains
     ! Res_VCB = Var_VCB(t+dt)
     call implicit2explicit(Var_VCB)
     call exchange_messages
-    call advance_expl(DoCalcTimestep, -1)
+    call advance_explicit(DoCalcTimestep, -1)
     call explicit2implicit(1, nI, 1, nJ, 1, nK, Res_VCB)
 
     if(DoSubtract) Res_VCB(:,:,:,:,1:nBlockImpl) = &
