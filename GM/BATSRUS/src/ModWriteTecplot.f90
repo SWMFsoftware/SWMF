@@ -36,6 +36,7 @@ module ModWriteTecplot
   public:: write_tecplot_auxdata   ! write auxiliary information
   public:: write_tecplot_node_data ! write node averaged tecplot output
   public:: assign_node_numbers     ! assign node numbers for node averaged plot
+  public:: set_tecplot_var_string  ! set variable and unit names
 
   character(len=23), public :: textDateTime
   character(len=22), public :: textNandT
@@ -1825,5 +1826,312 @@ contains
     end if
 
   end subroutine assign_node_numbers
+
+  !============================================================================
+
+  subroutine set_tecplot_var_string( &
+       iFile, nPlotVar, NamePlotVar_V, StringVarTec)
+
+    ! Set StringVarTec with variable names and units 
+    ! based on NamePlotVar_V array
+
+    use ModPhysics
+    use ModUtilities,  ONLY: lower_case
+    use ModIO,         ONLY: plot_dimensional, plot_type1
+    use ModVarIndexes, ONLY: IsMhd
+    use ModIO,         ONLY: NameVarUserTec_I, NameUnitUserTec_I
+    use ModMultiFluid, ONLY: extract_fluid_name, iFluid, NameFluid
+    use BATL_lib,      ONLY: nDim
+
+    ! Arguments
+
+    integer, intent(in)              :: nPlotVar, iFile
+    character (len=*), intent(in)    :: NamePlotVar_V(nPlotVar)
+    character (len=1500), intent(out) :: StringVarTec 
+
+    character (len=20) :: NameTecFluid
+    character (len=20) :: String, NamePlotVar, NameTecVar, NameUnit
+    integer            :: iPlotVar, iVar
+    !--------------------------------------------------------------------------
+
+    ! Coordinate names and units
+    if(plot_type1(1:3) == 'box')then
+       if (plot_dimensional(iFile)) then
+          StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
+               // '", "", "'
+       else
+          StringVarTec = 'VARIABLES ="x", "y", "z'
+       end if
+
+    elseif(plot_type1(1:3) == 'shl')then
+       if (plot_dimensional(iFile)) then
+          StringVarTec = 'VARIABLES ="R '// trim(NameTecUnit_V(UnitX_)) &
+               // '", "Lon [deg]", "Lat [deg]'
+       else
+          StringVarTec = 'VARIABLES ="R", "Lon", "Lat'
+       end if
+
+    else
+       if (plot_dimensional(iFile)) then
+          StringVarTec = 'VARIABLES ="X ' // trim(NameTecUnit_V(UnitX_)) &
+               // '", "Y ' // trim(NameTecUnit_V(UnitX_))
+          if(nDim==3) StringVarTec = trim(StringVarTec) &
+               // '", "Z ' // trim(NameTecUnit_V(UnitX_))
+       else
+          if(nDim==2) StringVarTec = 'VARIABLES = "X", "Y'
+          if(nDim==3) StringVarTec = 'VARIABLES = "X", "Y", "Z'
+       end if
+
+    end if
+
+    do iPlotVar = 1, nPlotVar
+
+       NamePlotVar = NamePlotVar_V(iPlotVar)
+       call lower_case(NamePlotVar)
+       String = NamePlotVar
+       call extract_fluid_name(String)
+       NameTecFluid = ''
+       if(iFluid > 1 .or. .not. IsMhd) NameTecFluid = '^'//NameFluid
+
+       ! Default value for NameUnit is empty string
+       NameUnit = ''
+
+       select case(String)
+       case('rho') 
+          NameTecVar = 'Rho'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitRho_)
+       case('rhoux','mx') 
+          NameTecVar = 'Rho U_x'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitRhoU_)
+       case('rhouy','my') 
+          NameTecVar = 'Rho U_y'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitRhoU_)
+       case('rhouz','mz') 
+          NameTecVar = 'Rho U_z'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitRhoU_)
+       case('bx') 
+          NameTecVar = 'B_x'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('by') 
+          NameTecVar = 'B_y'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('bz') 
+          NameTecVar = 'B_z'
+          NameUnit   = NameTecUnit_V(UnitB_)
+          ! face centered magnetic field
+       case('bxl') ! east
+          NameTecVar = 'B_e'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('bxr') ! west
+          NameTecVar = 'B_w'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('byl') ! south
+          NameTecVar = 'B_s'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('byr') ! north
+          NameTecVar = 'B_n'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('bzl') ! bottom
+          NameTecVar = 'B_b'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('bzr') ! top
+          NameTecVar = 'B_t'
+          NameUnit   = NameTecUnit_V(UnitB_)
+          !
+       case('e')
+          NameTecVar = 'E'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitEnergydens_)
+       case('p','pth')
+          NameTecVar = 'P'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitP_)
+       case('ppar')
+          NameTecVar = 'P_par'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitP_)
+       case('pperp')
+          NameTecVar = 'P_perp'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitP_)
+       case('n')
+          NameTecVar = 'n'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitN_)
+       case('t','temp')
+          NameTecVar = 'T'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitTemperature_)
+       case('ux')
+          NameTecVar = 'U_x'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitU_)
+       case('uy') 
+          NameTecVar = 'U_y'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitU_)
+       case('uz', 'uzrot') 
+          NameTecVar = 'U_z'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitU_)
+       case('uxrot')
+          NameTecVar = 'U_x_rot'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitU_)
+       case('uyrot') 
+          NameTecVar = 'U_y_rot'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitU_)
+       case('ur') 
+          NameTecVar = 'U_r'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitU_)
+       case('rhour','mr') 
+          NameTecVar = 'Rho U_r'//NameTecFluid
+          NameUnit   = NameTecUnit_V(UnitRhoU_)
+       case('br') 
+          NameTecVar = 'B_r'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('b1x') 
+          NameTecVar = 'B1_x'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('b1y')                                 
+          NameTecVar = 'B1_y'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('b1z')                                 
+          NameTecVar = 'B1_z'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('b1r')                                 
+          NameTecVar = 'B1_r'
+          NameUnit   = NameTecUnit_V(UnitB_)
+       case('jx') 
+          NameTecVar = 'J_x'
+          NameUnit   = NameTecUnit_V(UnitJ_)
+       case('jy')                                 
+          NameTecVar = 'J_y'
+          NameUnit   = NameTecUnit_V(UnitJ_)
+       case('jz')                                 
+          NameTecVar = 'J_z'
+          NameUnit   = NameTecUnit_V(UnitJ_)
+       case('jr')                                 
+          NameTecVar = 'J_r'
+          NameUnit   = NameTecUnit_V(UnitJ_)
+       case('ex')
+          NameTecVar = 'E_x'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('ey')
+          NameTecVar = 'E_y'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('ez')                                 
+          NameTecVar = 'E_z'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('expot')
+          NameTecVar = 'Epot_x'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('eypot')
+          NameTecVar = 'Epot_y'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('ezpot')                                 
+          NameTecVar = 'Epot_z'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('exind')
+          NameTecVar = 'Eind_x'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('eyind')
+          NameTecVar = 'Eind_y'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('ezind')                                 
+          NameTecVar = 'Eind_z'
+          NameUnit   = NameTecUnit_V(UnitElectric_)         
+       case('gradpex')
+          NameTecVar = 'GradPe_x'
+          NameUnit   = 'nPa/m'
+       case('gradpey')
+          NameTecVar = 'GradPe_y'
+          NameUnit   = 'nPa/m'
+       case('gradpez')
+          NameTecVar = 'GradPe_z'
+          NameUnit   = 'nPa/m'
+       case('gradper')
+          NameTecVar = 'GradPe_r'
+          NameUnit   = 'nPa/m'
+       case('pote')
+          NameTecVar = 'PotE'
+          NameUnit   = 'V'
+       case('dive')
+          NameTecVar = 'div(E)'
+          NameUnit   = 'V/m^2'
+       case('er')                                 
+          NameTecVar = 'E_r'
+          NameUnit   = NameTecUnit_V(UnitElectric_)
+       case('pvecx')
+          NameTecVar = 'S_x'
+          NameUnit   = NameTecUnit_V(UnitPoynting_)
+       case('pvecy')
+          NameTecVar = 'S_y'
+          NameUnit   = NameTecUnit_V(UnitPoynting_)              
+       case('pvecz')
+          NameTecVar = 'S_z'
+          NameUnit   = NameTecUnit_V(UnitPoynting_)              
+       case('pvecr')
+          NameTecVar = 'S_r'
+          NameUnit   = NameTecUnit_V(UnitPoynting_)
+       case('b2ur')
+          NameTecVar = 'B^2/mu_0 U_r'
+          NameUnit   = NameTecUnit_V(UnitPoynting_)                
+       case('divb', 'divb_cd', 'divb_ct', 'absdivb')
+          NameTecVar = 'div B'
+          NameUnit   = NameTecUnit_V(UnitDivB_)
+       case('theta1')
+          NameTecVar = 'theta_1'
+          NameUnit   = NameTecUnit_V(UnitAngle_)
+       case('phi1')
+          NameTecVar = 'phi_1'
+          NameUnit   = NameTecUnit_V(UnitAngle_)
+       case('theta2')
+          NameTecVar = 'theta_2'
+          NameUnit   = NameTecUnit_V(UnitAngle_)
+       case('phi2')
+          NameTecVar = 'phi_2'
+          NameUnit   = NameTecUnit_V(UnitAngle_)
+       case('status')
+          NameTecVar = 'Status'
+       case('f1x','f1y','f1z','f2x','f2y','f2z')
+          NameTecVar = NamePlotVar
+       case('x','y','z','r','dx','dy','dz','req1','req2')
+          NameTecVar = String
+          NameUnit   = NameTecUnit_V(UnitX_)
+       case('dvol')
+          NameTecVar = 'dvol'
+          NameUnit   = trim(NameTecUnit_V(UnitX_))//'^3'
+       case('dt')
+          NameTecVar = 'dt'
+          NameUnit   = NameTecUnit_V(UnitT_)
+       case('dtblk')
+          NameTecVar = 'dtblk'
+          NameUnit   = NameTecUnit_V(UnitT_)
+       case('impl')
+          NameTecVar = 'impl'
+       case('proc')
+          NameTecVar = 'PE #'
+       case('blk')
+          NameTecVar = 'Block #'
+       case('node')
+          NameTecVar = 'Node #'
+       case('ew','erad')
+          NameTecVar = String
+          NameUnit   = NameTecUnit_V(UnitEnergydens_)
+       case default
+          ! Set the default or user defined values
+          NameTecVar = NameVarUserTec_I(iPlotVar)
+          NameUnit   = NameUnitUserTec_I(iPlotVar)
+
+          ! Try to find the plot variable among the basic variables
+          do iVar = 1, nVar
+             if(NamePlotVar /= NameVarLower_V(iVar)) CYCLE
+             NameUnit = NameUnitUserTec_V(iVar)
+             EXIT
+          end do
+       end select
+
+       StringVarTec = trim(StringVarTec) // '", "' // NameTecVar
+
+       if (plot_dimensional(iFile)) &
+            StringVarTec = trim(StringVarTec) // ' ' //NameUnit
+
+    end do
+
+    ! Append a closing double quote
+    StringVarTec = trim(StringVarTec) // '"'
+
+  end subroutine set_tecplot_var_string
 
 end module ModWriteTecplot
