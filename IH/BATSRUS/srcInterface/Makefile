@@ -12,7 +12,6 @@ OBJECTS = \
 	ModGridDescriptor.o\
 	ModBuffer.o\
 	ModRadioWaveImage.o\
-	ModRadioWaveRaytracing.o\
 	ModDensityAndGradient.o\
 	IH_wrapper.o
 
@@ -45,6 +44,6 @@ distclean: clean
 	rm -f ModGridDescriptor.f90 ModBuffer.f90 \
 		update_lagrangian_grid.f90 
 	rm -f Makefile.DEPEND ModDensityAndGradient.f90 \
-		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90
+		ModRadioWaveImage.f90
 
 # keep this line

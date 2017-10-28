@@ -299,7 +299,6 @@ allclean: ENV_CHECK rmdir
 		do (echo Distcleaning $$i; cd $$i; make distclean); done
 	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
 		do (echo Uninstalling $$i; cd $$i; ./Config.pl -uninstall); done
-	
 	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make distclean;fi #^CMP IF ESMF
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
@@ -416,7 +415,7 @@ EE/BATSRUS/src/Makefile:
 						  ../../../EE/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModRadioWaveImage.f90 \
 		ModDensityAndGradient.f90 \
 		../../../EE/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/	  
@@ -456,7 +455,7 @@ IH/BATSRUS/src/Makefile:
 					../../../IH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModRadioWaveImage.f90 \
 		ModDensityAndGradient.f90 \
 		../../../IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
@@ -498,7 +497,7 @@ OH/BATSRUS/src/Makefile:
 					../../../OH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModRadioWaveImage.f90 \
 		ModDensityAndGradient.f90 \
 		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
@@ -551,7 +550,7 @@ SC/BATSRUS/src/Makefile:
 			../../SC/BATSRUS/
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
-		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModRadioWaveImage.f90 \
 		ModDensityAndGradient.f90 \
 		../../../SC/BATSRUS/srcInterface
 	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \

@@ -11,7 +11,6 @@ OBJECTS = \
 	ModGridDescriptor.o\
         ModBuffer.o\
         ModRadioWaveImage.o\
-        ModRadioWaveRaytracing.o\
         ModDensityAndGradient.o\
 	OH_wrapper.o
 

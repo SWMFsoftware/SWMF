@@ -10,8 +10,7 @@ OBJECTS = \
 	ModGridDescriptor.o\
 	SC_wrapper.o\
 	ModDensityAndGradient.o\
-	ModRadioWaveImage.o\
-	ModRadioWaveRaytracing.o
+	ModRadioWaveImage.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I${DEMTDIR} -I${EMPIRICALEEDIR} -I../src -I../srcBATL
@@ -42,7 +41,7 @@ distclean: clean
 	rm -f   SC_wrapper.f90 SC_get_for_sp.f90 \
 		ModGridDescriptor.f90 update_lagrangian_grid.f90 \
 		Makefile.DEPEND ModBuffer.f90 ModDensityAndGradient.f90 \
-		ModRadioWaveImage.f90 ModRadioWaveRaytracing.f90 \
+		ModRadioWaveImage.f90 \
 		SC_get_for_mh.f90 SC_get_for_mh_with_xyz.f90 \
 		SC_put_from_mh.f90
 
