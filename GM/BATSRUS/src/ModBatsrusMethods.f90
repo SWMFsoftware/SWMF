@@ -799,9 +799,10 @@ contains
          DoSaveGridmag, write_magnetometers, DoWriteIndices, &
          write_geoindices
     use ModParticleFieldLine, ONLY: write_plot_particle
-    use ModWritePlotLos, ONLY: write_plot_los
-    use ModWriteTecplot, ONLY: assign_node_numbers
-    use ModMessagePass, ONLY: exchange_messages
+    use ModWritePlot,         ONLY: write_plot
+    use ModWritePlotLos,      ONLY: write_plot_los
+    use ModWriteTecplot,      ONLY: assign_node_numbers
+    use ModMessagePass,       ONLY: exchange_messages
 
     integer :: iSat
 
@@ -897,16 +898,16 @@ contains
 
        if(plot_type(ifile)/='nul' .and. .not.IsFound ) then
           ! Assign node numbers for tec plots
-          if( index(plot_form(ifile),'tec')>0 .and. DoAssignNodeNumbers)then
+          if( index(plot_form(iFile),'tec')>0 .and. DoAssignNodeNumbers)then
              call assign_node_numbers
              DoAssignNodeNumbers = .false.
           end if
 
-          if(  index(plot_type(ifile),'ray')>0 .or. &
-               index(plot_vars(ifile),'status')>0) call ray_trace
+          if(  index(plot_type(iFile),'ray')>0 .or. &
+               index(plot_vars(iFile),'status')>0) call ray_trace
 
           call timing_start('save_plot')
-          call write_plot_common(ifile)
+          call write_plot(iFile)
           call timing_stop('save_plot')
        end if
     elseif(iFile > Satellite_ .and. iFile <= Satellite_ + nSatellite) then

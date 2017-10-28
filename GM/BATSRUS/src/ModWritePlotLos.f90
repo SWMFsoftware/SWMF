@@ -77,11 +77,10 @@ contains
     use ModUtilities, ONLY: lower_case, split_string, join_string, &
          open_file, close_file
     use ModPlotFile, ONLY: save_plot_file
+    use ModWritePlot, ONLY: set_plot_scalars
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table, Table_I
     use BATL_lib, ONLY: Xyz_DGB, CellSize_DB, &
          IsCartesianGrid, IsCartesian, IsRzGeometry
-
-    implicit none
 
     ! Arguments
 
@@ -239,8 +238,8 @@ contains
          ' form = ',plot_form(ifile)
 
     call lower_case(plot_vars1)
-    call split_string(plot_vars1,nPlotVarLosMax,plotvarnames,nPlotVar)
-    call set_scalar_param(ifile,neqparmax,neqpar,eqparnames,eqpar)
+    call split_string(plot_vars1, nPlotVarLosMax, plotvarnames, nPlotVar)
+    call set_plot_scalars(iFile,nEqparMax, nEqpar,eqparnames, Eqpar)
 
     ! For generalized Los Table check PlotVarNames for string 'tbl'
     UseTableGen = any(PlotVarNames(1:nPlotVar)== 'tbl')
@@ -1699,7 +1698,6 @@ contains
 
     use ModPhysics, ONLY : NameTecUnit_V, UnitX_, UnitU_
     use ModIO, ONLY: plot_dimensional
-    implicit none
 
     ! Arguments
 
@@ -1821,8 +1819,6 @@ contains
 
     use ModPhysics, ONLY : NameIdlUnit_V, UnitX_, UnitU_
     use ModIO, ONLY : plot_dimensional
-
-    implicit none
 
     ! Arguments
 

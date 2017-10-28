@@ -3437,9 +3437,10 @@ contains
 
     subroutine correct_plot_range
 
-      use BATL_lib,    ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
+      use BATL_lib,     ONLY: radius_to_gen, Phi_, Theta_, nRoot_D, &
            CoordMin_D, CoordMax_D, nIJK_D
-      use ModKind,     ONLY: nByteReal
+      use ModKind,      ONLY: nByteReal
+      use ModWritePlot, ONLY: adjust_plot_range
       use ModIO
 
       integer :: iFile

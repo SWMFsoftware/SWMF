@@ -2985,8 +2985,8 @@ subroutine write_plot_line(iFile)
   use ModIO,       ONLY: StringDateOrTime,            &
        NamePlotDir, plot_type, plot_form, plot_dimensional, Plot_, &
        NameLine_I, nLine_I, XyzStartLine_DII, IsParallelLine_II, IsSingleLine_I
-  use ModMain,     ONLY: n_step, time_accurate, time_simulation, &
-       NamePrimitive_V
+  use ModWriteTecplot, ONLY: set_tecplot_var_string
+  use ModMain,     ONLY: n_step, time_accurate, time_simulation, NamePrimitive_V
   use ModIoUnit,   ONLY: UnitTmp_
   use ModUtilities,ONLY: open_file, close_file, join_string
   use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
@@ -3113,7 +3113,7 @@ subroutine write_plot_line(iFile)
   case('tec')
      IsIdl = .false.
      if(DoExtractState) then
-        call get_tec_variables(iFile, nVar, NamePrimitive_V, NameVar)
+        call set_tecplot_var_string(iFile, nVar, NamePrimitive_V, NameVar)
      else
         NameVar = '"X", "Y", "Z"'
      end if
