@@ -1044,15 +1044,16 @@ void c_Solver:: write_plot_idl(int cycle, bool doForceOutput){
 
   for(int iPlot=0; iPlot<nPlotFile; iPlot++){
     int dnOutput;
-    double dtOutput, timeNow;
+    double dtOutput, timeNow, dtTiny;
     dnOutput = col->getdnOutput(iPlot);
     dtOutput = col->getdtOutput(iPlot);
+    dtTiny = 1e-6*dtOutput; 
     timeNow  = col->getSItime();
     if(  (doForceOutput || (dnOutput > 0 && cycle % dnOutput==0) ||
-	  (dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot])) &&
+	  (dtOutput > 0 && timeNow+dtTiny >= nextOutputTime_I[iPlot])) &&
 	 lastOutputCycle_I[iPlot] != cycle){
-      if(dtOutput > 0 && timeNow >= nextOutputTime_I[iPlot]) {
-	nextOutputTime_I[iPlot] = floor(timeNow/dtOutput+1)*dtOutput;
+      if(dtOutput > 0 && timeNow+dtTiny >= nextOutputTime_I[iPlot]) {
+	nextOutputTime_I[iPlot] = floor((timeNow + dtTiny)/dtOutput+1)*dtOutput;
       }
       
       lastOutputCycle_I[iPlot] = cycle;
