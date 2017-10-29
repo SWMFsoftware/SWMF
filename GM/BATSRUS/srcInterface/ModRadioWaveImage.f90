@@ -6,11 +6,13 @@ module ModRadioWaveImage
   use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector
   use BATL_size, ONLY    : MaxDim
   implicit none
-
+  SAVE
 
   public :: ray_bunch_intensity
   real, pointer, dimension(:,:) :: Coord_DI
-
+  !\
+  !Frequency related:  in GGSE
+  real :: DensityCr = -1.0, DensityCrInv = -1.0
 contains !=========================================================
 
   subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
@@ -84,9 +86,6 @@ contains !=========================================================
     !Misc functions of inputs 
     !/     
     real :: XyzObservLen !=sqrt(sum(XyzObs_D**2))
-    !\
-    !Frequency related:
-    real :: DensityCr !In GGSE
     !\
     ! Same as ImageRange_I(4)
     real :: XLower, XUpper, YLower, YUpper
@@ -169,6 +168,7 @@ contains !=========================================================
     !
     DensityCr = cPi*cProtonMass*cElectronMass*1e6 &
          *(RadioFrequency/ProtonChargeSGSe)**2
+    DensityCrInv = 1.0/DensityCr
 
     !
     ! Determine the image plane inner coordinates of pixel centers
@@ -244,7 +244,7 @@ contains !=========================================================
        !\
        ! Advance rays through one step.
        call ray_path(nRay, UnusedRay_I, Slope_DI, &
-            DeltaS_I, Tolerance, DensityCr, Intensity_I)
+            DeltaS_I, Tolerance, Intensity_I)
        !Exclude rays which are out the integration sphere
        RAYS:do iRay = 1, nRay
           if(UnusedRay_I(iRay))CYCLE RAYS
@@ -263,7 +263,7 @@ contains !=========================================================
   end subroutine ray_bunch_intensity
   !=========
   subroutine ray_path(nRay, UnusedRay_I, Slope_DI, &
-       DeltaS_I, ToleranceInit, DensityCr, Intensity_I)
+       DeltaS_I, ToleranceInit, Intensity_I)
     !use ModCoordTransform
     !use CON_global_vector, ONLY: associate_with_global_vector
     use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
@@ -351,7 +351,7 @@ contains !=========================================================
     integer, intent(in) :: nRay   ! # of pixels in the raster
     real,    intent(inout), dimension(MaxDim,nRay) :: Slope_DI
     real,    intent(inout), dimension(nRay) :: Intensity_I, DeltaS_I
-    real,    intent(in) ::  ToleranceInit, DensityCr
+    real,    intent(in) ::  ToleranceInit
 
     ! a ray is excluded from processing if it is .true. 
     logical, intent(inout), dimension(nRay) :: UnusedRay_I   
@@ -380,7 +380,7 @@ contains !=========================================================
     real :: GradDielPermSqr, GradEpsDotSlope
     real :: ParabLen
     real, save :: &
-         Tolerance=0.1, ToleranceSqr=1.0e-2, DensityCrInv=1.0, StepMin = 1.0
+         Tolerance=0.1, ToleranceSqr=1.0e-2, StepMin = 1.0
     
     integer:: iRay, iDim
 
@@ -395,7 +395,6 @@ contains !=========================================================
        DistanceToCritSurf_I = 0.0
        allocate(IsOKRay_I(nRay))
        IsOKRay_I = .true.
-       DensityCrInv = 1.0/DensityCr
 
        !  minimum ten points between a vacuum and a critical surface and
        !  minimum 10 points over 1 rad of the curvature
