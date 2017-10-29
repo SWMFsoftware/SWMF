@@ -74,7 +74,7 @@ F			DoNormalizeCell
 #USERINPUTBEGIN ----------------
 
 #WAVE
-14			ElUx
+ElUx			NameVar
 1000.0			Width
 1e-2			Amplitude
 0.707106781186		LambdaX

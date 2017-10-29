@@ -74,7 +74,7 @@ SHOCKPOSITION
 #USERINPUTBEGIN ----------------
 
 #WAVE
-6			By
+By			NameVar
 1000.0			Width
 -1e-2			Amplitude
 1.0e-3			LambdaX
@@ -83,7 +83,7 @@ SHOCKPOSITION
 0.0			Phase
 
 #WAVE
-10			Ez
+Ez			NameVar
 1000.0			Width
 1e-1			Amplitude
 1.0e-3			LambdaX
