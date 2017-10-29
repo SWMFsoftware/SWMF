@@ -805,6 +805,7 @@ contains
     use ModParticleFieldLine, ONLY: write_plot_particle
     use ModWritePlot,         ONLY: write_plot
     use ModWritePlotLos,      ONLY: write_plot_los
+    use ModWritePlotRadiowave,ONLY: write_plot_radiowave
     use ModWriteTecplot,      ONLY: assign_node_numbers
     use ModMessagePass,       ONLY: exchange_messages
 
