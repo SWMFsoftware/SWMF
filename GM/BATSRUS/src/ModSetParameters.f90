@@ -31,7 +31,7 @@ contains
     use ModImplHypre, ONLY: hypre_read_param
     use ModPhysics
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
-    use ModCT, ONLY : init_mod_ct, DoInitConstrainB
+    use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
     use ModBlockData, ONLY: clean_block_data
     use BATL_lib, ONLY: read_amr_criteria, read_region_param, &
          DoCritAmr, DoAutoAmr, DoStrictAmr, BetaProlong,&

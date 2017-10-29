@@ -9,7 +9,7 @@ subroutine BATS_setup
   use ModMpi
   use ModProcMH
   use ModMain
-  use ModCT, ONLY : DoInitConstrainB
+  use ModConstrainDivB, ONLY: DoInitConstrainB
   use ModIO
   use ModAMR,      ONLY: nRefineLevelIC
   use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
@@ -239,7 +239,7 @@ contains
     ! Ensure zero divergence for the CT scheme
     if(UseConstrainB)then
        if(restart_Bface)then
-          DoInitConstrainB=.false.
+          DoInitConstrainB = .false.
        else
           call BATS_init_constrain_b
        end if
@@ -279,7 +279,7 @@ subroutine BATS_init_session
   use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
        UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
        UseProjection, UseConstrainB, UseParticles, UseLocalTimeStepNew
-  use ModCT,   ONLY: DoInitConstrainB
+  use ModConstrainDivB, ONLY: DoInitConstrainB
   use ModProjectDivB, ONLY: project_divb
   use ModHallResist, ONLY: UseHallResist, init_hall_resist, UseBiermannBattery
   use ModImplicit, ONLY: UseFullImplicit, UseSemiImplicit, TypeSemiImplicit
@@ -602,7 +602,7 @@ end subroutine BATS_advance
 subroutine BATS_init_constrain_b
   use ModProcMH
   use ModMain, ONLY: lVerbose, x_, y_, z_, nBlock
-  use ModCT, ONLY : DoInitConstrainB
+  use ModConstrainDivB, ONLY: DoInitConstrainB, Bcenter2Bface
   use ModProjectDivB, ONLY: proj_get_divb, project_divb
   use ModNumConst, ONLY: cTiny
   use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
@@ -1023,7 +1023,7 @@ subroutine BATSRUS_finalize
   use ModAdvance,      ONLY: clean_mod_advance
   use ModGeometry,     ONLY: clean_mod_geometry
   use ModNodes,        ONLY: clean_mod_nodes
-  use ModCT,           ONLY: clean_mod_ct
+  use ModConstrainDivB,ONLY: clean_mod_ct
   use ModRaytrace,     ONLY: clean_mod_raytrace
   use ModPartImplicit, ONLY: clean_mod_part_impl
   use ModSemiImplicit, ONLY: clean_mod_semi_impl

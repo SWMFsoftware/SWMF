@@ -15,7 +15,7 @@ module ModRestartFile
   use ModAdvance,    ONLY: State_VGB
   use ModGeometry,   ONLY: CellSize_DB, xyzStart_BLK, NameGridFile
   use ModIO,         ONLY: Restart_Bface
-  use ModCT,         ONLY: BxFace_BLK,ByFace_BLK,BzFace_BLK
+  use ModConstrainDivB, ONLY: BxFace_BLK, ByFace_BLK, BzFace_BLK
   use ModMain,       ONLY: UseConstrainB
   use ModImplicit, ONLY: UseImplicit, &
        n_prev, ImplOld_VCB, dt_prev

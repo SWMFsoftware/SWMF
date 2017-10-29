@@ -100,10 +100,10 @@ contains
     use ModProcMH
     use ModMain, ONLY: Itest, Jtest, Ktest, BLKtest
     use ModVarIndexes,ONLY: Bx_,Bz_,P_
-    use ModAdvance, ONLY : State_VGB
-    use ModGeometry, ONLY : true_cell
-    use ModMain, ONLY : UseConstrainB
-    use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
+    use ModAdvance, ONLY: State_VGB
+    use ModGeometry, ONLY: true_cell
+    use ModMain, ONLY: UseConstrainB
+    use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
     use ModMessagePass, ONLY: exchange_messages
     use BATL_lib, ONLY: Xyz_DGB
 
@@ -302,13 +302,12 @@ contains
     ! Calculate div B using simple finite differences
     ! Do corrections for mesh refinement
 
-    use ModMain, ONLY: nBlock, Unused_B
-    use ModSize, ONLY : nI,nJ,nK, MaxBlock, x_, y_, z_
-    use ModVarIndexes, ONLY : Bx_,By_,Bz_
-    use ModAdvance, ONLY : State_VGB
-    use ModMain, ONLY : UseConstrainB
-    use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
-    use BATL_lib, ONLY: CellSize_DB
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_
+    use ModAdvance, ONLY: State_VGB
+    use ModMain, ONLY: UseConstrainB
+    use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
+    use BATL_lib, ONLY:  nI,nJ,nK, MaxBlock, nBlock, Unused_B, &
+         x_, y_, z_, CellSize_DB
 
     ! Argument
 
@@ -449,7 +448,7 @@ contains
     use ModMain, ONLY : nBLK,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
     use ModGeometry, ONLY : true_cell,body_BLK
     use ModMain, ONLY : UseConstrainB
-    use ModCT
+!    use ModCT
     use BATL_lib, ONLY: CellSize_DB
 
     ! Arguments
@@ -464,7 +463,7 @@ contains
     real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK) :: dphi,ddphi
     integer :: i,j,k
     real :: phiC(-1:1,-1:1,-1:1), InvDx2, InvDy2, InvDz2
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call proj_boundphi(phi)
 
     if(UseConstrainB)then
@@ -660,15 +659,15 @@ contains
 
     ! Correct B field by gradient of phi
 
-    use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest, &
-         nBlock,Unused_B
+    use ModMain, ONLY : nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance,    ONLY : State_VGB
     use ModGeometry,   ONLY : true_cell
     use ModMain, ONLY : UseConstrainB
-    use ModCT
+    use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK, &
+         Bface2Bcenter, bound_bface
     use ModEnergy, ONLY: calc_energy_cell
-    use BATL_lib, ONLY: CellSize_DB
+    use BATL_lib, ONLY: CellSize_DB, x_, y_, z_, nI, nJ, nK, nBlock,Unused_B
 
     ! Arguments
     real, intent(inout) :: phi(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
@@ -678,7 +677,7 @@ contains
     real    :: DxInvHalf, DyInvHalf, DzInvHalf, DxInv, DyInv, DzInv
 
     logical :: oktest, oktest_me
-    !---------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     call set_oktest('proj_correction',oktest,oktest_me)
 

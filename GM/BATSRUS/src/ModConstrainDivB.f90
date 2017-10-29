@@ -2,24 +2,44 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-module ModCT
+module ModConstrainDivB
+
+  ! A flux averaged constrained transport scheme for block AMR grid. See 
+  !
+  ! G. Toth, 2000, Journal of Computational Physics, 161, 605-652
+  !
+  ! G. Toth and P. L. Roe, 2002, Journal of Computational Phys, 180, 736-750
+  !
+  ! Since we switched to BATL, it only works on uniform grid.
 
   use ModSize
-  use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc
+  use ModIO,     ONLY: iUnitOut, write_prefix
+  use ModProcMH, ONLY: iProc
 
   implicit none
   SAVE
 
-  !\
-  ! Variables for Constrained Transport
-  !/
+  private ! except
+
+  public:: init_mod_ct
+  public:: clean_mod_ct
+  public:: constrain_b
+  public:: constrain_ics
+  public:: Bcenter2Bface
+  public:: Bface2Bcenter
+  public:: get_vxb
+  public:: bound_vxb
+  public:: bound_bface
+
+  ! Initialize?
+  logical, public :: DoInitConstrainB = .true.
 
   ! Face centered magnetic field components, Bxface is centered on face X etc.
+  real, public, allocatable :: Bxface_BLK(:,:,:,:)
+  real, public, allocatable :: Byface_BLK(:,:,:,:)
+  real, public, allocatable :: Bzface_BLK(:,:,:,:)
 
-  real, allocatable :: Bxface_BLK(:,:,:,:)
-  real, allocatable :: Byface_BLK(:,:,:,:)
-  real, allocatable :: Bzface_BLK(:,:,:,:)
+  ! Local variables --------------
 
   ! Face centered normal magnetic field from the 4 finer neighbors
   ! on the two sides of the block (1=east/south/bot, 2=west/north/top)
@@ -34,14 +54,12 @@ module ModCT
   real, allocatable :: VxB_y(:,:,:,:)
   real, allocatable :: VxB_z(:,:,:,:)
 
-  logical :: DoInitConstrainB = .true.
-
 contains
   !============================================================================
   subroutine init_mod_ct
 
+    if(allocated(Bxface_BLK)) RETURN
 
-    if(allocated(Bxface_BLK)) return
     allocate(Bxface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
     allocate(Byface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
     allocate(Bzface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
@@ -60,7 +78,8 @@ contains
   !============================================================================
   subroutine clean_mod_ct
 
-    if(.not.allocated(Bxface_BLK)) return
+    if(.not.allocated(Bxface_BLK)) RETURN
+
     deallocate(Bxface_BLK)
     deallocate(Byface_BLK)
     deallocate(Bzface_BLK)
@@ -78,14 +97,7 @@ contains
 
   end subroutine clean_mod_ct
 
-end module ModCT
-
-
-! A flux averaged constrained transport scheme for block AMR grid. See 
-!
-! G. Toth, 2000, Journal of Computational Physics, 161, 605-652
-!
-! G. Toth and P. L. Roe, 2002, Journal of Computational Phys, 180, 736-750
+  !==========================================================================
 
 subroutine get_VxB(iBlock)
 
@@ -94,9 +106,7 @@ subroutine get_VxB(iBlock)
   use ModMain, ONLY : nI,nJ,nK,iTest,jTest,kTest,BLKtest
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
-  use ModCT, ONLY : VxB_x,VxB_y,VxB_z
   use BATL_lib, ONLY: CellFace_DB
-  implicit none
 
   integer, intent(in) :: iBlock
 
@@ -154,10 +164,8 @@ subroutine bound_VxB(iBlock)
   use ModParallel, ONLY : NOBLK,&
        neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
   use ModGeometry, ONLY : true_cell, body_BLK
-  use ModCT, ONLY : VxB_x,VxB_y,VxB_z
   use ModPhysics, ONLY: SW_UX,SW_UY,SW_UZ,SW_BX,SW_BY,SW_BZ
   use BATL_lib, ONLY: CellFace_DB
-  implicit none
 
   integer, intent(in) :: iBlock
 
@@ -249,8 +257,6 @@ subroutine constrain_B(iBlock)
   use ModSize
   use ModMain, ONLY : Dt,BLKtest,iTest,jTest,kTest
   use ModGeometry, ONLY : CellSize_DB
-  use ModCT, ONLY : VxB_x,VxB_y,VxB_z,Bxface_BLK,Byface_BLK,Bzface_BLK
-  implicit none
 
   integer, intent(in) :: iBlock
 
@@ -324,8 +330,6 @@ subroutine Bface2Bcenter(iBlock)
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
   use ModGeometry, ONLY : true_cell,body_BLK
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
-  implicit none
 
   integer, intent(in) :: iBlock
 
@@ -365,9 +369,7 @@ subroutine Bcenter2Bface(iBlock)
   use ModSize
   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   use ModAdvance, ONLY : State_VGB
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   use ModMain, ONLY: UseConstrainB
-  implicit none
 
   integer, intent(in) :: iBlock
 
@@ -414,8 +416,6 @@ subroutine bound_Bface(iBlock)
   use ModSize
   use ModMain,     ONLY: BLKtest
   use ModGeometry, ONLY: true_cell,body_BLK
-  use ModCT,       ONLY: Bxface_BLK,Byface_BLK,Bzface_BLK
-  implicit none
 
   integer, intent(in) :: iBlock
 
@@ -1102,10 +1102,7 @@ subroutine constrain_ICs(iBlock)
   use ModGeometry, ONLY : body_BLK, true_cell
   use ModIO, ONLY : restart
   use ModPhysics, ONLY : SW_Bx,SW_By,SW_Bz
-  use ModCT, ONLY : Bxface_BLK,Byface_BLK,Bzface_BLK
   use BATL_lib, ONLY: Xyz_DGB
-
-  implicit none
 
   integer, intent(in) :: iBlock
   !---------------------------------------------------------------------------
@@ -1248,10 +1245,8 @@ end subroutine constrain_ICs
 !   use ModMain
 !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE, &
 !        BLKneighborPE,BLKneighborBLK,DiLevelNei_IIIB,BLKneighborCHILD
-!   use ModCT, ONLY : VxB_x,VxB_y,VxB_z
 !   use ModAMR, ONLY : child2subface,child2subedge
 !   use ModMpi
-!   implicit none
 ! 
 !   ! Local variables
 ! 
@@ -1870,17 +1865,15 @@ end subroutine constrain_ICs
 ! 
 ! end subroutine correct_VxB
 ! 
-! !==============================================================================
+! !============================================================================
 ! subroutine b_face_fine_pass
 ! 
 !   ! Set B*FaceFine_*SB from finer face
 !   use ModProcMH
 !   use ModMain, ONLY : nBLock,Unused_B,BLKtest
-!   use ModCT
 !   use ModAMR, ONLY : child2subface
 !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE,BLKneighborCHILD
 !   use ModMpi
-!   implicit none
 ! 
 !   integer :: iError
 !   integer :: iBlock, iTag, iProcNei, iBlockNei
@@ -2059,3 +2052,5 @@ end subroutine constrain_ICs
 !   end subroutine copy_b_face_fine
 ! 
 ! end subroutine b_face_fine_pass
+
+end module ModConstrainDivB

@@ -11,12 +11,13 @@ subroutine set_ics(iBlock)
   use ModIO, ONLY : restart
   use ModPhysics
   use ModUserInterface ! user_set_ics
+  use ModConstrainDivB, ONLY: constrain_ics
   use ModMultiFluid
   use ModEnergy, ONLY: calc_energy_ghost
   use ModConserveFlux, ONLY: init_cons_flux
   use ModRestartFile, ONLY: UseRestartWithFullB
-  use BATL_lib, ONLY: Xyz_DGB
   use ModBoundaryGeometry, ONLY: iBoundary_GB
+  use BATL_lib, ONLY: Xyz_DGB
 
   implicit none
 
@@ -76,8 +77,8 @@ subroutine set_ics(iBlock)
            ! fix the units for the velocities
            do iFluid = 1, nFluid
               call select_fluid
-              ShockLeft_V(iUx:iUz)  = ShockLeftState_V(iUx:iUz) *Io2No_V(UnitU_)
-              ShockRight_V(iUx:iUz) = ShockRightState_V(iUx:iUz)*Io2No_V(UnitU_)
+              ShockLeft_V(iUx:iUz) = ShockLeftState_V(iUx:iUz) *Io2No_V(UnitU_)
+              ShockRight_V(iUx:iUz)= ShockRightState_V(iUx:iUz)*Io2No_V(UnitU_)
            end do
 
         end if
@@ -142,13 +143,13 @@ subroutine set_ics(iBlock)
            end if
 
         end do; end do; end do
-        
-         
+
         if(UseConstrainB)call constrain_ics(iBlock)
 
         if(UseUserICs) call user_set_ics(iBlock)
 
-        if(iSignRotationIC /= 0) call add_rotational_velocity(iSignRotationIC, iBlock)
+        if(iSignRotationIC /= 0) &
+             call add_rotational_velocity(iSignRotationIC, iBlock)
 
      end if ! not restart
 
