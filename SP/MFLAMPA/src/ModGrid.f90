@@ -23,8 +23,8 @@ module SP_ModGrid
   public:: DMomentumOverDEnergy_I
   public:: Begin_, End_, Shock_, ShockOld_
   public:: nVar, X_, Y_, Z_, D_, S_, LagrID_
-  public:: Rho_, T_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_, RhoOld_, BOld_, EFlux_
-  public:: Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
+  public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
+  public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
   public:: NameVar_V
   public:: TypeCoordSystem
 
@@ -107,39 +107,40 @@ module SP_ModGrid
   real, allocatable:: State_VIB(:,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar = 26
+  integer, parameter:: nVar = 27
   integer, parameter:: &
        !\
        !------- The following variables MUST be in CONTIGUOUS  order ----------
        !------- as this is used in subroutine read_mh_data --------------------
        !------- DO NOT CHANGE WITHOUT CAREFULL CONSIDERATION !!! --------------
-       LagrID_= 1, & ! Lagrangian id
-       X_     = 2, & ! 
-       Y_     = 3, & ! Cartesian coordinates
-       Z_     = 4, & ! 
-       Rho_   = 5, & ! Background plasma density
-       T_     = 6, & ! Background temperature
-       Ux_    = 7, &
-       Uy_    = 8, &
-       Uz_    = 9, &
-       Bx_    =10, & !
-       By_    =11, & ! Background magnetic field
-       Bz_    =12, & !
+       LagrID_ = 1, & ! Lagrangian id
+       X_      = 2, & ! 
+       Y_      = 3, & ! Cartesian coordinates
+       Z_      = 4, & ! 
+       Rho_    = 5, & ! Background plasma density
+       T_      = 6, & ! Background temperature
+       Ux_     = 7, & !
+       Uy_     = 8, & ! Background plasma bulk velocity
+       Uz_     = 9, & !
+       Bx_     =10, & !
+       By_     =11, & ! Background magnetic field
+       Bz_     =12, & !
        !-----------------------------------------------------------------------
-       D_     =13, & ! Distance to the next particle
-       S_     =14, & ! Distance from the beginning of the line
-       U_     =15, &
-       B_     =16, & ! Magnitude of magnetic field
-       RhoOld_=17, & ! Background plasma density
-       BOld_  =18, & ! Magnitude of magnetic field
-       Flux0_ =19, & ! Total integral (simulated) particle flux
-       Flux1_ =20, & ! Integral particle flux >  5 MeV (GOES Channel 1)
-       Flux2_ =21, & ! Integral particle flux > 10 MeV (GOES Channel 2)
-       Flux3_ =22, & ! Integral particle flux > 30 MeV (GOES Channel 3)
-       Flux4_ =23, & ! Integral particle flux > 50 MeV (GOES Channel 4)
-       Flux5_ =24, & ! Integral particle flux > 60 MeV (GOES Channel 5)
-       Flux6_ =25, & ! Integral particle flux >100 MeV (GOES Channel 6)
-       EFlux_ =26    ! Total integral energy flux
+       D_      =13, & ! Distance to the next particle
+       S_      =14, & ! Distance from the beginning of the line
+       U_      =15, & ! Magnitude of plasma bulk velocity
+       B_      =16, & ! Magnitude of magnetic field
+       DLogRho_=17, & ! Dln(Rho)/Dt, i.e. -div(U)
+       RhoOld_ =18, & ! Background plasma density
+       BOld_   =19, & ! Magnitude of magnetic field
+       Flux0_  =20, & ! Total integral (simulated) particle flux
+       Flux1_  =21, & ! Integral particle flux >  5 MeV (GOES Channel 1)
+       Flux2_  =22, & ! Integral particle flux > 10 MeV (GOES Channel 2)
+       Flux3_  =23, & ! Integral particle flux > 30 MeV (GOES Channel 3)
+       Flux4_  =24, & ! Integral particle flux > 50 MeV (GOES Channel 4)
+       Flux5_  =25, & ! Integral particle flux > 60 MeV (GOES Channel 5)
+       Flux6_  =26, & ! Integral particle flux >100 MeV (GOES Channel 6)
+       EFlux_  =27    ! Total integral energy flux
 
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
@@ -159,6 +160,7 @@ module SP_ModGrid
        'S         ', &
        'U         ', &
        'B         ', &
+       'DLogRho   ', &
        'RhoOld    ', &
        'BOld      ', &
        'Flux Total', &
@@ -342,6 +344,12 @@ contains
           ! plasma speed
           State_VIB(U_,iParticle, iBlock) = &
                sqrt(sum(State_VIB(Ux_:Uz_,iParticle,iBlock)**2))
+
+          ! divergence of plasma velocity
+          State_VIB(DLogRho_,iParticle,iBlock) = log(&
+               State_VIB(Rho_,iParticle,iBlock) / &
+               State_VIB(RhoOld_,iParticle,iBlock))
+
           ! magnetic field
           State_VIB(B_,iParticle, iBlock) = &
                sqrt(sum(State_VIB(Bx_:Bz_,iParticle,iBlock)**2))

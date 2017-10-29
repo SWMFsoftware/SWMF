@@ -15,8 +15,8 @@ module SP_ModWrite
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
        Proc_, Begin_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, &
-       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, EFlux_, &
-       Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
+       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
+       EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V
 
   use SP_ModAdvance, ONLY: DoTraceShock
@@ -243,6 +243,11 @@ contains
       if(index(StringPlot,' rho ') > 0 .or. &
            File_I(iFile)%iKindData == MH1D_)then
          File_I(iFile) % DoPlot_V(Rho_) = .true.
+         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      end if
+      ! lagrangian derivative of plasma density ----------
+      if(index(StringPlot,' drho ') > 0)then
+         File_I(iFile) % DoPlot_V(DLogRho_) = .true.
          File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
       end if
       ! temperature -------------

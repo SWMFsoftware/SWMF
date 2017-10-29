@@ -12,8 +12,8 @@ module SP_ModAdvance
 
   use SP_ModGrid, ONLY: &
        X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
-       Begin_, End_, Shock_, ShockOld_, EFlux_,&
-       Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
+       Begin_, End_, Shock_, ShockOld_, DLogRho_, &
+       EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        nBlock, &
        State_VIB, Distribution_IIB, iGridLocal_IB, &
        MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
@@ -429,12 +429,12 @@ contains
        ! various data along the line
        Radius_I(iBegin:iEnd) = &
             sqrt(sum(State_VIB(X_:Z_, iBegin:iEnd, iBlock)**2, 1))
-       Rho_I(    iBegin:iEnd) = State_VIB(Rho_,   iBegin:iEnd,iBlock)
-       U_I(      iBegin:iEnd) = State_VIB(U_,     iBegin:iEnd,iBlock)
-       T_I(      iBegin:iEnd) = State_VIB(T_,     iBegin:iEnd,iBlock)
-       BOld_I(   iBegin:iEnd) = State_VIB(BOld_,  iBegin:iEnd,iBlock)
-       RhoOld_I( iBegin:iEnd) = State_VIB(RhoOld_,iBegin:iEnd,iBlock)
-       DLogRho_I(iBegin:iEnd) = log(Rho_I(iBegin:iEnd)/RhoOld_I(iBegin:iEnd))
+       Rho_I(    iBegin:iEnd) = State_VIB(Rho_,    iBegin:iEnd,iBlock)
+       U_I(      iBegin:iEnd) = State_VIB(U_,      iBegin:iEnd,iBlock)
+       T_I(      iBegin:iEnd) = State_VIB(T_,      iBegin:iEnd,iBlock)
+       BOld_I(   iBegin:iEnd) = State_VIB(BOld_,   iBegin:iEnd,iBlock)
+       RhoOld_I( iBegin:iEnd) = State_VIB(RhoOld_, iBegin:iEnd,iBlock)
+       DLogRho_I(iBegin:iEnd) = State_VIB(DLogRho_,iBegin:iEnd,iBlock)!log(Rho_I(iBegin:iEnd)/RhoOld_I(iBegin:iEnd))
 
        ! identify shock in the data
        call get_shock_location
