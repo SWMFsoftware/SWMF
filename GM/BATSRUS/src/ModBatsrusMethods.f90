@@ -405,7 +405,8 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModWriteProgress, ONLY: write_timeaccurate
   use ModUpdateState, ONLY: select_conservative, update_b0, update_te0, &
        fix_anisotropy
-  use ModProjectDivb, ONLY: project_divb
+  use ModProjectDivB, ONLY: project_divb
+  use ModCleanDivB,   ONLY: clean_divb
 
   implicit none
 
