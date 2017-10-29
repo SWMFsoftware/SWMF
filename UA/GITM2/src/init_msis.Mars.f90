@@ -451,7 +451,7 @@ subroutine read_dust
            write(*,*) "Does this file exist?"
            call stop_GITM("In init_msis_Mars")
         endif
-        if (cline(1:6) .eq. '#START')  notstarted = 0
+        if (cline(1:6) .eq. '#START')  notstarted = .false.
      enddo
      
      read(iInputUnit_,*,iostat=iError) DustLatitude
@@ -524,7 +524,7 @@ subroutine read_dust
            write(*,*) "Does this file exist?"
            call stop_GITM("In init_msis_Mars")
         endif
-        if (cline(1:6) .eq. '#START')  notstarted = 0
+        if (cline(1:6) .eq. '#START')  notstarted = .false.
      enddo
      
      read(iInputUnit_,*,iostat=iError) DustLatitude
