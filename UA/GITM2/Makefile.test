@@ -12,8 +12,8 @@ timing:
 
 test: 
 	@rm -f *.diff
-	-@($(MAKE) test_earth)
-	-@($(MAKE) test_mars)
+	-@($(MAKE) test_gitm_earth)
+	-@($(MAKE) test_gitm_mars)
 	@ls -l *.diff
 
 # All tests are done in this directory:
@@ -33,7 +33,7 @@ test_help:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} STANDALONE=YES GMDIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} STANDALONE=YES
 
 ### EARTH GITM TEST ###
 
