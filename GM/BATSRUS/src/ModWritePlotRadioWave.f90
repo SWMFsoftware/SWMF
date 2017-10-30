@@ -1,11 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!^GFG COPYRIGHT UM
+
 module ModWritePlotRadiowave
   implicit none
   SAVE
-  PRIVATE !Except
-  public write_plot_radiowave
+
+  private !Except
+  public:: write_plot_radiowave
+
 contains
   !============================================================================
   subroutine write_plot_radiowave(iFile)
@@ -84,8 +87,7 @@ contains
     character (LEN=4)   :: NameFileExtension
     character (LEN=40)  :: NameFileFormat
     logical             :: DoTest, DoTestMe
-    !--------------------------------------------------------
-
+    !------------------------------------------------------------------------
     !
     ! Initialize
     !
@@ -120,7 +122,7 @@ contains
     call parse_freq_string(StringRadioFrequency_I(iFile), RadioFrequency_I, &
          NameVar_I, nFreq) 
 
-    if (iProc .eq. 0) then
+    if (iProc == 0) then
        if(DoTest)then
           write(*,*) 'XyzObserv_D     =', XyzObserv_D
           write(*,*) 'ImageRange_I   =', ImageRange_I, &
@@ -174,18 +176,19 @@ contains
     do iFreq = 1, nFreq
        ! Calculate approximate radius of the  critical surface around the sun
        ! from the frequency
-       if (iProc .eq. 0) write(*,*) 'RAYTRACE START: RadioFrequency = ', &
-            RadioFrequency_I(iFreq)
-       if (iProc .eq. 0) write(*,*) 'RAYTRACE START: ImagePlaneDiagRadius = ', &
-            ImagePlaneDiagRadius 
-       if (iProc .eq. 0) write(*,*) 'RAYTRACE START: rIntegration = ', &
-            rIntegration
-
+       if (iProc == 0)then
+          write(*,*) 'RAYTRACE START: RadioFrequency = ', &
+               RadioFrequency_I(iFreq)
+          write(*,*) 'RAYTRACE START: ImagePlaneDiagRadius = ', &
+               ImagePlaneDiagRadius 
+          write(*,*) 'RAYTRACE START: rIntegration = ', &
+               rIntegration
+       end if
        call get_ray_bunch_intensity(XyzObserv_D, RadioFrequency_I(iFreq), &
             ImageRange_I, rIntegration, &
             nXPixel, nYPixel, Intensity_III(:,:,iFreq))
 
-       if (iProc .eq. 0) write(*,*) 'RAYTRACE END'
+       if (iProc == 0) write(*,*) 'RAYTRACE END'
     end do
 
     if (iProc==0) then
@@ -273,19 +276,21 @@ contains
   !==========================================================================
 
   subroutine parse_freq_string(NameVarAll, Frequency_I, NameVar_I, nFreq)
+
     use ModIO, ONLY: nPlotRfrFreqMax
-    implicit none
+
     !\
     ! INPUT
     !/
     ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz'
+
     character(len=*), intent(in) :: NameVarAll
     real,    intent(out) :: Frequency_I(nPlotRfrFreqMax)
     integer, intent(out) :: nFreq
     character(len=*), intent(out) :: NameVar_I(nPlotRfrFreqMax)
     character(len=50) :: cTmp, NameFreqUnit
     integer :: iFreq, lNameVarAll, iChar, iTmp
-
+    !-------------------------------------------------------------------------
 
     lNameVarAll = len(trim(NameVarAll))
     nFreq = 1
@@ -294,16 +299,16 @@ contains
     ! Skip spaces, commas, or semicolons
     if (is_delim(NameVarAll(1:1))) then
        do while(is_delim(NameVarAll(iChar:iChar)) &
-            .and. (iChar .le. lNameVarAll))
+            .and. (iChar <= lNameVarAll))
           iChar = iChar + 1
        end do
     end if
 
-    do while (iChar .le. lNameVarAll)
+    do while (iChar <= lNameVarAll)
 
        iTmp = 0
        do while(is_num(NameVarAll(iChar:iChar)) &
-            .and. (iChar .le. lNameVarAll))
+            .and. (iChar <= lNameVarAll))
           iTmp = iTmp + 1
           cTmp(iTmp:iTmp) = NameVarAll(iChar:iChar)
           iChar = iChar + 1
@@ -312,13 +317,13 @@ contains
        read(cTmp(1:iTmp),*) Frequency_I(nFreq)
 
        do while(is_delim(NameVarAll(iChar:iChar)) &
-            .and. (iChar .le. lNameVarAll))
+            .and. (iChar <= lNameVarAll))
           iChar = iChar + 1
        end do
 
        iTmp = 0
        do while((.not. is_delim(NameVarAll(iChar:iChar))) &
-            .and. (iChar .le. lNameVarAll))
+            .and. (iChar <= lNameVarAll))
           iTmp = iTmp + 1
           cTmp(iTmp:iTmp) = NameVarAll(iChar:iChar)
           iChar = iChar + 1
@@ -342,7 +347,7 @@ contains
        end select
 
        do while(is_delim(NameVarAll(iChar:iChar)) &
-            .and. (iChar .le. lNameVarAll))
+            .and. (iChar <= lNameVarAll))
           iChar = iChar + 1
        end do
 
@@ -361,13 +366,13 @@ contains
     do iFreq = 1, nFreq
        if ((Frequency_I(iFreq) > 0.0) .and. (Frequency_I(iFreq)<1e3)) then
           write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq), '_Hz' 
-       else if ((Frequency_I(iFreq)>=1e3) .and. (Frequency_I(iFreq)<1e6)) then
+       else if((Frequency_I(iFreq)>=1e3) .and. (Frequency_I(iFreq)<1e6)) then
           write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq)/1e3, '_kHz' 
-       else if ((Frequency_I(iFreq) >= 1e6) .and. (Frequency_I(iFreq)<1e9)) then
+       else if((Frequency_I(iFreq) >= 1e6) .and. (Frequency_I(iFreq)<1e9)) then
           write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e6, '_MHz' 
-       else if ((Frequency_I(iFreq) >= 1e9).and.(Frequency_I(iFreq)< 1e12)) then
+       else if((Frequency_I(iFreq) >= 1e9).and.(Frequency_I(iFreq)<1e12)) then
           write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e9, '_GHz' 
-       else if ((Frequency_I(iFreq) >= 1e12).and.(Frequency_I(iFreq)< 1e15))then
+       else if((Frequency_I(iFreq) >= 1e12).and.(Frequency_I(iFreq)<1e15))then
           write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e12, '_THz' 
        end if
     end do
@@ -377,21 +382,24 @@ contains
     end do
 
   contains 
-    !==============================
-    function is_num(c) result(yesno)
-      character(len=1) :: c
-      logical :: yesno
-      yesno = (lge(c, '0') .and. lle(c, '9')) .or. (c .eq. '.') &
-           .or. (c .eq. 'e') .or. (c .eq. 'E') &
-           .or. (c .eq. 'd') .or. (c .eq. 'D') &
-           .or. (c .eq. '+') .or. (c .eq. '-')
+    !=========================================================================
+    logical function is_num(c)
+      character, intent(in) :: c
+
+      is_num = (lge(c, '0') .and. lle(c, '9')) .or. (c == '.') &
+           .or. (c == 'e') .or. (c == 'E') &
+           .or. (c == 'd') .or. (c == 'D') &
+           .or. (c == '+') .or. (c == '-')
+
     end function is_num
-    !==============================
-    function is_delim(c) result(yesno)
-      character(len=1) :: c
-      logical :: yesno
-      yesno = (c .eq. ' ') .or. (c .eq. ',') .or. (c .eq. ';')
+    !==========================================================================
+    logical function is_delim(c)
+      character, intent(in) :: c
+
+      is_delim = (c == ' ') .or. (c == ',') .or. (c == ';')
+
     end function is_delim
-    !==============================
+    !=========================================================================
   end subroutine parse_freq_string
+
 end module ModWritePlotRadiowave
