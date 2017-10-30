@@ -670,8 +670,7 @@ contains
     use CON_coupler
     use CON_world,      ONLY: get_comp_info
     use CON_comp_param, ONLY: lNameVersion
-    use ModImPressure                              ! Storage for IM pressure
-    use ModNumConst
+    use ModImCoupling                              ! Storage for IM pressure
     use ModMain, ONLY : n_step,time_simulation
     use ModIoUnit, ONLY: UNITTMP_
     use ModProcMH, ONLY: iProc

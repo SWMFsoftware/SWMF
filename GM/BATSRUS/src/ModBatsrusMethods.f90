@@ -388,6 +388,7 @@ subroutine BATS_advance(TimeSimulationLimit)
   use ModImplicit, ONLY: UseImplicit, n_prev, UseSemiImplicit
   use ModSemiImplicit, ONLY: advance_semi_impl
   use ModIeCoupling, ONLY: apply_ie_velocity
+  use ModImCoupling, ONLY: apply_im_pressure
   use ModTimeStepControl, ONLY: UseTimeStepControl, control_time_step
   use ModParticleFieldLine, ONLY: advect_particle_line
   use ModLaserHeating,    ONLY: add_laser_heating
