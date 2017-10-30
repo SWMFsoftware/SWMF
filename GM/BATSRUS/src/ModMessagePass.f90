@@ -27,6 +27,7 @@ contains
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
 
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
+    use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModProcMH
     use ModMain, ONLY : nBlock, Unused_B, &
          time_loop, &

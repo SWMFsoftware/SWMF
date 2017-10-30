@@ -8,12 +8,23 @@ module ModBoundaryGeometry
   implicit none
   SAVE
 
+  private ! except
+
+  public:: init_mod_boundary_cells      ! initialize module
+  public:: read_boundary_geometry_param ! read parameters
+  public:: fix_geometry                 ! set geometry variables 
+  public:: fix_block_geometry           ! set geometry variables for a block
+  public:: fix_boundary_ghost_cells     ! recalculate "true_cell" in ghost cells
+
   ! iBoundary_GB contains the index of the boundary that the cell belongs to.
-  integer, allocatable :: iBoundary_GB(:,:,:,:)
+  integer, allocatable, public :: iBoundary_GB(:,:,:,:)
 
   ! Cells inside domain have index domain_ that is smaller than smallest 
   ! boundary index (SolidBc_ = -3)
-  integer, parameter :: domain_ = -10
+  integer, parameter, public :: domain_ = -10
+
+
+  ! Local variables -------------------------------
 
   ! Boundary parameter for SolidState
   character(len=15) :: TypeSolidGeometry = 'none'
@@ -43,7 +54,7 @@ contains
     use ModMain,      ONLY: Coord1MinBc_, xMinBc_, solidBc_
     use ModReadParam, ONLY: read_var
     use BATL_size,    ONLY: nDim
-    
+
     integer :: i
 
     character(len=*), intent(in):: NameCommand
@@ -103,8 +114,6 @@ contains
          Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
     use ModAdvance, ONLY: time_BLK
-
-    implicit none
 
     integer, intent(in) :: iBlock
     logical, intent(in), optional :: DoSolveSolidIn
@@ -178,15 +187,15 @@ contains
           end select
        end if
     end if
-    
+
     ! Set iBoundary_GB for body1 and body2 (always face boundary)            
     if(UseBody2) then
        where( R2_BLK(:,:,:,iBlock) < rbody2) &
-          iBoundary_GB(:,:,:,iBlock) = body2_
+            iBoundary_GB(:,:,:,iBlock) = body2_
     end if
     if(body1) then
        where( R_BLK(:,:,:,iBlock) < rbody ) &
-         iBoundary_GB(:,:,:,iBlock) = body1_
+            iBoundary_GB(:,:,:,iBlock) = body1_
     end if
 
     ! No face BC is applied for TypeFaceBc_I(1:6) if not set in PARAM.in   
@@ -242,67 +251,64 @@ contains
 
   end subroutine fix_geometry
 
+  !============================================================================
+
+  subroutine fix_boundary_ghost_cells
+
+    ! Recalculate true_cell information in ghost cells if grid changed. 
+
+    use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
+         BlkTest, iTest, jTest, kTest, iteration_number, nOrderProlong
+    use ModGeometry, ONLY: true_cell, body_BLK
+    use BATL_lib, ONLY: message_pass_cell
+
+    integer:: iBlock
+    integer:: iGridHere = -1, iDecompositionHere = -1
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'fix_boundary_ghost_cells'
+    !----------------------------------------------------------------------------
+    if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition) RETURN
+
+    iGridHere = iNewGrid; iDecompositionHere = iNewDecomposition
+
+    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
+         true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
+
+    ! DoResChangeOnly=true works as long as the ghost cells are correctly set
+    ! away from resolution changes. This usually holds, but not if the 
+    ! boundary cells are set based on the state variables read from a restart
+    ! file that has no ghost cell information saved. This can only happen
+    ! at the very beginning of a run when iteration_number == 0.
+
+    if(nOrderProlong > 1)then
+       call message_pass_cell(iBoundary_GB, &
+            DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+    else
+       call message_pass_cell(iBoundary_GB, &
+            nProlongOrderIn=1, nCoarseLayerIn=2, &
+            DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
+            DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
+    end if
+
+    if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
+         iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+
+       true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock)  &
+            .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
+
+       body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
+    end do
+
+    if(DoTestMe) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
+         true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
+
+  end subroutine fix_boundary_ghost_cells
+
 end module ModBoundaryGeometry
 
-!=============================================================================
-
-subroutine fix_boundary_ghost_cells
-
-  ! Recalculate true_cell information in ghost cells if grid changed. 
-
-  use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
-  use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-       BlkTest, iTest, jTest, kTest, iteration_number, nOrderProlong
-  use ModGeometry, ONLY: true_cell, body_BLK
-  !use ModProcMH, ONLY: iProc
-  use BATL_lib, ONLY: message_pass_cell
-
-  implicit none
-
-  integer:: iBlock
-  integer:: iGridHere = -1, iDecompositionHere = -1
-
-  logical:: DoTest, DoTestMe
-  character(len=*), parameter:: NameSub = 'fix_boundary_ghost_cells'
-  !----------------------------------------------------------------------------
-  if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition) RETURN
-
-  iGridHere = iNewGrid; iDecompositionHere = iNewDecomposition
-
-  call set_oktest(NameSub, DoTest, DoTestMe)
-
-  if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
-       true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
-
-  ! DoResChangeOnly=true works as long as the ghost cells are correctly set
-  ! away from resolution changes. This usually holds, but not if the 
-  ! boundary cells are set based on the state variables read from a restart
-  ! file that has no ghost cell information saved. This can only happen
-  ! at the very beginning of a run when iteration_number == 0.
-
-  if(nOrderProlong > 1)then
-     call message_pass_cell(iBoundary_GB, &
-          DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
-  else
-     call message_pass_cell(iBoundary_GB, &
-          nProlongOrderIn=1, nCoarseLayerIn=2, &
-          DoSendCornerIn=.true., DoRestrictFaceIn=.true., &
-          DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
-  end if
-
-  if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
-       iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
-
-  do iBlock = 1, nBlock
-     if(Unused_B(iBlock)) CYCLE
-
-     true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock)  &
-          .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
-
-     body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
-  end do
-
-  if(DoTestMe) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
-       true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
-
-end subroutine fix_boundary_ghost_cells

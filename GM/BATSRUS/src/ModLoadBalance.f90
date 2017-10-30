@@ -245,6 +245,7 @@ contains
          SkippedBlock_, ImplBlock_, SteadyBlock_, &
          UseLowOrderRegion, IsLowOrderOnly_B
     use ModGeometry,   ONLY: True_Blk, true_cell, far_field_BCs_Blk
+    use ModBoundaryGeometry, ONLY: fix_boundary_ghost_cells
     use ModPartSteady, ONLY: UsePartSteady
     use BATL_lib,      ONLY: Unused_BP
     use ModParallel
