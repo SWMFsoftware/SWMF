@@ -13,16 +13,17 @@ module ModParticleFieldLine
        iProc,&
        MaxDim, nDim, &
        interpolate_grid_amr_gc, check_interpolate_amr_gc, &
-       Particle_I, CellSize_DB, Xyz_DGB, CellVolume_GB, &
-       MinI,MinJ,MinK, MaxI,MaxJ,MaxK, MaxBlock, nI, nJ, nK, nBlock, &
-       jDim_, kDim_, allocate_particles, Unused_B, &
+       Particle_I, Xyz_DGB, CellVolume_GB, &
+       MaxBlock, nI, nJ, nK, nBlock, &
+       allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
        mark_undefined
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
   use ModPhysics, ONLY: rBody
-  use ModCellGradient, ONLY: GradCosBR_DGB => GradVar_DGB
+  use ModCellGradient, ONLY: calc_gradient_ghost, GradCosBR_DGB => GradVar_DGB
+
   implicit none
   SAVE
 
@@ -242,7 +243,7 @@ contains
        iIndexStart_II,&
        UseInputInGenCoord)
     use BATL_geometry, ONLY: coord_to_xyz
-    use ModCellGradient, ONLY: get_grad_dgb
+
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -308,7 +309,7 @@ contains
     !/
     allocate(CosBR_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
     call compute_cosbr
-    call get_grad_dgb(CosBR_CB)
+    call calc_gradient_ghost(CosBR_CB)
 
     !\
     ! Trace field lines
@@ -392,7 +393,7 @@ contains
       use ModMain, ONLY: UseB0
       use ModB0, ONLY: B0_DGB
       use ModGeometry, ONLY: R_BLK
-      use ModCellGradient, ONLY: calc_gradient
+
       integer :: iBlock, i, j, k ! loop variables
       real    :: XyzCell_D(nDim), BCell_D(nDim)
       !------------------------------------------------------------------------
@@ -572,7 +573,6 @@ contains
   end subroutine extract_particle_line
   !=======================================================================
   subroutine trace_particle_line(iDirTrace)
-    use ModCoordTransform, ONLY: cross_product
     ! the subroutine is the tracing loop;
     ! tracing starts at KindEnd_ particles and proceeds in a given direction
     !------------------------------------------------------------------------
@@ -774,7 +774,7 @@ contains
       ! current direction
       real, intent(inout):: Dir_D(MaxDim)
       ! aux vectors
-      real, dimension(MaxDim):: C_D, R_D, D_D, A_D
+      real, dimension(MaxDim):: C_D, R_D, A_D
       ! deviation from radial direction
       real:: DCosBR
       ! threshold for deviation from radial direction to apply correction
@@ -876,8 +876,10 @@ contains
   end subroutine copy_end_to_regular
   !========================================================================
   subroutine get_step_size(Xyz_D, iBlock, StepSize)
+
     ! returns interpolate step size to be used during extraction; 
     ! based on cell size of cells to be used in the interpolation stencil
+
     real,    intent(in) :: Xyz_D(MaxDim)
     integer, intent(in) :: iBlock
     real,    intent(out):: StepSize
@@ -887,7 +889,6 @@ contains
     real   :: Weight_I(2**nDim)
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
-    character(len=200):: StringError
     character(len=*), parameter:: NameSub = "get_b_dir"
     !----------------------------------------------------------------------
     StepSize = 0.0
@@ -907,8 +908,10 @@ contains
   subroutine get_b_dir(Xyz_D, iBlock, Dir_D)
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: get_b0
+
     ! returns the direction of magnetic field 
     ! as well as the block used for interpolation
+
     real,    intent(in) :: Xyz_D(MaxDim)
     integer, intent(in) :: iBlock
     real,    intent(out):: Dir_D(MaxDim)
@@ -945,23 +948,24 @@ contains
     end if
     ! normalize vector to unity
     Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
+
   end subroutine get_b_dir
   !========================================================================
   subroutine get_grad_cosbr(Xyz_D, iBlock, Grad_D)
-    use ModMain, ONLY: UseB0
-    use ModB0, ONLY: get_b0
+
+
     ! returns the direction of magnetic field 
     ! as well as the block used for interpolation
+
     real,          intent(in) :: Xyz_D(MaxDim)
     integer,       intent(in) :: iBlock
     real,          intent(out):: Grad_D(MaxDim)
 
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim), DirB_D(MaxDim)
+    real   :: Weight_I(2**nDim)
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
-    character(len=200):: StringError
     character(len=*), parameter:: NameSub = "get_grad_cosbr"
     !----------------------------------------------------------------------
     Grad_D = 0
@@ -1307,7 +1311,7 @@ contains
 
     ! Save particle data
 
-    use ModProcMH,  ONLY: iComm, iProc, nProc
+    use ModProcMH,  ONLY: iProc, nProc
     use ModMain,    ONLY: n_step, time_accurate, time_simulation
     use ModIO,      ONLY: &
          StringDateOrTime, NamePlotDir, &
@@ -1323,8 +1327,6 @@ contains
 
     logical:: IsIdl
     integer:: iPlotFile
-    integer:: iParticle ! loop variable
-    integer:: nParticle
 
     character(len=*), parameter :: NameSub = 'write_plot_particle'
     !------------------------------------------------------------------------

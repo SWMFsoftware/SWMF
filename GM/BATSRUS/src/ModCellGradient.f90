@@ -13,24 +13,20 @@ module ModCellGradient
   SAVE
   private ! except
 
-  public:: calc_divergence
-  public:: calc_gradient
+  public:: calc_divergence ! calculate divergence
+  public:: calc_gradient   ! calculate gradient
+  public:: calc_gradient_ghost    ! set gradient in ghost cells too
+
+  real, public, allocatable :: GradVar_DGB(:,:,:,:,:)
+
+  ! Local variables -------------
 
   integer, allocatable:: iTrue_G(:,:,:)
-
 
   interface calc_gradient
      module procedure calc_gradient1, calc_gradient3
   end interface
 
-  !\
-  ! The following tools may be use to interpolate the gradient in any
-  ! point.
-  !/
-  public:: get_grad_dgb, GradVar_DGB
-  real, allocatable :: GradVar_DGB(:,:,:,:,:)
-  logical :: DoAllocate = .true.
-  integer, parameter :: nG1 = 1
 contains
 
   !==========================================================================
@@ -506,73 +502,72 @@ contains
        end if
     end if
   end subroutine calc_gradient3
-  !=======================
-  subroutine get_grad_dgb(Var_CB, GradVarInOut_DGB)
+  !==========================================================================
+  subroutine calc_gradient_ghost(Var_CB, GradVarInOut_DGB)
+
+    use ModFaceGradient, ONLY: set_block_field2
+    use BATL_lib, ONLY: j0_, nJp1_, k0_, nKp1_, message_pass_cell
+
     ! Unless GradVarInOut_DGB is provided, the result is stored
     ! in the public array GradVar_DGB, which can be used for interpolation
     ! outside of this module
     ! CAUTION: you may omit GradVarInOut_DGB ONLY(!) if you can guarantee that 
-    ! get_grad_dgb isn't called again before you use GradVar_DGB
-    use BATL_pass_cell, ONLY: message_pass_cell
-    use ModFaceGradient, ONLY: set_block_field2
-    !INPUT
+    ! calc_gradient_ghost isn't called again before you use GradVar_DGB
+
     real, intent(in)    :: Var_CB(1:nI,1:nJ,1:nK,1:MaxBlock)
-    !OPTIONAL
-    real, optional, intent(inout) :: GradVarInOut_DGB(&
-         nDim,1-nG1:nI+nG1,1-nG1*jDim_:nJ+nG1*jDim_,&
-         1-nG1*kDim_:nK+nG1*kDim_,MaxBlock)
-    !Local
+
+    real, optional, intent(inout) :: &
+         GradVarInOut_DGB(nDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlock)
+
     real  :: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  
     real  :: VarCopy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    !Loop vars: 
+
     integer :: iBlock
-    !-------------------------
+    !-------------------------------------------------------------------------
     Var_GB = 0.0; VarCopy_G = 0.0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        Var_GB(1:nI,1:nJ,1:nK,iBlock) = Var_CB(:,:,:,iBlock)
     end do
 
-    call message_pass_cell(&
-         State_GB        = Var_GB, &
-         nProlongOrderIn = 1)
-    if(.not.present(GradVarInOut_DGB).and.DoAllocate)then
-       allocate(GradVar_DGB(&
-            nDim,1-nG1:nI+nG1,1-nG1*jDim_:nJ+nG1*jDim_,&
-            1-nG1*kDim_:nK+nG1*kDim_,MaxBlock))
-       DoAllocate = .false.
+    ! set scalar variables in the ghost cells
+    call message_pass_cell(Var_GB, nProlongOrderIn = 1)
+    if(.not.present(GradVarInOut_DGB))then
+       if(.not. allocated(GradVar_DGB)) &
+            allocate(GradVar_DGB(nDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlock))
     end if
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
        ! correct ghost cells
-       call set_block_field2(&
-            iBlock    = iBlock, &
-            nVar      = 1, &
-            Field1_VG = VarCopy_G, &
-            Field_VG  = Var_GB(:,:,:,iBlock))
-       ! compute gradient
+       call set_block_field2(iBlock, nVar=1, &
+            Field1_VG = VarCopy_G, Field_VG=Var_GB(:,:,:,iBlock))
+
+       ! compute gradient in cell centers
        if(present(GradVarInOut_DGB))then
-          call calc_gradient1(iBlock, Var_GB(:,:,:,iBlock), nG1, &
+          call calc_gradient1(iBlock, Var_GB(:,:,:,iBlock), 1, &
                GradVarInOut_DGB(:,:,:,:,iBlock))
        else
-          call calc_gradient1(iBlock, Var_GB(:,:,:,iBlock), nG1, &
+          call calc_gradient1(iBlock, Var_GB(:,:,:,iBlock), 1, &
                GradVar_DGB(:,:,:,:,iBlock))
        end if
     end do
+
     ! fill ghost cells for gradient via message pass
     if(present(GradVarInOut_DGB))then
        call message_pass_cell(&
-            nVar            = nDim,&
-            nG              = nG1, &
+            nVar            = nDim, &
+            nG              = 1,    &
             State_VGB       = GradVarInOut_DGB, &
             nProlongOrderIn = 1)
     else
        call message_pass_cell(&
-            nVar            = nDim,&
-            nG              = nG1, &
+            nVar            = nDim, &
+            nG              = 1,    &
             State_VGB       = GradVar_DGB, &
             nProlongOrderIn = 1)
     end if
-  end subroutine get_grad_dgb
-  !==================
+
+  end subroutine calc_gradient_ghost
+
 end module ModCellGradient

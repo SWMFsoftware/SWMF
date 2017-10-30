@@ -30,7 +30,7 @@ contains
          NamePlotDir, StringDateOrTime, nPlotRfrFreqMax
     use ModUtilities, ONLY: open_file, close_file
     use ModIoUnit, ONLY: UnitTmp_
-    use ModCellGradient, ONLY: get_grad_dgb
+    use ModCellGradient, ONLY: calc_gradient_ghost
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: Rho_
     use BATL_lib, ONLY:  nI, nJ, nK
@@ -170,9 +170,9 @@ contains
     end if
     allocate(Intensity_III(nXPixel,nYPixel,nFreq))
     Intensity_III = 0.0
-    !\
-    !Get density gradient
-    call get_grad_dgb(State_VGB(Rho_,1:nI,1:nJ,1:nK,:))
+
+    ! Get density gradient
+    call calc_gradient_ghost(State_VGB(Rho_,1:nI,1:nJ,1:nK,:))
     do iFreq = 1, nFreq
        ! Calculate approximate radius of the  critical surface around the sun
        ! from the frequency
