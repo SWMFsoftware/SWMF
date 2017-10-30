@@ -217,7 +217,7 @@ rho ux uy uz ti te bx by bz I01 I02 p
 g rbody
 rfr idl rwi
 -1
-100.0
+10.0
 -67.92
 200.40
 -26.91
