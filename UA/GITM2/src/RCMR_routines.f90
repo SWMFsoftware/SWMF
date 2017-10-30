@@ -26,7 +26,7 @@ subroutine run_RCMR
   implicit none
 
   integer :: status(MPI_STATUS_SIZE), iError, ii_loop
-  real :: output_est, ulimit, llimit, dummy_TEC_calculated, dummy
+  real :: output_est(1,1), ulimit, llimit, dummy_TEC_calculated, dummy
   double precision :: localVar
   !double precision, dimension(12) :: TEC_calculated = 0     !ANKIT: holds the value of TEC at AA 
   double precision, dimension(:), allocatable :: TEC_calculated     !ANKIT: holds the value of TEC at AA 
@@ -238,14 +238,14 @@ subroutine run_RCMR
      if (ustep > C_on) then
         output_est = u(1, ustep)
      else if (ustep <= C_on) then
-        u(:,ustep) = output_est
+        u(1,ustep) = output_est(1,1)
      end if
 
      if(RCMROutType == 'F107') then
-        f107_est  = output_est
+        f107_est  = output_est(1,1)
         f107a_est = f107_est
      else if(RCMROutType == "PHOTOELECTRON") then
-        PhotoElectronHeatingEfficiency_est = output_est
+        PhotoElectronHeatingEfficiency_est = output_est(1,1)
      elseif(RCMROutType == "EDC") then !ANKIT 6 Oct 2014
         EDC_est = output_est
         !write (*,*) "EDC estimate is ", EDC_est, ustep
@@ -259,7 +259,7 @@ subroutine run_RCMR
   ! Send the F10.7 Estimate to all the different processors
   ! AGB Question: why use MPI_SCATTER and not MPI_Bcast?
   if (iProc==0) then
-     scattered(:) = output_est
+     scattered(1) = output_est(1,1)
   end if
 
   call MPI_SCATTER(scattered, 1, mpi_double_precision, scatter, 1, &

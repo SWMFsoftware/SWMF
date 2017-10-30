@@ -39,7 +39,7 @@ subroutine advance
      else if(RCMROutType == "PHOTOELECTRON") then
         PhotoElectronHeatingEfficiency = PhotoElectronHeatingEfficiency_est 
      else if(RCMROutType == "EDC") then
-        EddyDiffusionCoef = EDC_est  !Ankit23May16: Added EDC_est out
+        EddyDiffusionCoef = EDC_est(1,1)  !Ankit23May16: Added EDC_est out
      end if
   end if
 

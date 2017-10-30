@@ -43,6 +43,7 @@ subroutine set_inputs
   character (len=iCharLen_), dimension(100) :: cTempLines
 
   real :: Vx, Bx, Bz, By, Kp, HemisphericPower, tsim_temp
+  real :: EDC_est_tmp
   real*8 :: DTime
 
   call report("set_inputs",1)
@@ -1227,7 +1228,9 @@ subroutine set_inputs
                  !!ANKIT: TEC read
               else if(RCMROutType == 'EDC') then
                  RCMRFlag = .true.
-                 call read_in_real(EDC_est, iError)
+                 call read_in_real(EDC_est_tmp, iError)
+                 EDC_est(1,1) = EDC_est_tmp
+                 ! call read_in_real(EDC_est, iError)
                  
                  if(iError /= 0) then
                     write (*,*) 'Unrecognizable initial eddy diffusion '
@@ -1239,7 +1242,7 @@ subroutine set_inputs
                  end if
                  
                  if(RCMROutType == 'EDC') then
-                    EddyDiffusionCoef = EDC_est
+                    EddyDiffusionCoef = EDC_est(1,1)
                  end if
               end if
               ! Quality check of the satellite indexes will occur when
