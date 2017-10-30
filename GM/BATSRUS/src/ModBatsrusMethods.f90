@@ -142,15 +142,15 @@ contains
 
   subroutine set_initial_conditions
 
-    use ModIO,          ONLY: restart
-    use ModIO,          ONLY: restart_Bface
-    use ModRestartFile, ONLY: read_restart_files
-    use ModMessagePass, ONLY: exchange_messages
-    use ModMain,        ONLY: UseB0
-    use ModB0,          ONLY: set_b0_reschange
-    use ModFieldLineThread, ONLY: UseFieldLineThreads, set_threads
-    use ModAMR,         ONLY: do_amr, set_levels
-    use ModLoadBalance, ONLY: load_balance
+    use ModSetInitialCondition, ONLY: set_initial_condition
+    use ModIO,                  ONLY: restart, restart_Bface
+    use ModRestartFile,         ONLY: read_restart_files
+    use ModMessagePass,         ONLY: exchange_messages
+    use ModMain,                ONLY: UseB0
+    use ModB0,                  ONLY: set_b0_reschange
+    use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
+    use ModAMR,                 ONLY: do_amr, set_levels
+    use ModLoadBalance,         ONLY: load_balance
 
     use ModUserInterface ! user_initial_perturbation, user_action
 
@@ -166,7 +166,7 @@ contains
        do iLevel=1, nRefineLevelIC
           call timing_start('amr_ics_set')
           do iBlock = 1, nBlockMax
-             call set_ICs(iBlock)
+             call set_initial_condition(iBlock)
           end do
           call timing_stop('amr_ics_set')
 
@@ -205,7 +205,7 @@ contains
 
     do iBlock = 1, nBlockMax
        ! Initialize solution blocks
-       call set_ICs(iBlock)
+       call set_initial_condition(iBlock)
     end do
 
     call user_action('initial condition done')
@@ -279,6 +279,7 @@ subroutine BATS_init_session
   use ModMain, ONLY: iSignRotationIC, UseUserPerturbation, &
        UseRadDiffusion, UseHeatConduction, UseIonHeatConduction, &
        UseProjection, UseConstrainB, UseParticles, UseLocalTimeStepNew
+  use ModSetInitialCondition, ONLY: add_rotational_velocity
   use ModConstrainDivB, ONLY: DoInitConstrainB
   use ModProjectDivB, ONLY: project_divb
   use ModHallResist, ONLY: UseHallResist, init_hall_resist, UseBiermannBattery
@@ -625,7 +626,7 @@ subroutine BATS_init_constrain_b
   do iBlock=1, nBlock
      ! Estimate Bface from the centered B values
      call Bcenter2Bface(iBlock)
-     ! Calculate energy (it is not set in set_ICs)
+     ! Calculate energy (it is not set in set_initial_condition)
      ! because the projection scheme will need it
 !!! call calc_energy(iBlock)
   end do
