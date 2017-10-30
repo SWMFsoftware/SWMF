@@ -14,7 +14,7 @@ module ModDensityAndGradient
   implicit none
   private !Except
   logical,save :: DoInit=.true.
-  character(LEN=10), save :: NameVector
+  character(LEN=10), save :: NameVector, NameMask
   type(RouterType),save::Router
   type(GridDescriptorType),save::LineGrid,MhGrid
   type(DomainDecompositionType),save::LineDD
@@ -22,7 +22,8 @@ module ModDensityAndGradient
   real,allocatable,save,dimension(:,:)::GradDensity_DI
 
   !PUBLIC MEMBERS:
-  public::get_plasma_density,NameVector,GradDensity_DI,Density_I,DeltaSNew_I
+  public::get_plasma_density, NameVector, NameMask
+  public::GradDensity_DI,Density_I,DeltaSNew_I
   !EOP
 
 contains
@@ -70,6 +71,7 @@ contains
          GridDescriptorTarget=LineGrid,&
          Router=Router,&
          NameMappingVector=NameVector,&
+         NameMask=NameMask, &
          interpolate=interpolation_amr_gc)
 
     call global_message_pass(Router=Router,&

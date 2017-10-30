@@ -3,16 +3,21 @@
 module ModRadioWaveImage
   use ModConst, ONLY: cPi, cElectronMass, cProtonMass
   use ModCoordTransform, ONLY: cross_product
-  use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector
+  use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector,&
+       allocate_mask, associate_with_global_mask
   use BATL_size, ONLY    : MaxDim
   implicit none
   SAVE
 
   public :: ray_bunch_intensity
-  real, pointer, dimension(:,:) :: Coord_DI
+  real, pointer    :: Coord_DI(:,:)
+  logical, pointer :: IsMask_I(:)
+  real, allocatable             :: Xyz_DI(:,:)
   !\
   !Frequency related:  in GGSE
   real :: DensityCr = -1.0, DensityCrInv = -1.0
+  !\
+
 contains !=========================================================
 
   subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
@@ -61,7 +66,7 @@ contains !=========================================================
     !
     use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord, coord_to_xyz
     use ModMain,ONLY:NameThisComp
-    use ModDensityAndGradient,ONLY: NameVector, &
+    use ModDensityAndGradient,ONLY: NameVector, NameMask, &
          Density_I, GradDensity_DI, DeltaSNew_I
 
     implicit none
@@ -139,9 +144,9 @@ contains !=========================================================
     real, dimension(nXPixel*nYPixel) :: Intensity_I, DeltaS_I
     !\
     ! Parameters
-    real,parameter :: Tolerance = 0.01, DeltaS = 1.0
+    real,parameter  :: Tolerance = 0.01, DeltaS = 1.0
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
-    logical, save :: DoAllocate = .true.
+    logical, save   :: DoAllocate = .true.
     !\
     !Loop variables
     integer ::  i, j, iRay 
@@ -159,9 +164,15 @@ contains !=========================================================
        DoAllocate=.false.
        ! Symbolic name of the global vector:
        NameVector = NameThisComp//'_Pos_DI'
+       NameMask   = NameThisComp//'_Mask_I' 
        call allocate_vector(NameVector, 3, nRay)
+       NameMask   = NameThisComp//'_Mask_I' 
+       call allocate_mask(NameMask, nRay)
        call associate_with_global_vector(Coord_DI, NameVector)
+       call associate_with_global_mask(IsMask_I, NameMask)
        allocate(Density_I(nRay), GradDensity_DI(MaxDim,nRay),DeltaSNew_I(nRay))
+       allocate(Xyz_DI(MaxDim,nRay))
+       Xyz_DI(MaxDim,nRay) = 0.0
     end if
     !
     ! Calculate the critical density from the frequency, in CGS
@@ -224,13 +235,8 @@ contains !=========================================================
           ObservToIntSphereDist = -sum(XyzObserver_D*Slope_DI(:,iRay))&
                - sqrt(rIntegration**2 - XyzObservLen**2 &
                + sum(Slope_DI(:,iRay)*XyzObserver_D)**2)
-          XyzAtIntSphere_D = XyzObserver_D &
+          Xyz_DI(:,iRay) = XyzObserver_D &
                + Slope_DI(:,iRay)*ObservToIntSphereDist
-          if(IsCartesianGrid)then
-             Coord_DI(:,iRay) = XyzAtIntSphere_D 
-          else
-             call xyz_to_coord(XyzAtIntSphere_D, Coord_DI(:,iRay))
-          end if
        end do
     end do
     !
@@ -248,12 +254,7 @@ contains !=========================================================
        !Exclude rays which are out the integration sphere
        RAYS:do iRay = 1, nRay
           if(UnusedRay_I(iRay))CYCLE RAYS
-          if(IsCartesianGrid)then
-             SolarDistSqr = sum(Coord_DI(:,iRay)**2)
-          else
-             call coord_to_xyz(Coord_DI(:,iRay),Xyz_D)
-             SolarDistSqr = sum(Xyz_D**2)
-          end if
+          SolarDistSqr = sum(Xyz_DI(:,iRay)**2)
           UnusedRay_I(iRay) = SolarDistSqr .gt. rIntegrationSqr
        end do RAYS
     end do
@@ -264,8 +265,6 @@ contains !=========================================================
   !=========
   subroutine ray_path(nRay, UnusedRay_I, Slope_DI, &
        DeltaS_I, ToleranceInit, Intensity_I)
-    !use ModCoordTransform
-    !use CON_global_vector, ONLY: associate_with_global_vector
     use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
          GradDensity_DI, Density_I, DeltaSNew_I
     use ModPhysics, ONLY   : No2Si_V, UnitRho_, UnitX_
@@ -365,7 +364,6 @@ contains !=========================================================
     real,    save, dimension(MaxDim)       :: StepX_D, StepY_D, RelGradRefrInx_D 
     real,    save, dimension(MaxDim)       :: GradDielPerm_D, PositionHalfBack_D
 
-    real, save, allocatable             :: Xyz_DI(:,:)
     real, save, pointer, dimension(:)   :: DistanceToCritSurf_I
 
     ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
@@ -384,13 +382,11 @@ contains !=========================================================
     
     integer:: iRay, iDim
 
-    character(LEN=20),save:: TypeBoundaryDown_D(MaxDim), TypeBoundaryUp_D(MaxDim)
+   ! character(LEN=20),save:: TypeBoundaryDown_D(MaxDim), TypeBoundaryUp_D(MaxDim)
     !---------------
 
     if (IsNewEntry) then
        IsNewEntry = .false.
-       allocate(Xyz_DI(MaxDim,nRay))
-       Xyz_DI(MaxDim,nRay) = 0.0
        allocate(DistanceToCritSurf_I(nRay))
        DistanceToCritSurf_I = 0.0
        allocate(IsOKRay_I(nRay))
@@ -405,15 +401,15 @@ contains !=========================================================
        
        ! One (ten-thousandth) hundredth of average step 
        StepMin = 1e-2*sum(DeltaS_I)/nRay
-       do iDim=1,MaxDim
-          TypeBoundaryDown_D(iDim) = trim(TypeCellBc_I(2*iDim-1))
-          TypeBoundaryUp_D(iDim)   = trim(TypeCellBc_I(2*iDim))
-       end do
-       if(iProc==0)then
-          write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
-          write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
-          write(*,*)'StepMin=',StepMin
-       end if
+      ! do iDim=1,MaxDim
+      !    TypeBoundaryDown_D(iDim) = trim(TypeCellBc_I(2*iDim-1))
+      !    TypeBoundaryUp_D(iDim)   = trim(TypeCellBc_I(2*iDim))
+      ! end do
+      ! if(iProc==0)then
+      !    write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
+      !    write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
+      !    write(*,*)'StepMin=',StepMin
+      ! end if
           
     end if
 
@@ -421,11 +417,6 @@ contains !=========================================================
 
     do iRay = 1, nRay
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
-       if(IsCartesianGrid)then
-          Xyz_DI(:, iRay)= Coord_DI(:,iRay)
-       else
-          call coord_to_xyz(Coord_DI(:,iRay), Xyz_DI(:, iRay))
-       end if
        Xyz_DI(:,iRay) = Xyz_DI(:,iRay) + &
             Slope_DI(:,iRay)*0.50*DeltaS_I(iRay)
        if(IsCartesianGrid)then
@@ -435,26 +426,13 @@ contains !=========================================================
        end if
        ! Now Xyz_DI moved by 1/2 DeltaS !!!
        call check_bc(iRay)
-       if(UnusedRay_I(iRay))then
-          !\
-          !Ray end is behind the boundary of the computational domain
-          !Push the end point backward
-          !/
-          Xyz_DI(:,iRay) = Xyz_DI(:,iRay) - &
-               Slope_DI(:,iRay)*0.50*DeltaS_I(iRay)
-          if(IsCartesianGrid)then
-             Coord_DI(:,iRay) = Xyz_DI(:, iRay)
-          else
-             call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
-          end if
-       end if
     end do
 
     !
     ! The following routine collects the density values at the Xyz_DI
     ! from all relevant processors
     !
-
+    IsMask_I(1:nRay) = .not.UnusedRay_I(1:nRay)
     call get_plasma_density(nRay)
     
     
@@ -464,12 +442,7 @@ contains !=========================================================
     do iRay = 1, nRay
 
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
-       if(IsCartesianGrid)then
-          Xyz_DI(:, iRay)= Coord_DI(:,iRay)
-       else
-          call coord_to_xyz(Coord_DI(:,iRay), Xyz_DI(:, iRay))
-       end if
-
+ 
        HalfDeltaS = 0.50*DeltaS_I(iRay)
        ! Original Position (at an integer point):
        PositionHalfBack_D = Xyz_DI(:,iRay) - Slope_DI(:,iRay)*HalfDeltaS
@@ -507,11 +480,7 @@ contains !=========================================================
           if (Curv .ge. ToleranceSqr) then
              DeltaS_I(iRay) = 0.99 * &
                   DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
-             if(IsCartesianGrid)then
-                Coord_DI(:,iRay) = PositionHalfBack_D
-             else
-                call xyz_to_coord(PositionHalfBack_D, Coord_DI(:,iRay))
-             end if
+             Xyz_DI(:,iRay) = PositionHalfBack_D
              CYCLE
           end if
 
@@ -533,11 +502,7 @@ contains !=========================================================
              DeltaS_I(iRay) =  max(&
                   0.50*Tolerance*DistanceToCritSurf_I(iRay),&
                   StepMin)
-             if(IsCartesianGrid)then
-                Coord_DI(:,iRay) = PositionHalfBack_D
-             else
-                call xyz_to_coord(PositionHalfBack_D, Coord_DI(:,iRay))
-             end if
+             Xyz_DI(:,iRay) = PositionHalfBack_D
              CYCLE
           end if
 
@@ -602,18 +567,6 @@ contains !=========================================================
              call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
           end if
           call check_bc(iRay)
-          if(UnusedRay_I(iRay))then
-             !\
-             !Ray end is behind the boundary of the computational domain
-             !Push the end point backward
-             !/
-             Xyz_DI(:,iRay) = PositionHalfBack_D
-             if(IsCartesianGrid)then
-                Coord_DI(:,iRay) = Xyz_DI(:, iRay)
-             else
-                call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
-             end if
-          end if
           !
           ! Step_X is in the direction of - grad \epsilon,
           ! whose vector is of the length of 1/L.
@@ -656,19 +609,6 @@ contains !=========================================================
              call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
           end if
           call check_bc(iRay)
-          if(UnusedRay_I(iRay))then
-             !\
-             !Ray end is behind the boundary of the computational domain
-             !Push the end point backward
-             !/
-             Xyz_DI(:,iRay) = Xyz_DI(:,iRay)&
-               - Slope_DI(:,iRay)*HalfDeltaS
-             if(IsCartesianGrid)then
-                Coord_DI(:,iRay) = Xyz_DI(:, iRay)
-             else
-                call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
-             end if
-          end if
           Intensity_I(iRay) = Intensity_I(iRay) &
                + DeltaS_I(iRay)*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
        end if
