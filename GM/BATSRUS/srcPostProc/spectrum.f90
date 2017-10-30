@@ -14,6 +14,10 @@ program spectrum
 
   integer                     :: iError 
 
+  !One line option
+  logical                     :: IsOneLine = .false.
+  real                        :: OneLineWavelength
+
   ! Variables for output file
   character(len=200)          :: NameSpectrumFile = 'spectrum.out'
   character(len=200)          :: NameLabelFile = 'label.out'
@@ -40,7 +44,7 @@ program spectrum
   logical                     :: IsDoppler = .true. ! Calculate Doppler shift
   integer                     :: n1Block, n2Block, n3Block ! Define data size
   ! Rotation angles for box variable rotation
-  integer                     :: iDimLOS, iDimVertical, iDimHorizontal
+  integer                     :: iDimLOS=1, iDimVertical=2, iDimHorizontal=3
 
   ! Variables to read solar wind data file in
   integer                     :: nVar   ! Number of variables   
@@ -73,7 +77,7 @@ program spectrum
        t_    = 11, &
        I01_  = 12, &
        I02_  = 13
-  
+
   integer                     :: nLocalVar = 13 ! Number of used variables
 
   ! Variables for the wavelengths of interest
@@ -101,8 +105,8 @@ program spectrum
      character(len=6)         :: NameIon
      real                     :: Aion
      integer                  :: nLevelFrom, nLevelTo ! Levels of transition
-  ! Indexes on density-temperature grid 
-  ! i = density index, j = temperature index 
+     ! Indexes on density-temperature grid 
+     ! i = density index, j = temperature index 
      integer                  :: iMin, jMin, iMax, jMax  
      real                     :: LineWavelength 
      real, allocatable        :: g_II(:,:)
@@ -152,9 +156,13 @@ program spectrum
   if(IsVerbose)write(*,*)'allocated LabelTable_III'
 
   ! Loop over Chianti lines
+  if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
   do iLine = 1,nLineAll
-     call calc_flux 
+     if (.not. IsOneLine)call calc_flux
+     if (IsOneLine .and.  &
+          OneLineWavelength == LineTable_I(iLine)%LineWavelength)call calc_flux
   end do
+
 
   call save_all
   if(IsVerbose)write(*,*)'done with save_all'
@@ -378,7 +386,7 @@ contains
     do kPixel=1,n3
        do jPixel=1,n2
           do i=1,n1
-             ! Cells inside body
+             ! Cells inside body or behind the solar disk
              if(all(Var_VIII(1:7,i,jPixel,kPixel)==0))EXIT 
 
              ! Doppler shift while x axis is oriented towards observer
@@ -494,8 +502,10 @@ contains
                 write(*,*)'iCenter , iInterval = ',iCenter, iInterval
                 write(*,*)'jTMin, jTMax = ', jTMin, jTMax
                 write(*,*)'iNMin, iNMax = ', iNMin, iNMax
-                write(*,*)'LogNe,DLogN , LogTe,DLogT = ',LogNe,DLogN , LogTe,DLogT
-                write(*,*)'LogNe/DLogN , LogTe/DLogT = ',LogNe/DLogN , LogTe/DLogT
+                write(*,*)'LogNe,DLogN , LogTe,DLogT = ', &
+                     LogNe,DLogN , LogTe,DLogT
+                write(*,*)'LogNe/DLogN , LogTe/DLogT = ', &
+                     LogNe/DLogN , LogTe/DLogT
                 write(*,*)'Gint = ',Gint
                 write(*,*)'                                                   '
              endif
@@ -537,7 +547,7 @@ contains
     do iBegin = 1, nWaveBin - 1
        if (LambdaBegin < SpectrumTable_I(iInterval)%SpectrumGrid_I(iBegin+1))&
             EXIT
-    end do                          
+    end do
 
     ! Start at iBegin for efficiency and
     ! stop at nWaveBin-1 so iEnd = mWaveBin if no EXIT was performed
@@ -654,7 +664,7 @@ contains
              do iPixel=1,nPixel
                 DLambdaInstr_I(iPixel) = 0.0
              end do
-             
+
              SizeWavelengthBin = 0.0223
              if(IsNoInstrument)then
                 write(*,*)'INSTRUMENT interval changed to WAVELENGTHINTERVALS'
@@ -683,12 +693,12 @@ contains
              call read_var('TparUni',TparUni)
              TperpUni = TparUni
              TeUni = TparUni
-          ! Proton +  electron temperatures
+             ! Proton +  electron temperatures
           elseif(IsPe .and. .not. IsPpar)then
              call read_var('TparUni',TparUni)
              TperpUni = TparUni
              call read_var('TeUni',TeUni)
-          ! Electron + anisotropic proton temperatures
+             ! Electron + anisotropic proton temperatures
           elseif(IsPe .and. IsPpar)then
              IsPperp = .true.
              call read_var('TparUni',TparUni)
@@ -696,8 +706,8 @@ contains
              call read_var('TeUni',TeUni)
           else 
              write(*,*) NameSub // ' WARNING: check temperature setting' // &
-             'Select either 1-, 2-(proton+electron), or 3 temperature' // & 
-             '(electron+anisotropic proton) model!' 
+                  'Select either 1-, 2-(proton+electron), or 3 temperature' // & 
+                  '(electron+anisotropic proton) model!' 
           endif
           call read_var('I01Uni',I01Uni)
           call read_var('I02Uni',I02Uni)
@@ -716,6 +726,10 @@ contains
 
        case("#ISDOPPLER")
           call read_var('IsDoppler',IsDoppler)
+
+       case("#ONELINE")
+          IsOneLine = .true.
+          call read_var('OneLineWavelength',OneLineWavelength)
 
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
@@ -751,7 +765,7 @@ contains
     integer                     :: nStep, i, j, k, Size_D(3)
     integer                     :: k1, k2
     integer                     :: nVarName, iVar
-    
+
     real                        :: MinWavelength, MaxWavelength
     real                        :: Xangle, Yangle, Zangle, Rot_DD(3,3)
     real                        :: Param_I(3)
@@ -839,7 +853,7 @@ contains
                = MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
        end do
     end do
-    
+
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
        Var_VIII(rho_,1:n1,1:n2,1:n3)   = rhoUni * 1e6 * cProtonMass
@@ -895,22 +909,26 @@ contains
              ! dyne/cm2 --> N/m2
              ! T = p/rho * M / kB
              Var_VIII(tpar_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
-                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * &
+                  cProtonMass &
                   / cBoltzmann
              IsPpar = .true.
           case('pperp')
              Var_VIII(tperp_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3)&
-                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * &
+                  cProtonMass &
                   / cBoltzmann
              IsPperp = .true.
           case('pe')
              Var_VIII(te_,1:n1,1:n2,1:n3)   = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
-                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * &
+                  cProtonMass &
                   / cBoltzmann
              IsPe = .true.
           case('p')
              Var_VIII(t_,1:n1,1:n2,1:n3) = VarIn_VIII(iVar,1:n1,1:n2,1:n3) &
-                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * cProtonMass &
+                  * 1e-1 / max(1e-30,Var_VIII(rho_,1:n1,1:n2,1:n3)) * &
+                  cProtonMass &
                   / cBoltzmann
           case('i01')
              ! erg/cm^3 --> J/m^3
@@ -954,11 +972,11 @@ contains
     if(.not. IsPpar .and. .not. IsPperp)then
        Var_VIII(tpar_,1:n1,1:n2,1:n3) = Var_VIII(t_,1:n1,1:n2,1:n3)
        Var_VIII(tperp_,1:n1,1:n2,1:n3) = Var_VIII(t_,1:n1,1:n2,1:n3)
-    ! tperp = (3*t - tpar)/2
+       ! tperp = (3*t - tpar)/2
     elseif(IsPpar .and. .not. IsPperp)then
        Var_VIII(tperp_,1:n1,1:n2,1:n3) = (3*Var_VIII(t_,1:n1,1:n2,1:n3) &
             - Var_VIII(tpar_,1:n1,1:n2,1:n3))/2.0
-    ! tpar = 3*t - 2*tperp
+       ! tpar = 3*t - 2*tperp
     elseif(.not. IsPpar .and.IsPperp)then
        Var_VIII(tpar_,1:n1,1:n2,1:n3) = 3*Var_VIII(t_,1:n1,1:n2,1:n3) &
             - 2*Var_VIII(tperp_,1:n1,1:n2,1:n3)
@@ -974,6 +992,24 @@ contains
        Var_VIII(I02_,1:n1,1:n2,1:n3) = 0
        write(*,*)"IsNoAlfven ON !!!"
     endif
+
+
+    ! Cells behind the solar disk
+    do kPixel = 1, n3
+       do jPixel = 1, n2
+          do i = 1, n1
+             if(CoordMin_D(iDimLOS) + &
+                  i * (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 < 0 .and. &
+                  (CoordMin_D(iDimVertical) + jPixel * &
+                  (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2)**2+&
+                  (CoordMin_D(iDimHorizontal) + kPixel * &
+                  (CoordMax_D(iDimHorizontal)-&
+                  CoordMin_D(iDimHorizontal))/n3)**2 < 1 ) &
+                  Var_VIII = 0
+          end do
+       end do
+    end do
+
 
   end subroutine read_data
 
@@ -1055,7 +1091,7 @@ contains
           read(UnitTmp_,'(a)',iostat=iError) StringLine
           if(iError  /= 0)then
              write(*,*)'iError = ',iError
-             call CON_stop('failed reading remaining header part of chianti table')
+             call CON_stop('failed reading remaining header of chianti table')
           end if
           if(IsVerbose) write(*,'(a)') StringLine
           if(StringLine == "#START") IsHeader = .false.
@@ -1114,7 +1150,7 @@ contains
        end if
 
        ! If wavelength is different than previous line
-       ! prass only if wavelength is inside of wavelengthintervals of interest
+       ! pass only if wavelength is inside of wavelengthintervals of interest
        do iWavelengthInterval = 1, nWavelengthInterval
           if(IsDoppler)then
              ! If Doppler shift is calculated, use shifted intervals
