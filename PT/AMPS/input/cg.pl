@@ -251,6 +251,13 @@ while ($line=<InputFile>) {
       }
     }
     
+    ### The starting Rosina observation point for which the data is simulated 
+    elsif ($InputLine eq "ISTARTPOINT") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      ampsConfigLib::ChangeValueOfVariable("const int iStartRosinaAnalysisDataPont",$InputLine,"main/RosinaMeasurements.h");                
+    }
+    
     ### EndOfMission::SpeciesSencitivityMode ###
     elsif ($InputLine eq "SPECIESSENCITIVITYMODE") { 
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
