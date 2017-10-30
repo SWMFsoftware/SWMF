@@ -164,7 +164,7 @@ contains
        ! Get the headers that contain variable names and units
        select case(plot_form(ifile))
        case('tec')
-          unitstr_TEC = 'VARIABLES = "X", "Y",'//NameVarAll//'"'
+          unitstr_TEC = 'VARIABLES = "X", "Y",'//trim(NameVarAll)//'"'
           if(DoTest) write(*,*) unitstr_TEC
        end select
     end if
