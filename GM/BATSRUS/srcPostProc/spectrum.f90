@@ -55,7 +55,8 @@ program spectrum
   real,allocatable            :: Var_VIII(:,:,:,:)
   ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
   real                        :: ProtonElectronRatio = 0.83
-
+  real                        :: dx = 1.
+  
   ! Variables for uniform data
   logical                     :: IsUniData = .false. ! Overwrite data w/ const
   real                        :: RhoUni, UxUni, UyUni, UzUni, BxUni, ByUni
@@ -205,6 +206,8 @@ contains
        ! erg cm^-3 --> J m^-3
        Var_VIII(I01_,1:n1,1:n2,1:n3)  = I01Uni * 1e-1
        Var_VIII(I02_,1:n1,1:n2,1:n3)  = I02Uni * 1e-1
+
+       dx = 1.0
     else 
        call CON_stop( &
             NameSub//' need data input!!! ')
@@ -387,7 +390,7 @@ contains
        do jPixel=1,n2
           do i=1,n1
              ! Cells inside body or behind the solar disk
-             if(all(Var_VIII(1:7,i,jPixel,kPixel)==0))EXIT 
+             if(all(Var_VIII(1:7,i,jPixel,kPixel)==0))CYCLE
 
              ! Doppler shift while x axis is oriented towards observer
              if(IsDoppler)then
@@ -486,7 +489,7 @@ contains
 
              ! Calculate flux and spread it on the Spectrum_II grids
              ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
-             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) 
+             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx
 
              if(IsDebug)then
                 write(*,*)'                                                   '
@@ -993,23 +996,23 @@ contains
        write(*,*)"IsNoAlfven ON !!!"
     endif
 
-
     ! Cells behind the solar disk
     do kPixel = 1, n3
        do jPixel = 1, n2
           do i = 1, n1
              if(CoordMin_D(iDimLOS) + &
-                  i * (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 < 0 .and. &
-                  (CoordMin_D(iDimVertical) + jPixel * &
+                  (i-0.5) * (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 < 0 .and. &
+                  (CoordMin_D(iDimVertical) + (jPixel-0.5) * &
                   (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2)**2+&
-                  (CoordMin_D(iDimHorizontal) + kPixel * &
+                  (CoordMin_D(iDimHorizontal) + (kPixel-0.5) * &
                   (CoordMax_D(iDimHorizontal)-&
                   CoordMin_D(iDimHorizontal))/n3)**2 < 1 ) &
-                  Var_VIII = 0
+                  Var_VIII(:,i,jPixel,kPixel) = 0.
           end do
        end do
     end do
 
+    dx = (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 * rSun
 
   end subroutine read_data
 
