@@ -840,7 +840,15 @@ contains
     elseif(ifile>plot_ .and. ifile<=plot_+nplotfile) then
        ! Case for plot files
        IsFound=.false.
-
+       
+       if(DoExchangeAgain.and.index(plot_type(iFile),'rfr')==1)then
+          if(iProc==0.and.lVerbose>0)then
+             call write_prefix; write(iUnitOut,*)&
+                  'Calling exchange_messages to reset ghost cells ...'
+          end if
+          call exchange_messages(DoResChangeOnlyIn=.true.)
+          DoExchangeAgain = .false.
+       end if
        if(TypeSave /= 'BEFOREAMR' .and. .not.DoExchangeAgain .and. ( &
             index(plot_type(iFile),'lin')==1 .or. &
             index(plot_type(iFile),'pnt')==1 .or. &
@@ -850,7 +858,8 @@ contains
             index(plot_type(iFile),'lcb')==1 .or. &
             index(plot_type(iFile),'los')==1 .or. &
             index(plot_type(iFile),'sph')==1 .or. &
-            plot_form(iFile) == 'tec')) then
+            (plot_form(iFile) == 'tec'.and.       &
+            index(plot_type(iFile),'rfr')/=1))    ) then
 
           if(iProc==0.and.lVerbose>0)then
              call write_prefix; write(iUnitOut,*)&
