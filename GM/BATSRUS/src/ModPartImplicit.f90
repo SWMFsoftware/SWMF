@@ -379,6 +379,8 @@ contains
     use ModResistivity, ONLY: UseResistivity, init_impl_resistivity, &
          init_impl_hall_resist
     use ModHallResist, ONLY: UseHallResist, HallCmaxFactor
+    use ModFixAxisCells, ONLY: fix_axis_cells
+
     use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi

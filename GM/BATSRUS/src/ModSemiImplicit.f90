@@ -255,7 +255,6 @@ contains
     use ModImplHypre, ONLY: hypre_initialize, hypre_preconditioner
     use ModLinearSolver, ONLY: solve_linear_multiblock
     use ModMessagePass, ONLY: exchange_messages
-    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B
     use ModRadDiffusion,   ONLY: &
          get_impl_rad_diff_state, set_rad_diff_range, update_impl_rad_diff
     use ModHeatConduction, ONLY: &
@@ -263,6 +262,8 @@ contains
     use ModResistivity,    ONLY: &
          get_impl_resistivity_state, update_impl_resistivity
     use ModFieldLineThread, ONLY: UseFieldLineThreads, advance_threads, Heat_
+    use ModFixAxisCells, ONLY: fix_axis_cells
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, nBlock, Unused_B
 
     integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
 

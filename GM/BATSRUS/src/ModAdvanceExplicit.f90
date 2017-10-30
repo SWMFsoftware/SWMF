@@ -40,6 +40,7 @@ contains
          UseFieldLineThreads, advance_threads, Enthalpy_
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
+    use ModFixAxisCells, ONLY: fix_axis_cells
 
     logical, intent(in) :: DoCalcTimestep
     integer, intent(in) :: iStageMax ! advance only part way
