@@ -1,13 +1,14 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 module ModParticleFieldLine
+
   ! the module contains subroutine for extracting magnetic field lines 
   ! for passing to other codes;
   ! field line intergration is performed with use of BATL library including
   ! - continuous AMR interpolation
   ! - particle methods
-  !============================================================================
 
   use BATL_lib, ONLY: &
        iProc,&
@@ -45,7 +46,7 @@ module ModParticleFieldLine
      module procedure get_particle_data_i_particle
   end interface
 
-  
+  ! Local variables ----------------------
 
   ! kinds of particles used to generate a magnetic field line
   integer, parameter:: &
@@ -119,9 +120,7 @@ module ModParticleFieldLine
   logical:: UseCorrection=.false.
   real:: RCorrectionMin = 0.0, RCorrectionMax = Huge(1.0)
 
-  !\
   ! initialization related info
-  !/
   integer:: nLineInit
   real, allocatable:: XyzLineInit_DI(:,:)
 
@@ -242,7 +241,7 @@ contains
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
        iIndexStart_II,&
        UseInputInGenCoord)
-    use BATL_geometry, ONLY: coord_to_xyz
+    use BATL_lib, ONLY: coord_to_xyz
 
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
@@ -257,9 +256,8 @@ contains
     integer,optional,intent(in)::iTraceModeIn
     ! initial particle indices for starting particles
     integer,optional,intent(in)::iIndexStart_II(nIndexParticleReg,nFieldLineIn)
-    !\
+
     ! An input can be in generalized coordinates
-    !/
     logical, optional,intent(in) :: UseInputInGenCoord 
     logical :: DoTransformCoordToXyz
     integer :: nLineThisProc ! number of new field lines initialized locally
@@ -286,10 +284,8 @@ contains
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iIndexReg_II(:,:)
 
-    !\
-    ! Cosine between direction of the field and radial direction: for correcting
-    ! the line's direction to prevent it from closing
-    !/
+    ! Cosine between direction of the field and radial direction: 
+    ! for correcting the line's direction to prevent it from closing
     real, allocatable:: CosBR_CB(:,:,:,:)
     character(len=*), parameter:: NameSub='extract_particle_line'
     !----------------------------------------------------------------------
@@ -304,16 +300,13 @@ contains
     if(present(UseInputInGenCoord))&
          DoTransformCoordToXyz = UseInputInGenCoord
 
-    !\
     ! allocate containers for cosine of angle between B and radial direction
-    !/
     allocate(CosBR_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
     call compute_cosbr
     call calc_gradient_ghost(CosBR_CB)
 
-    !\
     ! Trace field lines
-    !/
+
     ! initialize field lines
     Particle_I(KindEnd_)%nParticle = 0
     nLineThisProc = 0
@@ -379,12 +372,10 @@ contains
           Particle_I(KindEnd_)%nParticle = nLineThisProc
        end if
     end do
-    !\
+
     ! Offset in id_
-    !/
     call offset_id(nFieldLine - nLineAllProc+1,nFieldLine)
 
-    !\
     ! free space
     deallocate(CosBR_CB)
   contains
@@ -438,9 +429,7 @@ contains
          call stop_mpi(NameSub //": "//StringError)
       end if
 
-      !\
       ! Assign particle to an appropriate processor
-      !/
       if(iProc /= iProcOut) RETURN
 
       ! Exclude particles that are in the zero magnetic field region
@@ -470,16 +459,14 @@ contains
       iLineEnd = nFieldLineMax
       if(present(iLineEndIn))iLineEnd = iLineEndIn
       iOffsetLocal_I = 0; iOffset_I = 0  
-      !\
+
       ! set a pointer to parameters of regular particles
-      !/
       iIndex_II => Particle_I(KindReg_)%iIndex_II
       nParticle = Particle_I(KindReg_)%nParticle
       do iParticle = 1, nParticle
          iLine = iIndex_II(fl_,iParticle)
-         !\
+
          ! Reset offset, if id_ is less than one
-         !/
          iOffsetLocal_I(iLine) = max(iOffsetLocal_I(iLine),&
               1 - iIndex_II(id_,iParticle))
       end do
@@ -494,9 +481,8 @@ contains
       end if
       do iParticle = 1, nParticle
          iLine = iIndex_II(fl_,iParticle)
-         !\
+
          ! Apply offset
-         !/
          iIndex_II(id_,iParticle) = iIndex_II(id_,iParticle) + &
               iOffset_I(iLine)
       end do
@@ -584,9 +570,8 @@ contains
     real, dimension(MaxDim) :: DirBCurr_D, DirBNext_D
     ! direction of the tangent to the line
     real, dimension(MaxDim) :: DirCurr_D, DirNext_D
-    !\
+
     ! radii and vector of radial direction
-    !/
     real :: ROld, RNew, DirR_D(MaxDim)
     ! cosine of angle between direction of field and radial direction
     real:: CosBR
@@ -618,9 +603,8 @@ contains
        ! copy last known coordinates to Auxilary 
        StateEnd_VI(XOld_:ZOld_,1:Particle_I(KindEnd_)%nParticle) = &
             StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
-       !\
+
        ! First stage of RK2 method
-       !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
                 ! get the direction of the magnetic field at original location
           call get_b_dir(&
@@ -660,14 +644,11 @@ contains
                StateEnd_VI(Ds_, iParticle) * &
                0.50 * DirCurr_D
        end do
-       !\
+
        ! Message pass: some particles may have moved to different procs
-       !/
        call message_pass_particles(KindEnd_)
 
-       !\
        ! remove particles that went outside of the domain
-       !/
        if(Body1)then ! check if there is an inner body
           call check_inner_boundary(KindEnd_)
        end if
@@ -676,9 +657,7 @@ contains
        ! check if all field lines have been completed
        if(is_complete()) RETURN
 
-       !\
        ! Second stage of RK2 
-       !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
           ! get the direction of the magnetic field in the middle
           call get_b_dir(&
@@ -707,22 +686,17 @@ contains
           ! update the direction of the previous step
           StateEnd_VI(DirX_:DirZ_,  iParticle) = DirNext_D
        end do
-       !\
+
        ! Message pass: some particles may have moved to different procs
-       !/
        call message_pass_particles(KindEnd_)
 
-       !\
        ! remove particles that went outside of the domain
-       !/
        if(Body1)then ! check if there is an inner body
           call check_inner_boundary(KindEnd_)
        end if
        call remove_undefined_particles(KindEnd_)
 
-       !\
        ! Stage 3:
-       !/
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
           ! get the cosine between the magnetic field and the radial direction
           call get_b_dir(&
@@ -738,14 +712,11 @@ contains
           end if
        end do
        call remove_undefined_particles(KindEnd_)
-       !\
+
        ! Message pass: some particles may have moved to different procs
-       !/
        call message_pass_particles(KindEnd_)
 
-       !\
        ! remove particles that went outside of the domain
-       !/
        if(Body1)then ! check if there is an inner body
           call check_inner_boundary(KindEnd_)
        end if
@@ -982,28 +953,25 @@ contains
   !========================================================================
   subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II,&
        UseInputInGenCoord, DoReplace)
-    !\
-    ! Very strange, but this is the first use of the BATL procedure to 
-    ! transform the generalized to cartesian coords in BATSRUS
-    !/
-    use BATL_geometry, ONLY: coord_to_xyz
+
+    use BATL_lib, ONLY: coord_to_xyz
+
     ! add particles with specified coordinates to the already existing lines
     integer, intent(in):: nParticleIn
     real,    intent(in):: XyzIn_DI(MaxDim, nParticleIn)
     integer, intent(in):: iIndexIn_II(nIndexParticleReg, nParticleIn)
-    !\
+
     ! An input can be in generalized coordinates
-    !/
     logical, optional,intent(in) :: UseInputInGenCoord 
-    !\
+
     ! Whether to replace ALL old particles with the input
-    !/
     logical, optional, intent(in):: DoReplace
     logical :: DoTransformCoordToXyz
     real   :: Xyz_D(MaxDim)
     integer:: iIndex_I(nIndexParticleReg)
     integer:: iParticle
     integer:: iProcOut, iBlockOut
+
     ! parameters of regular particles
     real,    pointer:: StateReg_VI(:,:)
     integer, pointer:: iIndexReg_II(:,:)
@@ -1076,26 +1044,22 @@ contains
     State_VI  => Particle_I(KindReg_)%State_VI
     iIndex_II => Particle_I(KindReg_)%iIndex_II
 
-    !\
     ! go over the list of particles and advect them
-    !/
     do iParticle = 1, Particle_I(KindReg_)%nParticle
-       !\
+
        ! simple advection (Euler integration)
-       !/ 
        ! get the local velocity
        call get_v(&
             Xyz_D = State_VI(x_:z_, iParticle),&
             iBlock=iIndex_II(0,iParticle),&
             V_D = VLocal_D)
+
        ! update particle location
        State_VI(x_:z_, iParticle) = State_VI(x_:z_, iParticle) + &
             Dt * VLocal_D
     end do
 
-    !\
     ! Message pass: some particles may have moved to different procs
-    !/
     call message_pass_particles(KindReg_)
     call remove_undefined_particles(KindReg_)
 
@@ -1228,11 +1192,11 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_particle_data_all'
     !----------------------------------------------------------------------
-    !\
+
     ! first, determine which data are requested
-    !/
     DoReturnVar_V   = .false.
     DoReturnIndex_I = .false.
+
     ! determine which variables are requested
     call process_request(NameVar, nVarOut, DoReturnVar_V(1:nVarAvail), &
          nIndexOut, DoReturnIndex_I(0:nIndexAvail), iOrder_I)
@@ -1240,9 +1204,7 @@ contains
     if(nData /= nVarOut + nIndexOut)&
          call CON_stop(NameSub//': incorrect number of data is requested')
 
-    !\
     ! return data
-    !/
     do iParticle = 1, Particle_I(KindReg_)%nParticle
        ! store variables
        DataOut_VI(1:nVarOut,      iParticle) = PACK(&
@@ -1279,11 +1241,10 @@ contains
 
     character(len=*), parameter:: NameSub = 'get_particle_data_all'
     !----------------------------------------------------------------------
-    !\
     ! first, determine which data are requested
-    !/
     DoReturnVar_V   = .false.
     DoReturnIndex_I = .false.
+
     ! determine which variables are requested
     call process_request(NameVar, nVarOut, DoReturnVar_V(1:nVarAvail), &
          nIndexOut, DoReturnIndex_I(0:nIndexAvail), iOrder_I)
@@ -1291,19 +1252,20 @@ contains
     if(nData /= nVarOut + nIndexOut)&
          call CON_stop(NameSub//': incorrect number of data is requested')
 
-    !\
     ! return data
-    !/
     ! store variables
     DataOut_V(1:nVarOut) = PACK(&
          Particle_I(KindReg_)%State_VI( :,iParticle),&
          MASK = DoReturnVar_V)
+
     ! store indexes
     DataOut_V(nVarOut+1:nData) = PACK(&
          Particle_I(KindReg_)%iIndex_II(:,iParticle),&
          MASK = DoReturnIndex_I)
+
     ! permute data order so it corresponds to the order of the request
     DataOut_V( pack(iOrder_I,iOrder_I>0)) = DataOut_V(:)
+
   end subroutine get_particle_data_i_particle
   !==========================================================================
 
@@ -1398,5 +1360,3 @@ contains
   end subroutine write_plot_particle
 
 end module ModParticleFieldLine
-
-
