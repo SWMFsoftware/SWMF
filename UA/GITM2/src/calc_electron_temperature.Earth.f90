@@ -10,19 +10,20 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   use ModTime
   use ModInputs
   use ModUserGITM
+  use ModKind
   
   implicit none
 
   integer, intent(in) :: iBlock
-  real(kind=8), intent(in), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: &
+  real(Real8_), intent(in), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: &
        eHeatingp, iHeatingp, eHeatingm, &
        iHeatingm, iHeating, lame, lami
  
   real, dimension(nLons,nLats,0:nAlts+1) :: tn, te, ti, etemp, itemp, nn, ni, ne
   real, dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: lam_e, lam_i, sinI2, sinI
-  real(kind=8), dimension(nLons,nLats,nAlts) :: eConduction, iConduction
+  real(Real8_), dimension(nLons,nLats,nAlts) :: eConduction, iConduction
 
-  real(kind=8), dimension(nLons,nLats,nAlts) :: eThermo=0.0, eHeatadv=0.0, eAdiab=0.0
+  real(Real8_), dimension(nLons,nLats,nAlts) :: eThermo=0.0, eHeatadv=0.0, eAdiab=0.0
 
   real, dimension(nLons,nLats,0:nAlts+1) :: alts 
   real :: tipct = 1.1
@@ -44,9 +45,9 @@ subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   integer :: DoY
 
   ! for Tridiagnal solver
-  real(kind=8), dimension(nAlts) :: a, b, c, d, u, testm     !
-  real(kind=8) :: zu, zl, lamu, laml, nne, tte, nni, tti, neu, nel, uiu, uil
-  real(kind=8) :: xcoef, hcoef, fcoef, ilam, m
+  real(Real8_), dimension(nAlts) :: a, b, c, d, u, testm     !
+  real(Real8_) :: zu, zl, lamu, laml, nne, tte, nni, tti, neu, nel, uiu, uil
+  real(Real8_) :: xcoef, hcoef, fcoef, ilam, m
   
   real, dimension(nLons,nLats,0:nAlts+1) :: uiup
 
@@ -323,10 +324,10 @@ contains
 
     use ModSizeGitm
     implicit none
-    real(kind=8), intent(in)::a(nAlts),b(nAlts),c(nAlts),d(nAlts)
-    real(kind=8), intent(out)::u(nAlts)
-    real(kind=8):: cpp(nAlts), dpp(nAlts)
-    real(kind=8) :: m
+    real(Real8_), intent(in)::a(nAlts),b(nAlts),c(nAlts),d(nAlts)
+    real(Real8_), intent(out)::u(nAlts)
+    real(Real8_):: cpp(nAlts), dpp(nAlts)
+    real(Real8_) :: m
     
     ! initialize c-prime and d-prime
     cpp(1) = c(1)/b(1)
@@ -424,60 +425,60 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   implicit none
   integer, intent(in) :: iBlock
 
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1), intent(out) :: eHeatingp, iHeatingp, eHeatingm, &
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1), intent(out) :: eHeatingp, iHeatingp, eHeatingm, &
        iHeatingm, iHeating, lame, lami
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: &
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: &
        nn, ni, ne, nh, nhe, no, nn2, no2, nnr, nno, &
        tn, te, ti, temp, te_6000, te_exc, tn_exc, &
        nop, no2p, nn2p, nnop, nhp, nhep, nnp, &
        nu_oop, nu_nnp, nu_o2o2p, nu_o2op, nu_n2op, nu_n2o2p, &
        nu_oo2p, nu_n2n2p, tr, dv2, dv2_en, dv2_ei 
-  real(kind=8), dimension(-1:nLons+2,-1:nLats+2,0:nAlts+1) :: te_con, ti_con
-  real(kind=8), dimension(-1:nLons+2,-1:nLats+2) :: dtedphe, dtidphe, dtedtheta, dtidtheta
-  real(kind=8), dimension(-1:nLons+2,-1:nLats+2) :: dledphe, dlidphe, dledtheta, dlidtheta
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: Qphe, Qenc, Qeic, Qiec, &
+  real(Real8_), dimension(-1:nLons+2,-1:nLats+2,0:nAlts+1) :: te_con, ti_con
+  real(Real8_), dimension(-1:nLons+2,-1:nLats+2) :: dtedphe, dtidphe, dtedtheta, dtidtheta
+  real(Real8_), dimension(-1:nLons+2,-1:nLats+2) :: dledphe, dlidphe, dledtheta, dlidtheta
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: Qphe, Qenc, Qeic, Qiec, &
        Qinc_t, Qinc_v, Qnic_t, Qnic_v, iAdvection, Qaurora, QprecipIon, &
        Qencp, Qeicp, Qiecp, Qinc_tp, Qrotp, Qfp, Qexcp, Qvib_o2p, Qvib_n2p, &
        Qencm, Qeicm, Qiecm, Qinc_tm, Qrotm, Qfm, Qexcm, Qvib_o2m, Qvib_n2m, &
        Qrot, Qf, Qeic_v, Qenc_v, Qexc, Qvib_o2, Qvib_n2, &
        Qeconhm, Qeconhp,Qiconhm, Qiconhp  !! Conduction perpendicular to field lines  
   !! Magnetic dip/declination angles, Conductivities
-  real(kind=8), dimension(nLons,nLats,0:nAlts+1) :: cos2dip, magh2, sin2dec, cos2dec, sindec, cosdec 
-  real(kind=8), dimension(nLons,nLats) :: sin2theta, sintheta, costheta !! polar angle
-  real(kind=8) :: dLon, dLat
+  real(Real8_), dimension(nLons,nLats,0:nAlts+1) :: cos2dip, magh2, sin2dec, cos2dec, sindec, cosdec 
+  real(Real8_), dimension(nLons,nLats) :: sin2theta, sintheta, costheta !! polar angle
+  real(Real8_) :: dLon, dLat
   real, dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: lam_op, lam_o2p, lam_n2p, lam_nop, lam_np
   integer :: Ao=16, Ao2=32, An2=28, Ano=30, An=14
 
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: x, epsilon, logx
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: dz_u, dz_l
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: alts 
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: x, epsilon, logx
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: dz_u, dz_l
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: alts 
 
 ! for O2 vibration
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1,10) :: Q0v
-  real(kind=8), dimension(7) :: Av, Bv, Cv, Dv, Fv, Gv
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: logQ
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1,10) :: Q0v
+  real(Real8_), dimension(7) :: Av, Bv, Cv, Dv, Fv, Gv
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: logQ
 
 
 ! for V2 vibration
-  real(kind=8), dimension(10) :: Av0, Bv0, Cv0, Dv0, Fv0
-  real(kind=8), dimension(2:9) :: Av1, Bv1, Cv1, Dv1, Fv1
-  real(kind=8) :: Av0L, Bv0L, Cv0L, Dv0L, Fv0L
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1,10)  :: logQv0
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1,2:9) :: logQv1 
-  real(kind=8) :: tte, ttn, tte_6000
+  real(Real8_), dimension(10) :: Av0, Bv0, Cv0, Dv0, Fv0
+  real(Real8_), dimension(2:9) :: Av1, Bv1, Cv1, Dv1, Fv1
+  real(Real8_) :: Av0L, Bv0L, Cv0L, Dv0L, Fv0L
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1,10)  :: logQv0
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1,2:9) :: logQv1 
+  real(Real8_) :: tte, ttn, tte_6000
   integer :: iLevel
 
 
 ! for O fine structure
-  real(kind=8), parameter :: s21 = 1.863e-11
-  real(kind=8), parameter :: s20 = 1.191e-11  
+  real(Real8_), parameter :: s21 = 1.863e-11
+  real(Real8_), parameter :: s20 = 1.191e-11  
   real, dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: s10, Dfine  
 
 ! for O excitation
-  real(kind=8), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: dexc
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: dexc
 
 ! Aurora heaeting efficiency coefffient
-  real(kind=8) :: auroheat=1.0
+  real(Real8_) :: auroheat=1.0
 
   integer :: iDir, iAlt, iLon, iLat
   real :: tipct = 1.1
@@ -961,9 +962,9 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
           - sindec(1:nLons,1:nLats,iAlt)*cosdec(1:nLons,1:nLats,iAlt)/sintheta**2*costheta * dtedphe(1:nLons,1:nLats) )&
           !!!!! Gradient in lambda !!!!!!
           + cos2dip(1:nLons,1:nLats,iAlt) /(6.37e6 + alts(1:nLons,1:nLats,iAlt))**2 * ( &
-          cos2dec(1:nLons,1:nLats,iAlt) *dtedtheta(1:nLons,1:nLats)*dledtheta(1:nLons,1:nLats) + &
+          cos2dec(1:nLons,1:nLats,iAlt) *dtedtheta(1:nLons,1:nLats)*dledtheta(1:nLons,1:nLats) &
           + sin2dec(1:nLons,1:nLats,iAlt) / sin2theta * &
-          dtedphe(1:nLons,1:nLats)*dledphe(1:nLons,1:nLats) + &
+          dtedphe(1:nLons,1:nLats)*dledphe(1:nLons,1:nLats) &
           + sindec(1:nLons,1:nLats,iAlt) * cosdec(1:nLons,1:nLats,iAlt) /sintheta * (&
           dtedtheta(1:nLons,1:nLats)*dledphe(1:nLons,1:nLats) + dtedtheta(1:nLons,1:nLats)*dledphe(1:nLons,1:nLats) ) )        
           
@@ -984,9 +985,9 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
           /sintheta**2*costheta * dtidphe(1:nLons,1:nLats)) &
           !!!!! Gradient in lambda !!!!!!
           + cos2dip(1:nLons,1:nLats,iAlt) /(6.37e6 + alts(1:nLons,1:nLats,iAlt))**2 * ( &
-          cos2dec(1:nLons,1:nLats,iAlt) *dtidtheta(1:nLons,1:nLats)*dlidtheta(1:nLons,1:nLats) + &
+          cos2dec(1:nLons,1:nLats,iAlt) *dtidtheta(1:nLons,1:nLats)*dlidtheta(1:nLons,1:nLats) &
           + sin2dec(1:nLons,1:nLats,iAlt) / sin2theta * &
-          dtidphe(1:nLons,1:nLats)*dlidphe(1:nLons,1:nLats) + &
+          dtidphe(1:nLons,1:nLats)*dlidphe(1:nLons,1:nLats) &
           + sindec(1:nLons,1:nLats,iAlt) * cosdec(1:nLons,1:nLats,iAlt) /sintheta * (&
           dtidtheta(1:nLons,1:nLats)*dlidphe(1:nLons,1:nLats) + dtidtheta(1:nLons,1:nLats)*dlidphe(1:nLons,1:nLats) ) )        
           

@@ -274,7 +274,7 @@ subroutine alloc_rcmr
   ALLOCATE(PRdelta (ltheta, ltheta))
   ALLOCATE(dTheta  (ltheta, 1))
   ALLOCATE(Iltheta    (ltheta, ltheta))
-  call identity(Iltheta, ltheta, 1.0_8)
+  call identity(Iltheta, ltheta, 1.)
   XX = 0     
   zp1 = 0
   Rp = 0

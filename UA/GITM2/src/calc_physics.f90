@@ -242,8 +242,8 @@ subroutine get_sza(lon, lat, sza_calc)
   double precision, intent(in) :: lon, lat !lat, lon need to be in radians
   double precision, intent(out) :: sza_calc
 
-  real(8) :: OrbitAngle_1, LocalTime_1
-  real(8) :: SunDeclination_1, SinDec, CosDec
+  real(Real8_) :: OrbitAngle_1, LocalTime_1
+  real(Real8_) :: SunDeclination_1, SinDec, CosDec
 
   OrbitAngle_1 = 2.*pi*(CurrentTime - VernalTime)/SecondsPerYear
   SunDeclination_1 = atan(tan(Tilt*pi/180.)*sin(OrbitAngle_1))

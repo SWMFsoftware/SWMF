@@ -752,7 +752,8 @@ C          starting point
       IF (A .LT. 1.) THEN
 	WRITE (0,'(''APEX: A can not be less than 1; A, REQ, HTA: '',1P3
      +E15.7)') A,REQ,HTA
-	CALL EXIT (1)
+C	CALL EXIT (1)
+      stop 1
       ENDIF
       RASQ = ACOS (SQRT(1./A))*RTOD
       ALAT = SIGN (RASQ,ZMAG)
@@ -903,6 +904,11 @@ C                    add intermediates which are otherwise calculated twice
       RETURN
       END
 
+      BLOCK DATA commonvals
+      COMMON /MAGCOF/ NMAX,GB(255),GV(225),ICHG
+      DATA ICHG /-99999/
+      END 
+
       SUBROUTINE COFRM (DATE)
 C          Define the International Geomagnetic Reference Field (IGRF) as a
 C          scalar potential field using a truncated series expansion with
@@ -995,13 +1001,11 @@ C          http://www.ngdc.noaa.gov/IAGA/vmod/igrf.html use script
 C          ~maute/apex.d/apex_update/igrf2f Note that the downloaded file the start 
 C          column of the year in the first line has to be before the start of each 
 C          number in the same column
-C   
+C
 C          Jan. 2010 (Maute) update with IGRF11 (same instructions as Sep. 2005
 C          comment
-
       DOUBLE PRECISION F,F0
       COMMON /MAGCOF/ NMAX,GB(255),GV(225),ICHG
-      DATA ICHG /-99999/
  
 C          NEPO = Number of epochs
 C          NGH  = Single dimensioned array size of 2D version (GYR or HYR)
@@ -2336,7 +2340,8 @@ C          Trap out of range date:
  
 C          Error trap diagnostics:
  9100 WRITE (0,*) 'COFRM:  DATE ',DATE,' preceeds earliest available:',EPOCH(1)
-      CALL EXIT (1)
+C      CALL EXIT (1)
+      stop 1
  9200 FORMAT('COFRM:  DATE',F9.3,' is after the last recommended for ext
      +rapolation (',F6.1,')')
       END

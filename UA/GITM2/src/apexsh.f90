@@ -115,34 +115,34 @@
 !***************************************************************************************************
 
 module apxshmodule
-
+    use ModKind
     implicit none
 
     integer(4)               :: nterm, nmax, mmax, lmax, nepoch, ntermsh
     integer(4)               :: vecflag
 
-    real(8), allocatable     :: coeff0(:,:,:)
-    real(8), allocatable     :: qcoeff0(:,:), gcoeff0(:,:)
-    real(8), allocatable     :: xqcoeff(:), yqcoeff(:), zqcoeff(:)
-    real(8), allocatable     :: dxqdrhocoeff(:), dyqdrhocoeff(:), dzqdrhocoeff(:)
-    real(8), allocatable     :: xgcoeff(:), ygcoeff(:), zgcoeff(:)
-    real(8), allocatable     :: sh(:), shgradtheta(:), shgradphi(:)
-    real(8), allocatable     :: polynomq(:), dpolynomq(:), polynomg(:)
-    real(8), allocatable     :: pbar(:,:), vbar(:,:), wbar(:,:)
-    real(4), allocatable     :: epochgrid(:)
+    real(Real8_), allocatable     :: coeff0(:,:,:)
+    real(Real8_), allocatable     :: qcoeff0(:,:), gcoeff0(:,:)
+    real(Real8_), allocatable     :: xqcoeff(:), yqcoeff(:), zqcoeff(:)
+    real(Real8_), allocatable     :: dxqdrhocoeff(:), dyqdrhocoeff(:), dzqdrhocoeff(:)
+    real(Real8_), allocatable     :: xgcoeff(:), ygcoeff(:), zgcoeff(:)
+    real(Real8_), allocatable     :: sh(:), shgradtheta(:), shgradphi(:)
+    real(Real8_), allocatable     :: polynomq(:), dpolynomq(:), polynomg(:)
+    real(Real8_), allocatable     :: pbar(:,:), vbar(:,:), wbar(:,:)
+    real(Real4_), allocatable     :: epochgrid(:)
 
-    real(8)                  :: h, Reph, rho
-    real(8)                  :: xq, yq, zq
-    real(8)                  :: qlat, qlon
-    real(8)                  :: sinqlat, cosqlat, cosqlon, sinqlon
-    real(8)                  :: xqgrad(1:3), yqgrad(1:3), zqgrad(1:3)
-    real(8)                  :: qlatgrad(1:3), qlongrad(1:3)
+    real(Real8_)                  :: h, Reph, rho
+    real(Real8_)                  :: xq, yq, zq
+    real(Real8_)                  :: qlat, qlon
+    real(Real8_)                  :: sinqlat, cosqlat, cosqlon, sinqlon
+    real(Real8_)                  :: xqgrad(1:3), yqgrad(1:3), zqgrad(1:3)
+    real(Real8_)                  :: qlatgrad(1:3), qlongrad(1:3)
 
-    real(8), parameter       :: pi=3.14159265358979323846D0
-    real(8), parameter       :: dtor=pi/180D0, pid2=pi/2D0, twopi=2D0*pi
-    real(8), parameter       :: Req=6378.1370D0, eps=1.D0/298.257223563D0
-    real(8), parameter       :: Re=Req*(1-eps/3D0), ecc2=eps*(2-eps)
-    real(4), parameter       :: missing=-9999E0
+    real(Real8_), parameter       :: pi=3.14159265358979323846D0
+    real(Real8_), parameter       :: dtor=pi/180D0, pid2=pi/2D0, twopi=2D0*pi
+    real(Real8_), parameter       :: Req=6378.1370D0, eps=1.D0/298.257223563D0
+    real(Real8_), parameter       :: Re=Req*(1-eps/3D0), ecc2=eps*(2-eps)
+    real(Real4_), parameter       :: missing=-9999E0
 
 !   Req = Equatorial radius of Earth in km (WGS84 value)
 !   eps = flatness of ellipsoidal Earth (WGS84 value)
@@ -150,8 +150,8 @@ module apxshmodule
 !   ecc2 = squared eccentricity of ellipsoidal Earth
 
     character(128)           :: datafile
-    real(4)                  :: epoch
-    real(4)                  :: altlastq, altlastg
+    real(Real4_)                  :: epoch
+    real(Real4_)                  :: altlastq, altlastg
     logical                  :: loadflag = .true.
 
 end module apxshmodule
@@ -165,8 +165,8 @@ subroutine loadapxsh(datafilenew,epochnew)
     implicit none
 
     character(128)              :: datafilenew, datafilelast=''
-    real(4)                     :: epochnew, epochlast=-999.0
-    real(8)                     :: we0, we1
+    real(Real4_)                     :: epochnew, epochlast=-999.0
+    real(Real8_)                     :: we0, we1
     integer(4)                  :: iepoch0, iepoch1, iterm, icoord
 
     !CHECK FILE, GET DIMENSIONS, AND ALLOCATE ARRAYS
@@ -296,14 +296,14 @@ subroutine apxg2q(glat,glon,alt,vecflagin,qlatout,qlonout,f1,f2,f)
 
     implicit none
 
-    real(4), intent(in)         :: glat, glon, alt
+    real(Real4_), intent(in)         :: glat, glon, alt
     integer(4), intent(in)      :: vecflagin
-    real(4), intent(out)        :: qlatout, qlonout
-    real(4), intent(out)        :: f1(1:2), f2(1:2), f
+    real(Real4_), intent(out)        :: qlatout, qlonout
+    real(Real4_), intent(out)        :: f1(1:2), f2(1:2), f
 
     integer(4)               :: i, l, iterm, itermsh
-    real(8)                  :: theta, phi
-    real(8)                  :: costheta, Jtemp, J, r
+    real(Real8_)                  :: theta, phi
+    real(Real8_)                  :: costheta, Jtemp, J, r
 
     !INITIALIZE OUTPUT ARGUMENTS    
     qlat = missing
@@ -414,15 +414,15 @@ subroutine apxg2all(glat,glon,alt,hr,vecflagin, &
 
     implicit none
 
-    real(4), intent(in)         :: glat, glon, alt, hr
+    real(Real4_), intent(in)         :: glat, glon, alt, hr
     integer(4), intent(in)      :: vecflagin
-    real(4), intent(out)        :: qlatout, qlonout, mlat, mlon
-    real(4), intent(out)        :: f1(1:2), f2(1:2), f
-    real(4), intent(out)        :: d1(1:3), d2(1:3), d3(1:3), d
-    real(4), intent(out)        :: e1(1:3), e2(1:3), e3(1:3)
+    real(Real4_), intent(out)        :: qlatout, qlonout, mlat, mlon
+    real(Real4_), intent(out)        :: f1(1:2), f2(1:2), f
+    real(Real4_), intent(out)        :: d1(1:3), d2(1:3), d3(1:3), d
+    real(Real4_), intent(out)        :: e1(1:3), e2(1:3), e3(1:3)
 
     integer(4)               :: i
-    real(8)                  :: cosmlat, Rrat, denom
+    real(Real8_)                  :: cosmlat, Rrat, denom
 
     if (loadflag) then
       print *, 'No coordinates loaded. Call LOADAPXSH first.'
@@ -501,19 +501,19 @@ subroutine apxq2g(qlat0,qlon0,alt,prec,glatout,glonout,error)
 
     implicit none
 
-    real(4), intent(in)         :: qlat0, qlon0, alt, prec
-    real(4), intent(out)        :: glatout, glonout, error
+    real(Real4_), intent(in)         :: qlat0, qlon0, alt, prec
+    real(Real4_), intent(out)        :: glatout, glonout, error
 
     integer(4)               :: l, iterm, itermsh, vecflagin, niter
-    real(4)                  :: qlatout, qlonout, errorlast
-    real(4)                  :: mlon, f1(1:2), f2(1:2), f
-    real(8)                  :: theta, phi
-    real(8)                  :: sinqlon0, cosqlon0, sinqlat0, cosqlat0, cotqlat0, zfact
-    real(8)                  :: glat, glon
-    real(8)                  :: xg, yg, zg, cosglat
-    real(8)                  :: xggrad(1:2), yggrad(1:2), zggrad(1:2)
-    real(8)                  :: delqlon, delqlat, delxq, delyq, denom
-    real(8)                  :: coserror
+    real(Real4_)                  :: qlatout, qlonout, errorlast
+    real(Real4_)                  :: mlon, f1(1:2), f2(1:2), f
+    real(Real8_)                  :: theta, phi
+    real(Real8_)                  :: sinqlon0, cosqlon0, sinqlat0, cosqlat0, cotqlat0, zfact
+    real(Real8_)                  :: glat, glon
+    real(Real8_)                  :: xg, yg, zg, cosglat
+    real(Real8_)                  :: xggrad(1:2), yggrad(1:2), zggrad(1:2)
+    real(Real8_)                  :: delqlon, delqlat, delxq, delyq, denom
+    real(Real8_)                  :: coserror
 
     if (loadflag) then
       print *, 'No coordinates loaded. Call LOADAPXSH first.'
@@ -631,10 +631,10 @@ subroutine shcalc(theta,phi)
 
     implicit none
 
-    real(8), intent(in)      :: theta, phi
+    real(Real8_), intent(in)      :: theta, phi
 
     integer(4)               :: n, m, i, i1
-    real(8)                  :: mphi, cosmphi, sinmphi
+    real(Real8_)                  :: mphi, cosmphi, sinmphi
 
     call alfbasis(nmax,mmax,theta,pbar,vbar,wbar)
     i = 0
@@ -671,18 +671,18 @@ end subroutine shcalc
 !***************************************************************************************************
 
 module alfbasismodule
-
+    use ModKind
     implicit none
 
     integer(4)           :: nmax0
     integer(4)           :: mmax0
-    real(8), allocatable :: anm(:,:)
-    real(8), allocatable :: cm(:)
-    real(8), allocatable :: bnm(:,:)
-    real(8), allocatable :: dnm(:,:)
-    real(8), allocatable :: en(:)
-    real(8), allocatable :: marr(:)
-    real(8), allocatable :: narr(:)
+    real(Real8_), allocatable :: anm(:,:)
+    real(Real8_), allocatable :: cm(:)
+    real(Real8_), allocatable :: bnm(:,:)
+    real(Real8_), allocatable :: dnm(:,:)
+    real(Real8_), allocatable :: en(:)
+    real(Real8_), allocatable :: marr(:)
+    real(Real8_), allocatable :: narr(:)
 
 end module alfbasismodule
 
@@ -695,7 +695,7 @@ subroutine alfbasisinit(nmax0in,mmax0in)
     implicit none
 
     integer(4), intent(in) :: nmax0in, mmax0in
-    integer(8)             :: n, m
+    integer(Int8_)             :: n, m
 
     nmax0 = nmax0in
     mmax0 = mmax0in
@@ -737,14 +737,14 @@ subroutine alfbasis(nmax,mmax,theta,P,V,W)
     implicit none
 
     integer(4), intent(in)  :: nmax, mmax
-    real(8), intent(in)     :: theta
-    real(8), intent(out)    :: P(0:nmax,0:mmax)
-    real(8), intent(out)    :: V(0:nmax,0:mmax)
-    real(8), intent(out)    :: W(0:nmax,0:mmax)
+    real(Real8_), intent(in)     :: theta
+    real(Real8_), intent(out)    :: P(0:nmax,0:mmax)
+    real(Real8_), intent(out)    :: V(0:nmax,0:mmax)
+    real(Real8_), intent(out)    :: W(0:nmax,0:mmax)
 
     integer(4)              :: n, m
-    real(8)                 :: x, y
-    real(8), parameter      :: p00=0.70710678118654746D0
+    real(Real8_)                 :: x, y
+    real(Real8_), parameter      :: p00=0.70710678118654746D0
 
     P(0,0) = p00
     x = dcos(theta)
