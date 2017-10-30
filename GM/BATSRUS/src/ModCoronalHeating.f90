@@ -1,15 +1,18 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
+
 !=========================================!Master module!======================
 module ModCoronalHeating
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
   use ModMultiFluid, ONLY: IonFirst_, IonLast_
+  use ModExpansionFactors, ONLY: get_bernoulli_integral
 
   implicit none
   SAVE
+
   PRIVATE  ! except
 
   ! The Poynting flux to magnetic field ratio (one of the input parameters

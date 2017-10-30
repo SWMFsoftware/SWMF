@@ -106,7 +106,8 @@ contains
     use ModMagnetogram, ONLY: set_parameters_magnetogram, &
          read_magnetogram_file, read_potential_field,     &
          read_new_magnetogram_file, read_new_potential_field
-    use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim, read_wsa_coeff
+    use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim, &
+         read_wsa_coeff, set_empirical_model
     use ModCoronalHeating,  ONLY: read_corona_heating, &
          init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
     use ModFieldLineThread, ONLY: read_threads 
@@ -189,7 +190,6 @@ contains
     integer :: iNameBoundary, nNameBoundary
     real    :: BoundaryStateDim_V(1:nVar)
 
-    integer :: iTestVar, iError
     character(len=10) :: NameTestVar
 
     !-------------------------------------------------------------------------
@@ -1458,6 +1458,7 @@ contains
 
        case("#PROJECTION")
           if(.not.UseB)CYCLE READPARAM
+          call read_project_divb_param(NameCommand)
 
        case("#CORRECTP")
           call read_var('pRatioLow',Pratio_lo)

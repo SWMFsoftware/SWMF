@@ -9,34 +9,49 @@ module ModExpansionFactors
        h_pfssm, ro_pfssm, rs_pfssm, PhiOffset, &
        Dr, Dphi, Dinv_D, dSinTheta, interpolate_field, correct_angles
   use ModConst, ONLY: cGravitation, mSun, rSun, cProtonMass, cBoltzmann, &
-       cRadToDeg, cDegToRad, cSecondPerHour, cTiny
+       cRadToDeg, cDegToRad, cTiny
 
   !Dependecies to be removed
   use ModProcMH,   ONLY: iProc,nProc,iComm
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModPhysics, ONLY: RadiusStar, MassStar
+
   implicit none
-  save
+
+  SAVE
+
+  private ! except
+
+  public:: read_wsa_coeff
+  public:: get_bernoulli_integral
+  public:: set_empirical_model
+
+  real, public:: UMin=265.0
+  character(len=20), public :: NameModelSW='none' ! Type of SW model
+
+  ! The distribution of the temperature ober the
+  ! coronal base is assumed to depend on the expansion
+  ! factor: TBase = CoromalT0Dim/min(uFunal/uMin,2) is assumed
+  !
+  real, public :: CoronalT0Dim=3.5E+6 !in K
+
+
+
+
+  ! Local variables ---------------------------------------
 
   ! Named indexes for local use only
   integer, parameter:: r_=1, Phi_=2, Theta_=3
 
-  !Gravity potential, m^2/s^2
-  real,parameter :: cSunGravitySI=cGravitation*mSun/Rsun
- 
-  !The distribution of the temperature ober the
-  !coronal base is assumed to depend on the expansion
-  !factor: TBase = CoromalT0Dim/min(uFunal/uMin,2) is assumed
-  !
-  real :: CoronalT0Dim=3.5E+6 !in K
+  ! Gravity potential, m^2/s^2
+  real, parameter :: cSunGravitySI=cGravitation*mSun/Rsun
+
 
   !Gravity potential of a proton, in K
-  real,parameter :: cSunGravityK =cSunGravitySI*cProtonMass/cBoltzmann
 
-  character(len=20) :: NameModelSW='none' ! Type of SW model
   !Distribution of the solar wind model parameters: 
 
-  real,allocatable,dimension(:,:,:) :: FiskFactor_N
+  real, allocatable :: FiskFactor_N(:,:,:)
   ! The value of this factor at a given grid point
   ! is equal to the value of |B_R(r=r_Sun)|/|B(r=R_Sun)|}, 
   ! where B_R is taken at the "photospheric footpoint" of the 
@@ -56,7 +71,7 @@ module ModExpansionFactors
   ! if the magnetic field line is open, 
   ! zero otherwise.
 
-  real,allocatable,dimension(:,:,:) :: ExpansionFactorInv_N
+  real, allocatable :: ExpansionFactorInv_N(:,:,:)
   ! The expansion factor. !!!INVERTED!!!!
   ! The value of this factor at a given grid point
   ! is equal to the value of  
@@ -78,14 +93,14 @@ module ModExpansionFactors
   ! We use the referenced definition to define the expansion factor 
   ! for open field lines. If the field line is close, the expansion
   ! factor is set to be zero.
-  real,allocatable,dimension(:,:,:) :: ThetaB_N
+  real, allocatable :: ThetaB_N(:,:,:)
 
   ! Speed distribution extracted from Wang-Sheeley-Arge 
   ! model (Arge et al. 2006):
-  real,allocatable,dimension(:,:,:) :: WSAspeed_N
+  real, allocatable :: WSAspeed_N(:,:,:)
 
   !parameters in the WSA models
-  real,dimension(10) :: ArgesAlpha_I=(/&
+  real :: ArgesAlpha_I(10)=(/&
        240.0,& !constant speed km/s       !1
        675.0,& !modulation of speed km/s  !2
        4.5  ,& !power index               !3
@@ -97,17 +112,14 @@ module ModExpansionFactors
        0.0  ,& !lower bound               !9
        9999.0/)!upper bound               !10
 
-
-
-
   ! Speed distribution extracted from Fisk model
-  real,allocatable,dimension(:,:,:) :: Fiskspeed_N
-  real::UMin=265.0
-  real::GammaSS=1.10
+  real, allocatable :: Fiskspeed_N(:,:,:)
+  real:: GammaSS=1.10
 
 contains
   !==========================================================================
   subroutine read_wsa_coeff
+
     use ModReadParam,   ONLY: read_var
     !-----------------------------------------------------------------------
     call read_var('constant speed',ArgesAlpha_I(1))
@@ -446,7 +458,7 @@ contains
       R_D(Phi_)=real(iPhi)*dPhi
       R_D(Theta_)=colatitude(iTheta)
       R_D(R_)=min(max(R_D(R_),Ro_PFSSM + 0.25*dR),Rs_PFSSM-0.25*dR)
-    end subroutine start_at_grid_point 
+    end subroutine start_at_grid_point
     !==========================================================================
     function f_d(RIn_D)
       ! This fucnction calculates the value of 
@@ -491,13 +503,13 @@ contains
     real, intent(in)  :: xInput,yInput,zInput
     real, intent(out) :: Output
     real :: Rin_PFSSM,Theta_PFSSM,Phi_PFSSM
-    
+
     integer :: Node_D(3)
     real :: Res_D(3)
-    
+
     real :: Weight_III(0:1,0:1,0:1)
     real :: R_PFSSM
-    
+
     !------------------------------------------------------------------
     !\
     ! Calculate cell-centered spherical coordinates::
@@ -512,33 +524,33 @@ contains
     end if
     Theta_PFSSM = acos(zInput/Rin_PFSSM)
     Phi_PFSSM   = atan2(yInput,xInput)
-    
+
     !\
     ! Set the source surface radius::
     ! The inner boundary in the simulations starts at a height
     ! H_PFSSM above that of the magnetic field measurements!
     !/
-    
+
     R_PFSSM =min(Rin_PFSSM+H_PFSSM, Rs_PFSSM)
-    
-    
+
+
     !\
     ! Transform Phi_PFSSM from the component's frame to the
     ! magnetogram's frame.
     !/
-    
+
     Phi_PFSSM = Phi_PFSSM - PhiOffset*cDegToRad
-    
+
     !\
     ! Take a residual for the bi-linear interpolation
     !/
     Res_D=(/R_PFSSM,Phi_PFSSM,Theta_PFSSM/)
-    
+
     !Limit a value of R:
     Res_D(R_)=max(min(Res_D(R_),Rs_PFSSM-cTiny),Ro_PFSSM-nRExt*dR+cTiny)
-    
+
     Res_D(R_)=Res_D(R_)-Ro_PFSSM
-    
+
     call correct_angles(Res_D)
     Res_D(Theta_)=cos(Res_D(Theta_)) &!This is sin(latitude)
          -sin_latitude(0)     !the same for the iTheta=0 node
@@ -548,7 +560,7 @@ contains
     if(Node_D(R_)==nR)Node_D(R_)=Node_D(R_)-1
     Res_D=Res_D-real(Node_D)
     if(Node_D(Phi_)==nPhi)Node_D(Phi_)=0
-    
+
     if(Node_D(Theta_)>=nTheta)then
        Node_D(Theta_)=nTheta-1
        Res_D(Theta_)=1.0
@@ -556,219 +568,210 @@ contains
        Node_D(Theta_)=0
        Res_D(Theta_)=0.0
     end if
-    
+
     Weight_III(0,:,:)=1.0-Res_D(R_)
     Weight_III(1,:,:)=Res_D(R_)
     Weight_III(:,0,:)=Weight_III(:,0,:)*(1.0-Res_D(Phi_))
     Weight_III(:,1,:)=Weight_III(:,1,:)*Res_D(Phi_)
     Weight_III(:,:,0)=Weight_III(:,:,0)*(1.0-Res_D(Theta_))
     Weight_III(:,:,1)=Weight_III(:,:,1)*Res_D(Theta_)
-    
+
     Output= sum(Weight_III*Array_N( Node_D(R_):Node_D(R_)+1,&
          & Node_D(Phi_):Node_D(Phi_)+1,&
          & Node_D(Theta_):Node_D(Theta_)+1))
 
   end subroutine get_interpolated
 
+  !======================================================================
+  subroutine set_empirical_model(TypeRead,BodyT0)
+
+    character(LEN=*),intent(in) :: TypeRead
+    real, intent(in) :: BodyT0
+    !------------------------------------------------------------------
+    NameModelSW=trim(TypeRead)
+    CoronalT0Dim = BodyT0
+    call set_expansion_factors
+    if(iProc==0)call write_expansion_tec
+
+  end subroutine set_empirical_model
+  !====================================================================
+  subroutine get_bernoulli_integral(XyzIn_D, Output)
+
+    real, intent(in)  :: XyzIn_D(3)
+    real, intent(out) :: Output
+
+    call get_interpolated(WSASpeed_N,XyzIn_D(1),XyzIn_D(2),XyzIn_D(3),Output)
+  end subroutine get_bernoulli_integral
+
+  !==========================================================================
+
+  subroutine get_gamma_emp(xx,yy,zz,gammaOut)
+
+    ! Provides the distribution of the polytropic index, complying with
+    ! the WSA or Fisk semi-empirical models
+
+    use ModNumConst
+
+    real, intent(in) :: xx,yy,zz
+    real, intent(out)   :: gammaOut 
+    real :: RR,Uf,BernoulliFactor,R1
+    real, parameter :: gammaIH=1.5
+    real, parameter :: R2=12.50
+    integer,parameter::nPowerIndex=2
+    !------------------------------------------------------------------
+    !--
+    R1=Rs_PFSSM
+    !\
+    ! Calculate cell-centered spherical coordinates::
+    RR   = sqrt(xx**2+yy**2+zz**2)
+    !\
+    ! Avoid calculating inside a critical radius = 0.5*Rsun
+    !/
+    if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
+       gammaOut= gammaSS
+       RETURN
+    end if
+
+    ! Calculate gamma
+    if(RR >= R2)then
+       gammaOut=gammaIH
+    else if(RR >= R1)then
+
+       gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
+    else
+       call get_bernoulli_integral((/xx,yy,zz/), Uf)
+       BernoulliFactor=(0.5*Uf**2+cSunGravitySI*MassStar/RadiusStar)/&
+            (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
+            *(R1-RR)*&
+            & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
+            &/(GammaSS-1.0)*(1.0- (R1-RR)*(Ro_PFSSM/RR)&
+            &**nPowerIndex/ (R1-Ro_PFSSM))
+       gammaOut = BernoulliFactor/(BernoulliFactor-1.0)
+    end if
+
+  end subroutine get_gamma_emp
+  !==========================================================================
+
+  subroutine get_total_wave_energy_dens(X,Y,Z,&
+       VAlfvenSI,WaveEnergyDensSI)
+
+    ! Subroutine get_total_wave_energy_density
+    ! Provides the distribution of the total Alfven wave energy density
+    ! at the coronal base complying with the WSA semi-empirical model
+
+    use ModConst
+    use ModPhysics,ONLY: Gamma, GammaMinus1
+
+    real, intent(in) :: X,Y,Z,VAlfvenSI !VAlfven should be in m/s
+    real, intent(out)   :: WaveEnergyDensSI
+    real :: RR,Uf,ExpansionFactorInv
+    real, parameter :: RhoVAt1AU = 5.40e-15 !kg/(m2*s)
+    real, parameter :: AreaRatio = (cAU/rSun)**2
+    real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
+    real, parameter :: VAlfvenMin = 1.0e5   !100 km/s
+    !------------------------------------------------------------------
+    !--
+    !\
+    ! Calculate cell-centered spherical coordinates::
+    RR   = sqrt(X**2+Y**2+Z**2)
+    !\
+    ! Avoid calculating inside a critical radius = 0.5*Rsun
+    !/
+    if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
+       WaveEnergyDensSI = 0.0
+       RETURN
+    end if
+
+    !v_\infty from WSA model:
+    call get_bernoulli_integral((/X,Y,Z/), Uf)
+
+    !An expansion factor
+    call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)
+
+    WaveEnergyDensSi = (0.5 * Uf**2 + cSunGravitySI*MassStar/RadiusStar - &
+         Gamma/GammaMinus1*cBoltzmann/cProtonMass*&
+         CoronalT0Dim/min(Uf/UMin, 2.0) )& !This is a modulated Tc
+         * RhoV/&
+         max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
+
+  end subroutine get_total_wave_energy_dens
+  !====================================================================
+  subroutine write_expansion_tec
+
+    ! Generates a 2D tecplot output file,
+    ! which displays the ModExpansionFactors parameters. All variables 
+    ! are displayed in the MAGNETOGRAM frame of reference - 
+    ! Mag_Long (Magnetogram longitude) and Mag_Lat (magnetogram latitude).
+
+    use ModIO, ONLY: NamePlotDir
+
+    real :: GammaR0, GammaRS
+    integer :: iError,iPhi,iTheta,iUnit
+    real :: xx,yy,zz,rLatitude
+    character(len=32) :: FileNameDat
+
+    !-----------------------------------------------------------------
+    FileNameDat= trim(NamePlotDir)//'PFSSM_Factors.dat'
+
+    iUnit=io_unit_new()
+    call write_prefix;write(iUnitOut,*)'Writing PFSSM factors  output&
+         & file'
+    open(unit = iUnit, file = FileNameDat , form =&
+         & 'formatted', access = 'sequential', status = 'replace',&
+         & iostat = iError )
+    ! Tecplot file header  
+    if ( iError /= 0 ) then
+       call write_prefix;write(iUnitOut, '(a)' ) ' '
+       call write_prefix;write(iUnitOut, '(a)' ) 'TECPLOT_WRITE_OPEN -&
+            & Fatal error!'
+       call write_prefix;write(iUnitOut, '(a)' ) '  Could not open the&
+            & output file.'
+       call stop_mpi('')
+    end if
+
+    write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
+    write ( iUnit, '(a)' ) 'Variables = ' // trim ( '"Mag_Long [Deg]",&
+         & "Mag_Lat [Deg]",  "f_s","Fisk_factor","Theta_b","U_WSA [Km&
+         &/s]","U_Fisk [Km/s]","Gamma0","GammaSS"')
+    write ( iUnit, '(a)' ) ' '
+    write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', nPhi+1, ', J=',&
+         & nTheta+1, ', F=point' 
+    !\
+    ! Writing parameters maps:
+    ! List of parameters:
+    ! 1) 1/fs(Rs), 2) Fisk_factor(Rs), 3) Theta_b(Rs), 4) Final WSA speed
+    ! (at Rs),
+    ! 5) Final Fisk speed (at Rs), 6) Gamma (R0), 7) Gamma (Rs)  
+    !/
+    do iTheta=0,nTheta
+       rLatitude=r_latitude(iTheta)
+       do iPhi=0,nPhi
+          xx=Ro_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+PhiOffset&
+               &*cDegToRad)
+          yy=Ro_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+PhiOffset&
+               &*cDegToRad)
+          zz=Ro_PFSSM*sin(rLatitude) 
+          call get_gamma_emp(xx,yy,zz,GammaR0)
+          xx=Rs_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+PhiOffset&
+               &*cDegToRad)
+          yy=Rs_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+PhiOffset&
+               &*cDegToRad)
+          zz=Rs_PFSSM*sin(rLatitude)
+          call get_gamma_emp(xx,yy,zz,GammaRS)
+          write ( iUnit, '(6f10.3)' )real(iPhi)*dPhi/cDegToRad,&
+               rLatitude/cDegToRad,&
+               ExpansionFactorInv_N(nR,iPhi,iTheta),&
+               FiskFactor_N(nR,iPhi,iTheta),&
+               ThetaB_N(nR,iPhi,iTheta),&
+               WSAspeed_N(nR,iPhi,iTheta)/1.0E3,&   !in Km/s
+               Fiskspeed_N(nR,iPhi,iTheta)/1.0E3,&   !in Km/s
+               GammaR0,&                       !At the solar surface
+               GammaRS                        !At the source surface
+
+       end do
+    end do
+    close(iUnit)
+
+  end subroutine write_expansion_tec
+
 end module ModExpansionFactors
-!=================================set_empirical_model=============
-subroutine set_empirical_model(TypeRead,BodyT0)
-  use ModExpansionFactors
-  implicit none
-
-  character(LEN=*),intent(in) :: TypeRead
-  real, intent(in) :: BodyT0
-  !------------------------------------------------------------------
-  NameModelSW=trim(TypeRead)
-  CoronalT0Dim = BodyT0
-  call set_expansion_factors
-  if(iProc==0)call write_expansion_tec
-
-end subroutine set_empirical_model
-!====================================================================
-subroutine get_bernoulli_integral(XyzIn_D, Output)
-  use ModExpansionFactors
-  implicit none
-  real, intent(in)  :: XyzIn_D(3)
-  real, intent(out) :: Output
-
-  call get_interpolated(WSASpeed_N,XyzIn_D(1),XyzIn_D(2),XyzIn_D(3),Output)
-end subroutine get_bernoulli_integral
-
-!==========================================================================
-
-subroutine get_gamma_emp(xx,yy,zz,gammaOut)
-
-  ! Subroutine get_gamma_emp
-  ! Provides the distribution of the polytropic index, complying with
-  ! the WSA or Fisk semi-empirical models
-
-  use ModExpansionFactors
-  use ModNumConst
-  implicit none
-
-  real, intent(in) :: xx,yy,zz
-  real, intent(out)   :: gammaOut 
-  real :: RR,Uf,BernoulliFactor,R1
-  real, parameter :: gammaIH=1.5
-  real, parameter :: R2=12.50
-  integer,parameter::nPowerIndex=2
-  !------------------------------------------------------------------
-  !--
-  R1=Rs_PFSSM
-  !\
-  ! Calculate cell-centered spherical coordinates::
-  RR   = sqrt(xx**2+yy**2+zz**2)
-  !\
-  ! Avoid calculating inside a critical radius = 0.5*Rsun
-  !/
-  if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
-     gammaOut= gammaSS
-     RETURN
-  end if
-
-  ! Calculate gamma
-  if(RR >= R2)then
-     gammaOut=gammaIH
-  else if(RR >= R1)then
-
-     gammaOut=gammaSS+(RR-R1)*(gammaIH-gammaSS)/(R2-R1)
-  else
-     call get_bernoulli_integral((/xx,yy,zz/), Uf)
-     BernoulliFactor=(0.5*Uf**2+cSunGravitySI*MassStar/RadiusStar)/&
-          (CoronalT0Dim*cBoltzmann/cProtonMass/min(Uf/UMin, 2.0))&
-          *(R1-RR)*&
-          & (Ro_PFSSM/RR)**nPowerIndex/ (R1-Ro_PFSSM)+ GammaSS&
-          &/(GammaSS-1.0)*(1.0- (R1-RR)*(Ro_PFSSM/RR)&
-          &**nPowerIndex/ (R1-Ro_PFSSM))
-     gammaOut = BernoulliFactor/(BernoulliFactor-1.0)
-  end if
-
-end subroutine get_gamma_emp
-!==========================================================================
-
-subroutine get_total_wave_energy_dens(X,Y,Z,&
-     VAlfvenSI,WaveEnergyDensSI)
-
-  ! Subroutine get_total_wave_energy_density
-  ! Provides the distribution of the total Alfven wave energy density
-  ! at the coronal base complying with the WSA semi-empirical model
-
-  use ModExpansionFactors
-  use ModConst
-  use ModPhysics,ONLY: Gamma, GammaMinus1
-  implicit none
-
-  real, intent(in) :: X,Y,Z,VAlfvenSI !VAlfven should be in m/s
-  real, intent(out)   :: WaveEnergyDensSI
-  real :: RR,Uf,ExpansionFactorInv
-  real, parameter :: RhoVAt1AU = 5.40e-15 !kg/(m2*s)
-  real, parameter :: AreaRatio = (cAU/rSun)**2
-  real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
-  real, parameter :: VAlfvenMin = 1.0e5   !100 km/s
-  !------------------------------------------------------------------
-  !--
-  !\
-  ! Calculate cell-centered spherical coordinates::
-  RR   = sqrt(X**2+Y**2+Z**2)
-  !\
-  ! Avoid calculating inside a critical radius = 0.5*Rsun
-  !/
-  if (RR <max(Ro_PFSSM-dR*nRExt,0.90*Ro_PFSSM)) then 
-     WaveEnergyDensSI = 0.0
-     RETURN
-  end if
-
-  !v_\infty from WSA model:
-  call get_bernoulli_integral((/X,Y,Z/), Uf)
-
-  !An expansion factor
-  call get_interpolated(ExpansionFactorInv_N,X,Y,Z,ExpansionFactorInv)
-
-  WaveEnergyDensSi = (0.5 * Uf**2 + cSunGravitySI*MassStar/RadiusStar - &
-       Gamma/GammaMinus1*cBoltzmann/cProtonMass*&
-       CoronalT0Dim/min(Uf/UMin, 2.0) )& !This is a modulated Tc
-       * RhoV/&
-       max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
-
-end subroutine get_total_wave_energy_dens
-!====================================================================
-! Subroutine write_expansion_tec generates a 2D tecplot output file,
-! which displays the ModExpansionFactors parameters. All variables 
-! are displayed in the MAGNETOGRAM frame of reference - 
-! Mag_Long (Magnetogram longitude) and Mag_Lat (magnetogram latitude).
-!====================================================================
-subroutine write_expansion_tec
-  use ModExpansionFactors
-  use ModIO, ONLY: NamePlotDir
-
-  implicit none
-
-  real :: GammaR0, GammaRS
-  integer :: iError,iPhi,iTheta,iUnit
-  real :: xx,yy,zz,rLatitude
-  character(len=32) :: FileNameDat
-
-  !-----------------------------------------------------------------
-  FileNameDat= trim(NamePlotDir)//'PFSSM_Factors.dat'
-
-  iUnit=io_unit_new()
-  call write_prefix;write(iUnitOut,*)'Writing PFSSM factors  output&
-       & file'
-  open(unit = iUnit, file = FileNameDat , form =&
-       & 'formatted', access = 'sequential', status = 'replace',&
-       & iostat = iError )
-  ! Tecplot file header  
-  if ( iError /= 0 ) then
-     call write_prefix;write(iUnitOut, '(a)' ) ' '
-     call write_prefix;write(iUnitOut, '(a)' ) 'TECPLOT_WRITE_OPEN -&
-          & Fatal error!'
-     call write_prefix;write(iUnitOut, '(a)' ) '  Could not open the&
-          & output file.'
-     call stop_mpi('')
-  end if
-
-  write ( iUnit, '(a)' ) 'Title = "'     // trim ('PFSSM_Br') // '"'
-  write ( iUnit, '(a)' ) 'Variables = ' // trim ( '"Mag_Long [Deg]",&
-       & "Mag_Lat [Deg]",  "f_s","Fisk_factor","Theta_b","U_WSA [Km&
-       &/s]","U_Fisk [Km/s]","Gamma0","GammaSS"')
-  write ( iUnit, '(a)' ) ' '
-  write ( iUnit, '(a,i6,a,i6,a)' ) 'Zone I = ', nPhi+1, ', J=',&
-       & nTheta+1, ', F=point' 
-  !\
-  ! Writing parameters maps:
-  ! List of parameters:
-  ! 1) 1/fs(Rs), 2) Fisk_factor(Rs), 3) Theta_b(Rs), 4) Final WSA speed
-  ! (at Rs),
-  ! 5) Final Fisk speed (at Rs), 6) Gamma (R0), 7) Gamma (Rs)  
-  !/
-  do iTheta=0,nTheta
-     rLatitude=r_latitude(iTheta)
-     do iPhi=0,nPhi
-        xx=Ro_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+PhiOffset&
-             &*cDegToRad)
-        yy=Ro_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+PhiOffset&
-             &*cDegToRad)
-        zz=Ro_PFSSM*sin(rLatitude) 
-        call get_gamma_emp(xx,yy,zz,GammaR0)
-        xx=Rs_PFSSM*cos(rLatitude)* cos(real(iPhi)*dPhi+PhiOffset&
-             &*cDegToRad)
-        yy=Rs_PFSSM*cos(rLatitude)* sin(real(iPhi)*dPhi+PhiOffset&
-             &*cDegToRad)
-        zz=Rs_PFSSM*sin(rLatitude)
-        call get_gamma_emp(xx,yy,zz,GammaRS)
-        write ( iUnit, '(6f10.3)' )real(iPhi)*dPhi/cDegToRad,&
-             rLatitude/cDegToRad,&
-             ExpansionFactorInv_N(nR,iPhi,iTheta),&
-             FiskFactor_N(nR,iPhi,iTheta),&
-             ThetaB_N(nR,iPhi,iTheta),&
-             WSAspeed_N(nR,iPhi,iTheta)/1.0E3,&   !in Km/s
-             Fiskspeed_N(nR,iPhi,iTheta)/1.0E3,&   !in Km/s
-             GammaR0,&                       !At the solar surface
-             GammaRS                        !At the source surface
-
-     end do
-  end do
-  close(iUnit)
-
-end subroutine write_expansion_tec
