@@ -33,7 +33,7 @@ test_help:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} STANDALONE=YES
+	$(MAKE) rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
 
 ### EARTH GITM TEST ###
 
