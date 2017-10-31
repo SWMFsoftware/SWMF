@@ -809,6 +809,7 @@ contains
     use ModWritePlotLos,      ONLY: write_plot_los
     use ModWritePlotRadiowave,ONLY: write_plot_radiowave
     use ModWriteTecplot,      ONLY: assign_node_numbers
+    use ModWriteLogSatFile,   ONLY: write_logfile
     use ModMessagePass,       ONLY: exchange_messages
 
     integer :: iSat
