@@ -3295,6 +3295,15 @@ contains
          iVarUseCmax_I = (/Ex_, Ey_, Ez_, HypE_/)
       end if
 
+      if (UseEfield .and. UseHyperbolicDivb .and. ClightDim > 0 &
+           .and. SpeedHypDim > ClightDim) then
+         SpeedHypDim = ClightDim
+         if (iProc ==0)  write(*,*) NameSub //                &
+              ' SpeedHypDim is larger than cLightDim. '//     &
+              'Reduce SpeedHypDim to ClightDimSpeedHypDim =', &
+              SpeedHypDim, ' ClightDim =', ClightDim, ''
+      end if
+
     end subroutine correct_parameters
 
     !==========================================================================
