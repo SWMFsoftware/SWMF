@@ -335,7 +335,7 @@ contains
     character (len=lNameLogVar) :: NameLogVar
 
     real :: StateIntegral_V(nVar)
-    real :: SatRayVar_I(5), SatRayVarSum_I(5)
+    real :: SatRayVar_I(5)
 
     integer :: iVar,iR,iVarTot, iBLK
     integer :: i,j,k
@@ -389,7 +389,7 @@ contains
           select case(NameLogVar_I(iVar))
           case('theta1','theta2','phi1','phi2','status')
              call get_satellite_ray(iSat, SatRayVar_I)
-             call MPI_reduce(SatRayVar_I, SatRayVarSum_I, 6, MPI_REAL, MPI_SUM, &
+             if(nProc > 1)call MPI_reduce_real_array(SatRayVar_I, 5, MPI_SUM, &
                   0, iComm, iError)
              EXIT
           end select
@@ -1080,15 +1080,15 @@ contains
 
          !Raytracing footpoint values
       case('theta1')
-         LogVar_I(iVarTot) = SatRayVarSum_I(1)
+         LogVar_I(iVarTot) = SatRayVar_I(1)
       case('phi1')
-         LogVar_I(iVarTot) = SatRayVarSum_I(2)
+         LogVar_I(iVarTot) = SatRayVar_I(2)
       case('status')
-         LogVar_I(iVarTot) = SatRayVarSum_I(3)
+         LogVar_I(iVarTot) = SatRayVar_I(3)
       case('theta2')
-         LogVar_I(iVarTot) = SatRayVarSum_I(4)
+         LogVar_I(iVarTot) = SatRayVar_I(4)
       case('phi2')
-         LogVar_I(iVarTot) = SatRayVarSum_I(5)
+         LogVar_I(iVarTot) = SatRayVar_I(5)
 
       case default
          ! Check if the variable name is one of the state variables
@@ -1616,19 +1616,12 @@ contains
     real, intent(inout) :: StateCurrent_V(0:nVar+3)
 
     !LOCAL VARIABLES:
-    ! This is needed for MPI_reduce
-    real :: StateCurrentAll_V(0:nVar+3)
-
-    ! Temporary variables
     real    :: Weight
     integer :: iError
     !--------------------------------------------------------------------------
     ! Collect contributions from all the processors to PE 0
-    if(nProc>1)then
-       call MPI_reduce(StateCurrent_V, StateCurrentAll_V, nVar+4,&
-            MPI_REAL, MPI_SUM, 0, iComm, iError)
-       if(iProc==0)StateCurrent_V = StateCurrentAll_V
-    end if
+    if(nProc > 1)call MPI_reduce_real_array(StateCurrent_V, nVar+4, MPI_SUM, &
+         0, iComm, iError)
 
     ! Check total weight and divide by it if necessary
     if(iProc==0)then
