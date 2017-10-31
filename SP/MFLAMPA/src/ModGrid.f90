@@ -422,7 +422,7 @@ contains
        DistanceToMin = sqrt(sum((&
             State_VIB(X_:Z_, 1, iBlock) - CoordMin_DI(:,iBlock))**2))
        ! skip the line if it's still close to the Sun
-       if(DistanceToMin <= Length_I(iBlock)) CYCLE
+       if(DistanceToMin * (1.0 + cTol) < Length_I(iBlock)) CYCLE
        
        ! append a new particle
        !-----------------------
