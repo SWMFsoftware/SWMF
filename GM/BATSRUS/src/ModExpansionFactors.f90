@@ -26,17 +26,16 @@ module ModExpansionFactors
   public:: get_bernoulli_integral
   public:: set_empirical_model
 
-  real, public:: UMin=265.0
-  character(len=20), public :: NameModelSW='none' ! Type of SW model
+  character(len=20), public:: NameModelSW='none' ! Type of SW model
 
-  ! The distribution of the temperature ober the
+  ! The distribution of the temperature over the
   ! coronal base is assumed to depend on the expansion
-  ! factor: TBase = CoromalT0Dim/min(uFunal/uMin,2) is assumed
-  !
-  real, public :: CoronalT0Dim=3.5E+6 !in K
+  ! factor: TBase = CoromalT0Dim/min(uFinal/uMin,2) is assumed
+  real, public:: CoronalT0Dim=3.5E+6 !in K
+  real, public:: UMin=265.0
 
-
-
+  ! Gamma at the source surface
+  real, public:: GammaSS=1.1
 
   ! Local variables ---------------------------------------
 
@@ -114,7 +113,6 @@ module ModExpansionFactors
 
   ! Speed distribution extracted from Fisk model
   real, allocatable :: Fiskspeed_N(:,:,:)
-  real:: GammaSS=1.10
 
 contains
   !==========================================================================
@@ -437,8 +435,10 @@ contains
     end select
 
     ! Finding the maximum surface value of gamma (related to the minimum speed)
-    gammaSS=( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar)/(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
-         /( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar)/(CoronalT0Dim*cBoltzmann/cProtonMass)-1.0 )
+    gammaSS= ( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar) &
+         /(CoronalT0Dim*cBoltzmann/cProtonMass) ) &
+         /( (0.5*UMin**2+cSunGravitySI*MassStar/RadiusStar)    &
+         /(CoronalT0Dim*cBoltzmann/cProtonMass)-1.0 )
   contains
     !==========================================================================
     subroutine advance_line_point(RInOut_D, Dir)
