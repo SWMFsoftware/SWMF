@@ -35,11 +35,11 @@ NOMPI:
 
 GITM:
 	@cd ${SHAREDIR}; make LIB
-	@cd $(ABDIR);    make LIB
+	@cd $(ABDIR);    make -j1  LIB
 	@cd $(EIEDIR);   make LIB
 	@cd ${EUADIR};   make LIB
 	@cd $(IODIR);    make LIB
-	@cd $(GLDIR);	 make LIB
+	@cd $(GLDIR);	 make -j1 LIB
 	@cd $(MAINDIR);  make GITM
 
 POST:
