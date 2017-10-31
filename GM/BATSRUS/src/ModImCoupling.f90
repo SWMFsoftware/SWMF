@@ -61,7 +61,7 @@ contains
 
     use ModMain,     ONLY : nI, nJ, nK, DoFixPolarRegion, rFixPolarRegion, &
          dLatSmoothIm, UseB0
-    use ModRaytrace, ONLY : ray
+    use ModFieldTrace, ONLY : ray
     use ModPhysics,  ONLY : &
          Si2No_V, UnitB_, UnitP_, UnitRho_, PolarRho_I, PolarP_I
     use ModGeometry, ONLY : R_BLK, Xyz_DGB, z_
@@ -293,6 +293,7 @@ contains
     use ModMultiFluid, ONLY : IonFirst_, IonLast_, iRho_I, iP_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I, iFluid
     use ModEnergy, ONLY: calc_energy_cell
+    use ModFieldTrace, ONLY: trace_field_grid
 
     real :: Factor
 
@@ -324,10 +325,10 @@ contains
     ! redo ray tracing if necessary 
     ! (load_balance takes care of new decomposition)
     if(iNewPIm > iLastPIm .or. iNewGrid > iLastGrid) then
-       if(DoTestMe)write(*,*)'GM_apply_im_pressure: call ray_trace ',&
+       if(DoTestMe)write(*,*)'GM_apply_im_pressure: call trace_field_grid ',&
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
-       call ray_trace
+       call trace_field_grid
     end if
 
     ! Remember this call

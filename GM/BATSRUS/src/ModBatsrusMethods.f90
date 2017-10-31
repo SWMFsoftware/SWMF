@@ -801,15 +801,18 @@ contains
     use ModSatelliteFile, ONLY: &
          nSatellite, set_satellite_file_status, set_satellite_flags, &
          TimeSatStart_I, TimeSatEnd_I, iCurrent_satellite_position
-    use ModGroundMagPerturb, ONLY: DoSaveMags, &
-         DoSaveGridmag, write_magnetometers, DoWriteIndices, &
-         write_geoindices
+    use ModWriteLogSatFile,   ONLY: write_logfile
+    use ModGroundMagPerturb, ONLY: &
+         DoSaveMags, DoSaveGridmag, write_magnetometers, &
+         DoWriteIndices, write_geoindices
     use ModParticleFieldLine, ONLY: write_plot_particle
     use ModWritePlot,         ONLY: write_plot
     use ModWritePlotLos,      ONLY: write_plot_los
     use ModWritePlotRadiowave,ONLY: write_plot_radiowave
     use ModWriteTecplot,      ONLY: assign_node_numbers
-    use ModWriteLogSatFile,   ONLY: write_logfile
+    use ModFieldTrace,        ONLY: trace_field_grid, &
+         write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
+
     use ModMessagePass,       ONLY: exchange_messages
 
     integer :: iSat
@@ -898,17 +901,17 @@ contains
        if(  index(plot_type(iFile),'eqr')>0 .or. &
             index(plot_type(iFile),'eqb')>0) then
           IsFound = .true.
-          call plot_ray_equator(iFile)
+          call write_plot_equator(iFile)
        end if
 
        if(index(plot_type(iFile),'ieb')>0) then
           IsFound = .true.
-          call ieb_plot(iFile)
+          call write_plot_ieb(iFile)
        end if
 
        if(index(plot_type(iFile),'lcb')>0) then
           IsFound = .true.
-          call lcb_plot(iFile)
+          call write_plot_lcb(iFile)
        end if
 
        if(index(plot_type(iFile),'buf')>0)then
@@ -924,7 +927,7 @@ contains
           end if
 
           if(  index(plot_type(iFile),'ray')>0 .or. &
-               index(plot_vars(iFile),'status')>0) call ray_trace
+               index(plot_vars(iFile),'status')>0) call trace_field_grid
 
           call timing_start('save_plot')
           call write_plot(iFile)
@@ -1040,7 +1043,7 @@ subroutine BATSRUS_finalize
   use ModGeometry,     ONLY: clean_mod_geometry
   use ModNodes,        ONLY: clean_mod_nodes
   use ModConstrainDivB,ONLY: clean_mod_ct
-  use ModRaytrace,     ONLY: clean_mod_raytrace
+  use ModFieldTrace,   ONLY: clean_mod_field_trace
   use ModPartImplicit, ONLY: clean_mod_part_impl
   use ModSemiImplicit, ONLY: clean_mod_semi_impl
   use ModIeCoupling,   ONLY: clean_mod_ie_coupling
@@ -1057,7 +1060,7 @@ subroutine BATSRUS_finalize
   call clean_mod_semi_impl
   call clean_mod_geometry
   call clean_mod_nodes
-  call clean_mod_raytrace
+  call clean_mod_field_trace
   call clean_mod_ie_coupling
 
   ! call clean_mod_boundary_cells !!! to be implemented

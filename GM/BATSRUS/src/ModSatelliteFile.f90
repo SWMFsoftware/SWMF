@@ -556,10 +556,11 @@ contains
 
   subroutine get_satellite_ray(iSatIn, SatRayVar_I)
 
-    use ModRaytrace
+    use ModFieldTrace, ONLY: ray
+    use BATL_size,ONLY: 
+    use BATL_lib, ONLY: iProc, nI, nJ, nK, IsCartesianGrid, &
+         CellSize_DB, CoordMin_DB, xyz_to_coord
     use ModMpi
-    use BATL_size,ONLY: nI, nJ, nK
-    use BATL_lib, ONLY: IsCartesianGrid, CellSize_DB, CoordMin_DB, xyz_to_coord
 
     integer, intent(in) :: iSatIn
     real,    intent(out):: SatRayVar_I(5)
@@ -682,8 +683,8 @@ contains
   subroutine GM_trace_sat(SatXyz_D, SatRay_D)
     
     use ModProcMH,    ONLY: iComm, iProc
-    use ModRayTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
-         rIonosphere
+    use ModFieldTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
+         extract_field_lines, rIonosphere
     use ModVarIndexes,ONLY: nVar
     use ModMain,      ONLY:time_simulation,TypeCoordSystem
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
@@ -691,7 +692,6 @@ contains
     use CON_axes,     ONLY: transform_matrix
     use CON_planet_field, ONLY: map_planet_field
     use ModPhysics,   ONLY: rBody
-    implicit none
     
     real, intent(in) :: SatXyz_D(3) ! Satellite Position
     real, intent(out)   :: SatRay_D(3)
@@ -731,7 +731,7 @@ contains
        call line_init(nStateVar)
        
        ! Obtain the line data
-       call ray_lines(nLine, (/IsParallel/), SatXyz_D)
+       call extract_field_lines(nLine, (/IsParallel/), SatXyz_D)
        
        ! Collect lines from all PE-s to Proc 0
        call line_collect(iComm,0)
@@ -757,7 +757,7 @@ contains
        call line_init(nStateVar)
        
        ! Obtain the line data
-       call ray_lines(nLine, (/.not.IsParallel/), SatXyz_D)
+       call extract_field_lines(nLine, (/.not.IsParallel/), SatXyz_D)
        
        ! Collect lines from all PE-s to Proc 0
        call line_collect(iComm,0)

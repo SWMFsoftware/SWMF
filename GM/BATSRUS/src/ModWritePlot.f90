@@ -782,11 +782,11 @@ contains
     ! Extend array of scalar parameters with useful information
 
     use ModProcMH
-    use ModPhysics, ONLY : Gamma, Gamma_I, GammaElectron, &
+    use ModPhysics, ONLY: Gamma, Gamma_I, GammaElectron, &
          cLight, rBody, ThetaTilt, &
          No2Io_V, No2Si_V, Io2Si_V, UnitX_, UnitT_, UnitU_, UnitRho_
-    use ModRaytrace, ONLY : R_raytrace
-    use ModNumConst, ONLY : cRadToDeg
+    use ModFieldTrace, ONLY: R_raytrace
+    use ModNumConst, ONLY: cRadToDeg
     use ModResistivity, ONLY: Eta0Si
     use ModIO
     use ModMain, ONLY: dt
@@ -965,7 +965,7 @@ contains
     use ModPhysics, ONLY: BodyRho_I, BodyP_I, OmegaBody, FaceState_VI, &
          ElectronPressureRatio, RhoBody2, pBody2, rBody2
     use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
-    use ModRayTrace, ONLY: ray, rayface
+    use ModFieldTrace, ONLY: ray, rayface
     use ModUtilities, ONLY: lower_case
     use ModIO, ONLY: NameVarUserTec_I, NameUnitUserTec_I, NameUnitUserIdl_I, &
          plot_dimensional, Plot_

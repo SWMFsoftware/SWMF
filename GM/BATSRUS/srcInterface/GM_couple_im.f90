@@ -69,10 +69,10 @@ contains
   subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, &
        nPointLine)
 
-    ! Do ray tracing for IM. 
+    ! Do field tracing for IM. 
     ! Provide total number of points along rays 
     ! and the number of variables to pass to IM
-    use ModRayTrace, ONLY: DoExtractUnitSi
+    use ModFieldTrace, ONLY: DoExtractUnitSi, integrate_field_from_sphere
     use CON_line_extract, ONLY: line_get
 
     integer, intent(in)           :: iSizeIn, jSizeIn
@@ -101,8 +101,8 @@ contains
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
     DoExtractUnitSi = .true.
 
-    call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
-         NameVar)
+    call integrate_field_from_sphere(&
+         iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, NameVar)
 
     call line_get(nVarLine, nPointLine)
 
@@ -289,6 +289,7 @@ contains
     !Modules
     use ModProcMH,        ONLY: iProc
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
+    use ModWriteLogSatFile, ONLY: collect_satellite_data
     use ModMain,          ONLY: UseB0, nBlock
     use ModPhysics,       ONLY: No2Si_V, UnitB_
     use ModVarIndexes,    ONLY: nVar, Bx_, Bz_
@@ -350,8 +351,8 @@ contains
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_coupler,      ONLY: Grid_C, IM_
     use CON_axes,         ONLY: transform_matrix
-    use ModMultiFluid, ONLY: iFluid, nFluid, iUx_I, iUz_I
-    use ModRaytrace,   ONLY: DoExtractBGradB1
+    use ModMultiFluid,    ONLY: iFluid, nFluid, iUx_I, iUz_I
+    use ModFieldTrace,    ONLY: DoExtractBGradB1, trace_field_equator
 
     integer, intent(in)           :: nRadius, nLon
     integer, intent(out)          :: nVarLine, nPointLine
@@ -392,7 +393,7 @@ contains
     NameVar = 'iLine Length x y z '//NamePrimitiveVarOrig
     if(DoExtractBGradB1) NameVar = trim(NameVar)//' bgradb1x bgradb1y bgradb1z'
 
-    call trace_ray_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
+    call trace_field_equator(nRadius, nLon, RadiusIm_I, LongitudeIm_I, .true.)
 
     if(iProc /= 0) RETURN
 
@@ -436,7 +437,7 @@ contains
 
 
     use ModProcMH,  ONLY: iProc
-    use ModRayTrace, ONLY: RayMap_DSII
+    use ModFieldTrace, ONLY: RayMap_DSII
 
     character (len=*), parameter :: NameSub='GM_get_for_im_line'
 
@@ -469,9 +470,10 @@ contains
   subroutine GM_get_for_im(Buffer_IIV,KpOut,iSizeIn,jSizeIn,nVar,NameVar)
 
     use ModProcMH, ONLY: iProc
-    use ModRaytrace, ONLY: RayResult_VII, RayIntegral_VII, &
+    use ModFieldTrace, ONLY: RayResult_VII, RayIntegral_VII, &
          InvB_, Z0x_, Z0y_, Z0b_, RhoInvB_, pInvB_,  &
-         HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, xEnd_, CLOSEDRAY
+         HpRhoInvB_, OpRhoInvB_, HpPInvB_, OpPInvB_, xEnd_, CLOSEDRAY, &
+         integrate_field_from_sphere
     use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
 
     integer,          intent(in) :: iSizeIn, jSizeIn, nVar
@@ -501,10 +503,12 @@ contains
     ! The RCM ionosphere radius in normalized units
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
     if(.not. DoMultiFluidIMCoupling)then
-       call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
+       call integrate_field_from_sphere(&
+            iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
     else
-       call integrate_ray_accurate(iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
+       call integrate_field_from_sphere(&
+            iSizeIn, jSizeIn, IM_lat, IM_lon, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b,HpRhoInvB,OpRhoInvB,HppInvB,OppInvB')
        ! but not pass Rhoinvb, Pinvb to IM
     end if
@@ -581,7 +585,7 @@ contains
           Buffer_IIV(:,:,RhoInvB_) = MHD_SUM_rho
           Buffer_IIV(:,:,pInvB_)   = MHD_SUM_p
        else
-          ! the index is not continuous as in ModRayTrace                
+          ! the index is not continuous as in ModFieldTrace                
           Buffer_IIV(:,:,HpRhoInvB_) = MHD_HpRho
           Buffer_IIV(:,:,OpRhoInvB_) = MHD_Oprho
           Buffer_IIV(:,:,HpPInvB_)   = MHD_HpP
@@ -674,7 +678,7 @@ contains
     use ModMain, ONLY : n_step,time_simulation
     use ModIoUnit, ONLY: UNITTMP_
     use ModProcMH, ONLY: iProc
-    use ModRaytrace, ONLY: UseAccurateTrace, DoMapEquatorRay
+    use ModFieldTrace, ONLY: UseAccurateTrace, DoMapEquatorRay
 
     character(len=80):: filename
 
@@ -799,7 +803,7 @@ contains
 
     end subroutine write_IMvars_tec
 
-    !============================================================================
+    !==========================================================================
     subroutine write_IMvars_idl
       if(iProc /= 0)RETURN
 

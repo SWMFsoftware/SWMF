@@ -13,7 +13,7 @@ module ModLoadBalance
   use ModPointImplicit, ONLY: UsePointImplicit_B, &
        DoBalancePointImplicit, IsDynamicPointImplicit
   use ModConstrainDivB, ONLY: Bxface_BLK, Byface_BLK, Bzface_BLK
-  use ModRaytrace, ONLY: ray
+  use ModFieldTrace, ONLY: ray
   use ModAdvance, ONLY: nVar
   use ModB0, ONLY: B0_DGB
   use ModIo, ONLY: log_vars

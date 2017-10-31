@@ -209,7 +209,7 @@ contains
     ! Do ray tracing for RB. 
     ! Provide total number of points along rays 
     ! and the number of variables to pass to RB
-    use ModRayTrace, ONLY: DoExtractUnitSi
+    use ModFieldTrace, ONLY: DoExtractUnitSi, integrate_field_from_sphere
 
     use CON_line_extract, ONLY: line_get
 
@@ -230,8 +230,8 @@ contains
     ! The RB ionosphere radius in normalized units
     Radius = (6378.+100.)/6378.  !!! could be derived from Grid_C ?
     DoExtractUnitSi = .true.
-    call integrate_ray_accurate(iSizeIn, jSizeIn, RB_lat, RB_lon, Radius, &
-         NameVar)
+    call integrate_field_from_sphere(&
+         iSizeIn, jSizeIn, RB_lat, RB_lon, Radius, NameVar)
 
     call line_get(nVarLine, nPointLine)
 
@@ -409,6 +409,7 @@ contains
     !Modules
     use ModProcMH,        ONLY: iProc
     use ModSatelliteFile, ONLY: NameSat_I, XyzSat_DI, gm_trace_sat
+    use ModWriteLogSatFile, ONLY: collect_satellite_data
     use ModMain,          ONLY: UseB0, nBlock
     use ModPhysics,       ONLY: No2Si_V, UnitB_
     use ModVarIndexes,    ONLY: nVar, Bx_, By_, Bz_

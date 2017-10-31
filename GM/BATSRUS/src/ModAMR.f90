@@ -73,7 +73,7 @@ contains
          nVar, State_VGB, &
          SkippedBlock_ !!!
     use ModLoadBalance, ONLY: load_balance
-    use ModRaytrace, ONLY: ray
+    use ModFieldTrace, ONLY: ray
     use ModBlockData, ONLY: clean_block_data
     use ModIO, ONLY : write_prefix, iUnitOut
     use ModMpi

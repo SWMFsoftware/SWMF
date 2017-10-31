@@ -38,7 +38,8 @@ contains
          init_mpi, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
     use ModAMR
-    use ModRaytrace
+    use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param,&
+         DoMapEquatorRay
     use ModIO
     use CON_planet,       ONLY: read_planet_var, check_planet_var, NamePlanet
     use ModPlanetConst
@@ -315,7 +316,7 @@ contains
        call init_mod_boundary_cells
        call init_mod_nodes
        if(UseB0)           call init_mod_b0
-       if(UseRaytrace)     call init_mod_raytrace
+       if(UseRaytrace)     call init_mod_field_trace
        if(UseConstrainB)   call init_mod_ct
        if(UseImplicit)     call init_mod_part_impl
        if(UseSemiImplicit) call init_mod_semi_impl
@@ -995,10 +996,10 @@ contains
 
                    select case(NamePlotVar(l1+1:l2-1))
                    case('MHD', 'mhd')
-                      NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVarPlot//  &
+                      NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVarPlot//&
                            ' jx jy jz ' //trim(NamePlotVar(l2+1:))
                    case('HD', 'hd')
-                      NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVarPlot//  &
+                      NamePlotVar = NamePlotVar(:l1-1)//NamePrimitiveVarPlot//&
                            trim(NamePlotVar(l2+1:))
                    case default
                       call stop_mpi(NameSub// &
@@ -1010,16 +1011,20 @@ contains
                 end if
                 plot_vars(iFile) = NamePlotVar
 
-             elseif(index(plot_string,'RAY')>0.or.index(plot_string,'ray')>0)then
-                plot_var='ray'
+             elseif(index(plot_string,'RAY')>0 &
+                  .or.index(plot_string,'ray')>0)then
+                plot_var = 'ray'
                 plot_dimensional(iFile) = index(plot_string,'RAY')>0
                 if(DoMapEquatorRay)then
-                   plot_vars(iFile)='bx by bz req1 phi1 req2 phi2 status blk'
+                   plot_vars(iFile) = &
+                        'bx by bz req1 phi1 req2 phi2 status blk'
                 else
-                   plot_vars(iFile)='bx by bz theta1 phi1 theta2 phi2 status blk'
+                   plot_vars(iFile) = &
+                        'bx by bz theta1 phi1 theta2 phi2 status blk'
                 end if
                 plot_pars(iFile)='rbody'
-             elseif(index(plot_string,'RAW')>0.or.index(plot_string,'raw')>0)then
+             elseif(index(plot_string,'RAW')>0 .or. &
+                  index(plot_string,'raw')>0)then
                 plot_var='raw'
                 plot_dimensional(iFile)=index(plot_string,'RAW')>0
                 plot_vars(iFile) = NameConservativeVarPlot//  &
@@ -1514,19 +1519,8 @@ contains
           call read_solar_wind_param(NameCommand)
           DoReadSolarwindFile = UseSolarwindFile
 
-       case("#RAYTRACE")
-          call read_var('UseRaytrace',UseRaytrace)
-          if(UseRaytrace)then
-             call read_var('UseAccurateTrace', UseAccurateTrace)
-             call read_var('DtExchangeRay',    DtExchangeRay)
-             call read_var('DnRaytrace',       DnRaytrace)
-          end if
-       case("#RAYTRACELIMIT")
-          call read_var('RayLengthMax', RayLengthMax)
-       case("#RAYTRACEEQUATOR")
-          call read_var('DoMapEquatorRay', DoMapEquatorRay)
-       case("#IE")
-          call read_var('DoTraceIE', DoTraceIE)
+       case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
+          call read_field_trace_param(NameSub)
        case("#IECOUPLING")
           call read_ie_velocity_param
        case("#IMCOUPLING","#IM")
@@ -2208,8 +2202,8 @@ contains
           ! Convert degrees to radians, latitude to co-latitude
           BufferMin_D(BuffPhi_)   = BufferMin_D(BuffPhi_) * cDegToRad
           BufferMax_D(BuffPhi_)   = BufferMax_D(BuffPhi_) * cDegToRad
-          BufferMin_D(BuffTheta_) = cHalfPi - BufferMin_D(BuffTheta_) * cDegToRad
-          BufferMax_D(BuffTheta_) = cHalfPi - BufferMax_D(BuffTheta_) * cDegToRad
+          BufferMin_D(BuffTheta_) = cHalfPi - BufferMin_D(BuffTheta_)*cDegToRad
+          BufferMax_D(BuffTheta_) = cHalfPi - BufferMax_D(BuffTheta_)*cDegToRad
 
        case("#THINCURRENTSHEET")
           call read_var('DoThinCurrentSheet', DoThinCurrentSheet)

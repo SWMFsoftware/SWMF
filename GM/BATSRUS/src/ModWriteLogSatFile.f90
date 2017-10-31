@@ -8,7 +8,8 @@ module ModWriteLogSatFile
 
   private ! except
 
-  public:: write_logfile   ! write one line into the log file
+  public:: write_logfile          ! write one line into the log file
+  public:: collect_satellite_data ! collect data from multiple processors
 
 contains
 
@@ -318,7 +319,7 @@ contains
     use ModCurrent,  ONLY: get_point_data
     use ModB0,       ONLY: B0_DGB, get_b0
     use ModGeometry, ONLY: R_BLK, x1, x2, y1, y2, z1, z2, DomainVolume
-    use ModRaytrace, ONLY: ray
+    use ModFieldTrace, ONLY: ray
     use ModSatelliteFile, ONLY: get_satellite_ray
     use ModSatelliteFile, ONLY: XyzSat_DI
     use ModIO, ONLY: write_myname, lNameLogVar

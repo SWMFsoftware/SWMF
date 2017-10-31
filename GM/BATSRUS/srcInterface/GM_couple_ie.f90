@@ -78,8 +78,9 @@ contains
     use CON_axes, ONLY: transform_matrix
     use ModMain, ONLY: Time_Simulation, TypeCoordSystem
     use ModCurrent,            ONLY: calc_field_aligned_current
-    use ModRaytrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
-         InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD
+    use ModFieldTrace, ONLY: DoTraceIE, RayResult_VII, RayIntegral_VII, &
+         InvB_, RhoInvB_, pInvB_, xEnd_, yEnd_, zEnd_, CLOSEDRAY, GmSm_DD,&
+         integrate_field_from_sphere
     use ModNumConst, ONLY: cRadToDeg
     use ModProcMH,         ONLY: iProc
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitP_, UnitRho_, UnitB_, UnitJ_
@@ -146,7 +147,7 @@ contains
        IE_lat = 90.0 - cRadToDeg * ThetaIono_I(1:iSize)
        IE_lon =        cRadToDeg * PhiIono_I
        Radius = (6378.+100.)/6378.
-       call integrate_ray_accurate(iSize, jSize, IE_lat, IE_lon, Radius, &
+       call integrate_field_from_sphere(iSize, jSize, IE_lat, IE_lon, Radius, &
             'InvB,RhoInvB,pInvB,Z0x,Z0y,Z0b')
 
        ! Only processor 0 has the resulting integrals,
