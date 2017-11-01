@@ -1,6 +1,6 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 !==============================================================================
 module ModUser
   use ModSize,      ONLY: x_, y_, z_
@@ -8,7 +8,7 @@ module ModUser
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_initial_perturbation,       &
-       IMPLEMENTED5 => user_set_face_boundary,                   &
+       IMPLEMENTED5 => user_set_face_boundary,          &
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_update_states
@@ -183,7 +183,8 @@ contains
     
     use ModGeometry,   ONLY: r_BLK
     use ModPhysics,    ONLY: Gbody, BodyRho_I, Si2No_V, UnitTemperature_
-    use ModExpansionFactors,  ONLY: Umin, CoronalT0Dim
+    use ModExpansionFactors,  ONLY: Umin, CoronalT0Dim, &
+         get_gamma_emp, get_bernoulli_integral
     use BATL_lib,      ONLY: Xyz_DGB
 
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
@@ -368,16 +369,17 @@ contains
 
     use ModVarIndexes
     use ModSize
-    use ModAdvance, ONLY: State_VGB
-    use ModB0,      ONLY: B0_DGB
-    use ModPhysics, ONLY: InvGammaMinus1
-    use ModGeometry,ONLY: R_BLK
-    use ModEnergy,  ONLY: calc_energy_cell
-    use ModExpansionFactors, ONLY: gammaSS,Rs_PFSSM
+    use ModAdvance,          ONLY: State_VGB
+    use ModB0,               ONLY: B0_DGB
+    use ModPhysics,          ONLY: InvGammaMinus1
+    use ModGeometry,         ONLY: R_BLK
+    use ModEnergy,           ONLY: calc_energy_cell
+    use ModExpansionFactors, ONLY: gammaSS
+    use ModMagnetogram,      ONLY: Rs_PFSSM
 
     integer,intent(in):: iBlock
-    integer:: i,j,k
-    real:: DensCell,PresCell,GammaCell
+    integer:: i, j, k
+    real:: DensCell, PresCell, GammaCell
     !------------------------------------------------------------------------
     call update_state_normal(iBlock)
 

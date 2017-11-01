@@ -1,9 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModExpansionFactors
+
   use ModMpi
-  use ModIoUnit,   ONLY: io_unit_new
+  use ModIoUnit, ONLY: io_unit_new
   use ModMagnetogram, ONLY: nR, nRExt, nPhi, nTheta, nThetaPerProc, &
        Sin_Latitude, Colatitude, r_latitude, &
        h_pfssm, ro_pfssm, rs_pfssm, PhiOffset, &
@@ -11,8 +12,8 @@ module ModExpansionFactors
   use ModConst, ONLY: cGravitation, mSun, rSun, cProtonMass, cBoltzmann, &
        cRadToDeg, cDegToRad, cTiny
 
-  !Dependecies to be removed
-  use ModProcMH,   ONLY: iProc,nProc,iComm
+  ! Dependecies to be removed
+  use ModProcMH,   ONLY: iProc, nProc, iComm
   use ModIO, ONLY: iUnitOut, write_prefix
   use ModPhysics, ONLY: RadiusStar, MassStar
 
@@ -23,6 +24,7 @@ module ModExpansionFactors
   private ! except
 
   public:: read_wsa_coeff
+  public:: get_gamma_emp
   public:: get_bernoulli_integral
   public:: set_empirical_model
 
@@ -36,6 +38,8 @@ module ModExpansionFactors
 
   ! Gamma at the source surface
   real, public:: GammaSS=1.1
+
+  
 
   ! Local variables ---------------------------------------
 
