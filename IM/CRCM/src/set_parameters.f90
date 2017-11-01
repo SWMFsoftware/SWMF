@@ -5,7 +5,7 @@ subroutine CRCM_set_parameters(NameAction)
   use ModCrcmInitialize, ONLY: IsEmptyInitial,IsDataInitial, IsGmInitial
   use ModCrcmPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux, DoSaveLog,&
                                UseSeparatePlotFiles, DtLogOut
-  use ModFieldTrace,     ONLY: UseEllipse
+  use ModCrcmTrace,     ONLY: UseEllipse
   use ModCrcm,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin
   use ModCrcmRestart,    ONLY: IsRestart
   use ModCrcmPlanet,     ONLY: nspec

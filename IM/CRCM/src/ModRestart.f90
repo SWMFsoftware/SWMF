@@ -13,7 +13,7 @@ contains
     use ModCrcm,      ONLY: f2, phot, Pressure_IC, PressurePar_IC, FAC_C, &
          Ppar_IC, Bmin_C,eChangeOperator_IV,driftin,driftout,rbsumlocal,  &
          rbsumGlobal
-    use ModFieldTrace,ONLY: iba,ekev
+    use ModCrcmTrace,ONLY: iba,ekev
     use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm
@@ -64,7 +64,7 @@ contains
     use ModCrcmGrid,  ONLY: np,nt,nm,nk,MinLonPar,MaxLonPar
     use ModCrcm,      ONLY: f2,time, phot, Pressure_IC, PressurePar_IC, &
          FAC_C, Ppar_IC, Bmin_C,eChangeOperator_IV,driftin,driftout
-    use ModFieldTrace,ONLY: iba    
+    use ModCrcmTrace,ONLY: iba    
     use ModGmCrcm,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCrcmGrid,  ONLY: iProc,nProc,iComm,nLonPar,nLonPar_P,nLonBefore_P

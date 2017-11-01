@@ -1,4 +1,4 @@
-Module ModFieldTrace
+Module ModCrcmTrace
   use ModCrcmGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy, &
        UseExpandedGrid,MinLonPar,MaxLonPar,iProc,iComm,iProcMidnight,nProc,&
        iLonMidnight,nLonPar,nLonPar_P,nLonBefore_P
@@ -959,4 +959,4 @@ contains
   end subroutine closed
   
 
-end Module ModFieldTrace
+end Module ModCrcmTrace

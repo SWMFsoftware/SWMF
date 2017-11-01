@@ -27,7 +27,7 @@ contains
                                iPhotplot_I,iPparhotplot_I, iNplot_I,   &
                                Beq_,Vol_,Pot_,FAC_,nVar
     use ModCrcmGrid,   ONLY: PhiIono_C => phi, LatIono_C => xlatr
-    use ModFieldTrace, ONLY: iba
+    use ModCrcmTrace, ONLY: iba
     integer, intent(in) :: nLat, nLon
     real,    intent(in) :: X_C(nLat,nLon), Y_C(nLat,nLon), Time, Dt
     real,    intent(in) :: Pressure_IC(nspec,nLat,nLon), &
@@ -167,7 +167,7 @@ contains
     use ModCrcmGrid,  ONLY:nLat=>np, nLon=>nt, nEnergy=>neng, nPitchAng=>npit,&
                            energy,sinAo,xlat,xmlt,Ebound
     use ModCrcmPlanet,ONLY:nSpecies=>nspec
-    use ModFieldTrace,ONLY:ro,bo,xmlto,irm
+    use ModCrcmTrace,ONLY:ro,bo,xmlto,irm
     use ModCrcmRestart, ONLY: IsRestart
     use ModImTime,    ONLY:iCurrentTime_I
     real, intent(in) :: rc,flux(nSpecies,nLat,nLon,nEnergy,nPitchAng),time

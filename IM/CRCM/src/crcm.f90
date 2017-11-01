@@ -9,7 +9,7 @@ subroutine crcm_run(delta_t)
                             driftin, driftout
   use ModCrcmPlanet,  ONLY: re_m, dipmom, Hiono, nspec, amu_I, &
                             dFactor_I,tFactor_I
-  use ModFieldTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
+  use ModCrcmTrace,  ONLY: fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
                             ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2,xmlto
   use ModGmCrcm,      ONLY: Den_IC,Temp_IC,Temppar_IC,StateBmin_IIV,&
                             AveP_,AvePpar_,AveDens_, AveDen_I,AveP_I,iLatMin,&
@@ -620,7 +620,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   use ModCrcm,   ONLY: f2,eChangeOperator_IV,nOperator,driftin,driftout,rbsumLocal,rbsumGlobal
   use ModCrcmInitialize,   ONLY: IsEmptyInitial, IsDataInitial, IsGmInitial
   use ModCrcmGrid,ONLY: nm,nk,MinLonPar,MaxLonPar,iProc,nProc,iComm,d4Element_C
-  use ModFieldTrace, ONLY: sinA,ro, ekev,pp,iw2,irm
+  use ModCrcmTrace, ONLY: sinA,ro, ekev,pp,iw2,irm
   use ModMpi
   implicit none
 
@@ -767,7 +767,7 @@ subroutine boundaryIM(nspec,np,nt,nm,nk,iba,irm,amu_I,xjac,vel,fb)
   ! Output: fb
   Use ModGmCrcm, ONLY: Den_IC, Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
   use ModCrcm,       ONLY: MinLonPar,MaxLonPar, f2
-  use ModFieldTrace, ONLY: sinA
+  use ModCrcmTrace, ONLY: sinA
   implicit none
 
   integer nspec,np,nt,nm,nk,iba(nt),irm(nt),j,n,k,m,ib1
@@ -970,7 +970,7 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,dt,dlat,dphi,brad,rb,vl,vp, &
   ! Input/Output: f2,ib0,driftin,driftout
   use ModCrcmGrid, ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar, &
        iProcLeft, iLonLeft, iProcRight, iLonRight, d4Element_C
-  use ModFieldTrace, ONLY: iba, ekev
+  use ModCrcmTrace, ONLY: iba, ekev
     
   use ModMpi
   implicit none
@@ -1345,7 +1345,7 @@ subroutine sume(xle)
 ! Input: f2,ekev,iba
 ! Input/Output: rbsum,xle
   use ModCrcm,       ONLY: rbsumLocal
-  use ModFieldTrace, ONLY: iba
+  use ModCrcmTrace, ONLY: iba
   use ModCrcmGrid,   ONLY: nProc,iProc,iComm
   use ModCrcmPlanet, ONLY: nspec
   use ModMPI
@@ -1384,7 +1384,7 @@ end subroutine sume
 subroutine calc_rbsumlocal(iSpecies)
   use ModCrcm,       ONLY: f2,rbsumLocal
   use ModCrcmGrid,   ONLY: np,nm,nk,MinLonPar,MaxLonPar,d4Element_C
-  use ModFieldTrace, ONLY: iba, ekev
+  use ModCrcmTrace, ONLY: iba, ekev
   implicit none
 
   integer, intent(in) :: iSpecies

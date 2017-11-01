@@ -146,7 +146,7 @@ contains
 
     use ModCrcmGrid,      ONLY: np, xlat
     use ModCrcm,          ONLY: init_mod_crcm, Time
-    use ModFieldTrace,    ONLY: init_mod_field_trace
+    use ModCrcmTrace,     ONLY: init_mod_field_trace
     use ModImTime
     use ModTimeConvert,   ONLY: time_real_to_int
     use CON_physics,      ONLY: get_time
@@ -489,7 +489,7 @@ contains
     use ModCrcm,      ONLY: Pressure_IC, PressurePar_IC, Bmin_C, Time, Pmin
     use ModGmCrcm,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling, &
          DoAnisoPressureGMCoupling
-    use ModFieldTrace,ONLY: iba
+    use ModCrcmTrace, ONLY: iba
     use ModCrcmPlanet,ONLY: nspec,amu_I
     use ModNumConst,  ONLY: cRadToDeg
     use ModConst,     ONLY: cProtonMass
