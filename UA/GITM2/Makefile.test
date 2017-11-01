@@ -101,12 +101,10 @@ test_gitm_earth_eclipse_compile:
 	./Config.pl -Earth -g=1,1,50,4
 	$(MAKE) GITM
 
-test_gitm_earth_eclipse_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR}
+test_gitm_earth_eclipse_rundir: test_rundir
+	cd ${TESTDIR}; cp UA/DataIn/UAM.in.eclipse ./UAM.in
 
 test_gitm_earth_eclipse_run:
-	cd ${TESTDIR}; cp UA/DataIn/UAM.in.eclipse ./UAM.in
 	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./GITM.exe > runlog_earth_eclipse
 
 test_gitm_earth_eclipse_check:
@@ -123,12 +121,10 @@ test_gitm_earth_3d_compile:
 	./Config.pl -Earth -g=9,9,50,4
 	$(MAKE) GITM
 
-test_gitm_earth_3d_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR}
+test_gitm_earth_3d_rundir: test_rundir
+	cd ${TESTDIR}; cp UA/DataIn/UAM.in.3d ./UAM.in
 
 test_gitm_earth_3d_run:
-	cd ${TESTDIR}; cp UA/DataIn/UAM.in.3d ./UAM.in
 	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 4 ./GITM.exe
 
 test_gitm_earth_3d_check:
@@ -173,12 +169,10 @@ test_gitm_mars_1d_compile:
 	./Config.pl -Mars -g=1,1,120,4
 	$(MAKE) GITM
 
-test_gitm_mars_1d_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR}
+test_gitm_mars_1d_rundir: test_rundir
+	cd ${TESTDIR}; cp UA/DataIn/UAM.mars.in.1d ./UAM.in
 
 test_gitm_mars_1d_run:
-	cd ${TESTDIR}; cp UA/DataIn/UAM.mars.in.1d ./UAM.in
 	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./GITM.exe > runlog_mars_1d
 
 test_gitm_mars_1d_check:
@@ -195,12 +189,10 @@ test_gitm_mars_3d_compile:
 	./Config.pl -Mars -g=8,4,120,4
 	$(MAKE) GITM
 
-test_gitm_mars_3d_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR}
+test_gitm_mars_3d_rundir: test_rundir
+	cd ${TESTDIR}; cp UA/DataIn/UAM.mars.in.3d ./UAM.in
 
 test_gitm_mars_3d_run:
-	cd ${TESTDIR}; cp UA/DataIn/UAM.mars.in.3d ./UAM.in
 	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 4 ./GITM.exe > runlog_mars_3d
 
 test_gitm_mars_3d_check:
