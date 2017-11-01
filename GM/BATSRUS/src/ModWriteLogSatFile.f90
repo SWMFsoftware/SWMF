@@ -10,6 +10,7 @@ module ModWriteLogSatFile
 
   public:: write_logfile          ! write one line into the log file
   public:: collect_satellite_data ! collect data from multiple processors
+  public:: calc_sphere            ! calculate values on spherical surface
 
 contains
 
