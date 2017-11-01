@@ -12,12 +12,18 @@ module ModRadioWaveImage
   public :: ray_bunch_intensity
   real, pointer    :: Coord_DI(:,:)
   logical, pointer :: IsMask_I(:)
-  real, allocatable             :: Xyz_DI(:,:)
+  real, allocatable:: Xyz_DI(:,:)
   !\
   !Frequency related:  in GGSE
   real :: DensityCr = -1.0, DensityCrInv = -1.0
   !\
+  !Tolerance parameters::
+  real :: Tolerance =  0.1, Tolerance2   =  1.0e-2
+  real, allocatable                 :: DistanceToCritSurf_I(:)
 
+    ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
+  logical, allocatable              :: IsOKRay_I(:)       
+  real :: StepMin = 1.0
 contains !=========================================================
 
   subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
@@ -96,7 +102,7 @@ contains !=========================================================
     real :: XLower, XUpper, YLower, YUpper
     !\
     ! rIntegration related vars:
-    real :: rIntegrationSqr !=rIntegration**2 + Eps
+    real :: rIntegration2 !=rIntegration**2 + Eps
     !\
     !nPixel related:
 
@@ -136,7 +142,7 @@ contains !=========================================================
     !/
     
 
-    real :: SolarDistSqr, Xyz_D(MaxDim)   
+    real :: SolarDist2, Xyz_D(MaxDim)   
   
     !\
     ! A ray is excluded from processing if it is .true.
@@ -226,8 +232,8 @@ contains !=========================================================
           !/
     
           !\
-          ! Solve a duadratic equation,
-          !|| XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
+          ! Solve a quadratic equation,
+          !   XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
           !or  ObservToIntSphereDist**2 + 
           !  + 2*ObservToIntSphereDist*XyzObs_D
           !  + XyzObservLen**2 - rIntegration**2 = 0
@@ -245,7 +251,7 @@ contains !=========================================================
     Intensity_I = 0
     UnusedRay_I = .false.
     DeltaS_I = DeltaS
-    rIntegrationSqr = rIntegration**2 + 0.01
+    rIntegration2 = rIntegration**2 + 0.01
     do while(.not.all(UnusedRay_I))
        !\
        ! Advance rays through one step.
@@ -254,8 +260,8 @@ contains !=========================================================
        !Exclude rays which are out the integration sphere
        RAYS:do iRay = 1, nRay
           if(UnusedRay_I(iRay))CYCLE RAYS
-          SolarDistSqr = sum(Xyz_DI(:,iRay)**2)
-          UnusedRay_I(iRay) = SolarDistSqr .gt. rIntegrationSqr
+          SolarDist2 = sum(Xyz_DI(:,iRay)**2)
+          UnusedRay_I(iRay) = SolarDist2 .gt. rIntegration2
        end do RAYS
     end do
 
@@ -356,33 +362,58 @@ contains !=========================================================
     logical, intent(inout), dimension(nRay) :: UnusedRay_I   
 
     logical, save :: IsNewEntry = .true.
-   
-    integer, parameter :: nSplitDeltaS = 2
-
-    real,    save, dimension(MaxDim)       :: Slope1_D, Omega_D
-    real,    save, dimension(MaxDim)       :: ProjSlopeOnMinusGradEps_D
-    real,    save, dimension(MaxDim)       :: StepX_D, StepY_D, RelGradRefrInx_D 
-    real,    save, dimension(MaxDim)       :: GradDielPerm_D, PositionHalfBack_D
-
-    real, save, pointer, dimension(:)   :: DistanceToCritSurf_I
-
-    ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
-    logical, save, pointer, dimension(:)   :: IsOKRay_I       
+    !\
+    ! Predictor
+    real :: HalfDeltaS                        
+    !\
+    ! Coordinates at the begining of stage 
+    !/
+    real  ::  PositionHalfBack_D(MaxDim)
+    !\
+    ! Density/Density_cr
+    !/
+    real  ::  Dens2DensCr
+    !\
+    ! Dielectric permeability, 1 - Dens2DensCr
+    !/
+    real :: DielPerm
+    !\
+    ! Gradient of dielectric permeability
+    !/
+    real  ::  GradDielPerm_D(MaxDim)
+    !\
+    ! Gradient of dielectric permeability squared
+    real  ::  GradDielPerm2
+    !\
+    ! grad(n)/n, with n=\sqrt(\varepsilon)
+    !/
+    real  ::  RelGradRefrInx_D(MaxDim)
+    !\
+    ! Omega = \nabla n/n\times d\vec{x}/ds
+    ! Analogous to the magnetic field times q/m in the
+    ! equation for the particle gyration
+    !/
+    real  ::  Omega_D(MaxDim)
+    !\
+    ! Slope at the stage of predictor
+    !/
+    real  ::  Slope1_D(MaxDim)
+ 
+    real,    dimension(MaxDim)       :: ProjSlopeOnMinusGradEps_D
+    real,    dimension(MaxDim)       :: StepX_D, StepY_D
     
 
-    real :: HalfDeltaS                        ! DeltaS halved
-    real :: DielPerm, DielPermHalfBack, Dens2DensCr
+    real :: DielPermHalfBack
     real :: Coef, Curv, Curv1
     real :: LCosAl ! L*cos(Alpha),   
     ! where L is inverse grad of \epsilon, Alpha is the incidence angle
-    real :: GradDielPermSqr, GradEpsDotSlope
+    real :: GradEpsDotSlope
     real :: ParabLen
-    real, save :: &
-         Tolerance=0.1, ToleranceSqr=1.0e-2, StepMin = 1.0
-    
-    integer:: iRay, iDim
+    !\
+    ! Loop variable
+    !/
+    integer:: iRay
 
-   ! character(LEN=20),save:: TypeBoundaryDown_D(MaxDim), TypeBoundaryUp_D(MaxDim)
     !---------------
 
     if (IsNewEntry) then
@@ -397,26 +428,22 @@ contains !=========================================================
        Tolerance = min(ToleranceInit,0.1)  
 
        
-       ToleranceSqr = Tolerance**2 
+       Tolerance2 = Tolerance**2 
        
        ! One (ten-thousandth) hundredth of average step 
-       StepMin = 1e-2*sum(DeltaS_I)/nRay
-      ! do iDim=1,MaxDim
-      !    TypeBoundaryDown_D(iDim) = trim(TypeCellBc_I(2*iDim-1))
-      !    TypeBoundaryUp_D(iDim)   = trim(TypeCellBc_I(2*iDim))
-      ! end do
-      ! if(iProc==0)then
-      !    write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
-      !    write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
-      !    write(*,*)'StepMin=',StepMin
-      ! end if
-          
+       StepMin = 1e-2*sum(DeltaS_I)/nRay          
     end if
 
     !Start the predictor step of the GIRARD scheme: 
 
     do iRay = 1, nRay
-       if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
+       !\
+       ! Do not process the rays that are done
+       !/
+       if (UnusedRay_I(iRay)) CYCLE
+       !\
+       ! For the slope calculated at the previous
+       ! stage we advance the ray at half step  
        Xyz_DI(:,iRay) = Xyz_DI(:,iRay) + &
             Slope_DI(:,iRay)*0.50*DeltaS_I(iRay)
        if(IsCartesianGrid)then
@@ -425,6 +452,8 @@ contains !=========================================================
           call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
        end if
        ! Now Xyz_DI moved by 1/2 DeltaS !!!
+       !\
+       ! Check that at half step the ray escaped the domain
        call check_bc(iRay)
     end do
 
@@ -436,21 +465,24 @@ contains !=========================================================
     call get_plasma_density(nRay)
     
     
-    !In making radio images this is a bad pixel which should be further processed 
+    !In making radio images the ray accidentally reachig the overdense plasma 
+    !region  should not be further processed 
     UnusedRay_I = UnusedRay_I .or.  Density_I >= DensityCr ! "bad rays" are done
     
     do iRay = 1, nRay
-
-       if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
+       !\
+       ! Do not process the rays that are done
+       !/
+       if (UnusedRay_I(iRay)) CYCLE  
  
        HalfDeltaS = 0.50*DeltaS_I(iRay)
        ! Original Position (at an integer point):
        PositionHalfBack_D = Xyz_DI(:,iRay) - Slope_DI(:,iRay)*HalfDeltaS
        Dens2DensCr = Density_I(iRay)*DensityCrInv
 
-       DielPerm = 1.0 - Dens2DensCr
+       DielPerm       = 1.0 - Dens2DensCr
        GradDielPerm_D = -GradDensity_DI(:,iRay)*DensityCrInv
-       GradDielPermSqr = sum(GradDielPerm_D**2)
+       GradDielPerm2  = sum(GradDielPerm_D**2)
 
        GradEpsDotSlope = sum(GradDielPerm_D*Slope_DI(:,iRay))
 
@@ -463,7 +495,7 @@ contains !=========================================================
        end if
 
        Curv = (0.50*HalfDeltaS/DielPermHalfBack)**2* &
-            (GradDielPermSqr - GradEpsDotSlope**2)
+            (GradDielPerm2 - GradEpsDotSlope**2)
        !The curvature squared characterizes the magnitude of
        !the tranverse gradient of the dielectric permittivity
 
@@ -477,9 +509,9 @@ contains !=========================================================
           !
           !
 
-          if (Curv .ge. ToleranceSqr) then
+          if (Curv .ge. Tolerance2) then
              DeltaS_I(iRay) = 0.99 * &
-                  DeltaS_I(iRay)/(2*sqrt(Curv/ToleranceSqr))
+                  DeltaS_I(iRay)/(2*sqrt(Curv/Tolerance2))
              Xyz_DI(:,iRay) = PositionHalfBack_D
              CYCLE
           end if
@@ -493,12 +525,12 @@ contains !=========================================================
           if (3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) then
              !
              ! Mark the ray as steep; 
-             ! memorize the distance to the critical surface;
+             ! store the distance to the critical surface;
              ! reduce step
              !
              IsOKRay_I(iRay) = .false.
              DistanceToCritSurf_I(iRay) = DielPermHalfBack  &
-                  /sqrt(GradDielPermSqr)
+                  /sqrt(GradDielPerm2)
              DeltaS_I(iRay) =  max(&
                   0.50*Tolerance*DistanceToCritSurf_I(iRay),&
                   StepMin)
@@ -541,7 +573,7 @@ contains !=========================================================
           ! direction according to Snell law.
           !
 
-          LCosAl = -GradEpsDotSlope/GradDielPermSqr
+          LCosAl = -GradEpsDotSlope/GradDielPerm2
           ProjSlopeOnMinusGradEps_D = -LCosAl*GradDielPerm_D  
           ! Here v_proj
 
@@ -583,10 +615,12 @@ contains !=========================================================
        else 
 
           ! Make a step using Boris' algorithm
-
+          !\
+          ! grad(n)/n = grad(eps(i+1/2))/(2*eps(i+1/2))
+          ! RelGradRefrInx_D =  grad(n)/n*ds/2
+          !/
           Coef = 0.50*HalfDeltaS/(1.0 - Dens2DensCr)
           RelGradRefrInx_D = Coef*GradDielPerm_D    
-          ! grad(n) = grad(eps(i+1/2))/(2*eps(i+1/2))
 
           Omega_D = cross_product(RelGradRefrInx_D, Slope_DI(:,iRay))
           Slope1_D = Slope_DI(:,iRay) &
@@ -660,7 +694,7 @@ contains !=========================================================
           !   The ray is reverted to "gentle" or "shallow"
           !
           if (DielPermHalfBack .gt. &
-               DistanceToCritSurf_I(iRay)*sqrt(GradDielPermSqr)) then
+               DistanceToCritSurf_I(iRay)*sqrt(GradDielPerm2)) then
              IsOKRay_I(iRay) = .true.
              DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay), 1.0)*&
                   min(DeltaSNew_I(iRay), DeltaS_I(iRay))
