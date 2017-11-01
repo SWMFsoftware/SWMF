@@ -23,7 +23,7 @@ TESTDIR = run_test
 REFDIR = run_test_ref
 
 test_help:
-	@echo "    test                       (run all tests with ${MPIRUN})"
+	@echo "    test                       (run all tests)"
 	@echo "    test KEEP=y                (run tests and keep run directories)"
 	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
@@ -33,7 +33,7 @@ test_help:
 
 test_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} STANDALONE=YES UADIR=`pwd`
+	$(MAKE) rundir RUNDIR=${TESTDIR} STANDALONE=YES
 
 ### EARTH GITM TEST ###
 
@@ -90,7 +90,7 @@ test_gitm_earth_1d_rundir:
 
 test_gitm_earth_1d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.1d ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} -np 1 ./GITM.exe > runlog_earth_1d
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./GITM.exe > runlog_earth_1d
 
 test_gitm_earth_1d_check:
 	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
@@ -109,7 +109,7 @@ test_gitm_earth_eclipse_rundir:
 
 test_gitm_earth_eclipse_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.eclipse ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} -np 1 ./GITM.exe > runlog_earth_eclipse
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./GITM.exe > runlog_earth_eclipse
 
 test_gitm_earth_eclipse_check:
 	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
@@ -131,7 +131,7 @@ test_gitm_earth_3d_rundir:
 
 test_gitm_earth_3d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.in.3d ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} -np 4 ./GITM.exe
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 4 ./GITM.exe
 
 test_gitm_earth_3d_check:
 	(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
@@ -181,7 +181,7 @@ test_gitm_mars_1d_rundir:
 
 test_gitm_mars_1d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.mars.in.1d ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./GITM.exe > runlog_mars_1d
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./GITM.exe > runlog_mars_1d
 
 test_gitm_mars_1d_check:
 	@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
@@ -203,7 +203,7 @@ test_gitm_mars_3d_rundir:
 
 test_gitm_mars_3d_run:
 	cd ${TESTDIR}; cp ./DataIn/UAM.mars.in.3d ./UAM.in
-	cd ${TESTDIR}; ${MPIRUN} -np 4 ./GITM.exe > runlog_mars_3d
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 4 ./GITM.exe > runlog_mars_3d
 
 test_gitm_mars_3d_check:
 	(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
