@@ -2,16 +2,16 @@
 
 localdefault: help # default target
 
-DIR     = ${UADIR}
+DIR     = ${MYDIR}
 
-SCRIPTDIR = ${UADIR}/share/Scripts
-LIBDIR    = ${UADIR}/src
-RUNDIR    = ${UADIR}/run
-BINDIR    = ${UADIR}/src
-INCLDIR   = ${UADIR}/share/include
-SHAREDIR  = ${UADIR}/share/Library/src
-NOMPIDIR  = ${UADIR}/util/NOMPI/src
-EMPIRICALIEDIR     = ${UADIR}/util/EMPIRICAL/srcIE
-EMPIRICALUADIR     = ${UADIR}/util/EMPIRICAL/srcUA
-DATAREADINDICESDIR = ${UADIR}/util/DATAREAD/srcIndices
+SCRIPTDIR = ${MYDIR}/share/Scripts
+LIBDIR    = ${MYDIR}/src
+RUNDIR    = ${MYDIR}/run
+BINDIR    = ${MYDIR}/src
+INCLDIR   = ${MYDIR}/share/include
+SHAREDIR  = ${MYDIR}/share/Library/src
+NOMPIDIR  = ${MYDIR}/util/NOMPI/src
+EMPIRICALIEDIR     = ${MYDIR}/util/EMPIRICAL/srcIE
+EMPIRICALUADIR     = ${MYDIR}/util/EMPIRICAL/srcUA
+DATAREADINDICESDIR = ${MYDIR}/util/DATAREAD/srcIndices
 

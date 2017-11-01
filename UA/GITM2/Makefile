@@ -5,9 +5,6 @@ include Makefile.def
 include Makefile.test
 
 ABDIR   = srcSphereAB
-EIEDIR  = ${EMPIRICALIEDIR}
-EUADIR  = ${EMPIRICALUADIR}
-IODIR   = ${DATAREADINDICESDIR}
 MAINDIR = src
 GLDIR   = srcGlow
 
@@ -34,13 +31,13 @@ NOMPI:
 	@cd ${NOMPIDIR}; make LIB
 
 GITM:
-	@cd ${SHAREDIR}; make LIB
-	@cd $(ABDIR);    make -j1  LIB
-	@cd $(EIEDIR);   make LIB
-	@cd ${EUADIR};   make LIB
-	@cd $(IODIR);    make LIB
-	@cd $(GLDIR);	 make -j1 LIB
-	@cd $(MAINDIR);  make GITM
+	@cd ${SHAREDIR};           make LIB
+	@cd $(ABDIR);              make -j1  LIB
+	@cd $(EMPIRICALIEDIR);     make LIB
+	@cd ${EMPIRICALUADIR};     make LIB
+	@cd $(DATAREADINDICESDIR); make LIB
+	@cd $(GLDIR);	           make -j1 LIB
+	@cd $(MAINDIR);            make GITM
 
 POST:
 	@cd $(MAINDIR);  make POST
@@ -90,7 +87,7 @@ rundir:
 		mkdir restartOUT data DataIn; \
 		ln -s restartOUT restartIN; \
 		ln -s ${BINDIR}/pGITM .; \
-		ln -s ${UADIR}/srcData/* DataIn; rm -f DataIn/CVS
+		ln -s ${MYDIR}/srcData/* DataIn; rm -f DataIn/CVS
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
 		cd ${RUNDIR} ; \
 		ln -s ${BINDIR}/GITM.exe . ; \
