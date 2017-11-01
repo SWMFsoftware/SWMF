@@ -1554,74 +1554,58 @@ contains
   end subroutine user_set_plot_var
 
   !=====================================================================
-  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+  subroutine user_get_log_var(VarValue, NameVar, Radius)
 
     use ModGeometry,   ONLY: Xyz_DGB, R_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
-    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModWriteLogSatFile, ONLY: calc_sphere
 
     real, intent(out)            :: VarValue
-    character (len=*), intent(in):: TypeVar
+    character (len=*), intent(in):: NameVar
     real, intent(in), optional :: Radius
 
-    real, external :: calc_sphere
-    real ::mass
-    integer:: i,j,k,iBLK,index
-    character (len=*), parameter :: Name='user_get_log_var'
+    integer:: i, j, k, iBlock, iVar
+
     logical:: oktest=.false.,oktest_me
+    character (len=*), parameter :: NameSub='user_get_log_var'
     !-------------------------------------------------------------------
-    call set_oktest('user_get_log_var',oktest,oktest_me)
-    if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
-    select case(TypeVar)
+    call set_oktest(NameSub, oktest, oktest_me)
+    if(oktest_me)write(*,*)  NameSub,': NameVar=',NameVar
+    select case(NameVar)
     case('lpflx')
-       index = RhoLp_
-
+       iVar = RhoLp_
     case('mpflx')
-       index = RhoMp_
-
+       iVar = RhoMp_
     case('h1pflx')
-       index = RhoH1p_
-
+       iVar = RhoH1p_
     case('h2pflx')
-       index = RhoH2p_
-
+       iVar = RhoH2p_
     case('mhcpflx')
-       index= RhoMHCp_
-
+       iVar= RhoMHCp_
     case('hhcpflx')
-       index= RhoHHCp_
-
+       iVar= RhoHHCp_
     case('hnipflx')
-       index= RhoHNIp_
-
-    !case('neflx')
-
+       iVar= RhoHNIp_
     case default
-       call stop_mpi('wrong logvarname')
+       call stop_mpi(NameSub//': wrong NameVar='//NameVar)
     end select
 
-    do iBLK=1,nBLK
-       if (Unused_B(iBLK)) CYCLE
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
-               (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-               +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-               +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-               )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          tmp1_BLK(i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)* &
+               sum(State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) &
+               *Xyz_DGB(:,i,j,k,iBlock)) &
+               /(R_BLK(i,j,k,iBlock)*State_VGB(rho_,i,j,k,iBlock))
        end do; end do; end do
     end do
 
-    VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-
-    mass = MassSpecies_V(index)
-    VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
-    !change to user value from normalized flux
-    !    write(*,*)'varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t=',&
-    !         varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t
-
+    VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK) &
+         /MassSpecies_V(iVar) &
+         *No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)
 
   end subroutine user_get_log_var
 

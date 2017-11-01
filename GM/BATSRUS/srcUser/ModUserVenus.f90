@@ -6,8 +6,7 @@ module ModUser
   ! This is the user module for Venus
 
   use ModSize
-  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_,&
-       MassSpecies_V
+  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_, MassSpecies_V
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -1147,61 +1146,60 @@ contains
   end function neutral_density
   !============================================================================
 
-  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+  subroutine user_get_log_var(VarValue, NameVar, Radius)
 
-    use ModGeometry,   ONLY: Xyz_DGB,R_BLK
+    use ModGeometry,   ONLY: Xyz_DGB, R_BLK
     use ModMain,       ONLY: Unused_B
-    use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
-         rhoUx_,rhoUy_,rhoUz_
+    use ModVarIndexes, ONLY: &
+         Rho_, rhoHp_, rhoO2p_, RhoOp_, RhoCO2p_, rhoUx_, rhoUz_
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
-    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModWriteLogSatFile, ONLY: calc_sphere
 
     real, intent(out)            :: VarValue
-    character (len=*), intent(in):: TypeVar
+    character (len=*), intent(in):: NameVar
     real, intent(in), optional :: Radius
 
-    real, external :: calc_sphere
-    real ::mass
-    integer:: i,j,k,iBLK, index
-    character (len=*), parameter :: Name='user_get_log_var'
+    integer:: i, j, k, iBlock, iVar
+
     logical:: oktest=.false.,oktest_me
+    character (len=*), parameter :: NameSub='user_get_log_var'
     !-------------------------------------------------------------------
-    call set_oktest('user_get_log_var',oktest,oktest_me)
-    if(oktest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
-    select case(TypeVar)
+    call set_oktest(NameSub, oktest, oktest_me)
+    if(oktest_me)write(*,*) NameSub, ': NameVar=', NameVar
+    select case(NameVar)
     case('hpflx')
-       index = rhoHp_
+       iVar = RhoHp_
     case('opflx')
-       index = RhoOp_
+       iVar = RhoOp_
     case('o2pflx')
-       index = rhoO2p_
+       iVar = RhoO2p_
     case('co2pflx')
-       index = RhoCO2p_ 
+       iVar = RhoCO2p_ 
     case default
-       call stop_mpi('wrong logvarname')
+       call stop_mpi(NameSub//': wrong NameVar='//NameVar)
     end select
 
-    do iBLK=1,nBLK
-       if (Unused_B(iBLK)) CYCLE
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-          tmp1_BLK(i,j,k,iBLK) = State_VGB(index,i,j,k,iBLK)* &
-               (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-               +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-               +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-               )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
+          tmp1_BLK(i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)* &
+               sum(State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) &
+               *   Xyz_DGB(:,i,j,k,iBlock)) &
+               /R_BLK(i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
        end do; end do; end do
     end do
     
-    VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-
-    mass = MassSpecies_V(index)
-    VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+    VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK) &
+         /MassSpecies_V(iVar) &
+         *No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)
 
   end subroutine user_get_log_var
 
   !===========================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
+
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, &
          UnitTemperature_, UnitX_,UnitT_, Rbody
     use ModProcMH,   ONLY: iProc
@@ -1216,10 +1214,12 @@ contains
     real   :: Te_dim
     real   :: loc_c(3), NumDenNeutral_V(3), Eta0
     integer:: i, j, k
-    logical:: oktest, oktest_me=.true.
+    logical:: oktest, oktest_me
+
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
     !---------------------------------------------------------------------
     if(iProc==PROCtest .and. iBlock == BlkTest)then
-       call set_oktest('user_set_resistivity',oktest,oktest_me)
+       call set_oktest(NameSub, oktest, oktest_me)
     else
        oktest=.false.; oktest_me=.false.
     end if
@@ -1256,20 +1256,20 @@ contains
             sum(loc_c(:)*NumDenNeutral_V(1:3))/&
             (totalNumRho+1.0e-8)
 
-!       if(iProc==PROCtest .and. iBlock == BlkTest.and.&
-
        if(oktest_me.and. &
             itest==i.and.jtest==j.and.ktest==k)then
-          write(*,*)'loc_c=', loc_c
-          write(*,*)'Te_dim=', Te_dim
-          write(*,*)'TotalNumRho=',TotalNumRho
-          write(*,*)'NumDenNeutral=', NumDenNeutral_V 
-          write(*,*)'Eta_G=',Eta_G(Itest,Jtest,Ktest)
-          write(*,*)'Eta0Si, Eta0=',Eta0Si, Eta0
+          write(*,*) NameSub,': loc_c=', loc_c
+          write(*,*) NameSub,': Te_dim=', Te_dim
+          write(*,*) NameSub,': TotalNumRho=',TotalNumRho
+          write(*,*) NameSub,': NumDenNeutral=', NumDenNeutral_V 
+          write(*,*) NameSub,': Eta_G=',Eta_G(Itest,Jtest,Ktest)
+          write(*,*) NameSub,': Eta0Si, Eta0=',Eta0Si, Eta0
        end if
     end do; end do; end do
 
   end subroutine user_set_resistivity
+
+  !============================================================================
 
   subroutine user_update_states(iBlock)
 

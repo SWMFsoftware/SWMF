@@ -18,9 +18,6 @@ module ModUser
        IMPLEMENTED10=> user_get_b0
 
   use ModMultiFluid
-
-
-
   use ModAdvance, ONLY: Pe_, UseElectronPressure
 
   include 'user_module.h' !list of public methods
@@ -1895,250 +1892,87 @@ contains
   end subroutine user_set_boundary_cells
 
   !========================================================================
-  subroutine user_get_log_var(VarValue, TypeVar, Radius)
-    use ModGeometry,   ONLY: Xyz_DGB,R_BLK
-    use ModMain
-    use ModVarIndexes
-    use ModAdvance,    ONLY: State_VGB,tmp1_BLK
-    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+  subroutine user_get_log_var(VarValue, NameVar, Radius)
 
+    use ModGeometry,        ONLY: Xyz_DGB, R_BLK
+    use ModAdvance,         ONLY: State_VGB, tmp1_BLK
+    use ModPhysics,         ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModWriteLogSatFile, ONLY: calc_sphere
+    use BATL_lib,           ONLY: Unused_B
+    
     real, intent(out)            :: VarValue
-    character (len=*), intent(in):: TypeVar
+    character (len=*), intent(in):: NameVar
     real, intent(in), optional :: Radius
 
-    real, external :: calc_sphere
-    real ::mass
-    integer:: i,j,k,iBLK
-    character (len=*), parameter :: NameSub='user_get_log_var'
-    logical:: oktest=.false.,oktest_me
+    integer:: i, j, k, iBlock, iIonFluid, iSide
+    integer:: iRho, iRhoUx, iRhoUz
 
-    !---------------------------------------------------------------------------
-    !write(*,*)'user_get_log_var called'
+    logical:: oktest, oktest_me
+    character(len=*), parameter :: NameSub='user_get_log_var'
+    !--------------------------------------------------------------------------
     call set_oktest(NameSub,oktest,oktest_me)
-    if(oktest_me)write(*,*)NameSub, ': TypeVar=',TypeVar
+    if(oktest_me)write(*,*)NameSub, ': NameVar=',NameVar
 
-    select case(TypeVar)
+    iSide = 0
 
+    select case(NameVar)
     case('hplflx')
-       mass=1.0
-       !write(*,*)'hola 2'
-       do iBLK=1,nBLK
-          ! write(*,*)'iBlock=',iBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             !write(*,*)'i,j,k=',i,j,k
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(HpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
-
+       iIonFluid = Hp_
+       iSide     = -1
     case('hprflx')
-       mass=1.0
-       !write(*,*)'hola 2'
-       do iBLK=1,nBLK
-          ! write(*,*)'iBlock=',iBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             !write(*,*)'i,j,k=',i,j,k
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(HpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
+       iIonFluid = Hp_
+       iSide     = +1
     case('hpflx')
-       mass=1.0
-       do iBLK=1,nBLK
-          ! write(*,*)'iBlock=',iBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             !write(*,*)'i,j,k=',i,j,k
-             tmp1_BLK(i,j,k,iBLK) =&
-                  (State_VGB(HpRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(HpRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(HpRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)
-             !if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
+       iIonFluid = Hp_
     case('oplflx')
-       mass=16.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(OpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
-
+       iIonFluid = Op_
+       iSide     = -1
     case('oprflx')
-       mass=16.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(OpRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
+       iIonFluid = Op_
+       iSide     = +1
     case('opflx')
-       mass=16.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) =  &
-                  (State_VGB(OpRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(OpRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(OpRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)
-             !if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
-    case('o2prflx')
-       mass=32.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(O2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
-
+       iIonFluid = Op_
     case('o2plflx')
-       mass=32.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(O2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
+       iIonFluid = O2p_
+       iSide     = -1
+    case('o2prflx')
+       iIonFluid = O2p_
+       iSide     = +1
     case('o2pflx')
-       mass=32.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) =  &
-                  (State_VGB(O2pRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(O2pRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(O2pRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)
-             !if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
+       iIonFluid = O2p_
     case('co2plflx')
-       mass=44.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(CO2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)>0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
-
+       iIonFluid = CO2p_
+       iSide     = -1
     case('co2prflx')
-       mass=44.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(CO2pRho_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-             if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             !tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
-
+       iIonFluid = CO2p_
+       iSide     = +1
     case('co2pflx')
-       mass=44.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) =  &
-                  (State_VGB(CO2pRhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(CO2pRhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(CO2pRhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)
-             !if(Xyz_DGB(x_,i,j,k,iBLK)<0.0)tmp1_BLK(i,j,k,iBLK)=0.0
-             ! tmp1_BLK(i,j,k,iBLK) = max(0.0, tmp1_BLK(i,j,k,iBLK))
-          end do; end do; end do
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-       VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
-
+       iIonFluid = CO2p_
     case default
-       call stop_mpi(NameSub//': wrong logvarname='//TypeVar)
+       call stop_mpi(NameSub//': wrong NameVar='//NameVar)
     end select
+
+    iRho   = iRhoIon_I(iIonFluid)
+    iRhoUx = iRhoUxIon_I(iIonFluid)
+    iRhoUz = iRhoUzIon_I(iIonFluid)
+
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          tmp1_BLK(i,j,k,iBlock) = State_VGB(HpRho_,i,j,k,iBlock)* &
+               sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
+               *Xyz_DGB(:,i,j,k,iBlock)) &
+               /(R_BLK(i,j,k,iBlock)*State_VGB(iRho,i,j,k,iBlock))
+
+          ! Exclude left side if iSide=1 or right side if iSide=-1
+          if(iSide /= 0)then
+             if( iSide*Xyz_DGB(x_,i,j,k,iBlock) < 0) tmp1_BLK(i,j,k,iBlock) = 0
+          end if
+       end do; end do; end do
+    end do
+    VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK) &
+         /MassIon_I(iIonFluid) &
+         *No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)
 
   end subroutine user_get_log_var
 
@@ -2157,7 +1991,7 @@ contains
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
-    real,             intent(out)  :: PlotVar_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
+    real,             intent(out)  :: PlotVar_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real,             intent(out)  :: PlotVarBody
     logical,          intent(out)  :: UsePlotVarBody
     character(len=*), intent(inout):: NameTecVar

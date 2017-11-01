@@ -7,7 +7,7 @@ module ModUser
 
   use ModSize
   use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_, &
-       SpeciesFirst_, SpeciesLast_
+       SpeciesFirst_, SpeciesLast_, MassSpecies_V
   use ModAdvance,    ONLY: nSpecies
   use ModPhysics,    ONLY: BodyRhoSpecies_I
 
@@ -184,8 +184,7 @@ module ModUser
   logical:: UseOldEnergy=.true.
 
 contains
-  !=============================================================================
-
+  !============================================================================
   subroutine user_read_inputs
     use ModMain
     use ModProcMH,    ONLY: iProc
@@ -1588,90 +1587,52 @@ contains
   end subroutine MarsB0
 
   !=====================================================================
-  subroutine user_get_log_var(VarValue, TypeVar, Radius)
+  subroutine user_get_log_var(VarValue, NameVar, Radius)
 
     use ModGeometry,   ONLY: Xyz_DGB,R_BLK
     use ModMain,       ONLY: Unused_B
-    use ModVarIndexes, ONLY: Rho_, rhoHp_, rhoO2p_, RhoOp_,RhoCO2p_,&
-         rhoUx_,rhoUy_,rhoUz_
+    use ModVarIndexes, ONLY: &
+         Rho_, rhoHp_, rhoO2p_, RhoOp_, RhoCO2p_, rhoUx_, rhoUy_, rhoUz_
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
-    use ModPhysics,ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
+    use ModWriteLogSatFile, ONLY: calc_sphere
 
-    real, intent(out)            :: VarValue
-    character (len=*), intent(in):: TypeVar
-    real, intent(in), optional :: Radius
+    real, intent(out)           :: VarValue
+    character(len=*), intent(in):: NameVar
+    real, intent(in), optional  :: Radius
 
-    real, external :: calc_sphere
-    real ::mass
-    integer:: i,j,k,iBLK
-    character (len=*), parameter :: Name='user_get_log_var'
-    logical:: DoTest=.false.,DoTestMe
+    integer:: i, j, k, iBlock, iVar
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='user_get_log_var'
     !-------------------------------------------------------------------
-    call set_oktest('user_get_log_var',DoTest,DoTestMe)
-    if(DoTest)write(*,*)'in user_get_log_var: TypeVar=',TypeVar
-    select case(TypeVar)
+    call set_oktest(NameSub, DoTest, DoTestMe)
+    if(DoTestMe)write(*,*) NameSub,': NameVar=', NameVar
+    select case(NameVar)
     case('hpflx')
-       mass=1.0
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoHp_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-
+       iVar = rhoHp_
     case('opflx')
-       mass=16.
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoOp_,i,j,k,iBLK)* &
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)    
+       iVar = RhoOp_
     case('o2pflx')
-       mass=32.
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoO2p_,i,j,k,iBLK)*&
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-
+       iVar = RhoO2p_
     case('co2pflx')
-       mass=44.
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             tmp1_BLK(i,j,k,iBLK) = State_VGB(rhoCO2p_,i,j,k,iBLK)*&
-                  (State_VGB(rhoUx_,i,j,k,iBLK)*Xyz_DGB(x_,i,j,k,iBLK) &
-                  +State_VGB(rhoUy_,i,j,k,iBLK)*Xyz_DGB(y_,i,j,k,iBLK) &
-                  +State_VGB(rhoUz_,i,j,k,iBLK)*Xyz_DGB(z_,i,j,k,iBLK) &
-                  )/R_BLK(i,j,k,iBLK)/State_VGB(rho_,i,j,k,iBLK)
-          end do; end do; end do          
-       end do
-       VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK)
-
+       iVar =  RhoCO2p_
     case default
-       call stop_mpi('wrong logvarname')
+       call stop_mpi(NameSub//': wrong NameVar='//NameVar)
     end select
-    !change to user value from normalized flux
-    !    write(*,*)'varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t=',&
-    !         varvalue, unitSI_n, unitSI_x, unitSI_U, mass, unitSI_t
-    VarValue=VarValue*No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)/mass
+
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          tmp1_BLK(i,j,k,iBlock) = State_VGB(iVar,i,j,k,iBlock)*&
+               sum(State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) &
+               *   Xyz_DGB(:,i,j,k,iBlock)) &
+               /R_BLK(i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
+       end do; end do; end do
+    end do
+    VarValue = calc_sphere('integrate', 360, Radius, tmp1_BLK) &
+         /MassSpecies_V(iVar) &
+         *No2Si_V(UnitN_)*No2Si_V(UnitX_)**2*No2Si_V(UnitU_)
 
   end subroutine user_get_log_var
 
