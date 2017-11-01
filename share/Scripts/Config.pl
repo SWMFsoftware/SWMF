@@ -445,6 +445,7 @@ sub install_code_{
 	die "$ERROR_ $MakefileDefOrig is missing\n" unless
 	    -f $MakefileDefOrig;
 	my $header = "${Component}DIR    = $DIR
+MYDIR    = $DIR
 OS       = $OS
 COMPILER = $Compiler
 SERIAL   =
