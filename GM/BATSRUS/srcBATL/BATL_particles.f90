@@ -198,7 +198,7 @@ contains
     integer          :: nParticle      ! # of particles of this kind on proc
     integer          :: nParticleMax   ! max # of particles of this kind on PE
     ! number of particles to send to other procs
-    integer:: nSend_P(0:nProc-1) 
+    integer:: nSend_P(0:nProc-1), nSendThis, nSendAll
     ! number of particles to recv by particle kind from other procs
     integer:: nRecv_P(0:nProc-1)
     ! offset for data to be sent/recv'd by procs in the BufferSend_I
@@ -278,6 +278,13 @@ contains
          nSend_P(      iProcOut)  = nSend_P(iProcOut) + 1
       end do
       if(nProc==1)RETURN
+      
+      ! check if need to pass any particles in the communicator
+      nSendThis = sum(nSend_P)
+      call MPI_Allreduce(&
+           nSendThis, nSendAll, 1, MPI_INTEGER, MPI_SUM, iComm, iError)
+      if(nSendAll==0)RETURN
+
       ! send size of messages
       iRequest = 0
       do iProcFrom = 0, nProc - 1
