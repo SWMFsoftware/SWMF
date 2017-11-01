@@ -37,12 +37,13 @@ program spectrum
 
   ! Variables for solar wind input data file (if any)
   logical                     :: IsDataBlock = .false. ! Overwrite data size
-  logical                     :: IsPermuteAxis = .false. ! Rotate box variables
+  logical                     :: IsOnePixel = .false. ! Select one pixel only
   logical                     :: IsPe = .false.
   logical                     :: IsPpar = .false., IsPperp = .false.
   logical                     :: IsNoAlfven = .false. ! Ignore Alfven waves
   logical                     :: IsDoppler = .true. ! Calculate Doppler shift
   integer                     :: n1Block, n2Block, n3Block ! Define data size
+  integer                     :: iOnePixel, jOnePixel, kOnePixel
   ! Rotation angles for box variable rotation
   integer                     :: iDimLOS=1, iDimVertical=2, iDimHorizontal=3
 
@@ -386,144 +387,150 @@ contains
     ! Fill in LabelTabel%NameIon
     LabelTable_III(iLine,:,:)%NameIon = LineTable_I(iLine)%NameIon
 
+    if(IsOnePixel)write(*,*)'n1 n2 n3 i j k =',n1,n2,n3,i,jPixel,kPixel
+
     do kPixel=1,n3
        do jPixel=1,n2
           do i=1,n1
-             ! Cells inside body or behind the solar disk
-             if(all(Var_VIII(1:7,i,jPixel,kPixel)==0))CYCLE
 
-             ! Doppler shift while x axis is oriented towards observer
-             if(IsDoppler)then
-                Lambda_shifted = (-Var_VIII(ux_,i,jPixel,kPixel)/cLightSpeed &
-                     + 1 ) * Lambda
-                Lambda = Lambda_shifted
-             endif
+             if(IsOnePixel .and. (kPixel/=kOnePixel .or. &
+                  jPixel/=jOnePixel .or. i/=iOnePixel))CYCLE
 
-             ! Find which interval wavelength belongs to
-             iInterval = -1
-             do iWavelengthInterval = 1, nWavelengthInterval
-                if((Lambda <= WavelengthInterval_II(2,iWavelengthInterval)) &
-                     .and.&
-                     (Lambda >= WavelengthInterval_II(1,iWavelengthInterval)))&
-                     then
-                   iInterval = iWavelengthInterval
-                   EXIT
-                end if
-             end do
-             if(iInterval == -1)then
-                write(*,*)"Lambda = ",Lambda," will be left out!"
-                write(*,*)"Intervals begin and end = ", &
-                     WavelengthInterval_II(:,:)
-                EXIT
-             endif
+                ! Cells inside body or behind the solar disk
+                if(all(Var_VIII(1:7,i,jPixel,kPixel)==0))CYCLE
 
-             iBin =0
-             do
-                iBin=iBin+1
-                if ((Lambda > &
-                     SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
-                     .and.&
-                     (Lambda < & 
-                     SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
-                     then
-                   iCenter=iBin
-                   EXIT
-                end if
-                if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
-                     WavelengthInterval_II(2,iInterval))EXIT
-                if (iBin==nBin)then
+                ! Doppler shift while x axis is oriented towards observer
+                if(IsDoppler)then
+                   Lambda_shifted = (-Var_VIII(ux_,i,jPixel,kPixel)/cLightSpeed &
+                        + 1 ) * Lambda
+                   Lambda = Lambda_shifted
+                endif
+
+                ! Find which interval wavelength belongs to
+                iInterval = -1
+                do iWavelengthInterval = 1, nWavelengthInterval
+                   if((Lambda <= WavelengthInterval_II(2,iWavelengthInterval)) &
+                        .and.&
+                        (Lambda >= WavelengthInterval_II(1,iWavelengthInterval)))&
+                        then
+                      iInterval = iWavelengthInterval
+                      EXIT
+                   end if
+                end do
+                if(iInterval == -1)then
                    write(*,*)"Lambda = ",Lambda," will be left out!"
+                   write(*,*)"Intervals begin and end = ", &
+                        WavelengthInterval_II(:,:)
                    EXIT
                 endif
+
+                iBin =0
+                do
+                   iBin=iBin+1
+                   if ((Lambda > &
+                        SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
+                        .and.&
+                        (Lambda < & 
+                        SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1)))&
+                        then
+                      iCenter=iBin
+                      EXIT
+                   end if
+                   if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
+                        WavelengthInterval_II(2,iInterval))EXIT
+                   if (iBin==nBin)then
+                      write(*,*)"Lambda = ",Lambda," will be left out!"
+                      EXIT
+                   endif
+                end do
+
+                ! Calculate Elzasser variables
+                Rho = Var_VIII(rho_,i,jPixel,kPixel)
+                Zplus2   = Var_VIII(I01_,i,jPixel,kPixel) * 4.0 / Rho
+                Zminus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
+
+                ! Calculate angle between LOS and B directions
+                B_D      = Var_VIII(bx_:bz_,i,jPixel,kPixel)
+                CosAlpha = abs(B_D(1)/sqrt(max(sum(B_D**2), 1e-30)))
+
+                ! Calculate temperature relative to the LOS direction
+                SinAlpha = sqrt(1 - CosAlpha**2)
+                Tlos = SinAlpha**2 * Var_VIII(tperp_,i,jPixel,kPixel) &
+                     + CosAlpha**2 * Var_VIII(tpar_,i,jPixel,kPixel)
+
+                ! Calculate thermal and non-thermal broadening
+                Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
+                Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)  
+
+                ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
+                ! and divide by cProtonMass in kg so Ne is in cm^-3
+                ! 1 : 0.83  electron to proton ratio is assumed
+                LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
+                LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
+
+                ! Convert to SI
+                LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
+
+                ! Add thermal and non-thermal broadening
+                DLambdaSI2 = LambdaSI**2 * (Uth2 + Unth2)/cLightSpeed**2
+
+                ! Add instrumental broadening (if any)
+                if(IsInstrument)DLambdaSI2 = DLambdaSI2 + DLambdaInstr2
+
+                ! Convert [m] --> [A]
+                DLambdaSI = sqrt(DLambdaSI2)
+                DLambda   = DLambdaSI * 1e10
+
+                ! Get the contribution function
+                iNMin  = LineTable_I(iLine)%iMin
+                jTMin  = LineTable_I(iLine)%jMin
+                iNMax  = LineTable_I(iLine)%iMax
+                jTMax  = LineTable_I(iLine)%jMax
+                Glambda_II = LineTable_I(iLine)%g_II(:,:)
+
+                Gint = bilinear(Glambda_II, iNMin, iNMax, jTMin, jTMax, &
+                     (/ LogNe/DLogN , LogTe/DLogT /),DoExtrapolate=.true.)
+
+                ! When Gint becomes negative due to extrapolation -> move to next
+                if(Gint<=0)CYCLE 
+
+                ! Calculate flux and spread it on the Spectrum_II grids
+                ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
+                FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx
+
+                if(IsDebug)then
+                   write(*,*)'                                                   '
+                   write(*,*)'      ',LineTable_I(iLine)%NameIon,'         '
+                   write(*,*)'LineWavelength = ',LineTable_I(iLine)%LineWavelength
+                   write(*,*)'Gint = ',log10(Gint),' FluxMono = ',FluxMono
+                   write(*,*)'Aion = ',Aion
+                   write(*,*)'LambdaSI =',LambdaSI
+                   write(*,*)'DLambdaSI, DLambda =', DLambdaSI, DLambda
+                   write(*,*)'Uth, Unth = ',sqrt(Uth2), sqrt(Unth2)
+                   write(*,*)'LogTlos = ',log10(Tlos)
+                   write(*,*)'iLine = ',iLine
+                   write(*,*)'iCenter , iInterval = ',iCenter, iInterval
+                   write(*,*)'jTMin, jTMax = ', jTMin, jTMax
+                   write(*,*)'iNMin, iNMax = ', iNMin, iNMax
+                   write(*,*)'LogNe,DLogN , LogTe,DLogT = ', &
+                        LogNe,DLogN , LogTe,DLogT
+                   write(*,*)'LogNe/DLogN , LogTe/DLogT = ', &
+                        LogNe/DLogN , LogTe/DLogT
+                   write(*,*)'Gint = ',Gint
+                   write(*,*)'                                                   '
+                endif
+
+                ! Fill in LabelTabel%Lambda,FluxMono
+                LabelTable_III(iLine,:,:)%Lambda = Lambda
+                LabelTable_III(iLine,jPixel,kPixel)%FluxMono = &
+                     FluxMono /(sqrt(2*cPi) * DLambda)
+
+                call disperse_line(iInterval, iCenter, Lambda, DLambda, FluxMono)
              end do
-
-             ! Calculate Elzasser variables
-             Rho = Var_VIII(rho_,i,jPixel,kPixel)
-             Zplus2   = Var_VIII(I01_,i,jPixel,kPixel) * 4.0 / Rho
-             Zminus2  = Var_VIII(I02_,i,jPixel,kPixel) * 4.0 / Rho
-
-             ! Calculate angle between LOS and B directions
-             B_D      = Var_VIII(bx_:bz_,i,jPixel,kPixel)
-             CosAlpha = abs(B_D(1)/sqrt(max(sum(B_D**2), 1e-30)))
-
-             ! Calculate temperature relative to the LOS direction
-             SinAlpha = sqrt(1 - CosAlpha**2)
-             Tlos = SinAlpha**2 * Var_VIII(tperp_,i,jPixel,kPixel) &
-                  + CosAlpha**2 * Var_VIII(tpar_,i,jPixel,kPixel)
-
-             ! Calculate thermal and non-thermal broadening
-             Unth2    = 1.0/16.0 * (Zplus2 + Zminus2) * SinAlpha**2
-             Uth2     = cBoltzmann * Tlos/(cProtonMass * Aion)  
-
-             ! Convert from kg m^-3 to kg cm^-3 (*1e-6)
-             ! and divide by cProtonMass in kg so Ne is in cm^-3
-             ! 1 : 0.83  electron to proton ratio is assumed
-             LogNe = log10(Rho*1e-6/cProtonMass/ProtonElectronRatio)
-             LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
-
-             ! Convert to SI
-             LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
-
-             ! Add thermal and non-thermal broadening
-             DLambdaSI2 = LambdaSI**2 * (Uth2 + Unth2)/cLightSpeed**2
-
-             ! Add instrumental broadening (if any)
-             if(IsInstrument)DLambdaSI2 = DLambdaSI2 + DLambdaInstr2
-
-             ! Convert [m] --> [A]
-             DLambdaSI = sqrt(DLambdaSI2)
-             DLambda   = DLambdaSI * 1e10
-
-             ! Get the contribution function
-             iNMin  = LineTable_I(iLine)%iMin
-             jTMin  = LineTable_I(iLine)%jMin
-             iNMax  = LineTable_I(iLine)%iMax
-             jTMax  = LineTable_I(iLine)%jMax
-             Glambda_II = LineTable_I(iLine)%g_II(:,:)
-
-             Gint = bilinear(Glambda_II, iNMin, iNMax, jTMin, jTMax, &
-                  (/ LogNe/DLogN , LogTe/DLogT /),DoExtrapolate=.true.)
-
-             ! When Gint becomes negative due to extrapolation -> move to next
-             if(Gint<=0)CYCLE 
-
-             ! Calculate flux and spread it on the Spectrum_II grids
-             ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
-             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx
-
-             if(IsDebug)then
-                write(*,*)'                                                   '
-                write(*,*)'      ',LineTable_I(iLine)%NameIon,'         '
-                write(*,*)'LineWavelength = ',LineTable_I(iLine)%LineWavelength
-                write(*,*)'Gint = ',log10(Gint),' FluxMono = ',FluxMono
-                write(*,*)'Aion = ',Aion
-                write(*,*)'LambdaSI =',LambdaSI
-                write(*,*)'DLambdaSI, DLambda =', DLambdaSI, DLambda
-                write(*,*)'Uth, Unth = ',sqrt(Uth2), sqrt(Unth2)
-                write(*,*)'LogTlos = ',log10(Tlos)
-                write(*,*)'iLine = ',iLine
-                write(*,*)'iCenter , iInterval = ',iCenter, iInterval
-                write(*,*)'jTMin, jTMax = ', jTMin, jTMax
-                write(*,*)'iNMin, iNMax = ', iNMin, iNMax
-                write(*,*)'LogNe,DLogN , LogTe,DLogT = ', &
-                     LogNe,DLogN , LogTe,DLogT
-                write(*,*)'LogNe/DLogN , LogTe/DLogT = ', &
-                     LogNe/DLogN , LogTe/DLogT
-                write(*,*)'Gint = ',Gint
-                write(*,*)'                                                   '
-             endif
-
-             ! Fill in LabelTabel%Lambda,FluxMono
-             LabelTable_III(iLine,:,:)%Lambda = Lambda
-             LabelTable_III(iLine,jPixel,kPixel)%FluxMono = &
-                  FluxMono /(sqrt(2*cPi) * DLambda)
-
-             call disperse_line(iInterval, iCenter, Lambda, DLambda, FluxMono)
           end do
        end do
-    end do
 
-  end subroutine calc_flux
+     end subroutine calc_flux
 
   !==========================================================================
   subroutine disperse_line(iInterval,iCenter,Lambda,DLambda,FluxMono)
@@ -718,11 +725,11 @@ contains
        case("#NOALFVEN")
           call read_var('IsNoAlfven',IsNoAlfven)
 
-       case("#ISPERMUTEAXIS")
-          call read_var('IsPermuteAxis',IsPermuteAxis)
-          call read_var('iDimLOS',iDimLOS)
-          call read_var('iDimVertical',iDimVertical)
-          call read_var('iDimHorizontal',iDimHorizontal)
+       case("#ISONEPIXEL")
+          call read_var('IsOnePixel',IsOnePixel)
+          call read_var('iOnePixel',iOnePixel)
+          call read_var('jOnePixel',jOnePixel)
+          call read_var('kOnePixel',kOnePixel)
 
        case("#ISALLLINES")
           call read_var('IsAllLines',IsAllLines) ! Unobserved lines included
@@ -765,7 +772,7 @@ contains
     integer, parameter          :: MaxNameVar = 100
     character(len=20)           :: NameVar_V(MaxNameVar)
 
-    integer                     :: nStep, i, j, k, Size_D(3)
+    integer                     :: nStep, i, j, k
     integer                     :: k1, k2
     integer                     :: nVarName, iVar
 
@@ -813,17 +820,6 @@ contains
 
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
-
-    if(IsPermuteAxis)then
-       Size_D(1:3) = (/n1,n2,n3/)
-       CoordMax_D = (/ CoordMax_D(iDimLOS), CoordMax_D(iDimVertical), &
-            CoordMax_D(iDimHorizontal)/)
-       CoordMin_D = (/ CoordMin_D(iDimLOS), CoordMin_D(iDimVertical), &
-            CoordMin_D(iDimHorizontal)/)
-       n1 = Size_D(iDimLOS)
-       n2 = Size_D(iDimVertical)
-       n3 = Size_D(iDimHorizontal)
-    endif
 
     if(IsDataBlock)then
        n1 = n1Block
