@@ -1027,7 +1027,7 @@ contains
     ! True if the block already containes open rays
     logical :: DoCheckOpen
 
-    ! Counter for entering follow_ray_iono
+    ! Counter for entering follow_iono
     integer :: nIono
 
     ! Control volume limits in local coordinates
@@ -1352,7 +1352,7 @@ contains
 
              ! Try mapping down to rIonosphere if we haven't tried yet (a lot)
              if(nIono<5)then
-                if(.not.follow_ray_iono())then
+                if(.not.follow_iono())then
                    ! We did not hit the surface of the ionosphere
                    ! continue the integration
                    nIono=nIono+1
@@ -1403,7 +1403,7 @@ contains
 
                    end if
 
-                   ! Exit integration loop (XyzInOut_D is set by follow_ray_iono)
+                   ! Exit integration loop (XyzInOut_D is set by follow_iono)
                    iFace=ray_iono_
                    EXIT FOLLOW
                 end if
@@ -1620,7 +1620,7 @@ contains
 
     !===========================================================================
 
-    logical function follow_ray_iono()
+    logical function follow_iono()
 
       ! Follow ray inside ionosphere starting from XyzCur_D which is given in
       ! real coordinates and use analytic mapping.
@@ -1644,17 +1644,17 @@ contains
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for XyzCur_D=',XyzCur_D
          write(*,*)'iBlock, iRay=',iBlock,iRay
-         call stop_mpi('ERROR in follow_ray_iono')
+         call stop_mpi('ERROR in follow_iono')
       end if
 
       if(iHemisphere*DipoleStrength*sign(1.0,1.5-iRay) < 0.0)then
          XyzInOut_D = x_D
-         follow_ray_iono = .true.
+         follow_iono = .true.
       else
-         follow_ray_iono = .false.
+         follow_iono = .false.
       end if
 
-    end function follow_ray_iono
+    end function follow_iono
 
     !=========================================================================
 
@@ -4067,7 +4067,7 @@ contains
                    if(ray_iter==0)then
                       do iray=1,2
                          ! Follow ray in direction iray
-                         iface=follow_ray(.true.,ix-0.5,iy-0.5,iz-0.5)
+                         iface=follow_fast(.true.,ix-0.5,iy-0.5,iz-0.5)
 
                          ! Assign value to rayface
                          call assign_ray(.true.,rayface(:,iray,ix,iy,iz,iBLK))
@@ -4283,10 +4283,10 @@ contains
                 CYCLE
              end if
 
-             if(oktest_ray)write(*,*)'calling follow_ray'
+             if(oktest_ray)write(*,*)'calling follow_fast'
 
              ! Follow ray in direction iray
-             iface=follow_ray(.false.,real(ix),real(iy),real(iz))
+             iface=follow_fast(.false.,real(ix),real(iy),real(iz))
 
              if(oktest_ray)write(*,*)'calling assign_ray'
 
@@ -4415,7 +4415,7 @@ contains
 
     !===========================================================================
 
-    function follow_ray(surface_point,x_0,y_0,z_0) result(qface)
+    function follow_fast(surface_point,x_0,y_0,z_0) result(qface)
 
       ! Follow ray starting at initial position x_0,y_0,z_0 in direction iray
       ! until we hit the wall of the control volume or the ionosphere.
@@ -4450,13 +4450,13 @@ contains
       ! counter for ray integration
       integer :: nsegment 
 
-      ! Counter for entering follow_ray_iono
+      ! Counter for entering follow_fast_iono
       integer :: n_iono
 
       !--------------------------------------------------------------------------
 
       if(oktest_ray)&
-           write(*,*)'follow_ray: me,iBLK,surface_point,x_0,y_0,z_0,iray=',&
+           write(*,*)'follow_fast: me,iBLK,surface_point,x_0,y_0,z_0,iray=',&
            iProc,iBLK,surface_point,x_0,y_0,z_0,iray
 
       ! Step size limits
@@ -4521,7 +4521,7 @@ contains
 
                ! Try mapping down to rIonosphere if we haven't tried yet
                if(n_iono<1)then
-                  if(follow_ray_iono())then
+                  if(follow_fast_iono())then
                      x=xx
                      qface=ray_iono_
                      EXIT
@@ -4634,10 +4634,10 @@ contains
             elseif(x(2)>=xmax(2))then; qface=4
             elseif(x(3)>=xmax(3))then; qface=6
             else
-               write(*,*)'Error in follow_ray for me,iBLK,ix,iy,iz=',&
+               write(*,*)'Error in follow_fast for me,iBLK,ix,iy,iz=',&
                     iProc,iBLK,ix,iy,iz
                write(*,*)'nsegment,x,dl,dl_back=',nsegment,x,dl,dl_back
-               call stop_mpi('GM_follow_ray: Hit wall but which one?')
+               call stop_mpi('GM_follow_fast: Hit wall but which one?')
             end if
 
             ! Make sure that x is not outside the control volume
@@ -4662,11 +4662,11 @@ contains
 
       end do
 
-      if(oktest_ray)write(*,*)'Finished follow_ray at me,iBLK,nsegment,qface,x,xx=',&
+      if(oktest_ray)write(*,*)'Finished follow_fast at me,iBLK,nsegment,qface,x,xx=',&
            iProc,iBLK,nsegment,qface,x,&
            Xyz_DGB(:,1,1,1,iBLK) + CellSize_DB(:,iBLK)*(x - 1.)
 
-    end function follow_ray
+    end function follow_fast
 
     !==========================================================================
 
@@ -4833,7 +4833,7 @@ contains
 
     !===========================================================================
 
-    logical function follow_ray_iono()
+    logical function follow_fast_iono()
 
       ! Follow ray inside ionosphere starting from xx which is given in
       ! real coordinates and use analytic mapping.
@@ -4855,17 +4855,17 @@ contains
       if(iHemisphere==0)then
          write(*,*)'iHemisphere==0 for xx=',xx
          write(*,*)'iBLK, iRay=',iBLK,iRay
-         call stop_mpi('ERROR in follow_ray_iono')
+         call stop_mpi('ERROR in follow_fast_iono')
       end if
 
       if(iHemisphere*DipoleStrengthSi*sign(1.0,1.5-iray) < 0.0)then
          xx = x_D
-         follow_ray_iono = .true.
+         follow_fast_iono = .true.
       else
-         follow_ray_iono = .false.
+         follow_fast_iono = .false.
       end if
 
-    end function follow_ray_iono
+    end function follow_fast_iono
 
     !===========================================================================
     subroutine evaluate_bb(qx,qb)
