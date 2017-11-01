@@ -1520,7 +1520,7 @@ contains
           DoReadSolarwindFile = UseSolarwindFile
 
        case("#RAYTRACE", "#RAYTRACELIMIT", "#RAYTRACEEQUATOR", "#IE")
-          call read_field_trace_param(NameSub)
+          call read_field_trace_param(NameCommand)
        case("#IECOUPLING")
           call read_ie_velocity_param
        case("#IMCOUPLING","#IM")
