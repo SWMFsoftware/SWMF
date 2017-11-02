@@ -285,7 +285,7 @@ contains
 !!! Nighttime EUV Ionization
 
     real :: night_photoion(Num_NightWaveLens, nIons-1)
-    real :: night_photoabs(Num_NightWaveLens, nSpecies)
+    real :: night_photoabs(Num_NightWaveLens, nSpeciesTotal)
     real :: night_col(nLons,nLats,nAlts,nSpecies)
     real :: dAlts(nLons,nLats)
     real, dimension(nLons,nLats) :: nTau, nIntensity
