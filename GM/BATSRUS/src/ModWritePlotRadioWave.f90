@@ -25,11 +25,12 @@ contains
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: Time_Accurate, n_Step, Time_Simulation
     use ModIO, ONLY: StringRadioFrequency_I, plot_type1, &
-         plot_type, plot_form, plot_, filename, ObsPos_DI, &
+         plot_type, plot_form, plot_, ObsPos_DI, &
          n_Pix_X, n_Pix_Y, X_Size_Image, Y_Size_Image, &
          NamePlotDir, StringDateOrTime, nPlotRfrFreqMax
     use ModUtilities, ONLY: open_file, close_file
     use ModIoUnit, ONLY: UnitTmp_
+    use ModPlotFile, ONLY: save_plot_file
     use ModCellGradient, ONLY: calc_gradient_ghost
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: Rho_
@@ -74,14 +75,14 @@ contains
     !\
     ! The result of the emissivity integration
     !/
-    real, allocatable, dimension(:,:,:) :: Intensity_III
+    real, allocatable, dimension(:,:,:) :: Intensity_IIV
 
     integer :: iFreq, iPixel, jPixel
     real :: XPixel, XPixelSize, YPixel, YPixelSize
     real :: XLower, YLower, XUpper, YUpper
     real :: ImagePlaneDiagRadius
 
-    character (LEN=120) :: NameVarAll
+    character (LEN=120) :: NameVarAll, NameFile
     character (LEN=4)   :: NameDelimiter
     character (LEN=500) :: unitstr_TEC
     character (LEN=4)   :: NameFileExtension
@@ -168,8 +169,8 @@ contains
           if(DoTest) write(*,*) unitstr_TEC
        end select
     end if
-    allocate(Intensity_III(nXPixel,nYPixel,nFreq))
-    Intensity_III = 0.0
+    allocate(Intensity_IIV(nXPixel,nYPixel,nFreq))
+    Intensity_IIV = 0.0
 
     ! Get density gradient
     call calc_gradient_ghost(State_VGB(Rho_,1:nI,1:nJ,1:nK,:))
@@ -186,39 +187,37 @@ contains
        end if
        call get_ray_bunch_intensity(XyzObserv_D, RadioFrequency_I(iFreq), &
             ImageRange_I, rIntegration, &
-            nXPixel, nYPixel, Intensity_III(:,:,iFreq))
+            nXPixel, nYPixel, Intensity_IIV(:,:,iFreq))
 
        if (iProc == 0) write(*,*) 'RAYTRACE END'
     end do
 
     if (iProc==0) then
        if (ifile-plot_ > 9) then
-          NameFileFormat='("' // trim(NamePlotDir) // '",a,i2,a,i7.7,a)'
+          NameFileFormat='(a,i2,a,i7.7,a)'
        else
-          NameFileFormat='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
+          NameFileFormat='(a,i1,a,i7.7,a)'
        end if
 
        if(time_accurate)then
           call get_time_string
-          write(filename,NameFileFormat) &
-               trim(plot_type1)//"_",&
+          write(NameFile,NameFileFormat) &
+               trim(NamePlotDir)//trim(plot_type1)//"_",&
                ifile-plot_,"_t"//trim(StringDateOrTime)//"_n",n_step,&
                NameFileExtension
        else
-          write(filename,NameFileFormat) &
-               trim(plot_type1)//"_",&
+          write(NameFile,NameFileFormat) &
+               trim(NamePlotDir)//trim(plot_type1)//"_",&
                ifile-plot_,"_n",n_step,NameFileExtension
        end if
 
-       write(*,*) 'filename = ', filename
-
-       call open_file(FILE=filename)
-
+       write(*,*) 'filename = ', NameFile
        !
        ! Write the file header
        !
        select case(plot_form(ifile))
        case('tec')
+          call open_file(FILE=NameFile)
           write(UnitTmp_,*) 'TITLE="BATSRUS: Radiotelescope Image"'
           write(UnitTmp_,'(a)') trim(unitstr_TEC)
           write(UnitTmp_,*) 'ZONE T="RFR Image"', &
@@ -230,42 +229,26 @@ contains
                 XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
 
                 write(UnitTmp_,fmt="(30(E14.6))") XPixel, YPixel, &
-                     Intensity_III(iPixel,jPixel,1:nFreq)
+                     Intensity_IIV(iPixel,jPixel,1:nFreq)
              end do
           end do
-
+          call close_file
        case('idl')
           ! description of file contains units, physics and dimension
-          write(UnitTmp_,"(a)") 'RFR Radiorelescope Image'
-
-          ! 2 in the next line means 2 dimensional plot, 1 in the next line
-          !  is for a 2D cut, in other words one dimension is left out)
-          write(UnitTmp_,"(i7,1pe13.5,3i3)") &
-               n_step, time_simulation, 2, 0, nFreq
-
-          ! Grid size
-          write(UnitTmp_,"(2i4)") nXPixel, nYPixel
-
-          ! Coordinate, variable and equation parameter names
-          write(UnitTmp_,"(a)")  '  X  Y '//trim(NameVarAll)
-
-          ! Data
-          do jPixel = 1, nYPixel
-             YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
-
-             do iPixel = 1, nXPixel
-                XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
-                write(UnitTmp_,fmt="(30(1pe13.5))") &
-                     XPixel, YPixel, Intensity_III(iPixel,jPixel,1:nFreq)
-             end do
-          end do
+          call save_plot_file(NameFile=NameFile,          &
+               StringHeaderIn='RFR Radiorelescope Image', &
+               nStepIn=n_step, TimeIn=Time_Simulation,    &
+               NameVarIn='  X  Y '//trim(NameVarAll),     &
+               CoordMinIn_D=&
+               (/XLower + 0.5*XPixelSize, YLower + 0.5*YPixelSize/),&
+               CoordMaxIn_D=&
+               (/XUpper - 0.5*XPixelSize, YUpper - 0.5*YPixelSize/),&
+               VarIn_IIV=Intensity_IIV, StringFormatIn = '(30(1pe13.5))')
        end select
-
-       call close_file
 
     end if  !iProc ==0
 
-    deallocate(Intensity_III)
+    deallocate(Intensity_IIV)
 
     if (DoTestMe) write(*,*) 'write_plot_radiowave finished'
 
