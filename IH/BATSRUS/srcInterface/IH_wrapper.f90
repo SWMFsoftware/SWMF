@@ -3,10 +3,16 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module IH_wrapper
-  use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
+
   ! Wrapper for IH_BATSRUS Inner Heliosphere (IH) component
 
+  use IH_domain_decomposition, ONLY: IH_LineDD=>MH_LineDecomposition
+
   use IH_ModBuffer
+
+  use IH_ModBatsrusMethods, ONLY: &
+       BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
+       BATS_finalize
 
   implicit none
 
@@ -83,10 +89,10 @@ contains
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
 
     if(IsUninitialized)then
-       call IH_BATS_setup
+       call BATS_setup
        IsUninitialized = .false.
     end if
-    call IH_BATS_init_session
+    call BATS_init_session
 
     if(DoTest)write(*,*)NameSub,' finished for session ',iSession
 
@@ -172,7 +178,7 @@ contains
     ! We are not advancing in time any longer
     time_loop = .false.
 
-    call IH_BATS_save_files('FINAL')
+    call BATS_save_files('FINAL')
 
     call IH_error_report('PRINT',0.,iError,.true.)
 
@@ -187,7 +193,7 @@ contains
 
     character(len=*), parameter :: NameSub='IH_save_restart'
 
-    call IH_BATS_save_files('RESTART')
+    call BATS_save_files('RESTART')
 
   end subroutine IH_save_restart
 
@@ -219,7 +225,7 @@ contains
        call CON_stop(NameSub//': IH and SWMF simulation times differ')
     end if
 
-    call IH_BATS_advance(TimeSimulationLimit)
+    call BATS_advance(TimeSimulationLimit)
 
     ! Return time after the time step
     TimeSimulation = Time_Simulation

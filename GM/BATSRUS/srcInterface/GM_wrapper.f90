@@ -14,6 +14,9 @@ module GM_wrapper
   use GM_couple_pc          !^CMP IF PC
 
   use ModProcMH, ONLY: iProc, nProc, iComm
+  use ModBatsrusMethods, ONLY: &
+       BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
+       BATS_finalize
 
   implicit none
 
@@ -369,7 +372,7 @@ contains
 
     call BATS_save_files('FINAL')
 
-    call BATSRUS_finalize
+    call BATS_finalize
 
   end subroutine GM_finalize
 

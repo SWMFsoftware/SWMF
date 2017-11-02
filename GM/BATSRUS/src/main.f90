@@ -3,6 +3,13 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program BATSRUS
 
+  use ModBatsrusMethods, ONLY: &
+       BATS_init_session, &
+       BATS_setup, &
+       BATS_advance, &
+       BATS_save_files, &
+       BATS_finalize
+
   use ModKind
   use ModProcMH, ONLY: iComm, iProc, nProc
   use ModUtilities, ONLY: remove_file, touch_file
@@ -166,7 +173,7 @@ program BATSRUS
 
   if(UseTimingAll)close(iUnitTiming)
 
-  call BATSRUS_finalize
+  call BATS_finalize
 
   !\
   ! Touch BATSRUS.SUCCESS

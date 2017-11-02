@@ -6,6 +6,10 @@ module EE_wrapper
 
   ! Wrapper for the BATSRUS Eruptive Event (EE) component
 
+  use EE_ModBatsrusMethods, ONLY: &
+       BATS_init_session, BATS_setup, BATS_advance, BATS_save_files, &
+       BATS_finalize
+
   implicit none
 
   private ! except
@@ -176,10 +180,10 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(IsUninitialized)then
-       call EE_BATS_setup
+       call BATS_setup
        IsUninitialized = .false.
     end if
-    call EE_BATS_init_session
+    call BATS_init_session
 
     if(DoTest)write(*,*)NameSub,' finished for session ',iSession
 
@@ -198,9 +202,9 @@ contains
     ! We are not advancing in time any longer
     time_loop = .false.
 
-    call EE_BATS_save_files('FINAL')
+    call BATS_save_files('FINAL')
 
-    call EE_BATSRUS_finalize
+    call BATS_finalize
 
   end subroutine EE_finalize
 
@@ -212,7 +216,7 @@ contains
 
     character(len=*), parameter :: NameSub='EE_save_restart'
     !--------------------------------------------------------------------------
-    call EE_BATS_save_files('RESTART')
+    call BATS_save_files('RESTART')
 
   end subroutine EE_save_restart
 
@@ -240,7 +244,7 @@ contains
        call CON_stop(NameSub//': EE and SWMF simulation times differ')
     end if
 
-    call EE_BATS_advance(TimeSimulationLimit)
+    call BATS_advance(TimeSimulationLimit)
 
     ! Return time after the time step
     TimeSimulation = Time_Simulation

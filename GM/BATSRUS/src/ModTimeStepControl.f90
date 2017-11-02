@@ -507,7 +507,7 @@ contains
                      ' for the last ',iCheckTimeStep, ' time steps'
                 write(*,*) NameSub,' saving output files before abort'
              end if
-             call BATS_save_files('FINAL')
+             ! call BATS_save_files('FINAL')
              if(iProc==0) call stop_mpi(NameSub//' time steps are too small')
           end if
        else
