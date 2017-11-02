@@ -68,7 +68,8 @@ contains
        CoordIn_I, CoordIn_DII, CoordIn_DIII,&
        VarIn_I,  VarIn_II,  VarIn_III,  &
        VarIn_VI, VarIn_VII, VarIn_VIII, &
-       VarIn_IV, VarIn_IIV, VarIn_IIIV, iCommIn)
+       VarIn_IV, VarIn_IIV, VarIn_IIIV, &
+       StringFormatIn, iCommIn)
 
     use ModUtilities, ONLY: split_string, join_string, open_file, close_file
 
@@ -76,6 +77,7 @@ contains
     character(len=*), optional, intent(in):: TypePositionIn !asis/rewind/append
     character(len=*), optional, intent(in):: TypeFileIn     ! ascii/real8/real4
     character(len=*), optional, intent(in):: StringHeaderIn ! header line
+    character(len=*), optional, intent(in):: StringFormatIn ! Format for output
     integer,          optional, intent(in):: nStepIn        ! number of steps
     real,             optional, intent(in):: TimeIn         ! simulation time  
     real,             optional, intent(in):: ParamIn_I(:)   ! parameters
@@ -107,7 +109,7 @@ contains
     character(len=10)  :: TypeStatus
     character(len=20), allocatable  :: NameVar_I(:)
     character(len=20)  :: TypeFile
-    character(len=lStringPlotFile) :: StringHeader
+    character(len=lStringPlotFile) :: StringHeader, StringFormat
     character(len=lStringPlotFile) :: NameVar,NameUnits
     integer :: nStep, nDim, nParam, nVar, n1, n2, n3
     integer :: nCellsPerBlock(3), iBlk, nBlocks
@@ -136,6 +138,8 @@ contains
     if(present(TypeFileIn)) TypeFile = TypeFileIn
     StringHeader = 'No header info'
     if(present(StringHeaderIn)) StringHeader = StringHeaderIn
+    StringFormat = '(100es18.10)'
+    if(present(StringFormatIn)) StringFormat = StringFormatIn
     nStep = 0
     if(present(nStepIn)) nStep = nStepIn
     Time = 0.0
@@ -439,7 +443,7 @@ contains
           if(n2 > 1)write(UnitTmp_, "(i6)", ADVANCE="NO") j
           if(n1 > 1)write(UnitTmp_, "(i8)", ADVANCE="NO") i
           n = n + 1
-          write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
+          write(UnitTmp_, trim(StringFormat)) Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
 
        call close_file
@@ -449,7 +453,7 @@ contains
        write(UnitTmp_, "(a)")             trim(StringHeader)
        write(UnitTmp_, "(i7,es18.10,3i3)") nStep, Time, nDimOut, nParam, nVar
        write(UnitTmp_, "(3i8)")           n_D(1:nDim)
-       if(nParam > 0) write(UnitTmp_, "(100es18.10)")     Param_I
+       if(nParam > 0) write(UnitTmp_, trim(StringFormat))     Param_I
        write(UnitTmp_, "(a)")             trim(NameVar)
 
        where(abs(Var_IV) < 1d-99) Var_IV = 0.0
@@ -458,7 +462,7 @@ contains
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          write(UnitTmp_, "(100es18.10)") Coord_ID(n,:), Var_IV(n, :) 
+          write(UnitTmp_, trim(StringFormat)) Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
        call close_file
     case('real8')
