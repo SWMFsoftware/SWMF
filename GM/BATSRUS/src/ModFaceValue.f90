@@ -384,6 +384,7 @@ contains
     real :: AverageOrig_V(nVar), AverageOrig
     real :: Coarse, Middle, FaceAverage, FaceTmp_II(2,2), Alpha, Alpha1
     real :: Beta
+    real :: Denominator
     !-------------------------------------------------------------------------
 
     !Calculate averaged Fine1_VII 
@@ -458,14 +459,18 @@ contains
        end if
 
        ! Calculate interpolation coefficient needed to satisfy the condition
-       Alpha = (FaceAverage - AverageOrig) / &
-            ( 0.25*sum( FaceTmp_II ) - AverageOrig)
-       Alpha1 = 1.0 - Alpha
+       ! Avoid zero denominator.
+       Denominator = 0.25*sum(FaceTmp_II) - AverageOrig
+       if(abs(Denominator) < 1e-30) then
+          CoarseToFineF_VII(iVar,:,:) = FaceTmp_II        
+       else 
+          Alpha = (FaceAverage - AverageOrig) / Denominator
+          Alpha1 = 1.0 - Alpha
 
-       ! Interpolate
-       CoarseToFineF_VII(iVar,:,:) = &
-            Alpha*FaceTmp_II + Alpha1*CoarseToFineF_VII(iVar,:,:)
-
+          ! Interpolate
+          CoarseToFineF_VII(iVar,:,:) = &
+               Alpha*FaceTmp_II + Alpha1*CoarseToFineF_VII(iVar,:,:)
+       endif
     end do
 
     ! The face is half the distance in the fine cell
@@ -525,6 +530,7 @@ contains
     real :: AverageOrig_V(nVar), AverageOrig
     real :: Coarse, Middle, FaceAverage, FaceTmp_I(2), Alpha, Alpha1
     real :: Beta
+    real :: Denominator
     !-------------------------------------------------------------------------
 
     !Calculate averaged Fine1_VI
@@ -594,12 +600,17 @@ contains
        end if
 
        ! Calculate interpolation coefficient needed to satisfy the condition
-       Alpha = (FaceAverage - AverageOrig) / (0.5*sum(FaceTmp_I) - AverageOrig)
-       Alpha1 = 1.0 - Alpha
-
-       ! Interpolate
-       CoarseToFineF_VI(iVar,:) = &
-            Alpha*FaceTmp_I + Alpha1*CoarseToFineF_VI(iVar,:)
+       ! Avoid zero denominator.
+       Denominator = 0.5*sum(FaceTmp_I) - AverageOrig
+       if(abs(Denominator) < 1e-30) then
+          CoarseToFineF_VI(iVar,:) = FaceTmp_I        
+       else 
+          Alpha = (FaceAverage - AverageOrig) / Denominator
+          Alpha1 = 1.0 - Alpha
+          ! Interpolate
+          CoarseToFineF_VI(iVar,:) = &
+               Alpha*FaceTmp_I + Alpha1*CoarseToFineF_VI(iVar,:)
+       endif
 
     end do
 
