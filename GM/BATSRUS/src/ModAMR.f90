@@ -11,10 +11,11 @@ module ModAMR
 
   private  ! except
 
-  public:: init_mod_amr
-  public:: clean_mod_amr
-  public:: do_amr
-  public:: set_levels
+  public:: init_mod_amr    ! initialize module
+  public:: clean_mod_amr   ! deallocate variables
+  public:: prepare_amr     ! message pass and set AMR criteria
+  public:: do_amr          ! perform AMR
+  public:: set_levels      ! copy min/max_block_level into iTree_IA
 
   ! Local and global refinement/coarsening and neighbor parameters.
 
@@ -35,11 +36,15 @@ module ModAMR
   real,    public:: min_cell_dx, max_cell_dx
   logical, public:: DoProfileAmr = .false.
 
+  ! Probably iTypeAdvance_BP should be replaced by this?!
+  ! This array is allocated by prepare_amr and deallocated by do_amr
+  integer, allocatable:: iTypeAdvance_A(:)
+
 contains
   !============================================================================
   subroutine init_mod_amr(nCrit)
 
-    use ModMain, ONLY: MaxBlock
+    use BATL_lib, ONLY: MaxBlock
 
     integer, intent(in) :: nCrit
     !-----------------------------------------------------------------------
@@ -47,58 +52,34 @@ contains
     ! clean for each time we have new refinment criteia
     call clean_mod_amr
 
-    allocate(RefineCrit(nCrit),              &
-         AmrCriteria_IB(nCrit,MaxBlock))
+    allocate(RefineCrit(nCrit), AmrCriteria_IB(nCrit,MaxBlock))
 
   end subroutine init_mod_amr
   !============================================================================
   subroutine clean_mod_amr
 
-    if(allocated(RefineCrit)) deallocate( &
-         RefineCrit,&
-         AmrCriteria_IB)
+    if(allocated(RefineCrit)) deallocate(RefineCrit, AmrCriteria_IB)
 
   end subroutine clean_mod_amr
   !============================================================================
-  subroutine do_amr(DoFullMessagePass,TypeAmr)
+  subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
-    use ModProcMH
-    use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
-         lVerbose, UseB, Dt_BLK, &
-         iNewGrid, iNewDecomposition, UseHighOrderAMR, time_loop, &
-         UseLocalTimeStep
-    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
-         count_true_cells
-    use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
-         nVar, State_VGB, &
-         SkippedBlock_ !!!
-    use ModLoadBalance, ONLY: load_balance
-    use ModFieldTrace, ONLY: ray
-    use ModBlockData, ONLY: clean_block_data
-    use ModIO, ONLY : write_prefix, iUnitOut
-    use ModMpi
+    use ModMain,     ONLY: nBlockMax
+    use ModAdvance,  ONLY: iTypeAdvance_BP, nVar, State_VGB
+    use BATL_lib,    ONLY: set_amr_criteria, &
+         MaxNode, nNode, iTree_IA, &
+         Status_, Used_, Proc_, Block_ !!!
 
-    use BATL_lib,         ONLY: regrid_batl, set_amr_criteria, &
-         MaxNode, nNode, iTree_IA, nLevelMin, nLevelMax, &
-         IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_ !!!
-
-    use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModMessagePass,   ONLY: exchange_messages
     use ModPartSteady,    ONLY: UsePartSteady
-    use ModVarIndexes, ONLY: DefaultState_V
 
     logical, intent(in) :: DoFullMessagePass
     character(3), intent(in) :: TypeAmr
 
+    integer:: iNode
+
     logical :: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'do_amr'
-
-    ! Check if we have the same grid as before, store old grid id
-    integer, save :: iLastGrid=-1, iLastDecomposition=-1
-
-    integer:: iNode !!!
-    integer, allocatable:: iTypeAdvance_A(:) !!!
-
+    character(len=*), parameter:: NameSub = 'prepare_amr'
     !--------------------------------------------------------------------------
 
     call set_oktest(NameSub, DoTest, DoTestMe)
@@ -124,22 +105,57 @@ contains
     if(nAmrCriteria > 0)then
        AmrCriteria_IB(:,1:nBlockMax) = 0.0
        if(DoProfileAmr) call timing_start('amr::amr_criteria')
-       call amr_criteria(AmrCriteria_IB,TypeAmr)
+       call amr_criteria(AmrCriteria_IB)
        if(DoProfileAmr) call timing_stop('amr::amr_criteria')
        if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
        call set_amr_criteria(nVar, State_VGB,&
-            nAmrCriteria,AmrCriteria_IB,TypeAmrIn=TypeAmr)
+            nAmrCriteria, AmrCriteria_IB, TypeAmrIn=TypeAmr)
        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
-
     else
        if(DoProfileAmr) call timing_start('amr::set_amr_criteria')
-       call set_amr_criteria(nVar, State_VGB,TypeAmrIn=TypeAmr)
+       call set_amr_criteria(nVar, State_VGB, TypeAmrIn=TypeAmr)
        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
     end if
 
-    ! If AMR is done, then the plotting with BATS_save_files
-    ! is called here instead of in BATS_method to save the AMR criteria
-    if (time_loop) call BATS_save_files('BEFOREAMR')
+  end subroutine prepare_amr
+
+  !============================================================================
+  subroutine do_amr
+
+    use ModProcMH
+    use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
+         lVerbose, UseB, Dt_BLK, &
+         iNewGrid, iNewDecomposition, UseHighOrderAMR, &
+         UseLocalTimeStep
+    use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
+         count_true_cells
+    use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
+         nVar, State_VGB, &
+         SkippedBlock_ !!!
+    use ModLoadBalance, ONLY: load_balance
+    use ModFieldTrace, ONLY: ray
+    use ModBlockData, ONLY: clean_block_data
+    use ModIO, ONLY : write_prefix, iUnitOut
+    use ModMpi
+
+    use BATL_lib,         ONLY: regrid_batl, &
+         nNode, iTree_IA, nLevelMin, nLevelMax, &
+         IsLogRadius, IsGenRadius, Status_, Used_, Proc_, Block_ !!!
+
+    use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
+    use ModMessagePass,   ONLY: exchange_messages
+    use ModPartSteady,    ONLY: UsePartSteady
+    use ModVarIndexes, ONLY: DefaultState_V
+
+    ! Check if we have the same grid as before, store old grid id
+    integer:: iLastGrid=-1, iLastDecomposition=-1
+
+    integer:: iNode
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub = 'do_amr'
+    !--------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
@@ -244,7 +260,7 @@ contains
 
   end subroutine do_amr
   !============================================================================
-  subroutine amr_criteria(Crit_IB,TypeAmr)
+  subroutine amr_criteria(Crit_IB)
 
     use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          x_, y_, z_, MaxBlock
@@ -262,9 +278,9 @@ contains
     use ModVarIndexes, ONLY: SignB_
     use ModUserInterface ! user_amr_criteria
 
-    real, intent(out) :: Crit_IB(nAmrCriteria,maxBlock)
-    character(len=3), intent(in) :: TypeAmr
-    real :: userCriteria
+    real, intent(out):: Crit_IB(nAmrCriteria,MaxBlock)
+
+    real :: UserCriteria
 
     logical :: IsFound
     integer :: iBlock, iCrit, i, j, k
@@ -280,12 +296,13 @@ contains
 
     real:: Current_D(3)
 
-    character(len=*), parameter:: NameSub='amr_criteria'
-
     ! Needed for the 'currentsheet'
     real :: rDotB_G(nI,nJ,0:nK+1)
 
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter:: NameSub='amr_criteria'
     !--------------------------------------------------------------------------
+    call set_oktest(NameSub, DoTest, DoTestMe)
 
     if(.not.allocated(Rho_G)) allocate( &
          Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -605,6 +622,7 @@ contains
       end select
 
     end subroutine trace_transient
+
   end subroutine amr_criteria
   !============================================================================
   subroutine set_levels
