@@ -1,6 +1,7 @@
 <commandList name="IPIC3D2">
 
 <command name="SAVEIDL">
+
 #SAVEIDL
 4                       nPlotFile
 sat_sat01.sat  var ascii si        StringPlot
@@ -11,7 +12,7 @@ rhoS0 rhoS1 rho pxx pxxS0 pxxS1 Ex Ey Ez Bx By Bz
 sat_sat02.sat particles1 real4 si   StringPlot
 1                       DnOutput
 -0.05                   DtOutput
-10.          DxOutput: output one particle of every DxOutput particles.
+10.          		DxOutput: output one particle of every DxOutput particles.
 z=0 var ascii si        StringPlot
 -1                      DnOutput
 3.0                     DtOutput
@@ -21,7 +22,7 @@ x=0 var ascii pic       StringPlot
 1                       DnOutput
 -0.05                   DtOutput
 0.                      DxOutput
-rhoS0 rhoS1 bx by pxx          PlotVar
+rhoS0 rhoS1 bx by pxx   NamePlotVar
 3d all real4  planet    StringPlot
 1                       DnOutput
 -0.05                   DtOutput
@@ -45,11 +46,11 @@ cut particles0 real4 si  StringPlot
 3                       yMax
 4                       zMin
 5                       zMax
-1.            DxOutput: output one particle of every DxOutput particles.
+1.            		DxOutput: output one particle of every DxOutput particles.
 3d particles1 real4 si   StringPlot
 1                       DnOutput
 -0.05                   DtOutput
-10.          DxOutput: output one particle of every DxOutput particles.
+10.          		DxOutput: output one particle of every DxOutput particles.
 
 This command determines the IDL type output from iPIC3D.
 
@@ -87,13 +88,12 @@ kXXS0 = sum(vx*vx), where vx is the particle velocity. So kXXS0 includes the
 effect of bulk velocity. But pXXS0 has exclude the influence of the bulk
 velocity.
 
-The file format could be either 'real4' or 'ascii'. The 'unit' could be:
+The file format could be either 'real4' or 'ascii'. The 'unit' can be:
 \begin{verbatim}
 PIC  - normalized PIC unit.
 SI   - SI unit. The unit of current and electric field are not well defined. 
 PLANETARY - planetary unit. B field is in nT, velocity is in km/s, length is in planet radius, density is in amu/cm^3, pressure is in nPa. Current and electric field are not well defined. 
 \end{verbatim}
-
 
 Note:
 1) Available output variables are listed in EMfields3D.cpp::getVar().
@@ -101,6 +101,7 @@ Note:
 3) The position for "cut", "x=", "y="... is in BATSRUS coordinate.
 4) Output variable 'particles' only works for 'cut', '3d' and 'sat'.
 5) The unit of current and electric field are not well defined so far.
+
 </command>
 
 <command name="SATELLITERADIUS">
@@ -151,7 +152,6 @@ is limited to be smaller than 1 and larger than 0.
 Default is nSmooth=0, so no smoothing is done.
 </command>
 
-
 <command name="SUBCYCLING">
   <parameter name="doSubCycling" type="logical" default="F" />
   
@@ -180,8 +180,6 @@ is only one cell in one direction, periodic boundary conditions will be used
 in this direction and the parameter above will be ignored. 
 
 </command>
-
-
 
 <command name="EMWAVE">
 	 <parameter name="doTestEMWave" type="logical" default="F"/>
@@ -254,7 +252,7 @@ If useECSIM is true, then the Energy Conserving Semi-Implicit Method (ECSIM)
   <parameter name="doCorrectWeight" type="logical" default="F"/>
   
 #CORRECTWEIGHT
-T                        useECSIM
+T                        doCorrectWeight
 
 If doCorrectWeight is true, at the end of each iteration, after the update
 of the EM field and particles, the weights of the electrons will be corrected
