@@ -77,7 +77,7 @@ contains
     character(len=*), optional, intent(in):: TypePositionIn !asis/rewind/append
     character(len=*), optional, intent(in):: TypeFileIn     ! ascii/real8/real4
     character(len=*), optional, intent(in):: StringHeaderIn ! header line
-    character(len=*), optional, intent(in):: StringFormatIn ! Format for output
+    character(len=*), optional, intent(in):: StringFormatIn ! format for ascii
     integer,          optional, intent(in):: nStepIn        ! number of steps
     real,             optional, intent(in):: TimeIn         ! simulation time  
     real,             optional, intent(in):: ParamIn_I(:)   ! parameters
@@ -109,7 +109,8 @@ contains
     character(len=10)  :: TypeStatus
     character(len=20), allocatable  :: NameVar_I(:)
     character(len=20)  :: TypeFile
-    character(len=lStringPlotFile) :: StringHeader, StringFormat
+    character(len=lStringPlotFile) :: StringHeader
+    character(len=40)  :: StringFormat
     character(len=lStringPlotFile) :: NameVar,NameUnits
     integer :: nStep, nDim, nParam, nVar, n1, n2, n3
     integer :: nCellsPerBlock(3), iBlk, nBlocks
@@ -443,7 +444,7 @@ contains
           if(n2 > 1)write(UnitTmp_, "(i6)", ADVANCE="NO") j
           if(n1 > 1)write(UnitTmp_, "(i8)", ADVANCE="NO") i
           n = n + 1
-          write(UnitTmp_, trim(StringFormat)) Coord_ID(n,:), Var_IV(n, :) 
+          write(UnitTmp_, StringFormat) Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
 
        call close_file
@@ -453,7 +454,8 @@ contains
        write(UnitTmp_, "(a)")             trim(StringHeader)
        write(UnitTmp_, "(i7,es18.10,3i3)") nStep, Time, nDimOut, nParam, nVar
        write(UnitTmp_, "(3i8)")           n_D(1:nDim)
-       if(nParam > 0) write(UnitTmp_, trim(StringFormat))     Param_I
+       if(nParam > 0) &
+            write(UnitTmp_, StringFormat) Param_I
        write(UnitTmp_, "(a)")             trim(NameVar)
 
        where(abs(Var_IV) < 1d-99) Var_IV = 0.0
@@ -462,7 +464,7 @@ contains
        n = 0
        do k = 1, n3; do j = 1, n2; do i = 1, n1
           n = n + 1
-          write(UnitTmp_, trim(StringFormat)) Coord_ID(n,:), Var_IV(n, :) 
+          write(UnitTmp_, StringFormat) Coord_ID(n,:), Var_IV(n, :) 
        end do; end do; end do
        call close_file
     case('real8')
