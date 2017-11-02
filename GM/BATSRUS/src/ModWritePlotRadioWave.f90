@@ -243,7 +243,7 @@ contains
                (/XLower + 0.5*XPixelSize, YLower + 0.5*YPixelSize/),&
                CoordMaxIn_D=&
                (/XUpper - 0.5*XPixelSize, YUpper - 0.5*YPixelSize/),&
-               VarIn_IIV=Intensity_IIV, StringFormatIn = '(30(1pe13.5))')
+               VarIn_IIV=Intensity_IIV, StringFormatIn = '(30es13.5)')
        end select
 
     end if  !iProc ==0
