@@ -4901,11 +4901,13 @@ inline void EMfields3D::fixVarBCnode(arr4_double Var,
       }}}
 }
 
-double EMfields3D::calDtMax(double dx, double dy, double dz, double dt){
+double EMfields3D::calDtMax(double dx, double dy, double dz, double dt, int &iError){
   /* Calculate max dt that satisfies the accuracy condition: max(uth*dt/dx) < 1.  */
   const Collective *col = &get_col();
   double uthLocal, p0, rho0;
-  double dtMax=1e10; 
+  double dtMax=1e10;
+  double uthLimit = col->get_maxUth();
+  iError = 1; 
   for(int is=0; is<ns; is++){
     uthLocal = 0;
     for (int i=1; i<nxn-1; i++)
@@ -4924,9 +4926,11 @@ double EMfields3D::calDtMax(double dx, double dy, double dz, double dt){
     
     if(get_vct().getCartesian_rank() == 0){
       cout<<"is= "<<is<<" uth= "<<uth<<" dx/uth= "<<dx/uth
-	  <<" dy/uth= "<<dy/uth<<" dz/uth= "<<dz/uth<<endl;
-
+	  <<" dy/uth= "<<dy/uth<<" dz/uth= "<<dz/uth<<endl;      
     }
+
+    if(uth > uthLimit) iError = -1;
+    
   }// is
 
   return dtMax;

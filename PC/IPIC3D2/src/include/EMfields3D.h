@@ -768,7 +768,7 @@ class EMfields3D                // :public Field
     void setFluidBC_P(int is);
 
     /* Calculate dt based on the accuracy condition. */
-    double calDtMax(double dx, double dy, double dz, double dt);
+    double calDtMax(double dx, double dy, double dz, double dt, int &iError);
 
     /* Write fields to IDL format files*/
     void write_plot_field(string filename, string *plotVar, int nVar,

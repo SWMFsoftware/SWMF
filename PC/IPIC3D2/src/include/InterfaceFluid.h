@@ -181,6 +181,10 @@ class InterfaceFluid
   double cflLimit;
   double maxDt; // maxDt = min(dxi/uth, dyi/uth, dzi/uth), i=0...nspecies-1
 
+  // If the maximum thermal velocity of one node exceeds maxUth, which is in
+  // normalized PIC unit, then save the output and stop runing. 
+  double maxUth; //
+
   // 1) If useSWMFDt is true, use the dt given by coupling frequency.
   // 2) If useSWMFDt is false and useFixedDt is true, use fixedDt, which is set with
   //    command #TIMESTEP.
@@ -2484,7 +2488,8 @@ class InterfaceFluid
   inline double getMhdNo2NoL()const{return(MhdNo2SiL*Si2NoL);}
 
   bool getdoSubCycling()const{return doSubCycling;}
-  
+
+  double get_maxUth()const{return maxUth;}
 };
 
 

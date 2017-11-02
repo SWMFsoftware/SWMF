@@ -1594,6 +1594,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   maxDt    = -1; 
   cflLimit = 0.6;
 
+  maxUth = 2; 
+
   // Start time. The default values are the same as BATSRUS. 
   iYear   = 2000;
   iMonth  = 3;
@@ -1802,6 +1804,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     }
     else if( Command == "#SAVEBINARY"){
       read_var(param,"doSaveBinary", &doSaveBinary);
+    }
+    else if( Command == "#CHECKSTOP"){
+      read_var(param,"maxUth", &maxUth);
     }
     else if( Command == "#TIMESTEPPING"){
       read_var(param, "useSWMFDt", &useSWMFDt);

@@ -1003,8 +1003,13 @@ void c_Solver::setSIDt(double SIDt, bool isSWMFDt){
 
 double c_Solver::calSIDt(){
   double dtMax;
+  int iError;
   // dtMax is in normalized unit. 
-  dtMax = EMf->calDtMax(col->getDx(), col->getDy(), col->getDz(), col->getDt());
+  dtMax = EMf->calDtMax(col->getDx(), col->getDy(), col->getDz(), col->getDt(), iError);
+  if(iError == -1 ){
+    WriteOutput(col->getCycle(), true);
+    eprintf("Error: The plasma is too hot! Maximum thermal velocity exceeds the limit %f, which is set by the command #CHECKSTOP. ", col->get_maxUth());
+  }
   col->setmaxDt(dtMax);
   
   return col->calSIDt();

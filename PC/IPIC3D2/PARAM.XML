@@ -300,4 +300,16 @@ It will be ignored when PIC is coupled with five-moment or six-moment MHD.
     
 </command>
 
+<command name="CHECKSTOP">
+  <parameter name="maxUth" type="real" default="2" >
+
+#CHECKSTOP
+2                  maxUth
+
+If the maximum thermal velocity of any species exceeds maxUth, which is in
+normalized PIC unit and has default value 2, then the code will save the
+output data and stop running. 
+    
+</command>
+
 </commandList>
