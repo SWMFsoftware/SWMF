@@ -68,7 +68,8 @@ StringPlot has the format:'domain variables format unit'.
 x=x0     - a 2D cut of x=x0 plane. 'x0' is the coordinate.
 y=y0     - a 2D cut of y=y0 plane. 'y0' is the coordinate.
 z=z0     - a 2D cut of z=z0 plane. 'z0' is the coordinate.
-3d       - the whole 3d domain.
+3d       - the whole computational domain.
+1d       - the whole computational domain. It is essentially the same as '3d'.
 cut      - part of the 3D domain. Need to specifiy the output range.
 sat_SatelliteFile  - save information along the satellite trajectory read from SatelliteFile.
 \end{verbatim}

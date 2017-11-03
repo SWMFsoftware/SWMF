@@ -1187,7 +1187,7 @@ void c_Solver:: write_plot_init(){
       ss>>plotMin_ID[iPlot][z_];
       plotMin_ID[iPlot][z_] = plotMin_ID[iPlot][z_]*No2NoL - col->getFluidStartZ();
       plotMax_ID[iPlot][z_] = plotMin_ID[iPlot][z_] + 1e-10;
-    }else if(subString.substr(0,2)=="3d"){
+    }else if(subString.substr(0,2)=="3d" || subString.substr(0,2)=="1d"){
       plotMin_ID[iPlot][x_] = 0;
       plotMin_ID[iPlot][y_] = 0;
       plotMin_ID[iPlot][z_] = 0;
