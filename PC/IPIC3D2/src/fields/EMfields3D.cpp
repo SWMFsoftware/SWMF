@@ -3899,11 +3899,16 @@ void EMfields3D::PoissonImage(double *image, double *vector, bool doSolveForChan
 /*! interpolate charge density and pressure density from node to center */
 void EMfields3D::interpDensitiesN2C()
 {
-  // do we need communication or not really?
-  get_grid().interpN2C(rhoc, rhon);
+  const VirtualTopology3D *vct = &get_vct();
 
-  for (int is = 0; is < ns; is++)
+  get_grid().interpN2C(rhoc, rhon);
+  communicateCenterBC_P(nxc, nyc, nzc, rhoc, 2, 2, 2, 2, 2, 2, vct, this);
+
+  for (int is = 0; is < ns; is++){
     get_grid().interpN2C(rhocs, is, rhons);
+    double ***moment = convert_to_arr3(rhocs[is]);
+    communicateCenterBC_P(nxc, nyc, nzc, moment, 2, 2, 2, 2, 2, 2, vct, this);
+  }
 }
 /*! communicate ghost for grid -> Particles interpolation */
 void EMfields3D::communicateGhostP2G(int ns)

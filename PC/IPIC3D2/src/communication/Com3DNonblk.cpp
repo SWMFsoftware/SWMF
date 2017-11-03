@@ -1111,6 +1111,20 @@ void communicateCenterBC_P(   int nx, int ny, int nz, arr3_double _vector,
   BCface_P(nx, ny, nz, vector, bcFaceXrght, bcFaceXleft, bcFaceYrght, bcFaceYleft, bcFaceZrght, bcFaceZleft, vct);
 }
 
+void communicateCenterBC_P(   int nx, int ny, int nz, double ***vector,
+			      int bcFaceXrght, int bcFaceXleft,
+			      int bcFaceYrght, int bcFaceYleft,
+			      int bcFaceZrght, int bcFaceZleft,
+			      const VirtualTopology3D * vct, EMfields3D *EMf)
+{
+  NBDerivedHaloComm(nx, ny, nz, vector, vct, EMf, true, false,false,true);
+
+  // ////////////////////////////////////////////////////////////////////////
+  // ///////////////// APPLY the boundary conditions ////////////////////////
+  // ////////////////////////////////////////////////////////////////////////
+  BCface_P(nx, ny, nz, vector, bcFaceXrght, bcFaceXleft, bcFaceYrght, bcFaceYleft, bcFaceZrght, bcFaceZleft, vct);
+}
+
 void communicateCenterBoxStencilBC(   int nx, int ny, int nz, arr3_double _vector,
 				      int bcFaceXrght, int bcFaceXleft,
 				      int bcFaceYrght, int bcFaceYleft,

@@ -64,6 +64,8 @@ void communicateCenterBC(int nx, int ny, int nz, arr3_double vector, int bcFaceX
 // /////////// communication + BC ////////////////////////////
 void communicateCenterBC_P(int nx, int ny, int nz, arr3_double vector, int bcFaceXright, int bcFaceXleft, int bcFaceYright, int bcFaceYleft, int bcFaceZright, int bcFaceZleft, const VirtualTopology3D * vct, EMfields3D *EMf);
 
+void communicateCenterBC_P(int nx, int ny, int nz, double ***vector, int bcFaceXright, int bcFaceXleft, int bcFaceYright, int bcFaceYleft, int bcFaceZright, int bcFaceZleft, const VirtualTopology3D * vct, EMfields3D *EMf);
+
 /** communicate ghost cells (FOR CENTERS) with BOX stencil*/
 void communicateCenterBoxStencilBC(int nx, int ny, int nz, arr3_double vector, int bcFaceXright, int bcFaceXleft, int bcFaceYright, int bcFaceYleft, int bcFaceZright, int bcFaceZleft, const VirtualTopology3D * vct, EMfields3D *EMf);
 
