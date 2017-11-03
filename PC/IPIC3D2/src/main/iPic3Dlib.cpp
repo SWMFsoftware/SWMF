@@ -404,7 +404,6 @@ void c_Solver::CalculateMoments(bool doCorrectWeights) {
 	  EMf->sumOverSpecies();
 	  EMf->interpDensitiesN2C();
 	  int isLight = col->get_iSpeciesLightest();
-	  cout<<"isLight = "<<isLight<<endl;
 	  part[isLight].correctWeight(EMf);
 	  EMf->setZeroPrimaryMoments();
 	}
