@@ -2693,6 +2693,84 @@ void Particles3D::correctWeight(Field *EMf){
   double ratio;
   int nOrder = 2;
 
+  // Cell based correction does not works well. Leave the code here for the
+  // experiments in the future.
+  bool isNodeBased = true; 
+
+  if(isNodeBased){
+
+  const int nxn = grid->getNXN();
+  const int nyn = grid->getNYN();
+  const int nzn = grid->getNZN();
+
+  array3_double error_G(nxn,nyn,nzn);
+
+  for(int i = 0; i < nxn; i++)
+    for(int j = 0; j < nyn; j++)
+      for(int k = 0; k < nzn; k++){
+	error_G[i][j][k] =
+	  (EMf->getRHOn(i,j,k) - invFourPI*EMf->getdivEn(i,j,k))
+	  /EMf->getRHOns(i,j,k,ns);
+      }
+  
+  if(nOrder ==1){
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      SpeciesParticle* pcl = &_pcls[pidx];
+
+      const double xp = pcl->get_x();
+      const double yp = pcl->get_y();
+      const double zp = pcl->get_z();
+      const double qi = pcl->get_q();
+
+      // The node index where the particel
+      const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
+      const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
+      const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));
+
+      ratio = (1 - error_G[ix][iy][iz]);
+      pcl->set_q(qi*ratio);
+    }
+  }else if(nOrder == 2){
+    
+    double weight_I[8], value;
+    int ix, iy, iz;
+    
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      SpeciesParticle* pcl = &_pcls[pidx];
+
+      const double xp = pcl->get_x();
+      const double yp = pcl->get_y();
+      const double zp = pcl->get_z();
+      const double qi = pcl->get_q();
+
+      grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I);
+
+      const double w000 = weight_I[0];
+      const double w001 = weight_I[1];
+      const double w010 = weight_I[2];
+      const double w011 = weight_I[3];
+      const double w100 = weight_I[4];
+      const double w101 = weight_I[5];
+      const double w110 = weight_I[6];
+      const double w111 = weight_I[7];
+      
+      double error = 0; 
+      error += w000*error_G[ix][iy][iz];
+      error += w001*error_G[ix][iy][iz-1];
+      error += w010*error_G[ix][iy-1][iz];
+      error += w011*error_G[ix][iy-1][iz-1];
+      error += w100*error_G[ix-1][iy][iz];
+      error += w101*error_G[ix-1][iy][iz-1];
+      error += w110*error_G[ix-1][iy-1][iz];
+      error += w111*error_G[ix-1][iy-1][iz-1];
+
+      ratio = (1 - error);
+      pcl->set_q(qi*ratio);      
+    }
+  }
+
+  }else{
+
   const int nxc = grid->getNXC();
   const int nyc = grid->getNYC();
   const int nzc = grid->getNZC();
@@ -2762,5 +2840,7 @@ void Particles3D::correctWeight(Field *EMf){
       pcl->set_q(qi*ratio);      
     }
   }
+}
+
 }
 
