@@ -44,7 +44,7 @@ contains
   !============================================================================
   subroutine init_mod_amr(nCrit)
 
-    use BATL_lib, ONLY: MaxBlock
+    use ModSize, ONLY: MaxBlock
 
     integer, intent(in) :: nCrit
     !-----------------------------------------------------------------------
