@@ -460,7 +460,7 @@ public: // accessors (inline)
   }
 
 
-  void getInterpolateWeight(double x, double y, double z, int &ix, int &iy, int &iz, double weight_I[8])const;
+  void getInterpolateWeight(double x, double y, double z, int &ix, int &iy, int &iz, double weight_I[8], bool isCellBased = false)const;
   
 };
 

@@ -623,15 +623,20 @@ void Grid3DCU::interpN2Cfull(double ***vecFieldC, double ***vecFieldN){
 
 
 void Grid3DCU::getInterpolateWeight(double xp, double yp, double zp,
-				      int &ix, int &iy, int &iz,
-				      double weight_I[8])const{
+				    int &ix, int &iy, int &iz,
+				    double weight_I[8], bool isCellBased)const{
 
+  /*
+    Example:
+                               xp
+                 |-----x-----|-----x------|
+   Node idx:     11          12           13
+   Cell idx:           11          12
+
+   ix = 13 for node based case. 
+   ix = 12 for cell based interpolation.
+   */
   
-  const double nxn = getNXN();
-  const double nyn = getNYN();
-  const double nzn = getNZN();
-
-
   const double xstart = getXstart();
   const double ystart = getYstart();
   const double zstart = getZstart();
@@ -647,24 +652,35 @@ void Grid3DCU::getInterpolateWeight(double xp, double yp, double zp,
   const double invVOL = getInvVOL();
   const double inv_dx = 1.0 / dx, inv_dy = 1.0 / dy, inv_dz = 1.0 / dz;
     
-
-  const double ixd = floor((xp - xstart) * inv_dx);
-  const double iyd = floor((yp - ystart) * inv_dy);
-  const double izd = floor((zp - zstart) * inv_dz);
-  
-  ix = 2 + int (ixd);
-  iy = 2 + int (iyd);
-  iz = 2 + int (izd);
+  if(isCellBased){
+    ix = 1 + floor((xp - xstart) * inv_dx + 0.5);
+    iy = 1 + floor((yp - ystart) * inv_dy + 0.5);
+    iz = 1 + floor((zp - zstart) * inv_dz + 0.5);
+  }else{
+    // Node Based. 
+    ix = 2 + floor((xp - xstart) * inv_dx);
+    iy = 2 + floor((yp - ystart) * inv_dy);
+    iz = 2 + floor((zp - zstart) * inv_dz);
+  }
 		
    double xi[2];
    double eta[2];
    double zeta[2];
-   xi[0]   = xp - getXN(ix - 1, iy, iz);
-   eta[0]  = yp - getYN(ix, iy - 1, iz);
-   zeta[0] = zp - getZN(ix, iy, iz - 1);
-   xi[1]   = getXN(ix,iy,iz) - xp;
-   eta[1]  = getYN(ix,iy,iz) - yp;
-   zeta[1] = getZN(ix,iy,iz) - zp;
+   if(isCellBased){
+     xi[0]   = xp - getXC(ix - 1, iy, iz);
+     eta[0]  = yp - getYC(ix, iy - 1, iz);
+     zeta[0] = zp - getZC(ix, iy, iz - 1);
+     xi[1]   = getXC(ix,iy,iz) - xp;
+     eta[1]  = getYC(ix,iy,iz) - yp;
+     zeta[1] = getZC(ix,iy,iz) - zp;     
+   }else{
+     xi[0]   = xp - getXN(ix - 1, iy, iz);
+     eta[0]  = yp - getYN(ix, iy - 1, iz);
+     zeta[0] = zp - getZN(ix, iy, iz - 1);
+     xi[1]   = getXN(ix,iy,iz) - xp;
+     eta[1]  = getYN(ix,iy,iz) - yp;
+     zeta[1] = getZN(ix,iy,iz) - zp;
+   }
 
    weight_I[0] = xi[0] * eta[0] * zeta[0] * invVOL;
    weight_I[1] = xi[0] * eta[0] * zeta[1] * invVOL;
