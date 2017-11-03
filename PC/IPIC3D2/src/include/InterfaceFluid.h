@@ -212,6 +212,9 @@ class InterfaceFluid
 
   int nPartGhost;
 
+  //If useUniformPart is true, then assign the particle position uniformly.
+  bool useUniformPart; 
+
   // Change smooth coefficient near the boundary.
   // Parameters 'SmoothNiter' and 'Smooth' are declared in Colective.h
   bool doSmoothAll; // Smooth jh and rhoh?. 
@@ -2464,6 +2467,7 @@ class InterfaceFluid
   int getnPartGhost()const{return nPartGhost;};
   bool getdoSmoothAll()const{return doSmoothAll;};
   double getMiSpecies(int i)const{return MoMi_S[i];};
+  double getQiSpecies(int i)const{return QoQi_S[i];};
   double getcLightSI()const{return Unorm/100;/*Unorm is in cgs unit*/};
   
   bool getdoTestEMWave()const{return doTestEMWave;};
@@ -2490,6 +2494,8 @@ class InterfaceFluid
   bool getdoSubCycling()const{return doSubCycling;}
 
   double get_maxUth()const{return maxUth;}
+
+  bool get_useUniformPart()const{return useUniformPart;}
 };
 
 

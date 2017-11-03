@@ -174,7 +174,8 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
   /*
    * i,j,k          : grid cell index on proc (in)
    */
-  
+
+  bool useUniformPart = col->get_useUniformPart();
   double harvest;
   double x0,y0,z0, u, v, w;
   int ns0, iSample;
@@ -193,6 +194,8 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
     idum = (ns+3)*nRandom*npcel*(nxcg*nycg*nzcg*iCycle + nycg*nzcg*ig + nzcg*jg + kg);
   }
 #endif
+
+  double x, y, z; // Particle location.
   
   // loop over particles inside grid cell i, j, k
   for (int ii = 0; ii < npcelx; ii++)
@@ -200,18 +203,19 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
       for (int kk = 0; kk < npcelz; kk++){
 	// Assign particle positions: uniformly spaced.
 	// x_cellnode + dx_particle*(0.5+index_particle)
-	#ifdef UNIFORM_X
-	const double x = (ii + .5)*(dx/npcelx) + grid->getXN(i, j, k);
-	const double y = (jj + .5)*(dy/npcely) + grid->getYN(i, j, k);
-	const double z = (kk + .5)*(dz/npcelz) + grid->getZN(i, j, k);
-	#else
-	harvest =   RANDNUM ;
-	const double x = (ii + harvest)*(dx/npcelx) + grid->getXN(i, j, k);
-	harvest =   RANDNUM ;
-	const double y = (jj + harvest)*(dy/npcely) + grid->getYN(i, j, k);
-	harvest =   RANDNUM ;
-	const double z = (kk + harvest)*(dz/npcelz) + grid->getZN(i, j, k);
-	#endif
+
+	if(useUniformPart){
+	  x = (ii + .5)*(dx/npcelx) + grid->getXN(i, j, k);
+	  y = (jj + .5)*(dy/npcely) + grid->getYN(i, j, k);
+	  z = (kk + .5)*(dz/npcelz) + grid->getZN(i, j, k);
+	}else{
+	  harvest =   RANDNUM ;
+	  x = (ii + harvest)*(dx/npcelx) + grid->getXN(i, j, k);
+	  harvest =   RANDNUM ;
+	  y = (jj + harvest)*(dy/npcely) + grid->getYN(i, j, k);
+	  harvest =   RANDNUM ;
+	  z = (kk + harvest)*(dz/npcelz) + grid->getZN(i, j, k);
+	}
 	// q = charge
 	x0=x; y0=y; z0=z;
 	const double q =  (qom/fabs(qom))*(col->getFluidRhoNum(x0, y0, z0, ns0)
@@ -2682,14 +2686,28 @@ double Particles3D::deleteParticlesInsideSphere2DPlaneXZ(double R, double x_cent
   return(Q_removed);
 }
 
-void Particles3D::correctWeight(Field *EMf)
-{
-  // Modify the weights of the electrons based on the
-  // difference of div(E) and netcharge on nodes. 
-  
-  if(ns!=0) return;
+void Particles3D::correctWeight(Field *EMf){
+  // Modify the weights of the lightest species based on the
+  // difference of div(E) and net charge on nodes. 
   const double  invFourPI =1./(16*atan(1.0));
   double ratio;
+  int nOrder = 2;
+
+  const int nxc = grid->getNXC();
+  const int nyc = grid->getNYC();
+  const int nzc = grid->getNZC();
+
+  array3_double error_G(nxc,nyc,nzc);
+
+  for(int i = 0; i < nxc; i++)
+    for(int j = 0; j < nyc; j++)
+      for(int k = 0; k < nzc; k++){
+	error_G[i][j][k] =
+	  (EMf->getRHOc(i,j,k) - invFourPI*EMf->getdivEc(i,j,k))
+	  /EMf->getRHOcs(i,j,k,ns);
+      }
+  
+  if(nOrder ==1){
     for (int pidx = 0; pidx < getNOP(); pidx++) {
       SpeciesParticle* pcl = &_pcls[pidx];
 
@@ -2697,15 +2715,52 @@ void Particles3D::correctWeight(Field *EMf)
       const double yp = pcl->get_y();
       const double zp = pcl->get_z();
       const double qi = pcl->get_q();
-      
-      const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
-      const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
-      const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));
 
-      ratio =
-	(1-(EMf->getRHOn(ix,iy,iz) - invFourPI*EMf->getdivEn(ix,iy,iz))
-	 /EMf->getRHOns(ix,iy,iz,ns));
+      // The cell center index where the particel
+      const int ix = 1 + int (floor((xp - xstart) * inv_dx));
+      const int iy = 1 + int (floor((yp - ystart) * inv_dy));
+      const int iz = 1 + int (floor((zp - zstart) * inv_dz));
+
+      ratio = (1 - error_G[ix][iy][iz]);
       pcl->set_q(qi*ratio);
-    }  
+    }
+  }else if(nOrder == 2){
+    
+    double weight_I[8], value;
+    int ix, iy, iz;
+    
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      SpeciesParticle* pcl = &_pcls[pidx];
+
+      const double xp = pcl->get_x();
+      const double yp = pcl->get_y();
+      const double zp = pcl->get_z();
+      const double qi = pcl->get_q();
+
+      grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I, true);
+
+      const double w000 = weight_I[0];
+      const double w001 = weight_I[1];
+      const double w010 = weight_I[2];
+      const double w011 = weight_I[3];
+      const double w100 = weight_I[4];
+      const double w101 = weight_I[5];
+      const double w110 = weight_I[6];
+      const double w111 = weight_I[7];
+      
+      double error = 0; 
+      error += w000*error_G[ix][iy][iz];
+      error += w001*error_G[ix][iy][iz-1];
+      error += w010*error_G[ix][iy-1][iz];
+      error += w011*error_G[ix][iy-1][iz-1];
+      error += w100*error_G[ix-1][iy][iz];
+      error += w101*error_G[ix-1][iy][iz-1];
+      error += w110*error_G[ix-1][iy-1][iz];
+      error += w111*error_G[ix-1][iy-1][iz-1];
+
+      ratio = (1 - error);
+      pcl->set_q(qi*ratio);      
+    }
+  }
 }
 

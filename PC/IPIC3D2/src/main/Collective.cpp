@@ -1335,6 +1335,15 @@ void Collective::init_derived_parameters()
     //double npMaxi = (NpMaxNpRatio * np[i]);
     //npMax[i] = (int) npMaxi;
   }
+
+  int qomMax = fabs(qom[0]);
+  iSpeciesLightest = 0;  
+  for(int is = 1; is<ns; is++){
+    if(fabs(qom[is]) > qomMax ){
+      qomMax = fabs(qom[is]);
+      iSpeciesLightest = is; 
+    }
+  }
 }
 
 /*! destructor */
@@ -1619,7 +1628,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   useGradRho = true;
   useExplicitMover = false; 
   
-  doCorrectWeight = false;  
+  doCorrectWeight = false;
+
+  useUniformPart = false; 
 
   // The way to set the value of qom is very wired. Change it. --Yuxi
   qom = new double[1];
@@ -1659,6 +1670,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       innerSmoothFactor = Smooth;
       boundarySmoothFactor = Smooth;
     }
+    
     else if( Command == "#EMWAVE"){
       read_var(param,"doTestEMWave",           &doTestEMWave);
       double temp, ctwoPi;
@@ -1744,6 +1756,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	     !RESTART1 ){
       // iones info comes from BATSRUS
       read_var(param,"qom", &qom[0]);
+    }
+    else if( Command == "#UNIFORMPARTICLES" && !RESTART1){
+      read_var(param,"useUniformPart", &useUniformPart);      
     }
     else if( Command == "#PARTICLES" && 
              Case    == "BATSRUS"  &&

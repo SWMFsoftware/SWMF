@@ -208,6 +208,7 @@ class Collective
     bool getuseAccurateJ()const{return useAccurateJ;};
     bool getuseExplicitMover()const{return useExplicitMover;};
     bool getdoCorrectWeight()const{return doCorrectWeight;}
+    int get_iSpeciesLightest()const{return iSpeciesLightest;}
     
     /*! Boundary condition selection for BCFace for the electric field components */
     int bcEx[6], bcEy[6], bcEz[6];
@@ -435,6 +436,8 @@ class Collective
 
     // Change particle weight so that div(E) - 4*pi*rho ~ 0
     bool doCorrectWeight;
+    // The index of the species that has maximum abs(qom);
+    int iSpeciesLightest; 
 
 
     // Energy Conserving Semi-Implicit Mothod is developed based

@@ -402,8 +402,10 @@ void c_Solver::CalculateMoments(bool doCorrectWeights) {
 	  // Do not correct weights at the initialization stage.
 	  EMf->sumMoments_AoS(part, true);	
 	  EMf->sumOverSpecies();
-	  EMf->interpDensitiesN2C();	
-	  part[0].correctWeight(EMf);
+	  EMf->interpDensitiesN2C();
+	  int isLight = col->get_iSpeciesLightest();
+	  cout<<"isLight = "<<isLight<<endl;
+	  part[isLight].correctWeight(EMf);
 	  EMf->setZeroPrimaryMoments();
 	}
        
@@ -1428,19 +1430,13 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
 
 
     // me, m1, m2....c, rPlanet
-    int nScalar = ns + 2;       
+    int nScalar = 2*ns + 2;
     outFile<<"#SCALARPARAM\n";
     outFile<<nScalar<<"\t nParam\n";
 
-    if(col->get_useElectronFluid()){
-      for(int iSpecies=0; iSpecies<ns; iSpecies++){
-	outFile<<col->getMiSpecies(iSpecies)<<"\t m"<<iSpecies<<"\n";
-      }
-    }else{
-      outFile<<col->getMiSpecies(0)<<"\t me\n";
-      for(int iSpecies=1; iSpecies<ns; iSpecies++){
-	outFile<<col->getMiSpecies(iSpecies)<<"\t m"<<iSpecies<<"\n";
-      }
+    for(int iSpecies=0; iSpecies<ns; iSpecies++){
+      outFile<<col->getMiSpecies(iSpecies)<<"\t mS"<<iSpecies<<"\n";
+      outFile<<col->getQiSpecies(iSpecies)<<"\t qS"<<iSpecies<<"\n";
     }
     outFile<<col->getcLightSI()<<"\t cLight\n";
     outFile<<col->getrPlanet()<<"\t rPlanet\n";
@@ -1449,13 +1445,12 @@ void c_Solver:: write_plot_header(int iPlot, int cycle){
     {
       string scalarVar;
       stringstream ss;
-      ss<<" me";
-      for(int iSpecies=1; iSpecies<ns; iSpecies++){
-	ss<<" m"<<iSpecies;
+      for(int iSpecies=0; iSpecies<ns; iSpecies++){
+	ss<<" mS"<<iSpecies<<" qS"<<iSpecies;
       }
       ss<<" clight"<<" xSI";
       scalarVar = ss.str();
-      
+
       outFile<<"#PLOTVARIABLE\n";
       outFile<<nVar_I[iPlot]<<"\t nPlotVar\n";
       outFile<<plotVar_I[iPlot]<<scalarVar<<"\n";    
