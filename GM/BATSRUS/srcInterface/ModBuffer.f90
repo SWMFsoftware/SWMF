@@ -3,7 +3,6 @@
 module ModBuffer
   use ModMain,     ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D
   use ModNumConst, ONLY: cPi, cTwoPi
-  use CON_global_vector,   ONLY: point_state_v
   use CON_grid_descriptor, ONLY: GridDescriptorType, Nodes_, &
        bilinear_interpolation, DomainDecompositionType, is_proc0, &
        init_decomposition, get_root_decomposition, complete_grid, &
@@ -70,11 +69,11 @@ end module ModBuffer
 
 !==============================================================================
 
-subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
+subroutine get_from_spher_buffer_grid(XyzTarget_D, nVar, State_V)
+
   use ModBuffer
   use ModMain,       ONLY: &
-       MaxDim, x_, y_, z_,&
-       TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
+       MaxDim, TypeCoordSystem, Time_Simulation, DoThinCurrentSheet
   use ModAdvance,    ONLY: &
        UseElectronPressure, UseAnisoPressure, UseMultiSpecies
   use ModVarIndexes, ONLY: &
@@ -92,6 +91,9 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
   use ModPhysics,    ONLY: No2Si_V,Si2No_V,UnitRho_,UnitU_,UnitB_,UnitP_,UnitX_
   use ModPhysics,    ONLY: UnitEnergyDens_
   use ModMultiFluid, ONLY: IsFullyCoupledFluid
+
+  use ModCoordTransform, ONLY: xyz_to_sph
+
   implicit none
 
   integer,intent(in) :: nVar
@@ -126,25 +128,15 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
      XyzSource_D = XyzTarget_D
   end if
 
-  ! Convert to left handed spherical coordinates !!!
-  call xyz_to_spherical(XyzSource_D(x_),XyzSource_D(y_),XyzSource_D(z_),&
-       Sph_D(1),Sph_D(2),Sph_D(3))
+  ! Convert to left handed spherical coordinates Sph_D=(/r,phi,theta/) !!!
+  ! What a concept...
+  call xyz_to_sph(XyzSource_D, Sph_D(1), Sph_D(3), Sph_D(2))
 
   ! Get the target state from the spherical buffer grid
-  if(.true.)then
-     call interpolate_from_global_buffer(Sph_D, nVarCouple, Buffer_V)
-  else
-     Buffer_V=point_state_v(&
-          NameBuffer,&
-          nVarCouple,&
-          MaxDim,    &
-          Sph_D,     &
-          LocalBufferGD,&
-          bilinear_interpolation)
-  end if
+  call interpolate_from_global_buffer(Sph_D, nVarCouple, Buffer_V)
 
   State_V(Rho_) = Buffer_V(iVar_V(RhoCouple_))
-  !Transform to primitive variables
+  ! Transform to primitive variables
   State_V(Ux_:Uz_) = &
        Buffer_V(iVar_V(RhoUxCouple_):iVar_V(RhoUzCouple_))&
        /Buffer_V(iVar_V(RhoCouple_))
@@ -159,7 +151,7 @@ subroutine get_from_spher_buffer_grid(XyzTarget_D,nVar,State_V)
           State_V(Bx_:Bz_) = matmul( State_V(Bx_:Bz_), SourceTarget_DD)
   end if
 
-  !Convert from SI units to normalized units
+  ! Convert from SI units to normalized units
   State_V(rho_)      = State_V(rho_)   *Si2No_V(UnitRho_)
   State_V(Ux_:Uz_)   = State_V(Ux_:Uz_)*Si2No_V(UnitU_)
   if(DoCoupleVar_V(Bfield_)) &
@@ -239,7 +231,6 @@ subroutine interpolate_from_global_buffer(SphSource_D, nVar, Buffer_V)
   use ModInterpolate, ONLY: trilinear
   use ModMain,        ONLY: BufferState_VG, BufferMin_D,&
                             nRBuff, nPhiBuff, nThetaBuff, dSphBuff_D
- 
   implicit none
 
   ! Input and output variables
@@ -270,22 +261,25 @@ subroutine plot_buffer(iFile)
        UseElectronPressure, UseAnisoPressure
   use ModVarIndexes, ONLY: &
        nVar, Rho_, Ux_, Uz_, Bx_, Bz_, p_, &
-       WaveFirst_, WaveLast_, Pe_, Ppar_, nFluid, SignB_, Ehot_
+       WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_
   use ModIO,            ONLY: NamePrimitiveVarOrig
-  use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
+  use ModTimeConvert,   ONLY: time_real_to_int
   use ModMain,          ONLY: StartTime, Time_Simulation, x_, y_, z_, n_step
   use ModMain, ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D, BuffR_
   use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitU_, UnitB_, UnitP_, UnitX_,&
        UnitEnergyDens_
   use ModProcMH,     ONLY: iProc
+
   implicit none
+
   integer, intent(in)::iFile
   integer:: iTimePlot_I(7), iR, iPhi, iTheta
   real   :: R, Theta, Phi, CosTheta, SinTheta
   real, allocatable,dimension(:,:,:):: State_VII, Coord_DII
   character(LEN=30)::NameFile
-  !-----------------------
+  !---------------------------------------------------------------------------
   if(iProc/=0)RETURN !May be improved.
+
   allocate(State_VII(3 + nVar, 0:nPhiBuff, 0:nThetaBuff))
   allocate(Coord_DII(2, 0:nPhiBuff, 0:nThetaBuff))
   call time_real_to_int(StartTime + Time_Simulation, iTimePlot_I)
@@ -311,7 +305,7 @@ subroutine plot_buffer(iFile)
 
         end do
      end do
-     !Convert from normalized units to SI
+     ! Convert from normalized units to SI
      State_VII(  x_:z_,:,:) = State_VII(  x_:z_,:,:)*No2Si_V(UnitX_)
      State_VII(z_+rho_,:,:) = State_VII(z_+rho_,:,:)*No2Si_V(UnitRho_)
      State_VII(z_+Ux_:z_+Uz_,:,:)   = State_VII(z_+Ux_:z_+Uz_,:,:)*&
@@ -344,5 +338,5 @@ subroutine plot_buffer(iFile)
           CoordIn_DII=Coord_DII, &
           VarIn_VII=State_VII)
   end do
+
 end subroutine plot_buffer
-  
