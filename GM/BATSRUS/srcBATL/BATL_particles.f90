@@ -18,6 +18,7 @@ module BATL_particles
   public:: message_pass_particles
   public:: mark_undefined
   public:: remove_undefined_particles
+  public:: get_particles
 
   SAVE
   logical  ::UseParticles = .false.
@@ -63,7 +64,8 @@ module BATL_particles
 
   real,    allocatable:: BufferSend_I(:)! buffer of data to be sent
   real,    allocatable:: BufferRecv_I(:)! buffer of data to be recv'd
-
+  character(len=*),parameter  :: NameMod='BATL_particles'
+  character(len=120), private :: StringError
 contains
 
   !===========================================================================
@@ -76,13 +78,19 @@ contains
        nParticleMax = Particle_I(iParticleKind)%nParticleMax
        nullify( Particle_I(iParticleKind)%State_VI)
        allocate(Particle_I(iParticleKind)%State_VI(1:nVar,1:nParticleMax))
-       Particle_I(iParticleKind)%State_VI(1:nVar,1:nParticleMax) = 0.0
        nullify( Particle_I(iParticleKind)%iIndex_II)
        allocate(Particle_I(iParticleKind)%iIndex_II(0:nIndex,1:nParticleMax))
-       Particle_I(iParticleKind)%iIndex_II(0:nIndex,1:nParticleMax) = -1
+       call clean_particle_arr(iParticleKind, 1, nParticleMax)
     end do
   end subroutine allocate_particles
-  !===========================================================================
+  !================================
+  subroutine clean_particle_arr(iParticleKind, iParticleMin, iParticleMax)
+    integer, intent(in) :: iParticleKind, iParticleMin, iParticleMax
+    if(iParticleMin > iParticleMax) RETURN
+    Particle_I(iParticleKind)%State_VI(:,iParticleMin:iParticleMax) = 0.0
+    Particle_I(iParticleKind)%iIndex_II(:,iParticleMin:iParticleMax) = 0 
+  end subroutine clean_particle_arr
+  !================================
   subroutine allocate_buffers
     integer          :: iKindParticle  ! loop variable
     ! max number of particles 
@@ -160,12 +168,24 @@ contains
     integer          :: nParticleMax   ! max # of particles of this kind on PE
     integer          :: nUnset         ! # of particles with undefined block
     !-------------------------------------------------------------------------
+    !\
+    !Return, if no particles on the given Proc
+    if(Particle_I(iKindParticle)%nParticle < 1)RETURN
+   
     call set_pointer_to_particles(iKindParticle, &
          State_VI, iIndex_II, nVar, nIndex, nParticle, nParticleMax)
  
     nUnset = count(iIndex_II(0,1:nParticle)<0)
+    !\
+    ! Return, if there is no underfined particle
     if(nUnset==0) RETURN
-
+    !\
+    ! Set nParticle to 0 and return if all particles are undefined
+    if(nParticle == nUNset)then
+       call clean_particle_arr(iKindParticle, 1, nParticle)
+       Particle_I(iKindParticle)%nParticle = 0
+       RETURN
+    end if
     do iVar = 1, nVar
        State_VI(iVar, 1:(nParticle-nUnset)) = PACK(&
             State_VI(iVar, 1:nParticle), &
@@ -176,6 +196,7 @@ contains
             iIndex_II(iIndex, 1:nParticle), &
             iIndex_II(0,      1:nParticle)>0 )
     end do
+    call clean_particle_arr(iKindParticle, nParticle - nUnset + 1, nParticle)
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
   !===========================================================================
@@ -219,10 +240,6 @@ contains
        call pass_this_kind
        Particle_I(iKindParticle)%nParticle = nParticle
     end do
-    ! deallocate buffer
-    ! deallocate(BufferSend_I, iSendOffset_I, iProcTo_I, BufferRecv_I)
-
-
   contains
     !==========================================================================
     subroutine pass_this_kind
@@ -237,6 +254,7 @@ contains
       integer:: iSendOffset  ! start position in BufferSend for particle data
       integer:: iRecvOffset  ! start position in BufferRecv for particle data
       integer:: nParticleStay! # of particles that stay on this proc
+      integer:: nParticleNew ! # of particles after message pass
       logical:: IsOut        ! particle is out of domain
       integer:: iTag, iError, iRequest, iRequest_I(2*nProc)
       integer:: iStatus_II(MPI_STATUS_SIZE, 2*nProc)
@@ -394,11 +412,15 @@ contains
       call MPI_waitall(iRequest, iRequest_I, iStatus_II, iError)
 
       ! change total number of particles of this kind
-      nParticle = nParticle - sum(nSend_P) + sum(nRecv_P)
-      if(nParticle > nParticleMax)&
-           call CON_stop("Exceeded allowed number of particles per kind=",&
-           iKindParticle)
-
+      nParticleNew = nParticle - sum(nSend_P) + sum(nRecv_P)
+      if(nParticleNew > nParticleMax)then
+         write(StringError,'(a,i4)')&
+              "Exceeded allowed number of particles per kind=",&
+              iKindParticle
+         call CON_stop(StringError)
+      end if
+      call clean_particle_arr(iKindParticle, nParticleNew +1, nParticle)
+      nParticle = nParticleNew
       ! finally, put particles from buffer to storage
       iRecvOffset = 0
       do iParticle = 1, sum(nRecv_P)
@@ -409,7 +431,115 @@ contains
          iRecvOffset = iRecvOffset + nVar + nIndex + 1
       end do
     end subroutine pass_this_kind
-
   end subroutine message_pass_particles
+  !==========================
+  subroutine get_particles(iKindParticle, StateIn_VI, iLastIdIn, &
+       iIndexIn_II, UseInputInGenCoord, DoReplace, nParticlePE)
+    use BATL_mpi,      ONLY: iProc
+    use BATL_geometry, ONLY: coord_to_xyz
+    integer,         intent(in)  :: iKindParticle
+    real,            intent(in)  :: StateIn_VI(:,:)
+    integer,optional,intent(in)  :: iLastIdIn
+    integer,optional,intent(in)  :: iIndexIn_II(:,:)
+    logical, optional,intent(in) :: UseInputInGenCoord, DoReplace 
+    integer,optional,intent(out) :: nParticlePE
+    !\
+    ! Data pointers for particles of a given sort
+    !/
+    real,                pointer :: State_VI(:,:)
+    integer,             pointer :: iIndex_II(:,:)
+    !\
+    ! Size of data pointers
+    !/
+    integer  :: nVar, nIndex, nParticleOld, nParticleMax
+    !\
+    ! Size of input arrays
+    !/
+    integer  :: nVarIn, nParticleIn, nIndexIn, nU_I(2)
+    !\
+    ! Used if there is no input index array. In this case the particle
+    ! Id, if desired, is formed as the order # of particle in the input 
+    ! array(s) + iLastId 
+    !/ 
+    integer  :: iLastId 
+    !Output parameters for check_interpolate routine:
+    integer :: iProcOut, iBlockOut
+    !Coordinates, may be modified by the check_interpolate routine
+    real :: Xyz_D(MaxDim), Coord_D(MaxDim)
+    !Loop Variables
+    integer  :: iParticleIn, iVar
+    !Misc
+    integer  :: nParticle, iParticleNew
+    logical  :: DoTransform
+    character(len=*), parameter:: NameSub=NameMod//'::get_particles'
+    !--------------------
+    call set_pointer_to_particles(&
+         iKindParticle, State_VI, iIndex_II, &
+         nVar, nIndex, nParticleOld, nParticleMax)
+    if(present(DoReplace))then
+       if(DoReplace)then
+          call clean_particle_arr(iKindParticle, 1, nParticleOld)
+          nParticleOld = 0
+       end if
+    end if
+    nU_I = ubound(StateIn_VI)
+    nVarIn      = nU_I(1) 
+    nParticleIn = nU_I(2)
+    iLastId     = 0
+    if(present(iLastIdIn)) iLastId = iLastIdIn
+    if(present(iIndexIn_II))then
+       nU_I = ubound(iIndexIn_II)
+       nIndexIn = nU_I(1) 
+    end if
+    DoTransform = .false.
+    if(present(UseInputInGenCoord))DoTransform = UseInputInGenCoord
+    nParticle = 0
+    do iParticleIn = 1, nParticleIn
+       ! find block and processor suitable for interpolation
+       if(DoTransform)then
+          Coord_D = 0 
+          Coord_D(1:nDim) = StateIn_VI(1:nDim,iParticleIn)
+          call coord_to_xyz(Coord_D, Xyz_D)
+       else
+          Xyz_D = 0; Xyz_D(1:nDim) = StateIn_VI(1:nDim,iParticleIn)
+       end if
+       call check_interpolate(Xyz_D, &
+            1, & ! input block ID doesn't matter
+            iProcOut, iBlockOut)
 
+       ! check whether point is outside of the domain
+       if(iProcOut < 0)then
+          write(StringError,'(a,es15.6,a, es15.6, a, es15.6)') &
+               "Start point for a field line is outside of the domain: X = ",&
+               StateIn_VI(1,iParticleIn), " Y = ", &
+               StateIn_VI(2,iParticleIn), " Z = ", &
+               StateIn_VI(3,iParticleIn) 
+          call CON_stop(NameSub//':'//StringError)
+       end if
+       ! Assign particle to an appropriate processor
+       if(iProc /= iProcOut) CYCLE
+       nParticle = nParticle + 1
+       iParticleNew = nParticleOld + nParticle
+       if(iParticleNew > nParticleMax)then
+          write(StringError,'(a,i4)')&
+               "Exceeded allowed number of particles per kind=",&
+               iKindParticle
+          call CON_stop(NameSub//':'//StringError)
+       end if
+       State_VI(1:MaxDim,iParticleNew) = Xyz_D
+       do iVar = MaxDim + 1, nVarIn
+          State_VI(iVar,iParticleNew) = StateIn_VI(iVar,iParticleIn)
+       end do
+       if(present(iIndexIn_II))then
+          !copy index array from inputs
+          iIndex_II(1:nIndexIn,iParticleNew) = iIndexIn_II(:,iParticleIn)
+       else
+          !Create particle Id as 
+          iIndex_II(min(1,nIndex),iParticleNew) = iLastId + iParticleIn 
+       end if
+       iIndex_II(0,iParticleNew) = iBlockOut
+    end do
+    Particle_I(iKindParticle)%nParticle = nParticleOld + nParticle
+    if(present(nParticlePE))nParticlePE = nParticle
+  end subroutine get_particles
 end module BATL_particles
