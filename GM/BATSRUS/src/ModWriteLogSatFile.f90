@@ -427,9 +427,6 @@ contains
        end if
     end do
 
-
-
-
   contains
     !==========================================================================
     subroutine set_log_var
@@ -446,7 +443,7 @@ contains
       use ModUserInterface ! user_get_log_var
 
       ! Local variables
-      real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, qval, qval_all
+      real :: Bx, By, Bz, RhoUx, RhoUy, RhoUz, bDotB, bDotU, Value
       real :: Current_D(3)
       real :: FullB_DG(3,0:nI+1,0:nJ+1,0:nK+1)
       real :: Convert_DD(3,3)
@@ -573,25 +570,19 @@ contains
                  calc_sphere('integrate', 180, rCurrents, tmp1_BLK) &
                  /(4*cPi*rCurrents**2)
          case('jinmax')
-            qval = calc_sphere('minval',180,rCurrents,tmp1_BLK)
-            if(nProc>1)then
-               call MPI_allreduce(qval, qval_all, 1, MPI_REAL, MPI_MIN, &
-                    iComm, iError)
-               ! Divide by nProc so that adding up the processors can work
-               LogVar_I(iVarTot) = qval_all/nProc
-            else
-               LogVar_I(iVarTot) = qval/nProc
-            endif
+            Value = calc_sphere('minval',180,rCurrents,tmp1_BLK)
+            if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Value, 1, MPI_REAL, &
+                 MPI_MIN, iComm, iError)
+            ! Divide by nProc so that adding up the processors can work
+            LogVar_I(iVarTot) = Value/nProc
+
          case('joutmax')
-            qval = calc_sphere('maxval',180,rCurrents,tmp1_BLK)
-            if(nProc>1)then
-               call MPI_allreduce(qval, qval_all, 1, MPI_REAL, MPI_MAX, &
-                    iComm, iError)
-               ! Divide by nProc so that adding up the processors can work
-               LogVar_I(iVarTot) = qval_all/nProc
-            else
-               LogVar_I(iVarTot) = qval/nProc
-            endif
+            Value = calc_sphere('maxval',180,rCurrents,tmp1_BLK)
+            if(nProc > 1)call MPI_allreduce(MPI_IN_PLACE, Value, 1, MPI_REAL, &
+                 MPI_MAX, iComm, iError)
+            ! Divide by nProc so that adding up the processors can work
+            LogVar_I(iVarTot) = Value/nProc
+
          end select
 
       case('dst')
@@ -1169,8 +1160,6 @@ contains
           ! User unit is kV = 1000 V
           LogVar_I(iVarTot) = LogVar_I(iVarTot) &
                *(No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0       
-
-
 !!$! Flux values
        case('aflx')
           LogVar_I(iVarTot:iVarTot+nLogR-1)=LogVar_I(iVarTot:iVarTot+nLogR-1)&
@@ -1397,7 +1386,8 @@ contains
           ! Fill in edges and corners for the first layer so that bilinear 
           ! interpolation can be used without message passing these values
 
-          if(index(optimize_message_pass,'opt')>0) call fill_edge_corner(Array_G)
+          if(index(optimize_message_pass,'opt')>0) &
+               call fill_edge_corner(Array_G)
 
           do i = 1, nTheta
 
