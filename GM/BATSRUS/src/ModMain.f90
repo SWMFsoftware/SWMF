@@ -157,9 +157,6 @@ module ModMain
   ! Number of explicitly and implicitly advanced blocks
   integer :: nBlockExplAll, nBlockImplAll
 
-  ! Variable for setting AMR levels
-  logical :: DoSetLevels = .false.
-
   ! Index limits for the cell faces (needed for the constrained trasnsport)
   integer, parameter :: nIFace=nI+1 
   integer, parameter :: nJFace=nJ+1
