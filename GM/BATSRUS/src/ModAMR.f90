@@ -7,74 +7,163 @@ module ModAMR
   use ModCellGradient, ONLY: calc_gradient
 
   implicit none
-  save
+  SAVE
 
   private  ! except
 
   public:: init_mod_amr    ! initialize module
   public:: clean_mod_amr   ! deallocate variables
+  public:: read_amr_param  ! read parameters
   public:: prepare_amr     ! message pass and set AMR criteria
   public:: do_amr          ! perform AMR
-  public:: set_levels      ! copy min/max_block_level into iTree_IA
+  public:: set_amr_limits  ! copy min/MaxAmrLevel into iTree_IA
+  public:: fix_amr_limits  ! fix levels for #AMRRESOLUTION command
 
   ! Local and global refinement/coarsening and neighbor parameters.
 
-  ! Refinement criteria parameters
-  integer, public  :: nAmrCriteria
-  character(len=20), public, allocatable:: RefineCrit(:)
-
-  real, allocatable:: AmrCriteria_IB(:,:)
+  ! Setting minimum and maximum AMR levels
+  logical, public :: DoSetAmrLimits = .false.
 
   ! Refinement parameters.
-  integer, public:: nRefineLevelIC
+  integer, public:: nRefineLevelIC = 0
   logical, public:: DoAmr = .false.
   integer, public:: DnAmr = -1
   real,    public:: DtAmr = -1.0
-  logical, public :: automatic_refinement
+  logical, public :: DoAutoRefine = .false.
 
-  integer, public:: min_block_level, max_block_level
-  real,    public:: min_cell_dx, max_cell_dx
-  logical, public:: DoProfileAmr = .false.
+  ! Local variables ----------------------
+
+  ! Refinement criteria parameters
+  integer:: nAmrCriteria = 0
+  character(len=20), allocatable:: NameAmrCrit_I(:)
+
+  ! Parameters for setting the finest and coarsest AMR levels
+  integer:: MinAmrLevel = 0, MaxAmrLevel = 99
+  real::    CellSizeMin = 0., CellSizeMax = 99999.
+  logical:: DoProfileAmr = .false.
 
   ! Probably iTypeAdvance_BP should be replaced by this?!
   ! This array is allocated by prepare_amr and deallocated by do_amr
   integer, allocatable:: iTypeAdvance_A(:)
 
+  real, allocatable:: AmrCriteria_IB(:,:)
+
 contains
   !============================================================================
-  subroutine init_mod_amr(nCrit)
-
-    use ModSize, ONLY: MaxBlock
-
-    integer, intent(in) :: nCrit
+  subroutine init_mod_amr
     !-----------------------------------------------------------------------
 
     ! clean for each time we have new refinment criteia
     call clean_mod_amr
 
-    allocate(RefineCrit(nCrit), AmrCriteria_IB(nCrit,MaxBlock))
+    ! Allocate NameAmrCrit_I only. AmrCriteria_IB is allocated later
+    allocate(NameAmrCrit_I(nAmrCriteria))
 
   end subroutine init_mod_amr
   !============================================================================
   subroutine clean_mod_amr
 
-    if(allocated(RefineCrit)) deallocate(RefineCrit, AmrCriteria_IB)
+    if(allocated(NameAmrCrit_I))     deallocate(NameAmrCrit_I)
+    if(allocated(AmrCriteria_IB)) deallocate(AmrCriteria_IB)
 
   end subroutine clean_mod_amr
+  !============================================================================
+  subroutine read_amr_param(NameCommand, iSession)
+
+    use ModReadParam, ONLY: read_var
+    use ModVarIndexes,ONLY: NameVar_V, nVar
+    use BATL_lib,     ONLY: DoCritAmr, DoAutoAmr, DoStrictAmr, &
+         read_amr_criteria
+
+    character(len=*), intent(in):: NameCommand
+    integer,          intent(in):: iSession
+
+    character(len=*), parameter:: NameSub = 'read_amr_param'
+    !-------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#AMR")
+       call read_var('DnRefine',DnAmr)
+       DoAmr = DnAmr > 0
+       DtAmr = -1.0
+       if (DoAmr)then
+          call read_var('DoAutoRefine', DoAutoRefine)
+          if (DoAutoRefine) call read_amr_criteria("#AMR")
+       end if
+
+    case("#DOAMR")
+       call read_var('DoAmr',DoAmr)
+       if(DoAmr) then
+          call read_var('DnAmr', DnAmr)
+          call read_var('DtAmr', DtAmr)
+          call read_var('IsStrictAmr', DoStrictAmr)
+       end if
+
+    case("#AMRINITPHYSICS")
+       call read_var('nRefineLevelIC', nRefineLevelIC)
+
+    case("#AMRLEVELS")
+       call read_var('MinAmrLevel',MinAmrLevel)
+       call read_var('MaxAmrLevel',MaxAmrLevel)
+       if(iSession==1)then
+          ! Set limits after correction (?)
+          DoSetAmrLimits = .true.
+       else
+          ! Set limits in the tree right now
+          call set_amr_limits
+       end if
+
+    case("#AMRRESOLUTION")
+       call read_var('CellSizeMin', CellSizeMin)
+       call read_var('CellSizeMax', CellSizeMax)
+       ! See also fix_amr_limits
+
+    case("#AMRLIMIT", "#AMRTYPE")
+       call read_amr_criteria(NameCommand)
+
+    case("#AMRCRITERIA")
+
+       DoCritAmr = .true.
+       DoAutoAmr = .true.
+       DoAutoRefine = DoAutoAmr ! for now
+       call read_var('nCriteria',nAmrCriteria)
+       call init_mod_amr
+       call read_amr_criteria(NameCommand, &
+            nCritInOut=nAmrCriteria, NameCritOut_I=NameAmrCrit_I,&
+            NameStatVarIn_V=NameVar_V, nStateVarIn=nVar)
+
+    case("#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION")
+       DoCritAmr = .true.
+       DoAutoAmr = .true.
+       DoAutoRefine = DoAutoAmr ! for now
+       call read_var('nCriteria', nAmrCriteria)
+       call init_mod_amr
+       call read_amr_criteria(NameCommand, &
+            nCritInOut=nAmrCriteria, NameCritOut_I=NameAmrCrit_I,&
+            NameStatVarIn_V=NameVar_V, nStateVarIn=nVar)
+       if(nAmrCriteria < 0)call stop_mpi(NameSub// &
+            ' ERROR: nAmrCriteria must be positiv.')
+
+    case("#AMRPROFILE")
+       call read_var('DoAmrPofile',DoProfileAmr)
+
+    case default
+       call stop_mpi(NameSub//': unknown command='//NameCommand)
+    end select
+  end subroutine read_amr_param
+
   !============================================================================
   subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
     use ModMain,     ONLY: nBlockMax
     use ModAdvance,  ONLY: iTypeAdvance_BP, nVar, State_VGB
-    use BATL_lib,    ONLY: set_amr_criteria, &
-         MaxNode, nNode, iTree_IA, &
-         Status_, Used_, Proc_, Block_ !!!
-
-    use ModMessagePass,   ONLY: exchange_messages
-    use ModPartSteady,    ONLY: UsePartSteady
+    use BATL_lib,    ONLY: &
+         MaxNode, nNode, iTree_IA, Status_, Used_, Proc_, Block_, MaxBlock, &
+         set_amr_criteria
+    use ModMessagePass, ONLY: exchange_messages
+    use ModPartSteady,  ONLY: UsePartSteady
 
     logical, intent(in) :: DoFullMessagePass
-    character(3), intent(in) :: TypeAmr
+    character(len=3), intent(in) :: TypeAmr
 
     integer:: iNode
 
@@ -103,6 +192,8 @@ contains
        end do
     end if
     if(nAmrCriteria > 0)then
+       if(.not.allocated(AmrCriteria_IB)) &
+            allocate(AmrCriteria_IB(nAmrCriteria,MaxBlock))
        AmrCriteria_IB(:,1:nBlockMax) = 0.0
        if(DoProfileAmr) call timing_start('amr::amr_criteria')
        call amr_criteria(AmrCriteria_IB)
@@ -286,7 +377,7 @@ contains
     integer :: iBlock, iCrit, i, j, k
 
     real, allocatable, save, dimension(:,:,:):: &
-         Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, P_G
+         Var_G, Rho_G, RhoUx_G, RhoUy_G, RhoUz_G, Bx_G, By_G, Bz_G, p_G
 
     ! X, Y and Z derivatives for vectors and scalars
     real, dimension(1:nI,1:nJ,1:nK) :: &
@@ -329,16 +420,16 @@ contains
           Bx_G(i,j,k)   = State_VGB(Bx_,i,j,k,iBlock)
           By_G(i,j,k)   = State_VGB(By_,i,j,k,iBlock)
           Bz_G(i,j,k)   = State_VGB(Bz_,i,j,k,iBlock)
-          P_G(i,j,k)    = State_VGB(P_,i,j,k,iBlock)
+          p_G(i,j,k)    = State_VGB(P_,i,j,k,iBlock)
        end do; end do; end do
 
        do iCrit = 1,nAmrCriteria
 
           if (masked_amr_criteria(iBlock,iCritExtIn=iCrit)) CYCLE
-          select case(RefineCrit(iCrit))
+          select case(NameAmrCrit_I(iCrit))
           case('gradt')
              ! Temperature gradient.
-             Var_G = P_G/Rho_G
+             Var_G = p_G/Rho_G
              call calc_gradient(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
              Crit_IB(iCrit,iBlock) = &
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
@@ -351,14 +442,14 @@ contains
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
           case('gradlogp')
              ! Log of pressure gradient
-             Var_G = log10(P_G)
+             Var_G = log10(p_G)
              call calc_gradient( iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
              Crit_IB(iCrit,iBlock) = &
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2))
 
           case('gradp')
              ! Pressure gradient 2.
-             call calc_gradient(iBlock, P_G, GradX_C,GradY_C,GradZ_C)
+             call calc_gradient(iBlock, p_G, GradX_C,GradY_C,GradZ_C)
              Crit_IB(iCrit,iBlock) = &
                   sqrt(maxval(GradX_C**2 + GradY_C**2 + GradZ_C**2)) &
                   * No2Io_V(UnitP_)
@@ -484,14 +575,15 @@ contains
           case default
              ! WARNING if we do not find the criteria in the above list we 
              ! will search for it among 'transient' criteria
-             if (UseUserAMR .or. RefineCrit(iCrit) == 'user') then
+             if (UseUserAMR .or. NameAmrCrit_I(iCrit) == 'user') then
                 IsFound=.false.
                 call user_amr_criteria(iBlock, &
-                     UserCriteria, RefineCrit(iCrit), IsFound)
+                     UserCriteria, NameAmrCrit_I(iCrit), IsFound)
                 Crit_IB(iCrit,iBlock) = userCriteria
              else
                 ! Use dynamic refinement if there is a transient event 
-                call trace_transient(RefineCrit(iCrit), Crit_IB(iCrit,iBlock))
+                call trace_transient( &
+                     NameAmrCrit_I(iCrit), Crit_IB(iCrit, iBlock))
              end if
           end select
        end do ! iCrit
@@ -503,11 +595,12 @@ contains
     subroutine trace_transient(NameCrit, RefineCrit)
 
       character(len=*), intent(in) :: NameCrit
-
       real, intent(out) :: RefineCrit
 
       real, dimension(nI,nJ,nK) :: Tmp_C, RhoOld_C, RhoUxOld_C, &
-           RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, POld_C    
+           RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, pOld_C
+
+      character(len=*), parameter:: NameSub = 'ModAMR::trace_transient'
       !-----------------------------------------------------------------------
       do k=1,nK; do j=1,nJ; do i=1,nI
          RhoOld_C(i,j,k)  = StateOld_VGB(rho_,i,j,k,iBlock)
@@ -517,44 +610,36 @@ contains
          BxOld_C(i,j,k)   = StateOld_VGB(Bx_,i,j,k,iBlock)
          ByOld_C(i,j,k)   = StateOld_VGB(By_,i,j,k,iBlock)
          BzOld_C(i,j,k)   = StateOld_VGB(Bz_,i,j,k,iBlock)
-         POld_C(i,j,k)    = StateOld_VGB(P_,i,j,k,iBlock)
+         pOld_C(i,j,k)    = StateOld_VGB(P_,i,j,k,iBlock)
       end do; end do; end do
 
       select case(NameCrit)
       case('P_dot','p_dot')
-         !\
          ! RefineCrit = abs(|p|-|p|_o)/max(|p|,|p|_o,cTiny)
          ! over all the cells of block iBlock
-         !/
-         Tmp_C = abs(P_G(1:nI,1:nJ,1:nK) - POld_C)
-         Tmp_C = Tmp_C / max(cTiny,P_G(1:nI,1:nJ,1:nK), &
-              POld_C)
+         Tmp_C = abs(p_G(1:nI,1:nJ,1:nK) - pOld_C)
+         Tmp_C = Tmp_C / max(cTiny, p_G(1:nI,1:nJ,1:nK), pOld_C)
          RefineCrit = maxval(Tmp_C)
+
       case('T_dot','t_dot')
-         !\
          ! RefineCrit = abs(|T|-|T|_o)/max(|T|,|T|_o,cTiny)
          ! over all the cells of block iBlock
-         !/
-         Tmp_C = abs(P_G(1:nI,1:nJ,1:nK)/Rho_G(1:nI,1:nJ,1:nK)  - &
-              POld_C/RhoOld_C)
-         Tmp_C = Tmp_C / max(cTiny,P_G(1:nI,1:nJ,1:nK)/ &
-              Rho_G(1:nI,1:nJ,1:nK),POld_C/ &
-              RhoOld_C)
+         Tmp_C = abs(p_G(1:nI,1:nJ,1:nK)/Rho_G(1:nI,1:nJ,1:nK) &
+              - pOld_C/RhoOld_C)
+         Tmp_C = Tmp_C / max(cTiny, &
+              p_G(1:nI,1:nJ,1:nK)/Rho_G(1:nI,1:nJ,1:nK), pOld_C/RhoOld_C)
          RefineCrit = maxval(Tmp_C)
+
       case('Rho_dot','rho_dot')
-         !\
          ! RefineCrit = abs(|rho|-|rho|_o)/max(|rho|,|rho|_o,cTiny)
          ! over all the cells of block iBlock
-         !/
          Tmp_C = abs(Rho_G(1:nI,1:nJ,1:nK) - RhoOld_C)
-         Tmp_C = Tmp_C / max(cTiny,Rho_G(1:nI,1:nJ,1:nK), &
-              RhoOld_C)
+         Tmp_C = Tmp_C / max(cTiny,Rho_G(1:nI,1:nJ,1:nK), RhoOld_C)
          RefineCrit = maxval(Tmp_C)
+
       case('RhoU_dot','rhoU_dot','rhou_dot')
-         !\
          ! RefineCrit = abs(|rhoU|-|rhoU|_o)/max(|rhoU|,|rhoU|_o,cTiny)
          ! over all the cells of block iBlock
-         !/
          Tmp_C = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2       + &
               RhoUy_G(1:nI,1:nJ,1:nK)**2 + RhoUz_G(1:nI,1:nJ,1:nK)**2)      - &
               sqrt(RhoUxOld_C**2 + RhoUyOld_C**2 + RhoUzOld_C**2))
@@ -563,11 +648,10 @@ contains
               RhoUz_G(1:nI,1:nJ,1:nK)**2), &
               sqrt(RhoUxOld_C**2 + RhoUyOld_C**2 + RhoUzOld_C**2))
          RefineCrit = maxval(Tmp_C)
+
       case('B_dot','b_dot')
-         !\
          ! RefineCrit = abs(|B|-|B|_o)/max(|B|,|B|_o,cTiny)
          ! over all the cells of block iBlock
-         !/
          Tmp_C = abs(sqrt(Bx_G(1:nI,1:nJ,1:nK)**2                + &
               By_G(1:nI,1:nJ,1:nK)**2 + Bz_G(1:nI,1:nJ,1:nK)**2) - &
               sqrt(BxOld_C**2 + ByOld_C**2 + BzOld_C**2))
@@ -576,6 +660,7 @@ contains
               Bz_G(1:nI,1:nJ,1:nK)**2),                                 &
               sqrt(BxOld_C**2 + ByOld_C**2 + BzOld_C**2))
          RefineCrit = maxval(Tmp_C)
+
       case('meanUB')
          !  (d|rhoU|/dt)/|rhoU| * (d|B|/dt)/|B|
          Tmp_C = abs(sqrt(RhoUx_G(1:nI,1:nJ,1:nK)**2                   + &
@@ -595,6 +680,7 @@ contains
               Bz_G(1:nI,1:nJ,1:nK)**2),                                 &
               sqrt(BxOld_C**2 + ByOld_C**2 + BzOld_C**2))
          RefineCrit = RefineCrit*maxval(Tmp_C)
+
       case('Rho_2nd_1')
          ! (|d2Rho/dx2| + |d2Rho/dy2| + |d2Rho/dz2|)/rho
          Tmp_C = ( & 
@@ -606,6 +692,7 @@ contains
               2 * Rho_G(1:nI,1:nJ,1:nK)))                           / &
               Rho_G(1:nI,1:nJ,1:nK)
          RefineCrit = maxval(Tmp_C)
+
       case('Rho_2nd_2')
          ! (|d2Rho/dx2  +  d2Rho/dy2  +  d2Rho/dz2|)/rho
          Tmp_C = abs( & 
@@ -617,22 +704,52 @@ contains
               2 * Rho_G(1:nI,1:nJ,1:nK)))                        / &
               Rho_G(1:nI,1:nJ,1:nK)
          RefineCrit = maxval(Tmp_C)
+
       case default
-         call stop_mpi('Unknown RefineCrit='//NameCrit)
+         call stop_mpi(NameSub//': Unknown NameCritCrit='//NameCrit)
       end select
 
     end subroutine trace_transient
 
   end subroutine amr_criteria
   !============================================================================
-  subroutine set_levels
+  subroutine set_amr_limits
 
     use BATL_lib, ONLY: iTree_IA, MinLevel_, MaxLevel_
 
-    iTree_IA(MinLevel_,:) = min_block_level
-    iTree_IA(MaxLevel_,:) = max_block_level
+    iTree_IA(MinLevel_,:) = MinAmrLevel
+    iTree_IA(MaxLevel_,:) = MaxAmrLevel
 
-  end subroutine set_levels
+  end subroutine set_amr_limits
   !=======================================================================
+  subroutine fix_amr_limits(RootDx)
+
+    real, intent(in):: RootDx
+
+    integer:: j
+    !--------------------------------------------------------------------
+
+    if    (CellSizeMax < -1.E-6) then
+       MinAmrLevel = -1
+    elseif(CellSizeMax <  1.E-6) then
+       MinAmrLevel = 99
+    else
+       do j = 1, 99
+          MinAmrLevel = j - 1
+          if ( RootDx/(2**j) < CellSizeMax) EXIT
+       end do
+    end if
+    if    (CellSizeMin < -1.E-6) then
+       MaxAmrLevel = -1
+    elseif(CellSizeMin <  1.E-6) then
+       MaxAmrLevel = 99
+    else
+       do j=1,99
+          MaxAmrLevel = j-1
+          if ( RootDx/(2**j) < CellSizeMin) EXIT
+       end do
+    end if
+
+  end subroutine fix_amr_limits
 
 end module ModAMR

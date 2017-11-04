@@ -76,7 +76,7 @@ contains
       ! set_amr_criteria
       use ModAdvance, ONLY : nVar, State_VGB
       use ModLoadBalance, ONLY: load_balance
-      use ModAMR, ONLY: set_levels
+      use ModAMR, ONLY: DoSetAmrLimits, set_amr_limits
 
       !LOCAL VARIABLES:
       character(len=*), parameter :: NameSubSub = NameSub//'::grid_setup'
@@ -146,7 +146,7 @@ contains
 
       nRefineLevel = nInitialAmrLevel
 
-      if(DoSetLevels) call set_levels
+      if(DoSetAmrLimits) call set_amr_limits
     end subroutine grid_setup
 
     !==========================================================================
@@ -160,7 +160,8 @@ contains
       use ModMain,                ONLY: UseB0
       use ModB0,                  ONLY: set_b0_reschange
       use ModFieldLineThread,     ONLY: UseFieldLineThreads, set_threads
-      use ModAMR,                 ONLY: prepare_amr, do_amr, set_levels
+      use ModAMR,                 ONLY: prepare_amr, do_amr, &
+           DoSetAmrLimits, set_amr_limits
       use ModLoadBalance,         ONLY: load_balance
 
       use ModUserInterface ! user_initial_perturbation, user_action
@@ -243,7 +244,7 @@ contains
 
          ! Redo the AMR level constraints for fixed body level
          ! The coordinates of the blocks are only known now
-         if(DoSetLevels) call set_levels
+         if(DoSetAmrLimits) call set_amr_limits
       end if
 
       ! Fix face centered B0 at resolution changes
@@ -392,7 +393,7 @@ contains
     use ModProcMH
     use ModMain
     use ModIO, ONLY: iUnitOut, write_prefix, save_plots_amr
-    use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, automatic_refinement, &
+    use ModAmr, ONLY: DoAmr, DnAmr, DtAmr, DoAutoRefine, &
          prepare_amr, do_amr
     use ModPhysics, ONLY : No2Si_V, UnitT_
     use ModAdvance, ONLY: UseNonConservative, nConservCrit, UseAnisoPressure, &
@@ -585,7 +586,8 @@ contains
           if (time_accurate) call write_timeaccurate
        end if
 
-       if (.not. automatic_refinement) nRefineLevel = nRefineLevel + 1
+       ! Increase refinement level if geometric refinement is done
+       if (.not. DoAutoRefine) nRefineLevel = nRefineLevel + 1
 
        ! BDF2 scheme should not use previous step after AMR
        n_prev = -100

@@ -33,11 +33,12 @@ contains
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
     use ModBlockData, ONLY: clean_block_data
-    use BATL_lib, ONLY: read_amr_criteria, read_region_param, &
-         DoCritAmr, DoAutoAmr, DoStrictAmr, BetaProlong,&
+    use BATL_lib, ONLY: read_region_param, &
+         BetaProlong,&
          init_mpi, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
-    use ModAMR
+    use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits,& 
+         DoAmr
     use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param,&
          DoMapEquatorRay
     use ModIO
@@ -135,9 +136,8 @@ contains
     character (len=*), intent(in) :: TypeAction
 
     ! Local variables
-    integer :: iFile, i, j
+    integer :: iFile, i
     logical :: IsUninitialized      = .true.
-    real :: local_root_dx
 
     !  logical :: HdfUninitialized      = .true.
     logical :: DoReadSolarwindFile  = .false.
@@ -1146,66 +1146,15 @@ contains
        case("#GRIDRESOLUTION","#GRIDLEVEL","#REGION","#AMRREGION")
           call read_region_param(NameCommand, UseStrictIn=UseStrict)
 
-       case("#AMRLEVELS")
-          call read_var('MinBlockLevel',min_block_level)
-          call read_var('MaxBlockLevel',max_block_level)
-          if(iSession==1)then
-             DoSetLevels=.true.
-          else
-             call set_levels
-          end if
+       case("#AMR", "#DOAMR", &
+            "#AMRLEVELS", "#AMRRESOLUTION", "#AMRLIMIT", "#AMRTYPE", &
+            "#AMRCRITERIA", "#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION", &
+            "#AMRPROFILE")
+          call read_amr_param(NameCommand, iSession)
 
-       case("#AMRRESOLUTION")
-          call read_var('DxCellMin',min_cell_dx)
-          call read_var('DxCellMax',max_cell_dx)
-          ! See also end of correct_parameters
-
-       case("#DOAMRPROFILE")
-          call read_var('DoAmrPofile',DoProfileAmr)
-
-       case("#AMR")
-          call read_var('DnRefine',DnAmr)
-          DoAmr = DnAmr > 0
-          DtAmr = -1.0
-          if (DoAmr)then
-             call read_var('DoAutoRefine',automatic_refinement)
-             if (automatic_refinement) call read_amr_criteria("#AMR")
-          end if
-
-       case("#AMRLIMIT", "#AMRTYPE")
-          call read_amr_criteria(NameCommand)
-
-       case("#DOAMR")
-          call read_var('DoAmr',DoAmr)
-          if(DoAmr) then
-             call read_var('DnAmr',DnAmr)
-             call read_var('DtAmr',DtAmr)
-             call read_var('IsStrictAmr'  ,DoStrictAmr)
-          end if
-
-       case("#AMRCRITERIA")
-
-          DoCritAmr = .true.
-          DoAutoAmr = .true.
-          automatic_refinement = DoAutoAmr ! for now
-          call read_var('nCriteria',nAmrCriteria)
-          call init_mod_amr(nAmrCriteria)
-          call read_amr_criteria(NameCommand, &
-               nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
-               NameStatVarIn_V=NameVar_V, nStateVarIn=nVar)
-
-       case("#AMRCRITERIALEVEL","#AMRCRITERIARESOLUTION")
-
-          DoCritAmr = .true.
-          DoAutoAmr = .true.
-          automatic_refinement = DoAutoAmr ! for now
-          call read_var('nCriteria',nAmrCriteria)
-          call init_mod_amr(nAmrCriteria)
-          call read_amr_criteria(NameCommand, &
-               nCritInOut=nAmrCriteria, NameCritOut_I=RefineCrit,&
-               NameStatVarIn_V=NameVar_V, nStateVarIn=nVar)
-          if(nAmrCriteria < 0)call stop_mpi(NameSub// &
-               ' ERROR: nAmrCriteria must be positiv.')
+       case("#AMRINITPHYSICS")
+          if(.not.is_first_session()) CYCLE READPARAM
+          call read_amr_param(NameCommand, iSession)
 
        case('#CONSERVEFLUX')
           call read_var('DoConserveFlux', DoConserveFlux)
@@ -1793,10 +1742,6 @@ contains
                   ' or increase MaxBlock with Config.pl -g and recompile!')
           end if
 
-       case("#AMRINITPHYSICS")
-          if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nRefineLevelIC',nRefineLevelIC)
-
        case("#GAMMA")
           if(.not.is_first_session())CYCLE READPARAM
           do iFluid = IonFirst_, nFluid
@@ -2326,7 +2271,7 @@ contains
 
       is_first_session = iSession == 1
 
-      if(iSession/=1 .and. iProc==0)then
+      if(iSession /= 1 .and. iProc==0)then
          write(*,*)NameSub//' WARNING: command '//trim(NameCommand)// &
               ' can be used in the first session only !!!'
          if(UseStrict)call stop_mpi('Correct PARAM.in')
@@ -2557,17 +2502,6 @@ contains
       dt            = 0.0
       dt_BLK        = 0.0
 
-      nRefineLevelIC        = 0
-
-      min_block_level =  0
-      max_block_level = 99
-      min_cell_dx =     0.
-      max_cell_dx = 99999.
-
-      DnAmr=-1
-      DoAmr=.false.
-      automatic_refinement = .false.
-
       nOrder = 2
       FluxType = 'RUSANOV'
 
@@ -2617,8 +2551,7 @@ contains
 
       MassIon_I = MassFluid_I(IonFirst_:IonLast_) ! Ion masses
 
-      nAmrCriteria = 0
-      call init_mod_amr(nAmrCriteria)
+      call init_mod_amr
 
       !\
       ! Set component dependent defaults
@@ -2926,7 +2859,8 @@ contains
 
       ! Make sure periodic boundary conditions are symmetric
       do i=Coord1MinBc_,Coord3MinBc_,2
-         if(any(TypeCellBc_I(i:i+1)=='periodic')) TypeCellBc_I(i:i+1)='periodic'
+         if(any(TypeCellBc_I(i:i+1) == 'periodic')) &
+              TypeCellBc_I(i:i+1) = 'periodic'
       end do
 
       ! Set UseBufferGrid logical 
@@ -3068,8 +3002,8 @@ contains
            TypeSemiImplicit /= 'resisthall' .and. &
            TypeSemiImplicit /= 'resistivity')then
          if(iProc==0)then
-            write(*,'(a)') NameSub//&
-                 ' WARNING: Boris correction only works with semi-implicit Hall MHD!!!'
+            write(*,'(a)') NameSub//' WARNING: '//&
+                 'Boris correction only works with semi-implicit Hall MHD!!!'
             if (UseStrict) call stop_mpi('Correct PARAM.in!')
             write(*,*)NameSub//' Setting boris_correction = .false.'
          end if
@@ -3152,32 +3086,12 @@ contains
          UsePointImplicit = .false.
       end if
 
-      !Finish checks for implicit
+      ! Finish checks for implicit
 
-      !Set min_block_level and max_block_level for #AMRRESOLUTION in session 1
-      if(i_line_command("#AMRRESOLUTION", iSessionIn = 1) > 0)then
-         local_root_dx = (XyzMax_D(x_)-XyzMin_D(x_))/real(nRootRead_D(1)*nI)
-         if    (max_cell_dx < -1.E-6) then
-            min_block_level = -1
-         elseif(max_cell_dx <  1.E-6) then
-            min_block_level = 99
-         else
-            do j=1,99
-               min_block_level = j-1
-               if ( local_root_dx/(2**j) < max_cell_dx) EXIT
-            end do
-         end if
-         if    (min_cell_dx < -1.E-6) then
-            max_block_level = -1
-         elseif(min_cell_dx <  1.E-6) then
-            max_block_level = 99
-         else
-            do j=1,99
-               max_block_level = j-1
-               if ( local_root_dx/(2**j) < min_cell_dx) EXIT
-            end do
-         end if
-      end if
+      ! Set min_block_level and max_block_level for #AMRRESOLUTION in session 1
+      if(i_line_command("#AMRRESOLUTION", iSessionIn = 1) > 0) &
+           call fix_amr_limits( &
+           (XyzMax_D(x_)-XyzMin_D(x_))/real(nRootRead_D(1)*nI))
 
       if(TypeGeometry == 'cartesian')then                               
          if(UsePoleDiffusion .or. DoFixAxis)then
@@ -3492,7 +3406,7 @@ contains
                  cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
             do iDim = 1, nDim
                if(plot_range(2*iDim-1,iFile) < plot_range(2*iDim,iFile)) CYCLE
-               Cut = 0.5*(plot_range(2*iDim-1,iFile) + plot_range(2*iDim,iFile))
+               Cut =0.5*(plot_range(2*iDim-1,iFile) + plot_range(2*iDim,iFile))
                plot_range(2*iDim-1,iFile) = Cut - SmallSize_D(iDim)
                plot_range(2*iDim,iFile)   = Cut + SmallSize_D(iDim)
             end do
@@ -3726,7 +3640,7 @@ contains
       end do
 
     end subroutine set_extra_parameters
-    !============================================================================
+    !==========================================================================
     subroutine sort_smooth_indicator
 
       ! The variables using the same smooth indicator should be 
@@ -3748,8 +3662,8 @@ contains
       call sort_quick(nVar,iVarSmoothReal_V,iVarSmoothIndex_I)
 
     end subroutine sort_smooth_indicator
-    !============================================================================
+    !==========================================================================
 
-  end subroutine Set_parameters
+  end subroutine set_parameters
 
 end module ModSetParameters
