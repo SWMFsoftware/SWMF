@@ -528,35 +528,7 @@ end function test_cell_value
 
 !=============================================================================
 
-subroutine xyz_to_spherical(x, y, z, r, Phi, Colatitude)
-
-  use ModNumConst, ONLY: cTwoPi
-  implicit none
-
-  real, intent(in)  :: x, y, z
-  real, intent(out) :: r, Phi, Colatitude
-  !---------------------------------------------------------------------------
-  r = sqrt(x**2 + y**2 + z**2)
-
-  if(r == 0.0)then
-     Phi      = 0.0
-     Colatitude = 0.0
-     RETURN
-  end if
-
-  ! get the phi(longitude relative to +x) and colatitude
-  if (x == 0.0 .and. y == 0.0) then
-     Phi = 0.0
-  else
-     Phi = modulo(atan2(y, x), cTwoPi)
-  end if
-  Colatitude = acos(z/R)
-
-end subroutine xyz_to_spherical
-
-!=============================================================================
-
-subroutine set_oktest(str,oktest,oktest_me)
+subroutine set_oktest(str, oktest, oktest_me)
 
   use ModProcMH
   use ModMain, ONLY : iteration_number,Ttest,iterTEST,PROCtest,lVerbose, &
@@ -564,13 +536,12 @@ subroutine set_oktest(str,oktest,oktest_me)
   implicit none
 
   character (len=*) :: str
-  integer, external :: index_mine
   logical :: oktest, oktest_me
   !----------------------------------------------------------------------------
 
   if(iteration_number>iterTEST .or. &
        (time_accurate .and. time_simulation>Ttest))then
-     oktest=index_mine(' '//test_string,' '//str//' ')>0
+     oktest = index(' '//test_string, ' '//str//' ') > 0
      oktest_me = oktest .and. iProc==PROCtest
      if(oktest_me)then
         write(*,*)str,' at iter=',iteration_number
@@ -585,18 +556,6 @@ subroutine set_oktest(str,oktest,oktest_me)
   end if
 
 end subroutine set_oktest
-
-!=============================================================================
-
-integer function index_mine(str1,str2)
-
-  implicit none
-
-  character (len=*), intent(in) :: str1, str2
-
-  index_mine=index(str1,str2)
-
-end function index_mine
 
 !=============================================================================
 
@@ -951,24 +910,6 @@ subroutine test_error_report
 
 end subroutine test_error_report
 
-!==============================================================================
-subroutine join_str(n, String_I, String)
-
-  ! Append the n strings in the string array String_I to the end of String
-  ! separated by spaces.
-  implicit none
-
-  integer, intent(in)            :: n
-  character(len=*), intent(in)   :: String_I(n)
-  character(len=*), intent(inout):: String
-
-  integer :: i
-  !---------------------------------------------------------------------------
-  do i = 1, n
-     String = trim(String) // ' ' // String_I(i)
-  end do
-
-end subroutine join_str
 !==============================================================================
 subroutine find_test_cell
 
