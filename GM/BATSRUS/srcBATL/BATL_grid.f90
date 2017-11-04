@@ -1667,8 +1667,11 @@ contains
     !\
     ! Fix coordinates for periodic boundary conditions
     !/
+    !For Cartesian grid: for all dimensions
     if(IsCartesianGrid .and. any(IsPeriodic_D(1:nDim))) &
          Xyz_D = Coord_D
+    !\
+    ! For cylindrical coordinates: along z asis only:
     if((IsCylindrical.or.IsRzGeometry) .and. IsPeriodic_D(nDim)) &
          Xyz_D(nDim) = Coord_D(nDim)
 
