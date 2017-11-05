@@ -19,7 +19,7 @@ module BATL_particles
   public:: mark_undefined
   public:: remove_undefined_particles
   public:: get_particles
-
+  public:: trace_particles
   SAVE
   logical  ::UseParticles = .false.
   !\
@@ -66,29 +66,33 @@ module BATL_particles
   real,    allocatable:: BufferRecv_I(:)! buffer of data to be recv'd
   character(len=*),parameter  :: NameMod='BATL_particles'
   character(len=120), private :: StringError
+  integer:: nU_I(2)
 contains
 
   !===========================================================================
   subroutine allocate_particles
-    integer:: iParticleKind, nVar, nIndex, nParticleMax
+    integer:: iKindParticle, nVar, nIndex, nParticleMax
     !------------------------------------------------------------------------
-    do iParticleKind = 1, nKindParticle
-       nVar         = Particle_I(iParticleKind)%nVar
-       nIndex       = Particle_I(iParticleKind)%nIndex
-       nParticleMax = Particle_I(iParticleKind)%nParticleMax
-       nullify( Particle_I(iParticleKind)%State_VI)
-       allocate(Particle_I(iParticleKind)%State_VI(1:nVar,1:nParticleMax))
-       nullify( Particle_I(iParticleKind)%iIndex_II)
-       allocate(Particle_I(iParticleKind)%iIndex_II(0:nIndex,1:nParticleMax))
-       call clean_particle_arr(iParticleKind, 1, nParticleMax)
+    do iKindParticle = 1, nKindParticle
+       nVar         = Particle_I(iKindParticle)%nVar
+       nIndex       = Particle_I(iKindParticle)%nIndex
+       nParticleMax = Particle_I(iKindParticle)%nParticleMax
+       nullify( Particle_I(iKindParticle)%State_VI)
+       allocate(Particle_I(&
+               iKindParticle)%State_VI(1:nVar,1:nParticleMax))
+
+       nullify( Particle_I(iKindParticle)%iIndex_II)
+       allocate(Particle_I(&
+            iKindParticle)%iIndex_II(0:nIndex,1:nParticleMax))
+       call clean_particle_arr(iKindParticle, 1, nParticleMax)
     end do
   end subroutine allocate_particles
   !================================
-  subroutine clean_particle_arr(iParticleKind, iParticleMin, iParticleMax)
-    integer, intent(in) :: iParticleKind, iParticleMin, iParticleMax
+  subroutine clean_particle_arr(iKindParticle, iParticleMin, iParticleMax)
+    integer, intent(in) :: iKindParticle, iParticleMin, iParticleMax
     if(iParticleMin > iParticleMax) RETURN
-    Particle_I(iParticleKind)%State_VI(:,iParticleMin:iParticleMax) = 0.0
-    Particle_I(iParticleKind)%iIndex_II(:,iParticleMin:iParticleMax) = 0 
+    Particle_I(iKindParticle)%State_VI(:,iParticleMin:iParticleMax) = 0.0
+    Particle_I(iKindParticle)%iIndex_II(:,iParticleMin:iParticleMax) = 0 
   end subroutine clean_particle_arr
   !================================
   subroutine allocate_buffers
@@ -542,4 +546,92 @@ contains
     Particle_I(iKindParticle)%nParticle = nParticleOld + nParticle
     if(present(nParticlePE))nParticlePE = nParticle
   end subroutine get_particles
+  !==========================
+  !Tracing the trajectories of particles (end points) of a given sort, 
+  !which are displaced according to the function, displace_particle. 
+  !For example, if the if the end points of are displaced by an 
+  !elementray step size in the direction of the magnetic field, the 
+  !resulting trajectories are the magnetic field lines. The displacement 
+  !stops when the particle leaves the computational domain, or reaches 
+  !a body, or goes beyond some "soft" boundary. The integration has been 
+  !completed once all particles reach some boundary. 
+  subroutine trace_particles(iKindParticle, displace_particle)
+    use ModMpi
+    use BATL_mpi, ONLY: iComm, nProc
+    integer, intent(in) :: iKindParticle
+    interface
+       subroutine displace_particle(iParticle, IsEndOfSegment)
+         implicit none
+         integer, intent(in) :: iParticle
+         logical, intent(out):: IsEndOfSegment
+         !---------------
+         !\
+         ! IsEndOfSegment should be set to .true. if one of the
+         ! following is true:
+         ! (1) check_interpolate in the displaced location of the
+         ! particle shows that the particle left the computational 
+         ! domain. Such particle MUST be marked as "undefined":
+         !\
+         ! call mark_undefined(iKind, iParticle)
+         !/
+         ! (2) check_interpolate in the displaced location of the
+         ! particle shows that the particle location can no longer 
+         ! be interpolated at the given PE
+         ! (3) other criteria are satisfied for ending the 
+         ! trajectory of a given partiale (it reaches the internal 
+         ! or "soft" boundary). Such particle MUST be 
+         ! marked as "undefined":
+         !\
+         ! call mark_undefined(iKind, iParticle) 
+         !/
+       end subroutine displace_particle
+    end interface
+    !\
+    ! Conditions for exiting a loop or the whole routine
+    logical :: IsNotAnyParticle, DoStop, IsEndOfSegment
+    !\
+    !Loop variable
+    integer :: iParticle
+    !\
+    !Misc
+    integer :: iError
+    !-----------
+    !\
+    !CYCLE till all particles leave the domain
+    !/
+    do 
+       !\
+       !For all particles at this PE
+       !/ 
+       do iParticle = 1, Particle_I(iKindParticle)%nParticle
+          !Displace while the particle is at the PE domain
+          SEGMENT:do 
+             call displace_particle(iParticle,IsEndOfSegment)
+             !\
+             ! The end of segment is achieved if the particle
+             ! (1) reaches the computational domain boundary.
+             !     These particles should be marked using 
+             !     mark_undefined procedure
+             ! (2) passes to block assigned to different PE  
+             if(IsEndOfSegment)EXIT SEGMENT
+          end do SEGMENT
+       end do
+       !\
+       ! Particles of the (1) kind are removed
+       call remove_undefined_particles(iKindParticle)
+       IsNotAnyParticle = Particle_I(iKindParticle)%nParticle == 0
+       if(nProc>1)then
+          call MPI_Allreduce(IsNotAnyParticle,&
+               DoStop, 1, MPI_LOGICAL, MPI_LAND, iComm, iError)
+       else
+          DoStop = IsNotAnyParticle
+       end if
+       if(DoStop)RETURN
+       !\
+       ! Particles of (2) kind are sent to proper processor
+       !/
+       call message_pass_particles(iKindParticle)
+    end do
+  end subroutine trace_particles
+  !=======================
 end module BATL_particles
