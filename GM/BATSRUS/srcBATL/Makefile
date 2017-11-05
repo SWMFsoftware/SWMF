@@ -16,6 +16,7 @@ OBJECTS = \
 	BATL_geometry.o \
 	BATL_grid.o \
 	BATL_high_order.o \
+	BATL_interpolate_amr.o \
 	BATL_lib.o  \
 	BATL_mpi.o  \
 	BATL_particles.o \
@@ -25,8 +26,8 @@ OBJECTS = \
 	BATL_pass_face_field.o \
 	BATL_region.o \
 	BATL_size.o \
-	BATL_tree.o \
-	BATL_interpolate_amr.o
+	BATL_test.o \
+	BATL_tree.o
 
 ALLOBJECTS = \
 	${OBJECTS} \

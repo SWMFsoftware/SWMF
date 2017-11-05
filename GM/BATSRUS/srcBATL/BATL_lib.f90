@@ -18,6 +18,7 @@ module BATL_lib
   use BATL_pass_node
   use BATL_high_order
   use BATL_particles
+  use BATL_test
 
   implicit none
 
@@ -118,8 +119,14 @@ module BATL_lib
   public:: Particle_I
   public:: allocate_particles, update_particle_location
   public:: get_particles, trace_particles
-  public:: allocate_particles
   public:: message_pass_particles, remove_undefined_particles, mark_undefined
+
+  ! Inherited from BATL_test
+  public:: StringTest
+  public:: iProcTest, iBlockTest, iTest, jTest, kTest
+  public:: XyzTest_D, xTest, yTest, zTest
+  public:: read_test_param, find_test_cell, do_test
+
 
 contains
   !============================================================================

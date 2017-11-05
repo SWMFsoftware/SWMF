@@ -5,7 +5,9 @@ program advect
 
   use BATL_lib, ONLY: MaxDim, nDim, nDimAmr, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, barrier_mpi, r_, &
-       Xyz_DGB, CellSize_DB, find_grid_block, message_pass_cell
+       Xyz_DGB, CellSize_DB, find_grid_block, message_pass_cell, &
+       StringTest, XyzTest_D, iTest, jTest, kTest, iBlockTest, iProcTest, &
+       read_test_param, find_test_cell, do_test
 
   implicit none
 
@@ -80,19 +82,13 @@ program advect
   ! Face centered flux for conservation fix
   real, allocatable, dimension(:,:,:,:,:):: Flux_VXB, Flux_VYB, Flux_VZB
 
-  ! Test stuff
-  real:: XyzTest_D(MaxDim) = 0.0
-  integer:: iTest_D(MaxDim), iTest=1, jTest=1, kTest=1
-  integer:: iBlockTest=1, iProcTest=0
-  character(len=100):: StringTest = ' '
-
   logical:: DoTest
   character(len=*), parameter:: NameSub = 'advect_main'
   !--------------------------------------------------------------------------
   call initialize
 
   DoTest = do_test(NameSub, iProc)
-  
+
   if(DoTest)write(*,*)NameSub,' starting iProc=',iProc
   if(DoTest)call barrier_mpi
 
@@ -100,8 +96,7 @@ program advect
   do
      if(DoTest)write(*,*)NameSub,' advance iProc, iStep=',iProc,iStep
 
-     call find_grid_block(XyzTest_D, iProcTest, iBlockTest, iTest_D)
-     iTest = iTest_D(1); jTest = iTest_D(2); kTest = iTest_D(3)
+     call find_test_cell
 
      if(iProc==iProcTest .and. StringTest /= '')then
         write(*,*)'Test cell iTest, jTest, kTest, iBlockTest, iProcTest=', &
@@ -373,19 +368,8 @@ contains
           call read_var('DtPlot', DtPlot)
        case("#STOP")
           call read_var('TimeMax', TimeMax)
-       case("#TESTXYZ")
-          call             read_var('xTest', XyzTest_D(x_))
-          if(nDim > 1)call read_var('yTest', XyzTest_D(y_))
-          if(nDim > 2)call read_var('zTest', XyzTest_D(z_))
-          iProcTest = -1
-       case("#TESTIJK")
-          call read_var('iTest', iTest)
-          call read_var('jTest', jTest)
-          call read_var('kTest', kTest)
-          call read_var('iBlockTest', iBlockTest)
-          call read_var('iProcTest', iProcTest)
-       case("#TEST")
-          call read_var('StringTest', StringTest)
+       case("#TEST", "#TESTIJK", "#TESTXYZ")
+          call read_test_param(NameCommand)
        case default
           call CON_stop(NameSub//' unknown command='//trim(NameCommand))
        end select
@@ -1550,25 +1534,6 @@ contains
     end do; end do; end do
 
   end function is_incorrect_block
-
-  !===========================================================================
-  logical function do_test(NameSub, iProcIn, iBlockIn)
-
-    character(len=*), intent(in):: NameSub
-    integer, intent(in), optional:: iBlockIn
-    integer, intent(in), optional:: iProcIn
-    !------------------------------------------------------------------------
-    do_test = .false.
-
-    if(present(iProcIn))then
-       if(iProcIn /= iProcTest) RETURN
-    end if
-    if(present(iBlockIn))then
-       if(iBlockIn /= iBlockTest) RETURN
-    end if
-    do_test = index(' '//StringTest//' ', ' '//NameSub//' ') > 0
-
-  end function do_test
 
 end program advect
 
