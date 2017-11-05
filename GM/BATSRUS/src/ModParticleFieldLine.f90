@@ -18,7 +18,7 @@ module ModParticleFieldLine
        MaxBlock, nI, nJ, nK, nBlock, &
        allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
-       mark_undefined, get_particles
+       mark_undefined, update_particle_location, get_particles
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
@@ -79,7 +79,15 @@ module ModParticleFieldLine
        ! ( -1 -> reversed, +1 -> aligned); important for radial ordering 
        ! when magnetic field general direction may be inward
        Alignment_ = 3, &
-       Stage_     = 4   !To figure out at which the 
+       ! indicator for message passing in trace_particle_line
+       Pass_ = 4
+
+  integer, parameter:: &
+       NoPass_ = 0, &
+       DoPassHalfStep_ = 1, &
+       PassedHalfStep_ = 2, &
+       DoPassFullStep_ = 3
+  
 
   ! data that can be requested and returned to outside this module
   ! ORDER MUST CORRESPOND TO INDICES ABOVE
@@ -251,6 +259,7 @@ contains
     ! requested coordinates may be different for different processor,
     ! if a certain line can't be started on a given processor, it is
     ! ignored, thus duplicates are avoided
+    ! NOTE: different sets of lines may be request on different processors!
     !-----------------------------------------------------------------------
     integer,         intent(in)::nFieldLineIn
     real,            intent(in)::XyzStart_DI(MaxDim, nFieldLineIn)
@@ -262,8 +271,9 @@ contains
 
     ! An input can be in generalized coordinates
     logical, optional,intent(in) :: UseInputInGenCoord 
-    integer :: nLineThisProc ! number of new field lines initialized locally
-    integer :: nParticleOld  ! number of already existing regular particles
+    integer :: nLineThisProc! number of new field lines initialized locally
+    integer :: nLineAllProc ! number of new field lines initialized on all PEs
+    integer :: nParticleOld ! number of already existing regular particles
 
     ! direction of tracing: -1 -> backward, +1 -> forward
     integer:: iDirTrace
@@ -292,13 +302,16 @@ contains
          UseInputInGenCoord = UseInputInGenCoord,&
          DoReplace          = .true.,            &    
          nParticlePE        = nLineThisProc)
+
+    nParticleOld  = Particle_I(KindReg_)%nParticle
+
     ! how many lines have been started on all processors
-    nFieldLine    = nFieldLine + nFieldLineIn
+    call count_new_lines()
+    nFieldLine    = nFieldLine + nLineAllProc
     if(nFieldLine > nFieldLineMax)&
          call CON_stop(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
 
-    nParticleOld  = Particle_I(KindReg_)%nParticle
     call copy_end_to_regular
 
     ! set pointers to parameters of end particles
@@ -359,7 +372,7 @@ contains
     end do
 
     ! Offset in id_
-    call offset_id(nFieldLine - nFieldLineIn + 1, nFieldLine)
+    call offset_id(nFieldLine - nLineAllProc + 1, nFieldLine)
   contains
     !========================================================================
     subroutine compute_cosbr()
@@ -423,13 +436,28 @@ contains
       end do
     end subroutine offset_id
     !========================================================================
+    subroutine count_new_lines()
+      ! gather information from all processors on how many new field lines
+      ! have been started
+      use ModMpi
+      use BATL_mpi, ONLY: iComm, nProc
+      integer:: iError
+      !-----------------------------------------------------------------------
+      if(nProc>1)then
+         call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
+              MPI_INTEGER, MPI_SUM, iComm, iError)
+      else
+         nLineAllProc = nLineThisProc
+      end if
+    end subroutine count_new_lines
+    !========================================================================
     subroutine get_alignment()
       ! determine alignment of particle indexing with direction 
       ! of the magnetic field
       integer:: iParticle
       real   :: DirB_D(MaxDim)
       !---------------------------------------------------------------------
-      iIndexEnd_II(Stage_, 1:Particle_I(KindEnd_)%nParticle) = 0
+      iIndexEnd_II(Pass_, 1:Particle_I(KindEnd_)%nParticle) = NoPass_
       if(iOrderMode == Field_)then
          iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
          RETURN
@@ -465,6 +493,9 @@ contains
     ! cosine of angle between direction of field and radial direction
     real:: CosBR
 
+    ! whether to schedule a particle for message pass
+    logical:: DoPass
+    
     ! parameters of end particles
     real,    pointer:: StateEnd_VI(:,:)
     integer, pointer:: iIndexEnd_II(:,:)
@@ -481,6 +512,7 @@ contains
        StateEnd_VI(DirX_:DirZ_,  iParticle) = iDirTrace * &
             StateEnd_VI(x_:z_,  iParticle) / &
             sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+       iIndexEnd_II(Pass_, iParticle) = NoPass_
     end do
 
     TRACE: do
@@ -490,12 +522,18 @@ contains
           call remove_undefined_particles(KindEnd_)
        end if
 
-       ! copy last known coordinates to Auxilary 
-       StateEnd_VI(XOld_:ZOld_,1:Particle_I(KindEnd_)%nParticle) = &
-            StateEnd_VI(x_:z_, 1:Particle_I(KindEnd_)%nParticle)
-
        ! First stage of RK2 method
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! check whether to perfrom first stage for this particle:
+          ! may be scheduled to be passed to other processor or passed
+          ! after the first stage
+          if(any(iIndexEnd_II(Pass_,iParticle)==&
+               (/DoPassHalfStep_,DoPassFullStep_,PassedHalfStep_/)))&
+               CYCLE
+
+          ! copy last known coordinates to old coords
+          StateEnd_VI(XOld_:ZOld_,iParticle) = StateEnd_VI(x_:z_, iParticle)
+
           ! get the direction of the magnetic field at original location and
           ! gradient of cosine of angle between field and radial direction
           call get_b_dir(&
@@ -527,10 +565,15 @@ contains
           ! get middle location
           StateEnd_VI(x_:z_, iParticle) = StateEnd_VI(x_:z_, iParticle) + &
                0.50*StateEnd_VI(Ds_, iParticle) *  DirCurr_D
-       end do
 
-       ! Message pass: some particles may have moved to different procs
-       call message_pass_particles(KindEnd_)
+          ! update location and schedule for message pass
+          call update_particle_location( &
+               iKindParticle = KindEnd_, &
+               iParticle     = iParticle,&
+               DoPass        = DoPass)
+          if(DoPass)&
+               iIndexEnd_II(Pass_, iParticle) = DoPassHalfStep_
+       end do
 
        ! remove particles that went outside of the domain
        if(Body1)then ! check if there is an inner body
@@ -538,11 +581,18 @@ contains
        end if
        call remove_undefined_particles(KindEnd_)
 
-       ! check if all field lines have been completed
-       if(is_complete()) RETURN
-
        ! Second stage of RK2 
        do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          ! check whether to perfrom second stage for this particle:
+          ! may be scheduled to be passed to other processor
+          if(any(iIndexEnd_II(Pass_,iParticle)==&
+               (/DoPassHalfStep_,DoPassFullStep_/)))&
+               CYCLE
+          
+          ! change Pass_ field for particle passed after first stage
+          if(iIndexEnd_II(Pass_,iParticle)==PassedHalfStep_)&
+               iIndexEnd_II(Pass_,iParticle) = NoPass_
+
           ! get the direction of the magnetic field in the middle
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
@@ -572,10 +622,15 @@ contains
                ( ROld + StateEnd_VI(Ds_, iParticle)*sum(DirNext_D*DirR_D) )
           ! update the direction of the previous step
           StateEnd_VI(DirX_:DirZ_,  iParticle) = DirNext_D
-       end do
 
-       ! Message pass: some particles may have moved to different procs
-       call message_pass_particles(KindEnd_)
+          ! update location and schedule for message pass
+          call update_particle_location( &
+               iKindParticle = KindEnd_, &
+               iParticle     = iParticle,&
+               DoPass        = DoPass)
+          if(DoPass)&
+               iIndexEnd_II(Pass_, iParticle) = DoPassFullStep_
+       end do
 
        ! remove particles that went outside of the domain
        if(Body1)then ! check if there is an inner body
@@ -583,13 +638,31 @@ contains
        end if
        call remove_undefined_particles(KindEnd_)
 
-       ! check if all field lines have been completed
-       if(is_complete()) RETURN
+       ! if all particles are scheduled for message pass -> perform it
+       DoPass = Particle_I(KindEnd_)%nParticle==0 .or. &
+            all(iIndexEnd_II(Pass_,1:Particle_I(KindEnd_)%nParticle)/=NoPass_)
+       if(DoPass)then
+          if(is_complete()) RETURN
+          call message_pass_particles(KindEnd_)
+          ! process the passed particles
+          do iParticle = 1, Particle_I(KindEnd_)%nParticle
+             select case(iIndexEnd_II(Pass_,iParticle))
+             case(DoPassHalfStep_)
+                iIndexEnd_II(Pass_,iParticle) = PassedHalfStep_
+             case(DoPassFullStep_)
+                iIndexEnd_II(Pass_,iParticle) = NoPass_
+             case default
+                call CON_stop(NameSub//": incorrect message pass ")
+             end select
+          end do
+       end if
 
        ! increase particle index & copy to regular
-       iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
-            iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
-            iDirTrace
+       where(iIndexEnd_II(Pass_,1:Particle_I(KindEnd_)%nParticle) == NoPass_)
+          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
+               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
+               iDirTrace
+       end where
 
        call copy_end_to_regular
 
@@ -696,6 +769,8 @@ contains
     integer:: iParticle
     !----------------------------------------------------------------------
     do iParticle = 1, Particle_I(KindEnd_)%nParticle
+       if(Particle_I(KindEnd_)%iIndex_II(Pass_,iParticle)/=NoPass_)&
+            CYCLE
        Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle+1
        Particle_I(KindReg_)%State_VI(iVarCopy_I, &
             Particle_I(KindReg_)%nParticle) =&
@@ -901,6 +976,8 @@ contains
     integer:: iParticle ! loop variable
     !----------------------------------------------------------------------
     do iParticle = 1, Particle_I(iKind)%nParticle
+       if(Particle_I(iKind)%iIndex_II(Pass_,iParticle) /= NoPass_) &
+            CYCLE
        if(sum(Particle_I(iKind)%State_VI(x_:z_,iParticle)**2) &
             > rBoundarySoft**2)&
             call mark_undefined(iKind, iParticle)

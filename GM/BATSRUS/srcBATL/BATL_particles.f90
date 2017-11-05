@@ -16,6 +16,7 @@ module BATL_particles
   public:: allocate_particles
   public:: set_pointer_to_particles
   public:: message_pass_particles
+  public:: update_particle_location
   public:: mark_undefined
   public:: remove_undefined_particles
   public:: get_particles
@@ -204,6 +205,44 @@ contains
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
   !===========================================================================
+  subroutine update_particle_location(iKindParticle,iParticle, iProcOut,DoPass)
+    use BATL_tree, ONLY: Unset_
+    use BATL_mpi,  ONLY: iProc
+
+    integer,           intent(in) :: iKindParticle
+    integer,           intent(in) :: iParticle
+    integer, optional, intent(out):: iProcOut
+    logical, optional, intent(out):: DoPass
+
+    real   :: Xyz_D(MaxDim)! particle coordinates
+    integer:: iBlock, iBlockFound, iProcFound
+    !-------------------------------------------------------------------------
+    Xyz_D = 0
+    if(IsCartesian)then
+       where(IsPeriodic_D(1:nDim))&
+            Particle_I(iKindParticle)%State_VI(1:nDim, iParticle) = &
+            CoordMin_D(1:nDIm) + &
+            modulo(Particle_I(iKindParticle) % &
+            State_VI(1:nDim, iParticle) - CoordMin_D(1:nDim), &
+            CoordMax_D(1:nDim) - CoordMin_D(1:nDim))
+    end if
+    Xyz_D(1:nDim)  = Particle_I(iKindParticle)%State_VI(1:nDim, iParticle)
+    iBlock         = Particle_I(iKindParticle)%iIndex_II(0, iParticle)
+    call check_interpolate(Xyz_D, iBlock, iProcFound, iBlockFound)
+         
+    if(present(iProcOut))iProcOut = iProcFound
+    if(present(DoPass))  DoPass = iProc /= iProcFound .and. .not.iProcFound < 0
+
+    if(iBlockFound == Unset_)then
+       ! particle is out of domain, don't pass it
+       call mark_undefined(iKindParticle, iParticle)
+    else
+       ! change the block 
+       Particle_I(iKindParticle)%iIndex_II(0, iParticle) = iBlockFound
+    end if
+
+  end subroutine update_particle_location
+  !===========================================================================
   subroutine message_pass_particles(iKindParticleIn)
     use BATL_tree, ONLY: Unset_
     use ModMpi
@@ -223,7 +262,7 @@ contains
     integer          :: nParticle      ! # of particles of this kind on proc
     integer          :: nParticleMax   ! max # of particles of this kind on PE
     ! number of particles to send to other procs
-    integer:: nSend_P(0:nProc-1), nSendThis, nSendAll
+    integer:: nSend_P(0:nProc-1)
     ! number of particles to recv by particle kind from other procs
     integer:: nRecv_P(0:nProc-1)
     ! offset for data to be sent/recv'd by procs in the BufferSend_I
@@ -258,6 +297,7 @@ contains
       integer:: iSendOffset  ! start position in BufferSend for particle data
       integer:: iRecvOffset  ! start position in BufferRecv for particle data
       integer:: nParticleStay! # of particles that stay on this proc
+      logical:: DoPass       ! whether need to pass current particle
       integer:: nParticleNew ! # of particles after message pass
       logical:: IsOut        ! particle is out of domain
       integer:: iTag, iError, iRequest, iRequest_I(2*nProc)
@@ -270,42 +310,16 @@ contains
 
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle
-         Xyz_D = 0
-         if(IsCartesian)then
-            where(IsPeriodic_D(1:nDim))State_VI(1:nDim, iParticle) = &
-                 CoordMin_D(1:nDIm) + &
-                 modulo(State_VI(1:nDim, iParticle) - CoordMin_D(1:nDim), &
-                 CoordMax_D(1:nDim) - CoordMin_D(1:nDim))
-         end if
-         Xyz_D(1:nDim)  = State_VI(1:nDim, iParticle)
-         iBlock = iIndex_II(0, iParticle)
-         call check_interpolate(Xyz_D, iBlock, iProcOut, iBlockOut)
-         
-         if(iProc == iProcOut .and. iBlock==iBlockOut)&
-              CYCLE
-
-         if(iBlockOut == Unset_)then ! particle is out of domain, don't pass it
-            call mark_undefined(iKindParticle, iParticle)
-            CYCLE
-         end if
-
-         ! change the block 
-         iIndex_II(0, iParticle) = iBlockOut
-         
-         if(iProcOut == iProc) CYCLE ! particle stays on this proc
+         call update_particle_location(iKindParticle,iParticle,iProcOut,DoPass)
+         if(.not.DoPass) CYCLE
 
          ! prepare this particle to be passed
          iProcTo_I(    iParticle) = iProcOut
          iSendOffset_I(iParticle) = nSend_P(iProcOut) * (nVar + nIndex + 1)
          nSend_P(      iProcOut)  = nSend_P(iProcOut) + 1
       end do
+
       if(nProc==1)RETURN
-      
-      ! check if need to pass any particles in the communicator
-      nSendThis = sum(nSend_P)
-      call MPI_Allreduce(&
-           nSendThis, nSendAll, 1, MPI_INTEGER, MPI_SUM, iComm, iError)
-      if(nSendAll==0)RETURN
 
       ! send size of messages
       iRequest = 0
