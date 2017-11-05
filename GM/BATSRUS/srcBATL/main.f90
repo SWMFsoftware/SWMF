@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-program BATL_test
+program BATL_main
 
   use BATL_amr,        ONLY: test_amr
   use BATL_mpi,        ONLY: init_mpi
@@ -32,7 +32,7 @@ program BATL_test
 
   call MPI_finalize(iError)
   
-end program BATL_test
+end program BATL_main
 !=============================================================================
 
 include 'external_routines.f90'
