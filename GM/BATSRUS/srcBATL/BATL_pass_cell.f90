@@ -482,7 +482,7 @@ contains
                          
                          ! Skip if the receiving block grid level is not 
                          ! in range. Time levels of the receiving block(s)
-                         ! will be checked later (if Time_B is present).
+                         ! will be checked later if UseTimeLevel is true.
                          if(present(iLevelMin) .and. .not.UseTimeLevel)then
                             if(iLevelSend - DiLevel < iLevelMin) CYCLE
                          end if
