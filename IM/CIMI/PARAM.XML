@@ -39,18 +39,33 @@ This command specifies the simulation time.
 <command name="SAVEPLOT">
 	<parameter name="DtSavePlot" type="real" />
 	<parameter name="DoSaveFlux" type="logical" default="F"/>
+	<parameter name="DoSaveDrifts" type="logical" default="F"/>
+	<parameter name="DoSavePSD" type="logical" default="F"/>
 	<parameter name="UseSeparatePlotFiles" type="logical" default="F"/>
 #SAVEPLOT
-2		DtSavePlot
+2.0		DtSavePlot
 F		DoSaveFlux
+F		DoSaveDrifts
+F		DoSavePSD
 F		UseSeparatePlotFiles
 
-Define frequency of plots. When DoSaveFlux is false, only integrated 
-values such as species pressure density etc is saved. When DoSaveFlux is 
-true, then another file containing information needed to make plots of 
-species flux in each energy bin is saved. Use SeparatePlotFiles defines if 
-each time is saved in the same file or if a separate file is used for each 
-time.
+DtSavePlot defines frequency of plots in seconds.
+
+Integrated values such as species pressure, density etc are saved into 
+CIMIiono.outs (ionospheric) and CIMIeq.outs (minimum B surface).
+
+When DoSaveFlux is true, then save the fluxes per energy bin into the *_SPECIES.fls files.
+
+When DoSaveDrifts is true, save the equatorial drift velocities indexed by 
+1st and 2nd adiabatic invariants into the 
+*_SPECIES.vp (poloidal velocity) and *_SPECIES.vl (longitudinal velocity) files.
+
+When DoSavePSD is true, then save the phase space density into the *_SPECIES.psd files.
+
+Use SeparatePlotFiles defines if each time is saved in the same file or 
+if a separate file is used for each time.
+
+No files are saved by default.
 </command>
 
 <command name="SAVELOG">
@@ -93,23 +108,27 @@ Determine whether or not to continue a previous run.
 </command>
 
 <command name="INITIALF2">
-	<parameter name="IsEmptyF2" type="logical" />
-	<parameter name="IsGMInitial" type="logical" />
-	<parameter name="IsDataInitial" type="logical" />
+	<parameter name="IsEmptyF2" type="logical" default="false"/>
+	<parameter name="IsGMInitial" type="logical" default="true"/>
+	<parameter name="IsDataInitial" type="logical" default="false"/>
+	<parameter name="IsRBSPData" type="logical" default="false"/>
 
 #INITIALF2
 F			IsEmptyF2
 T			IsGmInitial
 F			IsDataInitial
+F			IsRBSPData
 
-Determines whether to fill the fluxes in the simulation domain based on a 
-Maxwellian determined from MHD quantities (IsGmInitial=T) or to set the 
-initial fluxes in the simulation domain to zero (IsEmptyF2=T, not recommended) 
-or to set the initial fluxes in the simulation to values from AMPTE/CCE data 
-(IsDataInitial=T). The default is shown. 
+Set initial fluxes (F2).
+If IsEmptyF2 is true, set to zero (not recommended).
+If IsGmInitial is true, set to Maxwellian determined from MHD quantities.
+If IsDataInitial is true, use values from AMPTE/CCE data.
+If IsRBSPData, use RBSP (van Allen probe) data.
+
+Only one option can be true.
+
+Default values are shown.
 </command>
-
-
 
 <command name="END">
 
