@@ -130,7 +130,7 @@ contains
        call couple_rcm
     case('RAM')
        call couple_ram
-    case('CRC')
+    case('CRC', 'CIM')
        call couple_crcm
     case default
        call CON_stop(NameSub//': unknown IM version='//NameVersionIm)
