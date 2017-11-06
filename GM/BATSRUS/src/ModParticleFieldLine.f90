@@ -13,12 +13,14 @@ module ModParticleFieldLine
   use BATL_lib, ONLY: &
        iProc,&
        MaxDim, nDim, &
-       interpolate_grid_amr_gc, check_interpolate_amr_gc, &
+       check_interpolate_amr_gc, &
        Particle_I, Xyz_DGB, CellVolume_GB, &
        MaxBlock, nI, nJ, nK, nBlock, &
        allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
        mark_undefined, check_particle_location, get_particles
+  use ModBatlInterface, ONLY: interpolate_grid_amr_gc
+  use ModGeometry, ONLY: true_cell
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
@@ -485,6 +487,9 @@ contains
     ! cosine of angle between direction of field and radial direction
     real:: CosBR
 
+    ! whether particle's location isn't covered by true cells
+    logical:: IsBody
+
     ! whether to schedule a particle for message pass
     logical:: DoPass
     
@@ -521,11 +526,20 @@ contains
           ! get the direction of the magnetic field at original location and
           ! gradient of cosine of angle between field and radial direction
           call get_b_dir(&
-               Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-               iBlock=iIndexEnd_II(0,iParticle),&
-               Dir_D = DirBCurr_D,&
-               Grad_D= StateEnd_VI(GradX_:GradZ_,iParticle),&
-               StepSize= StateEnd_VI(Ds_,iParticle))! find the step size
+               Xyz_D   = StateEnd_VI(x_:z_, iParticle),&
+               iBlock  =iIndexEnd_II(0,iParticle),&
+               Dir_D   = DirBCurr_D,&
+               Grad_D  = StateEnd_VI(GradX_:GradZ_,iParticle),&
+               StepSize= StateEnd_VI(Ds_,iParticle),&
+               IsBody  = IsBody)
+
+          ! particle's location isn't covered by mostly true cells, 
+          ! i.e. not well outside central body
+          if(IsBody)then
+             call mark_undefined(KindEnd_,iParticle)
+             CYCLE
+          end if
+
           !\
           ! Limit the interpolated time step
           StateEnd_VI(Ds_, iParticle) = &
@@ -581,7 +595,16 @@ contains
           call get_b_dir(&
                Xyz_D = StateEnd_VI(x_:z_, iParticle),&
                iBlock=iIndexEnd_II(0,iParticle),&
-               Dir_D = DirBNext_D)
+               Dir_D = DirBNext_D,&
+               IsBody  = IsBody)
+
+          ! particle's location isn't covered by mostly true cells, 
+          ! i.e. not well outside central body
+          if(IsBody)then
+             call mark_undefined(KindEnd_,iParticle)
+             CYCLE
+          end if
+
           ! direction at the 1st stage 
           DirNext_D = DirBNext_D *&
                iDirTrace * iIndexEnd_II(Alignment_, iParticle)
@@ -765,7 +788,7 @@ contains
     end do
   end subroutine copy_end_to_regular
   !================================
-  subroutine get_b_dir(Xyz_D, iBlock, Dir_D, Grad_D, StepSize)
+  subroutine get_b_dir(Xyz_D, iBlock, Dir_D, Grad_D, StepSize, IsBody)
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: get_b0
 
@@ -775,13 +798,16 @@ contains
     real,    intent(in) :: Xyz_D(MaxDim)
     integer, intent(in) :: iBlock
     real,    intent(out):: Dir_D(MaxDim)
-    real, optional, intent(out):: Grad_D(MaxDim)
-    real, optional, intent(out):: StepSize
+    real,    optional, intent(out):: Grad_D(MaxDim)
+    real,    optional, intent(out):: StepSize
+    logical, optional, intent(out):: IsBody
+
     ! magnetic field
     real   :: B_D(MaxDim) = 0.0
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim)
+    real   :: Weight_I(2**nDim), WeightTotal
+    logical:: IsBodyLocal
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     character(len=200):: StringError
@@ -791,7 +817,10 @@ contains
     ! get potential part of the magnetic field at the current location
     if(UseB0)call get_b0(Xyz_D, B_D)
     ! get the remaining part of the magnetic field
-    call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+    call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
+         true_cell(:,:,:,iBlock), IsBodyLocal)
+    if(present(IsBody)) IsBody = IsBodyLocal
+
     ! interpolate magnetic field value
     do iCell = 1, nCell
        i_D = 1
@@ -799,6 +828,8 @@ contains
        B_D = B_D + &
             State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
+    WeightTotal = sum(Weight_I(1:nCell))
+    B_D = B_D / WeightTotal
     if(all(B_D==0))then
        write(StringError,'(a,es15.6,a,es15.6,a,es15.6)') &
             NameThisComp//':'//NameSub//&
@@ -912,14 +943,15 @@ contains
 
       ! variables for AMR interpolation
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
-      real   :: Weight_I(2**nDim)
+      real   :: Weight_I(2**nDim), WeightTotal
       integer:: iCell ! loop variable
       integer:: i_D(MaxDim)
       !------------------------------------
       ! reset the interpoalted values
       V_D = 0!; Rho = 0; M_D = 0
       ! get the velocity
-      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
+           true_cell(:,:,:,iBlock))
       ! interpolate the local density and momentum
       do iCell = 1, nCell
          i_D = 1
@@ -932,6 +964,8 @@ contains
               State_VGB(Rho_,         i_D(1),i_D(2),i_D(3),iBlock) * &
               Weight_I(iCell)
       end do
+      WeightTotal = sum(Weight_I(1:nCell))
+      if(WeightTotal > 0.0) V_D = V_D / WeightTotal
     end subroutine get_v
   end subroutine advect_particle_line
 

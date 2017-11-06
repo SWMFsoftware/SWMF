@@ -3,6 +3,8 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBatlInterface
 
+  use BATL_lib, ONLY: BATL_interpolate => interpolate_grid_amr_gc
+
   implicit none
 
 contains
@@ -358,5 +360,67 @@ contains
     end if
 
   end subroutine calc_other_vars
+
+  !============================================================================
+  
+  subroutine interpolate_grid_amr_gc(XyzIn_D, iBlock, &
+       nCell, iCell_II, Weight_I, IsTrueCell_G, IsBody)
+    use BATL_lib, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    ! Interpolation is performed using cells (including ghost) of single block,
+    ! its index, iBlock, is provided at the call;
+    !--------------------------------------------------------------------------
+    ! NOTE: it is assumed that iBlock is appropriate for interpolation
+    ! that utilizes only 1 layer of ghost cells, i.e. the call
+    !  call check_interpolate_amr_gc(XyzIn_D,iBlock,iPeOut,iBlockOut)!BATL_grid
+    ! would result in iBlockOut==iBlock
+    !--------------------------------------------------------------------------
+    ! difference from BATL_grid version: if a cell in the stencil is not
+    ! a true cell (see optional arguments) -> it's removed from the stencil
+    real,    intent(in) :: XyzIn_D(MaxDim)
+    integer, intent(in) :: iBlock
+    integer, intent(out):: nCell
+    integer, intent(out):: iCell_II(0:nDim,2**nDim)
+    real,    intent(out):: Weight_I(2**nDim)
+
+    logical, optional,intent(in) :: IsTrueCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    logical, optional,intent(out):: IsBody
+
+    integer:: i_D(MaxDim), iCell ! loop variables
+    integer:: nCellNew
+    real:: WeightTotal
+    
+    character(len=*), parameter:: NameSub = &
+         'ModBatlInterface:interpolate_grid_amr_gc'
+    !--------------------------------------------------------------------------
+    ! call interpolation routine from BATL_grid
+    call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
+    
+    ! if appropriate information is provided during the call:
+    ! check whether all cells in the stencil are true cells
+    if(present(IsTrueCell_G))then
+       ! number of cells in the stencil may change, reset it
+       nCellNew = 0
+       ! reset total weight as well
+       WeightTotal = 0.0
+       do iCell = 1, nCell
+          i_D = 1
+          i_D = iCell_II(1:nDim, iCell)
+          if(IsTrueCell_G(i_D(1),i_D(2),i_D(3)))then
+             nCellNew = nCellNew + 1
+             WeightTotal = WeightTotal + Weight_I(iCell)
+             ! rearrange output if necessary
+             if(nCellNew < iCell)then
+                iCell_II(:,nCellNew) = iCell_II(:,iCell)
+                Weight_I(  nCellNew) = Weight_I(  iCell)
+             end if
+          end if
+       end do
+       nCell = nCellNew
+       if(present(IsBody)) IsBody = WeightTotal < 0.5
+    else
+       if(present(IsBody)) IsBody = .false.
+    end if
+
+  end subroutine interpolate_grid_amr_gc
 
 end module ModBatlInterface
