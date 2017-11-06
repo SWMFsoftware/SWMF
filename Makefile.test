@@ -31,6 +31,7 @@ test_help:
 	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
 	@echo "    test1                      (run GM-IE-PW test)"
 	@echo "    test2                      (run multifluid GM-IM coupling test)"
+	@echo "    test3                      (run GM-IE-CIMI test)"
 	@echo "    test4                      (run GM-IE-HEIDI test)"
 	@echo "    test5                      (run EE-SC test)"
 	@echo "    test6                      (run GM-IE-CRCM test)"
@@ -59,6 +60,7 @@ test:
 	-@(${MAKE} test_swpc_multiion)
 	-@(${MAKE} test_swpc_multispecies)
 	-@(${MAKE} test1)
+	-@(${MAKE} test3)
 	-@(${MAKE} test4)
 	-@(${MAKE} test5)
 	-@(${MAKE} test6)
@@ -752,6 +754,76 @@ test_swpc_multispecies_check:
 		>> test_swpc_multispecies_ie.diff)
 	ls -l test_swpc_multispecies_*.diff
 
+
+### Test3: GM+IE+IM=CIMI ###
+
+test3:
+	@echo "test3_compile..." > test3_gm.diff
+	@echo "test3_compile..." > test3_ie.diff
+	@echo "test3_compile..." > test3_im_cimi.diff
+	${MAKE} test3_compile
+	@echo "test3_rundir..." >> test3_gm.diff
+	@echo "test3_rundir..." >> test3_ie.diff
+	@echo "test3_rundir..." >> test3_im_cimi.diff
+	${MAKE} test3_rundir
+	@echo "test3_run..." >> test3_gm.diff
+	@echo "test3_run..." >> test3_ie.diff
+	@echo "test3_run..." >> test3_im_cimi.diff
+	${MAKE} test3_run
+	@echo "test3_restart..." >> test3_gm.diff
+	@echo "test3_restart..." >> test3_ie.diff
+	@echo "test3_restart..." >> test3_im_cimi.diff
+	${MAKE} test3_restart
+	@echo "test3_check..." >> test3_gm.diff
+	@echo "test3_check..." >> test3_ie.diff
+	@echo "test3_check..." >> test3_im_cimi.diff
+	${MAKE} test3_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test3_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,IM:EarthHO
+	${MAKE} SWMF
+	make PIDL
+
+test3_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.GMIEIMCIMI ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMIEIMCIMI ${TESTDIR}/LAYOUT.in
+
+test3_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl
+
+test3_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIMCIMI PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
+
+# check last snapshot from CIMI output
+test3_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/GM/log_n000001.log \
+		output/test3/GM.log \
+		> test3_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IE/IE*.log \
+		output/test3/IE.log \
+		> test3_ie.diff)
+	tail -2504 ${TESTDIR}/RESULTS/IM/CIMIeq.outs \
+		> ${TESTDIR}/RESULTS/IM/CIMIeq.out
+	gunzip -c output/test3/IM_eq.out.gz \
+		> ${TESTDIR}/RESULTS/IM/CIMIeq_ref.out
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/RESULTS/IM/CIMIeq.out \
+		${TESTDIR}/RESULTS/IM/CIMIeq_ref.out \
+		> test3_im_cimi.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/IM/CIMI.log \
+		output/test3/IM.log \
+		> test3_im_cimi_log.diff)
+	ls -l test3_*.diff
 
 ### Test4: GM+IE+HEIDI ###############
 
