@@ -16,7 +16,7 @@ module BATL_particles
   public:: allocate_particles
   public:: set_pointer_to_particles
   public:: message_pass_particles
-  public:: update_particle_location
+  public:: check_particle_location
   public:: mark_undefined
   public:: remove_undefined_particles
   public:: get_particles
@@ -205,7 +205,7 @@ contains
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
   !===========================================================================
-  subroutine update_particle_location(iKindParticle,iParticle, iProcOut,DoPass)
+  subroutine check_particle_location(iKindParticle,iParticle, iProcOut,DoPass)
     use BATL_tree, ONLY: Unset_
     use BATL_mpi,  ONLY: iProc
 
@@ -214,34 +214,33 @@ contains
     integer, optional, intent(out):: iProcOut
     logical, optional, intent(out):: DoPass
 
+    logical :: IsOut
     real   :: Xyz_D(MaxDim)! particle coordinates
     integer:: iBlock, iBlockFound, iProcFound
     !-------------------------------------------------------------------------
     Xyz_D = 0
-    if(IsCartesian)then
-       where(IsPeriodic_D(1:nDim))&
-            Particle_I(iKindParticle)%State_VI(1:nDim, iParticle) = &
-            CoordMin_D(1:nDIm) + &
-            modulo(Particle_I(iKindParticle) % &
-            State_VI(1:nDim, iParticle) - CoordMin_D(1:nDim), &
-            CoordMax_D(1:nDim) - CoordMin_D(1:nDim))
-    end if
     Xyz_D(1:nDim)  = Particle_I(iKindParticle)%State_VI(1:nDim, iParticle)
     iBlock         = Particle_I(iKindParticle)%iIndex_II(0, iParticle)
     call check_interpolate(Xyz_D, iBlock, iProcFound, iBlockFound)
-         
+              
     if(present(iProcOut))iProcOut = iProcFound
-    if(present(DoPass))  DoPass = iProc /= iProcFound .and. .not.iProcFound < 0
-
-    if(iBlockFound == Unset_)then
+    IsOut = iBlockFound == Unset_
+    if(IsOut)then
        ! particle is out of domain, don't pass it
        call mark_undefined(iKindParticle, iParticle)
+       if(present(DoPass))  DoPass = .false.
     else
+       !\
+       ! For periodic boundary conditions the coordinates may be 
+       ! changed by check_interpolate routine
+       !/
+       Particle_I(iKindParticle)%State_VI(1:nDim, iParticle) &
+            = Xyz_D(1:nDim)
        ! change the block 
        Particle_I(iKindParticle)%iIndex_II(0, iParticle) = iBlockFound
+       if(present(DoPass))  DoPass = iProc /= iProcFound
     end if
-
-  end subroutine update_particle_location
+  end subroutine check_particle_location
   !===========================================================================
   subroutine message_pass_particles(iKindParticleIn)
     use BATL_tree, ONLY: Unset_
@@ -310,7 +309,7 @@ contains
 
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle
-         call update_particle_location(iKindParticle,iParticle,iProcOut,DoPass)
+         call check_particle_location(iKindParticle,iParticle,iProcOut,DoPass)
          if(.not.DoPass) CYCLE
 
          ! prepare this particle to be passed
