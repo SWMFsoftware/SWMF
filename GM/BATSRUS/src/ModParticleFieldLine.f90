@@ -18,7 +18,7 @@ module ModParticleFieldLine
        MaxBlock, nI, nJ, nK, nBlock, &
        allocate_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
-       mark_undefined, update_particle_location, get_particles
+       mark_undefined, check_particle_location, get_particles
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
@@ -133,7 +133,16 @@ module ModParticleFieldLine
   ! initialization related info
   integer:: nLineInit
   real, allocatable:: XyzLineInit_DI(:,:)
+  !\
+  ! Shared variavles
+  !/
+  !\
+  ! direction of tracing: -1 -> backward, +1 -> forward
+  integer:: iDirTrace
 
+  ! parameters of end particles
+  real,    pointer:: StateEnd_VI(:,:)
+  integer, pointer:: iIndexEnd_II(:,:)
 contains
   !==========================================================================
   integer function n_particle_reg_max()
@@ -229,6 +238,9 @@ contains
     Particle_I(KindReg_)%nIndex = nIndexParticleReg
     Particle_I(KindEnd_)%nIndex = nIndexParticleEnd
     call allocate_particles
+    ! set pointers to parameters of end particles
+    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
+    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
     if(nLineInit > 0)&
          ! extract initial field lines
          call extract_particle_line(nLineInit, XyzLineInit_DI)
@@ -275,24 +287,16 @@ contains
     integer :: nLineAllProc ! number of new field lines initialized on all PEs
     integer :: nParticleOld ! number of already existing regular particles
 
-    ! direction of tracing: -1 -> backward, +1 -> forward
-    integer:: iDirTrace
-
     ! mode of tracing (see description below)
     integer:: iTraceMode
-
-    ! parameters of end particles
-    real,    pointer:: StateEnd_VI(:,:)
-    integer, pointer:: iIndexEnd_II(:,:)
-    ! parameters of regular particles
-    real,    pointer:: StateReg_VI(:,:)
-    integer, pointer:: iIndexReg_II(:,:)
 
     ! Cosine between direction of the field and radial direction: 
     ! for correcting the line's direction to prevent it from closing
     real, allocatable:: CosBR_CB(:,:,:,:)
     character(len=*), parameter:: NameSub='extract_particle_line'
-    !----------------------------------------------------------------------
+    integer, pointer :: iIndexReg_II(:,:)
+    !-----------------------------
+    iIndexReg_II=> Particle_I(KindReg_)%iIndex_II
     ! initialize field lines
     call  get_particles(&
          iKindParticle      = KindEnd_,          &
@@ -313,15 +317,6 @@ contains
          ': Limit for number of particle field lines exceeded')
 
     call copy_end_to_regular
-
-    ! set pointers to parameters of end particles
-    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
-    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
-
-    ! set pointers to parameters of regular particles
-    StateReg_VI  => Particle_I(KindReg_)%State_VI
-    iIndexReg_II => Particle_I(KindReg_)%iIndex_II
-
     ! allocate containers for cosine of angle between B and radial direction
     allocate(CosBR_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
     call compute_cosbr
@@ -354,7 +349,7 @@ contains
        ! fix alignment of particle indexing with B field direction
        call get_alignment()
 
-       call trace_particle_line(iDirTrace)
+       call trace_particle_line()
 
        ! if just finished backward tracing and need to trace in both dirs
        ! => return to initial particles
@@ -363,14 +358,13 @@ contains
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,
           ! i.e. occupy positions from (nParticleOld+1)
-          StateEnd_VI(x_:z_, 1:nLineThisProc) = &
-               StateReg_VI(x_:z_, nParticleOld+1:nParticleOld+nLineThisProc)
-          iIndexEnd_II(0:id_,1:nLineThisProc) = &
-               iIndexReg_II(0:id_,nParticleOld+1:nParticleOld+nLineThisProc)
+          StateEnd_VI(x_:z_, 1:nLineThisProc) = Particle_I(KindReg_&
+               )%State_VI(x_:z_, nParticleOld+1:nParticleOld+nLineThisProc)
+          iIndexEnd_II(0:id_,1:nLineThisProc) = iIndexReg_II(&
+               0:id_,nParticleOld+1:nParticleOld+nLineThisProc)
           Particle_I(KindEnd_)%nParticle = nLineThisProc
        end if
     end do
-
     ! Offset in id_
     call offset_id(nFieldLine - nLineAllProc + 1, nFieldLine)
   contains
@@ -405,8 +399,8 @@ contains
       use BATL_mpi, ONLY: iComm, nProc
       integer, intent(in) :: iLineStart, iLineEnd
       integer:: iParticle, nParticle, iLine, iError
-      integer:: iOffsetLocal_I(1:nFieldLineMax), iOffset_I(1:nFieldLineMax)
-      !-----------------------------
+      integer, dimension(1:nFieldLineMax):: iOffsetLocal_I, iOffset_I
+      !------------
       iOffsetLocal_I = 0; iOffset_I = 0  
 
       ! set a pointer to parameters of regular particles
@@ -474,13 +468,11 @@ contains
     end subroutine get_alignment
     !=================
   end subroutine extract_particle_line
-  !=======================================================================
-  subroutine trace_particle_line(iDirTrace)
+  !=========================================================================
+  subroutine trace_particle_line()
     ! the subroutine is the tracing loop;
     ! tracing starts at KindEnd_ particles and proceeds in a given direction
-    !------------------------------------------------------------------------
-    integer, intent(in):: iDirTrace
-
+    !-----------------------------------------------------------------------
     integer :: iParticle     ! loop variable
 
     ! direction of the magnetic field
@@ -496,16 +488,8 @@ contains
     ! whether to schedule a particle for message pass
     logical:: DoPass
     
-    ! parameters of end particles
-    real,    pointer:: StateEnd_VI(:,:)
-    integer, pointer:: iIndexEnd_II(:,:)
-
     character(len=*),parameter:: NameSub = "trace_particle_line"
     !------------------------------------------------------------------------
-    ! set pointers to parameters of end particles
-    StateEnd_VI  => Particle_I(KindEnd_)%State_VI
-    iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
-
     ! Initialize the radial direction that corresponds 
     ! to the previous step
     do iParticle = 1, Particle_I(KindEnd_)%nParticle
@@ -567,7 +551,7 @@ contains
                0.50*StateEnd_VI(Ds_, iParticle) *  DirCurr_D
 
           ! update location and schedule for message pass
-          call update_particle_location( &
+          call check_particle_location( &
                iKindParticle = KindEnd_, &
                iParticle     = iParticle,&
                DoPass        = DoPass)
@@ -624,7 +608,7 @@ contains
           StateEnd_VI(DirX_:DirZ_,  iParticle) = DirNext_D
 
           ! update location and schedule for message pass
-          call update_particle_location( &
+          call check_particle_location( &
                iKindParticle = KindEnd_, &
                iParticle     = iParticle,&
                DoPass        = DoPass)
