@@ -1,0 +1,249 @@
+
+\chapter{Introduction}
+
+This document descibes the installation, configuration, execution and 
+usage of the Comprehensive Inner Magnetosphere Ionosphere (CIMI) model.
+
+\section{Acknowledgments}
+
+
+\section{The CIMI model in a Few Paragraphs}
+
+
+\section{System Requirements}
+
+In order to install and run CIMI the following minimum system
+requirements apply.
+
+\begin{itemize}
+\item The CIMI model runs only under the UNIX/Linux operating systems.  This now
+  includes Macintosh system 10.x because it is based on BSD UNIX.  The
+  CIMI model does not run under any Microsoft Windows operating system.
+\item A FORTRAN 90 or greater compiler must be installed.
+\item The Perl interpreter must be installed.
+\item A version of the Message Passing Interface (MPI) library must be
+  installed.
+\item Small tests such as single  field-line simulations can be done on a 
+  single processor
+\item Very large runs require many more processors.
+\item In order to generate the documentation you must have LaTex installed on
+your system.  The PDF generation requires the {\tt dvips} and {\tt ps2pdf}
+utilities. 
+
+\end{itemize}
+
+
+In addition to the above requirements, the CIMI output is designed to
+be visualized using IDL.  You may be able to
+visualize the output with other packages, but formats and scripts have
+been designed for only this visualization software.
+
+
+%-----------------------------------------------------------------------
+% Chapter 2
+%-----------------------------------------------------------------------
+
+\chapter{Quick Start}
+
+\section{A Brief Description of the CIMI Distribution}
+
+The top level directory contains the following subdirectories:
+\begin{itemize}
+\item {\tt src}       - Source code of the main code
+\item {\tt srcSAMI3}  - Source code of SAMI3 model
+\item {\tt Scripts}   - shell and Perl scripts
+\item {\tt bin}       - location of executable
+\item {\tt doc}       - the documentation directory 
+\item {\tt share}     - shared scripts and source code
+\item {\tt util}      - general utilities such as TIMING and NOMPI
+\end{itemize}
+and the following files
+\begin{itemize}
+\item {\tt README}        - a short instruction on installation and usage
+\item {\tt Makefile}      - the main makefile
+\item {\tt Config.pl}     - Perl script for (un)installation and configuration
+\end{itemize}
+
+\section{General Hints}
+
+\subsubsection{Getting help with scripts and the Makefile}
+
+Most of the Perl and shell scripts that are distributed with the PWOM
+provide help which can be accessed as follows using the {\tt -h} flag.
+For example, 
+\begin{verbatim}
+  Config.pl -h
+\end{verbatim}
+will provide a detailed listing of the options and capabilities of the
+{\tt Config.pl} script.  In addition, you can find all the possible
+targets  that can be built by typing
+\begin{verbatim}
+make help
+\end{verbatim}
+
+\subsubsection{Input commands: PARAM.XML}
+A very useful set of files to become familiar with are the {\tt PARAM.XML}
+files.
+
+This file contains a complete list of all input commands for the
+component as well as the allowed ranges for each of the input parameters.
+Although the XML format makes the files a little hard to read, they are
+extremely useful.  A typical usage is to cut and paste commands out of the
+PARAM.XML file into the PARAM.in file for a run.
+
+
+\section{Installing the Code}
+
+
+The CIMI model needs to know what architecture you are running the code on
+and what FORTRAN compiler will be used.  For most platforms and compilers,
+it can figure this out all by itself. To install PWOM run the command:
+\begin{verbatim}
+  Config.pl -install
+\end{verbatim}
+in the main directory. This creates {\tt Makefile.def} with
+the correct absolute path to the base directory and {\tt Makefile.conf}
+which contains the operating system and compiler specific part of
+the Makefile. If the compiler is not the default one for a given
+platform (e.g. not the NAG f95 compiler for a Linux platform) then
+the compiler must be specified explicitly with the {\tt -compiler}
+flag. If the MPI header file is not the default one, it can be
+specified with the {\tt -mpi} flag. For example on a Mac machine
+one can select the g95 compiler with the Intel version of the 
+MPI library using
+\begin{verbatim}
+  Config.pl -install -compiler=g95 -mpi=Intel
+\end{verbatim}
+To uninstall CIMI type
+\begin{verbatim}
+  Config.pl -uninstall
+\end{verbatim}
+If the uninstallation fails (this can happen if some makefiles are missing)
+do reinstallation with
+\begin{verbatim}
+  Config.pl -install
+\end{verbatim}
+and then try uninstalling the code again.
+To get a complete description of the {\tt Config.pl}  script type
+\begin{verbatim}
+  Config.pl -h
+\end{verbatim}
+
+\section{Creating Documentation}
+
+The documentation for PWOM can be generated from the distribution by
+the command
+\begin{verbatim}
+  make PDF
+\end{verbatim}
+which creates the user manual
+\begin{verbatim}
+  doc/PWOM.pdf
+\end{verbatim}
+In order for this to work you must have
+LaTex installed on your system (and dvips and ps2pdf).  
+
+To clean the intermediate files type
+\begin{verbatim}
+  cd doc/Tex
+  make clean
+\end{verbatim}
+To remove all the created documentation type
+\begin{verbatim}
+  cd doc/Tex
+  make cleanall
+\end{verbatim}
+
+\section{Building and Running an Executable}
+
+
+Compilation flags, such as the precision and optimization 
+level are stored in {\tt Makefile.conf}. This file is created on
+installation of CIMI and has defaults which are appropriate for
+your system architecture.  The precision of reals
+can be changed to single precision (for example) by typing
+\begin{verbatim}
+  Config.pl -single
+\end{verbatim}
+while the compiler flags can be modified with
+\begin{verbatim}
+  Config.pl -debug -O0
+\end{verbatim}
+to debug the code with 0 optimization level, and
+\begin{verbatim}
+  Config.pl -nodebug -O4
+\end{verbatim}
+to run the code at maximum optimization level and without the debugging flags.
+
+To build the executable {\bf bin/CIMI.exe}, type:
+\begin{verbatim}
+  make
+\end{verbatim} 
+Depending on the configuration, the compiler settings and the machine 
+that you are compiling on, this can take from 1 to up to 5 minutes.  
+
+The {\tt CIMI.exe} executable should be run in a sub-directory, since a 
+large number of files are created in each run.  
+To create this directory use thecommand:
+\begin{verbatim}
+  make rundir
+\end{verbatim} 
+This command creates a directory called {\tt run}.  You can either
+leave this directory as named, or {\tt mv} it to a different name.  It
+is best to leave it in the same CIMI directory, since
+keeping track of the code version associated with each run is quite
+important.  The {\tt run} directory will contain links to the codes
+which were created in the previous step as well as subdirectories
+where input and output will reside.
+
+Here we assume that the {\tt run} directory is still called {\tt
+run}:
+\begin{verbatim}
+  cd run
+\end{verbatim}
+In order to run CIMI you must have the input files: 
+PARAM.in. The PARAM.in 
+file contains the detailed commands for controlling what you want the
+code to do during the run.  The default PARAM.in 
+file in the run directory  suitable to perform a simple test.
+
+To run CIMI interactively on four processors:
+\begin{verbatim}
+cd run
+mpirun -np 4 CIMI.exe
+\end{verbatim}
+
+To recompile the executable with different compiler settings you have
+to use the command
+\begin{verbatim}
+make clean
+\end{verbatim}
+before recompiling the executables. It is possible to recompile
+only a component or just one subdirectory if the {\tt make clean}
+command is issued in the appropriate directory.
+
+\section{Restarting a Run}
+
+There are several reasons for restarting a run. A run may fail
+due to a run time error, due to hardware failure, due to 
+software failure (e.g. the machine crashes) or because the
+queue limits are exceeded. In such a case the run can be continued from
+the last saved state of CIMI. 
+
+The restart files are saved at the frequency determined in the PARAM.in file.
+Normally the restart files are saved into the IM/restartOUT directory. 
+The files in that directory need only be copied into the PW/restartIN 
+directory inorder to prepare a restarted run.
+
+\section{What next?}
+
+Hopefully this section has guided you through installing CIMI and
+given you a basic knowledge of how to run it.  So what next?
+
+We suggest that you read all of chapter \ref{chapter:basics}, which
+outlines the basic features of CIMI as well as some things you
+really must know in order to use the code.  Once you have done this you
+are ready to experiment.  Chapter \ref{chapter:examples} gives several 
+examples which are intended to make you familiar with the use of CIMI.  We suggest that you try them!
+
+%\end{document}

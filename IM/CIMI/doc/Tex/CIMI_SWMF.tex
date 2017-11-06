@@ -1,0 +1,79 @@
+The ring current can have a significant impact on the solution in the 
+magnetosphere. It controls the energy density in the inner magnetosphere and
+is important for the overall solution. 
+Because of the importance of including 
+such connections in our model, we now turn to the issue of how to use the CIMI
+model as a component of the SWMF. 
+
+\section{Configuring the SWMF to use CIMI}
+Configuring the SWMF to use the CIMI is straight forward. Simply type:
+\begin{verbatim}
+  Config.pl -v=IM/CIMI
+\end{verbatim}
+Doing so tells the SWMF that the CIMI will represent the IM component of the 
+SWMF. This configuration allows the user to execute the CIMI model through the 
+SWMF without any other components.
+
+Should the user wish to include, say, a global magnetosphere or the 
+ionosphere electrodynamics the configuration is simply:
+\begin{verbatim}
+  Config.pl -v=IM/CIMI,GM/BATSRUS,IE/Ridley_serial
+\end{verbatim}
+Coupling with these other components is described in greater detail in the 
+next section.
+
+\section{Coupling the IM component with other components}
+The CIMI model represents the IM component of the SWMF. It can be directly coupled 
+to the Global Magnetosphere (GM) and Ionosphere Electrodynamics (IE) components 
+by using the
+\begin{verbatim}
+  #COUPLE1
+\end{verbatim}
+ or
+\begin{verbatim}
+  #COUPLE2
+\end{verbatim}
+commands (See the SWMF manual for details). The IE component is coupled 
+in a unidirectional manner with the IM component, by which the polar cap 
+potential is passed to IM but no information 
+flows in the opposite direction. (actually there is a feedback of currents provided, but it is not recommended). 
+
+The IM-GM coupling is more complicated. The GM component can be coupled 
+unidirectionally, with the IM component setting the densities and temperature at 
+the IM outer boundary, or it can be set bidirectionally where the 
+magnetospheric pressure and density is set from the IM model. 
+
+There are several options for how the coupling between GM and IM can proceed. 
+They all, however, start with the same command in the PARAM file:
+\begin{verbatim}
+  #COUPLE2
+  GM            COMP1
+  IM            COMP2
+  10.0          DTcoupling
+\end{verbatim}
+The default method for coupling the IM and GM components is ...
+In the case where composition is important, the GM component can be configured to 
+use the multi-species equations:
+\begin{verbatim}
+  Config.pl -o=GM:e=MhdPw
+\end{verbatim}
+In this case the individual species densities are preserved, but the 
+velocities are combined into a single fluid velocity. This is because the 
+multi-species MHD representation of BATS-R-US solves separate continuity 
+equations, but a single momentum and energy equation. 
+
+The user also has the option to preserve velocity information as well as 
+density information when putting the PW output into GM. This requires the 
+user to configure the GM component to solve the full multi-fluid 
+equations:
+\begin{verbatim}
+  Config.pl -o=GM:e=MultiIon
+\end{verbatim}
+In this case the individual species densities and velocities are conserved, as 
+BATS-R-US solves a full continuity, momentum, and energy equation for each 
+species.
+
+The ansiotropic coupling can be activiated by using the following configuation
+\begin{verbatim}
+  Config.pl -o=GM:e=
+\end{verbatim}

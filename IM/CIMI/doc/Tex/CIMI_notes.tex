@@ -1,0 +1,38 @@
+\begin{document}
+
+\textbf{Transformation of Fokker-Planck Equation from
+(\emph{E,}}\(\mathbf{\ }\mathbf{\alpha}_{\mathbf{0}}\)\textbf{) to
+(\emph{V}, \emph{K})}
+
+\textbf{1. Diffusion Equation in \emph{V} and \emph{K}}
+
+\[\frac{\partial f}{\partial t} = \frac{1}{\hat{G}}\frac{\partial}{\partial V}\hat{G}\left\lbrack D_{\text{VV}}\frac{\partial f}{\partial V} + D_{\text{VK}}\frac{\partial f}{\partial K} \right\rbrack + \frac{1}{\hat{G}}\frac{\partial}{\partial K}\hat{G}\left\lbrack D_{\text{KV}}\frac{\partial f}{\partial V} + D_{\text{KK}}\frac{\partial f}{\partial K} \right\rbrack\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (1)\]
+
+where
+
+\[V = M\left( K + a \right)^{b}\]
+
+\[\hat{G} = \left( K + a \right)^{- 3b/2}\sqrt{V}\]
+
+\[D_{\text{VV}} = \left( K + a \right)^{2b}\operatorname{}\alpha_{0}\left\lbrack \left( \frac{E(E + E_{0})\sin\alpha_{0}}{E_{0}B_{0}} \right)^{2}\frac{D_{\text{EE}}}{E^{2}} + \left( \frac{E\left( E + 2E_{0} \right)\cos\alpha_{0}}{E_{0}B_{0}} \right)^{2}D_{\alpha_{0}\alpha_{0}} + 2\left( \frac{E + E_{0}}{E_{0}B_{0}} \right)\left( \frac{E^{2}\left( E + 2E_{0} \right)\sin\alpha_{0}\cos\alpha_{0}}{E_{0}B_{0}} \right)\frac{D_{\alpha_{0}E}}{E} \right\rbrack\]
+
+\[D_{\text{VK}} = {- \left( K + a \right)}^{b}\ 2R_{0}T\left( \alpha_{0} \right)\left\lbrack \left( \frac{E\left( E + 2E_{0} \right)}{E_{0}\sqrt{B_{0}}} \right)\left( \frac{\operatorname{}\alpha_{0}}{\sin\alpha_{0}}\  \right)D_{\alpha_{0}\alpha_{0}} + \ \left( \frac{E(E + E_{0})}{E_{0}\sqrt{B_{0}}} \right)\cos\alpha_{0}\frac{D_{\alpha_{0}E}}{E} \right\rbrack\]
+
+\[D_{\text{KK}} = B_{0}\left( \frac{\cos\alpha_{0}}{\operatorname{}\alpha_{0}}\ 2R_{0}T\left( \alpha_{0} \right) \right)^{2}D_{\alpha_{0}\alpha_{0}}\]
+
+where
+
+\emph{m} = rest mass
+
+\[T\left( \alpha_{0} \right) = \frac{1}{2R_{0}}\int_{s_{m}}^{s_{m'}}\frac{\text{ds}}{\cos\mathrm{\alpha}}\]
+
+\textbf{2. Diffusion Equation in ln\emph{V} and ln\emph{K}}
+
+Let \emph{U\textsubscript{V}} = ln\emph{V}, \emph{U\textsubscript{K}} =
+ln\emph{K} , then (1) becomes
+
+\[\frac{\partial f}{\partial t} = \frac{1}{G_{U}}\frac{\partial}{\partial U_{V}}\left\lbrack G_{U}\left( \frac{D_{\text{VV}}}{V^{2}}\frac{\partial f}{\partial U_{V}} + \frac{D_{\text{VK}}}{\text{VK}}\frac{\partial f}{\partial U_{K}} \right) \right\rbrack + \frac{1}{G_{U}}\frac{\partial}{\partial U_{K}}\left\lbrack G_{U}\left( \frac{D_{\text{KV}}}{\text{VK}}\frac{\partial f}{\partial U_{V}} + \frac{D_{\text{KK}}}{K^{2}}\frac{\partial f}{\partial U_{K}} \right) \right\rbrack\text{\ \ \ }\text{\ \ \ \ \ \ \ \ \ \ }(2)\]
+
+where
+
+\[G_{U} = K{(K + a)}^{- 3b/2}V^{3/2}\]

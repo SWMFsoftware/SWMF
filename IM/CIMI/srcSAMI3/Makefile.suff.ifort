@@ -1,0 +1,3 @@
+
+.f.o:
+     	${COMPILE.f77} ${Cflag3} -save -132 -mcmodel=large -shared-intel $<

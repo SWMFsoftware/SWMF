@@ -1,0 +1,45 @@
+  1  2  2 !  H+  + O     --> O+  + H        ! columns    1    2    3
+  5  6  6 !  He+ + N2    --> N2+ + He       !          loss neut prod
+  5  6  7 !  He+ + N2    --> N+  + N + He
+  5  4  2 !  He+ + O2    --> O+  + O + He
+  5  4  4 !  He+ + O2    --> O2+ + He
+  7  4  3 !  N+  + O2    --> NO+ + O
+  7  4  4 !  N+  + O2    --> O2+ + N(2D)
+  7  2  2 !  N+  + 0     --> O+  + N
+  7  3  3 !  N+  + NO    --> NO+ + O
+  2  1  1 !  O+  + H     --> H+  + O 
+  2  6  3 !  O+  + N2    --> NO+ + N
+  2  4  4 !  O+  + O2    --> O2+ + O
+  2  3  3 !  O+  + NO    --> NO+ + O 
+  6  2  3 !  N2+ + O     --> NO+ + N(2D) 
+  6  4  4 !  N2+ + O2    --> O2+ + N2
+  6  4  3 !  N2+ + O2    --> NO+ + NO
+  6  3  3 !  N2+ + NO    --> NO+ + N2
+  4  7  3 !  O2+ + N     --> NO+ + O
+  4  7  7 !  O2+ + N(2D) --> N+  + O2
+  4  3  3 !  O2+ + NO    --> NO+ + O2
+  4  6  3 !  O2+ + N2    --> NO+ + NO
+
+! original reaction numbers
+
+!  1  4  4 !  H+  + O     --> O+  + H        ! columns    1    2    3
+!  2  5  5 !  He+ + N2    --> N2+ + He       !          loss neut prod
+!  2  5  3 !  He+ + N2    --> N+  + N + He
+!  2  7  4 !  He+ + O2    --> O+  + O + He
+!  2  7  7 !  He+ + O2    --> O2+ + He
+!  3  7  6 !  N+  + O2    --> NO+ + O
+!  3  7  7 !  N+  + O2    --> O2+ + N(2D)
+!  3  4  4 !  N+  + 0     --> O+  + N
+!  3  6  6 !  N+  + NO    --> NO+ + O
+!  4  1  1 !  O+  + H     --> H+  + O 
+!  4  5  6 !  O+  + N2    --> NO+ + N
+!  4  7  7 !  O+  + O2    --> O2+ + O
+!  4  6  6 !  O+  + NO    --> NO+ + O 
+!  5  4  6 !  N2+ + O     --> NO+ + N(2D) 
+!  5  7  7 !  N2+ + O2    --> O2+ + N2
+!  5  7  6 !  N2+ + O2    --> NO+ + NO
+!  5  6  6 !  N2+ + NO    --> NO+ + N2
+!  7  3  6 !  O2+ + N     --> NO+ + O
+!  7  3  3 !  O2+ + N(2D) --> N+  + O2
+!  7  6  6 !  O2+ + NO    --> NO+ + O2
+!  7  5  6 !  O2+ + N2    --> NO+ + NO

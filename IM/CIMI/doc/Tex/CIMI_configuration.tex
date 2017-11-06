@@ -1,0 +1,56 @@
+\section{Configuration of CIMI}
+
+Configuration refers to several different ways of controlling how the 
+CIMI model is compiled and run.  The most obvious is the setting of
+compiler flags specific to the machine and version of FORTRAN
+compiler.  The other methods refer to the grid (default vs expanded) and
+species.
+
+\subsection{Setting compiler flags in Makefile.conf and with Config.pl}
+
+The compiler flags can be modified by editing
+\begin{verbatim}
+  Makefile.conf
+\end{verbatim}
+This makefile is created during installation, and it contains the
+platform and compiler specific part of the makefile system.
+The most usual changes can be easily done with the Config.pl script.
+The precision of real numbers can be set with
+\begin{verbatim}
+  Config.pl -single
+\end{verbatim}
+or 
+\begin{verbatim}
+  Config.pl -double
+\end{verbatim}
+If the precision is modified, the script will execute 'make clean',
+so that all the files are compiled with the new real precision.
+
+The debugging flags can be switched on and off with
+\begin{verbatim}
+  Config.pl -debug
+\end{verbatim}
+and
+\begin{verbatim}
+  Config.pl -nodebug
+\end{verbatim}
+respectively. The maximum optimization level can be set to -O2 with
+\begin{verbatim}
+  Config.pl -O2
+\end{verbatim}
+The minimum level is 0, the maximum is 4 (Note that not all compilers support
+level 4 optimization).
+
+\subsection{Grid and Species Configuration}
+
+The CIMI model is set to have a very general core of code,
+
+\begin{verbatim}
+  Config.pl -GridExpanded
+\end{verbatim}
+to configure for H
+\begin{verbatim}
+  Config.pl -EarthH
+\end{verbatim}
+
+
