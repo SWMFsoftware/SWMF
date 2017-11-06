@@ -1400,6 +1400,7 @@ contains
     ! if it is 0 or 1 => call a simpler interpolation function
     if(nDimAmr <= 1)then
        call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       if(present(IsSecondOrder)) IsSecondOrder = .true.
        RETURN
     end if
     
@@ -1446,11 +1447,13 @@ contains
     integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
     real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
     integer:: iBlockOut, iProcOut
+    logical:: IsSecondOrderLocal
     !-----------------------------------
     ! check number of AMR dimensions:
     ! if it is 0 or 1 => call a simpler interpolation function
     if(nDimAmr <= 1)then
        call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       if(present(IsSecondOrder)) IsSecondOrder = .true.
        RETURN
     end if
     
@@ -1467,6 +1470,7 @@ contains
     if (iProcOut /= iProc)then
        !call CON_stop("Can't perform interpolation on this processor")
        nCell = 0
+       if(present(IsSecondOrder)) IsSecondOrder = .false.
        RETURN
     end if
 
@@ -1486,10 +1490,12 @@ contains
     call interpolate_amr_gc(&
          nDim, Coord_D(1:nDim), CoordMin_D(1:nDim),&
          DCoord_D(1:nDim), nIJK_D(1:nDim), DiLevelNei_III, &
-         nCell, iCell_II(1:nDim,:), Weight_I)
+         nCell, iCell_II(1:nDim,:), Weight_I, IsSecondOrderLocal)
 
     ! return block number as well
     iCell_II(0,:) = iBlockOut
+    
+    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
 
   end subroutine interpolate_grid_amr_gc_nob
   !==================================
@@ -1519,11 +1525,13 @@ contains
 
     integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
     real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
+    logical:: IsSecondOrderLocal
     !-----------------------------------
     ! check number of AMR dimensions:
     ! if it is 0 or 1 => call a simpler interpolation function
     if(nDimAmr <= 1)then
        call interpolate_grid(XyzIn_D, nCell, iCell_II, Weight_I)
+       if(present(IsSecondOrder)) IsSecondOrder = .true.
        RETURN
     end if
     
@@ -1555,6 +1563,8 @@ contains
 
     ! return block number as well
     iCell_II(0,:) = iBlock
+
+    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
   end subroutine interpolate_grid_amr_gc_ib
 
   !==================================
