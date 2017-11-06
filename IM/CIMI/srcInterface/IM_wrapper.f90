@@ -41,7 +41,6 @@ contains
     use ModGmCimi,  ONLY: UseGm
     use ModIeCimi,  ONLY: UseIE
     use ModCimiGrid, ONLY: iProc,nProc,iComm
-    implicit none
 
     character (len=*), intent(in)     :: TypeAction ! which action to perform
     type(CompInfoType), intent(inout) :: CompInfo   ! component information
@@ -97,8 +96,6 @@ contains
     use ModNumConst,      ONLY: cDegToRad
     use CON_coupler,      ONLY: set_grid_descriptor, is_proc, IM_
 
-    implicit none
-
     character (len=*), parameter :: NameSub='IM_set_grid'
     integer :: iSize,jSize
     real, dimension (:,:), allocatable :: gridLat,gridLT
@@ -146,12 +143,10 @@ contains
 
     use ModCimiGrid,      ONLY: np, xlat
     use ModCimi,          ONLY: init_mod_cimi, Time
-    use ModFieldTrace,    ONLY: init_mod_field_trace
+    use ModCimiTrace,    ONLY: init_mod_field_trace
     use ModImTime
     use ModTimeConvert,   ONLY: time_real_to_int
     use CON_physics,      ONLY: get_time
-
-    implicit none
 
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
@@ -177,19 +172,16 @@ contains
     use CON_time,   ONLY: DoTimeAccurate
     use ModCimi,    ONLY: Time, dt, dtmax,iProc
 
-    implicit none
-
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
     real, intent(inout):: TimeSimulation   ! current time of component
 
-    Logical, save :: IsInitiallized = .false.
+    Logical:: IsInitialized = .false.
     character(len=*), parameter :: NameSub='IM_run'
-
     !------------------------------------------------------------------------
 
-    if (.not. IsInitiallized) then
+    if (.not. IsInitialized) then
        call cimi_init
-       IsInitiallized = .true.
+       IsInitialized = .true.
     endif
 
     if( .not. DoTimeAccurate)then
@@ -210,7 +202,6 @@ contains
   subroutine IM_finalize(TimeSimulation)
 
     !USES:
-    implicit none
 
     real,     intent(in) :: TimeSimulation   ! seconds from start time
     character(len=*), parameter :: NameSub='IM_finalize'
@@ -225,7 +216,6 @@ contains
 
   subroutine IM_save_restart(TimeSimulation)
     use ModCimiRestart, ONLY: cimi_write_restart
-    implicit none
 
     real,     intent(in) :: TimeSimulation   ! seconds from start time
     character(len=*), parameter :: NameSub='IM_save_restart'
@@ -245,7 +235,6 @@ contains
     use ModPrerunField,ONLY: DoWritePrerun, save_prerun
     use ModIoUnit, ONLY: UnitTmp_
     !  use ModPrerunField,ONLY: DoWritePrerun, save_prerun
-    implicit none
 
     integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
     real,    intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
@@ -413,9 +402,10 @@ contains
 
   end subroutine IM_put_from_gm_line
   !============================================================================
-  subroutine IM_put_from_gm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,NameVar)
+  subroutine IM_put_from_gm(Buffer_IIV,BufferKp,iSizeIn,jSizeIn,nVarIn,NameVar)
 
     integer, intent(in) :: iSizeIn,jSizeIn,nVarIn
+    real,    intent(in) :: BufferKp
     real, dimension(iSizeIn,jSizeIn,nVarIn), intent(in) :: Buffer_IIV
     character (len=*),intent(in)       :: NameVar
 
@@ -446,7 +436,6 @@ contains
     use ModCimiGrid,   ONLY: iProc
     use ModIoUnit,     ONLY: UnitTmp_
 
-    implicit none
     character (len=*),parameter :: NameSub='IM_put_sat_from_gm'
 
     ! Arguments
@@ -520,13 +509,12 @@ contains
     use ModCimi,      ONLY: Pressure_IC, PressurePar_IC, Bmin_C, Time, Pmin
     use ModGmCimi,    ONLY: Den_IC, iLatMin, DoMultiFluidGMCoupling, &
          DoAnisoPressureGMCoupling
-    use ModFieldTrace,ONLY: iba
+    use ModCimiTrace,ONLY: iba
     use ModCimiPlanet,ONLY: nspec,amu_I
     use ModNumConst,  ONLY: cRadToDeg
     use ModConst,     ONLY: cProtonMass
     use ModIoUnit, ONLY: UnitTmp_
 
-    implicit none
     character (len=*),parameter :: NameSub='IM_get_for_gm'
 
     integer, intent(in)                                :: iSizeIn,jSizeIn,nVar
@@ -707,7 +695,6 @@ contains
     use CON_router,   ONLY: IndexPtrType, WeightPtrType
     use ModIeCimi,    ONLY: Pot!, birk_mhd, iSize, jSize, sigmaH_mhd,sigmaP_mhd
     
-    implicit none
     character(len=*), parameter   :: NameSub='IM_put_from_ie'
     integer,intent(in)            :: nPoint, iPointStart, nVar
     real, intent(in)              :: Buff_V(nVar)
@@ -760,7 +747,6 @@ contains
     use ModCimi,    ONLY: Time
 
     use ModMpi
-    implicit none
     integer:: iError,nsize
     !--------------------------------------------------------------------------
     ! Bcast  potential to all procs
@@ -782,7 +768,7 @@ contains
 
     use ModCimi,      ONLY: FAC_C, nLat=>np, nLon=>nt
     use CON_router,   ONLY: IndexPtrType, WeightPtrType
-    implicit none
+
     character(len=*), parameter :: NameSub='IM_get_for_ie'
 
     integer,intent(in)            :: nPoint, iPointStart, nVar
