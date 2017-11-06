@@ -12,6 +12,8 @@ INSTALLFILES =  src/Makefile.DEPEND \
 install: 
 	touch ${INSTALLFILES}
 	./Config.pl -EarthHO -GridDefault
+	@(if [ ! -d input ];  then ln -s data/input  input;  fi)
+	@(if [ ! -d output ]; then ln -s data/output output; fi)
 
 #
 #       General Housekeeping
@@ -55,15 +57,14 @@ LIB:
 TESTDIR = run_test
 
 test:
-	@echo "test_compile..." > test.diff
+	@echo "test_compile..." > test_cimi.diff
 	make   test_compile
-	@echo "test_rundir..." >> test.diff
+	@echo "test_rundir..." >> test_cimi.diff
 	make   test_rundir
-	@echo "test_run..."    >> test.diff
+	@echo "test_run..."    >> test_cimi.diff
 	make   test_run
-	@echo "test_check..."  >> test.diff
+	@echo "test_check..."  >> test_cimi.diff
 	make   test_check
-	ls -l test_*.diff
 
 test_all:
 	@echo "test_compile..." > test_cimi.diff
@@ -73,7 +74,7 @@ test_all:
 	@echo "test_run..."    >> test_cimi.diff
 	make   test_run
 	@echo "test_check..."  >> test_cimi.diff
-	make   test_check
+	make   test_check_all
 	@echo "test_rundir_WAVES..." >> test_cimi.diff
 	make   test_rundir_WAVES
 	@echo "test_run..."    >> test_cimi.diff
@@ -198,90 +199,97 @@ test_rundir_Prerun:
 test_run:
 	cd ${TESTDIR}; ${MPIRUN} ./cimi.exe > runlog 
 
+# reduced set of checks for the SWMF nightly tests
 test_check:
+	-make test_check_eq
+	ls -l test_cimi*.diff
+
+# complete set of checks
+test_check_all:
 	-make test_check_flux
 	-make test_check_psd
 	-make test_check_eq
 	-make test_check_drift
 	-make test_check_log
+	ls -l test_cimi*.diff
 
 test_check_WAVES:
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiFlux_e.fls \
 		output/CimiFlux_e.fls.WAVES \
-		> test_cimi_e_fls_WAVES.diff
+		> test_cimi_waves.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_e.psd \
 		output/CimiPSD_e.psd.WAVES \
-		> test_cimi_e_psd_WAVES.diff
+		>> test_cimi_waves.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CIMIeq.outs \
 		output/CIMIeq.outs.WAVES \
-		> test_cimi_eq_WAVES.diff
+		>> test_cimi_waves.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CIMI.log \
 		output/CIMI.log.WAVES \
-		> test_cimi_log_WAVES.diff
+		>> test_cimi_waves.diff
 
 test_check_flux:
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiFlux_h.fls \
 		output/CimiFlux_h.fls \
-		> test_cimi_h_fls.diff
+		> test_cimi_flux.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiFlux_o.fls \
 		output/CimiFlux_o.fls \
-		> test_cimi_o_fls.diff
+		>> test_cimi_flux.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiFlux_e.fls \
 		output/CimiFlux_e.fls \
-		> test_cimi_e_fls.diff
+		>> test_cimi_flux.diff
 
 test_check_psd:
-	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+	-${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_h.psd \
 		output/CimiPSD_h.psd \
-		> test_cimi_h_psd.diff
-	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		> test_cimi_psd.diff
+	-${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_o.psd \
 		output/CimiPSD_o.psd \
-		> test_cimi_o_psd.diff
-	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		>> test_cimi_psd.diff
+	-${SCRIPTDIR}/DiffNum.pl -t -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_e.psd \
 		output/CimiPSD_e.psd \
-		> test_cimi_e_psd.diff
+		>> test_cimi_psd.diff
 
 test_check_drift:
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiDrift_h.vp \
 		output/CimiDrift_h.vp \
-		> test_cimi_h_vp.diff
+		> test_cimi_drift.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiDrift_o.vp \
 		output/CimiDrift_o.vp \
-		> test_cimi_o_vp.diff
+		>> test_cimi_drift.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiDrift_e.vp \
 		output/CimiDrift_e.vp \
-		> test_cimi_e_vp.diff
+		>> test_cimi_drift.diff
 
 test_check_dipole:
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiDrift_h.vp \
 		output/CimiDrift_h.vp.dipole \
-		> test_cimi_h_vp_dipole.diff
+		> test_cimi_dipole.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiDrift_o.vp \
 		output/CimiDrift_o.vp.dipole \
-		> test_cimi_o_vp_dipole.diff
+		>> test_cimi_dipole.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiDrift_e.vp \
 		output/CimiDrift_e.vp.dipole \
-		> test_cimi_e_vp_dipole.diff
+		>> test_cimi_dipole.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CIMI.log \
 		output/CIMI.log.dipole \
-		> test_cimi_log_dipole.diff
+		>> test_cimi_dipole.diff
 
 test_check_eq:
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
@@ -299,36 +307,35 @@ test_check_Prerun:
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiFlux_h.fls \
 		output/CimiFlux_h.fls.Prerun \
-		> test_cimi_h_fls_Prerun.diff
+		> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiFlux_o.fls \
 		output/CimiFlux_o.fls.Prerun \
-		> test_cimi_o_fls_Prerun.diff
+		>> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiFlux_e.fls \
 		output/CimiFlux_e.fls.Prerun \
-		> test_cimi_e_fls_Prerun.diff
+		>> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_h.psd \
 		output/CimiPSD_h.psd.Prerun \
-		> test_cimi_h_psd_Prerun.diff
+		>> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_o.psd \
 		output/CimiPSD_o.psd.Prerun \
-		> test_cimi_o_psd_Prerun.diff
+		>> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_e.psd \
 		output/CimiPSD_e.psd.Prerun \
-		> test_cimi_e_psd_Prerun.diff
+		>> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CIMIeq.outs \
 		output/CIMIeq.outs.Prerun \
-		> test_cimi_eq_Prerun.diff
+		>> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CIMI.log \
 		output/CIMI.log.Prerun \
-		> test_cimi_log_Prerun.diff
-
+		>> test_cimi_Prerun.diff
 
 PDF:
 	@cd doc/Tex; make PDF
@@ -350,6 +357,8 @@ allclean:
 	cd src; make distclean
 	cd srcInterface; make distclean
 	rm -f config.log *~
+	if [ -h input ]; then rm -f input; fi
+	if [ -h output ]; then rm -f output; fi
 
 #
 #       Create run directories
