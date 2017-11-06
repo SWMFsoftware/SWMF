@@ -14,7 +14,7 @@ contains
     use ModCimi,      ONLY: f2, phot, Pressure_IC, PressurePar_IC, FAC_C, &
          Ppar_IC, Bmin_C, eTimeAccumult_ICI, eChangeOperator_VICI, &
          driftin, driftout, rbsumGlobal, nOperator
-    use ModFieldTrace,ONLY: iba,ekev
+    use ModCimiTrace,ONLY: iba,ekev
     use ModGmCimi,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCimiGrid,  ONLY: iProc,nProc,iComm
@@ -78,7 +78,7 @@ contains
          FAC_C, Ppar_IC, Bmin_C, &
          eTimeAccumult_ICI, eChangeOperator_VICI, &
          driftin, driftout, rbsumGlobal, nOperator
-    use ModFieldTrace,ONLY: iba    
+    use ModCimiTrace,ONLY: iba    
     use ModGmCimi,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModCimiGrid,  ONLY: iProc,nProc,iComm,nLonPar,nLonPar_P,nLonBefore_P

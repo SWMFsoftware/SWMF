@@ -31,7 +31,7 @@ contains
                                iPhotplot_I,iPparhotplot_I, iNplot_I,   &
                                Beq_,Vol_,Pot_,FAC_,Lstar_, Plas_,nVar
     use ModCimiGrid,   ONLY: PhiIono_C => phi, LatIono_C => xlatr
-    use ModFieldTrace, ONLY: iba
+    use ModCimiTrace, ONLY: iba
     use DensityTemp, ONLY: density
     integer, intent(in) :: nLat, nLon
     real,    intent(in) :: X_C(nLat,nLon), Y_C(nLat,nLon), Time, Dt
@@ -176,7 +176,7 @@ contains
     use ModCimiGrid,  ONLY:nLat=>np, nLon=>nt, nEnergy=>neng, nPitchAng=>npit,&
                            energy,sinAo,xlat,xmlt,Ebound
     use ModCimiPlanet,ONLY:nSpecies=>nspec
-    use ModFieldTrace,ONLY:ro,bo,xmlto,irm
+    use ModCimiTrace,ONLY:ro,bo,xmlto,irm
     use ModCimiRestart, ONLY: IsRestart
     use ModImTime,    ONLY:iCurrentTime_I
     real, intent(in) :: rc,flux(nSpecies,nLat,nLon,nEnergy,nPitchAng),time,&
@@ -288,7 +288,7 @@ contains
          nm, nk, &
          energy,sinAo,xlat,xmlt,Ebound
     use ModCimiPlanet,	ONLY: nSpecies=>nspec,re_m
-    use ModFieldTrace,	ONLY: ro,bo,xmlto,irm
+    use ModCimiTrace,	ONLY: ro,bo,xmlto,irm
     use ModCimiRestart,	ONLY: IsRestart
     use ModImTime,	ONLY: iCurrentTime_I
     use ModConst,	ONLY: cElectronCharge, cLightSpeed
@@ -395,7 +395,7 @@ contains
     use ModCimiGrid,  ONLY:nLat=>np, nLon=>nt, nEnergy=>neng, nPitchAng=>npit,&
          energy,sinAo,xlat,xmlt,Ebound
     use ModCimiPlanet,ONLY:nSpecies=>nspec
-    use ModFieldTrace,ONLY:ro,bo,xmlto,irm
+    use ModCimiTrace,ONLY:ro,bo,xmlto,irm
     use ModCimiRestart, ONLY: IsRestart
     use ModImTime,    ONLY:iCurrentTime_I
     real, intent(in) :: rc,vlEa(nSpecies,nLat,nLon,nEnergy,nPitchAng),time
@@ -500,7 +500,7 @@ contains
     use ModCimiGrid,  ONLY:nLat=>np, nLon=>nt, nEnergy=>neng, nPitchAng=>npit,&
          energy,sinAo,xlat,xmlt,Ebound
     use ModCimiPlanet,ONLY:nSpecies=>nspec
-    use ModFieldTrace,ONLY:ro,bo,xmlto,irm
+    use ModCimiTrace,ONLY:ro,bo,xmlto,irm
     use ModCimiRestart, ONLY: IsRestart
     use ModImTime,    ONLY:iCurrentTime_I
     real, intent(in) :: rc,vpEa(nSpecies,nLat,nLon,nEnergy,nPitchAng),time
@@ -664,7 +664,7 @@ contains
    use ModCimiGrid,    ONLY:nLat=>np, nLon=>nt, nEnergy=>neng,&
                             energy,xlat,xmlt
    use ModCimiPlanet,  ONLY: nSpecies=>nspec,re_m
-   use ModFieldTrace,  ONLY:ro,bo,xmlto,irm
+   use ModCimiTrace,  ONLY:ro,bo,xmlto,irm
    use ModCimiRestart, ONLY: IsRestart
    use ModImTime,      ONLY:iCurrentTime_I   ! for separate files only do need right now
    use ModCimiInitialize, ONLY: dphi
@@ -742,7 +742,7 @@ contains
     use ModCimiGrid,	ONLY: nLat=>np, nLon=>nt, &
          nm, nk, xlat,xmlt
     use ModCimiPlanet,	ONLY: nSpecies=>nspec,re_m
-    use ModFieldTrace,	ONLY: ro,bm,xmlto,irm
+    use ModCimiTrace,	ONLY: ro,bm,xmlto,irm
     use ModCimiRestart,	ONLY: IsRestart
 
     real, intent(in) :: rc,xk(nk),time,Lstarm(nLat,nLon,nk),Lstar_maxm(nk)

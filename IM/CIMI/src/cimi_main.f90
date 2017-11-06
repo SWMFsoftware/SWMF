@@ -13,7 +13,7 @@ program cimi
   use ModCIMI,        ONLY: IsStandalone
   use ModMpi
   use ModCimi,        ONLY: init_mod_cimi, Time
-  use ModFieldTrace,  ONLY: init_mod_field_trace
+  use ModCimiTrace,  ONLY: init_mod_field_trace
   use ModImTime,      ONLY: TimeMax
   use ModCimiRestart, ONLY: DtSaveRestart,cimi_write_restart
   use ModReadParam

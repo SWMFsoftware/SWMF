@@ -54,7 +54,7 @@ contains
 
   use ModNumConst, only:pi=>cPi
   use ModCimiPlanet, only:re_m,xme=>dipmom
-  use ModFieldTrace,only: bo,ro,iba,rb
+  use ModCimiTrace,only: bo,ro,iba,rb
   use ModCimiGrid, only:xlati=>xlatr,ir=>np,ip=>nt,xmlt
   implicit none
 
@@ -150,7 +150,7 @@ write(*,'("L* =",10f8.2)') (Lstar(i,1),i=1,ir)
 
   use ModNumConst, only:pi=>cPi
   use ModCimiPlanet, only:re_m,xme=>dipmom
-  use ModFieldTrace,only: bm,ro,iba,rb
+  use ModCimiTrace,only: bm,ro,iba,rb
   use ModCimiGrid, only:xlati=>xlatr,ir=>np,ip=>nt,xmlt,ik=>nk
   implicit none
 

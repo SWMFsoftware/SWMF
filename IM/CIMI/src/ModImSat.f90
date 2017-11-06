@@ -25,7 +25,7 @@ contains
     use ModCimiPlanet,  ONLY: nSpecies=>nspec
     use ModCimiGrid,    ONLY: LonGrid_I=>phi, LatGrid_I=>xlat, &
                               AngleGrid_I=>sinAo
-    use ModFieldTrace,  ONLY: BfieldEq_C => bo, iba
+    use ModCimiTrace,  ONLY: BfieldEq_C => bo, iba
     use ModImTime,      ONLY: iCurrentTime_I
 
     implicit none

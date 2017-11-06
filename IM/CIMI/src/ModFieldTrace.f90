@@ -3,7 +3,7 @@ Module ModDstOutput
 EndModule ModDstOutput
 
 
-Module ModFieldTrace
+Module ModCimiTrace
   use ModCimiGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk, neng, energy, &
        UseExpandedGrid,MinLonPar,MaxLonPar,iProc,iComm,iProcMidnight,nProc,&
        iLonMidnight,nLonPar,nLonPar_P,nLonBefore_P
@@ -1190,4 +1190,4 @@ contains
   end function julianday
   
   
-end Module ModFieldTrace
+end Module ModCimiTrace

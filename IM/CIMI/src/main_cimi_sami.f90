@@ -19,7 +19,7 @@ program cimi_sami
   use ModCIMI,        ONLY: IsStandalone,TimeCIMI=>time
   use ModMpi
   use ModCimi,        ONLY: init_mod_cimi
-  use ModFieldTrace,  ONLY: init_mod_field_trace
+  use ModCimiTrace,  ONLY: init_mod_field_trace
   use ModImTime,      ONLY: TimeMaxCIMI=>TimeMax
   use ModCimiRestart, ONLY: DtSaveRestart,cimi_write_restart
   use ModReadParam

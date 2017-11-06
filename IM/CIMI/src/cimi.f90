@@ -14,7 +14,7 @@ subroutine cimi_run(delta_t)
                             eChangeLocal,eChangeGlobal
   use ModCimiPlanet,  ONLY: re_m, dipmom, Hiono, nspec, amu_I, &
                             dFactor_I,tFactor_I
-  use ModFieldTrace,  ONLY: &
+  use ModCimiTrace,  ONLY: &
        fieldpara, brad=>ro, ftv=>volume, xo,yo,rb,irm,&
        ekev,iba,bo,pp,Have, sinA, vel, alscone, iw2,xmlto, bm
   use ModGmCimi,      ONLY: Den_IC,UseGm
@@ -821,7 +821,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   use ModCimiInitialize,   ONLY: IsEmptyInitial, IsDataInitial, IsRBSPData, &
        IsGmInitial
   use ModCimiGrid,ONLY: nm,nk,MinLonPar,MaxLonPar,iProc,nProc,iComm,d4Element_C,neng
-  use ModFieldTrace, ONLY: sinA,ro, ekev,pp,iw2,irm
+  use ModCimiTrace, ONLY: sinA,ro, ekev,pp,iw2,irm
   use ModMpi
   use ModWaveDiff, ONLY:  testDiff_aa,testDiff_EE,testDiff_aE
 
@@ -988,7 +988,7 @@ subroutine boundaryIM(nspec,neng,np,nt,nm,nk,iba,irm,amu_I,xjac,energy,vel,fb)
   Use ModGmCimi, ONLY:  Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
   use ModCimi,        ONLY: MinLonPar,MaxLonPar, f2
   use ModCimiGrid, ONLY: MinLonPar,MaxLonPar
-  use ModFieldTrace,  ONLY: sinA,ekev,iw2,pp
+  use ModCimiTrace,  ONLY: sinA,ekev,iw2,pp
   use ModCimiBoundary,ONLY: BoundaryDens_IC,BoundaryTemp_IC,BoundaryTempPar_IC
 
   implicit none
@@ -1157,7 +1157,7 @@ subroutine set_cimi_potential(CurrentTime,rc)
   use EIE_ModWeimer, ONLY: setmodel00, boundarylat00, epotval00
   use ModNumConst, ONLY: cPi, cRadToDeg
   use ModIndicesInterfaces
-  use ModFieldTrace, ONLY: UsePotential
+  use ModCimiTrace, ONLY: UsePotential
   implicit none
 
   real, intent(in) :: CurrentTime,rc
@@ -1247,7 +1247,7 @@ subroutine driftV(nspec,np,nt,nm,nk,irm,re_m,Hiono,dipmom,dphi,xlat, &
   use ModCimiGrid, ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar, &
        iProcLeft, iLonLeft, iProcRight, iLonRight
   use ModMpi
-  use ModFieldTrace, ONLY: UseCorotation
+  use ModCimiTrace, ONLY: UseCorotation
   implicit none
 
   integer nspec,np,nt,nm,nk,irm(nt),n,i,ii,j,k,m,i0,i2,j0,j2,icharge
@@ -1360,7 +1360,7 @@ subroutine driftIM(iw2,nspec,np,nt,nm,nk,dt,dlat,dphi,brad,rb,vl,vp, &
   ! Input: iw2,nspec,np,nt,nm,nk,iba,dt,dlat,dphi,brad,rb,vl,vp,fbi
   ! Input/Output: f2,ib0,driftin,driftout
   use ModCimiGrid, ONLY: MinLonPar, MaxLonPar
-  use ModFieldTrace, ONLY: iba, ekev
+  use ModCimiTrace, ONLY: iba, ekev
   use ModCimiGrid, ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar, &
        iProcLeft, iLonLeft, iProcRight, iLonRight, d4Element_C    
   use ModMpi
@@ -1728,7 +1728,7 @@ subroutine sume(xle)
 ! Input: f2,ekev,iba
 ! Input/Output: rbsum,xle
   use ModCimi,       ONLY: rbsumLocal
-  use ModFieldTrace, ONLY: iba
+  use ModCimiTrace, ONLY: iba
   use ModCimiGrid,   ONLY: nProc,iProc,iComm
   use ModCimiPlanet, ONLY: nspec
   use ModMPI
@@ -1763,7 +1763,7 @@ end subroutine sume
 subroutine calc_rbsumlocal(iSpecies)
   use ModCimi,       ONLY: f2,rbsumLocal
   use ModCimiGrid,   ONLY: np,nm,nk,MinLonPar,MaxLonPar,d4Element_C
-  use ModFieldTrace, ONLY: iba, ekev
+  use ModCimiTrace, ONLY: iba, ekev
   implicit none
 
   integer, intent(in) :: iSpecies
@@ -1804,7 +1804,7 @@ subroutine sume_cimi(OperatorName)
        xle=>eChangeOperator_VICI,ple=>pChangeOperator_VICI, &
        eChangeGlobal,eChangeLocal, &
        esum=>eTimeAccumult_ICI,psum=>pTimeAccumult_ICI
-  use ModFieldTrace, ONLY: iba,irm,ekev,ro,iw2
+  use ModCimiTrace, ONLY: iba,irm,ekev,ro,iw2
   use ModCimiGrid,   ONLY: &
        nProc,iProc,iComm, MinLonPar,MaxLonPar,d4Element_C, &
        ip=>np,ir=>nt,im=>nm,ik=>nk,je=>neng,Energy,Ebound
@@ -1917,7 +1917,7 @@ subroutine cimi_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   use ModCimiGrid,ONLY: iProc,nProc,iComm,MinLonPar,MaxLonPar,&
        iProcLeft, iLonLeft, iProcRight, iLonRight
   use ModMpi
-  use ModFieldTrace, ONLY: ro
+  use ModCimiTrace, ONLY: ro
   implicit none
 
   integer np,nt,nm,nk,nspec,neng,npit,iba(nt),i,j,k,m,n,j1,j_1
@@ -2162,7 +2162,7 @@ subroutine cimi_precip_calc(rc,dsec)
        preF, preP, Eje1, &
        xlel=>eChangeOperator_VICI, plel=>pChangeOperator_VICI, &
        OpLossCone_, OpLossCone0_
-  use ModFieldTrace, ONLY: iba
+  use ModCimiTrace, ONLY: iba
   use ModCimiGrid,   ONLY: &
        nProc,iProc,iComm,MinLonPar,MaxLonPar,nt,np,neng,xlatr,xmlt,dlat
   use ModCimiPlanet, ONLY: nspec,re_m

@@ -6,7 +6,7 @@ subroutine CIMI_set_parameters(NameAction)
        IsGmInitial
   use ModCimiPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux, DoSaveDrifts,&
        DoSaveLog, UseSeparatePlotFiles, DtLogOut,DoSavePSD
-  use ModFieldTrace,     ONLY: UseEllipse, UseSmooth, UseCorotation, &
+  use ModCimiTrace,     ONLY: UseEllipse, UseSmooth, UseCorotation, &
        UsePotential, SmoothWindow, imod
   use ModCimi,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin,&
        IsStandAlone, UseStrongDiff, dt, dtmax

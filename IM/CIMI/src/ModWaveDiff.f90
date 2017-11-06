@@ -14,7 +14,7 @@ contains
   subroutine simple_plasmasphere(Kp)
 
     use ModCimiGrid,    ONLY: MinLonPar, MaxLonPar
-    use ModFieldTrace, ONLY: ro, iba
+    use ModCimiTrace, ONLY: ro, iba
     
     implicit none
     
@@ -79,7 +79,7 @@ Module ModWaveDiff
 
 use ModCimiGrid,ONLY: ir=>np, ip=>nt, iw=>nm , ik=>nk  
 use ModCimiPlanet,ONLY: nspec
-use ModFieldTrace, ONLY: ekev,tya,y=>sinA,Bo,ro,xmlto,lintpIM,bm
+use ModCimiTrace, ONLY: ekev,tya,y=>sinA,Bo,ro,xmlto,lintpIM,bm
 use ModNumConst,       ONLY: pi => cPi
 
 

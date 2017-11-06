@@ -24,7 +24,7 @@ contains
     use ModGmCimi,      ONLY: Den_IC,Temp_IC,Temppar_IC,StateBmin_IIV,&
          AveP_,AvePpar_,AveDens_, AveDen_I,AveP_I,iLatMin,&
          DoMultiFluidGMCoupling,DoAnisoPressureGMCoupling
-    use ModFieldTrace,  ONLY: irm, iba
+    use ModCimiTrace,  ONLY: irm, iba
     integer :: iSpecies, iLon, iLat
     real, parameter :: cJouleToEv=6.2415e18  
     real :: FactorTotalDens
@@ -165,7 +165,7 @@ contains
   !============================================================================
   subroutine cimi_set_boundary_empirical
     use ModImTime,    ONLY: CurrentTime, TimeLagBoundary
-    use ModFieldTrace,ONLY: iba, ro, xmlto, irm
+    use ModCimiTrace,ONLY: iba, ro, xmlto, irm
     use ModGmCimi,      ONLY: Den_IC,Temp_IC
     use ModIndicesInterfaces
     use ModNumConst,       ONLY: cPi
