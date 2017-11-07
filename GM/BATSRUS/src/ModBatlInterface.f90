@@ -401,7 +401,7 @@ contains
        WeightTotal = 0.0
        do iCell = 1, nCell
           i_D = 1
-          i_D = iCell_II(1:nDim, iCell)
+          i_D(1:nDim) = iCell_II(1:nDim, iCell)
           if(true_cell(i_D(1),i_D(2),i_D(3),iBlock))then
              nCellNew = nCellNew + 1
              WeightTotal = WeightTotal + Weight_I(iCell)
