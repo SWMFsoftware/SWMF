@@ -452,7 +452,7 @@ contains
        call open_file(FILE=NameFile, POSITION=TypePosition, STATUS=TypeStatus)
 
        write(UnitTmp_, "(a)")             trim(StringHeader)
-       write(UnitTmp_, "(i7,es18.10,3i3)") nStep, Time, nDimOut, nParam, nVar
+       write(UnitTmp_, "(i10,es18.10,3i3)") nStep, Time, nDimOut, nParam, nVar
        write(UnitTmp_, "(3i8)")           n_D(1:nDim)
        if(nParam > 0) &
             write(UnitTmp_, StringFormat) Param_I
