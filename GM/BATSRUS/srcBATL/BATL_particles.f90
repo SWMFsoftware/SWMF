@@ -22,7 +22,6 @@ module BATL_particles
   public:: get_particles
   public:: trace_particles
   SAVE
-  logical  ::UseParticles = .false.
   !\
   ! Use the pair RSend + IRecv or ISend + IRecv
   !/
@@ -86,6 +85,7 @@ contains
        allocate(Particle_I(&
             iKindParticle)%iIndex_II(0:nIndex,1:nParticleMax))
        call clean_particle_arr(iKindParticle, 1, nParticleMax)
+       Particle_I(iKindParticle)%nParticle = 0
     end do
   end subroutine allocate_particles
   !================================
