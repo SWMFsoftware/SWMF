@@ -74,7 +74,7 @@ contains
     integer, intent(out):: nCell
     integer, intent(out):: iCell_II(0:nDim,2**nDim)
     real,    intent(out):: Weight_I(2**nDim)
-    logical, intent(out):: IsSecondOrder
+    logical, optional, intent(out):: IsSecondOrder
 
     integer:: iIndexes_II(0:nDimAmr+1,2**nDimAmr)
     integer:: nGridOut
@@ -138,7 +138,8 @@ contains
        end do
        call sort_out_other_procs
        ! return whether interpolation is of 2nd order
-       IsSecondOrder = IsSecondOrder .and. IsSecondOrderNoAmr
+       if(present(IsSecondOrder))&
+            IsSecondOrder = IsSecondOrder .and. IsSecondOrderNoAmr
        RETURN
     end if
 

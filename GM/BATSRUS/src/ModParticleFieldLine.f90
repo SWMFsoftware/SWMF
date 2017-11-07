@@ -807,7 +807,6 @@ contains
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
     real   :: Weight_I(2**nDim)
-    logical:: IsBodyLocal
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     character(len=200):: StringError
@@ -818,8 +817,7 @@ contains
     if(UseB0)call get_b0(Xyz_D, B_D)
     ! get the remaining part of the magnetic field
     call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
-         IsBodyLocal)
-    if(present(IsBody)) IsBody = IsBodyLocal
+         IsBody)
 
     ! interpolate magnetic field value
     do iCell = 1, nCell

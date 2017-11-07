@@ -1394,7 +1394,6 @@ contains
     logical, optional, intent(out):: IsSecondOrder
 
     real   :: Coord_D(MaxDim)
-    logical:: IsSecondOrderLocal
     !-----------------------------------
     ! check number of AMR dimensions:
     ! if it is 0 or 1 => call a simpler interpolation function
@@ -1413,9 +1412,7 @@ contains
 
     ! call the wrapper for the shared AMR interpolation procedure,
     call interpolate_amr(Coord_D, &
-         nCell, iCell_II, Weight_I, IsSecondOrderLocal)
-
-    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
+         nCell, iCell_II, Weight_I, IsSecondOrder)
 
   end subroutine interpolate_grid_amr
 
@@ -1488,7 +1485,6 @@ contains
 
     integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
     real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
-    logical:: IsSecondOrderLocal
     !-----------------------------------
     ! check number of AMR dimensions:
     ! if it is 0 or 1 => call a simpler interpolation function
@@ -1526,8 +1522,6 @@ contains
 
     ! return block number as well
     iCell_II(0,:) = iBlock
-
-    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
   end subroutine interpolate_grid_amr_gc_ib
 
   !==================================
