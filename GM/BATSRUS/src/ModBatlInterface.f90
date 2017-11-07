@@ -2,9 +2,7 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBatlInterface
-
   use BATL_lib, ONLY: BATL_interpolate => interpolate_grid_amr_gc
-
   implicit none
 
 contains
@@ -364,8 +362,9 @@ contains
   !============================================================================
   
   subroutine interpolate_grid_amr_gc(XyzIn_D, iBlock, &
-       nCell, iCell_II, Weight_I, IsTrueCell_G, IsBody)
-    use BATL_lib, ONLY: MaxDim, nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+       nCell, iCell_II, Weight_I, IsBody)
+    use BATL_lib, ONLY: nDim, MaxDim
+    use ModGeometry, ONLY: body_BLK, true_cell 
     ! Interpolation is performed using cells (including ghost) of single block,
     ! its index, iBlock, is provided at the call;
     !--------------------------------------------------------------------------
@@ -381,8 +380,6 @@ contains
     integer, intent(out):: nCell
     integer, intent(out):: iCell_II(0:nDim,2**nDim)
     real,    intent(out):: Weight_I(2**nDim)
-
-    logical, optional,intent(in) :: IsTrueCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     logical, optional,intent(out):: IsBody
 
     integer:: i_D(MaxDim), iCell ! loop variables
@@ -397,7 +394,7 @@ contains
     
     ! if appropriate information is provided during the call:
     ! check whether all cells in the stencil are true cells
-    if(present(IsTrueCell_G))then
+    if(body_BLK(iBlock))then
        ! number of cells in the stencil may change, reset it
        nCellNew = 0
        ! reset total weight as well
@@ -405,7 +402,7 @@ contains
        do iCell = 1, nCell
           i_D = 1
           i_D = iCell_II(1:nDim, iCell)
-          if(IsTrueCell_G(i_D(1),i_D(2),i_D(3)))then
+          if(true_cell(i_D(1),i_D(2),i_D(3),iBlock))then
              nCellNew = nCellNew + 1
              WeightTotal = WeightTotal + Weight_I(iCell)
              ! rearrange output if necessary
@@ -416,7 +413,16 @@ contains
           end if
        end do
        nCell = nCellNew
-       if(present(IsBody)) IsBody = WeightTotal < 0.5
+       if(nCell==0)then
+          if(.not.present(IsBody))call stop_mpi(&
+            'No true cell in the interpolation stencil')
+       else
+          !\
+          !Rescale weights to get their total equal 1
+          !/
+          !!!!$ Weight_I(1:nCell) = Weight_I(1:nCell)/WeightTotal
+       end if
+       if(present(IsBody))IsBody = WeightTotal < 0.5
     else
        if(present(IsBody)) IsBody = .false.
     end if

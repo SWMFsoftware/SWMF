@@ -20,7 +20,6 @@ module ModParticleFieldLine
        message_pass_particles, remove_undefined_particles, &
        mark_undefined, check_particle_location, get_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
-  use ModGeometry, ONLY: true_cell
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: Body1, NameThisComp
@@ -806,8 +805,7 @@ contains
     real   :: B_D(MaxDim) = 0.0
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
-    real   :: Weight_I(2**nDim), WeightTotal
-    logical:: IsBodyLocal
+    real   :: Weight_I(2**nDim)
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     character(len=200):: StringError
@@ -818,9 +816,7 @@ contains
     if(UseB0)call get_b0(Xyz_D, B_D)
     ! get the remaining part of the magnetic field
     call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
-         true_cell(:,:,:,iBlock), IsBodyLocal)
-    if(present(IsBody)) IsBody = IsBodyLocal
-
+         IsBody)
     ! interpolate magnetic field value
     do iCell = 1, nCell
        i_D = 1
@@ -828,8 +824,6 @@ contains
        B_D = B_D + &
             State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
-    WeightTotal = sum(Weight_I(1:nCell))
-    B_D = B_D / WeightTotal
     if(all(B_D==0))then
        write(StringError,'(a,es15.6,a,es15.6,a,es15.6)') &
             NameThisComp//':'//NameSub//&
@@ -950,8 +944,7 @@ contains
       ! reset the interpoalted values
       V_D = 0!; Rho = 0; M_D = 0
       ! get the velocity
-      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
-           true_cell(:,:,:,iBlock))
+      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
       ! interpolate the local density and momentum
       do iCell = 1, nCell
          i_D = 1
