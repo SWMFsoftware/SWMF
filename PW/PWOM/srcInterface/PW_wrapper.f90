@@ -176,8 +176,8 @@ contains
     use ModPWOM, only: &
          nAlt,r_C,GeoMagLat_I,GeoMagLon_I,DtVertical,&
          nStep,NameRestart, &
-         State_CVI,nLine
-
+         State_CVI,nLine,UseParticles
+    use ModParticle, ONLY: disinter_line, bury_line,write_restart_particle
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
@@ -190,6 +190,12 @@ contains
             nAlt, r_C, GeoMagLat_I(iLine), GeoMagLon_I(iLine), &
             TimeSimulation, DtVertical, nStep, NameRestart(iLine), &
             State_CVI(:,:,iLine))
+
+       if (UseParticles) then
+          call disinter_line(iLine)
+          call write_restart_particle(iLine)
+          call bury_line(iLine)
+       endif
     enddo
 
   end subroutine PW_save_restart
@@ -257,7 +263,8 @@ contains
        Name_V, iBlock)
 
     use ModPWOM, ONLY: allocate_ie_variables, Phi_G, Theta_G, Potential_G, &
-         Jr_G, AvE_G, Eflux_G
+         Jr_G, AvE_G, Eflux_G, DoPlotElectrodynamics,Time,&
+         DtPlotElectrodynamics,DtHorizontal
     use CON_coupler, ONLY: Grid_C, IE_
 
     character(len=*), parameter :: NameSub='PW_put_from_ie'
@@ -324,7 +331,7 @@ contains
           IsAveFound = .true.
           do i=1,iSize
              do j=1,jSize
-                AvE_G(j,i) = Buffer_IIV(i, j, iVar)
+                AvE_G(j,i) = Buffer_IIV(i, j, iVar)*1000.0 !convert keV to eV
              end do
           end do
        case('Tot')
@@ -345,6 +352,13 @@ contains
     end if
 
     call PW_get_electrodynamics
+
+    !Output the electrodynamics info
+    if (DoPlotElectrodynamics) then
+       if (floor(Time/DtPlotElectrodynamics) &
+            /= floor((Time-DtHorizontal)/DtPlotElectrodynamics) ) &
+            call PW_print_electrodynamics
+    endif
 
   end subroutine PW_put_from_ie
 

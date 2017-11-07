@@ -8,6 +8,7 @@ module ModPhotoElectron
   
   !minimum thermal density of electrons [/cc]
   real :: eThermalDensMin=1.0
+  !real :: eThermalDensMin=1.0e-1
 
   logical :: DoCoupleSE = .false., UseFeedbackFromSE=.false.
 

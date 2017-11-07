@@ -3,8 +3,8 @@ Module ModSeCross
   private !except
   
   public :: EXSECT
-
   public :: cross_jupiter
+
   !number of excited states
   integer, public,parameter :: NEI=10
   
@@ -83,7 +83,14 @@ Module ModSeCross
          12.10,16.10,16.90,18.2,20.30,23.00,37.00, 0.,0.,0., &
          15.58,16.73,18.75,22.0,23.60,40.00, 0.00, 0.,0.,0./
 
-  
+    ! Temporary parameters and arrays to hold jupiter PE and PIN
+    integer, parameter :: nEnergyTmp = 312
+    integer, parameter :: nBackscatterSpecies = 3
+    real :: pa_tsm(nBackscatterSpecies,nEnergyTmp)
+    real :: pe_tsm(nBackscatterSpecies,nEnergyTmp)
+    real :: EnergyGridTmp_I(nEnergyTmp)
+
+    
 contains
 
   ! Subroutine EXSECT
@@ -283,6 +290,7 @@ contains
                              + log (CI(II,IJ)/CI(I,IJ)) * FAC)
           ENDIF
    80   CONTINUE
+        !write(*,*) IJ,':',PIN(IJ,:)
    90 CONTINUE
 !
 !
@@ -569,53 +577,248 @@ contains
   subroutine cross_jupiter(nNeutralSpecies)
     
     use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I, &
-         EnergyMin, BINNUM
+         EnergyMin, BINNUM, IsVerbose
     !jupiter
     integer,parameter  :: H2_=1, He_=2, H_=3, CH4_=4
     
     !allocate sig arrays if not already done
     if (.not.allocated(SIGS)) allocate(SIGS(nNeutralSpecies,nEnergy)) 
-    if (.not.allocated(SIGIX)) allocate(SIGIX(nNeutralSpecies,nEnergy,nEnergy)) 
+    if (.not.allocated(SIGIX)) allocate(SIGIX(NEI,nNeutralSpecies,nEnergy)) 
     if (.not.allocated(SIGA)) allocate(SIGA(nNeutralSpecies,nEnergy,nEnergy)) 
+    if (.not.allocated(SIGEX)) allocate(SIGEX(NEI,nNeutralSpecies,nEnergy)) 
+    if (.not.allocated(SEC)) allocate(SEC(nNeutralSpecies,nEnergy,nEnergy))
+    if (.not. allocated(PE)) allocate(PE(nNeutralSpecies,nEnergy))
+    if (.not. allocated(PIN)) allocate(PIN(nNeutralSpecies,nEnergy))
+    if (.not. allocated(IIMAXX)) allocate(IIMAXX(nEnergy))
     
-    ! currently just set crossections to zero. 
-    SIGS(:,:)=0.0
-    SIGIX(:,:,:)=0.0
-    SIGA(:,:,:)=0.0
+    ! initialize crossections to zero. 
+    SIGS(:,:)    = 0.0
+    SIGIX(:,:,:) = 0.0
+    SIGA(:,:,:)  = 0.0
+    SIGEX(:,:,:) = 0.0
+    SEC(:,:,:)   = 0.0
+    PE(:,:)      = 0.5
+    PIN(:,:)     = 0.5
+    IIMAXX(:)    = 0.0
 
+    call read_backscatter_prob
+    write(*,*) 'PA',pa_tsm(:,1)
+    write(*,*) 'PA',pa_tsm(:,nEnergyTmp-4:nEnergyTmp)
+    write(*,*) 'PE',pe_tsm(:,1)
+    write(*,*) 'PE',pe_tsm(:,nEnergyTmp-4:nEnergyTmp)
+    
     write(*,*) 'Neutrals: ',nNeutralSpecies
     
     do iNeutral = 1, nNeutralSpecies
-
+       
        write(*,*) 'getting H2 cross'
        call get_excitation_crossection('H2', SIGA(H2_,:,:))
-       call get_crossection_diffion('H2', SIGIX(H2_,:,:), SIGA(H2_,:,:))
+       call get_crossection_diffion('H2', SEC(H2_,:,:), SIGA(H2_,:,:))
        call get_scattering_crossection('H2',SIGS(H2_,:))
+       call interp_backscatter(H2_)
        write(*,*) 'getting He cross'
        call get_excitation_crossection('He', SIGA(He_,:,:))
-       call get_crossection_diffion('He', SIGIX(He_,:,:), SIGA(He_,:,:))
+       call get_crossection_diffion('He', SEC(He_,:,:), SIGA(He_,:,:))
        call get_scattering_crossection('He',SIGS(He_,:))
+       call interp_backscatter(He_)
        write(*,*) 'getting H cross'
        call get_excitation_crossection('H', SIGA(H_,:,:))
-       call get_crossection_diffion('H',  SIGIX(H_,:,:), SIGA(H_,:,:))
+       call get_crossection_diffion('H',  SEC(H_,:,:), SIGA(H_,:,:))
        call get_scattering_crossection('H',SIGS(H_,:))
+       call interp_backscatter(H_)
        write(*,*) 'getting CH4 cross'
        call get_excitation_crossection('CH4', SIGA(CH4_,:,:))
-       call get_crossection_diffion('CH4',SIGIX(CH4_,:,:), SIGA(CH4_,:,:))
+       call get_crossection_diffion('CH4',SEC(CH4_,:,:), SIGA(CH4_,:,:))
        call get_scattering_crossection('CH4',SIGS(CH4_,:))
+       ! assume CH4 backscatter is 0.5
        
     end do
     
     ! plot the differential ion crossection (for testing)
-    call plot_diffion_cross
+    ! call plot_diffion_cross
+    ! call plot_siga_cross
+    ! call plot_sigs(SIGS,PE,nNeutralSpecies)
+    
   end subroutine cross_jupiter
 
-  !=============================================================================
+   !--------------------------------------------------------------------------
+  !--------------------------------------------------------------------------
+  !--------------------------------------------------------------------------
+  ! save crossection plot for verification
+  ! doesn't work for Earth yet
+  ! for debugging only one line
+  !--------------------------------------------------------------------------
+  subroutine plot_sigs(SIGS,PE,nNeutralSpecies)
+    use ModSeGrid,     ONLY: Alt_C,nAlt,nEnergy,  &
+         DeltaE_I,EnergyGrid_I, IsVerbose
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModPlotFile,   ONLY: save_plot_file
+    use ModNumConst,   ONLY: cRadToDeg,cPi
+    use ModPlanetConst, only: Planet_, NamePlanet_I
+
+    real, intent(in) :: SIGS(nNeutralSpecies,nEnergy),PE(nNeutralSpecies,nEnergy)
+
+    real, allocatable   :: Coord_I(:), PlotState_IV(:,:)
+    !grid parameters
+    integer, parameter :: nDim =1
+    integer :: nVar,iEnergy
+    integer, parameter ::iLine=1
+    !Jupiter
+    integer, parameter :: H2_=1,He_=2,H_=3,CH4_=4
+    
+    !Earth
+    integer, parameter :: Oplus_=1
+    
+    character(len=100),parameter :: NamePlotVarEarth=&
+         'E[eV] Var g r'
+    character(len=100),parameter :: NamePlotVarJupiter=&
+         'E[eV] SigS_H2 PE_H2 SigS_He PE_He SigS_H PE_H SigS_CH4 PE_CH4 g r'
+
+    character(len=100) :: NamePlotVar
+    character(len=*),parameter :: NameHeader='SigmaS Cross Sec and Backscatter'
+    character(len=5) :: TypePlot='ascii'
+    integer :: iIon,iAlt
+    character(len=100) :: NamePlot
+    logical,save :: IsFirstCall =.true.
+    !--------------------------------------------------------------------------
+
+    nVar=2*nNeutralSpecies
+    allocate(Coord_I(nEnergy),PlotState_IV(nEnergy,nVar))
+
+    PlotState_IV = 0.0
+    Coord_I     = 0.0
+    
+    select case(NamePlanet_I(Planet_))
+    case('EARTH')
+       NamePlotVar=NamePlotVarEarth
+    case('JUPITER')
+       NamePlotVar=NamePlotVarJupiter
+    end select
+       
+       do iEnergy=1,nEnergy
+          Coord_I(iEnergy) = EnergyGrid_I(iEnergy)
+          PlotState_IV(iEnergy,1) = SIGS(H2_,iEnergy)
+          PlotState_IV(iEnergy,2) = PE(H2_,iEnergy)
+          PlotState_IV(iEnergy,3) = SIGS(He_,iEnergy)
+          PlotState_IV(iEnergy,4) = PE(He_,iEnergy)
+          PlotState_IV(iEnergy,5) = SIGS(H_,iEnergy)
+          PlotState_IV(iEnergy,6) = PE(H_,iEnergy)
+          PlotState_IV(iEnergy,7) = SIGS(CH4_,iEnergy)
+          PlotState_IV(iEnergy,8) = PE(CH4_,iEnergy)
+       enddo       
+       
+    ! set name for plotfile
+    write(NamePlot,"(a,i4.4,a)") 'PW/plots/SIGS.out'
+    
+    !Plot grid for given line
+    if(IsFirstCall) then
+       call save_plot_file(NamePlot, TypePositionIn='rewind', &
+            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
+            NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
+            nDimIn=nDim,CoordIn_I=Coord_I,                &
+            VarIn_IV = PlotState_IV, ParamIn_I = (/1.6, 1.0/)) !***
+       IsFirstCall = .false.
+    else
+       call save_plot_file(NamePlot, TypePositionIn='rewind', &
+            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
+            NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
+            nDimIn=nDim,CoordIn_I=Coord_I,                &
+            VarIn_IV = PlotState_IV, ParamIn_I = (/1.6, 1.0/)) !***
+    endif
+    
+    deallocate(Coord_I, PlotState_IV)
+  end subroutine plot_sigs
+
+   !--------------------------------------------------------------------------
+  !--------------------------------------------------------------------------
+  !--------------------------------------------------------------------------
+  ! save crossection plot for verification
+  ! doesn't work for Earth yet
+  ! for debugging only one line
+  !--------------------------------------------------------------------------
+  subroutine plot_sigex(SIGEX,nStates)
+    use ModSeGrid,     ONLY: Alt_C,nAlt,nEnergy,  &
+         DeltaE_I,EnergyGrid_I, IsVerbose
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModPlotFile,   ONLY: save_plot_file
+    use ModNumConst,   ONLY: cRadToDeg,cPi
+    use ModPlanetConst, only: Planet_, NamePlanet_I
+
+    real, intent(in) :: SIGEX(nEnergy,nStates)
+
+    real, allocatable   :: Coord_I(:), PlotState_IV(:,:)
+    !grid parameters
+    integer, parameter :: nDim =1
+    integer :: nVar,iEnergy,iState
+    integer, parameter ::iLine=1
+    !Jupiter
+    integer, parameter :: H2_=1,He_=2,H_=3,CH4_=4
+    
+    !Earth
+    integer, parameter :: Oplus_=1
+    
+    character(len=100),parameter :: NamePlotVarEarth=&
+         'E[eV] Var g r'
+    character(len=100),parameter :: NamePlotVarJupiter=&
+         'E[eV] Sig1 Sig2 Sig3 Sig4 Sig5 Sig6 Sig7 Sig8 Sig9 Sig10 Sig11 Sig12 g r'
+
+    character(len=100) :: NamePlotVar
+    character(len=*),parameter :: NameHeader='SigmaEx Cross Sec'
+    character(len=5) :: TypePlot='ascii'
+    integer :: iIon,iAlt
+    character(len=100) :: NamePlot
+    logical,save :: IsFirstCall =.true.
+    !--------------------------------------------------------------------------
+
+    nVar=nStates
+    allocate(Coord_I(nEnergy),PlotState_IV(nEnergy,nVar))
+
+    PlotState_IV = 0.0
+    Coord_I     = 0.0
+    
+    select case(NamePlanet_I(Planet_))
+    case('EARTH')
+       NamePlotVar=NamePlotVarEarth
+    case('JUPITER')
+       NamePlotVar=NamePlotVarJupiter
+    end select
+       
+    do iEnergy=1,nEnergy
+       Coord_I(iEnergy) = EnergyGrid_I(iEnergy)
+       do iState=1,nStates
+          PlotState_IV(iEnergy,iState) = SIGEX(iEnergy,iState)
+       enddo
+    enddo
+       
+    ! set name for plotfile
+    write(NamePlot,"(a,i4.4,a)") 'PW/plots/SIGEX.out'
+    
+    !Plot grid for given line
+    if(IsFirstCall) then
+       call save_plot_file(NamePlot, TypePositionIn='rewind', &
+            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
+            NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
+            nDimIn=nDim,CoordIn_I=Coord_I,                &
+            VarIn_IV = PlotState_IV, ParamIn_I = (/1.6, 1.0/)) !***
+       IsFirstCall = .false.
+    else
+       call save_plot_file(NamePlot, TypePositionIn='rewind', &
+            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
+            NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
+            nDimIn=nDim,CoordIn_I=Coord_I,                &
+            VarIn_IV = PlotState_IV, ParamIn_I = (/1.6, 1.0/)) !***
+    endif
+    
+    deallocate(Coord_I, PlotState_IV)
+  end subroutine plot_sigex
+
+ !=============================================================================
   subroutine get_excitation_crossection(NameNeutralSpecies,SigA)
-    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,EnergyMin,BINNUM
+    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,EnergyMin,BINNUM,IsVerbose,&
+         Emin=>EnergyMin
     
     character(len=*), intent(in) :: NameNeutralSpecies
-    real, intent(out) :: SigA(nEnergy,nEnergy)
+    real, intent(inout) :: SigA(nEnergy,nEnergy)
     integer :: nStates
 
     real, allocatable :: SigExcitation(:,:),Threshold(:)
@@ -626,7 +829,7 @@ contains
     !
     ! Calculate electron impact excitation cross sections (put into SIGA):
     !
-    write(*,*) 'Getting excitation crossections for ',NameNeutralSpecies
+    if (IsVerbose) write(*,*) 'Getting excitation crossections for ',NameNeutralSpecies
     
     select case(NameNeutralSpecies)
     case('O')
@@ -646,6 +849,7 @@ contains
        if(.not.allocated(SigExcitation)) allocate(SigExcitation(nEnergy,nStates))
        if(.not.allocated(Threshold)) allocate(Threshold(nStates))
        call read_excitation_crossection(NameNeutralSpecies,nStates,Threshold,SigExcitation)
+       ! call plot_sigex(SigExcitation,nStates)
     case('H')
        nStates = 6
        if(.not.allocated(SigExcitation)) allocate(SigExcitation(nEnergy,nStates))
@@ -733,7 +937,7 @@ contains
     use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,EnergyMin,BINNUM
 
     character(len=*), intent(in) :: NameNeutralSpecies
-    real, intent(out) :: SigS(nEnergy)
+    real, intent(inout) :: SigS(nEnergy)
 
     real, allocatable :: SigTotalI(:)
     integer :: iEnergy,iEnergySec
@@ -798,11 +1002,10 @@ contains
   
  !=============================================================================
   subroutine get_crossection_diffion(NameNeutralSpecies,SigDiffI,SigDiffA)
-    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,EnergyMin,BINNUM
+    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,EnergyMin,BINNUM,IsVerbose
 
     character(len=*), intent(in) :: NameNeutralSpecies
-    real, intent(out) :: SigDiffI(nEnergy,nEnergy), SigDiffA(nEnergy,nEnergy)
-
+    real, intent(inout) :: SigDiffI(nEnergy,nEnergy), SigDiffA(nEnergy,nEnergy)
     real :: Ethreshold,Ebar,OpalCoef
     real :: S_kr,t_kr,coef_kr,coef2_kr,w_kr,dfdw_kr,Term1_kr,Term2_kr,Term3_kr
     real, allocatable :: SigTotalI(:)
@@ -817,7 +1020,7 @@ contains
     !for testing
     SigTotalI(:) = 0.0
 
-    write(*,*) 'Getting ',NameNeutralSpecies
+    if (IsVerbose) write(*,*) 'Getting ',NameNeutralSpecies
     
     select case(NameNeutralSpecies)
     case('O')
@@ -842,7 +1045,8 @@ contains
     case('H')
        call read_diff_ionization_crossection(NameNeutralSpecies,SigDiffI)
  !      SigDiffI(:,:) = 0.0
-
+       Ethreshold = 13.6
+       Ebar = 7.3 !check this!!!
    case('CH4')
        call read_total_ionization_crossection(NameNeutralSpecies,SigTotalI)
        Ethreshold = 13.0
@@ -865,10 +1069,10 @@ contains
        if (NameNeutralSpecies.NE.'H') then
           !use the paper by Opal et al 1971 to set
           ! the differential ionization crossection
-          if(EnergyGrid_I(iEnergy)>=Ethreshold) then
+          if(EnergyGrid_I(iEnergy)>Ethreshold) then
              !set the Opal coef
              OpalCoef = SigTotalI(iEnergy)&
-                  /(Ebar * atan((EnergyGrid_I(iEnergy)-Ethrehold)/(2.0*Ebar)))
+                  /(Ebar * atan((EnergyGrid_I(iEnergy)-Ethreshold)/(2.0*Ebar)))
           else
              ! when energy of primary is below threshold make sure coef is zero
              OpalCoef=0.0
@@ -885,6 +1089,7 @@ contains
        ! ETJ is EnergyGrid_I(iEnergy)
 
        ! Lowest primary energy after collision
+       !write(*,*) iEnergy, EnergyGrid_I(iEnergy), Ethreshold
        NewPrimaryELow = (EnergyGrid_I(iEnergy)-Ethreshold) / 2.
        ! Highest primary energy after collision
        NewPrimaryEHigh = EnergyGrid_I(iEnergy)-Ethreshold
@@ -893,7 +1098,7 @@ contains
        
        iEnergyLow=BINNUM(NewPrimaryELow)
        iEnergyHigh=BINNUM(NewPrimaryEHigh)
-       
+
        ! if NewPrimaryELow is below the EnergyMin then say that the primary
        ! loses all of its energy for all New Primary Energies from
        ! NewPrimaryELow to EnergyMin, which means Secondary Energies from
@@ -906,19 +1111,20 @@ contains
           !          E2Secondary=NewPrimaryELow
           ! Not sure about the right way to convert this to a single secondary energy...
           EnergySecondary=NewPrimaryELow
-          iEnergySec=BINNUM(EnergySecondary)
+          iEnergySec=max(BINNUM(EnergySecondary),1)
           SigDiffA(iEnergy,iEnergy) = SigDiffA(iEnergy,iEnergy) + &
                SigDiffI(iEnergySec,iEnergy)
           iEnergyLow=1
           NewPrimaryELow=NewPrimaryEHigh-EnergyMin
+          if (IIMAXX(iEnergy).LT.(iEnergySec + 1)) IIMAXX(iEnergy) = iEnergySec + 1
        END IF
        IF (iEnergyHigh.EQ.0 .OR. NewPrimaryEHigh.LE.EnergyMin) cycle
-       DO  iNewEnergy=iEnergyHigh,iEnergyLow,-1
+       DO  iNewEnergy=min(iEnergyHigh,nEnergy),iEnergyLow,-1
           ! Secondary energy = new total energy - new primary energy
           EnergySecondary = NewPrimaryEHigh - EnergyGrid_I(iNewEnergy)
           IF (iNewEnergy.EQ.iEnergyLow) EnergySecondary=NewPrimaryELow
           IF (EnergySecondary.LE.1.E-10) cycle
-          iEnergySec = BINNUM(EnergySecondary)
+          iEnergySec = max(BINNUM(EnergySecondary),1)
           SIGG=SigDiffI(iEnergySec,iEnergy)
           IF (iNewEnergy.EQ.iEnergy) THEN
              SigDiffA(1,iEnergy)=SigDiffA(1,iEnergy) &
@@ -930,6 +1136,7 @@ contains
              SigDiffA(iEnergy-iNewEnergy,iEnergy) = &
                   SigDiffA(iEnergy-iNewEnergy,iEnergy)+SIGG
           END IF
+          if (IIMAXX(iEnergy).LT.(iEnergySec + 1)) IIMAXX(iEnergy) = iEnergySec + 1
        enddo
        !
        !
@@ -943,7 +1150,7 @@ contains
   !=============================================================================
   ! crossection for H taken from Shyn 1992
   subroutine read_diff_ionization_crossection(NameSpecies,SigDiffI)
-    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I
+    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,IsVerbose
     use ModIoUnit, ONLY : UnitTmp_
     use ModInterpolate, ONLY: bilinear
     
@@ -956,7 +1163,7 @@ contains
     real :: DataArray(3,DataLen)
     real :: Energy1Array(nE1,nE2),Energy2Array(nE1,nE2),CrossSecArray(nE1,nE2)
     
-    write(*,*) 'getting total ionization crossection for species ', &
+    if (IsVerbose) write(*,*) 'getting total ionization crossection for species ', &
          NameSpecies
 
     write(DatafileName,"(3a)") 'PW/DiffIon',NameSpecies,'.dat'
@@ -1003,7 +1210,7 @@ contains
   end subroutine read_diff_ionization_crossection
   !=============================================================================
   subroutine read_total_ionization_crossection(NameSpecies,SigTotalI)
-    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I
+    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,IsVerbose
     use ModIoUnit, ONLY : UnitTmp_
     use ModInterpolate, ONLY: linear
     
@@ -1013,7 +1220,7 @@ contains
     integer :: DataLen
     real, allocatable :: EnergyArray(:),CrossSecArray(:)
     
-    write(*,*) 'getting total ionization crossection for species ', &
+    if (IsVerbose) write(*,*) 'getting total ionization crossection for species ', &
          NameSpecies
 
     write(DatafileName,"(3a)") 'PW/IonCross',NameSpecies,'.dat'
@@ -1051,7 +1258,7 @@ contains
   end subroutine read_total_ionization_crossection
   !============================================================================
   subroutine read_excitation_crossection(NameSpecies,nStates,Threshold,SigEx)
-    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I
+    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,IsVerbose
     use ModIoUnit, ONLY : UnitTmp_
     use ModInterpolate, ONLY: linear
     
@@ -1063,7 +1270,7 @@ contains
     integer :: DataLen,iState,iEnergy
     real, allocatable :: EnergyArray(:),CrossSecArray(:)
     
-    write(*,*) 'getting excitation/absorption crossections for species ', &
+    if (IsVerbose) write(*,*) 'getting excitation/absorption crossections for species ', &
          NameSpecies
 
     write(DatafileName,"(3a)") 'PW/',NameSpecies,'Across.dat'
@@ -1104,7 +1311,7 @@ contains
   end subroutine read_excitation_crossection
   !============================================================================
   subroutine read_scattering_crossection(NameSpecies,SigS)
-    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I
+    use ModSeGrid,only:nEnergy,DeltaE_I,EnergyGrid_I,IsVerbose
     use ModIoUnit, ONLY : UnitTmp_
     use ModInterpolate, ONLY: linear
     
@@ -1114,7 +1321,7 @@ contains
     integer :: DataLen
     real, allocatable :: EnergyArray(:),CrossSecArray(:)
     
-    write(*,*) 'getting elastic scattering crossection for species ', &
+    if (IsVerbose) write(*,*) 'getting elastic scattering crossection for species ', &
          NameSpecies
 
     write(DatafileName,"(3a)") 'PW/',NameSpecies,'Scross.dat'
@@ -1151,6 +1358,158 @@ contains
 
   end subroutine read_scattering_crossection
   !============================================================================
+  ! read in Jupiter backscatter probabilities
+  !============================================================================
+  subroutine read_backscatter_prob
+    use ModIoUnit, ONLY : UnitTmp_
+    use ModSeGrid, ONLY : IsVerbose
+    
+    integer, parameter :: TmpDim = 25
+    character(len=100) :: DatafileName
+    real :: tmp(nEnergyTmp,TmpDim), tmp2(nBackscatterSpecies,nEnergyTmp)
+
+    integer :: M6,iEnergyCounter
+    real :: NMM(21),DDDE(16), EEE,DD7,ND7,DELE(nEnergyTmp)
+    
+    if (IsVerbose) write(*,*) 'getting backscatter probabilities'
+
+    write(DatafileName,"(1a)") 'PW/DGAEICSF1.txt'
+
+    open(UnitTmp_,FILE=DatafileName,STATUS='OLD')
+
+200 format(8ES10.3)
+778 format(8(ES12.5))
+355 format(8F10.6)
+    
+    !Read in cross-sections for the production of various airglow features
+    do k=1,TmpDim
+       READ(UnitTmp_,200) (tmp(iEnergyCounter,k),iEnergyCounter=1,nEnergyTmp)                   !(1)
+    end do
+    
+    ! Read Elastic Cross-Sections and In/Elastic Backscatter Probabilities
+    ! --------------------------------------------------------------------
+    do n=1,nBackscatterSpecies
+       READ(UnitTmp_,778) (tmp2(n,j),j=1,nEnergyTmp)                     !(2)
+       READ(UnitTmp_,355) (pe_tsm(n,j),j=1,nEnergyTmp)                       !(3)
+       READ(UnitTmp_,355) (pa_tsm(n,j),j=1,nEnergyTmp)                       !(4)
+    end do
+    
+    !Inelastic cross sections and something else ("tion") also present
+    ! not read in
+    CLOSE(UnitTmp_)
+    
+    !ENERGY GRID SETUP
+    !-----------------
+    !***DG (~~~ARE: Tabulated this comment)
+    ! dz_tsm    : Altitude step (cm)
+    ! EE        : Energy (eV)
+    ! DELE      : Energy step size (eV)
+    ! M6        : Number of energy intervals
+    ! NMM       : Number of bins in given interval
+    ! nnspec    : Number of neutral species included in electron-impact reactions
+    ! nbins     : Number of energy bins used when generating XSECT output
+    
+    M6 = 16
+    
+    !Set up interval bins
+    !--------------------
+    NMM(1)  = 20
+    NMM(2)  = 90
+    NMM(3)  = 10
+    NMM(4)  = 16
+    NMM(5)  = 10
+    NMM(6)  =  5
+    NMM(7)  =  6
+    NMM(8)  = 13
+    NMM(9)  = 10
+    NMM(10) = 15
+    NMM(11) = 15
+    NMM(12) = 14
+    NMM(13) = 22
+    NMM(14) = 17
+    NMM(15) = 28
+    NMM(16) = 21
+    
+    !Set up interval bin sizes
+    !-------------------------
+    DDDE(1)  = 0.5
+    DDDE(2)  = 1.0
+    DDDE(3)  = 2.0
+    DDDE(4)  = 5.0
+    DDDE(5)  = 10.0
+    DDDE(6)  = 20.0
+    DDDE(7)  = 50.0
+    DDDE(8)  = 100.0
+    DDDE(9)  = 200.0
+    DDDE(10) = 400.0
+    DDDE(11) = 800.0
+    DDDE(12) = 1000.0
+    DDDE(13) = 2000.0
+    DDDE(14) = 10000.0
+    DDDE(15) = 25000.0
+    DDDE(16) = 50000.0
+    
+    EEE = 0.0 !Energy grid level placeholder
+    iEnergyCounter  = 0   !Counter
+    
+    !Set up the energy grid
+    !----------------------
+    do i=1,M6
+       DD7 = DDDE(i)
+       ND7 = NMM(i)
+       
+       do j=1,ND7
+          EEE      = EEE + DD7
+          iEnergyCounter       = iEnergyCounter + 1
+          DELE(iEnergyCounter) = DD7
+          EnergyGridTmp_I(iEnergyCounter)   = EEE - 0.5*DD7
+       end do
+       
+    end do
+    
+    check_nbins: IF (iEnergyCounter .ne. nEnergyTmp) THEN
+       WRITE(*,*) 'nEnergyTmp does not agree with iEnergyCounter'
+       WRITE(*,*) 'nEnergyTmp =',nbins
+       WRITE(*,*) 'iEnergyCounter =',iEnergyCounter
+    end if check_nbins
+  end subroutine read_backscatter_prob
+  !============================================================================
+
+  !============================================================================
+  subroutine interp_backscatter(iSpecies)
+  !============================================================================
+    use ModSeGrid, ONLY: nEnergy, EnergyGrid_I, IsVerbose
+    use ModInterpolate, ONLY: linear
+
+    integer, intent(in) :: iSpecies    !H2_=1, He_=2, H_=3
+    
+    integer :: iEnergy,iUnder
+
+    iUnder = 0
+    
+    do iEnergy = 1,nEnergy
+       if (EnergyGrid_I(iEnergy).LT.EnergyGridTmp_I(1)) then
+          iUnder = iEnergy
+       else if (EnergyGrid_I(iEnergy).LE.EnergyGridTmp_I(nEnergyTmp)) then
+          PIN(iSpecies,iEnergy) = linear(pa_tsm(iSpecies,:),1,nEnergyTmp, &
+               EnergyGrid_I(iEnergy),EnergyGridTmp_I(:))
+          PE(iSpecies,iEnergy)  = linear(pe_tsm(iSpecies,:),1,nEnergyTmp, &
+               EnergyGrid_I(iEnergy),EnergyGridTmp_I(:))
+       else
+          if (PIN(iSpecies,iEnergy-1).LT.0.2) PIN(iSpecies,iEnergy) = 0.0
+          if (PE(iSpecies,iEnergy-1).LT.0.2)  PE(iSpecies,iEnergy)  = 0.0
+       endif
+    end do
+
+    do iEnergy=iUnder,1,-1
+       if (PIN(iSpecies,iEnergy+1).LT.0.2) PIN(iSpecies,iEnergy) = 0.0
+       if (PE(iSpecies,iEnergy+1).LT.0.2)  PE(iSpecies,iEnergy)  = 0.0
+    end do
+    
+  end subroutine interp_backscatter
+  !============================================================================
+
+  !============================================================================
   ! plot differential ionization crossection
   subroutine plot_diffion_cross
     use ModSeGrid,     ONLY: nEnergy, EnergyGrid_I
@@ -1172,7 +1531,7 @@ contains
 
     integer :: iNeutral
     
-    character(len=100) :: NamePlot = 'DiffIonCross.out'
+    character(len=100) :: NamePlot = 'PW/plots/DiffIonCross.out'
     
     character(len=*),parameter :: NameHeader='SE output iono'
     character(len=5) :: TypePlot='ascii'
@@ -1210,7 +1569,7 @@ contains
           ! set plot state
           do iNeutral=1,nNeutral
              PlotState_IIV(iEnergySecondary,iEnergyPrimary,iNeutral) = &
-                  SIGIX(iNeutral,iEnergySecondary,iEnergyPrimary)
+                  SEC(iNeutral,iEnergySecondary,iEnergyPrimary)
           enddo
        enddo
     enddo
@@ -1224,7 +1583,7 @@ contains
             VarIn_IIV = PlotState_IIV, ParamIn_I = (/1.6, 1.0/))
        IsFirstCall = .false.
     else
-       call save_plot_file(NamePlot, TypePositionIn='append', &
+       call save_plot_file(NamePlot, TypePositionIn='rewind', &
             TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
             NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
             nDimIn=nDim,CoordIn_DII=Coord_DII,                &
@@ -1233,6 +1592,89 @@ contains
     
     deallocate(Coord_DII, PlotState_IIV)
   end subroutine plot_diffion_cross
+  !============================================================================
+  ! plot absorption crossection
+  subroutine plot_siga_cross
+    use ModSeGrid,     ONLY: nEnergy, EnergyGrid_I
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModPlotFile,   ONLY: save_plot_file
+    use ModPlanetConst, ONLY: Planet_, NamePlanet_I
+    
+    real, allocatable   :: Coord_DII(:,:,:), PlotState_IIV(:,:,:)
+
+    real    :: time=0
+    integer :: nStep =0
+    
+    !grid parameters
+    integer, parameter :: nDim =2, E1_=1, E2_=2
+    
+    ! planet-specific values
+    integer :: nVar, nNeutral
+    character(len=100) :: NamePlotVar
+
+    integer :: iNeutral
+    
+    character(len=100) :: NamePlot = 'PW/plots/SIGA.out'
+    
+    character(len=*),parameter :: NameHeader='SE output iono'
+    character(len=5) :: TypePlot='ascii'
+    integer :: iEnergyPrimary,iEnergySecondary
+
+    logical :: IsFirstCall=.true.
+    
+    !--------------------------------------------------------------------------
+
+    select case(NamePlanet_I(Planet_))
+    case('EARTH')
+       nVar=3
+       nNeutral=3
+       NamePlotVar= &
+            'Es[eV] Ep[eV]  sigmaO[/cc/eV] sigmaO2[/cc/eV] sigmaN2[/cc/eV] g r'
+
+    case('JUPITER')
+       nVar=4
+       nNeutral=4
+       NamePlotVar= 'Es[eV] Ep[eV]  sigmaH2[/cc/eV] sigmaHe[/cc/eV] sigmaH[/cc/eV] sigmaCH4[/cc/eV] g r'
+
+    end select
+    
+    allocate(Coord_DII(nDim,nEnergy,nEnergy),PlotState_IIV(nEnergy,nEnergy,nVar))
+    
+    !    do iLine=1,nLine
+    PlotState_IIV = 0.0
+    Coord_DII     = 0.0
+    
+    !Set values
+    do iEnergyPrimary=1,nEnergy
+       do iEnergySecondary=1,nEnergy
+          Coord_DII(E1_,iEnergySecondary,iEnergyPrimary) = EnergyGrid_I(iEnergySecondary)             
+          Coord_DII(E2_,iEnergySecondary,iEnergyPrimary) = EnergyGrid_I(iEnergyPrimary)             
+          ! set plot state
+          do iNeutral=1,nNeutral
+             PlotState_IIV(iEnergySecondary,iEnergyPrimary,iNeutral) = &
+                  SIGA(iNeutral,iEnergySecondary,iEnergyPrimary)
+          enddo
+       enddo
+    enddo
+    
+    !Plot crossection
+    if(IsFirstCall) then
+       call save_plot_file(NamePlot, TypePositionIn='rewind', &
+            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
+            NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
+            nDimIn=nDim,CoordIn_DII=Coord_DII,                &
+            VarIn_IIV = PlotState_IIV, ParamIn_I = (/1.6, 1.0/))
+       IsFirstCall = .false.
+    else
+       call save_plot_file(NamePlot, TypePositionIn='rewind', &
+            TypeFileIn=TypePlot,StringHeaderIn = NameHeader,  &
+            NameVarIn = NamePlotVar, nStepIn=nStep,TimeIn=time,     &
+            nDimIn=nDim,CoordIn_DII=Coord_DII,                &
+            VarIn_IIV = PlotState_IIV, ParamIn_I = (/1.6, 1.0/))
+    endif
+    
+    deallocate(Coord_DII, PlotState_IIV)
+  end subroutine plot_siga_cross
   !=============================================================================
   subroutine calc_backscatter
     use ModSeGrid,only:NBINS=>nEnergy,ener=>EnergyGrid_I, &

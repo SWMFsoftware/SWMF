@@ -16,8 +16,8 @@ MODULES = \
 	ModBackground.o\
 	ModElecTrans.o\
 	twostream_init.o\
-	ModCouplePWOMtoTWOSTREAM.o
-
+	ModCouplePWOMtoTWOSTREAM.o\
+	Mod3DAtmos.o
 
 
 METHODS = \

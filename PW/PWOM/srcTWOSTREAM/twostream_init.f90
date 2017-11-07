@@ -1,7 +1,7 @@
 ! Initializes the stet code, 
 
 subroutine twostream_init(Coord_D,Ap_I,F107,F107A, TimeIn)
-  use ModSeGrid, only:set_egrid,set_altgrid,IsVerbose,Time
+  use ModSeGrid, only:allocate_grid_arrays,set_egrid,set_altgrid,IsVerbose,Time
   use ModSeBackground,only: allocate_background_arrays,mLat,mLon, &
        set_footpoint_locations,fill_thermal_plasma_empirical,plot_background,&
        plot_ephoto_prod,DoAlignDipoleRot,get_neutrals_and_pe_spectrum
@@ -28,6 +28,7 @@ subroutine twostream_init(Coord_D,Ap_I,F107,F107A, TimeIn)
   ! Set up the grid
   !/
   if(IsVerbose) write(*,*) 'setting grids'
+  call allocate_grid_arrays
   call set_egrid
   call set_altgrid
   

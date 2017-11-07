@@ -27,6 +27,16 @@ module ModPWOM
 
   integer :: nLine,nLog=0
 
+  !particle variables
+  logical :: UseParticles=.false.,DoInitAltParticles=.false.
+  logical :: UseParticleFeedback=.false.
+  real    :: DtCoupleParticles=1.0
+  integer :: nAltParticles,iAltParticle
+  real    :: AltMinParticles,AltMaxParticles !in cm
+  character(len=100) :: TypeParticleGrid='Uniform'
+  
+
+
   ! The number of lines on each processor and on the processors with lower rank
   integer, allocatable :: nLine_P(:), nLineBefore_P(:)
 

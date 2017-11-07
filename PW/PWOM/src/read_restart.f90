@@ -16,16 +16,22 @@ subroutine PW_read_restart
   integer:: iError, iIon, iLine,i, nAltFile,iAlt,iMin,iMax
 
 !------------------------------------------------------------------------------
-  if (.not.allocated(StateFile_CVI)) &
-       allocate(StateFile_CVI(nAlt,nVar,nLine))
-  if (.not.allocated(Alt_C)) &
-       allocate(Alt_C(nAlt))
+!  if (.not.allocated(StateFile_CVI)) &
+!       allocate(StateFile_CVI(nAlt,nVar,nLine))
+!  if (.not.allocated(Alt_C)) &
+!       allocate(Alt_C(nAlt))
   !read in restart data for each line
   allocate(IsNorth_I(nLine))
   do iLine=1,nLine
      OPEN(UNIT=UnitTmp_, FILE=NameRestartIn(iLine), STATUS='OLD')
      READ (UnitTmp_,*) Time,Dt_I(iLine),nAltFile, nStep
      READ (UnitTmp_,*) GeoMagLat_I(iLine),GeoMagLon_I(iLine)
+     
+     if (.not.allocated(StateFile_CVI)) &
+          allocate(StateFile_CVI(nAltFile,nVar,nLine))
+     if (.not.allocated(Alt_C)) &
+          allocate(Alt_C(nAltFile))
+     
 
      if (GeoMagLat_I(iLine) < 0.0) then
         IsNorth_I(iLine) = .false.

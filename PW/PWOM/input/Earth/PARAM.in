@@ -27,7 +27,7 @@ T
 4
 
 #SAVEPLOT
-100.0		DtSavePlot
+50.0		DtSavePlot
 -1		DnSavePlot
 T		SaveFirst
 

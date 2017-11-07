@@ -33,7 +33,8 @@ Module ModSeState
 
   ! ilocal defines the number of points at the bottom of each ionosphere where 
   ! transport is explicitly turned off. default is shown
-  integer :: ilocal = 12
+!  integer :: ilocal = 12
+  integer :: ilocal = 2
 
   ! Arrays for electron production in ionosphere. These are only used to store 
   ! these values for output. They are already added into Qstar for the purposes 
@@ -751,6 +752,8 @@ contains
 
     real,parameter :: cEVtoCMperS = 5.88e7 ! convert energy to velocity
 
+    ! precipitation 
+    real :: PrecipCoef,PolarRainCoef
     !---------------------------------------------------------------------------
     
     !initialize lbeta to 0
@@ -934,8 +937,79 @@ contains
                   FieldLineGrid_IC(iLine,nAltMax) &
                   -FieldLineGrid_IC(iLine,nAltMax+1)
              !fill bc from iono
-          !   write(*,*) j,nTop, nThetaAlt_IIC(iLine,j,nTop)
+             !   write(*,*) j,nTop, nThetaAlt_IIC(iLine,j,nTop)
              phidn(iLine,:,nTop+1,j) = 0.0
+             
+             ! Add precip info here
+             if(UsePrecipitation .and. EnergyGrid_I(j) > PrecipEmin &
+                  .and. EnergyGrid_I(j) < PrecipEmax &
+                  .and. .not.UseOvation) then 
+                !write(*,*) 'HA!!!!!',PrecipEmin,PrecipEmean,PrecipEflux,nThetaAlt_IIC(iLine,j,nIono) 
+                !stop
+             
+!                do k=0,nThetaAlt_IIC(iLine,j,nAltMax+1)
+                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+                   !These current values are for soft electron precipitation 
+                   ! from strangeway et al 2005. In future should come from 
+                   ! PWOM
+                   !PrecipCoef=get_precip_norm(400.0,100.0,1000.0,2.0)
+                   PrecipCoef=get_precip_norm(PrecipEmean,PrecipEmin,&
+                        PrecipEmax,PrecipEflux)
+                   phidn(iLine,k,nAltMax+1:nPoint,j)= &
+                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+                        /PrecipEmean)
+!                   PrecipCoef=get_precip_norm_gaussian(PrecipEmean,PrecipEmin,&
+!                        PrecipEmax,PrecipEflux)
+!                   phidn(iLine,k,nAltMax+1:nPoint,j)= &
+!                        PrecipCoef*exp(-(EnergyGrid_I(j)-PrecipEmean)&
+!                        /(2.0*(0.1*PrecipEmean)**2.0))
+                end do
+             elseif(UseOvation .and. EnergyGrid_I(j) > OvationEmin &
+                  .and. .not.UsePrecipitation) then 
+                !Start with diffuse aurora
+                PrecipCoef=get_precip_norm(EmeanDiff,OvationEmin,&
+                     OvationEmax,EfluxDiff)
+                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+                   phidn(iLine,k,nAltMax,j)= &
+                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+                        /EmeanDiff)
+                enddo
+                !add in wave aurora
+                PrecipCoef=get_precip_norm(EmeanWave,OvationEmin,&
+                     OvationEmax,EfluxWave)
+                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+                   phidn(iLine,k,nAltMax,j)= phidn(iLine,k,nAltMax,j) + &
+                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+                        /EmeanWave)
+                enddo
+                !add in Monoenergetic aurora
+                PrecipCoef=get_precip_norm(EmeanMono,OvationEmin,&
+                     OvationEmax,EfluxMono)
+                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+                   phidn(iLine,k,nAltMax,j)= phidn(iLine,k,nAltMax,j) + &
+                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+                        /EmeanMono)
+                enddo
+             end if
+             
+             ! add in polar rain
+             if(UsePolarRain .and. EnergyGrid_I(j) > PolarRainEmin ) then 
+                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+                   PolarRainCoef=get_precip_norm(PolarRainEmean,PolarRainEmin,&
+                        PolarRainEmax,PolarRainEflux)
+                   if (UsePrecipitation.and. EnergyGrid_I(j) > PrecipEmin) then
+                      !add polar rain on top of the precipitation set
+                      phidn(iLine,k,nAltMax,j)= phidn(iLine,k,nAltMax,j) + &
+                           PolarRainCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+                           /PolarRainEmean)
+                   else
+                      !set polar rain values instead of adding
+                      phidn(iLine,k,nAltMax,j)= &
+                           PolarRainCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+                           /PolarRainEmean)
+                   endif
+                end do
+             end if
           else
              ! closed line so keep hemispheres attached. Note that should 
              ! they get detached for energies less than the potential we will
@@ -1367,65 +1441,65 @@ contains
              end do
 
              ! Add precip info here
-             if(UsePrecipitation .and. EnergyGrid_I(j) > PrecipEmin &
-                  .and. .not.UseOvation) then 
-                do k=0,nThetaAlt_IIC(iLine,j,nIono)
-                   !These current values are for soft electron precipitation 
-                   ! from strangeway et al 2005. In future should come from 
-                   ! PWOM
-                   !PrecipCoef=get_precip_norm(400.0,100.0,1000.0,2.0)
-                   PrecipCoef=get_precip_norm(PrecipEmean,PrecipEmin,&
-                        PrecipEmax,PrecipEflux)
-                   iphidn(iLine,k,nIono+1,j)= &
-                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
-                        /PrecipEmean)
-                end do
-             elseif(UseOvation .and. EnergyGrid_I(j) > OvationEmin &
-                  .and. .not.UsePrecipitation) then 
-                !Start with diffuse aurora
-                PrecipCoef=get_precip_norm(EmeanDiff,OvationEmin,&
-                     OvationEmax,EfluxDiff)
-                do k=0,nThetaAlt_IIC(iLine,j,nIono)
-                   iphidn(iLine,k,nIono+1,j)= &
-                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
-                        /EmeanDiff)
-                enddo
-                !add in wave aurora
-                PrecipCoef=get_precip_norm(EmeanWave,OvationEmin,&
-                     OvationEmax,EfluxWave)
-                do k=0,nThetaAlt_IIC(iLine,j,nIono)
-                   iphidn(iLine,k,nIono+1,j)= iphidn(iLine,k,nIono+1,j) + &
-                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
-                        /EmeanWave)
-                enddo
-                !add in Monoenergetic aurora
-                PrecipCoef=get_precip_norm(EmeanMono,OvationEmin,&
-                     OvationEmax,EfluxMono)
-                do k=0,nThetaAlt_IIC(iLine,j,nIono)
-                   iphidn(iLine,k,nIono+1,j)= iphidn(iLine,k,nIono+1,j) + &
-                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
-                        /EmeanMono)
-                enddo
-             end if
-             
-             ! add in polar rain
-             if(UsePolarRain .and. EnergyGrid_I(j) > PolarRainEmin ) then 
-                do k=0,nThetaAlt_IIC(iLine,j,nIono)
-                   PolarRainCoef=get_precip_norm(PolarRainEmean,PolarRainEmin,&
-                        PolarRainEmax,PolarRainEflux)
-                   if (UsePrecipitation.and. EnergyGrid_I(j) > PrecipEmin) then
-                      !add polar rain on top of the precipitation set
-                      iphidn(iLine,k,nIono+1,j)= iphidn(iLine,k,nIono+1,j) + &
-                           PolarRainCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
-                           /PolarRainEmean)
-                   else
-                      !set polar rain values instead of adding
-                      iphidn(iLine,k,nIono+1,j)= &
-                           PolarRainCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
-                           /PolarRainEmean)
-                   endif
-                end do
-             end if
+!             if(UsePrecipitation .and. EnergyGrid_I(j) > PrecipEmin &
+!                  .and. .not.UseOvation) then 
+!                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+!                   !These current values are for soft electron precipitation 
+!                   ! from strangeway et al 2005. In future should come from 
+!                   ! PWOM
+!                   !PrecipCoef=get_precip_norm(400.0,100.0,1000.0,2.0)
+!                   PrecipCoef=get_precip_norm(PrecipEmean,PrecipEmin,&
+!                        PrecipEmax,PrecipEflux)
+!                   iphidn(iLine,k,nIono+1,j)= &
+!                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+!                        /PrecipEmean)
+!                end do
+!             elseif(UseOvation .and. EnergyGrid_I(j) > OvationEmin &
+!                  .and. .not.UsePrecipitation) then 
+!                !Start with diffuse aurora
+!                PrecipCoef=get_precip_norm(EmeanDiff,OvationEmin,&
+!                     OvationEmax,EfluxDiff)
+!                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+!                   iphidn(iLine,k,nIono+1,j)= &
+!                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+!                        /EmeanDiff)
+!                enddo
+!                !add in wave aurora
+!                PrecipCoef=get_precip_norm(EmeanWave,OvationEmin,&
+!                     OvationEmax,EfluxWave)
+!                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+!                   iphidn(iLine,k,nIono+1,j)= iphidn(iLine,k,nIono+1,j) + &
+!                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+!                        /EmeanWave)
+!                enddo
+!                !add in Monoenergetic aurora
+!                PrecipCoef=get_precip_norm(EmeanMono,OvationEmin,&
+!                     OvationEmax,EfluxMono)
+!                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+!                   iphidn(iLine,k,nIono+1,j)= iphidn(iLine,k,nIono+1,j) + &
+!                        PrecipCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+!                        /EmeanMono)
+!                enddo
+!             end if
+!             
+!             ! add in polar rain
+!             if(UsePolarRain .and. EnergyGrid_I(j) > PolarRainEmin ) then 
+!                do k=0,nThetaAlt_IIC(iLine,j,nIono)
+!                   PolarRainCoef=get_precip_norm(PolarRainEmean,PolarRainEmin,&
+!                        PolarRainEmax,PolarRainEflux)
+!                   if (UsePrecipitation.and. EnergyGrid_I(j) > PrecipEmin) then
+!                      !add polar rain on top of the precipitation set
+!                      iphidn(iLine,k,nIono+1,j)= iphidn(iLine,k,nIono+1,j) + &
+!                           PolarRainCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+!                           /PolarRainEmean)
+!                   else
+!                      !set polar rain values instead of adding
+!                      iphidn(iLine,k,nIono+1,j)= &
+!                           PolarRainCoef*EnergyGrid_I(j)*exp(-EnergyGrid_I(j)&
+!                           /PolarRainEmean)
+!                   endif
+!                end do
+!             end if
           endif
 
           !set bounds for ionosphere loop depending if you are in iono 1 or 2
@@ -2644,6 +2718,7 @@ contains
                         mu_IIIC(iLine,iAngle,iEnergy,iPoint)&
                         * phidn(iLine,iAngle,iPlas,iEnergy)
                 endif
+                
              enddo
              ! integrate to get the up and down flux
              CALL midpnt_int(FluxUp_IC(iEnergy,iPoint),IntegrandFluxUp_I,&
@@ -2653,7 +2728,12 @@ contains
                   mu_IIIC(iLine,:,iEnergy,iPoint),1,&
                   nThetaAlt_IIC(iLine,iEnergy,iPoint),nAngle,1)
           endif
-          
+!          if(iPoint==30) then
+!             write(*,*) 'iEnergy,FluxUp_IC,FluxUp_IC',&
+!
+!                  iEnergy,FluxUp_IC(iEnergy,iPoint),FluxDn_IC(iEnergy,iPoint)
+!          endif
+
           ! Get the net flux
           NetFlux_IC(iEnergy,iPoint)=&
                2.0*cPi*(FluxUp_IC(iEnergy,iPoint)+FluxDn_IC(iEnergy,iPoint))

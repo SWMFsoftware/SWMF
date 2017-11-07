@@ -289,6 +289,7 @@ subroutine PW_advance_line
   use ModPWOM
   use ModFieldLine
   use ModAurora,   ONLY: set_aurora, set_auroral_rates
+  use ModParticle, ONLY: disinter_line, bury_line
   implicit none
 
   real XXX,MaxLineTime
@@ -320,6 +321,10 @@ subroutine PW_advance_line
 !     call set_aurora
 !     call set_auroral_rates
 !  endif
+  !if we use particles then we need to disinter the line  before updating
+  if (UseParticles) then
+     call disinter_line(iLine)
+  endif
 
   call put_field_line(nAlt,&
        State_CVI(:,:,iLine),&
@@ -348,6 +353,12 @@ subroutine PW_advance_line
        OmegaLine_I(iLine),       &
        iLine=iLine,MaxLineTime=MaxLineTime,Dt=Dt_I(iLine))
   endif
+  
+  !when using particles, bury the line
+  if (UseParticles) then
+     call bury_line(iLine)
+  endif
+
   
 end subroutine PW_advance_line
 

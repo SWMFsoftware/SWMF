@@ -11,6 +11,7 @@ include Makefile.DEPEND
 include Makefile.RULES
 
 MODULES = \
+	ModParticle.o\
 	ModOvation.o\
 	ModPW.o\
 	ModParameters.o\
@@ -92,6 +93,7 @@ ${EXE}:	${EXEOBJECTS}
 		ar -x ${LIBDIR}/libEMPIRICALUA.a; \
 		ar -x ${LIBDIR}/libINDICES.a; \
 		ar -x ${LIBDIR}/libSHARE.a; \
+		ar -x ${LIBDIR}/libTIMING.a; \
 		ar -x ${LIBDIR}/libSE.a
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} ${Lflag1}
 

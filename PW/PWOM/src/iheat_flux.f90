@@ -9,18 +9,23 @@ SUBROUTINE PW_iheat_flux
        D1(MaxGrid),D2(MaxGrid),&
        D3(MaxGrid),D4(MaxGrid)
   REAL YL(MaxGrid),YK(MaxGrid)
+  integer :: nTop
   !----------------------------------------------------------------------------
 
   if (.not.UseIonHeat) return
   
   do iIon=1,nIon-1
+     nTop=nAltTop_I(iIon)
+     !nTop=nAltTop_I(iIon)+10
+
      C2(1)=H0*(HeatCon_GI(2,iIon)-HeatCon_GI(0,iIon))
-     C2(NDIM)=H0*(HeatCon_GI(nDim+1,iIon)-HeatCon_GI(NDIM2,iIon))
-     DO  K=2,NDIM2
+     C2(nTop)=H0*(HeatCon_GI(nTop+1,iIon)&
+          -HeatCon_GI(nTop-1,iIon))
+     DO  K=2,nTop-1
         !C2 = d/dr Kappa 
         C2(K)=H0*(HeatCon_GI(K+1,iIon)-HeatCon_GI(K-1,iIon))
      enddo
-     DO K=1,NDIM
+     DO K=1,nTop
         !C1 = kappa/rho
         C1(K)=HeatCon_GI(K,iIon)/State_GV(K,iRho_I(iIon))
         !C2 = 1/rho d/dr Kappa
@@ -37,7 +42,7 @@ SUBROUTINE PW_iheat_flux
      ! D2  = 1/dt + 1/dr**2 * (Kappa/Rho )
      ! D3  = -0.5/dr**2 * Kappa/Rho + .25/dr * (1/(Rho*A) d/dr(A*kappa))
      ! D4  = 1/Dt - 1/dr**2 * (Kappa/Rho )
-     DO K=1,NDIM
+     DO K=1,nTop
         XX1=H3*C1(K)
         XX2=H4*C2(K)
         XX3=H2*C1(K)
@@ -50,29 +55,34 @@ SUBROUTINE PW_iheat_flux
      D4(1)=&
           -D3(1)*State_GV(0,iT_I(iIon))+D4(1)*State_GV(1,iT_I(iIon))&
           -D1(1)*State_GV(2,iT_I(iIon))
-     D4(NDIM)=-D3(NDIM)*State_GV(nDim2,iT_I(iIon))+&
-        D4(NDIM)*State_GV(nDim,iT_I(iIon))-D1(NDIM)*State_GV(nDim+1,iT_I(iIon))
+     D4(nTop)=&
+          -D3(nTop)*State_GV(nTop-1,iT_I(iIon))+&
+          D4(nTop)*State_GV(nTop,iT_I(iIon))&
+          -D1(nTop)*State_GV(nTop+1,iT_I(iIon))
      ! D4 = 0.5/dr**2 * Kappa*T(k-1)/Rho  
      !      - .25/dr * (1/(Rho*A) d/dr(A*kappa)) *T(k-1)
      !      + T(k)/Dt - T(k)/dr**2 * (Kappa*T(k)/Rho ) 
      !      + 0.5/dr**2 * Kappa*T(k+1)/Rho + 0.25*T(k+1)/dr * (1/(Rho*A) d/dr(A*kappa))
      !    = -0.5 kappa/rho d^2 T/dr^2 - 0.5 * dT/dr * (1/(Rho*A) d/dr(A*kappa))+T/Dt
      !    = -0.5/A/rho* d/dr (A*kappa*dT/dr) + T/Dt
-     DO K=2,NDIM2
+     DO K=2,nTop-1
         D4(K)=-D3(K)*State_GV(K-1,iT_I(iIon))+D4(K)*State_GV(K,iT_I(iIon))-&
              D1(K)*State_GV(K+1,iT_I(iIon))
      enddo
      YL(1)=D1(1)/D2(1)
      YK(1)=(D4(1)-D3(1)*State_GV(0,iT_I(iIon)))/D2(1)
-     DO  K=2,NDIM
+     DO  K=2,nTop
         XX1=D2(K)-D3(K)*YL(K-1)
         YK(K)=(D4(K)-D3(K)*YK(K-1))/XX1
         YL(K)=D1(K)/XX1
      enddo
-     State_GV(nDim,iT_I(iIon))=YK(NDIM)-YL(NDIM)*State_GV(nDim+1,iT_I(iIon))
-     State_GV(nDim,iP_I(iIon))=&
-          RGAS_I(iIon)*State_GV(nDim,iRho_I(iIon))*State_GV(nDim,iT_I(iIon))
-     DO  K=NDIM2,1,-1
+     State_GV(nTop,iT_I(iIon))=&
+          YK(nTop)-YL(nTop)&
+          *State_GV(nTop+1,iT_I(iIon))
+     State_GV(nTop,iP_I(iIon))=&
+          RGAS_I(iIon)*State_GV(nTop,iRho_I(iIon))&
+          *State_GV(nTop,iT_I(iIon))
+     DO  K=nTop-1,1,-1
         State_GV(K,iT_I(iIon))=YK(K)-YL(K)*State_GV(K+1,iT_I(iIon))
         State_GV(K,iP_I(iIon))=&
              RGAS_I(iIon)*State_GV(K,iRho_I(iIon))*State_GV(K,iT_I(iIon))

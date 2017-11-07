@@ -67,7 +67,8 @@ contains
   subroutine fill_thermal_plasma_empirical(F107,F107A,t)
     use ModSeGrid, only: nAlt,Alt_C,IsVerbose
     use ModPlanetConst, only: Planet_, NamePlanet_I
-
+    use ModNumConst,  only: cDegToRad
+    
     real   , intent(in) :: F107, F107A, t
     real    :: factor
     integer :: iAlt
@@ -86,6 +87,7 @@ contains
           eThermalTemp_C(iAlt) = &
                eTemp_Jupiter(Alt_C(iAlt))
        end do
+       dip = 90.0*cDegToRad
     end select
     
     
@@ -160,7 +162,8 @@ contains
     use EUA_ModMsis90,  only: GTD6,TSELEC
     use ModNumConst,    only: cDegToRad,cRadToDeg
     use ModPlanetConst, only: Planet_, NamePlanet_I
-
+    use Mod3DAtmos,     only: get_jupiter_atmos
+    
     real   , intent(in) :: F107, F107A,AP(7)
     
     integer :: iAlt, iEnergy ! loop variables
@@ -183,7 +186,7 @@ contains
     !--------------------------------------------------------------------------
 
     !set the solar flux
-    CALL SSFLUX(0,F107,F107A,0.,0.,0.,0.,1.)
+    CALL SSFLUX(1,F107,F107A,0.,0.,0.,0.,1.)
 
 
     ! on first call initialize the production parameters
@@ -196,6 +199,8 @@ contains
     STL=(UT/240+gLon)/15
     IF (STL.LT.0.) STL=STL+24.
     IF (STL.GT.24.) STL=STL-24.
+
+    if (IsVerbose) print *, '***** solar time *****',STL, UT, gLon
     
     select case(NamePlanet_I(Planet_))
     case('EARTH')
@@ -217,13 +222,15 @@ contains
     case('JUPITER')
        ! interpolate from AtmosArray(1,:) to FieldLineGrid_IC(iLine,iAlt)
        NeutralFile = 'PW/JGITM-1D-atmos.dat'
-       CALL get_jupiter_atmos(NeutralFile,nNeutralSpecies, &
+       !CALL get_jupiter_atmos(NeutralFile,nNeutralSpecies, &
+       CALL get_jupiter_atmos(mLat,mLon,nNeutralSpecies, &
             NeutralDens_IC(:,1:nAlt),NeutralTemp_C(1:nAlt))
 
        ! Calculate the solar zenith angle
        SZA=acos(cos(gLat*cDegToRad)*cos(gLon*cDegToRad))
+       if (IsVerbose) print *, '***** solar zenith angle, Lat, Lon *****',SZA*cRadToDeg,gLat,gLon
     end select
-    if (IsVerbose) write(*,*) 'SZA ',SZA*cRadToDeg
+    !write(*,*) 'SZA ',SZA*cRadToDeg
     
     !  Set the slant path column densities for O,O2 and N2
     CALL RCOLUM(SZA,Alt_C(1:nAlt), &
@@ -411,10 +418,10 @@ contains
     
     character(len=100),parameter :: NamePlotVarEarth=&
          'Alt[km] O+[cm-3s-1] g r'
-    character(len=100),parameter :: NamePlotVarJupiter=&
+    character(len=120),parameter :: NamePlotVarJupiter=&
          'Alt[km] H2+[cm-3s-1] He+[cm-3s-1] H+[cm-3s-1] CH4+[cm-3s-1] CH3+[cm-3s-1] CH2+[cm-3s-1] CH+[cm-3s-1] g r'
 
-    character(len=100) :: NamePlotVar
+    character(len=120) :: NamePlotVar
     character(len=*),parameter :: NameHeader='Photoionization Rates'
     character(len=5) :: TypePlot='ascii'
     integer :: iIon,iAlt
@@ -525,46 +532,46 @@ contains
 
   !============================================================================
   
-  subroutine get_jupiter_atmos(DatafileName,nSpecies,NeutralDens_IC,NeutralTemp_C)
-    use ModInterpolate, ONLY: linear
-    use ModSeGrid, ONLY : Alt_C, nAlt
-    use ModIoUnit, ONLY : UnitTmp_
-    character (len=100), intent(in) :: DatafileName ! 'JGITM-1D-atmos.dat'
-    integer,            intent(in)  :: nSpecies     ! 4
-    real,               intent(out) :: NeutralDens_IC(nSpecies,nAlt)
-    real,               intent(out) :: NeutralTemp_C(nAlt)
-    
-    integer, parameter :: nAltGrid= 10000
-    integer            :: iAlt
-    character (len=189) :: line1
-    real :: AtmosArray(5+nSpecies,nAltGrid)
-    
-    write(*,*) 'starting get_jupiter_atmos'
-    open(UnitTmp_,FILE=DatafileName,STATUS='OLD')
-    
-    read(UnitTmp_,'(a)') line1
-    read(UnitTmp_,*) AtmosArray
-    
-    close(UnitTmp_)
-    
-    print *,line1
-    print *, AtmosArray(1,1),AtmosArray(2,1),AtmosArray(9,1)
-    print *, AtmosArray(1,10000),AtmosArray(2,10000),AtmosArray(9,10000)
-    write(*,*) 'starting get_jupiter_atmos linear'
-    do iAlt=1,nAlt
-       NeutralDens_IC(1,iAlt) = linear(AtmosArray(5,:), &        ! H2
-            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
-       NeutralDens_IC(2,iAlt) = linear(AtmosArray(6,:), &        ! He
-            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
-       NeutralDens_IC(3,iAlt) = linear(AtmosArray(7,:), &        ! H
-            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
-       NeutralDens_IC(4,iAlt) = linear(AtmosArray(8,:), &        ! CH4
-            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
-       NeutralTemp_C(iAlt) = linear(AtmosArray(2,:), &        ! Temp
-            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
-    end do
-    write(*,*) 'done get_jupiter_atmos'
-  end subroutine get_jupiter_atmos
+!!$  subroutine get_jupiter_atmos(DatafileName,nSpecies,NeutralDens_IC,NeutralTemp_C)
+!!$    use ModInterpolate, ONLY: linear
+!!$    use ModSeGrid, ONLY : Alt_C, nAlt
+!!$    use ModIoUnit, ONLY : UnitTmp_
+!!$    character (len=100), intent(in) :: DatafileName ! 'JGITM-1D-atmos.dat'
+!!$    integer,            intent(in)  :: nSpecies     ! 4
+!!$    real,               intent(out) :: NeutralDens_IC(nSpecies,nAlt)
+!!$    real,               intent(out) :: NeutralTemp_C(nAlt)
+!!$    
+!!$    integer, parameter :: nAltGrid= 10000
+!!$    integer            :: iAlt
+!!$    character (len=189) :: line1
+!!$    real :: AtmosArray(5+nSpecies,nAltGrid)
+!!$    
+!!$    write(*,*) 'starting get_jupiter_atmos'
+!!$    open(UnitTmp_,FILE=DatafileName,STATUS='OLD')
+!!$    
+!!$    read(UnitTmp_,'(a)') line1
+!!$    read(UnitTmp_,*) AtmosArray
+!!$    
+!!$    close(UnitTmp_)
+!!$    
+!!$    print *,line1
+!!$    print *, AtmosArray(1,1),AtmosArray(2,1),AtmosArray(9,1)
+!!$    print *, AtmosArray(1,10000),AtmosArray(2,10000),AtmosArray(9,10000)
+!!$    write(*,*) 'starting get_jupiter_atmos linear'
+!!$    do iAlt=1,nAlt
+!!$       NeutralDens_IC(1,iAlt) = linear(AtmosArray(5,:), &        ! H2
+!!$            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
+!!$       NeutralDens_IC(2,iAlt) = linear(AtmosArray(6,:), &        ! He
+!!$            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
+!!$       NeutralDens_IC(3,iAlt) = linear(AtmosArray(7,:), &        ! H
+!!$            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
+!!$       NeutralDens_IC(4,iAlt) = linear(AtmosArray(8,:), &        ! CH4
+!!$            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
+!!$       NeutralTemp_C(iAlt) = linear(AtmosArray(2,:), &        ! Temp
+!!$            1,nAltGrid,Alt_C(iAlt)/1e5,AtmosArray(1,:))
+!!$    end do
+!!$    write(*,*) 'done get_jupiter_atmos'
+!!$  end subroutine get_jupiter_atmos
   !=============================================================================
   function Ne_Jupiter(z)
     use ModSeGrid, ONLY: rPlanetCM

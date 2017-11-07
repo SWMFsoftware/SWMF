@@ -22,6 +22,11 @@ program pw
   call MPI_COMM_RANK(iComm,iProc,errcode)
   call MPI_COMM_SIZE(iComm,nProc,errcode)
 
+
+  call timing_active(.true.)
+  call timing_step(0)
+  call timing_start('PWOM')
+
   !****************************************************************************
   ! Read the input file
   !****************************************************************************
@@ -136,7 +141,17 @@ program pw
        iUnitGraphics,iUnitOutput, iLineGlobal,IsNorth_I)
   
 
+  call timing_stop('PWOM')
+    if (iProc == 0) then
+     write(*,'(a)') 'Finished PWOM run, (reporting timings)'
+     write(*,'(a)') '--------------------------------------'
+     call timing_report
+  endif
+
+
   call MPI_FINALIZE(errcode)
+
+
 
 end program pw
 

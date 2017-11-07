@@ -11,7 +11,8 @@ module ModCommonVariables
        iUnitCollision, iUnitSourceGraphics
   
   
-
+  !species dependent upper boundary
+  integer :: nAltTop_I(nIon)
   
   real :: wHorizontal
   character(len=7) :: TypeSolver
@@ -64,8 +65,14 @@ module ModCommonVariables
   REAL  ALTMIN,ALTMAX,DTR1,DTR2
   real :: DrBnd =2.0e6
 
-  REAL  GAMMA,GMIN1,GMIN2,GPL1,GPL2,GM12,GRAR,GREC
-  REAL  XAMU
+  REAL  GMIN1,GMIN2,GPL1,GPL2,GM12,GRAR,GRE
+  ! Gas constant = k_Boltzmann/AMU
+  real, parameter :: RGAS=8.314E7
+  ! Adiabatic index
+  real,parameter::  GAMMA=5./3.
+  ! AMU in gramms
+  real, parameter ::XAMU=1.6606655E-24
+
   real :: Mass_I(nIon),MassElecIon_I(nIon-1),RGAS_I(nIon)
   INTEGER NDIM,NDIM1,NSTEP,NPRINT,NSTPMX,NDIM2,NDIMM
   REAL  DT,DTMX,TIME,TMAX,DTX1,DTX2

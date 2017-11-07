@@ -28,7 +28,8 @@ contains
        AltPwIn_C,PrecipEminPwIn,PrecipEmaxPwIn,PrecipEmeanPwIn,PrecipEfluxPwIn,&
        PolarRainEminPwIn,PolarRainEmaxPwIn,PolarRainEmeanPwIn,&
        PolarRainEfluxPwIn, OvationEminPwIn,OvationEmaxPwIn)
-    use ModSeGrid, only: iLineGlobal,IsVerbose,AltPwUpper,set_altgrid,set_egrid
+    use ModSeGrid, only: iLineGlobal,IsVerbose,AltPwUpper,&
+         allocate_grid_arrays,set_altgrid,set_egrid
     use ModSeBackground,only: allocate_background_arrays,DoAlignDipoleRot,&
                               DoUsePWOM
     use ModElecTrans,only: PrecipEmin, PrecipEmax, &
@@ -53,18 +54,11 @@ contains
     if (.not.allocated(iLineGlobal_I))allocate(iLineGlobal_I(nLine))
     iLineGlobal_I=iLineGlobalPw_I
 
-    ! Set verbose base on PWOM input
+    ! Set verbose based on PWOM input
     IsVerbose = IsVerbosePw
-
-    ! Set up the grid parameters, actual grid will be set later by each line
-    
-    ! Allocate the background arrays
-    if(IsVerbose) write(*,*) 'allocating background arrays'
-    call allocate_background_arrays
     
     ! align dipole and rotation
     DoAlignDipoleRot = .false.
-
 
     ! store PWOM altitude grid in module for use by interpolation routines
     ! for passing info between STET and PWOM
@@ -78,6 +72,16 @@ contains
     ! save the grid spacing in PWOM
     dAltPw = AltPw_C(2)-AltPw_C(1)
 
+    ! Set up the grid
+    call allocate_grid_arrays
+    call set_egrid
+    call set_altgrid
+    
+    ! Allocate the background arrays
+    if(IsVerbose) write(*,*) 'allocating background arrays'
+    call allocate_background_arrays
+    if(IsVerbose) write(*,*) 'done allocating background arrays'
+    
     ! Set the incomming precipitation
     if (present(PrecipEminPwIn).and.present(PrecipEmaxPwIn) &
          .and.present(PrecipEmeanPwIn).and.present(PrecipEfluxPwIn)) then
@@ -121,10 +125,6 @@ contains
     case('JUPITER')
        nIonPW=3
     end select
-
-    call set_egrid
-    call set_altgrid
-
        
   end subroutine init_pwom_se_coupling
   
@@ -134,13 +134,13 @@ contains
        eDensPW_C,eTempPW_C,EfieldPW_C,Ap_I,F107,F107A,IYD,&
        SeDensPW_C, SeFluxPW_C, SeHeatPW_C, IonRatePW_C, PhotoIonRatePW_IC, &
        SecIonRatePW_IC,EMeanDiffPW,EFluxDiffPW,EMeanWavePW,&
-       EFluxWavePW,EMeanMonoPW,EFluxMonoPW)
+       EFluxWavePW,EMeanMonoPW,EFluxMonoPW,EMeanIePW,EFluxIePW)
     use ModSeGrid, only: Efield_C,iLineGlobal,IsVerbose,calc_potential
     use ModSeBackground,only: mLat,mLon, gLat,gLon,&
          Idate, UT,fill_thermal_plasma_empirical,&
          plot_background,plot_ephoto_prod,get_neutrals_and_pe_spectrum
     use ModElecTrans,only: Time, EMeanDiff,EFluxDiff,EMeanWave,&
-         EFluxWave,EMeanMono,EFluxMono,etrans
+         EFluxWave,EMeanMono,EFluxMono,etrans,EMeanIe,EFluxIe,UseIePrecip
 
     implicit none
     ! Incomming time from PWOM
@@ -168,6 +168,9 @@ contains
     !OVATION precipitation parameters
     real,optional,  intent(in) :: EmeanDiffPW,EFluxDiffPW,EMeanWavePW,&
          EFluxWavePW, EMeanMonoPW,EFluxMonoPW
+
+    !IE precipitation parameters
+    real,optional,  intent(in) :: EmeanIePW,EFluxIePW
     
     ! named parameters for coordinates
     integer,parameter :: Lat_=1 ,Lon_=2 !named parameters for Coord_ID
@@ -213,6 +216,16 @@ contains
        EFluxWave=EFluxWavePW
        EMeanMono=EMeanMonoPW
        EFluxMono=EFluxMonoPW
+    endif
+
+
+    !set IE precip 
+    if (present(EMeanIePW).or.present(EFluxIePW))then
+       EMeanIe=EMeanIePW
+       EFluxIe=EFluxIePW
+       UseIePrecip = .true.
+    else
+       UseIePrecip = .false.
     endif
 
     ! Get the neutral atmosphere and photo e production spectrum

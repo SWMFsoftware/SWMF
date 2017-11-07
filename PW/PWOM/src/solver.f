@@ -34,25 +34,25 @@ C     Local:
       
       logical :: DoTest
       !------------------------------------------------------------------------
-      eSource_C(1:nDim) = eCollision(1:nDim)
+      eSource_C(1:nCell) = eCollision(1:nCell)
       
-      dSpecies(1:nDim) = InitialState_GV(1:nDim,1)
-      uSpecies(1:nDim) = InitialState_GV(1:nDim,2)
-      pSpecies(1:nDim) = InitialState_GV(1:nDim,3)
-      T_G(0:nDim+1)      = InitialState_GV(0:nDim+1,4)
+      dSpecies(1:nCell) = InitialState_GV(1:nCell,1)
+      uSpecies(1:nCell) = InitialState_GV(1:nCell,2)
+      pSpecies(1:nCell) = InitialState_GV(1:nCell,3)
+      T_G(0:nCell+1)      = InitialState_GV(0:nCell+1,4)
 
       dSur = InitialState_GV(0,1)
       uSur = InitialState_GV(0,2)
       pSur = InitialState_GV(0,3)
 
-      dBgnd = InitialState_GV(nDim+1,1)
-      uBgnd = InitialState_GV(nDim+1,2)
-      pBgnd = InitialState_GV(nDim+1,3)
+      dBgnd = InitialState_GV(nCell+1,1)
+      uBgnd = InitialState_GV(nCell+1,2)
+      pBgnd = InitialState_GV(nCell+1,3)
       
       ! Get heat flow in fully implicit case
       if (IsFullyImplicit .and. UseIonHeat)then
       ! Get Temperature Gradient
-         do iCell = 0,nDim
+         do iCell = 0,nCell
             GradT_F(iCell)=(T_G(iCell+1)-T_G(iCell)) / DrBnd
          enddo
       ! Get facevalues of Kappa*Grad(T)
@@ -68,7 +68,7 @@ C     Local:
      &           / (CellVolume_C(iCell))
          enddo
       ! Add heat flux to energy source
-         eSource_C(1:nDim) = eCollision(1:nDim)+Diffusion_C(1:nDim)
+         eSource_C(1:nCell) = eCollision(1:nCell)+Diffusion_C(1:nCell)
       
       endif
 
@@ -95,7 +95,7 @@ C     Local:
       D12(1)=CVMGP(D12(1),DSPECIES(1),WR(1))
 
 ! work on rest of grid     
-      DO K=2,NDIM
+      DO K=2,nCell
          L=K-1
          USUM=USPECIES(L)+USPECIES(K)
          UDIFF=USPECIES(L)-USPECIES(K)
@@ -104,7 +104,7 @@ C     Local:
          DSUM=DSPECIES(L)+DSPECIES(K)
          A0=SQRT(GAMMA*PSUM(K)*DSUM/4.)
          P12(K)=(PSUM(K)+A0*UDIFF)/2.
-c         write(50,*) USUM,PDIFF(NDIM),AO
+c         write(50,*) USUM,PDIFF(nCell),AO
          U12(K)=(USUM+PDIFF(K)/A0)/2.
          DD=CVMGP(DSPECIES(L),DSPECIES(K),U12(K))
          PP=CVMGP(PSPECIES(L),PSPECIES(K),U12(K))
@@ -120,27 +120,27 @@ c         write(50,*) USUM,PDIFF(NDIM),AO
       end do
  
 CALEX work on top of grid
-      USUM=USPECIES(NDIM)+UBGND
-      UDIFF=USPECIES(NDIM)-UBGND
-      PDIFF(NDIM1)=PSPECIES(NDIM)-PBGND
-      PSUM(NDIM1)=PSPECIES(NDIM)+PBGND
-      DSUM=DSPECIES(NDIM)+DBGND
-      A0=SQRT(GAMMA*PSUM(NDIM1)*DSUM/4.)
-      P12(NDIM1)=(PSUM(NDIM1)+A0*UDIFF)/2.
-      U12(NDIM1)=(USUM+PDIFF(NDIM1)/A0)/2.
-      DD=CVMGP(DSPECIES(NDIM),DBGND,U12(NDIM1))
-      PP=CVMGP(PSPECIES(NDIM),PBGND,U12(NDIM1))
-      D12(NDIM1)=DD*(GPL1*P12(NDIM1)+GMIN1*PP)/(GMIN1*P12(NDIM1)
+      USUM=USPECIES(nCell)+UBGND
+      UDIFF=USPECIES(nCell)-UBGND
+      PDIFF(nCell+1)=PSPECIES(nCell)-PBGND
+      PSUM(nCell+1)=PSPECIES(nCell)+PBGND
+      DSUM=DSPECIES(nCell)+DBGND
+      A0=SQRT(GAMMA*PSUM(nCell+1)*DSUM/4.)
+      P12(nCell+1)=(PSUM(nCell+1)+A0*UDIFF)/2.
+      U12(nCell+1)=(USUM+PDIFF(nCell+1)/A0)/2.
+      DD=CVMGP(DSPECIES(nCell),DBGND,U12(nCell+1))
+      PP=CVMGP(PSPECIES(nCell),PBGND,U12(nCell+1))
+      D12(nCell+1)=DD*(GPL1*P12(nCell+1)+GMIN1*PP)/(GMIN1*P12(nCell+1)
      $     +GPL1*PP)
-      WL(NDIM1)=USPECIES(NDIM)-A0/DSPECIES(NDIM)
-      WR(NDIM1)=UBGND+A0/DBGND
-      D12(NDIM1)=CVMGP(DSPECIES(NDIM),D12(NDIM1),WL(NDIM1))
-      U12(NDIM1)=CVMGP(USPECIES(NDIM),U12(NDIM1),WL(NDIM1))
-      P12(NDIM1)=CVMGP(PSPECIES(NDIM),P12(NDIM1),WL(NDIM1))
-      U12(NDIM1)=CVMGP(U12(NDIM1),UBGND,WR(NDIM1))
-      P12(NDIM1)=CVMGP(P12(NDIM1),PBGND,WR(NDIM1))
-      D12(NDIM1)=CVMGP(D12(NDIM1),DBGND,WR(NDIM1))
-      DO K=1,NDIM1
+      WL(nCell+1)=USPECIES(nCell)-A0/DSPECIES(nCell)
+      WR(nCell+1)=UBGND+A0/DBGND
+      D12(nCell+1)=CVMGP(DSPECIES(nCell),D12(nCell+1),WL(nCell+1))
+      U12(nCell+1)=CVMGP(USPECIES(nCell),U12(nCell+1),WL(nCell+1))
+      P12(nCell+1)=CVMGP(PSPECIES(nCell),P12(nCell+1),WL(nCell+1))
+      U12(nCell+1)=CVMGP(U12(nCell+1),UBGND,WR(nCell+1))
+      P12(nCell+1)=CVMGP(P12(nCell+1),PBGND,WR(nCell+1))
+      D12(nCell+1)=CVMGP(D12(nCell+1),DBGND,WR(nCell+1))
+      DO K=1,nCell+1
          DBN1(K)=U12(K)*D12(K)
          UFL=U12(K)*DBN1(K)
          PFL=GMIN2*U12(K)*UFL
@@ -158,7 +158,7 @@ c
       OutputState_GV(-1:0,3)=InitialState_GV(-1:0,3)
       OutputState_GV(-1:0,4)=InitialState_GV(-1:0,4)
       
-      DO K=1,NDIM
+      DO K=1,nCell
          KK=K+1
          OutputState_GV(K,1)=DSPECIES(K)-DtIn/DRBND*(AR23(K)*DBN1(KK)-AR12(K)*DBN1(K))
      $        +DtIn*RhoSource(K)
@@ -171,10 +171,10 @@ c
          OutputState_GV(K,4)=OutputState_GV(K,3)/RGASSPECIES/OutputState_GV(K,1)
       end do
 
-      OutputState_GV(nDim+1:nDim+2,1)=InitialState_GV(nDim+1:nDim+2,1)
-      OutputState_GV(nDim+1:nDim+2,2)=InitialState_GV(nDim+1:nDim+2,2)
-      OutputState_GV(nDim+1:nDim+2,3)=InitialState_GV(nDim+1:nDim+2,3)
-      OutputState_GV(nDim+1:nDim+2,4)=InitialState_GV(nDim+1:nDim+2,4)
+      OutputState_GV(nCell+1:nCell+2,1)=InitialState_GV(nCell+1:nCell+2,1)
+      OutputState_GV(nCell+1:nCell+2,2)=InitialState_GV(nCell+1:nCell+2,2)
+      OutputState_GV(nCell+1:nCell+2,3)=InitialState_GV(nCell+1:nCell+2,3)
+      OutputState_GV(nCell+1:nCell+2,4)=InitialState_GV(nCell+1:nCell+2,4)
 
       RETURN
       END

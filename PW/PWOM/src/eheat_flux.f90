@@ -107,5 +107,13 @@ SUBROUTINE PW_eheat_flux
      
   enddo
   
+  !kludge put a floor on Te
+!  do k=1,nDim+2
+!     if (State_GV(k,Te_)<100.) then
+!        State_GV(k,Te_)=100.0
+!        State_GV(K,pE_)=RGAS_I(nIon)*State_GV(K,RhoE_)*State_GV(K,Te_)
+!     endif
+!  enddo
+
   RETURN
 end SUBROUTINE PW_eheat_flux

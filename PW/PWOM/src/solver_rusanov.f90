@@ -7,7 +7,7 @@
 !/
 
 subroutine rusanov_solver(iIon, nCell,&
-     Rgas, DtIn,&
+     RgasIon, DtIn,&
      OldState_GV,&
      OldeState_GV,&
      RhoSource_C, RhoUSource_C, eSource_C,&
@@ -18,7 +18,7 @@ subroutine rusanov_solver(iIon, nCell,&
   implicit none
 
   integer, intent(in)      :: iIon,nCell
-  real, intent(in)         :: Rgas,DtIn
+  real, intent(in)         :: RgasIon,DtIn
   real, intent(in)         :: OldState_GV(-1:nCell+2,3)
   real, intent(in)         :: OldeState_GV(-1:nCell+2,3)
   real, dimension(nCell), intent(in)  :: RhoSource_C, RhoUSource_C, eSource_C
@@ -53,7 +53,7 @@ subroutine rusanov_solver(iIon, nCell,&
 
   ! get temperature from pressure and density, and calculate heat flow
   ! source term for the fully implicit case.
-  T_G(-1:nCell+2)=OldState_GV(-1:nCell+2,3)/Rgas/OldState_GV(-1:nCell+2,1)
+  T_G(-1:nCell+2)=OldState_GV(-1:nCell+2,3)/RgasIon/OldState_GV(-1:nCell+2,1)
   
   if (IsFullyImplicit .and. UseIonHeat)then
      ! Get Temperature Gradient
@@ -67,7 +67,7 @@ subroutine rusanov_solver(iIon, nCell,&
      enddo
      ! Get heat diffusion term
      do iCell = 1,nCell
-        Diffusion_C(iCell) = Rgas/Gmin1 *&
+        Diffusion_C(iCell) = RgasIon/Gmin1 *&
            (Ar23(iCell)*Conduction_F(iCell)-Ar12(iCell)*Conduction_F(iCell-1))&
              / (CellVolume_C(iCell))
      enddo
@@ -123,7 +123,7 @@ subroutine rusanov_solver(iIon, nCell,&
 
   ! update the cells one timestep 
   call update_state( iIon,nCell,&
-       Rgas, DtIn,&
+       RgasIon, DtIn,&
        OldState_GV(1:nCell,Rho_), OldState_GV(1:nCell,U_), &
        OldState_GV(1:nCell,P_), &
        LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
@@ -368,7 +368,7 @@ end subroutine HLL_flux
 !==============================================================================
 
 subroutine update_state( iIon,nCell,&
-     Rgas,DtIn,&
+     RgasIon,DtIn,&
      OldRho_C, OldU_C, OldP_C, &
      LeftRho_F, RightRho_F,LeftU_F, RightU_F,LeftP_F, RightP_F, &
      RhoFlux_F, RhoUFlux_F, eFlux_F, &
@@ -380,7 +380,7 @@ subroutine update_state( iIon,nCell,&
   implicit none
 
   integer, intent(in)                   :: iIon,nCell  
-  real, intent(in)                      :: Rgas,DtIn 
+  real, intent(in)                      :: RgasIon,DtIn 
   real, dimension(nCell), intent(in)  :: OldRho_C, OldU_C, OldP_C
   real, dimension(nCell+1), intent(in):: LeftRho_F, LeftU_F, LeftP_F
   real, dimension(nCell+1), intent(in):: RightRho_F, RightU_F, RightP_F
@@ -401,7 +401,7 @@ subroutine update_state( iIon,nCell,&
      allocate(NewRhoU(nCell), NewE(nCell),NewRhoUSource_C(nCell), &
           ExplicitRhoU_C(nCell),OldT_C(nCell))
   endif
-  OldT_C(1:nCell)=OldP_C(1:nCell)/Rgas/OldRho_C(1:nCell)
+  OldT_C(1:nCell)=OldP_C(1:nCell)/RgasIon/OldRho_C(1:nCell)
   
   InvGammaMinus1 = 1.0/(Gamma - 1.0)
 
@@ -472,7 +472,7 @@ subroutine update_state( iIon,nCell,&
      endif
      
      
-     NewT_C(i)=NewP_C(i)/Rgas/NewRho_C(i)
+     NewT_C(i)=NewP_C(i)/RgasIon/NewRho_C(i)
   end do
   deallocate(NewRhoU, NewE,NewRhoUSource_C, ExplicitRhoU_C,OldT_C)
 end subroutine update_state

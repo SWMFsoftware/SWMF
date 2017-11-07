@@ -29,34 +29,7 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
 
 CALEX not I use O for H3 and he for H2
-C Gas constant = k_Boltzmann/AMU
-      RGAS=8.314E7
-C Adiabatic index
-      GAMMA=5./3.
-C AMU in gramms
-      XAMU=1.6606655E-24
-C Mass of atomic H3 in gramms
-      Mass_I(Ion1_)=3.0237*XAMU
-C Mass of atomic H in gramms
-      Mass_I(Ion2_)=1.00797*XAMU
-C Mass of H2 in gramms
-      Mass_I(Ion3_)=2.0159*XAMU
-C Mass of electron in gramms
-      Mass_I(nIon)=9.109534E-28
-C Relative mass of H3 to electron
-      MassElecIon_I(Ion1_)=Mass_I(nIon)/Mass_I(Ion1_)
-C Relative mass of atomic H to electron
-      MassElecIon_I(Ion2_)=Mass_I(nIon)/Mass_I(Ion2_)
-C Relative mass of H2 to electron
-      MassElecIon_I(Ion3_)=Mass_I(nIon)/Mass_I(Ion3_)
-C kB/m_H3
-      RGAS_I(Ion1_)=RGAS*XAMU/Mass_I(Ion1_)
-C kB/m_H
-      RGAS_I(Ion2_)=RGAS*XAMU/Mass_I(Ion2_)
-C kB/m_H2
-      RGAS_I(Ion3_)=RGAS*XAMU/Mass_I(Ion3_)
-C kB/m_e
-      RGAS_I(nIon)=RGAS*XAMU/Mass_I(nIon)
+
       GMIN1=GAMMA-1.
       GMIN2=GMIN1/2.
       GPL1=GAMMA+1.

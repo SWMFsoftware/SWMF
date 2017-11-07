@@ -14,7 +14,8 @@ C
       use ModGlow, ONLY: get_ionization
 C
       use ModConst ,ONLY: cBoltzmann
-      use ModPWOM  ,ONLY: UseAurora,UseIndicies, UseIE, iLine
+      use ModPWOM  ,ONLY: UseAurora,UseIndicies, UseIE, iLine, 
+     &     UseParticles,iAltParticle
       use ModAurora,ONLY: get_aurora,AuroralIonRateO_C
       use ModPwTime,ONLY: CurrentTime,StartTime,iStartTime,
      &                    Hour_,Minute_,Second_, iCurrentTime_I
@@ -54,34 +55,8 @@ C           GAS CONSTANT (RGAS) AND THE SPECIFIC HEAT RATIO (GAMMA)    C
 C                                                                      C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C                                                                      C
-C Gas constant = k_Boltzmann/AMU
-      RGAS=8.314E7
-C Adiabatic index
-      GAMMA=5./3.
-C AMU in gramms
-      XAMU=1.6606655E-24
-C Mass of atomic O in gramms
-      Mass_I(Ion1_)=15.994*XAMU
-C Mass of atomic H in gramms
-      Mass_I(Ion2_)=1.00797*XAMU
-C Mass of atomic He in gramms
-      Mass_I(Ion3_)=4.0026*XAMU
-C Mass of electron in gramms
-      Mass_I(Ion4_)=9.109534E-28
-C Relative mass of atomic O to electron
-      MassElecIon_I(Ion1_)=Mass_I(Ion4_)/Mass_I(Ion1_)
-C Relative mass of atomic H to electron
-      MassElecIon_I(Ion2_)=Mass_I(Ion4_)/Mass_I(Ion2_)
-C Relative mass of atomic He to electron
-      MassElecIon_I(Ion3_)=Mass_I(Ion4_)/Mass_I(Ion3_)
-C kB/m_O
-      RGAS_I(Ion1_)=RGAS*XAMU/Mass_I(Ion1_)
-C kB/m_H
-      RGAS_I(Ion2_)=RGAS*XAMU/Mass_I(Ion2_)
-C kB/m_He
-      RGAS_I(Ion3_)=RGAS*XAMU/Mass_I(Ion3_)
-C kB/m_e
-      RGAS_I(Ion4_)=RGAS*XAMU/Mass_I(Ion4_)
+
+
       GMIN1=GAMMA-1.
       GMIN2=GMIN1/2.
       GPL1=GAMMA+1.
@@ -322,6 +297,14 @@ C                                                                      C
      &           EMeanWavePW=EMeanWave,EFluxWavePW=EFluxWave,
      &           EMeanMonoPW=EMeanMono,EFluxMonoPW=EFluxMono)
         
+         elseif(UseIE) then
+            call get_se_for_pwom(Time,UTsec,iLine,(/GmLat,GmLon/),
+     &           (/GLAT,GLONG/),(/GLAT2,GLONG2/),
+     &           State_GV(1:nDim,RhoE_)/Mass_I(Ion4_),State_GV(1:nDim,Te_),
+     &           Efield(1:nDim),Ap,F107,F107A,IYD,SeDens_C, SeFlux_C, SeHeat_C,
+     &           IonRatePW_C=IonRateO_C(1:nDim),EMeanIePW=AveIE,
+     &           EFluxIePW=EFluxIE)
+
          else
             call get_se_for_pwom(Time,UTsec,iLine,(/GmLat,GmLon/),
      &           (/GLAT,GLONG/),(/GLAT2,GLONG2/),
@@ -573,6 +556,8 @@ C      READ(5,3) NCNPRT
 
       
       CALL COLLIS(NDIM,State_GV(-1:nDim+2,:))
+!     zero out sources terms in particle region
+      !if (UseParticles) Source_CV(iAltParticle+1:nDim,:)=0.0
 
       CALL PW_CALC_EFIELD(nDim,State_GV(-1:nDim+2,:))
 
@@ -1396,6 +1381,8 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       SUBROUTINE STRT1
       use ModCommonVariables
       use ModPWOM,ONLY: IsRestart
+      use CON_planet,  ONLY: IsPlanetModified, RotAxisTheta, RotAxisPhi
+      use ModNumConst, ONLY: cDegToRad, cRadToDeg
 C     
 C     
 C     
@@ -1406,8 +1393,25 @@ C     DEFINE THE HE PHOTOIONIZATION RATE
 C     
 C      PHIHE=1.30E-7
       PHIHE=3.87E-8
+      !PHIHE=3.87E-12
 
+      ! Set He production to depend on SZA
+      if (IsPlanetModified) then
+         if (RotAxisTheta == 0.0 .and. RotAxisPhi == 0.0) then
+            !IDEALAXES are set. Use SmLat and SmLon to set sza
+            SZA=acos(cos(SmLat*cDegToRad)*cos(SmLon*cDegToRad))*cRadToDeg
+         else
+            !ERROR, planet modified but not IDEALAXES
+            call con_stop()
+         endif
+      else
+         ! Standard situation: Real axes
+         CALL SOLZEN (IYD, SEC, GLAT, GLONG, SZA)
+      endif
+      PHIHE = PHIHE * cos(min(SZA,88.0)*cDegToRad)
+      !write(*,*)' PhiHe,SZA', PhiHe,SZA
 C     
+      
 C     C
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C     C

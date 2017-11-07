@@ -19,6 +19,7 @@ program main_twostream
   real :: TimeStart = 0.0
 
   character(len=5) :: NamePlanet = 'EARTH'
+  !character(len=7) :: NamePlanet = 'JUPITER'
   logical :: IsPlanetSet=.false.
   !-----------------------------------------------------------------------------
 
@@ -65,12 +66,14 @@ program main_twostream
 !  Coord_D(Lat_)=acos(sqrt(1.0/L))*cRadToDeg
 !  Coord_D(Lon_)=0.0
 
-  Coord_D(Lat_)=70.0
+  Coord_D(Lat_)=60.0
   Coord_D(Lon_)=0.0
 
   AP_I(:)=4.0
-  F107 = 60.0
-  F107A= 60.0
+!  F107 = 60.0
+!  F107A= 60.0
+  F107 = 180.0
+  F107A= 180.0
 !  ZEP=2
   ! Include the parallel electric field?
 !  DoIncludePotential=.true.
@@ -80,7 +83,8 @@ program main_twostream
   !/
   write(*,*) 'Initializing stet'
   call twostream_init(Coord_D,Ap_I,F107,F107A, TimeStart)
-  
+
+  write(*,*) 'F10.7',F107,F107A
   
   write(*,*) 'Running two-stream'
   call etrans
