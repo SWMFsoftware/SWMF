@@ -87,7 +87,8 @@ module ModParticleFieldLine
        NoPass_ = 0, &
        DoPassHalfStep_ = 1, &
        PassedHalfStep_ = 2, &
-       DoPassFullStep_ = 3
+       DoPassFullStep_ = 3, &
+       DoneFromScratch_ = 4
   
 
   ! data that can be requested and returned to outside this module
@@ -452,7 +453,7 @@ contains
       integer:: iParticle
       real   :: DirB_D(MaxDim)
       !---------------------------------------------------------------------
-      iIndexEnd_II(Pass_, 1:Particle_I(KindEnd_)%nParticle) = NoPass_
+      iIndexEnd_II(Pass_, 1:Particle_I(KindEnd_)%nParticle) = DoneFromScratch_
       if(iOrderMode == Field_)then
          iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
          RETURN
@@ -494,16 +495,26 @@ contains
     
     character(len=*),parameter:: NameSub = "trace_particle_line"
     !------------------------------------------------------------------------
-    ! Initialize the radial direction that corresponds 
-    ! to the previous step
-    do iParticle = 1, Particle_I(KindEnd_)%nParticle
-       StateEnd_VI(DirX_:DirZ_,  iParticle) = iDirTrace * &
-            StateEnd_VI(x_:z_,  iParticle) / &
-            sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
-       iIndexEnd_II(Pass_, iParticle) = NoPass_
-    end do
+
 
     TRACE: do
+       do iParticle = 1, Particle_I(KindEnd_)%nParticle
+          if(iIndexEnd_II(Pass_,iParticle)==DoneFromScratch_)then
+             ! Initialize the radial direction that corresponds 
+             ! to the previous step
+             StateEnd_VI(DirX_:DirZ_,  iParticle) = iDirTrace * &
+                  StateEnd_VI(x_:z_,  iParticle) / &
+                  sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
+             iIndexEnd_II(Pass_, iParticle) = NoPass_
+          elseif(iIndexEnd_II(Pass_, iParticle) == NoPass_)then
+             ! increase particle index & copy to regular
+             iIndexEnd_II(id_,iParticle) = &
+                  iIndexEnd_II(id_,iParticle) + &
+                  iDirTrace
+             call copy_end_to_regular(iParticle)
+          end if
+       end do
+
        ! check if particles are beyond the soft boundary
        if(RBoundarySoft > 0.0)then
           call check_soft_boundary(KindEnd_)
@@ -662,16 +673,6 @@ contains
              end select
           end do
        end if
-
-       ! increase particle index & copy to regular
-       where(iIndexEnd_II(Pass_,1:Particle_I(KindEnd_)%nParticle) == NoPass_)
-          iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) = &
-               iIndexEnd_II(id_,1:Particle_I(KindEnd_)%nParticle) + &
-               iDirTrace
-       end where
-
-       call copy_end_to_regular
-
     end do TRACE
 
   contains
@@ -768,15 +769,21 @@ contains
     end function is_complete
   end subroutine trace_particle_line
   !========================================================================
-  subroutine copy_end_to_regular
+  subroutine copy_end_to_regular(iParticleIn)
+    integer, optional, intent(in) :: iParticleIn
     ! copies indicated variables of known end particles to regular particles
     integer, parameter:: iVarCopy_I(3)   = (/x_, y_, z_/)
     integer, parameter:: iIndexCopy_I(3) = (/0, fl_, id_/)
-    integer:: iParticle
+    integer:: iParticle, iParticleStart, iParticleEnd
     !----------------------------------------------------------------------
-    do iParticle = 1, Particle_I(KindEnd_)%nParticle
-       if(Particle_I(KindEnd_)%iIndex_II(Pass_,iParticle)/=NoPass_)&
-            CYCLE
+    if(present(iParticleIn))then
+       iParticleStart = iParticleIn
+       iParticleEnd   = iParticleIn
+    else
+       iParticleStart = 1
+       iParticleEnd   = Particle_I(KindEnd_)%nParticle
+    end if
+    do iParticle = iParticleStart, iParticleEnd 
        Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle+1
        Particle_I(KindReg_)%State_VI(iVarCopy_I, &
             Particle_I(KindReg_)%nParticle) =&
