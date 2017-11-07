@@ -1,4 +1,5 @@
 *_planet.f
+*_planet.f90
 ModCommonPlanet.f90
 ModGlow.f90
 get_rate.f90
@@ -9,3 +10,4 @@ Makefile.planet
 Makefile.DEPEND
 Makefile.RULES
 *.mod
+
