@@ -363,8 +363,8 @@ contains
   
   subroutine interpolate_grid_amr_gc(XyzIn_D, iBlock, &
        nCell, iCell_II, Weight_I, IsBody)
-    use BATL_lib, ONLY: nDim, MaxDim
-    use ModGeometry, ONLY: body_BLK, true_cell 
+    use BATL_lib, ONLY: MaxDim, nDim
+    use ModGeometry, ONLY: body_BLK, true_cell
     ! Interpolation is performed using cells (including ghost) of single block,
     ! its index, iBlock, is provided at the call;
     !--------------------------------------------------------------------------
@@ -374,7 +374,7 @@ contains
     ! would result in iBlockOut==iBlock
     !--------------------------------------------------------------------------
     ! difference from BATL_grid version: if a cell in the stencil is not
-    ! a true cell (see optional arguments) -> it's removed from the stencil
+    ! a true cell (see ModGeometry) -> it's removed from the stencil
     real,    intent(in) :: XyzIn_D(MaxDim)
     integer, intent(in) :: iBlock
     integer, intent(out):: nCell
@@ -385,14 +385,13 @@ contains
     integer:: i_D(MaxDim), iCell ! loop variables
     integer:: nCellNew
     real:: WeightTotal
-    
+
     character(len=*), parameter:: NameSub = &
          'ModBatlInterface:interpolate_grid_amr_gc'
     !--------------------------------------------------------------------------
     ! call interpolation routine from BATL_grid
     call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
-    
-    ! if appropriate information is provided during the call:
+
     ! check whether all cells in the stencil are true cells
     if(body_BLK(iBlock))then
        ! number of cells in the stencil may change, reset it
@@ -420,7 +419,7 @@ contains
           !\
           !Rescale weights to get their total equal 1
           !/
-          !!!!$ Weight_I(1:nCell) = Weight_I(1:nCell)/WeightTotal
+          Weight_I(1:nCell) = Weight_I(1:nCell)/WeightTotal
        end if
        if(present(IsBody))IsBody = WeightTotal < 0.5
     else
