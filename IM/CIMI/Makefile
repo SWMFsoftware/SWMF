@@ -6,6 +6,7 @@ INSTALLFILES =  src/Makefile.DEPEND \
 		src/Makefile.RULES \
 		srcSAMI3/Makefile.DEPEND \
 		srcSAMI3/Makefile.RULES \
+		srcSAMI3/Makefile.suff \
 		srcInterface/Makefile.DEPEND
 
 
