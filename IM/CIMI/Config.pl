@@ -9,6 +9,8 @@ our $Help;
 our $ERROR;
 our $WARNING;
 our $Install;
+our $Compiler;
+
 our %Remaining;   # Arguments not handled by share/Scripts/Config.pl
 
 # Planet variables
@@ -17,7 +19,6 @@ my $Planet;
 my $NewPlanet;
 my $Grid;
 my $NewGrid;
-my $Compiler;
 
 $NewPlanet="EarthHO" if $Install;
 
@@ -53,7 +54,7 @@ foreach (@Arguments){
 
 &set_grid   if $NewGrid and $NewGrid ne $Grid;
 
-&set_compiler  if $Compiler;
+&set_compiler  if $Install;
 
 &show_settings if $Show; 
 
@@ -91,49 +92,49 @@ sub get_settings{
 #############################################################################
 
 sub set_planet{
-    my $Files;
+    my $File;
     $Planet = $NewPlanet;
 
     my $Dir = "src";
-    die "Directory $Dir is missing\n" unless -d $Dir;
+    die "$ERROR Directory $Dir is missing\n" unless -d $Dir;
 
-    $Files .= " $Dir/ModEarthHOHe.f90" if $Planet eq "EarthHOHe";
-    $Files .= " $Dir/ModEarthHO.f90"   if $Planet eq "EarthHO";
-    $Files .= " $Dir/ModEarthH.f90"    if $Planet eq "EarthH";
+    $File = " $Dir/ModEarthHOHe.f90" if $Planet eq "EarthHOHe";
+    $File = " $Dir/ModEarthHO.f90"   if $Planet eq "EarthHO";
+    $File = " $Dir/ModEarthH.f90"    if $Planet eq "EarthH";
 
-    &shell_command("cp $Files src/ModPlanet.f90");
+    &shell_command("cp $File src/ModPlanet.f90");
 
     &shell_command("echo PLANET=$NewPlanet > config.log");
     &shell_command("echo Grid=$NewGrid >> config.log");
 }
 #############################################################################
 
-#############################################################################
-
 sub set_compiler{
-    my $Files;
+
     my $Dir = "srcSAMI3";
-    die "Directory $Dir is missing\n" unless -d $Dir;
+    die "$ERROR Directory $Dir is missing\n" unless -d $Dir;
+    my $File = "$Dir/Makefile.suff";
 
-    $Files .= " $Dir/Makefile.suff.gfortran" if $Compiler eq "gfortran";
-    $Files .= " $Dir/Makefile.suff.ifort"   if $Compiler eq "ifort";
-
-    &shell_command("cp $Files $Dir/Makefile.suff");
+    if(-e "$File\.$Compiler"){
+	&shell_command("cp $File\.$Compiler $File");
+    }else{
+	&shell_command("rm -f $File; touch $File");
+    }
 }
 #############################################################################
 
 
 sub set_grid{
-    my $Files;
+    my $File;
     $Grid = $NewGrid;
 
     my $Dir = "src";
-    die "Directory $Dir is missing\n" unless -d $Dir;
+    die "$ERROR Directory $Dir is missing\n" unless -d $Dir;
 
-    $Files .= " $Dir/ModGrid_default.f90"   if $Grid eq "GridDefault";
-    $Files .= " $Dir/ModGrid_expanded.f90"  if $Grid eq "GridExpanded";
+    $File = " $Dir/ModGrid_default.f90"   if $Grid eq "GridDefault";
+    $File = " $Dir/ModGrid_expanded.f90"  if $Grid eq "GridExpanded";
 
-    &shell_command("cp $Files src/ModGrid.f90");
+    &shell_command("cp $File src/ModGrid.f90");
 
     &shell_command("echo PLANET=$NewPlanet > config.log");
     &shell_command("echo Grid=$NewGrid >> config.log");
