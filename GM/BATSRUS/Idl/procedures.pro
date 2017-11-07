@@ -2456,7 +2456,7 @@ pro read_plot_param
   endif else begin
      if strmid(plotmode,0,4) eq 'plot' then plotmode='contbar'
      print,'2D plotmode: shade/surface/cont/tv/polar(rad|deg|hour)/velovect/vector/stream'
-     print,'2D +options: bar,body,fill,grid,irr,label,max,mean,log'
+     print,'2D +options: bar,body,fill,grid,irr,label,max,mean,log,lgx,lgy'
      print,'2D +options: map,mesh,noaxis,over,usa,white,#c999,#ct999'
      askstr,'plotmode(s)                ',plotmode,doask
   endelse
@@ -3758,6 +3758,18 @@ pro plot_func
         logarithm=1
      endif else logarithm=0
 
+     i=strpos(plotmod,'lgx')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        lgx=1
+     endif else lgx=0
+
+     i=strpos(plotmod,'lgy')
+     if i ge 0 then begin
+        plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
+        lgy=1
+     endif else lgy=0
+
      i=strpos(plotmod,'max')
      if i ge 0 then begin
         plotmod=strmid(plotmod,0,i)+strmid(plotmod,i+3)
@@ -4014,7 +4026,8 @@ pro plot_func
         'cells': case plotmod of
            'cont': contour,f>f_min,LEVELS=levels,$
                            FILL=fill,FOLLOW=label,$
-                           XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE
+                           XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE,$
+                           XLOG=lgx, YLOG=lgy
            'plot':plot,f,YRANGE=[f_min,f_max],$
                        XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
            'plot_io':plot_io,f,YRANGE=[f_min,f_max],$
@@ -4059,11 +4072,12 @@ pro plot_func
               contour,f>f_min,xx,yy,$
                       FOLLOW=label, FILL=fill, TRIANGULATION=tri, $
                       LEVELS=levels,XSTYLE=noaxis+1,YSTYLE=noaxis+1,$
-                      /NOERASE
+                      /NOERASE, XLOG=lgx, YLOG=lgy
            endif else $
               contour,f>f_min,xx,yy,$
-                      FOLLOW=label, FILL=fill, LEVELS=levels, $
-                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE
+                      FOLLOW=label, FILL=fill, LEVELS=levels,   $
+                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE, $
+                      XLOG=lgx, YLOG=lgy
            'polar'    :polar_contour,f>f_min,yy*angleunit,xx,$
                                      FOLLOW=label, FILL=fill, LEVELS=levels,$
                                      XSTYLE=noaxis+1,YSTYLE=noaxis+1,/dither, $
