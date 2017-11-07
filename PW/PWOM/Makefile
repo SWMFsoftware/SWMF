@@ -92,7 +92,9 @@ rundir:
 		mkdir restartIN restartOUT plots; \
 		cp ${MYDIR}/data/input/${PLANET}/restartfiles/restart_iline* restartIN/ ;\
 		cp ${MYDIR}/data/input/${PLANET}/*.dat .;\
+		cp ${MYDIR}/data/input/${PLANET}/*.txt .;\
 		cp -r ${MYDIR}/data/IRI_DATA .;\
+		cp -r ${MYDIR}/data/crossection_data/*dat .;\
 		cp -r ${MYDIR}/data/nightside_fluxes/*dat .;\
 		cp ${MYDIR}/data/input/*dat .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
@@ -119,6 +121,7 @@ test_orig:
 	-@(make test_earth)
 	-@(make test_restart)
 	-@(make test_earth_twostream)
+	-@(make test_jupiter_twostream)
 	-@(make clean)
 	-@(make test_earth_stet)
 
@@ -143,6 +146,17 @@ test_earth_twostream:
 	@echo "test_run..." >> test_Earth_twostream.diff
 	make test_run
 	@echo "test_check..." >> test_Earth_twostream.diff
+	make test_check SEDIR=TwoStream MYTEST=_twostream
+
+test_jupiter_twostream:	
+	@echo "starting..." > test_Jupiter_twostream_plots.diff
+	@echo "test_compile..." > test_Jupiter_twostream.diff
+	make test_compile PLANET=Jupiter
+	@echo "test_rundir..." >> test_Jupiter_twostream.diff
+	make test_rundir PARAMIN=PARAM.in.twostream
+	@echo "test_run..." >> test_Jupiter_twostream.diff
+	make test_run
+	@echo "test_check..." >> test_Jupiter_twostream.diff
 	make test_check SEDIR=TwoStream MYTEST=_twostream
 
 test_earth_stet:	
@@ -237,7 +251,7 @@ test_restart:
 	make   test_check MYTEST=_restart
 
 test_restart_save:
-	cp data/input/${PLANET}/restart_iline* ${TESTDIR}/PW/restartIN/
+	cp data/input/${PLANET}/restartfiles/restart_iline* ${TESTDIR}/PW/restartIN/
 	cp input/${PLANET}/PARAM.in.restartsave ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./PWOM.exe
 	cd ${TESTDIR}; mv PW/restartOUT/* PW/restartIN/
@@ -282,5 +296,7 @@ allclean:
 	@touch ${INSTALLFILES}
 	cd src; make distclean
 	cd srcInterface; make distclean
+	cd srcTWOSTREAM; make distclean
+	cd srcSTET; make distclean
 	cd doc/Tex; make distclean
 	rm -rf Makefile.planet *~ bin ${INSTALLFILES}
