@@ -5,7 +5,7 @@ SEARCHDIR = -I${SHAREDIR} -I${EMPIRICALGMDIR} -I${EMPIRICALIEDIR} -I${DATAREADIN
 include ../Makefile.conf
 include Makefile.DEPEND
 include Makefile.RULES
-
+include Makefile.suff # SAMI3 requires special compilation rules (e.g. save flag)
 
 OBJECTS= \
 	ModSAMI.o\
@@ -79,31 +79,5 @@ SAMI3_orig: ${OBJECTS_EXE}
 clean: cleanfiles
 
 distclean: clean
-
-
-#SAMI3 requires save flag  for origional .f files
-# right now this only works for gfortran and would have to get 
-# modified for other codes. Probably this hase to get fixed at Config.pl
-include Makefile.suff
-
-
-###.SUFFIXES : .o .f90 .f 
-###
-###
-###%.o:%.mod
-###
-###.f.o:
-###	$(f90) -c $*.f 
-###
-###.f90.o:
-###	$(f90) -c $*.f90
-###
-###clean:
-###	rm *.o *.exe 
-###
-###sami3.x:	$(OBJ)
-###	$(f90) -o sami3.x $(OBJ)
-###
-###$(OBJ): com3_mpi-1.98.inc
-###$(OBJ): param3_mpi-1.98.inc
+	rm -f Makefile.suff
 
