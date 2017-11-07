@@ -346,8 +346,8 @@ clean:
 	cd srcSAMI3; make clean
 	cd srcInterface; make clean
 	cd doc/Tex; make clean
-	(if [ -d util ];  then cd util;  make clean; fi);
-	(if [ -d share ]; then cd share; make clean; fi);
+	@(if [ -d util ];  then cd util;  make clean; fi);
+	@(if [ -d share ]; then cd share; make clean; fi);
 
 distclean:
 	./Config.pl -uninstall
@@ -357,8 +357,8 @@ allclean:
 	cd src; make distclean
 	cd srcInterface; make distclean
 	rm -f config.log *~
-	if [ -h input ]; then rm -f input; fi
-	if [ -h output ]; then rm -f output; fi
+	@(if [ -h input ]; then rm -f input; fi)
+	@(if [ -h output ]; then rm -f output; fi)
 
 #
 #       Create run directories
