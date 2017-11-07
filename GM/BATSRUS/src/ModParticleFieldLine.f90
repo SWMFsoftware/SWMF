@@ -22,7 +22,7 @@ module ModParticleFieldLine
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
-  use ModMain, ONLY: Body1, NameThisComp
+  use ModMain, ONLY: NameThisComp
   use ModPhysics, ONLY: rBody
   use ModCellGradient, ONLY: calc_gradient_ghost, &
        GradCosBR_DGB => GradVar_DGB
@@ -584,9 +584,6 @@ contains
        end do
 
        ! remove particles that went outside of the domain
-       if(Body1)then ! check if there is an inner body
-          call check_inner_boundary(KindEnd_)
-       end if
        call remove_undefined_particles(KindEnd_)
 
        ! Second stage of RK2 
@@ -650,9 +647,6 @@ contains
        end do
 
        ! remove particles that went outside of the domain
-       if(Body1)then ! check if there is an inner body
-          call check_inner_boundary(KindEnd_)
-       end if
        call remove_undefined_particles(KindEnd_)
 
        ! if all particles are scheduled for message pass -> perform it
@@ -813,6 +807,7 @@ contains
     ! interpolation data: number of cells, cell indices, weights
     integer:: nCell, iCell_II(0:nDim, 2**nDim)
     real   :: Weight_I(2**nDim)
+    logical:: IsBodyLocal
     integer:: iCell ! loop variable
     integer:: i_D(MaxDim)
     character(len=200):: StringError
@@ -823,7 +818,9 @@ contains
     if(UseB0)call get_b0(Xyz_D, B_D)
     ! get the remaining part of the magnetic field
     call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
-         IsBody)
+         IsBodyLocal)
+    if(present(IsBody)) IsBody = IsBodyLocal
+
     ! interpolate magnetic field value
     do iCell = 1, nCell
        i_D = 1
@@ -831,6 +828,7 @@ contains
        B_D = B_D + &
             State_VGB(Bx_:Bz_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
     end do
+
     if(all(B_D==0))then
        write(StringError,'(a,es15.6,a,es15.6,a,es15.6)') &
             NameThisComp//':'//NameSub//&
@@ -944,7 +942,7 @@ contains
 
       ! variables for AMR interpolation
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
-      real   :: Weight_I(2**nDim), WeightTotal
+      real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
       integer:: i_D(MaxDim)
       !------------------------------------
@@ -964,25 +962,8 @@ contains
               State_VGB(Rho_,         i_D(1),i_D(2),i_D(3),iBlock) * &
               Weight_I(iCell)
       end do
-      WeightTotal = sum(Weight_I(1:nCell))
-      if(WeightTotal > 0.0) V_D = V_D / WeightTotal
     end subroutine get_v
   end subroutine advect_particle_line
-
-  !========================================================================
-
-  subroutine check_inner_boundary(iKind)
-    ! check whether particles have crossed an inner boundary
-    ! if so => set particle's block to negative value
-    integer, intent(in):: iKind
-
-    integer:: iParticle ! loop variable
-    !----------------------------------------------------------------------
-    do iParticle = 1, Particle_I(iKind)%nParticle
-       if(sum(Particle_I(iKind)%State_VI(x_:z_,iParticle)**2) < rBody*rBody)&
-            call mark_undefined(iKind, iParticle)
-    end do
-  end subroutine check_inner_boundary
 
   !========================================================================
 
