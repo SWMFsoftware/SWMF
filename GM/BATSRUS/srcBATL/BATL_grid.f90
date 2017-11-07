@@ -1428,9 +1428,6 @@ contains
   !/ 
   subroutine interpolate_grid_amr_gc_nob(XyzIn_D, &
        nCell, iCell_II, Weight_I, IsSecondOrder)
-
-    use ModInterpolateAMR, ONLY: interpolate_amr_gc
-
     ! Find the grid cells surrounding the point Xyz_D.
     ! nCell returns the number of cells found on the processor.
     ! iCell_II returns the block+cell indexes for each cell.
@@ -1443,11 +1440,7 @@ contains
     real,    intent(out)  :: Weight_I(2**nDim)
 
     logical, optional, intent(out):: IsSecondOrder
-
-    integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
-    real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
     integer:: iBlockOut, iProcOut
-    logical:: IsSecondOrderLocal
     !-----------------------------------
     ! check number of AMR dimensions:
     ! if it is 0 or 1 => call a simpler interpolation function
@@ -1457,46 +1450,16 @@ contains
        RETURN
     end if
     
-    ! Convert to generalized coordinates if necessary
-    if(IsCartesianGrid)then
-       Coord_D = XyzIn_D
-    else
-       call xyz_to_coord(XyzIn_D, Coord_D)
-    end if
-
     ! find a block suitable for interpolation
     call check_interpolate_amr_gc(XyzIn_D, 1, iProcOut, iBlockOut)
     ! check if it is on the current processor
     if (iProcOut /= iProc)then
-       !call CON_stop("Can't perform interpolation on this processor")
        nCell = 0
        if(present(IsSecondOrder)) IsSecondOrder = .false.
        RETURN
     end if
-
-    ! get corner coordinates and cel size of the block
-    CoordMin_D =  CoordMin_DB(:,iBlockOut)
-    DCoord_D   = (CoordMax_DB(:,iBlockOut) - CoordMin_DB(:,iBlockOut)) / nIJK_D
-
-    ! information about neighbors' resolution level relative to current block
-    ! NOTE: in the shared procedure difference is understood as follows:
-    !       +1 -> neighbor is finer
-    !       -1 -> neighbor is coarser
-    !       this is opposite to BATL's treatment, hence minus sign
-    DiLevelNei_III = DiLevelNei_IIIB(:, :, :, iBlockOut)
-    where(abs(DiLevelNei_III)==1)DiLevelNei_III = - DiLevelNei_III
-
-    ! call the wrapper for the shared AMR interpolation procedure
-    call interpolate_amr_gc(&
-         nDim, Coord_D(1:nDim), CoordMin_D(1:nDim),&
-         DCoord_D(1:nDim), nIJK_D(1:nDim), DiLevelNei_III, &
-         nCell, iCell_II(1:nDim,:), Weight_I, IsSecondOrderLocal)
-
-    ! return block number as well
-    iCell_II(0,:) = iBlockOut
-    
-    if(present(IsSecondOrder)) IsSecondOrder = IsSecondOrderLocal
-
+    call interpolate_grid_amr_gc_ib(XyzIn_D, iBlockOut, &
+       nCell, iCell_II, Weight_I, IsSecondOrder)
   end subroutine interpolate_grid_amr_gc_nob
   !==================================
   subroutine interpolate_grid_amr_gc_ib(XyzIn_D, iBlock, &
