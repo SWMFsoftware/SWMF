@@ -13,6 +13,9 @@ Module ModGmCimi
   integer, parameter,dimension(nspec-1) :: AveP_I   = (/9,10/)
 
   integer,parameter :: nVar=4
+
+  real :: KpGm=-1.0
+  logical :: UseGmKp=.false.
   
   real :: Den_IC(nspec,nLat,nLon) = 0.0, Temp_IC(nspec,nLat,nLon) = 0.0, &
        Temppar_IC(nspec,nLat,nLon) = 0.0

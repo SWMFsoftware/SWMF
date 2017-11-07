@@ -112,7 +112,7 @@ contains
 
   !==========================================================================
 
-  subroutine GM_get_for_im_crcm(Buffer_IIV, iSizeIn, jSizeIn, nVarIn, &
+  subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nVarIn, &
        BufferLine_VI, nVarLine, nPointLine, NameVar)
 
     use ModGeometry,ONLY: x2
@@ -126,13 +126,14 @@ contains
          UnitN_, UnitU_, UnitB_, UnitP_, rBody
     use ModSolarwind, ONLY: get_solar_wind_point
     use ModConst, ONLY: cProtonMass
-
+    use ModGroundMagPerturb, ONLY: DoCalcKp, Kp
+    
     use CON_line_extract, ONLY: line_get, line_clean
     use CON_axes,         ONLY: transform_matrix
     use CON_planet,       ONLY: RadiusPlanet
 
     integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
-    real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
+    real,    intent(out):: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut
 
     integer, intent(in) :: nPointLine, nVarLine
     real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
@@ -153,6 +154,14 @@ contains
     if(iProc /= 0) RETURN
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+    ! If Kp is being calculated, share it.  Otherwise, share -1.
+    if(DoCalcKp) then
+       KpOut = Kp
+    else
+       KpOut = -1
+    endif
+
+    
     if(DoMultiFluidIMCoupling)then
        if(NameVar /= 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp')&
             call CON_stop(NameSub//' invalid NameVar='//NameVar)

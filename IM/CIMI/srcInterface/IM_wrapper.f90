@@ -226,7 +226,7 @@ contains
   end subroutine IM_save_restart
   !===========================================================================
 
-  subroutine IM_put_from_gm_crcm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,&
+  subroutine IM_put_from_gm_crcm(Buffer_IIV,BufferKp,iSizeIn,jSizeIn,nVarIn,&
        BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
     use ModGmCIMI
     use ModCimiGrid,  ONLY: nLat => np, nLon => nt, iProc, nProc
@@ -237,7 +237,7 @@ contains
     !  use ModPrerunField,ONLY: DoWritePrerun, save_prerun
 
     integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
-    real,    intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
+    real,    intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn),BufferKp
     integer, intent(in) :: nVarLine, nPointLine
     real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
 
@@ -254,6 +254,15 @@ contains
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+    !if BufferKp >0 then GM is passing Kp and we will store it
+    if (BufferKp>0) then
+       KpGm=BufferKp
+       UseGmKp = .true.
+    else
+       KpGm=-1.0
+       UseGmKp = .false.
+    endif
+       
     DoMultiFluidGMCoupling = .false.
     DoAnisoPressureGMCoupling = .false.
 

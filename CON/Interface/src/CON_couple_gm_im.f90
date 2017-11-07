@@ -295,6 +295,9 @@ contains
       ! Buffer for satellite locations   
       real, allocatable :: SatPos_DII(:,:,:)
 
+      ! Buffer for scalar Kp
+      real :: BufferKp
+      
       ! Buffer for satellite names   
       character(len=100), allocatable:: NameSat_I(:)
 
@@ -335,14 +338,15 @@ contains
       ! Only GM root returns useful info but all processors should be called
       ! so they can deallocate ray tracing
       if(is_proc0(GM_)) call GM_get_for_im_crcm( &
-           Buffer_IIV, iSize, jSize, nVarBmin, &
+           Buffer_IIV, BufferKp, iSize, jSize, nVarBmin, &
            BufferLine_VI, nVarLine, nPointLine, NameVar)
 
       call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
       call transfer_real_array(GM_, IM_, size(BufferLine_VI), BufferLine_VI)
-
+      call transfer_real(GM_,IM_, BufferKp)
+      
       if(is_proc(IM_)) call IM_put_from_gm_crcm(&
-           Buffer_IIV, iSize, jSize, nVarBmin,&
+           Buffer_IIV, BufferKp, iSize, jSize, nVarBmin,&
            BufferLine_VI, nVarLine, nPointLine, NameVar, tSimulation)
 
       deallocate(Buffer_IIV, BufferLine_VI)
