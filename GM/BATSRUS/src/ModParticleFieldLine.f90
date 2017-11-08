@@ -65,7 +65,7 @@ module ModParticleFieldLine
        ! stepsize during line extraction
        Ds_   = 7, &       
        !grad CosBR at the beginning of extraction iteration
-       GradX_= 8, GradZ_ = 10, &
+       GradCosBRX_= 8, GradCosBRZ_ = 10, &
        ! value of CosBR at the beginning of extraction iteration
        CosBR_   =  11, &
        ! previous direction
@@ -556,7 +556,7 @@ contains
            Xyz_D   = StateEnd_VI(x_:z_, iParticle),&
            iBlock  =iIndexEnd_II(0,iParticle),&
            Dir_D   = DirB_D,&
-           Grad_D  = StateEnd_VI(GradX_:GradZ_,iParticle),&
+           Grad_D  = StateEnd_VI(GradCosBRX_:GradCosBRZ_,iParticle),&
            StepSize= StateEnd_VI(Ds_,iParticle),&
            IsBody  = IsBody)
       if(IsBody)then
@@ -688,41 +688,74 @@ contains
       !-----------------------------------
       ! current direction
       real, intent(inout):: Dir_D(MaxDim)
-      ! aux vectors
-      real, dimension(MaxDim):: C_D, R_D, A_D
-      ! deviation from radial direction
+      !\
+      ! deviation of outward directed line (iIndexEnd_II(Alignment_) = 1)
+      ! from outward radial direction, OR  
+      ! deviation of inward directed line (iIndexEnd_II(Alignment_) = -1)
+      ! from inward radial direction.
+      !/
       real:: DCosBR
-      ! threshold for deviation from radial direction to apply correction
+      ! threshold for such deviation to apply correction
       real:: DCosBRMax = 0.15
+      !\
+      ! Heliocentric distance
+      !/
+      real :: R
+      !\
+      ! unit vector of a radial direction
+      !/
+      real :: R_D(MaxDim)
+      !\
+      ! Unit vector parallel or antiparallel to GradCosBR
+      !/
+      real :: DirGradCosBR_D(MaxDim)
+      !\
+      ! Dot product of these two vestors
+      real :: DirRDotDirGradCosBR
+      !\
       ! scalars to define parameters of the correction
-      real:: Misc, Rad
-      real:: CRad, CTan
+      real:: Misc
       real:: KappaTh, Kappa
       !-----------------------------------
-      ! the deviation of the field line from radial direction
+      !\
+      ! deviation of outward directed line (iIndexEnd_II(Alignment_) = 1)
+      ! from outward radial direction, OR  
+      ! deviation of inward directed line (iIndexEnd_II(Alignment_) = -1)
+      ! from inward radial direction.
+      !/
       DCosBR = abs(CosBR - iIndexEnd_II(Alignment_,iParticle))
-      ! radius
-      Rad = sqrt(sum(StateEnd_VI(x_:z_,iParticle)**2))
+      !\
+      ! Heliocentric distance, to compare with RCorrection
+      !/
+      R = sqrt(sum(StateEnd_VI(x_:z_,iParticle)**2))
 
       ! if the line deviates to0 much -> correct its direction
       ! to go along surface B_R = 0 
       if(DCosBR > DCosBRMax .and. & 
-           Rad > RCorrectionMin .and. Rad < RCorrectionMax)then
-         ! unit vector along the direction of gradient
-         ! with alignment accounted for
-         C_D = iIndexEnd_II(Alignment_, iParticle) * &
-              StateEnd_VI(GradX_:GradZ_, iParticle)/ &
-              sqrt(sum(StateEnd_VI(GradX_:GradZ_, iParticle)**2))
-         ! unit vector in radial direction
-         R_D = StateEnd_VI(x_:z_, iParticle) / Rad
-              
-         ! vector \perp C_D with max possible radial component
-         CRad = sum(C_D*R_D)
-         CTan = sqrt(1.0 - CRad**2)
-         A_D = iDirTrace * (CTan * R_D  - (C_D - CRad*R_D) * CRad / CTan)
-
-         ! change the direction of the line
-         Dir_D = A_D
+           R > RCorrectionMin .and. R < RCorrectionMax)then
+         !\
+         ! unit vector of a radial direction
+         !/
+         R_D = StateEnd_VI(x_:z_, iParticle)/R
+         ! unit vector along gradient of cosBR
+         DirGradCosBR_D = &
+              StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle)/ &
+              sqrt(sum(StateEnd_VI(GradCosBRX_:GradCosBRZ_, iParticle)**2))
+         !\
+         ! Change the direction of line for the unit vector, which  
+         !(1) is perpendicular to GradCosBR (or, the same, is parallel
+         !    to the current sheet surface, CosBR=0=const
+         !(2) has a maximum possible radial component 
+         !/
+         !\
+         ! First, calculate the cosine of angle between radial direction and
+         ! the direction of GradCosBR:
+         !/    
+         DirRDotDirGradCosBR = sum(DirGradCosBR_D*R_D)
+         !\
+         ! get the corrected line direction
+         Dir_D = iDirTrace*(R_D - DirGradCosBR_D*DirRDotDirGradCosBR)/&
+              sqrt(1 - DirRDotDirGradCosBR**2)
          RETURN
       end if
       
