@@ -2054,7 +2054,7 @@ pro get_hdf_pict,group_id,iGroup,ipict,nx,iSpecies,pictout,name,getdata
 end
 ;=============================================================================
 pro get_pict, unit, filename, filetype, npict, error
-  
+
   common debug_param & on_error, onerror
 
   if filetype eq 'IPIC3D' then begin 
@@ -3651,10 +3651,12 @@ pro plot_func
   if plotdim gt 1 and ytitleorig ne '' then !y.title=ytitleorig
 
   if !x.range[0] ne !x.range[1] then xrange=!x.range else $
-     xrange=[min(xx),max(xx)]
+     if axistype eq 'coord' then xrange=[min(xx),max(xx)] $
+     else xrange=[0,nx(0)-1]
   if plotdim gt 1 then begin
      if !y.range[0] ne !y.range[1] then yrange=!y.range else $
-        yrange=[min(yy),max(yy)]
+     if axistype eq 'coord' then yrange=[min(yy),max(yy)] $
+     else yrange = [0,nx(1)-1]
   endif
 
   ;; Calculate plot spacing from number of subplots per page (ppp) and charsize
@@ -4026,8 +4028,7 @@ pro plot_func
         'cells': case plotmod of
            'cont': contour,f>f_min,LEVELS=levels,$
                            FILL=fill,FOLLOW=label,$
-                           XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE,$
-                           XLOG=lgx, YLOG=lgy
+                           XSTYLE=noaxis+1,YSTYLE=noaxis+1,/NOERASE
            'plot':plot,f,YRANGE=[f_min,f_max],$
                        XSTYLE=noaxis+18,ystyle=18,LINE=lstyle,/NOERASE
            'plot_io':plot_io,f,YRANGE=[f_min,f_max],$
@@ -6151,8 +6152,8 @@ pro set_space, nb, spacex, spacey, sizes, nx = nx, ny = ny
   xsi = float(!d.x_size)
   ysi = float(!d.y_size)
 
-  xs = xsi - 5.0*spacex*xsi
-  ys = ysi - 5.0*spacey*ysi
+  xs = xsi*((1 - 5.0*spacex) > 0.5)
+  ys = ysi*((1 - 5.0*spacey) > 0.5)
 
   if nb eq 1 then begin
 
