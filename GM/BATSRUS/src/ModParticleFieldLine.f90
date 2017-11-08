@@ -714,8 +714,12 @@ contains
       real :: DirRDotDirGradCosBR
       !\
       ! scalars to define parameters of the correction
-      real:: Misc
-      real:: KappaTh, Kappa
+      ! to avoid exessive line curvature.
+      !/
+      !\
+      ! Dot product of the old and new directions
+      real :: DirOldDotDirNew 
+      real, parameter :: cDirOldDotDirNewMin = 0.995 
       !-----------------------------------
       !\
       ! deviation of outward directed line (iIndexEnd_II(Alignment_) = 1)
@@ -762,26 +766,21 @@ contains
       ! the line doesn't deviate much, but it may just have exited the region
       ! where the correction above has been applied; 
       ! to prevent sharp changes in the direction -> limit line's curvature
-
-      ! cut-off curvature is based on the local grid size
-      KappaTh = 0.1 / StateEnd_VI(Ds_, iParticle)
-      ! curvature based on uncorrected direction
-      Kappa  = &
-           sqrt(2*(1-sum(Dir_D*StateEnd_VI(DirX_:DirZ_, iParticle)))) / &
-           StateEnd_VI(Ds_, iParticle)
-      ! if curvature isn't large -> don't apply the correction
-      if(Kappa < KappaTh) RETURN
-
-      ! remove scale the component of the current direction parallel
-      ! to the one on the previous step;
+      DirOldDotDirNew = sum(Dir_D*StateEnd_VI(DirX_:DirZ_, iParticle))
+      !Do not correct, if cosine of angle between old and new direction is
+      !close enough to 1:
+      if(DirOldDotDirNew > cDirOldDotDirNewMin) RETURN
+      !\
+      ! Direction needs to be corrected
+      !/
+      ! eliminate the component of the current direction parallel
+      ! to the one during the previous step;
+      Dir_D = Dir_D - DirOldDotDirNew*StateEnd_VI(DirX_:DirZ_,iParticle)
       ! components \perp to it are scaled accordingly to keep ||Dir_D|| = 1
-      Dir_D = Dir_D - &
-           sum(Dir_D*StateEnd_VI(DirX_:DirZ_,iParticle)) * &
-           StateEnd_VI(DirX_:DirZ_,iParticle)
-      Dir_D = Dir_D / sqrt(sum(Dir_D**2))
-      Misc  = 1 - 0.5 * (KappaTh*StateEnd_VI(Ds_, iParticle))**2
-      Dir_D = Misc * StateEnd_VI(DirX_:DirZ_,iParticle) +&
-           sqrt(1-Misc**2) * Dir_D
+      Dir_D = Dir_D/sqrt(1 - DirOldDotDirNew**2)
+      !Floor the cosine of angle between the old and new direction
+      Dir_D = cDirOldDotDirNewMin*StateEnd_VI(DirX_:DirZ_,iParticle) + &
+           sqrt(1 - cDirOldDotDirNewMin**2)*Dir_D
     end subroutine correct
     !====================
   end subroutine particle_line
