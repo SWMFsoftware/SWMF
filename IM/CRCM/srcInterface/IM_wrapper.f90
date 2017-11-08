@@ -238,8 +238,8 @@ contains
   end subroutine IM_save_restart
   !===========================================================================
 
-  subroutine IM_put_from_gm_crcm(Buffer_IIV,iSizeIn,jSizeIn,nVarIn,&
-       BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+  subroutine IM_put_from_gm_crcm(Buffer_IIV, Kp, iSizeIn, jSizeIn, nVarIn,&
+       BufferLine_VI, nVarLine, nPointLine, NameVar, tSimulation)
     use ModGmCRCM
     use ModCrcmGrid,  ONLY: nLat => np, nLon => nt, iProc, nProc
     use ModCrcmPlanet,ONLY: rEarth => re_m
@@ -250,6 +250,7 @@ contains
 
     integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
     real,    intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn)
+    real,    intent(in) :: Kp
     integer, intent(in) :: nVarLine, nPointLine
     real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
 
@@ -281,7 +282,7 @@ contains
        write(*,*)'nVarLine=',nVarLine
        call CON_stop(NameSub//' invalid nVarLine (should be 4)')
     end if
-    DoneGmCoupling=.true.
+    DoneGmCoupling = .true.
     if(DoTestMe)then
        write(*,*)NameSub,' iSizeIn,jSizeIn,nVarIn=',&
             iSizeIn,jSizeIn,nVarIn
@@ -305,8 +306,8 @@ contains
             StateBmin_IIV(iSizeIn,jSizeIn,nVarIn))
     endif
 
-    StateLine_VI      = BufferLine_VI
-    StateBmin_IIV(:,:,:) = Buffer_IIV(:,:,:)
+    StateLine_VI  = BufferLine_VI
+    StateBmin_IIV = Buffer_IIV
 
     ! convert unit of locations X and Y
     StateBmin_IIV(:,:,1:2) = StateBmin_IIV(:,:,1:2)/rEarth ! m --> Earth Radii
@@ -379,9 +380,8 @@ contains
 
     nsw = 1
 
-    iyear=2002
-    iday=1
-
+    iyear = 2002
+    iday  = 1
 
     ! create an index array on the first call
     if (IsFirstCall) then

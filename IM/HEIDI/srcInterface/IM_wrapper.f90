@@ -1053,11 +1053,13 @@ contains
   end subroutine IM_save_restart
 
   !===========================================================================
-  subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
-       BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+  subroutine IM_put_from_gm_crcm(Integral_IIV, Kp, &
+       iSizeIn, jSizeIn, nIntegralIn, &
+       BufferLine_VI, nVarLine, nPointLine, NameVar, tSimulation)
 
     integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
     real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
+    real,    intent(in) :: Kp
     integer, intent(in) :: nVarLine, nPointLine
     real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
     real,    intent(in) :: tSimulation
@@ -1068,8 +1070,6 @@ contains
     call CON_stop(NameSub//': CRCM version cannot be used for HEIDI!')
 
   end subroutine IM_put_from_gm_crcm
-
-
   !===========================================================================
 
   subroutine interpolate_linear_b( &

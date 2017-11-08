@@ -422,18 +422,22 @@ contains
   end subroutine IM_put_from_ie_mpi
 
   !============================================================================
-  subroutine IM_put_from_gm_crcm(Integral_IIV,iSizeIn,jSizeIn,nIntegralIn,&
-       BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
+  !===========================================================================
+  subroutine IM_put_from_gm_crcm(Integral_IIV, Kp, &
+       iSizeIn, jSizeIn, nIntegralIn, &
+       BufferLine_VI, nVarLine, nPointLine, NameVar, tSimulation)
 
     integer, intent(in) :: iSizeIn, jSizeIn, nIntegralIn
     real,    intent(in) :: Integral_IIV(iSizeIn,jSizeIn,nIntegralIn)
+    real,    intent(in) :: Kp
     integer, intent(in) :: nVarLine, nPointLine
     real,    intent(in) :: BufferLine_VI(nVarLine, nPointLine)
+    real,    intent(in) :: tSimulation
+    character (len=*), intent(in) :: NameVar
 
-    character (len=*),intent(in) :: NameVar
-    real, intent(in) :: tSimulation
+    character (len=*), parameter :: NameSub='IM_put_from_gm_crcm'
 
-    call CON_stop('IM_put_from_gm_crcm cannot be used by RCM2!')
+    call CON_stop(NameSub//': CRCM version cannot be used for RCM2!')
 
   end subroutine IM_put_from_gm_crcm
 
