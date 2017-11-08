@@ -205,14 +205,15 @@ contains
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
   !===========================================================================
-  subroutine check_particle_location(iKindParticle,iParticle, iProcOut,DoPass)
+  subroutine check_particle_location(iKindParticle,iParticle, iProcOut, &
+       DoMove, IsGone)
     use BATL_tree, ONLY: Unset_
     use BATL_mpi,  ONLY: iProc
 
     integer,           intent(in) :: iKindParticle
     integer,           intent(in) :: iParticle
     integer, optional, intent(out):: iProcOut
-    logical, optional, intent(out):: DoPass
+    logical, optional, intent(out):: DoMove, IsGone
 
     logical :: IsOut
     real   :: Xyz_D(MaxDim)! particle coordinates
@@ -225,10 +226,11 @@ contains
               
     if(present(iProcOut))iProcOut = iProcFound
     IsOut = iBlockFound == Unset_
+    if(present(IsGone))IsGone = IsOut
     if(IsOut)then
        ! particle is out of domain, don't pass it
        call mark_undefined(iKindParticle, iParticle)
-       if(present(DoPass))  DoPass = .false.
+       if(present(DoMove))  DoMove = .false.
     else
        !\
        ! For periodic boundary conditions the coordinates may be 
@@ -238,7 +240,7 @@ contains
             = Xyz_D(1:nDim)
        ! change the block 
        Particle_I(iKindParticle)%iIndex_II(0, iParticle) = iBlockFound
-       if(present(DoPass))  DoPass = iProc /= iProcFound
+       if(present(DoMove))  DoMove = iProc /= iProcFound
     end if
   end subroutine check_particle_location
   !===========================================================================
@@ -296,7 +298,7 @@ contains
       integer:: iSendOffset  ! start position in BufferSend for particle data
       integer:: iRecvOffset  ! start position in BufferRecv for particle data
       integer:: nParticleStay! # of particles that stay on this proc
-      logical:: DoPass       ! whether need to pass current particle
+      logical:: DoMove       ! whether need to pass current particle
       integer:: nParticleNew ! # of particles after message pass
       logical:: IsOut        ! particle is out of domain
       integer:: iTag, iError, iRequest, iRequest_I(2*nProc)
@@ -309,8 +311,8 @@ contains
 
       ! cycle through particles & find which should be passed to other procs
       do iParticle = 1, nParticle
-         call check_particle_location(iKindParticle,iParticle,iProcOut,DoPass)
-         if(.not.DoPass) CYCLE
+         call check_particle_location(iKindParticle,iParticle,iProcOut,DoMove)
+         if(.not.DoMove) CYCLE
 
          ! prepare this particle to be passed
          iProcTo_I(    iParticle) = iProcOut
