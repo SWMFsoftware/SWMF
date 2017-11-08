@@ -7,7 +7,7 @@ program advect
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, barrier_mpi, r_, &
        Xyz_DGB, CellSize_DB, find_grid_block, message_pass_cell, &
        StringTest, XyzTest_D, iTest, jTest, kTest, iBlockTest, iProcTest, &
-       read_test_param, find_test_cell, do_test
+       read_test_param, find_test_cell, set_do_test_proc, set_do_test_block
 
   implicit none
 
@@ -87,7 +87,7 @@ program advect
   !--------------------------------------------------------------------------
   call initialize
 
-  DoTest = do_test(NameSub, iProc)
+  call set_do_test_proc(NameSub, DoTest)
 
   if(DoTest)write(*,*)NameSub,' starting iProc=',iProc
   if(DoTest)call barrier_mpi
@@ -368,7 +368,7 @@ contains
           call read_var('DtPlot', DtPlot)
        case("#STOP")
           call read_var('TimeMax', TimeMax)
-       case("#TEST", "#TESTIJK", "#TESTXYZ")
+       case("#TEST", "#TESTIJK", "#TESTXYZ", "#VERBOSE")
           call read_test_param(NameCommand)
        case default
           call CON_stop(NameSub//' unknown command='//trim(NameCommand))
@@ -963,7 +963,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !------------------------------------------------------------------------
-    DoTest = do_test(NameSub, iProc, iBlock)
+    call set_do_test_block(NameSub, iBlock, DoTest)
 
     if(DoTest)then
        StateLeft_VFD  = -777.7
@@ -1057,7 +1057,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'limit_slope'
     !----------------------------------------------------------------------
-    DoTest = do_test(NameSub, iProc, iBlock)
+    call set_do_test_block(NameSub, iBlock, DoTest)
 
     if(DoTest)Slope_VGD = -777.7
 
@@ -1150,7 +1150,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_explicit'
     !--------------------------------------------------------------------------
-    DoTest = do_test(NameSub, iProc)
+    call set_do_test_proc(NameSub, DoTest)
 
     DtInv = 0.0
 
@@ -1280,8 +1280,8 @@ contains
 
     logical:: DoTest, DoTestBlock
     character(len=*), parameter:: NameSub = 'advance_localstep'
-    !-----------------------------------------------------------------------
-    DoTest = do_test(NameSub, iProc)
+    !----------------------------------------------------------------------
+    call set_do_test_proc(NameSub, DoTest)
 
     if(DoTest)then
        write(*,*) NameSub,' starting with nLevelMin, nLevelMax=', &

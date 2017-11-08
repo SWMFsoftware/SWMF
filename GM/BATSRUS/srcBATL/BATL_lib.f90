@@ -122,11 +122,13 @@ module BATL_lib
   public:: message_pass_particles, remove_undefined_particles, mark_undefined
 
   ! Inherited from BATL_test
-  public:: StringTest
+  public:: lVerbose, StringTest
   public:: iProcTest, iBlockTest, iTest, jTest, kTest
   public:: XyzTest_D, xTest, yTest, zTest
-  public:: read_test_param, find_test_cell, do_test
-
+  public:: iProcTest2, iBlockTest2, iTest2, jTest2, kTest2
+  public:: XyzTest2_D, xTest2, yTest2, zTest2
+  public:: read_test_param, find_test_cell
+  public:: set_do_test, set_do_test_proc, set_do_test_block, set_do_test_cell
 
 contains
   !============================================================================
