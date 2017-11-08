@@ -300,7 +300,7 @@ test_initial_state:
 	@echo ${MPIRUN} ./test_initial_state_exe >> test_initial_state.diff
 	-@(${MPIRUN} ./test_initial_state.exe > test_initial_state.tmp)
 	-@gunzip -c test_initial_state.ref.gz > test_initial_state.ref
-	-@(${SCRIPTDIR}/DiffNum.pl \
+	-@(${SCRIPTDIR}/DiffNum.pl -b \
 	    test_initial_state.out test_initial_state.ref \
 						 >  test_initial_state.diff)
 	@ls -l test_initial_state.diff
