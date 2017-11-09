@@ -122,10 +122,12 @@ function funcdef,xx,w,func
      ['deSI'     ,' di0/sqrt(rho*mi/me)*xSI'                 ], $            ; electron skin depth in SI
      ['ldebye'   , 'ld0/c0*sqrt(p)/rho'                      ], $            ; Debye length
      ['ldSI'     , 'ld0/c0*sqrt(p)/rho*xSI'                  ], $            ; Debye length in SI
+     ['n0'       , '{rhos0}/mS0'                             ], $            ; number density of species 0
+     ['n1'       , '{rhos1}/mS1'                             ], $            ; number density of species 1
+     ['qtot'     , 'qS1*{n1}+qS0*{n0}'                       ], $            ; total charge
+     ['dqtot'    ,  '{qtot}-div({ex},{ey},x,y)*eps0'         ], $            ; error in net charge
      ['ni'       , '{rhos1}/mi'                              ], $            ; ion number density
      ['ne'       , '{rhos0}/me'                              ], $            ; electron number density
-     ['qtot'     , 'qi*{ni}+qe*{ne}'                         ], $            ; total charge
-     ['dqtot'    , '{qtot}-div({ex},{ey},x,y)*eps0'          ], $            ; error in net charge
      ['dqtot1d'  , '{qtot}-diff1({ex},x)*eps0'               ], $            ; error in net charge in 1D
      ['jpx'      , 'qi*{ni}*{uxs1}+qe*{ne}*{uxs0}'           ], $            ; jx from particles
      ['jpy'      , 'qi*{ni}*{uys1}+qe*{ne}*{uys0}'           ], $            ; jy from particles

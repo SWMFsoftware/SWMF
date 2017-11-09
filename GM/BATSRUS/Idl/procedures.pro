@@ -321,7 +321,7 @@ pro set_default_values
 ; Physical unit names and values in SI units
   common phys_units, $
      fixunits, typeunit, xSI, tSI, rhoSI, uSI, pSI, bSI, jSI, Mi, Me, $
-     Qi, Qe, gamma, gammae, clight
+     Qi, Qe, mS0, mS1, qS0, qS1, gamma, gammae, clight
 
   fixunits   = 0                ; fix units (do not overwrite) if true
   typeunit   = 'NORMALIZED'     ; 'SI'/'NORMALIZED'/'PIC'/'PLANETARY'/'SOLAR'
@@ -339,6 +339,10 @@ pro set_default_values
   gamma      = 5./3.            ; Adiabatic index for first fluid
   gammae     = 5./3.            ; Adiabatic index for electrons
   clight     = cSI              ; (Reduced) speed of light
+  mS0        = 1/1836.15
+  mS1        = 1
+  qS0        = -1
+  qS1        = 1
 
 ; conversion factors that are useful to calculate various derived quantities
   common phys_convert, $
@@ -3472,6 +3476,10 @@ pro set_units, type, distunit=distunit, Mion=Mion, Melectron=Melectron
         'mi'    : mi     = value
         'm1'    : mi     = value
         'me'    : me     = value
+        'mS0'   : mS0    = value
+        'mS1'   : mS1    = value
+        'qS0'   : qS0    = value
+        'qS1'   : qS1    = value
         'qi'    : qi     = value
         'q1'    : qi     = value
         'qe'    : qe     = value
