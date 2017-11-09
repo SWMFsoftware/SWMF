@@ -127,8 +127,8 @@ foreach $source (@source){
 	if(/Unused parameter/i){
 	    print "$source at line $nline: $var is $msg\n";
 	}else{
-	    $line =~ /end (module|function|subroutine) (\w+)/ or
-		die "line=$line did not match end module/function/subroutine\n";
+	    $line =~ /end (program|module|function|subroutine) (\w+)/ or
+		die "line=$line did not match end program/module/function/subroutine\n";
 	    $method = "$1 $2";
 	    print "$source at line $nline: $var is $msg in method=$method\n";
 	}
