@@ -23,6 +23,8 @@
 !February 2011 - PUI fluid
 !April 2011 - Sources for PUI 
 !July 2012 - Use sonic Mach number to define Region 1 - Region 4 boundary 
+!November 2017 - use Solar Wind Pressure and Temp for the Mach Number for REGIONS definition 
+! for inner boundary the solar pressure is iostropic (dont have any dependence with magnetic field) 
 !==============================================================================
 module ModUser
 
@@ -301,29 +303,40 @@ contains
 
     ! Note: use -zFace to invert polarity
 ! polarity for 1997    Bsph_D(1) =  sign(SWH_Bx, zFace)             ! Br
-    Bsph_D(1) =  sign(SWH_Bx, zFace)             ! Br  !good for 2005 field
-    Bsph_D(2) =  0.0                             ! Btheta
-    Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi
+!    Bsph_D(1) =  sign(SWH_Bx, zFace)             ! Br  !good for 2005 field
+!    Bsph_D(2) =  0.0                             ! Btheta
+!    Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi
+! monopole
+
+     Bsph_D(1) =  SWH_Bx             ! Br  !good for 2005 field
+     Bsph_D(2) =  0.0                             ! Btheta
+     Bsph_D(3) =  SWH_Bx*SinTheta*ParkerTilt 
 
     Vsph_D    = (/ SWH_Ux, 0.0, 0.0 /)           ! Vr, Vtheta, Vphi
     VPUIsph_D = (/ Pu3_Ux, 0.0, 0.0 /)    
    
-    ! Calculate pressure (equilibrium at a given inner boundary)
+    ! Calculate pressur:e (equilibrium at a given inner boundary)
     Pmag = sum(Bsph_D**2) / 2.0
 
     ! magnetic pressure at the equator (actually wrong, neglects Br=SWH_Bx)
     PmagEquator = (SWH_Bx*ParkerTilt)**2/2
     
-    !Merav says numerical reasons only and FIX FOR PUI
 
     !this method garruntees equal pressure over inner boundary.  Simplier splitting method likely pl
-   p_frac = SWH_p/(SWH_p+PU3_p) 
-   pSolarWind = SWH_p + p_frac*(PmagEquator - Pmag)
-   pPUI = PU3_p +(1-p_frac)* (PmagEquator - Pmag)
+
+! Christina's way is also ok - trying my way 
+!    p_frac = SWH_p/(SWH_p+PU3_p) 
+!!merav    pSolarWind = SWH_p + p_frac*(PmagEquator - Pmag)
+!!merav    pPUI = PU3_p +(1-p_frac)* (PmagEquator - Pmag)
   
+!    pSolarWind = SWH_p + PmagEquator - Pmag
+    pPUI = PU3_p  
+
+    pSolarWind = SWH_p
+
   !new inner boundary pressures  
-  pPUI_30 = pPUI
-  PSolarWind_30 = pSolarWind
+    pPUI_30 = pPUI
+    PSolarWind_30 = pSolarWind
 
     ! Apply boundary conditions for ions
     VarsGhostFace_V(SWHRho_)    = SWH_rho
@@ -574,9 +587,14 @@ contains
        ! good for polarity of 1997       SignZ = sign(1.0, z)
        SignZ = sign(1.0,z)  ! good for 2005
 
-       Bsph_D(1) = SignZ*SWH_Bx*(rBody/r)**2  ! Br
+!       Bsph_D(1) = SignZ*SWH_Bx*(rBody/r)**2  ! Br
+!       Bsph_D(2) = 0.0                        ! Btheta
+!       Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/r) !Bphi
+
+!monopole
+       Bsph_D(1) = SWH_Bx*(rBody/r)**2  ! Br
        Bsph_D(2) = 0.0                        ! Btheta
-       Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/r) !Bphi
+       Bsph_D(3) = SWH_Bx*SinTheta*ParkerTilt*(rBody/r) !Bphi
 
 
        Vsph_D = (/ SWH_Ux, 0., 0. /)
@@ -852,6 +870,7 @@ contains
     PU3_p1   = PU3_T_dim*Io2No_V(UnitTemperature_)*PU3_rho
     PU3_p   = PU3_T_dim*Io2No_V(UnitTemperature_)*PU3_rho
 
+! comment from merav = this assumes cold electrons for PUIs 
     ! The units of rho_dim are n/cc and unitUSER_rho Gamma/cc
     !/
 
@@ -1582,6 +1601,8 @@ contains
 
     integer :: i, j, k
     real    :: InvRho, U2,SWHU2, p, Mach2, TempDim,TempDimSW, U2Dim, B2, rho, MachAlfven2,T_ave
+!merav
+    real    :: pSW, InvRhoSW
     real    :: MachMagneto2
     !------------------------------------------------------------------------
 
@@ -1596,15 +1617,11 @@ contains
 
        InvRho = 1.0/(State_VGB(SWHRho_,i,j,k,iBlock)+ State_VGB(Pu3Rho_,i,j,k,iBlock)) !rho is sum of ions density
 
-       !U2     = sum((State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock)+State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock))**2)*InvRho**2 !+ added by C.P.
-
+       InvRhoSW = 1.0/State_VGB(SWHRho_,i,j,k,iBlock)
 
        p      = State_VGB(SWHp_,i,j,k,iBlock) + State_VGB(Pu3p_,i,j,k,iBlock)
-       !U2     = (State_VGB(SWHRhoUx_,i,j,k,iBlock)/State_VGB(SWHRho_,i,j,k,iBlock) + State_VGB(Pu3RhoUx_,i,j,k,iBlock)/State_VGB(PU3Rho_,i,j,k,iBlock))**2 + &
-       !         (State_VGB(SWHRhoUy_,i,j,k,iBlock)/State_VGB(SWHRho_,i,j,k,iBlock) + State_VGB(Pu3RhoUy_,i,j,k,iBlock)/State_VGB(PU3Rho_,i,j,k,iBlock))**2 + &
-       !         (State_VGB(SWHRhoUz_,i,j,k,iBlock)/State_VGB(SWHRho_,i,j,k,iBlock) + State_VGB(Pu3RhoUz_,i,j,k,iBlock)/State_VGB(PU3Rho_,i,j,k,iBlock))**2 
 
-       ! U2     = (sum(State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock)**2)/State_VGB(SWHRho_,i,j,k,iBlock)**2 + sum(State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock)**2)/State_VGB(PU3Rho_,i,j,k,iBlock)**2)/2  !/ number of fluids 
+       pSW = State_VGB(SWHp_,i,j,k,iBlock)
 
        U2 = (State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**2 &
             + (State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**2 &
@@ -1636,16 +1653,14 @@ contains
        !end of merav modifications
        ! Square of Mach number
        !Mach2      = U2/(Gamma*p*InvRho)
-       Mach2       = U2/(Gamma*T_ave)
+!       Mach2       = U2/(Gamma*T_ave) this is wrong what is supersonic is the SW not PUI  
 
+       Mach2      = U2/(Gamma*pSW*InvRhoSW)
 
        ! Temperature in Kelvins
        TempDim = InvRho*p*No2Si_V(UnitTemperature_)
        !Account for e- pressure
        TempDimSW = 1./2.*State_VGB(SWHp_,i,j,k,iBlock)/State_VGB(SWHRho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
-       ! if (TempPop1LimitDim > TempDimSW) write(*,*) &
-       ! TempDimSW,State_VGB(SWHp_,i,j,k,iBlock),State_VGB(SWHRho_,i,j,k,iBlock), &
-       ! No2Si_V(UnitTemperature_),r_BLK(i,j,k,iBlock), Xyz_DGB(:,i,j,k,iBlock), TempDim
 
 !!!july12 use sonic Mach number - Berci
        if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
@@ -1654,12 +1669,10 @@ contains
           !Outside the bow shock
           iFluidProduced_C(i,j,k) = Ne4_
        elseif( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
-          ! elseif( TempPop1LimitDim > TempDimSW .and. uPop1LimitDim**2 > U2Dim)then
           !add spatial and checking for region 2 qualifications, Oct 26, 2011 
           !Outside the heliopause
 
           iFluidProduced_C(i,j,k) = Neu_
-
 
        elseif( MachPop2Limit**2 > Mach2 )then
           ! Heliosheath
