@@ -128,7 +128,7 @@ module BATL_lib
   public:: iProcTest2, iBlockTest2, iTest2, jTest2, kTest2
   public:: XyzTest2_D, xTest2, yTest2, zTest2
   public:: read_test_param, find_test_cell
-  public:: set_do_test, set_do_test_proc, set_do_test_block, set_do_test_cell
+  public:: test_start, test_stop, test_cell
 
 contains
   !============================================================================

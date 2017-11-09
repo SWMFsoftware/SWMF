@@ -5,9 +5,11 @@ program advect
 
   use BATL_lib, ONLY: MaxDim, nDim, nDimAmr, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, barrier_mpi, r_, &
-       Xyz_DGB, CellSize_DB, find_grid_block, message_pass_cell, &
-       StringTest, XyzTest_D, iTest, jTest, kTest, iBlockTest, iProcTest, &
-       read_test_param, find_test_cell, set_do_test_proc, set_do_test_block
+       Xyz_DGB, CellSize_DB, message_pass_cell, &
+       StringTest, &
+       XyzTest_D, iTest, jTest, kTest, iBlockTest, iProcTest, &
+       XyzTest2_D, iTest2, jTest2, kTest2, iBlockTest2, iProcTest2, &
+       read_test_param, find_test_cell, test_start, test_stop
 
   implicit none
 
@@ -87,9 +89,7 @@ program advect
   !--------------------------------------------------------------------------
   call initialize
 
-  call set_do_test_proc(NameSub, DoTest)
-
-  if(DoTest)write(*,*)NameSub,' starting iProc=',iProc
+  call test_start(NameSub, DoTest, DoTestAll=.true.)
   if(DoTest)call barrier_mpi
 
   call timing_start('ADVECT')
@@ -101,8 +101,15 @@ program advect
      if(iProc==iProcTest .and. StringTest /= '')then
         write(*,*)'Test cell iTest, jTest, kTest, iBlockTest, iProcTest=', &
              iTest, jTest, kTest, iBlockTest, iProcTest
-        write(*,*)'Test cell Xyz_D=', Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
-        write(*,*)'Test cell size =', CellSize_DB(:,iBlockTest)
+        write(*,*)'Test cell Xyz_D=', XyzTest_D(1:nDim)
+        write(*,*)'Test cell size =', CellSize_DB(1:nDim,iBlockTest)
+     end if
+
+     if(iProc==iProcTest2 .and. StringTest /= '')then
+        write(*,*)'2nd Test cell iTest, jTest, kTest, iBlockTest, iProcTest=',&
+             iTest2, jTest2, kTest2, iBlockTest2, iProcTest2
+        write(*,*)'2nd Test cell Xyz_D=', XyzTest2_D(1:nDim)
+        write(*,*)'2nd Test cell size =', CellSize_DB(1:nDim,iBlockTest2)
      end if
 
      ! Save plot at required frequency
@@ -170,6 +177,8 @@ program advect
   if(DoTest)write(*,*)NameSub,' finalize iProc=',iProc
 
   call finalize
+
+  call test_stop(NameSub, DoTest)
 
 contains
 
@@ -282,7 +291,7 @@ contains
          rRound0, rRound1
 
     use BATL_amr, ONLY: UseSimpleRefinement
-    use BATL_geometry, ONLY: GridRot_DD, IsRotatedCartesian, x_, y_, z_
+    use BATL_geometry, ONLY: GridRot_DD, IsRotatedCartesian
 
     use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command, read_var
@@ -368,7 +377,8 @@ contains
           call read_var('DtPlot', DtPlot)
        case("#STOP")
           call read_var('TimeMax', TimeMax)
-       case("#TEST", "#TESTIJK", "#TESTXYZ", "#VERBOSE")
+       case("#TEST", "#TESTIJK", "#TESTXYZ", "#TEST2IJK", "#TEST2XYZ", &
+            "#VERBOSE")
           call read_test_param(NameCommand)
        case default
           call CON_stop(NameSub//' unknown command='//trim(NameCommand))
@@ -963,7 +973,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !------------------------------------------------------------------------
-    call set_do_test_block(NameSub, iBlock, DoTest)
+    call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
        StateLeft_VFD  = -777.7
@@ -1039,6 +1049,8 @@ contains
        write(*,*)NameSub, ': Flux_VFD = ', Flux_VFD(:,iTest,jTest,kTest,:)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine calc_face_flux
   !===========================================================================
   subroutine limit_slope(iBlock, State_VG, Slope_VGD)
@@ -1057,7 +1069,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'limit_slope'
     !----------------------------------------------------------------------
-    call set_do_test_block(NameSub, iBlock, DoTest)
+    call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)Slope_VGD = -777.7
 
@@ -1083,6 +1095,8 @@ contains
             State_VG(:,iTest,jTest,kTest-1:kTest+1)
        write(*,*) NameSub, ': Slope1=', Slope_VGD(:,iTest,jTest,kTest,:)
     end if
+
+    call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine limit_slope
   !===========================================================================
@@ -1150,7 +1164,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_explicit'
     !--------------------------------------------------------------------------
-    call set_do_test_proc(NameSub, DoTest)
+    call test_start(NameSub, DoTest)
 
     DtInv = 0.0
 
@@ -1257,6 +1271,8 @@ contains
 
     end do
 
+    call test_stop(NameSub, DoTest)
+
   end subroutine advance_explicit
   !===========================================================================
   subroutine advance_localstep
@@ -1281,7 +1297,7 @@ contains
     logical:: DoTest, DoTestBlock
     character(len=*), parameter:: NameSub = 'advance_localstep'
     !----------------------------------------------------------------------
-    call set_do_test_proc(NameSub, DoTest)
+    call test_start(NameSub, DoTest)
 
     if(DoTest)then
        write(*,*) NameSub,' starting with nLevelMin, nLevelMax=', &
@@ -1488,9 +1504,11 @@ contains
 
     end if
 
-    if(DoTest)write(*,*) NameSub,' finished with State=', &
+    if(DoTest)write(*,*) NameSub,' State=', &
          State_VGB(:,iTest,jTest,kTest,iBlockTest), &
          exact_v(Xyz_DGB(1:nDim,iTest,jTest,kTest,iBlockTest), Time+Dt)
+
+    call test_stop(NameSub, DoTest)
 
   end subroutine advance_localstep
   !===========================================================================
