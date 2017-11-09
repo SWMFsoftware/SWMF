@@ -19,7 +19,7 @@ module BATL_particles
   public:: check_particle_location
   public:: mark_undefined
   public:: remove_undefined_particles
-  public:: get_particles
+  public:: put_particles
   public:: trace_particles
   SAVE
   !\
@@ -452,7 +452,7 @@ contains
     end subroutine pass_this_kind
   end subroutine message_pass_particles
   !==========================
-  subroutine get_particles(iKindParticle, StateIn_VI, iLastIdIn, &
+  subroutine put_particles(iKindParticle, StateIn_VI, iLastIdIn, &
        iIndexIn_II, UseInputInGenCoord, DoReplace, nParticlePE)
     use BATL_mpi,      ONLY: iProc
     use BATL_geometry, ONLY: coord_to_xyz
@@ -490,7 +490,7 @@ contains
     !Misc
     integer  :: nParticle, iParticleNew
     logical  :: DoTransform
-    character(len=*), parameter:: NameSub=NameMod//'::get_particles'
+    character(len=*), parameter:: NameSub=NameMod//'::put_particles'
     !--------------------
     call set_pointer_to_particles(&
          iKindParticle, State_VI, iIndex_II, &
@@ -560,7 +560,7 @@ contains
     end do
     Particle_I(iKindParticle)%nParticle = nParticleOld + nParticle
     if(present(nParticlePE))nParticlePE = nParticle
-  end subroutine get_particles
+  end subroutine put_particles
   !==========================
   !Tracing the trajectories of particles (end points) of a given sort, 
   !which are displaced according to the function, displace_particle. 
@@ -570,7 +570,7 @@ contains
   !stops when the particle leaves the computational domain, or reaches 
   !a body, or goes beyond some "soft" boundary. The integration has been 
   !completed once all particles reach some boundary. 
-  subroutine trace_particles(iKindParticle, displace_particle)
+  subroutine trace_particles(iKindParticle, displace_particle, check_done)
     use ModMpi
     use BATL_mpi, ONLY: iComm, nProc
     integer, intent(in) :: iKindParticle
@@ -600,10 +600,25 @@ contains
          ! call mark_undefined(iKind, iParticle) 
          !/
        end subroutine displace_particle
+       !--------------------------------------------------------------------
+       subroutine check_done(Done)
+         implicit none
+         logical, intent(out):: Done
+         !---------------
+         !\
+         ! tracing may need to be performed not to the full exhaustion
+         ! of particle in the domain, but until a certain criteria is met,
+         ! e.g. all particles were moved one full time step;
+         ! this subroutine alllows propagating these criteria to this module
+         !/
+       end subroutine check_done
     end interface
+
+    optional:: check_done
+
     !\
     ! Conditions for exiting a loop or the whole routine
-    logical :: IsNotAnyParticle, DoStop, IsEndOfSegment
+    logical :: IsNotAnyParticle, Done, DoStop, IsEndOfSegment
     !\
     !Loop variable
     integer :: iParticle
@@ -646,6 +661,18 @@ contains
        ! Particles of (2) kind are sent to proper processor
        !/
        call message_pass_particles(iKindParticle)
+       ! check additional criteria if provided
+       if(present(check_done))then
+          call check_done(Done)
+          if(nProc>1)then
+             call MPI_Allreduce(Done,&
+                  DoStop, 1, MPI_LOGICAL, MPI_LAND, iComm, iError)
+          else
+             DoStop = Done
+          end if
+          if(DoStop)RETURN
+
+       end if
     end do
   end subroutine trace_particles
   !=======================

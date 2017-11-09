@@ -9,16 +9,15 @@ module ModParticleFieldLine
   ! field line intergration is performed with use of BATL library including
   ! - continuous AMR interpolation
   ! - particle methods
-
   use BATL_lib, ONLY: &
        iProc,&
        MaxDim, nDim, &
        check_interpolate_amr_gc, &
        Particle_I, Xyz_DGB, CellVolume_GB, &
        MaxBlock, nI, nJ, nK, nBlock, &
-       allocate_particles, Unused_B, &
+       allocate_particles, trace_particles, Unused_B, &
        message_pass_particles, remove_undefined_particles, &
-       mark_undefined, check_particle_location, get_particles
+       mark_undefined, check_particle_location, put_particles
        
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
   use ModAdvance, ONLY: State_VGB
@@ -77,12 +76,12 @@ module ModParticleFieldLine
        fl_        = 1, &
        ! index of the particle along this field line
        id_        = 2, &
+       ! indicator for message passing in trace_particle_line
+       Pass_      = 3, &
        ! alignment of particle numbering with direction of B field:
        ! ( -1 -> reversed, +1 -> aligned); important for radial ordering 
        ! when magnetic field general direction may be inward
-       Alignment_ = 3, &
-       ! indicator for message passing in trace_particle_line
-       Pass_ = 4
+       Alignment_ = 4
 
   integer, parameter::    &
        Normal_ = 0       ,&
@@ -112,7 +111,7 @@ module ModParticleFieldLine
   integer, parameter:: nVarParticleEnd = 14
 
   ! number of indices
-  integer, parameter:: nIndexParticleReg = 2
+  integer, parameter:: nIndexParticleReg = 3
   integer, parameter:: nIndexParticleEnd = 4
 
   ! maximum allowed number of field lines
@@ -142,8 +141,8 @@ module ModParticleFieldLine
   integer:: iDirTrace
 
   ! parameters of end particles
-  real,    pointer:: StateEnd_VI(:,:)
-  integer, pointer:: iIndexEnd_II(:,:)
+  real,    pointer::  StateEnd_VI(:,:), StateReg_VI(:,:)
+  integer, pointer:: iIndexEnd_II(:,:),iIndexReg_II(:,:)
 contains
   !==========================================================================
   integer function n_particle_reg_max()
@@ -242,6 +241,8 @@ contains
     ! set pointers to parameters of end particles
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
+    StateReg_VI  => Particle_I(KindReg_)%State_VI
+    iIndexReg_II => Particle_I(KindReg_)%iIndex_II
     if(nLineInit > 0)&
          ! extract initial field lines
          call extract_particle_line(nLineInit, XyzLineInit_DI)
@@ -265,7 +266,6 @@ contains
        iIndexStart_II,&
        UseInputInGenCoord)
     use BATL_lib, ONLY: coord_to_xyz
-    use BATL_particles, ONLY: trace_particles
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
@@ -279,8 +279,7 @@ contains
     ! mode of tracing (forward, backward or both ways)
     integer,optional,intent(in)::iTraceModeIn
     ! initial particle indices for starting particles
-    integer,optional,intent(in) :: &
-         iIndexStart_II(nIndexParticleReg,nFieldLineIn)
+    integer,optional,intent(in) :: iIndexStart_II(:,:)
 
     ! An input can be in generalized coordinates
     logical, optional,intent(in) :: UseInputInGenCoord 
@@ -295,11 +294,9 @@ contains
     ! for correcting the line's direction to prevent it from closing
     real, allocatable:: CosBR_CB(:,:,:,:)
     character(len=*), parameter:: NameSub='extract_particle_line'
-    integer, pointer :: iIndexReg_II(:,:)
     !-----------------------------
-    iIndexReg_II=> Particle_I(KindReg_)%iIndex_II
     ! initialize field lines
-    call  get_particles(&
+    call  put_particles(&
          iKindParticle      = KindEnd_,          &
          StateIn_VI         = XyzStart_DI,       &
          iLastIdIn          = nFieldLine,        &
@@ -358,8 +355,8 @@ contains
           ! the initial particles are currently right after the particles,
           ! that were in the list before the start of this subroutine,
           ! i.e. occupy positions from (nParticleOld+1)
-          StateEnd_VI(x_:z_, 1:nLineThisProc) = Particle_I(KindReg_&
-               )%State_VI(x_:z_, nParticleOld+1:nParticleOld+nLineThisProc)
+          StateEnd_VI(x_:z_, 1:nLineThisProc) = &
+               StateReg_VI(x_:z_, nParticleOld+1:nParticleOld+nLineThisProc)
           iIndexEnd_II(0:id_,1:nLineThisProc) = iIndexReg_II(&
                0:id_,nParticleOld+1:nParticleOld+nLineThisProc)
           Particle_I(KindEnd_)%nParticle = nLineThisProc
@@ -473,7 +470,7 @@ contains
     ! the subroutine is the tracing loop;
     ! tracing starts at KindEnd_ particles and proceeds in a given direction
     !-----------------------------------------------------------------------
-    integer, intent(in) :: iParticle     ! loop variable
+    integer, intent(in) :: iParticle
     logical, intent(out):: IsEndOfSegment
     !---------------
     ! cosine of angle between direction of field and radial direction
@@ -533,7 +530,7 @@ contains
       !-------------------
       IsEndOfSegment = .false.
       if(RBoundarySoft > 0.0)then
-         if(sum(Particle_I(KindEnd_)%State_VI(1:nDim,iParticle)**2) &
+         if(sum(StateEnd_VI(1:nDim,iParticle)**2) &
               > rBoundarySoft**2)then
             call mark_undefined(KindEnd_, iParticle)
             IsEndOfSegment = .true.
@@ -801,12 +798,10 @@ contains
     end if
     do iParticle = iParticleStart, iParticleEnd 
        Particle_I(KindReg_)%nParticle = Particle_I(KindReg_)%nParticle+1
-       Particle_I(KindReg_)%State_VI(iVarCopy_I, &
-            Particle_I(KindReg_)%nParticle) =&
-            Particle_I(KindEnd_)%State_VI(iVarCopy_I, iParticle)
-       Particle_I(KindReg_)%iIndex_II(iIndexCopy_I,&
-            Particle_I(KindReg_)%nParticle) =&
-            Particle_I(KindEnd_)%iIndex_II(iIndexCopy_I, iParticle)
+       StateReg_VI(iVarCopy_I, Particle_I(KindReg_)%nParticle) =&
+            StateEnd_VI(iVarCopy_I, iParticle)
+       iIndexReg_II(iIndexCopy_I, Particle_I(KindReg_)%nParticle) =&
+            iIndexEnd_II(iIndexCopy_I, iParticle)
     end do
   end subroutine copy_end_to_regular
   !================================
@@ -892,7 +887,7 @@ contains
     ! add particles with specified coordinates to the already existing lines
     integer, intent(in):: nParticleIn
     real,    intent(in):: XyzIn_DI(MaxDim, nParticleIn)
-    integer, intent(in):: iIndexIn_II(nIndexParticleReg, nParticleIn)
+    integer, intent(in):: iIndexIn_II(:,:)
 
     ! An input can be in generalized coordinates
     logical, optional,intent(in) :: UseInputInGenCoord 
@@ -900,7 +895,7 @@ contains
     ! Whether to replace ALL old particles with the input
     logical, optional, intent(in):: DoReplace
     !\
-    call get_particles(&
+    call put_particles(&
          iKindParticle      = KindReg_          ,&
          StateIn_VI         = XyzIn_DI          ,&
          iIndexIn_II        = iIndexIn_II       ,&
@@ -912,15 +907,7 @@ contains
 
   subroutine advect_particle_line
     ! advect particles with the local plasma velocity
-    use ModMain, ONLY: time_accurate, Dt
-    ! parameters of particles
-    real,    pointer:: State_VI(:,:)
-    integer, pointer:: iIndex_II(:,:)
-
-    ! local plasma velocity
-    real:: VLocal_D(MaxDim)
-    !loop variable
-    integer:: iParticle
+    use ModMain, ONLY: time_accurate
 
     character(len=*),parameter::NameSub='advect_particle_line'
     !----------------------------------------------------------------------
@@ -928,37 +915,131 @@ contains
     if(.not.time_accurate) &
          RETURN
 
-    ! set pointers to parameters of particles
-    State_VI  => Particle_I(KindReg_)%State_VI
-    iIndex_II => Particle_I(KindReg_)%iIndex_II
+    ! reset particle's stage
+    iIndexReg_II(Pass_,1:Particle_I(KindReg_)%nParticle) = DoneFromScratch_
 
-    ! go over the list of particles and advect them
-    do iParticle = 1, Particle_I(KindReg_)%nParticle
+    call trace_particles(KindReg_, advect_particle, check_done_advect)
+  end subroutine advect_particle_line
 
-       ! simple advection (Euler integration)
-       ! get the local velocity
-       call get_v(&
-            Xyz_D = State_VI(x_:z_, iParticle),&
-            iBlock=iIndex_II(0,iParticle),&
-            V_D = VLocal_D)
+  !=========================================================================
+  
+  subroutine advect_particle(iParticle, IsEndOfSegment)
+    use ModMain, ONLY: Dt
+    ! advect an indiviudal particle using 2-stage integration
+    !-----------------------------------------------------------------------
+    integer, intent(in) :: iParticle
+    logical, intent(out):: IsEndOfSegment
+    !-----------------------------------------------------------------------
+    ! whether particle's location isn't covered by true cells
+    logical:: IsBody
 
-       ! update particle location
-       State_VI(x_:z_, iParticle) = State_VI(x_:z_, iParticle) + &
-            Dt * VLocal_D
-    end do
+    ! whether to schedule a particle for message pass
+    logical:: DoMove, IsGone
 
-    ! Message pass: some particles may have moved to different procs
-    call message_pass_particles(KindReg_)
-    call remove_undefined_particles(KindReg_)
+    ! local plasma velocity
+    real :: VLocal_D(MaxDim)
 
+    character(len=*),parameter:: NameSub = "particle_line"
+    !-------------------------------------------------------------
+    select case(iIndexReg_II(Pass_,iParticle))
+    case(HalfStep_)
+       ! stage 1 has been finished, proceed to the next one
+       call stage2(iParticle, IsEndOfSegment)
+    case(DoneFromScratch_)
+       ! begin particle's advection
+       call stage1(iParticle, IsEndOfSegment)
+    case(Normal_)
+       ! do nothing, full time step has been finished
+    case default
+       call stop_mpi(NameSub//': Unknown stage ID')
+    end select
   contains
+    !========================
+    subroutine stage1(iParticle, IsEndOfSegment)
+      integer, intent(in) :: iParticle
+      Logical, intent(out):: IsEndOfSegment
+      !-------------------
+      ! copy last known coordinates to old coords
+      StateReg_VI(XOld_:ZOld_,iParticle) = &
+           StateReg_VI(x_:z_, iParticle)
 
-    subroutine get_v(Xyz_D, iBlock, V_D)
+      ! get the direction of the local plasma velocity
+      call get_v(&
+           Xyz_D  = StateReg_VI(x_:z_, iParticle),&
+           iBlock =iIndexReg_II(0,iParticle),&
+           V_D    = VLocal_D,&
+           IsBody = IsBody)
+      if(IsBody)then
+         ! particle's location isn't covered by mostly true cells, 
+         ! i.e. not well outside central body
+         call mark_undefined(KindReg_,iParticle)
+         IsEndOfSegment = .true.
+         RETURN
+      end if
+
+      ! get next location
+      StateReg_VI(x_:z_, iParticle) = &
+           StateReg_VI(x_:z_, iParticle) + 0.5 * Dt * VLocal_D
+
+      ! check location, schedule for message pass, if needed
+      call check_particle_location(  &
+           iKindParticle = KindReg_ ,&
+           iParticle     = iParticle,&
+           DoMove        = DoMove   ,&
+           IsGone        = IsGone    )
+
+      !\
+      ! Particle may be beyond the boundary of computational domain
+      ! or need to move particle to different PE
+      IsEndOfSegment = IsGone .or. DoMove
+
+      !\
+      ! the first stage is done
+      iIndexReg_II(Pass_, iParticle) = HalfStep_
+    end subroutine stage1
+    !====================
+    subroutine stage2(iParticle, IsEndOfSegment)
+      integer, intent(in) :: iParticle
+      logical, intent(out):: IsEndOfSegment
+      !-------------------
+      ! get the direction of the local plasma velocity
+      call get_v(&
+           Xyz_D  = StateReg_VI(x_:z_, iParticle),&
+           iBlock =iIndexReg_II(0,iParticle),&
+           V_D    = VLocal_D,&
+           IsBody = IsBody)
+      if(IsBody)then
+         ! particle's location isn't covered by mostly true cells, 
+         ! i.e. not well outside central body
+         call mark_undefined(KindReg_,iParticle)
+         IsEndOfSegment = .true.
+         RETURN
+      end if   
+
+      ! get final location
+      StateReg_VI(x_:z_,iParticle) = &
+           StateReg_VI(XOld_:ZOld_,iParticle) + Dt * VLocal_D
+
+      ! update location and schedule for message pass
+      call check_particle_location( &
+           iKindParticle = KindReg_,&
+           iParticle     = iParticle)
+      !\
+      ! Particle may come beyond the boundary of computational domain 
+      ! or may need to be moved to different PE
+      IsEndOfSegment = .true.
+
+      !\
+      ! the second stage is done
+      iIndexReg_II(Pass_, iParticle) = Normal_
+    end subroutine stage2
+    !=============================================
+    subroutine get_v(Xyz_D, iBlock, V_D, IsBody)
       ! get local plasma velocity
       real,   intent(in) :: Xyz_D(MaxDim)
       integer,intent(in) :: iBlock
       real,   intent(out):: V_D(MaxDim)
-
+      logical, optional, intent(out):: IsBody
 
       ! variables for AMR interpolation
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
@@ -969,7 +1050,8 @@ contains
       ! reset the interpoalted values
       V_D = 0 
       ! get the velocity
-      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I)
+      call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I, &
+           IsBody)
       ! interpolate the local density and momentum
       do iCell = 1, nCell
          i_D = 1
@@ -983,7 +1065,17 @@ contains
               Weight_I(iCell)
       end do
     end subroutine get_v
-  end subroutine advect_particle_line
+  end subroutine advect_particle
+
+  !========================================================================
+
+  subroutine check_done_advect(Done)
+    ! check whether all paritcles have benn advected full time step
+    logical, intent(out):: Done
+    !------------------------------------------------------------
+    Done = all(iIndexReg_II(Pass_,1:Particle_I(KindReg_)%nParticle)==Normal_)
+  end subroutine check_done_advect
+  
   !=====================
   
   subroutine process_request(StringRequest, &
@@ -1060,11 +1152,11 @@ contains
     do iParticle = 1, Particle_I(KindReg_)%nParticle
        ! store variables
        DataOut_VI(1:nVarOut,      iParticle) = PACK(&
-            Particle_I(KindReg_)%State_VI( :,iParticle),&
+            StateReg_VI( :,iParticle),&
             MASK = DoReturnVar_V)
        ! store indexes
        DataOut_VI(nVarOut+1:nData,iParticle) = PACK(&
-            Particle_I(KindReg_)%iIndex_II(:,iParticle),&
+            iIndexReg_II(:,iParticle),&
             MASK = DoReturnIndex_I)
     end do
     ! permute data order so it corresponds to the order of the request
@@ -1107,12 +1199,12 @@ contains
     ! return data
     ! store variables
     DataOut_V(1:nVarOut) = PACK(&
-         Particle_I(KindReg_)%State_VI( :,iParticle),&
+         StateReg_VI( :,iParticle),&
          MASK = DoReturnVar_V)
 
     ! store indexes
     DataOut_V(nVarOut+1:nData) = PACK(&
-         Particle_I(KindReg_)%iIndex_II(:,iParticle),&
+         iIndexReg_II(:,iParticle),&
          MASK = DoReturnIndex_I)
 
     ! permute data order so it corresponds to the order of the request
