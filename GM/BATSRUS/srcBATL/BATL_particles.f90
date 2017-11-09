@@ -571,8 +571,6 @@ contains
   !a body, or goes beyond some "soft" boundary. The integration has been 
   !completed once all particles reach some boundary. 
   subroutine trace_particles(iKindParticle, displace_particle, check_done)
-    use ModMpi
-    use BATL_mpi, ONLY: iComm, nProc
     integer, intent(in) :: iKindParticle
     interface
        subroutine displace_particle(iParticle, IsEndOfSegment)
@@ -592,8 +590,10 @@ contains
          ! (2) check_interpolate in the displaced location of the
          ! particle shows that the particle location can no longer 
          ! be interpolated at the given PE
+         ! subroutine check_particle_location may be also used for 
+         ! these two purposes, which marks undefinedparticles too.
          ! (3) other criteria are satisfied for ending the 
-         ! trajectory of a given partiale (it reaches the internal 
+         ! trajectory of a given particle (it reaches the internal 
          ! or "soft" boundary). Such particle MUST be 
          ! marked as "undefined":
          !\
@@ -615,19 +615,16 @@ contains
     end interface
 
     optional:: check_done
-
     !\
     ! Conditions for exiting a loop or the whole routine
-    logical :: IsNotAnyParticle, Done, DoStop, IsEndOfSegment
+    logical :: IsEndOfSegment, Done
     !\
     !Loop variable
     integer :: iParticle
-    !\
-    !Misc
-    integer :: iError
     !-----------
     !\
-    !CYCLE till all particles leave the domain
+    !CYCLE till all particles leave the domain or
+    !check_done gives Done=.true. on all processors
     !/
     do 
        !\
@@ -649,31 +646,32 @@ contains
        !\
        ! Particles of the (1) kind are removed
        call remove_undefined_particles(iKindParticle)
-       IsNotAnyParticle = Particle_I(iKindParticle)%nParticle == 0
-       if(nProc>1)then
-          call MPI_Allreduce(IsNotAnyParticle,&
-               DoStop, 1, MPI_LOGICAL, MPI_LAND, iComm, iError)
-       else
-          DoStop = IsNotAnyParticle
-       end if
-       if(DoStop)RETURN
+       if(is_for_all_pe(Particle_I(iKindParticle)%nParticle == 0))&
+            RETURN
        !\
        ! Particles of (2) kind are sent to proper processor
        !/
        call message_pass_particles(iKindParticle)
-       ! check additional criteria if provided
        if(present(check_done))then
           call check_done(Done)
-          if(nProc>1)then
-             call MPI_Allreduce(Done,&
-                  DoStop, 1, MPI_LOGICAL, MPI_LAND, iComm, iError)
-          else
-             DoStop = Done
-          end if
-          if(DoStop)RETURN
-
+          if(is_for_all_pe(Done))RETURN
        end if
     end do
+  contains
+    function is_for_all_pe(DoStop) RESULT(DoStopAll)
+      use ModMpi
+      use BATL_mpi, ONLY  : iComm, nProc
+      logical, intent(in) :: DoStop
+      logical             :: DoStopAll
+      integer :: iError
+      !-----------
+      if(nProc>1)then
+         call MPI_Allreduce(DoStop,&
+              DoStopAll, 1, MPI_LOGICAL, MPI_LAND, iComm, iError)
+      else
+         DoStopAll = DoStop
+      end if
+    end function is_for_all_pe
   end subroutine trace_particles
   !=======================
 end module BATL_particles
