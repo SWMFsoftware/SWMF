@@ -482,6 +482,8 @@ contains
 
        ! change Pass_ field for particle passed after first stage
        iIndexEnd_II(Pass_,iParticle) = Normal_
+       ! will continue tracing, can't be the end of segment
+       IsEndOfSegment = .false.
        ! do not call the first stage, proceed to the second one
 
     case(DoneFromScratch_)
