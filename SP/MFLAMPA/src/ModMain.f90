@@ -39,7 +39,7 @@ module SP_ModMain
   real :: DataInputTime
   ! Methods and variables from this module 
   public:: &
-       read_param, initialize, run, finalize, check,&
+       read_param, initialize, run, check,&
        TimeGlobal, iIterGlobal, DataInputTime
 
   ! Methods and variables from ModSize
@@ -135,13 +135,27 @@ contains
 
   !============================================================================
 
-  subroutine run(TimeInOut, TimeLimit)
+  subroutine run(TimeInOut, TimeLimit, DoFinalizeIn)
     ! advance the solution in time
-    real, intent(inout):: TimeInOut
-    real, intent(in)   :: TimeLimit
+    real,              intent(inout):: TimeInOut
+    real,              intent(in)   :: TimeLimit
+    logical, optional, intent(in)   :: DoFinalizeIn
+    logical:: DoFinalize
     logical, save:: IsFirstCall = .true.
     !------------------------------
+    if(present(DoFinalizeIn))then
+       DoFinalize = DoFinalizeIn
+    else
+       DoFinalize = .false.
+    end if
+    
     if(DoReadMhData)then
+       !\
+       ! data flow is different when read MHD data from file:
+       ! the final data file has alredy been read, no new data is available
+       !/
+       if(DoFinalize) RETURN
+
        !\
        ! Read the background data from file
        !/
@@ -196,12 +210,5 @@ contains
     ! Make output and check input directories
     if(iProc==0) call make_dir(NamePlotDir)
   end subroutine check
-
-  !============================================================================
-
-  subroutine finalize
-    character(LEN=*),parameter:: NameSub='SP:finalize'
-    !--------------------------------------------------------------------------
-  end subroutine finalize
 
 end module SP_ModMain

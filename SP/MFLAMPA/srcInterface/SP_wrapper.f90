@@ -8,7 +8,7 @@ module SP_wrapper
   use ModConst, ONLY: rSun, cProtonMass
   use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
   use SP_ModMain, ONLY: &
-       run, initialize, finalize, check, read_param,&
+       run, initialize, check, read_param,&
        get_node_indexes, append_particles, &
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
@@ -103,8 +103,10 @@ contains
 
   subroutine SP_finalize(TimeSimulation)
     real,intent(in)::TimeSimulation
+    real:: TimeAux ! to satisfy intent of arguments in run()
     !--------------------------------------------------------------------------
-    call finalize
+    TimeAux = TimeSimulation
+    call run(TimeAux, TimeSimulation, .true.)
   end subroutine SP_finalize
 
   !=========================================================
