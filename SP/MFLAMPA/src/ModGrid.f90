@@ -16,12 +16,11 @@ module SP_ModGrid
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
-  public:: iGridGlobal_IA, iGridLocal_IB, iNode_II, iNode_B
-  public:: CoordMin_DI, Length_I
+  public:: iGridGlobal_IA, iGridLocal_IB, ParamLocal_IB, iNode_II, iNode_B
   public:: State_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
-  public:: Begin_, End_, Shock_, ShockOld_
+  public:: Begin_, End_, Shock_, ShockOld_, XMin_, YMin_, ZMin_, Length_
   public:: nVar, X_, Y_, Z_, D_, S_, LagrID_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
@@ -54,20 +53,6 @@ module SP_ModGrid
   ! Mark that grid has been set
   logical:: IsSetGrid = .false.
   !----------------------------------------------------------------------------
-  ! Said angular grids itself; each field line is identified by latitude
-  ! and longitude of the origin point at surface R=ROrigin as it is set
-  ! at the beginning of simulation;
-  ! 1st index - three spherical coordinates (R is added for completeness)
-  ! 2nd index - node number (equivalent to line number)
-  real,    allocatable:: CoordOrigin_DA(:,:)
-  !----------------------------------------------------------------------------
-  ! Foot-prints of the traced field lines on the surface R=RMin;
-  ! 1st index - three spherical coordinates (R is added for completeness)
-  ! 2nd index - block number
-  real, allocatable:: CoordMin_DI(:,:)
-  ! the initial length of segment 1-2: to control its as new particles
-  ! are appended to the beginnings of lines
-  real, allocatable:: Length_I(:)
   !----------------------------------------------------------------------------
   ! Node number based on the field line identified by 2 angular grid indices,
   ! latitude and longitude;
@@ -87,6 +72,7 @@ module SP_ModGrid
   ! 2nd index - node number / block number
   integer, allocatable:: iGridGlobal_IA(:,:)
   integer, allocatable:: iGridLocal_IB(:,:)
+  real,    allocatable:: ParamLocal_IB(:,:)
   !----------------------------------------------------------------------------
   ! Number of info fields per node/block and their identifications
   integer, parameter:: nNodeIndexes = 2
@@ -99,6 +85,13 @@ module SP_ModGrid
        End_     = 2, & ! Index of the last particle on this line/node
        Shock_   = 3, & ! Current location of a shock wave
        ShockOld_= 4    ! Old location of a shock wave
+  integer, parameter:: nBlockParam = 4
+  integer, parameter:: &
+       XMin_   = 1, & ! 
+       YMin_   = 2, & ! Foot-prints of the field lines on the surface R=RMin;
+       ZMin_   = 3, & ! 
+       Length_ = 4    ! init length of segment 1-2: control for new particles
+                      ! being appended to the beginnings of lines
   !----------------------------------------------------------------------------
   ! State vector;
   ! 1st index - identification of variable
@@ -130,7 +123,7 @@ module SP_ModGrid
        S_      =14, & ! Distance from the beginning of the line
        U_      =15, & ! Magnitude of plasma bulk velocity
        B_      =16, & ! Magnitude of magnetic field
-       DLogRho_=17, & ! Dln(Rho)/Dt, i.e. -div(U)
+       DLogRho_=17, & ! Dln(Rho), i.e. -div(U) * Dt
        RhoOld_ =18, & ! Background plasma density
        BOld_   =19, & ! Magnitude of magnetic field
        Flux0_  =20, & ! Total integral (simulated) particle flux
@@ -268,12 +261,8 @@ contains
     call check_allocate(iError, NameSub//'iGridGlobal_IA')
     allocate(iGridLocal_IB(nBlockIndexes, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'iGridLocal_IB')
-    allocate(CoordOrigin_DA(nDim, nNode), stat=iError)
-    call check_allocate(iError, NameSub//'CoordOrigin_DA')
-    allocate(CoordMin_DI(nDim, nBlock), stat=iError)
-    call check_allocate(iError, NameSub//'CoordMin_DI')
-    allocate(Length_I(nBlock), stat=iError)
-    call check_allocate(iError, NameSub//'Length_I')
+    allocate(ParamLocal_IB(nBlockParam, nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'ParamLocal_IB')
     allocate(State_VIB(nVar,iParticleMin:iParticleMax,nBlock), stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
     allocate(Distribution_IIB(&
@@ -313,12 +302,11 @@ contains
     do iLat = 1, nLat
        do iLon = 1, nLon
           iNode = iNode_II(iLon, iLat)
-          CoordOrigin_DA(:, iNode) = &
-               (/ROrigin, LonMin + (iLon-0.5)*DLon, LatMin + (iLat-0.5)*DLat/)
           iBlock = iGridGlobal_IA(Block_, iNode)
           if(iProc == iGridGlobal_IA(Proc_, iNode))then
              call rlonlat_to_xyz(&
-                  CoordOrigin_DA(:,iNode), State_VIB(X_:Z_,1,iBlock))
+                  (/ROrigin, LonMin+(iLon-0.5)*DLon, LatMin+(iLat-0.5)*DLat/),&
+                  State_VIB(X_:Z_,1,iBlock))
              State_VIB(LagrID_,1,iBlock) = 1
           end if
        end do
@@ -420,9 +408,9 @@ contains
        ! check if the beginning of the line moved far enough from its 
        ! footprint on the solar surface
        DistanceToMin = sqrt(sum((&
-            State_VIB(X_:Z_, 1, iBlock) - CoordMin_DI(:,iBlock))**2))
+            State_VIB(X_:Z_,1,iBlock) - ParamLocal_IB(XMin_:ZMin_,iBlock))**2))
        ! skip the line if it's still close to the Sun
-       if(DistanceToMin * (1.0 + cTol) < Length_I(iBlock)) CYCLE
+       if(DistanceToMin * (1.0 + cTol) < ParamLocal_IB(Length_, iBlock)) CYCLE
        
        ! append a new particle
        !-----------------------
@@ -435,9 +423,10 @@ contains
             State_VIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
        Distribution_IIB(     :,2:iGridLocal_IB(End_, iBlock)+1, iBlock) = &
             Distribution_IIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
-       iGridLocal_IB(End_, iBlock) = iGridLocal_IB(End_, iBlock) + 1
+       iGridLocal_IB(End_, iBlock)  = iGridLocal_IB(End_, iBlock) + 1
        ! put the new particle just above the lower boundary
-       State_VIB(X_:Z_,  1, iBlock) = CoordMin_DI(:,iBlock) * (1.0 + cTol)
+       State_VIB(X_:Z_,  1, iBlock) = &
+            ParamLocal_IB(XMin_:ZMin_, iBlock) * (1.0 + cTol)
        State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
        ! for old values of background parameters use extrapolation
        Alpha = DistanceToMin / (DistanceToMin + State_VIB(D_, 2, iBlock))

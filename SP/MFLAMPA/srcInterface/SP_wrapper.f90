@@ -16,8 +16,8 @@ module SP_wrapper
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, &
-       Length_I, CoordMin_DI, DataInputTime, &
-       Block_, Proc_, Begin_, End_, Shock_, ShockOld_, &
+       ParamLocal_IB, DataInputTime, &
+       Block_, Proc_, Begin_, End_, Shock_, ShockOld_, XMin_, ZMin_, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
@@ -328,8 +328,8 @@ contains
        ! Xyz0, the footprint, is distance Alpha away from Xyz1:
        ! Xyz0 = Xyz1 + Alpha * Dir1 and R0 = RMin =>
        Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
-       CoordMin_DI(:,iBlock) = Xyz1_D + Alpha * Dir1_D
-       Length_I(iBlock) = abs(Alpha)
+       ParamLocal_IB(XMin_:ZMin_,iBlock) = Xyz1_D + Alpha * Dir1_D
+       ParamLocal_IB(Length_,    iBlock) = abs(Alpha)
     end do
   end subroutine SP_put_r_min
 

@@ -17,13 +17,14 @@ module SP_ModMain
   use SP_ModGrid, ONLY: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
+       XMin_, YMin_, ZMin_, Length_, &
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_, Shock_, ShockOld_, &
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, &
-       Length_I, CoordMin_DI, TypeCoordSystem,&
+       ParamLocal_IB, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency, &
        append_particles
   
@@ -52,12 +53,13 @@ module SP_ModMain
   public:: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
+       XMin_, YMin_, ZMin_, Length_, &
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_, Shock_, ShockOld_, &
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       Distribution_IIB, Length_I, CoordMin_DI, TypeCoordSystem,& 
+       Distribution_IIB, ParamLocal_IB, TypeCoordSystem,& 
        get_node_indexes, append_particles
 
   ! Methods and variables from ModWrite
