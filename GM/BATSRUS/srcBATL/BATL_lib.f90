@@ -84,7 +84,7 @@ module BATL_lib
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
   public:: find_grid_block, interpolate_grid, average_grid_node
-  public:: interpolate_grid_amr_gc, check_interpolate_amr_gc
+  public:: check_interpolate_amr_gc
   public:: CellMetrice_DDG, CellCoef_DDGB
   public:: create_grid
 

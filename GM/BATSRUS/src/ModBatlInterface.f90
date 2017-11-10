@@ -2,7 +2,7 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBatlInterface
-  use BATL_lib, ONLY: BATL_interpolate => interpolate_grid_amr_gc
+  use BATL_grid, ONLY: BATL_interpolate => interpolate_grid_amr_gc
   implicit none
 
 contains
