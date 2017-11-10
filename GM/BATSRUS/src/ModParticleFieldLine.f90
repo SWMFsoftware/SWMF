@@ -10,15 +10,11 @@ module ModParticleFieldLine
   ! - continuous AMR interpolation
   ! - particle methods
   use BATL_lib, ONLY: &
-       iProc,&
-       MaxDim, nDim, &
-       check_interpolate_amr_gc, &
-       Particle_I, Xyz_DGB, CellVolume_GB, &
-       MaxBlock, nI, nJ, nK, nBlock, &
-       allocate_particles, trace_particles, Unused_B, &
-       message_pass_particles, remove_undefined_particles, &
+       iProc, MaxDim, nDim, MaxBlock, nI, nJ, nK, nBlock,     &
+       Xyz_DGB, CellVolume_GB, Unused_B,                      &
+       check_interpolate_amr_gc,                              &
+       Particle_I, allocate_particles, trace_particles,       &
        mark_undefined, check_particle_location, put_particles
-       
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
@@ -26,10 +22,8 @@ module ModParticleFieldLine
   use ModPhysics, ONLY: rBody
   use ModCellGradient, ONLY: calc_gradient_ghost, &
        GradCosBR_DGB => GradVar_DGB
-
   implicit none
   SAVE
-
   private !except
 
   public:: n_particle_reg_max
@@ -42,12 +36,6 @@ module ModParticleFieldLine
   public:: advect_particle_line
   public:: get_particle_data
   public:: write_plot_particle
-
-  interface get_particle_data
-     module procedure get_particle_data_all
-     module procedure get_particle_data_i_particle
-  end interface
-
   ! Local variables ----------------------
 
   ! kinds of particles used to generate a magnetic field line
@@ -91,7 +79,8 @@ module ModParticleFieldLine
 
   ! data that can be requested and returned to outside this module
   ! ORDER MUST CORRESPOND TO INDICES ABOVE
-  integer, parameter:: nVarAvail = 3, nIndexAvail = 2
+  integer, parameter:: nVarAvail = 3, nIndexAvail = 2, nDataMax = &
+       nVarAvail + nIndexAvail +1
   character(len=2), parameter:: NameVarAvail_V(nVarAvail) = &
        (/'xx', 'yy', 'zz'/)
   character(len=2), parameter:: NameIndexAvail_I(0:nIndexAvail) = &
@@ -140,9 +129,10 @@ module ModParticleFieldLine
   ! direction of tracing: -1 -> backward, +1 -> forward
   integer:: iDirTrace
 
-  ! parameters of end particles
+  ! state and indexes for particles:
   real,    pointer::  StateEnd_VI(:,:), StateReg_VI(:,:)
   integer, pointer:: iIndexEnd_II(:,:),iIndexReg_II(:,:)
+  public :: KindReg_, x_,y_, z_, fl_, id_
 contains
   !==========================================================================
   integer function n_particle_reg_max()
@@ -305,18 +295,21 @@ contains
          DoReplace          = .true.,            &    
          nParticlePE        = nLineThisProc)
 
-    nParticleOld  = Particle_I(KindReg_)%nParticle
-
     ! how many lines have been started on all processors
-    call count_new_lines()
+    call count_new_lines() !nLineAllProc = sum(nLineThisProc)
     nFieldLine    = nFieldLine + nLineAllProc
     if(nFieldLine > nFieldLineMax)&
          call CON_stop(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
-
+    !\
+    ! Save number of regular particles
+    nParticleOld  = Particle_I(KindReg_)%nParticle
+    !\
+    ! Copy end points to regular points. Note, that new regular points
+    ! have numbers nParticleOld+1:nParticleOld+nLineThisProc
     call copy_end_to_regular
     ! allocate containers for cosine of angle between B and radial direction
-    allocate(CosBR_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+    allocate(CosBR_CB(1:nI, 1:nJ, 1:nK, MaxBlock)); CosBR_CB = 0
     call compute_cosbr
     call calc_gradient_ghost(CosBR_CB)
     ! free space
@@ -365,7 +358,22 @@ contains
     ! Offset in id_
     call offset_id(nFieldLine - nLineAllProc + 1, nFieldLine)
   contains
-    !========================================================================
+    !===================================================
+    subroutine count_new_lines()
+      ! gather information from all processors on how many new field lines
+      ! have been started
+      use ModMpi
+      use BATL_mpi, ONLY: iComm, nProc
+      integer:: iError
+      !-----------------------------------------------------------------------
+      if(nProc>1)then
+         call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
+              MPI_INTEGER, MPI_SUM, iComm, iError)
+      else
+         nLineAllProc = nLineThisProc
+      end if
+    end subroutine count_new_lines
+    !========================
     subroutine compute_cosbr()
       use ModMain, ONLY: UseB0
       use ModB0, ONLY: B0_DGB
@@ -390,6 +398,25 @@ contains
          end do; end do; end do
       end do
     end subroutine compute_cosbr
+    !=======================================================================
+    subroutine get_alignment()
+      ! determine alignment of particle indexing with direction 
+      ! of the magnetic field
+      integer:: iParticle
+      real   :: DirB_D(MaxDim)
+      !---------------------------------------------------------------------
+      iIndexEnd_II(Pass_, 1:Particle_I(KindEnd_)%nParticle) = DoneFromScratch_
+      if(iOrderMode == Field_)then
+         iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
+         RETURN
+      end if
+
+      do iParticle = 1, Particle_I(KindEnd_)%nParticle
+         call get_b_dir(iParticle, DirB_D)
+         iIndexEnd_II(Alignment_, iParticle) = &
+              nint( SIGN(1.0, sum(DirB_D*StateEnd_VI(x_:z_, iParticle)) ))
+      end do
+    end subroutine get_alignment
     !=============
     subroutine  offset_id(iLineStart,iLineEnd)
       use ModMpi
@@ -426,43 +453,6 @@ contains
               iOffset_I(iLine)
       end do
     end subroutine offset_id
-    !========================================================================
-    subroutine count_new_lines()
-      ! gather information from all processors on how many new field lines
-      ! have been started
-      use ModMpi
-      use BATL_mpi, ONLY: iComm, nProc
-      integer:: iError
-      !-----------------------------------------------------------------------
-      if(nProc>1)then
-         call MPI_Allreduce(nLineThisProc, nLineAllProc, 1, &
-              MPI_INTEGER, MPI_SUM, iComm, iError)
-      else
-         nLineAllProc = nLineThisProc
-      end if
-    end subroutine count_new_lines
-    !========================================================================
-    subroutine get_alignment()
-      ! determine alignment of particle indexing with direction 
-      ! of the magnetic field
-      integer:: iParticle
-      real   :: DirB_D(MaxDim)
-      !---------------------------------------------------------------------
-      iIndexEnd_II(Pass_, 1:Particle_I(KindEnd_)%nParticle) = DoneFromScratch_
-      if(iOrderMode == Field_)then
-         iIndexEnd_II(Alignment_, 1:Particle_I(KindEnd_)%nParticle) = 1
-         RETURN
-      end if
-
-      do iParticle = 1, Particle_I(KindEnd_)%nParticle
-         call get_b_dir(&
-              Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-              iBlock=iIndexEnd_II(0,iParticle),&
-              Dir_D = DirB_D)
-         iIndexEnd_II(Alignment_, iParticle) = &
-              nint( SIGN(1.0, sum(DirB_D*StateEnd_VI(x_:z_, iParticle)) ))
-      end do
-    end subroutine get_alignment
     !=================
   end subroutine extract_particle_line
   !=========================================================================
@@ -476,11 +466,14 @@ contains
     ! cosine of angle between direction of field and radial direction
     real:: CosBR
 
-    ! whether particle's location isn't covered by true cells
-    logical:: IsBody
-
     ! whether to schedule a particle for message pass
     logical:: DoMove, IsGone
+
+    ! direction of the magnetic field
+    real :: DirB_D(MaxDim)
+    ! direction of the tangent to the line: may be parallel or 
+    ! antiparallel to DirB. The direction may be corrected if needed
+    real :: DirLine_D(MaxDim)    
     
     character(len=*),parameter:: NameSub = "particle_line"
     !-------------------------------------------------------------
@@ -500,8 +493,7 @@ contains
             sqrt(sum(StateEnd_VI(x_:z_, iParticle)**2))
        iIndexEnd_II(Pass_, iParticle) = Normal_
 
-       call stage1(iParticle, IsEndOfSegment)
-       if(IsEndOfSegment) RETURN
+       call stage1
 
     case(Normal_)
 
@@ -510,25 +502,18 @@ contains
             iIndexEnd_II(id_,iParticle) + iDirTrace
        call copy_end_to_regular(iParticle)
 
-       call stage1(iParticle, IsEndOfSegment)
-       if(IsEndOfSegment) RETURN
+       call stage1
 
     case default
        call stop_mpi(NameSub//': Unknown stage ID')
     end select
 
-    call stage2(iParticle, IsEndOfSegment)
+    if(IsEndOfSegment) RETURN
+    call stage2
  contains
     !========================
-    subroutine stage1(iParticle, IsEndOfSegment)
-      integer, intent(in) :: iParticle
-      Logical, intent(out):: IsEndOfSegment
-      ! direction of the magnetic field
-      real :: DirB_D(MaxDim)
-      ! direction of the tangent to the line
-      real :: DirLine_D(MaxDim)
+    subroutine stage1
       !-------------------
-      IsEndOfSegment = .false.
       if(RBoundarySoft > 0.0)then
          if(sum(StateEnd_VI(1:nDim,iParticle)**2) &
               > rBoundarySoft**2)then
@@ -549,20 +534,12 @@ contains
       ! radial direction
       ! get and save step size
       !/
-      call get_b_dir(&
-           Xyz_D   = StateEnd_VI(x_:z_, iParticle),&
-           iBlock  =iIndexEnd_II(0,iParticle),&
-           Dir_D   = DirB_D,&
+      call get_b_dir(iParticle, DirB_D,&
            Grad_D  = StateEnd_VI(GradCosBRX_:GradCosBRZ_,iParticle),&
            StepSize= StateEnd_VI(Ds_,iParticle),&
-           IsBody  = IsBody)
-      if(IsBody)then
-         ! particle's location isn't covered by mostly true cells, 
-         ! i.e. not well outside central body
-         call mark_undefined(KindEnd_,iParticle)
-         IsEndOfSegment = .true.
-         RETURN
-      end if
+           IsBody  = IsEndOfSegment)
+      ! particle's location may be inside central body
+      if(IsEndOfSegment)RETURN
       !\
       ! get cosine of angle between field and radial direction
       !
@@ -597,45 +574,24 @@ contains
            iParticle     = iParticle,&
            DoMove        = DoMove   ,&
            IsGone        = IsGone    )
-      if(IsGone)then
-         !\
-         !Particle is beyond the boundary of 
-         !computational domain
-         !/
-         IsEndOfSegment = .true.
-      elseif(DoMove) then
-         !\
-         ! Move particle to different PE
-         !/
-         iIndexEnd_II(Pass_, iParticle) = HalfStep_
-         IsEndOfSegment = .true.
-      end if
+     
+      !\
+      !Particle may come beyond the boundary of computational 
+      !domain. Otherwise, it may need to be marked as passed
+      !the first stage and be moved to different PE
+      !/
+      IsEndOfSegment = IsGone.or.DoMove
+      if(DoMove) iIndexEnd_II(Pass_, iParticle) = HalfStep_
     end subroutine stage1
     !====================
-    subroutine stage2(iParticle, IsEndOfSegment)
-      integer, intent(in) :: iParticle
-      Logical, intent(out):: IsEndOfSegment
-      ! direction of the magnetic field
-      real :: DirB_D(MaxDim)
-      ! direction of the tangent to the line
-      real :: DirLine_D(MaxDim)
+    subroutine stage2
       ! radii and vector of radial direction
       real :: ROld, RNew, DirR_D(MaxDim)
-      !-------------------
-      IsEndOfSegment = .false.  
+      !-------------------  
       ! get the direction of the magnetic field in the middle
-      call get_b_dir(&
-           Xyz_D = StateEnd_VI(x_:z_, iParticle),&
-           iBlock=iIndexEnd_II(0,iParticle),&
-           Dir_D = DirB_D,&
-           IsBody  = IsBody)
-      if(IsBody)then
-         ! particle's location isn't covered by mostly true cells, 
-         ! i.e. not well outside central body
-         call mark_undefined(KindEnd_,iParticle)
-         IsEndOfSegment = .true.
-         RETURN
-      end if   
+      call get_b_dir(iParticle, DirB_D,&
+           IsBody  = IsEndOfSegment)
+      if(IsEndOfSegment) RETURN   
       ! direction at the 2nd stage  
       DirLine_D = DirB_D *&
            iDirTrace * iIndexEnd_II(Alignment_, iParticle)
@@ -757,6 +713,9 @@ contains
          ! get the corrected line direction
          Dir_D = iDirTrace*(R_D - DirGradCosBR_D*DirRDotDirGradCosBR)/&
               sqrt(1 - DirRDotDirGradCosBR**2)
+         !\
+         ! Why???
+         !/
          RETURN
       end if
       
@@ -805,19 +764,20 @@ contains
     end do
   end subroutine copy_end_to_regular
   !================================
-  subroutine get_b_dir(Xyz_D, iBlock, Dir_D, Grad_D, StepSize, IsBody)
+  subroutine get_b_dir(iParticle, Dir_D, Grad_D, StepSize, IsBody)
     use ModMain, ONLY: UseB0
     use ModB0, ONLY: get_b0
 
-    ! returns the direction of magnetic field 
-    ! as well as the block used for interpolation
-
-    real,    intent(in) :: Xyz_D(MaxDim)
-    integer, intent(in) :: iBlock
+    ! returns the direction of magnetic field for a given particle
+    integer, intent(in):: iParticle
     real,    intent(out):: Dir_D(MaxDim)
     real,    optional, intent(out):: Grad_D(MaxDim)
     real,    optional, intent(out):: StepSize
     logical, optional, intent(out):: IsBody
+    
+    !Coordinates and block #
+    real     :: Xyz_D(MaxDim)
+    integer  :: iBlock
 
     ! magnetic field
     real   :: B_D(MaxDim) = 0.0
@@ -830,13 +790,21 @@ contains
     character(len=*), parameter:: NameSub = "get_b_dir"
     !----------------------------------------------------------------------
     Dir_D = 0; B_D = 0
+    if(present(Grad_D))Grad_D = 0
+    if(present(StepSize))StepSize = 0.0
+    !Coordinates and block #
+    Xyz_D   = StateEnd_VI(x_:z_, iParticle)
+    iBlock  = iIndexEnd_II(0,iParticle)
+    call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
+         IsBody)
+    if(present(IsBody))then
+       if(IsBody)then
+          call mark_undefined(KindEnd_,iParticle);RETURN
+       end if
+    end if
     ! get potential part of the magnetic field at the current location
     if(UseB0)call get_b0(Xyz_D, B_D)
     ! get the remaining part of the magnetic field
-    call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I,&
-         IsBody)
-
-    ! interpolate magnetic field value
     do iCell = 1, nCell
        i_D = 1
        i_D(1:nDim) = iCell_II(1:nDim, iCell)
@@ -855,7 +823,6 @@ contains
     ! normalize vector to unity
     Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
     if(present(Grad_D))then
-       Grad_D = 0
        ! interpolate grad(cos b.r)
        do iCell = 1, nCell
           i_D = 1
@@ -865,7 +832,6 @@ contains
        end do
     end if
     if(present(StepSize))then
-       StepSize = 0.0
        ! interpolate cell sizes. For non-cartesian grids 
        !the metic tensor is used
        do iCell = 1, nCell
@@ -881,9 +847,6 @@ contains
   !========================================================================
   subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II,&
        UseInputInGenCoord, DoReplace)
-
-    use BATL_lib, ONLY: coord_to_xyz
-
     ! add particles with specified coordinates to the already existing lines
     integer, intent(in):: nParticleIn
     real,    intent(in):: XyzIn_DI(MaxDim, nParticleIn)
@@ -930,116 +893,77 @@ contains
     integer, intent(in) :: iParticle
     logical, intent(out):: IsEndOfSegment
     !-----------------------------------------------------------------------
-    ! whether particle's location isn't covered by true cells
-    logical:: IsBody
-
     ! whether to schedule a particle for message pass
     logical:: DoMove, IsGone
 
     ! local plasma velocity
-    real :: VLocal_D(MaxDim)
+    real :: V_D(MaxDim)
 
     character(len=*),parameter:: NameSub = "particle_line"
     !-------------------------------------------------------------
     select case(iIndexReg_II(Pass_,iParticle))
+    case(DoneFromScratch_)
+       !\
+       ! begin particle's advection
+       !/
+       ! copy last known coordinates to old coords
+       StateReg_VI(XOld_:ZOld_,iParticle) = &
+            StateReg_VI(x_:z_, iParticle)
+
+       ! get the local plasma velocity
+       call get_v
+       if(IsEndOfSegment) RETURN
+       ! get next location
+       StateReg_VI(x_:z_, iParticle) = &
+            StateReg_VI(x_:z_, iParticle) + 0.5 * Dt * V_D
+
+       ! check location, schedule for message pass, if needed
+       call check_particle_location(  &
+            iKindParticle = KindReg_ ,&
+            iParticle     = iParticle,&
+            DoMove        = DoMove   ,&
+            IsGone        = IsGone    )
+
+       !\
+       ! Particle may be beyond the boundary of computational domain
+       ! or need to move particle to different PE
+       IsEndOfSegment = IsGone .or. DoMove
+       
+       !\
+       ! the first stage is done
+       iIndexReg_II(Pass_, iParticle) = HalfStep_
     case(HalfStep_)
        ! stage 1 has been finished, proceed to the next one
-       call stage2(iParticle, IsEndOfSegment)
-    case(DoneFromScratch_)
-       ! begin particle's advection
-       call stage1(iParticle, IsEndOfSegment)
+       ! get the local plasma velocity
+       call get_v
+       if(IsEndOfSegment)RETURN
+       ! get final location
+       StateReg_VI(x_:z_,iParticle) = &
+            StateReg_VI(XOld_:ZOld_,iParticle) + Dt * V_D
+       
+       ! update location and schedule for message pass
+       call check_particle_location( &
+            iKindParticle = KindReg_,&
+            iParticle     = iParticle)
+       !\
+       ! Integration is done
+       !
+       iIndexReg_II(Pass_, iParticle) = Normal_
+       IsEndOfSegment = .true.
     case(Normal_)
        ! do nothing, full time step has been finished
     case default
        call stop_mpi(NameSub//': Unknown stage ID')
     end select
   contains
-    !========================
-    subroutine stage1(iParticle, IsEndOfSegment)
-      integer, intent(in) :: iParticle
-      Logical, intent(out):: IsEndOfSegment
-      !-------------------
-      ! copy last known coordinates to old coords
-      StateReg_VI(XOld_:ZOld_,iParticle) = &
-           StateReg_VI(x_:z_, iParticle)
-
-      ! get the direction of the local plasma velocity
-      call get_v(&
-           Xyz_D  = StateReg_VI(x_:z_, iParticle),&
-           iBlock =iIndexReg_II(0,iParticle),&
-           V_D    = VLocal_D,&
-           IsBody = IsBody)
-      if(IsBody)then
-         ! particle's location isn't covered by mostly true cells, 
-         ! i.e. not well outside central body
-         call mark_undefined(KindReg_,iParticle)
-         IsEndOfSegment = .true.
-         RETURN
-      end if
-
-      ! get next location
-      StateReg_VI(x_:z_, iParticle) = &
-           StateReg_VI(x_:z_, iParticle) + 0.5 * Dt * VLocal_D
-
-      ! check location, schedule for message pass, if needed
-      call check_particle_location(  &
-           iKindParticle = KindReg_ ,&
-           iParticle     = iParticle,&
-           DoMove        = DoMove   ,&
-           IsGone        = IsGone    )
-
+    !============
+    subroutine get_v
       !\
-      ! Particle may be beyond the boundary of computational domain
-      ! or need to move particle to different PE
-      IsEndOfSegment = IsGone .or. DoMove
-
-      !\
-      ! the first stage is done
-      iIndexReg_II(Pass_, iParticle) = HalfStep_
-    end subroutine stage1
-    !====================
-    subroutine stage2(iParticle, IsEndOfSegment)
-      integer, intent(in) :: iParticle
-      logical, intent(out):: IsEndOfSegment
-      !-------------------
-      ! get the direction of the local plasma velocity
-      call get_v(&
-           Xyz_D  = StateReg_VI(x_:z_, iParticle),&
-           iBlock =iIndexReg_II(0,iParticle),&
-           V_D    = VLocal_D,&
-           IsBody = IsBody)
-      if(IsBody)then
-         ! particle's location isn't covered by mostly true cells, 
-         ! i.e. not well outside central body
-         call mark_undefined(KindReg_,iParticle)
-         IsEndOfSegment = .true.
-         RETURN
-      end if   
-
-      ! get final location
-      StateReg_VI(x_:z_,iParticle) = &
-           StateReg_VI(XOld_:ZOld_,iParticle) + Dt * VLocal_D
-
-      ! update location and schedule for message pass
-      call check_particle_location( &
-           iKindParticle = KindReg_,&
-           iParticle     = iParticle)
-      !\
-      ! Particle may come beyond the boundary of computational domain 
-      ! or may need to be moved to different PE
-      IsEndOfSegment = .true.
-
-      !\
-      ! the second stage is done
-      iIndexReg_II(Pass_, iParticle) = Normal_
-    end subroutine stage2
-    !=============================================
-    subroutine get_v(Xyz_D, iBlock, V_D, IsBody)
       ! get local plasma velocity
-      real,   intent(in) :: Xyz_D(MaxDim)
-      integer,intent(in) :: iBlock
-      real,   intent(out):: V_D(MaxDim)
-      logical, optional, intent(out):: IsBody
+      !/
+      !Coordinates and block #
+      real     :: Xyz_D(MaxDim)
+      integer  :: iBlock
 
       ! variables for AMR interpolation
       integer:: nCell, iCell_II(0:nDim, 2**nDim)
@@ -1047,11 +971,17 @@ contains
       integer:: iCell ! loop variable
       integer:: i_D(MaxDim)
       !------------------------------------
+      !Coordinates and block #
+      Xyz_D   = StateReg_VI(x_:z_, iParticle)
+      iBlock  = iIndexReg_II(0,    iParticle)
       ! reset the interpoalted values
       V_D = 0 
       ! get the velocity
       call interpolate_grid_amr_gc(Xyz_D, iBlock, nCell, iCell_II, Weight_I, &
-           IsBody)
+           IsEndOfSegment)
+      if(IsEndOfSegment)then
+         call mark_undefined(KindReg_,iParticle);RETURN
+      end if
       ! interpolate the local density and momentum
       do iCell = 1, nCell
          i_D = 1
@@ -1070,148 +1000,71 @@ contains
   !========================================================================
 
   subroutine check_done_advect(Done)
-    ! check whether all paritcles have benn advected full time step
+    ! check whether all paritcles have been advected full time step
     logical, intent(out):: Done
     !------------------------------------------------------------
     Done = all(iIndexReg_II(Pass_,1:Particle_I(KindReg_)%nParticle)==Normal_)
   end subroutine check_done_advect
-  
-  !=====================
-  
-  subroutine process_request(StringRequest, &
-       nVarReturn, DoReturnVar_V, nIndexReturn, DoReturnIndex_I, iOrder_I)
-    ! finds if variable Name is requested via StringRequest,
-    ! this function is called in get_particle_data to identify the variable
-    ! being requested from outside this module;
-    ! the function also returns the position iPos of Name in StringRequest
-    character(len=*),intent(in)  :: StringRequest
-    integer,         intent(out) :: nVarReturn
-    logical,         intent(out) :: DoReturnVar_V(nVarAvail)
-    integer,         intent(out) :: nIndexReturn
-    logical,         intent(out) :: DoReturnIndex_I(0:nIndexAvail)
-    integer,         intent(out) :: iOrder_I(nVarAvail+nIndexAvail+1)
 
-    integer:: iPos, iVar
-    !--------------------------------------------------------------------
-    do iVar = 1, nVarAvail
-       iPos = index(StringRequest, NameVarAvail_V(iVar))
-       DoReturnVar_V(iVar) = iPos > 0
-       iOrder_I(iVar) = iPos
-    end do
-    nVarReturn = count(DoReturnVar_V)
-    do iVar = 0, nIndexAvail
-       iPos = index(StringRequest, NameIndexAvail_I(iVar))
-       DoReturnIndex_I(iVar) = iPos > 0
-       iOrder_I(nVarAvail + iVar + 1) = iPos
-    end do
-    nIndexReturn = count(DoReturnIndex_I)
+  !================ACCESS TO THE PARTICLE DATA==============================
 
-    do iVar = 1, nVarReturn+nIndexReturn
-       iPos = minloc(iOrder_I, 1, MASK = iOrder_I >= iVar)
-       iOrder_I(iPos) = iVar
-    end do
-  end subroutine process_request
-  
-  !========================================================================
-
-  subroutine get_particle_data_all(nData, NameVar, DataOut_VI)
+  subroutine get_particle_data(nSize, NameVar, DataOut_VI)
+    use ModUtilities, ONLY: split=>split_string
     ! the subroutine gets variables specified in the string StringVar
-    ! and writes them into DataOut_VI;
-    ! data is for all particles otherwise
+    ! and writes them into DataOut_VI; data is for all particles otherwise
     ! NOTE: function n_particle_reg can be used to find size beforehand
-    integer, intent(in) :: nData
-    real,    intent(out):: DataOut_VI(nData,Particle_I(KindReg_)%nParticle)
+    integer, intent(in) :: nSize    
+    real,    intent(out):: DataOut_VI(nSize,Particle_I(KindReg_)%nParticle)
     character(len=*),intent(in) :: NameVar
 
-    ! mask for returning variables
-    logical:: DoReturnVar_V(nVarParticleReg)
-    logical:: DoReturnIndex_I(0:nIndexParticleReg)
+    ! order of requested variables/indexes 
+    integer:: iOrderVar_V(nVarAvail), iOrderIndex_I(nIndexAvail + 1)
     ! number of variables/indices found in the request string
     integer:: nVarOut, nIndexOut
-    ! loop variables
-    integer:: iParticle
-    ! permutation of between data order of the request and order in which
-    ! data are checked to be present in the request
-    integer:: iOrder_I(nVarAvail+nIndexAvail+1)
+    ! order of data in the request
+    integer:: iOrder_I(nDataMax)
 
     character(len=*), parameter:: NameSub = 'get_particle_data_all'
-    !----------------------------------------------------------------------
-
-    ! first, determine which data are requested
-    DoReturnVar_V   = .false.
-    DoReturnIndex_I = .false.
-
+    !------------------------------------------------------------
+    character(len=20)            :: Name_I(  nDataMax)
+    integer                      :: iVar, iIndex, iOutput, nData
+    !------------------------------------------------------------
+    nVarOut = 0  ; nIndexOut = 0
+    call split(NameVar,  Name_I, nData)
     ! determine which variables are requested
-    call process_request(NameVar, nVarOut, DoReturnVar_V(1:nVarAvail), &
-         nIndexOut, DoReturnIndex_I(0:nIndexAvail), iOrder_I)
-    ! check that number of data found is the same as requested
-    if(nData /= nVarOut + nIndexOut)&
-         call CON_stop(NameSub//': incorrect number of data is requested')
-
-    ! return data
-    do iParticle = 1, Particle_I(KindReg_)%nParticle
-       ! store variables
-       DataOut_VI(1:nVarOut,      iParticle) = PACK(&
-            StateReg_VI( :,iParticle),&
-            MASK = DoReturnVar_V)
-       ! store indexes
-       DataOut_VI(nVarOut+1:nData,iParticle) = PACK(&
-            iIndexReg_II(:,iParticle),&
-            MASK = DoReturnIndex_I)
-    end do
-    ! permute data order so it corresponds to the order of the request
-    DataOut_VI( pack(iOrder_I,iOrder_I>0), :) = DataOut_VI(:, :)
-  end subroutine get_particle_data_all
-
-  !========================================================================
-
-  subroutine get_particle_data_i_particle(nData, NameVar, DataOut_V, iParticle)
-    ! the subroutine gets variables specified in the string StringVar
-    ! and writes them into DataOut_V;
-    ! data is for a single particle specified as iParticle
-    integer, intent(in) :: nData
-    integer, intent(in) :: iParticle
-    real,    intent(out):: DataOut_V(nData)
-    character(len=*),intent(in) :: NameVar
-
-    ! mask for returning variables
-    logical:: DoReturnVar_V(nVarParticleReg)
-    logical:: DoReturnIndex_I(0:nIndexParticleReg)
-    ! number of variables/indices found in the request string
-    integer:: nVarOut, nIndexOut
-    ! permutation of between data order of the request and order in which
-    ! data are checked to be present in the request
-    integer:: iOrder_I(nVarAvail+nIndexAvail+1)
-
-    character(len=*), parameter:: NameSub = 'get_particle_data_all'
-    !----------------------------------------------------------------------
-    ! first, determine which data are requested
-    DoReturnVar_V   = .false.
-    DoReturnIndex_I = .false.
-
-    ! determine which variables are requested
-    call process_request(NameVar, nVarOut, DoReturnVar_V(1:nVarAvail), &
-         nIndexOut, DoReturnIndex_I(0:nIndexAvail), iOrder_I)
-    ! check that number of data found is the same as requested
-    if(nData /= nVarOut + nIndexOut)&
-         call CON_stop(NameSub//': incorrect number of data is requested')
-
-    ! return data
+    VAR:do iVar = 1, nVarAvail
+       do iOutput = 1, nData
+          if(index(Name_I(iOutput),NameVarAvail_V(iVar)) == 1)then
+             !The variable #iVar is present in the request at #iOutput
+             nVarOut              = nVarOut + 1
+             iOrderVar_V(nVarOut) = iVar
+             iOrder_I(   nVarOut) = iOutput
+             CYCLE VAR
+          end if
+       end do
+    end do VAR
+    IND:do iIndex = 0, nIndexAvail
+       do iOutput = 1, nData
+          if(index(Name_I(iOutput),NameIndexAvail_I(iIndex)) == 1)then
+            !The index #iIndex is present in the request at #iOutput
+             nIndexOut                     = nIndexOut + 1
+             iOrderIndex_I(nIndexOut)      = iIndex
+             iOrder_I(nVarOut + nIndexOut) = iOutput
+             CYCLE IND
+          end if
+       end do
+    end do IND
+    if(nData /= nVarOut + nIndexOut)call CON_stop(&
+         'Unrecognized some of the names: '//NameVar)
+    DataOut_VI = 0
     ! store variables
-    DataOut_V(1:nVarOut) = PACK(&
-         StateReg_VI( :,iParticle),&
-         MASK = DoReturnVar_V)
-
+    if(nVarOut   > 0) DataOut_VI(iOrder_I(1:nVarOut),:)                   = &
+         StateReg_VI(iOrderVar_V(   1:nVarOut  ),:)
     ! store indexes
-    DataOut_V(nVarOut+1:nData) = PACK(&
-         iIndexReg_II(:,iParticle),&
-         MASK = DoReturnIndex_I)
-
-    ! permute data order so it corresponds to the order of the request
-    DataOut_V( pack(iOrder_I,iOrder_I>0)) = DataOut_V(:)
-
-  end subroutine get_particle_data_i_particle
-  !==========================================================================
+    if(nIndexOut > 0) DataOut_VI(iOrder_I(nVarOut+1:nVarOut+nIndexOut),:) = &
+         iIndexReg_II(iOrderIndex_I(1:nIndexOut),:)
+  end subroutine get_particle_data
+  !===================================
 
   subroutine write_plot_particle(iFile)
 

@@ -1445,30 +1445,26 @@ contains
   !============================================================================
 
   subroutine IH_get_particle_indexes(iParticle, iIndex_I)
-    use IH_ModParticleFieldLine, ONLY: &
-         get_particle_data
+    use IH_ModParticleFieldLine, ONLY: fl_, id_, KindReg_
+    use IH_BATL_particles, ONLY: Particle_I
     integer, intent(in) :: iParticle
     integer, intent(out):: iIndex_I(2)
-
-    real:: Buff_I(2)
     character(len=*), parameter:: NameSub='IH_get_particle_indexes'
     !--------------------------------------------------------------------------
-    call get_particle_data(2, 'fl id', Buff_I, iParticle)
-    iIndex_I = nint(Buff_I)
+    iIndex_I(1) = Particle_I(KindReg_)%iIndex_II(fl_, iParticle)
+    iIndex_I(2) = Particle_I(KindReg_)%iIndex_II(id_, iParticle)
   end subroutine IH_get_particle_indexes
 
   !============================================================================
 
   subroutine IH_get_particle_coords(iParticle, Xyz_D)
     use IH_BATL_lib, ONLY: nDim
-    use IH_ModParticleFieldLine, ONLY: &
-         get_particle_data
+    use IH_ModParticleFieldLine, ONLY: KindReg_
+    use IH_BATL_particles, ONLY: Particle_I
     integer, intent(in) :: iParticle
     real,    intent(out):: Xyz_D(nDim)
-
-    character(len=*), parameter:: NameSub='IH_get_particle_indexes'
-    !--------------------------------------------------------------------------
-    call get_particle_data(3, 'xx yy zz', Xyz_D, iParticle)
+    !--------------------------------------------------------------
+    Xyz_D = Particle_I(KindReg_)%State_VI(1:nDim, iParticle)
   end subroutine IH_get_particle_coords
 
   !============================================================================
