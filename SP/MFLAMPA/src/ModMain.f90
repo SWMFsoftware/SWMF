@@ -14,6 +14,9 @@ module SP_ModMain
   use SP_ModReadMhData, ONLY: &
        set_read_mh_data_param, read_mh_data, DoReadMhData
 
+  use SP_ModRestart, ONLY: &
+       write_restart, read_restart
+
   use SP_ModGrid, ONLY: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
@@ -40,8 +43,8 @@ module SP_ModMain
   real :: DataInputTime
   ! Methods and variables from this module 
   public:: &
-       read_param, initialize, run, check,&
-       TimeGlobal, iIterGlobal, DataInputTime
+       read_param, initialize, run, check, save_restart, &
+       TimeGlobal, iIterGlobal, DataInputTime, DoRestart
 
   ! Methods and variables from ModSize
   public:: &
@@ -85,6 +88,8 @@ contains
     use ModReadParam, ONLY: read_var, read_line, read_command
     character (len=*), intent(in)     :: TypeAction ! What to do  
 
+    ! aux variables 
+    integer:: nParticleCheck, nLonCheck, nLatCheck
     ! The name of the command
     character (len=100) :: NameCommand
     character (len=*), parameter :: NameSub='SP:read_param'
@@ -99,7 +104,23 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
        case('#RESTART')
-          DoRestart=.true.
+          call read_var('DoRestart',DoRestart)
+       case('#CHECKGRIDSIZE')
+          call read_var('nParticle',nParticleCheck)
+          call read_var('nLon',     nLonCheck)
+          call read_var('nLat',     nLatCheck)
+          if(iProc==0.and.any(&
+               (/nParticle,     nLon,     nLat/) /= &
+               (/nParticleCheck,nLonCheck,nLatCheck/)))then
+             write(*,*)'Code is compiled with nParticle,nLon,nLat=',&
+                  (/nParticle, nLon, nLat/)
+             call CON_stop(&
+                  'Change nParticle,nLon,nLat with Config.pl -g & recompile!')
+          end if
+       case('#NSTEP')
+          call read_var('nStep',iIterGlobal)
+       case('#TIMESIMULATION')
+          call read_var('tSimulation',TimeGlobal)
        case('#GRID')
           call set_grid_param
        case('#DORUN')
@@ -133,7 +154,15 @@ contains
     TimeGlobal = TimeStart
     call init_advance_const
     call init_grid
+    if(DoRestart)&
+         call read_restart
   end subroutine initialize
+
+  !============================================================================
+
+  subroutine save_restart
+    call write_restart
+  end subroutine save_restart
 
   !============================================================================
 
@@ -180,8 +209,7 @@ contains
     !/
     if(IsFirstCall)then
        ! print the initial state
-       call write_output(TimeGlobal, iIterGlobal, &
-            IsInitialOutput = .true.)
+       call write_output(IsInitialOutput = .true.)
        IsFirstCall = .false.
     end if
 
@@ -199,7 +227,7 @@ contains
     iIterGlobal = iIterGlobal + 1
     TimeGlobal = min(DataInputTime,TimeLimit)
     
-    call write_output(TimeGlobal, iIterGlobal)
+    call write_output
 
   end subroutine run
 

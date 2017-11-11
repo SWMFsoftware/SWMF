@@ -36,6 +36,13 @@ module SP_wrapper
   public:: SP_copy_old_state
 contains
 
+  subroutine SP_do_extract(DoExtract)
+    logical, intent(out):: DoExtract
+    character(len=*), parameter:: NameSub='SP_do_extract'
+    !---------------------------------------------------------------
+    call CON_stop('SP:'//NameSub//': cannot call the empty version')
+  end subroutine SP_do_extract
+  !========================================================================  
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
 
     real,intent(inout)::TimeSimulation

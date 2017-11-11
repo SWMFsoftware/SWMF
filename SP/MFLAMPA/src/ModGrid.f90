@@ -13,7 +13,7 @@ module SP_ModGrid
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: fix_grid_consistency, append_particles
-  public:: iComm, iProc, nProc, nBlock, Proc_, Block_
+  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nBlockIndexes, nBlockParam
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, ParamLocal_IB, iNode_II, iNode_B

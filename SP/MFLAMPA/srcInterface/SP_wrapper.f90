@@ -8,8 +8,9 @@ module SP_wrapper
   use ModConst, ONLY: rSun, cProtonMass
   use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
   use SP_ModMain, ONLY: &
-       run, initialize, check, read_param,&
+       run, initialize, check, read_param, save_restart, &
        get_node_indexes, append_particles, &
+       DoRestart, &
        iComm, iProc, nProc, &
        nDim, nNode, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
@@ -31,6 +32,7 @@ module SP_wrapper
   use ModMpi
   use CON_world, ONLY: is_proc0, is_proc, n_proc
   use CON_comp_param, ONLY: SP_, SC_, IH_
+  use CON_io, ONLY: SaveRestart
 
   implicit none
 
@@ -61,6 +63,7 @@ module SP_wrapper
   public:: SP_put_r_min
   public:: SP_n_particle
   public:: SP_copy_old_state
+  public:: SP_do_extract
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -70,7 +73,13 @@ module SP_wrapper
   integer:: iOffsetToLagrID_A(nNode) = 0
 
 contains
-  !========================
+  !========================================================================  
+  subroutine SP_do_extract(DoExtract)
+    logical, intent(out):: DoExtract
+    DoExtract = .not. DoRestart
+  end subroutine SP_do_extract
+  
+  !========================================================================
   integer function SP_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
     SP_n_particle = iGridLocal_IB(End_,  iBlockLocal)
@@ -107,6 +116,7 @@ contains
     !--------------------------------------------------------------------------
     TimeAux = TimeSimulation
     call run(TimeAux, TimeSimulation, .true.)
+    if(SaveRestart % DoThis) call SP_save_restart(TimeSimulation)
   end subroutine SP_finalize
 
   !=========================================================
@@ -142,7 +152,8 @@ contains
 
   subroutine SP_save_restart(TimeSimulation) 
     real,     intent(in) :: TimeSimulation 
-    call CON_stop('Can not call SP_save restart')
+    !------------------------------------
+    call save_restart
   end subroutine SP_save_restart
 
   !=========================================================

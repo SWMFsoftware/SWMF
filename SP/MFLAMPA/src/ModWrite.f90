@@ -19,7 +19,7 @@ module SP_ModWrite
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V
 
-  use SP_ModAdvance, ONLY: DoTraceShock
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
@@ -320,10 +320,8 @@ contains
 
   !============================================================================
 
-  subroutine write_output(Time, iIter, IsInitialOutput)
+  subroutine write_output(IsInitialOutput)
     ! write the output data
-    real,    intent(in):: Time ! current time
-    integer, intent(in):: iIter! current iteration
     logical, intent(in), optional:: IsInitialOutput
 
     ! loop variables
@@ -393,10 +391,10 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
-         call get_time_string(Time, StringTime)
+         call get_time_string(TimeGlobal, StringTime)
          write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
               trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
-              '_t'//StringTime//'_n',iIter,&
+              '_t'//StringTime//'_n',iIterGlobal,&
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
@@ -420,8 +418,8 @@ contains
               NameFile     = NameFile, &
               TypeFileIn   = File_I(iFile) % TypeFile, &
               nDimIn       = 1, &
-              TimeIn       = Time, &
-              nStepIn      = iIter, &
+              TimeIn       = TimeGlobal, &
+              nStepIn      = iIterGlobal, &
               CoordMinIn_D = (/real(iFirst)/), &
               CoordMaxIn_D = (/real(iLast)/), &
               NameVarIn    = File_I(iFile) % NameVarPlot, &
@@ -481,11 +479,11 @@ contains
          iNode = iNode_B(iBlock)
 
          ! set the file name
-         call get_time_string(Time, StringTime)
+         call get_time_string(TimeGlobal, StringTime)
          write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
               trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
               File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
-              '_t'//StringTime//'_n', iIter, File_I(iFile) % NameFormat
+              '_t'//StringTime//'_n', iIterGlobal, File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
          iFirst = iGridLocal_IB(Begin_, iBlock)
@@ -548,8 +546,8 @@ contains
            NameFile     = NameFile, &
            TypeFileIn   = File_I(iFile) % TypeFile, &
            nDimIn       = 1, &
-           TimeIn       = Time, &
-           nStepIn      = iIter, &
+           TimeIn       = TimeGlobal, &
+           nStepIn      = iIterGlobal, &
            Coord1In_I   = real(pack(iNodeIndex_I, MASK=DoPrint_I)), &
            NameVarIn    = File_I(iFile) % NameVarPlot, &
            VarIn_VI     = &
@@ -681,10 +679,10 @@ contains
               NameFile     = NameFile, &
               TypeFileIn   = File_I(iFile) % TypeFile, &
               nDimIn       = 1, &
-              TimeIn       = Time, &
-              nStepIn      = iIter, &
-              CoordMinIn_D = (/real(iIter - nDataLine + 1)/), &
-              CoordMaxIn_D = (/real(iIter)/), &
+              TimeIn       = TimeGlobal, &
+              nStepIn      = iIterGlobal, &
+              CoordMinIn_D = (/real(iIterGlobal - nDataLine + 1)/), &
+              CoordMaxIn_D = (/real(iIterGlobal)/), &
               NameVarIn    = File_I(iFile) % NameVarPlot, &
               VarIn_VI     = &
               File_I(iFile) % Buffer_II(1:nVarPlot,1:nDataLine)&
@@ -731,10 +729,10 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
-         call get_time_string(Time, StringTime)
+         call get_time_string(TimeGlobal, StringTime)
          write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
               trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
-              '_t'//StringTime//'_n',iIter,&
+              '_t'//StringTime//'_n',iIterGlobal,&
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
@@ -757,8 +755,8 @@ contains
               NameFile   = NameFile, &
               TypeFileIn = File_I(iFile) % TypeFile, &
               nDimIn     = 2, &
-              TimeIn     = Time, &
-              nStepIn    = iIter, &
+              TimeIn     = TimeGlobal, &
+              nStepIn    = iIterGlobal, &
               Coord1In_I = Scale_I, &
               Coord2In_I = State_VIB(S_,iFirst:iLast,iBlock), &
               NameVarIn  = File_I(iFile) % NameVarPlot, &

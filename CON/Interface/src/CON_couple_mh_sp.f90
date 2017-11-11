@@ -41,7 +41,7 @@ module CON_couple_mh_sp
   use SP_wrapper, ONLY: &
        SP_put_from_sc, SP_put_from_ih, SP_put_input_time, &
        SP_put_line, SP_n_particle, SP_synchronize_grid, &
-       SP_get_grid_descriptor_param, &
+       SP_get_grid_descriptor_param, SP_do_extract, &
        SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
        SP_interface_point_coords_for_ih_extract, &
@@ -108,6 +108,9 @@ contains
     ! solar corona boundary
     real:: RSc, RIh, RMin
 
+    ! whether need to extract new line
+    logical:: DoExtract
+
     character(len=*), parameter:: NameSub = 'couple_mh_sp_init'
     !----------------------------------------------------------------------
     if(.not.DoInit)return
@@ -128,6 +131,10 @@ contains
          GridDescriptor = SP_GridDescriptor, &
          LocalGD = SP_LocalGD)
 
+    ! determine whether need to extract new field lines
+    if(is_proc0(SP_))&
+         call SP_do_extract(DoExtract)
+    call MPI_Bcast(DoExtract, 1, MPI_LOGICAL, i_proc0(SP_), i_comm(), iError)
 
     ! get the value of SC and IH boundary as set in SP
     if(is_proc0(SP_))&
@@ -159,7 +166,8 @@ contains
           call exchange_lines(SC_)
        end if
        ! put the lower boundary of the domain in SC to SP
-       call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
+       if(DoExtract)&
+            call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
     end if
 
     if(use_comp(IH_))then
@@ -221,109 +229,131 @@ contains
       !----------------------------------------------------------------
       select case(iMHComp)
       case(SC_)
-         if(is_proc(SP_))&
-              call set_semi_router_from_target(&
-              GridDescriptorSource  = SC_GridDescriptor, &
-              GridDescriptorTarget  = SP_LocalGD, &
-              Router                = RouterScSp, &
-              n_interface_point_in_block = SP_n_particle,&
-              interface_point_coords= SP_interface_point_coords_for_sc, &
-              mapping               = mapping_sp_to_sc, &
-              interpolate           = interpolation_amr_gc)
-         call synchronize_router_target_to_source(RouterScSp)
-         if(is_proc(SC_))then
-            nLength = nlength_buffer_source(RouterScSp)
-            call SC_extract_line(&
-                 nLine           = nLength,                                   &
-                 XyzOrigin_DI    = &
-                 RouterScSp%BufferSource_II(1:nDim,1:nLength),                &
-                 iTraceMode      = iInterfaceOrigin,                          &
-                 nIndex          = nAux,                                      &
-                 iIndexOrigin_II = &
-                 nint(RouterScSp%BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                 RSoftBoundary   =  RSc,                                      &
-                 UseInputInGenCoord = .true.)
+         if(DoExtract)then
+            if(is_proc(SP_))&
+                 call set_semi_router_from_target(&
+                 GridDescriptorSource  = SC_GridDescriptor, &
+                 GridDescriptorTarget  = SP_LocalGD, &
+                 Router                = RouterScSp, &
+                 n_interface_point_in_block = SP_n_particle,&
+                 interface_point_coords= SP_interface_point_coords_for_sc, &
+                 mapping               = mapping_sp_to_sc, &
+                 interpolate           = interpolation_amr_gc)
+            call synchronize_router_target_to_source(RouterScSp)
+            if(is_proc(SC_))then
+               nLength = nlength_buffer_source(RouterScSp)
+               call SC_extract_line(&
+                    nLine           = nLength, &
+                    XyzOrigin_DI    = &
+                    RouterScSp%BufferSource_II(1:nDim,1:nLength), &
+                    iTraceMode      = iInterfaceOrigin, &
+                    nIndex          = nAux, &
+                    iIndexOrigin_II = nint(RouterScSp%&
+                    BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
+                    RSoftBoundary   =  RSc, &
+                    UseInputInGenCoord = .true.)
+            end if
+            if(is_proc(SC_))then
+               call set_semi_router_from_source(&
+                    GridDescriptorSource = SC_LocalLineGD,     &
+                    GridDescriptorTarget = SP_GridDescriptor,  &
+                    Router               = RouterLineScSp,     &
+                    n_interface_point_in_block = SC_n_particle,&
+                    interface_point_coords=SC_line_interface_point,&
+                    mapping              = mapping_line_sc_to_sp)
+            end if
+            call synchronize_router_source_to_target(RouterLineScSp)
+            if(is_proc(SP_))then
+               call update_semi_router_at_target(&
+                    RouterLineScSp, SP_GridDescriptor)
+            end if
+            call global_message_pass(RouterLineScSp, &
+                 nVar = 3, &
+                 fill_buffer = SC_get_line_for_sp_and_transform, &
+                 apply_buffer= SP_put_line_from_sc)
          end if
-         if(is_proc(SC_))then
-            call set_semi_router_from_source(&
-                 GridDescriptorSource = SC_LocalLineGD,     &
-                 GridDescriptorTarget = SP_GridDescriptor,  &
-                 Router               = RouterLineScSp,     &
-                 n_interface_point_in_block = SC_n_particle,&
-                 interface_point_coords=SC_line_interface_point,&
-                 mapping              = mapping_line_sc_to_sp)
-         end if
-         call synchronize_router_source_to_target(RouterLineScSp)
+         call SP_synchronize_grid(RouterScSp%iCommUnion)
          if(is_proc(SP_))then
-            call update_semi_router_at_target(&
-                 RouterLineScSp, SP_GridDescriptor)
+            call set_semi_router_from_target(&
+                 GridDescriptorSource  = SC_GridDescriptor, &
+                 GridDescriptorTarget  = SP_LocalGD, &
+                 Router                = RouterScSp, &
+                 n_interface_point_in_block = SP_n_particle,&
+                 interface_point_coords= SP_interface_point_coords_for_sc, &
+                 mapping               = mapping_sp_to_sc, &
+                 interpolate           = interpolation_amr_gc)
+            nLength = nlength_buffer_target(RouterScSp)
+            call fix_buffer(nLength,&
+                 RouterScSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
          end if
-         call global_message_pass(RouterLineScSp, &
-              nVar = 3, &
-              fill_buffer = SC_get_line_for_sp_and_transform, &
-              apply_buffer= SP_put_line_from_sc)
-         if(is_proc(SP_))&
-              call set_semi_router_from_target(&
-              GridDescriptorSource  = SC_GridDescriptor, &
-              GridDescriptorTarget  = SP_LocalGD, &
-              Router                = RouterScSp, &
-              n_interface_point_in_block = SP_n_particle,&
-              interface_point_coords= SP_interface_point_coords_for_sc, &
-              mapping               = mapping_sp_to_sc, &
-              interpolate           = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
+            if(.not.DoExtract)then
+               nLength = nlength_buffer_source(RouterScSp)
+               call SC_add_to_line(&
+                    nParticle = nLength,&
+                    Xyz_DI    =  RouterScSp%BufferSource_II(&
+                    1:nDim, 1:nLength), &
+                    nIndex    = nAux,   &
+                    iIndex_II = nint(RouterScSp%BufferSource_II(&
+                    nDim+1:nDim+nAux, 1:nLength)),&      
+                    UseInputInGenCoord = .true.,&
+                    DoReplace = .true.)
+            end if
             call update_semi_router_at_source(RouterScSp,&
                  SC_GridDescriptor,interpolation_amr_gc)
          end if
-
          call global_message_pass(RouterScSp, &
               nVar = nVarBuffer, &
               fill_buffer = SC_get_for_sp_and_transform, &
               apply_buffer= SP_put_from_sc)
       case(IH_)
-         if(is_proc(SP_))&
-              call set_semi_router_from_target(&
-              GridDescriptorSource  = IH_GridDescriptor, &
-              GridDescriptorTarget  = SP_LocalGD, &
-              Router                = RouterIHSp, &
-              n_interface_point_in_block = SP_n_particle,&
-              interface_point_coords= SP_interface_point_coords_for_ih_extract, &
-              mapping               = mapping_sp_to_IH, &
-              interpolate           = interpolation_amr_gc) 
-         call synchronize_router_target_to_source(RouterIhSp)
-         if(is_proc(IH_))then
-            nLength = nlength_buffer_source(RouterIhSp)
-            call IH_extract_line(&
-                 nLine           = nLength,                                   &
-                 XyzOrigin_DI    = &
-                 RouterIhSp%BufferSource_II(1:nDim,1:nLength),                &
-                 iTraceMode      = iInterfaceEnd,                             &
-                 nIndex          = nAux,                                      &
-                 iIndexOrigin_II = &
-                 nint(RouterIhSp%BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                 RSoftBoundary   =  RIh,                                      &
-                 UseInputInGenCoord = .true.)
+         if(DoExtract)then
+            if(is_proc(SP_))&
+                 call set_semi_router_from_target(&
+                 GridDescriptorSource  = IH_GridDescriptor, &
+                 GridDescriptorTarget  = SP_LocalGD, &
+                 Router                = RouterIHSp, &
+                 n_interface_point_in_block = SP_n_particle,&
+                 interface_point_coords= &
+                 SP_interface_point_coords_for_ih_extract, &
+                 mapping               = mapping_sp_to_IH, &
+                 interpolate           = interpolation_amr_gc) 
+            call synchronize_router_target_to_source(RouterIhSp)
+            if(is_proc(IH_))then
+               nLength = nlength_buffer_source(RouterIhSp)
+               call IH_extract_line(&
+                    nLine           = nLength, &
+                    XyzOrigin_DI    = &
+                    RouterIhSp%BufferSource_II(1:nDim,1:nLength), &
+                    iTraceMode      = iInterfaceEnd, &
+                    nIndex          = nAux, &
+                    iIndexOrigin_II = nint(RouterIhSp%&
+                    BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
+                    RSoftBoundary   =  RIh, & 
+                    UseInputInGenCoord = .true.)
+            end if
+            if(is_proc(IH_))then
+               call set_semi_router_from_source(&
+                    GridDescriptorSource = IH_LocalLineGD,         &
+                    GridDescriptorTarget = SP_GridDescriptor,      &
+                    Router               = RouterLineIhSp,         &
+                    n_interface_point_in_block = IH_n_particle,    &
+                    interface_point_coords=IH_line_interface_point,&
+                    mapping              = mapping_line_ih_to_sp)
+            end if
+            call synchronize_router_source_to_target(RouterLineIhSp)
+            if(is_proc(SP_))then
+               call update_semi_router_at_target(&
+                    RouterLineIhSp, SP_GridDescriptor)
+            end if
+            call global_message_pass(RouterLineIhSp, &
+                 nVar = 3, &
+                 fill_buffer = IH_get_line_for_sp_and_transform, &
+                 apply_buffer= SP_put_line_from_ih)
          end if
-         if(is_proc(IH_))then
-            call set_semi_router_from_source(&
-                 GridDescriptorSource = IH_LocalLineGD,         &
-                 GridDescriptorTarget = SP_GridDescriptor,      &
-                 Router               = RouterLineIhSp,         &
-                 n_interface_point_in_block = IH_n_particle,    &
-                 interface_point_coords=IH_line_interface_point,&
-                 mapping              = mapping_line_ih_to_sp)
-         end if
-         call synchronize_router_source_to_target(RouterLineIhSp)
+         call SP_synchronize_grid(RouterIhSp%iCommUnion)
          if(is_proc(SP_))then
-            call update_semi_router_at_target(&
-                 RouterLineIhSp, SP_GridDescriptor)
-         end if
-         call global_message_pass(RouterLineIhSp, &
-              nVar = 3, &
-              fill_buffer = IH_get_line_for_sp_and_transform, &
-              apply_buffer= SP_put_line_from_ih)
-         if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = IH_GridDescriptor, &
               GridDescriptorTarget  = SP_LocalGD, &
@@ -332,12 +362,27 @@ contains
               interface_point_coords= SP_interface_point_coords_for_ih, &
               mapping               = mapping_sp_to_ih, &
               interpolate           = interpolation_amr_gc)
+            nLength = nlength_buffer_target(RouterIhSp)
+            call fix_buffer(nLength,&
+                 RouterIhSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
+         end if
          call synchronize_router_target_to_source(RouterIhSp)
          if(is_proc(IH_))then
+            if(.not.DoExtract)then
+               nLength = nlength_buffer_source(RouterIhSp)
+               call IH_add_to_line(&
+                    nParticle = nLength,&
+                    Xyz_DI    =  RouterIhSp%BufferSource_II(&
+                    1:nDim, 1:nLength), &
+                    nIndex    = nAux,   &
+                    iIndex_II = nint(RouterIhSp%BufferSource_II(&
+                    nDim+1:nDim+nAux, 1:nLength)),&      
+                    UseInputInGenCoord = .true.,&
+                    DoReplace = .true.)
+            end if
             call update_semi_router_at_source(RouterIhSp,&
                  IH_GridDescriptor,interpolation_amr_gc)
          end if
-
          call global_message_pass(RouterIhSp, &
               nVar = nVarBuffer, &
               fill_buffer = IH_get_for_sp_and_transform, &
