@@ -34,6 +34,7 @@ module SP_wrapper
   public:: SP_put_r_min
   public:: SP_n_particle
   public:: SP_copy_old_state
+  public:: SP_do_extract
 contains
 
   subroutine SP_do_extract(DoExtract)
