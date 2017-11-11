@@ -12,7 +12,7 @@ program spectrum
   logical                     :: IsVerbose =  .false., IsDebug = .false.
   logical                     :: IsDataFile = .false. ! Use input file or not
   logical                     :: IsLogTeMin = .false.
-  
+
   integer                     :: iError 
 
   real                        :: LogTeMin = 3.
@@ -60,7 +60,12 @@ program spectrum
   ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
   real                        :: ProtonElectronRatio = 0.83
   real                        :: dx = 1.!, dy = 1., dz = 1., dVperd2 = 1., dOmega= 1.
-  
+
+  ! Extend transition region
+  logical :: DoExtendTransitionRegion = .false.
+  real :: TeModSi = 3.0E+5    !K
+  real :: DeltaTeModSi = 1E+4 !K
+
   ! Variables for uniform data
   logical                     :: IsUniData = .false. ! Overwrite data w/ const
   real                        :: RhoUni, UxUni, UyUni, UzUni, BxUni, ByUni
@@ -211,7 +216,7 @@ contains
        Var_VIII(I01_,1:n1,1:n2,1:n3)  = I01Uni * 1e-1
        Var_VIII(I02_,1:n1,1:n2,1:n3)  = I02Uni * 1e-1
 
-!       dVperd2 = 1.0
+       !       dVperd2 = 1.0
     else 
        call CON_stop( &
             NameSub//' need data input!!! ')
@@ -472,7 +477,7 @@ contains
              LogTe = log10(Var_VIII(te_,i,jPixel,kPixel))
 
              if(IsLogTeMin .and. (LogTe < LogTeMin))CYCLE
-             
+
              ! Convert to SI
              LambdaSI = LineTable_I(iLine)%LineWavelength * 1e-10 
 
@@ -502,6 +507,9 @@ contains
              ! Calculate flux and spread it on the Spectrum_II grids
              ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
              FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx *1e2
+
+             if(DoExtendTransitionRegion) FluxMono = FluxMono &
+                  /extension_factor(Var_VIII(te_,i,jPixel,kPixel))
 
              if(IsDebug)then
                 write(*,*)'                                                   '
@@ -536,6 +544,19 @@ contains
     end do
 
   end subroutine calc_flux
+
+  !==========================================================================
+  real function extension_factor(TeSi)
+
+    real, intent(in) :: TeSi
+
+    real :: FractionSpitzer
+    !------------------------------------------------------------------------
+    FractionSpitzer = 0.5*(1.0+tanh((TeSi-TeModSi)/DeltaTeModSi))
+
+    extension_factor = FractionSpitzer + &
+         (1.0 - FractionSpitzer)*(TeModSi/TeSi)**2.5
+  end function extension_factor
 
   !==========================================================================
   subroutine disperse_line(iInterval,iCenter,Lambda,DLambda,FluxMono)
@@ -749,7 +770,14 @@ contains
        case("#LOGTEMIN")
           IsLogTeMin = .true.
           call read_var('LogTeMin',LogTeMin)
-          
+
+       case("#TRANSITIONREGION")
+          call read_var('DoExtendTransitionRegion',DoExtendTransitionRegion)
+          if(DoExtendTransitionRegion)then
+             call read_var('TeModSi',TeModSi)
+             call read_var('DeltaTeModSi',DeltaTeModSi)
+          end if
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -1000,7 +1028,7 @@ contains
        Var_VIII(I02_,1:n1,1:n2,1:n3) = 0
        write(*,*)"IsNoAlfven ON !!!"
     endif
-    
+
     ! Cells behind the solar disk
     do kPixel = 1, n3
        do jPixel = 1, n2
@@ -1018,8 +1046,8 @@ contains
     end do
 
     dx = (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 * rSun
-!    dy = (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2 * rSun
-!    dz = (CoordMax_D(iDimHorizontal)-CoordMin_D(iDimHorizontal))/n3 * rSun
+    !    dy = (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2 * rSun
+    !    dz = (CoordMax_D(iDimHorizontal)-CoordMin_D(iDimHorizontal))/n3 * rSun
 
     ! Constant multiplier converted from SI [m] to CGS units [cm]
     ! dV_cell / (1AU)^2 * 1e2
@@ -1029,8 +1057,8 @@ contains
     ! dOmega = dy*dz / (1.496e11)**2
 
     ! dVperd2/dOmega = dx * 1e2
-    
-    
+
+
   end subroutine read_data
 
   !==========================================================================
