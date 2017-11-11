@@ -42,6 +42,22 @@ See the unused variables for all Fortran files:
 my @testvar = 
     ("iTest", "jTest", "kTest", "iBlockTest", "iProcTest", "iVarTest", "iDimTest", "xTest", "yTest", "zTest");
 
+# Simple Fortran types with possible (len=..) and (kind=..) attributes:
+my $SimpleType = '(real|integer|logical|character)(\s*\([^\)]+\))?\b';
+
+# Obsolete Fortran types with *NUMBER, e.g. real*8 character*10
+my $ObsoleteType = '(real|integer|logical|character)\s*\*\s*\d+';
+
+# Derived Fortran type
+my $DerivedType = 'type\s*\(\s*\w+\s*\)';
+
+# Any Fortran Type
+my $AnyType = "($SimpleType|$ObsoleteType|$DerivedType)";
+
+my $indent;      # indentation at the beginning of the "unit"
+my $unittype;    # program, subroutine or function
+my $unitname;    # name of program unit
+my $declaration; # true in declaration part
 my $source;
 foreach $source (@source){
 
@@ -50,14 +66,67 @@ foreach $source (@source){
     my @lines = <FILE>;
     close(FILE);
 
-    # Replace old variable names with new names
+    my $i = -1;
     foreach (@lines){
+	# line index
+	$i++;
+
+	# Fix copyright message
+	s/University of Michigan, portions used/University of Michigan,\n!  portions used/;
+
+	# Replace old variable names with new names
 	s/\bBLKtest\b/iBlockTest/gi;
 	s/\bPROCtest\b/iProcTest/gi;
 	s/\bVARtest\b/iVarTest/gi;
 	s/\bDIMtest\b/iDimTest/gi;
 	s/\biBLK\b/iBlock/gi;
 	s/\boktest(_me)?\b/DoTest/gi;
+
+	# remove original separator lines !==== and !-----
+	$_ = '' if /^\s+\![\=\-]+\!?\s+$/;
+
+	# Find start of subroutines and functions
+	if(/^(\s*)(subroutine|function|$AnyType\s+function)\s(\w+)/i){
+	    $indent = $1;
+	    $unittype = $2;
+	    $unitname = $3;
+	    $declaration = 1;
+	    next;
+	}
+	if($declaration){
+	    # remove unnecessary "implicit none" from subroutines/functions
+	    $_ = "" if /^\s+implicit\s+none/i;
+
+	    # Skip empty lines and comments
+	    next if s/^\s*$// or /^\s*\!/;
+
+            # skip continuation lines
+            next if $lines[$i-1] =~ /\&\s*(\!.*)?$/;
+	    
+	    # skip use statements
+	    next if s/(\s*)use\b/$1use/i;
+
+	    # skip variable declarations
+	    next if /^\s*($AnyType)/i;
+
+	    # End of declarations: insert !----- separator line
+	    #print "end of declaration at line=$i for unit=$unitname, indent=$indent, line=$_";
+
+	    $_ = $indent . '  !' . "-" x (76-length($indent)) . "\n" . $_;
+	    $declaration = 0;
+	}else{
+	    s/\bcycle\b/CYCLE/;
+	    s/\bexit\b/EXIT/;
+	    s/\breturn\b/RETURN/;
+	}
+
+	# put in separator line at the end of methods
+	if(/^(\s*)(contains|end\s+subroutine|end\s+function)\b/){
+	    $_ .= $1 . "!" . ("=" x (78-length($1))) . "\n";
+	    $unitname = "";
+	    
+	}
+
     }
 
     my $text = join('', @lines);
@@ -68,6 +137,7 @@ foreach $source (@source){
 	$usetest .= ", $testvar" if $text =~ /\b$testvar\b/i;
     }
 
+    my $module;
     my $subroutine;
     my $addnamesub;
     my $adddotest;
@@ -75,14 +145,11 @@ foreach $source (@source){
     my $remove;
     foreach (@lines){
 
-	# Add use statement for all test variables
-	if(s/^Module/module/i){
+	# Add use statement for all test variables at the beginning of the module
+	if(s/^Module\s*(\w+)/module $1/i){
+	    $module = $1;
 	    $_ .= "\n$usetest\n";
-	}
-
-	# Fix separator line(s)
-	if(/^(\s+\!)=+\s+$/){
-	    $_  = $1 . "=" x (79 - length($1)) . "\n";
+	    print "Working on module $module\n";
 	}
 
 	if(/^  subroutine\s+(\w+)(.*)/){
@@ -99,7 +166,7 @@ foreach $source (@source){
 	next unless $subroutine;
 
 	# Remove original declarations for sake of uniformity
-	$_ = "" if /parameter::\s*NameSub\s*=/ or /\s+logical\s?::\s?DoTest/
+	$_ = "" if /parameter\s*::\s*NameSub\s*=/ or /\s+logical\s?::\s?DoTest/
 	    or /^\s+call set_oktest/;
 
 	# Remove "if(iProc==PROCtest .and. iBlock==BLKtest)...endif"
