@@ -32,7 +32,6 @@ module SP_wrapper
   use ModMpi
   use CON_world, ONLY: is_proc0, is_proc, n_proc
   use CON_comp_param, ONLY: SP_, SC_, IH_
-  use CON_io, ONLY: SaveRestart
 
   implicit none
 
@@ -71,6 +70,9 @@ module SP_wrapper
 
   ! offset between LagrID and particle cell index
   integer:: iOffsetToLagrID_A(nNode) = 0
+
+  ! whether to save rstart files
+  logical:: DoSaveRestart = .false.
 
 contains
   !========================================================================  
@@ -116,7 +118,7 @@ contains
     !--------------------------------------------------------------------------
     TimeAux = TimeSimulation
     call run(TimeAux, TimeSimulation, .true.)
-    if(SaveRestart % DoThis) call SP_save_restart(TimeSimulation)
+    if(DoSaveRestart) call SP_save_restart(TimeSimulation)
   end subroutine SP_finalize
 
   !=========================================================
@@ -153,6 +155,7 @@ contains
   subroutine SP_save_restart(TimeSimulation) 
     real,     intent(in) :: TimeSimulation 
     !------------------------------------
+    DoSaveRestart = .true.
     call save_restart
   end subroutine SP_save_restart
 
