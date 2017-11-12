@@ -378,7 +378,7 @@ contains
        case("#STOP")
           call read_var('TimeMax', TimeMax)
        case("#TEST", "#TESTIJK", "#TESTXYZ", "#TEST2IJK", "#TEST2XYZ", &
-            "#VERBOSE")
+            "#TESTDIM", "#TESTVAR", "#TESTVARINDEX", "#VERBOSE")
           call read_test_param(NameCommand)
        case default
           call CON_stop(NameSub//' unknown command='//trim(NameCommand))
