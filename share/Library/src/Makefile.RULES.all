@@ -21,6 +21,7 @@ $Compiler eq "crayftn"
 # NAGFOR 5.3.2 fails random number test with any optimization but O0
 $Compiler eq "nagfor"
 	${COMPILE.f90} ${Cflag0} ModRandomNumber.f90
+	${COMPILE.f90} ${Cflag1} CON_axes.f90
 
 # With NAG f95 ModMpiInterface compiles with -dusty only because
 # the same MPI routines are called with different argument types
