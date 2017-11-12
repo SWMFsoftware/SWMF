@@ -54,10 +54,19 @@ my $DerivedType = 'type\s*\(\s*\w+\s*\)';
 # Any Fortran Type
 my $AnyType = "($SimpleType|$ObsoleteType|$DerivedType)";
 
-my $indent;      # indentation at the beginning of the "unit"
-my $unittype;    # program, subroutine or function
-my $unitname;    # name of program unit
-my $declaration; # true in declaration part
+my $addnamesub;    # true if namesub should be declared
+my $addtest;       # true if call test_start/stop should be added
+my $namesubline;   # declaration of NameSub = ...
+my $dotestline;    # declaration of DoTest logical
+my $separatorline; # !---- line
+my $indent;        # indentation at the beginning of the "unit"
+my $unittype;      # program, subroutine or function
+my $unitname;      # name of program unit
+my $declaration;   # true in declaration part
+my $usemodmain;    # true inside use ModMain... declaration
+my $testarguments; # arguments for test_start and test_stop
+my $removeoktest;  # true while removing old oktest code
+
 my $source;
 foreach $source (@source){
 
@@ -71,8 +80,11 @@ foreach $source (@source){
 	# line index
 	$i++;
 
+	# remove trailing spaces
+	s/\s+\n/\n/;
+
 	# Fix copyright message
-	s/University of Michigan, portions used/University of Michigan,\n!  portions used/;
+	s/Michigan, portions used/Michigan,\n!  portions used/;
 
 	# Replace old variable names with new names
 	s/\bBLKtest\b/iBlockTest/gi;
@@ -80,17 +92,43 @@ foreach $source (@source){
 	s/\bVARtest\b/iVarTest/gi;
 	s/\bDIMtest\b/iDimTest/gi;
 	s/\biBLK\b/iBlock/gi;
-	s/\boktest(_me)?\b/DoTest/gi;
+	s/\bnBLK\b/MaxBlock/gi;
+	s/\boktest\b/DoTest/gi;
+	s/\boktest_me\b/DoTestMe/gi;
 
 	# remove original separator lines !==== and !-----
-	$_ = '' if /^\s+\![\=\-]+\!?\s+$/;
+	$_ = '' if /^\s+\![\=\-]+\!?$/;
+
+	# fix comments !blabla --> ! blabla
+	s/^(\s*\![\!\$]+)([^\s\/\\\-\=\!\$])/$1 $2/;
 
 	# Find start of subroutines and functions
-	if(/^(\s*)(subroutine|function|$AnyType\s+function)\s(\w+)/i){
+	if(/^(\s*)(subroutine|function|$AnyType\s+function)\s+(\w+)/i){
 	    $indent = $1;
 	    $unittype = $2;
-	    $unitname = $3;
+	    $unitname = $+;
 	    $declaration = 1;
+
+	    if($unittype eq "subroutine" and $indent eq "  "){
+		$addtest = 1;
+	    }else{
+		$addtest = 0;
+	    }
+
+	    if(/\biBlock\b/i){
+		$testarguments = "NameSub, DoTest, iBlock";
+	    }else{
+		$testarguments = "NameSub, DoTest";
+	    }
+
+	    $dotestline = "$indent  logical:: DoTest\n";
+	    $namesubline = "$indent  ".
+		"character(len=*), parameter:: NameSub = '$unitname'\n";
+	    $separatorline = "$indent  !" . "-" x (76-length($indent)) . "\n";
+
+	    #print "indent=$indent, unittype=$unittype, unitname=$unitname"
+	    #	.", addtest=$addtest\n";
+
 	    next;
 	}
 	if($declaration){
@@ -98,35 +136,117 @@ foreach $source (@source){
 	    $_ = "" if /^\s+implicit\s+none/i;
 
 	    # Skip empty lines and comments
-	    next if s/^\s*$// or /^\s*\!/;
+	    next if /^$/ or s/^\s*\n/\n/ or /^\s*\!/;
+
+            # Fix ModSomething  ,only : --> ModSomething, ONLY:
+            s/\bonly\s*:\b/ONLY:/i;
+	    s/,ONLY/, ONLY/;
+	    s/\s+(,\s+ONLY)/$1/;
+
+            # remove iTest ... iVarTest from use ModMain
+	    $usemodmain=1 if /^\s+use ModMain/i;
+	    if($usemodmain){
+		$usemodmain = 0 unless /\&$/;
+		s/\b(i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b\s*,?//g;
+		s/(,\s*)?(i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test$//g;
+		next if s/^\s+use ModMain\s*,\s+ONLY:\s*$//i;
+	    }
 
             # skip continuation lines
             next if $lines[$i-1] =~ /\&\s*(\!.*)?$/;
-	    
+
 	    # skip use statements
 	    next if s/(\s*)use\b/$1use/i;
 
-	    # skip variable declarations
+	    # Remove old declarations of DoTest and DoTestMe
+	    if(/^\s+logical\s*::\s*DoTest/){
+		s/DoTest(Me)?\s*(=\s*\.(true|false)\.\s*)?,?\s*//g;
+		$_ = '' if /^\s+logical\s*::\s*$/;
+		$addtest = 1;
+		next;
+	    }
+
+	    # Remove original NameSub declarations for sake of uniformity
+	    if(/^\s+character.*parameter\s*::\s*NameSub\s*=/){
+		$addnamesub = 1;
+		$_ = "";
+		next;
+	    }
+
+	    # skip all other variable declarations
 	    next if /^\s*($AnyType)/i;
 
-	    # End of declarations: insert !----- separator line
-	    #print "end of declaration at line=$i for unit=$unitname, indent=$indent, line=$_";
-
-	    $_ = $indent . '  !' . "-" x (76-length($indent)) . "\n" . $_;
+	    # End of declarations 
 	    $declaration = 0;
-	}else{
-	    s/\bcycle\b/CYCLE/;
-	    s/\bexit\b/EXIT/;
-	    s/\breturn\b/RETURN/;
-	}
 
-	# put in separator line at the end of methods
-	if(/^(\s*)(contains|end\s+subroutine|end\s+function)\b/){
-	    $_ .= $1 . "!" . ("=" x (78-length($1))) . "\n";
-	    $unitname = "";
+	    # Declare DoTest if needed
+	    $lines[$i-1] .= $dotestline if $addtest;
+
+	    # Add NameSub declaration if needed
+	    $lines[$i-1] .= $namesubline if $addnamesub or $addtest;
+	    $addnamesub = 0;
+
+	    # insert !----- separator line to the end of the next line
+	    $lines[$i-1] .= $separatorline;
+
+	    # add call test line
+	    $lines[$i-1] .= $indent."  call test_start($testarguments)\n"
+		if $addtest and not /\btest_start/;;
+	}
+	# fix code after the declaration part
+
+	# Remove "if(iProc==iProcTest .and. iBlock==iBlockTest)...endif"
+	$removeoktest = 1
+	    if /^\s+if.*then$/ and /\biProcTest\b/ and /\biBlockTest\b/;
+
+	if($removeoktest){
+	    $removeoktest = 0 if /^\s+end\s?if/i;
+	    $_ = "";
+	    next;
+	}
 	    
-	}
+	# Remove simple call set_oktest
+	$_ = '' if /^\s+call\s+set_oktest/i;
 
+	# DoTestMe --> DoTest
+	s/\bDoTestMe\b/DoTest/gi;
+
+	# Fix some common coding issues
+
+	# Capitalize jumps
+	s/\bcycle\b/CYCLE/;
+	s/\bexit\b/EXIT/;
+	s/\breturn\b/RETURN/;
+	s/\bgo\s*to\b/GOTO/;
+
+	# Obsolete relation operators
+	s/\s*\.eq\.\s*/ == /ig;
+	s/\s*\.ne\.\s*/ \/= /ig;
+	s/\s*\.ge\.\s*/ \>= /ig;
+	s/\s*\.le\.\s*/ \<= /ig;
+	s/\s*\.gt\.\s*/ \> /ig;
+	s/\s*\.lt\.\s*/ \< /ig;
+
+	# Obsolete named constants
+	s/\bcZero\b/0.0/ig;
+	s/\bcHalf\b/0.5/ig;
+	s/\bcOne\b/1.0/ig;
+
+	# put in call test_stop() and separator line at the end of methods
+	if(/^(\s*)(contains|end\s+subroutine|end\s+function)\b/){
+	    $indent = $1;
+	    $_ = $indent."  call test_stop($testarguments)\n".$_
+		if $addtest and $lines[$i-1] !~ /\btest_stop/;
+
+	    # extra indentation for separator after "contains" line
+	    $indent .= "  " if /contains/;
+	    $_ .= "$indent!" . ("=" x (78-length($indent))) . "\n";
+
+	    $indent = "";
+	    $unitname = "";
+	    $addtest = 0;
+	    $testarguments = "";
+	}
     }
 
     my $text = join('', @lines);
@@ -139,66 +259,16 @@ foreach $source (@source){
 
     my $module;
     my $subroutine;
-    my $addnamesub;
-    my $adddotest;
-    my $testarguments;
-    my $remove;
+    my $i = -1;
     foreach (@lines){
+	$i++;
 
-	# Add use statement for all test variables at the beginning of the module
+	# Add use statement for all test variables at the beginning of module
 	if(s/^Module\s*(\w+)/module $1/i){
 	    $module = $1;
-	    $_ .= "\n$usetest\n";
-	    print "Working on module $module\n";
+	    $_ .= "\n$usetest\n" unless $lines[$i+3] =~ /test_start/;
+	    last;
 	}
-
-	if(/^  subroutine\s+(\w+)(.*)/){
-	    $subroutine = $1;
-
-	    if($2 =~ /\biBlock\b/i){
-		$testarguments = "NameSub, DoTest, iBlock";
-	    }else{
-		$testarguments = "NameSub, DoTest";
-	    }
-	    next;
-	}
-
-	next unless $subroutine;
-
-	# Remove original declarations for sake of uniformity
-	$_ = "" if /parameter\s*::\s*NameSub\s*=/ or /\s+logical\s?::\s?DoTest/
-	    or /^\s+call set_oktest/;
-
-	# Remove "if(iProc==PROCtest .and. iBlock==BLKtest)...endif"
-	$remove = 1
-	    if /^\s+if.*then\s*$/ and /\biProcTest\b/ and /\biBlockTest\b/;
-
-	if($remove){
-	    # remove code
-	    $remove = 0 if /\s+end\s?if/i;
-	    $_ = "";
-	    next;
-	}
-
-	# Declare DoTest, set NameSub, and add call test_start 
-	# after the declarations
-	if(/  !--------------------------------/){
-	    chop;
-	    $_ = "
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = '$subroutine'
-    !-------------------------------------------------------------------------
-    call test_start($testarguments)
-
-";
-	}
-
-	# Add call test_stop to the end of the subroutine
-	if(/^  (contains|end subroutine)/){
-	    $_ = "    call test_stop($testarguments)\n\n" . $_;
-	    $subroutine = '';
-	}
-	
     }
 
     my $orig = $source."_orig_";
