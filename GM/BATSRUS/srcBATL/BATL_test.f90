@@ -4,7 +4,8 @@ module BATL_test
 
   use ModReadParam, ONLY: lStringLine, read_var
   use BATL_mpi,  ONLY: iProc, nProc, iComm
-  use BATL_size, ONLY: nDim, MaxDim, nBlock, MaxBlock
+  use BATL_size, ONLY: nDim, MaxDim, nBlock, MaxBlock, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use BATL_geometry, ONLY: x_, y_, z_
   use BATL_grid, ONLY: find_grid_block
 
@@ -18,24 +19,27 @@ module BATL_test
   public:: test_stop       ! stop testing a subroutine/function
   public:: test_cell       ! decide if a cell is to be tested
 
-  character(lStringLine), public:: StringTest = ' '    ! space separated list
-  integer, public:: iTest  = 1, jTest  = 1, kTest  = 1 ! 1st test cell
-  integer, public:: iTest2 = 1, jTest2 = 1, kTest2 = 1 ! 2nd test cell
-  integer, public:: iBlockTest = 1                     ! 1st test block
-  integer, public:: iBlockTest2 = 1                    ! 2nd test block
-  integer, public:: iProcTest = 0                      ! 1st test processor
-  integer, public:: iProcTest2 = -1                    ! 2nd test processor
-  real,    public:: XyzTest_D(MaxDim) = 0.0            ! 1st test position
-  real,    public:: xTest = 0.0, yTest = 0.0, zTest = 0.0 
-  real,    public:: XyzTest2_D(MaxDim)= 0.0            ! 2nd test position
-  real,    public:: xTest2 = 0.0, yTest2 = 0.0, zTest2 = 0.0
-
   ! verbosity level:
   !   lVerbose=0:   no verbose output
   !   lVerbose=1:   minimal verbose output
   !   lVerbose=10:  verbose output on test processor
   !   lVerbose=100: verbose output on all processors
   integer, public:: lVerbose = 1                       
+
+  character(lStringLine), public:: StringTest = ' '    ! list of things to test
+  integer, public:: iProcTest = 0                      ! 1st test processor
+  integer, public:: iProcTest2 = -1                    ! 2nd test processor
+  integer, public:: iBlockTest = 1                     ! 1st test block
+  integer, public:: iBlockTest2 = 1                    ! 2nd test block
+  integer, public:: iTest  = 1, jTest  = 1, kTest  = 1 ! 1st test cell
+  integer, public:: iTest2 = 1, jTest2 = 1, kTest2 = 1 ! 2nd test cell
+  real,    public:: XyzTest_D(MaxDim) = 0.0            ! 1st test position
+  real,    public:: xTest = 0.0, yTest = 0.0, zTest = 0.0 
+  real,    public:: XyzTest2_D(MaxDim)= 0.0            ! 2nd test position
+  real,    public:: xTest2 = 0.0, yTest2 = 0.0, zTest2 = 0.0
+  integer, public:: iVarTest = 1                       ! variable index to test
+  character(len=20), public:: NameVarTest = ''         ! variable name to test
+  integer, public:: iDimTest = 1                       ! dimension to test
 
   ! Local variables
 
@@ -53,36 +57,50 @@ contains
     select case(NameCommand)
     case("#VERBOSE")
        call              read_var('lVerbose',    lVerbose)
+    case("#TEST")
+       call              read_var('StringTest',  StringTest)
     case("#TESTXYZ")
+       UseTestXyz = .true.
        call              read_var('xTest',       XyzTest_D(x_))
        if(nDim > 1)call  read_var('yTest',       XyzTest_D(y_))
        if(nDim > 2)call  read_var('zTest',       XyzTest_D(z_))
-       UseTestXyz = .true.
     case("#TESTIJK")
-       call              read_var('iTest',       iTest)
-       if(nDim > 1) call read_var('jTest',       jTest)
-       if(nDim > 2) call read_var('kTest',       kTest)
-       call              read_var('iBlockTest',  iBlockTest)
-       if(nProc > 1)call read_var('iProcTest',   iProcTest)
        UseTestXyz = .false.
-       iBlockTest = min(MaxBlock, max(1, iBlockTest))
-       iProcTest  = min(nProc-1, max(0, iProcTest))
+       call              read_var('iTest',       iTest)
+       iTest              = min(MaxI, max(MinI, iTest))
+       if(nDim > 1) call read_var('jTest',       jTest)
+       if(nDim > 1) jTest = min(MaxJ, max(MinJ, jTest))
+       if(nDim > 2) call read_var('kTest',       kTest)
+       if(nDim > 2) kTest = min(MaxK, max(MinK, kTest))
+       call              read_var('iBlockTest',  iBlockTest)
+       iBlockTest = max(1, iBlockTest)
+       if(nProc > 0) call read_var('iProcTest',   iProcTest)
+       iProcTest = min(nProc-1, max(0, iProcTest))
     case("#TEST2XYZ")
+       UseTest2Xyz = .true.
        call              read_var('xTest2',      XyzTest2_D(x_))
        if(nDim > 1) call read_var('yTest2',      XyzTest2_D(y_))
        if(nDim > 2) call read_var('zTest2',      XyzTest2_D(z_))
-       UseTest2Xyz = .true.
     case("#TEST2IJK")
-       call              read_var('iTest2',      iTest2)
-       if(nDim > 1) call read_var('jTest2',      jTest2)
-       if(nDim > 2) call read_var('kTest2',      kTest2)
-       call              read_var('iBlockTest2', iBlockTest)
-       if(nProc > 1)call read_var('iProcTest2',  iProcTest)
        UseTest2Xyz = .false.
-       iBlockTest2 = min(MaxBlock, max(1, iBlockTest2))
-       iProcTest2  = min(nProc-1, max(-1, iProcTest2))
-    case("#TEST")
-       call              read_var('StringTest',  StringTest)
+       call              read_var('iTest2',      iTest2)
+       iTest2              = min(MaxI, max(MinI, iTest2))
+       if(nDim > 1) call read_var('jTest2',      jTest2)
+       if(nDim > 1) jTest2 = min(MaxJ, max(MinJ, jTest2))
+       if(nDim > 2) call read_var('kTest2',      kTest2)
+       if(nDim > 2) kTest2 = min(MaxK, max(MinK, kTest2))
+       call              read_var('iBlockTest2', iBlockTest)
+       iBlockTest2 = max(1, iBlockTest2)
+       call read_var('iProcTest2',  iProcTest)
+       iProcTest2  = min(nProc-1, max(-1, iProcTest2)) ! -1 switches this off
+    case("#TESTDIM")
+       call read_var('iDimTest', iDimTest)
+       iDimTest = min(nDim, max(0, iDimTest))  ! 0 means all dimensions
+    case("#TESTVAR")
+       call read_var('NameVarTest', NameVarTest)
+    case("#TESTVARINDEX")
+       call read_var('iVarTest', iVarTest)
+       iVarTest = max(1, iVarTest)
     case default
        call CON_stop(NameSub//': unknown command='//NameCommand)
     end select
