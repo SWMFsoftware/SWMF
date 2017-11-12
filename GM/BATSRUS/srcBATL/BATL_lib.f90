@@ -117,7 +117,7 @@ module BATL_lib
 
   ! Inherited from BATL_particles
   public:: Particle_I
-  public:: allocate_particles, check_particle_location
+  public:: check_particle_location
   public:: put_particles, trace_particles
   public:: message_pass_particles, remove_undefined_particles, mark_undefined
 
