@@ -70,9 +70,20 @@ module BATL_particles
 contains
 
   !===========================================================================
-  subroutine allocate_particles
-    integer:: iKindParticle, nVar, nIndex, nParticleMax
+  subroutine allocate_particles(iKindIn)
+    integer, optional, intent(in) :: iKindIn
+    integer:: iKindParticle, iKindFirst, iKindLast
+    !\
+    !Misc
+    integer :: nVar, nIndex, nParticleMax
     !------------------------------------------------------------------------
+    if(present(iKindIn))then
+       iKindFirst = iKindIn
+       iKindLast  = iKindIn
+    else
+       iKindFirst = 1
+       iKindLast  = nKindParticle
+    end if
     do iKindParticle = 1, nKindParticle
        nVar         = Particle_I(iKindParticle)%nVar
        nIndex       = Particle_I(iKindParticle)%nIndex

@@ -128,6 +128,6 @@ module BATL_size
   integer :: nBlock = 0
 
   ! Number of different kinds of particles
-  integer, parameter:: nKindParticle = 2
+  integer, parameter:: nKindParticle = 8
 
 end module BATL_size
