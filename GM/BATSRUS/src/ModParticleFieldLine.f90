@@ -13,8 +13,9 @@ module ModParticleFieldLine
        iProc, MaxDim, nDim, MaxBlock, nI, nJ, nK, nBlock,     &
        Xyz_DGB, CellVolume_GB, Unused_B,                      &
        check_interpolate_amr_gc,                              &
-       Particle_I, allocate_particles, trace_particles,       &
+       Particle_I, trace_particles,                           &
        mark_undefined, check_particle_location, put_particles
+  use ModParticles, ONLY: allocate_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
