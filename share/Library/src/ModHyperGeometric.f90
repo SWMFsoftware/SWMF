@@ -11,6 +11,7 @@ module ModHyperGeometric
   implicit none
   real, parameter:: cTolerance_I(0:1) = (/1.0e-7, 1.0e-15/)
   real, parameter:: cEiler    = 0.57721566490
+  real, parameter:: cSqrtPi   = 1.7724538509055159
 contains
   real function psi_semi(n)
     integer, intent(in) :: n
@@ -56,7 +57,7 @@ contains
     ! \Gamma(0.5 + n)
     integer :: k
     !------------
-    gamma_semi = sqrt(cPi)
+    gamma_semi = cSqrtPi
     do k = 1, n
        gamma_semi = gamma_semi * (real(k) - 0.50)
     end do
@@ -81,7 +82,7 @@ contains
     character(LEN=*), parameter:: NameSub = 'hypergeom'
     !----------------------------
     hypergeom = 1.0
-    rMember = 1.0
+    rMember   = 1.0
     aPlusI = a -1.0
     bPlusI = b -1.0
     cPlusI = c -1.0
@@ -96,9 +97,10 @@ contains
     end do
   end function hypergeom
   !=====================
-  real function hyper_semi_semi_int(nA, nB, nC, Z)
-    integer, intent(in) :: nA, nB, nC 
-    real,    intent(in) :: Z
+  real function hyper_semi_semi_int(nA, nB, nC, ZIn, OneMinusZIn)
+    integer,        intent(in) :: nA, nB, nC 
+    real, optional, intent(in) :: ZIn, OneMinusZIn
+    real    :: Z, OneMinusZ
     !\
     ! Calculate hypergeometric series F(a, b, c, z), if
     ! semiinteger a = 0.5 + nA, nA = 0, 1, 2
@@ -113,9 +115,17 @@ contains
     !\
     ! Misc
     !/
-    real :: aPlusI, bPlusI, rMember, LogFactor, OneMinusZ
+    real :: aPlusI, bPlusI, cPlusI, rMember, LogFactor
     character(LEN=*), parameter:: NameSub = 'hyper_semi_semi_int'
     !-----------
+    if(present(ZIn))then
+       Z = ZIn; OneMinusZ = 1.0 - Z
+    elseif(present(OneMinusZIn))then
+       OneMinusZ = OneMinusZIn; Z = 1.0 - OneMinusZ
+    else
+       call CON_stop(&
+            NameSub//': ZIn or OneMinusZIn should be present')
+    end if
     !Real arguments of the hypergeometric function:
     A =  0.50 + real(nA); B = 0.50 + real(nB); C = real(nC)
     if (abs(z).lt.0.50) then
@@ -132,7 +142,7 @@ contains
     end if
     !\
     ! Use the analytic extension to the singular point z=1
-    OneMinusZ = 1.0 - z
+    ! OneMinusZ = 1.0 - z
     ! The difference C - (A+B) is integer. Calculate this.
     !/
     n = nC - (1 + nA + nB)
@@ -156,25 +166,178 @@ contains
           LogFactor = LogFactor + 2.0/real(i) - 1.0/aPlusI - 1.0/bPlusI
           hyper_semi_semi_int = hyper_semi_semi_int + rMember*LogFactor
        end do
+    elseif(n<0)then
+       n = -n
+       rMember      = factorial(nC-1)*factorial(n-1)/(OneMinusZ**n*&
+            gamma_semi(nA)*gamma_semi(nB))
+       hyper_semi_semi_int = rMember
+       aPlusI       = A - (n + 1.0)
+       bPlusI       = B - (n + 1.0)
+       do i = 1, n-1
+          aPlusI = aPlusI + 1.0
+          bPlusI = bPlusI + 1.0
+          rMember = rMember*aPlusI*bPlusI/(real(i)*real(n -i))*(-OneMinusZ)
+          hyper_semi_semi_int = hyper_semi_semi_int + rMember
+       end do
+       aPlusI = aPlusI + 1.0
+       bPlusI = bPlusI + 1.0
+       cPlusI = real(n)
+       rMember = rMember*aPlusI*bPlusI/cPlusI*(-OneMinusZ)
+       LogFactor    = -log(OneMinusZ) + psi_int(1) + psi_int(1+n) - &
+            (psi_semi(nA) + psi_semi(nB))
+       hyper_semi_semi_int = hyper_semi_semi_int + rMember*LogFactor
+       i = 0
+       do while(abs(rMember) .ge. cTolerance_I(iRealPrec))
+          i = i + 1
+          aPlusI = aPlusI + 1.0
+          bPlusI = bPlusI + 1.0
+          cPlusI = cPlusI + 1.0
+          rMember = rMember*aPlusI*bPlusI/(real(i)*cPlusI)*OneMinusZ
+          LogFactor = LogFactor + 1.0/real(i) + 1.0/cPlusI - &
+               1.0/aPlusI - 1.0/bPlusI
+          hyper_semi_semi_int = hyper_semi_semi_int + rMember*LogFactor
+       end do
     else
-       call CON_stop('In '//NameSub//' only n=0 case is implemented')
+       rMember      = factorial(nC-1)*factorial(n-1)/(&
+            gamma_semi(nA + n)*gamma_semi(nB + n))
+       hyper_semi_semi_int = rMember
+       aPlusI       = A - 1.0
+       bPlusI       = B - 1.0
+       do i = 1, n-1
+          aPlusI = aPlusI + 1.0
+          bPlusI = bPlusI + 1.0
+          rMember = rMember*aPlusI*bPlusI/(real(i)*real(n - i))*(-OneMinusZ)
+          hyper_semi_semi_int = hyper_semi_semi_int + rMember
+       end do
+       aPlusI = aPlusI + 1.0
+       bPlusI = bPlusI + 1.0
+       cPlusI = real(n)
+       rMember = rMember*aPlusI*bPlusI/cPlusI*(-OneMinusZ)
+       LogFactor    = -log(OneMinusZ) + psi_int(1) + psi_int(1 + n) - &
+            (psi_semi(nA + n) + psi_semi(nB + n))
+       hyper_semi_semi_int = hyper_semi_semi_int + rMember*LogFactor
+       i = 0
+       do while(abs(rMember) .ge. cTolerance_I(iRealPrec))
+          i = i + 1
+          aPlusI = aPlusI + 1.0
+          bPlusI = bPlusI + 1.0
+          cPlusI = cPlusI + 1.0
+          rMember = rMember*aPlusI*bPlusI/(real(i)*cPlusI)*OneMinusZ
+          LogFactor = LogFactor + 1.0/real(i) + 1.0/cPlusI - &
+               1.0/aPlusI - 1.0/bPlusI
+          hyper_semi_semi_int = hyper_semi_semi_int + rMember*LogFactor
+       end do
+      
     end if
   end function hyper_semi_semi_int
-  !=====================
+  !=====================Toroid functions=========
+  !\
+  ! Calculate functions
+  ! sqrt(2\sinh u)P^{-1}_{n - 1/2}(\cosh u)/(k^3(k^\prime)^n)
+  ! sqrt(2\sinh u)Q^{-1}_{n - 1/2}(\cosh u)/(k^3(k^\prime)^n)
+  ! The multiplier, k^3, is present in a definition 
+  ! of the toroid functions and while calculated detivatives
+  ! the multiplier is taken into account, however, it is not
+  ! calculated, to avoid dividing zero by zero at k=0
+  !/
+  ! Herewith cosh u = (2 - k^2)/(2k^\prime);
+  ! sinh u = k^2/(2k^\prime)
+  ! k^\prime=sqrt(1 - k^2)=exp(-u)
+  real function toroid_p(n, Kappa2In, KappaPrime2In)
+    integer, intent(in):: n  !.ge.0
+    real, optional, intent(in) :: Kappa2In, KappaPrime2In
+    real :: Kappa2, KappaPrime2
+    character(LEN=*), parameter:: NameSub = 'toroid_p'
+    !-----------
+    if(n < 0)call CON_stop(&
+         NameSub//': argument n should be non-negative')
+    if(present(Kappa2In))then
+       toroid_p = 0.250*hyper_semi_semi_int(nA=1, nB=1+n, nC=3, &
+            ZIn = Kappa2In)
+    elseif(present(KappaPrime2In))then
+       toroid_p = 0.250*hyper_semi_semi_int(nA=1, nB=1+n, nC=3, &
+            OneMinusZIn = KappaPrime2In)
+    else
+       call CON_stop(&
+            NameSub//': Kappa2In or KappaPrime2InIn should be present')
+    end if
+  end function toroid_p
+  !====================
+  real function toroid_q(n, KappaPrime2In, Kappa2In)
+    integer, intent(in):: n  !.ge.1
+    real, optional, intent(in) :: KappaPrime2In, Kappa2In
+    character(LEN=*), parameter:: NameSub = 'toroid_q'
+    !-----------
+    if(n < 1)call CON_stop(&
+         NameSub//': argument n should be non-negative')
+    if(present(KappaPrime2In))then
+       toroid_q = hyper_semi_semi_int(nA=1, nB=1+n, nC=n+1, &
+            ZIn = KappaPrime2In)
+    elseif(present(Kappa2In))then
+       toroid_q = hyper_semi_semi_int(nA=1, nB=1+n, nC=n+1, &
+            OneMinusZIn = Kappa2In)
+    else
+       call CON_stop(&
+            NameSub//': Kappa2In or KappaPrime2InIn should be present')
+    end if
+    toroid_q = -toroid_q*cSqrtPi*gamma_semi(n-1)/factorial(n)
+  end function toroid_q
+ !====================
+  real function toroid_q0(KappaPrime2In, Kappa2In)
+    real, optional, intent(in) :: KappaPrime2In, Kappa2In
+    character(LEN=*), parameter:: NameSub = 'toroid_q0'
+    !-----------
+    if(present(KappaPrime2In))then
+       toroid_q0 = 2.0*cPi*hyper_semi_semi_int(nA=1, nB=1, nC=1, &
+            ZIn = KappaPrime2In)
+    elseif(present(Kappa2In))then
+       toroid_q0 = 2.0*cPi*hyper_semi_semi_int(nA=1, nB=1, nC=1, &
+            OneMinusZIn = Kappa2In)
+    else
+       call CON_stop(&
+            NameSub//': Kappa2In or KappaPrime2InIn should be present')
+    end if
+  end function toroid_q0
+  !====================
+  real function scr_inductance(KappaPrime2)
+    real, intent(in):: KappaPrime2
+    !\
+    ! for a superconducting ring calculate the ratio of inductance
+    ! to \mu_0R_\infty as a function of (k^prime)^2. For a given R0 and a,
+    ! R_\infty = sqrt(R_0^2-a^2) and k^\prime=a/(R_0+R_\infty)
+    !\
+    ! Inverse of inductances: from a geven harmonic harmonic and total
+    real:: InvInductance, InvInductanceTotal
+    real:: Tolerance
+    !\
+    ! Loop variable
+    integer::n 
+    !---------------
+    InvInductance = toroid_q0(KappaPrime2In=KappaPrime2)/&
+         (0.25*toroid_p(0, KappaPrime2In=KappaPrime2))
+    Tolerance = InvInductance*cTolerance_I(iRealPrec)
+    InvInductanceTotal = InvInductance 
+    n = 0
+    do while(InvInductance > Tolerance)
+       n = n +1
+       InvInductance = toroid_q(n, KappaPrime2In=KappaPrime2)/&
+            ((0.25 - n*n)*toroid_p(n, KappaPrime2In=KappaPrime2))
+       InvInductanceTotal = InvInductanceTotal + 2.0*InvInductance
+    end do
+    !\
+    ! Invert and accunf for the common multiplier
+    scr_inductance = 2.0*cPi**2/InvInductanceTotal
+  end function scr_inductance
+  !====================
   subroutine calc_elliptic_int_1kind(Z, KElliptic)
     real, intent(in):: Z
     real, intent(out):: KElliptic
     character(LEN=*), parameter:: NameSub = 'calc_elliptic_int_1kind'
     !----------------------------
     ! Calculate 2F1(0.5 +0, 0.5 + 0; 1; Z)
-    KElliptic = 0.50*cPi*hyper_semi_semi_int(0, 0, 1, Z**2)
+    KElliptic = 0.50*cPi*hyper_semi_semi_int(nA=0, nB=0, nC=1, ZIn=Z**2)
   end subroutine calc_elliptic_int_1kind
-  !====================================================================
-    !------------------------------------------------------------------
-    ! Compute the complete elliptic integral of 2nd kind from the series
-    ! representations given in Gradstein abd Ryzhik,
-    ! see formulae 8.114.1 (for 0<k<0.701) and 8.114(3)(for 0.701=<k<1)
-    ! therein::
+  !==================================================================
   subroutine calc_elliptic_int_2kind(ArgK,EElliptic)
 
     real, intent(in):: ArgK
@@ -189,32 +352,9 @@ contains
     real :: aPlusI, bPlusI, rMember, LogFactor, ArgKPrime2 
     real :: OneOver2n2nMinus1
     character(LEN=*), parameter:: NameSub = 'calc_elliptic_int_2kind'
-    !----------------------------
-    ! Compute the CEI of second kind.
-    if (ArgK**2.lt.0.50) then
-       EElliptic = 0.50*cPi*hypergeom(-0.50, 0.50, 1.0, ArgK**2)
-       RETURN
-    end if
-    ! Initialize some variables::
-    ArgKPrime2   = 1.0 -ArgK**2
-    OneOver2n2nMinus1 = 0.50
-    LogFactor    = 0.5*log(16.0/ArgKPrime2) - OneOver2n2nMinus1
-    rMember      = 0.50*ArgKPrime2
-    EElliptic    = 1 + LogFactor*rMember
-    aPlusI       = -0.50
-    bPlusI       =  0.50
-    do i = 2, 1000
-       aPlusI  = aPlusI + 1.0
-       bPlusI  = bPlusI + 1.0
-       rMember = rMember*aPlusI*bPlusI/(i*(i - 1.0))*ArgKPrime2
-       LogFactor         = LogFactor - OneOver2n2nMinus1
-       OneOver2n2nMinus1 = 0.250/(i*(i - 0.50))
-       LogFactor         = LogFactor - OneOver2n2nMinus1
-       EElliptic         = EElliptic + rMember*LogFactor 
-       if(abs(rMember) < cTolerance_I(iRealPrec))RETURN
-    end do
-    call CON_stop(&
-         'In '//NameSub//' convegence with 1000 terms is not achieved')
+    !----------------------------    
+    EElliptic = 0.50*cPi*hyper_semi_semi_int(nA=-1, nB=0, nC=1, ZIn=ArgK**2)
   end subroutine calc_elliptic_int_2kind
-  !=================
+  !===========The toroid functions=================================
+  
 end module ModHyperGeometric
