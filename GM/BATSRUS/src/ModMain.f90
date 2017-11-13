@@ -16,7 +16,11 @@ module ModMain
   use BATL_tree, ONLY: Unused_B
 
   ! Total number of used blocks on all processors
-  use BATL_lib, ONLY: nBlockAll => nNodeUsed
+  use BATL_lib, ONLY: nBlock, nBlockAll => nNodeUsed, Unused_B, &
+       test_string => StringTest, iTest, jTest, kTest, &
+       BLKtest => iBlockTest, PROCTest => iProcTest, xTest, yTest, zTest, &
+       XyzTestCell_D => XyzTest_D, VARtest => iVarTest, DIMtest => iDimTest,&
+       lVerbose
 
   implicit none
 
@@ -226,21 +230,8 @@ module ModMain
   ! Shall we be strict about errors in the input parameter file
   logical :: UseStrict=.true.
 
-  ! Verbosity level (0, 1, 10, 100)
-  integer :: lVerbose = 1
-
   ! Create call sequence in stop_mpi
   logical:: DoWriteCallSequence = .false.
-
-  ! A space separated list of words, typically names of subroutines.
-  character (len=200) :: test_string=''
-
-  ! Location for test
-  integer :: iTest=1, jTest=1, kTest=1, BLKtest=1, PROCtest=0, ITERtest=-1
-  integer :: VARtest=1, DIMtest=1
-  real    :: xTest=0.0, yTest=0.0, zTest=0.0, tTest=0.0
-  real    :: XyzTestCell_D(3)=0.0
-  logical :: UseTestCell=.false., coord_test=.false.
 
   ! Debug logicals
   logical :: okdebug=.false., ShowGhostCells=.true.
