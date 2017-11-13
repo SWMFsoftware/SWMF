@@ -50,7 +50,7 @@ module BATL_lib
   ! Inherited from BATL_tree
   public:: MaxNode, nNode, nNodeUsed, nRoot_D
   public:: MaxLevel, nLevelMin, nLevelMax, MaxCoord_I
-  public:: Unused_B, Unused_BP
+  public:: Unused_B, Unused_BP, Used_GB
   public:: iNode_B, iMortonNode_A, iNodeMorton_I
   public:: DiLevelNei_IIIB, iNodeNei_IIIB
   public:: iStatusNew_A, Refine_, Coarsen_, Unset_
@@ -84,9 +84,9 @@ module BATL_lib
   public:: CellFace_DB, CellFace_DFB, FaceNormal_DDFB
   public:: CellVolume_B, CellVolume_GB
   public:: find_grid_block, interpolate_grid, average_grid_node
-  public:: check_interpolate_amr_gc
   public:: CellMetrice_DDG, CellCoef_DDGB
-  public:: create_grid
+  public:: check_interpolate_amr_gc
+  public:: create_grid, show_grid_cell
 
   ! Inherited from BATL_amr
   public:: BetaProlong
@@ -123,10 +123,13 @@ module BATL_lib
 
   ! Inherited from BATL_test
   public:: lVerbose, StringTest
+  public:: UseTestCell, UseTestXyz
   public:: iProcTest, iBlockTest, iTest, jTest, kTest
   public:: XyzTest_D, xTest, yTest, zTest
+  public:: UseTest2Cell, UseTest2Xyz
   public:: iProcTest2, iBlockTest2, iTest2, jTest2, kTest2
   public:: XyzTest2_D, xTest2, yTest2, zTest2
+  public:: iVarTest, NameVarTest, iDimTest
   public:: read_test_param, find_test_cell
   public:: test_start, test_stop, test_cell
 
