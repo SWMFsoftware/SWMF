@@ -15,13 +15,14 @@ module BATL_grid
 
   private ! except
 
-  public :: init_grid
-  public :: clean_grid
-  public :: create_grid
-  public :: create_grid_block
+  public :: init_grid           ! initializa module
+  public :: clean_grid          ! clean module
+  public :: create_grid         ! set coordinates, sizes, faces, etc.
+  public :: create_grid_block   ! set one block
   public :: fix_grid_res_change
   public :: average_grid_node
   public :: find_grid_block
+  public :: show_grid_cell     ! provide information about grid cell
   public :: interpolate_grid
   public :: interpolate_grid_amr
   public :: interpolate_grid_amr_gc
@@ -1001,6 +1002,76 @@ contains
 
   end subroutine show_grid_block
 
+  !===========================================================================
+  subroutine show_grid_cell(NameCell, i, j, k, iBlock)
+
+    ! Show information about cell i, j, k, iBlock described by NameCell
+
+    use ModNumConst, ONLY: i_DD
+
+    character(len=*), intent(in):: NameCell
+    integer,          intent(in):: i, j, k, iBlock
+
+    integer:: iDim, iSide, Di, Dj, Dk, i1, j1, k1, i2, k2, j2
+    integer:: DiLevel, iNodeNei, iNodeNei_I(4)
+    !------------------------------------------------------------------------
+    write(*,*)
+    write(*,*) NameCell,', Used_GB=', Used_GB(i,j,k,iBlock)
+    if(.not.all(Used_GB(i-1:i+1,j,k,iBlock))) &
+         write(*,*)'Used_GB(i-1:i+1)=', Used_GB(i-1:i+1,j,k,iBlock)
+
+    if(nDim > 1)then
+       if(.not.all(Used_GB(i,j-1:j+1,k,iBlock))) &
+            write(*,*)'Used_GB(j-1:j+1)=', Used_GB(i,j-1:j+1,k,iBlock)
+    end if
+
+    if(nDim > 2)then
+       if(.not.all(Used_GB(i,j,k-1:k+1,iBlock))) &
+            write(*,*)'Used_GB(k-1:k+1)=', Used_GB(i,j,k-1:k+1,iBlock)
+    end if
+
+    write(*,'(a,i4,a,i4,a,i4,a,i8,a,i5)')&
+         'I=',i,' J=',j,' K=',k,' iBlock=',iBlock,' iProc=', iProc
+    write(*,'(a,3es13.5,a,es13.5)') &
+         'x,y,z=', Xyz_DGB(:,i,j,k,iBlock), &
+         ' r=',sqrt(sum(Xyz_DGB(1:nDim,i,j,k,iBlock)**2))
+    write(*,'(a,3es13.5,a,es13.5)') &
+         ' CellSize_D=', CellSize_DB(:,iBlock),&
+         ' CellVolume=', CellVolume_GB(i,j,k,iBlock)
+    if(.not.IsCartesian) write(*,'(a,3f12.5)') &
+         ' CellFace_D=',CellFace_DFB(:,i,j,k,iBlock)
+    do iDim = 1, nDim
+       do iSide = -1, 1, 2
+          ! Left, middle, right: Di = -1,0,1; i1=0,1,3; i2=0,2,3
+
+          Di = iSide*i_DD(1,iDim); i1 = (3*Di + 3)/2; i2 = (3*Di + 4)/2
+          Dj = iSide*i_DD(2,iDim); j1 = (3*Dj + 3)/2; j2 = (3*Dj + 4)/2
+          Dk = iSide*i_DD(3,iDim); k1 = (3*Dk + 3)/2; k2 = (3*Dk + 4)/2
+          DiLevel = DiLevelNei_IIIB(Di,Dj,Dk,iBlock)
+          select case(DiLevel)
+          case(0,1)
+             iNodeNei = iNodeNei_IIIB(i1,j1,k1,iBlock)
+             write(*,'(a,i2,a,i2,a,i2,a,i5,a,i8)')&
+                  'iDim=', iDim,' iSide=', iSide,' DiLevel=', DiLevel,&
+                  ' iProcNei=', iTree_IA(Proc_,iNodeNei), &
+                  ' iBlockNei=',iTree_IA(Block_,iNodeNei)
+          case(-1)
+             iNodeNei_I = &
+                  pack(iNodeNei_IIIB(i1:i2,j1:j2,k1:k2,iBlock), .true.)
+             where(iNodeNei_I == Unset_) iNodeNei_I = iNode_B(iBlock)
+             write(*,'(a,i2,a,i2,a,i2,a,4i5,a,4i8)')                &
+                  'iDim=', iDim,' iSide=', iSide,' DiLevel=', DiLevel, &
+                  ' iProcNei=', iTree_IA(Proc_,iNodeNei_I),            &
+                  ' iBlockNei=', iTree_IA(Block_,iNodeNei_I)
+          case(UnSet_)
+             write(*,'(a,i2,a,i2,a,i5)')&
+                  'iDim=', iDim,' iSide=', iSide,' DiLevel=', DiLevel
+          end select
+       end do
+    end do
+    write(*,*)
+
+  end subroutine show_grid_cell
   !===========================================================================
 
   subroutine show_grid_proc
