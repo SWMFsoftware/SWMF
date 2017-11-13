@@ -168,16 +168,15 @@ OBJ_LINEAR_WRAPPER = \
         ../src/ModMpiInterfaces.o \
         ../src/ModBlasLapack.o \
         ../src/ModLinearSolver.o \
-	linear_solver_matvec_c.o \
 	../src/linear_solver_wrapper.o \
-	test_linear_wrapper.o \
-	test_linear_solver.o
+	linear_solver_matvec.o \
+	linear_solver_matvec_c.o \
+	test_linear_wrapper.o
 
 test_linear_wrapper_exe:
 	@(cd ../src; make blas.o lapack.o ModLinearSolver.o \
 		linear_solver_wrapper.o)
-	@make test_linear_solver.o
-	@make linear_solver_matvec_c.o test_linear_wrapper.o
+	@make linear_solver_matvec.o linear_solver_matvec_c.o test_linear_wrapper.o
 	${LINK.f90} ${NOMAINFLAG} -o test_linear_wrapper.exe \
 		${OBJ_LINEAR_WRAPPER} ${Lflag1} ${CPPLIB}
 
