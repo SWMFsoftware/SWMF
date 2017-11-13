@@ -11,7 +11,7 @@ module SP_ModReadMhData
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
        iComm, &
-       nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       nVarRead, nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
        Proc_, Begin_, End_, X_, Y_, Z_, Bx_, By_, Bz_, &
@@ -45,8 +45,6 @@ module SP_ModReadMhData
   character (len=4)  :: NameFormat
   character (len=20) :: TypeFile
 
-  integer, parameter:: nReadVar = 12
-  
   ! buffer is larger than the data needed to be read in the case 
   ! the input file has additional data
   real:: Buffer_II(nVar,nParticle)
@@ -141,8 +139,8 @@ contains
             n1out      = nParticleInput,&
             VarOut_VI  = Buffer_II)
 
-       State_VIB(1:nReadVar, 1:nParticleInput, iBlock) = &
-            Buffer_II(1:nReadVar, 1:nParticleInput)
+       State_VIB(1:nVarRead, 1:nParticleInput, iBlock) = &
+            Buffer_II(1:nVarRead, 1:nParticleInput)
 
        iGridLocal_IB(Begin_,iBlock) = 1
        iGridLocal_IB(End_,  iBlock) = nParticleInput

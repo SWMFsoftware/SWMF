@@ -8,7 +8,8 @@ module SP_ModRestart
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
        iProc, &
-       nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       RMin, RBufferMin, RBufferMax, RMax, &
        Distribution_IIB,  ParamLocal_IB, &
        Begin_, End_, &
        nBlockParam, nBlockIndexes
@@ -29,7 +30,6 @@ module SP_ModRestart
   public:: set_restart_param, write_restart, read_restart
   public:: NameRestartInDir, NameRestartOutDir
 
-  integer, parameter:: nVarRead = 12
   integer, parameter:: nBufferMax = &
        nBlockParam+nBlockIndexes+nParticle*(nVarRead+nMomentumBin)
   real, allocatable:: Buffer_I(:)
@@ -218,8 +218,8 @@ contains
 
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
     write(UnitTmp_,'(i8,a32)') nParticle,'nParticle'
-    write(UnitTmp_,'(i8,a32)') nLon,'nLon'
-    write(UnitTmp_,'(i8,a32)') nLat,'nLat'
+    write(UnitTmp_,'(i8,a32)') nLon,     'nLon'
+    write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
 
     write(UnitTmp_,'(a)')'#NSTEP'
     write(UnitTmp_,'(i8,a32)')iIterGlobal,'nStep'
@@ -227,6 +227,12 @@ contains
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
     write(UnitTmp_,'(es22.15,a18)')TimeGlobal,'tSimulation'
 
+    write(UnitTmp_,'(a)')'#GRID'
+    write(UnitTmp_,'(es22.15,a18)')RMin,      'RMin'
+    write(UnitTmp_,'(es22.15,a18)')RBufferMin,'RBufferMin'
+    write(UnitTmp_,'(es22.15,a18)')RBufferMax,'RBufferMax'
+    write(UnitTmp_,'(es22.15,a18)')RMax,      'RMin'
+   
     call close_file
 
   end subroutine write_restart_header

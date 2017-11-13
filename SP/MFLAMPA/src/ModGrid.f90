@@ -21,7 +21,7 @@ module SP_ModGrid
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
   public:: Begin_, End_, Shock_, ShockOld_, XMin_, YMin_, ZMin_, Length_
-  public:: nVar, X_, Y_, Z_, D_, S_, LagrID_
+  public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
   public:: NameVar_V
@@ -101,12 +101,13 @@ module SP_ModGrid
   real, allocatable:: State_VIB(:,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar = 27
+  integer, parameter:: nVar     = 27
+  integer, parameter:: nVarRead = 12
   integer, parameter:: &
        !\
-       !------- The following variables MUST be in CONTIGUOUS  order ----------
-       !------- as this is used in subroutine read_mh_data --------------------
-       !------- DO NOT CHANGE WITHOUT CAREFULL CONSIDERATION !!! --------------
+       !-- The following variables MUST be in CONTIGUOUS  order --------------
+       !-- used in subroutines read_mh_data, write_restart, read_restart -----
+       !-- DO NOT CHANGE WITHOUT CAREFULL CONSIDERATION !!! ------------------
        LagrID_ = 1, & ! Lagrangian id
        X_      = 2, & ! 
        Y_      = 3, & ! Cartesian coordinates
