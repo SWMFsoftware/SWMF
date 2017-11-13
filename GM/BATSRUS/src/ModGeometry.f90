@@ -4,10 +4,10 @@
 module ModGeometry
 
   use ModSize
-  use ModMain,       ONLY: UseBody2, ExtraBc_, SolidBc_
-  use ModIO,         ONLY: iUnitOut, write_prefix
-  use ModProcMH,     ONLY: iProc
-  use BATL_grid,     ONLY: Xyz_DGB, CellSize_DB
+  use ModMain,   ONLY: UseBody2, ExtraBc_, SolidBc_
+  use ModIO,     ONLY: iUnitOut, write_prefix
+  use ModProcMH, ONLY: iProc
+  use BATL_lib,  ONLY: Xyz_DGB, CellSize_DB, true_cell => Used_GB
 
   implicit none
   SAVE
@@ -48,9 +48,6 @@ module ModGeometry
 
   ! true when all cells in block (not including ghost cells) are true_cells 
   logical :: true_BLK(MaxBlock)
-
-  ! true cells are cells that are not inside a body
-  logical, allocatable :: true_cell(:,:,:,:)
 
   ! Number of true cells (collected for processor 0)
   integer :: nTrueCells = -1
