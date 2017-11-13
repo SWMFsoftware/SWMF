@@ -19,6 +19,7 @@ help:
 	@echo "   test_line_extract     - test CON_line_extract"
 	@echo "   test_linear_advection - test ModLinearAdvection"
 	@echo "   test_linear_solver    - test ModLinearSolver"
+	@echo "   test_linear_wrapper   - test linear_solver_wrapper"
 	@echo "   test_lookup_table     - test ModLookupTable"
 	@echo "   test_planet_field     - test CON_planet_field"
 	@echo "   test_plot_file        - test ModPlotFile"
@@ -53,6 +54,7 @@ test:
 	-@make test_line_extract
 	-@make test_linear_advection
 	-@make test_linear_solver
+	-@make test_linear_wrapper
 	-@make test_lookup_table
 	-@make test_planet_field
 	-@make test_plot_file
@@ -157,6 +159,37 @@ test_linear_solver:
 		test_linear_solver.tmp test_linear_solver.log \
 						>  test_linear_solver.diff)
 	@ls -l test_linear_solver.diff
+
+#######################################################################
+OBJ_LINEAR_WRAPPER = \
+        ../src/blas.o \
+        ../src/lapack.o \
+        ../src/ModMpi.o \
+        ../src/ModMpiInterfaces.o \
+        ../src/ModBlasLapack.o \
+        ../src/ModLinearSolver.o \
+	linear_solver_matvec_c.o \
+	../src/linear_solver_wrapper.o \
+	test_linear_wrapper.o \
+	test_linear_solver.o
+
+test_linear_wrapper_exe:
+	@(cd ../src; make blas.o lapack.o ModLinearSolver.o \
+		linear_solver_wrapper.o)
+	@make test_linear_solver.o
+	@make linear_solver_matvec_c.o test_linear_wrapper.o
+	${LINK.f90} ${NOMAINFLAG} -o test_linear_wrapper.exe \
+		${OBJ_LINEAR_WRAPPER} ${Lflag1} ${CPPLIB}
+
+test_linear_wrapper:
+	@echo test_linear_wrapper starting 	>  test_linear_wrapper.diff
+	@make test_linear_wrapper_exe		>> test_linear_wrapper.diff
+	@echo ./test_linear_wrapper.exe		>> test_linear_wrapper.diff
+	-@(./test_linear_wrapper.exe > test_linear_wrapper.tmp)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+		test_linear_wrapper.tmp test_linear_wrapper.log \
+						>  test_linear_wrapper.diff)
+	@ls -l test_linear_wrapper.diff
 
 #######################################################################
 OBJ_LINEAR_ADVECTION = \
