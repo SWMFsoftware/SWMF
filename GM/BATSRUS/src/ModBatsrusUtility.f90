@@ -530,30 +530,16 @@ end function test_cell_value
 
 subroutine set_oktest(str, oktest, oktest_me)
 
-  use ModProcMH
-  use ModMain, ONLY : iteration_number,Ttest,iterTEST,PROCtest,lVerbose, &
-       time_accurate,time_simulation,test_string
+  use BATL_lib, ONLY: test_start, iProcTest, iProcTest2, iProc
+
   implicit none
 
   character (len=*) :: str
   logical :: oktest, oktest_me
   !----------------------------------------------------------------------------
 
-  if(iteration_number>iterTEST .or. &
-       (time_accurate .and. time_simulation>Ttest))then
-     oktest = index(' '//test_string, ' '//str//' ') > 0
-     oktest_me = oktest .and. iProc==PROCtest
-     if(oktest_me)then
-        write(*,*)str,' at iter=',iteration_number
-     else if(lVerbose>=100)then
-        write(*,*)str,' CALLED by me=',iProc,' at iter=',iteration_number
-     else if(iProc==PROCtest.and.lVerbose>=10)then
-        write(*,*)str,' CALLED at iter=',iteration_number
-     endif
-  else
-     oktest    = .false.
-     oktest_me = .false.
-  end if
+  call test_start(str, oktest, DoTestAll=.true.)
+  oktest_me = oktest .and. (iProc == iProcTest .or. iProc == iProcTest2)
 
 end subroutine set_oktest
 
@@ -909,142 +895,6 @@ subroutine test_error_report
   call error_report('PRINT',0.,iErr1,.true.)
 
 end subroutine test_error_report
-
-!==============================================================================
-subroutine find_test_cell
-
-  ! Find cell indices corresponding to Xtest, Ytest, Ztest coordinates
-  ! or print out cell coordinates corresponding to Itest, Jtest, Ktest, ...
-
-  use ModProcMH
-  use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, &
-       xTest, yTest, zTest, XyzTestCell_D, lVerbose, Coord_Test, UseTestCell
-  use ModParallel, ONLY: NOBLK, neiLEV, neiPE, neiBLK
-  use ModGeometry, ONLY: r_BLK, true_cell
-  use BATL_lib, ONLY: nBlock, Unused_B, &
-       Xyz_DGB, CellSize_DB, CellFace_DFB, CellVolume_GB, &
-       IsCartesian, MaxDim, find_grid_block, nDim
-  use ModMpi
-
-  implicit none
-
-  logical :: DoBroadcast
-  integer :: IjkTest_D(MaxDim), iDir, iError
-
-  character(len=*), parameter:: NameSub = 'find_test_cell'
-  !----------------------------------------------------------------------------
-
-  DoBroadcast = .false.
-
-  if(.not.coord_test)then
-     if(iProc == ProcTest)then
-        if(1 <= BLKtest .and. BLKtest <= nBlock)then
-           if(Unused_B(BLKtest))then
-              if(lVerbose>0) write(*,*)'Test cell is in an unused block'
-           else
-              XyzTestCell_D = Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest)
-              DoBroadcast = .true.
-           end if
-        else
-           if(lVerbose>0) write(*,*)'BLKtest=',BLKtest,&
-                ' is out of 1..nBlock=',nBlock
-        end if
-     end if
-     call MPI_Bcast(DoBroadcast,1,MPI_LOGICAL,PROCtest,iComm,iError)
-     if (.not. DoBroadcast) RETURN
-
-  else   ! if a coord_test
-     DoBroadcast = .true.
-
-     call find_grid_block( (/ xTest, yTest, zTest /), &
-          ProcTest, BlkTest, IjkTest_D)
-
-     if(ProcTest < 0)then
-
-        if(iProc==0)then
-           write(*,*) NameSub,' xTest, yTest, zTest=', xTest, yTest, zTest
-           write(*,*) NameSub,' WARNING test point was not found! Setting defaults.'
-        end if
-
-        iTest = 1
-        jTest = 1
-        kTest = 1
-        BlkTest  = 1
-        ProcTest = 0
-        xTest = 0.0
-        yTest = 0.0
-        zTest = 0.0
-        XyzTestCell_D = 0.0
-     else        
-        iTest = IjkTest_D(1)
-        jTest = IjkTest_D(2)
-        kTest = Ijktest_D(3)
-        if(iProc==ProcTest) XyzTestCell_D = Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest)
-     end if
-
-  end if
-  if (DoBroadcast) then
-
-     call MPI_Bcast(XyzTestCell_D, 3, MPI_REAL, ProcTest, iComm, iError)
-     if(.not.coord_test)then
-        xTest = XyzTestCell_D(1)
-        yTest = XyzTestCell_D(2)
-        zTest = XyzTestCell_D(3)
-     end if
-     if(iProc == ProcTest .and. UseTestCell .and. lVerbose>0)then
-        write(*,*)
-        write(*,*)'Selected test cell, true_cell=', true_cell(iTest,jTest,kTest,BlkTest)
-        if(.not.all(true_cell(iTest-1:iTest+1,jTest,kTest,BlkTest))) &
-             write(*,*)'true_cell(iTest-1:iTest+1)=', &
-             true_cell(iTest-1:iTest+1,jTest,kTest,BlkTest)
-
-        if(nDim > 1)then
-           if(.not.all(true_cell(iTest,jTest-1:jTest+1,kTest,BlkTest))) &
-                write(*,*)'true_cell(jTest-1:jTest+1)=', &
-                true_cell(iTest,jTest-1:jTest+1,kTest,BlkTest)
-        end if
-
-        if(nDim > 2)then
-           if(.not.all(true_cell(iTest,jTest,kTest-1:kTest+1,BlkTest))) &
-                write(*,*)'true_cell(kTest-1:kTest+1)=', &
-                true_cell(iTest,jTest,kTest-1:kTest+1,BlkTest)
-        end if
-
-        write(*,'(a,i4,a,i4,a,i4,a,i8,a,i5)')&
-             'I=',Itest,' J=',Jtest,' K=',Ktest,&
-             ' BLK=',BLKtest,' PE=',PROCtest
-        write(*,'(a,3es13.5,a,es13.5)') &
-             'x,y,z=',Xyz_DGB(:,Itest,Jtest,Ktest,BLKtest), &
-             ' r=',r_BLK(iTest,jTest,kTest,BLKtest)
-        write(*,'(a,3es13.5,a,es13.5)') &
-             ' CellSize_D=',CellSize_DB(:,BLKtest),&
-             ' CellVolume=',CellVolume_GB(iTest,jTest,kTest,BLKtest)
-        if(.not.IsCartesian) write(*,'(a,3f12.5)') &
-             ' CellFace_D=',CellFace_DFB(:,iTest,jTest,kTest,BLKtest)
-  	do iDir = 1, 6
-  	   select case(neiLEV(iDir,BLKtest))
-           case(0,1)
-              write(*,'(a,i2,a,i2,a,i5,a,i8)')&
-                   'idir=',idir,' neiLEV=',neiLEV(idir,BLKtest),&
-                   ' neiPE=',neiPE(1,idir,BLKtest),&
-                   ' neiBLK=',neiBLK(1,idir,BLKtest)
-           case(-1)
-              write(*,'(a,i2,a,i2,a,4i5,a,4i8)')&
-                   'idir=',idir,' neiLEV=',neiLEV(idir,BLKtest),&
-                   ' neiPE=',neiPE(:,idir,BLKtest),&
-                   ' neiBLK=',neiBLK(:,idir,BLKtest)
-  	   case(NOBLK)
-  	      write(*,'(a,i2,a,i5)')&
-                   'idir=',iDir,' neiLEV=',neiLEV(iDir,BLKtest)
-  	   end select
-  	end do
-  	write(*,*)
-
-     end if
-
-  end if
-
-end subroutine find_test_cell
 
 !=============================================================================
 subroutine fill_edge_corner(Array_G)
