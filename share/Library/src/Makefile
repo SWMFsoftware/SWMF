@@ -31,7 +31,6 @@ OBJECTS = \
 	ModKind.o\
 	ModLinearAdvection.o\
 	ModLinearSolver.o\
-	linear_solver_wrapper.o\
 	ModLookupTable.o\
 	ModMpiInterfaces.o\
 	ModMpi.o\
