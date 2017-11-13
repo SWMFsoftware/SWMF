@@ -25,8 +25,8 @@ contains
     use ModUtilities, ONLY: flush_unit, split_string, open_file
     use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
          iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
-    use BATL_lib, ONLY: Xyz_DGB
     use CON_axes, ONLY: transform_matrix
+    use BATL_lib, ONLY: Xyz_DGB, UseTestXyz
     use ModMpi
 
     implicit none
@@ -201,7 +201,7 @@ contains
              call open_file(unit_log, FILE=filename)
              if (index(NameAll,'pnt')>0 .or. index(NameAll,'PNT')>0 &
                   .or. index(NameAll,'test')>0) then
-                if (coord_test) then
+                if (UseTestXyz) then
                    write(unit_log,'(a,3es13.5)')  &
                         'test point (X,Y,Z): ',Xtest,Ytest,Ztest
                 else
