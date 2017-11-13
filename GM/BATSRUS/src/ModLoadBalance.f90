@@ -253,7 +253,7 @@ contains
     use ModPIC, ONLY: UsePic, pic_find_node, IsPicNode_A, DoBalancePicBlock
 
     use BATL_lib, ONLY: MaxNode, nNode, iTree_IA, Status_, Proc_, Block_, &
-         Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl
+         Used_, nTimeLevel, iTimeLevel_A, iNode_B, regrid_batl, find_test_cell
     use ModBatlInterface, ONLY: set_batsrus_grid, set_batsrus_state
     use ModTimeStepControl, ONLY: UseMaxTimeStep, DtMax, DtMin
     use ModUserInterface ! user_action, user_block_type

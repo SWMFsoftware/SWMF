@@ -30,6 +30,7 @@ contains
     use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, ExplBlock_
     use ModParallel, ONLY: init_mod_parallel
     use ModWriteProgress, ONLY: write_progress, write_runtime_values
+    use BATL_lib,    ONLY: find_test_cell
 
     ! Local variables
 
@@ -308,8 +309,8 @@ contains
     use ModMessagePass, ONLY: exchange_messages
     use ModUserInterface ! user_initial_perturbation
     use ModProcMH, ONLY: iProc
-    use BATL_lib, ONLY: init_amr_criteria
     use ModLoadBalance, ONLY: load_balance, select_stepping
+    use BATL_lib, ONLY: init_amr_criteria, find_test_cell
 
     ! Local variables
     character(len=*), parameter :: NameSub = 'BATS_init_session '
