@@ -33,9 +33,9 @@ contains
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
     use ModBlockData, ONLY: clean_block_data
-    use BATL_lib, ONLY: read_region_param, &
-         BetaProlong,&
-         init_mpi, IsCartesianGrid, IsCartesian, &
+    use BATL_lib, ONLY: &
+         read_region_param, read_test_param, NameVarTest, iVarTest, &
+         BetaProlong, init_mpi, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
     use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits,& 
          DoAmr
@@ -190,8 +190,6 @@ contains
     character(len=10) :: NameBoundary_I(zMaxBc_-SolidBc_+1+Coord3MaxBc_)
     integer :: iNameBoundary, nNameBoundary
     real    :: BoundaryStateDim_V(1:nVar)
-
-    character(len=10) :: NameTestVar
 
     !-------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
@@ -485,41 +483,13 @@ contains
        case("#TESTINFO")
           call read_var('DoWriteCallSequence', DoWriteCallSequence)
 
-       case("#TEST")
-          call read_var('StringTest',test_string)
-
-       case("#TESTXYZ")
-          coord_test=.true.
-          UseTestCell=.true.
-          call read_var('xTest',Xtest)
-          call read_var('yTest',Ytest)
-          call read_var('zTest',Ztest)
-
-       case("#TESTIJK")
-          coord_test=.false.
-          UseTestCell=.true.
-          call read_var('iTest',Itest)
-          call read_var('jTest',Jtest)
-          call read_var('kTest',Ktest)
-          call read_var('iBlockTest',BLKtest)
-          call read_var('iProcTest',PROCtest)
-
-       case("#TESTVAR")
-          call read_var('NameTestVar', NameTestVar, IsLowerCase=.true.)
-          call get_iVar(NameTestVar, VarTest)
-
-       case("#TESTDIM")
-          call read_var('iDimTest ',DIMtest)
-
-       case("#TESTTIME")
-          call read_var('nIterTest',ITERtest)
-          call read_var('TimeTest',Ttest)
+       case("#VERBOSE", "#TEST", "#TESTXYZ", "#TEST2XYZ", "#TESTIJK", &
+            "#TEST2IJK", "#TESTVAR", "#TESTDIM")
+          call read_test_param(NameCommand)
+          if(NameCommand == "#TESTVAR") call get_iVar(NameVarTest, iVarTest)
 
        case("#STRICT")
           call read_var('UseStrict',UseStrict)
-
-       case("#VERBOSE")
-          call read_var('lVerbose',lVerbose)
 
        case("#DEBUG")
           call read_var('DoDebug',okdebug)
@@ -2483,16 +2453,6 @@ contains
       ! Initialize StartTime to the default values
       ! For SWMF it is set during 'CHECK'
       if(IsStandAlone)call time_int_to_real(iStartTime_I, StartTime)
-
-      iterTEST        =-1
-      tTEST           =1.0E30
-      Itest           =1
-      Jtest           =1
-      Ktest           =1
-      BLKtest         =1
-      PROCtest        =0
-      VARtest         =1
-      DIMtest         =1
 
       nStage        = 2
       Cfl           = 0.8
