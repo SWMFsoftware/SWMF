@@ -24,7 +24,8 @@
 !April 2011 - Sources for PUI 
 !July 2012 - Use sonic Mach number to define Region 1 - Region 4 boundary 
 !November 2017 - use Solar Wind Pressure and Temp for the Mach Number for REGIONS definition 
-! for inner boundary the solar pressure is iostropic (dont have any dependence with magnetic field) 
+! for inner boundary the solar pressure is iostropic (dont have any dependence with magnetic field
+! took off inner boundary at 30AU 
 !==============================================================================
 module ModUser
 
@@ -44,6 +45,7 @@ module ModUser
        IMPLEMENTED4  => user_set_cell_boundary,         &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
+       IMPLEMENTED7  => user_update_states,             &
        IMPLEMENTED8  => user_action,                    & 
        IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
@@ -65,6 +67,8 @@ module ModUser
   real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
 
+  integer :: iTableSolarWind = -1 ! initialization is needed
+ 
   ! SWH variables.
   !/
   real :: SWH_a_dim=0.0  , &
@@ -166,6 +170,15 @@ module ModUser
  !some extra variables for constant pressure at inner boundary
   real :: pPUI_30 = 0.0 , &
           pSolarWind_30 = 0.0
+!merav
+  ! Variables for the reflective shape
+  real:: rCylinder = -1.0, zCylinder = -1.0
+  real:: rCrescent = -1.0, xCrescentCenter = -1.0
+  real:: rHelioPause = -1.0, TempHelioPauseSi = -1.0, TempHelioPause = -1.0
+
+  ! Freeze neutrals (with user_update_states
+  logical:: DoFreezeNeutral = .false.
+
 contains
 
   !=========================================================================
@@ -746,8 +759,188 @@ contains
   end subroutine user_initial_perturbation
 
   !=====================================================================
+ subroutine user_update_states(iBlock)
+
+    use ModUpdateState, ONLY: update_state_normal
+
+    use ModAdvance, ONLY: StateOld_VGB, State_VGB, EnergyOld_CBI, Energy_GBI
+    use ModGeometry, ONLY: rMin_BLK
+
+!merav
+    !C.P. edited
+    real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
+
+    real :: pSolarWind,pPUI, p_frac, Ptot, Pmag, PmagEquator
+
+    integer,intent(in):: iBlock
+
+    integer:: i, j, k
+
+    !------------------------------------------------------------------
+    call update_state_normal(iBlock)
+   if(DoFreezeNeutral)then
+
+       ! Set neutrals back to previous state
+       do k=1, nK; do j=1, nJ; do i=1, nI
+          State_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) = StateOld_VGB(NeuRho_:Ne4P_,i,j,k,iBlock)
+          Energy_GBI(i,j,k,iBlock,2:) = EnergyOld_CBI(i,j,k,iBlock,2:)
+       end do; end do; end do
+
+       RETURN
+    end if
+
+    ! No need to check blocks outside:
+    if(rMin_BLK(iBlock) > rBody) RETURN
+
+    do k=1, nK; do j=1, nJ; do i=1, nI
+       if(r_BLK(i,j,k,iBlock)  > rBody) CYCLE
+
+       if(iTableSolarwind > 0)then
+         ! Calculate the time dependent solar wind
+          call calc_time_dep_sw(i,j,k,iBlock)
+       else
+          ! Retain initial condition if time dependent solar wind is not used
+          State_VGB(Rho_:p_,i,j,k,iBlock) = StateOld_VGB(Rho_:p_,i,j,k,iBlock)
+          State_VGB(SWHrho_:SWHp_,i,j,k,iBlock) = StateOld_VGB(SWHRho_:SWHp_,i,j,k,iBlock)
+          State_VGB(Pu3Rho_:Pu3p_,i,j,k,iBlock) = StateOld_VGB(Pu3Rho_:Pu3p_,i,j,k,iBlock)
+          Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1)
+       endif
+
+    end do; end do; end do
+
+  contains
+    !======================================================================
+
+  subroutine calc_time_dep_sw(i,j,k,iBlock)
+
+      use BATL_lib,       ONLY: Xyz_DGB
+      use ModCoordTransform, ONLY: rot_xyz_sph
+      use ModLookupTable,    ONLY: interpolate_lookup_table
+      use ModEnergy,      ONLY: calc_energy
+
+      integer,intent(in):: i, j, k, iBlock
+
+      ! variables for Solar Cycle
+      real :: Rho, Ur, Temp, p, x, y, z, r, Latitude
+      real :: Bsph_D(3), Vsph_D(3)
+!merav
+      real :: b_D(3), v_D(3),vPUI_D(3), vPUISph_D(3)
+      real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD,Sph_D)
+
+      real, parameter:: LengthCycle = 662206313.647 ! length of solar cycle
+
+      real :: TimeCycle ! holds current time of the simulation
+      real :: Value_I(3)
+      real :: SinTheta
+      !---------------------------------------------------------------------
+
+      ! calculate the latitude of the cell
+      x = Xyz_DGB(1,i,j,k,iBlock)
+      y = Xyz_DGB(2,i,j,k,iBlock)
+      z = Xyz_DGB(3,i,j,k,iBlock)
+      r = r_BLK(i,j,k,iBlock)
+
+      XyzSph_DD = rot_xyz_sph(x,y,z)
+
+      SinTheta = sqrt(x**2+y**2)/r
+
+      ! calculating latitude of the cell
+      Latitude = cRadToDeg*asin(z/r)
+
+      ! calculating time relative to the solar cycle
+      TimeCycle = modulo(Time_Simulation, LengthCycle)
+
+      ! interpolating the value of Rho, Vr, and Temp
+      ! at the cell from the lookup table
+!!merav      call interpolate_lookup_table(iTableSolarwind, Latitude, TimeCycle, &
+!!merav           Value_I)
+
+      Ur  = Value_I(1)*Io2No_V(UnitU_)
+      Rho = Value_I(2)*Io2No_V(UnitRho_)
+      Temp= Value_I(3)*Io2No_V(UnitTemperature_)
+      p = 2.0*Rho*Temp
+
+      ! Spherical velocity, Vr, Vtheta, Vphi constant with  radial distance
+      Vsph_D    = (/ Ur, 0.0, 0.0 /)
+
+      !\
+      !monopole with By negative and a time varying B
+      ! time-dependent behavior of B taken from Michael et al. 2015
+      !/
+      Bsph_D(1) = (SQRT(0.5)/rBody**2)*(9.27638+ &
+           7.60832d-8*TimeCycle-1.91555*SIN(1.28737d-8*TimeCycle)+ &
+           0.144184*SIN(2.22823d-8*TimeCycle)+ &
+           47.7758*SIN(2.18788d-10*TimeCycle)+ &
+           83.5522*SIN(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
+      Bsph_D(2) =  0.0                             ! Btheta
+      Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SWH_Ux/Ur ! Bphi for vary B
+      !Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
+
+     !\
+      !for dipole with a time varying B
+      !/
+      !Bsph_D(1) = sign((SQRT(0.5)/rBody**2)*(9.27638+ &
+      !     7.60832d-8*TimeCycle-1.91555*SIN(1.28737d-8*TimeCycle)+ &
+      !     0.144184*SIN(2.22823d-8*TimeCycle)+ &
+      !     47.7758*SIN(2.18788d-10*TimeCycle)+ &
+      !     83.5522*SIN(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_), z) ! Br
+      !Bsph_D(2) =  0.0                             ! Btheta
+      !Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
+      !Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt*SWH_Ux/Ur ! Bphi for vary B
+
+      ! Scale density, pressure, and magnetic field with radial distance
+      Rho = Rho*(rBody/r)**2
+      p     = p*(rBody/r)**(2*Gamma)
+      Bsph_D(1) = Bsph_D(1)*(rBody/r)**2
+      Bsph_D(3) = Bsph_D(3)*(rBody/r)
+
+!merav      ! Setting the state variables
+!      State_VGB(Rho_,i,j,k,iBlock) = Rho
+
+!      ! Velocity converted to 3 components of momentum in Cartesian coords
+!      State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = matmul(XyzSph_DD, Rho*Vsph_D)
+
+      ! Spherical magnetic field converted to Cartesian components
+      State_VGB(Bx_:Bz_,i,j,k,iBlock) = matmul(XyzSph_DD, Bsph_D)
+
+      ! Sets pressure and energy only for the ion fluid
+!      State_VGB(p_,i,j,k,iBlock) = p
+      call calc_energy(i, i, j, j, k, k, iBlock, 1, 1)
+
+!merav
+             !velocity components in cartesian coordinates
+       v_D = matmul(XyzSph_DD, Vsph_D)
+       vPUI_D = matmul(XyzSph_DD, VPUIsph_D)
+       ! density and pressure
+       State_VGB(SWHRho_,i,j,k,iBlock) = SWH_rho * (rBody/r)**2
+       State_VGB(SWHP_,i,j,k,iBlock)   = SWH_p   * (rBody/r)**(2*Gamma)
+
+       ! momentum
+       State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) = State_VGB(SWHrho_,i,j,k,iBlock)*v_D
+       State_VGB(Pu3Rho_,i,j,k,iBlock) = Pu3_rho * (rBody/r)**2
+       State_VGB(Pu3P_,i,j,k,iBlock)   = Pu3_p   * (rBody/r)**(2*Gamma)
+
+       !momentum
+       State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock) = &
+            State_VGB(Pu3Rho_,i,j,k,iBlock)*vPUI_D
+
+
+       State_VGB(Rho_,i,j,k,iBlock)  = &
+            State_VGB(SWHRho_,i,j,k,iBlock) +  State_VGB(Pu3Rho_,i,j,k,iBlock)
+       State_VGB(P_,i,j,k,iBlock) = &
+            State_VGB(SWHP_,i,j,k,iBlock) + State_VGB(Pu3P_,i,j,k,iBlock)
+       !momentum
+       State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)  = &
+            State_VGB(SWHRhoUx_:SWHRhoUz_,i,j,k,iBlock) &
+            + State_VGB(Pu3RhoUx_:Pu3RhoUz_,i,j,k,iBlock)
+!merav
+    end subroutine calc_time_dep_sw
+
+  end subroutine user_update_states
+  !=====================================================================
 
   subroutine user_action(NameAction)
+	
     use ModMain
     use ModPhysics
     use ModMultiFluid
