@@ -198,7 +198,6 @@ contains
              Distribution_IIB(i, iParticle, iBlock) = Buffer_I(nBuffer)
           end do
        end do
-
     end do
 
   end subroutine read_restart
@@ -215,6 +214,9 @@ contains
     NameFile = trim(NameRestartOutDir)//trim(NameHeaderFile)
 
     call open_file(file=NameFile, NameCaller=NameSub)
+
+    write(UnitTmp_,'(a)')'#RESTART'
+    write(UnitTmp_,'(a)')'T'
 
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
     write(UnitTmp_,'(i8,a32)') nParticle,'nParticle'
