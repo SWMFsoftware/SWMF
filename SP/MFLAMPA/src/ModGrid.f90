@@ -50,8 +50,9 @@ module SP_ModGrid
   ! Boundaries of the buffer layer between SC and IH Rs
   real:: RBufferMin=-1.
   real:: RBufferMax=-1.
-  ! Mark that grid has been set
-  logical:: IsSetGrid = .false.
+  ! Mark that grid or lines' origin have been set
+  logical:: IsSetGrid   = .false.
+  logical:: IsSetOrigin = .false.
   !----------------------------------------------------------------------------
   !----------------------------------------------------------------------------
   ! Node number based on the field line identified by 2 angular grid indices,
@@ -184,52 +185,70 @@ module SP_ModGrid
 
 contains
   
-  subroutine set_grid_param
+  subroutine set_grid_param(TypeAction)
     use ModReadParam, ONLY: read_var
     use ModNumConst, ONLY: cPi
+    character (len=*), intent(in):: TypeAction ! What to do  
     character(len=*), parameter:: NameSub = 'SP:set_grid_param'
     !--------------------------------------------------------------------------
-    call read_var('ROrigin', ROrigin)
-    call read_var('RBufferMin', RBufferMin)
-    call read_var('RBufferMax', RBufferMax)
-    call read_var('RMax',RMax)
-    if(ROrigin < 0.0 .or.RBufferMin < 0.0 .or.RBufferMax < 0.0 .or.RMax < 0.0)&
-         call CON_stop(NameSub//&
-         ': all values ROrigin, RBufferMin, RBufferMax, RMax must be set to positive values')
-    if(RMax < RBufferMax .or. RMax < RBufferMin .or. RMax < ROrigin .or. &
-         RBufferMax < RBufferMin .or. RBufferMax < ROrigin .or. &
-         RBufferMin < ROrigin)&
-         call CON_stop(NameSub//&
-         ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
-    call read_var('LonMin', LonMin)
-    call read_var('LonMax', LonMax)
-    if(LonMax <= LonMin)&
-         call CON_stop(NameSub//': Origin surface grid is inconsistent')
-    ! convert angels from degrees to radians
-    LonMax = LonMax * cPi / 180
-    LonMin = LonMin * cPi / 180
-    ! angular grid's step
-    DLon = (LonMax - LonMin) / nLon
+    select case(TypeAction)
+    case('#ORIGIN')
+       call read_var('ROrigin', ROrigin)
+       call read_var('LonMin', LonMin)
+       call read_var('LatMin', LatMin)
+       call read_var('LonMax', LonMax)
+       call read_var('LatMax', LatMax)
 
-    call read_var('LatMin', LatMin)
-    call read_var('LatMax', LatMax)
-    if(LatMax <= LatMin)&
-         call CON_stop(NameSub//': Origin surface grid is inconsistent')
-    ! convert angels from degrees to radians
-    LatMax = LatMax * cPi / 180
-    LatMin = LatMin * cPi / 180
-    ! angular grid's step
-    DLat = (LatMax - LatMin) / nLat
+       ! check consistency
+       if(LonMax <= LonMin .or. LatMax <= LatMin)&
+            call CON_stop(NameSub//': Origin surface grid is inconsistent')
+       if(ROrigin < 0.0)&
+            call CON_stop(NameSub//&
+            ': ROrigin, if set, must have a positive values')
+       if(any((/RBufferMin, RBufferMax, RMax/) < ROrigin) .and. IsSetGrid)&
+            call CON_stop(NameSub//&
+            ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
 
-    IsSetGrid = .true.
+       ! convert angels from degrees to radians
+       LonMax = LonMax * cPi / 180
+       LonMin = LonMin * cPi / 180
+       ! angular grid's step
+       DLon = (LonMax - LonMin) / nLon
+
+       ! convert angels from degrees to radians
+       LatMax = LatMax * cPi / 180
+       LatMin = LatMin * cPi / 180
+       ! angular grid's step
+       DLat = (LatMax - LatMin) / nLat
+
+       IsSetOrigin = .true.
+    case('#GRID')
+       call read_var('RMin',RMin)
+       call read_var('RBufferMin', RBufferMin)
+       call read_var('RBufferMax', RBufferMax)
+       call read_var('RMax',RMax)
+
+       ! check consistency
+       if(RBufferMin < 0.0 .or.RBufferMax < 0.0 .or.RMax < 0.0)&
+            call CON_stop(NameSub//&
+            ': RBufferMin, RBufferMax, RMax must be set to positive values')
+       if(any((/RMax, RBufferMax/) < RBufferMin) .or. RMax < RBufferMax .or. &
+            any((/RBufferMin, RBufferMax, RMax/) < ROrigin) .and. IsSetOrigin)&
+            call CON_stop(NameSub//&
+            ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
+
+       IsSetGrid = .true.
+    end select
   end subroutine set_grid_param
 
   !============================================================================
 
-  subroutine init_grid
+  subroutine init_grid(DoReadInput)
     ! allocate the grid used in this model
     use ModUtilities, ONLY: check_allocate
     use ModCoordTransform, ONLY: rlonlat_to_xyz
+
+    logical, intent(in):: DoReadInput
     integer:: iError
     integer:: iLat, iLon, iNode, iBlock, iProcNode
     character(LEN=*),parameter:: NameSub='SP:init_grid'
@@ -239,6 +258,9 @@ contains
     !/
     if(.not.IsSetGrid)&
          call CON_stop(NameSub//': grid is not set in PARAM.in file')
+    if(.not.IsSetOrigin .and. .not. DoReadInput)&
+         call CON_stop(NameSub//": neither lines' origin is set, "//&
+         "nor input files are provided; change PARAM.in file!!!")
     !\
     ! distribute nodes between processors
     !/
@@ -299,6 +321,15 @@ contains
     !/
     Distribution_IIB = tiny(1.0)
     State_VIB = -1
+
+    if(DoReadInput)then
+       if(IsSetOrigin)&
+            write(*,*)NameSub//": input files are provided, "//&
+            "but lines' origin is set in PARAM.in. "//&
+            "The latter will be IGNORED!!!"
+       RETURN
+    end if
+    
     do iLat = 1, nLat
        do iLon = 1, nLon
           iNode = iNode_II(iLon, iLat)

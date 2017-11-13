@@ -121,8 +121,8 @@ contains
           call read_var('nStep',iIterGlobal)
        case('#TIMESIMULATION')
           call read_var('tSimulation',TimeGlobal)
-       case('#GRID')
-          call set_grid_param
+       case('#GRID', '#ORIGIN')
+          call set_grid_param(NameCommand)
        case('#DORUN')
           call read_var('DoRun',DoRun)
        case('#SAVEPLOT')
@@ -153,7 +153,7 @@ contains
     iIterGlobal = 0
     TimeGlobal = TimeStart
     call init_advance_const
-    call init_grid
+    call init_grid(DoRestart .or. DoReadMhData)
     if(DoRestart)&
          call read_restart
   end subroutine initialize
