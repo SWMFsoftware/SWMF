@@ -3,11 +3,12 @@
 # include <cmath>
 # include <mpi.h>
 # include "linear_solver_matvec_c.h"
+# include <stdio.h>
 
 int main(){
 
   // a test of the backward implicit solver for 1D diffusion equation
-  // second type of boundary condition is used, i.e., dT/dx =0
+  // first type of boundary condition is used, i.e., T(at two ends) =0
   int n=101; // number of true cells
  
   //alpha = 0.1; // the coefficient (dt)/(dx)^2, defined in MatVec_C.cpp
@@ -21,7 +22,7 @@ int main(){
   int iError;
   int lTest=0;
 
-  //set the init condition as a symmetric triangle
+  //set the init condition as a sin function
   // the Sol_I contains the first initial guess the same as Rhs_I
   double Rhs_I[n];
   double Sol_I[n];
