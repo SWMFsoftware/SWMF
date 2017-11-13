@@ -1,5 +1,4 @@
 !instrumental broadening
-!check boxes
 
 program spectrum
 
@@ -7,6 +6,13 @@ program spectrum
        cPi, rSun
 
   implicit none
+
+  ! Variables for DEM calculation
+  logical                     :: DoDEM = .false., DoSpectrum = .false.
+  logical                     :: IsNormalizeDEM
+  real,allocatable            :: DEM_I(:), Te_I(:)
+  real                        :: LogTeMinDEM, LogTeMaxDEM, DLogTeDEM
+  character(len=200)          :: NameDEMFile = 'dem.out'
 
   ! Logical variables of running modes
   logical                     :: IsVerbose =  .false., IsDebug = .false.
@@ -157,6 +163,11 @@ program spectrum
      call set_data_block
   endif
 
+  if(DoDEM)then
+     call calc_dem
+     if(.not. DoSpectrum)STOP
+  endif
+
   call read_table
 
   nLineAll = min(nMaxLine,nLineFound)
@@ -184,6 +195,80 @@ program spectrum
 
 contains
 
+  !==========================================================================
+  subroutine calc_dem
+
+    use ModPlotFile, ONLY          : save_plot_file
+
+    integer                        :: nLogTeDEM
+    integer                        :: iTe, i, j, k
+    real                           :: DTe, DxLocal
+    integer, allocatable           :: Counter_I(:)
+
+    ! Variables to save file.
+    character(len=5)               :: TypeFileDEM = 'ascii'
+    character(len=200)             :: StringHeaderDEM = &
+         '[K] [cm^-5 K^-1]'
+
+    character(len=*), parameter    :: NameSub = 'calc_dem'
+    !------------------------------------------------------------------------ 
+
+    ! Set up temperature grid and allocate variables
+    nLogTeDEM = nint((LogTeMaxDEM-LogTeMinDEM)/DLogTeDEM)
+
+    allocate(Te_I(nLogTeDEM), DEM_I(nLogTeDEM+1), Counter_I(nLogTeDEM+1))
+
+    DEM_I = 0
+    Counter_I = 0
+
+    do iTe=1,nLogTeDEM
+       Te_I(iTe) = 10**(LogTeMinDEM+DLogTeDEM * iTe)
+    end do
+
+    do k=1,n3
+       do j=1,n2
+          do i=1,n1
+             ! Cells inside or behind solar body
+             if(all(Var_VIII(1:7,i,j,k)==0))CYCLE
+             ! Cells off the Temperature grid stop calculation
+             if(Var_VIII(te_,i,j,k)<10**LogTeMinDEM)CYCLE
+             if(Var_VIII(te_,i,j,k)>10**LogTeMaxDEM)CYCLE
+             ! Locate cell on Temperature grid
+             do iTe=1,nLogTeDEM-1
+                if(Var_VIII(te_,i,j,k)<Te_I(iTe+1)) EXIT
+             end do
+             write(*,*)Var_VIII(te_,i,j,k)
+
+             Counter_I(iTe) = Counter_I(iTe) + 1
+             DTe = Te_I(iTe+1)-Te_I(iTe)
+             DxLocal = dx
+             if(DoExtendTransitionRegion) DxLocal = DxLocal &
+                  /extension_factor(Var_VIII(te_,i,j,k))            
+             ! DEM value is Ne^2 *dh/dT in [cm^-5 K^-1]
+             DEM_I(iTe) = DEM_I(iTe) + &
+                  (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 * DxLocal*1e2 /DTe
+          end do
+       end do
+    end do
+
+    do iTe=1,nLogTeDEM 
+       Te_I(iTe) = LogTeMinDEM+DLogTeDEM * iTe
+       if(IsNormalizeDEM .and. Counter_I(iTe)>0)DEM_I(iTe) = &
+            DEM_I(iTe)/Counter_I(iTe)
+    end do
+
+    call save_plot_file(NameFile = NameDEMFile, &
+               TypeFileIn     = TypeFileDEM,      &
+               StringHeaderIn = StringHeaderDEM,  &
+               NameVarIn      = "Temperature DEM",     &
+               nDimIn         = 1,                     &
+               Coord1In_I     = Te_I(1:nLogTeDEM-1),           &
+               VarIn_I     = DEM_I(1:nLogTeDEM-1))
+
+    deallocate(Te_I,DEM_I,Counter_I)
+
+  end subroutine calc_dem
+  
   !==========================================================================
   subroutine set_data_block
     ! When no data file input is used set up uniform data values in defined box
@@ -778,6 +863,15 @@ contains
              call read_var('DeltaTeModSi',DeltaTeModSi)
           end if
 
+       case("#DEM")
+          DoDEM = .true.
+          call read_var('NameDEMFile',NameDEMFile)
+          call read_var('DoSpectrum',DoSpectrum)
+          call read_var('IsNormalizeDEM',IsNormalizeDEM)
+          call read_var('LogTeMinDEM',LogTeMinDEM)
+          call read_var('LogTeMaxDEM',LogTeMaxDEM)
+          call read_var('DLogTeDEM',DLogTeDEM)
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
@@ -1046,8 +1140,8 @@ contains
     end do
 
     dx = (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 * rSun
-    !    dy = (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2 * rSun
-    !    dz = (CoordMax_D(iDimHorizontal)-CoordMin_D(iDimHorizontal))/n3 * rSun
+    !dy = (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2 * rSun
+    !dz = (CoordMax_D(iDimHorizontal)-CoordMin_D(iDimHorizontal))/n3 * rSun
 
     ! Constant multiplier converted from SI [m] to CGS units [cm]
     ! dV_cell / (1AU)^2 * 1e2
