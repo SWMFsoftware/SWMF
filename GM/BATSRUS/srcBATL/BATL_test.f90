@@ -4,10 +4,10 @@ module BATL_test
 
   use ModReadParam, ONLY: lStringLine, read_var
   use BATL_mpi,  ONLY: iProc, nProc, iComm
-  use BATL_size, ONLY: nDim, MaxDim, nBlock, MaxBlock, &
+  use BATL_size, ONLY: nDim, MaxDim, nBlock, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use BATL_geometry, ONLY: x_, y_, z_
-  use BATL_grid, ONLY: find_grid_block
+  use BATL_grid, ONLY: find_grid_block, show_grid_cell
 
   implicit none
 
@@ -19,18 +19,23 @@ module BATL_test
   public:: test_stop       ! stop testing a subroutine/function
   public:: test_cell       ! decide if a cell is to be tested
 
-  ! verbosity level:
+  integer, public:: lVerbose = 1                       ! verbosity level
   !   lVerbose=0:   no verbose output
   !   lVerbose=1:   minimal verbose output
   !   lVerbose=10:  verbose output on test processor
   !   lVerbose=100: verbose output on all processors
-  integer, public:: lVerbose = 1                       
 
   character(lStringLine), public:: StringTest = ' '    ! list of things to test
   integer, public:: iProcTest = 0                      ! 1st test processor
   integer, public:: iProcTest2 = -1                    ! 2nd test processor
   integer, public:: iBlockTest = 1                     ! 1st test block
   integer, public:: iBlockTest2 = 1                    ! 2nd test block
+
+  logical, public:: UseTestCell  = .false.             ! is 1st test cell set?
+  logical, public:: UseTest2Cell = .false.             ! is 2nd test cell set?
+  logical, public:: UseTestXyz   = .false.             ! position or index?
+  logical, public:: UseTest2Xyz  = .false.             ! position or index?
+
   integer, public:: iTest  = 1, jTest  = 1, kTest  = 1 ! 1st test cell
   integer, public:: iTest2 = 1, jTest2 = 1, kTest2 = 1 ! 2nd test cell
   real,    public:: XyzTest_D(MaxDim) = 0.0            ! 1st test position
@@ -40,11 +45,6 @@ module BATL_test
   integer, public:: iVarTest = 1                       ! variable index to test
   character(len=20), public:: NameVarTest = ''         ! variable name to test
   integer, public:: iDimTest = 1                       ! dimension to test
-
-  ! Local variables
-
-  ! Test cell based on position or index?
-  logical:: UseTestXyz = .false., UseTest2Xyz = .false.
 
 contains
 
@@ -61,6 +61,7 @@ contains
        call              read_var('StringTest',  StringTest)
     case("#TESTXYZ")
        UseTestXyz = .true.
+       UseTestCell = .true.
        call              read_var('xTest',       XyzTest_D(x_))
        if(nDim > 1)call  read_var('yTest',       XyzTest_D(y_))
        if(nDim > 2)call  read_var('zTest',       XyzTest_D(z_))
@@ -74,10 +75,12 @@ contains
        if(nDim > 2) kTest = min(MaxK, max(MinK, kTest))
        call              read_var('iBlockTest',  iBlockTest)
        iBlockTest = max(1, iBlockTest)
-       if(nProc > 0) call read_var('iProcTest',   iProcTest)
-       iProcTest = min(nProc-1, max(0, iProcTest))
+       call read_var('iProcTest',   iProcTest)
+       UseTestCell = iProcTest >= 0 ! -1 switches test cell off
+       iProcTest = min(nProc-1, max(0, iProcTest)) ! Don't allow -1
     case("#TEST2XYZ")
        UseTest2Xyz = .true.
+       UseTest2Cell = .true.
        call              read_var('xTest2',      XyzTest2_D(x_))
        if(nDim > 1) call read_var('yTest2',      XyzTest2_D(y_))
        if(nDim > 2) call read_var('zTest2',      XyzTest2_D(z_))
@@ -92,7 +95,8 @@ contains
        call              read_var('iBlockTest2', iBlockTest)
        iBlockTest2 = max(1, iBlockTest2)
        call read_var('iProcTest2',  iProcTest)
-       iProcTest2  = min(nProc-1, max(-1, iProcTest2)) ! -1 switches this off
+       UseTest2Cell = iProcTest2 >= 0 ! -1 switches test cell 2 off 
+       iProcTest2  = min(nProc-1, max(-1, iProcTest2)) ! Allow -1
     case("#TESTDIM")
        call read_var('iDimTest', iDimTest)
        iDimTest = min(nDim, max(0, iDimTest))  ! 0 means all dimensions
@@ -106,13 +110,16 @@ contains
     end select
   end subroutine read_test_param
   !===========================================================================
-  subroutine find_test_cell
+  subroutine find_test_cell(IsQuiet)
 
-    ! Find test cell based on the position
+    ! Find test cell(s) based on the position
+    ! Show information about the test cells unless IsQuiet is present and true
 
     use BATL_tree, ONLY: Unused_B
     use BATL_grid, ONLY: Xyz_DGB
     use ModMpi, ONLY: MPI_bcast, MPI_REAL
+
+    logical, intent(in), optional:: IsQuiet
 
     integer:: iTest_D(MaxDim), iError
 
@@ -131,7 +138,7 @@ contains
        end if
 
     elseif(iProcTest >= 0 .and. iProcTest < nProc) then
-       
+
        ! Find location of grid cell based on indexes
        if(iProc == iProcTest)then
           if(iBlockTest > nBlock)then
@@ -169,7 +176,7 @@ contains
        end if
 
     elseif(iProcTest2 >= 0 .and. iProcTest2 < nProc) then
-       
+
        ! Find location of grid cell based on indexes
        if(iProc == iProcTest2)then
           if(iBlockTest > nBlock)then
@@ -192,7 +199,19 @@ contains
        xTest2 = XyzTest2_D(1); yTest2 = XyzTest2_D(2); zTest2 = XyzTest2_D(3)
     end if
 
+
+    if(lVerbose == 0) RETURN
+    if(present(IsQuiet))then
+       if(IsQuiet) RETURN
+    end if
+
+    if(iProc == iProcTest .and. UseTestCell) call show_grid_cell( &
+         "Selected test cell", iTest, jTest, kTest, iBlockTest)
+    if(iProc == iProcTest2 .and. UseTest2Cell) call show_grid_cell( &
+         "Second test cell", iTest2, jTest2, kTest2, iBlockTest2)
+
   end subroutine find_test_cell
+
   !===========================================================================
   subroutine test_start(NameSub, DoTest, iBlock, DoTestAll)
 
@@ -213,8 +232,6 @@ contains
 
     integer, optional, intent(in) :: iBlock    ! block index
     logical, optional, intent(in) :: DoTestAll ! test on all processors
-
-    logical:: DoWriteAll
     !------------------------------------------------------------------------
 
     ! Check block index if present
@@ -228,23 +245,29 @@ contains
 
     DoTest = index(' '//StringTest//' ', ' '//NameSub//' ') > 0
 
+    if(DoTest)then
+       if(present(DoTestAll))then
+          if(.not.DoTestAll) &
+               DoTest = iProc == iProcTest .or. iProc == iProcTest2
+       else
+          DoTest = iProc == iProcTest .or. iProc == iProcTest2
+       end if
+    end if
+
     if(lVerbose == 0) RETURN
 
-    DoWriteAll = lVerbose == 100
-    if(present(DoTestAll)) DoWriteAll = DoTestAll
-
-    if(DoWriteAll .or. ((lVerbose == 10 .or. DoTest) &
+    if(lVerbose == 100 .or. ((lVerbose == 10 .or. DoTest) &
          .and. (iProc == iProcTest .or. iProc == iProcTest2)))then
        if(present(iBlock))then
           write(*,*) NameSub,' is starting for iProc, iBlock=', iProc, iBlock
-       elseif(nProc > 1 .and. (DoWriteAll .or. iProcTest2 >= 0))then
+       elseif(nProc > 1 .and. (lVerbose == 100 .or. iProcTest2 >= 0))then
           write(*,*) NameSub,' is starting on iProc=', iProc
        else
           write(*,*) NameSub,' is starting'
        end if
     end if
 
-  end subroutine 
+  end subroutine test_start
   !===========================================================================
   subroutine test_stop(NameSub, DoTest, iBlock)
 
