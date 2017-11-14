@@ -9,17 +9,11 @@ module ModMain
   use ModVarIndexes
   use ModNumConst, ONLY: cPi, cTwoPi
 
-  ! The ifort compiler cannot find nBlock through ModSize
-  use BATL_size, ONLY: nBlock
-
-  ! Logigal array for the blocks used (=.false.) on the given processor
-  use BATL_tree, ONLY: Unused_B
-
   ! Total number of used blocks on all processors
   use BATL_lib, ONLY: nBlock, nBlockAll => nNodeUsed, Unused_B, &
        test_string => StringTest, iTest, jTest, kTest, &
        BLKtest => iBlockTest, PROCTest => iProcTest, xTest, yTest, zTest, &
-       XyzTestCell_D => XyzTest_D, VARtest => iVarTest, DIMtest => iDimTest,&
+       XyzTestCell_D, VARtest => iVarTest, DIMtest => iDimTest,&
        lVerbose
 
   implicit none
