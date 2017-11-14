@@ -6,7 +6,6 @@ module BATL_test
   use BATL_mpi,  ONLY: iProc, nProc, iComm
   use BATL_size, ONLY: nDim, MaxDim, nBlock, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use BATL_geometry, ONLY: x_, y_, z_
   use BATL_grid, ONLY: find_grid_block, show_grid_cell
 
   implicit none
@@ -62,9 +61,10 @@ contains
     case("#TESTXYZ")
        UseTestXyz = .true.
        UseTestCell = .true.
-       call              read_var('xTest',       XyzTest_D(x_))
-       if(nDim > 1)call  read_var('yTest',       XyzTest_D(y_))
-       if(nDim > 2)call  read_var('zTest',       XyzTest_D(z_))
+       call              read_var('xTest',       xTest)
+       if(nDim > 1)call  read_var('yTest',       yTest)
+       if(nDim > 2)call  read_var('zTest',       zTest)
+       XyzTest_D = (/ xTest, yTest, zTest /)
     case("#TESTIJK")
        UseTestXyz = .false.
        call              read_var('iTest',       iTest)
@@ -81,9 +81,10 @@ contains
     case("#TEST2XYZ")
        UseTest2Xyz = .true.
        UseTest2Cell = .true.
-       call              read_var('xTest2',      XyzTest2_D(x_))
-       if(nDim > 1) call read_var('yTest2',      XyzTest2_D(y_))
-       if(nDim > 2) call read_var('zTest2',      XyzTest2_D(z_))
+       call              read_var('xTest2',      xTest2)
+       if(nDim > 1) call read_var('yTest2',      yTest2)
+       if(nDim > 2) call read_var('zTest2',      zTest2)
+       XyzTest2_D = (/ xTest2, yTest2, zTest2 /)
     case("#TEST2IJK")
        UseTest2Xyz = .false.
        call              read_var('iTest2',      iTest2)
@@ -127,14 +128,18 @@ contains
     !------------------------------------------------------------------------
     if(UseTestXyz)then
 
-       ! Find grid cell based on position
+       ! Find grid cell based on position provided in #TESTXYZ
+       XyzTest_D = (/ xTest, yTest, zTest /)
        call find_grid_block(XyzTest_D, iProcTest, iBlockTest, iTest_D)
        if(iProcTest < 0)then
           if(iProc == 0) write(*,*) NameSub,' WARNING test point at ', &
-               XyzTest_D,' is outside domain! Setting defaults.'
+               XyzTest_D(1:nDim),' is outside domain! Setting defaults.'
           iTest = 1; jTest = 1; kTest = 1; iBlockTest = 1; iProcTest = 0
        else
           iTest = iTest_D(1); jTest = iTest_D(2); kTest = iTest_D(3)
+          ! Set XyzTest_D to the actual cell center on the test processor
+          if(iProc == iProcTest) &
+               XyzTest_D = Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
        end if
 
     elseif(iProcTest >= 0 .and. iProcTest < nProc) then
@@ -154,9 +159,12 @@ contains
           end if
        end if
 
-       ! Broadcast test cell position to other processors
-       call MPI_Bcast(XyzTest_D, 3, MPI_REAL, iProcTest, iComm, iError)
+    end if
 
+    ! Broadcast test cell position to other processors
+    call MPI_Bcast(XyzTest_D, 3, MPI_REAL, iProcTest, iComm, iError)
+
+    if(.not. UseTestXyz)then
        ! Set the scalars for convenience
        xTest = XyzTest_D(1); yTest = XyzTest_D(2); zTest = XyzTest_D(3)
     end if
@@ -165,14 +173,17 @@ contains
 
     if(UseTest2Xyz)then
 
-       ! Find grid cell based on position
+       ! Find grid cell based on position provided in #TEST2XYZ
+       XyzTest2_D = (/ xTest2, yTest2, zTest2 /)
        call find_grid_block(XyzTest2_D, iProcTest2, iBlockTest2, iTest_D)
        if(iProcTest2 < 0)then
-          if(iProc == 0) write(*,*) NameSub,' WARNING test point at ', &
-               XyzTest_D,' is outside domain! Setting defaults.'
+          if(iProc == 0) write(*,*) NameSub,' WARNING 2nd test point at ', &
+               XyzTest2_D(1:nDim),' is outside domain! Setting defaults.'
           iTest2 = 1; jTest2 = 1; kTest2 = 1; iBlockTest2 = 1; iProcTest2 = -1
        else
           iTest2 = iTest_D(1); jTest2 = iTest_D(2); kTest2 = iTest_D(3)
+          if(iProc == iProcTest2) &
+               XyzTest2_D = Xyz_DGB(:,iTest2,jTest2,kTest2,iBlockTest2)
        end if
 
     elseif(iProcTest2 >= 0 .and. iProcTest2 < nProc) then
@@ -195,8 +206,10 @@ contains
        ! Broadcast test cell position to other processors
        call MPI_Bcast(XyzTest2_D, 3, MPI_REAL, iProcTest2, iComm, iError)
 
-       ! Set the scalars for convenience
-       xTest2 = XyzTest2_D(1); yTest2 = XyzTest2_D(2); zTest2 = XyzTest2_D(3)
+       if(.not. UseTest2Xyz)then
+          ! Set the scalars for convenience
+          xTest2 = XyzTest2_D(1); yTest2 = XyzTest2_D(2); zTest2 = XyzTest2_D(3)
+       end if
     end if
 
 
