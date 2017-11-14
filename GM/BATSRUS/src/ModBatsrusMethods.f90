@@ -57,7 +57,7 @@ contains
 
     IsRestartCoupler = restart
     restart = .false.
-
+    DoThreadRestart = .false.
   contains
     !==========================================================================
     subroutine grid_setup

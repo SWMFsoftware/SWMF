@@ -2191,7 +2191,10 @@ contains
           call read_threads(iSession)
 
        case("#THREADEDBC")
-          call read_threaded_bc   
+          call read_threaded_bc
+
+       case('#THREADRESTART')
+          call read_var('DoThreadRestart', DoThreadRestart)
 
        case("#ADVECTWAVES", "#ALFVENWAVES", "#WAVEPRESSURE", &
             "#FREQUENCY", "#SPECTRUM", "#WAVEREFLECTION")

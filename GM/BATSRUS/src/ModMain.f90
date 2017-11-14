@@ -309,7 +309,7 @@ module ModMain
   ! well above the transition region, which in connected by the 
   ! magnetic field line threads with the photosphere boundary.
   !/
-  logical:: UseFieldLineThreads = .false.
+  logical:: UseFieldLineThreads = .false., DoThreadRestart = .false.
   logical, public, allocatable :: DoThreads_B(:)
 
   ! Use high-order accurate ghost cells. 
