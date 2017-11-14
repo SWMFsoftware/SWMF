@@ -169,20 +169,21 @@ OBJ_LINEAR_WRAPPER = \
         ../src/ModBlasLapack.o \
         ../src/ModLinearSolver.o \
 	../src/linear_solver_wrapper.o \
-	linear_solver_matvec.o \
-	linear_solver_matvec_c.o \
+	external_methods.o \
 	test_linear_wrapper.o
 
 test_linear_wrapper_exe:
 	@(cd ../src; make blas.o lapack.o ModLinearSolver.o \
 		linear_solver_wrapper.o)
-	@make linear_solver_matvec.o linear_solver_matvec_c.o test_linear_wrapper.o
+	@make external_methods.o test_linear_wrapper.o
 	${LINK.f90} ${NOMAINFLAG} -o test_linear_wrapper.exe \
 		${OBJ_LINEAR_WRAPPER} ${Lflag1} ${CPPLIB}
 
 test_linear_wrapper:
 	@echo test_linear_wrapper starting 	>  test_linear_wrapper.diff
+	perl -pi -e 's/\!call/call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
 	@make test_linear_wrapper_exe		>> test_linear_wrapper.diff
+	perl -pi -e 's/call/\!call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
 	@echo ./test_linear_wrapper.exe		>> test_linear_wrapper.diff
 	-@(./test_linear_wrapper.exe > test_linear_wrapper.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \

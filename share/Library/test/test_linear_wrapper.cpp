@@ -2,8 +2,21 @@
 # include <iostream>
 # include <cmath>
 # include <mpi.h>
-# include "linear_solver_matvec_c.h"
+# include "test_linear_wrapper.h"
 # include <stdio.h>
+
+void linear_solver_matvec_c(double* VecIn, double * VecOut, int n){
+  
+  double alpha=0.1;
+  for (int i=1; i<n-1; i++){    
+    VecOut[i] = -alpha*(VecIn[i-1]+VecIn[i+1])+(1+2*alpha)*VecIn[i];
+  }
+  VecOut[0]=0.0;
+  VecOut[n-1]=0.0;
+
+}
+
+//========================================================================
 
 int main(){
 
@@ -15,6 +28,8 @@ int main(){
   //dt =1e-5;
   double  dx=1.0/((double)n-1);
   double nTotalStep=1000;
+
+  int iMatvec=1;
   int lInit=1;
   int nKrylov=100;
   double Tol=1e-5;
@@ -37,7 +52,7 @@ int main(){
  
     for (int i=0; i<n; i++) Rhs_I[i] = Sol_I[i];
     
-    linear_solver_gmres(Rhs_I, Sol_I, &lInit, &n , &nKrylov, &Tol,
+    linear_solver_gmres(&iMatvec, Rhs_I, Sol_I, &lInit, &n , &nKrylov, &Tol,
 			&nIter, &iError, &lTest);
       
   }
