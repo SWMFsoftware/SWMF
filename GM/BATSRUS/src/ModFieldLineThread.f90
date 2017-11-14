@@ -142,7 +142,11 @@ module ModFieldLineThread
   ! how the solution on the thread should be (or not be) advanced:
   ! after hydro stage or after the heat conduction stage etc
   !/
-  public:: advance_threads    
+  public:: advance_threads
+  !\
+  ! Saves restart
+  !/
+  public :: save_thread_restart    
   !\
   ! Correspondent named indexes
   !/
@@ -165,6 +169,7 @@ module ModFieldLineThread
   ! eefect of gravity on the hydrostatic equilibrium
   !/
   real,public :: GravHydroStat != cGravPot*MassIon_I(1)/(AverageIonCharge + 1)
+  character(len=100) :: NameRestartFile
 contains
   !=============================================================================
   subroutine read_threads(iSession)
@@ -242,7 +247,7 @@ contains
   end subroutine deallocate_thread_b
   !==============================================================================
   subroutine set_threads
-    use ModMain,     ONLY: MaxBlock, Unused_B,&
+    use BATL_lib,     ONLY: MaxBlock, Unused_B,&
          nJ, nK
     use ModParallel, ONLY: NeiLev, NOBLK
     use ModMpi
@@ -329,7 +334,8 @@ contains
   subroutine set_threads_b(iBlock)
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
-    use ModMain,       ONLY: n_step, iteration_number, time_simulation
+    use ModMain,       ONLY: n_step, iteration_number, time_simulation, &
+         DoThreadRestart
     use ModGeometry, ONLY: Xyz_DGB
     use ModPhysics,  ONLY: Si2No_V, No2Si_V,&
                            UnitTemperature_, UnitX_, UnitB_
@@ -337,6 +343,7 @@ contains
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
+    use ModIO, ONLY      : restart
     integer, intent(in) :: iBlock
     !\
     ! Locals:
@@ -667,6 +674,8 @@ contains
                0, j, k), BoundaryThreads_B(iBlock) % TMax_II(j, k))
 
     end do; end do
+    if(DoThreadRestart)call read_thread_restart(iBlock)
+   
     if(DoTestMe.and.iBlock==BlkTest)then
        write(*,'(a,3es18.10)')'Thread starting at the point  ',&
             Xyz_DGB(:,1,jTest,kTest,iBlock)
@@ -932,4 +941,88 @@ contains
 
   end subroutine advance_threads
   !=====================
+  subroutine read_thread_restart(iBlock)
+    use ModMain,       ONLY: NameThisComp
+    use BATL_lib,      ONLY: nJ, nK
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModUtilities,  ONLY: open_file, close_file
+    integer, intent(in) :: iBlock
+    !\
+    ! loop variables
+    !/
+    integer :: j, k
+    !\
+    !Misc:
+    integer :: nPoint, iError
+    real    :: RealNPoint
+    character (len=*), parameter :: NameSub='save_thread_restart'
+    !------------------------
+    call get_restart_file_name(iBlock, NameThisComp//'/restartIN/')
+    call open_file(file=NameRestartFile, status='old', &
+         form='UNFORMATTED', NameCaller=NameSub)
+    do k = 1,nK; do j = 1, nJ
+       read(UnitTmp_, iostat = iError)RealNPoint
+       if(iError>0)then
+          write(*,*)'Error in reading nPoint in Block=', iBlock
+          call close_file
+          RETURN
+       end if
+       nPoint = nint(RealNPoint)
+       if(BoundaryThreads_B(iBlock) % nPoint_II(j,k)/=nPoint)then
+          write(*,*)'Incorrest nPoint in Block=', iBlock
+          call close_file
+          RETURN
+       end if 
+       read(UnitTmp_, iostat = iError) &
+            BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k), & 
+            BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k), &
+            BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
+    end do; end do
+    call close_file
+    BoundaryThreads_B(iBlock) % iAction = Enthalpy_
+  end subroutine read_thread_restart
+  !======================
+  subroutine save_thread_restart
+    use ModMain,       ONLY: NameThisComp
+    use BATL_lib, ONLY: nBlock, nK, nJ, Unused_B
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModUtilities,  ONLY: open_file, close_file
+    integer :: j, k, iBlock, nPoint
+    character (len=*), parameter :: NameSub='save_thread_restart'
+    !---------
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock))CYCLE
+       if(.not.IsAllocatedThread_B(iBlock))CYCLE
+       call get_restart_file_name(iBlock, NameThisComp//'/restartOUT/')
+       call open_file(file=NameRestartFile, form='UNFORMATTED',&
+            NameCaller=NameSub)
+       do k = 1,nK; do j = 1, nJ
+          nPoint = BoundaryThreads_B(iBlock) % nPoint_II(j,k) 
+          write(UnitTmp_)real(nPoint)
+          write(UnitTmp_)&
+               BoundaryThreads_B(iBlock) % TeSi_III(1-nPoint:0,j,k),& 
+               BoundaryThreads_B(iBlock) % TiSi_III(1-nPoint:0,j,k),&
+               BoundaryThreads_B(iBlock) % PSi_III(1-nPoint:0,j,k)
+       end do; end do
+       call close_file
+    end do
+  end subroutine save_thread_restart
+  !============================
+  subroutine get_restart_file_name(iBlock, NameRestartDir)
+    use BATL_lib,      ONLY: iMortonNode_A, iNode_B
+    
+    integer, intent(in)          :: iBlock
+    character(len=*), intent(in) :: NameRestartDir
+    
+    integer  :: iBlockRestart
+    character:: StringDigit
+    !----------------------
+    iBlockRestart = iMortonNode_A(iNode_B(iBlock))
+    
+    write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
+    
+    write(NameRestartFile,'(a,i'//StringDigit//'.'//StringDigit//',a)')&
+         trim(NameRestartDir)//'thread_',iBlockRestart,'.blk'
+  end subroutine get_restart_file_name
+  !====================
 end module ModFieldLineThread

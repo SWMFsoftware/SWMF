@@ -184,7 +184,8 @@ contains
 
     use ModB0,       ONLY: UseB0, add_b0, subtract_b0
     use ModGeometry, ONLY: true_cell
-
+    use ModMain,     ONLY: UseFieldLineThreads
+    use ModFieldLineThread, ONLY: save_thread_restart
     integer :: iBlock
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='write_restart_files'
@@ -208,7 +209,7 @@ contains
     if (UseRestartOutSeries) &
          call string_append_iter(NameFile,iteration_number)
     call write_tree_file(NameFile)
-
+    if(UseFieldLineThreads)call save_thread_restart
     if(iProc==0) call write_restart_header
     select case(TypeRestartOutFile)
     case('block')
