@@ -125,10 +125,10 @@ module BATL_lib
   public:: lVerbose, StringTest
   public:: UseTestCell, UseTestXyz
   public:: iProcTest, iBlockTest, iTest, jTest, kTest
-  public:: XyzTest_D, xTest, yTest, zTest
+  public:: XyzTestCell_D, xTest, yTest, zTest
   public:: UseTest2Cell, UseTest2Xyz
   public:: iProcTest2, iBlockTest2, iTest2, jTest2, kTest2
-  public:: XyzTest2_D, xTest2, yTest2, zTest2
+  public:: XyzTestCell2_D, xTest2, yTest2, zTest2
   public:: iVarTest, NameVarTest, iDimTest
   public:: read_test_param, find_test_cell
   public:: test_start, test_stop, test_cell

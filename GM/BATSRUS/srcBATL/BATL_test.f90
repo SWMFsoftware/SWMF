@@ -35,15 +35,15 @@ module BATL_test
   logical, public:: UseTestXyz   = .false.             ! position or index?
   logical, public:: UseTest2Xyz  = .false.             ! position or index?
 
-  integer, public:: iTest  = 1, jTest  = 1, kTest  = 1 ! 1st test cell
-  integer, public:: iTest2 = 1, jTest2 = 1, kTest2 = 1 ! 2nd test cell
-  real,    public:: XyzTest_D(MaxDim) = 0.0            ! 1st test position
-  real,    public:: xTest = 0.0, yTest = 0.0, zTest = 0.0 
-  real,    public:: XyzTest2_D(MaxDim)= 0.0            ! 2nd test position
-  real,    public:: xTest2 = 0.0, yTest2 = 0.0, zTest2 = 0.0
+  integer, public:: iTest  = 1, jTest  = 1, kTest  = 1 ! 1st test cell index
+  integer, public:: iTest2 = 1, jTest2 = 1, kTest2 = 1 ! 2nd test cell index
+  real,    public:: XyzTestCell_D(MaxDim) = 0.0        ! 1st test cell position
+  real,    public:: XyzTestCell2_D(MaxDim)= 0.0        ! 2nd test cell position
+  real,    public:: xTest = 0, yTest = 0, zTest = 0    ! 1st test point pos.
+  real,    public:: xTest2 = 0, yTest2 = 0, zTest2 = 0 ! 2nd test point pos.
+  integer, public:: iDimTest = 1                       ! dimension to test
   integer, public:: iVarTest = 1                       ! variable index to test
   character(len=20), public:: NameVarTest = ''         ! variable name to test
-  integer, public:: iDimTest = 1                       ! dimension to test
 
 contains
 
@@ -64,7 +64,7 @@ contains
        call              read_var('xTest',       xTest)
        if(nDim > 1)call  read_var('yTest',       yTest)
        if(nDim > 2)call  read_var('zTest',       zTest)
-       XyzTest_D = (/ xTest, yTest, zTest /)
+       XyzTestCell_D = (/ xTest, yTest, zTest /)
     case("#TESTIJK")
        UseTestXyz = .false.
        call              read_var('iTest',       iTest)
@@ -84,7 +84,7 @@ contains
        call              read_var('xTest2',      xTest2)
        if(nDim > 1) call read_var('yTest2',      yTest2)
        if(nDim > 2) call read_var('zTest2',      zTest2)
-       XyzTest2_D = (/ xTest2, yTest2, zTest2 /)
+       XyzTestCell2_D = (/ xTest2, yTest2, zTest2 /)
     case("#TEST2IJK")
        UseTest2Xyz = .false.
        call              read_var('iTest2',      iTest2)
@@ -129,17 +129,17 @@ contains
     if(UseTestXyz)then
 
        ! Find grid cell based on position provided in #TESTXYZ
-       XyzTest_D = (/ xTest, yTest, zTest /)
-       call find_grid_block(XyzTest_D, iProcTest, iBlockTest, iTest_D)
+       XyzTestCell_D = (/ xTest, yTest, zTest /)
+       call find_grid_block(XyzTestCell_D, iProcTest, iBlockTest, iTest_D)
        if(iProcTest < 0)then
           if(iProc == 0) write(*,*) NameSub,' WARNING test point at ', &
-               XyzTest_D(1:nDim),' is outside domain! Setting defaults.'
+               XyzTestCell_D(1:nDim),' is outside domain! Setting defaults.'
           iTest = 1; jTest = 1; kTest = 1; iBlockTest = 1; iProcTest = 0
        else
           iTest = iTest_D(1); jTest = iTest_D(2); kTest = iTest_D(3)
-          ! Set XyzTest_D to the actual cell center on the test processor
+          ! Set XyzTestCell_D to the actual cell center on the test processor
           if(iProc == iProcTest) &
-               XyzTest_D = Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
+               XyzTestCell_D = Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
        end if
 
     elseif(iProcTest >= 0 .and. iProcTest < nProc) then
@@ -154,7 +154,7 @@ contains
                 if(lVerbose > 0) write(*,*) &
                      NameSub,' WARNING: test cell is in an unused block'
              else
-                XyzTest_D = Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
+                XyzTestCell_D = Xyz_DGB(:,iTest,jTest,kTest,iBlockTest)
              end if
           end if
        end if
@@ -162,11 +162,13 @@ contains
     end if
 
     ! Broadcast test cell position to other processors
-    call MPI_Bcast(XyzTest_D, 3, MPI_REAL, iProcTest, iComm, iError)
+    call MPI_Bcast(XyzTestCell_D, 3, MPI_REAL, iProcTest, iComm, iError)
 
     if(.not. UseTestXyz)then
        ! Set the scalars for convenience
-       xTest = XyzTest_D(1); yTest = XyzTest_D(2); zTest = XyzTest_D(3)
+       xTest = XyzTestCell_D(1)
+       yTest = XyzTestCell_D(2)
+       zTest = XyzTestCell_D(3)
     end if
 
     ! Deal with the second test cell
@@ -174,16 +176,16 @@ contains
     if(UseTest2Xyz)then
 
        ! Find grid cell based on position provided in #TEST2XYZ
-       XyzTest2_D = (/ xTest2, yTest2, zTest2 /)
-       call find_grid_block(XyzTest2_D, iProcTest2, iBlockTest2, iTest_D)
+       XyzTestCell2_D = (/ xTest2, yTest2, zTest2 /)
+       call find_grid_block(XyzTestCell2_D, iProcTest2, iBlockTest2, iTest_D)
        if(iProcTest2 < 0)then
           if(iProc == 0) write(*,*) NameSub,' WARNING 2nd test point at ', &
-               XyzTest2_D(1:nDim),' is outside domain! Setting defaults.'
+               XyzTestCell2_D(1:nDim),' is outside domain! Setting defaults.'
           iTest2 = 1; jTest2 = 1; kTest2 = 1; iBlockTest2 = 1; iProcTest2 = -1
        else
           iTest2 = iTest_D(1); jTest2 = iTest_D(2); kTest2 = iTest_D(3)
           if(iProc == iProcTest2) &
-               XyzTest2_D = Xyz_DGB(:,iTest2,jTest2,kTest2,iBlockTest2)
+               XyzTestCell2_D = Xyz_DGB(:,iTest2,jTest2,kTest2,iBlockTest2)
        end if
 
     elseif(iProcTest2 >= 0 .and. iProcTest2 < nProc) then
@@ -198,18 +200,18 @@ contains
                 if(lVerbose > 0) write(*,*) &
                      NameSub,' WARNING: 2nd test cell is in an unused block'
              else
-                XyzTest2_D = Xyz_DGB(:,iTest2,jTest2,kTest2,iBlockTest2)
+                XyzTestCell2_D = Xyz_DGB(:,iTest2,jTest2,kTest2,iBlockTest2)
              end if
           end if
        end if
 
        ! Broadcast test cell position to other processors
-       call MPI_Bcast(XyzTest2_D, 3, MPI_REAL, iProcTest2, iComm, iError)
+       call MPI_Bcast(XyzTestCell2_D, 3, MPI_REAL, iProcTest2, iComm, iError)
 
-       if(.not. UseTest2Xyz)then
-          ! Set the scalars for convenience
-          xTest2 = XyzTest2_D(1); yTest2 = XyzTest2_D(2); zTest2 = XyzTest2_D(3)
-       end if
+       ! Set the scalars for convenience
+       xTest2 = XyzTestCell2_D(1)
+       yTest2 = XyzTestCell2_D(2)
+       zTest2 = XyzTestCell2_D(3)
     end if
 
 

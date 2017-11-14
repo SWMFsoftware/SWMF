@@ -7,8 +7,8 @@ program advect
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK, iProc, barrier_mpi, r_, &
        Xyz_DGB, CellSize_DB, message_pass_cell, &
        StringTest, &
-       XyzTest_D, iTest, jTest, kTest, iBlockTest, iProcTest, &
-       XyzTest2_D, iTest2, jTest2, kTest2, iBlockTest2, iProcTest2, &
+       XyzTestCell_D, iTest, jTest, kTest, iBlockTest, iProcTest, &
+       XyzTestCell2_D, iTest2, jTest2, kTest2, iBlockTest2, iProcTest2, &
        read_test_param, find_test_cell, test_start, test_stop
 
   implicit none
@@ -101,14 +101,14 @@ program advect
      if(iProc==iProcTest .and. StringTest /= '')then
         write(*,*)'Test cell iTest, jTest, kTest, iBlockTest, iProcTest=', &
              iTest, jTest, kTest, iBlockTest, iProcTest
-        write(*,*)'Test cell Xyz_D=', XyzTest_D(1:nDim)
+        write(*,*)'Test cell Xyz_D=', XyzTestCell_D(1:nDim)
         write(*,*)'Test cell size =', CellSize_DB(1:nDim,iBlockTest)
      end if
 
      if(iProc==iProcTest2 .and. StringTest /= '')then
         write(*,*)'2nd Test cell iTest, jTest, kTest, iBlockTest, iProcTest=',&
              iTest2, jTest2, kTest2, iBlockTest2, iProcTest2
-        write(*,*)'2nd Test cell Xyz_D=', XyzTest2_D(1:nDim)
+        write(*,*)'2nd Test cell Xyz_D=', XyzTestCell2_D(1:nDim)
         write(*,*)'2nd Test cell size =', CellSize_DB(1:nDim,iBlockTest2)
      end if
 
@@ -413,8 +413,9 @@ contains
        ! Rotate the blob center the same way as the grid
        BlobCenter_D = matmul(GridRot_DD(1:nDim,1:nDim), BlobCenter_D)
 
-       ! Rotate the test cell location
-       XyzTest_D = matmul(GridRot_DD, XyzTest_D)
+       ! Rotate the test cell locations
+       XyzTestCell_D  = matmul(GridRot_DD, XyzTestCell_D)
+       XyzTestCell2_D = matmul(GridRot_DD, XyzTestCell2_D)
     end if
 
     ! The default value is .not.IsRzGeometry
