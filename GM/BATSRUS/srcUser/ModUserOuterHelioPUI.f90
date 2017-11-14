@@ -32,7 +32,6 @@ module ModUser
   use ModSize,     ONLY: nI, nJ, nK, nBLK
   use ModMain
   use ModPhysics
-!  use ModSetOuterBC
   use ModAdvance,  ONLY : State_VGB
   use ModGeometry, ONLY : Xyz_DGB, r_BLK, true_cell
   use ModVarIndexes
@@ -247,15 +246,15 @@ contains
           call read_var('MachPop3Limit',    MachPop3Limit)
           call read_var('rPop3Limit',       rPop3Limit)
           call read_var('MachPop4Limit',    MachPop4Limit)
-       case("#FACTORS")
-          call read_var('RhoNeuFactor', RhoNeuFactor)
-          call read_var('uNeuFactor'  , uNeuFactor)
-          call read_var('RhoNe2Factor', RhoNe2Factor)
-          call read_var('uNe2Factor'  , uNe2Factor)
-          call read_var('RhoNe3Factor', RhoNe3Factor)
-          call read_var('uNe3Factor'  , uNe3Factor)
-          call read_var('RhoNe4Factor', RhoNe4Factor)
-          call read_var('uNe4Factor'  , uNe4Factor)
+ !        case("#FACTORS")
+ !         call read_var('RhoNeuFactor', RhoNeuFactor)
+ !         call read_var('uNeuFactor'  , uNeuFactor)
+ !         call read_var('RhoNe2Factor', RhoNe2Factor)
+ !         call read_var('uNe2Factor'  , uNe2Factor)
+ !         call read_var('RhoNe3Factor', RhoNe3Factor)
+ !         call read_var('uNe3Factor'  , uNe3Factor)
+ !         call read_var('RhoNe4Factor', RhoNe4Factor)
+ !         call read_var('uNe4Factor'  , uNe4Factor)
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -368,44 +367,52 @@ contains
     VarsGhostFace_V(Ux_:Uz_) =  (VarsGhostFace_V(SWHRho_)*VarsGhostFace_V(SWHUx_:SWHUz_)&
          + VarsGhostFace_V(Pu3Rho_)*VarsGhostFace_V(Pu3Ux_:Pu3Uz_))/VarsGhostFace_V(Rho_)
 
-    ! NeuRho is PopI
-    ! Pop I is going through the inner BCs    
 
-   ! soft boundary for Pop I-IV
 
-       VarsGhostFace_V(NeuRho_:NeuP_) = VarsTrueFace_V(NeuRho_:NeuP_)
+    if(UseNeutralFluid)then
 
-    ! PopII leaves the domain at a supersonic velocity 
-    ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
-    ! For the transient case when it flows inward, we use a fraction of ion parameters
+       ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
+       !
+       ! Pop I is going through the inner BCs
 
-    if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne2Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe2Factor
-       VarsGhostFace_V(Ne2P_)         = VarsGhostFace_V(p_)      *RhoNe2Factor
-       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe2Factor
-    else
-       VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
-    end if
+       ! soft boundary for Pop I-IV
+
+       VarsGhostFace_V(NeuRho_:Ne4P_) = VarsTrueFace_V(NeuRho_:Ne4P_)
+
+    endif
+
+
+!    ! PopII leaves the domain at a supersonic velocity 
+!    ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
+!    ! For the transient case when it flows inward, we use a fraction of ion parameters
+
+!    if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
+!       VarsGhostFace_V(Ne2Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe2Factor
+!       VarsGhostFace_V(Ne2P_)         = VarsGhostFace_V(p_)      *RhoNe2Factor
+!       VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe2Factor
+!    else
+!       VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
+!    end if
 
     ! Pop III has the velocity and temperature of the ions at inner boundary
     ! the density is taken to be a fraction of the ions
 
-   if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne3Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe3Factor
-       VarsGhostFace_V(Ne3P_)         = VarsGhostFace_V(p_)      *RhoNe3Factor
-       VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe3Factor
-   else
-       VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
-   end if
+!   if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
+!       VarsGhostFace_V(Ne3Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe3Factor
+!       VarsGhostFace_V(Ne3P_)         = VarsGhostFace_V(p_)      *RhoNe3Factor
+!       VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe3Factor
+!   else
+!       VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
+!   end if
 
     ! Pop IV 
-   if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
-       VarsGhostFace_V(Ne4Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe4Factor
-       VarsGhostFace_V(Ne4P_)         = VarsGhostFace_V(p_)      *RhoNe4Factor
-       VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe4Factor
-   else
-       VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
-   end if
+!   if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
+!       VarsGhostFace_V(Ne4Rho_)       = VarsGhostFace_V(Rho_)    *RhoNe4Factor
+!       VarsGhostFace_V(Ne4P_)         = VarsGhostFace_V(p_)      *RhoNe4Factor
+!       VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) *uNe4Factor
+!   else
+!       VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
+!   end if
 
     if(DoTestMe)then
        write(*,*) NameSub,' FaceCoord=', FaceCoords_D
