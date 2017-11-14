@@ -41,6 +41,7 @@ contains
     use ModUpdateState, ONLY: update_check, update_state
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
+    use ModElectricField, ONLY: get_num_electric_field
 
     logical, intent(in) :: DoCalcTimestep
     integer, intent(in) :: iStageMax ! advance only part way
@@ -162,7 +163,7 @@ contains
           call timing_stop('update_state')
 
           if(DoCalcElectricField .and. iStage == nStage) &
-               call calc_electric_field(iBlock)
+               call get_num_electric_field(iBlock)
 
           if(UseConstrainB .and. iStage==nStage)then
              call timing_start('constrain_B')

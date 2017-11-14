@@ -39,6 +39,7 @@ module ModElectricField
   public:: get_electric_field_block ! Calculate E for 1 block
   public:: calc_div_e               ! Calculate div(E)
   public:: calc_inductive_e         ! Calculate Eind
+  public:: get_num_electric_field   ! Calculate numerical E from fluxes
 
   ! Make Efield available through this module too
   public:: Efield_DGB
@@ -80,6 +81,7 @@ module ModElectricField
   logical:: IsLinear = .false.
 
 contains
+
   !=========================================================================
   subroutine get_electric_field
 
@@ -473,6 +475,45 @@ contains
     end do
 
   end subroutine matvec_inductive_e
+
+!===========================================================================
+
+  subroutine get_num_electric_field(iBlock)
+
+    ! Calculate the total electric field which includes numerical resistivity
+    ! This estimate averages the numerical fluxes to the cell centers 
+    ! for sake of simplicity.
+
+    use ModSize,       ONLY: nI, nJ, nK
+    use ModVarIndexes, ONLY: Bx_,By_,Bz_
+    use ModAdvance,    ONLY: &
+         Flux_VX, Flux_VY, Flux_VZ, ExNum_CB, EyNum_CB, EzNum_CB
+    use BATL_lib,      ONLY: CellFace_DB
+
+    integer, intent(in) :: iBlock
+    !------------------------------------------------------------------------
+    ! E_x=(fy+fy-fz-fz)/4
+    ExNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
+         ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                            &
+         + Flux_VY(Bz_,1:nI,2:nJ+1,1:nK  )) / CellFace_DB(2,iBlock) - &
+         ( Flux_VZ(By_,1:nI,1:nJ  ,1:nK  )                            &
+         + Flux_VZ(By_,1:nI,1:nJ  ,2:nK+1)) / CellFace_DB(3,iBlock) )
+
+    ! E_y=(fz+fz-fx-fx)/4
+    EyNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
+         ( Flux_VZ(Bx_,1:nI  ,1:nJ,1:nK  )                            &
+         + Flux_VZ(Bx_,1:nI  ,1:nJ,2:nK+1)) / CellFace_DB(3,iBlock) - &
+         ( Flux_VX(Bz_,1:nI  ,1:nJ,1:nK  )                            &
+         + Flux_VX(Bz_,2:nI+1,1:nJ,1:nK  )) / CellFace_DB(1,iBlock) )
+
+    ! E_z=(fx+fx-fy-fy)/4
+    EzNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
+         ( Flux_VX(By_,1:nI  ,1:nJ  ,1:nK)                            &
+         + Flux_VX(By_,2:nI+1,1:nJ  ,1:nK)) / CellFace_DB(1,iBlock) - &
+         ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                            &
+         + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / CellFace_DB(2,iBlock))
+
+  end subroutine get_num_electric_field
 
 end module ModElectricField
 
