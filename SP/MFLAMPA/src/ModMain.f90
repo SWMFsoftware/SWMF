@@ -94,10 +94,6 @@ contains
     character (len=100) :: NameCommand
     character (len=*), parameter :: NameSub='SP:read_param'
     !--------------------------------------------------------------------------
-    if(DoInit)then
-       DoInit=.false.
-    end if
-
     ! Read the corresponding section of input file
     do
        if(.not.read_line() ) EXIT
@@ -150,6 +146,11 @@ contains
     real, intent(in):: TimeStart
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
+    if(DoInit)then
+       DoInit=.false.
+    else
+       RETURN
+    end if
     iIterGlobal = 0
     TimeGlobal = TimeStart
     call init_advance_const
@@ -179,7 +180,7 @@ contains
     else
        DoFinalize = .false.
     end if
-    
+
     if(DoReadMhData)then
        !\
        ! data flow is different when read MHD data from file:

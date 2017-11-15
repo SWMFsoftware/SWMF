@@ -221,7 +221,11 @@ contains
 
   subroutine init_particle_line
     ! allocate containers for particles
+    logical, save:: DoInit = .true.
     !------------------------------------------------------------------------
+    if(.not.DoInit) RETURN
+    DoInit = .false.
+
     Particle_I(KindReg_)%nParticleMax = 10000 * nFieldLineMax
     Particle_I(KindEnd_)%nParticleMax = nFieldLineMax
     Particle_I(KindReg_)%nVar   = nVarParticleReg

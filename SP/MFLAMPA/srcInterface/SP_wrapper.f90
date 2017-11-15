@@ -107,7 +107,7 @@ contains
     if(IsInitialized)&
          RETURN
     IsInitialized = .true.
-     call initialize(TimeSimulation)
+    call initialize(TimeSimulation)
   end subroutine SP_init_session
 
   !======================================================================
@@ -266,6 +266,11 @@ contains
   end subroutine SP_put_from_ih
   !===================================================================
   subroutine SP_set_grid
+    logical, save:: IsInitialized = .false.
+    !------------------------------------------------------------
+    if(IsInitialized)&
+         RETURN
+    IsInitialized = .true.
 
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
@@ -323,6 +328,9 @@ contains
 
     integer:: iBlock    ! loop variable
     !-----------------------------------------------------------------
+    ! check whether the lower boundary has been defined before
+    if(RMin > 0.0)then
+    end if
     RMin = RMinIn
 
     ! compute coordinates of footprints for each field lines
