@@ -2893,13 +2893,6 @@ contains
       if (UseAccurateResChange .or. nOrder == 4) &
            optimize_message_pass = 'all'
 
-      ! Check test processor
-      if(ProcTest > nProc)then
-         if(iProc==0) write(*,'(a)')NameSub//&
-              ' WARNING: procTEST > nProc, setting procTEST=0 !!!'
-         procTEST=0
-      end if
-
       if(IsRzGeometry .and. UseB)then
          if(UseMultiIon) &
               call stop_mpi('RZ geometry is not implemented for multi-ion')
