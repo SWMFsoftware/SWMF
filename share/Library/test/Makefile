@@ -55,6 +55,8 @@ test:
 	-@make test_linear_advection
 	-@make test_linear_solver
 	-@make test_linear_wrapper
+	@perl -pi -e 's/ call/ \!call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
+	@rm -f ../src/linear_solver_wrapper.o
 	-@make test_lookup_table
 	-@make test_planet_field
 	-@make test_plot_file
@@ -181,9 +183,10 @@ test_linear_wrapper_exe:
 
 test_linear_wrapper:
 	@echo test_linear_wrapper starting 	>  test_linear_wrapper.diff
-	perl -pi -e 's/\!call/call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
+	@perl -pi -e 's/!call/call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
 	@make test_linear_wrapper_exe		>> test_linear_wrapper.diff
-	perl -pi -e 's/call/\!call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
+	@perl -pi -e 's/ call/ !call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
+	@rm -f ../src/linear_solver_wrapper.o
 	@echo ./test_linear_wrapper.exe		>> test_linear_wrapper.diff
 	-@(./test_linear_wrapper.exe > test_linear_wrapper.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
