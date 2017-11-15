@@ -76,6 +76,7 @@ contains
     !\
     !Misc
     integer :: nVar, nIndex, nParticleMax
+    character(len=*), parameter:: NameSub=NameMod//'::allocate_particles'
     !------------------------------------------------------------------------
     if(present(iKindIn))then
        iKindFirst = iKindIn
@@ -84,7 +85,14 @@ contains
        iKindFirst = 1
        iKindLast  = nKindParticle
     end if
-    do iKindParticle = 1, nKindParticle
+    do iKindParticle = iKindFirst, iKindLast
+       ! check correctness
+       if(  associated(Particle_I(iKindParticle)% State_VI) .or.&
+            associated(Particle_I(iKindParticle)%iIndex_II))then
+          call CON_stop(NameSub//&
+               ": particles are allocated, attempting to allocate again")
+       end if
+
        nVar         = Particle_I(iKindParticle)%nVar
        nIndex       = Particle_I(iKindParticle)%nIndex
        nParticleMax = Particle_I(iKindParticle)%nParticleMax
