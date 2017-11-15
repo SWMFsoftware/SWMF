@@ -68,10 +68,6 @@ update_states calc_sources calc_facefluxes calc_timestep
 -0.7864  		yTest		(Y coordinate of cell for testing)
 -0.0169			zTest		(Z coordinate of cell for testing)
 
-#TESTTIME
-10			nIterTest	(iteration number to start testing)
-10.5			TimeTest	(time to start testing in seconds) 
-						Only read if timeaccurate!
 #TESTVAR
 1			iVarTest
 
