@@ -66,26 +66,22 @@ module BATL_particles
   real,    allocatable:: BufferRecv_I(:)! buffer of data to be recv'd
   character(len=*),parameter  :: NameMod='BATL_particles'
   character(len=120), private :: StringError
-  integer:: nU_I(2)
+  integer :: nU_I(2)
+
+  logical :: DoInit = .true.
 contains
 
   !===========================================================================
-  subroutine allocate_particles(iKindIn)
-    integer, optional, intent(in) :: iKindIn
+  subroutine allocate_particles()
     integer:: iKindParticle, iKindFirst, iKindLast
     !\
     !Misc
     integer :: nVar, nIndex, nParticleMax
     character(len=*), parameter:: NameSub=NameMod//'::allocate_particles'
     !------------------------------------------------------------------------
-    if(present(iKindIn))then
-       iKindFirst = iKindIn
-       iKindLast  = iKindIn
-    else
-       iKindFirst = 1
-       iKindLast  = nKindParticle
-    end if
-    do iKindParticle = iKindFirst, iKindLast
+    if(.not.DoInit)RETURN
+    DoInit = .false.
+    do iKindParticle = 1, nKindParticle
        nVar         = Particle_I(iKindParticle)%nVar
        nIndex       = Particle_I(iKindParticle)%nIndex
        nParticleMax = Particle_I(iKindParticle)%nParticleMax

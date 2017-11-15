@@ -11,13 +11,29 @@ module ModParticles
   use BATL_particles,    ONLY: BATL_allocate=>allocate_particles
   implicit none
   SAVE
-  integer, private, parameter :: nKindParticle = 2
+  integer, private :: nKindParticle = 0
 contains
-  subroutine allocate_particles
-    integer :: iKind
+  subroutine allocate_particles(iKindParticle, nVar, nIndex, nParticleMax)
+    integer, intent(inout) :: iKindParticle
+    integer, intent(in)    :: nVar, nIndex, nParticleMax
     !---------------
-    do iKind = 1, nKindParticle
-       call BATL_allocate(iKind)
-    end do
+    if(iKindParticle > 0) RETURN
+    nKindParticle = nKindParticle + 1
+    iKindParticle = nKindParticle
+    Particle_I(iKindParticle)%nVar   = nVar 
+    Particle_I(iKindParticle)%nIndex = nIndex
+    Particle_I(iKindParticle)%nParticleMax = nParticleMax
+
+    nullify( Particle_I(iKindParticle)%State_VI)
+    allocate(Particle_I(&
+         iKindParticle)%State_VI(1:nVar,1:nParticleMax))
+
+    nullify( Particle_I(iKindParticle)%iIndex_II)
+    allocate(Particle_I(&
+         iKindParticle)%iIndex_II(0:nIndex,1:nParticleMax))
+
+    Particle_I(iKindParticle)%State_VI( :,:) = 0.0
+    Particle_I(iKindParticle)%iIndex_II(:,:) = 0
+    Particle_I(iKindParticle)%nParticle      = 0
   end subroutine allocate_particles
 end module ModParticles

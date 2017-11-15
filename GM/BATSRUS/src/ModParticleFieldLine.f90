@@ -40,9 +40,9 @@ module ModParticleFieldLine
   ! Local variables ----------------------
 
   ! kinds of particles used to generate a magnetic field line
-  integer, parameter:: &
-       KindEnd_ = 1, &
-       KindReg_ = 2
+  integer :: &
+       KindEnd_ = -1, &
+       KindReg_ = -1
 
   ! variable in the state vector of a particle
   integer, parameter:: &
@@ -225,14 +225,16 @@ contains
     !------------------------------------------------------------------------
     if(.not.DoInit) RETURN
     DoInit = .false.
-
-    Particle_I(KindReg_)%nParticleMax = 10000 * nFieldLineMax
-    Particle_I(KindEnd_)%nParticleMax = nFieldLineMax
-    Particle_I(KindReg_)%nVar   = nVarParticleReg
-    Particle_I(KindEnd_)%nVar   = nVarParticleEnd
-    Particle_I(KindReg_)%nIndex = nIndexParticleReg
-    Particle_I(KindEnd_)%nIndex = nIndexParticleEnd
-    call allocate_particles
+    call allocate_particles(&
+         iKindParticle = KindReg_,  &
+         nVar   = nVarParticleReg,  &
+         nIndex = nIndexParticleReg,&
+         nParticleMax = 10000 * nFieldLineMax)
+    call allocate_particles(&
+         iKindParticle = KindEnd_  ,&
+         nVar   = nVarParticleEnd  ,&
+         nIndex = nIndexParticleEnd,&
+         nParticleMax = nFieldLineMax)
     ! set pointers to parameters of end particles
     StateEnd_VI  => Particle_I(KindEnd_)%State_VI
     iIndexEnd_II => Particle_I(KindEnd_)%iIndex_II
