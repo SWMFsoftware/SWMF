@@ -894,7 +894,8 @@ contains
 
     character (len=*), parameter :: NameSub='read_direct_restart_file'
     integer :: i, j, k, iBlock, iMorton, iRec, iVar, iFile, iFileLast = -1
-    logical :: IsRead, DoTest, DoTestMe
+    logical :: IsRead
+    logical:: DoTest, DoTestMe
     !-------------------------------------------------------------------------
 
     call set_oktest(NameSub, DoTest, DoTestMe)
