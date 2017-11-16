@@ -33,7 +33,8 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    character(len=*), parameter :: NameSub = 'read_heatflux_param'
+    character(len=*), parameter :: &
+         NameSub = 'ModHeatFluxCollision::read_heatflux_param'
     !--------------------------------------------------------------------------
 
     select case(NameCommand)
