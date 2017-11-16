@@ -4,7 +4,8 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 my $defaultexception = 
-    "set_parameters|correct_electronfluid_efield_cell|user_interface.f90";
+    "set_parameters|correct_electronfluid_efield_cell|select_fluid|".
+    "user_interface.f90";
 
 my $Help       = ($h or $help);
 my $Verbose    = ($v or $verbose);
@@ -292,8 +293,8 @@ foreach $source (@source){
 	    $usemodmain=1 if /^\s+use ModMain/i;
 	    if($usemodmain){
 		$usemodmain = 0 unless /\&$/;
-		s/\b(i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b\s*,//g;
-		s/(,\s*)?(i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b//;
+		s/\b(String|i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b\s*,//g;
+		s/(,\s*)?(String|i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b//;
 		s/,\s*$/\n/;
 
 		# remove line if no variables are left in it
