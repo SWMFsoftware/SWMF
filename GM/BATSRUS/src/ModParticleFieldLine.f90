@@ -961,6 +961,7 @@ contains
        IsEndOfSegment = .true.
     case(Normal_)
        ! do nothing, full time step has been finished
+       IsEndOfSegment = .true.
     case default
        call stop_mpi(NameSub//': Unknown stage ID')
     end select
