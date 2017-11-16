@@ -272,22 +272,21 @@ contains
   end subroutine tvd_reschange_body
   !===========================================================================
   subroutine tvd_reschange(&
-       Coarse2_V         ,& !State in the coarser ghostcell, 2nd layer
-       Coarse1_V         ,& !State in the coarser ghostcell, 1st layer
-       Fine1_VII         ,& !States in 4 fine physical cells,1st layer
-       Fine2_VII         ,& !States in 4 fine physical cells,2nd layer
-       CoarseToFineF_VII ,& !Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& !Facevalues in the physical cell,
-                                !                  looking at the coarser cell 
-       FineF_VII)           !Facevalues in the physical cell,
-    !   looking at another physical cell
+       Coarse2_V         ,& ! State in the coarser ghostcell, 2nd layer
+       Coarse1_V         ,& ! State in the coarser ghostcell, 1st layer
+       Fine1_VII         ,& ! States in 4 fine physical cells,1st layer
+       Fine2_VII         ,& ! States in 4 fine physical cells,2nd layer
+       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
+       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell 
+       FineF_VII)           ! Facevalues in the physical cell,
+    !                         looking at another physical cell
 
-    !_____________!_____________!_______!_______!_
-    !             !         CToF!FToC FF!
-    ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
-    !             !         CToF!FToC FF!      
-    !_____________!_____________!_F1_V__!__F2_V_!_
-    !             !             !       !       !
+    !_____________!_____________!________!_______!_
+    !             !         CToF! FToC FF!
+    ! C2_V        ! C1_V       _!__F1_V__!__F2_V_!_
+    !             !         CToF! FToC FF!      
+    !_____________!_____________!__F1_V__!__F2_V_!_
+    !             !             !        !       !
 
     real,dimension(nVar),intent(in):: Coarse2_V,Coarse1_V
     real,dimension(nVar,2,2),intent(in):: Fine1_VII,Fine2_VII
@@ -352,9 +351,8 @@ contains
        Fine1_VII         ,& ! States in 4 fine physical cells, 1st layer
        Fine2_VII         ,& ! States in 4 fine physical cells, 2nd layer
        CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& ! Facevalues in the physical cell,
-                                !   looking at the coarser cell 
-       FineF_VII)           ! Facevalues in the physical cell,
+       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell 
+       FineF_VII)           ! Values in the phys. cell,
     !                         looking at another physical cell
 
 
@@ -498,8 +496,7 @@ contains
        Fine1_VI          ,& ! States in 2 fine physical cells, 1st layer
        Fine2_VI          ,& ! States in 2 fine physical cells, 2nd layer
        CoarseToFineF_VI  ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VI  ,& ! Facevalues in the physical cell,
-                                !   looking at the coarser cell 
+       FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell 
        FineF_VI)            ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
@@ -639,8 +636,7 @@ contains
        Fine1_V           ,& ! States in 2 fine physical cells, 1st layer
        Fine2_V           ,& ! States in 2 fine physical cells, 2nd layer
        CoarseToFineF_V   ,& ! Values at face, in the coarse ghostcell
-       FineToCoarseF_V   ,& ! Facevalues in the physical cell,
-                                !   looking at the coarser cell 
+       FineToCoarseF_V   ,& ! Values in the phys. cell looking at coarser cell 
        FineF_V)             ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
