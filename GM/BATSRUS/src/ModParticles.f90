@@ -8,7 +8,7 @@ module ModParticles
        Particle_I, message_pass_particles, remove_undefined_particles, &
        mark_undefined, check_particle_location, put_particles, trace_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
-  use BATL_particles,    ONLY: BATL_allocate=>allocate_particles
+  use BATL_size,        ONLY: BatlNKind=>nKindParticle
   implicit none
   SAVE
   integer, private :: nKindParticle = 0
@@ -19,6 +19,8 @@ contains
     !---------------
     if(iKindParticle > 0) RETURN
     nKindParticle = nKindParticle + 1
+    if(nKindParticle > BatlNKind)&
+         call stop_mpi('Too many sorts of particles are allocated')
     iKindParticle = nKindParticle
     Particle_I(iKindParticle)%nVar   = nVar 
     Particle_I(iKindParticle)%nIndex = nIndex
