@@ -363,18 +363,20 @@ contains
   
   subroutine interpolate_grid_amr_gc(XyzIn_D, iBlock, &
        nCell, iCell_II, Weight_I, IsBody)
+
     use BATL_lib, ONLY: MaxDim, nDim
     use ModGeometry, ONLY: body_BLK, true_cell
     ! Interpolation is performed using cells (including ghost) of single block,
     ! its index, iBlock, is provided at the call;
-    !--------------------------------------------------------------------------
+    !
     ! NOTE: it is assumed that iBlock is appropriate for interpolation
     ! that utilizes only 1 layer of ghost cells, i.e. the call
     !  call check_interpolate_amr_gc(XyzIn_D,iBlock,iPeOut,iBlockOut)!BATL_grid
     ! would result in iBlockOut==iBlock
-    !--------------------------------------------------------------------------
+    !
     ! difference from BATL_grid version: if a cell in the stencil is not
     ! a true cell (see ModGeometry) -> it's removed from the stencil
+
     real,    intent(in) :: XyzIn_D(MaxDim)
     integer, intent(in) :: iBlock
     integer, intent(out):: nCell
@@ -386,8 +388,7 @@ contains
     integer:: nCellNew
     real:: WeightTotal
 
-    character(len=*), parameter:: NameSub = &
-         'ModBatlInterface:interpolate_grid_amr_gc'
+    character(len=*), parameter:: NameSub = 'interpolate_grid_amr_gc'
     !--------------------------------------------------------------------------
     ! call interpolation routine from BATL_grid
     call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
