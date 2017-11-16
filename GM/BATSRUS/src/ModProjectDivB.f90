@@ -771,13 +771,11 @@ contains
 
     ! Arguments
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
-         intent(inout) :: rhs
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(inout) :: rhs
     !        on input:  right-hand side vector.
     !        on output: residual vector.
 
-    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), &
-         intent(out):: qx
+    real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK), intent(out):: qx
     !        on output: solution vector.
 
     integer, intent(inout) :: iter
@@ -1049,12 +1047,12 @@ contains
 
     real :: rwork(2,7)
 
-    logical GoOn, rcmp, xpdt
-    integer nmv
-    real alpha, beta, omega, rho0, rho1, sigma
-    real varrho, hatgamma
-    real assumedzero, rnrm0, rnrm, rnrmMax0, rnrmMax
-    real mxnrmx, mxnrmr, kappa0, kappal
+    logical:: GoOn, rcmp, xpdt
+    integer:: nmv
+    real::    alpha, beta, omega, rho0, rho1, sigma
+    real::    varrho, hatgamma
+    real::    assumedzero, rnrm0, rnrm, rnrmMax0, rnrmMax
+    real::    mxnrmx, mxnrmr, kappa0, kappal
 
     logical :: oktest, oktest_me
 
