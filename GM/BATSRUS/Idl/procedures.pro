@@ -4958,7 +4958,12 @@ function grad_rz,idir,f,r,z
   else              return,filledge( -intedge(f,rc^2)/vol2/2/r)
 
 end
+;===========================================================================
+function div3,u,v,w,x,y,z
 
+  return, diff2(1,u,x) + diff2(2,v,y) + diff2(3,w,z)
+
+end
 ;===========================================================================
 function div,u,v,x,y
 ;
