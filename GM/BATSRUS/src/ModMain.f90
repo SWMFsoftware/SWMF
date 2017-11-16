@@ -4,9 +4,6 @@
 
 module ModMain
 
-  use BATL_lib, ONLY: &
-       StringTest, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest, iDimTest, xTest, yTest, zTest
-
   use ModKind
   use ModSize
   use ModVarIndexes
