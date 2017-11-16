@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModCurrent
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModCoordTransform, ONLY: sph_to_xyz
   use CON_axes,          ONLY: transform_matrix
@@ -9,24 +12,24 @@ module ModCurrent
   implicit none
 
 contains
-  !==============================================================================
+  !============================================================================
 
   subroutine get_point_data(WeightOldState, XyzIn_D, iBlockMin, iBlockMax, &
        iVarMin, iVarMax, StateCurrent_V)
 
-    ! Interpolate the (new and/or old) state vector from iVarMin to iVarMax and 
-    ! the current (if iVarMax=nVar+3) for input position 
-    ! XyzIn_D given in Cartesian coordinates. The interpolated state 
-    ! is second order accurate everywhere except where there is a 
-    ! resolution change in more than one direction for the cell centers 
-    ! surrounding the given position. In these exceptional cases the 
+    ! Interpolate the (new and/or old) state vector from iVarMin to iVarMax and
+    ! the current (if iVarMax=nVar+3) for input position
+    ! XyzIn_D given in Cartesian coordinates. The interpolated state
+    ! is second order accurate everywhere except where there is a
+    ! resolution change in more than one direction for the cell centers
+    ! surrounding the given position. In these exceptional cases the
     ! interpolated state is first order accurate. The interpolation algorithm
     ! is based on trilinear interpolation, but it is generalized for
     ! trapezoidal hexahedrons.
 
     use ModProcMH, ONLY: iProc
     use ModVarIndexes, ONLY: nVar
-    use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B, BlkTest, ProcTest
+    use ModMain, ONLY: nI, nJ, nK, nIJK_D, Unused_B
     use ModAdvance, ONLY: State_VGB, StateOld_VGB
     use ModParallel, ONLY: NeiLev
     use ModGeometry, ONLY: XyzStart_BLK
@@ -59,7 +62,7 @@ contains
     real,    dimension(3) :: Dxyz_D, DxyzInv_D, DxyzLo_D, DxyzHi_D
 
     ! Position of cell center to the lower index direction
-    integer, dimension(3) :: IjkLo_D 
+    integer, dimension(3) :: IjkLo_D
 
     ! Position of point and current cell center
     real :: x, y, z, xI, yJ, zK
@@ -74,13 +77,10 @@ contains
     real:: Current_D(3)
 
     ! Testing
-    logical :: DoTest, DoTestMe
-    !----------------------------------------------------------------------------
-    if(iProc == ProcTest .and. iBlockMin <= BlkTest .and. iBlockMax >= BlkTest)then
-       call set_oktest('get_point_data', DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_point_data'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Calculate maximum index and the number of state variables
     iStateMax = min(iVarMax, nVar)
@@ -100,7 +100,7 @@ contains
     BLOCK: do iBlock = iBlockMin, iBlockMax
        if(Unused_B(iBlock)) CYCLE
 
-       if(DoTestMe)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
+       if(DoTest)write(*,*)'get_point_data called with XyzIn_D=',XyzIn_D
 
        ! Put cell size of current block into an array
        Dxyz_D = CellSize_DB(:,iBlock)
@@ -217,6 +217,7 @@ contains
        end do
     end do BLOCK
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_point_data
   !============================================================================
 
@@ -251,9 +252,12 @@ contains
     real   :: InvDx2, InvDy2, InvDz2
 
     integer:: iBlockLast = -1
-    !--------------------------------------------------------------------------
 
     ! Exclude body cells
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_current'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.True_Cell(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
        Current_D = 0.0
 
@@ -426,6 +430,7 @@ contains
        Current_D = Current_D + CurlB0_DC(:,i,j,k)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine calc_cartesian_j
@@ -460,7 +465,6 @@ contains
            + State_VGB(Bz_,i,j,k,iBlock)/Xyz_DGB(y_,i,j,k,iBlock)
 
     end subroutine calc_cartesian_j
-
     !==========================================================================
 
     subroutine calc_gencoord_j
@@ -468,9 +472,9 @@ contains
       use ModCoordTransform, ONLY: inverse_matrix
 
       real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
-      !------------------------------------------------------------------------
 
       ! Get the dCartesian/dGencoord matrix with central difference
+      !------------------------------------------------------------------------
       DxyzDcoord_DD(:,1) = InvDx2 &
            *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
 
@@ -522,10 +526,10 @@ contains
            - sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,y_))
 
     end subroutine calc_gencoord_j
+    !==========================================================================
 
   end subroutine get_current
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_field_aligned_current(nTheta, nPhi, rIn, Fac_II, bSm_DII, &
        LatBoundary, Theta_I, Phi_I)
@@ -572,7 +576,10 @@ contains
     real    :: State_V(Bx_-1:nVar+3)
     real    :: dPhi, dTheta
     logical :: DoMap
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_field_aligned_current'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.allocated(bCurrentLocal_VII)) allocate( &
          bCurrentLocal_VII(0:6,nTheta,nPhi), &
          bCurrent_VII(0:6,nTheta,nPhi))
@@ -616,7 +623,7 @@ contains
                   rCurrents, Xyz_D, iHemisphere)
 
              if(iHemisphere == 0) then
-                ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0 
+                ! Assign weight 1, magnetic field of 1,0,0 and current 0,0,0
                 bCurrentLocal_VII(:,i,j) = &
                      (/1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0/)
                 CYCLE
@@ -680,7 +687,7 @@ contains
                 Theta = (i-1) * dTheta
              end if
 
-             ! Divide MHD values by the total weight if it exceeds 1.0 
+             ! Divide MHD values by the total weight if it exceeds 1.0
              if(bCurrent_VII(0,i,j) > 1.0) bCurrent_VII(:,i,j) = &
                   bCurrent_VII(:,i,j) / bCurrent_VII(0,i,j)
 
@@ -715,9 +722,9 @@ contains
              else
                 bIn_D = b_D
              end if
-             !store the field alinged current
-             Fac_II(i,j) = Fac 
-             !store the B field in SM coordinates !!
+             ! store the field alinged current
+             Fac_II(i,j) = Fac
+             ! store the B field in SM coordinates !!
 
              bSm_DII(:,i,j) = matmul(bIn_D, GmSmg_DD)
 
@@ -726,6 +733,9 @@ contains
     end if
     deallocate(bCurrentLocal_VII, bCurrent_VII)
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_field_aligned_current
+  !============================================================================
 
 end module ModCurrent
+!==============================================================================

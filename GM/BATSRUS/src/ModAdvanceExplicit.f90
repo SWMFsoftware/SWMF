@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!===========================================================================
 
 module ModAdvanceExplicit
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   implicit none
   private ! except
@@ -11,6 +13,7 @@ module ModAdvanceExplicit
   public:: advance_explicit ! advance state variables with explicit method
 
 contains
+  !============================================================================
 
   subroutine advance_explicit(DoCalcTimestep, iStageMax)
 
@@ -47,11 +50,10 @@ contains
     integer, intent(in) :: iStageMax ! advance only part way
     integer :: iBlock
 
-    character (len=*), parameter :: NameSub = 'advance_explicit'
-
-    logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'advance_explicit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     !\
     ! Perform multi-stage update of solution for this time (iteration) step
@@ -62,7 +64,7 @@ contains
 
     STAGELOOP: do iStage = 1, nStage
 
-       if(DoTestMe) write(*,*)NameSub,' starting stage=',iStage
+       if(DoTest) write(*,*)NameSub,' starting stage=',iStage
 
        ! If heating model depends on global B topology, update here
        if(UseUnsignedFluxModel) call get_coronal_heat_factor
@@ -75,7 +77,7 @@ contains
           do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
              if(all(neiLev(:,iBlock)/=1)) CYCLE
-             ! Calculate interface values for L/R states of each 
+             ! Calculate interface values for L/R states of each
              ! fine grid cell face at block edges with resolution changes
              !   and apply BCs for interface states as needed.
              call set_b0_face(iBlock)
@@ -99,7 +101,7 @@ contains
           end do
        endif
 
-       if(DoTestMe)write(*,*)NameSub,' done res change only'
+       if(DoTest)write(*,*)NameSub,' done res change only'
 
        ! Message pass conservative flux corrections.
        call timing_start('send_cons_flux')
@@ -108,7 +110,7 @@ contains
 
        call timing_stop('send_cons_flux')
 
-       if(DoTestMe)write(*,*)NameSub,' done message pass'
+       if(DoTest)write(*,*)NameSub,' done message pass'
 
        ! Multi-block solution update.
        do iBlock = 1, nBlock
@@ -140,10 +142,9 @@ contains
           end if
 
           ! Enforce flux conservation by applying corrected fluxes
-          ! to each coarse grid cell face at block edges with 
+          ! to each coarse grid cell face at block edges with
           ! resolution changes.
           if(DoConserveFlux) call apply_cons_flux(iBlock)
-
 
           ! Compute source terms for each cell.
           call timing_start('calc_sources')
@@ -181,13 +182,13 @@ contains
                iStage == nStage .and. DoCalcTimestep) &
                call calc_timestep(iBlock)
 
-          ! At this point the user has surely set all "block data" 
+          ! At this point the user has surely set all "block data"
           ! NOTE: The user has the option of calling set_block_data directly.
           call set_block_data(iBlock)
 
        end do ! Multi-block solution update loop.
 
-       if(DoTestMe)write(*,*)NameSub,' done update blocks'
+       if(DoTest)write(*,*)NameSub,' done update blocks'
 
        if(.not.UseOptimizeMpi) call barrier_mpi2('expl2')
 
@@ -200,13 +201,13 @@ contains
           call update_check
           call timing_stop('update_check')
 
-          if(DoTestMe)write(*,*)NameSub,' done update check'
+          if(DoTest)write(*,*)NameSub,' done update check'
        end if
 
        if(UseConstrainB .and. iStage==nStage)then
           call timing_start('constrain_B')
           ! Correct for consistency at resolution changes
-          !call correct_VxB
+          ! call correct_VxB
 
           ! Update face centered and cell centered magnetic fields
           do iBlock = 1, nBlock
@@ -215,7 +216,7 @@ contains
              call Bface2Bcenter(iBlock)
           end do
           call timing_stop('constrain_B')
-          if(DoTestMe)write(*,*)NameSub,' done constrain B'
+          if(DoTest)write(*,*)NameSub,' done constrain B'
        end if
 
        if(DoCalcTimeStep) then
@@ -234,7 +235,7 @@ contains
           call exchange_messages
        end if
 
-       if(DoTestMe)write(*,*)NameSub,' finished stage=',istage
+       if(DoTest)write(*,*)NameSub,' finished stage=',istage
 
        ! exit if exceeded requested maximum stage limit
        if ((iStageMax >= 0) .and. (iStage >= iStageMax)) EXIT STAGELOOP
@@ -243,11 +244,11 @@ contains
 
     if(UsePartImplicit)call timing_stop(NameSub)
 
-    if(DoTestMe)write(*,*)NameSub,' finished'
+    if(DoTest)write(*,*)NameSub,' finished'
 
+    call test_stop(NameSub, DoTest)
   end subroutine advance_explicit
-
-  !===========================================================================
+  !============================================================================
 
   subroutine update_secondbody
     use ModMain,     ONLY: time_simulation, nBlock
@@ -257,7 +258,10 @@ contains
     use ModBoundaryGeometry, ONLY: fix_block_geometry
 
     integer :: iBlock
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_secondbody'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Update second body coordinates
     xBody2 = DistanceBody2*cos(cTwoPi*Time_Simulation/OrbitPeriod+PhaseBody2)
@@ -265,12 +269,15 @@ contains
 
     do iBlock = 1, nBlock
        ! This might not work together with solid
-       call fix_block_geometry(iBlock) 
+       call fix_block_geometry(iBlock)
     end do
 
     ! call set_body_flag ! OLDAMR
     call exchange_messages
 
+    call test_stop(NameSub, DoTest)
   end subroutine update_secondbody
+  !============================================================================
 
 end module ModAdvanceExplicit
+!==============================================================================

@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!============================================================================
 
 module ModIeCoupling
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModProcMH
 
@@ -66,23 +68,22 @@ contains
     ! The ionosphere works on two hemispheres with a node based grid
     ! iSize is the number of latitude nodes from the pole to the equator.
     ! jSize is the number of longitude nodes (including a periodic overlap)
-    
+
     real, intent(in):: Theta_I(:)  ! co-latitudes in radians
     real, intent(in):: Phi_I(:)    ! longitudes in radians
     real, intent(in):: rIono       ! Ionosphere radius in meters
 
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='init_ie_grid'
-    !-----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_ie_grid'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(nThetaIono > 1) RETURN
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
 
     nThetaIono = size(Theta_I)
     nPhiIono   = size(Phi_I)
 
     allocate(ThetaIono_I(nThetaIono), PhiIono_I(nPhiIono), &
-         SinTheta_I(nThetaIono), CosTheta_I(nThetaIono), &    
+         SinTheta_I(nThetaIono), CosTheta_I(nThetaIono), &
          SinPhi_I(nPhiIono), CosPhi_I(nPhiIono))
 
     ThetaIono_I = Theta_I
@@ -99,13 +100,18 @@ contains
     dThetaIono = cPi    / (nThetaIono - 1)
     dPhiIono   = cTwoPi / (nPhiIono - 1)
 
-    if(DoTestMe)write(*,*) NameSub,': nThetaIono, nPhiIono=', &
+    if(DoTest)write(*,*) NameSub,': nThetaIono, nPhiIono=', &
          nThetaIono, nPhiIono
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_ie_grid
   !============================================================================
   subroutine clean_mod_ie_coupling
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'clean_mod_ie_coupling'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(allocated(IonoPotential_II)) &
          deallocate(IonoPotential_II, dIonoPotential_DII)
 
@@ -121,18 +127,20 @@ contains
     nThetaIono = -1
     nPhiIono = -1
 
+    call test_stop(NameSub, DoTest)
   end subroutine clean_mod_ie_coupling
+  !============================================================================
 
-  !===========================================================================
   subroutine get_ie_grid_index(Theta, Phi, ThetaNorm, PhiNorm)
     real, intent(in) :: Theta, Phi
     real, intent(out):: ThetaNorm, PhiNorm
 
+    !--------------------------------------------------------------------------
     ThetaNorm = Theta / dThetaIono
     PhiNorm   = Phi   / dPhiIono
   end subroutine get_ie_grid_index
-
   !============================================================================
+
   subroutine get_ie_potential(Xyz_D, Potential)
 
     use ModMain,           ONLY: Time_Simulation, TypeCoordSystem
@@ -151,10 +159,13 @@ contains
     real :: Theta, Phi           ! Mapped point colatitude, longitude
 
     logical, parameter :: DoTestMe = .false.
-    character(len=*), parameter :: NameSub = 'get_ie_potential'
-    !-------------------------------------------------------------------------
+
     ! call set_oktest(NameSub, DoTest, DoTestMe)
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_ie_potential'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.allocated(IonoPotential_II))then
        Potential = 0.0
 !       Potential = sign(10.0, Xyz_D(2))
@@ -172,8 +183,8 @@ contains
     Potential = bilinear(IonoPotential_II, 1, nThetaIono, 1, nPhiIono, &
          (/ Theta/dThetaIono+1, Phi/dPhiIono+1 /))
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_ie_potential
-
   !============================================================================
 
   subroutine calc_grad_ie_potential
@@ -182,7 +193,11 @@ contains
 
     integer, parameter :: Theta_=1, Phi_=2
     integer :: i, j
-    !-------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_grad_ie_potential'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.allocated(dIonoPotential_DII)) &
          allocate(dIonoPotential_DII(2,nThetaIono,nPhiIono))
 
@@ -222,9 +237,10 @@ contains
 
     dIonoPotential_DII(Phi_,:,nPhiIono) = dIonoPotential_DII(Phi_,:,1)
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_grad_ie_potential
-
   !============================================================================
+
   real function logvar_ionosphere(NameLogvar)
 
     ! Calculate cross polar cap potentials for write_logvar
@@ -237,7 +253,7 @@ contains
     !--------------------------------------------------------------------------
     if(.not.allocated(IonoPotential_II))then
        logvar_ionosphere = 0.0
-       return
+       RETURN
     endif
 
     select case(NameLogvar)
@@ -260,8 +276,8 @@ contains
     end select
 
   end function logvar_ionosphere
-
   !============================================================================
+
   subroutine calc_inner_bc_velocity(tSimulation, Xyz_D, b_D, u_D)
 
     !USES:
@@ -272,7 +288,7 @@ contains
     !INPUT ARGUMENTS:
     real, intent(in)    :: tSimulation      ! Simulation time
     real, intent(in)    :: Xyz_D(MaxDim)    ! Position vector
-    real, intent(in)    :: b_D(MaxDim)      ! Magnetic field 
+    real, intent(in)    :: b_D(MaxDim)      ! Magnetic field
 
     !OUTPUT ARGUMENTS:
     real, intent(out)   :: u_D(MaxDim)      ! Velocity vector
@@ -285,12 +301,12 @@ contains
     ! The algorithm is the following: the input location is mapped down
     ! to the ionosphere where the Theta and Phi gradients of the potential
     ! are interpolated to the mapped point. This gradient is multiplied by
-    ! the 2 by 3 Jacobian matrix of the mapping which converts the 
+    ! the 2 by 3 Jacobian matrix of the mapping which converts the
     ! Theta,Phi gradient to the X,Y,Z gradient of the potential, which is
     ! the electric field at the required location. The velocity is
     ! determined from the electric field and the magnetic field using
     ! the fact that the electric field is orthogonal to the magnetic field.
-    !EOP
+    ! EOP
 
     real :: XyzIono_D(MaxDim)    ! Mapped point on the ionosphere
     real :: Theta, Phi           ! Mapped point colatitude, longitude
@@ -305,11 +321,13 @@ contains
     integer :: iTheta, iPhi, iHemisphere
 
     logical, parameter :: DoTestMe = .false.
-    character(len=*), parameter :: NameSub = 'calc_inner_bc_velocity'
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_inner_bc_velocity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! call set_oktest(NameSub, DoTest, DoTestMe)
 
-    if(DoTestMe)write(*,*)NameSub,' Xyz_D=',Xyz_D
+    if(DoTest)write(*,*)NameSub,' Xyz_D=',Xyz_D
 
     ! Map down to the ionosphere at radius rIonosphere. Result is in SMG.
     ! Also obtain the Jacobian matrix between Theta,Phi and Xyz_D
@@ -352,7 +370,7 @@ contains
     ! U = (E x B) / B^2
     u_D = cross_product(eField_D, b_D) / B2
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub,' Xyz_D        =',Xyz_D
        write(*,*)NameSub,' XyzIono_D    =',XyzIono_D
        write(*,*)NameSub,' Theta, Phi   =',Theta,Phi
@@ -365,10 +383,11 @@ contains
        write(*,*)NameSub,' u_D=',u_D
     endif
 
-    if(DoTestMe)write(*,*)NameSub,' Final u_D=',u_D
+    if(DoTest)write(*,*)NameSub,' Final u_D=',u_D
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_inner_bc_velocity
-  !==========================================================================
+  !============================================================================
   subroutine map_jouleheating_to_inner_bc
 
     use ModMain,    ONLY: Time_Simulation
@@ -379,18 +398,21 @@ contains
     integer :: i, j, iHemisphere
     real, dimension(3) :: XyzIono_D, bIono_D, B_D, Xyz_tmp
     real    :: bIono, b
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'map_jouleheating_to_inner_bc'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do j = 1, nPhiIono; do i = 1, nThetaIono
        call sph_to_xyz(rIonosphere, ThetaIono_I(i), PhiIono_I(j), XyzIono_D)
        call get_planet_field(Time_Simulation,XyzIono_D, 'SMG NORM', bIono_D)
        bIono = sqrt(sum(bIono_D**2))
 
-       ! map out to GM (caution!, not like map down to the ionosphere, 
+       ! map out to GM (caution! , not like map down to the ionosphere,
        ! there is always a corresponding position.)
        call map_planet_field(Time_Simulation, XyzIono_D, 'SMG NORM', &
             rBody, Xyz_tmp, iHemisphere)
 
-       if (iHemisphere == 0) then 
+       if (iHemisphere == 0) then
           ! not a mapping in the dipole, but to the equator
           ! assume no outflow to GM inner boundary
           IonoJouleHeating_II(i,j) = 0
@@ -404,12 +426,13 @@ contains
        endif
     end do; end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine map_jouleheating_to_inner_bc
+  !============================================================================
 
-  !==========================================================================
   subroutine get_inner_bc_jouleheating(XyzSm_D, JouleHeating)
 
-    ! Get the Joule heating at the position XyzSm_D (given in SMG) 
+    ! Get the Joule heating at the position XyzSm_D (given in SMG)
     ! at the inner boundary.
 
     use ModCoordTransform, ONLY: xyz_to_dir
@@ -427,10 +450,10 @@ contains
 
     integer:: iHemisphere
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'map_inner_bc_jouleheating'
-    !---------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_inner_bc_jouleheating'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Map down to the ionosphere at radius rIonosphere
     call map_planet_field(Time_Simulation, XyzSm_D, 'SMG NORM', rIonosphere, &
@@ -455,9 +478,10 @@ contains
     ! Note: this is a first order accurate algorithm
     JouleHeating = IonoJouleHeating_II(iTheta, iPhi)
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_inner_bc_jouleheating
+  !============================================================================
 
-  !===========================================================================
   subroutine calc_ie_currents
 
     use CON_planet_field,  ONLY: get_planet_field
@@ -466,15 +490,17 @@ contains
 
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitElectric_, UnitJ_
 
-    ! Calculate the ionospheric Hall and Pedersen currents 
+    ! Calculate the ionospheric Hall and Pedersen currents
     ! from the Hall and Pedersen conductivities and the electric field.
 
     real:: XyzIono_D(3), eTheta, ePhi, eIono_D(3), bUnit_D(3)
 
     integer:: i, j
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_ie_currents'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! If the current arrays are allocated it means they are already calculated
     if(allocated(jHall_DII)) RETURN
 
@@ -544,9 +570,9 @@ contains
 
     end do; end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_ie_currents
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_ie_mag_perturb(nMag, XyzSm_DI, dBHall_DI, dBPedersen_DI)
 
@@ -567,14 +593,14 @@ contains
     real:: XyzIono_D(3), dXyz_D(3)
     integer:: iMag, i, j, iLine
     real:: Coef0, Coef
-    
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'calc_ie_mag_perturb'
-    !========================================================================
-    call timing_start(NameSub)
-    call set_oktest(NameSub, DoTest, DoTestMe)
 
-    if(DoTestMe)write(*,*) NameSub,' starting with XyzSm(iMag=1)=', &
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_ie_mag_perturb'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    call timing_start(NameSub)
+
+    if(DoTest)write(*,*) NameSub,' starting with XyzSm(iMag=1)=', &
          XyzSm_DI(:,1)*No2Si_V(UnitX_)
 
     ! Initialize magnetic perturbations
@@ -602,7 +628,7 @@ contains
        Coef0 = 1/(4*cPi)*rIonosphere**2*dThetaIono*dPhiIono*SinTheta_I(i)
 
        do iMag = 1, nMag
-          ! Distance vector between magnetometer position 
+          ! Distance vector between magnetometer position
           ! and ionosphere surface element
           dXyz_D = XyzSm_DI(:,iMag) - XyzIono_D
 
@@ -638,31 +664,37 @@ contains
     end do
     call timing_stop(NameSub)
 
-    if(DoTestMe)write(*,*) NameSub,': dBHall(iMag=1), dBPede(iMag=1)=', &
+    if(DoTest)write(*,*) NameSub,': dBHall(iMag=1), dBPede(iMag=1)=', &
          dBHall_DI(:,1)*No2Si_V(UnitB_), &
          dBPedersen_DI(:,1)*No2Si_V(UnitB_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_ie_mag_perturb
-  !===========================================================================
+  !============================================================================
   subroutine read_ie_velocity_param
 
     use ModReadParam, ONLY: read_var
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_ie_velocity_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call read_var('UseIonoVelocity', UseIonoVelocity)
     if(UseIonoVelocity)then
        call read_var('rCoupleUiono'   , rCoupleUiono)
        call read_var('TauCoupleUiono',  TauCoupleUiono)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_ie_velocity_param
+  !============================================================================
 
-  !===========================================================================
   subroutine apply_ie_velocity
 
     use ModMain,    ONLY: nI, nJ, nK, nBlock, time_accurate, time_simulation, &
          Dt, Unused_B, UseB0, UseRotatingBc
     use ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
-    use ModGeometry,ONLY: r_BLK, Rmin_BLK
+    use ModGeometry, ONLY: r_BLK, Rmin_BLK
     use ModB0,      ONLY: B0_DGB
     use ModPhysics, ONLY: Si2No_V, UnitT_, rBody, calc_corotation_velocity
     use ModEnergy,  ONLY: calc_energy_cell
@@ -672,12 +704,11 @@ contains
     real, dimension(3) :: Xyz_D, Uiono_D, Urot_D, RhoUiono_D, RhoU_D, b_D
 
     integer :: i,j,k,iBlock
-    character (len=*), parameter :: NameSub='apply_ie_velocity'
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'apply_ie_velocity'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.UseIonoVelocity) RETURN
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
 
     if(time_accurate)then
        ! Ramp up is based on physical time: u' = u + dt/tau * (uIE - u)
@@ -744,6 +775,9 @@ contains
 
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine apply_ie_velocity
+  !============================================================================
 
 end module ModIeCoupling
+!==============================================================================

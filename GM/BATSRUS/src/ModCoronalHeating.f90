@@ -1,9 +1,12 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!=========================================!Master module!======================
+!=========================================! Master module!======================
 module ModCoronalHeating
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModMain,       ONLY: nI, nJ, nK
   use ModReadParam,  ONLY: lStringLine
   use ModVarIndexes, ONLY: WaveFirst_, WaveLast_
@@ -66,7 +69,7 @@ module ModCoronalHeating
   real :: HeatChCgs = 5.0e-7
   real :: DecayLengthCh = 0.7
 
-  !Arrays for the calculated heat function and dissipated wave energy
+  ! Arrays for the calculated heat function and dissipated wave energy
   real,public :: CoronalHeating_C(1:nI,1:nJ,1:nK)
   real,public :: WaveDissipation_VC(WaveFirst_:WaveLast_,1:nI,1:nJ,1:nK)
 
@@ -83,7 +86,7 @@ module ModCoronalHeating
   real :: StochasticExponent = 0.34
   real :: StochasticAmplitude = 0.18
 
-  logical :: DoInit = .true. 
+  logical :: DoInit = .true.
 
   ! The power spectrum of magnetic energy fluctuations in the solar wind
   ! follows a Kolmogorov spectrum (\vardelta B)^(-5/3) in the inertial range
@@ -119,7 +122,6 @@ module ModCoronalHeating
   real, public :: UnsignedFluxHeight = -99999.0
 
 contains
-
   !============================================================================
 
   subroutine get_coronal_heat_factor
@@ -148,8 +150,10 @@ contains
 
     real, parameter :: HeatExponent = 1.1488, HeatCoef = 89.4
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_coronal_heat_factor'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(DoFirst .and. DtUpdateFlux <= 0.0)then
 
@@ -193,15 +197,15 @@ contains
 
        UnsignedFluxCgs = 0.0
        if(TypeGeometry == 'spherical')then
-          do iBlock = 1, nBlock 
-             if(Unused_B(iBlock)) cycle
+          do iBlock = 1, nBlock
+             if(Unused_B(iBlock)) CYCLE
              if(true_BLK(iBlock)) then
                 call get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
              end if
           end do
        elseif(TypeGeometry == 'cartesian')then
-          do iBlock = 1, nBlock 
-             if(Unused_B(iBlock)) cycle
+          do iBlock = 1, nBlock
+             if(Unused_B(iBlock)) CYCLE
              if(true_BLK(iBlock)) then
                 dAreaCgs = CellFace_DB(z_,iBlock)*No2Si_V(UnitX_)**2*1e4
 
@@ -258,8 +262,8 @@ contains
 
     HeatFactor = TotalCoronalHeating/HeatFunctionVolume
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_coronal_heat_factor
-
   !============================================================================
 
   subroutine get_coronal_heating(i, j, k, iBlock, CoronalHeating)
@@ -268,14 +272,17 @@ contains
     real, intent(out) :: CoronalHeating
 
     real :: HeatFunction
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_coronal_heating'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     call get_heat_function(i, j, k, iBlock, HeatFunction)
 
     CoronalHeating = HeatFactor*HeatFunction
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_coronal_heating
-
   !============================================================================
 
   subroutine get_heat_function(i, j, k, iBlock, HeatFunction)
@@ -290,8 +297,11 @@ contains
     real, intent(out) :: HeatFunction
 
     real :: Bmagnitude, B_D(3)
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_heat_function'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(UseB0) then
        B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
     else
@@ -319,9 +329,10 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_heat_function
+  !============================================================================
 
-  !===========================================================================
   subroutine get_photosphere_field(iBlock, Bz_V, BzCgs_II)
 
     use ModMain,      ONLY: nI, nJ, nK, z_
@@ -334,7 +345,10 @@ contains
     real, intent(out)   :: BzCgs_II(1:nI, 1:nJ)
     real :: MinZ, MaxZ, DxLeft, z
     integer :: iLeft
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_photosphere_field'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     MinZ = CoordMin_DB(z_,iBlock)
     MaxZ = CoordMax_DB(z_,iBlock)
@@ -348,6 +362,7 @@ contains
     BzCgs_II = ((1.0 - DxLeft)*Bz_V(1:nI, 1:nJ, iLeft) + &
          DxLeft*Bz_V(1:nI, 1:nJ, iLeft+1))*No2Si_V(UnitB_)*1e4
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_photosphere_field
   !============================================================================
   subroutine get_photosphere_unsignedflux(iBlock, UnsignedFluxCgs)
@@ -366,7 +381,10 @@ contains
 
     real :: MinR, MaxR, r, DrLeft, BrLeft, BrRight, BrCgs, DrL, dAreaCgs
     integer :: iLeft, j, k, iL
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_photosphere_unsignedflux'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     MinR = CoordMin_DB(r_,iBlock)
     MaxR = CoordMax_DB(r_,iBlock)
 
@@ -401,8 +419,9 @@ contains
        UnsignedFluxCgs = UnsignedFluxCgs + abs(BrCgs)*dAreaCgs
     end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_photosphere_unsignedflux
-  !==========================================================================
+  !============================================================================
   subroutine read_corona_heating(NameCommand)
 
     use ModAdvance,    ONLY: UseAnisoPressure
@@ -411,12 +430,15 @@ contains
     integer :: iFluid
 
     character(len=*), intent(in):: NameCommand
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_corona_heating'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#CORONALHEATING")
        call read_var('TypeCoronalHeating', TypeCoronalHeating)
 
-       !Initialize logicals
+       ! Initialize logicals
        UseCoronalHeating = .true.
        UseUnsignedFluxModel = .false.
        UseExponentialHeating= .false.
@@ -502,13 +524,17 @@ contains
             // NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_corona_heating
   !============================================================================
   subroutine init_coronal_heating
     use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, UnitX_, &
          UnitU_
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_coronal_heating'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.DoInit) RETURN
     DoInit = .false.
 
@@ -525,8 +551,9 @@ contains
     PoyntingFluxPerB = PoyntingFluxPerBSi &
          *Si2No_V(UnitEnergyDens_)*Si2No_V(UnitU_)/Si2No_V(UnitB_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_coronal_heating
-  !=========================================================================
+  !============================================================================
   subroutine get_cell_heating(i, j, k, iBlock, CoronalHeating)
 
     use ModGeometry,       ONLY: r_BLK
@@ -544,11 +571,11 @@ contains
 
     real :: HeatCh
 
-    ! parameters for open/closed. This uses WSA model to determine if 
+    ! parameters for open/closed. This uses WSA model to determine if
     ! cell is in an 'open' or 'closed' field region.
     !
     ! ** NOTE ** WSA does field line tracing on an auxiliary grid.
-    ! should really be using the computational domain, but global 
+    ! should really be using the computational domain, but global
     ! feild line tracing for this purpose is not easily implemented
     real :: Ufinal
     real :: UminIfOpen = 290.0
@@ -560,7 +587,10 @@ contains
     real :: FractionB, Bcell
 
     real :: WaveDissipation_V(WaveFirst_:WaveLast_)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_cell_heating'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseB0)then
        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
@@ -602,7 +632,7 @@ contains
           Weight = 0.0
        else if (UFinal >= UmaxIfOpen) then
           Weight = 1.0
-       else 
+       else
           Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
        end if
 
@@ -620,12 +650,13 @@ contains
        Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
 
        FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
-       CoronalHeating = max(CoronalHeating, & 
+       CoronalHeating = max(CoronalHeating, &
             FractionB * ArHeatFactorCgs * Bcell &
             * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
 
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_cell_heating
   !============================================================================
 
@@ -646,11 +677,11 @@ contains
     integer             :: i, j, k
     real :: HeatCh
 
-    ! parameters for open/closed. This uses WSA model to determine if 
+    ! parameters for open/closed. This uses WSA model to determine if
     ! cell is in an 'open' or 'closed' field region.
     !
     ! ** NOTE ** WSA does field line tracing on an auxiliary grid.
-    ! should really be using the computational domain, but global 
+    ! should really be using the computational domain, but global
     ! feild line tracing for this purpose is not easily implemented
     real :: Ufinal
     real :: UminIfOpen = 290.0
@@ -661,7 +692,10 @@ contains
     ! local variables for ArHeating (Active Region Heating)
     real :: FractionB, Bcell
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_block_heating'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseAlfvenWaveDissipation)then
 
@@ -709,7 +743,7 @@ contains
              Weight = 0.0
           else if (UFinal >= UmaxIfOpen) then
              Weight = 1.0
-          else 
+          else
              Weight = (UFinal - UminIfOpen)/(UmaxIfOpen - UminIfOpen)
           end if
 
@@ -737,12 +771,13 @@ contains
           Bcell = No2Io_V(UnitB_) * sqrt( sum( B_D**2 ) )
 
           FractionB = 0.5*(1.0+tanh((Bcell - ArHeatB0)/DeltaArHeatB0))
-          CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k), & 
+          CoronalHeating_C(i,j,k) = max(CoronalHeating_C(i,j,k), &
                FractionB * ArHeatFactorCgs * Bcell &
                * 0.1 * Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_))
        end do; end do; end do
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_block_heating
   !============================================================================
 
@@ -759,7 +794,10 @@ contains
          CoronalHeating
 
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseB0)then
        FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
@@ -781,8 +819,8 @@ contains
 
     CoronalHeating = sum(WaveDissipation_V)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_alfven_wave_dissipation
-
   !============================================================================
 
   subroutine turbulent_cascade(i, j, k, iBlock, WaveDissipation_V, &
@@ -801,9 +839,10 @@ contains
     real :: FullB_D(3), FullB, Coef
     real :: EwavePlus, EwaveMinus
 
-    character(len=*), parameter :: &
-         NameSub = 'ModCoronalHeating::turbulent_cascade'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'turbulent_cascade'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Low-frequency cascade due to small-scale nonlinearities
 
@@ -825,8 +864,8 @@ contains
 
     CoronalHeating = sum(WaveDissipation_V)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine turbulent_cascade
-
   !============================================================================
 
   subroutine get_wave_reflection(iBlock)
@@ -847,8 +886,11 @@ contains
     real :: GradLogAlfven_D(nDim), CurlU_D(3), b_D(3)
     real :: FullB_D(3), FullB, Rho, DissipationRateMax, ReflectionRate
     real :: EwavePlus, EwaveMinus
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_wave_reflection'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoExtendTransitionRegion) call get_tesi_c(iBlock, TeSi_C)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -879,15 +921,15 @@ contains
 
        ! Reflection rate driven by Alfven speed gradient and
        ! vorticity along the field lines
-       !if(R_BLK(i,j,k,iBlock)<2.5)then
+       ! if(R_BLK(i,j,k,iBlock)<2.5)then
        ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
             + (sum(FullB_D(:nDim)*GradLogAlfven_D))**2/Rho )
-       !else
+       ! else
        !   ReflectionRate = sqrt( (sum(b_D*CurlU_D))**2 &
        !        + min((sum(FullB_D(1:nDim)*GradLogAlfven_D))**2,&
        !        (sum(FullB_D(1:nDim)*Xyz_DGB(1:nDim,i,j,k,iBlock))/&
        !        R_BLK(i,j,k,iBlock)**2)**2)/Rho )
-       !end if
+       ! end if
        ! Clip the reflection rate from above with maximum dissipation rate
        ReflectionRate = min(ReflectionRate, DissipationRateMax)
 
@@ -910,8 +952,8 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_wave_reflection
-
   !============================================================================
 
   subroutine get_grad_log_alfven_speed(i, j, k, iBlock, GradLogAlfven_D)
@@ -925,7 +967,10 @@ contains
     real, intent(out) :: GradLogAlfven_D(nDim)
 
     real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(IsNewBlockAlfven)then
        call get_log_alfven_speed
 
@@ -953,7 +998,9 @@ contains
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
+    !==========================================================================
 
     subroutine get_log_alfven_speed
 
@@ -1002,9 +1049,9 @@ contains
       end if
 
     end subroutine get_log_alfven_speed
+    !==========================================================================
 
   end subroutine get_grad_log_alfven_speed
-
   !============================================================================
 
   subroutine get_curl_u(i, j, k, iBlock, CurlU_D)
@@ -1022,8 +1069,11 @@ contains
     real, intent(out) :: CurlU_D(MaxDim)
 
     real :: DxInvHalf, DyInvHalf, DzInvHalf
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_curl_u'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(IsCartesianGrid)then
        DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
        DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
@@ -1082,12 +1132,12 @@ contains
        CurlU_D(:) = 0.5*CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_curl_u
-
   !============================================================================
 
   subroutine apportion_coronal_heating(i, j, k, iBlock, &
-       CoronalHeating, QPerQtotal_I, QparPerQtotal_I, QePerQtotal) 
+       CoronalHeating, QPerQtotal_I, QparPerQtotal_I, QePerQtotal)
 
     ! Apportion the coronal heating to the electrons and protons based on
     ! how the Alfven waves dissipate at length scales << Lperp
@@ -1116,9 +1166,10 @@ contains
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingTotal
 
-    character(len=*), parameter :: &
-         NameSub = 'ModCoronalHeating::apportion_coronal_heating'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseStochasticHeating)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
@@ -1240,6 +1291,9 @@ contains
        call stop_mpi(NameSub//' Unknown heat partitioning')
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine apportion_coronal_heating
+  !============================================================================
 
 end module ModCoronalHeating
+!==============================================================================

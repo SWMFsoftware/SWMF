@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModPointImplicit
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest
 
   !DESCRIPTION:
   ! This module implements a point implicit scheme for the implicit
@@ -37,7 +40,7 @@ module ModPointImplicit
   ! If Rimp is linear, the linearization is exact.
   !
   ! Substituting the linearization back into the one-stage and two-stage
-  ! schemes yields a linear equation for the differences 
+  ! schemes yields a linear equation for the differences
   ! (Uimp^n+1/2 - Uimp^n) and (Uimp^n+1 - Uimp^n), respectively.
   ! Since Rimp depends on the local cell values only, the linear equations
   ! can be solved point-wise for every cell.
@@ -47,10 +50,10 @@ module ModPointImplicit
   ! derivatives of Rimp:
   !
   ! dRimp/dU^w = ((Rimp(Uexp^n+1,Uimp^n+eps^w) - Rimp(Uexp^n+1,Uimp^n))/eps^w
-  !                
+  !
   ! where eps^w is a small perturbation in the w-th component of Uimp.
-  !EOP
-  use ModSize, ONLY: nBLK
+  ! EOP
+  use ModSize, ONLY: MaxBlock
   use ModMultiFluid, ONLY: UseMultiIon
   use ModAdvance, ONLY: UseEfield
   implicit none
@@ -60,12 +63,12 @@ module ModPointImplicit
   private ! except
 
   ! Default is true for multi-ion and ion-electron equations
-  logical, public:: UsePointImplicit = UseMultiIon .or. UseEfield 
-  logical, public:: UsePointImplicit_B(nBLK) = UseMultiIon .or. UseEfield 
+  logical, public:: UsePointImplicit = UseMultiIon .or. UseEfield
+  logical, public:: UsePointImplicit_B(MaxBlock) = UseMultiIon .or. UseEfield
 
   ! balance point implicit blocks once or multiple times?
-  logical, public:: DoBalancePointImplicit = .false. 
-  logical, public:: IsDynamicPointImplicit = .false. 
+  logical, public:: DoBalancePointImplicit = .false.
+  logical, public:: IsDynamicPointImplicit = .false.
 
   integer, public, allocatable :: &
        iVarPointImpl_I(:)          ! Indexes of point implicit variables
@@ -83,31 +86,34 @@ module ModPointImplicit
   public:: init_point_implicit_num
 
   ! Local variables
-  ! Number of point implicit variables 
+  ! Number of point implicit variables
   integer :: nVarPointImpl = 0
 
   ! Number and indexes of variables with numerical derivatives
   integer :: nVarPointImplNum = 0
-  integer, allocatable :: iVarPointImplNum_I(:)       
+  integer, allocatable :: iVarPointImplNum_I(:)
 
   ! Coeff. of implicit part: beta=0.5 second order, beta=1.0 first order
-  real:: BetaPointImpl = 1.0  
+  real:: BetaPointImpl = 1.0
 
   ! Use asymmetric derivative in numerical Jacobian calculation
-  logical:: IsAsymmetric = .true. 
+  logical:: IsAsymmetric = .true.
 
   ! Normalize variables cell-by-cell or per block
   logical:: DoNormalizeCell = .false.
 
 contains
- !============================================================================
+  !============================================================================
   subroutine read_point_implicit_param
     use ModReadParam,     ONLY: read_var
-    character(len=*), parameter:: NameSub = 'read_implicit_param'
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_point_implicit_param'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call read_var('UsePointImplicit', UsePointImplicit)
-    !the array allows the user to specify the blocks to 
-    !use the point implicit scheme individually
+    ! the array allows the user to specify the blocks to
+    ! use the point implicit scheme individually
     UsePointImplicit_B = UsePointImplicit
     if(UsePointImplicit) then
        call read_var('BetaPointImplicit', BetaPointImpl)
@@ -115,8 +121,9 @@ contains
        call read_var('DoNormalizeCell',   DoNormalizeCell)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_point_implicit_param
-  !===========================================================================
+  !============================================================================
   subroutine update_point_implicit(iBlock, &
        calc_point_impl_source, init_point_implicit)
 
@@ -124,12 +131,12 @@ contains
     use ModKind,    ONLY: nByteReal
     use ModMain,    ONLY: &
          nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate, &
-         iTest, jTest, kTest, ProcTest, BlkTest, Test_String
+              StringTest
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
          DoReplaceDensity, &
          UseMultiSpecies
     use ModMultiFluid, ONLY: iRho_I, nFluid
-    use ModGeometry,ONLY: True_Blk, True_Cell
+    use ModGeometry, ONLY: True_Blk, True_Cell
     use ModVarIndexes, ONLY: SpeciesFirst_, SpeciesLast_, &
          Rho_, DefaultState_V, NameVar_V
     use ModPhysics, ONLY: RhoMin_I
@@ -152,17 +159,13 @@ contains
 
     real, allocatable, save :: Matrix_II(:,:), Rhs_I(:)
 
-    character(len=*), parameter:: NameSub='update_point_implicit'
-    logical :: DoTest, DoTestMe,DoTestCell
-    !-------------------------------------------------------------------------
+    logical :: DoTestCell
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_point_implicit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call timing_start(NameSub)
-
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub,DoTest,DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
 
     ! Switch to implicit user sources
     IsPointImplSource = .true.
@@ -180,7 +183,7 @@ contains
           if(IsAsymmetric)then
              ! Optimal value is the square root of P for 1-sided derivative
              EpsPointImpl   = 1.e-6
-          else 
+          else
              ! Optimal value is the 2/3 power of P for 1-sided derivative
              EpsPointImpl   = 1.e-9
           end if
@@ -201,11 +204,11 @@ contains
 
        ! This call should allocate and set the iVarPointImpl_I index array.
        ! If IsPointImplMatrixSet=T is set then the dS/dU matrix is analytic.
-       ! If IsPointImplMatrixSet is not true, then nVarPointImplNum and 
+       ! If IsPointImplMatrixSet is not true, then nVarPointImplNum and
        ! iVarPointImplNum_I index array may be set with the number and indexes
-       ! of point implicit variables that require numerical derivatives 
+       ! of point implicit variables that require numerical derivatives
        ! for setting dS/dU. This is a subset of the iVarPointImpl_I variables.
-       ! Finally, init_point_implicit  may also modify the EpsPointImpl and 
+       ! Finally, init_point_implicit  may also modify the EpsPointImpl and
        ! EpsPointImpl_V parameters.
 
        nVarPointImplNum = 0
@@ -215,7 +218,7 @@ contains
             ': init_point_implicit did not set iVarPointImpl_I')
 
        ! If IsPointImplMatrixSet is false and the iVarPointImplNum_I array is
-       ! not set, then all variables require numerical derivatives, 
+       ! not set, then all variables require numerical derivatives,
        ! so we simply copy iVarPointImpl_I into iVarPointImplNum_I
        if(.not.IsPointImplMatrixSet .and. nVarPointImplNum == 0) &
             call init_point_implicit_num
@@ -227,7 +230,7 @@ contains
             Matrix_II(nVarPointImpl,nVarPointImpl), &
             Rhs_I(nVarPointImpl))
 
-       if(iProc==0 .and. index(Test_String, NameSub)>0)then
+       if(iProc==0 .and. index(StringTest, NameSub)>0)then
           write(*,*)NameSub,' allocated arrays'
           write(*,*)NameSub,': nVarPointImpl  =', nVarPointImpl
           write(*,*)NameSub,': iVarPointImpl_I=', iVarPointImpl_I
@@ -248,7 +251,7 @@ contains
        BetaStage = BetaPointImpl
     end if
 
-    !call timing_start('pointimplinit')
+    ! call timing_start('pointimplinit')
 
     ! Store explicit update
     StateExpl_VC = State_VGB(:,1:nI,1:nJ,1:nK,iBlock)
@@ -261,15 +264,15 @@ contains
        State_VGB(iVar,i,j,k,iBlock) = StateOld_VGB(iVar,i,j,k,iBlock)
     end do; end do; end do; end do
 
-    ! Calculate unperturbed source for right hand side 
+    ! Calculate unperturbed source for right hand side
     ! and possibly also set analytic Jacobean matrix elements.
     ! Multi-ion may set its elements while the user uses numerical Jacobean.
     Source_VC = 0.0
     DsDu_VVC  = 0.0
 
-    !call timing_stop('pointimplinit')
+    ! call timing_stop('pointimplinit')
 
-    !call timing_start('pointimplsrc')
+    ! call timing_start('pointimplsrc')
 
     call calc_point_impl_source(iBlock)
 
@@ -341,7 +344,7 @@ contains
              end do
           end if
 
-          !Restore unperturbed state
+          ! Restore unperturbed state
           State_VGB(iVar,1:nI,1:nJ,1:nK,iBlock) = State0_C
 
        end do
@@ -352,9 +355,9 @@ contains
        IsPointImplPerturbed = .false.
 
     end if
-    !call timing_stop('pointimplsrc')
+    ! call timing_stop('pointimplsrc')
 
-    if(DoTestMe)then
+    if(DoTest)then
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
           write(*,'(a,a,i5,a,100es15.6)')NameSub,': DsDu(',iVar,',:)=',  &
                (DsDu_VVC(iVar,iVarPointImpl_I(iJVar),iTest,jTest,kTest), &
@@ -362,16 +365,15 @@ contains
        end do
     end if
 
-
     ! Do the implicit update
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
        ! Do not update body cells
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       !call timing_start('pointimplmatrix')
+       ! call timing_start('pointimplmatrix')
        DtCell = Cfl*time_BLK(i,j,k,iBlock)*iStage/real(nStage)
 
        ! The right hand side is Uexpl - Uold + Sold
@@ -391,7 +393,7 @@ contains
           Matrix_II(iIVar,iIVar) = Matrix_II(iIVar,iIVar) + 1.0
 
        end do
-       !call timing_stop('pointimplmatrix')
+       ! call timing_stop('pointimplmatrix')
 
        if (DoTestCell) then
           write(*,*) NameSub,' DtCell  =', DtCell
@@ -401,7 +403,7 @@ contains
              iVar = iVarPointImpl_I(iIVar)
              write(*,'(a,100es15.6)') NameVar_V(iVar),                    &
              StateExpl_VC(iVar,iTest,jTest,kTest),                        &
-                  StateOld_VGB(iVar,iTest,jTest,kTest,BlkTest),           &
+                  StateOld_VGB(iVar,iTest,jTest,kTest,iBlockTest),           &
                   Source_VC(iVar,iTest,jTest,kTest),                      &
                   Rhs_I(iIvar)
           end do
@@ -411,11 +413,10 @@ contains
           end do
        end if
 
-       
        ! Solve the A.dU = RHS equation
-       !call timing_start('pointimplsolve')
+       ! call timing_start('pointimplsolve')
        call linear_equation_solver(nVarPointImpl, Matrix_II, Rhs_I)
-       !call timing_stop('pointimplsolve')
+       ! call timing_stop('pointimplsolve')
 
        if (DoTestCell) then
           write(*,*) NameSub,': Rhs_I  ='
@@ -425,7 +426,7 @@ contains
           end do
        end if
 
-       !call timing_start('pointimplupdate')
+       ! call timing_start('pointimplupdate')
 
        ! Update: U^n+1 = U^n + dU
        do iIVar = 1, nVarPointImpl; iVar = iVarPointImpl_I(iIVar)
@@ -433,7 +434,7 @@ contains
                StateOld_VGB(iVar,i,j,k,iBlock) + Rhs_I(iIVar)
        end do
 
-       ! Set minimum density.                                          
+       ! Set minimum density.
        do iFluid = 1, nFluid
           if(RhoMin_I(iFluid) < 0) CYCLE
           iVar = iRho_I(iFluid)
@@ -451,11 +452,11 @@ contains
                sum(State_VGB(SpeciesFirst_:SpeciesLast_,i,j,k,iBlock))
        end if
 
-       !call timing_stop('pointimplupdate')
+       ! call timing_stop('pointimplupdate')
 
     end do; end do; end do
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub, ':'
        write(*,*) &
             'NameVar, StateOld,     StateExp,      StateNew='
@@ -473,22 +474,26 @@ contains
 
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_point_implicit
-
-
   !============================================================================
+
   subroutine init_point_implicit_num
 
     ! Set iVarPointImplicitNum_I, the list of variables to be perturbed
     ! by copying iVarPointImplicit_I
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_point_implicit_num'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(allocated(iVarPointImplNum_I)) deallocate(iVarPointImplNum_I)
     nVarPointImplNum = size(iVarPointImpl_I)
     allocate(iVarPointImplNum_I(nVarPointImplNum))
     iVarPointImplNum_I = iVarPointImpl_I
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_point_implicit_num
-
   !============================================================================
 
   subroutine linear_equation_solver(nVar, Matrix_VV, Rhs_V)
@@ -498,13 +503,13 @@ contains
     real, intent(inout) :: Rhs_V(nVar)
 
     ! This routine solves the system of Nvar linear equations:
-    ! 
+    !
     !               Matrix_VV*dUCell = Rhs_V.
-    ! 
+    !
     ! The result is returned in Rhs_V, the matrix is overwritten
     ! with the LU decomposition.
     !
-    ! The routine performs a lower-upper (LU) decomposition of the 
+    ! The routine performs a lower-upper (LU) decomposition of the
     ! square matrix Matrix_VV of rank Nvar and then uses forward and
     ! backward substitution to obtain the solution vector dUCell.
     ! Crout's method with partial implicit pivoting is used to perform
@@ -516,7 +521,10 @@ contains
     real    :: SCALING(MAXVAR), LHSMAX, LHSTEMP, TOTALSUM
     real, parameter :: TINY=1.0E-20
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'linear_equation_solver'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(nVar > MAXVAR) call stop_mpi(&
          'ERROR in ModPointImplicit linear solver: MaxVar is too small')
 
@@ -527,7 +535,7 @@ contains
     DO IL=1,nVar
        LHSMAX=0.00
        DO JL=1,nVar
-          IF (ABS(Matrix_VV(IL,JL)).GT.LHSMAX) LHSMAX=ABS(Matrix_VV(IL,JL))
+          IF (ABS(Matrix_VV(IL,JL)) > LHSMAX) LHSMAX=ABS(Matrix_VV(IL,JL))
        END DO
        SCALING(IL)=1.00/LHSMAX
     END DO
@@ -551,12 +559,12 @@ contains
           END DO
           Matrix_VV(IL,JL)=TOTALSUM
           LHSTEMP=SCALING(IL)*ABS(TOTALSUM)
-          IF (LHSTEMP.GE.LHSMAX) THEN
+          IF (LHSTEMP >= LHSMAX) THEN
              ILMAX=IL
              LHSMAX=LHSTEMP
           END IF
        END DO
-       IF (JL.NE.ILMAX) THEN
+       IF (JL /= ILMAX) THEN
           DO KL=1,nVar
              LHSTEMP=Matrix_VV(ILMAX,KL)
              Matrix_VV(ILMAX,KL)=Matrix_VV(JL,KL)
@@ -565,8 +573,8 @@ contains
           SCALING(ILMAX)=SCALING(JL)
        END IF
        INDX(JL)=ILMAX
-       IF (abs(Matrix_VV(JL,JL)).EQ.0.00) Matrix_VV(JL,JL)=TINY
-       IF (JL.NE.nVar) THEN
+       IF (abs(Matrix_VV(JL,JL)) == 0.00) Matrix_VV(JL,JL)=TINY
+       IF (JL /= nVar) THEN
           LHSTEMP=1.00/Matrix_VV(JL,JL)
           DO IL=JL+1,nVar
              Matrix_VV(IL,JL)=Matrix_VV(IL,JL)*LHSTEMP
@@ -583,11 +591,11 @@ contains
        LL=INDX(IL)
        TOTALSUM=Rhs_V(LL)
        Rhs_V(LL)=Rhs_V(IL)
-       IF (II.NE.0) THEN
+       IF (II /= 0) THEN
           DO JL=II,IL-1
              TOTALSUM=TOTALSUM-Matrix_VV(IL,JL)*Rhs_V(JL)
           END DO
-       ELSE IF (TOTALSUM.NE.0.00) THEN
+       ELSE IF (TOTALSUM /= 0.00) THEN
           II=IL
        END IF
        Rhs_V(IL)=TOTALSUM
@@ -600,7 +608,9 @@ contains
        Rhs_V(IL)=TOTALSUM/Matrix_VV(IL,IL)
     END DO
 
-    
+    call test_stop(NameSub, DoTest)
   end subroutine linear_equation_solver
+  !============================================================================
 
 end module ModPointImplicit
+!==============================================================================

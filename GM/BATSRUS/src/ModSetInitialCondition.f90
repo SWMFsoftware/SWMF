@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModSetInitialCondition
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
   implicit none
 
@@ -12,6 +15,7 @@ module ModSetInitialCondition
   public:: add_rotational_velocity ! transform between rotating/inertial frames
 
 contains
+  !============================================================================
 
   subroutine set_initial_condition(iBlock)
 
@@ -36,15 +40,10 @@ contains
     real   :: ShockLeft_V(nVar), ShockRight_V(nVar)
     integer:: i, j, k, iVar, iBoundary
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_initial_condition'
-    !----------------------------------------------------------------------------
-
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     time_BLK(:,:,:,iBlock) = 0.00
 
@@ -54,13 +53,11 @@ contains
 
     call init_cons_flux(iBlock)
 
-
     if(Unused_B(iBlock))then
        do iVar = 1, nVar
           State_VGB(iVar,:,:,:,iBlock) = DefaultState_V(iVar)
        end do
     else
-
 
        !\
        ! If used, initialize solution variables and parameters.
@@ -111,7 +108,7 @@ contains
                 end do
 
              elseif(.not.UseShockTube)then
-                State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MaxBc_)  
+                State_VGB(:,i,j,k,iBlock)   = CellState_VI(:,Coord1MaxBc_)
              else
                 if( (Xyz_DGB(x_,i,j,k,iBlock)-ShockPosition) &
                      < -ShockSlope*Xyz_DGB(y_,i,j,k,iBlock))then
@@ -169,12 +166,13 @@ contains
     !/
     call calc_energy_ghost(iBlock)
 
-    if(DoTestMe)write(*,*) &
-         NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,BlkTest)
+    if(DoTest)write(*,*) &
+         NameSub, 'State(test)=',State_VGB(:,iTest,jTest,kTest,iBlockTest)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_initial_condition
+  !============================================================================
 
-  !==========================================================================
   subroutine add_rotational_velocity(iSign, iBlockIn)
 
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
@@ -199,7 +197,10 @@ contains
     ! If iBlockIn is present, do that block, otherwise do all blocks.
 
     integer :: i, j, k, iBlock, iBlockFirst, iBlockLast
-    !---------------------------------------------------------------------------      
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'add_rotational_velocity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(present(iBlockIn))then
        iBlockFirst = iBlockIn; iBlockLast = iBlockIn
     else
@@ -221,6 +222,9 @@ contains
        end do; end do; end do
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine add_rotational_velocity
+  !============================================================================
 
 end module ModSetInitialCondition
+!==============================================================================

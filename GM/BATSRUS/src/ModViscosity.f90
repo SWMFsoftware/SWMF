@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModViscosity
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModProcMH, ONLY: iProc
 
@@ -52,19 +54,20 @@ module ModViscosity
 
   ! Artificial viscosity.
   logical, public :: UseArtificialVisco = .false.
-  real,    public :: AlphaVisco 
+  real,    public :: AlphaVisco
 
 contains
-
-  !=========================================================================
+  !============================================================================
 
   subroutine viscosity_read_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
     character(len=*), intent(in):: NameCommand
 
-    character(len=*), parameter :: NameSub = "viscosity_read_param" 
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'viscosity_read_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case('#VISCOSITY')
        call read_var('UseViscosity',      UseViscosity)
@@ -79,9 +82,9 @@ contains
        call stop_mpi(NameSub//' unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine viscosity_read_param
-
-  !=========================================================================
+  !============================================================================
 
   subroutine  viscosity_init
 
@@ -89,7 +92,10 @@ contains
          get_region_indexes
     use ModMultiFluid, ONLY: nFluid
     use ModPhysics,  ONLY: Si2No_V, UnitX_, UnitT_
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'viscosity_init'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.UseViscosity) RETURN
 
     ViscoCoeff = ViscoCoeffSi*Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
@@ -106,15 +112,20 @@ contains
 
     allocate(Visco_DDI(nDim,nDim,nFluid))
     Visco_DDI = 0.0
-    
+
     ! Get signed indexes for viscosity region(s)
     call get_region_indexes(StringViscoRegion, iRegionVisco_I)
 
+    call test_stop(NameSub, DoTest)
   end subroutine viscosity_init
+  !============================================================================
 
-  !=========================================================================
   subroutine  viscosity_clean
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'viscosity_clean'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.UseViscosity) RETURN
 
     if(allocated(u_DGI))          deallocate(u_DGI)
@@ -125,9 +136,9 @@ contains
 
     UseViscosity=.false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine viscosity_clean
-
-  !=========================================================================
+  !============================================================================
 
   subroutine set_visco_factor_cell(iBlock)
 
@@ -137,7 +148,11 @@ contains
 
     ! Set the viscosity factor for the cell centers of block iBlock
     ! Also set IsViscoBlock if any of the cells have a non-zero factor.
-    !----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_visco_factor_cell'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(ViscoFactor_C)) allocate(ViscoFactor_C(nI,nJ,nK))
 
     if(.not.allocated(iRegionVisco_I))then
@@ -154,8 +169,9 @@ contains
        if(ViscoCoeff /= 1) ViscoFactor_C = ViscoCoeff*ViscoFactor_C
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_visco_factor_cell
-  !=========================================================================
+  !============================================================================
   subroutine set_visco_factor_face(iBlock)
 
     use BATL_lib, ONLY: block_inside_regions, nDim, nINode, nJNode, nKNode
@@ -164,7 +180,11 @@ contains
 
     ! Set the visco factor for the cell faces of block iBlock
     ! Also set IsViscoBlock if any of the faces have a non-zero factor
-    !----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_visco_factor_face'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(ViscoFactor_DF)) &
          allocate(ViscoFactor_DF(nDim,nINode,nJNode,nKNode))
 
@@ -182,12 +202,12 @@ contains
        if(ViscoCoeff /= 1) ViscoFactor_DF = ViscoCoeff*ViscoFactor_DF
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_visco_factor_face
-
-  !=========================================================================
+  !============================================================================
 
   subroutine get_viscosity_tensor(iDimFace, iFace, jFace, &
-       kFace,iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)   
+       kFace,iBlockFace,iFluidMin,iFluidMax,ViscoCoeff)
 
     use ModAdvance, ONLY: State_VGB
     use BATL_lib,  ONLY: nDim, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_
@@ -202,14 +222,17 @@ contains
     logical :: IsNewBlock = .true.
     real, parameter :: TraceCoeff = 2.0/3.0
     integer :: i,j,k
-    !------------------------------------------------------------------------    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Get velocity vector for the block, only done ones per block
     if(IsNewBlockViscosity) then
        do iFluid = iFluidMin, iFluidMax
           call select_fluid
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then 
+             if(State_VGB(iRho,i,j,k,iBlockFace) > 0.0) then
                 u_DGI(:,i,j,k,iFluid) = &
                      State_VGB(iRhoUx:iRhoUx+nDim-1,i,j,k,iBlockFace) / &
                      State_VGB(iRho,i,j,k,iBlockFace)
@@ -220,7 +243,7 @@ contains
        end do
     end if
 
-    ! Get the velocity gradient on the faces. 
+    ! Get the velocity gradient on the faces.
     ! Fill in ghost cells for the block for each fluid once.
     IsNewBlock = IsNewBlockViscosity
     do iFluid = iFluidMin, iFluidMax
@@ -228,9 +251,9 @@ contains
             iBlockFace, nDim,  &
             IsNewBlock, u_DGI(:,:,:,:,iFluid), GradU_DDI(:,:,iFluid))
        ! so ghost cell for all fluids are updated
-       IsNewBlock = IsNewBlockViscosity 
+       IsNewBlock = IsNewBlockViscosity
     end do
-    IsNewBlockViscosity = .false.        
+    IsNewBlockViscosity = .false.
 
     ! Get the viscosity tensor
     do iFluid = 1, nFluid
@@ -259,9 +282,12 @@ contains
           Visco_DDI(z_,y_,iFluid) = Visco_DDI(y_,z_,iFluid)
        end if
 
-       Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)          
+       Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_viscosity_tensor
+  !============================================================================
 
 end module ModViscosity
+!==============================================================================

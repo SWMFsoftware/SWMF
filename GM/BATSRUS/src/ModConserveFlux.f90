@@ -1,14 +1,17 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModConserveFlux
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest
 
   use BATL_size, ONLY: nDim
   use ModSize, ONLY: nI, nJ, nK, MaxBlock
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_
 
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: BlkTest, ProcTest, iTest, jTest, kTest,UseB
+  use ModMain, ONLY:     UseB
   use ModAdvance, ONLY: &
        Flux_VX, Flux_VY, Flux_VZ, &
        VdtFace_X, VdtFace_Y, VdtFace_Z, &
@@ -25,7 +28,6 @@ module ModConserveFlux
        IsCartesianGrid, IsCartesian, IsRzGeometry, &
        CellFace_DFB, FaceNormal_DDFB, Unused_BP
 
-
   implicit none
 
   private ! except
@@ -39,17 +41,17 @@ module ModConserveFlux
        CorrectedFlux_VYB, &
        CorrectedFlux_VZB, &
        DoConserveFlux
-  
-  ! Correct face flux near resolution change. 
+
+  ! Correct face flux near resolution change.
   logical :: DoConserveFlux = .true.
 
   integer, parameter :: &
        FluxLast_ = nVar + nFluid, &
        UnFirst_=FluxLast_+1, UnLast_ = UnFirst_ + nFluid, &
        Vdt_ = UnLast_ + 1
-  !The normal components of the magnetic field is exchaned only for
-  !B_>U_ (UseB_ is true)
-  integer,parameter :: BnL_ = Vdt_ + min(1, B_-U_) 
+  ! The normal components of the magnetic field is exchaned only for
+  ! B_>U_ (UseB_ is true)
+  integer,parameter :: BnL_ = Vdt_ + min(1, B_-U_)
   integer,parameter :: BnR_ = BnL_ + min(1, B_-U_)
   integer,parameter :: nCorrectedFaceValues = BnR_
 
@@ -60,13 +62,15 @@ module ModConserveFlux
   real, parameter :: FaceRatio = 1.0/2**(nDim-1)
 
 contains
-
-  !===========================================================================
+  !============================================================================
 
   subroutine init_cons_flux(iBlock)
 
     integer,intent(in) :: iBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_cons_flux'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(CorrectedFlux_VXB)) allocate( &
          CorrectedFlux_VXB(nCorrectedFaceValues,nJ,nK,2,MaxBlock), &
          CorrectedFlux_VYB(nCorrectedFaceValues,nI,nK,2,MaxBlock), &
@@ -76,24 +80,19 @@ contains
     CorrectedFlux_VYB(:,:,:,:,iBlock) = 0.0
     CorrectedFlux_VZB(:,:,:,:,iBlock) = 0.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine init_cons_flux
-
   !============================================================================
 
   subroutine save_cons_flux(iBlock)
 
     integer, intent(in) :: iBlock
 
-    logical :: DoTest, DoTestMe
     integer :: lFaceFrom,lFaceTo,i,j,k
-    character(len=*), parameter :: NameSub = 'save_cons_flux'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'save_cons_flux'
     !--------------------------------------------------------------------------
-
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
+    call test_start(NameSub, DoTest, iBlock)
 
     if (neiLeast(iBlock)==+1) then
        lFaceFrom=1
@@ -131,12 +130,13 @@ contains
        call save_corrected_flux_z
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-
     !==========================================================================
 
     subroutine save_corrected_flux_x
 
+      !------------------------------------------------------------------------
       do k=1,nK; do j=1,nJ
          CorrectedFlux_VXB(1:FluxLast_, j, k, lFaceTo, iBlock)  &
               = Flux_VX(1:nVar+nFluid, lFaceFrom,j,k)
@@ -179,8 +179,8 @@ contains
          end do; end do
       end if
 
-      if(DoTestMe)then
-         
+      if(DoTest)then
+
          write(*,*)NameSub,' lFaceFrom, lFaceTo=',lFaceFrom, lFaceTo
          do i = 1, nFluid+1
             write(*,*)NameSub,' iVar, uDotA=', &
@@ -193,11 +193,11 @@ contains
       end if
 
     end subroutine save_corrected_flux_x
-
     !==========================================================================
 
     subroutine save_corrected_flux_y
 
+      !------------------------------------------------------------------------
       do k=1,nK;do i=1,nI
          CorrectedFlux_VYB(1:FluxLast_,  i,k,lFaceTo,iBlock)    &
               = Flux_VY(1:FluxLast_,i,lFaceFrom,k)
@@ -230,11 +230,11 @@ contains
       end if
 
     end subroutine save_corrected_flux_y
-
     !==========================================================================
 
     subroutine save_corrected_flux_z
 
+      !------------------------------------------------------------------------
       do j=1,nJ;do i=1,nI
          CorrectedFlux_VZB(1:FluxLast_,  i,j,lFaceTo,iBlock)    &
               = Flux_VZ(1:FluxLast_,i,j,lFaceFrom)
@@ -267,9 +267,9 @@ contains
       end if
 
     end subroutine save_corrected_flux_z
+    !==========================================================================
 
   end subroutine save_cons_flux
-
   !============================================================================
 
   subroutine apply_cons_flux(iBlock)
@@ -277,16 +277,12 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k
-    logical :: DoTest, DoTestMe
     integer :: lFaceFrom, lFaceTo
-    character(len=*), parameter :: NameSub = 'apply_cons_flux'
-    !--------------------------------------------------------------------------
 
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'apply_cons_flux'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if (neiLeast(iBlock)==-1)then
        if ( .not.Unused_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)).and.&
@@ -354,12 +350,13 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-
     !==========================================================================
 
     subroutine apply_corrected_flux_x
 
+      !------------------------------------------------------------------------
       do k = 1, nK; do j = 1, nJ
          if (.not.true_cell(lFaceTo-1, j, k, iBlock)) CYCLE
          if (.not.true_cell(lFaceTo  , j, k, iBlock)) CYCLE
@@ -387,15 +384,15 @@ contains
                  / CellFace_DFB(1,lFaceTo,j,k,iBlock)
          end if
 
-      end do; end do 
+      end do; end do
       if(UseB .and. .not.IsCartesianGrid) &
            call apply_bn_face_i(lFaceFrom, lFaceTo, iBlock)
 
     end subroutine apply_corrected_flux_x
-
     !==========================================================================
 
     subroutine apply_corrected_flux_y
+      !------------------------------------------------------------------------
       do k = 1, nK; do i = 1, nI
          if (.not.true_cell(i, lFaceTo-1, k, iBlock))CYCLE
          if (.not.true_cell(i, lFaceTo  , k, iBlock))CYCLE
@@ -412,16 +409,16 @@ contains
             RightState_VY(By_,i,lFaceTo,k) = &
                  CorrectedFlux_VYB(BnR_,i,k,lFaceFrom,iBlock)
          end if
-      end do; end do 
+      end do; end do
       if(.not.IsCartesianGrid .and. UseB) &
            call apply_bn_face_j(lFaceFrom, lFaceTo, iBlock)
 
     end subroutine apply_corrected_flux_y
-
     !==========================================================================
 
     subroutine apply_corrected_flux_z
 
+      !------------------------------------------------------------------------
       do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i, j, lFaceTo-1, iBlock)) CYCLE
          if(.not.true_cell(i, j, lFaceTo  , iBlock)) CYCLE
@@ -438,17 +435,17 @@ contains
             RightState_VZ(Bz_,i,j,lFaceTo) = &
                  CorrectedFlux_VZB(BnR_,i,j,lFaceFrom,iBlock)
          end if
-      end do; end do 
+      end do; end do
       if(.not.IsCartesianGrid .and. UseB) &
-           call apply_bn_face_k(lFaceFrom, lFaceTo, iBlock)           
+           call apply_bn_face_k(lFaceFrom, lFaceTo, iBlock)
 
     end subroutine apply_corrected_flux_z
+    !==========================================================================
 
   end subroutine apply_cons_flux
+  !============================================================================
 
-  !==========================================================================
   ! subroutines for applying Bn in generalized coordinates
-  !==========================================================================
 
   subroutine apply_bn_face_i(iFaceIn, iFaceOut, iBlock)
 
@@ -457,7 +454,10 @@ contains
     integer:: j, k
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'apply_bn_face_i'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do k=1,nK; do j=1,nJ
        if(.not.all(true_cell(iFaceOut-1:iFaceOut,j,k,iBlock)))CYCLE
 
@@ -481,9 +481,10 @@ contains
        RightState_VX(Bx_:B_+nDim,iFaceOut,j,k) = B_D + DeltaBDotFA*FaceArea_D
     end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine apply_bn_face_i
+  !============================================================================
 
-  !==========================================================================
   subroutine apply_bn_face_j(jFaceIn, jFaceOut, iBlock)
 
     integer, intent(in):: jFaceIn, jFaceOut, iBlock
@@ -491,7 +492,10 @@ contains
     integer:: i, k
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'apply_bn_face_j'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do i=1,nI
        if(.not.all(true_cell(i,jFaceOut-1:jFaceOut,k,iBlock)))CYCLE
@@ -517,9 +521,9 @@ contains
 
     end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine apply_bn_face_j
-
-  !==========================================================================
+  !============================================================================
 
   subroutine apply_bn_face_k(kFaceIn, kFaceOut, iBlock)
 
@@ -528,7 +532,10 @@ contains
     integer:: i,j
     real:: B_D(nDim), FaceArea_D(nDim)
     real:: FaceArea2, DeltaBDotFA
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'apply_bn_face_k'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do j=1,nJ; do i=1,nI
        if(.not.all(true_cell(i,j,kFaceOut-1:kFaceOut,iBlock)))CYCLE
 
@@ -542,17 +549,20 @@ contains
        DeltaBDotFA = ( CorrectedFlux_VZB(BnL_,i,j,kFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       LeftState_VZ(Bx_:B_+nDim,i,j,kFaceOut) = B_D + DeltaBDotFA*FaceArea_D  
+       LeftState_VZ(Bx_:B_+nDim,i,j,kFaceOut) = B_D + DeltaBDotFA*FaceArea_D
 
        B_D = RightState_VZ(Bx_:B_+nDim,i,j,kFaceOut)
 
        DeltaBDotFA = (CorrectedFlux_VZB(BnR_,i,j,kFaceIn,iBlock) - &
             sum(B_D*FaceArea_D))/FaceArea2
 
-       RightState_VZ(Bx_:B_+nDim,i,j,kFaceOut) = B_D + DeltaBDotFA*FaceArea_D  
+       RightState_VZ(Bx_:B_+nDim,i,j,kFaceOut) = B_D + DeltaBDotFA*FaceArea_D
 
     end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine apply_bn_face_k
+  !============================================================================
 
 end module ModConserveFlux
+!==============================================================================

@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================================
 module ModWriteLogSatFile
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest
 
   implicit none
 
@@ -13,6 +15,7 @@ module ModWriteLogSatFile
   public:: calc_sphere            ! calculate values on spherical surface
 
 contains
+  !============================================================================
 
   subroutine write_logfile(iSatIn, iFile)
     use ModProcMH
@@ -29,13 +32,11 @@ contains
     use BATL_lib, ONLY: Xyz_DGB, UseTestXyz
     use ModMpi
 
-    implicit none
-
     ! Arguments
 
     integer, intent(in) :: iFile
 
-    ! iSatIn = 0 -> write logfile 
+    ! iSatIn = 0 -> write logfile
     ! iSatIn >=1 -> write satellite output files (number = isat)
     integer, intent(in) :: iSatIn
 
@@ -69,26 +70,26 @@ contains
 
     real, external :: maxval_loc_BLK, minval_loc_BLK
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'write_logfile'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     DoWritePosition = .false.
 
-    if(iSatIn == 0 .and. ( index(test_string,'show_pmin')>0 .or. &
-         index(test_string,'show_pmax')>0 ) ) then
+    if(iSatIn == 0 .and. ( index(StringTest,'show_pmin')>0 .or. &
+         index(StringTest,'show_pmax')>0 ) ) then
 
        tmp1_BLK(1:nI,1:nJ,1:nK,1:nBlock) &
             = State_VGB(P_,1:nI,1:nJ,1:nK,1:nBlock)
 
-       if(index(test_string,'show_pmin')>0)then
+       if(index(StringTest,'show_pmin')>0)then
           pMin = minval_loc_BLK(nProc,tmp1_BLK,loc)
           if(loc(5)==iProc)write(*,*)'pmin, loc, x, y, z=',pmin,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
        end if
 
-       if(index(test_string,'show_pmax')>0)then
+       if(index(StringTest,'show_pmax')>0)then
           pMax = maxval_loc_BLK(nProc,tmp1_BLK,loc)
           if(loc(5)==iProc)write(*,*)'pmax, loc, x, y, z=',pmax,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
@@ -167,7 +168,7 @@ contains
        end if
     end do
 
-    if(DoTestMe .and. n_step <= 1)then
+    if(DoTest .and. n_step <= 1)then
        write(*,*)'nLogVar,nFluxVar,nLogR,nLogTot:',  &
             nLogVar,nFluxVar,nLogR,nLogTot
        write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
@@ -203,11 +204,11 @@ contains
                   .or. index(NameAll,'test')>0) then
                 if (UseTestXyz) then
                    write(unit_log,'(a,3es13.5)')  &
-                        'test point (X,Y,Z): ',Xtest,Ytest,Ztest
+                        'test point (X,Y,Z): ',xTest,yTest,zTest
                 else
                    write(unit_log,'(a,5(i6))')  &
                         'test point(I,J,K,BLK,PROC): ', &
-                        Itest,Jtest,Ktest,BLKtest,PROCtest
+                        iTest,jTest,kTest,iBlockTest,iProcTest
                 end if
              else
                 write(unit_log,'(a)')'Volume averages, fluxes, etc'
@@ -231,9 +232,9 @@ contains
 
     call set_logvar(nLogVar,NameLogVar_I,nLogR,LogR_I,nLogTot,LogVar_I,iSatIn)
 
-    ! this write statement seems to be necessary for 
+    ! this write statement seems to be necessary for
     ! NAG compiler in debugging mode
-    if(DoTestMe) &
+    if(DoTest) &
          write(*,*) NameSub, ' set_logvar finished'
 
     ! Collect LogVar_I from all processors
@@ -259,7 +260,7 @@ contains
                   iTime_I
           end if
           if(index(StringTime,'time')>0) then
-             !note that Time_Simulation is in SI units.
+             ! note that Time_Simulation is in SI units.
              if(plot_dimensional(iFile)) then
                 write(iUnit,'(es13.5)',ADVANCE='NO') &
                      Time_Simulation*Si2Io_V(UnitT_)
@@ -301,9 +302,10 @@ contains
        call flush_unit(iUnit)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_logfile
-
   !============================================================================
+
   subroutine set_logvar( &
        nLogVar, NameLogVar_I, nLogR, LogR_I, nLogTot, LogVar_I, iSat)
 
@@ -311,7 +313,7 @@ contains
     use ModNumConst, ONLY: cPi
     use ModMPI
     use ModMain, ONLY: n_step,Dt,Cfl,Unused_B,nI,nJ,nK,nBlock,UseUserLogFiles,&
-         iTest,jTest,kTest,ProcTest,BlkTest,optimize_message_pass,x_,y_,&
+         optimize_message_pass,x_,y_,&
          UseRotatingFrame,UseB0, NameVarLower_V
     use ModPhysics,    ONLY: rCurrents, InvGammaMinus1_I, OmegaBody, &
          ElectronPressureRatio
@@ -327,8 +329,6 @@ contains
     use ModMultiFluid, ONLY: UseMultiIon,  iFluid, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
 
-    implicit none
-
     integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
     character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
     real, intent(in)                        :: LogR_I(nLogR)
@@ -339,24 +339,24 @@ contains
     real :: StateIntegral_V(nVar)
     real :: SatRayVar_I(5)
 
-    integer :: iVar,iR,iVarTot, iBLK
+    integer :: iVar,iR,iVarTot, iBlock
     integer :: i,j,k
     integer :: iError
     real :: r
 
-    logical :: DoTest, DoTestMe
-
-    ! StateSat_V contains the weight (0), the state (1:nVar), 
+    ! StateSat_V contains the weight (0), the state (1:nVar),
     ! and the currents (nVar+1:nVar+3) at the position of the satellite
     ! B0Sat_D contains B0 at the satellite
     real :: StateSat_V(0:nVar+3), B0Sat_D(3)
 
     real, external :: integrate_BLK, maxval_BLK, minval_BLK
 
-    !-------------------------------------------------------------------------
-    call set_oktest('set_logvar',DoTest,DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_logvar'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    if(DoTestMe.and.n_step==1)then
+    if(DoTest.and.n_step==1)then
        write(*,*)'nLogVar,nLogR,nLogTot:',nLogVar,nLogR,nLogTot
        write(*,*)'NameLogVar_I:',NameLogVar_I(1:nLogVar)
        write(*,*)'LogR_I:',LogR_I(1:nLogR)
@@ -385,8 +385,7 @@ contains
                + StateSat_V(rho_)*OmegaBody*XyzSat_DI(x_,iSat)
        end if
 
-
-       !If any ray tracing satellite variables are present, collect ray data
+       ! If any ray tracing satellite variables are present, collect ray data
        do iVar=1, nLogVar
           select case(NameLogVar_I(iVar))
           case('theta1','theta2','phi1','phi2','status')
@@ -396,7 +395,6 @@ contains
              EXIT
           end select
        enddo
-
 
     else
        ! The logfile may need the integral of conservative variables
@@ -418,7 +416,7 @@ contains
        call normalize_name_log_var(NameLogVar_I(iVar), NameLogVar)
 
        ! If we are a satellite and not a logfile (iSat>=1) then we should
-       ! do only satellite variables so append a 'sat' to the end of the 
+       ! do only satellite variables so append a 'sat' to the end of the
        ! variables
        if (iSat >= 1) then
           call set_sat_var
@@ -427,6 +425,7 @@ contains
        end if
     end do
 
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
     subroutine set_log_var
@@ -437,7 +436,7 @@ contains
       use ModWaves,     ONLY: UseWavePressure
       use BATL_lib,     ONLY: Xyz_DGB, message_pass_cell
       use ModIO,        ONLY: lNameLogVar
-      use ModIeCoupling,ONLY: logvar_ionosphere
+      use ModIeCoupling, ONLY: logvar_ionosphere
       use ModCoordTransform, ONLY: cross_product
       use CON_axes,     ONLY: transform_matrix
       use ModUserInterface ! user_get_log_var
@@ -468,69 +467,69 @@ contains
          ! Divide by nProc so that adding up the processors can work
          LogVar_I(iVarTot) = maxval_BLK(nProc,tmp2_BLK)/nProc
       case('ux')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK) / &
-                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock) / &
+                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
       case('uy')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK) / &
-                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock) / &
+                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
       case('uz')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK) / &
-                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock) / &
+                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
       case('pperp')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 ( 3*State_VGB(iP,1:nI,1:nJ,1:nK,iBLK) &
-                 -State_VGB(iPpar,1:nI,1:nJ,1:nK,iBLK) )/2
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 ( 3*State_VGB(iP,1:nI,1:nJ,1:nK,iBlock) &
+                 -State_VGB(iPpar,1:nI,1:nJ,1:nK,iBlock) )/2
          end do
          LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
       case('ekinx')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2/&
-                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2/&
+                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
       case('ekiny')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) cycle
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2/&
-                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2/&
+                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
       case('ekinz')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) cycle
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2/&
-                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2/&
+                 State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
       case('ekin')
-         do iBLK=1,nBlock
-            if (Unused_B(iBLK)) cycle
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBLK) = &
-                 (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBLK)**2+&
-                 State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBLK)**2+&
-                 State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBLK)**2)&
-                 /State_VGB(iRho,1:nI,1:nJ,1:nK,iBLK)
+         do iBlock=1,nBlock
+            if (Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = &
+                 (State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2+&
+                 State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2+&
+                 State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2)&
+                 /State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
 
@@ -541,27 +540,27 @@ contains
               'message passing edges and corners. Fix PARAM.in!')
 
          ! calculate the total/maximum current either into or out of the body
-         do iBLK = 1, nBlock
-            if(Unused_B(iBLK))cycle
+         do iBlock = 1, nBlock
+            if(Unused_B(iBlock))CYCLE
 
             do k=1,nK; do j=1,nJ; do i=1,nI
                ! Calculate radial current
-               call get_current(i,j,k,iBlk,Current_D)
-               tmp1_BLK(i,j,k,iBLK) = &
-                    sum(Current_D*Xyz_DGB(:,i,j,k,iBLK)) / r_BLK(i,j,k,iBLK)
+               call get_current(i,j,k,iBlock,Current_D)
+               tmp1_BLK(i,j,k,iBlock) = &
+                    sum(Current_D*Xyz_DGB(:,i,j,k,iBlock)) / r_BLK(i,j,k,iBlock)
             end do; end do; end do
          end do
 
          call message_pass_cell(tmp1_BLK, nWidthIn=1)
 
-         do iBLK = 1, nBlock
-            if(Unused_B(iBLK))cycle
-            !now modify tmp1 according to the case we want
+         do iBlock = 1, nBlock
+            if(Unused_B(iBlock))CYCLE
+            ! now modify tmp1 according to the case we want
             select case(NameLogVar)
             case('jin')
-               tmp1_BLK(:,:,:,iBLK) = min(tmp1_BLK(:,:,:,iBLK), 0.0)
+               tmp1_BLK(:,:,:,iBlock) = min(tmp1_BLK(:,:,:,iBlock), 0.0)
             case('jout')
-               tmp1_BLK(:,:,:,iBLK) = max(tmp1_BLK(:,:,:,iBLK), 0.0)
+               tmp1_BLK(:,:,:,iBlock) = max(tmp1_BLK(:,:,:,iBlock), 0.0)
             end select
          end do
          select case(NameLogVar)
@@ -592,25 +591,25 @@ contains
          ! Since the field point is at the origin, R = (-x,-y,-z)
          ! Only the Z component is calculated here: (J x R)_z = -J_x*y + Jy*x
 
-         ! Calculate 
-         do iBLK = 1, nBlock
-            if(Unused_B(iBLK))cycle           
+         ! Calculate
+         do iBlock = 1, nBlock
+            if(Unused_B(iBlock))CYCLE
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBLK) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBLK) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBLK) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBLK) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBLK) < z1 ) then
-                  tmp1_BLK(i,j,k,iBLK)=0.0
+               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
+                  tmp1_BLK(i,j,k,iBlock)=0.0
                   CYCLE
                end if
-               call get_current(i,j,k,iBlk,Current_D)
-               tmp1_BLK(i,j,k,iBLK) = ( &
-                    -Current_D(x_)*Xyz_DGB(y_,i,j,k,iBLK) &
-                    +Current_D(y_)*Xyz_DGB(x_,i,j,k,iBLK) ) &
-                    / r_BLK(i,j,k,iBLK)**3
+               call get_current(i,j,k,iBlock,Current_D)
+               tmp1_BLK(i,j,k,iBlock) = ( &
+                    -Current_D(x_)*Xyz_DGB(y_,i,j,k,iBlock) &
+                    +Current_D(y_)*Xyz_DGB(x_,i,j,k,iBlock) ) &
+                    / r_BLK(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
@@ -621,32 +620,32 @@ contains
          ! B = (1/4 Pi)*integral( (curl B) x R / R**3 dV)
          ! where R is the vector FROM the CURRENT to the FIELD POINT!
          ! Since the field point is at the origin, R = (-x,-y,-z)
-         ! Only the SM Z component is calculated here: 
+         ! Only the SM Z component is calculated here:
          !   (J x R)_z = Sum_i GMtoSM_z,i * (curl B x R)_i
 
          ! Conversion from GM coordinate system to SMG
          Convert_DD = transform_matrix(Time_Simulation, &
               TypeCoordSystem, 'SMG')
 
-         ! Calculate 
-         do iBLK = 1, nBlock
-            if(Unused_B(iBLK))cycle           
+         ! Calculate
+         do iBlock = 1, nBlock
+            if(Unused_B(iBlock))CYCLE
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
-               if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBLK) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBLK) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBLK) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBLK) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBLK) < z1 ) then
-                  tmp1_BLK(i,j,k,iBLK)=0.0
+               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
+                  tmp1_BLK(i,j,k,iBlock)=0.0
                   CYCLE
                end if
-               call get_current(i,j,k,iBlk,Current_D)
-               tmp1_BLK(i,j,k,iBLK) = &
+               call get_current(i,j,k,iBlock,Current_D)
+               tmp1_BLK(i,j,k,iBlock) = &
                     -sum(Convert_DD(3,:) &
-                    *cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlk))) &
-                    / r_BLK(i,j,k,iBLK)**3
+                    *cross_product(Current_D, Xyz_DGB(:,i,j,k,iBlock))) &
+                    / r_BLK(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
@@ -658,106 +657,106 @@ contains
          ! Since the field point is at the origin, R = (-x,-y,-z)
          ! Only the Z component is calculated here: z * div B/R**3
 
-         ! Calculate 
-         do iBLK=1,nBlock
-            if(Unused_B(iBLK))cycle           
+         ! Calculate
+         do iBlock=1,nBlock
+            if(Unused_B(iBlock))CYCLE
             do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-               if ( r_BLK(i,j,k,iBLK) < rCurrents .or. &
-                    Xyz_DGB(x_,i+1,j,k,iBLK) > x2 .or.      &
-                    Xyz_DGB(x_,i-1,j,k,iBLK) < x1 .or.      &
-                    Xyz_DGB(y_,i,j+1,k,iBLK) > y2 .or.      &
-                    Xyz_DGB(y_,i,j-1,k,iBLK) < y1 .or.      &
-                    Xyz_DGB(z_,i,j,k+1,iBLK) > z2 .or.      &
-                    Xyz_DGB(z_,i,j,k-1,iBLK) < z1 ) then
-                  tmp1_BLK(i,j,k,iBLK)=0.0
+               if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
+                    Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
+                    Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
+                    Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
+                    Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
+                    Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
+                    Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
+                  tmp1_BLK(i,j,k,iBlock)=0.0
                   CYCLE
                end if
-               tmp1_BLK(i,j,k,iBLK) = &
-                    Xyz_DGB(z_,i,j,k,iBLK) * DivB1_GB(i,j,k,iBLK) &
-                    / r_BLK(i,j,k,iBLK)**3
+               tmp1_BLK(i,j,k,iBlock) = &
+                    Xyz_DGB(z_,i,j,k,iBlock) * DivB1_GB(i,j,k,iBlock) &
+                    / r_BLK(i,j,k,iBlock)**3
             end do; end do; end do
          end do
          ! The 4*pi is part of the Biot-Savart formula
          LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK) / (4*cPi)
 
-!!$! MHD variables at Itest, Jtest, Ktest, BLKtest, PROCtest
+!!$! MHD variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('rhopnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iRho,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
       case('rhouxpnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iRhoUx,iTest,jTest,kTest,BlkTest)
-      case('rhouypnt')     
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iRhoUy,iTest,jTest,kTest,BlkTest)
-      case('rhouzpnt')      
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iRhoUz,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest)
+      case('rhouypnt')
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(iRhoUy,iTest,jTest,kTest,iBlockTest)
+      case('rhouzpnt')
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(iRhoUz,iTest,jTest,kTest,iBlockTest)
       case('b1xpnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(Bx_,iTest,jTest,kTest,iBlockTest)
       case('b1ypnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(By_,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(By_,iTest,jTest,kTest,iBlockTest)
       case('b1zpnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(Bz_,iTest,jTest,kTest,iBlockTest)
       case('bxpnt')
-         if(iProc == ProcTest)then 
+         if(iProc == iProcTest)then
             if(UseB0)then
                LogVar_I(iVarTot) = &
-                    B0_DGB(x_,iTest,jTest,kTest,BlkTest) + &
-                    State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
+                    B0_DGB(x_,iTest,jTest,kTest,iBlockTest) + &
+                    State_VGB(Bx_,iTest,jTest,kTest,iBlockTest)
             else
                LogVar_I(iVarTot) = &
-                    State_VGB(Bx_,iTest,jTest,kTest,BlkTest)
+                    State_VGB(Bx_,iTest,jTest,kTest,iBlockTest)
             end if
          end if
-      case('bypnt')                      
-         if(iProc == ProcTest) then
+      case('bypnt')
+         if(iProc == iProcTest) then
             if(UseB0)then
                LogVar_I(iVarTot) = &
-                    B0_DGB(y_,iTest,jTest,kTest,BlkTest) + &
-                    State_VGB(By_,iTest,jTest,kTest,BlkTest)
+                    B0_DGB(y_,iTest,jTest,kTest,iBlockTest) + &
+                    State_VGB(By_,iTest,jTest,kTest,iBlockTest)
             else
                LogVar_I(iVarTot) = &
-                    State_VGB(By_,iTest,jTest,kTest,BlkTest)
+                    State_VGB(By_,iTest,jTest,kTest,iBlockTest)
             end if
          end if
-      case('bzpnt')                      
-         if(iProc == ProcTest) then
+      case('bzpnt')
+         if(iProc == iProcTest) then
             if(UseB0)then
                LogVar_I(iVarTot) = &
-                    B0_DGB(z_,iTest,jTest,kTest,BlkTest) + &
-                    State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
+                    B0_DGB(z_,iTest,jTest,kTest,iBlockTest) + &
+                    State_VGB(Bz_,iTest,jTest,kTest,iBlockTest)
             else
                LogVar_I(iVarTot) = &
-                    State_VGB(Bz_,iTest,jTest,kTest,BlkTest)
+                    State_VGB(Bz_,iTest,jTest,kTest,iBlockTest)
             end if
          end if
       case('ppnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = State_VGB(iP,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = State_VGB(iP,iTest,jTest,kTest,iBlockTest)
       case('tpnt', 'temppnt')
-         if(iProc == ProcTest) LogVar_I(iVarTot) = &
-              State_VGB(iP,iTest,jTest,kTest,BlkTest) &
+         if(iProc == iProcTest) LogVar_I(iVarTot) = &
+              State_VGB(iP,iTest,jTest,kTest,iBlockTest) &
               /(1 + ElectronPressureRatio) &
-              *MassFluid_I(iFluid)/State_VGB(iRho,iTest,jTest,kTest,BlkTest)
+              *MassFluid_I(iFluid)/State_VGB(iRho,iTest,jTest,kTest,iBlockTest)
       case('epnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = Energy_GBI(iTest,jTest,kTest,BlkTest,iFluid)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
       case('uxpnt')
-         if(iProc == ProcTest) LogVar_I(iVarTot) = &
-              State_VGB(iRhoUx,iTest,jTest,kTest,BlkTest) / &
-              State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) LogVar_I(iVarTot) = &
+              State_VGB(iRhoUx,iTest,jTest,kTest,iBlockTest) / &
+              State_VGB(iRho,  iTest,jTest,kTest,iBlockTest)
       case('uypnt')
-         if(iProc == ProcTest) LogVar_I(iVarTot) = &
-              State_VGB(iRhoUy,iTest,jTest,kTest,BlkTest) / &
-              State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) LogVar_I(iVarTot) = &
+              State_VGB(iRhoUy,iTest,jTest,kTest,iBlockTest) / &
+              State_VGB(iRho,  iTest,jTest,kTest,iBlockTest)
       case('uzpnt')
-         if(iProc == ProcTest) LogVar_I(iVarTot) = &
-              State_VGB(iRhoUz,iTest,jTest,kTest,BlkTest) / &
-              State_VGB(iRho,  iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) LogVar_I(iVarTot) = &
+              State_VGB(iRhoUz,iTest,jTest,kTest,iBlockTest) / &
+              State_VGB(iRho,  iTest,jTest,kTest,iBlockTest)
          ! RAYTRACE variables averaged over volume
       case('theta1', 'theta2', 'phi1', 'phi2','status')
          select case(NameLogvar)
@@ -772,32 +771,32 @@ contains
          case('status')
             i = 3; j = 1
          end select
-         do iBlk = 1, nBlock
-            if(Unused_B(iBLK)) CYCLE
-            tmp1_BLK(1:nI,1:nJ,1:nK,iBlk) = ray(i,j,1:nI,1:nJ,1:nK,iBlk)
+         do iBlock = 1, nBlock
+            if(Unused_B(iBlock)) CYCLE
+            tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = ray(i,j,1:nI,1:nJ,1:nK,iBlock)
          end do
          LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
-         ! RAYTRACE variables at Itest, Jtest, Ktest, BLKtest, PROCtest
+         ! RAYTRACE variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('theta1pnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = ray(1,1,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = ray(1,1,iTest,jTest,kTest,iBlockTest)
       case('theta2pnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = ray(1,2,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = ray(1,2,iTest,jTest,kTest,iBlockTest)
       case('phi1pnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = ray(2,1,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = ray(2,1,iTest,jTest,kTest,iBlockTest)
       case('phi2pnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = ray(2,2,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = ray(2,2,iTest,jTest,kTest,iBlockTest)
       case('statuspnt')
-         if(iProc == ProcTest) &
-              LogVar_I(iVarTot) = ray(3,1,iTest,jTest,kTest,BlkTest)
+         if(iProc == iProcTest) &
+              LogVar_I(iVarTot) = ray(3,1,iTest,jTest,kTest,iBlockTest)
       case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
            'cpcps','cpcp_s','cpcp_south','cpcpsouth')
          ! It is sufficient to calculate it on processor 0
          if(iProc == 0) &
-              LogVar_I(iVarTot) = logvar_ionosphere(NameLogVar) 
+              LogVar_I(iVarTot) = logvar_ionosphere(NameLogVar)
 !!$! Flux values integrated over the surface of a shpere
       case('aflx')
          ! just to check that the area is being computed correctly
@@ -814,13 +813,13 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            do iBLK=1,nBlock
-               if(Unused_B(iBLK)) CYCLE
+            do iBlock=1,nBlock
+               if(Unused_B(iBlock)) CYCLE
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBLK) = &
-                       sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK) &
-                       *Xyz_DGB(:,i,j,k,iBLK)) &
-                       /r_BLK(i,j,k,iBLK)
+                  tmp1_BLK(i,j,k,iBlock) = &
+                       sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
+                       *Xyz_DGB(:,i,j,k,iBlock)) &
+                       /r_BLK(i,j,k,iBlock)
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = calc_sphere('integrate',360, r, tmp1_BLK)
@@ -842,15 +841,15 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            do iBLK=1,nBlock
-               if(Unused_B(iBLK)) CYCLE
-               FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+            do iBlock=1,nBlock
+               if(Unused_B(iBlock)) CYCLE
+               FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                if(UseB0)FullB_DG = FullB_DG &
-                    +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+                    +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBLK) = &
-                       sum(FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBLK)) &
-                       / R_BLK(i,j,k,iBLK)
+                  tmp1_BLK(i,j,k,iBlock) = &
+                       sum(FullB_DG(:,i,j,k)*Xyz_DGB(:,i,j,k,iBlock)) &
+                       / R_BLK(i,j,k,iBlock)
                end do; end do; end do
             end do
 
@@ -861,19 +860,19 @@ contains
          iVarTot = iVarTot - 1
          do iR=1,nLogR
             iVarTot = iVarTot + 1
-            r = LogR_I(iR)           
-            do iBLK=1,nBlock
-               if(Unused_B(iBLK))cycle
-               FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+            r = LogR_I(iR)
+            do iBlock=1,nBlock
+               if(Unused_B(iBlock))CYCLE
+               FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                if(UseB0)FullB_DG = FullB_DG &
-                    +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)           
+                    +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-                  tmp1_BLK(i,j,k,iBLK) = &
+                  tmp1_BLK(i,j,k,iBlock) = &
                        sum(FullB_DG(:,i,j,k)**2)
-                  tmp1_BLK(i,j,k,iBLK) = 0.5*tmp1_BLK(i,j,k,iBLK)* &
-                       sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBLK) &
-                       *Xyz_DGB(:,i,j,k,iBLK)) &
-                       / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK))
+                  tmp1_BLK(i,j,k,iBlock) = 0.5*tmp1_BLK(i,j,k,iBlock)* &
+                       sum( State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
+                       *Xyz_DGB(:,i,j,k,iBlock)) &
+                       / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
@@ -883,19 +882,19 @@ contains
          do iR=1,nLogR
             iVarTot = iVarTot + 1
             r = LogR_I(iR)
-            do iBLK=1,nBlock
-               if(Unused_B(iBLK))CYCLE
-               FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+            do iBlock=1,nBlock
+               if(Unused_B(iBlock))CYCLE
+               FullB_DG=State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                if(UseB0)FullB_DG = FullB_DG &
-                    +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+                    +B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                   bDotb = sum(FullB_DG(:,i,j,k)**2)
                   bDotU = sum(&
-                       FullB_DG(:,i,j,k)*State_VGB(iRhoUx:iRhoUz,i,j,k,iBLk))
-                  tmp1_BLK(i,j,k,iBLk) = &
-                       sum( (bDotb*State_VGB(iRhoUx:iRhoUz,i,j,k,iBLk) &
-                       -     bDotU*FullB_DG(:,i,j,k))*Xyz_DGB(:,i,j,k,iBLk) &
-                       ) / (State_VGB(iRho,i,j,k,iBLk)*R_BLK(i,j,k,iBLk))
+                       FullB_DG(:,i,j,k)*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock))
+                  tmp1_BLK(i,j,k,iBlock) = &
+                       sum( (bDotb*State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) &
+                       -     bDotU*FullB_DG(:,i,j,k))*Xyz_DGB(:,i,j,k,iBlock) &
+                       ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = calc_sphere('integrate',360, r,tmp1_BLK)
@@ -903,29 +902,29 @@ contains
 
          ! simple circular integrals
       case('e2dflx')
-         !this is the azimuthal component of the electric field 
-         !integrated around a circle
+         ! this is the azimuthal component of the electric field
+         ! integrated around a circle
          ! Ex*y - Ey*x
          iVarTot = iVarTot-1
          do iR=1,nLogR
             iVarTot = iVarTot+1
             r = LogR_I(iR)
-            do iBLK = 1,nBlock
-               if(Unused_B(iBLK))CYCLE
-               FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+            do iBlock = 1,nBlock
+               if(Unused_B(iBlock))CYCLE
+               FullB_DG = State_VGB(Bx_:Bz_,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                if(UseB0) &
-                    FullB_DG = FullB_DG + B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBLK)
+                    FullB_DG = FullB_DG + B0_DGB(:,0:nI+1,0:nJ+1,0:nK+1,iBlock)
                do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
                   Bx = FullB_DG(x_,i,j,k)
                   By = FullB_DG(y_,i,j,k)
                   Bz = FullB_DG(z_,i,j,k)
-                  RhoUx = State_VGB(iRhoUx,i,j,k,iBLk)
-                  RhoUy = State_VGB(iRhoUy,i,j,k,iBLk)
-                  RhoUz = State_VGB(iRhoUz,i,j,k,iBLk)
-                  tmp1_BLK(i,j,k,iBLK) = &
-                       ( (RhoUy*Bz-RhoUz*By)*Xyz_DGB(y_,i,j,k,iBLK) &
-                       - (RhoUz*Bx-RhoUx*Bz)*Xyz_DGB(x_,i,j,k,iBLK) &
-                       ) / (State_VGB(iRho,i,j,k,iBLK)*R_BLK(i,j,k,iBLK)) 
+                  RhoUx = State_VGB(iRhoUx,i,j,k,iBlock)
+                  RhoUy = State_VGB(iRhoUy,i,j,k,iBlock)
+                  RhoUz = State_VGB(iRhoUz,i,j,k,iBlock)
+                  tmp1_BLK(i,j,k,iBlock) = &
+                       ( (RhoUy*Bz-RhoUz*By)*Xyz_DGB(y_,i,j,k,iBlock) &
+                       - (RhoUz*Bx-RhoUx*Bz)*Xyz_DGB(x_,i,j,k,iBlock) &
+                       ) / (State_VGB(iRho,i,j,k,iBlock)*R_BLK(i,j,k,iBlock))
                end do; end do; end do
             end do
             LogVar_I(iVarTot) = integrate_circle(r, 0.0, tmp1_BLK)
@@ -965,7 +964,7 @@ contains
                iVarTot = iVarTot - 1
                do iR=1,nLogR
                   iVarTot = iVarTot + 1
-                  r = LogR_I(iR)           
+                  r = LogR_I(iR)
                   call user_get_log_var(LogVar_I(iVarTot), NameLogVarLower, r)
                end do
             else
@@ -981,8 +980,8 @@ contains
          end if
       end select
     end subroutine set_log_var
-
     !==========================================================================
+
     subroutine set_sat_var
 
       use ModAdvance,   ONLY: UseMultiSpecies
@@ -991,6 +990,7 @@ contains
 
       integer :: jVar
       character(len=lNameLogVar) :: NameLogVarLower
+
       !------------------------------------------------------------------------
       if (iProc/=0) RETURN
 
@@ -1071,7 +1071,7 @@ contains
             LogVar_I(iVarTot) = 1
          end if
 
-         !Raytracing footpoint values
+         ! Raytracing footpoint values
       case('theta1')
          LogVar_I(iVarTot) = SatRayVar_I(1)
       case('phi1')
@@ -1097,17 +1097,16 @@ contains
               NameLogVar,' for iSat = ',iSat
       end select
     end subroutine set_sat_var
-    !=========================================================================
+    !==========================================================================
 
   end subroutine set_logvar
-
   !============================================================================
+
   subroutine normalize_logvar(nLogVar,NameLogVar_I,nLogR,&
        LogR_I,nLogTot,LogVar_I)
 
     use ModPhysics
     use ModIO, ONLY: lNameLogVar
-    implicit none
 
     integer, intent(in) :: nLogVar, nLogR, nLogTot
     character (LEN=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
@@ -1116,7 +1115,10 @@ contains
 
     character (len=lNameLogVar) :: NameLogVar
     integer :: iVar, iVarTot, jVar
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'normalize_logvar'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     iVarTot = 0
     do iVar=1,nLogVar
@@ -1153,13 +1155,13 @@ contains
        case('t','temp','tpnt','temppnt')
           LogVar_I(iVarTot)=LogVar_I(iVarTot)*No2Io_V(UnitTemperature_)
 
-!!$! Ionosphere values                                
+!!$! Ionosphere values
 
        case('cpcpn','cpcp_n','cpcp_north','cpcpnorth',&
             'cpcps','cpcp_s','cpcp_south','cpcpsouth')
           ! User unit is kV = 1000 V
           LogVar_I(iVarTot) = LogVar_I(iVarTot) &
-               *(No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0       
+               *(No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0
 !!$! Flux values
        case('aflx')
           LogVar_I(iVarTot:iVarTot+nLogR-1)=LogVar_I(iVarTot:iVarTot+nLogR-1)&
@@ -1185,7 +1187,7 @@ contains
           LogVar_I(iVarTot:iVarTot+nLogR-1)=LogVar_I(iVarTot:iVarTot+nLogR-1)&
                *(No2Si_V(UnitPoynting_)*No2Si_V(UnitX_)**2)
           iVarTot = iVarTot+nLogR-1
-       case('e2dflx') 
+       case('e2dflx')
           ! circular integral of the azimuthal component of the electric field
           ! on the surface of a sphere.
           LogVar_I(iVarTot:iVarTot+nLogR-1) = &
@@ -1206,14 +1208,14 @@ contains
           ! no normalization
        end select
     end do ! iVar
+    call test_stop(NameSub, DoTest)
   end subroutine normalize_logvar
-
   !============================================================================
 
   real function calc_sphere(TypeAction, nTheta, Radius, Array_GB)
 
     ! This function calculates the integral of the incomming variable Array_GB
-    ! over the surface of a sphere centered at the origin radius Radius.  
+    ! over the surface of a sphere centered at the origin radius Radius.
     ! The resolution in the colatitude is determined by the nTheta parameter.
 
     use ModMain,           ONLY: optimize_message_pass
@@ -1224,17 +1226,16 @@ contains
          CellSize_DB, Theta_, Phi_, j0_, k0_, nJp1_, nKp1_
     use ModNumConst, ONLY: cRadToDeg, cPi, cTwoPi
     use ModInterpolate, ONLY: trilinear
-    implicit none
 
     ! Arguments
 
     character(len=*), intent(in) :: TypeAction
     integer, intent(in):: nTheta
-    real,    intent(in):: Radius 
+    real,    intent(in):: Radius
     real,    intent(in):: Array_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 
     ! Local variables
-    real :: Result, Darea0, Darea, Average 
+    real :: Result, Darea0, Darea, Average
 
     ! Indices and coordinates
     integer :: iBlock,i,j,k,i1,i2
@@ -1250,10 +1251,11 @@ contains
     ! The x and y depend on iPhi,iTheta while z only depends on iTheta
     !  real, allocatable :: x_II(:,:), y_II(:,:), z_I(:), SinTheta_I(:)
 
-    logical :: DoTest=.false.,DoTestMe=.false.
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_sphere'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    call set_oktest('calc_sphere',DoTest,DoTestMe)
     call timing_start('calc_sphere_'//TypeAction)
 
     ! Initialize result
@@ -1268,8 +1270,8 @@ contains
        call stop_mpi('ERROR in calc_sphere: Invalid action='//TypeAction)
     end select
 
-    if(IsRLonLat)then         
-       ! For spherical geometry it is sufficient to 
+    if(IsRLonLat)then
+       ! For spherical geometry it is sufficient to
        ! interpolate in the radial direction
 
        do iBlock = 1, nBlock
@@ -1323,7 +1325,7 @@ contains
        dTheta = cPi/nTheta
        dArea0 = Radius**2 * 2 * sin(0.5*dTheta)
 
-       if (DoTestMe) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
+       if (DoTest) write(*,*) 'nTheta,MaxPhi,dTheta[deg]:',nTheta,MaxPhi,&
             dTheta*cRadToDeg
 
        ! Calculate sin(theta) and x,y,z in advance
@@ -1337,7 +1339,7 @@ contains
        !     z_I(i)        = Radius*cos(Theta)
        !
        !     ! Number of Phi coordinates is proportional to 2*nTheta*SinTheta
-       !     ! This keeps the area of the spherical cells roughly constant 
+       !     ! This keeps the area of the spherical cells roughly constant
        !     ! and the shape roughly a square.
        !     ! Make sure that nPhi is a multiple of 4 to preserve symmetry
        !     nPhi  = min(MaxPhi, 4 * ceiling(cQuarter*MaxPhi*SinTheta))
@@ -1355,7 +1357,7 @@ contains
 
           if (Unused_B(iBlock)) CYCLE
 
-          ! get the max and min radial distance for this block so that 
+          ! get the max and min radial distance for this block so that
           ! we can check whether or not this block contibutes to the sum.
 
           xMin = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock) &
@@ -1383,7 +1385,7 @@ contains
           ! Set temporary array
           Array_G = Array_GB(0:nI+1,j0_:nJp1_,k0_:nKp1_,iBlock)
 
-          ! Fill in edges and corners for the first layer so that bilinear 
+          ! Fill in edges and corners for the first layer so that bilinear
           ! interpolation can be used without message passing these values
 
           if(index(optimize_message_pass,'opt')>0) &
@@ -1419,8 +1421,8 @@ contains
                 if(y >= yMax) CYCLE
 
                 ! Compute the interpolated values at the current location.
-                ! Coordinates are normalized so that index=coordinate. 
-                ! XyzStart corresponds to 1,1,1 so we have to add 1 
+                ! Coordinates are normalized so that index=coordinate.
+                ! XyzStart corresponds to 1,1,1 so we have to add 1
                 ! to the index.
 
                 Average = trilinear( Array_G, 0,nI+1, 0,nJ+1, 0,nK+1, &
@@ -1434,12 +1436,12 @@ contains
                 case('minval')
                    Result = min(Result, Average)
                 end select
-                !if(iBlock==222.and.i==22.and.j==76)then
+                ! if(iBlock==222.and.i==22.and.j==76)then
                 !   write(*,*)'j, Result=',j, Result
                 !   write(*,*)'x,y,z=',x,y,z
                 !   write(*,*)'XyzStart_Blk=',XyzStart_Blk(:,iBlock)
                 !   write(*,*)'InvDxyz_D=',InvDxyz_D
-                !end if
+                ! end if
              end do
           end do
        end do
@@ -1452,21 +1454,25 @@ contains
     calc_sphere = Result
     call timing_stop('calc_sphere_'//TypeAction)
 
+    call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
 
     real function minmod(x,y)
       real, intent(in) :: x,y
+      !------------------------------------------------------------------------
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
+    !==========================================================================
 
     real function maxmod(x,y)
       real, intent(in) :: x,y
+      !------------------------------------------------------------------------
       maxmod = max(abs(x),abs(y))
     end function maxmod
+    !==========================================================================
 
   end function calc_sphere
-
-
   !============================================================================
 
   real function integrate_circle(Radius, z, Array_GB)
@@ -1474,7 +1480,7 @@ contains
     ! This function calculates the integral of the incoming variable Array_GB
     ! over a cirle parallel to the equitorial plane.  The radius of the circle
     ! for the z axis is defined by the radius Radius and the z position is
-    ! is given by z.  
+    ! is given by z.
 
     use ModMain,  ONLY: optimize_message_pass
     use ModGeometry, ONLY: XyzStart_Blk
@@ -1483,15 +1489,14 @@ contains
     use BATL_lib, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
          nBlock, MaxBlock, Unused_B, Xyz_DGB, x_, y_, z_, CellSize_DB, &
          j0_, nJp1_, k0_, nKp1_
-    implicit none
 
     ! Arguments
 
     real, intent(in) :: Array_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    real, intent(in) :: Radius, z 
+    real, intent(in) :: Radius, z
 
     ! Local variables
-    real :: Integral, Average 
+    real :: Integral, Average
 
     ! Indices and coordinates
     integer :: iBlock,i
@@ -1501,25 +1506,24 @@ contains
     real :: dPhi,Phi
     real :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
 
-    logical :: DoTest,DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'integrate_circle'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     Integral = 0.0
-
-    call set_oktest('integrate_circle',DoTest,DoTestMe)
 
     ! the angular resolution of the integral is hard coded
     nPhi = 720
     dPhi = cTwoPi/nPhi
 
-    if (DoTestMe) write(*,*) 'nPhi,dPhi',nPhi,dPhi
+    if (DoTest) write(*,*) 'nPhi,dPhi',nPhi,dPhi
 
     ! Sum all cells within range
 
     do iBlock = 1, nBlock
 
        if (Unused_B(iBlock)) CYCLE
-       ! get the max and min radial (cylindrical) distance for this block so 
+       ! get the max and min radial (cylindrical) distance for this block so
        ! that we can check whether or not this block contibutes to the sum.
 
        zMin=0.5*(Xyz_DGB(z_, 0, 0, 0,iBlock)+Xyz_DGB(z_,   1,   1,   1,iBlock))
@@ -1552,7 +1556,7 @@ contains
           if( y < yMin .or. y >= yMax) CYCLE
 
           ! Compute the interpolated values at the current location.
-          ! Coordinates are normalized so that index=coordinate. 
+          ! Coordinates are normalized so that index=coordinate.
           ! XyzStart corresponds to 1,1,1 so we have to add 1 to the index.
 
           Average = trilinear( Array_GB(:,:,:,iBlock),0,nI+1,0,nJ+1,0,nK+1, &
@@ -1562,26 +1566,31 @@ contains
        end do
     end do
 
-    ! Now multiply by the size of each interval in the integral.  
-    ! Since they are all the same we can do this after the fact 
+    ! Now multiply by the size of each interval in the integral.
+    ! Since they are all the same we can do this after the fact
     ! and not inside the above loops
 
     integrate_circle = Integral*Radius*dPhi
 
+    call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
 
     real function minmod(x,y)
       real, intent(in) :: x,y
+      !------------------------------------------------------------------------
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
+    !==========================================================================
 
     real function maxmod(x,y)
       real, intent(in) :: x,y
+      !------------------------------------------------------------------------
       maxmod = max(abs(x),abs(y))
     end function maxmod
+    !==========================================================================
 
   end function integrate_circle
-
   !============================================================================
 
   subroutine collect_satellite_data(Xyz_D, StateCurrent_V)
@@ -1589,19 +1598,18 @@ contains
     use ModProcMH, ONLY: nProc, iProc, iComm
     use ModVarIndexes, ONLY : nVar
     use ModMpi
-    implicit none
 
     !INPUT ARGUMENTS:
     real, intent(in) :: Xyz_D(3) ! The position of the interpolated state
 
     !INPUT/OUTPUT ARGUMENTS:
-    ! On input StateCurrent_V contains the weight and the interpolated state 
+    ! On input StateCurrent_V contains the weight and the interpolated state
     ! on a given PE.
     ! On output only PE 0 contains new data.
     ! In the first 0th element the total weight is returned.
     ! If weight is 1.0 then the returned state is second order accurate
     ! If weight is positive but not 1.0 then the returned state is first order
-    ! If weight is 0.0 (or less?) then the point was not found and the 
+    ! If weight is 0.0 (or less?) then the point was not found and the
     !     returned state is -777.0
     ! The rest of the elements contain the globally interpolated state.
 
@@ -1610,7 +1618,10 @@ contains
     !LOCAL VARIABLES:
     real    :: Weight
     integer :: iError
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'collect_satellite_data'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! Collect contributions from all the processors to PE 0
     if(nProc > 1)call MPI_reduce_real_array(StateCurrent_V, nVar+4, MPI_SUM, &
          0, iComm, iError)
@@ -1627,19 +1638,22 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine collect_satellite_data
-
   !============================================================================
+
   subroutine satellite_test
 
     use ModVarIndexes
-    use ModMain,         ONLY: xTest, yTest, zTest
     use ModAdvance,      ONLY: State_VGB
     use ModCurrent,      ONLY: get_point_data
     use BATL_lib,        ONLY: Xyz_DGB, x_, y_, z_, nBlock, iProc
-    implicit none
     real :: State_V(0:nVar+3)
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'satellite_test'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     State_VGB(Bx_,:,:,:,:) = Xyz_DGB(y_,:,:,:,:)
     State_VGB(By_,:,:,:,:) = Xyz_DGB(z_,:,:,:,:)
     State_VGB(Bz_,:,:,:,:) = Xyz_DGB(x_,:,:,:,:)
@@ -1663,22 +1677,26 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine satellite_test
-
   !============================================================================
+
   subroutine normalize_name_log_var(NameIn, NameOut)
 
-    ! Normalize the logvar name to lower case and 
+    ! Normalize the logvar name to lower case and
     ! replace alternative names with a unique name
 
     use ModUtilities, ONLY: lower_case
-    use ModMultiFluid,ONLY: extract_fluid_name
-    implicit none
+    use ModMultiFluid, ONLY: extract_fluid_name
 
     character(len=*), intent(in)  :: NameIn
     character(len=*), intent(out) :: NameOut
     integer :: l
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'normalize_name_log_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     NameOut = NameIn
 
     ! Switch to all lower case
@@ -1697,9 +1715,10 @@ contains
     if(l<4) RETURN
     if(NameOut(l-3:l) == 'test') NameOut(l-3:l)='pnt '
 
+    call test_stop(NameSub, DoTest)
   end subroutine normalize_name_log_var
-
   !============================================================================
+
   subroutine integrate_domain(Sum_V, Pressure_GB)
 
     ! Since the State_VGB variable has the variables in the first index,
@@ -1708,12 +1727,10 @@ contains
     ! for the processor only.
 
     use ModAdvance,   ONLY: nVar, State_VGB, P_
-    use ModGeometry,  ONLY: true_BLK, true_cell 
+    use ModGeometry,  ONLY: true_BLK, true_cell
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, Mink, MaxK, &
          nI, nJ, nK, nBlock, MaxBlock, Unused_B, &
          IsCartesian, CellVolume_B, CellVolume_GB
-
-    implicit none 
 
     ! Arguments
     real, intent(out) :: Sum_V(nVar)
@@ -1722,15 +1739,16 @@ contains
     ! Local variables:
     integer :: i, j, k, iBlock, iVar
     real    :: CellVolume
-    logical :: DoTest, DoTestMe
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'integrate_domain'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
     Sum_V = 0.0
 
-    if(IsCartesian)then                            
+    if(IsCartesian)then
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           if(true_BLK(iBlock)) then
@@ -1771,6 +1789,9 @@ contains
 
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest)
   end subroutine integrate_domain
+  !============================================================================
 
 end module ModWriteLogSatFile
+!==============================================================================

@@ -1,10 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModConstrainDivB
 
-  ! A flux averaged constrained transport scheme for block AMR grid. See 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest
+
+  ! A flux averaged constrained transport scheme for block AMR grid. See
   !
   ! G. Toth, 2000, Journal of Computational Physics, 161, 605-652
   !
@@ -58,26 +61,35 @@ contains
   !============================================================================
   subroutine init_mod_ct
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_ct'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(allocated(Bxface_BLK)) RETURN
 
-    allocate(Bxface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
-    allocate(Byface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
-    allocate(Bzface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
-    allocate(BxFaceFine_XQSB(nJ,nK,4,2,nBLK))
-    allocate(ByFaceFine_YQSB(nI,nK,4,2,nBLK))
-    allocate(BzFaceFine_ZQSB(nI,nJ,4,2,nBLK))
-    allocate(VxB_x(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
-    allocate(VxB_y(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
-    allocate(VxB_z(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nBLK))
+    allocate(Bxface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(Byface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(Bzface_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(BxFaceFine_XQSB(nJ,nK,4,2,MaxBlock))
+    allocate(ByFaceFine_YQSB(nI,nK,4,2,MaxBlock))
+    allocate(BzFaceFine_ZQSB(nI,nJ,4,2,MaxBlock))
+    allocate(VxB_x(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(VxB_y(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(VxB_z(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_ct allocated arrays'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_ct
   !============================================================================
   subroutine clean_mod_ct
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'clean_mod_ct'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.allocated(Bxface_BLK)) RETURN
 
     deallocate(Bxface_BLK)
@@ -95,27 +107,28 @@ contains
        write(iUnitOut,'(a)') 'clean_mod_ct deallocated arrays'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine clean_mod_ct
-
-  !==========================================================================
+  !============================================================================
 
   subroutine get_VxB(iBlock)
 
     ! Calculate VxB from fluxes following Balsara and Spicer
 
-    use ModMain, ONLY : nI,nJ,nK,iTest,jTest,kTest,BLKtest
+    use ModMain, ONLY : nI,nJ,nK
     use ModVarIndexes, ONLY : Bx_,By_,Bz_
     use ModAdvance, ONLY : Flux_VX,Flux_VY,Flux_VZ
     use BATL_lib, ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
 
-    logical :: oktest, oktest_me
-    !-------------------------------------------------------------------------
-    if(iBlock==BLKtest)then
-       call set_oktest('get_vxb',oktest,oktest_me)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_VxB'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    if(iBlock==iBlockTest)then
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     ! VxB_x=(fy+fy-fz-fz)/4
@@ -130,7 +143,7 @@ contains
          (Flux_VZ(Bx_,0:nI  ,1:nJ,1:nK+1)                        &
          +Flux_VZ(Bx_,1:nI+1,1:nJ,1:nK+1))/CellFace_DB(3,iBlock) &
          -(Flux_VX(Bz_,1:nI+1,1:nJ,0:nK  )                        &
-         +Flux_VX(Bz_,1:nI+1,1:nJ,1:nK+1))/CellFace_DB(1,iBlock)) 
+         +Flux_VX(Bz_,1:nI+1,1:nJ,1:nK+1))/CellFace_DB(1,iBlock))
 
     ! VxB_z=(fx+fx-fy-fy)/4
     VxB_z(1:nI+1,1:nJ+1,1:nK,iBlock)= 0.25*(                        &
@@ -139,23 +152,23 @@ contains
          -(Flux_VY(Bx_,0:nI  ,1:nJ+1,1:nK)                        &
          +Flux_VY(Bx_,1:nI+1,1:nJ+1,1:nK))/CellFace_DB(2,iBlock))
 
-    if(oktest_me)then
+    if(DoTest)then
        write(*,*)'get_vxb: final VxB (edge centered)'
        write(*,*)'VxB_xLL,LR,RL,RR=',&
-            VxB_x(iTest,jTest:jTest+1,kTest:kTest+1,BlkTest)
+            VxB_x(iTest,jTest:jTest+1,kTest:kTest+1,iBlockTest)
        write(*,*)'VxB_yLL,LR,RL,RR=',&
-            VxB_y(iTest:iTest+1,jTest,kTest:kTest+1,BlkTest)
+            VxB_y(iTest:iTest+1,jTest,kTest:kTest+1,iBlockTest)
        write(*,*)'VxB_zLL,LR,RL,RR=',&
-            VxB_z(iTest:iTest+1,jTest:jTest+1,kTest,BlkTest)
+            VxB_z(iTest:iTest+1,jTest:jTest+1,kTest,iBlockTest)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_VxB
-
-  !=============================================================================
+  !============================================================================
 
   subroutine bound_VxB(iBlock)
 
-    ! Apply boundary conditions on VxB 
+    ! Apply boundary conditions on VxB
 
     use ModSize
     use ModMain, ONLY : TypeCellBc_I, Coord1MaxBc_
@@ -170,9 +183,12 @@ contains
     integer, intent(in) :: iBlock
 
     integer:: i,j,k
-    !-------------------------------------------------------------------------
 
     ! Apply continuous or fixed boundary conditions at outer boundaries
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'bound_VxB'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(neiLeast(iBlock)==NOBLK)then
        do k=1,nK+1; do j=1,nJ
           VxB_y(1,j,k,iBlock) = +Flux_VZ(Bx_,1,j,k)/CellFace_DB(3,iBlock)
@@ -183,7 +199,7 @@ contains
     end if
     if(neiLwest(iBlock)==NOBLK)then
        ! fixed inflow!
-       !VxB_x(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
+       ! VxB_x(nI  ,:,:,iBlock)=SW_Uy*SW_Bz-SW_Uz*SW_Uy
        select case(TypeCellBc_I(Coord1MaxBc_))
        case('inflow','vary','fixed')
           VxB_y(nI+1,:,:,iBlock)=SW_Uz*SW_Bx-SW_Ux*SW_Bz
@@ -244,40 +260,41 @@ contains
        end do; end do; end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine bound_VxB
-
-  !=============================================================================
+  !============================================================================
 
   subroutine constrain_B(iBlock)
 
     ! Use CT scheme for updating the B field so that div B is conserved
 
     use ModSize
-    use ModMain, ONLY : Dt,BLKtest,iTest,jTest,kTest
+    use ModMain, ONLY : Dt
     use ModGeometry, ONLY : CellSize_DB
 
     integer, intent(in) :: iBlock
 
     real :: qdt
-    logical :: oktest,oktest_me
-    !-------------------------------------------------------------------------
-    if(iBlock==BLKtest)then
-       call set_oktest('constrain_b',oktest,oktest_me)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'constrain_B'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    if(iBlock==iBlockTest)then
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     ! Calculate physical time step
     qdt=dt
 
-    if(oktest_me)then
+    if(DoTest)then
        write(*,*)'constrain_b: initial face centered B'
        write(*,*)'BxfaceL,R=',&
-            BxFace_BLK(iTest:iTest+1,jTest,kTest,BlkTest)
+            BxFace_BLK(iTest:iTest+1,jTest,kTest,iBlockTest)
        write(*,*)'ByfaceL,R=',&
-            ByFace_BLK(iTest,jTest:jTest+1,kTest,BlkTest)
+            ByFace_BLK(iTest,jTest:jTest+1,kTest,iBlockTest)
        write(*,*)'BzfaceL,BzfaceR=',&
-            BzFace_BLK(iTest,jTest,kTest:kTest+1,BlkTest)
+            BzFace_BLK(iTest,jTest,kTest:kTest+1,iBlockTest)
     end if
 
     ! dBx/dt=d(VxB_z)/dy-d(VxB_y)/dz
@@ -308,19 +325,19 @@ contains
          -(VxB_x(1:nI  ,2:nJ+1,1:nK+1,iBlock)           &
          -VxB_x(1:nI  ,1:nJ  ,1:nK+1,iBlock))          &
          /CellSize_DB(y_,iBlock))
-    if(oktest_me)then
+    if(DoTest)then
        write(*,*)'constrain_b: final face centered B'
        write(*,*)'BxfaceL,R=',&
-            BxFace_BLK(iTest:iTest+1,jTest,kTest,BlkTest)
+            BxFace_BLK(iTest:iTest+1,jTest,kTest,iBlockTest)
        write(*,*)'ByfaceL,R=',&
-            ByFace_BLK(iTest,jTest:jTest+1,kTest,BlkTest)
+            ByFace_BLK(iTest,jTest:jTest+1,kTest,iBlockTest)
        write(*,*)'BzfaceL,BzfaceR=',&
-            BzFace_BLK(iTest,jTest,kTest:kTest+1,BlkTest)
+            BzFace_BLK(iTest,jTest,kTest:kTest+1,iBlockTest)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine constrain_B
-
-  !==============================================================================
+  !============================================================================
 
   subroutine Bface2Bcenter(iBlock)
 
@@ -331,8 +348,10 @@ contains
 
     integer, intent(in) :: iBlock
 
-    !---------------------------------------------------------------------------
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'Bface2Bcenter'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     State_VGB(Bx_:Bz_,:,:,:,iBlock) = -777.0
 
     ! average in direction x (b->B)
@@ -358,9 +377,9 @@ contains
        end where
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine Bface2Bcenter
-
-  !==============================================================================
+  !============================================================================
 
   subroutine Bcenter2Bface(iBlock)
 
@@ -372,7 +391,10 @@ contains
     integer, intent(in) :: iBlock
 
     integer:: i,j,k
-    !---------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'Bcenter2Bface'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Estimate BFace from Bcenter
 
@@ -402,9 +424,10 @@ contains
 
     call bound_Bface(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine Bcenter2Bface
+  !============================================================================
 
-  !==============================================================================
   subroutine bound_Bface(iBlock)
 
 !!! Set Bface to zero on the cell faces of the body cells !!!
@@ -412,23 +435,23 @@ contains
     ! This may have to be generalized later
 
     use ModSize
-    use ModMain,     ONLY: BLKtest
     use ModGeometry, ONLY: true_cell,body_BLK
 
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
 
-    logical :: oktest, oktest_me
-    !---------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'bound_Bface'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(iBlock==BLKtest)then
-       call set_oktest('bound_Bface',oktest,oktest_me)
+    if(iBlock==iBlockTest)then
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
-    if(oktest_me)write(*,*)'bound_Bface, body_BLK=',body_BLK(iBlock)
+    if(DoTest)write(*,*)'bound_Bface, body_BLK=',body_BLK(iBlock)
 
     if(body_BLK(iBlock))then
        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
@@ -440,243 +463,244 @@ contains
        end do; end do; end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine bound_Bface
+  !============================================================================
 
-  !=============================================================================
-  ! subroutine prolong1_Bface(coarse_sol, iVar, iBLK, fine_sol)
-  ! 
+  ! subroutine prolong1_Bface(coarse_sol, iVar, iBlock, fine_sol)
+  !
   !   ! First order div B conserving prolongation for Bface
-  ! 
+  !
   !   use ModSize
   !   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   !   implicit none
-  ! 
-  !   integer, intent(in) :: iVar, iBLK
+  !
+  !   integer, intent(in) :: iVar, iBlock
   !   real, dimension (MinI:MaxI,MinJ:MaxJ, MinK:MaxK) :: &
   !        coarse_sol,fine_sol
-  ! 
+  !
   !   integer :: i,j,k,i1,j1,k1,ishift,jshift,kshift
   !   !--------------------------------------------------------------------------
-  ! 
-  ! !!!  call get_shifts(iBLK,ishift,jshift,kshift)
-  ! 
+  !
+  ! !!!  call get_shifts(iBlock,ishift,jshift,kshift)
+  !
   !   ! Assign default solution state to fine block to get corners
   !   fine_sol=0.0
-  ! 
+  !
   !   !\
   !   ! Prolong coarse grid solution to finer block.
   !   !/
-  ! 
+  !
   !   select case(iVar)
   !   case(Bx_)
-  !      !BxFace
+  !      ! BxFace
   !      do i = 1+ishift, nI/2+ishift+1
   !         do j = 1+jshift, nJ/2+jshift
   !            do k = 1+kshift, nK/2+kshift
   !               i1 = 2*(i-ishift)-1
   !               j1 = 2*(j-jshift)-1
   !               k1 = 2*(k-kshift)-1
-  ! 
+  !
   !               fine_sol(i1,j1:j1+1,k1:k1+1) = coarse_sol(i,j,k)
-  ! 
+  !
   !               if(i1<nI+1)fine_sol(i1+1,j1:j1+1,k1:k1+1) = &
   !                    0.5*(coarse_sol(i,j,k)+coarse_sol(i+1,j,k))
   !            end do
   !         end do
   !      end do
   !   case(By_)
-  !      !ByFace
+  !      ! ByFace
   !      do i = 1+ishift, nI/2+ishift
   !         do j = 1+jshift, nJ/2+jshift+1
   !            do k = 1+kshift, nK/2+kshift
   !               i1 = 2*(i-ishift)-1
   !               j1 = 2*(j-jshift)-1
   !               k1 = 2*(k-kshift)-1
-  ! 
+  !
   !               fine_sol(i1:i1+1,j1,k1:k1+1) = coarse_sol(i,j,k)
-  ! 
+  !
   !               if(j1<nJ+1)fine_sol(i1:i1+1,j1+1,k1:k1+1) = &
   !                    0.5*(coarse_sol(i,j,k)+coarse_sol(i,j+1,k))
   !            end do
   !         end do
   !      end do
   !   case(Bz_)
-  !      !BzFace
+  !      ! BzFace
   !      do i = 1+ishift, nI/2+ishift
   !         do j = 1+jshift, nJ/2+jshift
   !            do k = 1+kshift, nK/2+kshift+1
   !               i1 = 2*(i-ishift)-1
   !               j1 = 2*(j-jshift)-1
   !               k1 = 2*(k-kshift)-1
-  ! 
+  !
   !               fine_sol(i1:i1+1,j1:j1+1,k1) = coarse_sol(i,j,k)
-  ! 
+  !
   !               if(k1<nK+1)fine_sol(i1:i1+1,j1:j1+1,k1+1) = &
   !                    0.5*(coarse_sol(i,j,k)+coarse_sol(i,j,k+1))
   !            end do
   !         end do
   !      end do
   !   end select
-  ! 
+  !
   ! end subroutine prolong1_Bface
-  ! 
+  !
   ! !=============================================================================
-  ! 
+  !
   ! subroutine prolong_b_face(Bxf_c,Byf_c,Bzf_c,&
   !      BxFaceFine_XQS,ByFaceFine_YQS,BzFaceFine_ZQS,&
   !      IsFinerNei_E,iChild,iBlock,Bxf_f,Byf_f,Bzf_f)
-  ! 
+  !
   !   ! Second order div B conserving prolongation for Bface
   !   ! _c is coarse, _f is fine
-  ! 
+  !
   !   use ModSize
-  !   use ModMain, ONLY : BLKtest, iTest, jTest, kTest
+  !   use ModMain, ONLY : iBlockTest, iTest, jTest, kTest
   !   use ModGeometry, ONLY: dx_BLK, dy_BLK, dz_BLK
   !   use ModAMR, ONLY: child2subface
   !   implicit none
-  ! 
+  !
   !   ! Coarse face centered B field components
   !   real, intent(in),  dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
   !        Bxf_c, Byf_c, Bzf_c
-  ! 
+  !
   !   ! Did we have finer neighbors before prolongation
   !   logical, intent(in) :: IsFinerNei_E(1:6)
-  ! 
-  !   ! Normal B components from finer neighbors 
+  !
+  !   ! Normal B components from finer neighbors
   !   ! on the shared subfaces (index Q) on two sides (index S)
   !   real, intent(in) :: BxFaceFine_XQS(1:nJ,1:nK,4,2)
   !   real, intent(in) :: ByFaceFine_YQS(1:nI,1:nK,4,2)
   !   real, intent(in) :: BzFaceFine_ZQS(1:nI,1:nJ,4,2)
-  ! 
+  !
   !   ! The child index relative to the coarse parent
   !   integer, intent(in) :: iChild
-  ! 
+  !
   !   ! The block number of the fine block into which the prolongation is done
   !   integer, intent(in) :: iBlock
-  ! 
+  !
   !   ! Fine face centered B field components produced by prolongation
   !   real, intent(out), dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) :: &
   !        Bxf_f, Byf_f, Bzf_f
-  ! 
+  !
   !   integer :: i,j,k,i1,j1,k1,ishift,jshift,kshift
   !   integer :: iP,iM,jP,jM,kP,kM
   !   real :: gradXl, gradXr, gradYl, gradYr, gradZl, gradZr
   !   real :: dBxdy, dBxdz, dBydx, dBydz, dBzdx, dBzdy
   !   real :: dBxdxx, dBydyy, dBzdzz, dBxdxyz, dBydxyz, dBzdxyz
-  ! 
+  !
   !   ! aspect ratio related constants
   !   real :: Dx,Dy,Dz,DxDy8Inv,DxDz8Inv,DyDx8Inv,DyDz8Inv,DzDx8Inv,DzDy8Inv
   !   real :: Dx2,Dy2,Dz2,Dx2Dxy2,Dy2Dxy2,Dx2Dxz2,Dz2Dxz2,Dy2Dyz2,Dz2Dyz2
   !   real :: Dy2DBxDxyz,Dz2DBxDxyz, Dx2DByDxyz,Dz2DByDxyz, Dx2DBzDxyz,Dy2DBzDxyz
-  ! 
-  !   logical :: oktest, oktest_me
+  !
+  !   logical :: DoTest, DoTest
   !   !--------------------------------------------------------------------------
-  ! 
+  !
   ! !!!  call get_shifts(iChild,ishift,jshift,kshift)
-  ! 
+  !
   !   ! Calculate aspect ratios for a non-cubic cell
   !   Dx = CellSize_DB(x_,iBlock); Dy = CellSize_DB(y_,iBlock); Dz = CellSize_DB(z_,iBlock)
   !   DxDy8Inv = Dx/(8*Dy); DxDz8Inv = Dx/(8*Dz)
   !   DyDx8Inv = Dy/(8*Dx); DyDz8Inv = Dy/(8*Dz)
   !   DzDx8Inv = Dz/(8*Dx); DzDy8Inv = Dz/(8*Dy)
-  ! 
+  !
   !   Dx2 = Dx**2; Dy2 = Dy**2; Dz2 = Dz**2
   !   Dx2Dxy2 = Dx2/(Dx2+Dy2); Dy2Dxy2 = Dy2/(Dx2+Dy2)
   !   Dx2Dxz2 = Dx2/(Dx2+Dz2); Dz2Dxz2 = Dz2/(Dx2+Dz2)
   !   Dy2Dyz2 = Dy2/(Dy2+Dz2); Dz2Dyz2 = Dz2/(Dy2+Dz2)
-  ! 
-  !   if(iBlock==BLKtest.and.&
+  !
+  !   if(iBlock==iBlockTest.and.&
   !        iShift<iTest.and.iTest<=iShift+nI/2.and. &
   !        jShift<jTest.and.jTest<=jShift+nJ/2.and. &
   !        kShift<kTest.and.kTest<=kShift+nK/2)then
-  !      call set_oktest('prolong2_bface',oktest,oktest_me)
+  !      call set_oktest('prolong2_bface',DoTest,DoTest)
   !   else
-  !      oktest=.false.; oktest_me=.false.
+  !      DoTest=.false.; DoTest=.false.
   !   end if
-  ! 
-  !   if(oktest_me)write(*,*)'prolong2_bface: iChild,iShift,jShift,kShift=',&
+  !
+  !   if(DoTest)write(*,*)'prolong2_bface: iChild,iShift,jShift,kShift=',&
   !        iChild,iShift,jShift,kShift
-  ! 
+  !
   !   ! Assign default solution state to fine block to get corners
   !   Bxf_f=0.0; Byf_f=0.0; Bzf_f=0.0
-  ! 
+  !
   !   ! X faces
   !   do i = 1+ishift, nI/2+ishift+1
   !      do j = 1+jshift, nJ/2+jshift; jP=min(j+1,nJ); jM=max(j-1,1)
   !         do k = 1+kshift, nK/2+kshift; kP=min(k+1,nK); kM=max(k-1,1)
   !            i1 = 2*(i-ishift)-1; j1 = 2*(j-jshift)-1; k1 = 2*(k-kshift)-1
   !            ! Second order minmod limited interpolation on coarse cell faces
-  ! 
+  !
   !            gradYr = Bxf_c(i,jP ,k)-Bxf_c(i,j  ,k)
   !            gradYl = Bxf_c(i,j  ,k)-Bxf_c(i,jM ,k)
   !            dBxdy  = sign(0.25,gradyl)*&
   !                 max(0.,min(abs(gradyl),sign(1.,gradyl)*gradyr))
-  ! 
+  !
   !            gradZr = Bxf_c(i,j,kP) - Bxf_c(i,j,k)
   !            gradZl = Bxf_c(i,j,k)  - Bxf_c(i,j,kM)
   !            dBxdz  = sign(0.25,gradzl)*&
   !                 max(0.,min(abs(gradzl),sign(1.,gradzl)*gradzr))
-  ! 
+  !
   !            Bxf_f(i1,j1  ,k1  )   = Bxf_c(i,j,k) - dBxdy - dBxdz
   !            Bxf_f(i1,j1+1,k1  )   = Bxf_c(i,j,k) + dBxdy - dBxdz
   !            Bxf_f(i1,j1  ,k1+1)   = Bxf_c(i,j,k) - dBxdy + dBxdz
   !            Bxf_f(i1,j1+1,k1+1)   = Bxf_c(i,j,k) + dBxdy + dBxdz
-  ! 
+  !
   !         end do
   !      end do
   !   end do
-  ! 
+  !
   !   ! Y faces
   !   do i = 1+ishift, nI/2+ishift; iP=min(i+1,nI); iM=max(i-1,1)
   !      do j = 1+jshift, nJ/2+jshift+1
   !         do k = 1+kshift, nK/2+kshift; kP=min(k+1,nK); kM=max(k-1,1)
   !            i1 = 2*(i-ishift)-1; j1 = 2*(j-jshift)-1; k1 = 2*(k-kshift)-1
-  ! 
+  !
   !            gradXr = Byf_c(iP,j,k) - Byf_c(i ,j,k)
   !            gradXl = Byf_c(i ,j,k) - Byf_c(iM,j,k)
   !            dBydx  = sign(0.25,gradxl)*&
   !                 max(0.,min(abs(gradxl),sign(1.,gradxl)*gradxr))
-  ! 
+  !
   !            gradZr = Byf_c(i,j,kP) - Byf_c(i,j,k)
   !            gradZl = Byf_c(i,j,k)  - Byf_c(i,j,kM)
   !            dBydz  = sign(0.25,gradzl)*&
   !                 max(0.,min(abs(gradzl),sign(1.,gradzl)*gradzr))
-  ! 
+  !
   !            Byf_f(i1  ,j1,k1  )   = Byf_c(i,j,k) - dBydx - dBydz
   !            Byf_f(i1+1,j1,k1  )   = Byf_c(i,j,k) + dBydx - dBydz
   !            Byf_f(i1  ,j1,k1+1)   = Byf_c(i,j,k) - dBydx + dBydz
   !            Byf_f(i1+1,j1,k1+1)   = Byf_c(i,j,k) + dBydx + dBydz
-  ! 
+  !
   !         end do
   !      end do
   !   end do
-  ! 
+  !
   !   ! Z faces
   !   do i = 1+ishift, nI/2+ishift; iP=min(i+1,nI); iM=max(i-1,1)
   !      do j = 1+jshift, nJ/2+jshift; jP=min(j+1,nJ); jM=max(j-1,1)
   !         do k = 1+kshift, nK/2+kshift+1
   !            i1 = 2*(i-ishift)-1; j1 = 2*(j-jshift)-1; k1 = 2*(k-kshift)-1
-  ! 
+  !
   !            gradXr = Bzf_c(iP,j,k) - Bzf_c(i ,j,k)
   !            gradXl = Bzf_c(i ,j,k) - Bzf_c(iM,j,k)
   !            dBzdx  = sign(0.25,gradxl)*&
   !                 max(0.,min(abs(gradxl),sign(1.,gradxl)*gradxr))
-  ! 
+  !
   !            gradYr = Bzf_c(i,jP,k) - Bzf_c(i,j ,k)
   !            gradYl = Bzf_c(i,j ,k) - Bzf_c(i,jM,k)
   !            dBzdy  = sign(0.25,gradyl)*&
   !                 max(0.,min(abs(gradyl),sign(1.,gradyl)*gradyr))
-  ! 
+  !
   !            Bzf_f(i1  ,j1  ,k1)   = Bzf_c(i,j,k) - dBzdx - dBzdy
   !            Bzf_f(i1+1,j1  ,k1)   = Bzf_c(i,j,k) + dBzdx - dBzdy
   !            Bzf_f(i1  ,j1+1,k1)   = Bzf_c(i,j,k) - dBzdx + dBzdy
   !            Bzf_f(i1+1,j1+1,k1)   = Bzf_c(i,j,k) + dBzdx + dBzdy
-  ! 
+  !
   !         end do
   !      end do
   !   end do
-  ! 
-  !   if(oktest_me)then
+  !
+  !   if(DoTest)then
   !      ! Check if the interpolated fine B fluxes add up to the coarse B flux
   !      i1 = 2*(iTest-ishift)-1; j1 = 2*(jTest-jshift)-1; k1 = 2*(kTest-kshift)-1
   !      write(*,*)'Before correction'
@@ -697,28 +721,28 @@ contains
   !           (Byf_c(iTest,jTest+1,kTest)-Byf_c(iTest,jTest,kTest))/Dy+&
   !           (Bzf_c(iTest,jTest,kTest+1)-Bzf_c(iTest,jTest,kTest))/Dz
   !   end if
-  ! 
+  !
   !   ! Correct normal components on faces which were shared with a finer block
   !   ! before the AMR so that we get a consistent normal flux
   !   if(IsFinerNei_E(1).and.iShift==0)  Bxf_f(   1,1:nJ,1:nK)=&
   !        BxFaceFine_XQS(:,:,child2subface(iChild,1),1)
-  ! 
+  !
   !   if(IsFinerNei_E(2).and.iShift>0)   Bxf_f(nI+1,1:nJ,1:nK)=&
   !        BxFaceFine_XQS(:,:,child2subface(iChild,2),2)
-  ! 
+  !
   !   if(IsFinerNei_E(3).and.jShift==0) Byf_f(1:nI,   1,1:nK)=&
   !        ByFaceFine_YQS(:,:,child2subface(iChild,3),1)
-  ! 
+  !
   !   if(IsFinerNei_E(4).and.jShift>0)  Byf_f(1:nI,nJ+1,1:nK)=&
   !        ByFaceFine_YQS(:,:,child2subface(iChild,4),2)
-  ! 
+  !
   !   if(IsFinerNei_E(5).and.kShift==0)   Bzf_f(1:nI,1:nJ,1)=&
   !        BzFaceFine_ZQS(:,:,child2subface(iChild,5),1)
-  ! 
+  !
   !   if(IsFinerNei_E(6).and.kShift>0)    Bzf_f(1:nI,1:nJ,nK+1)=&
   !        BzFaceFine_ZQS(:,:,child2subface(iChild,6),2)
-  ! 
-  !   if(oktest_me)then
+  !
+  !   if(DoTest)then
   !      ! Check if the corrected fine B fluxes add up to the coarse B flux
   !      i1 = 2*(iTest-ishift)-1; j1 = 2*(jTest-jshift)-1; k1 = 2*(kTest-kshift)-1
   !      write(*,*)'After correction'
@@ -735,15 +759,15 @@ contains
   !      write(*,*)'Bz_c, avg Bz_f(+)=',Bzf_c(iTest,jTest,kTest+1),&
   !           sum(Bzf_f(i1:i1+1,j1:j1+1,k1+2))/4
   !   end if
-  ! 
+  !
   !   ! Do central faces of coarse cells according to Toth and Roe paper
   !   do i = 1+ishift, nI/2+ishift
   !      do j = 1+jshift, nJ/2+jshift
   !         do k = 1+kshift, nK/2+kshift
   !            i1 = 2*(i-ishift)-1; j1 = 2*(j-jshift)-1; k1 = 2*(k-kshift)-1
-  ! 
+  !
   !            ! Second order derivatives, correct for face areas
-  ! 
+  !
   !            ! dBxdxx = 1/8 * sum i j By + i k Bz
   !            dBxdxx = &
   !                 DxDy8Inv*( &
@@ -764,7 +788,7 @@ contains
   !                 + Bzf_f(i1+1,j1  ,k1+2) &
   !                 - Bzf_f(i1  ,j1+1,k1+2) &
   !                 + Bzf_f(i1+1,j1+1,k1+2))
-  ! 
+  !
   !            ! dBydyy = 1/8 * sum j i Bx + k j Bz
   !            dBydyy = &
   !                 DyDx8Inv*( &
@@ -785,7 +809,7 @@ contains
   !                 + Bzf_f(i1  ,j1+1,k1+2) &
   !                 - Bzf_f(i1+1,j1  ,k1+2) &
   !                 + Bzf_f(i1+1,j1+1,k1+2))
-  ! 
+  !
   !            ! dBzdzz = 1/8 * sum k i Bx + k j By
   !            dBzdzz = &
   !                 DzDx8Inv*( &
@@ -806,11 +830,11 @@ contains
   !                 + Byf_f(i1  ,j1+2,k1+1) &
   !                 - Byf_f(i1+1,j1+2,k1  ) &
   !                 + Byf_f(i1+1,j1+2,k1+1))
-  ! 
+  !
   !            ! Third order derivatives
   !            ! These are zero unless a fine B face correction was done
   !            ! aspect ratios are taken into account
-  ! 
+  !
   !            ! dBxdxyz = 1/(8(dy^2+dz^2)) sum i j k Bx
   !            dBxdxyz= &
   !                 -Bxf_f(i1  ,j1  ,k1  ) &
@@ -821,10 +845,10 @@ contains
   !                 -Bxf_f(i1+2,j1+1,k1  ) &
   !                 -Bxf_f(i1+2,j1  ,k1+1) &
   !                 +Bxf_f(i1+2,j1+1,k1+1)
-  ! 
-  !            Dy2DBxDxyz = DzDx8Inv*Dy2Dyz2*DBxDxyz 
+  !
+  !            Dy2DBxDxyz = DzDx8Inv*Dy2Dyz2*DBxDxyz
   !            Dz2DBxDxyz = DyDx8Inv*Dz2Dyz2*DBxDxyz
-  ! 
+  !
   !            ! dBydxyz = 1/(8(dx^2+dz^2)) sum i j k By
   !            dBydxyz= &
   !                 -Byf_f(i1  ,j1  ,k1  ) &
@@ -835,10 +859,10 @@ contains
   !                 -Byf_f(i1+1,j1+2,k1  ) &
   !                 -Byf_f(i1+1,j1  ,k1+1) &
   !                 +Byf_f(i1+1,j1+2,k1+1)
-  ! 
+  !
   !            Dx2DByDxyz = DzDy8Inv*Dx2Dxz2*DByDxyz
   !            Dz2DByDxyz = DxDy8Inv*Dz2Dxz2*DByDxyz
-  ! 
+  !
   !            ! dBzdxyz = 1/(8(dy^2+dz^2)) sum i j k Bz
   !            dBzdxyz= &
   !                 -Bzf_f(i1  ,j1  ,k1  ) &
@@ -849,68 +873,68 @@ contains
   !                 -Bzf_f(i1+1,j1+1,k1  ) &
   !                 -Bzf_f(i1+1,j1  ,k1+2) &
   !                 +Bzf_f(i1+1,j1+1,k1+2)
-  ! 
+  !
   !            Dx2DBzDxyz = DyDz8Inv*Dx2Dxy2*DBzDxyz
   !            Dy2DBzDxyz = DxDz8Inv*Dy2Dxy2*DBzDxyz
-  ! 
+  !
   !            ! Calculate internal fine solution
-  ! 
+  !
   !            ! Bx = (Bxp+Bxm)/2 + dBxdxx + k dz^2 dBydxyz + j dy^2 dBzdxyz
   !            Bxf_f(i1+1,j1  ,k1  )=0.5*(&
   !                 Bxf_f(i1  ,j1  ,k1  )+ &
   !                 Bxf_f(i1+2,j1  ,k1  ))  + dBxdxx - Dz2DByDxyz - Dy2DBzDxyz
-  ! 
+  !
   !            Bxf_f(i1+1,j1+1,k1  )=0.5*(&
   !                 Bxf_f(i1  ,j1+1,k1  )+ &
   !                 Bxf_f(i1+2,j1+1,k1  ))  + dBxdxx - Dz2DByDxyz + Dy2DBzDxyz
-  ! 
+  !
   !            Bxf_f(i1+1,j1  ,k1+1)=0.5*(&
   !                 Bxf_f(i1  ,j1  ,k1+1)+ &
   !                 Bxf_f(i1+2,j1  ,k1+1))  + dBxdxx + Dz2DByDxyz - Dy2DBzDxyz
-  ! 
+  !
   !            Bxf_f(i1+1,j1+1,k1+1)=0.5*(&
   !                 Bxf_f(i1  ,j1+1,k1+1)+ &
   !                 Bxf_f(i1+2,j1+1,k1+1))  + dBxdxx + Dz2DByDxyz + Dy2DBzDxyz
-  ! 
+  !
   !            ! By = (Byp+Bym)/2 + dBydyy + i dx^2 dBzdxyz + k dz^2 dBxdxyz
   !            Byf_f(i1  ,j1+1,k1  )=0.5*(&
   !                 Byf_f(i1  ,j1  ,k1  )+ &
   !                 Byf_f(i1  ,j1+2,k1  ))  + dBydyy - Dx2DBzDxyz - Dz2DBxDxyz
-  ! 
+  !
   !            Byf_f(i1+1,j1+1,k1  )=0.5*(&
   !                 Byf_f(i1+1,j1  ,k1  )+ &
   !                 Byf_f(i1+1,j1+2,k1  ))  + dBydyy + Dx2DBzDxyz - Dz2DBxDxyz
-  ! 
+  !
   !            Byf_f(i1  ,j1+1,k1+1)=0.5*(&
   !                 Byf_f(i1  ,j1  ,k1+1)+ &
   !                 Byf_f(i1  ,j1+2,k1+1))  + dBydyy - Dx2DBzDxyz + Dz2DBxDxyz
-  ! 
+  !
   !            Byf_f(i1+1,j1+1,k1+1)=0.5*(&
   !                 Byf_f(i1+1,j1  ,k1+1)+ &
   !                 Byf_f(i1+1,j1+2,k1+1))  + dBydyy + Dx2DBzDxyz + Dz2DBxDxyz
-  ! 
+  !
   !            ! Bz = (Bzp+Bzm)/2 + dBzdzz + j dy^2 dBxdxyz + i dx^2 dBydxyz
   !            Bzf_f(i1  ,j1  ,k1+1)=0.5*(&
   !                 Bzf_f(i1  ,j1  ,k1  )+ &
   !                 Bzf_f(i1  ,j1  ,k1+2))  + dBzdzz - Dy2DBxDxyz - Dx2DByDxyz
-  ! 
+  !
   !            Bzf_f(i1+1,j1  ,k1+1)=0.5*(&
   !                 Bzf_f(i1+1,j1  ,k1  )+ &
   !                 Bzf_f(i1+1,j1  ,k1+2))  + dBzdzz - Dy2DBxDxyz + Dx2DByDxyz
-  ! 
+  !
   !            Bzf_f(i1  ,j1+1,k1+1)=0.5*(&
   !                 Bzf_f(i1  ,j1+1,k1  )+ &
   !                 Bzf_f(i1  ,j1+1,k1+2))  + dBzdzz + Dy2DBxDxyz - Dx2DByDxyz
-  ! 
+  !
   !            Bzf_f(i1+1,j1+1,k1+1)=0.5*(&
   !                 Bzf_f(i1+1,j1+1,k1  )+ &
   !                 Bzf_f(i1+1,j1+1,k1+2))  + dBzdzz + Dy2DBxDxyz + Dx2DByDxyz
-  ! 
+  !
   !         end do
   !      end do
   !   end do
-  ! 
-  !   if(oktest_me)then
+  !
+  !   if(DoTest)then
   !      ! Check the divergence B condition for the prolonged cells
   !      i1 = 2*(iTest-iShift)-1; j1 = 2*(jTest-jshift)-1; k1 = 2*(kTest-kshift)-1
   !      do i=i1,i1+1; do j=j1,j1+1; do k=k1,k1+1
@@ -920,41 +944,41 @@ contains
   !              (Bzf_f(i,j,k+1)-Bzf_f(i,j,k))/Dz
   !      end do; end do; end do
   !   end if
-  ! 
+  !
   ! end subroutine prolong_b_face
   ! !============================================================================
-  ! subroutine assign_coarse_face_soln(sol_BLK,iVar) 
+  ! subroutine assign_coarse_face_soln(sol_BLK,iVar)
   !   use ModProcMH
   !   use ModSize
   !   use ModAMR, ONLY:local_cube,local_cubeBLK
   !   use ModMpi
   !   implicit none
-  ! 
+  !
   !   integer,intent(in)::iVar
   !   real, intent(inout), dimension (MinI:MaxI, &
   !        MinJ:MaxJ, &
-  !        MinK:MaxK,nBLK) :: sol_BLK
-  ! 
+  !        MinK:MaxK,MaxBlock) :: sol_BLK
+  !
   !   real, dimension(1:nI/2+1, 1:nJ/2+1, 1:nK/2+1, 8) ::&
   !        restricted_soln_blks
-  ! 
+  !
   !   integer::remaining_PE,remaining_BLK,iCube
-  ! 
+  !
   !   integer,parameter :: isize=(nI/2+1)*(nJ/2+1)*(nK/2+1)
   !   integer :: iTag,iError, number_send_requests, send_requests(7)
   !   integer::receive_requests(7), number_receive_requests, &
   !        status(MPI_STATUS_SIZE, 7)
-  ! 
+  !
   !   number_send_requests = 0
   !   remaining_PE=local_cube(1)
   !   remaining_BLK=local_cubeBLK(1)
-  ! 
+  !
   !   do icube = 1, 8
   !      if (iProc == local_cube(icube)) then
   !         call restrict_Bface(sol_BLK(:,:,:,local_cubeBLK(icube)),&
   !              iVar, restricted_soln_blks(:,:,:,icube))
-  ! 
-  !         if (icube > 1 .and. iProc .ne. remaining_PE) then
+  !
+  !         if (icube > 1 .and. iProc /= remaining_PE) then
   !            itag = local_cubeBLK(icube)*100 + iVar
   !            number_send_requests = number_send_requests + 1
   !            call MPI_isend(restricted_soln_blks(1,1,1,icube), &
@@ -963,18 +987,18 @@ contains
   !         end if
   !      end if
   !   end do
-  ! 
+  !
   !   if (number_send_requests > 0) then
   !      call MPI_waitall(number_send_requests, &
   !           send_requests(1), &
   !           status(1,1), iError)
   !   end if
-  ! 
+  !
   !   number_receive_requests = 0
-  ! 
+  !
   !   if (iProc == remaining_PE) then ! remaining coarse block
   !      do icube = 2, 8
-  !         if (local_cube(icube) .ne. remaining_PE) then
+  !         if (local_cube(icube) /= remaining_PE) then
   !            itag = local_cubeBLK(icube)*100 + iVar
   !            number_receive_requests = number_receive_requests + 1
   !            call MPI_irecv(restricted_soln_blks(1,1,1,icube), &
@@ -982,33 +1006,33 @@ contains
   !                 receive_requests(number_receive_requests), iError)
   !         end if
   !      end do
-  ! 
+  !
   !      if (number_receive_requests > 0) then
   !         call MPI_waitall(number_receive_requests, &
   !              receive_requests(1), &
   !              status(1,1), iError)
-  ! 
+  !
   !      end if
   !      call assign_restricted_Bface(restricted_soln_blks, iVar, &
   !           sol_BLK(:,:,:,remaining_BLK))
   !   end if ! remaining coarse block
-  ! 
+  !
   ! end subroutine assign_coarse_face_soln
-  ! 
+  !
   ! !=============================================================================
-  ! 
+  !
   ! subroutine restrict_Bface(fine_sol,iVar,coarse_sol)
-  ! 
+  !
   !   use ModSize
   !   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   !   implicit none
-  ! 
+  !
   !   integer, intent(in) :: iVar
   !   real, intent(in) :: fine_sol(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
   !   real, intent(out):: coarse_sol(1:nI/2+1,1:nJ/2+1,1:nK/2+1)
-  ! 
+  !
   !   !---------------------------------------------------------------------------
-  ! 
+  !
   !   select case(iVar)
   !   case(Bx_)
   !      coarse_sol(1:nI/2+1,1:(nJ+1)/2,1:(nK+1)/2)=0.25*(&
@@ -1031,28 +1055,28 @@ contains
   !   case default
   !      call stop_mpi('Invalid iVar in restrict_Bface')
   !   end select
-  ! 
+  !
   ! end subroutine restrict_Bface
-  ! 
+  !
   ! !==============================================================================
-  ! 
+  !
   ! subroutine assign_restricted_Bface(r_sol,iVar,coarse_sol)
-  ! 
+  !
   !   use ModSize
   !   use ModVarIndexes, ONLY : Bx_,By_,Bz_
   !   implicit none
-  ! 
+  !
   !   real, intent(in)   :: r_sol(1:nI/2+1,1:nJ/2+1,1:nK/2+1,8)
   !   integer, intent(in):: iVar
   !   real, intent(out)  :: coarse_sol(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-  ! 
+  !
   !   integer :: dI, dJ, dK
-  ! 
+  !
   !   !---------------------------------------------------------------------------
-  ! 
+  !
   !   ! Assign default for corners
   !   coarse_sol=0.0
-  ! 
+  !
   !   select case(iVar)
   !   case(Bx_)
   !      dI=1; dJ=0; dK=0;
@@ -1061,34 +1085,32 @@ contains
   !   case(Bz_)
   !      dI=0; dJ=0; dK=1;
   !   end select
-  ! 
+  !
   !   coarse_sol(1:nI/2      ,1:nJ/2      ,nK/2+1:nK+dK)= &  ! 001
   !        r_sol(1:nI/2      ,1:nJ/2      ,1:nK/2+dK   ,1)
-  ! 
+  !
   !   coarse_sol(nI/2+1:nI+dI,1:nJ/2      ,nK/2+1:nK+dK)= &  ! 101
   !        r_sol(1:nI/2+dI   ,1:nJ/2      ,1:nK/2+dK   ,2)
-  ! 
+  !
   !   coarse_sol(nI/2+1:nI+dI,1:nJ/2      ,1:nK/2      )= &  ! 100
   !        r_sol(1:nI/2+dI   ,1:nJ/2      ,1:nK/2      ,3)
-  ! 
+  !
   !   coarse_sol(1:nI/2      ,1:nJ/2      ,1:nK/2      )= &  ! 000
   !        r_sol(1:nI/2      ,1:nJ/2      ,1:nK/2      ,4)
-  ! 
+  !
   !   coarse_sol(1:nI/2      ,nJ/2+1:nJ+dJ,1:nK/2      )= &  ! 010
   !        r_sol(1:nI/2      ,1:nJ/2+dJ   ,1:nK/2      ,5)
-  ! 
+  !
   !   coarse_sol(nI/2+1:nI+dI,nJ/2+1:nJ+dJ,1:nK/2      )= &  ! 110
   !        r_sol(1:nI/2+dI   ,1:nJ/2+dJ   ,1:nK/2      ,6)
-  ! 
+  !
   !   coarse_sol(nI/2+1:nI+dI,nJ/2+1:nJ+dJ,nK/2+1:nK+dK)= &  ! 111
   !        r_sol(1:nI/2+dI   ,1:nJ/2+dJ   ,1:nK/2+dK   ,7)
-  ! 
+  !
   !   coarse_sol(1:nI/2      ,nJ/2+1:nJ+dJ,nK/2+1:nK+dK)= &  ! 011
   !        r_sol(1:nI/2      ,1:nJ/2+dJ   ,1:nK/2+dK   ,8)
-  ! 
+  !
   ! end subroutine assign_restricted_Bface
-
-  !==============================================================================
 
   subroutine constrain_ICs(iBlock)
 
@@ -1103,8 +1125,11 @@ contains
     use BATL_lib, ONLY: Xyz_DGB
 
     integer, intent(in) :: iBlock
-    !---------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'constrain_ICs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(Unused_B(iBlock))then
        BxFace_BLK(:,:,:,iBlock)=0.0
        ByFace_BLK(:,:,:,iBlock)=0.0
@@ -1114,8 +1139,8 @@ contains
        if(.not.restart)then
           where(Xyz_DGB(x_,:,:,:,iBlock)<16.)
              ! Cancel B field at x<16Re to avoid non-zero initial divB
-             ! x=16 is a good choice because it is a power of 2 so it is 
-             ! a block boundary for all block sizes. 
+             ! x=16 is a good choice because it is a power of 2 so it is
+             ! a block boundary for all block sizes.
              ! x=16 is larger than typical rBody.
              State_VGB(Bx_,:,:,:,iBlock)=0.0
              State_VGB(By_,:,:,:,iBlock)=0.0
@@ -1131,8 +1156,7 @@ contains
           end where
        end if
 
-
-       if(index(test_string,'testCTcoarse')>0)then
+       if(index(StringTest,'testCTcoarse')>0)then
           State_VGB(Bx_,:,:,:,iBlock)=   Xyz_DGB(x_,:,:,:,iBlock)
           State_VGB(By_,:,:,:,iBlock)=   Xyz_DGB(y_,:,:,:,iBlock)
           State_VGB(Bz_,:,:,:,iBlock)=-2*Xyz_DGB(z_,:,:,:,iBlock)
@@ -1147,15 +1171,16 @@ contains
 
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine constrain_ICs
+  !============================================================================
 
-  !=============================================================================
   ! subroutine correct_VxB
-  ! 
+  !
   !   ! At refinement level changes correct VxB on coarse cell edge to the
   !   ! average of the 2 fine edge values. This requires the message passing
   !   ! of restricted faces and (in certain cases) edges
-  ! 
+  !
   !   ! For example the 4x4 block face orthogonal to Z is restricted like this:
   !   !
   !   !  +-Ex-+-Ex-+-Ex-+-Ex-+              +----Ex---+----Ex---+
@@ -1180,7 +1205,7 @@ contains
   !   !     while the Ey values are restricted from a 5x4 to 3x2.
   !   !
   !   ! We denote Ex as orientation 1 and Ey as orientation 2.
-  !   ! In general the array corresponding to orientation 1 is size 
+  !   ! In general the array corresponding to orientation 1 is size
   !   ! nxface*(nyface+1) while orientation 2 has size (nxface+1)*nyface,
   !   ! where nxface and nyface are half of the number of cells
   !   ! in the first and second directions (ordered as X,Y,Z).
@@ -1205,16 +1230,16 @@ contains
   !   ! A fine block has four edges per face. However, each edge belongs to two
   !   ! faces, so we can relate 2 edges to a face. In particular, we assign to
   !   ! the face orthogonal to X  the edges parallel to Y, to Y faces the Z edges
-  !   ! and to Z faces the X edges. The two edges are indexed by 1 and 2 in the 
-  !   ! order of increasing coordinates. Furthermore only one of the two edges 
-  !   ! assigned to a fine face can be shared with a coarse block in a diagonal 
+  !   ! and to Z faces the X edges. The two edges are indexed by 1 and 2 in the
+  !   ! order of increasing coordinates. Furthermore only one of the two edges
+  !   ! assigned to a fine face can be shared with a coarse block in a diagonal
   !   ! direction. Thus only one edge message per face can be sent.
   !   !
   !   ! The coarse block can receive at most 2 subedges for the 2 edges belonging
-  !   ! to a face, so at most 4 messages can arrive. Messages are tagged and 
+  !   ! to a face, so at most 4 messages can arrive. Messages are tagged and
   !   ! indexed in the receive buffer rbuf3 by the receiving block number, the
-  !   ! edge and subedge indices. The subedges are also indexed by 1 and 2 
-  !   ! with increasing coordinates. E.g. for a Z face the 2 edges parallel to X 
+  !   ! edge and subedge indices. The subedges are also indexed by 1 and 2
+  !   ! with increasing coordinates. E.g. for a Z face the 2 edges parallel to X
   !   ! are indexed and divided like this:
   !   !
   !   !  Y
@@ -1238,75 +1263,75 @@ contains
   !   !  |     |     |     |     |
   !   !  |     |     |     |     |
   !   !  +---sub1---edge1-sub2---+ --> X
-  ! 
+  !
   !   use ModProcMH
   !   use ModMain
   !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE, &
   !        BLKneighborPE,BLKneighborBLK,DiLevelNei_IIIB,BLKneighborCHILD
   !   use ModAMR, ONLY : child2subface,child2subedge
   !   use ModMpi
-  ! 
+  !
   !   ! Local variables
-  ! 
+  !
   !   ! facedir=1,2,3 correspond to east-west, south-north, bot-top.
   !   integer :: isweep, facedir, edgedir, sidedir
-  ! 
+  !
   !   ! Index sent and received face (east=1,..,top=6) and recv edge (min=1,max=2)
   !   integer :: iface, rface, iedge
-  ! 
+  !
   !   ! Fixed coord index (1 or n?+1) for sent and received faces and edges
   !   integer :: isface, irface, isedge, iredge
-  ! 
+  !
   !   ! Restricted face sizes (n?/2)
   !   integer :: nxface, nyface
-  ! 
+  !
   !   ! subedge (1..2), subface (1..4) and child (1..8) index
   !   integer :: isubedge, isubface, ichild
-  ! 
-  !   ! Block index (1..nBLK)
-  !   integer :: iBLK
-  ! 
+  !
+  !   ! Block index (1..MaxBlock)
+  !   integer :: iBlock
+  !
   !   ! Descriptors for neighbor face and neighbor subedges
   !   integer :: neiP,neiB,neiL,neiedgeP(2),neiedgeB(2)
-  ! 
+  !
   !   ! MPI variables
-  !   integer :: itag, request, number_receive_requests, receive_requests(nBLK*72)
-  !   integer :: status(MPI_STATUS_SIZE, nBLK*72)
-  ! 
+  !   integer :: itag, request, number_receive_requests, receive_requests(MaxBlock*72)
+  !   integer :: status(MPI_STATUS_SIZE, MaxBlock*72)
+  !
   !   ! Maximum sizes of RESTRICTED VxB layers to be received for two orientations
   !   integer, parameter :: maxsize1= max(&
   !        nI*(nJ+2)/4,nI*(nK+2)/4,nJ*(nK+2)/4)
-  ! 
+  !
   !   integer, parameter :: maxsize2= max(&
   !        (nI+2)*nJ/4,(nI+2)*nK/4,(nJ+2)*nK/4)
-  ! 
-  ! 
+  !
+  !
   !   ! Maximum size of a restricted block edge, only aligned VxB orientation
   !   integer, parameter :: maxsize3=max(nI/2,nJ/2,nK/2)
-  ! 
+  !
   !   ! Receive buffers to hold 4 incoming RESTRICTED subface/subedge values
   !   ! for all blocks and 6 faces, and for the 2 orientations and the edge
-  !   real, dimension(maxsize1,4  ,nBLK,6) :: rbuf1
-  !   real, dimension(maxsize2,4  ,nBLK,6) :: rbuf2
-  !   real, dimension(maxsize3,2,2,nBLK,6) :: rbuf3
-  ! 
+  !   real, dimension(maxsize1,4  ,MaxBlock,6) :: rbuf1
+  !   real, dimension(maxsize2,4  ,MaxBlock,6) :: rbuf2
+  !   real, dimension(maxsize3,2,2,MaxBlock,6) :: rbuf3
+  !
   !   ! Actual size of messages for the two VxB orientations and the edge
   !   integer :: isize1, isize2, isize3
-  ! 
+  !
   !   ! Restricted values to be sent are stored in these buffers
   !   real, dimension(:,:), allocatable :: sbuf1, sbuf2
   !   real, dimension(:),   allocatable :: sbuf3
-  ! 
-  !   logical :: oktest, oktest_me
+  !
+  !   logical :: DoTest, DoTest
   !   integer :: inow, jnow, iError
-  ! 
+  !
   !   !---------------------------------------------------------------------------
-  ! 
-  !   if(index(test_string,'NOCORRECT_VXB')>0)return
-  ! 
-  !   call set_oktest('correct_vxb',oktest, oktest_me)
-  !   if(oktest)write(*,*)'correct_VxB me=',iProc
-  ! 
+  !
+  !   if(index(StringTest,'NOCORRECT_VXB')>0)return
+  !
+  !   call set_oktest('correct_vxb',DoTest, DoTest)
+  !   if(DoTest)write(*,*)'correct_VxB me=',iProc
+  !
   !   select case(optimize_message_pass)
   !   case('dir')
   !      ! Send messages for two faces together
@@ -1322,45 +1347,45 @@ contains
   !      ! Send messages for all faces
   !      call VxB_pass_faces(1,6)
   !   end select
-  ! 
-  !   if(oktest_me)write(*,*)'VxB_pass finished'
-  ! 
+  !
+  !   if(DoTest)write(*,*)'VxB_pass finished'
+  !
   ! contains
-  ! 
+  !
   !   subroutine VxB_pass_faces(ifacemin,ifacemax)
-  ! 
+  !
   !     integer, intent(in):: ifacemin,ifacemax
   !     !------------------------------------------------------------------------
-  ! 
-  !     if(oktest)write(*,*)&
+  !
+  !     if(DoTest)write(*,*)&
   !          'VxB_pass_faces:me,ifacemin,ifacemax=',iProc,ifacemin,ifacemax
-  ! 
+  !
   !     ! Debug
   !     if(okdebug)then
   !        rbuf1  =0.; rbuf2=0.; rbuf3=0.
   !     end if
-  ! 
+  !
   !     number_receive_requests = 0
   !     receive_requests = MPI_REQUEST_NULL
-  ! 
+  !
   !     do iface=ifacemin,ifacemax
-  ! 
+  !
   !        ! Set index ranges for the face
   !        call setranges
-  ! 
-  !        if(okdebug.and.oktest)then
+  !
+  !        if(okdebug.and.DoTest)then
   !           write(*,*)'setranges for receive done'
   !           write(*,*)'me,iface,nxface,nyface,isize1,isize2,isize3',&
   !                iProc,iface,nxface,nyface,isize1,isize2,isize3
   !           write(*,*)'facedir,edgedir,sidedir=',facedir,edgedir,sidedir
   !        end if
-  ! 
-  !        do iBLK = 1,nBlockMax
-  !           if(Unused_B(iBLK))CYCLE
-  ! 
+  !
+  !        do iBlock = 1,nBlockMax
+  !           if(Unused_B(iBlock))CYCLE
+  !
   !           ! Post non-blocking receive for opposite face of neighbor block
-  !           neiL=neiLEV(rface,iBLK)
-  ! 
+  !           neiL=neiLEV(rface,iBlock)
+  !
   !           if(neiL==0)then
   !              ! Check for shared edges
   !              do iedge=1,2
@@ -1368,110 +1393,110 @@ contains
   !                 do isubedge=1,2
   !                    neiP=neiedgeP(isubedge)
   !                    if(neiP==iProc) CYCLE
-  ! 
+  !
   !                    ! Remote receive egde
   !                    neiB=neiedgeB(isubedge)
   !                    itag = 100*neiB+10*iface+3
-  ! 
-  !                    if(oktest)write(*,*)&
-  !                         'Remote recv edge:me,iBLK,itag,neiP,neiB,iedge,isubedge',&
-  !                         iProc,iBLK,itag,neiP,neiB,iedge,isubedge
-  ! 
-  !                    call MPI_irecv(rbuf3(1,isubedge,iedge,iBLK,iface),isize3,&
+  !
+  !                    if(DoTest)write(*,*)&
+  !                         'Remote recv edge:me,iBlock,itag,neiP,neiB,iedge,isubedge',&
+  !                         iProc,iBlock,itag,neiP,neiB,iedge,isubedge
+  !
+  !                    call MPI_irecv(rbuf3(1,isubedge,iedge,iBlock,iface),isize3,&
   !                         MPI_REAL,neiP,itag,iComm,request,iError)
-  ! 
+  !
   !                    number_receive_requests = number_receive_requests + 1
   !                    receive_requests(number_receive_requests) = request
   !                 end do
   !              end do
   !           end if
-  ! 
+  !
   !           ! Check if neighboring block is finer
   !           if(neiL/=-1)CYCLE
-  ! 
+  !
   !           do isubface=1,4
-  !              neiP=neiPE(isubface,rface,iBLK)
+  !              neiP=neiPE(isubface,rface,iBlock)
   !              if(neiP==iProc)CYCLE
-  ! 
+  !
   !              ! Remote receive
-  !              neiB=neiBLK(isubface,rface,iBLK)
+  !              neiB=neiBLK(isubface,rface,iBlock)
   !              itag = 100*neiB+10*iface
-  !              if(oktest.and.okdebug)write(*,*)&
-  !                   'Remote recv,me,iBLK,itag,neiP,neiB,isubface=',&
-  !                   iProc,iBLK,itag,neiP,neiB,isubface
-  ! 
-  !              call MPI_irecv(rbuf1(1,isubface,iBLK,iface),isize1,&
+  !              if(DoTest.and.okdebug)write(*,*)&
+  !                   'Remote recv,me,iBlock,itag,neiP,neiB,isubface=',&
+  !                   iProc,iBlock,itag,neiP,neiB,isubface
+  !
+  !              call MPI_irecv(rbuf1(1,isubface,iBlock,iface),isize1,&
   !                   MPI_REAL,neiP,itag+1,iComm,request,iError)
-  ! 
+  !
   !              number_receive_requests = number_receive_requests + 1
   !              receive_requests(number_receive_requests) = request
-  ! 
-  !              call MPI_irecv(rbuf2(1,isubface,iBLK,iface),isize2,&
+  !
+  !              call MPI_irecv(rbuf2(1,isubface,iBlock,iface),isize2,&
   !                   MPI_REAL,neiP,itag+2,iComm,request,iError)
-  ! 
+  !
   !              number_receive_requests = number_receive_requests + 1
   !              receive_requests(number_receive_requests) = request
   !           end do ! isubface
-  !        end do ! iBLK
+  !        end do ! iBlock
   !     end do ! iface
-  ! 
+  !
   !     !\
   !     ! Wait for all receive commands to be posted for all processors
   !     !/
   !     call barrier_mpi
-  ! 
-  !     if(oktest)write(*,*)'receives posted: me=',iProc
-  ! 
+  !
+  !     if(DoTest)write(*,*)'receives posted: me=',iProc
+  !
   !     !\
   !     ! Send blocking messages with Rsend (ready to receive)
   !     !/
   !     do iface=ifacemin,ifacemax
-  ! 
+  !
   !        ! Set index ranges for the face
   !        call setranges
-  ! 
-  !        if(okdebug.and.oktest)write(*,*)&
+  !
+  !        if(okdebug.and.DoTest)write(*,*)&
   !             'setranges for send done: me, iface=',iProc, iface
-  ! 
+  !
   !        allocate(sbuf1(nxface,nyface+1),sbuf2(nxface+1,nyface),sbuf3(isize3))
-  ! 
-  !        if(okdebug.and.oktest)write(*,*)'allocation done, me,iface=',&
+  !
+  !        if(okdebug.and.DoTest)write(*,*)'allocation done, me,iface=',&
   !             iProc,iface
-  ! 
-  !        do iBLK=1,nBlockMax
-  !           if(Unused_B(iBLK))CYCLE
-  ! 
+  !
+  !        do iBlock=1,nBlockMax
+  !           if(Unused_B(iBlock))CYCLE
+  !
   !           ! Check if neighbouring block is coarser
-  !           neiL=neiLEV(iface,iBLK)
+  !           neiL=neiLEV(iface,iBlock)
   !           if(neiL/=1)CYCLE
-  ! 
-  !           if(okdebug.and.oktest)write(*,*)&
-  !                'sending: me, iface,iBLK,neiL=',iProc,iface,iBLK,neiL
-  ! 
+  !
+  !           if(okdebug.and.DoTest)write(*,*)&
+  !                'sending: me, iface,iBlock,neiL=',iProc,iface,iBlock,neiL
+  !
   !           ! Restrict VxB
   !           select case(facedir)
   !           case(1)
-  !              sbuf1=0.5*(VxB_y(isface,1:nJ-1:2,1:nK+1:2,iBLK)+&
-  !                         VxB_y(isface,2:nJ  :2,1:nK+1:2,iBLK))
-  !              sbuf2=0.5*(VxB_z(isface,1:nJ+1:2,1:nK-1:2,iBLK)+&
-  !                         VxB_z(isface,1:nJ+1:2,2:nK  :2,iBLK))
+  !              sbuf1=0.5*(VxB_y(isface,1:nJ-1:2,1:nK+1:2,iBlock)+&
+  !                         VxB_y(isface,2:nJ  :2,1:nK+1:2,iBlock))
+  !              sbuf2=0.5*(VxB_z(isface,1:nJ+1:2,1:nK-1:2,iBlock)+&
+  !                         VxB_z(isface,1:nJ+1:2,2:nK  :2,iBlock))
   !           case(2)
-  !              sbuf1=0.5*(VxB_x(1:nI-1:2,isface,1:nK+1:2,iBLK)+&
-  !                         VxB_x(2:nI  :2,isface,1:nK+1:2,iBLK))
-  ! 
-  !              sbuf2=0.5*(VxB_z(1:nI+1:2,isface,1:nK-1:2,iBLK)+&
-  !                         VxB_z(1:nI+1:2,isface,2:nK  :2,iBLK))
+  !              sbuf1=0.5*(VxB_x(1:nI-1:2,isface,1:nK+1:2,iBlock)+&
+  !                         VxB_x(2:nI  :2,isface,1:nK+1:2,iBlock))
+  !
+  !              sbuf2=0.5*(VxB_z(1:nI+1:2,isface,1:nK-1:2,iBlock)+&
+  !                         VxB_z(1:nI+1:2,isface,2:nK  :2,iBlock))
   !           case(3)
-  !              sbuf1=0.5*(VxB_x(1:nI-1:2,1:nJ+1:2,isface,iBLK)+&
-  !                         VxB_x(2:nI  :2,1:nJ+1:2,isface,iBLK))
-  !              sbuf2=0.5*(VxB_y(1:nI+1:2,1:nJ-1:2,isface,iBLK)+&
-  !                         VxB_y(1:nI+1:2,2:nJ  :2,isface,iBLK))
-  ! 
+  !              sbuf1=0.5*(VxB_x(1:nI-1:2,1:nJ+1:2,isface,iBlock)+&
+  !                         VxB_x(2:nI  :2,1:nJ+1:2,isface,iBlock))
+  !              sbuf2=0.5*(VxB_y(1:nI+1:2,1:nJ-1:2,isface,iBlock)+&
+  !                         VxB_y(1:nI+1:2,2:nJ  :2,isface,iBlock))
+  !
   !           end select
-  ! 
+  !
   !           ! Check if any of the edges require message passing
   !           if(send_edge())then
-  ! 
+  !
   !              select case(facedir)
   !              case(1)
   !                 ! X face passes Y edge
@@ -1483,136 +1508,136 @@ contains
   !                 ! Z face passes X edge
   !                 sbuf3=sbuf1(:,isedge)
   !              end select
-  ! 
-  !              if(oktest)write(*,*)&
-  !                   'Send edge: me,iBLK,iface,isedge,sbuf3',&
-  !                   iProc,iBLK,iface,isedge,sbuf3
-  ! 
+  !
+  !              if(DoTest)write(*,*)&
+  !                   'Send edge: me,iBlock,iface,isedge,sbuf3',&
+  !                   iProc,iBlock,iface,isedge,sbuf3
+  !
   !              if(neiP==iProc)then
   !                 ! Local copy into appropriate subedge
-  !                 ichild=BLKneighborCHILD(0,0,0,1,iBLK)
+  !                 ichild=BLKneighborCHILD(0,0,0,1,iBlock)
   !                 isubedge=child2subedge(ichild,iface)
-  ! 
-  !                 if(oktest)write(*,*)&
-  !                      'Local copy edge,me,iBLK,neiB,iedge,isubedge=',&
-  !                      iProc,iBLK,neiB,iedge,isubedge
+  !
+  !                 if(DoTest)write(*,*)&
+  !                      'Local copy edge,me,iBlock,neiB,iedge,isubedge=',&
+  !                      iProc,iBlock,neiB,iedge,isubedge
   !                 call buf2subedge(sbuf3,isize3,neiB)
   !              else
   !                 ! Remote send of edge
-  !                 itag = 100*iBLK+10*iface+3
-  ! 
-  !                 if(oktest)write(*,*)&
-  !                      'Remote send edge,me,iBLK,itag,neiP,neiB,isedge=',&
-  !                      iProc,iBLK,itag,neiP,neiB,isedge
-  ! 
+  !                 itag = 100*iBlock+10*iface+3
+  !
+  !                 if(DoTest)write(*,*)&
+  !                      'Remote send edge,me,iBlock,itag,neiP,neiB,isedge=',&
+  !                      iProc,iBlock,itag,neiP,neiB,isedge
+  !
   !                 call MPI_Rsend(sbuf3,isize3,&
   !                      MPI_REAL,neiP,itag,iComm,iError)
   !              end if
   !           end if
-  ! 
-  !           neiP=neiPE(1,iface,iBLK)
-  !           neiB=neiBLK(1,iface,iBLK)
-  ! 
+  !
+  !           neiP=neiPE(1,iface,iBlock)
+  !           neiB=neiBLK(1,iface,iBlock)
+  !
   !           if(neiP==iProc)then
   !              ! Local copy into appropriate subface
   !              ! Subface index =1,2,3, or 4 with respect to the coarse neighbor
-  !              ichild=BLKneighborCHILD(0,0,0,1,iBLK)
+  !              ichild=BLKneighborCHILD(0,0,0,1,iBlock)
   !              isubface=child2subface(ichild,iface)
   !              call buf2subface(sbuf1,sbuf2,nxface,nyface,neiB)
   !           else
   !              ! Remote send of face
-  !              itag = 100*iBLK+10*iface
-  ! 
-  !              if(oktest.and.okdebug)write(*,*)&
-  !                   'Remote send,me,iBLK,itag,neiP,neiB=',&
-  !                   iProc,iBLK,itag,neiP,neiB
-  ! 
+  !              itag = 100*iBlock+10*iface
+  !
+  !              if(DoTest.and.okdebug)write(*,*)&
+  !                   'Remote send,me,iBlock,itag,neiP,neiB=',&
+  !                   iProc,iBlock,itag,neiP,neiB
+  !
   !              call MPI_Rsend(sbuf1,isize1,&
   !                   MPI_REAL,neiP,itag+1,iComm,iError)
   !              call MPI_Rsend(sbuf2,isize2,&
   !                   MPI_REAL,neiP,itag+2,iComm,iError)
   !           end if
-  !        end do ! iBLK
-  ! 
+  !        end do ! iBlock
+  !
   !        deallocate(sbuf1,sbuf2,sbuf3)
-  ! 
-  !        if(oktest_me)write(*,*)'messages sent, me, iface=',iProc,iface
-  ! 
+  !
+  !        if(DoTest)write(*,*)'messages sent, me, iface=',iProc,iface
+  !
   !     end do ! iface
-  ! 
+  !
   !     !\
   !     ! WAIT FOR ALL MESSAGES TO BE RECEIVED
   !     !/
   !     if (number_receive_requests > 0) &
   !          call MPI_waitall(number_receive_requests,receive_requests,status,iError)
-  ! 
-  !     if(oktest_me)write(*,*)'messages received, me, facedir=',iProc, facedir
-  ! 
+  !
+  !     if(DoTest)write(*,*)'messages received, me, facedir=',iProc, facedir
+  !
   !     ! Copy averaged VxB received from non-local finer neigbors
   !     ! and stored in the buffers into the coarse VxB
-  ! 
+  !
   !     do iface=ifacemin,ifacemax
-  ! 
+  !
   !        ! Set index ranges for the face
   !        call setranges
-  ! 
-  !        do iBLK = 1,nBlockMax
-  !           if(Unused_B(iBLK))CYCLE
-  ! 
-  !           neiL=neiLEV(rface,iBLK)
+  !
+  !        do iBlock = 1,nBlockMax
+  !           if(Unused_B(iBlock))CYCLE
+  !
+  !           neiL=neiLEV(rface,iBlock)
   !           if(neiL==0)then
   !              ! Check if remote edges were received
   !              do iedge=1,2
   !                 if(.not.recv_edge())CYCLE
-  ! 
-  !                 if(oktest)write(*,*)'receive edge, me,iBLK,iface,iedge=',&
-  !                      iProc,iBLK,iface,iedge
-  ! 
+  !
+  !                 if(DoTest)write(*,*)'receive edge, me,iBlock,iface,iedge=',&
+  !                      iProc,iBlock,iface,iedge
+  !
   !                 do isubedge=1,2
   !                    if(neiedgeP(isubedge)==iProc)CYCLE
-  ! 
+  !
   !                    neiB=neiedgeB(isubedge)
-  ! 
-  !                    if(oktest)write(*,*)'read buffer, me,isize3,neiB,rbuf3=',&
+  !
+  !                    if(DoTest)write(*,*)'read buffer, me,isize3,neiB,rbuf3=',&
   !                         iProc,isize3,neiB,&
   !                         rbuf3(1:isize3,isubedge,iedge,neiB,iface)
-  ! 
-  !                    call buf2subedge(rbuf3(1,isubedge,iedge,iBLK,iface),&
-  !                         isize3,iBLK)
+  !
+  !                    call buf2subedge(rbuf3(1,isubedge,iedge,iBlock,iface),&
+  !                         isize3,iBlock)
   !                 end do
   !              enddo
   !           endif
-  ! 
+  !
   !           ! Check if neighboring block is finer
   !           if(neiL/=-1)CYCLE
-  ! 
+  !
   !           do isubface=1,4
-  !              if(neiPE(isubface,rface,iBLK)==iProc) CYCLE
-  ! 
-  !              neiB=neiBLK(isubface,rface,iBLK)
-  !              if(okdebug.and.oktest)&
-  !                   write(*,*)'buf2subface: me, isubface, iBLK, neiB=',&
-  !                   iProc,isubface,iBLK,neiB
-  ! 
-  !              call buf2subface(rbuf1(1,isubface,iBLK,iface),&
-  !                   rbuf2(1,isubface,iBLK,iface),&
-  !                   nxface,nyface,iBLK)
+  !              if(neiPE(isubface,rface,iBlock)==iProc) CYCLE
+  !
+  !              neiB=neiBLK(isubface,rface,iBlock)
+  !              if(okdebug.and.DoTest)&
+  !                   write(*,*)'buf2subface: me, isubface, iBlock, neiB=',&
+  !                   iProc,isubface,iBlock,neiB
+  !
+  !              call buf2subface(rbuf1(1,isubface,iBlock,iface),&
+  !                   rbuf2(1,isubface,iBlock,iface),&
+  !                   nxface,nyface,iBlock)
   !           end do
-  !        end do ! iBLK
+  !        end do ! iBlock
   !     end do ! iface
-  ! 
-  !     if(oktest)write(*,*)'VxB_pass_faces finished: me, ifacemin, ifacemax=',&
+  !
+  !     if(DoTest)write(*,*)'VxB_pass_faces finished: me, ifacemin, ifacemax=',&
   !          iProc,ifacemin,ifacemax
-  ! 
+  !
   !   end subroutine VxB_pass_faces
-  ! 
+  !
   !   !===========================================================================
-  ! 
+  !
   !   subroutine setranges
-  ! 
+  !
   !     ! Calculate directions for face, edge, and side direction for edge
   !     facedir=(iface+1)/2; edgedir=mod(facedir,3)+1; sidedir=mod(edgedir,3)+1
-  ! 
+  !
   !     ! Calculate the size of the subfaces for the 2 orientations of VxB
   !     ! and for the subedge associated with the face
   !     select case(facedir)
@@ -1623,28 +1648,28 @@ contains
   !     case(3)
   !        nxface=nI/2; nyface=nJ/2
   !     end select
-  ! 
+  !
   !     isize1=nxface*(nyface+1); isize2=(nxface+1)*nyface
   !     isize3=nIJK_D(edgedir)/2
-  ! 
+  !
   !     select case(iface)
   !     case(1,3,5)
   !        rface=iface+1; isface=1; irface=nIJK_D(facedir)+1
   !     case(2,4,6)
   !        rface=iface-1; isface=nIJK_D(facedir)+1; irface=1
   !     end select
-  ! 
+  !
   !   end subroutine setranges
-  ! 
+  !
   !   !===========================================================================
   !   subroutine buf2subface(qbuf1,qbuf2,qnxface,qnyface,qBLK)
-  ! 
+  !
   !     integer, intent(in) :: qnxface,qnyface,qBLK
   !     real, intent(inout) :: qbuf1(qnxface,qnyface+1),qbuf2(qnxface+1,qnyface)
   !     !-------------------------------------------------------------------------
-  ! 
+  !
   !     ! Assign VxB on a subface of receiving face
-  ! 
+  !
   !     select case(facedir)
   !     case(1)
   !        select case(isubface)
@@ -1679,7 +1704,7 @@ contains
   !           VxB_z(nI/2+1:nI+1,irface,nK/2+1:nK  ,qBLK)=qbuf2
   !        end select
   !     case(3)
-  ! 
+  !
   !        select case(isubface)
   !           ! Beware, case(2) and case(3) are not swapped
   !        case(1)
@@ -1695,20 +1720,20 @@ contains
   !           VxB_x(nI/2+1:nI  ,nJ/2+1:nJ+1,irface,qBLK)=qbuf1
   !           VxB_y(nI/2+1:nI+1,nJ/2+1:nJ  ,irface,qBLK)=qbuf2
   !        end select
-  ! 
+  !
   !     end select
-  ! 
+  !
   !   end subroutine buf2subface
-  ! 
+  !
   !   !===========================================================================
   !   subroutine buf2subedge(qbuf,qsize,qBLK)
-  ! 
+  !
   !     integer, intent(in) :: qsize,qBLK
   !     real, intent(inout) :: qbuf(qsize)
   !     !-------------------------------------------------------------------------
-  ! 
+  !
   !     ! Assign VxB on a subface of receiving subedge indexed by isubedge
-  ! 
+  !
   !     select case(facedir)
   !     case(1)
   !        if(isubedge==1)then
@@ -1729,24 +1754,24 @@ contains
   !           VxB_x(nI/2+1:nI,iredge,irface,qBLK)=qbuf
   !        end if
   !     end select
-  ! 
+  !
   !   end subroutine buf2subedge
-  ! 
+  !
   !   !===========================================================================
-  ! 
+  !
   !   logical function send_edge()
-  ! 
+  !
   !     ! Check if any of the edges associated with the sending face are shared
   !     ! with a coarser block to which an edge message should be sent.
   !     ! We already know that the neighbor in the face direction is coarser,
   !     ! so the diagonal and the extra direction are checked. On the figures
   !     ! below the left case returns send_edge=.true., while the other cases
-  !     ! return false. Here iface 3 (south, on the figure ==) of block iBLK (i).
+  !     ! return false. Here iface 3 (south, on the figure ==) of block iBlock (i).
   !     ! is checked for the east Z edge associated with the face (Z on the figure)
   !     ! The edge is orthogonal to the screen. Below each figure the caption
   !     ! indicates how the Z edge will get corrected, if it's needed at all.
   !     !
-  !     ! +-----+                                 +-----+      
+  !     ! +-----+                                 +-----+
   !     ! |     |                                 |     |
   !     ! |     |                                 |     |
   !     ! |     +--+             +--+--+          |     +--+          +--+--+
@@ -1763,49 +1788,49 @@ contains
   !     !   EDGE PASS           FACE PASS        SAME LEVEL          SAME LEVEL
   !     !
   !     ! When true is returned, all the necessary variables are set
-  ! 
+  !
   !     integer :: d_edge(3), d_side(3), q_edge
   !     !-------------------------------------------------------------------------
-  ! 
-  !     if(index(test_string,'NOEDGEPASS')>0)then
+  !
+  !     if(index(StringTest,'NOEDGEPASS')>0)then
   !        send_edge=.false. ; return
   !     end if
-  ! 
+  !
   !     ! Calculate edge and side face shifts
   !     d_edge=0; d_edge(facedir)=iface-rface
-  !     d_side=0; 
-  ! 
+  !     d_side=0;
+  !
   !     ! Check both edges
   !     do q_edge=-1,1,2
   !        d_edge(sidedir)=q_edge; d_side(sidedir)=q_edge
-  ! 
-  !        if(DiLevelNei_IIIB(d_edge(1),d_edge(2),d_edge(3),iBLK)==1 .and. &
-  !           DiLevelNei_IIIB(d_side(1),d_side(2),d_side(3),iBLK)==1)then
-  ! 
+  !
+  !        if(DiLevelNei_IIIB(d_edge(1),d_edge(2),d_edge(3),iBlock)==1 .and. &
+  !           DiLevelNei_IIIB(d_side(1),d_side(2),d_side(3),iBlock)==1)then
+  !
   !           if(q_edge==-1)then
   !              isedge=1;                   iredge=nIJK_D(sidedir)+1; iedge=2
   !           else
   !              isedge=nIJK_D(sidedir)/2+1; iredge=1;                 iedge=1
   !           end if
-  ! 
-  !           neiB=BLKneighborBLK(d_edge(1),d_edge(2),d_edge(3),1,iBLK)
-  !           neiP= BLKneighborPE(d_edge(1),d_edge(2),d_edge(3),1,iBLK)
-  ! 
+  !
+  !           neiB=BLKneighborBLK(d_edge(1),d_edge(2),d_edge(3),1,iBlock)
+  !           neiP= BLKneighborPE(d_edge(1),d_edge(2),d_edge(3),1,iBlock)
+  !
   !           ! If one edge is to be sent, the other is definitely not
   !           send_edge=.true.
   !           return
   !        end if
   !     end do
-  ! 
+  !
   !     send_edge=.false.
-  ! 
+  !
   !   end function send_edge
-  ! 
+  !
   !   !===========================================================================
-  ! 
+  !
   !   logical function recv_edge()
-  ! 
-  !     ! Check if the edge indexed with iedge associated with the recv face 
+  !
+  !     ! Check if the edge indexed with iedge associated with the recv face
   !     ! is shared with a finer block from which an edge should be received.
   !     ! We already know that the neighbor in the face direction is equal,
   !     ! so the diagonal and the extra direction are checked. On the figures
@@ -1814,7 +1839,7 @@ contains
   !     ! is orthogonal to the screen (see the Z character). Below each figure
   !     ! the caption shows how the Z edge is corrected, if it's needed at all.
   !     !
-  !     ! +-----+             +-----+         +-----+-----+    +-----+-----+      
+  !     ! +-----+             +-----+         +-----+-----+    +-----+-----+
   !     ! |     |             |     |         |     |     |    |     |     |
   !     ! |     |             |     |         |     |     |    |     |     |
   !     ! |     +--+          |     +--+      |     |     |    |     |     |
@@ -1831,66 +1856,66 @@ contains
   !     !   EDGE PASS          FACE PASS        SAME LEVEL        SAME LEVEL
   !     !
   !     ! When true is returned, all the necessary variables are set
-  ! 
+  !
   !     integer :: d_edge(3), d_side(3)
   !     !-------------------------------------------------------------------------
-  ! 
-  !     if(index(test_string,'NOEDGEPASS')>0)then
+  !
+  !     if(index(StringTest,'NOEDGEPASS')>0)then
   !        recv_edge=.false. ; return
   !     end if
-  ! 
+  !
   !     ! Calculate shifts for edge and side face for edge iedge on face rface
   !     d_edge=0; d_edge(sidedir)=2*iedge-3; d_edge(facedir)=rface-iface
   !     d_side=0; d_side(sidedir)=2*iedge-3;
-  ! 
-  !     if(DiLevelNei_IIIB(d_edge(1),d_edge(2),d_edge(3),iBLK)==-1 .and. &
-  !        DiLevelNei_IIIB(d_side(1),d_side(2),d_side(3),iBLK)== 0)then
-  ! 
+  !
+  !     if(DiLevelNei_IIIB(d_edge(1),d_edge(2),d_edge(3),iBlock)==-1 .and. &
+  !        DiLevelNei_IIIB(d_side(1),d_side(2),d_side(3),iBlock)== 0)then
+  !
   !        if(iedge==1)then
   !           iredge=1
   !        else
   !           iredge=nIJK_D(sidedir)+1
   !        end if
-  !        neiedgeP= BLKneighborPE(d_edge(1),d_edge(2),d_edge(3),1:2,iBLK)
-  !        neiedgeB=BLKneighborBLK(d_edge(1),d_edge(2),d_edge(3),1:2,iBLK)
-  ! 
+  !        neiedgeP= BLKneighborPE(d_edge(1),d_edge(2),d_edge(3),1:2,iBlock)
+  !        neiedgeB=BLKneighborBLK(d_edge(1),d_edge(2),d_edge(3),1:2,iBlock)
+  !
   !        recv_edge= .true.
   !     else
   !        recv_edge=.false.
   !     end if
-  ! 
+  !
   !   end function recv_edge
-  ! 
+  !
   ! end subroutine correct_VxB
-  ! 
+  !
   ! !============================================================================
   ! subroutine b_face_fine_pass
-  ! 
+  !
   !   ! Set B*FaceFine_*SB from finer face
   !   use ModProcMH
-  !   use ModMain, ONLY : nBLock,Unused_B,BLKtest
+  !   use ModMain, ONLY : nBLock,Unused_B,iBlockTest
   !   use ModAMR, ONLY : child2subface
   !   use ModParallel, ONLY : neiLEV,neiBLK,neiPE,BLKneighborCHILD
   !   use ModMpi
-  ! 
+  !
   !   integer :: iError
   !   integer :: iBlock, iTag, iProcNei, iBlockNei
   !   integer :: iSide, iFace, iFaceOther, iSubface, iChild, iSize
-  ! 
+  !
   !   integer :: number_receive_requests, request
-  !   integer :: receive_requests(nBLK*24)
-  !   integer :: status(MPI_STATUS_SIZE, nBLK*24)
-  ! 
+  !   integer :: receive_requests(MaxBlock*24)
+  !   integer :: status(MPI_STATUS_SIZE, MaxBlock*24)
+  !
   !   real, allocatable :: Buffer(:,:)
-  ! 
-  !   logical :: oktest, oktest_me
+  !
+  !   logical :: DoTest, DoTest
   !   !------------------------------------------------------------------
-  !   call set_oktest('b_face_fine_pass',oktest,oktest_me)
-  ! 
+  !   call set_oktest('b_face_fine_pass',DoTest,DoTest)
+  !
   !   ! Initialize counters for non-blocking receive requests
   !   number_receive_requests = 0
   !   receive_requests = MPI_REQUEST_NULL
-  ! 
+  !
   !   !\
   !   ! Non-blocking recieve messages from fine blocks
   !   ! or copy for local blocks
@@ -1898,7 +1923,7 @@ contains
   !   do iBlock=1,nBlock
   !      if(Unused_B(iBlock)) CYCLE
   ! !!!     if(.not.refine_list(iBlock,iProc)) CYCLE
-  ! 
+  !
   !      do iFace=1,6
   !         if(neiLEV(iFace,iBlock)==-1)then
   !            do iSubFace=1,4
@@ -1912,18 +1937,18 @@ contains
   !         end if
   !      end do
   !   end do
-  ! 
+  !
   !   !\
   !   ! Wait for all receive commands to be posted for all processors
   !   !/
   !   call barrier_mpi
-  ! 
+  !
   !   !\
   !   ! Send blocking messages with Rsend (ready to receive)
   !   !/
   !   do iBlock=1,nBlock
   !      if(Unused_B(iBlock)) CYCLE
-  ! 
+  !
   !      do iFace=1,6
   !         if(neiLEV(iFace,iBlock)/=1) CYCLE
   !         iBlockNei=neiBLK(1,iFace,iBlock)
@@ -1932,21 +1957,21 @@ contains
   !         if(iProcNei==iProc) CYCLE ! local copy
   !         call send_b_face_fine
   !      end do
-  ! 
+  !
   !   end do
-  ! 
+  !
   !   !\
   !   ! WAIT FOR ALL MESSAGES TO BE RECEIVED
   !   !/
   !   if (number_receive_requests > 0) &
   !        call MPI_waitall(number_receive_requests,receive_requests,status,iError)
-  ! 
+  !
   ! contains
-  ! 
+  !
   !   subroutine recv_b_face_fine
-  ! 
+  !
   !     ! write(*,*)'recv_b_face_fine: me,iBlock,iFace=',iProc,iBlock,iFace
-  ! 
+  !
   !     iTag=100*iBlock+10*iFace+iSubFace
   !     select case(iFace)
   !     case(1,2)
@@ -1967,13 +1992,13 @@ contains
   !     end select
   !     number_receive_requests = number_receive_requests + 1
   !     receive_requests(number_receive_requests) = request
-  ! 
+  !
   !   end subroutine recv_b_face_fine
-  ! 
+  !
   !   subroutine send_b_face_fine
-  ! 
+  !
   !     ! write(*,*)'send_b_face_fine: me,iBlock,iFace=',iProc,iBlock,iFace
-  ! 
+  !
   !     select case(iFace)
   !     case(1)
   !        iSize=nJ*nK
@@ -2006,26 +2031,26 @@ contains
   !        iFaceOther=5
   !        Buffer=BzFace_BLK(1:nI,1:nJ,nK+1,iBlock)
   !     end select
-  ! 
+  !
   !     iChild=BLKneighborCHILD(0,0,0,1,iBlock)
   !     iSubface=child2subface(iChild,iFace)
   !     iTag=100*iBlockNei+10*iFaceOther+iSubFace
   !     call MPI_Rsend(buffer, iSize, &
   !          MPI_REAL, iProcNei, iTag, iComm, iError)
-  ! 
+  !
   !     deallocate(Buffer)
-  ! 
+  !
   !   end subroutine send_b_face_fine
-  ! 
+  !
   !   subroutine copy_b_face_fine
-  ! 
+  !
   !     ! Copy fine normal B face component from the neighboring block
-  ! 
+  !
   !     iBlockNei=neiBLK(iSubFace,iFace,iBlock)
-  ! 
-  !     if(oktest_me.and.(iBlock==BLKtest.or.iBlockNei==BLKtest))&
+  !
+  !     if(DoTest.and.(iBlock==iBlockTest.or.iBlockNei==iBlockTest))&
   !          write(*,*)'copy from iBlockNei=',iBlockNei,' to iBlock=',iBlock
-  ! 
+  !
   !     select case(iFace)
   !     case(1)
   !        BxFaceFine_XQSB(:,:,iSubFace,1,iBlock)=&
@@ -2046,9 +2071,10 @@ contains
   !        BzFaceFine_ZQSB(:,:,iSubFace,2,iBlock)=&
   !             BzFace_BLK(1:nI,1:nJ,   1,iBlockNei)
   !     end select
-  ! 
+  !
   !   end subroutine copy_b_face_fine
-  ! 
+  !
   ! end subroutine b_face_fine_pass
 
 end module ModConstrainDivB
+!==============================================================================

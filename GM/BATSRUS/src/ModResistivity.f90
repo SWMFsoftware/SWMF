@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModResistivity
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
   ! Resistivity related variables and methods
 
@@ -55,7 +58,7 @@ module ModResistivity
 
   ! Indexes of regions defined with the #REGION commands
   integer, allocatable:: iRegionResist_I(:)
-  
+
   ! resistivity pre-multiplied by the face area vector
   real, allocatable :: Eta_DFDB(:,:,:,:,:,:)
 
@@ -64,7 +67,7 @@ module ModResistivity
 
   ! Whistler diffusion coefficients.
   real, allocatable :: WhistlerCoeff_FDB(:,:,:,:,:)
-  
+
   ! Named indices for semi-implicit variables
   integer, public, parameter :: BxImpl_ = 1, ByImpl_ = 2, BzImpl_ = 3
 
@@ -73,15 +76,17 @@ module ModResistivity
 
   character(len=*), private, parameter :: NameMod = 'ModResistivity'
 contains
-  !===========================================================================
+  !============================================================================
   subroutine read_resistivity_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_resistivity_param'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(NameCommand)
     case('#MESSAGEPASSRESISTIVITY')
@@ -120,9 +125,9 @@ contains
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_resistivity_param
-
-  !===========================================================================
+  !============================================================================
 
   subroutine init_mod_resistivity
 
@@ -131,12 +136,12 @@ contains
          cElectronMass, cEps, cBoltzmann, cTwoPi
     use BATL_lib,   ONLY: get_region_indexes
 
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'init_mod_resistivity'
-    !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    UseResistiveFlux = DoResistiveFlux 
+    UseResistiveFlux = DoResistiveFlux
 
     Si2NoEta = Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
 
@@ -154,11 +159,11 @@ contains
     if(.not.allocated(Eta_GB)) &
          allocate(Eta_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(TypeResistivity == 'constant')then
-       if(DoTestMe) write(*,*)NameSub, ': setting Eta_GB=Eta0=',Eta0
+       if(DoTest) write(*,*)NameSub, ': setting Eta_GB=Eta0=',Eta0
        Eta_GB = Eta0
     else
-       if(DoTestMe) write(*,*)NameSub, ': setting Eta_GB=0.0 TypeResistivity=', &
-            TypeResistivity 
+       if(DoTest) write(*,*)NameSub, ': setting Eta_GB=0.0 TypeResistivity=', &
+            TypeResistivity
        Eta_GB = 0.0
     end if
 
@@ -169,7 +174,7 @@ contains
     ! Get signed indexes for resistive region(s)
     call get_region_indexes(StringResistRegion, iRegionResist_I)
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub, ': DoResistiveFlux  = ', DoResistiveFlux
        write(*,*)NameSub, ': UseResistiveFlux = ', UseResistiveFlux
        write(*,*)NameSub, ': UseJouleHeating  = ', UseJouleHeating
@@ -181,22 +186,23 @@ contains
        write(*,*)NameSub, ': JcritInv = ', JcritInv
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_resistivity
-
-  !===========================================================================
+  !============================================================================
 
   subroutine set_resistivity
 
     use ModMain,    ONLY: nBlock, Unused_B
     use BATL_lib,   ONLY: message_pass_cell, block_inside_regions
 
-    character (len=*), parameter :: NameSub = 'set_resistivity'
-
     real, allocatable:: ResistFactor_G(:,:,:)
 
     integer :: iBlock
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(allocated(iRegionResist_I)) &
          allocate(ResistFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
@@ -230,9 +236,9 @@ contains
     if(DoMessagePassResistivity) &
          call message_pass_cell(Eta_GB, nWidthIn=1)
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_resistivity
-
-  !===========================================================================
+  !============================================================================
 
   subroutine spitzer_resistivity(iBlock, Eta_G)
 
@@ -242,14 +248,17 @@ contains
     use ModB0,      ONLY: B0_DGB
     use ModMain,    ONLY: UseB0
 
-    ! Compute Spitzer-type, classical resistivity 
+    ! Compute Spitzer-type, classical resistivity
 
     integer, intent(in) :: iBlock
     real,    intent(out):: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
 
     real :: EtaSi, Coef, B0_DG(3,MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
     integer :: i, j, k
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'spitzer_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     Coef =((cProtonMass/cElectronCharge)*No2Si_V(UnitB_)/No2Si_V(UnitRho_))**2
     if(UseB0)then
@@ -268,8 +277,8 @@ contains
        Eta_G(i,j,k) = EtaSi*Si2NoEta
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine spitzer_resistivity
-
   !============================================================================
 
   subroutine anomalous_resistivity(iBlock, Eta_G)
@@ -283,25 +292,29 @@ contains
 
     real :: Current_D(3), AbsJ
     integer :: i, j, k
-    !-------------------------------------------------------------------------
 
     ! Compute the magnitude of the current density |J|
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'anomalous_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1;
 
        call get_current(i,j,k,iBlock,Current_D)
        AbsJ = sqrt(sum(current_D**2))
 
-       ! Compute the anomalous resistivity:: 
-       ! Eta = Eta0 + Eta0Anom*(|J|/Jcrit-1) 
+       ! Compute the anomalous resistivity::
+       ! Eta = Eta0 + Eta0Anom*(|J|/Jcrit-1)
 
        Eta_G(i,j,k) = Eta0 + &
             min(EtaMaxAnom, max(0.0, Eta0Anom*(AbsJ*JcritInv - 1.0)))
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine anomalous_resistivity
+  !============================================================================
 
-  !===========================================================================
   subroutine raeder_resistivity(iBlock, Eta_G)
 
     ! Compute resistivity based on Raeder's formula
@@ -320,8 +333,10 @@ contains
     real :: Current_D(3), AbsJ, AbsB, JoverB, b_D(3)
     integer :: i, j, k, l, m, n
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'raeder_resistivity'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(nDim /= 3) call stop_mpi(NameSub//' is implemented for 3D only')
 
     ! Compute |J| and |B|
@@ -339,22 +354,23 @@ contains
        AbsB = AbsB/27.0
 
        ! No dx here, because that causes problems at resolution changes
-       JoverB = min(AbsJ/(AbsB + 1e-8), 1.0) 
+       JoverB = min(AbsJ/(AbsB + 1e-8), 1.0)
 
        ! Compute Raeder resistivity
        if(JoverB >= JoverBCrit)then
-          Eta_G(i,j,k) = EtaCoeff*(JoverB**2) 
+          Eta_G(i,j,k) = EtaCoeff*(JoverB**2)
        else
           Eta_G(i,j,k) = 0.0
        end if
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine raeder_resistivity
+  !============================================================================
 
-  !===========================================================================
   subroutine calc_resistivity_source(iBlock)
 
-    use ModMain,       ONLY: x_, BlkTest, ProcTest, iTest, jTest, kTest
+    use ModMain,       ONLY: x_
     use ModGeometry,   ONLY: true_cell
     use BATL_lib,      ONLY: IsRzGeometry, Xyz_DGB
     use ModCurrent,    ONLY: get_current
@@ -371,21 +387,19 @@ contains
 
     integer:: i, j, k
 
-    logical :: DoTest, DoTestMe, DoTestCell = .false.
-    character(len=*), parameter :: NameSub = 'calc_resistivity_source'
-    !------------------------------------------------------------------------
-    if(iBlock==BLKtest .and. iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
+    logical :: DoTestCell = .false.
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_resistivity_source'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     JouleHeating = 0.0
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DoTestCell = DoTestMe .and. &
+       DoTestCell = DoTest .and. &
             i == iTest .and. j == jTest .and. k == kTest
 
        if (DoTestCell) then
@@ -456,14 +470,13 @@ contains
        end if
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_resistivity_source
-
   !============================================================================
 
   subroutine calc_heat_exchange
 
-    use ModMain,       ONLY: Cfl, nBlock, Unused_B, &
-         BlkTest, iTest, jTest, kTest
+    use ModMain,       ONLY: Cfl, nBlock, Unused_B
     use ModGeometry,   ONLY: true_cell
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
@@ -473,10 +486,11 @@ contains
     real :: DtLocal
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
     integer:: i, j, k, iBlock
-    logical :: DoTest, DoTestMe, DoTestCell
-    character(len=*), parameter :: NameSub = 'calc_heat_exchange'
-    !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical :: DoTestCell
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_heat_exchange'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     HeatExchange = 0.0
     HeatExchangePeP = 0.0
@@ -490,13 +504,13 @@ contains
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          DoTestCell = DoTestMe .and. iBlock == BlkTest .and. &
-               i == iTest .and. j == jTest .and. k == kTest 
+          DoTestCell = DoTest .and. iBlock == iBlockTest .and. &
+               i == iTest .and. j == jTest .and. k == kTest
 
           DtLocal = Cfl*time_BLK(i,j,k,iBlock)
 
-          ! For single ion fluid the ion-electron collision results in a 
-          ! heat exchange term for the electron pressure 
+          ! For single ion fluid the ion-electron collision results in a
+          ! heat exchange term for the electron pressure
           ! See eq. 4.124c in Schunk and Nagy.
 
           ! Explicit heat exchange (energy)
@@ -560,11 +574,11 @@ contains
        call calc_energy_cell(iBlock)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_heat_exchange
+  !============================================================================
 
-  !============================================================================
   ! Interface for (Semi-)implicit collisional and Hall resistivity
-  !============================================================================
 
   subroutine get_impl_resistivity_state(SemiAll_VCB)
 
@@ -582,10 +596,10 @@ contains
 
     logical:: IsSemiBlock
 
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'get_impl_resistivity_state'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_impl_resistivity_state'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     if(UseSemiResistivity) call init_impl_resistivity
     if(UseSemiHallResist)  call init_impl_hall_resist
@@ -619,9 +633,9 @@ contains
 
     if(DoTest) write(*,*) NameSub,' iProc, nBlockSemi=', iProc, nBlockSemi
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_impl_resistivity_state
-
-  !===========================================================================
+  !============================================================================
 
   subroutine init_impl_resistivity
 
@@ -633,8 +647,10 @@ contains
     real:: Eta
     real:: FaceNormal_D(nDim)
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_impl_resistivity'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.UseResistivity) RETURN
 
     ! Calculate Eta*FaceNormal_D to be used for resistive flux
@@ -665,8 +681,9 @@ contains
        end do
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_impl_resistivity
-  !===========================================================================
+  !============================================================================
   subroutine init_impl_hall_resist
 
     use BATL_lib,        ONLY: nBlock, Unused_B, IsCartesian, &
@@ -685,13 +702,15 @@ contains
     real:: HallCoeff, Rho, b_D(MaxDim)
 
     real:: InvDxyz
-    
+
     real:: FaceNormal_D(nDim)
-    
-    character(len=*), parameter:: NameSub = 'init_impl_resistivity'
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_impl_hall_resist'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.UseHallResist) RETURN
-    
+
     ! Calculate B/ne = m/e * B/rho on the face to be used for the Hall flux
     if(.not.allocated(Bne_DFDB)) &
          allocate(Bne_DFDB(MaxDim,nI+1,nJ+1,nK+1,nDim,MaxBlock))
@@ -699,7 +718,7 @@ contains
     ! Whistler diffusion coefficient
     if(HallCmaxFactor > 0 .and. .not.allocated(WhistlerCoeff_FDB)) &
          allocate(WhistlerCoeff_FDB(nI+1,nJ+1,nK+1,nDim,MaxBlock))
-    
+
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -724,7 +743,7 @@ contains
              ! Cell center indexes for the cell on the left of the face
              i1 = i-Di; j1 = j-Dj; k1 = k - Dk
 
-             ! Average rho and B to the face 
+             ! Average rho and B to the face
              ! NOTE: HallCoeff is normalized to total ion mass density
              Rho = 0.5*(sum(State_VGB(iRhoIon_I,i1,j1,k1,iBlock)) &
                   +     sum(State_VGB(iRhoIon_I,i, j, k, iBlock)) )
@@ -752,7 +771,7 @@ contains
                 ! 0.5*HallCmaxFactor*c_whistler (like first order TVD).
                 ! The whistler speed in the face normal direction is
                 ! c_whistler = |B_n| * pi/(e*n_e*dx)
-                ! Store the D coefficient for the diffusive flux 
+                ! Store the D coefficient for the diffusive flux
                 ! F_i+1/2 = D_i+1/2 * (B_i+1 - B_i) where
                 ! D = HallCmaxFactor*0.5*pi*|Area*B_n|/(e*n_e*dx)
                 WhistlerCoeff_FDB(i,j,k,iDim,iBlock) = HallCmaxFactor*0.5*cPi*&
@@ -763,8 +782,8 @@ contains
        end do
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_impl_hall_resist
-
   !============================================================================
 
   subroutine get_resistivity_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
@@ -791,7 +810,10 @@ contains
     real    :: Current_D(MaxDim), Jx, InvDy2, FaceNormal_D(nDim)
     real    :: Jnormal, BneNormal
     logical :: IsNewBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_resistivity_rhs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     IsNewBlock = .true.
 
@@ -810,7 +832,7 @@ contains
           FaceNormal_D = 0.0; FaceNormal_D(iDim) = CellFace_DB(iDim,iBlock)
        end if
 
-       ! Loop over cell faces orthogonal to iDim 
+       ! Loop over cell faces orthogonal to iDim
        do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -821,7 +843,7 @@ contains
 
           if(UseSemiResistivity)then
              ! Resistive flux
-             ! dB/dt = -curl E 
+             ! dB/dt = -curl E
              !       = -sum(FaceNormal x eta*J)
              !       = -sum(eta*FaceNormal x J)
              !       = -div(FluxImpl)
@@ -916,13 +938,13 @@ contains
 
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_resistivity_rhs
-
   !============================================================================
 
   subroutine add_jacobian_resistivity(iBlock, nVarImpl, Jacobian_VVCI)
 
-    ! Calculate the Jacobian for the preconditioning of 
+    ! Calculate the Jacobian for the preconditioning of
     ! collisional resistivity.
 
     use BATL_lib,        ONLY: IsCartesianGrid, CellSize_DB, CellVolume_GB
@@ -932,7 +954,7 @@ contains
     use ModGeometry,     ONLY: true_cell
     use ModImplicit,     ONLY: nStencil
     use ModAdvance,      ONLY: B_
-    
+
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
@@ -942,8 +964,10 @@ contains
     integer:: iVar, jVar
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), Coeff
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_resistivity'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! Set the base index value for magnetic field variables
     if(UseSemiResistivity)then
        iB = 0
@@ -969,7 +993,7 @@ contains
 
                 DiffLeft  = Coeff*Eta_DFDB(iDim,i,j,k,iDim,iBlock)
                 DiffRight = Coeff*Eta_DFDB(iDim,i+Di,j+Dj,k+Dk,iDim,iBlock)
-                
+
                 Jacobian_VVCI(iVar,iVar,i,j,k,1) = &
                      Jacobian_VVCI(iVar,iVar,i,j,k,1) - (DiffLeft + DiffRight)
 
@@ -995,7 +1019,7 @@ contains
        do iDim = 1, nDim
           Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
-             if(.not.true_cell(i,j,k,iBlock)) CYCLE 
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
              Coeff = InvDcoord_D(iDim)/CellVolume_GB(i,j,k,iBlock)
 
              do iDir = 1, MaxDim; do jDir = 1, nDim
@@ -1027,7 +1051,6 @@ contains
                 Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) = &
                      Jacobian_VVCI(iVar,iVar,i,j,k,2*iDim+1) + DiffRight
 
-
                 DiffLeft = -Eta_DFDB(jDir,i,j,k,iDim,iBlock) &
                      *DcoordDxyz_DDFD(iDim,iDir,i,j,k,iDim)*Coeff
                 DiffRight = -Eta_DFDB(jDir,i+Di,j+Dj,k+Dk,iDim,iBlock) &
@@ -1055,8 +1078,8 @@ contains
        end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_jacobian_resistivity
-
   !============================================================================
 
   subroutine add_jacobian_hall_resist(iBlock, nVarImpl, Jacobian_VVCI)
@@ -1072,7 +1095,7 @@ contains
     use ModGeometry,     ONLY: true_cell
     use ModAdvance,      ONLY: B_
     use ModHallResist,   ONLY: HallCmaxFactor
-    
+
     integer, intent(in):: iBlock
     integer, intent(in):: nVarImpl
     real, intent(inout):: Jacobian_VVCI(nVarImpl,nVarImpl,nI,nJ,nK,nStencil)
@@ -1085,8 +1108,10 @@ contains
 
     real:: InvVolume
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_jacobian_hall_resist'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! Set the base index value for magnetic field variables
     if(UseSemiHallResist)then
        iB = 0
@@ -1110,7 +1135,7 @@ contains
              j2 = j + i_DD(2,iDim)
              k2 = k + i_DD(3,iDim)
 
-             InvVolume = 1./CellVolume_GB(i,j,k,iBlock)                
+             InvVolume = 1./CellVolume_GB(i,j,k,iBlock)
              ! dR/dB_i-1 = H_i-1/2 / V_i
              TermSub =  InvVolume*WhistlerCoeff_FDB(i,j,k,iDim,iBlock)
              ! dR/dB_i+1 = H_i+1/2 / V_i
@@ -1164,7 +1189,7 @@ contains
 
              ! Loop over magnetic field flux components
              do iDir = 1, MaxDim
-                ! There is a Levi_Civita symbol with iDim,iDir,jDir 
+                ! There is a Levi_Civita symbol with iDim,iDir,jDir
                 ! (see eqs. 52-53 with iDim=s, iDir=j, jDir=l)
                 ! so all 3 have to be different. Their sum is 1+2+3=6.
                 if(iDim == iDir) CYCLE
@@ -1186,7 +1211,7 @@ contains
                      InvDcoord2_D(iDim)*Bne_DFDB(iDim,i2,j2,k2,iDim,iBlock)
 
                 ! Jacobian = dF(B_iDir)/dB_jDir
-                ! Main diagonal (eq. 52) 
+                ! Main diagonal (eq. 52)
                 Jacobian_VVCI(iVar,jVar,i,j,k,1) = &
                      Jacobian_VVCI(iVar,jVar,i,j,k,1) - (TermSub + TermSup)
 
@@ -1220,7 +1245,7 @@ contains
           if(kDim == lDir) CYCLE
 
           ! jDir is the index for flux component in dR(B_j)/d(B_l)
-          do jDir = 1, 3 
+          do jDir = 1, 3
              jklEpsilon = iLeviCivita_III(jDir,kDim,lDir)
 
              ! Variable indexes for the Jacobian
@@ -1295,8 +1320,8 @@ contains
 
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_jacobian_hall_resist
-
   !============================================================================
 
   subroutine update_impl_resistivity(iBlock, SemiAll_VC)
@@ -1311,8 +1336,11 @@ contains
     real,    intent(in):: SemiAll_VC(nVarSemiAll,nI,nJ,nK)
 
     integer :: i, j, k
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_impl_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = SemiAll_VC(BxImpl_:BzImpl_,i,j,k)
@@ -1320,6 +1348,9 @@ contains
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_impl_resistivity
+  !============================================================================
 
 end module ModResistivity
+!==============================================================================

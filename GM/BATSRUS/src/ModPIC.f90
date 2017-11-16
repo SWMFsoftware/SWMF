@@ -1,8 +1,11 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  Portions used with permission 
+!  Portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModPIC
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Variables and methods for coupling BATSRUS with a PIC code
 
@@ -17,10 +20,9 @@ module ModPIC
   public:: pic_find_node
   public:: pic_find_region
   public:: mhd_to_pic_vec
-  
-  
+
   logical, public:: UsePic = .false.
-  
+
   logical, public:: DoBalancePicBlock=.true.
 
   ! Local variables
@@ -57,7 +59,7 @@ module ModPIC
 
   logical :: IsPicRegionInitialized = .false.
 contains
-  !===========================================================================
+  !============================================================================
   subroutine pic_read_param(NameCommand)
 
     use ModProcMH,    ONLY: iProc
@@ -71,10 +73,12 @@ contains
 
     integer:: iRegion
 
-    real :: xRotate, yRotate, zRotate 
+    real :: xRotate, yRotate, zRotate
 
-    character(len=*), parameter:: NameSub = 'read_pic_param'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'pic_read_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case ("#PICGHOST")
       call read_var('nGhostPic',nGhostPic)
@@ -82,7 +86,7 @@ contains
        call read_var('xUnitPicSi', xUnitPicSi)
        call read_var('uUnitPicSi', uUnitPicSi)
     case("#PICBALANCE")
-       call read_var('DoBalancePicBlock', DoBalancePicBlock)       
+       call read_var('DoBalancePicBlock', DoBalancePicBlock)
     case("#PICREGION")
        call read_var('nPicRegion', nRegionPic)
        UsePic = nRegionPic > 0
@@ -115,7 +119,7 @@ contains
           R_DDI(1,1,iRegion) = 1
           R_DDI(2,2,iRegion) = 1
           R_DDI(3,3,iRegion) = 1
-          
+
        end do
     case("#PICREGIONROTATE")
        DoRotatePIC = .true.
@@ -157,23 +161,24 @@ contains
                rot_matrix_z(-zRotate*cDegToRad),&
                rot_matrix_y(-yRotate*cDegToRad)),&
                rot_matrix_x(-xRotate*cDegToRad))
-       end do             
+       end do
     case default
        if(iProc==0) call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine pic_read_param
+  !============================================================================
 
-  !===========================================================================
   subroutine pic_init_region
 
     use ModProcMH,    ONLY: iProc
     use BATL_lib,     ONLY: nDim, MaxDim
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
-    use ModHallResist,ONLY: HallFactorMax
+    use ModHallResist, ONLY: HallFactorMax
     use ModPhysics,   ONLY: IonMassPerCharge
-    use ModMultiFluid,ONLY: nIonFLuid, MassIon_I
-    use ModVarIndexes,ONLY: IsMhd
+    use ModMultiFluid, ONLY: nIonFLuid, MassIon_I
+    use ModVarIndexes, ONLY: IsMhd
     ! PIC grid indexes
     integer:: nPic_D(MaxDim), iRegion
 
@@ -186,56 +191,58 @@ contains
     real:: XyzPic_D(MaxDim)
 
     ! mass per charge SI
-    real:: IonMassPerChargeSi 
+    real:: IonMassPerChargeSi
 
     ! Region check
     integer :: nCell
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_init_region'
-    !-------------------------------------------------------------------------
-    
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
     if(nIonFluid > 1 .and. IsMhd) then
        if(iProc == 0) then
-          write(*,*) ' ' 
+          write(*,*) ' '
           write(*,*) "Error!!!!!"
-          write(*,*) 'Multi-fluid MHD with total density and total ',& 
+          write(*,*) 'Multi-fluid MHD with total density and total ',&
                'momentum variables is used for  the current simulation ', &
                '(see ModEquation.f90). ', &
                'MHD-EPIC does not support this case now. Please eliminate ', &
                'the total density and total momentum variables and try again.'
-          write(*,*) ' ' 
+          write(*,*) ' '
        endif
        call stop_mpi(NameSub)
     endif
-    
+
     ! Normalizing the system so q/(mc) == 1 in IPIC3D.
-    ! 
+    !
     ! In CGS units the Hall speed is uH_CGS = j/(nq) = c/4pi curlB m/(q rho)
     !
     ! In SI  units the Hall speed is uH_SI  = j/nq = curlB/mu0 m/(q rho)
     !
-    ! The CGS dimension of curlB/(uH rho) is 
+    ! The CGS dimension of curlB/(uH rho) is
     !   1/[L] * [U]sqrt[RHO]/([U][RHO]) = 1/([L] sqrt[RHO]) = sqrt[L]/sqrt[M]
     ! which can be used to scale the PIC units to true CGS units.
     !
     ! CGS->SI: 1kg=1000g, 1m=100cm, 1T=10000G and mu0 = 4pi*1e-7
     !
-    ! 1  = q_PIC/(m_PIC c_pic) 
-    !    = curlB_PIC /  (4pi uH_PIC rho_PIC)     
+    ! 1  = q_PIC/(m_PIC c_pic)
+    !    = curlB_PIC /  (4pi uH_PIC rho_PIC)
     !    = curlB_CGS /  (4pi uH_CGS rho_CGS) * sqrt( [M]_CGS / [L]_CGS )
-    !    = curlB_SI*100/(4pi uH_SI*100 rho_SI*0.001) 
+    !    = curlB_SI*100/(4pi uH_SI*100 rho_SI*0.001)
     !                                        * sqrt{ [M]_SI*1000 / ([L]_SI*100)
     !    = 10^3.5/4pi * curlB_SI/(uH_SI rho_SI) * sqrt( [M]_SI / [L]_SI )
     !    = 10^3.5/4pi * mu0_SI*q_SI/m_SI        * sqrt( [M]_SI / [L]_SI )
     !    = 10^(-3.5)  *        q_SI/m_SI        * sqrt( [M]_SI / [L]_SI )
-    ! 
+    !
     ! Then we can solve for the mass unit
-    ! 
-    !   [M]_SI = 10^7 * [L]_SI * (m_SI/q_SI)^2 
+    !
+    !   [M]_SI = 10^7 * [L]_SI * (m_SI/q_SI)^2
 
     ! iPIC3D does not suppor multi-sessions now. If the pic region related
     ! parameters has been initialized, then skip this subroutine in
-    ! the following sessions. 
+    ! the following sessions.
     if(IsPicRegionInitialized) RETURN
     IsPicRegionInitialized = .true.
     IonMassPerChargeSi = IonMassPerCharge* &
@@ -244,7 +251,7 @@ contains
     if(nIonFluid == 1) IonMassPerChargeSi = IonMassPerChargeSi/MassIon_I(1)
 
     mUnitPicSi = 1e7*xUnitPicSi * (IonMassPerChargeSi*HallFactorMax)**2
-    
+
     if(iProc==0)then
        write(*,*) NameSub,': IonMassPerChargeSi=', IonMassPerChargeSi
        write(*,*) NameSub,': xUnitPicSi = ',xUnitPicSi
@@ -258,88 +265,91 @@ contains
     do iRegion = 1, nRegionPic
        ! extending the region sizes with 1 ghost cell
        do i=1, nDim
-          ! Number of nodes (not cells!)
+          ! Number of nodes (not cells! )
           nCell = nint(LenPic_DI(i,iRegion)/DxyzPic_DI(i,iRegion))
           ! 1 ghost cell layer at each side
           LenPic_DI(i,iRegion) = (nCell+2)*DxyzPic_DI(i,iRegion)
        end do
 
-       XyzMinPic_DI(:,iRegion) = XyzPic0_DI(:,iRegion) - DxyzPic_DI(:,iRegion)       
+       XyzMinPic_DI(:,iRegion) = XyzPic0_DI(:,iRegion) - DxyzPic_DI(:,iRegion)
     end do
 
     if(iProc == 0) then
        write(*,*) "Corrected IPIC3D  regions"
        do iRegion = 1, nRegionPic
-          write(*,*) "  Region : ", iRegion   
+          write(*,*) "  Region : ", iRegion
           write(*,*) "     Min Cordinate : ", &
                XyzMinPic_DI(1:nDim,iRegion) + DxyzPic_DI(1:nDim,iRegion)
           write(*,*) "     Max Cordinate : ", &
                XyzMaxPic_DI(1:nDim,iRegion) - DxyzPic_DI(1:nDim,iRegion)
        end do
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine pic_init_region
-  !===========================================================================
+  !============================================================================
 
   subroutine pic_find_node()
-    ! Find out the blocks that overlaped with PIC region(s). 
+    ! Find out the blocks that overlaped with PIC region(s).
     use BATL_lib,  ONLY: nDim, MaxDim, find_grid_block, &
          x_, y_, z_, MaxNode
     integer:: nIJK_D(1:MaxDim), ijk_D(1:MaxDim)
     real:: PIC_D(1:MaxDim), MHD_D(1:MaxDim)
     integer:: iRegion, iBlock, i, j, k, iProcFound, iNode
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_find_node'
-    !----------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*) NameSub,' is called'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
     if(.not.allocated(IsPicNode_A)) allocate(IsPicNode_A(MaxNode))
     IsPicNode_A = .false.
 
     nIJK_D = 1; PIC_D = 0; MHD_D=0
-    
+
     do iRegion = 1, nRegionPic
-       ! nIJK_D includes two ghost cells. 
+       ! nIJK_D includes two ghost cells.
        nIJK_D(1:nDim) = int(&
             LenPic_DI(1:nDim,iRegion)/DxyzPic_DI(1:nDim,iRegion) + 0.5)
 
-       if(DoTestMe) write(*,*) NameSub,' iRegion = ',iRegion, &
+       if(DoTest) write(*,*) NameSub,' iRegion = ',iRegion, &
             ' nIJK_D = ',nIJK_D(1:nDim)
 
        do k=1, nIJK_D(z_); do j=1, nIJK_D(y_); do i=1, nIJK_D(x_)
-          ! Loop through all the PIC node points. 
+          ! Loop through all the PIC node points.
           ijk_D(x_) = i - 1; ijk_D(y_) = j - 1; ijk_D(z_) = k - 1
           PIC_D(1:nDim) = ijk_D(1:nDim)*DxyzPic_DI(1:nDim,iRegion)
           call pic_to_mhd_vec(iRegion,PIC_D,MHD_D)
           call find_grid_block(MHD_D, iProcFound, iBlock, iNodeOut=iNode)
           IsPicNode_A(iNode) = .true.
        enddo; enddo; enddo
-       
+
     enddo
-    
-    if(DoTestMe) write(*,*)'IsPicNode= ', IsPicNode_A(:)
+
+    if(DoTest) write(*,*)'IsPicNode= ', IsPicNode_A(:)
+    call test_stop(NameSub, DoTest)
   end subroutine pic_find_node
-  !===========================================================================
+  !============================================================================
 
   integer function pic_find_region(iBlock,i,j,k)
     ! If a cell is inside the PIC region, return 1;
-    ! otherwise, return 0; 
+    ! otherwise, return 0;
     use BATL_lib, ONLY: nDim, Xyz_DGB
-    
+
     integer, intent(in) :: iBlock,i,j,k
 
     integer:: iStatus
     integer:: iRegion
     real:: xyz_D(nDim), PIC_D(nDim)
+
     character(len=*), parameter:: NameSub = 'pic_find_region'
-    
+    !--------------------------------------------------------------------------
     xyz_D = Xyz_DGB(1:nDim,i,j,k,iBlock)
 
     iStatus=0
-    do iRegion = 1, nRegionPic    
+    do iRegion = 1, nRegionPic
        call mhd_to_pic_vec(iRegion, xyz_D, PIC_D)
-       
+
        if(  all(PIC_D > 0 ).and.&
             all(PIC_D < LenPic_DI(:,iRegion))) & ! Not accurate here. --Yuxi
             iStatus = 1
@@ -347,12 +357,12 @@ contains
 
     pic_find_region=iStatus
   end function pic_find_region
-  !===========================================================================
-  
-  subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)    
+  !============================================================================
+
+  subroutine pic_to_mhd_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
     ! Transfer Pic coordinates to Mhd coordinates. Origin_D
     ! is the origin of the PIC coordinates.
-    !------------------------------------------
+
     use BATL_lib, ONLY: nDim
 
     integer, intent(in) :: iRegion
@@ -363,11 +373,11 @@ contains
 
     integer :: ix, in, ii, jj
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='pic_to_mhd_vec'
-    !-----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*) NameSub,' is called'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'pic_to_mhd_vec'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
     Origin_D = XyzMinPic_DI(:,iRegion)
     if(present(OriginIn_D)) Origin_D = OriginIn_D
@@ -381,13 +391,13 @@ contains
     enddo; enddo
 
     CoordOut_D = 0
-    do ix = 1, nDim       
+    do ix = 1, nDim
        CoordOut_D(ix) = sum(R_DD(ix,1:nDim)*coord_D)
     enddo
 
     CoordOut_D = CoordOut_D + Origin_D
 
-    if(DoTestMe) then
+    if(DoTest) then
        write(*,*) 'Origin_D   = ', Origin_D
        write(*,*) 'CoordIn_D  = ', CoordIn_D
        write(*,*) 'CoordOut_D = ', CoordOut_D
@@ -396,14 +406,15 @@ contains
        enddo
     endif
 
+    call test_stop(NameSub, DoTest)
   end subroutine pic_to_mhd_vec
-  !===========================================================================
+  !============================================================================
 
-  subroutine mhd_to_pic_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)    
+  subroutine mhd_to_pic_vec(iRegion, CoordIn_D, CoordOut_D, OriginIn_D)
     ! DoMhd2Pic == true: transfer Mhd coordinates to a coordinates
     !   that is parallel to the PIC coordinates but the origin point is
     !   defined by Origin_D.
-    !------------------------------------------
+
     use BATL_lib, ONLY: nDim
 
     integer, intent(in) :: iRegion
@@ -414,11 +425,11 @@ contains
 
     integer :: ix
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='mhd_to_pic_vec'
-    !-----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*) NameSub,' is called'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'mhd_to_pic_vec'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' is called'
 
     Origin_D = XyzMinPic_DI(:,iRegion)
     if(present(OriginIn_D)) Origin_D = OriginIn_D
@@ -426,11 +437,11 @@ contains
     Coord_D = CoordIn_D - Origin_D
 
     CoordOut_D = 0
-    do ix = 1, nDim       
+    do ix = 1, nDim
        CoordOut_D(ix) = sum(R_DDI(ix,1:nDim,iRegion)*coord_D)
     enddo
 
-    if(DoTestMe) then
+    if(DoTest) then
        write(*,*) 'Origin_D   = ', Origin_D
        write(*,*) 'CoordIn_D  = ', CoordIn_D
        write(*,*) 'CoordOut_D = ', CoordOut_D
@@ -439,7 +450,9 @@ contains
        enddo
     endif
 
+    call test_stop(NameSub, DoTest)
   end subroutine mhd_to_pic_vec
+  !============================================================================
 
-  !===========================================================================
 end module ModPIC
+!==============================================================================

@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================================
 module ModPlotShell
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iBlockTest
 
   use ModIO
   use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
@@ -32,7 +34,7 @@ module ModPlotShell
   real:: PlotToGm_DD(3,3)
 
 contains
-  !==========================================================================
+  !============================================================================
   subroutine init_plot_shell(iFile, nPlotVar)
 
     ! set up the shell grid for this plot file
@@ -43,10 +45,10 @@ contains
 
     integer, intent(in):: iFile, nPlotVar
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_shell'
-    !-----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Allocate results array and set up all the spherical shell
     if(allocated(PlotVar_VIII)) RETURN
@@ -61,12 +63,12 @@ contains
     LonMax = plot_range(4, iFile) * cDegtoRad
     LatMin = plot_range(5, iFile) * cDegtoRad
     LatMax = plot_range(6, iFile) * cDegtoRad
-    
+
     ! Set number of points:
     nR   = nint((rMax - rMin)/dR)       + 1
     nLon = nint((LonMax - LonMin)/dLon) + 1
     nLat = nint((LatMax - LatMin)/dLat) + 1
-    
+
     ! Ensure dR, dLon and dLat are compatible with the ranges
     dR   = (rMax - rMin)/max(1, nR - 1)
     dLon = (LonMax - LonMin)/max(1, nLon - 1)
@@ -81,7 +83,7 @@ contains
     PlotToGm_DD = transform_matrix(Time_Simulation, &
          TypeCoordPlot_I(iFile), TypeCoordSystem)
 
-    if (DoTestMe) then
+    if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar=      ', iFile, nPlotVar
        write(*,*) NameSub//' Raw plot_dx=          ', plot_dx(:,iFile)
        write(*,*) NameSub//' Raw plot_range=       ', plot_range(:,iFile)
@@ -94,16 +96,16 @@ contains
        call show_rot_matrix(PlotToGm_DD)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_plot_shell
-
   !============================================================================
+
   subroutine set_plot_shell(iBlock, nPlotvar, Plotvar_GV)
 
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
-    
+
     use ModGeometry,    ONLY: rMin_BLK
-    use ModMain,        ONLY: BlkTest
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord
     use ModCoordTransform, ONLY: rlonlat_to_xyz
@@ -112,25 +114,26 @@ contains
     integer, intent(in) :: iBlock
     integer, intent(in) :: nPlotvar
     real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
-    
+
     ! Local variables
     integer :: i, j, k, iVar
-    
+
     real :: r, Lon, Lat
     real :: XyzPlot_D(3), XyzGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
-    
-    character(len=*), parameter :: NameSub='set_plot_shell'
-    logical :: DoTest, DoTestMe
-    !--------------------------------------------------------------------------
+
     ! Check testing for block
-    if(iBlock == BlkTest)then
-       call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_plot_shell'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    if(iBlock == iBlockTest)then
+       call CON_set_do_test(NameSub, DoTest, DoTest)
     else
-       DoTest = .false.; DoTestMe = .false.
+       DoTest = .false.; DoTest = .false.
     end if
-     
-    if (DoTestMe) write(*,*) NameSub//' Called for iBlock=      ', iBlock
+
+    if (DoTest) write(*,*) NameSub//' Called for iBlock=      ', iBlock
 
     ! Loop through shell points and interpolate PlotVar
     do i = 1, nR
@@ -168,14 +171,15 @@ contains
                 PlotVar_VIII(iVar,i,j,k) = trilinear(PlotVar_GV(:,:,:,iVar),&
                      MinI, MaxI, MinJ, MaxJ, MinK, MaxK, CoordNorm_D)
              end do
-             
+
           end do ! lon loop
        end do    ! lat loop
     end do       ! r loop
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_plot_shell
-
   !============================================================================
+
   subroutine write_plot_shell(iFile, nPlotVar, NameVar_V, &
        NameUnit, NameFile)
 
@@ -191,15 +195,15 @@ contains
     integer :: iVar, iR, iLon, iLat, iError
     character(len=500) :: NameVar
 
-    logical :: DoTest,DoTestMe
-    character(len=*), parameter :: NameSub='write_plot_shell'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_plot_shell'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     ! This subroutine does not support HDF output.
     if(plot_form(iFile) == 'hdf') call CON_stop(NameSub// &
          ': HDF file type not supported for Geo Sphere output.')
-    
+
     ! Collect results to head node
     if(nProc > 1) call MPI_reduce_real_array(PlotVar_VIII, size(PlotVar_VIII),&
          MPI_SUM, 0, iComm, iError)
@@ -231,10 +235,12 @@ contains
             VarIn_VIII = PlotVar_VIII(1:,:,:,:))
     end if
 
-    
     ! Deallocate results arrays:.
     deallocate(PlotVar_VIII)
-    
+
+    call test_stop(NameSub, DoTest)
   end subroutine write_plot_shell
+  !============================================================================
 
 end module ModPlotShell
+!==============================================================================

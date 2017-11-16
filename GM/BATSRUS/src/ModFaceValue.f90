@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModFaceValue
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest, iDimTest
 
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
@@ -31,8 +34,8 @@ module ModFaceValue
   character(len=6), public :: TypeLimiter = 'minmod'
   character(len=6), public :: TypeLimiter5= 'mp'
 
-  ! Logical switch for 5th order scheme: use cweno5 or mp5 scheme. 
-  logical, public ::  UseCweno = .false. 
+  ! Logical switch for 5th order scheme: use cweno5 or mp5 scheme.
+  logical, public ::  UseCweno = .false.
 
   logical, public:: UsePerVarLimiter = .false. ! Variable for CWENO5
   integer, public:: iVarSmooth_V(nVar), iVarSmoothIndex_I(nVar)
@@ -45,7 +48,7 @@ module ModFaceValue
 
   ! Parameters for the limiter applied near resolution changes
   ! Scheme has no effect if BetaLimierReschange is larger than BetaLimiter
-  real    :: BetaLimiterResChange  = 2.0 
+  real    :: BetaLimiterResChange  = 2.0
   integer :: nFaceLimiterResChange = 2
 
   ! Parameters for limiting the logarithm of variables
@@ -57,7 +60,7 @@ module ModFaceValue
   logical :: UsePtotalLtd     = .false.
   logical :: UsePtotalLimiter = .false.
 
-  ! Parameters for limiting the variable divided by density 
+  ! Parameters for limiting the variable divided by density
   logical :: UseScalarToRhoRatioLtd = .false.
   integer :: nVarLimitRatio
   integer, allocatable, save:: iVarLimitRatio_I(:)
@@ -118,8 +121,11 @@ contains
     integer :: i, iVar
     character(len=10) :: NameVar_I(nVar)
     character(len=lStringLine) :: NameVarLimitRatio
-    character(len=*), parameter :: NameSub = 'read_face_value_param'
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_face_value_param'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case('#RESOLUTIONCHANGE')
        call read_var('UseAccurateResChange',  UseAccurateResChange)
@@ -172,29 +178,30 @@ contains
        end if
     case("#LOWORDERREGION")
        call read_var('StringLowOrderRegion', StringLowOrderRegion)
-       UseLowOrderRegion = .true. 
+       UseLowOrderRegion = .true.
     case default
        call CON_stop(NameSub//' invalid command='//trim(NameCommand))
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_face_value_param
-  !===========================================================================
-  subroutine tvd_reschange_body(& 
-       Coarse2_V         ,& !State in the coarser ghostcell, 2nd layer
-       Coarse1_V         ,& !State in the coarser ghostcell, 1st layer
-       Fine1_VII         ,& !States in 4 fine physical cells,1st layer
-       Fine2_VII         ,& !States in 4 fine physical cells,2nd layer
-       CoarseToFineF_VII ,& !Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& !Facevalues in phys. cell looking at coarser cell 
-       FineF_VII         ,& !Facevalues in phys. cell looking at phys. cell
-       IsTrueCoarse2     ,& !True if coarser ghostcell of 2nd layer is true
-       IsTrueCoarse1     ,& !True if coarser ghostcell of 1st layer is true
-       IsTrueFine1       ,& !True if all physical cells of 1st layer are true
-       IsTrueFine2_II)      !True for true physical cell of the 2nd layer
+  !============================================================================
+  subroutine tvd_reschange_body(&
+       Coarse2_V         ,& ! State in the coarser ghostcell, 2nd layer
+       Coarse1_V         ,& ! State in the coarser ghostcell, 1st layer
+       Fine1_VII         ,& ! States in 4 fine physical cells,1st layer
+       Fine2_VII         ,& ! States in 4 fine physical cells,2nd layer
+       CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
+       FineToCoarseF_VII ,& ! Facevalues in phys. cell looking at coarser cell
+       FineF_VII         ,& ! Facevalues in phys. cell looking at phys. cell
+       IsTrueCoarse2     ,& ! True if coarser ghostcell of 2nd layer is true
+       IsTrueCoarse1     ,& ! True if coarser ghostcell of 1st layer is true
+       IsTrueFine1       ,& ! True if all physical cells of 1st layer are true
+       IsTrueFine2_II)      ! True for true physical cell of the 2nd layer
     !_____________!_____________!_______!_______!_
-    !             !         CToF!FToC FF!
+    !             !         CToF! FToC FF!
     ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
-    !             !         CToF!FToC FF!      
+    !             !         CToF! FToC FF!
     !_____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     real,dimension(nVar),intent(in):: Coarse2_V, Coarse1_V
@@ -205,11 +212,14 @@ contains
     logical,dimension(2,2),intent(in):: IsTrueFine2_II
     integer::iVar,i2,j2
     real,dimension(nVar):: AveragedFine1_V,GradNormal_V,SignGradNormal_V
-    real,dimension(nVar):: GradNormalLtd_V  !Ltd stands for "Limited"
+    real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
 
     real:: Beta
-    !-------------------------------------------------------------------------
-    !Calculate averaged Fine1_VII 
+
+    character(len=*), parameter:: NameSub = 'tvd_reschange_body'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VII
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
@@ -221,7 +231,7 @@ contains
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
     if(IsTrueCoarse2.and.IsTrueCoarse1.and.IsTrueFine1)then
-       !Limit gradient in the first coarser cell
+       ! Limit gradient in the first coarser cell
        GradNormalLtd_V= SignGradNormal_V*&
             max(0.0,&
             min(Beta*cTwoThird*abs(GradNormal_V),&
@@ -230,8 +240,8 @@ contains
             0.25*SignGradNormal_V*(Coarse1_V-Coarse2_V)))
 
        do j2=1,2;do i2=1,2
-          !Limit transverse gradients, if they are larger than the normal one
-          !The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
+          ! Limit transverse gradients, if they are larger than the normal one
+          ! The unlimited transverse gradients are Fine1_VII-AveragedFine1_V
           CoarseToFineF_VII(:,i2,j2)=Coarse1_V+GradNormalLtd_V+&
                sign(min(abs(GradNormalLtd_V), &
                abs(Fine1_VII(:,i2,j2)-AveragedFine1_V)),&
@@ -239,20 +249,20 @@ contains
        end do;end do
     else
        do j2=1,2;do i2=1,2
-          !First order scheme
+          ! First order scheme
           CoarseToFineF_VII(:,i2,j2)=Coarse1_V
        end do;end do
     end if
     if(.not.(IsTrueCoarse1.and.IsTrueFine1))then
        do j2=1,2;do i2=1,2
-          !First order scheme
+          ! First order scheme
           FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)
           FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)
        end do;end do
     else
        do j2=1,2;do i2=1,2
           if(IsTrueFine2_II(i2,j2))then
-             !Limit gradient in the first layer of finer cells
+             ! Limit gradient in the first layer of finer cells
              GradNormalLtd_V = SignGradNormal_V*&
                   max(0.0,&
                   min(Beta*cThird*abs(GradNormal_V),&
@@ -262,29 +272,30 @@ contains
                   cSixth*abs(GradNormal_V) + 0.25*SignGradNormal_V*&
                   (Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))))
           else
-             !First order scheme
+             ! First order scheme
              GradNormalLtd_V=0.0
           end if
           FineToCoarseF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)-GradNormalLtd_V
           FineF_VII(:,i2,j2)=Fine1_VII(:,i2,j2)+GradNormalLtd_V
        end do;end do
     end if
+
   end subroutine tvd_reschange_body
-  !===========================================================================
+  !============================================================================
   subroutine tvd_reschange(&
        Coarse2_V         ,& ! State in the coarser ghostcell, 2nd layer
        Coarse1_V         ,& ! State in the coarser ghostcell, 1st layer
        Fine1_VII         ,& ! States in 4 fine physical cells,1st layer
        Fine2_VII         ,& ! States in 4 fine physical cells,2nd layer
        CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell 
+       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
        FineF_VII)           ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
     !_____________!_____________!________!_______!_
     !             !         CToF! FToC FF!
     ! C2_V        ! C1_V       _!__F1_V__!__F2_V_!_
-    !             !         CToF! FToC FF!      
+    !             !         CToF! FToC FF!
     !_____________!_____________!__F1_V__!__F2_V_!_
     !             !             !        !       !
 
@@ -295,23 +306,23 @@ contains
     integer::iVar,i2,j2
     real,dimension(nVar):: AveragedFine1_V
     real,dimension(nVar):: GradNormal_V,SignGradNormal_V
-    real,dimension(nVar):: GradNormalLtd_V  !Ltd stands for "Limited"
+    real,dimension(nVar):: GradNormalLtd_V  ! Ltd stands for "Limited"
 
     real :: Beta
-    !-------------------------------------------------------------------------
-
-    !Calculate averaged Fine1_VII 
+    character(len=*), parameter:: NameSub = 'tvd_reschange'
+    !--------------------------------------------------------------------------
+    ! Calculate averaged Fine1_VII
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
     GradNormal_V= AveragedFine1_V-Coarse1_V
 
-    !Save gradients squared
+    ! Save gradients squared
     SignGradNormal_V=sign(1.0,GradNormal_V)
 
     Beta = min(BetaLimiterResChange, BetaLimiter)
 
-    !Limit gradient in the first coarser cell
+    ! Limit gradient in the first coarser cell
     GradNormalLtd_V= SignGradNormal_V*max(0.0, min( &
          Beta*cTwoThird*abs(GradNormal_V),&
          Beta*0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V), &
@@ -319,9 +330,9 @@ contains
          SignGradNormal_V*(Coarse1_V - Coarse2_V)))
 
     do j2=1,2;do i2=1,2
-       !Limit transverse gradients, if they are larger than the normal one
-       !Before limiting the transverse gradients are equal to
-       !Fine1_VII-AveragedFine1V
+       ! Limit transverse gradients, if they are larger than the normal one
+       ! Before limiting the transverse gradients are equal to
+       ! Fine1_VII-AveragedFine1V
        CoarseToFineF_VII(:,i2,j2) = Coarse1_V + GradNormalLtd_V + &
             sign(min(abs(GradNormalLtd_V),&
             abs(Fine1_VII(:,i2,j2) - AveragedFine1_V)),&
@@ -329,7 +340,7 @@ contains
     end do;end do
 
     do j2=1,2;do i2=1,2
-       !Limit gradient in the first layer of finer cells
+       ! Limit gradient in the first layer of finer cells
        GradNormalLtd_V = SignGradNormal_V*max(0.0,min( &
             SignGradNormal_V*(Fine1_VII(:,i2,j2)-Coarse1_V),&
             Beta*cThird*abs(GradNormal_V),&
@@ -344,23 +355,22 @@ contains
     end do;end do
 
   end subroutine tvd_reschange
-  !===========================================================================
+  !============================================================================
   subroutine accurate_reschange3d(&
        Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
        Coarse1_VII       ,& ! State in the coarser ghostcells, 1st layer
        Fine1_VII         ,& ! States in 4 fine physical cells, 1st layer
        Fine2_VII         ,& ! States in 4 fine physical cells, 2nd layer
        CoarseToFineF_VII ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell 
+       FineToCoarseF_VII ,& ! Values in phys. cell looking at coarser cell
        FineF_VII)           ! Values in the phys. cell,
     !                         looking at another physical cell
 
-
     !             ! C1_V        !       !       !
     !_____________!_____________!_______!_______!_
-    !             !         CToF!FToC FF!       !
+    !             !         CToF! FToC FF!       !
     ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
-    !             !         CToF!FToC FF!       !
+    !             !         CToF! FToC FF!       !
     !_____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
@@ -383,18 +393,20 @@ contains
     real :: Coarse, Middle, FaceAverage, FaceTmp_II(2,2), Alpha, Alpha1
     real :: Beta
     real :: Denominator
-    !-------------------------------------------------------------------------
 
-    !Calculate averaged Fine1_VII 
+    character(len=*), parameter:: NameSub = 'accurate_reschange3d'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VII
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.25*sum(Fine1_VII(iVar,:,:))
     end do
     GradNormal_V = AveragedFine1_V - Coarse1_VII(:,1,1)
 
-    !Save sign of the gradient
+    ! Save sign of the gradient
     SignGradNormal_V=sign(1.0,GradNormal_V)
 
-    !Limit gradient in the first coarser cell
+    ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
     Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VII(:,1,1) - Coarse2_V)
 
@@ -440,7 +452,7 @@ contains
        Coarse      = Coarse1_VII(iVar, 1, 1)
        Middle      = FaceMiddle_V(iVar)
 
-       ! Check if the |L-M| <= |M-C| condition is satisfied 
+       ! Check if the |L-M| <= |M-C| condition is satisfied
        if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
 
        ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
@@ -460,8 +472,8 @@ contains
        ! Avoid zero denominator.
        Denominator = 0.25*sum(FaceTmp_II) - AverageOrig
        if(abs(Denominator) < 1e-30) then
-          CoarseToFineF_VII(iVar,:,:) = FaceTmp_II        
-       else 
+          CoarseToFineF_VII(iVar,:,:) = FaceTmp_II
+       else
           Alpha = (FaceAverage - AverageOrig) / Denominator
           Alpha1 = 1.0 - Alpha
 
@@ -474,7 +486,7 @@ contains
     ! The face is half the distance in the fine cell
     Slope1_V = 0.5*Slope1_V
     do j2=1,2; do i2=1,2
-       !Limit gradient in the first layer of finer cells
+       ! Limit gradient in the first layer of finer cells
        Slope2_V = 0.5*SignGradNormal_V*(Fine2_VII(:,i2,j2)-Fine1_VII(:,i2,j2))
 
        ! The first limiting ensures that the FineToCoarse face value
@@ -489,23 +501,22 @@ contains
     end do; end do
 
   end subroutine accurate_reschange3d
-  !===========================================================================
+  !============================================================================
   subroutine accurate_reschange2d(&
        Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
        Coarse1_VI        ,& ! State in the coarser ghostcells, 1st layer
        Fine1_VI          ,& ! States in 2 fine physical cells, 1st layer
        Fine2_VI          ,& ! States in 2 fine physical cells, 2nd layer
        CoarseToFineF_VI  ,& ! Values at subfaces, in the coarse ghostcell
-       FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell 
+       FineToCoarseF_VI  ,& ! Values in phys. cell looking at coarser cell
        FineF_VI)            ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-
     !             ! C1_V        !       !       !
     !_____________!_____________!_______!_______!_
-    !             !         CToF!FToC FF!       !
+    !             !         CToF! FToC FF!       !
     ! C2_V        ! C1_V       _!_F1_V__!__F2_V_!_
-    !             !         CToF!FToC FF!       !
+    !             !         CToF! FToC FF!       !
     !_____________!_____________!_F1_V__!__F2_V_!_
     !             !             !       !       !
     !             ! C1_V        !       !       !
@@ -528,18 +539,20 @@ contains
     real :: Coarse, Middle, FaceAverage, FaceTmp_I(2), Alpha, Alpha1
     real :: Beta
     real :: Denominator
-    !-------------------------------------------------------------------------
 
-    !Calculate averaged Fine1_VI
+    character(len=*), parameter:: NameSub = 'accurate_reschange2d'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VI
     do iVar=1,nVar
        AveragedFine1_V(iVar) = 0.5*sum(Fine1_VI(iVar,:))
     end do
     GradNormal_V = AveragedFine1_V - Coarse1_VI(:,1)
 
-    !Save sign of the gradient
+    ! Save sign of the gradient
     SignGradNormal_V=sign(1.0,GradNormal_V)
 
-    !Limit gradient in the first coarser cell
+    ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
     Slope2_V = 0.5*SignGradNormal_V*(Coarse1_VI(:,1) - Coarse2_V)
 
@@ -582,7 +595,7 @@ contains
        Coarse      = Coarse1_VI(iVar,1)
        Middle      = FaceMiddle_V(iVar)
 
-       ! Check if the |L-M| <= |M-C| condition is satisfied 
+       ! Check if the |L-M| <= |M-C| condition is satisfied
        if(abs(AverageOrig - Middle) <=  abs(Coarse - Middle) ) CYCLE
 
        ! Calculate the fixed average value L = Lorig + sgn(Lorig-M)*|M-C|
@@ -600,8 +613,8 @@ contains
        ! Avoid zero denominator.
        Denominator = 0.5*sum(FaceTmp_I) - AverageOrig
        if(abs(Denominator) < 1e-30) then
-          CoarseToFineF_VI(iVar,:) = FaceTmp_I        
-       else 
+          CoarseToFineF_VI(iVar,:) = FaceTmp_I
+       else
           Alpha = (FaceAverage - AverageOrig) / Denominator
           Alpha1 = 1.0 - Alpha
           ! Interpolate
@@ -614,7 +627,7 @@ contains
     ! The face is half the distance in the fine cell
     Slope1_V = 0.5*Slope1_V
     do i2 = 1, 2
-       !Limit gradient in the first layer of finer cells
+       ! Limit gradient in the first layer of finer cells
        Slope2_V = 0.5*SignGradNormal_V*(Fine2_VI(:,i2) - Fine1_VI(:,i2))
 
        ! The first limiting ensures that the FineToCoarse face value
@@ -629,20 +642,19 @@ contains
     end do
 
   end subroutine accurate_reschange2d
-  !===========================================================================
+  !============================================================================
   subroutine accurate_reschange1d(&
        Coarse2_V         ,& ! State in the coarser ghostcell,  2nd layer
        Coarse1_V         ,& ! State in the coarser ghostcells, 1st layer
        Fine1_V           ,& ! States in 2 fine physical cells, 1st layer
        Fine2_V           ,& ! States in 2 fine physical cells, 2nd layer
        CoarseToFineF_V   ,& ! Values at face, in the coarse ghostcell
-       FineToCoarseF_V   ,& ! Values in the phys. cell looking at coarser cell 
+       FineToCoarseF_V   ,& ! Values in the phys. cell looking at coarser cell
        FineF_V)             ! Facevalues in the physical cell,
     !                         looking at another physical cell
 
-
     !_____________!_____________!_______!_______!_
-    !             !         CToF!FToC FF!       !
+    !             !         CToF! FToC FF!       !
     ! C2_V        ! C1_V        ! F1_V  !  F2_V !
     !_____________!_____________!_______!_______!_
 
@@ -658,15 +670,17 @@ contains
     real, dimension(nVar):: GradNormal_V, SignGradNormal_V, GradNormalLtd_V
 
     real :: Beta
-    !-------------------------------------------------------------------------
 
-    !Calculate averaged Fine1_VI
+    character(len=*), parameter:: NameSub = 'accurate_reschange1d'
+    !--------------------------------------------------------------------------
+
+    ! Calculate averaged Fine1_VI
     GradNormal_V = Fine1_V - Coarse1_V
 
-    !Save sign of the gradient
+    ! Save sign of the gradient
     SignGradNormal_V=sign(1.0,GradNormal_V)
 
-    !Limit gradient in the first coarser cell
+    ! Limit gradient in the first coarser cell
     Slope1_V = cTwoThird*abs(GradNormal_V)
     Slope2_V = 0.5*SignGradNormal_V*(Coarse1_V - Coarse2_V)
 
@@ -680,7 +694,7 @@ contains
 
     ! The face is half the distance in the fine cell
     Slope1_V = 0.5*Slope1_V
-    !Limit gradient in the first layer of finer cells
+    ! Limit gradient in the first layer of finer cells
     Slope2_V = 0.5*SignGradNormal_V*(Fine2_V - Fine1_V)
 
     ! The first limiting ensures that the FineToCoarse face value
@@ -693,23 +707,23 @@ contains
     FineF_V         = Fine1_V + GradNormalLtd_V
 
   end subroutine accurate_reschange1d
-  !===========================================================================
+  !============================================================================
   subroutine calc_face_value(DoResChangeOnly, iBlock)
 
     use ModMultiFluid, ONLY: nIonFluid, iRho, iUx, iUz, iUx_I, iUz_I
 
     ! The subroutine calculates right and left face values (primitive
-    ! variables) LeftState_VX .. RightState_VZ for block iBlock from 
+    ! variables) LeftState_VX .. RightState_VZ for block iBlock from
     ! the cell centered State_VGB.
     !
-    ! If DoResChangeOnly is true, only facevalues next to a coarser 
+    ! If DoResChangeOnly is true, only facevalues next to a coarser
     ! neighbor block are calculated.
 
     use ModMain,     ONLY: nOrder, nOrderProlong, UseB0, &
          UseConstrainB, nIFace, nJFace, nKFace, &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
          iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
-         UseHighResChange, iTest, jTest, kTest, BlkTest, DimTest, VarTest
+         UseHighResChange
 
     use ModGeometry, ONLY : true_cell, body_BLK
     use ModPhysics, ONLY: GammaWave, c2LIGHT, inv_c2LIGHT
@@ -725,7 +739,6 @@ contains
          RightState_VY,     &  ! Face Right Y
          LeftState_VZ,      &  ! Face Left  Z
          RightState_VZ         ! Face Right Z
-
 
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
@@ -751,39 +764,39 @@ contains
     real:: Laplace_V(nVar), Laplace
 
     real:: State_V(nVar), Energy
-    integer:: iVarSmoothLast, iVarSmooth 
+    integer:: iVarSmoothLast, iVarSmooth
 
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'calc_face_value'
-    !-------------------------------------------------------------------------
-    if(iBlock==BLKtest .and. .not. DoResChangeOnly )then
-       call set_oktest('calc_face_value', DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_face_value'
+    !--------------------------------------------------------------------------
+    if(.not. DoResChangeOnly)then
+       call test_start(NameSub, DoTest, iBlock)
     else
-       DoTest=.false.; DoTestMe=.false.
+       DoTest=.false.
     end if
 
-    if(DotestMe)then
+    if(DoTest)then
        write(*,*) NameSub,' starting with DoResChangeOnly=', DoResChangeOnly
-       if(DimTest==0 .or. DimTest==1)then
+       if(iDimTest==0 .or. iDimTest==1)then
           write(*,*)'TestVar(iTest-nG:iTest+nG)=', &
-               State_VGB(VarTest,iTest-nG:iTest+nG,jTest,kTest,BlkTest)
-          if(.not.all(true_cell(iTest-nG:iTest+nG,jTest,kTest,BlkTest))) &
+               State_VGB(iVarTest,iTest-nG:iTest+nG,jTest,kTest,iBlockTest)
+          if(.not.all(true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlockTest))) &
                write(*,*)'true_cell(iTest-nG:iTest+nG)=',&
-               true_cell(iTest-nG:iTest+nG,jTest,kTest,BlkTest)
+               true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlockTest)
        end if
-       if(nDim > 1 .and. (DimTest==0 .or. DimTest==2))then
+       if(nDim > 1 .and. (iDimTest==0 .or. iDimTest==2))then
           write(*,*)'TestVar(jTest-nG:jTest+nG)=', &
-               State_VGB(VarTest,iTest,jTest-nG:jTest+nG,kTest,BlkTest)
-          if(.not.all(true_cell(iTest,jTest-nG:jTest+nG,kTest,BlkTest))) &
+               State_VGB(iVarTest,iTest,jTest-nG:jTest+nG,kTest,iBlockTest)
+          if(.not.all(true_cell(iTest,jTest-nG:jTest+nG,kTest,iBlockTest))) &
                write(*,*)'true_cell(jTest-nG:jTest+nG)=',&
-               true_cell(iTest,jTest-nG:jTest+nG,kTest,BlkTest)
+               true_cell(iTest,jTest-nG:jTest+nG,kTest,iBlockTest)
        end if
-       if(nDim > 2 .and. (DimTest==0 .or. DimTest==3)) then
+       if(nDim > 2 .and. (iDimTest==0 .or. iDimTest==3)) then
           write(*,*)'TestVar(kTest-nG:kTest+nG)=', &
-               State_VGB(VarTest,iTest,jTest,kTest-nG:kTest+nG,BlkTest)
-          if(.not.all(true_cell(iTest,jTest,kTest-nG:kTest+nG,BlkTest))) &
+               State_VGB(iVarTest,iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
+          if(.not.all(true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest))) &
                write(*,*)'true_cell(kTest-nG:kTest+nG)=', &
-               true_cell(iTest,jTest,kTest-nG:kTest+nG,BlkTest)
+               true_cell(iTest,jTest,kTest-nG:kTest+nG,iBlockTest)
        end if
     end if
 
@@ -794,13 +807,11 @@ contains
        allocate(FaceL_I(1:MaxIJK+2))
        allocate(FaceR_I(0:MaxIJK+1))
        allocate(WeightL_II(-2:2,0:MaxIJK+1))
-       allocate(WeightR_II(-2:2,0:MaxIJK+1)) 
+       allocate(WeightR_II(-2:2,0:MaxIJK+1))
     endif
 
     UseTrueCell = body_BLK(iBlock)
 
-
-    
     ! Set variables related to low vs. high order scheme
     if(nOrder>2) then
        call set_low_order_face
@@ -831,8 +842,8 @@ contains
 
     UsePtotalLimiter = nOrder > 1 .and. nIonFluid == 1 .and. UsePtotalLtd
 
-    if(.not.DoResChangeOnly & !In order not to call it twice
-         .and. nOrder > 1   & !Is not needed for nOrder=1
+    if(.not.DoResChangeOnly & ! In order not to call it twice
+         .and. nOrder > 1   & ! Is not needed for nOrder=1
          .and. (UseAccurateResChange .or. UseTvdResChange)) &
          call correct_monotone_restrict(iBlock)
 
@@ -858,27 +869,27 @@ contains
        do k = kMinFace, kMaxFace
           do j = jMinFace, jMaxFace
              do i=1-nStencil,nI+nStencil
-                call calc_primitives_boris    !needed for x-faces
+                call calc_primitives_boris    ! needed for x-faces
              end do
           end do
        end do
        if(nJ > 1)then
           do k = kMinFace, kMaxFace; do i = iMinFace, iMaxFace
              do j=1-nStencil,jMinFace-1
-                call calc_primitives_boris    ! additional calculations for 
+                call calc_primitives_boris    ! additional calculations for
              end do                           ! y -faces
              do j=jMaxFace+1,nJ+nStencil
-                call calc_primitives_boris    ! additional calculations for 
+                call calc_primitives_boris    ! additional calculations for
              end do	                      ! y-faces
           end do; end do
        end if
        if(nK > 1)then
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
-                call calc_primitives_boris    ! additional calculations for 
+                call calc_primitives_boris    ! additional calculations for
              end do                           ! z-faces
              do k=kMaxFace+1,nK+nStencil
-                call calc_primitives_boris    ! additional calculations for 
+                call calc_primitives_boris    ! additional calculations for
              end do	                      ! z-faces
           end do; end do
        end if
@@ -960,27 +971,27 @@ contains
           do k=kMinFace,kMaxFace
              do j=jMinFace,jMaxFace
                 do i=1-nStencil,nI+nStencil
-                   call calc_primitives_MHD   !needed for x-faces
+                   call calc_primitives_MHD   ! needed for x-faces
                 end do
              end do
           end do
           if(nJ > 1)then
              do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
                 do j=1-nStencil,jMinFace-1
-                   call calc_primitives_MHD   ! additional calculations for 
+                   call calc_primitives_MHD   ! additional calculations for
                 end do                        ! y -faces
                 do j=jMaxFace+1,nJ+nStencil
-                   call calc_primitives_MHD   ! additional calculations for 
+                   call calc_primitives_MHD   ! additional calculations for
                 end do	                      ! y-faces
              end do; end do
           end if
           if(nK > 1)then
              do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
                 do k=1-nStencil,kMinFace-1
-                   call calc_primitives_MHD   ! additional calculations for 
+                   call calc_primitives_MHD   ! additional calculations for
                 end do                        ! z-faces
                 do k=kMaxFace+1,nK+nStencil
-                   call calc_primitives_MHD   ! additional calculations for 
+                   call calc_primitives_MHD   ! additional calculations for
                 end do	                      ! z-faces
              end do; end do
           end if
@@ -1041,7 +1052,7 @@ contains
        if(nOrderProlong==1 .and..not.UseConstrainB &
             .and. .not.UseHighResChange)then
 
-          ! If nOrderProlong is 1 then use TVD reschange or accurate reschange 
+          ! If nOrderProlong is 1 then use TVD reschange or accurate reschange
           ! scheme and overwrite face values at resolution changes
 
           if(nJ == 1 .and. (UseAccurateResChange .or. UseTvdResChange))then
@@ -1192,31 +1203,32 @@ contains
 
     end select  ! nOrder
 
-    if(DotestMe)then
+    if(DoTest)then
        write(*,*) NameSub,' finishing with DoResChangeOnly=', DoResChangeOnly
-       if(DimTest==0 .or. DimTest==1) &
+       if(iDimTest==0 .or. iDimTest==1) &
             write(*,*)'Left,Right(i-1/2),Left,Right(i+1/2)=', &
-            LeftState_VX(VarTest,iTest,jTest,kTest), &
-            RightState_VX(VarTest,iTest,jTest,kTest), &
-            LeftState_VX(VarTest,iTest+1,jTest,kTest), &
-            RightState_VX(VarTest,iTest+1,jTest,kTest)
+            LeftState_VX(iVarTest,iTest,jTest,kTest), &
+            RightState_VX(iVarTest,iTest,jTest,kTest), &
+            LeftState_VX(iVarTest,iTest+1,jTest,kTest), &
+            RightState_VX(iVarTest,iTest+1,jTest,kTest)
 
-       if(nDim > 1 .and. (DimTest==0 .or. DimTest==2)) &
+       if(nDim > 1 .and. (iDimTest==0 .or. iDimTest==2)) &
             write(*,*)'Left,Right(j-1/2),Left,Right(j+1/2)=', &
-            LeftState_VY(VarTest,iTest,jTest,kTest), &
-            RightState_VY(VarTest,iTest,jTest,kTest), &
-            LeftState_VY(VarTest,iTest,jTest+1,kTest), &
-            RightState_VY(VarTest,iTest,jTest+1,kTest)
+            LeftState_VY(iVarTest,iTest,jTest,kTest), &
+            RightState_VY(iVarTest,iTest,jTest,kTest), &
+            LeftState_VY(iVarTest,iTest,jTest+1,kTest), &
+            RightState_VY(iVarTest,iTest,jTest+1,kTest)
 
-       if(nDim > 2 .and. (DimTest==0 .or. DimTest==3)) &
+       if(nDim > 2 .and. (iDimTest==0 .or. iDimTest==3)) &
             write(*,*)'Left,Right(k-1/2),Left,Right(k+1/2)=', &
-            LeftState_VZ(VarTest,iTest,jTest,kTest), &
-            RightState_VZ(VarTest,iTest,jTest,kTest), &
-            LeftState_VZ(VarTest,iTest,jTest,kTest+1), &
-            RightState_VZ(VarTest,iTest,jTest,kTest+1)
+            LeftState_VZ(iVarTest,iTest,jTest,kTest), &
+            RightState_VZ(iVarTest,iTest,jTest,kTest), &
+            LeftState_VZ(iVarTest,iTest,jTest,kTest+1), &
+            RightState_VZ(iVarTest,iTest,jTest,kTest+1)
 
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine limit_var(lMin, lMax, iVar, DoCalcWeightIn)
@@ -1262,6 +1274,7 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iVar
+
       !------------------------------------------------------------------------
       do iVar = 1, nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
@@ -1278,6 +1291,7 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iVar
+
       !------------------------------------------------------------------------
       do iVar = 1, nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
@@ -1294,6 +1308,7 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iVar
+
       !------------------------------------------------------------------------
       do iVar=1,nVar
          if(.not.UseLogLimiter_V(iVar))CYCLE
@@ -1310,6 +1325,7 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
+
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VX(iVarLimitRatio_I,i,j,k) = &
@@ -1324,6 +1340,7 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
+
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VY(iVarLimitRatio_I,i,j,k) = &
@@ -1338,6 +1355,7 @@ contains
 
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer :: i, j, k
+
       !------------------------------------------------------------------------
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          LeftState_VZ(iVarLimitRatio_I,i,j,k) = &
@@ -1352,6 +1370,7 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
+
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1376,6 +1395,7 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
+
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1400,6 +1420,7 @@ contains
 
       integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax
       integer :: i, j, k
+
       !------------------------------------------------------------------------
       if(UseElectronPressure)then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1419,14 +1440,15 @@ contains
       end if
 
     end subroutine ptotal_to_p_facez
-
     !==========================================================================
-    subroutine calc_primitives_boris                                       
-      !momentum is limited
+
+    subroutine calc_primitives_boris
+      ! momentum is limited
 
       ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
       !            = rhoU + (U B^2 - B U.B)/c^2
       !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
+      !------------------------------------------------------------------------
       Primitive_VG(:,i,j,k) = &
            State_VGB(1:nVar,i,j,k,iBlock)
       BxFull = B0_DG(x_,i,j,k) + Primitive_VG(Bx_,i,j,k)
@@ -1462,14 +1484,14 @@ contains
            Primitive_VG(iVarLimitRatio_I,i,j,k)/Primitive_VG(Rho_,i,j,k)
 
     end subroutine calc_primitives_boris
-    !=========================================================================
+    !==========================================================================
     subroutine get_facex_high(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       if(TypeLimiter == 'no')then
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -1613,7 +1635,7 @@ contains
            iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facex_high
-    !========================================================================
+    !==========================================================================
     subroutine get_facey_high(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
@@ -1621,7 +1643,7 @@ contains
       real, allocatable, save:: State_VY(:,:,:,:)
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1652,9 +1674,9 @@ contains
                iVarSmoothLast = 0
                do iSort = 1, nVar
                   if(UseCweno) then
-                     ! The variables use the same smooth indicator are 
-                     ! calculated one by one. And the smooth indicator 
-                     ! itself is calculated first. 
+                     ! The variables use the same smooth indicator are
+                     ! calculated one by one. And the smooth indicator
+                     ! itself is calculated first.
                      iVar = iVarSmoothIndex_I(iSort)
                      iVarSmooth = iVarSmooth_V(iVar)
                      if(iVarSmooth /= iVarSmoothLast) then
@@ -1693,7 +1715,7 @@ contains
                end if
 
                ! Get face value for Uy
-               ! Copy points along i direction into 1D array                  
+               ! Copy points along i direction into 1D array
                Cell_I(jMin-nG:jMax-1+nG) = &
                     Primitive_VG(Uy_,i,jMin-nG:jMax-1+nG,k)
                call limit_var(jMin, jMax, Uy_)
@@ -1725,7 +1747,7 @@ contains
 
          ! Convert from face averaged to face centered variables (eq 18)
          State_VY = LeftState_VY
-         do k = kMinFace,kMaxFace; do j = jMin,jMax; do i = iMinFace,iMaxFace; 
+         do k = kMinFace,kMaxFace; do j = jMin,jMax; do i = iMinFace,iMaxFace;
             Laplace_V = -2*(nDim-1)*State_VY(:,i,j,k) &
                  + State_VY(:,i-1,j,k) + State_VY(:,i+1,j,k)
             if(nK>1) Laplace_V = Laplace_V &
@@ -1739,7 +1761,7 @@ contains
          end do; end do; end do
          if(TypeLimiter /= 'no')then
             State_VY = RightState_VY
-            do k=kMinFace,kMaxFace; do j=jMin,jMax; do i=iMinFace,iMaxFace; 
+            do k=kMinFace,kMaxFace; do j=jMin,jMax; do i=iMinFace,iMaxFace;
                Laplace_V = -2*(nDim-1)*State_VY(:,i,j,k) &
                     + State_VY(:,i-1,j,k) + State_VY(:,i+1,j,k)
                if(nK>1) Laplace_V = Laplace_V &
@@ -1755,13 +1777,13 @@ contains
       end if
 
       if(TypeLimiter == 'no') RightState_VY = LeftState_VY
-      if(DoLimitMomentum)call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      if(DoLimitMomentum)call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facey_high
-    !========================================================================
+    !==========================================================================
     subroutine get_facez_high(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
@@ -1769,7 +1791,7 @@ contains
       real, allocatable, save:: State_VZ(:,:,:,:)
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       if(TypeLimiter == 'no')then
          do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
@@ -1819,7 +1841,7 @@ contains
                        Primitive_VG(iVar,i,j,kMin-nG:kMax-1+nG)
 
                   if(UseLowOrder)then
-                     ! Use 2nd order face values where high order is skipped    
+                     ! Use 2nd order face values where high order is skipped
                      FaceL_I(kMin:kMax) = LeftState_VZ(iVar,i,j,kMin:kMax)
                      FaceR_I(kMin:kMax) = RightState_VZ(iVar,i,j,kMin:kMax)
                   end if
@@ -1838,7 +1860,7 @@ contains
                   call calc_cweno_weight(kMin, kMax)
                end if
 
-               ! Copy points along i direction into 1D array                  
+               ! Copy points along i direction into 1D array
                Cell_I(kMin-nG:kMax-1+nG) = &
                     Primitive_VG(Uz_,i,j,kMin-nG:kMax-1+nG)
                call limit_var(kMin, kMax, Uz_)
@@ -1896,37 +1918,37 @@ contains
          end if
       end if
 
-      if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facez_high
+    !==========================================================================
 
-    !========================================================================
     subroutine get_facex_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VX(:,i,j,k)=Primitive_VG(:,i-1,j,k)
-         RightState_VX(:,i,j,k)=Primitive_VG(:,i,j,k)              
+         RightState_VX(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
 
-      if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facex_first
-    !========================================================================
+    !==========================================================================
     subroutine get_facey_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VY(:,i,j,k)=Primitive_VG(:,i,j-1,k)
-         RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)              
+         RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
 
       if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1935,17 +1957,17 @@ contains
            iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facey_first
-    !========================================================================
+    !==========================================================================
     subroutine get_facez_first(iMin,iMax,jMin,jMax,kMin,kMax)
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
          LeftState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k-1)
          RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
 
-      if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1954,7 +1976,7 @@ contains
     !==========================================================================
     subroutine calc_primitives_MHD
       integer:: iVar
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
       RhoInv = 1/Primitive_VG(Rho_,i,j,k)
       Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
@@ -2061,13 +2083,14 @@ contains
 
       end do; end do; end do
     end subroutine BorisFaceXtoMHD
-    !=========================================================================
+    !==========================================================================
     subroutine BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
       integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
 
       ! U_Boris=rhoU_Boris/rho
       ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
 
+      !------------------------------------------------------------------------
       do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
 
          ! Left face values
@@ -2101,7 +2124,7 @@ contains
               Ga2Boris * (LeftState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
 
          ! Right face values
-         RhoInv = 1/RightState_VY(rho_,i,j,k) 
+         RhoInv = 1/RightState_VY(rho_,i,j,k)
          if(UseB0)then
             BxFull = B0_DY(x_,i,j,k) + RightState_VY(Bx_,i,j,k)
             ByFull = B0_DY(y_,i,j,k) + RightState_VY(By_,i,j,k)
@@ -2209,6 +2232,7 @@ contains
     subroutine get_face_accurate3d(iSideIn)
       integer, intent(in):: iSideIn
 
+      !------------------------------------------------------------------------
       select case(iSideIn)
       case(1)
          do k=1,nK,2; do j=1,nJ,2
@@ -2223,7 +2247,7 @@ contains
                     FineToCoarseF_VII=RightState_VX(:,1,j:j+1,k:k+1)   ,&
                     FineF_VII        = LeftState_VX(:,2,j:j+1,k:k+1))
             else
-               call tvd_reschange_body(                                 & 
+               call tvd_reschange_body(                                 &
                     Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
                     Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
                     Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
@@ -2250,7 +2274,7 @@ contains
                     FineToCoarseF_VII=LeftState_VX(:,nI+1,j:j+1,k:k+1) ,&
                     FineF_VII       =RightState_VX(:,nI,j:j+1,k:k+1))
             else
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
                     Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
                     Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
@@ -2277,7 +2301,7 @@ contains
                     FineToCoarseF_VII=RightState_VY(:,i:i+1,1,k:k+1)   ,&
                     FineF_VII       = LeftState_VY(:,i:i+1,2,k:k+1))
             else
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
                     Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
@@ -2302,9 +2326,9 @@ contains
                     Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
                     CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
                     FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
-                    FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
+                    FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1))
             else
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
                     Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
@@ -2329,9 +2353,9 @@ contains
                     Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
                     CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
                     FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
-                    FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
+                    FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))
             else
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
                     Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
@@ -2356,9 +2380,9 @@ contains
                     Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
                     CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
                     FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
-                    FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)) 
+                    FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK))
             else
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
                     Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
@@ -2374,10 +2398,11 @@ contains
          end do; end do
       end select
     end subroutine get_face_accurate3d
-    !=======================================================================
+    !==========================================================================
     subroutine get_face_accurate1d(iSideIn)
       integer, intent(in):: iSideIn
 
+      !------------------------------------------------------------------------
       select case(iSideIn)
       case(1)
          call accurate_reschange1d(&
@@ -2400,10 +2425,11 @@ contains
       end select
 
     end subroutine get_face_accurate1d
-    !=======================================================================
+    !==========================================================================
     subroutine get_face_accurate2d(iSideIn)
       integer, intent(in):: iSideIn
 
+      !------------------------------------------------------------------------
       select case(iSideIn)
       case(1)
          do j=1,nJ,2
@@ -2447,19 +2473,20 @@ contains
                  Fine2_VI        = Primitive_VG(:,i:i+1,nJ-1,1)   ,&
                  CoarseToFineF_VI=RightState_VY(:,i:i+1,nJ+1,1)   ,&
                  FineToCoarseF_VI= LeftState_VY(:,i:i+1,nJ+1,1)   ,&
-                 FineF_VI        =RightState_VY(:,i:i+1,nJ,1)) 
+                 FineF_VI        =RightState_VY(:,i:i+1,nJ,1))
          end do
       end select
     end subroutine get_face_accurate2d
-    !=======================================================================
+    !==========================================================================
     subroutine get_face_tvd(iSideIn)
       integer,intent(in)::iSideIn
 
+      !------------------------------------------------------------------------
       select case(iSideIn)
       case(1)
          do k=1,nK,2; do j=1,nJ,2
             if(.not.all(true_cell(-1:2,j:j+1,k:k+1,iBlock)))then
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,-1,j,k)           ,&
                     Coarse1_V    =    Primitive_VG(:, 0,j,k)           ,&
                     Fine1_VII    =    Primitive_VG(:, 1,j:j+1,k:k+1)   ,&
@@ -2485,7 +2512,7 @@ contains
       case(2)
          do k=1,nK,2; do j=1,nJ,2
             if(.not.all(true_cell(nI-1:nI+2,j:j+1,k:k+1,iBlock)))then
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,nI+2,j,k)         ,&
                     Coarse1_V    =    Primitive_VG(:, nI+1,j,k)        ,&
                     Fine1_VII    =    Primitive_VG(:, nI,j:j+1,k:k+1)  ,&
@@ -2511,7 +2538,7 @@ contains
       case(3)
          do k=1,nK,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,-1:2,k:k+1,iBlock)))then
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,-1,k)           ,&
                     Coarse1_V    =    Primitive_VG(:,i, 0,k)           ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1, 1,k:k+1)   ,&
@@ -2537,7 +2564,7 @@ contains
       case(4)
          do k=1,nK,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,nJ-1:nJ+2,k:k+1,iBlock)))then
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,nJ+2,k)         ,&
                     Coarse1_V    =    Primitive_VG(:,i,nJ+1,k)         ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1, nJ,k:k+1)  ,&
@@ -2557,13 +2584,13 @@ contains
                     Fine2_VII    =    Primitive_VG(:,i:i+1, nJ-1,k:k+1),&
                     CoarseToFineF_VII=RightState_VY(:,i:i+1,nJ+1,k:k+1),&
                     FineToCoarseF_VII=LeftState_VY(:,i:i+1,nJ+1,k:k+1) ,&
-                    FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1)) 
+                    FineF_VII        =RightState_VY(:,i:i+1,nJ,k:k+1))
             end if
          end do; end do
       case(5)
          do j=1,nJ,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,j:j+1,-1:2,iBlock)))then
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,j,-1)           ,&
                     Coarse1_V    =    Primitive_VG(:,i,j, 0)           ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, 1)   ,&
@@ -2583,13 +2610,13 @@ contains
                     Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, 2)   ,&
                     CoarseToFineF_VII= LeftState_VZ(:,i:i+1,j:j+1,1)   ,&
                     FineToCoarseF_VII=RightState_VZ(:,i:i+1,j:j+1,1)   ,&
-                    FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))  
+                    FineF_VII        = LeftState_VZ(:,i:i+1,j:j+1,2))
             end if
          end do; end do
       case(6)
          do j=1,nJ,2; do i=1,nI,2
             if(.not.all(true_cell(i:i+1,j:j+1,nK-1:nK+2,iBlock)))then
-               call tvd_reschange_body(& 
+               call tvd_reschange_body(&
                     Coarse2_V    =    Primitive_VG(:,i,j,nK+2)         ,&
                     Coarse1_V    =    Primitive_VG(:,i,j,nK+1)         ,&
                     Fine1_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK)  ,&
@@ -2609,16 +2636,17 @@ contains
                     Fine2_VII    =    Primitive_VG(:,i:i+1,j:j+1, nK-1),&
                     CoarseToFineF_VII=RightState_VZ(:,i:i+1,j:j+1,nK+1),&
                     FineToCoarseF_VII=LeftState_VZ(:,i:i+1,j:j+1,nK+1) ,&
-                    FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK)) 
+                    FineF_VII        =RightState_VZ(:,i:i+1,j:j+1,nK))
             end if
          end do; end do
       end select
     end subroutine get_face_tvd
-    !=========================================================================
+    !==========================================================================
     subroutine get_facex_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer::i1, iMinSharp, iMaxSharp
-      !----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       iMinSharp = iMin
       iMaxSharp = iMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2628,7 +2656,7 @@ contains
               min(iMax, max(iMin - 1, nI + 1 - nFaceLimiterResChange))
       endif
 
-      do k=kMin, kMax; do j=jMin, jMax; 
+      do k=kMin, kMax; do j=jMin, jMax;
          Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
          if(UseTrueCell)then
             IsTrueCell_I(iMin-2:iMax+1) = true_cell(iMin-2:iMax+1,j,k,iBlock)
@@ -2640,7 +2668,7 @@ contains
                  call limiter_body(iMaxSharp+1, iMax, BetaLimiterResChange)
          else
             if(iMinSharp <= iMaxSharp) &
-                 call limiter(iMinSharp, iMaxSharp, BetaLimiter)            
+                 call limiter(iMinSharp, iMaxSharp, BetaLimiter)
             if(iMin < iMinSharp) &
                  call limiter(iMin, iMinSharp-1, BetaLimiterResChange)
             if(iMax > iMaxSharp) &
@@ -2653,14 +2681,15 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      if(DoLimitMomentum) call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facex_second
     !==========================================================================
     subroutine get_facey_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer::j1, jMinSharp, jMaxSharp
-      !----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       jMinSharp = jMin
       jMaxSharp = jMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2682,7 +2711,7 @@ contains
                  call limiter_body(jMaxSharp+1, jMax, BetaLimiterResChange)
          else
             if(jMinSharp <= jMaxSharp) &
-                 call limiter(jMinSharp, jMaxSharp, BetaLimiter)            
+                 call limiter(jMinSharp, jMaxSharp, BetaLimiter)
             if(jMin < jMinSharp) &
                  call limiter(jMin, jMinSharp-1, BetaLimiterResChange)
             if(jMax > jMaxSharp) &
@@ -2695,14 +2724,15 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax) 
+      if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facey_second
     !==========================================================================
     subroutine get_facez_second(iMin,iMax,jMin,jMax,kMin,kMax)
       integer,intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
       integer::k1, kMinSharp, kMaxSharp
-      !----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       kMinSharp = kMin
       kMaxSharp = kMax
       if(BetaLimiter > BetaLimiterResChange)then
@@ -2711,7 +2741,7 @@ contains
          if(neiLtop(iBlock) /= 0) kMaxSharp = &
               min(kMax, max(kMin - 1, nK + 1 - nFaceLimiterResChange))
       endif
-      do j=jMin,jMax; do i=iMin,iMax; 
+      do j=jMin,jMax; do i=iMin,iMax;
          Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
          if(UseTrueCell)then
             IsTrueCell_I(kMin-2:kMax+1) = true_cell(i,j,kMin-2:kMax+1,iBlock)
@@ -2723,7 +2753,7 @@ contains
                  call limiter_body(kMaxSharp+1, kMax, BetaLimiterResChange)
          else
             if(kMinSharp <= kMaxSharp) &
-                 call limiter(kMinSharp, kMaxSharp, BetaLimiter)            
+                 call limiter(kMinSharp, kMaxSharp, BetaLimiter)
             if(kMin < kMinSharp) &
                  call limiter(kMin, kMinSharp-1, BetaLimiterResChange)
             if(kMax > kMaxSharp) &
@@ -2739,8 +2769,8 @@ contains
       if(DoLimitMomentum) call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facez_second
+    !==========================================================================
 
-    !========================================================================
     subroutine flatten(Prim_VG)
 
       use ModMultiFluid, ONLY: iFluid, iRho, iUx, iUy, iUz, iP, select_fluid
@@ -2755,8 +2785,8 @@ contains
       real, allocatable:: FlatCoef_G(:,:,:)
 
       integer:: i, j, k
-      !----------------------------------------------------------------------
-      !call timing_start('flatten')
+      !------------------------------------------------------------------------
+      ! call timing_start('flatten')
 
       if(.not.allocated(FlatCoef_G)) &
            allocate(FlatCoef_G(0:nI+1,1-jDim_:nJ+jDim_,1-kDim_:nK+kDim_))
@@ -2774,7 +2804,7 @@ contains
                FlatCoef_I(i) = 1.0
 
                if(UseDuFlat)then
-                  ! Check if there is compression 
+                  ! Check if there is compression
                   ! Note: Balsara suggests to look at rarefactions too...)
                   if(Prim_VG(iUx,i-1,j,k) - Prim_VG(iUx,i+1,j,k) <= 0)CYCLE
                end if
@@ -2913,11 +2943,11 @@ contains
 
       end do FLUIDLOOP
 
-      !call timing_stop('flatten')
+      ! call timing_stop('flatten')
 
     end subroutine flatten
+    !==========================================================================
 
-    !======================================================================
     subroutine set_low_order_face
 
       use BATL_lib, ONLY: block_inside_regions
@@ -2927,7 +2957,7 @@ contains
 
       integer:: i, j, k
       character(len=*), parameter:: NameSub = 'set_low_order_face'
-      !-------------------------------------------------------------------
+      !------------------------------------------------------------------------
       UseLowOrderOnly = .false.
       UseLowOrder = UseTrueCell .or. UseLowOrderRegion
       IsLowOrderOnly_B(iBlock) = .false.
@@ -2979,9 +3009,10 @@ contains
 
       if(UseLowOrderOnly) IsLowOrderOnly_B(iBlock) = .true.
     end subroutine set_low_order_face
+    !==========================================================================
 
   end subroutine calc_face_value
-  !===========================================================================
+  !============================================================================
   subroutine limiter_mp(lMin, lMax, Cell_I, Cell2_I, iVar)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
@@ -2998,8 +3029,8 @@ contains
     real, parameter:: &
          c1 = 2/60., c2 = -13/60., c3 = 47/60., c4 = 27/60., c5 = -3/60.
 
-    !If the cell center value is used, the interpolatio for the face value 
-    !is implemented with the coefficients below
+    ! If the cell center value is used, the interpolatio for the face value
+    ! is implemented with the coefficients below
     real, parameter:: &
          d1 = 3./128, d2 = -20./128, d3 = 90./128, d4=60./128, d5=-5./128
 
@@ -3019,11 +3050,13 @@ contains
     real:: FaceMin, FaceMax
 
     integer:: l
-    !------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'limiter_mp'
+    !--------------------------------------------------------------------------
 
     ! Second derivative based on cell values (3 ghost cells are needed)
     do l = lMin-2, lMax+1
-       D2_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1) 
+       D2_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1)
     end do
 
     ! Limit left face first. Loop index l is for cell center, and face l+1/2
@@ -3040,8 +3073,8 @@ contains
        Cellp  = Cell_I(l+1)
        Cellpp = Cell_I(l+2)
 
-       if(UseFDFaceFlux) then 
-          !Get the 5th order face value.
+       if(UseFDFaceFlux) then
+          ! Get the 5th order face value.
           FaceOrig = d1*Cellmm + d2*Cellm + d3*Cell + d4*Cellp + d5*Cellpp
        else
           ! 5th order interpolation
@@ -3088,7 +3121,7 @@ contains
     end do
 
     do l = lMin-2, lMax+1
-       D2_I(l) = Cell2_I(l+1) - 2*Cell2_I(l) + Cell2_I(l-1) 
+       D2_I(l) = Cell2_I(l+1) - 2*Cell2_I(l) + Cell2_I(l-1)
     end do
 
     ! Limit right face. Loop index l is for cell center, and face l-1/2
@@ -3104,8 +3137,8 @@ contains
        Cellp  = Cell2_I(l+1)
        Cellpp = Cell2_I(l+2)
 
-       if(UseFDFaceFlux) then 
-          !FaceOrig 
+       if(UseFDFaceFlux) then
+          ! FaceOrig
           FaceOrig = d1*Cellpp + d2*Cellp + d3*Cell + d4* Cellm + d5*Cellmm
        else
           ! 5th order interpolation
@@ -3151,18 +3184,19 @@ contains
     end do
 
   contains
-    !========================================================================
+    !==========================================================================
     real function minmod(a, b)
       real, intent(in):: a, b
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       minmod = (sign(0.5,a) + sign(0.5,b))*min(abs(a), abs(b))
     end function minmod
+    !==========================================================================
 
-    !========================================================================
     real function minmod4(a, b, c, d)
       real, intent(in):: a, b, c, d
       real:: SignSum
-      !---------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       SignSum = sign(0.25,a) + sign(0.25,b) + sign(0.25,c) + sign(0.25,d)
       if(abs(SignSum) < 0.9)then
          minmod4 = 0.0
@@ -3170,10 +3204,10 @@ contains
          minmod4 = SignSum*min(abs(a), abs(b), abs(c), abs(d))
       end if
     end function minmod4
-    !========================================================================
+    !==========================================================================
 
   end subroutine limiter_mp
-  !==========================================================================
+  !============================================================================
   subroutine calc_cweno_weight(lMin, lMax)
 
     integer, intent(in):: lMin, lMax
@@ -3184,7 +3218,7 @@ contains
     real, parameter:: c73over120 = 73./120, c7over6 = 7./6, c1over60 = 1./60
     real, parameter:: c13over3 = 13./3
 
-    !Constants for ECHO scheme(UseFDFaceFlux)
+    ! Constants for ECHO scheme(UseFDFaceFlux)
     real, parameter:: c3over8 = 3./8, c1over8 = 1./8, c6over8 = 3./4
     real, parameter:: c10over8 = 10./8, c15over8 = 15./8
     real, parameter:: c3over64 = 3./64, c1over16 = 1./16
@@ -3208,7 +3242,9 @@ contains
     ! eq (24)
     real:: AlphaIS_I(4), Weight_I(4), w1, w2, w3, w4
     real:: ISmin, ISmax, Epsilon
-    !----------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'calc_cweno_weight'
+    !--------------------------------------------------------------------------
     do l = lMin - 1, lMax
 
        Cellmm = Cell_I(l-2)
@@ -3238,16 +3274,15 @@ contains
        ISmax = maxval(ISLocal_I(1:3))
        ISLocal_I(4) = IsMax
 
-
        ! This expression is from G. Capdeville's code
        Epsilon = sqrt(((ISmin + 1e-12)/(ISmax + 1e-12))**3)
 
        ! the following is just as fast with NAG 5.1
-       !Epsilon = ((ISmin + 1e-12)/(ISmax + 1e-12))**1.5 
+       ! Epsilon = ((ISmin + 1e-12)/(ISmax + 1e-12))**1.5
 
-       ! This alternative expression comes from: 
+       ! This alternative expression comes from:
        ! A.A.I. pEER, et al., Appl. Math. Lett. 22 (2009) 1730-1733
-       !Epsilon = 1e-6*min(1.0, ((ISmin+1e-28)/(ISmax-ISmin+1e-30))) + 1e-99
+       ! Epsilon = 1e-6*min(1.0, ((ISmin+1e-28)/(ISmax-ISmin+1e-30))) + 1e-99
 
        ! eq(24)
        AlphaIS_I = LinearCoeff_I/(Epsilon + ISLocal_I)**2
@@ -3274,7 +3309,7 @@ contains
           WeightR_II(+2,l) = c3over8*w3 - c3over64*w4
 
        else
-          ! Calculate interpolation weights used in eq (34) to obtain 
+          ! Calculate interpolation weights used in eq (34) to obtain
           ! left and right face values
           WeightL_II(-2,l) = c1over3*w1 - c1over60*w4
           WeightL_II(-1,l) = -(c1over6*w2 + c7over6*w1 + c7over120*w4)
@@ -3293,7 +3328,7 @@ contains
     end do
 
   end subroutine calc_cweno_weight
-  !=========================================================================
+  !============================================================================
   subroutine limiter_cweno5(lMin, lMax, Cell_I, Cell2_I, iVar)
 
     ! G. Capdeville, A central WENO scheme for solving hyperbolic conservation
@@ -3305,7 +3340,9 @@ contains
     integer, optional, intent(in):: iVar
 
     integer:: l
-    !----------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'limiter_cweno5'
+    !--------------------------------------------------------------------------
     do l = lMin-1, lMax-1
        if(UseLowOrder)then
           if(UseLowOrder_I(l+1)) CYCLE
@@ -3338,17 +3375,18 @@ contains
           end do
        end if
     endif
+
   end subroutine limiter_cweno5
-  !===========================================================================
+  !============================================================================
   subroutine limiter_ppm4(lMin, lMax, iVar)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
     integer, intent(in):: iVar        ! variable to check for positivity
 
-    ! Apply 4th order PPM limiter as described by 
+    ! Apply 4th order PPM limiter as described by
     !
     ! "A high-order finite volume method for hyperbolic conservation laws
-    ! on locally-refined grids", 
+    ! on locally-refined grids",
     ! P. McCorquodale and P. Colella, 2010, LBNL document
     !
     ! Input: cell centered primitive variables Cell_I(lMin-nG:lMax-1+nG)
@@ -3361,7 +3399,7 @@ contains
     ! For now the implementation is done per variable
     ! Optimization can be done once it works
 
-    ! Various constants 
+    ! Various constants
     real, parameter:: c0 = 1e-12, c2 = 1.25, c3 = 0.1, c6=6.0
 
     ! Second derivative based on cell center values
@@ -3374,11 +3412,11 @@ contains
 
     integer:: l
 
-    character(len=*), parameter:: NameSub = 'limiter_ppm4'
-
-    !-------------------------------------------------------------------------
     ! Fourth order interpolation scheme
     ! Fill in lMin-1 and lMax+1, because the limiter needs these face values
+
+    character(len=*), parameter:: NameSub = 'limiter_ppm4'
+    !--------------------------------------------------------------------------
     do l = lMin - 1, lMax + 1
        Face_I(l) = c7over12*(Cell_I(l-1) + Cell_I(l)) &
             -      c1over12*(Cell_I(l-2) + Cell_I(l+1))
@@ -3386,7 +3424,7 @@ contains
 
     ! Second derivative based on cell values
     do l = lMin+1-nG, lMax-2+nG
-       D2c_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1) 
+       D2c_I(l) = Cell_I(l+1) - 2*Cell_I(l) + Cell_I(l-1)
     end do
 
     if(UseLimiter4 .and. .not.UseTrueCell)then
@@ -3403,7 +3441,7 @@ contains
     do l = lMin - 1, lMax
 
        if(UseTrueCell)then
-          ! The PPM limiter seems to use these cells only                       
+          ! The PPM limiter seems to use these cells only
           if(.not.all(IsTrueCell_I(l-2:l+2))) CYCLE
        end if
 
@@ -3507,15 +3545,16 @@ contains
   !
   !       left_face  = central_value - limited_slope_left
   !       right_face = central_value + limited_slope_right
-  !===========================================================================
   subroutine limiter_body(lMin, lMax, Beta)
 
     integer, intent(in):: lMin, lMax
     real,    intent(in):: Beta
 
-    real,dimension(Hi3_):: dVar1_I, dVar2_I ! 
+    real,dimension(Hi3_):: dVar1_I, dVar2_I !
     real,dimension(nVar):: dVar1_V, dVar2_V ! unlimited left and right slopes
     integer::l
+
+    character(len=*), parameter:: NameSub = 'limiter_body'
     !--------------------------------------------------------------------------
     select case(TypeLimiter)
     case('beta')
@@ -3597,8 +3636,7 @@ contains
     end select
 
   end subroutine limiter_body
-
-  !===========================================================================
+  !============================================================================
 
   subroutine limiter(lMin, lMax, Beta)
 
@@ -3608,6 +3646,8 @@ contains
     real,dimension(Hi3_):: dVar1_I, dVar2_I
     real,dimension(nVar):: dVar1_V, dVar2_V
     integer::l
+
+    character(len=*), parameter:: NameSub = 'limiter'
     !--------------------------------------------------------------------------
     select case(TypeLimiter)
     case('beta')
@@ -3680,15 +3720,14 @@ contains
     end select
 
   end subroutine limiter
+  !============================================================================
 
-  !=======================================================================
+  subroutine correct_monotone_restrict(iBlock)
 
-  subroutine correct_monotone_restrict(iBLK)
-
-    ! Correct the result of the first order monotone restriction by modifying 
-    ! the coarse ghost cell values such that the slope remains the same 
+    ! Correct the result of the first order monotone restriction by modifying
+    ! the coarse ghost cell values such that the slope remains the same
     ! while the cell center is moved from the fine cell distance to the
-    ! coarse cell distance. 
+    ! coarse cell distance.
     !
     ! This operation should be performed at most once per exchange messages.
     ! To avoid multiple modifications in schemes which switch off some blocks,
@@ -3706,130 +3745,124 @@ contains
 
     ! For debugging
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: VarTest, ProcTest, BlkTest, jTest, kTest
 
-    integer, intent(in) :: iBLK
+    integer, intent(in) :: iBlock
     integer             :: i, j, k
-    logical :: DoTest, DoTestMe
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'correct_monotone_restrict'
     !--------------------------------------------------------------------------
-    if(all(neiLEV(:,iBLK) /= -1))RETURN
+    call test_start(NameSub, DoTest, iBlock)
+    if(all(neiLEV(:,iBlock) /= -1))RETURN
 
-    if(iProc == ProcTest .and. iBlk == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
-
-    if(DoTestMe)write(*,*)NameSub, ' state before: ',&
-         State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
+    if(DoTest)write(*,*)NameSub, ' state before: ',&
+         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
 
     if(.not.DoLimitMomentum)then
        ! Convert momenta to velocities (that will be limited)
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
-               / State_VGB(iRho_I,i,j,k,iBLK)
-          State_VGB(iRhoUy_I,i,j,k,iBLK)=State_VGB(iRhoUy_I,i,j,k,iBLK) &
-               / State_VGB(iRho_I,i,j,k,iBLK)
-          State_VGB(iRhoUz_I,i,j,k,iBLK)=State_VGB(iRhoUz_I,i,j,k,iBLK) &
-               / State_VGB(iRho_I,i,j,k,iBLK)
+          State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
+               / State_VGB(iRho_I,i,j,k,iBlock)
        end do; end do; end do
     end if
 
-    if(neiLeast(iBLK) == -1)then
-       if(        .not.Unused_BP(neiBeast(1,iBLK),neiPeast(1,iBLK)) &
-            .and. .not.Unused_BP(neiBeast(2,iBLK),neiPeast(2,iBLK)) &
-            .and. .not.Unused_BP(neiBeast(3,iBLK),neiPeast(3,iBLK)) &
-            .and. .not.Unused_BP(neiBeast(4,iBLK),neiPeast(4,iBLK)))then
+    if(neiLeast(iBlock) == -1)then
+       if(        .not.Unused_BP(neiBeast(1,iBlock),neiPeast(1,iBlock)) &
+            .and. .not.Unused_BP(neiBeast(2,iBlock),neiPeast(2,iBlock)) &
+            .and. .not.Unused_BP(neiBeast(3,iBlock),neiPeast(3,iBlock)) &
+            .and. .not.Unused_BP(neiBeast(4,iBlock),neiPeast(4,iBlock)))then
           do k=1,nK;do j=1,nJ
-             State_VGB(1:nVar,0,j,k,iBLK) = &
-                  State_VGB(1:nVar,0,j,k,iBLK) + cThird*(&
-                  State_VGB(1:nVar,0,j,k,iBLK) - &
-                  State_VGB(1:nVar,1,j,k,iBLK))
+             State_VGB(1:nVar,0,j,k,iBlock) = &
+                  State_VGB(1:nVar,0,j,k,iBlock) + cThird*(&
+                  State_VGB(1:nVar,0,j,k,iBlock) - &
+                  State_VGB(1:nVar,1,j,k,iBlock))
              where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,0,j,k,iBLK) = &
-                  max(State_VGB(1:nVar,0,j,k,iBLK), 1e-30)
+                  State_VGB(1:nVar,0,j,k,iBlock) = &
+                  max(State_VGB(1:nVar,0,j,k,iBlock), 1e-30)
           end do; end do
        end if
     end if
-    if(neiLwest(iBLK) == -1)then
-       if(        .not.Unused_BP(neiBwest(1,iBLK),neiPwest(1,iBLK)) &
-            .and. .not.Unused_BP(neiBwest(2,iBLK),neiPwest(2,iBLK)) &
-            .and. .not.Unused_BP(neiBwest(3,iBLK),neiPwest(3,iBLK)) &
-            .and. .not.Unused_BP(neiBwest(4,iBLK),neiPwest(4,iBLK)))then
+    if(neiLwest(iBlock) == -1)then
+       if(        .not.Unused_BP(neiBwest(1,iBlock),neiPwest(1,iBlock)) &
+            .and. .not.Unused_BP(neiBwest(2,iBlock),neiPwest(2,iBlock)) &
+            .and. .not.Unused_BP(neiBwest(3,iBlock),neiPwest(3,iBlock)) &
+            .and. .not.Unused_BP(neiBwest(4,iBlock),neiPwest(4,iBlock)))then
           do k=1,nK;do j=1,nJ
-             State_VGB(1:nVar,nI+1,j,k,iBLK) = &
-                  State_VGB(1:nVar,nI+1,j,k,iBLK) + cThird*( &
-                  State_VGB(1:nVar,nI+1,j,k,iBLK) - &
-                  State_VGB(1:nVar,nI,  j,k,iBLK))
+             State_VGB(1:nVar,nI+1,j,k,iBlock) = &
+                  State_VGB(1:nVar,nI+1,j,k,iBlock) + cThird*( &
+                  State_VGB(1:nVar,nI+1,j,k,iBlock) - &
+                  State_VGB(1:nVar,nI,  j,k,iBlock))
              where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,nI+1,j,k,iBLK) = &
-                  max(State_VGB(1:nVar,nI+1,j,k,iBLK), 1e-30)
+                  State_VGB(1:nVar,nI+1,j,k,iBlock) = &
+                  max(State_VGB(1:nVar,nI+1,j,k,iBlock), 1e-30)
           end do; end do
        end if
     end if
-    if(neiLsouth(iBLK) == -1 .and. nJ > 1)then
-       if(        .not.Unused_BP(neiBsouth(1,iBLK),neiPsouth(1,iBLK)) & 
-            .and. .not.Unused_BP(neiBsouth(2,iBLK),neiPsouth(2,iBLK)) & 
-            .and. .not.Unused_BP(neiBsouth(3,iBLK),neiPsouth(3,iBLK)) & 
-            .and. .not.Unused_BP(neiBsouth(4,iBLK),neiPsouth(4,iBLK)))then
+    if(neiLsouth(iBlock) == -1 .and. nJ > 1)then
+       if(        .not.Unused_BP(neiBsouth(1,iBlock),neiPsouth(1,iBlock)) &
+            .and. .not.Unused_BP(neiBsouth(2,iBlock),neiPsouth(2,iBlock)) &
+            .and. .not.Unused_BP(neiBsouth(3,iBlock),neiPsouth(3,iBlock)) &
+            .and. .not.Unused_BP(neiBsouth(4,iBlock),neiPsouth(4,iBlock)))then
           do k=1,nK;do i=1,nI
-             State_VGB(1:nVar,i,0,k,iBLK) = &
-                  State_VGB(1:nVar,i,0,k,iBLK) + cThird*( &
-                  State_VGB(1:nVar,i,0,k,iBLK) - &
-                  State_VGB(1:nVar,i,1,k,iBLK))
+             State_VGB(1:nVar,i,0,k,iBlock) = &
+                  State_VGB(1:nVar,i,0,k,iBlock) + cThird*( &
+                  State_VGB(1:nVar,i,0,k,iBlock) - &
+                  State_VGB(1:nVar,i,1,k,iBlock))
              where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,0,k,iBLK) = &
-                  max(State_VGB(1:nVar,i,0,k,iBLK), 1e-30)
+                  State_VGB(1:nVar,i,0,k,iBlock) = &
+                  max(State_VGB(1:nVar,i,0,k,iBlock), 1e-30)
           end do; end do
        end if
     end if
-    if(neiLnorth(iBLK) == -1 .and. nJ > 1)then
-       if(     .not.Unused_BP(neiBnorth(1,iBLK),neiPnorth(1,iBLK)) &
-            .and. .not.Unused_BP(neiBnorth(2,iBLK),neiPnorth(2,iBLK)) &
-            .and. .not.Unused_BP(neiBnorth(3,iBLK),neiPnorth(3,iBLK)) &
-            .and. .not.Unused_BP(neiBnorth(4,iBLK),neiPnorth(4,iBLK)))then
+    if(neiLnorth(iBlock) == -1 .and. nJ > 1)then
+       if(     .not.Unused_BP(neiBnorth(1,iBlock),neiPnorth(1,iBlock)) &
+            .and. .not.Unused_BP(neiBnorth(2,iBlock),neiPnorth(2,iBlock)) &
+            .and. .not.Unused_BP(neiBnorth(3,iBlock),neiPnorth(3,iBlock)) &
+            .and. .not.Unused_BP(neiBnorth(4,iBlock),neiPnorth(4,iBlock)))then
           do k=1,nK;do i=1,nI
-             State_VGB(1:nVar,i,nJ+1,k,iBLK) =&
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK) + cThird*( &
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK) - &
-                  State_VGB(1:nVar,i,nJ,k,iBLK))
+             State_VGB(1:nVar,i,nJ+1,k,iBlock) =&
+                  State_VGB(1:nVar,i,nJ+1,k,iBlock) + cThird*( &
+                  State_VGB(1:nVar,i,nJ+1,k,iBlock) - &
+                  State_VGB(1:nVar,i,nJ,k,iBlock))
              where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,nJ+1,k,iBLK) = &
-                  max(State_VGB(1:nVar,i,nJ+1,k,iBLK), 1e-30)
+                  State_VGB(1:nVar,i,nJ+1,k,iBlock) = &
+                  max(State_VGB(1:nVar,i,nJ+1,k,iBlock), 1e-30)
           end do; end do
        end if
     end if
-    if(neiLbot(iBLK) == -1 .and. nK > 1)then
-       if(        .not.Unused_BP(neiBbot(1,iBLK),neiPbot(1,iBLK)) &
-            .and. .not.Unused_BP(neiBbot(2,iBLK),neiPbot(2,iBLK)) &
-            .and. .not.Unused_BP(neiBbot(3,iBLK),neiPbot(3,iBLK)) &
-            .and. .not.Unused_BP(neiBbot(4,iBLK),neiPbot(4,iBLK)))then
+    if(neiLbot(iBlock) == -1 .and. nK > 1)then
+       if(        .not.Unused_BP(neiBbot(1,iBlock),neiPbot(1,iBlock)) &
+            .and. .not.Unused_BP(neiBbot(2,iBlock),neiPbot(2,iBlock)) &
+            .and. .not.Unused_BP(neiBbot(3,iBlock),neiPbot(3,iBlock)) &
+            .and. .not.Unused_BP(neiBbot(4,iBlock),neiPbot(4,iBlock)))then
           do j=1,nJ;do i=1,nI
-             State_VGB(1:nVar,i,j,0,iBLK) = &
-                  State_VGB(1:nVar,i,j,0,iBLK) + cThird*( &
-                  State_VGB(1:nVar,i,j,0,iBLK) - &
-                  State_VGB(1:nVar,i,j,1,iBLK))
+             State_VGB(1:nVar,i,j,0,iBlock) = &
+                  State_VGB(1:nVar,i,j,0,iBlock) + cThird*( &
+                  State_VGB(1:nVar,i,j,0,iBlock) - &
+                  State_VGB(1:nVar,i,j,1,iBlock))
              where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,j,0,iBLK) = &
-                  max(State_VGB(1:nVar,i,j,0,iBLK), 1e-30)
+                  State_VGB(1:nVar,i,j,0,iBlock) = &
+                  max(State_VGB(1:nVar,i,j,0,iBlock), 1e-30)
           end do; end do
        end if
     end if
-    if(neiLtop(iBLK) == -1 .and. nK > 1)then
-       if(        .not.Unused_BP(neiBtop(1,iBLK),neiPtop(1,iBLK)) &
-            .and. .not.Unused_BP(neiBtop(2,iBLK),neiPtop(2,iBLK)) &
-            .and. .not.Unused_BP(neiBtop(3,iBLK),neiPtop(3,iBLK)) &
-            .and. .not.Unused_BP(neiBtop(4,iBLK),neiPtop(4,iBLK)))then
+    if(neiLtop(iBlock) == -1 .and. nK > 1)then
+       if(        .not.Unused_BP(neiBtop(1,iBlock),neiPtop(1,iBlock)) &
+            .and. .not.Unused_BP(neiBtop(2,iBlock),neiPtop(2,iBlock)) &
+            .and. .not.Unused_BP(neiBtop(3,iBlock),neiPtop(3,iBlock)) &
+            .and. .not.Unused_BP(neiBtop(4,iBlock),neiPtop(4,iBlock)))then
           do j=1,nJ;do i=1,nI
-             State_VGB(1:nVar,i,j,nK+1,iBLK) = &
-                  State_VGB(1:nVar,i,j,nK+1,iBLK) + cThird*(&
-                  State_VGB(1:nVar,i,j,nK+1,iBLK) - &
-                  State_VGB(1:nVar,i,j,nK,iBLK))
+             State_VGB(1:nVar,i,j,nK+1,iBlock) = &
+                  State_VGB(1:nVar,i,j,nK+1,iBlock) + cThird*(&
+                  State_VGB(1:nVar,i,j,nK+1,iBlock) - &
+                  State_VGB(1:nVar,i,j,nK,iBlock))
              where(DefaultState_V(1:nVar) > 0.0) &
-                  State_VGB(1:nVar,i,j,nK+1,iBLK) = &
-                  max(State_VGB(1:nVar,i,j,nK+1,iBLK), 1e-30)
+                  State_VGB(1:nVar,i,j,nK+1,iBlock) = &
+                  max(State_VGB(1:nVar,i,j,nK+1,iBlock), 1e-30)
           end do; end do
        end if
     end if
@@ -3837,19 +3870,22 @@ contains
     if(.not.DoLimitMomentum)then
        ! Convert velocities back to momenta
        do k = k0_, nKp1_; do j = j0_, nJp1_; do i = 0, nI+1
-          State_VGB(iRhoUx_I,i,j,k,iBLK)=State_VGB(iRhoUx_I,i,j,k,iBLK) &
-               * State_VGB(iRho_I,i,j,k,iBLK)
-          State_VGB(iRhoUy_I,i,j,k,iBLK)=State_VGB(iRhoUy_I,i,j,k,iBLK) &
-               * State_VGB(iRho_I,i,j,k,iBLK)
-          State_VGB(iRhoUz_I,i,j,k,iBLK)=State_VGB(iRhoUz_I,i,j,k,iBLK) &
-               * State_VGB(iRho_I,i,j,k,iBLK)
+          State_VGB(iRhoUx_I,i,j,k,iBlock)=State_VGB(iRhoUx_I,i,j,k,iBlock) &
+               * State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUy_I,i,j,k,iBlock)=State_VGB(iRhoUy_I,i,j,k,iBlock) &
+               * State_VGB(iRho_I,i,j,k,iBlock)
+          State_VGB(iRhoUz_I,i,j,k,iBlock)=State_VGB(iRhoUz_I,i,j,k,iBlock) &
+               * State_VGB(iRho_I,i,j,k,iBlock)
        end do; end do; end do
     end if
 
-    if(DoTestMe)write(*,*)NameSub, ' state after: ',&
-         State_VGB(VarTest, nI:nI+1, jTest, kTest, iBlk)
+    if(DoTest)write(*,*)NameSub, ' state after: ',&
+         State_VGB(iVarTest, nI:nI+1, jTest, kTest, iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine correct_monotone_restrict
+  !============================================================================
 
 end module ModFaceValue
+!==============================================================================
 

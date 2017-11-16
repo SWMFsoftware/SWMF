@@ -1,10 +1,12 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModEnergy
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+
   use ModProcMH,     ONLY: iProc
-  use ModMain,       ONLY: BlkTest, iTest, jTest, kTest, ProcTest
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
        iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &
@@ -31,31 +33,27 @@ module ModEnergy
   public:: calc_old_energy          ! pold -> eold (ModPartImplicit)
   public:: correctP                 ! obsolete method for CT and projection
 
-  ! It is possible to add the hyperbolic scalar energy to the total energy 
+  ! It is possible to add the hyperbolic scalar energy to the total energy
   ! (Tricco & Price 2012, J. Comput. Phys. 231, 7214).
   ! Experiments so far do not show any benefit, but the code is preserved.
   logical, parameter:: UseHypEnergy = .false.
 
 contains
-
   !============================================================================
+
   subroutine calc_energy_or_pressure(iBlock)
 
-    ! Calculate pressure from energy or energy from pressure depending on 
+    ! Calculate pressure from energy or energy from pressure depending on
     ! the value of UseNonConservative and IsConserv_CB
 
     integer, intent(in) :: iBlock
     integer::i,j,k
-    logical:: DoTest,DoTestMe
-    character(len=*),parameter:: NameSub='calc_energy_or_pressure'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_energy_or_pressure'
     !--------------------------------------------------------------------------
-    if(iBlock==BlkTest .and. iProc==ProcTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(DoTestMe)write(*,*)NameSub, &
+    if(DoTest)write(*,*)NameSub, &
          ': UseNonConservative, DoConserveNeutrals, nConservCrit=', &
          UseNonConservative, DoConserveNeutrals, nConservCrit
 
@@ -138,8 +136,8 @@ contains
     call limit_pressure(1, nI, 1, nJ, 1, nK, iBlock, 1, nFluid, &
          DoUpdateEnergy = .true.)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy_or_pressure
-
   !============================================================================
 
   subroutine calc_old_pressure(iBlock)
@@ -151,7 +149,11 @@ contains
 
     integer, intent(in) :: iBlock
     integer :: i, j, k
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_old_pressure'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do iFluid = 1, nFluid
        call select_fluid
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -180,8 +182,8 @@ contains
 
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_old_pressure
-
   !============================================================================
 
   subroutine calc_old_energy(iBlock)
@@ -192,8 +194,11 @@ contains
 
     integer, intent(in) :: iBlock
     integer :: i, j, k
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_old_energy'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do iFluid = 1, nFluid
        call select_fluid
        ! Calculate thermal plus kinetic energy
@@ -224,11 +229,11 @@ contains
                   0.5*StateOld_VGB(Hyp_,i,j,k,iBlock)**2
           end do; end do; end do
        end if
-          
+
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_old_energy
-
   !============================================================================
 
   subroutine calc_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
@@ -241,17 +246,13 @@ contains
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
-    integer :: i, j, k    
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='calc_pressure'
-    !-------------------------------------------------------------------------
-    if(iBlock==BlkTest .and. iProc==ProcTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    integer :: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_pressure'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(DoTestMe)write(*,*)NameSub, &
+    if(DoTest)write(*,*)NameSub, &
          ': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
          iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax
 
@@ -286,14 +287,14 @@ contains
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax, DoUpdateEnergy = .true.)
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
        write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_pressure
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_energy(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
        iFluidMin, iFluidMax)
@@ -306,7 +307,10 @@ contains
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     integer::i,j,k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
@@ -344,37 +348,37 @@ contains
 
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_pressure_cell(iBlock)
     integer, intent(in) :: iBlock
+    !--------------------------------------------------------------------------
     call calc_pressure(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
   end subroutine calc_pressure_cell
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_pressure_ghost(iBlock)
     integer, intent(in) :: iBlock
+    !--------------------------------------------------------------------------
     call calc_pressure(MinI,MaxI,MinJ,MaxJ,MinK,MaxK,iBlock,1,nFluid)
   end subroutine calc_pressure_ghost
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_pressure_point(i, j, k, iBlock)
     integer, intent(in) :: i, j, k, iBlock
+    !--------------------------------------------------------------------------
     call calc_pressure(i,i,j,j,k,k,iBlock,1,nFluid)
   end subroutine calc_pressure_point
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_energy_cell(iBlock)
     integer, intent(in) :: iBlock
+    !--------------------------------------------------------------------------
     call calc_energy(1,nI,1,nJ,1,nK,iBlock,1,nFluid)
   end subroutine calc_energy_cell
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_energy_ghost(iBlock, DoResChangeOnlyIn)
 
@@ -385,8 +389,11 @@ contains
 
     integer :: i, j, k
     logical :: DoResChangeOnly
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_energy_ghost'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     DoResChangeOnly =.false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
@@ -414,7 +421,7 @@ contains
 
                 if(Hyp_ > 1 .and. UseHypEnergy) &
                      Energy_GBI(i,j,k,iBlock,iFluid) = &
-                     Energy_GBI(i,j,k,iBlock,iFluid) & 
+                     Energy_GBI(i,j,k,iBlock,iFluid) &
                      + 0.5*State_VGB(Hyp_,i,j,k,iBlock)**2
 
              end if
@@ -434,19 +441,19 @@ contains
        end if
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy_ghost
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_energy_point(i, j, k, iBlock)
     integer, intent(in) :: i, j, k, iBlock
+    !--------------------------------------------------------------------------
     call calc_energy(i,i,j,j,k,k,iBlock,1,nFluid)
   end subroutine calc_energy_point
+  !============================================================================
 
-  !===========================================================================
-
-  subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
-       iBlock, iFluidMin, iFluidMax, DoUpdateEnergy)
+  subroutine limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, iBlock, &
+       iFluidMin, iFluidMax, DoUpdateEnergy)
 
     ! Keep pressure(s) in State_VGB above pMin_I limit
     ! If DoUpdateEnergy is present, also modify energy to remain consistent
@@ -460,7 +467,11 @@ contains
 
     integer:: i, j, k
     real :: NumDens, p, pMin, Ne
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'limit_pressure'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do iFluid = iFluidMin, iFluidMax
        if(pMin_I(iFluid) < 0.0) CYCLE
        pMin = pMin_I(iFluid)
@@ -534,23 +545,23 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine limit_pressure
-
   !============================================================================
-  ! moved from file exchange_messages.f90 
+
+  ! moved from file exchange_messages.f90
   subroutine correctP(iBlock)
 
-    ! Make pressure and energy consistent and maintain thermal energy ratio 
+    ! Make pressure and energy consistent and maintain thermal energy ratio
     ! at a reasonable value (this also excludes negative pressure)
 
     use ModProcMH
-    use ModMain,       ONLY: nI,nJ,nK,Itest,Jtest,Ktest,BLKtest
+    use ModMain,       ONLY: nI,nJ,nK
     use ModVarIndexes, ONLY: rho_, rhoUx_, rhoUy_, rhoUz_, Bx_, By_, Bz_, P_
     use ModAdvance,    ONLY: State_VGB, Energy_GBI
     use ModPhysics,    ONLY: GammaMinus1, InvGammaMinus1, Pratio_hi, Pratio_lo
     use ModGeometry,   ONLY: true_cell
     use BATL_lib,      ONLY: Xyz_DGB
-    implicit none
 
     integer, intent(in) :: iBlock
 
@@ -562,13 +573,13 @@ contains
 
     integer :: ierror1=-1, ierror2=-1, ierror3=-1, loc(3)
 
-    logical :: oktest, oktest_me
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'correctP'
     !--------------------------------------------------------------------------
-
-    if(iBlock==BLKtest)then
-       call set_oktest('correctP',oktest,oktest_me)
+    call test_start(NameSub, DoTest, iBlock)
+    if(iBlock==iBlockTest)then
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     qpmin=1.
@@ -588,9 +599,9 @@ contains
        qp=P_old(i,j,k)
        qe=Energy_GBI(i,j,k,iBlock,1)
 
-       if(oktest_me.and.i==Itest.and.J==Jtest.and.K==Ktest)&
+       if(DoTest.and.i==iTest.and.J==jTest.and.K==kTest)&
             write(*,*)'CorrectP at me,BLK,i,j,k=',&
-            iProc,BLKtest,Itest,Jtest,Ktest, &
+            iProc,iBlockTest,iTest,jTest,kTest, &
             ', initial P,E=',qp,qe
 
        ! Memorize smallest pressure
@@ -628,7 +639,7 @@ contains
        !
        ! Correct!
 
-       if(oktest_me.and.i==Itest.and.J==Jtest.and.K==Ktest)then
+       if(DoTest.and.i==iTest.and.J==jTest.and.K==kTest)then
           write(*,*)'qp,qth,qe,qd,qratio,qde=',qp,qth,qe,qd,qratio,qde
           write(*,*)'CorrectP, final P=',State_VGB(P_,i,j,k,iBlock)
        end if
@@ -638,7 +649,7 @@ contains
     if(qpmin<0.)then
        if(ierror1==-1)then
           loc=minloc(P_old)
-          write(*,*)'Negative P at me,iBLK,I,J,K,x,y,z,val',&
+          write(*,*)'Negative P at me,iBlock,I,J,K,x,y,z,val',&
                iProc,iBlock,loc,&
                Xyz_DGB(:,loc(1),loc(2),loc(3),iBlock), &
                P_old(loc(1),loc(2),loc(3))
@@ -652,10 +663,12 @@ contains
             .false.)
     end if
 
-    if(oktest_me)write(*,*)'CorrectP qpmin=',qpmin
+    if(DoTest)write(*,*)'CorrectP qpmin=',qpmin
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine correctP
-
+  !============================================================================
 
 end module ModEnergy
+!==============================================================================
 

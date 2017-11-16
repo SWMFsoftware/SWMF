@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModMessagePass
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Message passing to fill in ghost cells.
   !
@@ -20,10 +23,10 @@ module ModMessagePass
   ! True if it is sufficient to fill in the fine ghost cells with a single
   ! layer of the coarse cell values.
   ! set from MH_set_parameters
-  logical, public:: DoOneCoarserLayer = .true. 
+  logical, public:: DoOneCoarserLayer = .true.
 
 contains
-  !========================================================================
+  !============================================================================
   subroutine exchange_messages(DoResChangeOnlyIn, UseOrder2In)
 
     use ModCellBoundary, ONLY: set_cell_boundary, set_edge_corner_ghost
@@ -36,9 +39,9 @@ contains
          UseHighResChange, UseBufferGrid, UseResistivePlanet
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
-    use ModGeometry, ONLY: far_field_BCs_BLK        
+    use ModGeometry, ONLY: far_field_BCs_BLK
     use ModPhysics,  ONLY: ShockSlope, nVectorVar, iVectorVar_I
-    use ModFaceValue,ONLY: UseAccurateResChange
+    use ModFaceValue, ONLY: UseAccurateResChange
     use ModEnergy,   ONLY: calc_energy_ghost, correctP
     use ModCoordTransform, ONLY: rot_xyz_sph
 
@@ -48,7 +51,7 @@ contains
     use ModMpi
 
     ! Fill ghost cells at res. change only
-    logical, optional, intent(in) :: DoResChangeOnlyIn 
+    logical, optional, intent(in) :: DoResChangeOnlyIn
 
     ! Use 2nd order prolongation to fill
     logical, optional, intent(in) :: UseOrder2In
@@ -70,12 +73,12 @@ contains
     integer:: iVector, iVar, i, j, k
     real   :: XyzSph_DD(3,3)
 
-    logical:: DoTest, DoTestMe, DoTime, DoTimeMe
-    character (len=*), parameter :: NameSub = 'exchange_messages'
+    logical:: DoTime, DoTimeMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    call set_oktest('time_exchange', DoTime, DoTimeMe)
-    
+    call test_start(NameSub, DoTest)
+
     ! This way of doing periodic BC for wedge is not perfect.
     ! It does not work for AMR or semi-implicit scheme with vectors.
     ! But it works for a number of simple but useful applications.
@@ -100,7 +103,7 @@ contains
 
     UseHighResChangeNow = nOrder==5 .and. UseHighResChange
 
-    if(DoTestMe)write(*,*) NameSub, &
+    if(DoTest)write(*,*) NameSub, &
          ': DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers=',&
          DoResChangeOnly, UseOrder2, DoRestrictFace, DoTwoCoarseLayers
 
@@ -142,7 +145,7 @@ contains
        call message_pass_cell(nVar, State_VGB,&
             DoResChangeOnlyIn=DoResChangeOnlyIn)
     elseif (optimize_message_pass=='all') then
-       ! If ShockSlope is not zero then even the first order scheme needs 
+       ! If ShockSlope is not zero then even the first order scheme needs
        ! all ghost cell layers to fill in the corner cells at the sheared BCs.
        nWidth = nG; if(nOrder == 1 .and. ShockSlope == 0.0)  nWidth = 1
        nCoarseLayer = 1; if(DoTwoCoarseLayers) nCoarseLayer = 2
@@ -192,7 +195,7 @@ contains
        if (Unused_B(iBlock)) CYCLE
 
        ! The corner ghost cells outside the domain are updated
-       ! from the ghost cells inside the domain, so the outer 
+       ! from the ghost cells inside the domain, so the outer
        ! boundary condition have to be reapplied.
        if(.not.DoResChangeOnly &
             .or. any(abs(DiLevelNei_IIIB(:,:,:,iBlock)) == 1) )then
@@ -206,25 +209,26 @@ contains
 
        if(UseResistivePlanet) &
             call user_set_cell_boundary(iBlock,-1,'ResistivePlanet',IsFound)
-       
+
     end do
 
     call timing_stop('exch_msgs')
     if(DoTime)call timing_show('exch_msgs',1)
-    
-    if(DoTestMe)write(*,*) NameSub,' finished'
 
+    if(DoTest)write(*,*) NameSub,' finished'
+
+    call test_stop(NameSub, DoTest)
   end subroutine exchange_messages
-  !===========================================================================
+  !============================================================================
   logical function is_buffered_point(i,j,k,iBlock)
-    use ModGeometry,ONLY: R_BLK
+    use ModGeometry, ONLY: R_BLK
     use ModMain,    ONLY: BufferMin_D, BufferMax_D
     integer, intent(in):: i, j, k, iBlock
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     is_buffered_point =   R_BLK(i,j,k,iBlock) <= BufferMax_D(1) &
          .and.            R_BLK(i,j,k,iBlock) >= BufferMin_D(1)
   end function is_buffered_point
-  !===========================================================================
+  !============================================================================
   subroutine fix_buffer_grid(iBlock)
 
     ! Do not update solution in the domain covered by the buffer grid
@@ -235,7 +239,10 @@ contains
     integer, intent(in):: iBlock
 
     integer:: i, j, k
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fix_buffer_grid'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.is_buffered_point(i, j, k, iBlock))CYCLE
@@ -244,18 +251,21 @@ contains
        Energy_GBI(i, j, k, iBlock,:) = EnergyOld_CBI(i, j, k, iBlock,:)
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_buffer_grid
-  !===========================================================================
+  !============================================================================
   subroutine fill_in_from_buffer(iBlock)
     use ModAdvance, ONLY: nVar, State_VGB, Rho_, RhoUx_, RhoUz_, Ux_, Uz_
     use ModProcMH,  ONLY: iProc
     use BATL_lib,   ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
-    implicit none
     integer,intent(in)::iBlock
 
     integer:: i, j, k
     logical:: DoWrite=.true.
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fill_in_from_buffer'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(DoWrite)then
        DoWrite=.false.
@@ -277,6 +287,9 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine fill_in_from_buffer
+  !============================================================================
 
 end module ModMessagePass
+!==============================================================================

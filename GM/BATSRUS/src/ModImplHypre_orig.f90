@@ -1,6 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModImplHypre
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iProcTest
 
   use ModKind,   ONLY: Int8_
   use BATL_size, ONLY: nDim, nI, nJ, nK, nIJK, nIJK_D, iRatio, jRatio, kRatio
@@ -32,7 +36,7 @@ module ModImplHypre
   integer, parameter:: CoordLast_ = Coord0_+nDim
   integer, parameter:: nCell_D(nDim) = nIjk_D(1:nDim)
 
-  ! This is defined in HYPREf.h (Fortran header file)                         
+  ! This is defined in HYPREf.h (Fortran header file)
   integer, parameter:: HYPRE_PARCSR = 5555
 
   ! This is defined in HYPRE_sstruct_mv.h (a C header file)
@@ -56,7 +60,7 @@ module ModImplHypre
 
   ! Mapping between boundaries: same index order and same direction
   integer:: iDim
-  integer, parameter:: iIndexMap_D(nDim) = (/ (iDim, iDim=0,nDim-1)/) 
+  integer, parameter:: iIndexMap_D(nDim) = (/ (iDim, iDim=0,nDim-1)/)
   integer, parameter:: iIndexDir_D(nDim) = 1
 
   ! Stencil description
@@ -81,11 +85,15 @@ module ModImplHypre
   integer:: iLastDecomposition = -1
 
 contains
-  !==========================================================================
+  !============================================================================
   subroutine hypre_read_param
 
     use ModReadParam, ONLY: read_var
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'hypre_read_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call read_var('iVerboseAmg',        iVerboseAmg)
     call read_var('MaxRowElementsAmg',  MaxRowElementsAmg)
     call read_var('iCoarsenAmg',        iCoarsenAmg)
@@ -94,8 +102,9 @@ contains
     call read_var('StrongThresholdAmg', StrongThresholdAmg)
     call read_var('TruncFactorAmg',     TruncFactorAmg)
 
+    call test_stop(NameSub, DoTest)
   end subroutine hypre_read_param
-  !==========================================================================
+  !============================================================================
   subroutine hypre_initialize
 
     use ModMain, ONLY: iNewDecomposition
@@ -109,18 +118,16 @@ contains
     integer:: iReduce, jReduce, iSide, jSide, kSide, i, j, k
     integer:: iSideMe, jSideMe, kSideMe, iSideMax, jSideMax, kSideMax
 
-    logical:: DoTest, DoTestMe
-
     logical, parameter:: DoDebug = .false.
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'hypre_initialize'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! Nothing to do if the grid has not changed
     if(iNewDecomposition == iLastDecomposition) RETURN
 
-    call set_oktest(NameSub,DoTest,DoTestMe)
-
-    if(DoTestMe)write(*,*) NameSub,' starting'
+    if(DoTest)write(*,*) NameSub,' starting'
 
     if(iLastDecomposition == -1)then
        allocate(Value_I(nStencil*nIJK))
@@ -139,7 +146,7 @@ contains
     ! Create an empty 3D grid object
     call HYPRE_SStructGridCreate(iComm, nDim, nPart, i8Grid, iError)
 
-    if(DoTestMe)write(*,*)'HYPRE_SStructGridCreate done with nPart=', nPart
+    if(DoTest)write(*,*)'HYPRE_SStructGridCreate done with nPart=', nPart
 
     ! Add each block as a local box in the corresponding part (level)
     do iBlockSemi = 1, nBlockSemi
@@ -156,7 +163,7 @@ contains
             iError)
     end do
 
-    if(DoTestMe)write(*,*)'HYPRE_SStructGridSetExtents done'
+    if(DoTest)write(*,*)'HYPRE_SStructGridSetExtents done'
 
     ! Single cell centered variable on all parts
     do jPart = 0, nPart - 1
@@ -164,7 +171,7 @@ contains
             iError)
     end do
 
-    if(DoTestMe)write(*,*)'HYPRE_SStructGridSetVariables done'
+    if(DoTest)write(*,*)'HYPRE_SStructGridSetVariables done'
 
     ! For periodic boundaries the part is connected to itself
     do iDim = 1, nDim
@@ -206,12 +213,12 @@ contains
        end do
     end do
 
-    if(DoTestMe)write(*,*)'HYPRE_SStructGridSetNeighborPart done'
+    if(DoTest)write(*,*)'HYPRE_SStructGridSetNeighborPart done'
 
     ! Assemble grid from all processors
     call HYPRE_SStructGridAssemble(i8Grid, iError)
     if(iError/=0)write(*,*)'ERROR: HYPRE_SStructGridAssemble failed'
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_SStructGridAssemble done'
+    if(DoTest)write(*,*) NameSub,' HYPRE_SStructGridAssemble done'
 
     ! Define index offsets for the 2*nDim+1-point stencil
     DiStencil_DI = 0
@@ -232,7 +239,7 @@ contains
     call HYPRE_SStructGraphCreate(iComm, i8Grid, i8Graph, iError)
     call HYPRE_SStructGraphSetObjectType(i8Graph, iObjectType, iError)
 
-    ! Tell the graph which stencil to use for each variable on each part 
+    ! Tell the graph which stencil to use for each variable on each part
     do jPart = 0, nPart - 1
        call HYPRE_SStructGraphSetStencil(i8Graph, jPart, iVar, i8Stencil, &
             iError)
@@ -430,7 +437,7 @@ contains
     ! Assemble the graph
     call HYPRE_SStructGraphAssemble(i8Graph, iError)
 
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_SStructGraphAssemble done'
+    if(DoTest)write(*,*) NameSub,' HYPRE_SStructGraphAssemble done'
 
     ! Create an empty matrix object
     call HYPRE_SStructMatrixCreate(iComm, i8Graph, i8A, iError)
@@ -440,7 +447,7 @@ contains
 
     ! Initialize matrix
     call HYPRE_SStructMatrixInitialize(i8A, iError)
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_SStructMatrixInitialize done'
+    if(DoTest)write(*,*) NameSub,' HYPRE_SStructMatrixInitialize done'
 
     ! Create empty vector objects for RHS and solution
     call HYPRE_SStructVectorCreate(iComm, i8Grid, i8B, iError)
@@ -453,11 +460,11 @@ contains
     ! Initialize vectors
     call HYPRE_SStructVectorInitialize(i8B, iError)
     call HYPRE_SStructVectorInitialize(i8X, iError)
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_SStructVectorInitialize done'
+    if(DoTest)write(*,*) NameSub,' HYPRE_SStructVectorInitialize done'
 
     ! Create the BoomerAMG as a preconditioner
     call HYPRE_BoomerAMGCreate(i8Precond, iError)
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_BoomerAMGCreate done'
+    if(DoTest)write(*,*) NameSub,' HYPRE_BoomerAMGCreate done'
 
     ! Set BoomerAMG parameters
 
@@ -474,12 +481,14 @@ contains
     call HYPRE_BoomerAMGSetStrongThrshld(i8Precond, StrongThresholdAmg, iError)
     call HYPRE_BoomerAMGSetTruncFactor(  i8Precond, TruncFactorAmg, iError)
 
-    if(DoTestMe)write(*,*) NameSub,' finished'
+    if(DoTest)write(*,*) NameSub,' finished'
 
+    call test_stop(NameSub, DoTest)
   contains
-    !========================================================================
+    !==========================================================================
     subroutine set_jpart_iratio_jratio
 
+      !------------------------------------------------------------------------
       if(DiLevel == 1)then
          ! jNode is coarser than iNode
          jPart   = iPart - 1
@@ -501,10 +510,11 @@ contains
       end if
 
     end subroutine set_jpart_iratio_jratio
-    !========================================================================
+    !==========================================================================
     subroutine connect_i_direction
 
       ! Shift index ranges to appropriate subface
+      !------------------------------------------------------------------------
       if(iReduce == 2)then
          ! iNode is coarser than jNode: do current subface of iNode
          if(nJ>1) iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
@@ -542,10 +552,11 @@ contains
       end do
 
     end subroutine connect_i_direction
-    !========================================================================
+    !==========================================================================
     subroutine connect_j_direction
 
       ! Shift to appropriate side
+      !------------------------------------------------------------------------
       if(iReduce == 2)then
          iCoord0_D(Dim1_)          = iCoord0_D(Dim1_) + (iSide-1)*nI/2
          if(nK>1) iCoord0_D(Dim3_) = iCoord0_D(Dim3_) + (kSide-1)*nK/2
@@ -578,10 +589,11 @@ contains
       end do
 
     end subroutine connect_j_direction
-    !========================================================================
+    !==========================================================================
     subroutine connect_k_direction
 
       ! Shift to appropriate side
+      !------------------------------------------------------------------------
       if(iReduce == 2)then
          iCoord0_D(Dim1_) = iCoord0_D(Dim1_) + (iSide-1)*nI/2
          iCoord0_D(Dim2_) = iCoord0_D(Dim2_) + (jSide-1)*nJ/2
@@ -614,10 +626,10 @@ contains
       end do
 
     end subroutine connect_k_direction
+    !==========================================================================
 
   end subroutine hypre_initialize
-
-  !===========================================================================
+  !============================================================================
 
   subroutine hypre_set_matrix_block(iBlockSemi, Jacobian_CI)
 
@@ -644,10 +656,13 @@ contains
     integer:: iNode, iCoord_D(nDim)
 
     logical, parameter :: DoDebug = .false.
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'hypre_set_matrix_block'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     iBlock = iBlockFromSemi_B(iBlockSemi)
 
-    ! DoDebug = iProc == ProcTest
+    ! DoDebug = iProc == iProcTest
 
     if(TypeCellBc_I(1)=='reflect' .and. &
          DiLevelNei_IIIB(-1,0,0,iBlock) == Unset_)&
@@ -732,7 +747,7 @@ contains
              iStencilExtra_C(1,j,k) = iStencil
 
              if(DoDebug)write(*,*)'-I iCoord, Jac =', iCoord_D, Jac
-             
+
           end do
        end do
     end if
@@ -752,7 +767,7 @@ contains
           if(nK > 1) iCoord_D(Dim3_) = iUpper_D(Dim3_) + k - nK
           do j = 1, nJ
              if(nJ > 1) iCoord_D(Dim2_) = iUpper_D(Dim2_) + j - nJ
-                
+
              Jac = Jacobian_CI(nI,j,k,Stencil3_)/nStencilExtra
              do iStencil = nStencil, nStencil + nStencilExtra - 1
                 call HYPRE_SStructMatrixSetValues(i8A, iPart, &
@@ -795,7 +810,7 @@ contains
              iStencilExtra_C(i,1,k) = iStencil
 
              if(DoDebug)write(*,*)'-J iCoord, Jac =', iCoord_D, Jac
-             
+
           end do
        end do
 
@@ -860,7 +875,7 @@ contains
              iStencilExtra_C(i,j,1) = iStencil
 
              if(DoDebug)write(*,*)'-K iCoord, Jac =', iCoord_D, Jac
-             
+
           end do
        end do
 
@@ -897,49 +912,50 @@ contains
 
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine hypre_set_matrix_block
-
   !============================================================================
+
   subroutine hypre_set_matrix(DoInitHypreAmg)
 
-    use ModMain, ONLY: test_string
+    use ModMain, ONLY: StringTest
 
     logical, intent(in):: DoInitHypreAmg
 
     integer:: iError
 
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'hypre_set_matrix'
-    !-------------------------------------------------------------------------
     ! Assemble matrix
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*) NameSub,' starting with DoInitHypreAmg=', &
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'hypre_set_matrix'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' starting with DoInitHypreAmg=', &
          DoInitHypreAmg
 
     call HYPRE_SStructMatrixAssemble(i8A, iError)
 
-    if(index(test_string,'HYPRE_PRINT_MATRIX') > 0)then
+    if(index(StringTest,'HYPRE_PRINT_MATRIX') > 0)then
        call HYPRE_SStructMatrixPrint("matrix.dat", i8A, 0, iError)
        call stop_mpi('debug')
     end if
 
-    if(DoTestMe)write(*,*) NameSub,' HYPRE_SStructMatrixAssemble done'
+    if(DoTest)write(*,*) NameSub,' HYPRE_SStructMatrixAssemble done'
 
     if(.not.DoInitHypreAmg) RETURN
 
     ! Pass matrix to the solvers
     call HYPRE_SStructMatrixGetObject(i8A, i8ParA, iError)
-    if(DoTestMe) write(*,*) NameSub,' HYPRE_SStructMatrixGetObject done'
+    if(DoTest) write(*,*) NameSub,' HYPRE_SStructMatrixGetObject done'
 
     ! Setup AMG preconditioner for Krylov solver
     call timing_start('BoomerAMGSetup')
     call HYPRE_BoomerAMGSetup(i8Precond, i8ParA, i8ParB, i8ParX, iError)
     call timing_stop('BoomerAMGSetup')
 
-    if(DoTestMe)write(*,*) NameSub,' finished'
+    if(DoTest)write(*,*) NameSub,' finished'
 
+    call test_stop(NameSub, DoTest)
   end subroutine hypre_set_matrix
-
   !============================================================================
 
   subroutine hypre_preconditioner(n, y_I)
@@ -952,11 +968,13 @@ contains
 
     logical, parameter:: DoDebug = .false.
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'hypre_preconditioner'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! DoDebug = iProc == 1
-    
+
     if(DoDebug)write(*,*) NameSub,' starting n, sum(y_I**)=', &
          n, sum(y_I**2)
 
@@ -1028,13 +1046,17 @@ contains
 
     if(DoDebug)write(*,*) NameSub,' finished'
 
+    call test_stop(NameSub, DoTest)
   end subroutine hypre_preconditioner
+  !============================================================================
 
-  !================================================================================
   subroutine hypre_clean
 
     integer:: iError
-    !-----------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'hypre_clean'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     call HYPRE_SStructGridDestroy(i8Grid, iError)
     call HYPRE_SStructStencilDestroy(i8Stencil, iError)
@@ -1044,10 +1066,12 @@ contains
     call HYPRE_SStructVectorDestroy(i8X, iError)
     call HYPRE_BoomerAMGDestroy(i8Precond, iError)
 
+    call test_stop(NameSub, DoTest)
   end subroutine hypre_clean
-  !================================================================================
+  !============================================================================
   subroutine hypre_finalize
 
+    !--------------------------------------------------------------------------
     if(iLastDecomposition == -1) RETURN
 
     call hypre_clean
@@ -1055,6 +1079,8 @@ contains
     iLastDecomposition = -1
 
   end subroutine hypre_finalize
+  !============================================================================
 
 end module ModImplHypre
+!==============================================================================
 

@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModHallResist
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModSize, ONLY: nI, nJ, nK, MaxDim, j0_, nJp1_, k0_, nKp1_
 
@@ -9,7 +12,7 @@ module ModHallResist
 
   SAVE
 
-  private !except
+  private ! except
 
   ! Public methods
   public :: init_hall_resist
@@ -62,13 +65,12 @@ contains
     use ModPhysics, ONLY: IonMassPerCharge, Si2No_V, UnitX_, UnitCharge_
     use BATL_lib,   ONLY: get_region_indexes
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='init_hall_resist'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_hall_resist'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
-    if (DoTestMe) then
+    if (DoTest) then
        write(*,*) ''
        write(*,*) '>>>>>>>>>>>>>>>>> HALL Resistivity Parameters <<<<<<<<<<'
        write(*,*)
@@ -97,17 +99,20 @@ contains
     ! Get signed indexes for Hall region(s)
     call get_region_indexes(StringHallRegion, iRegionHall_I)
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_hall_resist
+  !============================================================================
 
-  !=========================================================================
   subroutine read_hall_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_hall_param'
-    !---------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#HALLRESISTIVITY")
        call read_var('UseHallResist',  UseHallResist)
@@ -124,9 +129,10 @@ contains
        call stop_mpi(NameSub//' unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_hall_param
+  !============================================================================
 
-  !=========================================================================
   subroutine set_ion_mass_per_charge(iBlock)
 
     use ModAdvance, ONLY: State_VGB, UseIdealEos, UseMultiSpecies
@@ -136,7 +142,10 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_ion_mass_per_charge'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Check if IonMassPerCharge_G varies at all. Return if it is constant.
     if(.not.UseMultiIon .and. .not.UseMultiSpecies .and. UseIdealEos) RETURN
@@ -148,9 +157,9 @@ contains
             IonMassPerCharge_G(i,j,k))
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_ion_mass_per_charge
-
-  !===========================================================================
+  !============================================================================
 
   subroutine set_ion_mass_per_charge_point(State_V, IonMassPerChargeOut)
 
@@ -165,7 +174,10 @@ contains
     real, intent(out):: IonMassPerChargeOut
 
     real :: zAverage, NatomicSi
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_ion_mass_per_charge_point'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(.not.UseIdealEos)then
        call user_material_properties(State_V, &
@@ -192,9 +204,10 @@ contains
 
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_ion_mass_per_charge_point
+  !============================================================================
 
-  !=========================================================================
   subroutine set_hall_factor_cell(iBlock, UseIonMassPerCharge)
 
     use BATL_lib, ONLY: block_inside_regions
@@ -207,7 +220,10 @@ contains
     ! If UseIonMassPerCharge is present and FALSE, the hall factor is
     ! NOT multiplied with the ion mass per charge averaged to the face
 
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_hall_factor_cell'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(HallFactor_C)) allocate(HallFactor_C(nI,nJ,nK))
 
     if(.not.allocated(iRegionHall_I))then
@@ -232,8 +248,9 @@ contains
     call set_ion_mass_per_charge(iBlock)
     HallFactor_C = HallFactor_C*IonMassPerCharge_G(1:nI,1:nJ,1:nK)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_hall_factor_cell
-  !=========================================================================
+  !============================================================================
   subroutine set_hall_factor_face(iBlock, UseIonMassPerCharge)
 
     use BATL_lib, ONLY: block_inside_regions, nDim, nINode, nJNode, nKNode
@@ -248,7 +265,10 @@ contains
 
     integer:: i, j, k
 
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_hall_factor_face'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(HallFactor_DF)) &
          allocate(HallFactor_DF(nDim,nINode,nJNode,nKNode))
 
@@ -292,7 +312,9 @@ contains
             0.5*sum(IonMassPerCharge_G(i,j,k-1:k))
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_hall_factor_face
-  !=========================================================================
+  !============================================================================
 
 end module ModHallResist
+!==============================================================================

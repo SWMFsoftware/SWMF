@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!==============================================================================
 module ModHeatFluxCollisionless
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   implicit none
   save
@@ -24,7 +26,6 @@ module ModHeatFluxCollisionless
   real :: CollisionlessAlpha = 1.05
 
 contains
-
   !============================================================================
 
   subroutine read_heatflux_param(NameCommand)
@@ -33,9 +34,10 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    character(len=*), parameter :: &
-         NameSub = 'ModHeatFluxCollision::read_heatflux_param'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_heatflux_param'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(NameCommand)
 
@@ -56,8 +58,8 @@ contains
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_heatflux_param
-
   !============================================================================
 
   subroutine update_heatflux_collisionless(iBlock)
@@ -73,7 +75,10 @@ contains
 
     integer:: i, j, k, iP
     real:: GammaHere
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_heatflux_collisionless'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! We use a varying gamma for the electrons to parameterize the
     ! collisionless heat flux of Hollweg (1976).
@@ -93,8 +98,8 @@ contains
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_heatflux_collisionless
-
   !============================================================================
 
   subroutine get_gamma_collisionless(x_D, GammaOut)
@@ -109,8 +114,11 @@ contains
 
     real :: r
     real :: GammaCollisionless
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_gamma_collisionless'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     r = sqrt(sum(x_D**2))
 
     if(UseElectronPressure)then
@@ -135,6 +143,9 @@ contains
             exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_gamma_collisionless
+  !============================================================================
 
 end module ModHeatFluxCollisionless
+!==============================================================================

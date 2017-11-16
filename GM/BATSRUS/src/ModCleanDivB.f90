@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-
 module ModCleanDivB
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   implicit none
 
@@ -19,16 +21,16 @@ module ModCleanDivB
   integer:: nCleanDivb = 0
 
 contains
+  !============================================================================
 
-  !==========================================================================
   subroutine clean_divb
 
     use ModProcMH
     use ModNumConst, ONLY: cTiny
-    use ModMain,ONLY: iNewGrid, iNewDecomposition
-    use ModAdvance,ONLY: nVar,State_VGB, Bx_, By_, Bz_,tmp1_BLK,tmp2_BLK,&
+    use ModMain, ONLY: iNewGrid, iNewDecomposition
+    use ModAdvance, ONLY: nVar,State_VGB, Bx_, By_, Bz_,tmp1_BLK,tmp2_BLK,&
          Residual_GB=>tmp1_blk,Dir_GB=>tmp2_blk
-    use ModAdvance,ONLY:tmp3_blk=>divB1_GB
+    use ModAdvance, ONLY:tmp3_blk=>divB1_GB
     use ModGeometry, ONLY: true_blk, body_blk, true_cell
     use ModParallel, ONLY : NOBLK, neiLEV
     use ModMpi
@@ -51,7 +53,7 @@ contains
     ! Dir_GB=p^(i)/rho_(i-1)
 
     real::DirDotDir,DirDotDirInv
-    !DirDotDirInv=1/(Dir.A.Dir)
+    ! DirDotDirInv=1/(Dir.A.Dir)
 
     real::    Tolerance=cTiny
     integer:: iError
@@ -61,16 +63,14 @@ contains
     ! For convenience, what is stored in these arrays are the gradients
     ! multiplied by the cell volume
     ! While calculating the magnetic field, we use vInv*vDotGrad Phi
-    ! While calculating the sum V_i grad^2 Phi, we use vInv vDotGrad^2 Phi 
+    ! While calculating the sum V_i grad^2 Phi, we use vInv vDotGrad^2 Phi
 
     integer :: iLastGrid=-100, iLastDecomposition=-100
 
-
-    logical::oktest,oktest_me
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'clean_divb'
-
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, oktest, oktest_me)
+    call test_start(NameSub, DoTest)
 
     if(.not.allocated(Prec_CB)) allocate(Prec_CB(nI,nJ,nK,MaxBlock))
 
@@ -81,18 +81,18 @@ contains
     endif
     call timing_start(NameSub)
 
-    Iteration=1                                
+    Iteration=1
 
-    do 
+    do
        call message_pass_cell(nVar, State_VGB, nWidthIn=1, &
             DoSendCornerIn=.false., nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
-       !Get the ghostcell values for MF 
+       ! Get the ghostcell values for MF
        DivBInt = 0.0;DivBTemp = 0.0
        do iBlock=1,nBlock
           Residual_GB(:,:,:,iBlock) = 0.0
           if(Iteration==1) Dir_GB(:,:,:,iBlock) = 0.0
-          !Initialize the vector "Dir"
+          ! Initialize the vector "Dir"
 
           if(Unused_B(iBlock))CYCLE
 
@@ -124,21 +124,21 @@ contains
        DivBTemp = DivBInt
 
        ! Now evaluate the norm only for that part of the residual,
-       ! which is orthogobal to 1: 
+       ! which is orthogobal to 1:
        ! (Res.M^{-1}.Res)_{mod} + (Res.M^{-1}.(1/sqrt(1.M^{-1}.1)))^2
        ! = Res.M^{-1}.Res
 
        DivBInt(ResDotM1DotRes_) = DivBTemp(ResDotM1DotRes_)&
             -OneDotMDotOneInv*DivBTemp(ResDotOne_)**2
 
-       if(iProc==0.and.oktest)&
-            write(*,*) NameSub,': iteration=',Iteration,& 
+       if(iProc==0.and.DoTest)&
+            write(*,*) NameSub,': iteration=',Iteration,&
             'SigmaRes,SigmaRes^2,integral error:',&
             DivBTemp,DivBInt(ResDotM1DotRes_)
 
        if(DivBInt(ResDotM1DotRes_) < Tolerance)EXIT
 
-       ! This is what we should add to the Residual to make it ortogonal 
+       ! This is what we should add to the Residual to make it ortogonal
        ! to the constant solution
        DivBInt(ResDotOne_) = -OneDotMDotOneInv*DivBTemp(ResDotOne_)
 
@@ -179,11 +179,11 @@ contains
 
        DirDotDirInv = 1.0/DirDotDir
 
-       if(oktest .and. iProc==0) &
+       if(DoTest .and. iProc==0) &
             write(*,*) NameSub,': effective diffusion coefficient = ',&
             DirDotDirInv*DivBInt(ResDotM1DotRes_)
 
-       ! If iterations are not used, the diffusion coefficient 
+       ! If iterations are not used, the diffusion coefficient
        ! should be less than 1 to ensure the convergence in the r.M^{-1}.r norm
        if(nCleanDivb==0) &
             DirDotDirInv = min(DirDotDirInv, 0.99/DivBInt(ResDotM1DotRes_))
@@ -198,19 +198,20 @@ contains
                   CellVolume_GB(i,j,k,iBlock)
           end do; end do; end do
        end do
-       Iteration = Iteration + 1   
-       if(Iteration > nCleanDivb) EXIT    
+       Iteration = Iteration + 1
+       if(Iteration > nCleanDivb) EXIT
     end do
 
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
     subroutine init_divb_cleanup
 
       integer::i,j,k,iBlock,iError,iLimit
       real,dimension(0:nI+1,0:nJ+1,0:nK+1)::Q_G
-      real::EstimateForMAMNorm,OneDotMDotOne 
+      real::EstimateForMAMNorm,OneDotMDotOne
       real:: divb_diffcoeff, VInvHalf
       !------------------------------------------------------------------------
       tmp1_blk = 0.0; Prec_CB = 0.0
@@ -221,7 +222,7 @@ contains
               1/CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)
       end do
 
-      !tmp1 is equal to the inverse of the volume, including the ghostcells 
+      ! tmp1 is equal to the inverse of the volume, including the ghostcells
       call message_pass_cell(tmp1_blk, DoSendCornerIn=.false. ,&
            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
@@ -234,13 +235,13 @@ contains
             if(NeiLev(1,iBlock)==NoBLK)then
                tmp1_blk(0,1:nJ,1:nK,iBlock) = &
                     1.0/CellVolume_GB(1,1:nJ,1:nK,iBlock)
-               !to define somehow tmp1 in the outer ghostcells
+               ! to define somehow tmp1 in the outer ghostcells
 
-            elseif(abs(NeiLev(1,iBlock))==1)then           
+            elseif(abs(NeiLev(1,iBlock))==1)then
                Q_G(0,:,:)=4.0**NeiLev(1,iBlock)
-               !if the neighboring block is coarser,
+               ! if the neighboring block is coarser,
                !  the input from FA^2 should be multipled by four
-               !If the neighborig block is finer,
+               ! If the neighborig block is finer,
                !  the input from FA^2  should be multiplied by 1/4
             end if
             if(NeiLev(2,iBlock)==NoBLK)then
@@ -275,8 +276,8 @@ contains
             end if
          end if
          Prec_CB(:,:,:,iBlock)=4.0/(&
-              (Q_G(2:nI+1,1:nJ,1:nK)*tmp1_blk(2:nI+1,1:nJ,1:nK,iBlock)+& 
-              Q_G(0:nI-1,1:nJ,1:nK)*tmp1_blk(0:nI-1,1:nJ,1:nK,iBlock))& 
+              (Q_G(2:nI+1,1:nJ,1:nK)*tmp1_blk(2:nI+1,1:nJ,1:nK,iBlock)+&
+              Q_G(0:nI-1,1:nJ,1:nK)*tmp1_blk(0:nI-1,1:nJ,1:nK,iBlock))&
               *CellFace_DB(x_,iBlock)**2+&
               (Q_G(1:nI,2:nJ+1,1:nK)*tmp1_blk(1:nI,2:nJ+1,1:nK,iBlock)+&
               Q_G(1:nI,0:nJ-1,1:nK)*tmp1_blk(1:nI,0:nJ-1,1:nK,iBlock))&
@@ -314,20 +315,20 @@ contains
             do k=1,nK;do j=1,nJ;do i=1,nI
                Prec_CB(i,j,k,iBlock)=min(&
                     minval(tmp1_blk(i-1:i+1,j,k,iBlock)),&
-                    minval(tmp1_blk(i,j-1:j+1:2,k,iBlock)),& 
+                    minval(tmp1_blk(i,j-1:j+1:2,k,iBlock)),&
                     minval(tmp1_blk(i,j,k-1:k+1:2,iBlock)))
             end do;end do; end do
          end do
       end do
 
-      !With the preconditioner, defined in the manner like this
-      !the upper estimate of the spectral radius fo the matrix
-      !||Prec^{1/2}.A.Prec^1/2 is 2, according to the Frobenius inequality 
+      ! With the preconditioner, defined in the manner like this
+      ! the upper estimate of the spectral radius fo the matrix
+      ! ||Prec^{1/2}.A.Prec^1/2 is 2, according to the Frobenius inequality
 
-      !Herewith Prec is also denoted as M^{-1}
-      !Calculate the divB diffusion coefficient =2/||M^(-1/2).A.M^(-1/2)||
-      !For the grid, which is at least partially uniform cartesian,
-      !this coefficient equals 1
+      ! Herewith Prec is also denoted as M^{-1}
+      ! Calculate the divB diffusion coefficient =2/||M^(-1/2).A.M^(-1/2)||
+      ! For the grid, which is at least partially uniform cartesian,
+      ! this coefficient equals 1
       do iBlock=1,nBlock
          if (Unused_B(iBlock)) CYCLE
          if(any(NeiLev(:,iBlock)==NoBLK))then
@@ -351,7 +352,7 @@ contains
       call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
            nProlongOrderIn=1, DoRestrictFaceIn=.true.)
 
-      !Now the elements of diag(Prec_CB)^{1/2} are in tmp1_blk
+      ! Now the elements of diag(Prec_CB)^{1/2} are in tmp1_blk
 
       do iBlock=1,nBlock
          if (Unused_B(iBlock)) CYCLE
@@ -377,7 +378,7 @@ contains
                  Q_G(i,j,k-1))
          end do;end do; end do
       end do
-      ! In tmp1,tmp2 and divB1 are the estimates of gradX, gradY,gradZ 
+      ! In tmp1,tmp2 and divB1 are the estimates of gradX, gradY,gradZ
       ! correspondenyly
 
       call message_pass_cell(tmp1_blk,DoSendCornerIn=.false. ,&
@@ -411,7 +412,7 @@ contains
 
       if(iProc==0)write(*,*)"Divb diffusion coefficient is: ",divb_diffcoeff
 
-      !Compute 1/sum(M_i)
+      ! Compute 1/sum(M_i)
       OneDotMDotOne = 0.0
       do iBlock=1,nBlock
          if (Unused_B(iBlock)) CYCLE
@@ -429,7 +430,7 @@ contains
       OneDotMDotOneInv = 1.0/OneDotMDotOne
 
       if(iProc==0)write(*,*) NameSub, &
-           ' finishes with OneDotMDotOneInv=',OneDotMDotOneInv 
+           ' finishes with OneDotMDotOneInv=',OneDotMDotOneInv
 
     end subroutine init_divb_cleanup
     !==========================================================================
@@ -437,8 +438,8 @@ contains
 
       integer,intent(in) :: iBlock
       real, intent(inout):: Phi_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       VDotGrad_DC = 0.0
 
       if (NeiLev(1,iBlock) == NOBLK) Phi_GB(0,1:nJ,1:nK,iBlock) = &
@@ -497,16 +498,16 @@ contains
          end do;end do;end do
       end if
     end subroutine v_grad_phi
+    !==========================================================================
 
   end subroutine clean_divb
+  !============================================================================
 
-  !===========================================================================
-
-  subroutine div_3d_b1(iBlock,VecX_G,VecY_G,VecZ_G,Out_G)     
+  subroutine div_3d_b1(iBlock,VecX_G,VecY_G,VecZ_G,Out_G)
 
     ! Can only be used for divB diffusion and projection scheme!!!!
     ! DivB is multiplied by -V_Cell!!!!
-    ! With this modification DivB[grad Phi] is a symmetric positive definite 
+    ! With this modification DivB[grad Phi] is a symmetric positive definite
     ! operator!
 
     use ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
@@ -523,9 +524,13 @@ contains
     real, dimension(0:nI+1, 0:nJ+1, 0:nK+1) :: OneTrue_G
 
     integer :: i, j, k
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'div_3d_b1'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     Out_G = 0.0
-    if(.not.(body_blk(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then 
+    if(.not.(body_blk(iBlock).or.any(neilev(:,iBlock)==NOBLK)))then
        do k=1,nK; do j=1,nJ; do i=1,nI
           Out_G(i,j,k) = - 0.5*(&
                CellFace_DB(x_,iBlock)*&
@@ -536,7 +541,7 @@ contains
                (VecZ_G(i, j, k+1)-VecZ_G(i,j,k-1)) )
        end do; end do; end do
     else
-       where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock)) 
+       where(true_cell(0:nI+1, 0:nJ+1, 0:nK+1,iBlock))
           OneTrue_G = 1.0
        elsewhere
           OneTrue_G = 0.0
@@ -579,6 +584,9 @@ contains
        end do; end do; end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine div_3d_b1
+  !============================================================================
 
 end module ModCleanDivB
+!==============================================================================

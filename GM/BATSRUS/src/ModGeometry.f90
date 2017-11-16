@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModGeometry
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModSize
   use ModMain,   ONLY: UseBody2, ExtraBc_, SolidBc_
@@ -31,7 +34,7 @@ module ModGeometry
   ! Coodinate limits in true radius and degrees (used in restart.H)
   real :: CoordDimMin_D(3) = 0.0, CoordDimMax_D(3) = 0.0
   real :: RadiusMin = -1.0, RadiusMax = -1.0
-  
+
   ! Mirror symmetry in the 3 directions
   integer:: nMirror_D(3) = 1
 
@@ -43,10 +46,10 @@ module ModGeometry
   real:: CellSizeMin, CellSizeMax
 
   ! Variables describing cells inside boundaries
-  !true when at least one cell in the block (including ghost cells) is not true
+  ! true when at least one cell in the block (including ghost cells) is not true
   logical :: body_BLK(MaxBlock)
 
-  ! true when all cells in block (not including ghost cells) are true_cells 
+  ! true when all cells in block (not including ghost cells) are true_cells
   logical :: true_BLK(MaxBlock)
 
   ! Number of true cells (collected for processor 0)
@@ -64,7 +67,7 @@ module ModGeometry
 
   ! ADDED FOR general r grid in spherical geometry!
   ! Main Idea is to have a tabulated function that maps
-  ! a general coordinate to log(r). This way, r resolution can 
+  ! a general coordinate to log(r). This way, r resolution can
   ! be arbitrarily defined. Gen. coord is taken to be 0 to 1.0
   ! but will be linearly extrapolated outside of this domain
   real, allocatable :: LogRGen_I(:)
@@ -78,7 +81,11 @@ contains
   !============================================================================
   subroutine init_mod_geometry
 
-    if(allocated(true_cell)) return
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_geometry'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(allocated(true_cell)) RETURN
     allocate(true_cell(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(R_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     if(UseBody2) allocate(R2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
@@ -87,10 +94,15 @@ contains
        write(iUnitOut,'(a)') 'init_mod_geometry allocated arrays'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_geometry
   !============================================================================
   subroutine clean_mod_geometry
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'clean_mod_geometry'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.allocated(true_cell)) RETURN
 
     deallocate(true_cell)
@@ -103,8 +115,9 @@ contains
        write(iUnitOut,'(a)') 'clean_mod_geometry deallocated arrays'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine clean_mod_geometry
-  !===========================================================================
+  !============================================================================
   subroutine read_gen_radial_grid(NameFile)
 
     use ModIoUnit, ONLY: UnitTmp_
@@ -115,18 +128,20 @@ contains
     integer :: i, iError, nGrid
     real :: LogR
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_gen_radial_grid'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! This function is for reading in the general grid function.
     ! For simplicity the files Must be in a fixed format that is read by this
     ! routine.
 
-    ! The formate is a single column with number of points in the 
+    ! The formate is a single column with number of points in the
     ! first row, and the folling rows the log(r) value from gen = 0 to 1
 
     call open_file(FILE=NameFile, STATUS='old')
 
-    ! read in nGrid 
+    ! read in nGrid
     read(UnitTmp_,*,iostat=iError) nGrid
 
     if(iError /= 0) call CON_stop(NameSub// &
@@ -149,19 +164,20 @@ contains
 
     call close_file
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_gen_radial_grid
-  !===========================================================================
+  !============================================================================
   subroutine set_gen_radial_grid
 
     ! Set a single element array when generalized radial coordinate
     ! is not used, but still should be set.
 
+    !--------------------------------------------------------------------------
     if(allocated(LogRGen_I)) deallocate(LogRGen_I)
     allocate(LogRGen_I(1))
-    LogRGen_I = 0.0 
+    LogRGen_I = 0.0
 
   end subroutine set_gen_radial_grid
-
   !============================================================================
 
   subroutine set_block_jacobian_cell(iBlock)
@@ -174,14 +190,13 @@ contains
     real:: InvDx1Half, InvDx2Half, InvDx3Half
     real:: DxyzDgen_DD(MaxDim, MaxDim)
     integer:: i,j,k
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='set_block_jacobian'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_block_jacobian_cell'
     !--------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Calculate the dCartesian/dGencoord matrix
-    
+
     InvDx1Half = 0.5/CellSize_DB(1,iBlock)
     InvDx2Half = 0.5/CellSize_DB(2,iBlock)
     InvDx3Half = 0.5/CellSize_DB(3,iBlock)
@@ -205,8 +220,8 @@ contains
             inverse_matrix(DxyzDgen_DD, DoIgnoreSingular=.true.)
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_jacobian_cell
- 
   !============================================================================
 
   subroutine count_true_cells
@@ -215,7 +230,10 @@ contains
     use ModMpi
 
     integer :: iBlock, iError
-    !----------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'count_true_cells'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     nTrueCells=0
     do iBlock = 1, nBlock
@@ -224,6 +242,9 @@ contains
     end do
     call MPI_reduce_integer_scalar(nTrueCells, MPI_SUM, 0, iComm, iError)
 
+    call test_stop(NameSub, DoTest)
   end subroutine count_true_cells
+  !============================================================================
 
 end module ModGeometry
+!==============================================================================

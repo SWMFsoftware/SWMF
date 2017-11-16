@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================================
 module ModWritePlotLos
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   implicit none
 
@@ -17,8 +19,8 @@ contains
     ! Integrate some quantities along several lines of sight and
     ! create a 2D image of the integrated quantities.
     ! The viewing point can be inifinitely far or at a finite distance.
-    ! Applications include integrating density, 
-    ! creating a synthetic coronagraph image of Thomson scattered 
+    ! Applications include integrating density,
+    ! creating a synthetic coronagraph image of Thomson scattered
     ! white light by integrating light scattered in the line of sight.
     !
     ! The algorithm loops over all blocks per processor (in parallel)
@@ -33,7 +35,7 @@ contains
     ! January  2002 modified for improved image plane
     ! December 2003 fixed sign error in scattering coefficient b_los
     ! January  2004 fix to accept 0 in LOS vector
-    ! January  2004 fixed declaration for norm_los(3), XyzPix_D(3) 
+    ! January  2004 fixed declaration for norm_los(3), XyzPix_D(3)
     ! February 2004 fix integration and make 2nd order accurate
     !               fix save_file in main.f90 update ghost cells
     !               include forgotten plot_pars1=plot_pars(ifile)
@@ -49,15 +51,15 @@ contains
     ! January  2006 compatibility with framework
     !               rotation of the coordinates to HGI
     !               wide-angle line-of-sight (for STEREO)
-    !               change in the parameters: satellite_position, 
-    !               offset_angle   
+    !               change in the parameters: satellite_position,
+    !               offset_angle
     !               Cartesian grid and circular image centered
     !               at the Sun (no offset angle)
     ! March    2009 Allow integration of functions different from rho
     ! Sept     2009 Edit by Cooper Downs: Added integration method
-    !               for spherical geometry, 
+    !               for spherical geometry,
     !               also added EUV (3-filters)
-    !               and Soft-Xray synthesis capability 
+    !               and Soft-Xray synthesis capability
 
     use ModProcMH
     use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
@@ -93,7 +95,6 @@ contains
     real    :: aOffset, bOffset, rSizeImage, rSizeImage2, rOccult, rOccult2,&
          OffsetAngle
 
-
     ! Plot variables
     integer, parameter :: neqparmax=10
     real, allocatable :: ImagePe_VII(:,:,:), Image_VII(:,:,:)
@@ -111,7 +112,7 @@ contains
     real    :: LosPix_D(3)            ! unit vector from observer to pixel
     real    :: XyzPix_D(3)            ! pixel location in 3D
     real    :: rBlockSize, rBlockCenter
-    real    :: SizePix, r2Pix    
+    real    :: SizePix, r2Pix
     real    :: BlockDistance, ObsDistance, Ratio
     real    :: XyzBlockCenter_D(3), CellSize_D(3), aBlockCenter, bBlockCenter
     real    :: XyzBlockStart_D(3), XyzBlockSign_D(3)=1.0, CoordMinBlock_D(3)
@@ -131,7 +132,7 @@ contains
     character (LEN=40) :: file_format
 
     ! extra variables needed for auxiliarry data writing with tec output
-    ! (style copied from write_plot_tec) 
+    ! (style copied from write_plot_tec)
     character (len=23) :: TextDateTime0, TextDateTime
     character (len=80) :: FormatTime
     character(len=80) :: StringTmp
@@ -140,14 +141,14 @@ contains
     ! block and variable Indices
     integer :: iBlock, iMirror, jMirror, kMirror, iVar
 
-    logical :: oktest,oktest_me, DoTiming, DoTimingMe, DoCheckBlock
+    logical :: DoTiming, DoTimingMe, DoCheckBlock
     logical :: UseScattering, UseRho
 
     ! variables added for sph geometry
     logical :: UseEuv,UseSxr
 
     ! XyzBlockcenter changes, so need fixed one
-    real :: FixedXyzBlockCenter_D(3) 
+    real :: FixedXyzBlockCenter_D(3)
 
     logical :: AlignedZ = .false.
 
@@ -160,12 +161,12 @@ contains
     integer :: nTableVar
     real, allocatable :: InterpValues_I(:)
 
-    character(len=*), parameter :: NameSub = 'write_plot_los'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_plot_los'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Initialize stuff
-    call set_oktest(NameSub, oktest, oktest_me)
-    call set_oktest('los_timing', DoTiming, DoTimingMe)
 
     call timing_start(NameSub)
 
@@ -218,7 +219,7 @@ contains
     ! Pixel size for node based pixel grid
     SizePix = 2*rSizeImage/(nPix - 1)
 
-    if(oktest .and. iProc==0) then
+    if(DoTest .and. iProc==0) then
        write(*,*) 'ObsPos         =',ObsPos_DI(:,ifile)
        write(*,*) 'Los_D          =', Los_D
        write(*,*) 'rSizeImage     =',rSizeImage
@@ -234,7 +235,7 @@ contains
     plot_type1=plot_type(ifile)
     plot_vars1=plot_vars(ifile)
 
-    if(oktest_me)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
+    if(DoTest)write(*,*)'ifile=',ifile,' plot_type=',plot_type1, &
          ' form = ',plot_form(ifile)
 
     call lower_case(plot_vars1)
@@ -258,7 +259,7 @@ contains
        ! redefine plot_vars1 with correct table info
        call join_string(nPlotVar, PlotVarNames, plot_vars1)
 
-       if(oktest_me) then
+       if(DoTest) then
           write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
           write(*,*) 'nPlotVar, PlotVarNames_V=', &
                nPlotVar,plotvarnames(1:nPlotVar)
@@ -268,13 +269,13 @@ contains
        if(.not.allocated(InterpValues_I)) &
             allocate(InterpValues_I(nPlotVar))
 
-       if(oktest_me) write(*,*) 'NameVar: ', Table_I(iTableGen)%NameVar
+       if(DoTest) write(*,*) 'NameVar: ', Table_I(iTableGen)%NameVar
     endif
 
     allnames='x y '//trim(plot_vars1)//' '//plot_pars(iFile)
-    if(oktest_me) write(*,*) 'AllNames: ', AllNames
+    if(DoTest) write(*,*) 'AllNames: ', AllNames
 
-    if(oktest_me) then
+    if(DoTest) then
        write(*,*) 'plot variables, UseRho=', plot_vars1, UseRho
        write(*,*) 'nPlotVar, PlotVarNames_V=', &
             nPlotVar,plotvarnames(1:nPlotVar)
@@ -284,13 +285,13 @@ contains
     select case(plot_form(ifile))
     case('tec')
        call get_TEC_los_variables(ifile,nPlotVar,plotvarnames,unitstr_TEC)
-       if(oktest .and. iProc==0) write(*,*)unitstr_TEC
+       if(DoTest .and. iProc==0) write(*,*)unitstr_TEC
     case('idl')
        call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, .false.)
-       if(oktest .and. iProc==0) write(*,*)unitstr_IDL
+       if(DoTest .and. iProc==0) write(*,*)unitstr_IDL
     case('hdf')
        call get_IDL_los_units(ifile,nPlotVar,plotvarnames,unitstr_IDL, .true.)
-       if(oktest .and. iProc==0) write(*,*)unitStr_IDL
+       if(DoTest .and. iProc==0) write(*,*)unitStr_IDL
     end select
 
     if(UseTableGen) then
@@ -298,19 +299,19 @@ contains
        do iVar=1, nPlotVar
           unitstr_TEC = trim(unitstr_TEC)//', "'//trim(PlotVarNames(iVar))//'"'
        enddo
-       if(oktest .and. iProc==0) write(*,*)'unitstr_TEC: ',unitstr_TEC
+       if(DoTest .and. iProc==0) write(*,*)'unitstr_TEC: ',unitstr_TEC
 
        if(plot_form(ifile) /= 'hdf') then
           call join_string(nPlotVar, PlotVarNames, plot_vars1)
           unitstr_IDL = 'x y '//plot_vars1
-          if(oktest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
+          if(DoTest .and. iProc==0) write(*,*)'unitstr_IDL: ',unitstr_IDL
        end if
     endif
 
-    ! Create unit vectors aUnit_D and bUnit_D orthogonal to the 
+    ! Create unit vectors aUnit_D and bUnit_D orthogonal to the
     ! central line of sight to setup the coordinate system in the viewing plane
-    ! We use cross products of the LOS vector with one of the principal 
-    ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is 
+    ! We use cross products of the LOS vector with one of the principal
+    ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is
     ! aligned with the original Cartesian coordinates. In case the viewing
     ! is roughly along the X or Y axis, we want bUnit_D to point along +Z,
     ! for viewing along the Z axis, we want bUnit_D to point along +Y:
@@ -335,7 +336,7 @@ contains
     aOffset = dot_product(ImageCenter_D, aUnit_D)
     bOffset = dot_product(ImageCenter_D, bUnit_D)
 
-!!!aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
+!!! aOffset = aOffset + dot_product(ObsPos_D, aUnit_D)
 
     allocate( &
          ImagePe_VII(nPlotVar,nPix,nPix), &
@@ -352,7 +353,7 @@ contains
          .or.       any(plotvarnames(1:nPlotVar) == 'euv195') &
          .or.       any(plotvarnames(1:nPlotVar) == 'euv284')
 
-    ! Do we need to calc Soft X-Ray response? 
+    ! Do we need to calc Soft X-Ray response?
     UseSxr = any(plotvarnames(1:nPlotVar) == 'sxr')
 
     ! if EUV or SXR calc, then get lookup table info
@@ -391,7 +392,7 @@ contains
     end if
 
     if(DoTiming)call timing_stop('los_block_loop')
-    !   if(plot_form(iFile) .ne. 'hdf') then
+    !   if(plot_form(iFile) /= 'hdf') then
     !       ! add up the pixels from all PE-s to root proc
     if(nProc > 1)then
        call MPI_REDUCE(ImagePe_VII, Image_VII, nPix*nPix*nPlotVar, &
@@ -421,9 +422,9 @@ contains
           file_format='("' // trim(NamePlotDir) // '",a,i1,a,i7.7,a)'
        end if
 
-       !the plot time is stored in the hdf5 files and displayed in VisIt.
-       !if you don not include it in the filename VisIt will automacially
-       !group all the los files.
+       ! the plot time is stored in the hdf5 files and displayed in VisIt.
+       ! if you don not include it in the filename VisIt will automacially
+       ! group all the los files.
        if(time_accurate .and. plot_form(ifile) /= 'hdf')then
           call get_time_string
           write(filename,file_format) &
@@ -446,9 +447,8 @@ contains
           write(UnitTmp_,*) 'ZONE T="LOS Image"', &
                ', I=',nPix,', J=',nPix,', K=1, F=POINT'
 
-
           ! Write Auxilliary header info, which is useful for EUV images.
-          ! Makes it easier to identify, and automatically process synthetic 
+          ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
           if (UseTableGen) then
 
@@ -459,30 +459,30 @@ contains
              write(TextDateTime0,FormatTime) iTime0_I
              write(TextDateTime ,FormatTime) iTime_I
 
-             !TIMEEVENT
+             ! TIMEEVENT
              write(UnitTmp_,'(a,a,a)') &
                   'AUXDATA TIMEEVENT="',trim(TextDateTime),'"'
 
-             !TIMEEVENTSTART
+             ! TIMEEVENTSTART
              write(UnitTmp_,'(a,a,a)') &
                   'AUXDATA TIMEEVENTSTART="',trim(TextDateTime0),'"'
 
-             !TIMESECONDSABSOLUTE     
+             ! TIMESECONDSABSOLUTE
              ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
              write(StringTmp,'(E20.13)')StartTime+Time_Simulation
              write(UnitTmp_,'(a,a,a)') &
                   'AUXDATA TIMESECONDSABSOLUTE="',trim(adjustl(StringTmp)),'"'
 
-             !ITER
+             ! ITER
              write(StringTmp,'(i12)')n_step
              write(UnitTmp_,'(a,a,a)') &
                   'AUXDATA ITER="',trim(adjustl(StringTmp)),'"'
 
-             !NAMELOSTABLE
+             ! NAMELOSTABLE
              write(UnitTmp_,'(a,a,a)') &
                   'AUXDATA NAMELOSTABLE="',trim(NameLosTable(iFile)),'"'
 
-             !HGIXYZ
+             ! HGIXYZ
              write(StringTmp,'(3(E14.6))')ObsPos_DI(:,iFile)
              write(UnitTmp_,'(a,a,a)') &
                   'AUXDATA HGIXYZ="',trim(adjustl(StringTmp)),'"'
@@ -510,7 +510,7 @@ contains
           ! description of file contains units, physics and dimension
           StringHeadLine = 'LOS integrals'
           ! Write Auxilliary header info, which is useful for EUV images.
-          ! Makes it easier to identify, and automatically process synthetic 
+          ! Makes it easier to identify, and automatically process synthetic
           ! images from different instruments/locations
           if (UseTableGen) then
 
@@ -526,7 +526,7 @@ contains
                   '_TIMEEVENT='//trim(TextDateTime)// &
                   '_TIMEEVENTSTART='//TextDateTime0
 
-             ! TIMESECONDSABSOLUTE    
+             ! TIMESECONDSABSOLUTE
              ! time in seconds since 1965 Jan 01 T00:00:00.000 UTC
              write(StringTmp,'(E20.13)')StartTime+Time_Simulation
              StringHeadLine = trim(StringHeadLine)//&
@@ -549,7 +549,7 @@ contains
           endif
 
           ! Set image size and dimensionalize if necessary
-          aPix = rSizeImage 
+          aPix = rSizeImage
           if (plot_dimensional(ifile)) aPix = aPix * No2Io_V(UnitX_)
 
           select case(plot_form(ifile))
@@ -561,7 +561,7 @@ contains
                   TimeIn = time_simulation, &
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn = allnames, &
-                  nDimIn = 2, & 
+                  nDimIn = 2, &
                   CoordMinIn_D = (/-aPix, -aPix/), &
                   CoordMaxIn_D = (/+aPix, +aPix/), &
                   VarIn_VII = Image_VII)
@@ -574,7 +574,7 @@ contains
                   ParamIn_I = eqpar(1:neqpar), &
                   NameVarIn_I = PlotVarNames, &
                   NameUnitsIn = unitstr_IDL,&
-                  nDimIn = 2, & 
+                  nDimIn = 2, &
                   CoordMinIn_D = (/-aPix, -aPix/), &
                   CoordMaxIn_D = (/+aPix, +aPix/), &
                   VarIn_VII = Image_VII)
@@ -589,10 +589,11 @@ contains
 
     if(UseTableGen) deallocate(InterpValues_I)
 
-    if(oktest_me)write(*,*) NameSub,' finished'
+    if(DoTest)write(*,*) NameSub,' finished'
 
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
     subroutine integrate_image
@@ -601,7 +602,7 @@ contains
       real:: d=0.0, Discriminant=-1.0
       real:: XyzIntersect_D(3)
 
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! Loop over pixels
       do jPix = 1, nPix
@@ -620,7 +621,7 @@ contains
 
             r2Pix = aPix**2 + bPix**2
             ! Check if pixel is outside the circular region
-            if( r2Pix > rSizeImage2 ) CYCLE 
+            if( r2Pix > rSizeImage2 ) CYCLE
 
             ! Get the 3D location of the pixel
             XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
@@ -632,16 +633,16 @@ contains
 
             ! Calculate whether there are intersections with the rInner sphere
             ! The LOS line can be written as XyzLine_D = XyzPix_D + d*LosPix_D
-            ! If the LOS line intersects with the sphere of radius 
-            ! rInner+cTiny, then 
+            ! If the LOS line intersects with the sphere of radius
+            ! rInner+cTiny, then
             ! (rInner+cTiny)^2 = (XyzPix_D + d*LosPix_D)^2
             !                  = XyzPix_D^2 + 2 d XyzPix_D.LosPix_D + d^2
-            ! where we use that LosPix_D is a unit vector. 
+            ! where we use that LosPix_D is a unit vector.
             ! This can be rearranged to
             ! 0 = d^2 + 2 p d + q
-            ! solved for d = -p + sqrt(p^2 - q) where only the positive root 
-            ! is needed, as LosPix_D points toward the observer. 
-            ! If there is an intersection, we set the starting point to 
+            ! solved for d = -p + sqrt(p^2 - q) where only the positive root
+            ! is needed, as LosPix_D points toward the observer.
+            ! If there is an intersection, we set the starting point to
             ! XyzIntersect_D = XyzPix_D + d*LosPix_D
 
             ! The discriminant of the equation
@@ -668,7 +669,7 @@ contains
       end do    ! iPix loop
 
     end subroutine integrate_image
-    !=========================================================================
+    !==========================================================================
     subroutine integrate_line(XyzStartIn_D, LengthMax)
 
       ! Integrate variables from XyzStartIn_D in the direction LosPix_D
@@ -685,7 +686,7 @@ contains
       real:: Length          ! Total length of integral
       real:: Ds              ! Length of line segment
 
-      real:: XyzLos_D(3)    ! Coordinate of center of line segment    
+      real:: XyzLos_D(3)    ! Coordinate of center of line segment
       integer:: iNode
       real, dimension(MaxDim):: XyzStart_D, &
            PositionMin_D, PositionMax_D, &
@@ -698,9 +699,10 @@ contains
       logical:: IsEdge
 
       logical, parameter :: DoTest = .false.
-      character(len=*), parameter:: NameSub='integrate_line'
-      !------------------------------------------------------------------------
+
       ! DoTest = iPix==200 .and. jPix==200
+      character(len=*), parameter:: NameSub = 'integrate_line'
+      !------------------------------------------------------------------------
       if(DoTest .and. iProc == 0) &
            write(*,'(2a, 3f10.7)')NameSub,' XyzStartIn_D=', XyzStartIn_D
 
@@ -749,11 +751,11 @@ contains
 
             ! Set block coordinates and the cell size on all processors
             call get_tree_position(iNode, PositionMin_D, PositionMax_D)
-            CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  !Start
-            CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  !End
-            CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) !Center
-            CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D     !Block size
-            CellSize_D      = CoordSizeBlock_D / nIjk_D             !Cell size
+            CoordMinBlock_D = CoordMin_D + CoordSize_D*PositionMin_D  ! Start
+            CoordMaxBlock_D = CoordMin_D + CoordSize_D*PositionMax_D  ! End
+            CoordBlock_D    = 0.5*(CoordMaxBlock_D + CoordMinBlock_D) ! Center
+            CoordSizeBlock_D= CoordMaxBlock_D - CoordMinBlock_D     ! Block size
+            CellSize_D      = CoordSizeBlock_D / nIjk_D             ! Cell size
             if(DoTest)then
                write(*,*)NameSub,': new iBlock=', iBlock
                write(*, '(A, 3E12.5))')NameSub//': CoordMin=', CoordMinBlock_D
@@ -789,7 +791,7 @@ contains
 
          ! If change is too large or too small adjust the step size
          if(Step > StepMax .or. (Step < StepMin .and. .not. IsEdge))then
-            ! New interval size corresponds to a StepGood 
+            ! New interval size corresponds to a StepGood
             ! in generalized coordinates instead of Step
             Ds = Ds*StepGood/Step
 
@@ -823,8 +825,8 @@ contains
       end do LOOPLINE
 
     end subroutine integrate_line
+    !==========================================================================
 
-    !=========================================================================
     subroutine add_segment(Ds, XyzLos_D)
 
       use ModMain,        ONLY: NameVarLower_V
@@ -874,7 +876,7 @@ contains
       real :: TeCutSi = 4.0e+5
       real :: DeltaTeCutSi = 3.0e+4
       real :: FractionTrue
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       rLos2= sum(XyzLos_D**2)
       xLos = XyzLos_D(1)
@@ -886,16 +888,16 @@ contains
          ! Equations for A, B, C, D on page 13,190
 
          ! This calculation is useful for light scattering in SC and IH
-         ! as it assumes that the radiation comes from a central 
+         ! as it assumes that the radiation comes from a central
          ! body with radius 1. Normally setting rOccult > 1 ensures rLos2 > 1.
 
          Sin2Omega = 1.0/rLos2
          SinOmega  = sqrt(Sin2Omega)
          Cos2Omega = 1 - Sin2Omega
          CosOmega = sqrt(Cos2Omega)
-         Logarithm = log((1.0 + SinOmega)/CosOmega)  
+         Logarithm = log((1.0 + SinOmega)/CosOmega)
 
-         !omega and functions of omega are unique to a given line of sight
+         ! omega and functions of omega are unique to a given line of sight
          a_los = CosOmega*Sin2Omega
          b_los = -0.125*( 1.0 - 3.0*Sin2Omega - (Cos2Omega/SinOmega)* &
               (1.0 + 3.0*Sin2Omega)*Logarithm )
@@ -928,7 +930,6 @@ contains
          CoordNorm_D = (GenLos_D - CoordMinBlock_D)/CellSize_D + 0.5
       end if
 
-
       ! Interpolate state if it is needed by any of the plot variables
       StateInterpolateDone = .false.
       if(UseRho .or. UseEuv .or. UseSxr .or. UseTableGen)then
@@ -951,9 +952,9 @@ contains
          if(UseElectronPressure)then
             Te = State_V(Pe_)/Ne
          elseif(UseMultiIon)then
-            Te = sum(State_V(iPIon_I))*PePerPtotal/Ne 
+            Te = sum(State_V(iPIon_I))*PePerPtotal/Ne
          else
-            Te = State_V(p_)*PePerPtotal/Ne 
+            Te = State_V(p_)*PePerPtotal/Ne
          end if
 
 !!! So minimum temperature is cTolerance in SI units???
@@ -963,7 +964,7 @@ contains
          LogTe = log10(TeSi)
 
          ! Here calc log base 10 of electron density, the -6 is to convert to CGS
-         !LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
+         ! LogNe = log10(max(Rho*No2Si_V(UnitN_),cTolerance)) - 6.0
 
 !!! Really, cTolerance is the minimum number density in CGS units???
          Ne = 1e-6*max(Ne*No2Si_V(UnitN_), cTolerance)
@@ -971,7 +972,7 @@ contains
 
          ! rconv converts solar radii units to CGS for response function exponent
          ! calculate Ne**2 and normalize units (10 ^ an exponent)
-         !ResponseFactor = 10.0**(2.0*LogNe + rConv - 26.0)
+         ! ResponseFactor = 10.0**(2.0*LogNe + rConv - 26.0)
 
          ResponseFactor = Ne**2*6.96e-16
 
@@ -1013,7 +1014,6 @@ contains
             RETURN
          endif
       end if
-
 
       do iVar = 1, nPlotVar
          Value = 0.0 ! initialize to 0 so that if statements below work right
@@ -1080,7 +1080,7 @@ contains
             end do
 
             ! if the name is not in state variables
-            if (jVar > nVar) then 
+            if (jVar > nVar) then
                ! Obtain user defined plot function for the whole block
                if(iBlock /= iBlockLast .or. iVar > iVarLast)then
                   iBlockLast = iBlock
@@ -1111,10 +1111,10 @@ contains
     !==========================================================================
     subroutine integrate_block
 
-      character(len=*), parameter :: NameSub='integrate_block'
+      character(len=*), parameter:: NameSub = 'integrate_block'
       !------------------------------------------------------------------------
       if(IsRzGeometry)then
-         ! Exclude blocks that do not intersect the Z=0 plane 
+         ! Exclude blocks that do not intersect the Z=0 plane
          if(nK > 1)then
             if(.not.(Xyz_DGB(z_,1,1,0,iBlock)<0 &
                  .and. Xyz_DGB(z_,1,1,nK,iBlock)>0)) RETURN
@@ -1128,7 +1128,7 @@ contains
            ((nJ+1)*CellSize_DB(y_,iBlock))**2 + &
            ((nK+1)*CellSize_DB(z_,iBlock))**2)
 
-      !position of the block center
+      ! position of the block center
       XyzBlockCenter_D = 0.5*(Xyz_DGB(:,nI,nJ,nK,iBlock) &
            +                  Xyz_DGB(:,1,1,1,iBlock))
 
@@ -1138,12 +1138,12 @@ contains
 
       rBlockCenter = sqrt(sum(XyzBlockCenter_D**2))
 
-      if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr .or. UseTableGen)) then 
+      if(.not.IsRzGeometry .and. (UseEuv .or. UseSxr .or. UseTableGen)) then
          ! in cartesian grid, the rBody boundary cuts through blocks and,
          ! since EUV plots are integrating to surface, need to make sure that
          ! interpolation does not interpolate to ghost cells filled with
-         ! garbage body values. So make sure that rInner is equal to 
-         ! rBody + cell diagonal width. 
+         ! garbage body values. So make sure that rInner is equal to
+         ! rBody + cell diagonal width.
          ! This way, 8 cells bounding a point along the los
          ! are guaranteed to be true_cells. Only do this for blocks on the
          ! body (doesn't affect others). Also, changing it within block loop
@@ -1209,7 +1209,7 @@ contains
             ! Check if block can intersect this pixel
             if(DoCheckBlock)then
                if( (aPix - aBlockCenter)**2 + (bPix - bBlockCenter)**2 > &
-                    rBlockSize**2 ) CYCLE 
+                    rBlockSize**2 ) CYCLE
             end if
 
             r2Pix = (aPix + aOffset)**2 + (bPix + bOffset)**2
@@ -1218,7 +1218,7 @@ contains
 
             r2Pix = aPix**2 + bPix**2
             ! Check if pixel is outside the circular region
-            if( r2Pix > rSizeImage2 ) CYCLE 
+            if( r2Pix > rSizeImage2 ) CYCLE
 
             ! Get the 3D location of the pixel
             XyzPix_D = ImageCenter_D + aPix*aUnit_D + bPix*bUnit_D
@@ -1241,57 +1241,57 @@ contains
       end do    ! iPix loop
 
     end subroutine integrate_block
-
     !==========================================================================
+
     subroutine integrate_los_block_rz
 
       ! 0. Set x_S to the left and right X faces,
       !    and r_S to the inner and outer Y faces of the block.
       !
-      ! 1. Calculate the Y and Z coordinates of the LOS intersecting x_S 
-      !    x1 = xMin and x2 = xMax and obtain the corresponding 
-      !    radial distances r1 = sqrt(y1^2+z1^2) and r2=sqrt(y^2 + z^2) 
+      ! 1. Calculate the Y and Z coordinates of the LOS intersecting x_S
+      !    x1 = xMin and x2 = xMax and obtain the corresponding
+      !    radial distances r1 = sqrt(y1^2+z1^2) and r2=sqrt(y^2 + z^2)
       !    and keep them if R1 or R2 is within the [rMin, rMax] interval.
-      ! 
-      ! 2. Calculate the intersection of the line with a circular ring of width 
-      !    yMax-yMin in the Y-Z plane and obtain the corresponding X values 
-      !    (up to 4) and keep the ones that are within [xMin, xMax]. 
+      !
+      ! 2. Calculate the intersection of the line with a circular ring of width
+      !    yMax-yMin in the Y-Z plane and obtain the corresponding X values
+      !    (up to 4) and keep the ones that are within [xMin, xMax].
       !    This requires the solution of 2 second order equations.
       !
       ! 3. Integrate along the 1 or 2 line segments
-      !    (making sure that we integrate inside the ring!) to get the length 
+      !    (making sure that we integrate inside the ring! ) to get the length
       !    of the line segment.
 
       use ModSort,        ONLY: sort_quick
 
-      ! maximum number of intersections between LOS and 
+      ! maximum number of intersections between LOS and
       ! the ring formed by rotating the block around the X axis
       ! There are six potential cross sections with the sides and inner and
       ! outer rings, but only at most 4 of these are on the block
-      integer, parameter :: MaxIntersect = 6 
+      integer, parameter :: MaxIntersect = 6
 
       ! index and number of intersections
-      integer :: iIntersect, nIntersect 
+      integer :: iIntersect, nIntersect
 
       ! indexes for sorting by distance
-      integer :: iSort_I(MaxIntersect) 
+      integer :: iSort_I(MaxIntersect)
       integer :: iSide, iSign
 
       ! the axial (X) and squared radial (Y**2) coordinates of the block faces
-      real :: x_S(2), r2_S(2) 
+      real :: x_S(2), r2_S(2)
       real :: Ratio, UnitYZ_D(2), DistRmin, r2Min, r2, Dist2, Dist
 
       ! coordinates of the intersections
       real :: Intersect_D(3), Intersect2_D(3), Intersect_DI(3,MaxIntersect)
 
       ! distances of intersections from the center of the pixel
-      real :: DistIntersect, DistIntersect_I(MaxIntersect) 
+      real :: DistIntersect, DistIntersect_I(MaxIntersect)
       !------------------------------------------------------------------------
       ! Calculate the closest approach to the origin in the Y-Z plane
       ! Normalize the Y-Z components of the LOS vector to unity
       Ratio     = 1/sqrt(sum(LosPix_D(2:3)**2))
       UnitYZ_D  = Ratio*LosPix_D(2:3)
-      ! Distance to the closest approach is the projection of the pixel 
+      ! Distance to the closest approach is the projection of the pixel
       ! location to the line pointing in the LOS direction
       DistRMin = -sum(UnitYZ_D*XyzPix_D(2:3))
       ! The min distance squared can be obtained from the Pythagorian theorem
@@ -1369,7 +1369,7 @@ contains
          Intersect_D  = Intersect_DI(:,iSort_I(iIntersect))
          Intersect2_D = Intersect_DI(:,iSort_I(iIntersect+1))
 
-         ! check if the radius of the midpoint is inside the block, 
+         ! check if the radius of the midpoint is inside the block,
          ! if not then CYCLE
          r2 = sum((0.5*(Intersect_D(2:3) + Intersect2_D(2:3)))**2)
 
@@ -1379,7 +1379,6 @@ contains
       end do
 
     end subroutine integrate_los_block_rz
-
     !==========================================================================
 
     subroutine integrate_los_block
@@ -1397,14 +1396,14 @@ contains
 
       real :: Tmp
       !------------------------------------------------------------------------
-      !if(DoTiming)call timing_start('los_set_plotvar')
+      ! if(DoTiming)call timing_start('los_set_plotvar')
 
-      !x_los, y_los, z_los, r_los give the position of the point on the los
-      !mu_los parameter related to the limb darkening
-      !face_location give the locations of the faces of the block
-      !face_location(2,3) = x1, y1, z1---x2, y2, z2 
+      ! x_los, y_los, z_los, r_los give the position of the point on the los
+      ! mu_los parameter related to the limb darkening
+      ! face_location give the locations of the faces of the block
+      ! face_location(2,3) = x1, y1, z1---x2, y2, z2
 
-      !Determine the location of the block faces
+      ! Determine the location of the block faces
       xx1 = 0.5*(Xyz_DGB(x_, 0, 0, 0,iBlock)+Xyz_DGB(x_,   1,   1  , 1,iBlock))
       xx2 = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,nI+1,nJ+1,nK+1,iBlock))
       yy1 = 0.5*(Xyz_DGB(y_, 0, 0, 0,iBlock)+Xyz_DGB(y_,   1,   1,   1,iBlock))
@@ -1430,16 +1429,16 @@ contains
       face_location(2,2) = yy2
       face_location(2,3) = zz2
 
-      !Determine where the line of sight enters and exits the block
-      !loop over the number of block face pairs, face directions and coordinates
-      do i=1,2       !face loop
+      ! Determine where the line of sight enters and exits the block
+      ! loop over the number of block face pairs, face directions and coordinates
+      do i=1,2       ! face loop
          intrsct(i,1,1) = face_location(i,1)
          intrsct(i,2,2) = face_location(i,2)
          intrsct(i,3,3) = face_location(i,3)
 
-         do j=1,3     !direction loop
-            do k=1,3   !coordinate loop
-               if (j /= k) then  
+         do j=1,3     ! direction loop
+            do k=1,3   ! coordinate loop
+               if (j /= k) then
                   intrsct(i,j,k) = XyzPix_D(k) + &
                        (LosPix_D(k)/LosPix_D(j)) &
                        *(face_location(i,j) - XyzPix_D(j))
@@ -1448,10 +1447,10 @@ contains
          end do
       end do
 
-      !which of the 6 points are on the block?
+      ! which of the 6 points are on the block?
       counter = 0
-      CHECK: do i=1,2 
-         do j=1,3 
+      CHECK: do i=1,2
+         do j=1,3
             if( (intrsct(i,j,1) >= xx1) .and. (intrsct(i,j,1) <= xx2)) then
                if( (intrsct(i,j,2) >= yy1) .and. (intrsct(i,j,2) <= yy2)) then
                   if( (intrsct(i,j,3) >= zz1) .and. (intrsct(i,j,3) <= zz2)) then
@@ -1470,8 +1469,8 @@ contains
          end do
       end do CHECK
 
-      ! Check if the los cuts through the block 
-      if(counter /= 2) RETURN 
+      ! Check if the los cuts through the block
+      if(counter /= 2) RETURN
 
       R2Point1 = sum(Point1_D**2)
       R2Point2 = sum(Point2_D**2)
@@ -1521,7 +1520,6 @@ contains
          Solution1_D = Point1_D + (Point2_D - Point1_D) * Solution1
          Solution2_D = Point1_D + (Point2_D - Point1_D) * Solution2
 
-
          ! Check if the solutions are within the segment
          IsGoodSolution1 = (Solution1 >= 0.0 .and. Solution1 <= 1.0)
          IsGoodSolution2 = (Solution2 >= 0.0 .and. Solution2 <= 1.0)
@@ -1545,8 +1543,8 @@ contains
                end if
             end if
          else
-            ! For inner sphere replace 
-            ! internal point1 with solution2 and 
+            ! For inner sphere replace
+            ! internal point1 with solution2 and
             ! internal point2 with solution1
             if(R2Point1 < rInner2) Point1_D = Solution2_D
             if(R2Point2 < rInner2) Point2_D = Solution1_D
@@ -1568,7 +1566,7 @@ contains
       end if
 
       ! remove backside of sun from EUV images
-      if(UseEuv.or.UseSxr.or.UseTableGen) then 
+      if(UseEuv.or.UseSxr.or.UseTableGen) then
          call los_cut_backside(Point1_D, Point2_D,IsAllBehind)
          ! don't continue if all on backside
          if(IsAllBehind) RETURN
@@ -1577,8 +1575,7 @@ contains
       call integrate_segment(Point1_D, Point2_D)
 
     end subroutine integrate_los_block
-
-    !=========================================================================
+    !==========================================================================
 
     subroutine integrate_segment(XyzStart_D, XyzEnd_D)
 
@@ -1592,9 +1589,10 @@ contains
       integer :: iSegment, nSegment
 
       real :: Ds             ! Length of line segment
-      real :: XyzLos_D(3)    ! Coordinate of center of line segment    
-      !------------------------------------------------------------------------
+      real :: XyzLos_D(3)    ! Coordinate of center of line segment
+
       ! Number of segments for an accurate integral
+      !------------------------------------------------------------------------
       if (IsRzGeometry) then
          ! In RZ geometry Delta Y is representative for the radial resolution
          nSegment = 1 + sum(abs(XyzEnd_D - XyzStart_D) &
@@ -1615,16 +1613,16 @@ contains
 
          call add_segment(Ds, XyzLos_D)
 
-      end do !line segment interation loop 
+      end do ! line segment interation loop
 
     end subroutine integrate_segment
-
     !==========================================================================
 
     subroutine dimensionalize_plotvar_los
 
       use ModConst,   ONLY : cSigmaThomson
       use ModPhysics, ONLY : No2Si_V, UnitX_, UnitRho_
+
       !------------------------------------------------------------------------
       do iVar = 1, nPlotVar
          NameVar = plotvarnames(iVar)
@@ -1637,9 +1635,9 @@ contains
                  *No2Si_V(UnitRho_)*No2Si_V(UnitX_)
          case('wl','pb')
             ! The sigma in Hundhausen, A. J. (1993) should be the square of the
-            ! electron radius according to Equation (4.54) 
+            ! electron radius according to Equation (4.54)
             ! in Altschuler, M.D. (1979),
-            ! in Image Reconstruction from Projections, 
+            ! in Image Reconstruction from Projections,
             ! ed. G.T. Herman (Berlin:Springer), 105
             ! So we use cSigmaThomson*3.0/16.0 here.
             Image_VII(iVar,:,:) = Image_VII(iVar,:,:) &
@@ -1655,7 +1653,6 @@ contains
       end do ! iVar
 
     end subroutine dimensionalize_plotvar_los
-
     !==========================================================================
 
     subroutine los_cut_backside(Xyz1_D,Xyz2_D,IsAllBehind)
@@ -1664,6 +1661,7 @@ contains
       logical, intent(out) :: IsAllBehind
       logical :: IsBehind1, IsBehind2
 
+      !------------------------------------------------------------------------
       IsAllBehind = .false.
 
       ! check if pixel intersects the solar disk, if not then return
@@ -1673,10 +1671,10 @@ contains
       IsBehind1 = (sum(Xyz1_D * ObsPos_D) < 0.0)
       IsBehind2 = (sum(Xyz2_D * ObsPos_D) < 0.0)
 
-      ! *** NOTE XyzPix_D is the 3D position along the pixel LOS that lies 
+      ! *** NOTE XyzPix_D is the 3D position along the pixel LOS that lies
       ! on the plane intersecting the sun center and perp to observer
       ! ---> perfect for trimming intersection to plane with the hemisphere
-      ! towards the observer. 
+      ! towards the observer.
 
       if(IsBehind1) Xyz1_D = XyzPix_D
 
@@ -1686,12 +1684,11 @@ contains
       IsAllBehind = IsBehind1.and.IsBehind2
 
     end subroutine los_cut_backside
-
     !==========================================================================
 
   end subroutine write_plot_los
-
   !============================================================================
+
   subroutine get_TEC_los_variables(iFile, nPlotVar, plotvarnames, unitstr_TEC)
 
     ! Using plot var information set the units for Tecplot files
@@ -1703,11 +1700,14 @@ contains
 
     integer, intent(in) :: NPlotVar,iFile
     character (len=20), intent(in) :: plotvarnames(NPlotVar)
-    character (len=500), intent(out) :: unitstr_TEC 
+    character (len=500), intent(out) :: unitstr_TEC
     character (len=20) :: s
 
     integer :: iVar
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_TEC_los_variables'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if (plot_dimensional(ifile)) then
        write(unitstr_TEC,'(a)') 'VARIABLES = '
@@ -1729,38 +1729,38 @@ contains
 
           select case(s)
           case ('len')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'len'//' '//&
                   trim(NameTecUnit_V(UnitX_))
           case('rho')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`r [m^-^2]'
           case('vlos','Vlos','ulos','Ulos')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'u.s'//' '//&
                   trim(NameTecUnit_V(UnitU_))
           case('wl')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`wl [m^-^2]'//' '
           case('pb')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`pb [m^-^2]'//' '
           case('euv171')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`euv171 [DN/S]'//' '
           case('euv195')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`euv195 [DN/S]'//' '
           case('euv284')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`euv284 [DN/S]'//' '
           case('sxr')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`sxr [DN/S]'//' '
 
              ! DEFAULT FOR A BAD SELECTION
           case default
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'Default'
 
           end select
@@ -1769,36 +1769,36 @@ contains
 
           select case(s)
           case ('len')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'len'
           case('rho')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'`r'
           case('vlos','Vlos','ulos','Ulos')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'u.s'
           case('wl')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'wl'
           case('pb')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'pb'
           case('euv171')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'euv171'
           case('euv195')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'euv195'
           case('euv284')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'euv284'
           case('sxr')
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'sxr'
 
              ! DEFAULT FOR A BAD SELECTION
           case default
-             write(unitstr_TEC,'(a)') & 
+             write(unitstr_TEC,'(a)') &
                   trim(unitstr_TEC)//'Default'
 
           end select
@@ -1809,9 +1809,10 @@ contains
 
     write(unitstr_TEC,'(a)') trim(unitstr_TEC)//'"'
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_TEC_los_variables
-
   !============================================================================
+
   subroutine get_IDL_los_units(iFile, nPlotVar, plotvarnames, &
        unitstr_IDL, UnitForAllnVars)
 
@@ -1825,11 +1826,14 @@ contains
     integer, intent(in) :: iFile,NPlotVar
     logical, intent(in) :: UnitForALlNvars
     character (len=20), intent(in) :: plotvarnames(NPlotVar)
-    character (len=79), intent(out) :: unitstr_IDL 
+    character (len=79), intent(out) :: unitstr_IDL
     character (len=20) :: s
 
     integer :: iVar
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_IDL_los_units'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if (plot_dimensional(ifile)) then
        write(unitstr_IDL,'(a)') trim(NameIdlUnit_V(UnitX_))//' '//&
             trim(NameIdlUnit_V(UnitX_))//' '//&
@@ -1855,37 +1859,37 @@ contains
 
           select case(s)
           case ('len')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//&
                   trim(NameIdlUnit_V(UnitX_))
           case('rho')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//'[m^-^2]'
           case('vlos','Vlos','ulos','Ulos')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//&
                   trim(NameIdlUnit_V(UnitU_))
           case('wl')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//'[m^-^2]'
           case('pb')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//'[m^-^2]'
           case('euv171')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//'euv171 [DN/S]'
           case('euv195')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//'euv195 [dn/s]'
           case('euv284')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//'euv284 [DN/S]'
           case('sxr')
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//' '//'sxr [DN/S]'
              ! DEFAULT FOR A BAD SELECTION
           case default
-             write(unitstr_IDL,'(a)') & 
+             write(unitstr_IDL,'(a)') &
                   trim(unitstr_IDL)//'" Dflt"'
           end select
 
@@ -1893,7 +1897,9 @@ contains
 
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_IDL_los_units
   !============================================================================
 
 end module ModWritePlotLos
+!==============================================================================

@@ -1,12 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBatlInterface
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use BATL_grid, ONLY: BATL_interpolate => interpolate_grid_amr_gc
   implicit none
 
 contains
-  !===========================================================================
+  !============================================================================
   subroutine set_batsrus_grid
 
     use BATL_lib, ONLY: nBlock, Unused_B, Unused_BP, iProc, iComm, &
@@ -27,16 +30,18 @@ contains
     integer:: iBlock, iError
     real   :: CellSize1Root
 
-    logical:: DoTest, DotestMe
+    logical:: DotestMe
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_batsrus_grid'
-    !-------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Tell if the grid and/or the tree has changed
     if(IsNewDecomposition) iNewDecomposition = mod(iNewDecomposition+1,10000)
     if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
 
-    if(DoTestMe)write(*,*) NameSub, &
+    if(DoTest)write(*,*) NameSub, &
          ' starting with IsNewDecomposition, IsNewTree, restart=', &
          IsNewDecomposition, IsNewTree, restart
 
@@ -76,8 +81,9 @@ contains
 
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_batsrus_grid
-  !===========================================================================
+  !============================================================================
   subroutine set_batsrus_block(iBlock)
 
     use BATL_lib, ONLY: nDim, &
@@ -97,12 +103,15 @@ contains
 
     integer, intent(in):: iBlock
 
-    ! Convert from BATL to BATSRUS ordering of subfaces. 
+    ! Convert from BATL to BATSRUS ordering of subfaces.
 
     integer, parameter:: iOrder_I(4) = (/1,3,2,4/)
     integer:: iNodeNei, iNodeNei_I(4)
     integer:: i, j, k
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_batsrus_block'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     neiLeast(iBlock)  = DiLevelNei_IIIB(-1,0,0,iBlock)
     neiLwest(iBlock)  = DiLevelNei_IIIB(+1,0,0,iBlock)
     neiLsouth(iBlock) = DiLevelNei_IIIB(0,-1,0,iBlock)
@@ -117,7 +126,7 @@ contains
     neiLEV(5,iBlock)  = neiLbot(iBlock)
     neiLEV(6,iBlock)  = neiLtop(iBlock)
 
-    ! neiBeast ... neiPbot are used in 
+    ! neiBeast ... neiPbot are used in
     ! ModFaceValue::correct_monotone_restrict and
     ! ModConserveFlux::apply_cons_flux
 
@@ -238,6 +247,7 @@ contains
 
     call fix_block_geometry(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_batsrus_block
   !============================================================================
   subroutine set_batsrus_state
@@ -255,10 +265,10 @@ contains
 
     integer:: iBlock
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_batsrus_state'
-    !-------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -275,6 +285,7 @@ contains
     if(UseResistivity) call set_resistivity
     if(UseB0)call set_b0_reschange
     if(UseFieldLineThreads)call set_threads
+    call test_stop(NameSub, DoTest)
   end subroutine set_batsrus_state
   !============================================================================
   subroutine calc_other_vars(iBlock)
@@ -294,7 +305,10 @@ contains
     integer, intent(in) :: iBlock
 
     integer:: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_other_vars'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! Initialize variables for flux conservation
     call init_cons_flux(iBlock)
 
@@ -323,7 +337,7 @@ contains
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(R2_Blk(i,j,k,iBlock) > rBody2) CYCLE
           State_VGB(1:nVar,i,j,k,iBlock) = FaceState_VI(1:nVar,body2_)
-          ! Convert velocity to momentum                                    
+          ! Convert velocity to momentum
           do iFluid = 1, nFluid
              call select_fluid
              State_VGB(iRhoUx,i,j,k,iBlock) = &
@@ -357,10 +371,10 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_other_vars
-
   !============================================================================
-  
+
   subroutine interpolate_grid_amr_gc(XyzIn_D, iBlock, &
        nCell, iCell_II, Weight_I, IsBody)
 
@@ -371,7 +385,7 @@ contains
     !
     ! NOTE: it is assumed that iBlock is appropriate for interpolation
     ! that utilizes only 1 layer of ghost cells, i.e. the call
-    !  call check_interpolate_amr_gc(XyzIn_D,iBlock,iPeOut,iBlockOut)!BATL_grid
+    !  call check_interpolate_amr_gc(XyzIn_D,iBlock,iPeOut,iBlockOut)! BATL_grid
     ! would result in iBlockOut==iBlock
     !
     ! difference from BATL_grid version: if a cell in the stencil is not
@@ -388,8 +402,10 @@ contains
     integer:: nCellNew
     real:: WeightTotal
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'interpolate_grid_amr_gc'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! call interpolation routine from BATL_grid
     call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
 
@@ -418,7 +434,7 @@ contains
             'No true cell in the interpolation stencil')
        else
           !\
-          !Rescale weights to get their total equal 1
+          ! Rescale weights to get their total equal 1
           !/
           Weight_I(1:nCell) = Weight_I(1:nCell)/WeightTotal
        end if
@@ -427,6 +443,9 @@ contains
        if(present(IsBody)) IsBody = .false.
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine interpolate_grid_amr_gc
+  !============================================================================
 
 end module ModBatlInterface
+!==============================================================================

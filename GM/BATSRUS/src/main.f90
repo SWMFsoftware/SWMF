@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program BATSRUS
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModBatsrusMethods, ONLY: &
        BATS_init_session, &
@@ -35,7 +38,7 @@ program BATSRUS
   integer :: iError
   real(Real8_) :: CpuTimeStart
 
-  !---------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   !\
   ! Initialization of MPI/parallel message passing.
   !/
@@ -98,7 +101,7 @@ program BATSRUS
      !\
      ! Test string is read, so set the test flags now
      !/
-     !call set_oktest('main',DoTest,DoTestMe)
+     ! call set_oktest('main',DoTest,DoTest)
 
      !\
      ! Time execution (timing parameters were set by MH_set_parameters)
@@ -120,8 +123,8 @@ program BATSRUS
         !\
         ! Stop this session if stopping conditions are fulfilled
         !/
-        if (stop_condition_true()) exit TIMELOOP
-        if(is_time_to_stop())exit SESSIONLOOP
+        if (stop_condition_true()) EXIT TIMELOOP
+        if(is_time_to_stop())EXIT SESSIONLOOP
 
         call timing_step(n_step+1)
 
@@ -183,13 +186,13 @@ program BATSRUS
   call MPI_finalize(iError)
 
 contains
-
-  !===========================================================================
+  !============================================================================
 
   function stop_condition_true() result(StopConditionTrue)
 
     logical :: StopConditionTrue
 
+    !--------------------------------------------------------------------------
     StopConditionTrue = .false.
 
     if(nIter >= 0 .and. iteration_number >= nIter) StopConditionTrue = .true.
@@ -198,8 +201,7 @@ contains
          StopConditionTrue = .true.
 
   end function stop_condition_true
-
-  !===========================================================================
+  !============================================================================
 
   function is_time_to_stop() result(IsTimeToStop)
 
@@ -207,6 +209,7 @@ contains
 
     logical :: IsTimeToStop
 
+    !--------------------------------------------------------------------------
     IsTimeToStop = .false.
 
     if(iProc==0)then
@@ -224,8 +227,7 @@ contains
     call MPI_BCAST(IsTimeToStop,1,MPI_LOGICAL,0,iComm,iError)
 
   end function is_time_to_stop
-
-  !===========================================================================
+  !============================================================================
 
   subroutine show_progress
 
@@ -243,6 +245,10 @@ contains
     !/
 
     ! Show speed as cells/second/PE/step
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'show_progress'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if( UseTiming .and. iProc==0 &
          .and. dn_progress1>0 .and. mod(n_step,dn_progress1) == 0 ) then
 
@@ -294,64 +300,71 @@ contains
        write(*,*)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine show_progress
+  !============================================================================
 
 end program BATSRUS
+!==============================================================================
 
-!============================================================================
 ! The following subroutines are here so that we can use SWMF library routines
 ! Also some features available in SWMF mode only require empty subroutines
 ! for compilation of the stand alone code.
-!============================================================================
 subroutine CON_stop(StringError)
   implicit none
   character (len=*), intent(in) :: StringError
+  !----------------------------------------------------------------------------
   call stop_mpi(StringError)
 end subroutine CON_stop
-!============================================================================
+!==============================================================================
 subroutine CON_set_do_test(String,DoTest,DoTestMe)
   implicit none
   character (len=*), intent(in)  :: String
   logical          , intent(out) :: DoTest, DoTestMe
-  call set_oktest(String,DoTest,DoTestMe)
+  !----------------------------------------------------------------------------
 end subroutine CON_set_do_test
+!==============================================================================
 
-!============================================================================
-! The subroutines and functions below are defined in srcInterface for SWMF. 
-!============================================================================
+! The subroutines and functions below are defined in srcInterface for SWMF.
 subroutine update_grad_density
+  !----------------------------------------------------------------------------
   call stop_mpi('ERROR: update_grad_density is for SWMF')
 end subroutine update_grad_density
-!============================================================================
+!==============================================================================
 subroutine get_ray_bunch_intensity
+  !----------------------------------------------------------------------------
   call stop_mpi('ERROR: get_ray_bunch_intensity is for SWMF')
 end subroutine get_ray_bunch_intensity
-!============================================================================
+!==============================================================================
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   implicit none
   real,dimension(3),intent(in)::Xyz_D
   integer,intent(in)::nVar
   real,dimension(nVar)::State_V
+  !----------------------------------------------------------------------------
   call stop_mpi( &
        'ERROR: get_from_spher_buffer_grid is for SWMF')
 end subroutine get_from_spher_buffer_grid
-!=============================================================================
+!==============================================================================
 subroutine plot_buffer(iFile)
   implicit none
   integer, intent(in)::iFile
-  !-----------
+  !----------------------------------------------------------------------------
   call stop_mpi( &
        'ERROR: plot_buffer is for SWMF')
 end subroutine plot_buffer
-!=============================================================================
+!==============================================================================
 subroutine read_ih_buffer(y,z,State_V)
   real :: y, z, State_V(8)
+  !----------------------------------------------------------------------------
   call stop_mpi('ERROR: read_ih_buffer is for SWMF')
 end subroutine read_ih_buffer
-!=============================================================================
+!==============================================================================
 subroutine read_pw_buffer(FaceCoords_D,nVar,FaceState_V)
   real, intent(in) :: FaceCoords_D(3)
   integer, intent(in) :: nVar
   real, intent(inout) :: FaceState_V(nVar)
+  !----------------------------------------------------------------------------
   call stop_mpi('ERROR: read_pw_buffer is for SWMF')
 end subroutine read_pw_buffer
+!==============================================================================

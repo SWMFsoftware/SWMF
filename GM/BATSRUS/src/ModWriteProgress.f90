@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 
 module ModWriteProgress
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   implicit none
 
@@ -14,6 +16,7 @@ module ModWriteProgress
   public:: write_timeaccurate   ! write info about simulation/wall clock time
 
 contains
+  !============================================================================
 
   subroutine write_progress(inopt)
     use ModProcMH
@@ -23,7 +26,10 @@ contains
     use ModVarIndexes, ONLY: NameEquation
 
     integer, intent(in) :: inopt
-    !----------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_progress'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if (iProc /= 0 .or. lVerbose<=0) RETURN
 
@@ -61,9 +67,9 @@ contains
        end if
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_progress
-
-  !==============================================================================
+  !============================================================================
 
   subroutine write_runtime_values
 
@@ -83,14 +89,17 @@ contains
     use CON_planet,    ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
          RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
          IonosphereHeight
-    use ModIonElectron,ONLY: iVarUseCmax_I
+    use ModIonElectron, ONLY: iVarUseCmax_I
     use ModMpi
     use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK, nLevelMin, nLevelMax,&
          IsLogRadius, IsGenRadius
     use ModUserInterface ! user_action
 
     character(len=100):: String, StringFormat
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_runtime_values'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Count number of true cells
     call count_true_cells
@@ -179,13 +188,12 @@ contains
        if (UseBody2Orbit) then
           call write_prefix; write(iUnitOut,'(10X,''UseBody2Orbit: .true.'')')
           call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))') &
-               'OrbitPeriod: ', OrbitPeriod/cSecondPerDay 
+               'OrbitPeriod: ', OrbitPeriod/cSecondPerDay
        endif
     else
        call write_prefix
        write(iUnitOut,'(10X,''UseBody2: .false.'')')
     end if
-
 
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))')&
@@ -283,7 +291,7 @@ contains
        write(iUnitOut,'(10x,a,f4.2)') '    Cfl:    ', Cfl
     end if
     if(boris_correction)then
-       call write_prefix     
+       call write_prefix
        write(iUnitOut,'(10X,a,f10.4)') &
             "    with Boris correction, factor =", boris_cLIGHT_factor
     end if
@@ -341,21 +349,22 @@ contains
     call write_prefix; write(iUnitOut,*)
     if(UseUserEchoInput) call user_action('write progress')
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_runtime_values
-
-  !==============================================================================
+  !============================================================================
 
   subroutine write_timeaccurate
 
     use ModMain, ONLY : Time_Simulation
 
+    !--------------------------------------------------------------------------
     write(*, '(a,e13.5,a,f12.6,a,f12.6,a)') &
          '   Simulated Time T = ',Time_Simulation, &
          ' (',Time_Simulation/60.00, &
          ' min, ',Time_Simulation/3600.00,' hrs)'
 
   end subroutine write_timeaccurate
-
   !============================================================================
 
 end module ModWriteProgress
+!==============================================================================

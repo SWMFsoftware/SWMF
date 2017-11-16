@@ -1,13 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModFaceFlux
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iDimTest
 
   use ModProcMH,     ONLY: iProc
   use ModSize,       ONLY:x_, y_, z_, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModMain,       ONLY: UseB, UseB0, cLimit, &
-       iTest, jTest, kTest, ProcTest, BlkTest, DimTest
+  use ModMain,       ONLY: UseB, UseB0, cLimit
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
        UseIonHeatConduction, DoThinCurrentSheet
   use ModMain,       ONLY: UseBorisSimple, UseBoris => boris_correction
@@ -76,7 +78,7 @@ module ModFaceFlux
   logical :: DoLfNeutral, DoHllNeutral, DoHlldwNeutral, DoLfdwNeutral, &
        DoAwNeutral, DoGodunovNeutral, DoHllcNeutral
 
-  ! 1D Burgers' equation, works for Hd equations. 
+  ! 1D Burgers' equation, works for Hd equations.
   logical:: DoBurgers = .false.
 
   logical :: UseLindeFix
@@ -89,7 +91,7 @@ module ModFaceFlux
   ! Direction of the face
   integer :: iDimFace
 
-  ! index of the face 
+  ! index of the face
   integer :: iFace, jFace, kFace
 
   ! index of cell in the negative and positive directions from face
@@ -116,9 +118,9 @@ module ModFaceFlux
   real :: UnLeft_I(nFluid+1)  = 0.0
   real :: UnRight_I(nFluid+1) = 0.0
 
-  real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /) !B x Area for current -> BxJ
-  real :: Enormal = 0.0                         !normal electric field -> div E
-  real :: Pe      = 0.0                         !electron pressure -> grad Pe
+  real :: bCrossArea_D(3) = (/ 0.0, 0.0, 0.0 /) ! B x Area for current -> BxJ
+  real :: Enormal = 0.0                         ! normal electric field -> div E
+  real :: Pe      = 0.0                         ! electron pressure -> grad Pe
   real :: Pwave   = 0.0
 
   ! Variables for normal resistivity
@@ -149,7 +151,7 @@ module ModFaceFlux
 
   ! Variables for rotated coordinate system (n is normal to face)
   real :: Normal_D(3), NormalX, NormalY, NormalZ
-  real :: Tangent1_D(3), Tangent2_D(3)   
+  real :: Tangent1_D(3), Tangent2_D(3)
   real :: B0n, B0t1, B0t2
   real :: UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L
   real :: UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R
@@ -160,13 +162,12 @@ module ModFaceFlux
 
   ! One of the two possible ways to treat the MHD-like systems
   ! (partially symmetrizable, following the Godunov definition).
-  ! If UseRS7=.true. then use the 7-wave Riemann Solver (RS) with 
+  ! If UseRS7=.true. then use the 7-wave Riemann Solver (RS) with
   ! continuous  normal component of the magnetic field across the face.
   ! The number of jumps in the physical variables across the face is equal
-  ! to the number of waves, resulting in a well-posed Riemann problem. 
+  ! to the number of waves, resulting in a well-posed Riemann problem.
   ! This approach is an alternative to the 8-wave scheme.
   logical:: UseRS7 = .false.
-
 
   ! Local logical variables for various terms that may be switched off
   ! if they are treated with semi-implicit scheme.
@@ -179,13 +180,14 @@ module ModFaceFlux
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
 contains
+  !============================================================================
 
-  !=========================================================================
   subroutine face_flux_set_parameters(NameCommand)
     use ModReadParam, ONLY: read_var
 
     character(len=*), intent(in):: NameCommand
-    !------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     select case(NameCommand)
     case('#CLIMIT')
        call read_var('UseClimit', UseClimit)
@@ -203,8 +205,8 @@ contains
     end select
 
   end subroutine face_flux_set_parameters
+  !============================================================================
 
-  !=========================================================================
   subroutine rotate_state_vectors
 
     use ModCoordTransform, ONLY: cross_product
@@ -215,7 +217,7 @@ contains
     ! Store the rotated vector components in scalar variables UnL, Ut1L, ....
     ! Also store the transformation for rotating back.
     ! Current implementation is for a single ion fluid.
-
+    !--------------------------------------------------------------------------
     if(IsCartesianGrid)then
        select case (iDimFace)
        case (x_) ! x face
@@ -314,13 +316,14 @@ contains
     end if
 
   end subroutine rotate_state_vectors
-  !==========================================================================
+  !============================================================================
   subroutine rotate_flux_vector(FluxRot_V, Flux_V)
     real, intent(in)   :: FluxRot_V(:)
     real, intent(inout):: Flux_V(:)
 
     ! Rotate n,t1,t2 components back to x,y,z components
-    if(IsCartesianGrid)then                             
+    !--------------------------------------------------------------------------
+    if(IsCartesianGrid)then
        select case (iDimFace)
        case (x_)
           Flux_V(RhoUx_ ) = FluxRot_V(RhoUn_)
@@ -367,7 +370,7 @@ contains
     end if
 
   end subroutine rotate_flux_vector
-  !===========================================================================
+  !============================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
     use ModAdvance,  ONLY: TypeFlux => FluxType
@@ -378,23 +381,17 @@ contains
          UseHyperbolicDivb
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
     use ModWaves,    ONLY: UseWavePressure
-    use ModViscosity,ONLY: UseArtificialVisco, AlphaVisco
+    use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
-    logical :: DoTest, DoTestMe
 
-
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
-
-    if(DoTestMe)call print_values
+    if(DoTest)call print_values
 
     DoSimple = TypeFlux == 'Simple'
     DoLf     = TypeFlux == 'Rusanov'
@@ -420,7 +417,7 @@ contains
          (UseHyperbolicDivb .or. DoHll .or. DoLfdw .or. DoHlldw &
          .or. DoHlld .or. DoAw)
 
-    ! Make sure that Hall MHD recalculates the magnetic field 
+    ! Make sure that Hall MHD recalculates the magnetic field
     ! in the current block that will be used for the Hall term
     IsNewBlockCurrent      = .true.
     IsNewBlockGradPe       = .true.
@@ -470,17 +467,18 @@ contains
             call get_flux_z(iMinFace, iMaxFace, jMinFace, jMaxFace, 1, nKFace)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-    !=========================================================================
+    !==========================================================================
     subroutine print_values
       integer :: iVar
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       if(DoResChangeOnly)then
          write(*,*)'calc_facefluxes for DoResChangeOnly'
          RETURN
       end if
 
-      if(DimTest==x_ .or. DimTest==0)then
+      if(iDimTest==x_ .or. iDimTest==0)then
          write(*,*)&
               'Calc_facefluxes, left and right states at i-1/2 and i+1/2:'
 
@@ -504,7 +502,7 @@ contains
          end if
       end if
 
-      if(DimTest==y_ .or. DimTest==0)then
+      if(iDimTest==y_ .or. iDimTest==0)then
          write(*,*)&
               'Calc_facefluxes, left and right states at j-1/2 and j+1/2:'
 
@@ -528,7 +526,7 @@ contains
          end if
       end if
 
-      if(DimTest==z_ .or. DimTest==0)then
+      if(iDimTest==z_ .or. iDimTest==0)then
          write(*,*)&
               'Calc_facefluxes, left and right states at k-1/2 and k+1/2:'
          do iVar=1,nVar
@@ -552,7 +550,6 @@ contains
       end if
 
     end subroutine print_values
-
     !==========================================================================
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -560,13 +557,13 @@ contains
       use ModAdvance, ONLY: State_VGB
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       call set_block_values(iBlock, x_)
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         DoTestCell = DoTestMe &
+         DoTestCell = DoTest &
               .and. (iFace == iTest .or. iFace == iTest+1) &
               .and. jFace == jTest .and. kFace == kTest
 
@@ -591,28 +588,28 @@ contains
                  Normal_D)
             RightState_VX(Bx_:Bz_, iFace, jFace, kFace)=&
                  RightState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnR* Normal_D   
+                 DeltaBnR* Normal_D
             DeltaBnL=sum((LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace-1,jFace,kFace,iBlockFace))*&
                  Normal_D)
             LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)=&
                  LeftState_VX(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnL* Normal_D         
+                 DeltaBnL* Normal_D
          else
-            DeltaBnL=cZero;DeltaBnR=cZero
+            DeltaBnL=0.0;DeltaBnR=0.0
          end if
          StateLeft_V  = LeftState_VX( :, iFace, jFace, kFace)
          StateRight_V = RightState_VX(:, iFace, jFace, kFace)
-         
+
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
-         
+
          if(UseArtificialVisco) call add_artificial_viscosity( &
               Flux_VX(:,iFace, jFace, kFace))
 
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         if(UseFDFaceFlux) call correct_u_normal(x_) 
+         if(UseFDFaceFlux) call correct_u_normal(x_)
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -628,8 +625,8 @@ contains
       end do; end do; end do
 
       if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
-         ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx 
-         ! is 6th order. 
+         ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
+         ! is 6th order.
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
                if(UseLowOrder_X(iFace,jFace,kFace)) CYCLE
@@ -642,7 +639,6 @@ contains
          end do; end do; enddo
       endif
     end subroutine get_flux_x
-
     !==========================================================================
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
@@ -656,7 +652,7 @@ contains
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         DoTestCell = DoTestMe .and. iFace == iTest .and. &
+         DoTestCell = DoTest .and. iFace == iTest .and. &
               (jFace == jTest .or. jFace == jTest+1) .and. kFace == kTest
 
          call set_cell_values_y
@@ -667,7 +663,7 @@ contains
             VdtFace_Y(iFace,jFace,kFace) = 0.0
             CYCLE
          endif
-         
+
          if(UseB0)then
             B0x = B0_DY(x_,iFace, jFace, kFace)
             B0y = B0_DY(y_,iFace, jFace, kFace)
@@ -686,9 +682,9 @@ contains
                  Normal_D)
             LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)=&
                  LeftState_VY(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnL* Normal_D         
+                 DeltaBnL* Normal_D
          else
-            DeltaBnL=cZero;DeltaBnR=cZero
+            DeltaBnL=0.0;DeltaBnR=0.0
          end if
 
          StateLeft_V  = LeftState_VY( :, iFace, jFace, kFace)
@@ -698,7 +694,7 @@ contains
 
          if(UseArtificialVisco) call add_artificial_viscosity( &
               Flux_VY(:,iFace, jFace, kFace))
-         
+
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
 
          if(UseFDFaceFlux) call correct_u_normal(y_)
@@ -717,8 +713,8 @@ contains
 
       end do; end do; end do
 
-      !For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
-      !is 6th order. 
+      ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
+      ! is 6th order.
       if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
@@ -733,7 +729,6 @@ contains
          end do; end do; enddo
       end if
     end subroutine get_flux_y
-
     !==========================================================================
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
@@ -747,7 +742,7 @@ contains
 
       do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
 
-         DoTestCell = DoTestMe .and. iFace == iTest .and. &
+         DoTestCell = DoTest .and. iFace == iTest .and. &
               jFace == jTest .and. (kFace == kTest .or. kFace == kTest+1)
 
          call set_cell_values_z
@@ -758,7 +753,7 @@ contains
             VdtFace_Z(iFace,jFace,kFace) = 0.0
             CYCLE
          endif
-         
+
          if(UseB0)then
             B0x = B0_DZ(x_,iFace, jFace, kFace)
             B0y = B0_DZ(y_,iFace, jFace, kFace)
@@ -770,15 +765,15 @@ contains
                  Normal_D)
             RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
                  RightState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnR* Normal_D   
+                 DeltaBnR* Normal_D
             DeltaBnL=sum((LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
                  State_VGB(Bx_:Bz_,iFace,jFace,kFace-1,iBlockFace))*&
                  Normal_D)
             LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)=&
                  LeftState_VZ(Bx_:Bz_, iFace, jFace, kFace)-&
-                 DeltaBnL* Normal_D         
+                 DeltaBnL* Normal_D
          else
-            DeltaBnL=cZero;DeltaBnR=cZero
+            DeltaBnL=0.0;DeltaBnR=0.0
          end if
 
          StateLeft_V  = LeftState_VZ( :, iFace, jFace, kFace)
@@ -791,7 +786,7 @@ contains
 
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
 
-         if(UseFDFaceFlux) call correct_u_normal(z_)  
+         if(UseFDFaceFlux) call correct_u_normal(z_)
          uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBoris) &
@@ -820,37 +815,43 @@ contains
          end do; end do; enddo
       end if
     end subroutine get_flux_z
-    !=====================================================================
+    !==========================================================================
 
     subroutine add_artificial_viscosity(Flux_V)
-      use ModAdvance,ONLY: State_VGB, Energy_GBI
+      use ModAdvance, ONLY: State_VGB, Energy_GBI
       real,     intent(inout) :: Flux_V(nFlux)
-      
+
+      !------------------------------------------------------------------------
       if(all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace))) then
 
          Flux_V(1:nVar) = Flux_V(1:nVar) - AlphaVisco*CmaxDt* &
               (State_VGB(1:nVar,iFace,jFace,kFace,iBlockFace) - &
               State_VGB(1:nVar,iLeft,jLeft,kLeft,iBlockFace))* &
-              Area 
+              Area
 
          Flux_V(nVar+1:nFlux) = Flux_V(nVar+1:nFlux) - AlphaVisco*CmaxDt* &
               (Energy_GBI(iFace,jFace,kFace,iBlockFace,:) - &
               Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,:))* &
-              Area 
+              Area
       endif
     end subroutine add_artificial_viscosity
+    !==========================================================================
 
   end subroutine calc_face_flux
+  !============================================================================
 
-  !===========================================================================
   subroutine set_block_values(iBlock, iDim)
     integer, intent(in) :: iBlock, iDim
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_block_values'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     iBlockFace = iBlock
     iDimFace   = iDim
 
     ! For generalized coordinates the values below are calculated cell by cell
-    if(.not.IsCartesian .and. .not. UseHighFDGeometry) RETURN    
+    if(.not.IsCartesian .and. .not. UseHighFDGeometry) RETURN
 
     ! Calculate face normal and area vectors for Cartesian grid
     Normal_D = 0.0; Normal_D(iDim) = 1.0
@@ -868,10 +869,11 @@ contains
     end select
     Area2 = Area**2
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_values
-  !===========================================================================
+  !============================================================================
   subroutine set_cell_values
-
+    !--------------------------------------------------------------------------
     select case(iDimFace)
     case(x_)
        call set_cell_values_x
@@ -882,9 +884,11 @@ contains
     end select
 
   end subroutine set_cell_values
-  !===========================================================================
+  !============================================================================
   subroutine set_cell_values_x
 
+    character(len=*), parameter:: NameSub = 'set_cell_values_x'
+    !--------------------------------------------------------------------------
     iLeft = iFace - 1; jLeft = jFace; kLeft = kFace
 
     if(.not.IsCartesian)then
@@ -909,7 +913,7 @@ contains
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 1e-30)then
 
-          if(DoTestCell)write(*,*)'set_cell_values_x: Area2=', Area2
+          if(DoTestCell)write(*,*)NameSub,': Area2=', Area2
 
           ! The face is at the pole
           Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
@@ -926,10 +930,12 @@ contains
     call set_cell_values_common
 
   end subroutine set_cell_values_x
+  !============================================================================
 
-  !===========================================================================
   subroutine set_cell_values_y
 
+    character(len=*), parameter:: NameSub = 'set_cell_values_y'
+    !--------------------------------------------------------------------------
     iLeft = iFace; jLeft = jFace - 1; kLeft = kFace
 
     if(.not.IsCartesian)then
@@ -950,9 +956,9 @@ contains
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 1e-30)then
 
-          if(DoTestCell)write(*,*)'set_cell_values_y: Area2=', Area2
+          if(DoTestCell)write(*,*)NameSub,': Area2=', Area2
 
-          !The face is at the pole
+          ! The face is at the pole
           Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
                -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
           Normal_D=Normal_D/sqrt(sum(Normal_D**2))
@@ -969,10 +975,12 @@ contains
     call set_cell_values_common
 
   end subroutine set_cell_values_y
-  !===========================================================================
+  !============================================================================
 
   subroutine set_cell_values_z
 
+    character(len=*), parameter:: NameSub = 'set_cell_values_z'
+    !--------------------------------------------------------------------------
     iLeft = iFace; jLeft = jFace; kLeft = kFace - 1
 
     if(.not.IsCartesian)then
@@ -983,9 +991,9 @@ contains
        Area2 = AreaX**2 + AreaY**2 + AreaZ**2
        if(Area2 < 1e-30)then
 
-          if(DoTestCell)write(*,*)'set_cell_values_z: Area2 = ', Area2
+          if(DoTestCell)write(*,*) NameSub,': Area2 = ', Area2
 
-          !The face is at the pole
+          ! The face is at the pole
           Normal_D = Xyz_DGB(:,iFace,jFace,kFace,iBlockFace) &
                -     Xyz_DGB(:,iLeft,jLeft,kLeft,iBlockFace)
           Normal_D=Normal_D/sqrt(sum(Normal_D**2))
@@ -1001,18 +1009,17 @@ contains
     call set_cell_values_common
 
   end subroutine set_cell_values_z
-
-  !==========================================================================
+  !============================================================================
 
   subroutine set_cell_values_common
 
     use ModPhysics, ONLY: Io2No_V, UnitU_
     use ModGeometry, ONLY: r_BLK
     real :: r
-    !--------------------------------------------------------------------
-
+    character(len=*), parameter:: NameSub = 'set_cell_values_common'
+    !--------------------------------------------------------------------------
     if(DoTestCell .and. .not.IsCartesian) &
-         write(*,*)'Area2,AreaX,AreaY,AreaZ,Normal_D=', &
+         write(*,*)NameSub,': Area2,AreaX,AreaY,AreaZ,Normal_D=', &
          Area2, AreaX, AreaY, AreaZ, Normal_D
 
     iRight= iFace; jRight = jFace; kRight = kFace
@@ -1071,13 +1078,12 @@ contains
           Climit = -1.0
        end if
 
-       if(DoTestCell)write(*,*)'set_cell_values_common: Climit=', Climit
+       if(DoTestCell)write(*,*) NameSub,': Climit=', Climit
 
     end if
 
   end subroutine set_cell_values_common
-
-  !==========================================================================
+  !============================================================================
 
   subroutine get_numerical_flux(Flux_V)
 
@@ -1109,8 +1115,7 @@ contains
     real, save :: b_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     character(len=*), parameter:: NameSub = 'get_numerical_flux'
-    !-----------------------------------------------------------------------
-
+    !--------------------------------------------------------------------------
     ! Initialize diffusion coefficient for time step restriction
     DiffCoef = 0.0
 
@@ -1162,7 +1167,7 @@ contains
                 ! Subtract ion pressure from total pressure.
                 Pe_G(i,j,k) = State_VGB(p_,i,j,k,iBlockFace) &
                      - NatomicSi*Si2No_V(UnitN_)*TeSi*Si2No_V(UnitTemperature_)
-             end do; end do; end do 
+             end do; end do; end do
           elseif(UseElectronPressure)then
              Pe_G = State_VGB(Pe_,:,:,:,iBlockFace)
           elseif(IsMhd)then
@@ -1221,10 +1226,10 @@ contains
              uLeft_D  = StateLeft_V(Ux_:Uz_)
              uRight_D = StateRight_V(Ux_:Uz_)
           else
-             !Since the divB source term is calculated using the
-             !cell centered velocity, the numerical diffusion
-             !for the normal magnetic field should be evaluated
-             !in terms of the cell centered velocity too
+             ! Since the divB source term is calculated using the
+             ! cell centered velocity, the numerical diffusion
+             ! for the normal magnetic field should be evaluated
+             ! in terms of the cell centered velocity too
              uLeft_D = &
                   State_VGB(RhoUx_:RhoUz_,iLeft,jLeft,kLeft,iBlockFace) &
                   /        State_VGB(Rho_,iLeft,jLeft,kLeft,iBlockFace)
@@ -1259,7 +1264,7 @@ contains
           StateLeft_V(Bx_:Bz_)  =  StateLeft_V(Bx_:Bz_)  + DiffBn_D
           StateRight_V(Bx_:Bz_) =  StateRight_V(Bx_:Bz_) - DiffBn_D
 
-          ! The energy jump is also modified by 
+          ! The energy jump is also modified by
           ! 1/2(Br^2 - Bl^2) = 1/2(Br-Bl)*(Br+Bl)
           ! We store half of this in DiffE
           DiffE = &
@@ -1404,14 +1409,14 @@ contains
     if(UseHyperbolicDivb) CmaxDt = max(SpeedHyp, CmaxDt)
 
     if(DoTestCell)call write_test_info
-
   contains
     !==========================================================================
     subroutine modify_flux(Flux_V,Un)
 
       real, intent(in)   :: Un
       real, intent(inout):: Flux_V(nFlux)
-      !----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       Flux_V(RhoUx_:RhoUz_) = Flux_V(RhoUx_:RhoUz_) + 0.5*DiffBb*Normal_D
       Flux_V(Energy_)       = Flux_V(Energy_)       + Un*DiffBb
 
@@ -1419,6 +1424,7 @@ contains
     !==========================================================================
     subroutine roe_solver_new
 
+      !------------------------------------------------------------------------
       Flux_V = 0.5*(FluxLeft_V + FluxRight_V) + DissipationFlux_V
       CmaxDt = Cmax
 
@@ -1427,21 +1433,21 @@ contains
     subroutine simple_flux
 
       real    :: Cmax_I(nFluid)
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       ! This is needed for the time step constraint only (CmaxDt)
-      if(UseDtFixed)then 
+      if(UseDtFixed)then
          CmaxDt = 1.0
       else
          call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
       end if
 
     end subroutine simple_flux
-
     !==========================================================================
+
     subroutine lax_friedrichs_flux
 
       real    :: Cmax_I(nFluid)
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       call get_speed_max(State_V, B0x, B0y, B0z, Cmax_I = Cmax_I)
 
       Cmax = maxval(Cmax_I(iFluidMin:iFluidMax))
@@ -1470,7 +1476,7 @@ contains
          end if
       end if
 
-      if (DoTestCell) then 
+      if (DoTestCell) then
          write(*,*) 'iFluidMin, iFluidMax, Cmax =', iFluidMin, iFluidMax, Cmax
       end if
 
@@ -1481,7 +1487,7 @@ contains
       real, dimension(nFluid) :: CleftStateLeft_I,   CleftStateHat_I, &
            Cmax_I, CrightStateRight_I, CrightStateHat_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
            Cleft_I =CleftStateLeft_I)
@@ -1549,8 +1555,9 @@ contains
       real:: Cleft, Cright
       real:: WeightLeft=0.0, WeightRight=0.0, Diffusion=0.0, DiffusionDw
       real:: Nu1, Nu2, Nu, CsoundL, CsoundR, Cdw
-      !-----------------------------------------------------------------------
+
       ! Get the max, left and right speeds for HLL (and DW?)
+      !------------------------------------------------------------------------
       call get_speed_max(State_V, B0x, B0y, B0z, &
            Cmax_I = Cmax_I, &
            Cleft_I = CleftStateHat_I, Cright_I = CrightStateHat_I)
@@ -1676,9 +1683,9 @@ contains
 
       real, dimension(nFluid) :: Cleft_I, Cright_I, Cmax_I
       real :: Cleft, Cright, WeightLeft, WeightRight, Diffusion
-      !-----------------------------------------------------------------------
 
       ! The propagation speeds are modified by the DoAw = .true. !
+      !------------------------------------------------------------------------
       call get_speed_max(State_V, B0x, B0y, B0z,  &
            Cleft_I = Cleft_I, Cright_I = Cright_I, Cmax_I = Cmax_I, &
            UseAwSpeedIn = .true.)
@@ -1730,8 +1737,6 @@ contains
       use ModPhysics, ONLY: InvGammaMinus1, GammaMinus1
       use ModNumConst, ONLY: cTiny
 
-      implicit none
-
       ! Rotated flux for vector variables
       real :: FluxRot_V(nFluxMhd)
 
@@ -1762,7 +1767,7 @@ contains
       real :: sL, CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
       real :: sR, CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
 
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! This is the choice made in the hlld_tmp code. May not be the best.
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
@@ -1790,7 +1795,7 @@ contains
          RETURN
       end if
 
-      if(sR <= 0.) then 
+      if(sR <= 0.) then
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
               StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
@@ -1849,7 +1854,7 @@ contains
          InvSLUn = 1.0/(sL-Un)
          Rho     = DsRhoL*InvSLUn
 
-         ! Tangential velocity and magnetic field 
+         ! Tangential velocity and magnetic field
          ! for the outer intermediate left state
          Tmp = DsRhoL*(sL-Un) - Bn2
          if(Tmp < cTiny) then
@@ -1919,7 +1924,7 @@ contains
          InvSRUn = 1.0/(sR-Un)
          Rho     = DsRhoR*InvSRUn
 
-         ! Tangential velocity and magnetic field 
+         ! Tangential velocity and magnetic field
          ! for the outer intermediate right state
          Tmp = DsRhoR*(sR-Un) - Bn2
          if(Tmp < cTiny) then
@@ -1986,7 +1991,7 @@ contains
       end if
 
       ! Calculate flux from HLLD state but use pTot12 instead of p+B^2/2
-      ! Note that p derived from e is always positive, 
+      ! Note that p derived from e is always positive,
       ! but p derived from pTot12 may not be
       RhoUn  = Rho*Un
       Bt1 = B1t1 + B0t1
@@ -2036,8 +2041,8 @@ contains
       end if
 
     end subroutine hlld_flux
-
     !==========================================================================
+
     subroutine godunov_flux
 
       ! The Godunov flux works for hydro fluid (no magnetic field)
@@ -2052,13 +2057,14 @@ contains
       real::Rho, Un, p, pTotal, e, StateStar_V(nVar)
       real::RhoSide,UnSide
 
-      !The wave pressure: in the left state, right state and at the wall
+      ! The wave pressure: in the left state, right state and at the wall
       real::pWaveL=0.0,pWaveR=0.0, pWaveStar=0.0, pWaveSide=0.0
       real :: PeL, PeR, PeStar, PeSide
       real :: Adiabatic, Isothermal, GammaRatio, Factor
       integer::iVar
-      !-----------------------------------------------------------------------
+
       ! Scalar variables
+      !------------------------------------------------------------------------
       RhoL = StateLeft_V(iRho)
       pL   = StateLeft_V(iP)
       RhoR = StateRight_V(iRho)
@@ -2078,7 +2084,7 @@ contains
          pL = pL + pWaveL
          pR = pR + pWaveR
       else
-         !It is easier to add zero than using if(UseWavePressure)
+         ! It is easier to add zero than using if(UseWavePressure)
          pWaveL = 0.0; pWaveR = 0.0
       end if
       if(UseElectronPressure .and. iFluid==1)then
@@ -2101,7 +2107,7 @@ contains
 
       ! At strong shocks use the artificial wind scheme
       if((pStar > 2*pL .and. wL < 0.0).or.(pStar > 2*pR .and. wR > 0.0))then
-         ! Temporary solution, should be the monotone numerical flux with 
+         ! Temporary solution, should be the monotone numerical flux with
          ! modified StateLeft_V and/or StateRight_V
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
               StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
@@ -2136,7 +2142,7 @@ contains
       call exact_rs_sample(0.0, Rho, Un, p)
 
       ! In order the Riemann problem solution to be governed by the
-      ! total pressure, the wave pressure should behave 
+      ! total pressure, the wave pressure should behave
       ! adiabatically, with the same polytropic index as that for the gas
 
       Isothermal           = Rho/RhoSide
@@ -2156,12 +2162,12 @@ contains
          StateStar_V(iVar) = StateStar_V(iVar)*(Rho/RhoSide)
       end do
 
-      ! Calculate flux 
+      ! Calculate flux
       ! (1) calculate momenta
       StateStar_V(iRhoUx:iRhoUz) = StateStar_V(iUx:iUz) * Rho
 
       ! (2) take advective part of the flux
-      Flux_V(1:nVar) = StateStar_V * Un 
+      Flux_V(1:nVar) = StateStar_V * Un
 
       ! (3) add the pressure gradient
       ! also add the force due to the radiation and electron pressure gradient
@@ -2192,13 +2198,11 @@ contains
       end if
 
     end subroutine godunov_flux
-
     !==========================================================================
 
     subroutine hllc_flux
       ! The HLLC scheme works for single ion fluid only
       ! HYDRO ONLY (NO MHD)
-      implicit none
 
       real :: StateStarCons_V(nFlux)
       real :: UnStar
@@ -2209,7 +2213,7 @@ contains
 
       real :: CleftStateLeft_I(nFluid), CleftStateRight_I(nFluid)
       real :: CrightStateLeft_I(nFluid), CrightStateRight_I(nFluid)
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       call get_speed_max(StateLeft_V,  B0x, B0y, B0z, &
            Cleft_I = CleftStateLeft_I, Cright_I = CrightStateLeft_I)
@@ -2223,9 +2227,7 @@ contains
       Cmax   = max(sR, -sL)
       CmaxDt = Cmax
 
-      !=======================================================================
       ! Calculate intermediate states
-      !=======================================================================
 
       RhoL = StateLeft_V(Rho_)
       RhoR = StateRight_V(Rho_)
@@ -2265,12 +2267,11 @@ contains
       endif
 
     end subroutine hllc_flux
-
     !==========================================================================
 
     subroutine write_test_info
       integer :: iVar
-      !--------------------------------------------------------------------
+      !------------------------------------------------------------------------
       write(*,'(1x,4(a,i4))')'Hat state for dir=',iDimFace,&
            ' at I=',iFace,' J=',jFace,' K=',kFace
       write(*,*)'rho=',0.5*(StateLeft_V(Rho_)+StateRight_V(Rho_))
@@ -2302,10 +2303,10 @@ contains
       end do
 
     end subroutine write_test_info
+    !==========================================================================
 
   end subroutine get_numerical_flux
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
        StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
@@ -2320,7 +2321,7 @@ contains
 
     real,    intent(in) :: State_V(nVar)       ! input primitive state
     real,    intent(in) :: B0x, B0y, B0z       ! B0
-    real,    intent(out):: StateCons_V(nFlux)  !conservative states with energy
+    real,    intent(out):: StateCons_V(nFlux)  ! conservative states with energy
     real,    intent(out):: Flux_V(nFlux)       ! fluxes for all states
     real,    intent(out):: Un_I(nFluid+1)      ! normal velocities
     real,    intent(out):: En                  ! normal electric field
@@ -2413,7 +2414,7 @@ contains
                r_BLK(iRight,jRight,kRight,iBlockFace) < 1.0) &
                Flux_V(Bx_:Bz_) = 0.0
        end if
-       
+
        ! Store normal velocity (needed for source terms with div U)
        Un_I(iFluid) = Un
 
@@ -2474,7 +2475,7 @@ contains
 
     if(UseB) then
        ! These terms are common for the induction equation
-       ! If the first fluid is the total fluid, 
+       ! If the first fluid is the total fluid,
        ! the total energy density is also updated
        if(Eta > 0.0)then
           ! Add curl Eta.J to induction equation
@@ -2534,11 +2535,12 @@ contains
        Flux_V(Energy_) = Flux_V(Energy_) + IonHeatFlux
     end if
 
-    ! Set the normal electron velocity used for Hall MHD and/or 
+    ! Set the normal electron velocity used for Hall MHD and/or
     ! the electron pressure source term
     Un_I(eFluid_) = HallUn
 
   contains
+    !==========================================================================
 
     subroutine get_boris_flux
 
@@ -2549,9 +2551,9 @@ contains
       real :: Rho, Ux, Uy, Uz, p, e
       real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
-      !-----------------------------------------------------------------------
 
       ! Extract primitive variables
+      !------------------------------------------------------------------------
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
@@ -2560,7 +2562,7 @@ contains
 
       B2      = Bx**2 + By**2 + Bz**2
 
-      ! Electric field divided by speed of light: 
+      ! Electric field divided by speed of light:
       ! E= - U x B / c = (B x U)/c
       Ex      = (FullBy*Uz - FullBz*Uy) * InvClight
       Ey      = (FullBz*Ux - FullBx*Uz) * InvClight
@@ -2584,7 +2586,7 @@ contains
          end if
       end if
 
-      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
+      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2
       !        = p + bb/2 + (p - ppar)/2
       if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
 
@@ -2642,7 +2644,6 @@ contains
       HallUn = Un
 
     end subroutine get_boris_flux
-
     !==========================================================================
 
     subroutine get_mhd_flux
@@ -2658,9 +2659,9 @@ contains
 
       real :: InvElectronDens, UxPlus, UyPlus, UzPlus, UnPlus
       real, dimension(nIonFluid) :: ChargeDens_I, Ux_I, Uy_I, Uz_I, RhoUn_I
-      !-----------------------------------------------------------------------
 
       ! Extract primitive variables
+      !------------------------------------------------------------------------
       Rho     = State_V(Rho_)
       Ux      = State_V(Ux_)
       Uy      = State_V(Uy_)
@@ -2686,7 +2687,7 @@ contains
          end if
       end if
 
-      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2 
+      ! pTotal = pperp + bb/2 = 3/2*p - 1/2*ppar + bb/2
       !        = p + bb/2 + (p - ppar)/2
       if(UseAnisoPressure) pTotal = pTotal + 0.5*(p - State_V(Ppar_))
 
@@ -2729,7 +2730,7 @@ contains
 
       if(UseMultiIon)then
          ! Add up the (rho u u) diads of the ion fluids:
-         ! f_n[rhou_k] = sum_s(rho_s*u_n,s*u_k,s) 
+         ! f_n[rhou_k] = sum_s(rho_s*u_n,s*u_k,s)
          !               - b_n*(b_k + B0_k) - B0_n*b_k + Ptotal*n_k
 
          RhoUn_I = State_V(iRhoIon_I) &
@@ -2786,9 +2787,9 @@ contains
       end if
 
       ! de/dt = -div(E x B) = -B.curl E + E.curl B = B.dB/dt + E.j
-      ! For semi-implicit MHD the energy gets updated at the same time 
+      ! For semi-implicit MHD the energy gets updated at the same time
       ! as the magnetic field, so de/dt = B.dB/dt = -B.curlE is taken
-      ! into account. The other term is E.j = 0, since the 
+      ! into account. The other term is E.j = 0, since the
       ! Hall related electric field is j x B/ne so orthogonal to j.
       if(HallCoeff > 0.0 .and. DoHallInduction) then
          Flux_V(Energy_) = &
@@ -2801,7 +2802,7 @@ contains
               - FullBn*(UxPlus*Bx + UyPlus*By + UzPlus*Bz)  &
               + (UnPlus - Un)*(B2 + B0B1)
       elseif(UseAnisoPressure)then
-         ! can only work for single fluid without Hall 
+         ! can only work for single fluid without Hall
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) &
@@ -2809,7 +2810,7 @@ contains
       else
          ! f_i[e]=(u_i*(ptotal + e + (b_k*B0_k)) - (b_i+B0_i)*(b_k*u_k))
          Flux_V(Energy_) = &
-              Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)     
+              Un*(pTotal + e) - FullBn*(Ux*Bx + Uy*By + Uz*Bz)
       end if
 
       ! Correct energy flux, so that the electron contribution to the energy
@@ -2836,18 +2837,17 @@ contains
       end if
 
     end subroutine get_mhd_flux
-
     !==========================================================================
 
     subroutine get_magnetic_flux
 
-      ! Calculate magnetic flux for multi-ion equations 
+      ! Calculate magnetic flux for multi-ion equations
       ! without a global ion fluid
 
       real :: ChargeDens_I(nIonFluid), InvElectronDens
       real :: UxPlus, UyPlus, UzPlus, UnPlus
       real :: HallUx, HallUy, HallUz, InvRho
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! calculate number densities
       ChargeDens_I    = ChargePerMass_I*State_V(iRhoIon_I)
@@ -2860,7 +2860,7 @@ contains
       UnPlus = UxPlus*NormalX + UyPlus*NormalY + UzPlus*NormalZ
 
       if(HallCoeff > 0.0)then
-         ! The ion mass per charge that is contained in HallCoef (and HallJ*) 
+         ! The ion mass per charge that is contained in HallCoef (and HallJ*)
          ! is normalized to be divided with the total mass density.
          InvRho = 1/sum(State_V(iRhoIon_I))
          HallUx = UxPlus - HallJx*InvRho
@@ -2892,7 +2892,6 @@ contains
       end if
 
     end subroutine get_magnetic_flux
-
     !==========================================================================
 
     subroutine get_electro_magnetic_flux
@@ -2900,7 +2899,8 @@ contains
       use ModPhysics, ONLY: Clight, C2light
 
       real:: Ex, Ey, Ez
-      !----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       Ex = State_V(Ex_); Ey = State_V(Ey_); Ez = State_V(Ez_)
 
       ! dB/dt + div F = 0
@@ -2917,7 +2917,7 @@ contains
       ! dE/dt + c*grad PhiE ...
       Flux_V(Ex_:Ez_) = Flux_V(Ex_:Ez_) + Clight*Normal_D*State_V(HypE_)
 
-      ! Flux part of dPhiE/dt + c*(div E - chargedensity/eps0) 
+      ! Flux part of dPhiE/dt + c*(div E - chargedensity/eps0)
       Flux_V(HypE_) = Clight*(Ex*NormalX  + Ey*NormalY  + Ez*NormalZ)
 
       if(DoTestCell)then
@@ -2943,8 +2943,9 @@ contains
       ! Variables for conservative state and flux calculation
       real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal
       real :: DpPerB, FullB2
-      !-----------------------------------------------------------------------
+
       ! Extract primitive variables
+      !------------------------------------------------------------------------
       Rho     = State_V(iRho)
       Ux      = State_V(iUx)
       Uy      = State_V(iUy)
@@ -3011,17 +3012,18 @@ contains
       if(iFluid == 1 .and. .not.UseB) HallUn = Un
 
     end subroutine get_hd_flux
+    !==========================================================================
 
-    !======================================================================
     subroutine get_burgers_flux
+      !------------------------------------------------------------------------
       Flux_V = 0.0
       Flux_V(iRho) = 0.5*State_V(iRho)**2
     end subroutine get_burgers_flux
-    !=========================================================================
+    !==========================================================================
 
   end subroutine get_physical_flux
+  !============================================================================
 
-  !===========================================================================
   subroutine calc_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
@@ -3038,9 +3040,12 @@ contains
     real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
     real:: CmaxArea, CmaxAll, Cmax_I(nFluid), Conservative_V(nFlux)
 
-    ! These are calculated but not used                                        
+    ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_cell_flux'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(.not.allocated(FluxLeft_VGD)) allocate( &
          FluxLeft_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim), &
@@ -3111,8 +3116,9 @@ contains
        end do
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_cell_flux
-  !===========================================================================
+  !============================================================================
   subroutine calc_simple_cell_flux(iBlock)
 
     ! Calculate cell centered fluxes including ghost cells
@@ -3129,13 +3135,15 @@ contains
     real:: Primitive_V(nVar), RhoInv, Flux_V(nFlux)
     real:: Conservative_V(nFlux)
 
-    ! These are calculated but not used          
+    ! These are calculated but not used
     real:: Un_I(nFluid+1), En, Pe, Pwave
 
     real, allocatable, save:: Flux_VD(:,:)
     integer:: iFlux
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_simple_cell_flux'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(.not.allocated(FluxCenter_VGD)) allocate( &
          FluxCenter_VGD(nFlux,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nDim))
@@ -3144,16 +3152,16 @@ contains
     HallCoeff     = -1.0
     if(UseHallResist .and. .not.UseSemiHallResist) call stop_mpi(NameSub// &
          ": Hall Resistivity has not been implemented!")
-    
+
     BiermannCoeff = -1.0
     if(UseBiermannBattery) call stop_mpi(NameSub// &
          ": BiermannBattery has not been implemented!")
-    
+
     ViscoCoeff = 0.0
     if(UseViscosity) call stop_mpi(NameSub// &
          ": Viscosity has not been implemented!")
 
-    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0         
+    UseHallGradPe = .false. !!! HallJx = 0; HallJy = 0; HallJz = 0
     DoTestCell = .false.
     do iDim = 1, nDim
        call set_block_values(iBlock, iDim)
@@ -3161,7 +3169,7 @@ contains
        do k = MinK, MaxK; kFace = k
           do j = MinJ, MaxJ; jFace = j
              do i = MinI, MaxI; iFace = i
-                
+
                 Eta       = 0.0
                 if(UseResistiveFlux) Eta = Eta_GB(i,j,k,iBlock)
 
@@ -3190,15 +3198,15 @@ contains
                 if(.not. UseHighFDGeometry) then
                    FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
                 else
-                   ! 'Area' is included in the transform coef: 
-                   FluxCenter_VGD(:,i,j,k,iDim) = Flux_V                  
+                   ! 'Area' is included in the transform coef:
+                   FluxCenter_VGD(:,i,j,k,iDim) = Flux_V
                 endif
              end do
           end do
        end do
     end do
 
-    if(UseHighFDGeometry) then 
+    if(UseHighFDGeometry) then
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           do iFlux = 1, nFlux
              Flux_VD(iFlux,:) = FluxCenter_VGD(iFlux,i,j,k,:)
@@ -3214,8 +3222,10 @@ contains
           enddo
        enddo; enddo; enddo
     endif
+
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_simple_cell_flux
-  !===========================================================================
+  !============================================================================
 
   subroutine get_speed_max(State_V, B0x, B0y, B0z, cMax_I, cLeft_I, cRight_I,&
        UseAwSpeedIn)
@@ -3233,13 +3243,16 @@ contains
     real, optional, intent(out) :: Cleft_I(nFluid)  ! maximum left speed
     real, optional, intent(out) :: Cright_I(nFluid) ! maximum right speed
 
-    logical, optional, intent(in):: UseAwSpeedIn    ! Use AW speed definitions
+    logical, optional, intent(in):: UseAwSpeedIn    ! use AW speed definitions
 
     logical:: UseAwSpeed
 
     real :: CmaxDt_I(nFluid)
     real :: UnLeft, UnRight
     integer :: iError = -1
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_speed_max'
     !--------------------------------------------------------------------------
     UseAwSpeed = .false.
     if(present(UseAwSpeedIn)) UseAwSpeed = UseAwSpeedIn
@@ -3249,7 +3262,7 @@ contains
 
        if(iFluid == 1 .and. UseB)then
           if(UseAwSpeed)then
-             ! For AW flux UnLeft_I,UnRight_I 
+             ! For AW flux UnLeft_I,UnRight_I
              ! are already set by get_physical_flux
              UnLeft = minval(UnLeft_I(1:nIonFluid))
              UnRight= maxval(UnRight_I(1:nIonFluid))
@@ -3258,12 +3271,12 @@ contains
           if(UseBoris .or. (UseEfield .and. nTrueIon ==1))then
              ! In the five- and six-moment case, we should use Boris speed for
              ! numerical diffusion for single ion case. For multi-ion five- and
-             ! six-moment we should call the UseBorisSimple correction in 
-             ! get_mhd_speed. 
-             ! In the five- and six-moment case, we should NOT call Boris 
-             ! flux, as the Maxwell's equation already contains the 
+             ! six-moment we should call the UseBorisSimple correction in
+             ! get_mhd_speed.
+             ! In the five- and six-moment case, we should NOT call Boris
+             ! flux, as the Maxwell's equation already contains the
              ! displacement current.
-             call get_boris_speed             
+             call get_boris_speed
           else
              call get_mhd_speed
           endif
@@ -3338,7 +3351,6 @@ contains
        RETURN
     end if
 
-
     ! Take time step limit for the fluids that were calculated so far
     if (present(Cmax_I)) &
          CmaxDt = max(CmaxDt, maxval(CmaxDt_I(iFluidMin:iFluidMax)))
@@ -3363,8 +3375,8 @@ contains
     end if
 
   contains
+    !==========================================================================
 
-    !========================================================================
     subroutine get_boris_speed
 
       use ModPhysics, ONLY: Gamma, inv_c2LIGHT, GammaElectron
@@ -3375,13 +3387,13 @@ contains
       real :: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, Slow
       real :: GammaA2, GammaU2
       real :: UnBoris, Sound2Boris, Alfven2Boris, Alfven2NormalBoris
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       ! No explicit formula for multi-ion fluids
       if (nTrueIon > 1) call stop_mpi &
            ('get_boris_speed should not be called with multi-ion fluids')
 
       InvRho = 1.0/State_V(Rho_)
-      ! iPIon_I = p_ for single ion MHD case. iPIon_I is need to add the 
+      ! iPIon_I = p_ for single ion MHD case. iPIon_I is need to add the
       ! electron pressure(s) for single ion five- and six-moment case.
       p = sum(State_V(iPIon_I))
       FullBx = State_V(Bx_) + B0x
@@ -3392,7 +3404,7 @@ contains
 
       ! Calculate sound speed squared
       if(UseAnisoPressure .and. FullB2 > 0)then
-         ! iPparIon_I = Ppar_ for single ion MHD case. iPparIon_I is need to 
+         ! iPparIon_I = Ppar_ for single ion MHD case. iPparIon_I is need to
          ! add the electron pressure(s) for single ion six-moment case.
          Ppar  = sum(State_V(iPparIon_I))
          Pperp = (3*p - Ppar)/2.
@@ -3422,10 +3434,10 @@ contains
       Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
 
       ! "Alfven Lorentz" factor
-      GammaA2 = 1.0/(1.0 + Alfven2*inv_c2LIGHT) 
+      GammaA2 = 1.0/(1.0 + Alfven2*inv_c2LIGHT)
 
       ! 1-gA^2*Un^2/c^2
-      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*inv_c2LIGHT) 
+      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*inv_c2LIGHT)
 
       ! Modified speeds
       Sound2Boris        = Sound2        *GammaA2*(1+Alfven2Normal*inv_c2LIGHT)
@@ -3435,9 +3447,9 @@ contains
       ! Approximate slow and fast wave speeds
       Fast2  = Sound2Boris + Alfven2Boris
 
-      if(UseAnisoPressure .and. FullB2 > 0)then 
+      if(UseAnisoPressure .and. FullB2 > 0)then
          Discr = sqrt(max(0.0, Fast2**2  &
-              + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
+              + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &
               - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
               + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
               - (3*Ppar + GammaPe)*InvRho*Alfven2NormalBoris &
@@ -3473,8 +3485,7 @@ contains
       end if
 
     end subroutine get_boris_speed
-
-    !========================================================================
+    !==========================================================================
 
     subroutine get_mhd_speed
 
@@ -3498,7 +3509,7 @@ contains
 
       integer:: jFluid, iVar
 
-      character(len=*), parameter:: NameSub=NameMod//'::get_mhd_speed'
+      character(len=*), parameter:: NameSub = 'get_mhd_speed'
       !------------------------------------------------------------------------
 
       if(DoTestCell) then
@@ -3518,7 +3529,7 @@ contains
       UnMin = Un
       UnMax = Un
 
-      if(DoTestCell) write(*,*) & 
+      if(DoTestCell) write(*,*) &
            NameSub,' Initial Sound2              =', Sound2
 
       do jFluid = 2, nTrueIon
@@ -3528,7 +3539,7 @@ contains
          ! contains the maximum of ion sound speeds squared
          Sound2 = max(Sound2, State_V(iPIon_I(jFluid))*Gamma_I(jFluid)/Rho1)
          Un = sum( State_V(iUxIon_I(jFluid):iUzIon_I(jFluid))*Normal_D )
-         ! A reliable upper and lower estimate for wave speeds 
+         ! A reliable upper and lower estimate for wave speeds
          ! uses the max and min of all ion bulk velocities.
          UnMin = min(Un, UnMin)
          UnMax = max(Un, UnMax)
@@ -3575,7 +3586,7 @@ contains
 
       if(UseEfield) then
          ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
-         ! MultiIonFactor is used to correct Alfven2/Alfven2Normal, 
+         ! MultiIonFactor is used to correct Alfven2/Alfven2Normal,
          ! it must be calculated first, even for single ion fluid.
          if(nTrueIon > 1)then
             MultiIonFactor = Rho*sum(              &
@@ -3622,10 +3633,10 @@ contains
       if(UseAwSpeed)then
          ! According to I. Sokolov adding (Bright-Bleft)^2/4 to
          ! the average field squared (Bright+Bleft)^2/4 results in
-         ! an upper estimate of the left and right Alfven speeds 
+         ! an upper estimate of the left and right Alfven speeds
          ! max(Bleft^2/RhoLeft, Bright^2/RhoRight)/
          !
-         ! For B0=Bleft=0 and Bright=1 RhoLeft=RhoRight=1 
+         ! For B0=Bleft=0 and Bright=1 RhoLeft=RhoRight=1
          ! this is clearly not true.
          !
          dB1dB1 = 0.25*sum((StateRight_V(Bx_:Bz_)-StateLeft_V(Bx_:Bz_))**2)
@@ -3671,9 +3682,9 @@ contains
          end if
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
-         Fast2 = Sound2 + Alfven2 
+         Fast2 = Sound2 + Alfven2
          Discr = sqrt(max(0.0, Fast2**2  &
-              + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &  
+              + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &
               - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
               + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
               - (3*Ppar + GammaPe)*InvRho*Alfven2Normal &
@@ -3752,7 +3763,7 @@ contains
          ! Take the faster speed
          cHall     = HallCoeff*InvDxyz*InvRho*max(cWhistler, cDrift)
 
-         !cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
+         ! cHall    = HallCoeff*InvDxyz*InvRho*cWhistler
          FastDt = Fast + cHall
          Fast   = Fast + HallCmaxFactor*cHall
          if(DoTestCell) then
@@ -3767,7 +3778,7 @@ contains
 
       if(UseAlfvenWaves.and.UseAwSpeed) then
          !\
-         ! In this case the propagation speed for 
+         ! In this case the propagation speed for
          ! Alfven waves equal to the Alvfen speed
          ! may happen to be larger that the fast wave
          ! speed in the "hat" state
@@ -3843,7 +3854,7 @@ contains
       end if
 
     end subroutine get_mhd_speed
-    !========================================================================
+    !==========================================================================
     subroutine get_hd_speed
 
       use ModAdvance, ONLY: UseElectronPressure, State_VGB
@@ -3851,10 +3862,10 @@ contains
 
       real :: InvRho, Sound2, Sound, Un, GammaP
 
-      character(len=*), parameter:: NameSub=NameMod//'::get_hd_speed'
+      character(len=*), parameter:: NameSub = 'get_hd_speed'
       !------------------------------------------------------------------------
 
-      if(DoTestCell) then 
+      if(DoTestCell) then
          write(*,'(1x,a,a,i3,i3)')    NameSub,' iRho, iP =',iRho, iP
          write(*,'(1x,a,a,30es13.5)') NameSub,' State_V  =',State_V(iRho:iP)
       end if
@@ -3923,11 +3934,11 @@ contains
       end if
 
     end subroutine get_hd_speed
-    !========================================================================
+    !==========================================================================
     subroutine get_burgers_speed
 
       real:: Rho
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       Rho = State_V(Rho_)
       if(present(Cmax_I))then
          Cmax_I(1)   = Rho
@@ -3937,13 +3948,14 @@ contains
       if(present(Cright_I)) Cright_I(1) = Rho
 
     end subroutine get_burgers_speed
+    !==========================================================================
 
   end subroutine get_speed_max
-
   !============================================================================
+
   subroutine correct_u_normal(iDim)
 
-    ! Make Unormal 6th order accuracte                 
+    ! Make Unormal 6th order accuracte
     use ModMultiFluid, ONLY: iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModAdvance,    ONLY: State_VGB
     use BATL_lib,  ONLY: correct_face_value, CellCoef_DDGB, &
@@ -3955,8 +3967,9 @@ contains
     real :: Ucell_I(4), Unormal, Ucell_D(3)
     real :: Normal0_D(3), Area0_D(3)
     integer:: iCell, iCount
-    !--------------------------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'correct_u_normal'
+    !--------------------------------------------------------------------------
     do iFluid = iFluidMin, iFluidMax
 
        Unormal = Unormal_I(iFluid)
@@ -4026,7 +4039,7 @@ contains
     enddo
 
   end subroutine correct_u_normal
-  !===================================================================================
+  !============================================================================
   subroutine roe_solver(Flux_V)
 
     use ModPhysics,  ONLY: Gamma,GammaMinus1,InvGammaMinus1
@@ -4038,7 +4051,7 @@ contains
 
     ! Named MHD wave indexes
     integer, parameter :: EntropyW_=1, AlfvenRW_=2, AlfvenLW_=3, &
-         SlowRW_=4, FastRW_=5, SlowLW_=6, FastLW_=7, DivBW_=8 
+         SlowRW_=4, FastRW_=5, SlowLW_=6, FastLW_=7, DivBW_=8
 
     ! Loop variables
     integer :: iFlux, iVar, iWave
@@ -4064,7 +4077,7 @@ contains
     real, dimension(nWaveMhd) :: dCons_V
 
     ! Eigenvalues and jumps in characteristic variable
-    real, dimension(nWaveMhd) :: Eigenvalue_V, DeltaWave_V 
+    real, dimension(nWaveMhd) :: Eigenvalue_V, DeltaWave_V
 
     ! Eigenvectors
     real, dimension(nWaveMhd, nWaveMhd):: EigenvectorL_VV  ! Left  eigenvectors
@@ -4075,8 +4088,9 @@ contains
 
     ! Misc. scalar variables
     real :: SignBnH, Tmp1, Tmp2, Tmp3, Gamma1A2Inv
-    !---------------------------------------------------------------------------
-    ! Scalar variables
+
+    character(len=*), parameter:: NameSub = 'roe_solver'
+    !--------------------------------------------------------------------------
     RhoL  =  StateLeft_V(Rho_)
     pL    =  StateLeft_V(p_ )
     RhoR  =  StateRight_V(Rho_)
@@ -4130,12 +4144,12 @@ contains
     Bb1H = B1nH**2 + B1t1H**2 + B1t2H**2
     aH   = Gamma*pH*RhoInvH
 
-    !if(aL<0.0)then
+    ! if(aL<0.0)then
     !   write(*,*)'NEGATIVE aL Me, iDir, i, j, k, iBlockFace',&
     !        aL,iProc,iDimFace,i,j,k,&
     !        Xyz_DGB(:,i,j,k,iBlockFace)
     !   call stop_mpi
-    !end if
+    ! end if
 
     aL=sqrt(aL)
     aR=sqrt(aR)
@@ -4218,7 +4232,6 @@ contains
     RhoInvSqrtL=1./RhoSqrtL
     RhoInvSqrtR=1./RhoSqrtR
 
-
     SignBnH     = sign(1.,BnH)
     Gamma1A2Inv = GammaMinus1 / aH**2
 
@@ -4296,15 +4309,15 @@ contains
     !\
     ! Timur's divergence wave fix
     !/
-    !original  version
+    ! original  version
     !      Eigenvalue_V(8)=abs(Eigenvalue_V(8))+aH
     !
-    !Enhanced diffusion, the maximum eigenvalue
+    ! Enhanced diffusion, the maximum eigenvalue
     Eigenvalue_V(DivbW_) = max( Eigenvalue_V(FastRW_), -Eigenvalue_V(FastLW_))
 
     ! The original version was proposed by Timur Linde for heliosphere
     ! simulations. Enhanced version was found to be more robust on 8/20/01
-    ! The original version was commented out in versions 6x resulting in 
+    ! The original version was commented out in versions 6x resulting in
     ! worse stability for the Roe solver.
 
     ! At inner BC replace all eigenvalues with the enhanced eigenvalue
@@ -4406,19 +4419,19 @@ contains
     EigenvectorL_VV(7,8) = 0.
     EigenvectorL_VV(8,8) = 0.
 
-    !coefficient for pressure component of the Right vector
-    Tmp1=Gamma*max(pL,pR) 
+    ! coefficient for pressure component of the Right vector
+    Tmp1=Gamma*max(pL,pR)
 
-    !Pressure component is not linearly independent and obeys the 
+    ! Pressure component is not linearly independent and obeys the
     ! equation as follows:
-    !EigenvectorR_VV(1:8,9)=(0.5*UuH*EigenvectorR_VV(1:8,1)-&
+    ! EigenvectorR_VV(1:8,9)=(0.5*UuH*EigenvectorR_VV(1:8,1)-&
     !                     UnH*EigenvectorR_VV(1:8,2)-&
     !                     Ut1H*EigenvectorR_VV(1:8,3)-&
     !                     Ut2H*EigenvectorR_VV(1:8,4)-&
     !                     B1nH*EigenvectorR_VV(1:8,5)-&
     !                     B1t1H*EigenvectorR_VV(1:8,6)-&
     !                     B1t2H*EigenvectorR_VV(1:8,7)+
-    !                     EigenvectorR_VV(1:8,8))*inv_gm1         
+    !                     EigenvectorR_VV(1:8,8))*inv_gm1
 
     ! Right eigenvector for Entropy wave
     EigenvectorR_VV(1,1) = 1.
@@ -4429,7 +4442,7 @@ contains
     EigenvectorR_VV(1,6) = 0.
     EigenvectorR_VV(1,7) = 0.
     EigenvectorR_VV(1,eMhd_) = 0.5*UuH
-    EigenvectorR_VV(1,pMhd_)=cZero
+    EigenvectorR_VV(1,pMhd_)=0.0
 
     ! Right eigenvector for Alfven wave +
     EigenvectorR_VV(2,1) = 0.
@@ -4441,7 +4454,7 @@ contains
     EigenvectorR_VV(2,7) = -BetaY*RhoSqrtH*cSqrtHalf
     EigenvectorR_VV(2,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
          + (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(2,pMhd_)=cZero
+    EigenvectorR_VV(2,pMhd_)=0.0
 
     ! Right eigenvector for Alfven wave -
     EigenvectorR_VV(3,1) = 0.
@@ -4453,7 +4466,7 @@ contains
     EigenvectorR_VV(3,7) = BetaY*RhoSqrtH*cSqrtHalf
     EigenvectorR_VV(3,eMhd_) = (BetaY*Ut2H - BetaZ*Ut1H)*RhoH*cSqrtHalf &
          - (B1t1H*BetaZ - B1t2H*BetaY)*RhoSqrtH*cSqrtHalf
-    EigenvectorR_VV(3,pMhd_)=cZero
+    EigenvectorR_VV(3,pMhd_)=0.0
 
     ! Right eigenvector for Slow magnetosonic wave +
     EigenvectorR_VV(4,1) = RhoH*AlphaS
@@ -4520,7 +4533,7 @@ contains
     EigenvectorR_VV(8,6) = 0.
     EigenvectorR_VV(8,7) = 0.
     EigenvectorR_VV(8,eMhd_) = B1nH
-    EigenvectorR_VV(8,pMhd_) = cZero
+    EigenvectorR_VV(8,pMhd_) = 0.0
 
     !\
     ! Alphas (elemental wave strengths)
@@ -4538,7 +4551,7 @@ contains
     if(Climit > 0.0) Eigenvalue_V = min(Climit, Eigenvalue_V)
 
     !\
-    ! Calculate the Roe Interface fluxes 
+    ! Calculate the Roe Interface fluxes
     ! F = A * 0.5 * [ F_L+F_R - sum_k(|lambda_k| * alpha_k * r_k) ]
     !/
     ! First get the diffusion: sum_k(|lambda_k| * alpha_k * r_k)
@@ -4570,6 +4583,7 @@ contains
     CmaxDt    = abs(UnH) + CfH
 
   end subroutine roe_solver
+  !============================================================================
 
 end module ModFaceFlux
 !==============================================================================

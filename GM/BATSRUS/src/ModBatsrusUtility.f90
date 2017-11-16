@@ -1,21 +1,23 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 !==== Simple subroutines and functions that operate on all used blocks ========
-!=============================================================================
-real function integrate_BLK(qnum,qa)              
+real function integrate_BLK(qnum,qa)
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Return the volume integral of qa, ie. sum(qa*CellVolume_B)
   ! for all used blocks and true cells
   ! Do for each processor separately if qnum=1, otherwise add them all
 
   use ModProcMH
-  use ModGeometry, ONLY : true_BLK, true_cell 
+  use ModGeometry, ONLY : true_BLK, true_cell
   use BATL_lib, ONLY: IsCartesian, CellVolume_GB, CellVolume_B, Unused_B, &
        nI, nJ, nK, nBlock, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   use ModMpi
-  implicit none 
+  implicit none
 
   ! Arguments
 
@@ -24,36 +26,37 @@ real function integrate_BLK(qnum,qa)
 
   ! Local variables:
   real    :: qsum, qsum_all
-  integer :: iBLK, iError
+  integer :: iBlock, iError
 
-  logical :: oktest, oktest_me
-  !---------------------------------------------------------------------------
-  call set_oktest('integrate_BLK',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'integrate_BLK'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qsum=0.0
 
   if(IsCartesian)then
-     do iBLK = 1, nBlock
-        if(Unused_B(iBLK)) CYCLE
-        if(true_BLK(iBLK)) then
-           qsum = qsum + CellVolume_B(iBLK)* &
-                sum(qa(1:nI,1:nJ,1:nK,iBLK))
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock)) CYCLE
+        if(true_BLK(iBlock)) then
+           qsum = qsum + CellVolume_B(iBlock)* &
+                sum(qa(1:nI,1:nJ,1:nK,iBlock))
         else
-           qsum = qsum + CellVolume_B(iBLK)* &
-                sum( qa(1:nI,1:nJ,1:nK,iBLK), &
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
+           qsum = qsum + CellVolume_B(iBlock)* &
+                sum( qa(1:nI,1:nJ,1:nK,iBlock), &
+                MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
         end if
      end do
   else
-     do iBLK = 1, nBlock
-        if(Unused_B(iBLK)) CYCLE
-        if(true_BLK(iBLK)) then
-           qsum=qsum + sum(CellVolume_GB(1:nI,1:nJ,1:nK,iBLK)* &
-                qa(1:nI,1:nJ,1:nK,iBLK))
+     do iBlock = 1, nBlock
+        if(Unused_B(iBlock)) CYCLE
+        if(true_BLK(iBlock)) then
+           qsum=qsum + sum(CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)* &
+                qa(1:nI,1:nJ,1:nK,iBlock))
         else
-           qsum=qsum + sum(CellVolume_GB(1:nI,1:nJ,1:nK,iBLK)* &
-                qa(1:nI,1:nJ,1:nK,iBLK), &
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK))
+           qsum=qsum + sum(CellVolume_GB(1:nI,1:nJ,1:nK,iBlock)* &
+                qa(1:nI,1:nJ,1:nK,iBlock), &
+                MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
         end if
      end do
   end if
@@ -62,17 +65,20 @@ real function integrate_BLK(qnum,qa)
      call MPI_allreduce(qsum, qsum_all, 1,  MPI_REAL, MPI_SUM, &
           iComm, iError)
      integrate_BLK = qsum_all
-     if(oktest)write(*,*)'me,sum,sum_all:',iProc,qsum,qsum_all
+     if(DoTest)write(*,*)'me,sum,sum_all:',iProc,qsum,qsum_all
   else
      integrate_BLK = qsum
-     if(oktest)write(*,*)'me,qsum:',iProc,qsum
+     if(DoTest)write(*,*)'me,qsum:',iProc,qsum
   end if
 
-end function integrate_BLK    
-
-!=============================================================================
+  call test_stop(NameSub, DoTest)
+end function integrate_BLK
+!==============================================================================
 
 real function minval_BLK(qnum,qa)
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Return minval(qa)) corresponding to all used blocks
   ! If qnum<=1, return minval for the processor, otherwise
@@ -94,23 +100,22 @@ real function minval_BLK(qnum,qa)
 
   ! Local variables:
   real    :: qminval, qminval_all
-  integer :: iBLK, iError
+  integer :: iBlock, iError
 
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('minval_BLK',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'minval_BLK'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qminval=1.e+30
 
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK)) then
-           qminval=min(qminval, minval(qa(1:nI,1:nJ,1:nK,iBLK)))
+  do iBlock=1,nBlock
+     if(.not.Unused_B(iBlock)) then
+        if(true_BLK(iBlock)) then
+           qminval=min(qminval, minval(qa(1:nI,1:nJ,1:nK,iBlock)))
         else
-           qminval=min(qminval, minval(qa(1:nI,1:nJ,1:nK,iBLK),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK)))
+           qminval=min(qminval, minval(qa(1:nI,1:nJ,1:nK,iBlock),&
+                MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
         endif
      end if
   end do
@@ -119,19 +124,22 @@ real function minval_BLK(qnum,qa)
      call MPI_allreduce(qminval, qminval_all, 1,  MPI_REAL, MPI_MIN, &
           iComm, iError)
      minval_BLK=qminval_all
-     if(oktest)write(*,*)'me,minval,minval_all:',iProc,qminval,qminval_all
+     if(DoTest)write(*,*)'me,minval,minval_all:',iProc,qminval,qminval_all
 !     if(qminval_all>=1.e+30)call stop_mpi('Error in minval_BLK: NaN-s?')
   else
      minval_BLK=qminval
-     if(oktest)write(*,*)'me,qminval:',iProc,qminval
+     if(DoTest)write(*,*)'me,qminval:',iProc,qminval
 !     if(qminval>=1.e+30)call stop_mpi('Error in minval_BLK: NaN-s?')
   endif
 
+  call test_stop(NameSub, DoTest)
 end function minval_BLK
-
-!=============================================================================
+!==============================================================================
 
 real function maxval_BLK(qnum,qa)
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Return maxval(qa)) corresponding to all used blocks
   ! If qnum<=1, return maxval for the processor, otherwise
@@ -153,23 +161,22 @@ real function maxval_BLK(qnum,qa)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all
-  integer :: iBLK, iError
+  integer :: iBlock, iError
 
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('maxval_BLK',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'maxval_BLK'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qmaxval=-1.e+30
 
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK)) then
-           qmaxval=max(qmaxval, maxval(qa(1:nI,1:nJ,1:nK,iBLK)))
+  do iBlock=1,nBlock
+     if(.not.Unused_B(iBlock)) then
+        if(true_BLK(iBlock)) then
+           qmaxval=max(qmaxval, maxval(qa(1:nI,1:nJ,1:nK,iBlock)))
         else
-           qmaxval=max(qmaxval, maxval(qa(1:nI,1:nJ,1:nK,iBLK),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK)))
+           qmaxval=max(qmaxval, maxval(qa(1:nI,1:nJ,1:nK,iBlock),&
+                MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
         endif
      end if
   end do
@@ -178,21 +185,25 @@ real function maxval_BLK(qnum,qa)
      call MPI_allreduce(qmaxval, qmaxval_all, 1,  MPI_REAL, MPI_MAX, &
           iComm, iError)
      maxval_BLK=qmaxval_all
-     if(oktest)write(*,*)'me,maxval,maxval_all:',iProc,qmaxval,qmaxval_all
+     if(DoTest)write(*,*)'me,maxval,maxval_all:',iProc,qmaxval,qmaxval_all
      if(qmaxval_all<=-1.e+30)call stop_mpi('Error in maxval_BLK: NaN-s?')
   else
      maxval_BLK=qmaxval
-     if(oktest)write(*,*)'qmaxval:',qmaxval
+     if(DoTest)write(*,*)'qmaxval:',qmaxval
      if(qmaxval<=-1.e+30)call stop_mpi('Error in maxval_BLK: NaN-s?')
   endif
 
+  call test_stop(NameSub, DoTest)
 end function maxval_BLK
+!==============================================================================
 
-!=============================================================================
 real function maxval_loc_BLK(qnum,qa,loc)
 
-  ! Return maxval(qa)) corresponding to all used blocks and 
-  ! also return the location of the maximum value into loc(5)=I,J,K,IBLK,PE
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
+  ! Return maxval(qa)) corresponding to all used blocks and
+  ! also return the location of the maximum value into loc(5)=I,J,K,iBlock,PE
   ! If qnum<=1, return maxval for the processor, otherwise
   ! return the maximum for all processors.
 
@@ -200,7 +211,7 @@ real function maxval_loc_BLK(qnum,qa,loc)
   use ModSize, ONLY: &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, MaxBlock
   use ModMain, ONLY: Unused_B
-  use ModGeometry, ONLY :true_cell
+  use ModGeometry, ONLY:true_cell
   use ModMpi
   implicit none
 
@@ -214,15 +225,14 @@ real function maxval_loc_BLK(qnum,qa,loc)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all
-  integer :: i,j,k,iBLK, iError
+  integer :: i,j,k,iBlock, iError
 
   real, external :: maxval_BLK
 
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('maxval_loc_BLK',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'maxval_loc_BLK'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qmaxval=maxval_BLK(1,qa)
   if(qnum==1)then
@@ -234,26 +244,30 @@ real function maxval_loc_BLK(qnum,qa,loc)
 
   loc=-1
   if (qmaxval == qmaxval_all) then
-     BLKLOOP: do iBLK=1,nBlock
-        if(Unused_B(iBLK)) CYCLE
+     BLKLOOP: do iBlock=1,nBlock
+        if(Unused_B(iBlock)) CYCLE
         do k=1,nK; do j=1,nJ; do i=1,nI
-           if(.not.true_cell(i,j,k,iBLK)) CYCLE
-           if(qa(i,j,k,iBLK)==qmaxval)then
-              loc(1)=i; loc(2)=j; loc(3)=k; loc(4)=iBLK; loc(5)=iProc
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
+           if(qa(i,j,k,iBlock)==qmaxval)then
+              loc(1)=i; loc(2)=j; loc(3)=k; loc(4)=iBlock; loc(5)=iProc
               EXIT BLKLOOP
            end if
-        enddo; enddo; enddo; 
+        enddo; enddo; enddo;
      enddo BLKLOOP
   end if
 
   maxval_loc_BLK=qmaxval_all
 
+  call test_stop(NameSub, DoTest)
 end function maxval_loc_BLK
-!=============================================================================
+!==============================================================================
 real function maxval_loc_abs_BLK(qnum,qa,loc)
 
-  ! Return maxval(abs(qa)) corresponding to all used blocks and 
-  ! also return the location of the maximum value into loc(5)=I,J,K,IBLK,PE
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
+  ! Return maxval(abs(qa)) corresponding to all used blocks and
+  ! also return the location of the maximum value into loc(5)=I,J,K,iBlock,PE
   ! If qnum<=1, return maxval for the processor, otherwise
   ! return the maximum for all processors.
 
@@ -275,15 +289,14 @@ real function maxval_loc_abs_BLK(qnum,qa,loc)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all
-  integer :: i,j,k,iBLK, iError
+  integer :: i,j,k,iBlock, iError
 
   real, external :: maxval_abs_BLK
 
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('maxval_loc_abs_BLK',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'maxval_loc_abs_BLK'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qmaxval=maxval_abs_BLK(1,qa)
   if(qnum==1)then
@@ -295,26 +308,30 @@ real function maxval_loc_abs_BLK(qnum,qa,loc)
 
   loc=-1
   if (qmaxval == qmaxval_all) then
-     BLKLOOP: do iBLK=1,nBlock
-        if(Unused_B(iBLK)) CYCLE
+     BLKLOOP: do iBlock=1,nBlock
+        if(Unused_B(iBlock)) CYCLE
         do k=1,nK; do j=1,nJ; do i=1,nI
-           if(.not.true_cell(i,j,k,iBLK)) CYCLE
-           if(abs(qa(i,j,k,iBLK))==qmaxval)then
-              loc(1)=i; loc(2)=j; loc(3)=k; loc(4)=iBLK; loc(5)=iProc
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
+           if(abs(qa(i,j,k,iBlock))==qmaxval)then
+              loc(1)=i; loc(2)=j; loc(3)=k; loc(4)=iBlock; loc(5)=iProc
               EXIT BLKLOOP
            end if
-        enddo; enddo; enddo; 
+        enddo; enddo; enddo;
      enddo BLKLOOP
   end if
 
   maxval_loc_abs_BLK=qmaxval_all
 
+  call test_stop(NameSub, DoTest)
 end function maxval_loc_abs_BLK
-!=============================================================================
+!==============================================================================
 real function minval_loc_BLK(qnum,qa,loc)
 
-  ! Return minval(qa)) corresponding to all used blocks and 
-  ! also return the location of the minimum value into loc(5)=I,J,K,IBLK,PE
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
+  ! Return minval(qa)) corresponding to all used blocks and
+  ! also return the location of the minimum value into loc(5)=I,J,K,iBlock,PE
   ! If qnum<=1, return minval for the processor, otherwise
   ! return the minimum for all processors.
 
@@ -336,15 +353,14 @@ real function minval_loc_BLK(qnum,qa,loc)
 
   ! Local variables:
   real    :: qminval, qminval_all
-  integer :: i,j,k,iBLK, iError
+  integer :: i,j,k,iBlock, iError
 
   real, external :: minval_BLK
 
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('minval_loc_BLK',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'minval_loc_BLK'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qminval=minval_BLK(1,qa)
   if(qnum==1)then
@@ -356,25 +372,28 @@ real function minval_loc_BLK(qnum,qa,loc)
 
   loc=-1
   if (qminval == qminval_all) then
-     BLKLOOP:do iBLK=1,nBlock
-        if(Unused_B(iBLK)) CYCLE
+     BLKLOOP:do iBlock=1,nBlock
+        if(Unused_B(iBlock)) CYCLE
         do k=1,nK; do j=1,nJ; do i=1,nI
-           if(.not.true_cell(i,j,k,iBLK)) CYCLE
-           if(qa(i,j,k,iBLK)==qminval)then
-              loc(1)=i; loc(2)=j; loc(3)=k; loc(4)=iBLK; loc(5)=iProc
+           if(.not.true_cell(i,j,k,iBlock)) CYCLE
+           if(qa(i,j,k,iBlock)==qminval)then
+              loc(1)=i; loc(2)=j; loc(3)=k; loc(4)=iBlock; loc(5)=iProc
               EXIT BLKLOOP
            end if
-        enddo; enddo; enddo; 
+        enddo; enddo; enddo;
      enddo BLKLOOP
   end if
 
   minval_loc_BLK=qminval_all
 
+  call test_stop(NameSub, DoTest)
 end function minval_loc_BLK
-
-!=============================================================================
+!==============================================================================
 
 real function maxval_abs_BLK(qnum,qa)
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Return maxval(abs(qa)) corresponding to all used blocks
   ! If qnum<=1, return maxval(abs(qa)) for the processor, otherwise
@@ -396,23 +415,22 @@ real function maxval_abs_BLK(qnum,qa)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all
-  integer :: iBLK, iError
+  integer :: iBlock, iError
 
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('maxval_abs_BLK',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'maxval_abs_BLK'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qmaxval=-1.0
 
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        if(true_BLK(iBLK)) then
-           qmaxval=max(qmaxval, maxval(abs(qa(1:nI,1:nJ,1:nK,iBLK))))
+  do iBlock=1,nBlock
+     if(.not.Unused_B(iBlock)) then
+        if(true_BLK(iBlock)) then
+           qmaxval=max(qmaxval, maxval(abs(qa(1:nI,1:nJ,1:nK,iBlock))))
         else
-           qmaxval=max(qmaxval, maxval(abs(qa(1:nI,1:nJ,1:nK,iBLK)),&
-                MASK=true_cell(1:nI,1:nJ,1:nK,iBLK)))
+           qmaxval=max(qmaxval, maxval(abs(qa(1:nI,1:nJ,1:nK,iBlock)),&
+                MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
         endif
      end if
   end do
@@ -421,22 +439,25 @@ real function maxval_abs_BLK(qnum,qa)
      call MPI_allreduce(qmaxval, qmaxval_all, 1,  MPI_REAL, MPI_MAX, &
           iComm, iError)
      maxval_abs_BLK=qmaxval_all
-     if(oktest)write(*,*)'me,maxval,maxval_all:',iProc,qmaxval,qmaxval_all
+     if(DoTest)write(*,*)'me,maxval,maxval_all:',iProc,qmaxval,qmaxval_all
      if(qmaxval_all<0.0) then
         call barrier_mpi
         call stop_mpi('Error in maxval_abs_BLK: negative max!')
      end if
   else
      maxval_abs_BLK=qmaxval
-     if(oktest)write(*,*)'qmaxval:',qmaxval
+     if(DoTest)write(*,*)'qmaxval:',qmaxval
      if(qmaxval<0.0)call stop_mpi('Error in maxval_abs_BLK: negative max!')
   endif
 
+  call test_stop(NameSub, DoTest)
 end function maxval_abs_BLK
-
-!=============================================================================
+!==============================================================================
 
 real function maxval_abs_ALL(qnum,qa)
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Return maxval(abs(qa)) corresponding to all used blocks
   ! Include ghost cells and .not.true_cell -s too.
@@ -458,19 +479,18 @@ real function maxval_abs_ALL(qnum,qa)
 
   ! Local variables:
   real    :: qmaxval, qmaxval_all
-  integer :: iBLK, iError
+  integer :: iBlock, iError
 
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('maxval_abs_ALL',oktest, oktest_me)
+  logical:: DoTest
+  character(len=*), parameter:: NameSub = 'maxval_abs_ALL'
+  !----------------------------------------------------------------------------
+  call test_start(NameSub, DoTest)
 
   qmaxval=-1.0
 
-  do iBLK=1,nBlock
-     if(.not.Unused_B(iBLK)) then
-        qmaxval=max(qmaxval, maxval(abs(qa(:,:,:,iBLK))))
+  do iBlock=1,nBlock
+     if(.not.Unused_B(iBlock)) then
+        qmaxval=max(qmaxval, maxval(abs(qa(:,:,:,iBlock))))
      end if
   end do
 
@@ -478,15 +498,15 @@ real function maxval_abs_ALL(qnum,qa)
      call MPI_allreduce(qmaxval, qmaxval_all, 1,  MPI_REAL, MPI_MAX, &
           iComm, iError)
      maxval_abs_ALL=qmaxval_all
-     if(oktest)write(*,*)'me,maxval,maxval_all:',iProc,qmaxval,qmaxval_all
+     if(DoTest)write(*,*)'me,maxval,maxval_all:',iProc,qmaxval,qmaxval_all
   else
      maxval_abs_ALL=qmaxval
-     if(oktest)write(*,*)'qmaxval:',qmaxval
+     if(DoTest)write(*,*)'qmaxval:',qmaxval
   endif
 
+  call test_stop(NameSub, DoTest)
 end function maxval_abs_ALL
-
-!=============================================================================
+!==============================================================================
 
 subroutine set_oktest(String, DoTst, DoTstMe)
 
@@ -502,8 +522,7 @@ subroutine set_oktest(String, DoTst, DoTstMe)
   DoTstMe = DoTst .and. (iProc == iProcTest .or. iProc == iProcTest2)
 
 end subroutine set_oktest
-
-!=============================================================================
+!==============================================================================
 
 subroutine barrier_mpi
 
@@ -519,8 +538,7 @@ subroutine barrier_mpi
   call timing_stop('barrier')
 
 end subroutine barrier_mpi
-
-!=============================================================================
+!==============================================================================
 
 subroutine barrier_mpi2(str)
 
@@ -538,8 +556,8 @@ subroutine barrier_mpi2(str)
   call timing_stop('barrier-'//str)
 
 end subroutine barrier_mpi2
+!==============================================================================
 
-!=============================================================================
 subroutine stop_mpi(str)
 
   use ModProcMH
@@ -578,19 +596,19 @@ subroutine stop_mpi(str)
   end if
 
 end subroutine stop_mpi
-!============================================================================
+!==============================================================================
 subroutine alloc_check(iError,String)
 
   implicit none
 
   integer, intent(in) :: iError
   character (len=*), intent(in) :: String
-  !----------------------------------------------------------------------------
 
+  !----------------------------------------------------------------------------
   if (iError>0) call stop_mpi("Allocation error for "//String)
 
 end subroutine alloc_check
-!==========================================================================
+!==============================================================================
 subroutine error_report(str,value,iErrorIn,show_first)
 
   use ModProcMH
@@ -645,11 +663,10 @@ subroutine error_report(str,value,iErrorIn,show_first)
 
   integer :: i,i0,ip
 
-  !--------------------------------------------------------------------------
+  ! Debug
+  ! write(*,*)'Error_report me, iErrorIn, value, str=',iProc,iErrorIn,value,str
 
-  !Debug
-  !write(*,*)'Error_report me, iErrorIn, value, str=',iProc,iErrorIn,value,str
-
+  !----------------------------------------------------------------------------
   if(str=='PRINT')then
      ! Allocate memory in PROC 0
      allocate(&
@@ -703,7 +720,7 @@ subroutine error_report(str,value,iErrorIn,show_first)
                     error_mean(i0)=error_mean_all(i,ip)
                     error_last(i0)=error_last_all(i,ip)
                     error_last_sum(i0)=error_last_all(i,ip)
-                    exit
+                    EXIT
                  end if
                  if(error_message(i0)==msg)then
 
@@ -731,7 +748,7 @@ subroutine error_report(str,value,iErrorIn,show_first)
                          min(error_min_all(i,ip),error_min(i0))
                     error_max(i0)=&
                          max(error_max_all(i,ip),error_min(i0))
-                    exit
+                    EXIT
                  end if
                  i0=i0+1
               end do ! i0
@@ -764,7 +781,7 @@ subroutine error_report(str,value,iErrorIn,show_first)
           iter_first_all,iter_last_all,error_min_all,error_max_all,&
           error_mean_all,error_last_all)
 
-     return
+     RETURN
 
   end if ! PRINT
 
@@ -775,9 +792,9 @@ subroutine error_report(str,value,iErrorIn,show_first)
         if(iErrorIn>nErrors)then
            ! First occurance of this error type
            nErrors=iErrorIn
-           exit
+           EXIT
         end if
-        if(error_message(iErrorIn)==str)exit
+        if(error_message(iErrorIn)==str)EXIT
         iErrorIn=iErrorIn+1
      end do
   end if
@@ -807,7 +824,6 @@ subroutine error_report(str,value,iErrorIn,show_first)
   end if
 
 end subroutine error_report
-
 !==============================================================================
 
 subroutine test_error_report
@@ -819,6 +835,7 @@ subroutine test_error_report
   integer:: ierr1=-1, ierr2=-1, ierr3=-1
 
   ! Test error_report
+  !----------------------------------------------------------------------------
   select case(iProc)
   case(0)
      iteration_number=1
@@ -844,8 +861,8 @@ subroutine test_error_report
   call error_report('PRINT',0.,iErr1,.true.)
 
 end subroutine test_error_report
+!==============================================================================
 
-!=============================================================================
 subroutine fill_edge_corner(Array_G)
 
   ! Fill edges and corners for Array_G (e.g. for bilinear interpolation)
@@ -854,8 +871,9 @@ subroutine fill_edge_corner(Array_G)
 
   implicit none
   real, intent(inout) :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
-  !---------------------------------------------------------------------------
+
   ! Edges in the` K direction
+  !----------------------------------------------------------------------------
   Array_G(0,0,:) = &
        Array_G(1,0,:)     + Array_G(0,1,:)     - Array_G(1,1,:)
   Array_G(nI+1,0,:) = &
@@ -864,7 +882,7 @@ subroutine fill_edge_corner(Array_G)
        Array_G(0,nJ,:)    + Array_G(1,nJ+1,:)  - Array_G(1,nJ,:)
   Array_G(nI+1,nJ+1,:) = &
        Array_G(nI+1,nJ,:) + Array_G(nI,nJ+1,:) - Array_G(nI,nJ,:)
-  
+
   ! Edges in the J direction
   Array_G(0,:,0) = &
        Array_G(1,:,0)     + Array_G(0,:,1)     - Array_G(1,:,1)
@@ -874,7 +892,7 @@ subroutine fill_edge_corner(Array_G)
        Array_G(1,:,nK+1)  + Array_G(0,:,nK)    - Array_G(1,:,nK)
   Array_G(nI+1,:,nK+1) = &
        Array_G(nI,:,nK+1) + Array_G(nI+1,:,nK) - Array_G(nI,:,nK)
-  
+
   ! Edges in the I direction including the corners
   Array_G(:,0,0) = &
        Array_G(:,1,0)     + Array_G(:,0,1)     - Array_G(:,1,1)
@@ -886,34 +904,36 @@ subroutine fill_edge_corner(Array_G)
        Array_G(:,nJ,nK+1) + Array_G(:,nJ+1,nK) - Array_G(:,nJ,nK)
 
 end subroutine fill_edge_corner
+!==============================================================================
 
-!=========================================================================
 subroutine get_date_time_start(iTime_I)
-  
+
   use ModMain,        ONLY : StartTime
   use ModTimeConvert, ONLY : time_real_to_int
 
   implicit none
   integer, intent(out) :: iTime_I(7)
 
+  !----------------------------------------------------------------------------
   call time_real_to_int(StartTime,iTime_I)
 
 end subroutine get_date_time_start
+!==============================================================================
 
-!=========================================================================
 subroutine get_date_time(iTime_I)
-  
+
   use ModMain,        ONLY : StartTime, Time_Simulation
   use ModTimeConvert, ONLY : time_real_to_int
 
   implicit none
   integer, intent(out) :: iTime_I(7)
 
+  !----------------------------------------------------------------------------
   call time_real_to_int(StartTime+Time_Simulation,iTime_I)
 
 end subroutine get_date_time
+!==============================================================================
 
-!=========================================================================
 subroutine get_time_string
 
   use ModIO,   ONLY: StringDateOrTime, NameMaxTimeUnit
@@ -923,9 +943,9 @@ subroutine get_time_string
 
   integer:: i
   type(TimeType):: Time
-  !---------------------------------------------------------------------------
 
   ! This is the value if the time is too large
+  !----------------------------------------------------------------------------
   StringDateOrTime = '99999999'
   select case(NameMaxTimeUnit)
   case('hour')
@@ -993,8 +1013,8 @@ subroutine get_time_string
   end select
 
 end subroutine get_time_string
+!==============================================================================
 
-!=========================================================================
 subroutine get_iVar(NameVar, iVar)
 
   use ModMain,       ONLY: NameVarLower_V
@@ -1006,10 +1026,10 @@ subroutine get_iVar(NameVar, iVar)
   integer,intent(out)              :: iVar
 
   integer :: iVarLoop, iError
-  character(len=*), parameter :: NameSub = 'get_iVar'
-  !---------------------------------------------------------------------------
 
   ! Initialize iVar
+  character(len=*), parameter:: NameSub = 'get_iVar'
+  !----------------------------------------------------------------------------
   iVar = -1
 
   ! In case NameVar is in upper case...
@@ -1055,3 +1075,4 @@ subroutine get_iVar(NameVar, iVar)
        //'iVar is not within 1 and nVar???')
 
 end subroutine get_iVar
+!==============================================================================

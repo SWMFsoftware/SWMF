@@ -1,8 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-Module ModIO
+module ModIO
 
   use ModSize
   use ModIoUnit, ONLY: UnitTmp_, STDOUT_
@@ -29,7 +28,7 @@ Module ModIO
   integer, parameter :: &
        restart_=1, logfile_=2, magfile_=3, indexfile_=4, maggridfile_=5, &
        plot_=5, satellite_ = plot_+MaxPlotFile
-  
+
   ! I/O
   integer             :: iUnitOut = STDOUT_
   character (len=7)   :: StringPrefix=''
@@ -42,7 +41,6 @@ Module ModIO
   character (len=20) :: NameMaxTimeUnit = 'hour'
   ! Simulation time or physical date and time used in file names
   character (len=14) :: StringDateOrTime
-
 
   logical :: restart=.false.        ! read restart file
   logical :: restart_Bface =.false. ! Bface restarted ^CFG IF CONSTRAINB
@@ -71,9 +69,8 @@ Module ModIO
   integer, dimension(MaxFile) :: n_Pix_X, n_Pix_Y
   real,    dimension(MaxFile) :: X_Size_Image, Y_Size_Image
   ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz':
-  character(len=100), dimension(MaxFile) :: StringRadioFrequency_I  
+  character(len=100), dimension(MaxFile) :: StringRadioFrequency_I
   real, dimension(MaxFile,nPlotRfrFreqMax) :: RadioFrequency_II
-
 
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
@@ -83,8 +80,8 @@ Module ModIO
   logical   :: IsParallelLine_II(MaxLine,MaxPlotFile)  ! Parallel/anti-parallel
 
   ! Actual number of output files and plot files
-  ! note that nfile is not the number of output files but rather the 
-  ! index of the maximum file number.  The array FileUsed contains a 
+  ! note that nfile is not the number of output files but rather the
+  ! index of the maximum file number.  The array FileUsed contains a
   ! value that tells whether or not each file is used or not.
   integer :: nFile=0, nPlotFile=0
 
@@ -104,7 +101,7 @@ Module ModIO
   character(LEN=3)  :: TypeCoordPlot_I(MaxFile) = '???'
 
   ! x1, x2, y1, y2, z1, z2 limits for plotting
-  real, dimension(6,MaxFile) :: plot_range=0. 
+  real, dimension(6,MaxFile) :: plot_range=0.
   ! plot range for the current file
   real :: PlotRange_I(6)
 
@@ -124,11 +121,11 @@ Module ModIO
   ! variables to put in log file
   character (len=500) :: log_vars, log_R_str
 
-  ! variables to control time output format 
+  ! variables to control time output format
   character (len=100) :: log_time
 
   ! dimensionalize the output
-  logical :: plot_dimensional(MaxFile)    
+  logical :: plot_dimensional(MaxFile)
 
   ! Plot variable names and units defined in the user module
   character(len=10), dimension(nPlotVarMax) :: &
@@ -156,26 +153,30 @@ Module ModIO
   ! The space separated list of primitive/conservative variables for plotting
   character(len=:), allocatable :: NamePrimitiveVarPlot, NameConservativeVarPlot
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine write_prefix
 
     use ModMain, ONLY: IsStandAlone
 
+    !--------------------------------------------------------------------------
     if(IsStandAlone) RETURN
     if(iUnitOut==STDOUT_)write(*,'(a)',ADVANCE='NO')trim(StringPrefix)
 
   end subroutine write_prefix
+  !============================================================================
 
-  !===========================================================================
   subroutine write_myname
 
     use ModMain, ONLY: NameThisComp, IsStandAlone
 
+    !--------------------------------------------------------------------------
     if(IsStandAlone) RETURN
     if(len_trim(NameThisComp)>0) &
          write(*,'(a)',ADVANCE='NO')NameThisComp//':'
 
   end subroutine write_myname
+  !============================================================================
 
 end module ModIO
+!==============================================================================

@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModFixAxisCells
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
   implicit none
 
@@ -11,12 +14,13 @@ module ModFixAxisCells
   public:: fix_axis_cells
 
 contains
+  !============================================================================
 
   subroutine fix_axis_cells
 
     use ModProcMH, ONLY: iComm
-    use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B, iTest, jTest, kTest, &
-         BlkTest, x_, y_
+    use ModMain, ONLY: nI, nJ, nK, nBlock, Unused_B,    &
+          x_, y_
     use ModAdvance, ONLY: nVar, State_VGB, Energy_GBI, rFixAxis, r2FixAxis
     use ModGeometry, ONLY: TypeGeometry, XyzMin_D, XyzMax_D, CellSize1Min, &
          r_BLK, rMin_BLK, far_field_bcs_blk
@@ -38,16 +42,16 @@ contains
     real :: r, x, y, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
     real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'fix_axis_cells'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
-    if(DoTestMe)then
-       if(.not.Unused_B(BlkTest)) &
+    if(DoTest)then
+       if(.not.Unused_B(iBlockTest)) &
             write(*,*) NameSub,' initial state, energy=', &
-            State_VGB(:,iTest,jTest,kTest,BlkTest), &
-            Energy_GBI(iTest,jTest,kTest,BlkTest,:)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest), &
+            Energy_GBI(iTest,jTest,kTest,iBlockTest,:)
     end if
 
     if(IsCylindrical)then
@@ -67,9 +71,9 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
 
-       if(rMin_BLK(iBlock) < r2FixAxis) then 
+       if(rMin_BLK(iBlock) < r2FixAxis) then
           nAxisCell = 2
-       elseif(rMin_BLK(iBlock) < rFixAxis) then 
+       elseif(rMin_BLK(iBlock) < rFixAxis) then
           nAxisCell = 1
        else
           CYCLE
@@ -91,7 +95,7 @@ contains
           iR = ceiling( (r - XyzMin_D(1))/CellSize1Min + 0.1)
 
           ! Average small cells in the kMin:kMax ring(s)
-          do k=kMin, kMax; 
+          do k=kMin, kMax;
              Volume = CellVolume_GB(i,1,k,iBlock)
              Buffer_VIII(Volume_,iR,Geom_,iHemisphere) = &
                   Buffer_VIII(Volume_,iR,Geom_,iHemisphere) + nJ*Volume
@@ -135,10 +139,10 @@ contains
     do iBlock = 1, nBlock
        if(Unused_B(iBlock) .or. .not. far_field_BCs_BLK(iBlock)) CYCLE
 
-       if(rMin_BLK(iBlock) < r2FixAxis) then 
+       if(rMin_BLK(iBlock) < r2FixAxis) then
           nAxisCell = 2
           Beta = 0.8
-       elseif(rMin_BLK(iBlock) < rFixAxis) then 
+       elseif(rMin_BLK(iBlock) < rFixAxis) then
           nAxisCell = 1
           Beta = 1.5
        else
@@ -195,13 +199,14 @@ contains
 
     deallocate(Buffer_VIII)
 
-    if(DoTestMe)then
-       if(.not.Unused_B(BlkTest)) &
+    if(DoTest)then
+       if(.not.Unused_B(iBlockTest)) &
             write(*,*) NameSub,' final state, energy=', &
-            State_VGB(:,iTest,jTest,kTest,BlkTest), &
-            Energy_GBI(iTest,jTest,kTest,BlkTest,:)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest), &
+            Energy_GBI(iTest,jTest,kTest,iBlockTest,:)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine fix_axis_cells
   !============================================================================
   subroutine fix_axis_cells_cyl
@@ -225,10 +230,11 @@ contains
     real :: x, y, z, Volume, InvVolume, SumX, SumXAvg, InvSumX2, dLeft, dRight
     real :: State_V(nVar), dStateDx_V(nVar), dStateDy_V(nVar)
 
+    ! Maximum number of cells along the axis
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'fix_axis_cells_cyl'
     !--------------------------------------------------------------------------
-
-    ! Maximum number of cells along the axis
+    call test_start(NameSub, DoTest)
     if(nK == 1)then
        nZ = 1
     else
@@ -239,7 +245,7 @@ contains
 
     Buffer_VII    = 0.0
 
-    if (r2FixAxis > 0.1) then 
+    if (r2FixAxis > 0.1) then
        nAxisCell = 2
        Beta = 0.8
     else
@@ -321,16 +327,16 @@ contains
              dStateDx_V(iVar) = (sign(0.5,dLeft)+sign(0.5,dRight))*InvSumX2 &
                   *min(Beta*abs(dLeft),Beta*abs(dRight),0.5*abs(dLeft+dRight))
 
-             !if(iVar==1)then
+             ! if(iVar==1)then
              !   write(*,*)'!!! iBlock=',iBlock
              !   write(*,*)'!!! SumX, InvSumX2 =', SumX, InvSumX2
-             !   write(*,*)'!!! Avg, SumXAvg   =', State_V(iVar), SumXAvg 
+             !   write(*,*)'!!! Avg, SumXAvg   =', State_V(iVar), SumXAvg
              !   write(*,*)'!!! SumXLeft, Right=', &
              !        Buffer_VII(iVar,iZ,SumXLeft_), &
              !        Buffer_VII(iVar,iZ,SumXRight_)
              !   write(*,*)'!!! dLeft, dRight  =',  dLeft, dRight
              !   write(*,*)'!!! dStateDx_V     =', dStateDx_V(iVar)
-             !end if
+             ! end if
 
              dLeft  = SumXAvg - Buffer_VII(iVar,iZ,SumYLeft_)
              dRight = Buffer_VII(iVar,iZ,SumYRight_) - SumXAvg
@@ -339,9 +345,8 @@ contains
 
           end do
 
-          !write(*,*)'!!! x     =', Xyz_DGB(x_,nAxisCell,1:nJ,1,iBlock)
-          !write(*,*)'!!! Before=',State_VGB(1,nAxisCell,1:nJ,1,iBlock)
-
+          ! write(*,*)'!!! x     =', Xyz_DGB(x_,nAxisCell,1:nJ,1,iBlock)
+          ! write(*,*)'!!! Before=',State_VGB(1,nAxisCell,1:nJ,1,iBlock)
 
           ! Apply fit to each cell within the supercell
           do j=1, nJ; do i=1, nAxisCell
@@ -353,7 +358,7 @@ contains
              call calc_energy_point(i,j,k,iBlock)
           end do; end do
 
-          !write(*,*)'!!! After =',State_VGB(1,nAxisCell,1:nJ,1,iBlock)
+          ! write(*,*)'!!! After =',State_VGB(1,nAxisCell,1:nJ,1,iBlock)
 
        end do
 
@@ -361,6 +366,9 @@ contains
 
     deallocate(Buffer_VII)
 
+    call test_stop(NameSub, DoTest)
   end subroutine fix_axis_cells_cyl
+  !============================================================================
 
 end module ModFixAxisCells
+!==============================================================================

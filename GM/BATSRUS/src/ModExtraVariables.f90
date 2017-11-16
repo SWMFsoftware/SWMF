@@ -1,7 +1,8 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModExtraVariables
-  
+
   ! Define indexes that are not used in most equation modules
 
   ! Set impossible value for indexes
@@ -33,3 +34,4 @@ module ModExtraVariables
   real               :: MassSpecies_V(SpeciesFirst_:SpeciesLast_)
 
 end module ModExtraVariables
+!==============================================================================

@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPhysics
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModNumConst, ONLY: cDegToRad
   use ModConst, ONLY: rSun, mSun, RotationPeriodSun, cSecondPerDay, &
@@ -85,16 +88,16 @@ module ModPhysics
   !\
   ! The following are some notes on how to pick the Q's.  I have used the
   ! cartesian version of the quadrupole magnetic potential because it was
-  ! the easiest to differentiate in our coordinate system.  The two ways 
+  ! the easiest to differentiate in our coordinate system.  The two ways
   ! to write the potential are as follows (in SI - see Jackson pp.136-8):
   !
   !    spherical:       phi = (1/5)*mu * sum(m=-2..2) qlm * Ylm/r^3
   !    cartesian:       phi = 1/(8*pi)*mu * sum(i,j=1..3) Qqpij * xi*xj/r^5
   !
-  !  the coefficients are related to each other as follows (note that I am 
+  !  the coefficients are related to each other as follows (note that I am
   !  using the relations in Jackson.  He uses Gaussian units.  I would guess
   !  that these relations are the same for both systems but I have not checked
-  !  them.  They are most usefull in getting the theta and phi dependance that 
+  !  them.  They are most usefull in getting the theta and phi dependance that
   !  you want and are not really used to do any type of converting):
   !
   !               q22 = (1/12)*sqrt(15/2/pi)*(Qqp11-i*Qqp12 - Qqp22)
@@ -104,10 +107,9 @@ module ModPhysics
   !  Note that Qqp is TRACELESS.  Also note that it is symmetric.  The q's have
   !  the following property:
   !
-  !                  ql(-m) = (-1)^m  *  complex_conjugate(qlm)   
+  !                  ql(-m) = (-1)^m  *  complex_conjugate(qlm)
   !
   !/
-
 
   !\
   ! Far field solar wind solution variables.
@@ -126,7 +128,7 @@ module ModPhysics
   !\
   ! General Body parameters
   !/
-  character (len=2) :: NamePlanetRadius = 'R ' !can be 'km' if there is no body
+  character (len=2) :: NamePlanetRadius = 'R ' ! can be 'km' if there is no body
   real :: rPlanetSi=0.0, rBody=0.0, rCurrents=0.0
   real :: gBody=0.0
   real :: RotPeriodSi=0.0, OmegaBody=0.0
@@ -161,7 +163,6 @@ module ModPhysics
   logical:: UseOutflowPressure = .false.
   real :: pOutflowSi = -1.0, pOutflow = -1.0
 
-
   ! Relaxation time for anisotropic pressure
   logical :: UseConstantTau = .false.
   real    :: TauInstabilitySi = -1.0, TauInstability
@@ -182,9 +183,8 @@ module ModPhysics
   logical :: UseShockTube = .false.
   real :: ShockLeftState_V(nVar)=0.0, ShockRightState_V(nVar)=0.0
   real :: ShockPosition = 0.0, ShockSlope = 0.0
- 
 
-  ! Logicals for using Boundary State              
+  ! Logicals for using Boundary State
   logical :: UseFaceBoundaryState_I(SolidBc_:zMaxBc_) = .false.
   logical :: UseCellBoundaryState_I(Coord1MinBc_:Coord3MaxBc_) = .false.
 
@@ -238,8 +238,7 @@ module ModPhysics
   character (len=20), dimension(nIoUnit) :: &
        NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
 
-
-  ! Names of the user (I/O) units for IDL and TECPlot output 
+  ! Names of the user (I/O) units for IDL and TECPlot output
   ! for all variables including energies
   character(len=20) :: &
        NameUnitUserIdl_V(nVar+nFluid) = '', NameUnitUserTec_V(nVar+nFluid) = ''
@@ -259,8 +258,8 @@ module ModPhysics
   integer, allocatable:: iVectorVar_I(:) ! Index of first components
 
 contains
-  !===========================================================================
-  subroutine set_physics_constants 
+  !============================================================================
+  subroutine set_physics_constants
 
     ! set normalizations, physical constants, etc.
 
@@ -279,12 +278,11 @@ contains
 
     integer :: i, iBoundary
 
-    character (len=*), parameter :: NameSub = "set_physics_constants"
-
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_physics_constants'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    
+    call test_start(NameSub, DoTest)
+
     call set_unit_conversion_array_indices
     !\
     ! Load body rotation rates, masses, and radii
@@ -304,7 +302,7 @@ contains
        if(UseStar) then
           rPlanetSi   = RadiusStar*rSun
           MassBodySi  = MassStar*mSun
-          RotPeriodSi = RotationPeriodStar*cSecondPerDay 
+          RotPeriodSi = RotationPeriodStar*cSecondPerDay
        else
           rPlanetSi   = rSun
           MassBodySi  = mSun
@@ -354,12 +352,12 @@ contains
          ChargeIon_I(Electron_:) = -1.0
 
     ! Electron charge in normalized units (actually it is proton charge/mass)
-    ! This is useful in formulas like n_s q_s (u_s - u_+) x B 
+    ! This is useful in formulas like n_s q_s (u_s - u_+) x B
     ! in the multi-ion momentum equation. It is used in some user modules,
     ! so we keep the name.
     ElectronCharge = 1.0/IonMassPerCharge
 
-    ! Charge per mass in normalized units, This is needed in 
+    ! Charge per mass in normalized units, This is needed in
     ! formulas like rho_s q_s/m_s (E + u_s x B)
     ! Note that ChargeIon_I is for charge state Z, which is not
     ! in normalized units.
@@ -404,7 +402,6 @@ contains
        ! Normalize gravitational acceleration
        Gbody  = GravitySi*(Si2No_V(UnitU_)**2 / Si2No_V(UnitX_))
     end if
-
 
     GBody2 = -cGravitation*MassBody2Si*(Si2No_V(UnitU_)**2 * Si2No_V(UnitX_))
 
@@ -462,11 +459,8 @@ contains
        PolarP_I(1) = PolarP_I(1)*(1 + ElectronPressureRatio)
     end if
 
-
     RhoBody2= RhoDimBody2 *Io2No_V(UnitN_)*MassIon_I(1)
     pBody2  = RhoBody2 * TDimBody2*Io2No_V(UnitTemperature_)
-
-
 
     ! Here the arrays of the FACE VALUE are formed
     ! Initialization
@@ -499,14 +493,14 @@ contains
        FaceState_VI(Ppar_,Body2_) = pBody2
     end if
 
-    !The following part of the code is sensitive to a particular physical
-    !model. It should be modified in adding/deleting the physical effects 
-    !or features
+    ! The following part of the code is sensitive to a particular physical
+    ! model. It should be modified in adding/deleting the physical effects
+    ! or features
 
     FaceState_VI(rho_,body2_) = RhoBody2
     FaceState_VI(P_,body2_)   = pBody2
 
-    !For Outer Boundaries (if SW_* are set)
+    ! For Outer Boundaries (if SW_* are set)
     if(SW_rho > 0.0)then
 
        FaceState_VI(Rho_, xMinBc_:zMaxBc_) = SW_rho
@@ -520,7 +514,7 @@ contains
 
        if(UseElectronPressure) &
             FaceState_VI(Pe_, xMinBc_:zMaxBc_) = SW_p*ElectronPressureRatio
-       
+
        if(UseAnisoPressure) FaceState_VI(Ppar_, xMinBc_:zMaxBc_) = SW_p
 
        if (UseMultiSpecies) then
@@ -531,7 +525,7 @@ contains
        endif
 
        if(nFluid > 1)then
-          ! Ratio of total pressure and sum of ion pressures 
+          ! Ratio of total pressure and sum of ion pressures
           ! depends on UseElectronPressure
           pCoef = 1 + ElectronPressureRatio
           if(UseElectronPressure) pCoef = 1.0
@@ -557,7 +551,7 @@ contains
              FaceState_VI( iUx,xMinBc_:zMaxBc_) = SW_Ux
              FaceState_VI( iUy,xMinBc_:zMaxBc_) = SW_Uy
              FaceState_VI( iUz,xMinBc_:zMaxBc_) = SW_Uz
-             ! Use solar wind temperature and reduced density to get pressure 
+             ! Use solar wind temperature and reduced density to get pressure
              FaceState_VI( iP,xMinBc_:zMaxBc_) = SW_p/pCoef &
                   *LowDensityRatio*MassIon_I(1)/MassFluid_I(iFluid)
           end do
@@ -578,7 +572,7 @@ contains
     CellState_VI(:,Coord1MinBc_:Coord3MaxBc_) = FaceState_VI(:,xMinBc_:zMaxBc_)
 
     ! Use cell values from #BOUNDARYSTATE commands given in primitive variables
-    do iBoundary = 1, 2*nDim 
+    do iBoundary = 1, 2*nDim
        if (.not.UseCellBoundaryState_I(iBoundary)) CYCLE
        CellState_VI(:,iBoundary) = &
             CellStateDim_VI(:,iBoundary) * Io2No_V(iUnitPrim_V)
@@ -622,14 +616,13 @@ contains
     ! Nondimensionalize dipole strength.
     Bdp  = DipoleStrengthSi*Si2No_V(UnitB_)
 
-    BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)              
+    BdpBody2_D = BdpDimBody2_D*Io2No_V(UnitB_)
 
     ! Saving initial coordinates of second body:
     if(UseBody2Orbit)then
        PhaseBody2    = atan2(yBody2, xBody2)
        DistanceBody2 = sqrt(xBody2**2 + yBody2**2)
     end if
-
 
     ! Compute dipole tilt variables
     ! For IH ThetaTilt should be set with the #HELIODIPOLETILT command
@@ -645,9 +638,9 @@ contains
     if(UseHyperbolicDivb .and. SpeedHypDim > 0) &
          SpeedHyp  = SpeedHypDim*Io2No_V(UnitU_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_physics_constants
-
-  !===========================================================================
+  !============================================================================
 
   subroutine set_units
 
@@ -656,11 +649,10 @@ contains
     use ModMultiFluid, ONLY: MassIon_I
     use ModUserInterface ! user_io_units, user_normalization
 
-    character (len=*), parameter :: NameSub="set_units"
-
-    logical :: DoTest, DoTestMe
-    !-----------------------------------------------------------------------
-    call set_oktest(NameSub,DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_units'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     !\
     ! set variables for converting from normalized to SI units and back:
@@ -675,7 +667,7 @@ contains
        ! rPlanet, rPlanet/sec, amu/cm^3
        No2Si_V(UnitX_)   = rPlanetSi
        No2Si_V(UnitU_)   = rPlanetSi
-       No2Si_V(UnitRho_) = 1000000*cProtonMass !AtomicMass
+       No2Si_V(UnitRho_) = 1000000*cProtonMass ! AtomicMass
     case("SOLARWIND")
        ! rPlanet, SW sound speed, SW density in amu/cm^3
        No2Si_V(UnitX_)   = rPlanetSi
@@ -714,7 +706,7 @@ contains
     No2Si_V(UnitJ_)          = No2Si_V(UnitB_)/( No2Si_V(UnitX_)*cMu ) ! A/m^2
     No2Si_V(UnitElectric_)   = No2Si_V(UnitU_)*No2Si_V(UnitB_)         ! V/m
     No2Si_V(UnitTemperature_)= No2Si_V(UnitP_) &
-         /( No2Si_V(UnitN_)*cBoltzmann )                               ! K 
+         /( No2Si_V(UnitN_)*cBoltzmann )                               ! K
     No2Si_V(UnitDivB_)       = No2Si_V(UnitB_)/No2Si_V(UnitX_)         ! T/m
     No2Si_V(UnitAngle_)      = 1.0                                     ! radian
     No2Si_V(UnitMass_)       = No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3    ! kg
@@ -735,7 +727,7 @@ contains
     ! Note that the input/output units are not necessarily consistent, e.g.
     ! units of distance divided by units of time does not necessarily
     ! coincide with the units of velocity.
-    ! 
+    !
     ! Also load the unit name strings for IDL and TEC output
     !/
 
@@ -746,38 +738,38 @@ contains
     !\
     ! set string variables used for writing Tecplot output
     !/
-    NameTecUnit_V(UnitX_)           = '[m]'            
-    NameTecUnit_V(UnitU_)           = '[m/s]'          
+    NameTecUnit_V(UnitX_)           = '[m]'
+    NameTecUnit_V(UnitU_)           = '[m/s]'
     NameTecUnit_V(UnitRho_)         = '[kg/m^3]'
-    NameTecUnit_V(UnitT_)           = '[s]'             
-    NameTecUnit_V(UnitN_)           = '[m^-^3]'        
-    NameTecUnit_V(UnitP_)           = '[Pa]'           
-    NameTecUnit_V(UnitB_)           = '[T]'            
+    NameTecUnit_V(UnitT_)           = '[s]'
+    NameTecUnit_V(UnitN_)           = '[m^-^3]'
+    NameTecUnit_V(UnitP_)           = '[Pa]'
+    NameTecUnit_V(UnitB_)           = '[T]'
     NameTecUnit_V(UnitRhoU_)        = '[kg m^-^2 s^-^2]'
-    NameTecUnit_V(UnitEnergydens_)  = '[J/m^3]'             
+    NameTecUnit_V(UnitEnergydens_)  = '[J/m^3]'
     NameTecUnit_V(UnitPoynting_)    = '[J m^-^2 s^-^1]'
-    NameTecUnit_V(UnitJ_)           = '[A/m^2]'       
-    NameTecUnit_V(UnitElectric_)    = '[V/m]'          
-    NameTecUnit_V(UnitTemperature_) = '[K]'             
-    NameTecUnit_V(UnitDivB_)        = '[T/m]'           
+    NameTecUnit_V(UnitJ_)           = '[A/m^2]'
+    NameTecUnit_V(UnitElectric_)    = '[V/m]'
+    NameTecUnit_V(UnitTemperature_) = '[K]'
+    NameTecUnit_V(UnitDivB_)        = '[T/m]'
     NameTecUnit_V(UnitAngle_)       = '[rad]'
     !\
     ! set string variables used for writing IDL output
     !/
-    NameIdlUnit_V(UnitX_)           = 'm'            
+    NameIdlUnit_V(UnitX_)           = 'm'
     NameIdlUnit_V(UnitRho_)         = 'kg/m3'
-    NameIdlUnit_V(UnitU_)           = 'm/s'          
-    NameIdlUnit_V(UnitT_)           = 's'             
-    NameIdlUnit_V(UnitN_)           = '/m3'        
-    NameIdlUnit_V(UnitP_)           = 'Pa'           
-    NameIdlUnit_V(UnitB_)           = 'T'            
+    NameIdlUnit_V(UnitU_)           = 'm/s'
+    NameIdlUnit_V(UnitT_)           = 's'
+    NameIdlUnit_V(UnitN_)           = '/m3'
+    NameIdlUnit_V(UnitP_)           = 'Pa'
+    NameIdlUnit_V(UnitB_)           = 'T'
     NameIdlUnit_V(UnitRhoU_)        = 'kg/m2s2'
-    NameIdlUnit_V(UnitEnergyDens_)  = 'J/m3'           
+    NameIdlUnit_V(UnitEnergyDens_)  = 'J/m3'
     NameIdlUnit_V(UnitPoynting_)    = 'J/m2s'
-    NameIdlUnit_V(UnitJ_)           = 'A/m2'       
-    NameIdlUnit_V(UnitElectric_)    = 'V/m'          
-    NameIdlUnit_V(Unittemperature_) = 'K'             
-    NameIdlUnit_V(UnitDivB_)        = 'T/m'           
+    NameIdlUnit_V(UnitJ_)           = 'A/m2'
+    NameIdlUnit_V(UnitElectric_)    = 'V/m'
+    NameIdlUnit_V(Unittemperature_) = 'K'
+    NameIdlUnit_V(UnitDivB_)        = 'T/m'
     NameIdlUnit_V(UnitAngle_)       = 'rad'
 
     ! Store SI unit names for writing out variables in SI units
@@ -802,12 +794,12 @@ contains
        !/
        NameTecUnit_V(UnitX_)           = '['//trim(NamePlanetRadius)//']'
        NameTecUnit_V(UnitRho_)         = '[amu/cm^3]'
-       NameTecUnit_V(UnitU_)           = '[km/s]'          
-       NameTecUnit_V(UnitN_)           = '[cm^-^3]'        
-       NameTecUnit_V(UnitP_)           = '[nPa]'           
-       NameTecUnit_V(UnitB_)           = '[nT]'            
-       NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'       
-       NameTecUnit_V(UnitElectric_)    = '[mV/m]'          
+       NameTecUnit_V(UnitU_)           = '[km/s]'
+       NameTecUnit_V(UnitN_)           = '[cm^-^3]'
+       NameTecUnit_V(UnitP_)           = '[nPa]'
+       NameTecUnit_V(UnitB_)           = '[nT]'
+       NameTecUnit_V(UnitJ_)           = '[`mA/m^2]'
+       NameTecUnit_V(UnitElectric_)    = '[mV/m]'
        NameTecUnit_V(UnitDivB_)        = '[nT/'//trim(NamePlanetRadius)//']'
        NameTecUnit_V(UnitAngle_)       = '[deg]'
 
@@ -818,7 +810,7 @@ contains
        NameIdlUnit_V(UnitRho_)         = 'Mp/cc'
        NameIdlUnit_V(UnitU_)           = 'km/s'
        NameIdlUnit_V(UnitN_)           = '/cc'
-       NameIdlUnit_V(UnitP_)           = 'nPa'           
+       NameIdlUnit_V(UnitP_)           = 'nPa'
        NameIdlUnit_V(UnitB_)           = 'nT'
        NameIdlUnit_V(UnitJ_)           = 'uA/m2'
        NameIdlUnit_V(UnitElectric_)    = 'mV/m'
@@ -869,8 +861,8 @@ contains
     case("NONE")
        ! I/O and normalized units are the same, so
        Io2Si_V = No2Si_V
-       NameTecUnit_V = ''            
-       NameIdlUnit_V = ''   
+       NameTecUnit_V = ''
+       NameIdlUnit_V = ''
 
     case("USER")
        ! User method provides the conversion from I/O to SI units
@@ -885,9 +877,10 @@ contains
     No2Io_V = No2Si_V*Si2Io_V
     Io2No_V = 1/No2Io_V
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_units
-
   !============================================================================
+
   subroutine set_unit_conversion_array_indices
     use ModProcMH,  ONLY: iProc
     use ModVarIndexes
@@ -895,8 +888,10 @@ contains
 
     integer :: iVar
     character (len=len(NameVar_V)) :: NameVar
-    character (len=*), parameter :: NameSub="set_unit_conversion_array_indices"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_unit_conversion_array_indices'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Set mapping from state variable indices to unit conversion array indices
     do iVar = 1, nVar
@@ -938,14 +933,13 @@ contains
        end select
     end do
 
-
+    call test_stop(NameSub, DoTest)
   end subroutine set_unit_conversion_array_indices
-
-
   !============================================================================
+
   subroutine init_mhd_variables
 
-    ! Set default I/O units and unit names for the state variables 
+    ! Set default I/O units and unit names for the state variables
     ! in MHD type equations
 
     use ModVarIndexes
@@ -955,9 +949,10 @@ contains
     use ModMain,    ONLY: UseB
 
     integer :: iVar
-    character (len=*), parameter :: NameSub="init_mhd_variables"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mhd_variables'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
 
     if(UseB)then
        UnitUser_V(Bx_:Bz_)        = No2Io_V(UnitB_)
@@ -1058,8 +1053,8 @@ contains
        NameUnitUserIdl_V(Ehot_) = NameIdlUnit_V(UnitEnergyDens_)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mhd_variables
-
   !============================================================================
 
   subroutine init_vector_variables
@@ -1069,8 +1064,10 @@ contains
     use ModMain,    ONLY: UseB
     use ModVarIndexes
 
-    character (len=*), parameter :: NameSub="init_vector_variables"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_vector_variables'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(nVectorVar == 0)then
        nVectorVar = nFluid
@@ -1080,16 +1077,15 @@ contains
        if(UseB) iVectorVar_I(nFluid+1) = Bx_
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_vector_variables
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_corotation_velocity(Xyz_D, uRot_D)
 
     ! Calculates cartesian corotation velocity uRot_D at
     ! location Xyz_D. The angular velocity depends on the component
     ! and possibly also on simulation time.
-    !-------------------------------------------------------------------------
 
     use CON_axes,          ONLY: get_axes
     use ModCoordTransform, ONLY: cross_product
@@ -1101,7 +1097,10 @@ contains
     real, save:: Omega_D(3)
     logical   :: IsUninitialized = .true.
 
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(TypeCoordSystem)
     case('HGI')
        ! In the HGI system the Solar angular velocity vector points towards +Z
@@ -1121,6 +1120,9 @@ contains
     ! The corotation velocity is u = Omega x R
     uRot_D = cross_product(Omega_D, Xyz_D)
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_corotation_velocity
+  !============================================================================
 
 end module ModPhysics
+!==============================================================================

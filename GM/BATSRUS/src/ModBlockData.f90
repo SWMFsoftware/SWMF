@@ -1,11 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModBlockData
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iBlockTest, iProcTest
+
   use ModSize,   ONLY: MaxBlock
-  use ModMain,   ONLY: ProcTest, BlkTest
   use ModProcMH, ONLY: iProc
 
   implicit none
@@ -41,7 +43,7 @@ module ModBlockData
 
   public test_block_data
 
-  ! Maximum number of reals associated with a block. 
+  ! Maximum number of reals associated with a block.
   ! This has to be set in ModUser so that load_balance.f90 knows about it.
   integer, public:: MaxBlockData = 0
 
@@ -56,35 +58,36 @@ module ModBlockData
   end type BlockDataType
 
   ! Array of allocatable storage
-  type(BlockDataType) :: Data_B(MaxBlock) 
+  type(BlockDataType) :: Data_B(MaxBlock)
 
   character(len=*), parameter :: NameMod = 'ModBlockData'
 
   logical, parameter :: DoDebug = .false.
 
 contains
-
-  !===========================================================================
+  !============================================================================
 
   subroutine init_block(iBlock,nValue)
     integer, intent(in) :: iBlock
     integer, intent(in) :: nValue
-    character (len=*), parameter :: NameSub = NameMod//'::init_block'
-    !------------------------------------------------------------------------
-    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_block'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
     allocate(Data_B(iBlock) % Array_I(nValue))
     iData_B(iBlock)   = 0
     nData_B(iBlock)   = 0
     UseData_B(iBlock) = .false.
 
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' finished'
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine init_block
-
-  !===========================================================================
+  !============================================================================
 
   subroutine extend_array(iBlock, nValue)
     integer, intent(in) :: iBlock
@@ -92,10 +95,13 @@ contains
 
     integer :: nSize
     real, pointer :: DataTemp_I(:)
-    character (len=*), parameter :: NameSub = NameMod//'::extend_array'
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'extend_array'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nValue=',nValue
     endif
 
@@ -115,23 +121,25 @@ contains
     Data_B(iBlock) % Array_I => DataTemp_I
 
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' allocated size=',size(DataTemp_I)
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine extend_array
-
-  !===========================================================================
+  !============================================================================
 
   subroutine put_point(iBlock, Value, DoAllowReplace)
     integer, intent(in) :: iBlock
     real,    intent(in) :: Value
     logical, intent(in), optional :: DoAllowReplace
 
-    character (len=*), parameter :: NameSub=NameMod//'::put_point'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'put_point'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called'
     endif
 
@@ -152,13 +160,13 @@ contains
     Data_B(iBlock) % Array_I(iData_B(iBlock)) = Value
 
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' returning Value=',Value
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine put_point
-
-  !===========================================================================
+  !============================================================================
 
   subroutine put_array(iBlock, nValue, Value_I, DoAllowReplace)
     integer, intent(in) :: iBlock
@@ -167,10 +175,12 @@ contains
     logical, intent(in), optional :: DoAllowReplace
 
     integer :: i
-    character (len=*), parameter :: NameSub=NameMod//'::put_array'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'put_array'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nValue=',nValue
     endif
 
@@ -191,9 +201,9 @@ contains
     iData_B(iBlock) = i + nValue
     Data_B(iBlock) % Array_I(i+1:i+nValue) = Value_I
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine put_array
-
-  !===========================================================================
+  !============================================================================
 
   subroutine put_array2(iBlock, nI, nJ, Value_II, DoAllowReplace)
     integer, intent(in) :: iBlock
@@ -202,10 +212,12 @@ contains
     logical, intent(in), optional :: DoAllowReplace
 
     integer :: i, j, nValue
-    character (len=*), parameter :: NameSub=NameMod//'::put_array2'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'put_array2'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nI, nJ=',nI, nJ
     endif
 
@@ -231,9 +243,9 @@ contains
     end do
     iData_B(iBlock) = i
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine put_array2
-
-  !===========================================================================
+  !============================================================================
 
   subroutine put_array3(iBlock, nI, nJ, nK, Value_III, DoAllowReplace)
     integer, intent(in) :: iBlock
@@ -242,10 +254,12 @@ contains
     logical, intent(in), optional :: DoAllowReplace
 
     integer :: i, j, k, nValue
-    character (len=*), parameter :: NameSub=NameMod//'::put_array3'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'put_array3'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK
     endif
 
@@ -271,9 +285,9 @@ contains
     end do; end do
     iData_B(iBlock) = i
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine put_array3
-
-  !===========================================================================
+  !============================================================================
 
   subroutine put_array4(iBlock, nI, nJ, nK, nL, Value_IIII, DoAllowReplace)
     integer, intent(in) :: iBlock
@@ -282,10 +296,12 @@ contains
     logical, intent(in), optional :: DoAllowReplace
 
     integer :: i, j, k, l, nValue
-    character (len=*), parameter :: NameSub=NameMod//'::put_array4'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'put_array4'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK, nL
     endif
 
@@ -311,43 +327,46 @@ contains
     end do; end do; end do
     iData_B(iBlock) = i
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine put_array4
+  !============================================================================
 
-  !===========================================================================
   subroutine set_block_data(iBlock)
     integer, intent(in) :: iBlock
-    character(len=*), parameter :: NameSub = NameMod//'::set_block_data'
-    !------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'set_block_data'
+    !--------------------------------------------------------------------------
     UseData_B(iBlock) = .true.
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) write(*,*)NameSub,' called'
+       if(iProc==iProcTest .and. iBlock==iBlockTest) write(*,*)NameSub,' called'
     endif
   end subroutine set_block_data
-
-  !===========================================================================
+  !============================================================================
 
   logical function use_block_data(iBlock)
     integer, intent(in) :: iBlock
-    character (len=*), parameter :: NameSub = NameMod//'::use_block_data'
-    !------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'use_block_data'
+    !--------------------------------------------------------------------------
     use_block_data = UseData_B(iBlock) .and. nData_B(iBlock) > 0
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' returning ',UseData_B(iBlock)
     endif
   end function use_block_data
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_point(iBlock, Value, DoNotAdvance)
     integer, intent(in) :: iBlock
     real,    intent(out):: Value
     logical, intent(in), optional :: DoNotAdvance
 
-    character(len=*), parameter :: NameSub = NameMod//'::get_point'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_point'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called'
     endif
 
@@ -371,12 +390,12 @@ contains
     if(.not.present(DoNotAdvance)) iData_B(iBlock) = iData_B(iBlock) + 1
 
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' returning Value=',Value
     endif
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_point
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_array(iBlock, nValue, Value_I, DoNotAdvance)
     integer, intent(in) :: iBlock
@@ -386,10 +405,12 @@ contains
 
     integer :: i
 
-    character(len=*), parameter :: NameSub = NameMod//'::get_array'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_array'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nValue=',nValue
     endif
     ! wrap around
@@ -414,9 +435,9 @@ contains
     ! Adjust index
     if(.not.present(DoNotAdvance)) iData_B(iBlock) = i + nValue
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_array
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_array2(iBlock, nI, nJ, Value_II, DoNotAdvance)
     integer, intent(in) :: iBlock
@@ -426,10 +447,12 @@ contains
 
     integer :: i, j, nValue
 
-    character(len=*), parameter :: NameSub = NameMod//'::get_array2'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_array2'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nI, nJ=',nI, nJ
     endif
     ! wrap around
@@ -458,9 +481,9 @@ contains
     ! Adjust index
     if(.not.present(DoNotAdvance)) iData_B(iBlock) = i
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_array2
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_array3(iBlock, nI, nJ, nK, Value_III, DoNotAdvance)
     integer, intent(in) :: iBlock
@@ -470,10 +493,12 @@ contains
 
     integer :: i, j, k, nValue
 
-    character(len=*), parameter :: NameSub = NameMod//'::get_array3'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_array3'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nI, nJ, nK=',nI, nJ, nK
     endif
     ! wrap around
@@ -502,9 +527,9 @@ contains
     ! Adjust index
     if(.not.present(DoNotAdvance)) iData_B(iBlock) = i
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_array3
-  
-  !===========================================================================
+  !============================================================================
 
   subroutine get_array4(iBlock, nI, nJ, nK, nL, Value_IIII, DoNotAdvance)
     integer, intent(in) :: iBlock
@@ -514,10 +539,12 @@ contains
 
     integer :: i, j, k, l, nValue
 
-    character(len=*), parameter :: NameSub = NameMod//'::get_array4'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_array4'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' called with nI, nJ, nK, nL=',nI, nJ, nK, nL
     endif
     ! wrap around
@@ -546,16 +573,19 @@ contains
     ! Adjust index
     if(.not.present(DoNotAdvance)) iData_B(iBlock) = i
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_array4
-  
-  !===========================================================================
+  !============================================================================
 
   subroutine clean_block(iBlock)
     integer, intent(in) :: iBlock
-    character (len=*), parameter :: NameSub = NameMod//'::clean_block'
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'clean_block'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) write(*,*)NameSub,' called'
+       if(iProc==iProcTest .and. iBlock==iBlockTest) write(*,*)NameSub,' called'
     endif
     UseData_B(iBlock) = .false.
     if(nData_B(iBlock) < 0) RETURN
@@ -563,54 +593,58 @@ contains
     nData_B(iBlock) = -1
     iData_B(iBlock) = -1
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine clean_block
-
-  !===========================================================================
+  !============================================================================
 
   subroutine clean_all
     integer :: iBlock
-    character (len=*), parameter :: NameSub = NameMod//'::clean_all'
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'clean_all'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do iBlock = 1, MaxBlock
        call clean_block(iBlock)
     end do
     if(DoDebug)then
-       if(iProc==ProcTest) write(*,*)NameSub,' finished'
+       if(iProc==iProcTest) write(*,*)NameSub,' finished'
     endif
+    call test_stop(NameSub, DoTest)
   end subroutine clean_all
-
-  !===========================================================================
+  !============================================================================
 
   integer function n_data(iBlock)
     integer, intent(in) :: iBlock
-    character (len=*), parameter :: NameSub = NameMod//'::n_data'
-    !------------------------------------------------------------------------
+
+    character(len=*), parameter:: NameSub = 'n_data'
+    !--------------------------------------------------------------------------
     n_data = nData_B(iBlock)
     if(DoDebug)then
-       if(iProc==ProcTest .and. iBlock==BlkTest) &
+       if(iProc==iProcTest .and. iBlock==iBlockTest) &
             write(*,*)NameSub,' returning ',nData_B(iBlock)
     endif
   end function n_data
-
-  !===========================================================================
+  !============================================================================
 
   integer function max_data()
-    character (len=*), parameter :: NameSub = NameMod//'::max_data'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'max_data'
+    !--------------------------------------------------------------------------
     max_data = maxval(nData_B)
     if(DoDebug)then
-       if(iProc==ProcTest)write(*,*)NameSub,' returning ',maxval(nData_B)
+       if(iProc==iProcTest)write(*,*)NameSub,' returning ',maxval(nData_B)
     endif
   end function max_data
-
-  !===========================================================================
+  !============================================================================
 
   subroutine test_block_data
 
     real :: Value, Value_I(3), Value_II(2,3)
     integer :: nData, i
-    character (len=*), parameter :: NameSub = NameMod//'::test_block_data'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'test_block_data'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     write(*,*)'Testing put_block_data and n_block_data()'
 
     ! Put 1 value
@@ -626,7 +660,7 @@ contains
     if(i /= 1)write(*,*)'put_block_data failed, iData=',i,' should be 1'
 
     ! Put 3 values as an array (the optional argument should not matter now)
-    call put_block_data(1,3,(/2.0, 3.0, 4.0/)) !, DoAllowReplace=.true.)
+    call put_block_data(1,3,(/2.0, 3.0, 4.0/)) ! , DoAllowReplace=.true.)
 
     nData = n_block_data(1)
     if(nData /= 4)write(*,*)'n_block_data(1) failed, n=',nData,' should be 4'
@@ -699,9 +733,10 @@ contains
     if(nData /= -1)write(*,*) &
          'clean_block_data failed, n=',nData,' should be -1'
 
+    call test_stop(NameSub, DoTest)
   end subroutine test_block_data
+  !============================================================================
 
-  !===========================================================================
   subroutine write_block_restart_files(NameRestartOutDir, UseRestartOutSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
@@ -714,13 +749,13 @@ contains
     integer            :: iBlock
     character(len=100) :: NameBlockFile
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='write_block_restart_files'
-    !--------------------------------------------------------------------
-    if(iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_block_restart_files'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==iProcTest)then
     else
-       DoTest=.false.; DoTestMe=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     do iBlock=1,nBlock
@@ -741,18 +776,19 @@ contains
        call close_file
     end do
 
-    if(DoTestMe)then
-       write(*,*)NameSub,': iProc, iBlock  =', iProc, BLKtest
-       write(*,*)NameSub,': use_block_data =', use_block_data(BLKtest)
-       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(BLKtest)
+    if(DoTest)then
+       write(*,*)NameSub,': iProc, iBlock  =', iProc, iBlockTest
+       write(*,*)NameSub,': use_block_data =', use_block_data(iBlockTest)
+       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(iBlockTest)
        write(*,*)NameSub,': Data_B(iBlock)%Array_I(1:5) = ', &
-            Data_B(BLKtest)%Array_I(1:5)
+            Data_B(iBlockTest)%Array_I(1:5)
        write(*,*)NameSub,' finished'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_block_restart_files
+  !============================================================================
 
-  !===========================================================================
   subroutine read_block_restart_files(NameRestartInDir, UseRestartInSeries)
 
     use ModMain, ONLY: nBlock, Unused_B
@@ -768,13 +804,13 @@ contains
 
     character(len=100) :: NameBlockFile
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='read_block_restart_files'
-    !--------------------------------------------------------------------
-    if(iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_block_restart_files'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==iProcTest)then
     else
-       DoTest=.false.; DoTestMe=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     do iBlock=1,nBlock
@@ -811,18 +847,19 @@ contains
        close(UnitTmp_)
     end do
 
-    if(DoTestMe)then
-       write(*,*)NameSub,': iProc, iBlock  =', iProc, BLKtest
-       write(*,*)NameSub,': use_block_data =', use_block_data(BLKtest)
-       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(BLKtest)
+    if(DoTest)then
+       write(*,*)NameSub,': iProc, iBlock  =', iProc, iBlockTest
+       write(*,*)NameSub,': use_block_data =', use_block_data(iBlockTest)
+       write(*,*)NameSub,': nData_B(iBlock)=', nData_B(iBlockTest)
        write(*,*)NameSub,': Data_B(iBlock)%Array_I(1:5) = ', &
-            Data_B(BLKtest)%Array_I(1:5)
+            Data_B(iBlockTest)%Array_I(1:5)
        write(*,*)NameSub,' finished'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_block_restart_files
-
   !============================================================================
+
   subroutine get_block_restart_namefile(iBlock, &
        NameRestartDir, UseRestartSeries, NameBlockFile)
 
@@ -840,8 +877,10 @@ contains
     character(len=*), parameter :: NameStart        = "blockdata_Blk"
     character(len=*), parameter :: StringRestartExt = ".rst"
 
-    character(len=*), parameter :: NameSub='get_block_restart_namefile'
-    !--------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_block_restart_namefile'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     iBlockRestart = iMortonNode_A(iNode_B(iBlock))
     write(StringDigit,'(i1)') max(5,int(1+alog10(real(iBlockRestart))))
@@ -856,6 +895,9 @@ contains
             trim(NameRestartDir)//NameStart,iBlockRestart,StringRestartExt
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_block_restart_namefile
+  !============================================================================
 
 end module ModBlockData
+!==============================================================================

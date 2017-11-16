@@ -1,5 +1,8 @@
 module ModBorisCorrection
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
   use ModVarIndexes,     ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
   use ModPhysics,        ONLY: c2Light, inv_c2light
   use ModCoordTransform, ONLY: cross_product
@@ -13,7 +16,7 @@ module ModBorisCorrection
   public:: boris_simple_to_mhd ! from (1+B^2/(Rho*c^2))*RhoU to RhoU
 
 contains
-  !==========================================================================
+  !============================================================================
   subroutine mhd_to_boris(State_V, Energy, B0_D)
 
     real, intent(inout)          :: State_V(nVar)
@@ -25,7 +28,10 @@ contains
     ! Use B0=B0_D in the total magnetic field if present.
 
     real:: Rho, b_D(3), u_D(3)
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'mhd_to_boris'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     b_D = State_V(Bx_:Bz_)
     if(present(b0_D)) b_D = b_D + B0_D
@@ -44,8 +50,9 @@ contains
     if(present(Energy)) &
          Energy = Energy + 0.5*sum(cross_product(u_D, b_D)**2)*inv_c2LIGHT
 
+    call test_stop(NameSub, DoTest)
   end subroutine mhd_to_boris
-  !==========================================================================
+  !============================================================================
   subroutine boris_to_mhd(State_V, Energy, B0_D)
 
     real, intent(inout)          :: State_V(nVar)
@@ -57,7 +64,10 @@ contains
     ! Use B0=B0_D in the total magnetic field if present.
 
     real:: RhoC2, b_D(3), RhoUBoris_D(3), u_D(3)
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'boris_to_mhd'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     b_D = State_V(Bx_:Bz_)
     if(present(b0_D)) b_D = b_D + B0_D
@@ -79,8 +89,9 @@ contains
        Energy = Energy - 0.5*sum(cross_product(u_D, b_D)**2)*inv_c2LIGHT
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine boris_to_mhd
-  !==========================================================================
+  !============================================================================
   subroutine mhd_to_boris_simple(State_V, B0_D)
 
     real, intent(inout)          :: State_V(nVar)
@@ -90,7 +101,10 @@ contains
     ! Use B0=B0_D in the total magnetic field if present.
 
     real:: b_D(3), Factor
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'mhd_to_boris_simple'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     b_D = State_V(Bx_:Bz_)
     if(present(b0_D)) b_D = b_D + B0_D
@@ -99,8 +113,9 @@ contains
     Factor = 1 + sum(b_D**2)/(State_V(Rho_)*c2light)
     State_V(RhoUx_:RhoUz_) = Factor*State_V(RhoUx_:RhoUz_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine mhd_to_boris_simple
-  !==========================================================================
+  !============================================================================
   subroutine boris_simple_to_mhd(State_V, B0_D)
 
     real, intent(inout)          :: State_V(nVar)
@@ -110,7 +125,10 @@ contains
     ! Use B0=B0_D in the total magnetic field if present.
 
     real:: b_D(3), Factor
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'boris_simple_to_mhd'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     b_D = State_V(Bx_:Bz_)
     if(present(b0_D)) b_D = b_D + B0_D
@@ -119,6 +137,9 @@ contains
     Factor = 1 + sum(b_D**2)/(State_V(Rho_)*c2Light)
     State_V(RhoUx_:RhoUz_) = State_V(RhoUx_:RhoUz_)/Factor
 
+    call test_stop(NameSub, DoTest)
   end subroutine boris_simple_to_mhd
+  !============================================================================
 
 end module ModBorisCorrection
+!==============================================================================

@@ -1,6 +1,5 @@
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModSize
-  
+
   use BATL_size, MaxBlockBatl => MaxBlock
 
   ! Named indexes for coordinate directions
@@ -17,3 +16,4 @@ module ModSize
   integer, parameter :: MaxImplBLK = min(MaxBlock, 100)
 
 end module ModSize
+!==============================================================================

@@ -1,26 +1,28 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!============================================================================
 module ModRadDiffusion
 
-  ! Solve for gray or multigroup radiation diffusion 
-  ! and/or isotropic electron heat conduction in the 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
+  ! Solve for gray or multigroup radiation diffusion
+  ! and/or isotropic electron heat conduction in the
   ! non-relativistic fluid velocity limit.
   !
-  ! The unknowns are radiation energy density and black body 
+  ! The unknowns are radiation energy density and black body
   ! radiation energy density (a*Te**4) representing the material
   ! (electron or ion) energy density.
   !
   ! Split semi-implicit schemes is implemented.
   ! The energy exchange terms are either evaluated point-implicitly,
-  ! or implicitly. 
+  ! or implicitly.
   !
-  ! Notes: 
+  ! Notes:
   !
   ! 1. If present, the electron/ion energy density must be the
-  !    first implicit variable! 
+  !    first implicit variable!
   !
   ! 2. In the split semi-implicit scheme all variables
   !    use the point-implicit energy exchange!
@@ -32,7 +34,7 @@ module ModRadDiffusion
   implicit none
   save
 
-  private !except
+  private ! except
 
   ! Public methods
   public :: read_rad_diffusion_param
@@ -113,6 +115,7 @@ module ModRadDiffusion
   real, allocatable :: FluxImpl_VFD(:,:,:,:,:)
 
 contains
+  !============================================================================
 
   subroutine read_rad_diffusion_param(NameCommand)
 
@@ -121,8 +124,10 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    character(len=*), parameter :: NameSub = 'read_rad_diffusion_param'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_rad_diffusion_param'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(NameCommand)
     case("#RADIATION")
@@ -155,9 +160,8 @@ contains
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
 
-
+    call test_stop(NameSub, DoTest)
   end subroutine read_rad_diffusion_param
-
   !============================================================================
 
   subroutine init_rad_diffusion
@@ -176,8 +180,10 @@ contains
 
     real :: TradMin
 
-    character(len=*), parameter :: NameSub = "init_rad_diffusion"
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_rad_diffusion'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(allocated(Erad_WG)) RETURN
 
@@ -283,8 +289,8 @@ contains
     iDiffRadMax = iDiffRadLast
     iPointSemi  = 1
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_rad_diffusion
-
   !============================================================================
 
   subroutine get_radiation_energy_flux(iDir, i, j, k, iBlock, &
@@ -299,8 +305,11 @@ contains
     real,    intent(out):: RadDiffCoef, EradFlux
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
 
@@ -319,7 +328,9 @@ contains
 
     EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
+    !==========================================================================
 
     subroutine get_diffusion_coef(State_V, DiffCoef)
 
@@ -354,9 +365,9 @@ contains
       end if
 
     end subroutine get_diffusion_coef
+    !==========================================================================
 
   end subroutine get_radiation_energy_flux
-
   !============================================================================
 
   subroutine calc_source_rad_diffusion(iBlock)
@@ -375,8 +386,10 @@ contains
     real :: TeSi, Te
     real :: AbsorptionEmission, OpacityPlanckSi_W(nWave)
     real :: OpacityEmissionSi_W(nWave)
-    character(len=*), parameter:: NameSub = "calc_source_rad_diffusion"
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_source_rad_diffusion'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -412,11 +425,11 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_source_rad_diffusion
+  !============================================================================
 
-  !============================================================================
   ! Semi-implicit interface
-  !============================================================================
 
   subroutine get_impl_rad_diff_state(SemiAll_VCB, DconsDsemiAll_VCB, &
        DeltaSemiAll_VCB, DoCalcDeltaIn)
@@ -470,9 +483,10 @@ contains
     real :: State_V(nVar)
     integer :: iVarSemi_
 
-    character(len=*), parameter:: NameSub='get_impl_rad_diff_state'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_impl_rad_diff_state'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     DoCalcDelta = .false.
     if(present(DoCalcDeltaIn)) DoCalcDelta=DoCalcDeltaIn
 
@@ -690,7 +704,7 @@ contains
        RETURN
     end if
 
-    ! Message pass to fill in ghost cells 
+    ! Message pass to fill in ghost cells
     call message_pass_cell(nDiff, DiffSemiCoef_VGB, nWidthIn=1, &
          nProlongOrderIn=1, DoSendCornerIn=.false., DoRestrictFaceIn=.true.)
 
@@ -782,7 +796,9 @@ contains
        end if
     end do
 
+    call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
 
     subroutine face_equal(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
@@ -798,7 +814,6 @@ contains
       enddo; enddo; enddo
 
     end subroutine face_equal
-
     !==========================================================================
 
     subroutine face_left_coarse2fine(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
@@ -815,7 +830,6 @@ contains
       enddo; enddo; enddo
 
     end subroutine face_left_coarse2fine
-
     !==========================================================================
 
     subroutine face_right_coarse2fine(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
@@ -832,7 +846,6 @@ contains
       enddo; enddo; enddo
 
     end subroutine face_right_coarse2fine
-
     !==========================================================================
 
     subroutine face_left_fine2coarse(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
@@ -840,8 +853,8 @@ contains
       integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
 
       integer :: iShift, jShift, kShift
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
@@ -854,7 +867,6 @@ contains
       enddo; enddo; enddo
 
     end subroutine face_left_fine2coarse
-
     !==========================================================================
 
     subroutine face_right_fine2coarse(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
@@ -862,8 +874,8 @@ contains
       integer, intent(in) :: iDim, iMin, iMax, jMin, jMax, kMin, kMax
 
       integer :: iShift, jShift, kShift, i1, j1, k1
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       Di = i_DD(iDim,1); Dj = i_DD(iDim,2); Dk = i_DD(iDim,3)
       iShift = 1-Di; jShift = min(1-Dj,nJ-1); kShift = min(1-Dk,nK-1)
       do k=kMin,kMax,2-Dk; do j=jMin,jMax,2-Dj; do i=iMin,iMax,2-Di
@@ -877,7 +889,6 @@ contains
       enddo; enddo; enddo
 
     end subroutine face_right_fine2coarse
-
     !==========================================================================
 
     subroutine get_diffusion_coef
@@ -960,7 +971,6 @@ contains
       end if
 
     end subroutine get_diffusion_coef
-
     !==========================================================================
 
     subroutine get_ghostcell_diffcoef
@@ -976,9 +986,9 @@ contains
       call get_diffusion_coef
 
     end subroutine get_ghostcell_diffcoef
+    !==========================================================================
 
   end subroutine get_impl_rad_diff_state
-
   !============================================================================
 
   subroutine set_rad_outflow_bc(iSide, iBlock, iBlockSemi, State_VG, IsLinear)
@@ -996,8 +1006,10 @@ contains
 
     integer :: iVar, i, j, k, iDiff
     real :: Coef
-    character(len=*), parameter :: NameSub='set_rad_outflow_bc'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_rad_outflow_bc'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     select case(iSide)
     case(1)
@@ -1062,8 +1074,8 @@ contains
        end do; end do
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_rad_outflow_bc
-
   !============================================================================
 
   subroutine get_rad_diffusion_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
@@ -1096,8 +1108,10 @@ contains
          jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1), &
          kMin = 1 - 2*min(1,nK-1), kMax = nK + 2*min(1,nK-1)
 
-    character(len=*), parameter :: NameSub='get_rad_diffusion_rhs'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_rad_diffusion_rhs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseAccurateRadiation)then
 
@@ -1345,7 +1359,7 @@ contains
                      DiffCoef_VFDB(iDiff,i,j,k+1,3,iBlock)* &
                      (  - StateImpl_VG(iVar,i,j,k+1)**2   &
                      +   StateImpl_VG(iVar,i,j,k  )**2  )
-             end do; end do; end do  
+             end do; end do; end do
           end if
        end if
 
@@ -1358,7 +1372,7 @@ contains
                   DiffCoef_VFDB(iDiff,i  ,j,k,1,iBlock)* &
                   (   StateImpl_VG(iVar,i  ,j,k)**2   &
                   -   StateImpl_VG(iVar,i-1,j,k)**2 )
-          end do; end do; end do  
+          end do; end do; end do
        end if
 
        if(NeiLev(2,iBlock) == NOBLK)then
@@ -1369,8 +1383,8 @@ contains
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i+1,j,k,1,iBlock)*   &
                   ( - StateImpl_VG(iVar,i+1,j,k)**2   &
-                  +   StateImpl_VG(iVar,i  ,j,k)**2 ) 
-          end do; end do; end do  
+                  +   StateImpl_VG(iVar,i  ,j,k)**2 )
+          end do; end do; end do
        end if
 
        if(nDim > 1 .and. NeiLev(3,iBlock) == NOBLK)then
@@ -1381,8 +1395,8 @@ contains
              pDotADotPPe = pDotADotPPe + 0.5 *&
                   DiffCoef_VFDB(iDiff,i,j  ,k,2,iBlock)* &
                   (   StateImpl_VG(iVar,i,j  ,k)**2   &
-                  -   StateImpl_VG(iVar,i,j-1,k)**2 ) 
-          end do; end do; end do  
+                  -   StateImpl_VG(iVar,i,j-1,k)**2 )
+          end do; end do; end do
        end if
 
        if(nDim > 1 .and. NeiLev(4,iBlock) == NOBLK)then
@@ -1394,7 +1408,7 @@ contains
                   DiffCoef_VFDB(iDiff,i,j+1,k,2,iBlock)* &
                   ( - StateImpl_VG(iVar,i,j+1,k)**2   &
                   +   StateImpl_VG(iVar,i,j  ,k)**2 )
-          end do; end do; end do 
+          end do; end do; end do
        end if
 
        ! Point implicit source terms due to energy exchange
@@ -1412,7 +1426,9 @@ contains
        pDotADotPPe = 0.0
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
+    !==========================================================================
 
     subroutine correct_left_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
 
@@ -1439,7 +1455,6 @@ contains
       enddo; enddo; enddo
 
     end subroutine correct_left_ghostcell
-
     !==========================================================================
 
     subroutine correct_right_ghostcell(iDim,iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1467,9 +1482,9 @@ contains
       enddo; enddo; enddo
 
     end subroutine correct_right_ghostcell
+    !==========================================================================
 
   end subroutine get_rad_diffusion_rhs
-
   !============================================================================
 
   subroutine add_jacobian_rad_diff(iBlock, nVarImpl, Jacobian_VVCI)
@@ -1492,7 +1507,10 @@ contains
     real :: DiffLeft, DiffRight
     real :: InvDcoord_D(MaxDim), CoeffLeft, CoeffRight
     real :: Coeff0, Coeff
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'add_jacobian_rad_diff'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseSemiImplicit)then
        ! Point implicit for ions (or electrons with no heat-conduction)
@@ -1719,8 +1737,8 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_jacobian_rad_diff
-
   !============================================================================
 
   subroutine update_impl_rad_diff(iBlock, iBlockSemi, &
@@ -1749,9 +1767,10 @@ contains
     real :: PeSi, Ee, EeSi
     real :: Relaxation
 
-    character(len=*), parameter :: NameSub = 'update_impl_rad_diff'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_impl_rad_diff'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        if(UseRadDiffusion)then
@@ -1788,7 +1807,7 @@ contains
        end if
 
        ! Add up internal energy change from all point-implicit variables
-       ! Multiple point-implicit variables can occur 
+       ! Multiple point-implicit variables can occur
        ! in split semi-implicit scheme only.
        do iVar = 1, nPoint
           Relaxation = &
@@ -1865,16 +1884,18 @@ contains
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_impl_rad_diff
-  !==========================================================================
+  !============================================================================
   subroutine set_rad_diff_range(iVarSemi)
 
     integer, intent(in):: iVarSemi
 
-    character(len=*), parameter:: NameSub = 'set_rad_diff_range'
-    !-----------------------------------------------------------------------
-
     ! Range of diffusions (all semi-implicit variables should have diffusion)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_rad_diff_range'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     iDiffMin    = iVarSemi
     iDiffMax    = iVarSemi
 
@@ -1885,6 +1906,9 @@ contains
     ! Index of point implicit energy exchange terms
     iPointSemi  = iVarSemi
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_rad_diff_range
+  !============================================================================
 
 end module ModRadDiffusion
+!==============================================================================

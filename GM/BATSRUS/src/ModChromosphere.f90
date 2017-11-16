@@ -1,75 +1,75 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 
-!==============================================================================
 module ModChromosphere
-  !Here all parameters relating to chromosphere and tansition region are
-  !collected
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+  ! Here all parameters relating to chromosphere and tansition region are
+  ! collected
 
   use ModSize, ONLY: nI, nJ, nK
   implicit none
   save
-  
-  !The use of short-scale exponential heat function with 
-  !the decay length = (30 m/K)*TeCromosphere SI
-  logical:: UseChromosphereHeating    = .false. 
- 
 
-  real   :: NumberDensChromosphereCgs = 1.0e+12 ![cm^{-3}  
-  real   :: TeChromosphereSi = 1.0e4            ![K]
+  ! The use of short-scale exponential heat function with
+  ! the decay length = (30 m/K)*TeCromosphere SI
+  logical:: UseChromosphereHeating    = .false.
+
+  real   :: NumberDensChromosphereCgs = 1.0e+12 ! [cm^{-3}
+  real   :: TeChromosphereSi = 1.0e4            ! [K]
 
   !\
   ! TRANSITION REGION
   !/
-  ! 
-  
+  !
+
   logical :: DoExtendTransitionRegion = .false.
 
-  !The following variables are meaningful if
-  !DoExtendTransitionRegion=.true.
+  ! The following variables are meaningful if
+  ! DoExtendTransitionRegion=.true.
 
-  real :: TeModSi = 3.0E+5                !K
-  real :: DeltaTeModSi = 1E+4             !K
+  real :: TeModSi = 3.0E+5                ! K
+  real :: DeltaTeModSi = 1E+4             ! K
 
-  !The following variable is meaningful if 
-  !DoExtendTransitionRegion = .false. . Al long as
-  !the unextended transition region cannot be resolved
-  !we set the 'corona base temperature' equal to the
-  !temperature at the top of the transition region and 
-  !use the integral ralationship across the transition
-  !region to find the number density at the top of the
-  !transition region
+  ! The following variable is meaningful if
+  ! DoExtendTransitionRegion = .false. . Al long as
+  ! the unextended transition region cannot be resolved
+  ! we set the 'corona base temperature' equal to the
+  ! temperature at the top of the transition region and
+  ! use the integral ralationship across the transition
+  ! region to find the number density at the top of the
+  ! transition region
 
-  real :: TeTransitionRegionTopSi = 4.0e+5 ![K]
+  real :: TeTransitionRegionTopSi = 4.0e+5 ! [K]
 
   ! Electron temperature in K:
   real :: TeSi_C(nI,nJ,nK)
 
 contains
-  !================================
+  !============================================================================
 
   subroutine read_chromosphere
     use ModReadParam, ONLY: read_var
-    !-------------------------------
+    !--------------------------------------------------------------------------
     call read_var('UseChromosphereHeating'   , UseChromosphereHeating)
     call read_var('NumberDensChromosphereCgs', NumberDensChromosphereCgs)
     call read_var('TeChromosphereSi',          TeChromosphereSi      )
   end subroutine read_chromosphere
-
   !============================================================================
 
   real function extension_factor(TeSi)
-    real, intent(in) :: TeSi    !Dimensionless
-    
+    real, intent(in) :: TeSi    ! Dimensionless
+
     real :: FractionSpitzer
-    !--------------------------------
+
+    !--------------------------------------------------------------------------
     FractionSpitzer = 0.5*(1.0+tanh((TeSi-TeModSi)/DeltaTeModSi))
-    
+
     extension_factor = FractionSpitzer + &
          (1.0 - FractionSpitzer)*(TeModSi/TeSi)**2.5
   end function extension_factor
-
   !============================================================================
 
   subroutine get_tesi_c(iBlock, TeSi_C)
@@ -86,7 +86,10 @@ contains
     real,    intent(out) :: TeSi_C(1:nI,1:nJ,1:nK)
 
     integer:: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_tesi_c'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(UseMultiIon)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           TeSi_C(i,j,k) = State_VGB(Pe_,i,j,k,iBlock) &
@@ -115,6 +118,9 @@ contains
                TeOut=TeSi_C(i,j,k))
        end do; end do; end do
     end if
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_tesi_c
+  !============================================================================
 
 end module ModChromosphere
+!==============================================================================

@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!===========================================================================
 module ModLocalTimeStep
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iVarTest
 
   use ModSize, ONLY: nDim, nBlock, MaxBlock, nI, nJ, nK, nG, x_, y_, z_
   use ModMain, ONLY: UseLocalTimeStep, UseLocalTimeStepNew, DtLimitDim
@@ -20,7 +22,7 @@ module ModLocalTimeStep
   real:: DtMinSi, DtMaxSi
 
 contains
-  !======================================================================
+  !============================================================================
   subroutine read_localstep_param(NameCommand, iSession)
 
     use ModReadParam, ONLY: read_var
@@ -28,8 +30,10 @@ contains
     character(len=*), intent(in):: NameCommand
     integer, intent(in):: iSession
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_localstep_param'
-    !-------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case('#LOCALTIMESTEP', '#SUBCYCLING')
        ! Check if we had it on already
@@ -49,12 +53,13 @@ contains
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_localstep_param
-  !===========================================================================
+  !============================================================================
   subroutine advance_localstep(TimeSimulationLimit)
 
     use ModMain,       ONLY: Time_Simulation, Dt, Dt_BLK, Cfl, iStage, nStage,&
-         nOrder, nOrderProlong, VarTest, iTest, jTest, kTest, BlkTest
+         nOrder, nOrderProlong
     use ModFaceFlux,   ONLY: calc_face_flux
     use ModFaceValue,  ONLY: calc_face_value
     use ModAdvance,    ONLY: nFluid, nVar, State_VGB, Energy_GBI, &
@@ -72,7 +77,7 @@ contains
     use ModCoronalHeating, ONLY: get_coronal_heat_factor, UseUnsignedFluxModel
     use ModResistivity, ONLY: set_resistivity, UseResistivity
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
-    use ModUpdateState,ONLY: update_state
+    use ModUpdateState, ONLY: update_state
     use BATL_lib,      ONLY: Unused_B, min_tree_level,  &
          message_pass_cell, store_face_flux, apply_flux_correction
 
@@ -97,12 +102,11 @@ contains
     real   :: TimeStage, TimeEnd, DtSiTiny
     integer:: nTimeStage, iStageLocal, iLevelMin, iBlock
 
-
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_localstep'
-    !-------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*)NameSub, &
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*)NameSub, &
          ' starting with TimeSimulationLimit=', TimeSimulationLimit
 
     if(UseMaxTimeStep)then
@@ -110,7 +114,7 @@ contains
        DtMinSi = DtMin*No2Si_V(UnitT_)*Cfl
        DtMaxSi = DtMax*No2Si_V(UnitT_)*Cfl
 
-       if(DoTestMe)write(*,*) NameSub,' DtMinSi, DtMaxSi=', DtMinSi, DtMaxSi
+       if(DoTest)write(*,*) NameSub,' DtMinSi, DtMaxSi=', DtMinSi, DtMaxSi
 
     else
        ! set global and local time steps
@@ -124,7 +128,7 @@ contains
             Flux_VFD(nFlux,nI+1,nJ+1,nK+1,nDim), &
             Flux_VXB(nFlux,nJ,nK,2,MaxBlock), & ! Two sides of the block
             Flux_VYB(nFlux,nI,nK,2,MaxBlock), &
-            Flux_VZB(nFlux,nI,nJ,2,MaxBlock)) 
+            Flux_VZB(nFlux,nI,nJ,2,MaxBlock))
 
        ! Initialize fluxes for flux correction scheme
        Flux_VFD = 0.0
@@ -132,8 +136,7 @@ contains
        Flux_VYB = 0.0
        Flux_VZB = 0.0
 
-
-       if(DoTestMe)write(*,*) NameSub,' initialized conservative flux arrays'
+       if(DoTest)write(*,*) NameSub,' initialized conservative flux arrays'
 
     end if
 
@@ -151,7 +154,7 @@ contains
     ! Final simulation time
     TimeEnd = Time_Simulation + DtMaxSi
 
-    ! Number of stages 
+    ! Number of stages
     nTimeStage = nint(DtMaxSi/DtMinSi)
 
     ! Loop over stages (nStage stages per local time step)
@@ -159,12 +162,12 @@ contains
 
        ! Number of grid levels involved in this stage
        iLevelMin = min_tree_level(iStageLocal)
-       if(DoTestMe)write(*,*)'iStageLocal, iLevelMin=', iStageLocal, iLevelMin
+       if(DoTest)write(*,*)'iStageLocal, iLevelMin=', iStageLocal, iLevelMin
 
-       !write(*,*)'!!! left TimeOld, Time=', TimeOld_B(13), Time_B(13)
-       !write(*,*)'!!! rite TimeOld, Time=', TimeOld_B(14), Time_B(14)
-       !write(*,*)'!!! Bef left Rho( 3:6)=', State_VGB(3, 3:6,1,1,13)
-       !write(*,*)'!!! Bef rite Rho(-1:2)=', State_VGB(3,-1:2,1,1,14)
+       ! write(*,*)'!!! left TimeOld, Time=', TimeOld_B(13), Time_B(13)
+       ! write(*,*)'!!! rite TimeOld, Time=', TimeOld_B(14), Time_B(14)
+       ! write(*,*)'!!! Bef left Rho( 3:6)=', State_VGB(3, 3:6,1,1,13)
+       ! write(*,*)'!!! Bef rite Rho(-1:2)=', State_VGB(3,-1:2,1,1,14)
 
        call timing_start('message_pass_cell')
        if(nOrder > 1 .and. nOrderProlong == 2)then
@@ -174,13 +177,13 @@ contains
           call message_pass_cell(nVar, State_VGB, &
                DoSendCornerIn=.true., &
                nProlongOrderIn=1, &
-               DoRestrictFaceIn=.true., & 
+               DoRestrictFaceIn=.true., &
                TimeOld_B=TimeOld_B, Time_B=Time_B, iLevelMin=iLevelMin)
        end if
        call timing_stop('message_pass_cell')
 
-       !write(*,*)'!!! Aft left Rho( 3:6)=', State_VGB(3, 3:6,1,1,13)
-       !write(*,*)'!!! Aft rite Rho(-1:2)=', State_VGB(3,-1:2,1,1,14)
+       ! write(*,*)'!!! Aft left Rho( 3:6)=', State_VGB(3, 3:6,1,1,13)
+       ! write(*,*)'!!! Aft rite Rho(-1:2)=', State_VGB(3,-1:2,1,1,14)
 
        ! Calculate coronal heat factor
        ! This routine involves MPI_allreduce, so it cannot be done per block
@@ -245,13 +248,13 @@ contains
              if(nK>1) & ! 3D
                   Flux_VFD(1:nFlux,1:nI,1:nJ,1:nK+1,z_) = &
                   Flux_VZ(1:nFlux,1:nI,1:nJ,1:nK+1)
-             
+
              call store_face_flux(iBlock, nFlux, &
                   Flux_VFD, Flux_VXB, Flux_VYB, Flux_VZB, &
                   DtIn = Dt_BLK(iBlock)*Cfl, DoStoreCoarseFluxIn = .true.,&
                   DoReschangeOnlyIn = .not.UseMaxTimeStep)
 
-             if(DoTestMe .and. iBlock == BlkTest) &
+             if(DoTest .and. iBlock == iBlockTest) &
                   write(*,*) NameSub,' stored conservative flux'
 
           end if
@@ -269,7 +272,7 @@ contains
           if(Time_B(iBlock) >= TimeEnd - DtSiTiny) call calc_timestep(iBlock)
 
           ! STABILITY !!!
-          !!!if(iStage == nStage)then
+          !!! if(iStage == nStage)then
           !!!   DtBlkOld = Dt_Blk(iBlock)
           !!!   call calc_timestep(iBlock)
           !!!   if(iBlock==127) then
@@ -291,10 +294,10 @@ contains
           !!!
           !!!   if(DtBlkOld < Dt_Blk(iBlock)) Dt_BLK(iBlock) = DtBlkOld
           !!!   time_BLK(:,:,:,iBlock) = Dt_BLK(iBlock)
-          !!!   
+          !!!
           !!!   if(iBlock==127)write(*,*)'!!! iBlock, DtBlkOld, DtBlk=', &
           !!!        iBlock, DtBlkOld, Dt_BLK(iBlock)
-          !!!end if
+          !!! end if
 
           ! At this point the user has surely set all "block data"
           ! NOTE: The user has the option of calling set_block_data directly.
@@ -306,18 +309,18 @@ contains
        if(DoConserveFlux .and. &
             (modulo(iStageLocal,2*nStage) == 0 .or. iStageLocal == nStage))then
 
-          if(DoTestMe)write(*,*) NameSub, &
+          if(DoTest)write(*,*) NameSub, &
                ' before  conservative flux, test var=',&
-               State_VGB(VarTest,iTest,jTest,kTest,BlkTest)
+               State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
           call apply_flux_correction( &
                nVar, nFluid, State_VGB, Energy_GBI, &
                Flux_VXB, Flux_VYB, Flux_VZB, iStageIn=iStageLocal/nStage, &
-               DoReschangeOnlyIn=.not.UseMaxTimeStep, DoTestIn=DoTestMe)
+               DoReschangeOnlyIn=.not.UseMaxTimeStep, DoTestIn=DoTest)
 
-          if(DoTestMe)write(*,*) NameSub, &
+          if(DoTest)write(*,*) NameSub, &
                ' applied conservative flux, test var=',&
-               State_VGB(VarTest,iTest,jTest,kTest,BlkTest)
+               State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
        end if
 
        ! Coarsen the axis cells if requested
@@ -330,11 +333,12 @@ contains
 
     Time_Simulation = Time_Simulation + DtMaxSi
 
-    if(DoTestMe)write(*,*)NameSub,' finished'
+    if(DoTest)write(*,*)NameSub,' finished'
 
+    call test_stop(NameSub, DoTest)
   end subroutine advance_localstep
+  !============================================================================
 
-  !======================================================================
   subroutine set_local_time_step(TimeSimulationLimit)
 
     use ModGeometry,   ONLY: true_cell, true_BLK, CellSize1Min, CellSize1Max
@@ -347,16 +351,16 @@ contains
 
     real, intent(in) :: TimeSimulationLimit
 
-    real   :: DtDxMinPe, DtDxMin 
+    real   :: DtDxMinPe, DtDxMin
     integer:: iError
     integer:: iBlock
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_local_time_step'
-    !----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    if(DoTestMe)write(*,*) NameSub,' starting with TimeSimulationLimit=', &
+    if(DoTest)write(*,*) NameSub,' starting with TimeSimulationLimit=', &
          TimeSimulationLimit
 
     ! Find the smallest value of Dt_stable/Dx in the whole domain
@@ -369,7 +373,7 @@ contains
     DtMinSi = Cfl*CellSize1Min*DtDxMin*No2Si_V(UnitT_)
     DtMaxSi = Cfl*CellSize1Max*DtDxMin*No2Si_V(UnitT_)
 
-    if(DoTestMe)write(*,*) NameSub,': original DtDxMin, DtMinSi, DtMaxSi=', &
+    if(DoTest)write(*,*) NameSub,': original DtDxMin, DtMinSi, DtMaxSi=', &
           DtDxMin, DtMinSi, DtMaxSi
 
     ! Check if we reached the final time
@@ -400,9 +404,12 @@ contains
        end if
     enddo
 
-    if(DoTestMe)write(*,*) NameSub,' finished with DtMinSi, DtMaxSi=', &
+    if(DoTest)write(*,*) NameSub,' finished with DtMinSi, DtMaxSi=', &
          DtMinSi, DtMaxSi
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_local_time_step
+  !============================================================================
 
 end module ModLocalTimeStep
+!==============================================================================

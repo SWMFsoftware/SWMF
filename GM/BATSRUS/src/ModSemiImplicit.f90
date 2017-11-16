@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModSemiImplicit
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest
 
   use ModSemiImplVar
   use ModProcMH,   ONLY: iProc
@@ -31,8 +34,8 @@ module ModSemiImplicit
   real, allocatable:: ResSemi_VCB(:,:,:,:,:)       ! Result of Matrix(Semi)
   real, allocatable:: JacSemi_VVCIB(:,:,:,:,:,:,:) ! Jacobian/preconditioner
 
-  ! Store Difference of U^* (after explicit update)  and U^n. 
-  real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:) 
+  ! Store Difference of U^* (after explicit update)  and U^n.
+  real, allocatable:: DeltaSemiAll_VCB(:,:,:,:,:)
 
   ! Linear arrays for RHS, unknowns, pointwise Jacobi preconditioner
   real, allocatable:: Rhs_I(:), x_I(:), JacobiPrec_I(:)
@@ -64,8 +67,10 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_semi_impl_param'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case('#SEMIIMPLICIT', '#SEMIIMPL')
        call read_var('UseSemiImplicit', UseSemiImplicit)
@@ -73,7 +78,7 @@ contains
 
     case("#SEMIIMPLICITSTABLE")
        call read_var('UseStableImplicit',UseStableImplicit)
-       
+
     case("#SEMICOEFF", "#SEMIIMPLCOEFF", "#SEMIIMPLICITCOEFF")
        call read_var('SemiImplCoeff', SemiImplCoeff)
 
@@ -117,7 +122,8 @@ contains
          (TypeSemiImplicit /= 'cond' .and. TypeSemiImplicit /='parcond')) &
          call stop_mpi(NameSub//' StableImplicit is not available for '&
          //TypeSemiImplicit)
-    
+
+    call test_stop(NameSub, DoTest)
   end subroutine read_semi_impl_param
   !============================================================================
   subroutine init_mod_semi_impl
@@ -129,8 +135,10 @@ contains
     use ModResistivity, ONLY: BxImpl_, UseResistivity
     use ModHallResist,  ONLY: UseHallResist
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_mod_semi_impl'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(allocated(SemiAll_VCB)) RETURN
 
     allocate(iBlockFromSemi_B(MaxBlock))
@@ -217,12 +225,17 @@ contains
        allocate(JacobiPrec_I(1))
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_semi_impl
   !============================================================================
   subroutine clean_mod_semi_impl
 
     ! Deallocate all variables
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'clean_mod_semi_impl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(allocated(iBlockFromSemi_B))  deallocate(iBlockFromSemi_B)
     if(allocated(SemiAll_VCB))       deallocate(SemiAll_VCB)
     if(allocated(NewSemiAll_VCB))    deallocate(NewSemiAll_VCB)
@@ -239,6 +252,7 @@ contains
     if(allocated(JacobiPrec_I))      deallocate(JacobiPrec_I)
     if(allocated(iVectorSemi_I))     deallocate(iVectorSemi_I)
 
+    call test_stop(NameSub, DoTest)
   end subroutine clean_mod_semi_impl
   !============================================================================
   subroutine advance_semi_impl
@@ -246,8 +260,7 @@ contains
     ! Advance semi-implicit terms
 
     use ModProcMH, ONLY: iComm
-    use ModMain, ONLY: time_accurate, &
-         BlkTest, ProcTest, iTest, jTest, kTest, VarTest
+    use ModMain, ONLY: time_accurate
     use ModAdvance, ONLY: DoFixAxis, State_VGB
     use ModB0, ONLY: B0_DGB
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
@@ -267,16 +280,16 @@ contains
 
     integer :: iBlockSemi, iBlock, iError1, i, j, k, iVar, n
 
-    logical :: DoTest, DoTestMe, DoTestKrylov
+    logical :: DoTestKrylov
 
-    character(len=*), parameter :: NameSub = 'advance_semi_impl'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'advance_semi_impl'
     !--------------------------------------------------------------------------
-    !call set_oktest('krylov', DoTest, DoTestKrylov)
-    call set_oktest(NameSub, DoTest, DoTestMe) 
-    if(DoTestMe) write(*,*)NameSub,' starting with test var, B0=', &
-         State_VGB(VarTest,iTest,jTest,kTest,BlkTest), &
-         B0_DGB(:,iTest,jTest,kTest,BlkTest)
-
+    call test_start(NameSub, DoTest)
+    ! call set_oktest('krylov', DoTest, DoTestKrylov)
+    if(DoTest) write(*,*)NameSub,' starting with test var, B0=', &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
+         B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
     if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
@@ -287,9 +300,9 @@ contains
           nBlockSemi = nBlockSemi + 1
           iBlockFromSemi_B(nBlockSemi) = iBlock
        end do
-       DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0 
+       DconsDsemiAll_VCB(:,:,:,:,1:nBlockSemi) = 1.0
     else
-       ! For (Hall) resistivity the number of semi-implicit blocks will be 
+       ! For (Hall) resistivity the number of semi-implicit blocks will be
        ! set in get_impl_resistivity_state, so initialize up to nBlock
        DconsDsemiAll_VCB(:,:,:,:,1:nBlock) = 1.0
     end if
@@ -312,9 +325,9 @@ contains
     end select
 
     ! Set the test block
-    if(iProc == ProcTest)then
+    if(iProc == iProcTest)then
        do iBlockSemi = 1, nBlockSemi
-          if(BlkTest == iBlockFromSemi_B(iBlockSemi))then
+          if(iBlockTest == iBlockFromSemi_B(iBlockSemi))then
              iBlockSemiTest = iBlockSemi
              EXIT
           end if
@@ -393,8 +406,8 @@ contains
        end select
     end do
 
-    if(DoTestMe) write(*,*)NameSub,' after update test var=', &
-         State_VGB(VarTest,iTest,jTest,kTest,BlkTest)
+    if(DoTest) write(*,*)NameSub,' after update test var=', &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest)
 
     if(DoFixAxis)call fix_axis_cells
     if(UseCoarseAxis)call coarsen_axis_cells
@@ -402,13 +415,14 @@ contains
     if(UseFieldLineThreads) call advance_threads(Heat_)
     call exchange_messages
 
-    if(DoTestMe) write(*,*)NameSub,' final test var, B0=', &
-         State_VGB(VarTest,iTest,jTest,kTest,BlkTest), &
-         B0_DGB(:,iTest,jTest,kTest,BlkTest)
+    if(DoTest) write(*,*)NameSub,' final test var, B0=', &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
+         B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
+    call test_stop(NameSub, DoTest)
   end subroutine advance_semi_impl
-
   !============================================================================
+
   subroutine get_semi_impl_rhs_block(iBlock, SemiState_VG, RhsSemi_VC, &
        IsLinear)
 
@@ -423,8 +437,10 @@ contains
     real, intent(out)  :: RhsSemi_VC(nVarSemi,nI,nJ,nK)
     logical, intent(in):: IsLinear
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs_block'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
        if(.not.IsLinear) UsePDotADotP = .false.
@@ -441,6 +457,7 @@ contains
             //TypeSemiImplicit)
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_semi_impl_rhs_block
   !============================================================================
   subroutine get_semi_impl_rhs(SemiAll_VCB, RhsSemi_VCB)
@@ -462,10 +479,10 @@ contains
 
     real :: DtLocal
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_semi_impl_rhs'
-    !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Fill in SemiState so it can be message passed
     SemiState_VGB = 0.0
@@ -477,7 +494,7 @@ contains
        end do; end do; end do
     end do
 
-    ! Message pass to fill in ghost cells 
+    ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
        if(UseAccurateRadiation)then
@@ -532,7 +549,7 @@ contains
                *CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
     end do
-    
+
     if(UseStableImplicit) then
        DtLocal = dt
        do iBlockSemi = 1, nBlockSemi
@@ -544,12 +561,12 @@ contains
                   RhsSemi_VCB(:,i,j,k,iBlockSemi) &
                   + DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) &
                   *DconsDsemiAll_VCB(:,i,j,k,iBlockSemi) &
-                  *CellVolume_GB(i,j,k,iBlock)/DtLocal                  
+                  *CellVolume_GB(i,j,k,iBlock)/DtLocal
           end do; end do; end do
        enddo
     endif
 
-    if(DoTestMe) then
+    if(DoTest) then
        do iBlockSemi = 1, nBlockSemi
           iBlock = iBlockFromSemi_B(iBlockSemi)
           if(iBlockSemi == iBlockSemiTest)then
@@ -566,6 +583,7 @@ contains
        end do
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_semi_impl_rhs
   !============================================================================
   subroutine semi_impl_matvec(x_I, y_I, MaxN)
@@ -588,10 +606,10 @@ contains
     integer :: iBlockSemi, iBlock, i, j, k, iVar, n
     real :: Volume, DtLocal
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'semi_impl_matvec'
-    !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
     ! Fill in StateSemi so it can be message passed
@@ -604,7 +622,7 @@ contains
        end do; end do; end do; end do
     end do
 
-    ! Message pass to fill in ghost cells 
+    ! Message pass to fill in ghost cells
     select case(TypeSemiImplicit)
     case('radiation', 'radcond', 'cond')
 
@@ -719,7 +737,6 @@ contains
        end if
     end do
 
-
     if (UsePDotADotP)then
        pDotADotPPe = pDotADotPPe * SemiImplCoeff
     else
@@ -732,25 +749,30 @@ contains
 
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest)
   end subroutine semi_impl_matvec
   !============================================================================
   subroutine cg_precond(Vec_I, PrecVec_I, MaxN)
 
-    ! Set PrecVec = Prec.Vec where Prec is the preconditioner matrix. 
+    ! Set PrecVec = Prec.Vec where Prec is the preconditioner matrix.
     ! This routine is used by the Preconditioned Conjugate Gradient method
 
     integer, intent(in) :: MaxN
     real,    intent(in) :: Vec_I(MaxN)
     real,    intent(out):: PrecVec_I(MaxN)
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'cg_precond'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     PrecVec_I = Vec_I
     call semi_precond(MaxN, PrecVec_I)
 
+    call test_stop(NameSub, DoTest)
   end subroutine cg_precond
   !============================================================================
   subroutine semi_precond(MaxN, Vec_I)
 
-    ! Multiply Vec with the preconditioner matrix. 
+    ! Multiply Vec with the preconditioner matrix.
     ! This routine is used by the Preconditioned Conjugate Gradient method
 
     use BATL_size,       ONLY: nDim, nI, nJ, nK
@@ -759,7 +781,11 @@ contains
 
     integer, intent(in)   :: MaxN
     real,    intent(inout):: Vec_I(MaxN)
-    !-------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'semi_precond'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(SemiParam%TypePrecond)
     case('HYPRE')
        call hypre_preconditioner(MaxN, Vec_I)
@@ -770,19 +796,18 @@ contains
             nVarSemi, nDim, nI, nJ, nK, nBlockSemi, JacSemi_VVCIB, Vec_I)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine semi_precond
   !============================================================================
 
   subroutine test_semi_impl_jacobian
 
-    ! Calculate the Jacobian Jac_VVI = d(RHS)/d(Var) for the test cell 
-    ! using numerical derivatives of the RHS obtained with 
+    ! Calculate the Jacobian Jac_VVI = d(RHS)/d(Var) for the test cell
+    ! using numerical derivatives of the RHS obtained with
     ! get_semi_impl_rhs_block
 
     use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
          IsRotatedCartesian, rot_to_cart
-
-    use ModMain, ONLY: iTest, jTest, kTest, BlkTest
 
     ! Local variables
     real, parameter:: RelEps = 1e-6, AbsEps = 1e-8
@@ -796,9 +821,10 @@ contains
 
     integer:: i, j, k, iPert, jPert, kPert, iBlock, iStencil, iVar, jVar
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'test_semi_impl_jacobian'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     allocate( &
          SemiState_VG(nVarSemi, MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
          SemiPert_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -808,12 +834,12 @@ contains
          JacAna_VV(nVarSemi,nVarSemi), JacNum_VV(nVarSemi,nVarSemi))
 
     ! For sake of simpler code
-    iBlock = BlkTest
+    iBlock = iBlockTest
 
     ! Get analytic Jacobian
     call get_semi_impl_jacobian_block(iBlock, JacAna_VVCI)
 
-    ! Set semi-implicit state with nG ghost cells. 
+    ! Set semi-implicit state with nG ghost cells.
     ! The ghost cells are set but not used.
     SemiState_VG = 1.0
     SemiState_VG(:,1:nI,1:nJ,1:nK) = &
@@ -904,9 +930,10 @@ contains
     deallocate(SemiState_VG, SemiPert_VG, Rhs_VC, RhsPert_VC, &
          JacAna_VVCI, JacNum_VVI, JacAna_VV, JacNum_VV)
 
+    call test_stop(NameSub, DoTest)
   end subroutine test_semi_impl_jacobian
-
   !============================================================================
+
   subroutine get_semi_impl_jacobian_block(iBlock, JacSemi_VVCI)
 
     use BATL_lib,          ONLY: nI, nJ, nK
@@ -918,9 +945,11 @@ contains
     integer, intent(in) :: iBlock
     real,    intent(out):: JacSemi_VVCI(nVarSemi,nVarSemi,nI,nJ,nK,nStencil)
 
-    character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian_block'
-    !------------------------------------------------------------------------
     ! All elements have to be set
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian_block'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     JacSemi_VVCI = 0.0
 
     select case(TypeSemiImplicit)
@@ -938,9 +967,10 @@ contains
             //TypeSemiImplicit)
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_semi_impl_jacobian_block
-
   !============================================================================
+
   subroutine get_semi_impl_jacobian
 
     use ModAdvance, ONLY: time_BLK
@@ -953,12 +983,12 @@ contains
     integer :: iBlockSemi, iBlock, i, j, k, iStencil, iVar
     real    :: Coeff, DtLocal
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_semi_impl_jacobian'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
-    if(DoTestMe) call test_semi_impl_jacobian
+    if(DoTest) call test_semi_impl_jacobian
 
     ! The HYPRE AMG preconditioner requires the overlap between blocks
     ! For all other preconditioners it is better to avoid the overpap
@@ -971,8 +1001,8 @@ contains
        call get_semi_impl_jacobian_block(iBlock, &
             JacSemi_VVCIB(:,:,:,:,:,:,iBlockSemi))
 
-       ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU) 
-       !    symmetrized for sake of CG       
+       ! Form A = Volume*(1/dt - SemiImplCoeff*dR/dU)
+       !    symmetrized for sake of CG
        do iStencil = 1, nStencil; do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           Coeff = -SemiImplCoeff*CellVolume_GB(i,j,k,iBlock)
@@ -990,11 +1020,11 @@ contains
                   + JacSemi_VVCIB(1,1,i,j,k,1,iBlockSemi)
           else
              do iVar = 1, nVarSemi
-                JacSemi_VVCIB(iVar,iVar,i,j,k,1,iBlockSemi) = &             
+                JacSemi_VVCIB(iVar,iVar,i,j,k,1,iBlockSemi) = &
                      Coeff*DconsDsemiAll_VCB(iVar,i,j,k,iBlockSemi) &
-                     + JacSemi_VVCIB(iVar,iVar,i,j,k,1,iBlockSemi) 
+                     + JacSemi_VVCIB(iVar,iVar,i,j,k,1,iBlockSemi)
              end do
-          end if          
+          end if
        end do; end do; end do
 
        if(SemiParam%TypePrecond == 'HYPRE') &
@@ -1006,7 +1036,10 @@ contains
 
     UseNoOverlap = .true.
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_semi_impl_jacobian
+  !============================================================================
 
 end module ModSemiImplicit
+!==============================================================================
 

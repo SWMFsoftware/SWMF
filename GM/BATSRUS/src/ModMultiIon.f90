@@ -1,23 +1,26 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used
-!  with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used
+!  with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMultiIon
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iVarTest
 
 !!! "resistive terms" = ion-electron collisions to be added
 !!! RZ geometry terms are missing
 
-  ! Calculate source terms for multi-ion MHD. 
-  ! For sake of numerical stability this should be done with 
-  ! a point-implicit scheme. 
+  ! Calculate source terms for multi-ion MHD.
+  ! For sake of numerical stability this should be done with
+  ! a point-implicit scheme.
   ! Allow for extra point-implicit sources in ModUser
 
   use ModMultiFluid
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: UseUserSource, &
-       iTest, jTest, kTest, VarTest, BlkTest, ProcTest
+  use ModMain, ONLY: UseUserSource
   use ModSize, ONLY: nI, nJ, nK
   use ModGeometry, ONLY: true_cell
-  
+
   use ModUserInterface ! user_calc_sources, user_init_point_implicit
 
   implicit none
@@ -75,8 +78,8 @@ module ModMultiIon
   real:: LowPressureRatio = 1e-10
 
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine multi_ion_set_parameters(NameCommand)
 
     use ModSize, ONLY: nI, nJ, nK, MaxBlock
@@ -86,7 +89,7 @@ contains
     use ModAdvance, ONLY: UseSingleIonVelocity, UseSingleIonTemperature
 
     character(len=*), intent(in):: NameCommand
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     select case(NameCommand)
     case("#MHDIONS")
        call read_var('DoAddRho',  DoAddRho)
@@ -100,7 +103,7 @@ contains
           call read_var('ParabolaWidthMultiIon', ParabolaWidthMultiIon)
        end if
        IsPointImplMatrixSet = IsAnalyticJacobian
-       
+
     case("#MULTIIONSTATE")
        call read_var('UseSingleIonVelocity',    UseSingleIonVelocity)
        call read_var('UseSingleIonTemperature', UseSingleIonTemperature)
@@ -118,8 +121,7 @@ contains
          allocate(IsMultiIon_CB(nI,nJ,nK,MaxBlock))
 
   end subroutine multi_ion_set_parameters
-
-  !===========================================================================
+  !============================================================================
 
   subroutine multi_ion_set_restrict(iBlock)
 
@@ -134,43 +136,38 @@ contains
 
     real    :: Rho, p, RhoUx
     integer :: i, j, k
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'multi_ion_set_restrict'
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'multi_ion_set_restrict'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if (iBlock == BlkTest .and. iProc == ProcTest) then 
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false. ; DoTestMe = .false.
-    end if
-    
     do k=1,nK; do j=1,nJ; do i=1,nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
        ! Check if we are in the solar wind
        Rho   = State_VGB(Rho_,i,j,k,iBlock)
        p     = State_VGB(p_,i,j,k,iBlock)
        RhoUx = State_VGB(RhoUx_,i,j,k,iBlock)
-          
+
        IsMultiIon_CB(i,j,k,iBlock) = .not. &
             (RhoUx < 0.0 .and. RhoUx**2 > MachNumberMultiIon**2*Gamma*p*Rho &
             .and. sum(Xyz_DGB(x_:y_,i,j,k,iBlock)**2) > &
             -ParabolaWidthMultiIon * Xyz_DGB(x_,i,j,k,iBlock))
 
-       if(DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest) then
+       if(DoTest .and. i == iTest .and. j == jTest .and. k == kTest) then
           write(*,*) NameSub,'Rho, p, RhoUx =',Rho, p, RhoUx
           write(*,*) NameSub,'RhoUx**2, MachNumberMultiIon*g*p*Rho=', &
                RhoUx**2, MachNumberMultiIon*Gamma*p*Rho
           write(*,*) NameSub,'y**2, z**2, -ParabolaWidthMultiIon*x=', &
                Xyz_DGB(x_:y_,i,j,k,iBlock)**2, &
                 -ParabolaWidthMultiIon * Xyz_DGB(x_,i,j,k,iBlock)
-          write(*,*) NameSub, ' IsMultiIon_CB=',  IsMultiIon_CB(i,j,k,iBlock) 
+          write(*,*) NameSub, ' IsMultiIon_CB=',  IsMultiIon_CB(i,j,k,iBlock)
        end if
 
     end do; end do; end do
-  
-  end subroutine multi_ion_set_restrict
 
-  !===========================================================================
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine multi_ion_set_restrict
+  !============================================================================
 
   subroutine multi_ion_source_expl(iBlock)
 
@@ -183,7 +180,7 @@ contains
     !    p_e is the electron pressure and
     !    n_e is the electron number density.
     !    The electron pressure may be solved for (UseElectronPressure is true)
-    !    or can be a fixed fraction (ElectronTemperatureRatio) of the total 
+    !    or can be a fixed fraction (ElectronTemperatureRatio) of the total
     !    pressure.
 
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, &
@@ -199,7 +196,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    ! For multi-ion MHD the gradient of electron pressure appears in 
+    ! For multi-ion MHD the gradient of electron pressure appears in
     ! all the individual ion momentum equations as -n_i/n_e * grad Pe
 
     real :: State_V(nVar)
@@ -213,25 +210,22 @@ contains
 
     integer :: i, j, k, iIonFluid
 
+    logical :: DoTestCell
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_source_expl'
-    logical :: DoTest, DoTestMe, DoTestCell
-    !----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(iProc == ProcTest .and. iBlock==BLkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false. ; DoTestMe = .false.
-    end if
-
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,'(2a,es16.8)') NameSub,': initial Source_VC=', &
-            Source_VC(VarTest,iTest,jTest,kTest)
+            Source_VC(iVarTest,iTest,jTest,kTest)
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DoTestCell = DoTestMe .and. iTest==i .and. jTest==j .and. kTest==k 
+       DoTestCell = DoTest .and. iTest==i .and. jTest==j .and. kTest==k
 
        vInv = 1.0/CellVolume_GB(i,j,k,iBlock)
 
@@ -374,22 +368,22 @@ contains
 
     end do; end do; end do
 
-    if(DoTestMe)write(*,'(2a,15es16.8)')NameSub,': final Source_VC =',&
-         Source_VC(VarTest,iTest,jTest,kTest)
+    if(DoTest)write(*,'(2a,15es16.8)')NameSub,': final Source_VC =',&
+         Source_VC(iVarTest,iTest,jTest,kTest)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine multi_ion_source_expl
-
-  !===========================================================================
+  !============================================================================
 
   subroutine multi_ion_source_impl(iBlock)
 
     ! Add 'stiff' source terms specific to multi-ion MHD:
     !
-    ! 1. d(rho u_s)/dt +=      n_s*(- u_+ - w_H + u_s )xB 
+    ! 1. d(rho u_s)/dt +=      n_s*(- u_+ - w_H + u_s )xB
     !    d(e_s)/dt     += u_s.[n_s*(- u_+ - w_H + u_s )xB]
-    !    where s is the index for the ion fluid, 
+    !    where s is the index for the ion fluid,
     !    u_+ is the charge density weighted average ion velocity,
-    !    w_H = -J/(e n_e) is the Hall velocity, 
+    !    w_H = -J/(e n_e) is the Hall velocity,
     !    n_e is the electron number density, and
     !    e is the electron charge.
     !
@@ -409,7 +403,7 @@ contains
     use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
          InvClight2 => Inv_C2light, Si2No_V, No2Si_V, Io2No_V, &
          UnitTemperature_, UnitT_, UnitU_
-         
+
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
     use ModNumConst,       ONLY: iLeviCivita_III
@@ -435,22 +429,19 @@ contains
     ! Artificial friction
     real :: InvuCutOff2, InvTauCutOff
 
-    logical :: DoTest, DoTestMe, DoTestCell
+    logical :: DoTestCell
 
     ! Variables for analytic Jacobian
     integer :: iDim, jDim, kDim, iUi, iUk
     real    :: SignedB, ForceCoeff, Coeff, CoefJacobian, Du2
     real    :: Du_D(3)
 
-    character(len=*), parameter :: NameSub = 'multi_ion_source_impl'
-    !-----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'multi_ion_source_impl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
     DoTestCell = .false.
 
     ! Add user defined point implicit source terms here
@@ -458,7 +449,7 @@ contains
     if(UsePointImplicit .and. UseUserSource) call user_calc_sources(iBlock)
 
     ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
-    ! (needed for the user source terms) 
+    ! (needed for the user source terms)
     if(IsPointImplPerturbed .and. IsAnalyticJacobian) RETURN
 
     if(CollisionCoefDim > 0.0)then
@@ -478,16 +469,16 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
        if(DoTestCell)write(*,'(2a,15es16.8)') NameSub, ' initial source = ',&
-            Source_VC(VarTest,i,j,k)
+            Source_VC(iVarTest,i,j,k)
 
        ! Extract conservative variables
        State_V = State_VGB(:,i,j,k,iBlock)
 
        ! Total magnetic field
-       FullB_D = State_V(Bx_:Bz_) 
+       FullB_D = State_V(Bx_:Bz_)
        if(UseB0) FullB_D =  FullB_D + B0_DGB(:,i,j,k,iBlock)
 
        ! calculate number densities
@@ -499,7 +490,7 @@ contains
             call stop_mpi(NameSub//': negative electron denisty')
 
        ChargeDensBoris_I = ChargeDens_I
-       
+
        if(UseBoris .or. UseBorisSimple)then
           ! See the ASTRONUM 2009 proceedings paper by Toth et al.
           !
@@ -531,7 +522,7 @@ contains
           write(*,*)'Temp_I             =',Temp_I
           call stop_mpi(NameSub//': non-positive average temperature')
        end if
-       
+
        Rho_I    = State_V(iRhoIon_I)
        InvRho_I = 1.0/Rho_I
        Ux_I     = InvRho_I*State_V(iUxIon_I)
@@ -560,7 +551,7 @@ contains
           uIon_D = (/ Ux_I(iIon),  Uy_I(iIon), Uz_I(iIon) /)
           u_D    = uIon_D - uPlus_D
           ForceCoeff = ElectronCharge*ChargeDensBoris_I(iIon)
-          Force_D    = ForceCoeff * cross_product(u_D, FullB_D) 
+          Force_D    = ForceCoeff * cross_product(u_D, FullB_D)
 
           if(DoTestCell)then
              write(*,'(2a,i2)') NameSub,' iIon            =', iIon
@@ -582,7 +573,7 @@ contains
 
                    ! This Jacobian term occurs with respect to the same fluid
                    iUi = iUxIon_I(iIon) + iDim - 1
-                   DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) & 
+                   DsDu_VVC(iUk, iUi, i, j, k) = DsDu_VVC(iUk, iUi, i, j, k) &
                         + ForceCoeff*SignedB*InvRho_I(iIon)
 
                    Coeff = ForceCoeff*SignedB*InvElectronDens
@@ -601,7 +592,7 @@ contains
           if(CollisionCoefDim > 0.0 .or. TauCutOffDim > 0.0)then
              do jIon = 1, nIonFluid
                 if(jIon == iIon) CYCLE
-                
+
                 ! Add collisional terms
                 uIon2_D = (/ Ux_I(jIon),  Uy_I(jIon), Uz_I(jIon) /)
 
@@ -615,24 +606,24 @@ contains
                 end if
 
                 ! Artificial friction to keep the velocity difference in check
-                ! We take the smaller of the two densities so that the 
-                ! acceleration is independent of the density of 
+                ! We take the smaller of the two densities so that the
+                ! acceleration is independent of the density of
                 ! the minor species and the restriction works in all regions.
                 ! The min function is symmetric, so momentum is conserved.
                 ! u_0 is the cut-off velocity, Tau gives the time rate, and
                 ! the power determines how sharp the cut-off is.
                 if(TauCutOffDim > 0.0)then
-                   ! CollisionRate = 
+                   ! CollisionRate =
                    !  1/tau * min(rho^iIon, rho^jIon) * (du2/u_0^2)^n
 
                    if(uCutOffDim < 0.0)then
-                      ! Use properly "averaged" Alfven speed 
-                      ! for the cut-off velocity based on 
-                      ! "On the physical realization of two-dimensional 
+                      ! Use properly "averaged" Alfven speed
+                      ! for the cut-off velocity based on
+                      ! "On the physical realization of two-dimensional
                       ! turbulence fields in magnetized interplanetary plasmas"
                       ! A. Stockem et al., APJ 651, 584, (2006). Eq(29) has
                       !
-                      ! Du_crit = V_A1*sqrt(1 + r_n) 
+                      ! Du_crit = V_A1*sqrt(1 + r_n)
                       !
                       ! where V_A1 = B/sqrt(rho1) from just above eq.29
                       ! and r_n = N1/N2 = rho1/rho2 defined after eq.14, so
@@ -654,7 +645,6 @@ contains
 
                 Force_D = Force_D + CollisionRate * (uIon2_D - uIon_D)
 
-
                 if(DoTestCell)then
                    write(*,'(2a,15es16.8)') NameSub,' CollisionCoef=',CollisionCoef
                    write(*,'(2a,15es16.8)') NameSub,' AverageTemp  =',AverageTemp
@@ -667,20 +657,20 @@ contains
                 end if
 
 !!! No heating for now
-! If heating is added as below, adjust update_states_MHD to make sure that 
-! the execution passes through here even if UseUniformIonVelocity is true 
+! If heating is added as below, adjust update_states_MHD to make sure that
+! the execution passes through here even if UseUniformIonVelocity is true
 ! (fluids can have different temperatures)
-                !Heating = Heating + CollisionRate* &
+                ! Heating = Heating + CollisionRate* &
                 !     ( 2*(Temp_I(jIon) - Temp_I(iIon)) &
                 !     + gm1*sum((uIon2_D - uIon_D)**2) )
-             
+
                 ! Calculate corresponding matrix elements
                 if (TauCutOffDim > 0.0 .and. IsAnalyticJacobian) then
 
                    ! du = u^iIon - u^jIon
                    Du_D = uIon_D - uIon2_D
 
-                   ! Common coefficient: CoefJacobian = 
+                   ! Common coefficient: CoefJacobian =
                    !  1/tau * min(rho^iIon, rho^jIon) * (1/u_0)^2n * (du^2)^n-1
                    CoefJacobian = InvTauCutOff &
                         * min(Rho_I(iIon), Rho_I(jIon)) &
@@ -700,10 +690,10 @@ contains
                          DsDu_VVC(iUk, iUi, i, j, k) = &
                               DsDu_VVC(iUk, iUi, i, j, k) &
                               - 2.0 * nPowerCutOff * InvRho_I(iIon) &
-                              * Du_D(iDim) * Du_D(kDim) & 
+                              * Du_D(iDim) * Du_D(kDim) &
                               *  CoefJacobian
                          if (iDim == kDim) DsDu_VVC(iUk, iUi, i, j, k) = &
-                              DsDu_VVC(iUk, iUi, i, j, k) & 
+                              DsDu_VVC(iUk, iUi, i, j, k) &
                               - CoefJacobian * Du2 *InvRho_I(iIon)
 
                          ! dFriction^iIon_k/d(RhoU^jIon_i) = +CoefJacobian
@@ -716,7 +706,7 @@ contains
                               * Du_D(iDim) * Du_D(kDim) &
                               * CoefJacobian
                          if (iDim == kDim)DsDu_VVC(iUk, iUi, i, j, k)  = &
-                              DsDu_VVC(iUk, iUi, i, j, k) & 
+                              DsDu_VVC(iUk, iUi, i, j, k) &
                               + CoefJacobian * Du2 *InvRho_I(jIon)
                       end do
                    end do
@@ -740,16 +730,17 @@ contains
        end do
 
        if(DoTestCell)write(*,'(2a,15es16.8)')NameSub, ' final source = ',&
-            Source_VC(VarTest,i,j,k)
+            Source_VC(iVarTest,i,j,k)
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine multi_ion_source_impl
-  !===========================================================================
+  !============================================================================
   subroutine multi_ion_init_point_impl
 
     ! Select variables for point implicit evaluation. This is the union
-    ! of the ion momenta and the variables selected (if any) in 
+    ! of the ion momenta and the variables selected (if any) in
     ! ModUser::user_init_point_implicit
 
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, &
@@ -758,8 +749,11 @@ contains
 
     logical :: IsPointImpl_V(nVar)
     integer :: iVar, iPointImplVar, nPointImplVar
-    !------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'multi_ion_init_point_impl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     IsPointImpl_V = .false.
     IsPointImplMatrixSet = IsAnalyticJacobian
 
@@ -790,14 +784,14 @@ contains
        iVarPointImpl_I(iPointImplVar) = iVar
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine multi_ion_init_point_impl
-
-  !==========================================================================
+  !============================================================================
 
   subroutine multi_ion_update(iBlock, IsFinal)
 
     ! Resolve the update of total fluid vs. ion fluids:
-    !   - take care of minor fluids with very small densities 
+    !   - take care of minor fluids with very small densities
     !   - take care of conservation of total density and energy
 
     use ModEnergy, ONLY: calc_energy
@@ -813,17 +807,14 @@ contains
     real    :: TeRatio1, InvTeRatio1
     logical :: IsMultiIon
 
-    logical:: DoTest, DoTestMe, DoTestCell
+    logical:: DoTestCell
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'multi_ion_update'
-    !-----------------------------------------------------------------------
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(DoTestMe)write(*,*) NameSub,' starting with IsFinal, testvar=', &
-         IsFinal, State_VGB(VarTest,iTest,jTest,kTest,iBlock)
+    if(DoTest)write(*,*) NameSub,' starting with IsFinal, testvar=', &
+         IsFinal, State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
     TeRatio1    = 1 + ElectronTemperatureRatio
     InvTeRatio1 = 1 / TeRatio1
@@ -831,11 +822,11 @@ contains
     do k=1,nK; do j=1,nJ; do i=1,nI
         if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
        State_V = State_VGB(:,i,j,k,iBlock)
 
-       ! Total density 
+       ! Total density
        Rho    = State_V(Rho_)
        InvRho = 1/Rho
 
@@ -847,7 +838,7 @@ contains
             max( State_V(iPIon_I), LowPressureRatio*p )
 
        if(DoTestCell)write(*,*) NameSub,' after low pressure:', &
-            State_VGB(VarTest,i,j,k,iBlock)
+            State_VGB(iVarTest,i,j,k,iBlock)
 
        if(.not.IsFinal)then
 
@@ -949,7 +940,7 @@ contains
                State_VGB(iRhoIon_I,i,j,k,iBlock)*MassIon_I(1)/MassIon_I
 
           if(DoTestCell)write(*,*) NameSub,' after not ismultiion:', &
-               State_VGB(VarTest,i,j,k,iBlock)
+               State_VGB(iVarTest,i,j,k,iBlock)
        end if
 
     end do; end do; end do
@@ -957,11 +948,12 @@ contains
     ! Reset total and ion energies
     call calc_energy(1, nI, 1, nJ, 1, nK, iBlock, 1, IonLast_)
 
-    if(DoTestMe)write(*,*) NameSub,' finishing with testvar=', &
-         State_VGB(VarTest,iTest,jTest,kTest,iBlock)
+    if(DoTest)write(*,*) NameSub,' finishing with testvar=', &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine multi_ion_update
-
-  !==========================================================================
+  !============================================================================
 
 end module ModMultiIon
+!==============================================================================

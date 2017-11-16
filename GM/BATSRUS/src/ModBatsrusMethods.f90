@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModBatsrusMethods
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! This module contains the top level methods for BATSRUS
 
@@ -16,8 +19,8 @@ module ModBatsrusMethods
   public:: BATS_save_files   ! save output and/or restart files
   public:: BATS_finalize     ! final save, close files, deallocate
 
-
 contains
+  !============================================================================
 
   subroutine BATS_setup
 
@@ -34,9 +37,11 @@ contains
 
     ! Local variables
 
-    integer :: iError 
-    character(len=*), parameter :: NameSub = 'BATS_setup'
+    integer :: iError
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'BATS_setup'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Allocate and initialize variables dependent on number of PEs
     call init_mod_parallel
@@ -58,6 +63,7 @@ contains
     IsRestartCoupler = restart
     restart = .false.
     DoThreadRestart = .false.
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
     subroutine grid_setup
@@ -84,8 +90,8 @@ contains
       character(len=100) :: NameFile
 
       integer:: iBlock
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       call set_batsrus_grid
 
       if (.not.restart) then
@@ -149,7 +155,6 @@ contains
 
       if(DoSetAmrLimits) call set_amr_limits
     end subroutine grid_setup
-
     !==========================================================================
 
     subroutine set_initial_conditions
@@ -174,6 +179,7 @@ contains
 
       character(len=*), parameter :: NameSubSub = &
            NameSub//'::set_initial_conditions'
+
       !------------------------------------------------------------------------
       if(.not.restart .and. nRefineLevelIC>0)then
          call timing_start('amr_ics')
@@ -184,7 +190,7 @@ contains
             end do
             call timing_stop('amr_ics_set')
 
-            ! Allow the user to add a perturbation and use that 
+            ! Allow the user to add a perturbation and use that
             ! for physical refinement.
             if (UseUserPerturbation)then
                call timing_start('amr_ics_perturb')
@@ -242,7 +248,6 @@ contains
          call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
               IsNewBlock=.true.)
 
-
          ! Redo the AMR level constraints for fixed body level
          ! The coordinates of the blocks are only known now
          if(DoSetAmrLimits) call set_amr_limits
@@ -264,7 +269,6 @@ contains
       call exchange_messages
 
     end subroutine set_initial_conditions
-
     !==========================================================================
 
     subroutine initialize_files
@@ -286,9 +290,9 @@ contains
       plot_type(logfile_)='logfile'
 
     end subroutine initialize_files
+    !==========================================================================
 
   end subroutine BATS_setup
-
   !============================================================================
 
   subroutine BATS_init_session
@@ -313,13 +317,15 @@ contains
     use BATL_lib, ONLY: init_amr_criteria, find_test_cell
 
     ! Local variables
-    character(len=*), parameter :: NameSub = 'BATS_init_session '
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'BATS_init_session'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(UseLocalTimeStepNew)then
        if(iProc == 0)write(*,*) &
             NameSub,': redo load balance for time accurate local timestepping'
-       ! move coordinates and data, there are no new blocks  
+       ! move coordinates and data, there are no new blocks
        call load_balance(DoMoveCoord=.true., DoMoveData=.true., &
             IsNewBlock=.false.)
        UseLocalTimeStepNew = .false.
@@ -342,7 +348,7 @@ contains
 
     ! Transform velocities from a rotating system to the HGI system if required
     if(iSignRotationIC /= 0)then
-       ! add/subtract rho*(omega x r) to/from the momentum of all fluids 
+       ! add/subtract rho*(omega x r) to/from the momentum of all fluids
        ! for all blocks
        call add_rotational_velocity(iSignRotationIC)
        iSignRotationIC = 0
@@ -382,8 +388,8 @@ contains
     ! Set all arrays for AMR
     call init_amr_criteria
 
+    call test_stop(NameSub, DoTest)
   end subroutine BATS_init_session
-
   !============================================================================
 
   subroutine BATS_advance(TimeSimulationLimit)
@@ -436,9 +442,10 @@ contains
     ! Local variables
     real :: AmrTime = 0
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'BATS_advance'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'BATS_advance'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! Check if time limit is reached (to be safe)
     if(Time_Simulation >= TimeSimulationLimit) RETURN
 
@@ -449,8 +456,6 @@ contains
        ! There is nothing to do, simply return
        RETURN
     end if
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! We are advancing in time
     time_loop = .true.
@@ -614,12 +619,12 @@ contains
 
     else
        ! If AMR is done, then the plotting of BATS_save_files('NORMAL')
-       ! is called in ModAMR to save the AMR criteria.  
+       ! is called in ModAMR to save the AMR criteria.
        call BATS_save_files('NORMAL')
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine BATS_advance
-
   !============================================================================
 
   subroutine BATS_init_constrain_b
@@ -633,12 +638,14 @@ contains
     use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
 
     ! Local variables
-    character(len=*), parameter :: NameSub ='BATS_init_constrain_b '
     real, external :: maxval_loc_abs_BLK
     integer :: iBlock
     integer :: iLoc_I(5)  ! full location index
     real    :: divbmax_now
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'BATS_init_constrain_b'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     DoInitConstrainB=.false.
 
     call message_pass_cell(3,State_VGB(Bx_:Bz_,:,:,:,:), nWidthIn=1, &
@@ -692,9 +699,9 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine BATS_init_constrain_b
-
-  !===========================================================================
+  !============================================================================
 
   subroutine BATS_save_files(TypeSaveIn)
 
@@ -710,8 +717,10 @@ contains
     logical :: DoExchangeAgain, DoAssignNodeNumbers, IsFound, DoSaveRestartTmp
     integer :: iFile
 
-    character(len=*), parameter :: NameSub='BATS_save_files'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'BATS_save_files'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     DoExchangeAgain     = .false.
     DoAssignNodeNumbers = .true.
     TypeSave = TypeSaveIn
@@ -768,6 +777,7 @@ contains
        call stop_mpi(NameSub//' ERROR incorrect TypeSave='//TypeSave)
     end select
 
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
     subroutine save_files
@@ -775,8 +785,9 @@ contains
       logical :: DoSave = .false.
       integer :: t_output_current
 
+      !------------------------------------------------------------------------
       do iFile = 1, nFile
-         ! We want to use the IE magnetic perturbations that were passed 
+         ! We want to use the IE magnetic perturbations that were passed
          ! in the last coupling together with the current GM perturbations.
          if( (iFile==magfile_ .or. iFile==maggridfile_) &
               .neqv. TypeSave == 'BEGINSTEP') CYCLE
@@ -798,7 +809,7 @@ contains
          end if
       end do
       ! If message passing with corners was done in save_file
-      ! then do exchange_messages over again to get expected values 
+      ! then do exchange_messages over again to get expected values
       ! in ghost cells.
 
       if(DoExchangeAgain)then
@@ -810,7 +821,6 @@ contains
       end if
 
     end subroutine save_files
-
     !==========================================================================
 
     subroutine save_file
@@ -826,7 +836,7 @@ contains
       use ModParticleFieldLine, ONLY: write_plot_particle
       use ModWritePlot,         ONLY: write_plot
       use ModWritePlotLos,      ONLY: write_plot_los
-      use ModWritePlotRadiowave,ONLY: write_plot_radiowave
+      use ModWritePlotRadiowave, ONLY: write_plot_radiowave
       use ModWriteTecplot,      ONLY: assign_node_numbers
       use ModFieldTrace,        ONLY: trace_field_grid, &
            write_plot_lcb, write_plot_ieb, write_plot_equator, write_plot_line
@@ -837,26 +847,26 @@ contains
 
       ! Backup location for the Time_Simulation variable.
       ! Time_Simulation is used in steady-state runs as a loop parameter
-      ! in the save_files subroutine, where set_satellite_flags and 
+      ! in the save_files subroutine, where set_satellite_flags and
       ! write_logfile are called with different Time_Simulation values
       ! spanning all the satellite trajectory cut. Old Time_Simulation value
       ! is saved here before and it is restored after the loop.
 
       real :: tSimulationBackup = 0.0
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       if(n_step<=n_output_last(ifile) .and. dn_output(ifile)/=0 &
-           .and. (n_step/=0 .or. ifile/=restart_) ) return
+           .and. (n_step/=0 .or. ifile/=restart_) ) RETURN
 
       if(ifile==restart_) then
          ! Case for restart file
-         if(.not.save_restart_file)return
+         if(.not.save_restart_file)RETURN
          call write_restart_files
 
       elseif(ifile==logfile_) then
-         ! Case for logfile 
+         ! Case for logfile
 
-         if(.not.save_logfile)return
+         if(.not.save_logfile)RETURN
          call timing_start('save_logfile')
          call write_logfile(0,ifile)
          call timing_stop('save_logfile')
@@ -971,7 +981,7 @@ contains
             do while (Time_Simulation <= TimeSatEnd_I(iSat))
                call set_satellite_flags(iSat)
                ! write for ALL the points of trajectory cut
-               call write_logfile(iSat,ifile)  
+               call write_logfile(iSat,ifile)
                Time_Simulation = Time_Simulation + dt_output(iSat+Satellite_)
             end do
             Time_Simulation = tSimulationBackup    ! ... Restore
@@ -981,21 +991,21 @@ contains
          call timing_stop('save_satellite')
 
       elseif(ifile == magfile_) then
-         !Cases for magnetometer files
+         ! Cases for magnetometer files
          if(.not.DoSaveMags) RETURN
-         if(time_accurate) then  
+         if(time_accurate) then
             call timing_start('save_magnetometer')
-            call write_magnetometers('stat')   
-            call timing_stop('save_magnetometer')  
+            call write_magnetometers('stat')
+            call timing_stop('save_magnetometer')
          end if
 
       elseif(ifile == maggridfile_) then
-         !Case for grid magnetometer files
+         ! Case for grid magnetometer files
          if(.not. DoSaveGridmag) RETURN
-         if(time_accurate) then  
+         if(time_accurate) then
             call timing_start('grid_magnetometer')
-            call write_magnetometers('grid')   
-            call timing_stop('grid_magnetometer')  
+            call write_magnetometers('grid')
+            call timing_stop('grid_magnetometer')
          end if
 
       elseif(ifile == indexfile_) then
@@ -1010,7 +1020,7 @@ contains
            .and. iFile /= indexfile_ .and. iFile /= maggridfile_ &
            .and. (iFile <= satellite_ .or. iFile > satellite_+nSatellite))then
          if(time_accurate)then
-            call write_prefix; 
+            call write_prefix;
             write(iUnitOut,'(a,i2,a,a,a,i7,a,i4,a,i2.2,a,i2.2,a)') &
                  'saved ifile=',ifile,' type=',plot_type(ifile),&
                  ' at n_step=',n_step,' time=', &
@@ -1027,15 +1037,15 @@ contains
       end if
 
     end subroutine save_file
-
     !==========================================================================
+
     subroutine save_files_final
 
       use ModSatelliteFile, ONLY: set_satellite_file_status, nSatellite
       use ModGroundMagPerturb, ONLY: finalize_magnetometer
 
       integer :: iSat
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       do iFile = 1, plot_ + nPlotFile
          call save_file
       end do
@@ -1052,16 +1062,17 @@ contains
       if (save_logfile.and.iProc==0.and.unit_log>0) close(unit_log)
 
     end subroutine save_files_final
+    !==========================================================================
 
   end subroutine BATS_save_files
-
   !============================================================================
+
   subroutine BATS_finalize
 
     use ModAdvance,      ONLY: clean_mod_advance
     use ModGeometry,     ONLY: clean_mod_geometry
     use ModNodes,        ONLY: clean_mod_nodes
-    use ModConstrainDivB,ONLY: clean_mod_ct
+    use ModConstrainDivB, ONLY: clean_mod_ct
     use ModFieldTrace,   ONLY: clean_mod_field_trace
     use ModPartImplicit, ONLY: clean_mod_part_impl
     use ModSemiImplicit, ONLY: clean_mod_semi_impl
@@ -1069,7 +1080,10 @@ contains
     use BATL_lib,        ONLY: clean_batl
 
     integer:: iError
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'BATS_finalize'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call clean_batl
     call clean_mod_advance
     call clean_mod_ct
@@ -1085,6 +1099,9 @@ contains
 
     call error_report('PRINT',0.,iError,.true.)
 
+    call test_stop(NameSub, DoTest)
   end subroutine BATS_finalize
+  !============================================================================
 
 end module ModBatsrusMethods
+!==============================================================================

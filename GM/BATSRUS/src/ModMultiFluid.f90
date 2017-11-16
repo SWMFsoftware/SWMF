@@ -3,6 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMultiFluid
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
   use ModVarIndexes
 
   implicit none
@@ -77,9 +80,10 @@ module ModMultiFluid
        mProtonMass
 
 contains
+  !============================================================================
 
   subroutine select_fluid
-
+    !--------------------------------------------------------------------------
     iRho   = iRho_I(iFluid)
     iRhoUx = iRhoUx_I(iFluid)
     iRhoUy = iRhoUy_I(iFluid)
@@ -97,7 +101,7 @@ contains
     NameFluid = NameFluid_I(iFluid)
 
   end subroutine select_fluid
-  !============================================================
+  !============================================================================
   subroutine extract_fluid_name(String)
 
     ! Find fluid name in string, remove it from string
@@ -109,10 +113,11 @@ contains
 
     integer :: i, l
     character (len=10) :: NameFluid
-    !----------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'extract_fluid_name'
+    !--------------------------------------------------------------------------
     ! Assume fluid 1 as the default
-    iFluid = 1              
+    iFluid = 1
 
     ! Check if the string starts with a fluid name
     do i = 1, nFluid
@@ -129,5 +134,7 @@ contains
     call select_fluid
 
   end subroutine extract_fluid_name
+  !============================================================================
 
 end module ModMultiFluid
+!==============================================================================

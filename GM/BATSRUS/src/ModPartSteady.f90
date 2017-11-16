@@ -1,13 +1,17 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPartSteady
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! The Partially Steady State (PSS) scheme is based on the idea that
   ! one can evolve only the grid blocks that change in time, while
   ! the grid blocks containing a steady state can be ignored.
   ! Since information can travel by at most one cell/time step in an explicit
   ! scheme, it is sufficient to switch on blocks which neighbor the
-  ! already evolving blocks. 
+  ! already evolving blocks.
 
   use ModProcMH
   use ModVarIndexes, ONLY: nVar
@@ -44,14 +48,17 @@ module ModPartSteady
   logical, parameter :: DoDebug = .false.
 
 contains
-  !===========================================================================
+  !============================================================================
   subroutine part_steady_switch(IsOn)
 
     ! If IsOn=.true., set used blocks to the evolving and boundary blocks
     ! If IsOn=.false., return to the original used blocks
 
     logical, intent(in) :: IsOn
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'part_steady_switch'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(DoDebug)write(*,*)'part_steady_switch called with IsOn=',IsOn
 
@@ -76,9 +83,9 @@ contains
     if(DoDebug)write(*,*)'part_steady_switch nBlockMax, nUnused=',&
          nBlockMax, count(Unused_B(1:nBlockMax))
 
+    call test_stop(NameSub, DoTest)
   end subroutine part_steady_switch
-
-  !===========================================================================
+  !============================================================================
 
   subroutine part_steady_select
 
@@ -92,7 +99,10 @@ contains
     integer :: iError
 
     real :: dState_V(nVar), dStateLimit
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'part_steady_select'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(DoDebug)write(*,*)'part_steady_select'
 
@@ -104,7 +114,7 @@ contains
 
        ! Skip explicit blocks if Expl->Steady change is not allowed
        if(DoPreserveExpl .and. iTypeAdvance_B(iBlock) == ExplBlock_) CYCLE
-       
+
        ! Calculate the maximum change in the block for each variable
        dState_V = 0.0
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -207,11 +217,14 @@ contains
     if(iProc==0 .and. lVerbose>0) &
          write(*,*)'part_steady finished:',&
          ' nStep,nSkipped,Steady,Bound,ExplALL=',n_step, &
-         count(iTypeAdvance_BP == SkippedBlock_), & 
-         count(iTypeAdvance_BP == SteadyBlock_), & 
+         count(iTypeAdvance_BP == SkippedBlock_), &
+         count(iTypeAdvance_BP == SteadyBlock_), &
          count(iTypeAdvance_BP == SteadyBoundBlock_), &
          count(iTypeAdvance_BP == ExplBlock_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine part_steady_select
+  !============================================================================
 
 end module ModPartSteady
+!==============================================================================

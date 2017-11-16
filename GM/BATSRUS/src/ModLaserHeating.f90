@@ -1,11 +1,13 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModLaserHeating
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
   ! Calculate heating due to irradiation by a laser. The laser is represented
-  ! by a finite number of laser beams. The laser beams are traced through 
+  ! by a finite number of laser beams. The laser beams are traced through
   ! the plasa following the rules of geometrical optics. The laser energy is
   ! deposited near the critical density.
 
@@ -24,7 +26,7 @@ module ModLaserHeating
 
   SAVE
 
-  private !Except
+  private ! Except
 
   real, public, allocatable:: LaserHeating_CB(:,:,:,:) ! Heating energy density
   public:: read_laser_heating_param  ! Read laser parameters
@@ -39,19 +41,17 @@ module ModLaserHeating
   real, allocatable:: DeltaSNew_I(:)        ! step size for rays
   logical, allocatable:: Unused_I(:)        ! true if ray is used
 
-
-  !Circular frequency, [rad/s]
+  ! Circular frequency, [rad/s]
   real, parameter:: Omega = 3* &            ! Third harmonic
        cTwoPi * cLightSpeed/(1.06e-6)       ! of the Nd Laser
 
-  !Critical density
+  ! Critical density
   real, parameter:: DensityCrSI  = Omega**2 &
        *cEps * cElectronMass/cElectronCharge**2
 
   logical:: DoInit=.true.
 
   real, allocatable::AbsorptionCoeff_I(:)
-
 
   ! the irradiance (power). The pointwise sources of energy calculated by
   ! this subroutine are multipled by :
@@ -66,17 +66,15 @@ module ModLaserHeating
 
   logical, parameter:: DoVerbose = .false.
 
+  ! The laser pulse is assumed to have the linear raise front
+  ! and linear decay with the constant irradiance within the
+  ! pulse,  at  t_raise < t < tPulse - tDecay
+  real:: tRaise = 1.0e-10 ! [s]
+  real:: tDecay = 1.0e-10 ! [s]
+  real:: tPulse = 1.1e-9  ! [s]
+  real:: IrradianceSi = 3.8e12 ! [J/s] !This is the power; rename?
 
-
-  !The laser pulse is assumed to have the linear raise front
-  !and linear decay with the constant irradiance within the
-  !pulse,  at  t_raise < t < tPulse - tDecay
-  real:: tRaise = 1.0e-10 ![s]
-  real:: tDecay = 1.0e-10 ![s]
-  real:: tPulse = 1.1e-9  ![s]
-  real:: IrradianceSi = 3.8e12 ![J/s] !This is the power; rename?
-
-  !Beam geometry: 'rz', '2d', '3d', 'xy'
+  ! Beam geometry: 'rz', '2d', '3d', 'xy'
   character(LEN=3):: TypeBeam='???'
   !\
   ! Geometry of the 'rz'-beam:
@@ -90,12 +88,12 @@ module ModLaserHeating
   !   \\\|
   !    \\|_ _ _ _ _
   !     \|    I
-  !      | This height is yCr   
+  !      | This height is yCr
   !______|____V____ axis of symmetry
   !      |
   !      |
   !     /|
-  !    //|    In the presented case nRayPerBeam = 1 
+  !    //|    In the presented case nRayPerBeam = 1
   !   ///|    (half of all rays except for the Central Ray (CR))
   !  /// |    The intensity falls as exp(-r^2/rBeam^2),
   ! ///  |    where r is the transverse distance from the CR
@@ -103,25 +101,24 @@ module ModLaserHeating
   !//slope (approximately +60 deg in the presented case))
   !/-----|
   !
-  !< This coordinate is xStart
+  ! < This coordinate is xStart
 
   integer:: nRayPerBeam
 
   integer:: nBeam = 0
   real   :: rBeam = 1.0, xStart = -60.0
 
-  !Named indexes:
+  ! Named indexes:
   integer, parameter:: MaxBeam = 20
   integer, parameter:: SlopeDeg_ = 1, rCr_ = 2, PhiCr_ = 3, AmplitudeRel_ = 4
   real   :: BeamParam_II(AmplitudeRel_,MaxBeam)
 
   real   :: SuperGaussianOrder = 4.2
 
-
   integer:: nRayInside = -1, nRayOutside = -1, nRayTotal = -1
   integer:: nRayY = -1, nRayZ = -1, nRayR = -1, nRayPhi = -1
 
-  real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI 
+  real, allocatable, dimension(:,:):: XyzRay_DI, SlopeRay_DI
   real, allocatable, dimension(:)  :: Amplitude_I
 
   logical:: Is3DBeamInRz = .false.
@@ -130,23 +127,26 @@ module ModLaserHeating
   logical:: DoLaserRayTest  = .false.
 
 contains
-  !==========================================================================
+  !============================================================================
   subroutine calc_absorption(NAtomicSI, ZAverage, TeSI, NeSI, Absorption)
-    !The subroutine calculates the absorption coefficient, Absorption [m-1],
+    ! The subroutine calculates the absorption coefficient, Absorption [m-1],
     ! at the circular frequency, omega and convert then to the dimensionless
-    !form
+    ! form
 
     real,intent(in):: NAtomicSI, ZAverage, TeSI, NeSI
-    real, intent(out):: Absorption  !The absorption coefficient, [m-1]
+    real, intent(out):: Absorption  ! The absorption coefficient, [m-1]
 
     real:: AveragedElectronSpeed, CollisionCrossSection
     real:: EffectiveCollisionRate, Dens2DensCr
     real,parameter::CoulombLog = 5.0
-    !------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_absorption'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     Dens2DensCr = min(1.0, NeSI/DensityCrSi)
-    !calculate the effective collision frequency
-    !write(*,*)'NeSi=',NeSi,' Dens2DensCr=',Dens2DensCr
+    ! calculate the effective collision frequency
+    ! write(*,*)'NeSi=',NeSi,' Dens2DensCr=',Dens2DensCr
 
     if(DoLaserRayTest)then
 
@@ -157,30 +157,30 @@ contains
 
        AveragedElectronSpeed = sqrt(8.0*cBoltzmann &
             *TeSi/(cPi*cElectronMass))
-       !write(*,*)'TeSi=',TeSi,' AverageElectronSpeed=',AveragedElectronSpeed
+       ! write(*,*)'TeSi=',TeSi,' AverageElectronSpeed=',AveragedElectronSpeed
        CollisionCrossSection = cPi*2.0/3.0 &
             *(cElectronCharge**2/(4.0*cPi*cEps*(cBoltzmann*TeSi)))**2
-       !write(*,*)'Collision Cross Section =', CollisionCrossSection
+       ! write(*,*)'Collision Cross Section =', CollisionCrossSection
        EffectiveCollisionRate = CollisionCrossSection* &
-            (NatomicSi*ZAverage**2)*AveragedElectronSpeed*CoulombLog 
-       !write(*,*)'NAtomicSi=',NAtomicSi, &
+            (NatomicSi*ZAverage**2)*AveragedElectronSpeed*CoulombLog
+       ! write(*,*)'NAtomicSi=',NAtomicSi, &
        !          ' EffectiveCollisionRate=',EffectiveCollisionRate
 
     end if
 
     Absorption = EffectiveCollisionRate/cLightSpeed*Dens2DensCr/&
          sqrt(1 - Dens2DensCr/(1 + (EffectiveCollisionRate/Omega)**2) )
-    !write(*,*)'Dimensional absorption=', Absorption
-    !Convert to the dimensionless form:
+    ! write(*,*)'Dimensional absorption=', Absorption
+    ! Convert to the dimensionless form:
     Absorption =  Absorption*No2Si_V(UnitX_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_absorption
-
   !============================================================================
 
   subroutine get_density_and_absorption(nRay)
 
-    ! Calculates plasma density, Density_I, and its gradient, 
+    ! Calculates plasma density, Density_I, and its gradient,
     ! GradDensity_DI(3,nRay), at specified locations Position_DI(3,nRay)
     ! Also, it provides appropriate step, DeltaSNew_I, conceivably dependent
     ! on the numeric grid size
@@ -205,7 +205,11 @@ contains
     real, allocatable:: RayValue_VI(:,:), RayValueAll_VI(:,:)
 
     integer:: iError
-    !-----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_density_and_absorption'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.allocated(RayValue_VI)) &
          allocate(RayValue_VI(nVarRay,nRay), RayValueAll_VI(nVarRay,nRay))
 
@@ -223,11 +227,10 @@ contains
           Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
           Xyz_D(3) = 0.0
        end if
-       
+
        if(Is3DBeamInXy) Xyz_D(3) = 0.0
 
        if(Is3DBeamIn1D) Xyz_D(2:3) = 0.0
-
 
        ! Find the processor, block and grid cell containing the ray
        call interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
@@ -360,8 +363,8 @@ contains
        DeltaSNew_I(iRay)      = RayValue_VI(CellSize_,iRay)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_density_and_absorption
-
   !============================================================================
 
   subroutine ray_path(get_plasma_density, nRay, UnusedRay_I, Slope_DI, &
@@ -370,19 +373,19 @@ contains
     !
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
-    ! specified by its Cartesian Position_DI and its direction cosines 
-    ! Slope_DI. The subroutine calculates new Position_DI, which is 
+    ! specified by its Cartesian Position_DI and its direction cosines
+    ! Slope_DI. The subroutine calculates new Position_DI, which is
     ! DeltaS_I away from the initial position. It calculates the intensity
     ! along the step as emissivity multiplied by DeltaS and adds this to the
     ! Intensity_I. Thus, after series of calls to ray_path(), the Intensity_I
-    ! contains the result of integration along the paths of every ray. 
+    ! contains the result of integration along the paths of every ray.
     !   The electromagnetic rays are refracted in plasma due to its non-zero
     ! refractive index, which is the square root of the dielectric
-    ! permittivity \epsilon. The \epsilon, in turn, is a function of the 
+    ! permittivity \epsilon. The \epsilon, in turn, is a function of the
     ! plasma density. The external subprogram, get_plasma_density(),
     ! provides the plasma Density_I along with its gradient, GradDensity_DI,
     ! at the Position_DI. The \epsilon can be calculated as
-    !         1 - Density_I/DensityCr, 
+    !         1 - Density_I/DensityCr,
     ! where DensityCr is the "critical" plasma density at which the dielectric
     ! permittivity \epsilon falls down to zero. The value of DensityCr is
     ! proportional to the square of the wave frequency. For example,
@@ -402,8 +405,8 @@ contains
     ! on the plasma density. The density is obtained from the MHD simulation.
     ! The density data are located in the memories of several processors, and
     ! the get_plasma_density() program from the ModDensityAndGradient module
-    ! makes the density acquisition. 
-    ! 
+    ! makes the density acquisition.
+    !
     !   The parameters of the ray_path() are briefly described below.
     !
     ! get_plasma_density():  external subroutine that returns the plasma
@@ -431,7 +434,7 @@ contains
     !     requirement is not satisfied, the corresponding element of DeltaS_I
     !     is decreased. Do not set the ToleranceInit to any value greater than
     !     0.1 (which means 10 points per curvature radian): it will be
-    !     internally reduced to 0.1 anyway.   
+    !     internally reduced to 0.1 anyway.
     ! DensityCr: the plasma density at which its dielectric permittivity
     !     becomes zero for chosen wave frequency.
     ! Intensity_I:    the intensities of each ray calculated as the integral
@@ -446,7 +449,7 @@ contains
     !     error, the flagged rays should be considered as "bad" and thrown
     !     away from the resultant Intensity_I. Set all the elements of
     !     IsBehindCr_I to .false. before calling ray_path() for the first time.
-    ! 
+    !
     ! Written by Leonid Benkevitch.
     !
     !
@@ -466,27 +469,25 @@ contains
     ! .true. if a ray is OK, .false. otherwise:
     logical, intent(inout), dimension(nRay):: IsBehindCr_I
 
-    ! a ray is excluded from processing if it is .true. 
-    logical, intent(inout), dimension(nRay) :: UnusedRay_I   
+    ! a ray is excluded from processing if it is .true.
+    logical, intent(inout), dimension(nRay) :: UnusedRay_I
 
     logical, save:: IsNewEntry = .true.
 
-
     real,    save, dimension(3)       :: Slope1_D, Omega_D
     real,    save, dimension(3)       :: ProjSlopeOnMinusGradEps_D
-    real,    save, dimension(3)       :: StepX_D, StepY_D, RelGradRefrInx_D 
+    real,    save, dimension(3)       :: StepX_D, StepY_D, RelGradRefrInx_D
     real,    save, dimension(3)       :: GradDielPerm_D, PositionHalfBack_D
 
     real, save, pointer, dimension(:)   :: DistanceToCritSurf_I
 
     ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
-    logical, save, pointer, dimension(:)   :: IsOKRay_I       
-
+    logical, save, pointer, dimension(:)   :: IsOKRay_I
 
     real :: HalfDeltaS                        ! DeltaS halved
     real :: DielPerm, DielPermHalfBack, Dens2DensCr
     real :: Coef, Curv, Curv1
-    real :: LCosAl ! L*cos(Alpha),   
+    real :: LCosAl ! L*cos(Alpha),
     ! where L is inverse grad of \epsilon, Alpha is the incidence angle
     real :: GradDielPermSqr, GradEpsDotSlope
     real :: ParabLen
@@ -497,7 +498,10 @@ contains
     integer:: iRay, iDim
 
     character(LEN=20),save:: TypeBoundaryDown_D(nDim), TypeBoundaryUp_D(nDim)
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'ray_path'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if (IsNewEntry) then
        IsNewEntry = .false.
@@ -509,28 +513,27 @@ contains
 
        !  minimum ten points between a vacuum and a critical surface and
        !  minimum 10 points over 1 rad of the curvature
-       Tolerance = min(ToleranceInit,0.1)  
+       Tolerance = min(ToleranceInit,0.1)
 
+       ToleranceSqr = Tolerance**2
 
-       ToleranceSqr = Tolerance**2 
-
-       ! One (ten-thousandth) hundredth of average step 
+       ! One (ten-thousandth) hundredth of average step
        StepMin = 1e-2*sum(DeltaS_I)/nRay
        do iDim=1,nDim
           TypeBoundaryDown_D(iDim) = trim(TypeCellBc_I(2*iDim-1))
           TypeBoundaryUp_D(iDim)   = trim(TypeCellBc_I(2*iDim))
        end do
-       !if(iProc==0)then
+       ! if(iProc==0)then
        !   write(*,*)'TypeBoundaryDown_D=',TypeBoundaryDown_D
        !   write(*,*)'TypeBoundaryUp_D=',TypeBoundaryUp_D
        !   write(*,*)'StepMin=',StepMin
-       !end if
+       ! end if
 
     end if
 
     nCall = nCall + 1
 
-    !Start the predictor step of the GIRARD scheme: 
+    ! Start the predictor step of the GIRARD scheme:
     do iRay = 1, nRay
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
 
@@ -547,13 +550,12 @@ contains
 
     call get_plasma_density(nRay)
 
-
-    ! In making radio images this is a bad pixel which should be further processed 
+    ! In making radio images this is a bad pixel which should be further processed
     IsBehindCr_I = Density_I>= DensityCr.and..not.UnusedRay_I
     UnusedRay_I = UnusedRay_I .or. IsBehindCr_I ! "bad rays" are done
 
-    !In solving the laser deposition energy the total remnant energy 
-    !should be deposited if the ray pamatrates through the critical surface
+    ! In solving the laser deposition energy the total remnant energy
+    ! should be deposited if the ray pamatrates through the critical surface
     if(UseLaserHeating)then
        where( IsBehindCr_I)
           EnergyDeposition_I = Intensity_I
@@ -564,7 +566,6 @@ contains
     do iRay = 1, nRay
 
        if (UnusedRay_I(iRay)) CYCLE  ! Do not process the rays that are done
-
 
        HalfDeltaS = 0.5*DeltaS_I(iRay)
        ! Original Position (at an integer point):
@@ -581,7 +582,7 @@ contains
 
        DielPermHalfBack = DielPerm  - GradEpsDotSlope*HalfDeltaS
 
-       !Check positivity:
+       ! Check positivity:
        if( DielPermHalfBack<=0.0)then
           IsBehindCr_I(iRay) = .true.
           if(UseLaserHeating)then
@@ -593,14 +594,14 @@ contains
 
        Curv = (0.5*HalfDeltaS/DielPermHalfBack)**2* &
             (GradDielPermSqr - GradEpsDotSlope**2)
-       !The curvature squared characterizes the magnitude of
-       !the tranverse gradient of the dielectric permittivity
+       ! The curvature squared characterizes the magnitude of
+       ! the tranverse gradient of the dielectric permittivity
 
        if (IsOKRay_I(iRay)) then
 
           !
           ! Check if the trajectory curvature is too sharp
-          ! to meet the Tolerance. If so, reduce the DeltaS 
+          ! to meet the Tolerance. If so, reduce the DeltaS
           ! step for the iRay-th ray and leave it until
           ! the next call.
           !
@@ -614,17 +615,17 @@ contains
              if(UseLaserHeating)EnergyDeposition_I(iRay) = 0.0
              CYCLE
           end if
-          !if(UseLaserHeating)then
-          !   !Check if the absorption is too high
+          ! if(UseLaserHeating)then
+          !   ! Check if the absorption is too high
           !   if(AbsorptionCoeff_I(iRay) * DeltaS_I(iRay)>=0.5)then
           !      DeltaS_I(iRay) =  max(&
-          !           cHalf/AbsorptionCoeff_I(iRay),&
+          !           0.5/AbsorptionCoeff_I(iRay),&
           !           StepMin)
           !      Position_DI(:,iRay) = PositionHalfBack_D
           !      if(UseLaserHeating)EnergyDeposition_I(iRay) = 0.0
           !      CYCLE
           !   end if
-          !end if
+          ! end if
           !
           ! Test if some of the next points can get into the prohibited
           ! part of space with "negative" dielectric permittivity
@@ -634,7 +635,7 @@ contains
 
           if (3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) then
              !
-             ! Mark the ray as steep; 
+             ! Mark the ray as steep;
              ! memorize the distance to the critical surface;
              ! reduce step
              !
@@ -663,57 +664,56 @@ contains
           ! Switch to the opposite branch of parabolic trajectory
           !
           ! When a next step can drive the ray into the area with the
-          ! plasma density greater then its critical value, then a special 
-          ! technique of "parabolic ray reflection" is employed. 
+          ! plasma density greater then its critical value, then a special
+          ! technique of "parabolic ray reflection" is employed.
           ! It can be shown that a ray trajectory in the medium with constant
           ! gradient of dielectric permittivity is a parabola. If the step
           ! DeltaS_I is small enough we can assume the grad \epsilon constant
-          ! and hence assume that the ray approaches the critical surface 
+          ! and hence assume that the ray approaches the critical surface
           ! in a parabolic path.
           ! We calculate the parameters of the parabola, namely:
-          ! StepX_D -- vector along the -grad \epsilon, with the length equal 
-          !     to the distance from the PositionHalfBack_D to the parabola 
-          !     extremum;  
+          ! StepX_D -- vector along the -grad \epsilon, with the length equal
+          !     to the distance from the PositionHalfBack_D to the parabola
+          !     extremum;
           ! StepY_D -- vector perpendicular to StepX_D, lying inside of the
           !     parabola plane, pointing at the opposite parabola branch, and
           !     with the length equal the distance from PositionHalfBack_D to
           !     the opposite branch of parabola.
           ! The parabolic reflection is just a replacement of the Position_DI
-          ! with the symmetric point at the opposite branch of parabola, and 
+          ! with the symmetric point at the opposite branch of parabola, and
           ! changing the "incident" direction Slope_DI to the "departing" ray
           ! direction according to Snell law.
           !
 
           LCosAl = -GradEpsDotSlope/GradDielPermSqr
-          ProjSlopeOnMinusGradEps_D = -LCosAl*GradDielPerm_D  
+          ProjSlopeOnMinusGradEps_D = -LCosAl*GradDielPerm_D
           ! Here v_proj
 
-          StepY_D = Slope_DI(:,iRay) - ProjSlopeOnMinusGradEps_D 
+          StepY_D = Slope_DI(:,iRay) - ProjSlopeOnMinusGradEps_D
           ! Here c; |c| = sin \alpha
 
           Slope_DI(:,iRay) = Slope_DI(:,iRay) - 2*ProjSlopeOnMinusGradEps_D
 
           !
-          ! We need to have 
+          ! We need to have
           !   |Step_Y| = 4 * sin(\alpha)*cos(\alpha)*DielPermHalfBack*L
           ! Now the direction of Step_Y is right, the length of it is equal
           ! to  sin(\alpha).
           ! Multiply it by L*Cos(\alpha)*DielPermHalfBack
           !
 
-          StepY_D = 4*StepY_D*LCosAl*DielPermHalfBack 
+          StepY_D = 4*StepY_D*LCosAl*DielPermHalfBack
 
           Position_DI(:,iRay) = PositionHalfBack_D + StepY_D
 
           !
           ! Step_X is in the direction of - grad \epsilon,
           ! whose vector is of the length of 1/L.
-          ! The length of Step_X is cos^2(\alpha)*L*DielPermHalfBack 
+          ! The length of Step_X is cos^2(\alpha)*L*DielPermHalfBack
           ! Thus,
           !
 
           StepX_D = (DielPermHalfBack*LCosAl**2)*GradDielPerm_D
-
 
           ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
           if(.not.UseLaserHeating)then
@@ -726,7 +726,7 @@ contains
              ! if(UseLaserHeating)then missing ???
 
              if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
-                !Mark this ray as if it is behind the critical surface
+                ! Mark this ray as if it is behind the critical surface
                 EnergyDeposition_I(iRay) = Intensity_I(iRay)
                 UnusedRay_I(iRay) = .true.
                 Intensity_I(iRay) = 0.0
@@ -734,15 +734,15 @@ contains
                 CYCLE
              end if
              Intensity_I(iRay) = Intensity_I(iRay) * &
-                  (1 - ParabLen * AbsorptionCoeff_I(iRay)) 
+                  (1 - ParabLen * AbsorptionCoeff_I(iRay))
           end if
 
-       else 
+       else
 
           ! Make a step using Boris' algorithm
 
           Coef=0.5*HalfDeltaS/(1.0 - Dens2DensCr)
-          RelGradRefrInx_D = Coef*GradDielPerm_D    
+          RelGradRefrInx_D = Coef*GradDielPerm_D
 
           ! grad(n) = grad(eps(i+1/2))/(2*eps(i+1/2))
 
@@ -767,7 +767,7 @@ contains
              EnergyDeposition_I(iRay) = Intensity_I(iRay) *  &
                   DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)
              if(EnergyDeposition_I(iRay)>=Intensity_I(iRay))then
-                !Mark this ray as if it in behind the critical surface
+                ! Mark this ray as if it in behind the critical surface
                 EnergyDeposition_I(iRay) = Intensity_I(iRay)
                 Intensity_I(iRay) = 0.0
                 UnusedRay_I(iRay) = .true.
@@ -775,7 +775,7 @@ contains
                 CYCLE
              end if
              Intensity_I(iRay) = Intensity_I(iRay) * &
-                  (1 - DeltaS_I(iRay) * AbsorptionCoeff_I(iRay)) 
+                  (1 - DeltaS_I(iRay) * AbsorptionCoeff_I(iRay))
           else
              Intensity_I(iRay) = Intensity_I(iRay) &
                   + DeltaS_I(iRay)*(Dens2DensCr**2)*(0.5 - Dens2DensCr)**2
@@ -789,7 +789,7 @@ contains
        ! specified in DeltaSNew. The smooth step increase is required so as
        ! not to get into the space behind the critical surface, stepping with
        ! DeltaS that instantly changes from a very little size to the normal
-       ! DeltaSNew length. DeltaS is usually reduced in a close vicinity of 
+       ! DeltaSNew length. DeltaS is usually reduced in a close vicinity of
        ! the critical surface, where the ray is travelling along a very sharp
        ! curve with high curvature. For many rays it means fractioning of the
        ! DeltaS down several orders of magnitude, therefore the new step trial
@@ -805,32 +805,32 @@ contains
        ! next value of Y is always that of X.
        !     The behaviour of Y can also be characterized as exponential
        ! growth when Y is close to zero, and exponential saturation when Y is
-       ! close to X. 
-       ! 
+       ! close to X.
+       !
        if (IsOKRay_I(iRay)) then
           !
           ! For shallow rays the DeltaS is increased unconditionally
           !
           DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay),1.0)*&
                min(DeltaSNew_I(iRay), DeltaS_I(iRay))
-       else 
+       else
           !
           ! If the iRay-th ray is marked as steep (i.e. "not gentle" or "not
           ! shallow") then the code below increases its DeltaS only if the
           ! current distance to the critical surface, calculated as
           !      \epsilon / grad \epsilon,
           ! is greater than this distance value saved along with marking the
-          ! ray as steep in the DistanceToCritSurf_I. 
-          !   This can happen in two cases: 
+          ! ray as steep in the DistanceToCritSurf_I.
+          !   This can happen in two cases:
           ! (1) either the ray was "parabola reflected" and
           ! after several steps it went away from the surface by the distance
-          ! where the parabola switching occurred; 
-          ! (2)or the ray is not steep any more because 
+          ! where the parabola switching occurred;
+          ! (2)or the ray is not steep any more because
           ! the current DeltaS is so small, that the next step does not
           ! penetrate the critical surface.
           !   The ray is reverted to "gentle" or "shallow"
           !
-          if (DielPermHalfBack .gt. &
+          if (DielPermHalfBack > &
                DistanceToCritSurf_I(iRay)*sqrt(GradDielPermSqr)) then
              IsOKRay_I(iRay) = .true.
              DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay), 1.0)*&
@@ -838,13 +838,15 @@ contains
           end if
        end if
     end do
+    call test_stop(NameSub, DoTest)
   contains
-    !=======================================================================
+    !==========================================================================
     subroutine check_bc
 
       integer::iDim
       real:: Radius, Runit_D(2:3)
-      !--------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       do iDim = 1, nDim
          if(Is3DBeamInRz .and. iDim == 2)then
             Radius = sqrt(sum(Position_DI(2:3,iRay)**2))
@@ -882,23 +884,22 @@ contains
          end if
       end do
     end subroutine check_bc
-    !====================
+    !==========================================================================
   end subroutine ray_path
-
   !============================================================================
 
   real function irradiance_t(TimeSi)
 
     real,intent(in)::TimeSi
-    !----------------------
+    !--------------------------------------------------------------------------
 
     if (TimeSi > tPulse) UseLaserHeating = .false.
 
     if(DoLaserRayTest)then
-       !no temporal profile
+       ! no temporal profile
        irradiance_t = IrradianceSi
     else
-       !top hat profile
+       ! top hat profile
        irradiance_t = IrradianceSi * &
             max(0.0, min(1.0,        &
             (TimeSi/tRaise),         &
@@ -906,13 +907,16 @@ contains
     end if
 
   end function irradiance_t
-
   !============================================================================
+
   subroutine get_rays
 
     use BATL_lib,    ONLY: IsRzGeometry
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_rays'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     Is3DBeamInRz = TypeBeam == '3d' .and. IsRzGeometry
     Is3DBeamInXy = TypeBeam == 'xy'
@@ -940,11 +944,11 @@ contains
        call stop_mpi('Unknown TypeBeam='//TypeBeam)
     end select
 
-    !Normalize amplitudes:
+    ! Normalize amplitudes:
     Amplitude_I(1:nRayInside) = Amplitude_I(1:nRayInside) / sum(Amplitude_I(:))
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_rays
-
   !============================================================================
 
   subroutine init_beam_3d
@@ -960,13 +964,16 @@ contains
     logical:: IsInside
     integer:: iRayR, iRayPhi, iRayY, iRayZ, iRayRPrev
     real:: PhiRay, Amplitude, RandomPhase
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_beam_3d'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
-       !Positive direction of the slope is taken for the beams
-       !converging to the axis:
+       ! Positive direction of the slope is taken for the beams
+       ! converging to the axis:
 
        sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
@@ -1087,8 +1094,8 @@ contains
        end do ! iRay
     end do ! iBeam
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_beam_3d
-
   !============================================================================
 
   subroutine init_beam_rz
@@ -1101,7 +1108,10 @@ contains
     real:: rDistance, BeamAmplitude
     integer:: iRay, jRay, iBeam
     logical:: IsInside
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_beam_rz'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(TypeGeometry/='rz')call CON_stop(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
@@ -1109,8 +1119,8 @@ contains
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
-       !Positive direction of the slope is taken for the beams
-       !converging to the axis:
+       ! Positive direction of the slope is taken for the beams
+       ! converging to the axis:
 
        sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_,iBeam))
 
@@ -1167,8 +1177,8 @@ contains
        end do ! iRay
     end do ! iBeam
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_beam_rz
-
   !============================================================================
 
   subroutine init_beam_rz2
@@ -1180,7 +1190,10 @@ contains
     real:: rDistance, BeamAmplitude
     integer:: iRay, jRay, iBeam
     logical:: IsInside=.true.
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_beam_rz2'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Warning !!! There are two issues with the rz2 beam:
     ! (1) beam profiles are not defined with beam coordinates
@@ -1196,8 +1209,8 @@ contains
     do iBeam = 1, nBeam
        cosTheta =  cos(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
-       !Positive direction of the slope is taken for the beams
-       !converging to the axis:
+       ! Positive direction of the slope is taken for the beams
+       ! converging to the axis:
 
        sinTheta = -sin(cDegToRad * BeamParam_II(SlopeDeg_, iBeam))
 
@@ -1208,7 +1221,7 @@ contains
 
 !!$       do iRay = -nRayPerHalfBeam, nRayPerHalfBeam
        ! The following is conform the H2D strategy for following rays
-       do iRay = 1, nRayPerBeam  !just for beams pointed at the symmetry axix
+       do iRay = 1, nRayPerBeam  ! just for beams pointed at the symmetry axix
 
 		   xPlane = xStart
 
@@ -1226,26 +1239,25 @@ contains
           ! by yBeam in the PARAM.in file
           yPlane = yCrCentral + (rDistance + xStart*sinTheta/(cosTheta))
 
-          !Dealing with rays starting outside the computational domain on laser-entry plane:
+          ! Dealing with rays starting outside the computational domain on laser-entry plane:
           ! Substracting CellSize1Min from y2 so that the rays do not start on domain boundary
           if((yPlane) >= y2)then
-             !Do not let rays begin in target past drive surface
+             ! Do not let rays begin in target past drive surface
              if(sinTheta < 0.0 .and. &
                   (xPlane + (abs(yPlane)-(y2-CellSize1Min))*(cosTheta)/(-sinTheta) < 0.0))then
                 xPlane = xPlane + (abs(yPlane)-(y2-CellSize1Min))*cosTheta/(-sinTheta)
                 yPlane = y2 - (CellSize1Min)
-             else	
+             else
                 IsInside=.false.
              endif
           endif
 
-
           if(yPlane <= 0.0)then
-             !Do not let rays begin in target past drive surface
+             ! Do not let rays begin in target past drive surface
              if(xPlane + (yPlane+CellSize1Min)*cosTheta/(-sinTheta) < 0.0)then
                 xPlane = xPlane + (yPlane+CellSize1Min)*cosTheta/(-sinTheta)
                 yPlane = CellSize1Min
-             else	
+             else
                 IsInside=.false.
              endif
           endif
@@ -1275,8 +1287,8 @@ contains
 
        end do
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine init_beam_rz2
-
   !============================================================================
 
   subroutine read_laser_heating_param(NameCommand)
@@ -1285,8 +1297,10 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_laser_heating_param'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(NameCommand)
     case("#LASERPULSE")
@@ -1346,14 +1360,17 @@ contains
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_laser_heating_param
-
   !============================================================================
 
   subroutine init_laser_package
 
     use ModSize, ONLY: MaxBlock, nI, nJ, nK
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_laser_package'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     DoInit = .false.
     call get_rays
     nRay = nRayInside
@@ -1379,7 +1396,7 @@ contains
     allocate(Intensity_I(nRayInside), DeltaS_I(nRayInside))
     allocate(Unused_I(nRayInside), IsBehindCr_I(nRayInside))
 
-    !Initialize all arrays:
+    ! Initialize all arrays:
     Position_DI(:, 1:nRayInside) = XyzRay_DI(:,   1:nRayInside)
     Slope_DI(:,    1:nRayInside) = SlopeRay_DI(:, 1:nRayInside)
     Intensity_I(   1:nRayInside) = Amplitude_I(   1:nRayInside)
@@ -1403,8 +1420,9 @@ contains
 !!$       close(UnitTmp_)
 !!$    end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_laser_package
-  !===========================================================================
+  !============================================================================
   subroutine get_energy_source
 
     use BATL_lib, ONLY: nDim, MaxDim, nIJK_D, interpolate_grid, CoordMin_D
@@ -1418,7 +1436,10 @@ contains
     integer:: iError
     real::    PosXHold, TurningPoint
     real::    SumLaserHeatingPe, SumLaserHeating, SumLaserHeatingRef
-    !-----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_energy_source'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(DoInit) then
        call init_laser_package
        if(iProc==0.and.DoVerbose)then
@@ -1427,7 +1448,7 @@ contains
        end if
     end if
 
-    !Initialize all arrays:
+    ! Initialize all arrays:
     Position_DI(:, 1:nRayInside) = XyzRay_DI(:,   1:nRayInside)
     Slope_DI(:,    1:nRayInside) = SlopeRay_DI(:, 1:nRayInside)
     Intensity_I(   1:nRayInside) = Amplitude_I(   1:nRayInside)
@@ -1442,7 +1463,7 @@ contains
     iStep = 0
     do while(.not.all(Unused_I))
        EnergyDeposition_I=0.0
-       !Propagate each of rays through the distance of DeltaS
+       ! Propagate each of rays through the distance of DeltaS
        call ray_path(get_density_and_absorption, nRay, Unused_I, Slope_DI, &
             DeltaS_I, Tolerance, DensityCrSi, Intensity_I, IsBehindCr_I)
 
@@ -1454,7 +1475,7 @@ contains
        if(.not.any(DoRay_I))EXIT
        iStep = iStep + 1
 
-       ! Save EnergyDeposition_I to LaserHeating_CB 
+       ! Save EnergyDeposition_I to LaserHeating_CB
        ! using the interpolation weights
        iCell_D = 1 ! for ignored dimensions
        do iRay = 1, nRay
@@ -1466,7 +1487,7 @@ contains
              Xyz_D(2) = sqrt(sum(Xyz_D(2:MaxDim)**2))
              Xyz_D(3) = 0.0
           end if
-          
+
           if(Is3DBeamInXy) Xyz_D(3) = 0.0
 
           if(Is3DBeamIn1D) Xyz_D(2:3) = 0.0
@@ -1489,7 +1510,7 @@ contains
              k      = iCell_D(3)
              Weight = Weight_I(iCell)
 
-             ! Deposit the energy 
+             ! Deposit the energy
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   + Weight*EnergyDeposition_I(iRay)
 
@@ -1500,7 +1521,7 @@ contains
     end do
 
     if(DoLaserRayTest)then
-       !L=50 for the test
+       ! L=50 for the test
        TurningPoint = CoordMin_D(1) &
             + 50.0*cos(cDegToRad*BeamParam_II(SlopeDeg_,1))**2
 
@@ -1526,9 +1547,10 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_energy_source
+  !============================================================================
 
-  !===========================================================================
   subroutine add_laser_heating
 
     ! Calculate the source terms due to laser heating
@@ -1551,9 +1573,10 @@ contains
     real:: Irradiance, EInternalSi, PressureSi
     integer :: iBlock, i, j, k, iP
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_laser_heating'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     if(iProc==0 .and. DoVerbose) write(*,*)'Start ',NameSub
 
     call timing_start(NameSub)
@@ -1598,14 +1621,14 @@ contains
                   *(CoordMax_D(3) - CoordMin_D(3))/cTwoPi
           elseif(Is3DBeamInXy .and. nDim == 2)then
              ! Assuming circular beam spot. Deals with extent in "Z" direction
-             ! while maintaining the irradiance of 3D system. 
+             ! while maintaining the irradiance of 3D system.
              ! The formula below needs some explanation
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
                   *(CoordMax_D(3) - CoordMin_D(3))/(rBeam*cHalfPi)
           elseif(Is3DBeamIn1D .and. nDim == 1)then
              ! Assuming circular beam spot. Deals with extent in "Y and Z"
-             ! directions while maintaining the irradiance of 3D system. 
+             ! directions while maintaining the irradiance of 3D system.
              ! The formula below needs some explanation
              LaserHeating_CB(i,j,k,iBlock) = LaserHeating_CB(i,j,k,iBlock) &
                   *Irradiance/CellVolume_GB(i,j,k,iBlock) &
@@ -1658,6 +1681,9 @@ contains
 
     if(iProc==0 .and. DoVerbose) write(*,*)'End ',NameSub
 
+    call test_stop(NameSub, DoTest)
   end subroutine add_laser_heating
+  !============================================================================
 
 end module ModLaserHeating
+!==============================================================================

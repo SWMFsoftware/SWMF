@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!============================================================================
 module ModRadiativeCooling
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest
   use ModChromosphere
   use ModSize
   implicit none
@@ -12,7 +14,6 @@ module ModRadiativeCooling
   logical:: UseRadCoolingTable =.false.
   integer,private:: iTableRadCool      =-1
 
-
   real :: AuxTeSi
   !\
   ! Recommended usage of get_radiative_cooling function
@@ -20,20 +21,23 @@ module ModRadiativeCooling
   ! use ModRadiativeCooling
   ! call user_material_properties(i,j,k,iBlock,TeOut=AuxTeSi)
   ! call get_radiative_cooling(State_VGB(i, j, k, iBlock,AuxTeSi, RadCooling)
-  ! 
-  ! The dimensionless cooling function WITH NEGATIVE SIGN is 
-  ! in RadCooling  
+  !
+  ! The dimensionless cooling function WITH NEGATIVE SIGN is
+  ! in RadCooling
 
   real :: RadCooling_C(1:nI,1:nJ,1:nK)
 
   real, parameter :: Cgs2SiEnergyDens = &
-       1.0e-7&   !erg = 1e-7 J
-       /1.0e-6    !cm3 = 1e-6 m3 
+       1.0e-7&   ! erg = 1e-7 J
+       /1.0e-6    ! cm3 = 1e-6 m3
 contains
-  !==============================
+  !============================================================================
   subroutine read_modified_cooling
     use ModReadParam
-    !---------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_modified_cooling'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call read_var('DoExtendTransitionRegion',DoExtendTransitionRegion)
     if(DoExtendTransitionRegion)then
 
@@ -42,12 +46,13 @@ contains
     else
        call read_var('TeTransitionRegionTopSi',TeTransitionRegionTopSi)
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine read_modified_cooling
-  !==============================
+  !============================================================================
 
   subroutine check_cooling_param
     use ModLookupTable, ONLY: i_lookup_table
-    !-----------------------
+    !--------------------------------------------------------------------------
 
     iTableRadCool = i_lookup_table('radcool')
     UseRadCoolingTable = iTableRadCool>0
@@ -66,7 +71,10 @@ contains
     real,   intent(out) :: RadiativeCooling
     integer,intent(out),optional::iError
     real :: NumberDensCgs
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_radiative_cooling'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(present(iError))iError=0
     if(UseMultiIon)then
        NumberDensCgs = &
@@ -89,15 +97,16 @@ contains
           RadiativeCooling = RadiativeCooling * (TeChromosphereSi/TeModSi)**2.5
        endif
     end if
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_radiative_cooling
-  !===========================================================================
+  !============================================================================
   real function radiative_cooling(TeSiIn, NumberDensCgs,iError)
     use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
-    use ModMain,          ONLY: test_string
+    use ModMain,          ONLY: StringTest
     use ModMultiFluid,    ONLY: UseMultiIon
 
-    !Imput - dimensional, output: dimensionless
+    ! Imput - dimensional, output: dimensionless
     real, intent(in):: TeSiIn, NumberDensCgs
     integer,optional,intent(out)::iError
 
@@ -105,7 +114,7 @@ contains
     real :: CoolingTableOut_I(1)
     real, parameter :: RadNorm = 1.0E+22
 
-    character(len=*), parameter :: NameSub = 'radiative_cooling'
+    character(len=*), parameter:: NameSub = 'radiative_cooling'
     !--------------------------------------------------------------------------
 
     if(UseRadCoolingTable) then
@@ -113,7 +122,7 @@ contains
        ! index, and might want to include Ne dependence in table later.
        ! Table variable should be normalized to radloss_cgs * 10E+22
        ! since we don't want to deal with such tiny numbers
-       if(index(test_string, NameSub)>0)then
+       if(index(StringTest, NameSub)>0)then
           if(TeSiIn<1.0e4.or.TeSiIn>1.0e8.or.NumberDensCgs<1.0e2.or.&
                NumberDensCgs<1.0e2.or.NumberDensCgs>1.0e14)then
              write(*,*)'TeSiIn, NumberDensCgs=',TeSiIn, NumberDensCgs
@@ -150,8 +159,11 @@ contains
 
     real, intent(in) :: TeSi
     real, intent(out):: CoolingFunctionCgs
-    !-----------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_cooling_function_fit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(TeSi <= 8e3)then
        CoolingFunctionCgs = (1.0606e-6*TeSi)**11.7
     elseif(TeSi <= 2e4)then
@@ -172,8 +184,9 @@ contains
        CoolingFunctionCgs = 10**(-26.6)*sqrt(TeSi)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_cooling_function_fit
-  !=============================================================
+  !============================================================================
   real function cooling_function_integral_si(TeTransitionRegionSi)
 
     real,intent(in):: TeTransitionRegionSi
@@ -182,9 +195,10 @@ contains
     integer:: iStep
     real:: DeltaTeSi, IntegralCgs, IntegralSi
     real, dimension(0:nStep):: X_I, Y_I, Simpson_I
-    !-----------------
-    !Calculate the integral, \int{\sqrt{T_e}\Lambda{T_e}dT_e}:
+
+    ! Calculate the integral, \int{\sqrt{T_e}\Lambda{T_e}dT_e}:
     !
+    !--------------------------------------------------------------------------
     DeltaTeSi = (TeTransitionRegionSi - TeChromosphereSi) / nStep
 
     X_I(0) = TeChromosphereSi
@@ -200,12 +214,12 @@ contains
     Y_I = Y_I * sqrt(X_I)
     IntegralCgs = sum(Simpson_I*Y_I) * DeltaTeSi / 3.0
     !\
-    !Transform to SI. Account for the transformation coefficient for n_e^2
+    ! Transform to SI. Account for the transformation coefficient for n_e^2
     !/
-    IntegralSi = IntegralCgs * Cgs2SiEnergyDens * 1.0e-12 
+    IntegralSi = IntegralCgs * Cgs2SiEnergyDens * 1.0e-12
     cooling_function_integral_si = IntegralSi
   end function cooling_function_integral_si
-  !========================================
+  !============================================================================
   subroutine add_chromosphere_heating(TeSi_C,iBlock)
     use ModGeometry, ONLY: r_BLK
     use ModConst,    ONLY: mSun, rSun, cProtonMass, cGravitation, cBoltzmann
@@ -220,7 +234,10 @@ contains
          (cProtonMass * cGravityAcceleration)
 
     real:: HeightSi_C(1:nI,1:nJ,1:nK), BarometricScaleSi, Amplitude
-    !------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'add_chromosphere_heating'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     HeightSi_C = (r_BLK(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
     if(UseStar)then
        BarometricScaleSi = TeChromosphereSi *  cBarometricScalePerT*RadiusStar**2/MassStar
@@ -234,17 +251,18 @@ contains
          CoronalHeating_C = CoronalHeating_C + &
          Amplitude * exp(-HeightSi_C/BarometricScaleSi)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_chromosphere_heating
-  !======================================
+  !============================================================================
   subroutine calc_reb_density(iSide, iFace, jFace, kFace, iBlock,&
        IsNewBlock, TotalFaceB_D,                                 &
        Te_G, TeTRTopSiIn, TeChromoSiIn, RadIntegralSiIn, DensityReb)
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModConst, ONLY: kappa_0_e
-    use ModCoronalHeating,ONLY: get_cell_heating
+    use ModCoronalHeating, ONLY: get_cell_heating
     use ModPhysics, ONLY: Si2No_V, No2Si_V, UnitX_, UnitT_,&
                           UnitEnergyDens_, UnitN_, UnitTemperature_
-    use ModFaceGradient,ONLY: get_face_gradient
+    use ModFaceGradient, ONLY: get_face_gradient
     ! function to return the density given by the Radiative Energy Balance Model
     ! (REB) for the Transition region. Originally given in Withbroe 1988, this
     ! uses eq from Lionell 2001. NO enthalpy flux correction in this
@@ -257,17 +275,17 @@ contains
 
     real,intent(inout) :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    !Temperature value in K chosen as the temperature at the top of 
-    !the transition region 
+    ! Temperature value in K chosen as the temperature at the top of
+    ! the transition region
     real, intent(in),optional :: TeTRTopSiIn
-    ! The same for 
+    ! The same for
     ! the bottom of the transition region=the top of the chromosphere
     real, intent(in),optional :: TeChromoSiIn
     ! The value of integlar of the radiation loss function time \sqrt{T}
     ! from TeChromoSi till TeTRTopSi
     real, intent(in),optional :: RadIntegralSiIn
     real, intent(out) :: DensityReb
-    real :: TeTRTopSi     = 1.0e4 
+    real :: TeTRTopSi     = 1.0e4
     real :: TeChromoSi    = 5.0e5
     ! Here Rad integral is integral of lossfunction*T^(1/2) from T=10,000 to
     ! 500,000. Use same approximate loss function used in BATS to calculate
@@ -277,7 +295,6 @@ contains
     real :: FaceGrad_D(3),GradTeSi_D(3)
     real :: TotalFaceBunit_D(3)
 
-
     ! Left and right cell centered heating
     real :: CoronalHeatingLeft, CoronalHeatingRight, CoronalHeating
 
@@ -286,7 +303,10 @@ contains
 
     integer :: iDir=0
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_reb_density'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(present(TeChromoSiIn))then
        TeChromoSi = TeChromoSiIn
@@ -312,10 +332,10 @@ contains
     ! need to get direction for face gradient calc
     ! also put left cell centered heating call here (since index depends on
     ! the direction)
-    if(iSide==1 .or. iSide==2) then 
+    if(iSide==1 .or. iSide==2) then
        iDir = x_
        call get_cell_heating(iFace-1, jFace, kFace, iBlock, CoronalHeatingLeft)
-    elseif(iSide==3 .or. iSide==4) then 
+    elseif(iSide==3 .or. iSide==4) then
        iDir = y_
        call get_cell_heating(iFace, jFace-1, kFace, iBlock, CoronalHeatingLeft)
     elseif(iSide==5 .or. iSide==6) then
@@ -333,7 +353,6 @@ contains
     qHeatSi = (2.0/7.0) * CoronalHeating * TeTRTopSi**1.5 &
          * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_)
 
-
     call get_face_gradient(iDir, iFace, jFace, kFace, iBlock, &
          IsNewBlock, Te_G, FaceGrad_D)
 
@@ -349,5 +368,8 @@ contains
     DensityReb = sqrt((qCondSi + qHeatSi) / RadIntegralSi) &
          * Si2No_V(UnitN_)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_reb_density
+  !============================================================================
 end module ModRadiativeCooling
+!==============================================================================

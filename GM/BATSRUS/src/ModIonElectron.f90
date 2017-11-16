@@ -1,11 +1,13 @@
 module ModIonElectron
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iVarTest
+
   ! methods related to the ion-electron fluid closures following Uri Schumlak
 
   use ModVarIndexes
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY:  UseUserSource, &
-       BlkTest, ProcTest, iTest,jTest,kTest, VarTest
+  use ModMain, ONLY:  UseUserSource
   use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
@@ -28,14 +30,14 @@ module ModIonElectron
 
   logical,public :: DoCorrectElectronFluid = .false.
   logical,public :: DoCorrectEfield        = .false.
-  
+
   ! calculate analytic Jacobian for point-implicit scheme
   logical, parameter:: IsAnalyticJacobian = .true.
 
   integer, allocatable, public :: iVarUseCmax_I(:)
 
 contains
-  !===========================================================================
+  !============================================================================
   subroutine read_ion_electron_param(NameCommand)
 
     use ModMain,      ONLY: NameVarLower_V
@@ -48,8 +50,10 @@ contains
     character(len=200)        :: StringVarUseCmax
     character(len(NameVar_V)) :: NameVarUseCmax_I(nVar)
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_ion_electron_param'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#HYPERBOLICDIVE")
        call read_var('HypEDecay', HypEDecay)
@@ -80,8 +84,9 @@ contains
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_ion_electron_param
-  !===========================================================================
+  !============================================================================
   subroutine ion_electron_source_impl(iBlock)
 
     ! Add electron, ion and electric field source terms to Source_VC
@@ -97,20 +102,16 @@ contains
     integer:: iIon, iRhoUx, iRhoUy, iRhoUz
     real:: ChargePerMass
 
+    logical :: DotestCell
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'ion_electron_source_impl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    logical :: DoTest, DoTestMe, DotestCell
-    character(len=*), parameter :: NameSub = 'ion_electron_source_impl'
-    !-----------------------------------------------------------------------
-
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub,DoTest,DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
     DoTestCell = .false.
 
     if(UsePointImplicit .and. .not. IsPointImplSource) then
-       if (DoTestMe) write(*,*) NameSub, ' initial return'
+       if (DoTest) write(*,*) NameSub, ' initial RETURN'
        RETURN
     end if
 
@@ -119,15 +120,15 @@ contains
     if(UsePointImplicit .and. UseUserSource) call user_calc_sources(iBlock)
 
     ! Do not evaluate multi-ion sources in the numerical Jacobian calculation
-    ! (needed for the user source terms) 
+    ! (needed for the user source terms)
     if(IsPointImplPerturbed .and. IsAnalyticJacobian) then
-       if (DoTestMe) write(*,*) &
+       if (DoTest) write(*,*) &
             NameSub, ' no evaluation in the numerical Jacobian calculation'
        RETURN
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
-       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
        if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -138,7 +139,7 @@ contains
 
        if (DoTestCell) then
           write(*,'(1x,2a,es20.12)') NameSub,' initial Source(testvar) =', &
-               Source_VC(VarTest,i,j,k)
+               Source_VC(iVarTest,i,j,k)
        end if
 
        ! d(rhou)/dt += q/m*(rho*E + rhou x B)
@@ -179,7 +180,6 @@ contains
             -C2light*sum(ChargePerMass_I * State_V(iRhoUyIon_I))
        Source_VC(Ez_,i,j,k) = &
             -C2light*sum(ChargePerMass_I * State_V(iRhoUzIon_I))
-
 
        ! Set corresponding matrix elements
        if (IsAnalyticJacobian .and. UsePointImplicit) then
@@ -230,22 +230,26 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine ion_electron_source_impl
-  !===========================================================================
+  !============================================================================
   subroutine ion_electron_init_point_impl
 
     ! Select variables for point implicit evaluation. This is the union
     ! of the ion and electron momenta, the electric field
     ! and the variables selected (if any) in ModUser::user_init_point_implicit
-    
+
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, &
          init_point_implicit_num
     use ModUserInterface ! user_init_point_implicit
 
     logical :: IsPointImpl_V(nVar)
     integer :: iVar, iPointImplVar, nPointImplVar
-    !------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'ion_electron_init_point_impl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     IsPointImpl_V = .false.
     IsPointImplMatrixSet = IsAnalyticJacobian
 
@@ -276,9 +280,10 @@ contains
        iVarPointImpl_I(iPointImplVar) = iVar
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine ion_electron_init_point_impl
+  !============================================================================
 
-  !===========================================================================
   subroutine correct_electronfluid_efield(State_VG, iMin, iMax, jMin, jMax, &
        kMin, kMax, iBlock, DoHallCurrentIn, DoGradPeIn, DoCorrectEfieldIn)
 
@@ -301,16 +306,12 @@ contains
     real, allocatable :: GradPe_DG(:,:,:,:)
     logical :: DoHallCurrent, DoGradPe, DoCorrectEfield
 
-    logical :: DoTest, DoTestMe, DoTestCell
+    logical :: DoTestCell
 
-    character (len=*), parameter :: NameSub = 'correct_electronfluid_efield'
-    !------------------------------------------------------------------------
-
-    if(iProc == ProcTest .and. iBlock == BlkTest) then
-       call set_oktest(NameSub,DoTest,DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'correct_electronfluid_efield'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! only single electron fluid is supported at this moment
     if(nElectronFluid /= 1) &
@@ -335,7 +336,7 @@ contains
     end if
 
     do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-       DoTestCell = DoTestMe .and. i == iTest .and. j == jTest .and. k == kTest
+       DoTestCell = DoTest .and. i == iTest .and. j == jTest .and. k == kTest
 
        if (DoHallCurrent .and. true_cell(i,j,k,iBlock)) then
           call get_current(i,j,k,iBlock,Current_D)
@@ -350,9 +351,10 @@ contains
 
     if (allocated(GradPe_DG)) deallocate(GradPe_DG)
 
+    call test_stop(NameSub, DoTest)
   end subroutine correct_electronfluid_efield
+  !============================================================================
 
-  !===========================================================================
   subroutine correct_electronfluid_efield_cell(State_V, Current_D, GradPe_D, &
        DoCorrectEfield, DoTest)
 
@@ -373,9 +375,8 @@ contains
     integer, parameter :: ElecUx_ = iRhoUxIon_I(Electron_),  &
          ElecUz_ = iRhoUzIon_I(Electron_)
 
-    character (len=*), parameter :: &
-         NameSub = 'correct_electronfluid_efield_cell'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'correct_electronfluid_efield_cell'
+    !--------------------------------------------------------------------------
 
     ! save the old state_V for testing
     StateOld_V = State_V
@@ -425,5 +426,7 @@ contains
        end do
     end if
   end subroutine correct_electronfluid_efield_cell
+  !============================================================================
 
 end module ModIonElectron
+!==============================================================================

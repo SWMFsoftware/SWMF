@@ -1,17 +1,20 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModElectricField
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
   ! Calculate electric field Efield_DGB from MHD quantities.
   !
-  ! Calculate potential and inductive part of the electric field: Epot and Eind 
+  ! Calculate potential and inductive part of the electric field: Epot and Eind
   ! Efield = Epot + Eind
   !
   ! where curl(Epot) = 0 and div(Eind)=0.
   !
-  ! This is similar to the projection scheme. 
+  ! This is similar to the projection scheme.
   ! NOTE: For convenience the sign of the potential is reversed.
   !
   ! Epot = grad(Potential), and Potential satisfies the Poisson equation
@@ -59,7 +62,7 @@ module ModElectricField
 
   ! Default parameters for the linear solver
   type(LinearSolverParamType):: SolverParam = LinearSolverParamType( &
-       .false.,     &! DoPrecond 
+       .false.,     &! DoPrecond
        'left',      &! TypePrecondSide
        'BILU',      &! TypePrecond
        0.0,         &! PrecondParam (Gustafsson for MBILU)
@@ -73,7 +76,7 @@ module ModElectricField
 
   ! number of blocks used
   integer:: nBlockUsed
-  
+
   ! number of unknowns to solve for
   integer:: nVarAll
 
@@ -81,15 +84,19 @@ module ModElectricField
   logical:: IsLinear = .false.
 
 contains
+  !============================================================================
 
-  !=========================================================================
   subroutine get_electric_field
 
     ! Fill in all cells of Efield_DGB with electric field
 
     integer:: iBlock
     integer:: nStepLast = -1
-    !----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_electric_field'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(nStepLast == n_step) RETURN
     nStepLast = n_step
 
@@ -110,9 +117,10 @@ contains
             TypeBcIn = 'float')
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_electric_field
+  !============================================================================
 
-  !=========================================================================
   subroutine get_electric_field_block(iBlock, DoHallCurrentIn)
 
     ! Fill in all cells of Efield_DGB with electric field for block iBlock
@@ -134,7 +142,10 @@ contains
     integer :: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
     real    :: b_D(3), uPlus_D(3), uElec_D(3), Current_D(3), InvElectronDens
     logical :: DoHallCurrent
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_electric_field_block'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(Efield_DGB))then
        allocate(Efield_DGB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        Efield_DGB = 0.0
@@ -186,15 +197,16 @@ contains
        if (DoHallCurrent) call get_current(i,j,k,iBlock,Current_D)
 
        uElec_D = uPlus_D - Current_D*InvElectronDens
-             
+
        ! E = - ue x B
        Efield_DGB(:,i,j,k,iBlock) = -cross_product(uElec_D, b_D)
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_electric_field_block
+  !============================================================================
 
-  !=========================================================================
   subroutine calc_inductive_e
 
     ! Calculate the inductive part of the electric field Eind
@@ -202,11 +214,11 @@ contains
     integer:: iBlock
     integer:: nStepLast = -1
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_inductive_e'
-    !----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*) NameSub, ' starting'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub, ' starting'
 
     if(nStepLast == n_step) RETURN
     nStepLast = n_step
@@ -218,7 +230,7 @@ contains
 
     call calc_div_e
 
-    ! Calculate Potential_GB from the Poisson equation 
+    ! Calculate Potential_GB from the Poisson equation
     ! fill ghost cells at the end
     call calc_potential
 
@@ -238,7 +250,7 @@ contains
             nG, Epot_DGB(:,:,:,:,iBlock), UseBodyCellIn=.true.)
     end do
 
-    ! Fill in ghost cells                                                                               
+    ! Fill in ghost cells
     call message_pass_cell(3,Epot_DGB)
 
     ! Calculate Epot and Eind
@@ -249,15 +261,20 @@ contains
             Epot_DGB(:,:,:,:,iBlock)
     end do
 
-    if(DoTestMe)write(*,*) NameSub, ' finished'
+    if(DoTest)write(*,*) NameSub, ' finished'
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_inductive_e
-  !=========================================================================
+  !============================================================================
   subroutine calc_div_e
 
     integer:: iBlock
     integer:: nStepLast = -1
-    !----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_div_e'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(nStepLast == n_step) RETURN
     nStepLast = n_step
 
@@ -271,8 +288,9 @@ contains
             0, DivE_CB(:,:,:,iBlock), UseBodyCellIn=.true.)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_div_e
-  !=========================================================================
+  !============================================================================
   subroutine calc_potential
 
     real, allocatable:: Rhs_I(:), Potential_I(:)
@@ -281,11 +299,11 @@ contains
 
     integer:: nStepLast = -1
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_potential'
-    !----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*) NameSub,' starting at n_step, nStepLast=', &
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' starting at n_step, nStepLast=', &
          n_step, nStepLast
 
     if(nStepLast == n_step) RETURN
@@ -312,7 +330,7 @@ contains
     call matvec_inductive_e(Potential_I, Rhs_I, nVarAll)
     Rhs_I = -Rhs_I
 
-    if(DoTestMe)write(*,*) NameSub,' min,max(BC Rhs)=', &
+    if(DoTest)write(*,*) NameSub,' min,max(BC Rhs)=', &
          minval(Rhs_I), maxval(Rhs_I)
 
     ! Add div(E) to the RHS
@@ -326,7 +344,7 @@ contains
        end do; end do; end do
     end do
 
-    if(DoTestMe)write(*,*) NameSub,' min,max(Full Rhs)=', &
+    if(DoTest)write(*,*) NameSub,' min,max(Full Rhs)=', &
          minval(Rhs_I), maxval(Rhs_I)
 
     ! Start the linear solve stage
@@ -339,12 +357,12 @@ contains
     ! solve Poisson equation Laplace(Potential) = div(E)
     call solve_linear_multiblock( SolverParam, &
          1, nDim, nI, nJ, nK, nBlockUsed, iComm, &
-         matvec_inductive_e, Rhs_I, Potential_I, DoTestMe)
+         matvec_inductive_e, Rhs_I, Potential_I, DoTest)
 
     if(SolverParam%iError /= 0 .and. iProc == 0) &
          write(*,*) NameSub,' failed in ModElectricField'
 
-    if(DoTestMe)write(*,*) NameSub,' min,max(Potential_I)=', &
+    if(DoTest)write(*,*) NameSub,' min,max(Potential_I)=', &
           minval(Potential_I), maxval(Potential_I)
 
     ! Put solution Potential_I into Potential_GB
@@ -364,12 +382,13 @@ contains
 
     deallocate(Rhs_I, Potential_I)
 
-    if(DoTestMe)write(*,*) NameSub,' min,max(Potential_GB)=', &
+    if(DoTest)write(*,*) NameSub,' min,max(Potential_GB)=', &
           minval(Potential_GB(:,:,:,1:nBlock)), &
           maxval(Potential_GB(:,:,:,1:nBlock))
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_potential
-  !=========================================================================
+  !============================================================================
   subroutine bound_potential
 
     use ModGeometry,   ONLY: body_blk, r_BLK
@@ -382,7 +401,10 @@ contains
     integer:: iBlock, i, j, k
     real:: rInside
     character(len=10):: TypeBc
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'bound_potential'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! Fill in ghost cells for Potential_GB
     call message_pass_cell(Potential_GB)
 
@@ -394,7 +416,7 @@ contains
        TypeBc = 'gradpot'
     end if
 
-    ! Fill outer ghost cells 
+    ! Fill outer ghost cells
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
@@ -418,9 +440,10 @@ contains
        end do; end do; end do
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine bound_potential
+  !============================================================================
 
-  !=========================================================================
   subroutine matvec_inductive_e(x_I, y_I, MaxN)
 
     ! Calculate y = Laplace(x)
@@ -430,7 +453,10 @@ contains
     real,    intent(out):: y_I(MaxN)
 
     integer:: iBlock, i, j, k, n
-    !---------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'matvec_inductive_e'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.allocated(Laplace_C)) allocate(Laplace_C(nI,nJ,nK))
 
     ! x_I -> Potential_GB
@@ -474,14 +500,14 @@ contains
        end do; end do; end do
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine matvec_inductive_e
-
-!===========================================================================
+  !============================================================================
 
   subroutine get_num_electric_field(iBlock)
 
     ! Calculate the total electric field which includes numerical resistivity
-    ! This estimate averages the numerical fluxes to the cell centers 
+    ! This estimate averages the numerical fluxes to the cell centers
     ! for sake of simplicity.
 
     use ModSize,       ONLY: nI, nJ, nK
@@ -491,7 +517,10 @@ contains
     use BATL_lib,      ONLY: CellFace_DB
 
     integer, intent(in) :: iBlock
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_num_electric_field'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! E_x=(fy+fy-fz-fz)/4
     ExNum_CB(:,:,:,iBlock) = - 0.25*(                                    &
          ( Flux_VY(Bz_,1:nI,1:nJ  ,1:nK  )                            &
@@ -513,7 +542,10 @@ contains
          ( Flux_VY(Bx_,1:nI  ,1:nJ  ,1:nK)                            &
          + Flux_VY(Bx_,1:nI  ,2:nJ+1,1:nK)) / CellFace_DB(2,iBlock))
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_num_electric_field
+  !============================================================================
 
 end module ModElectricField
+!==============================================================================
 

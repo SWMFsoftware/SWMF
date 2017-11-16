@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!==============================================================================
 module ModHeatConduction
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModHeatFluxCollisionless, ONLY: UseHeatFluxRegion, &
        rCollisional, rCollisionless
@@ -78,9 +80,9 @@ module ModHeatConduction
   ! electron-ion energy exchange
   real, allocatable :: PointCoef_CB(:,:,:,:)
   real, allocatable :: PointImpl_VCB(:,:,:,:,:)
- 
+
   real:: cTeTiExchangeRate
-  
+
   ! radiative cooling
   logical :: DoRadCooling = .false.
 
@@ -89,7 +91,6 @@ module ModHeatConduction
   real, allocatable :: CoolHeatDeriv_CB(:,:,:,:)
 
 contains
-
   !============================================================================
 
   subroutine read_heatconduction_param(NameCommand)
@@ -99,10 +100,10 @@ contains
 
     character(len=*), intent(in) :: NameCommand
 
-    character(len=*), parameter :: &
-         NameSub = 'ModHeatConduction::read_heatconduction_param'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_heatconduction_param'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#HEATCONDUCTION")
        call read_var('UseHeatConduction', UseHeatConduction)
@@ -137,8 +138,8 @@ contains
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_heatconduction_param
-
   !============================================================================
 
   subroutine init_heat_conduction
@@ -162,10 +163,11 @@ contains
 
     real :: HeatCondParSi, IonHeatCondParSi
     real::  cTeTiExchangeRateSi
-    character(len=*), parameter :: &
-         NameSub = 'ModHeatConduction::init_heat_conduction'
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_heat_conduction'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.UseSemiImplicit)then
        if(UseHeatConduction)then
           if(.not.allocated(Te_G))allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
@@ -237,44 +239,43 @@ contains
     ! the equation as follows:
     ! dTe/dt = -(Te-Ti)/(tau_{ei})
     ! dTi/dt = +(Te-Ti)/(tau_{ei})
-    ! The expression for 1/tau_{ei} may be found in 
-    ! Lifshitz&Pitaevskii, Physical Kinetics, Eq.42.5 
-    ! note that in the Russian edition they denote k_B T as Te and 
+    ! The expression for 1/tau_{ei} may be found in
+    ! Lifshitz&Pitaevskii, Physical Kinetics, Eq.42.5
+    ! note that in the Russian edition they denote k_B T as Te and
     ! the factor 3 is missed in the denominator:
     ! 1/tau_ei = 2* CoulombLog * sqrt{m_e} (e^2/cEps)**2* Z**2 *Ni /&
     ! ( 3 * (2\pi k_B Te)**1.5 M_p). This exchange rate scales linearly
-    ! with the plasma density, therefore, we introduce its ratio to 
+    ! with the plasma density, therefore, we introduce its ratio to
     ! the particle concentration. We calculate the temperature exchange
-    ! rate by multiplying the expression for electron-ion effective 
+    ! rate by multiplying the expression for electron-ion effective
     ! collision rate,
     ! \nu_{ei} = CoulombLog/sqrt(cElectronMass)*  &
     !            ( cElectronCharge**2 / cEps)**2 /&
     !            ( 3 *(cTwoPi*cBoltzmann)**1.50 )* Ne/Te**1.5
-    !  and then multiply in by the energy exchange coefficient    
+    !  and then multiply in by the energy exchange coefficient
     !            (2*cElectronMass/cProtonMass)
     ! The calculation of the effective electron-ion collision rate is
     ! re-usable and can be also applied to calculate the resistivity:
     ! \eta = m \nu_{ei}/(e**2 Ne)
-    !/ 
+    !/
 
     cTeTiExchangeRateSi = &
          CoulombLog/sqrt(cElectronMass)*  &!\
-         ( cElectronCharge**2 / cEps)**2 /&!effective ei collision frequency
+         ( cElectronCharge**2 / cEps)**2 /&! effective ei collision frequency
          ( 3 *(cTwoPi*cBoltzmann)**1.50 ) &!/
-         *(2*cElectronMass/cProtonMass)    !*energy exchange per ei collision
+         *(2*cElectronMass/cProtonMass)    ! *energy exchange per ei collision
     !\
     ! While used, this should be divided by TeSi**1.5 and multipled by
     ! atomic density, N_i in SI. We will apply dimensionless density
-    ! so that the transformation coefficient shoule be multiplied by 
-    ! No2Si_V(UnitN_). We will employ dimensionless Te, therefore, we should 
-    ! divide by No2Si_V(UnitTemperature_)**1.5. We also need to convert the 
-    ! exchange rate from inverse seconds to dimensionless units by dividing by 
+    ! so that the transformation coefficient shoule be multiplied by
+    ! No2Si_V(UnitN_). We will employ dimensionless Te, therefore, we should
+    ! divide by No2Si_V(UnitTemperature_)**1.5. We also need to convert the
+    ! exchange rate from inverse seconds to dimensionless units by dividing by
     ! Si2No_V(UnitT_)
     !/
 
     cTeTiExchangeRate = cTeTiExchangeRateSi * &
          (1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
-
 
     DoUserHeatConduction    = TypeHeatConduction == 'user'
     DoUserIonHeatConduction = TypeIonHeatConduction == 'user'
@@ -316,8 +317,8 @@ contains
        iTeImpl = 1
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_heat_conduction
-
   !============================================================================
 
   subroutine get_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
@@ -348,8 +349,10 @@ contains
     logical :: UseFirstOrderBc = .false.
     logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
 
-    character(len=*), parameter :: NameSub = 'ModHeatConduction::get_heat_flux'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     !\
     ! Use first order flux across the computational domain boundary with
     ! threaded-field-line-model
@@ -360,7 +363,7 @@ contains
        UseFirstOrderBc = .false.
     end if
     if(UseFirstOrderBc)then
-       iFace_D = (/iFace, jFace, kFace/) 
+       iFace_D = (/iFace, jFace, kFace/)
        UseRightStateOnly = any(&
             iFace_D(1:nDim)==1.and.NeiLev(1:(2*nDim-1):2,iBlock)==NOBLK)
        UseLeftStateOnly =  any(&
@@ -409,7 +412,7 @@ contains
             StateLeft_V, Normal_D, HeatCondL_D)
        call get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
             StateRight_V, Normal_D, HeatCondR_D)
-       
+
        HeatCond_D = 0.5*(HeatCondL_D + HeatCondR_D)
 
     end if
@@ -457,8 +460,8 @@ contains
     else
        HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
     end if
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_heat_flux
-
   !============================================================================
 
   subroutine get_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
@@ -482,9 +485,10 @@ contains
     real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te
     real :: HeatCoefSi, HeatCoef
 
-    character(len=*), parameter :: &
-         NameSub = 'ModHeatConduction::get_heat_cond_coef'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_heat_cond_coef'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseB0)then
        select case(iDir)
@@ -516,10 +520,10 @@ contains
           end if
        end if
        !\
-       !To calculate the extension factor for the transition
-       !region we may need the temperature in Kelvin.
+       ! To calculate the extension factor for the transition
+       ! region we may need the temperature in Kelvin.
        !/
-       TeSi = Te*No2Si_V(UnitTemperature_)    
+       TeSi = Te*No2Si_V(UnitTemperature_)
     else
        call user_material_properties(State_V, &
             iFace, jFace, kFace, iBlock, iDir, TeOut=TeSi)
@@ -527,7 +531,7 @@ contains
     end if
 
     if(DoWeakFieldConduction)then
-       ! Initialize these public variables. The user can change them in 
+       ! Initialize these public variables. The user can change them in
        ! user_material_properties when HeatCondOut is present
        ElectronCollisionRate = 0.0
        FractionFieldAligned  = -1.0
@@ -556,7 +560,7 @@ contains
        ! If the user did not set the field-aligned fraction, calculate it as
        ! FractionFieldAligned = 1/(1 + ElectronCollisionRate/OmegaElectron)
        ! OmegaElectron = B*q_e/m_e = B*ElectronGyroFreqCoef
-       ! The collision rate is the sum of the user supplied value 
+       ! The collision rate is the sum of the user supplied value
        ! (can be the neutral-electron rate) and
        ! the ion-electron collision rate.
        if(FractionFieldAligned < 0.0)then
@@ -574,8 +578,8 @@ contains
        HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_heat_cond_coef
-
   !============================================================================
 
   subroutine get_ion_heat_flux(iDir, iFace, jFace, kFace, iBlock, &
@@ -595,10 +599,10 @@ contains
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), CvL, CvR
 
-    character(len=*), parameter :: &
-         NameSub = 'ModHeatConduction::get_ion_heat_flux'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -639,8 +643,8 @@ contains
     end if
     HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_ion_heat_flux
-
   !============================================================================
 
   subroutine get_ion_heat_cond_coef(iDir, iFace, jFace, kFace, iBlock, &
@@ -660,10 +664,10 @@ contains
     real :: B_D(3), Bnorm, Bunit_D(3), Ti
     real :: IonHeatCoefSi, IonHeatCoef
 
-    character(len=*), parameter :: &
-         NameSub = 'ModHeatConduction::get_ion_heat_cond_coef'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_ion_heat_cond_coef'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     if(UseB0)then
        select case(iDir)
        case(1)
@@ -697,8 +701,8 @@ contains
 
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_ion_heat_cond_coef
-
   !============================================================================
 
   real function heat_cond_factor(iDir, iFace, jFace, kFace, iBlock)
@@ -733,7 +737,6 @@ contains
   end function heat_cond_factor
   !============================================================================
   ! Non-split operator, (almost) explicit ei heat energy exchange
-  !============================================================================
   subroutine calc_ei_heat_exchange
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
@@ -749,11 +752,13 @@ contains
     real :: DtLocal, TeSi
     real :: HeatExchange, HeatExchangePeP, HeatExchangePePpar
     integer:: i, j, k, iBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_ei_heat_exchange'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     HeatExchange = 0.0
     HeatExchangePeP = 0.0
     HeatExchangePePpar = 0.0
-    
 
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
@@ -780,20 +785,19 @@ contains
        !/
        if(.not.UseIdealEos)call CON_stop(&
             'No explicit ei heat exchange for non-idealized plasmas')
-       
+
        if(UseMultiion)call CON_stop(&
             'No explicit ei heat exchange for non-idealized plasmas')
-
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
           DtLocal = Cfl*time_BLK(i,j,k,iBlock)
           !\
-          !We apply the energy exchange rate for temperature,
-          !Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+          ! We apply the energy exchange rate for temperature,
+          ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
           !/
-          !For a hydrogen only, for ideal EOS only
+          ! For a hydrogen only, for ideal EOS only
           HeatExchange = cTeTiExchangeRate * &
                State_VGB(Rho_,i,j,k,iBlock)/Te_G(i,j,k)**1.5
 
@@ -825,12 +829,11 @@ contains
        call calc_energy_cell(iBlock)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_ei_heat_exchange
-
-
   !============================================================================
+
   ! Operator split, semi-implicit subroutines
-  !============================================================================
 
   subroutine get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB, &
        DeltaSemiAll_VCB, DoCalcDeltaIn)
@@ -868,7 +871,7 @@ contains
 
     logical :: DoCalcDelta
     ! Set it as allocatable
-    real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi) 
+    real :: StarSemiAll_VCB(nVarSemiAll,nI,nJ,nK,nBlockSemi)
     real :: State_V(nVar)
 
     integer :: iDim, iDir, i, j, k, Di, Dj, Dk, iBlock, iBlockSemi, iP
@@ -879,8 +882,11 @@ contains
     real :: TeEpsilonSi = 1.0, TeEpsilon, RadCoolEpsilonR, RadCoolEpsilonL
     real :: bb_DD(nDim,nDim)
     logical :: IsNewBlockTe
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_impl_heat_cond_state'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     DoCalcDelta = .false.
     if(present(DoCalcDeltaIn)) DoCalcDelta=DoCalcDeltaIn
 
@@ -926,7 +932,6 @@ contains
           enddo; enddo; enddo
        endif ! DoCalcDelta
 
-
        ! For the electron flux limiter, we need Te in the ghostcells
        if(UseMultiIon)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -948,13 +953,13 @@ contains
 
        ! Store the electron temperature in SemiAll_VCB and the
        ! specific heat in DconsDsemiAll_VCB
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI             
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
           SemiAll_VCB(iTeImpl,i,j,k,iBlockSemi) = Te_G(i,j,k)
           if(DoCalcDelta) &
                DeltaSemiAll_VCB(:,i,j,k,iBlockSemi) = &
                StarSemiAll_VCB(:,i,j,k,iBlockSemi) - &
                SemiAll_VCB(:,i,j,k,iBlockSemi)
-          
+
           TeSi = Te_G(i,j,k)*No2Si_V(UnitTemperature_)
 
           if(UseIdealEos)then
@@ -979,10 +984,10 @@ contains
              if(UseElectronPressure .and. .not.UseMultiIon)then
                 Natomic = State_VGB(Rho_,i,j,k,iBlock)/MassIon_I(1)
                 !\
-                !We apply the energy exchange rate for temperature,
-                !Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
-                !to the electron energy density, therefore,we multiply by
-                !Ne/(\gamma -1)
+                ! We apply the energy exchange rate for temperature,
+                ! Ni*cTeTiExchangeRate/Te_G(i,j,k)**1.5
+                ! to the electron energy density, therefore,we multiply by
+                ! Ne/(\gamma -1)
                 !/
                 TeTiCoef = InvGammaElectronMinus1*(AverageIonCharge*Natomic)* &
                      (cTeTiExchangeRate*Natomic/Te_G(i,j,k)**1.5)
@@ -1041,7 +1046,7 @@ contains
        end do; end do; end do
 
        if(UseFieldLineThreads.and.far_field_BCs_BLK(iBlock))then
-          !First order BC at the outer boundaries
+          ! First order BC at the outer boundaries
           if(NeiLev(1,iBlock)==NOBLK)then
              HeatCoef_G(0,:,:) = HeatCoef_G(1,:,:)
              bb_DDG(:,:,0,:,:) = bb_DDG(:,:,1,:,:)
@@ -1119,8 +1124,9 @@ contains
 
     end do
 
+    call test_stop(NameSub, DoTest)
   contains
-    !=========================================================================
+    !==========================================================================
     subroutine get_heat_cond_tensor(State_V, i, j, k, iBlock)
 
       use ModB0,         ONLY: B0_DGB
@@ -1142,9 +1148,9 @@ contains
       ! Set HeatCoef_G(i,j,k) and bb_DDG(:,iDim,i,j,k) tensor and optionally
       ! the free stream flux FreeStreamFlux_G(i,j,k) for the cell center
       ! indexed by i,j,k of block iBlock based on its state State_V.
-      ! The actual heat conduction tensor is 
+      ! The actual heat conduction tensor is
       ! HeatCoef_G(i,j,k)*bb_DDG(:,iDim,i,j,k)
-      ! so in general bb_DDG(:,iDim,i,j,k) is the sum of the bb tensor AND 
+      ! so in general bb_DDG(:,iDim,i,j,k) is the sum of the bb tensor AND
       ! an isotropic part. The isotropic part can be set as a fraction
       ! of the field aligned heat conduction.
 
@@ -1177,7 +1183,7 @@ contains
       end if
 
       if(DoWeakFieldConduction)then
-         ! Initialize these public variables. The user can change them in 
+         ! Initialize these public variables. The user can change them in
          ! user_material_properties when HeatCondOut is present
          ElectronCollisionRate = 0.0
          FractionFieldAligned  = -1.0
@@ -1236,7 +1242,7 @@ contains
          ! If the user did not set the field-aligned fraction, calculate it as
          ! FractionFieldAligned = 1/(1 + ElectronCollisionRate/OmegaElectron)
          ! OmegaElectron = B*q_e/m_e = B*ElectronGyroFreqCoef
-         ! The collision rate is the sum of the user supplied value 
+         ! The collision rate is the sum of the user supplied value
          ! (can be the neutral-electron rate) and
          ! the ion-electron collision rate
          if(FractionFieldAligned < 0.0)then
@@ -1258,10 +1264,10 @@ contains
       end if
 
     end subroutine get_heat_cond_tensor
+    !==========================================================================
 
   end subroutine get_impl_heat_cond_state
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_heat_conduction_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
@@ -1285,7 +1291,10 @@ contains
     integer :: iDim, i, j, k, Di, Dj, Dk
     real :: FaceGrad_D(MaxDim)
     logical :: IsNewBlockHeatCond, UseFirstOrderBc
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_heat_conduction_rhs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     IsNewBlockHeatCond = .true.
     UseFirstOrderBc = UseFieldLineThreads.and.far_field_BCs_BLK(iBlock)
@@ -1352,8 +1361,8 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_heat_conduction_rhs
-
   !============================================================================
 
   subroutine add_jacobian_heat_cond(iBlock, nVarImpl, Jacobian_VVCI)
@@ -1375,7 +1384,10 @@ contains
 
     integer :: i, j, k, iDim, Di, Dj, Dk
     real :: DiffLeft, DiffRight, InvDcoord_D(nDim), InvDxyzVol_D(nDim), Coeff
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'add_jacobian_heat_cond'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Contributions due to electron-ion energy exchange
     if(UseElectronPressure .and. .not.UseMultiIon)then
@@ -1433,15 +1445,15 @@ contains
        end do; end do; end do
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_jacobian_heat_cond
-
   !============================================================================
 
   subroutine update_impl_heat_cond(iBlock, iBlockSemi, &
        NewSemiAll_VC, OldSemiAll_VC, DconsDsemiAll_VC)
 
     ! The use ModVarIndexes has to be next to use ModAdvance for sake
-    ! of the extremely advanced PGF90 12.9 compiler 
+    ! of the extremely advanced PGF90 12.9 compiler
 
     use ModAdvance,  ONLY: State_VGB, UseIdealEos, UseElectronPressure, &
          UseAnisoPressure, time_BLK
@@ -1468,7 +1480,10 @@ contains
     real :: DeltaEinternal, Einternal, EinternalSi, PressureSi, pMin
     real :: GammaTmp
     real :: DtLocal
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_impl_heat_cond'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseElectronPressure)then
        iP = Pe_
@@ -1544,6 +1559,9 @@ contains
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_impl_heat_cond
+  !============================================================================
 
 end module ModHeatConduction
+!==============================================================================

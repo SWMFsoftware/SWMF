@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModFaceBoundary
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iVarTest
 
   use ModVarIndexes, ONLY: nVar
   use ModMultiFluid, ONLY: nIonFluid
@@ -28,7 +30,7 @@ module ModFaceBoundary
   ! Negative iBoundary indicates which body we are computing for.
   ! Zero corresponds to the user defined extra boundary.
   ! iBoundary=1:6  for cell boundaries set by #OUTERBOUNDARY
-  ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY  
+  ! iBoundary=7:12 for face boundaries set by #BOXBOUNDARY
   integer, public :: iBoundary
 
   ! Index of the face
@@ -45,8 +47,7 @@ module ModFaceBoundary
 
   ! The time at which the (time dependent) boundary condition is calculated
   real, public :: TimeBc
-  
-  
+
   ! Local variables
 
   ! Values for configuring empirical ionospheric outflow boundary conditions:
@@ -78,18 +79,20 @@ contains
 
     integer:: iDensity
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_face_boundary_param'
-    !----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#INNERBOUNDARY")
        call read_var('TypeBcInner',TypeFaceBc_I(body1_))
-       if(UseBody2) call read_var('TypeBcBody2',TypeFaceBc_I(body2_)) 
+       if(UseBody2) call read_var('TypeBcBody2',TypeFaceBc_I(body2_))
 
     case("#OUTFLOWCRITERIA")
        call read_var('OutflowVelocity', OutflowVelocity)
        call read_var('FluxAlpha',       FluxAlpha)
        call read_var('FluxBeta',        FluxBeta)
-       
+
     case("#POLARBOUNDARY")
        do iFluid = IonFirst_, nFluid
           call read_var('PolarNDim',  PolarNDim_I(iFluid))
@@ -113,13 +116,13 @@ contains
        call stop_mpi(NameSub//': unknown command = '//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_face_boundary_param
   !============================================================================
   subroutine set_face_boundary(iBlock, TimeBcIn, DoResChangeOnlyIn)
 
     use ModProcMH, ONLY: iProc
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use ModMain, ONLY: ProcTest, BlkTest, iTest, jTest, kTest, VarTest
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
     use ModGeometry, ONLY: true_cell
@@ -129,70 +132,67 @@ contains
     real,    intent(in) :: TimeBcIn
     logical, intent(in) :: DoResChangeOnlyIn
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='set_face_boundary'
     logical, allocatable :: IsBodyCell_G(:,:,:)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_face_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(IsBodyCell_G))&
          allocate(IsBodyCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
     call timing_start(NameSub)
-
-    if(iBlock==BLKtest.and.iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest,DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    endif
 
     ! set variables in module
     TimeBc          = TimeBcIn
     DoResChangeOnly = DoResChangeOnlyIn
     iBlockBc        = iBlock
 
-    if(DoTestMe)call write_face_state('Initial')
+    if(DoTest)call write_face_state('Initial')
 
     ! This call may be needed for moving bodies, but not in general
     !!! call set_boundary_cells(iBlockBc)
 
     IsBodyCell_G(:,:,:) = &
          .not.(iBoundary_GB(:,:,:,iBlockBc) == domain_)
-          
+
     call set_face_bc(IsBodyCell_G, true_cell(:,:,:,iBlockBc) )
 
-    if(DoTestMe)call write_face_state('Final')
+    if(DoTest)call write_face_state('Final')
 
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-    !=========================================================================
+    !==========================================================================
     subroutine write_face_state(String)
 
       character(len=*), intent(in):: String
 
+      !------------------------------------------------------------------------
       write(*,*) NameSub,' ',String,' face states:'
       write(*,*) 'VarL_x, VarR_x(iTest)  =',&
-           LeftState_VX(VarTest,  Itest, Jtest, Ktest),  &
-           RightState_VX(VarTest, Itest, Jtest, Ktest)
+           LeftState_VX(iVarTest,  iTest, jTest, kTest),  &
+           RightState_VX(iVarTest, iTest, jTest, kTest)
       write(*,*) 'VarL_x, VarR_x(iTest+1)=',&
-           LeftState_VX(VarTest,  Itest+1, Jtest, Ktest), &
-           RightState_VX(VarTest, Itest+1, Jtest, Ktest)
+           LeftState_VX(iVarTest,  iTest+1, jTest, kTest), &
+           RightState_VX(iVarTest, iTest+1, jTest, kTest)
       write(*,*) 'VarL_y, VarR_y(jTest)  =',&
-           LeftState_VY(VarTest,  Itest, Jtest, Ktest),  &
-           RightState_VY(VarTest, Itest, Jtest, Ktest)
+           LeftState_VY(iVarTest,  iTest, jTest, kTest),  &
+           RightState_VY(iVarTest, iTest, jTest, kTest)
       write(*,*) 'VarL_y, VarR_y(jTest+1)=',&
-           LeftState_VY(VarTest,  Itest, Jtest+1, Ktest), &
-           RightState_VY(VarTest, Itest, Jtest+1, Ktest)
+           LeftState_VY(iVarTest,  iTest, jTest+1, kTest), &
+           RightState_VY(iVarTest, iTest, jTest+1, kTest)
       write(*,*) 'VarL_z, VarR_z(kTest)  =',&
-           LeftState_VZ(VarTest,  Itest, Jtest, Ktest), &
-           RightState_VZ(VarTest, Itest, Jtest, Ktest)
+           LeftState_VZ(iVarTest,  iTest, jTest, kTest), &
+           RightState_VZ(iVarTest, iTest, jTest, kTest)
       write(*,*) 'VarL_z, VarR_z(kTest+1)=',&
-           LeftState_VZ(VarTest,  Itest, Jtest, Ktest+1), &
-           RightState_VZ(VarTest, Itest, Jtest, Ktest+1)
+           LeftState_VZ(iVarTest,  iTest, jTest, kTest+1), &
+           RightState_VZ(iVarTest, iTest, jTest, kTest+1)
 
     end subroutine write_face_state
+    !==========================================================================
 
   end subroutine set_face_boundary
-
   !============================================================================
 
   subroutine set_face_bc(IsBodyCell_G, IsTrueCell_G)
@@ -225,21 +225,15 @@ contains
     ! External function for ionosphere
     real:: RhoCpcp_I(nIonDensity)
 
-    character (len=*), parameter :: NameSub = 'set_face_bc'
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_face_bc'
     !--------------------------------------------------------------------------
-    if(iBlockBc==BLKtest.and.iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-       if(DoTestMe)write(*,*) NameSub,' starting'
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    call test_start(NameSub, DoTest, iBlockBc)
 
     if(TypeFaceBc_I(body1_) == 'polarwind') then
        GmToSmg_DD = transform_matrix(Time_Simulation, TypeCoordSystem, 'SMG')
        Cos2PolarTheta = cos(PolarTheta)**2
     end if
-
 
     ! Calculate inner BC density from cross polar cap potential if required
     ! Use KeV units for Cpcp and amu/cc for density.
@@ -248,10 +242,9 @@ contains
          * 0.5*(logvar_ionosphere('cpcpn') + logvar_ionosphere('cpcps')) &
          * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
 
-
     !\
     ! Apply face boundary conditions as required.
-    !/                            
+    !/
     B0Face_D = 0.0
 
     do k = kMinFace, kMaxFace
@@ -260,7 +253,6 @@ contains
              !\
              ! Apply BCs at X-direction faces as necessary.
              !/
-             !====================================
              !         NUMBERING!
              !
              !     C     F     C  B  F     C
@@ -268,7 +260,6 @@ contains
              !
              !     i-1   i     i     i+1   i+1
              !
-             !====================================
              if (IsTrueCell_G(i-1,j,k) .and. &
                   IsBodyCell_G(i,j,k) .and. &
                   (.not.DoResChangeOnly .or. &
@@ -307,11 +298,11 @@ contains
 
                 call set_face(i,j,k,i-1,j,k)
 
-                LeftState_VX(:,i,j,k) = VarsGhostFace_V                
+                LeftState_VX(:,i,j,k) = VarsGhostFace_V
              end if
-          end do !end i loop
-       end do !end j loop
-    end do !end k loop
+          end do ! end i loop
+       end do ! end j loop
+    end do ! end k loop
 
     if(nDim == 1) RETURN
     do k = kMinFace, kMaxFace
@@ -337,7 +328,7 @@ contains
 
                 call set_face(i,j-1,k,i,j,k)
 
-                RightState_VY(:,i,j,k) = VarsGhostFace_V           
+                RightState_VY(:,i,j,k) = VarsGhostFace_V
              end if
 
              if (IsTrueCell_G(i,j,k) .and. &
@@ -359,9 +350,9 @@ contains
 
                 LeftState_VY(:,i,j,k) = VarsGhostFace_V
              end if
-          end do !end j loop
-       end do !end i loop
-    end do !end k loop
+          end do ! end j loop
+       end do ! end i loop
+    end do ! end k loop
 
     if(nDim == 2) RETURN
     do k = 1, nKFace
@@ -410,10 +401,11 @@ contains
                 LeftState_VZ(:,i,j,k) = VarsGhostFace_V
 
              end if
-          end do !end i loop
-       end do !end j loop
-    end do !end k loop
+          end do ! end i loop
+       end do ! end j loop
+    end do ! end k loop
 
+    call test_stop(NameSub, DoTest, iBlockBc)
   contains
     !==========================================================================
     subroutine set_face(iTrue, jTrue, kTrue, iGhost, jGhost, kGhost)
@@ -460,11 +452,12 @@ contains
       integer:: iDir
       real:: Normal_D(MaxDim)
 
-      !logical:: DoTestCell
+      ! logical:: DoTestCell
       logical, parameter:: DoTestCell = .false.
       character(len=*), parameter:: NameSubSub = 'set_face'
       !------------------------------------------------------------------------
-      !DoTestCell = DoTestMe .and. i==iTest+1 .and. j==jTest .and. k==kTest
+
+      ! DoTestCell = DoTestMe .and. i==iTest+1 .and. j==jTest .and. k==kTest
 
       if(DoTestCell)write(*,*) NameSubSub,' starting with ijkTrue, ijkGhost=',&
            iTrue, jTrue, kTrue, iGhost, jGhost, kGhost
@@ -491,9 +484,9 @@ contains
       end if
 
       ! Default fixed/initial state for this boundary
-      FaceState_V = FaceState_VI(:, iBoundary)  
+      FaceState_V = FaceState_VI(:, iBoundary)
 
-      select case(TypeBc) 
+      select case(TypeBc)
       case('linetied','ionospherefloat')
          VarsGhostFace_V        =  VarsTrueFace_V
          VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
@@ -527,7 +520,7 @@ contains
          ! reflect the normal component of B1 (reflect/reflectall)
          ! or full B (reflectb)
          ! reflect the normal component of the velocities for reflectall
-         ! reflect the full velocity vectors for reflect and reflectb 
+         ! reflect the full velocity vectors for reflect and reflectb
 
          ! Apply floating condition on densities and pressures
          VarsGhostFace_V          =  VarsTrueFace_V
@@ -606,7 +599,7 @@ contains
             ! polarwind type conditions
             if(UsePw)then
                ! Get density/ies and velocity from polarwind code
-               call read_pw_buffer(FaceCoords_D,nVar,FaceState_V) !^CMP IF PW
+               call read_pw_buffer(FaceCoords_D,nVar,FaceState_V) ! ^CMP IF PW
                VarsGhostFace_V = FaceState_V
 
                ! Reapply floating conditions on P and B
@@ -629,7 +622,7 @@ contains
             ! Ionosphere type conditions
 
             ! Use body densities but limit jump
-            ! Pressure gets set too (!). It will be overwritten below
+            ! Pressure gets set too (! ). It will be overwritten below
             where(DefaultState_V(1:nVar) > cTiny)
                VarsGhostFace_V = VarsTrueFace_V + &
                     sign(1.0, FaceState_V - VarsTrueFace_V)*   &
@@ -664,14 +657,14 @@ contains
             ! Ionosphere outflow in multifluids  --- Yiqun 2008
             !---------------------------------------------------
 
-            if(TypeBc == 'ionosphereoutflow')then      
+            if(TypeBc == 'ionosphereoutflow')then
 
                iIonSecond = min(IonFirst_ + 1, IonLast_)
 
-               if (TypeCoordSystem /= 'SMG') then 
+               if (TypeCoordSystem /= 'SMG') then
                   SmgFaceCoords_D = matmul(transform_matrix(TimeBc, &
                        TypeCoordSystem, 'SMG'), FaceCoords_D)
-               else 
+               else
                   SmgFaceCoords_D = FaceCoords_D
                endif
 
@@ -680,12 +673,12 @@ contains
 
                if(abs(SmgFaceCoords_D(z_)) > zCap)then
                   ! for the polar region
-                  if(UseIe .and. UseMultiIon) then 
+                  if(UseIe .and. UseMultiIon) then
 
-                     if (TypeCoordSystem /= 'GEO') then 
+                     if (TypeCoordSystem /= 'GEO') then
                         GeoFaceCoords_D = matmul(transform_matrix(TimeBc, &
                              TypeCoordSystem, 'GEO'), FaceCoords_D)
-                     else 
+                     else
                         GeoFaceCoords_D = FaceCoords_D
                      endif
                      GseToGeo_D = matmul(transform_matrix(TimeBc,'GSE','GEO'),&
@@ -693,7 +686,7 @@ contains
 
                      ! For the cap region (refer to Tom Moore 2003?)
                      ! Get the Op flux from IE calculation
-                     ! Get the Hp flux from fluxpw, 
+                     ! Get the Hp flux from fluxpw,
                      ! which is constant for certain solar zenith angle
                      ! Fix the velocities(V), thermal energies
                      ! Get the densities(rho), thermal pressure(P)
@@ -703,7 +696,6 @@ contains
                           TypeCoordSystem//'NORM', bFace_D)
                      b =  sqrt(sum(bFace_D**2))
                      bUnit_D = bFace_D / B
-
 
                      ! get the magnetic field at 4000km = 4e6m
                      call map_planet_field(TimeBc, FaceCoords_D, &
@@ -715,43 +707,43 @@ contains
 
                      b4 =  sqrt(sum(bFace_D**2))
 
-                     ! get the joule heating mapped from the ionosphere 
+                     ! get the joule heating mapped from the ionosphere
                      ! (already in nomalized unit)
                      call get_inner_bc_jouleheating(SmgFaceCoords_D, &
                           JouleHeating)
 
-                     ! get the O+ flux based on Strangeway's formula, 
+                     ! get the O+ flux based on Strangeway's formula,
                      ! and scale it
                      FluxIono = FluxAlpha*(JouleHeating*No2Si_V(UnitPoynting_)&
                           * 1.0e3)**FluxBeta * 1.0e4 &
                           * Si2No_V(UnitU_) * Si2No_V(UnitN_) * (b4/b)**0.265
 
-                     ! thermal energy = 0.1 + 1.6 * S^1.26 
+                     ! thermal energy = 0.1 + 1.6 * S^1.26
                      ! (S is joule heating in mW/m^2 at inner boundary)
                      ! to specify the O+ temperature
                      eCap = 0.1 + 9.2 * &
                           ((b4/b)* JouleHeating*No2Si_V(UnitPoynting_) &
-                          * 1.0e3)**0.35    !eV
+                          * 1.0e3)**0.35    ! eV
 
-                     ! Get the field aligned current at this location, 
+                     ! Get the field aligned current at this location,
                      ! so comes the parallel energy
                      call get_point_data(1.0, FaceCoords_D, 1, nBlock, Bx_, &
                           nVar+3, State_V)
 
                      Jlocal_D = State_V(nVar+1:nVar+3)
-                     Jpar = sum(bUnit_D * Jlocal_D)  !in normalized unit
+                     Jpar = sum(bUnit_D * Jlocal_D)  ! in normalized unit
 
-                     ! parallel energy 
+                     ! parallel energy
                      ! (ePar = eV=e*(1500[V/mmA/m^2] * (J//-0.33)^2 [mmA/m^2]))
-                     if(abs(Jpar*No2Si_V(UnitJ_))*1.0e6 > 0.33)then 
+                     if(abs(Jpar*No2Si_V(UnitJ_))*1.0e6 > 0.33)then
                         ePar = 1500 * (abs(Jpar*No2Si_V(UnitJ_))*1.0e6 &
-                             - 0.33)**2 !eV
+                             - 0.33)**2 ! eV
                      else
                         ePar = 0.
                      end if
 
                      if(OutflowVelocity<0)then
-                        ! If outflowvelocity <0, 
+                        ! If outflowvelocity <0,
                         ! get the velocity along B, superpose the parallel
                         ! velocity and the thermal velocity
                         Ub_V(1) = (sqrt(2 * (ePar + eCap) * cElectronCharge / &
@@ -766,17 +758,17 @@ contains
                         Ub_V(1) = OutflowVelocity*Io2No_V(UnitU_)
                      end if
 
-                     ! SZA x is determind by 
+                     ! SZA x is determind by
                      ! cosx = sin(the)sin(da)+cos(the)cos(da)cos(dt)
-                     ! where, the is the latitude, da is solar declination( 
-                     ! angle between solar ray and equatorial plane), 
+                     ! where, the is the latitude, da is solar declination(
+                     ! angle between solar ray and equatorial plane),
                      ! dt is local time angle
                      TheTmp = asin(GeoFaceCoords_D(z_)/ &
-                          sqrt(sum(GeoFaceCoords_D**2)))      !latitutde
-                     DaTmp = acos(GseToGeo_D(z_))               !declination
+                          sqrt(sum(GeoFaceCoords_D**2)))      ! latitutde
+                     DaTmp = acos(GseToGeo_D(z_))               ! declination
                      DtTmp = acos(SmgFaceCoords_D(x_)/ &
                           sqrt(SmgFaceCoords_D(x_)**2 + &
-                          SmgFaceCoords_D(y_)**2))        !local time angle
+                          SmgFaceCoords_D(y_)**2))        ! local time angle
 
                      if(SmgFaceCoords_D(y_)<0.0) DtTmp =  cTwoPi - DtTmp
                      Cosx = sin(TheTmp)*sin(DaTmp) + &
@@ -791,7 +783,7 @@ contains
                           TypeCoordSystem//'NORM', bFace_D)
                      b1 =  sqrt(sum(bFace_D**2))
 
-                     ! get the Hp flux by mapping the flux at 1000km 
+                     ! get the Hp flux by mapping the flux at 1000km
                      ! into the inner boudnary
                      if (acos(Cosx)*cRadToDeg < 90 .and. &
                           acos(Cosx)*cRadToDeg > 0.) then
@@ -810,7 +802,7 @@ contains
                      VarsGhostFace_V(iRho_I(IonFirst_))  = FluxPw/Ub_V(1)   * &
                           MassFluid_I(IonFirst_)
                      VarsGhostFace_V(iRho_I(iIonSecond)) = FluxIono/Ub_V(2) * &
-                          MassFluid_I(iIonSecond)     
+                          MassFluid_I(iIonSecond)
 
                      ! Make sure it points outward
                      if(sum(bUnit_D*FaceCoords_D) < 0.0) bUnit_D = -bUnit_D
@@ -830,7 +822,7 @@ contains
                           * VarsGhostFace_V(iRho_I(iIonSecond)) &
                           /MassFluid_I(iIonSecond)
                      VarsGhostFace_V(iP_I(IonFirst_))   =  2./3. * eCap * &
-                          cElectronCharge / cBoltzmann & 
+                          cElectronCharge / cBoltzmann &
                           * Si2No_V(UnitTemperature_)  &
                           * VarsGhostFace_V(iRho_I(IonFirst_)) &
                           /MassFluid_I(IonFirst_)
@@ -841,7 +833,7 @@ contains
                      VarsGhostFace_V(iUx_I(1))  = sum(VarsGhostFace_V( &
                           iRho_I(IonFirst_:iIonSecond)) &
                           * VarsGhostFace_V(iUx_I(IonFirst_:iIonSecond)))&
-                          /sum(VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond))) 
+                          /sum(VarsGhostFace_V(iRho_I(IonFirst_:iIonSecond)))
                      VarsGhostFace_V(iUy_I(1))  = sum(VarsGhostFace_V( &
                           iRho_I(IonFirst_:iIonSecond)) &
                           * VarsGhostFace_V(iUy_I(IonFirst_:iIonSecond)))&
@@ -871,7 +863,7 @@ contains
          end if
 
       case('absorb')
-         ! for inflow float everything 
+         ! for inflow float everything
          VarsGhostFace_V = VarsTrueFace_V
 
          ! Calculate 1/r^2
@@ -892,9 +884,9 @@ contains
               - 2*sum(VarsTrueFace_V(Bx_:Bz_)*FaceCoords_D)*r2Inv*FaceCoords_D
 
       case('buffergrid')
-         ! REVISION: June  2011 - R. Oran - generalized.   
+         ! REVISION: June  2011 - R. Oran - generalized.
          ! Inner boundary conditions based on coupling to another BATSRUS
-         ! component through a buffer grid. 
+         ! component through a buffer grid.
 
          ! Allows specifying boundary conditions for additional variables
          ! that were not passed through the buffer.
@@ -903,7 +895,7 @@ contains
          ! Note: the older case 'coronatoih' is redirected to here for
          ! backwards compatability.
 
-         !Get interpolated values from buffer grid:
+         ! Get interpolated values from buffer grid:
          call get_from_spher_buffer_grid(&
               FaceCoords_D,nVar,FaceState_V)
 
@@ -915,7 +907,7 @@ contains
             ! through the buffer grid. BC's for fluids must be specified
             ! somehow.
 
-            if (DoOhNeutralBc) then   
+            if (DoOhNeutralBc) then
                ! Get face BCs for neutrals in the outerheliosphere
                ! (based on M. Opher)
                ! Pop I is going through the inner BCs
@@ -925,7 +917,7 @@ contains
                ! For the transient case of inward flow, use a fraction of ions
 
                ! Pop III has the velocity and temperature of the ions at inner
-               !boundary,  the density is taken to be a fraction of the ions
+               ! boundary,  the density is taken to be a fraction of the ions
 
                VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
                     VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
@@ -945,7 +937,7 @@ contains
                   end if
                end do
 
-            else 
+            else
                ! If this component is multyfluid and coupled to a single-fluid,
                ! stop with an error
                call CON_stop( &
@@ -953,18 +945,16 @@ contains
             end if
          end if
 
-
       case('Body2Orbit')
          VarsGhostFace_V = FaceState_V
          VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0Face_D
 
-         ! Setting velocity BCs to be the second body orbital velocity: 
+         ! Setting velocity BCs to be the second body orbital velocity:
          VarsGhostFace_V(Ux_) = &
-              -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_) 
+              -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
          VarsGhostFace_V(Uy_) = &
               (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
          VarsGhostFace_V(Uz_) =  0.0
-
 
       case default
          write(*,*) NameSub,': iTrue, jTrue, kTrue, iBlockBc =', &
@@ -998,7 +988,6 @@ contains
          end select
       end if
 
-
       if (UseRotatingBc .and. iBoundary==Body1_) then
 
          ! Calculate corotation velocity uRot_D at position FaceCoords
@@ -1012,11 +1001,14 @@ contains
             VarsGhostFace_V(iUz_I) = 2*uRot_D(z_) + VarsGhostFace_V(iUz_I)
          case default
             call stop_mpi('UseRotatingBc is not compatible with TypeFaceBc_I='&
-                 //TypeBc) 
+                 //TypeBc)
          end select
       end if
     end subroutine set_face
+    !==========================================================================
 
   end subroutine set_face_bc
+  !============================================================================
 
 end module ModFaceBoundary
+!==============================================================================

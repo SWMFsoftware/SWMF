@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModAdvance
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModSize
   use ModVarIndexes
@@ -68,7 +71,7 @@ module ModAdvance
   character (len=10), allocatable :: TypeConservCrit_I(:)
 
   ! Geometrical parameters
-  real    :: rConserv, xParabolaConserv, yParabolaConserv 
+  real    :: rConserv, xParabolaConserv, yParabolaConserv
 
   ! Physics based parameters (to locate shocks)
   real    :: pCoeffConserv, GradPCoeffConserv
@@ -94,7 +97,6 @@ module ModAdvance
   real, allocatable :: tmp1_BLK(:,:,:,:)
   real, allocatable :: tmp2_BLK(:,:,:,:)
 
-
   real, allocatable :: time_BLK(:,:,:,:)
 
   ! Electric field including numerical flux
@@ -112,7 +114,7 @@ module ModAdvance
   ! Extra source terms coming from other models in the SWMF
   ! It should be allocated in the coupler
   real, allocatable :: ExtraSource_ICB(:,:,:,:,:)
-  
+
   real, allocatable :: DivB1_GB(:,:,:,:)
 
   ! Face centered variables for the current block
@@ -128,8 +130,8 @@ module ModAdvance
   logical, allocatable:: &
        UseLowOrder_X(:,:,:), UseLowOrder_Y(:,:,:), UseLowOrder_Z(:,:,:)
   logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
-  logical:: UseLowOrderRegion = .false. 
-  
+  logical:: UseLowOrderRegion = .false.
+
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
 
@@ -164,7 +166,7 @@ module ModAdvance
   ! Merge cells around the polar axis in spherical geometry
   !/
   logical :: DoFixAxis = .false.
-  real ::    rFixAxis = 0.0, r2FixAxis = 0.0 
+  real ::    rFixAxis = 0.0, r2FixAxis = 0.0
 
   !\
   ! Block type information
@@ -181,12 +183,15 @@ module ModAdvance
        ImplBlock_=4           ! Blocks changing with the implicit scheme
 
 contains
-
   !============================================================================
 
   subroutine init_mod_advance
 
     ! These arrays may need allocation depending on the parameters
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_advance'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(DoCalcElectricField .and. .not.allocated(ExNum_CB))then
        allocate(ExNum_CB(nI,nJ,nK,MaxBlock))
        allocate(EyNum_CB(nI,nJ,nK,MaxBlock))
@@ -214,7 +219,7 @@ contains
     if(allocated(State_VGB)) RETURN
 
     ! The arrays below are allocated at the beginning (if at all)
-    if(UseB)then 
+    if(UseB)then
        allocate(DivB1_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        DivB1_GB = 0.0
     end if
@@ -250,7 +255,7 @@ contains
 
     allocate(IsLowOrderOnly_B(MaxBlock))
     IsLowOrderOnly_B = .true.
-    
+
     iTypeAdvance_B  = SkippedBlock_
     iTypeAdvance_BP = SkippedBlock_
 
@@ -259,12 +264,16 @@ contains
        write(iUnitOut,'(a)') 'init_mod_advance allocated arrays'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_advance
-
   !============================================================================
 
   subroutine clean_mod_advance
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'clean_mod_advance'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(allocated(State_VGB))       deallocate(State_VGB)
     if(allocated(Energy_GBI))      deallocate(Energy_GBI)
     if(allocated(StateOld_VGB))    deallocate(StateOld_VGB)
@@ -305,14 +314,15 @@ contains
     if(allocated(UseLowOrder_Y))   deallocate(UseLowOrder_Y)
     if(allocated(UseLowOrder_Z))   deallocate(UseLowOrder_Z)
     if(allocated(IsLowOrderOnly_B))deallocate(IsLowOrderOnly_B)
-    
+
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_advance deallocated arrays'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine clean_mod_advance
-
   !============================================================================
 
 end module ModAdvance
+!==============================================================================

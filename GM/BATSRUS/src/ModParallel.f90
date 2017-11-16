@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModParallel
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModSize, ONLY: MaxBlock
   use BATL_tree, ONLY: Unset_
   implicit none
@@ -9,7 +12,7 @@ module ModParallel
 
   !\
   ! Neighbor solution block refinement levels
-  ! ( 0=neighbors at same level, 
+  ! ( 0=neighbors at same level,
   !  -1=neighbors at lower level,
   !  +1=neighbors at higher level,
   !  NOBLK=no neighbors).
@@ -24,7 +27,7 @@ module ModParallel
   !\
   ! Neighbor processor and block numbers (a value of NOBLK
   ! means not used).  As only one level change is permitted
-  ! between neighboring solution blocks, there are either 1 or 4 
+  ! between neighboring solution blocks, there are either 1 or 4
   ! neighboring blocks in each of the six directions.
   !/
   integer, dimension(4,MaxBlock) :: &
@@ -37,6 +40,7 @@ module ModParallel
   integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)
 
 contains
+  !============================================================================
 
   subroutine init_mod_parallel
 
@@ -49,17 +53,22 @@ contains
     use ModSize, ONLY: MaxBlock
 
     integer :: jProc
-    !---------------------------------------------------------------
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_parallel'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(allocated(nBlockMax_P)) RETURN
-    
+
     allocate(nBlockMax_P(0:nProc-1), MaxBlockDisp_P(0:nProc-1))
     do jProc = 0, nProc-1
        MaxBlockDisp_P(jProc) = jProc*MaxBlock
     end do
     nBlockMax_P = 0
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_parallel
+  !============================================================================
 
 end module ModParallel
+!==============================================================================

@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModFaceGradient
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModSize, ONLY: MaxDim, nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        j0_, j2_, nJp1_, nJm1_, k0_, k2_, nKp1_, nKm1_, &
@@ -25,7 +27,6 @@ module ModFaceGradient
   real, public :: DcoordDxyz_DDFD(MaxDim,MaxDim,1:nI+1,1:nJ+1,1:nK+1,MaxDim)
 
 contains
-
   !============================================================================
 
   subroutine set_block_field2(iBlock, nVar, Field1_VG, Field_VG)
@@ -48,11 +49,14 @@ contains
     integer :: ip, jp, kp
 
     logical :: IsEqualLevel_G(0:nI+1,0:nJ+1,0:nK+1)
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_block_field2'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     Field1_VG = Field_VG
 
-    do kSide = -1,1; 
+    do kSide = -1,1;
        if(nK == 1 .and. kSide /= 0) CYCLE
        do jSide = -1,1
           if(nJ == 1 .and. jSide /= 0) CYCLE
@@ -83,8 +87,8 @@ contains
              else
                 IsEqualLevel_G(iL:iR,jL:jR,kL:kR) = .false.
              end if
-          end do; 
-       end do; 
+          end do;
+       end do;
     end do
 
     ! Do the faces
@@ -93,8 +97,8 @@ contains
           ! Interpolate in 1D. Fine cell center is twice further than coarse
           Field_VG(:,0,1,1) = (2*Field1_VG(:,0,1,1) + Field1_VG(:,1,1,1))/3
        else
-          ! Interpolate 3 co-planar cell centers 
-          ! 0,j2,k2 is the fine ghost cell to be filled in, 
+          ! Interpolate 3 co-planar cell centers
+          ! 0,j2,k2 is the fine ghost cell to be filled in,
           !         originally it is the coarse cell (1st order prolongation)
           ! 1,j2,k2 is the fine physical cell next to the ghost cell
           ! 0,jp,kp is a fine/coarse nearby ghost cell chosen in the same plane
@@ -105,7 +109,7 @@ contains
           !
           ! The corner and coarse cell center are then interpolated
 
-          do k1=1, nK, 2; do j1=1, nJ, 2; 
+          do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
                 jp = 3*j2 - 2*j1 -1
                 if(nK == 1) kp = 1
@@ -117,7 +121,7 @@ contains
                    Field_VG(:,0,j2,k2) = c0*Field1_VG(:,0,j2,k2) &
                         + p0*Field1_VG(:,0,jp,kp) + F1*Field_VG(:,1,j2,k2)
                 end if
-             end do; end do; 
+             end do; end do;
           end do; end do
        end if
     end if
@@ -127,7 +131,7 @@ contains
           Field_VG(:,nI+1,1,1) = &
                (2*Field1_VG(:,nI+1,1,1) + Field1_VG(:,nI,1,1))/3
        else
-          do k1=1, nK, 2; do j1=1, nJ, 2; 
+          do k1=1, nK, 2; do j1=1, nJ, 2;
              do k2 = k1,k1+min(1,nK-1); do j2 = j1,j1+1
                 jp = 3*j2 - 2*j1 -1
                 if(nK == 1) kp = 1
@@ -139,7 +143,7 @@ contains
                    Field_VG(:,nI+1,j2,k2) = c0*Field1_VG(:,nI+1,j2,k2) &
                         + p0*Field1_VG(:,nI+1,jp,kp) + F1*Field_VG(:,nI,j2,k2)
                 end if
-             end do; end do; 
+             end do; end do;
           end do; end do
        end if
     end if
@@ -147,7 +151,7 @@ contains
     if(nJ == 1) RETURN
 
     if(NeiLsouth(iBlock) == 1)then
-       do k1=1, nK, 2; do i1=1, nI, 2; 
+       do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1
              if(nK == 1) kp = 1
@@ -159,12 +163,12 @@ contains
                 Field_VG(:,i2,j0_,k2) = c0*Field1_VG(:,i2,j0_,k2) &
                      + p0*Field1_VG(:,ip,j0_,kp) + F1*Field_VG(:,i2,1,k2)
              end if
-          end do; end do; 
+          end do; end do;
        end do; end do
     end if
 
     if(NeiLnorth(iBlock) == 1)then
-       do k1=1, nK, 2; do i1=1, nI, 2; 
+       do k1=1, nK, 2; do i1=1, nI, 2;
           do k2 = k1,k1+min(1,nK-1); do i2 = i1,i1+1
              ip = 3*i2 - 2*i1 -1
              if(nK == 1) kp = 1
@@ -232,7 +236,7 @@ contains
              Field_VG(:,iC,jC,k2) = c0*Field1_VG(:,iC,jC,k2) &
                   + p0*Field1_VG(:,iC,jC,kp) + F1*Field_VG(:,i1,j1,k2)
           end if
-       end do; end do         
+       end do; end do
     end do; end do
 
     ! The X and Y edges are not needed in 2D
@@ -279,9 +283,8 @@ contains
        end do; end do
     end do; end do
 
-
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_field2
-
   !============================================================================
 
   subroutine set_block_field3(iBlock, nVar, Field1_VG, Field_VG)
@@ -305,7 +308,10 @@ contains
     integer :: ip, im, jp, jm, kp, km, iVar
 
     real :: Fc_V(nVar) ! interpolated coarse cell value
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_block_field3'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     Field1_VG = Field_VG
 
@@ -569,8 +575,8 @@ contains
        end do;end do
     end do;end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_field3
-
   !============================================================================
 
   subroutine set_block_jacobian_face(iBlock, UseFirstOrderBcIn)
@@ -596,19 +602,19 @@ contains
     ! Indexes
     integer:: i, j, k
 
-    !coeff of Ui+2 and Ui+1 to get normal derivative
-    real, parameter:: fp2 = -1./24.0, fp1 = 9.0/8.0 
-    !coeff of Ui+2 and Ui+1 for transverse derivatives
-    real, parameter:: dp2 = -1./12.0, dp1 = 2.0/3.0 
-    !coeff to average transverse derivatives
+    ! coeff of Ui+2 and Ui+1 to get normal derivative
+    real, parameter:: fp2 = -1./24.0, fp1 = 9.0/8.0
+    ! coeff of Ui+2 and Ui+1 for transverse derivatives
+    real, parameter:: dp2 = -1./12.0, dp1 = 2.0/3.0
+    ! coeff to average transverse derivatives
     real, parameter:: ap2 = -1./16.0, ap1 = 9.0/16.
-    real :: Dxyz_D(MaxDim) 
+    real :: Dxyz_D(MaxDim)
 
-    logical :: DoTest, DoTestMe, UseFirstOrderBc
-    character(len=*), parameter:: NameSub='set_block_jacobian_face'
+    logical :: UseFirstOrderBc
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_block_jacobian_face'
     !--------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Calculate the dGencoord/dCartesian matrix
 
@@ -755,13 +761,14 @@ contains
        end do; end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_block_jacobian_face
-
   !============================================================================
+
   subroutine get_face_gradient_field(iDir, i, j, k, iBlock, nField, &
        IsNewBlock, Var_IG, FaceGrad_DI)
 
-    ! calculate the gradient FaceGrad_DI of field Var_IG 
+    ! calculate the gradient FaceGrad_DI of field Var_IG
     ! on face iDir of cell i, j, k of block iBlock
 
     use ModParallel,   ONLY: neiLeast, neiLwest, neiLsouth, &
@@ -780,8 +787,10 @@ contains
     Real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
 
-    character(len=*), parameter:: NameSub='get_face_gradient_field'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_face_gradient_field'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
@@ -796,9 +805,9 @@ contains
     end if
 
     ! Central difference with averaging in orthogonal direction
-    iR = i+1; iL = i-1; 
-    jR = j+1; jL = j-1; 
-    kR = k+1; kL = k-1; 
+    iR = i+1; iL = i-1;
+    jR = j+1; jL = j-1;
+    kR = k+1; kL = k-1;
 
     Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
@@ -925,11 +934,12 @@ contains
 
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_face_gradient_field
-  !==========================================================================
+  !============================================================================
 
   subroutine get_face_gradient(iDir, i, j, k, iBlock, IsNewBlock, Scalar_G, &
-       FaceGrad_D, UseFirstOrderBcIn) 
+       FaceGrad_D, UseFirstOrderBcIn)
 
     ! calculate the cell face gradient of Scalar_G
 
@@ -945,13 +955,13 @@ contains
     real, intent(out) :: FaceGrad_D(3)
     logical, optional, intent(in):: UseFirstOrderBcIn
     !\
-    !Limits for the cell index for the cells involoved in calculating
-    !the vector components of gradient, which are parallel to the face
+    ! Limits for the cell index for the cells involoved in calculating
+    ! the vector components of gradient, which are parallel to the face
     !/
     integer :: iL, iR, jL, jR, kL, kR
     !\
-    !Limits for the cell index for the cells involoved in calculating
-    !the vector component of gradient, which is orthogonal to the face
+    ! Limits for the cell index for the cells involoved in calculating
+    ! the vector component of gradient, which is orthogonal to the face
     !/
     integer :: iD, iU, jD, jU, kD, kU
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
@@ -963,13 +973,17 @@ contains
     ! in the direction across the computational domain boundary
     ! and only calculating  the gradient at the face which is
     ! a part of the computational domain boundary. Otherwise the
-    ! physical cells and the ghostcells within the computational 
-    ! domain are used, with eliminating the out-of-domain ghost cell 
+    ! physical cells and the ghostcells within the computational
+    ! domain are used, with eliminating the out-of-domain ghost cell
     ! from the interpolation stencil.
-    ! 
+    !
     !/
     logical :: UseFirstOrderBc
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_face_gradient'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
@@ -1006,7 +1020,7 @@ contains
             )then
           iL = i+1; iR = i+2; Ax=InvDx; Bx=-0.75*InvDx; Cx=-0.25*InvDx
        elseif(UseFirstOrderBc.and.NeiLeast(iBlock)==NoBlk)then
-          iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx   
+          iL = i; iD = i; Ax = 0.0; Bx = -0.50*InvDx; Cx = 0.50*InvDx
        end if
     elseif((i==nI+1 .or. i==nI.and.iDir/=x_) .and. NeiLwest(iBlock)==-1 .or. &
          i==nI .and. ((iDir==y_ .and. &
@@ -1033,7 +1047,7 @@ contains
             )then
           jL = j+1; jR = j+2; Ay=InvDy; By=-0.75*InvDy; Cy=-0.25*InvDy
        elseif(UseFirstOrderBc.and.NeiLsouth(iBlock)==NoBlk)then
-          jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy 
+          jL = i; jD = j; Ay = 0.0; By = -0.50*InvDy; Cy = 0.50*InvDy
        end if
     elseif((j==nJ+1 .or. j==nJ.and.iDir/=y_) .and. NeiLnorth(iBlock)==-1 .or. &
          j==nJ .and. ((iDir==x_ .and. &
@@ -1060,7 +1074,7 @@ contains
             )then
           kL = k+1; kR = k+2; Az=InvDz; Bz=-0.75*InvDz; Cz=-0.25*InvDz
        elseif(UseFirstOrderBc.and.NeiLbot(iBlock)==NoBlk)then
-          kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz 
+          kL = k; kD = k; Az = 0.0; Bz = -0.50*InvDz; Cz = 0.50*InvDz
        end if
     elseif((k==nK+1 .or. k==nK.and.iDir/=z_) .and. NeiLtop(iBlock)==-1 .or. &
          k==nK .and. ((iDir==x_ .and. &
@@ -1071,7 +1085,7 @@ contains
          (j==nJ+1 .and. DiLevelNei_IIIB( 0, 1, 1,iBlock)==-1))) &
          )then
        kL = k-1; kR = k-2; Az=-InvDz; Bz=0.75*InvDz; Cz=0.25*InvDz
-    elseif(UseFirstOrderBc.and.(k==nK+1 .or. k==nK.and.iDir/=z_)& 
+    elseif(UseFirstOrderBc.and.(k==nK+1 .or. k==nK.and.iDir/=z_)&
          .and. NeiLtop(iBlock)==NoBlk)then
        kR = k; kU = k-1; Az =-0.50*InvDz; Bz = 0.50*InvDz; Cz = 0.0
     end if
@@ -1130,8 +1144,8 @@ contains
     if(.not.IsCartesianGrid) then
        FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
     end if
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_face_gradient
-
   !============================================================================
 
   subroutine get_face_curl(iDir, i, j, k, iBlock, IsNewBlock, Vector_DG, &
@@ -1152,8 +1166,11 @@ contains
     real :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
     Real :: InvDx, InvDy, InvDz
     real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_face_curl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
@@ -1165,9 +1182,9 @@ contains
     end if
 
     ! Central difference with averaging in orthogonal direction
-    iR = i+1; iL = i-1; 
-    jR = j+1; jL = j-1; 
-    kR = k+1; kL = k-1; 
+    iR = i+1; iL = i-1;
+    jR = j+1; jL = j-1;
+    kR = k+1; kL = k-1;
 
     Ax = -0.25*InvDx; Bx = 0.0; Cx = +0.25*InvDx
     Ay = -0.25*InvDy; By = 0.0; Cy = +0.25*InvDy
@@ -1245,8 +1262,8 @@ contains
        call calc_gencoord_curl
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-
     !==========================================================================
 
     subroutine calc_cartesian_curl
@@ -1265,7 +1282,7 @@ contains
          if(nJ > 1) FaceCurl_D(z_) = FaceCurl_D(z_) &
               - Ay*(Vector_DG(x_,i-1,jL,k) + Vector_DG(x_,i,jL,k)) &
               - By*(Vector_DG(x_,i-1,j ,k) + Vector_DG(x_,i,j ,k)) &
-              - Cy*(Vector_DG(x_,i-1,jR,k) + Vector_DG(x_,i,jR,k)) 
+              - Cy*(Vector_DG(x_,i-1,jR,k) + Vector_DG(x_,i,jR,k))
 
          if(nJ > 1)then
             FaceCurl_D(x_) = &
@@ -1323,7 +1340,7 @@ contains
 
       case(z_)
          FaceCurl_D(x_) = &
-              -InvDz*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i,j,k-1)) & 
+              -InvDz*(Vector_DG(y_,i,j,k) - Vector_DG(y_,i,j,k-1)) &
               + Ay*(Vector_DG(z_,i,jL,k-1) + Vector_DG(z_,i,jL,k)) &
               + By*(Vector_DG(z_,i,j ,k-1) + Vector_DG(z_,i,j ,k)) &
               + Cy*(Vector_DG(z_,i,jR,k-1) + Vector_DG(z_,i,jR,k))
@@ -1348,7 +1365,6 @@ contains
       end select
 
     end subroutine calc_cartesian_curl
-
     !==========================================================================
 
     subroutine calc_gencoord_curl
@@ -1423,7 +1439,10 @@ contains
            - sum(DvectorDcoord_DD(x_,:)*DcoordDxyz_DDFD(:,y_,i,j,k,iDir))
 
     end subroutine calc_gencoord_curl
+    !==========================================================================
 
   end subroutine get_face_curl
+  !============================================================================
 
 end module ModFaceGradient
+!==============================================================================

@@ -1,11 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!==============================================================================
 module ModUserEmpty
 
-  ! This module contains empty user routines.  They should be "used" 
-  ! (included) in the srcUser/ModUser*.f90 files for routines that the user 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
+  ! This module contains empty user routines.  They should be "used"
+  ! (included) in the srcUser/ModUser*.f90 files for routines that the user
   ! does not wish to implement.
 
   ! These constants are provided for convenience
@@ -16,98 +18,107 @@ module ModUserEmpty
   private :: stop_user
 
 contains
+  !============================================================================
 
-  !=====================================================================
   subroutine user_set_boundary_cells(iBlock)
 
     integer,intent(in)::iBlock
 
-    character(len=*), parameter :: NameSub = 'user_set_boundary_cells'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_set_boundary_cells
+  !============================================================================
 
-  !=====================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModAdvance, ONLY: nVar
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
-    character(len=*), parameter :: NameSub = 'user_set_face_boundary' 
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_set_face_boundary
+  !============================================================================
 
-  !=====================================================================
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    character(len=*), parameter :: NameSub = 'user_set_cell_boundary'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IsFound = .false.
     call stop_user(NameSub)
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
+  !============================================================================
 
-  !=====================================================================
   subroutine user_initial_perturbation
-    use ModMain,ONLY: nBlockMax
-    character(len=*), parameter :: NameSub = 'user_initial_perturbation'
+    use ModMain, ONLY: nBlockMax
     integer::iBlock
-    !-------------------------------------------------------------------
-    !The routine is called once and should be applied for all blocks, the 
-    !do-loop should be present. Another distinction from user_set_ics is that 
-    !user_initial_perturbation can be applied after restart, while
-    !user_set_ICs cannot.
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    ! The routine is called once and should be applied for all blocks, the
+    ! do-loop should be present. Another distinction from user_set_ics is that
+    ! user_initial_perturbation can be applied after restart, while
+    ! user_set_ICs cannot.
 
     do iBlock = 1, nBlockMax
-    
+
        call stop_user(NameSub)
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
+  !============================================================================
 
-  !=====================================================================
   subroutine user_set_ics(iBlock)
 
     integer, intent(in) :: iBlock
 
-    character(len=*), parameter :: NameSub = 'user_set_ics'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_set_ics'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_set_ics
+  !============================================================================
 
-  !=====================================================================
   subroutine user_init_session
 
-    character(len=*), parameter :: NameSub = 'user_init_session'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_init_session
+  !============================================================================
 
-  !=====================================================================
   subroutine user_action(NameAction)
 
     character(len=*), intent(in):: NameAction
 
-    character(len=*), parameter :: NameSub = 'user_action'
-    !-------------------------------------------------------------------
-    !select case(NameAction)
-    !case('initial condition done')
+    ! select case(NameAction)
+    ! case('initial condition done')
     !  ...
-    !case('write progress')
+    ! case('write progress')
     !  ...
-    !end select
+    ! end select
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    call test_stop(NameSub, DoTest)
   end subroutine user_action
-  !=====================================================================
+  !============================================================================
   subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
        IsInside, IsInside_I, Value_I)
 
     ! geometric criteria
-    
+
     integer,   intent(in):: iArea        ! area index in BATL_region
     integer,   intent(in):: iBlock       ! block index
     integer,   intent(in):: nValue       ! number of output values
@@ -117,13 +128,16 @@ contains
     logical, optional, intent(out) :: IsInside_I(nValue)
     real,    optional, intent(out) :: Value_I(nValue)
 
-    character(len=*), parameter :: NameSub = 'user_specify_region'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_specify_region'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_specify_region
+  !============================================================================
 
-  !=====================================================================
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     integer, intent(in)          :: iBlock
@@ -131,34 +145,39 @@ contains
     character(len=*), intent(in) :: TypeCriteria
     logical, intent(inout)       :: IsFound
 
-    character(len=*), parameter :: NameSub = 'user_amr_criteria'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub//'(TypeCrit='//TypeCriteria//')')
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
+  !============================================================================
 
-  !=====================================================================
   subroutine user_read_inputs
 
-    character(len=*), parameter :: NameSub = 'user_read_inputs'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_read_inputs
+  !============================================================================
 
-  !=====================================================================
   subroutine user_get_log_var(VarValue, NameVar, Radius)
 
     real, intent(out)            :: VarValue
     character(len=*), intent(in) :: NameVar
     real, intent(in), optional   :: Radius
 
-    character(len=*), parameter :: NameSub = 'user_get_log_var'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_get_log_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call stop_user(NameSub//'(NameVar='//NameVar//')')
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
-
-  !====================================================================
+  !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
@@ -177,88 +196,90 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character(len=*), parameter :: NameSub = 'user_set_plot_var'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub//'(NameVar='//NameVar//')')
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
-  !====================================================================
+  !============================================================================
 
   subroutine user_calc_sources(iBlock)
 
     integer, intent(in) :: iBlock
 
-    character(len=*), parameter :: NameSub = 'user_calc_sources'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_calc_sources
-
-  !=====================================================================
+  !============================================================================
 
   subroutine user_init_point_implicit
 
-    character(len=*), parameter :: NameSub = 'user_init_point_implicit'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
 
   end subroutine user_init_point_implicit
-
-  !=====================================================================
+  !============================================================================
 
   subroutine user_get_b0(x, y, z, B0_D)
 
     real, intent(in)   :: x, y, z
     real, intent(inout):: B0_D(3)
 
-    character(len=*), parameter :: NameSub = 'user_get_b0'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_get_b0'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_get_b0
+  !============================================================================
 
-  !=====================================================================
   subroutine user_update_states(iBlock)
 
     integer,intent(in):: iBlock
 
-    character(len=*), parameter :: NameSub = 'user_update_states'
-    !-------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_update_states
-  
-  !=====================================================================
+  !============================================================================
+
   subroutine user_normalization
-    use ModPhysics 
-    
-    character(len=*), parameter :: NameSub = 'user_normalization'
-    !-------------------------------------------------------------------
+    use ModPhysics
+
+    character(len=*), parameter:: NameSub = 'user_normalization'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_normalization
+  !============================================================================
 
-  !=====================================================================
   subroutine user_io_units
-    use ModPhysics 
-    
-    character(len=*), parameter :: NameSub = 'user_io_units'
-    !-------------------------------------------------------------------
+    use ModPhysics
+
+    character(len=*), parameter:: NameSub = 'user_io_units'
+    !--------------------------------------------------------------------------
     call stop_user(NameSub)
   end subroutine user_io_units
+  !============================================================================
 
-  !=====================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
     ! This subrountine set the eta for every block
     use ModSize
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
-    character(len=*), parameter :: NameSub = 'user_set_resistivity'
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
@@ -304,10 +325,13 @@ contains
     !  Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
-    character(len=*), parameter :: NameSub = 'user_material_properties'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_material_properties'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
   !============================================================================
   integer function user_block_type(iBlock)
@@ -321,11 +345,11 @@ contains
     ! which warns the user if they try to use an unimplemented user routine.
 
     character(len=*), intent(in) :: NameSub
-    !-------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call stop_mpi('You are trying to call the empty user routine '//   &
          NameSub//'. Please implement the routine in src/ModUser.f90')
   end subroutine stop_user
-
+  !============================================================================
 
 end module ModUserEmpty
 !==============================================================================

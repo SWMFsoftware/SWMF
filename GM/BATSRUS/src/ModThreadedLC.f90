@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, jTest, kTest, iBlockTest, iProcTest
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
@@ -14,20 +17,20 @@ module ModThreadedLC
   use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,   ONLY: Xyz_DGB
   !\
-  !   Hydrostatic equilibrium in an isothermal corona: 
+  !   Hydrostatic equilibrium in an isothermal corona:
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
-  ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+  ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
   !/
   !\
-  ! The plasma properties dependent coefficient needed to evaluate the 
+  ! The plasma properties dependent coefficient needed to evaluate the
   ! eefect of gravity on the hydrostatic equilibrium
   !/
   use ModFieldLineThread, ONLY:  &
-       GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1) 
+       GravHydroStat != cGravPot*MassIon_I(1)/(Z + 1)
   implicit none
   !\
-  !energy flux needed to raise the mass flux rho*u to the heliocentric 
-  !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+  ! energy flux needed to raise the mass flux rho*u to the heliocentric
+  ! distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
   !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
   !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
   !/
@@ -52,7 +55,7 @@ module ModThreadedLC
        ExchangeRate_I
   !\
   ! We apply ADI to solve state vector, the components of the state
-  ! being temperature and log pressure. 
+  ! being temperature and log pressure.
   ! The heating at constant pressure is characterized by the
   ! specific heat at constant pressure. For pressure the barometric
   ! formula is applied
@@ -60,14 +63,14 @@ module ModThreadedLC
   integer, parameter:: Cons_ = 1, Ti_=2, LogP_ = 3
   real, allocatable, dimension(:,:):: Res_VI, DCons_VI
   real, allocatable, dimension(:,:,:) :: M_VVI, L_VVI, U_VVI
-  
+
   !\
   ! Table numbers needed to use lookup table
-  !/ 
+  !/
   integer :: iTableTR
   !\
-  !Control parameters: minimum temerature  and two logicals with 
-  !self-explained names
+  ! Control parameters: minimum temerature  and two logicals with
+  ! self-explained names
   !/
   real, parameter:: TeSiMin = 5.0e4
   logical        :: UseAlignedVelocity = .true.
@@ -81,13 +84,13 @@ module ModThreadedLC
   !\
   ! Coefficient to express dimensionless density as RhoNoDimCoef*PeSi/TeSi
   !/
-  real           ::  RhoNoDimCoef 
+  real           ::  RhoNoDimCoef
   !\
   ! Misc
   !/
   real:: TeMin, ConsMin, ConsMax, TeSiMax
   !\
-  ! For transforming conservative to TeSi and back 
+  ! For transforming conservative to TeSi and back
   !/
   real, parameter:: cTwoSevenths = 2.0/7.0
   !\
@@ -104,17 +107,21 @@ module ModThreadedLC
 
   real,parameter:: cTol=1.0e-6
 contains
-  !=========================================================================
+  !============================================================================
   subroutine init_threaded_lc
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModLookupTable,  ONLY: i_lookup_table
     use ModMultiFluid,   ONLY: MassIon_I
-    use ModFieldLineThread, ONLY: check_tr_table, & 
+    use ModFieldLineThread, ONLY: check_tr_table, &
          nPointThreadMax, HeatCondParSi
     use ModPhysics,            ONLY: &
          UnitTemperature_, Si2No_V, UnitEnergyDens_
     use ModVarIndexes,         ONLY: Pe_, p_
-    !-------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_threaded_lc'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     allocate(Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)); Te_G = 0.0
 
     allocate(ReflCoef_I(0:nPointThreadMax)); ReflCoef_I = 0.0
@@ -177,7 +184,7 @@ contains
        TeFraction = MassIon_I(1)/(1 + Z)
        TiFraction = TeFraction
        iP = p_
-       PeFraction = Z/(1.0 + Z) 
+       PeFraction = Z/(1.0 + Z)
     end if
     !\
     ! Therefore Te = TeFraction*State_V(iP)/State_V(Rho_)
@@ -195,31 +202,35 @@ contains
     ConsMin = cTwoSevenths*HeatCondParSi*TeSiMin**3.50
 
     !\
-    !   Hydrostatic equilibrium in an isothermal corona: 
+    !   Hydrostatic equilibrium in an isothermal corona:
     !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
-    ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+    ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
     !/
     GravHydroStat = cGravPot*MassIon_I(1)/(Z + 1)
     !\
-    !energy flux needed to raise the mass flux rho*u to the heliocentric 
-    !distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+    ! energy flux needed to raise the mass flux rho*u to the heliocentric
+    ! distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
     !=k_B*N_i*M_i(amu)u*cGravPot*(1-R_sun/r)=
     !=P_e/T_e*cGravPot*u(M_i[amu]/Z)*(1/R_sun -1/r)
     !/
     GravHydroDyn  = cGravPot*MassIon_I(1)/Z
     !\
-    ! With this constant, the dimensionless density 
+    ! With this constant, the dimensionless density
     ! equals RhoNoDimCoef*PeSi/TeSi
     !/
     RhoNoDimCoef = Si2No_V(UnitEnergyDens_)/PeFraction*&
          TeFraction/Si2No_V(UnitTemperature_)
+    call test_stop(NameSub, DoTest)
   end subroutine init_threaded_lc
-  !================================
+  !============================================================================
   subroutine read_threaded_bc
     use ModReadParam, ONLY: read_var
     use ModProcMH,      ONLY: iProc
     character(LEN=7)::TypeBc = 'limited'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_threaded_bc'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call read_var('UseAlignedVelocity', UseAlignedVelocity)
     call read_var('DoConvergenceCheck', DoConvergenceCheck)
     call read_var('TypeBc'            , TypeBc            )
@@ -234,7 +245,9 @@ contains
        if(iProc==0)write(*,'(a)')&
             'Unknown TypeBc = '//TypeBc//', reset to limited'
     end select
+    call test_stop(NameSub, DoTest)
   end subroutine read_threaded_bc
+  !============================================================================
   !\
   ! Main routine:
   ! solves MHD equations along thread, to link the state above the
@@ -250,36 +263,35 @@ contains
     use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
     use ModLookupTable,  ONLY: interpolate_lookup_table
-    use ModMain,         ONLY: BlkTest, ProcTest, jTest, kTest
     use ModProcMH,       ONLY: iProc
     !INPUT:
     !\
-    !Cell and block indexes for the boundary point
+    ! Cell and block indexes for the boundary point
     !/
-    integer,intent(in):: j, k, iBlock, iAction 
+    integer,intent(in):: j, k, iBlock, iAction
     !\
     ! Parameters of the state in the true cell near the boundary:
-    ! TeSiIn: Temperature in K 
+    ! TeSiIn: Temperature in K
     ! USiIn:  Velocity progection on the magnetic field direction.
     ! It is positive if the wind blows outward the Sun.
-    ! AMinorIn: for the wave propagating toward the Sun 
-    !            WaveEnergyDensity = (\Pi/B)\sqrt{\rho} AMinor**2 
+    ! AMinorIn: for the wave propagating toward the Sun
+    !            WaveEnergyDensity = (\Pi/B)\sqrt{\rho} AMinor**2
     !/
     real,   intent(in):: TeSiIn, TiSiIn, PeSiIn, USiIn, AMinorIn
     !\
     !OUTPUT:
-    !DTeOverDsSiOut: Temperature derivative along the thread, at the end point
+    ! DTeOverDsSiOut: Temperature derivative along the thread, at the end point
     !                Used to find the electron temperature in the ghostcell
-    !PeSiOut: The electron pressure 
-    !AMajorOut: For the wave propagating outward the Sun
-    !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMajor**2  
+    ! PeSiOut: The electron pressure
+    ! AMajorOut: For the wave propagating outward the Sun
+    !            EnergyDensity = (\Pi/B)\sqrt{\rho} AMajor**2
     !/
     real,  intent(out):: &
          DTeOverDsSiOut, PeSiOut, PiSiOut, RhoNoDimOut, AMajorOut
 
     !\
     ! Arrays needed to use lookup table
-    !/ 
+    !/
     real    :: Value_V(6)
     !\
     ! Limited Speed
@@ -292,10 +304,10 @@ contains
     ! Number of TEMPERATURE nodes (first one is on the top of TR
     ! the last one is in the physical cell of the SC model
     !/
-    integer        :: nPoint, iPoint 
+    integer        :: nPoint, iPoint
     integer        :: nIter = 20
     !\
-    ! Corrrect density and pressure values in the ghost 
+    ! Corrrect density and pressure values in the ghost
     !/
     real :: GhostCellCorr, BarometricFactor, DeltaTeFactor,             &
          Limiter, DensityRatio, RhoTrueCell,                            &
@@ -304,15 +316,16 @@ contains
     !\
     ! Electron heat condution flux from Low Corona to TR:
     !/
-    real :: HeatFlux2TR 
+    real :: HeatFlux2TR
 
     logical :: DoTestCell
 
-    character(len=*), parameter :: NameSub = 'solve_boundary_thread'
-    !-------------------------------------------------------------------------
-    if(iBlock == BLKtest .and.iProc == PROCtest &
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'solve_boundary_thread'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    if(iBlock == iBlockTest .and.iProc == iProcTest &
          .and. j==jTest.and.k==kTest)then
-       call set_oktest(NameSub, DoTestCell, DoTestCell)
     else
        DoTestCell = .false.
     endif
@@ -357,7 +370,7 @@ contains
        write(*,*)'iAction=',iAction
        write(*,*)'0D model results'
        write(*,*)'Pressure 0D=',PeSiOut
-       write(*,*)'RhoNoDimOut=', RhoNoDimOut 
+       write(*,*)'RhoNoDimOut=', RhoNoDimOut
     end if
 
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
@@ -387,20 +400,20 @@ contains
                BoundaryThreads_B(iBlock)% LengthSi_III(iPoint-nPoint,j,k), &
                Arg2In=1.0e8,            &
                Value_V=Value_V,         &
-               Arg1Out=TeSi_I(iPoint),  & 
+               Arg1Out=TeSi_I(iPoint),  &
                DoExtrapolate=.false.)
        end do
        TeSi_I(1:nPoint) = max(TeSiMin, TeSi_I(1:nPoint))
        TiSi_I(1:nPoint-1) = TeSi_I(1:nPoint-1)
        !\
-       ! The analytical solution assumes constant pressure and 
+       ! The analytical solution assumes constant pressure and
        ! no heating. Calculate the pressure distribution
-       !/ 
+       !/
        call set_pressure
        call advance_thread(IsTimeAccurate=.false.)
        call get_res_heating(nIterIn=nIter)
-       BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
-       BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint) 
+       BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
     case(Enthalpy_)
        call get_res_heating(nIterIn=nIter)
@@ -424,9 +437,9 @@ contains
        !\
        ! Calculate AWaves and store pressure and temperature
        !/
-       call get_res_heating(nIterIn=nIter) 
-       BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint) 
-       BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint) 
+       call get_res_heating(nIterIn=nIter)
+       BoundaryThreads_B(iBlock)%TeSi_III(1-nPoint:0,j,k) = TeSi_I(1:nPoint)
+       BoundaryThreads_B(iBlock)%TiSi_III(1-nPoint:0,j,k) = TiSi_I(1:nPoint)
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
     case default
        write(*,*)'iAction=',iAction
@@ -437,7 +450,7 @@ contains
     !/
     !\
     ! First order solution: ghost cell from the first layer are filled
-    ! in with the solution of the threaded field line equation at the 
+    ! in with the solution of the threaded field line equation at the
     ! end point.
     !/
     FirstOrderRho   = RhoNoDimCoef*PSi_I(nPoint)*Z/&
@@ -452,15 +465,15 @@ contains
     RhoTrueCell = RhoNoDimCoef*PeSiIn/TeSiIn
 
     ! The pressure in the ghost cell should be corrected corrected for
-    ! a barometric scale factor, as a consequence of the hydrostatic 
-    ! equiliblrium condition in the physical cell. Cell corr as calculated 
+    ! a barometric scale factor, as a consequence of the hydrostatic
+    ! equiliblrium condition in the physical cell. Cell corr as calculated
     ! below is the negative of DeltaR of BATSRUS / delta r of the thread. Thus,
-    !/ 
+    !/
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/&
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) - &
-         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )  !< O!
+         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) )  ! < O!
     !\
-    ! 
+    !
     !      ghost cell | phys.cell
     !           *<-delta R->*
     !      PGhost=exp(-dLogP/dR*DeltaR)*PPhys
@@ -474,14 +487,14 @@ contains
 
     SecondOrderPeSi  = PeSiIn*BarometricFactor
     !\
-    ! In the ghost cell value of density in addition to the 
+    ! In the ghost cell value of density in addition to the
     ! barometric factor the temperature gradient is accounted for,
     ! which is cotrolled by the heat flux derived from the TFL model:
     !/
-   
+
     GhostCellCorr =  BoundaryThreads_B(iBlock)% DeltaR_II(j,k)/min(          &
          (1/BoundaryThreads_B(iBlock)%RInv_III(-1,j,k) -                     &
-         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) ),-0.7*                 &  
+         1/BoundaryThreads_B(iBlock)%RInv_III(0,j,k) ),-0.7*                 &
          Si2No_V(UnitX_)*(BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) -   &
          BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
 
@@ -497,7 +510,7 @@ contains
     SecondOrderRho = RhoTrueCell*BarometricFactor*DeltaTeFactor
     !\
     ! Add numerical diffusion, which forcing the density in the true cell
-    ! to approach the "first order" values predicted by the TFL model. 
+    ! to approach the "first order" values predicted by the TFL model.
     !/
     SecondOrderRho  = SecondOrderRho  + (FirstOrderRho - RhoTrueCell)
     SecondOrderPeSi = SecondOrderPeSi + &
@@ -562,42 +575,43 @@ contains
        write(*,*)'Corrected:'
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
        write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
-    end if    
+    end if
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-    !=============================
+    !==========================================================================
     subroutine set_pressure
       integer::iPoint
-      !---------------
+      !------------------------------------------------------------------------
       !\
-      ! First variable in Value_V  is now the product of the thread length in 
+      ! First variable in Value_V  is now the product of the thread length in
       ! meters times a geometric mean pressure, so that
       !/
       PSi_I(1) = Value_V(LengthPAvrSi_)*(1 + Z)/(SqrtZ*&
            BoundaryThreads_B(iBlock)% LengthSi_III(1-nPoint,j,k))
       !\
-      !   Hydrostatic equilibrium in an isothermal corona: 
+      !   Hydrostatic equilibrium in an isothermal corona:
       !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
-      ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r)) 
+      ! => N_i*Te\propto exp(cGravPot/TeSi*(M_i[amu]/(1+Z))*\Delta(R_sun/r))
       !/
-      !GravHydroStat = cGravPot*MassIon_I(1)/(Z + 1)
+      ! GravHydroStat = cGravPot*MassIon_I(1)/(Z + 1)
       do iPoint = 2, nPoint
          PSi_I(iPoint) = PSi_I(iPoint-1)*&
             exp( -BoundaryThreads_B(iBlock)%TGrav_III(iPoint-nPoint,j,k)*&
            (Z + 1)/(Z*TeSi_I(iPoint) + TiSi_I(iPoint)))
       end do
     end subroutine set_pressure
- !======================
+    !==========================================================================
     subroutine advance_thread(IsTimeAccurate)
       use ModMain,     ONLY: cfl, Dt, time_accurate
       use ModAdvance,  ONLY: time_BLK
       use ModPhysics,  ONLY: UnitT_, No2Si_V
       !\
       ! Advances the thread solution
-      ! If IsTimeAccurate, the solution is advanced through the time 
+      ! If IsTimeAccurate, the solution is advanced through the time
       ! interval, DtLocal. Otherwise, it looks for the steady-state solution
       ! with the advanced boundary condition
-      !/ 
-      logical, intent(in) :: IsTimeAccurate 
+      !/
+      logical, intent(in) :: IsTimeAccurate
       !\
       ! Time step in the physical cell from which the thread originates
       !/
@@ -605,25 +619,25 @@ contains
       !\
       ! Loop variable
       !/
-      
+
       integer :: iPoint, iIter
       !\
       ! Enthalpy correction coefficients
       !/
-      real    :: EnthalpyFlux, FluxConst 
+      real    :: EnthalpyFlux, FluxConst
       real    :: ElectronEnthalpyFlux, IonEnthalpyFlux
       !\
       ! Coreection accounting for the Enthlpy flux from the TR
-      real    :: PressureTRCoef 
-      !-----------------
+      real    :: PressureTRCoef
+      !------------------------------------------------------------------------
       if(IsTimeAccurate)then
          if(time_accurate)then
             DtLocal = Dt*No2Si_V(UnitT_)
          else
             DtLocal = cfl*time_BLK(1,j,k,iBlock)*No2Si_V(UnitT_)
          end if
-         if(DtLocal==0.0)RETURN !No time-accurate advance is needed
-         DtInv = 1/DtLocal    
+         if(DtLocal==0.0)RETURN ! No time-accurate advance is needed
+         DtInv = 1/DtLocal
       else
          DtInv = 0.0
       end if
@@ -635,21 +649,21 @@ contains
       Cons_I(1:nPoint) = cTwoSevenths*HeatCondParSi*TeSi_I(1:nPoint)**3.50
       SpecHeat_I(1:nPoint-1) = InvGammaMinus1*Z*                     &
            BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)* &
-           PSi_I(1:nPoint-1)/(Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1)) 
+           PSi_I(1:nPoint-1)/(Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))
       SpecIonHeat_I(1:nPoint-1) = SpecHeat_I(1:nPoint-1)/Z
       ExchangeRate_I(1:nPoint-1) = cExchangeRateSi*InvGammaMinus1*Z**3*&
            BoundaryThreads_B(iBlock)%DsOverBSi_III(1-nPoint:-1,j,k)* &
            PSi_I(1:nPoint-1)**2/(&
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
            TeSi_I(1:nPoint-1)**1.5)
-      DeltaEnergy_I= 0.0; Res_VI=0.0 ; ResEnthalpy_I= 0.0 
+      DeltaEnergy_I= 0.0; Res_VI=0.0 ; ResEnthalpy_I= 0.0
       DeltaIonEnergy_I = 0.0
-      PressureTRCoef = 1.0; FluxConst = 0.0 
+      PressureTRCoef = 1.0; FluxConst = 0.0
       !\
       ! Turbulent heating and mass flux are not iterated
       !/
       call get_res_heating(nIterIn=nIter)
-      !if(.not.IsTimeAccurate.and.TeSi_I(nPoint)>1.0e6)ResHeating_I=0.0
+      ! if(.not.IsTimeAccurate.and.TeSi_I(nPoint)>1.0e6)ResHeating_I=0.0
       if(USi>0)then
          FluxConst    = USi * PSi_I(nPoint)/&
               ((Z*TeSiIn + TiSiIn)*PoyntingFluxPerBSi*&
@@ -658,13 +672,13 @@ contains
          FluxConst    = USi * PeSiIn/&
               (TeSiIn*PoyntingFluxPerBSi*&
               BoundaryThreads_B(iBlock)% B_III(0,j,k)*No2Si_V(UnitB_))
-         
+
       end if
-      EnthalpyFlux = FluxConst/Z& !5/2*U*Pi*(Z+1)
+      EnthalpyFlux = FluxConst/Z& ! 5/2*U*Pi*(Z+1)
            *(InvGammaMinus1 +1)*(1 + Z)
       !\
       ! Calculate flux to TR and its temperature derivative
-      !/ 
+      !/
       call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
            DoExtrapolate=.false.)
 
@@ -675,7 +689,7 @@ contains
          TeSiOld_I(1:nPoint) = TeSi_I(1:nPoint)
          TiSiOld_I(1:nPoint) = TiSi_I(1:nPoint)
          !\
-         !Shape the source.
+         ! Shape the source.
          !/
          call get_heat_cond
          !\
@@ -702,16 +716,16 @@ contains
          end if
          !==========Add Gravity Source================================
          !\
-         !cGravPot = cGravitation*mSun*cAtomicMass/&
+         ! cGravPot = cGravitation*mSun*cAtomicMass/&
          !/   (cBoltzmann*rSun)
-         !GravHydroDyn = cGravPot*MassIon_I(1)/Z
+         ! GravHydroDyn = cGravPot*MassIon_I(1)/Z
          !\
-         !energy flux needed to raise the mass flux rho*u to the  
-         !heliocentric distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
+         ! energy flux needed to raise the mass flux rho*u to the
+         ! heliocentric distance r equals: rho*u*G*Msun*(1/R_sun -1/r)=
          !=k_B*N_i*M_i(amu)*u*cGravPot*(1-R_sun/r)=
          !=P_e/T_e*cGravPot*(M_ion[amu]/Z)*u*(1/R_sun -1/r)
          !/
-         
+
          ResGravity_I(2:nPoint-1) = 0.5*GravHydroDyn*FluxConst*(     &
               - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint:-2,j,k)  &
               + BoundaryThreads_B(iBlock)%RInv_III(3-nPoint: 0,j,k))
@@ -719,12 +733,12 @@ contains
               - BoundaryThreads_B(iBlock)%RInv_III(1-nPoint,j,k)     &
               + BoundaryThreads_B(iBlock)%RInv_III(2-nPoint,j,k))
          ResEnthalpy_I(1:nPoint-1) = ResEnthalpy_I(1:nPoint-1) + &
-              0.5*ResGravity_I(1:nPoint-1) 
-            
+              0.5*ResGravity_I(1:nPoint-1)
+
          !\
          ! For the time accurate mode, account for the time derivative
          ! The contribution to the Jacobian be modified although the specific
-         ! heat should not,  because the conservative variable is 
+         ! heat should not,  because the conservative variable is
          ! flux-by-length, not the temperature
          !/
          M_VVI(Cons_,Cons_,1:nPoint-1) = M_VVI(Cons_,Cons_,1:nPoint-1) + &
@@ -733,7 +747,7 @@ contains
          M_VVI(Ti_,Ti_,1:nPoint-1) = M_VVI(Ti_,Ti_,1:nPoint-1) + &
               DtInv*SpecIonHeat_I(1:nPoint-1)
          PressureTRCoef = sqrt(max(&
-              1 - EnthalpyFlux*TeSi_I(1)/HeatFlux2TR,1.0e-8))        
+              1 - EnthalpyFlux*TeSi_I(1)/HeatFlux2TR,1.0e-8))
          Res_VI(Cons_,1:nPoint-1) = -DeltaEnergy_I(1:nPoint-1) +      &
               ResHeating_I(1:nPoint-1)*QeRatio +  ResCooling_I(1:nPoint-1) +&
               ResEnthalpy_I(1:nPoint-1) + ResHeatCond_I(1:nPoint-1) +&
@@ -779,7 +793,7 @@ contains
               M_VVI=M_VVI(:,:,1:nPoint-1),&
               U_VVI=U_VVI(:,:,1:nPoint-1),&
               R_VI=Res_VI(:,1:nPoint-1),  &
-              W_VI=DCons_VI(:,1:nPoint-1))         
+              W_VI=DCons_VI(:,1:nPoint-1))
          !\
          ! limit DeltaCons
          !/
@@ -800,7 +814,7 @@ contains
               (3.50*Cons_I(1:nPoint-1)/HeatCondParSi)**cTwoSevenths
          TiSi_I(1:nPoint-1) = TiSi_I(1:nPoint-1) + DCons_VI(Ti_,1:nPoint-1)
          !\
-         ! Change in the internal energy (to correct the energy source 
+         ! Change in the internal energy (to correct the energy source
          ! for the time-accurate mode):
          !/
          DeltaEnergy_I(1:nPoint-1) = DtInv*SpecHeat_I(1:nPoint-1)* &
@@ -809,13 +823,13 @@ contains
               (TiSi_I(1:nPoint-1) - TiSiStart_I(1:nPoint-1))
          !\
          ! Calculate TR pressure
-         ! For next iteration calculate TR heat flux and 
+         ! For next iteration calculate TR heat flux and
          ! its temperature derivative
          !/
          call interpolate_lookup_table(iTableTR, TeSi_I(1), 1.0e8, Value_V, &
               DoExtrapolate=.false.)
          !\
-         ! Set pressure for updated temperature 
+         ! Set pressure for updated temperature
          !/
          Value_V(LengthPAvrSi_) = Value_V(LengthPAvrSi_)*PressureTRCoef
          call set_pressure
@@ -858,12 +872,12 @@ contains
          call CON_stop('Algorithm failure in advance_thread')
       end if
     end subroutine advance_thread
-    !=======================
+    !==========================================================================
     subroutine get_res_heating(nIterIn)
       integer, intent(in)::nIterIn
       integer:: iPoint
       real    :: SqrtRho, RhoNoDim
-      !--------------------
+      !------------------------------------------------------------------------
       !\
       ! Now prepare to calculate Alfven wave amplitude distribution
       !/
@@ -893,7 +907,7 @@ contains
               (BoundaryThreads_B(iBlock)% Xi_III(iPoint-nPoint,j,k) - &
               BoundaryThreads_B(iBlock)% Xi_III(iPoint-1-nPoint,j,k))*&
               sqrt(SqrtRho)
-         Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint) 
+         Xi_I(iPoint) = Xi_I(iPoint-1) + DXi_I(iPoint)
       end do
       !\
       ! 4. Calculate the reflection coefficient
@@ -913,7 +927,7 @@ contains
       ! (0:nI)
       !/
       call solve_a_plus_minus(&
-           nI=nPoint,                      & 
+           nI=nPoint,                      &
            ReflCoef_I=ReflCoef_I(0:nPoint),&
            Xi_I=Xi_I(0:nPoint),            &
            AMinusBC=AMinorIn,              &
@@ -925,8 +939,9 @@ contains
            (APlus_I(0:nPoint-2)**2 - AMinus_I(0:nPoint-2)**2)&
            -(APlus_I(1:nPoint-1  )**2 - AMinus_I(1:nPoint-1)**2)
     end subroutine get_res_heating
-    !==========================
+    !==========================================================================
     subroutine get_heat_cond
+      !------------------------------------------------------------------------
       M_VVI = 0.0; ResHeatCond_I = 0.0; U_VVI = 0.0; L_VVI = 0.0
       !----------------
       !\
@@ -951,7 +966,7 @@ contains
       !/
       HeatFlux2TR = Value_V(HeatFluxLength_)*&
            BoundaryThreads_B(iBlock)% BDsInvSi_III(-nPoint,j,k)
-      ResHeatCond_I(1) = ResHeatCond_I(1) -  HeatFlux2TR 
+      ResHeatCond_I(1) = ResHeatCond_I(1) -  HeatFlux2TR
       !\
       ! Linearize left heat flux to the TR
       !/
@@ -1001,13 +1016,14 @@ contains
       M_VVI(Cons_,Ti_,1:nPoint-1) = M_VVI(Cons_,Ti_,1:nPoint-1) + &
            2*ResCooling_I(1:nPoint-1)/&
            (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))   !=-dCooling/dCons
-           
+
     end subroutine get_heat_cond
-    !===========================
+    !==========================================================================
     subroutine get_cooling(nLast)
       integer,intent(in) ::nLast
       integer ::  iPoint
-      !-----------------
+
+      !------------------------------------------------------------------------
       ResCooling_I = 0.0;
       do iPoint = 1, nLast
          if(TeSi_I(iPoint)>1.0e8)then
@@ -1028,9 +1044,9 @@ contains
               ResCooling_I(iPoint)*Value_V(DLogLambdaOverDLogT_)
       end do
     end subroutine get_cooling
-    !=========================
+    !==========================================================================
   end subroutine solve_boundary_thread
-  !=========================================================================  
+  !============================================================================
   ! This routine solves three-diagonal system of equations:                    !
   !  ||m_1 u_1  0....        || ||w_1|| ||r_1||                                !
   !  ||l_2 m_2 u_2...        || ||w_2|| ||r_2||                                !
@@ -1038,32 +1054,34 @@ contains
   !  ||...                   || ||...|| ||...||                                !
   !  ||.............0 l_n m_n|| ||w_n|| ||r_n||                                !
   ! Prototype: Numerical Recipes, Chapter 2.6, p.40.
-  ! Here each of the compenets w_i and r_i are 2-component states and 
+  ! Here each of the compenets w_i and r_i are 2-component states and
   ! m_i, l_i, u_i are 2*2 matrices                                             !
-  !============================================================================!
   subroutine tridiag_3by3_block(n,L_VVI,M_VVI,U_VVI,R_VI,W_VI)
-    implicit none
-    !--------------------------------------------------------------------------!
+
     integer, intent(in):: n
     real, intent(in):: L_VVI(3,3,n),M_VVI(3,3,n),U_VVI(3,3,n),R_VI(3,n)
     real, intent(out):: W_VI(3,n)
-    !--------------------------------------------------------------------------!
+
     integer:: j
     real   :: TildeM_VV(3,3), TildeMInv_VV(3,3), TildeMInvDotU_VVI(3,3,2:n)
-    !--------------------------------------------------------------------------!
+
     !\
-    ! If tilde(M)+L.Inverted(\tilde(M))\dot.U = M, then the equation 
+    ! If tilde(M)+L.Inverted(\tilde(M))\dot.U = M, then the equation
     !      (M+L+U)W = R
-    ! may be equivalently written as 
+    ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
     !/
-    if (det(M_VVI(:,:,1)).eq.0.0) then
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if (det(M_VVI(:,:,1)) == 0.0) then
        call CON_stop('Error in tridiag: M_I(1)=0')
     end if
     TildeM_VV = M_VVI(:,:,1)
     TildeMInv_VV = inverted(TildeM_VV)
     !\
-    ! First 3-vector element of the vector, Inverted(tilde(M) + L).R 
+    ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     !/
     W_VI(:,1) = matmul(TildeMInv_VV,R_VI(:,1))
     do j=2,n
@@ -1077,7 +1095,7 @@ contains
        !/
        TildeM_VV = M_VVI(:,:,j) - &
             matmul(L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j))
-       if (det(TildeM_VV).eq.0.0) then
+       if (det(TildeM_VV) == 0.0) then
           write(*,*)'j, M_I(j), L_I(j), TildeMInvDotU_I(j) = ',j, &
                M_VVI(:,:,j),L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j)
           call CON_stop('3*3 block Tridiag failed')
@@ -1100,20 +1118,22 @@ contains
        !/
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine tridiag_3by3_block
-  !=============
+  !============================================================================
   real function det(A_II)
     real, intent(in)::A_II(3,3)
+    !--------------------------------------------------------------------------
     det = A_II(1,1)*A_II(2,2)*A_II(3,3) + A_II(1,2)*A_II(2,3)*A_II(3,1)&
          +A_II(2,1)*A_II(3,2)*A_II(1,3) - A_II(1,3)*A_II(2,2)*A_II(3,1)&
          -A_II(1,1)*A_II(2,3)*A_II(3,2) - A_II(3,3)*A_II(1,2)*A_II(2,1)
   end function det
-  !============
+  !============================================================================
   function inverted(A_II)RESULT(B_II)
     real,intent(in)::A_II(3,3)
     real           ::B_II(3,3)
     real           ::DetInv
-    !------------------
+    !--------------------------------------------------------------------------
     DetInv = 1/det(A_II)
     B_II(1,1) = (A_II(2,2)*A_II(3,3) - A_II(3,2)*A_II(2,3))*DetInv
     B_II(2,2) = (A_II(1,1)*A_II(3,3) - A_II(1,3)*A_II(3,1))*DetInv
@@ -1125,23 +1145,26 @@ contains
     B_II(3,1) = (A_II(2,1)*A_II(3,2) - A_II(3,1)*A_II(2,2))*DetInv
     B_II(3,2) = (-A_II(1,1)*A_II(3,2)+ A_II(1,2)*A_II(3,1))*DetInv
   end function inverted
-  !====================
+  !============================================================================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
        APlusBC, nIterIn)
     use ModCoronalHeating, ONLY: MaxImbalance
-    !INPUT
+    ! INPUT
     integer,         intent(in):: nI
     real,            intent(in):: ReflCoef_I(0:nI), Xi_I(0:nI)
-    real,            intent(in):: AMinusBC         !BC for A-
-    !OUTPUT
-    real,           intent(out):: APlusBC          !BC for A+
+    real,            intent(in):: AMinusBC         ! BC for A-
+    ! OUTPUT
+    real,           intent(out):: APlusBC          ! BC for A+
     integer,optional,intent(in):: nIterIn
     real:: DeltaXi
     integer::iStep,iIter
     integer, parameter:: nIterMax = 10
     integer:: nIter
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
-    !---------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     APlus_I(0:nI)  = 1.0
     AMinus_I(0:nI) = AMinusBC
     if(present(nIterIn))then
@@ -1151,11 +1174,11 @@ contains
     end if
     do iIter=1,nIter
        !\
-       !Go forward, integrate APlus_I with given AMinus_I
+       ! Go forward, integrate APlus_I with given AMinus_I
        !/
        ADiffMax = 0.0
        do iStep=1, nI
-          !Predictor
+          ! Predictor
           AP = APlus_I(iStep-1); AM = AMinus_I(iStep-1)
           Derivative = -AM*(max(0.0, AP - MaxImbalance*AM) - &
                max(0.0, AM - MaxImbalance*AP) )*&
@@ -1164,7 +1187,7 @@ contains
           AOld = APlus_I(iStep)
           DeltaXi = Xi_I(iStep) - Xi_I(iStep-1)
 
-          !Corrector
+          ! Corrector
           AMMid = 0.5*(AMinus_I(iStep-1) + AMinus_I(iStep))
           APMid = AP + 0.5*Derivative*DeltaXi
           Derivative = -AMMid*&
@@ -1176,8 +1199,8 @@ contains
           ADiffMax = max(ADiffMax, &
                abs(AOld - APlus_I(iStep))/max(AOld,APlus_I(iStep)))
        end do
-       !Go backward, integrate APlus_I with given AMinus_I
-       !We integrate equation,
+       ! Go backward, integrate APlus_I with given AMinus_I
+       ! We integrate equation,
        !\
        ! 2da_-/d\xi=
        !=-[ max(1-2a_-/a_+,0)-max(1-2a_+/a_-,0)]* a_+ *
@@ -1185,16 +1208,16 @@ contains
        ! -2a_-a_+
        !/
        do iStep=nI - 1, 0, -1
-          !Predictor
+          ! Predictor
           AP = APlus_I(iStep+1); AM = AMinus_I(iStep+1)
           Derivative = -AP*(max(0.0,AP - MaxImbalance*AM) - &
                max(0.0,AM - MaxImbalance*AP)     )*&
                min(0.5*ReflCoef_I(iStep+1)/max(AM,AP), 1.0) + &
                AP*AM
           AOld = AMinus_I(iStep)
-          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep) 
+          DeltaXi = Xi_I(iStep+1) - Xi_I(iStep)
 
-          !Corrector
+          ! Corrector
           APMid = 0.5*(APlus_I(iStep+1) + APlus_I(iStep))
           AMMid = AM - 0.5*Derivative*DeltaXi
           Derivative = -APMid*&
@@ -1209,8 +1232,9 @@ contains
        if(ADiffMax<cTol)EXIT
     end do
     APlusBC = APlus_I(nI)
+    call test_stop(NameSub, DoTest)
   end subroutine solve_a_plus_minus
-  !=========================================================================
+  !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock, IsLinear)
     use EEE_ModCommonVariables, ONLY: UseCme
@@ -1218,7 +1242,7 @@ contains
     use ModMain,       ONLY: n_step, iteration_number, time_simulation
     use ModAdvance,      ONLY: State_VGB
     use BATL_lib, ONLY:  MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-    use BATL_size,ONLY:  nJ, nK
+    use BATL_size, ONLY:  nJ, nK
     use ModPhysics,      ONLY: No2Si_V, Si2No_V, UnitTemperature_, &
          UnitEnergyDens_, UnitU_, UnitX_, UnitB_, InvGammaElectronMinus1
     use ModVarIndexes,   ONLY: Rho_, p_, Bx_, Bz_, &
@@ -1228,23 +1252,22 @@ contains
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-    use ModMain, ONLY: BlkTest, ProcTest, jTest, kTest
     use ModProcMH, ONLY: iProc
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
     real, intent(inout):: State_VG(nVarState,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
- 
+
     ! Optional arguments when called by semi-implicit scheme
     integer, optional, intent(in):: iImplBlock
     logical, optional, intent(in):: IsLinear
 
     !\
-    ! Determines, which action should be done with the thread 
+    ! Determines, which action should be done with the thread
     ! before setting the BC
     !/
     integer:: iAction
-    
+
     integer :: i, j, k, Major_, Minor_
     real :: TeSi, PeSi, BDir_D(3), U_D(3), U, B1_D(3), SqrtRho, DirR_D(3)
     real :: PeSiOut, AMinor, AMajor, DTeOverDsSi, DTeOverDs, GammaHere
@@ -1254,9 +1277,10 @@ contains
     ! CME parameters, if needed
     !/
     real:: RhoCme, Ucme_D(3), Bcme_D(3), pCme
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'set_thread_bc'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_field_line_thread_bc'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(present(iImplBlock))then
        if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
             call CON_stop('Algorithm error in '//NameSub)
@@ -1268,7 +1292,7 @@ contains
     if(present(iImplBlock))then
        if(IsLinear)then
           !\
-          !Version Easter 2015
+          ! Version Easter 2015
           !/
           do k = MinK, MaxK; do j = MinJ, maxJ
              State_VG(iTeImpl,0,j,k) = 0.0
@@ -1276,11 +1300,6 @@ contains
           RETURN
        end if
     end if
-    if(iBlock==BLKtest.and.iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    endif
     !\
     ! Start from floating boundary values
     !/
@@ -1303,9 +1322,9 @@ contains
        BDir_D = B1_D + 0.50*(B0_DGB(:, 1, j, k, iBlock) + &
             B0_DGB(:, 0, j, k, iBlock))
        BDir_D = BDir_D/max(sqrt(sum(BDir_D**2)), 1e-30)
-       DirR_D = Xyz_DGB(:,1,j,k,iBlock)  
+       DirR_D = Xyz_DGB(:,1,j,k,iBlock)
        DirR_D = DirR_D/max(sqrt(sum(DirR_D**2)),1e-30)
-     
+
        if(sum(BDir_D*DirR_D) <  0.0)then
           BDir_D = -BDir_D
           Major_ = WaveLast_
@@ -1317,11 +1336,11 @@ contains
        !\
        ! Calculate input parameters for solving the thread
        !/
-       if(DoTestMe.and.j==jTest.and.k==kTest)then
+       if(DoTest.and.j==jTest.and.k==kTest)then
           write(*,*)'Direction B=', BDir_D
           write(*,*)'Direction R=', DirR_D
-          write(*,*)'Magnetic fields: B0True =', B0_DGB(:, 1, j, k, iBlock) 
-          write(*,*)'Magnetic fields: B0Ghost=', B0_DGB(:, 0, j, k, iBlock) 
+          write(*,*)'Magnetic fields: B0True =', B0_DGB(:, 1, j, k, iBlock)
+          write(*,*)'Magnetic fields: B0Ghost=', B0_DGB(:, 0, j, k, iBlock)
           write(*,*)'B1_D=', B1_D
           write(*,*)NameSub//': before limiting TeGhost=',&
                Te_G(0, j, k)*No2Si_V(UnitTemperature_)
@@ -1338,7 +1357,7 @@ contains
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
        U = sign(min(abs(U), UAbsMax), U)
-       if(DoTestMe.and.j==jTest.and.k==kTest)then
+       if(DoTest.and.j==jTest.and.k==kTest)then
           write(*,*)'U_D=',U_D
           write(*,*)'Direction U', U_D/sqrt(sum(U_D**2))
        end if
@@ -1355,10 +1374,10 @@ contains
        if(present(iImplBlock))then
           DTeOverDs = DTeOverDsSi * Si2No_V(UnitTemperature_)/Si2No_V(UnitX_)
           !\
-          ! Solve equation: -(TeGhost-TeTrue)/DeltaR = 
+          ! Solve equation: -(TeGhost-TeTrue)/DeltaR =
           ! dTe/ds*(b . DirR)
           !/
-          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs/max(&                
+          Te_G(0, j, k) = Te_G(0, j, k) - DTeOverDs/max(&
                sum(BDir_D*DirR_D),0.7)*&
                BoundaryThreads_B(iBlock)% DeltaR_II(j,k)
           !\
@@ -1366,17 +1385,17 @@ contains
           !/
           Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
                BoundaryThreads_B(iBlock) % TMax_II(j,k)))
-          if(DoTestMe.and.j==jTest.and.k==kTest)then
+          if(DoTest.and.j==jTest.and.k==kTest)then
              write(*,*)NameSub//': reset TeGhost=',&
                   Te_G(0, j, k)*No2Si_V(UnitTemperature_)
           end if
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           CYCLE
        end if
- 
+
        State_VG(iP,0,j,k) = PeSiOut*Si2No_V(UnitEnergyDens_)/PeFraction
        !\
-       !Extrapolation of pressure
+       ! Extrapolation of pressure
        !/
        State_VG(iP, 1-nGhost:-1, j, k) = State_VG(iP,0,j,k)**2/&
             State_VG(iP,1,j,k)
@@ -1391,20 +1410,20 @@ contains
 
        State_VG(Rho_, 0, j, k) = RhoNoDimOut
        !\
-       !Extrapolation of density
+       ! Extrapolation of density
        !/
        State_VG(Rho_, 1-nGhost:-1, j, k) = State_VG(Rho_, 0, j, k)**2&
-            /State_VG(Rho_,1,j,k) 
-   
+            /State_VG(Rho_,1,j,k)
+
        do i = 1-nGhost, 0
           !\
-          ! Ghost cell value of the magnetic field: cancel radial B1 field 
-          !/ 
+          ! Ghost cell value of the magnetic field: cancel radial B1 field
+          !/
           B1_D = State_VG(Bx_:Bz_, 1-i, j, k)
           State_VG(Bx_:Bz_, i, j, k) = B1_D - DirR_D*sum(DirR_D*B1_D)
           if(UseCME)then
              !\
-             ! Maintain the normal component of the superimposed 
+             ! Maintain the normal component of the superimposed
              ! CME magnetic configuration
              !/
              call EEE_get_state_BC(Xyz_DGB(:,i,j,k,iBlock), &
@@ -1415,9 +1434,9 @@ contains
                   State_VG(Bx_:Bz_, i, j, k) + DirR_D*sum(DirR_D*Bcme_D)
           end if
           !\
-          !Gnost cell value of velocity: keep the velocity projection
-          !onto the magnetic field, if UseAlignedVelocity=.true.
-          !Reflect the other components
+          ! Gnost cell value of velocity: keep the velocity projection
+          ! onto the magnetic field, if UseAlignedVelocity=.true.
+          ! Reflect the other components
           !/
           U_D = State_VG(RhoUx_:RhoUz_,1-i,j,k)/State_VG(Rho_,1-i,j,k)
           if(UseAlignedVelocity)then
@@ -1425,10 +1444,10 @@ contains
              U   = sign(min(abs(U), UAbsMax), U)
           else
              U = 0
-          end if     
+          end if
           State_VG(RhoUx_:RhoUz_, i, j, k) = -U_D*State_VG(Rho_,i,j,k) &
                 + U*BDir_D*State_VG(Rho_,i,j,k)
-              
+
           State_VG(Major_, i, j, k) = AMajor**2 * PoyntingFluxPerB *&
                sqrt( State_VG(Rho_, i, j, k) )
        end do
@@ -1445,5 +1464,8 @@ contains
        end if
     end do; end do
     BoundaryThreads_B(iBlock)%iAction = Done_
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_field_line_thread_bc
+  !============================================================================
 end module ModThreadedLC
+!==============================================================================

@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModMain
+
+  use BATL_lib, ONLY: &
+       StringTest, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest, iDimTest, xTest, yTest, zTest
 
   use ModKind
   use ModSize
@@ -12,8 +15,8 @@ module ModMain
   ! Total number of used blocks on all processors
   use BATL_lib, ONLY: nBlock, nBlockAll => nNodeUsed, Unused_B, &
        test_string => StringTest, iTest, jTest, kTest, &
-       BLKtest => iBlockTest, PROCTest => iProcTest, xTest, yTest, zTest, &
-       XyzTestCell_D, VARtest => iVarTest, DIMtest => iDimTest,&
+       BlKTest => iBlockTest, PROCTest => iProcTest, xTest, yTest, zTest, &
+       XyzTestCell_D, VARTest => iVarTest, DIMTest => iDimTest,&
        lVerbose
 
   implicit none
@@ -44,7 +47,7 @@ module ModMain
   integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
 
-  real :: dt, DtFixed, DtFixedOrig, DtFixedDim, Cfl, CflOrig, dt_BLK(nBLK)
+  real :: dt, DtFixed, DtFixedOrig, DtFixedDim, Cfl, CflOrig, dt_BLK(MaxBlock)
   logical :: time_accurate = .true.,   &
        boris_correction    = .false.,  &
        UseBorisSimple      = .false.,  &
@@ -76,7 +79,7 @@ module ModMain
   real    :: BufferMax_D(3) = (/ 21.0, cTwoPi, cPi/)
 
   real, allocatable:: BufferState_VG(:,:,:,:)
-  ! Named indexes for the spherical buffer (left handed coordinates!!!)
+  ! Named indexes for the spherical buffer (left handed coordinates!!! )
   integer, parameter :: BuffR_=1, BuffPhi_=2, BuffTheta_=3
 
   logical :: UseIe = .false.
@@ -86,8 +89,8 @@ module ModMain
   logical :: DoCoupleImPressure = .true.
   logical :: DoCoupleImDensity  = .false.
   logical :: DoFixPolarRegion   = .false.
-  logical :: DoImSatTrace       = .false.    
-  logical :: DoRbSatTrace       = .false.    
+  logical :: DoImSatTrace       = .false.
+  logical :: DoRbSatTrace       = .false.
   real    :: rFixPolarRegion    = 5.0
   real    :: dLatSmoothIm       = -1.0
   real    :: TauCoupleIm        = 20.0
@@ -133,7 +136,6 @@ module ModMain
   character(len=20) :: TypeCellBc_I(Coord1MinBc_:Coord3MaxBc_)='none'
   character(len=20) :: TypeFaceBc_I(SolidBc_:zMaxBc_)='none'
 
-
   ! Logicals for bodies
   logical:: Body1    = .false.
   logical:: UseBody2 = .false.
@@ -146,7 +148,7 @@ module ModMain
   integer :: iNewGrid=0, iNewDecomposition=0
 
   ! Number of geometric based refinements performed
-  ! (needed by the CCMC user module only!)
+  ! (needed by the CCMC user module only! )
   integer :: nRefineLevel = 0
 
   ! nBlockMax is a maximum block index over all processors
@@ -156,9 +158,9 @@ module ModMain
   integer :: nBlockExplAll, nBlockImplAll
 
   ! Index limits for the cell faces (needed for the constrained trasnsport)
-  integer, parameter :: nIFace=nI+1 
+  integer, parameter :: nIFace=nI+1
   integer, parameter :: nJFace=nJ+1
-  integer, parameter :: nKFace=nK+1  
+  integer, parameter :: nKFace=nK+1
 
   ! Limits in the orthogonal directions. Default is no ghost cells,
   ! but this can be changed to 1 or 2 ghost cells depending on scheme
@@ -177,7 +179,7 @@ module ModMain
   logical :: UseHyperbolicDivb= .false.
   real    :: SpeedHypDim = -1.0, SpeedHyp = 1.0
   real    :: HypDecay = 0.1
-  
+
   !\
   ! More numerical scheme parameters
   !/
@@ -212,13 +214,13 @@ module ModMain
   character(len=3) :: TypeCoordSystem = 'GSM'
 
   ! Rotating frame or (at least approximately) inertial frame
-  logical :: UseRotatingFrame = .false. 
+  logical :: UseRotatingFrame = .false.
 
   ! Transform initial condition between rotating and inertial frames
   integer:: iSignRotationIC = 0
 
   !\
-  ! Variables for debugging. 
+  ! Variables for debugging.
   !/
 
   ! Shall we be strict about errors in the input parameter file
@@ -303,29 +305,29 @@ module ModMain
   ! Logical for a thin heliospheric current sheet method similar to that
   ! in the ENLIL code of D. Odstril
   logical :: DoThinCurrentSheet = .false.
-  
+
   !\
   ! Logicals for the use of the boundary condition at the surface
-  ! well above the transition region, which in connected by the 
+  ! well above the transition region, which in connected by the
   ! magnetic field line threads with the photosphere boundary.
   !/
   logical:: UseFieldLineThreads = .false., DoThreadRestart = .false.
   logical, public, allocatable :: DoThreads_B(:)
 
-  ! Use high-order accurate ghost cells. 
-  logical :: UseHighResChange = .false. 
+  ! Use high-order accurate ghost cells.
+  logical :: UseHighResChange = .false.
 
   ! Use high-order accurate refined/coarsened cells.
   logical :: UseHighOrderAMR = .false.
 
   ! Use resistivity planetary interior. It may be set to true in the
   ! ModUserMercury.f90.
-  logical :: UseResistivePlanet = .false. 
+  logical :: UseResistivePlanet = .false.
 
   ! use particles in the simulation
   logical:: UseParticles = .false.
 
-  ! Variables related to another component coupled directly with pointers                             
+  ! Variables related to another component coupled directly with pointers
   integer           :: nVarComp2
   character(len=200):: NameVarComp2
   real, pointer     :: StateComp2_VGB(:,:,:,:,:)
@@ -335,3 +337,4 @@ module ModMain
   character(len=len(NameVar_V)) :: NamePrimitive_V(nVar)
 
 end module ModMain
+!==============================================================================

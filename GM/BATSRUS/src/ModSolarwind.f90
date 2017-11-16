@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSolarwind
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, xTest, yTest, zTest
 
   use ModKind
   use ModVarIndexes
@@ -35,7 +38,7 @@ module ModSolarwind
   character(len=10) :: NameInputVar_I(nVar)
 
   ! Variable index corresponding to the i-th input variable
-  integer :: iVarInput_V(max(nVar,8)) 
+  integer :: iVarInput_V(max(nVar,8))
 
   ! true if the variable is read from the data file
   logical :: IsInput_V(nVar)
@@ -70,8 +73,10 @@ contains
 
     character(len=*), intent(in):: NameCommand
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_solar_wind_param'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#SOLARWINDFILE", "#UPSTREAM_INPUT_FILE")
        call read_var('UseSolarWindFile', UseSolarwindFile)
@@ -83,6 +88,7 @@ contains
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_solar_wind_param
   !============================================================================
   subroutine read_solar_wind_file
@@ -124,11 +130,10 @@ contains
     real    :: Solarwind_V(nVar)
     logical :: DoSetMatrix=.true.
 
-    character (len=*), parameter:: NameSub='read_solar_wind_file'
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_solar_wind_file'
     !--------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     if(.not.allocated(Solarwind_VI)) &
          allocate(Solarwind_VI(nVar, MaxData), Time_I(MaxData))
@@ -272,7 +277,7 @@ contains
 
        do iVar =1, nVarInput
           jVar = iVarInput_V(iVar)
-          Solarwind_VI(jVar, nData) = TmpData_V(iVar)              
+          Solarwind_VI(jVar, nData) = TmpData_V(iVar)
        end do
 
        if(DoTest)then
@@ -292,9 +297,9 @@ contains
 
        if (UseZeroBx) Solarwind_VI(Bx_, nData) = 0.0
 
-       if (NameInputCoord /= TypeCoordSystem) then 
+       if (NameInputCoord /= TypeCoordSystem) then
 
-          if (TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then 
+          if (TypeCoordSystem == 'GSM' .and. NameInputCoord == 'GSE') then
 
              call geopack_recalc(iTime_I)
 
@@ -304,7 +309,7 @@ contains
                      matmul(GsmGse_DD, Solarwind_VI(iVar:iVar+2,nData))
              end do
 
-          elseif (TypeCoordSystem == 'GSE' .and. NameInputCoord == 'GSM') then 
+          elseif (TypeCoordSystem == 'GSE' .and. NameInputCoord == 'GSM') then
 
              call geopack_recalc(iTime_I)
 
@@ -328,7 +333,7 @@ contains
                 Solarwind_VI(iVar:iVar+2, nData)=&
                      matmul(HgiGsm_DD, Solarwind_VI(iVar:iVar+2,nData))
              end do
-             
+
           else
              write(*,*) 'Transformation between input ',&
                   ' coordinate system=',NameInputCoord,&
@@ -400,7 +405,7 @@ contains
        endif
 
        ! add up species densities
-       if (UseMultiSpecies) & 
+       if (UseMultiSpecies) &
             Solarwind_V(Rho_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_))
 
        ! These scalars should be removed eventually
@@ -414,8 +419,8 @@ contains
        SW_T_dim   = Solarwind_V(p_)
     endif
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_solar_wind_file
-
   !============================================================================
 
   subroutine normalize_solar_wind_data
@@ -428,22 +433,20 @@ contains
     use ModMultiFluid
     use ModConst
 
-    implicit none
-
     integer:: iData
     integer:: T_= p_
     real :: Solarwind_V(nVar)
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'normalize_solar_wind_data'
-    logical:: DoTest, DoTestMe
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub,DoTest,DoTestMe)
+    call test_start(NameSub, DoTest)
 
     do iData=1, nData
        ! Put this point into a small array
        Solarwind_V = Solarwind_VI(:, iData)
 
-       ! normalize B and U 
+       ! normalize B and U
        Solarwind_V(Bx_:Bz_) = Solarwind_V(Bx_:Bz_)*Io2No_V(UnitB_)
        Solarwind_V(Ux_:Uz_) = Solarwind_V(Ux_:Uz_)*Io2No_V(UnitU_)
 
@@ -461,7 +464,7 @@ contains
           end where
 
           if(UseTemperature)then
-             ! calculate normalized p = n*T 
+             ! calculate normalized p = n*T
              Solarwind_V(p_) = sum(Solarwind_V(SpeciesFirst_:SpeciesLast_)) &
                   *Solarwind_V(T_)*Io2No_V(UnitTemperature_)
           else
@@ -469,7 +472,7 @@ contains
              Solarwind_V(p_) = Solarwind_V(p_)*Io2No_V(UnitP_)
           end if
 
-          ! calculate mass density of each ion species 
+          ! calculate mass density of each ion species
           Solarwind_V(SpeciesFirst_:SpeciesLast_) = &
                Solarwind_V(SpeciesFirst_:SpeciesLast_)*MassSpecies_V
           ! add up species densities
@@ -516,7 +519,7 @@ contains
 
           ! Set fluid pressure
           if(.not.IsInput_V(iP)) then
-             !By default all fluids have the same temperature as the first ion
+             ! By default all fluids have the same temperature as the first ion
              Solarwind_V(iP) = Solarwind_V(p_)/Solarwind_V(Rho_) &
                   *Solarwind_V(iRho)*MassIon_I(1)/MassFluid_I(iFluid)
           elseif(UseTemperature)then
@@ -570,18 +573,18 @@ contains
 
     end do ! iData
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)'Io2No_V(UnitP_)',Io2No_V(UnitP_)
        write(*,*)'Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)',&
-            Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)     
+            Io2No_V(UnitN_)*Io2No_V(UnitTemperature_)
        write(*,*)'After normalization, Solarwind_VI(:,1)=',Solarwind_VI(:,1)
        write(*,*)'After normalization, Solarwind_VI(:,2)=',Solarwind_VI(:,2)
        write(*,*)'After normalization, Solarwind_VI(:,3)=',Solarwind_VI(:,3)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine normalize_solar_wind_data
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_solar_wind_point(TimeSimulation, Xyz_D, SolarWind_V)
 
@@ -589,35 +592,35 @@ contains
     ! TimeSimulation and position Xyz_D.
     ! If there is no solar wind file specified, the values given
     ! in the #SOLARWIND command (stored in FaceState_VI) are returned.
-    ! If the solar wind file consists of a single line, return 
+    ! If the solar wind file consists of a single line, return
     ! the values in it.
     ! If the solar wind file consists of multiple lines, then first
-    ! find the time preceeding TimeSimulation and get the 
+    ! find the time preceeding TimeSimulation and get the
     ! solar wind velocity at this time.
     !
-    ! If the absolute time Time based on TimeSimulation is before 
+    ! If the absolute time Time based on TimeSimulation is before
     ! the starting time of the solar wind data,
     ! use the first value. If Time is after the last value, then
-    ! either use the last value (if DoReadAgain is false), or wait until the 
+    ! either use the last value (if DoReadAgain is false), or wait until the
     ! solar wind file gets more information that covers TimeSimulation.
     ! This wait can be arbitrarily long. Touching the SWMF.KILL file in the
     ! run directory, however, will kill the code with MPI_abort.
     !
     ! If the satellite position (where the solar wind is measured)
-    ! has StatelliteXyz_D(1)=0, then it is assumed to be located at the 
+    ! has StatelliteXyz_D(1)=0, then it is assumed to be located at the
     ! minimum or maximum X boundary (x1 or x2) depending on the sign
     ! of the solar wind velocity.
     !
-    ! Next calculate how long it takes to propagate from the satellite 
-    ! position to Xyz_D using the solar wind velocity and the orientation 
-    ! of the normal vector Normal_D that is normal to the assumed plane of the 
+    ! Next calculate how long it takes to propagate from the satellite
+    ! position to Xyz_D using the solar wind velocity and the orientation
+    ! of the normal vector Normal_D that is normal to the assumed plane of the
     ! solar wind. TimeSimulation is shifted by the propagation time to
     ! the "propagated time". Note that when Xyz_D is at the boundary (x1 or x2)
     ! and the normal vector points in the +X direction, there is no time shift.
     !
-    ! Finally the solar wind data is interpolated to the propagated time. 
+    ! Finally the solar wind data is interpolated to the propagated time.
     ! If the propagated time is before the first or after the last time read
-    ! from the solar wind file, then use the first or last data values, 
+    ! from the solar wind file, then use the first or last data values,
     ! respectively.
 
     use ModKind
@@ -628,7 +631,6 @@ contains
     use ModGeometry, ONLY: x1, x2
     use ModUtilities, ONLY: sleep
 
-    implicit none
     real, intent(in)  :: TimeSimulation
     real, intent(in)  :: Xyz_D(3)
     real, intent(out) :: SolarWind_V(nVar) ! Varying solar wind parameters
@@ -639,11 +641,11 @@ contains
 
     ! Check if the run should be killed while waiting for solar wind file
     logical      :: DoKill
-    
-    logical, parameter:: DoTestCell = .false.
-    character(len=*), parameter :: NameSub = 'get_solar_wind_point'
-    !--------------------------------------------------------------------------
 
+    logical, parameter:: DoTestCell = .false.
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_solar_wind_point'
+    !--------------------------------------------------------------------------
     if(nData <= 0 .or. .not.UseSolarwindFile)then
        ! Use fixed boundary conditon if there is no input data
        SolarWind_V = FaceState_VI(:,xMinBc_)
@@ -662,7 +664,7 @@ contains
     if(SatelliteXyz_D(1) == 0.0)then
        ! Assume that the satellite is at the east or west boundary
        if(Solarwind_VI(Ux_,1) > 0.0)then
-          SatelliteXyz_D(1) = x1  
+          SatelliteXyz_D(1) = x1
        else
           SatelliteXyz_D(1) = x2
        endif
@@ -697,9 +699,9 @@ contains
 
        SatDistance_D = Xyz_D - SatelliteXyz_D
 
-       if((iData==nData .and. Time_I(iData)<=Time) .or. iData==1) then 
+       if((iData==nData .and. Time_I(iData)<=Time) .or. iData==1) then
           U_D = Solarwind_VI(Ux_:Uz_,iData)
-       else           
+       else
           DtData2 = (Time_I(iData) - Time) / &
                (Time_I(iData) - Time_I(iData-1) + 1.0e-6)
           DtData1 = 1.0 - DtData2
@@ -712,12 +714,11 @@ contains
        if(DoTestCell) write(*,*)NameSub,' u_D=',u_D
 
        ! Shift Time with travel time from the satellite plane
-       if(abs(dot_product(U_D, Normal_D))>1.0e-5)then  
+       if(abs(dot_product(U_D, Normal_D))>1.0e-5)then
           ! Absolute time is in SI units
           Time = Time - &
                dot_product(SatDistance_D, Normal_D)/ &
                dot_product(U_D, Normal_D) * No2Si_V(UnitT_)
-
 
           ! Find data point preceeding this time
           do iData = 1, nData-1
@@ -732,7 +733,7 @@ contains
 
     end if
 
-    if ((iData == nData .and. Time_I(iData) <= Time) .or. iData==1) then 
+    if ((iData == nData .and. Time_I(iData) <= Time) .or. iData==1) then
        ! Use end point value
        SolarWind_V = Solarwind_VI(:, iData)
 
@@ -751,8 +752,9 @@ contains
 
     if(DoTestCell)write(*,*)NameSub,' SolarWind_V =',SolarWind_V
 
-
   end subroutine get_solar_wind_point
+  !============================================================================
 
 end module ModSolarwind
+!==============================================================================
 

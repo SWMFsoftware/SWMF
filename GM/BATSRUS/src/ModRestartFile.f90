@@ -1,14 +1,17 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModRestartFile
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest
 
   use ModProcMH,     ONLY: iProc, nProc, iComm
   use ModIO,         ONLY: nFile, Dt_Output, Dn_Output, Restart_, &
        restart, save_restart_file
   use ModMain,       ONLY: &
-       nBlockAll, ProcTest, BlkTest, iTest, jTest, kTest, &
+       nBlockAll,      &
        n_step, Time_Simulation, dt_BLK, Cfl, CodeVersion, nByteReal, &
        NameThisComp, iteration_number, DoThinCurrentSheet, NameVarCouple
   use ModVarIndexes, ONLY: nVar, DefaultState_V, SignB_, NameVar_V
@@ -36,7 +39,7 @@ module ModRestartFile
   private ! except
 
   public read_restart_parameters
-  public write_restart_files 
+  public write_restart_files
   public read_restart_files
   public init_mod_restart_file
   public string_append_iter
@@ -75,7 +78,7 @@ module ModRestartFile
 
   integer :: nByteRealRead = 8     ! Real precision in restart files
 
-  ! One can use 'block', 'proc' or 'one' format for input and output 
+  ! One can use 'block', 'proc' or 'one' format for input and output
   ! restart files.
   ! The input format is set to 'block' for backwards compatibility
   character (len=20)  :: TypeRestartInFile ='block'
@@ -109,14 +112,15 @@ module ModRestartFile
   logical, public :: UseRestartWithFullB = .false.
 
 contains
+  !============================================================================
 
   subroutine init_mod_restart_file
 
+    !--------------------------------------------------------------------------
     NameRestartInDir(1:2)  = NameThisComp
     NameRestartOutDir(1:2) = NameThisComp
 
   end subroutine init_mod_restart_file
-
   !============================================================================
 
   subroutine read_restart_parameters(NameCommand)
@@ -127,8 +131,10 @@ contains
 
     character(len=*), intent(in) :: NameCommand
     integer:: i
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_restart_parameters'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(NameCommand)
     case("#SAVERESTART")
@@ -176,8 +182,8 @@ contains
        call stop_mpi(NameSub//' unknown NameCommand='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_restart_parameters
-
   !============================================================================
 
   subroutine write_restart_files
@@ -187,12 +193,11 @@ contains
     use ModMain,     ONLY: UseFieldLineThreads
     use ModFieldLineThread, ONLY: save_thread_restart
     integer :: iBlock
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='write_restart_files'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_restart_files'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do iBlock = 1, nBlock
@@ -246,32 +251,31 @@ contains
 
     call timing_stop(NameSub)
 
-    if(DoTestMe .and. iProc==PROCtest)then
-       write(*,*)NameSub,': iProc, BLKtest =',iProc, BLKtest
-       write(*,*)NameSub,': dt, TrueCell   =',dt_BLK(BLKtest), &
-            true_cell(Itest,Jtest,Ktest,BLKtest)
-       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,BLKtest)
-       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,BLKtest)
+    if(DoTest .and. iProc==iProcTest)then
+       write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
+       write(*,*)NameSub,': dt, TrueCell   =',dt_BLK(iBlockTest), &
+            true_cell(iTest,jTest,kTest,iBlockTest)
+       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
+       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,iBlockTest)
        write(*,*)NameSub,': State_VGB      =', &
-            State_VGB(:,Itest,Jtest,Ktest,BLKtest)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,' finished'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_restart_files
-
-  !===========================================================================
+  !============================================================================
 
   subroutine read_restart_files
 
     use ModEnergy, ONLY: calc_energy_cell
 
     integer :: iBlock
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='read_restart_files'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_restart_files'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
 
     ! Allocate temporary array for reading restart data
     ! with arbitrary percision and number of state variables.
@@ -309,7 +313,7 @@ contains
     deallocate(State4_VC)
     deallocate(StateRead_VCB)
     if(allocated(ImplOldRead_VCB)) deallocate(ImplOldRead_VCB)
-    
+
     if (TypeRestartInFile == 'block') then
        do iBlock = 1, nBlock
           if (.not.Unused_B(iBlock)) call calc_energy_cell(iBlock)
@@ -342,19 +346,19 @@ contains
 
     call timing_stop(NameSub)
 
-    if(DoTestMe .and. iProc==PROCtest)then
-       write(*,*)NameSub,': iProc, BLKtest =',iProc, BLKtest
-       write(*,*)NameSub,': dt             =',dt_BLK(BLKtest)
-       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,BLKtest)
-       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,BLKtest)
+    if(DoTest .and. iProc==iProcTest)then
+       write(*,*)NameSub,': iProc, iBlockTest =',iProc, iBlockTest
+       write(*,*)NameSub,': dt             =',dt_BLK(iBlockTest)
+       write(*,*)NameSub,': dx,dy,dz_BLK   =', CellSize_DB(:,iBlockTest)
+       write(*,*)NameSub,': xyzStart_BLK   =',xyzStart_BLK(:,iBlockTest)
        write(*,*)NameSub,': State_VGB      =', &
-            State_VGB(:,Itest,Jtest,Ktest,BLKtest)
+            State_VGB(:,iTest,jTest,kTest,iBlockTest)
        write(*,*)NameSub,' finished'
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_restart_files
-
-  !===========================================================================
+  !============================================================================
 
   subroutine write_restart_header
 
@@ -371,7 +375,7 @@ contains
          RhoDimBody2, tDimBody2, &
          nVar, nFluid, IonFirst_
 
-    ! If nFluid or IonFirst_ is taken directly from ModVarIndexes, 
+    ! If nFluid or IonFirst_ is taken directly from ModVarIndexes,
     ! the PGF90 compiler fails.
     use ModVarIndexes, ONLY: NameEquation
     use ModAdvance,    ONLY: UseMultiSpecies, nSpecies
@@ -380,15 +384,17 @@ contains
          RadiusMin, RadiusMax, TypeGeometry, CoordDimMin_D, CoordDimMax_D
     use ModUser,     ONLY: NameUserModule, VersionUserModule
     use CON_planet,  ONLY: NamePlanet
-    use ModReadParam,ONLY: i_line_command
+    use ModReadParam, ONLY: i_line_command
     use ModIO,       ONLY: NameMaxTimeUnit
     use BATL_lib,    ONLY: nRoot_D
 
     integer :: iSpecies, iFluid, iDim
     logical :: IsLimitedGeometry=.false.
 
-    character(len=*), parameter:: NameSub='write_restart_header'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_restart_header'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if (iProc/=0) RETURN
 
@@ -467,7 +473,7 @@ contains
        IsLimitedGeometry = CoordDimMin_D(1) < CoordDimMax_D(1)
        if(IsLimitedGeometry) then
           write(UnitTmp_,'(a)')'#GRIDGEOMETRYLIMIT'
-       else 
+       else
           write(UnitTmp_,'(a)')'#GRIDGEOMETRY'
        endif
        write(UnitTmp_,'(a20,a20)')TypeGeometry, 'TypeGeometry'
@@ -500,8 +506,8 @@ contains
     if(.not.IsCartesianGrid .and.  RadiusMin >= 0.0 .and. RadiusMax > 0.0 &
          .and. .not.IsLimitedGeometry)then
        write(UnitTmp_,'(a)')'#LIMITRADIUS'
-       write(UnitTmp_,'(es22.15,a18)') RadiusMin, 'RadiusMin' 
-       write(UnitTmp_,'(es22.15,a18)') RadiusMax, 'RadiusMax' 
+       write(UnitTmp_,'(es22.15,a18)') RadiusMin, 'RadiusMin'
+       write(UnitTmp_,'(es22.15,a18)') RadiusMax, 'RadiusMax'
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#COORDSYSTEM'
@@ -589,9 +595,10 @@ contains
 
     call close_file
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_restart_header
+  !============================================================================
 
-  !===========================================================================
   subroutine write_restart_index
 
     use ModMpi, ONLY: MPI_reduce, MPI_INTEGER, MPI_SUM
@@ -599,8 +606,10 @@ contains
     integer, allocatable:: Int_I(:)
     integer:: iMorton, iError
 
-    character(len=*), parameter:: NameSub='write_restart_index'
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_restart_index'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(nProc > 1)then
        ! Collect file and record indexes onto the root processor
        allocate(Int_I(nBlockAll))
@@ -624,15 +633,18 @@ contains
        write(UnitTmp_,*) iFileMorton_I(iMorton), iRecMorton_I(iMorton)
     end do
     call close_file
-    
+
+    call test_stop(NameSub, DoTest)
   end subroutine write_restart_index
-  !===========================================================================
+  !============================================================================
   subroutine read_restart_index
 
     integer:: iMorton, nBlockAllRead
 
-    character(len=*), parameter:: NameSub='read_restart_index'
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_restart_index'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     NameFile = trim(NameRestartInDir)//NameIndexFile
     if (UseRestartInSeries) call string_append_iter(NameFile,iteration_number)
     call open_file(FILE=NameFile, STATUS='old', NameCaller=NameSub)
@@ -646,6 +658,7 @@ contains
     end do
     call close_file
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_restart_index
   !============================================================================
   subroutine read_restart_file(iBlock)
@@ -655,15 +668,11 @@ contains
     integer   :: iVar, i, j, k, iError, iBlockRestart
     character :: StringDigit
 
-    logical :: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub='read_restart_file'
-    !--------------------------------------------------------------------
-    if(iProc==PROCtest.and.iBlock==BLKtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
-    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_restart_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
     iBlockRestart = iMortonNode_A(iNode_B(iBlock))
 
     write(StringDigit,'(i1)') max(5,1+int(alog10(real(iBlockRestart))))
@@ -691,13 +700,13 @@ contains
        XyzStart_BLK(:,iBlock) = Xyz8_D
 
        read(UnitTmp_, iostat = iError) State8_CV
-       
+
        do iVar = 1, nVarRestart
           StateRead_VCB(iVar,1:nI,1:nJ,1:nK,iBlock) = State8_CV(:,:,:,iVar)
        end do
 
        if(Restart_Bface)then
-          read(UnitTmp_, iostat = iError) b8_X, b8_Y, b8_Z               
+          read(UnitTmp_, iostat = iError) b8_X, b8_Y, b8_Z
           BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b8_X
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b8_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b8_Z
@@ -723,7 +732,7 @@ contains
        end do
 
        if(Restart_Bface)then
-          read(UnitTmp_, iostat = iError) b4_X, b4_Y, b4_Z               
+          read(UnitTmp_, iostat = iError) b4_X, b4_Y, b4_Z
           BxFace_BLK(1:nI+1,1:nJ,1:nK,iBlock) = b4_X
           ByFace_BLK(1:nI,1:nJ+1,1:nK,iBlock) = b4_Y
           BzFace_BLK(1:nI,1:nJ,1:nK+1,iBlock) = b4_Z
@@ -755,19 +764,19 @@ contains
        call stop_mpi(NameSub//': corrupt restart data!!!')
     end if
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub,': iProc, iBlock =',iProc, iBlock
        write(*,*)NameSub,': dt,tSimRead =',dt_BLK(iBlock),tSimulationRead
        write(*,*)NameSub,': dx,dy,dz_BLK=', CellSize_DB(:,iBlock)
        write(*,*)NameSub,': xyzStart_BLK=',xyzStart_BLK(:,iBlock)
        write(*,*)NameSub,': StateRead_VCB   =', &
-            StateRead_VCB(:,Itest,Jtest,Ktest,iBlock)
+            StateRead_VCB(:,iTest,jTest,kTest,iBlock)
        write(*,*)NameSub,' finished'
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine read_restart_file
-
-  !===========================================================================
+  !============================================================================
 
   subroutine write_restart_file(iBlock)
 
@@ -776,8 +785,10 @@ contains
     integer:: iVar, iBlockRestart
     character:: StringDigit
 
-    character (len=*), parameter :: NameSub='write_restart_file'
-    !--------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_restart_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     iBlockRestart = iMortonNode_A(iNode_B(iBlock))
 
@@ -804,22 +815,23 @@ contains
          (ImplOld_VCB(iVar,:,:,:,iBlock), iVar=1,nVar)
     call close_file
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_restart_file
-
   !============================================================================
 
   subroutine open_direct_restart_file(DoRead, iFile)
 
     logical, intent(in)           :: DoRead
-    integer, intent(in), optional :: iFile 
+    integer, intent(in), optional :: iFile
 
     integer :: lRecord, l, lReal
-    character(len=*), parameter :: NameSub='open_direct_restart_file'
-    logical :: DoTest, DoTestme
-    !-------------------------------------------------------------------------
+    logical :: DoTestme
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    if(DoTestMe)write(*,*) NameSub,' starting with DoRead=',DoRead
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'open_direct_restart_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(DoTest)write(*,*) NameSub,' starting with DoRead=',DoRead
 
     ! Size of a single real number in units of record length
     inquire (IOLENGTH = lReal) 1.0
@@ -849,8 +861,8 @@ contains
        lRecord = lRecord + l
     end if
 
-    if(DoTestMe)write(*,*) NameSub,' nByteReal, nByteRealRead, lRecord=',&
-          nByteReal, nByteRealRead, lRecord   
+    if(DoTest)write(*,*) NameSub,' nByteReal, nByteRealRead, lRecord=',&
+          nByteReal, nByteRealRead, lRecord
 
     if(DoRead)then
        if(nByteReal /= nByteRealRead) &
@@ -886,24 +898,23 @@ contains
 
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine open_direct_restart_file
-
   !============================================================================
 
   subroutine read_direct_restart_file
 
-    character (len=*), parameter :: NameSub='read_direct_restart_file'
     integer :: i, j, k, iBlock, iMorton, iRec, iVar, iFile, iFileLast = -1
     logical :: IsRead
-    logical:: DoTest, DoTestMe
-    !-------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_direct_restart_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(TypeRestartInFile == 'one') &
          call open_direct_restart_file(DoRead = .true.)
 
-    if(DoTestMe)write(*,*) NameSub,' starting with nBlock=', nBlock
+    if(DoTest)write(*,*) NameSub,' starting with nBlock=', nBlock
 
     do iBlock = 1, nBlock
 
@@ -914,7 +925,7 @@ contains
        if(TypeRestartInFile == 'proc')then
           ! Find the appropriate 'proc' restart file and the record number
           iFile = iFileMorton_I(iMorton)
-          iRec  = iRecMorton_I(iMorton)          
+          iRec  = iRecMorton_I(iMorton)
           if(iFile /= iFileLast) then
              if(iFileLast > 0) call close_file
              call open_direct_restart_file(DoRead = .true., iFile = iFile)
@@ -925,7 +936,7 @@ contains
           iRec = iMorton
        end if
 
-       if(DoTestMe) write(*,*) NameSub,' iBlock, iRec=', iBlock, iRec
+       if(DoTest) write(*,*) NameSub,' iBlock, iRec=', iBlock, iRec
 
        ! Fill in ghost cells
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
@@ -958,7 +969,7 @@ contains
           end if
           if(.not.IsRead) &
                read(UnitTmp_, rec=iRec) Dt4, Dxyz4_D, Xyz4_D, State4_VC
-          
+
           Dt_BLK(iBlock) = Dt4
           CellSize_DB(:,iBlock)  = Dxyz4_D
           XyzStart_BLK(:,iBlock) = Xyz4_D
@@ -1009,20 +1020,22 @@ contains
 
     call close_file
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_direct_restart_file
-
   !============================================================================
 
   subroutine write_direct_restart_file
 
-    character (len=*), parameter :: NameSub='write_direct_restart_file'
     integer :: iBlock, iMorton, iRec, iVar
-    !--------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_direct_restart_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(TypeRestartOutFile == 'one')then
        call open_direct_restart_file(DoRead = .false.)
     else
-       ! For 'proc' type open file with processor index 
+       ! For 'proc' type open file with processor index
        ! and write block records in the order they are stored
        call open_direct_restart_file(DoRead = .false., iFile = iProc)
        iRec = 0
@@ -1045,7 +1058,7 @@ contains
        end if
 
        if(UseConstrainB)then
-          ! Save face centered magnetic field 
+          ! Save face centered magnetic field
           write(UnitTmp_, rec=iRec)  Dt_BLK(iBlock),&
                CellSize_DB(:,iBLock), &
                XyzStart_BLK(:,iBlock), &
@@ -1075,21 +1088,23 @@ contains
 
     call close_file
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_direct_restart_file
-
   !============================================================================
 
   subroutine string_append_iter(NameFile, nIter)
 
-    character (len=*), parameter :: NameSub='string_append_iter'
     character (len=100), intent(inout) :: NameFile
     integer, intent(in) :: nIter
 
     ! Note: Fortran cannot write parts of a string into the same string!
     character(len=100):: NameFileOld
     integer:: i
-    !--------------------------------------------------------------------
-    
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'string_append_iter'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if (nIter < 0) call stop_mpi(NameSub//' nIter cannot be negative')
 
     NameFileOld = NameFile
@@ -1097,9 +1112,9 @@ contains
     write(NameFile,'(a,i8.8,a)') &
          NameFileOld(1:i)//'n', nIter, '_'//NameFileOld(i+1:90)
 
+    call test_stop(NameSub, DoTest)
   end subroutine string_append_iter
-
-  !===========================================================================
+  !============================================================================
 
   subroutine write_geoind_restart
 
@@ -1111,13 +1126,14 @@ contains
     character(len=100) :: NameFile
     character(len=1)   :: NameDim(2) = (/'x', 'y'/)
 
-    character(len=*), parameter :: NameSub='write_geoind_restart'
-    logical :: DoTest, DoTestMe
-    !------------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_geoind_restart'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    call CON_set_do_test(NameSub, DoTest, DoTest)
+
     ! Ensure that restart files are only written from head node.
-    if(iProc/=0) return
+    if(iProc/=0) RETURN
 
     do iDim=1, 2
        ! Open restart file.
@@ -1135,14 +1151,15 @@ contains
        call close_file
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_geoind_restart
+  !============================================================================
 
-  !===========================================================================
   subroutine read_geoind_restart
 
     ! Read MagHistory_II from restart file on processor 0
 
-    use ModGroundMagPerturb,ONLY: nKpMag, iSizeKpWindow, MagHistory_DII, &
+    use ModGroundMagPerturb, ONLY: nKpMag, iSizeKpWindow, MagHistory_DII, &
          IsFirstCalc, IsSecondCalc
 
     integer            :: i, j, iDim, nMagTmp, iSizeTmp
@@ -1150,10 +1167,11 @@ contains
     character(len=100) :: NameFile
     character(len=1)   :: NameDim(2) = (/'x', 'y'/)
 
-    character(len=*), parameter :: NameSub='read_geoind_restart'
-    logical :: DoTest, DoTestMe
-    !------------------------------------------------------------------------
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_geoind_restart'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     do iDim=1, 2
 
@@ -1198,12 +1216,14 @@ contains
     IsFirstCalc  = .false.
     IsSecondCalc = .false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_geoind_restart
+  !============================================================================
 
   ! ===================================================================
   subroutine match_copy_restart_variables
-    
-    ! This subroutine allows to use the state stored in an existing 
+
+    ! This subroutine allows to use the state stored in an existing
     ! restart file even if the variables or their order as defined in
     ! the present equation file has changed.
 
@@ -1218,11 +1238,11 @@ contains
     !    of the current equation module, they will be ignored, unless a
     !    a specific rule is implemented here.
     ! 2. If the current equation module includes variables not present
-    !    in the restart file, they will be assigned values according to 
-    !    specific rules implemented here. If no rule is defined, the default 
+    !    in the restart file, they will be assigned values according to
+    !    specific rules implemented here. If no rule is defined, the default
     !    state will be used for these variables (unless UseStrict=T, in which
     !    case the code will stop excution).
-  
+
     use ModVarIndexes, ONLY: nVar, NameVar_V, p_, Pe_, DefaultState_V
     use ModAdvance,    ONLY: UseElectronPressure
     use ModMain,       ONLY: UseStrict, NameVarLower_V
@@ -1234,9 +1254,12 @@ contains
     integer              :: iVarMapping
     integer, allocatable :: iVarFrom_I(:), iVarTo_I(:)
 
-    character(len=*),parameter :: NameSub='match_copy_restart_variables'
     ! -----------------------------------------------------------------
     ! If no change of variables occured, copy directly and return.
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'match_copy_restart_variables'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not. DoChangeRestartVariables) then
        do iBlock = 1,nBlock
           State_VGB(:,1:nI,1:nJ,1:nK,iBlock) = &
@@ -1247,7 +1270,7 @@ contains
        end do
        RETURN
     end if
-       
+
     ! Change of state variables!!
     if(iProc==0) then
        write(*,*) 'Changing state variables from restart file'
@@ -1258,9 +1281,9 @@ contains
             write(*,*) 'nVarRestartMapping         =', nVarRestartMapping
     end if
 
-    ! Loop over the current state variables, and locate the index of 
+    ! Loop over the current state variables, and locate the index of
     ! the corresponding variable in the restart file
-    MATCHLOOP: do iVar = 1,nVar 
+    MATCHLOOP: do iVar = 1,nVar
        do iVarRead = 1, nVarRestart
           if (NameVarLower_V(iVar) == NameVarRestart_V(iVarRead)) then
              iVarMatch_V(iVar) = iVarRead
@@ -1268,7 +1291,7 @@ contains
           end if
        end do
     end do MATCHLOOP
-    
+
     if (DoSpecifyRestartVarMapping) then
        if (allocated(iVarFrom_I)) deallocate(iVarFrom_I)
        if (allocated(iVarTo_I))   deallocate(iVarTo_I)
@@ -1318,7 +1341,7 @@ contains
 
           case('Pe')
              ! When electron pressure is used but is not present in the restart
-             ! file, divide pressure from restart state between ions and 
+             ! file, divide pressure from restart state between ions and
              ! electrons
              do iBlock = 1,nBlock
                 do i =1,nI ; do j=1,nJ; do k=1,nK
@@ -1327,10 +1350,10 @@ contains
                    State_VGB(p_,1:nI,1:nJ,1:nK,iBlock) = &
                         0.5*StateRead_VCB(iVarMatch_V(p_),i,j,k,iBlock)
                 end do; end do ; end do
-             end do                
+             end do
           case default
              if(iProc==0) &
-                write(*,*) 'WARNING!!!: the state variable ', &
+                write(*,*) 'WARNING!!! : the state variable ', &
                 NameVar_V(iVar) //                            &
                      'is not present in the restart file and no rule is'//&
                      ' implemented to define its value.'
@@ -1344,7 +1367,7 @@ contains
           end select
        end if
     end do
-       
+
     ! Check if restart file contains certain additional variables
     if(.not. UseElectronPressure) then
        ! Check if the restart file containes electron pressure
@@ -1386,7 +1409,10 @@ contains
        end do
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine match_copy_restart_variables
+  !============================================================================
 
 end module ModRestartFile
+!==============================================================================
 

@@ -4,6 +4,9 @@
 
 module ModUpdateState
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest
+
   implicit none
 
   private ! except
@@ -17,6 +20,7 @@ module ModUpdateState
   public:: select_conservative  ! select cells to use conservative update
 
 contains
+  !============================================================================
 
   subroutine update_state(iBlock)
 
@@ -33,46 +37,42 @@ contains
     integer, intent(in) :: iBlock
     integer :: iVar
 
-    logical :: oktest, oktest_me
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'update_state'
     !--------------------------------------------------------------------------
-    if(iBlock==BLKtest .and. iProc==PROCtest)then
-       call set_oktest(NameSub,oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    endif
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(oktest_me)then
+    if(DoTest)then
        write(*,*)NameSub,' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
        if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
             IsConserv_CB(iTest,jTest,kTest,iBlock)
        write(*,*)
        do iVar=1,nVar
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar), '(TestCell)  =',&
-               State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
+               State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
        end do
        do iFluid = 1, nFluid
           write(*,'(2x,a,i2,a,es23.15)') &
-               'E(',iFluid,')=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,iFluid)
+               'E(',iFluid,')=',Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
        end do
-       write(*,*)'Fluxes and sources for ',NameVar_V(VarTest)
+       write(*,*)'Fluxes and sources for ',NameVar_V(iVarTest)
        write(*,'(2x,a,2es23.15)') &
-            'X fluxes L,R =',Flux_VX(VARtest,Itest,Jtest,Ktest),&
-            Flux_VX(VARtest,Itest+1,Jtest,Ktest)
+            'X fluxes L,R =',Flux_VX(iVarTest,iTest,jTest,kTest),&
+            Flux_VX(iVarTest,iTest+1,jTest,kTest)
        write(*,'(2x,a,2es23.15)') &
-            'Y fluxes L,R =',Flux_VY(VARtest,Itest,Jtest,Ktest),&
-            Flux_VY(VARtest,Itest,Jtest+1,Ktest)
+            'Y fluxes L,R =',Flux_VY(iVarTest,iTest,jTest,kTest),&
+            Flux_VY(iVarTest,iTest,jTest+1,kTest)
        write(*,'(2x,a,2es23.15)') &
-            'Z fluxes L,R =',Flux_VZ(VARtest,Itest,Jtest,Ktest),&
-            Flux_VZ(VARtest,Itest,Jtest,Ktest+1)
-       write(*,'(2x,a,es23.15)')'source=',Source_VC(VARtest,Itest,Jtest,Ktest)
-       write(*,'(2x,a,es23.15)')'fluxes=',(Flux_VX(VARtest,Itest,Jtest,Ktest) &
-            -Flux_VX(VARtest,Itest+1,Jtest,Ktest)                        &
-            +Flux_VY(VARtest,Itest,Jtest,Ktest)                          &
-            -Flux_VY(VARtest,Itest,Jtest+1,Ktest)                        &
-            +Flux_VZ(VARtest,Itest,Jtest,Ktest)                          &
-            -Flux_VZ(VARtest,Itest,Jtest,Ktest+1) )                      &
-            /CellVolume_GB(iTest,jTest,kTest,BlkTest)
+            'Z fluxes L,R =',Flux_VZ(iVarTest,iTest,jTest,kTest),&
+            Flux_VZ(iVarTest,iTest,jTest,kTest+1)
+       write(*,'(2x,a,es23.15)')'source=',Source_VC(iVarTest,iTest,jTest,kTest)
+       write(*,'(2x,a,es23.15)')'fluxes=',(Flux_VX(iVarTest,iTest,jTest,kTest) &
+            -Flux_VX(iVarTest,iTest+1,jTest,kTest)                        &
+            +Flux_VY(iVarTest,iTest,jTest,kTest)                          &
+            -Flux_VY(iVarTest,iTest,jTest+1,kTest)                        &
+            +Flux_VZ(iVarTest,iTest,jTest,kTest)                          &
+            -Flux_VZ(iVarTest,iTest,jTest,kTest+1) )                      &
+            /CellVolume_GB(iTest,jTest,kTest,iBlockTest)
     end if
 
     ! Note must copy state to old state only if iStage is 1.
@@ -92,21 +92,21 @@ contains
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
     end if
 
-    if(oktest_me)then
+    if(DoTest)then
        write(*,*)NameSub,' final:'
        do iVar=1,nVar
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
-               State_VGB(iVar,Itest,Jtest,Ktest,BLKtest)
+               State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
        end do
        do iFluid = 1, nFluid
           write(*,'(2x,a,i2,a,es23.15)') &
-               'E(',iFluid,')=',Energy_GBI(Itest,Jtest,Ktest,BLKtest,iFluid)
+               'E(',iFluid,')=',Energy_GBI(iTest,jTest,kTest,iBlockTest,iFluid)
        end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine update_state
-
-  !==========================================================================
+  !============================================================================
 
   subroutine update_state_normal(iBlock)
 
@@ -141,14 +141,11 @@ contains
 
     ! These variables have to be double precision for accurate Boris scheme
     real:: DtLocal, DtFactor, Coeff
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'update_state_normal'
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_state_normal'
     !--------------------------------------------------------------------------
-    if(iBlock==BLKtest .and. iProc==PROCtest)then
-       call set_oktest('update_state', DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    endif
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Nothing to do if time step is zero
     if(time_accurate .and. Dt == 0.0) RETURN
@@ -161,10 +158,10 @@ contains
          (UseElectronPressure .or. UseNonConservative .or. &
          .not.UseResistiveFlux)) then
 
-       call calc_resistivity_source(iBlock)   
-       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+       call calc_resistivity_source(iBlock)
+       if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after add_resistive_source          =', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     end if
 
@@ -202,7 +199,7 @@ contains
             ( Flux_VX(:,i,j,k) - Flux_VX(:,i+1,j,k) &
             + Flux_VY(:,i,j,k) - Flux_VY(:,i,j+1,k) &
             + Flux_VZ(:,i,j,k) - Flux_VZ(:,i,j,k+1) ) &
-            /CellVolume_GB(i,j,k,iBlock) ) 
+            /CellVolume_GB(i,j,k,iBlock) )
     end do; end do; end do
 
     if(nOrder == 4 .and. UseFaceIntegral4 .and. nDim > 1)then
@@ -252,9 +249,9 @@ contains
 
     if(UseMultiIon .and. DoRestrictMultiIon)call multi_ion_set_restrict(iBlock)
 
-    if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+    if(DoTest)write(*,'(2x,2a,15es20.12)') &
          NameSub, ' original testvar and energy         =', &
-         State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     call update_explicit
@@ -265,9 +262,9 @@ contains
        call fix_multi_ion_update(iBlock)
        call calc_energy_cell(iBlock)
 
-       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+       if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after fix multiion update           =', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     end if
@@ -275,15 +272,15 @@ contains
     if(UseMultiIon .and. IsMhd)then
        call multi_ion_update(iBlock, IsFinal = .false.)
 
-       if(DoTestMe)write(*,'(2x,2a,15es20.12)')  &
+       if(DoTest)write(*,'(2x,2a,15es20.12)')  &
             NameSub, ' after multiion update1              =', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     end if
 
-    ! The point implicit update and other stuff below are only done in 
-    ! the last stage except for ion-electron equations where the point 
+    ! The point implicit update and other stuff below are only done in
+    ! the last stage except for ion-electron equations where the point
     ! implicit has to be done in every stage.
     if(.not.UseEfield .and. iStage < nStage)then
        if(UseBufferGrid) call fix_buffer_grid(iBlock)
@@ -312,17 +309,17 @@ contains
        ! Make sure that energy is consistent
        call calc_energy_cell(iBlock)
 
-       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+       if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after point impl state              =', &
-            State_VGB(VarTest, iTest,jTest,kTest,iBlock),      &
+            State_VGB(iVarTest, iTest,jTest,kTest,iBlock),      &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     end if
 
     if(UseMultiIon .and. IsMhd)then
        call multi_ion_update(iBlock, IsFinal = .true.)
-       if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+       if(DoTest)write(*,'(2x,2a,15es20.12)') &
             NameSub, ' after multiion update2              =', &
-            State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
             Energy_GBI(iTest,jTest,kTest,iBlock,:)
     end if
 
@@ -339,11 +336,12 @@ contains
 
     if(UseBufferGrid) call fix_buffer_grid(iBlock)
 
-    if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+    if(DoTest)write(*,'(2x,2a,15es20.12)') &
          NameSub, ' final state                         =', &
-         State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+         State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
          Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine update_explicit
@@ -382,9 +380,9 @@ contains
             end if
          end do; end do; end do
 
-         if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after mhd_to_boris                  =', &
-              State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       endif
 
@@ -412,9 +410,9 @@ contains
             end if
          end do; end do; end do
 
-         if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after mhd_to_boris_simple           =', &
-              State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       end if
 
@@ -522,7 +520,7 @@ contains
          ! Runge-Kutta scheme coefficients
          if (nStage==2) then
             Coeff1 = 0.5
-         elseif (nStage==3) then          
+         elseif (nStage==3) then
             if (iStage==2) then
                Coeff1 = 0.75
             elseif (iStage==3) then
@@ -547,13 +545,13 @@ contains
 
       endif
 
-      if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+      if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after flux/source                   =', &
-           State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+           State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
       if(boris_correction) then
-         ! Convert StateOld_VGB and State_VGB back from 
+         ! Convert StateOld_VGB and State_VGB back from
          ! semi-relativistic to classical MHD variables
          do k=1,nK; do j=1,nJ; do i=1,nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -571,14 +569,14 @@ contains
             end if
          end do; end do; end do
 
-         if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after boris_to_mhd                  =', &
-              State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       endif
 
       if(UseBorisSimple .and. IsMhd) then
-         ! Convert mometum in StateOld_VGB and State_VGB back from 
+         ! Convert mometum in StateOld_VGB and State_VGB back from
          ! enhanced momentum
          do k=1,nK; do j=1,nJ; do i=1,nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
@@ -594,9 +592,9 @@ contains
             end if
          end do; end do; end do
 
-         if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after boris_to_mhd                  =', &
-              State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       endif
 
@@ -627,9 +625,9 @@ contains
             end do; end do; end do
          end if
 
-         if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after multispecies correct          =', &
-              State_VGB(VarTest,iTest,jTest,kTest,iBlock)
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock)
 
       end if
 
@@ -643,7 +641,7 @@ contains
             end do; end do; end do
          end do
 
-         if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after min density correct densities =', &
               State_VGB(iRho_I,iTest,jTest,kTest,iBlock)
       end if
@@ -652,8 +650,8 @@ contains
            ((nStage==1.and..not.time_accurate) &
            .or.(nStage==2.and.iStage==1.and.UseHalfStep)))then
 
-         ! A desparate attempt to maintain positivity by adding dB^2/2 to the 
-         ! energy. This is fine for steady state, and is 2nd order accurate 
+         ! A desparate attempt to maintain positivity by adding dB^2/2 to the
+         ! energy. This is fine for steady state, and is 2nd order accurate
          ! for half+full step method. But it cannot be used for RK schemes!
 
          do k=1,nK; do j=1,nJ; do i=1,nI
@@ -663,9 +661,9 @@ contains
                  Source_VC(Bz_,i,j,k)**2)
          end do; end do; end do
 
-         if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+         if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after energy dB correct             =', &
-              State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
       end if
@@ -691,9 +689,9 @@ contains
       ! Update energy or pressure based on UseConservative and IsConserv_CB
       call calc_energy_or_pressure(iBlock)
 
-      if(DoTestMe)write(*,'(2x,2a,15es20.12)') &
+      if(DoTest)write(*,'(2x,2a,15es20.12)') &
            NameSub, ' after pressure/energy update        =', &
-           State_VGB(VarTest,iTest,jTest,kTest,iBlock),       &
+           State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
     end subroutine update_explicit
@@ -701,8 +699,9 @@ contains
 
     subroutine deduct_expl_source()
       integer:: iVarSemi_
-      character(len=*), parameter :: NameSub = 'deduct_expl_source'
 
+      character(len=*), parameter:: NameSub = 'deduct_expl_source'
+      !------------------------------------------------------------------------
       if(UseElectronPressure) then
          iVarSemi_  = pe_
       else
@@ -712,7 +711,7 @@ contains
       do k=1,nK; do j=1,nJ; do i=1,nI
          ! DtLocal = Cfl*time_BLK(i,j,k,iBlock)
 
-         ! For the first iteration, dt = 0;  
+         ! For the first iteration, dt = 0;
          ! if(DtLocal < 1e-15) CYCLE
          Source_VCB(iVarSemi_,i,j,k,iBlock) = &
               State_VGB(iVarSemi_,i,j,k,iBlock) - &
@@ -725,8 +724,7 @@ contains
     !==========================================================================
 
   end subroutine update_state_normal
-
-  !===========================================================================
+  !============================================================================
 
   subroutine update_te0
 
@@ -738,13 +736,15 @@ contains
 
     real:: Te0Si
     integer:: i, j, k, iBlock
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_te0'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     !\
-    ! At the end of time step just calculated values of ERad are used to 
+    ! At the end of time step just calculated values of ERad are used to
     ! calculate Te (and accordingly B(Te)).
     !/
     UseERadInput = .true.
-
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -758,9 +758,10 @@ contains
     ! Reset UseERadInput
     UseERadInput = .false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine update_te0
-
   !============================================================================
+
   subroutine update_check
 
     ! Check updated values for allowed change in density or pressure
@@ -791,25 +792,22 @@ contains
     real :: Value,B0_DC(3,nI,nJ,nK)
     integer :: i_D(3)
     logical :: update_check_done, IsNegative, DoStop
-    logical :: oktest,  oktest_me
-    logical :: oktest1, oktest1_me
-    logical :: oktest2, oktest2_me
-    logical :: oktest3, oktest3_me
+    logical :: DoTest1
+    logical :: DoTest2
+    logical :: DoTest3
 
     real    :: RhoChangeMax_I(2), pChangeMax_I(2)
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub = 'update_check'
     character(len=*), parameter:: format="(a,i5,a,f6.1,a,3es11.3)"
 
     integer :: iError1=-1
-    !-----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_check'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    call set_oktest('fix_update',DoTest,DoTestMe)
-
-    call set_oktest(NameSub, oktest,oktest_me)
-    call set_oktest('convergence_history',oktest1,oktest1_me)
-    call set_oktest('update_check_detail',oktest2,oktest2_me)
-    call set_oktest('locations',oktest3,oktest3_me)
+    call test_start('convergence_history', DoTest1)
+    call test_start('update_check_detail', DoTest2)
+    call test_start('locations',           DoTest3)
 
     ! Check for allowable percentage changed from update
     if(time_accurate) then
@@ -868,7 +866,7 @@ contains
                   StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock)) &
                   /StateOld_VGB(P_,1:nI,1:nJ,1:nK,iBlock) ) ) ) )
           end do
-          if(oktest)then
+          if(DoTest)then
              ! Find location of maximum change
              call MPI_allreduce(percent_chg_rho, RhoChangeMax_I, 2, &
                   MPI_REAL, MPI_MAX, iComm, iError)
@@ -897,7 +895,6 @@ contains
                               ' max p drop=',pChangeMax_I(1),&
                               '% at x,y,z=',&
                               Xyz_DGB(:,i,j,k,iBlock)
-
 
                          if(pChangeMax_I(2) > percent_max_p(2) .and. &
                               1e-4 > abs(pChangeMax_I(2) - 100. * abs( &
@@ -937,7 +934,7 @@ contains
                    end do
                 end do; end do; end do
              end do
-          end if !oktest
+          end if ! DoTest
           time_fraction_rho = 1.0 / maxval(percent_chg_rho/percent_max_rho)
           call MPI_allreduce(time_fraction_rho, min_time_fraction_rho, 1, &
                MPI_REAL, MPI_MIN, iComm, iError)
@@ -973,15 +970,13 @@ contains
        PercentChangePE(1:2) =  percent_chg_rho(1:2) - 0.1
        PercentChangePE(3:4) =  percent_chg_p(1:2) - 0.1
 
-
        ! The part implicit scheme can get here if all blocks become explicit
        ! due to time step reductions. To be able to recover the time step,
        ! increase fixed time step if there was no time step reduction above.
        if(UsePartImplicit .and. dt == DtFixed) &
             DtFixed = min(DtFixedOrig, DtFixed*1.05)
 
-
-       if(oktest) then
+       if(DoTest) then
           if (iProc == 0 .and. report_tf < 1.) &
                write(*,'(a,a,i6,a,f12.8,a,f12.8)') 'update_check TA:', &
                ' nStep=',n_step,'     dt reduction=',report_tf,' dt=',dt
@@ -1053,7 +1048,7 @@ contains
                    end if
                    update_check_done = .false.
                    cell_time_fraction = cell_time_fraction * time_fraction
-                   if(oktest2) then
+                   if(DoTest2) then
                       write(*,*) &
                            'update_check LT: changing cell value, PE=',iProc, &
                            ' BLK=',iBlock,' i,j,k=',i,' ',j,' ',k, &
@@ -1069,7 +1064,7 @@ contains
                            '   ', NameVar_V(nVar),State_VGB(nVar,i,j,k,iBlock)
                    end if
                    call fix_update
-                   if(oktest2) then
+                   if(DoTest2) then
                       write(*,*) &
                            iProc,' ',iBlock,' ',i,' ',j,' ',k,' NEW: ', &
                            NameVar_V(Rho_),'=',State_VGB(Rho_,i,j,k,iBlock),&
@@ -1088,14 +1083,14 @@ contains
        call MPI_allreduce(report_tf, report_tf_all, 1, &
             MPI_REAL, MPI_MIN, iComm, iError)
        report_tf = report_tf_all
-       if(oktest) then
+       if(DoTest) then
           if (iProc == 0 .and. report_tf < 1.) &
                write(*,'(a,a,i6,a,f12.8)') 'update_check LT:', &
                ' nStep=',n_step,' max dt reduction=',report_tf
        end if
     end if
 
-    if(oktest1.and.iStage==nStage) then
+    if(DoTest1.and.iStage==nStage) then
        call MPI_allreduce(PercentChangePE,  PercentChangeMax, 4, &
             MPI_REAL, MPI_MAX, iComm, iError)
        if(iProc==0) then
@@ -1104,11 +1099,11 @@ contains
           write(*,*) 'Maximum change in other positive variables:', &
                - PercentChangeMax(1),' %,   ',  PercentChangeMax(2),' %'
        end if
-       if(oktest3) then
+       if(DoTest3) then
           do iBlock = 1,nBlockMax
-             if(Unused_B(iBlock))cycle
+             if(Unused_B(iBlock))CYCLE
              do k=1,nK;do j=1,nJ; do i=1,nI
-                if(.not.true_cell(i,j,k,iBlock))cycle
+                if(.not.true_cell(i,j,k,iBlock))CYCLE
                 if (abs(100. * abs( min( 0., &
                      (State_VGB(Rho_,i,j,k,iBlock)-&
                      StateOld_VGB(Rho_,i,j,k,iBlock)) &
@@ -1205,7 +1200,9 @@ contains
     call MPI_allreduce(IsNegative, DoStop,1,MPI_LOGICAL,MPI_LOR,iComm,iError)
     if (DoStop) call stop_mpi('Stopping, negative density or pressure')
 
+    call test_stop(NameSub, DoTest)
   contains
+    !==========================================================================
 
     subroutine fix_update
 
@@ -1215,11 +1212,11 @@ contains
       real :: rhoUx_Boris, rhoUy_Boris, rhoUz_Boris, E_Boris, &
            rhoUx_o_Boris, rhoUy_o_Boris, rhoUz_o_Boris, E_o_Boris
 
-      character(len=*), parameter:: NameSub='fix_update'
       logical, parameter :: DoTestCell = .false.
+      character(len=*), parameter:: NameSub = 'fix_update'
       !------------------------------------------------------------------------
-      !DoTestCell = DoTestMe .and. iBlock==BlkTest .and. &
-      !     i==iTest .and. j==jTest .and. k==kTest 
+      ! DoTestCell = DoTestMe .and. iBlock==iBlockTest .and. &
+      !     i==iTest .and. j==jTest .and. k==kTest
 
       if(allocated(IsConserv_CB))then
          IsConserv = IsConserv_CB(i,j,k,iBlock)
@@ -1250,8 +1247,7 @@ contains
               StateOld_VGB(rhoUz_,i,j,k,iBlock)*fullBz)/rhoc2
          gA2_Boris=1.+fullBB/rhoc2
 
-
-         ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 
+         ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
          !            = rhoU + (U B^2 - B U.B)/c^2
          !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
          rhoUx_o_Boris = StateOld_VGB(rhoUx_,i,j,k,iBlock)*ga2_Boris - &
@@ -1284,8 +1280,7 @@ contains
               State_VGB(rhoUz_,i,j,k,iBlock)*fullBz)/rhoc2
          gA2_Boris = 1 + fullBB/rhoc2
 
-
-         ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 
+         ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
          !            = rhoU + (U B^2 - B U.B)/c^2
          !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
          rhoUx_Boris = State_VGB(rhoUx_,i,j,k,iBlock)*ga2_Boris - fullBx*UdotBc2
@@ -1305,8 +1300,8 @@ contains
          end if
 
          ! Interpolate
-         !For possible extension to multifluid
-         !State_VGB(iRho_I,i,j,k,iBlock) = &
+         ! For possible extension to multifluid
+         ! State_VGB(iRho_I,i,j,k,iBlock) = &
          !     (   time_fraction) *   State_VGB(iRho_I,i,j,k,iBlock) + &
          !     (1.0-time_fraction) * StateOld_VGB(iRho_I,i,j,k,iBlock)
          State_VGB(rho_,i,j,k,iBlock) = &
@@ -1363,7 +1358,6 @@ contains
                  -State_VGB(rhoUy_,i,j,k,iBlock)*fullBx)**2 &
                  )/State_VGB(rho_,i,j,k,iBlock)**2               )
 
-
             if((nStage==1.and..not.time_accurate).or.&
                  (nStage>1.and.iStage==1)) &
                  Energy_GBI(i,j,k,iBlock,1) =  Energy_GBI(i,j,k,iBlock,1) - &
@@ -1377,14 +1371,14 @@ contains
 
             call calc_pressure(i,i,j,j,k,k,iBlock,1,1)
 
-            ! For multifluid update all other energies and 
+            ! For multifluid update all other energies and
             ! call calc_pressure_point
          else
             ! For possible extension to multifluid
-            !State_VGB(iP_I,i,j,k,iBlock) = &
+            ! State_VGB(iP_I,i,j,k,iBlock) = &
             !     (   time_fraction) *   State_VGB(iP_I,i,j,k,iBlock) + &
             !     (1.0-time_fraction) * StateOld_VGB(iP_I,i,j,k,iBlock)
-            !call calc_energy_point(i,j,k,iBlock)
+            ! call calc_energy_point(i,j,k,iBlock)
 
             State_VGB(p_,i,j,k,iBlock) = &
                  (   time_fraction) *   State_VGB(p_,i,j,k,iBlock) + &
@@ -1392,7 +1386,7 @@ contains
 
             call calc_energy(i,i,j,j,k,k,iBlock,1,1)
          end if
-      else                      ! Non-Boris interpolation                
+      else                      ! Non-Boris interpolation
 
          State_VGB(1:nVar,i,j,k,iBlock) = &
               (   time_fraction) *   State_VGB(1:nVar,i,j,k,iBlock) + &
@@ -1421,10 +1415,11 @@ contains
       if(DoTestCell)write(*,*)NameSub,' final state=',State_VGB(:,i,j,k,iBlock)
 
     end subroutine fix_update
+    !==========================================================================
 
   end subroutine update_check
-
   !============================================================================
+
   subroutine select_conservative
 
     ! Set the global variable IsConserv_CB
@@ -1438,34 +1433,34 @@ contains
 
     integer :: iBlock, iCrit, i, j, k
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'select_conservative'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     call timing_start('nonconservative')
 
-    if(DoTestMe)write(*,*) NameSub,': starting with ',&
+    if(DoTest)write(*,*) NameSub,': starting with ',&
          'UseNonConservative, nConservCrit=',UseNonConservative, nConservCrit
 
     if(.not.allocated(IsConserv_CB))then
        allocate(IsConserv_CB(nI,nJ,nK,MaxBlock))
-       if(DoTestMe)write(*,*) NameSub,': allocated IsConserv_CB'
+       if(DoTest)write(*,*) NameSub,': allocated IsConserv_CB'
     end if
 
     if(nConservCrit < 1)then
        ! There are no criteria so use fully non-conservative
        IsConserv_CB = .false.
-       if(DoTestMe)write(*,*) NameSub,': set IsConserv_CB = F'
+       if(DoTest)write(*,*) NameSub,': set IsConserv_CB = F'
        RETURN
     endif
 
     if(any(TypeConservCrit_I == 'p' .or. TypeConservCrit_I == 'gradp' &
          .or. TypeConservCrit_I == 'jumpp') )then
 
-       if(DoTestMe)write(*,*) NameSub, ': Apply physics based criteria'
+       if(DoTest)write(*,*) NameSub, ': Apply physics based criteria'
 
-       ! These all have to be true to use non-conservative, 
+       ! These all have to be true to use non-conservative,
        ! so any of the criteria can switch to conservative
        IsConserv_CB = .false.
 
@@ -1504,7 +1499,7 @@ contains
                       IsConserv_CB(i,j,k,iBlock) = &
                            IsConserv_CB(i,j,k,iBlock) .or. &
                            State_VGB(P_,i,j,k,iBlock) > pCoeffConserv * &
-                           Energy_GBI(i,j,k,iBlock,1) 
+                           Energy_GBI(i,j,k,iBlock,1)
                    end do;end do;end do
                 end if
              case('gradp')
@@ -1548,7 +1543,7 @@ contains
                 CYCLE
              end select
 
-             if(DoTestMe .and. iBlock==BlkTest)&
+             if(DoTest .and. iBlock==iBlockTest)&
                   write(*,*) NameSub, ': TypeCrit, IsConserv=',&
                   TypeConservCrit_I(iCrit), &
                   IsConserv_CB(iTest,jTest,kTest,iBlock)
@@ -1565,11 +1560,11 @@ contains
        end do ! iBlock
 
     else
-       ! If there are no physics based criteria we start from 
+       ! If there are no physics based criteria we start from
        ! the assumption of conservative everywhere
        IsConserv_CB = .true.
 
-       if(DoTestMe .and. iProc==PROCtest)&
+       if(DoTest .and. iProc==iProcTest)&
             write(*,*) NameSub, ': default IsConserv is true'
     endif
 
@@ -1593,7 +1588,7 @@ contains
           case default
              CYCLE
           end select
-          if(DoTestMe.and.iBlock==BlkTest)&
+          if(DoTest.and.iBlock==iBlockTest)&
                write(*,*) NameSub, ': TypeCrit, IsConserv=',&
                TypeConservCrit_I(iCrit), IsConserv_CB(iTest,jTest,kTest,iBlock)
        end do
@@ -1601,20 +1596,20 @@ contains
 
     call timing_stop('nonconservative')
 
+    call test_stop(NameSub, DoTest)
   end subroutine select_conservative
-
-  !===========================================================================
+  !============================================================================
 
   subroutine fix_anisotropy
 
     ! Calculate the pressure anisotropy relaxation term for anisotropic MHD.
-    ! Correct the parallel pressure based on the firehose, mirror and proton 
-    ! cyclotron instability criteria in unstable regions and the global 
-    ! relaxation, if present, in the whole domain. 
+    ! Correct the parallel pressure based on the firehose, mirror and proton
+    ! cyclotron instability criteria in unstable regions and the global
+    ! relaxation, if present, in the whole domain.
     ! The instability that changes Ppar most is applied.
     !
-    ! If UseConstantTau = true, use TauInstability read from PARAM.in as the 
-    ! contant relaxation time, same for different instabilities. 
+    ! If UseConstantTau = true, use TauInstability read from PARAM.in as the
+    ! contant relaxation time, same for different instabilities.
     ! TauGlobal is a constant read from PARAM.in.
 
     use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, p_
@@ -1624,14 +1619,18 @@ contains
     use ModAdvance, ONLY: State_VGB, time_BLK
     use ModPhysics, ONLY: UseConstantTau, TauInstability, &
          IonMassPerCharge, TauGlobal
-    use ModGeometry,ONLY: true_cell
+    use ModGeometry, ONLY: true_cell
 
     ! Variables for anisotropic pressure
     real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
     real:: InvGyroFreq, PparOverLimit, Deltapf, Deltapm
 
     integer:: i, j, k, iBlock
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fix_anisotropy'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -1639,7 +1638,7 @@ contains
 
           ! Avoid Pperp < 0
           State_VGB(Ppar_,i,j,k,iBlock) = &
-               min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock)) 
+               min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock))
 
           ! Do not apply the relaxation term in this case
           if(UseConstantTau .and. TauInstability < 0.0) CYCLE
@@ -1668,14 +1667,14 @@ contains
           ! Limit anisotropy to instability criteria in unstable regions
           if(Ppar - Pperp > B2)then
              ! firehose
-             ! by how much the instability limit is exceeded: 
+             ! by how much the instability limit is exceeded:
              ! ppar - ppar_marginalstable
-             PparOverLimit = Ppar - p - 2/3.*B2             
+             PparOverLimit = Ppar - p - 2/3.*B2
 
-             ! Calc firehose relaxation time based on the maximum 
+             ! Calc firehose relaxation time based on the maximum
              ! growth rate calculated from eqn (2) of Hall [1981]
-             ! with theta = 0 and ppar < 4*pperp 
-             ! MaxGrowthRate = 
+             ! with theta = 0 and ppar < 4*pperp
+             ! MaxGrowthRate =
              !    0.5*GyroFreq*Delta pf/sqrt(ppar*(pperp-ppar/4))
              ! where Delta pf = ppar-pperp-B^2 = 3/2*PparOverLimit
              if(.not. UseConstantTau)then
@@ -1685,18 +1684,18 @@ contains
              end if
              Dp = min(Dp, -DtCell*PparOverLimit/(DtCell + TauInstability))
 
-          else 
+          else
              if(Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
-                ! mirror 
+                ! mirror
                 ! ppar_marginalstable - ppar
                 PparOverLimit = (B2 + 6.0*p &
                      - sqrt(B2**2 + 12.0*B2*p + 9.0*p**2))/3. - Ppar
 
-                ! Calc mirror relaxation time based on the maximum 
-                ! growth rate from eqn (7) of Southwood [1993], 
-                ! with the wavelength at maximum growth from eqn (21) 
+                ! Calc mirror relaxation time based on the maximum
+                ! growth rate from eqn (7) of Southwood [1993],
+                ! with the wavelength at maximum growth from eqn (21)
                 ! of Hall [1980]
-                ! MaxGrowthRate = 
+                ! MaxGrowthRate =
                 !    4/3/sqrt(5)*GyroFreq*sqrt(2*Delta pm/ppar)
                 ! where Delta pm = pperp-ppar-B^2*ppar/(2*pperp)
                 if(.not. UseConstantTau)then
@@ -1712,7 +1711,7 @@ contains
                      - 0.1*sqrt(B2))**2/2. - Ppar
 
                 ! Estimate ion cyclotron relaxation time from
-                ! observations in the magnetosphere and theories 
+                ! observations in the magnetosphere and theories
                 if(.not. UseConstantTau) &
                      TauInstability = 100*InvGyroFreq
 
@@ -1720,12 +1719,12 @@ contains
              end if
           end if
           State_VGB(Ppar_,i,j,k,iBlock) = Ppar + Dp
-       end do; end do; end do  
+       end do; end do; end do
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine fix_anisotropy
-
-  !===========================================================================
+  !============================================================================
 
   subroutine update_b0
 
@@ -1745,17 +1744,16 @@ contains
 
     integer :: iBlock
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'update_b0'
-    !=========================================================================
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'update_b0'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Update ThetaTilt
     if(NameThisComp=='GM') &
          call get_axes(Time_Simulation, MagAxisTiltGsmOut=ThetaTilt)
 
-    if (DoTestMe) then
+    if (DoTest) then
        if(NameThisComp=='GM')then
           call write_prefix; write(iUnitOut,*) &
                "update_b0 at tSimulation, TiltGsm=", &
@@ -1804,20 +1802,19 @@ contains
     end if
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest)
   end subroutine update_b0
-
-  !===========================================================================
+  !============================================================================
 
   subroutine fix_multi_ion_update(iBlock)
 
     ! This subroutine sets the ion velocities of the individual fluids equal to
-    ! their mass density weighted average, and/or the ion temperature of the 
+    ! their mass density weighted average, and/or the ion temperature of the
     ! individual fluids equal to their number density weighted average.
 
     use ModSize,       ONLY: nI, nJ, nK
     use ModAdvance,    ONLY: State_VGB, &
          UseSingleIonVelocity, UseSingleIonTemperature
-    use ModMain,       ONLY: iTest, jTest, kTest, BlkTest, ProcTest
     use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
     use ModGeometry,   ONLY: true_cell
@@ -1828,23 +1825,19 @@ contains
     integer :: i, j, k, iFluid
     real :: RhoInv, Ux, Uy, Uz, Temp, NumDens_I(nIonFluid)
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'fix_multi_ion_update'
-    !----------------------------------------------------------------------
-    if (iBlock == BlkTest .and. iProc == ProcTest) then 
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false. ; DoTestMe = .false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fix_multi_ion_update'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub,': ion fluid velocities and temperatures before fix:'
        do iFluid = IonFirst_, IonLast_
           write(*,*)'iIonFluid,ux,uy,uz,T=', &
                State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),&
                iTest,jTest,kTest,iBlock) &
                / State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock), &
-               State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    & 
+               State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    &
                *MassFluid_I(iFluid) &
                /State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock)
        end do
@@ -1889,19 +1882,22 @@ contains
        end do; end do; end do
     end if
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub,': ion fluid velocities and temperatures after fix:'
        do iFluid = IonFirst_, IonLast_
           write(*,*)'iIonFluid,ux,uy,uz,T=', &
                State_VGB(iRhoUx_I(iFluid):iRhoUz_I(iFluid),&
                iTest,jTest,kTest,iBlock) &
                / State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock), &
-               State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    & 
+               State_VGB(iP_I(iFluid),iTest,jTest,kTest,iBlock)    &
                *MassFluid_I(iFluid) &
                /State_VGB(iRho_I(iFluid),iTest,jTest,kTest,iBlock)
        end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_multi_ion_update
+  !============================================================================
 
 end module ModUpdateState
+!==============================================================================

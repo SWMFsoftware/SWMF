@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSetParameters
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iVarTest
 
   implicit none
 
@@ -10,6 +13,7 @@ module ModSetParameters
   public:: set_parameters
 
 contains
+  !============================================================================
 
   subroutine set_parameters(TypeAction)
 
@@ -37,7 +41,7 @@ contains
          read_region_param, read_test_param, NameVarTest, iVarTest, &
          BetaProlong, init_mpi, IsCartesianGrid, IsCartesian, &
          IsRzGeometry, IsCylindrical, IsRLonLat, IsLogRadius, IsGenRadius
-    use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits,& 
+    use ModAMR,           ONLY: init_mod_amr, read_amr_param, fix_amr_limits,&
          DoAmr
     use ModFieldTrace,    ONLY: init_mod_field_trace, read_field_trace_param,&
          DoMapEquatorRay
@@ -103,18 +107,18 @@ contains
     use ModPIC, ONLY: pic_read_param, pic_init_region, UsePic
     use ModIonElectron, ONLY: read_ion_electron_param, iVarUseCmax_I
     use ModFaceBoundary, ONLY: read_face_boundary_param
-    !CORONA SPECIFIC PARAMETERS
+    ! CORONA SPECIFIC PARAMETERS
     use EEE_ModMain, ONLY: EEE_set_parameters
     use ModMagnetogram, ONLY: set_parameters_magnetogram, &
          read_magnetogram_file, read_potential_field,     &
          read_new_magnetogram_file, read_new_potential_field
-    use ModExpansionFactors,ONLY: NameModelSW, CoronalT0Dim, &
+    use ModExpansionFactors, ONLY: NameModelSW, CoronalT0Dim, &
          read_wsa_coeff, set_empirical_model
     use ModCoronalHeating,  ONLY: read_corona_heating, &
          init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
-    use ModFieldLineThread, ONLY: read_threads 
+    use ModFieldLineThread, ONLY: read_threads
     use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc
-    use ModRadiativeCooling,ONLY: UseRadCooling,&
+    use ModRadiativeCooling, ONLY: UseRadCooling,&
          read_modified_cooling, check_cooling_param, read_chromosphere
     use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModWaves, ONLY: read_waves_param, check_waves
@@ -191,7 +195,7 @@ contains
     integer :: iNameBoundary, nNameBoundary
     real    :: BoundaryStateDim_V(1:nVar)
 
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
 
     iSession = i_session_read()
@@ -656,7 +660,7 @@ contains
              end if
 
              ! Determine the time output format to use in the logfile.
-             ! This is loaded by default above, but can be input in the 
+             ! This is loaded by default above, but can be input in the
              ! log_string line.
              if(index(log_string,'none')>0) then
                 log_time = 'none'
@@ -863,27 +867,27 @@ contains
                 call read_var('MuLimbDarkening',mu_los)
                 ! read the number of pixels
                 call read_var('nPix',n_pix_r(iFile))
-                ! if it is an EUV plot using a long table then read in the name 
+                ! if it is an EUV plot using a long table then read in the name
                 ! of the specific lookup table (will be matched to the name read
                 ! in by the lookuptable command).
                 if (index(plot_string,'TBL')>0&
                      .or.index(plot_string,'tbl')>0) &
-                     call read_var('NameLosTable',NameLosTable(iFile))            
+                     call read_var('NameLosTable',NameLosTable(iFile))
              elseif (index(plot_string,'rfr')>0) then
-                ! Refractive radiowave image 
+                ! Refractive radiowave image
                 plot_area='rfr'
                 ! Observer position
                 call read_var('ObsPosX', ObsPos_DI(1,iFile))
                 call read_var('ObsPosY', ObsPos_DI(2,iFile))
                 call read_var('ObsPosZ', ObsPos_DI(3,iFile))
                 ! read number of radiowave frequencies, i.e. # of plots
-                !call read_var('nRadioFrequency', nRadioFrequency)
+                ! call read_var('nRadioFrequency', nRadioFrequency)
                 call read_var('StringRadioFrequency', &
                      StringRadioFrequency_I(iFile))
                 call read_var('xSizeImage', X_Size_Image(iFile))
                 call read_var('ySizeImage', Y_Size_Image(iFile))
                 ! read the number of pixels
-                call read_var('nPixX', n_Pix_X(iFile))            
+                call read_var('nPixX', n_Pix_X(iFile))
                 call read_var('nPixY', n_Pix_Y(iFile))
              elseif(index(plot_string,'buf')>0)then
                 plot_area='buf'
@@ -919,7 +923,7 @@ contains
                      ) call read_var('DxSavePlot',plot_dx(1,iFile))
 
                 ! Extract the type of idl plot file: default is real4
-                TypeFile_I(iFile) = 'real4' 
+                TypeFile_I(iFile) = 'real4'
                 if(index(plot_string,'idl_real8') > 0) &
                      TypeFile_I(iFile) = 'real8'
                 if(index(plot_string,'idl_ascii') > 0) &
@@ -928,13 +932,13 @@ contains
                      TypeFile_I(iFile) = 'tec'
              elseif(index(plot_string, 'hdf') > 0) then
                 ! With these values VisIt recognises the files as timesteps
-                ! with the general defaults it does not. 
+                ! with the general defaults it does not.
                 IsPlotName_n = .true.
                 IsPlotName_t = .false.
                 IsPlotName_e = .false.
                 plot_form(iFile)='hdf'
                 TypeFile_I(iFile) = 'hdf5'
-             elseif(index(plot_string,'tec')>0)then 
+             elseif(index(plot_string,'tec')>0)then
                 plot_form(iFile)  = 'tec'
                 TypeFile_I(iFile) = 'tec'
              elseif(index(plot_string,'tcp')>0)then
@@ -1044,7 +1048,7 @@ contains
              elseif(index(plot_string,'TBL')>0.or.index(plot_string,'tbl')>0)then
                 plot_var='tbl'
                 plot_dimensional(iFile) = index(plot_string,'TBL')>0
-                plot_vars(iFile)='tbl' ! will read a table in write_plot_los 
+                plot_vars(iFile)='tbl' ! will read a table in write_plot_los
                 plot_pars(iFile)='mu'
              elseif(index(plot_string,'RWI')>0.or.index(plot_string,'rwi')>0)then
                 plot_var='rwi'
@@ -1081,7 +1085,7 @@ contains
                      //plot_string)
              end if
 
-             ! Set equation parameters for 3D unstructured IDL files 
+             ! Set equation parameters for 3D unstructured IDL files
              ! to describe block structure and the dipole. Needed by CCMC.
              if(plot_area == '3d_' .and. plot_form(iFile) == 'idl' &
                   .and. plot_dx(1, iFile) < 0.0) &
@@ -1153,15 +1157,15 @@ contains
 
           if(nOrder == 5) then
              ! Some of the settings below can be overwritten by #SCHEME5
-             UseFDFaceFlux    = .true. 
+             UseFDFaceFlux    = .true.
              UseCweno         = .false.
              ! HighResChange does not work for 1D, but works for 2D and 3D
              UseHighResChange = nDIm > 1
-             UseHighOrderAMR  = .true. 
+             UseHighOrderAMR  = .true.
 
-             UseTvdReschange = .false. 
-             UseAccurateResChange = .false.            
-             DoConserveFlux = .false. 
+             UseTvdReschange = .false.
+             UseAccurateResChange = .false.
+             DoConserveFlux = .false.
           endif
 
        case("#SCHEME4")
@@ -1181,14 +1185,14 @@ contains
           call read_var('UseHighResChange', UseHighResChange)
           call read_var('UseHighOrderAMR',UseHighOrderAMR)
 
-          ! If it is not 'cweno', mp5 scheme will be used. 
+          ! If it is not 'cweno', mp5 scheme will be used.
           UseCweno = TypeLimiter5 == 'cweno'
 
           ! The following lines are related to cweno scheme, and it needs
-          ! more tests. 
-          !if(UseCweno) call read_var('UsePerVarLimiter', UsePerVarLimiter)
+          ! more tests.
+          ! if(UseCweno) call read_var('UsePerVarLimiter', UsePerVarLimiter)
           ! if(UseCweno .and. .not. DoInterpolateFlux) then
-          !    ! Density and velocity use density as smooth indicator. 
+          !    ! Density and velocity use density as smooth indicator.
           !    ! Other variables use themselves.
           !    iVarSmooth_V(1:Uz_) = Rho_
           !    do iVar = Uz_+1, nVar
@@ -1198,7 +1202,7 @@ contains
           ! endif
 
           if(UseFDFaceFlux .and. UseHighResChange) &
-               DoConserveFlux   = .false. 
+               DoConserveFlux   = .false.
 
           if(.not.UseHighResChange) then
              nOrderProlong  = 2
@@ -1225,14 +1229,14 @@ contains
                      IsLowerCase=.true.)
                 select case(TypeConservCrit_I(i))
                    !\
-                   ! Geometry based criteria: 
+                   ! Geometry based criteria:
                    !/
                 case('r','radius')
                    !    non-conservative scheme is used for r < rConserv
                    TypeConservCrit_I(i) = 'r'
                    call read_var('rConserv',rConserv)
                 case('parabola','paraboloid')
-                   !    non-conservative scheme is used for 
+                   !    non-conservative scheme is used for
                    !    x < xParabolaConserv - (y**2+z**2)/yParabolaConserv
                    TypeConservCrit_I(i) = 'parabola'
                    call read_var('xParabolaConserv',xParabolaConserv)
@@ -1272,9 +1276,9 @@ contains
           call read_time_step_control_param(NameCommand)
 
        case("#UPDATECHECK")
-          call read_var("UseUpdateCheck",UseUpdateCheck)          
+          call read_var("UseUpdateCheck",UseUpdateCheck)
           if(UseUpdateCheck)then
-             call read_var("RhoMinPercent", percent_max_rho(1))        
+             call read_var("RhoMinPercent", percent_max_rho(1))
              call read_var("RhoMaxPercent", percent_max_rho(2))
              call read_var("pMinPercent",   percent_max_p(1))
              call read_var("pMaxPercent",   percent_max_p(2))
@@ -1285,7 +1289,7 @@ contains
           UseTvdResChange = .false.
           UseAccurateResChange = .false.
 
-       case("#MESSAGEPASS","#OPTIMIZE")               
+       case("#MESSAGEPASS","#OPTIMIZE")
           call read_var('TypeMessagePass', optimize_message_pass)
 
        case('#CLIMIT', '#CLIGHTWARNING')
@@ -1296,13 +1300,13 @@ contains
 
        case("#BORIS")
           if(.not.UseB)CYCLE READPARAM
-          call read_var('UseBorisCorrection', boris_correction)   
+          call read_var('UseBorisCorrection', boris_correction)
           if(boris_correction) then
              call read_var('BorisClightFactor', boris_cLight_factor)
              if(IsMhd)then
                 UseBorisSimple = .false.
              else
-                ! For non-MHD equations only simplified Boris correction 
+                ! For non-MHD equations only simplified Boris correction
                 ! is possible
                 UseBorisSimple   = .true.
                 boris_correction = .false.
@@ -1322,7 +1326,7 @@ contains
 
        case("#DIVB")
           if(.not.UseB)CYCLE READPARAM
-          call read_var('UseDivbSource'   ,UseDivbSource)   
+          call read_var('UseDivbSource'   ,UseDivbSource)
           call read_var('UseDivbDiffusion',UseDivbDiffusion)
           call read_var('UseProjection'   ,UseProjection)
           call read_var('UseConstrainB'   ,UseConstrainB)
@@ -1472,7 +1476,7 @@ contains
 
        case("#MULTIFLUIDIM")
           if(.not.is_first_session())CYCLE READPARAM
-          ! couple GM and IM in multi-fluid (all, Hp, Op) mode                
+          ! couple GM and IM in multi-fluid (all, Hp, Op) mode
           call read_var('DoMultiFluidIMCoupling', DoMultiFluidIMCoupling)
 
        case('#ANISOPRESSUREIM')
@@ -1493,7 +1497,7 @@ contains
           call read_var('UseUserWritePlot'        ,UseUserWritePlot)
           call read_var('UseUserAMR'              ,UseUserAMR)
           call read_var('UseUserEchoInput'        ,UseUserEchoInput)
-          call read_var('UseUserB0'               ,UseUserB0) 
+          call read_var('UseUserB0'               ,UseUserB0)
           call read_var('UseUserInitSession'      ,UseUserInitSession)
           call read_var('UseUserUpdateStates'     ,UseUserUpdateStates)
 
@@ -1549,7 +1553,7 @@ contains
           call read_var('NameEquation',NameEquationRead)
           call read_var('nVar',        nVarEquationRead)
           if(NameEquationRead /= NameEquation .and. iProc==0 &
-               .and. .not. DoChangeRestartVariables)then   
+               .and. .not. DoChangeRestartVariables)then
              write(*,'(a)')'BATSRUS was compiled with equation '// &
                   NameEquation//' which is different from '// &
                   NameEquationRead
@@ -1577,7 +1581,7 @@ contains
 
        case("#RESTARTVARIABLES")
           ! This reads the names of the variables saved in the input
-          ! restart file. 
+          ! restart file.
           call read_var('NameVarRestartRead', NameVarRestartRead, &
                IsLowerCase=.true.)
           IsReadNameVarRestart = .true.
@@ -1603,16 +1607,16 @@ contains
 
        case("#MAGNETOMETER")
           call read_magperturb_param(NameCommand)
-          nFile = max(nFile, magfile_) 
+          nFile = max(nFile, magfile_)
 
        case("#MAGNETOMETERGRID")
           call read_magperturb_param(NameCommand)
-          nFile = max(nFile, maggridfile_) 
+          nFile = max(nFile, maggridfile_)
 
        case("#GRIDGEOMETRY", "#GRIDGEOMETRYLIMIT")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('TypeGeometry', TypeGeometry, IsLowerCase=.true.)
-          ! need to read in the general grid file      
+          ! need to read in the general grid file
           if(TypeGeometry == 'spherical_genr') then
              call read_var('NameGridFile',NameGridFile)
              call read_gen_radial_grid(NameGridFile)
@@ -1672,7 +1676,7 @@ contains
 
        case("#GRID")
           if(.not.is_first_session())CYCLE READPARAM
-          call read_var('nRootBlockX', nRootRead_D(1)) 
+          call read_var('nRootBlockX', nRootRead_D(1))
           call read_var('nRootBlockY', nRootRead_D(2))
           call read_var('nRootBlockZ', nRootRead_D(3))
 
@@ -1779,7 +1783,7 @@ contains
           ElectronPressureRatio = ElectronTemperatureRatio
 
           ! AverageIonCharge is only useful when there is only one ion
-          if(nIonFluid==1 .and. .not. UseMultiSpecies)then  
+          if(nIonFluid==1 .and. .not. UseMultiSpecies)then
              AverageIonCharge = ChargeIon_I(1)
              ElectronPressureRatio = ElectronTemperatureRatio*AverageIonCharge
           end if
@@ -1801,7 +1805,7 @@ contains
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('UseExtraBoundary', UseExtraBoundary)
           if(UseExtraBoundary)then
-             call read_var('TypeFaceBc_I(ExtraBc_)', TypeFaceBc_I(ExtraBc_))  
+             call read_var('TypeFaceBc_I(ExtraBc_)', TypeFaceBc_I(ExtraBc_))
           end if
 
        case('#SOLIDSTATE')
@@ -1812,7 +1816,7 @@ contains
                call stop_mpi('#FACEBOUNDARY command is no longer used!')
 
        case("#SOLARWIND")
-          !if(.not.is_first_session())CYCLE READPARAM
+          ! if(.not.is_first_session())CYCLE READPARAM
           call read_var('SwNDim',  SW_n_dim)
           call read_var('SwTDim'  ,SW_T_dim)
           call read_var('SwUxDim' ,SW_Ux_dim)
@@ -1873,12 +1877,11 @@ contains
              if(UseBody2Orbit)then
                 call read_var('OrbitPeriod [days]', OrbitPeriod)
                 ! Convert orbit period from days to seconds
-                OrbitPeriod = OrbitPeriod*cSecondPerDay 
+                OrbitPeriod = OrbitPeriod*cSecondPerDay
              end if
           end if
 
-
-       case("#BOUNDARYSTATE")        
+       case("#BOUNDARYSTATE")
           ! Read boundary states for multiple boundaries.
           call read_var('StringBoundary', StringBoundary, IsLowerCase=.true.)
           do iVar = 1, nVar
@@ -1942,7 +1945,7 @@ contains
 
              case default
                 call stop_mpi(NameSub//' ERROR: incorrect boundary name='//&
-                     NameBoundary_I(iNameBoundary))   
+                     NameBoundary_I(iNameBoundary))
              end select
           end do
 
@@ -1971,7 +1974,7 @@ contains
           call check_stand_alone
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('dLongitudeHgi', dLongitudeHgiDeg)
-          dLongitudeHgi = dLongitudeHgiDeg * cDegToRad        
+          dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
        case("#COORDSYSTEM","#COORDINATESYSTEM")
           if(.not.is_first_session())CYCLE READPARAM
@@ -1988,7 +1991,7 @@ contains
              case('HGI')
                 ! If rotating frame was on in the previous session then
                 ! we need to transform from HGR/HGC to HGI system.
-                ! Note: This only works if the twoo coordinate systems 
+                ! Note: This only works if the twoo coordinate systems
                 ! are aligned at the initial time (i.e. HGR = HGC).
                 if(UseRotatingFrame) iSignRotationIC = +1
                 UseRotatingFrame = .false.
@@ -2067,7 +2070,6 @@ contains
           iEndTime_I(7) = 0
           call time_int_to_real(iEndTime_I, EndTime)
 
-
        case("#TIMESIMULATION")
           if(.not.is_first_session())CYCLE READPARAM
           if(IsStandAlone)then
@@ -2140,7 +2142,7 @@ contains
              call read_var('uBcFactor'  , uBcFactor_I(iFluid))
           end do
 
-          !CORONA SPECIFIC COMMANDS
+          ! CORONA SPECIFIC COMMANDS
 
        case("#MAGNETOGRAM", "#READPOTENTIALFIELD")
           call read_var('UseMagnetogram', UseMagnetogram)
@@ -2168,7 +2170,7 @@ contains
           UseEmpiricalSW = NameModelSW /= 'none'
 
        case("#WSACOEFF")
-          call read_wsa_coeff 
+          call read_wsa_coeff
 
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
             "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
@@ -2212,7 +2214,7 @@ contains
           UseStar=.true.
           call read_var('RadiusStar',         RadiusStar)
           call read_var('MassStar',           MassStar)
-          call read_var('RotationPeriodStar', RotationPeriodStar)        
+          call read_var('RotationPeriodStar', RotationPeriodStar)
 
        case default
           if(iProc==0) then
@@ -2226,10 +2228,11 @@ contains
     ! end reading parameters
 
   contains
-
     !==========================================================================
+
     subroutine check_stand_alone
 
+      !------------------------------------------------------------------------
       if(IsStandAlone) RETURN
       if(iProc==0) write(*,*) NameSub,' WARNING:'// &
            ' command '//trim(NameCommand)//&
@@ -2237,11 +2240,11 @@ contains
       if(UseStrict)call stop_mpi(NameSub//' Correct PARAM.in')
 
     end subroutine check_stand_alone
-
     !==========================================================================
 
     logical function is_first_session()
 
+      !------------------------------------------------------------------------
       is_first_session = iSession == 1
 
       if(iSession /= 1 .and. iProc==0)then
@@ -2251,7 +2254,6 @@ contains
       end if
 
     end function is_first_session
-
     !==========================================================================
 
     subroutine set_namevar
@@ -2348,7 +2350,7 @@ contains
          ! variable names (i.e. Pperp) for plotting purposes
          NamePrimitive_V(iVar) = trim(NamePrimitive)
 
-         ! overwrite the wave vars, trying to be consistent with previou 
+         ! overwrite the wave vars, trying to be consistent with previou
          ! equation files
          if (iVar >= WaveFirst_ .and. iVar <= WaveLast_ .and. WaveLast_ >1)then
             if (iVar == WaveFirst_) then
@@ -2409,7 +2411,6 @@ contains
       NamePrimitiveVarOrig    = trim(StringPrimitiveOrig)
 
     end subroutine set_namevar
-
     !==========================================================================
 
     subroutine set_defaults
@@ -2417,6 +2418,7 @@ contains
       !\
       ! Default plot and restart directories depend on NameThisComp
       !/
+      !------------------------------------------------------------------------
       NamePlotDir(1:2) = NameThisComp
 
       ! Set defaults for restart files
@@ -2440,7 +2442,7 @@ contains
          TypeCoordSystem   = 'GSM'
       end select
 
-      !Do not set B0 field in IH and OH
+      ! Do not set B0 field in IH and OH
       if(NameThisComp/='IH'.and.NameThisComp/='OH')then
          UseB0=UseB
       else
@@ -2505,8 +2507,8 @@ contains
       UseBody2 = .false.
       RBody2 =-1.0
       xBody2 = 0.0
-      yBody2 = 0.0			
-      zBody2 = 0.0			
+      yBody2 = 0.0
+      zBody2 = 0.0
       BdpBody2_D  = 0.0
       rCurrentsBody2 = 0.0
       RhoDimBody2 = 1.0    ! n/cc
@@ -2577,8 +2579,8 @@ contains
       TypeFaceBc_I(SolidBc_) = 'reflectall'
 
     end subroutine set_defaults
+    !==========================================================================
 
-    !=========================================================================
     subroutine correct_parameters
 
       use ModMultiFluid, ONLY: UseMultiIon
@@ -2593,7 +2595,7 @@ contains
       real    :: BetaProlongOrig = 0.0
       logical :: IsFirstCheck = .true.
       character(len(NameVarRestart_V)) :: NameVarTemp_V(100) = ''
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       !\
       ! Check for some combinations of things that cannot be accepted as input
       !/
@@ -2652,7 +2654,7 @@ contains
          nGUsed = nOrder
       case(4)
          ! 4th order interpolation formula needs 2 ghost cells
-         nGUsed = 2 
+         nGUsed = 2
          ! Volume integral needs an extra ghost cell layer
          if(UseVolumeIntegral4) nGUsed = nGUsed + 1
          if(TypeLimiter /= 'no')then
@@ -2711,7 +2713,7 @@ contains
                  call stop_mpi('Correct PARAM.in')
             FluxType='Sokolov'
          end if
-      case('ROEOLD','RoeOld')             
+      case('ROEOLD','RoeOld')
          FluxType='RoeOld'
       case('RUSANOV','TVDLF','Rusanov')
          FluxType='Rusanov'
@@ -2826,7 +2828,7 @@ contains
               TypeCellBc_I(i:i+1) = 'periodic'
       end do
 
-      ! Set UseBufferGrid logical 
+      ! Set UseBufferGrid logical
       UseBufferGrid = any(TypeFaceBc_I=='buffergrid')
 
       if(UseConstrainB .and. .not.time_accurate)then
@@ -2843,7 +2845,7 @@ contains
          if(iProc==0)write(*,'(a)')NameSub//&
               ' WARNING: cannot use TVD or accurate schemes at res. change'// &
               ' with ConstrainB'
-         !if(UseStrict)call stop_mpi('Correct PARAM.in!')
+         ! if(UseStrict)call stop_mpi('Correct PARAM.in!')
          if(iProc==0)write(*,*)NameSub// &
               ' setting UseTvdReschange=F UseAccurateResChange=F'
          UseTvdReschange      = .false.
@@ -2864,7 +2866,7 @@ contains
       if (UseRadDiffusion .and. (UseFullImplicit .or. UseSemiImplicit)) &
            optimize_message_pass = 'all'
 
-      !Check for magnetogram
+      ! Check for magnetogram
 
       if(UseEmpiricalSW.and..not.UseMagnetogram)&
            call stop_mpi(&
@@ -2876,7 +2878,7 @@ contains
            'The heating in the closed field region requires magnetogram')
 
       if(nOrder == 1)then
-         BetaProlongOrig = BetaProlong    
+         BetaProlongOrig = BetaProlong
          BetaProlong = 0.0
       else
          BetaProlong = max(BetaProlong, BetaProlongOrig)
@@ -3049,7 +3051,7 @@ contains
            call fix_amr_limits( &
            (XyzMax_D(x_)-XyzMin_D(x_))/real(nRootRead_D(1)*nI))
 
-      if(TypeGeometry == 'cartesian')then                               
+      if(TypeGeometry == 'cartesian')then
          if(UsePoleDiffusion .or. DoFixAxis)then
             UsePoleDiffusion = .false.
             DoFixAxis = .false.
@@ -3112,8 +3114,7 @@ contains
       ! because the final update is a linear combination of all stages.
       if(.not.UseHalfStep .and. .not.UseImplicit) UseUpdateCheck = .false.
 
-
-      ! Use first order prolongation for the first stage of high 
+      ! Use first order prolongation for the first stage of high
       ! resolution change.
       if(UseHighResChange) nOrderProlong = 1
 
@@ -3133,7 +3134,7 @@ contains
       ! Check that the number of variables listed in #RESTARTVARIABLES
       ! matches the number appearing in the #EQUATION command
       ! (this check is useful if the #RESTARTVARIABLES command is added
-      ! manually to older restart header files, but might become redundant 
+      ! manually to older restart header files, but might become redundant
       ! in the future).
       if(IsReadNameVarRestart) then
          call split_string(NameVarRestartRead, NameVarTemp_V, nVarRestart)
@@ -3169,8 +3170,8 @@ contains
       end if
 
     end subroutine correct_parameters
-
     !==========================================================================
+
     subroutine correct_grid_geometry
 
       use ModGeometry, ONLY: LogRGen_I
@@ -3179,9 +3180,8 @@ contains
 
       character(len=20):: TypeGeometryBatl
 
-      character(len=*), parameter:: NameSub='correct_grid_geometry'
-      !-----------------------------------------------------------------------
-
+      character(len=*), parameter:: NameSub = 'correct_grid_geometry'
+      !------------------------------------------------------------------------
       if(i_line_command("#GRID", iSessionIn = 1) < 0) &
            call stop_mpi(NameSub // &
            ' #GRID command must be specified in the first session!')
@@ -3200,7 +3200,7 @@ contains
          call stop_mpi(NameSub//': insufficient number of grid blocks')
       end if
 
-      ! Set XyzMin_D, XyzMax_D based on 
+      ! Set XyzMin_D, XyzMax_D based on
       ! #GRID, #GRIDGEOMETRY, and #LIMITRADIUS
       ! #GRIDGEOMETRYLIMIT already sets XyzMin_D, XyzMax_D so that it does not
       ! have to be reset here
@@ -3222,7 +3222,7 @@ contains
                  cTwoPi, cHalfPi /)
          case('cylindrical', 'cylindrical_lnr', 'cylindrical_genr')
             !            R,   Phi, Z
-            XyzMin_D = (/0.0, 0.0, z1/) 
+            XyzMin_D = (/0.0, 0.0, z1/)
             XyzMax_D = (/sqrt(max(x1**2,x2**2)+max(y1**2,y2**2)), cTwoPi, z2/)
          case('roundcube')
             if(rRound0 > rRound1)then
@@ -3244,7 +3244,7 @@ contains
             call stop_mpi(NameSub//': unknown TypeGeometry='//TypeGeometry)
          end select
 
-         if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then 
+         if(i_line_command("#LIMITRADIUS", iSessionIn = 1) > 0) then
             XyzMin_D(1) = RadiusMin
             XyzMax_D(1) = RadiusMax
             if(TypeGeometry == 'roundcube' .and. rRound1 > rRound0) &
@@ -3259,7 +3259,6 @@ contains
             RadiusMax = XyzMax_D(1)
          end if
       end if
-
 
       if(index(TypeGeometry,'_genr') < 1) call set_gen_radial_grid
 
@@ -3299,7 +3298,6 @@ contains
       end if
 
     end subroutine correct_grid_geometry
-
     !==========================================================================
 
     subroutine correct_plot_range
@@ -3316,19 +3314,18 @@ contains
       real    :: CellSizeMax_D(3), Cut
       real    :: SmallSize_D(3)   ! Used for 2D plot areas
 
+      logical:: DoTest
       character(len=*), parameter:: NameSub = 'correct_plot_range'
-      logical :: DoTest, DoTestMe
       !------------------------------------------------------------------------
+      call test_start(NameSub, DoTest)
 
-      call set_oktest(NameSub, DoTest, DoTestMe)
-
-      if(DoTestMe)write(*,*) NameSub,' CoordMin_D, CoordMax_D=', &
+      if(DoTest)write(*,*) NameSub,' CoordMin_D, CoordMax_D=', &
            CoordMin_D, CoordMax_D
 
       ! Largest cell size and a much smaller distance for 2D cuts
       CellSizeMax_D = (CoordMax_D - CoordMin_D)/(nIJK_D*nRoot_D)
 
-      if(DoTestMe)write(*,*)NameSub,' CellSizeMax_D=',CellSizeMax_D
+      if(DoTest)write(*,*)NameSub,' CellSizeMax_D=',CellSizeMax_D
 
       PLOTFILELOOP: do iFile = Plot_+1, Plot_ + nPlotFile
 
@@ -3342,7 +3339,7 @@ contains
             SmallSize_D   = 1e-6*CellSizeMax_D
          end if
 
-         if(DoTestMe)write(*,*)'iFile, plot_form, plot_area=',&
+         if(DoTest)write(*,*)'iFile, plot_form, plot_area=',&
               iFile, plot_form(iFile), plot_area
 
          ! Fix plot range for various plot areas
@@ -3357,7 +3354,7 @@ contains
                call radius_to_gen(plot_range(2,iFile))
             end if
             if(Phi_ > 0) plot_range(2*Phi_-1:2*Phi_,iFile) = &
-                 cDegToRad*plot_range(2*Phi_-1:2*Phi_,iFile) 
+                 cDegToRad*plot_range(2*Phi_-1:2*Phi_,iFile)
             if(Theta_ > 0) plot_range(2*Theta_-1:2*Theta_,iFile) = &
                  cDegToRad*plot_range(2*Theta_-1:2*Theta_,iFile)
             do iDim = 1, nDim
@@ -3370,7 +3367,7 @@ contains
             if(IsCartesianGrid)then
                plot_dx(1,iFile) = 1.0    ! set to match write_plot_sph
                plot_dx(2:3,iFile) = 1.0  ! angular resolution in degrees
-               plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 !so that R/=0
+               plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 ! so that R/=0
                plot_range(3,iFile)= 0.   - 0.5*plot_dx(2,iFile)
                plot_range(4,iFile)= 90.0 + 0.5*plot_dx(2,iFile)
                plot_range(5,iFile)= 0.   - 0.5*plot_dx(3,iFile)
@@ -3379,10 +3376,10 @@ contains
                plot_dx(1,iFile) = -1.0
                if(IsLogRadius) plot_range(1,iFile) = log(plot_range(1,iFile))
                if(IsGenRadius) call radius_to_gen(plot_range(1,iFile))
-               plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 !so that R/=0
+               plot_range(2,iFile)= plot_range(1,iFile) + 1.e-4 ! so that R/=0
                do i=Phi_,Theta_
                   plot_range(2*i-1,iFile) = CoordMin_D(i)
-                  plot_range(2*i,iFile)   = CoordMax_D(i)  
+                  plot_range(2*i,iFile)   = CoordMax_D(i)
                end do
                plot_area='r=r' ! to disable the write_plot_sph routine
             else
@@ -3452,13 +3449,13 @@ contains
          if(nK == 1) plot_range(5,iFile) = -SmallSize_D(z_)
          if(nK == 1) plot_range(6,iFile) = +SmallSize_D(z_)
 
-         if(DoTestMe)write(*,*)'For file ',iFile-plot_,&
+         if(DoTest)write(*,*)'For file ',iFile-plot_,&
               ' original range   =',plot_range(:,iFile)
 
          plot_range(1:5:2, iFile) = max(plot_range(1:5:2, iFile), CoordMin_D)
          plot_range(2:6:2, iFile) = min(plot_range(2:6:2, iFile), CoordMax_D)
 
-         if(DoTestMe)write(*,*)'For file ',iFile-plot_,&
+         if(DoTest)write(*,*)'For file ',iFile-plot_,&
               ' limited range   =',plot_range(:,iFile)
 
          ! For plot_dx = 0.0 or -1.0 there is no need to adjust cut range
@@ -3478,14 +3475,15 @@ contains
 
          ! Make sure that plotting range is placed at an integer multiple of dx
          call adjust_plot_range(PlotRes_D(1), plot_range(:,iFile))
-         if(DoTestMe)write(*,*)'For file ',iFile-plot_,&
+         if(DoTest)write(*,*)'For file ',iFile-plot_,&
               ' adjusted range   =',plot_range(:,iFile)
 
       end do PLOTFILELOOP
 
+      call test_stop(NameSub, DoTest)
     end subroutine correct_plot_range
-
     !==========================================================================
+
     subroutine set_extra_parameters
 
       use ModMultiFluid, ONLY: UseMultiIon
@@ -3505,13 +3503,13 @@ contains
       if(UseDtLimit .or. UseLocalTimeStep)then
          DtLimit     = DtLimitDim * Io2No_V(UnitT_)
          ! Store the initial setting
-         DtLimitOrig = DtLimit       
+         DtLimitOrig = DtLimit
          ! Dt = 0 in steady state
-         if(time_accurate .and. UseDtLimit) Dt  = DtLimit   
+         if(time_accurate .and. UseDtLimit) Dt  = DtLimit
       end if
 
       if(UseTimeStepControl)then
-         ! Reduce initial time step / Cfl number. 
+         ! Reduce initial time step / Cfl number.
          ! The original values are stored in DtFixedOrig and CflOrig
          if(UseDtFixed)then
             DtFixed = TimeStepControlInit*DtFixed
@@ -3599,14 +3597,15 @@ contains
     !==========================================================================
     subroutine sort_smooth_indicator
 
-      ! The variables using the same smooth indicator should be 
-      ! calculated one by one. The smooth indicator 
-      ! itself is calculated first. 
+      ! The variables using the same smooth indicator should be
+      ! calculated one by one. The smooth indicator
+      ! itself is calculated first.
       ! iVarSmoothIndex_I is the calculation order.
 
       real:: iVarSmoothReal_V(nVar)
       integer:: iVar
 
+      !------------------------------------------------------------------------
       do iVar = 1, nVar
          if(iVarSmooth_V(iVar) == iVar) then
             iVarSmoothReal_V(iVar) = real(iVar) - 0.5
@@ -3621,5 +3620,7 @@ contains
     !==========================================================================
 
   end subroutine set_parameters
+  !============================================================================
 
 end module ModSetParameters
+!==============================================================================

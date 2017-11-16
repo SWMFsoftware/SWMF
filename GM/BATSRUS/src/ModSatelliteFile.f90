@@ -1,14 +1,16 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModSatelliteFile
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModUtilities, ONLY: open_file, close_file
 
   implicit none
   save
-  private !Except
+  private ! Except
 
   public:: read_satellite_parameters  ! read satellite file input parameters
   public:: set_satellite_file_status  ! open, open to append or close the file
@@ -16,7 +18,7 @@ module ModSatelliteFile
   public:: set_satellite_flags        ! find the processor/block for satellite
   public:: get_satellite_ray ! map field line from satellite ^CFG IF RAYTRACE
   public:: gm_trace_sat      ! map field line from satellite ^CFG IF RAYTRACE
-  
+
   logical, public :: DoSaveSatelliteData = .false. ! save satellite data?
   integer, public :: nSatellite = 0                ! number of satellites
 
@@ -32,9 +34,9 @@ module ModSatelliteFile
   logical, public:: IsFirstWriteSat_I(MaxSatellite) = .true.
 
   ! current positions
-  real, public:: XyzSat_DI(3,MaxSatellite) 
+  real, public:: XyzSat_DI(3,MaxSatellite)
 
-  ! variables to control time output format 
+  ! variables to control time output format
   character(len=100), public :: TimeSat_I(MaxSatellite)
 
   ! variables to write to the satellite files
@@ -56,17 +58,16 @@ module ModSatelliteFile
 
   character(len=3)  :: TypeSatCoord_I(MaxSatellite)
 
-  ! Time limits (in seconds) for satellite trajectory cut 
+  ! Time limits (in seconds) for satellite trajectory cut
   ! for .not. time_accurate session.
   ! If a steady-state simulation is run for a specific moment of time
-  ! (set in  StartTime), the TimeSatStart_I determines the starting point of 
-  ! the satellite trajectory, while TimeSatEnd_I determines the trajectory 
+  ! (set in  StartTime), the TimeSatStart_I determines the starting point of
+  ! the satellite trajectory, while TimeSatEnd_I determines the trajectory
   ! ending point.
   ! Both determine the considered trajectory cut.
-  ! Unlike in time_accurate sessions, after each dn_output simulation 
-  ! steps the satellite variables for ALL the trajectory cut are 
+  ! Unlike in time_accurate sessions, after each dn_output simulation
+  ! steps the satellite variables for ALL the trajectory cut are
   ! saved in file.
-
 
 contains
   !============================================================================
@@ -78,14 +79,17 @@ contains
     use ModUtilities, ONLY: check_dir
     use ModReadParam, ONLY: read_var
     use ModIO,        ONLY: NamePrimitiveVarPlot
-    
+
     character(len=*), intent(in) :: NameCommand
 
     integer :: iSat, iFile
     character(len=100):: StringSatellite
     character (len=3) :: satellite_var
-    character(len=*), parameter :: NameSub = 'read_satellite_parameters'
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_satellite_parameters'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#SATELLITE")
        call read_var('nSatellite', nSatellite)
@@ -144,8 +148,8 @@ contains
                   //' from StringSatellite='//StringSatellite)
           end if
 
-          !Change by DTW, July 2007
-          !Add ray-tracing variables if 'ray' is present.
+          ! Change by DTW, July 2007
+          ! Add ray-tracing variables if 'ray' is present.
           if (index(StringSatellite,'ray')>0 .or. &
                index(StringSatellite,'RAY')>0) then
              StringSatVar_I(iSat) = trim(StringSatVar_I(iSat)) // &
@@ -154,8 +158,8 @@ contains
 
           plot_type(iFile) = "satellite"
 
-          ! Determine the time output format to use in the 
-          ! satellite files.  This is loaded by default above, 
+          ! Determine the time output format to use in the
+          ! satellite files.  This is loaded by default above,
           ! but can be input in the log_string line.
           if(index(StringSatellite,'none')>0) then
              TimeSat_I(iSat) = 'none'
@@ -190,6 +194,7 @@ contains
     case default
        call stop_mpi(NameSub//' unknown command='//NameCommand)
     end select
+    call test_stop(NameSub, DoTest)
   end subroutine read_satellite_parameters
   !============================================================================
   subroutine set_satellite_file_status(iSat,TypeStatus)
@@ -202,11 +207,11 @@ contains
     character(LEN=*),intent(in) :: TypeStatus
 
     integer :: l1, l2
-    logical :: DoTest, DoTestMe
 
-    character(len=*), parameter:: NameSub='set_satellite_file_status'
-    !------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_satellite_file_status'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(TypeStatus)
     case('open')
@@ -222,7 +227,7 @@ contains
           write(NameFile_I(iSat),'(a,i8.8,a)')trim(NamePlotDir)//&
                'sat_'//NameSat_I(iSat)(l1:l2)//'_n',n_step,'.sat'
        end if
-       if(DoTestMe) then
+       if(DoTest) then
           write(*,*) NameSub,': satellitename:', &
                NameSat_I(iSat), 'status =', TypeStatus
           write(*,*) 'iSat,l1,l2: ', iSat, l1, l2
@@ -247,6 +252,7 @@ contains
        call stop_mpi(NameSub//': unknown TypeStatus='//TypeStatus)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_satellite_file_status
   !============================================================================
 
@@ -273,10 +279,10 @@ contains
     real, allocatable:: Time_I(:), Xyz_DI(:,:)
     character(len=100):: NameFile
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub = 'read_satellite_input_files'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_satellite_input_files'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     ! Count maximum number of points by reading all satellite files
     MaxPoint = 0
@@ -412,55 +418,54 @@ contains
 
     deallocate(Time_I, Xyz_DI)
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_satellite_input_files
-
-  !==========================================================================
+  !============================================================================
 
   subroutine set_satellite_flags(iSat)
 
     use BATL_lib, ONLY: find_grid_block
 
     integer, intent(in) :: iSat
-    logical :: DoTest, DoTestMe
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_satellite_flags'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
-    if (DoTestMe) write(*,*) NameSub,' starting for iSat=', iSat
+    if (DoTest) write(*,*) NameSub,' starting for iSat=', iSat
 
     call set_satellite_positions(iSat)
 
-    if(DoTestMe)write(*,*) NameSub,' DoTrackSatellite=', &
+    if(DoTest)write(*,*) NameSub,' DoTrackSatellite=', &
          DoTrackSatellite_I(iSat)
-    if(.not.DoTrackSatellite_I(iSat)) RETURN !Position is not defined
+    if(.not.DoTrackSatellite_I(iSat)) RETURN ! Position is not defined
 
     call find_grid_block(XyzSat_DI(:,iSat), &
          iProcSat_I(iSat), iBlockSat_I(iSat))
 
     if (iProcSat_I(iSat) < 0) DoTrackSatellite_I(iSat) = .false.
 
-    if (DoTestMe) write(*,*)'set_satellite_flags iPE,iBLK,TrackSatellite=', &
-         iProcSat_I(iSat), iBlockSat_I(iSat), DoTrackSatellite_I(iSat) 
+    if (DoTest) write(*,*)'set_satellite_flags iPE,iBlock,TrackSatellite=', &
+         iProcSat_I(iSat), iBlockSat_I(iSat), DoTrackSatellite_I(iSat)
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_satellite_flags
-
   !============================================================================
 
   subroutine set_satellite_positions(iSat)
     use ModProcMH
-    use ModMain, ONLY :time_simulation
+    use ModMain, ONLY:time_simulation
     use ModNumConst
 
     integer, intent(in) :: iSat
     integer :: i
     real    :: dtime
 
-    logical :: DoTest, DoTestMe
-
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_satellite_positions'
     !--------------------------------------------------------------------------
-    call set_oktest('set_satellite_positions',DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     if (UseSatFile_I(iSat)) then
 
@@ -468,7 +473,7 @@ contains
 
           i = icurrent_satellite_position(iSat)
 
-          if(DoTestMe)write(*,*) NameSub,' nPoint, iPoint, TimeSim, TimeSat=',&
+          if(DoTest)write(*,*) NameSub,' nPoint, iPoint, TimeSim, TimeSat=',&
                nPointTraj_I(iSat), i, Time_Simulation, TimeSat_II(iSat,i)
 
           do while ((i < nPointTraj_I(iSat)) .and.   &
@@ -478,15 +483,15 @@ contains
 
           icurrent_satellite_position(iSat) = i
 
-          if(DoTestMe)write(*,*) NameSub,' final iPoint=', i
+          if(DoTest)write(*,*) NameSub,' final iPoint=', i
 
           if (i == nPointTraj_I(iSat) .and. &
-               TimeSat_II(iSat,i) <= Time_Simulation .or. i==1) then 
+               TimeSat_II(iSat,i) <= Time_Simulation .or. i==1) then
 
              DoTrackSatellite_I(iSat) = .false.
              XyzSat_DI(:,iSat) = 0.0
 
-             if(DoTestMe)write(*,*) NameSub,' DoTrackSat=.false.'
+             if(DoTest)write(*,*) NameSub,' DoTrackSat=.false.'
 
           else
 
@@ -496,22 +501,22 @@ contains
                   (TimeSat_II(iSat,i) - TimeSat_II(iSat,i-1) + 1.0e-6)
 
              XyzSat_DI(:,iSat) = dTime * XyzSat_DII(:,iSat,i) + &
-                  (1.0 - dTime) * XyzSat_DII(:,iSat,i-1) 
+                  (1.0 - dTime) * XyzSat_DII(:,iSat,i-1)
 
-             if(DoTestMe)write(*,*) NameSub,' XyzSat=', XyzSat_DI(:,iSat)
+             if(DoTest)write(*,*) NameSub,' XyzSat=', XyzSat_DI(:,iSat)
 
           endif
 
        endif
 
-    else 
+    else
 
        call satellite_trajectory_formula(iSat)
 
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_satellite_positions
-
   !============================================================================
 
   subroutine satellite_trajectory_formula(iSat)
@@ -519,14 +524,17 @@ contains
     integer, intent(in) :: iSat
     character (len=100) :: name_string
     real :: Xvect(3)
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'satellite_trajectory_formula'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     name_string = trim(NameSat_I(iSat))
     Xvect(:) = XyzSat_DI(:,iSat)
 
     ! Case should be for a specific satellite.  The trajectories can depend
     ! on the 'real' time so that the satellite knows where it is at.  For
-    ! example, Cassini could be if'd on the date so that the code knows 
-    ! whether the run is for a time near Earth, Jupiter or Saturn. 
+    ! example, Cassini could be if'd on the date so that the code knows
+    ! whether the run is for a time near Earth, Jupiter or Saturn.
 
     ! This routine should always set the TrackSatellite(iSat) flag. When
     ! the satellite is at a useless position the time should return a
@@ -543,21 +551,21 @@ contains
        Xvect(2) = 5.0
        Xvect(3) = 5.0
        DoTrackSatellite_I(iSat) = .true.
-    case default 
+    case default
        Xvect(1) = 1.0
        Xvect(2) = 1.0
        Xvect(3) = 1.0
        DoTrackSatellite_I(iSat) = .false.
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine satellite_trajectory_formula
-
   !============================================================================
 
   subroutine get_satellite_ray(iSatIn, SatRayVar_I)
 
     use ModFieldTrace, ONLY: ray
-    use BATL_size,ONLY: 
+    use BATL_size, ONLY:
     use BATL_lib, ONLY: iProc, nI, nJ, nK, IsCartesianGrid, &
          CellSize_DB, CoordMin_DB, xyz_to_coord
     use ModMpi
@@ -565,36 +573,38 @@ contains
     integer, intent(in) :: iSatIn
     real,    intent(out):: SatRayVar_I(5)
 
-    character(len=*), parameter :: NameSub = 'get_satellite_ray'
-    integer  :: iDir, iBLK, iDim
+    integer  :: iDir, iBlock, iDim
     real     :: Coord_D(3), RayVars(3,2,nI,nJ,nK)
     real     :: Dx1, Dx2, Dy1, Dy2, Dz1, Dz2
     integer  :: i1, i2, j1, j2, k1, k2, iNear, jNear, kNear
     integer  :: i, j, k
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_satellite_ray'
     !--------------------------------------------------------------------------
-    
+    call test_start(NameSub, DoTest)
+
     ! Initialize to zero
     SatRayVar_I = 0.0
 
     ! Only use this if we're on the correct node.
     if (iProc /= iProcSat_I(iSatIn)) RETURN
 
-    iBLK = iBlockSat_I(iSatIn)
-    if (iBLK == 0) RETURN
+    iBlock = iBlockSat_I(iSatIn)
+    if (iBlock == 0) RETURN
 
-    if (IsCartesianGrid) then 
+    if (IsCartesianGrid) then
        Coord_D = XyzSat_DI(:,iSatIn)
     else
        call xyz_to_coord(XyzSat_DI(:,iSatIn), Coord_D)
     end if
 
     ! Normalize coordinates to the cell center indexes
-    Coord_D = (Coord_D - CoordMin_DB(:,iBLK)) / CellSize_DB(:,iBlk) + 0.5
+    Coord_D = (Coord_D - CoordMin_DB(:,iBlock)) / CellSize_DB(:,iBlock) + 0.5
 
     ! Set location assuming point is inside block.
     i1 = floor(Coord_D(1))
-    j1 = floor(Coord_D(2))  
+    j1 = floor(Coord_D(2))
     k1 = floor(Coord_D(3))
     i2 = ceiling(Coord_D(1))
     j2 = ceiling(Coord_D(2))
@@ -618,12 +628,12 @@ contains
     kNear = min( nK, max(nint(Coord_D(3)),1) )
 
     ! Copy ray tracing values to new array so allow changing of values.
-    RayVars = ray(1:3,1:2,1:nI,1:nJ,1:nK,iBLK)
+    RayVars = ray(1:3,1:2,1:nI,1:nJ,1:nK,iBlock)
 
     ! Use the ray status of the nearest point to the satellite.
     SatRayVar_I(3) = RayVars(3, 1, iNear,jNear,kNear)
 
-    ! For each direction along the ray, determine if all lines surrounding 
+    ! For each direction along the ray, determine if all lines surrounding
     ! point are open or closed, then set SatRayVar_I accordingly.
     do iDir=1,2
 
@@ -651,9 +661,9 @@ contains
                    enddo
                 enddo
              enddo
-             !forall(i=i1:i2,j=j1:j2,k=k1:k2,RayVars(2,iDir,i,j,k)<30.0)
+             ! forall(i=i1:i2,j=j1:j2,k=k1:k2,RayVars(2,iDir,i,j,k)<30.0)
              !   RayVars(2,iDir,i,j,k) = RayVars(2,iDir,i,j,k) + 360.0
-             !end forall
+             ! end forall
           endif
 
           do iDim=1,2
@@ -677,112 +687,112 @@ contains
     if(SatRayVar_I(2) > 360.0) SatRayVar_I(2) = SatRayVar_I(2) - 360.0
     if(SatRayVar_I(5) > 360.0) SatRayVar_I(5) = SatRayVar_I(5) - 360.0
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_satellite_ray
   !============================================================================
-  
+
   subroutine GM_trace_sat(SatXyz_D, SatRay_D)
-    
+
     use ModProcMH,    ONLY: iComm, iProc
     use ModFieldTrace,  ONLY: DoExtractState, DoExtractUnitSi, &
          extract_field_lines, rIonosphere
-    use ModVarIndexes,ONLY: nVar
+    use ModVarIndexes, ONLY: nVar
     use ModMain,      ONLY:time_simulation,TypeCoordSystem
     use CON_line_extract, ONLY: line_init, line_collect, line_get, line_clean
     use ModNumConst,  ONLY: cRadToDeg
     use CON_axes,     ONLY: transform_matrix
     use CON_planet_field, ONLY: map_planet_field
     use ModPhysics,   ONLY: rBody
-    
+
     real, intent(in) :: SatXyz_D(3) ! Satellite Position
     real, intent(out)   :: SatRay_D(3)
     real :: SatXyzIono_D(3),SatXyzEnd_D(3),SatXyzEnd2_D(3),B2
-    
+
     integer            :: nStateVar
     integer            :: nPoint
-    
+
     real, pointer :: PlotVar_VI(:,:)
-    
+
     integer :: nLine, nVarOut, iHemisphere
-    
+
     logical :: IsParallel = .true., IsOpen=.true.
-    
-    character(len=*), parameter :: NameSub = 'GM_trace_sat'
-    logical :: DoTest, DoTestMe
+
     real    :: L, Rsat, Rxy2
-    ! Conversion matrix between SM and GM coordinates 
+    ! Conversion matrix between SM and GM coordinates
     ! (to be safe initialized to unit matrix)
     real :: GmSm_DD(3,3) = reshape( (/ &
          1.,0.,0., &
          0.,1.,0., &
          0.,0.,1. /), (/3,3/) )
-    !-------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
-    
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'GM_trace_sat'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
     DoExtractState = .true.
     DoExtractUnitSi= .false.
-    
+
     ! Set the number lines and variables to be extracted
     nLine     = 1
     nStateVar = 4
     if(DoExtractState) nStateVar = nStateVar + nVar
-    
+
     if (sum(SatXyz_D(1:3)**2) > rBody**2) then
        ! Initialize CON_line_extract
        call line_init(nStateVar)
-       
+
        ! Obtain the line data
        call extract_field_lines(nLine, (/IsParallel/), SatXyz_D)
-       
+
        ! Collect lines from all PE-s to Proc 0
        call line_collect(iComm,0)
-       
+
        if(iProc==0)then
           call line_get(nVarOut, nPoint)
           if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
           allocate(PlotVar_VI(0:nVarOut, nPoint))
           call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
        end if
-    
+
        call line_clean
-       
-       
-       ! Only iProc 0 stores result 
+
+       ! Only iProc 0 stores result
        if(iProc == 0) then
           SatXyzEnd_D = PlotVar_VI(2:4,nPoint)
           deallocate(PlotVar_VI)
        endif
-       
-       !Now Trace in opposite direction to make sure line is closed
+
+       ! Now Trace in opposite direction to make sure line is closed
        ! Initialize CON_line_extract
        call line_init(nStateVar)
-       
+
        ! Obtain the line data
        call extract_field_lines(nLine, (/.not.IsParallel/), SatXyz_D)
-       
+
        ! Collect lines from all PE-s to Proc 0
        call line_collect(iComm,0)
-       
+
        if(iProc==0)then
           call line_get(nVarOut, nPoint)
           if(nVarOut /= nStateVar)call stop_mpi(NameSub//': nVarOut error')
           allocate(PlotVar_VI(0:nVarOut, nPoint))
           call line_get(nVarOut, nPoint, PlotVar_VI, DoSort=.true.)
        end if
-       
+
        call line_clean
-       
-       ! Only iProc 0 stores result 
+
+       ! Only iProc 0 stores result
        if(iProc /= 0) RETURN
-       
+
        SatXyzEnd2_D = PlotVar_VI(2:4,nPoint)
-       
+
        B2=sum(PlotVar_VI(5:7,1)**2)
-       
+
        deallocate(PlotVar_VI)
-       
+
        ! Only iProc 0 works for returning line info
        !  if(iProc /= 0) RETURN
-       
+
        ! Check that line is closed
        if (sum(SatXyzEnd_D(:)**2.0) > 8.0*rIonosphere**2.0 .or. &
             sum(SatXyzEnd2_D(:)**2.0) > 8.0*rIonosphere**2.0) then
@@ -790,16 +800,16 @@ contains
        else
           IsOpen=.false.
        endif
-       
+
        if (.not. IsOpen) then
           call map_planet_field(Time_Simulation, SatXyzEnd_D, &
                TypeCoordSystem//' NORM', rIonosphere, SatXyzIono_D, iHemisphere)
-          
+
           ! Transformation matrix between the SM(G) and GM coordinates
           GmSm_DD = transform_matrix(time_simulation,'SMG',TypeCoordSystem)
           ! Convert GM position into RB position
           SatXyzIono_D = matmul(SatXyzIono_D, GmSm_DD)
-          
+
           ! Convert XYZ to Lat-Lon-IsOpen
           ! Calculate  -90 < latitude = asin(z)  <  90
           SatRay_D(1) = cRadToDeg * asin(SatXyzIono_D(3)/rIonosphere)
@@ -813,10 +823,10 @@ contains
           SatRay_D(1)=-100.0
           SatRay_D(2)=-200.0
           SatRay_D(3)=0.0
-          
+
        endif
     else
-       !When planet is inside rBody use dipole assumption
+       ! When planet is inside rBody use dipole assumption
        Rsat=sqrt(sum(SatXyz_D(1:3)**2))
        Rxy2=sum(SatXyz_D(1:2)**2)
        if (Rxy2>0.0) then
@@ -825,14 +835,15 @@ contains
        else
           SatRay_D(1)=90.0
        endif
-       
+
        SatRay_D(2) =  &
             modulo(cRadToDeg *atan2(SatXyz_D(2),SatXyz_D(1)),360.0)
-       !set closed flag
-       SatRay_D(3)=3.0              
+       ! set closed flag
+       SatRay_D(3)=3.0
     endif
+    call test_stop(NameSub, DoTest)
   end subroutine GM_trace_sat
   !============================================================================
 
-  
 end module ModSatelliteFile
+!==============================================================================

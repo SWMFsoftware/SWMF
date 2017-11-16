@@ -1,12 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModWritePlotRadiowave
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   implicit none
   SAVE
 
-  private !Except
+  private ! Except
   public:: write_plot_radiowave
 
 contains
@@ -17,7 +20,7 @@ contains
     ! Purpose:  creates radio telescope images of the radiowaves at several
     !     frequencies by inegrating the plasma emissivity along the refracting
     !     rays.
-    !     The plasma emissivity is considered here a function or the plasma 
+    !     The plasma emissivity is considered here a function or the plasma
     !     density only.
     ! Written by Leonid Benkevitch.
     !
@@ -46,14 +49,14 @@ contains
     !\
     ! Observer lacation
     !/
-    real :: XyzObserv_D(3)                     
-    real :: ImageRange_I(4)    
+    real :: XyzObserv_D(3)
+    real :: ImageRange_I(4)
     ! Image plane: XLower, YLower, XUpper, YUpper
     real :: HalfImageRangeX, HalfImageRangeY
     !\
     ! Radius of "integration sphere"
     !/
-    real :: rIntegration           
+    real :: rIntegration
     !\
     ! Dimensions of the raster in pixels
     !/
@@ -68,7 +71,7 @@ contains
     !/
     real               :: RadioFrequency_I(nPlotRfrFreqMax)
     !\
-    ! 
+    !
 
     character (LEN=20) :: NameVar_I(nPlotRfrFreqMax)
 
@@ -87,16 +90,17 @@ contains
     character (LEN=500) :: unitstr_TEC
     character (LEN=4)   :: NameFileExtension
     character (LEN=40)  :: NameFileFormat
-    logical             :: DoTest, DoTestMe
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_plot_radiowave'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     !
     ! Initialize
     !
-    call set_oktest('write_plot_radiowave', DoTest,DoTestMe)
     call timing_start('write_plot_radiowave')
 
     !
-    ! Set file specific parameters 
+    ! Set file specific parameters
     !
     XyzObserv_D = ObsPos_DI(:,iFile)
     nXPixel = n_Pix_X(iFile)
@@ -118,10 +122,10 @@ contains
     ImagePlaneDiagRadius = sqrt(HalfImageRangeX**2 + HalfImageRangeY**2)
     rIntegration = ceiling(max(ImagePlaneDiagRadius+1.0, 5.0))
 
-    if (DoTestMe) write(*,*) 'rIntegration = ', rIntegration
+    if (DoTest) write(*,*) 'rIntegration = ', rIntegration
 
     call parse_freq_string(StringRadioFrequency_I(iFile), RadioFrequency_I, &
-         NameVar_I, nFreq) 
+         NameVar_I, nFreq)
 
     if (iProc == 0) then
        if(DoTest)then
@@ -181,7 +185,7 @@ contains
           write(*,*) 'RAYTRACE START: RadioFrequency = ', &
                RadioFrequency_I(iFreq)
           write(*,*) 'RAYTRACE START: ImagePlaneDiagRadius = ', &
-               ImagePlaneDiagRadius 
+               ImagePlaneDiagRadius
           write(*,*) 'RAYTRACE START: rIntegration = ', &
                rIntegration
        end if
@@ -246,17 +250,17 @@ contains
                VarIn_IIV=Intensity_IIV, StringFormatIn = '(30es13.5)')
        end select
 
-    end if  !iProc ==0
+    end if  ! iProc ==0
 
     deallocate(Intensity_IIV)
 
-    if (DoTestMe) write(*,*) 'write_plot_radiowave finished'
+    if (DoTest) write(*,*) 'write_plot_radiowave finished'
 
     call timing_stop('write_plot_radiowave')
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_plot_radiowave
-
-  !==========================================================================
+  !============================================================================
 
   subroutine parse_freq_string(NameVarAll, Frequency_I, NameVar_I, nFreq)
 
@@ -273,7 +277,10 @@ contains
     character(len=*), intent(out) :: NameVar_I(nPlotRfrFreqMax)
     character(len=50) :: cTmp, NameFreqUnit
     integer :: iFreq, lNameVarAll, iChar, iTmp
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'parse_freq_string'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     lNameVarAll = len(trim(NameVarAll))
     nFreq = 1
@@ -341,22 +348,22 @@ contains
     !\
     ! Just in case: make all the frequencies positive
     !/
-    Frequency_I = abs(Frequency_I)    
+    Frequency_I = abs(Frequency_I)
 
     !
     ! Create standard frequency value array
     !
     do iFreq = 1, nFreq
        if ((Frequency_I(iFreq) > 0.0) .and. (Frequency_I(iFreq)<1e3)) then
-          write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq), '_Hz' 
+          write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq), '_Hz'
        else if((Frequency_I(iFreq)>=1e3) .and. (Frequency_I(iFreq)<1e6)) then
-          write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq)/1e3, '_kHz' 
+          write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq)/1e3, '_kHz'
        else if((Frequency_I(iFreq) >= 1e6) .and. (Frequency_I(iFreq)<1e9)) then
-          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e6, '_MHz' 
+          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e6, '_MHz'
        else if((Frequency_I(iFreq) >= 1e9).and.(Frequency_I(iFreq)<1e12)) then
-          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e9, '_GHz' 
+          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e9, '_GHz'
        else if((Frequency_I(iFreq) >= 1e12).and.(Frequency_I(iFreq)<1e15))then
-          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e12, '_THz' 
+          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e12, '_THz'
        end if
     end do
 
@@ -364,11 +371,13 @@ contains
        NameVar_I(iFreq) = 'f='//trim(adjustl(NameVar_I(iFreq)))
     end do
 
-  contains 
-    !=========================================================================
+    call test_stop(NameSub, DoTest)
+  contains
+    !==========================================================================
     logical function is_num(c)
       character, intent(in) :: c
 
+      !------------------------------------------------------------------------
       is_num = (lge(c, '0') .and. lle(c, '9')) .or. (c == '.') &
            .or. (c == 'e') .or. (c == 'E') &
            .or. (c == 'd') .or. (c == 'D') &
@@ -379,10 +388,13 @@ contains
     logical function is_delim(c)
       character, intent(in) :: c
 
+      !------------------------------------------------------------------------
       is_delim = (c == ' ') .or. (c == ',') .or. (c == ';')
 
     end function is_delim
-    !=========================================================================
+    !==========================================================================
   end subroutine parse_freq_string
+  !============================================================================
 
 end module ModWritePlotRadiowave
+!==============================================================================

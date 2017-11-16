@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModCellBoundary
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iDimTest
 
   implicit none
 
@@ -13,13 +15,13 @@ module ModCellBoundary
   ! Public methods
   public :: set_cell_boundary, set_edge_corner_ghost
 
-  ! Local variables 
+  ! Local variables
   ! (but we could make them public for ModUser::user_set_cell_boundary)
   integer:: iMin, iMax, jMin, jMax, kMin, kMax, iSide, iSideMin, iSideMax
 
 contains
-
   !============================================================================
+
   recursive subroutine set_cell_boundary(nGhost, iBlock, nVarState, State_VG, &
        iImplBlock, IsLinear, TypeBcIn, iSideIn)
 
@@ -28,13 +30,12 @@ contains
 
     use ModVarIndexes
     use BATL_size, ONLY: nI, nJ, nK, MaxDim, nDim
-    use ModAdvance,ONLY: UseEfield
+    use ModAdvance, ONLY: UseEfield
     use ModProcMH, ONLY: iProc
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
          UseHyperbolicDivb,                                        &
-         UseUserOuterBcs, TypeCellBc_I, time_accurate, time_loop,  &
-         BlkTest, ProcTest, iTest, jTest, kTest, DimTest
+         UseUserOuterBcs, TypeCellBc_I, time_accurate, time_loop
     use ModParallel, ONLY: NOBLK, NeiLev
     use ModGeometry, ONLY: &
          far_field_BCs_BLK, XyzMin_D
@@ -72,28 +73,25 @@ contains
     real, allocatable:: SymmCoeff_V(:)
 
     integer :: iGhost, jGhost, kGhost, iGhost2, jGhost2, kGhost2
-    logical :: DoTest, DoTestMe, IsFound
+    logical :: IsFound
 
-    character(len=*), parameter :: NameSub = 'set_cell_boundary'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_cell_boundary'
     !--------------------------------------------------------------------------
-    if(iBlock==BLKtest.and.iProc==PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    endif
+    call test_start(NameSub, DoTest, iBlock)
 
     if(.not.far_field_BCs_BLK(iBlock))then
        write(*,*) NameSub,' warning: iBlock=',iBlock,' is not far_field block'
        RETURN
     end if
 
-    if(DoTestMe)write(*,*)NameSub,': iBlock, neiLEV=',&
+    if(DoTest)write(*,*)NameSub,': iBlock, neiLEV=',&
          iBlock, neiLEV(:,iBlock)
 
-    if(DoTestMe)then
-       Ighost =Itest; Jghost=Jtest;  Kghost=Ktest
-       Ighost2=Itest; Jghost2=Jtest; Kghost2=Ktest
-       select case(DimTest)
+    if(DoTest)then
+       Ighost =iTest; Jghost=jTest;  Kghost=kTest
+       Ighost2=iTest; Jghost2=jTest; Kghost2=kTest
+       select case(iDimTest)
        case(x_)
           if(iTest== 1)then
              iGhost=0; iGhost2 = 1 - nGhost
@@ -122,7 +120,7 @@ contains
        write(*,*)'iGhost2,jGhost2,kGhost2 =',iGhost2,jGhost2,kGhost2
        do iVar = 1, nVarState
           write(*,*)'initial',NameVar_V(iVar),   'cell,ghost,ghost2=',&
-               State_VG(iVar,Itest,Jtest,Ktest),&
+               State_VG(iVar,iTest,jTest,kTest),&
                State_VG(iVar,Ighost,Jghost,Kghost), &
                State_VG(iVar,Ighost2,Jghost2,Kghost2)
        end do
@@ -148,7 +146,7 @@ contains
        ! Apply cell BC when TypeCellBc_I(1:6) is set
        if(TypeCellBc_I(iSide)=='none') CYCLE
 
-       ! Do not apply cell boundary conditions at the pole 
+       ! Do not apply cell boundary conditions at the pole
        ! This is either handled by message passing or supercell
        if(IsCylindricalAxis .and. iSide == 1) CYCLE
 
@@ -199,7 +197,7 @@ contains
           if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
        end if
 
-       if(DoTestMe) write(*,*) NameSub,' iSide, Type iMin,iMax..kMax=', &
+       if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax..kMax=', &
             iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
 
        select case(TypeBc)
@@ -268,7 +266,7 @@ contains
              end select
              call set_symm_bc(1, nVarState, SymmCoeff_V)
           else
-             call set_reflect_bc(nVectorVar, iVectorVar_I)             
+             call set_reflect_bc(nVectorVar, iVectorVar_I)
           end if
        case('reflect_semi')
           if(IsCartesianGrid .or. TypeSemiImplicit(1:6) /= 'resist')then
@@ -331,7 +329,7 @@ contains
        case('fixedb1')
           call set_fixed_bc(1, nVarState, CellState_VI(:,iSide))
        case('fixedb1_semi')
-          State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0   
+          State_VG(:,iMin:iMax,jMin:jMax,kMin:kMax) = 0.0
        case('shear', 'shear_semi')
           call set_shear_bc
        case('none')
@@ -370,10 +368,10 @@ contains
 
     end do
 
-    if(DoTestMe)then
+    if(DoTest)then
        do iVar = 1, nVarState
           write(*,*)'final',NameVar_V(iVar),'   cell,ghost,ghost2=',&
-               State_VG(iVar,Itest,Jtest,Ktest),&
+               State_VG(iVar,iTest,jTest,kTest),&
                State_VG(iVar,Ighost,Jghost,Kghost),&
                State_VG(iVar,Ighost2,Jghost2,Kghost2)
        end do
@@ -381,9 +379,10 @@ contains
 
     deallocate(SymmCoeff_V)
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-
     !==========================================================================
+
     subroutine set_gradpot_bc
 
       ! Pot(ghost) = Pot(inside2) + (x_ghost - x_inside2).E_inside1
@@ -392,7 +391,7 @@ contains
       use BATL_lib,   ONLY: Xyz_DGB, j2_, k2_, nJm1_, nKm1_
 
       integer:: i, j, k
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       select case(iSide)
       case(1)
@@ -434,16 +433,16 @@ contains
       end select
 
     end subroutine set_gradpot_bc
-
     !==========================================================================
+
     subroutine set_float_bc(iVarMin, iVarMax)
 
       ! Continuous: ghost = phys1
       integer, intent(in) :: iVarMin, iVarMax
 
       integer:: i, j, k
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       select case(iSide)
       case(1)
          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
@@ -478,8 +477,8 @@ contains
       end select
 
     end subroutine set_float_bc
-
     !==========================================================================
+
     subroutine set_shear_bc
 
       use ModPhysics, ONLY: ShockSlope
@@ -584,8 +583,8 @@ contains
       end select
 
     end subroutine set_symm_bc
-
     !==========================================================================
+
     subroutine set_reflect_bc(nVector, iVector_I)
 
       ! Copy variables in a symmetric fashion, and then
@@ -599,7 +598,7 @@ contains
       integer:: iVector, iVarX, iVarZ
       integer:: i, j, k, iL, iR, jL, jR, kL, kR
       real :: Normal_D(MaxDim), VarNormal_D(MaxDim), InvNormal2
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       ! Scalars are symmetric
       SymmCoeff_V = 1.0
       call set_symm_bc(1, nVarState, SymmCoeff_V)
@@ -687,8 +686,8 @@ contains
       end do; end do; end do
 
     end subroutine set_fixed_bc
-
     !==========================================================================
+
     subroutine fix_b0(iVarMin, iVarMax)
 
       use ModB0, ONLY: B0_DGB
@@ -705,8 +704,8 @@ contains
       end do; end do; end do
 
     end subroutine fix_b0
-
     !==========================================================================
+
     subroutine set_solar_wind_bc
 
       use ModAdvance,    ONLY: nVar
@@ -724,10 +723,10 @@ contains
       ! Varying solar wind parameters
       real :: SolarWind_V(nVar)
 
-      !logical :: DoTest, DoTestMe
-      !character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
+      ! logical :: DoTest, DoTestMe
+      ! character(len=*), parameter:: NameSub = 'set_solar_wind_bc'
       !------------------------------------------------------------------------
-      !call set_oktest(NameSub, DoTest, DoTestMe)
+      ! call set_oktest(NameSub, DoTest, DoTestMe)
 
       do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
          Xyz_D =  Xyz_DGB(:,i,j,k,iBlock)
@@ -773,7 +772,6 @@ contains
       end do; end do; end do
 
     end subroutine set_solar_wind_bc
-
     !==========================================================================
 
     subroutine set_solar_wind_bc_buffer
@@ -785,13 +783,14 @@ contains
       ! index and location of a single point
       integer :: i, j, k
       real    :: y, z
+
       !------------------------------------------------------------------------
       do k = kMin, kMax
          z = Xyz_DGB(z_,1,1,k,iBlock)
          do j = jMin, jMax
             y = Xyz_DGB(y_,1,j,1,iBlock)
             do i = iMin, iMax
-               call read_ih_buffer(y,z,State_VG(:,i,j,k))   !^CMP IF IH
+               call read_ih_buffer(y,z,State_VG(:,i,j,k))   ! ^CMP IF IH
                ! Subtract B0
                State_VG(Bx_:Bz_,i,j,k) = State_VG(Bx_:Bz_,i,j,k) &
                     - B0_DGB(:,i,j,k,iBlock)
@@ -816,7 +815,7 @@ contains
       integer:: i2G, j2G, k2G ! index for last  ghost cell layer
       integer:: i1P, j1P, k1P ! index for first physical cell layer
       integer:: i2P, j2P, k2P ! index for second physical cell layer
-      integer:: Di, Dj, Dk    ! +1 if last ghost cell layer has larger index 
+      integer:: Di, Dj, Dk    ! +1 if last ghost cell layer has larger index
       !                         than first ghost cell layer and -1 otherwise
 
       real   :: OpacityRosselandSi_W(nWave), Coef
@@ -909,22 +908,23 @@ contains
       end select
 
     end subroutine set_radiation_outflow_bc
+    !==========================================================================
 
   end subroutine set_cell_boundary
-  !=====================================================================
+  !============================================================================
 
   subroutine set_edge_corner_ghost(nGhost,iBlock, nVarState, State_VG)
     ! The blocks near boundary may have problem with high order resolution
-    ! change and high order AMR. These blocks' corner/edge ghost cells 
-    ! may out of boundary and can not receive data from any block. Set 
-    ! these ghost cells with the closest face ghost cell values. 
+    ! change and high order AMR. These blocks' corner/edge ghost cells
+    ! may out of boundary and can not receive data from any block. Set
+    ! these ghost cells with the closest face ghost cell values.
 
-    ! This approach is not accurate! If it is smooth near the resolution 
-    ! change boundary point, it will be fine. 
-        
+    ! This approach is not accurate! If it is smooth near the resolution
+    ! change boundary point, it will be fine.
+
     use BATL_lib,  ONLY: MinI,MaxI,MinJ,MaxJ,MinK,MaxK,DiLevelNei_IIIB,Unset_
     use BATL_size, ONLY: nI,nJ,nK
-    
+
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -932,7 +932,11 @@ contains
 
     integer:: i, j, k, iDir,jDir,kDir,kDirBegin,kDirEnd
     integer:: iBegin,iEnd,jBegin,jEnd,kBegin,kEnd,Di,Dj,Dk,i0,j0,k0
-    !----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_edge_corner_ghost'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(nJ == 1) RETURN
     if(nK == 1) then
        kDirBegin = 0; kDirEnd = 0
@@ -1015,11 +1019,14 @@ contains
              endif
              if(abs(State_VG(1,i,j,k) - 777)<1e-10 .and. &
                   abs(State_VG(nVarState,i,j,k) - 777)<1e-10) &
-                  State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)          
+                  State_VG(:,i,j,k) = State_VG(:,i0,j0,k0)
           enddo; enddo; enddo
        endif ! kDir /=0
     enddo; enddo; enddo
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_edge_corner_ghost
-  
+  !============================================================================
+
 end module ModCellBoundary
+!==============================================================================

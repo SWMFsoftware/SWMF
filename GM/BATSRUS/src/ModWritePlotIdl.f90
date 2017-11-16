@@ -1,16 +1,19 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================================
 module ModWritePlotIdl
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest
 
   implicit none
 
   private ! except
-  
+
   public:: write_plot_idl
 
 contains
+  !============================================================================
   subroutine write_plot_idl(iFile, iBlock, nPlotVar, PlotVar, &
        DoSaveGenCoord, xUnit, xMin, xMax, yMin, yMax, zMin, zMax, &
        DxBlock, DyBlock, DzBlock, nCell)
@@ -18,7 +21,7 @@ contains
     ! Save all cells within plotting range, for each processor
 
     use ModProcMH
-    use ModMain,     ONLY: PROCtest, BLKtest, test_string
+    use ModMain,     ONLY:   StringTest
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzStart_BLK
     use ModIO,       ONLY: save_binary, plot_type1, plot_dx, plot_range, &
          nPlotVarMax
@@ -31,8 +34,6 @@ contains
          nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
          Xyz_DGB, x_, y_, z_, Phi_
     use ModUtilities, ONLY: greatest_common_divisor
-
-    implicit none
 
     ! Arguments
 
@@ -56,15 +57,10 @@ contains
 
     real:: cHalfMinusTiny
 
-    character(len=*), parameter :: NameSub = 'write_plot_idl'
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_plot_idl'
     !--------------------------------------------------------------------------
-
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
+    call test_start(NameSub, DoTest, iBlock)
 
     if(nByteReal == 8)then
        cHalfMinusTiny = 0.5*(1.0 - 1e-9)
@@ -79,11 +75,11 @@ contains
     ! the NAG compiler with optimization on fails !
     nCell = 0
 
-    if(index(test_string,'SAVEPLOTALL')>0)then
+    if(index(StringTest,'SAVEPLOTALL')>0)then
 
        ! Save all cells of block including ghost cells
        DxBlock = CellSize_DB(x_,iBlock)
-       DyBlock = CellSize_DB(y_,iBlock) 
+       DyBlock = CellSize_DB(y_,iBlock)
        DzBlock = CellSize_DB(z_,iBlock)
 
        plot_range(1,iFile) = CoordMin_D(1) - nGI*DxBlock
@@ -139,7 +135,7 @@ contains
        ySqueezed = xyzStart_BLK(y_,iBlock)
     end if
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub, 'xMin1,xMax1,yMin1,yMax1,zMin1,zMax1=',&
             xMin1,xMax1,yMin1,yMax1,zMin1,zMax1
        write(*,*) NameSub, 'xyzStart_BLK=',iBlock,xyzStart_BLK(:,iBlock)
@@ -154,7 +150,7 @@ contains
     if(  xyzStart_BLK(x_,iBlock) > xMax1.or.&
          xyzStart_BLK(x_,iBlock)+(nI-1)*CellSize_DB(x_,iBlock) < xMin1.or.&
          ySqueezed > yMax1.or.&
-         ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock) < yMin1.or.&  
+         ySqueezed+(nJ-1)*CellSize_DB(y_,iBlock) < yMin1.or.&
          xyzStart_BLK(z_,iBlock) > zMax1.or.&
          xyzStart_BLK(z_,iBlock)+(nK-1)*CellSize_DB(z_,iBlock) < zMin1)&
          RETURN
@@ -174,7 +170,7 @@ contains
     kMin = max(1 ,floor((zMin1-xyzStart_BLK(z_,iBlock))/DzBlock)+2)
     kMax = min(nK,floor((zMax1-xyzStart_BLK(z_,iBlock))/DzBlock)+1)
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub, 'iMin,iMax,jMin,jMax,kMin,kMax=',&
             iMin,iMax,jMin,jMax,kMin,kMax
        write(*,*) NameSub, 'DxBlock,x1,y1,z1',DxBlock,xyzStart_BLK(:,iBlock)
@@ -232,7 +228,7 @@ contains
        ! Factor for taking the average
        Restrict = 1./(nRestrict**nDim)
 
-       if(DoTestMe) write(*,*) NameSub,': nRestrict, X, Y, Z, Restrict=',&
+       if(DoTest) write(*,*) NameSub,': nRestrict, X, Y, Z, Restrict=',&
             nRestrict, nRestrictX, nRestrictY, nRestrictZ, Restrict
 
        ! Loop for the nRestrictX*nRestrictY*nRestrictZ bricks inside the cut
@@ -274,6 +270,9 @@ contains
        end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_plot_idl
+  !============================================================================
 
 end module ModWritePlotIdl
+!==============================================================================

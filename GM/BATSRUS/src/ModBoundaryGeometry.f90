@@ -1,9 +1,11 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!============================================================================
 
 module ModBoundaryGeometry
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
   implicit none
   SAVE
@@ -12,17 +14,16 @@ module ModBoundaryGeometry
 
   public:: init_mod_boundary_cells      ! initialize module
   public:: read_boundary_geometry_param ! read parameters
-  public:: fix_geometry                 ! set geometry variables 
+  public:: fix_geometry                 ! set geometry variables
   public:: fix_block_geometry           ! set geometry variables for a block
   public:: fix_boundary_ghost_cells     ! recalculate "true_cell" in ghost cells
 
   ! iBoundary_GB contains the index of the boundary that the cell belongs to.
   integer, allocatable, public :: iBoundary_GB(:,:,:,:)
 
-  ! Cells inside domain have index domain_ that is smaller than smallest 
+  ! Cells inside domain have index domain_ that is smaller than smallest
   ! boundary index (SolidBc_ = -3)
   integer, parameter, public :: domain_ = -10
-
 
   ! Local variables -------------------------------
 
@@ -32,20 +33,23 @@ module ModBoundaryGeometry
   real :: SolidLimitDt = 0
 
 contains
-
   !============================================================================
+
   subroutine init_mod_boundary_cells
 
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_boundary_cells'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(.not. allocated(iBoundary_GB)) then
        allocate(iBoundary_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
        iBoundary_GB = domain_
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_boundary_cells
-
   !============================================================================
 
   subroutine read_boundary_geometry_param(NameCommand)
@@ -58,8 +62,10 @@ contains
     integer :: i
 
     character(len=*), intent(in):: NameCommand
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_boundary_geometry_param'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(NameCommand)
     case("#SOLIDSTATE")
@@ -72,7 +78,7 @@ contains
           case("sphere")
              call read_var('rSolid',rSolid)
           case("user")
-             !?
+             ! ?
           case default
              call stop_mpi(NameSub//': Command='//NameCommand//&
                   ', Geometry type='//TypeSolidGeometry//&
@@ -94,15 +100,15 @@ contains
        call stop_mpi(NameSub//' unknown command='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_boundary_geometry_param
-
   !============================================================================
 
   subroutine fix_block_geometry(iBlock, DoSolveSolidIn)
 
     use ModMain, ONLY: Body1, body1_, body2_, &
          UseBody2, UseExtraBoundary, UseSolidState, &
-         ProcTest, BlkTest, iTest, jTest, kTest, TypeFaceBc_I, &
+              TypeFaceBc_I, &
          xMinBc_, xMaxBc_, yMinBc_, yMaxBc_, zMinBc_, zMaxBc_, solidBc_
     use ModGeometry, ONLY: &
          R_BLK, R2_BLK, Rmin2_BLK, Body_BLK, &
@@ -120,15 +126,11 @@ contains
 
     integer :: i, j, k
     logical :: DoSolveSolid
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='fix_block_geometry'
-    !--------------------------------------------------------------------------
 
-    if(iBlock==BlkTest .and. iProc==ProcTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fix_block_geometry'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     DoSolveSolid = .true.
     if(present(DoSolveSolidIn)) DoSolveSolid = DoSolveSolidIn
@@ -149,7 +151,7 @@ contains
          (    CoordMin_DB(:,iBlock) <= CoordMin_D + 1e-12       &
          .or. CoordMax_DB(:,iBlock) >= CoordMax_D - 1e-12) )
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub,': far_field_bcs_blk=',far_field_bcs_BLK(iBlock)
        write(*,*)NameSub,': CoordMin_DB=', CoordMin_DB(:,iBlock)
        write(*,*)NameSub,': CellSize_D = ',CellSize_DB(:,iBlock)
@@ -157,12 +159,11 @@ contains
        write(*,*)NameSub,': CoordMax_D =', CoordMax_D
     end if
 
-
     ! TRUE_CELL: if not inside a body or outside the outer face boundary
     ! so true cells are those where iBoundary_GB==domain_
     true_cell(:,:,:,iBlock)=.true.
 
-    ! Reset for every level of refinement                               
+    ! Reset for every level of refinement
     iBoundary_GB(:,:,:,iBlock) = domain_
 
     ! User solid boundary or extra boundary
@@ -177,7 +178,7 @@ contains
              where( R_BLK(:,:,:,iBlock) < rSolid)&
                   iBoundary_GB(:,:,:,iBlock) = solidBc_
              where( R_BLK(1:nI,1:nJ,1:nK,iBlock) < rSolid)&
-                  time_BLK(:,:,:,iBlock) = 0.0        
+                  time_BLK(:,:,:,iBlock) = 0.0
           end select
        else ! DoSolveSolid=.TRUE.
           select case(TypeSolidGeometry)
@@ -188,7 +189,7 @@ contains
        end if
     end if
 
-    ! Set iBoundary_GB for body1 and body2 (always face boundary)            
+    ! Set iBoundary_GB for body1 and body2 (always face boundary)
     if(UseBody2) then
        where( R2_BLK(:,:,:,iBlock) < rbody2) &
             iBoundary_GB(:,:,:,iBlock) = body2_
@@ -198,7 +199,7 @@ contains
             iBoundary_GB(:,:,:,iBlock) = body1_
     end if
 
-    ! No face BC is applied for TypeFaceBc_I(1:6) if not set in PARAM.in   
+    ! No face BC is applied for TypeFaceBc_I(1:6) if not set in PARAM.in
     if(.not. all(TypeFaceBc_I(xMinBc_:zMaxBc_)=='none') )then
        where( Xyz_DGB(x_,:,:,:,iBlock) < x1 ) &
             iBoundary_GB(:,:,:,iBlock) = xMinBc_
@@ -222,7 +223,7 @@ contains
     ! TRUE_BLK: if all cells EXCLUDING ghost cells are outside body(ies)
     true_BLK(iBlock) = all(true_cell(1:nI,1:nJ,1:nK,iBlock))
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub,&
             ' finished with iBoundary_GB(iTest-nG:iTest+nG)=',&
             iBoundary_GB(iTest-nG:iTest+nG,jTest,kTest,iBlock)
@@ -232,8 +233,8 @@ contains
             true_cell(iTest-nG:iTest+nG,jTest,kTest,iBlock)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine fix_block_geometry
-
   !============================================================================
 
   subroutine fix_geometry(DoSolveSolidIn)
@@ -243,42 +244,44 @@ contains
     logical, intent(in) :: DoSolveSolidIn
 
     integer :: iBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fix_geometry'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     do iBlock = 1, nBlock
        call fix_block_geometry(iBlock, DoSolveSolidIn)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine fix_geometry
-
   !============================================================================
 
   subroutine fix_boundary_ghost_cells
 
-    ! Recalculate true_cell information in ghost cells if grid changed. 
+    ! Recalculate true_cell information in ghost cells if grid changed.
 
     use ModMain, ONLY : nBlock, Unused_B, iNewGrid, iNewDecomposition, &
-         BlkTest, iTest, jTest, kTest, iteration_number, nOrderProlong
+             iteration_number, nOrderProlong
     use ModGeometry, ONLY: true_cell, body_BLK
     use BATL_lib, ONLY: message_pass_cell
 
     integer:: iBlock
     integer:: iGridHere = -1, iDecompositionHere = -1
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'fix_boundary_ghost_cells'
-    !----------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iGridHere==iNewGrid .and. iDecompositionHere==iNewDecomposition) RETURN
 
     iGridHere = iNewGrid; iDecompositionHere = iNewDecomposition
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
-    if(DoTestMe) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
-         true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
+    if(DoTest) write(*,*)NameSub,' starting with true_cell(i-2:i+2)=', &
+         true_cell(iTest-2:iTest+2,jTest,kTest,iBlockTest)
 
     ! DoResChangeOnly=true works as long as the ghost cells are correctly set
-    ! away from resolution changes. This usually holds, but not if the 
+    ! away from resolution changes. This usually holds, but not if the
     ! boundary cells are set based on the state variables read from a restart
     ! file that has no ghost cell information saved. This can only happen
     ! at the very beginning of a run when iteration_number == 0.
@@ -293,8 +296,8 @@ contains
             DoResChangeOnlyIn=iteration_number>0, NameOperatorIn='max')
     end if
 
-    if(DoTestMe) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
-         iBoundary_GB(iTest-2:iTest+2,jTest,kTest,BlkTest)
+    if(DoTest) write(*,*) NameSub,': iBoundary_GB(i-2:i+2)=', &
+         iBoundary_GB(iTest-2:iTest+2,jTest,kTest,iBlockTest)
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -302,13 +305,16 @@ contains
        true_cell(:,:,:,iBlock) = true_cell(:,:,:,iBlock)  &
             .and. (iBoundary_GB(:,:,:,iBlock) == domain_)
 
-       body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))   
+       body_BLK(iBlock) = .not. all(true_cell(:,:,:,iBlock))
     end do
 
-    if(DoTestMe) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
-         true_cell(iTest-2:iTest+2,jTest,kTest,BlkTest)
+    if(DoTest) write(*,*) NameSub,' finished with true_cell(i-2:i+2)=', &
+         true_cell(iTest-2:iTest+2,jTest,kTest,iBlockTest)
 
+    call test_stop(NameSub, DoTest)
   end subroutine fix_boundary_ghost_cells
+  !============================================================================
 
 end module ModBoundaryGeometry
+!==============================================================================
 

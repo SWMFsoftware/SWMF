@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!==========================================================================
 module ModImCoupling
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! Routines related to the coupline with the Inner Magnetosphere component
 
@@ -31,10 +33,15 @@ module ModImCoupling
   integer :: iSize, jSize
 
 contains
+  !============================================================================
 
   subroutine im_pressure_init(iSizeIn,jSizeIn)
     integer :: iSizeIn, jSizeIn
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'im_pressure_init'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     iSize = iSizeIn
     jSize = jSizeIn
     allocate(&
@@ -53,9 +60,9 @@ contains
          IM_ppar(iSize,jSize), &
          IM_bmin(iSize,jSize))
 
+    call test_stop(NameSub, DoTest)
   end subroutine im_pressure_init
-
-  !===========================================================================
+  !============================================================================
 
   subroutine get_im_pressure(iBlock, pIm_IC, RhoIm_IC, TauCoeffIm_C, PparIm_C)
 
@@ -87,7 +94,10 @@ contains
     real :: Pperp, PperpInvPpar, Coeff
 
     integer :: iIonSecond, nIons
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_im_pressure'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     iIonSecond = min(IonFirst_+1, IonLast_)
     if (DoMultiFluidIMCoupling) then
        nIons = iIonSecond
@@ -97,7 +107,7 @@ contains
 
     TauCoeffIm_C = 1.0
 
-    ! Maximum latitude (ascending or descending) of the IM grid 
+    ! Maximum latitude (ascending or descending) of the IM grid
     LatMaxIm = max(IM_lat(1), IM_lat(iSize))
 
     ! Check to see if cell centers are on closed fieldline
@@ -112,7 +122,7 @@ contains
        ! For closed field lines nudge towards IM pressure/density
        if(nint(ray(3,1,i,j,k,iBlock)) == 3) then
 
-          ! Map the point down to the IM grid 
+          ! Map the point down to the IM grid
           ! Note: ray values are in SM coordinates!
           Lat = ray(1,1,i,j,k,iBlock)
 
@@ -137,7 +147,7 @@ contains
              iLat2 = iLat1-1
              LatWeight1 = &
                   (Lat - IM_lat(iLat2))/(IM_lat(iLat1) - IM_lat(iLat2))
-             LatWeight2 = 1 - LatWeight1              
+             LatWeight2 = 1 - LatWeight1
           endif
 
           ! Note: IM_lon is in ascending order
@@ -217,21 +227,21 @@ contains
                      LonWeight1 * ( LatWeight1*IM_ppar(iLat1,iLon1) &
                      +              LatWeight2*IM_ppar(iLat2,iLon1) ) + &
                      LonWeight2 * ( LatWeight1*IM_ppar(iLat1,iLon2) &
-                     +              LatWeight2*IM_ppar(iLat2,iLon2) ) ) 
+                     +              LatWeight2*IM_ppar(iLat2,iLon2) ) )
                 BminIm_C(i,j,k) = Si2No_V(UnitB_)*( &
                      LonWeight1 * ( LatWeight1*IM_bmin(iLat1,iLon1) &
                      +              LatWeight2*IM_bmin(iLat2,iLon1) ) + &
                      LonWeight2 * ( LatWeight1*IM_bmin(iLat1,iLon2) &
-                     +              LatWeight2*IM_bmin(iLat2,iLon2) ) ) 
+                     +              LatWeight2*IM_bmin(iLat2,iLon2) ) )
              end if
 
              if(.not. DoAnisoPressureIMCoupling)then
-                ! If coupled with RCM or if GM is not using anisotropic 
+                ! If coupled with RCM or if GM is not using anisotropic
                 ! pressure then set ppar = p.
                 PparIm_C(i,j,k) = pIm_IC(1,i,j,k)
              else
-                ! Anisotropic pressure coupling, not dealing with 
-                ! multifluid for now 
+                ! Anisotropic pressure coupling, not dealing with
+                ! multifluid for now
                 ! Pperp at minimum B
                 Pperp = (3.0*pIm_IC(1,i,j,k) - PparIm_C(i,j,k))/2.0
                 PperpInvPpar = Pperp/PparIm_C(i,j,k)
@@ -279,9 +289,9 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_im_pressure
-
-  !==========================================================================
+  !============================================================================
 
   subroutine apply_im_pressure
 
@@ -307,25 +317,24 @@ contains
     integer :: i, j, k, iBlock, nDensity
     integer, allocatable:: iDens_I(:)
 
-    character (len=*), parameter :: NameSub='apply_im_pressure'
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'apply_im_pressure'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iNewPIm < 1) RETURN ! No IM pressure has been obtained yet
 
     ! Are we coupled at all?
-    if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN  
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    if(.not.DoCoupleImPressure .and. .not.DoCoupleImDensity) RETURN
 
     iIonSecond = min(IonFirst_+1, IonLast_)
 
     ! Set density floor in normalized units
     if(DoCoupleImDensity) RhoMinIm = Io2No_V(UnitRho_)*RhoMinDimIm
 
-    ! redo ray tracing if necessary 
+    ! redo ray tracing if necessary
     ! (load_balance takes care of new decomposition)
     if(iNewPIm > iLastPIm .or. iNewGrid > iLastGrid) then
-       if(DoTestMe)write(*,*)'GM_apply_im_pressure: call trace_field_grid ',&
+       if(DoTest)write(*,*)'GM_apply_im_pressure: call trace_field_grid ',&
             'iNewPIm,iLastPIm,iNewGrid,iLastGrid=',&
             iNewPIm,iLastPIm,iNewGrid,iLastGrid
        call trace_field_grid
@@ -334,21 +343,21 @@ contains
     ! Remember this call
     iLastPIm = iNewPIm; iLastGrid = iNewGrid
 
-    ! Now use the pressure from the IM to nudge the pressure in the MHD code.  
+    ! Now use the pressure from the IM to nudge the pressure in the MHD code.
     ! This will happen only on closed magnetic field lines.
     ! Determining which field lines are closed is done by using the ray
     ! tracing.
 
     if(time_accurate)then
        ! Ramp up is based on physical time: p' = p + min(1,dt/tau) * (pIM - p)
-       ! A typical value might be 5, to get close to the IM pressure 
+       ! A typical value might be 5, to get close to the IM pressure
        ! in 10 seconds. Dt/Tau is limited to 1, when p' = pIM is set
 
        Factor = min(1.0, Dt/(TauCoupleIM*Io2No_V(UnitT_)))
 
     else
        ! Ramp up is based on number of iterations: p' = (ntau*p + pIm)/(1+ntau)
-       ! A typical value might be 20, to get close to the IM pressure 
+       ! A typical value might be 20, to get close to the IM pressure
        ! in 20 iterations
 
        Factor = 1.0/(1 + TauCoupleIM)
@@ -362,8 +371,7 @@ contains
        nIons = 1
     end if
 
-
-    ! Set array of density indexes: 
+    ! Set array of density indexes:
     ! 3 values for multispecies, nIons for multifluid
     if(UseMultiSpecies)then
        nDensity = 3
@@ -477,6 +485,9 @@ contains
 
     if(allocated(iDens_I)) deallocate(iDens_I)
 
+    call test_stop(NameSub, DoTest)
   end subroutine apply_im_pressure
+  !============================================================================
 
 end module ModImCoupling
+!==============================================================================

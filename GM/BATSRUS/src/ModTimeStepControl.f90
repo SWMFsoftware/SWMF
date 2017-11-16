@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModTimeStepControl
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
   implicit none
 
@@ -42,8 +45,8 @@ module ModTimeStepControl
   real   :: TimeStepMin = 0.0
 
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine read_time_step_control_param(NameCommand)
 
     use ModMain,       ONLY: NameVarLower_V
@@ -57,8 +60,10 @@ contains
     character(len=100):: NameVarControl
     character(len=20) :: NameVarControl_I(nVar)
 
-    character(len=*), parameter:: NameSub='read_time_step_control_param'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_time_step_control_param'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#CONTROLTIMESTEP", "#TIMESTEPCONTROL")
        call read_var('UseTimeStepControl', UseTimeStepControl)
@@ -98,16 +103,16 @@ contains
        call stop_mpi(NameSub//' invalid NameCommand='//NameCommand)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_time_step_control_param
-
-  !===========================================================================
+  !============================================================================
 
   subroutine calc_timestep(iBlock)
 
     use ModVarIndexes, ONLY: p_, WaveFirst_, WaveLast_
     use ModSize, ONLY: nI, nJ, nK
     use ModMain, ONLY: UseDtFixed, DtFixed, Dt_BLK, Cfl, &
-         iTest, jTest, kTest, BlkTest, UseDtLimit, DtLimit
+             UseDtLimit, DtLimit
     use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK, &
          DoFixAxis, rFixAxis, r2FixAxis, State_VGB, &
          UseElectronPressure
@@ -122,7 +127,7 @@ contains
     use BATL_lib, ONLY: CellVolume_GB, CoordMin_DB, CoordMax_DB, &
          IsCylindricalAxis, IsLatitudeAxis, r_, Lat_
     use ModNumConst, ONLY: cHalfPi
-    use ModCoarseAxis,ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
+    use ModCoarseAxis, ONLY: UseCoarseAxis, calc_coarse_axis_timestep,&
          NorthHemiSph_, SouthHemiSph_
 
     integer, intent(in) :: iBlock
@@ -133,17 +138,16 @@ contains
     ! Variables for time step control due to loss terms
     real :: Einternal, Source, Dt_loss, Coef
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_timestep'
     !--------------------------------------------------------------------------
-
-    if(iBlock==BLKtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest, iBlock)
+    if(iBlock==iBlockTest)then
     else
-       DoTest=.false.; DoTestMe=.false.
+       DoTest=.false.; DoTest=.false.
     endif
 
-    if(DoTestMe)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
+    if(DoTest)write(*,*) NameSub,' starting, true_BLK=', true_BLK(iBlock)
 
     ! Calculate time step limit based on maximum speeds across 6 faces
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -248,18 +252,18 @@ contains
        end if
     end if
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub,' VdtFace_x(iTest:iTest+1)=', &
-            VdtFace_x(Itest:Itest+1,jTest,kTest)
+            VdtFace_x(iTest:iTest+1,jTest,kTest)
        if(nJ>1) write(*,*) NameSub,' VdtFace_y(jTest:jTest+1)=', &
-            VdtFace_y(Itest,Jtest:jTest+1,kTest)
+            VdtFace_y(iTest,jTest:jTest+1,kTest)
        if(nK>1) write(*,*) NameSub,' VdtFace_z(kTest:kTest+1)=', &
-            VdtFace_z(Itest,Jtest,kTest:kTest+1)
-       write(*,*) NameSub,' time_BLK=',time_BLK(Itest,Jtest,Ktest,iBlock)
+            VdtFace_z(iTest,jTest,kTest:kTest+1)
+       write(*,*) NameSub,' time_BLK=',time_BLK(iTest,jTest,kTest,iBlock)
     end if
 
     !\
-    ! Compute maximum stable time step for this solution block 
+    ! Compute maximum stable time step for this solution block
     !/
 
     if(true_BLK(iBlock)) then
@@ -270,16 +274,16 @@ contains
             minval(time_BLK(:,:,:,iBlock), &
             MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)))
 
-       if(DoTestMe)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_BLK=',&
+       if(DoTest)write(*,*) NameSub,' minval(time_BLK,MASK), Dt_BLK=',&
             minval(time_BLK(:,:,:,iBlock), &
             MASK=true_cell(1:nI,1:nJ,1:nK,iBlock)), Dt_BLK(iBlock)
     end if
 
-    if(DoTestMe)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
+    if(DoTest)write(*,*)NameSub,' Dt_BLK, loc=',Dt_BLK(iBlock),&
          minloc(time_BLK(:,:,:,iBlock),&
          MASK=true_cell(1:nI,1:nJ,1:nK,iBlock))
 
-    ! Reset time_BLK for fixed time step (but Dt_BLK is kept!)
+    ! Reset time_BLK for fixed time step (but Dt_BLK is kept! )
     if(UseDtFixed) &
          time_BLK(:,:,:,iBlock) = DtFixed
 
@@ -287,13 +291,13 @@ contains
     if(UseDtLimit) &
          time_BLK(:,:,:,iBlock) = min(DtLimit/Cfl, time_BLK(:,:,:,iBlock))
 
-    if(DoTestMe .and. UseDtFixed) &
+    if(DoTest .and. UseDtFixed) &
          write(*,*) NameSub,' after UseDtFixed, time_BLK =', &
-         time_BLK(Itest,Jtest,Ktest,iBlock)
+         time_BLK(iTest,jTest,kTest,iBlock)
 
-    if(DoTestMe .and. UseDtLimit) &
+    if(DoTest .and. UseDtLimit) &
          write(*,*) NameSub,' after limiting, time_BLK =', &
-         time_BLK(Itest,Jtest,Ktest,iBlock)
+         time_BLK(iTest,jTest,kTest,iBlock)
 
     ! Set time step to zero inside body.
     if(.not.true_BLK(iBlock)) then
@@ -301,8 +305,8 @@ contains
             time_BLK(:,:,:,iBlock) = 0.0
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_timestep
-
   !============================================================================
 
   subroutine set_global_timestep(TimeSimulationLimit)
@@ -321,7 +325,7 @@ contains
     use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB, &
          MaxNode, nNode, iNode_B, iTimeLevel_A, nTimeLevel
 
-    real, intent(in) :: TimeSimulationLimit !Simulation time not to be exceeded
+    real, intent(in) :: TimeSimulationLimit ! Simulation time not to be exceeded
 
     integer :: iBlock
     integer :: iError, Ijk_D(3), i, j, k
@@ -329,22 +333,21 @@ contains
 
     real :: DtDim
 
-    logical :: DoTest, DoTestMe
+    ! time_BLK is already set in calc_timestep,
+    ! and Dt=DtLimit is set in MH_set_parameters
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_global_timestep'
     !--------------------------------------------------------------------------
-    ! time_BLK is already set in calc_timestep, 
-    ! and Dt=DtLimit is set in MH_set_parameters
+    call test_start(NameSub, DoTest)
     if(UseDtLimit) RETURN
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
-
     ! if calc_timestep is tested, test this routine too
-    if(.not.DoTest) call set_oktest('calc_timestep', DoTest, DoTestMe)
+    if(.not.DoTest) call set_oktest('calc_timestep', DoTest, DoTest)
 
-    if(DoTestMe)write(*,*) NameSub, &
+    if(DoTest)write(*,*) NameSub, &
          ' starting with TimeSimulationLimit, dt_BLK, time_BLK=', &
-         TimeSimulationLimit, dt_BLK(BlkTest), &
-         time_BLK(iTest,jTest,kTest,BlkTest)
+         TimeSimulationLimit, dt_BLK(iBlockTest), &
+         time_BLK(iTest,jTest,kTest,iBlockTest)
 
     if(UseMaxTimeStep)then
        if(.not.allocated(iTimeLevel_A)) allocate(iTimeLevel_A(MaxNode))
@@ -379,7 +382,7 @@ contains
        call MPI_allreduce(DtMinPE, DtMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
        Dt = DtMin
 
-       if(DoTestMe .and. DtMinPE == Dt)then
+       if(DoTest .and. DtMinPE == Dt)then
           do iBlock = 1, nBlock
              if(Unused_B(iBlock)) CYCLE
              if(Dt_BLK(iBlock) /= Dt) CYCLE
@@ -403,7 +406,7 @@ contains
                            +    B0_DGB(:,i,j,k,iBlock))**2    )
                    else
                       Cmax_C(i,j,k) = Cmax_C(i,j,k) + &
-                           sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2) 
+                           sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
                    end if
                 end if
                 CMax_C(i,j,k) = Cmax_C(i,j,k)/State_VGB(rho_,i,j,k,iBlock)
@@ -430,13 +433,13 @@ contains
           if(nProc > 1) call MPI_allreduce(&
                MPI_IN_PLACE, DtMax, 1, MPI_REAL, MPI_MAX, iComm, iError)
 
-          if(DoTestMe) write(*,*)NameSub,' DtMin, DtMax=', DtMin, DtMax
+          if(DoTest) write(*,*)NameSub,' DtMin, DtMax=', DtMin, DtMax
 
           ! Make DtMax a power of 2 multiple of DtMin
           nTimeLevel = floor(log(DtMax/DtMin)/log(2.0))
           DtMax = DtMin * 2**nTimeLevel
 
-          if(DoTestMe)write(*,*)NameSub,' DtMax after rounding=',DtMax
+          if(DoTest)write(*,*)NameSub,' DtMax after rounding=',DtMax
 
           Dt = DtMax
        end if
@@ -492,14 +495,14 @@ contains
     Dt = Cfl*Dt
 
     ! Check if time step has been too small for nCheckTimeStep steps
-    if(DoTestMe)write(*,*) NameSub,' DoCheckTimeStep=', DoCheckTimeStep
+    if(DoTest)write(*,*) NameSub,' DoCheckTimeStep=', DoCheckTimeStep
 
     if(DoCheckTimeStep)then
        DtDim = Dt*No2Io_V(UnitT_)
-       if(DoTestMe)write(*,*) NameSub,' checking DtDim=', DtDim
+       if(DoTest)write(*,*) NameSub,' checking DtDim=', DtDim
        if(DtDim < TimeStepMin)then
           iCheckTimeStep = iCheckTimeStep + 1
-          if(DoTestMe)write(*,*) NameSub,' iCheckTimeStep=', iCheckTimeStep
+          if(DoTest)write(*,*) NameSub,' iCheckTimeStep=', iCheckTimeStep
           if(iCheckTimeStep >= nCheckTimeStep)then
              if(iProc==0)then
                 write(*,*) NameSub,' ERROR: time step=', &
@@ -516,12 +519,12 @@ contains
        end if
     end if
 
-    if(DoTestMe)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
-         Dt, dt_BLK(BlkTest), time_BLK(iTest,jTest,kTest,BlkTest)
+    if(DoTest)write(*,*) NameSub,' finished with Dt, dt_BLK, time_BLK=', &
+         Dt, dt_BLK(iBlockTest), time_BLK(iTest,jTest,kTest,iBlockTest)
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_global_timestep
-
-  !===========================================================================
+  !============================================================================
 
   subroutine control_time_step
 
@@ -538,10 +541,10 @@ contains
     integer:: iBlock, i, j, k, iError
     real   :: RelativeChangeMin,  RelativeChangeMax, Tmp, Factor
 
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='control_time_step'
-    !-------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'control_time_step'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Use density and pressure as control variables by default
     if(nVarControl < 0)then
@@ -595,9 +598,9 @@ contains
        ! Reduce next time step
        Factor = RejectStepFactor
 
-       !if (RelativeChangeMax > 100.0) then
+       ! if (RelativeChangeMax > 100.0) then
        !   Factor = 0.1
-       !endif
+       ! endif
 
     elseif(   RelativeChangeMin < ReduceStepLevel1 &
          .or. RelativeChangeMax > ReduceStepLevel2 )then
@@ -624,7 +627,7 @@ contains
        Cfl     = min(CflOrig, Cfl*Factor)
     end if
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub,': RelativeChangeMin,Max,Factor=', &
             RelativeChangeMin, RelativeChangeMax, Factor
        if(UseDtFixed)then
@@ -638,6 +641,9 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine control_time_step
+  !============================================================================
 
 end module ModTimeStepControl
+!==============================================================================

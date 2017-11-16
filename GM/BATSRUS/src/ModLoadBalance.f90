@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModLoadBalance
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iBlockTest, iProcTest
 
   use ModMain, ONLY: UseConstrainB, UseB0, UseIM
   use BATL_size, ONLY: nI, nJ, nK, nIJK, &
@@ -37,7 +40,6 @@ module ModLoadBalance
 
   integer, allocatable:: iTypeAdvance_A(:)
 
-
   ! Local variables
 
   ! This could be public, so one can tell if we need to recalculate stuff
@@ -48,7 +50,7 @@ module ModLoadBalance
 
   logical:: DoSendRay
 
-  ! The index of block type features. 
+  ! The index of block type features.
   integer, parameter:: &
        iNotSkippedBlock     =  1, & ! Skipped block or not.
        iTrueBlock           =  2    ! True block or not.
@@ -59,7 +61,7 @@ module ModLoadBalance
        iFieldLineThreadBlock= -1, & ! Threaded file line BC or not.
        iPicBlock            = -1, & ! Overlaped with PIC or not.
        iSteadyBlock         = -1, & ! Steady block or not.
-       iHighOrderBlock      = -1, & ! Use high-order scheme or not. 
+       iHighOrderBlock      = -1, & ! Use high-order scheme or not.
        iUserTypeBlock       = -1, & ! User defined block types
        iSubCycleBlock       = -1    ! First bit of time level info
 
@@ -67,6 +69,10 @@ contains
   !============================================================================
   subroutine init_load_balance
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_load_balance'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     DoSendRay = UseIM .or. index(log_vars, 'status') > 0  !!! to be improved
 
     nBuffer = nScalarData
@@ -82,9 +88,10 @@ contains
     if(MaxBlockData > 0) &
          nBuffer = nBuffer + MaxBlockData
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_load_balance
-
   !============================================================================
+
   subroutine pack_load_balance(iBlock, nBuffer, Buffer_I)
 
     integer, intent(in) :: iBlock
@@ -93,10 +100,11 @@ contains
 
     integer:: i, j, k, i1, i2, iVar, iData, nDynamicData
 
-    character(len=*), parameter:: NameSub = 'pack_load_balance'
-    !------------------------------------------------------------------------
-
     ! Amount of user defined data for this block
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'pack_load_balance'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     nDynamicData = 0
     if(use_block_data(iBlock)) nDynamicData = n_block_data(iBlock)
     if(nDynamicData > MaxBlockData)then
@@ -167,9 +175,9 @@ contains
        call CON_stop(NameSub//'load_balnce: increase nBuffer')
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine pack_load_balance
-
-  !==========================================================================
+  !============================================================================
 
   subroutine unpack_load_balance(iBlock, nBuffer, Buffer_I)
 
@@ -179,9 +187,11 @@ contains
 
     integer:: i, j, k, i1, i2, iVar, iData, nDynamicData
 
-    character(len=*), parameter:: NameSub = 'unpack_load_balance'
-    !------------------------------------------------------------------------
     ! Amount of user defined data for this block
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'unpack_load_balance'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     nDynamicData = nint(Buffer_I(1))
 
     if(DoBalancePointImplicit) &
@@ -193,7 +203,7 @@ contains
     if (UseConstrainB) then
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
           iData = iData+1
-          Bxface_BLK(i,j,k,iBlock) = Buffer_I(iData) 
+          Bxface_BLK(i,j,k,iBlock) = Buffer_I(iData)
           iData = iData+1
           Byface_BLK(i,j,k,iBlock) = Buffer_I(iData)
           iData = iData+1
@@ -231,8 +241,9 @@ contains
        call set_block_data(iBlock)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine unpack_load_balance
-  !===========================================================================
+  !============================================================================
 
   subroutine load_balance(DoMoveCoord, DoMoveData, IsNewBlock)
 
@@ -286,23 +297,22 @@ contains
     integer :: i
     integer, allocatable:: nTypeProc_PI(:,:)
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'load_balance'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-    if(DoTestMe)write(*,*) NameSub, &
+    if(DoTest)write(*,*) NameSub, &
          ' starting with DoMoveCoord,DoMoveData,IsNewBlock=', &
          DoMoveCoord, DoMoveData, IsNewBlock
 
     call select_stepping(DoMoveCoord)
 
-  
-    if (nProc > 1 .and. index(test_string,'NOLOADBALANCE') < 1) then
+    if (nProc > 1 .and. index(StringTest,'NOLOADBALANCE') < 1) then
        if(.not.allocated(iTypeBalance_A)) allocate(iTypeBalance_A(MaxNode))
        iTypeBalance_A = 0
 
-       if(DoMoveCoord)then        
+       if(DoMoveCoord)then
           IsSemiImplBlock_B = .false.
           if(TypeSemiImplicit(1:6) == 'resist' .and. nBlockSemi >= 0) &
                IsSemiImplBlock_B(iBlockFromSemi_B(1:nBlockSemi)) = .true.
@@ -311,11 +321,11 @@ contains
                call pic_find_node
 
           ! N criteria are used to decide the type of a block.
-          ! Each criterion determines the value of one bit (0 or 1). 
+          ! Each criterion determines the value of one bit (0 or 1).
           ! For N criteria, the iType of a block could be -1 or a value
           ! between 1 and 2^N-1 (the first bit SkippedBlock is special).
           ! In a typical case only some of the possible combinations occur.
-          ! 
+          !
 
           ! 1st  bit: NotSkippedBlock   -> 1, otherwise -> iType will be -1.
           ! 2nd  bit: true_blk          -> 1, otherwise -> 0
@@ -371,7 +381,7 @@ contains
              iUserTypeBlock = 2*iCrit    ! first bit of the user types
              iCrit = 2**nTypeUser*iCrit  ! max bit of the user types
           end if
-          
+
           ! Maximum possible value is when all the bits are 1 from 0 to iCrit.
           iTypeMax = max(1, 2*iCrit - 1)
 
@@ -442,10 +452,10 @@ contains
                 ! For subcycling the time step of the block determines
                 ! which time level it belongs to. It can only belong
                 ! to one time level, so the type is the time level
-                ! times a constant iSubCycleBlock that leaves enough bits 
+                ! times a constant iSubCycleBlock that leaves enough bits
                 ! for the other block type criteria.
                 iType = iType + iSubCycleBlock*iTimeLevel_A(iNode_B(iBlock))
-                
+
                 if(dt_BLK(iBlock) < DtMin .or. iType > iTypeMax)then
                    write(*,*) NameSub,' ERROR for iBlock, iProc=', &
                         iBlock, iProc
@@ -462,27 +472,27 @@ contains
           enddo
           ! Update iTypeAdvance_BP
           ! CHEATING: only indicate first index to circumvent ModMpiInterfaces
-          ! Set displacement equal to MaxBlock so we get same behavior 
+          ! Set displacement equal to MaxBlock so we get same behavior
           ! as MPI_allgather. Use nBlockMax for maximum receive data for speed
           nBlockMax_P = nBlockMax
           call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
                iTypeAdvance_BP(1,0), nBlockMax_P, MaxBlockDisp_P,&
                MPI_INTEGER, iComm, iError)
 
-          ! In order to do MPI_allreduce with MPI_SUM, the default value of 
+          ! In order to do MPI_allreduce with MPI_SUM, the default value of
           ! iTypeBalance_A=0. The skipped blocks also have 0 type value.
           if(nProc > 1)&
                call MPI_allreduce(MPI_IN_PLACE, iTypeBalance_A, MaxNode, &
                MPI_INTEGER, MPI_SUM, iComm, iError)
 
-          ! Find all different block types that occur 
+          ! Find all different block types that occur
           IsTypeExist_I = .false.
           do iNode = 1, nNode
              if(iTypeBalance_A(iNode) >= 0)&
-                  IsTypeExist_I(iTypeBalance_A(iNode)) = .true.        
+                  IsTypeExist_I(iTypeBalance_A(iNode)) = .true.
           enddo
 
-          ! Count the number of different block types that occur and 
+          ! Count the number of different block types that occur and
           ! create an indirect index from the full range of possible types.
           iType_I = -1
           nType = 0
@@ -497,13 +507,13 @@ contains
        ! Convert from block/proc index to node index.
        allocate(iTypeAdvance_A(MaxNode))
        if(DoMoveCoord) then
-          do iNode = 1, nNode       
+          do iNode = 1, nNode
              if(iTree_IA(Status_,iNode) /= Used_) CYCLE
              iTypeAdvance_A(iNode) = &
                   iTypeAdvance_BP(iTree_IA(Block_,iNode),iTree_IA(Proc_,iNode))
              iTypeBalance_A(iNode) = iType_I(iTypeBalance_A(iNode))
           end do
-       else         
+       else
           iTypeBalance_A = 1
           iTypeAdvance_A = 1
        endif
@@ -524,7 +534,7 @@ contains
 
           call set_batsrus_grid
           call set_batsrus_state
-       else        
+       else
           call regrid_batl(nVar, State_VGB, Dt_BLK, Used_GB=true_cell, &
                iTypeBalance_A=iTypeBalance_A, iTypeNode_A=iTypeAdvance_A)
           call set_batsrus_grid
@@ -532,7 +542,7 @@ contains
 
        if(.not.IsNewBlock) call fix_boundary_ghost_cells
 
-       ! Go up to nBlockMax instead of nBlock (!) to clean up beyond nBlock
+       ! Go up to nBlockMax instead of nBlock (! ) to clean up beyond nBlock
        iTypeAdvance_BP(1:nBlockMax,:) = SkippedBlock_
        do iNode = 1, nNode
           if(iTree_IA(Status_,iNode) /= Used_) CYCLE
@@ -541,14 +551,14 @@ contains
        end do
        iTypeAdvance_B(1:nBlockMax)  = iTypeAdvance_BP(1:nBlockMax,iProc)
 
-       if(DoTestMe .and. nType > 0 .and. allocated(iType_I)) then
+       if(DoTest .and. nType > 0 .and. allocated(iType_I)) then
           ! Create the table so that we can check the status of a block.
           allocate(iTypeConvert_I(nType), nTypeProc_PI(0:nProc-1,nType))
           nCount = 1
           do iType = 1, iTypeMax
              if(iType_I(iType) > 0) then
                 iTypeConvert_I(nCount) = iType
-                nCount = nCount + 1           
+                nCount = nCount + 1
              endif
           enddo
 
@@ -564,7 +574,7 @@ contains
                   ' nCount= ',sum(nTypeProc_PI(:,i))
           enddo
           deallocate(nTypeProc_PI, iTypeConvert_I)
-       endif ! DoTestMe
+       endif ! DoTest
 
        deallocate(iTypeAdvance_A)
     end if
@@ -580,14 +590,15 @@ contains
     call timing_stop(NameSub)
 
     ! Allow the user to do something after load balancing was done
-    if (nProc>1 .and. index(test_string,'NOLOADBALANCE') < 1 .and. DoMoveData)&
+    if (nProc>1 .and. index(StringTest,'NOLOADBALANCE') < 1 .and. DoMoveData)&
          call user_action('load balance done')
 
+    call test_stop(NameSub, DoTest)
   end subroutine load_balance
   !============================================================================
   subroutine select_stepping(DoPartSelect)
 
-    ! Set logical arrays for implicit blocks, 
+    ! Set logical arrays for implicit blocks,
     ! set number of implicit and explicit blocks,
     ! and if DoPartSelect is true then select explicit and implicit blocks
     ! based on the stepping selection criteria.
@@ -595,7 +606,7 @@ contains
     use ModProcMH
     use ModMain
     use ModFaceFlux, ONLY : calc_face_flux
-    use ModFaceValue,ONLY : calc_face_value
+    use ModFaceValue, ONLY : calc_face_value
     use ModAdvance,  ONLY : iTypeAdvance_B, iTypeAdvance_BP, &
          SkippedBlock_, ExplBlock_, ImplBlock_
     use ModGeometry, ONLY : Rmin_BLK
@@ -610,11 +621,13 @@ contains
     logical, intent(in) :: DoPartSelect
 
     integer :: iBlock, iError
-    logical :: oktest, oktest_me
-    !---------------------------------------------------------------------------
-    call set_oktest('select_stepping',oktest,oktest_me)
 
-    if(oktest_me)then
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'select_stepping'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    if(DoTest)then
        write(*,*) 'select_stepping starting with iProc ',&
             'UseFullImplicit, UsePartImplicit, DoPartSelect=',&
             iProc, UseFullImplicit, UsePartImplicit, DoPartSelect
@@ -688,9 +701,9 @@ contains
                   iTypeAdvance_B(iBlock) = ImplBlock_
           end do
 
-          if(oktest_me)write(*,*)&
+          if(DoTest)write(*,*)&
                'SELECT: advancetype,dt_BLK,explCFL,dt=',&
-               iTypeAdvance_B(BLKtest),dt_BLK(BLKtest),explCFL,dt
+               iTypeAdvance_B(iBlockTest),dt_BLK(iBlockTest),explCFL,dt
 
        case('r','R')
           ! implicitly treated blocks are within rImplicit and not Unused
@@ -698,12 +711,12 @@ contains
                .not.Unused_B(1:nBlockMax)) &
                iTypeAdvance_B(1:nBlockMax) = ImplBlock_
        case('test')
-          if(iProc==PROCtest) iTypeAdvance_B(BLKtest) = ImplBlock_
+          if(iProc==iProcTest) iTypeAdvance_B(iBlockTest) = ImplBlock_
        end select
 
        ! Gather global information
        ! CHEATING: only indicate first index to circumvent ModMpiInterfaces.
-       ! Set displacement equal to MaxBlock so we get same behavior 
+       ! Set displacement equal to MaxBlock so we get same behavior
        ! as MPI_allgather. Use nBlockMax for maximum receive data for speed!
        nBlockMax_P = nBlockMax
        call MPI_allgatherv(iTypeAdvance_B(1), nBlockMax, MPI_INTEGER, &
@@ -714,13 +727,13 @@ contains
        nBlockExplALL = count(iTypeAdvance_BP(1:nBlockMax,:) == ExplBlock_)
 
        if(iProc==0.and.lVerbose>0)then
-          call write_prefix; 
+          call write_prefix;
           write(iUnitOut,*)'select_stepping: nBlockExplALL, nBlockImplALL=',&
                nBlockExplALL,nBlockImplALL
        end if
 
     end if
-    if(oktest_me)then
+    if(DoTest)then
        write(*,*)'select_stepping finished with ',&
             'iProc,nBlockExpl, nBlockImpl, nBlockSkipped=', iProc, &
             count(iTypeAdvance_B == ExplBlock_),&
@@ -738,8 +751,9 @@ contains
             'iProc,min(advanceall),max(advanceall)=',iProc, &
             minval(iTypeAdvance_BP),maxval(iTypeAdvance_BP)
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine select_stepping
-  !==========================================================================
+  !============================================================================
   subroutine load_balance_blocks
 
     use ModProcMH
@@ -751,14 +765,16 @@ contains
     !LOCAL VARIABLES:
     logical:: DoBalanceSemiImpl = .true.
 
-    character(len=*), parameter :: NameSub = 'load_balance_blocks'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'load_balance_blocks'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Select and load balance blocks
     if(  UseMaxTimeStep .or.                              &! subcycling scheme
          UsePartImplicit .or.                             &! part implicit
          UsePartSteady .and. IsNewSteadySelect .or.       &! part steady scheme
-         nBlockSemi >= 0 .and. DoBalanceSemiImpl .or.     &! semi-implicit 
+         nBlockSemi >= 0 .and. DoBalanceSemiImpl .or.     &! semi-implicit
          DoBalancePointImplicit .and. iteration_number>1  &! point-implicit
          ) then ! semi-implicit scheme
 
@@ -769,16 +785,18 @@ contains
        IsNewSteadySelect = .false.
 
        ! Repeated semi implicit load balancing is only needed if the
-       ! semi-implicit condition is changing dynamically. 
+       ! semi-implicit condition is changing dynamically.
        DoBalanceSemiImpl = IsDynamicSemiImpl
 
        ! Repeated point implicit load balancing is only needed if the
-       ! semi-implicit condition is changing dynamically. 
+       ! semi-implicit condition is changing dynamically.
        DoBalancePointImplicit = IsDynamicPointImplicit
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine load_balance_blocks
+  !============================================================================
 
 end module ModLoadBalance
-!=============================================================================
+!==============================================================================
 

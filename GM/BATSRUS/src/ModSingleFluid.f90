@@ -1,8 +1,9 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSingleFluid
 
-  ! Define single fluid values for multifluid parameters 
+  ! Define single fluid values for multifluid parameters
 
   implicit none
 
@@ -11,9 +12,10 @@ module ModSingleFluid
   integer,          parameter :: IonLast_  = 1
   logical,          parameter :: IsMhd     = .true.
   character(len=1), parameter :: NameFluid_I(nFluid) = (/' '/)
-  
+
   ! Default is proton mass, but it can be changed
   real :: MassFluid_I(nFluid) = 1.0
 
 end module ModSingleFluid
+!==============================================================================
 

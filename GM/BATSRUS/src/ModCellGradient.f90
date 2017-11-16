@@ -1,5 +1,8 @@
 module ModCellGradient
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
   ! Calculate cell centered gradient and divergence
 
   use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
@@ -28,12 +31,12 @@ module ModCellGradient
   end interface
 
 contains
+  !============================================================================
 
-  !==========================================================================
   subroutine calc_divergence(iBlock, Var_DG, nG, Div_G, UseBodyCellIn)
 
     ! Calculate divergence of Var_DG and return it in Div_G
-    ! Only the physical cells are calculated but Div_G can have 
+    ! Only the physical cells are calculated but Div_G can have
     ! nG ghost cells.
     ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
 
@@ -54,8 +57,10 @@ contains
     real:: VarR_D(nDim), VarL_D(nDIm)
     integer :: i, j, k, iL, iR, jL, jR, kL, kR
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_divergence'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     UseBodyCell = .false.
     if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
 
@@ -96,11 +101,11 @@ contains
 
        end if
     else
-       ! One sided differences if the neighbor is inside a body          
+       ! One sided differences if the neighbor is inside a body
 
        ! Set iTrue_G to 1 in used cells and 0 in non-used cells
        if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
-       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
+       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
           iTrue_G = 1
        elsewhere
           iTrue_G = 0
@@ -184,13 +189,14 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_divergence
+  !============================================================================
 
-  !==========================================================================
   subroutine calc_gradient1(iBlock, Var_G, nG, Grad_DG, UseBodyCellIn)
 
     ! Calculate gradient of Var_G and return it in Grad_DG
-    ! Only the physical cells are calculated but Grad_DG can have 
+    ! Only the physical cells are calculated but Grad_DG can have
     ! nG ghost cells.
     ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
 
@@ -206,9 +212,11 @@ contains
     real:: InvDxHalf, InvDyHalf, InvDzHalf, InvDx, InvDy, InvDz, VarL, VarR
     integer :: i, j, k, iL, iR, jL, jR, kL, kR
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_gradient1'
-    !-------------------------------------------------------------------------
-    UseBodyCell = .false. 
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    UseBodyCell = .false.
     if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
 
     if(UseBodyCell .or. .not. body_blk(iBlock)) then
@@ -248,10 +256,10 @@ contains
        end if
     else
        ! One sided differences if the neighbor is inside a body
-       
+
        ! Set iTrue_G to 1 in used cells and 0 in non-used cells
        if(.not.allocated(iTrue_G)) allocate(iTrue_G(0:nI+1,0:nJ+1,0:nK+1))
-       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
+       where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
           iTrue_G = 1
        elsewhere
           iTrue_G = 0
@@ -287,7 +295,7 @@ contains
 
           ! For false cells grad(Var) = 0. For true cells
           ! grad(Var) = Sum(AreaNormal*VarFace)/Volume for the 2*nDim faces
-          ! where VarFace = (VarNeighbor + VarCenter)/2. 
+          ! where VarFace = (VarNeighbor + VarCenter)/2.
           ! Since sum(AreaNormal) = 0, the VarCenter contributions vanish.
           ! For false neighbor on one side extrapolate from the other side.
           ! For false neighbors on both sides set VarNeigbbor = VarCenter.
@@ -330,12 +338,13 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_gradient1
+  !============================================================================
 
-  !==========================================================================
   subroutine calc_gradient3(iBlock, Var_G, GradX_C, GradY_C, GradZ_C)
 
-    ! Calculate the 
+    ! Calculate the
     ! This is an interface to cartesian or gencoord_gradient.
 
     integer, intent(in):: iBlock
@@ -346,7 +355,10 @@ contains
     real:: VInvHalf
     real :: FaceArea_DS(3,6), Difference_S(6)
     integer :: i, j, k
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_gradient3'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(IsCartesianGrid)then
        if(.not.body_blk(iBlock)) then
           do k=1,nK; do j=1,nJ; do i=1,nI
@@ -368,7 +380,7 @@ contains
              end if
           end do; end do; end do
        else
-          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
+          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
              OneTrue_G = 1.0
           elsewhere
              OneTrue_G = 0.0
@@ -440,7 +452,7 @@ contains
              GradZ_C(i,j,k) = sum(FaceArea_DS(z_,:)*Difference_S)*VInvHalf
           end do; end do; end do
        else
-          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock)) 
+          where(true_cell(0:nI+1,0:nJ+1,0:nK+1,iBlock))
              OneTrue_G = 1.0
           elsewhere
              OneTrue_G = 0.0
@@ -501,8 +513,9 @@ contains
           end do; end do; end do
        end if
     end if
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_gradient3
-  !==========================================================================
+  !============================================================================
   subroutine calc_gradient_ghost(Var_CB, GradVarInOut_DGB)
 
     use ModFaceGradient, ONLY: set_block_field2
@@ -511,7 +524,7 @@ contains
     ! Unless GradVarInOut_DGB is provided, the result is stored
     ! in the public array GradVar_DGB, which can be used for interpolation
     ! outside of this module
-    ! CAUTION: you may omit GradVarInOut_DGB ONLY(!) if you can guarantee that 
+    ! CAUTION: you may omit GradVarInOut_DGB ONLY(! ) if you can guarantee that
     ! calc_gradient_ghost isn't called again before you use GradVar_DGB
 
     real, intent(in)    :: Var_CB(1:nI,1:nJ,1:nK,1:MaxBlock)
@@ -519,11 +532,15 @@ contains
     real, optional, intent(inout) :: &
          GradVarInOut_DGB(nDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlock)
 
-    real  :: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  
+    real  :: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
     real  :: VarCopy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     integer :: iBlock
-    !-------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_gradient_ghost'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     Var_GB = 0.0; VarCopy_G = 0.0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock))CYCLE
@@ -568,6 +585,9 @@ contains
             nProlongOrderIn = 1)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_gradient_ghost
+  !============================================================================
 
 end module ModCellGradient
+!==============================================================================

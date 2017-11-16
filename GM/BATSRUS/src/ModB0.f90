@@ -1,10 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModB0
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+
   ! The magnetic field can be split into an analytic and numeric part.
-  ! The analytic part is B0. It should satisfy div(B0) = 0, 
+  ! The analytic part is B0. It should satisfy div(B0) = 0,
   ! and usually curl(B0) = 0 except if UseCurlB0 = .true.
   ! Even if curl(B0) = 0 analytically, the numerical representation
   ! may have a finite curl.
@@ -69,16 +72,18 @@ module ModB0
   real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0
 
 contains
-  !===========================================================================
+  !============================================================================
   subroutine read_b0_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
     use ModPhysics,   ONLY: MonopoleStrengthSi
 
     character(len=*), intent(in):: NameCommand
-    
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_b0_param'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     select case(NameCommand)
     case("#USEB0")
@@ -91,7 +96,7 @@ contains
        end if
     case("#DIVBSOURCE")
        call read_var('UseB0Source', UseB0Source)
-       
+
     case("#USECURLB0")
        call read_var('UseCurlB0', UseCurlB0)
        if(UseCurlB0)call read_var('rCurrentFreeB0', rCurrentFreeB0)
@@ -108,8 +113,9 @@ contains
 
     if(UseCurlB0) UseB0Source = .true.
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_b0_param
-  !===========================================================================
+  !============================================================================
   subroutine init_mod_b0
 
     use ModLookupTable, ONLY: i_lookup_table, get_lookup_table
@@ -117,7 +123,10 @@ contains
 
     integer:: nParam
     real:: Param_I(4)
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'init_mod_b0'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(.not.allocated(B0_DGB))then
        allocate( &
@@ -159,10 +168,12 @@ contains
        if(nParam > 2) dLonB0 = Param_I(3)*cDegToRad
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_mod_b0
-  !===========================================================================
+  !============================================================================
   subroutine clean_mod_b0
 
+    !--------------------------------------------------------------------------
     if(allocated(B0_DGB)) deallocate(B0_DGB, &
          B0ResChange_DXSB, B0ResChange_DYSB, B0ResChange_DZSB)
 
@@ -170,44 +181,40 @@ contains
     if(allocated(CurlB0_DC)) deallocate(CurlB0_DC)
 
   end subroutine clean_mod_b0
-  !===========================================================================
+  !============================================================================
   subroutine set_b0_cell(iBlock)
 
     ! Calculate the cell centered B0 for block iBlock
 
     use ModProcMH, ONLY: iProc
-    use ModMain,   ONLY: UseFieldLineThreads, DoThreads_B, &
-         ProcTest, BlkTest, iTest, jTest, kTest
+    use ModMain,   ONLY: UseFieldLineThreads, DoThreads_B
     use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_b0_cell'
     !--------------------------------------------------------------------------
-    if(iProc==PROCtest.and.iBlock==BLKtest)then
-       call set_oktest('set_b0_cell',DoTest,DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    endif
+    call test_start(NameSub, DoTest, iBlock)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        call get_b0(Xyz_DGB(:,i,j,k,iBlock), B0_DGB(:,i,j,k,iBlock))
     end do; end do; end do
 
     !\
-    ! If use field line threads, then in the block with newly  
+    ! If use field line threads, then in the block with newly
     ! calculated B0 the threads may or may not need to be calculated
-    ! depending on the block proximity to the Sun 
+    ! depending on the block proximity to the Sun
     !/
     if(UseFieldLineThreads)DoThreads_B(iBlock) = .true.
-    if(DoTestMe)write(*,*)'B0*Cell_BLK=',&
-         B0_DGB(:,Itest,Jtest,Ktest,BLKtest)
+    if(DoTest)write(*,*)'B0*Cell_BLK=',&
+         B0_DGB(:,iTest,jTest,kTest,iBlockTest)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_cell
-
-  !===========================================================================
+  !============================================================================
 
   subroutine set_b0_face(iBlock)
 
@@ -217,7 +224,10 @@ contains
     use BATL_lib,    ONLY: nDim
 
     integer,intent(in)::iBlock
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_b0_face'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.UseB0) RETURN
 
     ! Average cell centered B0_DGB to the face centered B0_DX,Y,Z arrays
@@ -257,12 +267,13 @@ contains
     if(NeiLev(6,iBlock) == -1) &
          B0_DZ(:,1:nI,1:nJ,1+nK) = B0ResChange_DZSB(:,:,:,6,iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_face
-  !===========================================================================
+  !============================================================================
   subroutine set_b0_reschange
 
     ! Set face centered B0 at resolution changes. Use the face area weighted
-    ! average of the fine side B0 for the coarce face. This works for 
+    ! average of the fine side B0 for the coarce face. This works for
     ! non-Cartesian grids too, because all the fine and coarse face normal
     ! vectors are parallel with each other (see algorithm in BATL_grid).
 
@@ -272,17 +283,16 @@ contains
     integer:: i, j, k, iBlock
     real:: Coef
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_reschange'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! There are no resolution changes in 1D
     if(nDim == 1) RETURN
 
     if(.not.UseB0) RETURN
 
-    call set_oktest(NameSub, DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,' starting'
-
 
     ! For Cartesian grid take 1/8-th of the contributing fine B0 values.
     ! For non-Cartesian grid the averaged cell values are weighted by face area
@@ -399,7 +409,6 @@ contains
           end do; end do
        end if
 
-
        if(DiLevelNei_IIIB(0,0,+1,iBlock) == -1) then
           do j = 1, nJ; do i = 1, nI
              B0ResChange_DZSB(:,i,j,6,iBlock) =    &
@@ -411,9 +420,10 @@ contains
 
     if(DoTest)write(*,*)NameSub,' finished'
 
+    call test_stop(NameSub, DoTest)
   end subroutine set_b0_reschange
+  !============================================================================
 
-  !===========================================================================
   subroutine set_b0_source(iBlock)
 
     ! Calculate div(B0) and curl(B0) for block iBlock
@@ -428,8 +438,10 @@ contains
     integer:: i, j, k
     real:: DxInv, DyInv, DzInv
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_source'
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.(UseB0 .and. UseB0Source)) RETURN
 
     ! set B0_DX, B0_DY, B0_DZ for this block
@@ -446,7 +458,7 @@ contains
                   DxInv*(B0_DX(x_,i+1,j,k) - B0_DX(x_,i,j,k)) + &
                   DyInv*(B0_DY(y_,i,j+1,k) - B0_DY(y_,i,j,k))
 
-             CurlB0_DC(x_,i,j,k) = & 
+             CurlB0_DC(x_,i,j,k) = &
                   +DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k))
 
              CurlB0_DC(y_,i,j,k) = &
@@ -468,7 +480,7 @@ contains
                   DyInv*(B0_DY(y_,i,j+1,k) - B0_DY(y_,i,j,k)) + &
                   DzInv*(B0_DZ(z_,i,j,k+1) - B0_DZ(z_,i,j,k))
 
-             CurlB0_DC(x_,i,j,k) = & 
+             CurlB0_DC(x_,i,j,k) = &
                   DyInv*(B0_DY(z_,i,j+1,k) - B0_DY(z_,i,j,k)) - &
                   DzInv*(B0_DZ(y_,i,j,k+1) - B0_DZ(y_,i,j,k))
 
@@ -545,6 +557,7 @@ contains
        end do; end do; end do
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_b0_source
   !============================================================================
   subroutine get_b0(Xyz_D, B0_D)
@@ -567,7 +580,11 @@ contains
     real, intent(out):: B0_D(3)
 
     real:: rLonLat_D(3), r
-    !-------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_b0'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iTableB0 > 0)then
        call xyz_to_rlonlat(Xyz_D, rLonLat_D)
        if(dLonB0 > 0.0) &
@@ -576,7 +593,7 @@ contains
        ! Extrapolate for r < rMinB0
        call interpolate_lookup_table(iTableB0, rLonLat_D, B0_D, &
             DoExtrapolate=(r<rMinB0) )
-       ! Convert from Gauss to Tesla then to normalized units. 
+       ! Convert from Gauss to Tesla then to normalized units.
        ! Multiply with B0 factor
        B0_D = B0_D*1e-4*Si2No_V(UnitB_)*FactorB0
        ! Scale with r^2 for r > rMaxB0
@@ -601,8 +618,8 @@ contains
 
     if(UseUserB0)call user_get_b0(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_b0
-
   !============================================================================
 
   subroutine get_b0_multipole(Xyz_D, B0_D)
@@ -615,17 +632,20 @@ contains
     use ModNumConst, ONLY: cTiny
     use ModPhysics, ONLY: Bdp, CosThetaTilt, SinThetaTilt, &
          rBody, Qqp, Oop
-    
+
     real, intent(in) :: Xyz_D(3)
     real, intent(out):: B0_D(3)
-    
+
     integer :: i, j, k, l
     real :: x, y, r2, rInv, r2Inv, r3Inv, r5Inv, r7Inv
     real :: XyzTilt_D(3), b_D(3), Bx, By
     real :: Dp, Tmp1, Tmp2, Dipole_D(3)
 
     logical :: DoQuadrupole, DoOctupole
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_b0_multipole'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! Determine radial distance and powers of it
     r2 = sum(Xyz_D(1:nDim)**2)
 
@@ -638,9 +658,9 @@ contains
     if(nDim == 2) then
        !
        ! 2D magnetic dipole is implemented from F.R. Cardoso et.al.'s paper
-       ! "2D MHD simulation of the magnetic dipole tilt and IMF influence 
+       ! "2D MHD simulation of the magnetic dipole tilt and IMF influence
        ! on the magnetosphere"
-       ! except that they define the dipole pointing down, while this one 
+       ! except that they define the dipole pointing down, while this one
        ! points upward.
 
        x = Xyz_D(1)
@@ -657,14 +677,14 @@ contains
        B0_D(3) = 0.0
        RETURN
     end if
-    
+
     rInv  = 1.0/sqrt(r2)
     r2Inv = rInv**2
     r3Inv = rInv*r2Inv
-    
+
     ! Compute dipole moment of the intrinsic magnetic field B0.
 
-    Dipole_D = (/ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp /) 
+    Dipole_D = (/ -SinThetaTilt*Bdp, 0.0, CosThetaTilt*Bdp /)
 
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
@@ -685,7 +705,7 @@ contains
     end if
 
     if(DoQuadrupole)then
-       ! Compute quadrupole moment of the intrinsic 
+       ! Compute quadrupole moment of the intrinsic
        ! magnetic field B0.
        do k=1,3
           Tmp1 = 0.0
@@ -699,13 +719,13 @@ contains
           b_D(k) = 2.5*Tmp2*r7Inv - Tmp1*r5Inv
        end do
 
-       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3) 
+       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3)
        B0_D(2) = B0_D(2) + b_D(2)
        B0_D(3) = B0_D(3) + SinThetaTilt*b_D(1) + CosThetaTilt*b_D(3)
     end if
 
     if(DoOctupole)then
-       ! Compute octupole moment of the intrinsic 
+       ! Compute octupole moment of the intrinsic
        ! magnetic field B0.
        do k = 1, 3
           Tmp1 = 0.0
@@ -722,13 +742,13 @@ contains
           b_D(k) = 7.0*Tmp2*r7Inv - 3.0*Tmp1*r5Inv
        end do
 
-       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3) 
+       B0_D(1) = B0_D(1) + CosThetaTilt*b_D(1) - SinThetaTilt*b_D(3)
        B0_D(2) = B0_D(2) + b_D(2)
        B0_D(3) = B0_D(3) + SinThetaTilt*b_D(1) + CosThetaTilt*b_D(3)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_b0_multipole
-
   !============================================================================
 
   subroutine add_b0_body2(XyzIn_D, B0_D)
@@ -745,10 +765,14 @@ contains
     real, intent(inout):: B0_D(3)
 
     real :: Xyz_D(3),R0,rInv,r2Inv,r3Inv,Dp
-    !--------------------------------------------------------------------------
+
     !\
     ! Determine normalized relative coordinates and radial distance from body 2
     !/
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'add_b0_body2'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     Xyz_D = (XyzIn_D - (/xBody2, yBody2, zBody2/))/rBody2
 
     R0 = sqrt(sum(Xyz_D**2))
@@ -765,8 +789,8 @@ contains
 
     B0_D = B0_D + (Dp*Xyz_D - BdpBody2_D)*r3Inv
 
+    call test_stop(NameSub, DoTest)
   end subroutine add_b0_body2
-
   !============================================================================
 
   subroutine add_b0(iBlock)
@@ -775,20 +799,22 @@ contains
 
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes, ONLY: Bx_, Bz_
-    implicit none
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'add_b0'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             + B0_DGB(:,i,j,k,iBlock)
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_b0
-
   !============================================================================
 
   subroutine subtract_b0(iBlock)
@@ -796,18 +822,23 @@ contains
     ! subtract B0 from full B0+B1 to obtain B1
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes, ONLY: Bx_, Bz_
-    implicit none
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'subtract_b0'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_VGB(Bx_:Bz_,i,j,k,iBlock) &
             - B0_DGB(:,i,j,k,iBlock)
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine subtract_b0
+  !============================================================================
 
 end module ModB0
+!==============================================================================

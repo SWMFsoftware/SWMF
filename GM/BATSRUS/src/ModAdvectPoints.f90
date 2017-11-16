@@ -1,7 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModAdvectPoints
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   implicit none
 
@@ -10,32 +14,34 @@ module ModAdvectPoints
   public:: advect_all_points ! advect all points defined by plots
 
 contains
+  !============================================================================
 
-  !==============================================================================
   subroutine advect_all_points
 
     use ModIO, ONLY: Plot_Type, nFile, Plot_, &
          NameLine_I, nLine_I, XyzStartLine_DII
 
     integer :: iFile, iPlotFile, nLine
-    character(len=*), parameter :: NameSub='advect_all_points'
-    logical :: DoTest, DoTestMe
-    !---------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'advect_all_points'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call timing_start(NameSub)
     do iFile = Plot_, nFile
        if (index(Plot_Type(iFile),'lin') /= 1) CYCLE
        iPlotFile = iFile - Plot_
        if (NameLine_I(iPlotFile) /= 'A') CYCLE
        nLine = nLine_I(iPlotFile)
-       if(DoTestMe)write(*,*) NameSub,' advect',nLine,' points for file',iFile
+       if(DoTest)write(*,*) NameSub,' advect',nLine,' points for file',iFile
        call advect_points(nLine, XyzStartLine_DII(:,1:nLine,iPlotFile))
     end do
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest)
   end subroutine advect_all_points
+  !============================================================================
 
-  !==============================================================================
   subroutine advect_points(nPoint, Xyz_DI)
 
     use ModMain, ONLY: time_accurate, Dt, nStage
@@ -47,15 +53,17 @@ contains
     real, dimension(:,:), allocatable :: XyzOld_DI
     integer :: iError
 
-    character(len=*), parameter :: NameSub = 'advect_points'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'advect_points'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.time_accurate) RETURN
     call timing_start(NameSub)
     if(nStage == 1)then
        ! Full step uses StateOld
        call advect_points1(0.0, Dt, nPoint, Xyz_DI, Xyz_DI)
     else
-       allocate(XyzOld_DI(3,nPoint), stat=iError); 
+       allocate(XyzOld_DI(3,nPoint), stat=iError);
        call alloc_check(iError,"XyzOld_DI")
        XyzOld_DI = Xyz_DI
        ! Half step uses StateOld
@@ -66,9 +74,10 @@ contains
     end if
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest)
   end subroutine advect_points
+  !============================================================================
 
-  !==============================================================================
   subroutine advect_points1(WeightOldState, Dt, nPoint, XyzOld_DI, Xyz_DI)
 
     use ModAdvance, ONLY: Rho_, RhoUz_, Ux_, Uz_, &
@@ -93,13 +102,13 @@ contains
     real    :: Weight
     integer :: iPoint, iError
 
-    character(len=*), parameter :: NameSub='advect_points1'
-    logical :: DoTest, DoTestMe
-    !---------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'advect_points1'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    if(DoTestMe)write(*,*)NameSub,' nPoint=',nPoint
-    if(DoTestMe)write(*,*)NameSub,' old Xyz_DI=',Xyz_DI
+    if(DoTest)write(*,*)NameSub,' nPoint=',nPoint
+    if(DoTest)write(*,*)NameSub,' old Xyz_DI=',Xyz_DI
 
     ! Allocate arrays that used to be automatic
     allocate(State_VI(Weight_:nState,nPoint), stat=iError)
@@ -140,7 +149,7 @@ contains
     Xyz_DI = XyzOld_DI + Dt * State_VI(Ux_:Uz_,:)
 
 !!!
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub,' Dt        =',Dt
        write(*,*)NameSub,' Velocity  =',State_VI(Ux_:Uz_,:)
        write(*,*)NameSub,' new Xyz_DI=',Xyz_DI(1:3,1)
@@ -151,9 +160,10 @@ contains
     ! Deallocate arrays
     deallocate(State_VI)
 
+    call test_stop(NameSub, DoTest)
   end subroutine advect_points1
+  !============================================================================
 
-  !==============================================================================
   subroutine advect_test
 
     ! Create a non-trivial flow field and advect a number of points
@@ -165,7 +175,7 @@ contains
     use BATL_lib,    ONLY: Xyz_DGB, x_, z_
     use ModNumConst, ONLY: cTwoPi
     use ModIoUnit,   ONLY: UnitTmp_
-    use ModUtilities,ONLY: open_file, close_file
+    use ModUtilities, ONLY: open_file, close_file
 
     integer, parameter :: nStep=100, nPoint = 1000
     real,    parameter :: Ux = 1.0/cTwoPi, Uz = -2.0/cTwoPi
@@ -173,9 +183,10 @@ contains
     real :: Xyz_DI(3,nPoint)
     real :: Time
 
-    character(len=*), parameter :: NameSub = 'advect_test'
-    !-------------------------------------------------------------------------
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'advect_test'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
     ! Initial positions
@@ -227,6 +238,9 @@ contains
 
     call timing_report
 
+    call test_stop(NameSub, DoTest)
   end subroutine advect_test
+  !============================================================================
 
 end module ModAdvectPoints
+!==============================================================================

@@ -1,11 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModSemiImplVar
-  
+
   implicit none
-  
+
   ! Semi-implicit variables that cannot be in ModSemiImplicit
   ! because it would create circular dependencies
 
@@ -23,7 +23,7 @@ module ModSemiImplVar
   ! Make the explicit steady state a solution for the semi-impl. discretization
   ! Only implemented for heat conduction right now.
   logical, public:: UseStableImplicit = .false.
-  
+
   ! Number of all semi-implicit variables
   integer, public:: nVarSemiAll
 
@@ -34,7 +34,7 @@ module ModSemiImplVar
   integer, public:: nVarSemi
 
   ! Number of vectors and indexes of first components among semi-impl vars
-  integer, public:: nVectorSemi = 0               
+  integer, public:: nVectorSemi = 0
   integer, public, allocatable:: iVectorSemi_I(:)
 
   ! Named indices for semi-implicit variables
@@ -61,8 +61,7 @@ module ModSemiImplVar
   real, allocatable:: SemiState_VGB(:,:,:,:,:)  ! Semi-implicit vars
 
 end module ModSemiImplVar
-
-!============================================================================
+!==============================================================================
 
 module ModImplicit
 
@@ -75,7 +74,6 @@ module ModImplicit
 
   ! for sake of fewer changes in the user modules
   use ModSemiImplVar, StateSemi_VGB => SemiState_VGB
-
 
   implicit none
   SAVE
@@ -97,14 +95,14 @@ module ModImplicit
   logical :: UseImplicit = .false.
 
   ! Use fully implicit scheme (all blocks)
-  logical :: UseFullImplicit=.false.  
+  logical :: UseFullImplicit=.false.
 
   ! Use part implicit scheme (some blocks)
-  logical :: UsePartImplicit=.false. 
+  logical :: UsePartImplicit=.false.
 
   ! Use temporally 2nd order part implicit by doing explicit predictor step
   ! in all the blocks to get second order flux at expl/impl interfaces
-  logical :: UsePartImplicit2=.false. 
+  logical :: UsePartImplicit2=.false.
 
   ! Shall we zero out contribution from ghost cells
   logical :: UseNoOverlap = .true.
@@ -137,3 +135,4 @@ module ModImplicit
   character (len=10) :: FluxTypeImpl = 'default' ! same as explicit
 
 end module ModImplicit
+!==============================================================================

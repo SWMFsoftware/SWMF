@@ -1,8 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModAMR
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModCellGradient, ONLY: calc_gradient
 
@@ -51,7 +54,7 @@ module ModAMR
 contains
   !============================================================================
   subroutine init_mod_amr
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     ! clean for each time we have new refinment criteia
     call clean_mod_amr
@@ -63,6 +66,7 @@ contains
   !============================================================================
   subroutine clean_mod_amr
 
+    !--------------------------------------------------------------------------
     if(allocated(NameAmrCrit_I))     deallocate(NameAmrCrit_I)
     if(allocated(AmrCriteria_IB)) deallocate(AmrCriteria_IB)
 
@@ -71,15 +75,17 @@ contains
   subroutine read_amr_param(NameCommand, iSession)
 
     use ModReadParam, ONLY: read_var
-    use ModVarIndexes,ONLY: NameVar_V, nVar
+    use ModVarIndexes, ONLY: NameVar_V, nVar
     use BATL_lib,     ONLY: DoCritAmr, DoAutoAmr, DoStrictAmr, &
          read_amr_criteria
 
     character(len=*), intent(in):: NameCommand
     integer,          intent(in):: iSession
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_amr_param'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(NameCommand)
     case("#AMR")
        call read_var('DnRefine',DnAmr)
@@ -149,9 +155,10 @@ contains
     case default
        call stop_mpi(NameSub//': unknown command='//NameCommand)
     end select
+    call test_stop(NameSub, DoTest)
   end subroutine read_amr_param
-
   !============================================================================
+
   subroutine prepare_amr(DoFullMessagePass, TypeAmr)
 
     use ModMain,     ONLY: nBlockMax
@@ -167,15 +174,14 @@ contains
 
     integer:: iNode
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'prepare_amr'
     !--------------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     ! Do message passing with second order accurate ghost cells
 
-    if(DoTestMe)write(*,*)NameSub,' starts 2nd order accurate message passing'
+    if(DoTest)write(*,*)NameSub,' starts 2nd order accurate message passing'
 
     if(DoProfileAmr) call timing_start('amr::exchange_true')
     call exchange_messages(UseOrder2In=.true., &
@@ -208,13 +214,14 @@ contains
        if(DoProfileAmr) call timing_stop('amr::set_amr_criteria')
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine prepare_amr
-
   !============================================================================
+
   subroutine do_amr
 
     use ModProcMH
-    use ModMain, ONLY : nIJK,nBLK,nBlock,nBlockMax,nBlockALL,&
+    use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
          lVerbose, UseB, Dt_BLK, &
          iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
@@ -243,23 +250,22 @@ contains
 
     integer:: iNode
 
-    logical :: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'do_amr'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     if(DoProfileAmr) call timing_start('amr::regrid_batl')
     if(UsePartSteady)then
-       call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTestMe, &
+       call regrid_batl(nVar, State_VGB, Dt_BLK, DoTestIn=DoTest, &
             Used_GB=true_cell, iTypeNode_A=iTypeAdvance_A)
     else
        call regrid_batl(nVar, State_VGB, Dt_BLK, &
-            DoBalanceEachLevelIn=UseLocalTimeStep, DoTestIn=DoTestMe, &
+            DoBalanceEachLevelIn=UseLocalTimeStep, DoTestIn=DoTest, &
             Used_GB=true_cell, UseHighOrderAMRIn=UseHighOrderAMR, &
             DefaultStateIn_V=DefaultState_V)
     end if
     if(DoProfileAmr) call timing_stop('amr::regrid_batl')
-
 
     ! This should be eliminated by using iTypeAdvance_A everywhere !!!
     if(UsePartSteady)then
@@ -303,7 +309,7 @@ contains
        ! Write block/cell summary after AMR
        call write_prefix; write(iUnitOut,*) '|'
        call write_prefix; write(iUnitOut,*) &
-            '|  AMR:  nBlockMax = ',nBlockMax,' nBLK = ',nBLK
+            '|  AMR:  nBlockMax = ',nBlockMax,' MaxBlock = ',MaxBlock
        call write_prefix; write(iUnitOut,*) &
             '|  AMR:  Total number of blocks used = ', nBlockALL
        call write_prefix; write(iUnitOut,*) &
@@ -349,6 +355,7 @@ contains
        if(DoProfileAmr) call timing_stop('amr::set_divb')
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine do_amr
   !============================================================================
   subroutine amr_criteria(Crit_IB)
@@ -390,10 +397,10 @@ contains
     ! Needed for the 'currentsheet'
     real :: rDotB_G(nI,nJ,0:nK+1)
 
-    logical:: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='amr_criteria'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'amr_criteria'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     if(.not.allocated(Rho_G)) allocate( &
          Var_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), &
@@ -520,7 +527,7 @@ contains
                   *No2Io_V(UnitJ_)**2
 
           case('divu','divv')
-             ! Divergence of velocity (this is REALLY INEFFICIENT !!!)
+             ! Divergence of velocity (this is REALLY INEFFICIENT !!! )
              call calc_gradient( iBlock, RhoUx_G/Rho_G, &
                   GradXVarX_C, GradYVarX_C, GradZVarX_C)
              call calc_gradient( iBlock, RhoUy_G/Rho_G, &
@@ -532,9 +539,9 @@ contains
                   maxval(abs(GradXVarX_C + GradYVarY_C + GradZVarZ_C)) &
                   *No2Io_V(UnitU_)
 
-          case('rcurrents')	
+          case('rcurrents')
              ! Inverse distance from Rcurrents, squared
-             ! The new geometric methods are better, but this is kept 
+             ! The new geometric methods are better, but this is kept
              ! so that the tests keep running
              Var_G(1:nI,1:nJ,1:nK) = 1.0/((max(cTiny, &
                   abs(Rcurrents - r_BLK(1:nI,1:nJ,1:nK,iBlock))))**2)
@@ -573,7 +580,7 @@ contains
 
              end if
           case default
-             ! WARNING if we do not find the criteria in the above list we 
+             ! WARNING if we do not find the criteria in the above list we
              ! will search for it among 'transient' criteria
              if (UseUserAMR .or. NameAmrCrit_I(iCrit) == 'user') then
                 IsFound=.false.
@@ -581,7 +588,7 @@ contains
                      UserCriteria, NameAmrCrit_I(iCrit), IsFound)
                 Crit_IB(iCrit,iBlock) = userCriteria
              else
-                ! Use dynamic refinement if there is a transient event 
+                ! Use dynamic refinement if there is a transient event
                 call trace_transient( &
                      NameAmrCrit_I(iCrit), Crit_IB(iCrit, iBlock))
              end if
@@ -589,6 +596,7 @@ contains
        end do ! iCrit
     end do ! iBlock
 
+    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
 
@@ -600,8 +608,8 @@ contains
       real, dimension(nI,nJ,nK) :: Tmp_C, RhoOld_C, RhoUxOld_C, &
            RhoUyOld_C, RhoUzOld_C, BxOld_C, ByOld_C, BzOld_C, pOld_C
 
-      character(len=*), parameter:: NameSub = 'ModAMR::trace_transient'
-      !-----------------------------------------------------------------------
+      character(len=*), parameter:: NameSub = 'trace_transient'
+      !------------------------------------------------------------------------
       do k=1,nK; do j=1,nJ; do i=1,nI
          RhoOld_C(i,j,k)  = StateOld_VGB(rho_,i,j,k,iBlock)
          RhoUxOld_C(i,j,k)= StateOld_VGB(rhoUx_,i,j,k,iBlock)
@@ -683,7 +691,7 @@ contains
 
       case('Rho_2nd_1')
          ! (|d2Rho/dx2| + |d2Rho/dy2| + |d2Rho/dz2|)/rho
-         Tmp_C = ( & 
+         Tmp_C = ( &
               abs(Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
               2 * Rho_G(1:nI,1:nJ,1:nK))                            + &
               abs(Rho_G(1:nI,0:nJ-1,1:nK) + Rho_G(1:nI,2:nJ+1,1:nK) - &
@@ -695,7 +703,7 @@ contains
 
       case('Rho_2nd_2')
          ! (|d2Rho/dx2  +  d2Rho/dy2  +  d2Rho/dz2|)/rho
-         Tmp_C = abs( & 
+         Tmp_C = abs( &
               (Rho_G(0:nI-1,1:nJ,1:nK) + Rho_G(2:nI+1,1:nJ,1:nK) - &
               2 * Rho_G(1:nI,1:nJ,1:nK))                         + &
               (Rho_G(1:nI,0:nJ-1,1:nK) + Rho_G(1:nI,2:nJ+1,1:nK) - &
@@ -710,6 +718,7 @@ contains
       end select
 
     end subroutine trace_transient
+    !==========================================================================
 
   end subroutine amr_criteria
   !============================================================================
@@ -717,18 +726,22 @@ contains
 
     use BATL_lib, ONLY: iTree_IA, MinLevel_, MaxLevel_
 
+    !--------------------------------------------------------------------------
     iTree_IA(MinLevel_,:) = MinAmrLevel
     iTree_IA(MaxLevel_,:) = MaxAmrLevel
 
   end subroutine set_amr_limits
-  !=======================================================================
+  !============================================================================
   subroutine fix_amr_limits(RootDx)
 
     real, intent(in):: RootDx
 
     integer:: j
-    !--------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'fix_amr_limits'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if    (CellSizeMax < -1.E-6) then
        MinAmrLevel = -1
     elseif(CellSizeMax <  1.E-6) then
@@ -750,6 +763,9 @@ contains
        end do
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine fix_amr_limits
+  !============================================================================
 
 end module ModAMR
+!==============================================================================

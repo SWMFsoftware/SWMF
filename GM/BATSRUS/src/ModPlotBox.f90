@@ -1,8 +1,10 @@
- !  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+ !  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================================
 module ModPlotBox
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iBlockTest
 
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
        plot_form, TypeFile_I
@@ -35,7 +37,7 @@ module ModPlotBox
   real:: PlotToGm_DD(3,3)
 
 contains
-  !==========================================================================
+  !============================================================================
   subroutine init_plot_box(iFile, nPlotVar)
 
     ! Set up the box grid for this plot file
@@ -45,11 +47,11 @@ contains
     use ModCoordTransform, ONLY: show_rot_matrix
 
     integer, intent(in):: iFile, nPlotVar
-    
-    logical:: DoTest, DoTestMe
+
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_box'
-    !-----------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Allocate results array and set up the box
     if(allocated(PlotVar_VIII)) RETURN
@@ -58,11 +60,11 @@ contains
     dX   = abs(plot_dx(1, iFile))
     dY   = abs(plot_dx(2, iFile))
     dZ   = abs(plot_dx(3, iFile))
-    Xyz0_D = plot_range(1:3, iFile) 
+    Xyz0_D = plot_range(1:3, iFile)
     xLen = plot_range(4, iFile)
     yLen = plot_range(5, iFile)
     zLen = plot_range(6, iFile)
-    
+
     xMin = plot_range(1, iFile) - xLen/2
     xMax = plot_range(1, iFile) + xLen/2
     yMin = plot_range(2, iFile) - yLen/2
@@ -94,7 +96,7 @@ contains
     PlotToGm_DD = transform_matrix(Time_Simulation, &
          TypeCoordPlot_I(iFile), TypeCoordSystem)
 
-    if (DoTestMe) then
+    if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar=      ', iFile, nPlotVar
        write(*,*) NameSub//' Raw plot_dx=          ', plot_dx(:,iFile)
        write(*,*) NameSub//' Raw plot_range=       ', plot_range(:,iFile)
@@ -106,15 +108,15 @@ contains
        call show_rot_matrix(PlotToGm_DD)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine init_plot_box
-
   !============================================================================
+
   subroutine set_plot_box(iBlock, nPlotvar, Plotvar_GV)
 
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
 
-    use ModMain,        ONLY: BlkTest
     use ModInterpolate, ONLY: trilinear
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK
@@ -133,39 +135,40 @@ contains
     real :: Xyz_D(3), XyzRot_D(3), XyzRotGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
-    character(len=*), parameter :: NameSub='set_plot_box'
-    logical :: DoTest, DoTestMe
-    !--------------------------------------------------------------------------
     ! Check testing for block
-    if(iBlock == BlkTest)then
-       call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_plot_box'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    if(iBlock == iBlockTest)then
+       call CON_set_do_test(NameSub, DoTest, DoTest)
     else
-       DoTest = .false.; DoTestMe = .false.
+       DoTest = .false.; DoTest = .false.
     end if
 
-    if (DoTestMe) write(*,*) NameSub//' Called for iBlock=      ', iBlock
+    if (DoTest) write(*,*) NameSub//' Called for iBlock=      ', iBlock
 
     ! Shift box elements with origin of box
     do k = 1, nZ
        Xyz_D(3) = zMin + (k-1)*dZ - Xyz0_D(3)
-       
+
        do j = 1, nY
           Xyz_D(2) = yMin + (j-1)*dY - Xyz0_D(2)
 
           do i = 1, nX
              Xyz_D(1) = xMin + (i-1)*dX - Xyz0_D(1)
-                 
-             ! Rotate box 
+
+             ! Rotate box
              XyzRot_D = matmul(rot_matrix_z(-zAngle), &
                   matmul(rot_matrix_y(-yAngle), &
                   matmul(rot_matrix_x(-xAngle), Xyz_D)))
-             
+
              ! Shift box back and Get Gm coordinates
              XyzRotGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
 
              ! When inside Body keep default plot values
-             if(sqrt(sum(XyzRotGm_D**2)) < rBody)CYCLE 
-             
+             if(sqrt(sum(XyzRotGm_D**2)) < rBody)CYCLE
+
              ! Get generalized coordinates
              call xyz_to_coord(XyzRotGm_D, Coord_D)
 
@@ -188,9 +191,10 @@ contains
        end do
     end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine set_plot_box
-
   !============================================================================
+
   subroutine write_plot_box(iFile, nPlotVar, NameVar_V, &
        NameUnit, NameFile)
 
@@ -206,10 +210,10 @@ contains
     integer :: iVar, iError, i, j, k
     character(len=500) :: NameVar
 
-    logical :: DoTest,DoTestMe
-    character(len=*), parameter :: NameSub='write_plot_box'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'write_plot_box'
     !--------------------------------------------------------------------------
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    call test_start(NameSub, DoTest)
 
     ! This subroutine does not support HDF output.
     if(plot_form(iFile) == 'hdf') call CON_stop(NameSub// &
@@ -226,18 +230,18 @@ contains
        do iVar=1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
-       NameVar = trim(NameVar) // ' xAngle yAngle zAngle' 
+       NameVar = trim(NameVar) // ' xAngle yAngle zAngle'
 
        ! Correct for double counting in MPI_reduce_real_array
        do k = 1, nZ
-          do j = 1, nY; 
-             do i = 1, nX; 
+          do j = 1, nY;
+             do i = 1, nX;
                 if(PlotVar_VIII(0,i,j,k) <= 1.0) CYCLE
                 PlotVar_VIII(1:nPlotVar,i,j,k) = &
                      PlotVar_VIII(1:nPlotVar,i,j,k) &
                      / PlotVar_VIII(0,i,j,k)
-             end do; 
-          end do; 
+             end do;
+          end do;
        end do
 
        ! Call save_plot_file to write data to disk.
@@ -256,8 +260,9 @@ contains
     ! Deallocate results arrays:.
     deallocate(PlotVar_VIII)
 
+    call test_stop(NameSub, DoTest)
   end subroutine write_plot_box
-
   !============================================================================
 
 end module ModPlotBox
+!==============================================================================

@@ -1,27 +1,28 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModCalcSource
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iVarTest
 
   implicit none
   save
 
-  private !except
+  private ! except
 
   ! Public methods
   public :: calc_source
 
 contains
-
   !============================================================================
 
   subroutine calc_source(iBlock)
 
-    use ModMain,          ONLY: ProcTest,iTest,jTest,kTest,BlkTest,VarTest,&
+    use ModMain,          ONLY: &
          UseB0,UseDivBsource,GravityDir,UseBody2,&
          TypeCoordSystem,Useraddiffusion,&
-         DoThinCurrentSheet,UseUSerSource,test_string
+         DoThinCurrentSheet,UseUSerSource,StringTest
     use ModAdvance
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
@@ -33,7 +34,7 @@ contains
     use ModMultiIon,      ONLY: multi_ion_source_expl, multi_ion_source_impl
     use ModIonElectron,   ONLY: ion_electron_source_impl
     use ModWaves,         ONLY: UseWavePressure, GammaWave, DivU_C
-    use ModCoronalHeating,ONLY: UseCoronalHeating, get_block_heating, &
+    use ModCoronalHeating, ONLY: UseCoronalHeating, get_block_heating, &
          CoronalHeating_C, UseAlfvenWaveDissipation, WaveDissipation_VC, &
          apportion_coronal_heating, UseTurbulentCascade, get_wave_reflection
     use ModRadiativeCooling, ONLY: RadCooling_C,UseRadCooling, &
@@ -88,16 +89,10 @@ contains
     ! Variables for multi-ion MHD
     real :: InvElectronDens, uPlus_D(3), U_D(3)
 
-    logical :: DoTest, DoTestMe
-
-    character(len=*), parameter :: NameSub = 'calc_source'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
-
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
+    call test_start(NameSub, DoTest, iBlock)
 
     Source_VC = 0.0
 
@@ -139,7 +134,7 @@ contains
                         - 2*State_VGB(iPpar,i,j,k,iBlock)*bDotGradparU
 
                    ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
-                   !     = (p - ppar)*b.(b.(GradU)) 
+                   !     = (p - ppar)*b.(b.(GradU))
                    Source_VC(iP,i,j,k) = Source_VC(iP,i,j,k) &
                         + (State_VGB(iP,i,j,k,iBlock) -  &
                         State_VGB(iPpar,i,j,k,iBlock))*bDotGradparU
@@ -154,12 +149,12 @@ contains
 
                    ! Calculate first -2/3 (div u)^2
                    Visco              =         GradU_DD(Dim1_,1)
-                   if(nDim > 1) Visco = Visco + GradU_DD(Dim2_,2) 
+                   if(nDim > 1) Visco = Visco + GradU_DD(Dim2_,2)
                    if(nDim > 2) Visco = Visco + GradU_DD(Dim3_,3)
                    Visco = -cTwoThirds*Visco**2
 
                    ! Add 2*Sum_i (d_i u_i)^2
-                   Visco              = Visco + 2.0*GradU_DD(Dim1_,1)**2 
+                   Visco              = Visco + 2.0*GradU_DD(Dim1_,1)**2
                    if(nDim > 1) Visco = Visco + 2.0*GradU_DD(Dim2_,2)**2
                    if(nDim > 2) Visco = Visco + 2.0*GradU_DD(Dim3_,3)**2
 
@@ -185,8 +180,8 @@ contains
                 end if
              end do; end do; end do
 
-             if(DoTestMe .and. UseAnisoPressure .and. &
-                  (VarTest == iPparIon_I(IonFirst_) .or. VarTest == p_)) &
+             if(DoTest .and. UseAnisoPressure .and. &
+                  (iVarTest == iPparIon_I(IonFirst_) .or. iVarTest == p_)) &
                   call write_source('After bDotGradparU')
 
           end if
@@ -211,7 +206,7 @@ contains
              end if
           end do; end do; end do
 
-          if(DoTestMe .and. VarTest==iP)call write_source('After p div U')
+          if(DoTest .and. iVarTest==iP)call write_source('After p div U')
 
        end do
     end if
@@ -380,7 +375,7 @@ contains
                   Source_VC(RhoUy_,i,j,k) + Pe/Xyz_DGB(y_,i,j,k,iBlock)
           end if
        end do; end do; end do
-       if(DoTestMe.and.VarTest==Pe_)call write_source('After Pe div Ue')
+       if(DoTest.and.iVarTest==Pe_)call write_source('After Pe div Ue')
     end if
 
     if(IsRzGeometry)then
@@ -477,7 +472,7 @@ contains
     !
     ! Conservative fluxes add the divergence of the Maxwell tensor
     !     div(B1^2 + B1.B0 - B1 B1 - B1 B0 - B0 B1)
-    ! 
+    !
     ! Deviations between these two are
     !   -B1 div(B1)       - usual div B source
     !   -B1 div(B0)       - div(B0) source
@@ -493,8 +488,8 @@ contains
           call calc_divb_source_gencoord
        end if
 
-       if(DoTestMe)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,BlkTest)
-       if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_)&
+       if(DoTest)write(*,*)'divb=',DivB1_GB(iTest,jTest,kTest,iBlockTest)
+       if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_)&
             call write_source('After B0B1 source')
 
        ! Add contributions to other source terms
@@ -537,12 +532,12 @@ contains
 
        end do; end do; end do
 
-       if(DoTestMe)call write_source('After divb source')
+       if(DoTest)call write_source('After divb source')
 
        if(UseB0Source .and. IsMhd)then
 
           !   -B1 div(B0)     - div(B0) source
-          ! -curl(B0) x B1    - remove this term (in case curl B0 should be 0) 
+          ! -curl(B0) x B1    - remove this term (in case curl B0 should be 0)
           !                     have to undo this if curl B0 is actually not 0
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -553,7 +548,7 @@ contains
                   CurlB0_DC(:,i,j,k), State_VGB(Bx_:Bz_,i,j,k,iBlock))
           end do; end do; end do
 
-          if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_)then 
+          if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_)then
              write(*,*)'DivB0_C  =',DivB0_C(iTest,jTest,kTest)
              write(*,*)'CurlB0_DC=',CurlB0_DC(:,iTest,jTest,kTest)
              call write_source('After B0 source')
@@ -581,34 +576,34 @@ contains
                /State_VGB(rho_,i,j,k,iBlock)
        end do; end do; end do
 
-       if(DoTestMe .and. &
-            (VarTest==Energy_.or.VarTest>=RhoUx_.and.VarTest<=RhoUz_))&
+       if(DoTest .and. &
+            (iVarTest==Energy_.or.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_))&
             call write_source('After curl B0')
     end if
 
     if(UseB .and. boris_correction &
-         .and. boris_cLIGHT_factor < 0.9999 & 
-         .and. index(test_string,'nodivE')<1) then
+         .and. boris_cLIGHT_factor < 0.9999 &
+         .and. index(StringTest,'nodivE')<1) then
 
        Coef = (boris_cLIGHT_factor**2 - 1.0)*inv_c2LIGHT
        FullB_DC = State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock)
-       if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock) 
+       if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           E_D = cross_product(FullB_DC(:,i,j,k),&
                State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/&
                State_VGB(Rho_,i,j,k,iBlock)
 
-          ! Calculate divergence of electric field 
-          DivE =                     EDotFA_X(i+1,j,k) - EDotFA_X(i,j,k) 
+          ! Calculate divergence of electric field
+          DivE =                     EDotFA_X(i+1,j,k) - EDotFA_X(i,j,k)
           if(nDim > 1) DivE = DivE + EDotFA_Y(i,j+1,k) - EDotFA_Y(i,j,k)
           if(nDim > 2) DivE = DivE + EDotFA_Z(i,j,k+1) - EDotFA_Z(i,j,k)
           DivE = DivE/CellVolume_GB(i,j,k,iBlock)
 
           Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
-               + Coef*DivE*E_D 
+               + Coef*DivE*E_D
 
-          if(DoTestMe.and.VarTest>=RhoUx_.and.VarTest<=RhoUz_) &
+          if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
                call write_source('After E div E')
 
        end do; end do; end do
@@ -655,8 +650,8 @@ contains
                      + Gbody*State_VGB(iRhoUGrav,i,j,k,iBlock)
              end do; end do; end do
           end if
-          if(DoTestMe.and. &
-               (VarTest==Energy_ .or. VarTest>=iRhoUx.and.VarTest<=iRhoUz))then
+          if(DoTest.and. &
+               (iVarTest==Energy_ .or. iVarTest>=iRhoUx.and.iVarTest<=iRhoUz))then
              call write_source('After gravity')
           end if
        end if
@@ -689,7 +684,7 @@ contains
                   ' Inertial forces are not implemented for'// &
                   ' TypeCoordSystem='//TypeCoordSystem)
           end select
-          if(DoTestMe.and.VarTest>=iRhoUx .and. VarTest<=iRhoUy) &
+          if(DoTest.and.iVarTest>=iRhoUx .and. iVarTest<=iRhoUy) &
                call write_source('After Coriolis')
        end if
     end do
@@ -698,13 +693,13 @@ contains
        ! Add momentum source terms containing the gradient of electron pressure
        call multi_ion_source_expl(iBlock)
 
-       if(DoTestMe) call write_source('After MultiIon sources explicit')
+       if(DoTest) call write_source('After MultiIon sources explicit')
 
        ! Add stiff momentum source terms (uPlus - Uion) and artificial friction
        ! Explicit evaluation of these source terms is for code development only
        if (.not. (UsePointImplicit .and. UsePointImplicit_B(iBlock)) ) then
           call multi_ion_source_impl(iBlock)
-          if(DoTestMe) call write_source('After MultiIon sources implicit')
+          if(DoTest) call write_source('After MultiIon sources implicit')
        end if
     end if
 
@@ -721,19 +716,18 @@ contains
     if(UseEfield .and. .not.UsePointImplicit)then
        ! Explicit evaluation of these source terms is for code development only
        call ion_electron_source_impl(iBlock)
-       if(DoTestMe) call write_source('After IonElectron sources implicit')
+       if(DoTest) call write_source('After IonElectron sources implicit')
     end if
 
     if(UseB .and. .not.IsMhd .and. .not.(UseMultiIon .or. UseEfield))then
        ! Add JxB term for nonconservative MHD scheme (like LFM)
        call multi_ion_source_expl(iBlock)
 
-       if(DoTestMe) call write_source('After JxB term')
+       if(DoTest) call write_source('After JxB term')
     end if
 
     if(UseRadDiffusion .and. UseFullImplicit) &
          call calc_source_rad_diffusion(iBlock)
-
 
     if(SignB_>1 .and. DoThinCurrentSheet)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -752,11 +746,12 @@ contains
 
     if(UseUserSource)then
        call user_calc_sources(iBlock)
-       if(DoTestMe) call write_source('After user sources')
+       if(DoTest) call write_source('After user sources')
     end if
 
-    if(DoTestMe) call write_source('final')
+    if(DoTest) call write_source('final')
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine calc_grad_u(GradU_DD, i, j, k, iBlock)
@@ -767,9 +762,9 @@ contains
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
 
       integer :: iDir
-      character(len=*), parameter:: NameSub = 'ModCalcSource::calc_grad_u'
-      !------------------------------------------------------------------------
 
+      character(len=*), parameter:: NameSub = 'calc_grad_u'
+      !------------------------------------------------------------------------
       GradU_DD = 0.0
 
       ! Calculate gradient tensor of velocity
@@ -841,8 +836,8 @@ contains
       ! Variables needed for div B source terms
       real:: DxInvHalf, DyInvHalf, DzInvHalf, DivBInternal_C(1:nI,1:nJ,1:nK)
       real:: dB1nFace1, dB1nFace2, dB1nFace3, dB1nFace4, dB1nFace5, dB1nFace6
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
       DzInvHalf = 0.5/CellSize_DB(z_,iBlock)
@@ -890,7 +885,7 @@ contains
          if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
               + dB1nFace5 + dB1nFace6
 
-         ! Momentum source term from B0 only needed for div(B^2/2 - BB) 
+         ! Momentum source term from B0 only needed for div(B^2/2 - BB)
          ! discretization
          if(.not.(IsMhd.and.UseB0)) CYCLE
 
@@ -931,7 +926,6 @@ contains
 
       character(len=*), parameter:: NameSub = 'calc_divb_source_gencoord'
       !------------------------------------------------------------------------
-
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
@@ -961,11 +955,11 @@ contains
 
       end do; end do; end do
 
-      if(DoTestMe)write(*,*)NameSub,' after i divbint, divb1=', &
+      if(DoTest)write(*,*)NameSub,' after i divbint, divb1=', &
            DivBInternal_C(iTest,jTest,kTest), &
-           DivB1_GB(iTest,jTest,kTest,BlkTest)
+           DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI 
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
          VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
@@ -995,12 +989,12 @@ contains
 
       end do; end do; end do
 
-      if(DoTestMe)write(*,*)NameSub,' after j divbint, divb1=', &
+      if(DoTest)write(*,*)NameSub,' after j divbint, divb1=', &
            DivBInternal_C(iTest,jTest,kTest), &
-           DivB1_GB(iTest,jTest,kTest,BlkTest)
+           DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
       if(nK > 1)then
-         do k = 1, nK; do j = 1, nJ; do i = 1, nI 
+         do k = 1, nK; do j = 1, nJ; do i = 1, nI
             if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
             VInvHalf = 0.5/CellVolume_GB(i,j,k,iBlock)
@@ -1032,24 +1026,24 @@ contains
          end do; end do; end do
       end if
 
-      if(DoTestMe)write(*,*)NameSub,' after k divbint, divb1=', &
+      if(DoTest)write(*,*)NameSub,' after k divbint, divb1=', &
            DivBInternal_C(iTest,jTest,kTest), &
-           DivB1_GB(iTest,jTest,kTest,BlkTest)
+           DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI 
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
          DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) +DivBInternal_C(i,j,k)
       end do; end do; end do
 
-      if(DoTestMe)write(*,*)NameSub,' final divb1=', &
-           DivB1_GB(iTest,jTest,kTest,BlkTest)
+      if(DoTest)write(*,*)NameSub,' final divb1=', &
+           DivB1_GB(iTest,jTest,kTest,iBlockTest)
 
       if(.not.(IsMhd .and. UseB0)) RETURN
 
-      do k = 1, nK; do j = 1, nJ; do i = 1, nI 
+      do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
          Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
-              - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)            
+              - DivBInternal_C(i,j,k)*B0_DGB(:,i,j,k,iBlock)
       end do; end do; end do
 
     end subroutine calc_divb_source_gencoord
@@ -1057,18 +1051,19 @@ contains
 
     subroutine write_source(String)
       character(len=*), intent(in) :: String
-      write(*,'(a,es13.5)') NameSub//": "//String//" S(VarTest)=",&
-           Source_VC(VarTest,iTest,jTest,kTest) 
+      !------------------------------------------------------------------------
+      write(*,'(a,es13.5)') NameSub//": "//String//" S(iVarTest)=",&
+           Source_VC(iVarTest,iTest,jTest,kTest)
     end subroutine write_source
+    !==========================================================================
 
   end subroutine calc_source
-
   !============================================================================
 
   subroutine calc_divb(iBlock)
 
     ! Calculate div B for a block and store result into DivB1_GB
-    ! Compute divB using averaged and conservatively corrected 
+    ! Compute divB using averaged and conservatively corrected
     ! left and right values
 
     use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
@@ -1083,7 +1078,10 @@ contains
 
     integer:: i, j, k
     real   :: DivB, InvDx, InvDy, InvDz
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_divb'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     InvDx            = 1/CellSize_DB(x_,iBlock)
     if(nJ > 1) InvDy = 1/CellSize_DB(y_,iBlock)
@@ -1112,6 +1110,9 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_divb
+  !============================================================================
 
 end module ModCalcSource
+!==============================================================================
