@@ -91,7 +91,7 @@ $MethodType =~ s/^n.*/none/;
 
 # New test variable names
 my @testvar = 
-    ("test_start", "test_stop", 
+    ("test_start", "test_stop", "StringTest", 
      "iTest", "jTest", "kTest", "iBlockTest", "iProcTest", "iVarTest", 
      "iDimTest", "xTest", "yTest", "zTest"), 
 
@@ -163,8 +163,10 @@ foreach $source (@source){
 
 	# Fix copyright message
 	s/Michigan, portions used/Michigan,\n!  portions used/;
+	$_ = "" if /This code is a copyright/ and /2002/;
 
 	# Replace old variable names with new names
+	s/\btest_string\b/StringTest/gi;
 	s/\bItest\b/iTest/gi;
 	s/\bJtest\b/jTest/gi;
 	s/\bKtest\b/kTest/gi;
@@ -176,9 +178,12 @@ foreach $source (@source){
 	s/\bVARtest\b/iVarTest/gi;
 	s/\bDIMtest\b/iDimTest/gi;
 	s/\biBLK\b/iBlock/gi;
-	s/\bnBLK\b/MaxBlock/gi;
+	s/\bnBLK\b/MaxBlock/gi unless $source =~ /ModSize(_orig)?\.f90/;
 	s/\boktest\b/DoTest/gi;
 	s/\boktest_me\b/DoTestMe/gi;
+
+	# Fix capitalization errors
+	s/^(\s*(end\s+)?)Module/$1module/i;
 
 	# remove original !==== separator lines 
 	$_ = '' if /^\s*\!\=+\!?$/;
@@ -226,7 +231,8 @@ foreach $source (@source){
 	    # Decide if call test_start/stop should be added at this level
 	    if($iLevel <= $TestLevel and $MethodType =~ /all|$unittype/ 
 	       and $unittype !~ /module|program/
-	       and $unitname !~ /$Exceptions/){
+	       and $unitname !~ /$Exceptions/
+	       and $source ne "ModBatsrusUtility.f90"){
 		$newtest = 1;
 	    }else{
 		$newtest = 0;
@@ -332,8 +338,6 @@ foreach $source (@source){
 
 	    # skip all other variable declarations
 	    #next if /^\s*($AnyType)/i;
-
-	    print "!!! $_" if /MinAbs/;
 
 	    next if /^[^\!]*::/;
 
