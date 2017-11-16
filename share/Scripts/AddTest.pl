@@ -5,7 +5,7 @@
 
 my $defaultexception = 
     "set_parameters|correct_electronfluid_efield_cell|select_fluid|".
-    "user_interface.f90";
+    "user_interface.f90|ModUserEmpty.f90";
 
 my $Help       = ($h or $help);
 my $Verbose    = ($v or $verbose);
