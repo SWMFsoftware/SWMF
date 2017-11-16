@@ -103,7 +103,6 @@ contains
   real function radiative_cooling(TeSiIn, NumberDensCgs,iError)
     use ModPhysics,       ONLY: Si2No_V, UnitT_, UnitEnergyDens_
     use ModLookupTable,   ONLY: interpolate_lookup_table
-    use ModMain,          ONLY: StringTest
     use ModMultiFluid,    ONLY: UseMultiIon
 
     ! Imput - dimensional, output: dimensionless

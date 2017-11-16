@@ -130,8 +130,7 @@ contains
     use ModProcMH,  ONLY: iProc
     use ModKind,    ONLY: nByteReal
     use ModMain,    ONLY: &
-         nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate, &
-              StringTest
+         nI, nJ, nK, nIJK, Cfl, iStage, nStage, time_accurate
     use ModAdvance, ONLY: nVar, State_VGB, StateOld_VGB, Source_VC, Time_Blk, &
          DoReplaceDensity, &
          UseMultiSpecies

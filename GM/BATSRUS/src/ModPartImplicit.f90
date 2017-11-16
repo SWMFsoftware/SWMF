@@ -5,7 +5,8 @@
 module ModPartImplicit
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest
+       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, &
+       iProcTest, iVarTest
 
   use ModImplicit
 
@@ -374,8 +375,7 @@ contains
     use ModProcMH, ONLY: iComm, nProc
     use ModMain, ONLY: nBlockMax, nBlockExplAll, time_accurate, &
          n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
-         iNewDecomposition, &
-         StringTest
+         iNewDecomposition
     use ModVarIndexes, ONLY: Rho_
     use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
     use ModAdvance, ONLY : State_VGB, Energy_GBI, StateOld_VGB, EnergyOld_CBI,&

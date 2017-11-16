@@ -21,7 +21,6 @@ contains
     ! Save all cells within plotting range, for each processor
 
     use ModProcMH
-    use ModMain,     ONLY:   StringTest
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, XyzStart_BLK
     use ModIO,       ONLY: save_binary, plot_type1, plot_dx, plot_range, &
          nPlotVarMax

@@ -22,7 +22,7 @@ contains
     use ModMain,          ONLY: &
          UseB0,UseDivBsource,GravityDir,UseBody2,&
          TypeCoordSystem,Useraddiffusion,&
-         DoThinCurrentSheet,UseUSerSource,StringTest
+         DoThinCurrentSheet,UseUSerSource
     use ModAdvance
     use ModGeometry,      ONLY: R_BLK, R2_Blk, true_cell
     use ModPhysics
