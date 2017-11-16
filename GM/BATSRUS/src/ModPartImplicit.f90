@@ -362,7 +362,7 @@ contains
     use ModProcMH, ONLY: iComm, nProc
     use ModMain, ONLY: nBlockMax, nBlockExplAll, time_accurate, &
          n_step, time_simulation, dt, UseDtFixed, DtFixed, DtFixedOrig, Cfl, &
-         iNewDecomposition, NameThisComp, &
+         iNewDecomposition, &
          test_string, iTest, jTest, kTest, ProcTest, VarTest
     use ModVarIndexes, ONLY: Rho_
     use ModMultifluid, ONLY: select_fluid, iFluid, nFluid, iP
@@ -405,10 +405,9 @@ contains
 
     integer :: iLoc_I(5)
 
-    character(len=20) :: NameSub = 'MH_advance_part_impl'
+    character(len=*), parameter :: NameSub = 'advance_part_impl'
     !--------------------------------------------------------------------------
-    NameSub(1:2) = NameThisComp
-    call set_oktest('implicit',DoTest,DoTestMe) 
+    call set_oktest(NameSub,DoTest,DoTestMe)
     if(DoTestMe) write(*,*)NameSub,' starting at step=',n_step
 
     ! Initialize some variables in ModImplicit

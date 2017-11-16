@@ -246,7 +246,7 @@ contains
     ! Advance semi-implicit terms
 
     use ModProcMH, ONLY: iComm
-    use ModMain, ONLY: IsStandAlone, NameThisComp, time_accurate, &
+    use ModMain, ONLY: time_accurate, &
          BlkTest, ProcTest, iTest, jTest, kTest, VarTest
     use ModAdvance, ONLY: DoFixAxis, State_VGB
     use ModB0, ONLY: B0_DGB
@@ -269,18 +269,14 @@ contains
 
     logical :: DoTest, DoTestMe, DoTestKrylov
 
-    character(len=20) :: NameSub = 'MH_advance_semi_impl'
+    character(len=*), parameter :: NameSub = 'advance_semi_impl'
     !--------------------------------------------------------------------------
-    if(IsStandAlone)then
-       NameSub = 'advance_semi_impl'
-    else
-       NameSub(1:2) = NameThisComp
-    end if
-    call set_oktest('krylov', DoTest, DoTestKrylov)
+    !call set_oktest('krylov', DoTest, DoTestKrylov)
     call set_oktest(NameSub, DoTest, DoTestMe) 
     if(DoTestMe) write(*,*)NameSub,' starting with test var, B0=', &
          State_VGB(VarTest,iTest,jTest,kTest,BlkTest), &
          B0_DGB(:,iTest,jTest,kTest,BlkTest)
+
 
     if(TypeSemiImplicit(1:6) /= 'resist')then
        ! All used blocks are solved for with the semi-implicit scheme
