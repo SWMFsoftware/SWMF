@@ -416,7 +416,6 @@ EE/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		ModRadioWaveImage.f90 \
-		ModDensityAndGradient.f90 \
 		../../../EE/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/	  
 	cp GM/BATSRUS/srcEquation/*.f90 EE/BATSRUS/srcEquation/
@@ -456,7 +455,6 @@ IH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		ModRadioWaveImage.f90 \
-		ModDensityAndGradient.f90 \
 		../../../IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
@@ -498,7 +496,6 @@ OH/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		ModRadioWaveImage.f90 \
-		ModDensityAndGradient.f90 \
 		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
@@ -551,7 +548,6 @@ SC/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		ModRadioWaveImage.f90 \
-		ModDensityAndGradient.f90 \
 		../../../SC/BATSRUS/srcInterface
 	cp -f IH/BATSRUS/srcInterface/IH_wrapper.f90 \
 		SC/BATSRUS/srcInterface/SC_wrapper.f90
