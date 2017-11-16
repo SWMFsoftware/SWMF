@@ -5,25 +5,45 @@ module ModRadioWaveImage
   use ModCoordTransform, ONLY: cross_product
   use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector,&
        allocate_mask, associate_with_global_mask
-  use BATL_size, ONLY    : MaxDim
+  use BATL_lib, ONLY: iProc, MaxDim, nDim, check_interpolate_amr_gc, &
+       Particle_I, MaxBlock, nI, nJ, nK, nBlock, &
+       Unused_B, &
+       message_pass_particles, remove_undefined_particles, &
+       mark_undefined, Particle_I
+  use ModParticles, ONLY: allocate_particles
+  use ModBatlInterface, ONLY:  interpolate_grid_amr_gc
   implicit none
   SAVE
 
   public :: ray_bunch_intensity
-  real, pointer    :: Coord_DI(:,:)
+  real, pointer    :: Coord_DI(:,:), State_VI(:,:)
   logical, pointer :: IsMask_I(:)
-  real, allocatable:: Xyz_DI(:,:)
   !\
   !Frequency related:  in GGSE
   real :: DensityCr = -1.0, DensityCrInv = -1.0
   !\
   !Tolerance parameters::
   real :: Tolerance =  0.1, Tolerance2   =  1.0e-2
-  real, allocatable                 :: DistanceToCritSurf_I(:)
-
-    ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
+ 
+  ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
   logical, allocatable              :: IsOKRay_I(:)       
   real :: StepMin = 1.0
+  integer :: iKindRay_ = -1
+  !\
+  ! Components of the ray vector
+  !\
+  ! Cartesian coordinates
+  integer, parameter :: x_ = 1, y_ = 2, z_ = 3
+  ! Unity slope vectors for all the line-of-sights pointing at 
+  ! the pixels
+  integer, parameter :: SlopeX_ = 4, SlopeY_ = 5, SlopeZ_ = 6 
+  !\
+  ! Integration step
+  integer, parameter :: Ds_ = 7
+  !\
+  ! Distance to a critical surface, at which Density = DensityCr
+  integer, parameter :: Dist2Cr_ = 8
+  integer, parameter :: nVar = Dist2Cr_
 contains !=========================================================
 
   subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
@@ -113,7 +133,7 @@ contains !=========================================================
     !/ 
     real :: DxPixel, DyPixel 
     ! Pixel coordinates INSIDE the image plane
-    real, dimension(nXPixel,nYPixel) :: XPixel_II, YPixel_II  
+    real :: XPixel, YPixel  
     ! Unity vector normal to the image plane 
     real :: Normal_D(MaxDim)                                          
     real :: ZAxisOrt_D(MaxDim) = (/0, 0, 1/)
@@ -126,9 +146,8 @@ contains !=========================================================
     !\
     ! Initial directions of rays
     !/
-    ! Unity slope vectors for all the line-of-sights pointing at 
-    ! the pixels          
-    real :: SlopeUnscaled_D(MaxDim), Slope_DI(MaxDim,nXPixel*nYPixel)
+             
+    real :: SlopeUnscaled_D(MaxDim)
     !\
     ! Distance from the radiotelescope to the integration sphere  
     real :: ObservToIntSphereDist
@@ -147,7 +166,7 @@ contains !=========================================================
     !\
     ! A ray is excluded from processing if it is .true.
     logical, dimension(nYPixel*nXPixel) :: UnusedRay_I
-    real, dimension(nXPixel*nYPixel) :: Intensity_I, DeltaS_I
+    real, dimension(nXPixel*nYPixel) :: Intensity_I
     !\
     ! Parameters
     real,parameter  :: Tolerance = 0.01, DeltaS = 1.0
@@ -176,9 +195,13 @@ contains !=========================================================
        call allocate_mask(NameMask, nRay)
        call associate_with_global_vector(Coord_DI, NameVector)
        call associate_with_global_mask(IsMask_I, NameMask)
+       call allocate_particles(&
+            iKindParticle = iKindRay_, &
+            nVar          = Ds_      , &
+            nIndex        = 1        , &
+            nParticleMax  = nRay       )
+       nullify(State_VI); State_VI => Particle_I(iKindRay_)%State_VI
        allocate(Density_I(nRay), GradDensity_DI(MaxDim,nRay),DeltaSNew_I(nRay))
-       allocate(Xyz_DI(MaxDim,nRay))
-       Xyz_DI(MaxDim,nRay) = 0.0
     end if
     !
     ! Calculate the critical density from the frequency, in CGS
@@ -196,15 +219,6 @@ contains !=========================================================
     YUpper = ImageRange_I(4)
     DxPixel = (XUpper - XLower)/nXPixel
     DyPixel = (YUpper - YLower)/nYPixel
-    XPixel_II(:,1) = (/ (XLower + (real(i) - 0.5)*DxPixel, i = 1, nXPixel) /)
-    do j = 2, nYPixel
-       XPixel_II(:,j) = XPixel_II(:,1)
-    end do
-    YPixel_II(1,:) = (/ (YLower + (real(j) - 0.5)*DyPixel, j = 1, nYPixel) /)
-    do i = 2, nXPixel
-       YPixel_II(i,:) = YPixel_II(1,:)
-    end do
-
     !
     ! Determune the orts, Tau and Xi, of the inner coordinate system
     ! of the image plane
@@ -220,11 +234,14 @@ contains !=========================================================
     !
     iRay = 0
     do j = 1, nYPixel
+       YPixel = YLower + (real(j) - 0.5)*DyPixel
        do i = 1, nXPixel
-          XyzPixel_D = XPixel_II(i,j)*Tau_D + YPixel_II(i,j)*Xi_D
+          XPixel = XLower + (real(i) - 0.5)*DxPixel
+          XyzPixel_D = XPixel*Tau_D + YPixel*Xi_D
           SlopeUnscaled_D = XyzPixel_D - XyzObserver_D
           iRay = iRay + 1
-          Slope_DI(:,iRay) = SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
+          State_VI(SlopeX_:SlopeZ_,iRay) = &
+               SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
 
           !\
           ! Find the points on the integration sphere where it intersects
@@ -238,11 +255,14 @@ contains !=========================================================
           !  + 2*ObservToIntSphereDist*XyzObs_D
           !  + XyzObservLen**2 - rIntegration**2 = 0
           !/  
-          ObservToIntSphereDist = -sum(XyzObserver_D*Slope_DI(:,iRay))&
+          ObservToIntSphereDist = -sum(XyzObserver_D*&
+               State_VI(SlopeX_:SlopeZ_,iRay))&
                - sqrt(rIntegration**2 - XyzObservLen**2 &
-               + sum(Slope_DI(:,iRay)*XyzObserver_D)**2)
-          Xyz_DI(:,iRay) = XyzObserver_D &
-               + Slope_DI(:,iRay)*ObservToIntSphereDist
+               + sum(State_VI(SlopeX_:SlopeZ_,iRay)&
+               *XyzObserver_D)**2)
+          State_VI(x_:z_,iRay) = XyzObserver_D &
+               + State_VI(SlopeX_:SlopeZ_,iRay)&
+               *ObservToIntSphereDist
        end do
     end do
     !
@@ -250,17 +270,16 @@ contains !=========================================================
     !
     Intensity_I = 0
     UnusedRay_I = .false.
-    DeltaS_I = DeltaS
+    State_VI(Ds_,:) = DeltaS
     rIntegration2 = rIntegration**2 + 0.01
     do while(.not.all(UnusedRay_I))
        !\
        ! Advance rays through one step.
-       call ray_path(nRay, UnusedRay_I, Slope_DI, &
-            DeltaS_I, Tolerance, Intensity_I)
+       call ray_path(nRay, UnusedRay_I, Tolerance, Intensity_I)
        !Exclude rays which are out the integration sphere
        RAYS:do iRay = 1, nRay
           if(UnusedRay_I(iRay))CYCLE RAYS
-          SolarDist2 = sum(Xyz_DI(:,iRay)**2)
+          SolarDist2 = sum(State_VI(x_:z_,iRay)**2)
           UnusedRay_I(iRay) = SolarDist2 .gt. rIntegration2
        end do RAYS
     end do
@@ -269,8 +288,7 @@ contains !=========================================================
 
   end subroutine ray_bunch_intensity
   !=========
-  subroutine ray_path(nRay, UnusedRay_I, Slope_DI, &
-       DeltaS_I, ToleranceInit, Intensity_I)
+  subroutine ray_path(nRay, UnusedRay_I, ToleranceInit, Intensity_I)
     use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
          GradDensity_DI, Density_I, DeltaSNew_I
     use ModPhysics, ONLY   : No2Si_V, UnitRho_, UnitX_
@@ -354,8 +372,7 @@ contains !=========================================================
     !
     !
     integer, intent(in) :: nRay   ! # of pixels in the raster
-    real,    intent(inout), dimension(MaxDim,nRay) :: Slope_DI
-    real,    intent(inout), dimension(nRay) :: Intensity_I, DeltaS_I
+    real,    intent(inout), dimension(nRay) :: Intensity_I
     real,    intent(in) ::  ToleranceInit
 
     ! a ray is excluded from processing if it is .true. 
@@ -418,8 +435,6 @@ contains !=========================================================
 
     if (IsNewEntry) then
        IsNewEntry = .false.
-       allocate(DistanceToCritSurf_I(nRay))
-       DistanceToCritSurf_I = 0.0
        allocate(IsOKRay_I(nRay))
        IsOKRay_I = .true.
 
@@ -431,7 +446,7 @@ contains !=========================================================
        Tolerance2 = Tolerance**2 
        
        ! One (ten-thousandth) hundredth of average step 
-       StepMin = 1e-2*sum(DeltaS_I)/nRay          
+       StepMin = 1e-2*sum(State_VI(Ds_,:))/nRay          
     end if
 
     !Start the predictor step of the GIRARD scheme: 
@@ -444,12 +459,15 @@ contains !=========================================================
        !\
        ! For the slope calculated at the previous
        ! stage we advance the ray at half step  
-       Xyz_DI(:,iRay) = Xyz_DI(:,iRay) + &
-            Slope_DI(:,iRay)*0.50*DeltaS_I(iRay)
+       State_VI(x_:z_,iRay) = &
+            State_VI(x_:z_,iRay) + &
+            State_VI(SlopeX_:SlopeZ_,iRay)&
+            *0.50*State_VI(Ds_,iRay)
        if(IsCartesianGrid)then
-          Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+          Coord_DI(:,iRay) = State_VI(x_:z_, iRay)
        else
-          call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+          call xyz_to_coord(State_VI(x_:z_, iRay), &
+               Coord_DI(:,iRay))
        end if
        ! Now Xyz_DI moved by 1/2 DeltaS !!!
        !\
@@ -475,16 +493,18 @@ contains !=========================================================
        !/
        if (UnusedRay_I(iRay)) CYCLE  
  
-       HalfDeltaS = 0.50*DeltaS_I(iRay)
+       HalfDeltaS = 0.50*State_VI(Ds_,iRay)
        ! Original Position (at an integer point):
-       PositionHalfBack_D = Xyz_DI(:,iRay) - Slope_DI(:,iRay)*HalfDeltaS
+       PositionHalfBack_D = State_VI(x_:z_,iRay) - &
+            State_VI(SlopeX_:SlopeZ_,iRay)*HalfDeltaS
        Dens2DensCr = Density_I(iRay)*DensityCrInv
 
        DielPerm       = 1.0 - Dens2DensCr
        GradDielPerm_D = -GradDensity_DI(:,iRay)*DensityCrInv
        GradDielPerm2  = sum(GradDielPerm_D**2)
 
-       GradEpsDotSlope = sum(GradDielPerm_D*Slope_DI(:,iRay))
+       GradEpsDotSlope = sum(GradDielPerm_D*&
+            State_VI(SlopeX_:SlopeZ_,iRay))
 
        DielPermHalfBack = DielPerm  - GradEpsDotSlope*HalfDeltaS
 
@@ -510,9 +530,11 @@ contains !=========================================================
           !
 
           if (Curv .ge. Tolerance2) then
-             DeltaS_I(iRay) = 0.99 * &
-                  DeltaS_I(iRay)/(2*sqrt(Curv/Tolerance2))
-             Xyz_DI(:,iRay) = PositionHalfBack_D
+             State_VI(Ds_,iRay) = 0.99 * &
+                  State_VI(Ds_,iRay)/&
+                  (2*sqrt(Curv/Tolerance2))
+             State_VI(x_:z_,iRay) = &
+                  PositionHalfBack_D
              CYCLE
           end if
 
@@ -529,12 +551,12 @@ contains !=========================================================
              ! reduce step
              !
              IsOKRay_I(iRay) = .false.
-             DistanceToCritSurf_I(iRay) = DielPermHalfBack  &
+             State_VI(Dist2Cr_,iRay) = DielPermHalfBack  &
                   /sqrt(GradDielPerm2)
-             DeltaS_I(iRay) =  max(&
-                  0.50*Tolerance*DistanceToCritSurf_I(iRay),&
+             State_VI(Ds_,iRay) =  max(&
+                  0.50*Tolerance*State_VI(Dist2Cr_,iRay),&
                   StepMin)
-             Xyz_DI(:,iRay) = PositionHalfBack_D
+             State_VI(x_:z_,iRay) = PositionHalfBack_D
              CYCLE
           end if
 
@@ -546,7 +568,7 @@ contains !=========================================================
        !
 
        if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack)&
-            .or.(DeltaS_I(iRay)<StepMin.and.&
+            .or.(State_VI(Ds_,iRay)<StepMin.and.&
             GradEpsDotSlope<0)) then
 
           ! Switch to the opposite branch of parabolic trajectory
@@ -577,10 +599,13 @@ contains !=========================================================
           ProjSlopeOnMinusGradEps_D = -LCosAl*GradDielPerm_D  
           ! Here v_proj
 
-          StepY_D = Slope_DI(:,iRay) - ProjSlopeOnMinusGradEps_D 
+          StepY_D = State_VI(SlopeX_:SlopeZ_,iRay) &
+               - ProjSlopeOnMinusGradEps_D 
           ! Here c; |c| = sin \alpha
 
-          Slope_DI(:,iRay) = Slope_DI(:,iRay) - 2*ProjSlopeOnMinusGradEps_D
+          State_VI(SlopeX_:SlopeZ_,iRay) = &
+               State_VI(SlopeX_:SlopeZ_,iRay) &
+               - 2*ProjSlopeOnMinusGradEps_D
 
           !
           ! We need to have 
@@ -592,11 +617,13 @@ contains !=========================================================
 
           StepY_D = 4*StepY_D*LCosAl*DielPermHalfBack 
 
-          Xyz_DI(:,iRay) = PositionHalfBack_D + StepY_D
+          State_VI(x_:z_,iRay) = &
+               PositionHalfBack_D + StepY_D
           if(IsCartesianGrid)then
-             Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+             Coord_DI(:,iRay) = State_VI(x_:z_, iRay)
           else
-             call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+             call xyz_to_coord(State_VI(x_:z_, iRay),&
+                  Coord_DI(:,iRay))
           end if
           call check_bc(iRay)
           !
@@ -622,29 +649,37 @@ contains !=========================================================
           Coef = 0.50*HalfDeltaS/(1.0 - Dens2DensCr)
           RelGradRefrInx_D = Coef*GradDielPerm_D    
 
-          Omega_D = cross_product(RelGradRefrInx_D, Slope_DI(:,iRay))
-          Slope1_D = Slope_DI(:,iRay) &
-               + cross_product(Slope_DI(:,iRay), Omega_D)
+          Omega_D = cross_product(RelGradRefrInx_D, &
+               State_VI(SlopeX_:SlopeZ_,iRay))
+          Slope1_D = State_VI(SlopeX_:SlopeZ_,iRay) &
+               + cross_product(&
+               State_VI(SlopeX_:SlopeZ_,iRay), Omega_D)
 
           Omega_D = cross_product(RelGradRefrInx_D, Slope1_D)
-          Slope1_D = Slope_DI(:,iRay) &
-               + cross_product(Slope_DI(:,iRay), Omega_D)
+          Slope1_D = State_VI(SlopeX_:SlopeZ_,iRay) &
+               + cross_product(&
+               State_VI(SlopeX_:SlopeZ_,iRay), Omega_D)
 
           Curv1 = sum(Omega_D**2)
           Coef = 2/(1 + Curv1)
-          Slope_DI(:,iRay) = Slope_DI(:,iRay) &
+          State_VI(SlopeX_:SlopeZ_,iRay) = &
+               State_VI(SlopeX_:SlopeZ_,iRay) &
                + Coef*cross_product(Slope1_D, Omega_D)
 
-          Xyz_DI(:,iRay) = Xyz_DI(:,iRay) &
-               + Slope_DI(:,iRay)*HalfDeltaS
+          State_VI(x_:z_,iRay) = &
+               State_VI(x_:z_,iRay) &
+               + State_VI(SlopeX_:SlopeZ_,iRay)&
+               *HalfDeltaS
           if(IsCartesianGrid)then
-             Coord_DI(:,iRay) = Xyz_DI(:, iRay)
+             Coord_DI(:,iRay) = State_VI(x_:z_, iRay)
           else
-             call xyz_to_coord(Xyz_DI(:, iRay), Coord_DI(:,iRay))
+             call xyz_to_coord(State_VI(x_:z_, iRay), &
+                  Coord_DI(:,iRay))
           end if
           call check_bc(iRay)
           Intensity_I(iRay) = Intensity_I(iRay) &
-               + DeltaS_I(iRay)*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
+               + State_VI(Ds_,iRay)*&
+               (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
        end if
        if(UnusedRay_I(iRay))CYCLE
        !
@@ -674,8 +709,11 @@ contains !=========================================================
           !
           ! For shallow rays the DeltaS is increased unconditionally
           !
-          DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay),1.0)*&
-               min(DeltaSNew_I(iRay), DeltaS_I(iRay))
+          State_VI(Ds_,iRay) = &
+               max(2 - State_VI(Ds_,iRay)/&
+               DeltaSNew_I(iRay),1.0)*&
+               min(DeltaSNew_I(iRay), &
+               State_VI(Ds_,iRay))
        else 
           !
           ! If the iRay-th ray is marked as steep (i.e. "not gentle" or "not
@@ -694,10 +732,14 @@ contains !=========================================================
           !   The ray is reverted to "gentle" or "shallow"
           !
           if (DielPermHalfBack .gt. &
-               DistanceToCritSurf_I(iRay)*sqrt(GradDielPerm2)) then
+               State_VI(Dist2Cr_,iRay)&
+               *sqrt(GradDielPerm2)) then
              IsOKRay_I(iRay) = .true.
-             DeltaS_I(iRay) = max(2 - DeltaS_I(iRay)/DeltaSNew_I(iRay), 1.0)*&
-                  min(DeltaSNew_I(iRay), DeltaS_I(iRay))
+             State_VI(Ds_,iRay) = &
+                  max(2 - State_VI(Ds_,iRay)/&
+                  DeltaSNew_I(iRay), 1.0)*&
+                  min(DeltaSNew_I(iRay), &
+                  State_VI(Ds_,iRay))
           end if
        end if
     end do
