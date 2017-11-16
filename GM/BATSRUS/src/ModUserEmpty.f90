@@ -3,9 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUserEmpty
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
-
   ! This module contains empty user routines.  They should be "used"
   ! (included) in the srcUser/ModUser*.f90 files for routines that the user
   ! does not wish to implement.
@@ -48,23 +45,18 @@ contains
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     IsFound = .false.
     call stop_user(NameSub)
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
 
   subroutine user_initial_perturbation
     use ModMain, ONLY: nBlockMax
     integer::iBlock
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     ! The routine is called once and should be applied for all blocks, the
     ! do-loop should be present. Another distinction from user_set_ics is that
     ! user_initial_perturbation can be applied after restart, while
@@ -74,7 +66,6 @@ contains
 
        call stop_user(NameSub)
     end do
-    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
   !============================================================================
 
@@ -107,11 +98,8 @@ contains
     !  ...
     ! end select
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_action'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    call test_stop(NameSub, DoTest)
   end subroutine user_action
   !============================================================================
   subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
@@ -128,13 +116,10 @@ contains
     logical, optional, intent(out) :: IsInside_I(nValue)
     real,    optional, intent(out) :: Value_I(nValue)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_specify_region'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_specify_region
   !============================================================================
 
@@ -145,13 +130,10 @@ contains
     character(len=*), intent(in) :: TypeCriteria
     logical, intent(inout)       :: IsFound
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_amr_criteria'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub//'(TypeCrit='//TypeCriteria//')')
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
   !============================================================================
 
@@ -169,13 +151,10 @@ contains
     character(len=*), intent(in) :: NameVar
     real, intent(in), optional   :: Radius
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     call stop_user(NameSub//'(NameVar='//NameVar//')')
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
   !============================================================================
 
@@ -196,13 +175,10 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub//'(NameVar='//NameVar//')')
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
   !============================================================================
 
@@ -271,13 +247,10 @@ contains
     integer, intent(in) :: iBlock
     real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
   !============================================================================
 
@@ -325,13 +298,10 @@ contains
     !  Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     call stop_user(NameSub)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
   !============================================================================
   integer function user_block_type(iBlock)
