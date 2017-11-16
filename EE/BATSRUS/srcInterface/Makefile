@@ -11,8 +11,7 @@ OBJECTS = \
 	EE_wrapper.o \
 	ModBuffer.o \
 	ModRadioWaveImage.o \
-	ModGridDescriptor.o \
-	ModDensityAndGradient.o
+	ModGridDescriptor.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
 	-I${EMPIRICALEEDIR} -I../src -I../srcBATL
