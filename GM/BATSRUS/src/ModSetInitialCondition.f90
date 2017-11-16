@@ -18,7 +18,7 @@ contains
     use ModMain
     use ModAdvance
     use ModB0, ONLY: B0_DGB, set_b0_cell, subtract_b0
-    use ModGeometry, ONLY: true_cell, R2_BLK
+    use ModGeometry, ONLY: true_cell
     use ModIO, ONLY : restart
     use ModPhysics
     use ModUserInterface ! user_set_ics
@@ -175,7 +175,7 @@ contains
   end subroutine set_initial_condition
 
   !==========================================================================
-  subroutine add_rotational_velocity(iSign, iBlock)
+  subroutine add_rotational_velocity(iSign, iBlockIn)
 
     use ModSize,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nBlock, x_, y_
     use ModMain,     ONLY: Unused_B
@@ -186,7 +186,7 @@ contains
     use BATL_lib,    ONLY: Xyz_DGB
 
     integer, intent(in):: iSign
-    integer, intent(in):: iBlock
+    integer, optional, intent(in):: iBlockIn
 
     ! Transform velocities between inertial and rotating frames
     ! where Omega is the angular velocity of the rotating frame
@@ -196,26 +196,27 @@ contains
     ! iSign=+1: from rotating to inertial frame
     ! iSign=-1: from inertial to rotating frame
     !
-    ! If iBlock is 0 or negative, do all blocks in State_VGB,
-    ! otherwise do only block iBlock
+    ! If iBlockIn is present, do that block, otherwise do all blocks.
 
-    integer :: i, j, k, iBlk, iBlockFirst, iBlockLast
+    integer :: i, j, k, iBlock, iBlockFirst, iBlockLast
     !---------------------------------------------------------------------------      
-    if(iBlock > 0)then
-       iBlockFirst = 1; iBlockLast = nBlock
+    if(present(iBlockIn))then
+       iBlockFirst = iBlockIn; iBlockLast = iBlockIn
     else
-       iBlockFirst = iBlock; iBlockLast = iBlock
+       iBlockFirst = 1; iBlockLast = nBlock
     end if
 
-    do iBlk = iBlockFirst, iBlockLast
-       if(Unused_B(iBlk))CYCLE
+    do iBlock = iBlockFirst, iBlockLast
+       if(Unused_B(iBlock))CYCLE
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-          if(.not.true_Cell(i,j,k,iBlk)) CYCLE
-          State_VGB(iRhoUx_I,i,j,k,iBlk) = State_VGB(iRhoUx_I,i,j,k,iBlk) - &
-               iSign*State_VGB(iRho_I,i,j,k,iBlk)*OmegaBody*Xyz_DGB(y_,i,j,k,iBlk)
+          if(.not.true_Cell(i,j,k,iBlock)) CYCLE
+          State_VGB(iRhoUx_I,i,j,k,iBlock) = State_VGB(iRhoUx_I,i,j,k,iBlock) &
+               - iSign*State_VGB(iRho_I,i,j,k,iBlock) &
+	       *OmegaBody*Xyz_DGB(y_,i,j,k,iBlock)
 
-          State_VGB(iRhoUy_I,i,j,k,iBlk) = State_VGB(iRhoUy_I,i,j,k,iBlk) + &
-               iSign*State_VGB(iRho_I,i,j,k,iBlk)*OmegaBody*Xyz_DGB(x_,i,j,k,iBlk)
+          State_VGB(iRhoUy_I,i,j,k,iBlock) = State_VGB(iRhoUy_I,i,j,k,iBlock) &
+	       + iSign*State_VGB(iRho_I,i,j,k,iBlock) &
+	       *OmegaBody*Xyz_DGB(x_,i,j,k,iBlock)
 
        end do; end do; end do
     end do
