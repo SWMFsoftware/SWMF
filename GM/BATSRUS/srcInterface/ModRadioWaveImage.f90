@@ -23,11 +23,19 @@ module ModRadioWaveImage
   real :: DensityCr = -1.0, DensityCrInv = -1.0
   !\
   !Tolerance parameters::
-  real :: Tolerance =  0.1, Tolerance2   =  1.0e-2
+  !  minimum 100 points between a vacuum and a critical surface and
+  !  minimum 100 points over 1 rad of the curvature
+  real, parameter :: Tolerance =  1.0e-2, Tolerance2   =  1.0e-4
  
   ! IsOKRay_I: .true. for shallow rays; is set to .false. for steep rays.
-  logical, allocatable              :: IsOKRay_I(:)       
-  real :: StepMin = 1.0
+  logical, allocatable              :: IsOKRay_I(:)
+  !\
+  ! Initial time step
+  real,parameter  :: DeltaS = 1.0
+  ! One  hundredth of average step        
+  real, parameter :: StepMin = 1.0e-2
+  !\
+  ! Kind of particles used to integrate emissivity over rays 
   integer :: iKindRay_ = -1
   !\
   ! Components of the ray vector
@@ -169,7 +177,6 @@ contains !=========================================================
     real, dimension(nXPixel*nYPixel) :: Intensity_I
     !\
     ! Parameters
-    real,parameter  :: Tolerance = 0.01, DeltaS = 1.0
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
     logical, save   :: DoAllocate = .true.
     !\
@@ -202,6 +209,8 @@ contains !=========================================================
             nParticleMax  = nRay       )
        nullify(State_VI); State_VI => Particle_I(iKindRay_)%State_VI
        allocate(Density_I(nRay), GradDensity_DI(MaxDim,nRay),DeltaSNew_I(nRay))
+       allocate(IsOKRay_I(nRay))
+       IsOKRay_I = .true.
     end if
     !
     ! Calculate the critical density from the frequency, in CGS
@@ -275,7 +284,7 @@ contains !=========================================================
     do while(.not.all(UnusedRay_I))
        !\
        ! Advance rays through one step.
-       call ray_path(nRay, UnusedRay_I, Tolerance, Intensity_I)
+       call ray_path(nRay, UnusedRay_I, Intensity_I)
        !Exclude rays which are out the integration sphere
        RAYS:do iRay = 1, nRay
           if(UnusedRay_I(iRay))CYCLE RAYS
@@ -288,7 +297,7 @@ contains !=========================================================
 
   end subroutine ray_bunch_intensity
   !=========
-  subroutine ray_path(nRay, UnusedRay_I, ToleranceInit, Intensity_I)
+  subroutine ray_path(nRay, UnusedRay_I, Intensity_I)
     use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
          GradDensity_DI, Density_I, DeltaSNew_I
     use ModPhysics, ONLY   : No2Si_V, UnitRho_, UnitX_
@@ -373,8 +382,7 @@ contains !=========================================================
     !
     integer, intent(in) :: nRay   ! # of pixels in the raster
     real,    intent(inout), dimension(nRay) :: Intensity_I
-    real,    intent(in) ::  ToleranceInit
-
+  
     ! a ray is excluded from processing if it is .true. 
     logical, intent(inout), dimension(nRay) :: UnusedRay_I   
 
@@ -431,23 +439,6 @@ contains !=========================================================
     !/
     integer:: iRay
 
-    !---------------
-
-    if (IsNewEntry) then
-       IsNewEntry = .false.
-       allocate(IsOKRay_I(nRay))
-       IsOKRay_I = .true.
-
-       !  minimum ten points between a vacuum and a critical surface and
-       !  minimum 10 points over 1 rad of the curvature
-       Tolerance = min(ToleranceInit,0.1)  
-
-       
-       Tolerance2 = Tolerance**2 
-       
-       ! One (ten-thousandth) hundredth of average step 
-       StepMin = 1e-2*sum(State_VI(Ds_,:))/nRay          
-    end if
 
     !Start the predictor step of the GIRARD scheme: 
 
@@ -514,22 +505,20 @@ contains !=========================================================
           CYCLE
        end if
 
-       Curv = (0.50*HalfDeltaS/DielPermHalfBack)**2* &
-            (GradDielPerm2 - GradEpsDotSlope**2)
-       !The curvature squared characterizes the magnitude of
-       !the tranverse gradient of the dielectric permittivity
 
        if (IsOKRay_I(iRay)) then
-
-          !
-          ! Check if the trajectory curvature is too sharp
-          ! to meet the Tolerance. If so, reduce the DeltaS 
-          ! step for the iRay-th ray and leave it until
-          ! the next call.
-          !
-          !
-
+          !\
+          !The curvature squared characterizes the magnitude of
+          !the tranverse gradient of the dielectric permittivity
+          Curv = (0.50*HalfDeltaS/DielPermHalfBack)**2* &
+               (GradDielPerm2 - GradEpsDotSlope**2)
           if (Curv .ge. Tolerance2) then
+             !\
+             ! Check if the trajectory curvature is too sharp
+             ! to meet the Tolerance. If so, reduce the DeltaS 
+             ! step for the iRay-th ray and leave it until
+             ! the next call.
+             !/
              State_VI(Ds_,iRay) = 0.99 * &
                   State_VI(Ds_,iRay)/&
                   (2*sqrt(Curv/Tolerance2))
@@ -538,7 +527,7 @@ contains !=========================================================
              CYCLE
           end if
 
-          ! Test if some of the next points can get into the prohibited
+          ! Check if some of the next points can get into the prohibited
           ! part of space with "negative" dielectric permittivity
           !
           ! Here we check the magnitude of the longitudinal gradient
@@ -619,13 +608,6 @@ contains !=========================================================
 
           State_VI(x_:z_,iRay) = &
                PositionHalfBack_D + StepY_D
-          if(IsCartesianGrid)then
-             Coord_DI(:,iRay) = State_VI(x_:z_, iRay)
-          else
-             call xyz_to_coord(State_VI(x_:z_, iRay),&
-                  Coord_DI(:,iRay))
-          end if
-          call check_bc(iRay)
           !
           ! Step_X is in the direction of - grad \epsilon,
           ! whose vector is of the length of 1/L.
@@ -670,19 +652,19 @@ contains !=========================================================
                State_VI(x_:z_,iRay) &
                + State_VI(SlopeX_:SlopeZ_,iRay)&
                *HalfDeltaS
-          if(IsCartesianGrid)then
-             Coord_DI(:,iRay) = State_VI(x_:z_, iRay)
-          else
-             call xyz_to_coord(State_VI(x_:z_, iRay), &
-                  Coord_DI(:,iRay))
-          end if
-          call check_bc(iRay)
           Intensity_I(iRay) = Intensity_I(iRay) &
                + State_VI(Ds_,iRay)*&
                (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
        end if
+       if(IsCartesianGrid)then
+          Coord_DI(:,iRay) = State_VI(x_:z_, iRay)
+       else
+          call xyz_to_coord(State_VI(x_:z_, iRay),&
+               Coord_DI(:,iRay))
+       end if
+       call check_bc(iRay)
        if(UnusedRay_I(iRay))CYCLE
-       !
+       !\
        !   The code below makes gradual increases of the DeltaS up to the value
        ! specified in DeltaSNew. The smooth step increase is required so as
        ! not to get into the space behind the critical surface, stepping with
@@ -704,43 +686,34 @@ contains !=========================================================
        !     The behaviour of Y can also be characterized as exponential
        ! growth when Y is close to zero, and exponential saturation when Y is
        ! close to X. 
-       ! 
-       if (IsOKRay_I(iRay)) then
-          !
-          ! For shallow rays the DeltaS is increased unconditionally
-          !
+       !/
+       !\
+       ! For shallow rays the DeltaS is increased unconditionally
+       !/
+       !\
+       ! If the iRay-th ray is marked as steep (i.e. "not gentle" or "not
+       ! shallow") then the code below increases its DeltaS only if the
+       ! current distance to the critical surface, calculated as
+       !      \epsilon / grad \epsilon,
+       ! is greater than this distance value saved along with marking the
+       ! ray as steep in the DistanceToCritSurf_I. 
+       !   This can happen in two cases: 
+       ! (1) either the ray was "parabola reflected" and
+       ! after several steps it went away from the surface by the distance
+       ! where the parabola switching occurred; 
+       ! (2)or the ray is not steep any more because 
+       ! the current DeltaS is so small, that the next step does not
+       ! penetrate the critical surface.
+       !   The ray is reverted to "gentle" or "shallow"
+       !/
+       if (IsOKRay_I(iRay).or.DielPermHalfBack .gt. &
+               State_VI(Dist2Cr_,iRay)*sqrt(GradDielPerm2)) then
+          IsOKRay_I(iRay) = .true.
           State_VI(Ds_,iRay) = &
                max(2 - State_VI(Ds_,iRay)/&
-               DeltaSNew_I(iRay),1.0)*&
+               DeltaSNew_I(iRay), 1.0)*&
                min(DeltaSNew_I(iRay), &
                State_VI(Ds_,iRay))
-       else 
-          !
-          ! If the iRay-th ray is marked as steep (i.e. "not gentle" or "not
-          ! shallow") then the code below increases its DeltaS only if the
-          ! current distance to the critical surface, calculated as
-          !      \epsilon / grad \epsilon,
-          ! is greater than this distance value saved along with marking the
-          ! ray as steep in the DistanceToCritSurf_I. 
-          !   This can happen in two cases: 
-          ! (1) either the ray was "parabola reflected" and
-          ! after several steps it went away from the surface by the distance
-          ! where the parabola switching occurred; 
-          ! (2)or the ray is not steep any more because 
-          ! the current DeltaS is so small, that the next step does not
-          ! penetrate the critical surface.
-          !   The ray is reverted to "gentle" or "shallow"
-          !
-          if (DielPermHalfBack .gt. &
-               State_VI(Dist2Cr_,iRay)&
-               *sqrt(GradDielPerm2)) then
-             IsOKRay_I(iRay) = .true.
-             State_VI(Ds_,iRay) = &
-                  max(2 - State_VI(Ds_,iRay)/&
-                  DeltaSNew_I(iRay), 1.0)*&
-                  min(DeltaSNew_I(iRay), &
-                  State_VI(Ds_,iRay))
-          end if
        end if
     end do
   contains
