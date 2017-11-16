@@ -344,7 +344,7 @@ contains
     if(iSignRotationIC /= 0)then
        ! add/subtract rho*(omega x r) to/from the momentum of all fluids 
        ! for all blocks
-       call add_rotational_velocity(iSignRotationIC, 0) 
+       call add_rotational_velocity(iSignRotationIC)
        iSignRotationIC = 0
     end if
 
