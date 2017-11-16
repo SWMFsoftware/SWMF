@@ -487,59 +487,19 @@ real function maxval_abs_ALL(qnum,qa)
 end function maxval_abs_ALL
 
 !=============================================================================
-real function test_cell_value(qa,Imin,Imax,Jmin,Jmax,Kmin,Kmax)
 
-  ! Find the value at the test cell location Itest, Jtest, Ktest,BLKtest
-  ! PROCtest and then broadcast it to all PROC.
-
-  use ModProcMH
-  use ModMain, ONLY : nBLK,PROCtest,Itest,Jtest,Ktest,BLKtest
-  use ModMpi
-  implicit none
-
-  ! Arguments
-
-  integer, intent(in) :: Imin,Imax,Jmin,Jmax,Kmin,Kmax
-  real, dimension(Imin:Imax,Jmin:Jmax,Kmin:Kmax,nBLK), &
-       intent(in) :: qa
-
-  ! Local variables:
-  integer :: iError
-  real    :: qval
-
-  logical :: oktest, oktest_me
-
-  !---------------------------------------------------------------------------
-
-  call set_oktest('test_cell_value',oktest, oktest_me)
-
-  qval=0.0
-
-  if (PROCtest == iProc) qval = qa(Itest,Jtest,Ktest,BLKtest)
-
-  call MPI_Bcast(qval,1,MPI_REAL,PROCtest,iComm,iError)
-
-  test_cell_value=qval
-
-  if(oktest)write(*,*)'i,j,k,BLK,PROC,qval:',Itest,Jtest,Ktest,BLKtest, &
-       PROCtest,qval
-
-end function test_cell_value
-
-!=============================================================================
-
-subroutine set_oktest(str, oktest, oktest_me)
+subroutine set_oktest(String, DoTst, DoTstMe)
 
   use BATL_lib, ONLY: test_start, iProcTest, iProcTest2, iProc
 
   implicit none
 
-  character (len=*) :: str
-  logical :: oktest, oktest_me
+  character (len=*) :: String
+  logical :: DoTst, DoTstMe
   !----------------------------------------------------------------------------
 
-  call test_start(str, oktest, DoTestAll=.true.)
-  oktest_me = oktest .and. (iProc == iProcTest .or. iProc == iProcTest2)
+  call test_start(String, DoTst, DoTestAll=.true.)
+  DoTstMe = DoTst .and. (iProc == iProcTest .or. iProc == iProcTest2)
 
 end subroutine set_oktest
 
@@ -553,9 +513,7 @@ subroutine barrier_mpi
 
   ! Local variables:
   integer :: iError
-
   !----------------------------------------------------------------------------
-
   call timing_start('barrier')
   call MPI_barrier(iComm, iError)
   call timing_stop('barrier')
@@ -574,9 +532,7 @@ subroutine barrier_mpi2(str)
 
   ! Local variables:
   integer :: iError
-
   !----------------------------------------------------------------------------
-
   call timing_start('barrier-'//str)
   call MPI_barrier(iComm, iError)
   call timing_stop('barrier-'//str)
@@ -584,7 +540,6 @@ subroutine barrier_mpi2(str)
 end subroutine barrier_mpi2
 
 !=============================================================================
-
 subroutine stop_mpi(str)
 
   use ModProcMH
@@ -597,9 +552,7 @@ subroutine stop_mpi(str)
 
   ! Local variables:
   integer :: iError,nError
-
   !----------------------------------------------------------------------------
-
   if(IsStandAlone)then
      write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
           iteration_number,' with msg:'
@@ -625,9 +578,7 @@ subroutine stop_mpi(str)
   end if
 
 end subroutine stop_mpi
-
 !============================================================================
-
 subroutine alloc_check(iError,String)
 
   implicit none
@@ -639,9 +590,7 @@ subroutine alloc_check(iError,String)
   if (iError>0) call stop_mpi("Allocation error for "//String)
 
 end subroutine alloc_check
-
 !==========================================================================
-
 subroutine error_report(str,value,iErrorIn,show_first)
 
   use ModProcMH
