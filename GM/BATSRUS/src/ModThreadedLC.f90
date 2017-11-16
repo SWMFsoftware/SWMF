@@ -306,10 +306,17 @@ contains
     !/
     real :: HeatFlux2TR 
 
-    logical :: DoTest, DoTestMe
+    logical :: DoTestCell
 
     character(len=*), parameter :: NameSub = 'solve_boundary_thread'
     !-------------------------------------------------------------------------
+    if(iBlock == BLKtest .and.iProc == PROCtest &
+         .and. j==jTest.and.k==kTest)then
+       call set_oktest(NameSub, DoTestCell, DoTestCell)
+    else
+       DoTestCell = .false.
+    endif
+
     !\
     ! Initialize all output parameters from 0D solution
     !/
@@ -334,28 +341,24 @@ contains
     TeSiMax        = &
           BoundaryThreads_B(iBlock) % TMax_II(j,k)*No2Si_V(UnitTemperature_)
     ConsMax = cTwoSevenths*HeatCondParSi*TeSiMax**3.50
-    if(iBlock==BLKtest.and.iProc==PROCtest.and.j==jTest.and.k==kTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-       if(DoTestMe)then
-          write(*,*)'TeSiIn=       ',TeSiIn,' K '
-          write(*,*)'PeSiIn = ', PeSiIn
-          write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
-          write(*,*)'Dimensionless density (input)=',RhoNoDimCoef*PeSiIn/TeSiIn
-          write(*,*)'AMinorIn=     ', AMinorIn
-          write(*,*)'USiIn,USi=        ',USiIn,' ',USi,' m/s'
-          write(*,*)'Thread Length=', &
-               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
-               ,' m = ',  Si2No_V(UnitX_)*&
-               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' Rs'
-          write(*,*)'TeSiMax=       ',TeSiMax
-          write(*,*)'iAction=',iAction
-          write(*,*)'0D model results'
-          write(*,*)'Pressure 0D=',PeSiOut
-          write(*,*)'RhoNoDimOut=', RhoNoDimOut 
-       end if
-    else
-       DoTest=.false.; DoTestMe=.false.
-    endif
+
+    if(DoTestCell)then
+       write(*,*)'TeSiIn=       ',TeSiIn,' K '
+       write(*,*)'PeSiIn = ', PeSiIn
+       write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
+       write(*,*)'Dimensionless density (input)=',RhoNoDimCoef*PeSiIn/TeSiIn
+       write(*,*)'AMinorIn=     ', AMinorIn
+       write(*,*)'USiIn,USi=        ',USiIn,' ',USi,' m/s'
+       write(*,*)'Thread Length=', &
+            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
+            ,' m = ',  Si2No_V(UnitX_)*&
+            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' Rs'
+       write(*,*)'TeSiMax=       ',TeSiMax
+       write(*,*)'iAction=',iAction
+       write(*,*)'0D model results'
+       write(*,*)'Pressure 0D=',PeSiOut
+       write(*,*)'RhoNoDimOut=', RhoNoDimOut 
+    end if
 
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
     if(iAction/=DoInit_)then
@@ -410,7 +413,7 @@ contains
        DTeOverDsSiOut = max(0.0,(TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
             (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
             BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
-       if(DoTestMe)then
+       if(DoTestCell)then
           write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
                ', dT/ds*Length=',DTeOverDsSiOut*&
                BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
@@ -544,7 +547,7 @@ contains
        end do
        call CON_stop('Failure')
     end if
-    if(DoTestMe)then
+    if(DoTestCell)then
        write(*,*)'AMajorOut=    ', AMajorOut
        write(*,*)'Before correction:'
        write(*,*)'Pressure 1D (SI) = ',FirstOrderPeSi
@@ -825,7 +828,7 @@ contains
          !\
          ! Check convergence
          !/
-         if(DoTestMe.and.DoConvergenceCheck)then
+         if(DoTestCell.and.DoConvergenceCheck)then
             write(*,'(a,i4)')&
                  'TeOld abs(DCons) Cons abs(DCons)/Cons Res_V TNew at iIter=',&
                  iIter
