@@ -582,18 +582,6 @@ subroutine stop_mpi(str)
 
 end subroutine stop_mpi
 !==============================================================================
-subroutine alloc_check(iError,String)
-
-  implicit none
-
-  integer, intent(in) :: iError
-  character (len=*), intent(in) :: String
-
-  !----------------------------------------------------------------------------
-  if (iError>0) call stop_mpi("Allocation error for "//String)
-
-end subroutine alloc_check
-!==============================================================================
 subroutine error_report(str,value,iErrorIn,show_first)
 
   use ModProcMH
@@ -846,49 +834,6 @@ subroutine test_error_report
   call error_report('PRINT',0.,iErr1,.true.)
 
 end subroutine test_error_report
-!==============================================================================
-
-subroutine fill_edge_corner(Array_G)
-
-  ! Fill edges and corners for Array_G (e.g. for bilinear interpolation)
-
-  use ModSize, ONLY: nI, nJ, nK
-
-  implicit none
-  real, intent(inout) :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
-
-  ! Edges in the` K direction
-  !----------------------------------------------------------------------------
-  Array_G(0,0,:) = &
-       Array_G(1,0,:)     + Array_G(0,1,:)     - Array_G(1,1,:)
-  Array_G(nI+1,0,:) = &
-       Array_G(nI,0,:)    + Array_G(nI+1,1,:)  - Array_G(nI,1,:)
-  Array_G(0,nJ+1,:) = &
-       Array_G(0,nJ,:)    + Array_G(1,nJ+1,:)  - Array_G(1,nJ,:)
-  Array_G(nI+1,nJ+1,:) = &
-       Array_G(nI+1,nJ,:) + Array_G(nI,nJ+1,:) - Array_G(nI,nJ,:)
-
-  ! Edges in the J direction
-  Array_G(0,:,0) = &
-       Array_G(1,:,0)     + Array_G(0,:,1)     - Array_G(1,:,1)
-  Array_G(nI+1,:,0) = &
-       Array_G(nI,:,0)    + Array_G(nI+1,:,1)  - Array_G(nI,:,1)
-  Array_G(0,:,nK+1) = &
-       Array_G(1,:,nK+1)  + Array_G(0,:,nK)    - Array_G(1,:,nK)
-  Array_G(nI+1,:,nK+1) = &
-       Array_G(nI,:,nK+1) + Array_G(nI+1,:,nK) - Array_G(nI,:,nK)
-
-  ! Edges in the I direction including the corners
-  Array_G(:,0,0) = &
-       Array_G(:,1,0)     + Array_G(:,0,1)     - Array_G(:,1,1)
-  Array_G(:,nJ+1,0) = &
-       Array_G(:,nJ,0)    + Array_G(:,nJ+1,1)  - Array_G(:,nJ,1)
-  Array_G(:,0,nK+1)=&
-       Array_G(:,1,nK+1)  + Array_G(:,0,nK)    - Array_G(:,1,nK)
-  Array_G(:,nJ+1,nK+1) = &
-       Array_G(:,nJ,nK+1) + Array_G(:,nJ+1,nK) - Array_G(:,nJ,nK)
-
-end subroutine fill_edge_corner
 !==============================================================================
 
 subroutine get_date_time_start(iTime_I)
