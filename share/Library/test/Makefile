@@ -188,8 +188,8 @@ test_linear_wrapper:
 	@perl -pi -e 's/ call/ !call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
 	@rm -f ../src/linear_solver_wrapper.o
 	@echo ./test_linear_wrapper.exe		>> test_linear_wrapper.diff
-	-@(./test_linear_wrapper.exe > test_linear_wrapper.tmp)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${MPIRUN} ./test_linear_wrapper.exe > test_linear_wrapper.tmp)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-5 \
 		test_linear_wrapper.tmp test_linear_wrapper.log \
 						>  test_linear_wrapper.diff)
 	@ls -l test_linear_wrapper.diff
