@@ -520,10 +520,8 @@ contains
     real    :: SCALING(MAXVAR), LHSMAX, LHSTEMP, TOTALSUM
     real, parameter :: TINY=1.0E-20
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'linear_equation_solver'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(nVar > MAXVAR) call stop_mpi(&
          'ERROR in ModPointImplicit linear solver: MaxVar is too small')
 
@@ -607,7 +605,6 @@ contains
        Rhs_V(IL)=TOTALSUM/Matrix_VV(IL,IL)
     END DO
 
-    call test_stop(NameSub, DoTest)
   end subroutine linear_equation_solver
   !============================================================================
 
