@@ -165,8 +165,7 @@ contains
     !USES:
     use MH_domain_decomposition
     use CON_coupler
-    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple, test_string, &
-         UseParticles
+    use ModMain,         ONLY: TypeCoordSystem, NameVarCouple, UseParticles
     use ModPhysics,      ONLY: No2Si_V, UnitX_
     use ModVarIndexes,   ONLY: nVar
     use ModAdvance,      ONLY: State_VGB
@@ -174,9 +173,11 @@ contains
     use ModGeometry,     ONLY: TypeGeometry, RadiusMin, RadiusMax
     use BATL_lib,        ONLY: CoordMin_D, CoordMax_D
     use ModParticleFieldLine
-    logical:: DoTest,DoTestMe
+
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
+
+    logical:: DoTest, DoTestMe
     character(len=*), parameter:: NameSub = 'GM_set_grid'
     !----------------------------------------------------------
     !REVISION HISTORY:
@@ -185,7 +186,7 @@ contains
     !                                      call synchronize_refinement directly
     !EOP
 
-    DoTest=.false.;DoTestMe=.false.
+    DoTest=.false.; DoTestMe=.false.
 
     if(done_dd_init(GM_))return
     call init_decomposition(GM_,GM_,3,.true.)
@@ -359,7 +360,7 @@ contains
 
   subroutine GM_finalize(TimeSimulation)
 
-    use ModMain, ONLY: UseIe, time_loop
+    use ModMain, ONLY: time_loop
 
     !INPUT PARAMETERS:
     real,     intent(in) :: TimeSimulation   ! seconds from start time
