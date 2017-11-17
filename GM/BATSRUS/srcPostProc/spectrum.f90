@@ -171,13 +171,15 @@ program spectrum
   call read_table
 
   nLineAll = min(nMaxLine,nLineFound)
-
+  
   ! Allocate table for labels
   allocate(LabelTable_III(nLineAll,n2,n3))
   if(IsVerbose)write(*,*)'allocated LabelTable_III'
-
+  
   ! Loop over Chianti lines
   if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
+
+
   do iLine = 1,nLineAll
      if (.not. IsOneLine)call calc_flux
      if (IsOneLine .and.  &
@@ -237,7 +239,7 @@ contains
              do iTe=1,nLogTeDEM-1
                 if(Var_VIII(te_,i,j,k)<Te_I(iTe+1)) EXIT
              end do
-             write(*,*)Var_VIII(te_,i,j,k)
+
 
              Counter_I(iTe) = Counter_I(iTe) + 1
              DTe = Te_I(iTe+1)-Te_I(iTe)
@@ -439,13 +441,12 @@ contains
             TypeFileIn     = TypeFileSpectrum,      &
             StringHeaderIn = StringHeaderSpectrum,  &
             NameVarIn      = "wavelength x y flux", &
-            nDimIn         = 3,                     &
             CoordMinIn_D   = CoordMin_D,            &
             CoordMaxIn_D   = CoordMax_D,            &
             Coord1In_I     = CoordWave_I,           &
             VarIn_VIII      = Intensity_VIII)
     endif
-
+    
     deallocate(Intensity_VIII, CoordWave_I, CoordPixel_DII)
 
   end subroutine save_all
@@ -590,7 +591,16 @@ contains
              if(Gint<=0)CYCLE 
 
              ! Calculate flux and spread it on the Spectrum_II grids
-             ! Intensity calculation according to Aschwanden p.58 Eq(2.8.4)
+
+             ! Constant multiplier converted from SI [m] to CGS units [cm]
+             ! dV_cell / (1AU)^2 * 1e2
+             ! dVperd2 = dx*dy*dz /(1.496e11)**2 * 1e2
+
+             ! Solid angle obtained by the emitting surface at 1AU distance
+             ! dOmega = dy*dz / (1.496e11)**2
+
+             ! dVperd2/dOmega = dx * 1e2
+
              FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx *1e2
 
              if(DoExtendTransitionRegion) FluxMono = FluxMono &
@@ -1140,18 +1150,6 @@ contains
     end do
 
     dx = (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 * rSun
-    !dy = (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2 * rSun
-    !dz = (CoordMax_D(iDimHorizontal)-CoordMin_D(iDimHorizontal))/n3 * rSun
-
-    ! Constant multiplier converted from SI [m] to CGS units [cm]
-    ! dV_cell / (1AU)^2 * 1e2
-    ! dVperd2 = dx*dy*dz /(1.496e11)**2 * 1e2
-
-    ! Solid angle obtained by the emitting surface at 1AU distance
-    ! dOmega = dy*dz / (1.496e11)**2
-
-    ! dVperd2/dOmega = dx * 1e2
-
 
   end subroutine read_data
 
