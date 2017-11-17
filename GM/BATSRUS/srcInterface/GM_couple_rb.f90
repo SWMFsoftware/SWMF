@@ -46,11 +46,9 @@ module GM_couple_rb
 
   real, parameter :: noValue=-99999.
 
-  integer, parameter :: maxMessages=10
   integer :: iError
 
 
-  integer, parameter :: vol_=1, z0x_=2, z0y_=3, bmin_=4, rho_=5, p_=6
 
 contains
   !===========================================================================
@@ -78,44 +76,37 @@ contains
     end if
 
     if(.not.allocated(MHD_SUM_vol))then
-       allocate( MHD_SUM_vol(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_SUM_vol")
+       allocate( MHD_SUM_vol(isize,jsize))
        MHD_SUM_vol = 0.
     end if
 
     if(.not.allocated(MHD_SUM_rho))then
-       allocate( MHD_SUM_rho(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_SUM_rho")
+       allocate( MHD_SUM_rho(isize,jsize))
        MHD_SUM_rho = 0.
     end if
 
     if(.not.allocated(MHD_SUM_p))then
-       allocate( MHD_SUM_p(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_SUM_p")
+       allocate( MHD_SUM_p(isize,jsize))
        MHD_SUM_p = 0.
     end if
 
     if(.not.allocated(MHD_Beq))then
-       allocate( MHD_Beq(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_Beq")
+       allocate( MHD_Beq(isize,jsize))
        MHD_Beq = 0.
     end if
 
     if(.not.allocated(MHD_Xeq))then
-       allocate( MHD_Xeq(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_Xeq")
+       allocate( MHD_Xeq(isize,jsize))
        MHD_Xeq = 0.
     end if
 
     if(.not.allocated(MHD_Yeq))then
-       allocate( MHD_Yeq(isize,jsize), stat=iError )
-       call alloc_check(iError,"MHD_Yeq")
+       allocate( MHD_Yeq(isize,jsize))
        MHD_Yeq = 0.
     end if
 
     if(.not.allocated(MHD_lat_boundary))then
-       allocate( MHD_lat_boundary(jsize), stat=iError )
-       call alloc_check(iError,"MHD_lat_boundary")
+       allocate( MHD_lat_boundary(jsize))
        MHD_lat_boundary = 0
     end if
 

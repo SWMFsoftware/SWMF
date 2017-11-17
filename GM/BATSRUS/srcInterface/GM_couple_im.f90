@@ -891,8 +891,7 @@ contains
     end if
 
     ! Arrays needed for the field line integrals
-    allocate( MHD_SUM_vol(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_SUM_vol")
+    allocate( MHD_SUM_vol(isize,jsize))
     MHD_SUM_vol = 0.
 
     if(DoMultiFluidIMCoupling)then
@@ -908,28 +907,22 @@ contains
        MHD_SUM_p = 0.
     end if
 
-    allocate( MHD_Beq(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_Beq")
+    allocate( MHD_Beq(isize,jsize))
     MHD_Beq = 0.
 
-    allocate( MHD_Xeq(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_Xeq")
+    allocate( MHD_Xeq(isize,jsize))
     MHD_Xeq = 0.
 
-    allocate( MHD_Yeq(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_Yeq")
+    allocate( MHD_Yeq(isize,jsize))
     MHD_Yeq = 0.
 
-    allocate( MHD_tmp(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_tmp")
+    allocate( MHD_tmp(isize,jsize))
     MHD_tmp = 0.
 
-    allocate( MHD_Fluxerror(isize,jsize), stat=iError )
-    call alloc_check(iError,"MHD_Fluxerror")
+    allocate( MHD_Fluxerror(isize,jsize))
     MHD_Fluxerror = 0.
 
-    allocate( MHD_lat_boundary(jsize), stat=iError )
-    call alloc_check(iError,"MHD_lat_boundary")
+    allocate( MHD_lat_boundary(jsize))
     MHD_lat_boundary = 0
 
   end subroutine allocate_gm_im
