@@ -633,11 +633,9 @@ contains
     real, parameter :: gammaIH=1.5
     real, parameter :: R2=12.50
     integer,parameter::nPowerIndex=2
-    logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'get_gamma_emp'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    !--
     R1=Rs_PFSSM
     !\
     ! Calculate cell-centered spherical coordinates::
@@ -667,7 +665,6 @@ contains
        gammaOut = BernoulliFactor/(BernoulliFactor-1.0)
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_gamma_emp
   !============================================================================
 
@@ -688,11 +685,9 @@ contains
     real, parameter :: AreaRatio = (cAU/rSun)**2
     real, parameter :: RhoV =  AreaRatio * RhoVAt1AU
     real, parameter :: VAlfvenMin = 1.0e5   ! 100 km/s
-    logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'get_total_wave_energy_dens'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    !--
     !\
     ! Calculate cell-centered spherical coordinates::
     RR   = sqrt(X**2+Y**2+Z**2)
@@ -716,7 +711,6 @@ contains
          * RhoV/&
          max(abs(VAlfvenSI) * ExpansionFactorInv, VAlfvenMin)
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_total_wave_energy_dens
   !============================================================================
   subroutine write_expansion_tec
