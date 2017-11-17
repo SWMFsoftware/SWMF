@@ -1933,12 +1933,12 @@ contains
        NameVar, nVarData, nPoint, Data_VI, iPoint_I, Pos_DI)
 
     use IH_BATL_lib,    ONLY: &
-         nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB
+         nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, &
+         iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
          No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitRhoU_, UnitEnergyDens_, UnitT_
     use IH_ModGeometry, ONLY: true_cell
     use IH_ModAdvance, ONLY: ExtraSource_ICB
-    use IH_ModMain, ONLY: iTest, jTest, kTest, BlkTest
 
     character(len=*), intent(inout):: NameVar  ! List of variables
     integer,          intent(inout):: nVarData ! Number of variables in Data_VI
@@ -2018,7 +2018,7 @@ contains
     end do
 
     if(DoTestMe)write(*,*) NameSub,' finished with source=', &
-         ExtraSource_ICB(:,iTest,jTest,kTest,BlkTest)
+         ExtraSource_ICB(:,iTest,jTest,kTest,iBlockTest)
 
   end subroutine IH_put_from_pt
   !===========================================================================
