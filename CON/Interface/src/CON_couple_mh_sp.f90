@@ -250,7 +250,7 @@ contains
                     nIndex          = nAux, &
                     iIndexOrigin_II = nint(RouterScSp%&
                     BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                    RSoftBoundary   =  RSc, &
+                    RSoftBoundaryIn   =  RSc, &
                     UseInputInGenCoord = .true.)
             end if
             if(is_proc(SC_))then
@@ -330,7 +330,7 @@ contains
                     nIndex          = nAux, &
                     iIndexOrigin_II = nint(RouterIhSp%&
                     BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                    RSoftBoundary   =  RIh, & 
+                    RSoftBoundaryIn   =  RIh, & 
                     UseInputInGenCoord = .true.)
             end if
             if(is_proc(IH_))then

@@ -299,13 +299,13 @@ contains
   end subroutine IH_get_particle_coords
   !===================================================================!
   subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, &
-       nIndex, iIndexOrigin_II, RSoftBoundary, UseInputInGenCoord)
+       nIndex, iIndexOrigin_II, RSoftBoundaryIn, UseInputInGenCoord)
     integer,          intent(in) :: nLine
     real,             intent(in) :: XyzOrigin_DI(3, 1)
     integer,          intent(in) :: iTraceMode
     integer,          intent(in) :: nIndex
     integer,          intent(in) :: iIndexOrigin_II(1,1) 
-    real,    optional,intent(in) :: RSoftBoundary
+    real,    optional,intent(in) :: RSoftBoundaryIn
     logical, optional,intent(in) :: UseInputInGenCoord
 
     character(len=*), parameter :: NameSub='IH_extract_line'

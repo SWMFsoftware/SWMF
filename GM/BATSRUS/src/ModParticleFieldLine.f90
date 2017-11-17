@@ -28,16 +28,14 @@ module ModParticleFieldLine
   SAVE
   private ! except
 
-  public:: n_particle_reg_max
-  public:: n_particle_reg
   public:: read_particle_line_param
   public:: init_particle_line
-  public:: set_soft_boundary
   public:: extract_particle_line
   public:: add_to_particle_line
   public:: advect_particle_line
   public:: get_particle_data
   public:: write_plot_particle
+
   ! Local variables ----------------------
 
   ! kinds of particles used to generate a magnetic field line
@@ -105,7 +103,7 @@ module ModParticleFieldLine
 
   ! maximum allowed number of field lines
   integer, parameter :: nFieldLineMax = 1000
-
+  
   ! number of active field lines
   integer:: nFieldLine = 0
 
@@ -113,7 +111,7 @@ module ModParticleFieldLine
   ! "soft" means that particles are allowed beyond this boundary BUT:
   ! - during extraction first particle that crosses it is kept but extraction
   !   of this line is stopped
-  real:: RBoundarySoft = -1.0
+  real:: RSoftBoundary = -1.0
 
   ! may need to apply corrections during line tracing
   logical:: UseCorrection=.false.
@@ -132,18 +130,8 @@ module ModParticleFieldLine
   ! state and indexes for particles:
   real,    pointer::  StateEnd_VI(:,:), StateReg_VI(:,:)
   integer, pointer:: iIndexEnd_II(:,:),iIndexReg_II(:,:)
-  public :: KindReg_, x_,y_, z_, fl_, id_
+  public :: KindReg_, x_,y_, z_, fl_, id_, RSoftBoundary
 contains
-  !============================================================================
-  integer function n_particle_reg_max()
-    !--------------------------------------------------------------------------
-    n_particle_reg_max = Particle_I(KindReg_)%nParticleMax
-  end function n_particle_reg_max
-  !============================================================================
-  integer function n_particle_reg()
-    !--------------------------------------------------------------------------
-    n_particle_reg = Particle_I(KindReg_)%nParticle
-  end function n_particle_reg
   !============================================================================
   subroutine read_particle_line_param(NameCommand)
 
@@ -250,24 +238,6 @@ contains
          call extract_particle_line(nLineInit, XyzLineInit_DI)
     call test_stop(NameSub, DoTest)
   end subroutine init_particle_line
-  !============================================================================
-  subroutine set_soft_boundary(RBoundarySoftIn)
-    ! set additional boundary imposed by user
-    real, intent(in):: RBoundarySoftIn
-
-    ! soft boundary can be set only once!
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'set_soft_boundary'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    if(RBoundarySoft < 0.0)then
-       RBoundarySoft = RBoundarySoftIn
-    else
-       call CON_stop(NameThisComp//':'//NameSub//&
-            ': soft boundary may be set only once and may not be changed!')
-    end if
-    call test_stop(NameSub, DoTest)
-  end subroutine set_soft_boundary
   !============================================================================
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
        iIndexStart_II,&
@@ -542,9 +512,9 @@ contains
     !==========================================================================
     subroutine stage1
       !------------------------------------------------------------------------
-      if(RBoundarySoft > 0.0)then
+      if(RSoftBoundary > 0.0)then
          if(sum(StateEnd_VI(1:nDim,iParticle)**2) &
-              > rBoundarySoft**2)then
+              > RSoftBoundary**2)then
             call mark_undefined(KindEnd_, iParticle)
             IsEndOfSegment = .true.
             RETURN
@@ -1057,7 +1027,6 @@ contains
     use ModUtilities, ONLY: split=>split_string
     ! the subroutine gets variables specified in the string StringVar
     ! and writes them into DataOut_VI; data is for all particles otherwise
-    ! NOTE: function n_particle_reg can be used to find size beforehand
     integer, intent(in) :: nSize
     real,    intent(out):: DataOut_VI(nSize,Particle_I(KindReg_)%nParticle)
     character(len=*),intent(in) :: NameVar
@@ -1187,7 +1156,7 @@ contains
 
     ! get the data on this processor
     if(allocated(PlotVar_VI)) deallocate(PlotVar_VI)
-    allocate(PlotVar_VI(5,n_particle_reg()))
+    allocate(PlotVar_VI(5,Particle_I(KindReg_)%nParticle))
     call get_particle_data(5, 'xx yy zz fl id', PlotVar_VI)
 
     call save_plot_file(&

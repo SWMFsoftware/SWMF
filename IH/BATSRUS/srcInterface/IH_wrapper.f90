@@ -423,8 +423,8 @@ contains
          UseParticles
     use IH_ModPhysics,ONLY:No2Si_V, UnitX_
     use IH_ModGeometry, ONLY: TypeGeometry, RadiusMin, RadiusMax
-    use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D
-    use IH_ModParticleFieldLine
+    use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
+    use IH_ModParticleFieldLine, ONLY: KindReg_
     logical:: DoTest,DoTestMe
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
@@ -488,7 +488,7 @@ contains
        call init_decomposition_dd(&
        MH_LineDecomposition, IH_, nDim=1)
        if(is_proc0(IH_))then
-          nParticle = n_particle_reg_max()
+          nParticle = Particle_I(KindReg_)%nParticleMax
           call get_root_decomposition_dd(&
                MH_LineDecomposition, &
                (/n_proc(IH_)/),      &
@@ -1337,22 +1337,22 @@ contains
   !============================================================================
 
   subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, nIndex, &
-       iIndexOrigin_II, RSoftBoundary,UseInputInGenCoord)
+       iIndexOrigin_II, RSoftBoundaryIn,UseInputInGenCoord)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, &
-         ONLY: extract_particle_line, set_soft_boundary
+         ONLY: extract_particle_line, RSoftBoundary
     integer,          intent(in) :: nLine
     real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
     integer,          intent(in) :: iTraceMode
     integer,          intent(in) :: nIndex
     integer,          intent(in) :: iIndexOrigin_II(nIndex, nLine)
-    real,    optional,intent(in) :: RSoftBoundary
+    real,    optional,intent(in) :: RSoftBoundaryIn
     logical, optional,intent(in) :: UseInputInGenCoord
     character(len=*), parameter:: NameSub='IH_extract_line'
     !--------------------------------------------------------------------------
     ! set the soft boundary if provided
-    if(present(RSoftBoundary))&
-         call set_soft_boundary(RSoftBoundary)
+    if(present(RSoftBoundaryIn))&
+         RSoftBoundary = RSoftBoundaryIn
     ! extract field lines starting at input points
     call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_II,&
          UseInputInGenCoord)
@@ -1383,7 +1383,8 @@ contains
        nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
     use CON_router, ONLY: LocalGDType
-    use IH_ModParticleFieldLine, ONLY: n_particle_reg, n_particle_reg_max
+    use IH_BATL_lib, ONLY: Particle_I
+    use IH_ModParticleFieldLine, ONLY: KindReg_
     type(LocalGDType),intent(in)::GridDescriptor
     integer,intent(in)    :: iBlockUsed,nIndex
     logical,intent(out)   :: IsInterfacePoint
@@ -1391,16 +1392,16 @@ contains
     real,   intent(inout) :: Xyz_D(nDim)
     integer,intent(inout) :: iIndex_I(nIndex)
     !----------------------------------------------------------
-    IsInterfacePoint = iIndex_I(1) <= n_particle_reg()
-    Xyz_D(1) = mod(Xyz_D(1), real(n_particle_reg_max()))
+    IsInterfacePoint = iIndex_I(1) <= Particle_I(KindReg_)%nParticle
+    Xyz_D(1) = mod(Xyz_D(1), real(Particle_I(KindReg_)%nParticleMax))
   end subroutine IH_line_interface_point
 
   !============================================================================
 
   subroutine IH_get_scatter_line(nParticle, Coord_DI, iIndex_II, nAux, iAux_II)
-    use IH_BATL_lib, ONLY: nDim, xyz_to_coord
+    use IH_BATL_lib, ONLY: nDim, xyz_to_coord, Particle_I
     use IH_ModParticleFieldLine, ONLY: &
-         get_particle_data, n_particle_reg
+         get_particle_data, KindReg_
     integer,              intent(out):: nParticle
     real,    allocatable, intent(out):: Coord_DI(:,:)
     integer, allocatable, intent(out):: iIndex_II(:,:)
@@ -1417,10 +1418,10 @@ contains
     if(allocated(iAux_II)) deallocate(iAux_II)
     
     if(allocated(Buff_II)) deallocate(Buff_II)
-    nParticle = n_particle_reg()
+    nParticle = Particle_I(KindReg_)%nParticle
     allocate(Buff_II(5,nParticle))
     ! Buff_II is allocated inside the next call
-    call get_particle_data(5, 'xx yy zz fl id', Buff_II)!, nParticle)
+    call get_particle_data(5, 'xx yy zz fl id', Buff_II)
     
     ! indices to get state vector are not available yet,
     ! they should be determined outside of this subroutine
@@ -2293,10 +2294,11 @@ contains
   end subroutine IH_get_for_ee
   !===========================
   integer function IH_n_particle(iBlockLocal)
-    use IH_ModParticleFieldLine, ONLY: n_particle_reg
+    use IH_ModParticleFieldLine, ONLY: KindReg_
+    use IH_BATL_lib, ONLY: Particle_I
     integer, intent(in) :: iBlockLocal
     !---------------------------------
-    IH_n_particle = n_particle_reg()
+    IH_n_particle = Particle_I(KindReg_)%nParticle
   end function IH_n_particle
 
 end module IH_wrapper
