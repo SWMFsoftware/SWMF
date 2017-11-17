@@ -3,9 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModCharacteristicMhd
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
-
   use ModCoordTransform, ONLY: cross_product
   use ModVarIndexes
   use ModPhysics, ONLY: Gamma, GammaMinus1, InvGammaMinus1
@@ -31,10 +28,8 @@ contains
     real,dimension(3),intent(out)::Tangent1_D,Tangent2_D
 
     integer,dimension(1)::iMinAbs
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'generate_tangent12'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     iMinAbs=minloc(abs(Normal_D))
 
     ! Construct the vector along one of the coordinate axis which is
@@ -45,7 +40,6 @@ contains
     Tangent1_D=Tangent1_D/sqrt(sum(Tangent1_D**2))
     Tangent2_D=cross_product(Normal_D,Tangent1_D)
 
-    call test_stop(NameSub, DoTest)
   end subroutine generate_tangent12
   !============================================================================
 
@@ -155,10 +149,8 @@ contains
 
     real:: Tmp
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'decompose_state'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     dState_V=StateL_V-StateR_V
     ! Scalar variables
     RhoL    =  StateL_V(rho_)
@@ -376,7 +368,6 @@ contains
     ! CaR=CaR*sign(1.0,BnR)*SignBnH
     call set_eigenvalues(EigenvalueR_V,CsR,CaR,CfR)
 
-    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
     !-------------------------------------------------------------------------!
@@ -440,10 +431,8 @@ contains
     logical,intent(in)::IsBoundary
     integer::iWave
     real::Eps_V(nVar-1),Lambda
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_fixed_abs_eigenvalue'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     Eps_V=max(LambdaB0,abs(Eigenvalue_V(FastRW_)-Eigenvalue_V(FastLW_))*0.05)
     do iWave=1,nVar-1
        Lambda=Eigenvalue_V(iWave)
@@ -457,7 +446,6 @@ contains
 
     if(Climit > 0.0) EigenvalueFixed_V = min(Climit, EigenvalueFixed_V)
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_fixed_abs_eigenvalue
   !============================================================================
 
