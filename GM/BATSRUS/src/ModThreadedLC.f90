@@ -323,12 +323,12 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'solve_boundary_thread'
     !--------------------------------------------------------------------------
-    !call test_start(NameSub, DoTest, iBlock)
-    !if(iBlock == iBlockTest .and.iProc == iProcTest &
-    !      .and. j==jTest.and.k==kTest)then
-    ! else
-    DoTestCell = .false.
-    !endif
+    if(iBlock == iBlockTest .and.iProc == iProcTest &
+          .and. j==jTest .and. k==kTest)then
+       call test_start(NameSub, DoTest, iBlock)
+    else
+       DoTestCell = .false.
+    endif
 
     !\
     ! Initialize all output parameters from 0D solution
@@ -576,7 +576,7 @@ contains
        write(*,*)'Pressure 1D (SI) = ',PeSiOut
        write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
     end if
-    !call test_stop(NameSub, DoTest, iBlock)
+
   contains
     !==========================================================================
     subroutine set_pressure
