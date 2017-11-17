@@ -174,11 +174,8 @@ contains
     real, intent(out):: IonMassPerChargeOut
 
     real :: zAverage, NatomicSi
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_ion_mass_per_charge_point'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     if(.not.UseIdealEos)then
        call user_material_properties(State_V, &
             AverageIonChargeOut=zAverage, NatomicOut=NatomicSi)
@@ -204,7 +201,6 @@ contains
 
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine set_ion_mass_per_charge_point
   !============================================================================
 
