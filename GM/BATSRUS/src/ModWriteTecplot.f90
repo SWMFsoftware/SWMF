@@ -5,7 +5,7 @@
 module ModWriteTecplot
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest
+       test_start, test_stop, lVerbose
 
   ! Save cell centered data into Tecplot files
   !
@@ -107,10 +107,7 @@ contains
     character(len=*), parameter:: NameSub = 'write_tecplot_data'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    if(iBlock==iBlockTest)then
-    else
-       DoTest = .false.; DoTest = .false.
-    end if
+
     if(DoTest) write(*,*) NameSub,' starting with nPlotVar=', nPlotVar
 
     IjkMin_D = 1
@@ -1686,7 +1683,7 @@ contains
 
     use ModProcMH
     use ModIO, ONLY: write_prefix, iUnitOut
-    use ModMain, ONLY : lVerbose, nBlock, nBlockMax, nBlockALL
+    use ModMain, ONLY: nBlock, nBlockMax, nBlockALL
     use ModAdvance,  ONLY: iTypeAdvance_B, iTypeAdvance_BP, SkippedBlock_
     use ModNodes
     use ModMpi

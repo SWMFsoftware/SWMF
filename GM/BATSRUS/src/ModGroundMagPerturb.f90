@@ -4,7 +4,7 @@
 module ModGroundMagPerturb
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, lVerbose
 
   use ModPlanetConst,    ONLY: rPlanet_I, Earth_
   use ModPhysics,        ONLY: rCurrents, No2Io_V, Si2No_V, UnitB_, UnitJ_
@@ -757,7 +757,6 @@ contains
     ! set nMagnetometer
 
     use ModProcMH, ONLY: iProc, iComm
-    use ModMain,   ONLY: lVerbose
     use ModIoUnit, ONLY: UnitTmp_
     use ModIO,     ONLY: iUnitOut, Write_prefix
     use ModUtilities, ONLY: open_file, close_file
@@ -848,7 +847,6 @@ contains
     ! Input values read from file are saved in module-level variables.
 
     use ModProcMH, ONLY: iProc, iComm
-    use ModMain, ONLY: lVerbose
     use ModIO, ONLY: iUnitOut, Write_prefix
     use ModIoUnit, ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file

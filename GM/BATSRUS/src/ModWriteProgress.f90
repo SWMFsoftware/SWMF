@@ -5,7 +5,7 @@
 module ModWriteProgress
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, lVerbose
 
   implicit none
 

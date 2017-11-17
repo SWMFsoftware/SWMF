@@ -4,10 +4,10 @@
 
 module ModBatsrusMethods
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
-
   ! This module contains the top level methods for BATSRUS
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, lVerbose
 
   implicit none
 
@@ -629,13 +629,12 @@ contains
 
   subroutine BATS_init_constrain_b
     use ModProcMH
-    use ModMain, ONLY: lVerbose, x_, y_, z_, nBlock
     use ModConstrainDivB, ONLY: DoInitConstrainB, Bcenter2Bface
     use ModProjectDivB, ONLY: proj_get_divb, project_divb
     use ModNumConst, ONLY: cTiny
     use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
     use ModIO, ONLY: write_prefix, iUnitOut
-    use BATL_lib, ONLY: Xyz_DGB, message_pass_cell
+    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_, nBlock, message_pass_cell
 
     ! Local variables
     real, external :: maxval_loc_abs_BLK

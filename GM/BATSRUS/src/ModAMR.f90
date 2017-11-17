@@ -5,7 +5,7 @@
 module ModAMR
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, lVerbose
 
   use ModCellGradient, ONLY: calc_gradient
 
@@ -222,8 +222,7 @@ contains
 
     use ModProcMH
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
-         lVerbose, UseB, Dt_BLK, &
-         iNewGrid, iNewDecomposition, UseHighOrderAMR, &
+         UseB, Dt_BLK, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
          UseLocalTimeStep
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
          count_true_cells

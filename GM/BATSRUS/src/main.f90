@@ -4,7 +4,7 @@
 program BATSRUS
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, lVerbose
 
   use ModBatsrusMethods, ONLY: &
        BATS_init_session, &
@@ -21,7 +21,6 @@ program BATSRUS
        time_accurate, time_loop, time_simulation, t_max, &
        n_step, nIter, iteration_number, &
        IsLastRead, &
-       lVerbose, &
        dn_timing, UseTiming, UseTimingAll, iUnitTiming
   use ModSetParameters, ONLY: set_parameters
   use ModWriteProgress, ONLY: write_progress
@@ -245,6 +244,7 @@ contains
     !/
 
     ! Show speed as cells/second/PE/step
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'show_progress'
     !--------------------------------------------------------------------------
@@ -321,6 +321,7 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
   implicit none
   character (len=*), intent(in)  :: String
   logical          , intent(out) :: DoTest, DoTestMe
+
   !----------------------------------------------------------------------------
 end subroutine CON_set_do_test
 !==============================================================================

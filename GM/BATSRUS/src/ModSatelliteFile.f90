@@ -4,7 +4,7 @@
 module ModSatelliteFile
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, lVerbose
 
   use ModUtilities, ONLY: open_file, close_file
 
@@ -259,7 +259,7 @@ contains
   subroutine read_satellite_input_files
 
     use ModProcMH,      ONLY: iProc, iComm
-    use ModMain,        ONLY: MaxDim, lVerbose, TypeCoordSystem, StartTime
+    use ModMain,        ONLY: MaxDim, TypeCoordSystem, StartTime
     use CON_axes,       ONLY: transform_matrix
     use ModTimeConvert, ONLY: time_int_to_real
     use ModIoUnit,      ONLY: UnitTmp_

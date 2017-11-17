@@ -10,8 +10,7 @@ module ModMain
   use ModNumConst, ONLY: cPi, cTwoPi
 
   ! Total number of used blocks on all processors
-  use BATL_lib, ONLY: nBlock, nBlockAll => nNodeUsed, Unused_B, &
-       lVerbose
+  use BATL_lib, ONLY: nBlock, nBlockAll => nNodeUsed, Unused_B, lVerbose
 
   implicit none
 
