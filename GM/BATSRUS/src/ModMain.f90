@@ -11,9 +11,6 @@ module ModMain
 
   ! Total number of used blocks on all processors
   use BATL_lib, ONLY: nBlock, nBlockAll => nNodeUsed, Unused_B, &
-       test_string => StringTest, iTest, jTest, kTest, &
-       BlKTest => iBlockTest, PROCTest => iProcTest, xTest, yTest, zTest, &
-       XyzTestCell_D, VARTest => iVarTest, DIMTest => iDimTest,&
        lVerbose
 
   implicit none
