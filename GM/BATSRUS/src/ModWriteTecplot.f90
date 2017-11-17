@@ -1746,10 +1746,8 @@ contains
     deallocate(IndexNode_VNB)
 
     ! Allocate memory for storing the node offsets
-    allocate( NodeOffset   (nBlockALL*NodesPerBlock), stat=iError)
-    call alloc_check(iError,"NodeOffset")
-    allocate( NodeOffsetMax(nBlockALL*NodesPerBlock), stat=iError)
-    call alloc_check(iError,"NodeOffsetMax")
+    allocate( NodeOffset   (nBlockALL*NodesPerBlock))
+    allocate( NodeOffsetMax(nBlockALL*NodesPerBlock))
     NodeOffset=0
 
     ! Loop to compute node offsets

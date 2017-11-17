@@ -51,7 +51,6 @@ contains
 
     ! use to be an automatic array
     real, dimension(:,:), allocatable :: XyzOld_DI
-    integer :: iError
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'advect_points'
@@ -63,8 +62,7 @@ contains
        ! Full step uses StateOld
        call advect_points1(0.0, Dt, nPoint, Xyz_DI, Xyz_DI)
     else
-       allocate(XyzOld_DI(3,nPoint), stat=iError);
-       call alloc_check(iError,"XyzOld_DI")
+       allocate(XyzOld_DI(3,nPoint));
        XyzOld_DI = Xyz_DI
        ! Half step uses StateOld
        call advect_points1(1.0, Dt/2, nPoint, XyzOld_DI, Xyz_DI)
@@ -111,8 +109,7 @@ contains
     if(DoTest)write(*,*)NameSub,' old Xyz_DI=',Xyz_DI
 
     ! Allocate arrays that used to be automatic
-    allocate(State_VI(Weight_:nState,nPoint), stat=iError)
-    call alloc_check(iError,"advect_points1 arrays")
+    allocate(State_VI(Weight_:nState,nPoint))
 
     ! Get weight, density and momentum on local PE for all points
     do iPoint = 1, nPoint
