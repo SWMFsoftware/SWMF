@@ -158,13 +158,13 @@ module SP_ModGrid
        'DLogRho   ', &
        'RhoOld    ', &
        'BOld      ', &
-       'Flux Total', &
-       'Flux GOES1', &
-       'Flux GOES2', &
-       'Flux GOES3', &
-       'Flux GOES4', &
-       'Flux GOES5', &
-       'Flux GOES6', &
+       'Flux_Total', &
+       'Flux_GOES1', &
+       'Flux_GOES2', &
+       'Flux_GOES3', &
+       'Flux_GOES4', &
+       'Flux_GOES5', &
+       'Flux_GOES6', &
        'EFlux     '  /)
   !----------------------------------------------------------------------------
   ! Distribution vector;
