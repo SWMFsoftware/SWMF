@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -22,6 +25,7 @@ module ModUser
   real :: xLeft, xRight, cSoundX, Ux, CosSlope, SinSlope
 
 contains
+  !============================================================================
 
   subroutine user_read_inputs
     use ModMain
@@ -29,7 +33,10 @@ contains
     use ModReadParam
 
     character (len=100) :: NameCommand
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     do
        if(.not.read_line() ) EXIT
@@ -50,16 +57,19 @@ contains
                'user_read_inputs: unrecognized command: '//NameCommand)
        end select
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
-  !=====================================================================
+  !============================================================================
 
   subroutine user_init_session
 
     use ModProcMH,  ONLY: iProc
     use ModAdvance, ONLY: Ux_
     use ModPhysics, ONLY: ShockSlope, ShockLeftState_V
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! Calculate and store the cos and sin of the shock slope
     CosSlope = cos(atan(ShockSlope))
     SinSlope = sin(atan(ShockSlope))
@@ -78,9 +88,9 @@ contains
        write(*,*)'user_init_session: cSoundX,  Ux=',cSoundX,Ux
     endif
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
-  !=====================================================================
+  !============================================================================
 
   subroutine user_set_ics(iBlock)
 
@@ -98,7 +108,10 @@ contains
     real :: Perturb_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real :: pTotal
     integer :: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Redo rotated state so that div B = 0 if necessary
     if(ShockSlope /= 0.0 .and. .not. IsSmooth)then
@@ -186,9 +199,9 @@ contains
        end where
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
-  !========================================================================
+  !============================================================================
 
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
@@ -204,13 +217,16 @@ contains
     logical ,intent(inout)       :: IsFound
 
     real :: xCenter, yCenter, xShifted, x_I(5), Distance
-    !------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     xCenter = 0.5*(Xyz_DGB(x_,nI,nJ,nK,iBlock)+Xyz_DGB(x_,1,1,1,iBlock))
     yCenter = 0.5*(Xyz_DGB(y_,nI,nJ,nK,iBlock)+Xyz_DGB(y_,1,1,1,iBlock))
     xShifted = xCenter + ShockSlope*yCenter
 
-    !write(*,*)'xLeft,xRight,Ux,cSoundX=',xLeft,xRight,Ux,cSoundX
-    !call stop_mpi('Debug')
+    ! write(*,*)'xLeft,xRight,Ux,cSoundX=',xLeft,xRight,Ux,cSoundX
+    ! call stop_mpi('Debug')
 
     ! Location of sound wave edges and the tangential discontinuity
     x_I(1) = xLeft  + (Ux-cSoundX)*time_simulation
@@ -233,6 +249,9 @@ contains
 
     IsFound = .true.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
+  !============================================================================
 
 end module ModUser
+!==============================================================================

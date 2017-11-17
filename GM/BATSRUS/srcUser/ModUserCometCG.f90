@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-!========================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, xTest, yTest, zTest
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_set_boundary_cells,         &
@@ -13,17 +15,16 @@ module ModUser
 
   use ModSize
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: xTest, yTest, zTest
   use ModVarIndexes, ONLY: nVar
   use ModNumConst, ONLY: cPi
   use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
        UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
        UnitP_, UnitN_, UnitX_, Gamma
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   !\
-  ! Here you must define a user routine Version number and a 
+  ! Here you must define a user routine Version number and a
   ! descriptive string.
   !/
   real,              parameter :: VersionUserModule = 1.0
@@ -41,7 +42,7 @@ module ModUser
 
   ! Rotation of the comet (changes the direction of the Sun)
   real:: RotationCometHour = 12.0
-  
+
   ! Angular velocity
   real:: OmegaCometSi
 
@@ -51,7 +52,6 @@ module ModUser
   ! The time between updates
   real:: DtUpdateSi
   integer:: DnUpdate = 0, nStepStart
-
 
   ! minimum and maximum temperature
   real :: TempCometMinDim, TempCometMaxDim, TempCometMin, TempCometMax
@@ -66,7 +66,7 @@ module ModUser
   ! Maximum solar zenith angle for dayside production rate
   real :: SolarAngleMaxDim, SolarAngleMax
 
-  ! Parameters for y=ax+b to mimic the production rate and 
+  ! Parameters for y=ax+b to mimic the production rate and
   ! temperature distribution
   real :: SlopeProduction, bProduction, SlopeTemp, bTemp, cos75
 
@@ -87,8 +87,10 @@ contains
 
     character (len=100) :: NameCommand
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     do
        if(.not.read_line() ) EXIT
@@ -128,8 +130,9 @@ contains
     UseUserInitSession = .true.
     UseExtraBoundary   = .true.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-  !===========================================================================
+  !============================================================================
   subroutine user_init_session
 
     ! Read shape file and convert units
@@ -140,8 +143,11 @@ contains
     use ModConst, ONLY: cBoltzmann, cAtomicMass
     use ModVarIndexes, ONLY: MassFluid_I
     use ModBlockData, ONLY: MaxBlockData
-    !------------------------------------------------------------------------
-    ! We need to have unit conversions before reading the shape file 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    ! We need to have unit conversions before reading the shape file
     ! which contains everything in SI units
     call read_shape_file
 
@@ -170,12 +176,12 @@ contains
     ! From Gamma. Toth's derivations
     ! uNormal = sqrt( kT / m ), so TempToUnormal = sqrt( k/ m )
     ! and also unit conversions of temperature to SI, and velocity from SI
-    !TempToUnormal = sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
+    ! TempToUnormal = sqrt(cBoltzmann/(MassFluid_I(1)*cAtomicMass) * &
     !     No2Si_V(UnitTemperature_))*Si2No_V(UnitU_)
     !
     ! From Gamma. Toth's derivations
     ! T' = T/Gamma so and p = n*T' = rho*T/(Gamma*m) so TempToPressure = 1/(Gamma*m)
-    !TempToPressure = 1/(Gamma*MassFluid_I(1))
+    ! TempToPressure = 1/(Gamma*MassFluid_I(1))
 
     ! Calculate the parameters for production rate (y = a*cos(theta)+b)
     SlopeProduction = &
@@ -195,7 +201,7 @@ contains
     DtUpdateSi = AngleUpdateDeg*cDegToRad / abs(OmegaCometSi)
 
     ! Maximum amount of data to be stored in ModBlockData
-    ! This is for the inner boundary conditions. 
+    ! This is for the inner boundary conditions.
     ! In practice this is a rather generous overestimate.
     MaxBlockData = nVar*(nI+1)*(nJ+1)*(nK+1)
 
@@ -229,8 +235,9 @@ contains
             AngleUpdateDeg, DtUpdateSi
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-  !===========================================================================
+  !============================================================================
   subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, r_BLK
@@ -239,10 +246,14 @@ contains
 
     integer:: i, j, k
     real:: XyzInside_D(3)
-    !------------------------------------------------------------------------
+
     ! Place a point inside rMinShape sphere with transcendent coordinates
     ! to reduce chances of hitting the edge or corner of triangles
-    
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     XyzInside_D = rMinShape*(/cPi/10,cPi**2/50,cPi**3/700/)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
@@ -262,15 +273,16 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
+  !============================================================================
 
-  !=========================================================================
   subroutine read_shape_file
 
     use ModIoUnit, ONLY: UnitTmp_
     use ModCoordTransform, ONLY: cross_product
     use ModRandomNumber, ONLY: random_real
-    
+
     logical:: DoReadShapeFile = .true.
 
     integer:: nPoint, i, j, iPoint, iTriangle, iPoint1, iPoint2, iPoint3
@@ -281,8 +293,10 @@ contains
 
     character(len=100):: String1, String2
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_shape_file'
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.DoReadShapeFile) RETURN
     DoReadShapeFile = .false.
 
@@ -307,8 +321,8 @@ contains
     do iPoint = 1, nPoint
        read(UnitTmp_,*) String1, i, j, Xyz_DI(:,iPoint)
 
-       ! Perturb vertices of all triangles to avoid the the situation that 
-       ! a line segment is parallel to a triangle plane in 
+       ! Perturb vertices of all triangles to avoid the the situation that
+       ! a line segment is parallel to a triangle plane in
        ! is_segment_intersected
 
        Xyz_DI(1, iPoint) = Xyz_DI(1, iPoint) + random_real(iSeed)*1e-5
@@ -316,7 +330,7 @@ contains
        Xyz_DI(3, iPoint) = Xyz_DI(3, iPoint) + random_real(iSeed)*1e-5
 
        ! Convert from SI units to normalized unit
-       Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_) 
+       Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_)
     end do
     do iTriangle = 1, nTriangle
        read(UnitTmp_,*) String1, i, j, iPoint1, iPoint2, iPoint3
@@ -331,8 +345,8 @@ contains
             sqrt(sum(Normal_DI(:,iTriangle)**2))
     end do
 
-    !write(*,*)'!!! XyzTriangle_DII(:,:,1)=',XyzTriangle_DII(:,:,1)
-    !write(*,*)'!!! XyzTriangle_DII(:,:,n)=',XyzTriangle_DII(:,:,nTriangle)
+    ! write(*,*)'!!! XyzTriangle_DII(:,:,1)=',XyzTriangle_DII(:,:,1)
+    ! write(*,*)'!!! XyzTriangle_DII(:,:,n)=',XyzTriangle_DII(:,:,nTriangle)
 
     rMinShape = sqrt(minval(sum(Xyz_DI**2,DIM=1)))
     rMaxShape = sqrt(maxval(sum(Xyz_DI**2,DIM=1)))
@@ -344,8 +358,8 @@ contains
 
     close(UnitTmp_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_shape_file
-
   !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -379,10 +393,11 @@ contains
     integer:: nStepLonSun = -1
     real, save :: NormalSun_D(3)
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
-    !------------------------------------------------------------------------
-    ! We can use the saved values if 
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    ! We can use the saved values if
     ! not too much time or time step has passed since the last save
     if(  use_block_data(iBlock)                                      .and. &
          Time_Simulation < TimeSimulationSave_B(iBlock) + DtUpdateSi .and. &
@@ -392,7 +407,7 @@ contains
     end if
 
     ! Empty the block storage if we redo the calculation
-    if(use_block_data(iBlock)) call clean_block_data(iBlock) 
+    if(use_block_data(iBlock)) call clean_block_data(iBlock)
 
     if (iBoundary /= ExtraBc_) &
          call stop_mpi(NameSub//' is implemented for extra BC only')
@@ -403,8 +418,6 @@ contains
     if(nStepLonSun < n_step)then
 
        nStepLonSun = n_step
-
-       call set_oktest(NameSub, DoTest, DoTestMe)
 
        if(time_accurate)then
           ! The sun is moving clockwise in the rotating frame of the comet
@@ -503,7 +516,7 @@ contains
 
     ! Calculate the normal velocity
     uNormal = sqrt(TempCometLocal)*TempToUnormal
-    
+
     VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
     VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal*MassFluid_I(1)
     VarsGhostFace_V(P_)      = &
@@ -511,13 +524,13 @@ contains
 
     if (.false. .and. DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
-       
+
        write(*,*) 'FaceCoords_D  =', FaceCoords_D
        write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
        write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
        write(*,*) 'XyzIntersect_D=', XyzIntersect_D
-       write(*,*) 'XyzStart_D    =', XyzStart_D 
-       write(*,*) 'XyzEnd_D      =', XyzEnd_D 
+       write(*,*) 'XyzStart_D    =', XyzStart_D
+       write(*,*) 'XyzEnd_D      =', XyzEnd_D
        write(*,*) 'Normal_D      =', Normal_D
        write(*,*) 'CosAngle      =', CosAngle
        write(*,*) 'ProductionRate=', ProductionRateLocal
@@ -538,9 +551,10 @@ contains
     ! Store for future time steps
     call put_block_data(iBlock, nVar, VarsGhostFace_V)
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
-
   !============================================================================
+
   logical function is_segment_intersected(Xyz1_D, Xyz2_D, &
        IsOddIn, XyzIntersectOut_D, NormalOut_D)
 
@@ -566,10 +580,10 @@ contains
     real, dimension(3):: v1_D, Xyz_D, u_D, v_D, w_D
     real:: nDotP2P1, nDotV1P1, u2, v2, uDotV, wDotU, wDotV, InvDenom
 
-    character(len=*), parameter:: NameSub = 'is_segment_intersected'
-    !------------------------------------------------------------------------
     ! Default is to check for first intersection only
     ! (for shadows and convex shapes)
+    character(len=*), parameter:: NameSub = 'is_segment_intersected'
+    !--------------------------------------------------------------------------
     IsOdd = .false.
     if(present(IsOddIn))   IsOdd = IsOddIn
 
@@ -586,7 +600,7 @@ contains
              write(*,*) 'Test:', &
                   sum(Normal_DI(:,iTriangle)*(Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))
              CYCLE
-          else 
+          else
              CYCLE
           end if
        end if
@@ -611,8 +625,8 @@ contains
        ! 0 < Ratio1, Ratio2 and Ratio1 + Ratio2 < 1 both hold.
 
        ! Vectors relative to the first vertex
-       u_D = XyzTriangle_DII(:,2,iTriangle) - v1_D 
-       v_D = XyzTriangle_DII(:,3,iTriangle) - v1_D 
+       u_D = XyzTriangle_DII(:,2,iTriangle) - v1_D
+       v_D = XyzTriangle_DII(:,3,iTriangle) - v1_D
        w_D = Xyz_D                          - v1_D
 
        u2 = sum(u_D**2)
@@ -670,7 +684,7 @@ contains
        iTriangle = iTriangle_I(iMinRatio)
        NormalOut_D = Normal_DI(:,iTriangle)
 
-       if (nIntersect > 1) then          
+       if (nIntersect > 1) then
 !          write(*,*) 'nIntersect: ', nIntersect, 'Ratio_I: ', Ratio_I(1:nIntersect)
 !          write(*,*) 'Xyz1_D: ', Xyz1_D
 !          write(*,*) 'Xyz2_D: ', Xyz2_D
@@ -680,7 +694,7 @@ contains
 !             write(*,*) XyzTriangle_DII(:,2,iTriangle)
 !             write(*,*) XyzTriangle_DII(:,3,iTriangle)
 !          end do
-          write(*,*)  'Ratio_I(iMinRatio)            = ', Ratio_I(iMinRatio) 
+          write(*,*)  'Ratio_I(iMinRatio)            = ', Ratio_I(iMinRatio)
           write(*,*)  'minval(Ratio_I(1:nIntersect)) = ', minval(Ratio_I(1:nIntersect))
           write(*,*)  'Ratio_I(1:nIntersect)', Ratio_I(1:nIntersect)
        end if
@@ -688,7 +702,7 @@ contains
     if(present(XyzIntersectOut_D)) then
        XyzIntersectOut_D = Xyz1_D + minval(Ratio_I(1:nIntersect))*(Xyz2_D -  Xyz1_D)
     end if
-    
+
     if(.not. IsOdd)then
        ! The line segment was not intersected by any triangle
        is_segment_intersected = .false.
@@ -700,5 +714,7 @@ contains
     is_segment_intersected = modulo(nIntersect, 2) == 1
 
   end function is_segment_intersected
+  !============================================================================
 
 end module ModUser
+!==============================================================================

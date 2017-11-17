@@ -1,12 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iProcTest
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_set_ics
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
@@ -15,11 +18,11 @@ module ModUser
   real, parameter :: alpha = 2.0, beta = 3.0 ! Stretching factors
 
 contains
+  !============================================================================
 
-  !=============================================================================
   subroutine user_set_ics(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK, ProcTest
+    use ModMain,       ONLY: nI, nJ, nK
     use ModProcMH,     ONLY: iProc
     use ModAdvance,    ONLY: State_VGB
     use ModGeometry,   ONLY: Xyz_DGB
@@ -30,20 +33,20 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
-    logical :: oktest, oktest_me
     real    :: x, y, z, a, b
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-
-    if(iProc==ProcTest)then
+    call test_start(NameSub, DoTest, iBlock)
+    if(iProc==iProcTest)then
        write(*,*)'Initializing Stretched Dipole '
        write(*,*)'Parameters:'
        write(*,*)'alpha=', alpha
        write(*,*)'beta =', beta
 
-       call set_oktest('user_set_ics',oktest,oktest_me)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -58,9 +61,9 @@ contains
        a = (sqrt(x**2 + y**2 + z**2))**5
        b = (sqrt(x**2 + (y*beta)**2 + (alpha*z)**2))**5
 
-        !write(*,*) 'Bx', B0_DGB(1,i,j,k,iBlock), Bdp*(3*z * x)/a
-        !write(*,*) 'By', B0_DGB(2,i,j,k,iBlock), Bdp*(3*z * y)/a
-        !write(*,*) 'Bz', B0_DGB(3,i,j,k,iBlock), Bdp*(2*z**2  - x**2 - y**2)/a
+        ! write(*,*) 'Bx', B0_DGB(1,i,j,k,iBlock), Bdp*(3*z * x)/a
+        ! write(*,*) 'By', B0_DGB(2,i,j,k,iBlock), Bdp*(3*z * y)/a
+        ! write(*,*) 'Bz', B0_DGB(3,i,j,k,iBlock), Bdp*(2*z**2  - x**2 - y**2)/a
 
        State_VGB(Bx_,i,j,k,iBlock) = Bdp*((3. * z * x * alpha)/b - (3. * z * x)/a)
        State_VGB(By_,i,j,k,iBlock) = Bdp*((3. * z * y * alpha)/b - (3. * z * y)/a)
@@ -70,6 +73,9 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
+  !============================================================================
 
 end module ModUser
+!==============================================================================

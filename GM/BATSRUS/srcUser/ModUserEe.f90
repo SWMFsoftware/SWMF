@@ -1,17 +1,19 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 ! ModUser for flux emergence problems on Sun
-! We calculate the thin radiative cooling, vertical damping, 
-! and call coronal heating from PARAM.in to model the solar 
+! We calculate the thin radiative cooling, vertical damping,
+! and call coronal heating from PARAM.in to model the solar
 ! atmosphere, following Abbett (2007). The implementation of
-! tabular equation of state takes into account of the 
-! ionization energy. 
+! tabular equation of state takes into account of the
+! ionization energy.
 !
 ! 2010-03-01: committed in
-!=========================================================================
 
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iProcTest
   use ModSize, ONLY: x_, y_, z_, &
        nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
   use ModUserEmpty ,                                   &
@@ -33,15 +35,15 @@ module ModUser
   !\
   ! UseVerticalDamping: adds damping to vertical velocity
   ! UseThinRadiation:   adds thin radiative cooling
-  ! UseUniformInitialState: initialize the domain with uniform 
+  ! UseUniformInitialState: initialize the domain with uniform
   !                      density and temperature
   ! InitialDensity, InitialTemperature: the initial values if
   !                      UseUniformInitialState
   ! InitialBx, InitialBy, InitalBz: initial magnetic field, added through
   !                      user_initial_perturbation
-  ! RhoThinCutoff: the cutoff density for thin radiation( thin radiation =0 
+  ! RhoThinCutoff: the cutoff density for thin radiation( thin radiation =0
   !                      if rho> RhoThinCutoff)
-  ! NumberDensFloor: Minimum density value to prevent negative coronal density 
+  ! NumberDensFloor: Minimum density value to prevent negative coronal density
   ! TimeVerticalDamping: timescale over which the vertical velocity damps
   ! z_photo: height of photosphere
   ! TemperatureGradient: gradient of temperature at the bottom of domain
@@ -57,7 +59,7 @@ module ModUser
   real    :: RhoThinCutoff, NumberDensFloor, TimeVerticalDamping
   real    :: z_photo, TemperatureGradient
   real    :: BotDensity, BotPressure, BotExtraE
-  !rstari = 0.594354e-3/8.31, mu = 0.594354 set in init_session
+  ! rstari = 0.594354e-3/8.31, mu = 0.594354 set in init_session
   real,parameter ::  mu = 0.594354, rstari = 0.594354e-3/8.31
 
   ! Flux Rope Variables
@@ -79,8 +81,8 @@ module ModUser
   real, allocatable:: srcthin_GB(:,:,:,:)
 
 contains
+  !============================================================================
 
-  !=========================================================================
   subroutine user_read_inputs
     use ModMain,      ONLY: lverbose
     use ModProcMH,    ONLY: iProc
@@ -89,7 +91,10 @@ contains
     use ModCoronalHeating, ONLY: DtUpdateFlux, UnsignedFluxHeight
 
     character (len=100) :: NameCommand
-    !-----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc==0.and.lVerbose > 0)then
        call write_prefix; write(iUnitOut,*)'user_read_input RADMHD starts'
     endif
@@ -141,8 +146,9 @@ contains
           end if
        end select
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-  !==========================================================================
+  !============================================================================
   subroutine user_init_session
     use ModProcMH,      ONLY: iProc
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
@@ -152,11 +158,13 @@ contains
 
     real :: InitialState(1:4)
 
-    character (len=*), parameter :: NameSub = 'user_init_session'
-    !------------------------------------------------------------------------
-    !Gbody = -1 
-    !mu    =  MassIon_I(1)/(1 + AverageIonCharge)
-    !rstari = mu/(cBoltzmann/cProtonMass)  
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    ! Gbody = -1
+    ! mu    =  MassIon_I(1)/(1 + AverageIonCharge)
+    ! rstari = mu/(cBoltzmann/cProtonMass)
 
     ! initialize the indexes for lookup tables
     iTableInitialState = i_lookup_table('RhoUzExtraEP(Z,Const)')
@@ -177,21 +185,24 @@ contains
     if(.not.allocated(srcthin_GB)) &
          allocate(srcthin_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-  !==========================================================================
+  !============================================================================
   subroutine user_set_ICs(iBlock)
 
-    use ModMain,       ONLY: ProcTest, Unused_B
+    use ModMain,       ONLY:  Unused_B
     use ModProcMH,     ONLY: iProc
     use ModAdvance,    ONLY: State_VGB
     use ModVarIndexes
 
     integer, intent(in) :: iBlock
 
-    logical :: oktest, oktest_me
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ICs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if((iProc==PROCtest) .and. (iBlock==1))then
+    if((iProc==iProcTest) .and. (iBlock==1))then
        write(*,*)'Initializing Flux Emergence problem'
        write(*,*)'Parameters:'
        write(*,*)'iProc = ',iProc
@@ -199,9 +210,8 @@ contains
             'InitialBz = ',InitialBz
        write(*,*)'InitialDensity = ',InitialDensity,'InitialTemperature = ', &
             InitialTemperature, ' in CGS units'
-       call set_oktest('user_set_ICs',oktest,oktest_me)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     if (Unused_B(iBlock)) RETURN
@@ -223,8 +233,9 @@ contains
           write(*,*) '------------------------------------------------------'
        end if
     end if
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-    !========================================================================
+    !==========================================================================
     subroutine set_uniform_ICs(iBlock)
 
       use ModLookupTable, ONLY: interpolate_lookup_table
@@ -238,9 +249,10 @@ contains
       real :: g1, inv_g1, inv_g1m1, z0
 
       integer :: i,j,k
-      !---------------------------------------------------------------------
+
       ! calculate the Extra Internal Energy and Pressure (SI)
       ! from given initial conditions: InitialDensity, InitialTemperature(CGS)
+      !------------------------------------------------------------------------
       InitialDensitySi = InitialDensity*1e3
       if(iTableEOS>0)then
          call interpolate_lookup_table(iTableEOS, InitialTemperature, &
@@ -261,9 +273,9 @@ contains
          State_VGB(Bx_    ,i,j,k,iBlock) = 0.
          State_VGB(By_    ,i,j,k,iBlock) = 0.
          State_VGB(Bz_    ,i,j,k,iBlock) = 0.
-         State_VGB(rho_   ,i,j,k,iBlock) = Rho              
+         State_VGB(rho_   ,i,j,k,iBlock) = Rho
          State_VGB(Erad_  ,i,j,k,iBlock) = 0.
-         !cRadiationNo*(InitialTemperature*Si2No_V(UnitTemperature_))**4
+         ! cRadiationNo*(InitialTemperature*Si2No_V(UnitTemperature_))**4
          if(UseUniformT)then
             State_VGB(P_,i,j,k,iBlock) = p
             State_VGB(ExtraEInt_,i,j,k,iBlock) = ExtraEint
@@ -288,7 +300,7 @@ contains
       end do; end do ; end do
 
     end subroutine set_uniform_ICs
-    !========================================================================
+    !==========================================================================
     subroutine set_perturbed_ICs(iBlock)
 
       use ModPhysics,     ONLY: Si2No_V, UnitRho_, UnitU_, UnitEnergyDens_,&
@@ -301,7 +313,8 @@ contains
       real    :: InitialState(1:4), Const, &
            InitialRho, InitialUz, InitialExtraE, InitialP
       integer :: k
-      !---------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       Const = 2.5
       do k = 1, nK
          ! interpolate the tabular data of reference initial state and get
@@ -326,10 +339,10 @@ contains
               InitialP*Si2No_V(UnitP_)
       end do
     end subroutine set_perturbed_ICs
+    !==========================================================================
 
   end subroutine user_set_ICs
-
-  !=========================================================================
+  !============================================================================
 
   subroutine user_initial_perturbation
     use ModEnergy,   only: calc_energy_cell
@@ -342,13 +355,15 @@ contains
     integer:: iBlock, i,j,k
     real :: dp_ratio,prof,rsq,rasq,EInternal, RandomChange
 
-    character (len=*), parameter :: NameSub = 'user_initial_perturbation'
-    !-----------------------------------------------------------------------   
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     rasq = ra_rope*ra_rope
     do iBlock = 1, nBlockMax
        if( Unused_B(iBlock) ) CYCLE
        do k=1,nK
-          ! Add initial magnetic field 
+          ! Add initial magnetic field
           if(UseCoronalField)then
              if(Xyz_DGB(z_,4,4,k,iBlock) < z_photo)then
                 prof = (1 - tanh(Xyz_DGB(z_,4,4,k,iBlock) - z_photo))/2.
@@ -362,8 +377,8 @@ contains
              State_VGB(Bz_,:,:,k,iBlock) = &
                   State_VGB(Bz_,:,:,k,iBlock) + InitialBz*1.e-4*Si2No_V(UnitB_)
           end if
-          ! Add random perturbation to energy and pressure values of 
-          ! cells below the photosphere height                  
+          ! Add random perturbation to energy and pressure values of
+          ! cells below the photosphere height
           if(UseEnergyPert.and.(Xyz_DGB(z_,4,4,k,iBlock) < z_photo ))then
              do j=1, nJ; do i=1,nI
                 call random_number(RandomChange)
@@ -375,7 +390,7 @@ contains
                 end if
                 State_VGB(p_,i,j,k,iBlock) =                  &
                      State_VGB(p_,i,j,k,iBlock)*(1.0 +        &
-                     1.e-3*RandomChange) 
+                     1.e-3*RandomChange)
                 EInternal = (InvGammaMinus1*State_VGB(p_,i,j,k,iBlock) + &
                      State_VGB(ExtraEint_,i,j,k,iBlock))* &
                      No2Si_V(UnitEnergyDens_)
@@ -419,9 +434,10 @@ contains
        call calc_energy_cell(iBlock)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
+  !============================================================================
 
-  !==========================================================================
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
     use ModVarIndexes!, ONLY: rho_, rhoUz_, Bz_, p_, Erad_, ExtraEInt_
     use ModPhysics,    ONLY: UnitEnergyDens_, InvGammaMinus1, Si2No_V
@@ -435,8 +451,10 @@ contains
     integer :: i, j, k
     real :: EinternalSi
 
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     select case(iSide)
     case(5)
@@ -454,7 +472,7 @@ contains
           IsFound = .true.
        case('forcebalance')
           ! the density at the boundary is fixed.
-          ! pressure gradient at the boundary is set to balance the 
+          ! pressure gradient at the boundary is set to balance the
           ! gravitational force.
           do k = MinK,0; do j = MinJ,MaxJ; do i = MinI, MaxI
              State_VGB(rho_,i,j,k,iBlock) = BotDensity
@@ -486,8 +504,9 @@ contains
        end select
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-  !==========================================================================
+  !============================================================================
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance,     ONLY: Source_VC, State_VGB
@@ -501,8 +520,10 @@ contains
     real    :: RadiativeCooling = 0.0, EInternalSource =0.0, rhoUzSource =0.0,&
          DampingRhoUz = 0.0, DampingEnergy = 0.0, TeSi
 
-    character (len=*), parameter :: NameSub = 'user_calc_sources'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     RadiativeCooling = 0.
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -526,11 +547,12 @@ contains
        Source_VC(rhoUz_,i,j,k) = Source_VC(rhoUz_,i,j,k) + rhoUzSource
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
+  !============================================================================
 
-  !==========================================================================
   !----------------------------------------------!
-  !  subroutines containing energy source terms  !            
+  !  subroutines containing energy source terms  !
   !----------------------------------------------!
   subroutine get_vertical_damping(State_V, Z_V, DampingRhoUz, DampingEnergy)
     use ModPhysics,     ONLY: Si2No_V, UnitT_
@@ -538,13 +560,16 @@ contains
 
     real, intent(in) :: State_V(nVar), Z_V
     real, intent(out):: DampingRhoUz, DampingEnergy
-    !-----------------------------------------------------------------------
-    !if(UseUniformInitialState)then
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_vertical_damping'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    ! if(UseUniformInitialState)then
     !   DampingRhoUz  = -State_V(rhoUz_)/ &
     !        (TimeVerticalDamping*Si2No_V(UnitT_))
     !   DampingEnergy = -State_V(rhoUz_)**2/State_V(rho_)/&
     !        (TimeVerticalDamping*Si2No_V(UnitT_))
-    !else
+    ! else
     if(Z_V > z_photo)then
        DampingRhoUz  = -State_V(rhoUz_)/ &
             (TimeVerticalDamping*Si2No_V(UnitT_))
@@ -554,12 +579,13 @@ contains
        DampingRhoUz  = 0.
        DampingEnergy = 0.
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine get_vertical_damping
-  !=========================================================================
+  !============================================================================
   subroutine get_radiative_cooling(State_V, TeSi, Z_V, RadiativeCooling)
     use ModVarIndexes, ONLY: rho_, nVar
     use ModPhysics,    ONLY: UnitRho_, UnitEnergyDens_, Si2No_V, UnitT_
-    use ModLookupTable,ONLY: interpolate_lookup_table
+    use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cProtonMass
 
     real, intent(in) :: State_V(1:nVar)
@@ -571,7 +597,10 @@ contains
     real :: Fraction = 0.0, CoolingFunctionCgs = 0.0, &
          MassDensCgs, NumberDensCgs
     real :: Chianti(1:1)
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_radiative_cooling'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     MassDensCgs     = State_V(rho_)/Si2No_V(UnitRho_)*1.e-3
     NumberDensCgs   = MassDensCgs/(mu*cProtonMass*1.e3)
@@ -597,13 +626,13 @@ contains
             RadiativeCooling = RadiationCutoff*MassDensCgs
        RadiativeCooling = RadiativeCooling*0.1*Si2No_V(UnitEnergyDens_)/&
             Si2No_V(UnitT_)
-    else 
+    else
        RadiativeCooling = 0.
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine get_radiative_cooling
-
-  !==========================================================================
+  !============================================================================
 
   subroutine user_update_states(iBlock)
 
@@ -619,8 +648,10 @@ contains
     integer:: i,j,k
     real   :: MassDensFloor, EnergyFloor, EinternalSi, PressureSi
 
-    character (len=*), parameter :: NameSub = 'user_update_states'
-    !--------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! Define the minimum mass density and energy value
     ! Corresponding to ~NumberDensFloor and 200 K plasma
     MassDensFloor  = NumberDensFloor*1e6*cProtonMass*Si2No_V(UnitRho_)
@@ -647,9 +678,9 @@ contains
     ! calculate the total energy
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
-
-  !==========================================================================
+  !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G,PlotVarBody, UsePlotVarBody, &
@@ -670,7 +701,10 @@ contains
     integer :: i,j,k
 
     character (len=*), parameter :: Name='user_set_plot_var'
-    !-----------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     UsePlotVarBody = .true.
     PlotVarBody    = 0.0
     IsFound        = .true.
@@ -704,13 +738,13 @@ contains
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                EntropyOut=PlotVar_G(i,j,k))
        end do; end do; end do
-    case default 
+    case default
        IsFound = .false.
        call stop_mpi(Name//': unknown plot variables = '//NameVar)
     end select
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
-  !========================================================================
+  !============================================================================
 
   subroutine user_material_properties(State_V, i,j,k,iBlock,iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
@@ -719,11 +753,11 @@ contains
        OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
        PlanckOut_W, EntropyOut)
 
-    use ModLookupTable,ONLY: interpolate_lookup_table
+    use ModLookupTable, ONLY: interpolate_lookup_table
     use ModPhysics,    ONLY: No2Si_V, UnitP_, UnitRho_, InvGammaMinus1
     use ModVarIndexes, ONLY: nVar, Rho_, p_, ExtraEInt_
     use ModAdvance,    ONLY: nWave
-    !------------------------------------------------------------------------
+
     ! The State_V vector is in normalized units
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in) :: i, j, k, iBlock, iDir
@@ -733,23 +767,25 @@ contains
     real, optional, intent(out) :: AverageIonChargeOut     ! dimensionless
     real, optional, intent(out) :: EinternalOut            ! [J/m^3]
     real, optional, intent(out) :: TeOut                   ! [K]
-    real, optional, intent(out) :: PressureOut             ! [Pa]   
-    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]  
+    real, optional, intent(out) :: PressureOut             ! [Pa]
+    real, optional, intent(out) :: CvOut                   ! [J/(K*m^3)]
     real, optional, intent(out) :: GammaOut
-    real, optional, intent(out) :: HeatCondOut             ! [Jm^2/(Ks)]   
+    real, optional, intent(out) :: HeatCondOut             ! [Jm^2/(Ks)]
     real, optional, intent(out) :: IonHeatCondOut          ! [J/(m*K*s)]
-    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]  
+    real, optional, intent(out) :: TeTiRelaxOut            ! [1/s]
     real, optional, intent(out) :: OpacityPlanckOut_W(nWave)      ! [1/m]
     real, optional, intent(out) :: OpacityEmissionOut_W(nWave)    ! [1/m]
     real, optional, intent(out) :: OpacityRosselandOut_W(nWave)   ! [1/m]
-    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3] 
+    real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
     real, optional, intent(out) :: EntropyOut
 
     real :: pSi, EinternalSi, RhoSi, TeSi
     real :: Value_V(1:5)
 
-    character (len=*), parameter :: NameSub = 'user_material_properties'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_material_properties'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
@@ -767,7 +803,7 @@ contains
        call interpolate_lookup_table(iTableEOS, 1, pSi, RhoSi, &
             Value_V, Arg1Out = TeSi, DoExtrapolate=.false.)
     else
-       if(present(EinternalIn)) then 
+       if(present(EinternalIn)) then
           EinternalSi = EinternalIn
        else
           EinternalSi = &
@@ -785,6 +821,9 @@ contains
     if(present(CvOut)) CvOut = Value_V(4)
     if(present(GammaOut)) GammaOut = Value_V(5)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
+  !============================================================================
 
 end module ModUser
+!==============================================================================

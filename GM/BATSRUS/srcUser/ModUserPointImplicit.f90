@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!========================================================================
 module ModUser
-  ! This is an example user module demonstrating the use of the 
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+  ! This is an example user module demonstrating the use of the
   ! point implicit scheme for the user source terms.
   ! Please also see the documentation, and the ModPointImplicit.f90 file.
 
@@ -12,10 +14,10 @@ module ModUser
        IMPLEMENTED2 => user_calc_sources,               &
        IMPLEMENTED3 => user_init_point_implicit
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   !\
-  ! Here you must define a user routine Version number and a 
+  ! Here you must define a user routine Version number and a
   ! descriptive string.
   !/
   real,              parameter :: VersionUserModule = 1.0
@@ -26,11 +28,16 @@ module ModUser
   real :: rFriction = 1.0, TauFriction = 1.0
 
 contains
+  !============================================================================
   subroutine user_read_inputs
 
     use ModReadParam
     character (len=100) :: NameCommand
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -46,13 +53,14 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
+  !============================================================================
 
-  !==========================================================================
   subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
-    ! If there is no explicit source term, the subroutine user_expl_source 
+    ! If there is no explicit source term, the subroutine user_expl_source
     ! and the corresponding calls can be removed.
 
     use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
@@ -60,16 +68,19 @@ contains
     use ModMain,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Energy_
-    use ModGeometry,ONLY: r_BLK, rMin_BLK
+    use ModGeometry, ONLY: r_BLK, rMin_BLK
 
     integer, intent(in) :: iBlock
 
     integer :: i, j, k
     real    :: Coef
-    !-----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Only blocks within radius rFriction need to be point implicit
-    ! This array is also used for load balancing 
+    ! This array is also used for load balancing
     ! if DoBalancePointImplicit is set to true in user_init_point_implicit.
     UsePointImplicit_B(iBlock) = rMin_BLK(iBlock) < rFriction
 
@@ -87,6 +98,7 @@ contains
        call user_expl_source
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine user_expl_source
@@ -94,8 +106,9 @@ contains
       ! Add explicit source here
       ! The energy source is only needed in the explicit source term.
 
-      ! In this example a simple friction term is added to the momentum and 
+      ! In this example a simple friction term is added to the momentum and
       ! energy equations.
+      !------------------------------------------------------------------------
       Coef = 1.0/TauFriction
 
       ! Here come the explicit source terms
@@ -118,10 +131,11 @@ contains
       ! The friction force is proportional to the velocity and the density.
 
       ! Add implicit source here
-      ! In this example a simple friction term is added to the momentum 
+      ! In this example a simple friction term is added to the momentum
       ! equation. Note that the energy is a dependent variable in the
       ! point implicit scheme, so there is no energy source here.
       ! The pressure source is zero.
+      !------------------------------------------------------------------------
       Coef = 1.0/TauFriction
 
       do k=1,nK; do j=1,nJ; do i=1,nI
@@ -144,8 +158,8 @@ contains
       end if
 
     end subroutine user_impl_source
+    !==========================================================================
   end subroutine user_calc_sources
-
   !============================================================================
 
   subroutine user_init_point_implicit
@@ -153,7 +167,10 @@ contains
     use ModVarIndexes, ONLY: RhoUx_, RhoUy_, RhoUz_
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, &
          DoBalancePointImplicit, IsDynamicPointImplicit
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Allocate and set iVarPointImpl_I
     ! In this example there are 3 implicit variables
@@ -162,7 +179,7 @@ contains
     ! In this example the implicit variables are the 3 momenta
     iVarPointImpl_I = (/RhoUx_, RhoUy_, RhoUz_/)
 
-    ! Note that energy is not an independent variable for the 
+    ! Note that energy is not an independent variable for the
     ! point implicit scheme. The pressure is an independent variable,
     ! and in this example there is no implicit pressure source term.
 
@@ -171,15 +188,18 @@ contains
     IsPointImplMatrixSet = .true.
 
     ! Tell the load balancing scheme if point implicit blocks should be
-    ! load balanced. If set to true, UsePointImplicit_B should be set in 
+    ! load balanced. If set to true, UsePointImplicit_B should be set in
     ! user_calc_sources. Default is false.
     DoBalancePointImplicit = .true.
 
     ! Tell the load balancing scheme if the assignment of UsePointImplicit_B
-    ! keeps changing so load balancing is needed every time step. 
+    ! keeps changing so load balancing is needed every time step.
     ! Default is false.
     IsDynamicPointImplicit = .true.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
+  !============================================================================
 
 end module ModUser
+!==============================================================================

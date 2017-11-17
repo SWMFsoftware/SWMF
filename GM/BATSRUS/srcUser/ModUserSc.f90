@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModSize,      ONLY: x_, y_, z_
   use ModUserEmpty,                                     &
        IMPLEMENTED2 => user_init_session,               &
@@ -13,14 +15,13 @@ module ModUser
        IMPLEMENTED7 => user_get_b0,                     &
        IMPLEMENTED8 => user_update_states
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'EMPIRICAL SC - Cohen, Sokolov'
 
 contains
-
   !============================================================================
 
   subroutine user_init_session
@@ -28,7 +29,10 @@ contains
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModPhysics,     ONLY: BodyNDim_I,BodyTDim_I,Gamma
     use ModProcMH,      ONLY: iProc
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session:'
@@ -43,9 +47,10 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
   !============================================================================
+
   subroutine user_set_face_boundary(VarsGhostFace_V)
     use EEE_ModMain,   ONLY: EEE_get_state_BC
     use ModSize,       ONLY: MaxDim
@@ -63,13 +68,16 @@ contains
 
     integer:: iCell,jCell,kCell
 
-    real:: DensCell,PresCell,GammaCell,TBase,B1dotR  
+    real:: DensCell,PresCell,GammaCell,TBase,B1dotR
     real, dimension(3):: RFace_D,B1_D,U_D,B1t_D,B1n_D
 
     real :: RhoCME,UCME_D(MaxDim),BCME_D(MaxDim),pCME
     real :: BCMEn,BCMEn_D(MaxDim),UCMEn,UCMEn_D(MaxDim),UCMEt_D(MaxDim)
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
     U_D (x_:z_)  = VarsTrueFace_V(Ux_:Uz_)
@@ -92,7 +100,7 @@ contains
        ! If use orbital motion
        if(UseBody2Orbit) then
           VarsGhostFace_V(Ux_) = &
-               -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_) 
+               -(cTwoPi*yBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
           VarsGhostFace_V(Uy_) = &
                (cTwoPi*xBody2/OrbitPeriod)*No2Si_V(UnitX_)*Si2No_V(UnitU_)
           VarsGhostFace_V(Uz_) =  0.0
@@ -123,7 +131,7 @@ contains
     !/
     UCMEn   = dot_product(RFace_D,UCME_D)
     UCMEn_D = UCMEn*RFace_D
-    UCMEt_D = UCME_D-UCMEn_D   
+    UCMEt_D = UCME_D-UCMEn_D
     VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2.0*UCMEt_D
 
     !\
@@ -158,7 +166,7 @@ contains
     VarsGhostFace_V(P_) = &
          max(VarsGhostFace_V(Rho_)*TBase, &
          VarsTrueFace_V(P_))
-    VarsGhostFace_V(Ew_) = &!max(-VarsTrueFace_V(Ew_)+ &
+    VarsGhostFace_V(Ew_) = &! max(-VarsTrueFace_V(Ew_)+ &
          VarsGhostFace_V(Rho_)*TBase &
          *(1.0/(GammaCell-1.0)-InvGammaMinus1)
 
@@ -171,16 +179,16 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2*OmegaBody*FaceCoords_D(x_)
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
-
   !============================================================================
 
   subroutine get_plasma_parameters_cell(iCell,jCell,kCell,iBlock,&
        DensCell,PresCell,GammaCell)
 
-    ! This subroutine computes the cell values for density and pressure 
+    ! This subroutine computes the cell values for density and pressure
     ! assuming an isothermal atmosphere
-    
+
     use ModGeometry,   ONLY: r_BLK
     use ModPhysics,    ONLY: Gbody, BodyRho_I, Si2No_V, UnitTemperature_
     use ModExpansionFactors,  ONLY: Umin, CoronalT0Dim, &
@@ -189,13 +197,16 @@ contains
 
     integer, intent(in)  :: iCell,jCell,kCell,iBlock
     real, intent(out)    :: DensCell,PresCell,GammaCell
-    real :: UFinal       !The solar wind speed at the far end of the 
-                         !Parker spiral, which originates from the given cell
-    real :: URatio       !The coronal based values for temperature density 
-                         !are scaled as functions of UFinal/UMin ratio
+    real :: UFinal       ! The solar wind speed at the far end of the
+                         ! Parker spiral, which originates from the given cell
+    real :: URatio       ! The coronal based values for temperature density
+                         ! are scaled as functions of UFinal/UMin ratio
     real :: Temperature
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_plasma_parameters_cell'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call get_gamma_emp( &
          Xyz_DGB(x_,iCell,jCell,kCell,iBlock), &
          Xyz_DGB(y_,iCell,jCell,kCell,iBlock), &
@@ -205,44 +216,45 @@ contains
          /r_BLK(iCell,jCell,kCell,iBlock), UFinal)
     URatio = UFinal/UMin
 
-    ! In coronal holes the temperature is reduced 
+    ! In coronal holes the temperature is reduced
     Temperature = CoronalT0Dim*Si2No_V(UnitTemperature_) / (min(URatio,2.0))
 
-    DensCell  = ((1.0/URatio)**2) &          !This is the density variation
+    DensCell  = ((1.0/URatio)**2) &          ! This is the density variation
          *BodyRho_I(1)*exp(-GBody/Temperature &
          *(1.0/max(R_BLK(iCell,jCell,kCell,iBlock),0.90)-1.0))
 
     PresCell = DensCell*Temperature
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_plasma_parameters_cell
-
   !============================================================================
 
   subroutine user_initial_perturbation
     use EEE_ModMain,  ONLY: EEE_get_state_init
-    use ModMain, ONLY: nI,nJ,nK,nBLK,Unused_B,x_,y_,z_,n_step,iteration_number
+    use ModMain, ONLY: nI,nJ,nK,MaxBlock,Unused_B,x_,y_,z_,n_step,iteration_number
     use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB 
+    use ModAdvance,   ONLY: State_VGB
     use ModPhysics,   ONLY: Si2No_V,UnitRho_,UnitP_,UnitB_
     use ModGeometry
     use ModEnergy,    ONLY: calc_energy_cell
     use BATL_lib, ONLY: CellVolume_GB
 
-    integer :: i,j,k,iBLK
-    logical :: oktest,oktest_me
+    integer :: i,j,k,iBlock
     real :: x_D(MaxDim),Rho,B_D(MaxDim),p
 
     real :: Mass=0.0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
-    call set_oktest('user_initial_perturbation',oktest,oktest_me)
+    call test_start(NameSub, DoTest)
 
-    do iBLK=1,nBLK
-       if(Unused_B(iBLK))CYCLE
+    do iBlock=1,MaxBlock
+       if(Unused_B(iBlock))CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
 
-          x_D(x_) = Xyz_DGB(x_,i,j,k,iBLK)
-          x_D(y_) = Xyz_DGB(y_,i,j,k,iBLK)
-          x_D(z_) = Xyz_DGB(z_,i,j,k,iBLK)
+          x_D(x_) = Xyz_DGB(x_,i,j,k,iBlock)
+          x_D(y_) = Xyz_DGB(y_,i,j,k,iBlock)
+          x_D(z_) = Xyz_DGB(z_,i,j,k,iBlock)
 
           call EEE_get_state_init(x_D,Rho,B_D,p, &
                n_step,iteration_number)
@@ -257,41 +269,41 @@ contains
           !\
           ! Convert momentum density to velocity
           !/
-          State_VGB(Ux_:Uz_,i,j,k,iBLK) = &
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBLK)/&
-               State_VGB(Rho_,i,j,k,iBLK)
-          State_VGB(Rho_,i,j,k,iBLK) = State_VGB(Rho_,i,j,k,iBLK) + Rho
+          State_VGB(Ux_:Uz_,i,j,k,iBlock) = &
+               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/&
+               State_VGB(Rho_,i,j,k,iBlock)
+          State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
           !\
-          ! Fix momentum density to correspond to the modified mass density 
+          ! Fix momentum density to correspond to the modified mass density
           !/
-          State_VGB(RhoUx_:RhoUz_,i,j,k,iBLK) = &
-               State_VGB(Ux_:Uz_,i,j,k,iBLK)*&
-               State_VGB(Rho_,i,j,k,iBLK)
-          State_VGB(Bx_:Bz_,i,j,k,iBLK) = State_VGB(Bx_:Bz_,i,j,k,iBLK) + B_D
-          State_VGB(P_,i,j,k,iBLK) = State_VGB(P_,i,j,k,iBLK) + p
+          State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
+               State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
+               State_VGB(Rho_,i,j,k,iBlock)
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B_D
+          State_VGB(P_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock) + p
 
           !\
           ! Calculate the mass added to the eruptive event
           !/
-          Mass = Mass + Rho*CellVolume_GB(i,j,k,iBLK)
+          Mass = Mass + Rho*CellVolume_GB(i,j,k,iBlock)
        end do; end do; end do
 
        !\
        ! Update the total energy::
        !/
-       call calc_energy_cell(iBLK)
+       call calc_energy_cell(iBlock)
 
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
-
   !============================================================================
 
   subroutine user_set_ics(iBlock)
 
     use ModMain,      ONLY: nI,nJ,nK
     use ModVarIndexes
-    use ModAdvance,   ONLY: State_VGB 
+    use ModAdvance,   ONLY: State_VGB
     use ModPhysics,   ONLY: InvGammaMinus1,BodyTDim_I
     use ModGeometry
     use BATL_lib, ONLY: IsCartesianGrid, CoordMax_D
@@ -299,11 +311,13 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
-    logical :: oktest,oktest_me
     real :: Dens_BLK,Pres_BLK,Gamma_BLK
     real :: x,y,z,R,ROne,Rmax,U0
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-    call set_oktest('user_set_ics',oktest,oktest_me)
+    call test_start(NameSub, DoTest, iBlock)
 
     if(IsCartesianGrid)then
        Rmax = max(21.0, sqrt(sum(CoordMax_D**2)))
@@ -334,12 +348,13 @@ contains
        State_VGB(RhoUz_,i,j,k,iBlock) = Dens_BLK &
             *U0*((ROne-1.0)/(Rmax-1.0))*z/R
        State_VGB(Ew_,i,j,k,iBlock) = Pres_BLK &
-            *(1.0/(Gamma_BLK-1.0)-InvGammaMinus1) 
+            *(1.0/(Gamma_BLK-1.0)-InvGammaMinus1)
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
   !============================================================================
+
   subroutine user_get_b0(xInput,yInput,zInput,B0_D)
 
     use EEE_ModMain,    ONLY: EEE_get_B0
@@ -360,7 +375,6 @@ contains
     B0_D = B0_D + B_D*Si2No_V(UnitB_)
 
   end subroutine user_get_b0
-
   !============================================================================
 
   subroutine user_update_states(iBlock)
@@ -380,7 +394,10 @@ contains
     integer,intent(in):: iBlock
     integer:: i, j, k
     real:: DensCell, PresCell, GammaCell
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call update_state_normal(iBlock)
 
     ! Update pressure and relaxation energy
@@ -402,14 +419,15 @@ contains
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
+  !============================================================================
 
-  !========================================================================
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: Unused_B,nBLK,x_,y_,z_
-    use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_ 
+    use ModMain,       ONLY: Unused_B,MaxBlock,x_,y_,z_
+    use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
     use ModB0,         ONLY: B0_DGB
@@ -417,13 +435,17 @@ contains
          No2Si_V,UnitEnergydens_,UnitX_,UnitRho_
 
     real, intent(out):: VarValue
-    character (LEN=10), intent(in):: TypeVar 
+    character (LEN=10), intent(in):: TypeVar
     real, intent(in), optional :: Radius
 
-    integer:: iBLK
+    integer:: iBlock
     real:: unit_energy,unit_mass
     real, external:: integrate_BLK
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     unit_energy = 1.0e7*No2Si_V(UnitEnergydens_)*No2Si_V(UnitX_)**3
     unit_mass   = 1.0e3*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3
     !\
@@ -431,51 +453,54 @@ contains
     !/
     select case(TypeVar)
     case('em_t','Em_t','em_r','Em_r')
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = & 
-               (B0_DGB(x_,:,:,:,iBLK)+State_VGB(Bx_,:,:,:,iBLK))**2+&
-               (B0_DGB(y_,:,:,:,iBLK)+State_VGB(By_,:,:,:,iBLK))**2+&
-               (B0_DGB(z_,:,:,:,iBLK)+State_VGB(Bz_,:,:,:,iBLK))**2
+       do iBlock=1,MaxBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = &
+               (B0_DGB(x_,:,:,:,iBlock)+State_VGB(Bx_,:,:,:,iBlock))**2+&
+               (B0_DGB(y_,:,:,:,iBlock)+State_VGB(By_,:,:,:,iBlock))**2+&
+               (B0_DGB(z_,:,:,:,iBlock)+State_VGB(Bz_,:,:,:,iBlock))**2
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
     case('ek_t','Ek_t','ek_r','Ek_r')
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = &
-               (State_VGB(rhoUx_,:,:,:,iBLK)**2 +&
-               State_VGB(rhoUy_,:,:,:,iBLK)**2 +&
-               State_VGB(rhoUz_,:,:,:,iBLK)**2)/&
-               State_VGB(rho_  ,:,:,:,iBLK)             
+       do iBlock=1,MaxBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = &
+               (State_VGB(rhoUx_,:,:,:,iBlock)**2 +&
+               State_VGB(rhoUy_,:,:,:,iBlock)**2 +&
+               State_VGB(rhoUz_,:,:,:,iBlock)**2)/&
+               State_VGB(rho_  ,:,:,:,iBlock)
        end do
        VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
     case('et_t','Et_t','et_r','Et_r')
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = State_VGB(P_,:,:,:,iBLK)
+       do iBlock=1,MaxBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock)
        end do
        VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
     case('ew_t','Ew_t','ew_r','Ew_r')
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = State_VGB(Ew_,:,:,:,iBLK)
+       do iBlock=1,MaxBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = State_VGB(Ew_,:,:,:,iBlock)
        end do
        VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
     case('ms_t','Ms_t')
-       do iBLK=1,nBLK
-          if (Unused_B(iBLK)) CYCLE
-          tmp1_BLK(:,:,:,iBLK) = &
-               State_VGB(rho_,:,:,:,iBLK)/R_BLK(:,:,:,iBLK)
+       do iBlock=1,MaxBlock
+          if (Unused_B(iBlock)) CYCLE
+          tmp1_BLK(:,:,:,iBlock) = &
+               State_VGB(rho_,:,:,:,iBlock)/R_BLK(:,:,:,iBlock)
        end do
        VarValue = unit_mass*integrate_BLK(1,tmp1_BLK)
     case('vol','Vol')
-       tmp1_BLK(:,:,:,iBLK) = 1.0
+       tmp1_BLK(:,:,:,iBlock) = 1.0
        VarValue = integrate_BLK(1,tmp1_BLK)
     case default
        VarValue = -7777.
        call write_myname;
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
+    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
+  !============================================================================
 end module ModUser
+!==============================================================================
 

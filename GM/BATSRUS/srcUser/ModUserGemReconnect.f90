@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -11,10 +13,10 @@ module ModUser
 
   use ModNumConst, ONLY: cTwoPi
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   !\
-  ! Here you must define a user routine Version number and a 
+  ! Here you must define a user routine Version number and a
   ! descriptive string.
   !/
   real,              parameter :: VersionUserModule = 1.0
@@ -35,6 +37,7 @@ module ModUser
   logical:: UseUniformPressure    = .false.
 
 contains
+  !============================================================================
 
   subroutine user_read_inputs
 
@@ -47,7 +50,10 @@ contains
     real:: GaussX, GaussY    ! Width of Gaussian perturbation
 
     character(len=100) :: NameCommand
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     UseUserLogFiles = .true.
     do
        if(.not.read_line() ) EXIT
@@ -56,7 +62,7 @@ contains
        case('#GEM')
           UseUserIcs = .true.
           call read_var('Amplitude', Apert)
-          
+
        case('#GEMPARAM')
           call read_var('B0', B0)
           call read_var('Tp', Tp)
@@ -110,6 +116,7 @@ contains
     ySheet = 0.0
     if(UseDoubleCurrentSheet) ySheet = 0.25*WaveLengthY
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
   !============================================================================
   subroutine user_set_ics(iBlock)
@@ -127,8 +134,10 @@ contains
     real                :: x, y, a
     integer             :: i, j, k
 
-    character(len=*), parameter :: NameSub = 'user_set_ics'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if (UseDoubleCurrentSheet) then
        ! Use double current sheets in a Harris equilibrium
        State_VGB(Bx_,:,:,:,iBlock) = B0* &
@@ -167,20 +176,20 @@ contains
 
     ! Get density from the uniform temperature assumption
     State_VGB(Rho_,:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)/Tp
-    
+
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-       
+
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
-       
+
        if (UseDoubleCurrentSheet) then
           ! apply perturbation to reconnection sites only by varying By
           ! Az = Apert*B0*cos(Kx*x)
           ! By = -dAz/dx
           State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) &
-               + Apert*B0*Kx*sin(Kx*x)          
+               + Apert*B0*Kx*sin(Kx*x)
        else
-          ! Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)*cos(Ky*y) 
+          ! Az = exp(-x^2/GaussX^2-y^2/Gauss^2)*cos(Kx*x)*cos(Ky*y)
           a = Apert*B0*exp(-x**2*GaussXInv**2 - y**2*GaussYInv**2)
           !  Bx = dAz/dy
           State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) + &
@@ -191,15 +200,16 @@ contains
                a*(2*x*GaussXInv**2*cos(Kx*x)*cos(Ky*y) &
                + Kx*sin(Kx*x)*cos(Ky*y))
        end if
-       
+
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
+  !============================================================================
 
-  !=====================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
-    ! For TypeVar = byflux: 
+    ! For TypeVar = byflux:
     ! Integrate abs(By) along the current sheet at a fixed Y value
     ! Divide result by two to be compatible with GEM papers.
 
@@ -216,7 +226,10 @@ contains
 
     integer :: j1, j2, iBlock
     real:: y1, y2, Dy, dy1, dy2, HalfInvWidth, Flux
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_get_log_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
         ! Width in Z direction should be ignored (it is one for 2D)
     ! The 0.5 is there to be compatible with GEM papers
     ! that did the integral for half of the domain x > 0.
@@ -256,6 +269,9 @@ contains
        call stop_mpi('Unknown user logvar='//TypeVar)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
+  !============================================================================
 
 end module ModUser
+!==============================================================================

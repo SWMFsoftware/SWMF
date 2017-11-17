@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModSize, ONLY: x_, y_
 
   use ModUserEmpty,                                     &
@@ -16,7 +18,7 @@ module ModUser
        IMPLEMENTED8 => user_set_cell_boundary,               &
        IMPLEMENTED9 => user_amr_criteria
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
@@ -36,11 +38,11 @@ module ModUser
   real, allocatable :: xLowrie_C(:), StateLowrie_VC(:,:)
   real :: U0, X0
   real :: EradBc1, EradBc2
-  
+
   real, parameter :: Gamma = 5.0/3.0
 
 contains
-!============================================================================
+  !============================================================================
   subroutine user_read_inputs
 
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
@@ -49,7 +51,11 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
 
     character (len=100) :: NameCommand
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
        write(iUnitOut,*)'User read_input starts'
@@ -83,8 +89,8 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
   subroutine user_init_session
@@ -95,15 +101,16 @@ contains
     integer :: iError, iCell
     real :: Mach, Entropy
 
-    character(len=*), parameter :: NameSub = "user_init_session"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     select case(iLowrieTest)
     case(1)
        ! Mach 1.05 test
        nCellLowrie = 6188
        U0 = -1.05               ! veloxity added to lowrie's solution
-       X0 = 0.03675             ! shift in x-direction 
+       X0 = 0.03675             ! shift in x-direction
     case(2)
        ! Mach 2 test
        nCellLowrie = 4840
@@ -139,17 +146,19 @@ contains
     EradBc1 = cRadiationNo*StateLowrie_VC(iTradLowrie,1)**4
     EradBc2 = cRadiationNo*StateLowrie_VC(iTradLowrie,nCellLowrie)**4
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
-  !==========================================================================
+  !============================================================================
 
   subroutine user_normalization
 
     use ModConst,   ONLY: cRadiation, cProtonMass, cBoltzmann
     use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_
-    
-    character (len=*), parameter :: NameSub = 'user_normalization'
-    !------------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_normalization'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     No2Si_V = 1.0
     ! The following density unit is needed to get a normalized radiation
@@ -158,9 +167,9 @@ contains
     No2Si_V(UnitRho_) = 1.0e+4*cRadiation*(cProtonMass/cBoltzmann)**4 &
          *No2Si_V(UnitU_)**6/Gamma**4
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_normalization
-
-  !==========================================================================
+  !============================================================================
 
   subroutine user_set_ics(iBlock)
 
@@ -179,8 +188,10 @@ contains
     real :: Rho, Ux, Tgas, Trad, p, Erad, RhoU_D(3)
     real :: SinSlope, CosSlope, Rot_II(2,2)
 
-    character(len=*), parameter :: NameSub = "user_set_ics"
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Calculate sin and cos from the tangent = ShockSlope
     SinSlope = ShockSlope/sqrt(1.0+ShockSlope**2)
@@ -190,7 +201,7 @@ contains
          (/2,2/) )
 
     do j = 1, nJ; do i = 1, nI
-       
+
        x = Xyz_DGB(x_,i,j,1,iBlock)*CosSlope + Xyz_DGB(y_,i,j,1,iBlock)*SinSlope - X0
 
        do iCell = 1, nCellLowrie
@@ -238,9 +249,9 @@ contains
 
     end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
@@ -253,10 +264,10 @@ contains
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
-    !-------------------------------------------------------------------------
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not. (iSide==1 .or. iSide==2) )then
        write(*,*) NameSub//' : user boundary not defined at iSide = ', iSide
        call stop_mpi(NameSub)
@@ -292,9 +303,9 @@ contains
 
     IsFound = .true.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_update_states(iBlock)
 
@@ -315,9 +326,11 @@ contains
     real   :: PressureSi, EinternalSi, GammaEos, DivU
     logical:: IsConserv
 
-    character(len=*), parameter :: NameSub = 'user_update_states'
-    !------------------------------------------------------------------------
     ! Fix adiabatic compression source for pressure
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(UseNonConservative)then
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           DivU          =        uDotArea_XI(i+1,j,k,1) - uDotArea_XI(i,j,k,1)
@@ -353,7 +366,7 @@ contains
                State_VGB(ExtraEint_,i,j,k,iBlock))
           call user_material_properties(State_VGB(:,i,j,k,iBlock),&
                EinternalIn=EinternalSi, PressureOut=PressureSi)
-      
+
           ! Set true pressure
           State_VGB(p_,i,j,k,iBlock) = PressureSi*Si2No_V(UnitP_)
        else
@@ -370,9 +383,9 @@ contains
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
@@ -397,16 +410,17 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
-
     integer :: i, j, k, iCell
     real :: x, Weight1, Weight2
     real :: Ux, Tgas, Trad
     real :: SinSlope, CosSlope
     integer, parameter:: jMin = 1 - 2*min(1,nJ-1), jMax = nJ + 2*min(1,nJ-1)
     integer, parameter:: kMin = 1 - 2*min(1,nK-1), kMax = nK + 2*min(1,nK-1)
-    !------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
 
@@ -464,7 +478,7 @@ contains
 
              Ux   = ( Weight1*StateLowrie_VC(iUxLowrie, iCell-1) &
                   +   Weight2*StateLowrie_VC(iUxLowrie, iCell) )
-             
+
              select case(NameVar)
              case('ux0')
                 PlotVar_G(i,j,k) = (Ux+U0)*CosSlope
@@ -493,9 +507,9 @@ contains
        IsFound = .false.
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
-  !==========================================================================
+  !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
@@ -539,8 +553,10 @@ contains
 
     real :: Temperature, OpacityPlanck, DiffusionRad
 
-    character (len=*), parameter :: NameSub = 'user_material_properties'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_material_properties'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(present(EinternalIn))then
        Temperature = EinternalIn*Si2No_V(UnitEnergyDens_) &
@@ -585,8 +601,8 @@ contains
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
-
   !============================================================================
 
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
@@ -606,7 +622,10 @@ contains
     real, parameter:: TemperatureMin = 5.2, DTradDxMin = 1e3
     real:: Temperature, DTradDx, TradL, TradR, DyRefine
     integer:: i, j, k
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     DyRefine = (y2 - y1)/8
 
@@ -635,6 +654,9 @@ contains
 
     IsFound = .true.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
+  !============================================================================
 
 end module ModUser
+!==============================================================================

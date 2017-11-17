@@ -1,21 +1,23 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!Revision history:
- 
+! Revision history:
+
 ! 02 Oct. 2010 by R. Oran:
 ! Added user_read_inputs, user_set_ics to allow testing of different
 ! initial conditions.
 ! 10 Feb 2010 by R. Oran : added Parker initial conditions, user_set_face_boundary.
-!                          Removed IC's options that are  now in ModUserWaves.f90 
-!========================================================================
+!                          Removed IC's options that are  now in ModUserWaves.f90
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModUserEmpty,               &
        IMPLEMENTED2 => user_read_inputs,        &
        IMPLEMENTED3 => user_set_ics,            &
        IMPLEMENTED4 => user_set_face_boundary
- 
-  include 'user_module.h' !list of public methods
+
+  include 'user_module.h' ! list of public methods
 
   real, parameter   :: VersionUserModule = 2.0
   character(len=*), parameter :: &
@@ -35,10 +37,11 @@ contains
     use ModReadParam, ONLY: read_line, read_command, read_var
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
-
     character(len=100) :: NameCommand
-    character(len=*), parameter :: NameSub = 'user_read_inputs'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
        write(iUnitOut,*)'User read_input INNER HELIOSPHERE starts'
@@ -60,7 +63,7 @@ contains
              call read_var('TRef  [K]',    TRefIo )
              call read_var('UrSw  [km/s]', UrSwIo )
           end if
-                 
+
        case('#USERINPUTEND')
           if(iProc == 0 .and. lVerbose > 0)then
              call write_prefix;
@@ -80,11 +83,12 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-  !========================================================================
+  !============================================================================
   subroutine user_set_ics(iBlock)
-    
-    use ModMain,        ONLY: Unused_B   
+
+    use ModMain,        ONLY: Unused_B
     use ModSize,        ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModGeometry,    ONLY: Xyz_DGB, r_BLK
     use ModAdvance,     ONLY: State_VGB
@@ -95,11 +99,13 @@ contains
 
     integer   :: i,j,k
     real      :: x, y, z, r, State_V(nVar)
-    character(len=*), parameter :: NameSub = 'user_set_ics'
-    !----------------------------------------------------------------------
-  
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
     if (Unused_B(iBlock)) RETURN
-  
+
     if(UseParkerIcs) then
        do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
 
@@ -109,9 +115,9 @@ contains
           z = Xyz_DGB(z_,i,j,k,iBlock)
           r = r_BLK(i,j,k,iBlock)
 
-          if (r .le. rBody) CYCLE
-       
-          call get_parker_sln_cell(x,y,z,r,State_V)   
+          if (r <= rBody) CYCLE
+
+          call get_parker_sln_cell(x,y,z,r,State_V)
           State_VGB(:,i,j,k,iBlock) = State_V
 
        end do ; end do ; end do
@@ -120,26 +126,27 @@ contains
        call CON_stop('Correct PARAM.in')
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
   !============================================================================
   subroutine get_parker_sln_cell(x, y, z, r, State_V)
 
-    ! Set state to the steady state adiabatic Parker spiral solution.     
-    ! R. Oran 
+    ! Set state to the steady state adiabatic Parker spiral solution.
+    ! R. Oran
 
     ! OUTLINE:
-    ! This solution is appropriate only for the domain lying outside the sonic point. 
+    ! This solution is appropriate only for the domain lying outside the sonic point.
     ! The solar wind is assumed to have reached its terminal speed, which is purely
     ! radial in the inertial frame HGI.
-    
+
     ! The magnetic field is given by the Parker spiral.
     ! It is assumed to be purely radial at  r~10Rs.
-   
+
     ! The density is derived from conservation of mass: rho*Ur*r^2 = Const.
     ! The pressure is given by the adiabatic EOS: p = p0(r0/r)^2gamma
 
-    ! Depending on plasma parameters at rRef, the solution everywhere is found. 
-  
+    ! Depending on plasma parameters at rRef, the solution everywhere is found.
+
     ! INPUTS (to be read from PARAM.in file):
     ! rRef - heliocentric radius of reference point
     ! bRef
@@ -149,7 +156,7 @@ contains
 
     ! OUTPUT:
     ! The state variables for rho, P, U, and B are returned.
-      
+
     use ModMain,           ONLY: TypeCoordSystem
     use ModVarIndexes,     ONLY: Rho_, RhoUx_, RhoUz_,Bx_,Bz_,p_, nVar
     use ModCoordTransform, ONLY: rot_xyz_sph
@@ -159,7 +166,6 @@ contains
                                  Si2No_V, Io2No_V, No2Si_V, &
                                  UnitX_, UnitN_, UnitB_, UnitU_, UnitRho_, &
                                  UnitP_, UnitTemperature_, UnitT_
-
 
     real,intent(in)  :: x, y, z, r
     real,intent(out) :: State_V(nVar)
@@ -173,8 +179,10 @@ contains
     real     :: Br0, Rho0, p0, r0, UrSw, N0, T0, MassFlux
     real     :: RotationSpeed
 
-    character(len=*),parameter :: NameSub = 'get_parker_sln_cell'
-    !--------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_parker_sln_cell'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     ! Normalize and convert input parameters for rho, u, B, p
     r0   = rRefIo * cAu * Si2No_V(UnitX_)
     UrSw = UrSwIo*1000*Si2No_V(UnitU_)
@@ -185,30 +193,30 @@ contains
     p0   = Rho0 * T0
 
     ! Make sure the flow is supersonic at reference point
-    if (UrSw .lt. sqrt(Gamma0*p0/Rho0) ) then
+    if (UrSw < sqrt(Gamma0*p0/Rho0) ) then
        write(*,*) 'UrSw is subsonic at reference point!'
        call CON_stop('Check #PARKERICS command!')
     end if
 
-    MassFlux = Rho0 * UrSw * r0**2 ! conserved!     
+    MassFlux = Rho0 * UrSw * r0**2 ! conserved!
     OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
     RotationSpeed = r*No2Si_V(UnitX_)*(cTwoPi/RotationPeriodSun)*&
          Si2No_V(UnitU_)
-    !\ 
+    !\
     ! Calculate parker solution for given position
     !/
     r_D = (/x,y,z/)
-     
+
     ! sine of polar angle
     SinTheta = sqrt(x**2 + y**2)/r
 
     ! Transformation matrix from Spherical to Cartesian
     ! at this location
-    XyzSph_DD = rot_xyz_sph(x,y,z) 
-        
+    XyzSph_DD = rot_xyz_sph(x,y,z)
+
     !\
     ! Magnetic field
-    !/         
+    !/
     ! Magnetic field components in spherical coordinates as
     ! given by the Parker solution. Note the azimuthal component:
     ! Should depend on (r - rSourceSurface), since r >> rSourceSurface
@@ -238,11 +246,11 @@ contains
        ! In the co-rotating frame U || B, thus Uphi = Ur(Bphi/Br)
        u_D(1) = u_D(1) + OmegaSun*y
        u_D(2) = u_D(2) - OmegaSun*x
-            
+
     end if
-         
-    ! Find density from conservation of mass 
-    State_V(Rho_) = MassFlux / (sum(r_D*u_D) * r) 
+
+    ! Find density from conservation of mass
+    State_V(Rho_) = MassFlux / (sum(r_D*u_D) * r)
 
     ! RhoU
     State_V(RhoUx_:RhoUz_) = u_D * State_V(Rho_)
@@ -252,13 +260,13 @@ contains
     !/
     State_V(p_) = p0 * (r0 / r)**(2*Gamma0)
 
-
     ! Make sure the resulting flow is supersonic
-    if (UrSw  .lt. sqrt(Gamma0*State_V(p_)/State_V(Rho_)) ) then
+    if (UrSw < sqrt(Gamma0*State_V(p_)/State_V(Rho_)) ) then
        write(*,*) 'Ur is subsomic at: ',x, y, z
        call CON_stop('ERROR in get_parker_sln_cell')
     end if
-      
+
+    call test_stop(NameSub, DoTest)
   end subroutine get_parker_sln_cell
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -270,7 +278,11 @@ contains
     real, intent(out) :: VarsGhostFace_V(nVar)
 
     real :: x, y, z, r, State_V(nVar), U_D(3)
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     x = FaceCoords_D(x_)
     y = FaceCoords_D(y_)
     z = FaceCoords_D(z_)
@@ -278,9 +290,12 @@ contains
     call get_parker_sln_cell(x, y, z, r, State_V)
     VarsGhostFace_V = State_V
 
-    !VarsGhostFace_V(Rho_) =  2.0*State_V(Rho_) - VarsTrueFace_V(Rho_)
-  
+    ! VarsGhostFace_V(Rho_) =  2.0*State_V(Rho_) - VarsTrueFace_V(Rho_)
+
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
+  !============================================================================
 
 end module ModUser
+!==============================================================================
 

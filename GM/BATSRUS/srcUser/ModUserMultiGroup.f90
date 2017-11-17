@@ -1,8 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModUserEmpty,                                     &
        IMPLEMENTED2 => user_read_inputs,                &
        IMPLEMENTED3 => user_set_ics,                    &
@@ -12,7 +14,7 @@ module ModUser
        IMPLEMENTED7 => user_material_properties,        &
        IMPLEMENTED8 => user_init_session
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
@@ -25,20 +27,17 @@ module ModUser
   real :: TeFinalSi, TeFinal, TeInit
 
 contains
-
   !============================================================================
 
   subroutine user_update_states(iBlock)
 
     integer, intent(in):: iBlock
 
-    character(len=*), parameter :: NameSub = 'user_update_states'
-    !--------------------------------------------------------------------------
-
     ! No call to update_states_normal to nullify the effect of the hydro solver
 
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
   end subroutine user_update_states
-
   !============================================================================
 
   subroutine user_read_inputs
@@ -49,7 +48,11 @@ contains
     use ModReadParam, ONLY: read_line, read_command, read_var
 
     character (len=100) :: NameCommand
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
        write(iUnitOut,*)'User read_input starts'
@@ -82,8 +85,8 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
   subroutine user_init_session
@@ -94,9 +97,10 @@ contains
 
     real ::  FreqMinSi, FreqMaxSi
 
-    character (len=*), parameter :: NameSub = 'user_init_session'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     select case(TypeProblem)
     case('bubble')
     case('diffusionfront')
@@ -113,8 +117,8 @@ contains
        end if
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
   !============================================================================
 
   subroutine user_set_ics(iBlock)
@@ -135,9 +139,10 @@ contains
     real :: Rho, Temperature, Pressure, Erad, Trad, ExtraEint
     real :: x, y, r, Troom, Tbubble
 
-    character(len=*), parameter :: NameSub = "user_set_ics"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     if(TypeProblem == 'bubble')then
        Rho = 1.224*Si2No_V(UnitRho_)
        Troom = 300.0*Si2No_V(UnitTemperature_)
@@ -213,9 +218,8 @@ contains
        State_VGB(p_,i,j,k,iBlock) = Pressure
     end do; end do; end do
 
-
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
   !============================================================================
 
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
@@ -237,9 +241,10 @@ contains
 
     real :: Rho, Temperature
 
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
 
     select case(iSide)
@@ -449,8 +454,8 @@ contains
        call stop_mpi(NameSub)
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-
   !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
@@ -485,8 +490,10 @@ contains
     character(len=100):: NameFile = 'planckian.outs'
     character(len=10) :: TypePosition = 'rewind'
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
@@ -562,8 +569,8 @@ contains
        TypePosition = 'append'
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
   !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
@@ -612,8 +619,10 @@ contains
     real :: RhoSi, pSi, TeSi
     real :: PlanckSi, EgSi
 
-    character(len=*), parameter :: NameSub = 'user_material_properties'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
@@ -735,6 +744,9 @@ contains
     if(present(OpacityEmissionOut_W)) &
          OpacityEmissionOut_W = OpacityPlanckOut_W
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
+  !============================================================================
 
 end module ModUser
+!==============================================================================

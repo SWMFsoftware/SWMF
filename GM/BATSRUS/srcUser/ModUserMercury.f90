@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !#NOTPUBLIC  email:xzjia@umich.edu  expires:12/31/2099
-!This code is a copyright protected software (c) 2002- University of Michigan
-!========================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   ! This is the default user module which contains empty methods defined
   ! in ModUserEmpty.f90
 
@@ -14,7 +16,7 @@ module ModUser
        IMPLEMENTED4 => user_read_inputs,     &
        IMPLEMENTED5 => user_set_cell_boundary
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = 'Mercury, Lars Daldorff & Xianzhe Jia (V5)'
@@ -31,8 +33,7 @@ module ModUser
   integer :: iLayer
 
 contains
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_init_session
 
@@ -45,15 +46,17 @@ contains
     use ModResistivity, ONLY: Si2NoEta
     use ModGeometry,    ONLY: TypeGeometry
     CHARACTER(LEN=*), PARAMETER  :: FMT1 = "(A22,E10.3)"
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-!!! Introduce PlanetDensitySi etc., read those and convert 
+!!! Introduce PlanetDensitySi etc., read those and convert
 !!! from that. Initialize these to -1. PlanetRadius should be
 !!! in dimensional units.
 
     if (TypeGeometry /= 'spherical_lnr') &
          call stop_mpi('ERROR: Correct PARAM.in, need spherical grid.')
-
 
     if(PlanetDensitySi < 0.0) &
          PlanetDensitySI  = 3.0*MassPlanet/(4.0*cPi*RadiusPlanet**3)
@@ -64,7 +67,6 @@ contains
     if(PlanetPressureSi < 0.0) &
          PlanetPressureSi = 1.0e-8*No2Si_V(UnitP_)
 
- 
     PlanetDensity           = PlanetDensitySi*Si2No_V(UnitRho_)
     PlanetPressure          = PlanetPressureSi*Si2No_V(UnitP_)
 
@@ -80,14 +82,13 @@ contains
        end do
     end if
 
-    !print *," Rate eta", ResistivityRate
-
+    ! print *," Rate eta", ResistivityRate
 
      if(iProc==0) then
        call write_myname
        write(*,*) ''
-       write(*,*) '   Resistiv Planet Model'       
-       write(*,*) '   ---------------------'       
+       write(*,*) '   Resistiv Planet Model'
+       write(*,*) '   ---------------------'
        write(*,*) ''
        write(*,FMT1) '  Planet density  = ',PlanetDensitySi
        write(*,FMT1) '  Planet pressure = ',PlanetPressureSi
@@ -96,7 +97,7 @@ contains
           write(*,*) ''
           write(*,*) '   |-------- Planet Resistivety Profile -----|'
           write(*,*) '       Radius(SI)            Resistivety(SI)'
-          do iLayer =1,nLayer 
+          do iLayer =1,nLayer
              write(*,"(A7,E10.3,A15,E10.3)") " ",PlanetRadiusSi_I(iLayer)," ",&
                   ResistivetySi_I(iLayer)
           end do
@@ -106,9 +107,9 @@ contains
        write(*,*) ''
        write(*,*) ''
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-  
-  !===========================================================================
+  !============================================================================
 
   subroutine user_read_inputs
 
@@ -116,7 +117,10 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModReadParam
     character(len=100) :: NameCommand
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -145,10 +149,7 @@ contains
                 call read_var('Resistivety', ResistivetySi_I(iLayer))
              end do
 
-             
-
-
-             !Check values
+             ! Check values
              do iLayer=2,nLayer
                 if(PlanetRadius_I(iLayer-1) < &
                      PlanetRadius_I(iLayer)) then
@@ -172,10 +173,10 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
+  !============================================================================
 
-  !===========================================================================
-  
   subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
@@ -188,8 +189,10 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
-    character (len=*), parameter :: NameSub = 'user_set_ics'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(R_BLK(1,1,1,iBlock) > PlanetRadius) RETURN
 
@@ -208,10 +211,10 @@ contains
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
+  !============================================================================
 
-  !===========================================================================
-  
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
@@ -222,23 +225,23 @@ contains
     use BATL_lib,      ONLY: Xyz_DGB
     use ModMain,       ONLY: UseResistivePlanet
 
-
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
-    
 
     real :: r_D(3), dRhoUr_D(3), RhoUr, u_D(3)
     integer :: i, iG, j, k
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'    
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(.not. UseResistivePlanet .or. TypeBc .ne. 'ResistivePlanet') return;
-    
+    if(.not. UseResistivePlanet .or. TypeBc /= 'ResistivePlanet') RETURN;
+
     if(Rmin_BLK(iBlock) <= PlanetRadius) then
        do i = 1, nI
           if(R_BLK(i+nG,1,1,iBlock) >= PlanetRadius) CYCLE
-          do k = 1, nK; do j = 1, nJ; 
+          do k = 1, nK; do j = 1, nJ;
              ! Set density, pressure and momentum inside the planet
              ! and the nG ghost cells to fixed values.
              State_VGB(Rho_,i,j,k,iBlock) = PlanetDensity
@@ -256,40 +259,40 @@ contains
           do k = MinK, MaxK; do j = MinJ, MaxJ
              ! Get radial velocity
              r_D = Xyz_DGB(x_:z_,i,j,k,iBlock)/ r_BLK(i,j,k,iBlock)
-             
+
              RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
              if(RhoUr > 0.0) then
-               ! If flow is out of the planet, remove the radial component 
-               ! of the momentum so that the flow is tangential                
+               ! If flow is out of the planet, remove the radial component
+               ! of the momentum so that the flow is tangential
                dRhoUr_D = -r_D*RhoUr
              else
                ! If flow is into the planet the flow is absorbed
               dRhoUr_D = 0.0
              end if
-          
-             ! Set nG cells inside the planet 
+
+             ! Set nG cells inside the planet
              ! with zero gradient boundary condition
-             
+
              if(RhoUr>0) then
                 do iG = i-nG, i-1
                    State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
                         State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + dRhoUr_D
                    u_D = State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock)/ &
-                        State_VGB(Rho_,iG,j,k,iBlock) 
+                        State_VGB(Rho_,iG,j,k,iBlock)
 
-                   ! Based on my (Yuxi) experience, the time-accurate 
+                   ! Based on my (Yuxi) experience, the time-accurate
                    ! part-implicit run will crash if fixed density and
                    ! pressure are used.
-                   
-                   !State_VGB(Rho_,iG,j,k,iBlock) = 1.0
-                   !State_VGB(P_,iG,j,k,iBlock) = PlanetPressure
+
+                   ! State_VGB(Rho_,iG,j,k,iBlock) = 1.0
+                   ! State_VGB(P_,iG,j,k,iBlock) = PlanetPressure
 
                     ! float BC for Pressure & density
                     State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
                     State_VGB(P_,iG,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)
 
                     State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
-                         u_D*State_VGB(Rho_,iG,j,k,iBlock)              
+                         u_D*State_VGB(Rho_,iG,j,k,iBlock)
                 end do
              else
                 ! Float BC
@@ -308,10 +311,9 @@ contains
 
     call calc_energy_cell(iBlock)
 
-    
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
     use ModEnergy
@@ -319,10 +321,13 @@ contains
     use ModGeometry,   ONLY: R_BLK, Rmin_BLK
     use ModResistivity, ONLY: Eta0
     integer, intent(in) :: iBlock
-    real, intent(out) :: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK) 
+    real, intent(out) :: Eta_G(MinI:MaxI, MinJ:MaxJ, MinK:MaxK)
 
     integer ::i,j,k,iLayer
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     Eta_G = Eta0
 
     if(nLayer <2 ) RETURN
@@ -338,6 +343,9 @@ contains
        end do
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
+  !============================================================================
 
 end module ModUser
+!==============================================================================

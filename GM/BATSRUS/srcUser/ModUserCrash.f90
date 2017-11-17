@@ -1,8 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!========================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   ! This is the default user module which contains empty methods defined
   ! in ModUserEmpty.f90
 
@@ -32,7 +34,7 @@ module ModUser
   use BATL_lib, ONLY: MaxLevel
   use CRASH_ModInterfaceNLTE, ONLY: UseNLTE
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.2
   character (len=*), parameter :: &
@@ -58,7 +60,7 @@ module ModUser
   ! The Maximum Level set index that is used
   integer, parameter :: LevelMax = MaterialLast_
 
-  ! Nozzle that shrinks the circular cross section of the tube 
+  ! Nozzle that shrinks the circular cross section of the tube
   ! into an ellipse or smaller circle
   logical :: UseNozzle = .false.
   real    :: xStartNozzle = 0.0
@@ -129,8 +131,8 @@ module ModUser
   ! Maximum allowed value of the inverse magnetic Reynolds number
   real :: MaxNormalizedResistivity = 1e5
 
-  !Non LTE array to store E/B ratios
-  real, allocatable :: EOverB_VGB(:,:,:,:,:) 
+  ! Non LTE array to store E/B ratios
+  real, allocatable :: EOverB_VGB(:,:,:,:,:)
 
   ! Logical for using ModInitialState
   logical:: UseInitialStateDefinition = .false.
@@ -152,8 +154,8 @@ module ModUser
   real :: VaporizationTi_I(0:MaxMaterial-1)
 
 contains
-
   !============================================================================
+
   subroutine user_read_inputs
 
     use ModReadParam
@@ -172,8 +174,10 @@ contains
     character (len=100) :: NameCommand
     character (len=500) :: StringVar
 
-    character(len=*), parameter :: NameSub = 'user_read_inputs'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     UseUserLogFiles     = .true. ! to allow integration of rhoxe, rhobe...
     UseUserUpdateStates = .true. ! for internal energy
@@ -314,9 +318,10 @@ contains
 
     if(UseMixedCell) UseNonConsLevelSet = .false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
+
   subroutine user_set_ics(iBlock)
 
     use ModMain,        ONLY: nI, nJ, nK, UseRadDiffusion, UseERadInput
@@ -330,7 +335,7 @@ contains
     use ModConst,       ONLY: cPi, cAtomicMass
     use CRASH_ModEos,   ONLY: eos, Xe_, Plastic_
     use CRASH_ModMultiGroup, ONLY:get_planck_g_from_temperature
-    use ModInitialState,ONLY: get_initial_state
+    use ModInitialState, ONLY: get_initial_state
 
     integer, intent(in) :: iBlock
 
@@ -339,9 +344,10 @@ contains
 
     integer :: i, j, k, iMaterial, iP, iGroup
 
-    character(len=*), parameter :: NameSub = "user_set_ics"
-    !------------------------------------------------------------------------
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(UseCrash2dFile)then
 
        call timing_start('interpolate_crash2d')
@@ -354,7 +360,7 @@ contains
     call timing_start(NameSub)
 
     ! Set level set functions, internal energy, and other values
-    do k=1, nK; do j=1, nJ; do i=1, nI 
+    do k=1, nK; do j=1, nJ; do i=1, nI
 
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
@@ -408,7 +414,7 @@ contains
           call set_initial_temperature
        end if
 
-       ! Multiply level set functions with density unless the 
+       ! Multiply level set functions with density unless the
        ! non-conservative approach is used
        if(.not.UseNonConsLevelSet) &
             State_VGB(LevelXe_:LevelMax,i,j,k,iBlock) = &
@@ -424,7 +430,7 @@ contains
     ! user_material_properties
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        if(UseElectronPressure)then
-          !Find electron and ion pressure from temperature distributions
+          ! Find electron and ion pressure from temperature distributions
           TeSi = Te_G(i,j,k)*No2Si_V(UnitTemperature_)
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i, j, k, iBlock, TeIn=TeSi, &
@@ -440,12 +446,12 @@ contains
           Natomic = NatomicSi*Si2No_V(UnitN_)
           State_VGB(p_,i,j,k,iBlock)  = Natomic*Ti_G(i,j,k)
 
-          if(State_VGB(Pe_,i,j,k,iBlock).le.PeMin)then
-             !Correct ExtraEInt, otherwise it will be corrected at the next 
-             !timespep, breaking the time control
+          if(State_VGB(Pe_,i,j,k,iBlock) <= PeMin)then
+             ! Correct ExtraEInt, otherwise it will be corrected at the next
+             ! timespep, breaking the time control
              PeSi=PeMin*No2Si_V(UnitP_)
-             !Use equilibrium EOS !!! 
-             !NLTE EOS cannot be used with the pressure input
+             ! Use equilibrium EOS !!!
+             ! NLTE EOS cannot be used with the pressure input
              iMaterial = maxloc(State_VGB(LevelXe_:LevelMax,i,j,k,iBlock),1)-1
              RhoSi = State_VGB(rho_,i,j,k,iBlock)*No2Si_V(UnitRho_)
              call eos(iMaterial, RhoSi, PElectronIn=PeSi,&
@@ -470,18 +476,18 @@ contains
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*RadiationScaleFactor
 
        if(UseNlte)then
-          !Calculate actual Te without assuming EOverB=1:
+          ! Calculate actual Te without assuming EOverB=1:
           UseERadInput=.true.
           call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                i,j,k,iBlock, TeOut=Te0SI)
           UseERadInput=.false.
           State_VGB(Te0_,i,j,k,iBlock) = Te0SI * Si2No_V(UnitTemperature_)
 
-          !Calculate "E_rad"
+          ! Calculate "E_rad"
           EOverB_VGB(:,i,j,k,iBlock) = No2Si_V(UnitEnergyDens_)* &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
 
-          !Calculate "over B"
+          ! Calculate "over B"
           Te0Si = State_VGB(Te0_,i,j,k,iBlock) * No2Si_V(UnitTemperature_)
           do iGroup = 1, nWave
              call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
@@ -493,19 +499,17 @@ contains
              end if
           end do
 
-
-          !EInternalSI = (State_VGB(iP,i,j,k,iBlock)*InvGammaMinus1+&
+          ! EInternalSI = (State_VGB(iP,i,j,k,iBlock)*InvGammaMinus1+&
           !       State_VGB(ExtraEInt_,i,j,k,iBlock))*No2Si_V(UnitEnergyDens_)
-          !call user_material_properties(State_VGB(:,i,j,k,iBlock), &
+          ! call user_material_properties(State_VGB(:,i,j,k,iBlock), &
           !     i, j, k, iBlock, EInternalIn=EInternalSI, &
           !     PressureOut=PeSi)
 
-          !State_VGB(iP,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
-
+          ! State_VGB(iP,i,j,k,iBlock) = max(PeMin, PeSi*Si2No_V(UnitP_))
 
           ! Calculate internal energy
 
-          !State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
+          ! State_VGB(ExtraEint_,i,j,k,iBlock) = max(ExtraEintMin, &
           !     EinternalSi*Si2No_V(UnitEnergyDens_) &
           !     - InvGammaMinus1*State_VGB(iP,i,j,k,iBlock))
        end if
@@ -514,9 +518,10 @@ contains
 
     call timing_stop(NameSub)
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
+    !==========================================================================
 
-    !========================================================================
     subroutine set_initial_temperature
 
       use CRASH_ModMultiGroup, ONLY: get_energy_g_from_temperature
@@ -526,8 +531,8 @@ contains
       real    :: Tr = 0.0259                      ! [eV?]
       real    :: TrSi, EgSi
       integer :: iWave
-      !---------------------------------------------------------------------
-      TeSi = 2.1e6 *(0.025/180.) 
+      !------------------------------------------------------------------------
+      TeSi = 2.1e6 *(0.025/180.)
       Te_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
       Ti_G(i,j,k) = TeSi*Si2No_V(UnitTemperature_)
 
@@ -547,10 +552,9 @@ contains
       end if
 
     end subroutine set_initial_temperature
+    !==========================================================================
 
   end subroutine user_set_ics
-
-
   !============================================================================
 
   subroutine read_crash2d_file
@@ -564,10 +568,12 @@ contains
     integer:: nDimRead, nVarRead, nCellRead_D(2), iSnapshot
     character(len=500):: NameVarRead
 
-    character(len=*), parameter :: NameSub = "ModUser::read_crash2d_file"
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'read_crash2d_file'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do iSnapShot = 1, 100000
-       
+
        call read_plot_file(NameCrash2DFile, UnitTmp_, TypeCrash2DFile, &
             TimeOut = Time_Simulation, nDimOut = nDimRead, nVarOut = nVarRead,&
             nOut_D = nCellRead_D, NameVarOut = NameVarRead)
@@ -610,13 +616,13 @@ contains
        write(*,*) NameSub, ': coord/var/par names = ', trim(NameVarRead)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_crash2d_file
-
   !============================================================================
 
   subroutine interpolate_crash2d(iBlock)
 
-    ! Use Delaunay triangulation to interpolate 2D CRASH grid onto 
+    ! Use Delaunay triangulation to interpolate 2D CRASH grid onto
     ! a different (3D?) CRASH grid
 
     use ModProcMH,      ONLY: iProc
@@ -634,8 +640,10 @@ contains
     real    :: x, y, z, r, Weight1, Weight2, Weight3
     real    :: RhoUr, Bphi
 
-    character(len=*), parameter :: NameSub='interpolate_crash2d'
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'interpolate_crash2d'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.allocated(iNodeTriangle_II))then
 
        if(.not.allocated(CoordRead_DC) .and. iProc==0) &
@@ -656,7 +664,7 @@ contains
        rMax = maxval(CoordRead_DC(2,:))
     end if
 
-    ! Interpolate points 
+    ! Interpolate points
     do j = 1, nJ; do i = 1, nI; do k = 1, nk
 
        x = Xyz_DGB(x_,i,j,k,iBlock)
@@ -698,8 +706,8 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine interpolate_crash2d
-
   !============================================================================
 
   subroutine user_action(NameAction)
@@ -709,8 +717,10 @@ contains
 
     character(len=*), intent(in):: NameAction
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_action'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
 
     select case(NameAction)
@@ -726,8 +736,8 @@ contains
        end if
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_action
-
   !============================================================================
 
   subroutine user_update_states(iBlock)
@@ -752,26 +762,28 @@ contains
     real   :: PressureSi, EinternalSi, Te0Si, PlanckSi
     logical:: IsConserv
 
-    character(len=*), parameter :: NameSub = 'user_update_states'
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(UseNLTE.and. iStage==1) then
        !\
-       !Reset value of E_rad/B
+       ! Reset value of E_rad/B
        !/
-       !Ghost cells are needed to calculate temperature or electron density 
-       !gradients
+       ! Ghost cells are needed to calculate temperature or electron density
+       ! gradients
        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
 
           if(State_VGB(Te0_,i,j,k,iBlock)==DefaultState_V(Te0_))then
-             !Not filled-in ghost cell or initial conditions
+             ! Not filled-in ghost cell or initial conditions
              EOverB_VGB(:,i,j,k,iBlock) = 1.0
              CYCLE
           end if
-          !Calculate "E_rad"
+          ! Calculate "E_rad"
           EOverB_VGB(:,i,j,k,iBlock) = No2Si_V(UnitEnergyDens_)* &
                State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)
-             
-          !Calculate "over B"
+
+          ! Calculate "over B"
           Te0Si = State_VGB(Te0_,i,j,k,iBlock) * No2Si_V(UnitTemperature_)
           do iGroup = 1, nWave
              call get_planck_g_from_temperature(iGroup, Te0Si, EgSI=PlanckSi)
@@ -785,12 +797,11 @@ contains
        end do; end do; end do
     end if
 
-
     call update_state_normal(iBlock)
 
     iP = p_
     if(UseElectronPressure) iP = Pe_
-    
+
     ! update of pressure, ionization and total energies
     do k=1,nK; do j=1,nJ; do i=1,nI
 
@@ -844,8 +855,8 @@ contains
     ! Note that this is identical to e^n+1 = e^* + ExtraEInt^* - ExtraEint^n+1
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
-
   !============================================================================
 
   subroutine user_calc_sources(iBlock)
@@ -864,8 +875,10 @@ contains
     real :: DivU, GammaEos
     logical :: IsConserv
 
-    character (len=*), parameter :: NameSub = 'user_calc_sources'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.(UseNonConsLevelSet .or. UseNonConservative)) RETURN
 
     iP = p_
@@ -877,7 +890,6 @@ contains
        if(nJ > 1) DivU = DivU + uDotArea_YI(i,j+1,k,1) - uDotArea_YI(i,j,k,1)
        if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
        DivU = DivU/CellVolume_GB(i,j,k,iBlock)
-
 
        ! Add Level*div(u) as a source term so level sets beome advected scalars
        if(UseNonConsLevelSet) &
@@ -901,9 +913,9 @@ contains
        end if
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
@@ -947,8 +959,10 @@ contains
     real, parameter:: RadioDepth_I(0:MaxMaterial-1) = &
          (/ 79.4, 0.36, 2.24, 1e10, 2.24 /)
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
-    !------------------------------------------------------------------------  
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
     select case(NameVar)
     case('level', 'material')
@@ -958,18 +972,18 @@ contains
        end do; end do; end do
     case('tekev', 'TeKev')
        NameIdlUnit = 'KeV'
-       !if(Te0_>1)then
+       ! if(Te0_>1)then
        !   do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
        !      PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * &
        !           No2Si_V(UnitTemperature_) * cKToKev
        !   end do; end do; end do
-       !else
+       ! else
           do k = kMin, kMax; do j = jMin, jMax; do i = MinI, MaxI
              call user_material_properties(State_VGB(:,i,j,k,iBlock), &
                   i, j, k, iBlock, TeOut = PlotVar_G(i,j,k))
              PlotVar_G(i,j,k) = PlotVar_G(i,j,k) * cKToKev
           end do; end do; end do
-       !end if
+       ! end if
     case('tikev', 'TiKev')
        NameIdlUnit = 'KeV'
        if(UseElectronPressure)then
@@ -1058,7 +1072,7 @@ contains
                i, j, k, iBlock, GammaOut = PlotVar_G(i,j,k))
        end do; end do; end do
     case('usersphere10')
-       ! Test function for LOS images: sphere with "density" 
+       ! Test function for LOS images: sphere with "density"
        !    100 - r^2 inside r=10, and 0 outside.
        if(IsRzGeometry)then
           ! In R-Z geometry the "sphere" is a circle in the X-Y plane
@@ -1136,9 +1150,10 @@ contains
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
   !============================================================================
+
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
 
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK
@@ -1155,8 +1170,10 @@ contains
 
     integer:: iMaterial, iLevel, iBlock, i, j, k
 
-    character (len=*), parameter :: NameSub = 'user_get_log_var'
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_get_log_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     select case(TypeVar)
     case('rhoxe', 'rhobe', 'rhopl', 'rhoau', 'rhoay')
        select case(TypeVar)
@@ -1193,9 +1210,9 @@ contains
        VarValue = -7777.0
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_init_session
 
@@ -1208,7 +1225,7 @@ contains
     use ModWaves,       ONLY: nWave, FreqMinSI, FreqMaxSI, DoAdvectWaves
     use ModIo,          ONLY: restart
     use CRASH_ModMultiGroup, ONLY: nGroup, IsLogMultiGroupGrid
-    use CRASH_ModEos,        ONLY: nMaterialEos, NameMaterial_I 
+    use CRASH_ModEos,        ONLY: nMaterialEos, NameMaterial_I
     use CRASH_ModEosTable,   ONLY: check_eos_table, check_opac_table
     use ModSize,             ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
     use ModVarIndexes,       ONLY: nWave
@@ -1217,8 +1234,10 @@ contains
     integer:: iMaterial
     logical:: IsFirstTime = .true.
     logical,save:: UseNLTESaved = .false.
-    character (len=*), parameter :: NameSub = 'user_init_session'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(UseGammaLaw .and. UseMixedCell) call stop_mpi(NameSub// &
          " can not use gamma-law with mixed cell")
@@ -1239,7 +1258,7 @@ contains
     if( .not.IsFirstTime .and. UseNLTE .and. .not. UseNLTESaved) &
          call CON_stop(NameSub// &
          ': NLTE can be turned on only in the first session')
- 
+
     ! The rest of the initialization should be done once
     if(.not.IsFirstTime) RETURN
     IsFirstTime = .false.
@@ -1248,24 +1267,24 @@ contains
     ! This should be done with UseNLTE = .false., because
     ! to create the EOS tables with UseNLTE = .true. would
     ! create NLTE tables for E_rad/B = 0
-    UseNLTESaved = UseNLTE    
+    UseNLTESaved = UseNLTE
     UseNLTE      = .false.
 
     call check_eos_table(iComm = iComm)
 
     UseNLTE = UseNLTESaved
 
-    !Set the photon energy range
-    !First, check if the values of FreqMinSI and FreqSI are set:
+    ! Set the photon energy range
+    ! First, check if the values of FreqMinSI and FreqSI are set:
 
-    !If the frequency range IN HERZ has been alredy set, then skip
+    ! If the frequency range IN HERZ has been alredy set, then skip
     if(FreqMinSI <= 0) then
-       !Reset the minimum photon energy to be 0.1 eV
+       ! Reset the minimum photon energy to be 0.1 eV
        FreqMinSI = 0.1 /cHPlanckEV
     end if
 
     if(FreqMaxSI <= 0) then
-       !Reset the maximum photon energy to be 10 keV
+       ! Reset the maximum photon energy to be 10 keV
        FreqMaxSI = 10000.0 /cHPlanckEV
     end if
 
@@ -1344,9 +1363,10 @@ contains
 
     VaporizationTi_I = VaporizationTiDim_I*cEVToK*Si2No_V(UnitTemperature_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
+  !============================================================================
 
-  !===========================================================================
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
     use ModAdvance,     ONLY: UseElectronPressure
@@ -1363,8 +1383,11 @@ contains
     real:: Rho, p, e, Te, Cv, GammaEOS, Zavg, HeatCond, TeTiRelax
     real:: OpacityPlanck_W(nWave), OpacityRosseland_W(nWave)
     integer:: iMaterial
-    character(len=*), parameter:: NameSub = 'ModUser::calc_table_value'
-    !-----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_table_value'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(iTable == iTableOpacity)then
        ! Calculate gray specific opacities for all materials
@@ -1420,8 +1443,9 @@ contains
        call stop_mpi(NameSub//' invalid value for iTable')
     endif
 
+    call test_stop(NameSub, DoTest)
   end subroutine calc_table_value
-  !===========================================================================
+  !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
@@ -1448,7 +1472,7 @@ contains
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
-    use ModLookupTable,ONLY: interpolate_lookup_table
+    use ModLookupTable, ONLY: interpolate_lookup_table
     use ModConst,      ONLY: cAtomicMass, cKToEV
     use CRASH_ModInterfaceNLTE, ONLY: NLTE_EOS
 
@@ -1490,8 +1514,10 @@ contains
     integer :: iWave
     real :: PlanckSi
 
-    character (len=*), parameter :: NameSub = 'user_material_properties'
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_material_properties'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
@@ -1503,14 +1529,14 @@ contains
     ! Initialize to negative value to see if it gets set
     TeSi = -7.70
 
-    ! Find maximum level set value. 
+    ! Find maximum level set value.
     iMaterial   = maxloc(State_V(LevelXe_:LevelMax), 1) - 1
 
     IsMix               = .false.
     if(UseMixedCell)then
        ! Shall we use mixed material cells?
        LevelSum = sum(State_V(LevelXe_:LevelMax))
-       IsMix = maxval(State_V(LevelXe_:LevelMax)) < MixLimit*LevelSum 
+       IsMix = maxval(State_V(LevelXe_:LevelMax)) < MixLimit*LevelSum
 
        if(IsMix)then
           ! Use number densities for eos()
@@ -1591,10 +1617,10 @@ contains
                         OpacityPlanckOut_I=OpacityPlanckOut_W, &
                         OpacityRosselandOut_I=OpacityRosselandOut_W)
                 else
-                   !Direct EOS, use EOverB input
+                   ! Direct EOS, use EOverB input
                    call NLTE_EOS(iMaterial, RhoSi, TeIn=TeSi, &
                         EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),   &
-                        OpacityPlanckOut_I=OpacityPlanckOut_W, & 
+                        OpacityPlanckOut_I=OpacityPlanckOut_W, &
                         OpacityRosselandOut_I=OpacityRosselandOut_W)
                 end if
 
@@ -1619,13 +1645,13 @@ contains
        end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-
-    !========================================================================
+    !==========================================================================
 
     subroutine get_thermo
 
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! Obtain the pressure from EinternalIn or TeIn or State_V
       ! Do this for various cases: mixed cell or not, lookup tables or not
@@ -1643,7 +1669,7 @@ contains
                     GammaOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut)
             else
-               !Inverse NLTE EOS, may be used with ERad[SI] or ERad/B(Te) as inputs.
+               ! Inverse NLTE EOS, may be used with ERad[SI] or ERad/B(Te) as inputs.
                if(UseERadInput) then
                   call NLTE_EOS(iMaterial, Rho=RhoSi, eTotalIn=EinternalIn, &
                        EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
@@ -1688,7 +1714,7 @@ contains
                     CvTotalOut=CvOut, GammaOut=GammaOut, &
                     zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut)
             else
-               !Direct EOS, use EOverB input 
+               ! Direct EOS, use EOverB input
                call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                     EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
                     eTotalOut=EinternalOut, pTotalOut=pSi, &
@@ -1713,7 +1739,7 @@ contains
                   EinternalOut = pSi*InvGammaMinus1 + State_VGB(ExtraEint_,i,j,k,iBlock)*&
                        No2Si_V(UnitP_)
                   EInternalOut = max(EInternalOut,1e-30)
-                  !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                  ! Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
                   if(UseERadInput)then
                      call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
                           EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
@@ -1721,7 +1747,7 @@ contains
                           TeOut=TeSi,        &
                           CvTotalOut=CvOut, GammaOut=GammaOut, &
                           zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                          UseERadInput=UseERadInput) 
+                          UseERadInput=UseERadInput)
                   else
                      call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalOut, &
                           EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),        &
@@ -1772,7 +1798,7 @@ contains
                   EinternalSi = pSi*InvGammaMinus1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalSi = max(EInternalSi,1e-30)
-                  !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                  ! Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
                   if(UseERadInput)then
                      call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
                           EoBIn_I =  State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
@@ -1780,7 +1806,7 @@ contains
                           TeOut=TeSi, &
                           CvTotalOut=CvOut, GammaOut=GammaOut, &
                           zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                          UseERadInput=UseERadInput) 
+                          UseERadInput=UseERadInput)
 
                   else
                      call NLTE_EOS(iMaterial, RhoSi, eTotalIn=EinternalSi,&
@@ -1788,7 +1814,7 @@ contains
                           TeOut=TeSi, &
                           CvTotalOut=CvOut, GammaOut=GammaOut, &
                           zAverageOut=AverageIonChargeOut, HeatCond=HeatCondOut, &
-                          UseERadInput=UseERadInput)  
+                          UseERadInput=UseERadInput)
                   end if
                end if
             end if
@@ -1803,12 +1829,11 @@ contains
       end if
 
     end subroutine get_thermo
-
-    !========================================================================
+    !==========================================================================
 
     subroutine get_electron_thermo
 
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! Obtain the pressure from EinternalIn or TeIn or State_V
       ! Do this for mixed cell or not, lookup tables or not
@@ -1826,7 +1851,7 @@ contains
                     GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
-               !Indirect EOS, either EOverB, or ERad may be used as inputs
+               ! Indirect EOS, either EOverB, or ERad may be used as inputs
                if(UseERadInput)then
                   call NLTE_EOS(iMaterial, Rho=RhoSi, eElectronIn=EinternalIn, &
                        EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
@@ -1876,7 +1901,7 @@ contains
                     GammaEOut=GammaOut, zAverageOut=AverageIonChargeOut, &
                     HeatCond=HeatCondOut, TeTiRelax=TeTiRelaxOut)
             else
-               !Direct EOS, use EOverB as inputs
+               ! Direct EOS, use EOverB as inputs
                call NLTE_EOS(iMaterial, Rho=RhoSi, TeIn=TeIn, &
                     EoBIn_I = EOverB_VGB(:,i,j,k,iBlock),         &
                     eElectronOut=EinternalOut, &
@@ -1898,11 +1923,11 @@ contains
                     TeTiRelax=TeTiRelaxOut)
             else
                if(UseNLTE)then
-                  !call CON_stop('NLTE energy cannot be found from pressure')
+                  ! call CON_stop('NLTE energy cannot be found from pressure')
                   EInternalOut = pSi*InvGammaMinus1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalOut = max(EInternalOut,1e-30)
-                  !Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
+                  ! Indirect EOS, either ERad or ERad/B(Te) may be used as inputs
                   if(UseERadInput)then
                      call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalOut,&
                           EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
@@ -1968,7 +1993,7 @@ contains
                   EinternalSi = pSi*InvGammaMinus1+&
                        State_VGB(ExtraEint_,i,j,k,iBlock)*No2Si_V(UnitP_)
                   EInternalSi = max(EInternalSi,1e-30)
-                  !Indirect EOS, either ERad, or ERad/B(Te) may be used as inputs
+                  ! Indirect EOS, either ERad, or ERad/B(Te) may be used as inputs
                   if(UseERadInput)then
                      call NLTE_EOS(iMaterial, RhoSi, eElectronIn=EinternalSi,&
                           EoBIn_I = State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)&
@@ -2010,7 +2035,6 @@ contains
       end if
 
     end subroutine get_electron_thermo
-
     !==========================================================================
 
     subroutine eos_nlte_lookup(iMaterial, Rho, &
@@ -2051,6 +2075,7 @@ contains
       real :: Natomic
       real :: TeEV, Value_V(1:nVarEos)
       integer :: iTable
+
       !------------------------------------------------------------------------
       Natomic = Rho/(cAtomicMass*cAtomicMassCRASH_I(iMaterial))
 
@@ -2089,7 +2114,6 @@ contains
       if(present(zAverageOut))zAverageOut = Value_V(Z_)
 
     end subroutine eos_nlte_lookup
-
     !==========================================================================
 
     subroutine opac_nlte_lookup(iMaterial, Rho, Te, &
@@ -2108,6 +2132,7 @@ contains
       real :: Natomic
       real :: TeEV, Opacity_V(1:3*nWave)
       integer :: iTable
+
       !------------------------------------------------------------------------
       Natomic = Rho/(cAtomicMass*cAtomicMassCRASH_I(iMaterial))
       TeEV = Te*cKToEV
@@ -2125,7 +2150,6 @@ contains
            = Opacity_V(2*nWave+1:3*nWave)*Rho
 
     end subroutine opac_nlte_lookup
-
     !==========================================================================
 
     subroutine lookup_error(String, Arg1, Arg2, iArg)
@@ -2138,7 +2162,7 @@ contains
       real,              intent(in) :: Arg1, Arg2
       integer, optional, intent(in) :: iArg
 
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       write(*,*) 'ERROR for lookup arguments of '//String//': ', Arg1, Arg2
       if(present(iArg)) write(*,*) 'iArg =', iArg
 
@@ -2151,10 +2175,11 @@ contains
       call stop_mpi('lookup_error')
 
     end subroutine lookup_error
+    !==========================================================================
 
   end subroutine user_material_properties
+  !============================================================================
 
-  !===========================================================================
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     ! Set UserCriteria = 1.0 for refinement, 0.0 for coarsening.
@@ -2176,7 +2201,11 @@ contains
     logical:: IsAu_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     real   :: RhoMin
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax, nLevel, iNode
-    !------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
 
     UserCriteria = 0.0
@@ -2255,9 +2284,9 @@ contains
     ! No need to refine
     UserCriteria = 0.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
-
-  !===========================================================================
+  !============================================================================
 
   subroutine set_yzr(x, y, z, r, rMax)
 
@@ -2280,7 +2309,7 @@ contains
 
     real :: Factor
     real :: y0, z0, r0, rInner
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(UseNozzle)then
        Factor = max(0.0, min(1.0, &
             (x - xStartNozzle)/(xEndNozzle - xStartNozzle)))
@@ -2300,7 +2329,7 @@ contains
        r = abs(y)
        z = 0.0
     end if
-    
+
     if(present(rMax))then
 
        if(r > rMax)then
@@ -2312,7 +2341,6 @@ contains
 
     end if
   end subroutine set_yzr
-
   !============================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
@@ -2323,13 +2351,15 @@ contains
     use ModSize,       ONLY: nI, nJ, nK
 
     integer, intent(in) :: iBlock
-    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
+    real,    intent(out):: Eta_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
     integer :: i, j, k
     real :: TeSi, EtaCoef, HeatCondSi
 
-    character (len=*), parameter :: NameSub = 'user_set_resistivity'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     EtaCoef = (cBoltzmann/cElectronCharge)**2 &
          *Si2No_V(UnitX_)**2/(cMu*Si2No_V(UnitT_))
@@ -2346,8 +2376,8 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
-
   !============================================================================
 
   subroutine user_set_boundary_cells(iBlock)
@@ -2363,8 +2393,10 @@ contains
     integer :: i, j, k, iMaterial
     real :: TeSi, Ti, Natomic, NatomicSi
 
-    character(len=*), parameter :: NameSub='user_set_boundary_cells'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(Dt == 0.0) RETURN
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -2382,6 +2414,9 @@ contains
             iBoundary_GB(i,j,k,iBlock) = SolidBc_
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
+  !============================================================================
 
 end module ModUser
+!==============================================================================

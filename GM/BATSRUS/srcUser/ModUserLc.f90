@@ -1,47 +1,49 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!==============================================================================
-!Description (Sokolov, Feb.,04,2010)
-!Coded by: Cooper Downs /cdowns@ifa.hawaii.edu (version 0)
-!Development for the present version: Igor Sokolov
-!read_inputs: #TRBOUNDARY (sets the type of BC at the corona boundary)
-!Do not read TeBoundary and NeBoundary, set them equal to those
-!for chromosphere or for the top of the transition region, depending on the BC
+! Description (Sokolov, Feb.,04,2010)
+! Coded by: Cooper Downs /cdowns@ifa.hawaii.edu (version 0)
+! Development for the present version: Igor Sokolov
+! read_inputs: #TRBOUNDARY (sets the type of BC at the corona boundary)
+! Do not read TeBoundary and NeBoundary, set them equal to those
+! for chromosphere or for the top of the transition region, depending on the BC
 !
-!init_session: checks the presence of #TRBOUNDARY, #MAGNETOGRAM and
+! init_session: checks the presence of #TRBOUNDARY, #MAGNETOGRAM and
 !#PLASMA commands, sets the dimensionless constans for density and temperature
-!at the coronal base and for the heat conduction coefficient.
+! at the coronal base and for the heat conduction coefficient.
 !
-!set_ics: initialize the MHD parameters using the Parker solution.
-!Intialize waves acoordin to the "adiabatic law"
+! set_ics: initialize the MHD parameters using the Parker solution.
+! Intialize waves acoordin to the "adiabatic law"
 !
 !
-!set_initial_perturbation: initialize the "unsigned flux" model, calculate 
-!the total heating and compares with the contribution from the primary model
+! set_initial_perturbation: initialize the "unsigned flux" model, calculate
+! the total heating and compares with the contribution from the primary model
 !
-!face_bcs: implements two sorts of the BC at the low boundary: chromo and REB
-!Set the BC for waves
+! face_bcs: implements two sorts of the BC at the low boundary: chromo and REB
+! Set the BC for waves
 !
-!get_log_var: magnetic and internal energy, total heating
+! get_log_var: magnetic and internal energy, total heating
 !
-!calc_sources: modify the time step to prevent the code instability at large
-!values of the cooling function
+! calc_sources: modify the time step to prevent the code instability at large
+! values of the cooling function
 !
-!update_states: sets the logical at each used block needed for REB model
+! update_states: sets the logical at each used block needed for REB model
 !
-!set_boundary_cells: to use the "extra" inner boundary
+! set_boundary_cells: to use the "extra" inner boundary
 !
-!set_outer_BC: set the boundary values for temperature as needed for the 
-!parallel heat conduction
+! set_outer_BC: set the boundary values for temperature as needed for the
+! parallel heat conduction
 !
-!set_plot_var: implement plot variables qheat and qrad (heating and cooling
-!functions
-! 
+! set_plot_var: implement plot variables qheat and qrad (heating and cooling
+! functions
+!
 module ModUser
-  use ModMain,      ONLY: nBLK, nI, nJ, nK
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+  use ModMain,      ONLY: MaxBlock, nI, nJ, nK
   use ModReadParam, ONLY: lStringLine
-  use ModCoronalHeating,ONLY: CoronalHeating_C,get_cell_heating
+  use ModCoronalHeating, ONLY: CoronalHeating_C,get_cell_heating
   use ModRadiativeCooling
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -55,18 +57,15 @@ module ModUser
        IMPLEMENTED11=> user_set_cell_boundary,               &
        IMPLEMENTED12=> user_set_plot_var
 
-
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'Low Corona / Heating by waves'
 
-
   ! ratio of electron Temperature / Total Temperature
   ! given by the formula P = ne * k_B*Te + n_i k_B*T_i
   real :: TeFraction
-
 
   ! additional variables for TR boundary / heating models
   character(len=lStringLine) :: TypeTRBoundary
@@ -82,29 +81,28 @@ module ModUser
   real :: BoundaryTe
   real :: BoundaryRho
 
-
   ! Variables for the REB model
-  logical :: IsNewBlockTeCalc_B(nBLK) = .true.
+  logical :: IsNewBlockTeCalc_B(MaxBlock) = .true.
   ! cell centered electron temperature for entire block
   ! put here so not always re-computed during boundary calculation
-  real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK) 
+  real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
 contains
-
   !============================================================================
 
   subroutine user_read_inputs
 
-    use ModMain,        ONLY: lVerbose, UseUserInitSession     
+    use ModMain,        ONLY: lVerbose, UseUserInitSession
     use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModPhysics,     ONLY: SW_T_dim, SW_n_dim
-   
 
     character (len=100) :: NameCommand
-    character(len=*), parameter :: NameSub = 'user_read_inputs'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     UseUserInitSession = .true.
     UseRadCooling=.true.
 
@@ -160,8 +158,8 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
   subroutine user_init_session
@@ -182,7 +180,10 @@ contains
 
     real, parameter:: CoulombLog = 20.0
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session:'
@@ -218,7 +219,6 @@ contains
     TeFraction = MassIon_I(1)*ElectronTemperatureRatio &
          /(1 + AverageIonCharge*ElectronTemperatureRatio)
 
-
     ! calc normalized values of BC Te and Ne
     ! note, implicitly assuming Ne = Ni here
     BoundaryTe = BoundaryTeSi * Si2No_V(UnitTemperature_)
@@ -246,8 +246,8 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
   !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -264,13 +264,15 @@ contains
     use ModWaves,       ONLY: UseAlfvenWaves
     use ModAlfvenWaveHeating, ONLY: adiabatic_law_4_wave_state
 
-
     real, intent(out) :: VarsGhostFace_V(nVar)
 
     real :: Density, Temperature, FullBr
     real :: Runit_D(3), U_D(3)
     real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
@@ -285,8 +287,6 @@ contains
     FullB_D = B0Face_D + B1t_D
     FullBr = dot_product(Runit_D, FullB_D)
 
-
-
     Density = BoundaryRho
     if(DoREBModel) then
        ! now calculate the contribution due to heat conduction into the boundary
@@ -298,7 +298,6 @@ contains
     end if
 
     Temperature = BoundaryTe/TeFraction
-
 
     VarsGhostFace_V(Rho_) =  Density
     VarsGhostFace_V(p_) = Density*Temperature
@@ -314,8 +313,8 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2.0*OmegaBody*FaceCoords_D(x_)
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
-
   !============================================================================
 
   subroutine user_set_ics(iBlock)
@@ -355,14 +354,17 @@ contains
     ! Solution at rTransRegion
     real :: TeBaseCgs, NeBaseCgs, NeValue, TeValue
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-    ! This icond implements the radially symmetric parker isothermal wind solution 
+    call test_start(NameSub, DoTest, iBlock)
+    ! This icond implements the radially symmetric parker isothermal wind solution
     ! for the corona. If using a chromospheric condition, extend base of wind solution
-    ! to r=rTransRegion, and put in approximate transition region below 
-    ! 
+    ! to r=rTransRegion, and put in approximate transition region below
+    !
     ! NOTE this coronal icond does NOT use T value from the PARAM.in
     ! #BODY command, instead it sets the coronal Te to 1.5 MK everywhere.
-    ! It DOES however, set the base density of the coronal part according to 
+    ! It DOES however, set the base density of the coronal part according to
     ! BodyRho_I(1)
 
     T0 = 3.0e6*Si2No_V(UnitTemperature_)
@@ -449,12 +451,12 @@ contains
             B0_DGB(:, i, j, k, iBlock))
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
   !============================================================================
 
   subroutine user_initial_perturbation
-    use ModMain, ONLY: nI ,nJ , nK, nBLK, Unused_B, x_, y_, z_
+    use ModMain, ONLY: nI ,nJ , nK, MaxBlock, Unused_B, x_, y_, z_
     use ModProcMH,    ONLY: iProc, iComm
     use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitEnergyDens_, UnitT_, rBody
     use ModCoronalHeating, ONLY: TotalCoronalHeatingCgs, &
@@ -462,38 +464,38 @@ contains
     use ModProcMH,      ONLY: iProc
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMpi
-    use ModCoronalHeating,ONLY:UseExponentialHeating,&
+    use ModCoronalHeating, ONLY:UseExponentialHeating,&
          DecayLengthExp,HeatingAmplitudeCGS,WSAT0,DoOpenClosedHeat
     use ModRadiativeCooling
     use BATL_lib, ONLY: CellVolume_GB
 
     integer :: i, j, k, iBlock, iError
-    logical :: oktest, oktest_me
 
     real :: TotalHeatingProc, TotalHeating, TotalHeatingCgs, CoronalHeating
     real :: TotalHeatingModel = 0.0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
-    call set_oktest('user_initial_perturbation',oktest,oktest_me)
+    call test_start(NameSub, DoTest)
 
     ! Calculate the total power into the Computational Domain, loop over
     ! every cell, add the heating, and after block loop, MPI_reduce
 
-    ! Do this because want to be able to generalize models, which can depend on 
-    ! topology of domain --> total heating not always known beforehand 
+    ! Do this because want to be able to generalize models, which can depend on
+    ! topology of domain --> total heating not always known beforehand
 
     ! Need to initialize unsigned flux model first
 
-    !write(*,*)'Radiation cooling integral equals:',cooling_function_integral_si(5.0e5)
+    ! write(*,*)'Radiation cooling integral equals:',cooling_function_integral_si(5.0e5)
     if(UseUnsignedFluxModel) call get_coronal_heat_factor
 
     TotalHeatingProc = 0.0
 
-
-    do iBlock=1,nBLK
+    do iBlock=1,MaxBlock
        if(Unused_B(iBlock))CYCLE
        do k=1,nK; do j=1,nJ; do i=1,nI
 
-          ! Calc heating (Energy/Volume/Time) for the cell 
+          ! Calc heating (Energy/Volume/Time) for the cell
           call get_cell_heating(i, j, k, iBlock, CoronalHeating)
 
           ! Multiply by cell volume and add to sum
@@ -537,6 +539,7 @@ contains
        write(*,*) ''
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
   !============================================================================
 
@@ -558,14 +561,16 @@ contains
     logical, parameter :: DoCalcTime = .true.
     real :: TimeInvRad, TimeInvHeat, Einternal, Vdt_MaxSource
 
-    character (len=*), parameter :: NameSub = 'user_calc_sources'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Add this in for tentative timestep control from large source terms
     ! need this because radiative loss term becomes INSANELY large at
     ! Chromospheric densities
 
-    if(.not.DoCalcTime)return
+    if(.not.DoCalcTime)RETURN
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        Einternal = InvGammaMinus1 * State_VGB(P_,i,j,k,iBlock)
@@ -575,16 +580,16 @@ contains
        Vdt_MaxSource = (TimeInvRad + TimeInvHeat)*CellVolume_GB(i,j,k,iBlock)
 
        !**** NOTE This Is a CELL CENTERED TIMESCALE since sources are cell
-       ! centered. For now, add to lefthand VdtFace, knowing that calc timestep 
+       ! centered. For now, add to lefthand VdtFace, knowing that calc timestep
        ! looks at MAX of VdtFaces on all sides
-       ! (however cells at the edge of the block will only see one neighbor...) 
+       ! (however cells at the edge of the block will only see one neighbor...)
        VdtFace_x(i,j,k) = VdtFace_x(i,j,k) + 2.0 * Vdt_maxsource
        VdtFace_y(i,j,k) = VdtFace_y(i,j,k) + 2.0 * Vdt_maxsource
        VdtFace_z(i,j,k) = VdtFace_z(i,j,k) + 2.0 * Vdt_maxsource
 
-
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
   !============================================================================
 
@@ -593,23 +598,26 @@ contains
     use ModUpdateState, ONLY: update_state_normal
 
     integer, intent(in) :: iBlock
-    !--------------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call update_state_normal(iBlock)
 
     ! REB model calls face gradient calculation, reset block logical
     ! so that the Te block will be re-calculated next pass
     if(DoREBModel) IsNewBlockTeCalc_B(iBlock) = .true.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
-
   !============================================================================
 
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
     use ModIO,         ONLY: write_myname
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_
-    use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_ 
+    use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK
     use ModB0,         ONLY: B0_DGB
     use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_, &
@@ -618,13 +626,16 @@ contains
     use ModProcMH,     ONLY: nProc
 
     real, intent(out) :: VarValue
-    character (LEN=10), intent(in) :: TypeVar 
+    character (LEN=10), intent(in) :: TypeVar
     real, optional, intent(in) :: Radius
 
     integer :: iBlock
     real :: unit_energy
     real, external :: integrate_BLK
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     unit_energy = No2Io_V(UnitEnergydens_)*No2Io_V(UnitX_)**3
     !\
     ! Define log variable to be saved::
@@ -640,7 +651,7 @@ contains
     case('emag')
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
-          tmp1_BLK(:,:,:,iBlock) = & 
+          tmp1_BLK(:,:,:,iBlock) = &
                ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
                +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
                +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
@@ -661,8 +672,8 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
-
   !============================================================================
 
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
@@ -674,8 +685,10 @@ contains
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! This routine used only for setting the inner r ghost cells for
     ! spherical geometry. Need to fix the temperature to the boundary
@@ -692,9 +705,10 @@ contains
     endif
 
     IsFound = .true.
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
+  !============================================================================
 
-  !===========================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -703,7 +717,6 @@ contains
     use ModPhysics, ONLY: No2Si_V, UnitT_, UnitEnergyDens_, &
          UnitTemperature_
     use ModAdvance,  ONLY: State_VGB, Rho_, p_
-
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -716,22 +729,25 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
     real                         :: UnitEnergyDensPerTime, CoronalHeating
     real                         :: RadiativeCooling
     integer                      :: i, j, k
-    !-------------------------------------------------------------------    
-    !UsePlotVarBody = .true. 
-    !PlotVarBody = 0.0 
+
+    ! UsePlotVarBody = .true.
+    ! PlotVarBody = 0.0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IsFound=.true.
 
     UnitEnergyDensPerTime = 10.0 * No2Si_V(UnitEnergydens_) / No2Si_V(UnitT_)
-    !\                                                                              
+    !\
     ! Define plot variable to be saved::
-    !/ 
+    !/
     !
     select case(NameVar)
-       !Allways use lower case !!
+       ! Allways use lower case !!
 
     case('qheat')
        do k=MinK,MaxK ; do j=MinJ,MaxJ ; do i=MinI,MaxI
@@ -759,8 +775,10 @@ contains
     case default
        IsFound= .false.
     end select
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
+  !============================================================================
 
-  !============================================================================ 
 end module ModUser
+!==============================================================================
 

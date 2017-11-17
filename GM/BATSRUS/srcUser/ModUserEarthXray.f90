@@ -1,15 +1,18 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-! Note that for some reason that I don't understand yet, this user file 
-! will only work with the normalization type set to "solarwind".  You 
+! Note that for some reason that I don't understand yet, this user file
+! will only work with the normalization type set to "solarwind".  You
 ! should set this in the PARAM.in file.
 
-!========================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModSize,     ONLY: nI,nJ,nK,MaxBlock
   use ModVarIndexes, ONLY: nVar
-  use ModMain, ONLY: iTest, jTest, kTest, BlkTest, ProcTest, n_step
+  use ModMain, ONLY:      n_step
   use ModProcMH, ONLY: iProc
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_init_session,               &
@@ -18,23 +21,23 @@ module ModUser
        IMPLEMENTED4 => user_set_plot_var,               &
        IMPLEMENTED5 => user_update_states
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
-  !summed MHD quantities
+  ! summed MHD quantities
   integer, parameter, public :: MaxSumMhdVar=nVar+2 !(8+2+2)
   integer, parameter, public :: Umag_=nVar+1
-  integer, parameter, public :: Tsw_ =nVar+2 
+  integer, parameter, public :: Tsw_ =nVar+2
   real :: tSumStart, tSumEnd
   real :: StateSum_VC(MaxSumMhdVar,nI, nJ, nK)
   logical :: IsRestartSum(MaxBlock)
- 
+
   real, parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: &
        NameUserModule = 'Earth Mag X-ray (EarthXray), Hansen, Jan, 2008'
 
 contains
+  !============================================================================
 
-  !=====================================================================
   subroutine user_init_session
 
     use ModVarIndexes
@@ -44,7 +47,10 @@ contains
     use ModBlockData, ONLY: MaxBlockData
     integer :: iBoundary
 
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     ! Maximum numer of reals stored as extra block data
     MaxBlockData = MaxSumMhdVar*nIJK
@@ -53,19 +59,19 @@ contains
     ! We are using this routine to initialize the arrays that control the
     ! default value for the inner body and hence the boundary condition.
     ! Note these values are typically set in set_physics and they are set to
-    ! the BodyRho_I value read from the PARAM.in file.  We want to use 
-    ! this same strategy for multi-species but have to do it here to avoid 
+    ! the BodyRho_I value read from the PARAM.in file.  We want to use
+    ! this same strategy for multi-species but have to do it here to avoid
     ! modifying the core source code.
     !/
-  
+
     ! FaceState_VI is used to set the inner boundary condition.  Setting
-    ! the correct values here for the extra species will assure that 
+    ! the correct values here for the extra species will assure that
     ! the inner boundary is done correctly.
     FaceState_VI(rhosw_,body1_) =1e-6*BodyRho_I(1)
     FaceState_VI(rhoion_,body1_)=BodyRho_I(1)
 
     ! We set the following array for the outer boundaries.  Although
-    ! only CellState_VI is used we set both.  Not that these are 
+    ! only CellState_VI is used we set both.  Not that these are
     ! used for only some outerboundary cases (fixed, for example) and
     ! are ignored for vary and other types.  We code them as in set_physics
     ! just to be safe.
@@ -81,21 +87,25 @@ contains
             FaceState_VI(Ux_:Uz_,iBoundary)*FaceState_VI(rho_,iBoundary)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
+  !============================================================================
 
-  !=====================================================================
   subroutine user_set_ics(iBlock)
 
     use ModMain,     ONLY: time_simulation, dt
     use ModGeometry, ONLY: r_BLK
     use ModAdvance,  ONLY: State_VGB, rhoion_, rhosw_
     use ModPhysics,  ONLY: BodyRho_I, sw_rho, rBody
-    use ModBlockData,ONLY: put_block_data
+    use ModBlockData, ONLY: put_block_data
 
     integer, intent(in) :: iBlock
 
     integer :: iBlockLast = -1
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     where(r_BLK(:,:,:,iBlock)<2.0*Rbody)
        State_VGB(rhoion_,:,:,:,iBlock) = BodyRho_I(1)
@@ -105,9 +115,8 @@ contains
        State_VGB(rhosw_,:,:,:,iBlock)  = sw_rho
     end where
 
-
 !    !\
-!    ! Initiallize the arrays that contain the time average of the State 
+!    ! Initiallize the arrays that contain the time average of the State
 !    ! variables with the initial conditions of the cells
 !    !/
 !    tSumStart = Time_Simulation
@@ -117,10 +126,10 @@ contains
 !       call put_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, StateSum_VC)
 !    end if
 !
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
+  !============================================================================
 
-
-  !=====================================================================
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc,found)
 
   use ModMain,      ONLY : time_simulation
@@ -136,6 +145,10 @@ contains
 
     character (len=*), parameter :: Name='user_set_cell_boundary'
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     time_now = time_simulation
 
     !-------------------------------------------------------------------
@@ -147,9 +160,8 @@ contains
        call BC_fixed_B
     end if
 
-
     ! Note that the above code does not set the extra density species (vary)
-    ! or sets them to undefined values (fixed). 
+    ! or sets them to undefined values (fixed).
     !
     ! The solar wind species is the only one at the upstream boundary.
     ! The ionosphere species is zero.
@@ -158,9 +170,10 @@ contains
 
     found = .true.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
+  !============================================================================
 
-  !===========================================================================
   subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
@@ -168,16 +181,18 @@ contains
     use ModSize
     use ModAdvance, ONLY: State_VGB
     use ModMain,    ONLY: nStage, time_simulation, dt
-    use ModBlockData,ONLY: get_block_data, put_block_data, use_block_data
+    use ModBlockData, ONLY: get_block_data, put_block_data, use_block_data
 
     integer,intent(in):: iBlock
     integer :: iBlockLast = -1
 
-    !--------------------------------------------------------------------------
-
     !\
     ! do the normal update states
     !/
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call update_state_normal(iBlock)
 
     !\
@@ -191,7 +206,7 @@ contains
           call get_block_data(iBlock, MaxSumMhdVar, nI, nJ, nK, &
                StateSum_VC, DoNotAdvance=.true.)
 
-          !reset the block data for summing over the next period if it was just printed
+          ! reset the block data for summing over the next period if it was just printed
           if (IsRestartSum(iBlock)) then
              IsRestartSum(iBlock) = .false.
              StateSum_VC = 0.0
@@ -227,8 +242,8 @@ contains
                        State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock)**2 )/ &
                   State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*dt
              ! Note that the temperature of the solar wind plasma is only
-             ! going to work here for cells were the ionospheric plasma is 
-             ! small since we are using the full pressure and the partial 
+             ! going to work here for cells were the ionospheric plasma is
+             ! small since we are using the full pressure and the partial
              ! density.
              StateSum_VC(Tsw_,:,:,:) = StateSum_VC(Tsw_,:,:,:) + &
                   State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)/           &
@@ -249,9 +264,9 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
-
-  !====================================================================
+  !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
@@ -261,9 +276,8 @@ contains
     use ModMain, ONLY: Body1_, time_simulation,x_,y_,z_
     use ModAdvance
     use ModGeometry, ONLY: Xyz_DGB, r_BLK
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
-    use ModBlockData,ONLY: get_block_data, put_block_data, use_block_data
+    use ModBlockData, ONLY: get_block_data, put_block_data, use_block_data
 
     integer,          intent(in) :: iBlock
     character(len=*), intent(in) :: NameVar
@@ -280,16 +294,13 @@ contains
     integer :: iBlockLast = -1
 
     character (len=*), parameter :: Name='user_set_plot_var'
-    logical :: oktest,oktest_me
 
-    !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_set_plot_var',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    !If we are in this routine then reset the logical that tell the sum to start over
+    ! If we are in this routine then reset the logical that tell the sum to start over
 
     IsRestartSum = .true.
 
@@ -305,7 +316,7 @@ contains
     if(use_block_data(iBlock))then
 
        isFound = .true.
-    
+
        select case(NameVar)
        case('rhoave')
           NameTecVar = '<`r>'
@@ -320,40 +331,40 @@ contains
           NameTecVar = '<`rion>'
           iUnitVar   = UnitRho_
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(rhoion_,:,:,:)
-       case('bxave') 
+       case('bxave')
           NameTecVar = '<B_x>'
           iUnitVar   = UnitB_
           ! Note: here we add B0x to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bx_,:,:,:)+ &
                B0_DGB(x_,1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
-       case('byave') 
+       case('byave')
           NameTecVar = '<B_y>'
           iUnitVar   = UnitB_
           ! Note: here we add B0y to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(By_,:,:,:)+ &
                B0_DGB(y_,1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
-       case('bzave') 
+       case('bzave')
           NameTecVar = '<B_z>'
           iUnitVar   = UnitB_
           ! Note: here we add B0z to the summed B1.  We have to multiply by the time because the
           ! summed variables have been multiplied by dt in the summation.
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Bz_,:,:,:)+ &
                B0_DGB(z_,1:nI,1:nJ,1:nK,iBlock)*(tSumEnd-tSumStart)
-       case('uxave') 
+       case('uxave')
           NameTecVar = '<U_x>'
           iUnitVar   = UnitU_
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUx_,:,:,:)
-       case('uyave') 
+       case('uyave')
           NameTecVar = '<U_y>'
           iUnitVar   = UnitU_
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUy_,:,:,:)
-       case('uzave') 
+       case('uzave')
           NameTecVar = '<U_z>'
           iUnitVar   = UnitU_
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(RhoUz_,:,:,:)
-       case('uave') 
+       case('uave')
           NameTecVar = '<|U|>'
           iUnitVar   = UnitU_
           PlotVar_G(1:nI,1:nJ,1:nK)  = StateSum_VC(Umag_,:,:,:)
@@ -369,19 +380,22 @@ contains
           IsFound = .false.
           call stop_mpi(Name//': unimplemented variable='//NameVar)
        end select
-    
+
        UsePlotVarBody = .true.
        PlotVarBody    = 0.0
-    
+
        ! The Sum variables store the summation over time.  We want averages so divide by
        ! the elapsed time.
        PlotVar_G = PlotVar_G/((tSumEnd-tSumStart)*Io2No_V(UnitT_))
-    
+
        if(IsDimensional) PlotVar_G = PlotVar_G*No2Io_V(iUnitVar)
-    
+
     end if
-          
+
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
+  !============================================================================
 
 end module ModUser
+!==============================================================================
 

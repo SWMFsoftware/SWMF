@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!==============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -14,7 +16,7 @@ module ModUser
        IMPLEMENTED8 => user_normalization,              &
        IMPLEMENTED9 => user_calc_sources
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
@@ -51,7 +53,6 @@ module ModUser
   real    :: BxInput = 1.7, ByInput = 1.0
 
 contains
-
   !============================================================================
 
   subroutine user_init_session
@@ -60,7 +61,7 @@ contains
     use ModMain,    ONLY: Time_Simulation
     use ModPhysics, ONLY: Gamma
     use ModProcMH,  ONLY: iProc
-    use ModGeometry,ONLY: TypeGeometry
+    use ModGeometry, ONLY: TypeGeometry
     use ModVarIndexes, ONLY: ExtraEint_
 
     integer :: iCell, iError
@@ -73,8 +74,10 @@ contains
     character(len=100) :: NameFinFile
     character(len=500) :: StringHeaderFin, NameVarFin
 
-    character(len=*), parameter :: NameSub = 'user_init_session'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     IsSpherical = TypeGeometry(1:3) == 'sph'
 
     if(TypeProblem=='gaussian' .or. TypeProblem=='rz' &
@@ -217,8 +220,8 @@ contains
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
   !============================================================================
 
   subroutine user_normalization
@@ -226,8 +229,10 @@ contains
     use ModConst,   ONLY: cRadiation, cProtonMass, cBoltzmann
     use ModPhysics, ONLY: No2Si_V, UnitRho_, UnitU_, Gamma
 
-    character (len=*), parameter :: NameSub = 'user_normalization'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_normalization'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(TypeProblem == 'lowrie')then
        No2Si_V = 1.0
@@ -238,8 +243,8 @@ contains
             *No2Si_V(UnitU_)**6/Gamma**4
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_normalization
-
   !============================================================================
 
   subroutine user_update_states(iBlock)
@@ -259,8 +264,10 @@ contains
     integer :: i, j, k
     real :: Ee, EeSi, PeSi
 
-    character(len=*), parameter :: NameSub = 'user_update_states'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! No call to update_state_normal to nullify the effect of the hydro solver
     ! call update_state_normal(iBlock)
@@ -301,11 +308,11 @@ contains
                Ee - InvGammaMinus1*State_VGB(Pe_,i,j,k,iBlock)
        end do; end do; end do
 
-       call calc_energy_cell(iBlock)       
+       call calc_energy_cell(iBlock)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
-
   !============================================================================
 
   subroutine user_calc_sources(iBlock)
@@ -321,8 +328,10 @@ contains
 
     integer :: i, j, k, iP
     real :: DivU
-    character (len=*), parameter :: NameSub = 'user_calc_sources'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
        ! Note that the velocity of the first (and only) fluid is used
@@ -331,14 +340,13 @@ contains
        if(nK > 1) DivU = DivU + uDotArea_ZI(i,j,k+1,1) - uDotArea_ZI(i,j,k,1)
        DivU = DivU/CellVolume_GB(i,j,k,iBlock)
 
-
        ! Reduce gamma to 4/3 for electrons (lowrie test)
        Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
             -(GammaRel-Gamma)*State_VGB(Pe_,i,j,k,iBlock)*DivU
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
-
   !============================================================================
 
   subroutine user_read_inputs
@@ -349,7 +357,11 @@ contains
     use ModReadParam,   ONLY: read_line, read_command, read_var
 
     character (len=100) :: NameCommand
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
        write(iUnitOut,*)'User read_input starts'
@@ -388,8 +400,8 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
   subroutine user_set_ics(iBlock)
@@ -407,9 +419,10 @@ contains
     real :: r, Weight1, Weight2, Rho, Te, Ur, p, RhoU_D(2)
     real :: SinSlope, CosSlope, Rot_II(2,2), Ee, Pe, Ti, Ux
 
-    character(len=*), parameter :: NameSub = "user_set_ics"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     select case(TypeProblem)
     case('gaussian')
        do i = MinI,MaxI
@@ -536,13 +549,13 @@ contains
              call get_state_parcond(i, j, iBlock)
           end do; end do
        end if
-       
+
     case default
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
   !============================================================================
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
@@ -560,9 +573,10 @@ contains
     integer :: i, j, k
     real :: r, Temperature
 
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     select case(TypeProblem)
     case('gaussian')
        select case(TypeBc)
@@ -767,8 +781,8 @@ contains
 
     IsFound = .true.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-
   !============================================================================
 
   subroutine get_state_gaussian(i, iBlock)
@@ -779,14 +793,17 @@ contains
     integer, intent(in) :: i, iBlock
 
     real :: Temperature
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_state_gaussian'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call get_temperature_gaussian(i, iBlock, Temperature)
     State_VGB(Rho_,i,:,:,iBlock) = 1.0
     State_VGB(RhoUx_:RhoUz_,i,:,:,iBlock) = 0.0
     State_VGB(p_,i,:,:,iBlock) = Temperature
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_state_gaussian
-
   !============================================================================
 
   subroutine get_temperature_gaussian(i, iBlock, Temperature)
@@ -799,14 +816,17 @@ contains
     real,    intent(out):: Temperature
 
     real :: Spread
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_temperature_gaussian'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     Spread = 4.0*HeatConductionCoef*Time_Simulation
     Temperature = Tmin + AmplitudeTemperature/(sqrt(cPi*Spread)) &
          *exp(-Xyz_DGB(x_,i,1,1,iBlock)**2/Spread)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_temperature_gaussian
-
   !============================================================================
 
   subroutine get_state_rz(i, j, iBlock)
@@ -817,14 +837,17 @@ contains
     integer, intent(in) :: i, j, iBlock
 
     real :: Temperature
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_state_rz'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call get_temperature_rz(i, j, iBlock, Temperature)
     State_VGB(Rho_,i,j,:,iBlock) = 1.0
     State_VGB(RhoUx_:RhoUz_,i,j,:,iBlock) = 0.0
     State_VGB(p_,i,j,:,iBlock) = Temperature
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_state_rz
-
   !============================================================================
 
   subroutine get_temperature_rz(i, j, iBlock, Temperature)
@@ -837,7 +860,10 @@ contains
     real,    intent(out):: Temperature
 
     real :: r, Lambda, Spread
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_temperature_rz'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     Lambda = -(3.831705970/y2)**2
     Spread = 4.0*HeatConductionCoef*Time_Simulation
@@ -847,8 +873,8 @@ contains
          *bessj0(sqrt(-Lambda)*r) &
          /(sqrt(cPi*Spread))*exp(-Xyz_DGB(x_,i,j,1,iBlock)**2/Spread)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_temperature_rz
-
   !============================================================================
 
   subroutine get_state_parcond(i, j, iBlock)
@@ -860,7 +886,11 @@ contains
     integer, intent(in) :: i, j, iBlock
 
     real :: Te
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_state_parcond'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call get_temperature_parcond(i, j, 1, iBlock, Te)
     State_VGB(:,i,j,:,iBlock) = 0.0
     State_VGB(Rho_,i,j,:,iBlock) = 1.0
@@ -877,8 +907,8 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_state_parcond
-
   !============================================================================
 
   subroutine get_state_parcond_sph(i, j, k, iBlock)
@@ -890,7 +920,11 @@ contains
     integer, intent(in) :: i, j, k, iBlock
 
     real :: Te
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_state_parcond_sph'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call get_temperature_parcond(i, j, k, iBlock, Te)
     State_VGB(:,i,j,k,iBlock) = 0.0
     State_VGB(Rho_,i,j,k,iBlock) = 1.0
@@ -907,8 +941,8 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_state_parcond_sph
-
   !============================================================================
 
   subroutine get_temperature_parcond(i, j, k, iBlock, Temperature)
@@ -921,7 +955,10 @@ contains
     real,    intent(out):: Temperature
 
     real :: x, y, xx, yy, Spread, Spread0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'get_temperature_parcond'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     x = Xyz_DGB(x_,i,j,k,iBlock)
     y = Xyz_DGB(y_,i,j,k,iBlock)
     xx = (Bx*x+By*y)/sqrt(Bx**2+By**2)
@@ -935,8 +972,8 @@ contains
 
     if(TypeProblem == 'parcondsemi') Temperature = Temperature**(1.0/3.5)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_temperature_parcond
-
   !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
@@ -966,9 +1003,10 @@ contains
     real :: SinSlope, CosSlope, Ux, Te, Ti, TeSi
     integer :: i, j, k, iCell
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
 
@@ -1155,8 +1193,8 @@ contains
 
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
   !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
@@ -1205,8 +1243,10 @@ contains
     real :: Cv, HeatCond
     real :: EeSi, Ee, NatomicSi
 
-    character(len=*), parameter :: NameSub = 'user_material_properties'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
@@ -1315,8 +1355,8 @@ contains
     if(present(PlanckOut_W)) &
          PlanckOut_W = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
-
   !============================================================================
 
   real function bessj0(x)
@@ -1325,6 +1365,7 @@ contains
 
     real :: x, z, ax, xx
 
+    !--------------------------------------------------------------------------
     real y,p1,p2,p3,p4,p5,q1,q2,q3,q4,q5,r1,r2,r3,r4,r5,r6,s1,s2,s3,s4,s5,s6
     data p1,p2,p3,p4,p5/1.d0,-.1098628627d-2,.2734510407d-4, &
          -.2073370639d-5,.2093887211d-6/, q1,q2,q3,q4,q5/-.1562499995d-1, &
@@ -1336,7 +1377,7 @@ contains
 
     !--------------------------------------------------------------------------
 
-    if(abs(x).lt.8.)then
+    if(abs(x) < 8.)then
        y=x**2
        bessj0=(r1+y*(r2+y*(r3+y*(r4+y*(r5+y*r6))))) &
             /(s1+y*(s2+y*(s3+y*(s4+y*(s5+y*s6)))))
@@ -1350,5 +1391,7 @@ contains
     endif
 
   end function bessj0
+  !============================================================================
 
 end module ModUser
+!==============================================================================

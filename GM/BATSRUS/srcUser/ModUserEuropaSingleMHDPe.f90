@@ -1,7 +1,8 @@
 !#NOTPUBLIC  email:xzjia@umich.edu  expires:12/31/2099
-!This code is a copyright protected software (c) 2002- University of Michigan
-!========================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest
   ! This is the default user module which contains empty methods defined
   ! in ModUserEmpty.f90
 
@@ -18,12 +19,12 @@ module ModUser
        IMPLEMENTED6 => user_set_face_boundary, 		&
        IMPLEMENTED7 => user_set_plot_var
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 0.2
   character (len=*), parameter :: NameUserModule = 'Europa Single-Fluid MHD Pe, Xianzhe Jia, June 2013'
 
-  logical :: UseResistivePlanet = .false. 
+  logical :: UseResistivePlanet = .false.
 
   real, dimension(MaxI-MinI+1,MaxJ-MinJ+1,MaxK-MinK+1) :: NnNeutral, &
        UnxNeutral, UnyNeutral, UnzNeutral, TnNeutral, fioniz_asymfac
@@ -36,15 +37,13 @@ module ModUser
   real :: fioniz_Norm, CX_sigma_Norm, alpha_Norm, n_Norm
 
   real :: SW_Pi, SW_Pe, BodyN_upstream, BodyT_upstream, BodyN_downstream, &
-          BodyT_downstream
+       BodyT_downstream
 
   character*30 :: type_innerbcs, innerbcs_rho, innerbcs_p, innerbcs_u &
-                  , innerbcs_b, Ionization_model
-
+       , innerbcs_b, Ionization_model
 
 contains
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_read_inputs
 
@@ -55,7 +54,10 @@ contains
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
     character(len=100) :: NameCommand
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(iProc==0.and.lVerbose > 0)then
        call write_prefix; write(iUnitOut,*)'User read_input Europa starts'
@@ -79,7 +81,7 @@ contains
           call read_var('CX_sigma',CX_sigma)	 !! Charge-exchange cross-section (cm^2)
           call read_var('alpha',alpha)			 !! recombination rate (cm^3/s)
 
-          H1=H1*1E3                              !! conversion to SI  
+          H1=H1*1E3                              !! conversion to SI
           Nn1=Nn1*1E6                            !! conversion to SI
           Nn2=Nn2*1E6                            !! conversion to SI
 
@@ -89,10 +91,10 @@ contains
        case('#INNERBCS')
           call read_var('type_innerbcs',type_innerbcs)
           if(type_innerbcs == 'custom') then
-            call read_var('innerbcs_rho',innerbcs_rho)
-            call read_var('innerbcs_p',innerbcs_p)
-            call read_var('innerbcs_u',innerbcs_u)
-            call read_var('innerbcs_b',innerbcs_b)
+             call read_var('innerbcs_rho',innerbcs_rho)
+             call read_var('innerbcs_p',innerbcs_p)
+             call read_var('innerbcs_u',innerbcs_u)
+             call read_var('innerbcs_b',innerbcs_b)
           end if
 
        case('#BODYPARAM')
@@ -119,9 +121,9 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_init_session
 
@@ -138,13 +140,15 @@ contains
     use ModSize,        ONLY: nIJK
     use ModVarIndexes,  ONLY: nVar
 
-
     CHARACTER(LEN=*), PARAMETER  :: FMT1 = "(A22,E10.3)"
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     MaxBlockData = nVar*nIJK
 
-    !    call set_oktest('user_init_session',DoTest,DoTestMe)
+    !    call set_oktest('user_init_session',DoTest,DoTest)
 
     fioniz_Norm=1/Si2No_V(UnitT_)                           	!! conversion from SI to unitless
     alpha_Norm=1E-6*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)    	!! conversion from SI to unitless
@@ -168,9 +172,9 @@ contains
        write(*,*)'CX_sigma_Norm     =',CX_sigma_Norm
        write(*,*)'n_Norm    =',n_Norm
     end if
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
-  !===========================================================================
+  !============================================================================
 
   subroutine user_set_ICs(iBlock)
 
@@ -184,72 +188,78 @@ contains
     use CON_planet,    ONLY: RadiusPlanet, MassPlanet
     use ModPhysics
 
-
     !    use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, iEnergy, &
     !         iRho, iRhoUx, iRhoUy, iRhoUz
 
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
-    character (len=*), parameter :: NameSub = 'user_set_ics'
-    !-------------------------------------------------------------------
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ICs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     do k=1,nK; do j=1,nJ; do i=1,nI
 
-        State_VGB(Rho_,i,j,k,iBlock)      = SW_n*mi_mean
-        State_VGB(RhoUx_,i,j,k,iBlock)    = SW_n*mi_mean*SW_Ux
-        State_VGB(RhoUy_,i,j,k,iBlock)    = SW_n*mi_mean*SW_Uy
-        State_VGB(RhoUz_,i,j,k,iBlock)    = SW_n*mi_mean*SW_Uz
-	
-        if(UseElectronPressure) then
-            if(ElectronPressureRatio.le.0.) call stop_mpi('ERROR: Electron Pressure Ratio > 0 for init!')
-            State_VGB(P_,i,j,k,iBlock)      = SW_n*SW_T_dim*Io2No_V(UnitTemperature_)
-            State_VGB(Pe_,i,j,k,iBlock)     = State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
-        else
-            State_VGB(P_,i,j,k,iBlock)      = SW_n*SW_T_dim*Io2No_V(UnitTemperature_) &
-                                              *(1.+ElectronPressureRatio)
-        end if
+       State_VGB(Rho_,i,j,k,iBlock)      = SW_n*mi_mean
+       State_VGB(RhoUx_,i,j,k,iBlock)    = SW_n*mi_mean*SW_Ux
+       State_VGB(RhoUy_,i,j,k,iBlock)    = SW_n*mi_mean*SW_Uy
+       State_VGB(RhoUz_,i,j,k,iBlock)    = SW_n*mi_mean*SW_Uz
+
+       if(UseElectronPressure) then
+          if(ElectronPressureRatio <= 0.) call stop_mpi('ERROR: Electron Pressure Ratio > 0 for init!')
+          State_VGB(P_,i,j,k,iBlock)      = SW_n*SW_T_dim*Io2No_V(UnitTemperature_)
+          State_VGB(Pe_,i,j,k,iBlock)     = State_VGB(P_,i,j,k,iBlock)*ElectronPressureRatio
+       else
+          State_VGB(P_,i,j,k,iBlock)      = SW_n*SW_T_dim*Io2No_V(UnitTemperature_) &
+               *(1.+ElectronPressureRatio)
+       end if
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
+  !============================================================================
 
-  !========================================================================
   subroutine user_neutral_atmosphere(iBlock)
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
          use_block_data
     use ModPhysics
-    use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, iteration_number, Body1 
-    use ModProcMH,     ONLY: iProc 
+    use ModMain,       ONLY: nI, nJ, nK,    &
+           iteration_number, Body1
+    use ModProcMH,     ONLY: iProc
     use ModGeometry,   ONLY: R_BLK, Xyz_DGB
     !    use ModMultiFluid, ONLY: MassIon_I
     use ModIO,         ONLY: iUnitOut
 
     integer,intent(in) :: iBlock
-    logical :: DoTest=.false., DoTestMe=.false., init=.true.
+    logical :: init=.true.
     real :: theta, cos_theta, Dir_length, term
     real, dimension(3) :: Dir_I
     integer :: i, j, k
 
     ! Dayside neutral distribution centered at vector direction
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_neutral_atmosphere'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     Dir_I(1) =  1.0 !! -SW_Ux ! for direction of undisturbed plasma inflow
     Dir_I(2) =  0.0 !! -SW_Uz
     Dir_I(3) =  0.0 !! -SW_Uz
 
     !----------------------------------------------------------------------
 
-    !    if(iProc==PROCtest .and. iBlock == BlkTest) then
-    !       call set_oktest('user_neutral_atmosphere',DoTest,DoTestMe)
+    !    if(iProc==iProcTest .and. iBlock == iBlockTest) then
+    !       call set_oktest('user_neutral_atmosphere',DoTest,DoTest)
     !    else
-    !       DoTest=.false.; DoTestMe=.false.
+    !       DoTest=.false.; DoTest=.false.
     !    end if
 
     if (.not.use_block_data(iBlock)) then
        ! calculate and print out total mass loading (integral from rE to infinity)
        !       if(iProc==0.and.init) then
-       !          term = 2*nH2*H2**2*rPlanetSi+nH1*H1*rPlanetSi**2+2*nH2*H2**3+& 
-       !               2*nH1*H1**2*rPlanetSi+2*nH1*H1**3+nH2*H2*rPlanetSi**2 
+       !          term = 2*nH2*H2**2*rPlanetSi+nH1*H1*rPlanetSi**2+2*nH2*H2**3+&
+       !               2*nH1*H1**2*rPlanetSi+2*nH1*H1**3+nH2*H2*rPlanetSi**2
        !          write(iUnitOut,*)'Total Mass Loading = ',&
        !               term*cPi*(4+rcos)*(vO2toOp*MassIon_I(Op_)+vO2toO2p*MassIon_I(O2p_))&
        !               *cProtonMass,' [kg/s]'
@@ -279,13 +289,13 @@ contains
                Nn2*(Nr0/R_BLK(i,j,k,iBlock))**p2               ! p2 power-law contribution
 
           !! ??? test w/o body on
-          !if (NnNeutral_IG(O2_,i-MinI+1,j-MinJ+1,k-MinK+1) > nH1+nH2) then
+          ! if (NnNeutral_IG(O2_,i-MinI+1,j-MinJ+1,k-MinK+1) > nH1+nH2) then
           !   NnNeutral_IG(O2_,i-MinI+1,j-MinJ+1,k-MinK+1) = nH1+nH2
-          !end if
+          ! end if
 
           ! relative increase in relation to symmetric part, cosine distribution
           if(cos_theta>=0.) then
-             NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1) = NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)*(1.+rcos*cos_theta) 
+             NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1) = NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)*(1.+rcos*cos_theta)
           end if
 
           ! Calculate asymmetric ionization rate
@@ -294,7 +304,7 @@ contains
 
           ! relative increase in relation to symmetric part, cosine distribution
           if(cos_theta<=0.) then
-              fioniz_asymfac(i-MinI+1,j-MinJ+1,k-MinK+1) = fioniz_asymfac(i-MinI+1,j-MinJ+1,k-MinK+1)*(1.-rcos*cos_theta) 
+             fioniz_asymfac(i-MinI+1,j-MinJ+1,k-MinK+1) = fioniz_asymfac(i-MinI+1,j-MinJ+1,k-MinK+1)*(1.-rcos*cos_theta)
           end if
 
           UnxNeutral(i-MinI+1,j-MinJ+1,k-MinK+1) = 0.   !! set bulk flow speed of neutral gas to 0 m/s
@@ -314,14 +324,14 @@ contains
 
        call set_block_data(iBlock); !! has to be set in case data is accessed before first iteration is finished
 
-       if(DoTestMe) then
+       if(DoTest) then
           write(*,*)'user_neutral_atmosphere:'
-          theta=acos((Dir_I(1)*Xyz_DGB(x_,iTest,jTest,kTest,BlkTest)+Dir_I(2)*Xyz_DGB(y_,iTest,jTest,kTest,BlkTest)+&
-               Dir_I(3)*Xyz_DGB(z_,iTest,jTest,kTest,BlkTest))/(R_BLK(iTest,jTest,kTest,BlkTest)*Dir_length))
-          write(*,*)'x      = ',Xyz_DGB(x_,iTest,jTest,kTest,BlkTest)," [rPlanet]"
-          write(*,*)'y      = ',Xyz_DGB(y_,iTest,jTest,kTest,BlkTest)," [rPlanet]"
-          write(*,*)'z      = ',Xyz_DGB(z_,iTest,jTest,kTest,BlkTest)," [rPlanet]"
-          write(*,*)'r      = ',R_BLK(iTest,jTest,kTest,BlkTest)," [rPlanet]"
+          theta=acos((Dir_I(1)*Xyz_DGB(x_,iTest,jTest,kTest,iBlockTest)+Dir_I(2)*Xyz_DGB(y_,iTest,jTest,kTest,iBlockTest)+&
+               Dir_I(3)*Xyz_DGB(z_,iTest,jTest,kTest,iBlockTest))/(R_BLK(iTest,jTest,kTest,iBlockTest)*Dir_length))
+          write(*,*)'x      = ',Xyz_DGB(x_,iTest,jTest,kTest,iBlockTest)," [rPlanet]"
+          write(*,*)'y      = ',Xyz_DGB(y_,iTest,jTest,kTest,iBlockTest)," [rPlanet]"
+          write(*,*)'z      = ',Xyz_DGB(z_,iTest,jTest,kTest,iBlockTest)," [rPlanet]"
+          write(*,*)'r      = ',R_BLK(iTest,jTest,kTest,iBlockTest)," [rPlanet]"
           write(*,*)'theta  = ',theta," [radians]"
           write(*,*)'rcos   = ',rcos," [ ]"
           write(*,*)'Nn1    = ',Nn1," [m^-3]"
@@ -348,14 +358,14 @@ contains
        call get_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, fioniz_asymfac)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_neutral_atmosphere
-
-  !========================================================================
+  !============================================================================
 
   subroutine user_calc_sources(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, iteration_number, Dt_BLK
+    use ModMain,       ONLY: nI, nJ, nK,    &
+           iteration_number, Dt_BLK
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, RhoUx_, RhoUy_, RhoUz_, &
          Bx_,By_,Bz_, P_, Energy_
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
@@ -365,26 +375,27 @@ contains
     use ModPhysics
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, IsPointImplSource
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
-                             use_block_data
+         use_block_data
     integer, intent(in) :: iBlock
 
-
     real, dimension(1:3,1:nI,1:nJ,1:nK) :: Current_DC, uIon, uElec
-    real, dimension(1:nI,1:nJ,1:nK) :: uIon_sq, uElec_sq, nElec, nIon		
+    real, dimension(1:nI,1:nJ,1:nK) :: uIon_sq, uElec_sq, nElec, nIon
     real, dimension(1:nI,1:nJ,1:nK) :: SRho, SRhoUx, SRhoUy, SRhoUz, SBx, SBy, SBz, &
-         SP, SPe, SE 
+         SP, SPe, SE
     real, dimension(1:nI,1:nJ,1:nK) :: Ti, Te
 
     integer :: i,j,k
 
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-!    if(iBlock == BlkTest) then
-!       call set_oktest('user_calc_sources',DoTest,DoTestMe)
-!    else
-!       DoTest=.false.; DoTestMe=.false.
-!    end if
-
+    !    if(iBlock == iBlockTest) then
+    !       call set_oktest('user_calc_sources',DoTest,DoTestMe)
+    !    else
+    !       DoTest=.false.; DoTestMe=.false.
+    !    end if
 
     call user_neutral_atmosphere(iBlock)
 
@@ -421,7 +432,7 @@ contains
     uIon(3,1:nI,1:nJ,1:nK)=State_VGB(RhoUz_,1:nI,1:nJ,1:nK,iBlock) / &
          State_VGB(Rho_,1:nI,1:nJ,1:nK,iBlock)*No2SI_V(UnitU_)
 
-    ! Get the ion fluid speed and electron velocty in SI unit	 
+    ! Get the ion fluid speed and electron velocty in SI unit
     do k=1,nK; do j=1,nJ; do i=1,nI
        ! Calculate ion fluid speed
        uIon_sq(i,j,k) = sum(uIon(1:3,i,j,k)**2)
@@ -456,24 +467,24 @@ contains
 
     ! Calculate the source and loss terms associated with ionizaiton, charge-exchange and recombination
     do k=1,nK; do j=1,nJ; do i=1,nI
-       
+
        RhoSdot(i,j,k) = NnNeutral(i,j,k)*mi_mean*cProtonMass*Si2No_V(UnitRho_) &
-                        *fioniz*fioniz_Norm      !! Ionization in dimensionless unit
+            *fioniz*fioniz_Norm      !! Ionization in dimensionless unit
 
        if(Ionization_model == 'asymioniz') then
-           RhoSdot(i,j,k) = RhoSdot(i,j,k)*fioniz_asymfac(i,j,k)
+          RhoSdot(i,j,k) = RhoSdot(i,j,k)*fioniz_asymfac(i,j,k)
        end if
 
-       !CXrate(i,j,k) =	CX_sigma*CX_sigma_Norm*NnNeutral(i,j,k)*n_Norm*uIon_sq(i,j,k)**0.5 &
+       ! CXrate(i,j,k) =	CX_sigma*CX_sigma_Norm*NnNeutral(i,j,k)*n_Norm*uIon_sq(i,j,k)**0.5 &
        !  		*Si2No_V(UnitU_)	!! Charge-exchange in dimensionless unit
-        
+
        CXrate(i,j,k) =	CX_sigma*1E-4*NnNeutral(i,j,k)*uIon_sq(i,j,k)**0.5 &
-        /Si2No_V(UnitT_)	!! Charge-exchange in dimensionless unit
+            /Si2No_V(UnitT_)	!! Charge-exchange in dimensionless unit
        CXSdot(i,j,k) = CXrate(i,j,k)*State_VGB(Rho_,i,j,k,iBlocK) 	!! Charge-exchange rate in dimensionless unit
        Le(i,j,k) = alpha*alpha_Norm*nElec(i,j,k)*Si2No_V(UnitN_) 	!! Recombination in dimensionless unit
        AlphaSdot(i,j,k) = Le(i,j,k)*State_VGB(Rho_,i,j,k,iBlocK) 	!! Recombination rate in dimensionless unit
 
-       ! Source and Loss terms in dimensionless unit	
+       ! Source and Loss terms in dimensionless unit
        SRho(i,j,k) = RhoSdot(i,j,k) - AlphaSdot(i,j,k) !! source due to ionization and loss due to recombination
 
        SRhoUx(i,j,k) = - State_VGB(RhoUx_,i,j,k,iBlocK)*( &
@@ -488,19 +499,19 @@ contains
        if(UseElectronPressure) then
           ! Modified pressure terms to take the addition and loss of thermal energy
           SP(i,j,k) = -1*(CXrate(i,j,k) + Le(i,j,k))*State_VGB(P_,i,j,k,iBlocK) &
-              + (RhoSdot(i,j,k) + CXSdot(i,j,k))*uIon_sq(i,j,k)*Si2No_V(UnitU_)**2/3
+               + (RhoSdot(i,j,k) + CXSdot(i,j,k))*uIon_sq(i,j,k)*Si2No_V(UnitU_)**2/3
 
           ! SP(i,j,k) = -1*(CXrate(i,j,k) + Le(i,j,k))* &		!! Ion pressure change due to charge exchange & recombination
           !     State_VGB(P_,i,j,k,iBlocK)
-          
+
           SPe(i,j,k) = -1*Le(i,j,k)*State_VGB(Pe_,i,j,k,iBlocK)		!! Electron pressure change due to recombination
           SE(i,j,k) = -1*(CXrate(i,j,k) + Le(i,j,k))* &		!! Ion pressure change due to charge exchange & recombination
                (0.5*State_VGB(Rho_,i,j,k,iBlocK)*uIon_sq(i,j,k)*Si2No_V(UnitU_)**2 + &
                1.5*State_VGB(P_,i,j,k,iBlocK) + 1.5*State_VGB(Pe_,i,j,k,iBlocK))
        else
-          SP(i,j,k) = -1*(CXrate(i,j,k) + Le(i,j,k))*State_VGB(P_,i,j,k,iBlocK) & 
-                      *(1.+ElectronPressureRatio) + (RhoSdot(i,j,k) +  & 
-                      CXSdot(i,j,k))*uIon_sq(i,j,k)*Si2No_V(UnitU_)**2/3
+          SP(i,j,k) = -1*(CXrate(i,j,k) + Le(i,j,k))*State_VGB(P_,i,j,k,iBlocK) &
+               *(1.+ElectronPressureRatio) + (RhoSdot(i,j,k) +  &
+               CXSdot(i,j,k))*uIon_sq(i,j,k)*Si2No_V(UnitU_)**2/3
           ! SP(i,j,k) = -1.5*(CXrate(i,j,k) + Le(i,j,k))* &		!! Ion pressure change due to charge exchange & recombination
           !     State_VGB(P_,i,j,k,iBlocK)*(1.+ElectronPressureRatio)
           SE(i,j,k) = -1*(CXrate(i,j,k) + Le(i,j,k))* &		!! Ion pressure change due to charge exchange & recombination
@@ -526,49 +537,52 @@ contains
 
     end do;  end do;  end do
 
- !   if (.not.use_block_data(iBlock)) then
-     !   call put_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, RhoSdot)
-     !   call put_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, CXSdot)
-     !   call put_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, AlphaSdot)
- !   end if
+    !   if (.not.use_block_data(iBlock)) then
+    !   call put_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, RhoSdot)
+    !   call put_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, CXSdot)
+    !   call put_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, AlphaSdot)
+    !   end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
+  !============================================================================
 
-  !========================================================================
   subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry,         ONLY: ExtraBc_, Xyz_DGB, x1, x2
     use ModBoundaryGeometry, ONLY: iBoundary_GB
 
-    implicit none
-
     integer, intent(in):: iBlock
 
     character (len=*), parameter :: Name='user_set_boundary_cells'
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! For inflow in positive x direction
-    !where(Xyz_DGB(x_,:,:,:,iBlock) < x1) &
+    ! where(Xyz_DGB(x_,:,:,:,iBlock) < x1) &
     !     iBoundary_GB(:,:,:,iBlock) = ExtraBc_
     ! For inflow in negative x direction
     where (Xyz_DGB(x_,:,:,:,iBlock) > x2) &
          iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
+  !============================================================================
 
-  !========================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModVarIndexes
     use ModPhysics,    ONLY: SW_Ux, SW_Uy, SW_Uz, SW_rho, SW_p, SW_T_dim, &
-                             BodyNDim_I, BodyRho_I, BodyP_I, FaceState_VI, &
-                             Si2No_V, Io2No_V, UnitN_, UnitTemperature_
+         BodyNDim_I, BodyRho_I, BodyP_I, FaceState_VI, &
+         Si2No_V, Io2No_V, UnitN_, UnitTemperature_
 
     use ModFaceBoundary, ONLY: FaceCoords_D, VarsTrueFace_V, iBoundary, &
-                               B0Face_D
+         B0Face_D
     use ModB0, ONLY: B0_DX, B0_DY, B0_DZ
     use ModNumConst
-    use ModConst,      ONLY: cBoltzmann, cProtonMass 
+    use ModConst,      ONLY: cBoltzmann, cProtonMass
 
     real, intent(out):: VarsGhostFace_V(nVar)
 
@@ -576,6 +590,10 @@ contains
     real:: FaceState_V(nVar)
     real:: XFace,YFace,ZFace, rFace, rFace2, ram_angle
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
     ZFace = FaceCoords_D(3)
@@ -583,17 +601,17 @@ contains
     rFace  = sqrt(rFace2)
 
     ram_angle = acos((-SW_Ux*XFace-SW_Uy*YFace-SW_Uz*ZFace)/rFace/&
-    (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
+         (SW_Ux**2+SW_Uy**2+SW_Uz**2)**0.5)
 
     !--------------------------------------------------------------------------
-    !UdotR = dot_product(VarsTrueFace_V(Ux_:Uz_),FaceCoords_D)* &
+    ! UdotR = dot_product(VarsTrueFace_V(Ux_:Uz_),FaceCoords_D)* &
     ! 2.0/dot_product(FaceCoords_D,FaceCoords_D)
-    !URefl_D = FaceCoords_D*UdotR
+    ! URefl_D = FaceCoords_D*UdotR
 
     UDotR = sum(VarsTrueFace_V(Ux_:Uz_)*FaceCoords_D)/rFace2
 
-    !B0Face_D = 0.0
-    
+    ! B0Face_D = 0.0
+
     Borig_D = VarsTrueFace_V(Bx_:Bz_) ! Reflect B1
     ! Borig_D = Borig_D + B0Face_D  ! Reflect Full B
     BDotR = sum(Borig_D*FaceCoords_D)/rFace2
@@ -604,116 +622,116 @@ contains
 
     select case (type_innerbcs)
     case('float') ! Floating boundary
-        VarsGhostFace_V = VarsTrueFace_V
-        VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) + B0Face_D
+       VarsGhostFace_V = VarsTrueFace_V
+       VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) + B0Face_D
     case('fixed') ! Infinitly conducting body
-        VarsGhostFace_V = FaceState_V
-        VarsGhostFace_V(Ux_:Uz_)= -VarsTrueFace_V(Ux_:Uz_) ! - 2*UDotR*FaceCoords_D
-        VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
+       VarsGhostFace_V = FaceState_V
+       VarsGhostFace_V(Ux_:Uz_)= -VarsTrueFace_V(Ux_:Uz_) ! - 2*UDotR*FaceCoords_D
+       VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
     case('reflect') ! Infinitly conducting body
-        VarsGhostFace_V = VarsTrueFace_V
-        ! VarsGhostFace_V(Rho_)  = BodyRho_I(1)
-        ! VarsGhostFace_V(P_) = BodyP_I(1)
-        VarsGhostFace_V(Ux_:Uz_)= -VarsTrueFace_V(Ux_:Uz_)
-        VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
-    case('reflectB') ! Reflect B but use float boundary conditions for other parameters        
-        ! On upstream, reflect B but use float boundary conditions for other parameters
-        VarsGhostFace_V = VarsTrueFace_V
-        VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
+       VarsGhostFace_V = VarsTrueFace_V
+       ! VarsGhostFace_V(Rho_)  = BodyRho_I(1)
+       ! VarsGhostFace_V(P_) = BodyP_I(1)
+       VarsGhostFace_V(Ux_:Uz_)= -VarsTrueFace_V(Ux_:Uz_)
+       VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
+    case('reflectB') ! Reflect B but use float boundary conditions for other parameters
+       ! On upstream, reflect B but use float boundary conditions for other parameters
+       VarsGhostFace_V = VarsTrueFace_V
+       VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
 
-        ! On downstream,  set radial velocity to be zero and fix the density and pressure	
-        if(ram_angle > cPi/2) then
-            VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
-            VarsGhostFace_V(Rho_)  = BodyRho_I(1)
-            VarsGhostFace_V(P_) = BodyP_I(1)
-        end if
+       ! On downstream,  set radial velocity to be zero and fix the density and pressure
+       if(ram_angle > cPi/2) then
+          VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
+          VarsGhostFace_V(Rho_)  = BodyRho_I(1)
+          VarsGhostFace_V(P_) = BodyP_I(1)
+       end if
     case('test') ! Test boundary conditions
-        
-        VarsGhostFace_V = VarsTrueFace_V    !Floating everything first
-        ! VarsGhostFace_V(RhoUx_:RhoUz_) = 0.0
 
-        VarsGhostFace_V(Rho_)  = BodyRho_I(1) ! Fixed density and pressure to body values
-        VarsGhostFace_V(P_) = BodyP_I(1)
-        ! VarsGhostFace_V(Ux_:Uz_)= VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D ! Reflect azimuthal c  omponents of the velocity
-        VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) ! Reflect all components of the velocity
-        ! VarsGhostFace_V(Bx_:Bz_) =  VarsTrueFace_V(Bx_:Bz_) - BRefl_D ! Reflect normal componnet of B
+       VarsGhostFace_V = VarsTrueFace_V    ! Floating everything first
+       ! VarsGhostFace_V(RhoUx_:RhoUz_) = 0.0
+
+       VarsGhostFace_V(Rho_)  = BodyRho_I(1) ! Fixed density and pressure to body values
+       VarsGhostFace_V(P_) = BodyP_I(1)
+       ! VarsGhostFace_V(Ux_:Uz_)= VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D ! Reflect azimuthal c  omponents of the velocity
+       VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) ! Reflect all components of the velocity
+       ! VarsGhostFace_V(Bx_:Bz_) =  VarsTrueFace_V(Bx_:Bz_) - BRefl_D ! Reflect normal componnet of B
     case('asymfixed') ! Fixed boundary conditions with different density and pressure on upstream/downstream
-        VarsGhostFace_V = VarsTrueFace_V    !Floating everything first
-        VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) ! Reflect all components of the velocity
-        ! VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
+       VarsGhostFace_V = VarsTrueFace_V    ! Floating everything first
+       VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) ! Reflect all components of the velocity
+       ! VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
 
-        ! VarsGhostFace_V(Rho_)  = BodyN_upstream*Io2No_V(UnitN_)*mi_mean
-        ! VarsGhostFace_V(P_) = BodyN_upstream*Io2No_V(UnitN_)*BodyT_upstream &
-        !                      *Io2No_V(UnitTemperature_)
+       ! VarsGhostFace_V(Rho_)  = BodyN_upstream*Io2No_V(UnitN_)*mi_mean
+       ! VarsGhostFace_V(P_) = BodyN_upstream*Io2No_V(UnitN_)*BodyT_upstream &
+       !                      *Io2No_V(UnitTemperature_)
 
-        ! For downsteam hemisphere, fix the density and pressure	
-        !if(ram_angle > cPi/2) then
-        if(UDotR > 0) then
-            ! VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
-            VarsGhostFace_V(Rho_)  = BodyN_downstream*Io2No_V(UnitN_)*mi_mean
-            VarsGhostFace_V(P_) = BodyN_downstream*Io2No_V(UnitN_)*BodyT_downstream &
-                                  *Io2No_V(UnitTemperature_)
-        end if
+       ! For downsteam hemisphere, fix the density and pressure
+       ! if(ram_angle > cPi/2) then
+       if(UDotR > 0) then
+          ! VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
+          VarsGhostFace_V(Rho_)  = BodyN_downstream*Io2No_V(UnitN_)*mi_mean
+          VarsGhostFace_V(P_) = BodyN_downstream*Io2No_V(UnitN_)*BodyT_downstream &
+               *Io2No_V(UnitTemperature_)
+       end if
     case('custom') ! user customized inner boundary conditions
-        VarsGhostFace_V = VarsTrueFace_V    !Floating everything first
+       VarsGhostFace_V = VarsTrueFace_V    ! Floating everything first
 
-        if(innerbcs_rho == 'fixed') then
-            VarsGhostFace_V(Rho_)  = BodyN_upstream*Io2No_V(UnitN_)*mi_mean
-        end if
+       if(innerbcs_rho == 'fixed') then
+          VarsGhostFace_V(Rho_)  = BodyN_upstream*Io2No_V(UnitN_)*mi_mean
+       end if
 
-        if(innerbcs_p == 'fixed') then
-            VarsGhostFace_V(P_)  = BodyN_upstream*Io2No_V(UnitN_)*BodyT_upstream &
-                                     *Io2No_V(UnitTemperature_)
-        end if
+       if(innerbcs_p == 'fixed') then
+          VarsGhostFace_V(P_)  = BodyN_upstream*Io2No_V(UnitN_)*BodyT_upstream &
+               *Io2No_V(UnitTemperature_)
+       end if
 
-        if(innerbcs_u == 'zero') then
-            VarsGhostFace_V(Ux_:Uz_)= 0.0
-        else if(innerbcs_u == 'reflectall') then
-            VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) ! Reflect all components of the velocity
-        else if(innerbcs_u == 'reflect') then
-            VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D ! Reflect azimuthal components of the velocity
-        end if
+       if(innerbcs_u == 'zero') then
+          VarsGhostFace_V(Ux_:Uz_)= 0.0
+       else if(innerbcs_u == 'reflectall') then
+          VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) ! Reflect all components of the velocity
+       else if(innerbcs_u == 'reflect') then
+          VarsGhostFace_V(Ux_:Uz_)= -1*VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D ! Reflect azimuthal components of the velocity
+       end if
 
-        if(innerbcs_b == 'reflect') then
-            VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
-        else if(innerbcs_b == 'zero') then
-            VarsGhostFace_V(Bx_:Bz_)= 0.0
-        end if
+       if(innerbcs_b == 'reflect') then
+          VarsGhostFace_V(Bx_:Bz_)= VarsTrueFace_V(Bx_:Bz_) - 2*BDotR*FaceCoords_D
+       else if(innerbcs_b == 'zero') then
+          VarsGhostFace_V(Bx_:Bz_)= 0.0
+       end if
 
-        ! For downsteam hemisphere, always fix the density and pressure	
-        !if(ram_angle > cPi/2) then
-        if(UDotR > 0) then
-            ! VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
-            VarsGhostFace_V(Rho_)  = BodyN_downstream*Io2No_V(UnitN_)*mi_mean
-            VarsGhostFace_V(P_) = BodyN_downstream*Io2No_V(UnitN_)*BodyT_downstream &
-            *Io2No_V(UnitTemperature_)
-        end if
+       ! For downsteam hemisphere, always fix the density and pressure
+       ! if(ram_angle > cPi/2) then
+       if(UDotR > 0) then
+          ! VarsGhostFace_V(Ux_:Uz_) = VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
+          VarsGhostFace_V(Rho_)  = BodyN_downstream*Io2No_V(UnitN_)*mi_mean
+          VarsGhostFace_V(P_) = BodyN_downstream*Io2No_V(UnitN_)*BodyT_downstream &
+               *Io2No_V(UnitTemperature_)
+       end if
 
     case('zeroB')
-        VarsGhostFace_V(Ux_:Uz_)= VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
-        VarsGhostFace_V(Bx_:Bz_)= 0.0
+       VarsGhostFace_V(Ux_:Uz_)= VarsTrueFace_V(Ux_:Uz_) - 2*UDotR*FaceCoords_D
+       VarsGhostFace_V(Bx_:Bz_)= 0.0
     case('default')
-        write(*,*)'unknown type of user inner bcs'
+       write(*,*)'unknown type of user inner bcs'
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
+  !============================================================================
 
- !========================================================================
- subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
-    PlotVar_G, PlotVarBody, UsePlotVarBody, &
-    NameTecVar, NameTecUnit, NameIdlUnit, IsFound) 
-
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
+       PlotVar_G, PlotVarBody, UsePlotVarBody, &
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModAdvance,    ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
     use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
-                             UnitRho_, ElectronCharge, ElectronPressureRatio
+         UnitRho_, ElectronCharge, ElectronPressureRatio
     use ModVarIndexes, ONLY: Rho_, P_, Pe_
     use ModConst,      ONLY: cBoltzmann, cProtonMass
     use ModCurrent,    ONLY: get_current
-!    use ModMultiFluid, ONLY: MassIon_I
+    !    use ModMultiFluid, ONLY: MassIon_I
     use ModMain,       ONLY: Dt_BLK
     use ModBlockData,  ONLY: get_block_data, set_block_data, put_block_data, &
-                             use_block_data
+         use_block_data
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
     logical,          intent(in)   :: IsDimensional
@@ -731,8 +749,10 @@ contains
     real, dimension(3) :: Current_I
     real, dimension(3) :: uIon
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     if(iBlock /= iBlockLast) then
        iBlockLast = iBlock
        call user_neutral_atmosphere(iBlock)
@@ -743,176 +763,179 @@ contains
 
     select case(NameVar)
     case('nn')
-        NameIdlUnit = '1/cm^3'
-        NameTecUnit = '[1/cm^3]'
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-        ! do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-            PlotVar_G(i,j,k) = NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)/1E6
-        end do; end do; end do
+       NameIdlUnit = '1/cm^3'
+       NameTecUnit = '[1/cm^3]'
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          ! do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          PlotVar_G(i,j,k) = NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)/1E6
+       end do; end do; end do
 
     case('unx')
-        NameIdlUnit = 'km/s'
-        NameTecUnit = '[cm/s]'
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-            PlotVar_G(i,j,k) = UnxNeutral(i,j,k)/1E3 !! x direction
-        end do; end do; end do
+       NameIdlUnit = 'km/s'
+       NameTecUnit = '[cm/s]'
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          PlotVar_G(i,j,k) = UnxNeutral(i,j,k)/1E3 !! x direction
+       end do; end do; end do
 
     case('uny')
-        NameIdlUnit = 'km/s'
-        NameTecUnit = '[cm/s]'
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-            PlotVar_G(i,j,k) = UnyNeutral(i,j,k)/1E3 !! y direction
-        end do; end do; end do
+       NameIdlUnit = 'km/s'
+       NameTecUnit = '[cm/s]'
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          PlotVar_G(i,j,k) = UnyNeutral(i,j,k)/1E3 !! y direction
+       end do; end do; end do
 
     case('unz')
-        NameIdlUnit = 'km/s'
-        NameTecUnit = '[km/s]'
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-            PlotVar_G(i,j,k) = UnzNeutral(i,j,k)/1E3 !! z direction
-        end do; end do; end do
+       NameIdlUnit = 'km/s'
+       NameTecUnit = '[km/s]'
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          PlotVar_G(i,j,k) = UnzNeutral(i,j,k)/1E3 !! z direction
+       end do; end do; end do
 
     case('tn')
-        NameIdlUnit = 'K'
-        NameTecUnit = '[K]'
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-            PlotVar_G(i,j,k) = TnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)
-        end do; end do; end do
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          PlotVar_G(i,j,k) = TnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)
+       end do; end do; end do
 
     case('te')
-        NameIdlUnit = 'K'
-        NameTecUnit = '[K]'
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-            nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
-            nElec = nIon
-            if(UseElectronPressure)then
-                PlotVar_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)*No2SI_V(UnitP_)/&
-                (cBoltzmann*nElec)
-            else
-                PlotVar_G(i,j,k) = State_VGB(P_,i,j,k,iBlock)*No2SI_V(UnitP_)*ElectronPressureRatio/&
-                (1.+ElectronPressureRatio)/(cBoltzmann*nElec)
-            end if
-        end do; end do; end do
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
+          nElec = nIon
+          if(UseElectronPressure)then
+             PlotVar_G(i,j,k) = State_VGB(Pe_,i,j,k,iBlock)*No2SI_V(UnitP_)/&
+                  (cBoltzmann*nElec)
+          else
+             PlotVar_G(i,j,k) = State_VGB(P_,i,j,k,iBlock)*No2SI_V(UnitP_)*ElectronPressureRatio/&
+                  (1.+ElectronPressureRatio)/(cBoltzmann*nElec)
+          end if
+       end do; end do; end do
 
     case('ti')
-        NameIdlUnit = 'K'
-        NameTecUnit = '[K]'
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-            if(UseElectronPressure) then
-                PlotVar_G(i,j,k) = State_VGB(P_,i,j,k,iBlock)*NO2SI_V(UnitP_)/ &
-                (cBoltzmann*State_VGB(Rho_,i,j,k,iBlock)/mi_mean*NO2SI_V(UnitN_))
-            else
-                PlotVar_G(i,j,k) = State_VGB(P_,i,j,k,iBlock)*NO2SI_V(UnitP_)/(1.+ElectronPressureRatio)/ &
-                (cBoltzmann*State_VGB(Rho_,i,j,k,iBlock)/mi_mean*NO2SI_V(UnitN_))
-            end if
-        end do; end do; end do
+       NameIdlUnit = 'K'
+       NameTecUnit = '[K]'
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          if(UseElectronPressure) then
+             PlotVar_G(i,j,k) = State_VGB(P_,i,j,k,iBlock)*NO2SI_V(UnitP_)/ &
+                  (cBoltzmann*State_VGB(Rho_,i,j,k,iBlock)/mi_mean*NO2SI_V(UnitN_))
+          else
+             PlotVar_G(i,j,k) = State_VGB(P_,i,j,k,iBlock)*NO2SI_V(UnitP_)/(1.+ElectronPressureRatio)/ &
+                  (cBoltzmann*State_VGB(Rho_,i,j,k,iBlock)/mi_mean*NO2SI_V(UnitN_))
+          end if
+       end do; end do; end do
 
     case('uex')
-        NameIdlUnit = 'km/s'
-        NameTecUnit = '[km/s]'
-        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-            call get_current(i,j,k,iBlock,Current_I)
-            ! Get the ion velocity and density in SI unit
-            uIon(1)=State_VGB(RhoUx_,i,j,k,iBlock) / &
-                    State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitU_)
-            nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
-            nElec = nIon
-            PlotVar_G(i,j,k) = (uIon(1)-Current_I(1)/(nElec*Si2No_V(UnitN_)*&
-            ElectronCharge)*No2SI_V(UnitU_))/1E3
-        end do; end do; end do
+       NameIdlUnit = 'km/s'
+       NameTecUnit = '[km/s]'
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          call get_current(i,j,k,iBlock,Current_I)
+          ! Get the ion velocity and density in SI unit
+          uIon(1)=State_VGB(RhoUx_,i,j,k,iBlock) / &
+               State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitU_)
+          nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
+          nElec = nIon
+          PlotVar_G(i,j,k) = (uIon(1)-Current_I(1)/(nElec*Si2No_V(UnitN_)*&
+               ElectronCharge)*No2SI_V(UnitU_))/1E3
+       end do; end do; end do
 
     case('uey')
-        NameIdlUnit = 'km/s'
-        NameTecUnit = '[km/s]'
-        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-            call get_current(i,j,k,iBlock,Current_I)
-            ! Get the ion velocity and density in SI unit
-            uIon(2)=State_VGB(RhoUy_,i,j,k,iBlock) / &
-                    State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitU_)
-            nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
-            nElec = nIon
-            PlotVar_G(i,j,k) = (uIon(2)-Current_I(2)/(nElec*Si2No_V(UnitN_)*&
-            ElectronCharge)*No2SI_V(UnitU_))/1E3
-        end do; end do; end do
+       NameIdlUnit = 'km/s'
+       NameTecUnit = '[km/s]'
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          call get_current(i,j,k,iBlock,Current_I)
+          ! Get the ion velocity and density in SI unit
+          uIon(2)=State_VGB(RhoUy_,i,j,k,iBlock) / &
+               State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitU_)
+          nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
+          nElec = nIon
+          PlotVar_G(i,j,k) = (uIon(2)-Current_I(2)/(nElec*Si2No_V(UnitN_)*&
+               ElectronCharge)*No2SI_V(UnitU_))/1E3
+       end do; end do; end do
 
     case('uez')
-        NameIdlUnit = 'km/s'
-        NameTecUnit = '[km/s]'
-        do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-            call get_current(i,j,k,iBlock,Current_I)
-            ! Get the ion velocity and density in SI unit
-            uIon(3)=State_VGB(RhoUz_,i,j,k,iBlock) / &
-                    State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitU_)
-            nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
-            nElec = nIon
-            PlotVar_G(i,j,k) = (uIon(3)-Current_I(3)/(nElec*Si2No_V(UnitN_)*&
-            ElectronCharge)*No2SI_V(UnitU_))/1E3
-        end do; end do; end do
+       NameIdlUnit = 'km/s'
+       NameTecUnit = '[km/s]'
+       do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+          call get_current(i,j,k,iBlock,Current_I)
+          ! Get the ion velocity and density in SI unit
+          uIon(3)=State_VGB(RhoUz_,i,j,k,iBlock) / &
+               State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitU_)
+          nIon = State_VGB(Rho_,i,j,k,iBlock)/mi_mean*No2SI_V(UnitN_)
+          nElec = nIon
+          PlotVar_G(i,j,k) = (uIon(3)-Current_I(3)/(nElec*Si2No_V(UnitN_)*&
+               ElectronCharge)*No2SI_V(UnitU_))/1E3
+       end do; end do; end do
 
     case('rhosi')
-        NameIdlUnit = 'amu/cm^3s'
-        NameTecUnit = '[amu/cm^3 s]'
+       NameIdlUnit = 'amu/cm^3s'
+       NameTecUnit = '[amu/cm^3 s]'
 
-        ! call get_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, RhoSdot)
+       ! call get_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, RhoSdot)
 
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-        ! do k=1,nK; do j=1,nJ; do i=1,nI            
-           ! PlotVar_G(i,j,k)=RhoSdot(i,j,k)/(n_Norm*mi_mean*fioniz*fioniz_Norm)/1E6 
-           ! PlotVar_G(i,j,k)=RhoSdot(i,j,k)*No2SI_V(UnitRho_)/(No2SI_V(UnitT_))/ &
-           !                 (cProtonMass*1E6) 
-           PlotVar_G(i,j,k)=NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)*mi_mean* &
-                            cProtonMass*Si2No_V(UnitRho_)*fioniz*fioniz_Norm* &
-                            No2SI_V(UnitRho_)/(No2SI_V(UnitT_))/(cProtonMass*1E6)
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          ! do k=1,nK; do j=1,nJ; do i=1,nI
+          ! PlotVar_G(i,j,k)=RhoSdot(i,j,k)/(n_Norm*mi_mean*fioniz*fioniz_Norm)/1E6
+          ! PlotVar_G(i,j,k)=RhoSdot(i,j,k)*No2SI_V(UnitRho_)/(No2SI_V(UnitT_))/ &
+          !                 (cProtonMass*1E6)
+          PlotVar_G(i,j,k)=NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1)*mi_mean* &
+               cProtonMass*Si2No_V(UnitRho_)*fioniz*fioniz_Norm* &
+               No2SI_V(UnitRho_)/(No2SI_V(UnitT_))/(cProtonMass*1E6)
 
-           if(Ionization_model == 'asymioniz') then
-                PlotVar_G(i,j,k) = PlotVar_G(i,j,k) &
-                                   *fioniz_asymfac(i-MinI+1,j-MinJ+1,k-MinK+1)
-           end if
-        end do; end do; end do
+          if(Ionization_model == 'asymioniz') then
+             PlotVar_G(i,j,k) = PlotVar_G(i,j,k) &
+                  *fioniz_asymfac(i-MinI+1,j-MinJ+1,k-MinK+1)
+          end if
+       end do; end do; end do
 
     case('qsd')
-        NameIdlUnit = 'amu/cm^3s'
-        NameTecUnit = '[amu/cm^3 s]'
-        ! call get_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, CXSdot)
+       NameIdlUnit = 'amu/cm^3s'
+       NameTecUnit = '[amu/cm^3 s]'
+       ! call get_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, CXSdot)
 
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-        ! do k=1,nK; do j=1,nJ; do i=1,nI            
-           ! PlotVar_G(i,j,k)=CXSdot(i,j,k)/(n_Norm*mi_mean*fioniz*fioniz_Norm)/1E6 
-            uIon(1)=State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-            uIon(2)=State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-            uIon(3)=State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
-            uIon_sq = sum(uIon(1:3)**2)*No2SI_V(UnitU_)**2  !! convert to SI unit
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          ! do k=1,nK; do j=1,nJ; do i=1,nI
+          ! PlotVar_G(i,j,k)=CXSdot(i,j,k)/(n_Norm*mi_mean*fioniz*fioniz_Norm)/1E6
+          uIon(1)=State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          uIon(2)=State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          uIon(3)=State_VGB(RhoUz_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
+          uIon_sq = sum(uIon(1:3)**2)*No2SI_V(UnitU_)**2  !! convert to SI unit
 
-            PlotVar_G(i,j,k)= CX_sigma*1E-4*NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1) &
-                              *uIon_sq**0.5*State_VGB(Rho_,i,j,k,iBlocK) &
-                              *No2SI_V(UnitRho_)/(cProtonMass*1E6)
-            
-            !PlotVar_G(i,j,k)= CX_sigma*CX_sigma_Norm*NnNeutral(i-MinI+1,j-MinJ+1, &
-            !            k-MinK+1)*n_Norm*uIon_sq**0.5* &
-            !            State_VGB(Rho_,i,j,k,iBlocK)*No2SI_V(UnitRho_)/ &
-            !            (No2SI_V(UnitT_))/(cProtonMass*1E6) 
-        end do; end do; end do
+          PlotVar_G(i,j,k)= CX_sigma*1E-4*NnNeutral(i-MinI+1,j-MinJ+1,k-MinK+1) &
+               *uIon_sq**0.5*State_VGB(Rho_,i,j,k,iBlocK) &
+               *No2SI_V(UnitRho_)/(cProtonMass*1E6)
+
+          ! PlotVar_G(i,j,k)= CX_sigma*CX_sigma_Norm*NnNeutral(i-MinI+1,j-MinJ+1, &
+          !            k-MinK+1)*n_Norm*uIon_sq**0.5* &
+          !            State_VGB(Rho_,i,j,k,iBlocK)*No2SI_V(UnitRho_)/ &
+          !            (No2SI_V(UnitT_))/(cProtonMass*1E6)
+       end do; end do; end do
 
     case('alpha')
-        NameIdlUnit = 'amu/cm^3s'
-        NameTecUnit = '[amu/cm^3 s]'
-        ! call get_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, AlphaSdot)
-        do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-        ! do k=1,nK; do j=1,nJ; do i=1,nI        
-            ! PlotVar_G(i,j,k)=AlphaSdot(i,j,k)/(n_Norm*mi_mean*fioniz*fioniz_Norm)/1E6
+       NameIdlUnit = 'amu/cm^3s'
+       NameTecUnit = '[amu/cm^3 s]'
+       ! call get_block_data(iBlock, MaxI-MinI+1, MaxJ-MinJ+1, MaxK-MinK+1, AlphaSdot)
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          ! do k=1,nK; do j=1,nJ; do i=1,nI
+          ! PlotVar_G(i,j,k)=AlphaSdot(i,j,k)/(n_Norm*mi_mean*fioniz*fioniz_Norm)/1E6
 
-            nIon = State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitRho_)/(cProtonMass*mi_mean)  !! in SI unit
-            nElec = nIon  !! in SI unit
-            PlotVar_G(i,j,k)=alpha*alpha_Norm*nElec*Si2No_V(UnitN_)* &
-                             State_VGB(Rho_,i,j,k,iBlocK)*No2SI_V(UnitRho_)/ &
-                             (No2SI_V(UnitT_))/(cProtonMass*1E6) 
-        end do; end do; end do
+          nIon = State_VGB(Rho_,i,j,k,iBlock)*No2SI_V(UnitRho_)/(cProtonMass*mi_mean)  !! in SI unit
+          nElec = nIon  !! in SI unit
+          PlotVar_G(i,j,k)=alpha*alpha_Norm*nElec*Si2No_V(UnitN_)* &
+               State_VGB(Rho_,i,j,k,iBlocK)*No2SI_V(UnitRho_)/ &
+               (No2SI_V(UnitT_))/(cProtonMass*1E6)
+       end do; end do; end do
     case default
-        IsFound = .false.
+       IsFound = .false.
     end select
 
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
 
- end subroutine user_set_plot_var
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine user_set_plot_var
+  !============================================================================
 
 end module ModUser
+!==============================================================================

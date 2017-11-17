@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!========================================================================
-Module ModUser
+module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_, Energy_, &
        rhoUx_,rhoUy_,rhoUz_
   use ModSize,     ONLY: nI,nJ,nK
@@ -9,8 +12,8 @@ Module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_calc_sources
 
-  include 'user_module.h' !list of public methods
- 
+  include 'user_module.h' ! list of public methods
+
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'Jupiter Magnetosphere, Hansen, Nov, 2006'
@@ -24,25 +27,20 @@ Module ModUser
   real, dimension(1:nI,1:nJ,1:nK):: &
        Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SE
 
-
 contains
+  !============================================================================
 
-  !=====================================================================
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance, ONLY: Source_VC
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
     integer, intent(in) :: iBlock
 
-    logical :: oktest,oktest_me
-    !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_calc_sources',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Set the source arrays for this block to zero
     Srho   = 0.0
@@ -67,13 +65,12 @@ contains
     Source_VC(P_     ,:,:,:) = SP     + Source_VC(P_     ,:,:,:)
     Source_VC(Energy_,:,:,:) = SE     + Source_VC(Energy_,:,:,:)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
+  !============================================================================
 
-
-  !=====================================================================
   subroutine user_sources(iBlock)
 
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: Xyz_DGB, r_Blk, rMin_Blk
@@ -86,7 +83,6 @@ contains
 
     ! Variables required by this user subroutine
     integer :: i,j,k
-    logical :: oktest,oktest_me
 
     !\
     ! Variable meanings:
@@ -105,27 +101,24 @@ contains
     real :: P0,P1,L0,L
     real :: rhodot0,rhodot,rhodotnorm
     real :: accelerationfactor
-    real :: alpha_rec,CXsource,Tfrac 
+    real :: alpha_rec,CXsource,Tfrac
     real :: alphaCOROTATE,ScorotateUx,ScorotateUy,ScorotateUz,ScorotateE
     real :: uCOR,xHat,yHat,zHat,FdotB,Bmag,sinTheta
     real :: gradP_external,gradP_external_X,gradP_external_Y,gradP_external_Z
 
-    !---------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if (.not. UseMassLoading) RETURN
-    if (Rmin_BLK(iBlock) > 15.0)return
-
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_sources',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    end if
+    if (Rmin_BLK(iBlock) > 15.0)RETURN
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
        ! Calculate only in the region where the contribution is not
-       ! negligible.  
+       ! negligible.
 
-       ! Note that densities are given in 1/cm^3, 
+       ! Note that densities are given in 1/cm^3,
        ! Velocities, distances and scale heights are normalized
        ! (unitless).
 
@@ -134,21 +127,19 @@ contains
             (R_Blk(i,j,k,iBlock) < 15.0) .and.     &
             (R_BLK(i,j,k,iBlock) > 3.0)) then
 
-
           Ux  = State_VGB(rhoUx_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
           Uy  = State_VGB(rhoUy_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
           Uz  = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
           Usq = sqrt(Ux**2 + Uy**2 + Uz**2)
 
-
           ! compute the cylindrical radius for later use
           Rxy = sqrt(Xyz_DGB(X_,i,j,k,iBlock)**2 + &
-               Xyz_DGB(Y_,i,j,k,iBlock)**2)   
+               Xyz_DGB(Y_,i,j,k,iBlock)**2)
 
           ! The neutral velocity is taken to be the orbital velocity
           ! Note that Gbody/r**2 is a unitless acceleration.  So Gbody/r
-          ! is a uniless u**2.  Gbody is negative so that gravity pulls 
-          ! inward.  Take abs() here to get magnitude of the orbital 
+          ! is a uniless u**2.  Gbody is negative so that gravity pulls
+          ! inward.  Take abs() here to get magnitude of the orbital
           ! velocity.
 
           Unsq = abs(Gbody)/Rxy
@@ -161,9 +152,9 @@ contains
 
           ! now code the simple model taken from Schreier, 1998
           ! corresponds to a total production rate of 3.2e28 s^-1
-          ! analytically and 3.0e28 s^-1 for a grid of .25 spacing 
-          ! when rhodot0=0.5e-3.  Not that is not the peak rhodot	 
-          ! but is really a scaling factor.  The real peak is 
+          ! analytically and 3.0e28 s^-1 for a grid of .25 spacing
+          ! when rhodot0=0.5e-3.  Not that is not the peak rhodot
+          ! but is really a scaling factor.  The real peak is
           ! closer to 1.97e-2 s^-1cm^-3
 
           ! Variables preceeded by H are scale heights
@@ -189,17 +180,17 @@ contains
              rhodot =  rhodot0*19.9*exp(-(Rxy-RO3)/Hr3)
           end if
 
-          ! the scale height is 10 degree or Hz = tan(10*pi/180)*Rxy 
+          ! the scale height is 10 degree or Hz = tan(10*pi/180)*Rxy
           ! Hz = .176327*Rxy
-          ! the scale height is 5 degree or Hz = tan(5*pi/180)*Rxy 
+          ! the scale height is 5 degree or Hz = tan(5*pi/180)*Rxy
           Hz = .087489*Rxy
-          rhodot = rhodot*exp(-(Xyz_DGB(Z_,i,j,k,iBlock)**2)/Hz**2) 
+          rhodot = rhodot*exp(-(Xyz_DGB(Z_,i,j,k,iBlock)**2)/Hz**2)
 
-          ! now get everything normalized - note that rhodot is in 
-          ! units particles/cm^3/s.  To get a unitless rhodot we simply 
-          ! need to multiply by the mass of a proton times the 
-          ! #amu/partical (22.0) and 1.0e6 (to get 1/m^3) and then 
-          ! divide by (dimensions(rho)/dimensions(t)) which is 
+          ! now get everything normalized - note that rhodot is in
+          ! units particles/cm^3/s.  To get a unitless rhodot we simply
+          ! need to multiply by the mass of a proton times the
+          ! #amu/partical (22.0) and 1.0e6 (to get 1/m^3) and then
+          ! divide by (dimensions(rho)/dimensions(t)) which is
           ! No2Si_V(UnitRho_)/No2Si_V(UnitT_) to get the normalized
           ! form.
 
@@ -217,9 +208,9 @@ contains
              rhodot   = accelerationFactor*rhodot
           end if
 
-          ! Before loading the source term arrays load source terms 
+          ! Before loading the source term arrays load source terms
           ! associated with the corotational electric field acceleration
-          ! of the newly created plasma ions. This is the extra term 
+          ! of the newly created plasma ions. This is the extra term
           ! currently under investigation and in dispute with referees.
 
           alphaCOROTATE = 1.0
@@ -239,37 +230,37 @@ contains
 
           ! now load the source terms into the right hand side
 
-          Srho(i,j,k)   = Srho(i,j,k) +                                      & 
-               (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,iBlock))  
+          Srho(i,j,k)   = Srho(i,j,k) +                                      &
+               (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,iBlock))
           SrhoUx(i,j,k) = SrhoUx(i,j,k)                                      &
                + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unx &
                - (CXsource + Alpha_rec)*                          &
                State_VGB(rhoUx_,i,j,k,iBlock)                    &
-               + ScorotateUx					        
+               + ScorotateUx
           SrhoUy(i,j,k) = SrhoUy(i,j,k)                                      &
                + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*uny &
                - (CXsource + Alpha_rec)*                          &
                State_VGB(rhoUy_,i,j,k,iBlock)                    &
-               + ScorotateUy					        
-          SrhoUz(i,j,k) = SrhoUz(i,j,k)                                      &  
+               + ScorotateUy
+          SrhoUz(i,j,k) = SrhoUz(i,j,k)                                      &
                - (CXsource + Alpha_rec)*                          &
                State_VGB(rhoUz_,i,j,k,iBlock)                    &
                + ScorotateUz
-          SE(i,j,k)     = SE(i,j,k)                                               & 
+          SE(i,j,k)     = SE(i,j,k)                                               &
                + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unsq &
                - (CXsource + Alpha_rec)*                               &
                (0.5*usq*State_VGB(rho_,i,j,k,iBlock)                  &
                + 1.5*State_VGB(p_,i,j,k,iBlock))                 &
                + 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*Tfrac             &
-               + ScorotateE  
+               + ScorotateE
           SP(i,j,k)     = SP(i,j,k)                                                 &
                + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*urelsq &
                - 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*(1.0-Tfrac)         &
-               - 1.5*Alpha_rec*State_VGB(p_,i,j,k,iBlock)                  
+               - 1.5*Alpha_rec*State_VGB(p_,i,j,k,iBlock)
 
           ! Output to look at rates
-          if (oktest_me .and. iBlock==BLKtest  .and. &
-               i==Itest .and. j==Jtest .and. k==Ktest ) then
+          if (DoTest .and. iBlock==iBlockTest  .and. &
+               i==iTest .and. j==jTest .and. k==kTest ) then
              write(*,*) '----------Inner Torus Mass Loading Rates-------------------------'
              write(*,'(a,3(1X,E13.5))') 'X, Y, Z:', &
                   Xyz_DGB(X_,i,j,k,iBlock), Xyz_DGB(Y_,i,j,k,iBlock), Xyz_DGB(Z_,i,j,k,iBlock)
@@ -287,7 +278,6 @@ contains
                   State_VGB(rho_,i,j,k,iBlock), un, usq
              write(*,*) '-----------------------------------------------------------------'
           end if
-
 
           ! now code the simple model of high energy particles
           ! as a pressure source taken from Mauk, 1996,1998.
@@ -315,7 +305,7 @@ contains
                (3*Xyz_DGB(Z_,i,j,k,iBlock)*R_BLK(i,j,k,iBlock)/Rxy**2)
 
           ! now get everything normalized - note that gradP_external is in Pascal/Rj.
-          ! To get a unitless gradP_external we simply need to divide 
+          ! To get a unitless gradP_external we simply need to divide
           ! by No2Si_V(UnitP_)
           ! since the derivative was computed using the unitless Rj.
 
@@ -330,7 +320,7 @@ contains
           ! First compute the B unit vector b
           Bmag = sqrt(State_VGB(Bx_,i,j,k,iBlock)**2 + &
                State_VGB(By_,i,j,k,iBlock)**2 + &
-               State_VGB(Bz_,i,j,k,iBlock)**2 ) 
+               State_VGB(Bz_,i,j,k,iBlock)**2 )
           xHat = State_VGB(Bx_,i,j,k,iBlock)/Bmag
           yHat = State_VGB(By_,i,j,k,iBlock)/Bmag
           zHat = State_VGB(Bz_,i,j,k,iBlock)/Bmag
@@ -340,9 +330,9 @@ contains
                gradP_external_y*yHat + &
                gradP_external_z*zHat
 
-          ! gradP_external_X =  gradP_external_X - FdotB*xHat 
-          ! gradP_external_Y =  gradP_external_Y - FdotB*yHat 
-          ! gradP_external_Z =  gradP_external_Z - FdotB*zHat 
+          ! gradP_external_X =  gradP_external_X - FdotB*xHat
+          ! gradP_external_Y =  gradP_external_Y - FdotB*yHat
+          ! gradP_external_Z =  gradP_external_Z - FdotB*zHat
 
           ! now load the source terms into the right hand side of the momentum and
           ! energy equations.  There are no terms in the other equations.
@@ -351,26 +341,30 @@ contains
           SrhoUy(i,j,k) = SrhoUy(i,j,k) - gradP_external_Y
           SrhoUz(i,j,k) = SrhoUz(i,j,k) - gradP_external_Z
           SE(i,j,k)     = SE(i,j,k) - gradP_external_X*Ux   &
-               - gradP_external_Y*Uy   & 
-               - gradP_external_Z*UZ 
+               - gradP_external_Y*Uy   &
+               - gradP_external_Z*UZ
 
        end if     ! location test
 
     end do; end do; end do     ! end the i,j,k loops
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_sources
+  !============================================================================
 
-  !=====================================================================
   subroutine user_read_inputs
     use ModMain
     use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
-  
+
     integer:: i
     character (len=100) :: NameCommand
-    !---------------------------------------------------------------------------
-  
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
     if(iProc==0.and.lVerbose > 0)then
         call write_prefix; write(iUnitOut,*)'User read_input SATURN starts'
     endif
@@ -382,7 +376,7 @@ contains
        case("#MASSLOADING")
           call read_var('UseMassLoading',UseMassLoading)
   	  call read_var('MassLoadingRate (#/s)', MassLoadingRate)
-          call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 
+          call read_var('DoAccelerateMassLoading',AccelerateMassLoading)
 
        case('#USERINPUTEND')
           if(iProc==0.and.lVerbose > 0)then
@@ -400,8 +394,10 @@ contains
           end if
        end select
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
+  !============================================================================
 
 end module ModUser
+!==============================================================================
 

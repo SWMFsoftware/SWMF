@@ -1,37 +1,39 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!April 30, 2007 implementing MultiFluid
-!June 01, 2007 correcting normalization
-!June 08, 2007 correcting source terms
-!August 18, 2007 Implementing 3-fluids
-!October 23, 2007 more little corrections
-!January 01-04, 2008 Source terms in point-implicit form - with help
+! April 30, 2007 implementing MultiFluid
+! June 01, 2007 correcting normalization
+! June 08, 2007 correcting source terms
+! August 18, 2007 Implementing 3-fluids
+! October 23, 2007 more little corrections
+! January 01-04, 2008 Source terms in point-implicit form - with help
 ! of Gabor Toth
-!January 08 all source terms for PopI implicit
-!January 25 comments added
-!January 31-Feb 02
-!April 28, 2008 Michigan visit
-!May 02-setting the initial conditions to be closer to the 
-!final solution
-!May 30-31
-!June30
-!July 20-WORKED! 
-!July 28-4 neutral fluids
-!September 28 - source terms as McNutt
-!March 25, 2015 - adapted to be solved with either multifluid neutrals or single
-!ion MHD used for PT-OH coupling by A. Michael with help from G. Toth
-!July 2015 - trying not to have body at 30AU for the neutrals
-!September 2015 - A.Michael added time dependent code to user_update_states
+! January 08 all source terms for PopI implicit
+! January 25 comments added
+! January 31-Feb 02
+! April 28, 2008 Michigan visit
+! May 02-setting the initial conditions to be closer to the
+! final solution
+! May 30-31
+! June30
+! July 20-WORKED!
+! July 28-4 neutral fluids
+! September 28 - source terms as McNutt
+! March 25, 2015 - adapted to be solved with either multifluid neutrals or single
+! ion MHD used for PT-OH coupling by A. Michael with help from G. Toth
+! July 2015 - trying not to have body at 30AU for the neutrals
+! September 2015 - A.Michael added time dependent code to user_update_states
 ! in subroutine calc_time_dep_sw, it reads in file solarwind.dat
-!note TimeDep code was implemented without the Heliopause function
-!September 2015 - Added user_init_session
+! note TimeDep code was implemented without the Heliopause function
+! September 2015 - Added user_init_session
 ! October-Novermber 2016 - gtoth added code for a reflective heliosphere body
-!==============================================================================
 module ModUser
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest
+
   use ModSize,       ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
-  use ModMain,       ONLY: body1_, PROCtest, BLKtest, iTest, jTest, kTest, &
+  use ModMain,       ONLY: body1_,      &
        nBlock, Unused_B, Time_Simulation
   use ModPhysics,    ONLY: Gamma, GammaMinus1, OmegaBody, &
        UnitX_, Io2Si_V, Si2Io_V, Si2No_V, No2Io_V, No2Si_V, Io2No_V, &
@@ -46,7 +48,7 @@ module ModUser
   use ModVarIndexes, ONLY: nVar, Rho_, Ux_, Uy_, Uz_, RhoUx_, RhoUy_, RhoUz_, &
        Bx_, By_, Bz_, p_, Energy_, iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, &
        nFluid, NameVar_V
-  use ModProcMH,     ONLY: iProc 
+  use ModProcMH,     ONLY: iProc
   use ModMultiFluid, ONLY: UseNeutralFluid, RhoNeutralsISW, RhoNeutralsISW_dim, &
        PNeutralsISW, PNeutralsISW_dim, UxNeutralsISW, UyNeutralsISW, UzNeutralsISW, &
        TNeutralsISW_dim, UxNeutralsISW_dim, UyNeutralsISW_dim, UzNeutralsISW_dim, &
@@ -60,7 +62,7 @@ module ModUser
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
        IMPLEMENTED7  => user_update_states,             &
-       IMPLEMENTED8  => user_action,                    & 
+       IMPLEMENTED8  => user_action,                    &
        IMPLEMENTED9  => user_io_units,                  &
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED11 => user_calc_sources,              &
@@ -69,14 +71,14 @@ module ModUser
        IMPLEMENTED14 => user_set_boundary_cells,        &
        IMPLEMENTED15 => user_amr_criteria
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 2.3
   character (len=*), parameter :: &
        NameUserModule = 'Outer Heliosphere with 4 neutrals, Opher & Toth'
 
-  !these are the variable used for multiflud neutrals 
-  !that are not defined in ModEquationMhd.f90 used for K-MHD
+  ! these are the variable used for multiflud neutrals
+  ! that are not defined in ModEquationMhd.f90 used for K-MHD
   integer, parameter :: &
        NeuRho_    = min(nVar, 9), &
        NeuRhoUx_  = min(nVar-2, 10), NeuUx_ = NeuRhoUx_, &
@@ -101,7 +103,7 @@ module ModUser
 
   ! Named indexes for fluids
   integer, parameter :: Ion_ = 1, Neu_ = min(nFluid,2), &
-       Ne2_ = min(nFluid,3), Ne3_ = min(nFluid,4), Ne4_= min(nFluid,5) 
+       Ne2_ = min(nFluid,3), Ne3_ = min(nFluid,4), Ne4_= min(nFluid,5)
 
   logical :: UseSource_I(Ion_:Ne4_) = .true.
 
@@ -122,7 +124,7 @@ module ModUser
        SWH_By=0.0 , SWH_By_dim=0.0 , &
        SWH_Bz=0.0 , SWH_Bz_dim=0.0
 
-  ! 
+  !
   ! VLISM variables.
   !/
   real ::      VLISW_T_dim=0.0  , &
@@ -147,7 +149,7 @@ module ModUser
        SWfast_Uy=0.0 , SWfast_Uy_dim=0.0 , &
        SWfast_Uz=0.0 , SWfast_Uz_dim=0.0
 
-  ! mass of neutrals in 
+  ! mass of neutrals in
   real :: mNeutrals
 
   ! Velocity, temperature, Mach number and radius limits for the populations
@@ -169,16 +171,17 @@ module ModUser
   logical:: DoFreezeNeutral = .false.
 
 contains
-
-  !=========================================================================
+  !============================================================================
 
   subroutine user_read_inputs
 
     use ModReadParam
 
     character (len=100) :: NameCommand
-    character (len=*), parameter :: NameSub = 'user_read_inputs'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -251,9 +254,10 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
+  !============================================================================
 
-  !==========================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModFaceBoundary, ONLY: iBoundary, FaceCoords_D, VarsTrueFace_V, &
@@ -272,21 +276,16 @@ contains
 
     real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD, Sph_D)
 
-    logical :: DoTest, DoTestMe
-    character(len=*), parameter:: NameSub='user_set_face_boundary'
-    !-------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iBoundary /= body1_ .and. iBoundary /= 1)then
        write(*,*) NameSub,': iBoundary=', iBoundary
        call stop_mpi(NameSub//' is not implemented for this boundary!')
     end if
 
-    if(iProc == ProcTest .and. iBlockBc == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
-
-    if(DoTestMe)write(*,*) NameSub,' starting with iBoundary=', iBoundary
+    if(DoTest)write(*,*) NameSub,' starting with iBoundary=', iBoundary
 
     if(iBoundary == 1)then
        ! The LISW enters at the 1st boundary (negative x)
@@ -333,7 +332,7 @@ contains
 
     ! Note: use -zFace to invert polarity
     ! polarity for 1997    Bsph_D(1) =  sign(SWH_Bx, zFace)             ! Br
-    Bsph_D(1) =  sign(SWH_Bx, -zFace)             ! Br  !good for 2005 field
+    Bsph_D(1) =  sign(SWH_Bx, -zFace)             ! Br  ! good for 2005 field
     Bsph_D(2) =  0.0                             ! Btheta
     Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi
 
@@ -347,7 +346,7 @@ contains
     ! factor 1000 for test
     ! --------------
     ! Correct:
-    ! From angular momentum conservation 
+    ! From angular momentum conservation
     !    vPhi(rFace)*rFace*SinTheta = vPhi(rSun)*rSun*SinTheta
     ! and
     !    vPhi(rSun) = rSun*SinTheta*Omega
@@ -376,7 +375,7 @@ contains
     !! RhoSolarWind = SWH_rho + ((SWfast_rho - SWH_rho)*cosTheta*cosTheta)
     !! pressure will vary for fast and slow wind         PSolarWind = SWH_p
     !/
-    !!test      VrSolarWind = SWH_Ux
+    !! test      VrSolarWind = SWH_Ux
 
     ! Calculate pressure (equilibrium, but why? It is supersonic!)
     Pmag = sum(Bsph_D**2) / 2.0
@@ -395,7 +394,7 @@ contains
 
        ! NeuRho is PopI; NeuIIRho is PopII and NeuIIIRho is PopIII
        !
-       ! Pop I is going through the inner BCs    
+       ! Pop I is going through the inner BCs
 
        ! soft boundary for Pop I-IV
 
@@ -403,7 +402,7 @@ contains
 
     endif
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*) NameSub,' FaceCoord=', FaceCoords_D
        write(*,*) NameSub,' i,j,kFace=', iFace, jFace, kFace
        write(*,*) NameSub,' SinTheta =', SinTheta
@@ -421,7 +420,9 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
+  !============================================================================
 
   !-------------------------------------------------------------------
   subroutine user_normalization
@@ -429,23 +430,24 @@ contains
     use ModConst, ONLY: cAU, cProtonMass
     use ModPhysics, ONLY: No2Si_V, UnitX_, UnitU_, UnitRho_
 
-    character (len=*), parameter :: NameSub='user_normalization'
-    logical :: DoTest, DoTestMe
-    !-------------------------------------------------------------------
-
-    call set_oktest(NameSub, DoTest, DoTestMe)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_normalization'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     No2Si_V(UnitX_)  = cAU                                          ! m
     No2Si_V(UnitU_)  = sqrt(Gamma*cBoltzmann*SWH_T_dim/cProtonMass) ! m/s
     No2Si_V(UnitRho_)= cProtonMass*SWH_rho_dim*1.0E+6               ! kg/m^3
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)NameSub,' No2Si_V(UnitX_)  =',No2Si_V(UnitX_)
        write(*,*)NameSub,' No2Si_V(UnitU_)  =',No2Si_V(UnitU_)
        write(*,*)NameSub,' No2Si_V(UnitRho_)=',No2Si_V(UnitRho_)
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_normalization
+  !============================================================================
   !-------------------------------------------------------------------
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
@@ -457,7 +459,10 @@ contains
     logical,intent(out) :: IsFound
 
     integer :: i, iVar
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
 
     State_VGB(rho_,-1:2,:,:,iBlock)=VLISW_rho
@@ -482,33 +487,33 @@ contains
        State_VGB(Ne4P_,-1:2,:,:,iBlock)     = PNeutralsISW
 
        !
-       ! In general you should specify as many values as many incoming 
-       ! characteristic waves are present. For a neutral fluid this 
-       ! is 0 for supersonic outflow, 1 for subsonic outflow, 
-       ! 4 for subsonic inflow and 5 for supersonic inflow. 
+       ! In general you should specify as many values as many incoming
+       ! characteristic waves are present. For a neutral fluid this
+       ! is 0 for supersonic outflow, 1 for subsonic outflow,
+       ! 4 for subsonic inflow and 5 for supersonic inflow.
 
-       !ausg26 cond
-       !!State_VGB(NeuRho_,-1:2,:,:,iBlock)   = 0.639*RhoNeutralsISW    
-       !!State_VGB(NeuRhoUx_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UxNeutralsISW    
-       !!State_VGB(NeuRhoUy_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UyNeutralsISW   
-       !!State_VGB(NeuRhoUz_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UzNeutralsISW    
+       ! ausg26 cond
+       !! State_VGB(NeuRho_,-1:2,:,:,iBlock)   = 0.639*RhoNeutralsISW
+       !! State_VGB(NeuRhoUx_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UxNeutralsISW
+       !! State_VGB(NeuRhoUy_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UyNeutralsISW
+       !! State_VGB(NeuRhoUz_,-1:2,:,:,iBlock) = 0.639*RhoNeutralsISW*UzNeutralsISW
        ! hydro run State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.6798*PNeutralsISW
-       !!State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.639*PNeutralsISW
+       !! State_VGB(NeuP_,-1:2,:,:,iBlock)     = 0.639*PNeutralsISW
 
        !
        !\
        ! PopII and III supersonic outflow
        !/
-       !!do iVar = Ne2Rho_, Ne3P_; do i = -1, 2
-       !conditions of August 26
+       !! do iVar = Ne2Rho_, Ne3P_; do i = -1, 2
+       ! conditions of August 26
        do iVar = NeuRho_, Ne3P_; do i = -1, 2
           State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
        end do; end do
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-
-  !=====================================================================
+  !============================================================================
 
   subroutine user_set_ics(iBlock)
 
@@ -537,11 +542,10 @@ contains
     real, save :: RotMatrix_DD(3,3)
 
     ! I included an extra matrix to rotate between tilted and intertial coordinates
-    real, save :: RotMatrixInv_DD(3,3)   !teste
+    real, save :: RotMatrixInv_DD(3,3)   ! teste
 
-    ! Position vector in solar coordinates (merav) at the grid point 
+    ! Position vector in solar coordinates (merav) at the grid point
     real, dimension(3) :: Xyz_D
-
 
     ! The last time the rotation matrix was calculated
     real :: TimeLast = -1.0
@@ -557,15 +561,11 @@ contains
 
     ! end of tilt declarations
 
+    logical :: DoTestCell
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ics'
-    logical :: DoTest, DoTestMe, DoTestCell
     !--------------------------------------------------------------------------
-
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Make sure that OmegaSun and ParkerTilt are set
     if(OmegaSun == 0.0)call set_omega_parker_tilt
@@ -595,17 +595,16 @@ contains
        rot_period_dim = 26.0*24.0                   ! rotation period in hours
        OmegaBody = cTwoPi/(rot_period_dim*3600.00)
 
-
        ! to perform the negative rotation from TILTED -> INERTIAL
 
        !\
        ! Merav's Original Code
        !/
-       !RotMatrix_DD = matmul(&
+       ! RotMatrix_DD = matmul(&
        !     rot_matrix_y(THETAtilt), &        ! rotate around y axis by tilt
        !     rot_matrix_z(OMEGAbody*Time_Simulation))  ! rotate around z axis by rotation
        !
-       !RotMatrixInv_DD = matmul(&
+       ! RotMatrixInv_DD = matmul(&
        !     rot_matrix_y(-THETAtilt), &        ! rotate around y axis by tilt
        !     rot_matrix_z(-OmegaBody*Time_Simulation))
        !\
@@ -629,19 +628,19 @@ contains
 
        if(.not. true_cell(i,j,k,iBlock)) CYCLE
 
-       DoTestCell = DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest
+       DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
 
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
        r = r_BLK(i,j,k,iBlock)
 
-       !june 2010
+       ! june 2010
        Xyz_D = matmul( (/x, y, z/), RotMatrix_DD)
 
        xt = Xyz_D(1)
        yt = Xyz_D(2)
-       zt = Xyz_D(3) 
+       zt = Xyz_D(3)
        rt = sqrt(xt**2+yt**2+zt**2)
 
        XyzSph_DD = rot_xyz_sph(x,y,z)
@@ -649,16 +648,16 @@ contains
        ! theta is the angle measured from the pole
        SinTheta = sqrt(xt**2+yt**2)/rt
 
-       !2015
+       ! 2015
        Vsph_D = (/ SWH_Ux, 0., 0. /)
 
-       vSolar_D(1) = vSph_D(1) !Radial velocity
+       vSolar_D(1) = vSph_D(1) ! Radial velocity
        vSolar_D(2) = vSph_D(2)
-       vSolar_D(3) = vSph_D(3) !VERIFY THAT!!
+       vSolar_D(3) = vSph_D(3) ! VERIFY THAT!!
 
-       !calculating the Parker B field spherical components Bsph_D
+       ! calculating the Parker B field spherical components Bsph_D
 
-       !2015
+       ! 2015
        rBody = 30.
        OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
        ParkerTilt = OmegaSun*rBody/SWH_Ux
@@ -667,19 +666,19 @@ contains
        SignZ = -sign(1.0,z)  ! good for 2005
 
        ! dipole configuration
-       !Bsph_D(1) = SignZ*SWH_Bx*(rBody/rt)**2  ! Br
-       !Bsph_D(2) = 0.0                        ! Btheta
-       !Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/rt) !Bphi
+       ! Bsph_D(1) = SignZ*SWH_Bx*(rBody/rt)**2  ! Br
+       ! Bsph_D(2) = 0.0                        ! Btheta
+       ! Bsph_D(3) = -SignZ*SWH_Bx*SinTheta*ParkerTilt*(rBody/rt) !Bphi
 
-       !monopole magnetic field
+       ! monopole magnetic field
        Bsph_D(1) = SWH_Bx*(rBody/rt)**2  ! Br
        Bsph_D(2) = 0.0                        ! Btheta
-       Bsph_D(3) = SWH_Bx*SinTheta*ParkerTilt*(rBody/rt) !Bphi
+       Bsph_D(3) = SWH_Bx*SinTheta*ParkerTilt*(rBody/rt) ! Bphi
 
        ! tilted
-       bParker_D(1) = Bsph_D(1) !Radial component
-       bParker_D(2) = Bsph_D(2) !Theta component
-       bParker_D(3) = Bsph_D(3) !Phi component
+       bParker_D(1) = Bsph_D(1) ! Radial component
+       bParker_D(2) = Bsph_D(2) ! Theta component
+       bParker_D(3) = Bsph_D(3) ! Phi component
 
        bParker_D    = matmul(RotMatrixInv_DD, bParker_D)
 
@@ -688,7 +687,7 @@ contains
 
        State_VGB(Bx_:Bz_,i,j,k,iBlock) = b_D
 
-       !velocity components in cartesian coordinates
+       ! velocity components in cartesian coordinates
        v_D = matmul(XyzSph_DD, Vsph_D)
 
        ! density and pressure
@@ -708,23 +707,22 @@ contains
           State_VGB(NeuRhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW
           State_VGB(NeuRhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
 
-
           !! State_VGB(NeuRho_,i,j,k,iBlock) = &
           !!    RhoNeutralsISW*Exp(-lambda*thetaN/((r**2)*SinThetaN)) &
-          !!    *Exp(-lambda*thetaN/(r*SinThetaN))              
+          !!    *Exp(-lambda*thetaN/(r*SinThetaN))
           !! State_VGB(NeuP_,i,j,k,iBlock) = &
           !!    PNeutralsISW*Exp(-lambda*thetaN/(r*SinThetaN))
 
           !\
-          ! PopII - I set it to be about 100km/s radially. 
+          ! PopII - I set it to be about 100km/s radially.
           ! The temperature is set to be 10^5K for this population.
           ! v_D is the plasma velocity, we take one quarter of that.
           !/
-          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3 
-          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3 
+          State_VGB(Ne2Rho_,i,j,k,iBlock) = 1.e-3
+          State_VGB(Ne2P_,i,j,k,iBlock)   = 1.e-3
           State_VGB(Ne2RhoUx_:Ne2RhoUz_,i,j,k,iBlock) = 1.e-3
 
-          !\ 
+          !\
           ! PopIII
           !/
           State_VGB(Ne3Rho_,i,j,k,iBlock) = 0.1 * State_VGB(Rho_,i,j,k,iBlock)
@@ -736,8 +734,8 @@ contains
           ! PopIV
           !/
           State_VGB(Ne4Rho_,i,j,k,iBlock)  =RhoNeutralsISW
-          State_VGB(Ne4RhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW 
-          State_VGB(Ne4RhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW 
+          State_VGB(Ne4RhoUx_,i,j,k,iBlock)=RhoNeutralsISW*UxNeutralsISW
+          State_VGB(Ne4RhoUy_,i,j,k,iBlock)=RhoNeutralsISW*UyNeutralsISW
           State_VGB(Ne4RhoUz_,i,j,k,iBlock)=RhoNeutralsISW*UzNeutralsISW
           State_VGB(Ne4P_,i,j,k,iBlock) = PNeutralsISW
        endif
@@ -757,9 +755,10 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
+  !============================================================================
 
-  !=====================================================================
   subroutine user_initial_perturbation
 
     use ModEnergy, ONLY: calc_energy, calc_energy_ghost
@@ -767,9 +766,11 @@ contains
     ! Set Pop II to be the same state as the ions with smaller density
     integer:: iBlock
 
-    character (len=*), parameter :: NameSub = 'user_initial_perturbation'
-    !-------------------------------------------------------------------
-    !This subroutine is not needed when not using the 4 neutral fluids
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    ! This subroutine is not needed when not using the 4 neutral fluids
 
     if(.not.UseNeutralFluid)then
        if(rHelioPause > 0.0)then
@@ -810,9 +811,9 @@ contains
        call calc_energy(MinI,MaxI, MinJ,MaxJ, MinK,MaxK, iBlock, Ne2_, Ne2_)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
-
-  !=====================================================================
+  !============================================================================
 
   subroutine user_update_states(iBlock)
 
@@ -825,17 +826,20 @@ contains
 
     integer:: i, j, k
 
-    !------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call update_state_normal(iBlock)
 
     if(DoFreezeNeutral)then
 
        ! Set neutrals back to previous state
        do k=1, nK; do j=1, nJ; do i=1, nI
-          State_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) = StateOld_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) 
+          State_VGB(NeuRho_:Ne4P_,i,j,k,iBlock) = StateOld_VGB(NeuRho_:Ne4P_,i,j,k,iBlock)
           Energy_GBI(i,j,k,iBlock,2:) = EnergyOld_CBI(i,j,k,iBlock,2:)
        end do; end do; end do
-       
+
        RETURN
     end if
 
@@ -850,14 +854,15 @@ contains
           call calc_time_dep_sw(i,j,k,iBlock)
        else
           ! Retain initial condition if time dependent solar wind is not used
-          State_VGB(Rho_:p_,i,j,k,iBlock) = StateOld_VGB(Rho_:p_,i,j,k,iBlock) 
+          State_VGB(Rho_:p_,i,j,k,iBlock) = StateOld_VGB(Rho_:p_,i,j,k,iBlock)
           Energy_GBI(i,j,k,iBlock,1) = EnergyOld_CBI(i,j,k,iBlock,1)
        endif
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-    !======================================================================
+    !==========================================================================
     subroutine calc_time_dep_sw(i,j,k,iBlock)
 
       use BATL_lib,       ONLY: Xyz_DGB
@@ -878,7 +883,7 @@ contains
       real :: TimeCycle ! holds current time of the simulation
       real :: Value_I(3)
       real :: SinTheta
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! calculate the latitude of the cell
       x = Xyz_DGB(1,i,j,k,iBlock)
@@ -894,9 +899,9 @@ contains
       Latitude = cRadToDeg*asin(z/r)
 
       ! calculating time relative to the solar cycle
-      TimeCycle = modulo(Time_Simulation, LengthCycle) 
+      TimeCycle = modulo(Time_Simulation, LengthCycle)
 
-      ! interpolating the value of Rho, Vr, and Temp 
+      ! interpolating the value of Rho, Vr, and Temp
       ! at the cell from the lookup table
       call interpolate_lookup_table(iTableSolarwind, Latitude, TimeCycle, &
            Value_I)
@@ -907,12 +912,12 @@ contains
       p = 2.0*Rho*Temp
 
       ! Spherical velocity, Vr, Vtheta, Vphi constant with  radial distance
-      Vsph_D    = (/ Ur, 0.0, 0.0 /)         
+      Vsph_D    = (/ Ur, 0.0, 0.0 /)
 
       !\
-      !monopole with By negative and a time varying B 
+      ! monopole with By negative and a time varying B
       ! time-dependent behavior of B taken from Michael et al. 2015
-      !/  
+      !/
       Bsph_D(1) = (SQRT(0.5)/rBody**2)*(9.27638+ &
            7.60832d-8*TimeCycle-1.91555*SIN(1.28737d-8*TimeCycle)+ &
            0.144184*SIN(2.22823d-8*TimeCycle)+ &
@@ -920,19 +925,19 @@ contains
            83.5522*SIN(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_) ! Br
       Bsph_D(2) =  0.0                             ! Btheta
       Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt*SWH_Ux/Ur ! Bphi for vary B
-      !Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
+      ! Bsph_D(3) = Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
 
       !\
-      !for dipole with a time varying B
+      ! for dipole with a time varying B
       !/
-      !Bsph_D(1) = sign((SQRT(0.5)/rBody**2)*(9.27638+ &
+      ! Bsph_D(1) = sign((SQRT(0.5)/rBody**2)*(9.27638+ &
       !     7.60832d-8*TimeCycle-1.91555*SIN(1.28737d-8*TimeCycle)+ &
       !     0.144184*SIN(2.22823d-8*TimeCycle)+ &
       !     47.7758*SIN(2.18788d-10*TimeCycle)+ &
       !     83.5522*SIN(-1.20266d-9*TimeCycle))*Io2No_V(UnitB_), z) ! Br
-      !Bsph_D(2) =  0.0                             ! Btheta
-      !Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
-      !Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt*SWH_Ux/Ur ! Bphi for vary B
+      ! Bsph_D(2) =  0.0                             ! Btheta
+      ! Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt   ! Bphi for B independent of Vsw
+      ! Bsph_D(3) = -Bsph_D(1)*SinTheta*ParkerTilt*SWH_Ux/Ur ! Bphi for vary B
 
       ! Scale density, pressure, and magnetic field with radial distance
       Rho = Rho*(rBody/r)**2
@@ -954,10 +959,10 @@ contains
       call calc_energy(i, i, j, j, k, k, iBlock, 1, 1)
 
     end subroutine calc_time_dep_sw
+    !==========================================================================
 
   end subroutine user_update_states
-
-  !=====================================================================
+  !============================================================================
 
   subroutine user_action(NameAction)
 
@@ -965,8 +970,10 @@ contains
 
     character(len=*), parameter:: StringFormat = '(10X,A19,F15.6,A11,F15.6)'
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_action'
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(iProc==0) write(*,*) NameSub,' called with NameAction=', NameAction
 
@@ -980,48 +987,52 @@ contains
     write(*,StringFormat) 'SWH_rho_dim [n/cc]:',SWH_rho_dim,'SWH_rho:',SWH_rho
 
     write(*,StringFormat) 'SWH_Ux_dim  [km/s]:',SWH_Ux_dim,'SWH_Ux:',SWH_Ux
-    write(*,StringFormat) 'SWH_Uy_dim  [km/s]:',SWH_Uy_dim,'SWH_Uy:',SWH_Uy 
+    write(*,StringFormat) 'SWH_Uy_dim  [km/s]:',SWH_Uy_dim,'SWH_Uy:',SWH_Uy
     write(*,StringFormat) 'SWH_Uz_dim  [km/s]:',SWH_Uz_dim,'SWH_Uz:',SWH_Uz
     write(*,StringFormat) 'SWH_T_dim   [   K]:',SWH_T_dim,'SWH_p:',SWH_p
-    write(*,StringFormat) 'SWH_Bx_dim  [  nT]:',SWH_Bx_dim,'SWH_Bx:',SWH_Bx 
+    write(*,StringFormat) 'SWH_Bx_dim  [  nT]:',SWH_Bx_dim,'SWH_Bx:',SWH_Bx
     write(*,StringFormat) 'SWH_By_dim  [  nT]:',SWH_By_dim,'SWH_By:',SWH_By
     write(*,StringFormat) 'SWH_Bz_dim  [  nT]:',SWH_Bz_dim,'SWH_Bz:',SWH_Bz
     write(*,'(10X,A19,F15.6)')           'SWH_T_dim   [   K]:',SWH_T_dim
     ! fast solar wind
     write(*,*)
     write(*,*)
-    write(*,StringFormat) 'VLISW_rho_dim[n/cc]:',VLISW_rho_dim,'VLISW_rho:',VLISW_rho 
+    write(*,StringFormat) 'VLISW_rho_dim[n/cc]:',VLISW_rho_dim,'VLISW_rho:',VLISW_rho
     write(*,StringFormat) 'VLISW_Ux_dim[km/s]: ',VLISW_Ux_dim,'VLISW_Ux:',VLISW_Ux
     write(*,StringFormat) 'VLISW_Uy_dim[km/s]: ',VLISW_Uy_dim,'VLISW_Uy:',VLISW_Uy
-    write(*,StringFormat) 'VLISW_Uz_dim[km/s]: ',VLISW_Uz_dim,'VLISW_Uz:',VLISW_Uz 
-    write(*,StringFormat) 'VLISW_p_dim [nPa]: ',VLISW_p_dim,'VLISW_p:',VLISW_p 
+    write(*,StringFormat) 'VLISW_Uz_dim[km/s]: ',VLISW_Uz_dim,'VLISW_Uz:',VLISW_Uz
+    write(*,StringFormat) 'VLISW_p_dim [nPa]: ',VLISW_p_dim,'VLISW_p:',VLISW_p
     write(*,StringFormat) 'VLISW_Bx_dim[nT]: ',VLISW_Bx_dim,'VLISW_Bx:',VLISW_Bx
     write(*,StringFormat) 'VLISW_By_dim[nT]:',VLISW_By_dim,'VLISW_By:',VLISW_By
     write(*,StringFormat) 'VLISW_Bz_dim[nT]:',VLISW_Bz_dim,'VLISW_Bz:',VLISW_Bz
     write(*,'(10X,A19,F15.6)') 'VLISW_a_dim[km/s]: ',VLISW_a_dim
-    write(*,'(10X,A19,F15.6)') 'VLISW_T_dim[K]: ',VLISW_T_dim! 
+    write(*,'(10X,A19,F15.6)') 'VLISW_T_dim[K]: ',VLISW_T_dim!
     if(UseNeutralFluid)then
-       !neutrals
-       write(*,*)     
-       write(*,StringFormat) 'RhoNeutralsISW_dim:',RhoNeutralsISW_dim ,'RhoNeutralsISW:',RhoNeutralsISW 
-       write(*,StringFormat) 'UxNeutralsISW_dim:',UxNeutralsISW_dim,'UxNeutralsISW:',UxNeutralsISW 
+       ! neutrals
+       write(*,*)
+       write(*,StringFormat) 'RhoNeutralsISW_dim:',RhoNeutralsISW_dim ,'RhoNeutralsISW:',RhoNeutralsISW
+       write(*,StringFormat) 'UxNeutralsISW_dim:',UxNeutralsISW_dim,'UxNeutralsISW:',UxNeutralsISW
        write(*,StringFormat) 'UyNeutralsISW_dim:',UyNeutralsISW_dim,'UyNeutralsISW:',UyNeutralsISW
-       write(*,StringFormat) 'UzNeutralsISW_dim:',UzNeutralsISW_dim,'UzNeutralsISW:',UzNeutralsISW 
+       write(*,StringFormat) 'UzNeutralsISW_dim:',UzNeutralsISW_dim,'UzNeutralsISW:',UzNeutralsISW
        write(*,StringFormat) 'PNeutralsISW_dim:',PNeutralsISW_dim,'PNeutralsISW:',PNeutralsISW
-       write(*,'(10X,A19,F15.6)') 'TNeutralsISW_dim:',TNeutralsISW_dim     
+       write(*,'(10X,A19,F15.6)') 'TNeutralsISW_dim:',TNeutralsISW_dim
     endif
     write(*,*)
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_action
+  !============================================================================
 
-  !=====================================================================
   subroutine user_io_units
 
     use ModConst, ONLY: cAU, cProtonMass
-    character (len=*), parameter :: NameSub='user_io_units'
-    !-------------------------------------------------------------------------
+
     ! set strings for writing Tecplot output
     !/
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_io_units'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     NameTecUnit_V(UnitX_)            = 'AU'
     NameTecUnit_V(UnitRho_)          = 'amu/cm3'
     NameTecUnit_V(UnitN_)            = '#/cm3'
@@ -1045,8 +1056,8 @@ contains
     NameIdlUnit_V(UnitJ_)            = 'uA/m^2'
     NameIdlUnit_V(UnitDivB_)         = 'G/cm'
     NameIdlUnit_V(UnitAngle_)        = 'deg'
- 
-    Io2Si_V(UnitX_)           = cAU                       ! R  
+
+    Io2Si_V(UnitX_)           = cAU                       ! R
     Io2Si_V(UnitRho_)         = 1.0E+6*cProtonMass        ! Mp/cm^3
     Io2Si_V(UnitN_)           = 1.0E+6                    ! #/cm^3
     Io2Si_V(UnitU_)           = 1.0E+3                    ! km/s
@@ -1067,7 +1078,7 @@ contains
     VLISW_a_dim    = No2Io_V(UnitU_)*(VLISW_T_dim/SWH_T_dim)
     VLISW_p_dim1    = No2Io_V(UnitP_)/Gamma &
          *(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
-    ! 
+    !
     ! Pressure of plasma = 2*T_ion*rho_ion
 
     VLISW_B_factor = No2Io_V(UnitB_)*sqrt((VLISW_T_dim/SWH_T_dim) &
@@ -1077,10 +1088,10 @@ contains
     VLISW_p1   = VLISW_p_dim1*Io2No_V(UnitP_)
     VLISW_p    = 2.*VLISW_T_dim*Io2No_V(UnitTemperature_)*VLISW_rho
 
-    !merav
-    !write(*,*) 'VLISW_p1',VLISW_p1
-    !write(*,*) 'VLISW_p',VLISW_p
-    !merav
+    ! merav
+    ! write(*,*) 'VLISW_p1',VLISW_p1
+    ! write(*,*) 'VLISW_p',VLISW_p
+    ! merav
 
     VLISW_Ux  = VLISW_Ux_dim*Io2No_V(UnitU_)
     VLISW_Uy  = VLISW_Uy_dim*Io2No_V(UnitU_)
@@ -1091,7 +1102,7 @@ contains
 
     ! Latitude Dependent Wind
     SWfast_rho = SWfast_rho_dim*Io2No_V(UnitRho_)
-    SWfast_p   = SWfast_p_dim*Io2No_V(UnitP_) 
+    SWfast_p   = SWfast_p_dim*Io2No_V(UnitP_)
     SWfast_Ux  = SWfast_Ux_dim*Io2No_V(UnitU_)
     SWfast_Uy  = SWfast_Uy_dim*Io2No_V(UnitU_)
     SWfast_Uz  = SWfast_Uz_dim*Io2No_V(UnitU_)
@@ -1101,11 +1112,10 @@ contains
     ! Pressure of plasma = 2*T_ion*rho_ion
     SWH_p   = 2.*SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
 
-    !merav
-    !write(*,*) 'SWH_p1',SWH_p1
-    !write(*,*) 'SWH_p',SWH_p
-    !merav
-
+    ! merav
+    ! write(*,*) 'SWH_p1',SWH_p1
+    ! write(*,*) 'SWH_p',SWH_p
+    ! merav
 
     SWH_Ux  = SWH_Ux_dim*Io2No_V(UnitU_)
     SWH_Uy  = SWH_Uy_dim*Io2No_V(UnitU_)
@@ -1122,28 +1132,29 @@ contains
 
     if(UseNeutralFluid)then
        !/
-       !merav june01    PNeutralsISW   = RhoNeutralsISW * 
-       !TNeutralsISW_dim*Io2No_V(UnitTemperature_)
-       !merav june01  SWH_p   = SWH_rho * SW_T_dim*Io2No_V(UnitTemperature_)
+       ! merav june01    PNeutralsISW   = RhoNeutralsISW *
+       ! TNeutralsISW_dim*Io2No_V(UnitTemperature_)
+       ! merav june01  SWH_p   = SWH_rho * SW_T_dim*Io2No_V(UnitTemperature_)
 
        RhoNeutralsISW = RhoNeutralsISW_dim*Io2No_V(UnitRho_)
        PNeutralsISW_dim = No2Io_V(UnitP_)/Gamma*(RhoNeutralsISW_dim/SWH_rho_dim)*(TNeutralsISW_dim /SWH_T_dim)
 
-       !PNeutralsISW1 = PNeutralsISW_dim*Io2No_V(UnitP_)
-       PNeutralsISW = TNeutralsISW_dim*Io2No_V(UnitTemperature_)*RhoNeutralsISW 
+       ! PNeutralsISW1 = PNeutralsISW_dim*Io2No_V(UnitP_)
+       PNeutralsISW = TNeutralsISW_dim*Io2No_V(UnitTemperature_)*RhoNeutralsISW
        UxNeutralsISW  = UxNeutralsISW_dim*Io2No_V(UnitU_)
        UyNeutralsISW  = UyNeutralsISW_dim*Io2No_V(UnitU_)
        UzNeutralsISW  = UzNeutralsISW_dim*Io2No_V(UnitU_)
        mNeutrals    = mProtonMass*cProtonMass
 
-       !merav
-       !write(*,*) 'PNeutralsISW',PNeutralsISW
-       !write(*,*) 'PNeutralsISW1',PNeutralsISW1
-       !merav
+       ! merav
+       ! write(*,*) 'PNeutralsISW',PNeutralsISW
+       ! write(*,*) 'PNeutralsISW1',PNeutralsISW1
+       ! merav
     endif
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_io_units
-  !==============================================================
+  !============================================================================
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -1161,10 +1172,10 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: NameSub='user_set_plot_var'
-
-    !-------------------------------------------------------------------
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     UsePlotVarBody = .true.
     PlotVarBody    = 0.0
 
@@ -1178,50 +1189,50 @@ contains
           call select_region(iBlock)
           PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
        else
-          !This is not needed when not using the 4 nutral fluids
+          ! This is not needed when not using the 4 nutral fluids
           call CON_stop(NameSub//': no neutral fluids present')
        endif
     case('mach')
        PlotVar_G = &
             sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
             /    (Gamma *State_VGB(p_,:,:,:,iBlock)*State_VGB(Rho_,:,:,:,iBlock)) )
-       !merav addition
+       ! merav addition
     case('machalfven')
-       PlotVar_G = & 
+       PlotVar_G = &
             sqrt( sum(State_VGB(RhoUx_:RhoUz_,:,:,:,iBlock)**2, DIM=1)      &
             /   ( sum(State_VGB(Bx_:Bz_,:,:,:,iBlock)**2, DIM=1) &
             * State_VGB(Rho_,:,:,:,iBlock)) )
 
-       !end of merav addition         
+       ! end of merav addition
     case default
        IsFound = .false.
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
-  !====================================================================
+  !============================================================================
 
   subroutine user_calc_sources(iBlock)
     !\
     ! Calculates the charge exchange cross sections for the neutrals
-    ! This subroutine calculate the charge exchange between the ionized 
-    ! component and the three population of neutrals, Neu, Ne2, Ne3 
+    ! This subroutine calculate the charge exchange between the ionized
+    ! component and the three population of neutrals, Neu, Ne2, Ne3
     ! following the notation of McNutt (1998)
-    ! The three population of neutrals are the neutrals created by 
+    ! The three population of neutrals are the neutrals created by
     ! charge exchange in different regions of the outer heliosphere
     !
     ! Neu are the neutrals the comes from the interstellar medium  (PopI)
     ! Ne2 are created between the Termination Shock and Heliopause (PopII)
     ! Ne3 are the neutrals created inside the Termination Shock    (PopIII)
     !
-    ! As an example for Neu the source terms inside the Termination Shock will 
-    ! take into account their creations and destruction; 
-    ! outside the Termination Shock they will be just destroyed 
-    ! (see more details below). 
+    ! As an example for Neu the source terms inside the Termination Shock will
+    ! take into account their creations and destruction;
+    ! outside the Termination Shock they will be just destroyed
+    ! (see more details below).
     !
     ! The _I(1) is the ionized fluid and _I(Neu_)-_I(Ne4_) are the neutral fluids
     !/
-    ! 
+    !
     ! History of implementation:
     ! Written by Merav Opher April 21, 2002;
     ! Help From Gabor Toth
@@ -1229,26 +1240,25 @@ contains
     ! *modified for the version 7.5.2 May, 2002*
     ! *revistied and modified on Nov, 2002*
     ! source terms for the plasma
-    ! modified to take of the S=0 Feb 08 (initialization) 
+    ! modified to take of the S=0 Feb 08 (initialization)
     ! modified June 08, 2007 to take into account multi-fluids
     ! modified August 18;September10, 2007 to take into account 3-fluids
-    ! october 27 checking units 
-    ! January 01, 2008 implementing implicit source terms 
+    ! october 27 checking units
+    ! January 01, 2008 implementing implicit source terms
     ! January 08, 2008 all source terms for PopI as implicit
     ! January 24, 2008 comments included
     ! January-June BUGS fixed
     ! September - source terms written as McNutt (1998)
-    ! 
-    !-------------------------------------------------------------------
+    !
+
     use ModPointImplicit, ONLY:  UsePointImplicit, &
          IsPointImplSource, IsPointImplPerturbed
     use ModNumConst
 
     integer, intent(in) :: iBlock
 
-
     real :: cth
-    real :: State_V(nVar)  
+    real :: State_V(nVar)
     real :: Ux, Uy, Uz, U2
 
     real, dimension(nFluid) :: &
@@ -1259,38 +1269,32 @@ contains
          JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
          Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
 
-
     integer :: i, j, k
 
-    logical:: DoTest, DoTestMe
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_calc_sources'
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    if(iBlock == BLKtest .and. iProc == PROCtest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    endif
-
-    !updating sources from AMPS in PT-OH coupling
+    ! updating sources from AMPS in PT-OH coupling
     if(.not.UseNeutralFluid)then
        if(allocated(ExtraSource_ICB))then
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-             !skipping the cells inside rBody
+             ! skipping the cells inside rBody
              if(.not.true_cell(i,j,k,iBlock))CYCLE
 
-             !Extract conservative variables
+             ! Extract conservative variables
              State_V = State_VGB(:,i,j,k,iBlock)
-             
+
              Ux  = State_V(RhoUx_)/State_V(Rho_)
              Uy  = State_V(RhoUy_)/State_V(Rho_)
              Uz  = State_V(RhoUz_)/State_V(Rho_)
 
              U2  = Ux**2 + Uy**2 + Uz**2
 
-             !updating the source terms
+             ! updating the source terms
              Source_VC(Rho_,i,j,k) = Source_VC(Rho_,i,j,k) &
                   + ExtraSource_ICB(1,i,j,k,iBlock)
              Source_VC(RhoUx_,i,j,k) = Source_VC(RhoUx_,i,j,k) &
@@ -1318,11 +1322,11 @@ contains
     ! IsPointImplSource is true only when called from ModPointImplicit
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
 
-    !  calculating some constants cBoltzmann is J/K 
+    !  calculating some constants cBoltzmann is J/K
     cth = 2.0*cBoltzmann/mNeutrals
 
     ! Figure out which neutral population is produced at this point
-    if(.not.IsPointImplPerturbed) call select_region(iBlock) 
+    if(.not.IsPointImplPerturbed) call select_region(iBlock)
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
@@ -1330,18 +1334,18 @@ contains
        State_V = State_VGB(:, i, j, k, iBlock)
 
 !!! Experiment: zero temperature Neu
-!!!if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest) &
+!!! if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest) &
 !!!     State_V(NeuP_) = 1e-30 !!!
 
        Ux_I  = State_V(iRhoUx_I)/State_V(iRho_I)
        Uy_I  = State_V(iRhoUy_I)/State_V(iRho_I)
        Uz_I  = State_V(iRhoUz_I)/State_V(iRho_I)
 
-       ! Velocity square for the ionized and three population of neutrals; 
+       ! Velocity square for the ionized and three population of neutrals;
        U2_I  = Ux_I**2 + Uy_I**2 + Uz_I**2
 
        ! Temperature for the ionized and three population of neutrals (K)
-       ! T = p/rho 
+       ! T = p/rho
        ! since P_plasma=2T_proton*rho_ion; T_proton=0.5P_plasma/rho_ion
 
        Temp_I       = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
@@ -1349,12 +1353,12 @@ contains
 
        ! Thermal speed (squared) for ionized and three populations of neutrals
        ! UThS units are (m/s)^2
-       UThS_I = cth*Temp_I 
+       UThS_I = cth*Temp_I
 
        ! Relative velocity between neutrals and ionized fluid squared
        !! URelS_I = (Ux_I - Ux_I(1))**2 &
        !!     +    (Uy_I - Uy_I(1))**2 &
-       !!     +    (Uz_I - Uz_I(1))**2 
+       !!     +    (Uz_I - Uz_I(1))**2
 
        URelS_I(1) =0.
 
@@ -1377,7 +1381,7 @@ contains
        ! Calculating Cross Section Sigma_I for the different neutrals
        !
        ! Incorporating units to calculate the charge exchange cross sections
-       ! No2Si_V(UnitU_) has units of m/s like cstartT so UReldim and UStar 
+       ! No2Si_V(UnitU_) has units of m/s like cstartT so UReldim and UStar
        ! has units of m/s
 
        !! URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
@@ -1392,7 +1396,7 @@ contains
 
        !!  UStar_I  = sqrt(URelSdim_I + (4./cPi)*(UThS_I +UThS_I(1)))
 
-       UStar_I(1)=0. 
+       UStar_I(1)=0.
        UStar_I(Neu_) =  sqrt(URelSdim_I(Neu_) + (4./cPi)*(UThS_I(Neu_) +UThS_I(1)))
        UStar_I(Ne2_) =  sqrt(URelSdim_I(Ne2_) + (4./cPi)*(UThS_I(Ne2_) +UThS_I(1)))
        UStar_I(Ne3_) =  sqrt(URelSdim_I(Ne3_) + (4./cPi)*(UThS_I(Ne3_) +UThS_I(1)))
@@ -1408,13 +1412,12 @@ contains
        UStarM_I(Ne3_)  = sqrt(URelSdim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(1)))
        UStarM_I(Ne4_)  = sqrt(URelSdim_I(Ne4_) + (64./(9.*cPi))*(UThS_I(Ne4_) +UThS_I(1)))
 
-
-       ! Maher and Tinsley cross section Sigma 
+       ! Maher and Tinsley cross section Sigma
        ! UStar has to have units of cm/s so the factor 100 is to pass m to cm
        ! Sigma has units of units of m^2
 
        !! Sigma_I =((1.64E-7 - (6.95E-9)*log(UStarM_I*100.))**2)*(1.E-4)
-       !! SigmaN_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)       
+       !! SigmaN_I =((1.64E-7 - (6.95E-9)*log(UStar_I*100.))**2)*(1.E-4)
 
        Sigma_I(1)=0.
        SigmaN_I(1)=0.
@@ -1428,23 +1431,22 @@ contains
        Sigma_I(Ne4_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
        SigmaN_I(Ne4_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
 
-
        ! New Cross Section from Lindsay and Stebbings, 2005
-       !!Sigma_I =((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*(1.E-4)
+       !! Sigma_I =((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*(1.E-4)
 
-       !!SigmaN_I =((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*(1.E-4)
+       !! SigmaN_I =((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*(1.E-4)
 
-       !!Sigma_I(Neu_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
-       !!SigmaN_I(Neu_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
-       !!Sigma_I(Ne2_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
-       !!SigmaN_I(Ne2_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
-       !!Sigma_I(Ne3_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
-       !!SigmaN_I(Ne3_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
-       !!Sigma_I(Ne4_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
-       !!SigmaN_I(Ne4_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
+       !! Sigma_I(Neu_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
+       !! SigmaN_I(Neu_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
+       !! Sigma_I(Ne2_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
+       !! SigmaN_I(Ne2_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
+       !! Sigma_I(Ne3_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
+       !! SigmaN_I(Ne3_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
+       !! Sigma_I(Ne4_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
+       !! SigmaN_I(Ne4_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
 
        ! Calculating Rate  = \nu * nH * mp where nH is the density of neutrals
-       ! \nu = Sigma*np*u_star where np is the density of the ionized flow and 
+       ! \nu = Sigma*np*u_star where np is the density of the ionized flow and
        ! For each population of neutrals there will be another Rate
        ! The charge exhange cross section 100 to change ustar to cm/s
        ! Rate has no units (m^2*m/s*s*m-3 )
@@ -1463,11 +1465,10 @@ contains
        Rate_I(Ne4_) =Sigma_I(Ne4_)*State_V(Rho_)*State_V(iRho_I(Ne4_))*UStarM_I(Ne4_)  &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
-
-       !!RateN_I =SigmaN_I*State_V(Rho_)*State_V(iRho_I)*UStar_I  &
+       !! RateN_I =SigmaN_I*State_V(Rho_)*State_V(iRho_I)*UStar_I  &
        !!     *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
-       RateN_I(1)=0.      
+       RateN_I(1)=0.
 
        RateN_I(Neu_) =SigmaN_I(Neu_)*State_V(Rho_)*State_V(iRho_I(Neu_))*UStar_I(Neu_)  &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
@@ -1482,7 +1483,7 @@ contains
        ! The expressions for I0, Jxp, Kxp, Qexp are taken from Zank et al. 1996
        ! For example for population I; Neu:
        !
-       ! Source(density) = I0xpNe2 + I0xpNe3 in region 1 
+       ! Source(density) = I0xpNe2 + I0xpNe3 in region 1
        !                 = - I0pxNeu         otherwise
        !
        ! Source(momentum) = QmxpNeu + JxpNe2 + JxpNe3 in region 1
@@ -1490,33 +1491,33 @@ contains
        !
        ! Source(energy) = QexpNeu + KxpNe2 + KxpNe3 in region 1
        !                = -KpxNeu                   otherwise
-       ! 
+       !
        ! 'xp' indicates neutrals->protons charge exchange rates and
        ! 'px' indicates protons->neutrals
        ! charge exchange
-       ! For example: 
+       ! For example:
        ! I0xpNe2 is the term of creation of Neu by charge exchange p-Ne2
        ! I0xpNe3 is the term of creation of Neu by charge exchange p-Ne3
 
-       I0xp_I =RateN_I 
-       I0px_I =RateN_I 
+       I0xp_I =RateN_I
+       I0px_I =RateN_I
 
        I2xp_I  = Rate_I*(UStar_I/UStarM_I)*UThS_I(1)/No2Si_V(UnitU_)**2
        I2px_I  = Rate_I*(UStar_I/UStarM_I)*UThS_I/No2Si_V(UnitU_)**2
 
        ! units are fine: (Uth2/ustar)*termxp is unitless as it should be
 
-       JxpUx_I  = Ux_I(1)*Rate_I 
-       JxpUy_I  = Uy_I(1)*Rate_I   
-       JxpUz_I  = Uz_I(1)*Rate_I 
+       JxpUx_I  = Ux_I(1)*Rate_I
+       JxpUy_I  = Uy_I(1)*Rate_I
+       JxpUz_I  = Uz_I(1)*Rate_I
 
-       JpxUx_I  = Ux_I*Rate_I  
-       JpxUy_I  = Uy_I*Rate_I   
-       JpxUz_I  = Uz_I*Rate_I  
+       JpxUx_I  = Ux_I*Rate_I
+       JpxUy_I  = Uy_I*Rate_I
+       JpxUz_I  = Uz_I*Rate_I
 
-       !QmpxUx_I = JpxUx_I - JxpUx_I
-       !QmpxUy_I = JpxUy_I - JxpUy_I
-       !QmpxUz_I = JpxUz_I - JxpUz_I
+       ! QmpxUx_I = JpxUx_I - JxpUx_I
+       ! QmpxUy_I = JpxUy_I - JxpUy_I
+       ! QmpxUz_I = JpxUz_I - JxpUz_I
 
        QmpxUx_I(1)=0.
        QmpxUy_I(1)=0.
@@ -1537,9 +1538,9 @@ contains
        QmpxUz_I(Ne3_) = (Uz_I(Ne3_) - Uz_I(1))*Rate_I(Ne3_)
        QmpxUz_I(Ne4_) = (Uz_I(Ne4_) - Uz_I(1))*Rate_I(Ne4_)
 
-       Kxp_I = 0.5*U2_I(1)*Rate_I  + I2xp_I   
+       Kxp_I = 0.5*U2_I(1)*Rate_I  + I2xp_I
 
-       Kpx_I = 0.5*U2_I*Rate_I  + I2px_I   
+       Kpx_I = 0.5*U2_I*Rate_I  + I2px_I
 
        Qepx_I = Kpx_I - Kxp_I
 
@@ -1548,9 +1549,10 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-
     !==========================================================================
+
     subroutine calc_source_cell
 
       use ModPhysics,   ONLY: GammaMinus1_I
@@ -1560,7 +1562,7 @@ contains
 
       real:: Source_V(nVar + nFluid)
       integer:: iVar
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       Source_V = 0.0
 
@@ -1588,9 +1590,9 @@ contains
       end do
 
       if(UseSource_I(Ion_))then
-         !!Source_V(RhoUx_) = sum( QmpxUx_I(Neu_:Ne4_) )
-         !!Source_V(RhoUy_) = sum( QmpxUy_I(Neu_:Ne4_) )
-         !!Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne4_) )
+         !! Source_V(RhoUx_) = sum( QmpxUx_I(Neu_:Ne4_) )
+         !! Source_V(RhoUy_) = sum( QmpxUy_I(Neu_:Ne4_) )
+         !! Source_V(RhoUz_) = sum( QmpxUz_I(Neu_:Ne4_) )
          Source_V(RhoUx_) = QmpxUx_I(Neu_) + QmpxUx_I(Ne2_) &
               + QmpxUx_I(Ne3_) + QmpxUx_I(Ne4_)
          Source_V(RhoUy_) = QmpxUy_I(Neu_) + QmpxUy_I(Ne2_) &
@@ -1603,12 +1605,12 @@ contains
          Source_V(p_) = GammaMinus1* ( Source_V(Energy_) &
               - Ux_I(Ion_)*Source_V(RhoUx_) &
               - Uy_I(Ion_)*Source_V(RhoUy_) &
-              - Uz_I(Ion_)*Source_V(RhoUz_) ) 
+              - Uz_I(Ion_)*Source_V(RhoUz_) )
       end if
 
       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
 
-      if(DoTestMe .and. i==iTest .and. j==jTest .and. k==kTest)then
+      if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
 
          Source_V = Source_VC(:,i,j,k)
 
@@ -1633,13 +1635,13 @@ contains
          write(*,*) ' QmpxUx_I  ', QmpxUx_I
          write(*,*) ' Kxp_I     ', Kxp_I
          write(*,*) ' Kpx_I     ', Kpx_I
-         write(*,*) ' Qepx_I    ', Qepx_I 
+         write(*,*) ' Qepx_I    ', Qepx_I
       end if
 
     end subroutine calc_source_cell
+    !==========================================================================
 
   end subroutine user_calc_sources
-
   !============================================================================
 
   subroutine set_omega_parker_tilt
@@ -1648,11 +1650,11 @@ contains
     ! Note: the rotation period is 25.38 days in ModConst.f90:
     ! OmegaSun = cTwoPi/(RotationPeriodSun*Si2No_V(UnitT_))
 
+    !--------------------------------------------------------------------------
     OmegaSun   = cTwoPi/(26.0*24.0*3600.00*Si2No_V(UnitT_))
     ParkerTilt = OmegaSun*rBody/SWH_Ux
 
   end subroutine set_omega_parker_tilt
-
   !============================================================================
 
   subroutine select_region(iBlock)
@@ -1666,10 +1668,11 @@ contains
     real    :: InvRho, U2, p, Mach2, TempDim, U2Dim, B2, MachAlfven2
     real    :: MachMagneto2
 
+    ! This subroutine is not needed when not using the 4 neutral fluids
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'select_region'
-    !------------------------------------------------------------------------
-
-    !This subroutine is not needed when not using the 4 neutral fluids                   
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
 
     ! Produce fluid3 at the inner boundary
@@ -1686,14 +1689,14 @@ contains
        U2     = sum(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)**2)*InvRho**2
        U2Dim  = U2*No2Io_V(UnitU_)**2
 
-       !merav modifications
-       B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)        
+       ! merav modifications
+       B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
        ! Square of Alfven Mach Number
        MachAlfven2 = U2/(B2*InvRho + 1.E-30)
        MachMagneto2 = U2/(1.E-10 + Gamma*p*InvRho + B2*InvRho)
 
-       !end of merav modifications
+       ! end of merav modifications
        ! Square of Mach number
        Mach2      = U2/(Gamma*p*InvRho)
 
@@ -1701,15 +1704,15 @@ contains
        TempDim = InvRho*p*No2Si_V(UnitTemperature_)
 
        ! Apply full source except near the boundaries between regions
-!!!october11       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
+!!! october11       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
 !!!       if (MachPop4Limit**2 < MachMagneto2 .and. uPop1LimitDim**2 > U2Dim) then
 !!!       if (MachPop4Limit**2 < MachAlfven2 .and. uPop1LimitDim**2 > U2Dim .and. MachPop3Limit**2 < Mach2) then
-!!!july12 use sonic Mach number - Berci
-       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then  
-          !Outside the bow shock
+!!! july12 use sonic Mach number - Berci
+       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
+          ! Outside the bow shock
           iFluidProduced_C(i,j,k) = Ne4_
        elseif( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
-          !Outside the heliopause
+          ! Outside the heliopause
           iFluidProduced_C(i,j,k) = Neu_
        elseif( MachPop2Limit**2 > Mach2 )then
           ! Heliosheath
@@ -1724,24 +1727,25 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine select_region
-
   !============================================================================
 
   subroutine user_init_point_implicit
 
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet, EpsPointImpl_V
 
+    ! This subroutine is not needed when not using the 4 neutral fluids
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_point_implicit'
-    !------------------------------------------------------------------------
-
-    !This subroutine is not needed when not using the 4 neutral fluids                    
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
 
     ! Allocate and set iVarPointImpl_I
     ! In this example there are 3 implicit variables
 
-    ! All the neutrals momenta and plasma are implicit 
+    ! All the neutrals momenta and plasma are implicit
     ! (3 neutral fluid and 1 ion)
 
     allocate(iVarPointImpl_I(20))
@@ -1752,7 +1756,7 @@ contains
          Ne3Rho_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_, &
          Ne4Rho_, Ne4RhoUx_, Ne4RhoUy_, Ne4RhoUz_, Ne4P_/)
 
-    ! Because the second and third populations of neutrals have initially 
+    ! Because the second and third populations of neutrals have initially
     ! very small values I'm
     ! setting EpsPointImpl_V to be small for these variables ??? !!!
     EpsPointImpl_V(Ne2Rho_:Ne4P_) = 1.e-11
@@ -1762,23 +1766,28 @@ contains
 
     IsPointImplMatrixSet = .false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
-
-  !=======================================================================
+  !============================================================================
 
   subroutine user_init_session
 
     use ModLookupTable,   ONLY: i_lookup_table
     use ModMain,          ONLY: UseUserUpdateStates
-    !--------------------------------------------------------------------
+
     ! Get index for the solar wind table holding time-dep. solar cycle values
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     iTableSolarwind = i_lookup_table('solarwind2d')
 
     if(DoFreezeNeutral) UseUserUpdateStates = .true.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
+  !============================================================================
 
-  !=======================================================================
   subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry, ONLY: ExtraBc_, Xyz_DGB
@@ -1788,8 +1797,7 @@ contains
     integer, intent(in):: iBlock
     integer:: i, j, k
     real:: x, y, z, x0, z0, Ratio, d, r
-    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
-    !---------------------------------------------------------------------
+
     if(rHelioPause > 0.0)then
        if(TempHelioPause < 0.0) RETURN   ! restart files are not yet read
        where(r_BLK(:,:,:,iBlock) < rHelioPause .or. &
@@ -1798,6 +1806,10 @@ contains
             iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
        ! Set internal state to "body" values with high ion temperature
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(iBoundary_GB(i,j,k,iBlock)==ExtraBc_)then
              State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
@@ -1848,8 +1860,8 @@ contains
        end if
        ! Distance from the centerline
        d = sqrt( (x-x0)**2 + y**2 + (z-z0)**2 )
-       
-       ! The radius of the crescent is a function of x. 
+
+       ! The radius of the crescent is a function of x.
        if(x < 0.5*xCrescentCenter)then
           r = rCrescent
        else
@@ -1858,9 +1870,10 @@ contains
        if( d < r ) iBoundary_GB(i,j,k,iBlock) = ExtraBc_
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
+  !============================================================================
 
-  !===========================================================================
   subroutine user_amr_criteria(iBlock, UserCriteria, TypeCriteria, IsFound)
 
     ! Set UserCriteria = 1.0 for refinement, 0.0 for coarsening.
@@ -1873,11 +1886,13 @@ contains
 
     logical:: IsBoundaryCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    character(len=*), parameter:: NameSub = 'user_amr_criteria'
-    !------------------------------------------------------------------
     if(rHelioPause < 0.0) &
          call stop_mpi(NameSub//' #HELIOPAUSE command is needed')
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_amr_criteria'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
     UserCriteria = 0.0
 
@@ -1890,11 +1905,14 @@ contains
          r_BLK(:,:,:,iBlock) < rHelioPause .or. &
          State_VGB(p_,:,:,:,iBlock)/State_VGB(Rho_,:,:,:,iBlock) &
          > TempHelioPause
-       
+
     if(any(IsBoundaryCell_G) &
          .and. .not. all(IsBoundaryCell_G(1:nI,1:nJ,1:nK))) &
          UserCriteria = 1.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_amr_criteria
+  !============================================================================
 
 end module ModUser
+!==============================================================================

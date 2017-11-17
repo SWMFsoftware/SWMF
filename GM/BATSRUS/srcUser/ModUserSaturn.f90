@@ -1,7 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!========================================================================
-Module ModUser
+module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
   use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_,Bx_, By_, Bz_, Energy_, &
        rhoUx_,rhoUy_,rhoUz_
   use ModSize,     ONLY: nI,nJ,nK
@@ -11,7 +14,7 @@ Module ModUser
        IMPLEMENTED3 => user_set_boundary_cells,         &
        IMPLEMENTED4 => user_set_face_boundary
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
@@ -26,25 +29,20 @@ Module ModUser
   real, dimension(1:nI,1:nJ,1:nK):: &
        Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SE
 
-
 contains
+  !============================================================================
 
-  !=====================================================================
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance, ONLY: Source_VC
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModProcMH,   ONLY: iProc
 
     integer, intent(in) :: iBlock
 
-    logical :: oktest,oktest_me
-    !------------------------------------------------------------------------  
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_calc_sources',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Set the source arrays for this block to zero
     Srho   = 0.0
@@ -69,13 +67,12 @@ contains
     Source_VC(P_     ,:,:,:) = SP     + Source_VC(P_     ,:,:,:)
     Source_VC(Energy_,:,:,:) = SE     + Source_VC(Energy_,:,:,:)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
+  !============================================================================
 
-
-  !=====================================================================
   subroutine user_sources(iBlock)
 
-    use ModMain, ONLY: iTest, jTest, kTest, ProcTest, BlkTest
     use ModVarIndexes
     use ModAdvance, ONLY: State_VGB
     use ModGeometry, ONLY: Xyz_DGB, r_Blk, rMin_Blk
@@ -89,7 +86,6 @@ contains
 
     ! Variables required by this user subroutine
     integer :: i,j,k
-    logical :: oktest,oktest_me
 
     !\
     ! Variable meanings:
@@ -108,7 +104,7 @@ contains
     real :: mn, N0,nN, nElec
     real :: rhodot0,rhodot,rhodotnorm,CXNorm
     real :: accelerationfactor, sourcefactor
-    real :: alpha_rec,CXsource,Tfrac 
+    real :: alpha_rec,CXsource,Tfrac
     real :: Telectron, EVelectron, LogEVelectron,eta,alphaE
     real :: LTerm,Part1,Part2
     real :: rSaturn, rTitan_Orbit,omegaTitan_orbit
@@ -119,21 +115,18 @@ contains
     real, dimension(3) :: xGSE,xSMG,vGSE,vSMG
     real, dimension(3,3) :: SMG_GSE_mat
 
-    !---------------------------------------------------------------------------
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_sources',oktest,oktest_me)
-    else
-       oktest=.false.; oktest_me=.false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     rSaturn = rPlanet_I(Saturn_)
     rTitan_Orbit  = rOrbitPlanet_I(Titan_)
     omegaTitan_orbit = 2.0*cPi/OrbitalPeriodPlanet_I(Titan_)
 
-
     if (UseMassLoading) then
 
-       ! first rotate the coordinate system.  The mass loading	
+       ! first rotate the coordinate system.  The mass loading
        ! functions are centered at the rotational equator.  However,
        ! BATSRUS/GM solves in GSE so the z=0 plane is not the equatorial
        ! plane when doing the "real" saturn.  The fuctions here are coded
@@ -143,12 +136,11 @@ contains
 
        SMG_GSE_mat = transform_matrix(0.0, 'GSE','SMG')
 
-       if (Rmin_BLK(iBlock) > 45.0)return
+       if (Rmin_BLK(iBlock) > 45.0)RETURN
 
        do k = 1, nK
           do j = 1, nJ
              do i = 1, nI
-
 
                 ! Do the rotations.  Note that we want to compute the positions
                 ! in the SMG coordinate system.  However, we need to compute the
@@ -160,14 +152,13 @@ contains
                 xGSE(3) = Xyz_DGB(z_,i,j,k,iBlock)
                 xSMG = matmul(SMG_GSE_mat,xGSE)
 
-
                 ! first calculate the mass loading source terms for the inner
                 ! torus of H2O and products.  Althought the rates
                 ! used fall of at infinity and could be calculated everywhere, we
                 ! will only caluclate in the region where the contribution is not
-                ! negligible.  
+                ! negligible.
 
-                ! Note that Velocities, distances and scale heights are normalized 
+                ! Note that Velocities, distances and scale heights are normalized
                 ! (unitless).  Density is outlined below
 
                 if (((xSMG(3) < 2.0) .and.    &
@@ -180,17 +171,16 @@ contains
                    Uz  = State_VGB(rhoUz_,i,j,k,iBlock)/State_VGB(rho_,i,j,k,iBlock)
                    Usq = sqrt(Ux**2 + Uy**2 + Uz**2)
 
-
                    ! compute the cylindrical radius for later use
-                   Rxy = sqrt(xSMG(1)**2 + xSMG(2)**2)   
+                   Rxy = sqrt(xSMG(1)**2 + xSMG(2)**2)
 
                    ! The neutral velocity is taken to be the orbital velocity
                    ! Note that Gbody/r**2 is a unitless acceleration.  So Gbody/r
-                   ! is a uniless u**2.  Gbody is negative so that gravity pulls 
-                   ! inward.  Take abs() here to get magnitude of the orbital 
+                   ! is a uniless u**2.  Gbody is negative so that gravity pulls
+                   ! inward.  Take abs() here to get magnitude of the orbital
                    ! velocity.
 
-                   !compute in the SMG frame and then rotate back to the GSE frame
+                   ! compute in the SMG frame and then rotate back to the GSE frame
                    ! where we really want the velocities.
                    unsq = abs(Gbody)/Rxy
                    un = sqrt(unsq)
@@ -208,7 +198,6 @@ contains
                    unz = vGSE(3)
                    urelsq = (unx-Ux)**2 + (uny-Uy)**2 + (unz-Uz)**2
 
-
                    ! now code the model taken from Richardson, 90,98.  See my
                    ! dissertation on p. 125-129.
                    !
@@ -217,7 +206,7 @@ contains
                    ! analytically.  Using an average mass of 16.6 amu per ion
                    ! the correponding mass production rate is 1.43e28 amu/s.
                    ! Note that rhodot0 is in amu/cm^3/s so it ALREADY TAKES INTO
-                   ! ACCOUNT THE 16.6 AMU/ION.  It is already a MASS DENSITY 
+                   ! ACCOUNT THE 16.6 AMU/ION.  It is already a MASS DENSITY
                    ! not simply a number density!
                    !
                    ! Since Richardson gives a rate of about 1.3e27 s^-1 we multiply by
@@ -230,18 +219,18 @@ contains
                    !
                    ! 1/16		1.44E27		2.40E28
                    ! 1/8		1.16E27		1.92E28
-                   ! 0.195	8.55E26		1.42E28	 
+                   ! 0.195	8.55E26		1.42E28
                    ! 1/4		6.45E26		1.07E28
-                   ! 
-                   ! So, to repeat.  Below, rhodot0 and rhodot are in units of 
+                   !
+                   ! So, to repeat.  Below, rhodot0 and rhodot are in units of
                    ! amu/cm^3/s and already take into account the average mass
                    ! of an ion that is being added.  You do not need to multiply by
-                   ! 16.6 to get the rhodot.		 
+                   ! 16.6 to get the rhodot.
                    !
                    !
                    ! NOTE:  here we introduce a multiplication factor which we will
                    ! use to control the mass addition rate.  A factor of 1.0 corresponds
-                   ! to a rate of rhodot0 = 7.2e-4 amu/cm^3/s.  A factor of 2.0 
+                   ! to a rate of rhodot0 = 7.2e-4 amu/cm^3/s.  A factor of 2.0
                    ! obviously corresponds to twice this and therefore corresponds
                    ! to the rates in the table above!
                    !
@@ -249,11 +238,11 @@ contains
                    !-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
                    !-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
 
-                   !nominal rate of ~0.9E27 on a typical grid (3/16=0.195)
-                   !this corresponds to the above numbers for a 3/16 grid)
+                   ! nominal rate of ~0.9E27 on a typical grid (3/16=0.195)
+                   ! this corresponds to the above numbers for a 3/16 grid)
                    ! sourcefactor = 2.0
 
-                   !rate of ~0.3*1e28 on a typical grid (3/16=0.195) 
+                   ! rate of ~0.3*1e28 on a typical grid (3/16=0.195)
                    ! This number is taken from the most recent Richardson
                    ! paper which I just reviewed (Nov, 2004).  The paper
                    ! gives 1e28 as the neutral source rate of which .3 is
@@ -261,14 +250,14 @@ contains
                    ! neutrals.   The 3.333 comes from .3E28/.9E27
                    ! sourcefactor = 2.0*3.333333333
 
-                   !rate of ~1e28 on a typical grid  (3/16=0.195) 
+                   ! rate of ~1e28 on a typical grid  (3/16=0.195)
                    ! This number is the current neutral source rate being
                    ! used by Richardson as well as the Cassini people.  As
                    ! such this is the largest mass loading rate you might expect.
                    ! The 11.1 comes from 1e28/.9e27
                    ! sourcefactor = 2.0*11.1
 
-                   !rate which can be adjusted by the user from the input file
+                   ! rate which can be adjusted by the user from the input file
                    ! The user inputs the MassLoadingRate in #ofparticles/cm^3.
                    ! We still assume that the average mass is 16.6 .  Now, so that
                    ! we don't have to change anything below, here we caluclate
@@ -289,19 +278,13 @@ contains
                    !
                    sourcefactor = 2.222222E-27 * MassLoadingRate
 
-
-
-
-
                    !-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
                    !-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
                    !-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-
 
                    ! Variables preceeded by H are scale heights
 
-
-                   ! If we are using accelerated mass loading then calculate 
+                   ! If we are using accelerated mass loading then calculate
                    ! the factor by which we should increase the rates
 
                    ! set up values for this mass loading model
@@ -324,15 +307,14 @@ contains
                    rhodot = rhodot*exp(-(xSMG(3)**2)/Hneutral**2)&
                         *exp(-(xSMG(3)**2)/Helectron**2)
 
-
                    ! get the CX friction source terms
                    !
-                   ! The charge exchange friction is also calculated from 
-                   ! Richardson in my dissertation.  The charge exchange 
+                   ! The charge exchange friction is also calculated from
+                   ! Richardson in my dissertation.  The charge exchange
                    ! friction depends on the neutral density and the plasma
                    ! density.  We have coded eta so that the neutral density
                    ! dependence is built in.  So, if the neutral density is
-                   ! doubled the eta should be doubled.  Since above we change	
+                   ! doubled the eta should be doubled.  Since above we change
                    ! the mass loading rate by a source factor which is general
                    ! because of a neutral rate, we will use the same factor here
                    ! to control the eta scaling.
@@ -354,25 +336,24 @@ contains
 
                    CXsource = sourcefactor*CXsource
 
-                   ! get the electron recombination terms.  First get the 
-                   ! electron density.  This is gotten by first converting from 
-                   ! unitless rho to amr/cm^3 using No2Io_V(UnitRho_).  Then, by 
-                   ! dividing by the average amu per particle. In that case we 
+                   ! get the electron recombination terms.  First get the
+                   ! electron density.  This is gotten by first converting from
+                   ! unitless rho to amr/cm^3 using No2Io_V(UnitRho_).  Then, by
+                   ! dividing by the average amu per particle. In that case we
                    ! use 16.6 for O, OH, H2O.  Note that this term does not
                    ! depend on the neutrals in any way so we do not need to use the
                    ! sourcefactor to scale as we raise and lower the mass loading
                    ! rate.
 
-
                    nElec = State_VGB(rho_,i,j,k,iBlock)*No2Io_V(UnitRho_)/16.6
 
-                   ! We now need the electron temperature to calculate some 
-                   ! of the ionization rates.  The electron temperature that 
+                   ! We now need the electron temperature to calculate some
+                   ! of the ionization rates.  The electron temperature that
                    ! comes out of this calculation have units of K (kelvin).
                    ! This is an electron temperature calculation that takes
-                   ! Te = 1/15 Tp (Tp = Ti+Te). The EVelectron is the electron 
+                   ! Te = 1/15 Tp (Tp = Ti+Te). The EVelectron is the electron
                    ! temperature converted to an energy in electron volts (eV).
-                   ! This is used in a formula to get the recombination rate 
+                   ! This is used in a formula to get the recombination rate
                    ! in s.
 
                    Tfrac = 1.0/15.0;
@@ -388,19 +369,19 @@ contains
                    if (Telectron < 1.0) Alpha_rec = 2.234E-8*nElec
                    if (Telectron > 100) Alpha_rec = 7.552E-10*nElec
 
-                   ! now get everything normalized - note that rhodot is in 
+                   ! now get everything normalized - note that rhodot is in
                    ! units amu/cm^3/s already (the mass is taken into account
-                   ! above.  To get a unitless rhodot we simply need to multiply 
-                   ! by the mass of a proton times the 1.0e6 (to get 1/m^3) and then 
-                   ! divide by (dimensions(rho)/dimensions(t)) which is 
-                   ! No2Si_V(UnitRho_)/No2Si_V(UnitT_) to get the normalized (dimensionless) 
+                   ! above.  To get a unitless rhodot we simply need to multiply
+                   ! by the mass of a proton times the 1.0e6 (to get 1/m^3) and then
+                   ! divide by (dimensions(rho)/dimensions(t)) which is
+                   ! No2Si_V(UnitRho_)/No2Si_V(UnitT_) to get the normalized (dimensionless)
                    ! form.
 
                    rhodotNorm =  No2Si_V(UnitT_)/No2Si_V(UnitRho_)
                    CXNorm = No2Si_V(UnitT_)
 
                    rhodot = cProtonMass*1.0e6*rhodot*rhodotNorm
-                   CXsource = CXsource*CXNorm 
+                   CXsource = CXsource*CXNorm
                    Alpha_rec = Alpha_rec*CXNorm
 
                    if (AccelerateMassLoading) then
@@ -415,34 +396,33 @@ contains
 
                    ! now load the source terms into the right hand side
 
-                   Srho(i,j,k)   = Srho(i,j,k)                                        &  
-                        + (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,iBlock))  
+                   Srho(i,j,k)   = Srho(i,j,k)                                        &
+                        + (rhodot-Alpha_rec*State_VGB(rho_,i,j,k,iBlock))
                    SrhoUx(i,j,k) = SrhoUx(i,j,k)                                      &
                         + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unx &
                         - (CXsource + Alpha_rec)*                          &
-                        State_VGB(rhoUx_,i,j,k,iBlock)                    
+                        State_VGB(rhoUx_,i,j,k,iBlock)
                    SrhoUy(i,j,k) = SrhoUy(i,j,k)                                      &
                         + (rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*uny &
                         - (CXsource + Alpha_rec)*                          &
-                        State_VGB(rhoUy_,i,j,k,iBlock)                    
-                   SrhoUz(i,j,k) = SrhoUz(i,j,k)                                      &  
+                        State_VGB(rhoUy_,i,j,k,iBlock)
+                   SrhoUz(i,j,k) = SrhoUz(i,j,k)                                      &
                         - (CXsource + Alpha_rec)*                          &
-                        State_VGB(rhoUz_,i,j,k,iBlock)                    
-                   SE(i,j,k)     = SE(i,j,k)                                               & 
+                        State_VGB(rhoUz_,i,j,k,iBlock)
+                   SE(i,j,k)     = SE(i,j,k)                                               &
                         + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*unsq &
                         - (CXsource + Alpha_rec)*                               &
                         (0.5*usq*State_VGB(rho_,i,j,k,iBlock)                  &
                         + 1.5*State_VGB(p_,i,j,k,iBlock))                  &
-                        + 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*Tfrac             
-                   SP(i,j,k)     = SP(i,j,k)                                                 & 
+                        + 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*Tfrac
+                   SP(i,j,k)     = SP(i,j,k)                                                 &
                         + 0.5*(rhodot + CXsource*State_VGB(rho_,i,j,k,iBlock))*urelsq &
                         - 1.5*CXsource*State_VGB(p_,i,j,k,iBlock)*(1.0-Tfrac)         &
-                        - 1.5*Alpha_rec*State_VGB(p_,i,j,k,iBlock)                  
-
+                        - 1.5*Alpha_rec*State_VGB(p_,i,j,k,iBlock)
 
                    ! Output to look at rates
-                   if (oktest_me .and. iBlock==BLKtest  .and. &
-                        i==Itest .and. j==Jtest .and. k==Ktest ) then
+                   if (DoTest .and. iBlock==iBlockTest  .and. &
+                        i==iTest .and. j==jTest .and. k==kTest ) then
                       write(*,*) '----------Inner Torus Mass Loading Rates-------------------------'
                       write(*,'(a,3(1X,E13.5))') 'X, Y, Z:', &
                            Xyz_DGB(X_,i,j,k,iBlock), Xyz_DGB(Y_,i,j,k,iBlock), Xyz_DGB(Z_,i,j,k,iBlock)
@@ -469,7 +449,6 @@ contains
                 ! Calculate the radial distance from the center of the torus,
                 ! if inside, compute the mass loading, if outside do nothing.
 
-
                 Dtorus = sqrt( (sqrt(xSMG(1)**2+   &
                      xSMG(2)**2) - &
                      Rtitan_orbit/Rsaturn)**2 +          &
@@ -482,9 +461,8 @@ contains
                         State_VGB(rhoUz_,i,j,k,iBlock)**2 ) / &
                         (State_VGB(rho_,i,j,k,iBlock)**2)
 
-
                    ! compute the cylindrical radius for later use
-                   Rxy = sqrt(xSMG(1)**2 + xSMG(2)**2)   
+                   Rxy = sqrt(xSMG(1)**2 + xSMG(2)**2)
 
                    ! The neutral torus is taken to rotate ridgidly with Titan
                    unsq = (Rxy**2)*((OMEGAtitan_orbit*No2Si_V(UnitT_))**2)
@@ -506,9 +484,9 @@ contains
                    !
                    ! 1/16		5.46E25		7.64E26
                    ! 1/8		5.21E25		7.29E26
-                   ! 0.195	4.87E25		6.82E26	 
+                   ! 0.195	4.87E25		6.82E26
                    ! 1/4		4.61E25		6.45E26
-                   ! 
+                   !
                    !
 
                    mn = 14.0
@@ -517,7 +495,7 @@ contains
                    eta = 2.14287E-4
 
                    ! this is an electron temperature calculation that takes
-                   ! Te = 1/2 Tp = 1/2 (Ti+Te).  
+                   ! Te = 1/2 Tp = 1/2 (Ti+Te).
 
                    Tfrac = 1.0/2.0;
 
@@ -552,18 +530,17 @@ contains
 
                    SrhoUx(i,j,k) = SrhoUx(i,j,k) + (part1*(-OMEGAtitan_orbit*No2Si_V(UnitT_)*  &
                         Xyz_DGB(Y_,i,j,k,iBlock)) -  &
-                        part2*State_VGB(rhoUx_,i,j,k,iBlock))  
+                        part2*State_VGB(rhoUx_,i,j,k,iBlock))
                    SrhoUy(i,j,k) = SrhoUy(i,j,k) + (part1*(OMEGAtitan_orbit*No2Si_V(UnitT_)*   &
                         Xyz_DGB(X_,i,j,k,iBlock)) -   &
-                        part2*State_VGB(rhoUy_,i,j,k,iBlock))   
+                        part2*State_VGB(rhoUy_,i,j,k,iBlock))
                    SrhoUz(i,j,k) = SrhoUz(i,j,k) + (part1*(0.0) - &
-                        part2*State_VGB(rhoUz_,i,j,k,iBlock))  
+                        part2*State_VGB(rhoUz_,i,j,k,iBlock))
                    SE(i,j,k)     = SE(i,j,k)     + (part1*0.5*unsq -   &
                         part2*((0.5*State_VGB(rho_,i,j,k,iBlock)*usq)+ &
-                        ((3./2.)*State_VGB(p_,i,j,k,iBlock))))  
+                        ((3./2.)*State_VGB(p_,i,j,k,iBlock))))
 
                 end if    ! end calculation of source terms inside the torus.
-
 
              end do     ! end the i loop
           end do     ! end the j loop
@@ -571,9 +548,10 @@ contains
 
     end if     ! usemassloading test
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_sources
+  !============================================================================
 
-  !=====================================================================
   subroutine user_read_inputs
     use ModMain
     use ModProcMH,    ONLY: iProc
@@ -582,7 +560,10 @@ contains
 
     integer:: i
     character (len=100) :: NameCommand
-    !---------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(iProc==0.and.lVerbose > 0)then
        call write_prefix; write(iUnitOut,*)'User read_input SATURN starts'
@@ -595,7 +576,7 @@ contains
        case("#MASSLOADING")
           call read_var('UseMassLoading',UseMassLoading)
   	  call read_var('MassLoadingRate (#/s)', MassLoadingRate)
-          call read_var('DoAccelerateMassLoading',AccelerateMassLoading) 
+          call read_var('DoAccelerateMassLoading',AccelerateMassLoading)
 
        case('#USERINPUTEND')
           if(iProc==0.and.lVerbose > 0)then
@@ -613,8 +594,8 @@ contains
           end if
        end select
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
   subroutine user_set_boundary_cells(iBlock)
@@ -626,8 +607,8 @@ contains
          iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
   end subroutine user_set_boundary_cells
-
   !============================================================================
+
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModSize, ONLY: x_
@@ -637,11 +618,17 @@ contains
     use ModB0, ONLY: B0_DX
 
     real, intent(out):: VarsGhostFace_V(nVar)
-    !------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     call get_solar_wind_point(TimeBc, FaceCoords_D(x_), VarsGhostFace_V)
     VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0_DX(:,iFace, jFace, kFace)
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
+  !============================================================================
 
 end module ModUser
+!==============================================================================
 

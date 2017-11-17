@@ -1,9 +1,11 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
-!  portions used with permission 
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !#NOTPUBLIC  email:bartvand@umich.edu  expires:12/31/2099
-!==============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModVarIndexes, ONLY: IonFirst_, nFluid
   use ModMultiFluid, ONLY: nIonFluid
@@ -21,7 +23,7 @@ module ModUser
        IMPLEMENTED9 => user_init_point_implicit,        &
        IMPLEMENTED10=> user_get_b0
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
@@ -42,8 +44,8 @@ module ModUser
   real    :: ReducedMass_II(0:nIonFluid,0:nIonFluid)
   real    :: CollisionCoef_II(0:nIonFluid,0:nIonFluid)
 
-  ! variables for polar jet application              
-  ! Dipole under surface                                                   
+  ! variables for polar jet application
+  ! Dipole under surface
   real    :: UserDipoleStrength, UserDipoleStrengthSi
   real    :: UserDipoleDepth
   real    :: UserDipoleLatitude
@@ -51,7 +53,7 @@ module ModUser
   real    :: UserDipoleAxisLatitude
   real    :: UserDipoleAxisLongitude
 
-  ! Rotating boundary condition                                             
+  ! Rotating boundary condition
   real    :: TbeginJet, TendJet
   logical :: IsRamping
   logical :: IsPolarDipole, IsJetBC
@@ -60,13 +62,13 @@ module ModUser
   real    :: LocationMaxJet
   real    :: UmaxJet
   real    :: ProfileExponentJet
-  real    :: LinearCoeffJet 
-  real    :: PowerCoeffJet 
+  real    :: LinearCoeffJet
+  real    :: PowerCoeffJet
 
   ! Multiply the collisionfrequencies by CollisionFactor
   real :: CollisionFactor = 1.0
 
-contains 
+contains
   !============================================================================
   subroutine user_read_inputs
 
@@ -78,8 +80,10 @@ contains
     integer :: iFluid
     character (len=100) :: NameCommand
 
-    character(len=*), parameter :: NameSub = 'user_read_inputs'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     UseUserInitSession = .true.
 
     if(iProc == 0 .and. lVerbose > 0)then
@@ -145,8 +149,8 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
   subroutine user_init_session
@@ -162,14 +166,14 @@ contains
     use ModPhysics,    ONLY: ElectronTemperatureRatio, AverageIonCharge, &
          Si2No_V, UnitTemperature_, UnitN_, UnitX_, No2Si_V, UnitT_, UnitB_, &
          UnitU_
-    !UnitB_ and Unit_U are for jet only
+    ! UnitB_ and Unit_U are for jet only
     integer :: iIon, jIon
     real, parameter :: CoulombLog = 20.0
 
-    character (len=*),parameter :: NameSub = 'user_init_session'
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session:'
@@ -227,7 +231,7 @@ contains
     CollisionCoef_II = CollisionCoef_II &
          *(1/Si2No_V(UnitT_))*No2Si_V(UnitN_)/No2Si_V(UnitTemperature_)**1.5
 
-    ! dipole (jet) parameter converted to normalized units                  
+    ! dipole (jet) parameter converted to normalized units
     if(IsPolarDipole)then
        UserDipoleStrength = UserDipoleStrengthSi*Si2No_V(UnitB_)
        UserDipoleLatitude = UserDipoleLatitude*cDegToRad
@@ -238,9 +242,9 @@ contains
 
     ! the rotation's velocity profile is the following:
     ! u(z) = Ax-Bx^C
-    ! LinearCoeff =     A = umax/xmax * rmax^(C-1)/(rmax^(C-1)-xmax^(C-1)) 
-    ! PowerCoeff  =     B = umax/xmax             /(rmax^(C-1)-xmax^(C-1)) 
-    !                   B = A * rmax^(C-1) 
+    ! LinearCoeff =     A = umax/xmax * rmax^(C-1)/(rmax^(C-1)-xmax^(C-1))
+    ! PowerCoeff  =     B = umax/xmax             /(rmax^(C-1)-xmax^(C-1))
+    !                   B = A * rmax^(C-1)
     ! ProfileExponent = C = 5.14
     ! A = 3600.
     ! B = 164.^1./5.14 = 2.4226857e11
@@ -255,7 +259,7 @@ contains
        LocationMaxJet = DistMaxJet*ProfileExponentJet** &
             (1./(1.-ProfileExponentJet))
 
-       UmaxJet = UmaxJet * Si2No_V(UnitU_) * 1e3 
+       UmaxJet = UmaxJet * Si2No_V(UnitU_) * 1e3
 
        LinearCoeffJet = UmaxJet/LocationMaxJet &
             * DistMaxJet**(ProfileExponentJet-1.) &
@@ -273,8 +277,8 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
   !============================================================================
 
   subroutine user_set_ics(iBlock)
@@ -303,9 +307,11 @@ contains
     real :: Ur, Ur0, Ur1, del, rTransonic, Uescape, Usound
 
     real, parameter :: Epsilon = 1.0e-6
-    character (len=*), parameter :: NameSub = 'user_set_ics'
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Initially, density, electron and ion temperature are at coronal
     ! values starting from just above the boundary
@@ -420,8 +426,8 @@ contains
             sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
   !============================================================================
 
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
@@ -437,13 +443,17 @@ contains
     use ModGeometry,   ONLY: R_BLK
 
     real, intent(out) :: VarValue
-    character(len=10), intent(in) :: TypeVar 
+    character(len=10), intent(in) :: TypeVar
     real, optional, intent(in) :: Radius
 
     integer :: i, j, k, iBlock
     real :: unit_energy, unit_mass
     real, external :: integrate_BLK
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     unit_energy = No2Io_V(UnitEnergydens_)*No2Io_V(UnitX_)**3
     unit_mass   = 1.0e3*No2Si_V(UnitRho_)*No2Si_V(UnitX_)**3
 
@@ -467,7 +477,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           if(UseB0)then
-             tmp1_BLK(:,:,:,iBlock) = & 
+             tmp1_BLK(:,:,:,iBlock) = &
                   ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
                   +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
                   +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
@@ -519,8 +529,8 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
-
   !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
@@ -555,8 +565,10 @@ contains
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     IsFound = .true.
 
@@ -622,13 +634,13 @@ contains
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
   !============================================================================
 
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
-    ! Fill ghost cells inside body for spherical grid - this subroutine only 
+    ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
 
     use BATL_lib,      ONLY: CellSize_DB, x_, y_, z_
@@ -650,7 +662,7 @@ contains
     use ModMain,       ONLY: time_simulation, time_accurate
     use ModConst,      ONLY: cPi
     use ModCoordTransform, ONLY: rlonlat_to_xyz, cross_product
-    ! Above is for jet only                    
+    ! Above is for jet only
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
     logical,          intent(out) :: IsFound
@@ -662,18 +674,19 @@ contains
     real    :: Gamma
     real    :: U, U_D(3), Bdir_D(3)
 
-    ! Below is for jet only  
+    ! Below is for jet only
     real    :: Framp
     real    :: Xyz_D(3), JetCenter_D(3)
     real    :: CrossProduct_D(3), Urot_D(3)
     real    :: DistanceJet
     real    :: Ucoeff = 0.0
     real    :: r
-    ! Above is for jet only                    
+    ! Above is for jet only
 
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_cell_boundary')
@@ -687,9 +700,9 @@ contains
        RETURN
     case('usersemilinear','user_semilinear')
        IsFound = .true.
-       ! Value was already set to zero in ModCellBoundary     
+       ! Value was already set to zero in ModCellBoundary
        RETURN
-       ! jet BC                          
+       ! jet BC
     case('user')
        IsFound = .true.
     case default
@@ -699,7 +712,7 @@ contains
 
     ! This part is for jet only: rotation starts immediately or gradually
     if(IsJetBC)then
-       ! Check if time accurate is set.              
+       ! Check if time accurate is set.
        if(time_accurate .and. IsRamping)then
           if(time_simulation<TbeginJet)then
              Framp = 0.0
@@ -775,7 +788,7 @@ contains
                = sum(State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock))
        end do
 
-       ! At the inner boundary this seems to be unnecessary... 
+       ! At the inner boundary this seems to be unnecessary...
        ! Ehot=0 may be sufficient?!
        if(Ehot_ > 1)then
           if(UseHeatFluxCollisionless)then
@@ -804,7 +817,7 @@ contains
           Xyz_D = Xyz_DGB(:,1,j,k,iBlock)
           r  = sqrt(sum(Xyz_D**2))
 
-          ! Center is in the direction of the jet's rotation vector 
+          ! Center is in the direction of the jet's rotation vector
           call rlonlat_to_xyz( &
                (/r, UserDipoleLongitude, UserDipoleLatitude/), &
                JetCenter_D &
@@ -826,16 +839,16 @@ contains
              iRho = iRho_I(iFluid)
              iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
 
-             ! BC with reflected velocity for each cell 
+             ! BC with reflected velocity for each cell
              ! (relative to the surface)
              do i = MinI, 0
 
-                ! Calculate velocity in cell 1-i                           
+                ! Calculate velocity in cell 1-i
                 u_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
                      /State_VGB(iRho,1-i,j,k,iBlock)
                 u_D = u_D - Urot_D
 
-                ! u_ghost = 2*u_par - u_cell                  
+                ! u_ghost = 2*u_par - u_cell
                 u_D = 2*(sum(u_D*Bdir_D))*Bdir_D - u_D
                 u_D = u_D + Urot_D
 
@@ -856,7 +869,7 @@ contains
                   + 0.5*(B0_DGB(:,0,j,k,iBlock) + B0_DGB(:,1,j,k,iBlock))
              Bdir_D = FullB_D/sqrt(max(sum(FullB_D**2), 1e-30))
 
-             ! Copy field-aligned velocity component. 
+             ! Copy field-aligned velocity component.
              ! Reflect the other components
              do i = MinI, 0
                 U_D = State_VGB(iRhoUx:iRhoUz,1-i,j,k,iBlock) &
@@ -869,8 +882,8 @@ contains
        end do
     endif
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-
   !============================================================================
 
   subroutine user_set_resistivity(iBlock, Eta_G)
@@ -885,9 +898,10 @@ contains
     integer :: i, j, k
     real :: Te, TeSi
 
-    character (len=*), parameter :: NameSub = 'user_set_resistivity'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
        Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        TeSi = Te*No2Si_V(UnitTemperature_)
@@ -895,8 +909,8 @@ contains
        Eta_G(i,j,k) = EtaPerpSi/TeSi**1.5 *Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
-
   !============================================================================
 
   subroutine user_calc_sources(iBlock)
@@ -922,8 +936,10 @@ contains
     real :: U_D(3), Du_D(3), Me_D(3), B_D(3)
     real :: State_V(nVar), Source_V(nVar+nFluid)
 
-    character(len=*), parameter :: NameSub = 'user_calc_sources'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     ! Do not provide explicit source term when point-implicit scheme is used
     ! IsPointImplSource is true only when called from ModPointImplicit
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
@@ -1051,8 +1067,8 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
-
   !============================================================================
 
   subroutine user_init_point_implicit
@@ -1066,9 +1082,10 @@ contains
     logical :: IsPointImpl_V(nVar)
     integer :: iVar, iPointImplVar, nPointImplVar, iFluid
 
-    character(len=*), parameter :: NameSub = 'user_init_point_implicit'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest)
     IsPointImpl_V = .false.
 
     ! All ion momenta and pressures are implicit
@@ -1097,9 +1114,9 @@ contains
     ! If this is set to true the DsDu_VVC matrix has to be set below.
     IsPointImplMatrixSet = .false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
-
-  !===================================================================== 
+  !============================================================================
 
   subroutine user_get_b0(x, y, z, B0_D)
 
@@ -1112,9 +1129,8 @@ contains
     real :: Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3)
     real :: UserDipoleAxis_D(3)
 
-    character(len=*), parameter :: NameSub = 'user_get_b0'
-
-    !-------------------------------------------------------------------    
+    character(len=*), parameter:: NameSub = 'user_get_b0'
+    !--------------------------------------------------------------------------
 
     ! Center of dipole shifted by UserDipoleDepth below RadiusMin
     call rlonlat_to_xyz( &
@@ -1129,19 +1145,19 @@ contains
          (/1.,UserDipoleAxisLongitude, UserDipoleAxisLatitude/), &
          UserDipoleAxis_D)
 
-    ! Determine radial distance and powers of it                            
+    ! Determine radial distance and powers of it
     rInv  = 1.0/sqrt(sum(Xyz_D**2))
     r2Inv = rInv**2
     r3Inv = rInv*r2Inv
 
-    ! Compute dipole moment of the intrinsic magnetic field B0.             
-    Dipole_D = UserDipoleStrength * UserDipoleAxis_D 
+    ! Compute dipole moment of the intrinsic magnetic field B0.
+    Dipole_D = UserDipoleStrength * UserDipoleAxis_D
 
-    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv 
+    Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
 
     B0_D = B0_D + (Dp*Xyz_D - Dipole_D) * r3Inv
   end subroutine user_get_b0
-
-  !=====================================================================    
+  !============================================================================
 
 end module ModUser
+!==============================================================================

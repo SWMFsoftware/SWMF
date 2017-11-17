@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!==============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_init_session,               &
        IMPLEMENTED2 => user_read_inputs,                &
@@ -12,7 +14,7 @@ module ModUser
        IMPLEMENTED6 => user_set_plot_var,               &
        IMPLEMENTED7 => user_material_properties
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = 'Marshak Wave'
@@ -22,7 +24,6 @@ module ModUser
   real :: TradBc, Density, SpecificOpacity, Epsilon
 
 contains
-
   !============================================================================
 
   subroutine user_init_session
@@ -30,29 +31,29 @@ contains
     use ModConst,   ONLY: cKevToK
     use ModPhysics, ONLY: Si2No_V, UnitTemperature_, UnitRho_, UnitX_
 
-    character (len=*), parameter :: NameSub = 'user_init_session'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     TradBc = cKevToK*Si2No_V(UnitTemperature_)                ! 1 keV
     Density = 1000.0*Si2No_V(UnitRho_)                        ! 1 Gamma/cm^3
     SpecificOpacity = 0.1/(Si2No_V(UnitRho_)*Si2No_V(UnitX_)) ! 1 cm^2/Gamma
     Epsilon = 1.0
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-
   !============================================================================
 
   subroutine user_update_states(iBlock)
 
     integer, intent(in) :: iBlock
 
-    character(len=*), parameter :: NameSub = 'user_update_states'
-    !--------------------------------------------------------------------------
-
     ! No call to update_states_normal to nullify the effect of the hydro solver
 
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
   end subroutine user_update_states
-
   !============================================================================
 
   subroutine user_read_inputs
@@ -63,7 +64,11 @@ contains
     use ModReadParam, ONLY: read_line, read_command, read_var
 
     character (len=100) :: NameCommand
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0 .and. lVerbose > 0)then
        call write_prefix;
        write(iUnitOut,*)'User read_input starts'
@@ -96,8 +101,8 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
   subroutine user_set_ics(iBlock)
@@ -113,8 +118,10 @@ contains
     integer :: i, j, k
     real :: Temperature, Pressure
 
-    character(len=*), parameter :: NameSub = "user_set_ics"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     select case(TypeProblem)
     case('suolson')
@@ -133,8 +140,8 @@ contains
        call stop_mpi(NameSub//' : undefined problem type='//TypeProblem)
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-
   !============================================================================
 
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
@@ -151,8 +158,10 @@ contains
 
     real :: Coef
 
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     select case(iSide)
     case(1)
@@ -194,8 +203,8 @@ contains
 
     IsFound = .true.
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
-
   !============================================================================
 
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
@@ -219,8 +228,10 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
@@ -240,8 +251,8 @@ contains
        IsFound = .false.
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
-
   !============================================================================
 
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
@@ -287,8 +298,10 @@ contains
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi
 
-    character(len=*), parameter :: NameSub = 'user_material_properties'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
@@ -335,6 +348,9 @@ contains
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
+  !============================================================================
 
 end module ModUser
+!==============================================================================

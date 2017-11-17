@@ -1,12 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iProcTest
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_initial_perturbation
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
@@ -18,10 +21,11 @@ module ModUser
        yWaveUx=1.0, zWaveUx=0.0
 
 contains
+  !============================================================================
 
   subroutine user_initial_perturbation
 
-    use ModMain,     ONLY: nBlock, Unused_B, ProcTest
+    use ModMain,     ONLY: nBlock, Unused_B
     use ModProcMH,   ONLY: iProc
     use ModAdvance,  ONLY: State_VGB, Rho_, RhoUx_, RhoUy_
     use ModGeometry, ONLY: Xyz_DGB, y1, y2, z1, z2
@@ -29,26 +33,26 @@ contains
     use ModEnergy,   ONLY: calc_energy_ghost
 
     integer :: iBlock
-    logical :: oktest, oktest_me
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
     !--------------------------------------------------------------------------
-
-    if(iProc==PROCtest)then
+    call test_start(NameSub, DoTest)
+    if(iProc==iProcTest)then
        write(*,*)'Initializing Kelvin-Helmholtz problem'
        write(*,*)'Parameters:'
        write(*,*)'xWidthUy=',xWidthUy,' AmplUy =',AmplUy
        write(*,*)'xWidthUx=',xWidthUx,' AmplUx =',AmplUx
        write(*,*)'yWaveUx =',yWaveUx, ' zWaveUx=',zWaveUx
 
-       call set_oktest('user_initial_perturbation',oktest,oktest_me)
     else
-       oktest=.false.; oktest_me=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     do iBlock = 1, nBlock
        if (Unused_B(iBlock)) CYCLE
 
-       !Perturbation in Ux = 
+       ! Perturbation in Ux =
        !    Ux0 * exp(-(x/xWidthUx)**2) * cos(ky*y) * cos(kz*z)
 
        where(abs(Xyz_DGB(x_,:,:,:,iBlock))<xWidthUx)            &
@@ -66,6 +70,9 @@ contains
        call calc_energy_ghost(iBlock)
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
+  !============================================================================
 
 end module ModUser
+!==============================================================================

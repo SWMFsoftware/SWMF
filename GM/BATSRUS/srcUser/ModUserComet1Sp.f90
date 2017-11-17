@@ -1,8 +1,10 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!This code is a copyright protected software (c) 2002- University of Michigan
-!========================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest
 
   use ModSize
   use ModUserEmpty,               &
@@ -12,17 +14,17 @@ module ModUser
        IMPLEMENTED4 => user_update_states,              &
        IMPLEMENTED5 => user_init_point_implicit
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   !\
-  ! Here you must define a user routine Version number and a 
+  ! Here you must define a user routine Version number and a
   ! descriptive string.
   !/
   real,              parameter :: VersionUserModule = 2.01
   character (len=*), parameter :: NameUserModule = &
        'Yingdong single species cometary MHD module, M. Rubin & K.C. Hansen, Feb 2008'
 
-  real, public, dimension(0:nI+1, 0:nJ+1, 0:nK+1,nBLK, 4) :: Neutral_BLK
+  real, public, dimension(0:nI+1, 0:nJ+1, 0:nK+1,MaxBlock, 4) :: Neutral_BLK
 
   integer :: NR_neutral=121, NTheta_neutral=121, NPhi_neutral=121
   integer, parameter :: NR_ = 4, NTh_ = 5, NPhi_ = 6
@@ -33,7 +35,7 @@ module ModUser
 
   real ::  jet_ln2, Qprod_day, Qprod_nit &
        , Qprod_jet, Qprod_jeta
-  logical :: DoTest, DoTestMe
+  logical :: DoTest, DoTest
 
   logical ::  UseMultiSpecies=.false.
   integer ::  nSpecies=1
@@ -41,14 +43,14 @@ module ModUser
       MaxReactions=3
   integer ::  nNuSpecies=1
 
-  integer, parameter :: &       !reaction number
-    H2O_hv__H2Op_em_=1 ,&       !H2O+hv-->H2Op+em: photoinozation
-    H2Op_em__neutral_=2   ,&    !H2Op+em-->neutral: recombination
-    Hp_H2O__H2Op_H_=3           !Hp+H2O-->H2Op+H: change exchange
+  integer, parameter :: &       ! reaction number
+    H2O_hv__H2Op_em_=1 ,&       ! H2O+hv-->H2Op+em: photoinozation
+    H2Op_em__neutral_=2   ,&    ! H2Op+em-->neutral: recombination
+    Hp_H2O__H2Op_H_=3           ! Hp+H2O-->H2Op+H: change exchange
 
   real, dimension(MaxReactions) :: Rate_I
   real, dimension(MaxReactions) :: &
-       Ratedim_I=(/ 5.42e-7, 7.0e-7, 8.2e-9 /)  !cm^3 s^(-1)
+       Ratedim_I=(/ 5.42e-7, 7.0e-7, 8.2e-9 /)  ! cm^3 s^(-1)
 
   integer, parameter :: &	! order of ion species
        Hp_   =1, &
@@ -58,7 +60,7 @@ module ModUser
      ion_name_I=(/'Hp   ', 'H2Op '/)
 
   real, dimension(MaxSpecies)::  &
-     MassSpecies_I=(/1,18 /)  !atm
+     MassSpecies_I=(/1,18 /)  ! atm
 
   integer, parameter :: & ! order of Neutral species
        H2O_=1
@@ -67,7 +69,7 @@ module ModUser
        CrossSection_I
   real:: Productrate0,Optdep
   real, dimension(MaxNuSpecies)::  NuMassSpecies_I=(/18/), &
-       HNuSpecies_I, BodynDenNuSpecies_I, &  
+       HNuSpecies_I, BodynDenNuSpecies_I, &
        BodynDenNuSpdim_I=(/1.e8/)
 
   integer, parameter :: & ! other numbers
@@ -75,7 +77,7 @@ module ModUser
     hv_=-2
 
   ! Define some variables and set defaults
-  real :: &  
+  real :: &
     kin=1.7E-9,&
     kin_in=1.,&
     mbar=17.,&
@@ -96,10 +98,9 @@ module ModUser
 
   integer :: jpattern=0
 
-
 contains
+  !============================================================================
 
-  !========================================================================
   subroutine user_read_inputs
 
     use ModMain
@@ -110,8 +111,10 @@ contains
     integer:: i, j, k
     character (len=100) :: NameCommand, line
 
-
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     if(iProc==0.and.lVerbose > 0)then
        call write_prefix; write(iUnitOut,*)'User read_input COMET starts'
@@ -180,25 +183,21 @@ contains
     end do
 
 !    call stop_user(Name)
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
+  !============================================================================
 
-
-
-
-  !========================================================================
   subroutine user_set_ICs(iBlock)
-  !========================================================================
 
-    use ModMain, ONLY: nBlock, Unused_B, ProcTest, body1_
+    use ModMain, ONLY: nBlock, Unused_B,  body1_
     use ModProcMH, ONLY: iProc
     use ModPhysics
     use ModNumConst
     use ModVarIndexes, ONLY: Bx_, By_, Bz_
-    use ModGeometry,ONLY: Xyz_DGB,R_BLK
-    use ModIO,ONLY:restart
+    use ModGeometry, ONLY: Xyz_DGB,R_BLK
+    use ModIO, ONLY:restart
 
     integer, intent(in) :: iBlock
-    logical :: oktest, oktest_me
 
     real :: Theta, Phi, xR, xTheta,xPhi, unr_o, unr_i, unr0
     integer, parameter :: jTh_axis=4
@@ -206,21 +205,21 @@ contains
     integer:: iR, jTheta, kPhi, iRp1,jThetap1,kPhip1, jTh_axr, &
 	kPhi_conj, kPhip1_conj
 
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ICs'
     !--------------------------------------------------------------------------
-
-  if(restart)return!jet and Bx parameters has to be set in 1st session.
+    call test_start(NameSub, DoTest, iBlock)
+  if(restart)RETURN! jet and Bx parameters has to be set in 1st session.
     if( DoInitialize ) then
-      if(iProc==PROCtest)then
+      if(iProc==iProcTest)then
         write(*,*)'Initializing Comet Jet Data'
         write(*,*)'Parameters:'
         write(*,*)'jet_width=',jet_width,'Qprod_day =',Qprod_day
         write(*,*)'Qprod_nit=',Qprod_nit,' Qprod_jet =',Qprod_jet
         write(*,*)'Qprod_jeta =',Qprod_jeta, ' SW_By=',SW_By
 
-        call set_oktest('user_initial_perturbation',oktest,oktest_me)
       else
-        oktest=.false.; oktest_me=.false.
+        DoTest=.false.; DoTest=.false.
       end if
 
 !       jet_width = jet_width*cPi/180.
@@ -239,8 +238,7 @@ contains
 !         Qprod_jeta = Qprod_jeta/Ajet1
 !       endif
 
-
-!this is set after set_IC_comet, but this part is not used there.
+! this is set after set_IC_comet, but this part is not used there.
       FaceState_VI(Bx_,  body1_) = SW_Bx
       FaceState_VI(By_,  body1_) = SW_By
       FaceState_VI(Bz_,  body1_) = SW_Bz
@@ -254,7 +252,7 @@ contains
   do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
 
      if( R_BLK(i,j,k,iBlock) < 7.0E8/NO2SI_V(UnitX_) .and.  &
-		R_BLK(i,j,k,iBlock) > 2000.0/NO2SI_V(UnitX_) )then     !interpolate
+		R_BLK(i,j,k,iBlock) > 2000.0/NO2SI_V(UnitX_) )then     ! interpolate
 
         iR = int( (NR_neutral-1)/6.*log10(R_BLK(i,j,k,iBlock)*NO2SI_V(UnitX_)/1E3) ) + 1
         iR = max(iR,1)
@@ -348,7 +346,7 @@ contains
                 ( 1.0+1.2*(NeutralN(iR,jTh_axr,kPhi,NTh_)/180.-Theta) )
 	endif
 
-     else if( R_BLK(i,j,k,iBlock) > 7.0E8/NO2SI_V(UnitX_)) then	!Extrapolate beyond 10^6km
+     else if( R_BLK(i,j,k,iBlock) > 7.0E8/NO2SI_V(UnitX_)) then	! Extrapolate beyond 10^6km
 
         Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
@@ -370,7 +368,7 @@ contains
 		     Neutral_BLK(i,j,k,iBlock,2)*Neutral_BLK(i,j,k,iBlock,2) + &
 		     Neutral_BLK(i,j,k,iBlock,3)*Neutral_BLK(i,j,k,iBlock,3)) )
 
-     else	!Extrapolate within 3km
+     else	! Extrapolate within 3km
 if(.false.) then
         Theta = acos( Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock) )/cPi
         jTheta = int( Theta*(NTheta_neutral-1) ) + 1
@@ -417,7 +415,7 @@ if(.false.) then
 
 endif
 
-!write(*,*) '3rd choice', R_BLK(i,j,k,iBlock)
+! write(*,*) '3rd choice', R_BLK(i,j,k,iBlock)
         Neutral_BLK(i,j,k,iBlock,1:3)= 1.0
         Neutral_BLK(i,j,k,iBlock,4) = 40.*1E9*mbar
      end if
@@ -429,15 +427,16 @@ endif
   Neutral_BLK(:,:,:,iBlock,4) = Neutral_BLK(:,:,:,iBlock,4)*17
 !  Neutral_BLK(:,:,:,iBlock,4) = Neutral_BLK(:,:,:,iBlock,4)/22.
 
-
-!!!now Neutral_BLK(v) is dimensionless, while n is still dimensional!!!
+!!! now Neutral_BLK(v) is dimensionless, while n is still dimensional!!!
     Neutral_BLK(:,:,:,iBlock,1:3) = &
 	Neutral_BLK(:,:,:,iBlock,1:3)/NO2SI_V(UnitU_)
 
-!write(*,*) 'set_ICs ', Neutral_BLK(2,2,2,iBlock, :)
+! write(*,*) 'set_ICs ', Neutral_BLK(2,2,2,iBlock, :)
 
      endif
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ICs
+  !============================================================================
 
   subroutine user_init_point_implicit
 
@@ -445,11 +444,15 @@ endif
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
 
     ! Allocate and set iVarPointImpl_I
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     allocate(iVarPointImpl_I(4+nSpecies))
 
     iVarPointImpl_I = (/Rho_, RhoUx_, RhoUy_, RhoUz_, p_/)
 
-    ! Note that energy is not an independent variable for the 
+    ! Note that energy is not an independent variable for the
     ! point implicit scheme. The pressure is an independent variable,
     ! and in this example there is no implicit pressure source term.
 
@@ -458,19 +461,24 @@ endif
     ! Initialization for comet implicit sources: false => numerical ptimplicit.
     IsPointImplMatrixSet = .false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
+  !============================================================================
 
-  !========================================================================
   subroutine user_calc_sources(iBlock)
 
     ! Evaluate the explicit or implicit or both source terms.
-    ! If there is no explicit source term, the subroutine user_expl_source 
+    ! If there is no explicit source term, the subroutine user_expl_source
     ! and the corresponding calls can be removed.
 
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
 
     integer, intent(in) :: iBlock
 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(.not.UsePointImplicit)then
        ! Add all source terms if we do not use the point implicit scheme
        call user_expl_source(iBlock)
@@ -483,18 +491,20 @@ endif
        call user_expl_source(iBlock)
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
-  !==========================================================================
+  !============================================================================
   subroutine user_expl_source(iBlock)
 
     integer, intent(in) :: iBlock
 
     ! Here come the explicit source terms
 
+    !--------------------------------------------------------------------------
   end subroutine user_expl_source
-  !==========================================================================
+  !============================================================================
   subroutine user_impl_source(iBlock)
-  
+
     ! This is a test and example for using point implicit source terms
     ! Apply friction relative to some medium at rest
     ! The friction force is proportional to the velocity and the density.
@@ -502,10 +512,10 @@ endif
     use ModPointImplicit, ONLY: &
          UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
 
-    use ModMain,    ONLY: nI,nJ,nK,n_step,iTest,jTest,kTest,BlkTest
+    use ModMain,    ONLY: nI,nJ,nK,n_step
     use ModAdvance, ONLY: State_VGB, Source_VC, &
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
-    use ModGeometry,ONLY: Xyz_DGB,R_BLK
+    use ModGeometry, ONLY: Xyz_DGB,R_BLK
 
     use ModPhysics
     use ModProcMH
@@ -518,19 +528,21 @@ endif
     integer, save :: step = 0
     logical, save :: FirstCall = .TRUE.
 
-
 !****************    yingdong defined for comet    **************
 !    real, parameter ::  x_jet = 0.855363194, y_jet = -0.49384417, &
-!       z_jet = 0.156434465 	!borrelly jet pattern
+!       z_jet = 0.156434465 	! borrelly jet pattern
     real, parameter ::  x_jet = 1., y_jet = 0., z_jet = 0.
-	!encke sunward jet pattern
+	! encke sunward jet pattern
     real :: lambda, sMassdn, sMassj, &
 		jtheta, rcyl
     real, dimension(1:nI,1:nJ,1:nK) :: &
        usqr,sMass,Te,alphaTe,term1,term2,ne, eta, Rkm, logR, fi &
 	,sMasseta, Losse, chargexchg, Unx, Uny, Unz, ux, uy, uz
 
-    !-------------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_impl_source'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if (FirstCall) then
        FirstCall = .False.
@@ -551,7 +563,7 @@ endif
        else
           Qprod_jeta = Qprod_jeta/Ajet1
        endif
-       
+
 !        if (iProc == 0) then
 !          open(unit=321,file='Source_VCs.log',status='unknown', action ='write', position='rewind')
 !          write(321,*) "iter rho_ rhoUx_ rhoUy_ rhoUz_ p_ Energy_"
@@ -562,7 +574,7 @@ endif
 
 !*********************************************************
     ! Add implicit source here
-    ! In this example a simple friction term is added to the momentum and 
+    ! In this example a simple friction term is added to the momentum and
     ! energy equtaions.
 
     ux=State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock) / &
@@ -572,7 +584,7 @@ endif
     uz=State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock) / &
           State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
     usqr = ux*ux+uy*uy+uz*uz
-    Rkm = R_BLK(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/1E3	!km unit
+    Rkm = R_BLK(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/1E3	! km unit
     logR = log10(Rkm)
 
     if (jpattern == 50 ) then
@@ -585,7 +597,7 @@ endif
        lambda = Unr/ionization_rate
       !! fi multiplicator value for the ionization frequency (including enhanced electron impact in ion pile up reagion)
       !       fi = 1.0	!       set f_i=1 for all r
-       do k=1,nK ;   do j=1,nJ ;   do i=1,nI       
+       do k=1,nK ;   do j=1,nJ ;   do i=1,nI
 	  if (rkm(i,j,k) >= 5000. .and. rkm(i,j,k) < 10000.) then
              fi(i,j,k) = 1.0+0.77*log(rkm(i,j,k)/5000.)
 	  elseif (rkm(i,j,k) >= 10000. .and. rkm(i,j,k) < 50000.) then
@@ -599,11 +611,11 @@ endif
           exp(-R_BLK(1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitX_)/lambda) / &
           (4.0*cPi*lambda*R_BLK(1:nI,1:nJ,1:nK,iBlock)**2*NO2SI_V(UnitX_)**2)
 
-    !yingdong 060705 neutral num density
+    ! yingdong 060705 neutral num density
        if(ReadNeutral) sMass = fi * ionization_rate * &
 	  Neutral_BLK(1:nI,1:nJ,1:nK,iBlock,4)
 
-     ! sMass(amu/s/m^3)/NO2SI_V(UnitN_)*NO2SI_V(UnitT_) 
+     ! sMass(amu/s/m^3)/NO2SI_V(UnitN_)*NO2SI_V(UnitT_)
        sMass = sMass/NO2SI_V(UnitN_)*NO2SI_V(UnitT_)
 
      ! eta is already non-dimensional
@@ -611,7 +623,7 @@ endif
 ! added yingdong Aug22,03 for increased hydrogen CX.
 !       chargexchg = eta* ( 1.+exp(11.*R_BLK(1:nI,1:nJ,1:nK,iBlock)* &
 !                       NO2SI_V(UnitX_)/12./lambda)/6. )
-        chargexchg = eta        !original term
+        chargexchg = eta        ! original term
 !********   modification Apr 03 yingdong for Barrelley /end ***********
 !***** 3 etas r changed into chargexchg *****
 !**************************************
@@ -628,10 +640,10 @@ endif
 !          ( 2.0 * unitSI_rho * cBoltzmann * State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock) )
 
     ! Standard Profile
-    where  (rkm <= 1584.893) 
+    where  (rkm <= 1584.893)
        Te = 1.E+2
     end where
-    where (rkm > 1584.893 .and. rkm <= 6918.310) 
+    where (rkm > 1584.893 .and. rkm <= 6918.310)
        Te = 10.**( 1.143  * logR -  1.667 )
     end where
     where (rkm > 6918.310 .and. rkm <= 1.E+4)
@@ -644,7 +656,6 @@ endif
        Te = 1.E+5
     end where
 
-
 !********   modification Apr 03 yingdong for Borelley //start  *********
     if ( jet_width < 1e-6 ) then
 	jet_ln2 = 0.0
@@ -652,8 +663,8 @@ endif
 	jet_ln2 = -dlog(2.0)/jet_width/jet_width
     endif
 
-!     do k=1,nK ;   do j=1,nJ ;    do i=1,nI	!version with jet
-    do k=1,0 ;   do j=1,0 ;    do i=1,0	!version without jet
+!     do k=1,nK ;   do j=1,nJ ;    do i=1,nI	! version with jet
+    do k=1,0 ;   do j=1,0 ;    do i=1,0	! version without jet
 
      	!** the jet is located at 30 degree towards the +y in the xy plane   ***
      	!** and 9 degree towards the +z in the xz plane                      ***
@@ -662,7 +673,7 @@ endif
 	jtheta = ( Xyz_DGB(X_,i,j,k,iBlock)*x_jet+Xyz_DGB(Y_,i,j,k,iBlock)*y_jet+ &
 			Xyz_DGB(Z_,i,j,k,iBlock)*z_jet ) / R_BLK(i,j,k,iBlock)
 	if (jpattern /= 6 ) jtheta = dmax1(0.0, jtheta)
-	jtheta = dmin1(1.0,  jtheta)		!jtheta = cos(theta) now
+	jtheta = dmin1(1.0,  jtheta)		! jtheta = cos(theta) now
 
 	if ( Xyz_DGB(X_,i,j,k,iBlock) >= 0.0 ) then
 	  sMassdn = sMass(i,j,k)*Qprod_day
@@ -670,17 +681,17 @@ endif
 	  sMassdn = sMass(i,j,k)*Qprod_nit
 	endif
 
-	if( jpattern == 1 ) then			!exp jet
+	if( jpattern == 1 ) then			! exp jet
               jtheta = dacos(jtheta)
               sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*exp(jet_ln2*jtheta*jtheta)
-	elseif ( jpattern == 0 .or. jpattern == 7 ) then		!dayside cos jet
+	elseif ( jpattern == 0 .or. jpattern == 7 ) then		! dayside cos jet
               sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*jtheta
-	elseif ( jpattern == 6 ) then		!all cos jet
+	elseif ( jpattern == 6 ) then		! all cos jet
               sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*(1.0+jtheta)
-	elseif ( jpattern == 4 ) then		!dayside liner jet
+	elseif ( jpattern == 4 ) then		! dayside liner jet
               jtheta = dacos(jtheta)
 	    sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*(1.0-2.0*jtheta/cPi)
-	elseif ( jpattern == 5 ) then		!dayside cos2 jet
+	elseif ( jpattern == 5 ) then		! dayside cos2 jet
               sMass(i,j,k) = sMassdn+sMass(i,j,k)*Qprod_jet*jtheta*jtheta
 	elseif ( jpattern == 2 ) then
               sMassj = sMassdn+sMass(i,j,k)*Qprod_jet*jtheta
@@ -689,7 +700,7 @@ endif
 		exp(jet_ln2*jtheta*jtheta)*.5*( 1.-tanh((.15-R_BLK(i,j,k,iBlock))*64.) )
 	endif
 
-    end do ;  end do ; end do 
+    end do ;  end do ; end do
 
     if (jpattern == 50 ) then
 	Losse = 0.0
@@ -698,22 +709,22 @@ endif
 !        sMasseta = 0.
     else
      ! Define alpha.
-       where  (Te < 200.) 
+       where  (Te < 200.)
 	        alphaTe = 7.E-7*sqrt(300./Te)
        elsewhere
 	        alphaTe = 2.342*7.E-7*Te**(0.2553-0.1633*log10(Te))
        end where
-     !normalize alphaTe
-     !alpha Te has units [cm^3/s]
+     ! normalize alphaTe
+     ! alpha Te has units [cm^3/s]
        alphaTe=alphaTe/1E6
 
      ! Compute source terms.
-       Losse    = alphaTe*ne*NO2SI_V(UnitT_)	!added yingdong Jan 02 and Modified Mar.03.
-       sMasseta = sMass*chargexchg	!modified yingdong Oct. 04 to seperate ionisation/friction
-  
+       Losse    = alphaTe*ne*NO2SI_V(UnitT_)	! added yingdong Jan 02 and Modified Mar.03.
+       sMasseta = sMass*chargexchg	! modified yingdong Oct. 04 to seperate ionisation/friction
+
     endif
 
-     if( jpattern == 3 ) then		!shade by body
+     if( jpattern == 3 ) then		! shade by body
 	do k=1,nK ;   do j=1,nJ ;    do i=1,nI
           rcyl=sqrt( Xyz_DGB(Z_,i,j,k,iBlock)**2 + Xyz_DGB(Y_,i,j,k,iBlock)**2 )
           if ( Xyz_DGB(X_,i,j,k,iBlock) <= 0.0 .and. rcyl <= Rbody )  sMass(i,j,k) = 0.
@@ -723,7 +734,7 @@ endif
      term1 = sMass+sMasseta*State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
      term2 = sMasseta+Losse
 
-     if( jpattern == 7 ) then           !debug pattern
+     if( jpattern == 7 ) then           ! debug pattern
         do k=1,nK ;   do j=1,nJ ;    do i=1,nI
           if ( R_BLK(i,j,k,iBlock) <= 3.e-4 .and. Xyz_DGB(y_,i,j,k,iBlock) >= -1.e-5 .and. &
             R_BLK(i,j,k,iBlock) >= 8.e-5 .and. abs(Xyz_DGB(z_,i,j,k,iBlock)) <= 2.e-5 &
@@ -746,17 +757,17 @@ endif
         Uny = Neutral_BLK(1:nI,1:nJ,1:nK,iBlock,2)
         Unz = Neutral_BLK(1:nI,1:nJ,1:nK,iBlock,3)
 
-!write(*,*) 'user_src ',  Neutral_BLK(2,2,2,iBlock,:)
+! write(*,*) 'user_src ',  Neutral_BLK(2,2,2,iBlock,:)
 
         do k=1,nK ;   do j=1,nJ ;    do i=1,nI
           unr = Unx(i,j,k)*Unx(i,j,k) + Uny(i,j,k)*Uny(i,j,k) +  &
 		Unz(i,j,k)*Unz(i,j,k)
-!note: this unr is unr*unr*dimensionless
+! note: this unr is unr*unr*dimensionless
 
           Source_VC(Energy_,i,j,k) = Source_VC(Energy_,i,j,k) + &
                 ( term1(i,j,k)* (0.5*unr) -  &
                 term2(i,j,k)*(0.5*State_VGB(rho_,i,j,k,iBlock)* &
-                usqr(i,j,k) + 1.5*State_VGB(p_,i,j,k,iBlock)) )	!Pi->P
+                usqr(i,j,k) + 1.5*State_VGB(p_,i,j,k,iBlock)) )	! Pi->P
 !           usqr(i,j,k) + 0.5*1.5*State_VGB(p_,i,j,k,iBlock)) )
         end do; enddo; enddo
 
@@ -771,7 +782,7 @@ endif
      	Source_VC(Energy_,:,:,:) = Source_VC(Energy_,:,:,:) + &
 	  ( term1*(0.5*(Unr/NO2SI_V(UnitU_))**2) - &
           term2*(0.5*State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)* &
-          usqr + 1.5*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)) )	!Pi->P
+          usqr + 1.5*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)) )	! Pi->P
 !          usqr + 0.5*1.5*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)) )
 
     endif
@@ -783,19 +794,19 @@ endif
 	( term1*Unz - term2*State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock) )
     Source_VC(p_,:,:,:) = Source_VC(p_,:,:,:) + term1* &
         1.0/3.0*( (Unx-ux)**2+(Uny-uy)**2+(Unz-uz)**2 ) - &
-        term2*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)	!Pi->P
+        term2*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)	! Pi->P
 !          term2*State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)*0.5
 
 !     open(unit=321,file='Source_VCs.log',status='old', action ='write', position='append')
-!     if(iBlock==BLKtest) then
-!        do k=1,nK ;  
-!           do j=1,nJ ;    
+!     if(iBlock==iBlockTest) then
+!        do k=1,nK ;
+!           do j=1,nJ ;
 !              do i=1,nI ;
-!                 if(itest==i.and.jtest==j.and.ktest==k) then
+!                 if(iTest==i.and.jTest==j.and.kTest==k) then
 !                    if (step == n_step) then
 !                       write(321,123) n_step, Source_VC(rho_,i,j,k), Source_VC(rhoUx_,i,j,k),&
 !                            Source_VC(rhoUy_,i,j,k),Source_VC(rhoUz_,i,j,k),&
-!                            Source_VC(p_,i,j,k), Source_VC(Energy_,i,j,k)  
+!                            Source_VC(p_,i,j,k), Source_VC(Energy_,i,j,k)
 !                       123 format (i7,6(1x,E16.10))
 !                       step = n_step + 1
 !                    end if
@@ -806,12 +817,11 @@ endif
 !     endif
 !    close(321)
 
-
     if(IsPointImplMatrixSet)then
        ! Set the non-zero dS/dU matrix elements here
 !      term3    = (5.-3.*Gamma)*(sMasseta+Losse)
-!      term4    = 1.5*(sMasseta+Losse)	!for energy source
-!      term4    = term2		!for pressure source
+!      term4    = 1.5*(sMasseta+Losse)	! for energy source
+!      term4    = term2		! for pressure source
 
       DsDu_VVC = 0.0
 
@@ -831,7 +841,7 @@ endif
         do k=1,nK ;   do j=1,nJ ;    do i=1,nI
           unr = Unx(i,j,k)*Unx(i,j,k) + Uny(i,j,k)*Uny(i,j,k) +  &
 		Unz(i,j,k)*Unz(i,j,k)
-!note: this unr is unr*unr*dimensionless
+! note: this unr is unr*unr*dimensionless
           DsDu_VVC(5,1,i,j,k) = sMasseta(i,j,k)*1.0/3.0*(unr-usqr(i,j,k)) + &
              sMass(i,j,k)*2.0*1.0/3.0/State_VGB(rho_,i,j,k,iBlock)* &
              ( Unx(i,j,k)*ux(i,j,k) + Uny(i,j,k)*uy(i,j,k) + &
@@ -847,9 +857,10 @@ endif
 
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_impl_source
+  !============================================================================
 
-  !========================================================================
   subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
@@ -860,7 +871,11 @@ endif
     use ModEnergy
     integer,intent(in):: iBlock
     integer:: i,j,k
-    !----------------------------------------------------------------------
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     call update_states_normal(iBlock)
 
     !\
@@ -877,9 +892,10 @@ endif
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
-
+  !============================================================================
 
 end module ModUser
-
+!==============================================================================
 

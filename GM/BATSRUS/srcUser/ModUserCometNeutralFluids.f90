@@ -1,11 +1,12 @@
 !#NOTPUBLIC  email:shyinsi@umich.edu  expires:12/31/2099
-!This code is a copyright protected software (c) 2002- University of Michigan
-!========================================================================
 
 module ModUser
 
-  use ModSize      
-  use ModVarIndexes 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, xTest, yTest, zTest
+
+  use ModSize
+  use ModVarIndexes
   use ModMultiFluid
   use ModUserEmpty,                               &
        IMPLEMENTED1  => user_read_inputs,         &
@@ -17,17 +18,15 @@ module ModUser
        IMPLEMENTED7  => user_update_states,       &
        IMPLEMENTED8  => user_init_session,        &
        IMPLEMENTED9  => user_set_plot_var
- 
+
   use ModProcMH, ONLY: iProc
-  use ModMain, ONLY: xTest, yTest, zTest
   use ModVarIndexes, ONLY: nVar
   use ModNumConst, ONLY: cPi
   use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
        UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
-       UnitP_, UnitN_, UnitX_, Gamma, GammaMinus1      
+       UnitP_, UnitN_, UnitX_, Gamma, GammaMinus1
 
-
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real,              parameter :: VersionUserModule = 0.1
   character (len=*), parameter :: NameUserModule = &
@@ -44,47 +43,45 @@ module ModUser
        (/ 'Dust1 ','Dust2 ','Dust3 ','Dust4 ','Dust5 ','Dust6 '/)
 
   integer, parameter :: &
-        H2ORho_= 1,   &
-        H2ORhoUx_= 2, H2OUx_= 2,  &
-        H2ORhoUy_= 3, H2OUy_= 3,  &
-        H2ORhoUz_= 4, H2OUz_= 4, &
-        H2OP_= 5,     &
-        HRho_= 6,   &
-        HRhoUx_= 7, HUx_= 7,  &
-        HRhoUy_= 8, HUy_= 8,  &
-        HRhoUz_= 9, HUz_= 9, &
-        HP_= 10
-
+       H2ORho_= 1,   &
+       H2ORhoUx_= 2, H2OUx_= 2,  &
+       H2ORhoUy_= 3, H2OUy_= 3,  &
+       H2ORhoUz_= 4, H2OUz_= 4, &
+       H2OP_= 5,     &
+       HRho_= 6,   &
+       HRhoUx_= 7, HUx_= 7,  &
+       HRhoUy_= 8, HUy_= 8,  &
+       HRhoUz_= 9, HUz_= 9, &
+       HP_= 10
 
   integer, parameter :: H2O_  =  1,H_  =  2
-  integer, parameter :: Dust1_=1,Dust2_=2,Dust3_=3,Dust4_=4,Dust5_=5,Dust6_=6 
- 
+  integer, parameter :: Dust1_=1,Dust2_=2,Dust3_=3,Dust4_=4,Dust5_=5,Dust6_=6
 
-  real, dimension(nNeutral) :: uNeutr_I,DestructRate_I 
-   
+  real, dimension(nNeutral) :: uNeutr_I,DestructRate_I
+
   integer :: iNeutralBlockLast = -1
   real :: Qprod, Tmin, rHelio,Tn,unr_km,ion_rate, bodyRadius, dust2gas
-  integer, parameter :: nNeuFluid = nNeutral  
+  integer, parameter :: nNeuFluid = nNeutral
   integer, parameter :: iRhoNeu_I(nNeuFluid)   = iRho_I(1:nNeutral)
   integer, parameter :: iRhoUxNeu_I(nNeuFluid) = iRhoUx_I(1:nNeutral)
   integer, parameter :: iRhoUyNeu_I(nNeuFluid) = iRhoUy_I(1:nNeutral)
   integer, parameter :: iRhoUzNeu_I(nNeuFluid) = iRhoUz_I(1:nNeutral)
   integer, parameter :: iPNeu_I(nNeuFluid)     = iP_I(1:nNeutral)
-  real ::  MassNeu_I(nNeuFluid)   !in amu
+  real ::  MassNeu_I(nNeuFluid)   ! in amu
 
-  integer, parameter :: nDustFluid = nDust  
+  integer, parameter :: nDustFluid = nDust
   integer, parameter :: iRhoDust_I(nDustFluid)   = iRho_I(nNeutral+1:nFluid)
   integer, parameter :: iRhoUxDust_I(nDustFluid) = iRhoUx_I(nNeutral+1:nFluid)
   integer, parameter :: iRhoUyDust_I(nDustFluid) = iRhoUy_I(nNeutral+1:nFluid)
   integer, parameter :: iRhoUzDust_I(nDustFluid) = iRhoUz_I(nNeutral+1:nFluid)
   integer, parameter :: iPDust_I(nDustFluid)     = iP_I(nNeutral+1:nFluid)
-  real ::  MassDust_I(nDustFluid)   !in amu
-  real, parameter :: dustradius_I(nDustFluid)= (/1e-7, 1e-6,1e-5,1e-4,1e-3,1e-2/) 
+  real ::  MassDust_I(nDustFluid)   ! in amu
+  real, parameter :: dustradius_I(nDustFluid)= (/1e-7, 1e-6,1e-5,1e-4,1e-3,1e-2/)
   real, parameter ::  dustNumDistr_I(nDustFluid) = dustradius_I**(-4)  ! dust number ~ radius^(-4)
   real, parameter ::  dustMassDistr_I(nDustFluid) = dustNumDistr_I*dustradius_I**(3)
   real ::  dustDensity = 1e3 ! kg/m^3
-  ! assmue dust particles of all sizes have a constant density 
-  
+  ! assmue dust particles of all sizes have a constant density
+
   character (len=100) :: NameGravityFile
 
   real:: Gravity_DCB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) = 0.
@@ -102,7 +99,7 @@ module ModUser
 
   ! Rotation of the comet (changes the direction of the Sun)
   real:: RotationCometHour = 12.0
-  
+
   ! Angular velocity
   real:: OmegaCometSi
 
@@ -112,7 +109,6 @@ module ModUser
   ! The time between updates
   real:: DtUpdateSi
   integer:: DnUpdate = 0, nStepStart
-
 
   ! minimum and maximum temperature
   real :: TempCometMinDim, TempCometMaxDim, TempCometMin, TempCometMax
@@ -127,7 +123,7 @@ module ModUser
   ! Maximum solar zenith angle for dayside production rate
   real :: SolarAngleMaxDim, SolarAngleMax
 
-  ! Parameters for y=ax+b to mimic the production rate and 
+  ! Parameters for y=ax+b to mimic the production rate and
   ! temperature distribution
   real :: SlopeProduction, bProduction, SlopeTemp, bTemp, cos75
 
@@ -140,9 +136,8 @@ module ModUser
   real :: TimeSimulationSave_B(MaxBlock) = -1e30
 
 contains
+  !============================================================================
 
-
-  !========================================================================
   subroutine user_read_inputs
 
     use ModMain
@@ -152,8 +147,10 @@ contains
 
     character (len=100) :: NameCommand
 
-    !-----------------------------------------------------------------------
-
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc==0.and.lVerbose > 0)then
        call write_prefix; write(iUnitOut,*)'User read_input Comet starts'
     endif
@@ -174,13 +171,12 @@ contains
           call read_var('dust2gas', dust2gas)       !! dust2gas mass ratio
           call read_var('dustdensity', dustDensity) !! dust density in kg/m^3
           call read_var('addGravity', addGravity)
-          if (addGravity /=0) addGravity=1 
-         bodyRadius = bodyRadius *1e3   ! in m, SI unit
-         uNeutr_I(H2O_) = unr_km*1e3  ! [m/s] 
-         DestructRate_I(H2O_)=ion_rate
-!=========================================
+          if (addGravity /=0) addGravity=1
+          bodyRadius = bodyRadius *1e3   ! in m, SI unit
+          uNeutr_I(H2O_) = unr_km*1e3  ! [m/s]
+          DestructRate_I(H2O_)=ion_rate
        case("#GRAVITYFILE")
-          call read_var('NameGravityFile' ,NameGravityFile)        
+          call read_var('NameGravityFile' ,NameGravityFile)
        case("#SHAPEFILE")
           call read_var('NameShapeFile' ,NameShapeFile)
        case("#SUNDIRECTION")
@@ -204,7 +200,6 @@ contains
           call read_var('DnUpdate',          DnUpdate)
           nStepStart = n_step
 
-!=========================================
        case('#USERINPUTEND')
           if(iProc==0.and.lVerbose > 0)then
              call write_prefix;
@@ -222,16 +217,15 @@ contains
           end if
        end select
     end do
-!===================================real comet
-  UseUserInitSession = .true.
-  UseExtraBoundary   = .true.
-!===================================
+    !===================================real comet
+    UseUserInitSession = .true.
+    UseExtraBoundary   = .true.
 
-
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
+  !============================================================================
 
-!==============================================================================
- subroutine user_init_session
+  subroutine user_init_session
 
     ! Read shape file and convert units
 
@@ -241,11 +235,13 @@ contains
     use ModConst, ONLY: cBoltzmann, cAtomicMass
     use ModVarIndexes, ONLY: MassFluid_I
     use ModBlockData, ONLY: MaxBlockData
-    !------------------------------------------------------------------------
-    ! We need to have unit conversions before reading the shape file 
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    ! We need to have unit conversions before reading the shape file
     ! which contains everything in SI units
     call read_shape_file
-
 
     ! Production rate = number density * velocity, the unit is in [m^-2 s^-1]
     ! But, applying 1 / Si2No_V(UnitX_)**2 / Io2No_V(UnitT_) is not correct
@@ -288,7 +284,7 @@ contains
     DtUpdateSi = AngleUpdateDeg*cDegToRad / abs(OmegaCometSi)
 
     ! Maximum amount of data to be stored in ModBlockData
-    ! This is for the inner boundary conditions. 
+    ! This is for the inner boundary conditions.
     ! In practice this is a rather generous overestimate.
     MaxBlockData = nVar*(nI+1)*(nJ+1)*(nK+1)
 
@@ -322,9 +318,10 @@ contains
             AngleUpdateDeg, DtUpdateSi
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
-!===========================================================================
-subroutine user_set_boundary_cells(iBlock)
+  !============================================================================
+  subroutine user_set_boundary_cells(iBlock)
 
     use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, r_BLK
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
@@ -332,10 +329,14 @@ subroutine user_set_boundary_cells(iBlock)
 
     integer:: i, j, k
     real:: XyzInside_D(3)
-    !------------------------------------------------------------------------
+
     ! Place a point inside rMinShape sphere with transcendent coordinates
     ! to reduce chances of hitting the edge or corner of triangles
-    
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     XyzInside_D = rMinShape*(/cPi/10,cPi**2/50,cPi**3/700/)
 
     do k = MinK, MaxK; do j = MinJ, MaxJ; do i=MinI, MaxI
@@ -355,13 +356,14 @@ subroutine user_set_boundary_cells(iBlock)
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_boundary_cells
-!=============================================================================
-subroutine read_gravity_file
+  !============================================================================
+  subroutine read_gravity_file
 
     use ModPlotFile, ONLY: read_plot_file
-    use BATL_lib, ONLY: find_grid_block, nNodeUsed 
-    use ModGeometry, ONLY: Xyz_DGB  
+    use BATL_lib, ONLY: find_grid_block, nNodeUsed
+    use ModGeometry, ONLY: Xyz_DGB
     logical:: DoReadGravityFile = .true.
     integer:: iPoint, nPoint, i, j, k, iBlock
     integer:: iCell, nCell, iProcFound
@@ -370,45 +372,46 @@ subroutine read_gravity_file
     real, allocatable:: Gravity_DI(:,:), Xyz_DI(:,:)
     character(len=100):: String1, String2
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_gravity_file'
-  !-----------------------------------------------------------------------
-   if(.not.DoReadGravityFile) RETURN
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(.not.DoReadGravityFile) RETURN
     DoReadGravityFile = .false.
-  
+
     if(iProc==0)write(*,*) NameSub,' reading gravity file ',trim(NameGravityFile)
 
     call read_plot_file(NameGravityFile, n1Out = nCell)
 
     if(nCell /= nI*nj*nK*nNodeUsed) then
-    write (*,*) 'ncell=', nCell
-    write(*,*) 'ni,nj,nk,nNodeused:', nI,nj,nK,nNodeUsed
-    call stop_mpi(NameSub//' Wrong grid ')
+       write (*,*) 'ncell=', nCell
+       write(*,*) 'ni,nj,nk,nNodeused:', nI,nj,nK,nNodeUsed
+       call stop_mpi(NameSub//' Wrong grid ')
     end if
 
     allocate(Gravity_DI(3,nCell), Xyz_DI(3,nCell))
     call read_plot_file(NameGravityFile, CoordOut_DI=Xyz_DI, VarOut_VI=Gravity_DI)
 
-  !Loop through the elements and put into a block based data:
+    ! Loop through the elements and put into a block based data:
 
-   do iCell = 1, nCell
-        call find_grid_block(Xyz_DI(:,iCell), iProcFound, iBlock, iCell_D, Dist_D)
-        if(iProcFound /= iProc) CYCLE
-        where(Dist_D > 0.5) iCell_D = iCell_D + 1
-        i = iCell_D(1); j = iCell_D(2); k = iCell_D(3)
-        Gravity_DCB(:,i,j,k,iBlock) = Gravity_DI(:,iCell)
+    do iCell = 1, nCell
+       call find_grid_block(Xyz_DI(:,iCell), iProcFound, iBlock, iCell_D, Dist_D)
+       if(iProcFound /= iProc) CYCLE
+       where(Dist_D > 0.5) iCell_D = iCell_D + 1
+       i = iCell_D(1); j = iCell_D(2); k = iCell_D(3)
+       Gravity_DCB(:,i,j,k,iBlock) = Gravity_DI(:,iCell)
     end do
 
+    call test_stop(NameSub, DoTest)
+  end subroutine read_gravity_file
+  !============================================================================
 
-
-   end subroutine read_gravity_file
-
-!=============================================================================
-subroutine read_shape_file
+  subroutine read_shape_file
 
     use ModIoUnit, ONLY: UnitTmp_
     use ModCoordTransform, ONLY: cross_product
     use ModRandomNumber, ONLY: random_real
-    
+
     logical:: DoReadShapeFile = .true.
 
     integer:: nPoint, i, j, iPoint, iTriangle, iPoint1, iPoint2, iPoint3
@@ -419,11 +422,13 @@ subroutine read_shape_file
 
     character(len=100):: String1, String2
 
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'read_shape_file'
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(.not.DoReadShapeFile) RETURN
     DoReadShapeFile = .false.
-  
+
     if(iProc==0)write(*,*) NameSub,' reading shape file ',trim(NameShapeFile)
 
     open(UnitTmp_, file=NameShapeFile)
@@ -445,8 +450,8 @@ subroutine read_shape_file
     do iPoint = 1, nPoint
        read(UnitTmp_,*) String1, i, j, Xyz_DI(:,iPoint)
 
-       ! Perturb vertices of all triangles to avoid the the situation that 
-       ! a line segment is parallel to a triangle plane in 
+       ! Perturb vertices of all triangles to avoid the the situation that
+       ! a line segment is parallel to a triangle plane in
        ! is_segment_intersected
 
        Xyz_DI(1, iPoint) = Xyz_DI(1, iPoint) + random_real(iSeed)*1e-5
@@ -454,7 +459,7 @@ subroutine read_shape_file
        Xyz_DI(3, iPoint) = Xyz_DI(3, iPoint) + random_real(iSeed)*1e-5
 
        ! Convert from SI units to normalized unit
-       Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_) 
+       Xyz_DI(:,iPoint) = Xyz_DI(:,iPoint) * Si2No_V(UnitX_)
     end do
     do iTriangle = 1, nTriangle
        read(UnitTmp_,*) String1, i, j, iPoint1, iPoint2, iPoint3
@@ -469,8 +474,8 @@ subroutine read_shape_file
             sqrt(sum(Normal_DI(:,iTriangle)**2))
     end do
 
-    !write(*,*)'!!! XyzTriangle_DII(:,:,1)=',XyzTriangle_DII(:,:,1)
-    !write(*,*)'!!! XyzTriangle_DII(:,:,n)=',XyzTriangle_DII(:,:,nTriangle)
+    ! write(*,*)'!!! XyzTriangle_DII(:,:,1)=',XyzTriangle_DII(:,:,1)
+    ! write(*,*)'!!! XyzTriangle_DII(:,:,n)=',XyzTriangle_DII(:,:,nTriangle)
 
     rMinShape = sqrt(minval(sum(Xyz_DI**2,DIM=1)))
     rMaxShape = sqrt(maxval(sum(Xyz_DI**2,DIM=1)))
@@ -482,13 +487,14 @@ subroutine read_shape_file
 
     close(UnitTmp_)
 
+    call test_stop(NameSub, DoTest)
   end subroutine read_shape_file
+  !============================================================================
 
-!==============================================================================
   subroutine user_calc_sources(iBlock)
 
-    use ModMain,       ONLY: nI, nJ, nK, iTest, jTest, kTest, &
-         BlkTest, PROCtest, iteration_number, Dt_BLK, n_Step
+    use ModMain,       ONLY: nI, nJ, nK,    &
+           iteration_number, Dt_BLK, n_Step
     use ModAdvance,    ONLY: State_VGB, Source_VC
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
     use ModGeometry,   ONLY: Rmin_BLK, r_BLK, Xyz_DGB
@@ -498,7 +504,6 @@ subroutine read_shape_file
 
     integer, intent(in) :: iBlock
 
-   
     real, dimension(1:nI,1:nJ,1:nK) :: uNeu2_C
     real, dimension(3,1:nNeuFluid,1:nI,1:nJ,1:nK) :: SRhoUxNeuTerm_IIC, SRhoUyNeuTerm_IIC, SRhoUzNeuTerm_IIC
     real, dimension(4,1:nNeuFluid,1:nI,1:nJ,1:nK) :: SPNeuTerm_IIC
@@ -507,29 +512,27 @@ subroutine read_shape_file
          SRhoUxNeu_IC, SRhoUyNeu_IC, SRhoUzNeu_IC, SPNeu_IC
     real, dimension(1:nNeuFluid,1:nI,1:nJ,1:nK) :: NnNeutral_IC,UnxNeutral_IC, &
          UnyNeutral_IC,UnzNeutral_IC,Tn_IC
-   
+
     real, dimension(1:nDustFluid,1:nI,1:nJ,1:nK) :: SRhoDust_IC, &
          SRhoUxDust_IC, SRhoUyDust_IC, SRhoUzDust_IC
     real, dimension(1:nDustFluid,1:nI,1:nJ,1:nK) :: NnDust_IC,UxDust_IC, &
          UyDust_IC,UzDust_IC
     real, dimension(1:nDustFluid,1:nI,1:nJ,1:nK) ::  &
-         SRhoUxDustGravity_IC, SRhoUyDustGravity_IC, SRhoUzDustGravity_IC   
+         SRhoUxDustGravity_IC, SRhoUyDustGravity_IC, SRhoUzDustGravity_IC
 
     real, dimension(1:nDustFluid) :: relMach_I,Trec_I,Tdust_I,Ch_I,Udiff_I
-   
 
     real  :: vH2O_Destr, vH_prod
-    real  :: temp1, temp2, excess_energy 
-    logical :: DoTest, DoTestMe=.true.
+    real  :: temp1, temp2, excess_energy
     integer :: i,j,k,iNeutral,jNeutral,iTerm,iDim,iDust
     real  :: cDrag=2.0
     real  :: thermalU
-    real :: cross_section  !between H2O and H
+    real :: cross_section  ! between H2O and H
 
-
-
-
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Do not evaluate any source terms explicitly when running pointimplicit
     ! if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
@@ -539,56 +542,53 @@ subroutine read_shape_file
 
     !! Limit region for evaluation for source term evaluation
     !! if(RMin_BLK(iBlock) > 2.) RETURN
-   
-    if(iBlock == BlkTest) then
-       call set_oktest('user_calc_sources',DoTest,DoTestMe)
+
+    if(iBlock == iBlockTest) then
     else
-       DoTest=.false.; DoTestMe=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
-  
     MassNeu_I = MassFluid_I(1:nNeuFluid)
-     
-    MassDust_I = 4/3*cPi*dustradius_I**3*dustDensity/cProtonMass
-   
-    vH2O_Destr = 1e-6/9 !s^-1 in SI
-    vH_prod = 1e-5/9 !s^-1 in SI
-    excess_energy = 1.6e-19*1.9  ! 1.9 eV in SI    
-    Tdust_I=(/280,280,280,280,280,280/)
-      
-     SRhoNeu_IC = 0.0
-     SRhoUxNeu_IC=0.0 
-     SRhoUyNeu_IC = 0.0
-     SRhoUzNeu_IC=0.0 
-     SPNeu_IC= 0.0
 
-     SRhoDust_IC = 0.0
-     SRhoUxDust_IC=0.0 
-     SRhoUyDust_IC = 0.0
-     SRhoUzDust_IC=0.0 
-     
-     SRhoUxNeuTerm_IIC = 0.0 
-     SRhoUyNeuTerm_IIC = 0.0
-     SRhoUzNeuTerm_IIC = 0.0
-     SPNeuTerm_IIC = 0.0 
-    
-    if (addGravity==1 .and. .not.UseGravity(iBlock)) then 
-    call read_gravity_file
-    UseGravity(iBlock)= .true.
+    MassDust_I = 4/3*cPi*dustradius_I**3*dustDensity/cProtonMass
+
+    vH2O_Destr = 1e-6/9 ! s^-1 in SI
+    vH_prod = 1e-5/9 ! s^-1 in SI
+    excess_energy = 1.6e-19*1.9  ! 1.9 eV in SI
+    Tdust_I=(/280,280,280,280,280,280/)
+
+    SRhoNeu_IC = 0.0
+    SRhoUxNeu_IC=0.0
+    SRhoUyNeu_IC = 0.0
+    SRhoUzNeu_IC=0.0
+    SPNeu_IC= 0.0
+
+    SRhoDust_IC = 0.0
+    SRhoUxDust_IC=0.0
+    SRhoUyDust_IC = 0.0
+    SRhoUzDust_IC=0.0
+
+    SRhoUxNeuTerm_IIC = 0.0
+    SRhoUyNeuTerm_IIC = 0.0
+    SRhoUzNeuTerm_IIC = 0.0
+    SPNeuTerm_IIC = 0.0
+
+    if (addGravity==1 .and. .not.UseGravity(iBlock)) then
+       call read_gravity_file
+       UseGravity(iBlock)= .true.
     end if
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-     ! Calculate normalized neutral density 
+       ! Calculate normalized neutral density
        NnNeutral_IC(1:nNeuFluid,i,j,k) = State_VGB(iRhoNeu_I,i,j,k,iBlock)/MassNeu_I*No2Si_V(UnitN_)
        Tn_IC(1:nNeuFluid,i,j,k)= State_VGB(iPNeu_I,i,j,k,iBlock)*No2Si_V(UnitP_)&
-                                 /cBoltzmann/NnNeutral_IC(1:nNeuFluid,i,j,k)
+            /cBoltzmann/NnNeutral_IC(1:nNeuFluid,i,j,k)
 
-     ! Calculate dust density
-      NnDust_IC(1:nDustFluid,i,j,k) = State_VGB(iRhoDust_I,i,j,k,iBlock)/MassDust_I*No2Si_V(UnitN_)
+       ! Calculate dust density
+       NnDust_IC(1:nDustFluid,i,j,k) = State_VGB(iRhoDust_I,i,j,k,iBlock)/MassDust_I*No2Si_V(UnitN_)
     end do; end do; end do
 
-
-     !!Calculate normalized neutral velocity 
+    !! Calculate normalized neutral velocity
     UnxNeutral_IC(1:nNeuFluid,1:nI,1:nJ,1:nK)=State_VGB(iRhoUxNeu_I,1:nI,1:nJ,1:nK, iBlock)/ &
          State_VGB(iRhoNeu_I,1:nI,1:nJ,1:nK,iBlock)*No2Si_V(UnitU_)
     UnyNeutral_IC(1:nNeuFluid,1:nI,1:nJ,1:nK)=State_VGB(iRhoUyNeu_I,1:nI,1:nJ,1:nK, iBlock)/ &
@@ -596,7 +596,7 @@ subroutine read_shape_file
     UnzNeutral_IC(1:nNeuFluid,1:nI,1:nJ,1:nK)=State_VGB(iRhoUzNeu_I,1:nI,1:nJ,1:nK, iBlock)/ &
          State_VGB(iRhoNeu_I,1:nI,1:nJ,1:nK,iBlock)*No2Si_V(UnitU_)
 
-      !!Calculate dust velocity 
+    !! Calculate dust velocity
     UxDust_IC(1:nDustFluid,1:nI,1:nJ,1:nK)=State_VGB(iRhoUxDust_I,1:nI,1:nJ,1:nK, iBlock)/ &
          State_VGB(iRhoDust_I,1:nI,1:nJ,1:nK,iBlock)*No2Si_V(UnitU_)
     UyDust_IC(1:nDustFluid,1:nI,1:nJ,1:nK)=State_VGB(iRhoUyDust_I,1:nI,1:nJ,1:nK, iBlock)/ &
@@ -604,205 +604,176 @@ subroutine read_shape_file
     UzDust_IC(1:nDustFluid,1:nI,1:nJ,1:nK)=State_VGB(iRhoUzDust_I,1:nI,1:nJ,1:nK, iBlock)/ &
          State_VGB(iRhoDust_I,1:nI,1:nJ,1:nK,iBlock)*No2Si_V(UnitU_)
 
-     uNeu2_C(1:nI,1:nJ,1:nK) =  &
-          (UnxNeutral_IC(H2O_,1:nI,1:nJ,1:nK)-UnxNeutral_IC(H_,1:nI,1:nJ,1:nK))**2.+&
-          (UnyNeutral_IC(H2O_,1:nI,1:nJ,1:nK)-UnyNeutral_IC(H_,1:nI,1:nJ,1:nK))**2.+& 
-          (UnzNeutral_IC(H2O_,1:nI,1:nJ,1:nK)-UnzNeutral_IC(H_,1:nI,1:nJ,1:nK))**2.
-
+    uNeu2_C(1:nI,1:nJ,1:nK) =  &
+         (UnxNeutral_IC(H2O_,1:nI,1:nJ,1:nK)-UnxNeutral_IC(H_,1:nI,1:nJ,1:nK))**2.+&
+         (UnyNeutral_IC(H2O_,1:nI,1:nJ,1:nK)-UnyNeutral_IC(H_,1:nI,1:nJ,1:nK))**2.+&
+         (UnzNeutral_IC(H2O_,1:nI,1:nJ,1:nK)-UnzNeutral_IC(H_,1:nI,1:nJ,1:nK))**2.
 
     do k=1,nK; do j=1,nJ; do i=1,nI
-     
-   thermalU = sqrt(2*cBoltzmann*Tn_IC(H2O_,i,j,k)/MassNeu_I(H2O_)/cProtonMass)
-  ! Udiff_I=sqrt((UnxNeutral_IC(H2O_,i,j,k)-UxDust_IC(Dust1_:Dust6_,i,j,k))**2&
-  !        +(UnyNeutral_IC(H2O_,i,j,k)-UyDust_IC(Dust1_:Dust6_,i,j,k))**2&
-  !    +(UnzNeutral_IC(H2O_,i,j,k)-UzDust_IC(Dust1_:Dust6_,i,j,k))**2)
-   Udiff_I=sqrt(UnxNeutral_IC(H2O_,i,j,k)**2.+UnyNeutral_IC(H2O_,i,j,k)**2+&
-         UnzNeutral_IC(H2O_,i,j,k)**2.) - &
-           sqrt(UxDust_IC(Dust1_:Dust6_,i,j,k)**2.+ &
-         UyDust_IC(Dust1_:Dust6_,i,j,k)**2.+UzDust_IC(Dust1_:Dust6_,i,j,k)**2.)  
 
-   relMach_I = Udiff_I/thermalU
+       thermalU = sqrt(2*cBoltzmann*Tn_IC(H2O_,i,j,k)/MassNeu_I(H2O_)/cProtonMass)
+       ! Udiff_I=sqrt((UnxNeutral_IC(H2O_,i,j,k)-UxDust_IC(Dust1_:Dust6_,i,j,k))**2&
+       !        +(UnyNeutral_IC(H2O_,i,j,k)-UyDust_IC(Dust1_:Dust6_,i,j,k))**2&
+       !    +(UnzNeutral_IC(H2O_,i,j,k)-UzDust_IC(Dust1_:Dust6_,i,j,k))**2)
+       Udiff_I=sqrt(UnxNeutral_IC(H2O_,i,j,k)**2.+UnyNeutral_IC(H2O_,i,j,k)**2+&
+            UnzNeutral_IC(H2O_,i,j,k)**2.) - &
+            sqrt(UxDust_IC(Dust1_:Dust6_,i,j,k)**2.+ &
+            UyDust_IC(Dust1_:Dust6_,i,j,k)**2.+UzDust_IC(Dust1_:Dust6_,i,j,k)**2.)
+
+       relMach_I = Udiff_I/thermalU
        !! Zeroth moment
-         
-   SRhoNeu_IC(H2O_,i,j,k)=-vH2O_Destr*State_VGB(H2ORho_,i,j,k,iBlock)/Si2No_V(UnitT_)
- 
-   SRhoNeu_IC(H_,i,j,k) = vH_prod*State_VGB(H2ORho_,i,j,k,iBlock)/MassNeu_I(H2O_)*&
-                          MassNeu_I(H_)/Si2No_V(UnitT_)
-       !dusts have no src in continuity eqn. The srcs are zeroed already.     
-    
+
+       SRhoNeu_IC(H2O_,i,j,k)=-vH2O_Destr*State_VGB(H2ORho_,i,j,k,iBlock)/Si2No_V(UnitT_)
+
+       SRhoNeu_IC(H_,i,j,k) = vH_prod*State_VGB(H2ORho_,i,j,k,iBlock)/MassNeu_I(H2O_)*&
+            MassNeu_I(H_)/Si2No_V(UnitT_)
+       ! dusts have no src in continuity eqn. The srcs are zeroed already.
 
        !! First moment, x component
        !! d(rho_s*u_s)/dt = rho_s*du_s/dt + u_s*drho_s/dt combined from zeroth and first moment by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
-    temp1 = MassNeu_I(H_)*MassNeu_I(H2O_)/(MassNeu_I(H_)+MassNeu_I(H2O_))*NnNeutral_IC(H_,i,j,k)*&
-              NnNeutral_IC(H2O_,i,j,k)*cross_section
-    temp2 = (Tn_IC(H_,i,j,k)/MassNeu_I(H_)+Tn_IC(H2O_,i,j,k)/MassNeu_I(H2O_))/cProtonMass*8.*&
-              cBoltzmann/cPi
-    temp2 = sqrt(temp2+ uNeu2_C(i,j,k))      
+       temp1 = MassNeu_I(H_)*MassNeu_I(H2O_)/(MassNeu_I(H_)+MassNeu_I(H2O_))*NnNeutral_IC(H_,i,j,k)*&
+            NnNeutral_IC(H2O_,i,j,k)*cross_section
+       temp2 = (Tn_IC(H_,i,j,k)/MassNeu_I(H_)+Tn_IC(H2O_,i,j,k)/MassNeu_I(H2O_))/cProtonMass*8.*&
+            cBoltzmann/cPi
+       temp2 = sqrt(temp2+ uNeu2_C(i,j,k))
 
-    SRhoUxNeuTerm_IIC(2,H2O_,i,j,k)=temp1*temp2*(UnxNeutral_IC(H_,i,j,k)-UnxNeutral_IC(H2O_,i,j,k))&
-    *Si2No_V(UnitN_)*Si2No_V(UnitU_)/Si2No_V(UnitT_)
+       SRhoUxNeuTerm_IIC(2,H2O_,i,j,k)=temp1*temp2*(UnxNeutral_IC(H_,i,j,k)-UnxNeutral_IC(H2O_,i,j,k))&
+            *Si2No_V(UnitN_)*Si2No_V(UnitU_)/Si2No_V(UnitT_)
 
-    SRhoUxNeuTerm_IIC(1,H2O_,i,j,k)= SRhoNeu_IC(H2O_,i,j,k)*UnxNeutral_IC(H2O_,i,j,k)*&
-                                         Si2No_V(UnitU_)
+       SRhoUxNeuTerm_IIC(1,H2O_,i,j,k)= SRhoNeu_IC(H2O_,i,j,k)*UnxNeutral_IC(H2O_,i,j,k)*&
+            Si2No_V(UnitU_)
 
+       SRhoUxDust_IC(Dust1_:Dust6_,i,j,k)=0.5*cDrag*cPi*(dustradius_I(1:6)**2)*&
+            (UnxNeutral_IC(H2O_,i,j,k)-UxDust_IC(Dust1_:Dust6_,i,j,k))*abs(Udiff_I)* &
+            NnNeutral_IC(H2O_,i,j,k)*NnDust_IC(Dust1_:Dust6_,i,j,k)*MassNeu_I(H2O_)&
+            *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
 
-    SRhoUxDust_IC(Dust1_:Dust6_,i,j,k)=0.5*cDrag*cPi*(dustradius_I(1:6)**2)*&
-        (UnxNeutral_IC(H2O_,i,j,k)-UxDust_IC(Dust1_:Dust6_,i,j,k))*abs(Udiff_I)* &
-        NnNeutral_IC(H2O_,i,j,k)*NnDust_IC(Dust1_:Dust6_,i,j,k)*MassNeu_I(H2O_)&
-        *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)  
+       SRhoUxNeuTerm_IIC(3,H2O_,i,j,k)=-sum(SRhoUxDust_IC(Dust1_:Dust6_,i,j,k))
 
-    SRhoUxNeuTerm_IIC(3,H2O_,i,j,k)=-sum(SRhoUxDust_IC(Dust1_:Dust6_,i,j,k))
-   
-    SRhoUxDustGravity_IC(:,i,j,k) = MassDust_I*NnDust_IC(:,i,j,k)*Gravity_DCB(1,i,j,k,iBlock) &
-                                    *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
-         
-  
-    SRhoUxNeuTerm_IIC(2,H_,i,j,k)=-SRhoUxNeuTerm_IIC(2,H2O_,i,j,k)
-    SRhoUxNeuTerm_IIC(1,H_,i,j,k)= SRhoNeu_IC(H_,i,j,k)*UnxNeutral_IC(H_,i,j,k)*Si2No_V(UnitU_)
-  
+       SRhoUxDustGravity_IC(:,i,j,k) = MassDust_I*NnDust_IC(:,i,j,k)*Gravity_DCB(1,i,j,k,iBlock) &
+            *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
+
+       SRhoUxNeuTerm_IIC(2,H_,i,j,k)=-SRhoUxNeuTerm_IIC(2,H2O_,i,j,k)
+       SRhoUxNeuTerm_IIC(1,H_,i,j,k)= SRhoNeu_IC(H_,i,j,k)*UnxNeutral_IC(H_,i,j,k)*Si2No_V(UnitU_)
 
        !! First moment, y component
        !! d(rho_s*u_s)/dt = rho_s*du_s/dt + u_s*drho_s/dt combined from zeroth and first moment by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
-     SRhoUyNeuTerm_IIC(2,H2O_,i,j,k)=temp1*temp2*(UnyNeutral_IC(H_,i,j,k)-UnyNeutral_IC(H2O_,i,j,k))&
-    *Si2No_V(UnitN_)*Si2No_V(UnitU_)/Si2No_V(UnitT_)
+       SRhoUyNeuTerm_IIC(2,H2O_,i,j,k)=temp1*temp2*(UnyNeutral_IC(H_,i,j,k)-UnyNeutral_IC(H2O_,i,j,k))&
+            *Si2No_V(UnitN_)*Si2No_V(UnitU_)/Si2No_V(UnitT_)
 
-     SRhoUyNeuTerm_IIC(1,H2O_,i,j,k)= SRhoNeu_IC(H2O_,i,j,k)*UnyNeutral_IC(H2O_,i,j,k)*&
-                                         Si2No_V(UnitU_)
+       SRhoUyNeuTerm_IIC(1,H2O_,i,j,k)= SRhoNeu_IC(H2O_,i,j,k)*UnyNeutral_IC(H2O_,i,j,k)*&
+            Si2No_V(UnitU_)
 
+       SRhoUyDust_IC(Dust1_:Dust6_,i,j,k)=0.5*cDrag*cPi*(dustradius_I(1:6)**2)*&
+            (UnyNeutral_IC(H2O_,i,j,k)-UyDust_IC(Dust1_:Dust6_,i,j,k))*abs(Udiff_I)* &
+            NnNeutral_IC(H2O_,i,j,k)*NnDust_IC(Dust1_:Dust6_,i,j,k)*MassNeu_I(H2O_)&
+            *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
 
-        SRhoUyDust_IC(Dust1_:Dust6_,i,j,k)=0.5*cDrag*cPi*(dustradius_I(1:6)**2)*&
-        (UnyNeutral_IC(H2O_,i,j,k)-UyDust_IC(Dust1_:Dust6_,i,j,k))*abs(Udiff_I)* &
-        NnNeutral_IC(H2O_,i,j,k)*NnDust_IC(Dust1_:Dust6_,i,j,k)*MassNeu_I(H2O_)&
-        *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)  
+       SRhoUyNeuTerm_IIC(3,H2O_,i,j,k)=-sum(SRhoUyDust_IC(Dust1_:Dust6_,i,j,k))
 
-    SRhoUyNeuTerm_IIC(3,H2O_,i,j,k)=-sum(SRhoUyDust_IC(Dust1_:Dust6_,i,j,k))
-     
-    SRhoUyDustGravity_IC(:,i,j,k) = MassDust_I*NnDust_IC(:,i,j,k)*Gravity_DCB(2,i,j,k,iBlock) &
-                                    *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
-    
+       SRhoUyDustGravity_IC(:,i,j,k) = MassDust_I*NnDust_IC(:,i,j,k)*Gravity_DCB(2,i,j,k,iBlock) &
+            *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
 
-    SRhoUyNeuTerm_IIC(2,H_,i,j,k)=-SRhoUyNeuTerm_IIC(2,H2O_,i,j,k)
-    SRhoUyNeuTerm_IIC(1,H_,i,j,k)= SRhoNeu_IC(H_,i,j,k)*UnyNeutral_IC(H_,i,j,k)*Si2No_V(UnitU_)
-  
-            
+       SRhoUyNeuTerm_IIC(2,H_,i,j,k)=-SRhoUyNeuTerm_IIC(2,H2O_,i,j,k)
+       SRhoUyNeuTerm_IIC(1,H_,i,j,k)= SRhoNeu_IC(H_,i,j,k)*UnyNeutral_IC(H_,i,j,k)*Si2No_V(UnitU_)
 
- !! First moment, z component
+       !! First moment, z component
        !! d(rho_s*u_s)/dt = rho_s*du_s/dt + u_s*drho_s/dt combined from zeroth and first moment by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
-   SRhoUzNeuTerm_IIC(2,H2O_,i,j,k)=temp1*temp2*(UnzNeutral_IC(H_,i,j,k)-UnzNeutral_IC(H2O_,i,j,k))&
-    *Si2No_V(UnitN_)*Si2No_V(UnitU_)/Si2No_V(UnitT_)
+       SRhoUzNeuTerm_IIC(2,H2O_,i,j,k)=temp1*temp2*(UnzNeutral_IC(H_,i,j,k)-UnzNeutral_IC(H2O_,i,j,k))&
+            *Si2No_V(UnitN_)*Si2No_V(UnitU_)/Si2No_V(UnitT_)
 
-   SRhoUzNeuTerm_IIC(1,H2O_,i,j,k)= SRhoNeu_IC(H2O_,i,j,k)*UnzNeutral_IC(H2O_,i,j,k)*&
-                                         Si2No_V(UnitU_)
+       SRhoUzNeuTerm_IIC(1,H2O_,i,j,k)= SRhoNeu_IC(H2O_,i,j,k)*UnzNeutral_IC(H2O_,i,j,k)*&
+            Si2No_V(UnitU_)
 
+       SRhoUzDust_IC(Dust1_:Dust6_,i,j,k)=0.5*cDrag*cPi*(dustradius_I(1:6)**2)*&
+            (UnzNeutral_IC(H2O_,i,j,k)-UzDust_IC(Dust1_:Dust6_,i,j,k))*abs(Udiff_I)* &
+            NnNeutral_IC(H2O_,i,j,k)*NnDust_IC(Dust1_:Dust6_,i,j,k)*MassNeu_I(H2O_)&
+            *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
 
-        SRhoUzDust_IC(Dust1_:Dust6_,i,j,k)=0.5*cDrag*cPi*(dustradius_I(1:6)**2)*&
-       (UnzNeutral_IC(H2O_,i,j,k)-UzDust_IC(Dust1_:Dust6_,i,j,k))*abs(Udiff_I)* &
-        NnNeutral_IC(H2O_,i,j,k)*NnDust_IC(Dust1_:Dust6_,i,j,k)*MassNeu_I(H2O_)&
-        *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)  
+       SRhoUzNeuTerm_IIC(3,H2O_,i,j,k)=-sum(SRhoUzDust_IC(Dust1_:Dust6_,i,j,k))
 
-   SRhoUzNeuTerm_IIC(3,H2O_,i,j,k)=-sum(SRhoUzDust_IC(Dust1_:Dust6_,i,j,k))
+       SRhoUzDustGravity_IC(:,i,j,k) = MassDust_I*NnDust_IC(:,i,j,k)*Gravity_DCB(3,i,j,k,iBlock) &
+            *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
 
-   SRhoUzDustGravity_IC(:,i,j,k) = MassDust_I*NnDust_IC(:,i,j,k)*Gravity_DCB(3,i,j,k,iBlock) &
-                                    *SI2No_V(UnitN_)*SI2No_V(UnitU_)/SI2No_V(UnitT_)
-
-
-   SRhoUzNeuTerm_IIC(2,H_,i,j,k)=-SRhoUzNeuTerm_IIC(2,H2O_,i,j,k)
-   SRhoUzNeuTerm_IIC(1,H_,i,j,k)= SRhoNeu_IC(H_,i,j,k)*UnzNeutral_IC(H_,i,j,k)*Si2No_V(UnitU_)
-      
+       SRhoUzNeuTerm_IIC(2,H_,i,j,k)=-SRhoUzNeuTerm_IIC(2,H2O_,i,j,k)
+       SRhoUzNeuTerm_IIC(1,H_,i,j,k)= SRhoNeu_IC(H_,i,j,k)*UnzNeutral_IC(H_,i,j,k)*Si2No_V(UnitU_)
 
        !! Second moment
-       !! Sources separated into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"      
-    SPNeuTerm_IIC(1,H2O_,i,j,k) = -vH2O_Destr*State_VGB(P_,i,j,k,iBlock)
-    
- !   SPNeuTerm_IIC(2,H2O_,i,j,k) =GammaMinus1*vH_prod*excess_energy*NnNeutral_IC(H2O_,i,j,k)* &
- !                                MassNeu_I(H_)/(MassNeu_I(H_)+MassNeu_I(H2O_))&
- !                                *SI2No_V(UnitP_)/SI2No_V(UnitT_)  
-     
-   
-   temp2=temp2*NnNeutral_IC(H_,i,j,k)*NnNeutral_IC(H2O_,i,j,k)*MassNeu_I(H2O_)&
-          *cProtonMass*cross_section
+       !! Sources separated into the terms by Tamas' "Transport Equations for Multifluid Magnetized Plasmas"
+       SPNeuTerm_IIC(1,H2O_,i,j,k) = -vH2O_Destr*State_VGB(P_,i,j,k,iBlock)
 
-   SPNeuTerm_IIC(3,H2O_,i,j,k) = 2.*cBoltzmann * (Tn_IC(H_,i,j,k)-Tn_IC(H2O_,i,j,k))/(MassNeu_I(H_)*cProtonMass)&
-                            + 2./3.*uNeu2_C(i,j,k)
+       !   SPNeuTerm_IIC(2,H2O_,i,j,k) =GammaMinus1*vH_prod*excess_energy*NnNeutral_IC(H2O_,i,j,k)* &
+       !                                MassNeu_I(H_)/(MassNeu_I(H_)+MassNeu_I(H2O_))&
+       !                                *SI2No_V(UnitP_)/SI2No_V(UnitT_)
 
-   SPNeuTerm_IIC(3,H2O_,i,j,k) = SPNeuTerm_IIC(3,H2O_,i,j,k)*temp2*MassNeu_I(H_)/&
-            (MassNeu_I(H_)+MassNeu_I(H2O_))*SI2No_V(UnitP_)/SI2No_V(UnitT_) 
+       temp2=temp2*NnNeutral_IC(H_,i,j,k)*NnNeutral_IC(H2O_,i,j,k)*MassNeu_I(H2O_)&
+            *cProtonMass*cross_section
 
-  !  where(relMach_I<1e-3) relMach_I=1e-3
-  !  Trec_I = Tn_IC(H2O_,i,j,k)/gp1*(2*Gamma+2*GammaMinus1*relMach_I**2-GammaMinus1/&
-  !         (0.5+relMach_I**2+relMach_I*cPi**(-0.5)*exp(-relMach_I**2)/erf(relMach_I)))
-  !  Ch_I = gp1/GammaMinus1*cBoltzmann/(8*cProtonMass*MassNeu_I(H2O_))/relMach_I**2*&
-  !         (relMach_I*cPi**(-0.5)*exp(-relMach_I**2)+(0.5+relMach_I**2)*erf(relMach_I))
-  !  SPNeuTerm_IIC(4,H2O_,i,j,k)= GammaMinus1*4*cPi*State_VGB(Rho_,i,j,k,iBlock)* &
-  !             sum(NnDust_IC(1:6,i,j,k)*dustradius_I**2*relMach_I*thermalU*(Tdust_I-Trec_I)*Ch_I)*&
-  !             No2SI_V(UnitRho_)*SI2No_V(UnitP_)
+       SPNeuTerm_IIC(3,H2O_,i,j,k) = 2.*cBoltzmann * (Tn_IC(H_,i,j,k)-Tn_IC(H2O_,i,j,k))/(MassNeu_I(H_)*cProtonMass)&
+            + 2./3.*uNeu2_C(i,j,k)
 
+       SPNeuTerm_IIC(3,H2O_,i,j,k) = SPNeuTerm_IIC(3,H2O_,i,j,k)*temp2*MassNeu_I(H_)/&
+            (MassNeu_I(H_)+MassNeu_I(H2O_))*SI2No_V(UnitP_)/SI2No_V(UnitT_)
 
+       !  where(relMach_I<1e-3) relMach_I=1e-3
+       !  Trec_I = Tn_IC(H2O_,i,j,k)/gp1*(2*Gamma+2*GammaMinus1*relMach_I**2-GammaMinus1/&
+       !         (0.5+relMach_I**2+relMach_I*cPi**(-0.5)*exp(-relMach_I**2)/erf(relMach_I)))
+       !  Ch_I = gp1/GammaMinus1*cBoltzmann/(8*cProtonMass*MassNeu_I(H2O_))/relMach_I**2*&
+       !         (relMach_I*cPi**(-0.5)*exp(-relMach_I**2)+(0.5+relMach_I**2)*erf(relMach_I))
+       !  SPNeuTerm_IIC(4,H2O_,i,j,k)= GammaMinus1*4*cPi*State_VGB(Rho_,i,j,k,iBlock)* &
+       !             sum(NnDust_IC(1:6,i,j,k)*dustradius_I**2*relMach_I*thermalU*(Tdust_I-Trec_I)*Ch_I)*&
+       !             No2SI_V(UnitRho_)*SI2No_V(UnitP_)
 
+       SPNeuTerm_IIC(1,H_,i,j,k) = GammaMinus1*vH_prod*excess_energy* NnNeutral_IC(H2O_,i,j,k)* &
+            MassNeu_I(H2O_)/(MassNeu_I(H_)+MassNeu_I(H2O_))&
+            *SI2No_V(UnitP_)/SI2No_V(UnitT_)
 
-    SPNeuTerm_IIC(1,H_,i,j,k) = GammaMinus1*vH_prod*excess_energy* NnNeutral_IC(H2O_,i,j,k)* &
-                                MassNeu_I(H2O_)/(MassNeu_I(H_)+MassNeu_I(H2O_))&
-                                 *SI2No_V(UnitP_)/SI2No_V(UnitT_)
-      
-    SPNeuTerm_IIC(2,H_,i,j,k) = 2.*cBoltzmann * (Tn_IC(H2O_,i,j,k)-Tn_IC(H_,i,j,k))/(MassNeu_I(H2O_)*cProtonMass)&
-                            + 2./3.*uNeu2_C(i,j,k)
+       SPNeuTerm_IIC(2,H_,i,j,k) = 2.*cBoltzmann * (Tn_IC(H2O_,i,j,k)-Tn_IC(H_,i,j,k))/(MassNeu_I(H2O_)*cProtonMass)&
+            + 2./3.*uNeu2_C(i,j,k)
 
-    SPNeuTerm_IIC(2,H_,i,j,k) = SPNeuTerm_IIC(2,H_,i,j,k)*temp2*MassNeu_I(H2O_)/(MassNeu_I(H_)+MassNeu_I(H2O_))*SI2No_V(UnitP_)/SI2No_V(UnitT_)
+       SPNeuTerm_IIC(2,H_,i,j,k) = SPNeuTerm_IIC(2,H_,i,j,k)*temp2*MassNeu_I(H2O_)/(MassNeu_I(H_)+MassNeu_I(H2O_))*SI2No_V(UnitP_)/SI2No_V(UnitT_)
 
        !! sum up individual terms
-    !   do iTerm=1,2
-    !      SRho_IC(1:nIonFluid,i,j,k) = SRho_IC(1:nIonFluid,i,j,k)+SRhoTerm_IIC(iTerm,1:nIonFluid,i,j,k)
-    !   end do
-      
-        do iTerm=1,3
-           SRhoUxNeu_IC(1:nNeuFluid,i,j,k) = SRhoUxNeu_IC(1:nNeuFluid,i,j,k)+&
-                                             SRhoUxNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
-           SRhoUyNeu_IC(1:nNeuFluid,i,j,k) = SRhoUyNeu_IC(1:nNeuFluid,i,j,k)+& 
-                                             SRhoUyNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
-           SRhoUzNeu_IC(1:nNeuFluid,i,j,k) = SRhoUzNeu_IC(1:nNeuFluid,i,j,k)+&
-                                             SRhoUzNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
-         
-        end do
-       
+       !   do iTerm=1,2
+       !      SRho_IC(1:nIonFluid,i,j,k) = SRho_IC(1:nIonFluid,i,j,k)+SRhoTerm_IIC(iTerm,1:nIonFluid,i,j,k)
+       !   end do
+
+       do iTerm=1,3
+          SRhoUxNeu_IC(1:nNeuFluid,i,j,k) = SRhoUxNeu_IC(1:nNeuFluid,i,j,k)+&
+               SRhoUxNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
+          SRhoUyNeu_IC(1:nNeuFluid,i,j,k) = SRhoUyNeu_IC(1:nNeuFluid,i,j,k)+&
+               SRhoUyNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
+          SRhoUzNeu_IC(1:nNeuFluid,i,j,k) = SRhoUzNeu_IC(1:nNeuFluid,i,j,k)+&
+               SRhoUzNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
+
+       end do
+
        do iTerm=1,3
           SPNeu_IC(1:nNeuFluid,i,j,k) = SPNeu_IC(1:nNeuFluid,i,j,k)+&
-                                        SPNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
-         
+               SPNeuTerm_IIC(iTerm,1:nNeuFluid,i,j,k)
+
        end do
-      
-      
 
-          
-  
-      Source_VC(iRhoNeu_I   ,i,j,k) = SRhoNeu_IC(1:nNeuFluid,i,j,k) +  Source_VC(iRhoNeu_I   ,i,j,k)
-      Source_VC(iRhoUxNeu_I ,i,j,k) = SRhoUxNeu_IC(1:nNeuFluid,i,j,k)+ Source_VC(iRhoUxNeu_I ,i,j,k)
-      Source_VC(iRhoUyNeu_I ,i,j,k) = SRhoUyNeu_IC(1:nNeuFluid,i,j,k)+ Source_VC(iRhoUyNeu_I ,i,j,k)
-      Source_VC(iRhoUzNeu_I ,i,j,k) = SRhoUzNeu_IC(1:nNeuFluid,i,j,k)+ Source_VC(iRhoUzNeu_I ,i,j,k)
-      Source_VC(iPNeu_I,i,j,k) = SPNeu_IC(1:nNeuFluid,i,j,k) + Source_VC(iPNeu_I,i,j,k)
+       Source_VC(iRhoNeu_I   ,i,j,k) = SRhoNeu_IC(1:nNeuFluid,i,j,k) +  Source_VC(iRhoNeu_I   ,i,j,k)
+       Source_VC(iRhoUxNeu_I ,i,j,k) = SRhoUxNeu_IC(1:nNeuFluid,i,j,k)+ Source_VC(iRhoUxNeu_I ,i,j,k)
+       Source_VC(iRhoUyNeu_I ,i,j,k) = SRhoUyNeu_IC(1:nNeuFluid,i,j,k)+ Source_VC(iRhoUyNeu_I ,i,j,k)
+       Source_VC(iRhoUzNeu_I ,i,j,k) = SRhoUzNeu_IC(1:nNeuFluid,i,j,k)+ Source_VC(iRhoUzNeu_I ,i,j,k)
+       Source_VC(iPNeu_I,i,j,k) = SPNeu_IC(1:nNeuFluid,i,j,k) + Source_VC(iPNeu_I,i,j,k)
 
-      
-      Source_VC(iRhoDust_I   ,i,j,k) = SRhoDust_IC(1:nDustFluid,i,j,k)+ Source_VC(iRhoDust_I,i,j,k)
-      Source_VC(iRhoUxDust_I ,i,j,k) = SRhoUxDust_IC(1:nDustFluid,i,j,k)+ &
-                                       SRhoUxDustGravity_IC(:,i,j,k)+ Source_VC(iRhoUxDust_I ,i,j,k)
-      Source_VC(iRhoUyDust_I ,i,j,k) = SRhoUyDust_IC(1:nDustFluid,i,j,k)+ &
-                                       SRhoUyDustGravity_IC(:,i,j,k)+ Source_VC(iRhoUyDust_I ,i,j,k)
-      Source_VC(iRhoUzDust_I ,i,j,k) = SRhoUzDust_IC(1:nDustFluid,i,j,k)+ & 
-                                       SRhoUzDustGravity_IC(:,i,j,k)+ Source_VC(iRhoUzDust_I ,i,j,k)
-  end do;  end do;  end do
+       Source_VC(iRhoDust_I   ,i,j,k) = SRhoDust_IC(1:nDustFluid,i,j,k)+ Source_VC(iRhoDust_I,i,j,k)
+       Source_VC(iRhoUxDust_I ,i,j,k) = SRhoUxDust_IC(1:nDustFluid,i,j,k)+ &
+            SRhoUxDustGravity_IC(:,i,j,k)+ Source_VC(iRhoUxDust_I ,i,j,k)
+       Source_VC(iRhoUyDust_I ,i,j,k) = SRhoUyDust_IC(1:nDustFluid,i,j,k)+ &
+            SRhoUyDustGravity_IC(:,i,j,k)+ Source_VC(iRhoUyDust_I ,i,j,k)
+       Source_VC(iRhoUzDust_I ,i,j,k) = SRhoUzDust_IC(1:nDustFluid,i,j,k)+ &
+            SRhoUzDustGravity_IC(:,i,j,k)+ Source_VC(iRhoUzDust_I ,i,j,k)
+    end do;  end do;  end do
 
-    
-
-    if(iBlock == BlkTest .and. iProc==PROCtest) then
-       call set_oktest('user_calc_sources',DoTest,DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
-   
-    ! write(*,*) 'DoTest, DoTestMe:', DoTest, DoTestMe
-    if(DoTestMe) then
+    ! write(*,*) 'DoTest, DoTest:', DoTest, DoTest
+    if(DoTest) then
        write(*,*)'user_calc_sources:'
        write(*,*)'Inputs: '
-       i=iTest ; j=jTest ; k=kTest; 
+       i=iTest ; j=jTest ; k=kTest;
 123    format (A13,ES25.16,A15,A3,F7.2,A3)
        write(*,123)'x         = ',Xyz_DGB(x_,i,j,k,iBlock)," [rPlanet]"
        write(*,123)'y         = ',Xyz_DGB(y_,i,j,k,iBlock)," [rPlanet]"
@@ -825,107 +796,102 @@ subroutine read_shape_file
           write(*,123)'uxIC_dust      = ',UxDust_IC(iDust,i,j,k)," [m/s]"
           write(*,123)'uyIC           = ',UyDust_IC(iDust,i,j,k)," [m/s]"
           write(*,123)'uzIC           = ',UzDust_IC(iDust,i,j,k)," [m/s]"
-          write(*,123)'SRhoUxDust     = ',SRhoUxDust_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]" 
+          write(*,123)'SRhoUxDust     = ',SRhoUxDust_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]"
           write(*,123)'SRhoUyDust     = ',SRhoUyDust_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]"
           write(*,123)'SRhoUzDust     = ',SRhoUzDust_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]"
           write(*,123)'SRhoUxDustGravity= ',SRhoUxDustGravity_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]"
-          write(*,123)'SRhoUyDustGravity= ',SRhoUyDustGravity_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]" 
-          write(*,123)'SRhoUzDustGravity= ',SRhoUzDustGravity_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]"       
+          write(*,123)'SRhoUyDustGravity= ',SRhoUyDustGravity_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]"
+          write(*,123)'SRhoUzDustGravity= ',SRhoUzDustGravity_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_),"[kg m^-2/s^2]"
           write(*,123)'gx=',Gravity_DCB(1,i,j,k,iBlock),"[m/s^2]"
-          write(*,123)'gy=',Gravity_DCB(2,i,j,k,iBlock),"[m/s^2]" 
-          write(*,123)'gz=',Gravity_DCB(3,i,j,k,iBlock),"[m/s^2]" 
+          write(*,123)'gy=',Gravity_DCB(2,i,j,k,iBlock),"[m/s^2]"
+          write(*,123)'gz=',Gravity_DCB(3,i,j,k,iBlock),"[m/s^2]"
 
           write(*,123)'DeltaUx=',SRhoUxDust_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_)&
-                       /(NnDust_IC(iDust,i,j,k)*MassDust_I(iDust)*cProtonMass),"[m/s^2]"
+               /(NnDust_IC(iDust,i,j,k)*MassDust_I(iDust)*cProtonMass),"[m/s^2]"
           write(*,123)'DeltaUy=',SRhoUyDust_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_)&
-                       /(NnDust_IC(iDust,i,j,k)*MassDust_I(iDust)*cProtonMass),"[m/s^2]"
+               /(NnDust_IC(iDust,i,j,k)*MassDust_I(iDust)*cProtonMass),"[m/s^2]"
           write(*,123)'DeltaUz=',SRhoUzDust_IC(iDust,i,j,k)*No2SI_V(UnitRhoU_)&
-                       /(NnDust_IC(iDust,i,j,k)*MassDust_I(iDust)*cProtonMass),"[m/s^2]" 
-      end do
+               /(NnDust_IC(iDust,i,j,k)*MassDust_I(iDust)*cProtonMass),"[m/s^2]"
+       end do
 
-     
-           write(*,*)'Neutral     '
+       write(*,*)'Neutral     '
 
-         
-!           write(*,123)'RhoNeu       = ',State_VGB(NeuRho_,i,j,k,iBlock)*No2SI_V(UnitRho_)," [kg/m^3]"
-!           write(*,123)'rhoUxNeu     = ',State_VGB(NeuRhoUx_,i,j,k,iBlock)*No2SI_V(UnitRhoU_),&
-!                " [kg/(m^2*s)]"
-!           write(*,123)'rhoUyNeu     = ',State_VGB(NeuRhoUy_,i,j,k,iBlock)*No2SI_V(UnitRhoU_),&
-!                " [kg/(m^2*s)]"
-!           write(*,123)'rhoUzNeu     = ',State_VGB(NeuRhoUz_,i,j,k,iBlock)*No2SI_V(UnitRhoU_),&
-!                " [kg/(m^2*s)]"
-!           write(*,123)'PNeu       = ',State_VGB(NeuP_,i,j,k,iBlock)*No2SI_V(UnitP_)," [Pa]"
+       !           write(*,123)'RhoNeu       = ',State_VGB(NeuRho_,i,j,k,iBlock)*No2SI_V(UnitRho_)," [kg/m^3]"
+       !           write(*,123)'rhoUxNeu     = ',State_VGB(NeuRhoUx_,i,j,k,iBlock)*No2SI_V(UnitRhoU_),&
+       !                " [kg/(m^2*s)]"
+       !           write(*,123)'rhoUyNeu     = ',State_VGB(NeuRhoUy_,i,j,k,iBlock)*No2SI_V(UnitRhoU_),&
+       !                " [kg/(m^2*s)]"
+       !           write(*,123)'rhoUzNeu     = ',State_VGB(NeuRhoUz_,i,j,k,iBlock)*No2SI_V(UnitRhoU_),&
+       !                " [kg/(m^2*s)]"
+       !           write(*,123)'PNeu       = ',State_VGB(NeuP_,i,j,k,iBlock)*No2SI_V(UnitP_)," [Pa]"
 
+       write(*,123)'SRhoNeuH2O= ',SRhoNeu_IC(1,i,j,k)*No2SI_V(UnitRho_)&
+            /No2SI_V(UnitT_)," [kg/(m^3*s)]"
 
-     write(*,123)'SRhoNeuH2O= ',SRhoNeu_IC(1,i,j,k)*No2SI_V(UnitRho_)&
-                   /No2SI_V(UnitT_)," [kg/(m^3*s)]"
+       write(*,123)'SRhoUxNeuH2O    = ',SRhoUxNeu_IC(1,i,j,k)&
+            *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
-          
-     write(*,123)'SRhoUxNeuH2O    = ',SRhoUxNeu_IC(1,i,j,k)&
-                              *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
-     
-     write(*,123)'SRhoUxNeuT1H2O    = ',SRhoUxNeuTerm_IIC(1,1,i,j,k)&
-                               *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
+       write(*,123)'SRhoUxNeuT1H2O    = ',SRhoUxNeuTerm_IIC(1,1,i,j,k)&
+            *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
-     write(*,123)'SRhoUxNeuT2H2O    = ',SRhoUxNeuTerm_IIC(2,1,i,j,k)&
-                              *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
+       write(*,123)'SRhoUxNeuT2H2O    = ',SRhoUxNeuTerm_IIC(2,1,i,j,k)&
+            *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
+       write(*,123)'SRhoUyNeuH2O= ',SRhoUyNeu_IC(1,i,j,k)*&
+            No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
-     write(*,123)'SRhoUyNeuH2O= ',SRhoUyNeu_IC(1,i,j,k)*&
-                           No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
-         
-     write(*,123)'SRhoUyNeuT1H2O= ',SRhoUyNeuTerm_IIC(1,1,i,j,k)&
-                          *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
-  
-     write(*,123)'SRhoUyNeuT2H2O= ',SRhoUyNeuTerm_IIC(2,1,i,j,k)&
-                          *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
+       write(*,123)'SRhoUyNeuT1H2O= ',SRhoUyNeuTerm_IIC(1,1,i,j,k)&
+            *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
+       write(*,123)'SRhoUyNeuT2H2O= ',SRhoUyNeuTerm_IIC(2,1,i,j,k)&
+            *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
-     write(*,123)'SRhoUzNeuH2O= ',SRhoUzNeu_IC(1,i,j,k)*No2SI_V(UnitRhoU_)&
-                          /No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
-     
-     write(*,123)'SRhoUzNeuT1H2O= ',SRhoUzNeuTerm_IIC(1,1,i,j,k)&
-                        *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
- 
-     write(*,123)'SRhoUzNeuT2H2O= ',SRhoUzNeuTerm_IIC(2,1,i,j,k)&
-                        *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
+       write(*,123)'SRhoUzNeuH2O= ',SRhoUzNeu_IC(1,i,j,k)*No2SI_V(UnitRhoU_)&
+            /No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
-     write(*,123)'SPNeuH2O= ',SPNeu_IC(1,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
-     write(*,123)'SPNeuT1H2O= ',SPNeuTerm_IIC(1,1,i,j,k)*&
-                                      No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
-     write(*,123)'SPNeuT2H2O      = ',SPNeuTerm_IIC(2,1,i,j,k)*&
-                                    No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
-     write(*,123)'SPNeuT3H2O      = ',SPNeuTerm_IIC(3,1,i,j,k)*&
-                                    No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
-    
- 
-   end if 
+       write(*,123)'SRhoUzNeuT1H2O= ',SRhoUzNeuTerm_IIC(1,1,i,j,k)&
+            *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
+       write(*,123)'SRhoUzNeuT2H2O= ',SRhoUzNeuTerm_IIC(2,1,i,j,k)&
+            *No2SI_V(UnitRhoU_)/No2SI_V(UnitT_)," [kg/(m^2*s^2)]"
 
+       write(*,123)'SPNeuH2O= ',SPNeu_IC(1,i,j,k)*No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
+       write(*,123)'SPNeuT1H2O= ',SPNeuTerm_IIC(1,1,i,j,k)*&
+            No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
+       write(*,123)'SPNeuT2H2O      = ',SPNeuTerm_IIC(2,1,i,j,k)*&
+            No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
+       write(*,123)'SPNeuT3H2O      = ',SPNeuTerm_IIC(3,1,i,j,k)*&
+            No2SI_V(UnitP_)/No2SI_V(UnitT_)," [Pa/s]"
+
+    end if
+
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_calc_sources
-
-  !========================================================================
+  !============================================================================
 
   subroutine user_init_point_implicit
 
     use ModPointImplicit, ONLY: iVarPointImpl_I, IsPointImplMatrixSet
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_point_implicit'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     !! Source terms are evaluated explicitly!
-    !RETURN
+    ! RETURN
     if(.not. allocated(iVarPointImpl_I)) &
          allocate(iVarPointImpl_I(5*nFluid))
 
-  !  Martin's code
-  !  do iFluid = 1, nIonFluid
-  !     iVarPointImpl_I(5*iFluid-4) = iRhoIon_I(iFluid)
-  !     iVarPointImpl_I(5*iFluid-3) = iRhoUxIon_I(iFluid)
-  !     iVarPointImpl_I(5*iFluid-2) = iRhoUyIon_I(iFluid)
-  !     iVarPointImpl_I(5*iFluid-1) = iRhoUzIon_I(iFluid)
-  !     iVarPointImpl_I(5*iFluid)   = iPIon_I(iFluid)
-  !  end do
+    !  Martin's code
+    !  do iFluid = 1, nIonFluid
+    !     iVarPointImpl_I(5*iFluid-4) = iRhoIon_I(iFluid)
+    !     iVarPointImpl_I(5*iFluid-3) = iRhoUxIon_I(iFluid)
+    !     iVarPointImpl_I(5*iFluid-2) = iRhoUyIon_I(iFluid)
+    !     iVarPointImpl_I(5*iFluid-1) = iRhoUzIon_I(iFluid)
+    !     iVarPointImpl_I(5*iFluid)   = iPIon_I(iFluid)
+    !  end do
 
-   do iFluid = 1, nFluid
+    do iFluid = 1, nFluid
        iVarPointImpl_I(5*iFluid-4) = iRho_I(iFluid)
        iVarPointImpl_I(5*iFluid-3) = iRhoUx_I(iFluid)
        iVarPointImpl_I(5*iFluid-2) = iRhoUy_I(iFluid)
@@ -934,16 +900,16 @@ subroutine read_shape_file
     end do
 
     IsPointImplMatrixSet = .false.
-    !IsAsymmetric= .false.
+    ! IsAsymmetric= .false.
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
+  !============================================================================
 
-  !========================================================================
-
-    subroutine user_set_ICs(iBlock)
+  subroutine user_set_ICs(iBlock)
     use ModIO,       ONLY: restart
     use ModProcMH,   ONLY: iProc
-    use ModMain,     ONLY: iTest, jTest, kTest, ProcTest, BlkTest, Body1_, Body1
+    use ModMain,     ONLY:      Body1_, Body1
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics
     use ModConst,    ONLY: cBoltzmann
@@ -951,111 +917,99 @@ subroutine read_shape_file
 
     integer, intent(in) :: iBlock
 
-    logical :: DoTest, DoTestMe=.true.
     integer :: i, j, k, iIonFluid
     ! !-------------------------------------------------------------------------
-    if(iProc==PROCtest .and. iBlock==BLKtest)then
-       call set_oktest('user_set_ICs', DoTest, DoTestMe)
-    else
-       DoTest=.false.; DoTestMe=.false.
-    end if
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ICs'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-    
     MassNeu_I=MassFluid_I(1:nNeuFluid)
     MassFluid_I(nNeuFluid+1:nFluid)=4/3*cPi*dustradius_I**3*dustDensity/cProtonMass
- 
-   
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-     !  if ((Body1) .and. (R_BLK(i,j,k,iBlock) < bodyRadius*SI2No_V(UnitX_))) then
-          ! State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Body1_)
-          ! State_VGB(iUx_I,i,j,k,iBlock) = 0.
-          ! State_VGB(iUy_I,i,j,k,iBlock) = 0.
-          ! State_VGB(iUz_I,i,j,k,iBlock) = 0.
-          ! State_VGB(iPIon_I,i,j,k,iBlock) = BodyNDim_I*cBoltzmann*BodyTDim_I*1e6*SI2No_V(UnitP_)
-          ! if (UseElectronPressure) then
-          !    State_VGB(P_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))
-          !    State_VGB(Pe_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)*&
-          !         ElectronPressureRatio
-          ! else
-          !    State_VGB(P_,i,j,k,iBlock) = &
-          !         sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1.+ElectronPressureRatio)
-          ! end if
-      ! else
+       !  if ((Body1) .and. (R_BLK(i,j,k,iBlock) < bodyRadius*SI2No_V(UnitX_))) then
+       ! State_VGB(:,i,j,k,iBlock) = CellState_VI(:,Body1_)
+       ! State_VGB(iUx_I,i,j,k,iBlock) = 0.
+       ! State_VGB(iUy_I,i,j,k,iBlock) = 0.
+       ! State_VGB(iUz_I,i,j,k,iBlock) = 0.
+       ! State_VGB(iPIon_I,i,j,k,iBlock) = BodyNDim_I*cBoltzmann*BodyTDim_I*1e6*SI2No_V(UnitP_)
+       ! if (UseElectronPressure) then
+       !    State_VGB(P_,i,j,k,iBlock) = sum(State_VGB(iPIon_I,i,j,k,iBlock))
+       !    State_VGB(Pe_,i,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)*&
+       !         ElectronPressureRatio
+       ! else
+       !    State_VGB(P_,i,j,k,iBlock) = &
+       !         sum(State_VGB(iPIon_I,i,j,k,iBlock))*(1.+ElectronPressureRatio)
+       ! end if
+       ! else
 
-           State_VGB(H2ORho_,i,j,k,iBlock)= 1e11*Si2No_V(UnitN_)
-        !   State_VGB(H2ORho_,i,j,k,iBlock)= Qprod/(4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2&
-        !       *uNeutr_I(H2O_))*exp(-DestructRate_I(H2O_)/(0.9*uNeutr_I(H2O_))*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))&
-      !         *Si2No_V(UnitN_)*MassNeu_I(H2O_)
+       State_VGB(H2ORho_,i,j,k,iBlock)= 1e11*Si2No_V(UnitN_)
+       !   State_VGB(H2ORho_,i,j,k,iBlock)= Qprod/(4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2&
+       !       *uNeutr_I(H2O_))*exp(-DestructRate_I(H2O_)/(0.9*uNeutr_I(H2O_))*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))&
+       !         *Si2No_V(UnitN_)*MassNeu_I(H2O_)
 
-      !     State_VGB(H2ORhoUx_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*&       !dimensionless 
-      !         0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_) 
-      !     State_VGB(H2ORhoUy_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*&       !dimensionless 
-      !         0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)               
-      !     State_VGB(H2ORhoUz_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*&       !dimensionless 
+       !     State_VGB(H2ORhoUx_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*&       ! dimensionless
+       !         0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
+       !     State_VGB(H2ORhoUy_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*&       ! dimensionless
+       !         0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
+       !     State_VGB(H2ORhoUz_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*&       ! dimensionless
        !        0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(z_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
-                  
-           State_VGB(H2ORhoUx_,i,j,k,iBlock)= 0.0
-                                
-           State_VGB(H2ORhoUy_,i,j,k,iBlock)= 0.0
-                                
-           State_VGB(H2ORhoUz_,i,j,k,iBlock)= 0.0
-                                
-        State_VGB(H2OP_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)/MassNeu_I(H2O_)*& 
-                             30*Io2No_V(UnitTemperature_)
 
-     !   State_VGB(HRho_,i,j,k,iBlock)=Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**(-1.6103)&
-     !                     *MassNeu_I(H_)*SI2No_V(UnitN_)
-        State_VGB(HRho_,i,j,k,iBlock) = 1e8*SI2No_V(UnitN_) 
-        State_VGB(HRhoUx_,i,j,k,iBlock)= 0.0
-        State_VGB(HRhoUy_,i,j,k,iBlock)= 0.0
-        State_VGB(HRhoUz_,i,j,k,iBlock)= 0.0
-        State_VGB(HP_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)/MassNeu_I(H_)*& 
-                             30*Io2No_V(UnitTemperature_)
-    !    State_VGB(HRhoUx_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)*&       !dimensionless                   
-    !       0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)             
-    !    State_VGB(HRhoUy_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)*&       !dimensionless                   
-    !       0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
-    !    State_VGB(HRhoUz_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)*&       !dimensionless                   
-    !       0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(z_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
-  
+       State_VGB(H2ORhoUx_,i,j,k,iBlock)= 0.0
 
+       State_VGB(H2ORhoUy_,i,j,k,iBlock)= 0.0
 
+       State_VGB(H2ORhoUz_,i,j,k,iBlock)= 0.0
 
-        State_VGB(iRhoDust_I,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*dust2gas*&
-                           dustMassDistr_I(Dust1_:Dust6_)/sum(dustMassDistr_I)*1e-3
-        
-     !   State_VGB(iRhoUxDust_I,i,j,k,iBlock)=State_VGB(iRhoDust_I,i,j,k,iBlock)*&   !dimensionless 
-     !                      0.5*UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*SI2No_V(UnitU_)
-     !   State_VGB(iRhoUyDust_I,i,j,k,iBlock)=State_VGB(iRhoDust_I,i,j,k,iBlock)*&   !dimensionless 
-     !                      0.5*UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*SI2No_V(UnitU_)
-     !   State_VGB(iRhoUzDust_I,i,j,k,iBlock)=State_VGB(iRhoDust_I,i,j,k,iBlock)*&   !dimensionless 
-     !                      0.5*UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*SI2No_V(UnitU_)
- 
-        State_VGB(iRhoUxDust_I,i,j,k,iBlock)= 0.0
-        State_VGB(iRhoUyDust_I,i,j,k,iBlock)= 0.0
-        State_VGB(iRhoUzDust_I,i,j,k,iBlock)= 0.0
-        State_VGB(iPDust_I,i,j,k,iBlock)= 1e-20*SI2No_V(UnitP_)  
-        
-     !  end if
+       State_VGB(H2OP_,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)/MassNeu_I(H2O_)*&
+            30*Io2No_V(UnitTemperature_)
+
+       !   State_VGB(HRho_,i,j,k,iBlock)=Qprod*1.205E-11*1e6*(1E2*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**(-1.6103)&
+       !                     *MassNeu_I(H_)*SI2No_V(UnitN_)
+       State_VGB(HRho_,i,j,k,iBlock) = 1e8*SI2No_V(UnitN_)
+       State_VGB(HRhoUx_,i,j,k,iBlock)= 0.0
+       State_VGB(HRhoUy_,i,j,k,iBlock)= 0.0
+       State_VGB(HRhoUz_,i,j,k,iBlock)= 0.0
+       State_VGB(HP_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)/MassNeu_I(H_)*&
+            30*Io2No_V(UnitTemperature_)
+       !    State_VGB(HRhoUx_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)*&       ! dimensionless
+       !       0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(x_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
+       !    State_VGB(HRhoUy_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)*&       ! dimensionless
+       !       0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(y_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
+       !    State_VGB(HRhoUz_,i,j,k,iBlock)= State_VGB(HRho_,i,j,k,iBlock)*&       ! dimensionless
+       !       0.5*0.7*uNeutr_I(H2O_)*Xyz_DGB(z_,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)*SI2No_V(UnitU_)
+
+       State_VGB(iRhoDust_I,i,j,k,iBlock)= State_VGB(H2ORho_,i,j,k,iBlock)*dust2gas*&
+            dustMassDistr_I(Dust1_:Dust6_)/sum(dustMassDistr_I)*1e-3
+
+       !   State_VGB(iRhoUxDust_I,i,j,k,iBlock)=State_VGB(iRhoDust_I,i,j,k,iBlock)*&   ! dimensionless
+       !                      0.5*UnxNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*SI2No_V(UnitU_)
+       !   State_VGB(iRhoUyDust_I,i,j,k,iBlock)=State_VGB(iRhoDust_I,i,j,k,iBlock)*&   ! dimensionless
+       !                      0.5*UnyNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*SI2No_V(UnitU_)
+       !   State_VGB(iRhoUzDust_I,i,j,k,iBlock)=State_VGB(iRhoDust_I,i,j,k,iBlock)*&   ! dimensionless
+       !                      0.5*UnzNeutral_IG(H2O_,i-MinI+1,j-MinJ+1,k-MinK+1)*SI2No_V(UnitU_)
+
+       State_VGB(iRhoUxDust_I,i,j,k,iBlock)= 0.0
+       State_VGB(iRhoUyDust_I,i,j,k,iBlock)= 0.0
+       State_VGB(iRhoUzDust_I,i,j,k,iBlock)= 0.0
+       State_VGB(iPDust_I,i,j,k,iBlock)= 1e-20*SI2No_V(UnitP_)
+
+       !  end if
     end do; end do ; end do
-     
-  
 
-
-
-    if(DoTestMe) then
+    if(DoTest) then
        i=iTest ; j=jTest ; k=kTest
 123    format (A13,ES25.16,A15)
-  
-     write(*,*) 'iRhoDust_I', iRhoDust_I
-     write(*,*) 'dustmassdistr_I',dustMassDistr_I
-     write(*,*) 'mass/sum',dustMassDistr_I/sum(dustMassDistr_I)
+
+       write(*,*) 'iRhoDust_I', iRhoDust_I
+       write(*,*) 'dustmassdistr_I',dustMassDistr_I
+       write(*,*) 'mass/sum',dustMassDistr_I/sum(dustMassDistr_I)
 
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ICs
-
   !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -1066,10 +1020,10 @@ subroutine read_shape_file
          iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc
     use ModMain,         ONLY: body1_, n_step, time_simulation, time_accurate, Dt
     use ModPhysics,      ONLY: LowDensityRatio,UnitTemperature_, Io2No_V,  &
-        NO2SI_V, UnitP_, UnitRho_, UnitRhoU_, UnitU_, UnitB_, UnitN_, Io2SI_V, &
-        rBody,cPi,rPlanetSI,SI2No_V,UnitX_
+         NO2SI_V, UnitP_, UnitRho_, UnitRhoU_, UnitU_, UnitB_, UnitN_, Io2SI_V, &
+         rBody,cPi,rPlanetSI,SI2No_V,UnitX_
     use ModGeometry,      ONLY: R_BLK, Xyz_DGB,ExtraBc_
-    use BATL_lib, ONLY: CellSize_DB  
+    use BATL_lib, ONLY: CellSize_DB
     use ModNumConst, ONLY : cDegToRad, cRadToDeg
     use ModCoordTransform, ONLY: dir_to_xyz
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
@@ -1077,12 +1031,11 @@ subroutine read_shape_file
     use ModConst, ONLY: cProtonMass
 
     logical :: FirstCall = .true., DoTest, DoTestMe=.true.
-    !real    :: UdotR(nIonFluid), URefl_D(1:3,nIonFluid)
-    !real    :: BdotR, BRefl_D(1:3)
+    ! real    :: UdotR(nIonFluid), URefl_D(1:3,nIonFluid)
+    ! real    :: BdotR, BRefl_D(1:3)
 
-    real, intent(out):: VarsGhostFace_V(nVar) 
-    !=======================================================================
-    logical :: DoTestHere=.true., IsIlluminated = .false.  
+    real, intent(out):: VarsGhostFace_V(nVar)
+    logical :: DoTestHere=.true., IsIlluminated = .false.
 
     integer:: iTrue, jTrue, kTrue, iBody, jBody, kBody
 
@@ -1097,208 +1050,192 @@ subroutine read_shape_file
     integer:: nStepLonSun = -1
     real, save :: NormalSun_D(3)
 
-   
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    !=======================================================================
-
-    !------------------------------------------------------------------------
-
-    if(DoTestMe.and.FirstCall) then
-       call set_oktest('user_set_face_boundary',DoTest,DoTestMe)
+    if(DoTest.and.FirstCall) then
     else
-       DoTest=.false.; DoTestMe=.false.
+       DoTest=.false.; DoTest=.false.
     end if
 
     MassNeu_I=MassFluid_I(1:nNeuFluid)
-  
-!=====================================================================================
+
     !! Outer boundaries
     if(iBoundary > 0) then
 
        VarsGhostFace_V = VarsTrueFace_V
-          
-    !! Body boundaries
+
+       !! Body boundaries
     else if (iBoundary == ExtraBc_) then
-     
-  !   write(*,*) 'extraBc Test1'   !Yinsi
-!==================================================================================
-    ! We can use the saved values if 
-    ! not too much time or time step has passed since the last save
-    if (use_block_data(iBlock))  then
-       call get_block_data(iBlock, nVar, VarsGhostFace_V)
-     !  VarsGhostFace_V(HRho_:HP_) = VarsTrueFace_V(HRho_:HP_)
-       RETURN
-    end if
 
-   
-   
-   !  write(*,*) 'extraBc test2' ! Yinsi
-   !=====================================================================================
+       !   write(*,*) 'extraBc Test1'   ! Yinsi
+       ! We can use the saved values if
+       ! not too much time or time step has passed since the last save
+       if (use_block_data(iBlock))  then
+          call get_block_data(iBlock, nVar, VarsGhostFace_V)
+          !  VarsGhostFace_V(HRho_:HP_) = VarsTrueFace_V(HRho_:HP_)
+          RETURN
+       end if
 
-    ! Recalculate LonSunNow if needed. Note that we use Time_Simulation
-    ! that only changes after the full time step is done
-    ! and not ModFaceBoundary::TimeBc that can change during subcycling.
-  
-       call set_oktest(NameSub, DoTest, DoTestMe)
+       !  write(*,*) 'extraBc test2' ! Yinsi
 
-     
+       ! Recalculate LonSunNow if needed. Note that we use Time_Simulation
+       ! that only changes after the full time step is done
+       ! and not ModFaceBoundary::TimeBc that can change during subcycling.
+
        ! Use input direction
-          LonSunNow = LonSun
-        if (DoTest) write(*,*) NameSub, &
-               ': iProc, LonSun, LonSunNow=', iProc, LonSun, LonSunNow
-
+       LonSunNow = LonSun
+       if (DoTest) write(*,*) NameSub, &
+            ': iProc, LonSun, LonSunNow=', iProc, LonSun, LonSunNow
 
        ! Get the direction vector to the Sun
        call dir_to_xyz((90-LatSun)*cDegToRad, LonSunNow*cDegToRad, NormalSun_D)
 
+       ! Save step and simulation time info
+       nStepSave_B(iBlock)          = n_step
+       TimeSimulationSave_B(iBlock) = Time_Simulation
 
-    ! Save step and simulation time info
-    nStepSave_B(iBlock)          = n_step
-    TimeSimulationSave_B(iBlock) = Time_Simulation
+       ! Floating boundary condition by default
+       VarsGhostFace_V = VarsTrueFace_V
 
-    ! Floating boundary condition by default
-    VarsGhostFace_V = VarsTrueFace_V
+       ! Default indexes for the true and body cells
+       iTrue = iFace; jTrue = jFace; kTrue = kFace
+       iBody = iFace; jBody = jFace; kBody = kFace
 
-    ! Default indexes for the true and body cells
-    iTrue = iFace; jTrue = jFace; kTrue = kFace
-    iBody = iFace; jBody = jFace; kBody = kFace
+       select case(iSide)
+       case(1)
+          iBody = iFace - 1
+       case(2)
+          iTrue = iFace - 1
+       case(3)
+          jBody = jFace - 1
+       case(4)
+          jTrue = jFace - 1
+       case(5)
+          kBody = kFace -1
+       case(6)
+          kTrue = kFace -1
+       end select
 
-    select case(iSide)
-    case(1)
-       iBody = iFace - 1
-    case(2)
-       iTrue = iFace - 1
-    case(3)
-       jBody = jFace - 1
-    case(4)
-       jTrue = jFace - 1
-    case(5)
-       kBody = kFace -1
-    case(6)
-       kTrue = kFace -1
-    end select
+       XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlock)
+       XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlock)
 
-    XyzBodyCell_D = Xyz_DGB(:,iBody,jBody,kBody,iBlock)
-    XyzTrueCell_D = Xyz_DGB(:,iTrue,jTrue,kTrue,iBlock)
-
-    ! Find the intersection point between the true cell and the body cell
-    ! that is closest to the true cell
-    if (.not. is_segment_intersected( &
-         XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
-         XyzIntersectOut_D=XyzIntersect_D, NormalOut_D = Normal_D))then
-       write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
-       write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
-       write(*,*) NameSub,' error for face =', iFace, jFace, kFace
-       write(*,*) NameSub,' error for iside, iBlock=', iSide, iBlock
-       call stop_mpi(NameSub// &
-            ': No intersection points are found between true and the body cells')
-    end if
-
-    ! Fix the normal direction if it is not pointing outward
-    if (sum(Normal_D*(XyzTrueCell_D - XyzBodyCell_D)) < 0.0) &
-         Normal_D = -Normal_D
-
-    ! Set local outflow parameters as default that may be overwritten if illuminated
-    TempCometLocal      = TempCometMin
-    ProductionRateLocal = ProductionRateMin
-
-    ! Check if Sun light hits the shape
-    CosAngle = sum(Normal_D*NormalSun_D)
-
-    if (CosAngle > 0.0) then
-
-       ! See whether the intersection point is in the shade by going towards the Sun
-       ! and checking for intersection with the shape
-       XyzStart_D = XyzIntersect_D + 1e-9*rMaxShape*NormalSun_D
-       XyzEnd_D   = XyzIntersect_D +    2*rMaxShape*NormalSun_D
-       if(.not.is_segment_intersected(XyzStart_D, XyzEnd_D)) then
-          IsIlluminated = .true.
-
-          ! Increase temperature of the face if it is illuminated
-          TempCometLocal      = max( TempCometMin, &
-               SlopeTemp / CosAngle + bTemp)
-          ! Increase neutral production rate
-          ProductionRateLocal = max( ProductionRateMin, &
-               SlopeProduction * CosAngle + bProduction )
+       ! Find the intersection point between the true cell and the body cell
+       ! that is closest to the true cell
+       if (.not. is_segment_intersected( &
+            XyzTrueCell_D, XyzBodyCell_D, IsOddIn = .true., &
+            XyzIntersectOut_D=XyzIntersect_D, NormalOut_D = Normal_D))then
+          write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
+          write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
+          write(*,*) NameSub,' error for face =', iFace, jFace, kFace
+          write(*,*) NameSub,' error for iside, iBlock=', iSide, iBlock
+          call stop_mpi(NameSub// &
+               ': No intersection points are found between true and the body cells')
        end if
+
+       ! Fix the normal direction if it is not pointing outward
+       if (sum(Normal_D*(XyzTrueCell_D - XyzBodyCell_D)) < 0.0) &
+            Normal_D = -Normal_D
+
+       ! Set local outflow parameters as default that may be overwritten if illuminated
+       TempCometLocal      = TempCometMin
+       ProductionRateLocal = ProductionRateMin
+
+       ! Check if Sun light hits the shape
+       CosAngle = sum(Normal_D*NormalSun_D)
+
+       if (CosAngle > 0.0) then
+
+          ! See whether the intersection point is in the shade by going towards the Sun
+          ! and checking for intersection with the shape
+          XyzStart_D = XyzIntersect_D + 1e-9*rMaxShape*NormalSun_D
+          XyzEnd_D   = XyzIntersect_D +    2*rMaxShape*NormalSun_D
+          if(.not.is_segment_intersected(XyzStart_D, XyzEnd_D)) then
+             IsIlluminated = .true.
+
+             ! Increase temperature of the face if it is illuminated
+             TempCometLocal      = max( TempCometMin, &
+                  SlopeTemp / CosAngle + bTemp)
+             ! Increase neutral production rate
+             ProductionRateLocal = max( ProductionRateMin, &
+                  SlopeProduction * CosAngle + bProduction )
+          end if
+       end if
+
+       ! Calculate the normal velocity
+       uNormal = sqrt(TempCometLocal)*TempToUnormal
+
+       VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
+       VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal*MassFluid_I(1)
+       VarsGhostFace_V(P_)      = &
+            VarsGhostFace_V(Rho_)*TempCometLocal*TempToPressure
+
+       VarsGhostFace_V(HUx_:HUz_) = Normal_D*uNormal
+       VarsGhostFace_V(HRho_)= VarsGhostFace_V(Rho_)/1e7
+       VarsGhostFace_V(HP_)      = &
+            VarsGhostFace_V(HRho_)*TempCometLocal*TempToPressure*18
+       ! since temp2pressure is for h2o
+
+       VarsGhostFace_V(iRhoDust_I) = VarsGhostFace_V(H2ORho_)*dust2gas*&
+            dustMassDistr_I(Dust1_:Dust6_)/sum(dustMassDistr_I)
+       VarsGhostFace_V(iPDust_I) = 1e-20*SI2No_V(UnitP_)
+
+       gravityNormal = -sum(Normal_D*gravity_DCB(:,iFace,jFace,kFace,iBlock))  ! positve direction for gnormal is outward
+       maxLiftableSize = 3/8.0*cDrag*ProductionRateLocal*No2SI_V(UnitN_)*No2SI_V(UnitU_)* &
+            cProtonMass*MassNeu_I(H2O_)*uNormal*No2SI_V(UnitU_)/&
+            (dustDensity*gravityNormal)
+
+       if (addGravity==1) then
+          where (dustRadius_I > maxLiftableSize)
+             VarsGhostFace_V(iRhoDust_I)= VarsGhostFace_V(iRhoDust_I)*1e-3;
+          end where
+       end if
+       ! VarsGhostFace_V(iRhoUxDust_I)=Normal_D(1)*uNormal
+       VarsGhostFace_V(iRhoUxDust_I)= 0.0
+
+       ! VarsGhostFace_V(iRhoUyDust_I)=Normal_D(2)*uNormal
+       VarsGhostFace_V(iRhoUyDust_I)= 0.0
+       ! VarsGhostFace_V(iRhoUzDust_I)=Normal_D(3)*uNormal
+       VarsGhostFace_V(iRhoUzDust_I)= 0.0
+
+       if (.false. .and. DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
+          FaceCoordsTest_D = FaceCoords_D
+
+          write(*,*) 'FaceCoords_D  =', FaceCoords_D
+          write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
+          write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
+          write(*,*) 'XyzIntersect_D=', XyzIntersect_D
+          write(*,*) 'XyzStart_D    =', XyzStart_D
+          write(*,*) 'XyzEnd_D      =', XyzEnd_D
+          write(*,*) 'Normal_D      =', Normal_D
+          write(*,*) 'CosAngle      =', CosAngle
+          write(*,*) 'ProductionRate=', ProductionRateLocal
+          write(*,*) 'TempLocal [K] =', No2Si_V(UnitTemperature_)*TempCometLocal
+          write(*,*) 'Temperature[K]=', No2Si_V(UnitTemperature_)* &
+               VarsGhostFace_V(p_)*MassFluid_I(1)/VarsGhostFace_V(Rho_)
+          write(*,*) 'Rho           =', VarsGhostFace_V(Rho_)
+          write(*,*) 'u_D           =', VarsGhostFace_V(Ux_:Uz_)
+          write(*,*) 'uNormal       =', uNormal
+          write(*,*) 'p             =', VarsGhostFace_V(p_)
+          write(*,*) 'Mach number   =', &
+               uNormal/sqrt(Gamma*VarsGhostFace_V(p_)/VarsGhostFace_V(Rho_))
+          DoTestHere=.false.
+       end if
+
+       IsIlluminated = .false.
+
+       ! Store for future time steps
+       call put_block_data(iBlock, nVar, VarsGhostFace_V)
+
     end if
 
-    ! Calculate the normal velocity
-    uNormal = sqrt(TempCometLocal)*TempToUnormal
-    
-    VarsGhostFace_V(Ux_:Uz_) = Normal_D*uNormal
-    VarsGhostFace_V(Rho_)    = ProductionRateLocal/uNormal*MassFluid_I(1)
-    VarsGhostFace_V(P_)      = &
-         VarsGhostFace_V(Rho_)*TempCometLocal*TempToPressure
-
-    VarsGhostFace_V(HUx_:HUz_) = Normal_D*uNormal
-    VarsGhostFace_V(HRho_)= VarsGhostFace_V(Rho_)/1e7    
-    VarsGhostFace_V(HP_)      = &
-         VarsGhostFace_V(HRho_)*TempCometLocal*TempToPressure*18 
-! since temp2pressure is for h2o
-
-
-    VarsGhostFace_V(iRhoDust_I) = VarsGhostFace_V(H2ORho_)*dust2gas*&
-                               dustMassDistr_I(Dust1_:Dust6_)/sum(dustMassDistr_I)
-    VarsGhostFace_V(iPDust_I) = 1e-20*SI2No_V(UnitP_)
-
-    gravityNormal = -sum(Normal_D*gravity_DCB(:,iFace,jFace,kFace,iBlock))  ! positve direction for gnormal is outward
-    maxLiftableSize = 3/8.0*cDrag*ProductionRateLocal*No2SI_V(UnitN_)*No2SI_V(UnitU_)* &
-                     cProtonMass*MassNeu_I(H2O_)*uNormal*No2SI_V(UnitU_)/&
-                     (dustDensity*gravityNormal)
-              
-    if (addGravity==1) then
-       where (dustRadius_I > maxLiftableSize)
-       VarsGhostFace_V(iRhoDust_I)= VarsGhostFace_V(iRhoDust_I)*1e-3;
-       end where
-    end if    
-   ! VarsGhostFace_V(iRhoUxDust_I)=Normal_D(1)*uNormal
-     VarsGhostFace_V(iRhoUxDust_I)= 0.0
-                             
-   ! VarsGhostFace_V(iRhoUyDust_I)=Normal_D(2)*uNormal
-     VarsGhostFace_V(iRhoUyDust_I)= 0.0                     
-   ! VarsGhostFace_V(iRhoUzDust_I)=Normal_D(3)*uNormal
-     VarsGhostFace_V(iRhoUzDust_I)= 0.0  
-
-    if (.false. .and. DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
-       FaceCoordsTest_D = FaceCoords_D
-       
-       write(*,*) 'FaceCoords_D  =', FaceCoords_D
-       write(*,*) 'XyzTrueCell_D =', XyzTrueCell_D
-       write(*,*) 'XyzBodyCell_D =', XyzBodyCell_D
-       write(*,*) 'XyzIntersect_D=', XyzIntersect_D
-       write(*,*) 'XyzStart_D    =', XyzStart_D 
-       write(*,*) 'XyzEnd_D      =', XyzEnd_D 
-       write(*,*) 'Normal_D      =', Normal_D
-       write(*,*) 'CosAngle      =', CosAngle
-       write(*,*) 'ProductionRate=', ProductionRateLocal
-       write(*,*) 'TempLocal [K] =', No2Si_V(UnitTemperature_)*TempCometLocal
-       write(*,*) 'Temperature[K]=', No2Si_V(UnitTemperature_)* &
-            VarsGhostFace_V(p_)*MassFluid_I(1)/VarsGhostFace_V(Rho_)
-       write(*,*) 'Rho           =', VarsGhostFace_V(Rho_)
-       write(*,*) 'u_D           =', VarsGhostFace_V(Ux_:Uz_)
-       write(*,*) 'uNormal       =', uNormal
-       write(*,*) 'p             =', VarsGhostFace_V(p_)
-       write(*,*) 'Mach number   =', &
-            uNormal/sqrt(Gamma*VarsGhostFace_V(p_)/VarsGhostFace_V(Rho_))
-       DoTestHere=.false.
-    end if
-
-    IsIlluminated = .false.
-
-    ! Store for future time steps
-    call put_block_data(iBlock, nVar, VarsGhostFace_V)
-
-
-    end if
-
-
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
-
   !============================================================================
 
- logical function is_segment_intersected(Xyz1_D, Xyz2_D, &
+  logical function is_segment_intersected(Xyz1_D, Xyz2_D, &
        IsOddIn, XyzIntersectOut_D, NormalOut_D)
 
     ! Check if a line segment connecting Xyz1_D and Xyz2_D intersects
@@ -1323,10 +1260,10 @@ subroutine read_shape_file
     real, dimension(3):: v1_D, Xyz_D, u_D, v_D, w_D
     real:: nDotP2P1, nDotV1P1, u2, v2, uDotV, wDotU, wDotV, InvDenom
 
-    character(len=*), parameter:: NameSub = 'is_segment_intersected'
-    !------------------------------------------------------------------------
     ! Default is to check for first intersection only
     ! (for shadows and convex shapes)
+    character(len=*), parameter:: NameSub = 'is_segment_intersected'
+    !--------------------------------------------------------------------------
     IsOdd = .false.
     if(present(IsOddIn))   IsOdd = IsOddIn
 
@@ -1343,7 +1280,7 @@ subroutine read_shape_file
              write(*,*) 'Test:', &
                   sum(Normal_DI(:,iTriangle)*(Xyz1_D - XyzTriangle_DII(:,1,iTriangle)))
              CYCLE
-          else 
+          else
              CYCLE
           end if
        end if
@@ -1368,8 +1305,8 @@ subroutine read_shape_file
        ! 0 < Ratio1, Ratio2 and Ratio1 + Ratio2 < 1 both hold.
 
        ! Vectors relative to the first vertex
-       u_D = XyzTriangle_DII(:,2,iTriangle) - v1_D 
-       v_D = XyzTriangle_DII(:,3,iTriangle) - v1_D 
+       u_D = XyzTriangle_DII(:,2,iTriangle) - v1_D
+       v_D = XyzTriangle_DII(:,3,iTriangle) - v1_D
        w_D = Xyz_D                          - v1_D
 
        u2 = sum(u_D**2)
@@ -1388,13 +1325,13 @@ subroutine read_shape_file
        ! Second barycentric coordinate
        Ratio2 = (uDotV*wDotU - u2*wDotV)*InvDenom
 
-!       if (abs(Xyz2_D(1) -xTest) <= 1e-4 .and. &
-!            abs(Xyz2_D(2) - yTest) <= 1e-4 .and. &
-!            abs(Xyz2_D(3) - zTest) <= 1e-4) then
-!          if (abs(Ratio2) < 1e-10 .or. abs(Ratio2 - 1.0) < 1e-10) then
-!             write(*,*) 'iTriangle: ', iTriangle, 'Ratio1: ', Ratio1, 'Ratio2: ', Ratio2
-!          end if
-!       end if
+       !       if (abs(Xyz2_D(1) -xTest) <= 1e-4 .and. &
+       !            abs(Xyz2_D(2) - yTest) <= 1e-4 .and. &
+       !            abs(Xyz2_D(3) - zTest) <= 1e-4) then
+       !          if (abs(Ratio2) < 1e-10 .or. abs(Ratio2 - 1.0) < 1e-10) then
+       !             write(*,*) 'iTriangle: ', iTriangle, 'Ratio1: ', Ratio1, 'Ratio2: ', Ratio2
+       !          end if
+       !       end if
 
        if(         Ratio2 <    -1e-12) CYCLE
        if(Ratio1 + Ratio2 > 1.0+1e-12) CYCLE
@@ -1427,17 +1364,17 @@ subroutine read_shape_file
        iTriangle = iTriangle_I(iMinRatio)
        NormalOut_D = Normal_DI(:,iTriangle)
 
-       if (nIntersect > 1) then          
-!          write(*,*) 'nIntersect: ', nIntersect, 'Ratio_I: ', Ratio_I(1:nIntersect)
-!          write(*,*) 'Xyz1_D: ', Xyz1_D
-!          write(*,*) 'Xyz2_D: ', Xyz2_D
-!          do iIntersect = 1, nIntersect
-!             iTriangle = Triangle_I(iIntersect)
-!             write(*,*) XyzTriangle_DII(:,1,iTriangle)
-!             write(*,*) XyzTriangle_DII(:,2,iTriangle)
-!             write(*,*) XyzTriangle_DII(:,3,iTriangle)
-!          end do
-          write(*,*)  'Ratio_I(iMinRatio)            = ', Ratio_I(iMinRatio) 
+       if (nIntersect > 1) then
+          !          write(*,*) 'nIntersect: ', nIntersect, 'Ratio_I: ', Ratio_I(1:nIntersect)
+          !          write(*,*) 'Xyz1_D: ', Xyz1_D
+          !          write(*,*) 'Xyz2_D: ', Xyz2_D
+          !          do iIntersect = 1, nIntersect
+          !             iTriangle = Triangle_I(iIntersect)
+          !             write(*,*) XyzTriangle_DII(:,1,iTriangle)
+          !             write(*,*) XyzTriangle_DII(:,2,iTriangle)
+          !             write(*,*) XyzTriangle_DII(:,3,iTriangle)
+          !          end do
+          write(*,*)  'Ratio_I(iMinRatio)            = ', Ratio_I(iMinRatio)
           write(*,*)  'minval(Ratio_I(1:nIntersect)) = ', minval(Ratio_I(1:nIntersect))
           write(*,*)  'Ratio_I(1:nIntersect)', Ratio_I(1:nIntersect)
        end if
@@ -1445,7 +1382,7 @@ subroutine read_shape_file
     if(present(XyzIntersectOut_D)) then
        XyzIntersectOut_D = Xyz1_D + minval(Ratio_I(1:nIntersect))*(Xyz2_D -  Xyz1_D)
     end if
-    
+
     if(.not. IsOdd)then
        ! The line segment was not intersected by any triangle
        is_segment_intersected = .false.
@@ -1457,9 +1394,9 @@ subroutine read_shape_file
     is_segment_intersected = modulo(nIntersect, 2) == 1
 
   end function is_segment_intersected
+  !============================================================================
 
- !=================================================================================
-subroutine user_update_states(iBlock)
+  subroutine user_update_states(iBlock)
 
     use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,  ONLY: State_VGB
@@ -1470,100 +1407,99 @@ subroutine user_update_states(iBlock)
 
     integer,intent(in) :: iBlock
 
-
-    !----------------------------------------------------------------------                                                                                
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     call update_state_normal(iBlock)
 
-    ! Enforce a constant Ht pressure                                                                                                                       
+    ! Enforce a constant Ht pressure
 
-   !  State_VGB(Dust1P_,:,:,:,iBlock) = maxval(State_VGB(Dust1P_,:,:,:,iBlock))*No2SI_V(UnitN_)*&
-   !                                  50*cBoltzmann*SI2No_V(UnitP_)
-    
-       State_VGB(iPDust_I,:,:,:,iBlock) = 1e-20*SI2No_V(UnitP_)
+    !  State_VGB(Dust1P_,:,:,:,iBlock) = maxval(State_VGB(Dust1P_,:,:,:,iBlock))*No2SI_V(UnitN_)*&
+    !                                  50*cBoltzmann*SI2No_V(UnitP_)
+
+    State_VGB(iPDust_I,:,:,:,iBlock) = 1e-20*SI2No_V(UnitP_)
 
     call calc_energy_cell(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
+  !============================================================================
 
+  subroutine user_set_plot_var(iBlock, NameVar, IsDimensional,&
+       PlotVar_G, PlotVarBody, UsePlotVarBody,&
+       NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-!================================================================================
+    use ModAdvance,    ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
+         ElectronCharge, ElectronPressureRatio
+    use ModVarIndexes, ONLY: Rho_, P_, Pe_
+    use ModConst,      ONLY: cBoltzmann
+    use ModCurrent,    ONLY: get_current
+    use ModMultiFluid, ONLY: MassIon_I
+    use ModMain,       ONLY: Dt_BLK
 
-subroutine user_set_plot_var(iBlock, NameVar, IsDimensional,&
-      PlotVar_G, PlotVarBody, UsePlotVarBody,&
-      NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
+    integer,          intent(in)   :: iBlock
+    character(len=*), intent(in)   :: NameVar
+    logical,          intent(in)   :: IsDimensional
+    real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
+    real,             intent(out)  :: PlotVarBody
+    logical,          intent(out)  :: UsePlotVarBody
+    character(len=*), intent(inout):: NameTecVar
+    character(len=*), intent(inout):: NameTecUnit
+    character(len=*), intent(inout):: NameIdlUnit
+    logical,          intent(out)  :: IsFound
 
-   use ModAdvance,    ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_
-   use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_, &
-        ElectronCharge, ElectronPressureRatio
-   use ModVarIndexes, ONLY: Rho_, P_, Pe_
-   use ModConst,      ONLY: cBoltzmann
-   use ModCurrent,    ONLY: get_current
-   use ModMultiFluid, ONLY: MassIon_I
-   use ModMain,       ONLY: Dt_BLK
+    integer :: i, j, k
 
-   integer,          intent(in)   :: iBlock
-   character(len=*), intent(in)   :: NameVar
-   logical,          intent(in)   :: IsDimensional
-   real,             intent(out)  :: PlotVar_G(-1:nI+2, -1:nJ+2, -1:nK+2)
-   real,             intent(out)  :: PlotVarBody
-   logical,          intent(out)  :: UsePlotVarBody
-   character(len=*), intent(inout):: NameTecVar
-   character(len=*), intent(inout):: NameTecUnit
-   character(len=*), intent(inout):: NameIdlUnit
-   logical,          intent(out)  :: IsFound
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
-   integer :: i, j, k
+    IsFound = .true.
 
+    select case(NameVar)
+    case('dt')
+       NameIdlUnit = 's'
+       NameTecUnit = '[s]'
+       PlotVar_G(:,:,:) = Dt_BLK(iBlock)*No2SI_V(UnitT_)
 
-  !--------------------------------------------------------------------------
+    case('gx')
+       NameIdlUnit = 'm/s^2'
+       NameTecUnit = '[m/s^2]'
 
-   IsFound = .true.
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          PlotVar_G(i,j,k)= Gravity_DCB(1,i,j,k,iBlock)
+       end do; end do; end do
 
- 
-select case(NameVar)
-case('dt')
-      NameIdlUnit = 's'
-      NameTecUnit = '[s]'
-      PlotVar_G(:,:,:) = Dt_BLK(iBlock)*No2SI_V(UnitT_)
+    case('gy')
+       NameIdlUnit = 'm/s^2'
+       NameTecUnit = '[m/s^2]'
 
-case('gx')
-      NameIdlUnit = 'm/s^2'
-      NameTecUnit = '[m/s^2]'
-     
-    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-      PlotVar_G(i,j,k)= Gravity_DCB(1,i,j,k,iBlock)
-    end do; end do; end do 
-    
-case('gy')
-      NameIdlUnit = 'm/s^2'
-      NameTecUnit = '[m/s^2]'
-     
-    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-      PlotVar_G(i,j,k)= Gravity_DCB(2,i,j,k,iBlock)
-    end do; end do; end do
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          PlotVar_G(i,j,k)= Gravity_DCB(2,i,j,k,iBlock)
+       end do; end do; end do
 
-case('gz')
-      NameIdlUnit = 'm/s^2'
-      NameTecUnit = '[m/s^2]'
-     
-    do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
-      PlotVar_G(i,j,k)= Gravity_DCB(3,i,j,k,iBlock)
-    end do; end do; end do
+    case('gz')
+       NameIdlUnit = 'm/s^2'
+       NameTecUnit = '[m/s^2]'
 
- 
+       do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
+          PlotVar_G(i,j,k)= Gravity_DCB(3,i,j,k,iBlock)
+       end do; end do; end do
 
+    case default
+       IsFound = .false.
+    end select
 
-case default
-      IsFound = .false.
-end select
+    UsePlotVarBody = .false.
+    PlotVarBody    = 0.0
 
-   UsePlotVarBody = .false.
-   PlotVarBody    = 0.0
-
-end subroutine user_set_plot_var
-
-
-!=================================================================================
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine user_set_plot_var
+  !============================================================================
 
 end module ModUser
+!==============================================================================

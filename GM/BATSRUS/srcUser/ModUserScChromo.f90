@@ -1,8 +1,10 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission For more information, see
-!  http://csem.engin.umich.edu/tools/swmf 
-!============================================================================
+!  http://csem.engin.umich.edu/tools/swmf
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   use ModMain, ONLY: nI, nJ,nK
   use ModCoronalHeating, ONLY: PoyntingFluxPerB
@@ -19,7 +21,7 @@ module ModUser
        IMPLEMENTED10=> user_update_states,              &
        IMPLEMENTED11=> user_get_b0
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = &
@@ -59,7 +61,7 @@ module ModUser
   logical:: UrZero = .false.
   logical:: UpdateWithParker = .true.
 
-contains 
+contains
   !============================================================================
   subroutine user_read_inputs
 
@@ -70,8 +72,10 @@ contains
 
     character (len=100) :: NameCommand
 
-    character(len=*), parameter :: NameSub = 'user_read_inputs'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     UseUserInitSession = .true.
 
     if(iProc == 0 .and. lVerbose > 0)then
@@ -84,7 +88,7 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
 
        select case(NameCommand)
-          ! This command is used when the inner boundary is the chromosphere   
+          ! This command is used when the inner boundary is the chromosphere
        case("#CHROMOBC")
           call read_var('nChromoSi', nChromoSi)
           call read_var('tChromoSi', tChromoSi)
@@ -103,7 +107,7 @@ contains
        case("#POLARJETDIPOLE")
           call read_var('UserDipoleDepth', UserDipoleDepth)
           call read_var('UserDipoleStrengthSi', UserDipoleStrengthSi)
-          
+
        case('#POLARJETBOUNDARY')
           call read_var('PeakFlowSpeedFixerSi',PeakFlowSpeedFixerSi)
           call read_var('tBeginJet', tBeginJet)
@@ -136,6 +140,7 @@ contains
        end select
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
   !============================================================================
   subroutine user_init_session
@@ -156,8 +161,10 @@ contains
          UnitX_, UnitT_, Gamma
 
     real, parameter :: CoulombLog = 20.0
-    character (len=*),parameter :: NameSub = 'user_init_session'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_init_session'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     if(iProc == 0)then
        call write_prefix; write(iUnitOut,*) ''
        call write_prefix; write(iUnitOut,*) 'user_init_session:'
@@ -212,6 +219,7 @@ contains
        call write_prefix; write(iUnitOut,*) ''
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
   subroutine user_set_ics(iBlock)
@@ -239,8 +247,10 @@ contains
     real :: Ur, Ur0, Ur1, del, rTransonic, Uescape, Usound
 
     real, parameter :: Epsilon = 1.0e-6
-    character (len=*), parameter :: NameSub = 'user_set_ics'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! normalize with isothermal sound speed.
     Usound  = sqrt(tCorona*(1.0 + AverageIonCharge)/MassIon_I(1))
@@ -328,7 +338,7 @@ contains
           State_VGB(p_,i,j,k,iBlock) = (NumDensIon + NumDensElectron)*tCorona
        end if
        State_VGB(Rho_,i,j,k,iBlock) = Rho
-        
+
        State_VGB(RhoUx_,i,j,k,iBlock) = Rho*Ur*x/r *Usound
        State_VGB(RhoUy_,i,j,k,iBlock) = Rho*Ur*y/r *Usound
        State_VGB(RhoUz_,i,j,k,iBlock) = Rho*Ur*z/r *Usound
@@ -360,6 +370,7 @@ contains
 
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
   !============================================================================
   subroutine user_get_log_var(VarValue, TypeVar, Radius)
@@ -372,13 +383,16 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_
 
     real, intent(out) :: VarValue
-    character(len=10), intent(in) :: TypeVar 
+    character(len=10), intent(in) :: TypeVar
     real, optional, intent(in) :: Radius
 
     integer :: iBlock
     real :: unit_energy
     real, external :: integrate_BLK
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     unit_energy = No2Io_V(UnitEnergydens_)*No2Io_V(UnitX_)**3
     !\
     ! Define log variable to be saved::
@@ -400,7 +414,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           if(UseB0)then
-             tmp1_BLK(:,:,:,iBlock) = & 
+             tmp1_BLK(:,:,:,iBlock) = &
                   ( B0_DGB(x_,:,:,:,iBlock) + State_VGB(Bx_,:,:,:,iBlock))**2 &
                   +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
                   +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
@@ -426,9 +440,10 @@ contains
        write(*,*) 'Warning in set_user_logvar: unknown logvarname = ',TypeVar
     end select
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_get_log_var
-
   !============================================================================
+
   subroutine user_set_plot_var(iBlock, NameVar, IsDimensional, &
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
@@ -462,8 +477,10 @@ contains
     real :: QparPerQtotal_I(IonFirst_:IonLast_)
     real :: QePerQtotal
 
-    character (len=*), parameter :: NameSub = 'user_set_plot_var'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
 
     select case(NameVar)
@@ -559,11 +576,12 @@ contains
     UsePlotVarBody = .false.
     PlotVarBody    = 0.0
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
   !============================================================================
   subroutine user_set_cell_boundary(iBlock,iSide, TypeBc, IsFound)
 
-    ! Fill ghost cells inside body for spherical grid - this subroutine only 
+    ! Fill ghost cells inside body for spherical grid - this subroutine only
     ! modifies ghost cells in the r direction
 
     use EEE_ModCommonVariables, ONLY: UseCme
@@ -577,7 +595,7 @@ contains
     use ModPhysics,    ONLY: AverageIonCharge, UnitRho_, UnitB_, UnitP_, &
          Si2No_V, rBody, GBody, UnitU_
     use ModMain,       ONLY: n_step, iteration_number, time_simulation, &
-         time_accurate, ProcTest, BlkTest
+         time_accurate
     use ModB0,         ONLY: B0_DGB
     use BATL_lib,      ONLY: CellSize_DB, Phi_, Theta_, x_, y_
     use ModCoordTransform, ONLY: rot_xyz_sph
@@ -594,7 +612,6 @@ contains
     real    :: Runit_D(3)
     real    :: RhoCme, Ucme_D(3), Bcme_D(3), pCme, BrCme, BrCme_D(3)
 
-
     real    :: Br_II(MinJ:MaxJ,MinK:MaxK)
     real    :: Uphi, Ulat
     real    :: r, r1, r2Inv
@@ -603,7 +620,7 @@ contains
 
     real    :: Framp = 1.0
 
-    real    :: Dlat, Dphi, dBrDphi, dBrDlat, Br, Rho, p, Ur, rCosLat, uCoeff 
+    real    :: Dlat, Dphi, dBrDphi, dBrDlat, Br, Rho, p, Ur, rCosLat, uCoeff
     real    :: XyzSph_DD(3,3), u_D(3), Xyz1_D(3), bFace_D(3), b_D(3)
 
     real    :: Scale, H
@@ -615,35 +632,30 @@ contains
     !\
     ! Variables used in the 'heliofloat' boundary condition
     !/
-    real,parameter     :: UEscapeSi = 4.0e5 !400 km/c
+    real,parameter     :: UEscapeSi = 4.0e5 ! 400 km/c
     real,dimension(3)  :: DirR_D, DirTheta_D, DirPhi_D, Coord_D,&
          UTrue_D, UGhost_D, BTrue_D, BGhost_D
     real               :: CosTheta, SinTheta, CosPhi, SinPhi, rInv
-    real               :: BDotU, BPhi, UTheta 
+    real               :: BDotU, BPhi, UTheta
 
     real, parameter :: Epsilon = 1.0e-6
     integer :: Itercount
 
-    logical:: DoTest, DoTestMe
-    character (len=*), parameter :: NameSub = 'user_set_cell_boundary'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(iSide /= 1 .or. TypeGeometry(1:9) /='spherical') &
          call CON_stop('Wrong iSide in user_set_cell_boundary')
 
-    if(iProc == ProcTest .and. iBlock == BlkTest)then
-       call set_oktest(NameSub, DoTest, DoTestMe)
-    else
-       DoTest = .false.; DoTestMe = .false.
-    end if
-
-    if(DoTestMe) write(*,*) NameSub,'!!! starting with UpdateWithParker=',&
+    if(DoTest) write(*,*) NameSub,'!!! starting with UpdateWithParker=',&
          UpdateWithParker
 
     IsFound = .true.
 
     ! f(t) = 0                                    if      t < t1
     !      = 1                                    if t2 < t
-    !      = 0.5 * ( 1- cos(Pi * (t-t1)/(t2-t1))) if t1 < t < t2 
+    !      = 0.5 * ( 1- cos(Pi * (t-t1)/(t2-t1))) if t1 < t < t2
     if(TypeBc == 'usersurfacerot')then
 
        ! Check if time accurate is set.
@@ -678,26 +690,26 @@ contains
 
        do k = 0, MaxK-1; do j = 0, MaxJ-1
 
-          ! Latitude = arccos(z/r)  
+          ! Latitude = arccos(z/r)
           ! Longitude = arctg(y/x)
           !
           r1 = r_BLK(1,j,k,iBlock)
           Xyz1_D = Xyz_DGB(:,1,j,k,iBlock)
           rCosLat = sqrt(Xyz1_D(x_)**2 + Xyz1_D(y_)**2)
           ! GradBr = (0 ,
-          !           1/(r*cos(Theta)) * dB/dPhi , 
+          !           1/(r*cos(Theta)) * dB/dPhi ,
           !           1/r              * dB/dTheta )
           !
           dBrDphi = (Br_II(j+1,k) -  Br_II(j-1,k)) / (2*Dphi*rCosLat)
-          dBrDlat = (Br_II(j,k+1) -  Br_II(j,k-1)) / (2*Dlat*r1) 
+          dBrDlat = (Br_II(j,k+1) -  Br_II(j,k-1)) / (2*Dlat*r1)
 
           Br = Br_II(j,k)
 
           Ur = sum(Xyz1_D*State_VGB(RhoUx_:RhoUz_,1,j,k,iBlock)) / &
-               (r1*State_VGB(Rho_,1,j,k,iBlock))          
+               (r1*State_VGB(Rho_,1,j,k,iBlock))
 
           ! u_perpendicular = 0  if Br < B1 or Br > B2
-          !                 = v0 * f(t) * kb * (B2-B1)/Br * tanh(kb* (Br-B1)/ 
+          !                 = v0 * f(t) * kb * (B2-B1)/Br * tanh(kb* (Br-B1)/
           !                                            (B2-B1)) * (r x GradB)
           !                 = ( 0 , u_Phi, u_Theta)
           !
@@ -741,7 +753,7 @@ contains
 
              ! Set density and pressure in ghost cells once (does not change)
              if(iteration_number < 2)then
-                !update with Parker solution
+                ! update with Parker solution
                 if(UpdateWithParker)then
 
                    ! normalize with isothermal sound speed.
@@ -770,7 +782,7 @@ contains
                       end if
                    end do
 
-                   Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur2)                
+                   Rho = rBody**2*RhoCorona*uCorona/(r**2*Ur2)
 
                    NumDensIon = Rho/MassIon_I(1)
                    NumDensElectron = NumDensIon*AverageIonCharge
@@ -781,7 +793,7 @@ contains
 
                 else
                    ! update with scaleheight solution
-                   H = abs(tCorona * (1 + AverageIonCharge) / Gbody  ) 
+                   H = abs(tCorona * (1 + AverageIonCharge) / Gbody  )
                    Scale = exp(-(r-1) / H)
                    Rho  = RhoCorona*Scale
                    p = tCorona*Rho/MassIon_I(1) *(1 + AverageIonCharge)
@@ -791,7 +803,7 @@ contains
 
                 ! Check for differences relative to the initial solution.
                 if(.not.restart .and. &
-                     ( p/State_VGB(p_,i,j,k,iBlock)>(1.0+DiffDelta) & 
+                     ( p/State_VGB(p_,i,j,k,iBlock)>(1.0+DiffDelta) &
                      .or. p/State_VGB(p_,i,j,k,iBlock)<(1.0-DiffDelta) &
                      .or. Rho/State_VGB(Rho_,i,j,k,iBlock)>(1.0+DiffDelta) &
                      .or. Rho/State_VGB(Rho_,i,j,k,iBlock)<(1.0-DiffDelta)))&
@@ -834,12 +846,12 @@ contains
     endif
 
     !\
-    ! The routine is only used by the solver for semi-implicit heat 
+    ! The routine is only used by the solver for semi-implicit heat
     ! conduction along the magnetic field. To calculate the heat
     ! conduction coefficicients, which are averaged over the true cell
     ! and ghost cell, we need to know the magnetic field and temperature
-    ! in the ghost cell. To calculate the fux, we also need to set the 
-    ! ghost cell temperature within the implicit solver.  
+    ! in the ghost cell. To calculate the fux, we also need to set the
+    ! ghost cell temperature within the implicit solver.
     !/
     if(TypeBc == 'usersemi')then
        StateSemi_VGB(iTeImpl,0,:,:,iBlock) = tChromo
@@ -904,6 +916,7 @@ contains
        end do; end do
     end if
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -939,8 +952,10 @@ contains
     real :: RhoCme, Ucme_D(3), Bcme_D(3), pCme
     real :: BrCme, BrCme_D(3), UrCme, UrCme_D(3), UtCme_D(3)
 
-    character (len=*), parameter :: NameSub = 'user_set_face_boundary'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
     rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
     !\
@@ -983,12 +998,12 @@ contains
     end if
 
     ! Apply corotation if needed
-    if(.not.UseRotatingFrame)then                                            
+    if(.not.UseRotatingFrame)then
        VarsGhostFace_V(Ux_) = VarsGhostFace_V(Ux_)-2*OmegaBody*FaceCoords_D(y_)
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_)+2*OmegaBody*FaceCoords_D(x_)
     end if
     !\
-    ! Temperature is fixed 
+    ! Temperature is fixed
     !/
 
     Temperature = tChromo
@@ -1066,6 +1081,7 @@ contains
        end if
     end if
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)
@@ -1080,9 +1096,10 @@ contains
     integer :: i, j, k
     real :: Te, TeSi
 
-    character (len=*), parameter :: NameSub = 'user_set_resistivity'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_resistivity'
     !--------------------------------------------------------------------------
-
+    call test_start(NameSub, DoTest, iBlock)
     do k = MinK,MaxK; do j = MinJ,MaxJ; do i = MinI,MaxI
        Te = TeFraction*State_VGB(Pe_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock)
        TeSi = Te*No2Si_V(UnitTemperature_)
@@ -1090,12 +1107,13 @@ contains
        Eta_G(i,j,k) = EtaPerpSi/TeSi**1.5 *Si2No_V(UnitX_)**2/Si2No_V(UnitT_)
     end do; end do; end do
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
   !============================================================================
   subroutine user_initial_perturbation
 
     use EEE_ModMain,  ONLY: EEE_get_state_init
-    use ModMain, ONLY: nI, nJ, nK, nBLK, unused_B, n_step, iteration_number
+    use ModMain, ONLY: nI, nJ, nK, MaxBlock, unused_B, n_step, iteration_number
     use ModVarIndexes
     use ModAdvance,   ONLY: State_VGB, UseElectronPressure
     use ModPhysics,   ONLY: Si2No_V, UnitRho_, UnitP_, UnitB_
@@ -1104,14 +1122,15 @@ contains
     use BATL_lib,     ONLY: nDim, MaxDim
 
     integer :: i, j, k, iBlock
-    logical :: oktest, oktest_me
     real :: x_D(nDim), Rho, B_D(MaxDim), p
 
-    character (len=*), parameter :: NameSub = 'user_initial_perturbation'
     ! -------------------------------------------------------------------------
-    call set_oktest('user_initial_perturbation',oktest,oktest_me)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_initial_perturbation'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
 
-    do iBlock = 1, nBLK
+    do iBlock = 1, MaxBlock
        if(unused_B(iBlock))CYCLE
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1139,7 +1158,7 @@ contains
              State_VGB(Rho_,i,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock) + Rho
           endif
           !\
-          ! Fix momentum density to correspond to the modified mass density 
+          ! Fix momentum density to correspond to the modified mass density
           !/
           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = &
                State_VGB(Ux_:Uz_,i,j,k,iBlock)*&
@@ -1174,8 +1193,8 @@ contains
 
     end do
 
+    call test_stop(NameSub, DoTest)
   end subroutine user_initial_perturbation
-
   !============================================================================
 
   subroutine user_update_states(iBlock)
@@ -1185,7 +1204,10 @@ contains
     use ModGeometry, ONLY: true_cell, R_BLK, true_BLK
 
     integer,intent(in):: iBlock
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     if(UseSteady)then
        if(minval(R_BLK(1:nI,1:nJ,1:nK,iBlock)) <= rSteady)then
@@ -1195,9 +1217,10 @@ contains
     end if
     call update_state_normal(iBlock)
 
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
+  !============================================================================
 
-  !===================================================================== 
   subroutine user_get_b0(x, y, z, B0_D)
 
     use ModPhysics, ONLY: MonopoleStrength
@@ -1208,9 +1231,8 @@ contains
     real :: r,Xyz_D(3), Dp, rInv, r2Inv, r3Inv, Dipole_D(3)
     real :: B0_Dm(3)
 
-
-    character(len=*), parameter :: NameSub = 'user_get_b0'
-    !-------------------------------------------------------------------        
+    character(len=*), parameter:: NameSub = 'user_get_b0'
+    !--------------------------------------------------------------------------
     Xyz_D = (/x, y, z/)
     r = sqrt(sum(Xyz_D**2))
     B0_Dm = MonopoleStrength*Xyz_D/r**3
@@ -1221,7 +1243,7 @@ contains
     rInv  = 1.0/sqrt(sum(Xyz_D**2))
     r2Inv = rInv**2
     r3Inv = rInv*r2Inv
-    
+
     ! Compute dipole moment of the intrinsic magnetic field B0.
     Dipole_D = (/0.0, UserDipoleStrength, 0.0 /)
     Dp = 3*sum(Dipole_D*Xyz_D)*r2Inv
@@ -1229,6 +1251,7 @@ contains
     B0_D = B0_Dm + (Dp*Xyz_D - Dipole_D)*r3Inv
 
   end subroutine user_get_b0
-  !=====================================================================        
+  !============================================================================
 
 end module ModUser
+!==============================================================================

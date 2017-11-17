@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !#NOTPUBLIC  email:darrens@umich.edu  expires:12/31/2099
-!This code is a copyright protected software (c) 2002- University of Michigan
-!==============================================================================
 module ModUser
+
+  use BATL_lib, ONLY: &
+       test_start, test_stop
 
   ! This file contains a sample of a protected ModUser file.
   ! The top line above must follow the format shown.
@@ -11,23 +13,25 @@ module ModUser
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: &
        NameUserModule = 'NOTPUBLIC Protected Sample'
 
 contains
-
   !============================================================================
+
   subroutine user_read_inputs
 
     use ModReadParam, ONLY: read_line, read_command, read_var
     character(len=100):: NameCommand
     real:: MyVariable
 
-    character(len=*), parameter :: NameSub = "ModUser::user_read_inputs"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -41,8 +45,9 @@ contains
           call stop_mpi(NameSub//': unknown command name='//trim(NameCommand))
        end select
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
-
   !============================================================================
 
 end module ModUser
+!==============================================================================

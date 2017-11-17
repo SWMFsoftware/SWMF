@@ -1,26 +1,28 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!==============================================================================
 module ModUser
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop
+
   ! This file contains the CCMC version of "specify_refinement.f90"
-  ! Other than the usual #GRID command, the PARAM.in file must contain 
+  ! Other than the usual #GRID command, the PARAM.in file must contain
   ! the following commands in the GM section:
   !
   ! #USERINPUTBEGIN ----------------
-  ! 
+  !
   ! ! Define the name of the grid here
   ! CCMCGRID
   ! ror_shock
-  ! 
+  !
   ! #USERINPUTEND  -----------------
-  ! 
+  !
   ! ! Define the initial resolution
   ! #GRIDRESOLUTION
   ! 0.5                    Resolution
   ! initial                 NameArea
-  ! 
+  !
   ! ! A "user" defined area with the highest resolution during the run
   ! #GRIDRESOLUTION
   ! 0.125                    Resolution
@@ -30,24 +32,26 @@ module ModUser
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_specify_region
 
-  include 'user_module.h' !list of public methods
+  include 'user_module.h' ! list of public methods
 
   real, parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: &
        NameUserModule = 'CCMC grids, Kuznetsova and Toth'
 
-  ! Name of the grid 
+  ! Name of the grid
   character(len=30):: NameGrid = "ror6_short"
 
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine user_read_inputs
 
     use ModReadParam,   ONLY: read_line, read_command, read_var
     character (len=100) :: NameCommand
-    character(len=*), parameter :: NameSub = "ModUser::user_read_inputs"
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
     do
        if(.not.read_line() ) EXIT
        if(.not.read_command(NameCommand)) CYCLE
@@ -61,11 +65,11 @@ contains
           call stop_mpi(NameSub//': unknown command name='//trim(NameCommand))
        end select
     end do
+    call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
+  !============================================================================
 
-  !===========================================================================
-
-  subroutine user_specify_region(iArea, iBlk, nValue, NameLocation, &
+  subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
        DoRefine, IsInside_I, Value_I)
 
     use ModMain,     ONLY: body1, UseRotatingBc, nRefineLevel
@@ -75,7 +79,7 @@ contains
          CellSize_DB, CoordMin_DB, TypeGeometry, CoordMin_D, CoordMax_D
 
     integer,   intent(in):: iArea        ! area index in BATL_region
-    integer,   intent(in):: iBlk         ! block index
+    integer,   intent(in):: iBlock         ! block index
     integer,   intent(in):: nValue       ! number of output values
     character, intent(in):: NameLocation ! c, g, x, y, z, or n
 
@@ -95,45 +99,44 @@ contains
 
     real,parameter::cRefinedTailCutoff=0.75*0.875
 
-    character (len=*), parameter :: NameSub = 'user_specify_region'
-
-    logical :: oktest, oktest_me
     real    :: XyzStart_D(3),x1,x2
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_specify_region'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
     if(present(IsInside_I) .or. present(Value_I)) call stop_mpi(NameSub// &
          ': the CCMC version does not work for array output')
-
-    call set_oktest('initial_refinement',oktest,oktest_me)
 
     lev = nRefineLevel
     DoRefine = .false.
 
-    XyzStart_D(:) = CoordMin_DB(:,iBLK) + 0.5*CellSize_DB(:,iBLK)
+    XyzStart_D(:) = CoordMin_DB(:,iBlock) + 0.5*CellSize_DB(:,iBlock)
     x1= CoordMin_D(1)
     x2= CoordMin_D(2)
 
     ! Block min, max radius values
-    xx1 = Xyz_DNB(1,1,1,1,iBLK)
-    xx2 = Xyz_DNB(1,nI+1,nJ+1,nK+1,iBLK)
-    yy1 = Xyz_DNB(2,1,1,1,iBLK)
-    yy2 = Xyz_DNB(2,nI+1,nJ+1,nK+1,iBLK)
-    zz1 = Xyz_DNB(3,1,1,1,iBLK)
-    zz2 = Xyz_DNB(3,nI+1,nJ+1,nK+1,iBLK)
-    
-    !xx1 = 0.5*(Xyz_DGB(1, 0, 0, 0,iBLK)+Xyz_DGB(1,   1,   1  , 1,iBLK))
-    !xx2 = 0.5*(Xyz_DGB(1,nI,nJ,nK,iBLK)+Xyz_DGB(1,nI+1,nJ+1,nK+1,iBLK))
-    !yy1 = 0.5*(Xyz_DGB(2, 0, 0, 0,iBLK)+Xyz_DGB(2,   1,   1,   1,iBLK))
-    !yy2 = 0.5*(Xyz_DGB(2,nI,nJ,nK,iBLK)+Xyz_DGB(2,nI+1,nJ+1,nK+1,iBLK))
-    !zz1 = 0.5*(Xyz_DGB(3, 0, 0, 0,iBLK)+Xyz_DGB(3,   1,   1,   1,iBLK))
-    !zz2 = 0.5*(Xyz_DGB(3,nI,nJ,nK,iBLK)+Xyz_DGB(3,nI+1,nJ+1,nK+1,iBLK))
+    xx1 = Xyz_DNB(1,1,1,1,iBlock)
+    xx2 = Xyz_DNB(1,nI+1,nJ+1,nK+1,iBlock)
+    yy1 = Xyz_DNB(2,1,1,1,iBlock)
+    yy2 = Xyz_DNB(2,nI+1,nJ+1,nK+1,iBlock)
+    zz1 = Xyz_DNB(3,1,1,1,iBlock)
+    zz2 = Xyz_DNB(3,nI+1,nJ+1,nK+1,iBlock)
+
+    ! xx1 = 0.5*(Xyz_DGB(1, 0, 0, 0,iBlock)+Xyz_DGB(1,   1,   1  , 1,iBlock))
+    ! xx2 = 0.5*(Xyz_DGB(1,nI,nJ,nK,iBlock)+Xyz_DGB(1,nI+1,nJ+1,nK+1,iBlock))
+    ! yy1 = 0.5*(Xyz_DGB(2, 0, 0, 0,iBlock)+Xyz_DGB(2,   1,   1,   1,iBlock))
+    ! yy2 = 0.5*(Xyz_DGB(2,nI,nJ,nK,iBlock)+Xyz_DGB(2,nI+1,nJ+1,nK+1,iBlock))
+    ! zz1 = 0.5*(Xyz_DGB(3, 0, 0, 0,iBlock)+Xyz_DGB(3,   1,   1,   1,iBlock))
+    ! zz2 = 0.5*(Xyz_DGB(3,nI,nJ,nK,iBlock)+Xyz_DGB(3,nI+1,nJ+1,nK+1,iBlock))
 
     select case(TypeGeometry)
     case('cartesian')
-       SizeMax=CellSize_DB(1,iBLK)
+       SizeMax=CellSize_DB(1,iBlock)
        ! Block center coordinates
-       xxx = 0.5*(Xyz_DGB(1,nI,nJ,nK,iBLK)+Xyz_DGB(1,1,1,1,iBLK))!(Xyz_DGB(1,nI,nJ,nK,iBLK)+Xyz_DGB(1,1,1,1,iBLK)) 
-       yyy = 0.5*(Xyz_DGB(2,nI,nJ,nK,iBLK)+Xyz_DGB(2,1,1,1,iBLK))!(Xyz_DGB(2,nI,nJ,nK,iBLK)+Xyz_DGB(2,1,1,1,iBLK))
-       zzz = 0.5*(Xyz_DGB(3,nI,nJ,nK,iBLK)+Xyz_DGB(3,1,1,1,iBLK))!(Xyz_DGB(3,nI,nJ,nK,iBLK)+Xyz_DGB(3,1,1,1,iBLK))         
+       xxx = 0.5*(Xyz_DGB(1,nI,nJ,nK,iBlock)+Xyz_DGB(1,1,1,1,iBlock))!(Xyz_DGB(1,nI,nJ,nK,iBlock)+Xyz_DGB(1,1,1,1,iBlock))
+       yyy = 0.5*(Xyz_DGB(2,nI,nJ,nK,iBlock)+Xyz_DGB(2,1,1,1,iBlock))!(Xyz_DGB(2,nI,nJ,nK,iBlock)+Xyz_DGB(2,1,1,1,iBlock))
+       zzz = 0.5*(Xyz_DGB(3,nI,nJ,nK,iBlock)+Xyz_DGB(3,1,1,1,iBlock))!(Xyz_DGB(3,nI,nJ,nK,iBlock)+Xyz_DGB(3,1,1,1,iBlock))
        RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
        minRblk = sqrt(&
             minmod(xx1,xx2)**2 + minmod(yy1,yy2)**2 + minmod(zz1,zz2)**2)
@@ -142,25 +145,25 @@ contains
             (max(abs(zz1),abs(zz2)))**2)
        if(body1.and.maxRblk<rBody) RETURN
     case('rlonlat')
-       SizeMax=max(CellSize_DB(1,iBLK),CellSize_DB(2,iBLK)*maxRblk)
-       minRblk = XyzStart_D(1)-0.5*CellSize_DB(1,iBLK)            
-       maxRblk = minRblk+nI*CellSize_DB(1,iBLK)                            
-       RR=0.5*(minRblk+maxRblk)                                   
-       xxx=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBLK))*& 
-            cos(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBLK))       
-       yyy=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBLK))*& 
-            sin(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBLK))       
-       zzz=RR*cos(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBLK))
-    case('rlonlat_lnr')                                          
-       SizeMax=max(CellSize_DB(1,iBLK)*maxRblk,CellSize_DB(2,iBLK)*maxRblk)
-       minRblk =exp( XyzStart_D(1)-0.5*CellSize_DB(1,iBLK))            
-       maxRblk =exp(nI*CellSize_DB(1,iBLK))*minRblk                            
-       RR=0.5*(minRblk+maxRblk)                                   
-       xxx=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBLK))*& 
-            cos(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBLK))       
-       yyy=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBLK))*& 
-            sin(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBLK))       
-       zzz=RR*cos(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBLK))
+       SizeMax=max(CellSize_DB(1,iBlock),CellSize_DB(2,iBlock)*maxRblk)
+       minRblk = XyzStart_D(1)-0.5*CellSize_DB(1,iBlock)
+       maxRblk = minRblk+nI*CellSize_DB(1,iBlock)
+       RR=0.5*(minRblk+maxRblk)
+       xxx=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))*&
+            cos(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBlock))
+       yyy=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))*&
+            sin(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBlock))
+       zzz=RR*cos(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))
+    case('rlonlat_lnr')
+       SizeMax=max(CellSize_DB(1,iBlock)*maxRblk,CellSize_DB(2,iBlock)*maxRblk)
+       minRblk =exp( XyzStart_D(1)-0.5*CellSize_DB(1,iBlock))
+       maxRblk =exp(nI*CellSize_DB(1,iBlock))*minRblk
+       RR=0.5*(minRblk+maxRblk)
+       xxx=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))*&
+            cos(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBlock))
+       yyy=RR*sin(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))*&
+            sin(XyzStart_D(2)+0.5*(nJ-1)*CellSize_DB(2,iBlock))
+       zzz=RR*cos(XyzStart_D(3)+0.5*(nK-1)*CellSize_DB(3,iBlock))
     case default
        call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
     end select
@@ -173,7 +176,7 @@ contains
        DoRefine = .true.
 
     case ('2Dbodyfocus')
-       ! 
+       !
 
     case ('3Dbodyfocus')
        ! Refine, focusing on body
@@ -268,7 +271,7 @@ contains
           yyPoint =  0.
           zzPoint =  0.
           RR = sqrt( (xxx-xxPoint)**2 + (yyy-yyPoint)**2 + (zzz-zzPoint)**2 )
-          if (RR < 2.*real(nI)*CellSize_DB(1,iBLK)) DoRefine = .true.
+          if (RR < 2.*real(nI)*CellSize_DB(1,iBlock)) DoRefine = .true.
        end if
 
                   case ('ds1')
@@ -276,102 +279,99 @@ contains
            ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
            if (maxRblk > Rbody) then
 
-              if (CellSize_DB(1,iBLK) > 8.) then
+              if (CellSize_DB(1,iBlock) > 8.) then
                  ! Refine all blocks with dx greater than 8
                 DoRefine = .true.
               else
 
-                 if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0) DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0) DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                    abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 !    1 Re
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                     abs(yyy)<48..and. abs(zzz)<36.)DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+               if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                     abs(yyy)<48..and. abs(zzz)<24.)DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                     abs(yyy)<24..and. abs(zzz)<12.)DoRefine = .true.
 !    0.5 Re
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                     abs(yyy)<30. .and. abs(zzz)<21.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                     abs(yyy)<30. .and. abs(zzz)<15.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                     abs(yyy)<12..and. abs(zzz)<6.)DoRefine = .true.
 !    0.25 Re
-                 if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                 if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                     abs(yyy)<9. .and. abs(zzz)<9.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                     abs(yyy)<15. .and. abs(zzz)<12.)DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<15.)DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<12.)DoRefine = .true.
 
 !!!
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                     abs(yyy)<6..and. abs(zzz)<6.)DoRefine = .true.
 !  0.125 Re
 !  0.125 Re
 
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 13.5  .and. &
 !!!                   abs(zzz)< 6.)DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 12.  .and. &
 !!!                   abs(zzz)< 6)DoRefine = .true.
 
-
-                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
+                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
                   abs(yyy) < 6.  .and.  zzz < 4. .and. &
                    zzz > -10.)DoRefine = .true.
 
-
                   RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 17. .and.  zzz < 6. .and. zzz > -12. &
                    )DoRefine = .true.
 !
 !
 !!!! corrections on 04/14/07
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 20. .and. zzz < 6. .and. zzz > -12. &
                    )DoRefine = .true.
 !!!!!         end corrections 04/14/07
 ! 0.0625
 
-!!old                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
-!!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
-!!old                   abs(zzz)< 3.)DoRefine = .true.
+!! old                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+!! old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+!! old                   abs(zzz)< 3.)DoRefine = .true.
 
-!!                   if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+!!                   if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
 !!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
 !!                   abs(zzz)< 3.)DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                   abs(yyy) < 6.  .and.  zzz < 3.5 .and. &
                    zzz > -8.5)DoRefine = .true.
 
-
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
                  RRR > 11. .and. RRR < 15.5 .and.  zzz < 3.5 .and. &
                   zzz > -8.5)DoRefine = .true.
 !!! corrections 04/14/07
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
                  RRR > 11. .and. RRR < 18.5 .and.  zzz < 3.5 .and. &
                   zzz > -8.5)DoRefine = .true.
 
@@ -379,186 +379,174 @@ contains
 !!!
 !!!
 !!! corrections 04/15/07
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                  abs(yyy) < 7.5 .and.  zzz < 3.5 .and. &
                   zzz > -8.5)DoRefine = .true.
 !!! end 04/15/07
               end if
            end if
 
-
-
-
-
          case ('tn1')
            ! 6 x 6 x 6 block for High resolution Runs On Request
            ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
            if (maxRblk > Rbody) then
 
-              if (CellSize_DB(1,iBLK) > 8.) then
+              if (CellSize_DB(1,iBlock) > 8.) then
                  ! Refine all blocks with dx greater than 8
                 DoRefine = .true.
               else
 
-                 if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0) DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0) DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                    abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 !    1 Re
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                     abs(yyy)<48..and. abs(zzz)<36.)DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+               if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                     abs(yyy)<48..and. abs(zzz)<24.)DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                     abs(yyy)<24..and. abs(zzz)<12.)DoRefine = .true.
 !    0.5 Re
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                     abs(yyy)<30. .and. abs(zzz)<21.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                     abs(yyy)<30. .and. abs(zzz)<15.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                     abs(yyy)<12..and. abs(zzz)<6.)DoRefine = .true.
 !    0.25 Re
-                 if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                 if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                     abs(yyy)<9. .and. abs(zzz)<9.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                     abs(yyy)<15. .and. abs(zzz)<12.)DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<15.)DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<12.)DoRefine = .true.
 
 !!!
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                     abs(yyy)<6..and. abs(zzz)<6.)DoRefine = .true.
 !  0.125 Re
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
                   abs(yyy) < 6.  .and.  abs(zzz) < 9.)DoRefine = .true.
-
 
                   RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 17. .and.  abs(zzz) < 9. )DoRefine = .true.
 !
 !
 !!!! corrections on 04/14/07
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 20. .and. abs(zzz) < 9. )DoRefine = .true.
 !!!!!         end corrections 04/14/07
 ! 0.0625
 
-!!old                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
-!!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
-!!old                   abs(zzz)< 3.)DoRefine = .true.
+!! old                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+!! old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+!! old                   abs(zzz)< 3.)DoRefine = .true.
 
-!!                   if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+!!                   if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
 !!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
 !!                   abs(zzz)< 3.)DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                   abs(yyy) < 6.  .and.  abs(zzz) < 4.5)DoRefine = .true.
 
-
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
                  RRR > 11. .and. RRR < 15.5 .and. abs(zzz) < 4.5)DoRefine = .true.
 !!! corrections 04/14/07
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
                  RRR > 11. .and. RRR < 18.5 .and.  abs(zzz) < 4.5)DoRefine = .true.
 
 !!! end 04/14/07
 !!!
 !!!
 !!! corrections 04/15/07
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                  abs(yyy) < 7.5 .and.  abs(zzz) < 4.5 )DoRefine = .true.
 !!! end 04/15/07
               end if
            end if
-
-
 
 case ('kw2')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -519<X<57, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 27. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 27. .and. xxx > -9. .and. &
                   abs(yyy)<24..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 21. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 21. .and. xxx> -3.0 .and. &
                   abs(yyy)<18. .and. zzz > -9. .and. zzz < 15. ) DoRefine = .true.
 
- if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 21. .and. xxx> -6.0 .and. &
+ if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 21. .and. xxx> -6.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 18. .and. xxx > 0. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 18. .and. xxx > 0. .and. &
                abs(yyy) < 9.  .and. zzz > -6. .and. zzz < 12. ) DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 12. .and. xxx > -6 .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 12. .and. xxx > -6 .and. &
                abs(yyy) < 15.  .and.  abs(yyy) > 8.5 .and. zzz > -6. .and. zzz < 12.) DoRefine = .true.
 
-        if (CellSize_DB(1,iBLK)>0.125 .and. abs(xxx) < 6.0 .and. &
+        if (CellSize_DB(1,iBlock)>0.125 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
           end if
        end if
@@ -568,96 +556,93 @@ case ('kw1')
            ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
            if (maxRblk > Rbody) then
 
-              if (CellSize_DB(1,iBLK) > 8.) then
+              if (CellSize_DB(1,iBlock) > 8.) then
                  ! Refine all blocks with dx greater than 8
                 DoRefine = .true.
               else
 
-                 if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0) DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0) DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                    abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 !    1 Re
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                     abs(yyy)<48..and. abs(zzz)<36.)DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+               if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                     abs(yyy)<48..and. abs(zzz)<24.)DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                     abs(yyy)<24..and. abs(zzz)<12.)DoRefine = .true.
 !    0.5 Re
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                     abs(yyy)<30. .and. abs(zzz)<21.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                     abs(yyy)<30. .and. abs(zzz)<15.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                     abs(yyy)<12..and. abs(zzz)<6.)DoRefine = .true.
 !    0.25 Re
-                 if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                 if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                     abs(yyy)<9. .and. abs(zzz)<9.)DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                     abs(yyy)<15. .and. abs(zzz)<12.)DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<15.)DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<12.)DoRefine = .true.
 
 !!!
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                     abs(yyy)<6..and. abs(zzz)<6.)DoRefine = .true.!  0.125 Re
 !  0.125 Re
 
-
-                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
+                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
                   abs(yyy) < 6.  .and.  zzz < 4. .and. &
                    zzz > -10.)DoRefine = .true.
 
-
                   RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
                   RRR >9. .and.  RRR < 16. .and.  zzz < 6. .and. zzz > -8. &
                    )DoRefine = .true.
 !
 !
 !!!! corrections on 04/14/07
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
                   RRR >9. .and.  RRR < 16. .and. zzz < 6. .and. zzz > -8. &
                    )DoRefine = .true.
 !!!!!         end corrections 04/14/07
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -18. .and.  xxx < 0. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -18. .and.  xxx < 0. .and. &
                   yyy >-18. .and.  yyy < -9. .and. zzz < 4.5 .and. zzz > -6.5 &
                    )DoRefine = .true.
 ! 0.0625
 
-!!old                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
-!!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
-!!old                   abs(zzz)< 3.)DoRefine = .true.
+!! old                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+!! old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+!! old                   abs(zzz)< 3.)DoRefine = .true.
 
-!!                   if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+!!                   if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
 !!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
 !!                   abs(zzz)< 3.)DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                   abs(yyy) < 6.  .and.  zzz < 3.5 .and. &
                    zzz > -4.5)DoRefine = .true.
 
-
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
                  RRR > 10. .and. RRR < 11.5 .and.  zzz < 3.5 .and. &
                   zzz > -5.5)DoRefine = .true.
 !!! corrections 04/14/07
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -1. .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -1. .and.  xxx < 12. .and. &
                  RRR > 11. .and. RRR < 17.  .and.  zzz < 3.5 .and. &
                   zzz > -4.5)DoRefine = .true.
 !!! end 04/14/07
@@ -665,20 +650,20 @@ case ('kw1')
 !!!
 !!!
 !!! corrections 04/15/07
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                  abs(yyy) < 7.5 .and.  zzz < 3.5 .and. &
                   zzz > -4.5)DoRefine = .true.
 !!! end 04/15/07
 
-                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -15. .and.  xxx < -7. .and. &
+                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -15. .and.  xxx < -7. .and. &
                   yyy > -17. .and.  yyy < -10. .and. zzz < 3. .and. zzz > -4. &
                    )DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -10. .and.  xxx < -4. .and. &
+                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -10. .and.  xxx < -4. .and. &
                   yyy > -15.5 .and.  yyy < -10. .and. zzz < 3. .and. zzz > -4 &
                    )DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -5. .and.  xxx < 2. .and. &
+                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -5. .and.  xxx < 2. .and. &
                   yyy > -14. .and.  yyy < -9. .and. zzz < 3.5 .and. zzz > -4.5 &
                    )DoRefine = .true.
               end if
@@ -693,70 +678,68 @@ case ('kw1')
        ! Resolution in magnetosheath up to 1/8 Re
 
        if (maxRblk > Rbody) then
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -171.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -171.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -51.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -51.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -147.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -147.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -40. .and. xxx < 20.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -40. .and. xxx < 20.0 .and. &
                   abs(yyy)<30..and. abs(zzz)<30.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
 ! change from AS1 by reducing 0.5 to X > -10
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -10. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -10. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
 ! deleted from AS1 grid
-!             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -51.0 .and. &
+!             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -51.0 .and. &
 !                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
                   RRR=sqrt(yyy*yyy+zzz*zzz)
 
 ! modified for  X > -9
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 9.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-!             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+!             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
 !                  xxx > - 9.0 .and. &
 !                  abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and.  xxx < 15.  .and.  xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and.  xxx < 15.  .and.  xxx > -9. .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx > 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx > 0.0 .and. &
                   RRR <15.) DoRefine = .true.
 
-
 ! reduced from X<21 to X<15 and shaped as cylinder
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 6. .and. &
                   abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 15. .and. xxx > 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 15. .and. xxx > 0. .and. &
                   RRR < 6.) DoRefine = .true.
 
 ! add more cylinders to follow magnetosheath and cusps
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 14. .and. xxx > -4. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 14. .and. xxx > -4. .and. &
                   RRR < 8.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -2. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 13. .and. xxx > -2. .and. &
                   RRR < 10.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 12. .and. xxx > 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 12. .and. xxx > 0. .and. &
                   RRR < 12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 11. .and. xxx > 1. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 11. .and. xxx > 1. .and. &
                   RRR < 13.5) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 10. .and. xxx > 2. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 10. .and. xxx > 2. .and. &
                   RRR < 15.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 9. .and. xxx > 3. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 9. .and. xxx > 3. .and. &
                   RRR < 16.) DoRefine = .true.
 
           end if
@@ -771,54 +754,52 @@ case ('kw1')
        ! Resolution in magnetosheath up to 1/8 Re
 
        if (maxRblk > Rbody) then
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -171.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -171.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -51.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -51.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -147.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -147.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -40. .and. xxx < 20.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -40. .and. xxx < 20.0 .and. &
                   abs(yyy)<30..and. abs(zzz)<30.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
 ! change from AS1 by reducing 0.5 to X > -10
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -10. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -10. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
 ! deleted from AS1 grid
-!             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -51.0 .and. &
+!             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -51.0 .and. &
 !                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
                   RR =sqrt(yyy*yyy+zzz*zzz)
 
                   RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
 ! modified for  X > -9
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 9.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-!             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+!             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
 !                  xxx > - 9.0 .and. &
 !                  abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and.  xxx < 15.  .and.  xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and.  xxx < 15.  .and.  xxx > -9. .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx > 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx > 0.0 .and. &
                   RRR <15.) DoRefine = .true.
 
-
 ! reduced from X<21 to X<15 and shaped as cylinder
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR < 6.5) DoRefine = .true.
-
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR < 6.5) DoRefine = .true.
 
           end if
        end if
@@ -828,123 +809,120 @@ case ('kw1')
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -39. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -39. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -33. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -33. .and. &
                   abs(yyy)<30..and. abs(zzz)<30.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 3. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 3. .and. &
                   xxx > - 30.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-                if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 10. .and. &
+                if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 10. .and. &
                   xxx > 3.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
- if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+ if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
           end if
        end if
-
 
  case ('ck1')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -519<X<57, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> -6.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 10.5 .and. xxx > 2. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 10.5 .and. xxx > 2. .and. &
                abs(yyy) < 10.5  .and. abs(zzz)< 6.) DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 6. .and. xxx > -6 .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 6. .and. xxx > -6 .and. &
                abs(yyy) < 6.  .and. abs(zzz)< 6.) DoRefine = .true.
-
 
           end if
        end if
@@ -954,63 +932,61 @@ case ('ck2')
        ! Box sizes: -519<X<57, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -15. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -15. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> -6.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> -9.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> -9.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 10.5 .and. xxx > -6 .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 10.5 .and. xxx > -6 .and. &
                abs(yyy) < 10.5  .and. abs(zzz)< 12.) DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 6. .and. xxx > -6 .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 6. .and. xxx > -6 .and. &
                abs(yyy) < 6.  .and. abs(zzz)< 6.) DoRefine = .true.
-
 
           end if
        end if
@@ -1020,150 +996,144 @@ case ('ck2')
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-                     if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+                     if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 36.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> 0.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 15. .and. xxx > 5 .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 15. .and. xxx > 5 .and. &
                abs(yyy) < 7.5  .and. abs(zzz)< 7.5 ) DoRefine = .true.
 
- if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 12. .and. xxx > 0 .and. &
+ if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 12. .and. xxx > 0 .and. &
                abs(yyy) < 14.  .and. abs(zzz)< 10.5 ) DoRefine = .true.
 
- if (CellSize_DB(1,iBLK)>0.125.and.  xxx < 12. .and. xxx > -6 .and. &
+ if (CellSize_DB(1,iBlock)>0.125.and.  xxx < 12. .and. xxx > -6 .and. &
                abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
-     if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx < 13. .and. xxx > 7 .and. &
+     if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx < 13. .and. xxx > 7 .and. &
                abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
       RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx < 11. .and. xxx > 1. .and. &
+                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx < 11. .and. xxx > 1. .and. &
                RRR > 12.5  .and. RRR < 17.5 .and. abs(yyy) < 12.  .and. abs(zzz)< 6.) DoRefine = .true.
-
-
 
           end if
        end if
-
 
  case ('bs1')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -519<X<57, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 60.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
+if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
                abs(yyy) < 12.  .and. abs(zzz)< 6.) DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx < 10. .and. xxx > 6. .and. &
+               if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx < 10. .and. xxx > 6. .and. &
                abs(yyy) < 3. .and. abs(zzz)< 3.) DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx < 11.5 .and. xxx > 5. .and. &
+                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx < 11.5 .and. xxx > 5. .and. &
                abs(yyy) < 6.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-                if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx < 7. .and. xxx > 2 .and. abs(yyy)> 5. .and.  &
+                if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx < 7. .and. xxx > 2 .and. abs(yyy)> 5. .and.  &
                abs(yyy) < 9. .and. abs(zzz)< 3.) DoRefine = .true.
 
-
-               if (CellSize_DB(1,iBLK)>0.03125 .and.  xxx < 11. .and. xxx > 9.  .and. &
+               if (CellSize_DB(1,iBlock)>0.03125 .and.  xxx < 11. .and. xxx > 9.  .and. &
                abs(yyy) < 3. .and. abs(zzz)< 4.) DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>0.03125 .and.  xxx < 9.5 .and. xxx > 5.5  .and. &
+               if (CellSize_DB(1,iBlock)>0.03125 .and.  xxx < 9.5 .and. xxx > 5.5  .and. &
                abs(yyy) < 4. .and. abs(zzz)< 4.) DoRefine = .true.
 
-              if (CellSize_DB(1,iBLK)>0.03125 .and.  xxx < 8.5 .and. xxx > 5.5 .and. &
+              if (CellSize_DB(1,iBlock)>0.03125 .and.  xxx < 8.5 .and. xxx > 5.5 .and. &
                abs(yyy) < 6. .and. abs(yyy) > 4. .and. abs(zzz)< 4.) DoRefine = .true.
 
           end if
@@ -1173,105 +1143,102 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
            ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
            if (maxRblk > Rbody) then
 
-              if (CellSize_DB(1,iBLK) > 8.) then
+              if (CellSize_DB(1,iBlock) > 8.) then
                  ! Refine all blocks with dx greater than 8
                  DoRefine = .true.
               else
 
-                 if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                    abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 !    1 Re
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                     abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-               if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+               if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                     abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                     abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 !    0.5 Re
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 27.0 .and. xxx > -9. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 27.0 .and. xxx > -9. .and. &
                     abs(yyy)<30. .and. abs(zzz)<30.) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+                 if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                     abs(yyy)<30. .and. abs(zzz)<21.) DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                     abs(yyy)<30. .and. abs(zzz)<15.) DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                     abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-!25 Re
+! 25 Re
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 24. .and. xxx> -6.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 24. .and. xxx> -6.0 .and. &
                     abs(yyy)<24. .and. abs(zzz)<24.) DoRefine = .true.
 
-                 if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                 if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                     abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                     abs(yyy)<15. .and. abs(zzz)<12.) DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<15.) DoRefine = .true.
 
-                   if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+                   if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<12.) DoRefine = .true.
 
 !!!
 !!!
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                     abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
               end if
            end if
-
 
     case ('ror6_short')
        ! 6 x 6 x 6 block for pressure pulse high resolution stady
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -87.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -87.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -51. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -51. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.                     
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true. 
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
-                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.      
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. abs(xxx) < 3.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. abs(xxx) < 3.5 .and. &
                   abs(yyy)<3.5 .and. abs(zzz)<3.5) DoRefine = .true.
-
 
              ! 2 Re:  X>-84
              ! 1 Re:  |Z|<24, |Y|<24, -48<X<24
@@ -1279,12 +1246,10 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
              ! 0.25Re
              ! 0.25Re
 
-
              ! Refine tail sheet
 
              ! This will make it:
-             !    
-
+             !
 
           end if
        end if
@@ -1294,45 +1259,36 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -87.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -87.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -51. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -51. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<30..and. abs(zzz)<30.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > 15. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > 15. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-
-
 
              ! 2 Re:  X>-84
              ! 1 Re:  |Z|<24, |Y|<24, -48<X<24
@@ -1340,12 +1296,10 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
              ! 0.25Re
              ! 0.25Re
 
-
              ! Refine tail sheet
 
              ! This will make it:
              !
-
 
           end if
        end if
@@ -1355,48 +1309,42 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -87.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -87.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -51. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -51. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<30..and. abs(zzz)<30.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > 15. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > 15. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx > -6. .and. &
                   abs(yyy)<27..and. abs(zzz)<27.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx > 12. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx > 12. .and. &
                   abs(yyy)<21..and. abs(zzz)<21.) DoRefine = .true.
-
-
-
 
              ! 2 Re:  X>-84
              ! 1 Re:  |Z|<24, |Y|<24, -48<X<24
@@ -1404,12 +1352,10 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
              ! 0.25Re
              ! 0.25Re
 
-
              ! Refine tail sheet
 
              ! This will make it:
              !
-
 
           end if
        end if
@@ -1420,42 +1366,40 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
        ! Box sizes: -228<X<60, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -132.0 .and. &
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -132.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -84.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -84.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -12.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -12.0 .and. &
                   abs(yyy)<72..and. abs(zzz)<72.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -36.0 .and. &
-                  abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.                   
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -36.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -84.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -84.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -24. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -24. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -48. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -48. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -12. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -12. .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > 0. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > 0. .and. &
                   abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx > -12. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx > -12. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
           end if
@@ -1466,50 +1410,47 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
        ! Box sizes: -264<X<24, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -168.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -168.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -48.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -48.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -96.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -96.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -24. .and. xxx < 24.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -24. .and. xxx < 24.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -48. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -48. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 24.0 .and. xxx > -18. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 24.0 .and. xxx > -18. .and. &
                   abs(yyy)<36..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx > -18. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx > -18. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 24. .and. xxx> -12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 24. .and. xxx> -12.0 .and. &
                   abs(yyy)<30..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 15.0 .and. xxx> 0.0  .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 15.0 .and. xxx> 0.0  .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 12.0 .and. xxx> 0.0  .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 12.0 .and. xxx> 0.0  .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 9.0 .and. xxx> 0.0  .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 9.0 .and. xxx> 0.0  .and. &
                   abs(yyy)<24..and. abs(zzz)<6.) DoRefine = .true.
-
-
-
 
              ! 2 Re:  X>-84
              ! 1 Re:  |Z|<24, |Y|<24, -48<X<24
@@ -1517,7 +1458,6 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
              ! 0.25Re
              ! 0.25Re
 
-
              ! Refine tail sheet
 
              ! Refine tail sheet
@@ -1525,582 +1465,49 @@ if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 13. .and. xxx > -6 .and. &
              ! This will make it:
              !
 
-
           end if
        end if
-
 
     case ('ror6_long')
        ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.                     
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true. 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
-                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.      
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. abs(xxx) < 5. .and. &
-                  abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.06125 .and. abs(xxx) < 4.5 .and. &
-                  abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
-
-             ! This will make it:
-             !                                            
-
-             ! Tail
-             ! 4 Re:  X>-159
-             ! 2 Re:  X>-135
-             ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
-             ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
-
-             ! Magnetopause/Shock
-             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21 
-             ! 0.5Re:  |Z|<12, |Y|<12, 9<X<15
-             ! 0.5Re:  |Z|<18, |Y|<18, -3<X<9
-
-             ! Near Earth
-
-             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15  
-             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
-
-          end if
-       end if
-
-    case ('mn1')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -168.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -72.0)  DoRefine = .true.
-
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -60. .and. xxx < 36.0 .and. &
-                  abs(yyy)<60. .and. abs(zzz)<48.) DoRefine = .true.
-
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 30. .and. xxx> -54. .and. &
-                  abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-!             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
-!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
-!
-!             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
-!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
-
-
-
-          end if
-       end if
-
-    case ('mn2')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -168.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -72.0)  DoRefine = .true.
-
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > 0. .and. xxx < 36.0 .and. &
-                  yyy> -60. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -12. .and. xxx < 0 .and. &
-                 yyy> -72. .and. yyy < 36.  .and. abs(zzz)<36.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -60. .and. xxx < -12 .and. &
-                 yyy> -168. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
-  
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 30. .and. xxx> 0. .and. &
-                  yyy> -48. .and. yyy < 24. .and. abs(zzz)<30.) DoRefine = .true.
-
-            if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -12. .and. &
-                 yyy> -60. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
-
-            if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -10. .and. xxx> -54. .and. &
-                 yyy> -156. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-!             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
-!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
-!
-!             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
-!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
-
-
-
-          end if
-       end if
-
-
-    case ('mn2_old')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -168.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -72.0)  DoRefine = .true.
-
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > 0. .and. xxx < 36.0 .and. &
-                  yyy> -60. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -10. .and. xxx < 0 .and. &
-                 yyy> -72. .and. yyy < 36.  .and. abs(zzz)<36.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -60. .and. xxx < -10 .and. &
-                 yyy> -96. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
-
-
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 30. .and. xxx> 0. .and. &
-                  yyy> -48. .and. yyy < 24. .and. abs(zzz)<30.) DoRefine = .true.
-
-            if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -10. .and. &
-                 yyy> -60. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
-
-            if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -10. .and. xxx> -54. .and. &
-                 yyy> -96. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-!             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
-!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
-!
-!             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
-!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
-
-
-
-          end if
-       end if
- case ('ror6_RB_lr')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
-                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 21.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -87. .and. &
-                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -15. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -51. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12. .and. &
-                  abs(yyy)<12. .and. abs(zzz)<12. ) DoRefine = .true.
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. abs(xxx) < 5. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. abs(xxx) < 5. .and. &
                   abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.06125 .and. abs(xxx) < 4.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.06125 .and. abs(xxx) < 4.5 .and. &
                   abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
-
-          end if
-       end if
-
-
-
-    case ('ror6_long2')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
-                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
-                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.                     
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true. 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
-                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.      
-
-             ! increase near-Earth region to 8 R_E                    
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 8.0 .and. &
-                  abs(yyy)<8..and. abs(zzz)<8.) DoRefine = .true.
-
-             ! increase resolution in near-Earth tail                    
-             !                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx > 40 .and. xxx < -6.0 .and. &
-             !                    abs(yyy)<5..and. abs(zzz)<2.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. abs(xxx) < 5. .and. &
-                  abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.06125 .and. abs(xxx) < 4.5 .and. &
-                  abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
-
-             ! This will make it:
-             !                                            
-
-             ! Tail
-             ! 4 Re:  X>-159
-             ! 2 Re:  X>-135
-             ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
-             ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
-
-             ! Magnetopause/Shock
-             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21 
-             ! 0.5Re:  |Z|<12, |Y|<12, 9<X<15
-             ! 0.5Re:  |Z|<18, |Y|<18, -3<X<9
-
-             ! Near Earth
-
-             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15  
-             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
-
-          end if
-       end if
-
-
-    case ('ror6_long3')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
-                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
-                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.                     
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true. 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
-                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.      
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-             ! increase resolution in near-Earth tail                    
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx > -30 .and. xxx < -6.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. abs(xxx) < 5. .and. &
-                  abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.06125 .and. abs(xxx) < 4.5 .and. &
-                  abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
-
-             ! This will make it:
-             !                                            
-
-             ! Tail
-             ! 4 Re:  X>-159
-             ! 2 Re:  X>-135
-             ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
-             ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
-
-             ! Magnetopause/Shock
-             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21 
-             ! 0.5Re:  |Z|<12, |Y|<12, 9<X<15
-             ! 0.5Re:  |Z|<18, |Y|<18, -3<X<9
-
-             ! Near Earth
-
-             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15  
-             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
-          endif
-       endif
-
-    case ('ror6_hr_3')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
- 
-RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
-                   
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
-                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
-                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
-                   
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
-                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. RRR < 18. ) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. RRR < 12. ) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR< 7.5) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.06125 .and. RRR< 5.25) DoRefine = .true.
-
-
-          end if
-       end if
-
-    case ('ror6_hr_4')
-       ! 6 x 6 x 6 block for High resolution Runs On Request
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
-                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
-                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
-                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
-                  abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
-                  xxx > - 51.0 .and. &
-                  abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
-                  xxx > - 24.0 .and. &
-                  abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
-                  abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
-                  abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
-                  abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-
-              RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. RRR < 18. ) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. RRR < 12. ) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR< 7.5) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.06125 .and. RRR< 5.25) DoRefine = .true.
-
-          end if
-       end if
-
-
-
-    case ('mag6_rt')
-       ! 6 x 6 x 6 block for real time runs
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -87.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -51. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -3. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-
-
-          end if
-       end if
-
-
-    case ('ror6_rb')
-       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
-       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
-       if (maxRblk > Rbody) then
-
-          if (CellSize_DB(1,iBLK) > 8.) then
-             ! Refine all blocks with dx greater than 8
-             DoRefine = .true.
-          else
-
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
-                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
-                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
-                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
-                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9. .and. xxx> -24. .and. &
-                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
-                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-             !                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 3. .and. xxx > -18. .and. &
-             !                    yyy < 15. .and. yyy > -18. .and. abs(zzz)<9.) DoRefine = .true.
-             !
-             !                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. xxx > -15. .and. &
-             !                  yyy < -7. .and. yyy > -14. .and. zzz < 4. .and. zzz > -7.) &
-             !                     DoRefine = .true.
-             !
-
 
              ! This will make it:
              !
@@ -2124,51 +1531,554 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
           end if
        end if
 
+    case ('mn1')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -168.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -72.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -60. .and. xxx < 36.0 .and. &
+                  abs(yyy)<60. .and. abs(zzz)<48.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 30. .and. xxx> -54. .and. &
+                  abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+!             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+!
+!             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+
+          end if
+       end if
+
+    case ('mn2')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -168.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -72.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > 0. .and. xxx < 36.0 .and. &
+                  yyy> -60. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -12. .and. xxx < 0 .and. &
+                 yyy> -72. .and. yyy < 36.  .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -60. .and. xxx < -12 .and. &
+                 yyy> -168. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 30. .and. xxx> 0. .and. &
+                  yyy> -48. .and. yyy < 24. .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -12. .and. &
+                 yyy> -60. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -10. .and. xxx> -54. .and. &
+                 yyy> -156. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+!             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+!
+!             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+
+          end if
+       end if
+
+    case ('mn2_old')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -168.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -72.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > 0. .and. xxx < 36.0 .and. &
+                  yyy> -60. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -10. .and. xxx < 0 .and. &
+                 yyy> -72. .and. yyy < 36.  .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -60. .and. xxx < -10 .and. &
+                 yyy> -96. .and. yyy < 36.   .and. abs(zzz)<36.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 30. .and. xxx> 0. .and. &
+                  yyy> -48. .and. yyy < 24. .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -10. .and. &
+                 yyy> -60. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+            if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -10. .and. xxx> -54. .and. &
+                 yyy> -96. .and. yyy < 30.  .and. abs(zzz)<30.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+!             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+!
+!             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 24. .and. yyy > -24. .and. &
+!                  yyy<30. .and. abs(zzz)<5.) DoRefine = .true.
+
+          end if
+       end if
+ case ('ror6_RB_lr')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -87. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -15. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -51. .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12. .and. &
+                  abs(yyy)<12. .and. abs(zzz)<12. ) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.125 .and. abs(xxx) < 5. .and. &
+                  abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.06125 .and. abs(xxx) < 4.5 .and. &
+                  abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
+
+          end if
+       end if
+
+    case ('ror6_long2')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             ! increase near-Earth region to 8 R_E
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 8.0 .and. &
+                  abs(yyy)<8..and. abs(zzz)<8.) DoRefine = .true.
+
+             ! increase resolution in near-Earth tail
+             !                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx > 40 .and. xxx < -6.0 .and. &
+             !                    abs(yyy)<5..and. abs(zzz)<2.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.125 .and. abs(xxx) < 5. .and. &
+                  abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.06125 .and. abs(xxx) < 4.5 .and. &
+                  abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
+
+             ! This will make it:
+             !
+
+             ! Tail
+             ! 4 Re:  X>-159
+             ! 2 Re:  X>-135
+             ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
+             ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
+
+             ! Magnetopause/Shock
+             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21
+             ! 0.5Re:  |Z|<12, |Y|<12, 9<X<15
+             ! 0.5Re:  |Z|<18, |Y|<18, -3<X<9
+
+             ! Near Earth
+
+             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15
+             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
+
+          end if
+       end if
+
+    case ('ror6_long3')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+             ! increase resolution in near-Earth tail
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx > -30 .and. xxx < -6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.125 .and. abs(xxx) < 5. .and. &
+                  abs(yyy)<5..and. abs(zzz)<5.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.06125 .and. abs(xxx) < 4.5 .and. &
+                  abs(yyy)<4.5.and. abs(zzz)<4.5) DoRefine = .true.
+
+             ! This will make it:
+             !
+
+             ! Tail
+             ! 4 Re:  X>-159
+             ! 2 Re:  X>-135
+             ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
+             ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
+
+             ! Magnetopause/Shock
+             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21
+             ! 0.5Re:  |Z|<12, |Y|<12, 9<X<15
+             ! 0.5Re:  |Z|<18, |Y|<18, -3<X<9
+
+             ! Near Earth
+
+             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15
+             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
+          endif
+       endif
+
+    case ('ror6_hr_3')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. RRR < 18. ) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. RRR < 12. ) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR< 7.5) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.06125 .and. RRR< 5.25) DoRefine = .true.
+
+          end if
+       end if
+
+    case ('ror6_hr_4')
+       ! 6 x 6 x 6 block for High resolution Runs On Request
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+                  abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
+                  xxx > - 51.0 .and. &
+                  abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
+                  xxx > - 24.0 .and. &
+                  abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+                  abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+                  abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+                  abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
+
+              RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. RRR < 18. ) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. RRR < 12. ) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR< 7.5) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.06125 .and. RRR< 5.25) DoRefine = .true.
+
+          end if
+       end if
+
+    case ('mag6_rt')
+       ! 6 x 6 x 6 block for real time runs
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -87.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -51. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -3. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -27.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+          end if
+       end if
+
+    case ('ror6_rb')
+       ! 6 x 6 x 6 block for overview Runs On Request (long tail added)
+       ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
+       if (maxRblk > Rbody) then
+
+          if (CellSize_DB(1,iBlock) > 8.) then
+             ! Refine all blocks with dx greater than 8
+             DoRefine = .true.
+          else
+
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
+                  abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+                  abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -99. .and. &
+                  abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9. .and. xxx> -24. .and. &
+                  abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
+
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
+                  abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
+
+             !                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 3. .and. xxx > -18. .and. &
+             !                    yyy < 15. .and. yyy > -18. .and. abs(zzz)<9.) DoRefine = .true.
+             !
+             !                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. xxx > -15. .and. &
+             !                  yyy < -7. .and. yyy > -14. .and. zzz < 4. .and. zzz > -7.) &
+             !                     DoRefine = .true.
+             !
+
+             ! This will make it:
+             !
+
+             ! Tail
+             ! 4 Re:  X>-159
+             ! 2 Re:  X>-135
+             ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
+             ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
+
+             ! Magnetopause/Shock
+             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21
+             ! 0.5Re:  |Z|<12, |Y|<12, 9<X<15
+             ! 0.5Re:  |Z|<18, |Y|<18, -3<X<9
+
+             ! Near Earth
+
+             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15
+             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
+
+          end if
+       end if
 
     case ('ror6_tail')
        ! 6 x 6 x 6 block for overview Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.                     
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true. 
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 93.0 .and. &
-                  abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.      
+                  abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-
              ! This will make it:
-             !                                            
+             !
 
              ! Tail
              ! 4 Re:   X>-159
@@ -2178,15 +2088,14 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              ! 0.25Re: |Z|<3, |Y|<9, -93<X<0
 
              ! Magnetopause/Shock
-             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21 
+             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21
              ! 0.5Re:  |Z|<12, |Y|<12, 9<X<15
              ! 0.5Re:  |Z|<18, |Y|<18, -3<X<9
 
              ! Near Earth
 
-             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15  
-             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,   
-
+             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15
+             ! 0.25Re: |Z|<6, |Y|<6, |X|<6,
 
           end if
        end if
@@ -2195,57 +2104,50 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -63. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -63. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 6.0 .and. xxx > -39. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 6.0 .and. xxx > -39. .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -39. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -39. .and. &
                   abs(yyy)<36..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 6. .and. &
                   xxx > - 21.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 21.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-
-
 
              ! This will make it:
              !
@@ -2259,7 +2161,6 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
 
              ! Nightside magnetopause
 
-
              ! Magnetopause/Shock
              ! 1 Re:   |Z|<24, |Y|<24, -15 <X< 33
              ! 0.5Re:  |Z|<18, |Y|<18, -3<X<15
@@ -2270,7 +2171,6 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
 
              ! Near Earth
              ! 0.25Re: |Z|<6, |Y|<6, |X|<6
-
 
           end if
        end if
@@ -2280,56 +2180,51 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -63. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -63. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -39. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -39. .and. &
                   abs(yyy)<36..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 6. .and. &
                   xxx > - 21.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<6.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 3. .and. xxx > -18. .and. &
-                  yyy < 19.5 .and. yyy > 10. .and. & 
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 3. .and. xxx > -18. .and. &
+                  yyy < 19.5 .and. yyy > 10. .and. &
                   abs(zzz)< 3) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx < 0. .and. xxx > -15. .and. &
-                  yyy < 17. .and. yyy > 13. .and. & 
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx < 0. .and. xxx > -15. .and. &
+                  yyy < 17. .and. yyy > 13. .and. &
                   abs(zzz)< 1.5) DoRefine = .true.
-
-
 
              ! This will make it:
              !
@@ -2343,7 +2238,6 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
 
              ! Nightside magnetopause
 
-
              ! Magnetopause/Shock
              ! 1 Re:   |Z|<24, |Y|<24, -15 <X< 33
              ! 0.5Re:  |Z|<18, |Y|<18, -3<X<15
@@ -2355,7 +2249,6 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              ! Near Earth
              ! 0.25Re: |Z|<6, |Y|<6, |X|<6
 
-
           end if
        end if
 
@@ -2364,46 +2257,43 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 21.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.                     
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true. 
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> 0.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-
-
              ! This will make it:
-             !                                            
+             !
 
              ! Tail
              ! 4 Re:  X>-159
@@ -2412,18 +2302,17 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              ! 0.5Re: |Z|<6, |Y|<6, -99<X<0
 
              ! Magnetopause/Shock
-             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21 
+             ! 1 Re:   |Z|<24, |Y|<24, -15 <X<21
              ! 0.5Re:  |Z|<18, |Y|<18, -3<X<15
              ! 0.25Re: |Z|<12, |Y|<12, 0<X<12
              ! 0.25Re: |Z|<15, |Y|<15, 0<X<9
 
              ! Near Earth
 
-             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15  
+             ! 0.5Re:  |Z|<12, |Y|<15, -9<X<15
              ! 0.25Re: |Z|<6, |Y|<6, |X|<6
 
-             !    
-
+             !
 
           end if
        end if
@@ -2433,45 +2322,45 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -3. .and. &
-                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.                     
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -3. .and. &
+                  abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
-                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true. 
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                  abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> 0.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 0.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
              ! This will make it:
-             !                                            
+             !
              ! Tail
              ! 4 Re:  X>-159
              ! 2 Re:  X>-135
@@ -2496,41 +2385,41 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
              ! This will make it:
@@ -2560,52 +2449,50 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -384<X<192, -192<Z<192, -192<Y<192
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             ! add cylinder in night side and half sphere in dayside with radius=50 
-             !                 if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -30. .and. &
+             ! add cylinder in night side and half sphere in dayside with radius=50
+             !                 if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -30. .and. &
              !                    (yyy*yyy+zzz*zzz)<2500.) DoRefine = .true.
 
              ! add elliptic area in front of -30 R_E up to 45 R_E in X and with
              ! 170 R_E radous in in Y-Z plane
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -40. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -40. .and. &
                   ((xxx+40.)*(xxx+40.)+(yyy*yyy+zzz*zzz)/4.)<7225.) DoRefine = .true.
 
-
-
-             !                if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             !                if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
              !                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             !                if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             !                if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
              !                    abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             !                if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             !                if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
              !                    abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
              ! This will make it:
@@ -2635,48 +2522,46 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -384<X<192, -192<Z<192, -192<Y<192
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -24.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -24.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -120.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -120.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -24. .and. xxx < 48 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -24. .and. xxx < 48 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -96. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -96. .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx > 0. .and. xxx < 36 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx > 0. .and. xxx < 36 .and. &
                   abs(yyy)<30. .and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 1. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 1. .and. xxx > -9. .and. &
                   abs(yyy)<24. .and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -30.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -30.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
              ! add elliptic area in front of -30 R_E up to 45 R_E in X and with
              ! 170 R_E radous in in Y-Z plane
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -24. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -24. .and. &
                   ((xxx+40.)*(xxx+40.)+(yyy*yyy+zzz*zzz)/4.)<7225.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx > -3. .and. xxx < 18 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx > -3. .and. xxx < 18 .and. &
                   abs(yyy)<21..and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -12.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-
 
           end if
        end if
@@ -2686,104 +2571,100 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -384<X<192, -192<Z<192, -192<Y<192
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -24.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -24.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -120.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -120.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -24. .and. xxx < 48 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -24. .and. xxx < 48 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -96. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -96. .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx > 0. .and. xxx < 36 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx > 0. .and. xxx < 36 .and. &
                   abs(yyy)<30. .and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 1. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 1. .and. xxx > -9. .and. &
                   abs(yyy)<24. .and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -30.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -30.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
              ! add elliptic area in front of -30 R_E up to 45 R_E in X and with
              ! 170 R_E radous in in Y-Z plane
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -24. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -24. .and. &
                   ((xxx+40.)*(xxx+40.)+(yyy*yyy+zzz*zzz)/4.)<7225.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx > -3. .and. xxx < 27. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx > -3. .and. xxx < 27. .and. &
                   abs(yyy)<21..and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -6.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -12.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-
 
           end if
        end if
 
-
     case ('ror6_hr')
-       ! 6 x 6 x 6 block for High resolution Runs On Request 
+       ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
                   abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  abs(xxx) < 3. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  abs(xxx) < 3. .and. &
                   abs(yyy) < 3. .and. abs(zzz)< 3.) DoRefine = .true.
 
              ! This will make it:
@@ -2811,7 +2692,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        end if
 
     case ('AS1')
-       ! 6 x 6 x 6 block 
+       ! 6 x 6 x 6 block
        ! Box sizes: -267<X<21, -48<Z<48, -48<Y<48
        !
        ! Customized grid requested by  Andrey Samsonov
@@ -2821,50 +2702,48 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
 
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -171.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -171.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -51.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -51.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -147.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -147.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -39. .and. xxx < 21.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -39. .and. xxx < 21.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -21. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -21. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -51.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -51.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 36.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and.  xxx < 21.  .and.  xxx > -12. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and.  xxx < 21.  .and.  xxx > -12. .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 6. .and. &
                   abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx < 21. .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx < 21. .and. xxx > -6. .and. &
                   abs(yyy) < 8. .and. abs(zzz)< 8.) DoRefine = .true.
 
           end if
@@ -2875,68 +2754,65 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -351<X<33, -192<Z<192, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
              ! add elliptic area in front of -30 R_E up to 45 R_E in X and with
              ! 170 R_E radous in in Y-Z plane
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -24. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -24. .and. &
                   ((xxx+40.)*(xxx+40.)+(yyy*yyy+zzz*zzz)/4.)<7225.) DoRefine = .true.
 
-
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
              !                    abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 6. .and. &
                   abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
-
-             !                if (CellSize_DB(1,iBLK)>0.0625 .and.  abs(xxx) < 6. .and. &
+             !                if (CellSize_DB(1,iBlock)>0.0625 .and.  abs(xxx) < 6. .and. &
              !                    abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
              ! This will make it:
@@ -2968,78 +2844,75 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
 ! Katarina Nykyri
 
-           if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+           if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                   abs(yyy)<30. .and. abs(zzz)<30.) DoRefine = .true.
 
-          
-           if (CellSize_DB(1,iBLK)>0.5  .and. xxx > -21. .and. xxx < 12.0 .and. &
+           if (CellSize_DB(1,iBlock)>0.5  .and. xxx > -21. .and. xxx < 12.0 .and. &
                   abs(yyy)<24. .and. abs(zzz)<24.) DoRefine = .true.
 
-           if (CellSize_DB(1,iBLK)>0.25 .and. xxx > -18. .and. xxx < 9.0 .and. &
+           if (CellSize_DB(1,iBlock)>0.25 .and. xxx > -18. .and. xxx < 9.0 .and. &
                   yyy > -6. .and. yyy<15. .and.  zzz>3. .and. zzz < 18.) DoRefine = .true.
 
-          if (CellSize_DB(1,iBLK)>0.125 .and. xxx > -14. .and. xxx < 5.0 .and. &
+          if (CellSize_DB(1,iBlock)>0.125 .and. xxx > -14. .and. xxx < 5.0 .and. &
                   yyy > -1. .and. yyy<10. .and.  zzz>7. .and. zzz < 16.) DoRefine = .true.
 
-
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
              !                    abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 6. .and. &
                   abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
-
-             !                if (CellSize_DB(1,iBLK)>0.0625 .and.  abs(xxx) < 6. .and. &
+             !                if (CellSize_DB(1,iBlock)>0.0625 .and.  abs(xxx) < 6. .and. &
              !                    abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
              ! This will make it:
@@ -3066,69 +2939,66 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
           end if
        end if
 
-
-
     case ('ror6_hr_1')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
              !                    abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 6. .and. &
                   abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
-
-             !                if (CellSize_DB(1,iBLK)>0.0625 .and.  abs(xxx) < 6. .and. &
+             !                if (CellSize_DB(1,iBlock)>0.0625 .and.  abs(xxx) < 6. .and. &
              !                    abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
              ! This will make it:
@@ -3160,55 +3030,54 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -735<X<33, -192<Z<192, -192<Y<192
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -351.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -351.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -20. .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -20. .and. &
                   abs(yyy)<96. .and. abs(zzz)<96. )  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -207.0 .and. xxx< -15. .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -207.0 .and. xxx< -15. .and. &
                   abs(yyy)<144. .and. abs(zzz)<144.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
              ! This will make it:
              !
@@ -3239,108 +3108,103 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -9. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<21.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
              !                    abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 6. .and. &
                   abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
 
-
-             !                if (CellSize_DB(1,iBLK)>0.0625 .and.  abs(xxx) < 6. .and. &
+             !                if (CellSize_DB(1,iBlock)>0.0625 .and.  abs(xxx) < 6. .and. &
              !                    abs(yyy) < 6. .and. abs(zzz)< 6.) DoRefine = .true.
-
 
           end if
        end if
-
-
 
     case ('ESS-261lr')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -21. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -21. .and. xxx < 33.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -15. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -15. .and. &
                   abs(yyy)<36. .and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
              !
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
           end if
        end if
@@ -3350,70 +3214,69 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -21. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -21. .and. xxx < 33.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -15. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -15. .and. &
                   abs(yyy)<36. .and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
              !
 !!! Uncomment for high resolution run
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx)  <  12. .and.  &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx)  <  12. .and.  &
                   abs(yyy)< 21. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<15.) DoRefine = .true.
 
 !!! End of high resolution run
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -9. .and.  xxx < 3. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -9. .and.  xxx < 3. .and. &
                   abs(yyy) < 18 .and. abs(zzz)< 6) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 2. .and.  xxx < 8. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 2. .and.  xxx < 8. .and. &
                   abs(yyy) < 15 .and. abs(zzz)< 6) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 7.5 .and.  xxx < 12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 7.5 .and.  xxx < 12. .and. &
                   abs(yyy) < 12 .and. abs(zzz)< 6) DoRefine = .true.
-
 
           end if
        end if
@@ -3423,214 +3286,205 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
              !    1 Re
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
              !    0.5 Re
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                   abs(yyy)<30. .and. abs(zzz)<21.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                   abs(yyy)<30. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
              !    0.25 Re
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<18.) DoRefine = .true.
 
 !!!
 !!!
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
              !  0.125 Re
 
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 13.5  .and. &
 !!!                   abs(zzz)< 6.) DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 12.  .and. &
 !!!                   abs(zzz)< 6) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
                   abs(yyy) < 9.  .and. &
                   abs(zzz)< 10.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
                   abs(yyy) < 6.  .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 
-
              RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -10. .and.  xxx < 14. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -10. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 17. .and. &
                   abs(zzz)< 15. .and. abs(yyy) < 18.) DoRefine = .true.
              !
              !
 !!!! corrections on 04/14/07
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -10. .and.  xxx < 14. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -10. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 20. .and. &
                   abs(zzz)< 6. .and. abs(yyy) < 18.) DoRefine = .true.
 !!!!!         end corrections 04/14/07
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx > -10.5 .and.  xxx < 7.5 .and.  abs(yyy) < 12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx > -10.5 .and.  xxx < 7.5 .and.  abs(yyy) < 12. .and. &
                   abs(zzz) < 10.5) DoRefine = .true.
 !!!!!  correction on northern hemisphere
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx > -10.5 .and.  xxx < 10.5  .and.  yyy < 18. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx > -10.5 .and.  xxx < 10.5  .and.  yyy < 18. .and. &
                   yyy > 0. .and. zzz > 0. .and. zzz  < 15.) DoRefine = .true.
-
 
           end if
        end if
-
 
     case ('jb3')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
              !    1 Re
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
              !    0.5 Re
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                   abs(yyy)<30. .and. abs(zzz)<21.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                   abs(yyy)<30. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
              !    0.25 Re
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<12.) DoRefine = .true.
 
 !!!
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
              !  0.125 Re
 
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 13.5  .and. &
 !!!                   abs(zzz)< 6.) DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 12.  .and. &
 !!!                   abs(zzz)< 6) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
                   abs(yyy) < 9.  .and. &
                   abs(zzz)< 10.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 4.5 .and.  xxx < 12 .and. &
                   abs(yyy) < 6.  .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 
-
              RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 17. .and. &
                   abs(zzz)< 6.) DoRefine = .true.
              !
              !
 !!!! corrections on 04/14/07
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 1. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 20. .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 !!!!!         end corrections 04/14/07
              ! 0.0625
 
-             !!old                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
-             !!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
-             !!old                   abs(zzz)< 3.) DoRefine = .true.
+             !! old                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+             !! old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+             !! old                   abs(zzz)< 3.) DoRefine = .true.
 
-             !!                   if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+             !!                   if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
              !!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
              !!                   abs(zzz)< 3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                   abs(yyy) < 6.  .and. &
                   abs(zzz)< 4.5) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 0 .and.  xxx < 12. .and. &
                   RRR > 11. .and. RRR < 15.5 .and. &
                   abs(zzz)< 4.5) DoRefine = .true.
 !!! corrections 04/14/07
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 1. .and.  xxx < 14. .and. &
                   RRR > 11. .and. RRR < 18.5 .and. &
                   abs(zzz)< 4.5) DoRefine = .true.
 !!! end 04/14/07
 !!!
 !!! corrections 04/15/07
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 6. .and.  xxx < 12. .and. &
                   abs(yyy) < 7.5 .and. &
                   abs(zzz)< 4.5) DoRefine = .true.
 !!! end 04/15/07
@@ -3638,102 +3492,95 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
           end if
        end if
 
-
-
-
     case ('jb1')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
              !    1 Re
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
              !    0.5 Re
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                   abs(yyy)<30. .and. abs(zzz)<21.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                   abs(yyy)<30. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
              !    0.25 Re
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<12.) DoRefine = .true.
 
 !!!
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
 
              !  0.125 Re
 
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 13.5  .and. &
 !!!                   abs(zzz)< 6.) DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
 !!!                  abs(yyy) < 19.5 .and. abs(yyy) > 12.  .and. &
 !!!                   abs(zzz)< 6) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
                   abs(yyy) < 9.  .and. &
                   abs(zzz)< 10.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 7.5 .and.  xxx < 12 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 7.5 .and.  xxx < 12 .and. &
                   abs(yyy) < 6.  .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 
-
              RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -3. .and.  xxx < 14. .and. &
                   RRR >10. .and.  RRR < 17. .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 
              ! 0.0625
 
-             !!old                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
-             !!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
-             !!old                   abs(zzz)< 3.) DoRefine = .true.
+             !! old                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+             !! old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+             !! old                   abs(zzz)< 3.) DoRefine = .true.
 
-             !!                   if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+             !!                   if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
              !!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
              !!                   abs(zzz)< 3.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > 0 .and.  xxx < 13. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > 0 .and.  xxx < 13. .and. &
                   RRR > 11. .and. RRR < 15.5 .and. &
                   abs(zzz)< 4.5) DoRefine = .true.
 
@@ -3745,96 +3592,90 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
              !    1 Re
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -27. .and. xxx < 33.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<36.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -51. .and. xxx < -27 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -51. .and. xxx < -27 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < -51. .and. xxx > -75. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < -51. .and. xxx > -75. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
              !    0.5 Re
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -27. .and. &
                   abs(yyy)<30. .and. abs(zzz)<21.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -27.0 .and. xxx > - 45. .and. &
                   abs(yyy)<30. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < - 45. .and. xxx> - 63.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
-
 
              !    0.25 Re
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 9.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -36.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<12.) DoRefine = .true.
 
-!!! 
+!!!
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
              !  0.125 Re
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -24. .and.  xxx < -7.5 .and. &
                   abs(yyy) < 19.5 .and. abs(yyy) > 13.5  .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -7.5 .and.  xxx < -2.5 .and. &
                   abs(yyy) < 19.5 .and. abs(yyy) > 12.  .and. &
                   abs(zzz)< 6) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 6. .and.  xxx < 11 .and. &
                   abs(yyy) < 9.  .and. &
                   abs(zzz) > 5. .and.  abs(zzz)< 10.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 7.5 .and.  xxx < 12 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 7.5 .and.  xxx < 12 .and. &
                   abs(yyy) < 6.  .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 
-
              RRR=sqrt((xxx+3.)**2+1.3*zzz**2+(5.+0.77*abs(yyy))**2-25.)
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > -3. .and.  xxx < 16. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > -3. .and.  xxx < 16. .and. &
                   RRR >12. .and.  RRR < 18. .and. &
                   abs(zzz)< 6.) DoRefine = .true.
 
-
-
              ! 0.0625
 
-             !!old                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
-             !!old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
-             !!old                   abs(zzz)< 3.) DoRefine = .true.
+             !! old                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -18. .and.  xxx < -7.5 .and. &
+             !! old                  abs(yyy) < 18. .and. abs(yyy) > 15.  .and. &
+             !! old                   abs(zzz)< 3.) DoRefine = .true.
 
-             !!                   if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
+             !!                   if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -7.5 .and.  xxx < -0.75 .and. &
              !!                  abs(yyy) < 18. .and. abs(yyy) > 13.5  .and. &
              !!                   abs(zzz)< 3.) DoRefine = .true.
 
-
-             !!                  if (CellSize_DB(1,iBLK)>0.0625 .and.  xxx > -3. .and.  xxx < 16. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.0625 .and.  xxx > -3. .and.  xxx < 16. .and. &
              !!                  RRR > 12.5 .and. RRR < 16.5 .and. &
              !!                   abs(zzz)< 3.) DoRefine = .true.
 
@@ -3846,36 +3687,36 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
            ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
            if (maxRblk > Rbody) then
 
-              if (CellSize_DB(1,iBLK) > 8.) then
+              if (CellSize_DB(1,iBlock) > 8.) then
                  ! Refine all blocks with dx greater than 8
                  DoRefine  = .true.
               else
 
-                 if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0 .and. &
                  abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0 .and. &
               abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                    abs(yyy)<48..and. abs(zzz)<48.)  DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                     abs(yyy)<24..and. abs(zzz)<24.) DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -123. .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -123. .and. &
                     abs(yyy)<36..and. abs(zzz)<24.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                     abs(yyy)<18..and. abs(zzz)<18.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                     abs(yyy)<12..and. abs(zzz)<12.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
                     abs(yyy)<30..and. abs(zzz)<18.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 6. .and. xxx> -6. .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 6. .and. xxx> -6. .and. &
                     abs(yyy)<8. .and. abs(zzz)<8.) DoRefine  = .true.
 
               end if
@@ -3886,162 +3727,155 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
            ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
            if (maxRblk > Rbody) then
 
-              if (CellSize_DB(1,iBLK) > 8.) then
+              if (CellSize_DB(1,iBlock) > 8.) then
                  ! Refine all blocks with dx greater than 8
                  DoRefine  = .true.
               else
 
-                 if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0 .and. &
                  abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0 .and. &
               abs(yyy)<96..and. abs(zzz)<96.)  DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+                 if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                    abs(yyy)<48..and. abs(zzz)<48.)  DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                     abs(yyy)<24..and. abs(zzz)<24.) DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -123. .and. &
+                 if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -123. .and. &
                     abs(yyy)<36..and. abs(zzz)<24.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                     abs(yyy)<18..and. abs(zzz)<18.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                     abs(yyy)<12..and. abs(zzz)<12.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
                     abs(yyy)<30..and. abs(zzz)<18.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -87. .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -87. .and. &
                     abs(yyy)<27. .and. abs(zzz)<6.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> -3.0 .and. &
+                  if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> -3.0 .and. &
                     abs(yyy)<15. .and. abs(zzz)<15.) DoRefine  = .true.
 
-                 if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+                 if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                     abs(yyy)<12. .and. abs(zzz)<9.) DoRefine  = .true.
 
-                    if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -26.0 .and. &
+                    if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -26.0 .and. &
                     abs(yyy)<21. .and. abs(zzz)<9.) DoRefine  = .true.
 
-!!                  if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 10.0 .and. &
+!!                  if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 10.0 .and. &
 !!                    abs(yyy)<12..and. abs(zzz)<12.) DoRefine  = .true.
 
-                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 12. .and. &
+                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 12. .and. &
                     abs(yyy) < 8. .and. abs(zzz)< 6. ) DoRefine  = .true.
 
-
-                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
                      xxx > - 24.0 .and. &
                     abs(yyy)< 18. .and. abs(zzz)<6.) DoRefine  = .true.
 
-                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 8. .and. &
+                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 8. .and. &
                      xxx > - 6.0 .and. &
                     abs(yyy)< 12. .and. abs(zzz)<6.) DoRefine  = .true.
 
 !!
-                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -6. .and. &
+                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -6. .and. &
                      xxx > - 48.0 .and. &
                     abs(yyy)< 21. .and. abs(zzz)<3.) DoRefine  = .true.
 
-                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -40. .and. &
+                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -40. .and. &
                      xxx > - 60.0 .and. &
                     abs(yyy)< 18. .and. abs(zzz)<3.) DoRefine  = .true.
 
-!!                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -70. .and. &
+!!                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -70. .and. &
 !!                     xxx > - 87.0 .and. &
 !!                    abs(yyy)< 15. .and. abs(zzz)<3.) DoRefine  = .true.
 
-
-!!                  if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -8. .and. &
+!!                  if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -8. .and. &
 !!                     xxx > - 20.0 .and. &
 !!                    abs(yyy)<12. .and. abs(zzz)<3.) DoRefine  = .true.
 !!
-!!                      if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -8. .and. &
+!!                      if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -8. .and. &
 !!                     xxx > - 50.0 .and. &
 !!                    abs(yyy)<9. .and. abs(zzz)<1.5) DoRefine  = .true.
 !!
 !!
-!!                  if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -10. .and. &
+!!                  if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -10. .and. &
 !!                     xxx > - 16.0 .and. &
 !!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine  = .true.
               end if
            end if
-
-
-
-
 
     case ('ror6_sawt_jb')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -63.  .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -63.  .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 9. .and. xxx> -51.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 9. .and. xxx> -51.0 .and. &
                   abs(yyy)<30..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -39. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -39. .and. &
                   abs(yyy)<24. .and. abs(zzz)<6.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
                   abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  abs(xxx) < 3. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  abs(xxx) < 3. .and. &
                   abs(yyy) < 3. .and. abs(zzz)< 3.) DoRefine = .true.
 
              ! This will make it:
@@ -4068,58 +3902,56 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
           end if
        end if
 
-
     case ('ror6_cusp_pd')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0. .and. xxx> -33.0 .and. &
                   abs(yyy)<18..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)<15..and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.  .and. &
-                  abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.           
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.  .and. &
+                  abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
                   abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and.  abs(xxx) < 3. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and.  abs(xxx) < 3. .and. &
                   abs(yyy) < 3. .and. abs(zzz)< 3.) DoRefine = .true.! This will make it:
              !
              ! Tail
@@ -4127,13 +3959,13 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              ! 2 Re:  X>-135
              ! 1 Re:  |Z|<12, |Y|<24, -111<X<0
              ! 0.5Re: |Z|<6, |Y|<12, -99<X<0
-             ! 0.5Re: |Z|<6, |Y|<18, -33<X<0      
+             ! 0.5Re: |Z|<6, |Y|<18, -33<X<0
              ! 0.25   |Z|<3, |Y|<9, -51<X<0
              ! 0.25   |Z|<3, |Y|<15, -24<X<0
 
              ! Magnetopause/Shock
              ! 1 Re:   |Z|<24, |Y|<24, -15 <X< 33
-             ! 0.5Re:  |Z|<18, |Y|<18, -9<X<121  
+             ! 0.5Re:  |Z|<18, |Y|<18, -9<X<121
              ! 0.25Re: |Z|<12, |Y|<12, -6<X<18
              ! 0.25Re: |Z|<15, |Y|<15, -3<X<9
 
@@ -4149,55 +3981,52 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<24.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -99.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 0 .and. xxx> -51.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 0 .and. xxx> -51.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx> -33.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx> -33.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)<9..and. abs(zzz)<3.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
-
-
 
              ! This will make it:
              !
@@ -4224,69 +4053,66 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
           end if
        end if
 
-
     case ('ror6_tail_new2')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<48..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15. .and. xxx> -87.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15. .and. xxx> -87.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. &
                   xxx > - 63.0 .and. &
                   abs(yyy)<24.and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
                   xxx > - 51.0 .and. &
                   abs(yyy)< 18. .and. abs(zzz)<1.5) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -6. .and. &
                   xxx > - 36.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<0.75) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -6. .and. &
                   xxx > - 26.0 .and. &
                   abs(yyy)<3.75 .and. abs(zzz)<0.375) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 0.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<12.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 6.0 .and. &
                   abs(yyy)<6..and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 4.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 4.5 .and. &
                   abs(yyy) < 4.5 .and. abs(zzz)< 4.5) DoRefine = .true.
-
 
              ! This will make it:
              ! This will make it:
@@ -4321,87 +4147,84 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -351<X<33, -96<Z<96, -96<Y<96
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0 .and. &
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0 .and. &
                   abs(yyy)<96..and. abs(zzz)<96.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0 .and. &
                   abs(yyy)<96..and. abs(zzz)<96.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -123. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -123. .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -111.0 .and. &
                   abs(yyy)<30..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -99. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -99. .and. &
                   abs(yyy)<27. .and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -26.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -26.0 .and. &
                   abs(yyy)<21. .and. abs(zzz)<9.) DoRefine = .true.
 
-
-             !!                  if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12.0 .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12.0 .and. &
              !!                    abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 10. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 10. .and. &
                   abs(yyy) < 8. .and. abs(zzz)< 6. ) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
                   xxx > - 24.0 .and. &
                   abs(yyy)< 18. .and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 8. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 8. .and. &
                   xxx > - 6.0 .and. &
                   abs(yyy)< 12. .and. abs(zzz)<6.) DoRefine = .true.
 
              !!
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -6. .and. &
                   xxx > - 48.0 .and. &
                   abs(yyy)< 21. .and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -40. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -40. .and. &
                   xxx > - 72.0 .and. &
                   abs(yyy)< 18. .and. abs(zzz)<3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -70. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -70. .and. &
                   xxx > - 87.0 .and. &
                   abs(yyy)< 15. .and. abs(zzz)<3.) DoRefine = .true.
 
-
-             !!                  if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -8. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -8. .and. &
              !!                     xxx > - 20.0 .and. &
              !!                    abs(yyy)<12. .and. abs(zzz)<3.) DoRefine = .true.
              !!
-             !!                      if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -8. .and. &
+             !!                      if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -8. .and. &
              !!                     xxx > - 50.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<1.5) DoRefine = .true.
              !!
              !!
-             !!                  if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -10. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -10. .and. &
              !!                     xxx > - 16.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine = .true.
           end if
@@ -4412,203 +4235,194 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0 .and. &
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0 .and. &
                   abs(yyy)<96..and. abs(zzz)<96.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0 .and. &
                   abs(yyy)<96..and. abs(zzz)<96.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -123. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -123. .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
                   abs(yyy)<30..and. abs(zzz)<18.) DoRefine = .true.
 
              !!   0.25
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -75. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -75. .and. &
                   abs(yyy)<27. .and. zzz < 6. .and.  zzz > -9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> -3.0 .and. &
                   abs(yyy)<15. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<12. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -51.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -51.0 .and. &
                   abs(yyy)<21. .and. zzz < 6. .and. zzz > -12.) DoRefine = .true.
 
-
-             !!                  if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12.0 .and. &
-             !!  
+             !!                  if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12.0 .and. &
+             !!
              !!                    abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
 
              !!   0.125
 
-!!!!             if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 10. .and. &
+!!!!             if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 10. .and. &
 !!!!                  abs(yyy) < 8. .and. abs(zzz)< 6. ) DoRefine = .true.
 
-
-!!!!             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 8. .and. &
+!!!!             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 8. .and. &
 !!!!                  xxx > - 6.0 .and. &
 !!!!                  abs(yyy)< 12. .and. abs(zzz)<6.) DoRefine = .true.
 
              !!
 !!!!
-!!!!             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+!!!!             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
 !!!!                  xxx > - 33.0 .and. &
 !!!                  abs(yyy)< 18. .and. zzz < 3. .and. zzz > - 9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -6. .and. &
                   xxx > - 45.0 .and. &
                    abs(yyy)< 18. .and.  zzz < 3. .and. zzz > - 9.) DoRefine = .true.
 !!!!                  abs(yyy)< 21. .and.  zzz < 3. .and. zzz > - 9.) DoRefine = .true.
 
-!!!!             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -40. .and. &
+!!!!             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -40. .and. &
 !!!!                  xxx > - 57.0 .and. &
 !!!!                  abs(yyy)< 18. .and.  zzz < 3. .and. zzz > -9.) DoRefine = .true.
 
-
-
-
-             !!                  if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -8. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -8. .and. &
              !!                     xxx > - 24.0 .and. &
              !!                    abs(yyy)<12. .and. abs(zzz)<3.) DoRefine = .true.
              !!
-             !!                      if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -8. .and. &
+             !!                      if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -8. .and. &
              !!                     xxx > - 36.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<1.5) DoRefine = .true.
              !!
              !!
-             !!                  if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -10. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -10. .and. &
              !!                     xxx > - 16.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine = .true.
           end if
        end if
-
 
     case ('ror6_mp_105')
        ! 6 x 6 x 6 block for High resolution Runs On Request
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
                   abs(yyy)<18. .and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
                   abs(yyy)<18. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
              !
              ! IMF angle = 105
              RRR = sqrt(xxx*xxx*1.03*1.03 + 0.83*0.83*yyy*yyy + zzz*zzz)
              RRR1 = 0.5*xxx+sqrt(0.83*0.83*yyy*yyy + zzz*zzz)
-             !          
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             !
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > -4.5 .and. xxx < 7.5 .and. &
                   yyy > 1.5 .and. yyy<21 .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > -4.5 .and. xxx < 7.5 .and. &
                   yyy > -21. .and. yyy<-1.5 .and. zzz < 0.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.  .and. xxx > 7. .and. xxx < 10.5 .and. &
                   yyy > 0. .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.  .and. xxx > 7. .and. xxx < 10.5 .and. &
                   yyy < 0. .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.5  .and. xxx > 10.   &
                   ) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14 .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14 .and. &
                   RRR1<17.  .and. xxx > -3. .and. xxx < 6. .and. &
                   yyy > 2. .and. yyy<18. .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > -3. .and. xxx < 6. .and. &
                   yyy > -18. .and. yyy<-2. .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR>12.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR>12.5 .and. &
                   RRR<15.  .and. xxx > 11.   &
                   ) DoRefine = .true.
 
-
              !
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 8. .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 8. .and. &
 !!!                    abs(yyy) < 8. .and. abs(zzz)< 8. ) DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
 !!!                    abs(yyy) < 12. .and. abs(zzz)< 12. ) DoRefine = .true.
 !!!
-!!!                    if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
+!!!                    if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
 !!!                    abs(yyy) < 6. .and. abs(zzz)< 6. ) DoRefine = .true.
 
-             !!                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+             !!                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
              !!                     xxx > - 24.0 .and. &
              !!                    abs(yyy)< 15. .and. abs(zzz)<3.) DoRefine = .true.
 
-             !!                  if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -6. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -6. .and. &
              !!                     xxx > - 18.0 .and. &
              !!                    abs(yyy)<12. .and. abs(zzz)<1.5) DoRefine = .true.
              !!
-             !!                  if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -10. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -10. .and. &
              !!                     xxx > - 16.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine = .true.
           end if
@@ -4619,64 +4433,63 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
                   abs(yyy)<18. .and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
                   abs(yyy)<18. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
              !
              ! IMF angle = 120
              !
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy > 0. .and. yyy < 21. .and. &
                   zzz > 0. .and. zzz< 9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy < 0. .and. yyy > -21. .and. &
                   zzz < 0. .and. zzz>  -9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy > 0. .and. yyy < 12. .and. &
                   zzz > 0. .and. zzz< 18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy < 0. .and. yyy > -12. .and. &
                   zzz < 0. .and. zzz>  -18.) DoRefine = .true.
 
@@ -4685,97 +4498,96 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              RRR2 = 0.5*xxx+sqrt(0.85*0.85*yyy*yyy + zzz*zzz)
              RRR3 = 0.6*xxx+sqrt(0.83*0.83*yyy*yyy + zzz*zzz)
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > -6. .and. xxx < 3. .and. &
                   yyy > 9.  .and. zzz > 3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > -6. .and. xxx < 3. .and. &
                   yyy<-9. .and. zzz < -3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy > 1.5  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy<-1.5 .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR3>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR3>12. .and. &
                   RRR3<18.  .and. xxx > 6. .and. xxx < 9.  .and. &
                   yyy > 0.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR3>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR3>12. .and. &
                   RRR3<18.  .and. xxx > 6. .and. xxx < 9. .and. &
                   yyy< 0. .and. zzz < 0.) DoRefine = .true.
              !
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.5  .and. xxx > 9.  .and. &
                   abs(zzz)<9. .and. abs(yyy)< 12. &
                   ) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.5  .and. xxx > 12.  .and. &
                   abs(zzz)<9. .and. abs(yyy)< 12. &
                   ) DoRefine = .true.
 
              !
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > -3 .and. xxx < 3. .and. &
                   yyy > 7.5  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > -3. .and. xxx < 3. .and. &
                   yyy<-7.5 .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy > 3.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy<-3. .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR3>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR3>14. .and. &
                   RRR3<17.  .and. xxx > 6. .and. xxx < 9.  .and. &
                   yyy > 0.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR3>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR3>14. .and. &
                   RRR3<17.  .and. xxx > 6. .and. xxx < 9. .and. &
                   yyy< 0. .and. zzz < 0.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR>12.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR>12.5 .and. &
                   RRR<15.  .and. xxx > 9.  .and. &
                   abs(zzz)<7.5 .and. abs(yyy)< 9. &
                   ) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR>12.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR>12.5 .and. &
                   RRR<16.  .and. xxx > 12.  .and. &
                   abs(zzz)<7.5 .and. abs(yyy)< 9. &
                   ) DoRefine = .true.
 
              !
              !
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 8. .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 8. .and. &
 !!!                    abs(yyy) < 8. .and. abs(zzz)< 8. ) DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
 !!!                    abs(yyy) < 12. .and. abs(zzz)< 12. ) DoRefine = .true.
 !!!
-!!!                    if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
+!!!                    if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
 !!!                    abs(yyy) < 6. .and. abs(zzz)< 6. ) DoRefine = .true.
 
-             !!                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+             !!                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
              !!                     xxx > - 24.0 .and. &
              !!                    abs(yyy)< 15. .and. abs(zzz)<3.) DoRefine = .true.
 
-             !!                  if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -6. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -6. .and. &
              !!                     xxx > - 18.0 .and. &
              !!                    abs(yyy)<12. .and. abs(zzz)<1.5) DoRefine = .true.
              !!
-             !!                  if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -10. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -10. .and. &
              !!                     xxx > - 16.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine = .true.
           end if
@@ -4786,55 +4598,54 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
                   abs(yyy)<18. .and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
                   abs(yyy)<18. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
              !
              ! IMF angle = 225
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy < 0. .and. yyy > -21. .and. &
                   zzz > 0. .and. zzz< 9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy > 0. .and. yyy < 21. .and. &
                   zzz < 0. .and. zzz>  -9.) DoRefine = .true.
 
@@ -4843,91 +4654,90 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              RRR2 = 0.5*xxx+sqrt(0.85*0.85*yyy*yyy + zzz*zzz)
              RRR3 = 0.6*xxx+sqrt(0.83*0.83*yyy*yyy + zzz*zzz)
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR2>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR2>12. .and. &
                   RRR2<18.  .and. xxx > -3. .and. xxx < 3. .and. &
                   yyy < -6.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR2>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR2>12. .and. &
                   RRR2<18.  .and. xxx > -3. .and. xxx < 3. .and. &
                   yyy > 6. .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy <  -4.5  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy > 4.5 .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR3>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR3>12. .and. &
                   RRR3<18.  .and. xxx > 6. .and. xxx < 9.  .and. &
                   yyy < 0.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR3>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR3>12. .and. &
                   RRR3<18.  .and. xxx > 6. .and. xxx < 9. .and. &
                   yyy >  0. .and. zzz < 0.) DoRefine = .true.
              !
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.5  .and. xxx > 9.  .and. &
                   abs(zzz)<9. .and. abs(yyy)< 12. &
                   ) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.  .and. xxx > 9.  .and. &
                   abs(zzz)<6. .and. abs(yyy)< 13.5 &
                   ) DoRefine = .true.
              !
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR2>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR2>14. .and. &
                   RRR2<18.  .and. xxx > -1.5 .and. xxx < 3. .and. &
                   yyy < -9.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR2>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR2>14. .and. &
                   RRR2<18.  .and. xxx > -1.5 .and. xxx < 3. .and. &
                   yyy > 9. .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy < -6.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy > 6. .and. zzz < 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR3>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR3>14. .and. &
                   RRR3<17.  .and. xxx > 6. .and. xxx < 9.  .and. &
                   yyy < 0.  .and. zzz > 0.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR3>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR3>14. .and. &
                   RRR3<17.  .and. xxx > 6. .and. xxx < 9. .and. &
                   yyy >  0. .and. zzz < 0.) DoRefine = .true.
              !
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR>12.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR>12.5 .and. &
                   RRR<15.  .and. xxx > 9.  .and. &
                   abs(zzz)<7.5 .and. abs(yyy)< 9. &
                   ) DoRefine = .true.
              !
              !
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 8. .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 8. .and. &
 !!!                    abs(yyy) < 8. .and. abs(zzz)< 8. ) DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
 !!!                    abs(yyy) < 12. .and. abs(zzz)< 12. ) DoRefine = .true.
 !!!
-!!!                    if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
+!!!                    if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
 !!!                    abs(yyy) < 6. .and. abs(zzz)< 6. ) DoRefine = .true.
 
-             !!                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+             !!                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
              !!                     xxx > - 24.0 .and. &
              !!                    abs(yyy)< 15. .and. abs(zzz)<3.) DoRefine = .true.
 
-             !!                  if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -6. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -6. .and. &
              !!                     xxx > - 18.0 .and. &
              !!                    abs(yyy)<12. .and. abs(zzz)<1.5) DoRefine = .true.
              !!
-             !!                  if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -10. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -10. .and. &
              !!                     xxx > - 16.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine = .true.
           end if
@@ -4938,55 +4748,54 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -15. .and. xxx < 33.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx > -9. .and. xxx < 33.0 .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 0. .and. xxx > -111. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 0. .and. xxx > -111. .and. &
                   abs(yyy)<36..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 15.0 .and. xxx > -9. .and. &
                   abs(yyy)<18..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx > -9. .and. &
                   abs(yyy)<24..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 18. .and. xxx> -87.0 .and. &
                   abs(yyy)<24..and. abs(zzz)<18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0. .and. xxx> -48. .and. &
                   abs(yyy)<18. .and. abs(zzz)<6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> -3.0 .and. &
                   abs(yyy)<18. .and. abs(zzz)<15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> -6.0 .and. &
                   abs(yyy)<9. .and. abs(zzz)<9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. abs(xxx) < 12.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. abs(xxx) < 12.0 .and. &
                   abs(yyy)<12..and. abs(zzz)<12.) DoRefine = .true.
              !
              ! IMF angle = 135
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy > 0. .and. yyy < 21. .and. &
                   zzz > 0. .and. zzz< 9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 0 .and. xxx > -6. .and. &
                   yyy < 0. .and. yyy > -21. .and. &
                   zzz < 0. .and. zzz>  -9.) DoRefine = .true.
 
@@ -4995,98 +4804,96 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              RRR2 = 0.5*xxx+sqrt(0.85*0.85*yyy*yyy + zzz*zzz)
              RRR3 = 0.6*xxx+sqrt(0.83*0.83*yyy*yyy + zzz*zzz)
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR2>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR2>12. .and. &
                   RRR2<18.  .and. xxx > -3. .and. xxx < 3. .and. &
                   yyy > 6.  .and. zzz > -6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR2>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR2>12. .and. &
                   RRR2<18.  .and. xxx > -3. .and. xxx < 3. .and. &
                   yyy<-6. .and. zzz < 6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy > 4.5  .and. zzz > -6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR1>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR1>12. .and. &
                   RRR1<18.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy<-4.5 .and. zzz < 6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR3>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR3>12. .and. &
                   RRR3<18.  .and. xxx > 6. .and. xxx < 9.  .and. &
                   yyy > 0.  .and. zzz > -6.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR3>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR3>12. .and. &
                   RRR3<18.  .and. xxx > 6. .and. xxx < 9. .and. &
                   yyy< 0. .and. zzz < 6.) DoRefine = .true.
              !
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.5  .and. xxx > 9.  .and. &
                   abs(zzz)<9. .and. abs(yyy)< 12. &
                   ) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. RRR>12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. RRR>12. .and. &
                   RRR<16.  .and. xxx > 9.  .and. &
                   abs(zzz)<6. .and. abs(yyy)< 13.5 &
                   ) DoRefine = .true.
              !
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR2>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR2>14. .and. &
                   RRR2<18.  .and. xxx > -1.5 .and. xxx < 3. .and. &
                   yyy > 9.  .and. zzz > -3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR2>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR2>14. .and. &
                   RRR2<18.  .and. xxx > -1.5 .and. xxx < 3. .and. &
                   yyy<-9. .and. zzz < 3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy > 6.  .and. zzz > -3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR1>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR1>14. .and. &
                   RRR1<17.  .and. xxx > 3. .and. xxx < 6. .and. &
                   yyy<-6. .and. zzz < 3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR3>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR3>14. .and. &
                   RRR3<17.  .and. xxx > 6. .and. xxx < 9.  .and. &
                   yyy > 0.  .and. zzz > -3.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR3>14. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR3>14. .and. &
                   RRR3<17.  .and. xxx > 6. .and. xxx < 9. .and. &
                   yyy< 0. .and. zzz < 3.) DoRefine = .true.
 !!!!
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR>12.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR>12.5 .and. &
                   RRR<15.  .and. xxx > 9.  .and. &
                   abs(zzz)<9. .and. abs(yyy)< 9. &
                   ) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. RRR>12.5 .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. RRR>12.5 .and. &
                   RRR<15.  .and. xxx > 9.  .and. &
                   abs(zzz)<3. .and. abs(yyy)< 15. &
                   ) DoRefine = .true.
 
-
              !
              !
-             !                  if (CellSize_DB(1,iBLK)>0.125 .and.  abs(xxx) < 8. .and. &
+             !                  if (CellSize_DB(1,iBlock)>0.125 .and.  abs(xxx) < 8. .and. &
 !!!                    abs(yyy) < 8. .and. abs(zzz)< 8. ) DoRefine = .true.
 !!!
-!!!                   if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
+!!!                   if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 13.5 .and. &
 !!!                    abs(yyy) < 12. .and. abs(zzz)< 12. ) DoRefine = .true.
 !!!
-!!!                    if (CellSize_DB(1,iBLK)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
+!!!                    if (CellSize_DB(1,iBlock)>0.125 .and.  xxx > 0. .and. xxx < 15. .and. &
 !!!                    abs(yyy) < 6. .and. abs(zzz)< 6. ) DoRefine = .true.
 
-             !!                    if (CellSize_DB(1,iBLK)>0.125 .and. xxx < 0. .and. &
+             !!                    if (CellSize_DB(1,iBlock)>0.125 .and. xxx < 0. .and. &
              !!                     xxx > - 24.0 .and. &
              !!                    abs(yyy)< 15. .and. abs(zzz)<3.) DoRefine = .true.
 
-             !!                  if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -6. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -6. .and. &
              !!                     xxx > - 18.0 .and. &
              !!                    abs(yyy)<12. .and. abs(zzz)<1.5) DoRefine = .true.
              !!
-             !!                  if (CellSize_DB(1,iBLK)>0.03125 .and. xxx < -10. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.03125 .and. xxx < -10. .and. &
              !!                     xxx > - 16.0 .and. &
              !!                    abs(yyy)<9. .and. abs(zzz)<0.75) DoRefine = .true.
           end if
@@ -5097,51 +4904,47 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Box sizes: -255<X<33, -48<Z<48, -48<Y<48
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
 
-             if (CellSize_DB(1,iBLK) > 4. .and. xxx > -159.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 4. .and. xxx > -159.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -39.0)  DoRefine = .true.
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -39.0)  DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK) > 2. .and. xxx > -135.0 .and. &
+             if (CellSize_DB(1,iBlock) > 2. .and. xxx > -135.0 .and. &
                   abs(yyy)<48..and. abs(zzz)<48.)  DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>1. .and. xxx < 33. .and. xxx > -63. .and. &
+             if (CellSize_DB(1,iBlock)>1. .and. xxx < 33. .and. xxx > -63. .and. &
                   abs(yyy)<36..and. abs(zzz)<36.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.5 .and. abs(xxx) < 15.  .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. abs(xxx) < 15.  .and. &
                   abs(yyy)<30..and. abs(zzz)<24.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx> -15.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx> -15.0 .and. &
                   abs(yyy)<24..and. abs(zzz) < 18. ) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < 21. .and. xxx> -27.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < 21. .and. xxx> -27.0 .and. &
                   abs(yyy)<18..and. abs(zzz )< 12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.5 .and. xxx < -15. .and. xxx> -39.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.5 .and. xxx < -15. .and. xxx> -39.0 .and. &
                   yyy<30. .and. yyy > 6. .and. abs(zzz )< 18.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 9. .and. xxx> -12. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 9. .and. xxx> -12. .and. &
                   abs(yyy)<24. .and. zzz<18. .and. zzz> -21.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 12. .and. xxx> 9. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 12. .and. xxx> 9. .and. &
                   abs(yyy)<24. .and. zzz<15. .and. zzz> -18.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 15. .and. xxx> 12. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 15. .and. xxx> 12. .and. &
                   abs(yyy)<24. .and. zzz<12. .and. zzz> -15.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < 18. .and. xxx> 15. .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < 18. .and. xxx> 15. .and. &
                   abs(yyy)<24. .and. zzz<9. .and. zzz> -12.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.25 .and. xxx < -12. .and. xxx> -36.0 .and. &
+             if (CellSize_DB(1,iBlock)>0.25 .and. xxx < -12. .and. xxx> -36.0 .and. &
                   yyy<27. .and. yyy > 12. .and. abs(zzz )< 15.) DoRefine = .true.
-
 
              RRR1 = xxx+0.035*(yyy*yyy + zzz*zzz)
              RRR2 = xxx+0.070*(yyy*yyy + zzz*zzz)
@@ -5151,71 +4954,68 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              !
              ! Don Fairfield 2a
              !!
-             !!                   if (CellSize_DB(1,iBLK)>0.125 .and. xxx > -10.5 .and. yyy> -9. .and. &
+             !!                   if (CellSize_DB(1,iBlock)>0.125 .and. xxx > -10.5 .and. yyy> -9. .and. &
              !!                    yyy<22.5 .and. zzz<9. .and. zzz> -9. .and. &
              !!                   RRR1 < 15. .and. RRR2 > 8.) DoRefine = .true.
              !!
-             !!                  if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -6. .and. xxx > -30. .and. &
+             !!                  if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -6. .and. xxx > -30. .and. &
              !!                    yyy> 13.5 .and. &
-             !!                    yyy<22.5 .and. zzz<9. .and. zzz> -9.) DoRefine = .true. 
-             !!                  
-             !!                   if (CellSize_DB(1,iBLK)>0.125 .and. xxx > -10.5 .and. yyy> 10. .and. &
+             !!                    yyy<22.5 .and. zzz<9. .and. zzz> -9.) DoRefine = .true.
+             !!
+             !!                   if (CellSize_DB(1,iBlock)>0.125 .and. xxx > -10.5 .and. yyy> 10. .and. &
              !!                    yyy<22.5 .and. zzz<9. .and. zzz> -9. .and. &
              !!                   RRR1 < 15. .and. RRR5 > 8.) DoRefine = .true.
              !!
              !
-             !!                    if (CellSize_DB(1,iBLK)>0.0625 .and. xxx > -7. .and. yyy> -4. .and. &
+             !!                    if (CellSize_DB(1,iBlock)>0.0625 .and. xxx > -7. .and. yyy> -4. .and. &
              !!                    yyy<19.5 .and. zzz<7.5 .and. zzz> -6. .and. &
              !!                   RRR3 < 13. .and. RRR2 > 10.) DoRefine = .true.
              !!
-             !!                    if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -6.5 .and. xxx > -24. .and. &
+             !!                    if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -6.5 .and. xxx > -24. .and. &
              !!                     yyy> 16.5 .and. &
              !!                    yyy<20.25 .and. zzz<6. .and. zzz> -4.) DoRefine = .true.
              !!
              !
              !
-             ! Don Fairfield 3a 
+             ! Don Fairfield 3a
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx > -10.5 .and. yyy> -6. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx > -10.5 .and. yyy> -6. .and. &
                   yyy<22.5 .and. zzz<9. .and. zzz> -9. .and. &
                   RRR1 < 15. .and. RRR2 > 9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -6. .and. xxx > -12. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -6. .and. xxx > -12. .and. &
                   yyy> 13.5 .and. &
                   yyy<22.5 .and. zzz<9. .and. zzz> -9.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx < -12. .and. xxx > -30. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx < -12. .and. xxx > -30. .and. &
                   yyy> 15. .and. &
                   yyy<24. .and. zzz<9. .and. zzz> -9.) DoRefine = .true.
 
-
-             if (CellSize_DB(1,iBLK)>0.125 .and. xxx > -10.5 .and. yyy> 10. .and. &
+             if (CellSize_DB(1,iBlock)>0.125 .and. xxx > -10.5 .and. yyy> 10. .and. &
                   yyy<22.5 .and. zzz<9. .and. zzz> -9. .and. &
                   RRR1 < 15. .and. RRR5 > 9.) DoRefine = .true.
 
              !
-             if (CellSize_DB(1,iBLK)>0.0625 .and. xxx > -7. .and. yyy> -3. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. xxx > -7. .and. yyy> -3. .and. &
                   yyy<19.5 .and. zzz<5.25 .and. zzz> -5.25 .and. &
                   RRR3 < 13. .and. RRR2 > 11.) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -6.5 .and. xxx > -12. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -6.5 .and. xxx > -12. .and. &
                   yyy> 16.5 .and. &
                   yyy<20.25 .and. zzz<5.25 .and. zzz> -5.25) DoRefine = .true.
 
-             if (CellSize_DB(1,iBLK)>0.0625 .and. xxx < -12. .and. xxx > -24. .and. &
+             if (CellSize_DB(1,iBlock)>0.0625 .and. xxx < -12. .and. xxx > -24. .and. &
                   yyy> 18. .and. &
                   yyy<21.75 .and. zzz<5.25 .and. zzz> -5.25) DoRefine = .true.
 
-
           end if
        end if
-
 
     case ('mag_new')
        ! Refine for generic magnetosphere
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
@@ -5259,15 +5059,15 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                       end if
 
                       xxx = 0.0
-                      yyy = 0.50*(Xyz_DGB(2,nI,nJ,nK,iBLK)+Xyz_DGB(2,1,1,1,iBLK))
-                      zzz = 0.50*(Xyz_DGB(3,nI,nJ,nK,iBLK)+Xyz_DGB(3,1,1,1,iBLK))
+                      yyy = 0.50*(Xyz_DGB(2,nI,nJ,nK,iBlock)+Xyz_DGB(2,1,1,1,iBlock))
+                      zzz = 0.50*(Xyz_DGB(3,nI,nJ,nK,iBlock)+Xyz_DGB(3,1,1,1,iBlock))
                       RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
 
                       if (RR < 13.0 .and. SizeMax > 1.0) then
                          DoRefine = .true.
                       endif
 
-                      xxx = 0.50*(Xyz_DGB(1,nI,nJ,nK,iBLK)+Xyz_DGB(1,1,1,1,iBLK))
+                      xxx = 0.50*(Xyz_DGB(1,nI,nJ,nK,iBlock)+Xyz_DGB(1,1,1,1,iBlock))
                       RR = sqrt( xxx*xxx + yyy*yyy + zzz*zzz )
 
                    else
@@ -5326,21 +5126,20 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              !                 if (SizeMax > 4 .and. &
              !                      (xxx < 0. .and. xxx > -150.)) DoRefine = .true.
 
-
           end if
 
        endif
 
     case ('coupledhelio')
-       !refine to have resolution not worse 4.0 and
-       !refine the body intersecting blocks
-       DoRefine=minRblk<=rBody.or.CellSize_DB(1,iBLK)>4.01
+       ! refine to have resolution not worse 4.0 and
+       ! refine the body intersecting blocks
+       DoRefine=minRblk<=rBody.or.CellSize_DB(1,iBlock)>4.01
 
     case ('magnetosphere')
        ! Refine for generic magnetosphere
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then                                        
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
@@ -5349,11 +5148,11 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              if ((UseRotatingBc).and.(minRblk <= 6.0)) then
                 select case(TypeGeometry)
                 case('cartesian')
-                   if (min(abs(zz1),abs(zz2)) < Rcurrents) DoRefine = .true.   
+                   if (min(abs(zz1),abs(zz2)) < Rcurrents) DoRefine = .true.
                 case('spherical','spherical_lnr')
                    if(minRblk*min(abs(cos(XyzStart_D(3)-0.5*&
-                        CellSize_DB(3,iBLK))),abs(cos(XyzStart_D(3)+(nK-0.5)&
-                        *CellSize_DB(3,iBLK)))) < Rcurrents)DoRefine = .true.         
+                        CellSize_DB(3,iBlock))),abs(cos(XyzStart_D(3)+(nK-0.5)&
+                        *CellSize_DB(3,iBlock)))) < Rcurrents)DoRefine = .true.
                 case default
                    call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
                 end select
@@ -5396,16 +5195,16 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                       tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
                            25.*((min(abs(zz1),abs(zz2)))**2))
                    case('spherical','spherical_lnr')
-                      tmpminRblk=min(cos(XyzStart_D(3)-0.5*&          
-                           CellSize_DB(3,iBLK))**2,cos(XyzStart_D(3)+&  
-                           (nK-0.5)*CellSize_DB(3,iBLK))**2)
-                      tmpminRblk=min(sin(XyzStart_D(2)-0.5*&          
-                           CellSize_DB(2,iBLK))**2,sin(XyzStart_D(2)+&          
-                           (nJ-0.5)*CellSize_DB(2,iBLK))**2)*(1.0- tmpminRblk)&     
-                           + 25.*tmpminRblk                                         
+                      tmpminRblk=min(cos(XyzStart_D(3)-0.5*&
+                           CellSize_DB(3,iBlock))**2,cos(XyzStart_D(3)+&
+                           (nK-0.5)*CellSize_DB(3,iBlock))**2)
+                      tmpminRblk=min(sin(XyzStart_D(2)-0.5*&
+                           CellSize_DB(2,iBlock))**2,sin(XyzStart_D(2)+&
+                           (nJ-0.5)*CellSize_DB(2,iBlock))**2)*(1.0- tmpminRblk)&
+                           + 25.*tmpminRblk
                       tmpminRblk=minRblk*sqrt(tmpminRblk)
                    case default
-                      call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)               
+                      call stop_mpi('Unknown TypeGeometry = '//TypeGeometry)
                    end select
                    if (tmpminRblk < 12.) DoRefine = .true.
                 else
@@ -5426,8 +5225,8 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                 if(TypeGeometry=='cartesian')&
                      DoRefine = .true.
                 if(TypeGeometry=='spherical')&
-                     DoRefine = CellSize_DB(2,iBLK)>cPi/128+1e-6.or.&
-                     CellSize_DB(3,iBLK)>cPi/128+1e-6
+                     DoRefine = CellSize_DB(2,iBlock)>cPi/128+1e-6.or.&
+                     CellSize_DB(3,iBlock)>cPi/128+1e-6
              end if
           end if
        end if
@@ -5436,23 +5235,23 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        ! Refine for generic magnetosphere
        if (maxRblk > Rbody) then
 
-          if (CellSize_DB(1,iBLK) > 8.) then
+          if (CellSize_DB(1,iBlock) > 8.) then
              ! Refine all blocks with dx greater than 8
              DoRefine = .true.
           else
              select case(TypeGeometry)
              case('cartesian')
-                minx = minval(abs(Xyz_DGB(1,1:nI, 1, 1,iBLK)))
-                miny = minval(abs(Xyz_DGB(2,1, 1:nJ, 1,iBLK)))
-                minz = minval(abs(Xyz_DGB(3,1, 1, 1:nK,iBLK)))
+                minx = minval(abs(Xyz_DGB(1,1:nI, 1, 1,iBlock)))
+                miny = minval(abs(Xyz_DGB(2,1, 1:nJ, 1,iBlock)))
+                minz = minval(abs(Xyz_DGB(3,1, 1, 1:nK,iBlock)))
 
                 minRblk = sqrt(minx*minx + miny*miny + minz*minz)
-                minx = minval(Xyz_DGB(1,1:nI, 1, 1,iBLK))
+                minx = minval(Xyz_DGB(1,1:nI, 1, 1,iBlock))
 
              case('spherical','spherical_lnr')
-                minx = minval(Xyz_DGB(1,1:nI, 1:nJ, 1:nK,iBLK))
-                miny = minval(abs(Xyz_DGB(2,1:nI, 1:nJ, 1:nK,iBLK)))
-                minz = minval(abs(Xyz_DGB(3,1:nI, 1:nJ, 1:nK,iBLK)))  
+                minx = minval(Xyz_DGB(1,1:nI, 1:nJ, 1:nK,iBlock))
+                miny = minval(abs(Xyz_DGB(2,1:nI, 1:nJ, 1:nK,iBlock)))
+                minz = minval(abs(Xyz_DGB(3,1:nI, 1:nJ, 1:nK,iBlock)))
              case default
                 call stop_mpi('Specify Refinement: Unknown TypeGeometry'//TypeGeometry)
              end select
@@ -5496,12 +5295,12 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              ! With 4x4x4 blocks
              ! levels = 8 (i.e. 1/4 Re) 742912  cells for rbody+corotation+mp+tail
              ! levels = 9 (i.e. 1/8 Re) 1214208 cells for rbody+corotation+mp+tail
-             if ( SizeMax >0.4.and.&                               
+             if ( SizeMax >0.4.and.&
                   (TypeGeometry=='cartesian'.or.&
                   minx>x1+(x2-x1)*cRefinedTailCutoff).and.&
                   (minx<0. .and. &
                   minx > -SizeMax*50.0)) then
-                if (miny < 15.0*CellSize_DB(1,iBLK) .and. minz < SizeMax) DoRefine = .true.
+                if (miny < 15.0*CellSize_DB(1,iBlock) .and. minz < SizeMax) DoRefine = .true.
              end if
 
              ! With 8x8x8 blocks
@@ -5512,13 +5311,13 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
              ! This line didn't work in previous versions, since the
              ! cell centers were further away from 0.0 than RCurrents.
              ! Now it checks to see if it is within 1 cell of rcurrents.
-             if (minRblk - Rcurrents <= CellSize_DB(1,iBLK)) then
+             if (minRblk - Rcurrents <= CellSize_DB(1,iBlock)) then
                 if(TypeGeometry=='cartesian')&
                      DoRefine = .true.
                 if(TypeGeometry=='spherical'.or.&
                      TypeGeometry=='spherical_lnr')&
-                     DoRefine = CellSize_DB(2,iBLK)>cPi/128+1e-6.or.&
-                     CellSize_DB(3,iBLK)>cPi/128+1e-6
+                     DoRefine = CellSize_DB(2,iBlock)>cPi/128+1e-6.or.&
+                     CellSize_DB(3,iBlock)>cPi/128+1e-6
              end if
 
              minRblk = sqrt((min(abs(xx1),abs(xx2)))**2 + &
@@ -5531,7 +5330,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
 
        ! Refine for generic magnetosphere
        if (maxRblk > Rbody) then
-          if (CellSize_DB(1,iBLK) > 4.) then
+          if (CellSize_DB(1,iBlock) > 4.) then
              ! Refine all blocks with dx greater than 4
              DoRefine = .true.
           else
@@ -5563,12 +5362,12 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
                    tmpminRblk = sqrt((min(abs(yy1),abs(yy2)))**2 + &
                         25.*((min(abs(zz1),abs(zz2)))**2))
                 case('spherical')
-                   tmpminRblk=min(cos(XyzStart_D(3)-0.5*&          
-                        CellSize_DB(3,iBLK))**2,cos(XyzStart_D(3)+&          
-                        (nK-0.5)*CellSize_DB(3,iBLK))**2)                         
-                   tmpminRblk=min(sin(XyzStart_D(2)-0.5*&          
-                        CellSize_DB(2,iBLK))**2,sin(XyzStart_D(2)+&          
-                        (nJ-0.5)*CellSize_DB(2,iBLK))**2)*(1.0- tmpminRblk)&     
+                   tmpminRblk=min(cos(XyzStart_D(3)-0.5*&
+                        CellSize_DB(3,iBlock))**2,cos(XyzStart_D(3)+&
+                        (nK-0.5)*CellSize_DB(3,iBlock))**2)
+                   tmpminRblk=min(sin(XyzStart_D(2)-0.5*&
+                        CellSize_DB(2,iBlock))**2,sin(XyzStart_D(2)+&
+                        (nJ-0.5)*CellSize_DB(2,iBlock))**2)*(1.0- tmpminRblk)&
                         + 25.*tmpminRblk
                    tmpminRblk=minRblk*sqrt(tmpminRblk)
                 case default
@@ -5598,7 +5397,7 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        end if
 
        ! Refine all blocks with dx greater than 8
-       if(CellSize_DB(1,iBLK) > 8.) then
+       if(CellSize_DB(1,iBlock) > 8.) then
           DoRefine = .true.
           RETURN
        end if
@@ -5646,15 +5445,19 @@ RRR=sqrt(xxx*xxx+yyy*yyy+zzz*zzz)
        call stop_mpi(NameSub//' ERROR: unknown grid name='//trim(NameGrid))
     end select
 
+    call test_stop(NameSub, DoTest, iBlock)
   contains
-    !======================================================================
+    !==========================================================================
     real function minmod(x,y)
       real, intent(in) :: x,y
+      !------------------------------------------------------------------------
       minmod = max(0.0,min(abs(x),sign(1.0,x)*y))
     end function minmod
+    !==========================================================================
 
   end subroutine user_specify_region
-  !======================================================================
+  !============================================================================
 
 end module ModUser
+!==============================================================================
 
