@@ -422,19 +422,17 @@ contains
                TypeFileIn     = TypeFileSpectrum,      &
                StringHeaderIn = StringHeaderSpectrum,  &
                NameVarIn      = "wavelength flux",     &
-               nDimIn         = 1,                     &
                Coord1In_I     = CoordWave_I,           &
-               VarIn_VIII      = Intensity_VIII)
+               VarIn_VI       = Intensity_VIII(:,:,1,1))
        else
           call save_plot_file(NameFile = NameSpectrumFile, &
                TypeFileIn     = TypeFileSpectrum,      &
                StringHeaderIn = StringHeaderSpectrum,  &
                NameVarIn      = "wavelength y flux",   &
-               nDimIn         = 2,                     &
                CoordMinIn_D   = CoordMin_D,            &
                CoordMaxIn_D   = CoordMax_D,            &
                Coord1In_I     = CoordWave_I,           &
-               VarIn_VIII     = Intensity_VIII)
+               VarIn_VII      = Intensity_VIII(:,:,:,1))
        endif
     else
        call save_plot_file(NameFile = NameSpectrumFile, &
@@ -601,7 +599,7 @@ contains
 
              ! dVperd2/dOmega = dx * 1e2
 
-             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx *1e2
+             FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx
 
              if(DoExtendTransitionRegion) FluxMono = FluxMono &
                   /extension_factor(Var_VIII(te_,i,jPixel,kPixel))
@@ -1149,7 +1147,7 @@ contains
        end do
     end do
 
-    dx = (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 * rSun
+    dx = (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 * rSun *1e2
 
   end subroutine read_data
 
