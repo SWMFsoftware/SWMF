@@ -5,7 +5,8 @@
 module ModSemiImplicit
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest
+       test_start, test_stop, iTest, jTest, kTest, &
+       iBlockTest, iProcTest, iVarTest
 
   use ModSemiImplVar
   use ModProcMH,   ONLY: iProc
@@ -286,7 +287,7 @@ contains
     character(len=*), parameter:: NameSub = 'advance_semi_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    ! call set_oktest('krylov', DoTest, DoTestKrylov)
+    call test_start('krylov', DoTestKrylov)
     if(DoTest) write(*,*)NameSub,' starting with test var, B0=', &
          State_VGB(iVarTest,iTest,jTest,kTest,iBlockTest), &
          B0_DGB(:,iTest,jTest,kTest,iBlockTest)
