@@ -1229,6 +1229,7 @@ contains
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
                iImplBlock, IsLinear)
+
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
     use ModMain,       ONLY: n_step, iteration_number, time_simulation
@@ -1244,7 +1245,7 @@ contains
     use ModWaves,        ONLY: WaveFirst_, WaveLast_
     use ModHeatFluxCollisionless, ONLY: UseHeatFluxCollisionless, &
          get_gamma_collisionless
-    use ModProcMH, ONLY: iProc
+
     integer, intent(in):: nGhost
     integer, intent(in):: iBlock
     integer, intent(in):: nVarState
@@ -1269,6 +1270,7 @@ contains
     ! CME parameters, if needed
     !/
     real:: RhoCme, Ucme_D(3), Bcme_D(3), pCme
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_field_line_thread_bc'
     !--------------------------------------------------------------------------
