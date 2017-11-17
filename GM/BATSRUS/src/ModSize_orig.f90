@@ -10,8 +10,6 @@ module ModSize
   ! Maximum number of blocks per processor (set by Config.pl)
   integer, parameter :: MaxBlock = 400
 
-  integer, parameter :: nBLK = MaxBlock ! alias for convenience
-
   ! Maximum number of implicit blocks (set by Config.pl)
   integer, parameter :: MaxImplBLK = min(MaxBlock, 100)
 
