@@ -5,7 +5,8 @@
 module ModUpdateState
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
+       iProcTest, iVarTest
 
   implicit none
 
