@@ -319,13 +319,11 @@ contains
     real :: HeatFlux2TR
 
     logical :: DoTestCell
-
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'solve_boundary_thread'
     !--------------------------------------------------------------------------
     if(iBlock == iBlockTest .and.iProc == iProcTest &
           .and. j==jTest .and. k==kTest)then
-       call test_start(NameSub, DoTest, iBlock)
+       call test_start(NameSub, DoTestCell, iBlock)
     else
        DoTestCell = .false.
     endif
@@ -1071,10 +1069,8 @@ contains
     ! may be equivalently written as
     ! (tilde(M) +L).(I + Inverted(\tilde(M)).U).W=R
     !/
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if (det(M_VVI(:,:,1)) == 0.0) then
        call CON_stop('Error in tridiag: M_I(1)=0')
     end if
@@ -1118,7 +1114,6 @@ contains
        !/
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
-    call test_stop(NameSub, DoTest)
   end subroutine tridiag_3by3_block
   !============================================================================
   real function det(A_II)
@@ -1161,10 +1156,8 @@ contains
     integer, parameter:: nIterMax = 10
     integer:: nIter
     real::Derivative, AOld, ADiffMax, AP, AM, APMid, AMMid
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'solve_a_plus_minus'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     APlus_I(0:nI)  = 1.0
     AMinus_I(0:nI) = AMinusBC
     if(present(nIterIn))then
@@ -1232,7 +1225,6 @@ contains
        if(ADiffMax<cTol)EXIT
     end do
     APlusBC = APlus_I(nI)
-    call test_stop(NameSub, DoTest)
   end subroutine solve_a_plus_minus
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
