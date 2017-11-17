@@ -962,7 +962,6 @@ contains
     real:: dlongD, dlatD, daltD
     integer :: i,j,k
     integer:: iAlt,jLong, kLat, ip1,jp1,kp1
-    logical:: oktestme=.false.
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'DSMC_Input'
     !--------------------------------------------------------------------------
@@ -1034,7 +1033,7 @@ contains
        call stop_mpi('Unknown geometry type = '//TypeGeometry)
     end select
 
-    if(oktestme)then
+    if(DoTest)then
        write(*,*)'DSMC input end', &
             dR,dPhi,dTheta, iBlock, &
             maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,Oh_)),&
@@ -1063,7 +1062,6 @@ contains
     real:: xLat, xLong,xAlt
     integer :: i,j,k
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
-    logical:: oktestme=.false.
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'Mars_Input'
     !--------------------------------------------------------------------------
@@ -1236,7 +1234,7 @@ contains
        call stop_mpi('Unknown geometry type = '//TypeGeometry)
 
     end select
-    if(oktestme)then
+    if(DoTest)then
        write(*,*)'Mars input end', &
             dR,dPhi,dTheta, iBlock, &
             maxval(nDenNuSpecies_CBI(nI,:,:,iBlock,CO2_)),&

@@ -148,8 +148,6 @@ contains
 
     MaxBlockData = nVar*nIJK
 
-    !    call set_oktest('user_init_session',DoTest,DoTest)
-
     fioniz_Norm=1/Si2No_V(UnitT_)                           	!! conversion from SI to unitless
     alpha_Norm=1E-6*Si2No_V(UnitX_)**3/Si2No_V(UnitT_)    	!! conversion from SI to unitless
     CX_sigma_Norm=1E-4*Si2No_V(UnitX_)**2      			!! conversion from SI to unitless
@@ -246,14 +244,6 @@ contains
     Dir_I(1) =  1.0 !! -SW_Ux ! for direction of undisturbed plasma inflow
     Dir_I(2) =  0.0 !! -SW_Uz
     Dir_I(3) =  0.0 !! -SW_Uz
-
-    !----------------------------------------------------------------------
-
-    !    if(iProc==iProcTest .and. iBlock == iBlockTest) then
-    !       call set_oktest('user_neutral_atmosphere',DoTest,DoTest)
-    !    else
-    !       DoTest=.false.; DoTest=.false.
-    !    end if
 
     if (.not.use_block_data(iBlock)) then
        ! calculate and print out total mass loading (integral from rE to infinity)
@@ -390,12 +380,6 @@ contains
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-
-    !    if(iBlock == iBlockTest) then
-    !       call set_oktest('user_calc_sources',DoTest,DoTestMe)
-    !    else
-    !       DoTest=.false.; DoTestMe=.false.
-    !    end if
 
     call user_neutral_atmosphere(iBlock)
 

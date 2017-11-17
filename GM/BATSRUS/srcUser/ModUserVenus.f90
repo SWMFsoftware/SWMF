@@ -675,7 +675,6 @@ contains
     integer, intent(in) :: iBlock
 
     real ::CosSZA
-    logical::okTestMe=.false., DoTest=.false.
     integer :: i, j, k
 
     logical:: DoTest
@@ -683,7 +682,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(okTestMe)then
+    if(DoTest)then
        write(*,*)'BodynDenNuSpecies_I(:)=',&
             BodynDenNuSpecies_I(:)
        WRITE(*,*)''
@@ -822,7 +821,7 @@ contains
     end if
     time_BLK(:,:,:,iBlock) = 0.00
 
-    if(okTestMe)then
+    if(DoTest)then
        write(*,*)'initial set up'
        write(*,*)'Rate_I=',Rate_I
        write(*,*)''
@@ -854,14 +853,13 @@ contains
     use ModProcMH,   ONLY: iProc
 
     real :: Productrate
-    logical::oktestme=.false.
     real :: alt0
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_multiSp_ICs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(oktestme)then
+    if(DoTest)then
        write(*,*)'in set_multisp_ICs, No2Io_V(UnitN_),t=',&
             No2Io_V(UnitN_),No2Io_V(UnitT_)
        write(*,*)'No2Si_V(UnitX_), temperature=',&

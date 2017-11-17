@@ -81,7 +81,7 @@ module ModUser
        9.60e-11, 7.38e-8, 3.1e-7, 5.084e-10, 6.4e-10, 0.0 /)  ! cm^3 s^(-1)
 
   ! Ratedim_I=(/ 2.47e-7, 8.89e-8, 1.64e-10, 1.1e-9, &
-  ! 9.60e-11, 7.38e-8, 3.1e-7, 5.084e-10, 6.4e-10, 5.58e-8, 0.0 /)  !cm^3 s^(-1)
+  ! 9.60e-11, 7.38e-8, 3.1e-7, 5.084e-10, 6.4e-10, 5.58e-8, 0.0 /)  ! cm^3 s^(-1)
 
   integer, parameter :: &! order of ion species
        Hp_  =1, &
@@ -132,8 +132,8 @@ module ModUser
   !  NuMassSpecies_I(O_)=16	! atm
 
   real, dimension(MaxNuSpecies):: HNuSpecies_I=1.0,HNuSpeciesDim_I=1.0
-  ! HNuSpecies_dim_I(CO2_)=6.7e3   !m
-  ! HNuSpecies_dim_I(O_)=18.4e3    !m
+  ! HNuSpecies_dim_I(CO2_)=6.7e3   ! m
+  ! HNuSpecies_dim_I(O_)=18.4e3    ! m
 
   real, dimension(MaxNuSpecies):: BodynDenNuSpecies_I,&
        BodynDenNuSpDim_I=(/2.5e12,7.0e10, 0.0, 1.951e4, &
@@ -227,6 +227,7 @@ contains
     logical :: DoTestCell
 
     integer :: iLastGrid=-100, iLastDecomposition=-100
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -728,7 +729,7 @@ contains
        case("#SOLARCON") ! solar cycle condition
           call read_var('SolarCon',SolarCond)
 
-          ! case("#UseHotO")  !adding hot Oxygen or not
+          ! case("#UseHotO")  ! adding hot Oxygen or not
           ! call read_var('UseHotO',UseHotO)
           ! call read_var('CoeffHotO',CoeffHotO)
 
@@ -776,14 +777,13 @@ contains
     use ModPhysics
 
     real :: Productrate
-    logical::oktestme=.false.
     real::alt0
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_multiSp_ICs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(oktestme)then
+    if(DoTest)then
        write(*,*)'in set_multisp_ICs, No2Io_V(UnitN_),t=',&
             No2Io_V(UnitN_),No2Io_V(UnitT_)
        write(*,*)'No2Si_V(UnitX_), temperature=',&
@@ -852,7 +852,7 @@ contains
 
     alt0= Rbody-Altitude0*Si2No_V(UnitX_)-1.0
 
-    ! write(*,*)'!!!Altitude0*Si2No_V(UnitX_=',Altitude0*Si2No_V(UnitX_)
+    ! write(*,*)'!!! Altitude0*Si2No_V(UnitX_=',Altitude0*Si2No_V(UnitX_)
     ! write(*,*)'Rbody -1=',Rbody-1
     ! write(*,*)'alt0=',alt0
 
@@ -1001,6 +1001,7 @@ contains
     integer:: iBoundary
     real :: CosSZA,Xp, chap_y, chap, sinSZA, iBlock
     logical:: DoTestCell
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ICs'
     !--------------------------------------------------------------------------
@@ -1154,7 +1155,7 @@ contains
     end do;end do; end do;
 
     ! if(DoTest)then
-    ! write(*,*)'!!!!in set_ics 0 '
+    ! write(*,*)'!!!! in set_ics 0 '
     !      write(*,*)'State_VGB(iRhoIon_I)=',State_VGB(iRhoIon_I,iTest,jTest,kTest,iBlockTest)
     ! write(*,*)'nDenNuSpecies_CBI(i,j,k,iBlock,:)=',nDenNuSpecies_CBI(iTest,jTest,kTest,iBlock,:)
     ! write(*,*)'Rate_I=',Rate_I
@@ -1365,6 +1366,7 @@ contains
     use ModBoundaryGeometry, ONLY: iBoundary_GB
 
     integer, intent(in):: iBlock
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
     !--------------------------------------------------------------------------
