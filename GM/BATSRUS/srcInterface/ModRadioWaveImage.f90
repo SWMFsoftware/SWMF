@@ -173,17 +173,20 @@ module ModRadioWaveImage
   use ModCoordTransform, ONLY: cross_product
   use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector,&
        allocate_mask, associate_with_global_mask
-  use BATL_lib, ONLY: iProc, MaxDim, nDim, check_interpolate_amr_gc, &
-       Particle_I, MaxBlock, nI, nJ, nK, nBlock, &
-       Unused_B, &
-       message_pass_particles, remove_undefined_particles, &
-       mark_undefined, Particle_I, check_particle_location
-  use ModParticles, ONLY: allocate_particles
-  use ModBatlInterface, ONLY:  interpolate_grid_amr_gc
+  use BATL_lib, ONLY: iProc, MaxDim, nDim
+  use ModParticles, ONLY: allocate_particles,&
+       mark_undefined, Particle_I, check_particle_location,&
+       put_particles, trace_particles, interpolate_grid_amr_gc
   implicit none
   SAVE
-
+  !Public members
   public :: ray_bunch_intensity
+  ! Intensity_I:    the intensities of each ray calculated as the integral
+  !     of emissivity along the ray path. During each call to ray_path(),
+  !     each element of the Intensity_I is incremented by the integral along
+  !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
+  !     the first call to the ray_path().
+  real, allocatable :: Intensity_I(:)
   real, pointer    :: Coord_DI(:,:)
   logical, pointer :: IsMask_I(:)
   !\
@@ -193,7 +196,7 @@ module ModRadioWaveImage
   !Tolerance parameters::
   !  minimum 100 points between a vacuum and a critical surface and
   !  minimum 100 points over 1 rad of the curvature
-  real, parameter :: Tolerance =  1.0e-2, Tolerance2   =  1.0e-4 
+  real, parameter :: Tolerance =  1.0e-2, Tolerance2   =  1.0e-4
   !\
   ! Initial step size
   real,parameter  :: DeltaS = 1.0
@@ -230,8 +233,8 @@ module ModRadioWaveImage
   integer, parameter :: Ray_ = 1, Steepness_ = 2, OK_ = 0, Bad_ = 1
   integer, parameter :: Status_ = 3, Predictor_ = 1
   integer, parameter :: nIndex = Status_
-contains !=========================================================
-
+contains 
+  !=========================================================
   subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, &
        ImageRange_I, rIntegration, nXPixel, nYPixel, Intensity_II)
     use ModProcMH, ONLY: nProc, iComm, iProc
@@ -282,8 +285,6 @@ contains !=========================================================
     use ModMain,ONLY:NameThisComp
     use ModDensityAndGradient,ONLY: NameVector, NameMask, &
          Density_I, GradDensity_DI, DeltaSNew_I
-
-    implicit none
     !INPUTS
     ! Observer's position
     real, intent(in) :: XyzObserver_D(MaxDim)          
@@ -309,9 +310,7 @@ contains !=========================================================
     real :: XLower, XUpper, YLower, YUpper
     !\
     !nPixel related:
-
     integer :: nRay !=nXPixelX*nYPixel
-
     !\
     !Pixel grid
     !/ 
@@ -326,11 +325,9 @@ contains !=========================================================
     !\
     ! Pixel 3D Cartesian coordinates
     real, dimension(MaxDim) :: XyzPixel_D
-
     !\
     ! Initial directions of rays
-    !/
-             
+    !/             
     real :: SlopeUnscaled_D(MaxDim)
     !\
     ! Distance from the radiotelescope to the integration sphere  
@@ -339,20 +336,23 @@ contains !=========================================================
     ! Intersection point of the line of sight with the integration sphere
     !/
     real :: XyzAtIntSphere_D(MaxDim)
-
+    !\
+    ! Automatic arrays
+    !/
+    real :: StateIn_VI(x_:SlopeZ_,1:nXPixel*nYPixel)
     !\
     ! A ray is excluded from processing if it is .true.
     logical, dimension(nYPixel*nXPixel) :: UnusedRay_I
-    real, dimension(nXPixel*nYPixel) :: Intensity_I
     !\
     ! Parameters
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
     logical, save   :: DoAllocate = .true.
     !\
     !Loop variables
-    integer ::  i, j, iRay 
+    integer :: i, j, iRay
+    !\
+    integer :: iError
     !------------------------------------
-
     !
     ! Total number of rays and pixels in the raster
     !
@@ -371,22 +371,23 @@ contains !=========================================================
        call allocate_mask(NameMask, nRay)
        call associate_with_global_vector(Coord_DI, NameVector)
        call associate_with_global_mask(IsMask_I, NameMask)
-       call allocate_particles(&
-            iKindParticle = KindRay_, &
-            nVar          = nVar    , &
-            nIndex        = nIndex  , &
-            nParticleMax  = nRay      )
-       nullify(State_VI);   State_VI => Particle_I(KindRay_)%State_VI
-       nullify(iIndex_II); iIndex_II => Particle_I(KindRay_)%iIndex_II
        allocate(Density_I(nRay), GradDensity_DI(MaxDim,nRay),DeltaSNew_I(nRay))
+       allocate(Intensity_I(nRay))
+       nullify(State_VI); nullify(iIndex_II)
     end if
+    call allocate_particles(&
+         iKindParticle = KindRay_, &
+         nVar          = nVar    , &
+         nIndex        = nIndex  , &
+         nParticleMax  = nRay      )
+    State_VI => Particle_I(KindRay_)%State_VI
+    iIndex_II => Particle_I(KindRay_)%iIndex_II
     !
     ! Calculate the critical density from the frequency, in CGS
     !
     DensityCr = cPi*cProtonMass*cElectronMass*1e6 &
          *(RadioFrequency/ProtonChargeSGSe)**2
     DensityCrInv = 1.0/DensityCr
-
     !
     ! Determine the image plane inner coordinates of pixel centers
     !
@@ -405,7 +406,6 @@ contains !=========================================================
     Tau_D = cross_product(ZAxisOrt_D, Normal_D)
     Tau_D = Tau_D/sqrt(sum(Tau_D**2))
     Xi_D = cross_product(Normal_D, Tau_D)
-
     !
     ! Calculate coordinates of all the pixels in the SGI
     !
@@ -419,12 +419,10 @@ contains !=========================================================
           iRay = iRay + 1
           State_VI(SlopeX_:SlopeZ_,iRay) = &
                SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
-
           !\
           ! Find the points on the integration sphere where it intersects
           ! with the straight "rays" 
-          !/
-    
+          !/    
           !\
           ! Solve a quadratic equation,
           !   XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
@@ -443,9 +441,9 @@ contains !=========================================================
           iIndex_II(Ray_,iRay) = iRay
        end do
     end do
-    !
+    !\
     ! Do emissivity integration inside of the integration sphere 
-    !
+    !/
     Intensity_I = 0
     UnusedRay_I = .false.
     State_VI(Ds_,:     )    = DeltaS
@@ -455,14 +453,12 @@ contains !=========================================================
     do while(.not.all(UnusedRay_I))
        !\
        ! Advance rays through one step.
-       call ray_path(nRay, UnusedRay_I, Intensity_I)
+       call ray_path(nRay, UnusedRay_I)
     end do
-
     Intensity_II = reshape(Intensity_I, (/nXPixel,nYPixel/))
-
   end subroutine ray_bunch_intensity
   !=========
-  subroutine ray_path(nRay, UnusedRay_I, Intensity_I)
+  subroutine ray_path(nRay, UnusedRay_I)
     use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
          GradDensity_DI, Density_I, DeltaSNew_I
     use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord
@@ -504,6 +500,9 @@ contains !=========================================================
     ! 
     !   The parameters of the ray_path() are briefly described below.
     !
+    ! get_local_density():  external subroutine that returns the plasma
+    !     Density and its gradient GradDensity_D. It also provides the
+    !     recommended step size DeltaSNew.
     ! ToleranceInit:   determines the precision of ray paths calculation.
     !     ToleranceInit is the inverse of the minimum number of ray
     !     trajectory points per one radian of the ray curvature. If this
@@ -512,19 +511,11 @@ contains !=========================================================
     !     0.1 (which means 10 points per curvature radian): it will be
     !     internally reduced to 0.1 anyway.   
     ! DensityCr: the plasma density at which its dielectric permittivity
-    !     becomes zero for chosen wave frequency.
-    ! Intensity_I:    the intensities of each ray calculated as the integral
-    !     of emissivity along the ray path. During each call to ray_path(),
-    !     each element of the Intensity_I is incremented by the integral along
-    !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
-    !     the first call to the ray_path().
-    ! 
+    !     becomes zero for chosen wave frequency. 
     ! Written by Leonid Benkevitch.
     !
     !
-    integer, intent(in) :: nRay   ! # of pixels in the raster
-    real,    intent(inout), dimension(nRay) :: Intensity_I
-  
+    integer, intent(in) :: nRay   ! # of pixels in the raster 
     ! a ray is excluded from processing if it is .true. 
     logical, intent(inout), dimension(nRay) :: UnusedRay_I   
     !\
@@ -783,12 +774,15 @@ contains !=========================================================
       real  ::  RelGradRefrInx_D(MaxDim)
       !\
       !Misc
-      real :: Coef, Curv  
+      real :: Coef, Curv
+      !\
+      ! Ray ID
+      integer :: iRay
       !---------------
+      iRay = iIndex_II(Ray_,iParticle)
       if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack)&
            .or.(State_VI(Ds_,iParticle)<StepMin.and.&
            GradEpsDotSlope<0)) then
-
          ! Switch to the opposite branch of parabolic trajectory
          !
          ! When a next step can drive the ray into the area with the
@@ -812,7 +806,6 @@ contains !=========================================================
          ! changing the "incident" direction Slope_DI to the "departing" ray
          ! direction according to Snell law.
          !
-
          LCosAl = -GradEpsDotSlope/GradDielPerm2
          ProjSlopeOnMinusGradEps_D = -LCosAl*GradDielPerm_D  
          ! Here v_proj
@@ -848,7 +841,7 @@ contains !=========================================================
 
 
          ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
-         Intensity_I(iParticle) = Intensity_I(iParticle)  &
+         Intensity_I(iRay) = Intensity_I(iRay)  &
               + ParabLen*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
       else 
 
@@ -881,7 +874,7 @@ contains !=========================================================
               State_VI(x_:z_,iParticle) &
               + State_VI(SlopeX_:SlopeZ_,iParticle)&
               *HalfDeltaS
-         Intensity_I(iParticle) = Intensity_I(iParticle) &
+         Intensity_I(iRay) = Intensity_I(iRay) &
               + State_VI(Ds_,iParticle)*&
               (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
       end if
