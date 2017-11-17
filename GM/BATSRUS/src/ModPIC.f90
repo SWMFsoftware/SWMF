@@ -371,7 +371,7 @@ contains
     real, intent(in), optional :: OriginIn_D(nDim)
     real :: Origin_D(nDim), coord_D(nDim), R_DD(3, 3)
 
-    integer :: ix, in, ii, jj
+    integer:: iDim, jDim
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'pic_to_mhd_vec'
@@ -386,13 +386,13 @@ contains
 
     ! R_pic2mhd = transpose(R_mhd2pic)
     coord_D = CoordIn_D
-    do ii = 1, nDim; do jj = 1, nDim
-       R_DD(ii,jj) = R_DDI(jj,ii,iRegion)
+    do iDim = 1, nDim; do jDim = 1, nDim
+       R_DD(iDim,jDim) = R_DDI(jDim,iDim,iRegion)
     enddo; enddo
 
     CoordOut_D = 0
-    do ix = 1, nDim
-       CoordOut_D(ix) = sum(R_DD(ix,1:nDim)*coord_D)
+    do iDim = 1, nDim
+       CoordOut_D(iDim) = sum(R_DD(iDim,1:nDim)*coord_D)
     enddo
 
     CoordOut_D = CoordOut_D + Origin_D
@@ -401,8 +401,8 @@ contains
        write(*,*) 'Origin_D   = ', Origin_D
        write(*,*) 'CoordIn_D  = ', CoordIn_D
        write(*,*) 'CoordOut_D = ', CoordOut_D
-       do ix = 1, nDim
-          write(*,*) 'ix = ', ix, 'R = ', R_DD(ix,:)
+       do iDim = 1, nDim
+          write(*,*) 'iDim = ', iDim, 'R = ', R_DD(iDim,:)
        enddo
     endif
 
@@ -423,7 +423,7 @@ contains
     real, intent(in), optional :: OriginIn_D(nDim)
     real :: Origin_D(nDim), coord_D(nDim), R_DD(3, 3)
 
-    integer :: ix
+    integer :: iDim
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'mhd_to_pic_vec'
@@ -437,16 +437,16 @@ contains
     Coord_D = CoordIn_D - Origin_D
 
     CoordOut_D = 0
-    do ix = 1, nDim
-       CoordOut_D(ix) = sum(R_DDI(ix,1:nDim,iRegion)*coord_D)
+    do iDim = 1, nDim
+       CoordOut_D(iDim) = sum(R_DDI(iDim,1:nDim,iRegion)*coord_D)
     enddo
 
     if(DoTest) then
        write(*,*) 'Origin_D   = ', Origin_D
        write(*,*) 'CoordIn_D  = ', CoordIn_D
        write(*,*) 'CoordOut_D = ', CoordOut_D
-       do ix = 1, nDim
-          write(*,*) 'ix = ', ix, 'R = ', R_DD(ix,:)
+       do iDim = 1, nDim
+          write(*,*) 'iDim = ', iDim, 'R = ', R_DD(iDim,:)
        enddo
     endif
 

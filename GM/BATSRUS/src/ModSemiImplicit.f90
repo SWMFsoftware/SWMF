@@ -475,7 +475,6 @@ contains
 
     integer :: iBlockSemi, iBlock, i, j, k
 
-    integer :: iVarSemi_
 
     real :: DtLocal
 

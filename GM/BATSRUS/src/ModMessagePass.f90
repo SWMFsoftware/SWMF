@@ -73,7 +73,7 @@ contains
     integer:: iVector, iVar, i, j, k
     real   :: XyzSph_DD(3,3)
 
-    logical:: DoTime, DoTimeMe
+    logical:: DoTime
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------

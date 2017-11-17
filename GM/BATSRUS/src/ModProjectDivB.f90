@@ -5,7 +5,7 @@
 module ModProjectDivB
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
   ! Parameters for projection scheme:
   !
@@ -58,11 +58,9 @@ module ModProjectDivB
   real ::              proj_divbcoeff=0.1
   real ::              proj_divbconst=0.0
   integer ::           proj_matvecmax=50
-  character (len=10):: proj_boundtype='zero'
 
   ! Counter for matrix vector multiplications, and for errors of solver
 
-  integer :: nmatvectotal, poissonerror
 
   ! Minimum value for divB (a small number)
 

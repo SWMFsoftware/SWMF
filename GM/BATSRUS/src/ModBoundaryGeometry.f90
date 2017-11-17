@@ -116,7 +116,7 @@ contains
          x1, x2, y1, y2, z1, z2
     use ModPhysics, ONLY : xBody2,yBody2,zBody2, rbody, rBody2
     use BATL_lib, ONLY: &
-         iProc, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
+         MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, nG, &
          Xyz_DGB, CellSize_DB, x_, y_, z_, &
          CoordMin_DB, CoordMax_DB, CoordMin_D, CoordMax_D, IsPeriodic_D
     use ModAdvance, ONLY: time_BLK

@@ -10,7 +10,6 @@ module ModConserveFlux
   use ModSize, ONLY: nI, nJ, nK, MaxBlock
   use ModVarIndexes, ONLY: nFluid, nVar, Bx_, By_, Bz_,B_,U_
 
-  use ModProcMH, ONLY: iProc
   use ModMain, ONLY:     UseB
   use ModAdvance, ONLY: &
        Flux_VX, Flux_VY, Flux_VZ, &

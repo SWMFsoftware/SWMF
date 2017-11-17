@@ -7,8 +7,7 @@ module ModPlotShell
        test_start, test_stop, iBlockTest
 
   use ModIO
-  use ModIoUnit, ONLY: UnitTmp_, UnitTmp2_
-  use ModNumConst, ONLY: cRadtoDeg, cDegToRad, cPi
+  use ModNumConst, ONLY: cRadtoDeg, cDegToRad
 
   implicit none
 

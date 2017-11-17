@@ -6,7 +6,6 @@ module ModEnergy
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
 
-  use ModProcMH,     ONLY: iProc
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
        iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &

@@ -3744,7 +3744,6 @@ contains
     use BATL_lib,  ONLY: Unused_BP
 
     ! For debugging
-    use ModProcMH, ONLY: iProc
 
     integer, intent(in) :: iBlock
     integer             :: i, j, k

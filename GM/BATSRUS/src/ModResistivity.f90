@@ -378,7 +378,6 @@ contains
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_, Energy_
     use ModAdvance,    ONLY: Source_VC, &
          UseElectronPressure, UseAnisoPressure
-    use ModProcMH,     ONLY: iProc
 
     integer, intent(in):: iBlock
 

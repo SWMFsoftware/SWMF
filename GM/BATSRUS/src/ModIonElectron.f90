@@ -6,7 +6,6 @@ module ModIonElectron
   ! methods related to the ion-electron fluid closures following Uri Schumlak
 
   use ModVarIndexes
-  use ModProcMH, ONLY: iProc
   use ModMain, ONLY:  UseUserSource
   use ModAdvance, ONLY: State_VGB, Source_VC
   use ModPhysics, ONLY: C2light
@@ -367,7 +366,7 @@ contains
     logical, intent(in)    :: DoCorrectEfield
     logical, intent(in)    :: DoTest
 
-    integer :: iIonFluid, iVar
+    integer :: iVar
     real    :: nElec, InvElectronDens, uElec_D(3), Bfield_D(3), Efield_D(3)
     real    :: uPlus_D(3)
     real    :: StateOld_V(nVar)

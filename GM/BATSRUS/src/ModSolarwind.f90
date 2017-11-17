@@ -4,7 +4,7 @@
 module ModSolarwind
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, xTest, yTest, zTest
+       test_start, test_stop
 
   use ModKind
   use ModVarIndexes

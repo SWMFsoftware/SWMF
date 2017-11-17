@@ -2207,7 +2207,6 @@ contains
     ! subroutine get_physical_flux from ModFaceFlux.
 
     use ModVarIndexes, ONLY: nFluid, nVar, Energy_
-    use ModProcMH,   ONLY: iProc
     use ModMain,     ONLY: MaxDim, x_, y_, z_
     use ModFaceFlux, ONLY: nFlux, iFace, jFace, kFace, Area, &
          set_block_values, set_cell_values, get_physical_flux, &
@@ -2275,7 +2274,6 @@ contains
   subroutine get_cmax_face(Var_VF, B0_DF, nFaceI, nFaceJ, nFaceK, &
        iDim, iBlock,Cmax_F)
 
-    use ModProcMH,   ONLY: iProc
     use ModMain,     ONLY: MaxDim, x_, y_, z_
     use ModFaceFlux, ONLY: DoTestCell, iFace, jFace, kFace, Area, &
          set_block_values, set_cell_values, get_speed_max, nFluid, &

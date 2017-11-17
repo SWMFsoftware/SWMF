@@ -141,7 +141,7 @@ contains
     ! block and variable Indices
     integer :: iBlock, iMirror, jMirror, kMirror, iVar
 
-    logical :: DoTiming, DoTimingMe, DoCheckBlock
+    logical :: DoTiming, DoCheckBlock
     logical :: UseScattering, UseRho
 
     ! variables added for sph geometry

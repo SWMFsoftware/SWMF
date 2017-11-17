@@ -13,9 +13,8 @@ module ModParticleFieldLine
   ! - continuous AMR interpolation
   ! - particle methods
   use BATL_lib, ONLY: &
-       iProc, MaxDim, nDim, MaxBlock, nI, nJ, nK, nBlock,     &
-       Xyz_DGB, CellVolume_GB, Unused_B,                      &
-       check_interpolate_amr_gc,                              &
+       MaxDim, nDim, MaxBlock, nI, nJ, nK, nBlock,     &
+       Xyz_DGB, CellVolume_GB, Unused_B, &
        Particle_I, trace_particles,                           &
        mark_undefined, check_particle_location, put_particles
   use ModParticles, ONLY: allocate_particles
@@ -23,7 +22,6 @@ module ModParticleFieldLine
   use ModAdvance, ONLY: State_VGB
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, B_, Bx_, Bz_
   use ModMain, ONLY: NameThisComp
-  use ModPhysics, ONLY: rBody
   use ModCellGradient, ONLY: calc_gradient_ghost, &
        GradCosBR_DGB => GradVar_DGB
   implicit none
@@ -274,7 +272,6 @@ contains
   subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
        iIndexStart_II,&
        UseInputInGenCoord)
-    use BATL_lib, ONLY: coord_to_xyz
     ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;

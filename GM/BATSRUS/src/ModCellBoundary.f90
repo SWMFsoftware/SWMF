@@ -31,7 +31,6 @@ contains
     use ModVarIndexes
     use BATL_size, ONLY: nI, nJ, nK, MaxDim, nDim
     use ModAdvance, ONLY: UseEfield
-    use ModProcMH, ONLY: iProc
     use ModSize, ONLY: x_, y_, z_
     use ModMain, ONLY: NameThisComp, UseRadDiffusion, UseB, UseB0, &
          UseHyperbolicDivb,                                        &

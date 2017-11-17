@@ -360,7 +360,6 @@ contains
     use ModNumConst, ONLY: cTolerance
     use ModCoronalHeating, ONLY:PoyntingFluxPerBSi, PoyntingFluxPerB, &
          LPerpTimesSqrtB
-    use ModIO, ONLY      : restart
     integer, intent(in) :: iBlock
     !\
     ! Locals:

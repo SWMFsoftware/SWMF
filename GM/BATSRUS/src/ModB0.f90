@@ -186,7 +186,6 @@ contains
 
     ! Calculate the cell centered B0 for block iBlock
 
-    use ModProcMH, ONLY: iProc
     use ModMain,   ONLY: UseFieldLineThreads, DoThreads_B
     use BATL_lib,  ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
 

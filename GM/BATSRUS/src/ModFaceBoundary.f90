@@ -121,7 +121,6 @@ contains
   !============================================================================
   subroutine set_face_boundary(iBlock, TimeBcIn, DoResChangeOnlyIn)
 
-    use ModProcMH, ONLY: iProc
     use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK
     use ModAdvance, ONLY: LeftState_VX, LeftState_VY, LeftState_VZ, &
          RightState_VX, RightState_VY, RightState_VZ
@@ -198,7 +197,6 @@ contains
   subroutine set_face_bc(IsBodyCell_G, IsTrueCell_G)
 
     use ModMain
-    use ModProcMH,     ONLY: iProc
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
     use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
          LeftState_VX, LeftState_VY, LeftState_VZ, &

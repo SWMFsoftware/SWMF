@@ -5,7 +5,7 @@
 module ModFieldTrace
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest
+       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iProcTest
 
   use ModSize
   use ModKind
@@ -471,7 +471,7 @@ contains
     integer :: i, j, k, iBlock, iRay
 
     ! Testing and timing
-    logical :: DoTime, DoTimeMe
+    logical :: DoTime
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ray_trace_accurate'
@@ -3974,7 +3974,7 @@ contains
     integer :: iBlock, iRay
 
     ! Testing and timing
-    logical :: oktime, oktime_me
+    logical :: oktime
     integer :: loc(3)
 
     integer :: iError, iError1=-1

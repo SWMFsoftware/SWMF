@@ -1818,7 +1818,6 @@ contains
     use ModMultiFluid, ONLY: nIonFluid, IonFirst_, IonLast_, &
          iRho_I, iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I, MassIon_I, MassFluid_I
     use ModGeometry,   ONLY: true_cell
-    use ModProcMH,     ONLY: iProc
 
     integer, intent(in) :: iBlock
 

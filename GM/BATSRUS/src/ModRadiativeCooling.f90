@@ -291,7 +291,7 @@ contains
     ! This is in SI units [J m^3 K^(3/2)]
     real :: RadIntegralSi = 1.009E-26
 
-    real :: FaceGrad_D(3),GradTeSi_D(3)
+    real :: FaceGrad_D(3)
     real :: TotalFaceBunit_D(3)
 
     ! Left and right cell centered heating
