@@ -233,11 +233,8 @@ contains
 
     real :: x, y, z
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'xyz_to_latlon'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     ! Check if this direction is connected to the ionosphere or not
     if(Pos_D(1) > CLOSEDRAY)then
 
@@ -267,7 +264,6 @@ contains
        Pos_D(2) = -200.
     endif
 
-    call test_stop(NameSub, DoTest)
   end subroutine xyz_to_latlon
   !============================================================================
 
@@ -283,11 +279,8 @@ contains
 
     ! index for the direction connected to the equator
     integer:: iDir
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'xyz_to_rphi'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     ! Check if both directions are connected to the ionosphere
     ! or the equatorial plane
     if(all(Pos_DI(3,:) > CLOSEDRAY))then
@@ -317,7 +310,6 @@ contains
        Pos_DI(2,:) = -200.
     endif
 
-    call test_stop(NameSub, DoTest)
   end subroutine xyz_to_rphi
   !============================================================================
 
@@ -329,10 +321,8 @@ contains
 
     ! Convert 1st and 2nd elements into latitude and longitude
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'xyz_to_latlonstatus'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(DoMapEquatorRay)then
        call xyz_to_rphi(Ray_DI)
     else
@@ -358,7 +348,6 @@ contains
        Ray_DI(3,:)=-3.     ! Strange status
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine xyz_to_latlonstatus
   !============================================================================
 
@@ -671,12 +660,10 @@ contains
 
     real(Real8_) :: CpuTimeNow
 
-    ! call set_oktest(NameSub, DoTest, DoTestMe)
-
-    logical:: DoTest
+    logical:: DoTest = .false.
     character(len=*), parameter:: NameSub = 'follow_ray'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    ! call test_start(NameSubm DoTest)
     if(iRayIn /= 0)then
 
        ! Store starting indexes and ray direction
@@ -789,7 +776,6 @@ contains
 
     end do RAYS
 
-    call test_stop(NameSub, DoTest)
   contains
     !==========================================================================
 
@@ -1074,10 +1060,8 @@ contains
 
     logical :: IsWall
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'follow_ray_block'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(oktest_ray)write(*,'(a,3i4,3es12.4)')&
          'Starting follow_ray_block: me,iBlock,iRay,XyzInOut_D=',&
          iProc,iBlock,iRay,XyzInOut_D
@@ -1493,7 +1477,6 @@ contains
             iProc,IjkCur_D,XyzCur_D,XyzInOut_D
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     logical function do_stop_at_sm_equator()
@@ -3265,10 +3248,8 @@ contains
 
     real:: Gen_D(3)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'xyz_to_ijk'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     call xyz_to_coord(XyzIn_D, Gen_D)
 
     ! Did the ray cross the pole?
@@ -3313,7 +3294,6 @@ contains
     ! Gen_D is set, now compute normalized generalized coordinate IjkOut_D
     IjkOut_D = (Gen_D - GenRef_D)/dGen_D + 1.
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine xyz_to_ijk
   !============================================================================
 
@@ -5207,10 +5187,8 @@ contains
 
     integer :: Di,i,j,k
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'convFaces2LatLon'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     do k=1,nK+1
        do j=1,nJ+1
           ! Exclude inside points
@@ -5226,7 +5204,6 @@ contains
        end do
     end do
 
-    call test_stop(NameSub, DoTest)
   end subroutine convFaces2LatLon
   !============================================================================
 
