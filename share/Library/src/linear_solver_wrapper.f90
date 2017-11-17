@@ -50,7 +50,7 @@ end subroutine linear_solver_matvec
 !============================================================================
 subroutine linear_solver_gmres(iMatvec, &
      Rhs_I, x_I, lInit, n, nKrylov, &
-     Tolerance, nIter, iError, lTest) bind(C)
+     Tolerance, nIter, iError, lTest, iComm) bind(C)
 
   ! GMRES subroutine that can be called from C
 
@@ -77,7 +77,7 @@ subroutine linear_solver_gmres(iMatvec, &
   !                 - - residual did not reduce
 
   integer, intent(in)   :: lTest ! true if test info should be written
-
+  integer, intent(in)   :: iComm ! used as MPI Commnunicator
   ! subroutine for matrix vector multiplication 
   interface
      subroutine linear_solver_matvec(x_I, y_I, n) 
@@ -93,6 +93,6 @@ subroutine linear_solver_gmres(iMatvec, &
   iMatvecC = iMatvec
 
   call gmres(linear_solver_matvec, Rhs_I, x_I, lInit==1, n, nKrylov,&
-       Tolerance,'rel',nIter,iError,lTest==1)
+       Tolerance,'rel',nIter,iError,lTest==1,iComm)
 
 end subroutine Linear_solver_gmres
