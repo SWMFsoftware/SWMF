@@ -918,8 +918,6 @@ contains
 
   subroutine hypre_set_matrix(DoInitHypreAmg)
 
-    use ModMain, ONLY: StringTest
-
     logical, intent(in):: DoInitHypreAmg
 
     integer:: iError
