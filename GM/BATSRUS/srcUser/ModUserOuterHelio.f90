@@ -1798,6 +1798,13 @@ contains
     integer:: i, j, k
     real:: x, y, z, x0, z0, Ratio, d, r
 
+    ! Set internal state to "body" values with high ion temperature
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
     if(rHelioPause > 0.0)then
        if(TempHelioPause < 0.0) RETURN   ! restart files are not yet read
        where(r_BLK(:,:,:,iBlock) < rHelioPause .or. &
@@ -1805,11 +1812,6 @@ contains
             > TempHelioPause) &
             iBoundary_GB(:,:,:,iBlock) = ExtraBc_
 
-       ! Set internal state to "body" values with high ion temperature
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
        do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
           if(iBoundary_GB(i,j,k,iBlock)==ExtraBc_)then
              State_VGB(:,i,j,k,iBlock) = FaceState_VI(:,body1_)
@@ -1886,13 +1888,14 @@ contains
 
     logical:: IsBoundaryCell_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    if(rHelioPause < 0.0) &
-         call stop_mpi(NameSub//' #HELIOPAUSE command is needed')
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_amr_criteria'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+    if(rHelioPause < 0.0) &
+         call stop_mpi(NameSub//' #HELIOPAUSE command is needed')
+
     IsFound = .true.
     UserCriteria = 0.0
 
