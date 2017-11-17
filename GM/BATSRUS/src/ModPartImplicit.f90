@@ -1304,18 +1304,13 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'impl_jacobian'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    if(iProc==iProcTest.and.iBlockImpl==iBlockImplTest)then
-    else
-       DoTest=.false.; DoTest=.false.
-    end if
+    iBlock = iBlockFromImpl_B(iBlockImpl)
+    call test_start(NameSub, DoTest, iBlock)
 
     Eps = sqrt(JacobianEps)
 
     ! Extract state for this block
     Impl_VC = Impl_VGB(1:nVar,1:nI,1:nJ,1:nK,iBlockImpl)
-    iBlock = iBlockFromImpl_B(iBlockImpl)
     Dxyz_D = CellSize_DB(:,iBlock)
     if(UseB0)then
        call set_b0_face(iBlock)
@@ -1601,7 +1596,7 @@ contains
        end do
     end if
 
-    call test_stop(NameSub, DoTest)
+    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
 
@@ -1754,11 +1749,7 @@ contains
       logical:: DoTest
       character(len=*), parameter:: NameSub = 'impl_init_hall'
       !------------------------------------------------------------------------
-      call test_start(NameSub, DoTest)
-      if(iProc == iProcTest.and.iBlockImpl==iBlockImplTest)then
-      else
-         DoTest = .false.; DoTest = .false.
-      end if
+      call test_start(NameSub, DoTest, iBlock)
 
       call set_hall_factor_cell(iBlock)
 
@@ -1841,7 +1832,7 @@ contains
          HallJ_CD(i,j,k,:) = HallFactor_C(i,j,k)*HallJ_CD(i,j,k,:)
       end do; end do; end do
 
-      call test_stop(NameSub, DoTest)
+      call test_stop(NameSub, DoTest, iBlock)
     end subroutine impl_init_hall
     !==========================================================================
 
@@ -2290,7 +2281,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cmax_face'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    call test_start(NameSub, DoTest, iBlock)
 
     DoLf  = .true.
     DoAw  = .false.
@@ -2327,7 +2318,7 @@ contains
     if(DoTest)write(*,*) NameSub,': Area, cmax=', &
          Area, Cmax_F(iTest, jTest, kTest)
 
-    call test_stop(NameSub, DoTest)
+    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_cmax_face
   !============================================================================
 
@@ -2341,10 +2332,8 @@ contains
 
     real, intent(inout):: State_V(nVar)
     real :: InvRho, InvRho_I(nFluid)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'conservative_to_primitive'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(UseImplicitEnergy)then
        do iFluid = 1, nFluid
           call select_fluid
@@ -2367,7 +2356,6 @@ contains
        State_V(iUz_I) = InvRho_I*State_V(iRhoUz_I)
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine conservative_to_primitive
   !============================================================================
 
