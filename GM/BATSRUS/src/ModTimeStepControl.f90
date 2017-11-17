@@ -325,7 +325,7 @@ contains
     use BATL_lib,    ONLY: Xyz_DGB, CellSize_DB, &
          MaxNode, nNode, iNode_B, iTimeLevel_A, nTimeLevel
 
-    real, intent(in) :: TimeSimulationLimit ! Simulation time not to be exceeded
+    real, intent(in):: TimeSimulationLimit ! Simulation time not to be exceeded
 
     integer :: iBlock
     integer :: iError, Ijk_D(3), i, j, k
@@ -338,11 +338,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_global_timestep'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(UseDtLimit) RETURN
-
-    ! if calc_timestep is tested, test this routine too
-    if(.not.DoTest) call set_oktest('calc_timestep', DoTest, DoTest)
+    call test_start(NameSub, DoTest)
 
     if(DoTest)write(*,*) NameSub, &
          ' starting with TimeSimulationLimit, dt_BLK, time_BLK=', &

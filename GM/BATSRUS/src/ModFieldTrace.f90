@@ -5,7 +5,8 @@
 module ModFieldTrace
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iProcTest
+       test_start, test_stop, StringTest, xTest, yTest, zTest, &
+       iTest, jTest, kTest, iBlockTest, iProcTest
 
   use ModSize
   use ModKind
@@ -4384,7 +4385,7 @@ contains
       do
          ! Read position
          write(*,'(a)',ADVANCE='NO')'Rayface x,y,z,iRay:'
-         read(*,*)xTest,yTest,zTest,iRay
+         read(*,*) xTest,yTest,zTest,iRay
          if(xTest==0.0.and.yTest==0.0.and.zTest==0.0) EXIT
 
          ! Find position

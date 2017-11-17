@@ -5,7 +5,7 @@
 module ModSetInitialCondition
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iBlockTest
+       test_start, test_stop, iBlockTest, iTest, jTest, kTest
 
   implicit none
 

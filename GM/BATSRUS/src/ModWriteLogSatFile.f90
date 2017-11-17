@@ -4,7 +4,8 @@
 module ModWriteLogSatFile
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest
+       test_start, test_stop, StringTest, XyzTestCell_D, &
+       iTest, jTest, kTest, iBlockTest, iProcTest, xTest, yTest, zTest
 
   implicit none
 
