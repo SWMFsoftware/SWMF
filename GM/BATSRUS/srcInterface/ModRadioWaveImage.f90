@@ -184,8 +184,7 @@ module ModRadioWaveImage
   SAVE
 
   public :: ray_bunch_intensity
-  real, pointer    :: Coord_DI(:,:), State_VI(:,:)
-  integer, pointer :: iIndex_II(:,:)
+  real, pointer    :: Coord_DI(:,:)
   logical, pointer :: IsMask_I(:)
   !\
   !Frequency related:  in GGSE
@@ -194,8 +193,7 @@ module ModRadioWaveImage
   !Tolerance parameters::
   !  minimum 100 points between a vacuum and a critical surface and
   !  minimum 100 points over 1 rad of the curvature
-  real, parameter :: Tolerance =  1.0e-2, Tolerance2   =  1.0e-4
- 
+  real, parameter :: Tolerance =  1.0e-2, Tolerance2   =  1.0e-4 
   !\
   ! Initial step size
   real,parameter  :: DeltaS = 1.0
@@ -208,6 +206,10 @@ module ModRadioWaveImage
   !\
   ! Kind of particles used to integrate emissivity over rays 
   integer :: KindRay_ = -1
+  !\
+  ! Pointers to the arrays
+  real, pointer     :: State_VI(:,:)
+  integer, pointer  :: iIndex_II(:,:)
   !\
   ! Components of the ray vector
   !\
@@ -227,11 +229,13 @@ module ModRadioWaveImage
   !Indices
   integer, parameter :: Ray_ = 1, Steepness_ = 2, OK_ = 0, Bad_ = 1
   integer, parameter :: Status_ = 3, Predictor_ = 1
-  integer, parameter :: nIndex = Steepness_
+  integer, parameter :: nIndex = Status_
 contains !=========================================================
 
-  subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
-       rIntegration, nXPixel, nYPixel, Intensity_II)
+  subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, &
+       ImageRange_I, rIntegration, nXPixel, nYPixel, Intensity_II)
+    use ModProcMH, ONLY: nProc, iComm, iProc
+    use ModMpi
     !
     !   The subroutine ray_bunch_intensity() is an interface to the radiowave
     ! raytracer and emissivity integrator ray_path() from the 
@@ -296,11 +300,10 @@ contains !=========================================================
     ! The result of emissivity integration
     real, dimension(nXPixel,nYPixel), intent(out) :: Intensity_II          
     !/
-                            
     !\
     !Misc functions of inputs 
     !/     
-    real :: XyzObservLen !=sqrt(sum(XyzObs_D**2))
+    real :: ObserverDistance !=sqrt(sum(XyzObs_D**2))
     !\
     ! Same as ImageRange_I(4)
     real :: XLower, XUpper, YLower, YUpper
@@ -397,8 +400,8 @@ contains !=========================================================
     ! Determune the orts, Tau and Xi, of the inner coordinate system
     ! of the image plane
     !
-    XyzObservLen = sqrt(sum(XyzObserver_D**2))
-    Normal_D = XyzObserver_D/XyzObservLen
+    ObserverDistance = sqrt(sum(XyzObserver_D**2))
+    Normal_D = XyzObserver_D/ObserverDistance
     Tau_D = cross_product(ZAxisOrt_D, Normal_D)
     Tau_D = Tau_D/sqrt(sum(Tau_D**2))
     Xi_D = cross_product(Normal_D, Tau_D)
@@ -427,11 +430,11 @@ contains !=========================================================
           !   XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
           !or  ObservToIntSphereDist**2 + 
           !  + 2*ObservToIntSphereDist*XyzObs_D
-          !  + XyzObservLen**2 - rIntegration**2 = 0
+          !  + ObserverDistance**2 - rIntegration**2 = 0
           !/  
           ObservToIntSphereDist = -sum(XyzObserver_D*&
                State_VI(SlopeX_:SlopeZ_,iRay))&
-               - sqrt(rIntegration**2 - XyzObservLen**2 &
+               - sqrt(rIntegration**2 - ObserverDistance**2 &
                + sum(State_VI(SlopeX_:SlopeZ_,iRay)&
                *XyzObserver_D)**2)
           State_VI(x_:z_,iRay) = XyzObserver_D &
@@ -445,7 +448,9 @@ contains !=========================================================
     !
     Intensity_I = 0
     UnusedRay_I = .false.
-    State_VI(Ds_,:) = DeltaS
+    State_VI(Ds_,:     )    = DeltaS
+    State_VI(Dist2Cr_,:)    = 0.0
+    iIndex_II(Steepness_:Status_,:) = OK_
     rIntegration2 = rIntegration**2 + 0.01
     do while(.not.all(UnusedRay_I))
        !\
@@ -460,8 +465,6 @@ contains !=========================================================
   subroutine ray_path(nRay, UnusedRay_I, Intensity_I)
     use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
          GradDensity_DI, Density_I, DeltaSNew_I
-    use ModPhysics, ONLY   : No2Si_V, UnitRho_, UnitX_
-    use ModProcMH, ONLY    : iProc
     use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
@@ -501,25 +504,6 @@ contains !=========================================================
     ! 
     !   The parameters of the ray_path() are briefly described below.
     !
-    ! get_plasma_density():  external subroutine that returns the plasma
-    !     Density_I and its gradient GradDensity_DI. It also provides the
-    !     recommended step size DeltaSNew_I and asserts the UnusedRay_i (sets
-    !     it to .true.) for a ray, should it (illegally) penetrate into the
-    !     region with "negative" dielectric permittivity.
-    ! nRay:           number of rays being processed.
-    ! UnusedRay_I:  the caller program can use this logical array to stop
-    !     processing of any individual ray when it already finished travelling
-    !     inside of a specified part of space. Set the corresponding element
-    !     of UnusedRay_I to .true. to leave it unprocessed during the
-    !     subsequent calls to ray_path(). Before the first call to ray_path()
-    !     all the elements of UnusedRay_I should be set to .false.; then all
-    !     the rays will be processed.
-    ! Xyz_DI:    Cartesian position vectors of the rays.
-    ! Slope_DI:       Direction cosines of the rays.
-    ! DeltaS_I:       Current step values for the rays. Set the elements of
-    !     Delta_I to some reasonable value, say, 1.0. The DeltaS_I elements
-    !     are individually modified by ray_path() to satisfy the precision
-    !     requirements set by ToleranceInit.
     ! ToleranceInit:   determines the precision of ray paths calculation.
     !     ToleranceInit is the inverse of the minimum number of ray
     !     trajectory points per one radian of the ray curvature. If this
@@ -904,19 +888,18 @@ contains !=========================================================
     end subroutine advance_ray
     !====================
     subroutine get_local_density(&
-         iParticle, Density, GradDensity_D, StepSize, IsBody)
-         !USES:
+         iParticle, Density, GradDensity_D, DeltaSNew, IsBody)
+      !USES:
       use ModAdvance, ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
       use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB
-      use ModGeometry,ONLY: CellSize_DB, x_, y_, z_
+      use ModGeometry,ONLY: CellSize_DB
       use ModPhysics, ONLY: No2Si_V, UnitRho_
-      ! returns the direction of magnetic field for a given particle
       integer, intent(in):: iParticle
       real,    intent(out):: Density
       real,    intent(out):: GradDensity_D(MaxDim)
-      real,    intent(out):: StepSize
-      logical, intent(out):: IsBody
+      real,    intent(out):: DeltaSNew
+      logical, optional, intent(out):: IsBody
       
       !Coordinates and block #
       real     :: Xyz_D(MaxDim)
@@ -926,8 +909,7 @@ contains !=========================================================
       real   :: Weight_I(2**nDim)
       integer:: iCell ! loop variable
       integer:: i_D(MaxDim)
-      character(len=200):: StringError
-      character(len=*), parameter:: NameSub = "get_b_dir"
+      character(len=*), parameter:: NameSub = 'get_local_density'
       !----------------------------------------------------------------------
       !Coordinates and block #
       Xyz_D   = State_VI(x_:z_, iParticle)
@@ -937,13 +919,19 @@ contains !=========================================================
       if(IsBody)then
          call mark_undefined(KindRay_,iParticle);RETURN
       end if
-      Density = 0
+      Density = 0.0; GradDensity_D = 0.0; DeltaSNew = 0.0
       do iCell = 1, nCell
          i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
          Density = Density + &
               State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+         GradDensity_D = GradDensity_D + &
+              GradDensity_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+         DeltaSNew = DeltaSNew + &
+              Weight_I(iCell)*minval(CellSize_DB(:,iBlock))
       end do
+      Density       = Density      *No2Si_V(UnitRho_)*1.0e-3
+      GradDensity_D = GradDensity_D*No2Si_V(UnitRho_)*1.0e-3
     end subroutine get_local_density
     !====================
   end subroutine ray_path
