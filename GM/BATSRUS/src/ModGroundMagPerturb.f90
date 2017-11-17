@@ -363,23 +363,21 @@ contains
     ! at a given set of points (Xyz_DI) for nMag different magnetometers,
     ! from currents in GM cells.  The result is returned as MagPerturb_DI.
 
-    use ModSize,           ONLY: nI, nJ, nK, MaxBlock
+    use ModSize,           ONLY: nI, nJ, nK
     use ModGeometry,       ONLY: R_BLK, x1, x2, y1, y2, z1, z2
-    use ModMain,           ONLY: x_, y_, z_, &
+    use ModMain,           ONLY: &
          Unused_B, nBlock, Time_Simulation, TypeCoordSystem
     use ModNumConst,       ONLY: cPi
     use ModCurrent,        ONLY: get_current
     use CON_axes,          ONLY: transform_matrix
-    use BATL_lib,          ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, Xyz_DGB
+    use BATL_lib,          ONLY: CellVolume_GB, Used_GB, Xyz_DGB, x_, y_, z_
 
     integer, intent(in)                    :: nMag
     real,    intent(in), dimension(3,nMag) :: Xyz_DI
     real,    intent(out),dimension(3,nMag) :: MagPerturb_DI
     integer  :: i,j,k,iBlock,iMag
     real     :: r3, GmtoSmg_DD(3,3)
-    real, dimension(3):: Xyz_D, Temp_D, Current_D, MagPerturb_D
-    real, external    :: integrate_BLK
-    real, allocatable, dimension(:,:,:,:) :: Temp_BLK_x,Temp_BLK_y,Temp_BLK_z
+    real, dimension(3):: Xyz_D, Current_D, MagPerturb_D
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'ground_mag_perturb'
@@ -387,14 +385,6 @@ contains
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
 
-    if(.not.allocated(Temp_BLK_x))&
-         allocate(Temp_BLK_x(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-         Temp_BLK_y(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
-         temp_BLK_z(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-
-    Temp_BLK_x = 0.0
-    Temp_BLK_y = 0.0
-    Temp_BLK_z = 0.0
     !\
     ! Calculate the magnetic perturbations in cartesian coordinates
     !/
@@ -403,45 +393,33 @@ contains
 
     do iMag = 1, nMag
        Xyz_D = Xyz_DI(:,iMag)
-
+       MagPerturb_D = 0.0
        do iBlock=1, nBlock
           if (Unused_B(iBlock))CYCLE
           do k=1, nK; do j=1, nJ; do i=1, nI
-             if ( r_BLK(i,j,k,iBlock) < rCurrents .or. &
-                  Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or.      &
-                  Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or.      &
-                  Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or.      &
-                  Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or.      &
-                  Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or.      &
-                  Xyz_DGB(z_,i,j,k-1,iBlock) < z1 ) then
-                Temp_BLK_x(i,j,k,iBlock)=0.0
-                Temp_BLK_y(i,j,k,iBlock)=0.0
-                Temp_BLK_z(i,j,k,iBlock)=0.0
-                CYCLE
-             end if
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+             if(r_BLK(i,j,k,iBlock) < rCurrents   .or. &
+                  Xyz_DGB(x_,i+1,j,k,iBlock) > x2 .or. &
+                  Xyz_DGB(x_,i-1,j,k,iBlock) < x1 .or. &
+                  Xyz_DGB(y_,i,j+1,k,iBlock) > y2 .or. &
+                  Xyz_DGB(y_,i,j-1,k,iBlock) < y1 .or. &
+                  Xyz_DGB(z_,i,j,k+1,iBlock) > z2 .or. &
+                  Xyz_DGB(z_,i,j,k-1,iBlock) < z1)   CYCLE
 
              call get_current(i,j,k,iBlock,Current_D)
 
              r3 = (sqrt(sum((Xyz_D-Xyz_DGB(:,i,j,k,iBlock))**2)))**3
 
-             Temp_D = cross_product(Current_D, Xyz_D-Xyz_DGB(:,i,j,k,iBlock))/r3
-
-             Temp_BLK_x(i,j,k,iBlock) = Temp_D(1)
-             Temp_BLK_y(i,j,k,iBlock) = Temp_D(2)
-             Temp_BLK_z(i,j,k,iBlock) = Temp_D(3)
+             ! Add up perturbation
+             MagPerturb_D = MagPerturb_D + CellVolume_GB(i,j,k,iBlock)*&
+                  cross_product(Current_D, Xyz_D-Xyz_DGB(:,i,j,k,iBlock)) &
+                  /(4*cPi*r3)
           end do; end do; end do
        end do
-
-       ! We should just add this up without using the integrate_blk !!!
-       MagPerturb_D(x_) = integrate_blk(1, Temp_BLK_x)/(4*cPi)
-       MagPerturb_D(y_) = integrate_blk(1, Temp_BLK_y)/(4*cPi)
-       MagPerturb_D(z_) = integrate_blk(1, Temp_BLK_z)/(4*cPi)
 
        ! Convert to SMG coordinates
        MagPerturb_DI(:,iMag) = matmul(GmtoSmg_DD, MagPerturb_D)
     end do
-
-    deallocate(Temp_BLK_x,Temp_BLK_y,Temp_BLK_z)
 
     call timing_stop(NameSub)
 
