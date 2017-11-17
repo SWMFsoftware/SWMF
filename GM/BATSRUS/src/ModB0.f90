@@ -285,13 +285,12 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_reschange'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     ! There are no resolution changes in 1D
     if(nDim == 1) RETURN
 
     if(.not.UseB0) RETURN
 
-    if(DoTest)write(*,*)NameSub,' starting'
+    call test_start(NameSub, DoTest)
 
     ! For Cartesian grid take 1/8-th of the contributing fine B0 values.
     ! For non-Cartesian grid the averaged cell values are weighted by face area
@@ -417,8 +416,6 @@ contains
        end if
     end do
 
-    if(DoTest)write(*,*)NameSub,' finished'
-
     call test_stop(NameSub, DoTest)
   end subroutine set_b0_reschange
   !============================================================================
@@ -440,8 +437,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_b0_source'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(.not.(UseB0 .and. UseB0Source)) RETURN
+    call test_start(NameSub, DoTest, iBlock)
 
     ! set B0_DX, B0_DY, B0_DZ for this block
     call set_b0_face(iBlock)
@@ -580,10 +577,8 @@ contains
 
     real:: rLonLat_D(3), r
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_b0'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(iTableB0 > 0)then
        call xyz_to_rlonlat(Xyz_D, rLonLat_D)
        if(dLonB0 > 0.0) &
@@ -617,7 +612,6 @@ contains
 
     if(UseUserB0)call user_get_b0(Xyz_D(1), Xyz_D(2), Xyz_D(3), B0_D)
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_b0
   !============================================================================
 
@@ -641,10 +635,8 @@ contains
     real :: Dp, Tmp1, Tmp2, Dipole_D(3)
 
     logical :: DoQuadrupole, DoOctupole
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_b0_multipole'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     ! Determine radial distance and powers of it
     r2 = sum(Xyz_D(1:nDim)**2)
 
@@ -746,7 +738,6 @@ contains
        B0_D(3) = B0_D(3) + SinThetaTilt*b_D(1) + CosThetaTilt*b_D(3)
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_b0_multipole
   !============================================================================
 
@@ -768,10 +759,8 @@ contains
     !\
     ! Determine normalized relative coordinates and radial distance from body 2
     !/
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_b0_body2'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     Xyz_D = (XyzIn_D - (/xBody2, yBody2, zBody2/))/rBody2
 
     R0 = sqrt(sum(Xyz_D**2))
@@ -788,7 +777,6 @@ contains
 
     B0_D = B0_D + (Dp*Xyz_D - BdpBody2_D)*r3Inv
 
-    call test_stop(NameSub, DoTest)
   end subroutine add_b0_body2
   !============================================================================
 
