@@ -506,22 +506,7 @@ real function maxval_abs_ALL(qnum,qa)
 
   call test_stop(NameSub, DoTest)
 end function maxval_abs_ALL
-!==============================================================================
 
-subroutine set_oktest(String, DoTst, DoTstMe)
-
-  use BATL_lib, ONLY: test_start, iProcTest, iProcTest2, iProc
-
-  implicit none
-
-  character (len=*) :: String
-  logical :: DoTst, DoTstMe
-  !----------------------------------------------------------------------------
-
-  call test_start(String, DoTst, DoTestAll=.true.)
-  DoTstMe = DoTst .and. (iProc == iProcTest .or. iProc == iProcTest2)
-
-end subroutine set_oktest
 !==============================================================================
 
 subroutine barrier_mpi
