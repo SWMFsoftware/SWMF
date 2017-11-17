@@ -86,7 +86,7 @@ int main(){
   //alpha = 0.1; // the coefficient (dt)/(dx)^2, defined in MatVec_C.cpp
   //dt =1e-5;
   double  dx=1.0/((double)n-1);
-  double nTotalStep=1000;
+  double nTotalStep=2;
 
   int iMatvec=1;
   int lInit=1;
