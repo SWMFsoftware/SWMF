@@ -4,10 +4,11 @@
 module ModCalcSource
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, StringTest, iTest, jTest, kTest, iBlockTest, iVarTest
+       test_start, test_stop, StringTest, iTest, jTest, kTest, &
+       iBlockTest, iVarTest
 
   implicit none
-  save
+  SAVE
 
   private ! except
 
