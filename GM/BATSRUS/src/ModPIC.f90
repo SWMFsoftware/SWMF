@@ -173,22 +173,18 @@ contains
   subroutine pic_init_region
 
     use ModProcMH,    ONLY: iProc
-    use BATL_lib,     ONLY: nDim, MaxDim
+    use BATL_lib,     ONLY: nDim
     use ModPhysics,   ONLY: No2Si_V, UnitMass_, UnitCharge_
     use ModHallResist, ONLY: HallFactorMax
     use ModPhysics,   ONLY: IonMassPerCharge
     use ModMultiFluid, ONLY: nIonFLuid, MassIon_I
     use ModVarIndexes, ONLY: IsMhd
+
     ! PIC grid indexes
-    integer:: nPic_D(MaxDim), iRegion
+    integer:: iRegion
 
     ! MHD grid indexes
     integer:: i
-
-    ! Cell indexes in an array
-
-    ! Location of PIC node
-    real:: XyzPic_D(MaxDim)
 
     ! mass per charge SI
     real:: IonMassPerChargeSi
@@ -258,9 +254,6 @@ contains
        write(*,*) NameSub,': mUnitPicSi = ',mUnitPicSi
        write(*,*) NameSub,': uUnitPicSi = ',uUnitPicSi
     end if
-
-    XyzPic_D = 0.0
-    nPic_D = 1
 
     do iRegion = 1, nRegionPic
        ! extending the region sizes with 1 ghost cell
