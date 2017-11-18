@@ -1797,41 +1797,44 @@ contains
 
     ! Fill edges and corners for Array_G (e.g. for bilinear interpolation)
 
-    use ModSize, ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: nDim, nI, nJ, nK, j0_, nJp1_,k0_, nKp1_
 
     implicit none
-    real, intent(inout) :: Array_G(0:nI+1,0:nJ+1,0:nK+1)
-
-    ! Edges in the` K direction
+    real, intent(inout) :: Array_G(0:nI+1,j0_:nJp1_,k0_:nKp1_)
     !--------------------------------------------------------------------------
-    Array_G(0,0,:) = &
-         Array_G(1,0,:)     + Array_G(0,1,:)     - Array_G(1,1,:)
-    Array_G(nI+1,0,:) = &
-         Array_G(nI,0,:)    + Array_G(nI+1,1,:)  - Array_G(nI,1,:)
-    Array_G(0,nJ+1,:) = &
-         Array_G(0,nJ,:)    + Array_G(1,nJ+1,:)  - Array_G(1,nJ,:)
-    Array_G(nI+1,nJ+1,:) = &
-         Array_G(nI+1,nJ,:) + Array_G(nI,nJ+1,:) - Array_G(nI,nJ,:)
+    if(nDim == 1) RETURN
+
+    ! Edges in the K direction
+    Array_G(0,j0_,:) = &
+         Array_G(1,j0_,:)     + Array_G(0,1,:)      - Array_G(1,1,:)
+    Array_G(nI+1,j0_,:) = &
+         Array_G(nI,j0_,:)    + Array_G(nI+1,1,:)   - Array_G(nI,1,:)
+    Array_G(0,nJp1_,:) = &
+         Array_G(0,nJ,:)      + Array_G(1,nJp1_,:)  - Array_G(1,nJ,:)
+    Array_G(nI+1,nJp1_,:) = &
+         Array_G(nI+1,nJ,:)   + Array_G(nI,nJp1_,:) - Array_G(nI,nJ,:)
+
+    if(nDim == 2) RETURN
 
     ! Edges in the J direction
-    Array_G(0,:,0) = &
-         Array_G(1,:,0)     + Array_G(0,:,1)     - Array_G(1,:,1)
-    Array_G(nI+1,:,0) = &
-         Array_G(nI,:,0)    + Array_G(nI+1,:,1)  - Array_G(nI,:,1)
-    Array_G(0,:,nK+1) = &
-         Array_G(1,:,nK+1)  + Array_G(0,:,nK)    - Array_G(1,:,nK)
-    Array_G(nI+1,:,nK+1) = &
-         Array_G(nI,:,nK+1) + Array_G(nI+1,:,nK) - Array_G(nI,:,nK)
+    Array_G(0,:,k0_) = &
+         Array_G(1,:,k0_)     + Array_G(0,:,1)      - Array_G(1,:,1)
+    Array_G(nI+1,:,k0_) = &
+         Array_G(nI,:,k0_)    + Array_G(nI+1,:,1)   - Array_G(nI,:,1)
+    Array_G(0,:,nKp1_) = &
+         Array_G(1,:,nKp1_)   + Array_G(0,:,nK)     - Array_G(1,:,nK)
+    Array_G(nI+1,:,nKp1_) = &
+         Array_G(nI,:,nKp1_)  + Array_G(nI+1,:,nK)  - Array_G(nI,:,nK)
 
     ! Edges in the I direction including the corners
-    Array_G(:,0,0) = &
-         Array_G(:,1,0)     + Array_G(:,0,1)     - Array_G(:,1,1)
-    Array_G(:,nJ+1,0) = &
-         Array_G(:,nJ,0)    + Array_G(:,nJ+1,1)  - Array_G(:,nJ,1)
-    Array_G(:,0,nK+1)=&
-         Array_G(:,1,nK+1)  + Array_G(:,0,nK)    - Array_G(:,1,nK)
-    Array_G(:,nJ+1,nK+1) = &
-         Array_G(:,nJ,nK+1) + Array_G(:,nJ+1,nK) - Array_G(:,nJ,nK)
+    Array_G(:,j0_,k0_) = &
+         Array_G(:,1,k0_)     + Array_G(:,j0_,1)    - Array_G(:,1,1)
+    Array_G(:,nJp1_,k0_) = &
+         Array_G(:,nJ,k0_)    + Array_G(:,nJp1_,1)  - Array_G(:,nJ,1)
+    Array_G(:,j0_,nKp1_)=&
+         Array_G(:,1,nKp1_)   + Array_G(:,j0_,nK)   - Array_G(:,1,nK)
+    Array_G(:,nJp1_,nKp1_) = &
+         Array_G(:,nJ,nKp1_)  + Array_G(:,nJp1_,nK) - Array_G(:,nJ,nK)
 
   end subroutine fill_edge_corner
   !============================================================================
