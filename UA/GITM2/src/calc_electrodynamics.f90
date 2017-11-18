@@ -73,6 +73,8 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
   integer :: nX
   integer :: iStart, iEnd, iAve
 
+  logical :: UseNewTrace = .false.
+  
   external :: matvec_gitm
 
   if (Debug) &
@@ -291,8 +293,10 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      deltapmc = deltapmc * Pi / 180.0 / 2.0
      deltalmc = deltalmc * Pi / 180.0 / 2.0
 
-     LengthFieldLine   = 0.0
-     call MMT_Init
+     if (UseNewTrace) then 
+        LengthFieldLine   = 0.0
+        call MMT_Init
+     endif
      
   endif
 
@@ -531,7 +535,6 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
 
      PedersenFieldLine = 0.0
      HallFieldLine     = 0.0
-!     LengthFieldLine   = 0.0
      DivJuFieldLine    = 0.0
 
      SigmaPP = 0.0
@@ -545,141 +548,216 @@ subroutine UA_calc_electrodynamics(UAi_nMLTs, UAi_nLats)
      Kpm = 0.0
      Klm = 0.0
 
-     tmp3d(:,:,:,1) = Sigma_Hall
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     sigmahh = tmp2d(:,:,1)
+     if (UseNewTrace) then
 
-     tmp3d(:,:,:,1) = sigmap_d2d2_d
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     sigmall = tmp2d(:,:,1)
-     
-     tmp3d(:,:,:,1) = sigmap_d1d2_d
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     sigmaCC = tmp2d(:,:,1)
-     
-     tmp3d(:,:,:,1) = sigmap_d1d1_d
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     sigmaPP = tmp2d(:,:,1)
-     
-     tmp3d(:,:,:,1) = kmp
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     KDpm = tmp2d(:,:,1)
-     
-     tmp3d(:,:,:,1) = kml
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     KDlm = tmp2d(:,:,1)
-     
-     tmp3d(:,:,:,1) = je1
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     Kpm = tmp2d(:,:,1)
+        tmp3d(:,:,:,1) = Sigma_Hall
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        sigmahh = tmp2d(:,:,1)
 
-     tmp3d(:,:,:,1) = je2
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     Klm = tmp2d(:,:,1)
+        tmp3d(:,:,:,1) = sigmap_d2d2_d
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        sigmall = tmp2d(:,:,1)
+     
+        tmp3d(:,:,:,1) = sigmap_d1d2_d
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        sigmaCC = tmp2d(:,:,1)
+     
+        tmp3d(:,:,:,1) = sigmap_d1d1_d
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        sigmaPP = tmp2d(:,:,1)
+     
+        tmp3d(:,:,:,1) = kmp
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        KDpm = tmp2d(:,:,1)
+     
+        tmp3d(:,:,:,1) = kml
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        KDlm = tmp2d(:,:,1)
+     
+        tmp3d(:,:,:,1) = je1
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        Kpm = tmp2d(:,:,1)
 
-     tmp3d(:,:,:,1) = Sigma_Pedersen
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     PedersenFieldLine = tmp2d(:,:,1)
+        tmp3d(:,:,:,1) = je2
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        Klm = tmp2d(:,:,1)
 
-     tmp3d(:,:,:,1) = Sigma_Hall
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     HallFieldLine = tmp2d(:,:,1)
+        tmp3d(:,:,:,1) = Sigma_Pedersen
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        PedersenFieldLine = tmp2d(:,:,1)
 
-     tmp3d(:,:,1:nAlts,1) = DivJu
-     tmp2d = 0.0
-     call MMT_Integrate(tmp3d, tmp2d)
-     DivJuFieldLine = tmp2d(:,:,1)
+        tmp3d(:,:,:,1) = Sigma_Hall
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        HallFieldLine = tmp2d(:,:,1)
+
+        tmp3d(:,:,1:nAlts,1) = DivJu
+        tmp2d = 0.0
+        call MMT_Integrate(tmp3d, tmp2d)
+        DivJuFieldLine = tmp2d(:,:,1)
+
+     else
+        
+        LengthFieldLine   = 0.0
+
+        do iLon = -1, nLons+2
+           do iLat = -1, nLats+2
+
+              GeoLat = Latitude(iLat, iBlock)
+              GeoLon = Longitude(iLon,iBlock)
+
+              if (GeoLat > pi/2.) then
+                 GeoLat = pi - GeoLat
+                 GeoLon = mod(GeoLon + pi,twopi)
+              endif
               
-!     do iLon = -1, nLons+2
-!        do iLat = -1, nLats+2
-!
-!           GeoLat = Latitude(iLat, iBlock)
-!           GeoLon = Longitude(iLon,iBlock)
-!
-!           if (GeoLat > pi/2.) then
-!              GeoLat = pi - GeoLat
-!              GeoLon = mod(GeoLon + pi,twopi)
-!           endif
-!              
-!           if (GeoLat < -pi/2.) then
-!              GeoLat = -pi - GeoLat
-!              GeoLon = mod(GeoLon + pi,twopi)
-!           endif
-!           GeoLon = mod(GeoLon, twopi)
-!           if(GeoLon<0.) GeoLon=GeoLon+twopi
-!
-!           GeoAlt = Altitude_GB(iLon,iLat,1,iBlock)
-!           IsDone = .false.
-!           len = 200.0
-!           xAlt = 1.0
-!           iAlt = 1
-!
-!           if (iDebugLevel > 9) write(*,*) "=========> Integrals iLon, iLat: ",iLon,iLat
-!           if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-!
-!           CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0, &
-!                XMAG,YMAG,ZMAG)
-!           signz = sign(1.0,zmag)
-!
-!           do while (.not. IsDone)
-!
-!!              LengthFieldLine(iLon, iLat) = &
-!!                   LengthFieldLine(iLon, iLat) + len
-!
-!              CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0,&
-!                   XMAG,YMAG,ZMAG)
-!
-!              if (sign(1.0,zmag)*signz < 0) then
-!                 IsDone = .true.
-!              else
-!                 bmag = sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
-!                 GeoAlt = GeoAlt + abs(zmag)/bmag * len
-!                 if (GeoAlt > Altitude_GB(iLon,iLat,nAlts,iBlock)) then
-!                    IsDone = .true.
-!                 else
-!                    if (GeoAlt > Altitude_GB(iLon,iLat,iAlt+1,iBlock)) &
-!                         iAlt = iAlt+1
-!                    xAlt = (GeoAlt - Altitude_GB(iLon,iLat,iAlt,iBlock)) / &
-!                         ( Altitude_GB(iLon,iLat,iAlt+1,iBlock) &
-!                         - Altitude_GB(iLon,iLat,iAlt  ,iBlock))
-!                    GeoLat = GeoLat + signz*xmag/bmag * len/(RBody + GeoAlt)
-!                    GeoLon = GeoLon + &
-!                         signz*ymag/bmag * len/(RBody + GeoAlt)/cos(GeoLat)
-!
-!                    if (GeoLat > pi/2.) then
-!                       GeoLat = pi - GeoLat
-!                       GeoLon = mod(GeoLon + pi,twopi)
-!                    endif
-!              
-!                    if (GeoLat < -pi/2.) then
-!                       GeoLat = -pi - GeoLat
-!                       GeoLon = mod(GeoLon + pi,twopi)
-!                    endif
-!                   GeoLon = mod(GeoLon, twopi)
-!                    if(GeoLon<0.) GeoLon=GeoLon+twopi
-!
-!                 endif
-!              endif
-!
-!           enddo
-!
-!           if (iDebugLevel > 9) write(*,*) "=========> EndWhile "
-!           if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
-!
-!
-!        enddo
-!     enddo
+              if (GeoLat < -pi/2.) then
+                 GeoLat = -pi - GeoLat
+                 GeoLon = mod(GeoLon + pi,twopi)
+              endif
+              GeoLon = mod(GeoLon, twopi)
+              if(GeoLon<0.) GeoLon=GeoLon+twopi
 
+              GeoAlt = Altitude_GB(iLon,iLat,1,iBlock)
+              IsDone = .false.
+              len = 200.0
+              xAlt = 1.0
+              iAlt = 1
+
+              if (iDebugLevel > 9) write(*,*) "=========> Integrals iLon, iLat: ",iLon,iLat
+              if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
+              CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0, &
+                   XMAG,YMAG,ZMAG)
+              signz = sign(1.0,zmag)
+
+              do while (.not. IsDone)
+
+                 sp_d1d1_d = &
+                             xAlt * sigmap_d1d1_d(iLon, iLat, iAlt  ) + &
+                      (1.0 - xAlt) * sigmap_d1d1_d(iLon, iLat, iAlt+1)
+                 
+                 sp_d2d2_d = &
+                             xAlt  * sigmap_d2d2_d(iLon, iLat, iAlt) + &
+                      (1.0 - xAlt) * sigmap_d2d2_d(iLon, iLat, iAlt+1)
+
+                 sp_d1d2_d = &
+                          xAlt  * sigmap_d1d2_d(iLon, iLat, iAlt) + &
+                   (1.0 - xAlt) * sigmap_d1d2_d(iLon, iLat, iAlt+1)
+
+                 sh        = &
+                          xAlt  * sigmah(iLon, iLat, iAlt) + &
+                   (1.0 - xAlt) * sigmah(iLon, iLat, iAlt+1)
+
+                 kdpm_s     = &
+                          xAlt  * kmp(iLon, iLat, iAlt) + &
+                   (1.0 - xAlt) * kmp(iLon, iLat, iAlt+1)
+
+                 kdlm_s     = &
+                          xAlt  * kml(iLon, iLat, iAlt) + &
+                   (1.0 - xAlt) * kml(iLon, iLat, iAlt+1)
+
+                 je1_s     = &
+                          xAlt  * je1(iLon, iLat, iAlt) + &
+                   (1.0 - xAlt) * je1(iLon, iLat, iAlt+1)
+
+                 je2_s     = &
+                          xAlt  * je2(iLon, iLat, iAlt) + &
+                   (1.0 - xAlt) * je2(iLon, iLat, iAlt+1)
+
+                 ped = &
+                          xAlt  * Sigma_Pedersen(iLon, iLat, iAlt) + &
+                   (1.0 - xAlt) * Sigma_Pedersen(iLon, iLat, iAlt+1)
+                 hal = &
+                        xAlt  * Sigma_Hall(iLon, iLat, iAlt) + &
+                   (1.0-xAlt) * Sigma_Hall(iLon, iLat, iAlt+1)
+                 dju = &
+                        xAlt  * DivJu(iLon, iLat, iAlt) + &
+                   (1.0-xAlt) * DivJu(iLon, iLat, iAlt+1)
+
+                 SigmaPP(iLon, iLat) = SigmaPP(iLon, iLat) + len * sp_d1d1_d
+
+                 if(SigmaPP(iLon, iLat) > 1000.) write(*,*) "integrating :",&
+                      iLon, iLat, iAlt, SigmaPP(iLon, iLat), len, sp_d1d1_d, &
+                      Sigma_Pedersen(iLon, iLat, iAlt), &
+                      b0_d1(iLon,iLat,iAlt,1:3,iBlock), &
+                      b0_cD(iLon,iLat,iAlt,iBlock), iBlock, iProc
+
+                 SigmaLL(iLon, iLat) = SigmaLL(iLon, iLat) + len * sp_d2d2_d
+                 SigmaHH(iLon, iLat) = SigmaHH(iLon, iLat) + len * sh
+
+                 SigmaCC(iLon, iLat) = SigmaCC(iLon, iLat) + len * sp_d1d2_d
+
+                 KDpm(iLon, iLat) = KDpm(iLon, iLat) + len * kdpm_s
+                 KDlm(iLon, iLat) = KDlm(iLon, iLat) + len * kdlm_s
+
+                 Kpm(iLon, iLat) = Kpm(iLon, iLat) + len * je1_s
+                 Klm(iLon, iLat) = Klm(iLon, iLat) + len * je2_s
+
+                 PedersenFieldLine(iLon, iLat) = &
+                      PedersenFieldLine(iLon, iLat) + len * ped
+                 HallFieldLine(iLon, iLat) = &
+                      HallFieldLine(iLon, iLat) + len * hal
+                 DivJuFieldLine(iLon, iLat) = &
+                      DivJuFieldLine(iLon, iLat) + len * dju
+                 
+                 LengthFieldLine(iLon, iLat) = &
+                      LengthFieldLine(iLon, iLat) + len
+
+                 CALL get_magfield(GeoLat*180.0/pi,GeoLon*180.0/pi,GeoALT/1000.0,&
+                      XMAG,YMAG,ZMAG)
+
+                 if (sign(1.0,zmag)*signz < 0) then
+                    IsDone = .true.
+                 else
+                    bmag = sqrt(xmag*xmag + ymag*ymag + zmag*zmag)
+                    GeoAlt = GeoAlt + abs(zmag)/bmag * len
+                    if (GeoAlt > Altitude_GB(iLon,iLat,nAlts,iBlock)) then
+                       IsDone = .true.
+                    else
+                       if (GeoAlt > Altitude_GB(iLon,iLat,iAlt+1,iBlock)) &
+                            iAlt = iAlt+1
+                       xAlt = (GeoAlt - Altitude_GB(iLon,iLat,iAlt,iBlock)) / &
+                            ( Altitude_GB(iLon,iLat,iAlt+1,iBlock) &
+                            - Altitude_GB(iLon,iLat,iAlt  ,iBlock))
+                       GeoLat = GeoLat + signz*xmag/bmag * len/(RBody + GeoAlt)
+                       GeoLon = GeoLon + &
+                            signz*ymag/bmag * len/(RBody + GeoAlt)/cos(GeoLat)
+                       
+                       if (GeoLat > pi/2.) then
+                          GeoLat = pi - GeoLat
+                          GeoLon = mod(GeoLon + pi,twopi)
+                       endif
+              
+                       if (GeoLat < -pi/2.) then
+                          GeoLat = -pi - GeoLat
+                          GeoLon = mod(GeoLon + pi,twopi)
+                       endif
+                       GeoLon = mod(GeoLon, twopi)
+                       if(GeoLon<0.) GeoLon=GeoLon+twopi
+
+                    endif
+                 endif
+
+              enddo
+
+              if (iDebugLevel > 9) write(*,*) "=========> EndWhile "
+              if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
+
+           enddo
+        enddo
+
+     endif
+        
      call report("Calc MLT",2)
      if (UseBarriers) call MPI_BARRIER(iCommGITM,iError)
 
