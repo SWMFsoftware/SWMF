@@ -228,10 +228,11 @@ contains
   end subroutine find_test_cell
 
   !===========================================================================
-  subroutine test_start(NameSub, DoTest, iBlock, DoTestAll)
+  subroutine test_start(NameSub, DoTest, iBlock, i, j, k, DoTestAll)
 
     ! If optional block index iBlock is present, restrict all actions 
-    ! to the test block(s) only.
+    ! to the test block(s) only. If optional indexes i, j, or k are
+    ! present, check against the index(es) of the test cell(s).
     !
     ! Report this call on all processors if lVerbose == 100
     ! or DoTestAll is present and true.
@@ -246,16 +247,44 @@ contains
     logical,           intent(out):: DoTest    ! return true if testing is on
 
     integer, optional, intent(in) :: iBlock    ! block index
+    integer, optional, intent(in) :: i, j, k   ! cell index
     logical, optional, intent(in) :: DoTestAll ! test on all processors
     !------------------------------------------------------------------------
+
+    ! Start value for early returns
+    DoTest = .false.
 
     ! Check block index if present
     if(present(iBlock))then
        if(  (iProc /= iProcTest  .or. iBlock /= iBlockTest) .and. &
-            (iProc /= iProcTest2 .or. iBlock /= iBlockTest2))then
-          DoTest = .false.
-          RETURN
+            (iProc /= iProcTest2 .or. iBlock /= iBlockTest2)) &
+            RETURN
+
+       ! Check if cell indexes are present and equal with test cell(s)
+       if(iProc == iProcTest .and. iBlock == iBlockTest)then
+          if(present(i))then
+             if(i /= iTest) RETURN
+          end if
+          if(present(j))then
+             if(j /= jTest) RETURN
+          end if
+          if(present(k))then
+             if(k /= kTest) RETURN
+          end if
        end if
+
+       if(iProc == iProcTest2 .and. iBlock == iBlockTest2)then
+          if(present(i))then
+             if(i /= iTest2) RETURN
+          end if
+          if(present(j))then
+             if(j /= jTest2) RETURN
+          end if
+          if(present(k))then
+             if(k /= kTest2) RETURN
+          end if
+       end if
+
     end if
 
     DoTest = index(' '//StringTest//' ', ' '//NameSub//' ') > 0
@@ -284,7 +313,7 @@ contains
 
   end subroutine test_start
   !===========================================================================
-  subroutine test_stop(NameSub, DoTest, iBlock)
+  subroutine test_stop(NameSub, DoTest, iBlock, i, j, k)
 
     ! If optional block index iBlock is present, restrict all actions 
     ! to the test block(s) only.
@@ -293,6 +322,7 @@ contains
     character(len=*),  intent(in):: NameSub
     logical,           intent(in):: DoTest  
     integer, optional, intent(in):: iBlock
+    integer, optional, intent(in):: i, j, k
     !-----------------------------------------------------------------------
 
     ! Check block index if present
@@ -300,6 +330,32 @@ contains
        if(  (iProc /= iProcTest  .or. iBlock /= iBlockTest) .and. &
             (iProc /= iProcTest2 .or. iBlock /= iBlockTest2)) &
             RETURN
+
+       ! Check if cell indexes are present and equal with test cell(s)
+       if(iProc == iProcTest .and. iBlock == iBlockTest)then
+          if(present(i))then
+             if(i /= iTest) RETURN
+          end if
+          if(present(j))then
+             if(j /= jTest) RETURN
+          end if
+          if(present(k))then
+             if(k /= kTest) RETURN
+          end if
+       end if
+
+       if(iProc == iProcTest2 .and. iBlock == iBlockTest2)then
+          if(present(i))then
+             if(i /= iTest2) RETURN
+          end if
+          if(present(j))then
+             if(j /= jTest2) RETURN
+          end if
+          if(present(k))then
+             if(k /= kTest2) RETURN
+          end if
+       end if
+
     end if
 
     if(DoTest .or. lVerbose > 1) then
