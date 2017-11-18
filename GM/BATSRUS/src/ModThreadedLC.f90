@@ -263,7 +263,6 @@ contains
     use ModPhysics,      ONLY: InvGammaMinus1,&
          No2Si_V, UnitX_,Si2No_V, UnitB_, UnitTemperature_
     use ModLookupTable,  ONLY: interpolate_lookup_table
-    use ModProcMH,       ONLY: iProc
     !INPUT:
     !\
     ! Cell and block indexes for the boundary point
@@ -321,12 +320,7 @@ contains
     logical :: DoTestCell
     character(len=*), parameter:: NameSub = 'solve_boundary_thread'
     !--------------------------------------------------------------------------
-    if(iBlock == iBlockTest .and.iProc == iProcTest &
-          .and. j==jTest .and. k==kTest)then
-       call test_start(NameSub, DoTestCell, iBlock)
-    else
-       DoTestCell = .false.
-    endif
+    call test_start(NameSub, DoTestCell, iBlock, j=j, k=k)
 
     !\
     ! Initialize all output parameters from 0D solution
