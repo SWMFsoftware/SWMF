@@ -3,9 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModHdf5
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
-
   ! This empty module is used when HDF5 plotting is not enabled
 
   implicit none
@@ -30,17 +27,12 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'init_hdf5_plot'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    call test_stop(NameSub, DoTest)
   end subroutine init_hdf5_plot
   !============================================================================
 
   subroutine write_plot_hdf5(filename, plotType, plotVarNames, plotVarUnits,&
-       nPlotVar, NotACut, nonCartesian, IsSphPlot, plot_dimensional, xmin, xmax, &
-       ymin, ymax, zmin, zmax)
-
-    use ModNumConst
-    use ModMpi
+       nPlotVar, NotACut, nonCartesian, IsSphPlot, plot_dimensional, &
+       xmin, xmax, ymin, ymax, zmin, zmax)
 
     use ModProcMH, ONLY: iProc
 
@@ -54,11 +46,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_plot_hdf5'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     if(iProc==0) write (*,*) "ERROR: HDF5 plotting is not enabled!"
 
-    call test_stop(NameSub, DoTest)
   end subroutine write_plot_hdf5
   !============================================================================
   subroutine write_var_hdf5(iFile, plotType, iBlock, H5Index,nPlotVar,PlotVar, &
@@ -84,37 +73,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_var_hdf5'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine write_var_hdf5
   !============================================================================
 
-  subroutine close_sph_hdf5_plot(nPlotVar)
-    integer, intent(in) :: nPlotVar
-    !--------------------------------------------------------------------------
-  end subroutine close_sph_hdf5_plot
-  !============================================================================
-
-  subroutine write_sph_var_hdf5(iCell, jCell, H5Index, rplot, theta_out,phi_out,&
-   dtheta_plot, dphi_plot, nTheta, nPhi, nPlotVar, PointVar, plotVarNames)
-
-    integer, intent(in) :: iCell, jCell, nPlotVar, nTheta, nPhi, H5Index
-    real, intent(in) :: theta_out, phi_out, PointVar(nPlotVar)
-    real, intent(in) :: rplot, dtheta_plot, dphi_plot
-    character(len=*), intent(in):: plotVarNames(nPlotVar)
-    !--------------------------------------------------------------------------
-    end subroutine write_sph_var_hdf5
-  !============================================================================
-  subroutine init_sph_hdf5_plot(nPlotVar, filename, plotVarNames, PlotVarUnits, nTheta,&
-  nPhi, rplot)
-
-    integer, intent(in) :: nPlotVar, nTheta, nPhi
-    character(len=80),       intent(in):: filename
-    character(len=*), intent(in):: plotVarNames(nPlotVar)
-    character(len=*),  intent(in):: plotVarUnits(nPlotVar)
-    real, intent(in) :: rplot
-    !--------------------------------------------------------------------------
-  end subroutine init_sph_hdf5_plot
-  !============================================================================
 end module ModHdf5
 !==============================================================================
