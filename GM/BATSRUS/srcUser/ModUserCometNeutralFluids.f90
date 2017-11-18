@@ -769,7 +769,6 @@ contains
             SRhoUzDustGravity_IC(:,i,j,k)+ Source_VC(iRhoUzDust_I ,i,j,k)
     end do;  end do;  end do
 
-    ! write(*,*) 'DoTest, DoTest:', DoTest, DoTest
     if(DoTest) then
        write(*,*)'user_calc_sources:'
        write(*,*)'Inputs: '
@@ -1030,7 +1029,6 @@ contains
          get_block_data, put_block_data
     use ModConst, ONLY: cProtonMass
 
-    logical :: FirstCall = .true., DoTest, DoTestMe=.true.
     ! real    :: UdotR(nIonFluid), URefl_D(1:3,nIonFluid)
     ! real    :: BdotR, BRefl_D(1:3)
 
@@ -1050,14 +1048,14 @@ contains
     integer:: nStepLonSun = -1
     real, save :: NormalSun_D(3)
 
+    logical:: FirstCall = .true.
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    if(DoTest.and.FirstCall) then
+    if(FirstCall)then
+       call test_start(NameSub, DoTest)
     else
-       DoTest=.false.; DoTest=.false.
+       DoTest=.false.
     end if
 
     MassNeu_I=MassFluid_I(1:nNeuFluid)
@@ -1231,7 +1229,9 @@ contains
 
     end if
 
-    call test_stop(NameSub, DoTest)
+    if(FirstCall) call test_stop(NameSub, DoTest)
+    FirstCall = .false.
+
   end subroutine user_set_face_boundary
   !============================================================================
 

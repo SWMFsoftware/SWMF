@@ -5,7 +5,7 @@
 module ModUser
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest, xTest, yTest, zTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest
 
   use ModUserEmpty,               &
        IMPLEMENTED1  => user_set_boundary_cells,         &
@@ -554,8 +554,7 @@ contains
   !============================================================================
   subroutine user_set_boundary_cells(iBlock)
 
-    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, &
-         r_BLK, true_cell, x2
+    use ModGeometry, ONLY: ExtraBc_, Xyz_DGB, r_BLK
     use ModBoundaryGeometry, ONLY: iBoundary_GB, domain_
 
     integer, intent(in):: iBlock
@@ -693,7 +692,7 @@ contains
 
     logical :: DoReadFieldlineFile = .true.
 
-    integer:: nPoint, iPoint, iFileHeader, iZoneHeader, i
+    integer:: nPoint, iPoint, iFileHeader, i
 
     real, allocatable:: State_VI(:,:)
 
@@ -757,8 +756,7 @@ contains
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc, TimeBc
     use ModGeometry,    ONLY: ExtraBc_, Xyz_DGB
-    use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V, &
-         ElectronPressureRatio
+    use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V
     use ModSolarwind,    ONLY: get_solar_wind_point
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
@@ -1361,9 +1359,6 @@ contains
     use ModMain,     ONLY:     &
          n_step,   Time_Simulation
     use ModGeometry, ONLY: R_BLK, Xyz_DGB
-    use ModPhysics, ONLY:  Si2No_V, NO2SI_V, UnitX_
-    use ModBlockData, ONLY: use_block_data, clean_block_data, &
-         get_block_data, put_block_data
 
     integer,intent(in) :: i,j,k,iBlock
     real,intent(in)    :: Ti_I(nIonFluid)
@@ -1727,15 +1722,15 @@ contains
 
     use ModMain,       ONLY: nI, nJ, nK,    &
            n_step, Time_Simulation, iNewDecomposition
-    use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, &
-         RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, P_, time_BLK
+    use ModAdvance,    ONLY: State_VGB, Source_VC, &
+         Bx_,By_,Bz_, P_
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
     use ModGeometry,   ONLY: r_BLK, Xyz_DGB
     use ModCurrent,    ONLY: get_current
     use ModProcMH,     ONLY: iProc
-    use ModPhysics,    ONLY: SW_Ux, SW_Uy, SW_Uz, Si2No_V, No2Si_V, &
+    use ModPhysics,    ONLY: Si2No_V, No2Si_V, &
          UnitEnergyDens_, UnitN_, UnitRho_, UnitU_, UnitP_, UnitT_, &
-         UnitB_, UnitJ_, UnitRhoU_, UnitTemperature_, UnitX_,       &
+         UnitRhoU_, UnitTemperature_, UnitX_,       &
          ElectronPressureRatio, ElectronCharge
     use ModPointImplicit, ONLY: UsePointImplicit, IsPointImplSource
     use ModVarIndexes,    ONLY: MassFluid_I
@@ -1772,18 +1767,14 @@ contains
 
     real, dimension(1:nIonFluid) :: fiiTot_I, finTot_I, vAdd_I, &
          kinAdd_I, kinSub_I
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_calc_sources'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     real, dimension &
          (1:nIonFluid,1:nNeuFluid,1:nNeuFluid,1:nIonFluid,1:nI,1:nJ,1:nK) :: &
          kin_IIIIC
 
-    real    :: theta, fenTot, feiTot,logTe
+    real    :: fenTot, feiTot
     integer :: i,j,k,iNeuFluid,jNeutral,iIonFluid,jIonFluid,iTerm
 
-    logical :: DoTest, DoTest, TestCell
+    logical :: TestCell
     logical :: DoCalcShading = .false.
     integer, save :: iBlockLast = -100
     integer, save :: iLastDecomposition = -100
@@ -1792,8 +1783,10 @@ contains
     logical :: DoCalcDistance2Fieldline = .false.
     real,    save :: IsWithinTheRingR_III(nI,nJ,nK) = -1.0
 
-    character(len=*), parameter:: NameSub='user_calc_sources'
-    !----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_calc_sources'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
 
     ! Do not evaluate any source terms explicitly when running pointimplicit
     if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
@@ -2902,21 +2895,16 @@ contains
 
     use ModUpdateState, ONLY: update_state_normal
     use ModAdvance,  ONLY: State_VGB, Energy_GBI
-    use ModPhysics,  ONLY: SW_Rho, Sw_N, LowDensityRatio, &
-         cBoltzmann, ElectronPressureRatio, &
-         Si2No_V, No2Si_V, UnitN_, UnitP_, UnitTemperature_, UnitX_, UnitU_
+    use ModPhysics,  ONLY: LowDensityRatio, &
+         Si2No_V, No2Si_V, UnitN_, UnitTemperature_, UnitX_, UnitU_
     use ModEnergy,   ONLY: calc_energy_cell
     use ModGeometry, ONLY: true_cell, r_BLK, xyz_DGB
 
     integer,intent(in) :: iBlock
 
-    integer :: i,j,k, iIonFluid, iMajorIon
-    real    :: nElec, TempNeu1
+    integer :: i,j,k
     real    :: Ux, Uy, Uz, Ti
-    real, dimension(1:nIonFluid) :: nIon_I
 
-    real, dimension(1:nI,1:nJ,1:nK) :: nElec_C
-    real, dimension(1:nIonFluid,1:nI,1:nJ,1:nK) ::nIon_IC
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_update_states'
@@ -3118,7 +3106,6 @@ contains
 
     use ModPhysics,     ONLY: No2Si_V, Si2No_V, &
          UnitN_, UnitX_, UnitT_, UnitP_, ElectronPressureRatio
-    use ModProcMH,      ONLY: iProc
     use ModAdvance,     ONLY: State_VGB
     use ModVarIndexes,  ONLY: Pe_, P_
     use ModConst,       ONLY: cBoltzmann
@@ -3330,13 +3317,12 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody,&
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModAdvance,    ONLY: State_VGB, time_BLK
-    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitP_, UnitN_, UnitU_, UnitT_,&
-         ElectronCharge, ElectronPressureRatio, &
+    use ModAdvance,    ONLY: State_VGB
+    use ModPhysics,    ONLY: No2Si_V, UnitP_, UnitN_, UnitU_, UnitT_,&
+         ElectronPressureRatio, &
          UnitTemperature_, UnitEnergyDens_, UnitX_
     use ModVarIndexes, ONLY: P_, Pe_
     use ModConst,      ONLY: cBoltzmann
-    use ModCurrent,    ONLY: get_current
     use ModMultiFluid, ONLY: MassIon_I
     use ModMain,       ONLY: n_step
     use ModCellGradient, ONLY: calc_gradient
@@ -3352,9 +3338,8 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    integer :: i, j, k, iIonFluid
+    integer :: i, j, k
     real :: nElec
-    real, dimension(3)           :: Current_I, uIonMean_I
     real, dimension(nIonFluid)   :: nIon_I
     real, dimension(3,nIonFluid) :: uIon_I
 
@@ -3662,10 +3647,9 @@ contains
   !============================================================================
 
   subroutine user_set_ICs(iBlock)
-    use ModProcMH,   ONLY: iProc
     use ModMain,     ONLY:      Body1_
-    use ModAdvance,  ONLY: P_, Pe_, State_VGB
-    use ModPhysics,  ONLY: ElectronPressureRatio, No2Si_V, UnitRho_, &
+    use ModAdvance,  ONLY: Pe_, State_VGB
+    use ModPhysics,  ONLY: No2Si_V, UnitRho_, &
          UnitRhoU_, UnitP_, FaceState_VI, UnitU_
     use ModGeometry, ONLY: true_cell
 
@@ -3897,7 +3881,7 @@ contains
     use ModEnergy,   ONLY: calc_energy_cell
 
     integer :: i, j, k, iBlock
-    real    :: nElec, RhoSw, alpha, beta, ratioPerturbedSw
+    real    :: RhoSw, alpha, beta
     real, dimension(1:nI,1:nJ,1:nK) :: TempNeu1_C, nNeu1_C
 
     logical:: DoTest

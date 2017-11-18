@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 ! this file contains the ModUser for general Cometary MHD
 ! MassSpecies is defined at [SpeciesFirst:SpeciesLast]
 ! Last 01.15 committed in
@@ -36,14 +37,12 @@ module ModUser
   real ::  Qprod=7.e-9, ionization_rate=1.e-6, Unr, Unr_km=1.0, kin, kin_cc=1.7e-9
   real ::  Tion, mbar, lambda
   integer :: jpattern
-  logical :: DoTest, DoTest
 
   integer ::  nSpecies=1
   integer, parameter :: MaxSpecies=6, MaxNuSpecies=6,  &
        MaxIni=11, MaxCx=13
   integer ::  nNuSpecies=6	! nNuSpecies<6 doesn't work for this version yet
 
-  logical :: DoInitialize = .True.
   real, public, dimension(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, MaxNuSpecies) :: &
        NNeu_BLK = 1.
   real, public, dimension(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, 3           ) :: &
@@ -52,9 +51,6 @@ module ModUser
   integer, parameter :: H2Op_ =1, Hp_ =2, H3Op_ =3, OHp_ =4, Op_ =5, COp_ =6
 
   integer, parameter :: H2O_=1, H_=2, OH_=3, O_=4, CO_=5, H2_=6
-
-  real, dimension(MaxNuSpecies)::  NuMassSp_I=(/18.,1.,17.,16.,28.,2./)
-  ! at least for single neutral fluid version this neutral mass is useless.
 
   integer, parameter :: &	! ionization reaction number
        H2O_H2Op_ = 1 ,&
@@ -108,8 +104,7 @@ contains
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
-    integer:: i, j, k, ireadvar
-    character (len=100) :: NameCommand, line
+    character (len=100) :: NameCommand
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
@@ -130,7 +125,6 @@ contains
           call read_var('kin_cc',kin_cc)
           call read_var('Tion', Tion)
           call read_var('jpattern' ,jpattern)
-          DoInitialize = .True.
 
        case("#MultiSP")		! ini rates hardwired in parameters.
           call read_var('nSpecies'  , nSpecies  )
@@ -212,7 +206,7 @@ contains
 
     integer, intent(in) :: iBlock
 
-    integer :: i,j,k, iVar
+    integer :: iVar
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ICs'
     !--------------------------------------------------------------------------
@@ -360,12 +354,11 @@ contains
     ! point implicit scheme, so there is no energy source here.
     ! The pressure source is zero.
 
-    use ModPointImplicit, ONLY: &
-         UsePointImplicit, iVarPointImpl_I, IsPointImplMatrixSet, DsDu_VVC
+    use ModPointImplicit, ONLY: 
 
-    use ModMain,    ONLY: nI, nJ, nK, n_step
+    use ModMain,    ONLY: nI, nJ, nK
     use ModAdvance, ONLY: State_VGB, Source_VC
-    use ModGeometry, ONLY: Xyz_DGB,R_BLK
+    use ModGeometry, ONLY:R_BLK
     use ModVarIndexes
     use ModPhysics
     use ModProcMH
@@ -373,7 +366,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, m
-    real :: eta, usqr, Unsqr, totalNumRho, Te, alphaTe, fi, &
+    real :: usqr, Unsqr, totalNumRho, Te, alphaTe, fi, &
          totalSourceRho, totalLossRho, totalNumLoss, Rkm, logR
     real :: Source_H3Op, Loss_H3Op, NumLoss_H3Op, collisn	! H3Op special rxn
     real :: Un(3), U(3)
@@ -568,7 +561,6 @@ contains
     use ModPhysics, ONLY: cBoltzmann, No2Si_V, UnitN_, UnitP_
     use CON_planet,  ONLY: NamePlanet
     use ModEnergy
-    use ModGeometry, ONLY: Xyz_DGB
     use ModProcMH
 
     integer,intent(in):: iBlock

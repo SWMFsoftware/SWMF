@@ -159,8 +159,6 @@ module ModUser
   logical :: UseHotO = .false.
   logical :: UseTempCont=.false.
   logical :: UseImpactIon=.false.
-  real, dimension(32,MaxSpecies)::Impact_ION_dim=0.0
-  real, dimension(32):: Temp_dim
   logical :: UseChargeEx=.true.
   logical ::  UseChapman = .false.
 
@@ -342,7 +340,6 @@ contains
     use ModAdvance,  ONLY: Source_VC
     use ModMain, ONLY:      &
          iNewDecomposition
-    use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
          IsPointImplSource
     use ModPhysics, ONLY: Rbody
@@ -409,7 +406,6 @@ contains
     use ModAdvance, ONLY: Source_VC
     use ModVarIndexes, ONLY: Rho_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
-    use ModProcMH,   ONLY: iProc
 
     integer, intent(in) :: iBlock
 
@@ -491,9 +487,8 @@ contains
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
     use ModGeometry, ONLY:R_BLK
-    use ModProcMH,   ONLY: iProc
-    use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1, UnitTemperature_,&
-         No2Io_V,No2Si_V, Io2No_V, UnitT_, UnitN_
+    use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1,&
+         No2Io_V, UnitT_, UnitN_
     !    use ModBlockData,ONLY: use_block_data, put_block_data, get_block_data
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
@@ -863,7 +858,6 @@ contains
 
   subroutine user_set_ICs(iBlock)
 
-    use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
     use ModGeometry, ONLY:Xyz_DGB,R_BLK,true_cell
@@ -1024,7 +1018,6 @@ contains
     use ModIO
     use ModPhysics
 
-    logical::DoTestme=.false.
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_multiSp_ICs'
@@ -1334,7 +1327,6 @@ contains
 
     integer, intent(in):: iBlock
 
-    character (len=*), parameter :: Name='user_set_boundary_cells'
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_boundary_cells'
     !--------------------------------------------------------------------------
@@ -1586,7 +1578,7 @@ contains
     use ModGeometry,   ONLY: Xyz_DGB,R_BLK
     use ModMain,       ONLY: Unused_B
     use ModVarIndexes, ONLY: &
-         Rho_, rhoHp_, rhoO2p_, RhoOp_, RhoCO2p_, rhoUx_, rhoUy_, rhoUz_
+         Rho_, rhoHp_, rhoO2p_, RhoOp_, RhoCO2p_, rhoUx_, rhoUz_
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
     use ModPhysics,    ONLY: No2Si_V, UnitN_, UnitX_, UnitU_
     use ModWriteLogSatFile, ONLY: calc_sphere
@@ -1648,7 +1640,6 @@ contains
     real:: xLat, xLong,xAlt
     integer :: i,j,k
     integer:: iAlt, jLong, kLat, ip1,jp1,kp1
-    logical:: DoTestme=.true.
     !------ Interpolation/Expolation for Tn,nCO2,nO,PCO2p,POp -----
 
     logical:: DoTest
@@ -1821,7 +1812,6 @@ contains
 
   subroutine set_neutral_density(iBlock)
 
-    use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
     use ModGeometry, ONLY:Xyz_DGB,R_BLK
@@ -1833,16 +1823,13 @@ contains
     real ::CosSZA
     integer:: i, j, k
 
-    ! Varibales for chapman function
-    logical:: DoTest
+    ! Variables for chapman function
+    real:: Xp, chap_y, chap, sinSZA
+
+    logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'set_neutral_density'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    real Xp, chap_y, chap, sinSZA
-
-    logical:: DoTest, DoTest, DoTestCell
-    character (len=*), parameter :: NameSub = 'set_neutral_density'
-    !--------------------------------------------------------------------------
 
     ! calculate neutral
 
