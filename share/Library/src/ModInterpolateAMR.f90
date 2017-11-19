@@ -3861,11 +3861,11 @@ contains
     !\
     ! The minimal coordinates of the block, to which XyzIn_D point belongs
     !/ 
-    real, dimension(nDim) :: XyzBasicBlock_D
+    real, dimension(nDim) :: XyzStartBasic_D
     !\
     ! Pe and iBlock numbers for this block
     !/ 
-    integer:: iProcBasic, iBlockBasic
+    integer:: iProc, iBlock
     !\
     ! Cell sizes (/Dx, Dy, Dz/) in this block, or, if this block is finer 
     ! than its neihbors, DXyzGrid_D is redefine to be twice (/Dx, Dy, Dz/)
@@ -3901,10 +3901,6 @@ contains
     ! Misc----------------
     !/
     integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
-    !\
-    ! Stored iProc and iBlock number
-    !/
-    integer:: iProcStored, iBlockStored
     logical    :: IsOutOfDomain
     !\
     !Just 2**nDim
@@ -3930,8 +3926,8 @@ contains
     !\
     ! Find block to which the point belong
     !/ 
-    call find(nDim, Xyz_D, iProcBasic, iBlockBasic, &
-         XyzBasicBlock_D, DXyzGrid_D, IsOutOfDomain)
+    call find(nDim, Xyz_D, iProc, iBlock, &
+         XyzStartBasic_D, DXyzGrid_D, IsOutOfDomain)
     if(IsOutOfDomain)then
        !\
        ! The algorithm does not work for a point out of the computation
@@ -4026,8 +4022,8 @@ contains
          do iGrid = 1, nGrid
             if(Weight_I(iGrid) < cTol2)CYCLE
             nGridOut = nGridOut + 1
-            iIndexes_II(0,       nGridOut) = iProcBasic
-            iIndexes_II(nIndexes,nGridOut) = iBlockBasic
+            iIndexes_II(0,       nGridOut) = iProc
+            iIndexes_II(nIndexes,nGridOut) = iBlock
             iIndexes_II(1:nDim,  nGridOut) = iCellIndexes_DII(:,1,1) + &
                  iShift_DI(1:nDim,iGrid)
             Weight_I(nGridOut) = Weight_I(iGrid)
@@ -4069,8 +4065,8 @@ contains
          XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
          iCellIndexes_DII(:,1,iGrid) = &
               iCellIndexes_DII(:,1,1) + iShift_D
-         iBlock_I(iGrid) = iBlockBasic
-         iProc_I(iGrid)  = iProcBasic
+         iBlock_I(iGrid) = iBlock
+         iProc_I(iGrid)  = iProc
       end do
     end subroutine get_main_block
     !=====================
@@ -4081,13 +4077,13 @@ contains
       !/
       integer:: iLevel
       !\
-      ! For using find routine with inout argument
+      ! Stencil point coordinates
       !/
-      real  :: XyzMisc_D(nDim)
+      real  :: XyzGrid_D(nDim)
       !\
       ! Output parameters of find routine
       !/
-      real    :: XyzCorner_D(nDim), Dxyz_D(nDim)
+      real    :: XyzStartBlock_D(nDim), Dxyz_D(nDim)
       logical :: IsOut
       !----------------------------
       iGrid = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
@@ -4100,13 +4096,13 @@ contains
          !Recalculate absolute coordinates for
          !the grid point which is out of the block
          !/
-         XyzMisc_D = XyzBasicBlock_D + XyzGrid_DII(:,0,iGrid)
+         XyzGrid_D = XyzStartBasic_D + XyzGrid_DII(:,0,iGrid)
          !\
          ! Find neighboring block
          !/
-         call find(nDim, XyzMisc_D, &
-              iProcStored, iBlockStored, &
-              XyzCorner_D, Dxyz_D, IsOut)
+         call find(nDim, XyzGrid_D, &
+              iProc, iBlock, &
+              XyzStartBlock_D, Dxyz_D, IsOut)
          if(IsOut)then
             iProc_I(iGrid) = 0 !For not processing this point again
             IsOut_I(iGrid) = .true.
@@ -4121,11 +4117,11 @@ contains
             !/
             select case(iLevel)
             case(-1)
-               call get_coarse_block(iGrid, XyzMisc_D, DXyz_D)
+               call get_coarse_block(iGrid, XyzGrid_D)
             case(0)  ! (New Dxyz_D)*Stored DXyzInv =1
-               call get_block(iGrid, XyzMisc_D)
+               call get_block(iGrid, XyzGrid_D)
             case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
-               call get_fine_block(iGrid, XyzMisc_D, Dxyz_D)
+               call get_fine_block(iGrid, XyzGrid_D)
             end select
          end if
          !\
@@ -4139,9 +4135,9 @@ contains
       end do
     end subroutine get_other_blocks
     !========================
-    subroutine get_block(iGridOutOfBlock, XyzGridStored_D)
-      integer, intent(in)::iGridOutOfBlock
-      real, dimension(nDim), intent(in):: XyzGridStored_D
+    subroutine get_block(iGridInBlock, XyzGrid_D)
+      integer, intent(in)::iGridInBlock
+      real, dimension(nDim), intent(in):: XyzGrid_D
       !\
       ! Fills in the indexes for the grid boints belonging
       ! to the block, which it at the same resolution as the
@@ -4151,7 +4147,7 @@ contains
       !\
       ! Misc
       !/
-      integer:: iGrid, iGridStored, iCellIndexes_D(nDim)
+      integer:: iGrid, iCellIndexes_D(nDim)
       !\
       ! New variables to work with reduced nSubgrid_I
       !/
@@ -4172,22 +4168,21 @@ contains
       !/
       real  :: XyzMisc_D(nDim)
       !---------------------
-      iGridStored = iGridOutOfBlock
       !\
       ! Calculate cell indexes as we did before. Use nint
-      ! instead of int as long as XyzMisc_D is very close to 
+      ! instead of int as long as XyzGrid_D is very close to 
       ! the grid point 
       !/
-      iCellIndexes_D = nint(XyzGridStored_D*DxyzInv_D + 0.50)
+      iCellIndexes_D = nint(XyzGrid_D*DxyzInv_D + 0.50)
       !\
       ! Calculate discriminator
       !/
       !First, calculate Xyz_D with respect to the corner of given block
-      !Coords Xyz_D and XyzGrid_DII(:,0,iGridStored) are detemined with
+      !Coords Xyz_D and XyzGrid_DII(:,0,iGridInBlock) are detemined with
       !respect to the reference block, the latter point coords with
-      !with respect to the current block are XyzGridStored_D, so that
+      !with respect to the current block are XyzGrid_D, so that
       !/
-      XyzMisc_D = (Xyz_D + XyzGridStored_D - XyzGrid_DII(:,0,iGridStored))&
+      XyzMisc_D = (Xyz_D + XyzGrid_D - XyzGrid_DII(:,0,iGridInBlock))&
            *DxyzInv_D
       iDiscr_D = 0
       iDiscr_D(1:nDim) = nint(SIGN(0.50, XyzMisc_D - 0.50) +&
@@ -4196,23 +4191,24 @@ contains
       ! Check if there are more grid points belonging to the
       ! newly found block
       !/
-      iShift_D = iShift_DI(1:nDim,iGridStored)
+      iShift_D = iShift_DI(1:nDim,iGridInBlock)
       do iOrder = 1, iPowerOf2_D(1 + count(iDiscr_D(1:nDim)==0))
          iGrid = iSubgridBasic_IIII(&
               iOrder,-iDiscr_D(1),-iDiscr_D(2),-iDiscr_D(3))
          iCellIndexes_DII(:,1,iGrid) = iCellIndexes_D +&
               iShift_DI(1:nDim,iGrid) - iShift_D 
-         iProc_I( iGrid) = iProcStored
-         iBlock_I(iGrid) = iBlockStored
+         iProc_I( iGrid) = iProc
+         iBlock_I(iGrid) = iBlock
          XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
          iLevelSubGrid_I(iGrid) = Coarse_
          nSubgrid_I(iGrid) = 1
       end do
     end subroutine get_block
     !=====================
-    subroutine get_fine_block(iGridOutOfBlock, XyzGridStored_D, DxyzFine_D)
-      integer, intent(in)::iGridOutOfBlock
-      real, dimension(nDim), intent(in):: XyzGridStored_D, DxyzFine_D
+    subroutine get_fine_block(iGridInBlock, XyzGrid_D)
+      integer, intent(in)::iGridInBlock
+      real, dimension(nDim), intent(in):: XyzGrid_D
+      real :: DxyzSubgrid_D(nDim)
       !\
       ! Fills in the indexes for the grid points belonging
       ! to the block, which it at the same resolution as the
@@ -4234,47 +4230,45 @@ contains
       !Discriminators
       !/
       integer:: iDiscr_D(3), iDiscr1_D(3), iGridSeenFrom
-      integer:: iCellIndexesStored_D(nDim), iCellIndexes_D(nDim)
+      integer:: iCellIndexesInput_D(nDim), iCellIndexes_D(nDim)
       !\
       !Displacement measured in grid sizes or in their halfs
       !/ 
       integer, dimension(nDim) :: iShift_D
       !/
-      integer :: iGridStored
       !\
       ! Misc
       !/
       real  :: XyzMisc_D(nDim)
       !------------------
-      iGridStored = iGridOutOfBlock
- 
       !\
       ! Calculate cell indexes as we did above. Note that DxyzInv_D
       ! is twice less than needed, because it is calculated for the
       ! whole stencil, not for the finer subgrid
       !/
-      iCellIndexesStored_D = &
-           floor(2*XyzGridStored_D*DxyzInv_D + 0.50)
+      iCellIndexesInput_D = &
+           floor(2*XyzGrid_D*DxyzInv_D + 0.50)
       !\
       ! Calculate discriminator
       !/
       !First, calculate Xyz_D with respect to the corner of given block
-      !Coords Xyz_D and XyzGrid_DII(:,0,iGridStored) are detemined with
+      !Coords Xyz_D and XyzGrid_DII(:,0,iGridInBlock) are detemined with
       !respect to the reference block, the latter point coords with
       !with respect to the current block are XyzGridStored_D, so that
       !/
-      XyzMisc_D = (Xyz_D + XyzGridStored_D - XyzGrid_DII(:,0,iGridStored))&
+      XyzMisc_D = (Xyz_D + XyzGrid_D - XyzGrid_DII(:,0,iGridInBlock))&
            *DxyzInv_D
+      DXyzSubgrid_D = 0.5*DXyzGrid_D
       iDiscr_D = 0
       iDiscr_D(1:nDim) = nint(SIGN(0.50, XyzMisc_D - 0.50) +&
            SIGN(0.50, XyzMisc_D + 0.5 - nCell_D/2))
       do iOrder = 1, iPowerOf2_D(1 + count(iDiscr_D(1:nDim)==0))! -1
          iGrid = iSubgridBasic_IIII(&
               iOrder,-iDiscr_D(1),-iDiscr_D(2),-iDiscr_D(3))
-         iCellIndexes_D = iCellIndexesStored_D + 2*(&
-              iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridStored))
-         iProc_I(iGrid ) = iProcStored
-         iBlock_I(iGrid) = iBlockStored
+         iCellIndexes_D = iCellIndexesInput_D + 2*(&
+              iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridInBlock))
+         iProc_I(iGrid ) = iProc
+         iBlock_I(iGrid) = iBlock
          iLevelSubGrid_I(iGrid) = Fine_
          if(iGrid==iGridBasic)then
             !\
@@ -4292,21 +4286,19 @@ contains
          end if
          nSubgrid_I(iGrid) = iPowerOf2_D(1+nDim - &
               iLog2NDimOverNSubgrid_II(iGrid,iGridSeenFrom))
-              !iLog2NDimOverNSubgrid_II(iGrid,iGridBasic))
          do iOrderSubgrid = 1, nSubgrid_I(iGrid)
             iSubGrid = iSubgridOrder_III(iOrderSubgrid,iGrid,iGridSeenFrom)
             iShift_D = iShift_DI(1:nDim,iSubGrid)
             XyzGrid_DII(:,iOrderSubgrid,iGrid) = &
-                 XyzGrid_DII(:,0,iGrid) + DxyzFine_D*(iShift_D -0.50)
+                 XyzGrid_DII(:,0,iGrid) + DXyzSubgrid_D*(iShift_D -0.50)
             iCellIndexes_DII(:,iOrderSubgrid,iGrid) = iCellIndexes_D + iShift_D
          end do
       end do
     end subroutine get_fine_block
     !=====================
-    subroutine get_coarse_block(iGridOutOfBlock, XyzGridStoredIn_D, DXyzIn_D)
-      integer, intent(inout)::iGridOutOfBlock
-      real, dimension(nDim), intent(in):: XyzGridStoredIn_D, DxyzIn_D
-
+    subroutine get_coarse_block(iGridInBlock, XyzGrid_D)
+      integer, intent(in) :: iGridInBlock
+      real, dimension(nDim), intent(in):: XyzGrid_D
       !\
       ! Loop variables
       !/
@@ -4327,15 +4319,12 @@ contains
       !Displacement measured in grid sizes or in their halfs
       !/ 
       integer :: iShift_D(nDim)
-      !/
-      integer :: iGridStored
-
-      real   :: XyzMisc_D(nDim), DXyz_D(nDim), XyzGridStored_D(nDim)
+ 
+      real   :: XyzMisc_D(nDim), DXyzSubgrid_D(nDim), XyzGridStored_D(nDim)
 
       integer:: iCellOrigin_D(nDim), iProcStored, iBlockStored
       real   :: XyzGridOrigin_D(nDim), XyzGridOriginShift_D(nDim)
       !------------------
-      iGridStored = iGridOutOfBlock
       !\
       ! The neighboring block is coarser, the whole stencil 
       ! needs to be recalculated.
@@ -4343,7 +4332,7 @@ contains
       !\
       ! Increase the mesh size for the basic grid
       !/
-      DXyzGrid_D = 2*DXyzGrid_D
+      DXyzGrid_D       = 2*DXyzGrid_D
       DxyzInv_D        = 0.50*DxyzInv_D
       !\
       ! Recalculate coordinates of the origin point with respect to
@@ -4377,7 +4366,7 @@ contains
       ! of them, as long as all blocks we passed through so far are 
       ! fine comparing with the basic stencil
       !/
-      DXyz_D = 0.50*DXyzIn_D !Last calculated DXyz_D was coarse
+      DXyzSubgrid_D = 0.50*DXyzGrid_D
       do iGrid = nGrid, 1, -1
          iShift_D = iShift_DI(1:nDim,iGrid)
          XyzGrid_DII(:,0,iGrid) = &
@@ -4389,8 +4378,8 @@ contains
          ! This grid point is assigned. These are the coordinates 
          ! of the grid point with respect to the (its) block corner
          !/
-         XyzMisc_D = DXyz_D*(iCellIndexes_DII(:,1,iGrid) -0.50) +&
-              XyzGridOriginShift_D + DXyz_D*iShift_D
+         XyzMisc_D = DXyzSubgrid_D*(iCellIndexes_DII(:,1,iGrid) -0.50) +&
+              XyzGridOriginShift_D + DXyzSubgrid_D*iShift_D
          ! The grid displacement is accounted for in the second line.
          !\
          ! Now, XyzMisc_D are the coordinates of new grid point
@@ -4439,7 +4428,7 @@ contains
                ! Fine subgrid is displaced by half of finer subgrid size
                !/
                XyzGrid_DII(:,iOrder,iGrid) = &
-                    XyzGrid_DII(:,0,iGrid) + Dxyz_D*(iShift_D - 0.50)
+                    XyzGrid_DII(:,0,iGrid) + DXyzSubgrid_D*(iShift_D - 0.50)
                iCellIndexes_DII(:,iOrder,iGrid) = &
                     iCellIndexes_D + iShift_D
             end do
@@ -4449,14 +4438,12 @@ contains
       ! Done with all previously found fine blocks. Now proceed to
       ! the coarse block
       !/
-      DXyz_D = DXyzIn_D
       !\
       ! Account for the grid displacement
       !/
-      iShift_D = iShift_DI(1:nDim,iGridStored)
-      XyzGridStored_D = XyzGridStoredIn_D + XyzGridOriginShift_D + &
-           0.50*DXyz_D*iShift_D
-      call get_block(iGridOutOfBlock,XyzGridStored_D)
+      iShift_D = iShift_DI(1:nDim,iGridInBlock)
+      call get_block(iGridInBlock,XyzGrid_D + XyzGridOriginShift_D + &
+           DXyzSubgrid_D*iShift_D)
     end subroutine get_coarse_block
     !=====================
     subroutine get_ghost_cell_indexes
