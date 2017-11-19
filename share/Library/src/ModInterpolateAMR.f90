@@ -3910,8 +3910,6 @@ contains
     !Just 2**nDim
     integer:: nGrid
     !/
-
-    integer    :: iGridOutOfBlock
     !------------------------
     cTol2 = cTol**(nByteReal/4)
 
@@ -3956,8 +3954,7 @@ contains
        RETURN
     end if
 
-    iGridOutOfBlock = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
-    call get_other_blocks(iGridOutOfBlock)
+    call get_other_blocks
     !\
     ! recalculate grid cells indexes for ghost cells
     !/
@@ -4077,12 +4074,12 @@ contains
       end do
     end subroutine get_main_block
     !=====================
-    recursive subroutine get_other_blocks(iGridOutOfBlock)
-      integer, intent(inout)::iGridOutOfBlock
+    subroutine get_other_blocks
+      integer :: iGrid
       !\
       ! Misc
       !/
-      integer:: iGrid, iGridStored, iLevel
+      integer:: iLevel
       !\
       ! For using find routine with inout argument
       !/
@@ -4093,58 +4090,53 @@ contains
       real    :: XyzCorner_D(nDim), Dxyz_D(nDim)
       logical :: IsOut
       !----------------------------
-      if(iGridOutOfBlock == -1)RETURN
-      iGridStored = iGridOutOfBlock
-      !\
-      ! For the grid point not belonging to the block
-      ! find the block they belong to
-      !/ 
-      !\
-      !Recalculate absolute coordinates for
-      !the grid point which is out of the block
-      !/
-      XyzMisc_D = XyzBasicBlock_D + XyzGrid_DII(:,0,iGridStored)
-      !\
-      ! Find neighboring block
-      !/
-      call find(nDim, XyzMisc_D, &
-           iProcStored, iBlockStored, &
-           XyzCorner_D, Dxyz_D, IsOut)
-      if(IsOut)then
-         iProc_I(iGridStored) = 0 !For not processing this point again
-         IsOut_I(iGridStored) = .true.
-         XyzGrid_DII(:,1,iGridStored) = XyzGrid_DII(:,0,iGridStored)
+      iGrid = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
+      do
          !\
-         ! Find the next out-of-block point
+         ! For the grid point not belonging to the block
+         ! find the block they belong to
+         !/ 
+         !\
+         !Recalculate absolute coordinates for
+         !the grid point which is out of the block
          !/
-         do iGrid = iGridStored - 1, 1, -1
-            if(iProc_I(iGrid)==-1)then
-               iGridOutOfBlock = iGrid
-               call get_other_blocks(iGridOutOfBlock)
-               RETURN
-            end if
-         end do
-         RETURN
-      end if
-      iLevel = 1 - floor(Dxyz_D(1)*DXyzInv_D(1)+ cTol)
-      !\                     ^
-      ! For expression above | equal to 2 , 1, 0.5 correspondingly
-      ! iLevel = -1, 0, Fine_, meaning that the neighboring block
-      ! is coarser, at the same resolution or finer than the basic 
-      ! one.
-      !/
-      select case(iLevel)
-      case(-1)
-         call get_coarse_block(iGridOutOfBlock, XyzMisc_D, DXyz_D)
-      case(0)  ! (New Dxyz_D)*Stored DXyzInv =1
-         call get_block(iGridOutOfBlock, XyzMisc_D)
-      case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
-         call get_fine_block(iGridOutOfBlock, XyzMisc_D, Dxyz_D)
-      end select
-      iGridOutOfBlock = -1
-      if (any(iProc_I==-1))&
-           iGridOutOfBlock = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
-      call get_other_blocks(iGridOutOfBlock)
+         XyzMisc_D = XyzBasicBlock_D + XyzGrid_DII(:,0,iGrid)
+         !\
+         ! Find neighboring block
+         !/
+         call find(nDim, XyzMisc_D, &
+              iProcStored, iBlockStored, &
+              XyzCorner_D, Dxyz_D, IsOut)
+         if(IsOut)then
+            iProc_I(iGrid) = 0 !For not processing this point again
+            IsOut_I(iGrid) = .true.
+            XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
+         else
+            iLevel = 1 - floor(Dxyz_D(1)*DXyzInv_D(1)+ cTol)
+            !\                     ^
+            ! For expression above | equal to 2 , 1, 0.5 correspondingly
+            ! iLevel = -1, 0, Fine_, meaning that the neighboring block
+            ! is coarser, at the same resolution or finer than the basic 
+            ! one.
+            !/
+            select case(iLevel)
+            case(-1)
+               call get_coarse_block(iGrid, XyzMisc_D, DXyz_D)
+            case(0)  ! (New Dxyz_D)*Stored DXyzInv =1
+               call get_block(iGrid, XyzMisc_D)
+            case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
+               call get_fine_block(iGrid, XyzMisc_D, Dxyz_D)
+            end select
+         end if
+         !\
+         ! Find the next out-of-block point of stencil
+         !/
+         if (any(iProc_I==-1))then
+            iGrid = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
+         else
+            RETURN
+         end if
+      end do
     end subroutine get_other_blocks
     !========================
     subroutine get_block(iGridOutOfBlock, XyzGridStored_D)
