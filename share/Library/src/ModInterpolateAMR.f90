@@ -4151,11 +4151,14 @@ contains
       case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
          call get_fine_block(iGridOutOfBlock, XyzMisc_D, Dxyz_D)
       end select
+      iGridOutOfBlock = -1
+      if (any(iProc_I==-1))&
+           iGridOutOfBlock = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
       call get_other_blocks(iGridOutOfBlock)
     end subroutine get_other_blocks
     !========================
     subroutine get_block(iGridOutOfBlock, XyzGridStored_D)
-      integer, intent(inout)::iGridOutOfBlock
+      integer, intent(in)::iGridOutOfBlock
       real, dimension(nDim), intent(in):: XyzGridStored_D
       !\
       ! Fills in the indexes for the grid boints belonging
@@ -4223,13 +4226,10 @@ contains
          iLevelSubGrid_I(iGrid) = Coarse_
          nSubgrid_I(iGrid) = 1
       end do
-      iGridOutOfBlock = -1
-      if (any(iProc_I==-1))&
-           iGridOutOfBlock = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
     end subroutine get_block
     !=====================
     subroutine get_fine_block(iGridOutOfBlock, XyzGridStored_D, DxyzFine_D)
-      integer, intent(inout)::iGridOutOfBlock
+      integer, intent(in)::iGridOutOfBlock
       real, dimension(nDim), intent(in):: XyzGridStored_D, DxyzFine_D
       !\
       ! Fills in the indexes for the grid points belonging
@@ -4319,9 +4319,6 @@ contains
             iCellIndexes_DII(:,iOrderSubgrid,iGrid) = iCellIndexes_D + iShift_D
          end do
       end do
-      iGridOutOfBlock = -1
-      if (any(iProc_I==-1))&
-           iGridOutOfBlock = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
     end subroutine get_fine_block
     !=====================
     subroutine get_coarse_block(iGridOutOfBlock, XyzGridStoredIn_D, DXyzIn_D)
@@ -4355,7 +4352,6 @@ contains
 
       integer:: iCellOrigin_D(nDim), iProcStored, iBlockStored
       real   :: XyzGridOrigin_D(nDim), XyzGridOriginShift_D(nDim)
-      !integer, parameter:: iOrder_I(8) = (/1,2,3,4,5,6,7,8/)
       !------------------
       iGridStored = iGridOutOfBlock
       !\
