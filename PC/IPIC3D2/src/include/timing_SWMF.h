@@ -35,6 +35,7 @@ inline void timing_start(string name){
   char *nameChar=new char[nameLen+1];
   name.copy(nameChar,nameLen);
   timing_start_c(&nameLen, nameChar);
+  delete [] nameChar;
 #endif
 }
 
@@ -46,6 +47,7 @@ inline void timing_stop(string name){
   char *nameChar=new char[nameLen+1];
   name.copy(nameChar,nameLen);
   timing_stop_c(&nameLen, nameChar);
+  delete [] nameChar;
 #endif
 }
 

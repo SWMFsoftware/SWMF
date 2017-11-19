@@ -353,6 +353,7 @@ void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, cons
   //  e.push("In HDF5OutputAdaptor::write(int* array)");
   //  throw e;
   //}
+    delete [] hdf5dims;
 }
 
 void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, const long *i_array) {
@@ -384,6 +385,8 @@ void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, cons
     // close groups, if any, but don't try to close the file id at [0]
     for (int i = hid_array.size() - 1; i > 0; --i)
       hdf5err = H5Gclose(hid_array[i]);
+
+    delete [] hdf5dims;
 }
 
 void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, const longid *i_array)
@@ -512,6 +515,7 @@ void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, cons
   //  e.push("In HDF5OutputAdaptor::write(float* array)");
   //  throw e;
   //}
+    delete [] hdf5dims;
 }
 
 void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, const std::vector < float >&f_array) {
@@ -653,6 +657,7 @@ void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, cons
   //  e.push("In HDF5OutputAdaptor::write(double* array)");
   //  throw e;
   //}
+    delete [] hdf5dims;
 }
 
 void HDF5OutputAdaptor::write(const std::string & tag, const Dimens dimens, const std::vector < double >&d_array) {

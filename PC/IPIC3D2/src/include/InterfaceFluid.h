@@ -505,27 +505,30 @@ class InterfaceFluid
   
   /** destructor */
   ~InterfaceFluid(){
-    delete MoMi_S;
-    delete QoQi_S;
+    delete [] MoMi_S;
+    delete [] QoQi_S;
     delArr4(State_GV,nxnLG,nynLG,nznLG);
     delArr4(Bc_GD,nxnLG,nynLG,nznLG);
 
-    delete iRho_I;
-    delete iRhoUx_I;
-    delete iRhoUy_I;
-    delete iRhoUz_I;
-    delete iUx_I;
-    delete iUy_I;
-    delete iUz_I;
-    delete iPpar_I;
-    delete iP_I;
+    delete [] iRho_I;
+    delete [] iRhoUx_I;
+    delete [] iRhoUy_I;
+    delete [] iRhoUz_I;
+    delete [] iUx_I;
+    delete [] iUy_I;
+    delete [] iUz_I;
+    delete [] iPpar_I;
+    delete [] iP_I;
 
-    delete xStart_I;
-    delete xEnd_I;
-    delete yStart_I;
-    delete yEnd_I;
-    delete zStart_I;
-    delete zEnd_I;
+    delete [] xStart_I;
+    delete [] xEnd_I;
+    delete [] yStart_I;
+    delete [] yEnd_I;
+    delete [] zStart_I;
+    delete [] zEnd_I;
+
+    delete [] Si2No_V;
+    delete [] No2Si_V; 
     
     if(nPlotFile>0){
       delete [] dnOutput_I;
@@ -718,12 +721,12 @@ class InterfaceFluid
     MPI_Allreduce(zStart0_I,zStart_I,zlen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
     MPI_Allreduce(zEnd0_I,zEnd_I,zlen,MPI_DOUBLE,MPI_MAX,MPI_COMM_MYSIM);
 
-    delete xStart0_I;
-    delete xEnd0_I;
-    delete yStart0_I;
-    delete yEnd0_I;
-    delete zStart0_I;
-    delete zEnd0_I;
+    delete [] xStart0_I;
+    delete [] xEnd0_I;
+    delete [] yStart0_I;
+    delete [] yEnd0_I;
+    delete [] zStart0_I;
+    delete [] zEnd0_I;
 
     bool doTest;
     doTest=false;

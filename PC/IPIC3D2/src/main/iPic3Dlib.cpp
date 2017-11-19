@@ -56,10 +56,7 @@ bool isProc0;
 
 c_Solver::~c_Solver()
 {
-  delete col; // configuration parameters ("collectiveIO")
-  delete vct; // process topology
-  delete grid; // grid
-  delete EMf; // field
+  
 #ifndef NO_HDF5
   delete outputWrapperFPP;
 #endif
@@ -77,25 +74,33 @@ c_Solver::~c_Solver()
 
   delete [] Ke;
   delete [] momentum;
+  delete [] BulkEnergy;
   delete [] Qremoved;
   delete my_clock;
 
   #ifdef BATSRUS
   finalize_debug_SWMF();
 
+  delArr4(fieldwritebuffer,grid->getNZN()-3,grid->getNYN()-3,grid->getNXN()-3 );
+  
+  
   if(nPlotFile>0){
-    delArr2(plotMin_ID,nDimMax);
-    delArr2(plotMax_ID,nDimMax);
-    delArr2(plotIdxLocMin_ID, nDimMax);
-    delArr2(plotIdxLocMax_ID, nDimMax);
+    delArr2(plotMin_ID,nPlotFile);
+    delArr2(plotMax_ID,nPlotFile);
+    delArr2(plotIdxLocMin_ID, nPlotFile);
+    delArr2(plotIdxLocMax_ID, nPlotFile);
     
     for(int iPlot=0;iPlot<nPlotFile;iPlot++){
       for(int inode=0;inode<nNodeMax;inode++){
 	delete [] pointList_IID[iPlot][inode];
       }
-      delete [] pointList_IID[iPlot];
-      delete [] Var_II[iPlot];
     }
+
+    
+    for(int iPlot=0;iPlot<nPlotFile;iPlot++){
+      delete [] pointList_IID[iPlot];
+    }
+
     delete [] pointList_IID;
     delete [] Var_II;
 
@@ -109,9 +114,18 @@ c_Solver::~c_Solver()
     delete [] outputUnit_I;
     delete [] plotVar_I;
     delete [] doOutputParticles_I;
+    delete [] iSpeciesOutput_I;
+    delete [] isSat_I;
     delete [] nPoint_I;
+    delete [] satInputFile_I;
+    
   }
   #endif
+  
+  delete col; // configuration parameters ("collectiveIO")
+  delete vct; // process topology
+  delete grid; // grid
+  delete EMf; // field
 }
 
 int c_Solver::Init(int argc, char **argv, double inittime,
@@ -297,9 +311,8 @@ int c_Solver::Init(int argc, char **argv, double inittime,
 		}
 		#endif
 #ifdef BATSRUS
-		if(col->getFieldOutputCycle()>0){
-		  fieldwritebuffer = newArr4(float,(grid->getNZN()-3),grid->getNYN()-3,grid->getNXN()-3,3);
-		}
+		fieldwritebuffer = newArr4(float,(grid->getNZN()-3),grid->getNYN()-3,grid->getNXN()-3,3);
+
 #else
 	  if(!col->field_output_is_off()){
 		  if(col->getWriteMethod()=="pvtk"){

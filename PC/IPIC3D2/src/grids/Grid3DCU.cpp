@@ -246,9 +246,14 @@ void Grid3DCU::init_derived_parameters()
 
 /** deallocate the local grid */
 Grid3DCU::~Grid3DCU() {
+  delete [] pfloat_node_xcoord;
+  delete [] pfloat_node_ycoord;
+  delete [] pfloat_node_zcoord;
+  
   delete [] node_xcoord;
   delete [] node_ycoord;
   delete [] node_zcoord;
+  
   delete [] center_xcoord;
   delete [] center_ycoord;
   delete [] center_zcoord;
