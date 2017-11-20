@@ -3493,8 +3493,8 @@ contains
     !\
     ! variables to call interpolate_extended_stencil
     !/
-    real   :: XyzGrid_DII(nDim, 0:2**nDim, 2**nDim)
-    integer:: iCellIndexes_DII(nDim, 2**nDim, 2**nDim)
+    real   :: XyzGrid_DII(nDim, 0:2**(nDim-1), 2**nDim)
+    integer:: iCellIndexes_DII(nDim, 2**(nDim-1), 2**nDim)
     integer, parameter:: iBlock_I(8) = 1, iProc_I(8) = 1
     integer:: iLevel_I(2**nDim)
     logical:: IsOut_I(2**nDim)
@@ -3882,9 +3882,9 @@ contains
     ! The extended stencil in a structured form:
     ! A cubic 2*2*2 grid with 2*2*2 subgrids covering each vertex
     !/
-    real       :: XyzGrid_DII(nDim,0:2**nDim,2**nDim)
+    real       :: XyzGrid_DII(nDim,0:2**(nDim-1),2**nDim)
     integer    :: iBlock_I(2**nDim), iProc_I(2**nDim) 
-    integer    :: iCellIndexes_DII(nDim,2**nDim,2**nDim)
+    integer    :: iCellIndexes_DII(nDim,2**(nDim-1),2**nDim)
     integer    :: iLevelSubgrid_I(2**nDim)
     logical    :: IsOut_I(2**nDim)
     !\
@@ -4660,7 +4660,7 @@ contains
     ! Therefore, XyzGrid_DII and iLevelSubGrid_I have intent inout
     ! and their actual values used may be found, if desired. 
     !/
-    real,    intent(inout):: XyzGrid_DII(nDim,0:2**nDim,2**nDim) 
+    real,    intent(inout):: XyzGrid_DII(nDim,0:2**(nDim-1),2**nDim) 
     integer, intent(in):: iCellIndexes_DII(:,:,:)
     integer, intent(in), dimension(2**nDim):: iBlock_I, iProc_I
     integer, intent(inout):: iLevelSubgrid_I(2**nDim) 
