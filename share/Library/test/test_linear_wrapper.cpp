@@ -2,7 +2,7 @@
 # include <iostream>
 # include <cmath>
 # include <mpi.h>
-# include "test_linear_wrapper.h"
+# include "linear_solver_wrapper_c.h"
 # include <stdio.h>
 
 int rank, size;
@@ -37,7 +37,7 @@ void pass_cell_info(double * Vec, int n, double  *head, double *end){
   }
 }
 
-void linear_solver_matvec_c(double* VecIn, double * VecOut, int n){
+void linear_solver_matvec_c_default(double* VecIn, double * VecOut, int n){
   
   double  head;
   double  end;
@@ -68,6 +68,10 @@ void linear_solver_matvec_c(double* VecIn, double * VecOut, int n){
 //========================================================================
 
 int main(){
+  // set C matvec function pointer to the actual function 
+  // the function pointer is declared and used in 
+  // share/Library/src/linear_solver_wrapper_c.cpp
+  linear_solver_matvec_c = linear_solver_matvec_c_default;
 
   // a test of the backward implicit solver for 1D diffusion equation
   // first type of boundary condition is used, i.e., T(at two ends) =0
@@ -88,7 +92,6 @@ int main(){
   double  dx=1.0/((double)n-1);
   double nTotalStep=2;
 
-  int iMatvec=1;
   int lInit=1;
   int nKrylov=200;
   double Tol=1e-7;
@@ -126,7 +129,7 @@ int main(){
       }
     }
     */ 
-    linear_solver_gmres(&iMatvec, Rhs_I, Sol_I, &lInit, &nCellProc, &nKrylov, &Tol, &nIter, &iError, &lTest, &iComm);
+    linear_solver_gmres( Rhs_I, Sol_I, &lInit, &nCellProc, &nKrylov, &Tol, &nIter, &iError, &lTest, &iComm);
   }
   
   // the analytic solution is 100*exp(-Pi^2*t)sin(Pi*x)
