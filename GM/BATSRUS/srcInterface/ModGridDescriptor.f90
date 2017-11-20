@@ -164,10 +164,27 @@ contains
   subroutine MH_get_roots_dd(DomainDecomposition)                         
 
     use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
-
-    type(DomainDecompositionType),intent(inout)::DomainDecomposition  
+    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, r_, Theta_, Phi_    
+    type(DomainDecompositionType),intent(inout)::DomainDecomposition 
+    logical :: DoGlueMargins
+    integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
     !-------------------------------------------------------------------------
-
+    DoGlueMargins = IsAnyAxis 
+    iDirMinusGlue = 0; iDirPlusGlue = 0; iDirCycle = 0
+    if(IsAnyAxis) iDirCycle = Phi_ 
+    if(IsCylindricalAxis)then
+       ! IsCylindricalAxis = CoordMin_D(r_) == 0.0
+       ! r_ = 1; Phi_ = 2; z_=3
+       iDirMinusGlue = r_
+    else
+       ! IsSphericalAxis = CoordMin_D(Theta_) <   0.01*Unit &
+       !         .and.     CoordMax_D(Theta_) > 179.99*Unit
+       ! r_ = 1; Theta_ = 2; Phi_ = 3
+       ! IsLatitudeAxis  = CoordMin_D(Lat_)   < -89.99*Unit &
+       !                   CoordMax_D(Lat_)   >  89.99*Unit
+       ! r_ = 1; Phi_ = 2; Theta_ = Lat_ = 3
+       iDirMinusGlue = Theta_; iDirPlusGlue = Theta_
+    end if 
     call get_root_decomposition_dd(&
          DomainDecomposition,       & ! Decomposition to be constructed
          nRoot_D,                   & ! As in DomainDecompositionType
@@ -175,16 +192,38 @@ contains
          CoordMax_D,                & ! As in DomainDecompositionType
          nIJK_D,                    & ! As in DomainDecompositionType
          IsPeriodic_D=IsPeriodic_D, &
-         iShift_DI=iShiftMorton_DI)
+         iShift_DI=iShiftMorton_DI, &
+         DoGlueMargins= DoGlueMargins,&
+         iDirMinusGlue= iDirMinusGlue,&
+         iDirPlusGlue = iDirPlusGlue ,&
+         iDirCycle   = iDirCycle)
 
   end subroutine MH_get_roots_dd
   !===========================================================================
   subroutine MH_get_roots_id(GridID_)                         
 
     use BATL_lib, ONLY: nIJK_D, IsPeriodic_D, nRoot_D, CoordMin_D, CoordMax_D
-
+    use BATL_geometry, ONLY: IsAnyAxis, IsCylindricalAxis, r_, Theta_, Phi_
     integer, intent(in):: GridID_  
+    logical :: DoGlueMargins
+    integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
     !-------------------------------------------------------------------------
+    DoGlueMargins = IsAnyAxis
+    iDirMinusGlue = 0; iDirPlusGlue = 0; iDirCycle = 0
+    if(IsAnyAxis) iDirCycle = Phi_ 
+    if(IsCylindricalAxis)then
+       ! IsCylindricalAxis = CoordMin_D(r_) == 0.0
+       ! r_ = 1; Phi_ = 2; z_=3
+       iDirMinusGlue = r_
+    else
+       ! IsSphericalAxis = CoordMin_D(Theta_) <   0.01*Unit &
+       !         .and.     CoordMax_D(Theta_) > 179.99*Unit
+       ! r_ = 1; Theta_ = 2; Phi_ = 3
+       ! IsLatitudeAxis  = CoordMin_D(Lat_)   < -89.99*Unit &
+       !                   CoordMax_D(Lat_)   >  89.99*Unit
+       ! r_ = 1; Phi_ = 2; Theta_ = Lat_ = 3
+       iDirMinusGlue = Theta_; iDirPlusGlue = Theta_
+    end if
     call get_root_decomposition_id(&
          GridID_,                   & ! Decomposition to be constructed
          nRoot_D,                   & ! As in DomainDecompositionType
@@ -192,7 +231,11 @@ contains
          CoordMax_D,                & ! As in DomainDecompositionType
          nIJK_D,                    & ! As in DomainDecompositionType
          IsPeriodic_D=IsPeriodic_D, &
-         iShift_DI=iShiftMorton_DI)
+         iShift_DI=iShiftMorton_DI, &
+         DoGlueMargins= DoGlueMargins,&
+         iDirMinusGlue= iDirMinusGlue,&
+         iDirPlusGlue = iDirPlusGlue ,&
+         iDirCycle   = iDirCycle)
 
   end subroutine MH_get_roots_id
 

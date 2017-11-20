@@ -313,11 +313,11 @@ Module CON_domain_decomposition
 
      !For more complicated cases (spherical and analogous geometries 
      !having a pole singularity) a special procedure                 
-     !glue_marging(GridID_) is invoked when required. To do this     
+     !glue_margin is invoked when required. To do this     
      !for a particular grid, it should have DoGlueMargins=.true.     
 
-     logical::DoGlueMargins
-
+     logical :: DoGlueMargins
+     integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
      !==========SOME INTEGERS========================================
      !To search in the tree decompositions  it is optimal to start   
      !from the previously found node (from the previous search). To  
@@ -490,6 +490,9 @@ contains
     call check_allocate(iError,"IsPeriodic_D")
     DomainDecomposition%IsPeriodic_D=.false.
     DomainDecomposition%DoGlueMargins=.false.
+    DomainDecomposition%iDirMinusGlue = 0 
+    DomainDecomposition%iDirPlusGlue  = 0 
+    DomainDecomposition%iDirCycle     = 0
 
     if(DomainDecomposition%IsTreeDecomposition)then
        nullify(DomainDecomposition%iRoot_I)
@@ -648,8 +651,11 @@ contains
        PE_I,&         !PE layout
        iBlock_I,&     !Local Block Number layout
        IsPeriodic_D,& !As in DomainDecompositionType
-       iShift_DI)       !As in DomainDecompositionType
-
+       iShift_DI,   & !As in DomainDecompositionType
+       DoGlueMargins,& !As in DomainDecompositionType
+       iDirMinusGlue,&!As in DomainDecompositionType
+       iDirPlusGlue,& !As in DomainDecompositionType
+       iDirCycle)     !As in DomainDecompositionType
     !INPUT ARGUMENTS:
     type(DomainDecompositionType),intent(inout)::&
          DomainDecomposition
@@ -669,6 +675,11 @@ contains
          dimension(DomainDecomposition%nDim,&
          DomainDecomposition%nChildren),&
          intent(in)::iShift_DI
+    logical, intent(in), optional :: DoGlueMargins
+    integer, intent(in), optional :: iDirMinusGlue
+    integer, intent(in), optional :: iDirPlusGlue
+    integer, intent(in), optional :: iDirCycle
+    !-------
     integer::lBlock,MaxBlock
     !EOP
     !---------------------------------------------------------------!
@@ -692,6 +703,14 @@ contains
     DomainDecomposition%XyzMin_D=XyzMin_D
     DomainDecomposition%XyzMax_D=XyzMax_D
     DomainDecomposition%nCells_D=nCells_D
+    if(present(DoGlueMargins)) &
+         DomainDecomposition%DoGlueMargins = DoGlueMargins
+    if(present(iDirMinusGlue))&
+         DomainDecomposition%iDirMinusGlue = iDirMinusGlue
+    if(present(iDirPlusGlue)) &
+         DomainDecomposition%iDirPlusGlue  = iDirPlusGlue
+    if(present(iDirCycle))    &
+         DomainDecomposition%iDirCycle     = iDirCycle
 
     if(present(IsPeriodic_D))&
          DomainDecomposition%IsPeriodic_D=IsPeriodic_D
@@ -1333,6 +1352,59 @@ contains
             -3+cTiny)
     end if
   end function l_level_neighbor_dd
+  !BOP
+  !INTERFACE:
+  subroutine glue_margin_dd(&
+       DomainDecomposition,Xyz_D)
+    !INPUT ARGUMENTS:
+    type(DomainDecompositionType),intent(in)::&
+         DomainDecomposition
+    real,dimension(DomainDecomposition%nDim),&
+         intent(inout)::Xyz_D
+    !-----------
+    !\
+    ! Loop variable:
+    !/
+    integer :: iDir, nDim
+    !\
+    ! Directions to be glued
+    integer :: iDirMinusGlue, iDirPlusGlue, iDirCycle
+    !\
+    ! Domain boundaries:
+    !/
+    real,dimension(:),pointer::XyzMin_D,XyzMax_D
+    logical :: DoCycle
+    !-----------------
+    nDim = DomainDecomposition%nDim
+    XyzMin_D => DomainDecomposition%XyzMin_D
+    XyzMax_D => DomainDecomposition%XyzMax_D
+    iDirCycle = DomainDecomposition%iDirCycle
+    iDirMinusGlue = DomainDecomposition%iDirMinusGlue
+    iDirPlusGlue = DomainDecomposition%iDirPlusGlue
+    DoCycle = iDirCycle > 0.and.iDirCycle <= nDim
+    do iDir = 1, nDim
+       if(iDir == iDirCycle)CYCLE
+       if(Xyz_D(iDir) < XyzMin_D(iDir).and.iDir==iDirMinusGlue)then
+          !Ruturn the coordinate along the glued direction to the domain
+          Xyz_D(iDir) = 2*XyzMin_D(iDir) - Xyz_D(iDir)
+          !Add, if needed a half cycle over cycled direction
+          if(DoCycle)&
+               Xyz_D(iDirCycle) = XyzMin_D(iDirCycle) + &
+               modulo(Xyz_D(iDirCycle) + 0.50*&
+                XyzMax_D(iDirCycle) - 1.50*XyzMin_D(iDirCycle),&
+                XyzMax_D(iDirCycle) -  XyzMin_D(iDirCycle))
+       elseif(Xyz_D(iDir) > XyzMax_D(iDir).and.iDir==iDirPlusGlue)then
+          !Ruturn the coordinate along the glued direction to the domain
+          Xyz_D(iDir) = 2*XyzMax_D(iDir) - Xyz_D(iDir)
+          !Add, if needed a half cycle over cycled direction
+          if(DoCycle)&
+               Xyz_D(iDirCycle) = XyzMin_D(iDirCycle) + &
+               modulo(Xyz_D(iDirCycle) + 0.50*&
+               XyzMax_D(iDirCycle) - 1.50*XyzMin_D(iDirCycle),&
+               XyzMax_D(iDirCycle) -  XyzMin_D(iDirCycle))
+       end if
+    end do
+  end subroutine glue_margin_dd
   !BOP
   !IROUTINE: search_in - find which block involves the given point
   !DESCRIPTION:

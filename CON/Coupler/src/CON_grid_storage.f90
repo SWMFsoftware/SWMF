@@ -80,6 +80,11 @@ module CON_grid_storage
      module procedure l_level_neighbor_dd
   end interface
 
+  interface glue_margin
+     module procedure glue_margin_id
+     module procedure glue_margin_dd
+  end interface glue_margin
+
   interface search_in
      module procedure search_in_id
      module procedure search_in_dd
@@ -343,7 +348,11 @@ contains
        PE_I,&         !PE layout
        iBlock_I,&     !Local Block Number layout
        IsPeriodic_D,& !As in DomainDecompositionType
-       iShift_DI)     !As in DomainDecompositionType
+       iShift_DI, &   !As in DomainDecompositionType
+       DoGlueMargins,&!As in DomainDecompositionType
+       iDirMinusGlue,&!As in DomainDecompositionType
+       iDirPlusGlue,& !As in DomainDecompositionType
+       iDirCycle)     !As in DomainDecompositionType)     
 
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
@@ -363,6 +372,10 @@ contains
          dimension(:,&
          :),&
          intent(in)::iShift_DI
+    logical, optional, intent(in) ::  DoGlueMargins
+    integer, optional, intent(in) ::  iDirMinusGlue
+    integer, optional, intent(in) ::  iDirPlusGlue
+    integer, optional, intent(in) ::  iDirCycle     
     !EOP
     integer::lBlock,MaxBlock
     !---------------------------------------------------------------!
@@ -389,7 +402,14 @@ contains
     DD_I(GridID_)%Ptr%XyzMin_D=XyzMin_D
     DD_I(GridID_)%Ptr%XyzMax_D=XyzMax_D
     DD_I(GridID_)%Ptr%nCells_D=nCells_D
-
+    if(present(DoGlueMargins)) &
+         DD_I(GridID_)%Ptr%DoGlueMargins = DoGlueMargins
+    if(present(iDirMinusGlue))&
+         DD_I(GridID_)%Ptr%iDirMinusGlue = iDirMinusGlue
+    if(present(iDirPlusGlue)) &
+         DD_I(GridID_)%Ptr%iDirPlusGlue  = iDirPlusGlue
+    if(present(iDirCycle))    &
+         DD_I(GridID_)%Ptr%iDirCycle     = iDirCycle
     if(present(IsPeriodic_D))&
          DD_I(GridID_)%Ptr%IsPeriodic_D=IsPeriodic_D
 
@@ -609,6 +629,18 @@ contains
          DD_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
   end function l_level_neighbor_id
   !---------------------------------------------------------------!
+  !BOP
+  !INTERFACE:
+  subroutine glue_margin_id(GridID_,Xyz_D)
+    !INPUT ARGUMENTS:
+    integer,intent(in)::GridID_
+    real,dimension(nDim_C(GridID_)),&
+         intent(inout)::Xyz_D
+    !-----------
+    !EOP
+    call glue_margin_dd(DD_I(GridID_)%Ptr,Xyz_D)
+  end subroutine glue_margin_id
+    
   !BOP
   !INTERFACE:
   subroutine search_in_id(GridID_,Xyz_D,lGlobalTreeNumber)

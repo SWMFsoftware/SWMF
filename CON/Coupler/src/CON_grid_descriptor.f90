@@ -1100,6 +1100,7 @@ contains
 
   subroutine find_amr(nDim, Xyz_D, &
        iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
+    use ModNumConst
     integer, intent(in)   :: nDim
     real,    intent(inout):: Xyz_D(nDim)
     integer, intent(out)  :: iProc, iBlock 
@@ -1116,9 +1117,21 @@ contains
          .and..not.IsPeriodic_D) .or. &
          any(GridDescriptorAMR%DD%Ptr%XyzMax_D <= Xyz_D&
          .and..not.IsPeriodic_D)
-    if(IsOut) &
-         RETURN
-
+    if(IsOut) then
+       if(GridDescriptorAMR%DD%Ptr%DoGlueMargins)then
+          !Recalculate coordinates for spherical or similar
+          !grids
+          call glue_margin(GridDescriptorAMR%DD%Ptr, Xyz_D)
+          IsOut = &
+               any(GridDescriptorAMR%DD%Ptr%XyzMin_D >  Xyz_D&
+               .and..not.IsPeriodic_D) .or. &
+               any(GridDescriptorAMR%DD%Ptr%XyzMax_D <= Xyz_D&
+               .and..not.IsPeriodic_D)
+          if(IsOut)RETURN
+       else
+          RETURN
+       end if
+    end if
     ! call subroutine to find a node containing Xyz_D
     ! this call changes Xyz_D to coords relative to block's corner as needed
     call search_in(GridDescriptorAMR%DD%Ptr, Xyz_D, iNode)
