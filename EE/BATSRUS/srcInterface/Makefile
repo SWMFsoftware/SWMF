@@ -10,7 +10,6 @@ include Makefile.DEPEND
 OBJECTS = \
 	EE_wrapper.o \
 	ModBuffer.o \
-	ModRadioWaveImage.o \
 	ModGridDescriptor.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
@@ -39,8 +38,6 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f   Makefile.DEPEND ModBuffer.f90 update_lagrangian_grid.f90 \
-	ModRadioWaveImage.f90 ModGridDescriptor.f90 \
-	ModRadioWaveRaytracing.f90 ModDensityAndGradient.f90
+	rm -f   Makefile.DEPEND ModBuffer.f90 ModGridDescriptor.f90 
 
 # keep this line

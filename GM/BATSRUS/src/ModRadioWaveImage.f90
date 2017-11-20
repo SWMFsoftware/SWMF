@@ -1,178 +1,8 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!BOP
-!MODULE: ModDensityAndGradient - provide the density and gradients at SC_Xyz_DI
-!INTERFACE:
-module ModDensityAndGradient
-  !USES:
-  use MH_domain_decomposition
-  use CON_global_message_pass
-  use ModMain, ONLY: MaxDim
-  use ModProcMH, ONLY:iComm
-  use ModMpi
-  implicit none
-  private !Except
-  logical,save :: DoInit=.true.
-  character(LEN=10), save :: NameVector, NameMask
-  type(RouterType),save::Router
-  type(GridDescriptorType),save::LineGrid,MhGrid
-  type(DomainDecompositionType),save::LineDD
-  real,allocatable,save,dimension(:)::Density_I,DeltaSNew_I
-  real,allocatable,save,dimension(:,:)::GradDensity_DI
-
-  !PUBLIC MEMBERS:
-  public::get_plasma_density, NameVector, NameMask
-  public::GradDensity_DI,Density_I,DeltaSNew_I
-  !EOP
-
-contains
-  !==========================
-  subroutine get_plasma_density(nRay)
-    !
-    ! Calculates plasma density, Density_I, and its gradient, 
-    ! GradDensity_DI(3,nRay), at specified locations Position_DI(3,nRay)
-    ! Also, it provides appropriate step, DeltaSNew_I, conceivably dependent
-    ! on the numeric grid size
-    !
-    integer,intent(in)::nRay
-    !\
-    !Misc
-    integer :: nU_I(2), iError
-
-    call timing_start('get_plasma_density')
-    if(DoInit)then
-       DoInit=.false.
-       call set_standard_grid_descriptor(&
-            MH_DomainDecomposition,GridDescriptor=MhGrid)
-
-       nU_I=ubound_vector(NameVector)
-       call init_decomposition(LineDD,&
-            compid_grid(MhGrid%DD%Ptr),1,&
-            IsLocal=.true.)
-       call get_root_decomposition(&
-            LineDD,&                 !GridDescroptor to be constructed
-            iRootMapDim_D=(/1/),&!The block amount, along each direction(D)
-            XyzMin_D=(/cHalf/),&      !Minimal gen. coordinates, along each D 
-            XyzMax_D=(/cHalf+nU_I(2)/),& !Maximal gen. coordinates, along each D
-            nCells_D=(/nU_I(2)/))
-       call set_standard_grid_descriptor(LineDD,&
-            GridDescriptor=LineGrid)
-       call init_router(&
-            MhGrid,& !GridDesctriptor for the source field (in) 
-            LineGrid,&   !GirdDescriptor,save,intent(out)
-            Router,&   !resulting router, intent(out)
-            nIndexTarget=1)
-       DoInit=.false.
-    end if
-
-    call set_router(& 
-         GridDescriptorSource=MhGrid,&
-         GridDescriptorTarget=LineGrid,&
-         Router=Router,&
-         NameMappingVector=NameVector,&
-         NameMask=NameMask, &
-         interpolate=interpolation_amr_gc)
-
-    call global_message_pass(Router=Router,&
-         nVar=MaxDim+1+1,&
-         fill_buffer=get_density_local,&
-         apply_buffer=put_density_value)
-
-    call MPI_BCAST(GradDensity_DI(1,1),3*nRay,MPI_REAL,0,iComm,iError)
-    call MPI_BCAST(Density_I(1),         nRay,MPI_REAL,0,iComm,iError)
-    call MPI_BCAST(DeltaSNew_I(1),       nRay,MPI_REAL,0,iComm,iError)
-    call timing_stop('get_plasma_density')
-  end subroutine get_plasma_density
-  !================================================
-  subroutine get_density_local(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
-    !USES:
-    use ModAdvance, ONLY: State_VGB
-    use ModVarIndexes, ONLY: Rho_
-    use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB
-    use ModGeometry,ONLY: CellSize_DB, x_, y_, z_
-    use ModPhysics, ONLY: No2Si_V, UnitRho_
-    use CON_router
-    !INPUT ARGUMENTS:
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
-    real,dimension(nVar),intent(out)::State_V
-
-    integer::iGet, i, j, k, iBlock
-    real :: Weight
-    !----------------------------------------------------------
-    i      = Get%iCB_II(1,iGetStart)
-    j      = Get%iCB_II(2,iGetStart)
-    k      = Get%iCB_II(3,iGetStart)
-    iBlock = Get%iCB_II(4,iGetStart)
-    Weight = W%Weight_I(iGetStart)
-    State_V(1:MaxDim)= Weight*GradDensity_DGB(1:MaxDim,i,j,k,iBlock)
-    State_V(MaxDim+1)= Weight*&
-         State_VGB(rho_,i,j,k,iBlock)
-    State_V(MaxDim+1+1)=Weight*&
-         minval(CellSize_DB(:,iBlock))
-
-    do iGet=iGetStart+1,iGetStart+nPartial-1
-       i      = Get%iCB_II(1,iGet)
-       j      = Get%iCB_II(2,iGet)
-       k      = Get%iCB_II(3,iGet)
-       iBlock = Get%iCB_II(4,iGet)
-       Weight = W%Weight_I(iGet)
-       State_V(1:MaxDim)= State_V(1:MaxDim) + Weight*&
-            GradDensity_DGB(1:MaxDim,i,j,k,iBlock)
-       State_V(MaxDim+1)  = State_V(MaxDim+1)+Weight*&
-            State_VGB(rho_,i,j,k,iBlock)
-       State_V(MaxDim+1+1)= State_V(MaxDim+1+1)+Weight*&
-            minval(CellSize_DB(:,iBlock))
-
-    end do
-    !Convert density to SI
-    State_V(1:MaxDim+1) = State_V(1:MaxDim+1) * No2Si_V(UnitRho_)
-  end subroutine get_density_local
-
-  !====================================================================
-
-  subroutine put_density_value(nPartial,&
-       iPutStart,&
-       Put,&
-       W,&
-       DoAdd,&
-       Buff_I,nVar)
-    implicit none
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::W
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
-    integer::iCell
-
-    iCell=Put%iCB_II(1,iPutStart)
-    !Convert densities from kg/m3 to g/cm3, 
-    !the transformation coefficient is 1.0e-3
-    if(DoAdd)then
-       GradDensity_DI(:,iCell)= GradDensity_DI(:,iCell)+&
-            Buff_I(1:MaxDim) * 1.0e-3
-       Density_I(iCell)= Density_I(iCell)+&
-            Buff_I(MaxDim+1) * 1.0e-3
-       DeltaSNew_I(iCell) = DeltaSNew_I(iCell)+&
-            Buff_I(MaxDim+1+1)
-    else
-       GradDensity_DI(:,iCell)= &
-            Buff_I(1:MaxDim)  * 1.0e-3
-       Density_I(iCell)= &
-            Buff_I(MaxDim+1)  * 1.0e-3
-       DeltaSNew_I(iCell) = &
-            Buff_I(MaxDim+1+1)
-    end if
-  end subroutine put_density_value
-end module ModDensityAndGradient
-!===============================================
 module ModRadioWaveImage
   use ModConst, ONLY: cPi, cElectronMass, cProtonMass
   use ModCoordTransform, ONLY: cross_product
-  use CON_global_vector, ONLY: allocate_vector, associate_with_global_vector,&
-       allocate_mask, associate_with_global_mask
   use BATL_lib, ONLY: iProc, MaxDim, nDim
   use ModParticles, ONLY: allocate_particles,&
        mark_undefined, Particle_I, check_particle_location,&
@@ -187,8 +17,6 @@ module ModRadioWaveImage
   !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
   !     the first call to the ray_path().
   real, allocatable :: Intensity_I(:)
-  real, pointer    :: Coord_DI(:,:)
-  logical, pointer :: IsMask_I(:)
   !\
   !Frequency related:  in GGSE
   real :: DensityCr = -1.0, DensityCrInv = -1.0
@@ -281,10 +109,6 @@ contains
     ! Written by Leonid Benkevitch.
     !
     !
-    use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord, coord_to_xyz
-    use ModMain,ONLY:NameThisComp
-    use ModDensityAndGradient,ONLY: NameVector, NameMask, &
-         Density_I, GradDensity_DI, DeltaSNew_I
     !INPUTS
     ! Observer's position
     real, intent(in) :: XyzObserver_D(MaxDim)          
@@ -327,7 +151,7 @@ contains
     real, dimension(MaxDim) :: XyzPixel_D
     !\
     ! Initial directions of rays
-    !/             
+    !/
     real :: SlopeUnscaled_D(MaxDim)
     !\
     ! Distance from the radiotelescope to the integration sphere  
@@ -341,9 +165,6 @@ contains
     !/
     real :: StateIn_VI(x_:SlopeZ_,1:nXPixel*nYPixel)
     !\
-    ! A ray is excluded from processing if it is .true.
-    logical, dimension(nYPixel*nXPixel) :: UnusedRay_I
-    !\
     ! Parameters
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
     logical, save   :: DoAllocate = .true.
@@ -356,31 +177,25 @@ contains
     !
     ! Total number of rays and pixels in the raster
     !
-    nRay = nXPixel*nYPixel  
+    nRay = nXPixel*nYPixel
     !
     ! Initial allocation of the global vector of ray positions
     ! and other dynamic arrays
     !
     if(DoAllocate)then
-       DoAllocate=.false.
-       ! Symbolic name of the global vector:
-       NameVector = NameThisComp//'_Pos_DI'
-       NameMask   = NameThisComp//'_Mask_I' 
-       call allocate_vector(NameVector, 3, nRay)
-       NameMask   = NameThisComp//'_Mask_I' 
-       call allocate_mask(NameMask, nRay)
-       call associate_with_global_vector(Coord_DI, NameVector)
-       call associate_with_global_mask(IsMask_I, NameMask)
-       allocate(Density_I(nRay), GradDensity_DI(MaxDim,nRay),DeltaSNew_I(nRay))
+       DoAllocate = .false.
        allocate(Intensity_I(nRay))
        nullify(State_VI); nullify(iIndex_II)
+    end if
+    if(nRay > size(Intensity_I))then
+       deallocate(Intensity_I); allocate(Intensity_I(nRay))
     end if
     call allocate_particles(&
          iKindParticle = KindRay_, &
          nVar          = nVar    , &
          nIndex        = nIndex  , &
          nParticleMax  = nRay      )
-    State_VI => Particle_I(KindRay_)%State_VI
+    State_VI  => Particle_I(KindRay_)%State_VI
     iIndex_II => Particle_I(KindRay_)%iIndex_II
     !
     ! Calculate the critical density from the frequency, in CGS
@@ -417,12 +232,12 @@ contains
           XyzPixel_D = XPixel*Tau_D + YPixel*Xi_D
           SlopeUnscaled_D = XyzPixel_D - XyzObserver_D
           iRay = iRay + 1
-          State_VI(SlopeX_:SlopeZ_,iRay) = &
+          StateIn_VI(SlopeX_:SlopeZ_,iRay) = &
                SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
           !\
           ! Find the points on the integration sphere where it intersects
           ! with the straight "rays" 
-          !/    
+          !/
           !\
           ! Solve a quadratic equation,
           !   XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
@@ -431,37 +246,33 @@ contains
           !  + ObserverDistance**2 - rIntegration**2 = 0
           !/  
           ObservToIntSphereDist = -sum(XyzObserver_D*&
-               State_VI(SlopeX_:SlopeZ_,iRay))&
+               StateIn_VI(SlopeX_:SlopeZ_,iRay))&
                - sqrt(rIntegration**2 - ObserverDistance**2 &
-               + sum(State_VI(SlopeX_:SlopeZ_,iRay)&
+               + sum(StateIn_VI(SlopeX_:SlopeZ_,iRay)&
                *XyzObserver_D)**2)
-          State_VI(x_:z_,iRay) = XyzObserver_D &
-               + State_VI(SlopeX_:SlopeZ_,iRay)&
+          StateIn_VI(x_:z_,iRay) = XyzObserver_D &
+               + StateIn_VI(SlopeX_:SlopeZ_,iRay)&
                *ObservToIntSphereDist
-          iIndex_II(Ray_,iRay) = iRay
        end do
     end do
+    call put_particles(KindRay_ ,         &
+         StateIn_VI         = StateIn_VI, &
+         DoReplace          = .true.)
     !\
     ! Do emissivity integration inside of the integration sphere 
     !/
     Intensity_I = 0
-    UnusedRay_I = .false.
     State_VI(Ds_,:     )    = DeltaS
     State_VI(Dist2Cr_,:)    = 0.0
     iIndex_II(Steepness_:Status_,:) = OK_
     rIntegration2 = rIntegration**2 + 0.01
-    do while(.not.all(UnusedRay_I))
-       !\
-       ! Advance rays through one step.
-       call ray_path(nRay, UnusedRay_I)
-    end do
-    Intensity_II = reshape(Intensity_I, (/nXPixel,nYPixel/))
+    call trace_particles(KindRay_, ray_path)
+    if(nProc > 1) call MPI_reduce_real_array(Intensity_I, nRay, MPI_SUM, &
+         0, iComm, iError)
+    Intensity_II = reshape(Intensity_I(1:nRay), (/nXPixel,nYPixel/))
   end subroutine ray_bunch_intensity
   !=========
-  subroutine ray_path(nRay, UnusedRay_I)
-    use ModDensityAndGradient, ONLY: NameVector, get_plasma_density, &
-         GradDensity_DI, Density_I, DeltaSNew_I
-    use BATL_geometry, ONLY: IsCartesianGrid, xyz_to_coord
+  subroutine ray_path(iParticle, IsEndOfSegment)
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
     ! specified by its Cartesian Xyz_DI and its direction cosines 
@@ -511,13 +322,13 @@ contains
     !     0.1 (which means 10 points per curvature radian): it will be
     !     internally reduced to 0.1 anyway.   
     ! DensityCr: the plasma density at which its dielectric permittivity
-    !     becomes zero for chosen wave frequency. 
+    !     becomes zero for chosen wave frequency.
     ! Written by Leonid Benkevitch.
     !
     !
-    integer, intent(in) :: nRay   ! # of pixels in the raster 
-    ! a ray is excluded from processing if it is .true. 
-    logical, intent(inout), dimension(nRay) :: UnusedRay_I   
+    integer, intent(in)   :: iParticle
+    logical, intent(out)  :: IsEndOfSegment
+    real ::    GradDensity_D(MaxDim), Density, DeltaSNew  
     !\
     ! Predictor
     real :: HalfDeltaS                        
@@ -532,7 +343,7 @@ contains
     !\
     ! Dielectric permeability, 1 - Dens2DensCr
     !/
-    real  :: DielPerm
+    real  ::  DielPerm
     !\
     ! Gradient of dielectric permeability
     !/
@@ -540,164 +351,100 @@ contains
     !\
     ! Gradient of dielectric permeability squared
     real  ::  GradDielPerm2
- 
-    real :: DielPermHalfBack
-    real :: Curv  
-    real :: GradEpsDotSlope
     !\
-    ! Loop variable
-    !/
-    integer:: iParticle
+    ! Misc
+    real :: DielPermHalfBack  
+    real :: GradEpsDotSlope
     !\
     ! Output from check_step program. If true, the integration step
     ! should be repeated with reduced timestep
     !/
-    logical :: DoReturn = .false.
-    !\
-    ! Heliocentric distance squared, to compare with 
-    ! rIntegration squared
-    real ::  SolarDist2  
+    logical :: DoReturn, IsGone, DoMove
     !----------------------------
-
+    IsEndOfSegment = .false.
+    !\
     !Start the predictor step of the GIRARD scheme: 
-
-    do iParticle = 1, nRay
-       !\
-       ! Do not process the rays that are done
-       !/
-       if (UnusedRay_I(iParticle)) CYCLE
+    if(iIndex_II(Status_,iParticle)/=Predictor_)then
        !\
        ! For the slope calculated at the previous
        ! stage we advance the ray at half step  
-       State_VI(x_:z_,iParticle) = &
-            State_VI(x_:z_,iParticle) + &
+       State_VI(x_:z_,iParticle) = State_VI(x_:z_,iParticle) + &
             State_VI(SlopeX_:SlopeZ_,iParticle)&
             *0.50*State_VI(Ds_,iParticle)
-       if(IsCartesianGrid)then
-          Coord_DI(:,iParticle) = State_VI(x_:z_, iParticle)
-       else
-          call xyz_to_coord(State_VI(x_:z_, iParticle), &
-               Coord_DI(:,iParticle))
-       end if
        ! Now Xyz_DI moved by 1/2 DeltaS !!!
        !\
        ! Check if at half step the ray escaped the domain
        call check_particle_location(KindRay_, iParticle,&
-            IsGone = UnusedRay_I(iParticle))
-    end do
-
-    !
-    ! The following routine collects the density values at the Xyz_DI
-    ! from all relevant processors
-    !
-    IsMask_I(1:nRay) = .not.UnusedRay_I(1:nRay)
-    call get_plasma_density(nRay)
-    
-    
+            DoMove=DoMove, IsGone = IsGone)
+       if(IsGone)then
+          IsEndOfSegment = .true.
+          RETURN
+       elseif(DoMove)then
+          iIndex_II(Status_,iParticle) = Predictor_
+          IsEndOfSegment = .true.
+          RETURN
+       end if
+    else
+       iIndex_II(Status_,iParticle) = OK_
+    end if
+    !\
+    ! The following routine calculates density, gradient and 
+    ! step size
+    !/
+    call get_local_density(Density, GradDensity_D, DeltaSNew, IsEndOfSegment)
     !In making radio images the ray accidentally reachig the overdense plasma 
     !region  should not be further processed 
-    UnusedRay_I = UnusedRay_I .or.  Density_I >= DensityCr ! "bad rays" are done
+    if(IsEndOfSegment.or.  Density >= DensityCr)then
+       IsEndOfSegment = .true.
+       call mark_undefined(KindRay_,iParticle)
+       RETURN
+    end if
+    !\
+    ! Do not process the rays that are done
+    !/ 
+    HalfDeltaS = 0.50*State_VI(Ds_,iParticle)
+    ! Original Position (at an integer point):
+    PositionHalfBack_D = State_VI(x_:z_,iParticle) - &
+         State_VI(SlopeX_:SlopeZ_,iParticle)*HalfDeltaS
+    Dens2DensCr = Density*DensityCrInv
     
-    do iParticle = 1, nRay
-       !\
-       ! Do not process the rays that are done
-       !/
-       if (UnusedRay_I(iParticle)) CYCLE  
- 
-       HalfDeltaS = 0.50*State_VI(Ds_,iParticle)
-       ! Original Position (at an integer point):
-       PositionHalfBack_D = State_VI(x_:z_,iParticle) - &
-            State_VI(SlopeX_:SlopeZ_,iParticle)*HalfDeltaS
-       Dens2DensCr = Density_I(iParticle)*DensityCrInv
+    DielPerm       = 1.0 - Dens2DensCr
+    GradDielPerm_D = -GradDensity_D*DensityCrInv
+    GradDielPerm2  = sum(GradDielPerm_D**2)
 
-       DielPerm       = 1.0 - Dens2DensCr
-       GradDielPerm_D = -GradDensity_DI(:,iParticle)*DensityCrInv
-       GradDielPerm2  = sum(GradDielPerm_D**2)
+    GradEpsDotSlope = sum(GradDielPerm_D*&
+         State_VI(SlopeX_:SlopeZ_,iParticle))
+    
+    DielPermHalfBack = DielPerm  - GradEpsDotSlope*HalfDeltaS
+    
+    !Check positivity:
+    if( DielPermHalfBack<=0.0)then
+       IsEndOfSegment = .true.
+       call mark_undefined(KindRay_,iParticle)
+       RETURN
+    end if
 
-       GradEpsDotSlope = sum(GradDielPerm_D*&
-            State_VI(SlopeX_:SlopeZ_,iParticle))
-
-       DielPermHalfBack = DielPerm  - GradEpsDotSlope*HalfDeltaS
-
-       !Check positivity:
-       if( DielPermHalfBack<=0.0)then
-          UnusedRay_I(iParticle) = .true.
-          CYCLE
-       end if
-
-
-       if (iIndex_II(Steepness_,iParticle)==OK_) then
-          call check_step(iParticle, DoReturn)
-          if(DoReturn) CYCLE
-       end if 
-
-       !
-       ! Either switch to opposite pranch of parabola
-       ! or make a Boris step
-       call advance_ray(iParticle)
-       call check_particle_location(KindRay_, iParticle,&
-            IsGone = UnusedRay_I(iParticle))
-       !Exclude rays which are out the integration sphere
-       SolarDist2 = sum(State_VI(x_:z_,iParticle)**2)
-       UnusedRay_I(iParticle) = UnusedRay_I(iParticle)&
-            .or. SolarDist2 > rIntegration2
-       if(UnusedRay_I(iParticle))CYCLE
-       !\
-       !   The code below makes gradual increases of the DeltaS up to the value
-       ! specified in DeltaSNew. The smooth step increase is required so as
-       ! not to get into the space behind the critical surface, stepping with
-       ! DeltaS that instantly changes from a very little size to the normal
-       ! DeltaSNew length. DeltaS is usually reduced in a close vicinity of 
-       ! the critical surface, where the ray is travelling along a very sharp
-       ! curve with high curvature. For many rays it means fractioning of the
-       ! DeltaS down several orders of magnitude, therefore the new step trial
-       ! should start from a bigger step of the same order of magnitude.
-       !   This problem is solved using a non-linear difference equation:
-       !           Y(i+1) = [2 - Y(i)/X(i)]*Y(i),
-       ! where X(i) is the desired final DeltaS length from DeltaSNew, and
-       ! Y(i) is the actual DeltaS length. A brief analysis of the equation
-       ! shows that, when Y is small compared to X, the next value of Y will
-       ! be almost 2*X, so the DeltaS would grow in a geometrical progression.
-       ! However, as Y approaches X, its growth rate becomes slower. However,
-       ! Y always reaches X in several steps. One can check that for Y = X the
-       ! next value of Y is always that of X.
-       !     The behaviour of Y can also be characterized as exponential
-       ! growth when Y is close to zero, and exponential saturation when Y is
-       ! close to X. 
-       !/
-       !\
-       ! For shallow rays the DeltaS is increased unconditionally
-       !/
-       !\
-       ! If the iRay-th ray is marked as steep (i.e. "not gentle" or "not
-       ! shallow") then the code below increases its DeltaS only if the
-       ! current distance to the critical surface, calculated as
-       !      \epsilon / grad \epsilon,
-       ! is greater than this distance value saved along with marking the
-       ! ray as steep in the DistanceToCritSurf_I. 
-       !   This can happen in two cases: 
-       ! (1) either the ray was "parabola reflected" and
-       ! after several steps it went away from the surface by the distance
-       ! where the parabola switching occurred; 
-       ! (2)or the ray is not steep any more because 
-       ! the current DeltaS is so small, that the next step does not
-       ! penetrate the critical surface.
-       !   The ray is reverted to "gentle" or "shallow"
-       !/
-       if (iIndex_II(Steepness_,iParticle)==OK_.or.DielPermHalfBack .gt. &
-               State_VI(Dist2Cr_,iParticle)*sqrt(GradDielPerm2)) then
-          iIndex_II(Steepness_,iParticle) = OK_
-          State_VI(Ds_,iParticle) = &
-               max(2 - State_VI(Ds_,iParticle)/&
-               DeltaSNew_I(iParticle), 1.0)*&
-               min(DeltaSNew_I(iParticle), &
-               State_VI(Ds_,iParticle))
-       end if
-    end do
+    if (iIndex_II(Steepness_,iParticle)==OK_) then
+       call check_step(DoReturn)
+       if(DoReturn) RETURN
+    end if
+    !
+    ! Either switch to opposite pranch of parabola
+    ! or make a Boris step
+    call advance_ray
+    call check_particle_location(KindRay_, iParticle,&
+         IsGone = IsEndOfSegment)
+    !Exclude rays which are out the integration sphere
+    if(IsEndOfSegment.or.&
+         sum(State_VI(x_:z_,iParticle)**2) > rIntegration2)then
+       IsEndOfSegment = .true.
+       call mark_undefined(KindRay_,iParticle)
+       RETURN
+    end if
+    call get_new_step_size(DeltaSNew)
   contains
     !==================
-    subroutine check_step(iParticle, DoReturn)
-      integer, intent(in) :: iParticle
+    subroutine check_step(DoReturn)
       logical, intent(out):: DoReturn
       !\
       ! Misc
@@ -725,13 +472,11 @@ contains
          DoReturn = .true.
          RETURN
       end if
-
       ! Check if some of the next points can get into the prohibited
       ! part of space with "negative" dielectric permittivity
       !
       ! Here we check the magnitude of the longitudinal gradient
       ! of the dielectric permittivity
-
       if (3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack) then
          !
          ! Mark the ray as steep; 
@@ -749,8 +494,7 @@ contains
       end if
     end subroutine check_step
     !==================
-    subroutine advance_ray(iParticle)
-      integer, intent(in):: iParticle
+    subroutine advance_ray
       !\
       ! Omega = \nabla n/n\times d\vec{x}/ds
       ! Analogous to the magnetic field times q/m in the
@@ -762,8 +506,8 @@ contains
       !/
       real  ::  Slope1_D(MaxDim)
       
-      real,    dimension(MaxDim)       :: ProjSlopeOnMinusGradEps_D
-      real,    dimension(MaxDim)       :: StepX_D, StepY_D
+      real :: ProjSlopeOnMinusGradEps_D(MaxDim)
+      real :: StepX_D(MaxDim),  StepY_D(MaxDim)
       ! Below, L is inverse grad of \epsilon, Alpha is the incidence angle
       real :: LCosAl ! L*cos(Alpha)
       ! Length of parabola
@@ -880,15 +624,67 @@ contains
       end if
     end subroutine advance_ray
     !====================
+    subroutine get_new_step_size(StepSizeNew)
+      real, intent(in) :: StepSizeNew
+      !\
+      !   The code below makes gradual increases of the DeltaS up to the value
+      ! specified in DeltaSNew. The smooth step increase is required so as
+      ! not to get into the space behind the critical surface, stepping with
+      ! DeltaS that instantly changes from a very little size to the normal
+      ! DeltaSNew length. DeltaS is usually reduced in a close vicinity of 
+      ! the critical surface, where the ray is travelling along a very sharp
+      ! curve with high curvature. For many rays it means fractioning of the
+      ! DeltaS down several orders of magnitude, therefore the new step trial
+      ! should start from a bigger step of the same order of magnitude.
+      !   This problem is solved using a non-linear difference equation:
+      !           Y(i+1) = [2 - Y(i)/X(i)]*Y(i),
+      ! where X(i) is the desired final DeltaS length from DeltaSNew, and
+      ! Y(i) is the actual DeltaS length. A brief analysis of the equation
+      ! shows that, when Y is small compared to X, the next value of Y will
+      ! be almost 2*X, so the DeltaS would grow in a geometrical progression.
+      ! However, as Y approaches X, its growth rate becomes slower. However,
+      ! Y always reaches X in several steps. One can check that for Y = X the
+      ! next value of Y is always that of X.
+      !     The behaviour of Y can also be characterized as exponential
+      ! growth when Y is close to zero, and exponential saturation when Y is
+      ! close to X. 
+      !/
+      !\
+      ! For shallow rays the DeltaS is increased unconditionally
+      !/
+      !\
+      ! If the iRay-th ray is marked as steep (i.e. "not gentle" or "not
+      ! shallow") then the code below increases its DeltaS only if the
+      ! current distance to the critical surface, calculated as
+      !      \epsilon / grad \epsilon,
+      ! is greater than this distance value saved along with marking the
+      ! ray as steep in the DistanceToCritSurf_I. 
+      !   This can happen in two cases: 
+      ! (1) either the ray was "parabola reflected" and
+      ! after several steps it went away from the surface by the distance
+      ! where the parabola switching occurred; 
+      ! (2)or the ray is not steep any more because 
+      ! the current DeltaS is so small, that the next step does not
+      ! penetrate the critical surface.
+      !   The ray is reverted to "gentle" or "shallow"
+      !/
+      if (iIndex_II(Steepness_,iParticle)==OK_.or.DielPermHalfBack .gt. &
+           State_VI(Dist2Cr_,iParticle)*sqrt(GradDielPerm2)) then
+         iIndex_II(Steepness_,iParticle) = OK_
+         State_VI(Ds_,iParticle) = &
+              max(2 - State_VI(Ds_,iParticle)/StepSizeNew, 1.0)*&
+              min(StepSizeNew, State_VI(Ds_,iParticle))
+      end if
+    end subroutine get_new_step_size
+    !====================
     subroutine get_local_density(&
-         iParticle, Density, GradDensity_D, DeltaSNew, IsBody)
+         Density, GradDensity_D, DeltaSNew, IsBody)
       !USES:
       use ModAdvance, ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
       use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB
       use ModGeometry,ONLY: CellSize_DB
       use ModPhysics, ONLY: No2Si_V, UnitRho_
-      integer, intent(in):: iParticle
       real,    intent(out):: Density
       real,    intent(out):: GradDensity_D(MaxDim)
       real,    intent(out):: DeltaSNew

@@ -84,6 +84,7 @@ OBJECTS = \
 	ModProjectDivB.o \
 	ModRadDiffusion.o \
 	ModRadiativeCooling.o \
+	ModRadioWaveImage.o \
 	ModResistivity.o \
 	ModRestartFile.o \
 	ModSatelliteFile.o \

@@ -10,7 +10,6 @@ include Makefile.DEPEND
 OBJECTS = \
 	ModGridDescriptor.o\
         ModBuffer.o\
-        ModRadioWaveImage.o\
 	OH_wrapper.o
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR} -I${MAGNETOGRAMDIR} \
