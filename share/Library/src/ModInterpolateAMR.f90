@@ -4342,7 +4342,7 @@ contains
          XyzGrid_DII(:,1,iGridFlip) = XyzGrid_DII(:,0,iGridFlip)
          iLevelSubGrid_I(iGridFlip) = Coarse_
          nSubgrid_I(iGridFlip) = 1
-         IsFlipped_I(iGridFlip) = iGridFlip /= 0
+         IsFlipped_I(iGridFlip) = iDirFlipBlock > 0
       end do
     end subroutine get_block
     !=====================
