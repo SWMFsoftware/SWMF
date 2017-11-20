@@ -9,28 +9,17 @@
 subroutine linear_solver_matvec(x_I, y_I, n)
 
   ! Fortran subroutine calling C matvec routine
-
-  use ModLinearSolver, ONLY: iMatvecC
   use iso_c_binding
 
   implicit none
 
   interface
-     subroutine linear_solver_matvec_c(x_I, y_I, n)  bind(C) 
+     subroutine linear_wrapper_matvec_c(x_I, y_I, n)  bind(C) 
        use iso_c_binding
        integer(c_int ), VALUE:: n
        real(c_double)        :: x_I(n)
        real(c_double)        :: y_I(n)
-     end subroutine linear_solver_matvec_c
-  end interface
-
-  interface
-     subroutine linear_solver_matvec_c2(x_I, y_I, n)  bind(C) 
-       use iso_c_binding
-       integer(c_int ), VALUE:: n
-       real(c_double)        :: x_I(n)
-       real(c_double)        :: y_I(n)
-     end subroutine linear_solver_matvec_c2
+     end subroutine linear_wrapper_matvec_c
   end interface
 
   integer(c_int), intent(in) :: n
@@ -38,28 +27,22 @@ subroutine linear_solver_matvec(x_I, y_I, n)
   real(c_double), intent(out):: y_I(n)
   !--------------------------------------------------------------------------
 
-  select case(iMatVecC)
-  case(1)
-     !call linear_solver_matvec_c(x_I, y_I, n)  ! MATVEC1
-  case(2)
-     !call linear_solver_matvec_c2(x_I, y_I, n) ! MATVEC2
-  end select
-
+  call linear_wrapper_matvec_c(x_I, y_I, n) 
+ 
 end subroutine linear_solver_matvec
 
 !============================================================================
-subroutine linear_solver_gmres(iMatvec, &
+subroutine linear_solver_gmres( &
      Rhs_I, x_I, lInit, n, nKrylov, &
      Tolerance, nIter, iError, lTest, iComm) bind(C)
 
   ! GMRES subroutine that can be called from C
 
   use iso_c_binding
-  use ModLinearSolver, ONLY: gmres, iMatvecC
+  use ModLinearSolver, ONLY: gmres
 
   implicit none     
 
-  integer, intent(in):: iMatvec   ! index of C Matvec function.
   integer, intent(in):: n         ! number of unknowns.
   integer, intent(in):: nKrylov   ! size of krylov subspace
   real,    intent(in):: Rhs_I(n)  ! right hand side vector
@@ -90,8 +73,7 @@ subroutine linear_solver_gmres(iMatvec, &
   end interface
 
   !----------------------------------------------------------------------
-  iMatvecC = iMatvec
-
+ 
   call gmres(linear_solver_matvec, Rhs_I, x_I, lInit==1, n, nKrylov,&
        Tolerance,'rel',nIter,iError,lTest==1,iComm)
 
