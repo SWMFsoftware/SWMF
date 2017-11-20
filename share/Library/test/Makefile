@@ -55,8 +55,6 @@ test:
 	-@make test_linear_advection
 	-@make test_linear_solver
 	-@make test_linear_wrapper
-	@perl -pi -e 's/ call/ \!call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
-	@rm -f ../src/linear_solver_wrapper.o
 	-@make test_lookup_table
 	-@make test_planet_field
 	-@make test_plot_file
@@ -149,7 +147,7 @@ OBJ_LINEAR_SOLVER = \
 
 test_linear_solver_exe:
 	@(cd ../src; make blas.o lapack.o ModLinearSolver.o)
-	@make test_linear_solver.o
+	@make test_linear_solver.o 
 	${LINK.f90} -o test_linear_solver.exe ${OBJ_LINEAR_SOLVER} ${Lflag1}
 
 test_linear_solver:
@@ -163,6 +161,8 @@ test_linear_solver:
 	@ls -l test_linear_solver.diff
 
 #######################################################################
+SEARCH_C = -I${SHAREDIR}
+
 OBJ_LINEAR_WRAPPER = \
         ../src/blas.o \
         ../src/lapack.o \
@@ -171,22 +171,21 @@ OBJ_LINEAR_WRAPPER = \
         ../src/ModBlasLapack.o \
         ../src/ModLinearSolver.o \
 	../src/linear_solver_wrapper.o \
+	../src/linear_solver_wrapper_c.o \
 	external_methods.o \
 	test_linear_wrapper.o
 
 test_linear_wrapper_exe:
 	@(cd ../src; make blas.o lapack.o ModLinearSolver.o \
-		linear_solver_wrapper.o)
-	@make external_methods.o test_linear_wrapper.o
+		linear_solver_wrapper.o linear_solver_wrapper_c.o)
+	@make external_methods.o 
+	@make test_linear_wrapper.o 
 	${LINK.f90} ${NOMAINFLAG} -o test_linear_wrapper.exe \
-		${OBJ_LINEAR_WRAPPER} ${Lflag1} ${CPPLIB}
+		${OBJ_LINEAR_WRAPPER} ${Lflag1} ${CPPLIB} 
 
 test_linear_wrapper:
-	@echo test_linear_wrapper starting 	>  test_linear_wrapper.diff
-	@perl -pi -e 's/!call/call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
-	@make test_linear_wrapper_exe		>> test_linear_wrapper.diff
-	@perl -pi -e 's/ call/ !call/ if /MATVEC1/' ../src/linear_solver_wrapper.f90
-	@rm -f ../src/linear_solver_wrapper.o
+	@echo test_linear_wrapper starting 	>  test_linear_wrapper.diff	
+	make test_linear_wrapper_exe		>> test_linear_wrapper.diff
 	@echo ./test_linear_wrapper.exe		>> test_linear_wrapper.diff
 	-@(${MPIRUN} ./test_linear_wrapper.exe > test_linear_wrapper.tmp)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-5 \
@@ -646,7 +645,6 @@ test_process_var_name1:
 		>> test_process_var_name.log 2>&1
 	@for i in ${BATSDIR}/srcEquation/*.f90 ; do\
 		cp -f $${i} ModEquation.f90;\
-		perl -i -pe 's/call init_mhd_variables/ /' ModEquation.f90;\
 		echo working on $${i} >> test_process_var_name.tmp;\
 		echo working on $${i} >> test_process_var_name.log;\
 		sleep 1;\
