@@ -77,6 +77,7 @@ module BATL_lib
   public:: Xi_, Eta_, Zeta_
   public:: UseHighFDGeometry, set_high_geometry
   public:: rRound0, rRound1, IsRoundCube, SqrtNDim
+
   ! Inherited from BATL_grid
   public:: CoordMin_D, CoordMax_D, DomainSize_D
   public:: CoordMin_DB, CoordMax_DB, CellSize_DB, CellSizeRoot
@@ -87,6 +88,7 @@ module BATL_lib
   public:: CellMetrice_DDG, CellCoef_DDGB
   public:: check_interpolate_amr_gc
   public:: create_grid, show_grid_cell
+  public:: integrate_grid, minval_grid, maxval_grid
 
   ! Inherited from BATL_amr
   public:: BetaProlong

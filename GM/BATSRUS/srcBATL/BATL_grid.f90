@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_grid
 
-  use BATL_mpi, ONLY: iProc
+  use BATL_mpi, ONLY: iProc, nProc, iComm
   use BATL_size
   use BATL_tree
   use BATL_geometry
@@ -18,16 +18,21 @@ module BATL_grid
   public :: init_grid           ! initializa module
   public :: clean_grid          ! clean module
   public :: create_grid         ! set coordinates, sizes, faces, etc.
-  public :: create_grid_block   ! set one block
-  public :: fix_grid_res_change
-  public :: average_grid_node
-  public :: find_grid_block
-  public :: show_grid_cell     ! provide information about grid cell
+  public :: create_grid_block   ! set geometry of one block
+  public :: fix_grid_res_change ! fix curvilinear grid at res. changes
+  public :: average_grid_node   ! average var./coord. of hanging nodes
+  public :: find_grid_block     ! find grid block containing a point
+  public :: integrate_grid      ! return integral of some variable over grid
+  public :: maxval_grid         ! return maximum value/location of variable
+  public :: minval_grid         ! return minimum value/location of variable
+
   public :: interpolate_grid
   public :: interpolate_grid_amr
   public :: interpolate_grid_amr_gc
   public :: check_interpolate_amr_gc
-  public :: test_grid
+
+  public :: show_grid_cell      ! provide information about grid cell
+  public :: test_grid           ! unit test
 
   interface interpolate_grid_amr_gc
      !\
@@ -922,6 +927,8 @@ contains
   !===========================================================================
   subroutine fix_grid_res_change
 
+    ! Fix 3D curvilinear grid at resolution changes so that faces match
+
     integer:: iBlock, iDir, jDir, kDir
     !------------------------------------------------------------------------
     LOOPBLOCK: do iBlock = 1, nBlock
@@ -945,6 +952,8 @@ contains
   !===========================================================================
 
   subroutine create_grid
+
+    ! create the grid: coordinates, face normals, cell volumes etc.
 
     integer:: iBlock
     !------------------------------------------------------------------------
@@ -1193,6 +1202,161 @@ contains
     end if
 
   end subroutine find_grid_block
+  !===========================================================================
+  real function integrate_grid(Var_GB, UseGlobal)
+
+    use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_SUM, MPI_IN_PLACE
+
+    ! Return the volume integral of Var_GB, ie. sum(Var_GB*CellVolume_GB)
+    ! restricted to all used blocks and used cells. 
+    ! If UseGlobal is present, add up results for all processors.
+
+    real,    intent(in):: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    logical, intent(in), optional:: UseGlobal
+
+    ! Local variables:
+    real    :: Integral
+    integer :: i, j, k, iBlock, iError
+
+    character(len=*), parameter:: NameSub = 'integrate_grid'
+    !--------------------------------------------------------------------------
+    Integral = 0.0
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+          Integral = Integral &
+               + CellVolume_GB(i,j,k,iBlock)*Var_GB(i,j,k,iBlock)
+       end do; end do; end do
+    end do
+
+    if(nProc > 1 .and. present(UseGlobal))call MPI_allreduce( &
+         MPI_IN_PLACE, Integral, 1, MPI_REAL, MPI_SUM, iComm, iError)
+
+    integrate_grid = Integral
+
+  end function integrate_grid
+  !============================================================================
+  real function minval_grid(Var_GB, UseGlobal, iLoc_I)
+
+    use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_MIN, MPI_IN_PLACE
+
+    ! Return the minimum value of Var_GB for all used blocks and used cells. 
+    ! If UseGlobal is present, take minimum over all processors.
+    ! If iLoc_I is present, return the first cell, block and processor indexes
+    ! iLoc_I = (/i, j, k, iBlock, iProc/) 
+    ! where the variable equals the (global) minimum, or return -1 for all
+    ! 5 indexes. The iLoc_I is only returned on the processor(s) which
+    ! contain the minimum location.
+
+    real,    intent(in):: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    logical, intent(in),  optional:: UseGlobal
+    integer, intent(out), optional:: iLoc_I(5)
+
+    ! Local variables:
+    real    :: VarMin
+    integer :: i, j, k, iBlock, iError
+
+    character(len=*), parameter:: NameSub = 'integrate_grid'
+    !--------------------------------------------------------------------------
+    VarMin = Huge(1.0)
+
+    do iBlock = 1, nBlock
+       if(Unused_B(iBlock)) CYCLE
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+          VarMin = min(VarMin, Var_GB(i,j,k,iBlock))
+       end do; end do; end do
+    end do
+
+    if(nProc > 1 .and. present(UseGlobal)) call MPI_allreduce( &
+         MPI_IN_PLACE, VarMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
+
+    minval_grid = VarMin
+
+    if(present(iLoc_I))then
+       ! Find block and cell indexes where variable equals the (global) minimum
+       iLoc_I = -1
+       BLOCKLOOP:do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+             if(Var_GB(i,j,k,iBlock) == VarMin)then
+                iLoc_I = (/i, j, k, iBlock, iProc/)
+                EXIT BLOCKLOOP
+             end if
+          enddo; enddo; enddo;
+       enddo BLOCKLOOP
+    end if
+
+  end function minval_grid
+  !===========================================================================
+  real function maxval_grid(Var_GB, UseGlobal, UseAbs, iLoc_I)
+
+    use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_MAX, MPI_IN_PLACE
+
+    ! Return the maximum value of Var_GB for all used blocks and used cells. 
+    ! If UseAbs is present, take the maximum for the absolute value.
+    ! If UseGlobal is present, take maximum over all processors.
+    ! If iLoc_I is present, return the first cell, block and processor indexes
+    ! iLoc_I = (/i, j, k, iBlock, iProc/) 
+    ! where the variable equals the (global) maximum, or return -1 for all
+    ! 5 indexes. The iLoc_I is only returned on the processor(s) which
+    ! contain the maximum location(s).
+
+    real,    intent(in):: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    logical, intent(in),  optional:: UseGlobal
+    logical, intent(in),  optional:: UseAbs
+    integer, intent(out), optional:: iLoc_I(5)
+
+    ! Local variables:
+    real    :: VarMax
+    integer :: i, j, k, iBlock, iError
+
+    character(len=*), parameter:: NameSub = 'integrate_grid'
+    !--------------------------------------------------------------------------
+    VarMax = -Huge(1.0)
+
+    if(present(UseAbs))then
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+             VarMax = max(VarMax, abs(Var_GB(i,j,k,iBlock)))
+          end do; end do; end do
+       end do
+    else
+       do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not. Used_GB(i,j,k,iBlock)) CYCLE
+             VarMax = max(VarMax, Var_GB(i,j,k,iBlock))
+          end do; end do; end do
+       end do
+    end if
+
+    if(nProc > 1 .and. present(UseGlobal)) call MPI_allreduce( &
+         MPI_IN_PLACE, VarMax, 1, MPI_REAL, MPI_MAX, iComm, iError)
+
+    maxval_grid = VarMax
+
+    if(present(iLoc_I))then
+       ! Find block and cell indexes where variable equals the (global) maximum
+       iLoc_I = -1
+       BLOCKLOOP:do iBlock = 1, nBlock
+          if(Unused_B(iBlock)) CYCLE
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+             if(Var_GB(i,j,k,iBlock) == VarMax)then
+                iLoc_I = (/i, j, k, iBlock, iProc/)
+                EXIT BLOCKLOOP
+             end if
+          enddo; enddo; enddo;
+       enddo BLOCKLOOP
+    end if
+
+  end function maxval_grid
 
   !===========================================================================
   subroutine interpolate_grid(Xyz_D, nCell, iCell_II, Weight_I)
@@ -2217,7 +2381,7 @@ contains
     use BATL_mpi, ONLY: iProc, nProc, iComm
     use BATL_geometry, ONLY: init_geometry,rRound0,rRound1
     use ModNumConst, ONLY: i_DD, cPi
-    use ModMpi, ONLY: MPI_reduce, MPI_real, MPI_sum
+    use ModMpi, ONLY: MPI_reduce, MPI_REAL, MPI_SUM
 
     use ModRandomNumber, ONLY: random_real
 
