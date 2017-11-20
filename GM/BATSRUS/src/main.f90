@@ -332,11 +332,6 @@ subroutine update_grad_density
   call stop_mpi('ERROR: update_grad_density is for SWMF')
 end subroutine update_grad_density
 !==============================================================================
-subroutine get_ray_bunch_intensity
-  !----------------------------------------------------------------------------
-  call stop_mpi('ERROR: get_ray_bunch_intensity is for SWMF')
-end subroutine get_ray_bunch_intensity
-!==============================================================================
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   implicit none
   real,dimension(3),intent(in)::Xyz_D
