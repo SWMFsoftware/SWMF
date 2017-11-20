@@ -100,8 +100,6 @@ module ModLinearSolver
 
   public:: LinearSolverParamType
 
-  integer, public:: iMatvecC = 1         ! Index of C matvec function
-
   !REVISION HISTORY:
   ! 05Dec06 - Gabor Toth - initial prototype/prolog/code based on BATSRUS code
   ! 20Mar14 - Gabor Toth - lot of new code 
