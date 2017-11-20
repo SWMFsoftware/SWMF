@@ -233,7 +233,28 @@ test_sort:
 	-@(./test_sort.exe > test_sort.tmp)
 	-@(diff test_sort.tmp test_sort.log 	>  test_sort.diff)
 	@ls -l test_sort.diff
+#######################################################################
+test_hypergeometric.o: test_hypergeometric.f90
+	${COMPILE.f90} ${Cflag0} test_hypergeometric.f90
 
+OBJ_HYPERGEOMETRIC = \
+	../src/ModKind.o \
+	../src/ModMpi.o\
+	../src/ModNumConst.o \
+	../src/ModHyperGeometric.o \
+	test_hypergeometric.o
+
+test_hypergeometric_exe:
+	@(cd ../src; make ModKind.o; make ModMpi.o; make ModNumConst.o; make ModHyperGeometric.o)
+	@make test_hypergeometric.o
+	${LINK.f90} -o test_hypergeometric.exe ${OBJ_HYPERGEOMETRIC} ${Lflag2}
+
+test_hypergeometric:
+	@echo test_hypergeometric starting     >  test_hypergeometric.diff
+	@make test_hypergeometric_exe	       >> test_hypergeometric.diff
+	@echo ./test_hypergeometric.exe        >> test_hypergeometric.diff
+	-@(./test_hypergeometric.exe > test_hypergeometric.diff)
+	@ls -l test_hypergeometric.diff
 #######################################################################
 OBJ_IO_UNIT = \
 	test_io_unit.o \

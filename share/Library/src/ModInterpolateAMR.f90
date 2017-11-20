@@ -3811,7 +3811,9 @@ contains
          ! stencil coordinates might occur. To handle the latter problem,
          ! we added the "out" intent. The coordinates for the stencil
          ! and input point are calculated and recalculated below with
-         ! respect to the block corner. 
+         ! respect to the block corner. Another possible feature handled
+         ! below is the glued margins such as the pole of the spherical 
+         ! coordinate system. 
          !/
          real,  intent(inout):: Xyz_D(nDim)
          integer, intent(out):: iProc, iBlock !processor and block number
@@ -3906,6 +3908,23 @@ contains
     !Just 2**nDim
     integer:: nGrid
     !/
+    !\
+    ! In the neighboring block the direction of iDir coordinate
+    ! may be different. For example, near the northern pole the 
+    ! latitute coordinate increases toward the pole, while in 
+    ! the across pole block, if we keep follow the same direction
+    ! the latitude starts to decrese. The order number of the 
+    ! stencil grid changes if the stencil is viewed from the 
+    ! neighboring block. 
+    !/
+    logical    :: IsFlipped_I(2**nDim)
+    integer    :: iDirFlip = 0, iDiscrFlip_D(nDim) 
+    integer, parameter :: iOrderFlip_ID(1:8,0:3) = reshape((/&
+         1, 2, 3, 4, 5, 6, 7, 8,        &    !iDir = 0 no flip
+         2, 1, 4, 3, 6, 5, 8, 7,        &    !iDir=1 is flipped
+         3, 4, 1, 2, 7, 8, 5, 6,        &    !iDir=2 is flipped
+         5, 6, 7, 8, 1, 2, 3, 4/),(/8,4/))   !iDir=3 is flipped
+         
     !------------------------
     cTol2 = cTol**(nByteReal/4)
 
@@ -3915,8 +3934,9 @@ contains
     ! Initialize 
     !/
     iIndexes_II = 0; Weight_I    = 0
-    nGridOut = -1; Xyz_D = XyzIn_D ; IsOut_I = .false.
-    iBlock_I = -1; iProc_I = -1
+    nGridOut = -1; Xyz_D = XyzIn_D  
+    IsOut_I  = .false. ; IsFlipped_I = .false.
+    iBlock_I = -1; iProc_I = -1; iDirFlip = 0
     if(present(UseGhostCell))then
        UseGhostCellLocal = UseGhostCell
     else
@@ -3929,12 +3949,6 @@ contains
     call find(nDim, Xyz_D, iProc, iBlock, &
          XyzStartBasic_D, DXyzGrid_D, IsOutOfDomain)
     if(IsOutOfDomain)then
-       !\
-       ! The algorithm does not work for a point out of the computation
-       ! domain. It could, but in this case too much information
-       ! about grid should be brought to the table - the domain size,
-       ! periodicity etc
-       !/
        nGridOut = -1
        RETURN
     end if
@@ -4070,6 +4084,116 @@ contains
       end do
     end subroutine get_main_block
     !=====================
+    subroutine check_flip_in_block(XyzGridRel2Basic_D, &
+         XyzGridRel2Block_D, XyzStartBlock_D, IsFlippedBlock)
+      real, intent(in )     :: XyzGridRel2Basic_D(nDim)
+      real, intent(in )     :: XyzGridRel2Block_D(nDim)
+      real, intent(in )     :: XyzStartBlock_D(nDim)
+      logical, intent(out)  :: IsFlippedBlock 
+      !----------------------------
+      character(len=*), parameter:: NameSub = 'check_flip_in_block'
+      logical, parameter :: DoTest = .true.
+      !------------
+      !\
+      ! Coordinates XyzBasic_D and the grid point coordinates, 
+      ! XyzGridBasic_D are defined relative to the basic block.
+      ! XyzBasic_D + XyzCornerBasic_D are the "absolute coordinates"
+      ! of the point at which to interpolate, while
+      ! XyzGridBasic_D + XyzCornerBasic_D are "absolute coordinates"
+      ! of the stencil point. However, the stencil grid point is 
+      ! beyond the basic block boundary, therefore, in principle, it 
+      ! may be also beyond the margin of the coordinate map.
+      ! 
+      ! XyzGridRel2Block_D is the result of the 'find' procedure
+      !  application  to  the "absolute coordinates" of the stencil
+      !  point. The point belongs to the neighboring block, 
+      ! XyzStartBlock_D + XyzGridRel2Block_D are the "absolute coordinates" 
+      ! of the same point. However, the coordinate map in the neighboring 
+      ! block may be different if the block is beyond the margin of the 
+      ! basic block map.
+      !\
+      ! The difference between  
+      ! XyzGridRel2Basic_D + XyzStartBasic_D and
+      ! XyzGridRel2Block_D + XyzStartBlock_D  
+      !  may be non-zero by two possible reasons
+      ! 1. For cycling coordinate (over which the periodic boundary conditions
+      ! are applied)  XyzGridRel2Block_D + XyzStartBlock_D -
+      !              -(XyzGridRel2Basic_D + XyzStartBasic_D)=
+      !              =Full range of a cycling coordinate.
+      ! This difference is constant for the two maps from the both sides of
+      ! the periodic boundary. Therefore, the "absolute coordinates" of the
+      ! point, XyzRel2Basic_D + XyzCornerBasic_D, in the map of the 
+      ! neighboring block are XyzRel2Basic_D + XyzStartBasic_D  - 
+      !                       -(XyzGridRel2Basic_D + XyzStartBasic_D)+
+      !                       + XyzStartBlock_D + XyzGridRel2Block_D = 
+      !                     = XyzRel2Basic_D - XyzGridRel2Basic_D + 
+      !                       +XyzGridRel2Block_D + XyzStartBlock_D, 
+      ! so that the coordinates relative to the block corner are:
+      ! (1)XyzRel2Block_D = XyzRel2Basic_D - XyzGridRel2Basic_D + 
+      !                       +XyzGridRel2Block_D 
+      ! The SIGNATURE of this case is that the difference
+      ! abs(XyzGridRel2Block_D - XyzGridRel2Basic_D) is the sime
+      ! of the domain (sometimes, the half of domain) which is the 
+      ! multiple of the block sime, just as in the case, where there is no 
+      ! map margin in the block boundary , in which general case
+      ! the "absolute coordinates"
+      ! are same: XyzGridRel2Block_D + XyzCornerBlock_D = 
+      !          = XyzGridRel2Basic_D + XyzCornerBasic_D), and their
+      ! difference vanishes
+      ! Therefore, the following discriminator is zero:
+      iDiscrFlip_D = nint(mod(abs(&
+           XyzGridRel2Block_D + XyzStartBlock_D - &
+           (XyzGridRel2Basic_D + XyzStartBasic_D)),&
+           DXyzGrid_D*nCell_D)*DxyzInv_D)
+      ! (2) The second possibility is if the "absolute coordinate" is 
+      ! continuous but flips the direction of its growth beyond the margin:
+      !   XyzRel2Basic_D + XyzCornerBasic_D +
+      !  +XyzRel2Block_D + XyzCornerBlock_D =
+      !  2*(Absolute coordinate of a margin) =
+      !   +XyzGridRel2Basic_D + XyzCornerBasic_D +
+      !  +XyzGridRel2Block_D + XyzCornerBlock_D,
+      ! which gives:
+      ! (2)XyzRel2Block_D = XyzGridRel2Basic_D - XyzRel2Basic_D + 
+      !                   + XyzGridRel2Block_D
+      ! In addition, the following estimate is valid for the difference
+      ! a) the margin is at the right. In this case 
+      ! XyzGridRel2Basic_D = DXyzBasic_D*(nCell_D + 0.5)
+      ! XyzGridRel2Block   = DXyzBasic_D*(nCell_D - 0.5)
+      ! Their difference equals +DXyzBasic_D
+      ! a) the margin is at the left. In this case 
+      ! XyzGridRel2Basic_D = - DXyzBasic_D*0.5
+      ! XyzGridRel2Block   = + DXyzBasic_D*0.5
+      ! Their difference equals -DXyzBasic_D
+      ! in both cases a and b discriminator equals 1
+      IsFlippedBlock = any(iDiscrFlip_D/=0)
+      if(DoTest)then
+         if(any(iDiscrFlip_D/=0.and.iDiscrFlip_D/=1))&
+              call CON_stop(NameSub//': error in the algorithm')
+         if(sum(iDiscrFlip_D)>1)then
+            write(*,*)'iDiscrFlip_D = ', iDiscrFlip_D
+            call CON_stop(NameSub//': more than one flipping direction')
+         end if
+         if(iDirFlip/=0.and.iDirFlip/=sum(iOrder_I(1:nDim)*iDiscrFlip_D))then
+            write(*,*)'iDiscrFlip_D = ', iDiscrFlip_D
+            call CON_stop(NameSub//': more than one flipping direction')
+         end if
+      end if
+      if(IsFlippedBlock)&
+           iDirFlip = sum(iOrder_I(1:nDim)*iDiscrFlip_D)
+    end subroutine check_flip_in_block
+    !============================
+    function xyz_rel_to_block(XyzGridRel2Basic_D, XyzGridRel2Block_D)&
+         RESULT(XyzRel2Block_D)
+      real, intent(in )     :: XyzGridRel2Basic_D(nDim)
+      real, intent(in )     :: XyzGridRel2Block_D(nDim)
+      real                  :: XyzRel2Block_D(nDim)
+      !\
+      ! Combine Eqs. (1) for iDiscrFlip_D=0 and (2) for iDiscrFlip_D=1 
+      ! We obtain an equation
+      XyzRel2Block_D = (Xyz_D - XyzGridRel2Basic_D)* & 
+                       (1 - 2*iDiscrFlip_D)  + XyzGridRel2Block_D
+    end function xyz_rel_to_block
+    !==============================
     subroutine get_other_blocks
       integer :: iGrid
       !\
@@ -4084,7 +4208,8 @@ contains
       ! Output parameters of find routine
       !/
       real    :: XyzStartBlock_D(nDim), Dxyz_D(nDim)
-      logical :: IsOut
+      logical :: IsOut, IsFlippedBlock = .false.
+      integer :: iDirFlipBlock = 0
       !----------------------------
       iGrid = maxval(iOrder_I(1:nGrid),MASK=iProc_I==-1)
       do
@@ -4108,6 +4233,16 @@ contains
             IsOut_I(iGrid) = .true.
             XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
          else
+            call check_flip_in_block(&
+                 XyzGridRel2Basic_D = XyzGrid_DII(:,0,iGrid), &
+                 XyzGridRel2Block_D = XyzGrid_D             , &
+                 XyzStartBlock_D    = XyzStartBlock_D       , &
+                 IsFlippedBlock     = IsFlippedBlock)
+            if(IsFlippedBlock)then
+               iDirFlipBlock = iDirFlip
+            else
+               iDirFlipBlock = 0
+            end if
             iLevel = 1 - floor(Dxyz_D(1)*DXyzInv_D(1)+ cTol)
             !\                     ^
             ! For expression above | equal to 2 , 1, 0.5 correspondingly
@@ -4117,11 +4252,11 @@ contains
             !/
             select case(iLevel)
             case(-1)
-               call get_coarse_block(iGrid, XyzGrid_D)
+               call get_coarse_block(iGrid, XyzGrid_D, iDirFlipBlock)
             case(0)  ! (New Dxyz_D)*Stored DXyzInv =1
-               call get_block(iGrid, XyzGrid_D)
+               call get_block(       iGrid, XyzGrid_D, iDirFlipBlock)
             case(Fine_  )  !1, (New Dxyz_D)*Stored DXyzInv =0.5 
-               call get_fine_block(iGrid, XyzGrid_D)
+               call get_fine_block(  iGrid, XyzGrid_D, iDirFlipBlock)
             end select
          end if
          !\
@@ -4135,11 +4270,12 @@ contains
       end do
     end subroutine get_other_blocks
     !========================
-    subroutine get_block(iGridInBlock, XyzGrid_D)
-      integer, intent(in)::iGridInBlock
-      real, dimension(nDim), intent(in):: XyzGrid_D
+    subroutine get_block(iGridInBlock, XyzGrid_D, iDirFlipBlock)
+      integer, intent(in)  :: iGridInBlock
+      real,    intent(in)  :: XyzGrid_D(nDim)
+      integer, intent(in)  :: iDirFlipBlock
       !\
-      ! Fills in the indexes for the grid boints belonging
+      ! Fills in the indexes for the grid points belonging
       ! to the block, which it at the same resolution as the
       ! main block Returns the maximum number of the grid poit
       ! which is out of all blocks  found so far
@@ -4147,7 +4283,7 @@ contains
       !\
       ! Misc
       !/
-      integer:: iGrid, iCellIndexes_D(nDim)
+      integer:: iGrid, iCellIndexes_D(nDim), iGridFlip
       !\
       ! New variables to work with reduced nSubgrid_I
       !/
@@ -4174,16 +4310,18 @@ contains
       ! the grid point 
       !/
       iCellIndexes_D = nint(XyzGrid_D*DxyzInv_D + 0.50)
-      !\
-      ! Calculate discriminator
-      !/
+
       !First, calculate Xyz_D with respect to the corner of given block
       !Coords Xyz_D and XyzGrid_DII(:,0,iGridInBlock) are detemined with
       !respect to the reference block, the latter point coords with
       !with respect to the current block are XyzGrid_D, so that
       !/
-      XyzMisc_D = (Xyz_D + XyzGrid_D - XyzGrid_DII(:,0,iGridInBlock))&
-           *DxyzInv_D
+      XyzMisc_D = xyz_rel_to_block(&
+           XyzGridRel2Basic_D  = XyzGrid_DII(:,0,iGridInBlock), &
+           XyzGridRel2Block_D  = XyzGrid_D)*DxyzInv_D
+      !\
+      ! Calculate discriminator
+      !/
       iDiscr_D = 0
       iDiscr_D(1:nDim) = nint(SIGN(0.50, XyzMisc_D - 0.50) +&
            SIGN(0.50, XyzMisc_D + 0.5 - nCell_D))
@@ -4191,23 +4329,27 @@ contains
       ! Check if there are more grid points belonging to the
       ! newly found block
       !/
-      iShift_D = iShift_DI(1:nDim,iGridInBlock)
+      iShift_D = &
+           iShift_DI(1:nDim, iOrderFlip_ID(iGridInBlock, iDirFlipBlock))
       do iOrder = 1, iPowerOf2_D(1 + count(iDiscr_D(1:nDim)==0))
          iGrid = iSubgridBasic_IIII(&
               iOrder,-iDiscr_D(1),-iDiscr_D(2),-iDiscr_D(3))
-         iCellIndexes_DII(:,1,iGrid) = iCellIndexes_D +&
+         iGridFlip = iOrderFlip_ID(iGrid, iDirFlipBlock)
+         iCellIndexes_DII(:,1,iGridFlip) = iCellIndexes_D +&
               iShift_DI(1:nDim,iGrid) - iShift_D 
-         iProc_I( iGrid) = iProc
-         iBlock_I(iGrid) = iBlock
-         XyzGrid_DII(:,1,iGrid) = XyzGrid_DII(:,0,iGrid)
-         iLevelSubGrid_I(iGrid) = Coarse_
-         nSubgrid_I(iGrid) = 1
+         iProc_I( iGridFlip) = iProc
+         iBlock_I(iGridFlip) = iBlock
+         XyzGrid_DII(:,1,iGridFlip) = XyzGrid_DII(:,0,iGridFlip)
+         iLevelSubGrid_I(iGridFlip) = Coarse_
+         nSubgrid_I(iGridFlip) = 1
+         IsFlipped_I(iGridFlip) = iGridFlip /= 0
       end do
     end subroutine get_block
     !=====================
-    subroutine get_fine_block(iGridInBlock, XyzGrid_D)
-      integer, intent(in)::iGridInBlock
-      real, dimension(nDim), intent(in):: XyzGrid_D
+    subroutine get_fine_block(iGridInBlock, XyzGrid_D, iDirFlipBlock)
+      integer,  intent(in) :: iGridInBlock
+      real,     intent(in) :: XyzGrid_D(nDim)
+      integer,  intent(in) :: iDirFlipBlock
       real :: DxyzSubgrid_D(nDim)
       !\
       ! Fills in the indexes for the grid points belonging
@@ -4218,7 +4360,7 @@ contains
       !\
       ! Loop variables
       !/
-      integer:: iGrid, iSubGrid
+      integer:: iGrid, iSubGrid, iGridFlip, iSubGridFlip
       !\
       ! New variables to work with reduced nSubgrid_I
       !/
@@ -4240,6 +4382,7 @@ contains
       ! Misc
       !/
       real  :: XyzMisc_D(nDim)
+      logical :: IsFlippedBlock
       !------------------
       !\
       ! Calculate cell indexes as we did above. Note that DxyzInv_D
@@ -4251,22 +4394,27 @@ contains
       if(any(iCellIndexesInput_D < 1).or.&
            any(iCellIndexesInput_D > nCell_D))then
          !\
-         !This grid point is out of block
+         !This grid point is out of block, which may occur 
+         !when the basic block happens to be fine and many 
+         !some points need to be sorted out in the course of
+         !the stencil reconstruction
          !/
          iProc_I(iGridInBlock) = -1
          RETURN
       end if
-      !\
-      ! Calculate discriminator
-      !/
+      DXyzSubgrid_D = 0.5*DXyzGrid_D
+
       !First, calculate Xyz_D with respect to the corner of given block
       !Coords Xyz_D and XyzGrid_DII(:,0,iGridInBlock) are detemined with
       !respect to the reference block, the latter point coords with
-      !with respect to the current block are XyzGridStored_D, so that
+      !with respect to the current block are XyzGrid_D, so that
       !/
-      XyzMisc_D = (Xyz_D + XyzGrid_D - XyzGrid_DII(:,0,iGridInBlock))&
-           *DxyzInv_D
-      DXyzSubgrid_D = 0.5*DXyzGrid_D
+      XyzMisc_D = xyz_rel_to_block(&
+           XyzGridRel2Basic_D  = XyzGrid_DII(:,0,iGridInBlock), &
+           XyzGridRel2Block_D  = XyzGrid_D)*DxyzInv_D
+      !\
+      ! Calculate discriminator
+      !/
       iDiscr_D = 0
       iDiscr_D(1:nDim) = nint(SIGN(0.50, XyzMisc_D - 0.50) +&
            SIGN(0.50, XyzMisc_D + 0.5 - nCell_D/2))
@@ -4304,9 +4452,10 @@ contains
       end do
     end subroutine get_fine_block
     !=====================
-    subroutine get_coarse_block(iGridInBlock, XyzGrid_D)
-      integer, intent(in) :: iGridInBlock
-      real, dimension(nDim), intent(in):: XyzGrid_D
+    subroutine get_coarse_block(iGridInBlock, XyzGrid_D, iDirFlipBlock)
+      integer,   intent(in) :: iGridInBlock
+      real,      intent(in) :: XyzGrid_D(nDim)
+      integer,   intent(in) :: iDirFlipBlock
       !\
       ! Loop variables
       !/
@@ -4390,7 +4539,8 @@ contains
          XyzGridShift_D = XyzGridOriginShift_D +&
               DXyzSubgrid_D*iShift_DI(1:nDim,iGrid)
          call get_fine_block(iGrid, &
-              XyzGrid_D = XyzGridOld_D + XyzGridShift_D) 
+              XyzGrid_D = XyzGridOld_D + XyzGridShift_D,&
+              iDirFlipBlock = 0) 
       end do
       !\
       ! Done with all previously found fine blocks. Now proceed to
@@ -4402,7 +4552,7 @@ contains
       !/
       XyzGridShift_D = XyzGridOriginShift_D + &
            DXyzSubgrid_D*iShift_DI(1:nDim,iGridInBlock)
-      call get_block(iGridInBlock, XyzGrid_D + XyzGridShift_D)
+      call get_block(iGridInBlock, XyzGrid_D + XyzGridShift_D,0)
     end subroutine get_coarse_block
     !=====================
     subroutine get_ghost_cell_indexes
