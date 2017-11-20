@@ -1074,10 +1074,12 @@ contains
     DataOut_VI = 0
     ! store variables
     if(nVarOut   > 0) DataOut_VI(iOrder_I(1:nVarOut),:)                   = &
-         StateReg_VI(iOrderVar_V(   1:nVarOut  ),:)
+         StateReg_VI(iOrderVar_V(   1:nVarOut  ),&
+         1:Particle_I(KindReg_)%nParticle)
     ! store indexes
     if(nIndexOut > 0) DataOut_VI(iOrder_I(nVarOut+1:nVarOut+nIndexOut),:) = &
-         iIndexReg_II(iOrderIndex_I(1:nIndexOut),:)
+         iIndexReg_II(iOrderIndex_I(1:nIndexOut),&
+         1:Particle_I(KindReg_)%nParticle)
     call test_stop(NameSub, DoTest)
   end subroutine get_particle_data
   !============================================================================
