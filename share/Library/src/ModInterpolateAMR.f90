@@ -4141,7 +4141,7 @@ contains
       !          = XyzGridRel2Basic_D + XyzCornerBasic_D), and their
       ! difference vanishes
       ! Therefore, the following discriminator is zero:
-      iDiscrFlip_D = nint(mod(abs(&
+      iDiscrFlip_D = nint(mod(1.0e-6*DXyzGrid_D + abs(& 
            XyzGridRel2Block_D + XyzStartBlock_D - &
            (XyzGridRel2Basic_D + XyzStartBasic_D)),&
            DXyzGrid_D*nCell_D)*DxyzInv_D)
@@ -4166,16 +4166,38 @@ contains
       ! Their difference equals -DXyzBasic_D
       ! in both cases a and b discriminator equals 1
       IsFlippedBlock = any(iDiscrFlip_D/=0)
-      if(DoTest)then
-         if(any(iDiscrFlip_D/=0.and.iDiscrFlip_D/=1))&
-              call CON_stop(NameSub//': error in the algorithm')
+      if(DoTest.and.IsFlippedBlock)then
+         if(any(iDiscrFlip_D/=0.and.iDiscrFlip_D/=1))then
+            write(*,*)'XyzGridRel2Block_D=',XyzGridRel2Block_D
+            write(*,*)'XyzStartBlock_D=', XyzStartBlock_D
+            write(*,*)'XyzGridRel2Basic_D=',XyzGridRel2Basic_D
+            write(*,*)'XyzStartBasic_D=',XyzStartBasic_D
+            write(*,*)'DXyzGrid_D*nCell_D=',DXyzGrid_D*nCell_D
+            write(*,*)'iDiscrFlip_D=',iDiscrFlip_D
+            call CON_stop(NameSub//': error in the algorithm')
+         end if
          if(sum(iDiscrFlip_D)>1)then
+            write(*,*)'XyzGridRel2Block_D=',XyzGridRel2Block_D
+            write(*,*)'XyzStartBlock_D=', XyzStartBlock_D
+            write(*,*)'XyzGridRel2Basic_D=',XyzGridRel2Basic_D
+            write(*,*)'XyzStartBasic_D=',XyzStartBasic_D
+            write(*,*)'DXyzGrid_D*nCell_D=',DXyzGrid_D*nCell_D
+            write(*,*)'iDiscrFlip_D=',iDiscrFlip_D
             write(*,*)'iDiscrFlip_D = ', iDiscrFlip_D
-            call CON_stop(NameSub//': more than one flipping direction')
+            call CON_stop(NameSub//': sum:more than one flipping direction')
          end if
          if(iDirFlip/=0.and.iDirFlip/=sum(iOrder_I(1:nDim)*iDiscrFlip_D))then
+            write(*,*)'iDirFlip=',iDirFlip 
+            write(*,*)'XyzGridRel2Block_D=',XyzGridRel2Block_D
+            write(*,*)'XyzStartBlock_D=', XyzStartBlock_D
+            write(*,*)'XyzGridRel2Basic_D=',XyzGridRel2Basic_D
+            write(*,*)'XyzStartBasic_D=',XyzStartBasic_D
+            write(*,*)'DXyzGrid_D*nCell_D=',DXyzGrid_D*nCell_D
+            write(*,*)'iDiscrFlip_D=',iDiscrFlip_D
             write(*,*)'iDiscrFlip_D = ', iDiscrFlip_D
-            call CON_stop(NameSub//': more than one flipping direction')
+            write(*,*)'sum(iOrder_I(1:nDim)*iDiscrFlip_D))=',&
+                 sum(iOrder_I(1:nDim)*iDiscrFlip_D)
+            call CON_stop(NameSub//': iDiscrmore than one flipping direction')
          end if
       end if
       if(IsFlippedBlock)&
@@ -4360,7 +4382,8 @@ contains
       !\
       ! Loop variables
       !/
-      integer:: iGrid, iSubGrid, iGridFlip, iSubGridFlip
+      integer:: iGrid, iSubGrid, iGridFlip, iSubGridFlip,&
+           iGridBasicFlip, iGridInBlockFlip
       !\
       ! New variables to work with reduced nSubgrid_I
       !/
@@ -4402,7 +4425,10 @@ contains
          iProc_I(iGridInBlock) = -1
          RETURN
       end if
-      DXyzSubgrid_D = 0.5*DXyzGrid_D
+      IsFlippedBlock   = iDirFlipBlock > 0
+      iGridBasicFlip   = iOrderFlip_ID(iGridBasic   ,iDirFlipBlock)
+      iGridInBlockFlip = iOrderFlip_ID(iGridInBlock ,iDirFlipBlock)
+      DXyzSubgrid_D    = 0.5*DXyzGrid_D
 
       !First, calculate Xyz_D with respect to the corner of given block
       !Coords Xyz_D and XyzGrid_DII(:,0,iGridInBlock) are detemined with
@@ -4421,12 +4447,16 @@ contains
       do iOrder = 1, iPowerOf2_D(1 + count(iDiscr_D(1:nDim)==0))! -1
          iGrid = iSubgridBasic_IIII(&
               iOrder,-iDiscr_D(1),-iDiscr_D(2),-iDiscr_D(3))
+         iGridFlip = iOrderFlip_ID(iGrid, iDirFlipBlock)
          iCellIndexes_D = iCellIndexesInput_D + 2*(&
-              iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridInBlock))
-         iProc_I(iGrid ) = iProc
-         iBlock_I(iGrid) = iBlock
-         iLevelSubGrid_I(iGrid) = Fine_
+              iShift_DI(1:nDim,iGrid) - &
+              iShift_DI(1:nDim,iGridInBlockFlip))
+         iProc_I(        iGridFlip ) = iProc
+         iBlock_I(       iGridFlip)  = iBlock
+         iLevelSubGrid_I(iGridFlip)  = Fine_
+         IsFlipped_I(    iGridFlip)  = IsFlippedBlock
          if(iGrid==iGridBasic)then
+            !No flip in the basic block
             !\
             ! Determine, where Xyz point is located with respect to
             ! the subgrid at basic grid node
@@ -4438,16 +4468,18 @@ contains
             iGridSeenFrom = &
                  sum(iDiscr1_D(1:nDim)*iPowerOf2_D(1:nDim)) + iGridBasic
          else
-            iGridSeenFrom = iGridBasic
+            iGridSeenFrom = iGridBasicFlip
          end if
-         nSubgrid_I(iGrid) = iPowerOf2_D(1+nDim - &
+         nSubgrid_I(iGridFlip) = iPowerOf2_D(1+nDim - &
               iLog2NDimOverNSubgrid_II(iGrid,iGridSeenFrom))
-         do iOrderSubgrid = 1, nSubgrid_I(iGrid)
+         do iOrderSubgrid = 1, nSubgrid_I(iGridFlip)
             iSubGrid = iSubgridOrder_III(iOrderSubgrid,iGrid,iGridSeenFrom)
-            iShift_D = iShift_DI(1:nDim,iSubGrid)
-            XyzGrid_DII(:,iOrderSubgrid,iGrid) = &
-                 XyzGrid_DII(:,0,iGrid) + DXyzSubgrid_D*(iShift_D -0.50)
-            iCellIndexes_DII(:,iOrderSubgrid,iGrid) = iCellIndexes_D + iShift_D
+            iCellIndexes_DII(:,iOrderSubgrid,iGridFlip) = &
+                 iCellIndexes_D + iShift_DI(1:nDim,iSubGrid)
+            iSubgridFlip = iOrderFlip_ID(iSubGrid,iDirFlipBlock)
+            XyzGrid_DII(:,iOrderSubgrid,iGridFlip) = &
+                 XyzGrid_DII(:,0,iGridFlip) + DXyzSubgrid_D*&
+                 (iShift_DI(1:nDim,iSubgridFlip) - 0.50)
          end do
       end do
     end subroutine get_fine_block
@@ -4459,7 +4491,7 @@ contains
       !\
       ! Loop variables
       !/
-      integer:: iGrid
+      integer:: iGrid, iDirFlipFineBlock
       !\
       !Discriminator
       !/
@@ -4538,9 +4570,16 @@ contains
          XyzGridOld_D = DXyzSubgrid_D*(iCellIndexes_DII(:,1,iGrid) -0.50)
          XyzGridShift_D = XyzGridOriginShift_D +&
               DXyzSubgrid_D*iShift_DI(1:nDim,iGrid)
+         if(IsFlipped_I(iGrid))then
+            iDirFlipFineBlock = iDirFlip
+            XyzGridShift_D(iDirFlip) = - XyzGridShift_D(iDirFlip) 
+         else
+            iDirFlipFineBlock = 0
+         end if
+            
          call get_fine_block(iGrid, &
               XyzGrid_D = XyzGridOld_D + XyzGridShift_D,&
-              iDirFlipBlock = 0) 
+              iDirFlipBlock = iDirFlipFineBlock) 
       end do
       !\
       ! Done with all previously found fine blocks. Now proceed to
@@ -4552,7 +4591,11 @@ contains
       !/
       XyzGridShift_D = XyzGridOriginShift_D + &
            DXyzSubgrid_D*iShift_DI(1:nDim,iGridInBlock)
-      call get_block(iGridInBlock, XyzGrid_D + XyzGridShift_D,0)
+      if(iDirFlipBlock > 0)XyzGridShift_D(iDirFlipBlock) = -&
+           XyzGridShift_D(iDirFlipBlock)
+      call get_block(iGridInBlock                ,&
+           XyzGrid_D     = XyzGrid_D + XyzGridShift_D,&
+           iDirFlipBlock = iDirFlipBlock)
     end subroutine get_coarse_block
     !=====================
     subroutine get_ghost_cell_indexes
@@ -4596,7 +4639,10 @@ contains
 
          iBlock_I(iGrid) = iBlock_I(iGridPhys)
          iProc_I( iGrid) = iProc_I( iGridPhys)
-
+         if(IsFlipped_I(iGrid).neqv.IsFlipped_I(iGridPhys))&
+              iCellIndexes_DII( iDirFlip,1: nSubgrid_I(iGrid), iGrid)  =&
+              -iCellIndexes_DII(iDirFlip,1: nSubgrid_I(iGrid), iGrid)  +&
+              nCell_D(iDirFlip) +1 !Change 1<->nCell in flipped blocks
          iShift_D = iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys)
          !\
          ! Below we benefit from the observation that although the
