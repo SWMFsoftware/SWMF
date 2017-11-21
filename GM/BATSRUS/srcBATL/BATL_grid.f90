@@ -1719,7 +1719,8 @@ contains
     logical, optional, intent(out):: IsSecondOrder
 
     integer:: DiLevelNei_III(-1:1,-1:1,-1:1)
-    real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordMin_D(MaxDim)
+    integer:: iDim ! loop variable
+    real   :: Coord_D(MaxDim), DCoord_D(MaxDim), CoordBlock_D(MaxDim)
     !-----------------------------------
     ! check number of AMR dimensions:
     ! if it is 0 or 1 => call a simpler interpolation function
@@ -1728,7 +1729,7 @@ contains
        if(present(IsSecondOrder)) IsSecondOrder = .true.
        RETURN
     end if
-    
+
     ! Convert to generalized coordinates if necessary
     if(IsCartesianGrid)then
        Coord_D = XyzIn_D
@@ -1736,10 +1737,41 @@ contains
        call xyz_to_coord(XyzIn_D, Coord_D)
     end if
 
-
     ! get corner coordinates and cel size of the block
-    CoordMin_D =  CoordMin_DB(:,iBlock)
+    CoordBlock_D =  CoordMin_DB(:,iBlock)
     DCoord_D   = (CoordMax_DB(:,iBlock) - CoordMin_DB(:,iBlock)) / nIJK_D
+
+    ! account for periodic or "flipped" coordinates:
+    ! may need to adjust Coord_D if point is outside the block
+    do iDim = 1, nDim
+       if(  Coord_D(iDim) >= CoordMin_DB(iDim, iBlock) .and. &
+            Coord_D(iDim) <  CoordMax_DB(iDim, iBlock))&
+            CYCLE
+       !\
+       ! adjustment only needed near blocks along domain boundary
+       !/
+       if(IsPeriodic_D(iDim))then
+          ! example in polar coords: point's polar angle is close to 2pi,
+          ! while block's boundary is 0 => subtract 2pi from point's angle
+          if(CoordMin_DB(iDim, iBlock)==CoordMin_D(iDim).and.&
+               CoordMax_D(iDim)-Coord_D(iDim) <= DCoord_D(iDim))then
+             Coord_D(iDim) = Coord_D(iDim) - DomainSize_D(iDim)
+          elseif(CoordMax_DB(iDim, iBlock)==CoordMax_D(iDim).and.&
+               Coord_D(iDim)-CoordMin_D(iDim) < DCoord_D(iDim))then
+             Coord_D(iDim) = Coord_D(iDim) + DomainSize_D(iDim)
+          end if
+       elseif(iDim==Theta_ .and.(IsSpherical .or. IsRLonLat))then
+          ! example in rlonlat coords: point's latitude is close and < pi/2
+          ! block is across the pole => reflect point so that latitude > pi/2
+          if(CoordMin_DB(iDim, iBlock)==CoordMin_D(iDim).and.&
+               Coord_D(iDim)-CoordMin_D(iDim) <= DCoord_D(iDim))then
+             Coord_D(iDim) = 2*CoordMin_D(iDim)-Coord_D(iDim)
+          elseif(CoordMax_DB(iDim, iBlock)==CoordMax_D(iDim).and.&
+               CoordMax_D(iDim)-Coord_D(iDim) < DCoord_D(iDim))then
+             Coord_D(iDim) = 2*CoordMax_D(iDim)-Coord_D(iDim)
+          end if
+       end if
+    end do
 
     ! information about neighbors' resolution level relative to current block
     ! NOTE: in the shared procedure difference is understood as follows:
@@ -1751,7 +1783,7 @@ contains
 
     ! call the wrapper for the shared AMR interpolation procedure
     call interpolate_amr_gc(&
-         nDim, Coord_D(1:nDim), CoordMin_D(1:nDim),&
+         nDim, Coord_D(1:nDim), CoordBlock_D(1:nDim),&
          DCoord_D(1:nDim), nIJK_D(1:nDim), DiLevelNei_III, &
          nCell, iCell_II(1:nDim,:), Weight_I, IsSecondOrder)
 
@@ -1990,6 +2022,9 @@ contains
           CoordTree_D(1:nDim) = &
                ( CoordGrid_DI(1:nDim,iGrid) - CoordMin_D(1:nDim) ) / &
                DomainSize_D(1:nDim)
+          where(IsPeriodic_D(1:nDim)) &
+               CoordTree_D(1:nDim) = modulo(CoordTree_D(1:nDim), 1.0)
+
           ! call internal BATL find subroutine
           call find_tree_node(CoordIn_D=CoordTree_D, iNode=iNode)
           iNode_I(iGrid) = iNode
