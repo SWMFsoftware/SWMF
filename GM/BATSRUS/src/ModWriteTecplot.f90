@@ -755,11 +755,11 @@ contains
   subroutine write_tecplot_setinfo
 
     use ModProcMH, ONLY: iProc
-    use ModMain, ONLY: n_step, time_accurate
+    use ModMain, ONLY: n_step, time_accurate, iStartTime_I
     use ModIO, ONLY: StringDateOrTime
     use ModGeometry, ONLY: count_true_cells
 
-    integer :: iTime0_I(7),iTime_I(7)
+    integer :: iTime_I(7)
     character (len=80) :: format
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_tecplot_setinfo'
@@ -782,9 +782,8 @@ contains
     end if
 
     format='(i4.4,"/",i2.2,"/",i2.2," ",i2.2,":",i2.2,":",i2.2,".",i3.3)'
-    call get_date_time_start(iTime0_I)
     call get_date_time(iTime_I)
-    write(textDateTime0,format) iTime0_I
+    write(textDateTime0,format) iStartTime_I
     write(textDateTime ,format) iTime_I
 
     call test_stop(NameSub, DoTest)

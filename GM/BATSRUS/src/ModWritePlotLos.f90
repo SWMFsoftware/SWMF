@@ -64,7 +64,7 @@ contains
     use ModProcMH
     use ModMain, ONLY : nI, nJ, nK, n_step, time_simulation, Unused_B, &
          time_accurate, nBlock, NameThisComp, BufferMax_D, TypeCoordSystem, &
-         Body1, StartTime
+         Body1, StartTime, iStartTime_I
     use ModGeometry, ONLY: &
          XyzStart_BLK, nMirror_D, RadiusMin, rMin_BLK
     use ModPhysics, ONLY : No2Io_V, UnitX_, No2Si_V, UnitN_, rBody, &
@@ -126,17 +126,17 @@ contains
     ! rOuter in SC should be smaller than the size of the domain
     real :: rInner, rInner2, rOuter, rOuter2
 
-    character (LEN=500) :: allnames, StringHeadLine
-    character (LEN=500) :: unitstr_TEC, unitstr_IDL
-    character (LEN=5) :: file_extension
-    character (LEN=40) :: file_format
+    character(len=500) :: allnames, StringHeadLine
+    character(len=500) :: unitstr_TEC, unitstr_IDL
+    character(len=5)   :: file_extension
+    character(len=40)  :: file_format
 
     ! extra variables needed for auxiliarry data writing with tec output
     ! (style copied from write_plot_tec)
-    character (len=23) :: TextDateTime0, TextDateTime
-    character (len=80) :: FormatTime
+    character(len=23) :: TextDateTime0, TextDateTime
+    character(len=80) :: FormatTime
     character(len=80) :: StringTmp
-    integer :: iTime0_I(7),iTime_I(7)
+    integer           :: iTime_I(7)
 
     ! block and variable Indices
     integer :: iBlock, iMirror, jMirror, kMirror, iVar
@@ -454,9 +454,8 @@ contains
 
              FormatTime = &
                   '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
-             call get_date_time_start(iTime0_I)
              call get_date_time(iTime_I)
-             write(TextDateTime0,FormatTime) iTime0_I
+             write(TextDateTime0,FormatTime) iStartTime_I
              write(TextDateTime ,FormatTime) iTime_I
 
              ! TIMEEVENT
@@ -516,9 +515,8 @@ contains
 
              write(FormatTime,*)&
                   '(i4.4,"/",i2.2,"/",i2.2,"T",i2.2,":",i2.2,":",i2.2,".",i3.3)'
-             call get_date_time_start(iTime0_I)
              call get_date_time(iTime_I)
-             write(TextDateTime0,FormatTime) iTime0_I
+             write(TextDateTime0,FormatTime) iStartTime_I
              write(TextDateTime ,FormatTime) iTime_I
 
              ! TIMEEVENT and TIMEEVENTSTART

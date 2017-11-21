@@ -332,20 +332,6 @@ subroutine test_error_report
 end subroutine test_error_report
 !==============================================================================
 
-subroutine get_date_time_start(iTime_I)
-
-  use ModMain,        ONLY : StartTime
-  use ModTimeConvert, ONLY : time_real_to_int
-
-  implicit none
-  integer, intent(out) :: iTime_I(7)
-
-  !----------------------------------------------------------------------------
-  call time_real_to_int(StartTime,iTime_I)
-
-end subroutine get_date_time_start
-!==============================================================================
-
 subroutine get_date_time(iTime_I)
 
   use ModMain,        ONLY : StartTime, Time_Simulation
