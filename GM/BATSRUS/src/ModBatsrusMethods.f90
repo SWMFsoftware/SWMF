@@ -634,13 +634,13 @@ contains
     use ModNumConst, ONLY: cTiny
     use ModAdvance, ONLY : Bx_, Bz_, State_VGB, tmp1_BLK
     use ModIO, ONLY: write_prefix, iUnitOut
-    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_, nBlock, message_pass_cell
+    use BATL_lib, ONLY: Xyz_DGB, x_, y_, z_, nBlock, message_pass_cell, &
+         maxval_grid
 
     ! Local variables
-    real, external :: maxval_loc_abs_BLK
     integer :: iBlock
     integer :: iLoc_I(5)  ! full location index
-    real    :: divbmax_now
+    real    :: DivBMax
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'BATS_init_constrain_b'
     !--------------------------------------------------------------------------
@@ -659,17 +659,18 @@ contains
     end do
 
     call proj_get_divb(tmp1_BLK)
-    divbmax_now=maxval_loc_abs_BLK(nProc,tmp1_BLK,iLoc_I)
+    DivBMax = &
+         maxval_grid(tmp1_BLK, UseAbs=.true., iLoc_I=iLoc_I)
     if(iProc == 0.and.lVerbose>0)then
        call write_prefix; write(iUnitOut,*)
        call write_prefix; write(iUnitOut,*) NameSub, &
-            ' maximum of |div B| before projection=',divbmax_now
+            ' maximum of |div B| before projection=',DivBMax
        call write_prefix; write(iUnitOut,*)
     end if
-    if(divbmax_now>cTiny)then
+    if(DivBMax>cTiny)then
        if(iProc==iLoc_I(5))then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               ' divB,loc,x,y,z=',divbmax_now,iLoc_I,&
+               ' divB,loc,x,y,z=',DivBMax,iLoc_I,&
                Xyz_DGB(:,iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
        end if
 
@@ -684,16 +685,17 @@ contains
 
        ! Check and report the accuracy of the projection
        call proj_get_divb(tmp1_BLK)
-       divbmax_now=maxval_loc_abs_BLK(nProc,tmp1_BLK,iLoc_I)
-       if(iProc == 0.and.lVerbose>0)then
+       DivBMax = &
+            maxval_grid(tmp1_BLK, UseAbs=.true., iLoc_I=iLoc_I)
+       if(iProc == 0 .and. lVerbose > 0)then
           call write_prefix; write(iUnitOut,*)
           call write_prefix; write(iUnitOut,*) NameSub, &
-               ' maximum of |div B| after projection=',divbmax_now
+               ' maximum of |div B| after projection=',DivBMax
           call write_prefix; write(iUnitOut,*)
        end if
-       if(iProc==iLoc_I(5).and.divbmax_now>cTiny)then
+       if(iProc==iLoc_I(5) .and. DivBMax > cTiny)then
           call write_prefix; write(iUnitOut,*) NameSub, &
-               ' divB,loc,x,y,z=',divbmax_now,iLoc_I,&
+               ' divB,loc,x,y,z=', DivBMax, iLoc_I,     &
                Xyz_DGB(:,iLoc_I(x_),iLoc_I(y_),iLoc_I(z_),iLoc_I(4))
        end if
     end if

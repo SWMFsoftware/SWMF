@@ -5,7 +5,9 @@
 module ModProjectDivB
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, &
+       minval_grid, maxval_grid
+
 
   ! Parameters for projection scheme:
   !
@@ -124,11 +126,6 @@ contains
 
     integer :: loc(5)
 
-    ! Functions:
-
-    real, external :: maxval_abs_BLK, minval_BLK, maxval_loc_abs_BLK, &
-         minval_loc_BLK
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'project_divb'
     !--------------------------------------------------------------------------
@@ -178,8 +175,8 @@ contains
     ! call stop_mpi('debug')
 
     if(DoTest)then
-       pmin_old=minval_BLK(nProc,State_VGB(P_,:,:,:,:))
-       divbmax_now=maxval_abs_BLK(nProc,proj_divB)
+       pmin_old = minval_grid(State_VGB(P_,:,:,:,:))
+       divbmax_now = maxval_grid(proj_divB, UseAbs=.true.)
        if(DoTest) write(*,*) NameSub, &
             ': old max(abs(divB)), min(p)=',divbmax_now,pmin_old
     endif
@@ -194,10 +191,11 @@ contains
        case('rel')
           divbmax=proj_divbcoeff
        case('max')
-          if(proj_divbcoeff>0.0)then
-             divbmax=proj_divbcoeff*maxval_abs_BLK(nProc,proj_divb)
+          if(proj_divbcoeff > 0.0)then
+             divbmax = proj_divbcoeff &
+                  *maxval_grid(proj_divb, UseAbs=.true.)
           else
-             divbmax=proj_divbconst
+             divbmax = proj_divbconst
           endif
        end select
        if(DoTest)write(*,*)'Allowed maximum for div B:',divbmax
@@ -243,7 +241,8 @@ contains
        if(DoTest)write(*,*)'after proj_divb=',&
             proj_divb(iTest,jTest,kTest,iBlockTest)
 
-       divbmax_now=maxval_loc_abs_BLK(nProc,proj_divB,loc)
+       divbmax_now = &
+            maxval_grid(proj_divB, UseAbs=.true., iLoc_I=loc)
        if(abs(resid-divbmax_now)/(divbmax_now+1.e-12) > 0.1)then
           if(iProc==loc(5))write(*,*)&
                 NameSub, ': resid,max(abs(divB)),loc,X,Y,Z=',&
@@ -253,7 +252,7 @@ contains
           if(DoTest)write(*,*) NameSub, ': resid,max(abs(divB))',&
                resid, divbmax_now
        end if
-       pmin_new   =minval_loc_BLK(nProc,State_VGB(P_,:,:,:,:),loc)
+       pmin_new = minval_grid(State_VGB(P_,:,:,:,:), iLoc_I=loc)
        if(pmin_new<0.5*pmin_old)then
           if(iProc==loc(5))write(*,*) NameSub, ': min(p),loc,X,Y,Z=',&
                pmin_new,loc,Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
@@ -454,7 +453,6 @@ contains
     use ModMain, ONLY : MaxBlock,nBlock,Unused_B,nI,nJ,nK, x_, y_, z_
     use ModGeometry, ONLY : true_cell,body_BLK
     use ModMain, ONLY : UseConstrainB
-!    use ModCT
     use BATL_lib, ONLY: CellSize_DB
 
     ! Arguments
@@ -783,7 +781,7 @@ contains
   subroutine proj_cg(rhs,qx,iter,tol,typestop,info)
     use ModProcMH
     use ModMain, ONLY:MaxBlock
-    use ModAdvance, ONLY : tmp1_BLK,tmp2_BLK
+    use ModAdvance, ONLY: tmp1_BLK, tmp2_BLK
 
     ! Arguments
 
@@ -822,10 +820,6 @@ contains
     integer ::itr,matv
     real :: rho,rhonew,res,res0,bet,alf,assumedzero
 
-    ! external Functions:
-
-    real :: maxval_abs_BLK
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_cg'
     !--------------------------------------------------------------------------
@@ -849,7 +843,8 @@ contains
     rho=sqrt(dot_product_BLK(rhs,rhs))
 
     res0=rho
-    if (typestop=='max') res0=maxval_abs_BLK(nProc,rhs)
+    if (typestop=='max') res0 = maxval_grid(Rhs, UseAbs=.true.)
+
     ! DEBUG
     ! write(*,*)'res0:',res0,' rhs:',rhs
 
@@ -907,10 +902,10 @@ contains
 
           select case(typestop)
           case('max')
-             res=maxval_abs_BLK(nProc,rhs)
+             res = maxval_grid(Rhs, UseAbs=.true.)
 
           case('rel')
-             res=rhonew/res0
+             res = rhonew/res0
 
           case('abs')
              res=rhonew
@@ -1070,10 +1065,6 @@ contains
     real::    assumedzero, rnrm0, rnrm, rnrmMax0, rnrmMax
     real::    mxnrmx, mxnrmr, kappa0, kappal
 
-    ! External function:
-
-    real :: maxval_abs_BLK
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'proj_bicgstab'
     !--------------------------------------------------------------------------
@@ -1129,7 +1120,7 @@ contains
        rnrmMax0 = 0
 
     case('max')
-       rnrmMax0 = maxval_abs_BLK(nProc,tmp1_BLK)
+       rnrmMax0 = maxval_grid(tmp1_BLK, UseAbs=.true.)
        rnrmMax  = rnrmMax0
        if(DoTest) print *,'initial rnrmMax:',rnrmMax
        GoOn = rnrmMax>tol    .and. nmv<iter
@@ -1265,8 +1256,8 @@ contains
           if(DoTest) print *, nmv,' matvecs, ||rn|| =',rnrm
 
        case('max')
-          rnrmMax = maxval_abs_BLK(nProc,tmp1_BLK)
-          GoOn = rnrmMax>tol    .and. nmv<iter
+          rnrmMax = maxval_grid(tmp1_BLK, UseAbs=.true.)
+          GoOn = rnrmMax > tol  .and. nmv < iter
           if(DoTest) print *, nmv,' matvecs, max(rn) =',rnrmMax
        end select
 

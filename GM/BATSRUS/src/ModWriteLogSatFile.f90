@@ -30,7 +30,7 @@ contains
     use ModSatelliteFile, ONLY: NameSat_I, IsFirstWriteSat_I, &
          iUnitSat_I, TimeSat_I, StringSatVar_I, DoTrackSatellite_I, XyzSat_DI
     use CON_axes, ONLY: transform_matrix
-    use BATL_lib, ONLY: Xyz_DGB, UseTestXyz
+    use BATL_lib, ONLY: Xyz_DGB, UseTestXyz, maxval_grid, minval_grid
     use ModMpi
 
     ! Arguments
@@ -69,8 +69,6 @@ contains
     ! Event date for filename
     character(len=19) :: EventDateTime
 
-    real, external :: maxval_loc_BLK, minval_loc_BLK
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_logfile'
     !--------------------------------------------------------------------------
@@ -85,13 +83,13 @@ contains
             = State_VGB(P_,1:nI,1:nJ,1:nK,1:nBlock)
 
        if(index(StringTest,'show_pmin')>0)then
-          pMin = minval_loc_BLK(nProc,tmp1_BLK,loc)
+          pMin = minval_grid(tmp1_BLK, iLoc_I=loc)
           if(loc(5)==iProc)write(*,*)'pmin, loc, x, y, z=',pmin,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
        end if
 
        if(index(StringTest,'show_pmax')>0)then
-          pMax = maxval_loc_BLK(nProc,tmp1_BLK,loc)
+          pMax = maxval_grid(tmp1_BLK, iLoc_I=loc)
           if(loc(5)==iProc)write(*,*)'pmax, loc, x, y, z=',pmax,loc, &
                Xyz_DGB(:,loc(1),loc(2),loc(3),loc(4))
 
@@ -329,6 +327,7 @@ contains
     use ModIO, ONLY: write_myname, lNameLogVar
     use ModMultiFluid, ONLY: UseMultiIon,  iFluid, &
          iRho, iP, iPpar, iRhoUx, iRhoUy, iRhoUz, iRhoIon_I, MassIon_I
+    use BATL_lib, ONLY: integrate_grid, maxval_grid, minval_grid
 
     integer, intent(in)                     :: nLogVar, nLogR, nLogTot, iSat
     character (len=lNameLogVar), intent(in) :: NameLogVar_I(nLogVar)
@@ -350,8 +349,6 @@ contains
     ! B0Sat_D contains B0 at the satellite
     real :: StateSat_V(0:nVar+3), B0Sat_D(3)
 
-    real, external :: integrate_BLK, maxval_BLK, minval_BLK
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_logvar'
     !--------------------------------------------------------------------------
@@ -365,7 +362,7 @@ contains
 
     LogVar_I = 0.0
     tmp1_BLK = 1.0
-    DomainVolume  =integrate_BLK(nProc,tmp1_BLK)
+    DomainVolume  =integrate_grid(tmp1_BLK, UseGlobal=.true.)
 
     ! Obtain data to calculate log variables
     if(iSat>=1)then
@@ -460,13 +457,13 @@ contains
          ! MHD variables averaged over the computational domain
       case('e')
          LogVar_I(iVarTot) = &
-              integrate_BLK(1,Energy_GBI(:,:,:,:,iFluid))/DomainVolume
+              integrate_grid(Energy_GBI(:,:,:,:,iFluid))/DomainVolume
       case('pmin')
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = minval_BLK(nProc,tmp2_BLK)/nProc
+         LogVar_I(iVarTot) = minval_grid(tmp2_BLK)/nProc
       case('pmax')
          ! Divide by nProc so that adding up the processors can work
-         LogVar_I(iVarTot) = maxval_BLK(nProc,tmp2_BLK)/nProc
+         LogVar_I(iVarTot) = maxval_grid(tmp2_BLK)/nProc
       case('ux')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -474,7 +471,7 @@ contains
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
       case('uy')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -482,7 +479,7 @@ contains
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
       case('uz')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -490,7 +487,7 @@ contains
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock) / &
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
       case('pperp')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -498,7 +495,7 @@ contains
                  ( 3*State_VGB(iP,1:nI,1:nJ,1:nK,iBlock) &
                  -State_VGB(iPpar,1:nI,1:nJ,1:nK,iBlock) )/2
          end do
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
       case('ekinx')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -506,7 +503,7 @@ contains
                  State_VGB(iRhoUx,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
       case('ekiny')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -514,7 +511,7 @@ contains
                  State_VGB(iRhoUy,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
       case('ekinz')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -522,7 +519,7 @@ contains
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2/&
                  State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
       case('ekin')
          do iBlock=1,nBlock
             if (Unused_B(iBlock)) CYCLE
@@ -532,7 +529,7 @@ contains
                  State_VGB(iRhoUz,1:nI,1:nJ,1:nK,iBlock)**2)&
                  /State_VGB(iRho,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = 0.5*integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = 0.5*integrate_grid(tmp1_BLK)/DomainVolume
 
       case('jin','jout','jinmax','joutmax')
 
@@ -614,7 +611,7 @@ contains
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
 
       case('dst_sm')
          ! Calculate the Biot-Savart formula for the center of the Earth:
@@ -650,7 +647,7 @@ contains
             end do; end do; end do
          end do
          ! The /4pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
 
       case('dstdivb')
          ! Calculate the contribution of Div B to the surface integral of DST
@@ -678,7 +675,7 @@ contains
             end do; end do; end do
          end do
          ! The 4*pi is part of the Biot-Savart formula
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK) / (4*cPi)
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK) / (4*cPi)
 
 !!$! MHD variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('rhopnt')
@@ -776,7 +773,7 @@ contains
             if(Unused_B(iBlock)) CYCLE
             tmp1_BLK(1:nI,1:nJ,1:nK,iBlock) = ray(i,j,1:nI,1:nJ,1:nK,iBlock)
          end do
-         LogVar_I(iVarTot) = integrate_BLK(1,tmp1_BLK)/DomainVolume
+         LogVar_I(iVarTot) = integrate_grid(tmp1_BLK)/DomainVolume
          ! RAYTRACE variables at iTest, jTest, kTest, iBlockTest, iProcTest
       case('theta1pnt')
          if(iProc == iProcTest) &

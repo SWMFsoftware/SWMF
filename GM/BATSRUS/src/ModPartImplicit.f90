@@ -393,11 +393,9 @@ contains
     use ModHallResist, ONLY: UseHallResist, HallCmaxFactor
     use ModFixAxisCells, ONLY: fix_axis_cells
 
-    use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB
+    use BATL_lib, ONLY: Unused_B, Unused_BP, Xyz_DGB, minval_grid
     use BATL_size, ONLY: j0_, nJp1_, k0_, nKp1_
     use ModMpi
-
-    real, external :: minval_BLK, minval_loc_BLK
 
     integer :: i, j, k, iVar, iBlock, iBlockImpl
     integer :: nIterNewton
@@ -731,7 +729,7 @@ contains
        end do
 
        if(index(StringTest, 'updatecheck') > 0)then
-          pRhoRelativeMin = minval_loc_BLK(nProc, tmp1_BLK, iLoc_I)
+          pRhoRelativeMin = minval_grid(tmp1_BLK, iLoc_I=iLoc_I)
           if(iLoc_I(5) == iProc)then
              i = iLoc_I(1); j = iLoc_I(2); k = iLoc_I(3); iBlock = iLoc_I(4)
              write(*,*) 'pRhoRelativeMin is at i,j,k,iBlock,iProc = ',iLoc_I
@@ -741,7 +739,7 @@ contains
              write(*,*) 'pRhoRelativeMin=', pRhoRelativeMin
           end if
        else
-          pRhoRelativeMin = minval_BLK(nProc,tmp1_BLK)
+          pRhoRelativeMin = minval_grid(tmp1_BLK)
        end if
        if(pRhoRelativeMin < RejectStepLevel .or. ImplParam%iError /= 0)then
           ! Redo step if pressure decreased below RejectStepLevel
