@@ -32,13 +32,20 @@ module ModTestInterpolateAMR
   ! Ratio of lengths in different dimensions
   !/
   real, parameter:: SizeRatio_D(3) = (/1.0, 100.0, 0.01/)
+  !\
+  ! which coordinates are periodic
+  !/
+  logical:: IsPeriodic_D(3) = .false.
   
 contains
   !==================================================================
-  subroutine test_interpolate_amr(nDim,nSample, UseGeneric, UseGhostCell)
+  subroutine test_interpolate_amr(&
+       nDim,IsPeriodicIn_D,&
+       nSample, UseGeneric, UseGhostCell)
     use ModRandomNumber, ONLY: random_real
 
     integer, intent(in)::nDim, nSample
+    logical, intent(in)::IsPeriodicIn_D(nDim)
     logical, intent(in)::UseGeneric
     logical, optional, intent(in):: UseGhostCell
 
@@ -46,18 +53,21 @@ contains
     logical :: IsSecondOrder, IsPossible, IsOut
     real, dimension(nDim):: DxyzDomain_D, DxyzCoarseBlock_D, &
          DxyzFineBlock_D, DxyzCoarse_D, &
-         DxyzFine_D, Xyz_D,             &
+         DxyzFine_D, Xyz_D, XyzPass_D,  &
          XyzCont_D,                     &
          XyzInterpolated_D, XyzCorner_D,&
+         XyzModulo_D,                   &
          Dxyz_D
     real    ::VarInterpolated, VarContInterpolated
     real, allocatable::Xyz0_DGB(:,:,:,:,:)    
     real, allocatable::Xyz_DGB(:,:,:,:,:)    
     ! index of neigboring block, last index is resolution level of neighbor
     integer, allocatable::DiLevelNei_IIIB(:,:,:,:)
-    integer :: DiLevelNei_I(3**nDim)
     real, allocatable, dimension(:,:,:,:) :: Var_GB
     real    :: Weight_I(2**nDim)
+
+    ! whether to test approximation
+    logical:: DoTestApproximation
     !Loop variables
     integer :: iCase, iSample, iGrid, iSubGrid, i, j, k, iBlock, iDir
     integer :: iProc, iBlockNei
@@ -69,11 +79,17 @@ contains
     integer:: iSeed = 1
     !-------------------------------------------------------------------
     nCell_D = 1; nCell_D(1:nDim) = nCell
-    DxyzDomain_D      = 2*nCell*SizeRatio_D(1:nDim)
-    DxyzCoarseBlock_D = nCell*SizeRatio_D(1:nDim)
-    DxyzFineBlock_D   = 0.5*nCell*SizeRatio_D(1:nDim)
-    DxyzCoarse_D      = 1*SizeRatio_D(1:nDim)
-    DxyzFine_D        = 0.5*SizeRatio_D(1:nDim)
+    DxyzDomain_D        = 2*nCell*SizeRatio_D(1:nDim)
+    DxyzCoarseBlock_D   = nCell*SizeRatio_D(1:nDim)
+    DxyzFineBlock_D     = 0.5*nCell*SizeRatio_D(1:nDim)
+    DxyzCoarse_D        = 1*SizeRatio_D(1:nDim)
+    DxyzFine_D          = 0.5*SizeRatio_D(1:nDim)
+    IsPeriodic_D(1:nDim)= IsPeriodicIn_D
+    if(present(UseGhostCell))then
+       DoTestApproximation = .not.any(IsPeriodicIn_D) .or. UseGhostCell
+    else
+       DoTestApproximation = .not.any(IsPeriodicIn_D) .or. .not.UseGeneric
+    end if
     allocate(DiLevelNei_IIIB(-1:1,-1:1,-1:1,(2**nDim)*(2**nDim+1)))
     DiLevelNei_IIIB = 0
     allocate(Xyz0_DGB(nDim, 1-nG:nCell_D(1)+nG, &
@@ -168,15 +184,10 @@ contains
                 XyzCorner_D = Xyz_DGB(:,1,1,1,iBlock) - 0.5*DxyzFine_D
                 Dxyz_D = DxyzFine_D
              end if
-             if(nDim==2)then
-                DiLevelNei_I=reshape(DiLevelNei_IIIB(:,:,0,iBlock),(/3**nDim/))
-             else
-                DiLevelNei_I=reshape(DiLevelNei_IIIB(:,:,:,iBlock),(/3**nDim/))
-             end if
-
+             call fix_coord(nDim, Xyz_D, XyzCorner_D, XyzCorner_D+nCell*Dxyz_D, XyzPass_D)
              call interpolate_amr_gc(&
                   nDim         = nDim, &
-                  Xyz_D        = Xyz_D, &
+                  Xyz_D        = XyzPass_D, &
                   XyzMin_D     = XyzCorner_D, &
                   DXyz_D       = DXyz_D, &
                   nCell_D      = nCell_D, &
@@ -204,7 +215,13 @@ contains
                   Var_GB(iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
           end do
-          if(any(abs(Xyz_D - XyzInterpolated_D) > 1.0e-6).and.&
+          ! for periodic boundary conditions apply modulo
+          XyzModulo_D = XyzInterpolated_D
+          where(IsPeriodic_D(1:nDim))
+             XyzModulo_D = modulo(XyzModulo_D, DxyzDomain_D)
+          end where
+          if(  DoTestApproximation.and.&
+               any(abs(Xyz_D - XyzModulo_D) > 1.0e-6).and.&
                IsSecondOrder)then
              write(*,*)'Approximation test failed'
              write(*,*)'Grid:', iLevelTest_I(1:2**nDim)
@@ -256,14 +273,10 @@ contains
                 XyzCorner_D = Xyz_DGB(:,1,1,1,iBlock) - 0.5*DxyzFine_D
                 Dxyz_D = DxyzFine_D
              end if
-             if(nDim==2)then
-                DiLevelNei_I=reshape(DiLevelNei_IIIB(:,:,0,iBlock),(/3**nDim/))
-             else
-                DiLevelNei_I=reshape(DiLevelNei_IIIB(:,:,:,iBlock),(/3**nDim/))
-             end if
+             call fix_coord(nDim, XyzCont_D, XyzCorner_D, XyzCorner_D+nCell*Dxyz_D, XyzPass_D)
              call interpolate_amr_gc(&
                   nDim         = nDim, &
-                  Xyz_D        = XyzCont_D, &
+                  Xyz_D        = XyzPass_D, &
                   XyzMin_D     = XyzCorner_D, &
                   DXyz_D       = DXyz_D, &
                   nCell_D      = nCell_D, &
@@ -291,7 +304,12 @@ contains
                   Xyz_DGB(:,iCellIndex_D(1), iCellIndex_D(2), &
                   iCellIndex_D(3), iBlock)
           end do
-          if(any(abs(XyzCont_D - XyzInterpolated_D) > 1.0e-6).and.&
+          XyzModulo_D = XyzInterpolated_D
+          where(IsPeriodic_D(1:nDim))
+             XyzModulo_D = modulo(XyzModulo_D, DxyzDomain_D)
+          end where
+          if(  DoTestApproximation.and.&
+               any(abs(XyzCont_D - XyzModulo_D) > 1.0e-6).and.&
                IsSecondOrder)then
              write(*,*)'Approximation test failed'
              write(*,*)'Grid:', iLevelTest_I(1:2**nDim)
@@ -350,6 +368,36 @@ contains
     end do CASE
     deallocate(Xyz_DGB, Var_GB, DiLevelNei_IIIB)
   contains
+    !============================
+    subroutine fix_coord(nDim, XyzIn_D, XyzBlockMin_D, XyzBlockMax_D, XyzOut_D)
+      ! for periodic/flipped coordinate may need to adjust point's coordinates
+      ! for calling interpolate_amr_gc
+      integer,intent(in) :: nDim
+      real,   intent(in) :: XyzIn_D(nDim)
+      real,   intent(in) :: XyzBlockMin_D(nDim)
+      real,   intent(in) :: XyzBlockMax_D(nDim)
+      real,   intent(out):: XyzOut_D(nDim)
+      
+      real   :: Dxyz
+      integer:: iDim
+      !------------------------------------------------------------------------
+      XyzOut_D = XyzIn_D
+      do iDim = 1, nDim
+         if(  XyzOut_D(iDim) < XyzBlockMax_D(iDim) .and.&
+              XyzOut_D(iDim) >=XyzBlockMin_D(iDim))&
+              CYCLE
+         Dxyz = (XyzBlockMax_D(iDim) - XyzBlockMin_D(iDim)) / nCell_D(iDim)
+         if(IsPeriodic_D(iDim))then
+            if(XyzBlockMax_D(iDim)==DxyzDomain_D(iDim).and.&
+                 XyzOut_D(iDim) < Dxyz)then
+               XyzOut_D(iDim) = XyzOut_D(iDim) + DxyzDomain_D(iDim)
+            elseif(XyzBlockMin_D(iDim)==0.0.and.&
+                 XyzOut_D(iDim) >= DxyzDomain_D(iDim)-Dxyz)then
+               XyzOut_D(iDim) = XyzOut_D(iDim) - DxyzDomain_D(iDim)
+            end if
+         end if
+      end do
+    end subroutine fix_coord
     !============================
     subroutine check_interpolate_test(nDim, Xyz_D, iBlockIn, &
          iProcOut, iBlockOut)
@@ -439,15 +487,20 @@ contains
       integer, intent(in ):: iLevel_I(2**nDim)
       integer, intent(out):: iLevelOut
 
+      real:: XyzModulo_D(nDim)
       integer:: iDim, iGrid
       integer, parameter:: nTwoPower_I(3) = (/1,2,4/)
       !-----------------------------------------------
-      if(any(Xyz_D < 0) .or. any(Xyz_D >= DxyzDomain_D(1:nDim)))then
+      XyzModulo_D = Xyz_D
+      where(IsPeriodic_D(1:nDim))
+         XyzModulo_D = modulo(Xyz_D, DxyzDomain_D(1:nDim))
+      end where
+      if(any(XyzModulo_D < 0).or.any(XyzModulo_D >= DxyzDomain_D(1:nDim)))then
          iLevelOut = Out_
          RETURN
       end if
       iGrid = 1 + SUM(nTwoPower_I(1:nDim), &
-           MASK = Xyz_D >= 0.5 * DxyzDomain_D(1:nDim))
+           MASK = XyzModulo_D >= 0.5 * DxyzDomain_D(1:nDim))
       iLevelOut = iLevel_I(iGrid)
     end subroutine get_level
     !===========================
@@ -501,7 +554,7 @@ contains
       integer:: iDim, iProc, iBlock, iBlockNei, i, j ,k
       integer:: iGrid, iSubGrid
       integer:: iCellIndex_D(3), iCellIndexNei_D(3)
-      real, dimension(nDim):: Xyz_D, XyzCorner_D, Dxyz_D
+      real, dimension(nDim):: Xyz_D, XyzCorner_D, Dxyz_D, DxyzModulo_D
       !-----------------------------------------------
       Xyz_DGB = Xyz0_DGB
       ! find blocks that are used in the current refinement
@@ -527,6 +580,14 @@ contains
                   Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
                   call find_test(nDim, Xyz_D, &
                        iProc, iBlockNei, XyzCorner_D, Dxyz_D, IsOut)
+                  DxyzModulo_D = Xyz_DGB(:,i,j,k,iBlock) - Xyz_D - XyzCorner_D
+                  where(    DxyzModulo_D > Dxyz_D)
+                     DxyzModulo_D = DxyzDomain_D
+                  elsewhere(DxyzModulo_D <-Dxyz_D)
+                     DxyzModulo_D =-DxyzDomain_D
+                  elsewhere
+                     DxyzModulo_D = 0.0
+                  end where
                   if(IsOut) CYCLE
                   if(iBlock <= 2**nDim            &! iBlock    is Coarse
                        .and. iBlockNei > 2**nDim) &! iBlockNei is Fine
@@ -543,6 +604,10 @@ contains
                        Xyz_DGB(:,iCellIndexNei_D(1),&
                        iCellIndexNei_D(2),&
                        iCellIndexNei_D(3),iBlockNei)
+                  where(IsPeriodic_D(1:nDim))
+                     Xyz_DGB(:,i,j,k,iBlock) = &
+                          Xyz_DGB(:,i,j,k,iBlock) + DxyzModulo_D
+                  end where
                end do
             end do
          end do
@@ -597,6 +662,10 @@ contains
     DxyzCoarse_D      = 1*SizeRatio_D(1:nDim)
     DxyzFine_D        = 0.5*SizeRatio_D(1:nDim)
     iProc = 0; iBlock=0; XyzCorner_D=0.0; Dxyz_D = 0.0
+    ! fix periodic coordinates
+    where(IsPeriodic_D(1:nDim))
+       Xyz_D = modulo(Xyz_D, DxyzDomain_D)
+    end where
     IsOut = any(Xyz_D < 0.0 .or. Xyz_D >= DxyzDomain_D)
     if(IsOut) RETURN
     !\
@@ -638,12 +707,46 @@ program test_interpolate_amr
 
   implicit none
 
-  call test(2,20000, .true., .false.)
-  call test(2,20000, .true., .true.)
-  call test(2,20000, .false.)
-  call test(3,20000, .true., .false.)
-  call test(3,20000, .true., .true.)
-  call test(3,20000, .false.)
+  call test(&
+       nDim          = 2,&
+       IsPeriodicIn_D= (/.true.,.false./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .false.)
+
+  call test(&
+       nDim          = 2,&
+       IsPeriodicIn_D= (/.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .true.)
+
+  call test(&
+       nDim          = 2,&
+       IsPeriodicIn_D= (/.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .false.)
+
+
+  call test(&
+       nDim          = 3,&
+       IsPeriodicIn_D= (/.false.,.true.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .false.)
+
+  call test(&
+       nDim          = 3,&
+       IsPeriodicIn_D= (/.false.,.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .true.)
+
+  call test(&
+       nDim          = 3,&
+       IsPeriodicIn_D= (/.true.,.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .false.)
 
 end program test_interpolate_amr
 
