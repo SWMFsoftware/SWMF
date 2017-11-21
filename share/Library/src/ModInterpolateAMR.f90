@@ -2676,7 +2676,7 @@ contains
   !============================
   subroutine  interpolate_amr3(&
        XyzIn_D, XyzGridIn_DI, iLevel_I, IsOut_I, iCaseExtended,&
-       nGridOut, Weight_I, iOrder_I, IsCorner)
+       nGridOut, Weight_I, iOrder_I, IsCorner, NameCaller)
     integer,parameter :: nGrid = 8, nDim = 3
     character(LEN=*),parameter:: NameSub='interpolate_amr3'
     !\
@@ -2727,6 +2727,10 @@ contains
     !/
     logical, intent(out):: IsCorner
     !\
+    ! The name of the calling subroutine
+    !/
+    character(len=*), optional, intent(in):: NameCaller
+    !\
     ! Misc
     !/
     real    :: zMin               
@@ -2748,6 +2752,11 @@ contains
     ! To find the sort of corner stencil
     !/
     integer:: iCase, iDir, iGrid
+
+    !\
+    ! Error message
+    !/
+    character(len=200):: StringError
     !\
     ! Switches in the algorithm
     !/
@@ -3049,7 +3058,15 @@ contains
        Weight_I(nGridOut2 + 1:nGridOut) = Weight_I(1:nFine)*(1 - AuxFine)
        Weight_I(     1:nFine) = Weight_I(1:  nFine)*AuxFine
     case default
-       call CON_stop('How could this happen?')
+       if(present(NameCaller))then
+          StringError = NameCaller
+       else
+          StringError = NameSub
+       end if
+       StringError = trim(StringError)//&
+            ': failed to determine interpolation stencil; '//&
+            'likely, the grid information is incorrect'
+       call CON_stop(StringError)
     end select
   contains
     !==========================
@@ -3516,6 +3533,7 @@ contains
     ! Loop variables
     !/
     integer:: iGrid, iSubGrid, iGridSeenFrom, iOrder
+    character(len=*), parameter:: NameSub = 'share:interpolate_amr_gc'
     !--------------------------------------------------------------------    
     cTol2 = cTol**(nByteReal/4)
     Dimless_D = (Xyz_D - XyzMin_D)/DXyz_D
@@ -3709,7 +3727,8 @@ contains
          Weight_I        = Weight_I, & 
          iIndexes_II     = iIndexes_II, & 
          IsSecondOrder   = IsSecondOrder,&
-         nSubgridIn_I    = nSubgrid_I)
+         nSubgridIn_I    = nSubgrid_I,&
+         NameCaller      = NameSub)
 
     ! store indices of cells in the final interpolation stencil
     iCellOut_II(:,1:nCellOut) = iIndexes_II(1:nDim,1:nCellOut)
@@ -3924,7 +3943,7 @@ contains
          2, 1, 4, 3, 6, 5, 8, 7,        &    !iDir=1 is flipped
          3, 4, 1, 2, 7, 8, 5, 6,        &    !iDir=2 is flipped
          5, 6, 7, 8, 1, 2, 3, 4/),(/8,4/))   !iDir=3 is flipped
-         
+    character(len=*), parameter:: NameSub = 'share:interpolate_amr'
     !------------------------
     cTol2 = cTol**(nByteReal/4)
 
@@ -3973,7 +3992,7 @@ contains
     call interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
          XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
          iLevelSubgrid_I, IsOut_I, DxyzInv_D,                &
-         nGridOut, Weight_I, iIndexes_II, IsSecondOrder, nSubGrid_I)
+         nGridOut, Weight_I, iIndexes_II, IsSecondOrder, nSubGrid_I,NameSub)
   contains
     subroutine get_main_block
       !\
@@ -4671,7 +4690,8 @@ contains
   subroutine interpolate_extended_stencil(nDim, Xyz_D, nIndexes, &
        XyzGrid_DII, iCellIndexes_DII, iBlock_I, iProc_I,   &
        iLevelSubgrid_I, IsOut_I, DxyzInv_D,               &
-       nGridOut, Weight_I, iIndexes_II, IsSecondOrder, nSubgridIn_I)
+       nGridOut, Weight_I, iIndexes_II, IsSecondOrder, nSubgridIn_I,&
+       NameCaller)
     use ModResolutionCorner, ONLY: resolution_corner
     use ModInterpolateAMR23, ONLY: interpolate_amr2, interpolate_amr3,&
          check_transition2, check_transition3
@@ -4740,6 +4760,10 @@ contains
     ! Number of points in a subgrid
     !/
     integer,  intent(in), optional:: nSubgridIn_I(2**nDim)
+    !\
+    ! The name of the calling subroutine
+    !/
+    character(len=*), optional, intent(in):: NameCaller
     !\
     ! Local variables
     !/
@@ -4853,7 +4877,7 @@ contains
           call generate_basic_stencil(XyzStencil_D)
           call interpolate_amr3(&
                Xyz_D , XyzGrid_DI, iLevel_I, IsOut_I, iCaseExtended,&
-               nGridOut, Weight_I, iOrder_I, IsCorner)
+               nGridOut, Weight_I, iOrder_I, IsCorner, NameCaller)
        end if
        if(IsCorner)then
           !\
