@@ -103,6 +103,8 @@ int ipic3d_from_gm_init_(int *paramint, double *paramreal, char *NameVar){
   }
   timing_stop(nameFunc);
   isInitilized = true;
+
+  delete ss; 
   return(0);
 }
 
