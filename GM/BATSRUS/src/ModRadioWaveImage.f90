@@ -726,26 +726,3 @@ contains
   end subroutine ray_path
 end module ModRadioWaveImage
 
-!================================================
-
-subroutine get_ray_bunch_intensity(XyzObserver_D, RadioFrequency, &
-     ImageRange_I, rIntegration, nXPixel, nYPixel, Intensity_II)
-
-  use ModRadioWaveImage, ONLY: ray_bunch_intensity
-
-  implicit none
-  ! Observer position
-  real, intent(in) :: XyzObserver_D(3)          
-  real, intent(in) :: RadioFrequency  
-  ! (x0, y0, x1, y1), i.e. (XLower, YLower, XUpper, YUpper)
-  real, intent(in) :: ImageRange_I(4)         
-  ! Radius of "integration sphere"
-  real, intent(in) :: rIntegration           
- ! Dimensions of the raster in pixels
-  integer, intent(in) ::  nXPixel, nYPixel  
-  ! The result from emissivity integration 
-  real, dimension(nXPixel,nYPixel), intent(out) :: Intensity_II          
-  !--------------------------------
-  call ray_bunch_intensity(XyzObserver_D, RadioFrequency, ImageRange_I, &
-       rIntegration, nXPixel, nYPixel, Intensity_II)
-end subroutine get_ray_bunch_intensity

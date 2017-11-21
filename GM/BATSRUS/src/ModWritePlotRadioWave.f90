@@ -3,7 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 module ModWritePlotRadiowave
-
+  use ModRadioWaveImage, ONLY: ray_bunch_intensity
   use BATL_lib, ONLY: &
        test_start, test_stop
   implicit none
@@ -189,7 +189,7 @@ contains
           write(*,*) 'RAYTRACE START: rIntegration = ', &
                rIntegration
        end if
-       call get_ray_bunch_intensity(XyzObserv_D, RadioFrequency_I(iFreq), &
+       call ray_bunch_intensity(XyzObserv_D, RadioFrequency_I(iFreq), &
             ImageRange_I, rIntegration, &
             nXPixel, nYPixel, Intensity_IIV(:,:,iFreq))
 
