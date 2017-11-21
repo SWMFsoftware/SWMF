@@ -5,7 +5,7 @@
 
 my $defaultexception = 
     "set_parameters|correct_electronfluid_efield_cell|select_fluid|".
-    "user_interface.f90|ModUserEmpty.f90";
+    "set_yzr|user_get_b0|user_interface.f90|ModUserEmpty.f90";
 
 my $Help       = ($h or $help);
 my $Verbose    = ($v or $verbose);
@@ -92,7 +92,7 @@ $MethodType =~ s/^n.*/none/;
 
 # New test variable names
 my @testvar = 
-    ("test_start", "test_stop", "StringTest", 
+    ("test_start", "test_stop", "lVerbose", "StringTest", 
      "iTest", "jTest", "kTest", "iBlockTest", "iProcTest", "iVarTest", 
      "iDimTest", "xTest", "yTest", "zTest"), 
 
@@ -141,6 +141,7 @@ foreach $source (@source){
     my $namesubline;   # declaration of NameSub = ...
     my $dotestline;    # declaration of DoTest logical
     my $separatorline; # !---- line
+    my $addcalltest=1; # true if "call test_start" should be added
     my $unittype;      # program, subroutine or function
     my $unitname;      # name of program unit
     my $declaration;   # true inside declaration part
@@ -181,7 +182,7 @@ foreach $source (@source){
 	s/\biBLK\b/iBlock/gi;
 	s/\bnBLK\b/MaxBlock/gi unless $source =~ /ModSize(_orig)?\.f90/;
 	s/\boktest\b/DoTest/gi;
-	s/\boktest_me\b/DoTestMe/gi;
+	s/\boktest_?me\b/DoTestMe/gi;
 
 	# Fix capitalization errors
 	s/^(\s*(end\s+)?)Module/$1module/i;
@@ -191,8 +192,7 @@ foreach $source (@source){
 
 	# fix comments !blabla --> ! blabla
 	# except for the !INPUT ARGUMENTS: type Protex documentation
-	s/(\s*\![\!\$]*)([^\s\/\\\-\=\_\!\$\'\"])/$1 $2/ 
-	    if not /^\s*\![A-Z\/ ]+:$/;
+	s/(\s*\![\!\$]*)(\w)/$1 $2/ if not /^\s*\![A-Z\/ ]+:$/;
 
 	# Ignore interface .. end interface
 	$interface = 1 if /^\s*interface\b/i;
@@ -293,8 +293,8 @@ foreach $source (@source){
 	    $usemodmain=1 if /^\s+use ModMain/i;
 	    if($usemodmain){
 		$usemodmain = 0 unless /\&$/;
-		s/\b(String|i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b\s*,//g;
-		s/(,\s*)?(String|i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b//;
+		s/\blVerbose|(String|i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b\s*,//g;
+		s/(,\s*)?(lVerbose|String|i|j|k|iBlock|iProc|iVar|iDim|x|y|z)Test\b//;
 		s/,\s*$/\n/;
 
 		# remove line if no variables are left in it
@@ -342,9 +342,6 @@ foreach $source (@source){
 
 	    next if /^[^\!]*::/;
 
-	    # End of declarations 
-	    $declaration = 0;
-
 	    # Where to insert separator line and related lines?
 	    if($iseparator){
 		# Remove the original separator line to get length exact
@@ -353,8 +350,13 @@ foreach $source (@source){
 		# Add separator line to the previous line
 		$iseparator = $i - 1;
 	    }
+
+	    # End of declarations 
+	    $declaration = 0;
 	}
 	# fix code after the declaration part
+
+        $addcalltest = 0 if /^\s+call test_start\b/;
 
 	# Remove "if(iProc==iProcTest .and. iBlock==iBlockTest)...endif"
 	$removeoktest = 1
@@ -421,11 +423,11 @@ istart=$istart MinLength=$MinLength iseparator=$iseparator
 
 	    # add call test_start line
 	    $lines[$iseparator] .= "$indent  call test_start($testarguments)\n"
-		if $addtest;
+		if $addtest and $addcalltest;
 
 	    # add call test_stop line
 	    $_ = "$indent  call test_stop($testarguments)\n$_"
-		if $addtest;
+		if $addtest and $addcalltest;
 
 	    if(not /\bcontains\b/){
 		# Reduce level at end of program unit
