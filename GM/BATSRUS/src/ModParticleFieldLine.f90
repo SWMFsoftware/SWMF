@@ -916,16 +916,6 @@ contains
     select case(iIndexReg_II(Pass_,iParticle))
     case(DoneFromScratch_)
        !\
-       ! grid may have changed, e.g. due to AMR
-       ! start by scheduling particles for message pass, if needed
-       !/
-       call check_particle_location(  &
-            iKindParticle = KindReg_ ,&
-            iParticle     = iParticle,&
-            DoMove        = IsEndOfSegment)
-       ! schedule particle for message pass without changing Pass_ if needed
-       if(IsEndOfSegment) RETURN
-       !\
        ! begin particle's advection
        !/
        ! copy last known coordinates to old coords

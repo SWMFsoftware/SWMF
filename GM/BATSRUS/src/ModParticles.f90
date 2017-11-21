@@ -85,5 +85,17 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine deallocate_particles
   !============================================================================
+  subroutine redistribute_particles
+    ! when changes in grid occur, e.g. AMR, 
+    ! may need redistribute particles between blocks and processors
+    integer:: iKindParticle, iParticle ! loop variables
+    !---------------------------------------------------------------
+    do iKindParticle = 1, nKindParticle
+       do iParticle = 1, Particle_I(iKindParticle)%nParticle
+          call check_particle_location(iKindParticle, iParticle)
+       end do
+       call message_pass_particles(iKindParticle)
+    end do
+  end subroutine redistribute_particles
 end module ModParticles
 !==============================================================================

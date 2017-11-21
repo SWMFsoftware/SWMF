@@ -223,7 +223,7 @@ contains
     use ModProcMH
     use ModMain, ONLY : nIJK,MaxBlock,nBlock,nBlockMax,nBlockALL,&
          UseB, Dt_BLK, iNewGrid, iNewDecomposition, UseHighOrderAMR, &
-         UseLocalTimeStep
+         UseLocalTimeStep, UseParticles
     use ModGeometry, ONLY: CellSizeMin, CellSizeMax, true_cell, nTrueCells, &
          count_true_cells
     use ModAdvance,  ONLY: DivB1_GB, iTypeAdvance_B, iTypeAdvance_BP, &
@@ -244,6 +244,7 @@ contains
     use ModPartSteady,    ONLY: UsePartSteady
     use ModVarIndexes, ONLY: DefaultState_V
 
+    use ModParticles, ONLY: redistribute_particles
     ! Check if we have the same grid as before, store old grid id
     integer:: iLastGrid=-1, iLastDecomposition=-1
 
@@ -352,6 +353,12 @@ contains
        if(allocated(ray)) ray(:,:,:,:,:,1:nBlock) = 0.0
 
        if(DoProfileAmr) call timing_stop('amr::set_divb')
+    end if
+
+    if(UseParticles)then
+       if(DoProfileAmr) call timing_start('amr::redistribute_particles')
+       call redistribute_particles
+       if(DoProfileAmr) call timing_stop('amr::redistribute_particles')
     end if
 
     call test_stop(NameSub, DoTest)
