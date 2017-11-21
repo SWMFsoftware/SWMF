@@ -1,21 +1,19 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-
 module ModWritePlotRadiowave
-  use ModRadioWaveImage, ONLY: ray_bunch_intensity
-  use BATL_lib, ONLY: &
-       test_start, test_stop
+  use ModRadioWaveImage, ONLY: ray_bunch_intensity, nRay,      &
+       Intensity_I, check_allocate,  rIntegration2, StateIn_VI,&
+       SlopeX_, SlopeZ_
+  use BATL_lib, ONLY: test_start, test_stop, x_, y_, z_
   implicit none
   SAVE
 
   private ! Except
   public:: write_plot_radiowave
-
 contains
   !============================================================================
   subroutine write_plot_radiowave(iFile)
-
     !
     ! Purpose:  creates radio telescope images of the radiowaves at several
     !     frequencies by inegrating the plasma emissivity along the refracting
@@ -24,7 +22,7 @@ contains
     !     density only.
     ! Written by Leonid Benkevitch.
     !
-
+    use ModCoordTransform, ONLY: cross_product
     use ModProcMH, ONLY: iProc
     use ModMain, ONLY: Time_Accurate, n_Step, Time_Simulation
     use ModIO, ONLY: StringRadioFrequency_I, plot_type1, &
@@ -37,7 +35,7 @@ contains
     use ModCellGradient, ONLY: calc_gradient_ghost
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: Rho_
-    use BATL_lib, ONLY:  nI, nJ, nK
+    use BATL_lib, ONLY:  nI, nJ, nK, MaxDim
     !
     ! Arguments
     !
@@ -47,12 +45,14 @@ contains
     ! Local variables
     !/
     !\
-    ! Observer lacation
+    ! Observer's location; actually it is the location 
+    !     of the radiotelescope.
     !/
-    real :: XyzObserv_D(3)
-    real :: ImageRange_I(4)
-    ! Image plane: XLower, YLower, XUpper, YUpper
-    real :: HalfImageRangeX, HalfImageRangeY
+    real :: XyzObserver_D(MaxDim)
+    !\
+    !Misc functions of inputs 
+    !/     
+    real :: ObserverDistance !=sqrt(sum(XyzObs_D**2))
     !\
     ! Radius of "integration sphere"
     !/
@@ -61,7 +61,32 @@ contains
     ! Dimensions of the raster in pixels
     !/
     integer ::  nXPixel, nYPixel
-
+    !\
+    !Pixel grid
+    !/ 
+    real :: XLower, YLower, XUpper, YUpper
+    real :: DxPixel, DyPixel
+    ! Pixel coordinates INSIDE the image plane
+    real :: XPixel, YPixel  
+    ! Unity vector normal to the image plane 
+    real :: Normal_D(MaxDim)                                          
+    real :: ZAxisOrt_D(MaxDim) = (/0, 0, 1/)
+    ! Image plane inner Cartesian orts
+    real :: Tau_D(MaxDim), Xi_D(MaxDim) 
+    !\
+    ! Pixel 3D Cartesian coordinates
+    real, dimension(MaxDim) :: XyzPixel_D
+    !\
+    ! Initial directions of rays
+    !/
+    real :: SlopeUnscaled_D(MaxDim)
+    !\
+    ! Distance from the radiotelescope to the integration sphere  
+    real :: ObservToIntSphereDist 
+    !\
+    ! Intersection point of the line of sight with the integration sphere
+    !/
+    real :: XyzAtIntSphere_D(MaxDim)
     !\
     !  Number of frequencies read from StringRadioFrequency_I(iFile)
     !/
@@ -70,20 +95,16 @@ contains
     ! Frequencies in Hertz:
     !/
     real               :: RadioFrequency_I(nPlotRfrFreqMax)
-    !\
-    !
-
+ 
     character (LEN=20) :: NameVar_I(nPlotRfrFreqMax)
-
     !\
     ! The result of the emissivity integration
     !/
     real, allocatable, dimension(:,:,:) :: Intensity_IIV
-
-    integer :: iFreq, iPixel, jPixel
-    real :: XPixel, XPixelSize, YPixel, YPixelSize
-    real :: XLower, YLower, XUpper, YUpper
-    real :: ImagePlaneDiagRadius
+    !Loop variables
+    integer :: iFreq, i, j, iRay
+    ! Radius of "integration sphere"
+    real    :: ImagePlaneDiagRadius
 
     character (LEN=120) :: NameVarAll, NameFile
     character (LEN=4)   :: NameDelimiter
@@ -102,36 +123,82 @@ contains
     !
     ! Set file specific parameters
     !
-    XyzObserv_D = ObsPos_DI(:,iFile)
+    XyzObserver_D = ObsPos_DI(:,iFile)
     nXPixel = n_Pix_X(iFile)
     nYPixel = n_Pix_Y(iFile)
-    HalfImageRangeX = 0.5*X_Size_Image(iFile)
-    HalfImageRangeY = 0.5*Y_Size_Image(iFile)
-    ImageRange_I = (/-HalfImageRangeX, -HalfImageRangeY, &
-         HalfImageRangeX, HalfImageRangeY/)
+    !
+    ! Total number of rays and pixels in the raster
+    !
+    nRay = nXPixel*nYPixel
+    call check_allocate
     !
     ! Determine the image plane inner coordinates of pixel centers
     !
-    XLower = ImageRange_I(1)
-    YLower = ImageRange_I(2)
-    XUpper = ImageRange_I(3)
-    YUpper = ImageRange_I(4)
-    XPixelSize = (XUpper - XLower)/nXPixel
-    YPixelSize = (YUpper - YLower)/nYPixel
+    XLower = -0.50*X_Size_Image(iFile)
+    YLower = -0.50*Y_Size_Image(iFile)
+    XUpper =  0.50*X_Size_Image(iFile)
+    YUpper =  0.50*Y_Size_Image(iFile)
+    DxPixel = (XUpper - XLower)/nXPixel
+    DyPixel = (YUpper - YLower)/nYPixel
 
-    ImagePlaneDiagRadius = sqrt(HalfImageRangeX**2 + HalfImageRangeY**2)
+    !
+    ! Determune the orts, Tau and Xi, of the inner coordinate system
+    ! of the image plane
+    !
+    ObserverDistance = sqrt(sum(XyzObserver_D**2))
+    Normal_D = XyzObserver_D/ObserverDistance
+    Tau_D = cross_product(ZAxisOrt_D, Normal_D)
+    Tau_D = Tau_D/sqrt(sum(Tau_D**2))
+    Xi_D = cross_product(Normal_D, Tau_D)
+    !\
+    ! Find the radius of the integration domain
+    ImagePlaneDiagRadius = sqrt(xUpper**2 + yUpper**2)
     rIntegration = ceiling(max(ImagePlaneDiagRadius+1.0, 5.0))
-
-    if (DoTest) write(*,*) 'rIntegration = ', rIntegration
-
+    iRay = 0
+    !
+    ! Calculate coordinates of all the pixels 
+    !
+    do j = 1, nYPixel
+       YPixel = YLower + (real(j) - 0.5)*DyPixel
+       do i = 1, nXPixel
+          XPixel = XLower + (real(i) - 0.5)*DxPixel
+          XyzPixel_D = XPixel*Tau_D + YPixel*Xi_D
+          SlopeUnscaled_D = XyzPixel_D - XyzObserver_D
+          iRay = iRay + 1
+          !Store direction vectors
+          StateIn_VI(SlopeX_:SlopeZ_,iRay) = &
+               SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
+          !\
+          ! Find the points on the integration sphere where it intersects
+          ! with the straight "rays" 
+          !/
+          !\
+          ! Solve a quadratic equation,
+          !   XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
+          !or  ObservToIntSphereDist**2 + 
+          !  + 2*ObservToIntSphereDist*XyzObs_D
+          !  + ObserverDistance**2 - rIntegration**2 = 0
+          !/  
+          ObservToIntSphereDist = -sum(XyzObserver_D*&
+               StateIn_VI(SlopeX_:SlopeZ_,iRay))&
+               - sqrt(rIntegration**2 - ObserverDistance**2 &
+               + sum(StateIn_VI(SlopeX_:SlopeZ_,iRay)&
+               *XyzObserver_D)**2)
+          !So the points at the boundary of integration sphere
+          StateIn_VI(x_:z_,iRay) = XyzObserver_D &
+               + StateIn_VI(SlopeX_:SlopeZ_,iRay)&
+               *ObservToIntSphereDist
+       end do
+    end do
+ 
     call parse_freq_string(StringRadioFrequency_I(iFile), RadioFrequency_I, &
          NameVar_I, nFreq)
 
     if (iProc == 0) then
        if(DoTest)then
-          write(*,*) 'XyzObserv_D     =', XyzObserv_D
-          write(*,*) 'ImageRange_I   =', ImageRange_I, &
-               '(XLower, YLower, XUpper, YUpper)'
+          write(*,*) 'XyzObserv_D     =', XyzObserver_D
+          write(*,*)  '(XLower, YLower, XUpper, YUpper)=',&
+                XLower, YLower, XUpper, YUpper    
           write(*,*) 'nXPixel        =', nXPixel
           write(*,*) 'nYPixel        =', nYPixel
        end if
@@ -178,6 +245,8 @@ contains
 
     ! Get density gradient
     call calc_gradient_ghost(State_VGB(Rho_,1:nI,1:nJ,1:nK,:))
+    if (DoTest) write(*,*) 'rIntegration = ', rIntegration 
+    rIntegration2 = rIntegration**2 + 0.01
     do iFreq = 1, nFreq
        ! Calculate approximate radius of the  critical surface around the sun
        ! from the frequency
@@ -189,9 +258,9 @@ contains
           write(*,*) 'RAYTRACE START: rIntegration = ', &
                rIntegration
        end if
-       call ray_bunch_intensity(XyzObserv_D, RadioFrequency_I(iFreq), &
-            ImageRange_I, rIntegration, &
-            nXPixel, nYPixel, Intensity_IIV(:,:,iFreq))
+       call ray_bunch_intensity(RadioFrequency_I(iFreq))
+       Intensity_IIV(:,:,iFreq) = &
+            reshape(Intensity_I(1:nRay), (/nXPixel,nYPixel/))
 
        if (iProc == 0) write(*,*) 'RAYTRACE END'
     end do
@@ -227,13 +296,12 @@ contains
           write(UnitTmp_,*) 'ZONE T="RFR Image"', &
                ', I=',nXPixel,', J=',nYPixel,', F=POINT'
           ! Write point values
-          do jPixel = 1, nYPixel
-             YPixel = YLower + (real(jPixel) - 0.5)*YPixelSize
-             do iPixel = 1, nXPixel
-                XPixel = XLower + (real(iPixel) - 0.5)*XPixelSize
-
+          do j = 1, nYPixel
+             YPixel = YLower + (real(j) - 0.5)*DyPixel
+             do i = 1, nXPixel
+                XPixel = XLower + (real(i) - 0.5)*DxPixel
                 write(UnitTmp_,fmt="(30(E14.6))") XPixel, YPixel, &
-                     Intensity_IIV(iPixel,jPixel,1:nFreq)
+                     Intensity_IIV(i,j,1:nFreq)
              end do
           end do
           call close_file
@@ -244,9 +312,9 @@ contains
                nStepIn=n_step, TimeIn=Time_Simulation,    &
                NameVarIn='  X  Y '//trim(NameVarAll),     &
                CoordMinIn_D=&
-               (/XLower + 0.5*XPixelSize, YLower + 0.5*YPixelSize/),&
+               (/XLower + 0.5*DxPixel, YLower + 0.5*DyPixel/),&
                CoordMaxIn_D=&
-               (/XUpper - 0.5*XPixelSize, YUpper - 0.5*YPixelSize/),&
+               (/XUpper - 0.5*DxPixel, YUpper - 0.5*DyPixel/),&
                VarIn_IIV=Intensity_IIV, StringFormatIn = '(30es13.5)')
        end select
 

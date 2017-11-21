@@ -2,21 +2,26 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModRadioWaveImage
   use ModConst, ONLY: cPi, cElectronMass, cProtonMass
-  use ModCoordTransform, ONLY: cross_product
-  use BATL_lib, ONLY: iProc, MaxDim, nDim
+  use BATL_lib, ONLY: iProc, MaxDim, nDim, x_, y_, z_
   use ModParticles, ONLY: allocate_particles,&
        mark_undefined, Particle_I, check_particle_location,&
        put_particles, trace_particles, interpolate_grid_amr_gc
   implicit none
   SAVE
+  PRIVATE!Except
   !Public members
-  public :: ray_bunch_intensity
+  public :: ray_bunch_intensity, check_allocate
   ! Intensity_I:    the intensities of each ray calculated as the integral
   !     of emissivity along the ray path. During each call to ray_path(),
   !     each element of the Intensity_I is incremented by the integral along
   !     the step DeltaS_I. Set all the elements of Intensity_I to 0.0 before
   !     the first call to the ray_path().
+  public:: Intensity_I, StateIn_VI
   real, allocatable :: Intensity_I(:)
+  real, allocatable :: StateIn_VI(:,:)
+
+  public:: nRay, SlopeX_, SlopeZ_
+  integer :: nRay !=nXPixelX*nYPixel
   !\
   !Frequency related:  in GGSE
   real :: DensityCr = -1.0, DensityCrInv = -1.0
@@ -30,6 +35,7 @@ module ModRadioWaveImage
   real,parameter  :: DeltaS = 1.0
   ! One  hundredth of average step        
   real, parameter :: StepMin = 1.0e-2
+  public:: rIntegration2
   !\
   ! Radius squared of a "soft boundary". If the ray goes beyond 
   ! this boundary, the integration for this ray stops.
@@ -39,16 +45,15 @@ module ModRadioWaveImage
   integer :: KindRay_ = -1
   !\
   ! Pointers to the arrays
-  real, pointer     :: State_VI(:,:)
+  real,    pointer  :: State_VI(:,:)
   integer, pointer  :: iIndex_II(:,:)
   !\
   ! Components of the ray vector
   !\
-  ! Cartesian coordinates
-  integer, parameter :: x_ = 1, y_ = 2, z_ = 3
+  ! Cartesian coordinates: x_ = 1, y_ = 2, z_ = 3
   ! Unity slope vectors for all the line-of-sights pointing at 
   ! the pixels
-  integer, parameter :: SlopeX_ = 4, SlopeY_ = 5, SlopeZ_ = 6 
+  integer, parameter :: SlopeX_ = 4, SlopeZ_ = 6 
   !\
   ! Integration step
   integer, parameter :: Ds_ = 7
@@ -61,10 +66,33 @@ module ModRadioWaveImage
   integer, parameter :: Ray_ = 1, Steepness_ = 2, OK_ = 0, Bad_ = 1
   integer, parameter :: Status_ = 3, Predictor_ = 1
   integer, parameter :: nIndex = Status_
-contains 
+contains
   !=========================================================
-  subroutine ray_bunch_intensity(XyzObserver_D, RadioFrequency, &
-       ImageRange_I, rIntegration, nXPixel, nYPixel, Intensity_II)
+  subroutine check_allocate
+    logical, save   :: DoAllocate = .true.
+    !\
+    ! Initial allocation of the global vector of ray positions
+    ! and other dynamic arrays
+    !/
+    if(DoAllocate)then
+       DoAllocate = .false.
+       allocate(Intensity_I(nRay),StateIn_VI(x_:SlopeZ_,1:nRay))
+       nullify(State_VI); nullify(iIndex_II)
+    end if
+    if(nRay > size(Intensity_I))then
+       deallocate(Intensity_I,StateIn_VI)
+       allocate(Intensity_I(nRay),StateIn_VI(x_:SlopeZ_,1:nRay))
+    end if
+    call allocate_particles(&
+         iKindParticle = KindRay_, &
+         nVar          = nVar    , &
+         nIndex        = nIndex  , &
+         nParticleMax  = nRay      )
+    State_VI  => Particle_I(KindRay_)%State_VI
+    iIndex_II => Particle_I(KindRay_)%iIndex_II
+  end subroutine check_allocate
+  !=========================================================
+  subroutine ray_bunch_intensity(RadioFrequency)
     use ModProcMH, ONLY: nProc, iComm, iProc
     use ModMpi
     !
@@ -86,13 +114,7 @@ contains
     ! The ray_bunch_intensity() parameters are
     ! as follows:
     ! 
-    ! XyzObserver_D:   position of observer; actually it is the location 
-    !     of the radiotelescope.
     ! RadioFrequency:  frequency in Hertz at wich the radiotelescope works.
-    ! ImageRange_I:    two pairs of coordinates of the "lower left" and "upper
-    !     right" corners of the rectangular image plane. The image plane 
-    !     center coincides with the sun center (usually, the numeric domain 
-    !     origin. 
     ! rIntegration:    radius of the spherical surface around the sun within
     !     which the emissivity integration is performed. The plasma 
     !     emissivity is considered insignificant beyond the integration sphere.
@@ -109,152 +131,21 @@ contains
     ! Written by Leonid Benkevitch.
     !
     !
-    !INPUTS
-    ! Observer's position
-    real, intent(in) :: XyzObserver_D(MaxDim)          
- 
     real, intent(in) :: RadioFrequency
-    ! (XLower, YLower, XUpper, YUpper)
-    real, intent(in) :: ImageRange_I(4)        
-    ! Radius of "integration sphere"
-    real, intent(in) :: rIntegration           
-    ! Dimensions of the raster in pixels
-    integer, intent(in) ::  nXPixel, nYPixel
-    !\
-    ! OUTPUTS  
-    ! The result of emissivity integration
-    real, dimension(nXPixel,nYPixel), intent(out) :: Intensity_II          
-    !/
-    !\
-    !Misc functions of inputs 
-    !/     
-    real :: ObserverDistance !=sqrt(sum(XyzObs_D**2))
-    !\
-    ! Same as ImageRange_I(4)
-    real :: XLower, XUpper, YLower, YUpper
-    !\
-    !nPixel related:
-    integer :: nRay !=nXPixelX*nYPixel
-    !\
-    !Pixel grid
-    !/ 
-    real :: DxPixel, DyPixel 
-    ! Pixel coordinates INSIDE the image plane
-    real :: XPixel, YPixel  
-    ! Unity vector normal to the image plane 
-    real :: Normal_D(MaxDim)                                          
-    real :: ZAxisOrt_D(MaxDim) = (/0, 0, 1/)
-    ! Image plane inner Cartesian orts
-    real :: Tau_D(MaxDim), Xi_D(MaxDim) 
-    !\
-    ! Pixel 3D Cartesian coordinates
-    real, dimension(MaxDim) :: XyzPixel_D
-    !\
-    ! Initial directions of rays
-    !/
-    real :: SlopeUnscaled_D(MaxDim)
-    !\
-    ! Distance from the radiotelescope to the integration sphere  
-    real :: ObservToIntSphereDist
-    !\
-    ! Intersection point of the line of sight with the integration sphere
-    !/
-    real :: XyzAtIntSphere_D(MaxDim)
-    !\
-    ! Automatic arrays
-    !/
-    real :: StateIn_VI(x_:SlopeZ_,1:nXPixel*nYPixel)
     !\
     ! Parameters
     real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
-    logical, save   :: DoAllocate = .true.
-    !\
-    !Loop variables
-    integer :: i, j, iRay
     !\
     integer :: iError
     !------------------------------------
-    !
-    ! Total number of rays and pixels in the raster
-    !
-    nRay = nXPixel*nYPixel
-    !
-    ! Initial allocation of the global vector of ray positions
-    ! and other dynamic arrays
-    !
-    if(DoAllocate)then
-       DoAllocate = .false.
-       allocate(Intensity_I(nRay))
-       nullify(State_VI); nullify(iIndex_II)
-    end if
-    if(nRay > size(Intensity_I))then
-       deallocate(Intensity_I); allocate(Intensity_I(nRay))
-    end if
-    call allocate_particles(&
-         iKindParticle = KindRay_, &
-         nVar          = nVar    , &
-         nIndex        = nIndex  , &
-         nParticleMax  = nRay      )
-    State_VI  => Particle_I(KindRay_)%State_VI
-    iIndex_II => Particle_I(KindRay_)%iIndex_II
     !
     ! Calculate the critical density from the frequency, in CGS
     !
     DensityCr = cPi*cProtonMass*cElectronMass*1e6 &
          *(RadioFrequency/ProtonChargeSGSe)**2
     DensityCrInv = 1.0/DensityCr
-    !
-    ! Determine the image plane inner coordinates of pixel centers
-    !
-    XLower = ImageRange_I(1)
-    YLower = ImageRange_I(2)
-    XUpper = ImageRange_I(3)
-    YUpper = ImageRange_I(4)
-    DxPixel = (XUpper - XLower)/nXPixel
-    DyPixel = (YUpper - YLower)/nYPixel
-    !
-    ! Determune the orts, Tau and Xi, of the inner coordinate system
-    ! of the image plane
-    !
-    ObserverDistance = sqrt(sum(XyzObserver_D**2))
-    Normal_D = XyzObserver_D/ObserverDistance
-    Tau_D = cross_product(ZAxisOrt_D, Normal_D)
-    Tau_D = Tau_D/sqrt(sum(Tau_D**2))
-    Xi_D = cross_product(Normal_D, Tau_D)
-    !
-    ! Calculate coordinates of all the pixels in the SGI
-    !
-    iRay = 0
-    do j = 1, nYPixel
-       YPixel = YLower + (real(j) - 0.5)*DyPixel
-       do i = 1, nXPixel
-          XPixel = XLower + (real(i) - 0.5)*DxPixel
-          XyzPixel_D = XPixel*Tau_D + YPixel*Xi_D
-          SlopeUnscaled_D = XyzPixel_D - XyzObserver_D
-          iRay = iRay + 1
-          StateIn_VI(SlopeX_:SlopeZ_,iRay) = &
-               SlopeUnscaled_D/sqrt(sum(SlopeUnscaled_D**2)) 
-          !\
-          ! Find the points on the integration sphere where it intersects
-          ! with the straight "rays" 
-          !/
-          !\
-          ! Solve a quadratic equation,
-          !   XyzObs_D + ObservToIntSphereDist*Slope_DI || = rIntegration
-          !or  ObservToIntSphereDist**2 + 
-          !  + 2*ObservToIntSphereDist*XyzObs_D
-          !  + ObserverDistance**2 - rIntegration**2 = 0
-          !/  
-          ObservToIntSphereDist = -sum(XyzObserver_D*&
-               StateIn_VI(SlopeX_:SlopeZ_,iRay))&
-               - sqrt(rIntegration**2 - ObserverDistance**2 &
-               + sum(StateIn_VI(SlopeX_:SlopeZ_,iRay)&
-               *XyzObserver_D)**2)
-          StateIn_VI(x_:z_,iRay) = XyzObserver_D &
-               + StateIn_VI(SlopeX_:SlopeZ_,iRay)&
-               *ObservToIntSphereDist
-       end do
-    end do
+ 
+
     call put_particles(KindRay_ ,         &
          StateIn_VI         = StateIn_VI, &
          DoReplace          = .true.)
@@ -265,11 +156,9 @@ contains
     State_VI(Ds_,:     )    = DeltaS
     State_VI(Dist2Cr_,:)    = 0.0
     iIndex_II(Steepness_:Status_,:) = OK_
-    rIntegration2 = rIntegration**2 + 0.01
     call trace_particles(KindRay_, ray_path)
-    if(nProc > 1) call MPI_reduce_real_array(Intensity_I, nRay, MPI_SUM, &
+    if(nProc > 1) call MPI_reduce_real_array(Intensity_I(1), nRay, MPI_SUM, &
          0, iComm, iError)
-    Intensity_II = reshape(Intensity_I(1:nRay), (/nXPixel,nYPixel/))
   end subroutine ray_bunch_intensity
   !=========
   subroutine ray_path(iParticle, IsEndOfSegment)
@@ -495,6 +384,7 @@ contains
     end subroutine check_step
     !==================
     subroutine advance_ray
+      use ModCoordTransform, ONLY: cross_product
       !\
       ! Omega = \nabla n/n\times d\vec{x}/ds
       ! Analogous to the magnetic field times q/m in the
