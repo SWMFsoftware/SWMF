@@ -1227,9 +1227,9 @@ void c_Solver:: write_plot_init(){
       plotMin_ID[iPlot][x_] = 0;
       plotMin_ID[iPlot][y_] = 0;
       plotMin_ID[iPlot][z_] = 0;
-      plotMax_ID[iPlot][1] = col->getLx();
-      plotMax_ID[iPlot][3] = col->getLy();
-      plotMax_ID[iPlot][5] = col->getLz();
+      plotMax_ID[iPlot][x_] = col->getLx();
+      plotMax_ID[iPlot][y_] = col->getLy();
+      plotMax_ID[iPlot][z_] = col->getLz();
     }else{
       if(myrank==0)cout<<"Unknown plot range!! plotString = "<<plotString<<endl;
       abort();
