@@ -250,7 +250,6 @@ contains
                     nIndex          = nAux, &
                     iIndexOrigin_II = nint(RouterScSp%&
                     BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                    RSoftBoundaryIn   =  RSc, &
                     UseInputInGenCoord = .true.)
             end if
             if(is_proc(SC_))then
