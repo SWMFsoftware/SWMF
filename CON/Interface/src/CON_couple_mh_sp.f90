@@ -243,14 +243,15 @@ contains
             if(is_proc(SC_))then
                nLength = nlength_buffer_source(RouterScSp)
                call SC_extract_line(&
-                    nLine           = nLength, &
-                    XyzOrigin_DI    = &
+                    nLine             = nLength, &
+                    XyzOrigin_DI      = &
                     RouterScSp%BufferSource_II(1:nDim,1:nLength), &
-                    iTraceMode      = iInterfaceOrigin, &
-                    nIndex          = nAux, &
-                    iIndexOrigin_II = nint(RouterScSp%&
+                    iTraceMode        = iInterfaceOrigin, &
+                    nIndex            = nAux, &
+                    iIndexOrigin_II   = nint(RouterScSp%&
                     BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                    UseInputInGenCoord = .true.)
+                    RSoftBoundaryIn   =  RSc, & 
+                    UseInputInGenCoord= .true.)
             end if
             if(is_proc(SC_))then
                call set_semi_router_from_source(&
@@ -322,15 +323,15 @@ contains
             if(is_proc(IH_))then
                nLength = nlength_buffer_source(RouterIhSp)
                call IH_extract_line(&
-                    nLine           = nLength, &
-                    XyzOrigin_DI    = &
+                    nLine             = nLength, &
+                    XyzOrigin_DI      = &
                     RouterIhSp%BufferSource_II(1:nDim,1:nLength), &
-                    iTraceMode      = iInterfaceEnd, &
-                    nIndex          = nAux, &
-                    iIndexOrigin_II = nint(RouterIhSp%&
+                    iTraceMode        = iInterfaceEnd, &
+                    nIndex            = nAux, &
+                    iIndexOrigin_II   = nint(RouterIhSp%&
                     BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
                     RSoftBoundaryIn   =  RIh, & 
-                    UseInputInGenCoord = .true.)
+                    UseInputInGenCoord= .true.)
             end if
             if(is_proc(IH_))then
                call set_semi_router_from_source(&
