@@ -134,7 +134,7 @@ my $OpenMp;
 my $Mpi;
 my $Fcompiler;
 my $Ccompiler;
-my ${CxxCompiler};
+my $MpiCxxCompiler;
 my $MpiCompiler;
 my $MpiHeaderFile = "share/Library/src/mpif.h";
 my $Optimize;
@@ -278,14 +278,14 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Switch on or off the OPENMPFLAG
 &set_openmp_ if $NewOpenMp and $NewOpenMp ne $OpenMp;
 
-# Link with HDF5 library is required
+# Link with HDF5 library if required
 &set_hdf5_ 
     if ($Install and not $IsComponent) or ($NewHdf5 and $NewHdf5 ne $Hdf5);
 
-# Link with HYPRE library is required
+# Link with HYPRE library if required
 &set_hypre_ if $NewHypre and $NewHypre ne $Hypre;
 
-# Link with FISHPAK library is required 
+# Link with FISHPAK library if required 
 &set_fishpak_ if $NewFishpak and $NewFishpak ne $Fishpak;
 
 # Link with SPICE library is required
@@ -357,9 +357,9 @@ sub get_settings_{
 
 	  $Fcompiler = $+ if 
 	      /^\s*COMPILE\.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
-	  $Ccompiler   = $1 if /^\s*COMPILE\.c\s*=\s*(\S+)/;
-	  $MpiCompiler = $1 if /^\s*LINK\.f90\s*=\s*(.*)/;
-	  $CxxCompiler = $1 if /^\s*COMPILE\.mpicxx\s*=\s*(\S+)/;
+	  $Ccompiler      = $1 if /^\s*COMPILE\.c\s*=\s*(\S+)/;
+	  $MpiCompiler    = $1 if /^\s*LINK\.f90\s*=\s*(.*)/;
+	  $MpiCxxCompiler = $1 if /^\s*COMPILE\.mpicxx\s*=\s*(\S+)/;
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $OpenMp = "yes" if /^OPENMPFLAG/;
@@ -411,6 +411,7 @@ Makefile.conf was created from $MakefileConfOrig.$OS.$Compiler
                            and $MakefileConfOrig.$CompilerC
 The selected F90 compiler is $Fcompiler.
 The selected C   compiler is $Ccompiler.
+The selected C++ compiler is $MpiCxxCompiler.
 The default precision for reals is $Precision precision.
 The maximum optimization level is $Optimize
 Debugging flags:   $Debug
@@ -638,8 +639,10 @@ sub set_mpi_{
 		s/ \#\-lmpi_cxx/ \-lmpi_cxx/ if $Mpi eq "yes";
 	    }
 
-            if(/^\s*COMPILE.mpicxx\s*=/){
-            $_ = 'COMPILE.mpicxx = ${COMPILE.c}'."\n" if $Mpi eq "no";
+	    # Modify COMPILE.mpicxx definition
+            if(/^\s*COMPILE.mpic(c|xx)\s*=/){
+		s/=\s+/= \$\{COMPILE.c\}\# / if $Mpi eq "no";
+		s/ \$\{COMPILE.c\}\#//       if $Mpi eq "yes";
             }
 	    print;
 	}
