@@ -1238,12 +1238,11 @@ contains
 
   end function integrate_grid
   !============================================================================
-  real function minval_grid(Var_GB, UseGlobal, iLoc_I)
+  real function minval_grid(Var_GB, iLoc_I)
 
     use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_MIN, MPI_IN_PLACE
 
     ! Return the minimum value of Var_GB for all used blocks and used cells. 
-    ! If UseGlobal is present, take minimum over all processors.
     ! If iLoc_I is present, return the first cell, block and processor indexes
     ! iLoc_I = (/i, j, k, iBlock, iProc/) 
     ! where the variable equals the (global) minimum, or return -1 for all
@@ -1251,7 +1250,6 @@ contains
     ! contain the minimum location.
 
     real,    intent(in):: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    logical, intent(in),  optional:: UseGlobal
     integer, intent(out), optional:: iLoc_I(5)
 
     ! Local variables:
@@ -1270,7 +1268,7 @@ contains
        end do; end do; end do
     end do
 
-    if(nProc > 1 .and. present(UseGlobal)) call MPI_allreduce( &
+    if(nProc > 1) call MPI_allreduce( &
          MPI_IN_PLACE, VarMin, 1, MPI_REAL, MPI_MIN, iComm, iError)
 
     minval_grid = VarMin
@@ -1292,13 +1290,12 @@ contains
 
   end function minval_grid
   !===========================================================================
-  real function maxval_grid(Var_GB, UseGlobal, UseAbs, iLoc_I)
+  real function maxval_grid(Var_GB, UseAbs, iLoc_I)
 
     use ModMpi, ONLY: MPI_allreduce, MPI_REAL, MPI_MAX, MPI_IN_PLACE
 
     ! Return the maximum value of Var_GB for all used blocks and used cells. 
     ! If UseAbs is present, take the maximum for the absolute value.
-    ! If UseGlobal is present, take maximum over all processors.
     ! If iLoc_I is present, return the first cell, block and processor indexes
     ! iLoc_I = (/i, j, k, iBlock, iProc/) 
     ! where the variable equals the (global) maximum, or return -1 for all
@@ -1306,7 +1303,6 @@ contains
     ! contain the maximum location(s).
 
     real,    intent(in):: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    logical, intent(in),  optional:: UseGlobal
     logical, intent(in),  optional:: UseAbs
     integer, intent(out), optional:: iLoc_I(5)
 
@@ -1336,7 +1332,7 @@ contains
        end do
     end if
 
-    if(nProc > 1 .and. present(UseGlobal)) call MPI_allreduce( &
+    if(nProc > 1) call MPI_allreduce( &
          MPI_IN_PLACE, VarMax, 1, MPI_REAL, MPI_MAX, iComm, iError)
 
     maxval_grid = VarMax
