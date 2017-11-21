@@ -134,6 +134,7 @@ my $OpenMp;
 my $Mpi;
 my $Fcompiler;
 my $Ccompiler;
+my ${CxxCompiler};
 my $MpiCompiler;
 my $MpiHeaderFile = "share/Library/src/mpif.h";
 my $Optimize;
@@ -358,7 +359,7 @@ sub get_settings_{
 	      /^\s*COMPILE\.f90\s*=\s*(\$\{CUSTOMPATH_F\})?(\S+)/;
 	  $Ccompiler   = $1 if /^\s*COMPILE\.c\s*=\s*(\S+)/;
 	  $MpiCompiler = $1 if /^\s*LINK\.f90\s*=\s*(.*)/;
-
+	  $CxxCompiler = $1 if /^\s*COMPILE\.mpicxx\s*=\s*(\S+)/;
 	  $Precision = lc($1) if /^\s*PRECISION\s*=.*(SINGLE|DOUBLE)PREC/;
           $Debug = "yes" if /^\s*DEBUG\s*=\s*\$\{DEBUGFLAG\}/;
 	  $OpenMp = "yes" if /^OPENMPFLAG/;
@@ -636,6 +637,10 @@ sub set_mpi_{
 		s/ \-lmpi_cxx/ \#\-lmpi_cxx/ if $Mpi eq "no";
 		s/ \#\-lmpi_cxx/ \-lmpi_cxx/ if $Mpi eq "yes";
 	    }
+
+            if(/^\s*COMPILE.mpicxx\s*=/){
+            $_ = 'COMPILE.mpicxx = ${COMPILE.c}'."\n" if $Mpi eq "no";
+            }
 	    print;
 	}
     }
