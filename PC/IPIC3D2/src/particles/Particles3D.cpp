@@ -2711,9 +2711,14 @@ void Particles3D::correctWeight(Field *EMf){
     for(int i = 0; i < nxn; i++)
       for(int j = 0; j < nyn; j++)
 	for(int k = 0; k < nzn; k++){
-	  error_G[i][j][k] =
-	    (EMf->getRHOn(i,j,k) - invFourPI*EMf->getdivEn(i,j,k))
-	    /EMf->getRHOns(i,j,k,ns);
+	  double rhos = EMf->getRHOns(i,j,k,ns);
+	  if(fabs(rhos)>1e-99){
+	    error_G[i][j][k] =
+	      (EMf->getRHOn(i,j,k) - invFourPI*EMf->getdivEn(i,j,k))
+	      /rhos;
+	  }else{
+	    error_G[i][j][k] = 0; 
+	  }
 	}
   
     if(nOrder ==1){
