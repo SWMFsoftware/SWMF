@@ -121,7 +121,7 @@ contains
           R_DDI(3,3,iRegion) = 1
 
        end do
-    case("#PICREGIONROTATE")
+    case("#PICREGIONROTATE")       
        DoRotatePIC = .true.
        call read_var('nPicRegion', nRegionPic)
        UsePic = nRegionPic > 0
@@ -134,6 +134,11 @@ contains
             DxyzPic_DI(nDim,nRegionPic), &
             LenPic_DI(nDim,nRegionPic),  &
             R_DDI(3,3,nRegionPic))
+       XyzMinPic_DI = 0
+       XyzMaxPic_DI = 0
+       XyzPic0_DI = 0
+       DxyzPic_DI = 0
+       LenPic_DI = 0
        R_DDI=0
        do iRegion = 1, nRegionPic
           call              read_var('xMinPic', XyzMinPic_DI(x_,iRegion))
@@ -146,6 +151,7 @@ contains
           if(nDim > 1) call read_var('DyPic',   DxyzPic_DI(y_,iRegion))
           if(nDim > 2) call read_var('DzPic',   DxyzPic_DI(z_,iRegion))
           if(nDim==2 ) then
+             xRotate = 0; yRotate = 0
              call read_var('zRotate', zRotate)
              R_DDI(1:2,1:2,iRegion) = rot_matrix(-zRotate*cDegToRad)
           elseif(nDim==3) then
