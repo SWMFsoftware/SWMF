@@ -381,6 +381,7 @@ contains
     use ModMain,       ONLY: Unused_B, nBlock, x_, y_, z_, UseB0
     use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_, Pe_
+    use BATL_lib,      ONLY: integrate_grid
 
     real, intent(out) :: VarValue
     character(len=10), intent(in) :: TypeVar
@@ -388,7 +389,7 @@ contains
 
     integer :: iBlock
     real :: unit_energy
-    real, external :: integrate_BLK
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
@@ -408,7 +409,7 @@ contains
              tmp1_BLK(:,:,:,iBlock) = State_VGB(p_,:,:,:,iBlock)
           end if
        end do
-       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_grid(tmp1_BLK)
 
     case('emag')
        do iBlock = 1, nBlock
@@ -424,7 +425,7 @@ contains
                   + State_VGB(Bz_,:,:,:,iBlock)**2
           end if
        end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*0.5*integrate_grid(tmp1_BLK)
 
     case('vol')
        do iBlock = 1, nBlock
@@ -432,7 +433,7 @@ contains
 
           tmp1_BLK(:,:,:,iBlock) = 1.0
        end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
+       VarValue = integrate_grid(tmp1_BLK)
 
     case default
        VarValue = -7777.

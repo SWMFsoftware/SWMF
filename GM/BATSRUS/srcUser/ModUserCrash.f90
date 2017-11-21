@@ -1161,8 +1161,7 @@ contains
     use CRASH_ModEos,  ONLY: Xe_, Be_, Plastic_, Au_, Ay_
     use ModMain,       ONLY: nI, nJ, nK, nBlock, Unused_B
     use ModGeometry,   ONLY: DomainVolume
-
-    real, external :: integrate_BLK
+    use BATL_lib,      ONLY: integrate_grid
 
     real, intent(out)            :: VarValue
     character (len=*), intent(in):: TypeVar
@@ -1205,7 +1204,7 @@ contains
              end do; end do; end do
           end do
        end if
-       VarValue = integrate_BLK(1,tmp1_BLK)/DomainVolume
+       VarValue = integrate_grid(tmp1_BLK)/DomainVolume
     case default
        VarValue = -7777.0
     end select

@@ -4,8 +4,8 @@
 module ModUser
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
-  use ModSize,      ONLY: x_, y_, z_
+       test_start, test_stop, x_, y_, z_
+
   use ModUserEmpty,                                     &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
@@ -426,13 +426,15 @@ contains
   subroutine user_get_log_var(VarValue,TypeVar,Radius)
 
     use ModIO,         ONLY: write_myname
-    use ModMain,       ONLY: Unused_B,MaxBlock,x_,y_,z_
-    use ModVarIndexes, ONLY: Ew_,Bx_,By_,Bz_,rho_,rhoUx_,rhoUy_,rhoUz_,P_
+    use ModMain,       ONLY: Unused_B, MaxBlock, x_, y_, z_
+    use ModVarIndexes, ONLY: &
+         Ew_, Bx_, By_, Bz_, rho_, rhoUx_, rhoUy_, rhoUz_, P_
     use ModGeometry,   ONLY: R_BLK
     use ModAdvance,    ONLY: State_VGB,tmp1_BLK
     use ModB0,         ONLY: B0_DGB
-    use ModPhysics,    ONLY: InvGammaMinus1,&
-         No2Si_V,UnitEnergydens_,UnitX_,UnitRho_
+    use ModPhysics,    ONLY: InvGammaMinus1, &
+         No2Si_V, UnitEnergydens_, UnitX_, UnitRho_
+    use BATL_lib,      ONLY: integrate_grid
 
     real, intent(out):: VarValue
     character (LEN=10), intent(in):: TypeVar
@@ -440,7 +442,6 @@ contains
 
     integer:: iBlock
     real:: unit_energy,unit_mass
-    real, external:: integrate_BLK
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_get_log_var'
@@ -460,7 +461,7 @@ contains
                (B0_DGB(y_,:,:,:,iBlock)+State_VGB(By_,:,:,:,iBlock))**2+&
                (B0_DGB(z_,:,:,:,iBlock)+State_VGB(Bz_,:,:,:,iBlock))**2
        end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*0.5*integrate_grid(tmp1_BLK)
     case('ek_t','Ek_t','ek_r','Ek_r')
        do iBlock=1,MaxBlock
           if (Unused_B(iBlock)) CYCLE
@@ -470,29 +471,29 @@ contains
                State_VGB(rhoUz_,:,:,:,iBlock)**2)/&
                State_VGB(rho_  ,:,:,:,iBlock)
        end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*0.5*integrate_grid(tmp1_BLK)
     case('et_t','Et_t','et_r','Et_r')
        do iBlock=1,MaxBlock
           if (Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock)
        end do
-       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_grid(tmp1_BLK)
     case('ew_t','Ew_t','ew_r','Ew_r')
        do iBlock=1,MaxBlock
           if (Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(Ew_,:,:,:,iBlock)
        end do
-       VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*integrate_grid(tmp1_BLK)
     case('ms_t','Ms_t')
        do iBlock=1,MaxBlock
           if (Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = &
                State_VGB(rho_,:,:,:,iBlock)/R_BLK(:,:,:,iBlock)
        end do
-       VarValue = unit_mass*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_mass*integrate_grid(tmp1_BLK)
     case('vol','Vol')
        tmp1_BLK(:,:,:,iBlock) = 1.0
-       VarValue = integrate_BLK(1,tmp1_BLK)
+       VarValue = integrate_grid(tmp1_BLK)
     case default
        VarValue = -7777.
        call write_myname;

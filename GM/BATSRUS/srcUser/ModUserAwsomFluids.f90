@@ -441,6 +441,7 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, Pe_, iP_I, Ew_, &
                              rho_, rhoUx_, rhoUy_, rhoUz_
     use ModGeometry,   ONLY: R_BLK
+    use BATL_lib,      ONLY: integrate_grid
 
     real, intent(out) :: VarValue
     character(len=10), intent(in) :: TypeVar
@@ -448,7 +449,6 @@ contains
 
     integer :: i, j, k, iBlock
     real :: unit_energy, unit_mass
-    real, external :: integrate_BLK
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_get_log_var'
@@ -471,7 +471,7 @@ contains
                   + State_VGB(Pe_,i,j,k,iBlock)
           end do; end do; end do
        end do
-       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_grid(tmp1_BLK)
 
     case('emag')
        do iBlock = 1, nBlock
@@ -487,7 +487,7 @@ contains
                   + State_VGB(Bz_,:,:,:,iBlock)**2
           end if
        end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*0.5*integrate_grid(tmp1_BLK)
 
     case('ekin')
        do iBlock=1,nBlock
@@ -498,14 +498,14 @@ contains
                State_VGB(rhoUz_,:,:,:,iBlock)**2)/&
                State_VGB(rho_  ,:,:,:,iBlock)
        end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*0.5*integrate_grid(tmp1_BLK)
 
     case('ew')
        do iBlock=1,nBlock
           if (Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(Ew_,:,:,:,iBlock)
        end do
-       VarValue = unit_energy*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*integrate_grid(tmp1_BLK)
 
     case('mass')
        do iBlock=1,nBlock
@@ -513,7 +513,7 @@ contains
           tmp1_BLK(:,:,:,iBlock) = &
                State_VGB(rho_,:,:,:,iBlock)/R_BLK(:,:,:,iBlock)
        end do
-       VarValue = unit_mass*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_mass*integrate_grid(tmp1_BLK)
 
     case('vol')
        do iBlock = 1, nBlock
@@ -521,7 +521,7 @@ contains
 
           tmp1_BLK(:,:,:,iBlock) = 1.0
        end do
-       VarValue = integrate_BLK(1,tmp1_BLK)
+       VarValue = integrate_grid(tmp1_BLK)
 
     case default
        VarValue = -7777.

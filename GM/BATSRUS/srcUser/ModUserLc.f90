@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+
 ! Description (Sokolov, Feb.,04,2010)
 ! Coded by: Cooper Downs /cdowns@ifa.hawaii.edu (version 0)
 ! Development for the present version: Igor Sokolov
@@ -9,7 +10,7 @@
 ! for chromosphere or for the top of the transition region, depending on the BC
 !
 ! init_session: checks the presence of #TRBOUNDARY, #MAGNETOGRAM and
-!#PLASMA commands, sets the dimensionless constans for density and temperature
+! #PLASMA commands, sets the dimensionless constans for density and temperature
 ! at the coronal base and for the heat conduction coefficient.
 !
 ! set_ics: initialize the MHD parameters using the Parker solution.
@@ -624,6 +625,7 @@ contains
          UnitT_, No2Si_V
     use ModCoronalHeating, ONLY: HeatFactor,HeatNormalization
     use ModProcMH,     ONLY: nProc
+    use BATL_lib,      ONLY: integrate_grid
 
     real, intent(out) :: VarValue
     character (LEN=10), intent(in) :: TypeVar
@@ -631,7 +633,7 @@ contains
 
     integer :: iBlock
     real :: unit_energy
-    real, external :: integrate_BLK
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_get_log_var'
     !--------------------------------------------------------------------------
@@ -646,7 +648,7 @@ contains
           if(Unused_B(iBlock)) CYCLE
           tmp1_BLK(:,:,:,iBlock) = State_VGB(P_,:,:,:,iBlock)
        end do
-       VarValue = unit_energy*InvGammaMinus1*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*InvGammaMinus1*integrate_grid(tmp1_BLK)
 
     case('emag')
        do iBlock = 1, nBlock
@@ -656,11 +658,11 @@ contains
                +(B0_DGB(y_,:,:,:,iBlock) + State_VGB(By_,:,:,:,iBlock))**2 &
                +(B0_DGB(z_,:,:,:,iBlock) + State_VGB(Bz_,:,:,:,iBlock))**2
        end do
-       VarValue = unit_energy*0.5*integrate_BLK(1,tmp1_BLK)
+       VarValue = unit_energy*0.5*integrate_grid(tmp1_BLK)
 
     case('vol')
        tmp1_BLK(:,:,:,iBlock) = 1.0
-       VarValue = integrate_BLK(1,tmp1_BLK)
+       VarValue = integrate_grid(tmp1_BLK)
 
     case('psi')
        VarValue = HeatFactor * No2Si_V(UnitEnergyDens_) / No2Si_V(UnitT_) &
