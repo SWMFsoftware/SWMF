@@ -35,7 +35,7 @@ contains
     use ModPhysics
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
     use ModConstrainDivB, ONLY: init_mod_ct, DoInitConstrainB
-    use ModBlockData, ONLY: clean_block_data
+    use ModBlockData, ONLY: init_mod_block_data, clean_block_data
     use BATL_lib, ONLY: &
          read_region_param, read_test_param, NameVarTest, iVarTest, &
          BetaProlong, init_mpi, IsCartesianGrid, IsCartesian, &
@@ -66,7 +66,8 @@ contains
          RelativeEps_V, AbsoluteEps_V
     use ModBoundaryGeometry, ONLY: init_mod_boundary_cells, &
          read_boundary_geometry_param
-    use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit
+    use ModPointImplicit, ONLY: read_point_implicit_param, UsePointImplicit, &
+         init_mod_point_impl
     use ModRestartFile,   ONLY: read_restart_parameters, init_mod_restart_file, &
          DoChangeRestartVariables, nVarRestart, UseRestartWithFullB,      &
          NameRestartInDir, NameRestartOutDir, DoSpecifyRestartVarMapping, &
@@ -312,20 +313,23 @@ contains
        call correct_parameters
 
        ! initialize module variables
+       call init_mod_main
        call init_mod_advance
        call init_mod_geometry
        call init_mod_boundary_cells
        call init_mod_nodes
-       if(UseB0)           call init_mod_b0
-       if(UseRaytrace)     call init_mod_field_trace
-       if(UseConstrainB)   call init_mod_ct
-       if(UseImplicit)     call init_mod_part_impl
-       if(UseSemiImplicit) call init_mod_semi_impl
+       if(UseB0)            call init_mod_b0
+       if(UseRaytrace)      call init_mod_field_trace
+       if(UseConstrainB)    call init_mod_ct
+       if(UseImplicit)      call init_mod_part_impl
+       if(UseSemiImplicit)  call init_mod_semi_impl
+       if(UsePointImplicit) call init_mod_point_impl
        call init_mod_magperturb
 
        call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)
 
        ! clean dynamic storage
+       call init_mod_block_data
        call clean_block_data
 
        ! set physics uses dimensional solar wind data
@@ -2464,7 +2468,6 @@ contains
       UseDtFixed    = .false.
       UseDtLimit    = .false.
       dt            = 0.0
-      dt_BLK        = 0.0
 
       nOrder = 2
       FluxType = 'RUSANOV'

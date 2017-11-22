@@ -12,45 +12,50 @@ module ModBlockData
 
   implicit none
 
+  SAVE
+
   private ! except
 
-  public put_block_data    ! store 1 or more values into storage
+  public:: init_mod_block_data   ! initialize module
+  public:: clean_mod_block_data  ! clean module
+
+  public:: put_block_data    ! store 1 or more values into storage
   interface put_block_data
      module procedure put_point, put_array, put_array2, put_array3, put_array4
   end interface
 
-  public set_block_data    ! indicate that all block data has been set
+  public:: set_block_data    ! indicate that all block data has been set
 
-  public use_block_data    ! function to check if block data has been set
+  public:: use_block_data    ! function to check if block data has been set
 
-  public get_block_data    ! get 1 or more values from storage
+  public:: get_block_data    ! get 1 or more values from storage
   interface get_block_data
      module procedure get_point, get_array, get_array2, get_array3, get_array4
   end interface
 
-  public n_block_data      ! function for number of data values stored
+  public:: n_block_data      ! function for number of data values stored
   interface n_block_data
      module procedure n_data, max_data
   end interface
 
-  public clean_block_data
+  public:: clean_block_data
   interface clean_block_data
      module procedure clean_block, clean_all
   end interface
 
-  public write_block_restart_files
-  public read_block_restart_files
+  public:: write_block_restart_files
+  public:: read_block_restart_files
 
-  public test_block_data
+  public:: test_block_data
 
   ! Maximum number of reals associated with a block.
   ! This has to be set in ModUser so that load_balance.f90 knows about it.
   integer, public:: MaxBlockData = 0
 
-  ! These arrays can be initialized
-  integer :: nData_B(MaxBlock) = -1        ! Number of data elements
-  integer :: iData_B(MaxBlock) = -1        ! Current position for put/get
-  logical :: UseData_B(MaxBlock) = .false. ! Is the data usable?
+  ! Local variables
+  integer, allocatable :: nData_B(:)        ! Number of data elements
+  integer, allocatable :: iData_B(:)        ! Current position for put/get
+  logical, allocatable :: UseData_B(:)      ! Is the data usable?
 
   ! Allocatable storage type for block data
   type BlockDataType
@@ -58,13 +63,31 @@ module ModBlockData
   end type BlockDataType
 
   ! Array of allocatable storage
-  type(BlockDataType) :: Data_B(MaxBlock)
+  type(BlockDataType), allocatable :: Data_B(:)
 
   character(len=*), parameter :: NameMod = 'ModBlockData'
 
   logical, parameter :: DoDebug = .false.
 
 contains
+  !============================================================================
+  subroutine init_mod_block_data
+
+    if(allocated(nData_B)) RETURN
+    allocate(nData_B(MaxBlock), iData_B(MaxBlock), UseData_B(MaxBlock), &
+         Data_B(MaxBlock))
+    nData_B   = -1
+    iData_B   = -1
+    UseData_B = .false.
+    
+  end subroutine init_mod_block_data
+  !============================================================================
+  
+  subroutine clean_mod_block_data
+    
+    if(allocated(nData_B)) deallocate(nData_B, iData_B, UseData_B, Data_B)
+
+  end subroutine clean_mod_block_data
   !============================================================================
 
   subroutine init_block(iBlock,nValue)

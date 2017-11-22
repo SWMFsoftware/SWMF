@@ -1070,15 +1070,19 @@ contains
 
   subroutine BATS_finalize
 
-    use ModAdvance,      ONLY: clean_mod_advance
-    use ModGeometry,     ONLY: clean_mod_geometry
-    use ModNodes,        ONLY: clean_mod_nodes
+    use ModMain,          ONLY: clean_mod_main
+    use ModAdvance,       ONLY: clean_mod_advance
+    use ModBlockData,     ONLY: clean_mod_block_data
+    use ModGeometry,      ONLY: clean_mod_geometry
+    use ModNodes,         ONLY: clean_mod_nodes
     use ModConstrainDivB, ONLY: clean_mod_ct
-    use ModFieldTrace,   ONLY: clean_mod_field_trace
-    use ModPartImplicit, ONLY: clean_mod_part_impl
-    use ModSemiImplicit, ONLY: clean_mod_semi_impl
-    use ModIeCoupling,   ONLY: clean_mod_ie_coupling
-    use BATL_lib,        ONLY: clean_batl
+    use ModFieldTrace,    ONLY: clean_mod_field_trace
+    use ModParallel,      ONLY: clean_mod_parallel
+    use ModPartImplicit,  ONLY: clean_mod_part_impl
+    use ModPointImplicit, ONLY: clean_mod_point_impl
+    use ModSemiImplicit,  ONLY: clean_mod_semi_impl
+    use ModIeCoupling,    ONLY: clean_mod_ie_coupling
+    use BATL_lib,         ONLY: clean_batl
 
     integer:: iError
     logical:: DoTest
@@ -1087,8 +1091,12 @@ contains
     call test_start(NameSub, DoTest)
     call clean_batl
     call clean_mod_advance
+    call clean_mod_main
+    call clean_mod_block_data
     call clean_mod_ct
+    call clean_mod_parallel
     call clean_mod_part_impl
+    call clean_mod_point_impl
     call clean_mod_semi_impl
     call clean_mod_geometry
     call clean_mod_nodes

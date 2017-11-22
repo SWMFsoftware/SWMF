@@ -289,31 +289,32 @@ contains
     end if
 
     ! Add point implicit user or multi-ion source terms
-    if (UsePointImplicit .and. &
-         (IsDynamicPointImplicit .or. UsePointImplicit_B(iBlock))) then
-       if(UseEfield)then
-          call update_point_implicit(iBlock, ion_electron_source_impl, &
-               ion_electron_init_point_impl)
-       elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
-          call update_point_implicit(iBlock, multi_ion_source_impl, &
-               multi_ion_init_point_impl)
-       elseif(UseUserSource) then
-          call update_point_implicit(iBlock, user_calc_sources, &
-               user_init_point_implicit)
+    if (UsePointImplicit)then
+       if(IsDynamicPointImplicit .or. UsePointImplicit_B(iBlock)) then
+          if(UseEfield)then
+             call update_point_implicit(iBlock, ion_electron_source_impl, &
+                  ion_electron_init_point_impl)
+          elseif(UseMultiIon .and. .not.UseSingleIonVelocity)then
+             call update_point_implicit(iBlock, multi_ion_source_impl, &
+                  multi_ion_init_point_impl)
+          elseif(UseUserSource) then
+             call update_point_implicit(iBlock, user_calc_sources, &
+                  user_init_point_implicit)
+          end if
+
+          ! Make ion temperatures equal if requested
+          if(UseMultiIon .and. &
+               (UseSingleIonVelocity .or. UseSingleIonTemperature)) &
+               call fix_multi_ion_update(iBlock)
+
+          ! Make sure that energy is consistent
+          call calc_energy_cell(iBlock)
+
+          if(DoTest)write(*,'(2x,2a,15es20.12)') &
+               NameSub, ' after point impl state              =', &
+               State_VGB(iVarTest, iTest,jTest,kTest,iBlock),      &
+               Energy_GBI(iTest,jTest,kTest,iBlock,:)
        end if
-
-       ! Make ion temperatures equal if requested
-       if(UseMultiIon .and. &
-            (UseSingleIonVelocity .or. UseSingleIonTemperature)) &
-            call fix_multi_ion_update(iBlock)
-
-       ! Make sure that energy is consistent
-       call calc_energy_cell(iBlock)
-
-       if(DoTest)write(*,'(2x,2a,15es20.12)') &
-            NameSub, ' after point impl state              =', &
-            State_VGB(iVarTest, iTest,jTest,kTest,iBlock),      &
-            Energy_GBI(iTest,jTest,kTest,iBlock,:)
     end if
 
     if(UseMultiIon .and. IsMhd)then

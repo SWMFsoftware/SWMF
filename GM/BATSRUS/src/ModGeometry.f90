@@ -26,7 +26,7 @@ module ModGeometry
 
   ! Coordinates of 1,1,1 cell. Coord111_DB would be a good name.
   ! Same as BATL_lib::CoordMin_DB + 0.5*CellSize_DB
-  real :: XyzStart_BLK(3,MaxBlock)
+  real, allocatable :: XyzStart_BLK(:,:)
 
   ! Obsolete variables. Same as BATL_lib::CoordMin_D and CoordMax_D
   real :: XyzMin_D(3), XyzMax_D(3)
@@ -47,23 +47,24 @@ module ModGeometry
 
   ! Variables describing cells inside boundaries
   ! true when at least one cell in the block (including ghost cells) is not true
-  logical :: body_BLK(MaxBlock)
+  logical, allocatable :: body_BLK(:)
 
   ! true when all cells in block (not including ghost cells) are true_cells
-  logical :: true_BLK(MaxBlock)
+  logical, allocatable :: true_BLK(:)
 
   ! Number of true cells (collected for processor 0)
   integer :: nTrueCells = -1
 
   ! True for blocks next to the cell based boundaries
-  logical :: far_field_BCs_BLK(MaxBlock)
+  logical, allocatable :: far_field_BCs_BLK(:)
 
   ! Radial distance from origin and second body
   real, allocatable :: R_BLK(:,:,:,:)
   real, allocatable :: R2_BLK(:,:,:,:)
 
   ! Smallest value of r_BLK and r2_BLK within a block
-  real:: Rmin_BLK(MaxBlock), Rmin2_BLK(MaxBlock)
+  real, allocatable :: Rmin_BLK(:)
+  real, allocatable :: Rmin2_BLK(:)
 
   ! ADDED FOR general r grid in spherical geometry!
   ! Main Idea is to have a tabulated function that maps
@@ -86,9 +87,20 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(allocated(true_cell)) RETURN
+
     allocate(true_cell(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(body_BLK(MaxBlock))
+    allocate(true_BLK(MaxBlock))
+    allocate(far_field_BCs_BLK(MaxBlock))
     allocate(R_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    if(UseBody2) allocate(R2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    allocate(Rmin_BLK(MaxBlock))
+    allocate(XyzStart_BLK(3,MaxBlock))
+
+    if(UseBody2)then
+       allocate(R2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+       allocate(Rmin2_BLK(MaxBlock))
+    end if
+
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_geometry allocated arrays'
@@ -103,12 +115,17 @@ contains
     character(len=*), parameter:: NameSub = 'clean_mod_geometry'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    if(.not.allocated(true_cell)) RETURN
 
-    deallocate(true_cell)
-    if(allocated(R_BLK))     deallocate(R_BLK)
-    if(allocated(R2_BLK))    deallocate(R2_BLK)
-    if(allocated(LogRGen_I)) deallocate(LogRGen_I)
+    if(allocated(true_cell))         deallocate(true_cell)
+    if(allocated(body_BLK))          deallocate(body_BLK)
+    if(allocated(true_BLK))          deallocate(true_BLK)
+    if(allocated(far_field_BCs_BLK)) deallocate(far_field_BCs_BLK)
+    if(allocated(R_BLK))             deallocate(R_BLK)
+    if(allocated(R2_BLK))            deallocate(R2_BLK)
+    if(allocated(Rmin_BLK))          deallocate(Rmin_BLK)
+    if(allocated(Rmin2_BLK))         deallocate(Rmin2_BLK)
+    if(allocated(LogRGen_I))         deallocate(LogRGen_I)
+    if(allocated(XyzStart_BLK))      deallocate(XyzStart_BLK)
 
     if(iProc==0)then
        call write_prefix
@@ -247,4 +264,3 @@ contains
   !============================================================================
 
 end module ModGeometry
-!==============================================================================

@@ -62,9 +62,12 @@ module ModPointImplicit
 
   private ! except
 
+  public:: init_mod_point_impl
+  public:: clean_mod_point_impl
+
   ! Default is true for multi-ion and ion-electron equations
   logical, public:: UsePointImplicit = UseMultiIon .or. UseEfield
-  logical, public:: UsePointImplicit_B(MaxBlock) = UseMultiIon .or. UseEfield
+  logical, public, allocatable:: UsePointImplicit_B(:)
 
   ! balance point implicit blocks once or multiple times?
   logical, public:: DoBalancePointImplicit = .false.
@@ -103,6 +106,23 @@ module ModPointImplicit
   logical:: DoNormalizeCell = .false.
 
 contains
+  !============================================================================  
+  subroutine init_mod_point_impl
+
+    if(allocated(UsePointImplicit_B)) RETURN
+    allocate(UsePointImplicit_B(MaxBlock))
+    ! Default is true for multi-ion and electron-ion equations
+    UsePointImplicit_B = UseMultiIon .or. UseEfield
+
+  end subroutine init_mod_point_impl
+
+  !============================================================================  
+  subroutine clean_mod_point_impl
+
+    if(.not.allocated(UsePointImplicit_B)) RETURN
+    deallocate(UsePointImplicit_B)
+
+  end subroutine clean_mod_point_impl
   !============================================================================
   subroutine read_point_implicit_param
     use ModReadParam,     ONLY: read_var
@@ -112,8 +132,10 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call read_var('UsePointImplicit', UsePointImplicit)
+
     ! the array allows the user to specify the blocks to
     ! use the point implicit scheme individually
+    if(.not.allocated(UsePointImplicit_B)) allocate(UsePointImplicit_B(MaxBlock))
     UsePointImplicit_B = UsePointImplicit
     if(UsePointImplicit) then
        call read_var('BetaPointImplicit', BetaPointImpl)

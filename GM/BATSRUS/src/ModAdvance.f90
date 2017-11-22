@@ -171,7 +171,7 @@ module ModAdvance
   !\
   ! Block type information
   !/
-  integer :: iTypeAdvance_B(MaxBlock)
+  integer, allocatable :: iTypeAdvance_B(:)
   integer, allocatable :: iTypeAdvance_BP(:,:)
 
   ! Named indexes for block types
@@ -231,6 +231,7 @@ contains
     allocate(tmp2_BLK(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
     allocate(time_BLK(nI,nJ,nK,MaxBlock))
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
+    allocate(iTypeAdvance_B(MaxBlock))
 
     ! The current implementation of the constrained transport scheme
     ! requires fluxes between ghost cells. Should be eliminated, and then
@@ -283,6 +284,7 @@ contains
     if(allocated(time_BLK))        deallocate(time_BLK)
     if(allocated(DivB1_GB))        deallocate(DivB1_GB)
     if(allocated(iTypeAdvance_BP)) deallocate(iTypeAdvance_BP)
+    if(allocated(iTypeAdvance_B))  deallocate(iTypeAdvance_B)
     if(allocated(LeftState_VX))    deallocate(LeftState_VX, RightState_VX)
     if(allocated(LeftState_VY))    deallocate(LeftState_VY, RightState_VY)
     if(allocated(LeftState_VZ))    deallocate(LeftState_VZ, RightState_VZ)
@@ -325,4 +327,3 @@ contains
   !============================================================================
 
 end module ModAdvance
-!==============================================================================

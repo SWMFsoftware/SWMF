@@ -40,7 +40,13 @@ module ModMain
   integer :: n_step, nOrder, iStage, nStage, iteration_number=0, nOrderOld
   logical :: UseHalfStep = .true. ! true for the Dt/2, Dt update scheme
 
-  real :: dt, DtFixed, DtFixedOrig, DtFixedDim, Cfl, CflOrig, dt_BLK(MaxBlock)
+  real :: dt
+  real :: DtFixed
+  real :: DtFixedOrig
+  real :: DtFixedDim
+  real :: Cfl
+  real :: CflOrig
+  real, allocatable :: dt_BLK(:)
   logical :: time_accurate = .true.,   &
        boris_correction    = .false.,  &
        UseBorisSimple      = .false.,  &
@@ -329,5 +335,16 @@ module ModMain
   character(len=len(NameVar_V)) :: NameVarLower_V(nVar+nFluid)
   character(len=len(NameVar_V)) :: NamePrimitive_V(nVar)
 
+
+contains
+
+  subroutine init_mod_main
+    if(.not.allocated(dt_BLK)) allocate(dt_BLK(MaxBlock))
+
+  end subroutine init_mod_main
+
+  subroutine clean_mod_main
+    if(allocated(dt_BLK)) deallocate(dt_BLK)
+
+  end subroutine clean_mod_main
 end module ModMain
-!==============================================================================

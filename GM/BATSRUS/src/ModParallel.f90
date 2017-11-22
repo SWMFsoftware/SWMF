@@ -19,10 +19,14 @@ module ModParallel
   !/
   integer, parameter :: NOBLK = Unset_
 
-  integer, dimension(MaxBlock) :: &
-       neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
+  integer, allocatable :: neiLtop(:)
+  integer, allocatable :: neiLbot(:)
+  integer, allocatable :: neiLeast(:)
+  integer, allocatable :: neiLwest(:)
+  integer, allocatable :: neiLnorth(:)
+  integer, allocatable :: neiLsouth(:)
 
-  integer, dimension(1:6,MaxBlock):: neiLEV
+  integer, allocatable :: neiLEV(:,:)
 
   !\
   ! Neighbor processor and block numbers (a value of NOBLK
@@ -30,11 +34,21 @@ module ModParallel
   ! between neighboring solution blocks, there are either 1 or 4
   ! neighboring blocks in each of the six directions.
   !/
-  integer, dimension(4,MaxBlock) :: &
-       neiPtop, neiPbot, neiPeast, neiPwest, neiPnorth, neiPsouth, &
-       neiBtop, neiBbot, neiBeast, neiBwest, neiBnorth, neiBsouth
+  integer, allocatable :: neiPtop(:,:)
+  integer, allocatable :: neiPbot(:,:)
+  integer, allocatable :: neiPeast(:,:)
+  integer, allocatable :: neiPwest(:,:)
+  integer, allocatable :: neiPnorth(:,:)
+  integer, allocatable :: neiPsouth(:,:)
+  integer, allocatable :: neiBtop(:,:)
+  integer, allocatable :: neiBbot(:,:)
+  integer, allocatable :: neiBeast(:,:)
+  integer, allocatable :: neiBwest(:,:)
+  integer, allocatable :: neiBnorth(:,:)
+  integer, allocatable :: neiBsouth(:,:)
 
-  integer, dimension(4,1:6,MaxBlock) :: neiPE, neiBLK
+  integer, allocatable :: neiPE(:,:,:)
+  integer, allocatable :: neiBLK(:,:,:)
 
   ! used by mpi_allgatherv for a more efficient replacment of mpi_allgather
   integer, allocatable :: nBlockMax_P(:), MaxBlockDisp_P(:)
@@ -60,15 +74,67 @@ contains
 
     if(allocated(nBlockMax_P)) RETURN
 
-    allocate(nBlockMax_P(0:nProc-1), MaxBlockDisp_P(0:nProc-1))
+    allocate(neiLtop(MaxBlock))
+    allocate(neiLbot(MaxBlock))
+    allocate(neiLeast(MaxBlock))
+    allocate(neiLwest(MaxBlock))
+    allocate(neiLnorth(MaxBlock))
+    allocate(neiLsouth(MaxBlock))
+    allocate(neiLEV(1:6,MaxBlock))
+    allocate(neiPtop(4,MaxBlock))
+    allocate(neiPbot(4,MaxBlock))
+    allocate(neiPeast(4,MaxBlock))
+    allocate(neiPwest(4,MaxBlock))
+    allocate(neiPnorth(4,MaxBlock))
+    allocate(neiPsouth(4,MaxBlock))
+    allocate(neiBtop(4,MaxBlock))
+    allocate(neiBbot(4,MaxBlock))
+    allocate(neiBeast(4,MaxBlock))
+    allocate(neiBwest(4,MaxBlock))
+    allocate(neiBnorth(4,MaxBlock))
+    allocate(neiBsouth(4,MaxBlock))
+    allocate(neiPE(4,1:6,MaxBlock))
+    allocate(neiBLK(4,1:6,MaxBlock))
+
+    allocate(MaxBlockDisp_P(0:nProc-1))
     do jProc = 0, nProc-1
        MaxBlockDisp_P(jProc) = jProc*MaxBlock
     end do
+
+    allocate(nBlockMax_P(0:nProc-1))
     nBlockMax_P = 0
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_parallel
   !============================================================================
+  subroutine clean_mod_parallel
+
+    if(.not.allocated(nBlockMax_P)) RETURN
+
+    deallocate(neiLtop)
+    deallocate(neiLbot)
+    deallocate(neiLeast)
+    deallocate(neiLwest)
+    deallocate(neiLnorth)
+    deallocate(neiLsouth)
+    deallocate(neiLEV)
+    deallocate(neiPtop)
+    deallocate(neiPbot)
+    deallocate(neiPeast)
+    deallocate(neiPwest)
+    deallocate(neiPnorth)
+    deallocate(neiPsouth)
+    deallocate(neiBtop)
+    deallocate(neiBbot)
+    deallocate(neiBeast)
+    deallocate(neiBwest)
+    deallocate(neiBnorth)
+    deallocate(neiBsouth)
+    deallocate(neiPE)
+    deallocate(neiBLK)
+    deallocate(MaxBlockDisp_P)
+    deallocate(nBlockMax_P)
+
+  end subroutine clean_mod_parallel
 
 end module ModParallel
-!==============================================================================

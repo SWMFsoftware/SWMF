@@ -532,10 +532,10 @@ contains
     real, optional, intent(inout) :: &
          GradVarInOut_DGB(nDim,0:nI+1,j0_:nJp1_,k0_:nKp1_,MaxBlock)
 
-    real  :: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
-    real  :: VarCopy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real:: Var_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
+    real:: VarCopy_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    integer :: iBlock
+    integer:: iBlock
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_gradient_ghost'

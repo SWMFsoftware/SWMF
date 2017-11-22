@@ -143,8 +143,6 @@ contains
                sum( (Xyz_DGB(:,i,j,k,iBlock)- (/xBody2, yBody2, zBody2/))**2 ))
        end do; end do; end do
        Rmin2_BLK(iBlock) = minval(R2_BLK(:,:,:,iBlock))
-    else
-       Rmin2_BLK(iBlock) = 0.0
     end if
 
     far_field_BCs_BLK(iBlock) = any( .not. IsPeriodic_D .and.   &
