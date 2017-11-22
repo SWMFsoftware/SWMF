@@ -9,7 +9,6 @@ program spectrum
 
   ! Variables for DEM calculation
   logical                     :: DoDEM = .false., DoSpectrum = .false.
-  logical                     :: IsNormalizeDEM
   real,allocatable            :: DEM_I(:), Te_I(:)
   real                        :: LogTeMinDEM, LogTeMaxDEM, DLogTeDEM
   character(len=200)          :: NameDEMFile = 'dem.out'
@@ -165,7 +164,10 @@ program spectrum
 
   if(DoDEM)then
      call calc_dem
-     if(.not. DoSpectrum)STOP
+     if(.not. DoSpectrum)then
+        write(*,*)'Spectrum.exe ending with DEM calculation only.'
+        STOP
+     endif
   endif
 
   call read_table
@@ -179,18 +181,17 @@ program spectrum
   ! Loop over Chianti lines
   if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
 
-
   do iLine = 1,nLineAll
      if (.not. IsOneLine)call calc_flux
      if (IsOneLine .and.  &
           OneLineWavelength == LineTable_I(iLine)%LineWavelength)call calc_flux
   end do
 
-
   call save_all
   if(IsVerbose)write(*,*)'done with save_all'
   call save_label
   if(IsVerbose)write(*,*)'done with save_label'
+
   write(*,*)'Spectrum.exe ending'
 
 !!!  call MPI_finalize(iError)
@@ -204,8 +205,7 @@ contains
 
     integer                        :: nLogTeDEM
     integer                        :: iTe, i, j, k
-    real                           :: DTe, DxLocal
-    integer, allocatable           :: Counter_I(:)
+    real                           :: DxLocal
 
     ! Variables to save file.
     character(len=5)               :: TypeFileDEM = 'ascii'
@@ -218,11 +218,10 @@ contains
     ! Set up temperature grid and allocate variables
     nLogTeDEM = nint((LogTeMaxDEM-LogTeMinDEM)/DLogTeDEM)
 
-    allocate(Te_I(nLogTeDEM), DEM_I(nLogTeDEM+1), Counter_I(nLogTeDEM+1))
+    allocate(Te_I(nLogTeDEM), DEM_I(nLogTeDEM+1))
 
     DEM_I = 0
-    Counter_I = 0
-
+    
     do iTe=1,nLogTeDEM
        Te_I(iTe) = 10**(LogTeMinDEM+DLogTeDEM * iTe)
     end do
@@ -239,24 +238,20 @@ contains
              do iTe=1,nLogTeDEM-1
                 if(Var_VIII(te_,i,j,k)<Te_I(iTe+1)) EXIT
              end do
-
-
-             Counter_I(iTe) = Counter_I(iTe) + 1
-             DTe = Te_I(iTe+1)-Te_I(iTe)
              DxLocal = dx
              if(DoExtendTransitionRegion) DxLocal = DxLocal &
                   /extension_factor(Var_VIII(te_,i,j,k))            
-             ! DEM value is Ne^2 *dh/dT in [cm^-5 K^-1]
+             ! DEM value is Ne*N_H *dh/dT in [cm^-5 K^-1]
              DEM_I(iTe) = DEM_I(iTe) + &
-                  (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 * DxLocal*1e2 /DTe
+                  (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 &
+                  / ProtonElectronRatio * DxLocal*1e2 / DLogTeDEM / &
+                  Var_VIII(te_,i,j,k)
           end do
        end do
     end do
-
+   
     do iTe=1,nLogTeDEM 
        Te_I(iTe) = LogTeMinDEM+DLogTeDEM * iTe
-       if(IsNormalizeDEM .and. Counter_I(iTe)>0)DEM_I(iTe) = &
-            DEM_I(iTe)/Counter_I(iTe)
     end do
 
     call save_plot_file(NameFile = NameDEMFile, &
@@ -267,7 +262,7 @@ contains
                Coord1In_I     = Te_I(1:nLogTeDEM-1),           &
                VarIn_I     = DEM_I(1:nLogTeDEM-1))
 
-    deallocate(Te_I,DEM_I,Counter_I)
+    deallocate(Te_I,DEM_I)
 
   end subroutine calc_dem
   
@@ -875,7 +870,6 @@ contains
           DoDEM = .true.
           call read_var('NameDEMFile',NameDEMFile)
           call read_var('DoSpectrum',DoSpectrum)
-          call read_var('IsNormalizeDEM',IsNormalizeDEM)
           call read_var('LogTeMinDEM',LogTeMinDEM)
           call read_var('LogTeMaxDEM',LogTeMaxDEM)
           call read_var('DLogTeDEM',DLogTeDEM)
