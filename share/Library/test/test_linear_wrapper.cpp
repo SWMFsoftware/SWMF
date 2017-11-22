@@ -51,13 +51,13 @@ void linear_solver_matvec_c_default(double* VecIn, double * VecOut, int n){
   if(rank != 0){
     VecOut[0] = head+VecIn[1]-2*VecIn[0];
   }else{
-    VecOut[0] = VecIn[0]; //set bc
+    VecOut[0] = VecIn[1]-2*VecIn[0]; //set bc
   }
 
   if(rank != nProc-1){
     VecOut[n-1] = VecIn[n-2]+end-2.*VecIn[n-1];
   }else{
-    VecOut[n-1] = VecIn[n-1]; //set bc
+    VecOut[n-1] = VecIn[n-2]-2.*VecIn[n-1]; //set bc
   }
 
 }
@@ -76,16 +76,7 @@ double ** GetPrecondMatrix(int nVectorLen, int nDim){
     matrix[2][i] = (i!=nVectorLen-1)?1:0;
     
   }
-  //first type of boundary condition at two ends
-  //work for one block per proc case
-  if (rank==0) {
-    matrix[0][0] =1.; 
-    matrix[2][0]=0.0;
-  }
-  if (rank==nProc-1) {
-    matrix[0][nVectorLen-1]=1.;
-    matrix[1][nVectorLen-1]=0.0;
-  }
+
   return matrix;
 
 }
@@ -105,7 +96,7 @@ int main(){
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &nProc);
 
-  int n=200; // number of true cells
+  int n=200; // number of true cells excluding boundary cells
   int nLen =n/nProc; //length of first nProc-1 procs
   int nCellProc=nLen;//number of cell for this proc
   if (rank==nProc-1){
@@ -131,7 +122,7 @@ int main(){
   }
 
   //set boundary condition 
-  if (rank==nProc-1) Rhs_I[nCellProc-1] = n-1; 
+  if (rank==nProc-1) Rhs_I[nCellProc-1] = -n-1; 
 
   // Convert C MPI communicator to Fortran integer
   MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_WORLD);
@@ -185,7 +176,7 @@ int main(){
     }
     for (int i=0; i<n; i++) {
       printf("%f\n",output[i]);
-      if (abs(output[i]-i)>1e-3) printf("ERROR!\n");
+      if (fabs(output[i]-(i+1))>1e-3) printf("ERROR!\n");
     }
   }
 
