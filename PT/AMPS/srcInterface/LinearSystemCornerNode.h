@@ -1,4 +1,3 @@
-
 //$Id$
 //interface to SWMF's GMRES solver
 
@@ -117,7 +116,7 @@ public:
     cAMRnodeID NodeID;
   };
 
-  void BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& rhs));
+  void BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& rhs,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
 
   //exchange the data
   void ExchageIntermediateUnknownsData();
@@ -135,7 +134,7 @@ public:
 };
 
 template <class cCornerNode>
-void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs)) {
+void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& rhs,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   int i,j,k,thread;
   int iRow=0;
@@ -162,7 +161,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
         double rhs;
 
         //call the user defined function to determine the non-zero elements of the matrix
-        f(i,j,k,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs);
+        f(i,j,k,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,node);
         if (NonZeroElementsFound>=nMaxMatrixNonzeroElements) exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
 
         //scan through the found stencil and correct blocks and indexing is needed
