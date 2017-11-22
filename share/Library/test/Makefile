@@ -170,6 +170,8 @@ OBJ_LINEAR_WRAPPER = \
         ../src/ModMpiInterfaces.o \
         ../src/ModBlasLapack.o \
         ../src/ModLinearSolver.o \
+	../src/ModUtility.o \
+	../src/ModUtility_c.o \
 	../src/linear_solver_wrapper.o \
 	../src/linear_solver_wrapper_c.o \
 	external_methods.o \
@@ -177,6 +179,7 @@ OBJ_LINEAR_WRAPPER = \
 
 test_linear_wrapper_exe:
 	@(cd ../src; make blas.o lapack.o ModLinearSolver.o \
+		ModUtility.o ModUtility_c.o \
 		linear_solver_wrapper.o linear_solver_wrapper_c.o)
 	@make external_methods.o 
 	@make test_linear_wrapper.o 
@@ -188,9 +191,7 @@ test_linear_wrapper:
 	make test_linear_wrapper_exe		>> test_linear_wrapper.diff
 	@echo ./test_linear_wrapper.exe		>> test_linear_wrapper.diff
 	-@(${MPIRUN} ./test_linear_wrapper.exe > test_linear_wrapper.tmp)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-5 \
-		test_linear_wrapper.tmp test_linear_wrapper.log \
-						>  test_linear_wrapper.diff)
+	-@grep "ERROR" test_linear_wrapper.tmp   > test_linear_wrapper.diff
 	@ls -l test_linear_wrapper.diff
 
 #######################################################################
