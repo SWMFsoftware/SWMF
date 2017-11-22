@@ -26,17 +26,19 @@ public:
   public:
     cStencilElement* next;
     cCornerNode* CornerNode;
-    double* DataPartialUnknownVector;
     double MatrixElementValue;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    int UnknownVectorIndex,Thread;
 
     cStencilElement() {
       next=NULL,node=NULL,CornerNode=NULL;
       MatrixElementValue=0.0;
+      UnknownVectorIndex=-1,Thread=-1;
     }
   };
 
   class cMatrixRow {
+  public:
     cMatrixRow* next;
     cStencilElement* FirstElement;
     double rhs;
@@ -62,7 +64,6 @@ public:
   int* RecvExchangeBufferLength;
 
   int** SendExchangeBuffer;
-  int*** SendExchangeDataPointerList;
   int* SendExchangeBufferLength;
 
   int *RecvDataPointCounter;
@@ -75,13 +76,11 @@ public:
   class cMatrixRowNonZeroElementTable {
   public:
     int i,j,k; //coordintes of the corner block used in the equation
-    double rhs;
-    int iVar;
-    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+    double MatrixElementValue;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *Node;
 
     cMatrixRowNonZeroElementTable() {
-      node=NULL;
-      i=0,j=0,k=0,rhs=0.0,iVar=0;
+      i=0,j=0,k=0,MatrixElementValue=0.0,Node=NULL;
     }
   };
 
@@ -97,7 +96,7 @@ public:
 
     //exchange buffers
     RecvExchangeBuffer=NULL,RecvExchangeBufferLength=NULL,RecvDataPointCounter=NULL;
-    SendExchangeBuffer=NULL,SendExchangeDataPointerList=NULL,SendExchangeBufferLength=NULL;
+    SendExchangeBuffer=NULL,SendExchangeBufferLength=NULL;
 
     MatrixRowNonZeroElementTable=new cMatrixRowNonZeroElementTable[nMaxMatrixNonzeroElements];
 
@@ -113,6 +112,11 @@ public:
   void Reset();
 
   //build the matrix
+  struct cDataRequestListElement {
+    int i,j,k;
+    cAMRnodeID NodeID;
+  };
+
   void BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& rhs));
 
   //exchange the data
@@ -137,15 +141,11 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
   int iRow=0;
   cMatrixRow* Row;
   cStencilElement* el;
+  cCornerNode* CornerNode;
 
   //allocate the counter of the data points to be recieve
-  RecvDataPointCounter=new int [PIC::nTotalThreads]
+  RecvDataPointCounter=new int [PIC::nTotalThreads];
   for (thread=0;thread<PIC::nTotalThreads;thread++) RecvDataPointCounter[thread]=0;
-
-  struct cDataRequestListElement {
-    int i,j,k;
-    cAMRnodeID NodeID;
-  };
 
   list<cDataRequestListElement> DataRequestList[PIC::ThisThread];
 
@@ -167,19 +167,33 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
 
         //scan through the found stencil and correct blocks and indexing is needed
         for (int ii=0;ii<NonZeroElementsFound;ii++) {
-          if (MatrixRowNonZeroElementTable[ii].i==_BLOCK_CELLS_X_) {
-            MatrixRowNonZeroElementTable[ii].i=0;
-            MatrixRowNonZeroElementTable[ii].node=MatrixRowNonZeroElementTable[ii].node->GetNeib(1,0,0);
+          MatrixRowNonZeroElementTable[ii].Node=node;
+
+          if (MatrixRowNonZeroElementTable[ii].i>=_BLOCK_CELLS_X_) {
+            MatrixRowNonZeroElementTable[ii].i-=_BLOCK_CELLS_X_;
+            MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(1,0,0);
+          }
+          else if (MatrixRowNonZeroElementTable[ii].i<0) {
+            MatrixRowNonZeroElementTable[ii].i+=_BLOCK_CELLS_X_;
+            MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(0,0,0);
           }
 
-          if (MatrixRowNonZeroElementTable[ii].j==_BLOCK_CELLS_Y_) {
-            MatrixRowNonZeroElementTable[ii].j=0;
-            MatrixRowNonZeroElementTable[ii].node=MatrixRowNonZeroElementTable[ii].node->GetNeib(0,1,0);
+          if (MatrixRowNonZeroElementTable[ii].j>=_BLOCK_CELLS_Y_) {
+            MatrixRowNonZeroElementTable[ii].j-=_BLOCK_CELLS_Y_;
+            MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(3,0,0);
+          }
+          else if (MatrixRowNonZeroElementTable[ii].j<0) {
+            MatrixRowNonZeroElementTable[ii].j+=_BLOCK_CELLS_Y_;
+            MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(2,0,0);
           }
 
-          if (MatrixRowNonZeroElementTable[ii].k==_BLOCK_CELLS_Z_) {
-            MatrixRowNonZeroElementTable[ii].k=0;
-            MatrixRowNonZeroElementTable[ii].node=MatrixRowNonZeroElementTable[ii].node->GetNeib(0,0,1);
+          if (MatrixRowNonZeroElementTable[ii].k>=_BLOCK_CELLS_Z_) {
+            MatrixRowNonZeroElementTable[ii].k-=_BLOCK_CELLS_Z_;
+            MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(5,0,0);
+          }
+          else if (MatrixRowNonZeroElementTable[ii].k<0) {
+            MatrixRowNonZeroElementTable[ii].k+=_BLOCK_CELLS_Z_;
+            MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(4,0,0);
           }
 
           //check whether the periodic boundary conditions are in use, and the new block is on the boundary of the domain
@@ -191,6 +205,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
         NewRow->i=i,NewRow->j=j,NewRow->k=k;
         NewRow->iVar=iVar;
         NewRow->node=node;
+        NewRow->rhs=rhs;
         NewRow->FirstElement=NULL;
 
         NewRow->next=MatrixRowTable;
@@ -198,127 +213,111 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
 
         //add to the row non-zero elements
         for (int iElement=0;iElement<NonZeroElementsFound;iElement++) {
-          cStencilElement* el=StencilElementStack.newElement();
-
-          cCornerNode* CornerNode=
-              MatrixRowNonZeroElementTable[iElement].node->block.GetCornerNode
-              (PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[iElement].i,MatrixRowNonZeroElementTable[iElement].j,MatrixRowNonZeroElementTable[iElement].k));
+          el=StencilElementStack.newElement();
+          CornerNode=MatrixRowNonZeroElementTable[iElement].Node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[iElement].i,MatrixRowNonZeroElementTable[iElement].j,MatrixRowNonZeroElementTable[iElement].k));
 
           el->CornerNode=CornerNode;
-          el->DataPartialUnknownVector=NULL;
+          el->UnknownVectorIndex=-1;
           el->MatrixElementValue=MatrixRowNonZeroElementTable[iElement].MatrixElementValue;
-          el->node=MatrixRowNonZeroElementTable[iElement].node;
+          el->node=MatrixRowNonZeroElementTable[iElement].Node;
 
           el->next=NewRow->FirstElement;
           NewRow->FirstElement=el;
 
           //count the number of the element that are needed
-          if (MatrixRowNonZeroElementTable[iElement]>node->Thread==PIC::ThisThread) {
+          if (MatrixRowNonZeroElementTable[iElement].Node->Thread==PIC::ThisThread) {
             //the point is located at the current MPI process
 
-            if (CornerNode->LinearSolverLocalPartialUnknownVector==NULL) {
+            if (CornerNode->LinearSolverUnknownVectorIndex==-1) {
               RecvDataPointCounter[PIC::ThisThread]++;
-              CornerNode->LinearSolverLocalPartialUnknownVector=(double*)0xf;
+              CornerNode->LinearSolverUnknownVectorIndex=-2;
             }
           }
           else {
             //the data point is on another MPI process
-            nDataPoint[MatrixRowNonZeroElementTable[iElement]>node->Thread++;
-            CornerNode->LinearSolverLocalPartialUnknownVector=(double*)0xf;
 
-            //add into the data requst list
-            cDataRequestListElement DataRequestListElement;
-            cAMRnodeID NodeID;
+            if (CornerNode->LinearSolverUnknownVectorIndex==-1) {
+              RecvDataPointCounter[MatrixRowNonZeroElementTable[iElement].Node->Thread]++;
+              CornerNode->LinearSolverUnknownVectorIndex=-2;
 
-            PIC::Mesh::mesh.GetAMRnodeID(NodeID,MatrixRowNonZeroElementTable[iElement].node);
+              //add into the data requst list
+              cDataRequestListElement DataRequestListElement;
+              cAMRnodeID NodeID;
 
-            DataRequestListElement.i=MatrixRowNonZeroElementTable[iElement].i;
-            DataRequestListElement.j=MatrixRowNonZeroElementTable[iElement].j;
-            DataRequestListElement.k=MatrixRowNonZeroElementTable[iElement].k;
-            DataRequestListElement.NodeID=NodeID;
+              PIC::Mesh::mesh.GetAMRnodeID(NodeID,MatrixRowNonZeroElementTable[iElement].Node);
 
-            DataRequestList[MatrixRowNonZeroElementTable[iElement]>node->Thread].push_front(DataRequestListElement);
+              DataRequestListElement.i=MatrixRowNonZeroElementTable[iElement].i;
+              DataRequestListElement.j=MatrixRowNonZeroElementTable[iElement].j;
+              DataRequestListElement.k=MatrixRowNonZeroElementTable[iElement].k;
+              DataRequestListElement.NodeID=NodeID;
+
+              DataRequestList[MatrixRowNonZeroElementTable[iElement].Node->Thread].push_front(DataRequestListElement);
+            }
           }
         }
 
 
-      } //for (int iVar=0;iVar<nUnknownsPerNode;iVar++) {
+      }
     }
   }
 
-  //allocate the data buffers for the partial vectors and link the pointers
-  //points that are inside the subdomian
-  SubdomainPartialRHS=new double nDataPoint[PIC::ThisThread];
-  SubdomainPartialUnknownsVector=new double nDataPoint[PIC::ThisThread];
-
+  //allocate the data buffers for the partial vectors and link the pointers points that are inside the subdomian
+  //allocate the exchange buffer for the data the needs to be recieved from other MPI processess
   int cnt=0;
 
   int DataExchangeTableCounter[PIC::nTotalThreads];
   for (thread=0;thread<PIC::nTotalThreads;thread++) DataExchangeTableCounter[thread]=0;
 
   for (iRow=0,Row=MatrixRowTable;Row!=NULL;iRow,Row=Row->next) {
-    for (el=Row->FirstElement;el!=NULL;el=el->next) if (el->node->Thread==PIC::ThisThread) {
-      if (el->CornerNode->LinearSolverLocalPartialUnknownVector==(double*)0xf) {
+    for (el=Row->FirstElement;el!=NULL;el=el->next) {
+      if (el->CornerNode->LinearSolverUnknownVectorIndex==-2) {
         //the node is still not linked to the 'partial data vector'
-        el->CornerNode->LinearSolverLocalPartialUnknownVector=SubdomainPartialUnknownsVector+DataExchangeTableCounter[PIC::ThisThread];
-        DataExchangeTableCounter[PIC::ThisThread]++;
+        el->CornerNode->LinearSolverUnknownVectorIndex=DataExchangeTableCounter[PIC::ThisThread]++;
       }
 
-      el->DataPartialUnknownVector=el->CornerNode->LinearSolverLocalPartialUnknownVector;
-      SubdomainPartialRHS[iRow]=Row->rhs;
-    }
-  }
-
-  //allocate the exchange buffer for the data the needs to be recieved from other MPI processess
-  RecvExchangeBuffer=new double *[PIC::nTotalThreads];
-
-  for (thread=0;thread<PIC::nTotalThreads;thread++) RecvExchangeBuffer[thread]=(thread!=PIC::nTotalThreads) new double nDataPoint[thread] : NULL;
-
-  for (iRow=0,Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) {
-    for (el=Row->FirstElement;el!=NULL;el=el->next) if (el->node->Thread!=PIC::ThisThread) {
-      if (el->CornerNode->LinearSolverLocalPartialUnknownVector==(double*)0xf) {
-        el->CornerNode->LinearSolverLocalPartialUnknownVector=UnknownsExchangeVector[thread]+DataExchangeTableCounter[el->node->Thread];
-      }
-
-      el->DataPartialUnknownVector=el->CornerNode->LinearSolverLocalPartialUnknownVector;
+      el->UnknownVectorIndex=el->CornerNode->LinearSolverUnknownVectorIndex;
+      el->Thread=el->node->Thread;
     }
   }
 
   //exchange the request lists
-  int From,To,nGlobalDataPointTable=new int [PIC::nTotalThreads*PIC::nTotalThreads];
+  int From,To;
+  int *nGlobalDataPointTable=new int [PIC::nTotalThreads*PIC::nTotalThreads];
   cDataRequestListElement* ExchangeList;
 
-  MPI_Allgather(nDataPoint,PIC::nTotalThreads,MPI_INT,nGlobalDataPointTable,PIC::nTotalThreads,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
+  MPI_Allgather(DataExchangeTableCounter,PIC::nTotalThreads,MPI_INT,nGlobalDataPointTable,PIC::nTotalThreads,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
 
-  double* SendUnknownsList[PIC::nTotalThreads];
-  int SendUnknownsListLength[PIC::nTotalThreads];
+  SendExchangeBuffer=new int* [PIC::nTotalThreads];
+  SendExchangeBufferLength=new int [PIC::nTotalThreads];
+
+  for (thread=0;thread<PIC::nTotalThreads;thread++) SendExchangeBuffer[thread]=NULL,SendExchangeBufferLength[thread]=0;
+
 
   //create the lists
-  for (To=0;To<PIC::nTotalThreads;To++) if ((To!=From)&&(nGlobalDataPointTable[From+To*PIC::nTotalThreads]!=0) {
-    ExchangeList=new cDataRequestListElement [GlobalDataPointTable[From+To*PIC::nTotalThreads]];
+  for (To=0;To<PIC::nTotalThreads;To++) if ((To!=From)&&(nGlobalDataPointTable[From+To*PIC::nTotalThreads]!=0)) {
+    ExchangeList=new cDataRequestListElement [nGlobalDataPointTable[From+To*PIC::nTotalThreads]];
 
     if (PIC::ThisThread==To) {
-      list<cDataRequestListElement>::iterator ptr;
+//      list<cDataRequestListElement>::iterator ptr;
 
-      for (i=0,ptr=DataRequestList[From].begin();ptr!=DataRequestList[From].end();ptr++,i++) ExchangeList[i]=*ptr;
-      MPI_Send(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cDataRequestListElement),MPI_CHAR,0,From,MPI_GLOBAL_COMMUNICATOR);
+//      for (i=0,ptr=DataRequestList[From].begin();ptr!=DataRequestList[From].end();ptr++,i++) ExchangeList[i]=*ptr;
+//      MPI_Send(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cDataRequestListElement),MPI_CHAR,0,From,MPI_GLOBAL_COMMUNICATOR);
     }
     else {
       MPI_Status status;
 
-      MPI_Recv(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cDataRequestListElement)),MPI_CHAR,To,0,MPI_GLOBAL_COMMUNICATOR,&status)
+      MPI_Recv(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cDataRequestListElement),MPI_CHAR,To,0,MPI_GLOBAL_COMMUNICATOR,&status);
 
       //unpack the SendDataList
-      SendUnknownsTable[To]=new double* [nGlobalDataPointTable[From+To*PIC::nTotalThreads];
-      SendUnknownsListLength[To]=nGlobalDataPointTable[From+To*PIC::nTotalThreads];
+      SendExchangeBufferLength[To]=nGlobalDataPointTable[From+To*PIC::nTotalThreads];
+      SendExchangeBuffer[To]=new int[SendExchangeBufferLength[To]];
 
-      for (int ii=0;ii<SendUnknownsListLength[To];ii++) {
+
+      for (int ii=0;ii<SendExchangeBufferLength[To];ii++) {
         node=PIC::Mesh::mesh.findAMRnodeWithID(ExchangeList[ii].NodeID);
+        CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ExchangeList[ii].i,ExchangeList[ii].j,ExchangeList[ii].k));
 
-        cCornerNode* CornerNode=node->block->GetCornerNode(
-            PIC::Mesh::mesh.getCornerNodeLocalNumber(ExchangeList[ii].i,ExchangeList[ii].j,ExchangeList[ii].k));
-
-        SendUnknownsList[To][ii]=CornerNode->LinearSolverLocalPartialUnknownVector;
+        SendExchangeBuffer[To][ii]=CornerNode->LinearSolverUnknownVectorIndex;
       }
 
       delete [] ExchangeList;
@@ -385,17 +384,15 @@ void cLinearSystemCornerNode<cCornerNode>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBl
 
     for (int thread=0;thread<PIC::nTotalThreads;thread++) if (SendExchangeBuffer[thread]!=NULL) {
       delete [] SendExchangeBuffer[thread];
-      delete [] SendExchangeDataPointerList[thread];
     }
 
     delete [] SendExchangeBuffer;
-    delete [] SendExchangeDataPointerList;
     delete [] SendExchangeBufferLength;
 
     delete [] SubdomainPartialRHS;
     delete [] SubdomainPartialUnknownsVector;
 
-    SendExchangeBuffer=NULL,SendExchangeDataPointerList=NULL,SendExchangeBufferLength=NULL;
+    SendExchangeBuffer=NULL,SendExchangeBufferLength=NULL;
     MatrixRowTable=NULL;
     SubdomainPartialRHS=NULL,SubdomainPartialUnknownsVector=NULL;
 
@@ -411,7 +408,7 @@ void cLinearSystemCornerNode<cCornerNode>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBl
     if ((block=startNode->block)!=NULL) {
       for (int i=0;i<_BLOCK_CELLS_X_+1;i++) for (int j=0;j<_BLOCK_CELLS_Y_;j++) for (int k=0;k<_BLOCK_CELLS_Z_;k++) {
         if ((CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
-          CornerNode->LinearSolverLocalPartialUnknownVector=NULL;
+          CornerNode->LinearSolverUnknownVectorIndex=-1;
         }
       }
     }
@@ -423,15 +420,18 @@ void cLinearSystemCornerNode<cCornerNode>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBl
 template <class cCornerNode>
 void cLinearSystemCornerNode<cCornerNode>::MultiplyVector(double *p,double *x,int length) {
   cMatrixRow* row;
-  cStencilElement* el;
+  cStencilElement *el,StencilElement;
   int cnt;
   double res;
 
-  memcpy(SubdomainPartialUnknownsVector,x,length*sizeof(double))
   ExchageIntermediateUnknownsData();
 
   for (row=MatrixRowTable,cnt=0,row!=NULL;row=row->next,cnt++) {
-    for (res=0.0,el=row->FirstElement;el!=NULL;el++) res+=el->MatrixElementValue*el->DataPartialUnknownVector;
+    for (res=0.0,el=row->FirstElement;el!=NULL;el++) {
+      memcpy(&StencilElement,el,sizeof(cStencilElement));
+
+      res+=StencilElement.MatrixElementValue*((StencilElement.Thread==PIC::ThisThread) ? x[StencilElement.UnknownVectorIndex] : RecvExchangeBuffer[StencilElement.Thread][StencilElement.UnknownVectorIndex];
+    }
 
      p[cnt]=res;
   }
@@ -439,4 +439,4 @@ void cLinearSystemCornerNode<cCornerNode>::MultiplyVector(double *p,double *x,in
 
 
 
-#endif /* _LINEARSYSTEMCORNERCODE_H_ */
+#endif /* _LINEARSYSTEMCORNERNODE_H_ */
