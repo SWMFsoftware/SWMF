@@ -77,7 +77,7 @@ subroutine linear_solver_wrapper(TypeSolver, Tolerance, nIteration, &
      call CON_stop(NameSub)
   end if
 
-  if (Param%DoPrecond == .true. .and. Param%TypeKrylov == 'CG') then
+  if (Param%DoPrecond .and. Param%TypeKrylov == 'CG') then
      write(*,*) NameSub, ' ERROR: CG solver does not have preconditioner'
      call CON_stop(NameSub)
   end if
