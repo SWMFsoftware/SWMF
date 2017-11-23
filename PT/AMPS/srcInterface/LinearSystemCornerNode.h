@@ -13,6 +13,12 @@
 
 #include "pic.h"
 
+class cLinearSystemCornerNodeDataRequestListElement {
+public:
+  int i,j,k;
+  cAMRnodeID NodeID;
+};
+
 template <class cCornerNode>
 class cLinearSystemCornerNode {
 public:
@@ -75,11 +81,12 @@ public:
   class cMatrixRowNonZeroElementTable {
   public:
     int i,j,k; //coordintes of the corner block used in the equation
+    int iVar; //the index of the variable used in the stencil
     double MatrixElementValue;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *Node;
 
     cMatrixRowNonZeroElementTable() {
-      i=0,j=0,k=0,MatrixElementValue=0.0,Node=NULL;
+      i=0,j=0,k=0,iVar=0,MatrixElementValue=0.0,Node=NULL;
     }
   };
 
@@ -111,11 +118,6 @@ public:
   void Reset();
 
   //build the matrix
-  struct cDataRequestListElement {
-    int i,j,k;
-    cAMRnodeID NodeID;
-  };
-
   void BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& rhs,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
 
   //exchange the data
@@ -146,7 +148,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
   RecvDataPointCounter=new int [PIC::nTotalThreads];
   for (thread=0;thread<PIC::nTotalThreads;thread++) RecvDataPointCounter[thread]=0;
 
-  list<cDataRequestListElement> DataRequestList[PIC::ThisThread];
+  list<cLinearSystemCornerNodeDataRequestListElement> DataRequestList[PIC::ThisThread];
 
   //build the matrix
   for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
@@ -240,7 +242,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
               CornerNode->LinearSolverUnknownVectorIndex=-2;
 
               //add into the data requst list
-              cDataRequestListElement DataRequestListElement;
+              cLinearSystemCornerNodeDataRequestListElement DataRequestListElement;
               cAMRnodeID NodeID;
 
               PIC::Mesh::mesh.GetAMRnodeID(NodeID,MatrixRowNonZeroElementTable[iElement].Node);
@@ -282,7 +284,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
   //exchange the request lists
   int From,To;
   int *nGlobalDataPointTable=new int [PIC::nTotalThreads*PIC::nTotalThreads];
-  cDataRequestListElement* ExchangeList;
+  cLinearSystemCornerNodeDataRequestListElement* ExchangeList;
 
   MPI_Allgather(DataExchangeTableCounter,PIC::nTotalThreads,MPI_INT,nGlobalDataPointTable,PIC::nTotalThreads,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
 
@@ -294,18 +296,18 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
 
   //create the lists
   for (To=0;To<PIC::nTotalThreads;To++) if ((To!=From)&&(nGlobalDataPointTable[From+To*PIC::nTotalThreads]!=0)) {
-    ExchangeList=new cDataRequestListElement [nGlobalDataPointTable[From+To*PIC::nTotalThreads]];
+    ExchangeList=new cLinearSystemCornerNodeDataRequestListElement [nGlobalDataPointTable[From+To*PIC::nTotalThreads]];
 
     if (PIC::ThisThread==To) {
-//      list<cDataRequestListElement>::iterator ptr;
+      list<cLinearSystemCornerNodeDataRequestListElement>::iterator ptr;
 
-//      for (i=0,ptr=DataRequestList[From].begin();ptr!=DataRequestList[From].end();ptr++,i++) ExchangeList[i]=*ptr;
-//      MPI_Send(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cDataRequestListElement),MPI_CHAR,0,From,MPI_GLOBAL_COMMUNICATOR);
+      for (i=0,ptr=DataRequestList[From].begin();ptr!=DataRequestList[From].end();ptr++,i++) ExchangeList[i]=*ptr;
+      MPI_Send(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cLinearSystemCornerNodeDataRequestListElement),MPI_CHAR,0,From,MPI_GLOBAL_COMMUNICATOR);
     }
     else {
       MPI_Status status;
 
-      MPI_Recv(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cDataRequestListElement),MPI_CHAR,To,0,MPI_GLOBAL_COMMUNICATOR,&status);
+      MPI_Recv(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cLinearSystemCornerNodeDataRequestListElement),MPI_CHAR,To,0,MPI_GLOBAL_COMMUNICATOR,&status);
 
       //unpack the SendDataList
       SendExchangeBufferLength[To]=nGlobalDataPointTable[From+To*PIC::nTotalThreads];
