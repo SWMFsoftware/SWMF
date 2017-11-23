@@ -129,13 +129,9 @@ sub get_settings{
     open(FILE, $NameSizeFile) or die "$ERROR could not open $NameSizeFile\n";
     while(<FILE>){
 	next if /^\s*!/; # skip commented out lines
-        $MaxBlock=$1     if /\bMaxBlock\s*=\s*(\d+)/i;
 	$MaxImplBlock=$1 if /\bMaxImplBLK\s*=[^0-9]*(\d+)/i;
     }
     close FILE;
-
-    die "$ERROR could not read MaxBlock from $NameSizeFile\n" 
-	unless length($MaxBlock);
 
     die "$ERROR could not read MaxImplBlock from $NameSizeFile\n" 
 	unless length($MaxImplBlock);                         
@@ -148,6 +144,7 @@ sub get_settings{
         $nI=$1           if /\bnI\s*=\s*(\d+)/i;
 	$nJ=$1           if /\bnJ\s*=\s*(\d+)/i;
 	$nK=$1           if /\bnK\s*=\s*(\d+)/i;
+        $MaxBlock=$1     if /\bMaxBlock\s*=\s*(\d+)/i;
 	$GhostCell=$1    if /\bnG\s*=\s*(\d)/;
     }
     close FILE;
@@ -157,6 +154,8 @@ sub get_settings{
     die "$ERROR could not read nK from $NameBatlFile\n" unless length($nK);
     die "$ERROR could not read nG from $NameBatlFile\n" 
 	unless length($GhostCell);
+    die "$ERROR could not read MaxBlock from $NameSizeFile\n" 
+	unless length($MaxBlock);
 
     $GridSize = "$nI,$nJ,$nK,$MaxBlock,$MaxImplBlock";
 
@@ -205,7 +204,6 @@ sub set_grid_size{
     @ARGV = ($NameSizeFile);
     while(<>){
 	if(/^\s*!/){print; next} # Skip commented out lines
-	s/\b(MaxBlock\s*=[^0-9]*)(\d+)/$1$MaxBlock/i;
 	s/\b(MaxImplBLK\s*=[^0-9]*)(\d+)/$1$MaxImplBlock/i;
 	print;
     }
@@ -217,6 +215,7 @@ sub set_grid_size{
 	s/\b(nJ\s*=[^0-9]*)(\d+)/$1$nJ/i;
 	s/\b(nK\s*=[^0-9]*)(\d+)/$1$nK/i;
 	s/\b(nG\s*=[^0-9]*)\d/$1$GhostCell/i;
+	s/\b(MaxBlock\s*=[^0-9]*)(\d+)/$1$MaxBlock/i;
 	print;
     }
 
