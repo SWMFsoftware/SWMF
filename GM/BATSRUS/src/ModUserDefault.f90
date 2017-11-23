@@ -12,5 +12,15 @@ module ModUser
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = 'DEFAULT EMPTY ROUTINES'
 
+contains
+  !============================================================================
+
+  subroutine init_mod_user
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+  end subroutine clean_mod_user
 end module ModUser
 !==============================================================================
