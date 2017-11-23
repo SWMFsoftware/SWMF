@@ -122,7 +122,7 @@ module BATL_size
   real, parameter:: InvIjkRatio = 1.0/IjkRatio
 
   ! Maximum number of blocks per processor is set dynamically
-  integer :: MaxBlock = 0
+  integer :: MaxBlock = 400
 
   ! Largest used block index on a processor at any given time
   integer :: nBlock = 0
