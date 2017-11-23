@@ -22,7 +22,8 @@ module ModUser
        IMPLEMENTED12 => user_get_log_var,                &
        IMPLEMENTED13 => user_set_cell_boundary,          &
        IMPLEMENTED14 => user_amr_criteria,               &
-       IMPLEMENTED15 => user_initial_perturbation
+       IMPLEMENTED15 => user_initial_perturbation,       &
+       IMPLEMENTED16 => user_action
 
   use ModSize
   use ModProcMH,    ONLY: iProc
@@ -186,53 +187,62 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(nStepSave_B)) &
-        allocate(nStepSave_B(MaxBlock))
-    nStepSave_B = -100
-    if(.not.allocated(TimeSimulationSave_B)) &
-        allocate(TimeSimulationSave_B(MaxBlock))
-    TimeSimulationSave_B = -1e30
-    if(.not.allocated(nStepSaveCalcRates_B)) &
-        allocate(nStepSaveCalcRates_B(MaxBlock))
-    nStepSaveCalcRates_B = -100
-    if(.not.allocated(ne20eV_GB)) &
-        allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    ne20eV_GB = 0.
-    if(.not.allocated(SPeAdditional_GB)) &
-        allocate(SPeAdditional_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    SPeAdditional_GB =0.0
-    if(.not.allocated(v_IIGB)) &
-         allocate(v_IIGB(1:nNeuFluid,1:nIonFluid, &
-         MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    if(.not.allocated(ve_IIGB)) &
-         allocate(ve_IIGB(1:nNeuFluid,1:nIonFluid, &
-         MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    if(.not.allocated(TestArray_IGB)) &
-         allocate(TestArray_IGB(8, MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    TestArray_IGB = 0.0
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(nStepSave_B)) &
-        deallocate(nStepSave_B)
-    if(allocated(TimeSimulationSave_B)) &
-        deallocate(TimeSimulationSave_B)
-    if(allocated(nStepSaveCalcRates_B)) &
-        deallocate(nStepSaveCalcRates_B)
-    if(allocated(ne20eV_GB)) &
-        deallocate(ne20eV_GB)
-    if(allocated(SPeAdditional_GB)) &
-        deallocate(SPeAdditional_GB)
-    if(allocated(v_IIGB)) &
-         deallocate(v_IIGB)
-    if(allocated(ve_IIGB)) &
-         deallocate(ve_IIGB)
-    if(allocated(TestArray_IGB)) &
-         deallocate(TestArray_IGB)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(nStepSave_B)) &
+         allocate(nStepSave_B(MaxBlock))
+     nStepSave_B = -100
+     if(.not.allocated(TimeSimulationSave_B)) &
+         allocate(TimeSimulationSave_B(MaxBlock))
+     TimeSimulationSave_B = -1e30
+     if(.not.allocated(nStepSaveCalcRates_B)) &
+         allocate(nStepSaveCalcRates_B(MaxBlock))
+     nStepSaveCalcRates_B = -100
+     if(.not.allocated(ne20eV_GB)) &
+         allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+     ne20eV_GB = 0.
+     if(.not.allocated(SPeAdditional_GB)) &
+         allocate(SPeAdditional_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+     SPeAdditional_GB =0.0
+     if(.not.allocated(v_IIGB)) &
+          allocate(v_IIGB(1:nNeuFluid,1:nIonFluid, &
+          MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+     if(.not.allocated(ve_IIGB)) &
+          allocate(ve_IIGB(1:nNeuFluid,1:nIonFluid, &
+          MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+     if(.not.allocated(TestArray_IGB)) &
+          allocate(TestArray_IGB(8, MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+     TestArray_IGB = 0.0
+    case('clean module')
+      if(allocated(nStepSave_B)) &
+         deallocate(nStepSave_B)
+     if(allocated(TimeSimulationSave_B)) &
+         deallocate(TimeSimulationSave_B)
+     if(allocated(nStepSaveCalcRates_B)) &
+         deallocate(nStepSaveCalcRates_B)
+     if(allocated(ne20eV_GB)) &
+         deallocate(ne20eV_GB)
+     if(allocated(SPeAdditional_GB)) &
+         deallocate(SPeAdditional_GB)
+     if(allocated(v_IIGB)) &
+          deallocate(v_IIGB)
+     if(allocated(ve_IIGB)) &
+          deallocate(ve_IIGB)
+     if(allocated(TestArray_IGB)) &
+          deallocate(TestArray_IGB)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
   subroutine user_read_inputs

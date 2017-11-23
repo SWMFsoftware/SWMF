@@ -17,7 +17,8 @@ module ModUser
        IMPLEMENTED6  => user_set_boundary_cells,  &
        IMPLEMENTED7  => user_update_states,       &
        IMPLEMENTED8  => user_init_session,        &
-       IMPLEMENTED9  => user_set_plot_var
+       IMPLEMENTED9  => user_set_plot_var,        &
+       IMPLEMENTED10 => user_action
 
   use ModProcMH, ONLY: iProc
   use ModVarIndexes, ONLY: nVar
@@ -141,33 +142,42 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(Gravity_DCB)) &
-        allocate(Gravity_DCB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    Gravity_DCB = 0.
-    if(.not.allocated(UseGravity)) &
-        allocate(UseGravity(MaxBlock))
-    UseGravity = .false.
-    if(.not.allocated(nStepSave_B)) &
-        allocate(nStepSave_B(MaxBlock))
-    nStepSave_B = -100
-    if(.not.allocated(TimeSimulationSave_B)) &
-        allocate(TimeSimulationSave_B(MaxBlock))
-    TimeSimulationSave_B = -1e30
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(Gravity_DCB)) &
-        deallocate(Gravity_DCB)
-    if(allocated(UseGravity)) &
-        deallocate(UseGravity)
-    if(allocated(nStepSave_B)) &
-        deallocate(nStepSave_B)
-    if(allocated(TimeSimulationSave_B)) &
-        deallocate(TimeSimulationSave_B)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(Gravity_DCB)) &
+         allocate(Gravity_DCB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+     Gravity_DCB = 0.
+     if(.not.allocated(UseGravity)) &
+         allocate(UseGravity(MaxBlock))
+     UseGravity = .false.
+     if(.not.allocated(nStepSave_B)) &
+         allocate(nStepSave_B(MaxBlock))
+     nStepSave_B = -100
+     if(.not.allocated(TimeSimulationSave_B)) &
+         allocate(TimeSimulationSave_B(MaxBlock))
+     TimeSimulationSave_B = -1e30
+    case('clean module')
+      if(allocated(Gravity_DCB)) &
+         deallocate(Gravity_DCB)
+     if(allocated(UseGravity)) &
+         deallocate(UseGravity)
+     if(allocated(nStepSave_B)) &
+         deallocate(nStepSave_B)
+     if(allocated(TimeSimulationSave_B)) &
+         deallocate(TimeSimulationSave_B)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
 

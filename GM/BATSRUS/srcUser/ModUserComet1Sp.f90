@@ -12,7 +12,8 @@ module ModUser
        IMPLEMENTED2 => user_read_inputs,                &
        IMPLEMENTED3 => user_calc_sources,               &
        IMPLEMENTED4 => user_update_states,              &
-       IMPLEMENTED5 => user_init_point_implicit
+       IMPLEMENTED5 => user_init_point_implicit,        &
+       IMPLEMENTED6 => user_action
 
   include 'user_module.h' ! list of public methods
 
@@ -100,16 +101,25 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(Neutral_BLK)) &
-         allocate(Neutral_BLK(0:nI+1, 0:nJ+1, 0:nK+1,MaxBlock, 4))
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(Neutral_BLK)) deallocate(Neutral_BLK)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(Neutral_BLK)) &
+          allocate(Neutral_BLK(0:nI+1, 0:nJ+1, 0:nK+1,MaxBlock, 4))
+    case('clean module')
+      if(allocated(Neutral_BLK)) deallocate(Neutral_BLK)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
 

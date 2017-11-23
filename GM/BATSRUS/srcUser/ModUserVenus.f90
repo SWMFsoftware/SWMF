@@ -18,7 +18,8 @@ module ModUser
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED9 => user_set_resistivity,            &
-       IMPLEMENTED10=> user_get_log_var
+       IMPLEMENTED10=> user_get_log_var,                &
+       IMPLEMENTED11=> user_action
 
   use ModPhysics, ONLY: BodyRhoSpecies_I
   use ModAdvance, ONLY: nSpecies
@@ -146,37 +147,46 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(nu_BLK)) &
-        allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
-    if(.not.allocated(nDenNuSpecies_CBI)) &
-         allocate(nDenNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,MaxNuSpecies))
-    if(.not.allocated(Productrate_CB)) &
-         allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-    if(.not.allocated(MaxSiSpecies_CB)) &
-         allocate(MaxSiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-    if(.not.allocated(MaxLiSpecies_CB)) &
-         allocate(MaxLiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-    if(.not.allocated(MaxSLSpecies_CB)) &
-         allocate(MaxSLSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(nu_BLK)) &
-        deallocate(nu_BLK)
-    if(allocated(nDenNuSpecies_CBI)) &
-         deallocate(nDenNuSpecies_CBI)
-    if(allocated(Productrate_CB)) &
-         deallocate(Productrate_CB)
-    if(allocated(MaxSiSpecies_CB)) &
-         deallocate(MaxSiSpecies_CB)
-    if(allocated(MaxLiSpecies_CB)) &
-         deallocate(MaxLiSpecies_CB)
-    if(allocated(MaxSLSpecies_CB)) &
-         deallocate(MaxSLSpecies_CB)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(nu_BLK)) &
+         allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+     if(.not.allocated(nDenNuSpecies_CBI)) &
+          allocate(nDenNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,MaxNuSpecies))
+     if(.not.allocated(Productrate_CB)) &
+          allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+     if(.not.allocated(MaxSiSpecies_CB)) &
+          allocate(MaxSiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+     if(.not.allocated(MaxLiSpecies_CB)) &
+          allocate(MaxLiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+     if(.not.allocated(MaxSLSpecies_CB)) &
+          allocate(MaxSLSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+    case('clean module')
+      if(allocated(nu_BLK)) &
+         deallocate(nu_BLK)
+     if(allocated(nDenNuSpecies_CBI)) &
+          deallocate(nDenNuSpecies_CBI)
+     if(allocated(Productrate_CB)) &
+          deallocate(Productrate_CB)
+     if(allocated(MaxSiSpecies_CB)) &
+          deallocate(MaxSiSpecies_CB)
+     if(allocated(MaxLiSpecies_CB)) &
+          deallocate(MaxLiSpecies_CB)
+     if(allocated(MaxSLSpecies_CB)) &
+          deallocate(MaxSLSpecies_CB)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
 

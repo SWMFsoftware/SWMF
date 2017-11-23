@@ -44,15 +44,7 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-  end subroutine init_mod_user
 
-  !============================================================================
-
-  subroutine clean_mod_user
-  end subroutine clean_mod_user
-
-  !============================================================================
   subroutine user_read_inputs
 
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut

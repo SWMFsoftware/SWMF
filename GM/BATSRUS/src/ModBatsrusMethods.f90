@@ -1082,7 +1082,7 @@ contains
     use ModPointImplicit, ONLY: clean_mod_point_impl
     use ModSemiImplicit,  ONLY: clean_mod_semi_impl
     use ModIeCoupling,    ONLY: clean_mod_ie_coupling
-    use ModUser,          ONLY: clean_mod_user
+    use ModUserInterface, ONLY: user_action
     use BATL_lib,         ONLY: clean_batl
 
     integer:: iError
@@ -1091,7 +1091,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call clean_batl
-    call clean_mod_user
+    call user_action("clean module")
     call clean_mod_advance
     call clean_mod_main
     call clean_mod_block_data

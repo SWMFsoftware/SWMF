@@ -19,7 +19,8 @@ module ModUser
        IMPLEMENTED2 => user_set_ics,                    &
        IMPLEMENTED3 => user_set_cell_boundary,               &
        IMPLEMENTED4 => user_set_plot_var,               &
-       IMPLEMENTED5 => user_update_states
+       IMPLEMENTED5 => user_update_states,              &
+       IMPLEMENTED6 => user_action
 
   include 'user_module.h' ! list of public methods
 
@@ -39,17 +40,26 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(IsRestartSum)) &
-        allocate(IsRestartSum(MaxBlock))
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(IsRestartSum)) &
-        deallocate(IsRestartSum)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(IsRestartSum)) &
+         allocate(IsRestartSum(MaxBlock))
+    case('clean module')
+      if(allocated(IsRestartSum)) &
+         deallocate(IsRestartSum)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
 

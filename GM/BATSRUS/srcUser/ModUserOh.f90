@@ -19,15 +19,7 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-  end subroutine init_mod_user
 
-  !============================================================================
-
-  subroutine clean_mod_user
-  end subroutine clean_mod_user
-
-  !============================================================================
 
   subroutine user_specify_initial_refinement(iBlock,refineBlock,lev,DxBlock, &
        xCenter,yCenter,zCenter,rCenter,                        &

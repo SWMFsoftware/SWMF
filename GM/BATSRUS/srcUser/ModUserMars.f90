@@ -22,7 +22,8 @@ module ModUser
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED9 => user_get_b0,                     &
        IMPLEMENTED10 => user_get_log_var,               &
-       IMPLEMENTED11 => user_set_boundary_cells
+       IMPLEMENTED11 => user_set_boundary_cells,        &
+       IMPLEMENTED12 => user_action
 
   include 'user_module.h' ! list of public methods
 
@@ -186,45 +187,54 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(TempNuSpecies_CBI)) &
-         allocate(TempNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock))
-    if(.not.allocated(Productrate_CB)) &
-         allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-    if(.not.allocated(Ionizationrate_CBI)) &
-         allocate(Ionizationrate_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,2))
-    if(.not.allocated(MaxSiSpecies_CB)) &
-        allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
-    if(.not.allocated(MaxLiSpecies_CB)) &
-        allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
-    if(.not.allocated(MaxSLSpecies_CB)) &
-        allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
-    if(.not.allocated(nu_BLK)) &
-        allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
-    if(.not.allocated(nu1_BLK)) &
-        allocate(nu1_BLK(1:nI,1:nJ,1:nK,MaxBlock))
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(TempNuSpecies_CBI)) &
-         deallocate(TempNuSpecies_CBI)
-    if(allocated(Productrate_CB)) &
-         deallocate(Productrate_CB)
-    if(allocated(Ionizationrate_CBI)) &
-         deallocate(Ionizationrate_CBI)
-    if(allocated(MaxSiSpecies_CB)) &
-        deallocate(MaxSiSpecies_CB)
-    if(allocated(MaxLiSpecies_CB)) &
-        deallocate(MaxLiSpecies_CB)
-    if(allocated(MaxSLSpecies_CB)) &
-        deallocate(MaxSLSpecies_CB)
-    if(allocated(nu_BLK)) &
-        deallocate(nu_BLK)
-    if(allocated(nu1_BLK)) &
-        deallocate(nu1_BLK)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(TempNuSpecies_CBI)) &
+          allocate(TempNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock))
+     if(.not.allocated(Productrate_CB)) &
+          allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+     if(.not.allocated(Ionizationrate_CBI)) &
+          allocate(Ionizationrate_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,2))
+     if(.not.allocated(MaxSiSpecies_CB)) &
+         allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
+     if(.not.allocated(MaxLiSpecies_CB)) &
+         allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
+     if(.not.allocated(MaxSLSpecies_CB)) &
+         allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
+     if(.not.allocated(nu_BLK)) &
+         allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+     if(.not.allocated(nu1_BLK)) &
+         allocate(nu1_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+    case('clean module')
+      if(allocated(TempNuSpecies_CBI)) &
+          deallocate(TempNuSpecies_CBI)
+     if(allocated(Productrate_CB)) &
+          deallocate(Productrate_CB)
+     if(allocated(Ionizationrate_CBI)) &
+          deallocate(Ionizationrate_CBI)
+     if(allocated(MaxSiSpecies_CB)) &
+         deallocate(MaxSiSpecies_CB)
+     if(allocated(MaxLiSpecies_CB)) &
+         deallocate(MaxLiSpecies_CB)
+     if(allocated(MaxSLSpecies_CB)) &
+         deallocate(MaxSLSpecies_CB)
+     if(allocated(nu_BLK)) &
+         deallocate(nu_BLK)
+     if(allocated(nu1_BLK)) &
+         deallocate(nu1_BLK)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
   subroutine user_read_inputs

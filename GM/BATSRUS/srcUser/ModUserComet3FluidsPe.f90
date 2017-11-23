@@ -24,7 +24,8 @@ module ModUser
        IMPLEMENTED10 => user_set_ICs,             &
        IMPLEMENTED11 => user_get_log_var,         &
        IMPLEMENTED12 => user_set_boundary_cells,  &
-       IMPLEMENTED13 => user_set_cell_boundary
+       IMPLEMENTED13 => user_set_cell_boundary,   &
+       IMPLEMENTED14 => user_action
 
   include 'user_module.h' ! list of public methods
 
@@ -68,18 +69,27 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(ne20eV_GB)) &
-        allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-    ne20eV_GB = 0.
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(ne20eV_GB)) &
-        deallocate(ne20eV_GB)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(ne20eV_GB)) &
+         allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+     ne20eV_GB = 0.
+    case('clean module')
+      if(allocated(ne20eV_GB)) &
+         deallocate(ne20eV_GB)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
 

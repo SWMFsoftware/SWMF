@@ -11,7 +11,8 @@ module ModUser
        IMPLEMENTED1 => user_set_boundary_cells,         &
        IMPLEMENTED2 => user_read_inputs,                &
        IMPLEMENTED3 => user_init_session,               &
-       IMPLEMENTED4 => user_set_face_boundary
+       IMPLEMENTED4 => user_set_face_boundary,           &
+       IMPLEMENTED5 => user_action
 
   use ModSize
   use ModProcMH, ONLY: iProc
@@ -82,23 +83,32 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(nStepSave_B)) &
-        allocate(nStepSave_B(MaxBlock))
-    nStepSave_B = -100
-    if(.not.allocated(TimeSimulationSave_B)) &
-        allocate(TimeSimulationSave_B(MaxBlock))
-    TimeSimulationSave_B = -1e30
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(nStepSave_B)) &
-        deallocate(nStepSave_B)
-    if(allocated(TimeSimulationSave_B)) &
-        deallocate(TimeSimulationSave_B)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(nStepSave_B)) &
+         allocate(nStepSave_B(MaxBlock))
+     nStepSave_B = -100
+     if(.not.allocated(TimeSimulationSave_B)) &
+         allocate(TimeSimulationSave_B(MaxBlock))
+     TimeSimulationSave_B = -1e30
+    case('clean module')
+      if(allocated(nStepSave_B)) &
+         deallocate(nStepSave_B)
+     if(allocated(TimeSimulationSave_B)) &
+         deallocate(TimeSimulationSave_B)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
   subroutine user_read_inputs

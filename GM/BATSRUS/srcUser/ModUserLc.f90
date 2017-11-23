@@ -56,7 +56,8 @@ module ModUser
        IMPLEMENTED7 => user_calc_sources,               &
        IMPLEMENTED8 => user_update_states,              &
        IMPLEMENTED11=> user_set_cell_boundary,               &
-       IMPLEMENTED12=> user_set_plot_var
+       IMPLEMENTED12=> user_set_plot_var,               &
+       IMPLEMENTED13=> user_action
 
   include 'user_module.h' ! list of public methods
 
@@ -92,18 +93,27 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(IsNewBlockTeCalc_B)) &
-        allocate(IsNewBlockTeCalc_B(MaxBlock))
-    IsNewBlockTeCalc_B = .true.
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(IsNewBlockTeCalc_B)) &
-        deallocate(IsNewBlockTeCalc_B)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(IsNewBlockTeCalc_B)) &
+         allocate(IsNewBlockTeCalc_B(MaxBlock))
+     IsNewBlockTeCalc_B = .true.
+    case('clean module')
+      if(allocated(IsNewBlockTeCalc_B)) &
+         deallocate(IsNewBlockTeCalc_B)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
 

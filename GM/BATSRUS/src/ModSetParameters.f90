@@ -20,7 +20,6 @@ contains
 
     use ModProcMH
     use ModMain
-    use ModUser, ONLY: init_mod_user
     use ModAdvance
     use ModB0, ONLY: UseB0Source, UseCurlB0, DoUpdateB0, DtUpdateB0, &
          read_b0_param, init_mod_b0
@@ -319,7 +318,7 @@ contains
        call init_mod_geometry
        call init_mod_boundary_cells
        call init_mod_nodes
-       call init_mod_user
+       call user_action("initialize module")
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
        if(UseConstrainB)    call init_mod_ct

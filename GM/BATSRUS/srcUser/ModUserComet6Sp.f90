@@ -22,7 +22,8 @@ module ModUser
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_init_point_implicit,        &
        IMPLEMENTED5 => user_calc_sources,               &
-       IMPLEMENTED6 => user_update_states
+       IMPLEMENTED6 => user_update_states,              &
+       IMPLEMENTED7 => user_action
 
   include 'user_module.h' ! list of public methods
 
@@ -94,21 +95,30 @@ module ModUser
 contains
   !============================================================================
 
-  subroutine init_mod_user
-    if(.not.allocated(NNeu_BLK))&
-         NNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, MaxNuSpecies)
-    NNeu_BLK = 1.
-    if(.not.allocated(UNeu_BLK))&
-         UNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, 3)
-    UNeu_BLK = 0.
-  end subroutine init_mod_user
 
-  !============================================================================
+  subroutine user_action(NameAction)
+    use ModProcMH, ONLY: iProc
+    character(len=*), intent(in):: NameAction
 
-  subroutine clean_mod_user
-    if(allocated(NNeu_BLK)) deallocate(NNeu_BLK)
-    if(allocated(UNeu_BLK)) deallocate(UNeu_BLK)
-  end subroutine clean_mod_user
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_action'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+    if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+    select case(NameAction)
+    case('initialize module')
+      if(.not.allocated(NNeu_BLK))&
+          NNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, MaxNuSpecies)
+     NNeu_BLK = 1.
+     if(.not.allocated(UNeu_BLK))&
+          UNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, 3)
+     UNeu_BLK = 0.
+    case('clean module')
+      if(allocated(NNeu_BLK)) deallocate(NNeu_BLK)
+     if(allocated(UNeu_BLK)) deallocate(UNeu_BLK)
+    end select
+    call test_stop(NameSub, DoTest)
+  end subroutine user_action
 
   !============================================================================
 
