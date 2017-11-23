@@ -117,9 +117,11 @@ module ModUser
   real :: FaceCoordsTest_D(3) = (/0.0, 0.0, 0.0/)
 
   ! Last step and time the inner boundary values were saved for each block
-  integer :: nStepSave_B(MaxBlock) = -100
-  real    :: TimeSimulationSave_B(MaxBlock) = -1e30
-  integer :: nStepSaveCalcRates_B(MaxBlock) = -100
+  integer, allocatable :: nStepSave_B(:)
+
+  real, allocatable :: TimeSimulationSave_B(:)
+
+  integer, allocatable :: nStepSaveCalcRates_B(:)
   integer :: nStepPritSetFace = -100
 
   ! If this variable is set .true., then use the Haser neutral background
@@ -152,7 +154,8 @@ module ModUser
 
   real :: Qprod = 1e22
   real :: TminSi, Tmin, rHelio, vHI, uHaser
-  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: ne20eV_GB = 0.
+
+  real, allocatable :: ne20eV_GB(:,:,:,:)
 
   !! logical variable to determine whether to use an artifical perturbed solar
   !! wind at beyond a certain xPerturbedSwIO
@@ -169,20 +172,68 @@ module ModUser
 
   !! Make the photo- and electron impact ionization rate global arrays for
   !! user_set_plot_var
-  real, dimension(1:nNeuFluid,1:nIonFluid, &
-       MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: v_IIGB, ve_IIGB
+  real, allocatable ::v_IIGB(:,:,:,:,:,:), ve_IIGB(:,:,:,:,:,:)
 
   logical            :: DoSaveSource = .false.
   character (len=10) :: NameSource   = 'none'
-  real, dimension(8, MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: &
-       TestArray_IGB = 0.0
+  real, allocatable :: TestArray_IGB(:,:,:,:,:)
 
-  real, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) :: SPeAdditional_GB=0.0
+  real, allocatable :: SPeAdditional_GB(:,:,:,:)
 
   character (len=6), parameter, public :: NameNeutral_I(nNeuFluid) = &
        (/ 'Neu1  ' /)
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(nStepSave_B)) &
+        allocate(nStepSave_B(MaxBlock))
+    nStepSave_B = -100
+    if(.not.allocated(TimeSimulationSave_B)) &
+        allocate(TimeSimulationSave_B(MaxBlock))
+    TimeSimulationSave_B = -1e30
+    if(.not.allocated(nStepSaveCalcRates_B)) &
+        allocate(nStepSaveCalcRates_B(MaxBlock))
+    nStepSaveCalcRates_B = -100
+    if(.not.allocated(ne20eV_GB)) &
+        allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    ne20eV_GB = 0.
+    if(.not.allocated(SPeAdditional_GB)) &
+        allocate(SPeAdditional_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    SPeAdditional_GB =0.0
+    if(.not.allocated(v_IIGB)) &
+         allocate(v_IIGB(1:nNeuFluid,1:nIonFluid, &
+         MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(ve_IIGB)) &
+         allocate(ve_IIGB(1:nNeuFluid,1:nIonFluid, &
+         MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not.allocated(TestArray_IGB)) &
+         allocate(TestArray_IGB(8, MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    TestArray_IGB = 0.0
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(nStepSave_B)) &
+        deallocate(nStepSave_B)
+    if(allocated(TimeSimulationSave_B)) &
+        deallocate(TimeSimulationSave_B)
+    if(allocated(nStepSaveCalcRates_B)) &
+        deallocate(nStepSaveCalcRates_B)
+    if(allocated(ne20eV_GB)) &
+        deallocate(ne20eV_GB)
+    if(allocated(SPeAdditional_GB)) &
+        deallocate(SPeAdditional_GB)
+    if(allocated(v_IIGB)) &
+         deallocate(v_IIGB)
+    if(allocated(ve_IIGB)) &
+         deallocate(ve_IIGB)
+    if(allocated(TestArray_IGB)) &
+         deallocate(TestArray_IGB)
+  end subroutine clean_mod_user
+
   !============================================================================
   subroutine user_read_inputs
 

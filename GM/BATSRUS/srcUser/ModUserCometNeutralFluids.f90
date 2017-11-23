@@ -84,9 +84,12 @@ module ModUser
 
   character (len=100) :: NameGravityFile
 
-  real:: Gravity_DCB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) = 0.
+  real, allocatable :: Gravity_DCB(:,:,:,:,:)
+
   integer :: addGravity
-  logical :: UseGravity(MaxBlock)= .false.
+
+  logical, allocatable :: UseGravity(:)
+
   ! for real  shape
   character (len=100) :: NameShapeFile
 
@@ -132,10 +135,40 @@ module ModUser
   real :: TempToPressure
 
   ! Last step and time the inner boundary values were saved for each block
-  integer:: nStepSave_B(MaxBlock) = -100
-  real :: TimeSimulationSave_B(MaxBlock) = -1e30
+  integer, allocatable :: nStepSave_B(:)
+  real, allocatable :: TimeSimulationSave_B(:)
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(Gravity_DCB)) &
+        allocate(Gravity_DCB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    Gravity_DCB = 0.
+    if(.not.allocated(UseGravity)) &
+        allocate(UseGravity(MaxBlock))
+    UseGravity = .false.
+    if(.not.allocated(nStepSave_B)) &
+        allocate(nStepSave_B(MaxBlock))
+    nStepSave_B = -100
+    if(.not.allocated(TimeSimulationSave_B)) &
+        allocate(TimeSimulationSave_B(MaxBlock))
+    TimeSimulationSave_B = -1e30
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(Gravity_DCB)) &
+        deallocate(Gravity_DCB)
+    if(allocated(UseGravity)) &
+        deallocate(UseGravity)
+    if(allocated(nStepSave_B)) &
+        deallocate(nStepSave_B)
+    if(allocated(TimeSimulationSave_B)) &
+        deallocate(TimeSimulationSave_B)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_read_inputs

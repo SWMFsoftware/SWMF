@@ -29,13 +29,28 @@ module ModUser
   integer, parameter, public :: Tsw_ =nVar+2
   real :: tSumStart, tSumEnd
   real :: StateSum_VC(MaxSumMhdVar,nI, nJ, nK)
-  logical :: IsRestartSum(MaxBlock)
+
+  logical, allocatable :: IsRestartSum(:)
 
   real, parameter :: VersionUserModule = 1.1
   character (len=*), parameter :: &
        NameUserModule = 'Earth Mag X-ray (EarthXray), Hansen, Jan, 2008'
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(IsRestartSum)) &
+        allocate(IsRestartSum(MaxBlock))
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(IsRestartSum)) &
+        deallocate(IsRestartSum)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_init_session

@@ -47,13 +47,13 @@ module ModUser
   real, allocatable:: nDenNuSpecies_CBI(:,:,:,:,:)
   ! real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock,MaxNuSpecies) :: &
   !      nDenNuSpecies_CBI    ! number density of neutral Species
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock) :: &
-       TempNuSpecies_CBI    ! tempature of neutral Species
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock) :: &
-       Productrate_CB    ! production rate according to optical depth
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock,2) :: &
-       Ionizationrate_CBI ! Ionization rate !!according to TGCM
+  real, allocatable :: TempNuSpecies_CBI(:,:,:,:)! tempature of neutral Species
+  ! production rate according to optical depth
+  real, allocatable :: Productrate_CB(:,:,:,:)
 
+  ! Ionization rate !!according to TGCM
+  real, allocatable :: Ionizationrate_CBI(:,:,:,:,:)
+ 
   real, dimension(MaxReactions) :: ReactionRate_I
   real, dimension(MaxReactions,MaxSpecies):: CoeffSpecies_II, &
        dSdRho_II !, dLdRho_II
@@ -63,11 +63,11 @@ module ModUser
   real:: totalNumRho, totalLossRho,totalSourceRho, totalLossNumRho, &
        totalSourceNumRho, totalLossx, totalLossNumx
 
-  real,  dimension(nI,nJ,nK,MaxBlock) :: MaxSiSpecies_CB,  MaxLiSpecies_CB
+  real, allocatable :: MaxSiSpecies_CB(:,:,:,:)
+  real, allocatable :: MaxLiSpecies_CB(:,:,:,:)
   common /TimeBlock/ MaxSiSpecies_CB,  MaxLiSpecies_CB
 
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock) :: &
-       MaxSLSpecies_CB
+  real, allocatable :: MaxSLSpecies_CB(:,:,:,:)
 
   ! the reactions considered:(p means ion, em means electron)
   ! the prefered order of a reaction is ions, Nus, hv and electrons
@@ -141,7 +141,9 @@ module ModUser
   real :: Te_new_dim=1000., KTe0
 
   real :: T300_dim = 300.0, T300 , Ti_dim =300.
-  real,  dimension(1:nI,1:nJ,1:nK,MaxBlock) :: nu_BLK,nu1_BLK
+
+  real, allocatable :: nu_BLK (:,:,:,:)
+  real, allocatable :: nu1_BLK(:,:,:,:)
   real :: nu0_dim=4.0e-10,nu0
 
   ! coefficient of Mars magnetic field
@@ -182,6 +184,48 @@ module ModUser
   logical:: UseOldEnergy=.true.
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(TempNuSpecies_CBI)) &
+         allocate(TempNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock))
+    if(.not.allocated(Productrate_CB)) &
+         allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+    if(.not.allocated(Ionizationrate_CBI)) &
+         allocate(Ionizationrate_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,2))
+    if(.not.allocated(MaxSiSpecies_CB)) &
+        allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
+    if(.not.allocated(MaxLiSpecies_CB)) &
+        allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
+    if(.not.allocated(MaxSLSpecies_CB)) &
+        allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
+    if(.not.allocated(nu_BLK)) &
+        allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+    if(.not.allocated(nu1_BLK)) &
+        allocate(nu1_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(TempNuSpecies_CBI)) &
+         deallocate(TempNuSpecies_CBI)
+    if(allocated(Productrate_CB)) &
+         deallocate(Productrate_CB)
+    if(allocated(Ionizationrate_CBI)) &
+         deallocate(Ionizationrate_CBI)
+    if(allocated(MaxSiSpecies_CB)) &
+        deallocate(MaxSiSpecies_CB)
+    if(allocated(MaxLiSpecies_CB)) &
+        deallocate(MaxLiSpecies_CB)
+    if(allocated(MaxSLSpecies_CB)) &
+        deallocate(MaxSLSpecies_CB)
+    if(allocated(nu_BLK)) &
+        deallocate(nu_BLK)
+    if(allocated(nu1_BLK)) &
+        deallocate(nu1_BLK)
+  end subroutine clean_mod_user
+
   !============================================================================
   subroutine user_read_inputs
     use ModMain

@@ -48,13 +48,15 @@ module ModUser
   real:: NeutralMass_I(nNeutral)
   integer:: iNeutralBlockLast = -1
   real:: Qprod, Tmin, rHelio, vHI
-  real:: ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock) = 0.
+
+  real, allocatable :: ne20eV_GB(:,:,:,:)
 
   !! Plotting array to be used for testing
   ! real:: TestArray(4,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,,MaxBlock) = 0.
 
   !! To plot the cells where the heat flux is capped by the limiter
   ! real, public:: FluxLimited_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)=0.
+
   !! Add the following lines to get_impl_heat_cond_state
   ! use ModUser, ONLY: FluxLimited_GB
   !! and after "The threshold heat flux limiter model"
@@ -64,6 +66,21 @@ module ModUser
   !! before limiter is applied
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(ne20eV_GB)) &
+        allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    ne20eV_GB = 0.
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(ne20eV_GB)) &
+        deallocate(ne20eV_GB)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_read_inputs

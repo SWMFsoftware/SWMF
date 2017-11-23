@@ -152,6 +152,7 @@ module ModUser
 
   real :: T300_dim = 300.0, T300, Ti_dim=300.0
   !  real,  dimension(1:nI,1:nJ,1:nK,MaxBlock) :: nu_BLK
+
   real :: nu0_dim=1.0e-9,nu0  ! value from Terada 2009 Tanaka, 1997, JGR
 
   real:: IonNeuCoeff_II(1:nIonFluid,1:nNuSpecies)
@@ -190,6 +191,16 @@ module ModUser
   logical:: UseOldEnergy=.false.
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_calc_sources(iBlock)

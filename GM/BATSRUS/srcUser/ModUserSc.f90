@@ -24,6 +24,16 @@ module ModUser
 contains
   !============================================================================
 
+  subroutine init_mod_user
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+  end subroutine clean_mod_user
+
+  !============================================================================
+
   subroutine user_init_session
     use EEE_ModMain,    ONLY: EEE_initialize
     use ModIO,          ONLY: write_prefix, iUnitOut

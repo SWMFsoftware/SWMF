@@ -20,11 +20,26 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Rubin single species Europa MHD module, Jun 2010'
 
-  real, public, dimension(1:nI, 1:nJ, 1:nK, MaxBlock) :: Neutral_BLK
+  real, allocatable, public :: Neutral_BLK(:,:,:,:)
+
   real :: n0, dn, H, v, alpha, mi_mean, kin, distr
   real :: vNorm, alphaNorm, kinNorm, nNorm
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(Neutral_BLK)) &
+        allocate(Neutral_BLK(1:nI, 1:nJ, 1:nK, MaxBlock))
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(Neutral_BLK)) &
+        deallocate(Neutral_BLK)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_read_inputs

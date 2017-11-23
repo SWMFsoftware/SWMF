@@ -9,6 +9,8 @@
   private ! except  
   public :: VersionUserModule  
   public :: NameUserModule  
+  public :: init_mod_user
+  public :: clean_mod_user
   public :: user_set_boundary_cells
   public :: user_set_face_boundary
   public :: user_set_cell_boundary

@@ -24,7 +24,8 @@ module ModUser
   character (len=*), parameter :: NameUserModule = &
        'Yingdong single species cometary MHD module, M. Rubin & K.C. Hansen, Feb 2008'
 
-  real, public, dimension(0:nI+1, 0:nJ+1, 0:nK+1,MaxBlock, 4) :: Neutral_BLK
+
+  real, allocatable, public :: Neutral_BLK(:,:,:,:,:)
 
   integer :: NR_neutral=121, NTheta_neutral=121, NPhi_neutral=121
   integer, parameter :: NR_ = 4, NTh_ = 5, NPhi_ = 6
@@ -97,6 +98,19 @@ module ModUser
   integer :: jpattern=0
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(Neutral_BLK)) &
+         allocate(Neutral_BLK(0:nI+1, 0:nJ+1, 0:nK+1,MaxBlock, 4))
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(Neutral_BLK)) deallocate(Neutral_BLK)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_read_inputs

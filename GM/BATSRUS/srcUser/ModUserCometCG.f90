@@ -75,10 +75,31 @@ module ModUser
   real :: TempToPressure
 
   ! Last step and time the inner boundary values were saved for each block
-  integer:: nStepSave_B(MaxBlock) = -100
-  real :: TimeSimulationSave_B(MaxBlock) = -1e30
+  integer, allocatable :: nStepSave_B(:)
+
+  real, allocatable :: TimeSimulationSave_B(:)
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(nStepSave_B)) &
+        allocate(nStepSave_B(MaxBlock))
+    nStepSave_B = -100
+    if(.not.allocated(TimeSimulationSave_B)) &
+        allocate(TimeSimulationSave_B(MaxBlock))
+    TimeSimulationSave_B = -1e30
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(nStepSave_B)) &
+        deallocate(nStepSave_B)
+    if(allocated(TimeSimulationSave_B)) &
+        deallocate(TimeSimulationSave_B)
+  end subroutine clean_mod_user
+
   !============================================================================
   subroutine user_read_inputs
 

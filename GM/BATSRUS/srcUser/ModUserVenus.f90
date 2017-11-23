@@ -40,11 +40,11 @@ module ModUser
   integer, parameter :: MaxSpecies=4, MaxNuSpecies=3,  &
        MaxReactions=10
   integer :: nNuSpecies=3
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock,MaxNuSpecies) :: &
-       nDenNuSpecies_CBI    ! number density of neutral Species
+  ! number density of neutral Species
+  real, allocatable :: nDenNuSpecies_CBI(:,:,:,:,:)
 
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock) :: &
-       Productrate_CB    ! production rate according to optical depth
+  ! production rate according to optical depth
+  real,  allocatable :: Productrate_CB(:,:,:,:)
 
   real, dimension(MaxReactions) :: ReactionRate_I
   real, dimension(MaxReactions,MaxSpecies):: CoeffSpecies_II, &
@@ -55,12 +55,10 @@ module ModUser
   real:: totalNumRho, totalLossRho,totalSourceRho, totalLossNumRho, &
        totalSourceNumRho, totalLossx, totalLossNumx
 
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock) :: &
-       MaxSiSpecies_CB,  MaxLiSpecies_CB
+  real, allocatable :: MaxSiSpecies_CB(:,:,:,:), MaxLiSpecies_CB(:,:,:,:)
   common /TimeBlock/ MaxSiSpecies_CB,  MaxLiSpecies_CB
 
-  real,  dimension(1:nI, 1:nJ, 1:nK, MaxBlock) :: &
-       MaxSLSpecies_CB
+  real, allocatable :: MaxSLSpecies_CB(:,:,:,:)
 
   ! the reactions considered:(p means ion, em means electron)
   ! the prefered order of a reaction is ions, Nus, hv and electrons
@@ -130,7 +128,8 @@ module ModUser
 !  real :: Ti_body_dim=1000.0  ! ion temperature at the body
 !  real :: Tnu_body_dim = 1000.0, Tnu_body, Tnu, Tnu_dim ! neutral temperature
   real :: T300_dim = 300.0, T300
-  real,  dimension(1:nI,1:nJ,1:nK,MaxBlock) :: nu_BLK
+  real, allocatable :: nu_BLK(:,:,:,:)
+
   real :: nu0_dim=1.0e-9,nu0  ! value from Tanaka, 1997, JGR
 
   !\
@@ -145,6 +144,40 @@ module ModUser
   character (len=10) :: SolarCond='solarmax  '
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(nu_BLK)) &
+        allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+    if(.not.allocated(nDenNuSpecies_CBI)) &
+         allocate(nDenNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,MaxNuSpecies))
+    if(.not.allocated(Productrate_CB)) &
+         allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+    if(.not.allocated(MaxSiSpecies_CB)) &
+         allocate(MaxSiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+    if(.not.allocated(MaxLiSpecies_CB)) &
+         allocate(MaxLiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+    if(.not.allocated(MaxSLSpecies_CB)) &
+         allocate(MaxSLSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(nu_BLK)) &
+        deallocate(nu_BLK)
+    if(allocated(nDenNuSpecies_CBI)) &
+         deallocate(nDenNuSpecies_CBI)
+    if(allocated(Productrate_CB)) &
+         deallocate(Productrate_CB)
+    if(allocated(MaxSiSpecies_CB)) &
+         deallocate(MaxSiSpecies_CB)
+    if(allocated(MaxLiSpecies_CB)) &
+         deallocate(MaxLiSpecies_CB)
+    if(allocated(MaxSLSpecies_CB)) &
+         deallocate(MaxSLSpecies_CB)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_read_inputs

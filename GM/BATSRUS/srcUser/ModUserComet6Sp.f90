@@ -43,10 +43,7 @@ module ModUser
        MaxIni=11, MaxCx=13
   integer ::  nNuSpecies=6	! nNuSpecies<6 doesn't work for this version yet
 
-  real, public, dimension(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, MaxNuSpecies) :: &
-       NNeu_BLK = 1.
-  real, public, dimension(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, 3           ) :: &
-       UNeu_BLK = 0.
+  real, allocatable, public:: NNeu_BLK(:,:,:,:,:), UNeu_BLK(:,:,:,:,:)
 
   integer, parameter :: H2Op_ =1, Hp_ =2, H3Op_ =3, OHp_ =4, Op_ =5, COp_ =6
 
@@ -95,6 +92,24 @@ module ModUser
        1.6e-15, 0.3e-15/)  ! m^3 s^(-1), already in SI unit.
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(NNeu_BLK))&
+         NNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, MaxNuSpecies)
+    NNeu_BLK = 1.
+    if(.not.allocated(UNeu_BLK))&
+         UNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, 3)
+    UNeu_BLK = 0.
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(NNeu_BLK)) deallocate(NNeu_BLK)
+    if(allocated(UNeu_BLK)) deallocate(UNeu_BLK)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_read_inputs

@@ -83,12 +83,28 @@ module ModUser
   real :: BoundaryRho
 
   ! Variables for the REB model
-  logical :: IsNewBlockTeCalc_B(MaxBlock) = .true.
+  logical, allocatable :: IsNewBlockTeCalc_B(:)
+
   ! cell centered electron temperature for entire block
   ! put here so not always re-computed during boundary calculation
   real :: Te_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
 contains
+  !============================================================================
+
+  subroutine init_mod_user
+    if(.not.allocated(IsNewBlockTeCalc_B)) &
+        allocate(IsNewBlockTeCalc_B(MaxBlock))
+    IsNewBlockTeCalc_B = .true.
+  end subroutine init_mod_user
+
+  !============================================================================
+
+  subroutine clean_mod_user
+    if(allocated(IsNewBlockTeCalc_B)) &
+        deallocate(IsNewBlockTeCalc_B)
+  end subroutine clean_mod_user
+
   !============================================================================
 
   subroutine user_read_inputs
