@@ -36,6 +36,7 @@ contains
     use ModAdvance, ONLY: State_VGB
     use ModVarIndexes, ONLY: Rho_
     use BATL_lib, ONLY:  nI, nJ, nK, MaxDim
+    use ModUtilities, ONLY: join_string
     !
     ! Arguments
     !
@@ -107,8 +108,6 @@ contains
     real    :: ImagePlaneDiagRadius
 
     character (LEN=120) :: NameVarAll, NameFile
-    character (LEN=4)   :: NameDelimiter
-    character (LEN=500) :: unitstr_TEC
     character (LEN=4)   :: NameFileExtension
     character (LEN=40)  :: NameFileFormat
     logical:: DoTest
@@ -204,41 +203,18 @@ contains
        end if
        select case(plot_form(ifile))
        case('tec')
-          NameVarAll    = '"'
-          NameDelimiter = '", "'
           NameFileExtension='.dat'
        case('idl')
-          NameVarAll    = ''
-          NameDelimiter = '    '
           NameFileExtension='.out'
        end select
-       do iFreq = 1, nFreq
-          NameVarAll = &
-               trim(NameVarAll)//NameDelimiter//trim(adjustl(NameVar_I(iFreq)))
-       end do
+       call join_string(NameVar_I(1:nFreq), NameVarAll)
 
        plot_type1=plot_type(ifile)
 
        write(*,*) 'iFile = ', iFile
        write(*,*) 'nFreq = ', nFreq
-       write(*,*) 'StringRadioFrequency_I(iFile) = ', &
-            StringRadioFrequency_I(iFile)
-       write(*,*) 'NameVar_I:'
-       do iFreq = 1, nFreq
-          write(*,*) NameVar_I(iFreq)
-       end do
        write(*,*) 'NameVarAll = ', NameVarAll
-       write(*,*) 'RadioFrequency_I = '
-       do iFreq = 1, nFreq
-          write(*,*) RadioFrequency_I(iFreq)
-       end do
-
-       ! Get the headers that contain variable names and units
-       select case(plot_form(ifile))
-       case('tec')
-          unitstr_TEC = 'VARIABLES = "X", "Y",'//trim(NameVarAll)//'"'
-          if(DoTest) write(*,*) unitstr_TEC
-       end select
+       write(*,*) 'RadioFrequency_I = ',RadioFrequency_I(1:nFreq)
     end if
     allocate(Intensity_IIV(nXPixel,nYPixel,nFreq))
     Intensity_IIV = 0.0
@@ -290,21 +266,17 @@ contains
        !
        select case(plot_form(ifile))
        case('tec')
-          call open_file(FILE=NameFile)
-          write(UnitTmp_,*) 'TITLE="BATSRUS: Radiotelescope Image"'
-          write(UnitTmp_,'(a)') trim(unitstr_TEC)
-          write(UnitTmp_,*) 'ZONE T="RFR Image"', &
-               ', I=',nXPixel,', J=',nYPixel,', F=POINT'
-          ! Write point values
-          do j = 1, nYPixel
-             YPixel = YLower + (real(j) - 0.5)*DyPixel
-             do i = 1, nXPixel
-                XPixel = XLower + (real(i) - 0.5)*DxPixel
-                write(UnitTmp_,fmt="(30(E14.6))") XPixel, YPixel, &
-                     Intensity_IIV(i,j,1:nFreq)
-             end do
-          end do
-          call close_file
+         ! description of file contains units, physics and dimension
+          call save_plot_file(NameFile=NameFile,          &
+               TypeFileIn = 'tec',                        &
+               StringHeaderIn='BATSRUS: Radiotelescope Image', &
+               nStepIn=n_step, TimeIn=Time_Simulation,    &
+               NameVarIn='  X  Y '//trim(NameVarAll),     &
+               CoordMinIn_D=&
+               (/XLower + 0.5*DxPixel, YLower + 0.5*DyPixel/),&
+               CoordMaxIn_D=&
+               (/XUpper - 0.5*DxPixel, YUpper - 0.5*DyPixel/),&
+               VarIn_IIV=Intensity_IIV, StringFormatIn = '(30(E14.6))')
        case('idl')
           ! description of file contains units, physics and dimension
           call save_plot_file(NameFile=NameFile,          &

@@ -414,13 +414,19 @@ contains
        deallocate(MinimumBlockIjk)
     case('tec')
        call open_file(FILE=NameFile, POSITION=TypePosition, STATUS=TypeStatus)
-       write(UnitTmp_, "(a)", ADVANCE="NO") 'VARIABLES='
-       if(n3 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"K", '
-       if(n2 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"J", '
-       if(n1 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"I", '
        if(StringHeader(1:11)=="VARIABLES =")then
+          write(UnitTmp_, "(a)", ADVANCE="NO") 'VARIABLES='
+          if(n3 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"K", '
+          if(n2 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"J", '
+          if(n1 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"I", '
           write(UnitTmp_, "(a)") StringHeader(12:len_trim(StringHeader))
        else
+          if(present(StringHeaderIn))&
+               write(UnitTmp_, "(a)")'TITLE="'//trim(StringHeader)//'"'
+          write(UnitTmp_, "(a)", ADVANCE="NO") 'VARIABLES='
+          if(n3 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"K", '
+          if(n2 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"J", '
+          if(n1 > 1) write(UnitTmp_, "(a)", ADVANCE="NO") '"I", '
           call join_string(NameVar_I(1:nDim+nVar), NameVar, '", "')
           write(UnitTmp_, "(a)") '"'//trim(NameVar)//'"'
        end if
