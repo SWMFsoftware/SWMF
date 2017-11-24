@@ -130,6 +130,7 @@ contains
           call read_var('LonSun', LonSun)
 
           ! If the Sun's position is changed, recalculate illumination
+          call user_action('initialize module')
           nStepSave_B = -100
           TimeSimulationSave_B = -1e30
 
