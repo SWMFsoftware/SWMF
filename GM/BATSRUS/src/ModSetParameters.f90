@@ -1690,8 +1690,9 @@ contains
           call read_var('zMax',z2)
 
        case("#GRIDBLOCK")
-          call read_var('MaxBlock',   MaxBlock)
-          call read_var('MaxImplBlk', MaxBlockImpl)
+          if(.not.is_first_session())CYCLE READPARAM
+          call read_var('MaxBlock',     MaxBlock)
+          call read_var('MaxBlockImpl', MaxImplblk)
 
        case("#USERMODULE")
           if(.not.is_first_session())CYCLE READPARAM
