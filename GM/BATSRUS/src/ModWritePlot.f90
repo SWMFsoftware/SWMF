@@ -1589,7 +1589,7 @@ contains
           ! end if
        case('cons')
           if(allocated(IsConserv_CB))then
-             where(IsConserv_CB(:,:,:,iBlock)) PlotVar(1:nI,1:nJ,1:nK,iVar) = 1.
+             where(IsConserv_CB(:,:,:,iBlock)) PlotVar(1:nI,1:nJ,1:nK,iVar) = 1
           else if(.not.UseNonConservative)then
              PlotVar(1:nI,1:nJ,1:nK,iVar) = 1.
           end if
