@@ -7,8 +7,8 @@ module ModSize
 
   implicit none
 
-  ! Maximum number of implicit blocks (set by Config.pl)
-  integer, parameter :: MaxImplBLK = 100
+  ! Maximum number of implicit blocks (initial value set by Config.pl)
+  integer:: MaxImplBLK = 100
 
 end module ModSize
 !==============================================================================
