@@ -3,8 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
   ! This is the default user module which contains empty methods defined
   ! in ModUserEmpty.f90
 
@@ -25,14 +23,14 @@ module ModUser
   use ModMain, ONLY: &
        UseUserInitSession, UseUserIcs, UseUserSource, UseUserUpdateStates, &
        UseUserLogFiles
-  use ModSize, ONLY: x_, y_, z_, nI, nJ, nK
-
   use ModVarIndexes, ONLY: nMaterial, MaterialFirst_, MaterialLast_, Pe_
+  use BATL_amr, ONLY: BetaProlong
+  use BATL_lib, ONLY: MaxLevel, x_, y_, z_, nI, nJ, nK, test_start, test_stop,&
+       iProc, iComm
+
+  use CRASH_ModInterfaceNLTE, ONLY: UseNLTE
   use CRASH_ModEos, ONLY: MassMaterial_I => cAtomicMassCRASH_I, &
        Be_, Plastic_, Au_, Ay_
-  use BATL_amr, ONLY: BetaProlong
-  use BATL_lib, ONLY: MaxLevel
-  use CRASH_ModInterfaceNLTE, ONLY: UseNLTE
 
   include 'user_module.h' ! list of public methods
 
@@ -561,7 +559,6 @@ contains
 
   subroutine read_crash2d_file
 
-    use ModProcMH,   ONLY: iProc
     use ModAdvance,  ONLY: nVar
     use ModMain,     ONLY: Time_Simulation
     use ModPlotFile, ONLY: read_plot_file
@@ -627,7 +624,6 @@ contains
     ! Use Delaunay triangulation to interpolate 2D CRASH grid onto
     ! a different (3D?) CRASH grid
 
-    use ModProcMH,      ONLY: iProc
     use ModSize,        ONLY: nI, nJ, nK
     use ModAdvance,     ONLY: State_VGB, RhoUy_, RhoUz_, By_, Bz_, UseB
     use ModGeometry,    ONLY: Xyz_DGB
@@ -714,7 +710,6 @@ contains
 
   subroutine user_action(NameAction)
 
-    use ModProcMH, ONLY: iProc
     use ModInitialState, ONLY: clean_initial_state
 
     character(len=*), intent(in):: NameAction
@@ -1217,7 +1212,6 @@ contains
 
   subroutine user_init_session
 
-    use ModProcMH,      ONLY: iProc, iComm
     use ModVarIndexes,  ONLY: Rho_, Te0_
     use ModLookupTable, ONLY: i_lookup_table, make_lookup_table
     use ModPhysics,     ONLY: &
@@ -1371,7 +1365,6 @@ contains
   subroutine calc_table_value(iTable, Arg1, Arg2, Value_V)
 
     use ModAdvance,     ONLY: UseElectronPressure
-    use ModProcMH,      ONLY: iProc
     use CRASH_ModEos,   ONLY: eos, Ay_, Plastic_
     use ModConst,       ONLY: cProtonMass, cBoltzmann
     use ModLookupTable, ONLY: interpolate_lookup_table
@@ -2155,7 +2148,6 @@ contains
 
     subroutine lookup_error(String, Arg1, Arg2, iArg)
 
-      use ModProcMH, ONLY: iProc
       use ModGeometry, ONLY: Xyz_DGB
       use ModVarIndexes, ONLY: ExtraEint_
 

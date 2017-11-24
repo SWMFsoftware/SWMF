@@ -2,9 +2,6 @@
 
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, xTest, yTest, zTest
-
   use ModSize
   use ModVarIndexes
   use ModMultiFluid
@@ -20,12 +17,13 @@ module ModUser
        IMPLEMENTED9  => user_set_plot_var,        &
        IMPLEMENTED10 => user_action
 
-  use ModProcMH, ONLY: iProc
   use ModVarIndexes, ONLY: nVar
   use ModNumConst, ONLY: cPi
   use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
        UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
        UnitP_, UnitN_, UnitX_, Gamma, GammaMinus1
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
 
   include 'user_module.h' ! list of public methods
 
@@ -141,10 +139,8 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
@@ -154,37 +150,29 @@ contains
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(Gravity_DCB)) &
-         allocate(Gravity_DCB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-     Gravity_DCB = 0.
-     if(.not.allocated(UseGravity)) &
-         allocate(UseGravity(MaxBlock))
-     UseGravity = .false.
-     if(.not.allocated(nStepSave_B)) &
-         allocate(nStepSave_B(MaxBlock))
-     nStepSave_B = -100
-     if(.not.allocated(TimeSimulationSave_B)) &
-         allocate(TimeSimulationSave_B(MaxBlock))
-     TimeSimulationSave_B = -1e30
+       if(.not.allocated(Gravity_DCB)) then
+            allocate(Gravity_DCB(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+            Gravity_DCB = 0.
+            allocate(UseGravity(MaxBlock))
+            UseGravity = .false.
+            allocate(nStepSave_B(MaxBlock))
+            nStepSave_B = -100
+            allocate(TimeSimulationSave_B(MaxBlock))
+            TimeSimulationSave_B = -1e30
+         end if
     case('clean module')
-      if(allocated(Gravity_DCB)) &
-         deallocate(Gravity_DCB)
-     if(allocated(UseGravity)) &
-         deallocate(UseGravity)
-     if(allocated(nStepSave_B)) &
-         deallocate(nStepSave_B)
-     if(allocated(TimeSimulationSave_B)) &
-         deallocate(TimeSimulationSave_B)
+       if(allocated(Gravity_DCB)) deallocate(Gravity_DCB)
+       if(allocated(UseGravity))  deallocate(UseGravity)
+       if(allocated(nStepSave_B)) deallocate(nStepSave_B)
+       if(allocated(TimeSimulationSave_B)) deallocate(TimeSimulationSave_B)
     end select
     call test_stop(NameSub, DoTest)
+
   end subroutine user_action
-
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModMain
-    use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
@@ -541,7 +529,6 @@ contains
     use ModAdvance,    ONLY: State_VGB, Source_VC
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cElectronCharge, cProtonMass
     use ModGeometry,   ONLY: Rmin_BLK, r_BLK, Xyz_DGB
-    use ModProcMH,     ONLY: iProc
     use ModPhysics
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, IsPointImplSource
 
@@ -950,7 +937,6 @@ contains
 
   subroutine user_set_ICs(iBlock)
     use ModIO,       ONLY: restart
-    use ModProcMH,   ONLY: iProc
     use ModMain,     ONLY:      Body1_, Body1
     use ModAdvance,  ONLY: State_VGB
     use ModPhysics
@@ -960,7 +946,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i, j, k, iIonFluid
-    ! !-------------------------------------------------------------------------
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ICs'
     !--------------------------------------------------------------------------

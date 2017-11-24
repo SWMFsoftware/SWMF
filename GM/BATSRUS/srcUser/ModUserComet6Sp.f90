@@ -3,19 +3,18 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 ! this file contains the ModUser for general Cometary MHD
-! MassSpecies is defined at [SpeciesFirst:SpeciesLast]
-! Last 01.15 committed in
-! This 01.16 change Te calculation, add ini rates for solar max.
-! This ModUser.f90 requires copying ModEquationsMHDComet.f90 into ModEquation.f90.
-! jpattern = 0, 10, 11, 12, sets the electron impact ionization term, and
-! the way electron temperature is treated for dissociative recombination processes[Gombosi96].
 
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
+  ! MassSpecies is defined at [SpeciesFirst:SpeciesLast]
+  ! Last 01.15 committed in
+  ! This 01.16 change Te calculation, add ini rates for solar max.
+  ! This ModUser.f90 requires ModEquationMHDComet.f90
+  ! jpattern = 0, 10, 11, 12, sets the electron impact ionization term, and
+  ! the way electron temperature is treated for dissociative recombination 
+  ! processes[Gombosi96].
+
   ! This is the user module for Comets
-  use ModSize
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
@@ -24,6 +23,9 @@ module ModUser
        IMPLEMENTED5 => user_calc_sources,               &
        IMPLEMENTED6 => user_update_states,              &
        IMPLEMENTED7 => user_action
+
+  use BATL_lib, ONLY: test_start, test_stop, iProc
+  use ModSize
 
   include 'user_module.h' ! list of public methods
 
@@ -94,34 +96,30 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_action'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(NNeu_BLK))&
-          NNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, MaxNuSpecies)
-     NNeu_BLK = 1.
-     if(.not.allocated(UNeu_BLK))&
-          UNeu_BLK(0:nI+1, 0:nJ+1, 0:nK+1, MaxBlock, 3)
-     UNeu_BLK = 0.
+       if(.not.allocated(NNeu_BLK))then
+          allocate(NNeu_BLK(0:nI+1,0:nJ+1,0:nK+1,MaxBlock,MaxNuSpecies))
+          NNeu_BLK = 1.
+          allocate(UNeu_BLK(0:nI+1,0:nJ+1,0:nK+1,MaxBlock,3))
+          UNeu_BLK = 0.
+       end if
     case('clean module')
-      if(allocated(NNeu_BLK)) deallocate(NNeu_BLK)
-     if(allocated(UNeu_BLK)) deallocate(UNeu_BLK)
+       if(allocated(NNeu_BLK)) deallocate(NNeu_BLK)
+       if(allocated(UNeu_BLK)) deallocate(UNeu_BLK)
     end select
-    call test_stop(NameSub, DoTest)
+
   end subroutine user_action
-
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModMain

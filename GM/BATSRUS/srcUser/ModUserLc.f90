@@ -40,24 +40,24 @@
 !
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop
-  use ModMain,      ONLY: MaxBlock, nI, nJ, nK
-  use ModReadParam, ONLY: lStringLine
-  use ModCoronalHeating, ONLY: CoronalHeating_C,get_cell_heating
-  use ModRadiativeCooling
   use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
        IMPLEMENTED4 => user_initial_perturbation,       &
-       IMPLEMENTED5 => user_set_face_boundary,                   &
+       IMPLEMENTED5 => user_set_face_boundary,          &
        IMPLEMENTED6 => user_get_log_var,                &
        IMPLEMENTED7 => user_calc_sources,               &
        IMPLEMENTED8 => user_update_states,              &
-       IMPLEMENTED11=> user_set_cell_boundary,               &
+       IMPLEMENTED11=> user_set_cell_boundary,          &
        IMPLEMENTED12=> user_set_plot_var,               &
        IMPLEMENTED13=> user_action
+
+  use ModReadParam, ONLY: lStringLine
+  use ModCoronalHeating, ONLY: CoronalHeating_C,get_cell_heating
+  use ModRadiativeCooling
+  use BATL_lib, ONLY: &
+       MaxBlock, nI, nJ, nK, test_start, test_stop, iProc, iComm
 
   include 'user_module.h' ! list of public methods
 
@@ -92,8 +92,6 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
     use ModProcMH, ONLY: iProc
     character(len=*), intent(in):: NameAction
@@ -105,22 +103,20 @@ contains
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(IsNewBlockTeCalc_B)) &
-         allocate(IsNewBlockTeCalc_B(MaxBlock))
-     IsNewBlockTeCalc_B = .true.
+       if(.not.allocated(IsNewBlockTeCalc_B)) then
+          allocate(IsNewBlockTeCalc_B(MaxBlock))
+          IsNewBlockTeCalc_B = .true.
+       end if
     case('clean module')
-      if(allocated(IsNewBlockTeCalc_B)) &
-         deallocate(IsNewBlockTeCalc_B)
+       if(allocated(IsNewBlockTeCalc_B)) deallocate(IsNewBlockTeCalc_B)
     end select
     call test_stop(NameSub, DoTest)
+
   end subroutine user_action
-
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModMain,        ONLY: lVerbose, UseUserInitSession
-    use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: read_line, read_command, read_var
     use ModIO,          ONLY: write_prefix, write_myname, iUnitOut
     use ModPhysics,     ONLY: SW_T_dim, SW_n_dim
@@ -198,7 +194,6 @@ contains
     use ModPhysics,     ONLY: Si2No_V, UnitP_, UnitEnergyDens_, UnitT_, &
          ElectronTemperatureRatio, AverageIonCharge, UnitTemperature_, &
          UnitRho_, No2Si_V, UnitN_, UnitU_, UnitX_
-    use ModProcMH,      ONLY: iProc
     use ModReadParam,   ONLY: i_line_command
     use ModWaves
     use ModMain,        ONLY: optimize_message_pass, UseMagnetogram
@@ -256,7 +251,7 @@ contains
           call write_prefix;  write(iUnitOut,*) 'Using Tabulated RadCooling'
        else
           call write_prefix;  write(iUnitOut,*) 'Using Analytic Fit to ', &
-                                 'RadCooling'
+               'RadCooling'
        end if
        call write_prefix; write(iUnitOut,*) ''
 
@@ -484,11 +479,9 @@ contains
 
   subroutine user_initial_perturbation
     use ModMain, ONLY: nI ,nJ , nK, MaxBlock, Unused_B, x_, y_, z_
-    use ModProcMH,    ONLY: iProc, iComm
     use ModPhysics,   ONLY: No2Si_V, UnitX_, UnitEnergyDens_, UnitT_, rBody
     use ModCoronalHeating, ONLY: TotalCoronalHeatingCgs, &
          UseUnsignedFluxModel, get_coronal_heat_factor
-    use ModProcMH,      ONLY: iProc
     use ModIO,          ONLY: write_prefix, iUnitOut
     use ModMpi
     use ModCoronalHeating, ONLY:UseExponentialHeating,&
@@ -647,10 +640,9 @@ contains
     use ModVarIndexes, ONLY: Bx_, By_, Bz_, p_
     use ModAdvance,    ONLY: State_VGB, tmp1_BLK
     use ModB0,         ONLY: B0_DGB
-    use ModPhysics,    ONLY: InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_, &
-         UnitT_, No2Si_V
+    use ModPhysics,    ONLY: &
+         InvGammaMinus1, No2Io_V, UnitEnergydens_, UnitX_, UnitT_, No2Si_V
     use ModCoronalHeating, ONLY: HeatFactor,HeatNormalization
-    use ModProcMH,     ONLY: nProc
     use BATL_lib,      ONLY: integrate_grid
 
     real, intent(out) :: VarValue

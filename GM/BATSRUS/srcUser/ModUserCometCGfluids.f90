@@ -4,9 +4,6 @@
 !#NOTPUBLIC  email:zghuang@umich.edu  expires:12/31/2099
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest
-
   use ModUserEmpty,               &
        IMPLEMENTED1  => user_set_boundary_cells,         &
        IMPLEMENTED2  => user_read_inputs,                &
@@ -25,8 +22,10 @@ module ModUser
        IMPLEMENTED15 => user_initial_perturbation,       &
        IMPLEMENTED16 => user_action
 
+  use BATL_lib, ONLY: &
+       test_start, test_stop, &
+       iTest, jTest, kTest, iBlockTest, iProcTest, iVarTest, iProc
   use ModSize
-  use ModProcMH,    ONLY: iProc
   use ModNumConst,  ONLY: cPi, cTiny
   use ModAdvance,   ONLY: Pe_, UseElectronPressure
   use ModMultiFluid
@@ -186,10 +185,8 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
@@ -199,51 +196,36 @@ contains
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(nStepSave_B)) &
-         allocate(nStepSave_B(MaxBlock))
-     nStepSave_B = -100
-     if(.not.allocated(TimeSimulationSave_B)) &
-         allocate(TimeSimulationSave_B(MaxBlock))
-     TimeSimulationSave_B = -1e30
-     if(.not.allocated(nStepSaveCalcRates_B)) &
-         allocate(nStepSaveCalcRates_B(MaxBlock))
-     nStepSaveCalcRates_B = -100
-     if(.not.allocated(ne20eV_GB)) &
-         allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-     ne20eV_GB = 0.
-     if(.not.allocated(SPeAdditional_GB)) &
-         allocate(SPeAdditional_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-     SPeAdditional_GB =0.0
-     if(.not.allocated(v_IIGB)) &
-          allocate(v_IIGB(1:nNeuFluid,1:nIonFluid, &
-          MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-     if(.not.allocated(ve_IIGB)) &
+       if(.not.allocated(nStepSave_B)) then
+          allocate(nStepSave_B(MaxBlock))
+          nStepSave_B = -100
+          allocate(TimeSimulationSave_B(MaxBlock))
+          TimeSimulationSave_B = -1e30
+          allocate(nStepSaveCalcRates_B(MaxBlock))
+          nStepSaveCalcRates_B = -100
+          allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+          ne20eV_GB = 0.
+          allocate(SPeAdditional_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+          SPeAdditional_GB =0.0
+          allocate(v_IIGB(nNeuFluid,nIonFluid,&
+               MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
           allocate(ve_IIGB(1:nNeuFluid,1:nIonFluid, &
-          MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-     if(.not.allocated(TestArray_IGB)) &
+               MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
           allocate(TestArray_IGB(8, MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-     TestArray_IGB = 0.0
+          TestArray_IGB = 0.0
+       end if
     case('clean module')
-      if(allocated(nStepSave_B)) &
-         deallocate(nStepSave_B)
-     if(allocated(TimeSimulationSave_B)) &
-         deallocate(TimeSimulationSave_B)
-     if(allocated(nStepSaveCalcRates_B)) &
-         deallocate(nStepSaveCalcRates_B)
-     if(allocated(ne20eV_GB)) &
-         deallocate(ne20eV_GB)
-     if(allocated(SPeAdditional_GB)) &
-         deallocate(SPeAdditional_GB)
-     if(allocated(v_IIGB)) &
-          deallocate(v_IIGB)
-     if(allocated(ve_IIGB)) &
-          deallocate(ve_IIGB)
-     if(allocated(TestArray_IGB)) &
-          deallocate(TestArray_IGB)
+       if(allocated(nStepSave_B)) deallocate(nStepSave_B)
+       if(allocated(TimeSimulationSave_B)) deallocate(TimeSimulationSave_B)
+       if(allocated(nStepSaveCalcRates_B)) deallocate(nStepSaveCalcRates_B)
+       if(allocated(ne20eV_GB)) deallocate(ne20eV_GB)
+       if(allocated(SPeAdditional_GB)) deallocate(SPeAdditional_GB)
+       if(allocated(v_IIGB)) deallocate(v_IIGB)
+       if(allocated(ve_IIGB)) deallocate(ve_IIGB)
+       if(allocated(TestArray_IGB)) deallocate(TestArray_IGB)
     end select
     call test_stop(NameSub, DoTest)
   end subroutine user_action
-
   !============================================================================
   subroutine user_read_inputs
 
@@ -433,17 +415,17 @@ contains
        call read_fieldline_file
 
        if (iProc == 0) then
-            write (*,*) NameSub, ': reading field line data from ', &
-                 NameFieldlineFile
-            write(*,*) 'TimeEnhanceStartSI, TimeEnhanceStart = ', &
-                 TimeEnhanceStartSI, TimeEnhanceStart
-            write(*,*) 'TimeEnhanceEndSI, TimeEnhanceEnd=    = ', &
-                 TimeEnhanceEndSI, TimeEnhanceEnd
-            write(*,*) 'RadiusTubeSI, RadiusTube = ', RadiusTubeSI, RadiusTube
-            write(*,*) 'SPeAdditional   = ', SPeAdditional, &
-                 SPeAdditionalSi*Si2No_V(UnitP_)/Si2No_V(UnitT_)
-            write(*,*) 'SPeAdditionalSi = ', SPeAdditionalSi
-         end if
+          write (*,*) NameSub, ': reading field line data from ', &
+               NameFieldlineFile
+          write(*,*) 'TimeEnhanceStartSI, TimeEnhanceStart = ', &
+               TimeEnhanceStartSI, TimeEnhanceStart
+          write(*,*) 'TimeEnhanceEndSI, TimeEnhanceEnd=    = ', &
+               TimeEnhanceEndSI, TimeEnhanceEnd
+          write(*,*) 'RadiusTubeSI, RadiusTube = ', RadiusTubeSI, RadiusTube
+          write(*,*) 'SPeAdditional   = ', SPeAdditional, &
+               SPeAdditionalSi*Si2No_V(UnitP_)/Si2No_V(UnitT_)
+          write(*,*) 'SPeAdditionalSi = ', SPeAdditionalSi
+       end if
     end if
 
     rSphericalBody = rSphericalBodySi*Si2No_V(UnitX_)
@@ -865,7 +847,7 @@ contains
        call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
     else
        if (DoWriteOnce .and. .not. UseReflectedBC) then
-!          write(*,*) NameSub, ': floating body conditions.'
+          !          write(*,*) NameSub, ': floating body conditions.'
           DoWriteOnce = .false.
        end if
 
@@ -1072,14 +1054,14 @@ contains
 
       uIonMean_D = 0.0
       do iIonFluid=1,nIonFluid
-          iUx = iRhoUxIon_I(iIonFluid)
-          iUz = iRhoUzIon_I(iIonFluid)
-          uIonMean_D = uIonMean_D + &
-               VarsTrueFace_V(iUx:iUz) &
-               *nIon_I(iIonFluid)*ChargeIon_I(iIonFluid)/nElec
-       end do
+         iUx = iRhoUxIon_I(iIonFluid)
+         iUz = iRhoUzIon_I(iIonFluid)
+         uIonMean_D = uIonMean_D + &
+              VarsTrueFace_V(iUx:iUz) &
+              *nIon_I(iIonFluid)*ChargeIon_I(iIonFluid)/nElec
+      end do
 
-       uIonMeanNormal = sum(uIonMean_D*Normal_D)
+      uIonMeanNormal = sum(uIonMean_D*Normal_D)
 
       ! Projection length of U_ on the local cartesian surface normal vector
       ! do iIonFluid=1,nIonFluid
@@ -1102,7 +1084,7 @@ contains
          if (UseReflectedBC) then
             ! Reflected raidal velocity uG = uT - 2*u_normal
             if (DoWriteOnce) then
-!               write(*,*) NameSub, ': reflected boundary condition'
+               !               write(*,*) NameSub, ': reflected boundary condition'
                DoWriteOnce = .false.
             end if
 
@@ -1283,7 +1265,7 @@ contains
        if(nIntersect > MaxIntersect) then
           write(*,*) 'nIntersect, MaxIntersect =', nIntersect, MaxIntersect
           call stop_mpi(NameSub// &
-            ': too many intersections, increase MaxIntersect')
+               ': too many intersections, increase MaxIntersect')
        end if
 
        ! Store the position along the segment into Ratio_I
@@ -1587,9 +1569,9 @@ contains
     if (IsIntersectedShape) then
        v_II = v_II*1e-9
     else
-! opacity corrections based on Haser, still need some fecth fectors
-!       NCol = Qprod/4.0/(uHaser)/(sqrt(DistProjection2)*NO2SI_V(UnitX_)) * &
-!            (0.5-1.0/cPi*atan(Xyz_DGB(x_,i,j,k,iBlock)/sqrt(DistProjection2)))
+       ! opacity corrections based on Haser, still need some fecth fectors
+       !       NCol = Qprod/4.0/(uHaser)/(sqrt(DistProjection2)*NO2SI_V(UnitX_)) * &
+       !            (0.5-1.0/cPi*atan(Xyz_DGB(x_,i,j,k,iBlock)/sqrt(DistProjection2)))
        NCol = 0.0
        v_II = v_II*exp(-sigma*NCol) + v_II*1e-9
     end if
@@ -1782,13 +1764,12 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK,    &
-           n_step, Time_Simulation, iNewDecomposition
+         n_step, Time_Simulation, iNewDecomposition
     use ModAdvance,    ONLY: State_VGB, Source_VC, &
          Bx_,By_,Bz_, P_
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, cEV
     use ModGeometry,   ONLY: r_BLK, Xyz_DGB
     use ModCurrent,    ONLY: get_current
-    use ModProcMH,     ONLY: iProc
     use ModPhysics,    ONLY: Si2No_V, No2Si_V, &
          UnitEnergyDens_, UnitN_, UnitRho_, UnitU_, UnitP_, UnitT_, &
          UnitRhoU_, UnitTemperature_, UnitX_,       &
@@ -2020,7 +2001,7 @@ contains
        iBlocklast = iBlock
        if (use_block_data(iBlock) .and. .not. DoCalcShading) then
           call get_block_data(iBlock,nI,nJ,nK, IsIntersectedShapeR_III)
-!          write(*,*) 'iProc, iBlock get block data: ', iProc, iBlock, n_step
+          !          write(*,*) 'iProc, iBlock get block data: ', iProc, iBlock, n_step
        end if
 
        if (use_block_data(iBlock) .and. .not.  DoCalcDistance2Fieldline) then
@@ -2627,14 +2608,14 @@ contains
             Source_VC(Bz_    ,i,j,k)
 
        if(UseElectronPressure) then
-!          if (TestCell) then
-!             write(*,*) NameSub, &
-!                  ': Source_VC(Pe_) before applying user term =', &
-!                  Source_VC(Pe_    ,i,j,k)
-!             write(*,*) NameSub, &
-!                  ': User source_VC(Pe_)                      =', &
-!                  SPe_C(i,j,k)
-!          end if
+          !          if (TestCell) then
+          !             write(*,*) NameSub, &
+          !                  ': Source_VC(Pe_) before applying user term =', &
+          !                  Source_VC(Pe_    ,i,j,k)
+          !             write(*,*) NameSub, &
+          !                  ': User source_VC(Pe_)                      =', &
+          !                  SPe_C(i,j,k)
+          !          end if
           Source_VC(Pe_    ,i,j,k) = SPe_C(i,j,k)                    + &
                Source_VC(Pe_    ,i,j,k)
        end if
@@ -3077,7 +3058,6 @@ contains
        iBlock, i, j, k, TeSI, nIon_I, nElec, EtaSi)
     use ModResistivity,  ONLY: Eta0SI
     use ModConst,        ONLY: cElectronMass, cElectronCharge, cMu
-    use ModProcMH,       ONLY: iProc
 
     integer, intent(in)  :: iBlock, i, j, k
     real,    intent(in)  :: TeSI
@@ -3236,7 +3216,6 @@ contains
     use ModVarIndexes,   ONLY: nVar, p_
     use ModConst,        ONLY: cElectronCharge, cBoltzmann, cMu, cElectronMass
     use ModAdvance,      ONLY: State_VGB
-    use ModProcMH,       ONLY: iProc
     use ModGeometry,     ONLY: Xyz_DGB
 
     ! The State_V vector is in normalized units
@@ -3476,7 +3455,7 @@ contains
           PlotVar_G(i,j,k) = State_VGB(iPIon_I(H2Op_),i,j,k,iBlock) / &
                State_VGB(iRhoIon_I(H2Op_),i,j,k,iBlock) * &
                MassIon_I(H2Op_)* NO2SI_V(UnitTemperature_)
-      end do; end do; end do
+       end do; end do; end do
 
     case('uplusx')
        NameIdlUnit = 'km/s'

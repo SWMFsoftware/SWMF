@@ -3,17 +3,13 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
   ! This is the user module for Venus
 
-  use ModSize
-  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_, MassSpecies_V
-  use ModUserEmpty,               &
+  use ModUserEmpty,                                     &
        IMPLEMENTED1 => user_read_inputs,                &
        IMPLEMENTED2 => user_init_session,               &
        IMPLEMENTED3 => user_set_ics,                    &
-       IMPLEMENTED5 => user_set_face_boundary,                   &
+       IMPLEMENTED5 => user_set_face_boundary,          &
        IMPLEMENTED6 => user_calc_sources,               &
        IMPLEMENTED7 => user_init_point_implicit,        &
        IMPLEMENTED8 => user_update_states,              &
@@ -23,6 +19,10 @@ module ModUser
 
   use ModPhysics, ONLY: BodyRhoSpecies_I
   use ModAdvance, ONLY: nSpecies
+  use ModSize
+  use ModVarIndexes, ONLY: rho_, Ux_, Uz_,p_,Bx_, Bz_, MassSpecies_V
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
 
   include 'user_module.h' ! list of public methods
 
@@ -80,7 +80,7 @@ module ModUser
        Ratedim_I=(/3.270e-6,1.224e-6, 1.64e-10, 1.1e-9, &
        9.60e-11, 7.38e-8, 3.1e-7, 5.084e-10, 6.4e-10, 0.0 /)  ! cm^3 s^(-1)
 
-! CO2: 1.695e-6/0.72^2=3.26968  ; 6.346/0.72^2 = 12.24
+  ! CO2: 1.695e-6/0.72^2=3.26968  ; 6.346/0.72^2 = 12.24
   integer, parameter :: &! order of ion species
        Hp_  =1, &
        O2p_ =2, &
@@ -109,7 +109,7 @@ module ModUser
 
   real, dimension(MaxNuSpecies):: HNuSpecies_I,&
        HNuSpeciesDim_I=(/7.1e3,19.1e3, 1000.e3/)
-! scale height corresponding to 100km denisty
+  ! scale height corresponding to 100km denisty
 
   real, dimension(MaxNuSpecies):: BodynDenNuSpecies_I,&
        BodynDenNuSpDim_I=(/2.5e12,7.0e10, 0.0/) ! density at 100km
@@ -119,15 +119,15 @@ module ModUser
        em_=-1 ,&
        hv_=-2
 
-!  real :: body_Tn_dim = 2000.0! neutral temperature at the body
+  !  real :: body_Tn_dim = 2000.0! neutral temperature at the body
   real :: kTn, kTi0, kTp0  ! dimensionless temperature of neutral, &
-                           ! new created ions, plasma at the body
+  ! new created ions, plasma at the body
   real :: Te_new_dim=3000., KTe0 ! temperature of new created electrons
 
-!  real :: XiT0, XiTx ! dimensionless temperature of new created ions
-!  real :: Ti_body_dim=300.0  ! ion temperature at the body
-!  real :: Ti_body_dim=1000.0  ! ion temperature at the body
-!  real :: Tnu_body_dim = 1000.0, Tnu_body, Tnu, Tnu_dim ! neutral temperature
+  !  real :: XiT0, XiTx ! dimensionless temperature of new created ions
+  !  real :: Ti_body_dim=300.0  ! ion temperature at the body
+  !  real :: Ti_body_dim=1000.0  ! ion temperature at the body
+  !  real :: Tnu_body_dim = 1000.0, Tnu_body, Tnu, Tnu_dim ! neutral temperature
   real :: T300_dim = 300.0, T300
   real, allocatable :: nu_BLK(:,:,:,:)
 
@@ -146,10 +146,8 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
@@ -159,31 +157,27 @@ contains
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(nu_BLK)) &
-         allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
-     if(.not.allocated(nDenNuSpecies_CBI)) &
-          allocate(nDenNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,MaxNuSpecies))
-     if(.not.allocated(Productrate_CB)) &
-          allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-     if(.not.allocated(MaxSiSpecies_CB)) &
-          allocate(MaxSiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-     if(.not.allocated(MaxLiSpecies_CB)) &
-          allocate(MaxLiSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-     if(.not.allocated(MaxSLSpecies_CB)) &
-          allocate(MaxSLSpecies_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
+       if(.not.allocated(nu_BLK))then
+          allocate(nu_BLK(nI,nJ,nK,MaxBlock))
+          allocate(nDenNuSpecies_CBI(nI,nJ,nKMaxBlock,MaxNuSpecies))
+          allocate(Productrate_CB(nI,nJ,nKMaxBlock))
+          allocate(MaxSiSpecies_CB(nI,nJ,nKMaxBlock))
+          allocate(MaxLiSpecies_CB(nI,nJ,nKMaxBlock))
+          allocate(MaxSLSpecies_CB(nI,nJ,nKMaxBlock))
+       end if
     case('clean module')
-      if(allocated(nu_BLK)) &
-         deallocate(nu_BLK)
-     if(allocated(nDenNuSpecies_CBI)) &
-          deallocate(nDenNuSpecies_CBI)
-     if(allocated(Productrate_CB)) &
-          deallocate(Productrate_CB)
-     if(allocated(MaxSiSpecies_CB)) &
-          deallocate(MaxSiSpecies_CB)
-     if(allocated(MaxLiSpecies_CB)) &
-          deallocate(MaxLiSpecies_CB)
-     if(allocated(MaxSLSpecies_CB)) &
-          deallocate(MaxSLSpecies_CB)
+       if(allocated(nu_BLK)) &
+            deallocate(nu_BLK)
+       if(allocated(nDenNuSpecies_CBI)) &
+            deallocate(nDenNuSpecies_CBI)
+       if(allocated(Productrate_CB)) &
+            deallocate(Productrate_CB)
+       if(allocated(MaxSiSpecies_CB)) &
+            deallocate(MaxSiSpecies_CB)
+       if(allocated(MaxLiSpecies_CB)) &
+            deallocate(MaxLiSpecies_CB)
+       if(allocated(MaxSLSpecies_CB)) &
+            deallocate(MaxSLSpecies_CB)
     end select
     call test_stop(NameSub, DoTest)
   end subroutine user_action
@@ -192,7 +186,6 @@ contains
 
   subroutine user_read_inputs
     use ModMain
-    use ModProcMH,    ONLY: iProc
     use ModReadParam
 
     character (len=100) :: NameCommand
@@ -266,7 +259,6 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance,  ONLY: Source_VC
-    use ModProcMH,   ONLY: iProc
     use ModPointImplicit, ONLY: UsePointImplicit_B, UsePointImplicit, &
          IsPointImplSource
     use ModPhysics, ONLY: Rbody
@@ -314,7 +306,6 @@ contains
     use ModAdvance, ONLY: Source_VC
     use ModVarIndexes, ONLY: Rho_, &
          RhoUx_, RhoUy_, RhoUz_, P_, Energy_, Bx_, By_, Bz_
-    use ModProcMH,   ONLY: iProc
 
     integer, intent(in) :: iBlock
 
@@ -374,7 +365,6 @@ contains
     use ModAdvance,  ONLY: State_VGB,VdtFace_x,VdtFace_y,VdtFace_z
     use ModVarIndexes, ONLY: rho_, Ux_, Uy_, Uz_,p_
     use ModGeometry, ONLY: Xyz_DGB,R_BLK
-    use ModProcMH,   ONLY: iProc
     use ModPhysics,  ONLY: Rbody, InvGammaMinus1, GammaMinus1
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use BATL_lib, ONLY: CellVolume_GB
@@ -707,7 +697,6 @@ contains
 
   subroutine user_set_ICs(iBlock)
 
-    use ModProcMH, ONLY : iProc
     use ModMain
     use ModAdvance
     use ModGeometry, ONLY:Xyz_DGB,R_BLK,true_cell
@@ -893,7 +882,6 @@ contains
     use ModConst
     use ModIO
     use ModPhysics
-    use ModProcMH,   ONLY: iProc
 
     real :: Productrate
     real :: alt0
@@ -1241,7 +1229,6 @@ contains
 
     use ModPhysics,  ONLY: No2Si_V, Si2No_V, &
          UnitTemperature_, UnitX_,UnitT_, Rbody
-    use ModProcMH,   ONLY: iProc
     use ModAdvance,  ONLY: State_VGB
     use ModGeometry, ONLY: Rmin_BLK
     use ModResistivity, ONLY: Eta0Si

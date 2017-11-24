@@ -5,12 +5,12 @@
 
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest
-
   use ModMultiFluid
   use ModSize,       ONLY: nI, nJ, nK, MaxBlock
   use ModAdvance,    ONLY: Pe_, UseElectronPressure
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProcTest, iProc
+
   use ModUserEmpty,                               &
        IMPLEMENTED1  => user_read_inputs,         &
        IMPLEMENTED2  => user_calc_sources,        &
@@ -68,10 +68,8 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
@@ -81,22 +79,20 @@ contains
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(ne20eV_GB)) &
-         allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
-     ne20eV_GB = 0.
+       if(.not.allocated(ne20eV_GB))then
+          allocate(ne20eV_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+          ne20eV_GB = 0.
+       end if
     case('clean module')
-      if(allocated(ne20eV_GB)) &
-         deallocate(ne20eV_GB)
+       if(allocated(ne20eV_GB)) deallocate(ne20eV_GB)
     end select
     call test_stop(NameSub, DoTest)
+
   end subroutine user_action
-
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModMain,      ONLY: lVerbose
-    use ModProcMH,    ONLY: iProc
     use ModReadParam, ONLY: read_var, read_line, read_command
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
@@ -147,7 +143,6 @@ contains
          use_block_data, MaxBlockData
     use ModPhysics,    ONLY: rPlanetSi, cProtonMass, No2SI_V, UnitX_
     use ModNumConst,   ONLY: cPi, cRadToDeg
-    use ModProcMH,     ONLY: iProc
     use ModGeometry,   ONLY: R_BLK, Xyz_DGB,x1,y1,y2,z1,z2
     use ModLookupTable, ONLY: i_lookup_table, interpolate_lookup_table
 
@@ -660,7 +655,7 @@ contains
   subroutine user_calc_sources(iBlock)
 
     use ModMain,       ONLY: nI, nJ, nK,    &
-           Dt_BLK
+         Dt_BLK
     use ModAdvance,    ONLY: State_VGB, Source_VC, Rho_, RhoUx_, RhoUy_, RhoUz_, &
          Bx_,By_,Bz_, P_
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass
@@ -1014,11 +1009,11 @@ contains
           end do
        end do
 
-!       vAdd_I = 0.
-!       do iNeutral=1,nNeutral
-!          vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)*&
-!               NnNeutral_IG(iNeutral,i,j,k)
-!       end do
+       !       vAdd_I = 0.
+       !       do iNeutral=1,nNeutral
+       !          vAdd_I(1:nIonFluid) = vAdd_I(1:nIonFluid)+v_IIC(iNeutral,1:nIonFluid,i,j,k)*&
+       !               NnNeutral_IG(iNeutral,i,j,k)
+       !       end do
 
        SPTerm_IIC(1,1:nIonFluid,i,j,k) = -(kinSub_I(1:nIonFluid)/Si2No_V(UnitT_)+ &                                  !! lost ions through charge exchange and recombination
             alpha_IC(1:nIonFluid,i,j,k)*nElec_C(i,j,k)/Si2No_V(UnitT_))*State_VGB(iPIon_I,i,j,k,iBlock)
@@ -2330,7 +2325,6 @@ contains
 
     use ModMain,       ONLY: Dt_BLK
     use ModPhysics,    ONLY: No2SI_V, UnitT_
-    use ModProcMH,     ONLY: iProc
 
     real, intent(out)             :: VarValue
     character (len=*), intent(in) :: TypeVar

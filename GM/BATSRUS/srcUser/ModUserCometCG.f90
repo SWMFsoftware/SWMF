@@ -4,9 +4,6 @@
 
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, xTest, yTest, zTest
-
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_set_boundary_cells,         &
        IMPLEMENTED2 => user_read_inputs,                &
@@ -15,12 +12,13 @@ module ModUser
        IMPLEMENTED5 => user_action
 
   use ModSize
-  use ModProcMH, ONLY: iProc
   use ModVarIndexes, ONLY: nVar
   use ModNumConst, ONLY: cPi
   use ModPhysics, ONLY: Io2No_V, Si2No_V, No2Si_V, &
        UnitRho_, UnitU_, UnitTemperature_, UnitT_, &
        UnitP_, UnitN_, UnitX_, Gamma
+  use BATL_lib, ONLY: &
+       test_start, test_stop, xTest, yTest, zTest, iProc
 
   include 'user_module.h' ! list of public methods
 
@@ -82,10 +80,8 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
@@ -93,24 +89,23 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
+
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(nStepSave_B)) &
-         allocate(nStepSave_B(MaxBlock))
-     nStepSave_B = -100
-     if(.not.allocated(TimeSimulationSave_B)) &
-         allocate(TimeSimulationSave_B(MaxBlock))
-     TimeSimulationSave_B = -1e30
+       if(.not.allocated(nStepSave_B)) then
+          allocate(nStepSave_B(MaxBlock))
+          nStepSave_B = -100
+          allocate(TimeSimulationSave_B(MaxBlock))
+          TimeSimulationSave_B = -1e30
+       end if
     case('clean module')
-      if(allocated(nStepSave_B)) &
-         deallocate(nStepSave_B)
-     if(allocated(TimeSimulationSave_B)) &
-         deallocate(TimeSimulationSave_B)
+       if(allocated(nStepSave_B)) deallocate(nStepSave_B)
+       if(allocated(TimeSimulationSave_B)) deallocate(TimeSimulationSave_B)
     end select
     call test_stop(NameSub, DoTest)
   end subroutine user_action
-
   !============================================================================
+
   subroutine user_read_inputs
 
     use ModMain, ONLY: UseUserInitSession, UseExtraBoundary, n_step

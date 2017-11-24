@@ -3,10 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
-
-  use ModSize
   use ModUserEmpty,                        &
        IMPLEMENTED1 => user_set_ics,       &
        IMPLEMENTED2 => user_read_inputs,   &
@@ -14,6 +10,10 @@ module ModUser
        IMPLEMENTED4 => user_update_states, &
        IMPLEMENTED5 => user_set_face_boundary,&
        IMPLEMENTED6 => user_action
+
+  use ModSize
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
 
   include 'user_module.h' ! list of public methods
 
@@ -28,10 +28,8 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
@@ -41,21 +39,18 @@ contains
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(Neutral_BLK)) &
-         allocate(Neutral_BLK(1:nI, 1:nJ, 1:nK, MaxBlock))
+       if(.not.allocated(Neutral_BLK)) &
+            allocate(Neutral_BLK(1:nI, 1:nJ, 1:nK, MaxBlock))
     case('clean module')
-      if(allocated(Neutral_BLK)) &
-         deallocate(Neutral_BLK)
+       if(allocated(Neutral_BLK)) deallocate(Neutral_BLK)
     end select
     call test_stop(NameSub, DoTest)
+
   end subroutine user_action
-
   !============================================================================
-
   subroutine user_read_inputs
 
     use ModMain
-    use ModProcMH,    ONLY: iProc
     use ModReadParam
     use ModIO,        ONLY: write_prefix, write_myname, iUnitOut
 
@@ -74,31 +69,31 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
 
-         case("#EUROPA")
-            call read_var('n0' , n0)           !! Median neutral surface density [1/cm^3]
-            call read_var('distr' , distr)     !! Ram side neutral distr: uniform (0) or cos (1)
-            call read_var('dn' , dn)           !! Ram side fraction [%] only if distr==0
-            call read_var('H' , H)             !! Neutral scale height [km]
-            call read_var('v' , v)             !! Ionization rate [1/s]
-            call read_var('alpha' , alpha)     !! Recombination rate [cm^3/s]
-            call read_var('kin' , kin)         !! ion neutral friction [cm^3/s]
-            call read_var('mi_mean' , mi_mean) !! mean ion mass [amu]
-            H=H*1E3                            !! conversion to SI
-            n0=n0*1E6                          !! conversion to SI
-            dn=dn/100.0
-         case('#USERINPUTEND')
-            if(iProc==0.and.lVerbose > 0)then
-               call write_prefix;
+       case("#EUROPA")
+          call read_var('n0' , n0)           !! Median neutral surface density [1/cm^3]
+          call read_var('distr' , distr)     !! Ram side neutral distr: uniform (0) or cos (1)
+          call read_var('dn' , dn)           !! Ram side fraction [%] only if distr==0
+          call read_var('H' , H)             !! Neutral scale height [km]
+          call read_var('v' , v)             !! Ionization rate [1/s]
+          call read_var('alpha' , alpha)     !! Recombination rate [cm^3/s]
+          call read_var('kin' , kin)         !! ion neutral friction [cm^3/s]
+          call read_var('mi_mean' , mi_mean) !! mean ion mass [amu]
+          H=H*1E3                            !! conversion to SI
+          n0=n0*1E6                          !! conversion to SI
+          dn=dn/100.0
+       case('#USERINPUTEND')
+          if(iProc==0.and.lVerbose > 0)then
+             call write_prefix;
              write(iUnitOut,*)'User read_input EUROPA ends'
           endif
           EXIT
-      case default
-         if(iProc==0) then
-            call write_myname; write(*,*) &
+       case default
+          if(iProc==0) then
+             call write_myname; write(*,*) &
                   'ERROR: Invalid user defined #COMMAND in user_read_inputs. '
-            write(*,*) '--Check user_read_inputs for errors'
-            write(*,*) '--Check to make sure a #USERINPUTEND command was used'
-            write(*,*) '  *Unrecognized command was: '//NameCommand
+             write(*,*) '--Check user_read_inputs for errors'
+             write(*,*) '--Check to make sure a #USERINPUTEND command was used'
+             write(*,*) '  *Unrecognized command was: '//NameCommand
              call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
           end if
        end select
@@ -177,12 +172,11 @@ contains
          Rho_, RhoUx_, RhoUy_, RhoUz_, Bx_,By_,Bz_, p_, Energy_
     use ModGeometry, ONLY: Xyz_DGB,R_BLK
     use ModPhysics
-    use ModProcMH
 
     integer, intent(in) :: iBlock
 
-    real, dimension(1:nI,1:nJ,1:nK) :: ux, uy, uz, uxyz, ne !!, Te
-    real, dimension(1:nI,1:nJ,1:nK) :: Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SE
+    real, dimension(nI,nJ,nK) :: ux, uy, uz, uxyz, ne !!, Te
+    real, dimension(nI,nJ,nK) :: Srho,SrhoUx,SrhoUy,SrhoUz,SBx,SBy,SBz,Sp,SE
 
     integer :: i,j,k
 
@@ -191,11 +185,11 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     ux=State_VGB(rhoUx_,1:nI,1:nJ,1:nK,iBlock) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+         State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
     uy=State_VGB(rhoUy_,1:nI,1:nJ,1:nK,iBlock) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+         State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
     uz=State_VGB(rhoUz_,1:nI,1:nJ,1:nK,iBlock) / &
-          State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
+         State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)
 
     uxyz = ux*ux+uy*uy+uz*uz
 
@@ -284,9 +278,9 @@ contains
     ! set it to Tmin.
 
     where( State_VGB(p_,1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitP_) < &
-           (State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitN_)/mi_mean)*cBoltzmann*Tmin )
+         (State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitN_)/mi_mean)*cBoltzmann*Tmin )
        State_VGB(p_,1:nI,1:nJ,1:nK,iBlock) = &
-           (State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitN_)/mi_mean)*cBoltzmann*Tmin/NO2SI_V(UnitP_)
+            (State_VGB(rho_,1:nI,1:nJ,1:nK,iBlock)*NO2SI_V(UnitN_)/mi_mean)*cBoltzmann*Tmin/NO2SI_V(UnitP_)
     end where
 
     call calc_energy_cell(iBlock)
@@ -310,7 +304,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     UdotR = dot_product(VarsTrueFace_V(Ux_:Uz_),FaceCoords_D)* &
-     2.0/dot_product(FaceCoords_D,FaceCoords_D)
+         2.0/dot_product(FaceCoords_D,FaceCoords_D)
     URefl_D = FaceCoords_D*UdotR
 
     VarsGhostFace_V = VarsTrueFace_V

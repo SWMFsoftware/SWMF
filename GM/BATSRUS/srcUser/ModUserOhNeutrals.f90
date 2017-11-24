@@ -19,22 +19,11 @@
 ! July 10
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest
-
-  use ModSize,     ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
-  use ModMain
-  use ModPhysics
-  use ModAdvance,  ONLY : State_VGB
-  use ModGeometry, ONLY : Xyz_DGB, r_BLK, true_cell
-  use ModVarIndexes
-  use ModProcMH
-  use ModMultiFluid
   use ModUserEmpty,                                     &
        IMPLEMENTED1  => user_read_inputs,               &
-       IMPLEMENTED2  => user_set_face_boundary,                  &
+       IMPLEMENTED2  => user_set_face_boundary,         &
        IMPLEMENTED3  => user_normalization,             &
-       IMPLEMENTED4  => user_set_cell_boundary,              &
+       IMPLEMENTED4  => user_set_cell_boundary,         &
        IMPLEMENTED5  => user_set_ics,                   &
        IMPLEMENTED6  => user_initial_perturbation,      &
        IMPLEMENTED8  => user_action,                    &
@@ -42,6 +31,16 @@ module ModUser
        IMPLEMENTED10 => user_set_plot_var,              &
        IMPLEMENTED11 => user_calc_sources,              &
        IMPLEMENTED12 => user_init_point_implicit
+
+  use BATL_lib, ONLY: &
+       nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock, &
+       test_start, test_stop, iTest, jTest, kTest, iProc
+  use ModMain
+  use ModPhysics
+  use ModAdvance,  ONLY : State_VGB
+  use ModGeometry, ONLY : Xyz_DGB, r_BLK, true_cell
+  use ModVarIndexes
+  use ModMultiFluid
 
   include 'user_module.h' ! list of public methods
 

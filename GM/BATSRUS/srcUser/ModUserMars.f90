@@ -3,8 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModUser
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest, iBlockTest
   ! This is the user module for Mars
 
   use ModSize
@@ -12,6 +10,8 @@ module ModUser
        SpeciesFirst_, SpeciesLast_, MassSpecies_V
   use ModAdvance,    ONLY: nSpecies
   use ModPhysics,    ONLY: BodyRhoSpecies_I
+  use BATL_lib, ONLY: &
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest, iProc
 
   use ModUserEmpty,               &
        IMPLEMENTED1 => user_read_inputs,                &
@@ -54,7 +54,7 @@ module ModUser
 
   ! Ionization rate !!according to TGCM
   real, allocatable :: Ionizationrate_CBI(:,:,:,:,:)
- 
+
   real, dimension(MaxReactions) :: ReactionRate_I
   real, dimension(MaxReactions,MaxSpecies):: CoeffSpecies_II, &
        dSdRho_II !, dLdRho_II
@@ -186,10 +186,8 @@ module ModUser
 
 contains
   !============================================================================
-
-
   subroutine user_action(NameAction)
-    use ModProcMH, ONLY: iProc
+
     character(len=*), intent(in):: NameAction
 
     logical:: DoTest
@@ -199,39 +197,25 @@ contains
     if(iProc==0)write(*,*) NameSub,' called with action ',NameAction
     select case(NameAction)
     case('initialize module')
-      if(.not.allocated(TempNuSpecies_CBI)) &
-          allocate(TempNuSpecies_CBI(1:nI, 1:nJ, 1:nK, MaxBlock))
-     if(.not.allocated(Productrate_CB)) &
-          allocate(Productrate_CB(1:nI, 1:nJ, 1:nK, MaxBlock))
-     if(.not.allocated(Ionizationrate_CBI)) &
-          allocate(Ionizationrate_CBI(1:nI, 1:nJ, 1:nK, MaxBlock,2))
-     if(.not.allocated(MaxSiSpecies_CB)) &
-         allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
-     if(.not.allocated(MaxLiSpecies_CB)) &
-         allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
-     if(.not.allocated(MaxSLSpecies_CB)) &
-         allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
-     if(.not.allocated(nu_BLK)) &
-         allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
-     if(.not.allocated(nu1_BLK)) &
-         allocate(nu1_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+       if(.not.allocated(TempNuSpecies_CBI))then
+          allocate(TempNuSpecies_CBI(nI,nJ,nK,MaxBlock))
+          allocate(Productrate_CB(nI,nJ,nK,MaxBlock))
+          allocate(Ionizationrate_CBI(nI,nJ,nK,MaxBlock,2))
+          allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
+          allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
+          allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
+          allocate(nu_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+          allocate(nu1_BLK(1:nI,1:nJ,1:nK,MaxBlock))
+       end if
     case('clean module')
-      if(allocated(TempNuSpecies_CBI)) &
-          deallocate(TempNuSpecies_CBI)
-     if(allocated(Productrate_CB)) &
-          deallocate(Productrate_CB)
-     if(allocated(Ionizationrate_CBI)) &
-          deallocate(Ionizationrate_CBI)
-     if(allocated(MaxSiSpecies_CB)) &
-         deallocate(MaxSiSpecies_CB)
-     if(allocated(MaxLiSpecies_CB)) &
-         deallocate(MaxLiSpecies_CB)
-     if(allocated(MaxSLSpecies_CB)) &
-         deallocate(MaxSLSpecies_CB)
-     if(allocated(nu_BLK)) &
-         deallocate(nu_BLK)
-     if(allocated(nu1_BLK)) &
-         deallocate(nu1_BLK)
+       if(allocated(TempNuSpecies_CBI)) deallocate(TempNuSpecies_CBI)
+       if(allocated(Productrate_CB)) deallocate(Productrate_CB)
+       if(allocated(Ionizationrate_CBI)) deallocate(Ionizationrate_CBI)
+       if(allocated(MaxSiSpecies_CB))  deallocate(MaxSiSpecies_CB)
+       if(allocated(MaxLiSpecies_CB))  deallocate(MaxLiSpecies_CB)
+       if(allocated(MaxSLSpecies_CB))  deallocate(MaxSLSpecies_CB)
+       if(allocated(nu_BLK)) deallocate(nu_BLK)
+       if(allocated(nu1_BLK)) deallocate(nu1_BLK)
     end select
     call test_stop(NameSub, DoTest)
   end subroutine user_action
@@ -239,7 +223,6 @@ contains
   !============================================================================
   subroutine user_read_inputs
     use ModMain
-    use ModProcMH,    ONLY: iProc
     use ModReadParam
 
     character (len=100) :: NameCommand
