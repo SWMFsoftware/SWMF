@@ -3,8 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModSetParameters
 
-  use BATL_lib, ONLY: 
-
   implicit none
 
   private ! except
@@ -1690,6 +1688,10 @@ contains
           call read_var('yMax',y2)
           call read_var('zMin',z1)
           call read_var('zMax',z2)
+
+       case("#GRIDBLOCK")
+          call read_var('MaxBlock',   MaxBlock)
+          call read_var('MaxImplBlk', MaxBlockImpl)
 
        case("#USERMODULE")
           if(.not.is_first_session())CYCLE READPARAM
