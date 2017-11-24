@@ -128,7 +128,7 @@ contains
        call read_var('UseFullImplicit',  UseFullImplicit)
 
        UseImplicit = UseFullImplicit .or. UsePartImplicit
-       UsePointImplicit_B = UsePointImplicit
+       if(allocated(UsePointImplicit_B)) UsePointImplicit_B = UsePointImplicit
 
        if(UsePartImplicit  .and. UseFullImplicit) call stop_mpi(&
             'Only one of UsePartImplicit and UseFullImplicit can be true')
