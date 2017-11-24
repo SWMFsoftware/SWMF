@@ -324,7 +324,7 @@ contains
        if(UseConstrainB)    call init_mod_ct
        if(UseImplicit)      call init_mod_part_impl
        if(UseSemiImplicit)  call init_mod_semi_impl
-       if(UsePointImplicit) call init_mod_point_impl
+       call init_mod_point_impl
        call init_mod_magperturb
 
        call get_region_indexes(StringLowOrderRegion, iRegionLowOrder_I)
