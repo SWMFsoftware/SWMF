@@ -73,7 +73,6 @@ contains
     integer:: iVector, iVar, i, j, k
     real   :: XyzSph_DD(3,3)
 
-    logical:: DoTime
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'exchange_messages'
     !--------------------------------------------------------------------------
@@ -213,7 +212,7 @@ contains
     end do
 
     call timing_stop('exch_msgs')
-    if(DoTime)call timing_show('exch_msgs',1)
+    if(DoTest)call timing_show('exch_msgs',1)
 
     if(DoTest)write(*,*) NameSub,' finished'
 
