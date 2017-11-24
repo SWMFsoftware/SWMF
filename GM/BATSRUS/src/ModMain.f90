@@ -337,12 +337,14 @@ module ModMain
 
 
 contains
-
+  !============================================================================
   subroutine init_mod_main
-    if(.not.allocated(dt_BLK)) allocate(dt_BLK(MaxBlock))
-
+    if(.not.allocated(dt_BLK))then
+       allocate(dt_BLK(MaxBlock))
+       dt_BLK = 0.0
+    end if
   end subroutine init_mod_main
-
+  !============================================================================
   subroutine clean_mod_main
     if(allocated(dt_BLK)) deallocate(dt_BLK)
 
