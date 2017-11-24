@@ -112,7 +112,7 @@ contains
     if(allocated(UsePointImplicit_B)) RETURN
     allocate(UsePointImplicit_B(MaxBlock))
     ! Default is true for multi-ion and electron-ion equations
-    UsePointImplicit_B = UseMultiIon .or. UseEfield
+    UsePointImplicit_B = UsePointImplicit
 
   end subroutine init_mod_point_impl
 
