@@ -170,16 +170,16 @@ contains
 
     interface
        subroutine linear_wrapper_matvec_c(x_I, y_I, n)  bind(C) 
-         use iso_c_binding
-         integer(c_int ), VALUE:: n
-         real(c_double)        :: x_I(n)
-         real(c_double)        :: y_I(n)
+         integer, VALUE:: n
+         real          :: x_I(n)
+         real          :: y_I(n)
        end subroutine linear_wrapper_matvec_c
     end interface
 
-    integer(c_int), intent(in) :: n
-    real(c_double), intent(in) :: x_I(n) 
-    real(c_double), intent(out):: y_I(n)
+    integer, intent(in) :: n
+    real,    intent(in) :: x_I(n) 
+    real,    intent(out):: y_I(n)
+
     integer :: iStart
     !--------------------------------------------------------------------------
 
