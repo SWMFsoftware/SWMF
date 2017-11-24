@@ -38,7 +38,7 @@ module ModPartImplicit
   integer :: iBlockImplTest=1, nTest=1
 
   ! Indirect index array from implicit block index to general block index
-  integer :: iBlockFromImpl_B(MaxImplBLK)
+  integer, allocatable :: iBlockFromImpl_B(:)
 
   ! Parameters for the implicit techniques
 
@@ -265,6 +265,9 @@ contains
 
     allocate(IsImplCell_CB(nI,nJ,nK,MaxBlock))
 
+    ! Conversion of block index
+    allocate(iBlockFromImpl_B(MaxImplBLK))
+
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_implicit allocated arrays'
@@ -290,6 +293,7 @@ contains
     deallocate(Rhs_I)
     deallocate(x_I)
     deallocate(IsImplCell_CB)
+    deallocate(iBlockFromImpl_B)
 
     if(iProc==0)then
        call write_prefix
