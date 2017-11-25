@@ -59,7 +59,7 @@ CFLAGS = ${CFLAG} ${OPT2} -save
 
 # Link flags: Lflag1 for MPI parallel code, Lflag2 for serial code
 # Sometimes it's a good idea not to worry about unused undefined symbols
-Lflag1  = ${PRECISION} ${MPILIB} ${OPENMPFLAG} ${DEBUG}
+Lflag1  = ${PRECISION} ${MPILIB} ${OPENMPFLAG} ${CPPLIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${OPENMPFLAG} ${DEBUG} -Wl,--unresolved-symbols=ignore-in-object-files
 
 # BLAS and LAPACK libraries

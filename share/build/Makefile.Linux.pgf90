@@ -126,7 +126,7 @@ CFLAGS = ${CFLAG} -Msave
 # The linker flags. Lflag1 is for parallel code with the (NO)MPI library.
 # Lflag2 is for non-parallel code. Put here extra flags for the linking phase.
 #
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
+Lflag1  = ${PRECISION} ${MPILIB} ${CPPLIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
 
 #

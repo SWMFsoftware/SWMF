@@ -51,7 +51,7 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 CFLAGS = ${CFLAG} -save
 
 # The '-Bstatic' flag avoids segmentation fault for large number of blocks
-Lflag1  = ${PRECISION} ${MPILIB} ${OPENMPFLAG} ${DEBUG}
+Lflag1  = ${PRECISION} ${MPILIB} ${OPENMPFLAG} ${CPPLIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG} ${OPENMPFLAG}
 
 # BLAS and LAPACK libraries

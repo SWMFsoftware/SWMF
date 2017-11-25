@@ -53,7 +53,7 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 CFLAGS = ${CFLAG} ${OPT2} -save
 
 # Link flags: Lflag1 for MPI parallel code, Lflag2 for serial code
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
+Lflag1  = ${PRECISION} ${MPILIB} ${CPPLIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
 
 # BLAS and LAPACK libraries

@@ -55,7 +55,7 @@ CFLAGS = ${CFLAG} ${OPT2} -save
 
 # Add '-Bstatic' to link flags if segmentation fault occurs immediately
 
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
+Lflag1  = ${PRECISION} ${MPILIB} ${CPPLIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
 
 # BLAS and LAPACK libraries

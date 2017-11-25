@@ -48,7 +48,7 @@ Cflag4  = ${CFLAG} ${PRECISION} ${OPT4}
 # To allow RCM to compile as double precision, add PRECISION flag
 CFLAGS = ${CFLAG} -save
 
-Lflag1  = ${PRECISION} ${MPILIB} ${DEBUG}
+Lflag1  = ${PRECISION} ${MPILIB} ${CPPLIB} ${DEBUG}
 Lflag2  = ${PRECISION} ${DEBUG}
 
 # BLAS and LAPACK libraries
