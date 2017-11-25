@@ -489,7 +489,7 @@ void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, d
 void GetTestStencil(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
   //check whether the point is located at the boundary
-  for (int iface=0;iface<6;iface++) if (node->GetNeibFace(iface,0,0)==NULL) {
+  for (int iface=0;iface<6;iface++) if ((node->GetNeibFace(iface,0,0)==NULL) && ((i==0)||(i==_BLOCK_CELLS_X_) || (j==0)||(j==_BLOCK_CELLS_Y_) || (k==0)||(k==_BLOCK_CELLS_Z_)) ) {
     //the point is located at the boundary of the domain
     MatrixRowNonZeroElementTable[0].i=i,MatrixRowNonZeroElementTable[0].j=j,MatrixRowNonZeroElementTable[0].k=k,MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
     MatrixRowNonZeroElementTable[0].iVar=0;
