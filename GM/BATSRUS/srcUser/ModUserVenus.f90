@@ -57,7 +57,6 @@ module ModUser
        totalSourceNumRho, totalLossx, totalLossNumx
 
   real, allocatable :: MaxSiSpecies_CB(:,:,:,:), MaxLiSpecies_CB(:,:,:,:)
-  common /TimeBlock/ MaxSiSpecies_CB,  MaxLiSpecies_CB
 
   real, allocatable :: MaxSLSpecies_CB(:,:,:,:)
 
@@ -115,9 +114,6 @@ module ModUser
        BodynDenNuSpDim_I=(/2.5e12,7.0e10, 0.0/) ! density at 100km
 
   real:: Altitude0=100.0e3 ! altitude correspondint to neutral density
-  integer, parameter :: & ! other numbers
-       em_=-1 ,&
-       hv_=-2
 
   !  real :: body_Tn_dim = 2000.0! neutral temperature at the body
   real :: kTn, kTi0, kTp0  ! dimensionless temperature of neutral, &
@@ -159,11 +155,11 @@ contains
     case('initialize module')
        if(.not.allocated(nu_BLK))then
           allocate(nu_BLK(nI,nJ,nK,MaxBlock))
-          allocate(nDenNuSpecies_CBI(nI,nJ,nKMaxBlock,MaxNuSpecies))
-          allocate(Productrate_CB(nI,nJ,nKMaxBlock))
-          allocate(MaxSiSpecies_CB(nI,nJ,nKMaxBlock))
-          allocate(MaxLiSpecies_CB(nI,nJ,nKMaxBlock))
-          allocate(MaxSLSpecies_CB(nI,nJ,nKMaxBlock))
+          allocate(nDenNuSpecies_CBI(nI,nJ,nK,MaxBlock,MaxNuSpecies))
+          allocate(Productrate_CB(nI,nJ,nK,MaxBlock))
+          allocate(MaxSiSpecies_CB(nI,nJ,nK,MaxBlock))
+          allocate(MaxLiSpecies_CB(nI,nJ,nK,MaxBlock))
+          allocate(MaxSLSpecies_CB(nI,nJ,nK,MaxBlock))
        end if
     case('clean module')
        if(allocated(nu_BLK)) &
@@ -1105,7 +1101,6 @@ contains
        PlotVar_G, PlotVarBody, UsePlotVarBody, &
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
-    use ModSize,       ONLY: nI, nJ, nK
     use ModPhysics,    ONLY: No2Io_V, UnitN_, NameTecUnit_V, NameIdlUnit_V
     use ModAdvance,    ONLY: State_VGB, Rho_
 

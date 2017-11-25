@@ -66,7 +66,6 @@ module ModUser
 
   real, allocatable :: MaxSiSpecies_CB(:,:,:,:)
   real, allocatable :: MaxLiSpecies_CB(:,:,:,:)
-  common /TimeBlock/ MaxSiSpecies_CB,  MaxLiSpecies_CB
 
   real, allocatable :: MaxSLSpecies_CB(:,:,:,:)
 
