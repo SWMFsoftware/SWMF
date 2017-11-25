@@ -1737,16 +1737,35 @@ contains
     CoordBlock_D =  CoordMin_DB(:,iBlock)
     DCoord_D   = (CoordMax_DB(:,iBlock) - CoordMin_DB(:,iBlock)) / nIJK_D
 
+    !\
     ! account for periodic or "flipped" coordinates:
     ! may need to adjust Coord_D if point is outside the block
-    do iDim = 1, nDim
-       if(  Coord_D(iDim) >= CoordMin_DB(iDim, iBlock) .and. &
-            Coord_D(iDim) <  CoordMax_DB(iDim, iBlock))&
-            CYCLE
-       !\
-       ! adjustment only needed near blocks along domain boundary
-       !/
-       if(IsPeriodic_D(iDim))then
+    if(any(&
+         Coord_D(1:nDim) < CoordMin_DB(1:nDim, iBlock) .or. &
+         Coord_D(1:nDim) >=CoordMax_DB(1:nDim, iBlock)))then
+       ! fix spherical coordinates
+       if(IsSpherical .or. IsRLonLat)then
+          ! example in rlonlat coords: point's latitude is close to pi/2 and
+          ! block is across the pole => reflect point so that latitude > pi/2
+          if(CoordMin_DB(Theta_, iBlock)==CoordMin_D(Theta_).and.&
+               abs(Coord_D(Phi_)-CoordMin_DB(Phi_,iBlock)) > &
+               0.25*DomainSize_D(Phi_))then
+             Coord_D(Theta_) = 2*CoordMin_D(Theta_) - Coord_D(Theta_)
+             Coord_D(Phi_  ) = CoordMin_D(Phi_) + modulo(&
+                  Coord_D(Phi_) - CoordMin_D(Phi_) + 0.5*DomainSize_D(Phi_),&
+                  DomainSize_D(Phi_))
+          elseif(CoordMax_DB(Theta_, iBlock)==CoordMax_D(Theta_).and.&
+               abs(Coord_D(Phi_)-CoordMax_DB(Phi_,iBlock)) > &
+               0.25*DomainSize_D(Phi_))then
+             Coord_D(Theta_) = 2*CoordMax_D(Theta_)-Coord_D(Theta_)
+             Coord_D(Phi_  ) = CoordMin_D(Phi_) + modulo(&
+                  Coord_D(Phi_) - CoordMin_D(Phi_) + 0.5*DomainSize_D(Phi_),&
+                  DomainSize_D(Phi_))
+          end if
+       end if
+       ! fix periodic coordinates
+       do iDim = 1, nDim
+          if(.not.IsPeriodic_D(iDim)) CYCLE
           ! example in polar coords: point's polar angle is close to 2pi,
           ! while block's boundary is 0 => subtract 2pi from point's angle
           if(CoordMin_DB(iDim, iBlock)==CoordMin_D(iDim).and.&
@@ -1756,18 +1775,8 @@ contains
                Coord_D(iDim)-CoordMin_D(iDim) < DCoord_D(iDim))then
              Coord_D(iDim) = Coord_D(iDim) + DomainSize_D(iDim)
           end if
-       elseif(iDim==Theta_ .and.(IsSpherical .or. IsRLonLat))then
-          ! example in rlonlat coords: point's latitude is close and < pi/2
-          ! block is across the pole => reflect point so that latitude > pi/2
-          if(CoordMin_DB(iDim, iBlock)==CoordMin_D(iDim).and.&
-               Coord_D(iDim)-CoordMin_D(iDim) <= DCoord_D(iDim))then
-             Coord_D(iDim) = 2*CoordMin_D(iDim)-Coord_D(iDim)
-          elseif(CoordMax_DB(iDim, iBlock)==CoordMax_D(iDim).and.&
-               CoordMax_D(iDim)-Coord_D(iDim) < DCoord_D(iDim))then
-             Coord_D(iDim) = 2*CoordMax_D(iDim)-Coord_D(iDim)
-          end if
-       end if
-    end do
+       end do
+    end if
 
     ! information about neighbors' resolution level relative to current block
     ! NOTE: in the shared procedure difference is understood as follows:
@@ -2018,6 +2027,18 @@ contains
           CoordTree_D(1:nDim) = &
                ( CoordGrid_DI(1:nDim,iGrid) - CoordMin_D(1:nDim) ) / &
                DomainSize_D(1:nDim)
+
+          ! may need to fix CoordTree_D for spherical grids
+          if(IsSpherical .or. IsRLonLat)then
+             if(CoordTree_D(Theta_) > 1.0)then
+                CoordTree_D(Theta_) = 2.0 - CoordTree_D(Theta_)
+                CoordTree_D(Phi_) = modulo(CoordTree_D(Phi_)+0.5, 1.0)
+             elseif(CoordTree_D(Theta_) < 0.0)then
+                CoordTree_D(Theta_) = - CoordTree_D(Theta_)
+                CoordTree_D(Phi_) = modulo(CoordTree_D(Phi_)+0.5, 1.0)
+             end if
+          end if
+          ! may need to fix CoordTree_D for periodic grids
           where(IsPeriodic_D(1:nDim)) &
                CoordTree_D(1:nDim) = modulo(CoordTree_D(1:nDim), 1.0)
 
