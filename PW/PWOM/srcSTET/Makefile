@@ -61,7 +61,7 @@ ${EXE}:	${EXEOBJECTS}
 STET_general:
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
 		-L${LIBDIR}  -lEMPIRICALIE -lEMPIRICALUA -lINDICES -lSHARE -lTIMING \
-		${Lflag1} ${CPPLIB}
+		${Lflag1}
 
 STET_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_

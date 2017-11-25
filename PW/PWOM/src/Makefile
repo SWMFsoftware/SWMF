@@ -96,13 +96,13 @@ ${EXE}:	${EXEOBJECTS}
 		ar -x ${LIBDIR}/libTIMING.a; \
 		ar -x ${LIBDIR}/libSE.a
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} Tmp_/*.o ${LBLAS} \
-		${Lflag1} ${CPPLIB}
+		${Lflag1}
 
 PWOM_from_lib:	${EXEOBJECTS}
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
 		-L${LIBDIR} -lEMPIRICALIE -lEMPIRICALUA -lINDICES  \
 		-lTIMING  -lSE -lSHARE\
-		${Lflag1} ${CPPLIB}
+		${Lflag1}
 
 clean: cleanfiles
 	rm -rf Tmp_
