@@ -57,7 +57,7 @@ ${EXE}:	${EXEOBJECTS}
 TWOSTREAM_general:
 	${LINK.f90} -o ${EXE} ${EXEOBJECTS} \
 		-L${LIBDIR}  -lEMPIRICALIE -lEMPIRICALUA -lINDICES -lSHARE -lTIMING \
-		${Lflag1}
+		${Lflag1} ${CPPLIB}
 
 TWOSTREAM_for_Darwin:
 	rm -rf Tmp_; mkdir Tmp_
