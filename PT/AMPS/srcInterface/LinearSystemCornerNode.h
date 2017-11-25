@@ -178,7 +178,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
   int RecvDataPointCounter[PIC::nTotalThreads];
   for (thread=0;thread<PIC::nTotalThreads;thread++) RecvDataPointCounter[thread]=0;
 
-  list<cLinearSystemCornerNodeDataRequestListElement> DataRequestList[PIC::ThisThread];
+  list<cLinearSystemCornerNodeDataRequestListElement> DataRequestList[PIC::nTotalThreads];
 
   //build the matrix
   for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
@@ -187,7 +187,13 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
     //in case of the periodic boundary condition it is only the points that are inside the "real" computational domain that are considered
 
     //the limits are correct: the point i==_BLOCK_CELLS_X_ belongs to the onother block
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+    int kMax=_BLOCK_CELLS_Z_,jMax=_BLOCK_CELLS_Y_,iMax=_BLOCK_CELLS_X_;
+
+    if (node->GetNeibFace(1,0,0)==NULL) iMax=_BLOCK_CELLS_X_+1;
+    if (node->GetNeibFace(3,0,0)==NULL) jMax=_BLOCK_CELLS_Y_+1;
+    if (node->GetNeibFace(5,0,0)==NULL) kMax=_BLOCK_CELLS_Z_+1;
+
+    for (k=0;k<kMax;k++) for (j=0;j<jMax;j++) for (i=0;i<iMax;i++) {
       for (int iVar=0;iVar<NodeUnknownVariableVectorLength;iVar++) {
         int NonZeroElementsFound;
         double rhs;
@@ -200,7 +206,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
         for (int ii=0;ii<NonZeroElementsFound;ii++) {
           MatrixRowNonZeroElementTable[ii].Node=node;
 
-          if (MatrixRowNonZeroElementTable[ii].i>=_BLOCK_CELLS_X_) {
+          if (MatrixRowNonZeroElementTable[ii].i>=iMax) {
             MatrixRowNonZeroElementTable[ii].i-=_BLOCK_CELLS_X_;
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(1,0,0);
           }
@@ -209,7 +215,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(0,0,0);
           }
 
-          if (MatrixRowNonZeroElementTable[ii].j>=_BLOCK_CELLS_Y_) {
+          if (MatrixRowNonZeroElementTable[ii].j>=jMax) {
             MatrixRowNonZeroElementTable[ii].j-=_BLOCK_CELLS_Y_;
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(3,0,0);
           }
@@ -218,7 +224,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(2,0,0);
           }
 
-          if (MatrixRowNonZeroElementTable[ii].k>=_BLOCK_CELLS_Z_) {
+          if (MatrixRowNonZeroElementTable[ii].k>=kMax) {
             MatrixRowNonZeroElementTable[ii].k-=_BLOCK_CELLS_Z_;
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(5,0,0);
           }
