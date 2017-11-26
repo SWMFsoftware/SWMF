@@ -172,7 +172,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
   cCornerNode* CornerNode;
 
   //reset indexing of the nodes
-  ResetUnknownVectorIndex(PIC::Mesh::mesh.rootTree);
+  Reset();
 
   //allocate the counter of the data points to be recieve
   int RecvDataPointCounter[PIC::nTotalThreads];
@@ -349,7 +349,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
 
 
   //create the lists
-  for (To=0;To<PIC::nTotalThreads;To++) for (From=0;From<PIC::nTotalThreads;From++) if ((To!=From)&&(nGlobalDataPointTable[From+To*PIC::nTotalThreads]!=0)) {
+  for (To=0;To<PIC::nTotalThreads;To++) for (From=0;From<PIC::nTotalThreads;From++) if ( (To!=From) && (nGlobalDataPointTable[From+To*PIC::nTotalThreads]!=0) && ((To==PIC::ThisThread)||(From==PIC::ThisThread)) ) {
     ExchangeList=new cLinearSystemCornerNodeDataRequestListElement [nGlobalDataPointTable[From+To*PIC::nTotalThreads]];
 
     if (PIC::ThisThread==To) {
@@ -378,9 +378,9 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
 
         SendExchangeBufferElementIndex[To][ii]=CornerNode->LinearSolverUnknownVectorIndex;
       }
-
-      delete [] ExchangeList;
     }
+
+    delete [] ExchangeList;
   }
 
   //deallocate 'nGlobalDataPointTable'
@@ -514,8 +514,26 @@ void cLinearSystemCornerNode<cCornerNode>::Solve(void (*fInitialUnknownValues)(d
 
   //populate the buffers
   for (row=MatrixRowTable;row!=NULL;row=row->next) fInitialUnknownValues(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
-
+/*
   //call the iterative solver
+  double Tol=1e-5;// the max iteration error allowed
+  int nIter=200; //iter number
+  int nVar=1; //variable number
+  int nDim =1; //dimension
+  int nI, nJ,nK,nBlock;
+
+  MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_WORLD);
+
+  double Rhs_I(nVar*nVar*nI*nJ*nK*nBlock)// RHS of the equation
+  double Sol_I(nVar*nVar*nI*nJ*nK*nBlock)// vector for solution
+  double PrecondParam=0; // not use preconditioner
+  double ** precond_matrix_II;// pointer to precondition matrix; us  null if no preconditioner
+  int lTest=1;//1: need test output; 0: no test statement
+
+  linear_solver_wrapper("GMRES", &Tol,&nIter, &nVar, &nDim,
+                         &nI, &nJ, &nK, &nBlock, &iComm, Rhs_I,
+  Sol_I, &PrecondParam, precond_matrix_II[0],
+                         &lTest);*/
 
 
   //unpack the solution
