@@ -233,7 +233,7 @@ contains
 
     ! Spherical slices are special cases:
     DoPlotShell = plot_type1(1:3) == 'shl'
-    DoPlotBox   = plot_type1(1:3) == 'box'
+    DoPlotBox   = plot_type1(1:3) == 'box' .or. plot_type1(1:3) == 'sbx'
 
     if (DoSaveOneTecFile) then
        iUnit = io_unit_new()

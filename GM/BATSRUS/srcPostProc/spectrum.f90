@@ -245,7 +245,7 @@ contains
              DEM_I(iTe) = DEM_I(iTe) + &
                   (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 &
                   / ProtonElectronRatio * DxLocal*1e2 / DLogTeDEM / &
-                  Var_VIII(te_,i,j,k)
+                  Var_VIII(te_,i,j,k)/log(10.)
           end do
        end do
     end do

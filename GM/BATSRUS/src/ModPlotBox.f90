@@ -1,4 +1,4 @@
- !  Copyright (C) 2002 Regents of the University of Michigan,
+!  Copyright (C) 2002 Regents of the University of Michigan,
 !  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPlotBox
@@ -7,7 +7,7 @@ module ModPlotBox
        test_start, test_stop, iBlockTest
 
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
-       plot_form, TypeFile_I
+       plot_form, TypeFile_I, plot_type, ObsPos_DI
   use ModNumConst, ONLY: cDegToRad
 
   implicit none
@@ -29,6 +29,10 @@ module ModPlotBox
   real :: xAngle, yAngle, zAngle
   real :: Xyz0_D(3)
 
+  ! Variables for sbx plt box
+  logical :: DoSbx = .false.
+  real    :: Los_D(3), aUnit_D(3), bUnit_D(3)
+
   ! Local results container:
   ! Array of values written to file:
   real, allocatable :: PlotVar_VIII(:,:,:,:)
@@ -44,11 +48,16 @@ contains
 
     use ModMain,           ONLY: time_simulation, TypeCoordSystem
     use CON_axes,          ONLY: transform_matrix
-    use ModCoordTransform, ONLY: show_rot_matrix
+    use ModCoordTransform, ONLY: show_rot_matrix, cross_product
 
-    integer, intent(in):: iFile, nPlotVar
+    integer, intent(in)        :: iFile, nPlotVar
 
-    logical:: DoTest
+    real, dimension(3)         :: ObsPos_D
+    real                       :: ObsDistance
+
+    real                       :: ImageCenter_D(3) 
+
+    logical                    :: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_box'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
@@ -72,10 +81,54 @@ contains
     zMin = plot_range(3, iFile) - zLen/2
     zMax = plot_range(3, iFile) + zLen/2
 
-    ! Get box orientation from ModIO arrays:
-    xAngle = plot_normal(1,iFile) * cDegtoRad
-    yAngle = plot_normal(2,iFile) * cDegtoRad
-    zAngle = plot_normal(3,iFile) * cDegtoRad
+    if(index(plot_type(iFile),'box')>0)then
+       DoSbx = .false.
+       ! Get box orientation from ModIO arrays:
+       xAngle = plot_normal(1,iFile) * cDegtoRad
+       yAngle = plot_normal(2,iFile) * cDegtoRad
+       zAngle = plot_normal(3,iFile) * cDegtoRad
+       ! Get coordinate transformation matrix:
+       PlotToGm_DD = transform_matrix(Time_Simulation, &
+            TypeCoordPlot_I(iFile), TypeCoordSystem)
+    end if
+
+    if(index(plot_type(iFile),'sbx')>0)then
+       DoSbx = .true.
+       xAngle = 0.0
+       yAngle = 0.0
+       zAngle = 0.0
+       ! Convert to HGI
+       PlotToGm_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
+       ! Rotate observation point from HGI to the current coordinate system   
+       ObsPos_D    = matmul(PlotToGm_DD, ObsPos_DI(:,iFile))
+       ObsDistance = sqrt(sum(ObsPos_D**2))
+       ! Normalize line of sight vector pointing towards the origin
+       Los_D       = -ObsPos_D/ObsDistance
+       ! Observer distance from image plane
+       ObsDistance = abs(sum(ObsPos_D*Los_D))
+
+       ! Create unit vectors aUnit_D and bUnit_D orthogonal to the
+       ! central line of sight and cUnit_D out plane.
+       ! We use cross products of the LOS vector with one of the principal
+       ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is
+       ! aligned with the original Cartesian coordinates. In case the viewing
+       ! is roughly along the X or Y axis, we want bUnit_D to point along +Z,
+       ! a = LOS x (0,0,1), b = a x LOS ensures that b is aligned with +Z
+       aUnit_D = cross_product(Los_D, (/0.,0.,1./))
+       aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
+       bUnit_D = cross_product(aUnit_D, Los_D)
+       bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
+       ! ... and cUnit_D = -Los_D.
+
+       ! 3D vector pointing from the origin to the image center
+       ImageCenter_D = ObsPos_D + ObsDistance*Los_D &
+            - Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
+
+       ! Make offset to be relative to the Sun (and not the projected observer)
+       Xyz0_D(1) = dot_product(ImageCenter_D, -LOS_D)
+       Xyz0_D(2) = dot_product(ImageCenter_D, aUnit_D)
+       Xyz0_D(3) = dot_product(ImageCenter_D, bUnit_D)
+    end if
 
     ! Set number of points:
     nX = nint((xMax - xMin)/dX) + 1
@@ -91,10 +144,6 @@ contains
     ! contribute to a plot variable.
     allocate(PlotVar_VIII(0:nPlotVar,nX,nY,nZ))
     PlotVar_VIII = 0.0
-
-    ! Get coordinate transformation matrix:
-    PlotToGm_DD = transform_matrix(Time_Simulation, &
-         TypeCoordPlot_I(iFile), TypeCoordSystem)
 
     if (DoTest) then
        write(*,*) NameSub//' iFile, nPlotVar=      ', iFile, nPlotVar
@@ -132,7 +181,7 @@ contains
     ! Local variables
     integer :: i, j, k, iVar
 
-    real :: Xyz_D(3), XyzRot_D(3), XyzRotGm_D(3)
+    real :: Xyz_D(3), XyzRot_D(3), XyzGm_D(3)
     real :: Coord_D(3), CoordNorm_D(3)
 
     ! Check testing for block
@@ -158,19 +207,27 @@ contains
           do i = 1, nX
              Xyz_D(1) = xMin + (i-1)*dX - Xyz0_D(1)
 
-             ! Rotate box
-             XyzRot_D = matmul(rot_matrix_z(-zAngle), &
-                  matmul(rot_matrix_y(-yAngle), &
-                  matmul(rot_matrix_x(-xAngle), Xyz_D)))
 
-             ! Shift box back and Get Gm coordinates
-             XyzRotGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
+             if(DoSbx)then
+                XyzGm_D = &
+                     -(Xyz_D(1) + Xyz0_D(1))*Los_D &
+                     +(Xyz_D(2) + Xyz0_D(2))*aUnit_D &
+                     +(Xyz_D(3) + Xyz0_D(3))*bUnit_D
+             else
+                ! Rotate box
+                XyzRot_D = matmul(rot_matrix_z(-zAngle), &
+                     matmul(rot_matrix_y(-yAngle), &
+                     matmul(rot_matrix_x(-xAngle), Xyz_D)))
+
+                ! Shift box back and Get Gm coordinates
+                XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
+             end if
 
              ! When inside Body keep default plot values
-             if(sqrt(sum(XyzRotGm_D**2)) < rBody)CYCLE
+             if(sqrt(sum(XyzGm_D**2)) < rBody)CYCLE
 
              ! Get generalized coordinates
-             call xyz_to_coord(XyzRotGm_D, Coord_D)
+             call xyz_to_coord(XyzGm_D, Coord_D)
 
              ! Normalize to block coordinates
              CoordNorm_D = &
