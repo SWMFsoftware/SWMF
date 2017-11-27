@@ -251,6 +251,22 @@ while ($line=<InputFile>) {
       }
     }
     
+    ### output the field of view map
+    elsif ($InputLine eq "OUTPUTFIELDVIEWMAPMODE") { 
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+      
+      if ($InputLine eq "ON") {
+        ampsConfigLib::ChangeValueOfVariable("bool Comet::OutputFieldViewMapMode","true","main/Comet.cpp");          
+      }
+      elsif ($InputLine eq "OFF") {
+        ampsConfigLib::ChangeValueOfVariable("bool Comet::OutputFieldViewMapModee","false","main/Comet.cpp");                 
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)\n";          
+      }  
+    }
+    
     ### The starting Rosina observation point for which the data is simulated 
     elsif ($InputLine eq "ISTARTPOINT") {
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
