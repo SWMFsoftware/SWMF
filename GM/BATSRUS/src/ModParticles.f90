@@ -7,7 +7,7 @@ module ModParticles
   use BATL_lib, ONLY: &
        test_start, test_stop
   use BATL_particles, ONLY: & 
-       Particle_I, message_pass_particles, remove_undefined_particles, &
+       Particle_I, BATL_message_pass=>message_pass_particles, remove_undefined_particles, &
        mark_undefined, check_particle_location, put_particles, trace_particles
   use ModBatlInterface, ONLY: interpolate_grid_amr_gc
   use BATL_size,        ONLY: BatlNKind=>nKindParticle
@@ -85,17 +85,20 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine deallocate_particles
   !============================================================================
-  subroutine redistribute_particles
+  subroutine message_pass_particles(iKindIn)
+    integer, optional, intent(in):: iKindIn
     ! when changes in grid occur, e.g. AMR, 
     ! may need redistribute particles between blocks and processors
-    integer:: iKindParticle, iParticle ! loop variables
+    integer:: iKindParticle, iKindFirst, iKindLast ! loop variables
     !---------------------------------------------------------------
-    do iKindParticle = 1, nKindParticle
-       do iParticle = 1, Particle_I(iKindParticle)%nParticle
-          call check_particle_location(iKindParticle, iParticle)
-       end do
-       call message_pass_particles(iKindParticle)
+    if(present(iKindIn))then
+       iKindFirst = iKindIn; iKindLast = iKindIn
+    else
+       iKindFirst = 1; iKindLast = nKindParticle
+    end if
+    do iKindParticle = iKindFirst, iKindLast
+       call BATL_message_pass(iKindParticle)
     end do
-  end subroutine redistribute_particles
+  end subroutine message_pass_particles
 end module ModParticles
 !==============================================================================
