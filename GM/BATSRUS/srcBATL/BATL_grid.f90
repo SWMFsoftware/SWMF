@@ -1743,6 +1743,21 @@ contains
     if(any(&
          Coord_D(1:nDim) < CoordMin_DB(1:nDim, iBlock) .or. &
          Coord_D(1:nDim) >=CoordMax_DB(1:nDim, iBlock)))then
+       ! fix periodic coordinates
+       ! NOTE: periodic coords are fixed BEFORE spherical theta,
+       !       otherwise there's error near 0 longitude near axis
+       do iDim = 1, nDim
+          if(.not.IsPeriodic_D(iDim)) CYCLE
+          ! example in polar coords: point's polar angle is close to 2pi,
+          ! while block's boundary is 0 => subtract 2pi from point's angle
+          if(CoordMin_DB(iDim, iBlock)==CoordMin_D(iDim).and.&
+               CoordMax_D(iDim)-Coord_D(iDim) <= DCoord_D(iDim))then
+             Coord_D(iDim) = Coord_D(iDim) - DomainSize_D(iDim)
+          elseif(CoordMax_DB(iDim, iBlock)==CoordMax_D(iDim).and.&
+               Coord_D(iDim)-CoordMin_D(iDim) < DCoord_D(iDim))then
+             Coord_D(iDim) = Coord_D(iDim) + DomainSize_D(iDim)
+          end if
+       end do
        ! fix spherical coordinates
        if(IsSpherical .or. IsRLonLat)then
           ! example in rlonlat coords: point's latitude is close to pi/2 and
@@ -1763,19 +1778,6 @@ contains
                   DomainSize_D(Phi_))
           end if
        end if
-       ! fix periodic coordinates
-       do iDim = 1, nDim
-          if(.not.IsPeriodic_D(iDim)) CYCLE
-          ! example in polar coords: point's polar angle is close to 2pi,
-          ! while block's boundary is 0 => subtract 2pi from point's angle
-          if(CoordMin_DB(iDim, iBlock)==CoordMin_D(iDim).and.&
-               CoordMax_D(iDim)-Coord_D(iDim) <= DCoord_D(iDim))then
-             Coord_D(iDim) = Coord_D(iDim) - DomainSize_D(iDim)
-          elseif(CoordMax_DB(iDim, iBlock)==CoordMax_D(iDim).and.&
-               Coord_D(iDim)-CoordMin_D(iDim) < DCoord_D(iDim))then
-             Coord_D(iDim) = Coord_D(iDim) + DomainSize_D(iDim)
-          end if
-       end do
     end if
 
     ! information about neighbors' resolution level relative to current block
