@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 ! This is the ionospheric solver for the BATS-R-US MHD code.
@@ -52,7 +53,7 @@ subroutine ionosphere(iter, iAction)
      call ionosphere_init
      
   case(3)
-     call ionosphere_read_restart_file(iter)
+     call ionosphere_read_restart_file
      
   case (5)
      !\
@@ -961,7 +962,8 @@ subroutine IE_save_logfile
      IsFirstTime = .false.
      unitlog = io_unit_new()
      if(IsLogName_e)then
-        write(NameFile,'(a,i4.4,2i2.2,"-",3i2.2,a)') trim(NameIonoDir)//"IE_e", &
+        write(NameFile,'(a,i4.4,2i2.2,"-",3i2.2,a)') &
+             trim(NameIonoDir)//"IE_e", &
              time_array(1:6),".log"
      else
         write(NameFile,'(a,3i2.2,"_",3i2.2,a)') trim(NameIonoDir)//"IE_t", &
@@ -984,71 +986,58 @@ subroutine IE_save_logfile
   call flush_unit(unitlog)
 
 end subroutine IE_save_logfile
-
-!-------------------------------------------------------------------------
-! ionosphere_read_restart_file
-!
-!
-!
-!-------------------------------------------------------------------------
-
-subroutine ionosphere_read_restart_file(iter)
+!============================================================================
+subroutine ionosphere_read_restart_file
   !\
   ! This routine reads an ionospheric restart solution file.
   !/
+  use ModProcIE 
   use ModIonosphere
   use IE_ModIo
   implicit none
+  !---------------------------------------------------------------------------
+  if(iProc == 0)then
+     write(*,*) '=> Reading restart file for ionosphere.'
+     call check_dir(NameRestartInDir)
 
-  integer, intent(in) :: iter
-
-  integer :: i, j, i2, j2, nhemi, ierror
-  real :: xx,yy
-  character (len=4), Parameter :: IO_ext=".rst"
-
-  write(*,*) '=> Reading restart file for ionosphere.'
-
-  write(NameFile,'(a,i6.6,a)')trim(NameIonoDir)//"ionosphere_n",iter,IO_ext
-
-  open(iUnit, FILE=NameFile, STATUS="old", iostat=ierror)
-
-  if (ierror==0) then
-
-     read(iUnit,*) IONO_Radius, IONO_Height, &
-          IONO_Bdp, IONO_Radius_Mag_Boundary, &
+     ! Read header information
+     call open_file(FILE=trim(NameRestartInDir)//"restart.H", &
+          STATUS="OLD")
+     read(iUnit,*) IONO_Radius, IONO_Height,                   &
+          IONO_Bdp, IONO_Radius_Mag_Boundary,                  &
           IONO_NORTH_Theta_Max, IONO_SOUTH_Theta_Min
-
-     do j = 1, IONO_nPsi
-        do i = 1, IONO_nTheta
-           read(iUnit,*) i2,j2,xx,yy,IONO_NORTH_JR(i,j),                  &
-                SAVE_NORTH_SigmaH(i,j),SAVE_NORTH_SigmaP(i,j)
-        end do
-     end do
-
-     do j = 1, IONO_nPsi
-        do i = 1, IONO_nTheta
-           read(iUnit,*) i2,j2,xx,yy,IONO_SOUTH_JR(i,j),                  &
-                SAVE_SOUTH_SigmaH(i,j),SAVE_SOUTH_SigmaP(i,j) 
-        end do
-     end do
-
      call close_file
 
-  else
+     ! Read north restart file
+     call open_file(FILE=trim(NameRestartInDir)//"north.rst", &
+          STATUS="OLD", FORM="UNFORMATTED")
 
-     write(6,*) "==================================================="
-     write(6,*) "= Error in finding ionosphere restart file.       ="
-     write(6,*) "==================================================="
+     read(iUnit) IONO_NORTH_Theta
+     read(iUnit) IONO_NORTH_Psi
+     read(iUnit) IONO_NORTH_JR
+     read(iUnit) SAVE_NORTH_SigmaH
+     read(iUnit) SAVE_NORTH_SigmaP
 
-  endif
+     call close_file
+  end if
+  if(iProc == nProc - 1)then
+     call open_file(FILE=trim(NameRestartInDir)//"south.rst", &
+          STATUS="OLD", FORM="UNFORMATTED")
+
+     read(iUnit) IONO_SOUTH_Theta
+     read(iUnit) IONO_SOUTH_Psi
+     read(iUnit) IONO_SOUTH_JR
+     read(iUnit) SAVE_SOUTH_SigmaH
+     read(iUnit) SAVE_SOUTH_SigmaP
+
+     call close_file
+  end if
 
 end subroutine ionosphere_read_restart_file
-
 !=============================================================================
-
 subroutine ionosphere_write_restart_file
 
-  ! This routine write out 3 files: 
+  ! This routine writes out 3 files: 
   !       restart.H with scalar data
   !       north.rst with arrays for northern hemisphere
   !       south.rst with arrays for southern hemisphere
@@ -1056,7 +1045,6 @@ subroutine ionosphere_write_restart_file
   use ModProcIE
   use ModIonosphere
   use IE_ModIo
-  use ModUtilities, ONLY: make_dir
   implicit none
 
   integer:: iError
@@ -1077,7 +1065,7 @@ subroutine ionosphere_write_restart_file
   call MPI_barrier(iComm, iError)
   if(iProc == 0)then
      call open_file(FILE=trim(NameRestartOutDir)//"north.rst", &
-          FORM='UNFORMATTED')
+          FORM="UNFORMATTED")
 
      write(iUnit) IONO_NORTH_Theta
      write(iUnit) IONO_NORTH_Psi
@@ -1089,7 +1077,7 @@ subroutine ionosphere_write_restart_file
   end if
   if(iProc == nProc - 1)then
      call open_file(FILE=trim(NameRestartOutDir)//"south.rst", &
-          FORM='UNFORMATTED')
+          FORM="UNFORMATTED")
 
      write(iUnit) IONO_SOUTH_Theta
      write(iUnit) IONO_SOUTH_Psi
@@ -1101,8 +1089,7 @@ subroutine ionosphere_write_restart_file
   end if
 
 end subroutine ionosphere_write_restart_file
-
- 
+!==============================================================================
 subroutine iono_getpot(isize,jsize,MHD_lat,MHD_lon,MHD_pot,MHD_Jr)
   use ModIonosphere
   implicit none
