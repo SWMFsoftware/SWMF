@@ -31,10 +31,21 @@ Default is iDebugLevel=-1 which is no debug info on any and iDebugProc=0.
 
 </commandgroup>
 
-<commandgroup name="Output">
+<commandgroup name="Input and Output">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! OUTPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+<command name="RESTART">
+	<parameter name="DoRestart" tyep="logical" default="F"/>
+
+#RESTART
+T			DoRestart
+
+Read restart file if DoRestart is true. This is useful when the ionosphere 
+model runs in parallel with the other models in the SWMF (fast coupling). 
+Default is false.
+</command>
+
 <command name="IONODIR">
 	<parameter name="NameIonoDir" type="string" length="100" 
 						default="ionosphere"/>
@@ -130,7 +141,7 @@ Log files are named with the new substring including full year, ie. _e20000321-1
 #SAVELOGFILE
 F			DoSaveIELogfile
 
-If true, every time that iono_solve is called, iteration, time, and soltution
+If true, every time that iono_solve is called, iteration, time, and solution
 information is written to a logfile.
 </command>
 
