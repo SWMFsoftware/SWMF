@@ -116,7 +116,7 @@ exit $IsError;
 
 sub get_settings{
 
-    my $Settings = `./$ConfigPl -show | head -9; ./$ConfigPl -s`;
+    my $Settings = `./$ConfigPl -show | head -10; ./$ConfigPl -s`;
 
     die "$ERROR $ConfigPl -s did not provide the settings\n" unless $Settings;
 
