@@ -59,7 +59,7 @@ subroutine ionosphere(iter, iAction)
      ! Create a restart solution file containing the
      ! FAC driving the ionospheric solution.
      !/
-     call ionosphere_write_restart_file(iter)
+     call ionosphere_write_restart_file
 
   case default
      write(*,*)'IE ionosphere: ERROR, iAction = ',iAction
@@ -503,9 +503,8 @@ subroutine IE_output
      end if
   end do
 
-
 end subroutine IE_output
-
+!==============================================================================
 subroutine ionosphere_write_output(iFile, iBlock)
   !\
   ! This routine writes out the fine grid 
@@ -1045,56 +1044,61 @@ subroutine ionosphere_read_restart_file(iter)
 
 end subroutine ionosphere_read_restart_file
 
-!-------------------------------------------------------------------------
-! ionosphere_write_restart_file
-!
-!
-!
-!-------------------------------------------------------------------------
+!=============================================================================
 
-subroutine ionosphere_write_restart_file(iter)
-  !\
-  ! This routine reads in an ionospheric 
-  ! restart solution file.
-  !/
+subroutine ionosphere_write_restart_file
+
+  ! This routine write out 3 files: 
+  !       restart.H with scalar data
+  !       north.rst with arrays for northern hemisphere
+  !       south.rst with arrays for southern hemisphere
+
+  use ModProcIE
   use ModIonosphere
   use IE_ModIo
+  use ModUtilities, ONLY: make_dir
   implicit none
 
-  integer, intent(in) :: iter
+  integer:: iError
+  !----------------------------------------------------------------------------
+  if(iProc == 0)then
+     write(*,*) '=> Writing restart file for ionosphere.'
 
-  integer :: i, j
-  character (len=4), Parameter :: IO_ext=".rst"
+     call make_dir(NameRestartOutDir)
 
-  write(*,*) '=> Writing restart file for ionosphere.'
+     call open_file(FILE=trim(NameRestartOutDir)//"restart.H")
 
-  write(NameFile,'(a,i6.6,a)')trim(NameIonoDir)//"ionosphere_n",iter,IO_ext
+     write(iUnit,*) IONO_Radius, IONO_Height,                          &
+          IONO_Bdp, IONO_Radius_Mag_Boundary,                          &
+          IONO_NORTH_Theta_Max, IONO_SOUTH_Theta_Min
 
-  call open_file(FILE=NameFile)
+     call close_file
+  end if
+  call MPI_barrier(iComm, iError)
+  if(iProc == 0)then
+     call open_file(FILE=trim(NameRestartOutDir)//"north.rst", &
+          FORM='UNFORMATTED')
 
-  write(iUnit,*) IONO_Radius, IONO_Height,                                    &
-                 IONO_Bdp, IONO_Radius_Mag_Boundary,                          &
-                 IONO_NORTH_Theta_Max, IONO_SOUTH_Theta_Min
+     write(iUnit) IONO_NORTH_Theta
+     write(iUnit) IONO_NORTH_Psi
+     write(iUnit) IONO_NORTH_JR
+     write(iUnit) SAVE_NORTH_SigmaH
+     write(iUnit) SAVE_NORTH_SigmaP
 
-  do j = 1, IONO_nPsi
-     do i = 1, IONO_nTheta
-        write(iUnit,*) i,j,                                                   &
-                       IONO_NORTH_Theta(i,j),IONO_NORTH_Psi(i,j),             &
-                       IONO_NORTH_JR(i,j),SAVE_NORTH_SigmaH(i,j),             &
-                       SAVE_NORTH_SigmaP(i,j)
-     end do
-  end do
+     call close_file
+  end if
+  if(iProc == nProc - 1)then
+     call open_file(FILE=trim(NameRestartOutDir)//"south.rst", &
+          FORM='UNFORMATTED')
 
-  do j = 1, IONO_nPsi
-     do i = 1, IONO_nTheta
-        write(iUnit,*) i,j,                                                   &
-                       IONO_SOUTH_Theta(i,j),IONO_SOUTH_Psi(i,j),             &
-                       IONO_SOUTH_JR(i,j),SAVE_SOUTH_SigmaH(i,j),             &
-                       SAVE_SOUTH_SigmaP(i,j)
-     end do
-  end do
+     write(iUnit) IONO_SOUTH_Theta
+     write(iUnit) IONO_SOUTH_Psi
+     write(iUnit) IONO_SOUTH_JR
+     write(iUnit) SAVE_SOUTH_SigmaH
+     write(iUnit) SAVE_SOUTH_SigmaP
 
-  call close_file
+     call close_file
+  end if
 
 end subroutine ionosphere_write_restart_file
 
