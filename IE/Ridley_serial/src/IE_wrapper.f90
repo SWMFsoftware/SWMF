@@ -222,14 +222,12 @@ contains
             if (iDebugProc >= 0 .and. iProc /= iDebugProc) then
                iDebugLevel = -1
             endif
-
          case("#AMIEFILES")
             call read_var('NameAmieFileNorth',AMIEFileNorth)
             call read_var('NameAmieFileSouth',AMIEFileSouth)
             IE_NameOfEFieldModel = "amie"
             UseGridBasedIE = .true.
             UseAMIE = .true.
-
          case("#BACKGROUND")
 
             call read_var('NameOfModelDir',IE_NameOfModelDir)
@@ -305,6 +303,9 @@ contains
 
          case("#GEOMAGINDICES")
             write(*,*)'IE_WARNING: #GEOMAGINDICES COMMAND NOW GM-ONLY.'
+
+         case("#RESTART")
+            call read_var('DoRestart', DoRestart)
 
          case default
             if(iProc==0) then
