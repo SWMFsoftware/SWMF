@@ -23,7 +23,6 @@ template <class cCornerNode>
 class cLinearSystemCornerNode {
 public:
   int NodeUnknownVariableVectorLength;
-  int NodeUnknownVariableVectorOffset;
 
   double *SubdomainPartialRHS,*SubdomainPartialUnknownsVector;
   int SubdomainPartialUnknownsVectorLength;
@@ -95,10 +94,9 @@ public:
   cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable;
 
   //constructor
-  void ExplicitConstructor(int nUnknownsPerNode,int UnknownsVectorOffset,int MaxNonZeroElementNumber) {
+  void ExplicitConstructor(int nUnknownsPerNode,int MaxNonZeroElementNumber) {
     nMaxMatrixNonzeroElements=MaxNonZeroElementNumber;
     NodeUnknownVariableVectorLength=nUnknownsPerNode;
-    NodeUnknownVariableVectorOffset=UnknownsVectorOffset;
 
     MatrixRowTable=NULL,MatrixRowLast=NULL;
 
@@ -113,8 +111,8 @@ public:
     SubdomainPartialUnknownsVectorLength=0;
   }
 
-  cLinearSystemCornerNode(int nUnknownsPerNode,int UnknownsVectorOffset, int MaxNonZeroElementNumber) {ExplicitConstructor(nUnknownsPerNode,UnknownsVectorOffset,MaxNonZeroElementNumber);}
-  cLinearSystemCornerNode(int nUnknownsPerNode,int UnknownsVectorOffset) {ExplicitConstructor(nUnknownsPerNode,UnknownsVectorOffset,nMaxMatrixNonzeroElementsDefault);}
+  cLinearSystemCornerNode(int nUnknownsPerNode,int MaxNonZeroElementNumber) {ExplicitConstructor(nUnknownsPerNode,MaxNonZeroElementNumber);}
+  cLinearSystemCornerNode(int nUnknownsPerNode) {ExplicitConstructor(nUnknownsPerNode,nMaxMatrixNonzeroElementsDefault);}
 
   //void reset the data of the obsect to the default state
   void Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
@@ -435,28 +433,33 @@ void cLinearSystemCornerNode<cCornerNode>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBl
 
     //deallocate the allocated data buffers
     for (int thread=0;thread<PIC::nTotalThreads;thread++) {
-      if (RecvExchangeBuffer[thread]!=NULL) delete [] RecvExchangeBuffer[thread];
+      if (RecvExchangeBuffer!=NULL) if (RecvExchangeBuffer[thread]!=NULL) delete [] RecvExchangeBuffer[thread];
 
-      if (SendExchangeBufferElementIndex[thread]!=NULL) {
+      if (SendExchangeBufferElementIndex!=NULL) if (SendExchangeBufferElementIndex[thread]!=NULL) {
         delete [] SendExchangeBufferElementIndex;
         delete [] SendExchangeBuffer;
       }
     }
 
-    delete [] RecvExchangeBuffer;
-    delete [] RecvExchangeBufferLength;
+    if (RecvExchangeBuffer!=NULL) {
+      delete [] RecvExchangeBuffer;
+      delete [] RecvExchangeBufferLength;
+    }
 
     RecvExchangeBuffer=NULL,RecvExchangeBufferLength=NULL;
 
-    delete [] SendExchangeBuffer;
-    delete [] SendExchangeBufferLength;
-    delete [] SendExchangeBufferElementIndex;
+    if (SendExchangeBuffer!=NULL) {
+      delete [] SendExchangeBuffer;
+      delete [] SendExchangeBufferLength;
+      delete [] SendExchangeBufferElementIndex;
+    }
 
     SendExchangeBuffer=NULL,SendExchangeBufferLength=NULL,SendExchangeBufferElementIndex=NULL;
 
-
-    delete [] SubdomainPartialRHS;
-    delete [] SubdomainPartialUnknownsVector;
+    if (SubdomainPartialRHS!=NULL) {
+      delete [] SubdomainPartialRHS;
+      delete [] SubdomainPartialUnknownsVector;
+    }
 
     MatrixRowTable=NULL,MatrixRowLast=NULL;
     SubdomainPartialRHS=NULL,SubdomainPartialUnknownsVector=NULL;
