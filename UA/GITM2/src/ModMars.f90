@@ -40,12 +40,12 @@ module ModPlanet
   integer, parameter  :: nSpeciesAll = 16 !Ions plus neutrals
 
 ! Extra ions, just to be able to compile merged version (LHR, 07/2017):
-  integer, parameter :: iO_3P_   = -1
-  integer, parameter :: iN_4S_   = -1
-  integer, parameter  :: iO_4SP_ = -1
-  integer, parameter  :: iNP_    = -1
-  integer, parameter  :: iO_2DP_ = -1
-  integer, parameter  :: iO_2PP_ = -1
+  integer, parameter :: iO_3P_   = 7
+  integer, parameter :: iN_4S_   = 7
+  integer, parameter  :: iO_4SP_ = 1
+  integer, parameter  :: iNP_    = 1
+  integer, parameter  :: iO_2DP_ = 1
+  integer, parameter  :: iO_2PP_ = 1
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   character (len=20) :: cSpecies(nSpeciesTotal)
