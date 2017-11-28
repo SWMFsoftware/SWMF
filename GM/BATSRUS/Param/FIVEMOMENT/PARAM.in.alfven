@@ -168,10 +168,12 @@ T			DoSaveInitial
 
 #SAVEPLOT
 1
-1d mhd idl_ascii       StringPlot
+1d var idl_ascii       StringPlot
 -1			DnOutput
 500.0			DtOutput
 0.			DxOutput
+Rho Ux Uy Uz Bx By Bz P ElRho ElUx ElUy ElUz ElP
+{default}
 
 #STOP
 -1			MaxIteration
