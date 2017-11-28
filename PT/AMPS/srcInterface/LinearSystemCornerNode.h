@@ -492,7 +492,7 @@ void cLinearSystemCornerNode<cCornerNode>::MultiplyVector(double *p,double *x,in
   ExchageIntermediateUnknownsData(x);
 
   for (row=MatrixRowTable,cnt=0;row!=NULL;row=row->next,cnt++) {
-    for (res=0.0,el=row->FirstElement;el!=NULL;el++) {
+    for (res=0.0,el=row->FirstElement;el!=NULL;el=el->next) {
       memcpy(&StencilElement,el,sizeof(cStencilElement));
 
       res+=StencilElement.MatrixElementValue*((StencilElement.Thread==PIC::ThisThread) ? x[StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex] : RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex]);
@@ -505,7 +505,7 @@ void cLinearSystemCornerNode<cCornerNode>::MultiplyVector(double *p,double *x,in
 template <class cCornerNode>
 void cLinearSystemCornerNode<cCornerNode>::Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),void (*fUnpackSolution)(double* x,cCornerNode* CornerNode)) {
   cMatrixRow* row;
-  int GlobalVariableIndex;
+  int GlobalVariableIndex,cnt;
 
   //count the total number of the variables, and create the data buffers
   if (SubdomainPartialRHS==NULL) {
@@ -516,7 +516,12 @@ void cLinearSystemCornerNode<cCornerNode>::Solve(void (*fInitialUnknownValues)(d
   }
 
   //populate the buffers
-  for (row=MatrixRowTable;row!=NULL;row=row->next) fInitialUnknownValues(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
+  for (cnt=0,row=MatrixRowTable;row!=NULL;cnt++,row=row->next) {
+    fInitialUnknownValues(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
+    SubdomainPartialRHS[cnt]=row->rhs;
+  }
+
+
 /*
   //call the iterative solver
   double Tol=1e-5;// the max iteration error allowed
