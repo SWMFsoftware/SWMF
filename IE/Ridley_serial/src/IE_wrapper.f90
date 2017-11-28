@@ -1219,19 +1219,19 @@ contains
 
   subroutine IE_save_restart(tSimulation)
 
+    use CON_coupler, ONLY: NameRestartOutDirComp
     use ModProcIE, ONLY:  nProc
     use IE_ModMain, ONLY: nSolve
+    use IE_ModIo,   ONLY: NameRestartOutDir
 
     !INPUT PARAMETERS:
     real,     intent(in) :: tSimulation   ! seconds from start time
 
     character(len=*), parameter :: NameSub='IE_save_restart'
+    !-------------------------------------------------------------------------
+    if(NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
 
-    RETURN
-    ! IE does not need a restart file at least not in the framework
-    ! ionosphere_write_restart_file is still not parallel
-
-    if(nProc==1)call ionosphere_write_restart_file(nSolve)
+    call ionosphere_write_restart_file
 
   end subroutine IE_save_restart
 
