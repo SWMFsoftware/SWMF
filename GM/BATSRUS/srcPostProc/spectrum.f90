@@ -240,7 +240,8 @@ contains
              end do
              DxLocal = dx
              if(DoExtendTransitionRegion) DxLocal = DxLocal &
-                  /extension_factor(Var_VIII(te_,i,j,k))            
+                  /extension_factor(Var_VIII(te_,i,j,k))
+
              ! DEM value is Ne*N_H *dh/dT in [cm^-5 K^-1]
              DEM_I(iTe) = DEM_I(iTe) + &
                   (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 &
@@ -469,7 +470,6 @@ contains
 
     allocate(Glambda_II(MinI:MaxI,MinJ:MaxJ))
 
-    Lambda   = LineTable_I(iLine)%LineWavelength
     Aion     = LineTable_I(iLine)%Aion
     ! Fill in LabelTabel%NameIon
     LabelTable_III(iLine,:,:)%NameIon = LineTable_I(iLine)%NameIon
@@ -479,13 +479,12 @@ contains
     do kPixel=1,n3
        do jPixel=1,n2
           do i=1,n1
-
              if(IsOnePixel .and. (kPixel/=kOnePixel .or. &
                   jPixel/=jOnePixel .or. i/=iOnePixel))CYCLE
-
              ! Cells inside body or behind the solar disk
              if(all(Var_VIII(1:7,i,jPixel,kPixel)==0))CYCLE
 
+             Lambda   = LineTable_I(iLine)%LineWavelength
              ! Doppler shift while x axis is oriented towards observer
              if(IsDoppler)then
                 Lambda_shifted = (-Var_VIII(ux_,i,jPixel,kPixel)/cLightSpeed &
@@ -504,7 +503,7 @@ contains
                    EXIT
                 end if
              end do
-             if(iInterval == -1)then
+             if(iInterval == -1 .and. .not. IsOneLine)then
                 write(*,*)"Lambda = ",Lambda," will be left out!"
                 write(*,*)"Intervals begin and end = ", &
                      WavelengthInterval_II(:,:)
