@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module IE_ModIo
 
@@ -23,6 +24,8 @@ module IE_ModIo
   character (LEN=100) :: plot_vars(maxfile)
   character (LEN=80)  :: filename
   character (len=100) :: NameIonoDir='ionosphere/'
+  character (len=100) :: NameRestartInDir  = 'IE/restartIN/'
+  character (len=100) :: NameRestartOutDir = 'IE/restartOUT/'
   character (len=100) :: NameFile
 
   integer             :: dn_output(MaxFile)=-1, dn_magoutput = -1
