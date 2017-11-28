@@ -44,7 +44,8 @@ contains
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
-       write(*,*)NameSub,' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
+       write(*,*)NameSub,' n_step=', n_step,                &
+            ' dt=',time_BLK(iTest,jTest,kTest,iBlock)*Cfl
        if(allocated(IsConserv_CB)) write(*,*)NameSub,' IsConserv=', &
             IsConserv_CB(iTest,jTest,kTest,iBlock)
        write(*,*)
