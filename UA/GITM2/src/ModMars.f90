@@ -35,17 +35,17 @@ module ModPlanet
   integer, parameter  :: iN2P_  = 4
   integer, parameter  :: iNOP_  = 5
   integer, parameter  :: ie_    = 6
-  integer, parameter  :: nIons  = ie_
+  integer, parameter  :: nIons  = 10!ie_
   integer, parameter  :: nIonsAdvect = 0
-  integer, parameter  :: nSpeciesAll = 16 !Ions plus neutrals
+  integer, parameter  :: nSpeciesAll = 20 !Ions plus neutrals
 
 ! Extra ions, just to be able to compile merged version (LHR, 07/2017):
   integer, parameter :: iO_3P_   = 7
   integer, parameter :: iN_4S_   = 7
-  integer, parameter  :: iO_4SP_ = 1
-  integer, parameter  :: iNP_    = 1
-  integer, parameter  :: iO_2DP_ = 1
-  integer, parameter  :: iO_2PP_ = 1
+  integer, parameter  :: iO_4SP_ = 7
+  integer, parameter  :: iNP_    = 7
+  integer, parameter  :: iO_2DP_ = 7
+  integer, parameter  :: iO_2PP_ = 7
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   character (len=20) :: cSpecies(nSpeciesTotal)
