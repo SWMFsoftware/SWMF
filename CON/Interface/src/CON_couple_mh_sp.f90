@@ -47,7 +47,6 @@ module CON_couple_mh_sp
        SP_interface_point_coords_for_ih_extract, &
        SP_copy_old_state, SP_adjust_lines, SP_get_particle_index, &
        SP_get_cell_index
-
   implicit none
   
   private !Except
@@ -69,23 +68,25 @@ module CON_couple_mh_sp
   type(LocalGDType),save::SC_LocalLineGD                    !^CMP IF SC
   type(RouterType),save,private::RouterLineScSp             !^CMP IF SC
 
-  logical,save::DoInit=.true.
-
+  !\
+  !Three-dimensional grids in SC and IH, 
+  !three-component coordinate vector
+  !/
   integer, parameter :: nDim = 3
+  !\
+  ! We send: (1) the global index of the magnetic field line
+  ! and (2) the particle number along the magnetic field line
+  !/ 
   integer, parameter :: nAux = 2
   integer :: nLength
 
   integer::iError
   real,save::rBoundIh=21.0                !^CMP IF IH
   real,save::rBoundSc=1.20                !^CMP IF SC
-
-  ! available directions of interface between SP and MH 
-  integer, parameter:: &
-       iInterfaceBegin = -1, iInterfaceOrigin = 0, iInterfaceEnd = 1
   
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
-  real,dimension(3,3)::ScToIh_DD,ScToSp_DD,IhToSp_DD,SpToSc_DD
+  real,dimension(3,3) :: ScToSp_DD, IhToSp_DD
   real :: tNow
 
 contains
@@ -93,29 +94,23 @@ contains
   subroutine couple_mh_sp_init
     use CON_physics, ONLY: get_time
     use ModConst
-
-    logical::DoneRestart
-
-    integer:: iGridMin_D(3), iGridMax_D(3), ierror
-    real:: Disp_D(3)
-    real, pointer:: CoordMisc_DI(:,:)
+    logical,save::DoInit=.true. 
+   
+    integer:: iError
 
     ! available directions of interface between SP and MH 
     ! (see subroutine exchange_lines below)
     integer, parameter:: &
-         iInterfaceBegin = -1, iInterfaceOrigin = 0, iInterfaceEnd = 1
+         iInterfaceOrigin = 0, iInterfaceEnd = 1
 
     ! solar corona boundary
     real:: RSc, RIh, RMin
 
     ! whether need to extract new line
     logical:: DoExtract
-
-    character(len=*), parameter:: NameSub = 'couple_mh_sp_init'
     !----------------------------------------------------------------------
     if(.not.DoInit)return
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
-    DoInit=.false.
     !The initialization can be done only once
 
     call get_time(tSimulationOut=tNow)
@@ -141,258 +136,316 @@ contains
          call SP_get_domain_boundary(RSc, RIh)
     call MPI_Bcast(RSc, 1, MPI_REAL, i_proc0(SP_), i_comm(), iError)
     call MPI_Bcast(RIh, 1, MPI_REAL, i_proc0(SP_), i_comm(), iError)    
-
-    if(use_comp(SC_))then  
-       ! Set pair SC-SP
-       call SC_check_use_particles()
-       call set_couple_var_info(SC_, SP_)
-       call set_standard_grid_descriptor(SC_,GridDescriptor=&
-            SC_GridDescriptor)
-       call init_router(SC_GridDescriptor,SP_GridDescriptor,&
-            RouterScSp,nMappedPointIndex=nAux)
-       call set_standard_grid_descriptor(SC_LineDD,GridDescriptor=&
-            SC_LineGridDesc)
-       if(is_proc(SC_))call set_local_gd(&
-            iProc = i_proc(), &
-            GridDescriptor = SC_LineGridDesc, &
-            LocalGD = SC_LocalLineGD)
-       call init_router(SC_LineGridDesc, SP_GridDescriptor, RouterLineScSp, &
-            nMappedPointIndex=0)
-       if(RouterScSp%IsProc)then
-          call SC_synchronize_refinement(RouterScSp%iProc0Source,&
-               RouterScSp%iCommUnion)
-          ScToSp_DD=transform_matrix(tNow,&                 
-               Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-          call exchange_lines(SC_)
-       end if
+     ! Set pair SC-SP
+    if(use_comp(SC_)) then   !^CMP IF SC BEGIN
+       call couple_sc_sp_init
        ! put the lower boundary of the domain in SC to SP
-       if(DoExtract)&
+       if(DoExtract.and.is_proc(SP_))&
             call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
     end if
-
-    if(use_comp(IH_))then
-       ! Set pair IH-SP
-       call IH_check_use_particles()
-       call set_couple_var_info(IH_, SP_)
-       call set_standard_grid_descriptor(IH_,GridDescriptor=&
-            IH_GridDescriptor)
-       call init_router(IH_GridDescriptor,SP_GridDescriptor,&
-            RouterIhSp,nMappedPointIndex=nAux)
-       call set_standard_grid_descriptor(IH_LineDD,GridDescriptor=&
-            IH_LineGridDesc)
-       if(is_proc(IH_))call set_local_gd(&
-            iProc = i_proc(), &
-            GridDescriptor = IH_LineGridDesc, &
-            LocalGD = IH_LocalLineGD)
-       call init_router(IH_LineGridDesc, SP_GridDescriptor, RouterLineIhSp,&
-            nMappedPointIndex=0)
-       if(RouterIhSp%IsProc)then
-          call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
-               RouterIhSp%iCommUnion)
-          IhToSp_DD=transform_matrix(tNow,&                 
-               Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-          call exchange_lines(IH_)
-       end if
-    end if
+    ! Set pair IH-SP         !^CMP END SC
+    if(use_comp(IH_)) call couple_ih_sp_init !^CMP IF IH
+    DoInit=.false.
   contains
-    !================================================================    
-    subroutine exchange_lines(iMHComp)
-      ! MH extracts and sends field lines requested by SP;
-      !----------------------------------------------------------------
-      ! index of MH component
-      integer, intent(in):: iMHComp
-      !----------------------------------------------------------------
-      ! conversion matrix between SP and MH coordinates
-      real:: Convert_DD(3,3)
-      ! request coordinates, one per line
-      real, pointer:: CoordMisc_DI(:,:)
-      ! number of particles per line
-      integer,allocatable:: nParticleAtLine_I(:)
-      ! requested variables
-      integer:: nVar
-      character(len=100):: NameVar
-      ! particle data
-      real, allocatable:: Particle_II(:,:)
-      ! field line index in particle data
-      integer:: iFLIndex
-      ! MPI
-      integer:: MH_iProcFrom, SP_iProcTo
-      integer:: iProcTo_I(1), iProcFrom_I(1)
-      integer:: nParticleThisProc
-      integer, allocatable:: nParticleRecv_I(:), nParticleSend_I(:)
-      integer, allocatable:: iStatus_II(:,:), iRequestS_I(:), iRequestR_I(:)
-      integer:: nRequestS, nRequestR
-      integer:: iTag = 0
-      real, allocatable:: BuffRecv_I(:), BuffSend_I(:)
-      ! loop variables
-      integer:: iLine, iBuff, iParticle
-      !----------------------------------------------------------------
-      select case(iMHComp)
-      case(SC_)
-         if(DoExtract)then
-            if(is_proc(SP_))&
-                 call set_semi_router_from_target(&
-                 GridDescriptorSource  = SC_GridDescriptor, &
-                 GridDescriptorTarget  = SP_LocalGD, &
-                 Router                = RouterScSp, &
-                 n_interface_point_in_block = SP_n_particle,&
-                 interface_point_coords= SP_interface_point_coords_for_sc, &
-                 mapping               = mapping_sp_to_sc, &
-                 interpolate           = interpolation_amr_gc)
-            call synchronize_router_target_to_source(RouterScSp)
-            if(is_proc(SC_))then
-               nLength = nlength_buffer_source(RouterScSp)
-               call SC_extract_line(&
-                    nLine             = nLength, &
-                    XyzOrigin_DI      = &
-                    RouterScSp%BufferSource_II(1:nDim,1:nLength), &
-                    iTraceMode        = iInterfaceOrigin, &
-                    nIndex            = nAux, &
-                    iIndexOrigin_II   = nint(RouterScSp%&
-                    BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                    RSoftBoundaryIn   =  RSc, & 
-                    UseInputInGenCoord= .true.)
-            end if
-            if(is_proc(SC_))then
-               call set_semi_router_from_source(&
-                    GridDescriptorSource = SC_LocalLineGD,     &
-                    GridDescriptorTarget = SP_GridDescriptor,  &
-                    Router               = RouterLineScSp,     &
-                    n_interface_point_in_block = SC_n_particle,&
-                    interface_point_coords=SC_line_interface_point,&
-                    mapping              = mapping_line_sc_to_sp)
-            end if
-            call synchronize_router_source_to_target(RouterLineScSp)
-            if(is_proc(SP_))then
-               call update_semi_router_at_target(&
-                    RouterLineScSp, SP_GridDescriptor)
-            end if
-            call global_message_pass(RouterLineScSp, &
-                 nVar = 3, &
-                 fill_buffer = SC_get_line_for_sp_and_transform, &
-                 apply_buffer= SP_put_line_from_sc)
-         end if
-         call SP_synchronize_grid(RouterScSp%iCommUnion)
-         if(is_proc(SP_))then
-            call set_semi_router_from_target(&
-                 GridDescriptorSource  = SC_GridDescriptor, &
-                 GridDescriptorTarget  = SP_LocalGD, &
-                 Router                = RouterScSp, &
-                 n_interface_point_in_block = SP_n_particle,&
-                 interface_point_coords= SP_interface_point_coords_for_sc, &
-                 mapping               = mapping_sp_to_sc, &
-                 interpolate           = interpolation_amr_gc)
-            nLength = nlength_buffer_target(RouterScSp)
-            call fix_buffer(nLength,&
-                 RouterScSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
-         end if
+    !===============================
+    subroutine couple_sc_sp_init
+      call SC_check_use_particles()
+      call set_couple_var_info(SC_, SP_)
+      call set_standard_grid_descriptor(SC_,GridDescriptor=&
+           SC_GridDescriptor)
+      call init_router(SC_GridDescriptor,SP_GridDescriptor,&
+           RouterScSp,nMappedPointIndex=nAux)
+      call set_standard_grid_descriptor(SC_LineDD,GridDescriptor=&
+           SC_LineGridDesc)
+      if(is_proc(SC_))call set_local_gd(&
+           iProc = i_proc(), &
+           GridDescriptor = SC_LineGridDesc, &
+           LocalGD = SC_LocalLineGD)
+      call init_router(SC_LineGridDesc, SP_GridDescriptor, RouterLineScSp, &
+           nMappedPointIndex=0)
+      if(.not.RouterScSp%IsProc)RETURN
+      call SC_synchronize_refinement(RouterScSp%iProc0Source,&
+           RouterScSp%iCommUnion)
+      ScToSp_DD=transform_matrix(tNow,&                 
+           Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+      if(DoExtract)then
+         if(is_proc(SP_))&
+              call set_semi_router_from_target(&
+              GridDescriptorSource  = SC_GridDescriptor, &
+              GridDescriptorTarget  = SP_LocalGD, &
+              Router                = RouterScSp, &
+              n_interface_point_in_block = SP_n_particle,&
+              interface_point_coords= SP_interface_point_coords_for_sc, &
+              mapping               = mapping_sp_to_sc, &
+              interpolate           = interpolation_amr_gc)
          call synchronize_router_target_to_source(RouterScSp)
          if(is_proc(SC_))then
-            if(.not.DoExtract)then
-               nLength = nlength_buffer_source(RouterScSp)
-               call SC_add_to_line(&
-                    nParticle = nLength,&
-                    Xyz_DI    =  RouterScSp%BufferSource_II(&
-                    1:nDim, 1:nLength), &
-                    nIndex    = nAux,   &
-                    iIndex_II = nint(RouterScSp%BufferSource_II(&
-                    nDim+1:nDim+nAux, 1:nLength)),&      
-                    UseInputInGenCoord = .true.,&
-                    DoReplace = .true.)
-            end if
-            call update_semi_router_at_source(RouterScSp,&
-                 SC_GridDescriptor,interpolation_amr_gc)
+            nLength = nlength_buffer_source(RouterScSp)
+            call SC_extract_line(&
+                 nLine             = nLength, &
+                 XyzOrigin_DI      = &
+                 RouterScSp%BufferSource_II(1:nDim,1:nLength), &
+                 iTraceMode        = iInterfaceOrigin, &
+                 nIndex            = nAux, &
+                 iIndexOrigin_II   = nint(RouterScSp%&
+                 BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
+                 RSoftBoundaryIn   =  RSc, & 
+                 UseInputInGenCoord= .true.)
          end if
-         call global_message_pass(RouterScSp, &
-              nVar = nVarBuffer, &
-              fill_buffer = SC_get_for_sp_and_transform, &
-              apply_buffer= SP_put_from_sc)
-      case(IH_)
-         if(DoExtract)then
-            if(is_proc(SP_))&
-                 call set_semi_router_from_target(&
-                 GridDescriptorSource  = IH_GridDescriptor, &
-                 GridDescriptorTarget  = SP_LocalGD, &
-                 Router                = RouterIHSp, &
-                 n_interface_point_in_block = SP_n_particle,&
-                 interface_point_coords= &
-                 SP_interface_point_coords_for_ih_extract, &
-                 mapping               = mapping_sp_to_IH, &
-                 interpolate           = interpolation_amr_gc) 
-            call synchronize_router_target_to_source(RouterIhSp)
-            if(is_proc(IH_))then
-               nLength = nlength_buffer_source(RouterIhSp)
-               call IH_extract_line(&
-                    nLine             = nLength, &
-                    XyzOrigin_DI      = &
-                    RouterIhSp%BufferSource_II(1:nDim,1:nLength), &
-                    iTraceMode        = iInterfaceEnd, &
-                    nIndex            = nAux, &
-                    iIndexOrigin_II   = nint(RouterIhSp%&
-                    BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                    RSoftBoundaryIn   =  RIh, & 
-                    UseInputInGenCoord= .true.)
-            end if
-            if(is_proc(IH_))then
-               call set_semi_router_from_source(&
-                    GridDescriptorSource = IH_LocalLineGD,         &
-                    GridDescriptorTarget = SP_GridDescriptor,      &
-                    Router               = RouterLineIhSp,         &
-                    n_interface_point_in_block = IH_n_particle,    &
-                    interface_point_coords=IH_line_interface_point,&
-                    mapping              = mapping_line_ih_to_sp)
-            end if
-            call synchronize_router_source_to_target(RouterLineIhSp)
-            if(is_proc(SP_))then
-               call update_semi_router_at_target(&
-                    RouterLineIhSp, SP_GridDescriptor)
-            end if
-            call global_message_pass(RouterLineIhSp, &
-                 nVar = 3, &
-                 fill_buffer = IH_get_line_for_sp_and_transform, &
-                 apply_buffer= SP_put_line_from_ih)
-         end if
-         call SP_synchronize_grid(RouterIhSp%iCommUnion)
-         if(is_proc(SP_))then
+      end if
+      call exchange_data_sc_sp(DoInit, DoExtract)
+    end subroutine couple_sc_sp_init
+    !==============================
+    subroutine couple_ih_sp_init
+      call IH_check_use_particles()
+      call set_couple_var_info(IH_, SP_)
+      call set_standard_grid_descriptor(IH_,GridDescriptor=&
+           IH_GridDescriptor)
+      call init_router(IH_GridDescriptor,SP_GridDescriptor,&
+           RouterIhSp,nMappedPointIndex=nAux)
+      call set_standard_grid_descriptor(IH_LineDD,GridDescriptor=&
+           IH_LineGridDesc)
+      if(is_proc(IH_))call set_local_gd(&
+           iProc = i_proc(), &
+           GridDescriptor = IH_LineGridDesc, &
+           LocalGD = IH_LocalLineGD)
+      call init_router(IH_LineGridDesc, SP_GridDescriptor, RouterLineIhSp,&
+           nMappedPointIndex=0)
+      if(.not.RouterIhSp%IsProc)RETURN
+      call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
+           RouterIhSp%iCommUnion)
+      IhToSp_DD=transform_matrix(tNow,&                 
+           Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+      if(DoExtract)then
+         if(is_proc(SP_))&
               call set_semi_router_from_target(&
               GridDescriptorSource  = IH_GridDescriptor, &
               GridDescriptorTarget  = SP_LocalGD, &
-              Router                = RouterIhSp, &
+              Router                = RouterIHSp, &
               n_interface_point_in_block = SP_n_particle,&
-              interface_point_coords= SP_interface_point_coords_for_ih, &
-              mapping               = mapping_sp_to_ih, &
-              interpolate           = interpolation_amr_gc)
-            nLength = nlength_buffer_target(RouterIhSp)
-            call fix_buffer(nLength,&
-                 RouterIhSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
-         end if
+              interface_point_coords= &
+              SP_interface_point_coords_for_ih_extract, &
+              mapping               = mapping_sp_to_IH, &
+              interpolate           = interpolation_amr_gc) 
          call synchronize_router_target_to_source(RouterIhSp)
          if(is_proc(IH_))then
-            if(.not.DoExtract)then
-               nLength = nlength_buffer_source(RouterIhSp)
-               call IH_add_to_line(&
-                    nParticle = nLength,&
-                    Xyz_DI    =  RouterIhSp%BufferSource_II(&
-                    1:nDim, 1:nLength), &
-                    nIndex    = nAux,   &
-                    iIndex_II = nint(RouterIhSp%BufferSource_II(&
-                    nDim+1:nDim+nAux, 1:nLength)),&      
-                    UseInputInGenCoord = .true.,&
-                    DoReplace = .true.)
-            end if
-            call update_semi_router_at_source(RouterIhSp,&
-                 IH_GridDescriptor,interpolation_amr_gc)
+            nLength = nlength_buffer_source(RouterIhSp)
+            call IH_extract_line(&
+                 nLine             = nLength, &
+                 XyzOrigin_DI      = &
+                 RouterIhSp%BufferSource_II(1:nDim,1:nLength), &
+                 iTraceMode        = iInterfaceEnd, &
+                 nIndex            = nAux, &
+                 iIndexOrigin_II   = nint(RouterIhSp%&
+                 BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
+                 RSoftBoundaryIn   =  RIh, & 
+                 UseInputInGenCoord= .true.)
          end if
-         call global_message_pass(RouterIhSp, &
-              nVar = nVarBuffer, &
-              fill_buffer = IH_get_for_sp_and_transform, &
-              apply_buffer= SP_put_from_ih)
-      end select
-    end subroutine exchange_lines
-
+      end if
+      call exchange_data_ih_sp(DoInit, DoExtract)
+    end subroutine couple_ih_sp_init
   end subroutine couple_mh_sp_init
-  !==================================================================!
+  !=========================================================================
+  !^CMP IF SC BEGIN
+  subroutine couple_sc_sp(DataInputTime)
+    use CON_global_message_pass
 
+    real,intent(in)::DataInputTime
+    integer:: nLength
+    !-------------------------------------------------------
+    if(.not.RouterScSp%IsProc)return
+
+    tNow=DataInputTime
+    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
+
+    ! IMPORTANT: 
+    ! couple_sc_sp is called BEFORE couple_ih_sp; 
+    ! save the current state as old,
+    ! separate subroutine is used in order to avoid intersections 
+    ! as fluid elements transfer from SC to IH
+    if(is_proc(SP_))call SP_copy_old_state
+    
+    ScToSp_DD=transform_matrix(tNow,&
+         Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+
+    call SC_synchronize_refinement(RouterScSp%iProc0Source,&
+         RouterScSp%iCommUnion)
+    call SP_synchronize_grid(RouterScSp%iCommUnion)
+    call exchange_data_sc_sp(DoInit=.false., DoExtract=.false.)
+  end subroutine couple_sc_sp
+  !=====================
+  subroutine exchange_data_sc_sp(DoInit, DoExtract)
+    logical, intent(in) :: DoInit, DoExtract
+    !----------------------------------------------------------
+    if(DoExtract.or..not.DoInit)then
+       !\
+       !Lagrangian particles are either extracted or 
+       !updated in IH
+       !/
+       !\
+       ! Send Largrangian particle coords from SC to SP
+       if(is_proc(SC_))then
+          call set_semi_router_from_source(&
+               GridDescriptorSource = SC_LocalLineGD,     &
+               GridDescriptorTarget = SP_GridDescriptor,  &
+               Router               = RouterLineScSp,     &
+               n_interface_point_in_block = SC_n_particle,&
+               interface_point_coords=SC_line_interface_point,&
+               mapping              = mapping_line_sc_to_sp)
+       end if
+       call synchronize_router_source_to_target(RouterLineScSp)
+       if(is_proc(SP_))then
+          call update_semi_router_at_target(&
+               RouterLineScSp, SP_GridDescriptor)
+       end if
+       call global_message_pass(RouterLineScSp, &
+            nVar = 3, &
+            fill_buffer = SC_get_line_for_sp_and_transform, &
+            apply_buffer= SP_put_line_from_sc)
+       !Lagrangian particle coordinates are sent
+       !/
+    end if
+    if(is_proc(SP_).and..not.DoInit)&
+         call SP_adjust_lines(SC_)
+    call SP_synchronize_grid(RouterScSp%iCommUnion)
+    !\
+    ! Send coordinates of the points in SP to receive MHD data from SC
+    if(is_proc(SP_))then
+       call set_semi_router_from_target(&
+            GridDescriptorSource  = SC_GridDescriptor, &
+            GridDescriptorTarget  = SP_LocalGD, &
+            Router                = RouterScSp, &
+            n_interface_point_in_block = SP_n_particle,&
+            interface_point_coords= SP_interface_point_coords_for_sc, &
+            mapping               = mapping_sp_to_sc, &
+            interpolate           = interpolation_amr_gc)
+       nLength = nlength_buffer_target(RouterScSp)
+       call fix_buffer(nLength,&
+            RouterScSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
+    end if
+    call synchronize_router_target_to_source(RouterScSp)
+    if(is_proc(SC_))then
+       if(.not.(DoInit.and.DoExtract))then
+          nLength = nlength_buffer_source(RouterScSp)
+          call SC_add_to_line(&
+               nParticle = nLength,&
+               Xyz_DI    =  RouterScSp%BufferSource_II(&
+               1:nDim, 1:nLength), &
+               nIndex    = nAux,   &
+               iIndex_II = nint(RouterScSp%BufferSource_II(&
+               nDim+1:nDim+nAux, 1:nLength)),&      
+               UseInputInGenCoord = .true.,&
+               DoReplace = .true.)
+       end if
+       call update_semi_router_at_source(RouterScSp,&
+            SC_GridDescriptor,interpolation_amr_gc)
+    end if
+    call global_message_pass(RouterScSp, &
+         nVar = nVarBuffer, &
+         fill_buffer = SC_get_for_sp_and_transform, &
+         apply_buffer= SP_put_from_sc)
+    !MHD Data from SC to SP are sent
+    !/
+  end subroutine exchange_data_sc_sp
+  !^CMP END SC
+  !================================
+  !^CMP IF IH BEGIN
+  subroutine couple_ih_sp(DataInputTime)     
+    real,intent(in)::DataInputTime
+    !----------------------------------------------------------
+    if(.not.RouterIhSp%IsProc)return
+
+    tNow=DataInputTime
+    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
+    IhToSp_DD=transform_matrix(tNow,&
+         Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
+
+    call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
+         RouterIhSp%iCommUnion)
+    call SP_synchronize_grid(RouterIhSp%iCommUnion)  
+    call exchange_data_ih_sp(DoInit=.false., DoExtract=.false.)
+  end subroutine couple_ih_sp
+  !==================================================================
+  subroutine exchange_data_ih_sp(DoInit, DoExtract)
+    logical, intent(in) :: DoInit, DoExtract
+    !---------------
+    if(DoExtract.or..not.DoInit)then
+       !\
+       !Lagrangian particles are either extracted or 
+       !updated in IH
+       !/
+       !\
+       ! Send coordinates of the constructed Lagrangian points
+       ! from IH to SP
+       if(is_proc(IH_))then
+          call set_semi_router_from_source(&
+               GridDescriptorSource = IH_LocalLineGD,         &
+               GridDescriptorTarget = SP_GridDescriptor,      &
+               Router               = RouterLineIhSp,         &
+               n_interface_point_in_block = IH_n_particle,    &
+               interface_point_coords=IH_line_interface_point,&
+               mapping              = mapping_line_ih_to_sp)
+       end if
+       call synchronize_router_source_to_target(RouterLineIhSp)
+       if(is_proc(SP_))then
+          call update_semi_router_at_target(&
+               RouterLineIhSp, SP_GridDescriptor)
+       end if
+       call global_message_pass(RouterLineIhSp, &
+            nVar = 3, &
+            fill_buffer = IH_get_line_for_sp_and_transform, &
+            apply_buffer= SP_put_line_from_ih)
+       !Particle coordinates are sent to SP
+       !/
+    end if
+    if(is_proc(SP_).and..not.DoInit)&
+         call SP_adjust_lines(IH_)
+    call SP_synchronize_grid(RouterIhSp%iCommUnion)
+    !\
+    ! Send to IH the  coordinates of points in SP and
+    ! send back the MHD data in these points
+    if(is_proc(SP_))then
+       call set_semi_router_from_target(&
+            GridDescriptorSource  = IH_GridDescriptor, &
+            GridDescriptorTarget  = SP_LocalGD, &
+            Router                = RouterIHSp, &
+            n_interface_point_in_block = SP_n_particle,&
+            interface_point_coords= SP_interface_point_coords_for_ih, &
+            mapping               = mapping_sp_to_ih, &
+            interpolate           = interpolation_amr_gc)
+       nLength = nlength_buffer_target(RouterIhSp)
+       call fix_buffer(nLength,&
+            RouterIhSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
+    end if
+    call synchronize_router_target_to_source(RouterIhSp) 
+    if(is_proc(IH_))then
+       if(.not.(DoInit.and.DoExtract))then
+          nLength = nlength_buffer_source(RouterIhSp)
+          call IH_add_to_line(&
+               nParticle = nLength,&
+               Xyz_DI    =  RouterIhSp%BufferSource_II(&
+               1:nDim, 1:nLength), &
+               nIndex    = nAux,   &
+               iIndex_II = nint(RouterIhSp%BufferSource_II(&
+               nDim+1:nDim+nAux, 1:nLength)),&      
+               UseInputInGenCoord = .true.,&
+               DoReplace = .true.)
+       end if
+       call update_semi_router_at_source(RouterIhSp,&
+            IH_GridDescriptor,interpolation_amr_gc)
+    end if
+    call global_message_pass(RouterIhSp, &
+         nVar = nVarBuffer, &
+         fill_buffer = IH_get_for_sp_and_transform, &
+         apply_buffer= SP_put_from_ih)
+    !MHD data are sent
+    !/
+    !This coupler is performed after SC-SP coupling, so that 
+    !on SP the updated coordinates are available for those
+    !points which passed from SC to IH
+  end subroutine exchange_data_ih_sp
+  !^CMP END IH
+  !==================================================================!
   subroutine mapping(iCompIn, iCompOut, nDimIn, CoordIn_D, nDimOut, CoordOut_D)
     ! mapping from generalized coordinates in CompIn 
     ! to generalized coordinates in CompOut
@@ -446,7 +499,7 @@ contains
        CoordOut_D = XyzTemp_D
     else
        call CON_stop(NameSub//&
-            ': unkown type of geometry '//trim(TypeGeometryOut))
+            ': unknown type of geometry '//trim(TypeGeometryOut))
     end if
   end subroutine mapping
 
@@ -554,6 +607,7 @@ contains
     iIndex_II(:,1) = Put%iCB_II(1:4,iPutStart)
     call SP_put_line(SC_,1, Buff_II, iIndex_II)
   end subroutine SP_put_line_from_sc
+  !^CMP IF IH BEGIN
   !==================================================================!
   subroutine SP_put_line_from_ih(nPartial,&
        iPutStart,&
@@ -574,112 +628,11 @@ contains
     iIndex_II(:,1) = Put%iCB_II(1:4,iPutStart)
     call SP_put_line(IH_,1, Buff_II, iIndex_II)
   end subroutine SP_put_line_from_ih
-  !==================================================================!
-  subroutine fix_buffer(nLength, Buffer_II)
-    integer, intent(in):: nLength
-    real, intent(inout):: Buffer_II(nAux,nLength)
-    integer:: i, iIndexIn, iLine, iIndexOut
-    !---------------------------------------------------------------
-    do i = 1, nLength
-       iLine    = nint(Buffer_II(1,i))
-       iIndexIn = nint(Buffer_II(2,i))
-       call SP_get_particle_index(iLine, iIndexIn, iIndexOut)
-       Buffer_II(2,i) = real(iIndexOut)
-    end do
-  end subroutine fix_buffer
-  !==================================================================!
-  !^CMP IF IH BEGIN
-  subroutine couple_ih_sp(DataInputTime)     
-
-    use CON_global_message_pass
-
-    real,intent(in)::DataInputTime
-    real,dimension(3)::Xyz_D
-    integer:: nLength
-    !-------------------------------------------------------------------------
-    if(.not.RouterIhSp%IsProc)return
-
-    tNow=DataInputTime
-    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
-    IhToSp_DD=transform_matrix(tNow,&
-         Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-    ScToIh_DD=transform_matrix(tNow,&                   !^CMP IF SC
-         Grid_C(SC_)%TypeCoord, Grid_C(IH_)%TypeCoord)  !^CMP IF SC
-
-
-    call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
-         RouterIhSp%iCommUnion)
-    call SP_synchronize_grid(RouterIhSp%iCommUnion)
-
-    if(is_proc(IH_))then
-       call set_semi_router_from_source(&
-            GridDescriptorSource = IH_LocalLineGD,         &
-            GridDescriptorTarget = SP_GridDescriptor,      &
-            Router               = RouterLineIhSp,         &
-            n_interface_point_in_block = IH_n_particle,    &
-            interface_point_coords=IH_line_interface_point,&
-            mapping              = mapping_line_ih_to_sp)
-    end if
-    call synchronize_router_source_to_target(RouterLineIhSp)
-    if(is_proc(SP_))then
-       call update_semi_router_at_target(&
-            RouterLineIhSp, SP_GridDescriptor)
-    end if
-    call global_message_pass(RouterLineIhSp, &
-         nVar = 3, &
-         fill_buffer = IH_get_line_for_sp_and_transform, &
-         apply_buffer= SP_put_line_from_ih)
-    if(is_proc(SP_))&
-         call SP_adjust_lines(IH_)
-    call SP_synchronize_grid(RouterIhSp%iCommUnion)
-    if(is_proc(SP_))then
-       call set_semi_router_from_target(&
-            GridDescriptorSource  = IH_GridDescriptor, &
-            GridDescriptorTarget  = SP_LocalGD, &
-            Router                = RouterIHSp, &
-            n_interface_point_in_block = SP_n_particle,&
-            interface_point_coords= SP_interface_point_coords_for_ih, &
-            mapping               = mapping_sp_to_ih, &
-            interpolate           = interpolation_amr_gc)
-       nLength = nlength_buffer_target(RouterIhSp)
-       call fix_buffer(nLength,&
-            RouterIhSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
-    end if
-    call synchronize_router_target_to_source(RouterIhSp)
-    
-    if(is_proc(IH_))then
-       nLength = nlength_buffer_source(RouterIhSp)
-       call IH_add_to_line(&
-            nParticle = nLength,&
-            Xyz_DI    =  RouterIhSp%BufferSource_II(&
-            1:nDim, 1:nLength), &
-            nIndex    = nAux,   &
-            iIndex_II = nint(RouterIhSp%BufferSource_II(&
-            nDim+1:nDim+nAux, 1:nLength)),&      
-            UseInputInGenCoord = .true.,&
-            DoReplace = .true.)
-       call update_semi_router_at_source(RouterIhSp,&
-            IH_GridDescriptor,interpolation_amr_gc)
-    end if
-    
-    call global_message_pass(RouterIhSp, &
-         nVar = nVarBuffer, &
-         fill_buffer = IH_get_for_sp_and_transform, &
-         apply_buffer= SP_put_from_ih)
-    !    if(is_proc(SP_))then
-    !       call SP_put_input_time(DataInputTime)
-    !    end if
-    !^CMP IF SC BEGIN
-    !This coupler is performed after SC-SP coupling, so that 
-    !on SP the updated coordinates are available for those
-    !points which passed from SC to IH
-
-  end subroutine couple_ih_sp
-  !==================================================================
+ !==================================================================!
   logical function is_in_ih(Xyz_D)
     real,dimension(:),intent(in)::Xyz_D
     real:: R2
-    R2 = dot_product(Xyz_D,Xyz_D)
+    R2 = sum(Xyz_D**2)
     is_in_ih=R2>=rBoundIh**2.and.&
          all(Xyz_D < xyz_max_d(IH_)).and.all(Xyz_D >= xyz_min_d(IH_))
   end function is_in_ih
@@ -717,92 +670,22 @@ contains
     State_V = matmul(IhToSp_DD,State_V)
   end subroutine IH_get_line_for_sp_and_transform
   !^CMP END IH
-  !=========================================================================
-  !^CMP IF SC BEGIN
-  subroutine couple_sc_sp(DataInputTime)
-    use CON_global_message_pass
+  !==================================================================!
+  subroutine fix_buffer(nLength, Buffer_II)
+    integer, intent(in):: nLength
+    real, intent(inout):: Buffer_II(nAux,nLength)
+    integer:: i, iIndexIn, iLine, iIndexOut
+    !---------------------------------------------------------------
+    do i = 1, nLength
+       iLine    = nint(Buffer_II(1,i))
+       iIndexIn = nint(Buffer_II(2,i))
+       call SP_get_particle_index(iLine, iIndexIn, iIndexOut)
+       Buffer_II(2,i) = real(iIndexOut)
+    end do
+  end subroutine fix_buffer
 
-    real,intent(in)::DataInputTime
-    integer:: nLength
-    !-------------------------------------------------------
-    if(.not.RouterScSp%IsProc)return
-
-    tNow=DataInputTime
-    if(is_proc(SP_))call SP_put_input_time(DataInputTime)
-
-    ! IMPORTANT: 
-    ! couple_sc_sp is called BEFORE couple_ih_sp; 
-    ! save the current state as old,
-    ! separate subroutine is used in order to avoid intersections 
-    ! as fluid elements transfer from SC to IH
-    if(is_proc(SP_))call SP_copy_old_state
-    
-    ScToSp_DD=transform_matrix(tNow,&
-         Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-
-    call SC_synchronize_refinement(RouterScSp%iProc0Source,&
-         RouterScSp%iCommUnion)
-    call SP_synchronize_grid(RouterScSp%iCommUnion)
-
-    if(is_proc(SC_))then
-       call set_semi_router_from_source(&
-            GridDescriptorSource = SC_LocalLineGD,         &
-            GridDescriptorTarget = SP_GridDescriptor,      &
-            Router               = RouterLineScSp,         &
-            n_interface_point_in_block = SC_n_particle,    &
-            interface_point_coords=SC_line_interface_point,&
-            mapping              = mapping_line_sc_to_sp)
-    end if
-    call synchronize_router_source_to_target(RouterLineScSp)
-    if(is_proc(SP_))then
-       call update_semi_router_at_target(&
-            RouterLineScSp, SP_GridDescriptor)
-    end if
-    call global_message_pass(RouterLineScSp, &
-         nVar = 3, &
-         fill_buffer = SC_get_line_for_sp_and_transform, &
-         apply_buffer= SP_put_line_from_sc)
-    if(is_proc(SP_))&
-         call SP_adjust_lines(SC_)
-    call SP_synchronize_grid(RouterScSp%iCommUnion)
-    if(is_proc(SP_))then
-       call set_semi_router_from_target(&
-            GridDescriptorSource  = SC_GridDescriptor, &
-            GridDescriptorTarget  = SP_LocalGD, &
-            Router                = RouterScSp, &
-            n_interface_point_in_block = SP_n_particle,&
-            interface_point_coords= SP_interface_point_coords_for_sc, &
-            mapping               = mapping_sp_to_sc, &
-            interpolate           = interpolation_amr_gc)
-       nLength = nlength_buffer_target(RouterScSp)
-       call fix_buffer(nLength,&
-            RouterScSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
-    end if
-    call synchronize_router_target_to_source(RouterScSp)
-    if(is_proc(SC_))then
-       nLength = nlength_buffer_source(RouterScSp)
-       call SC_add_to_line(&
-            nParticle = nLength,&
-            Xyz_DI    =  RouterScSp%BufferSource_II(&
-            1:nDim, 1:nLength), &
-            nIndex    = nAux,   &
-            iIndex_II = nint(RouterScSp%BufferSource_II(&
-            nDim+1:nDim+nAux, 1:nLength)),&      
-            UseInputInGenCoord = .true.,&
-            DoReplace = .true.)
-       call update_semi_router_at_source(RouterScSp,&
-            SC_GridDescriptor,interpolation_amr_gc)
-    end if
-    call global_message_pass(RouterScSp, &
-         nVar = nVarBuffer, &
-         fill_buffer = SC_get_for_sp_and_transform, &
-         apply_buffer= SP_put_from_sc)
-    !    if(is_proc(SP_))then
-    !       call SP_put_input_time(DataInputTime)  
-    !       call transform_to_sp_from(SC_)
-    !    end if
-  end subroutine couple_sc_sp
-  !-------------------------------------------------------------------------
+ !^CMP IF SC BEGIN 
+ !-------------------------------------------------------------------------
   logical function is_in_sc(Xyz_D)
     real,dimension(:),intent(in)::Xyz_D
     real::R2
