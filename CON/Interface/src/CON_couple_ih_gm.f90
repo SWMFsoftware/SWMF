@@ -93,12 +93,11 @@ contains
          iCompTarget=GM_,             & ! component index for target
          nGhostPointTarget=2,         & ! number of halo points in target
          GridDescriptorSource=IH_Grid,& ! OUT!\
-         GridDescriptorTarget=GM_Grid,& ! OUT!-General coupler variables 
+         LocalGDTarget  =GM_LocalGD,  & ! OUT!-General coupler variables 
          Router=Router)                 ! OUT!/
-
+    call set_standard_grid_descriptor(GM_,nGhostGridPoints=2, GD=GM_grid)
     IH_iGridRealization=-1
     GM_iGridRealization=-1
-    call set_local_gd(i_proc(),GM_Grid, GM_LocalGD)
     ! Initialize the coordinate transformation
 
   end subroutine couple_ih_gm_init
@@ -126,7 +125,12 @@ contains
     if(IH_iGridRealization/=i_realization(IH_).or.&     
          GM_iGridRealization/=i_realization(GM_).or.&
          TimeCoupling - TimeCouplingLast > dTimeMappingMax)then  
-
+       if(GM_iGridRealization/=i_realization(GM_))then
+          !\
+          ! reset local GD
+          call clean_gd(GM_LocalGD)
+          call set_local_gd(i_proc(), GM_grid, GM_LocalGD)
+       end if
        ! Set the transformation matrices, compute the position and
        ! orbital veloctiy of the Earth in IH at the coupling time.
 

@@ -97,10 +97,9 @@ contains
             iCompTarget=IM_,              &
             nIndexTarget=2,               & ! IM grid size: iColat,iLon 
             GridDescriptorSource=IE_Grid, &
-            GridDescriptorTarget=IM_Grid, &
+            LocalGDTarget=IM_LocalGD, &
             Router=RouterIeIm)
-       call set_local_gd(i_proc(),IM_Grid,IM_LocalGD)
-
+  
        ! It is time to leave for non-involved PEs
        if(RouterIeIm%IsProc) call set_router( &
             IE_Grid,             &
@@ -116,9 +115,8 @@ contains
             iCompTarget=IE_,              &
             nIndexTarget=2,               & ! IE grid size: iColat,iLon 
             GridDescriptorSource=IM_Grid, &
-            GridDescriptorTarget=IE_Grid, &
+            LocalGDTarget=IE_LocalGD, &
             Router=RouterImIe)
-       call set_local_gd(i_proc(),IE_Grid,IE_LocalGD)
        ! Both grids are static, it is sufficient to set the router once
        if(RouterImIe%IsProc) call set_router(  &
             IM_Grid,                &
