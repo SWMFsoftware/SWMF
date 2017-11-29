@@ -432,12 +432,3 @@ program potential_field
 
 end program potential_field
 !==============================================================================
-subroutine CON_stop(String)
-
-  character(len=*), intent(in):: String
-
-  write(*,*) 'ERROR:', String
-  stop
-
-end subroutine CON_stop
-!==============================================================================

@@ -2,7 +2,10 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModMagHarmonics
+
   use ModNumConst
+  use ModUtilities, ONLY: CON_stop
+
   implicit none  
 
   !The logical is to be set. 

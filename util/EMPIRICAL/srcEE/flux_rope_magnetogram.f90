@@ -8,7 +8,10 @@ program magnetogram
   use ModPlotFile, ONLY:save_plot_file
   use ModReadParam, ONLY: read_file, read_init, &
          read_line, read_command
+  use ModUtilities, ONLYL CON_stop
+
   implicit none
+
   integer,parameter:: nLong = 360, nLat = 180
   integer:: Long0, i,j
   real:: Longitude_I(nLong), SinLong_I(nLong), CosLong_I(nLong), LongitudeRad
@@ -94,19 +97,3 @@ program magnetogram
   stop
 end program magnetogram
 !============================================================================
-! The following subroutines are here so that we can use SWMF library routines
-! Also some features available in SWMF mode only require empty subroutines
-! for compilation of the stand alone code.
-!============================================================================
-subroutine CON_stop(StringError)
-  implicit none
-  character (len=*), intent(in) :: StringError
-  write(*,*)StringError
-  stop
-end subroutine CON_stop
-!============================================================================
-subroutine CON_set_do_test(String,DoTest,DoTestMe)
-  implicit none
-  character (len=*), intent(in)  :: String
-  logical          , intent(out) :: DoTest, DoTestMe
-end subroutine CON_set_do_test

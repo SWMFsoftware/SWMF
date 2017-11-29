@@ -4,6 +4,7 @@ module EEE_ModCommonVariables
 
   use ModConst
   use ModMpi
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
   save

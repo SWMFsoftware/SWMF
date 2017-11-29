@@ -4,6 +4,7 @@
 module ModPotentialField
   
   use ModMpi
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 

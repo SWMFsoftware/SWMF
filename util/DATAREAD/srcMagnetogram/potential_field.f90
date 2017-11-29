@@ -1,6 +1,9 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModPotentialField
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 
@@ -807,14 +810,4 @@ program potential_field
 
 end program potential_field
 !==============================================================================
-subroutine CON_stop(String)
-
-  character(len=*), intent(in):: String
-
-  write(*,*) 'ERROR:', String
-  stop
-
-end subroutine CON_stop
-!==============================================================================
-
 

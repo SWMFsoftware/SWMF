@@ -4,6 +4,7 @@
 Module EEE_ModMain
 
   use EEE_ModGetB0, ONLY: EEE_get_B0
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
   save

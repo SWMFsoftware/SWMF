@@ -86,8 +86,3 @@ program dipole11
 
 end program dipole11
 !=================================================================
-subroutine CON_stop(String)
-  character(LEN=*),intent(in):: String
-  write(*,*) String
-  stop
-end subroutine CON_stop
