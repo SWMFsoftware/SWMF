@@ -39,42 +39,19 @@ subroutine barrier_mpi2(str)
 end subroutine barrier_mpi2
 !==============================================================================
 
-subroutine stop_mpi(str)
+subroutine stop_mpi(String)
 
-  use ModProcMH
-  use ModMain, ONLY : iteration_number, NameThisComp, IsStandAlone, &
-       DoWriteCallSequence
-  use ModMpi
+  use ModMain, ONLY : iteration_number, time_simulation, NameThisComp
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
-  character (len=*), intent(in) :: str
-
-  ! Local variables:
-  integer :: iError,nError
+  character(len=*), intent(in) :: String
   !----------------------------------------------------------------------------
-  if(IsStandAlone)then
-     write(*,*)'Stopping execution! me=',iProc,' at iteration=',&
-          iteration_number,' with msg:'
-     write(*,*)str
+  write(*,*) trim(NameThisComp),' BATSRUS stopping at iteration=', &
+       iteration_number,' simulation time=', time_simulation
 
-     if(DoWriteCallSequence)then
-        write(*,*)'Making floating point exception to write call sequence!'
-        write(*,*) sqrt(-1.0-iteration_number)
-     end if
-
-     call MPI_abort(iComm, nError, iError)
-     stop
-  else
-     write(*,*)NameThisComp,': stopping execution! me=',iProc,&
-          ' at iteration=',iteration_number
-
-     if(DoWriteCallSequence)then
-        write(*,*)'Making floating point exception to write call sequence!'
-        write(*,*) sqrt(-1.0-iteration_number)
-     end if
-
-     call CON_stop(NameThisComp//':'//str)
-  end if
+  call CON_stop(String)
 
 end subroutine stop_mpi
 !==============================================================================
