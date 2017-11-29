@@ -21,8 +21,10 @@ Module CON_grid_descriptor
   ! igorsok@umich.edu                                             
   ! phone(734)647-4705                                            
   !===============================================================
-  implicit none                                 
-  !=====================DERIVED TYPE============================== 
+  implicit none
+  PRIVATE !Except                                 
+  !=====================DERIVED TYPE==============================
+  public :: GridDescriptorType 
   type GridDescriptorType
 
      !The concept of the grid descriptor is very close to the domain 
@@ -114,59 +116,63 @@ Module CON_grid_descriptor
      !displacement of the grid block fragment is equal to the product
      !of Displacement_D by the grid size
   end type GridDescriptorType
-  !which can be introduced for some standard grids, like          
 
-  integer,parameter::CellCentered_=1,Nodes_=2
+  !which can be introduced for some standard grids, like          
+  integer,parameter, public ::CellCentered_=1,Nodes_=2
+  public :: set_standard_grid_descriptor
   interface set_standard_grid_descriptor
      module procedure set_standard_grid_descriptor_id
      module procedure set_standard_grid_descriptor_dd
   end interface set_standard_grid_descriptor
-  private:: set_standard_grid_descriptor_id
-  private:: set_standard_grid_descriptor_dd
   !\
   ! For a given global grid point number (in in4 or int8 format)
   ! which enumerates all points in the described grid and for a 
   ! given global grid descriptor, the routine returns
   ! a global node number and nDim grid point numbers in a block
+  !/
+  !\
   ! With a local grid descriptor, for a given local grid point
   ! number in a format int4, which enumerates all grid points in 
-  ! blocks allocated at the current PE, the procudere returns the 
+  ! blocks allocated at the current PE, the procedure returns the 
   ! order number of used block, which enumerates all used blocks at 
   ! the given PE in the same order the all blocks in the whole domain 
   ! decomposition are enumerated. The nDim grid point indexes are 
   ! returned too. For a global grid point number in int8 format,
-  ! it returns the same output.     
+  ! it returns the same output.  
+  !/
+  public :: global_i_grid_point_to_icb
   interface global_i_grid_point_to_icb
      module procedure global_i_grid_point_to_icb4
      module procedure global_i_grid_point_to_icb8
      module procedure global_i_grid_point_to_icb4_l
      module procedure global_i_grid_point_to_icb8_l
   end interface global_i_grid_point_to_icb
-  private :: global_i_grid_point_to_icb4
-  private :: global_i_grid_point_to_icb8
-  private :: global_i_grid_point_to_icb4_l
-  private :: global_i_grid_point_to_icb8_l
+  !\
+  ! Returns coordinate of the grid point, in the global or
+  ! local grid descriptor, for given global tree node or used
+  ! block number accordingly and for given point indexes in the 
+  ! block
+  !/
+  public :: xyz_grid_d
   interface xyz_grid_d
      module procedure xyz_grid_d_global
      module procedure xyz_grid_d_local
   end interface xyz_grid_d
-  private :: xyz_grid_d_global
-  private :: xyz_grid_d_local
+  
+  public :: i_grid_point_global
   interface i_grid_point_global
      module procedure i_grid_point_global_g
      module procedure i_grid_point_global_l
   end interface i_grid_point_global
-  private :: i_grid_point_global_g
-  private :: i_grid_point_global_l
+  public :: i8_grid_point_global
   interface i8_grid_point_global
      module procedure i8_grid_point_global_g
      module procedure i8_grid_point_global_l
   end interface i8_grid_point_global
-  private :: i8_grid_point_global_g
-  private :: i8_grid_point_global_l
+  
   !local storage for a grid descriptor passed to interpolation_amr_gc;
   !it is shared by interpolate_amr_gc and find_amr
-  type(GridDescriptorType) :: GridDescriptorAMR
+  type(GridDescriptorType) :: GDAMR
   !===========================Local Grid Descriptor===================!
   !The local GD describes in a compact way the parts of grid allocated 
   !at a given PE
@@ -175,7 +181,8 @@ Module CON_grid_descriptor
   ! Declared in CON_domain_decomposition:
   ! PE_ = 3, BLK_=2, GlobalBlock_ =4
   !/
-  integer, parameter:: GlobalTreeNode_ = 1, GridPointFirst_ = 3 
+  public :: BLK_, GlobalBlock_
+  integer, parameter, public:: GlobalTreeNode_ = 1, GridPointFirst_ = 3 
   type LocalGDType
      !\
      ! These four members are just copied from the global GD
@@ -192,25 +199,33 @@ Module CON_grid_descriptor
      integer, pointer ::  iIndex_IB(:,:)
      real,    pointer ::  XyzBlock_DB(:,:), DXyz_DB(:,:)
   end type LocalGDType
+  public :: set_local_gd, LocalGDType
+  public :: n_grid_points_per_block
+  !\
+  ! Interpolation procedures
+  !/
+  public :: nearest_grid_points     !First order interpolation
+  public :: bilinear_interpolation !For uniform or node-based grid
+  public :: interpolation_amr_gc   !Employs ghostcells 
 contains
   !ROUTINE: xyz_grid_d - the coordintes of the grid point
   !INTERFACE:
-  function xyz_grid_d_global(GridDescriptor,&
+  function xyz_grid_d_global(GD,&
        lGlobalTreeNode,iGridPoints_D)
     !INPUT ARGUMENTS:     
-    type(GridDescriptorType),intent(in)::GridDescriptor                 
+    type(GridDescriptorType),intent(in)::GD                 
     integer,intent(in)::lGlobalTreeNode
-    integer,dimension(GridDescriptor%nDim),intent(in)::&
+    integer,dimension(GD%nDim),intent(in)::&
          iGridPoints_D
     !OUTPUT ARGUMENTS:
-    real,dimension(GridDescriptor%nDim)::&
+    real,dimension(GD%nDim)::&
          xyz_grid_d_global
     !EOP
-    xyz_grid_d_global = xyz_block_d(GridDescriptor%DD%Ptr,&
+    xyz_grid_d_global = xyz_block_d(GD%DD%Ptr,&
          lGlobalTreeNode)+& 
-         d_xyz_cell_d(GridDescriptor%DD%Ptr,&
+         d_xyz_cell_d(GD%DD%Ptr,&
          lGlobalTreeNode)*&
-         (GridDescriptor%Displacement_D - cHalf+real(iGridPoints_D))
+         (GD%Displacement_D - cHalf+real(iGridPoints_D))
   end function xyz_grid_d_global
   !===============================
   function xyz_grid_d_local(LocalGD,&
@@ -243,27 +258,27 @@ contains
        iGridID,&
        nGhostGridPoints,&
        iStandard,&
-       GridDescriptor)
+       GD)
     !INPUT ARGUMENTS:
     integer,intent(in)::iGridID
     integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
     !OUTPUT ARGUMENTS:
-    type(GridDescriptorType),intent(out)::GridDescriptor
+    type(GridDescriptorType),intent(out)::GD
     !EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
     call associate_dd_pointer(&
          iGridID,&
-         GridDescriptor%DD)
-    GridDescriptor%nDim=ndim_grid(iGridID)
-    allocate(GridDescriptor%Displacement_D(&
-         1:GridDescriptor%nDim),stat=iError)
+         GD%DD)
+    GD%nDim=ndim_grid(iGridID)
+    allocate(GD%Displacement_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"Displacement_D")
-    allocate(GridDescriptor%iGridPointMin_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    allocate(GD%iGridPointMin_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMins_D")
-    allocate(GridDescriptor%iGridPointMax_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    allocate(GD%iGridPointMax_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMaxs_D")
     if(present(nGhostGridPoints))then
        nGhostGridPointsMy=nGhostGridPoints
@@ -277,17 +292,17 @@ contains
     end if
     select case(iMyStandard)
     case(CellCentered_)
-       GridDescriptor%Displacement_D=cZero
-       GridDescriptor%iGridPointMin_D=&
+       GD%Displacement_D= 0.0
+       GD%iGridPointMin_D=&
             1-nGhostGridPointsMy
-       GridDescriptor%iGridPointMax_D=&
+       GD%iGridPointMax_D=&
             ncells_decomposition_D(&
             iGridID)+nGhostGridPointsMy
     case(Nodes_)
-       GridDescriptor%Displacement_D=-cHalf
-       GridDescriptor%iGridPointMin_D=&
+       GD%Displacement_D=-cHalf
+       GD%iGridPointMin_D=&
             min(1,2-nGhostGridPointsMy)
-       GridDescriptor%iGridPointMax_D=&
+       GD%iGridPointMax_D=&
             ncells_decomposition_D(&
             iGridID)+nGhostGridPointsMy
     case default
@@ -301,30 +316,30 @@ contains
        DomainDecomposition,&
        nGhostGridPoints,&
        iStandard,&
-       GridDescriptor)
+       GD)
     !INPUT ARGUMENTS:
     type(DomainDecompositionType),target,intent(in)::&
          DomainDecomposition
     integer,intent(in),optional::iStandard
     integer,intent(in),optional::nGhostGridPoints
     !OUTPUT ARGUMENTS:
-    type(GridDescriptorType),intent(out)::GridDescriptor
+    type(GridDescriptorType),intent(out)::GD
     !EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
-    nullify(GridDescriptor%DD%Ptr)
+    nullify(GD%DD%Ptr)
     call associate_dd_pointer(&
          DomainDecomposition,&
-         GridDescriptor%DD)
-    GridDescriptor%nDim=ndim_grid(&
+         GD%DD)
+    GD%nDim=ndim_grid(&
          DomainDecomposition)
-    allocate(GridDescriptor%Displacement_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    allocate(GD%Displacement_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"Displacement_D")
-    allocate(GridDescriptor%iGridPointMin_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    allocate(GD%iGridPointMin_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMins_D")
-    allocate(GridDescriptor%iGridPointMax_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    allocate(GD%iGridPointMax_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMaxs_D")
     if(present(nGhostGridPoints))then
        nGhostGridPointsMy=nGhostGridPoints
@@ -338,16 +353,16 @@ contains
     end if
     select case(iMyStandard)
     case(CellCentered_)
-       GridDescriptor%Displacement_D=cZero
-       GridDescriptor%iGridPointMin_D=1-nGhostGridPointsMy
-       GridDescriptor%iGridPointMax_D=&
+       GD%Displacement_D= 0.0
+       GD%iGridPointMin_D=1-nGhostGridPointsMy
+       GD%iGridPointMax_D=&
             ncells_decomposition_d(&
             DomainDecomposition)+nGhostGridPointsMy
     case(Nodes_)
-       GridDescriptor%Displacement_D=-cHalf
-       GridDescriptor%iGridPointMin_D=&
+       GD%Displacement_D=-cHalf
+       GD%iGridPointMin_D=&
             min(1,2-nGhostGridPointsMy)
-       GridDescriptor%iGridPointMax_D=&
+       GD%iGridPointMax_D=&
             ncells_decomposition_d(&
             DomainDecomposition)+nGhostGridPointsMy
     case default
@@ -366,7 +381,7 @@ contains
        iGridPointMin_D,&
        iGridPointMax_D,&
        Displacement_D,&
-       GridDescriptor)
+       GD)
     !INPUT ARGUMENTS:
     integer,intent(in)::iGridID
     integer,intent(in)::nDim
@@ -374,25 +389,25 @@ contains
     integer,intent(in),dimension(nDim)::iGridPointMax_D
     real,intent(in),dimension(nDim)::Displacement_D
     !OUTPUT ARGUMENTS:
-    type(GridDescriptorType),intent(out)::GridDescriptor
+    type(GridDescriptorType),intent(out)::GD
     !EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
     call associate_dd_pointer(&
          iGridID,&
-         GridDescriptor%DD)
-    GridDescriptor%nDim=nDim
-    allocate(GridDescriptor%Displacement_D(&
-         1:GridDescriptor%nDim),stat=iError)
+         GD%DD)
+    GD%nDim=nDim
+    allocate(GD%Displacement_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"Displacement_D")
-    GridDescriptor%Displacement_D=Displacement_D
-    allocate(GridDescriptor%iGridPointMin_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    GD%Displacement_D=Displacement_D
+    allocate(GD%iGridPointMin_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMins_D")
-    GridDescriptor%iGridPointMin_D=iGridPointMin_D
-    allocate(GridDescriptor%iGridPointMax_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    GD%iGridPointMin_D=iGridPointMin_D
+    allocate(GD%iGridPointMax_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMaxs_D")
-    GridDescriptor%iGridPointMax_D=iGridPointMax_D
+    GD%iGridPointMax_D=iGridPointMax_D
   end subroutine set_grid_descriptor_id
   !---------------------------------------------------------------!
   !BOP
@@ -403,7 +418,7 @@ contains
        iGridPointMin_D,&
        iGridPointMax_D,&
        Displacement_D,&
-       GridDescriptor)
+       GD)
     !INPUT ARGUMENTS:
     type(DomainDecompositionType),target,intent(in)::&
          DomainDecomposition
@@ -412,49 +427,48 @@ contains
     integer,intent(in),dimension(nDim)::iGridPointMax_D
     real,intent(in),dimension(nDim)::Displacement_D
     !OUTPUT ARGUMENTS:
-    type(GridDescriptorType),intent(out)::GridDescriptor
+    type(GridDescriptorType),intent(out)::GD
     !EOP
     integer::iError,iMyStandard,nGhostGridPointsMy
     call associate_dd_pointer(&
          DomainDecomposition,&
-         GridDescriptor%DD)
-    GridDescriptor%nDim=nDim
-    allocate(GridDescriptor%Displacement_D(&
-         1:GridDescriptor%nDim),stat=iError)
+         GD%DD)
+    GD%nDim=nDim
+    allocate(GD%Displacement_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"Displacement_D")
-    GridDescriptor%Displacement_D=Displacement_D
-    allocate(GridDescriptor%iGridPointMin_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    GD%Displacement_D=Displacement_D
+    allocate(GD%iGridPointMin_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMins_D")
-    GridDescriptor%iGridPointMin_D=iGridPointMin_D
-    allocate(GridDescriptor%iGridPointMax_D(&
-         1:GridDescriptor%nDim),stat=iError)
+    GD%iGridPointMin_D=iGridPointMin_D
+    allocate(GD%iGridPointMax_D(&
+         1:GD%nDim),stat=iError)
     call check_allocate(iError,"iGridPointMaxs_D")
-    GridDescriptor%iGridPointMax_D=iGridPointMax_D
+    GD%iGridPointMax_D=iGridPointMax_D
   end subroutine set_grid_descriptor_dd
   !===============================================================!
-  subroutine set_local_gd(iProc, GridDescriptor, LocalGD)
+  subroutine set_local_gd(iProc, GD, LocalGD)
     !\
     ! PE rank (in a local group for a local model, or in a 
     ! global group for a global model)
     !/
     integer,                 intent(in) :: iProc 
-    type(GridDescriptorType),intent(in) :: GridDescriptor
+    type(GridDescriptorType),intent(in) :: GD
     type(LocalGDType),       intent(out):: LocalGD
     !Misc
-    integer :: nDim, nBlock, nPointPerBlock, nBlockAll
+    integer :: nDim, nBlock, nPointPerBlock
     integer :: iBlock, iError
     integer, pointer:: iDD_II(:,:), iGlobal_A(:)
     !----------------------------------
-    nDim                     = GridDescriptor%nDim
+    nDim                     = GD%nDim
     LocalGD%nDim             = nDim
-    LocalGD%Displacement_D  => GridDescriptor%Displacement_D
-    LocalGD%iGridPointMin_D => GridDescriptor%iGridPointMin_D
-    LocalGD%iGridPointMax_D => GridDescriptor%iGridPointMax_D
-    nBlock = n_block(GridDescriptor%DD%Ptr, iProc)
-    nBlockAll = n_block_total(GridDescriptor%DD%Ptr)
+    LocalGD%Displacement_D  => GD%Displacement_D
+    LocalGD%iGridPointMin_D => GD%iGridPointMin_D
+    LocalGD%iGridPointMax_D => GD%iGridPointMax_D
+    nBlock = n_block(GD%DD%Ptr, iProc)
     LocalGD%nBlock           = nBlock
-    nPointPerBlock =    n_grid_points_per_block(GridDescriptor)
+    nPointPerBlock =    n_grid_points_per_block(GD)
     LocalGD%nPointPerBlock   = nPointPerBlock
 
     allocate(LocalGD%iIndex_IB(GlobalTreeNode_:GlobalBlock_,&
@@ -463,8 +477,8 @@ contains
     !\
     ! For better readability
     !/
-    iDD_II=>GridDescriptor%DD%Ptr%iDecomposition_II
-    iGlobal_A=>GridDescriptor%DD%Ptr%iGlobal_A
+    iDD_II=>GD%DD%Ptr%iDecomposition_II
+    iGlobal_A=>GD%DD%Ptr%iGlobal_A
     LocalGD%iIndex_IB(GlobalTreeNode_,:) = pack(iGlobal_A,&
          MASK = iDD_II(PE_,iGlobal_A)==iProc)
     LocalGD%iIndex_IB(BLK_,:) = iDD_II(BLK_,&
@@ -479,10 +493,10 @@ contains
        LocalGD%iIndex_IB(GridPointFirst_,iBlock) = (iBlock - 1)*&
             nPointPerBlock + 1
        LocalGD%DXyz_DB(1:nDim,iBlock)     = &
-            GridDescriptor%DD%Ptr%DXyzCell_DI(1:nDim, &
+            GD%DD%Ptr%DXyzCell_DI(1:nDim, &
             LocalGD%iIndex_IB(GlobalTreeNode_,iBlock))
        LocalGD%XyzBlock_DB(1:nDim,iBlock) = &
-            GridDescriptor%DD%Ptr%XyzBlock_DI(1:nDim, &
+            GD%DD%Ptr%XyzBlock_DI(1:nDim, &
             LocalGD%iIndex_IB(GlobalTreeNode_,iBlock))
     end do
   end subroutine set_local_gd
@@ -490,23 +504,35 @@ contains
   !BOP
   !IROUTINE: clean_grid_descriptor
   !INTERFACE:
-  subroutine clean_grid_descriptor(GridDescriptor)
+  subroutine clean_grid_descriptor(GD)
     !INPUT ARGUMENTS:
     type(GridDescriptorType),intent(inout)::&
-         GridDescriptor
+         GD
     !EOP
-    deallocate(GridDescriptor%iGridPointMin_D)
-    deallocate(GridDescriptor%iGridPointMax_D)
-    deallocate(GridDescriptor%Displacement_D)
-    nullify(GridDescriptor%DD%Ptr)
+    deallocate(GD%iGridPointMin_D)
+    deallocate(GD%iGridPointMax_D)
+    deallocate(GD%Displacement_D)
+    nullify(GD%DD%Ptr)
   end subroutine clean_grid_descriptor
   !===============================================================!
+  subroutine clean_grid_descriptor_l(GD)
+    !INPUT ARGUMENTS:
+    type(LocalGDType),intent(inout)::&
+         GD
+    !EOP
+    deallocate(GD%iGridPointMin_D)
+    deallocate(GD%iGridPointMax_D)
+    deallocate(GD%Displacement_D)
+    deallocate(GD%iIndex_IB)
+    deallocate(GD%XyzBlock_DB) 
+    deallocate(GD%DXyz_DB)
+  end subroutine clean_grid_descriptor_l
+  !===============================================================!
   !Number of cells per block
-  integer function n_grid_points_per_block(GridDescriptor)
-    type(GriddescriptorType)::GridDescriptor
-    n_grid_points_per_block=product(&
-         Griddescriptor%iGridPointMax_D+1-&
-         GridDescriptor%iGridPointMin_D)
+  integer function n_grid_points_per_block(GD)
+    type(GriddescriptorType)::GD
+    n_grid_points_per_block = product(&
+         GD%iGridPointMax_D + 1 -GD%iGridPointMin_D)
   end function n_grid_points_per_block
   !===============================================================!
   !          ENUMERATION                                          !
@@ -522,113 +548,113 @@ contains
   !To use this procedure, the grid descriptor should be           !
   !constructed  first                                             !
   subroutine global_i_grid_point_to_icb4(&
-       GridDescriptor,&
+       GD,&
        iGridPointGlobal,&
        lGlobalTreeNode,&
        iGridPoint_D)
-    type(GridDescriptorType),intent(in)::GridDescriptor
+    type(GridDescriptorType),intent(in)::GD
     integer,intent(in)::iGridPointGlobal
     integer,intent(out):: lGlobalTreeNode
-    integer,dimension(GridDescriptor%nDim),intent(out)::&
+    integer,dimension(GD%nDim),intent(out)::&
          iGridPoint_D
-    integer,dimension(GridDescriptor%nDim)::nGridPoints_D 
+    integer,dimension(GD%nDim)::nGridPoints_D 
     integer::iDim,iMisc,iMisc1         
-    nGridPoints_D=1+GridDescriptor%iGridPointMax_D-&
-         GridDescriptor%iGridPointMin_D
+    nGridPoints_D=1+GD%iGridPointMax_D-&
+         GD%iGridPointMin_D
     iMisc=iGridPointGlobal-1
-    do idim=1,GridDescriptor%nDim
+    do idim=1,GD%nDim
        iMisc1=mod(iMisc,nGridPoints_D(iDim))
-       iGridPoint_D(iDim)=GridDescriptor%iGridPointMin_D(iDim)+iMisc1
+       iGridPoint_D(iDim)=GD%iGridPointMin_D(iDim)+iMisc1
        iMisc=(iMisc-iMisc1)/nGridPoints_D(iDim)
     end do
-    lGlobalTreeNode=i_global_node_a(GridDescriptor%DD%Ptr,iMisc+1)
+    lGlobalTreeNode=i_global_node_a(GD%DD%Ptr,iMisc+1)
   end subroutine global_i_grid_point_to_icb4
   !===============================================================
   subroutine global_i_grid_point_to_icb8(&
-       GridDescriptor,&
+       GD,&
        iGridPointGlobal,&
        lGlobalTreeNode,&
        iGridPoint_D)
-    type(GridDescriptorType),intent(in)::GridDescriptor
+    type(GridDescriptorType),intent(in)::GD
     integer(Int8_),intent(in)::iGridPointGlobal
     integer,intent(out):: lGlobalTreeNode
-    integer,dimension(GridDescriptor%nDim),intent(out)::&
+    integer,dimension(GD%nDim),intent(out)::&
          iGridPoint_D
-    integer(Int8_),dimension(GridDescriptor%nDim)::nGridPoints_D 
+    integer(Int8_),dimension(GD%nDim)::nGridPoints_D 
     integer::iDim, iMisc1
     integer(Int8_):: i8Misc
-    nGridPoints_D = 1_Int8_ + GridDescriptor%iGridPointMax_D -&
-         GridDescriptor%iGridPointMin_D
-    i8Misc = iGridPointGlobal-1
-    do idim=1,GridDescriptor%nDim
+    nGridPoints_D = 1_Int8_ + GD%iGridPointMax_D -&
+         GD%iGridPointMin_D
+    i8Misc = iGridPointGlobal - 1_Int8_
+    do idim=1,GD%nDim
        iMisc1=int(mod(i8Misc, nGridPoints_D(iDim)))
-       iGridPoint_D(iDim)=GridDescriptor%iGridPointMin_D(iDim)+iMisc1
-       i8Misc=(i8Misc-iMisc1)/nGridPoints_D(iDim)
+       iGridPoint_D(iDim) = GD%iGridPointMin_D(iDim) + iMisc1
+       i8Misc = (i8Misc-iMisc1)/nGridPoints_D(iDim)
     end do
-    lGlobalTreeNode = i_global_node_a(GridDescriptor%DD%Ptr,int(i8Misc)+1)
+    lGlobalTreeNode = i_global_node_a(GD%DD%Ptr,int(i8Misc)+1)
   end subroutine global_i_grid_point_to_icb8
   !=========================================
   subroutine global_i_grid_point_to_icb4_l(&
-       GridDescriptor, &
+       GD, &
        iGridPointLocal,&
        iBlockUsed,     &
        iGridPoint_D)
-    type(LocalGDType),    intent(in) :: GridDescriptor
+    type(LocalGDType),    intent(in) :: GD
     integer,              intent(in) :: iGridPointLocal
     integer,             intent(out) :: iBlockUsed
     integer,             intent(out) :: &
-         iGridPoint_D(GridDescriptor%nDim)
+         iGridPoint_D(GD%nDim)
     !\
     !Local variables
     !/
     !\
     ! Number of grid points in the block, for each direction
     !/
-    integer  :: nGridPoints_D(GridDescriptor%nDim) 
+    integer  :: nGridPoints_D(GD%nDim) 
     integer  :: iDim,iMisc,iMisc1
     !-----------------------------         
-    nGridPoints_D=1+GridDescriptor%iGridPointMax_D-&
-         GridDescriptor%iGridPointMin_D
+    nGridPoints_D=1+GD%iGridPointMax_D-&
+         GD%iGridPointMin_D
 
     iMisc = iGridPointLocal - 1
-    do idim = 1, GridDescriptor%nDim
+    do idim = 1, GD%nDim
        iMisc1 = mod(iMisc,nGridPoints_D(iDim))
-       iGridPoint_D(iDim) = GridDescriptor%iGridPointMin_D(iDim)+iMisc1
+       iGridPoint_D(iDim) = GD%iGridPointMin_D(iDim)+iMisc1
        iMisc=(iMisc-iMisc1)/nGridPoints_D(iDim)
     end do
     iBlockUsed = iMisc + 1
   end subroutine global_i_grid_point_to_icb4_l
   !===============================================================
   subroutine global_i_grid_point_to_icb8_l(&
-       GridDescriptor,  &
+       GD,  &
        iGridPointGlobal,&
        iBlockUsed,      &
        iGridPoint_D)
-    type(LocalGDType), intent(in) :: GridDescriptor
+    type(LocalGDType), intent(in) :: GD
     integer(Int8_),    intent(in) :: iGridPointGlobal
     integer,          intent(out) :: iBlockUsed
     integer,          intent(out) :: &
-         iGridPoint_D(GridDescriptor%nDim)
+         iGridPoint_D(GD%nDim)
     !\
     !Local variables
     !/
     !\
     ! Number of grid points in the block, for each direction
     !/
-    integer(Int8_)   :: nGridPoints_D(GridDescriptor%nDim) 
+    integer(Int8_)   :: nGridPoints_D(GD%nDim) 
     integer          :: iDim, iMisc1, loc(1)
     integer(Int8_)   :: i8Misc
     !-------------------------
-    nGridPoints_D = 1_Int8_ + GridDescriptor%iGridPointMax_D -&
-         GridDescriptor%iGridPointMin_D
+    nGridPoints_D = 1_Int8_ + GD%iGridPointMax_D -&
+         GD%iGridPointMin_D
     i8Misc =  iGridPointGlobal - 1
-    do iDim = 1, GridDescriptor%nDim
+    do iDim = 1, GD%nDim
        iMisc1 = int(mod(i8Misc, nGridPoints_D(iDim)))
-       iGridPoint_D(iDim) = GridDescriptor%iGridPointMin_D(iDim)+iMisc1
+       iGridPoint_D(iDim) = GD%iGridPointMin_D(iDim)+iMisc1
        i8Misc = (i8Misc - iMisc1)/nGridPoints_D(iDim)
     end do
-    loc = maxloc(GridDescriptor%iIndex_IB(GlobalBlock_,:),&
-         MASK = GridDescriptor%iIndex_IB(GlobalBlock_,:).le.&
+    loc = maxloc(GD%iIndex_IB(GlobalBlock_,:),&
+         MASK = GD%iIndex_IB(GlobalBlock_,:).le.&
          (int(i8Misc)+1))
     iBlockUsed = loc(1)
   end subroutine global_i_grid_point_to_icb8_l
@@ -636,95 +662,95 @@ contains
   !The inverse procedures                                         !
 
   integer function i_grid_point_global_g(&
-       GridDescriptor,&
+       GD,&
        lGlobalTreeNode,&
        iGridPoint_D)
-    type(GridDescriptorType), intent(in) :: GridDescriptor
+    type(GridDescriptorType), intent(in) :: GD
     integer,                  intent(in) :: lGlobalTreeNode
     integer,                  intent(in) :: &
-         iGridPoint_D(GridDescriptor%nDim)
-    integer :: nGridPoints_D(GridDescriptor%nDim)
+         iGridPoint_D(GD%nDim)
+    integer :: nGridPoints_D(GD%nDim)
     integer :: iDim, iMisc, iMisc1
     !---------------------------
-    nGridPoints_D(1:GridDescriptor%nDim) = 1 +  &
-         GridDescriptor%iGridPointMax_D -       &
-         GridDescriptor%iGridPointMin_D
-    i_grid_point_global_g = i_global_block(GridDescriptor%DD%Ptr,&
+    nGridPoints_D(1:GD%nDim) = 1 +  &
+         GD%iGridPointMax_D -       &
+         GD%iGridPointMin_D
+    i_grid_point_global_g = i_global_block(GD%DD%Ptr,&
          lGlobalTreeNode) - 1
-    do idim = GridDescriptor%nDim, 1, -1
+    do idim = GD%nDim, 1, -1
        i_grid_point_global_g = i_grid_point_global_g*     &
             nGridPoints_D(iDim) + iGridPoint_D(iDim) -    &
-            GridDescriptor%iGridPointMin_D(iDim)
+            GD%iGridPointMin_D(iDim)
     end do
     i_grid_point_global_g = i_grid_point_global_g + 1
   end function i_grid_point_global_g
   !====================================
   integer(Int8_) function i8_grid_point_global_g(&
-       GridDescriptor,&
+       GD,&
        lGlobalTreeNode,&
        iGridPoint_D)
-    type(GridDescriptorType), intent(in) :: GridDescriptor
+    type(GridDescriptorType), intent(in) :: GD
     integer,                  intent(in) :: lGlobalTreeNode
     integer,                  intent(in) :: &
-         iGridPoint_D(GridDescriptor%nDim)
-    integer :: nGridPoints_D(GridDescriptor%nDim)
+         iGridPoint_D(GD%nDim)
+    integer :: nGridPoints_D(GD%nDim)
     integer :: iDim, iMisc, iMisc1
-    nGridPoints_D(1:GridDescriptor%nDim) = 1 + &
-         GridDescriptor%iGridPointMax_D - &
-         GridDescriptor%iGridPointMin_D
-    i8_grid_point_global_g = i_global_block(GridDescriptor%DD%Ptr,&
+    nGridPoints_D(1:GD%nDim) = 1 + &
+         GD%iGridPointMax_D - &
+         GD%iGridPointMin_D
+    i8_grid_point_global_g = i_global_block(GD%DD%Ptr,&
          lGlobalTreeNode) - 1
-    do idim = GridDescriptor%nDim, 1, -1
+    do idim = GD%nDim, 1, -1
        i8_grid_point_global_g = i8_grid_point_global_g*&
             nGridPoints_D(iDim) + iGridPoint_D(iDim) -&
-            GridDescriptor%iGridPointMin_D(iDim)
+            GD%iGridPointMin_D(iDim)
     end do
     i8_grid_point_global_g = i8_grid_point_global_g + 1
   end function i8_grid_point_global_g
   !==================================
   integer function i_grid_point_global_l(&
-       GridDescriptor,&
+       GD,&
        iBlockUsed,    &
        iGridPoint_D)
-    type(LocalGDType), intent(in) :: GridDescriptor
+    type(LocalGDType), intent(in) :: GD
     integer,           intent(in) :: iBlockUsed
     integer,           intent(in) :: &
-         iGridPoint_D(GridDescriptor%nDim)
-    integer :: nGridPoints_D(GridDescriptor%nDim)
+         iGridPoint_D(GD%nDim)
+    integer :: nGridPoints_D(GD%nDim)
     integer :: iDim, iMisc, iMisc1
     !---------------------------
-    nGridPoints_D(1:GridDescriptor%nDim) = 1 +  &
-         GridDescriptor%iGridPointMax_D -       &
-         GridDescriptor%iGridPointMin_D
+    nGridPoints_D(1:GD%nDim) = 1 +  &
+         GD%iGridPointMax_D -       &
+         GD%iGridPointMin_D
     i_grid_point_global_l = iBlockUsed - 1
-    do idim = GridDescriptor%nDim, 1, -1
+    do idim = GD%nDim, 1, -1
        i_grid_point_global_l = i_grid_point_global_l*     &
             nGridPoints_D(iDim) + iGridPoint_D(iDim) -    &
-            GridDescriptor%iGridPointMin_D(iDim)
+            GD%iGridPointMin_D(iDim)
     end do
     i_grid_point_global_l = i_grid_point_global_l + 1
   end function i_grid_point_global_l
   !====================================
   integer(Int8_) function i8_grid_point_global_l(&
-       GridDescriptor,&
+       GD,&
        iBlockUsed,    &
        iGridPoint_D)
-    type(LocalGDType), intent(in) :: GridDescriptor
+    type(LocalGDType), intent(in) :: GD
     integer,           intent(in) :: iBlockUsed
     integer,           intent(in) :: &
-         iGridPoint_D(GridDescriptor%nDim)
-    integer :: nGridPoints_D(GridDescriptor%nDim)
+         iGridPoint_D(GD%nDim)
+    integer :: nGridPoints_D(GD%nDim)
     integer :: iDim, iMisc, iMisc1
     !----------------
-    nGridPoints_D(1:GridDescriptor%nDim) = 1 + &
-         GridDescriptor%iGridPointMax_D - &
-         GridDescriptor%iGridPointMin_D
-    i8_grid_point_global_l = GridDescriptor%iIndex_IB(&
+    nGridPoints_D(1:GD%nDim) = 1 + &
+         GD%iGridPointMax_D - &
+         GD%iGridPointMin_D
+    i8_grid_point_global_l = GD%iIndex_IB(&
          GlobalBlock_,iBlockUsed) - 1
-    do idim = GridDescriptor%nDim, 1, -1
+    do idim = GD%nDim, 1, -1
        i8_grid_point_global_l = i8_grid_point_global_l*&
             nGridPoints_D(iDim) + iGridPoint_D(iDim) -&
-            GridDescriptor%iGridPointMin_D(iDim)
+            GD%iGridPointMin_D(iDim)
     end do
     i8_grid_point_global_l = i8_grid_point_global_l + 1
   end function i8_grid_point_global_l
@@ -751,12 +777,12 @@ contains
   !BOP
   !INTERFACE:
   subroutine nearest_grid_points(nDim,Xyz_D,&
-       GridDescriptor,&
+       GD,&
        nIndex,&
        iIndex_II,&
        nImage, Weight_I)
     !INPUT ARGUMENTS:                       
-    type(GridDescriptorType):: GridDescriptor
+    type(GridDescriptorType):: GD
     integer,      intent(in):: nDim
     real,      intent(inout):: Xyz_D(nDim) 
     integer,      intent(in):: nIndex
@@ -779,44 +805,44 @@ contains
     !\
     !Initialize arrays
     !/
-    iIndex_II=0;Weight_I=cZero
+    iIndex_II=0;Weight_I= 0.0
     XyzStored_D=Xyz_D
     iIndex_II(1:nDim,1)=&
-         GridDescriptor%iGridPointMax_D+1
+         GD%iGridPointMax_D+1
     do while(any(iIndex_II(1:nDim,1)>&
-         GridDescriptor%iGridPointMax_D))
+         GD%iGridPointMax_D))
        Xyz_D=XyzStored_D
        !\
        ! Find a block to which the point belongs
        !/
-       call search_in(GridDescriptor%DD%Ptr,Xyz_D,lGlobalTreeNode)
+       call search_in(GD%DD%Ptr,Xyz_D,lGlobalTreeNode)
        DxyzCells_D=d_xyz_cell_d(&
-            GridDescriptor%DD%Ptr,lGlobalTreeNode)
+            GD%DD%Ptr,lGlobalTreeNode)
        !\
        ! Check if the point is out of the computational domain
        !/
-       where(is_right_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode))
+       where(is_right_boundary_d(GD%DD%Ptr,lGlobalTreeNode))
           Xyz_D=min(Xyz_D,cAlmostOne*d_xyz_block_d(&         
-               GridDescriptor%DD%Ptr,lGlobalTreeNode))
+               GD%DD%Ptr,lGlobalTreeNode))
           XyzStored_D=Xyz_D+xyz_block_d(&         
-               GridDescriptor%DD%Ptr,lGlobalTreeNode)
+               GD%DD%Ptr,lGlobalTreeNode)
        end where
-       where(is_left_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode))
-          Xyz_D=max(Xyz_D,cZero)
+       where(is_left_boundary_d(GD%DD%Ptr,lGlobalTreeNode))
+          Xyz_D=max(Xyz_D, 0.0)
           XyzStored_D=Xyz_D+xyz_block_d(&         
-               GridDescriptor%DD%Ptr,lGlobalTreeNode)
+               GD%DD%Ptr,lGlobalTreeNode)
        end where
        !\
        ! Store the processor number and block number. If the block
        ! number is meaningless use nIndex=nDim and this meaningless
        ! value will be overwritten later
        !/
-       call pe_and_blk(GridDescriptor%DD%Ptr,lGlobalTreeNode,&
+       call pe_and_blk(GD%DD%Ptr,lGlobalTreeNode,&
             iIndex_II(0,1),iIndex_II(nIndex,1))
        !\
        ! Find the nearest grid point in the block
        !/
-       Xyz_D=Xyz_D-DxyzCells_D*GridDescriptor%Displacement_D
+       Xyz_D=Xyz_D-DxyzCells_D*GD%Displacement_D
        iGridPoints_D=floor(Xyz_D/DxyzCells_D)
        iIndex_II(1:nDim,1)=iGridPoints_D+1
        DxyzTolerance_D=Tolerance*DxyzCells_D
@@ -831,18 +857,18 @@ contains
 
        IsAtFace_D=abs(Xyz_D)<DxyzTolerance_D&
             .or.abs(Xyz_D-DxyzCells_D )<DxyzTolerance_D
-       where(is_right_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode))&
+       where(is_right_boundary_d(GD%DD%Ptr,lGlobalTreeNode))&
             iIndex_II(1:nDim,1)=&
             min(iIndex_II(1:nDim,1),&
-            GridDescriptor%iGridPointMax_D)
+            GD%iGridPointMax_D)
        !\
        !The nearest grid points may be are in the upper block
        !/
        where(iIndex_II(1:nDim,1)>&
-            GridDescriptor%iGridPointMax_D)&
+            GD%iGridPointMax_D)&
             XyzStored_D=XyzStored_D+DxyzTolerance_D*0.25
     end do
-    nImage=1;Weight_I(1)=cOne
+    nImage=1;Weight_I(1)= 1.0
     if(.not.(any(IsAtFace_D)))return
     Xyz_DI(:,1)=XyzStored_D
     do iDim=1,nDim
@@ -857,17 +883,17 @@ contains
        end if
     end do
     do iImages=1,nImage
-       call search_in(GridDescriptor%DD%Ptr,&
+       call search_in(GD%DD%Ptr,&
             Xyz_DI(:,iImages),&
             lGlobalTreeNode)
-       call pe_and_blk(GridDescriptor%DD%Ptr,&
+       call pe_and_blk(GD%DD%Ptr,&
             lGlobalTreeNode,&
             iIndex_II(0,iImages),&
             iIndex_II(nIndex,iImages))
        Xyz_DI(:,iImages)=Xyz_DI(:,iImages)-&
-            d_xyz_cell_d(GridDescriptor%DD%Ptr,&
-            lGlobalTreeNode)*GridDescriptor%Displacement_D
-       call search_cell(GridDescriptor%DD%Ptr,&
+            d_xyz_cell_d(GD%DD%Ptr,&
+            lGlobalTreeNode)*GD%Displacement_D
+       call search_cell(GD%DD%Ptr,&
             lGlobalTreeNode,Xyz_DI(:,iImages),&
             iIndex_II(1:nDim,iImages))
     end do
@@ -875,9 +901,9 @@ contains
     do while(iImages<=nImage)
        !Exclude the stencil nodes which are out of the 
        !computational domain
-       do while(any(GridDescriptor%iGridPointMin_D>&
+       do while(any(GD%iGridPointMin_D>&
             iIndex_II(1:nDim,iImages).or.&
-            GridDescriptor%iGridPointMax_D<&
+            GD%iGridPointMax_D<&
             iIndex_II(1:nDim,iImages)))
           if(iImages==nImage)then
              nImage=nImage-1
@@ -888,7 +914,7 @@ contains
        end do
        iImages=iImages+1
     end do
-    Weight_I(1:nImage)=cOne/real(nImage)
+    Weight_I(1:nImage)= 1.0/real(nImage)
   end subroutine nearest_grid_points
   !===============================================================!
   !=================SECOND ORDER INTERPOLATION====================!
@@ -904,13 +930,13 @@ contains
   subroutine bilinear_interpolation(&
        nDim,&
        Xyz_D,&
-       GridDescriptor,&
+       GD,&
        nIndex,& 
        iIndex_II,&
        nImage,Weight_I)
     !INPUT ARGUMENTS:
     integer,intent(in)      ::nDim
-    type(GridDescriptorType)::GridDescriptor     
+    type(GridDescriptorType)::GD     
     real,intent(inout)::Xyz_D(nDim)
     integer,intent(in)::nIndex
     !OUTPUT ARGUMENTS
@@ -934,10 +960,10 @@ contains
          IsDomainBoundaryUp_D,IsDomainBoundaryDown_D
 
     iIndex_II=0
-    Weight_I=cZero
+    Weight_I= 0.0
     XyzStored_D=Xyz_D
     IsUp_DI(:,1)=.true.
-    call search_in(GridDescriptor%DD%Ptr,Xyz_D,lGlobalTreeNode)
+    call search_in(GD%DD%Ptr,Xyz_D,lGlobalTreeNode)
     !Find global node number, PE and number which involved the point
     do while(any(IsUp_DI(:,1)))
        !This do loop works more than once only in case of node
@@ -946,35 +972,35 @@ contains
        !to which block this point should be assigned. Otherwise,
        !automatically IsUp_D(:,1)=.false. after first loop pass.
        Xyz_D=XyzStored_D-xyz_block_d(&
-            GridDescriptor%DD%Ptr,lGlobalTreeNode)
+            GD%DD%Ptr,lGlobalTreeNode)
        IsDomainBoundaryUp_D=&
-            is_right_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode)
+            is_right_boundary_d(GD%DD%Ptr,lGlobalTreeNode)
        IsDomainBoundaryDown_D=&
-            is_left_boundary_d(GridDescriptor%DD%Ptr,lGlobalTreeNode)
+            is_left_boundary_d(GD%DD%Ptr,lGlobalTreeNode)
        where(IsDomainBoundaryUp_D)
           Xyz_D=min(Xyz_D,cAlmostOne*d_xyz_block_d(&         
-               GridDescriptor%DD%Ptr,lGlobalTreeNode))
+               GD%DD%Ptr,lGlobalTreeNode))
           XyzStored_D=Xyz_D+xyz_block_d(&         
-               GridDescriptor%DD%Ptr,lGlobalTreeNode)
+               GD%DD%Ptr,lGlobalTreeNode)
        end where
        where(IsDomainBoundaryDown_D)
-          Xyz_D=max(Xyz_D,cZero)
+          Xyz_D=max(Xyz_D, 0.0)
           XyzStored_D=Xyz_D+xyz_block_d(&         
-               GridDescriptor%DD%Ptr,lGlobalTreeNode)
+               GD%DD%Ptr,lGlobalTreeNode)
        end where
 
-       call pe_and_blk(GridDescriptor%DD%Ptr,lGlobalTreeNode,&
+       call pe_and_blk(GD%DD%Ptr,lGlobalTreeNode,&
             iIndex_II(0,1),iIndex_II(nIndex,1))
 
        !Find Dxyz for this block
        Dxyz_DI(:,0)=d_xyz_cell_d(&         
-            GridDescriptor%DD%Ptr,lGlobalTreeNode)
+            GD%DD%Ptr,lGlobalTreeNode)
 
        !\
        !/
 
        XyzResid_D=Xyz_D/Dxyz_DI(:,0)-&
-            GridDescriptor%Displacement_D+cHalf
+            GD%Displacement_D+cHalf
        iGridPoints_D=floor(XyzResid_D)
        XyzResid_D=XyzResid_D-real(iGridPoints_D)
        !Thus calculated XyzResid_D satisfies the inequalities as       !
@@ -983,16 +1009,16 @@ contains
        !being the left one with respect to all the spatial directions  !
        iIndex_II(1:nDim,1)=iGridPoints_D
        IsUp_DI(:,1)=iIndex_II(1:nDim,1)>&
-            GridDescriptor%iGridPointMax_D
+            GD%iGridPointMax_D
        IsDown_DI(:,1)=iIndex_II(1:nDim,1)<&
-            GridDescriptor%iGridPointMin_D
+            GD%iGridPointMin_D
        if(any(IsUp_DI(:,1)))&
             lGlobalTreeNode=l_neighbor(&
-            GridDescriptor%DD%Ptr,lGlobalTreeNode,&
+            GD%DD%Ptr,lGlobalTreeNode,&
             iIndex_II(1:nDim,1))
     end do
 
-    nImage=1;Weight_I(1)=cOne
+    nImage=1;Weight_I(1)= 1.0
 
     do iDim=1,nDim
        !Exclude the stencil nodes which are out of the 
@@ -1003,7 +1029,7 @@ contains
           CYCLE
        end if
 
-       if(iIndex_II(iDim,1)==GridDescriptor%iGridPointMax_D(iDim)&
+       if(iIndex_II(iDim,1)==GD%iGridPointMax_D(iDim)&
             .and.IsDomainBoundaryUp_D(iDim))CYCLE
        if(XyzResid_D(iDim)<cTiny)CYCLE
        iNewStart=nImage+1;nImageNew=nImage+nImage
@@ -1014,12 +1040,12 @@ contains
        IsUp_DI(:,iNewStart:nImageNew)=IsUp_DI(:,1:nImage)
        IsUp_DI(iDim,iNewStart:nImageNew)=&
             iIndex_II(iDim,iNewStart)>&
-            GridDescriptor%iGridPointMax_D(iDim)
+            GD%iGridPointMax_D(iDim)
        IsDown_DI(:,iNewStart:nImageNew)=IsDown_DI(:,1:nImage)
        IsDown_DI(iDim,iNewStart:nImageNew)=.false.
        Weight_I(iNewStart:nImageNew)= &
             Weight_I(1:nImage)*XyzResid_D(iDim)
-       WeightLeft=cOne-XyzResid_D(iDim)
+       WeightLeft= 1.0 -XyzResid_D(iDim)
        Weight_I(1:nImage)= WeightLeft* Weight_I(1:nImage)
        nImage=nImageNew
     end do
@@ -1031,20 +1057,20 @@ contains
           Dxyz_DI(:,iImages)=Dxyz_DI(:,0)
           lNode_I(iImages)=lGlobalTreeNode
        else
-          lNode_I(iImages)=l_neighbor(GridDescriptor%DD%Ptr,&
+          lNode_I(iImages)=l_neighbor(GD%DD%Ptr,&
                lGlobalTreeNode,iIndex_II(&
                1:nDim,iImages))
-          XyzMisc_D=xyz_grid_d(GridDescriptor,&
+          XyzMisc_D=xyz_grid_d(GD,&
                lGlobalTreeNode,iIndex_II(&
                1:nDim,iImages))-&
-               xyz_block_d(GridDescriptor%DD%Ptr,lNode_I(iImages))
-          call pe_and_blk(GridDescriptor%DD%Ptr,lNode_I(iImages),&
+               xyz_block_d(GD%DD%Ptr,lNode_I(iImages))
+          call pe_and_blk(GD%DD%Ptr,lNode_I(iImages),&
                iIndex_II(0,iImages),iIndex_II(nIndex,iImages))
-          Dxyz_DI(:,iImages)=d_xyz_cell_d(GridDescriptor%DD%Ptr,&
+          Dxyz_DI(:,iImages)=d_xyz_cell_d(GD%DD%Ptr,&
                lNode_I(iImages))
           XyzMisc_D=XyzMisc_D- Dxyz_DI(:,iImages)&
-               *GridDescriptor%Displacement_D
-          call search_cell(GridDescriptor%DD%Ptr,&
+               *GD%Displacement_D
+          call search_cell(GD%DD%Ptr,&
                lNode_I(iImages),XyzMisc_D,&
                iIndex_II(1:nDim,iImages))
        end if
@@ -1064,14 +1090,14 @@ contains
   subroutine interpolation_amr_gc(&
        nDim,&
        Xyz_D,&
-       GridDescriptor,&
+       GD,&
        nIndex,& 
        iIndex_II,&
        nImage,Weight_I)
     use ModInterpolateAMR, ONLY: interpolate_amr
     !INPUT ARGUMENTS:
     integer,   intent(in)   :: nDim
-    type(GridDescriptorType):: GridDescriptor     
+    type(GridDescriptorType):: GD     
     real,      intent(inout):: Xyz_D(nDim)
     integer,   intent(in)   :: nIndex
     !OUTPUT ARGUMENTS
@@ -1082,14 +1108,14 @@ contains
     !--------------------------------------------------------------------------
     ! memorize grid descriptor by storing it in modular variable;
     ! it is used by find_amr subroutine passed to shared interpolation routine
-    GridDescriptorAMR = GridDescriptor
+    GDAMR = GD
     ! call shared interpolation subroutine
     call interpolate_amr(&
          nDim        = nDim,&
          XyzIn_D     = Xyz_D,&
          nIndexes    = nIndex,&
          find        = find_amr,&
-         nCell_D     = GridDescriptorAMR%DD%Ptr%nCells_D,&
+         nCell_D     = GDAMR%DD%Ptr%nCells_D,&
          nGridOut    = nImage,&
          Weight_I    = Weight_I,&
          iIndexes_II = iIndex_II,&
@@ -1111,21 +1137,21 @@ contains
     logical:: IsPeriodic_D(nDim)
     !--------------------------------------------------------------------------
     ! check if point's inside the domain
-    IsPeriodic_D = GridDescriptorAMR%DD%Ptr%IsPeriodic_D 
+    IsPeriodic_D = GDAMR%DD%Ptr%IsPeriodic_D 
     IsOut = &
-         any(GridDescriptorAMR%DD%Ptr%XyzMin_D >  Xyz_D&
+         any(GDAMR%DD%Ptr%XyzMin_D >  Xyz_D&
          .and..not.IsPeriodic_D) .or. &
-         any(GridDescriptorAMR%DD%Ptr%XyzMax_D <= Xyz_D&
+         any(GDAMR%DD%Ptr%XyzMax_D <= Xyz_D&
          .and..not.IsPeriodic_D)
     if(IsOut) then
-       if(GridDescriptorAMR%DD%Ptr%DoGlueMargins)then
+       if(GDAMR%DD%Ptr%DoGlueMargins)then
           !Recalculate coordinates for spherical or similar
           !grids
-          call glue_margin(GridDescriptorAMR%DD%Ptr, Xyz_D)
+          call glue_margin(GDAMR%DD%Ptr, Xyz_D)
           IsOut = &
-               any(GridDescriptorAMR%DD%Ptr%XyzMin_D >  Xyz_D&
+               any(GDAMR%DD%Ptr%XyzMin_D >  Xyz_D&
                .and..not.IsPeriodic_D) .or. &
-               any(GridDescriptorAMR%DD%Ptr%XyzMax_D <= Xyz_D&
+               any(GDAMR%DD%Ptr%XyzMax_D <= Xyz_D&
                .and..not.IsPeriodic_D)
           if(IsOut)RETURN
        else
@@ -1134,13 +1160,13 @@ contains
     end if
     ! call subroutine to find a node containing Xyz_D
     ! this call changes Xyz_D to coords relative to block's corner as needed
-    call search_in(GridDescriptorAMR%DD%Ptr, Xyz_D, iNode)
+    call search_in(GDAMR%DD%Ptr, Xyz_D, iNode)
 
     ! now extract block's parameters
-    XyzCorner_D = GridDescriptorAMR%DD%Ptr%XyzBlock_DI(:, iNode)
-    Dxyz_D      = GridDescriptorAMR%DD%Ptr%DxyzCell_DI(:, iNode)
-    iProc       = GridDescriptorAMR%DD%Ptr%iDecomposition_II(PE_, iNode) 
-    iBlock      = GridDescriptorAMR%DD%Ptr%iDecomposition_II(BLK_, iNode) 
+    XyzCorner_D = GDAMR%DD%Ptr%XyzBlock_DI(:, iNode)
+    Dxyz_D      = GDAMR%DD%Ptr%DxyzCell_DI(:, iNode)
+    iProc       = GDAMR%DD%Ptr%iDecomposition_II(PE_, iNode) 
+    iBlock      = GDAMR%DD%Ptr%iDecomposition_II(BLK_, iNode) 
   end subroutine find_amr
 
   !==============================END==============================!
