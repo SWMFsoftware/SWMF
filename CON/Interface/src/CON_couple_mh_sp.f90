@@ -308,35 +308,31 @@ contains
     call SP_synchronize_grid(RouterScSp%iCommUnion)
     !\
     ! Send coordinates of the points in SP to receive MHD data from SC
-    if(is_proc(SP_))then
-       call set_semi_router_from_target(&
-            GDSource  = SC_GridDescriptor, &
-            GDTarget  = SP_LocalGD, &
-            Router                = RouterScSp, &
-            n_interface_point_in_block = SP_n_particle,&
-            interface_point_coords= SP_interface_point_coords_for_sc, &
-            mapping               = mapping_sp_to_sc, &
-            interpolate           = interpolation_amr_gc,&
-            extra_data            = fix_buffer)
+    !if(is_proc(SP_)call set_semi_router_from_target(&
+    call set_router(&
+         GDSource  = SC_GridDescriptor,             &
+         GDTarget  = SP_LocalGD,                    &
+         Router                = RouterScSp,        &
+         n_interface_point_in_block = SP_n_particle,&
+         interface_point_coords=                    &
+         SP_interface_point_coords_for_sc,          &
+         mapping               = mapping_sp_to_sc,  &
+         interpolate           = interpolation_amr_gc,&
+         extra_data            = fix_buffer)
+    !Get particles from the semi-router 
+    if(is_proc(SC_).and..not.(DoInit.and.DoExtract))then
+       nLength = nlength_buffer_source(RouterScSp)
+       call SC_add_to_line(&
+            nParticle = nLength,&
+            Xyz_DI    =  RouterScSp%BufferSource_II(&
+            1:nDim, 1:nLength), &
+            nIndex    = nAux,   &
+            iIndex_II = nint(RouterScSp%BufferSource_II(&
+            nDim+1:nDim+nAux, 1:nLength)),&      
+            UseInputInGenCoord = .true.,&
+            DoReplace = .true.)
     end if
-    call synchronize_router_target_to_source(RouterScSp)
-    if(is_proc(SC_))then
-       if(.not.(DoInit.and.DoExtract))then
-          nLength = nlength_buffer_source(RouterScSp)
-          call SC_add_to_line(&
-               nParticle = nLength,&
-               Xyz_DI    =  RouterScSp%BufferSource_II(&
-               1:nDim, 1:nLength), &
-               nIndex    = nAux,   &
-               iIndex_II = nint(RouterScSp%BufferSource_II(&
-               nDim+1:nDim+nAux, 1:nLength)),&      
-               UseInputInGenCoord = .true.,&
-               DoReplace = .true.)
-       end if
-       call update_semi_router_at_source(RouterScSp,&
-            SC_GridDescriptor,interpolation_amr_gc)
-    end if
-    call global_message_pass(RouterScSp, &
+    call couple_comp(RouterScSp, &
          nVar = nVarBuffer, &
          fill_buffer = SC_get_for_sp_and_transform, &
          apply_buffer= SP_put_from_sc)
@@ -371,23 +367,23 @@ contains
        !updated in IH
        !/
        !\
-       ! Send coordinates of the constructed Lagrangian points
-       ! from IH to SP
+       ! Send coordinates of the constructed or advected 
+       ! Lagrangian points from IH to SP
        if(is_proc(IH_))then
           call set_semi_router_from_source(&
                GDSource = IH_LocalLineGD,         &
                GDTarget = SP_GridDescriptor,      &
-               Router               = RouterLineIhSp,         &
+               Router                     = RouterLineIhSp,   &
                n_interface_point_in_block = IH_n_particle,    &
                interface_point_coords=IH_line_interface_point,&
-               mapping              = mapping_line_ih_to_sp)
+               mapping                    = mapping_line_ih_to_sp)
        end if
        call synchronize_router_source_to_target(RouterLineIhSp)
        if(is_proc(SP_))then
           call update_semi_router_at_target(&
                RouterLineIhSp, SP_GridDescriptor)
        end if
-       call global_message_pass(RouterLineIhSp, &
+       call couple_comp(RouterLineIhSp, &
             nVar = 3, &
             fill_buffer = IH_get_line_for_sp_and_transform, &
             apply_buffer= SP_put_line_from_ih)
@@ -400,35 +396,31 @@ contains
     !\
     ! Send to IH the  coordinates of points in SP and
     ! send back the MHD data in these points
-    if(is_proc(SP_))then
-       call set_semi_router_from_target(&
-            GDSource  = IH_GridDescriptor, &
-            GDTarget  = SP_LocalGD, &
-            Router                = RouterIHSp, &
-            n_interface_point_in_block = SP_n_particle,&
-            interface_point_coords= SP_interface_point_coords_for_ih, &
-            mapping               = mapping_sp_to_ih, &
-            interpolate           = interpolation_amr_gc,&
-            extra_data            = fix_buffer)
+    call set_router(                         &
+         GDSource    = IH_GridDescriptor,    &
+         GDTarget    = SP_LocalGD,           &
+         Router      = RouterIHSp,           &
+         n_interface_point_in_block =        &
+         SP_n_particle,                      &
+         interface_point_coords=             &
+         SP_interface_point_coords_for_ih,   &
+         mapping     = mapping_sp_to_ih,     &
+         interpolate = interpolation_amr_gc, &
+         extra_data            = fix_buffer)
+    !Get particles from the semi-router 
+    if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
+       nLength = nlength_buffer_source(RouterIhSp)
+       call IH_add_to_line(&
+            nParticle = nLength,&
+            Xyz_DI    =  RouterIhSp%BufferSource_II(&
+            1:nDim, 1:nLength), &
+            nIndex    = nAux,   &
+            iIndex_II = nint(RouterIhSp%BufferSource_II(&
+            nDim+1:nDim+nAux, 1:nLength)),&      
+            UseInputInGenCoord = .true.,&
+            DoReplace = .true.)
     end if
-    call synchronize_router_target_to_source(RouterIhSp) 
-    if(is_proc(IH_))then
-       if(.not.(DoInit.and.DoExtract))then
-          nLength = nlength_buffer_source(RouterIhSp)
-          call IH_add_to_line(&
-               nParticle = nLength,&
-               Xyz_DI    =  RouterIhSp%BufferSource_II(&
-               1:nDim, 1:nLength), &
-               nIndex    = nAux,   &
-               iIndex_II = nint(RouterIhSp%BufferSource_II(&
-               nDim+1:nDim+nAux, 1:nLength)),&      
-               UseInputInGenCoord = .true.,&
-               DoReplace = .true.)
-       end if
-       call update_semi_router_at_source(RouterIhSp,&
-            IH_GridDescriptor,interpolation_amr_gc)
-    end if
-    call global_message_pass(RouterIhSp, &
+    call couple_comp(RouterIhSp, &
          nVar = nVarBuffer, &
          fill_buffer = IH_get_for_sp_and_transform, &
          apply_buffer= SP_put_from_ih)
