@@ -363,8 +363,8 @@ contains
   end subroutine correct_electronfluid_efield
   !============================================================================
 
-  subroutine correct_electronfluid_efield_cell(State_V, Current_D, GradPe_D, &
-       DoCorrectEfield, DoTest)
+  subroutine correct_electronfluid_efield_cell(State_V, B0_D, Current_D,  &
+       GradPe_D, DoCorrectPe, DoCorrectEfield, DoTest)
 
     use ModPhysics,        ONLY: ElectronCharge
     use ModCoordTransform, ONLY: cross_product
