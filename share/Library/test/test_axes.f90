@@ -13,14 +13,3 @@ program test_axes
 
 end program test_axes
 
-subroutine CON_set_do_test(String,DoTest,DoTestMe)
-
-  implicit none
-
-  character (len=*), intent(in) :: String
-  logical, intent(out) :: DoTest,DoTestMe
-
-  DoTest   = .false.
-  DoTestMe = .false.
-
-end subroutine CON_set_do_test
