@@ -399,22 +399,24 @@ void cLinearSystemCornerNode<cCornerNode>::ExchageIntermediateUnknownsData(doubl
     RecvThreadCounter++;
   }
 
-  //prepare data to send and initial send {
+  //prepare data to send and initiate the non-blocked send {
   for (To=0;To<PIC::nTotalThreads;To++) if ((To!=PIC::ThisThread)&&(SendExchangeBufferLength[To]!=0)) {
     int i,j,cnt=0;
+    double *Buffer=SendExchangeBuffer[To];
 
-    for (i=0;i<SendExchangeBufferLength[To];i++) for (j=0;j<NodeUnknownVariableVectorLength;j++) {
-      SendExchangeBuffer[To][cnt++]=x[j+NodeUnknownVariableVectorLength*SendExchangeBufferElementIndex[To][i]];
+    for (i=0;i<SendExchangeBufferLength[To];i++) {
+      int base=NodeUnknownVariableVectorLength*SendExchangeBufferElementIndex[To][i];
+
+      for (int offset=0;offset<NodeUnknownVariableVectorLength;offset++) Buffer[cnt++]=x[offset+base];
     }
 
-    MPI_Isend(SendExchangeBuffer[To],NodeUnknownVariableVectorLength*SendExchangeBufferLength[To],MPI_DOUBLE,To,0,MPI_GLOBAL_COMMUNICATOR,SendRequest+SendThreadCounter);
+    MPI_Isend(Buffer,NodeUnknownVariableVectorLength*SendExchangeBufferLength[To],MPI_DOUBLE,To,0,MPI_GLOBAL_COMMUNICATOR,SendRequest+SendThreadCounter);
     SendThreadCounter++;
   }
 
   //finalize send and recieve
   MPI_Waitall(RecvThreadCounter,RecvRequest,RecvStatus);
   MPI_Waitall(SendThreadCounter,SendRequest,SendStatus);
-
 }
 
 
