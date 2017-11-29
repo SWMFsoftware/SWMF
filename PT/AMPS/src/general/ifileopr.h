@@ -18,6 +18,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "specfunc.h"
+
 #define init_str_maxlength 10000
 
 class CiFileOperations {
@@ -34,8 +36,10 @@ public:
     sprintf(fname,"%s",ifile); 
     line=0;
     if ((fd=fopen(ifile,"r"))==NULL) {
-      printf ("FILE %s is not found\n",ifile);
-      exit(0);
+      char msg[1000];
+
+      sprintf(msg,"FILE %s is not found\n",ifile);
+      exit(__LINE__,__FILE__,msg);
     } 
      
     return fd;
@@ -151,10 +155,7 @@ public:
   }; 
 
   void error(const char *msg=NULL) {
-    printf("$PREFIX:Error in file %s, line=%ld\n",fname,line);
-    printf("$PREFIX:%s\n",init_str);
-    if (msg!=NULL) printf("$PREFIX:Error message: %s\n",msg);
-    exit(0);
+    exit(__LINE__,__FILE__,msg);
   }; 
 };
 
