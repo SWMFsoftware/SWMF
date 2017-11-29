@@ -15,7 +15,6 @@ module CON_coupler
   !USES:
   use CON_comp_param
   use CON_world
-  use CON_buffer_grid
   use CON_global_message_pass, &
        couple_comp => global_message_pass
   use CON_router

@@ -7,7 +7,6 @@ Module CON_router
   !USES:
   use CON_grid_storage
   use CON_grid_descriptor
-  use CON_global_vector
   use ModMPI, ONLY: MPI_UNDEFINED
   !DESCRIPTION:
 !This file presents the class of routers between the grids, each!  
