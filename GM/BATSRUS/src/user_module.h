@@ -2,6 +2,8 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 
+  use ModUtilities, ONLY: CON_stop
+
   implicit none  
 
   SAVE ! save all module variables
