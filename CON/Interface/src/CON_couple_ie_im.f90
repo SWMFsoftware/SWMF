@@ -53,7 +53,7 @@ module CON_couple_ie_im
   type(GridDescriptorType)::IE_Grid           ! Source
   type(GridDescriptorType)::IM_Grid           ! Target
   type(RouterType),save:: RouterIeIm, RouterImIe
- 
+  type(LocalGDType) :: IE_LocalGD, IM_LocalGD
   logical :: DoTest, DoTestMe
 
   ! Variables for the simple coupler
@@ -99,11 +99,12 @@ contains
             GridDescriptorSource=IE_Grid, &
             GridDescriptorTarget=IM_Grid, &
             Router=RouterIeIm)
+       call set_local_gd(i_proc(),IM_Grid,IM_LocalGD)
 
        ! It is time to leave for non-involved PEs
        if(RouterIeIm%IsProc) call set_router( &
-            IE_Grid,                &
-            IM_Grid,                &
+            IE_Grid,             &
+            IM_LocalGD,                &
             RouterIeIm,             & 
             mapping=map_im_to_ie,   & 
             interpolate=bilinear_interpolation) 
@@ -117,11 +118,11 @@ contains
             GridDescriptorSource=IM_Grid, &
             GridDescriptorTarget=IE_Grid, &
             Router=RouterImIe)
-
+       call set_local_gd(i_proc(),IE_Grid,IE_LocalGD)
        ! Both grids are static, it is sufficient to set the router once
        if(RouterImIe%IsProc) call set_router(  &
             IM_Grid,                &
-            IE_Grid,                &
+            IE_LocalGD,             &
             RouterImIe,             &
             mapping=map_ie_to_im,   &
             interpolate=bilinear_interpolation) 

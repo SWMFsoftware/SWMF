@@ -71,6 +71,7 @@ module CON_couple_ih_gm
   type(RouterType)         :: Router
   type(GridDescriptorType) :: GM_Grid
   type(GridDescriptorType) :: IH_Grid
+  type(LocalGDType)        :: GM_LocalGD
 
   logical :: DoInitialize=.true., DoTest, DoTestMe
 
@@ -97,7 +98,7 @@ contains
 
     IH_iGridRealization=-1
     GM_iGridRealization=-1
-
+    call set_local_gd(i_proc(),GM_Grid, GM_LocalGD)
     ! Initialize the coordinate transformation
 
   end subroutine couple_ih_gm_init
@@ -149,10 +150,9 @@ contains
 
        if(DoTestMe)write(*,*)'couple_ih_gm_init XyzPlanetIh_D=',&
             XyzPlanetIh_D
-
        call set_router(&
-            GridDescriptorSource=IH_Grid,&
-            GridDescriptorTarget=GM_Grid,&
+            GDSource=IH_Grid,&
+            GDTarget=GM_LocalGD,&
             Router=Router,&
             is_interface_block=GM_is_west_block,&
             interface_point_coords=GM_west_cells, &
@@ -193,7 +193,7 @@ contains
        i_D,&
        IsInterfacePoint)
 
-    type(GridDescriptorType),intent(in):: GridDescriptor
+    type(LocalGDType),intent(in):: GridDescriptor
     integer,intent(in)::lGlobalTreeNode,nIndexes
     integer,intent(in)::nDim
     real,intent(inout)::Xyz_D(nDim)
@@ -205,7 +205,7 @@ contains
 
     IsLeftFace_D=i_D(x_:z_)<1
     IsRightFace_D=i_D(x_:z_)>&
-         ncells_decomposition_d(GridDescriptor%DD%Ptr)
+         GridDescriptor%iGridPointMax_D
     IsInterfacePoint=IsRightFace_D(x_).and..not.&
          (any(IsLeftFace_D(y_:z_)).or.any(IsRightFace_D(y_:z_)))
 
