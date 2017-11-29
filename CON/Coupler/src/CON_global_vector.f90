@@ -37,7 +37,7 @@ Module CON_global_vector
 
 
   !USES:
-
+  use CON_grid_storage
   use CON_grid_descriptor
   !REVISION HISTORY:
   ! Sokolov I.V.                                                  
