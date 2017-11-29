@@ -10,10 +10,10 @@ module ModUtilities
 
   !DESCRIPTION:
   ! Simple methods which are used by CON and can be used 
-  ! by the science components too. 
+  ! by the components of the SWMF too. 
   !
-  ! This module is almost self contained. Only ModIoUnit, ModMpi, ModKind 
-  ! and the external subroutine CON\_stop are used.
+  ! This module is almost self contained. 
+  ! Only ModIoUnit, ModMpi and ModKind are used.
   !
   ! F77 and C++ codes need an F90 interface to access these utilities.
   !EOP
@@ -39,9 +39,11 @@ module ModUtilities
   public:: sleep
   public:: check_allocate
   public:: greatest_common_divisor
+  public:: CON_stop
   public:: test_mod_utility
 
-  logical, public :: DoFlush = .true.
+  logical, public :: DoFlush = .true. ! parameter for flush_unit
+  logical, public :: DoWriteCallSequence = .false. ! parameter for CON_stop
 
   interface split_string
      module procedure split_string, split_string_simple
@@ -53,6 +55,96 @@ module ModUtilities
 
 contains
 
+  !============================================================================
+  subroutine CON_stop(String, Value1, Value2, Value3, Value4)
+
+    use ModIoUnit, ONLY: io_unit_clean
+    use ModMpi
+
+    character(len=*), intent(in):: String
+    class(*), optional, intent(in):: Value1, Value2, Value3, Value4
+
+    ! Stop execution after the following actions:
+    !
+    ! Write out error message with processor rank and String.
+    ! Write out optional arguments Value1 ... Value4 of arbitrary type.
+    ! Close open files. 
+    ! If public variable DoCreateCallSequence is true, then make a floating 
+    ! exception to produce call sequence (with NAG compiler in debugging mode).
+    ! Abort execution with MPI_abort and stop.
+
+    integer:: iRank, nError, iError
+    !-------------------------------------------------------------------------
+    call MPI_comm_rank(MPI_COMM_WORLD, iRank, iError)
+
+    write(*,*) 'Aborting execution on processor', iRank, ' with message:'
+    write(*,'(a)') String
+    if(present(Value1)) call write_value(Value1)
+    if(present(Value2)) call write_value(Value2)
+    if(present(Value3)) call write_value(Value3)
+    if(present(Value4)) call write_value(Value4)
+
+    ! Try closing all open IO units
+    call io_unit_clean
+
+    ! Create call sequence if requested
+    if(DoWriteCallSequence)then
+       write(*,*)'Making floating point exception to write call sequence!'
+       write(*,*) sqrt(-1.0-iRank)
+    end if
+
+    ! Stop execution
+    call MPI_abort(MPI_COMM_WORLD, nError, iError)
+    stop
+
+  end subroutine CON_stop
+  !============================================================================
+  subroutine write_value(Value, StringBefore, Advance)
+
+    ! Write out value of type real, integer, logical, or character.
+    ! If StringBefore is present, write it before the value with no advance.
+    ! If Advance is present and set to ADVANCE="NO", then the Value is
+    ! written out formatted with ADVANCE="NO".
+
+    class(*),         intent(in):: Value
+    character(len=*), optional, intent(in):: StringBefore
+    character(len=*), optional, intent(in):: Advance
+
+    logical:: DoAdvance
+    !--------------------------------------------------------------------------
+    DoAdvance = .true.
+    if(present(Advance)) DoAdvance = Advance /= "NO"
+    
+    if(present(StringBefore)) write(*,'(a)',ADVANCE="NO") StringBefore
+    select type (Value)
+    type is (real)
+       if(DoAdvance)then
+          write(*,*) Value
+       else
+          write(*,'(es18.5)',ADVANCE="NO") Value
+       end if
+    type is (integer)
+       if(DoAdvance)then
+          write(*,*) Value
+       else
+          write(*,'(i10)',ADVANCE="NO") Value
+       end if
+    type is (logical)
+       if(DoAdvance)then
+          write(*,*) Value
+       else
+          write(*,'(l1)',ADVANCE="NO") Value
+       end if
+    type is (character(*))
+       if(DoAdvance)then
+          write(*,'(a)') Value
+       else
+           write(*,'(a)',ADVANCE="NO") Value
+        end if
+    end select
+
+  end subroutine write_value
+  !============================================================================
 
   !BOP ========================================================================
   !ROUTINE: make_dir - Create a directory
@@ -158,13 +250,16 @@ contains
   !BOP ========================================================================
   !ROUTINE: check_dir - check if a directory exists
   !INTERFACE:
-  subroutine check_dir(NameDir)
+  subroutine check_dir(NameDir, iErrorOut)
 
     !USES:
     use ModIoUnit, ONLY: UNITTMP_
 
     !INPUT ARGUMENTS:
     character(len=*), intent(in) :: NameDir
+
+    !OUTPUT ARGUMENTS:
+    integer, optional, intent(out):: iErrorOut
 
     !DESCRIPTION:
     ! Check if a directory exists by trying to open a file in it.
@@ -188,8 +283,13 @@ contains
          iostat = iError)
 
     if (iError /= 0) then
-       call CON_stop(NameSub//' ERROR: Cannot find/write into directory '&
-            //trim(NameDir))
+       if(present(iErrorOut))then
+          iErrorOut = iError
+          RETURN
+       else
+          call CON_stop(NameSub//' ERROR: Cannot find/write into directory '&
+               //trim(NameDir))
+       end if
     else
        close(UNITTMP_, status = 'DELETE')
     endif
@@ -778,7 +878,7 @@ contains
   !BOP ========================================================================
   !ROUTINE: check_allocate - check and stop for allocation errors
   !INTERFACE:
-  subroutine check_allocate(iError,NameArray)
+  subroutine check_allocate(iError, NameArray)
 
     !INPUT ARGUMENTS:
     integer,intent(in)::iError
@@ -830,7 +930,8 @@ contains
     call check_dir('.')
     write(*,'(a)') 'check_dir returned successfully'
     write(*,'(a)') 'check directory "xxx/"'
-    call check_dir('xxx/')
+    call check_dir('xxx/', iErrorOut=iError)
+    if(iError==0) write(*,*) 'ERROR: iError should not be zero!'
 
     write(*,'(a)') 'testing make_dir'
     write(*,'(a)') 'make directory "xxx/"'
