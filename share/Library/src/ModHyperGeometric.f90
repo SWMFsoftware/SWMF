@@ -8,6 +8,8 @@ module ModHyperGeometric
   use ModMpi, ONLY: &
        iRealPrec !1, if the code is compiled with double precision
   use ModNumConst, ONLY: cPi
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   real, parameter:: cTolerance_I(0:1) = (/1.0e-7, 1.0e-15/)
   real, parameter:: cEiler    = 0.57721566490

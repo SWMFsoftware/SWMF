@@ -42,6 +42,8 @@ module ModPlotFile
   use ModIoUnit,    ONLY: UnitTmp_
   use ModKind,      ONLY: Real4_
   use ModHdf5Utils, ONLY: save_hdf5_file
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
   private ! except

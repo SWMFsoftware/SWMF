@@ -29,6 +29,7 @@
 module ModTimeConvert
 
   !USES:
+  use ModUtilities, ONLY: CON_stop
   use ModKind
   use ModConst
 

@@ -1,4 +1,6 @@
 module ModSpice
+
+  use ModUtilities, ONLY: CON_stop
   use ModKind, ONLY: Real8_
 
   ! Interface for the SPICE library that provides coordinate system
@@ -20,7 +22,8 @@ module ModSpice
   ! SWMF: 1965-01-01T00:00:00
   ! SPICE: 2000-01-01T00:00:00
   ! SpiceTime = SwmfTime + DtSpiceSwmf
-  real, parameter,  public::   DtSpiceSwmf = -1104494336.0 !spice includes leap second correction
+  ! spice includes leap second correction
+  real, parameter,  public::   DtSpiceSwmf = -1104494336.0 
 
   ! Local variables
   logical     :: DoInitialize = .true.

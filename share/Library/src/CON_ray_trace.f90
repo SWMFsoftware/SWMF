@@ -20,6 +20,7 @@ module CON_ray_trace
 
   !USES:
   use ModMpi
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 

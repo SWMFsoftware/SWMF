@@ -21,6 +21,7 @@ module CON_planet
   use ModNumConst, ONLY: cTwoPi
   use ModPlanetConst
   use ModTimeConvert, ONLY: TimeType, time_int_to_real
+  use ModUtilities, ONLY: CON_stop
 
   !REVISION HISTORY:
   ! 01Aug03 - Aaron Ridly <ridley@umich.edu> and 

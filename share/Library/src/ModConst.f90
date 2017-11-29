@@ -1,17 +1,17 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModConst
 
   ! no ONLY: so all constants can be accessed via ModConst
-  use ModNumConst   
+  use ModNumConst
   use ModUtilities, ONLY: CON_stop
 
   implicit none
 
   save
 
-  !\  
+  !\
   ! Physical and solar astronomical constants.
   !
   ! All constants for planets, satellites, comets and
@@ -72,7 +72,7 @@ module ModConst
   ! a free electron. Is of interest both itself (it determines the
   ! absolute brightness of the coronagraph image and as a
   ! convenient combination of the fundamental constants,
-  ! in CGS system, coming to the transport coefficients in 
+  ! in CGS system, coming to the transport coefficients in
   ! plasmas:
   ! \Sigma_{Thomson}=\frac{8\pi}{3}\left(\frac{e^2}{m_e c^2}\right)^2 [CGS]
   ! ~ 6.65E-25 cm^2
@@ -95,7 +95,7 @@ module ModConst
   real(Real8_), parameter:: cRadiation = 4.0*cStefan/cLightSpeed
 
   ! Units for energy.
-  real, parameter:: cErg=1.0E-7 !J
+  real, parameter:: cErg=1.0E-7 ! J
 
   real, parameter:: cEV  = cElectronCharge
   real, parameter:: cKEV = 1000 * cEV
@@ -111,10 +111,10 @@ module ModConst
   real, parameter:: cKToKEV = 1.0 / cKEVToK
   real, parameter:: cKToMEV = 1.0 / cMEVToK
 
-  ! Rydberg constant =13.60 eV. 
-  ! Sometimes the twice larger constant is referred to as Rydberg 
+  ! Rydberg constant =13.60 eV.
+  ! Sometimes the twice larger constant is referred to as Rydberg
   real(Real8_), parameter:: cRyToEV = (0.50/cElectronMass)*&
-       (cPlanckHBar/cBohrRadius)**2/cEV 
+       (cPlanckHBar/cBohrRadius)**2/cEV
 
   ! Here RME stands for Rest Mass Energy.
   real, parameter:: cRMEProton   = cProtonMass   * cLightSpeed**2
@@ -145,10 +145,10 @@ contains
   real function kappa_0_e(CoulombLog)
     real, intent(in):: CoulombLog
 
-    !Calculates the coefficient for the electron heat conduction coefficient 
-    !in a hydrogen plasma: q=kappa_e_0T^{5/2}\nabla T, the heat flux,q, and
-    !and the electron temperature, T, are both in SI system of units as well as
-    !the scale of length.
+    ! Calculates the coefficient for the electron heat conduction coefficient
+    ! in a hydrogen plasma: q=kappa_e_0T^{5/2}\nabla T, the heat flux,q, and
+    ! and the electron temperature, T, are both in SI system of units as well as
+    ! the scale of length.
     !\
     ! Attention!!! For all applications to solar corona and inner heliosphere
     ! it is expected that Coulomb logarithm equals 20. Therefore, the
@@ -168,7 +168,8 @@ contains
 
     real,intent(in):: Momentum
     character(LEN=*),intent(in):: NameParticle
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     select case(NameParticle)
     case('e','Electron','electron','ELECTRON')
        momentum_to_energy=sqrt((Momentum*cLightSpeed)**2+&
@@ -186,6 +187,7 @@ contains
 
     real,intent(in):: Momentum
     character(LEN=*),intent(in):: NameParticle
+
     !--------------------------------------------------------------------------
     select case(NameParticle)
     case('e','Electron','electron','ELECTRON')
@@ -206,6 +208,7 @@ contains
 
     real,intent(in):: Energy
     character(LEN=*),intent(in):: NameParticle
+
     !--------------------------------------------------------------------------
     select case(NameParticle)
     case('e','Electron','electron','ELECTRON')
@@ -224,6 +227,7 @@ contains
 
     real,intent(in):: Energy
     character(LEN=*),intent(in):: NameParticle
+
     !--------------------------------------------------------------------------
     select case(NameParticle)
     case('e','Electron','electron','ELECTRON')
@@ -264,6 +268,8 @@ contains
             NameEnergyUnit//' and many other.')
     end select
   end function energy_in
+  !============================================================================
 
 end module ModConst
+!==============================================================================
 

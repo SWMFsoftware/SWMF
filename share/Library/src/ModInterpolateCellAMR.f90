@@ -1,9 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModInterpolateCellAMR
   use ModInterpolateAMR, ONLY: interpolate_extended_stencil,&
                                iPowerOf2_D, iShift_DI
+
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
+
   integer,parameter:: Coarse_=0, Fine_=1
   !\
   !Interface for tools and methods in ModInterpolateAMR to be used with

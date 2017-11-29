@@ -9,6 +9,8 @@ C function:    ilaenv
 C 
 C============================================================================
       SUBROUTINE XERBLA( SRNAME, INFO )
+
+      use ModUtilities, ONLY: CON_stop
 *
 *  -- LAPACK auxiliary routine (version 1.1) --
 *     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,
@@ -1232,6 +1234,9 @@ C
 C=============================================================================
 C=============================================================================
       SUBROUTINE DGETRF( M, N, A, LDA, IPIV, INFO )
+
+      use ModUtilities, ONLY: CON_stop
+
 *
 *  -- LAPACK routine (version 2.0) --
 *     Univ. of Tennessee, Univ. of California Berkeley, NAG Ltd.,

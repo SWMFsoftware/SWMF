@@ -1,6 +1,9 @@
 module ModSpice
-  use ModKind, ONLY: Real8_
+
   ! Empty version of ModSpice_orig.f90 in case there is no SPICE library
+
+  use ModUtilities, ONLY: CON_stop
+  use ModKind, ONLY: Real8_
 
   implicit none
   save

@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModInterpolateSimpleShape
   !\
@@ -22,14 +23,19 @@ module ModInterpolateSimpleShape
   ! so that the provided routine may be used for interpolating values
   ! in the proximity of such points.  
   !/
+
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
-  PRIVATE
   SAVE
-  integer, parameter:: nDim = 3, nGrid = 8
-  integer, parameter:: Rectangular_=1, Trapezoidal_=2
+  PRIVATE ! Except
+
   public :: interpolate_tetrahedron
   public :: interpolate_pyramid
   public :: interpolate_pyramids, interpolate_on_parallel_rays
+
+  integer, parameter:: nDim = 3, nGrid = 8
+  integer, parameter:: Rectangular_=1, Trapezoidal_=2
 contains
   !========================
   function cross_product(a_D, B_d)
@@ -1046,6 +1052,7 @@ contains
 end module ModInterpolateSimpleShape
 !============================
 module ModCubeGeometry
+  use ModUtilities, ONLY: CON_stop
   implicit none
   SAVE
   !=================ARRAYS FOR A CUBE====================================!
@@ -1483,9 +1490,9 @@ contains
        i_case = i_case + i_case + iLevel_I(iGrid)
     end do
   end function i_case
-  !============================
+  !===========================================================================
 end module ModCubeGeometry
-!=========================
+!==============================================================================
 module ModResolutionCorner
   use ModCubeGeometry, ONLY: iSortStencil3_II, iFace_IDI, iOppositeFace_IDI,&
        Case_, Grid_, Dir_, FiveTetrahedra_, & 
@@ -1493,6 +1500,8 @@ module ModResolutionCorner
        CoarseMainDiag_, CoarseFaceDiag_, FineEdgePlusOne_,            &
        ThreeFineOnFace_, CoarseEdgePlusOne_, ThreeCoarseOnFace_,      &
        ThreeCoarseOnFacePlusOne_, CoarseChain_, i_case
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   PRIVATE
   SAVE
@@ -2086,14 +2095,15 @@ contains
     !===========================
   end subroutine resolution_corner
 end module ModResolutionCorner
-!================================
+!==============================================================================
 module ModInterpolateAMR23
+
+  use ModUtilities, ONLY: CON_stop
   use ModCubeGeometry
   implicit none
   integer, parameter:: x_ = 1, y_ = 2, z_ = 3
 contains
   !=====================================================================
-!============================
   subroutine interpolate_uniform(nDim, Dimless_D, Weight_I, IsOut_I)
     integer,intent(in)::nDim
     !\
@@ -3111,9 +3121,12 @@ contains
     !===========================
   end subroutine interpolate_amr3
 end module ModInterpolateAMR23
-!=========================
+!=============================================================================
 module ModInterpolateAMR
+
   use ModInterpolateAMR23, ONLY: interpolate_uniform
+  use ModUtilities, ONLY: CON_stop
+
   !\
   !Generalize bilinear and trilinear interpolation for AMR grids
   !The data are given at the cell-centered grid which consists of AMR blocks.

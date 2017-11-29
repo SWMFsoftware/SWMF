@@ -162,6 +162,7 @@ module CON_axes
   use ModNumConst, ONLY: cHalfPi, cRadToDeg, cTwoPi, cTwoPi8, cUnit_DD, cTiny
   use ModConst, ONLY: rSun
   use ModPlanetConst
+  use ModUtilities, ONLY: CON_stop
 
   !REVISION HISTORY:
   ! 01Aug03 - Gabor Toth and Aaron Ridley  - initial version

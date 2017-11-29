@@ -19,6 +19,7 @@
 module ModFreq
 
   !USES:
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 

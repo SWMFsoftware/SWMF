@@ -139,6 +139,7 @@ module ModReadParam
   !USES:
   use ModMpi
   use ModIoUnit, ONLY: io_unit_new, StdIn_, StdOut_
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 

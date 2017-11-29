@@ -18,6 +18,7 @@ module CON_planet_field
   !USES:
   use CON_planet
   use CON_axes
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 

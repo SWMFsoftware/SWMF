@@ -2,7 +2,10 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CON_geopack
+
   use ModNumConst, ONLY: cDegToRad, cHalfPi, cTwoPi
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
   ! Contains some subroutine of the geopack code (by N.V.Tsyganenko), 
