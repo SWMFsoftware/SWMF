@@ -12,6 +12,7 @@
 #define _LINEARSYSTEMCORNERNODE_H_
 
 #include "pic.h"
+#include "linear_solver_wrapper_c.h"
 
 class cLinearSystemCornerNodeDataRequestListElement {
 public:
@@ -111,8 +112,13 @@ public:
     SubdomainPartialUnknownsVectorLength=0;
   }
 
-  cLinearSystemCornerNode(int nUnknownsPerNode,int MaxNonZeroElementNumber) {ExplicitConstructor(nUnknownsPerNode,MaxNonZeroElementNumber);}
-  cLinearSystemCornerNode(int nUnknownsPerNode) {ExplicitConstructor(nUnknownsPerNode,nMaxMatrixNonzeroElementsDefault);}
+  cLinearSystemCornerNode(int nUnknownsPerNode,int MaxNonZeroElementNumber) {
+    ExplicitConstructor(nUnknownsPerNode,MaxNonZeroElementNumber);
+  }
+
+  cLinearSystemCornerNode(int nUnknownsPerNode) {
+    ExplicitConstructor(nUnknownsPerNode,nMaxMatrixNonzeroElementsDefault);
+  }
 
   //void reset the data of the obsect to the default state
   void Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
@@ -187,9 +193,11 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
     //the limits are correct: the point i==_BLOCK_CELLS_X_ belongs to the onother block
     int kMax=_BLOCK_CELLS_Z_,jMax=_BLOCK_CELLS_Y_,iMax=_BLOCK_CELLS_X_;
 
+/*  commented to exclude accounting for the "right" boundary effect
     if (node->GetNeibFace(1,0,0)==NULL) iMax=_BLOCK_CELLS_X_+1;
     if (node->GetNeibFace(3,0,0)==NULL) jMax=_BLOCK_CELLS_Y_+1;
     if (node->GetNeibFace(5,0,0)==NULL) kMax=_BLOCK_CELLS_Z_+1;
+*/
 
     for (k=0;k<kMax;k++) for (j=0;j<jMax;j++) for (i=0;i<iMax;i++) {
       for (int iVar=0;iVar<NodeUnknownVariableVectorLength;iVar++) {
@@ -306,7 +314,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
     for (el=Row->FirstElement;el!=NULL;el=el->next) {
       if (el->CornerNode->LinearSolverUnknownVectorIndex==-2) {
         //the node is still not linked to the 'partial data vector'
-        el->CornerNode->LinearSolverUnknownVectorIndex=DataExchangeTableCounter[PIC::ThisThread]++;
+        el->CornerNode->LinearSolverUnknownVectorIndex=DataExchangeTableCounter[el->node->Thread]++;
 
         if (el->node->Thread!=PIC::ThisThread) {
           //add the point to the data request list
@@ -336,12 +344,13 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
 
   SendExchangeBuffer=new double* [PIC::nTotalThreads];
   SendExchangeBufferLength=new int [PIC::nTotalThreads];
+  SendExchangeBufferElementIndex=new int* [PIC::nTotalThreads];
 
   RecvExchangeBuffer=new double* [PIC::nTotalThreads];
   RecvExchangeBufferLength=new int [PIC::nTotalThreads];
 
   for (thread=0;thread<PIC::nTotalThreads;thread++) {
-    SendExchangeBuffer[thread]=NULL,SendExchangeBufferLength[thread]=0;
+    SendExchangeBuffer[thread]=NULL,SendExchangeBufferLength[thread]=0,SendExchangeBufferElementIndex[thread]=0;
     RecvExchangeBuffer[thread]=NULL,RecvExchangeBufferLength[thread]=0;
   }
 
@@ -354,7 +363,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
       list<cLinearSystemCornerNodeDataRequestListElement>::iterator ptr;
 
       for (i=0,ptr=DataRequestList[From].begin();ptr!=DataRequestList[From].end();ptr++,i++) ExchangeList[i]=*ptr;
-      MPI_Send(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cLinearSystemCornerNodeDataRequestListElement),MPI_CHAR,0,From,MPI_GLOBAL_COMMUNICATOR);
+      MPI_Send(ExchangeList,nGlobalDataPointTable[From+To*PIC::nTotalThreads]*sizeof(cLinearSystemCornerNodeDataRequestListElement),MPI_CHAR,From,0,MPI_GLOBAL_COMMUNICATOR);
 
       //create the recv list
       RecvExchangeBufferLength[From]=nGlobalDataPointTable[From+To*PIC::nTotalThreads];
@@ -368,7 +377,7 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
       //unpack the SendDataList
       SendExchangeBufferLength[To]=nGlobalDataPointTable[From+To*PIC::nTotalThreads];
       SendExchangeBuffer[To]=new double[NodeUnknownVariableVectorLength*SendExchangeBufferLength[To]];
-
+      SendExchangeBufferElementIndex[To]=new int[SendExchangeBufferLength[To]];
 
       for (int ii=0;ii<SendExchangeBufferLength[To];ii++) {
         node=PIC::Mesh::mesh.findAMRnodeWithID(ExchangeList[ii].NodeID);
@@ -524,26 +533,36 @@ void cLinearSystemCornerNode<cCornerNode>::Solve(void (*fInitialUnknownValues)(d
   }
 
 
-/*
   //call the iterative solver
   double Tol=1e-5;// the max iteration error allowed
-  int nIter=200; //iter number
+  int nIter=1000; //iter number
   int nVar=1; //variable number
-  int nDim =1; //dimension
-  int nI, nJ,nK,nBlock;
+  int nDim = 3; //dimension
+  int nI=_BLOCK_CELLS_X_;
+  int nJ=_BLOCK_CELLS_Y_;
+  int nK=_BLOCK_CELLS_Z_;
+  int nBlock = PIC::DomainBlockDecomposition::nLocalBlocks;
 
   MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_WORLD);
 
-  double Rhs_I(nVar*nVar*nI*nJ*nK*nBlock)// RHS of the equation
-  double Sol_I(nVar*nVar*nI*nJ*nK*nBlock)// vector for solution
+  //double Rhs_I(nVar*nVar*nI*nJ*nK*nBlock)// RHS of the equation
+  //double Sol_I(nVar*nVar*nI*nJ*nK*nBlock)// vector for solution
+  double * Rhs_I=SubdomainPartialRHS;
+  double * Sol_I=SubdomainPartialUnknownsVector;
   double PrecondParam=0; // not use preconditioner
   double ** precond_matrix_II;// pointer to precondition matrix; us  null if no preconditioner
   int lTest=1;//1: need test output; 0: no test statement
 
-  linear_solver_wrapper("GMRES", &Tol,&nIter, &nVar, &nDim,
-                         &nI, &nJ, &nK, &nBlock, &iComm, Rhs_I,
-  Sol_I, &PrecondParam, precond_matrix_II[0],
-                         &lTest);*/
+  printf("nBlock:%d\n",nBlock);
+  for (int ii=0; ii<cnt;ii++){
+    printf("No.%d, RHS_I:%f\n", ii, Rhs_I[ii]);
+  }
+
+  linear_solver_wrapper("GMRES", &Tol,&nIter, &nVar, &nDim,&nI, &nJ, &nK, &nBlock, &iComm, Rhs_I,Sol_I, &PrecondParam, NULL, &lTest);
+
+  for (int ii=0; ii<cnt;ii++){
+    printf("No.%d, Sol_I:%f\n", ii, Sol_I[ii]);
+  }
 
 
   //unpack the solution
