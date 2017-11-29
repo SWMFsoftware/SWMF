@@ -1,19 +1,4 @@
 ! Collection of external routines called by BATL
-!=============================================================================
-subroutine CON_stop(String)
-  use BATL_mpi, ONLY: iProc
-  use ModMpi, ONLY: MPI_abort, MPI_COMM_WORLD
-  implicit none
-  integer:: iError, nError
-  character (len=*), intent(in) :: String
-  !--------------------------------------------------------------------------
-  write(*,*)'CON_stop called on processor ',iProc,' with String='
-  write(*,*) String
-
-  call MPI_abort(MPI_COMM_WORLD, nError, iError)
-  stop
-end subroutine CON_stop
-!=============================================================================
 subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
      IsInside, IsInside_I, Value_I)
 
@@ -28,9 +13,9 @@ subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
   logical, optional, intent(out) :: IsInside_I(nValue)
   real,    optional, intent(out) :: Value_I(nValue)
 
-  character(len=*), parameter :: NameSub = 'user_specify_region'
-  !-------------------------------------------------------------------
+  character(len=*), parameter:: NameSub = 'user_specify_region'
+  !----------------------------------------------------------------------------
   call CON_stop(NameSub//' is not implemented')
 
 end subroutine user_specify_region
-!=====================================================================
+!==============================================================================

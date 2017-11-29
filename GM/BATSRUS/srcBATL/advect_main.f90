@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program advect
 
@@ -10,6 +10,8 @@ program advect
        XyzTestCell_D, iTest, jTest, kTest, iBlockTest, iProcTest, &
        XyzTestCell2_D, iTest2, jTest2, kTest2, iBlockTest2, iProcTest2, &
        read_test_param, find_test_cell, test_start, test_stop
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 
@@ -85,8 +87,8 @@ program advect
   real, allocatable, dimension(:,:,:,:,:):: Flux_VXB, Flux_VYB, Flux_VZB
 
   logical:: DoTest
-  character(len=*), parameter:: NameSub = 'advect_main'
-  !--------------------------------------------------------------------------
+  character(len=*), parameter:: NameSub = 'advect'
+  !----------------------------------------------------------------------------
   call initialize
 
   call test_start(NameSub, DoTest, DoTestAll=.true.)
@@ -181,8 +183,8 @@ program advect
   call test_stop(NameSub, DoTest)
 
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine adapt_grid
 
     use BATL_lib, ONLY: regrid_batl, nBlock, Unused_B, iNode_B, &
@@ -190,7 +192,7 @@ contains
 
     real :: Factor
     integer:: iBlock, i, j, k
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     Factor = 1.0
     BLOCK: do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -215,7 +217,7 @@ contains
     call regrid_batl(nVar, State_VGB, DoBalanceEachLevelIn=UseLocalStep)
 
   end subroutine adapt_grid
-  !===========================================================================
+  !============================================================================
   function exact_v(Xyz_D, Time)
 
     use BATL_lib,    ONLY: IsCartesianGrid, IsRzGeometry, IsPeriodic_D, &
@@ -234,7 +236,7 @@ contains
     real:: XyzShift_D(nDim)
 
     real :: r1, r2, Rho, Rot_DD(3,3)
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! Move position back to initial point
     if(RadialVelocity > 0.0) then
        r1 = sqrt(sum(Xyz_D**2))
@@ -281,8 +283,8 @@ contains
     exact_v(Lin_) = sum(Linear_D*(Xyz_D - Velocity_D*Time))
 
   end function exact_v
+  !============================================================================
 
-  !===========================================================================
   subroutine initialize
 
     use BATL_lib, ONLY: init_mpi, init_batl, init_grid_batl, &
@@ -306,7 +308,7 @@ contains
     integer :: iDim, i, j, k, iBlock, iLevel
     logical:: IsNodeBasedRead = .true.
     logical:: UseUniformAxis
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     call init_mpi
 
@@ -397,10 +399,10 @@ contains
 
     ! Note that the periodicity will be fixed based on TypeGeometry
     call init_batl( &
-         MaxBlockIn     = 8000, &          
+         MaxBlockIn     = 8000, &
          CoordMinIn_D   = DomainMin_D,  &
          CoordMaxIn_D   = DomainMax_D,  &
-         nRootIn_D      = nRoot_D,      & 
+         nRootIn_D      = nRoot_D,      &
          TypeGeometryIn = TypeGeometry, &
          IsPeriodicIn_D = IsPeriodicGrid_D, &
          RgenIn_I       = Rgen_I, &
@@ -484,8 +486,8 @@ contains
     end if
 
   end subroutine initialize
+  !============================================================================
 
-  !===========================================================================
   subroutine save_log
 
     ! Calculate the totals on processor 0
@@ -500,7 +502,7 @@ contains
 
     character(len=100):: NameFile = 'advect.log'
     logical :: DoInitialize = .true.
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     Total_I = 0.0
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -541,8 +543,7 @@ contains
     close(UnitTmp_)
 
   end subroutine save_log
-
-  !===========================================================================
+  !============================================================================
 
   subroutine save_plot
 
@@ -565,9 +566,9 @@ contains
     integer :: iDim, iBlock, i, j, k, iError
     integer :: nCell, nCellAll, nPlotDim, iPlot, nPlot, iXyz
     character (len=1) :: c0
-    !-----------------------------------------------------------------------
 
     ! Calculate minimum cell size
+    !--------------------------------------------------------------------------
     do iDim = 1, MaxDim
        CellSizeMin_D(iDim) = &
             minval(CellSize_DB(iDim,1:nBlock), MASK=.not.Unused_B(1:nBlock))
@@ -583,7 +584,7 @@ contains
     CellSizePlot_D = CellSizeMinAll_D
 
     ! uncomment "if" to create sturctured grids if there is no AMR
-    ! if(MaxLevel > 0)then 
+    ! if(MaxLevel > 0)then
     ! Indicates to PostIDL that there is AMR in first element
     CellSizePlot_D(1) = -1.0
     ! Indicate full AMR by setting all values to -1
@@ -623,20 +624,20 @@ contains
                   CoordMax_DB(Phi_,iBlock) < cTwoPi    ) CYCLE
           elseif(IsCylindrical .and. iPlot == 2)then
              if(  CoordMin_DB(Phi_,iBlock) > 1e-6          .and. &
-                  CoordMax_DB(Phi_,iBlock) < cPi    - 1e-6       ) CYCLE   
+                  CoordMax_DB(Phi_,iBlock) < cPi    - 1e-6       ) CYCLE
              if(  CoordMin_DB(Phi_,iBlock) > cPi    + 1e-6 .and. &
                   CoordMax_DB(Phi_,iBlock) < cTwoPi - 1e-6       ) CYCLE
           elseif(nDim > 1)then
              if(CoordMin_DB(iXyz,iBlock) > 1e-6) CYCLE
              if(CoordMax_DB(iXyz,iBlock) <-1e-6) CYCLE
           end if
-          do k = 1, nK 
+          do k = 1, nK
              if(nDim > 2 .and. (iPlot == 1 .and. .not. IsSpherical &
                   .or.          iPlot == 2 .and.       IsSpherical) )then
                 ! Check for sign change of Y or Z along 3rd coordinate
                 if(product(Xyz_DGB(iXyz,1,1,k-1:k+1:2,iBlock)) > 0) CYCLE
              end if
-             do j = 1, nJ; 
+             do j = 1, nJ;
                 if(  iPlot == 1 .and.       IsSpherical .or. &
                      iPlot == 2 .and. .not. IsSPherical)then
                    ! Check for sign change of Y or Z along second coordinate
@@ -688,7 +689,7 @@ contains
              PlotMin_D(3) = -1e-10
              PlotMax_D(3) = +1e-10
           else
-             PlotMin_D(2) = -1e-10 
+             PlotMin_D(2) = -1e-10
              PlotMax_D(2) = +1e-10
           end if
 
@@ -696,7 +697,7 @@ contains
           open(UnitTmp_,file=NameFile,status="replace")
           write(UnitTmp_,'(a)') '#HEADFILE'
           write(UnitTmp_,'(a)') NameFile
-          write(UnitTmp_,'(i8,a18)') nProc, 'nProc'        
+          write(UnitTmp_,'(i8,a18)') nProc, 'nProc'
           write(UnitTmp_,'(l8,a18)') .true.,' DoSaveBinary'
           write(UnitTmp_,'(i8,a18)')nByteReal,' nByteReal'
           write(UnitTmp_,*)
@@ -704,14 +705,14 @@ contains
           write(UnitTmp_,'(a)') '#NDIM'
           write(UnitTmp_,'(i8,a18)') nDim, 'nDim'
           write(UnitTmp_,*)
-           
+
           write(UnitTmp_,'(a)') '#NSTEP'
           write(UnitTmp_,'(i8,a18)')iStep, 'nStep'
           write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#TIMESIMULATION'
           write(UnitTmp_,'(1pe18.10,a18)')Time, 'TimeSimulation'
-          write(UnitTmp_,*)        
+          write(UnitTmp_,*)
 
           write(UnitTmp_,'(a)') '#PLOTRANGE'
           do iDim = 1, nDim
@@ -747,7 +748,7 @@ contains
           write(UnitTmp_,'(i8,a18)') 2*nVar+7, 'nPlotVar'
           write(UnitTmp_,'(a)') &
                'coord1 coord2 coord3 rho lin rhoexact linexact volume '// &
-               'node proc block none' 
+               'node proc block none'
           write(UnitTmp_,'(a)')   '1 1 1'        ! units
           write(UnitTmp_,*)
 
@@ -757,7 +758,7 @@ contains
                   'TypeGeometry'
           else
              write(UnitTmp_,'(a,a18)')TypeGeometry, 'TypeGeometry'
-          end if       
+          end if
           if(TypeGeometry == 'roundcube')then
              write(UnitTmp_,'(es13.5," rRound0")') rRound0
              write(UnitTmp_,'(es13.5," rRound1")') rRound1
@@ -778,24 +779,24 @@ contains
     end do
 
   end subroutine save_plot
-  !===========================================================================
+  !============================================================================
   subroutine save_plot_block
 
     use ModPlotFile, ONLY: save_plot_file
     use BATL_lib, ONLY: iProc, &
          nBlock, Unused_B, CoordMin_DB, CoordMax_DB, CellSize_DB
-    
+
     integer :: iBlock
     character(len=100):: NameFile
     character (len=10) :: TypePosition = 'rewind'
-    !---------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        write(NameFile,'(a,i3.3,a,i5.5,a)') &
             'advect_pe',iProc,'_blk',iBlock,'.out'
-       
+
        call save_plot_file(NameFile,     &
             TypeFileIn='real4',          &
             TypePositionIn=TypePosition, &
@@ -812,11 +813,11 @@ contains
     TypePosition = 'append'
 
   end subroutine save_plot_block
-  !===========================================================================
+  !============================================================================
   subroutine finalize
 
     use BATL_lib, ONLY: clean_batl, clean_mpi
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call save_plot
     call save_log
 
@@ -824,7 +825,7 @@ contains
     call clean_mpi
 
   end subroutine finalize
-  !===========================================================================
+  !============================================================================
   subroutine set_boundary(TimeBc)
 
     use BATL_lib, ONLY: nBlock, Unused_B
@@ -832,13 +833,13 @@ contains
 
     ! Set ghost cells outside computational domain for time = TimeBc
     integer:: iBlock
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        call set_boundary_block(iBlock, TimeBc)
     end do
   end subroutine set_boundary
-  !===========================================================================
+  !============================================================================
   subroutine set_boundary_block(iBlock, TimeBc)
 
     use BATL_lib, ONLY: nDim, IsPeriodic_D, Xyz_DGB, iNode_B, get_tree_position
@@ -849,6 +850,7 @@ contains
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim), State_V(nVar)
 
     integer:: i, j, k
+
     !--------------------------------------------------------------------------
     call get_tree_position(iNode_B(iBlock), PositionMin_D, PositionMax_D)
 
@@ -954,7 +956,7 @@ contains
     end if
 
   end subroutine set_boundary_block
-  !===========================================================================
+  !============================================================================
   subroutine calc_face_flux(iBlock)
 
     use ModNumConst, ONLY: i_DD
@@ -973,7 +975,7 @@ contains
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)then
@@ -1053,7 +1055,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine calc_face_flux
-  !===========================================================================
+  !============================================================================
   subroutine limit_slope(iBlock, State_VG, Slope_VGD)
 
     ! Calculate TVD limited slopes Slope_GD of State_VG
@@ -1069,7 +1071,7 @@ contains
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'limit_slope'
-    !----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
     if(DoTest)Slope_VGD = -777.7
@@ -1100,7 +1102,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine limit_slope
-  !===========================================================================
+  !============================================================================
   subroutine calc_vface_normal(iBlock)
 
     use ModNumConst, ONLY: i_DD
@@ -1114,9 +1116,9 @@ contains
     real:: XyzFace_D(nDim), vFaceNormal
 
     integer:: iDim, Di, Dj, Dk, i, j, k
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
-    ! Calculate upwinded fluxes 
+    ! Calculate upwinded fluxes
     do iDim = 1, nDim
        Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
        do k = 1, nK+Dk; do j =1, nJ+Dj; do i = 1, nI+Di
@@ -1147,7 +1149,6 @@ contains
     end do
 
   end subroutine calc_vface_normal
-
   !============================================================================
 
   subroutine advance_explicit
@@ -1181,7 +1182,7 @@ contains
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
 
-          ! Calculate 
+          ! Calculate
           call calc_vface_normal(iBlock)
 
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
@@ -1275,7 +1276,7 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine advance_explicit
-  !===========================================================================
+  !============================================================================
   subroutine advance_localstep
 
     use BATL_lib, ONLY: message_pass_cell, MaxBlock, nBlock, Unused_B, &
@@ -1295,9 +1296,10 @@ contains
 
     integer:: iLevelMin
 
-    logical:: DoTest, DoTestBlock
+    logical:: DoTestBlock
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'advance_localstep'
-    !----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     if(DoTest)then
@@ -1512,32 +1514,32 @@ contains
     call test_stop(NameSub, DoTest)
 
   end subroutine advance_localstep
-  !===========================================================================
+  !============================================================================
   logical function is_incorrect_block(iBlock, Time, UseGhost)
 
     ! Check block against the analytic solution
-  
+
     integer, intent(in):: iBlock
     real,    intent(in):: Time
     logical, optional, intent(in):: UseGhost
 
     real:: State_V(nVar)
     integer:: i, j, k, iMin, iMax, jMin, jMax, kMin, kMax
-    
+
     character(len=*), parameter:: NameSub = 'is_incorrect_block'
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     is_incorrect_block = .false.
 
     if(present(UseGhost))then
-       iMin = MinI; iMax = MaxI 
+       iMin = MinI; iMax = MaxI
        jMin = MinJ; jMax = MaxJ
        kMin = MinK; kMax = MaxK
     else
        iMin = 1; iMax = nI
-       jMin = 1; jMax = nJ 
+       jMin = 1; jMax = nJ
        kMin = 1; kMax = nK
     end if
-       
+
     do k=kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
       State_V = exact_v(Xyz_DGB(:,i,j,k,iBlock), Time)
       if(abs(State_V(Lin_) - State_VGB(Lin_,i,j,k,iBlock)) > 1e-6)then
@@ -1553,7 +1555,9 @@ contains
     end do; end do; end do
 
   end function is_incorrect_block
+  !============================================================================
 
 end program advect
+!==============================================================================
 
 include 'external_routines.f90'

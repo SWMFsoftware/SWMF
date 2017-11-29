@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_pass_cell
 
@@ -7,6 +7,8 @@ module BATL_pass_cell
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi, cTwoPi
   use BATL_high_order, ONLY: restriction_high_order_reschange
+
+  use ModUtilities, ONLY: CON_stop
 
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
@@ -99,7 +101,7 @@ contains
     ! nProlongOrderIn is the order of accuracy of prolongation. Default is 2.
     ! nCoarseLayerIn is the number of coarse layers sent during first order
     !    prolongation. Default is 1, so all fine cells are equal.
-    !    If it is set to 2, the 2 (or more) coarse layers are copied into 
+    !    If it is set to 2, the 2 (or more) coarse layers are copied into
     !    the fine cell layers one by one.
     ! DoSendCornerIn determines if edges/corners are filled. Default is true.
     ! DoRestrictFaceIn determines if restriction is applied to a single layer
@@ -110,12 +112,12 @@ contains
     ! DoResChangeOnlyIn determines if only ghost cells next to resolution
     !    changes are filled in. Default is false.
     ! iLevelMin and iLevelMax restrict the communication for blocks with
-    !    grid or time (if Time_B is present) levels in the 
+    !    grid or time (if Time_B is present) levels in the
     !    iLevelMin..iLevelMax range.
-    !    Default is message passing among all levels. 
+    !    Default is message passing among all levels.
     ! TimeOld_B and Time_B are the simulation times associated with the
-    !    ghost cells and physical cells of State_VGB, respectively. 
-    !    If these arguments are present, the ghost cells are interpolated 
+    !    ghost cells and physical cells of State_VGB, respectively.
+    !    If these arguments are present, the ghost cells are interpolated
     !    in time. Default is a simple update with no temporal interpolation.
     ! UseHighResChangeIn determines if the fifth-order accurate scheme is
     !    used to obtain the ghost cell values at resolution changes.
@@ -123,7 +125,7 @@ contains
     ! DefaultState_V determines if the variables in State_VGB should be kept
     !    positive. Values larger than 0 indicates positive variables (like
     !    density or pressure). These variables are kept positive by
-    !    the high order scheme. By default no variables are forced to 
+    !    the high order scheme. By default no variables are forced to
     !    remain positive.
     ! DoTestIn determines if verbose information should be printed.
 
@@ -141,12 +143,11 @@ contains
     character(len=3) :: NameOperator
     logical:: UseMin, UseMax  ! logicals for min and max operators
     logical :: UseTime        ! true if time interpolation is to be done
-    logical :: DoTest
     logical :: UseHighResChange
 
     ! Various indexes
-    integer :: iSendStage  ! index for 2 stage scheme for 2nd order prolong or 
-    ! for  high order resolution change. 
+    integer :: iSendStage  ! index for 2 stage scheme for 2nd order prolong or
+    ! for  high order resolution change.
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
 
@@ -189,32 +190,31 @@ contains
     ! Slopes for 2nd order prolongation
     real, allocatable:: Slope_VG(:,:,:,:)
 
-    character(len=*), parameter:: NameSub = 'BATL_pass_cell::message_pass_cell'
-
     integer:: nSendStage
 
     integer:: iBlock
 
     logical:: IsPositive_V(nVar)
 
-    ! Variables for coarsened block. 
+    ! Variables for coarsened block.
     real, allocatable:: State_VIIIB(:,:,:,:,:)
     logical, allocatable:: IsAccurate_B(:)
 
-    logical:: DoSixthCorrect = .false. 
+    logical:: DoSixthCorrect = .false.
 
-    ! For high order resolution change, a few face ghost cells need to be 
-    ! calculated remotely after the corase block have got accurate 
-    ! ghost cells. For this case with block cell size smaller than 
-    ! 8, these few inaccurate face ghost cells need to be sent to 
+    ! For high order resolution change, a few face ghost cells need to be
+    ! calculated remotely after the corase block have got accurate
+    ! ghost cells. For this case with block cell size smaller than
+    ! 8, these few inaccurate face ghost cells need to be sent to
     ! neighbour block before they are overwritten by 5th order values
-    ! calculated remotely.  So, nSubStage == 2 for this case. Do_equal 
-    ! is called first and then use do_prolong. 
-    logical:: DoSendFace = .false., DoRecvFace = .false. 
+    ! calculated remotely.  So, nSubStage == 2 for this case. Do_equal
+    ! is called first and then use do_prolong.
+    logical:: DoSendFace = .false., DoRecvFace = .false.
     logical, allocatable:: IsAccurateFace_GB(:,:,:,:)
-    integer:: iSubStage, nSubStage 
+    integer:: iSubStage, nSubStage
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'message_pass_real'
     !--------------------------------------------------------------------------
-
     DoTest = .false.; if(present(DoTestIn)) DoTest = DoTestIn
     if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
 
@@ -241,10 +241,9 @@ contains
     DoResChangeOnly =.false.
     if(present(DoResChangeOnlyIn)) DoResChangeOnly = DoResChangeOnlyIn
 
-
-    UseHighResChange = .false. 
+    UseHighResChange = .false.
     if(present(UseHighResChangeIn)) UseHighResChange = UseHighResChangeIn
-    IsPositive_V = .false. 
+    IsPositive_V = .false.
     if(UseHighResChange .and. present(DefaultState_V)) &
          IsPositive_V = DefaultState_V > 0
 
@@ -298,7 +297,7 @@ contains
        call CON_stop(NameSub// &
             ': Time_B and iLevelMin can only be used together')
     end if
-       
+
     if(DoTest)write(*,*) NameSub, &
          ': Width, Prolong, Coarse, Corner, RestrictFace, ResChangeOnly=', &
          nWidth, nProlongOrder, nCoarseLayer, DoSendCorner, &
@@ -333,39 +332,39 @@ contains
          allocate(IsAccurateFace_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK, nBlock))
     if(UseHighResChange) then
        ! WARNING!!!!!!!!!!!!!!!!!!!
-       ! HighResChange has a issue with boundary conditions so far. One       
+       ! HighResChange has a issue with boundary conditions so far. One
        ! boundary block's corner/edge neighbors may be not defined (like
        ! reflect boundary) and the ghost cell values are not accurate (the
-       ! values may be 777 after AMR). This problem only occures with 
+       ! values may be 777 after AMR). This problem only occures with
        ! resolution change along the boundary with reflect/shear/float
-       ! (boundary conditions that ghost cells depending on physical 
-       ! cells) boundary conditions. 
+       ! (boundary conditions that ghost cells depending on physical
+       ! cells) boundary conditions.
        ! To solve the problem, fill in these corner/edge ghost cells with
        ! the nearby face ghost cell value (see ModCellBoundary::set_edge_
        ! corner_ghost)
 
        ! stage 1: first order prolongation and do_equal.
-       ! stage 2: 
+       ! stage 2:
        !   a) Do high order restriction remotely for all kinds of ghost cells.
        !   b) Pass restricted cells from fine to coarse.
-       !   c) Do high order prolongation for face ghost cell 
+       !   c) Do high order prolongation for face ghost cell
        !      locally.
-       ! stage 3: 
-       !   a) Remote high order prolongation on coarse blocks for edges and 
-       !      corners and for faces that are too complex to do locally. 
-       !   b) Pass locally high order prolonged face ghost cells 
+       ! stage 3:
+       !   a) Remote high order prolongation on coarse blocks for edges and
+       !      corners and for faces that are too complex to do locally.
+       !   b) Pass locally high order prolonged face ghost cells
        !      to edge/corner ghost cells of neighboring fine block.
        !   c) Pass remotely high order refined ghost cells from coarse
-       !      to fine block for other edge and corner ghost cells and 
+       !      to fine block for other edge and corner ghost cells and
        !      also for not yet done face ghost cells.
        nSendStage = 3
 
        ! For 6th order correction, which may be better because of symmetry,
-       ! 8 cells are needed in each direction. If it is not satisfied, 
-       ! use 5th order correction.        
+       ! 8 cells are needed in each direction. If it is not satisfied,
+       ! use 5th order correction.
        DoSixthCorrect = nI>7 .and. nJ>7 .and. (nDim==2 .or. nK>7)
 
-       ! Used for stage 2a. 
+       ! Used for stage 2a.
        if(.not. allocated(State_VIIIB))&
             allocate(&
             State_VIIIB(nVar,max(nI/2,1),max(nJ/2,1),max(nK/2,1),nBlock), &
@@ -377,7 +376,7 @@ contains
 
        if(UseHighResChange) then
           State_VIIIB = 0
-          IsAccurate_B = .false. 
+          IsAccurate_B = .false.
        endif
 
        do iCountOnly = 1, 2
@@ -388,7 +387,7 @@ contains
 
           call timing_start('local_pass')
 
-          ! Second order prolongation needs two stages: 
+          ! Second order prolongation needs two stages:
           ! first stage fills in equal and coarser ghost cells
           ! second stage uses these to prolong and fill in finer ghost cells
 
@@ -401,7 +400,7 @@ contains
                 ! Make buffers large enough
                 if(sum(nBufferR_P) > MaxBufferR) then
                    if(allocated(BufferR_I)) deallocate(BufferR_I)
-                   MaxBufferR = sum(nBufferR_P) 
+                   MaxBufferR = sum(nBufferR_P)
                    allocate(BufferR_I(MaxBufferR))
                 end if
 
@@ -424,8 +423,8 @@ contains
           if(iSendStage == 3) nSubStage = 2
 
           do iSubStage = 1, nSubStage
-             ! For the last stage of high order resolution change, 
-             ! do_equal first, then do_prolong. 
+             ! For the last stage of high order resolution change,
+             ! do_equal first, then do_prolong.
 
              ! Loop through all blocks that may send a message
              do iBlockSend = 1, nBlock
@@ -479,8 +478,8 @@ contains
 
                          ! Level difference = own_level - neighbor_level
                          DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlockSend)
-                         
-                         ! Skip if the receiving block grid level is not 
+
+                         ! Skip if the receiving block grid level is not
                          ! in range. Time levels of the receiving block(s)
                          ! will be checked later if UseTimeLevel is true.
                          if(present(iLevelMin) .and. .not.UseTimeLevel)then
@@ -490,21 +489,21 @@ contains
                             if(iLevelSend - DiLevel > iLevelMax) CYCLE
                          end if
 
-                         ! Do prolongation in the second stage if 
-                         ! nProlongOrder=2. We still need to call restriction 
+                         ! Do prolongation in the second stage if
+                         ! nProlongOrder=2. We still need to call restriction
                          ! and prolongation in both stages to calculate the
                          ! amount of received data
                          if(iSendStage == 2 .and. DiLevel == 0) CYCLE
 
                          ! Fill in the edge/corner ghost cells with values from
-                         ! face ghost cells first (do_equal). Replace the 
-                         ! inaccurate face ghost cells with the values from 
-                         ! remote restriction. 
+                         ! face ghost cells first (do_equal). Replace the
+                         ! inaccurate face ghost cells with the values from
+                         ! remote restriction.
                          if(iSendStage == 3 .and. DiLevel /= 0 &
                               .and. iSubStage == 1) CYCLE
                          if(iSendStage == 3 .and. DiLevel ==0 &
                               .and. iSubStage == 2) CYCLE
-                         
+
                          if(DiLevel == 0)then
                             ! Send data to same-level neighbor
                             if(iSendStage == 3) then
@@ -534,7 +533,7 @@ contains
           if(UseHighResChange .and. iSendStage == 2) then
              do iBlock = 1, nBlock
                 if (Unused_B(iBlock)) CYCLE
-                call high_prolong_for_face_ghost(iBlock)                
+                call high_prolong_for_face_ghost(iBlock)
              enddo
           endif
           ! Done for serial run
@@ -614,7 +613,7 @@ contains
     call timing_stop('batl_pass')
 
   contains
-    !======================================================================
+    !==========================================================================
 
     logical function is_only_corner_fine(iNode, iDir0, jDir0, kDir0, &
          iDirCorner, jDirCorner, kDirCorner)
@@ -627,16 +626,16 @@ contains
       integer:: iDirBegin, iDirEnd, jDirBegin, jDirEnd, kDirBegin, kDirEnd
       integer:: DiDir, DjDir, DkDir
       integer:: nRefinedEdge
-      logical:: IsOnlyCornerFine = .false. 
-      !----------------------------------------------------------------------
+      logical:: IsOnlyCornerFine = .false.
+      !------------------------------------------------------------------------
 
       call find_neighbor_for_anynode(iNode,DiLevelNei_III)
 
-      IsOnlyCornerFine = .false. 
-      if(abs(iDir0) + abs(jDir0) + abs(kDir0) == 1) then        
+      IsOnlyCornerFine = .false.
+      if(abs(iDir0) + abs(jDir0) + abs(kDir0) == 1) then
 
-         ! Loop through 4 corners block corresponding to this face, 
-         ! check whether it is finer. 
+         ! Loop through 4 corners block corresponding to this face,
+         ! check whether it is finer.
          iDirBegin = -1; iDirEnd = 1; DiDir = 2
          jDirBegin = -1; jDirEnd = 1; DjDir = 2
          kDirBegin = -1; kDirEnd = 1; DkDir = 2
@@ -651,11 +650,11 @@ contains
 
          ! 4 corners
          do kDir1=kDirBegin,kDirEnd,DkDir; do jDir1=jDirBegin,jDirEnd,DjDir; &
-              do iDir1=iDirBegin,iDirEnd,DiDir            
+              do iDir1=iDirBegin,iDirEnd,DiDir
             if(DiLevelNei_III(iDir1,jDir1,kDir1) == 0) then
                nRefinedEdge = 0
 
-               ! Check first edge block. 
+               ! Check first edge block.
                if(iDir0 /= 0) then
                   iDir2 = iDir1
                   jDir2 = jDir1
@@ -674,7 +673,7 @@ contains
                if(DiLevelNei_III(iDir2,jDir2,kDir2) == 0) &
                     nRefinedEdge = nRefinedEdge + 1
 
-               ! Check second edge block. 
+               ! Check second edge block.
                if(iDir0 /= 0) then
                   iDir2 = iDir1
                   jDir2 = 0
@@ -692,7 +691,6 @@ contains
                endif
                if(DiLevelNei_III(iDir2,jDir2,kDir2) == 0) &
                     nRefinedEdge = nRefinedEdge + 1
-
 
                if(nRefinedEdge == 0) then
                   IsOnlyCornerFine = .true.
@@ -705,15 +703,14 @@ contains
       endif
       is_only_corner_fine = IsOnlyCornerFine
     end function is_only_corner_fine
-
-    !======================================================================
+    !==========================================================================
 
     subroutine corrected_do_equal
       integer:: iEqualSOrig_DII(MaxDim,-1:1,Min_:Max_)
       integer:: iEqualROrig_DII(MaxDim,-1:1,Min_:Max_)
       integer:: iDir1,jDir1, kDir1, nDir
       integer:: iDir2, jDir2, kDir2, iDir3,jDir3,kDir3
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       nDir = abs(iDir)+abs(jDir)+abs(kDir)
 
@@ -724,7 +721,7 @@ contains
          if(iDir /=0) then
             iDir1 = 0
             do jDir1 = -1, 1, 2
-               ! Some information passed here is useless. 
+               ! Some information passed here is useless.
                ! Advantage: do not need to change do_equal.
                if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlockSend) == 1 .or.&
                     DiLevelNei_IIIB(iDir, jDir1,kDir1,iBlockSend) == 1 ) then
@@ -744,7 +741,7 @@ contains
                      iEqualR_DII(2,0,Min_) = nJ + 1
                      iEqualR_DII(2,0,Max_) = nJ + nWidth
                   endif
-                  call do_equal               
+                  call do_equal
                   iEqualS_DII = iEqualSOrig_DII
                   iEqualR_DII = iEqualROrig_DII
                endif
@@ -770,7 +767,7 @@ contains
                      iEqualR_DII(1,0,Min_) = nI + 1
                      iEqualR_DII(1,0,Max_) = nI + nWidth
                   endif
-                  call do_equal               
+                  call do_equal
                   iEqualS_DII = iEqualSOrig_DII
                   iEqualR_DII = iEqualROrig_DII
                endif
@@ -783,11 +780,10 @@ contains
                jDir1 = 0; kDir1 = 0
                do iDir1 = -1, 1, 2
                   if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlockSend) == 1 .or.&
-                       DiLevelNei_IIIB(iDir1,jDir,kdir,iBlockSend) == 1) then 
-
+                       DiLevelNei_IIIB(iDir1,jDir,kdir,iBlockSend) == 1) then
 
                      !-------------------
-                     ! The face values of iBlockSend is not accurate. Do not 
+                     ! The face values of iBlockSend is not accurate. Do not
                      ! send to iBlockRecv. The edge/corner cells of iBlockRecv
                      ! will be filled by do_prolongation.
                      iSend = (3*iDir + 3)/2
@@ -804,10 +800,10 @@ contains
 
                         if((jDir == -jDir2 .and. kDir == -kDir2) .or. &
                              (jDir == jDir3 .and. kDir == kDir3))&
-                             CYCLE                                             
+                             CYCLE
                      endif
                      !-------------------
-                     
+
                      iEqualSOrig_DII = iEqualS_DII
                      iEqualROrig_DII = iEqualR_DII
 
@@ -825,7 +821,7 @@ contains
                         iEqualR_DII(1,0,Max_) = nI + nWidth
                      endif
 
-                     call do_equal               
+                     call do_equal
                      iEqualS_DII = iEqualSOrig_DII
                      iEqualR_DII = iEqualROrig_DII
                   endif
@@ -852,7 +848,7 @@ contains
 
                         if((iDir == -iDir2 .and. kDir == -kDir2) .or. &
                              (iDir == iDir3 .and. kDir == kDir3))&
-                             CYCLE                                             
+                             CYCLE
                      endif
 
                      iEqualSOrig_DII = iEqualS_DII
@@ -872,7 +868,7 @@ contains
                         iEqualR_DII(2,0,Max_) = nJ + nWidth
                      endif
 
-                     call do_equal               
+                     call do_equal
                      iEqualS_DII = iEqualSOrig_DII
                      iEqualR_DII = iEqualROrig_DII
                   endif
@@ -898,7 +894,7 @@ contains
 
                         if((jDir == -jDir2 .and. iDir == -iDir2) .or. &
                              (jDir == jDir3 .and. iDir == iDir3))&
-                             CYCLE                                             
+                             CYCLE
                      endif
 
                      iEqualSOrig_DII = iEqualS_DII
@@ -918,7 +914,7 @@ contains
                         iEqualR_DII(3,0,Max_) = nK + nWidth
                      endif
 
-                     call do_equal               
+                     call do_equal
 
                      iEqualS_DII = iEqualSOrig_DII
                      iEqualR_DII = iEqualROrig_DII
@@ -933,7 +929,6 @@ contains
                   if(kDir1 /= 0 .and. jDir1 /= 0) CYCLE
                   if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlockSend) == 1 .or. &
                        DiLevelNei_IIIB(iDir,jDir1,kDir1,iBlockSend) == 1) then
-
 
                      iSend = (3*iDir + 3)/2
                      jSend = (3*jDir + 3)/2
@@ -954,11 +949,10 @@ contains
                              .or. &
                              (iDir == -iDir2 .and. &
                              (jDir1 == jDir2 .or. kDir1 == kDir2))) then
-                           CYCLE                                             
+                           CYCLE
                         endif
 
                      endif
-
 
                      iEqualSOrig_DII = iEqualS_DII
                      iEqualROrig_DII = iEqualR_DII
@@ -990,7 +984,7 @@ contains
                         iEqualR_DII(2,0,Min_) = nJ + 1
                         iEqualR_DII(2,0,Max_) = nJ + nWidth
                      endif
-                     call do_equal               
+                     call do_equal
                      iEqualS_DII = iEqualSOrig_DII
                      iEqualR_DII = iEqualROrig_DII
                   endif
@@ -1002,7 +996,7 @@ contains
                   if(kDir1 /= 0 .and. iDir1 /= 0) CYCLE
                   if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlockSend) == 1 .or. &
                        DiLevelNei_IIIB(iDir1,jDir,kDir1,iBlockSend) == 1) then
-                     
+
                      iSend = (3*iDir + 3)/2
                      jSend = (3*jDir + 3)/2
                      kSend = (3*kDir + 3)/2
@@ -1022,10 +1016,10 @@ contains
                              .or. &
                              (jDir == -jDir2 .and. &
                              (iDir1 == iDir2 .or. kDir1 == kDir2))) then
-                           CYCLE                                             
+                           CYCLE
                         endif
                      endif
-                     
+
                      iEqualSOrig_DII = iEqualS_DII
                      iEqualROrig_DII = iEqualR_DII
 
@@ -1057,7 +1051,7 @@ contains
                         iEqualR_DII(1,0,Max_) = nI + nWidth
                      endif
 
-                     call do_equal               
+                     call do_equal
                      iEqualS_DII = iEqualSOrig_DII
                      iEqualR_DII = iEqualROrig_DII
                   endif
@@ -1070,7 +1064,7 @@ contains
                   if(jDir1 /= 0 .and. iDir1 /= 0) CYCLE
                   if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlockSend) == 1 .or. &
                        DiLevelNei_IIIB(iDir1,jDir1,kDir,iBlockSend) == 1) then
-                     
+
                      iSend = (3*iDir + 3)/2
                      jSend = (3*jDir + 3)/2
                      kSend = (3*kDir + 3)/2
@@ -1090,7 +1084,7 @@ contains
                              .or. &
                              (kDir == -kDir2 .and. &
                              (iDir1 == iDir2 .or. jDir1 == jDir2))) then
-                           CYCLE                                             
+                           CYCLE
                         endif
                      endif
 
@@ -1125,7 +1119,7 @@ contains
                         iEqualR_DII(1,0,Max_) = nI + nWidth
                      endif
 
-                     call do_equal               
+                     call do_equal
                      iEqualS_DII = iEqualSOrig_DII
                      iEqualR_DII = iEqualROrig_DII
                   endif
@@ -1134,15 +1128,15 @@ contains
          endif
       endif ! nDim
     end subroutine corrected_do_equal
+    !==========================================================================
 
-    !======================================================================
     subroutine calc_accurate_coarsened_block(iBlock)
 
       use BATL_high_order, ONLY: &
            limit_interpolation, restriction_high_order_amr
 
       ! For nI*nJ*nK fine block, calculate its coarsened nI/2 * nJ/2 * nK/2
-      ! overlaped block. 
+      ! overlaped block.
 
       integer, intent(in):: iBlock
       integer:: iPerp
@@ -1161,17 +1155,17 @@ contains
       real:: Cell_III(6,6,6)
 
       ! Some points can be calculated in 2 or 3 symmetric ways, use their
-      ! average. 
+      ! average.
       integer, allocatable:: nCalc_III(:,:,:)
       integer, allocatable:: nCorrected_III(:,:,:)
       logical:: DoResChange_D(3), IsAccurateGhost, DoSymInterp
       real, parameter:: c1over10=1./10, c1over2=1./2
-      real:: Coef_I(6) 
+      real:: Coef_I(6)
       real:: Orig, Orig1, Orig2, Orig3, Res1, Res2, Res3
       integer:: nResChange, nEdge, nCorrect, iGhost, iCalTime
       real:: Weight1, Weight2
-      character(len=*), parameter :: NameSub = 'calc_accurate_coarsened_block'
-      !----------------------------------------------------------------------
+      character(len=*), parameter:: NameSub = 'calc_accurate_coarsened_block'
+      !------------------------------------------------------------------------
 
       if(DoSixthCorrect) then
          Coef_I = (/0.05, -0.3, 0.75, 0.75, -0.3, 0.05/)
@@ -1197,13 +1191,13 @@ contains
          DoResChange_D(1) = .true.
 
          ! Are the ghost cells close to the opposite face accurate?
-         ! For the more than 2 levels refinement case. 
+         ! For the more than 2 levels refinement case.
          IsAccurateGhost = all(DiLevelNei_IIIB(-iDir1,:,:,iBlock) /= -1)
          DoSymInterp = nI >= 8 .or. IsAccurateGhost
 
          if(iDir1 == -1) then
-            ! i0 is the index of the origin block. 
-            ! iC is the index of the coarsened block. 
+            ! i0 is the index of the origin block.
+            ! iC is the index of the coarsened block.
             i0 = 1; iC = 1
          elseif(iDir1 == 1) then
             i0 = nI; iC = nI/2
@@ -1211,9 +1205,9 @@ contains
 
          jBegin = 1; jEnd = max(nJ/2,1)
          if(DiLevelNei_IIIB(0,1,0,iBlock) == 1) then
-            ! For this situation, the calculation of cells j = nJ/2 
-            ! involves values of coarsened neighbour block. These 
-            ! cells need to be treated in a special way. 
+            ! For this situation, the calculation of cells j = nJ/2
+            ! involves values of coarsened neighbour block. These
+            ! cells need to be treated in a special way.
             jBegin = 1; jEnd = max(nJ/2-1,1)
          elseif(DiLevelNei_IIIB(0,-1,0,iBlock) == 1) then
             jBegin = max(nJ/2,1); jEnd = min(2,nJ)
@@ -1317,7 +1311,7 @@ contains
 
                do iGhost = 1, 3 ! 3 layer ghost cells.
                   ! For ghost cells can be calculated in several symmetric
-                  ! ways, use their average. 
+                  ! ways, use their average.
                   iCalTime = nCalc_III(i,jC-(iGhost-1)*jDir1,k)
                   Weight1 = iCalTime/(iCalTime + 1.0)
                   Weight2 = 1.0 - Weight1
@@ -1380,7 +1374,6 @@ contains
                     Fine_VIII(iVar,:,:,:), Coarse_I, DoSymInterp,&
                     IsPositiveIn=IsPositive_V(iVar))
 
-
                do iGhost = 1, 3 ! 3 layer ghost cells.
                   iCalTime = nCalc_III(i,j,kC-(iGhost-1)*kDir1)
                   Weight1 = iCalTime/(iCalTime + 1.0)
@@ -1396,33 +1389,33 @@ contains
          enddo; enddo
       enddo ! kDir1
 
-      ! At least one neighbour block is coarse when this subroutine called. 
-      ! If it is not a face block, it will be a edge/corner block. 
+      ! At least one neighbour block is coarse when this subroutine called.
+      ! If it is not a face block, it will be a edge/corner block.
       if(nK == 1) then ! 2D. Combine 2D and 3D part??
          ! Resolution change in the edge direction.
          if(.not. DoResChange_D(1) .and. .not.DoResChange_D(2)) then
 
             ! ___________________________________________
-            ! |                    |         |          |                     
-            ! |                    |         |          |                     
-            ! |                    |         |          |                     
+            ! |                    |         |          |
+            ! |                    |         |          |
+            ! |                    |         |          |
             ! |        3           |_________|__________|
-            ! |                    |         |          |                      
-            ! |                    |   14    |          |                      
-            ! |                    |         |          |        y             
-            ! |____________________|_________|__________|        | 
-            ! |          |         |*        |          |        |             
-            ! |          |   13    |   11    |   12     |        -----> x     
-            ! |          |         |         |          |                     
-            ! |__________|_________|_________|__________|                     
-            ! |          |         |         |          |                     
-            ! |          |         |   9     |   10     |                     
-            ! |          |         |         |          |                      
+            ! |                    |         |          |
+            ! |                    |   14    |          |
+            ! |                    |         |          |        y
+            ! |____________________|_________|__________|        |
+            ! |          |         |*        |          |        |
+            ! |          |   13    |   11    |   12     |        -----> x
+            ! |          |         |         |          |
             ! |__________|_________|_________|__________|
-            !  
-            ! 9-14 are the top layer of their parent block. 
+            ! |          |         |         |          |
+            ! |          |         |   9     |   10     |
+            ! |          |         |         |          |
+            ! |__________|_________|_________|__________|
+            !
+            ! 9-14 are the top layer of their parent block.
 
-            ! Coarsened cell * is interpolated diagonally. 
+            ! Coarsened cell * is interpolated diagonally.
 
             ! Edge ghost cells.
             kDir1 = 0
@@ -1477,18 +1470,18 @@ contains
             ! |        3           |                    |
             ! |                    |                    |
             ! |                    |   4                |
-            ! |                    |                    |        y 
-            ! |____________________|_________ __________|        | 
-            ! |                    |*        |          |        |            
-            ! |                    |   8     |   7      |        -----> x     
-            ! |                    |         |          |                    
-            ! |        1           |_________|__________|                    
-            ! |                    |         |          |                   
-            ! |                    |   5     |   6      |                    
-            ! |                    |         |          |                  
+            ! |                    |                    |        y
+            ! |____________________|_________ __________|        |
+            ! |                    |*        |          |        |
+            ! |                    |   8     |   7      |        -----> x
+            ! |                    |         |          |
+            ! |        1           |_________|__________|
+            ! |                    |         |          |
+            ! |                    |   5     |   6      |
+            ! |                    |         |          |
             ! |____________________|_________|__________|
-            !       
-            ! 5-8 are the top layer of their parent block. 
+            !
+            ! 5-8 are the top layer of their parent block.
 
             ! Coarsened cell * can be corrected in x or y direction. Use
             ! the average.
@@ -1544,25 +1537,25 @@ contains
             if(DoResChange_D(i)) nResChange = nResChange + 1
          enddo
 
-         if(nResChange > 1) then ! nResChange is 2 or 3. 
+         if(nResChange > 1) then ! nResChange is 2 or 3.
 
             ! Example: coarsen block 11, nResChange == 2
             ! ___________________________________________
-            ! |                    |                    |                     
-            ! |                    |                    |                     
-            ! |                    |                    |                    
-            ! |         7          |         8          |                    
-            ! |                    |                    |                   
-            ! |                    |                    |                  
-            ! |                    |                    |                 
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |         7          |         8          |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
             ! |____________________|____________________|
-            ! |                    |        |           |                  
-            ! |                    |        |           |                 
-            ! |                    |        |           |               
+            ! |                    |        |           |
+            ! |                    |        |           |
+            ! |                    |        |           |
             ! |          5         |________|___________|
-            ! |                    |        |           |              
-            ! |                    |        |           |               
-            ! |                    |        |           |          
+            ! |                    |        |           |
+            ! |                    |        |           |
+            ! |                    |        |           |
             ! |____________________|________|___________|
             !               TOP LAYER
 
@@ -1573,42 +1566,41 @@ contains
             ! |        3           |                    |
             ! |                    |                    |
             ! |                    |   4                |
-            ! |                    |                    |        y 
-            ! |____________________|_________ __________|        | 
-            ! |                    |*        |          |        |         
-            ! |                    |   11    |   12     |        -----> x    
-            ! |                    |         |          |                 
-            ! |        1           |_________|__________|               
-            ! |                    |         |          |               
-            ! |                    |   9     |   10     |               
-            ! |                    |         |          |               
+            ! |                    |                    |        y
+            ! |____________________|_________ __________|        |
+            ! |                    |*        |          |        |
+            ! |                    |   11    |   12     |        -----> x
+            ! |                    |         |          |
+            ! |        1           |_________|__________|
+            ! |                    |         |          |
+            ! |                    |   9     |   10     |
+            ! |                    |         |          |
             ! |____________________|_________|__________|
             !                 BOTTOM LAYER
-            ! 9-12 are the top layer of their parent block. 
+            ! 9-12 are the top layer of their parent block.
 
-            ! For block 11, resolution change happens in x and y direcitons. 
-            ! Only cells ic == 1 .and. jc == nJ/2 .and. 1 =< kc =< nK/2 need 
-            ! to be corrected with coarse cell values. Interpolations can be 
-            ! done in x direction or y direction. Use the average of both. 
-
+            ! For block 11, resolution change happens in x and y direcitons.
+            ! Only cells ic == 1 .and. jc == nJ/2 .and. 1 =< kc =< nK/2 need
+            ! to be corrected with coarse cell values. Interpolations can be
+            ! done in x direction or y direction. Use the average of both.
 
             ! Example: coarsen block 11, nResChange == 3
             ! ___________________________________________
-            ! |                    |                    |               
-            ! |                    |                    |                 
-            ! |                    |                    |                 
-            ! |         7          |         8          |                  
-            ! |                    |                    |                    
-            ! |                    |                    |                  
-            ! |                    |                    |               
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |         7          |         8          |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
             ! |____________________|____________________|
-            ! |                    |                    |                 
-            ! |                    |                    |               
-            ! |                    |                    |           
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
             ! |          5         |         6          |
-            ! |                    |                    |           
-            ! |                    |                    |           
-            ! |                    |                    |       
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
             ! |____________________|____________________|
             !               TOP LAYER
 
@@ -1619,27 +1611,27 @@ contains
             ! |        3           |                    |
             ! |                    |                    |
             ! |                    |   4                |
-            ! |                    |                    |        y 
-            ! |____________________|_________ __________|        | 
-            ! |                    |         |          |        |       
-            ! |                    |   11    |   12     |        -----> x  
-            ! |                    |         |          |                  
-            ! |        1           |_________|__________|                 
-            ! |                    |         |          |               
-            ! |                    |   9     |   10     |            
-            ! |                    |         |          |         
+            ! |                    |                    |        y
+            ! |____________________|_________ __________|        |
+            ! |                    |         |          |        |
+            ! |                    |   11    |   12     |        -----> x
+            ! |                    |         |          |
+            ! |        1           |_________|__________|
+            ! |                    |         |          |
+            ! |                    |   9     |   10     |
+            ! |                    |         |          |
             ! |____________________|_________|__________|
             !                 BOTTOM LAYER
-            ! 9-12 are the top layer of their parent block. 
+            ! 9-12 are the top layer of their parent block.
 
             ! For block 11, resolution change happens in x, y and z directions.
-            ! Correction similar with the nResChange==2 case, but one cell : 
-            ! ic == 1 .and. jc == nJ/2 .and. kc == nK/2 can be corrected in 
-            ! three directions. Also use the average. 
+            ! Correction similar with the nResChange==2 case, but one cell :
+            ! ic == 1 .and. jc == nJ/2 .and. kc == nK/2 can be corrected in
+            ! three directions. Also use the average.
 
             if(DiLevelNei_IIIB(-1,0,0,iBlock) == 1) then
-               ! i0: index of origin block. 
-               ! iC & iBegin & iEnd: index of coarsened block. 
+               ! i0: index of origin block.
+               ! iC & iBegin & iEnd: index of coarsened block.
                iC = 1; i0 = 1; Di = 1
                iBegin = nI/2; iEnd = 2
             elseif(DiLevelNei_IIIB(1,0,0,iBlock) == 1) then
@@ -1750,7 +1742,6 @@ contains
                      Cell2_I(1:3) = &
                           State_VGB(iVar,2*i,j0,k0-3*Dk:k0-Dk:Dk,iBlock)
 
-
                      if(DoSixthCorrect) then
                         Cell1_I(4:6) = &
                              State_VIIIB(iVar,i,jC+Dj:jC+3*Dj:Dj,kC,iBlock)
@@ -1762,7 +1753,6 @@ contains
                         Cell2_I(4:5) = &
                              State_VIIIB(iVar,i,jC,kC+Dk:kC+2*Dk:Dk,iBlock)
                      endif
-
 
                      Orig1 = sum(Coef_I*Cell1_I)
                      Orig2 = sum(Coef_I*Cell2_I)
@@ -1780,7 +1770,7 @@ contains
             endif
 
             if(nResChange == 3) then
-               ! One corner cell. 
+               ! One corner cell.
                do iVar = 1, nVar
                   Cell1_I(1:3) = &
                        State_VGB(iVar,i0-3*Di:i0-Di:Di, j0, k0,iBlock)
@@ -1804,8 +1794,6 @@ contains
                           State_VIIIB(iVar,iC,jC,kC+Dk:kC+2*Dk:Dk,iBlock)
                   endif
 
-
-
                   Orig1 = sum(Coef_I*Cell1_I)
                   Orig2 = sum(Coef_I*Cell2_I)
                   Orig3 = sum(Coef_I*Cell3_I)
@@ -1826,70 +1814,69 @@ contains
 
             ! Example: coarsen block 11
             ! ___________________________________________
-            ! |                    |                    |                  
-            ! |                    |                    |            
-            ! |                    |                    |              
-            ! |         7          |         8          |         
-            ! |                    |                    |         
-            ! |                    |                    |           
-            ! |                    |                    |            
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |         7          |         8          |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
             ! |____________________|____________________|
-            ! |                    |                    |            
-            ! |                    |                    |             
-            ! |                    |                    |           
-            ! |          5         |         6          |           
-            ! |                    |                    |           
-            ! |                    |                    |              
-            ! |                    |                    |          
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |          5         |         6          |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
             ! |____________________|____________________|
             !               TOP LAYER
 
             ! ___________________________________________
-            ! |                    |         |          |          
-            ! |                    |         |          |             
-            ! |                    |         |          |           
+            ! |                    |         |          |
+            ! |                    |         |          |
+            ! |                    |         |          |
             ! |        3           |_________|__________|
-            ! |                    |         |          |         
-            ! |                    |   14    |          |        
-            ! |                    |         |          |        y     
-            ! |____________________|_________|__________|        | 
-            ! |          |         |*        |          |        |     
-            ! |          |   13    |   11    |   12     |        -----> x 
-            ! |          |         |         |          |                
-            ! |__________|_________|_________|__________|          
-            ! |          |         |         |          |           
-            ! |          |         |   9     |   10     |          
-            ! |          |         |         |          |     
+            ! |                    |         |          |
+            ! |                    |   14    |          |
+            ! |                    |         |          |        y
+            ! |____________________|_________|__________|        |
+            ! |          |         |*        |          |        |
+            ! |          |   13    |   11    |   12     |        -----> x
+            ! |          |         |         |          |
+            ! |__________|_________|_________|__________|
+            ! |          |         |         |          |
+            ! |          |         |   9     |   10     |
+            ! |          |         |         |          |
             ! |__________|_________|_________|__________|
             !                 BOTTOM LAYER
-            ! 9-14 are the top layer of their parent block. 
-
+            ! 9-14 are the top layer of their parent block.
 
             ! Assume resolution change happens in z direction for block 11.
-            ! If block 3 is also refined, only need to coarsen block 11 to 
-            ! fill in the face ghost cells of block 6, which is trivial. 
-            ! If block 3 is coarse, there will be four kinds cells need 
-            ! to be coarsened for block 11: 
+            ! If block 3 is also refined, only need to coarsen block 11 to
+            ! fill in the face ghost cells of block 6, which is trivial.
+            ! If block 3 is coarse, there will be four kinds cells need
+            ! to be coarsened for block 11:
             ! ic, jc, kc are the index of coarsened block, not the original
-            ! block 11. 
+            ! block 11.
             ! Type 1: 1 =< ic =< nI/2; 1 =< jc =< nJ/2; nk/2 -2 =< kc =< nk/2
             !         except for ic == 1 .and. jc==nJ/2.
             ! Type 2: ic == 1 .and. jc==nJ/2 .and. nk/2 -2 =< kc =< nk/2
             ! Type 3: ic == 1 .and. jc==nJ/2 .and. 1 =< kc =< nk/2 - 3
             ! Type 4: 1 =< ic =< nI/2; 1 =< jc =< nJ/2; 1 =< kc =< nk/2 -3
-            !         except those belong to Type 3. 
+            !         except those belong to Type 3.
 
             ! Type 1 and Type 2 are face ghost cells of block 6. Some of them
             ! are also edge ghost cells for block 3.
             ! Type 3 and Type 4 are only used for edge ghost cells of block 3.
-            ! If nK is 6, there are no type 3 and type 4 cells. 
+            ! If nK is 6, there are no type 3 and type 4 cells.
 
-            ! Calculation: 
-            ! Type 1: the same as simple resolution change. 
-            ! Type 4: simple restriction use 6*6*6 fine cells. 
+            ! Calculation:
+            ! Type 1: the same as simple resolution change.
+            ! Type 4: simple restriction use 6*6*6 fine cells.
             ! Type 2&3: interpolation diagionally in x-y plane.
 
-            if(DoResChange_D(1)) then               
+            if(DoResChange_D(1)) then
                iDirMin =  0; iDirMax = 0; DiDir = 1
                jDirMin = -1; jDirMax = 1; DjDir = 2
                kDirMin = -1; kDirMax = 1; DkDir = 2
@@ -1929,7 +1916,7 @@ contains
                         kBegin = 1; kEnd = 3; Dk = 1; k0 = 1
                      endif
 
-                     ! Calc Type 4 cells. 
+                     ! Calc Type 4 cells.
                      do k = kBegin, kEnd, Dk
                         do j = jBegin, jEnd, Dj
                            do i = iBegin, iEnd, Di
@@ -1955,11 +1942,11 @@ contains
 
                            enddo ! i
                         enddo ! j
-                     enddo ! k                                         
+                     enddo ! k
 
-                     ! Calc Type 2 and Type 3. 
+                     ! Calc Type 2 and Type 3.
                      if(DoResChange_D(1)) then
-                        j = jBegin; k = kBegin                      
+                        j = jBegin; k = kBegin
                         do i = iBegin, iEnd, Di
                            do iVar = 1, nVar
                               Cell_I(1) = State_VIIIB&
@@ -1982,9 +1969,9 @@ contains
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
                            nCalc_III(i,j,k) = nCalc_III(i,j,k) + 1
-                        enddo ! i 
+                        enddo ! i
                      elseif(DoResChange_D(2)) then
-                        i = iBegin; k = kBegin                        
+                        i = iBegin; k = kBegin
                         do j = jBegin, jEnd, Dj
                            do iVar = 1, nVar
                               Cell_I(1) = State_VIIIB&
@@ -2007,7 +1994,7 @@ contains
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
                            nCalc_III(i,j,k) = nCalc_III(i,j,k) + 1
-                        enddo ! j 
+                        enddo ! j
 
                      elseif(DoResChange_D(3)) then
                         i = iBegin; j = jBegin
@@ -2032,7 +2019,7 @@ contains
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            enddo ! iVar
-                           nCalc_III(i,j,k) = nCalc_III(i,j,k)+1  
+                           nCalc_III(i,j,k) = nCalc_III(i,j,k)+1
                         enddo ! k
                      endif
                   enddo
@@ -2041,67 +2028,67 @@ contains
          elseif(nResChange == 0) then
             ! Example: coarsen block 11
             ! ___________________________________________
-            ! |                    |                    |             
-            ! |                    |                    |             
-            ! |                    |                    |                
-            ! |         7          |         8          |           
-            ! |                    |                    |            
-            ! |                    |                    |            
-            ! |                    |                    |       
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |         7          |         8          |
+            ! |                    |                    |
+            ! |                    |                    |
+            ! |                    |                    |
             ! |____________________|____________________|
-            ! |                    |        |           |           
-            ! |                    |        |           |             
-            ! |                    |        |           |           
+            ! |                    |        |           |
+            ! |                    |        |           |
+            ! |                    |        |           |
             ! |          5         _________|___________|
-            ! |                    |        |           |          
-            ! |                    |        |           |          
-            ! |                    |        |           |          
+            ! |                    |        |           |
+            ! |                    |        |           |
+            ! |                    |        |           |
             ! |____________________|________|___________|
             !               TOP LAYER
 
             ! ___________________________________________
-            ! |                    |         |          |        
-            ! |                    |         |          |           
-            ! |                    |         |          |              
+            ! |                    |         |          |
+            ! |                    |         |          |
+            ! |                    |         |          |
             ! |        3           |_________|__________|
-            ! |                    |         |          |         
-            ! |                    |   14    |          |       
-            ! |                    |         |          |        y          
-            ! |____________________|_________|__________|        | 
-            ! |          |         |*        |          |        |      
-            ! |          |   13    |   11    |   12     |        -----> x  
-            ! |          |         |         |          |                
-            ! |__________|_________|_________|__________|              
-            ! |          |         |         |          |          
-            ! |          |         |   9     |   10     |   
-            ! |          |         |         |          |  
+            ! |                    |         |          |
+            ! |                    |   14    |          |
+            ! |                    |         |          |        y
+            ! |____________________|_________|__________|        |
+            ! |          |         |*        |          |        |
+            ! |          |   13    |   11    |   12     |        -----> x
+            ! |          |         |         |          |
+            ! |__________|_________|_________|__________|
+            ! |          |         |         |          |
+            ! |          |         |   9     |   10     |
+            ! |          |         |         |          |
             ! |__________|_________|_________|__________|
             !                 BOTTOM LAYER
-            ! 9-14 are the top layer of their parent block. 
+            ! 9-14 are the top layer of their parent block.
 
-            ! Six faces neighbours of block 11 are fine blocks. 
-            ! But at most three edg blocks (block 3, 5, 8) and one 
-            ! corner (block 7) may not. 
+            ! Six faces neighbours of block 11 are fine blocks.
+            ! But at most three edg blocks (block 3, 5, 8) and one
+            ! corner (block 7) may not.
 
             ! Case 1: only one edge block (like block 3) is coarse.
             !         ic = 1 .and. jc = nJ/2 .and. 1 =< kc =< nK/2
             !         are interpolated diagonally in x-y plane. Other
             !         needed values are restricted with 6*6*6 fine cells.
-            ! Case 2: n ( 1<n<=3 ) edge blocks are coarse. Similar 
+            ! Case 2: n ( 1<n<=3 ) edge blocks are coarse. Similar
             !         with Case 1, but one cell: ic=1,jc=nk/2,kc=nk/2
             !         can be interpolated in n directions. Use the average
-            !         of these n interpolations. 
-            ! Case 3: only the corner block is coarse. Need to coarsen 11 
-            !         to fill in the corner ghost of block 7. 
-            !         All needed cells except for ic=1,jc=nk/2,kc=nk/2 can 
-            !         be rectricted with 6*6*6 fine cells. 
-            !         The corner one (ic=1,jc=nk/2,kc=nk/2) is interpolated 
-            !         diagionally in 3D space. 
+            !         of these n interpolations.
+            ! Case 3: only the corner block is coarse. Need to coarsen 11
+            !         to fill in the corner ghost of block 7.
+            !         All needed cells except for ic=1,jc=nk/2,kc=nk/2 can
+            !         be rectricted with 6*6*6 fine cells.
+            !         The corner one (ic=1,jc=nk/2,kc=nk/2) is interpolated
+            !         diagionally in 3D space.
 
             State_VIIIB = 0
             nEdge = 0
             if(.not. allocated(nCorrected_III)) allocate(&
-                 nCorrected_III(max(nI/2,1), max(nJ/2,1),max(nK/2,1)))       
+                 nCorrected_III(max(nI/2,1), max(nJ/2,1),max(nK/2,1)))
             nCorrected_III = 0
 
             do kDir1 = -1, 1; do jDir1 = -1, 1; do iDir1 = -1, 1
@@ -2128,7 +2115,6 @@ contains
                   jBegin = 1; jEnd = nJ/2; Dj = 1
                endif
 
-
                if(kDir1 == 1) then
                   kBegin = nK/2; kEnd = nK/2 - 2; Dk = -1; k0 = nK
                elseif(kDir1 == -1) then
@@ -2137,10 +2123,10 @@ contains
                   kBegin = 1; kEnd = nK/2; Dk = 1
                endif
 
-               ! Simple restrictioin for 'inner' cells. 
+               ! Simple restrictioin for 'inner' cells.
                ! Simple restriction with 6*6*6 fine cells. But some cells
-               ! calculated in this way may not accurate and will be 
-               ! overwritten in the later part. 
+               ! calculated in this way may not accurate and will be
+               ! overwritten in the later part.
                do k = kBegin, kEnd, Dk
                   do j = jBegin, jEnd, Dj
                      do i = iBegin, iEnd, Di
@@ -2154,8 +2140,8 @@ contains
                         do iVar = 1, nVar
                            Cell_III = State_VGB(iVar,&
                                 2*i-3:2*i+2,2*j-3:2*j+2,2*k-3:2*k+2,iBlock)
-                           ! Some value calculated here is not accurate, 
-                           ! which will be corrected in the next part. 
+                           ! Some value calculated here is not accurate,
+                           ! which will be corrected in the next part.
                            State_VIIIB(iVar,i,j,k,iBlock) = &
                                 restriction_high_order_amr(Cell_III, &
                                 IsPositiveIn=IsPositive_V(iVar))
@@ -2164,9 +2150,9 @@ contains
                         ! It is somewhat complicated to tell weather it is
                         ! accurate or not. So, do not set nCalc_III value.
 
-                     enddo ! i 
-                  enddo ! j 
-               enddo ! k 
+                     enddo ! i
+                  enddo ! j
+               enddo ! k
 
                do k = kBegin, kEnd, Dk
                   do j = jBegin, jEnd, Dj
@@ -2223,14 +2209,14 @@ contains
                                 c1over10*Cell_I(5)
                            nCorrect = nCorrected_III(i,j,k)
                            if(nCorrect == 0) then
-                              ! 2D diagonally interpolation. 
+                              ! 2D diagonally interpolation.
                               State_VIIIB(iVar,i,j,k,iBlock) = &
                                    limit_interpolation&
                                    (Orig,Cell_I(1:4),Distance_I,&
                                    IsPositiveIn=IsPositive_V(iVar))
                            else
-                              ! Corner cell for Case 2. 
-                              ! Some cells can be corrected in different 
+                              ! Corner cell for Case 2.
+                              ! Some cells can be corrected in different
                               ! direction. Use the average of these correcitons
                               State_VIIIB(iVar,i,j,k,iBlock) = &
                                    (nCorrect*State_VIIIB(iVar,i,j,k,iBlock) +&
@@ -2241,18 +2227,18 @@ contains
                            endif
                         enddo ! iVar
 
-                        ! If it is accurate, it will not be overwritten by 
-                        ! simple restriction for the inner cell code. 
+                        ! If it is accurate, it will not be overwritten by
+                        ! simple restriction for the inner cell code.
                         nCalc_III(i,j,k) = nCalc_III(i,j,k) + 1
 
                         nCorrected_III(i,j,k) = nCorrected_III(i,j,k) + 1
-                     enddo ! i 
-                  enddo ! j 
-               enddo ! k 
+                     enddo ! i
+                  enddo ! j
+               enddo ! k
             enddo; enddo; enddo
 
             if(nEdge == 0) then
-               ! Case 3. 
+               ! Case 3.
                ! Take care corner neighbour block.
                do kDir1 = -1, 1, 2; do jDir1 = -1, 1, 2; do iDir1 = -1, 1,2
                   if(DiLevelNei_IIIB(iDir1,jDir1,kDir1,iBlock) /=1) CYCLE
@@ -2275,7 +2261,7 @@ contains
                      kBegin = 1; kEnd = 3; Dk = 1; k0 = 1
                   endif
 
-                  ! Simple 6*6*6 restriction. 
+                  ! Simple 6*6*6 restriction.
                   do k = kBegin, kEnd, Dk
                      do j = jBegin, jEnd, Dj
                         do i = iBegin, iEnd, Di
@@ -2293,7 +2279,7 @@ contains
                   enddo
 
                   do iVar = 1, nVar
-                     ! 3D diagonal interpolation. 
+                     ! 3D diagonal interpolation.
                      i = iBegin; j = jBegin; k = kBegin
                      Cell_I(1) = &
                           State_VIIIB(iVar,i+2*Di,j+2*Dj,k+2*Dk,iBlock)
@@ -2319,26 +2305,25 @@ contains
             endif ! nEdge
 
          endif ! nResChange
-      endif ! nK 
+      endif ! nK
 
       IsAccurate_B(iBlock) = .true.
 
     end subroutine calc_accurate_coarsened_block
+    !==========================================================================
 
-    !======================================================================
-
-    subroutine high_prolong_for_face_ghost(iBlock) 
-      ! High order prolongation for face ghost cells. It is done locally. 
+    subroutine high_prolong_for_face_ghost(iBlock)
+      ! High order prolongation for face ghost cells. It is done locally.
       use BATL_high_order, ONLY: prolongation_high_order_for_face_ghost, &
            correct_face_ghost_for_fine_block
 
       integer, intent(in):: iBlock
       real, allocatable:: Field1_VG(:,:,:,:)
       integer:: DiLevelNei_I(6)
-      !----------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       if(.not. allocated(Field1_VG)) &
-           allocate(Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))            
+           allocate(Field1_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
 
       call is_face_accurate(iBlock)
 
@@ -2353,14 +2338,13 @@ contains
       DiLevelNei_I(5) = DiLevelNei_IIIB(0,0,-1,iBlock)
       DiLevelNei_I(6) = DiLevelNei_IIIB(0,0,+1,iBlock)
 
-      ! If the corner/edge block is not a coarse block, the ghost values for 
-      ! fine block need to be corrected. 
+      ! If the corner/edge block is not a coarse block, the ghost values for
+      ! fine block need to be corrected.
       if(any(DiLevelNei_I == 1)) call correct_face_ghost_for_fine_block(&
            iBlock, nVar, State_VGB(:,:,:,:,iBlock), &
            IsPositiveIn_V=IsPositive_V)
 
     end subroutine high_prolong_for_face_ghost
-
     !==========================================================================
 
     subroutine is_face_accurate(iBlock)
@@ -2368,14 +2352,14 @@ contains
       logical:: IsOnlyCornerFine
       integer:: iDirCorner, jDirCorner, kDirCorner
       integer:: iBegin, iEnd, jBegin, jEnd, kBegin, kEnd, Di, Dj, Dk
-      character(len=*), parameter :: NameSub = 'is_face_accurate'
 
-      !----------------------------------------------------------------------
       ! Non-face ghost cells are also set false.
+      character(len=*), parameter:: NameSub = 'is_face_accurate'
+      !------------------------------------------------------------------------
       IsAccurateFace_GB(:,:,:,iBlock) = .false.
 
-      ! Assume face ghost cells are accurate. 
-      IsAccurateFace_GB(-2:0,      1:nJ,1:nK,iBlock) = .true. 
+      ! Assume face ghost cells are accurate.
+      IsAccurateFace_GB(-2:0,      1:nJ,1:nK,iBlock) = .true.
       IsAccurateFace_GB(nI+1:nI+3, 1:nJ,1:nK,iBlock) = .true.
       IsAccurateFace_GB(1:nI,   -2:0,   1:nK,iBlock) = .true.
       IsAccurateFace_GB(1:nI,nJ+1:nJ+3, 1:nK,iBlock) = .true.
@@ -2391,31 +2375,31 @@ contains
 
          if(.not. IsOnlyCornerFine) CYCLE
 
-         if(iDirCorner == 1) then 
+         if(iDirCorner == 1) then
             iBegin = nI; iEnd = nI -3; Di = -1
-         elseif(iDirCorner==-1) then 
+         elseif(iDirCorner==-1) then
             iBegin = 1; iEnd = 4; Di = 1
-         else 
+         else
             call CON_stop(NameSub//': This case should not happen! - case1')
          endif
 
-         if(jDirCorner == 1) then 
+         if(jDirCorner == 1) then
             jBegin = nJ; jEnd = nJ -3; Dj = -1
-         elseif(jDirCorner == -1) then 
+         elseif(jDirCorner == -1) then
             jBegin = 1; jEnd = 4; Dj = 1
          else
             call CON_stop(NameSub//': This case should not happen! - case2')
          endif
 
-         if(kDirCorner == 1) then 
+         if(kDirCorner == 1) then
             kBegin = nK; kEnd = nK - 3; Dk = -1
-         elseif(kDirCorner == -1) then 
+         elseif(kDirCorner == -1) then
             kBegin = 1; kEnd = 4; Dk = 1
          else
             call CON_stop(NameSub//': This case should not happen! - case3')
          endif
 
-         ! This kind of things should be replaced by a matrix finally.  
+         ! This kind of things should be replaced by a matrix finally.
          if(iDir == 1) then
             iBegin = nI+1; iEnd = nI+3; Di = 1
          elseif(iDir == -1) then
@@ -2430,13 +2414,13 @@ contains
             kBegin = 0; kEnd = -2; Dk = -1
          endif
 
-         ! Find out the not accurate face cells. 
+         ! Find out the not accurate face cells.
          IsAccurateFace_GB(iBegin:iEnd:Di,jBegin:jEnd:Dj,kBegin:kEnd:Dk, &
               iBlock) = .false.
       enddo; enddo; enddo ! iDir jDir kDir
 
     end subroutine is_face_accurate
-    !======================================================================
+    !==========================================================================
 
     subroutine buffer_to_state
 
@@ -2444,6 +2428,7 @@ contains
 
       integer:: iBufferR, i, j, k
       real :: TimeSend, WeightOld, WeightNew
+
       !------------------------------------------------------------------------
       jRMin = 1; jRMax = 1
       kRMin = 1; kRMax = 1
@@ -2486,7 +2471,7 @@ contains
             else
                do k=kRMin,kRmax,DkR; do j=jRMin,jRMax,DjR; do i=iRMin,iRmax,DiR
                   if(.not. (iSendStage == 3 &
-                       .and. IsAccurateFace_GB(i,j,k,iBlockRecv)))then    
+                       .and. IsAccurateFace_GB(i,j,k,iBlockRecv)))then
                      State_VGB(:,i,j,k,iBlockRecv) = &
                           BufferR_I(iBufferR+1:iBufferR+nVar)
                   endif
@@ -2498,15 +2483,14 @@ contains
       end do
 
     end subroutine buffer_to_state
-
     !==========================================================================
 
     subroutine do_equal
 
       integer :: iBufferS, i, j, k, nSize, nWithin
       real    :: WeightOld, WeightNew
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       iSend = (3*iDir + 3)/2
       jSend = (3*jDir + 3)/2
       kSend = (3*kDir + 3)/2
@@ -2536,7 +2520,7 @@ contains
       kRMax = iEqualR_DII(3,kDir,Max_)
 
       if(iSendStage == 3) then
-         ! Only edge/corner cells need to be overwritten. 
+         ! Only edge/corner cells need to be overwritten.
          nWithin = 0
          if(.not.(iRMin >= 0 .and. iRMin <= nI)) nWithin = nWithin + 1
          if(.not.(jRMin >= 0 .and. jRMin <= nJ)) nWithin = nWithin + 1
@@ -2574,14 +2558,14 @@ contains
       kSMin = iEqualS_DII(3,kDir,Min_)
       kSMax = iEqualS_DII(3,kDir,Max_)
 
-      !if(DoTest)then
+      ! if(DoTest)then
       !   write(*,*)'!!! iSMin, iSMax, jSMin, jSMax, kSMin, kSMax=', &
       !        iSMin, iSMax, jSMin, jSMax, kSMin, kSMax
       !   write(*,*)'!!! iRMin, iRMax, jRMin, jRMax, kRMin, kRMax=', &
       !        iRMin, iRMax, jRMin, jRMax, kRMin, kRMax
       !   write(*,*)'!!! State(SendMin)=', &
       !        State_VGB(:,iSMin,jSMin,kSMin,iBlockSend)
-      !end if
+      ! end if
 
       if(iProc == iProcRecv)then
          ! Local copy
@@ -2634,7 +2618,6 @@ contains
       end if
 
     end subroutine do_equal
-
     !==========================================================================
 
     subroutine do_restrict
@@ -2651,8 +2634,8 @@ contains
       !------------------------------------------------------------------------
 
       ! For sideways communication from a fine to a coarser block
-      ! the coordinate parity of the sender block tells 
-      ! if the receiver block fills into the 
+      ! the coordinate parity of the sender block tells
+      ! if the receiver block fills into the
       ! lower (D*Recv = 0) or upper (D*Rev=1) half of the block
       iSide = 0; if(iRatio==2) iSide = modulo(iTree_IA(Coord1_,iNodeSend)-1, 2)
       jSide = 0; if(jRatio==2) jSide = modulo(iTree_IA(Coord2_,iNodeSend)-1, 2)
@@ -2696,9 +2679,9 @@ contains
       if(DoCountOnly .and. (&
            (.not. UseHighResChange .and. iSendStage == nProlongOrder) .or. &
            (UseHighResChange .and. (iSendStage == 1 .or. iSendStage == 3)))) &
-           then 
-         ! For high resolution change, finer block only receives data 
-         ! when iSendStage = 1. 
+           then
+         ! For high resolution change, finer block only receives data
+         ! when iSendStage = 1.
 
          ! This processor will receive a prolonged buffer from
          ! the other processor and the "recv" direction of the prolongations
@@ -2720,9 +2703,9 @@ contains
       ! If this is the pure prolongation stage, all we did was counting
       if(iSendStage == 2 .and. .not. UseHighResChange) RETURN
 
-      ! For high resolution change, the finer block receives data from 
-      ! coarser or equal blocks when iSendStage = 1. Restriction will 
-      ! be done when iSendStage = 2. 
+      ! For high resolution change, the finer block receives data from
+      ! coarser or equal blocks when iSendStage = 1. Restriction will
+      ! be done when iSendStage = 2.
       if(UseHighResChange .and. iSendStage == 1) RETURN
 
       ! Do prolongation for edge/corner ghost cells remotely.
@@ -2743,7 +2726,7 @@ contains
       if(DoCountOnly)then
          ! Number of reals to send to the other processor
          nSize = nVar*(iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) &
-              + 1 + 2*nDim 
+              + 1 + 2*nDim
          if(present(Time_B)) nSize = nSize + 1
          nBufferS_P(iProcRecv) = nBufferS_P(iProcRecv) + nSize
          RETURN
@@ -2783,16 +2766,16 @@ contains
          InvIjkRatioRestr = 1.0/(iRatioRestr*jRatioRestr*kRatioRestr)
       end if
 
-      !write(*,*)'iDir, jDir, kDir =',iDir, jDir, kDir
-      !write(*,*)'iRecv,jRecv,kRecv=',iRecv,jRecv,kRecv
+      ! write(*,*)'iDir, jDir, kDir =',iDir, jDir, kDir
+      ! write(*,*)'iRecv,jRecv,kRecv=',iRecv,jRecv,kRecv
       !
-      !write(*,*)'iSMin,iSmax,jSMin,jSMax,kSMin,kSmax=',&
+      ! write(*,*)'iSMin,iSmax,jSMin,jSMax,kSMin,kSmax=',&
       !     iSMin,iSmax,jSMin,jSMax,kSMin,kSmax
       !
-      !write(*,*)'iRMin,iRmax,jRMin,jRMax,kRMin,kRmax=',&
+      ! write(*,*)'iRMin,iRmax,jRMin,jRMax,kRMin,kRmax=',&
       !     iRMin,iRmax,jRMin,jRMax,kRMin,kRmax
       !
-      !write(*,*)'iRatioRestr,InvIjkRatioRestr=',iRatioRestr,InvIjkRatioRestr
+      ! write(*,*)'iRatioRestr,InvIjkRatioRestr=',iRatioRestr,InvIjkRatioRestr
 
       if(UseHighResChange .and. .not. allocated(Primitive_VIII)) &
            allocate(Primitive_VIII(nVar,8,6,min(6,nK)))
@@ -2891,7 +2874,7 @@ contains
                               State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
                                    InvIjkRatioRestr * sum( &
                                    State_VGB(iVar,iS1:iS2,jS1:jS2,kS1:kS2, &
-                                   iBlockSend))                              
+                                   iBlockSend))
                            end do
                         end if
                      end do ! iR
@@ -2985,7 +2968,6 @@ contains
       end if
 
     end subroutine do_restrict
-
     !==========================================================================
 
     subroutine do_prolong
@@ -3029,7 +3011,7 @@ contains
                iRecv = iSend - 3*iDir
 
                iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlockSend)
-               
+
                ! Skip blocks with a time level outside the range
                if(UseTimeLevel .and. present(iLevelMin))then
                   if(  iTimeLevel_A(iNodeRecv) < iLevelMin .and. &
@@ -3040,9 +3022,9 @@ contains
                iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
                if(iSendStage == 3 .and. nK > 1 .and. &
-                    abs(iDir)+abs(jDir)+abs(kDir) == 1 ) then 
-                  ! Do_prolongation for edge/corner ghost cells and for 
-                  ! some special face cells. 
+                    abs(iDir)+abs(jDir)+abs(kDir) == 1 ) then
+                  ! Do_prolongation for edge/corner ghost cells and for
+                  ! some special face cells.
                   DoSendFace = is_only_corner_fine(iNodeRecv,-iDir,-jDir,-kDir)
                   if(.not. DoSendFace) CYCLE
                endif
@@ -3116,8 +3098,8 @@ contains
                if(nDim > 2) DkR = sign(1, kRMax - kRMin)
 
                if(UseHighResChange .and. iSendStage == 3) then
-                  ! The values set in set_range are used for iSendStage == 1, 
-                  ! Which is first order prolongtion. Now, for high order 
+                  ! The values set in set_range are used for iSendStage == 1,
+                  ! Which is first order prolongtion. Now, for high order
                   ! prolongation, some values need to be corrected.
                   nWidthProlongS_D(1:nDim) = 1 + (nWidth-1)/iRatio_D(1:nDim)
 
@@ -3131,13 +3113,13 @@ contains
                   iProlongS_DII(:,3,Max_) = nIjk_D
 
                   if(DoSendCorner)then
-                     ! Face + two edges + corner or edge + one corner 
+                     ! Face + two edges + corner or edge + one corner
                      ! are sent/recv together from fine to coarse block
                      do iDim = 1, nDim
-                        if(iRatio_D(iDim) == 1)CYCLE                        
-                        ! The extension is by nWidth/2 rounded upwards 
+                        if(iRatio_D(iDim) == 1)CYCLE
+                        ! The extension is by nWidth/2 rounded upwards
                         ! independent of
-                        ! the value of nCoarseLayers. There is no need to send 
+                        ! the value of nCoarseLayers. There is no need to send
                         ! two coarse layers into corner/edge ghost cells.
                         iProlongS_DII(iDim,1,Max_) = &
                              iProlongS_DII(iDim,1,Max_) + (nWidth+1)/2
@@ -3157,13 +3139,12 @@ contains
 
                iRatioRestr = iRatio
                jRatioRestr = jRatio
-               kRatioRestr = kRatio      
+               kRatioRestr = kRatio
                if(iSendStage /= 3 .and. nCoarseLayer > 1)then
                   if(iDir /= 0) iRatioRestr = 1
                   if(jDir /= 0) jRatioRestr = 1
                   if(kDir /= 0) kRatioRestr = 1
                end if
-
 
                if(nProlongOrder == 2)then
                   ! Add up 2nd order corrections for all AMR dimensions
@@ -3187,8 +3168,8 @@ contains
                      ! This works up to nG=10 ghost cells: likely to be enough.
                      kS = kSMin + abs((kR+9)/kRatio - (kRMin+9)/kRatio)
 
-                     ! DkR=+1: interpolate left for odd kR, right for even kR 
-                     ! DkR=-1: interpolate left for even kR, right for odd kR 
+                     ! DkR=+1: interpolate left for odd kR, right for even kR
+                     ! DkR=-1: interpolate left for even kR, right for odd kR
                      if(kRatio == 1) kS1 = kS
                      if(kRatio == 2) kS1 = kS + DkR*(1 - 2*modulo(kR,2))
 
@@ -3202,7 +3183,7 @@ contains
 
                            if(iRatio == 1) iS1 = iS
                            if(iRatio == 2) iS1 = iS + DiR*(1 - 2*modulo(iR,2))
-                           
+
                            if(UseMin)then
                               ! Store min value of the stencil into Slope_VG
                               Slope_VG(:,iR,jR,kR) = min( &
@@ -3244,7 +3225,7 @@ contains
 
                               ! The max(0.0, and the normalization to 1
                               ! avoids extrapolation when the
-                              ! receiving point is outside the sending 
+                              ! receiving point is outside the sending
                               ! polyhedron. Remove these for exact
                               ! second order test.
                               if(nDim == 2)then
@@ -3297,9 +3278,9 @@ contains
                         end do
                      end do
                   end do
-               end if ! nProlongOrder = 2               
+               end if ! nProlongOrder = 2
 
-               if(iProc == iProcRecv)then                  
+               if(iProc == iProcRecv)then
 
                   if(present(Time_B)) UseTime = &
                        abs(Time_B(iBlockSend) - Time_B(iBlockRecv)) > 1e-30
@@ -3310,7 +3291,7 @@ contains
                      WeightNew = 1 - WeightOld
 
                      do kR = kRMin, kRMax, DkR
-                        ! For kRatio = 1 simple shift: kS = kSMin + kR - kRMin 
+                        ! For kRatio = 1 simple shift: kS = kSMin + kR - kRMin
                         ! For kRatio = 2 coarsen both kR and kRMin before shift
                         kS = kSMin + abs((kR+9)/kRatioRestr &
                              -           (kRMin+9)/kRatioRestr)
@@ -3334,8 +3315,8 @@ contains
                         do kR = kRMin, kRMax, DkR
                            kS = kSMin + abs((kR+9)/kRatioRestr &
                                 -           (kRMin+9)/kRatioRestr)
-                           ! kDir = -1 if kR is even; kDir = 1 if kR is odd. 
-                           ! kR may be negative (1-nK), 
+                           ! kDir = -1 if kR is even; kDir = 1 if kR is odd.
+                           ! kR may be negative (1-nK),
                            ! so kR+2*nK will be always positive.
                            if(kRatioRestr == 2) kDir1 = 2*mod(kR+2*nK,2) - 1
                            do jR = jRMin, jRMax, DjR
@@ -3419,7 +3400,7 @@ contains
                      do kR = kRMin, kRMax, DkR
                         kS = kSMin + abs((kR+9)/kRatioRestr &
                              -           (kRMin+9)/kRatioRestr)
-                        ! kDir = -1 if kR is even; kDir = 1 if kR is odd. 
+                        ! kDir = -1 if kR is even; kDir = 1 if kR is odd.
                         ! kR may be negative (1-nK), kR+2*nK will be positive.
                         if(kRatioRestr == 2) kDir1 = 2*mod(kR+2*nK,2) - 1
                         do jR = jRMin, jRMax, DjR
@@ -3442,8 +3423,8 @@ contains
                                  BufferS_I(iBufferS+iVar)=&
                                       prolongation_high_order_amr&
                                       (CoarseCell_III,&
-                                      IsPositiveIn=IsPositive_V(iVar)) 
-                                 
+                                      IsPositiveIn=IsPositive_V(iVar))
+
                               enddo
                               iBufferS = iBufferS + nVar
                            end do ! iR
@@ -3484,7 +3465,6 @@ contains
       end do
 
     end subroutine do_prolong
-
     !==========================================================================
 
     subroutine set_range
@@ -3567,14 +3547,14 @@ contains
       iProlongR_DII(:, 3,Max_) = nIjk_D + nWidth
 
       if(DoSendCorner)then
-         ! Face + two edges + corner or edge + one corner 
+         ! Face + two edges + corner or edge + one corner
          ! are sent/recv together from fine to coarse block
 
          do iDim = 1, nDim
             if(iRatio_D(iDim) == 1)CYCLE
 
             ! The extension is by nWidth/2 rounded upwards independent of
-            ! the value of nCoarseLayers. There is no need to send 
+            ! the value of nCoarseLayers. There is no need to send
             ! two coarse layers into corner/edge ghost cells.
             iProlongS_DII(iDim,1,Max_) = iProlongS_DII(iDim,1,Max_) &
                  + (nWidth+1)/2
@@ -3586,9 +3566,10 @@ contains
       end if
 
     end subroutine set_range
+    !==========================================================================
 
   end subroutine message_pass_real
-  !===========================================================================
+  !============================================================================
   subroutine message_pass_ng_real(nVar, State_VGB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
@@ -3632,8 +3613,8 @@ contains
          iLevelMin=iLevelMin, iLevelMax=iLevelMax)
 
   end subroutine message_pass_ng_real
+  !============================================================================
 
-  !===========================================================================
   subroutine message_pass_ng_real1(State_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
@@ -3660,7 +3641,7 @@ contains
     real,    optional, intent(in) :: Time_B(MaxBlock)
     character(len=*), optional,intent(in) :: NameOperatorIn
 
-    character(len=*), parameter:: NameSub = 'message_pass_ng_real'
+    character(len=*), parameter:: NameSub = 'message_pass_ng_real1'
     !--------------------------------------------------------------------------
 
     call message_pass_real(1, nG, State_GB, nWidthIn=nWidthIn, &
@@ -3671,8 +3652,8 @@ contains
          iLevelMin=iLevelMin, iLevelMax=iLevelMax)
 
   end subroutine message_pass_ng_real1
+  !============================================================================
 
-  !===========================================================================
   subroutine message_pass_real1(nG, State_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
@@ -3692,7 +3673,7 @@ contains
     integer, optional, intent(in) :: nProlongOrderIn
     integer, optional, intent(in) :: nCoarseLayerIn
     integer, optional, intent(in) :: iLevelMin, iLevelMax
-    logical, optional, intent(in) :: DoSendCornerIn    
+    logical, optional, intent(in) :: DoSendCornerIn
     logical, optional, intent(in) :: DoRestrictFaceIn
     logical, optional, intent(in) :: DoTestIn
     logical, optional, intent(in) :: DoResChangeOnlyIn
@@ -3711,8 +3692,8 @@ contains
          iLevelMin=iLevelMin, iLevelMax=iLevelMax)
 
   end subroutine message_pass_real1
+  !============================================================================
 
-  !===========================================================================
   subroutine message_pass_ng_int1(Int_GB, &
        nWidthIn, nProlongOrderIn, nCoarseLayerIn, DoSendCornerIn, &
        DoRestrictFaceIn, TimeOld_B, Time_B, DoTestIn, NameOperatorIn,&
@@ -3738,7 +3719,6 @@ contains
     real,    optional, intent(in) :: Time_B(MaxBlock)
     character(len=*), optional,intent(in) :: NameOperatorIn
 
-
     ! help array for converting between Scalar_GB and State_VGB
     ! used by message_pass_cell
     real, allocatable, save:: Scalar_VGB(:,:,:,:,:)
@@ -3762,7 +3742,6 @@ contains
          nint(Scalar_VGB(1,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,1:nBlock))
 
   end subroutine message_pass_ng_int1
-
   !============================================================================
 
   subroutine test_pass_cell
@@ -3819,12 +3798,12 @@ contains
 
     character(len=20):: NameGeometry
 
-    logical:: DoTestMe
-    character(len=*), parameter :: NameSub = 'test_pass_cell'
-    !-----------------------------------------------------------------------
-    DoTestMe = iProc == 0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'test_pass_cell'
+    !--------------------------------------------------------------------------
+    DoTest = iProc == 0
 
-    if(DoTestMe) write(*,*) 'Starting ',NameSub
+    if(DoTest) write(*,*) 'Starting ',NameSub
 
     call test_switches
     call test_scalar
@@ -3832,41 +3811,42 @@ contains
     if(nDim == 1) RETURN !------------------------
     call test_non_cartesian
 
-
     if(nG < 3) RETURN
     if(nDim > nDimAmr) RETURN
     call test_high_order_cartesian
     call test_high_order_non_cartesian
-    
+
   contains
+    !==========================================================================
     !----------------------------------------------------------------------
     subroutine test_switches
 
+      !------------------------------------------------------------------------
       call init_tree(MaxBlockTest)
       call init_geometry( IsPeriodicIn_D = IsPeriodicTest_D(1:nDim) )
       call init_grid( DomainMin_D(1:nDim), DomainMax_D(1:nDim) )
       call set_tree_root( nRootTest_D(1:nDim))
 
       call find_tree_node( (/0.5,0.5,0.5/), iNode)
-      if(DoTestMe)write(*,*) NameSub,' middle node=',iNode
+      if(DoTest)write(*,*) NameSub,' middle node=',iNode
       call refine_tree_node(iNode)
       call distribute_tree(.true.)
       call create_grid
 
-      if(DoTestMe) call show_tree(NameSub,.true.)
+      if(DoTest) call show_tree(NameSub,.true.)
 
       allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest))
 
       do nProlongOrder = 1, 2; do nCoarseLayer = 1, 2; do nWidth = 1, nG
 
-         ! Second order prolongation does not work with sending multiple 
-         ! coarse cell layers into the fine cells with their original values. 
+         ! Second order prolongation does not work with sending multiple
+         ! coarse cell layers into the fine cells with their original values.
          if(nProlongOrder == 2 .and. nCoarseLayer == 2) CYCLE
 
          ! Cannot send more coarse layers than the number of ghost cell layers
          if(nCoarseLayer > nWidth) CYCLE
 
-         if(DoTestMe)write(*,*) 'testing message_pass_cell with', &
+         if(DoTest)write(*,*) 'testing message_pass_cell with', &
               ' nProlongOrder=',  nProlongOrder, &
               ' nCoarseLayer=',   nCoarseLayer,  &
               ' nWidth=',         nWidth
@@ -3885,11 +3865,11 @@ contains
             DoRestrictFace = iRestrictFace == 2
 
             ! Second order prolongation does not work with restricting face:
-            ! the first order restricted cell cannot be used in the 
+            ! the first order restricted cell cannot be used in the
             ! prolongation.
             if(DoRestrictFace .and. nProlongOrder == 2) CYCLE
 
-            if(DoTestMe)write(*,*) 'testing message_pass_cell with', &
+            if(DoTest)write(*,*) 'testing message_pass_cell with', &
                  ' DoSendCorner=',   DoSendCorner, &
                  ' DoRestrictFace=', DoRestrictFace
 
@@ -3914,7 +3894,7 @@ contains
                ! Loop through all cells including ghost cells
                do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
 
-                  ! The filled in second order accurate ghost cell value 
+                  ! The filled in second order accurate ghost cell value
                   ! should be the same as the coordinates of the cell center
                   Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
 
@@ -3999,7 +3979,7 @@ contains
                        DiLevelNei_IIIB(iDir,jDir,kDir,iBlock) == 1)then
 
                      ! Shift depends on the parity of the fine ghost cell
-                     ! except when there is no AMR or multiple coarse cell 
+                     ! except when there is no AMR or multiple coarse cell
                      ! layers are sent in that direction
                      if(iRatio == 2 .and. (nCoarseLayer == 1 .or. iDir == 0)) &
                           Di = 2*modulo(i,2) - 1
@@ -4033,13 +4013,14 @@ contains
       call clean_grid
       call clean_tree
     end subroutine test_switches
+    !==========================================================================
     !----------------------------------------------------------------------
 
     subroutine test_scalar
       !------------------------ Test Scalar -----------------------------
 
-      ! To test the message pass for the cell with min max operators we 
-      ! generate a fine uniform grid 
+      ! To test the message pass for the cell with min max operators we
+      ! generate a fine uniform grid
       ! for the whole domain and transfer the cell values from the
       ! block cells to the cells on the fine grid. Then we gather all the
       ! data on the fine grid with the proper operator.
@@ -4047,6 +4028,7 @@ contains
       ! message_pass_cell_scalar is called with the fine grid values.
 
       ! rescale the domain to make indexing easyer
+      !------------------------------------------------------------------------
       DomainSize_D = iRatio_D*nRootTest_D*nIJK_D
       DomainMin_D = (/ 0.0, 0.0, 0.0 /)
       DomainMax_D = DomainSize_D
@@ -4061,12 +4043,12 @@ contains
       call distribute_tree(.true.)
       call create_grid
 
-      ! Position of cell corners, for solving problems with round-off 
+      ! Position of cell corners, for solving problems with round-off
       ! when getting fine grid positions
       allocate(XyzCorn_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest))
       do iBlock = 1, nBlock
          if(Unused_B(iBlock)) CYCLE
-         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI 
+         do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
             XyzCorn_DGB(:,i,j,k,iBlock) = &
                  Xyz_DGB(:,i,j,k,iBlock) - &
                  0.5*CellSize_DB(:,iBlock)*&
@@ -4086,7 +4068,6 @@ contains
            (nJ)*jRatio*nRootTest_D(2),&
            (nK)*kRatio*nRootTest_D(3)))
 
-
       nFineCell = ((nI)*iRatio*nRootTest_D(1))*&
            ((nJ)*jRatio*nRootTest_D(2))*&
            ((nK)*kRatio*nRootTest_D(3))
@@ -4104,13 +4085,13 @@ contains
             iMpiOperator = MPI_MIN
          case("max")
             FineGridLocal_III(:,:,:)  = -1.0e8
-            FineGridGlobal_III(:,:,:) = -1.0e8 
+            FineGridGlobal_III(:,:,:) = -1.0e8
             iMpiOperator=MPI_MAX
          case default
             call CON_stop(NameSub//': incorrect operator name')
          end select
 
-         if(DoTestMe) write(*,*) 'testing message_pass_cell_scalar ', &
+         if(DoTest) write(*,*) 'testing message_pass_cell_scalar ', &
               'with operator= ',NameOperator
 
          do iBlock = 1, nBlock
@@ -4126,7 +4107,7 @@ contains
             if(Unused_B(iBlock)) CYCLE
             do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-               iFG = nint(XyzCorn_DGB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1 
+               iFG = nint(XyzCorn_DGB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1
                jFG = nint(XyzCorn_DGB(2,i,j,k,iBlock)*FineGridStep_D(2)) + 1
                kFG = nint(XyzCorn_DGB(3,i,j,k,iBlock)*FineGridStep_D(3)) + 1
 
@@ -4156,14 +4137,14 @@ contains
                   jFG = nint(XyzCorn_DGB(2,i,j,k,iBlock)*FineGridStep_D(2)) + 1
                   kFG = nint(XyzCorn_DGB(3,i,j,k,iBlock)*FineGridStep_D(3)) + 1
 
-                  !copy cells that are inside the course grid cell
+                  ! copy cells that are inside the course grid cell
                   CourseGridCell_III = FineGridGlobal_III(&
                        iFG:iFG+min(1,iRatio-1),&
                        jFG:jFG+min(1,jRAtio-1),&
                        kFG:kFG+min(1,kRatio-1))
 
                   select case(NameOperator)
-                  case("min") 
+                  case("min")
                      if(Scalar_GB(i,j,k,iBlock) /= &
                           minval(CourseGridCell_III))then
                         write (*,*) "Error for operator, iNode,  iBlock= ",&
@@ -4173,7 +4154,7 @@ contains
                              i,j,k, " ::", iFG, jFG,kFG
 
                      end if
-                  case("max") 
+                  case("max")
                      if(Scalar_GB(i,j,k,iBlock) /= &
                           maxval(CourseGridCell_III))then
                         write (*,*) "Error for operator, iNode,  iBlock= ",&
@@ -4197,6 +4178,7 @@ contains
     !==========================================================================
     subroutine test_non_cartesian
 
+      !------------------------------------------------------------------------
       do iTest = 1,6
 
          ! The code is quite inaccurate for partial AMR across the pole
@@ -4257,7 +4239,7 @@ contains
          end select
          DomainSize_D = DomainMax_D - DomainMin_D
 
-         if(DoTestMe)then
+         if(DoTest)then
             if(iTest <= 3)write(*,*) &
                  'testing message_pass_cell across '//trim(NameGeometry)// &
                  ' pole'
@@ -4276,7 +4258,6 @@ contains
          if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
               write(*,*) NameSub,': IsPeriodic_D=', IsPeriodic_D(1:nDim), &
               ' should agree with ', IsPeriodicTest_D(1:nDim)
-
 
          if(iTest > 3)then
             ! Test with refined grid
@@ -4299,13 +4280,13 @@ contains
          call distribute_tree(.true.)
          call create_grid
 
-         !if(DoTestMe) call show_tree(NameSub,.true.)
-         !do iBlock = 3, 3
+         ! if(DoTest) call show_tree(NameSub,.true.)
+         ! do iBlock = 3, 3
          !   do j = 0, 3; do i = 0, 3
          !      write(*,*) '!!! iBlock, i, j, iNodeNei_IIIB(i,j,:,iBlock)=', &
          !           iBlock, i, j, iNodeNei_IIIB(i,j,:,iBlock)
          !   end do; end do
-         !end do
+         ! end do
 
          allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest))
 
@@ -4325,15 +4306,15 @@ contains
             ! Loop through all cells including ghost cells
             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
 
-               ! The filled in second order accurate ghost cell value 
+               ! The filled in second order accurate ghost cell value
                ! should be the same as the coordinates of the cell center
                Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
-               
+
                ! For 3D cylindrical Z coordinate is periodic
                if( (iTest==1 .or. iTest==4) .and. nDim == 3) &
                     Xyz_D(z_) = DomainMin_D(z_) &
                     + modulo(Xyz_D(z_) - DomainMin_D(z_), DomainSize_D(z_))
-               
+
                do iDim = 1, nDim
                   if(abs(State_VGB(iDim,i,j,k,iBlock) - Xyz_D(iDim)) &
                        /abs( Xyz_D(iDim)) > Tolerance)then
@@ -4358,7 +4339,7 @@ contains
       call clean_tree
 
     end subroutine test_non_cartesian
-    !=========================================================================
+    !==========================================================================
 
     subroutine test_high_order_cartesian
       real    :: ExactSolution, Error, ErrorTotal
@@ -4367,10 +4348,11 @@ contains
       integer :: iNode1_I(8)
       logical :: DoTestMeOnly = .false.
       integer :: nPoly = 3
-      
+
+      !------------------------------------------------------------------------
       if(nDim == 2) then
          nCount = 16; nRefineNode = 4
-      else 
+      else
          nCount = 256; nRefineNode = 8
       endif
 
@@ -4393,8 +4375,8 @@ contains
       do iRefinement = 1, nRefinement
          ! iRefinement = 1: 1 level refine
          ! iRefinement = 2: 2 level refine
-         
-         if(DoTestMe)then
+
+         if(DoTest)then
             write(*,*) &
                  'testing message_pass_cell across '//trim(NameGeometry)// &
                  ' with high resolution change with refinement level =', &
@@ -4416,7 +4398,7 @@ contains
                iNode_I = (/72,79,86,93,100,107,114,121/)
             endif
          endif
-         
+
          do iCount = 0, nCount-1
             if(DoTestMeOnly) then
                write(*,*) ''
@@ -4425,7 +4407,7 @@ contains
             call init_tree(MaxBlockTest)
             call init_geometry(NameGeometry, &
                  IsPeriodicIn_D=IsPeriodicTest_D(1:nDim))
-            
+
             call init_grid(DomainMin_D(1:nDim), DomainMax_D(1:nDim), &
                  UseDegreeIn=.false.)
             call set_tree_root( nRootTest_D(1:nDim))
@@ -4477,10 +4459,10 @@ contains
 
                ! Loop through all cells including ghost cells
                do k = kMin,kMax; do j = jMin,jMax; do i = iMin, iMax
-                  Xyz_D = Xyz_DGB(:,i,j,k,iBlock)                  
+                  Xyz_D = Xyz_DGB(:,i,j,k,iBlock)
                   if(.not. (all(Xyz_D(1:nDim) < DomainMax_D(1:nDim)) &
                        .and. all(Xyz_D(1:nDim) > DomainMin_D(1:nDim)))) then
-                     CYCLE                
+                     CYCLE
                   endif
 
                   ExactSolution= exact_solution(Xyz_D, nPolyIn=nPoly)
@@ -4511,13 +4493,13 @@ contains
       enddo ! iRefinement
 
     end subroutine test_high_order_cartesian
-    !=========================================================================
+    !==========================================================================
 
     subroutine test_high_order_non_cartesian
       real    :: ErrorTotal, ExactSolution, Error
       real    :: Xyz1_D(3), XyzGeneral_D(3)
       integer :: nPoly
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       do iTest = 1, 2
 
          ! The code is quite inaccurate for partial AMR across the pole
@@ -4559,7 +4541,7 @@ contains
          end select
          DomainSize_D = DomainMax_D - DomainMin_D
 
-         if(DoTestMe)then
+         if(DoTest)then
             write(*,*) &
                  'testing message_pass_cell across '//trim(NameGeometry)// &
                  ' with high resolution change'
@@ -4594,7 +4576,7 @@ contains
          if(iTest == 2) then
             Tolerance = 1e-14
             nPoly=3
-         else 
+         else
             Tolerance = 7e-3
             nPoly=1
          endif
@@ -4636,7 +4618,7 @@ contains
 
                if(.not. (all(Xyz1_D(1:nDim) < DomainMax_D(1:nDim)) &
                     .and. all(Xyz1_D(1:nDim) > DomainMin_D(1:nDim)))) then
-                  CYCLE                
+                  CYCLE
                endif
 
                ExactSolution= exact_solution(Xyz_D,nPolyIn=nPoly)
@@ -4666,6 +4648,7 @@ contains
       end do ! iTest
 
     end subroutine test_high_order_non_cartesian
+    !==========================================================================
 
     !----------------------------------------------------------------------
 
@@ -4675,14 +4658,15 @@ contains
       integer:: nPoly
       real:: x, y, z
 
+      !------------------------------------------------------------------------
       nPoly = 4
       if(present(nPolyIn)) nPoly = nPolyIn
 
-      x = Xyz_D(1) 
+      x = Xyz_D(1)
       y = Xyz_D(2)
       z = Xyz_D(3)
 
-      !exact_solution = 4.0+sin(y*2*cpi/8.0)+cos(z*2*cpi/8.0)+sin(x*2*cpi/8.0)
+      ! exact_solution = 4.0+sin(y*2*cpi/8.0)+cos(z*2*cpi/8.0)+sin(x*2*cpi/8.0)
       select case(nPoly)
       case(4)
          exact_solution = x**4 +y**4+ z**4 + x**3*y &
@@ -4696,8 +4680,9 @@ contains
          exact_solution = x + y + z
       end select
     end function exact_solution
-    !======================================================================
-
+    !==========================================================================
 
   end subroutine test_pass_cell
+  !============================================================================
 end module BATL_pass_cell
+!==============================================================================

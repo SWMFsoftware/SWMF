@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_tree
 
@@ -7,6 +7,8 @@ module BATL_tree
        nDimAmr, iDimAmr_D, nIJK_D
   use BATL_geometry, ONLY: IsPeriodic_D, IsPeriodicCoord_D, Phi_, Theta_, &
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, IsAnyAxis
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
   save
@@ -42,27 +44,27 @@ module BATL_tree
   ! nDesiredRefine and nDesiredCoarsen set the number of blocks that we
   ! wish to refine/coarsen but may not happen (e.g. DoStrictAmr = .false.)
   ! nNodeRefine and nNodeCoarsen set the number of blocks that has to be
-  ! refined/coarsened or the program will stop. 
+  ! refined/coarsened or the program will stop.
   ! nNodeSort is the number of nodes in the ranking list iRank_A
   ! sorted by one or more AMR criteria
 
   integer, public :: nDesiredRefine,nNodeRefine, &
        nDesiredCoarsen, nNodeCoarsen, nNodeSort
 
-  ! If the difference in the criteria is less than DiffRange for two blocks, 
+  ! If the difference in the criteria is less than DiffRange for two blocks,
   ! then the blocks are refined/coarsened together (preserves symmetry).
   real, public, parameter :: DiffRange = 1.0e-6
 
   ! We can also specify the percentage of blocks we want to refine. For doing
   ! this we need to sort them into a priority list iRank_A. This priority list
-  ! can also be used for refining/coarsening blocks to the point where we 
+  ! can also be used for refining/coarsening blocks to the point where we
   ! have no more blocks available.
   ! Rank_A stores the criteria values for iRank_A
   integer, public, allocatable :: iRank_A(:)
 
   ! Large Rank_A value means high priority for refinement, while
   ! low Rank_A value means high priority for coarsening.
-  real, public, allocatable :: Rank_A(:) 
+  real, public, allocatable :: Rank_A(:)
 
   ! Maximun number of try to refine/coarsen the grid based on iRank_A
   integer, public :: iMaxTryAmr = 100
@@ -79,7 +81,7 @@ module BATL_tree
   ! Named indexes of iTree_IA
   integer, public, parameter :: &
        Status_   =  1, &
-       Level_    =  2, & ! grid level 
+       Level_    =  2, & ! grid level
        Proc_     =  3, & ! processor index
        Block_    =  4, & ! block index
        MinLevel_ =  5, & ! minimum level allowed
@@ -89,7 +91,7 @@ module BATL_tree
        Coord2_   =  8, & ! coordinate of node in 2nd dimension
        Coord3_   =  9, & ! coordinate of node in 3rd dimension
        CoordLast_=  9, & ! Coord0_ + MaxDim (?)
-       Parent_   = 10, & ! Parent_ must be 
+       Parent_   = 10, & ! Parent_ must be
        Child0_   = 10, & ! equal to Child0_
        Child1_   = Child0_ + 1,      &
        ChildLast_= Child0_ + nChild
@@ -136,7 +138,7 @@ module BATL_tree
        Used_GB(:,:,:,:)               ! Used cells on local processors
 
   integer, public, allocatable :: &
-       DiLevelNei_IIIB(:,:,:,:),  &  ! Level difference relative to neighbors 
+       DiLevelNei_IIIB(:,:,:,:),  &  ! Level difference relative to neighbors
        iNodeNei_IIIB(:,:,:,:)        ! Node index of neighboring blocks
 
   ! Index for unset values (that are otherwise larger)
@@ -197,8 +199,8 @@ module BATL_tree
 
   integer :: iNodeNew = 0
 
-  ! The index along the Morton curve is global so that it can be used by the 
-  ! recursive subroutine order_children 
+  ! The index along the Morton curve is global so that it can be used by the
+  ! recursive subroutine order_children
   integer :: iMorton
 
   ! Needed for compact_tree
@@ -214,7 +216,7 @@ module BATL_tree
   character(len=*), parameter:: NameMod = "BATL_tree"
 
 contains
-  !===========================================================================
+  !============================================================================
   subroutine init_tree(MaxBlockIn)
 
     use BATL_mpi, ONLY: nProc
@@ -222,7 +224,8 @@ contains
     ! Initialize the tree assuming MaxBlockIn blocks per processor
 
     integer, intent(in) :: MaxBlockIn ! Max number of blocks per processor
-    !----------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(allocated(iTree_IA)) RETURN
 
     ! Store tree size and maximum number of blocks/processor
@@ -232,7 +235,7 @@ contains
     if(MaxTotalBlock <= 0)then
        MaxTotalBlock = nProc*MaxBlock
     else
-       ! MaxTotalBlock was set by the #AMRLIMIT command in 
+       ! MaxTotalBlock was set by the #AMRLIMIT command in
        ! BATL_amr_criteria::read_amr_criteria
        MaxTotalBlock = min(MaxTotalBlock, nProc*MaxBlock)
     end if
@@ -269,13 +272,12 @@ contains
     nLevelMax = 0
 
   end subroutine init_tree
-
-  !==========================================================================
+  !============================================================================
 
   subroutine set_tree_param(UseUniformAxisIn)
 
     logical, optional:: UseUniformAxisIn
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(.not.present(UseUniformAxisIn)) RETURN
     UseUniformAxis = UseUniformAxisIn
     if(UseUniformAxis)then
@@ -288,11 +290,11 @@ contains
     end if
 
   end subroutine set_tree_param
-
-  !==========================================================================
+  !============================================================================
 
   subroutine clean_tree
 
+    !--------------------------------------------------------------------------
     if(.not.allocated(iTree_IA)) RETURN
     deallocate(iTree_IA, iNodeMorton_I, iMortonNode_A, &
          iStatusNew_A, iStatusAll_A, &
@@ -307,13 +309,12 @@ contains
     iNodeNew = 0
 
   end subroutine clean_tree
-
-  !==========================================================================
+  !============================================================================
 
   integer function i_node_new()
 
     ! Find a skipped element in the iTree_IA array
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! Try next node first
     if(iNodeNew < MaxNode)then
        iNodeNew = iNodeNew + 1
@@ -335,8 +336,7 @@ contains
     call CON_stop('i_node_new: ran out of nodes')
 
   end function i_node_new
-
-  !==========================================================================
+  !============================================================================
 
   subroutine set_tree_root(nRootIn_D)
 
@@ -344,8 +344,8 @@ contains
 
     integer :: iRoot, jRoot, kRoot, iNode, iRoot_D(MaxDim)
 
-    character(len=*), parameter:: NameSub = 'BATL_tree::set_tree_root'
-    !-----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'set_tree_root'
+    !--------------------------------------------------------------------------
 
     ! Set number of root blocks: default or input arguments
     nRoot_D = 1
@@ -381,8 +381,8 @@ contains
     nNode     = nRoot
 
   end subroutine set_tree_root
+  !============================================================================
 
-  !==========================================================================
   subroutine refine_tree_node(iNode, iTypeNode_A)
 
     integer, intent(in) :: iNode
@@ -392,8 +392,8 @@ contains
     integer :: iCoord_D(nDim)
     integer :: iDim, iDimAmr, iNodeChild
 
-    character(len=*), parameter:: NameSub='refine_tree_node'
-    !----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'refine_tree_node'
+    !--------------------------------------------------------------------------
 
     if(iTree_IA(Status_, iNode) == Unused_) &
          call CON_stop(NameSub//' trying to refine and unused block')
@@ -449,19 +449,19 @@ contains
        if(present(iTypeNode_A)) iTypeNode_A(iNodeChild) = iTypeNode_A(iNode)
     end do
 
-    ! Keep track of used nodes in the future tree 
+    ! Keep track of used nodes in the future tree
     nNodeUsed = nNodeUsed + nChild - 1
 
   end subroutine refine_tree_node
+  !============================================================================
 
-  !==========================================================================
   subroutine coarsen_tree_node(iNode, iTypeNode_A)
 
     integer, intent(in) :: iNode
     integer, intent(inout), optional:: iTypeNode_A(MaxNode)
 
     integer :: iChild, iNodeChild
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     do iChild = Child1_, ChildLast_
        iNodeChild = iTree_IA(iChild, iNode)
@@ -484,8 +484,7 @@ contains
          maxval(iTypeNode_A(iTree_IA(Child1_:ChildLast_,iNode)))
 
   end subroutine coarsen_tree_node
-
-  !===========================================================================
+  !============================================================================
 
   subroutine adapt_tree(iTypeNode_A)
 
@@ -499,8 +498,8 @@ contains
     integer, intent(inout), optional:: iTypeNode_A(MaxNode)
 
     ! All processors can request some status changes in iStatusNew_A.
-    ! Here we collect requests, check for proper nesting, 
-    ! limitations on level, number of blocks, etc, 
+    ! Here we collect requests, check for proper nesting,
+    ! limitations on level, number of blocks, etc,
     ! modify iStatusNew_A and set iTree_IA.
 
     integer:: nNodeUsedNow, iMorton, iBlock, iChild, iStatus, iError
@@ -517,11 +516,11 @@ contains
     ! Expected number of nodes minus availabla number of nodes
     integer:: DnNodeUsed = 0
 
-    logical, parameter :: DoTest = .false., DoTestNei = .false. 
+    logical, parameter :: DoTest = .false., DoTestNei = .false.
     integer, allocatable :: iStatusNew0_A(:)
 
-    character(len=*), parameter:: NameSub = 'BATL_tree::adapt_tree'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'adapt_tree'
+    !--------------------------------------------------------------------------
 
     ! Collect the local status requests into a global request
     if(nProc > 1)then
@@ -530,7 +529,7 @@ contains
        iStatusNew_A(1:nNode) = iStatusAll_A(1:nNode)
     end if
 
-    !if(iProc == 0) then
+    ! if(iProc == 0) then
     !   do iNode=1,nNode
     !      if(iStatusNew_A(iNode) == Refine_) then
     !         print *," Want to Refine node =", iNode
@@ -541,7 +540,7 @@ contains
     !         print *," Want to Coarsen node =", iNode
     !      end if
     !   end do
-    !end if
+    ! end if
 
     ! store the initall list that will not be changed by the proper nesting
     if(.not.DoStrictAmr) then
@@ -560,7 +559,7 @@ contains
           iLevel    = iTree_IA(Level_,iNode)
           iLevelMin = min(iLevelMin, iLevel)
 
-          ! Check MaxLevel_ of node to see if it can be refined 
+          ! Check MaxLevel_ of node to see if it can be refined
           if(iStatusNew_A(iNode) == Refine_)then
              if(iLevel >= iTree_IA(MaxLevel_,iNode))then
                 iStatusNew_A(iNode) = Unset_
@@ -611,8 +610,8 @@ contains
 
        end do
 
-       ! Check proper nesting. Go down level by level. No need to 
-       ! check base level. Changes in the requests will be applied 
+       ! Check proper nesting. Go down level by level. No need to
+       ! check base level. Changes in the requests will be applied
        ! to all siblings immediately.
        LOOPLEVEL: do iLevel = iLevelMax, max(iLevelMin, 1), -1
 
@@ -634,9 +633,9 @@ contains
 
              ! Check neighbors around this corner of the parent block
 
-             ! Loop from 0 to 1 or from 2 to 3 in the side index 
+             ! Loop from 0 to 1 or from 2 to 3 in the side index
              ! depending on which side this node
-             ! is relative to its parent. If there is no refinement in some 
+             ! is relative to its parent. If there is no refinement in some
              ! direction, then loop from 0 to 3 (and skip 2).
 
              if(iRatio==1)then
@@ -652,7 +651,7 @@ contains
                 ! 2D or 3D but no AMR, check neighbors in both directions
                 jSideMin = 0; jSideMax = 3
              else
-                ! 2D or 3D and AMR: check only the directions 
+                ! 2D or 3D and AMR: check only the directions
                 ! corresponding to the corner occupied by this child
                 jSideMin = 2*modulo(iTree_IA(Coord2_,iNode)-1, 2)
                 jSideMax = jSideMin + 1
@@ -701,7 +700,7 @@ contains
 
                          if(jLevelNew < jLevel)then
                             ! Neighbor and its siblings cannot be coarsened
-                            jNodeParent = iTree_IA(Parent_,jNode) 
+                            jNodeParent = iTree_IA(Parent_,jNode)
                             do iChild = Child1_, ChildLast_
                                iNodeChild = iTree_IA(iChild,jNodeParent)
                                if(iStatusNew_A(iNodeChild) /= Coarsen_) CYCLE
@@ -773,27 +772,27 @@ contains
 
        ! exit if we have enough space for all the new blocks
        if(DnNodeUsed <= 0) then
-          !if(iProc==0)then
+          ! if(iProc==0)then
           !   write(*,*)'!!! DnNodeUsed, nNodeUsed=', DnNodeUsed, nNodeUsed
           !   write(*,*)'!!! nCoarsen=',count(iStatusNew_A(1:nNode)==Coarsen_)
           !   write(*,*)'!!! nRefine =',count(iStatusNew_A(1:nNode)==Refine_)
           !   write(*,*)'!!! nProc*MaxBlock, MaxTotalBlock=', &
           !        nProc*MaxBlock, MaxTotalBlock
-          !end if
+          ! end if
           EXIT LOOPTRY
        end if
 
-       ! Number of blocks we want to remove from the refinement list. 
+       ! Number of blocks we want to remove from the refinement list.
        ! Increase with the number of iterations
-       DnNodeUsed = (iTryAmr-1)*(nChild-1) + DnNodeUsed 
+       DnNodeUsed = (iTryAmr-1)*(nChild-1) + DnNodeUsed
 
        ! Reset iStatusNew_A to its inital value
-       iStatusNew_A = iStatusNew0_A 
+       iStatusNew_A = iStatusNew0_A
 
-       ! nodes to be refined are indexed 
-       ! from nNodeSort-nDesiredRefine to nNodeSort in the sorted list. 
+       ! nodes to be refined are indexed
+       ! from nNodeSort-nDesiredRefine to nNodeSort in the sorted list.
        ! The lowest priority corresponds to the first element.
-       ! Remove blocks starting from the lowest priority until the 
+       ! Remove blocks starting from the lowest priority until the
        ! number of blocks in the new grid will not exceed the maximum.
        LOOPREMOVE: do iRank = nNodeSort - nDesiredRefine, nNodeSort
           iNode = iRank_A(iRank)
@@ -883,14 +882,15 @@ contains
     iStatusNew_A(1:nNode) = Unset_
 
   contains
-    !========================================================================
+    !==========================================================================
     subroutine refine_axis(iNode)
 
       ! Refine all axis neighbors of iNode
 
-      integer, intent(in):: iNode    
+      integer, intent(in):: iNode
       integer:: jNode
-      !-----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       jNode = iNode
       do
          jNode = iNodeAxisNei_A(jNode)
@@ -898,15 +898,16 @@ contains
          iStatusNew_A(jNode) = Refine_
       end do
     end subroutine refine_axis
-    !========================================================================
+    !==========================================================================
     subroutine check_axis_coarsening(iNode)
 
       ! Check if any of the axis neighbors are not to be coarsened.
       ! If not then cancel coarsening for all axis neighbors.
 
-      integer, intent(in):: iNode    
+      integer, intent(in):: iNode
       integer:: jNode
-      !-----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       jNode = iNode
       do
          jNode = iNodeAxisNei_A(jNode)
@@ -919,14 +920,15 @@ contains
       call cancel_axis_coarsening(iNode)
 
     end subroutine check_axis_coarsening
-    !========================================================================
+    !==========================================================================
     subroutine cancel_axis_coarsening(iNode)
 
       ! Cancel coarsening for all axis neighbors
 
-      integer, intent(in):: iNode    
+      integer, intent(in):: iNode
       integer:: jNode, jNodeParent, jNodeChild_I(nChild)
-      !-----------------------------------------------------------------------
+
+      !------------------------------------------------------------------------
       jNode = iNode
       do
          jNode = iNodeAxisNei_A(jNode)
@@ -937,10 +939,10 @@ contains
          if(jNode == iNode) EXIT
       end do
     end subroutine cancel_axis_coarsening
-    !========================================================================
+    !==========================================================================
 
   end subroutine adapt_tree
-  !==========================================================================
+  !============================================================================
   subroutine get_tree_position(iNode, PositionMin_D, PositionMax_D)
 
     integer, intent(in) :: iNode
@@ -951,7 +953,7 @@ contains
 
     integer :: iLevel
     integer :: MaxIndex_D(MaxDim)
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     iLevel = iTree_IA(Level_, iNode)
 
     ! For non-AMR directions MaxIndex_D = nRoot_D
@@ -963,8 +965,8 @@ contains
     PositionMax_D = (iTree_IA(Coord1_:CoordLast_,iNode) + 0.0)/MaxIndex_D
 
   end subroutine get_tree_position
+  !============================================================================
 
-  !==========================================================================
   subroutine find_tree_node(CoordIn_D, iNode)
 
     ! Find the node that contains a point. The point coordinates should
@@ -977,8 +979,9 @@ contains
     real :: Coord_D(MaxDim)
     integer :: iLevel, iChild
     integer :: iRoot_D(MaxDim), iCoord_D(nDimAmr), iBit_D(nDimAmr)
-    !----------------------------------------------------------------------
+
     ! Scale coordinates so that 1 <= Coord_D <= nRoot_D+1
+    !--------------------------------------------------------------------------
     Coord_D = 1.0 + nRoot_D*max(0.0, min(1.0, CoordIn_D))
 
     ! Get root node index
@@ -999,7 +1002,7 @@ contains
     do iLevel = nLevelMax-1,0,-1
        ! Get the binary bits based on the coordinates
        iBit_D = ibits(iCoord_D, iLevel, 1)
-       ! Construct child index as iChild = Sum Bit_i*2**i 
+       ! Construct child index as iChild = Sum Bit_i*2**i
        ! The powers of 2 are stored in MaxCoord_I
        iChild = sum(iBit_D*MaxCoord_I(0:nDimAmr-1)) + Child1_
        iNode  = iTree_IA(iChild,iNode)
@@ -1011,8 +1014,8 @@ contains
     iNode = Unset_
 
   end subroutine find_tree_node
+  !============================================================================
 
-  !==========================================================================
   subroutine find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D, &
        UseGhostCell)
 
@@ -1021,11 +1024,11 @@ contains
     ! CoordIn_D = (CoordOrig_D - CoordMin_D)/DomainSize_D
     ! If UseGhostCell is not present or false
     !    then iCell_D returns the cell that contains the point.
-    ! If UseGhostCell is present and true 
+    ! If UseGhostCell is present and true
     !    then iCell_D will contain the cell indexes to the left of the point.
     ! If CellDistance_D is present, return the signed distances per dimension
     ! normalized to the cell size. This can be used as interpolation weight.
-    ! 
+    !
 
     real,           intent(in) :: Coord_D(MaxDim)
     integer,        intent(out):: iNode
@@ -1035,7 +1038,8 @@ contains
 
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
     real:: CellCoord_D(MaxDim)
-    !----------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     call find_tree_node(Coord_D, iNode)
 
     if(iNode == Unset_)then
@@ -1060,7 +1064,7 @@ contains
     if(present(CellDistance_D)) CellDistance_D = CellCoord_D - iCell_D
 
   end subroutine find_tree_cell
-  !===========================================================================
+  !============================================================================
   subroutine interpolate_tree(Coord_D, iNodeCell_II, Weight_I)
 
     integer, parameter:: nPoint = 2**nDim
@@ -1069,16 +1073,16 @@ contains
     integer, intent(out):: iNodeCell_II(0:nDim,nPoint)
     real,    intent(out):: Weight_I(nPoint)
 
-    ! Find the nPoint=2**nDim cell centers that surround point Coord_D 
-    ! given in normalized coordinates (0<Coord_D<1). 
+    ! Find the nPoint=2**nDim cell centers that surround point Coord_D
+    ! given in normalized coordinates (0<Coord_D<1).
     ! The cells are described by the node index and nDim cell indexes.
     ! Also provide the proper weights for a second order interpolation.
 
     integer:: iCell_D(MaxDim), jCell_D(MaxDim)
     real:: CellDistance_D(MaxDim), Weight_D(MaxDim)
-    !real:: CellSize_D(MaxDim), CoordShifted_D(MaxDim)
+    ! real:: CellSize_D(MaxDim), CoordShifted_D(MaxDim)
     integer:: iNode, i, j, k, iPoint, iDim
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call find_tree_cell(Coord_D, iNode, iCell_D, CellDistance_D)
     if(iNode == Unset_)then
        iNodeCell_II = Unset_
@@ -1123,7 +1127,7 @@ contains
     end  do
 
   end subroutine interpolate_tree
-  !==========================================================================
+  !============================================================================
   logical function is_point_inside_node(Position_D, iNode)
 
     ! Check if position is inside node or not
@@ -1132,7 +1136,7 @@ contains
     integer, intent(in):: iNode
 
     real    :: PositionMin_D(MaxDim), PositionMax_D(MaxDim)
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call get_tree_position(iNode, PositionMin_D, PositionMax_D)
 
     ! Include min edge but exclude max edge for sake of uniqueness
@@ -1141,11 +1145,10 @@ contains
          all(Position_D <  PositionMax_D)
 
   end function is_point_inside_node
-
-  !===========================================================================
+  !============================================================================
 
   subroutine find_neighbor_for_anynode(iNode, DiLevelNei_III)
-    ! Find neighbours for any node in this processor or not. 
+    ! Find neighbours for any node in this processor or not.
 
     use BATL_size, ONLY: iRatio_D
 
@@ -1156,9 +1159,10 @@ contains
     real :: Scale_D(MaxDim), x, y, z, y0, z0
     integer:: iNodeNei_III(0:3,0:3,0:3)
 
-    logical:: DoTestMe = .false.
-    !-----------------------------------------------------------------------
-    if(DoTestMe)write(*,*)'Starting find neighbors for node ',iNode
+    logical:: DoTest = .false.
+    character(len=*), parameter:: NameSub = 'find_neighbor_for_anynode'
+    !--------------------------------------------------------------------------
+    if(DoTest)write(*,*)'Starting find neighbors for node ',iNode
 
     ! Get AMR level of the node
     iLevel = iTree_IA(Level_,iNode)
@@ -1168,7 +1172,7 @@ contains
     where(iRatio_D == 2) &
          Scale_D = Scale_D/MaxCoord_I(iLevel)
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)'iNode, iLevel, Scale_D=', iNode, iLevel, Scale_D
        write(*,*)'scaled coordinates=', &
             iTree_IA(Coord1_:CoordLast_, iNode)*Scale_D
@@ -1196,8 +1200,8 @@ contains
              end if
           end if
        end if
-       ! store z for spherical axis 
-       z0 = z 
+       ! store z for spherical axis
+       z0 = z
        do j=0,3
           z = z0
           Dj = nint((j - 1.5)/1.5)
@@ -1271,7 +1275,7 @@ contains
              DiLevelNei_III(Di,Dj,Dk) = &
                   iLevel - iTree_IA(Level_, jNode)
 
-             if(DoTestMe) write(*,'(a,3i2,3f6.3,i4)') &
+             if(DoTest) write(*,'(a,3i2,3f6.3,i4)') &
                   'i,j,k,x,y,z,jNode=',i,j,k,x,y,z,jNode
 
           end do
@@ -1279,8 +1283,7 @@ contains
     end do
 
   end subroutine find_neighbor_for_anynode
-
-  !===========================================================================
+  !============================================================================
 
   subroutine find_neighbor(iBlock)
 
@@ -1293,10 +1296,10 @@ contains
 
     integer:: DiLevelNeiOld_III(-1:1,-1:1,-1:1)
 
-    logical, parameter :: DoTestMe = .false.
-    !-----------------------------------------------------------------------
+    logical, parameter :: DoTest = .false.
+    !--------------------------------------------------------------------------
     iNode = iNode_B(iBlock)
-    if(DoTestMe)write(*,*)'Starting find neighbors for node ',iNode
+    if(DoTest)write(*,*)'Starting find neighbors for node ',iNode
 
     ! Get AMR level of the node
     iLevel = iTree_IA(Level_,iNode)
@@ -1306,7 +1309,7 @@ contains
     where(iRatio_D == 2) &
          Scale_D = Scale_D/MaxCoord_I(iLevel)
 
-    if(DoTestMe)then
+    if(DoTest)then
        write(*,*)'iNode, iLevel, Scale_D=', iNode, iLevel, Scale_D
        write(*,*)'scaled coordinates=', &
             iTree_IA(Coord1_:CoordLast_, iNode)*Scale_D
@@ -1336,8 +1339,8 @@ contains
              end if
           end if
        end if
-       ! store z for spherical axis 
-       z0 = z 
+       ! store z for spherical axis
+       z0 = z
        do j=0,3
           z = z0
           Dj = nint((j - 1.5)/1.5)
@@ -1411,7 +1414,7 @@ contains
              DiLevelNei_IIIB(Di,Dj,Dk,iBlock) = &
                   iLevel - iTree_IA(Level_, jNode)
 
-             if(DoTestMe) write(*,'(a,3i2,3f6.3,i4)') &
+             if(DoTest) write(*,'(a,3i2,3f6.3,i4)') &
                   'i,j,k,x,y,z,jNode=',i,j,k,x,y,z,jNode
 
           end do
@@ -1437,8 +1440,7 @@ contains
     end if
 
   end subroutine find_neighbor
-
-  !==========================================================================
+  !============================================================================
 
   subroutine find_axis_neighbor
 
@@ -1447,7 +1449,8 @@ contains
 
     integer:: iNode, jNode, iLevel, iCoord, MaxCoord
     real:: PositionMin_D(MaxDim), PositionMax_D(MaxDim), Coord_D(MaxDim)
-    !------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(.not.IsAnyAxis) RETURN
 
     do iNode = 1, nNode
@@ -1462,7 +1465,7 @@ contains
           iLevel = iTree_IA(Level_,iNode)
           MaxCoord = nRoot_D(Theta_)
           if(iRatio_D(Theta_) == 2) MaxCoord = MaxCoord*MaxCoord_I(iLevel)
-          iCoord = iTree_IA(Coord0_+Theta_,iNode) 
+          iCoord = iTree_IA(Coord0_+Theta_,iNode)
           if(iCoord > 1 .and. iCoord < MaxCoord) CYCLE
        end if
 
@@ -1482,8 +1485,7 @@ contains
     end do
 
   end subroutine find_axis_neighbor
-
-  !==========================================================================
+  !============================================================================
 
   subroutine compact_tree(iTypeNode_A)
 
@@ -1495,7 +1497,7 @@ contains
     ! Amount of shift for each node
     integer :: iNode, iNodeSkipped, iNodeOld, iNodeNew, i, iBlock
     character(len=*), parameter:: NameSub = 'compact_tree'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! Set impossible initial value
     iNodeSkipped = MaxNode + 1
 
@@ -1542,7 +1544,7 @@ contains
        iNodeMorton_I(iMorton) = iNodeNew
        iMortonNode_A(iNodeNew)= iMorton
     end do
-    
+
     ! Fix iNode_B indexes
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
@@ -1554,8 +1556,7 @@ contains
     iNodeNew_A(1:nNode) = Unset_
 
   end subroutine compact_tree
-
-  !==========================================================================
+  !============================================================================
 
   subroutine write_tree_file(NameFile)
 
@@ -1565,7 +1566,7 @@ contains
     character(len=*), intent(in):: NameFile
 
     ! Write tree information into a file
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call compact_tree
 
     if(iProc == 0)then
@@ -1581,8 +1582,7 @@ contains
     call barrier_mpi
 
   end subroutine write_tree_file
-  
-  !==========================================================================
+  !============================================================================
 
   subroutine read_tree_file(NameFile)
 
@@ -1593,8 +1593,8 @@ contains
     ! Read tree information from a file
 
     integer :: nDimIn, nInfoIn, nNodeIn, iRatioIn_D(nDim), nRootIn_D(nDim)
-    character(len=*), parameter :: NameSub = 'read_tree_file'
-    !----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_tree_file'
+    !--------------------------------------------------------------------------
 
     open(UnitTmp_, file=NameFile, status='old', form='unformatted')
 
@@ -1608,7 +1608,7 @@ contains
        call CON_stop(NameSub//' nInfo is different in tree file!')
     end if
     if(nNodeIn > MaxNode)then
-       write(*,*) NameSub,' nNodeIn, MaxNode=',nNodeIn, MaxNode 
+       write(*,*) NameSub,' nNodeIn, MaxNode=',nNodeIn, MaxNode
        call CON_stop(NameSub//' too many nodes in tree file!')
     end if
     read(UnitTmp_) iRatioIn_D
@@ -1628,8 +1628,8 @@ contains
     call order_tree
 
   end subroutine read_tree_file
-  
-  !==========================================================================
+  !============================================================================
+
   subroutine distribute_tree(DoMove, iTypeBalance_A, iTypeNode_A)
 
     ! Order tree with the space filling curve then
@@ -1657,8 +1657,8 @@ contains
     integer, allocatable :: iNodeType_I(:), nNodeType_I(:), iProcType_I(:), &
          iBlock_P(:), nBlockType_PI(:,:)
 
-    character(len=*), parameter:: NameSub='BATL_tree::distribute_tree'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'distribute_tree'
+    !--------------------------------------------------------------------------
     ! DoMove is only true when we initialize the grid, so this is done only
     ! a few times.
     if(DoMove)Unused_BP = .true.
@@ -1678,7 +1678,7 @@ contains
        nType = 1
     end if
 
-    ! Allocate load balance tables: 
+    ! Allocate load balance tables:
     ! number of blocks per type and per processor and type
     allocate(&
          iNodeType_I(nType), nNodeType_I(nType), &
@@ -1693,7 +1693,7 @@ contains
     iBlock_P    = 0
 
     if(present(iTypeBalance_A))then
-       ! Count number of nodes for each type. 
+       ! Count number of nodes for each type.
        do iNode = 1, nNode
           if(iTree_IA(Status_,iNode)<=0) CYCLE
           iType = iTypeBalance_A(iNode)
@@ -1738,7 +1738,7 @@ contains
        ! Increase the index for this node type
        iNodeType_I(iType) = iNodeType_I(iType) + 1
 
-       ! Select target processor. 
+       ! Select target processor.
        ! Use iProcType_I to remember last proc. used for the given type
        do iProcTo = iProcType_I(iType), nProc-1
           if(iNodeType_I(iType) <= nBlockType_PI(iProcTo,iType))then
@@ -1769,8 +1769,7 @@ contains
     if(DoMove) call move_tree(iTypeNode_A)
 
   end subroutine distribute_tree
-
-  !==========================================================================
+  !============================================================================
 
   subroutine move_tree(iTypeNode_A)
 
@@ -1785,8 +1784,8 @@ contains
 
     integer:: iMorton, iNode, iNodeChild, iNodeParent, iChild, iBlock
 
-    character(len=*), parameter :: NameSub = 'move_tree'
-    !-----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'move_tree'
+    !--------------------------------------------------------------------------
     ! Update local Unused_B array
     Unused_B(:) = Unused_BP(:,iProc)
 
@@ -1840,15 +1839,15 @@ contains
     if(UseUniformAxis) call find_axis_neighbor
 
   end subroutine move_tree
-  !==========================================================================
+  !============================================================================
   subroutine order_tree
 
-    ! Set iNodeMorton_I and iMortonNode_A indirect index arrays according to 
+    ! Set iNodeMorton_I and iMortonNode_A indirect index arrays according to
     ! 1. root node order
     ! 2. Morton ordering for each root node
 
     integer :: iNode, iRoot, jRoot, kRoot, iLevel
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     nNode = nRoot
     iNode = 0
     iMorton = 0
@@ -1879,16 +1878,17 @@ contains
     end do
 
   end subroutine order_tree
-  !==========================================================================
+  !============================================================================
   recursive subroutine order_children(iNode)
 
     ! Recursively apply Morton ordering for nodes below a root block.
-    ! Store result into iNodeMorton_I and iMortonNode_A using the global 
+    ! Store result into iNodeMorton_I and iMortonNode_A using the global
     ! iMorton index.
 
     integer, intent(in) :: iNode
     integer :: iChild
-    !-----------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     nNode = max(nNode, iNode)
 
     if(iTree_IA(Status_, iNode) >= Used_)then
@@ -1902,14 +1902,13 @@ contains
     end if
 
   end subroutine order_children
-
-  !==========================================================================
+  !============================================================================
 
   integer function min_tree_level(iStage)
 
     integer, intent(in):: iStage
- 
-    ! Usage: in the iStage stage of the subcycling scheme the 
+
+    ! Usage: in the iStage stage of the subcycling scheme the
     ! grid blocks at or above min_tree_level(iStage) are advanced.
 
     ! Theory: if iStage-1 contains 2^n in its prime factorization
@@ -1917,7 +1916,8 @@ contains
     ! are advanced.
 
     integer:: i, n
-    !------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(iStage == 1)then
        ! All blocks are advanced in the first stage
        if(UseTimeLevel)then
@@ -1945,8 +1945,8 @@ contains
     end if
 
   end function min_tree_level
+  !============================================================================
 
-  !==========================================================================
   function di_level_nei(iDir, jDir, kDir, iBlock, DoResChangeOnly) &
        RESULT(DiLevel)
 
@@ -1963,7 +1963,7 @@ contains
     integer:: iTimeLevel, iNodeNei, iTimeLevelNei
 
     character(len=*), parameter:: NameSub = 'di_level_nei'
-    !----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     DiLevel = DiLevelNei_IIIB(iDir,jDir,kDir,iBlock)
 
     if(DiLevel /= 0) RETURN
@@ -1986,9 +1986,8 @@ contains
     DiLevel = sign(1, iTimeLevel - iTimeLevelNei)
 
   end function di_level_nei
+  !============================================================================
 
-  !==========================================================================
- 
   subroutine set_tree_periodic(IsOn)
 
     logical, intent(in):: IsOn
@@ -1996,9 +1995,10 @@ contains
     ! Switch on or off the periodic connectivity as needed
 
     integer:: iSign, iBlock, iNode, iLevel, iCoord, MaxIndex_D(MaxDim)
-    !-----------------------------------------------------------------------
+
     ! The only reason to do this if there is at least one
     ! periodic direction that is NOT a true periodic coordinate.
+    !--------------------------------------------------------------------------
     if(.not.any(IsPeriodic_D(1:nDim) .and. .not. IsPeriodicCoord_D(1:nDim)))&
          RETURN
 
@@ -2055,8 +2055,7 @@ contains
     end do
 
   end subroutine set_tree_periodic
-
-  !==========================================================================
+  !============================================================================
 
   subroutine show_tree(String, DoShowNei, DoShowTimeLevel)
 
@@ -2069,10 +2068,9 @@ contains
     character(len=200):: StringHeader
     logical:: DoShowTime
     integer:: iInfo, iNode, iBlock
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     DoShowTime = .false.
     if(present(DoShowTimeLevel)) DoShowTime = DoShowTimeLevel
-
 
     StringHeader = 'iNode'
     do iInfo = 1, nInfo
@@ -2113,8 +2111,7 @@ contains
     if(UseUniformAxis)write(*,*)'iNodeAxisNei_A=',iNodeAxisNei_A(1:nNode)
 
   end subroutine show_tree
-
-  !==========================================================================
+  !============================================================================
 
   subroutine test_tree
 
@@ -2135,15 +2132,13 @@ contains
 
     integer, allocatable:: iTypeNode_I(:)
 
-    logical :: DoTestMe
- 
-    character(len=*), parameter :: NameSub = 'test_tree'
-    !-----------------------------------------------------------------------
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'test_tree'
+    !--------------------------------------------------------------------------
+    DoTest = iProc == 0
 
-    DoTestMe = iProc == 0
-
-    if(DoTestMe)write(*,*)'Starting ',NameSub
-    if(DoTestMe)write(*,*)'Testing init_tree'
+    if(DoTest)write(*,*)'Starting ',NameSub
+    if(DoTest)write(*,*)'Testing init_tree'
     call init_tree(MaxBlockTest)
     if(MaxBlock /= MaxBlockTest) &
          write(*,*)'init_tree failed, MaxBlock=',&
@@ -2152,21 +2147,21 @@ contains
          write(*,*)'init_tree failed, MaxNode=', MaxNode, &
          ' should be', 2*ceiling(50*nProc*(1 + 1.0/(2**nDimAmr-1)))
 
-    if(DoTestMe)write(*,*)'Testing init_geometry'
+    if(DoTest)write(*,*)'Testing init_geometry'
     call init_geometry('cartesian', IsPeriodicTest_D(1:nDim))
     if(any(IsPeriodic_D(1:nDim) .neqv. IsPeriodicTest_D(1:nDim))) &
          write(*,*)'init_geometry failed, IsPeriodic_D=',&
          IsPeriodic_D(1:nDim), ' should be ', IsPeriodicTest_D(1:nDim)
 
-    if(DoTestMe)write(*,*)'Testing i_node_new()'
+    if(DoTest)write(*,*)'Testing i_node_new()'
     iNode = i_node_new()
     if(iNode /= 1) &
          write(*,*)'i_node_new() failed, iNode=',iNode,' should be 1'
 
-    if(DoTestMe)write(*,*)'Testing set_tree_root'
+    if(DoTest)write(*,*)'Testing set_tree_root'
     call set_tree_root( nRootTest_D(1:nDim))
 
-    if(DoTestMe)call show_tree('after set_tree_root')
+    if(DoTest)call show_tree('after set_tree_root')
 
     if(any( nRoot_D(1:nDim) /= nRootTest_D(1:nDim) )) &
          write(*,*) 'set_tree_root failed, nRoot_D=',nRoot_D(1:nDim),&
@@ -2178,7 +2173,7 @@ contains
          write(*,*) 'set_tree_root failed, coordinates of node four=',&
          iTree_IA(Coord1_:Coord0_+nDim,3), ' should be ',iCoord_D(1:nDim)
 
-    if(DoTestMe)write(*,*)'Testing find_tree_cell'
+    if(DoTest)write(*,*)'Testing find_tree_cell'
     call find_tree_cell(CoordTest_D, iNode, iCell_D, Distance_D)
     if(iNode /= nRoot)write(*,*)'ERROR: Test find point failed, iNode=',&
          iNode,' instead of',nRoot
@@ -2198,7 +2193,7 @@ contains
          write(*,*)'ERROR: Test find point failed, Distance_D=',&
          Distance_D(1:nDim),' instead of ', DistanceGood_D(1:nDim)
 
-    if(DoTestMe)write(*,*)'Testing interpolate_tree'
+    if(DoTest)write(*,*)'Testing interpolate_tree'
     call interpolate_tree(CoordTest_D, iNodeCell_II, Weight_I)
     select case(nDim)
     case(1)
@@ -2242,51 +2237,51 @@ contains
          write(*,*)'ERROR: Test interpolate_tree failed, Weight_I=',&
          Weight_I,' instead of ', WeightGood_I
 
-    if(DoTestMe)write(*,*)'Testing distribute_tree 1st'
+    if(DoTest)write(*,*)'Testing distribute_tree 1st'
     call distribute_tree(.true.)
-    if(DoTestMe)call show_tree('after distribute_tree 1st', .true.)
+    if(DoTest)call show_tree('after distribute_tree 1st', .true.)
 
-    if(DoTestMe)write(*,*)'Testing refine_tree_node'
+    if(DoTest)write(*,*)'Testing refine_tree_node'
     ! Refine the node where the point was found and find it again
     call refine_tree_node(iNode)
 
-    if(DoTestMe)write(*,*)'Testing distribute_tree 2nd'
+    if(DoTest)write(*,*)'Testing distribute_tree 2nd'
 
     ! Set node type to level+1
     allocate(iTypeNode_I(MaxNode))
     iTypeNode_I = 1 + iTree_IA(Level_,:)
     call distribute_tree(.true.,iTypeNode_I)
-    if(DoTestMe)call show_tree('after distribute_tree with type=level', .true.)
+    if(DoTest)call show_tree('after distribute_tree with type=level', .true.)
 
     ! Set node type to the second coordinate index
     iTypeNode_I = iTree_IA(Coord2_,:)
     call distribute_tree(.true.,iTypeNode_I)
-    if(DoTestMe)call show_tree('after distribute_tree with type=Coord2',.true.)
+    if(DoTest)call show_tree('after distribute_tree with type=Coord2',.true.)
 
     ! Use default (single type)
     call distribute_tree(.true.)
-    if(DoTestMe)call show_tree('after distribute_tree 2nd', .true.)
+    if(DoTest)call show_tree('after distribute_tree 2nd', .true.)
 
     call find_tree_node(CoordTest_D,iNode)
     if(.not.is_point_inside_node(CoordTest_D, iNode)) &
          write(*,*)'ERROR: Test find point failed for iNode=',iNode
 
     ! Refine another node
-    if(DoTestMe)write(*,*)'nRoot=',nRoot
+    if(DoTest)write(*,*)'nRoot=',nRoot
     call refine_tree_node(2)
 
-    if(DoTestMe)call show_tree('after another refine_tree_node')
+    if(DoTest)call show_tree('after another refine_tree_node')
 
-    if(DoTestMe)write(*,*)'Testing coarsen_tree_node'
+    if(DoTest)write(*,*)'Testing coarsen_tree_node'
 
     ! Coarsen back the last root node and find point again
     call coarsen_tree_node(nRoot)
-    if(DoTestMe)call show_tree('after coarsen_tree_node')
+    if(DoTest)call show_tree('after coarsen_tree_node')
 
     ! Distribute the new tree
-    if(DoTestMe)write(*,*)'Testing distribute_tree 3rd'
+    if(DoTest)write(*,*)'Testing distribute_tree 3rd'
     call distribute_tree(.true.)
-    if(DoTestMe)call show_tree('after distribute_tree 3rd', .true.)
+    if(DoTest)call show_tree('after distribute_tree 3rd', .true.)
 
     call find_tree_node(CoordTest_D,iNode)
     if(iNode /= nRoot)write(*,*) &
@@ -2309,27 +2304,29 @@ contains
     if(.not.is_point_inside_node(CoordTest_D, iNode)) &
          write(*,*)'ERROR: is_point_inside_node failed'
 
-    if(DoTestMe)write(*,*)'Testing write_tree_file'
+    if(DoTest)write(*,*)'Testing write_tree_file'
     call write_tree_file('tree.rst')
 
-    if(DoTestMe)write(*,*)'Testing read_tree_file'
+    if(DoTest)write(*,*)'Testing read_tree_file'
     iTree_IA = Unset_
     nRoot_D = 0
     call read_tree_file('tree.rst')
-    if(DoTestMe)call show_tree('after read_tree')
+    if(DoTest)call show_tree('after read_tree')
 
     call find_tree_node(CoordTest_D,iNode)
     if(iNode /= nRoot)write(*,*)'ERROR: compact_tree failed, iNode=',&
          iNode,' instead of',nRoot
 
-    if(DoTestMe)write(*,*)'Testing distribute_tree 4th'
+    if(DoTest)write(*,*)'Testing distribute_tree 4th'
     call distribute_tree(.true.)
-    if(DoTestMe)call show_tree('after distribute_tree 4th', .true.)
+    if(DoTest)call show_tree('after distribute_tree 4th', .true.)
 
-    if(DoTestMe)write(*,*)'Testing clean_tree'
+    if(DoTest)write(*,*)'Testing clean_tree'
     call clean_tree
-    if(DoTestMe)write(*,*)'MaxNode=', MaxNode
+    if(DoTest)write(*,*)'MaxNode=', MaxNode
 
   end subroutine test_tree
+  !============================================================================
 
 end module BATL_tree
+!==============================================================================

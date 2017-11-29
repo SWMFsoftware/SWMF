@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program BATL_main
 
@@ -17,7 +17,8 @@ program BATL_main
   implicit none
 
   integer:: iError
-  !--------------------------------------------------------------------------
+
+  !----------------------------------------------------------------------------
   call MPI_init(iError)
   call init_mpi(MPI_COMM_WORLD)
 
@@ -31,8 +32,8 @@ program BATL_main
   call test_amr_criteria
 
   call MPI_finalize(iError)
-  
+
 end program BATL_main
-!=============================================================================
+!==============================================================================
 
 include 'external_routines.f90'

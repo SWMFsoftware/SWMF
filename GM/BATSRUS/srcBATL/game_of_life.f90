@@ -9,7 +9,7 @@ program game_of_life
   real,    allocatable:: r_C(:,:)
   logical, allocatable:: DoRefine_B(:)
   integer:: i, j, iBlock, iStep
-  !--------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   call init_mpi
 
   call init_batl( &
@@ -75,25 +75,25 @@ program game_of_life
   call clean_mpi
 
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine save_plot_block
 
     use ModPlotFile, ONLY: save_plot_file
     use BATL_lib, ONLY: iProc, &
          nBlock, Unused_B, CoordMin_DB, CoordMax_DB, CellSize_DB
-    
+
     integer :: iBlock
     character(len=100):: NameFile
     character (len=10) :: TypePosition = 'rewind'
-    !---------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
 
        write(NameFile,'(a,i3.3,a,i5.5,a)') &
             'game_pe',iProc,'_blk',iBlock,'.out'
-       
+
        call save_plot_file(NameFile,     &
             TypeFileIn='real4',          &
             TypePositionIn=TypePosition, &
@@ -110,9 +110,9 @@ contains
     TypePosition = 'append'
 
   end subroutine save_plot_block
+  !============================================================================
 
 end program game_of_life
-
-!=============================================================================
+!==============================================================================
 
 include 'external_routines.f90'

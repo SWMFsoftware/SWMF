@@ -1,10 +1,12 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_amr
 
   use BATL_tree, ONLY: iAmrChange_B, &
        AmrRemoved_, AmrMoved_, AmrRefined_, AmrCoarsened_
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 
@@ -20,7 +22,7 @@ module BATL_amr
   real, public:: BetaProlong = 1.0
 
   ! For non-Cartesian grids refinement can be fully conservative or simple
-  ! The current conservative algorithm works well for the BATL advection 
+  ! The current conservative algorithm works well for the BATL advection
   ! problems, but it does not work well for non RZ geometries in BATSRUS.
   logical, public:: UseSimpleRefinement
 
@@ -29,21 +31,19 @@ module BATL_amr
   real,  allocatable:: ExtraData_IB(:,:)
 
 contains
-
-  !===========================================================================
+  !============================================================================
 
   subroutine init_amr
 
     use BATL_geometry, ONLY: IsRzGeometry
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
-    ! Set UseSimpleRefinement based on geometry. 
+    ! Set UseSimpleRefinement based on geometry.
     ! The current curvilinear algorithm is only good for RZ geometry.
     UseSimpleRefinement = .not. IsRzGeometry
 
   end subroutine init_amr
-
-  !===========================================================================
+  !============================================================================
 
   subroutine do_amr(nVar, State_VGB, Dt_B, Used_GB, DoBalanceOnlyIn, DoTestIn,&
        nExtraData, pack_extra_data, unpack_extra_data, UseHighOrderAMRIn,&
@@ -75,7 +75,7 @@ contains
     ! Time step limit for each block
     real, intent(inout), optional :: Dt_B(MaxBlock)
 
-    ! Cells that can be used for AMR 
+    ! Cells that can be used for AMR
     ! For example cells inside internal boundaries cannot be used in BATSRUS.
     logical, intent(in), optional:: &
          Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
@@ -115,13 +115,13 @@ contains
     optional:: pack_extra_data, unpack_extra_data
 
     ! If UseHighOrderAMRIn is true, 5th (6th) order accuracy will be achieved
-    ! for refined (coarsened) blocks. 
+    ! for refined (coarsened) blocks.
     logical, optional, intent(in):: UseHighOrderAMRIn
 
     ! Default value of each states. Used for high order AMR. If the default
     ! vaule is positive (like density, pressure), the value after AMR should
-    ! be positive too. 
-    real,intent(in), optional:: DefaultStateIn_V(nVar) 
+    ! be positive too.
+    real,intent(in), optional:: DefaultStateIn_V(nVar)
 
     ! Local variables
 
@@ -144,7 +144,7 @@ contains
     integer :: iMinP, iMaxP
     integer :: jMinP, jMaxP
     integer :: kMinP, kMaxP
-    integer :: nSizeP 
+    integer :: nSizeP
 
     integer, parameter:: MaxTry=100
     integer:: iTry
@@ -156,9 +156,10 @@ contains
 
     integer:: jProc
 
-    logical:: DoTest, DoBalanceOnly, UseHighOrderAMR, IsPositive_V(nVar)
-    character(len=*), parameter:: NameSub = 'BATL_AMR::do_amr'
-    !-------------------------------------------------------------------------
+    logical:: DoBalanceOnly, UseHighOrderAMR, IsPositive_V(nVar)
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'do_amr'
+    !--------------------------------------------------------------------------
     DoTest = .false.
     if(present(DoTestIn)) DoTest = DoTestIn
 
@@ -168,11 +169,10 @@ contains
     UseHighOrderAMR = .false.
     if(present(UseHighOrderAMRIn)) UseHighOrderAMR = UseHighOrderAMRIn
 
-    IsPositive_V = .false. 
+    IsPositive_V = .false.
     if(present(DefaultStateIn_V) .and. UseHighOrderAMR) then
-       IsPositive_V = DefaultStateIn_V > 0 
+       IsPositive_V = DefaultStateIn_V > 0
     endif
-
 
     if(UseHighOrderAMR) then
        ! Two ghost cell layers are needed.
@@ -206,9 +206,9 @@ contains
     end if
 
     ! Simple logical
-    UseMask = present(Used_GB)    
+    UseMask = present(Used_GB)
 
-    ! Small arrays are allocated once 
+    ! Small arrays are allocated once
     if(.not.allocated(iBlockAvailable_P)) &
          allocate(iBlockAvailable_P(0:nProc-1))
 
@@ -393,14 +393,14 @@ contains
     end if
 
   contains
-
     !==========================================================================
+
     integer function i_block_available(iProcRecv, iNodeRecv, iAmrChange)
 
       integer, intent(in):: iProcRecv, iNodeRecv, iAmrChange
       integer :: iBlock
-      character(len=*), parameter:: NameSub = 'BATL_amr::i_block_available'
-      !-----------------------------------------------------------------------
+      character(len=*), parameter:: NameSub = 'i_block_available'
+      !------------------------------------------------------------------------
       ! Assign the processor index
       iTree_IA(Proc_,iNodeRecv) = iProcRecv
 
@@ -435,7 +435,7 @@ contains
     subroutine make_block_available(iNodeSend, iBlockSend, iProcSend)
 
       integer, intent(in):: iNodeSend, iBlockSend, iProcSend
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       iTree_IA(Status_,iNodeSend) = Unused_
       Unused_BP(iBlockSend,iProcSend) = .true.
@@ -519,8 +519,8 @@ contains
            call unpack_extra_data(iBlockRecv, nExtraData, Buffer_I(iBuffer+1))
 
     end subroutine recv_block
+    !==========================================================================
 
-    !=========================================================================
     subroutine send_coarsened_block
 
       use BATL_size, ONLY:  InvIjkRatio
@@ -531,7 +531,7 @@ contains
       real :: CellVolume_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), Volume, InvVolume
       real :: FineCell_III(6,6,6)
       integer :: Di, Dj, Dk, i6_, j6_, k6_
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       iBuffer = 0
 
       ! Do we need to check the mask?
@@ -541,11 +541,10 @@ contains
          DoCheckMask = .false.
       end if
 
-
-      ! Averaging all used fine cells inside the coarse cell. 
+      ! Averaging all used fine cells inside the coarse cell.
       if(DoCheckMask) then
          ! Set the volume of unused cells to zero
-         where(Used_GB(:,:,:,iBlockSend)) 
+         where(Used_GB(:,:,:,iBlockSend))
             CellVolume_G = CellVolume_GB(:,:,:,iBlockSend)
          elsewhere
             CellVolume_G = 0.0
@@ -576,8 +575,8 @@ contains
          end do; end do; end do
       else
          if(UseHighOrderAMR) then
-            ! Calc 6th order coarsened cell. 
-            Di = iRatio - 1; Dj = jRatio - 1; Dk = kRatio - 1 
+            ! Calc 6th order coarsened cell.
+            Di = iRatio - 1; Dj = jRatio - 1; Dk = kRatio - 1
             i6_ = max(Di*6,1); j6_  = max(Dj*6,1); k6_ = max(Dk*6,1)
             do k = 1, nK, kRatio; do j = 1, nJ, jRatio; do i=1, nI, iRatio
                do iVar = 1, nVar
@@ -630,10 +629,10 @@ contains
       integer:: iBuffer, iSide, jSide, kSide
       integer:: iMin, jMin, kMin, iMax, jMax, kMax
       integer:: i, j, k
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       if(iProcRecv /= iProcSend)then
-         iBuffer = nIJK*nVar/IjkRatio 
+         iBuffer = nIJK*nVar/IjkRatio
          if(present(Dt_B))  iBuffer = iBuffer + 1
          call MPI_recv(Buffer_I, iBuffer, MPI_REAL, iProcSend, 32, iComm, &
               iStatus_I, iError)
@@ -654,8 +653,7 @@ contains
          iBuffer = iBuffer + nVar
       end do; end do; end do
 
-
-      ! Take the smallest of the doubled (valid for full AMR only) time steps 
+      ! Take the smallest of the doubled (valid for full AMR only) time steps
       ! of the children blocks
       if(present(Dt_B)) &
            Dt_B(iBlockRecv) = min(Dt_B(iBlockRecv), 2*Buffer_I(iBuffer+1))
@@ -673,7 +671,7 @@ contains
       logical:: DoCheckMask
 
       integer:: Dm1, Dp2
-      !----------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       ! Find the part of the block to be prolonged
       iSide = modulo(iTree_IA(Coord1_,iNodeRecv)-1, iRatio)
@@ -725,7 +723,7 @@ contains
 
             if(.not.Used_GB(i,j,k,iBlockSend))then
 
-               ! Find the total volume of used neighbor cells 
+               ! Find the total volume of used neighbor cells
                Volume = sum(CellVolume_G(i-1:i+1,j,k))
                if(nDim >1) Volume = Volume + sum(CellVolume_G(i,j-1:j+1,k))
                if(nDim >2) Volume = Volume + sum(CellVolume_G(i,j,k-1:k+1))
@@ -752,7 +750,7 @@ contains
 
                   end do
                   ! Send the information about the masked cells to
-                  ! the prolongation operation converting 
+                  ! the prolongation operation converting
                   ! .true. = 1.0 and .false. = 0.0
                   Buffer_I(iBuffer+nVar+1) = &
                        logical_to_real(Used_GB(i,j,k,iBlockSend))
@@ -804,7 +802,7 @@ contains
     real function logical_to_real(IsTrue)
 
       logical, intent(in):: IsTrue
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       if(IsTrue)then
          logical_to_real = 1.0
       else
@@ -830,8 +828,8 @@ contains
 
       logical:: DoCheckMask
       logical:: UseSlopeI, UseSlopeJ, UseSlopeK
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       UseSlopeI = .true.
       UseSlopeJ = .true.
       UseSlopeK = .true.
@@ -846,8 +844,8 @@ contains
       DoCheckMask = Buffer_I(1) > 0.5
       !      print *,"DoCheckMask",Buffer_I(1),DoCheckMask, UseMask
       if(DoCheckMask) then
-         nVarUsed = nVarBuffer 
-      else 
+         nVarUsed = nVarBuffer
+      else
          nVarUsed = nVar
       end if
 
@@ -863,13 +861,13 @@ contains
       if(UseHighOrderAMR) then
          iDir = 0; jDir = 0; kDir = 0
          i5_ = max(5*Di,1); j5_ = max(5*Dj,1); k5_ =  max(5*Dk,1)
-         ! For example, cell kR=1 and kR=2 refined from the same coarser 
+         ! For example, cell kR=1 and kR=2 refined from the same coarser
          ! cell, but they are calculated from different coarser cells.
-         ! These two refined cells are symmetric about the parent coarse 
-         ! cell and the code is organized in a symmetric way. 
+         ! These two refined cells are symmetric about the parent coarse
+         ! cell and the code is organized in a symmetric way.
          do kR = 1, nK
             kP = (kR + Dk)/kRatio
-            ! kDir = -1 if kR is even; kDir = 1 if kR is odd. 
+            ! kDir = -1 if kR is even; kDir = 1 if kR is odd.
             if(kRatio == 2) kDir = 2*mod(kR,2) - 1
 
             do jR = 1, nJ
@@ -887,7 +885,7 @@ contains
                           iP-2*iDir:iP+2*iDir:sign(1,iDir),&
                           jP-2*jDir:jP+2*jDir:sign(1,jDir),&
                           kP-2*kDir:kP+2*kDir:sign(1,kDir))
-                     
+
                      ! Calculate 5th order refined cells.
                      State_VGB(iVar,iR,jR,kR,iBlockRecv) = &
                           prolongation_high_order_amr&
@@ -922,7 +920,7 @@ contains
 
                      ! If one of the neighboring cells or the cell are masked we
                      ! will only be able to use 1st order prolongation in that
-                     ! dimension 
+                     ! dimension
 
                      if(DoCheckMask) then
                         ! If any of the neighbor cells are masked the product
@@ -1010,9 +1008,9 @@ contains
       end do; end do; end do
 
     end subroutine recv_refined_block
+    !==========================================================================
 
   end subroutine do_amr
-
   !============================================================================
 
   subroutine test_amr
@@ -1044,12 +1042,12 @@ contains
     integer:: iBlock, iDim, iNode, iVar,i,j,k
     integer:: iChild
 
-    logical:: DoTestMe
-    character(len=*), parameter :: NameSub = 'test_amr'
-    !-----------------------------------------------------------------------
-    DoTestMe = iProc == 0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'test_amr'
+    !--------------------------------------------------------------------------
+    DoTest = iProc == 0
 
-    if(DoTestMe) write(*,*) 'Starting ',NameSub
+    if(DoTest) write(*,*) 'Starting ',NameSub
 
     call init_tree(MaxBlockTest)
     call init_geometry( IsPeriodicIn_D = IsPeriodicTest_D(1:nDim) )
@@ -1059,7 +1057,7 @@ contains
     call create_grid
     call init_amr
 
-    if(DoTestMe) call show_tree('after create_grid')
+    if(DoTest) call show_tree('after create_grid')
 
     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest), &
          Dt_B(MaxBlockTest))
@@ -1072,41 +1070,41 @@ contains
        Dt_B(iBlock) = DomainSize_D(iDim) / (nIjk_D(iDim)*nRootTest_D(iDim))
     end do
 
-    if(DoTestMe) write(*,*)'test prolong and balance'
+    if(DoTest) write(*,*)'test prolong and balance'
     call refine_tree_node(1)
-    if(DoTestMe) call show_tree('after refine_tree_node')
+    if(DoTest) call show_tree('after refine_tree_node')
     call distribute_tree(.false.)
-    if(DoTestMe)then
+    if(DoTest)then
        call show_tree('after distribute_tree(.false.)')
        write(*,*)'iProc, iProcNew_A=',iProc, iProcNew_A(1:nNode)
     end if
 
     call do_amr(nVar, State_VGB, Dt_B)
-    if(DoTestMe) call show_tree('after do_amr')
+    if(DoTest) call show_tree('after do_amr')
     call move_tree
-    if(DoTestMe) call show_tree('after move_tree')
-    if(DoTestMe) write(*,*)'iAmrChange_B=', iAmrChange_B(1:nBlock)
+    if(DoTest) call show_tree('after move_tree')
+    if(DoTest) write(*,*)'iAmrChange_B=', iAmrChange_B(1:nBlock)
 
     call check_state
 
-    if(DoTestMe) write(*,*)'test restrict and balance'
+    if(DoTest) write(*,*)'test restrict and balance'
     call coarsen_tree_node(1)
-    if(DoTestMe) call show_tree('after coarsen_tree_node')
+    if(DoTest) call show_tree('after coarsen_tree_node')
     call distribute_tree(.false.)
-    if(DoTestMe)then
+    if(DoTest)then
        call show_tree('after distribute_tree(.false.)')
        write(*,*)'iProc, iProcNew_A=',iProc, iProcNew_A(1:nNode)
     end if
     call do_amr(nVar, State_VGB, Dt_B)
-    if(DoTestMe) call show_tree('after do_amr')
+    if(DoTest) call show_tree('after do_amr')
     call move_tree
-    if(DoTestMe) call show_tree('after move_tree')
-    if(DoTestMe) write(*,*)'iAmrChange_B=', iAmrChange_B(1:nBlock)
+    if(DoTest) call show_tree('after move_tree')
+    if(DoTest) write(*,*)'iAmrChange_B=', iAmrChange_B(1:nBlock)
 
     call check_state
 
     ! tests with mask
-    if(DoTestMe) write(*,*) 'test masked cells and extra data'
+    if(DoTest) write(*,*) 'test masked cells and extra data'
 
     allocate(Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlockTest),&
          TestState_VC(nVar,nI,nJ,nK), ExtraData_IB(nExtraData,MaxBlockTest))
@@ -1144,7 +1142,7 @@ contains
     call check_extra_data
 
     ! Nodes that needs special care in the testing
-    allocate(iEffectedNode_A(nNode)) 
+    allocate(iEffectedNode_A(nNode))
     iEffectedNode_A = unset_
 
     ! 0: the masked cell, 1: x+ neighbor, 2: y+ neighbor
@@ -1212,7 +1210,6 @@ contains
 
     call check_state_mask
 
-
     deallocate(State_VGB, Dt_B,Used_GB, iEffectedNode_A, TestState_VC, &
          ExtraData_IB)
 
@@ -1223,6 +1220,7 @@ contains
     !==========================================================================
     subroutine check_extra_data
 
+      !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          if(iAmrChange_B(iBlock) /= AmrMoved_) CYCLE
          if(  abs(ExtraData_IB(1,iBlock) - iNode_B(iBlock)) > 1e-6 .or. &
@@ -1236,6 +1234,7 @@ contains
     !==========================================================================
     subroutine check_state
 
+      !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          if(Unused_B(iBlock)) CYCLE
 
@@ -1260,7 +1259,7 @@ contains
       integer :: iDn, iUp, jDn, jUp, kDn, kUp
       integer :: Di, Dj, Dk
 
-
+      !------------------------------------------------------------------------
       do iBlock = 1, nBlock
          if(Unused_B(iBlock)) CYCLE
          iNode = iNode_B(iBlock)
@@ -1291,7 +1290,7 @@ contains
             end if
 
             if(jRatio == 2) then
-               jDn = nJ-jRatio+1 
+               jDn = nJ-jRatio+1
                jUp = nJ
                Dj = jRatio
             else
@@ -1319,23 +1318,22 @@ contains
                     (iRatio*jRatio*kRatio)
             end do
 
-            ! The neighbor cell in i direction will only have 
-            ! 1st order prolongation 
+            ! The neighbor cell in i direction will only have
+            ! 1st order prolongation
             TestState_VC(1,iDn-Di:iUp-Di,jDn:jUp,kDn:kUp) = &
                  sum(Xyz_DGB(1,iDn-Di:iUp-Di,jDn:jUp,kDn:kUp,iBlock))/&
-                 (iRatio*jRatio*kRatio)                 
+                 (iRatio*jRatio*kRatio)
 
-            ! The neighbor cell in j direction will only have 
-            ! 1st order prolongation 
+            ! The neighbor cell in j direction will only have
+            ! 1st order prolongation
             if(nDim >1) then
                TestState_VC(2,iDn:iUp,jDn-Dj:jUp-Dj,kDn:kUp) = &
                     sum(Xyz_DGB(2,iDn:iUp,jDn-Dj:jUp-Dj,kDn:kUp,iBlock))/&
                     (iRatio*jRatio*kRatio)
             end if
 
-
-            ! The neighbor cell in k direction will only have 
-            ! 1st order prolongation 
+            ! The neighbor cell in k direction will only have
+            ! 1st order prolongation
             if(nDim >2) then
                TestState_VC(3,iDn:iUp,jDn:jUp,kDn-Dk:kUp-Dk) = &
                     sum(Xyz_DGB(3,iDn:iUp,jDn:jUp,kDn-Dk:kUp-Dk,iBlock))/&
@@ -1368,7 +1366,7 @@ contains
             end if
 
             if(jRatio == 2) then
-               jDn = nJ-jRatio+1 
+               jDn = nJ-jRatio+1
                jUp = nJ
                Dj = jRatio
             else
@@ -1389,8 +1387,8 @@ contains
 
             TestState_VC = Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
 
-            ! The neighbor cell in i direction will only have 
-            ! 1st order prolongation 
+            ! The neighbor cell in i direction will only have
+            ! 1st order prolongation
             TestState_VC(1,iDn:iUp,jDn:jUp,kDn:kUp) = &
                  sum(Xyz_DGB(1,iDn:iUp,jDn:jUp,kDn:kUp,iBlock))/&
                  (iRatio*jRatio*kRatio)
@@ -1411,7 +1409,7 @@ contains
          case(2) ! j neighbore of masked block
 
             if(jRatio == 2) then
-               jDn = 1 
+               jDn = 1
                jUp = jRatio
                Dj  = jRatio
             else
@@ -1442,8 +1440,8 @@ contains
 
             TestState_VC = Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
 
-            ! The neighbor cell in j direction will only have 
-            ! 1st order prolongation 
+            ! The neighbor cell in j direction will only have
+            ! 1st order prolongation
             TestState_VC(2,iDn:iUp,jDn:jUp,kDn:kUp) = &
                  sum(Xyz_DGB(2,iDn:iUp,jDn:jUp,kDn:kUp,iBlock))/&
                  (iRatio*jRatio*kRatio)
@@ -1484,7 +1482,7 @@ contains
             end if
 
             if(jRatio == 2) then
-               jDn = nJ-jRatio+1 
+               jDn = nJ-jRatio+1
                jUp = nJ
                Dj = jRatio
             else
@@ -1495,8 +1493,8 @@ contains
 
             TestState_VC = Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK,iBlock)
 
-            ! The neighbor cell in k direction will only have 
-            ! 1st order prolongation 
+            ! The neighbor cell in k direction will only have
+            ! 1st order prolongation
             TestState_VC(3,iDn:iUp,jDn:jUp,kDn:kUp) = &
                  sum(Xyz_DGB(3,iDn:iUp,jDn:jUp,kDn:kUp,iBlock))/&
                  (iRatio*jRatio*kRatio)
@@ -1522,7 +1520,7 @@ contains
     subroutine show_state
 
       integer :: iProcShow
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       call barrier_mpi
 
       do iProcShow = 0, nProc - 1
@@ -1546,11 +1544,11 @@ contains
       end do
 
     end subroutine show_state
-    !========================================================================
+    !==========================================================================
     subroutine show_dt
 
       integer:: iProcShow
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       call barrier_mpi
 
       do iProcShow = 0, nProc - 1
@@ -1565,17 +1563,17 @@ contains
       end do
 
     end subroutine show_dt
-    !========================================================================
+    !==========================================================================
 
   end subroutine test_amr
+  !============================================================================
 
-  !==========================================================================
   subroutine test_pack(iBlock, nBuffer, Buffer_I)
 
     integer, intent(in) :: iBlock
     integer, intent(in) :: nBuffer
     real,    intent(out):: Buffer_I(nBuffer)
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if(nBuffer /= nExtraData)write(*,*)'ERROR in test_pack: ', &
          'nBuffer, nExtraData=', nBuffer, nExtraData
@@ -1583,13 +1581,13 @@ contains
     Buffer_I = ExtraData_IB(:,iBlock)
 
   end subroutine test_pack
-  !==========================================================================
+  !============================================================================
   subroutine test_unpack(iBlock, nBuffer, Buffer_I)
 
     integer, intent(in) :: iBlock
     integer, intent(in) :: nBuffer
     real,    intent(in) :: Buffer_I(nBuffer)
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     if(nBuffer /= nExtraData)write(*,*)'ERROR in test_unpack: ', &
          'nBuffer, nExtraData=', nBuffer, nExtraData
@@ -1597,6 +1595,8 @@ contains
     ExtraData_IB(:,iBlock) = Buffer_I
 
   end subroutine test_unpack
+  !============================================================================
 
 end module BATL_amr
+!==============================================================================
 

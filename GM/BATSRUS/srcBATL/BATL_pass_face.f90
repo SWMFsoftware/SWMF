@@ -1,10 +1,12 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_pass_face
 
   ! Possible improvements:
   ! (1) Overlapping communication and calculation
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 
@@ -20,6 +22,7 @@ module BATL_pass_face
   public test_pass_face
 
 contains
+  !============================================================================
 
   subroutine message_pass_face(nVar, Flux_VXB, Flux_VYB, Flux_VZB, &
        DoSubtractIn, DoResChangeOnlyIn, MinLevelIn, DoTestIn)
@@ -57,10 +60,10 @@ contains
     logical, optional, intent(in) :: DoTestIn
     integer, optional, intent(in) :: MinLevelIn
 
-    ! Send sum of fine fluxes to coarse neighbors and 
+    ! Send sum of fine fluxes to coarse neighbors and
     ! subtract it from the coarse flux if DoSubtractIn is true (default), or
     ! replace original flux with sum of fine fluxes if DoSubtractIn is false.
-    ! 
+    !
     ! DoResChangeOnlyIn determines if the flux correction is applied at
     !     resolution changes only. True is the default.
     !
@@ -99,7 +102,7 @@ contains
          iStatus_II(:,:)
 
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'BATL_pass_face::message_pass_face'
+    character(len=*), parameter:: NameSub = 'message_pass_face'
     !--------------------------------------------------------------------------
     DoTest = .false.; if(present(DoTestIn)) DoTest = DoTestIn
     if(DoTest)write(*,*)NameSub,' starting with nVar=',nVar
@@ -124,13 +127,13 @@ contains
     call set_range
 
     if(nProc > 1)then
-       ! Small arrays are allocated once 
+       ! Small arrays are allocated once
        if(.not.allocated(iBufferR_P))then
           allocate(iBufferR_P(0:nProc-1), iBufferS_P(0:nProc-1))
           allocate(iRequestR_I(nProc-1), iRequestS_I(nProc-1))
           allocate(iStatus_II(MPI_STATUS_SIZE,nProc-1))
        end if
-       ! Upper estimate of the number of variables sent 
+       ! Upper estimate of the number of variables sent
        ! from one block to another. Used for dynamic pointer buffers.
        DnBuffer = nVar*nFaceCell
 
@@ -261,6 +264,7 @@ contains
     call timing_stop('buffer_to_flux')
 
   contains
+    !==========================================================================
 
     subroutine extend_buffer(DoCopy, MaxBufferOld, MaxBufferNew, Buffer_IP)
 
@@ -270,8 +274,8 @@ contains
       real, pointer:: Buffer_IP(:,:)
 
       real, pointer :: OldBuffer_IP(:,:)
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       if(MaxBufferOld < 0 .or. .not.DoCopy)then
          if(MaxBufferOld > 0) deallocate(Buffer_IP)
          allocate(Buffer_IP(MaxBufferNew,0:nProc-1))
@@ -281,7 +285,7 @@ contains
          ! allocate extended buffer
          allocate(Buffer_IP(MaxBufferNew,0:nProc-1))
          ! copy old values
-         Buffer_IP(1:MaxBufferOld,:) = OldBuffer_IP(1:MaxBufferOld,:)  
+         Buffer_IP(1:MaxBufferOld,:) = OldBuffer_IP(1:MaxBufferOld,:)
          ! free old storage
          deallocate(OldBuffer_IP)
       end if
@@ -289,8 +293,8 @@ contains
       MaxBufferOld = MaxBufferNew
 
     end subroutine extend_buffer
-
     !==========================================================================
+
     subroutine buffer_to_flux
 
       ! Copy buffer into Flux_V*B
@@ -307,7 +311,7 @@ contains
             iTag = nint(BufferR_IP(iBufferR+1,iProcSend))
             iBufferR = iBufferR + 1
 
-            ! Decode iTag = 100*iBlockRecv + 20*iDim + 10*(iDimSide-1) 
+            ! Decode iTag = 100*iBlockRecv + 20*iDim + 10*(iDimSide-1)
             !               + 3*iSubFace1 + iSubFace2
             iBlockRecv = iTag/100; iTag = iTag - 100*iBlockRecv
             iDim       = iTag/20;  iTag = iTag - 20*iDim
@@ -399,7 +403,7 @@ contains
       iSend = (3*iDir + 3)/2
       jSend = (3*jDir + 3)/2
       kSend = (3*kDir + 3)/2
-      
+
       iNodeRecv  = iNodeNei_IIIB(iSend,jSend,kSend,iBlock)
 
       iTimeLevel    = iTimeLevel_A(iNode)
@@ -448,8 +452,8 @@ contains
 
       !------------------------------------------------------------------------
 
-      ! The coordinate parity of the sender block tells 
-      ! if the receiver block fills into the 
+      ! The coordinate parity of the sender block tells
+      ! if the receiver block fills into the
       ! lower or upper part of the face
 
       iSide = 0; if(iRatio==2) iSide = modulo(iTree_IA(Coord1_,iNode)-1, 2)
@@ -484,7 +488,7 @@ contains
       end select
 
     end subroutine do_restrict
-    !=======================================================================
+    !==========================================================================
     subroutine do_flux(iDim1, iDim2, n1, n2, Dn1, Dn2, iSide1, iSide2, &
          Flux_VFB)
 
@@ -494,7 +498,7 @@ contains
       ! For Dn1=2 set iSubFace1=1+iSide1 where iSide1=0/1 for lower/upper
       ! For Dn2=1 set iSubFace2=0 (full face) and ignore iSide2.
       ! For Dn2=2 set iSubFace2=1+iSide2 where iSide2=0/1 for lower/upper
-      
+
       integer, intent(in):: iDim1, iDim2, n1, n2, Dn1, Dn2, iSide1, iSide2
       real, intent(inout):: Flux_VFB(nVar,n1,n2,2,MaxBlock)
 
@@ -502,7 +506,7 @@ contains
       integer:: iR1, iR1Min, iR1Max, iR2, iR2Min, iR2Max
       integer:: iS1Min, iS1Max, iS2Min, iS2Max
       integer:: iVar, iBufferS
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
 
       iSubFace1 = (1 + iSide1)*(Dn1 - 1)
       iSubFace2 = (1 + iSide2)*(Dn2 - 1)
@@ -578,7 +582,6 @@ contains
       Flux_VFB(:,:,:,iDimSide,iBlock) = 0.0
 
     end subroutine do_flux
-
     !==========================================================================
 
     subroutine do_receive
@@ -621,13 +624,13 @@ contains
       end do
 
     end subroutine do_receive
-
     !==========================================================================
 
     subroutine set_range
 
       integer:: iDim
 
+      !------------------------------------------------------------------------
       do iDim = 1, MaxDim
          ! Full face
          iReceive_DII(iDim,0,Min_) = 1
@@ -643,9 +646,9 @@ contains
       end do
 
     end subroutine set_range
+    !==========================================================================
 
   end subroutine message_pass_face
-
   !============================================================================
 
   subroutine store_face_flux(iBlock, nVar, Flux_VFD, &
@@ -654,7 +657,7 @@ contains
 
     ! Put Flux_VFD into Flux_VXB, Flux_VYB, Flux_VZB for the appropriate faces.
     ! The coarse face flux is also stored unless DoStoreCoarseFluxIn is false.
-    ! Multiply flux by DtIn if present and add to previously stored flux 
+    ! Multiply flux by DtIn if present and add to previously stored flux
     ! so there is a time integral for subcycling.
 
     use BATL_size, ONLY: nDim, nI, nJ, nK, MaxBlock
@@ -676,9 +679,10 @@ contains
     real :: Dt
     logical::  DoResChangeOnly, DoStoreCoarseFlux
     integer:: DiLevel
-    !--------------------------------------------------------------------------
+
     ! Store flux at resolution change for conservation fix
 
+    !--------------------------------------------------------------------------
     Dt = 1.0
     if(present(DtIn)) Dt = DtIn
     DoResChangeOnly = .true.
@@ -706,7 +710,7 @@ contains
             .or. DiLevel == -1 .and. DoStoreCoarseFlux) &
             Flux_VYB(:,1:nI,1:nK,1,iBlock) = Flux_VYB(:,1:nI,1:nK,1,iBlock) &
             + Dt*Flux_VFD(:,1:nI,1,1:nK,min(2,nDim))
-       
+
        DiLevel = DiLevelNei_IIIB(0,+1,0,iBlock)
        if(.not. DoResChangeOnly .or. DiLevel == 1 &
             .or. DiLevel == -1 .and. DoStoreCoarseFlux) &
@@ -729,7 +733,6 @@ contains
     end if
 
   end subroutine store_face_flux
-
   !============================================================================
 
   subroutine correct_face_flux(iBlock, nVar, &
@@ -765,7 +768,7 @@ contains
        if(DiLevelNei_IIIB(0,-1,0,iBlock) == -1) &
             Flux_VFD(:,1:nI,1,1:nK,min(2,nDim)) &
             = Flux_VYB(:,1:nI,1:nK,1,iBlock)
-       
+
        if(DiLevelNei_IIIB(0,+1,0,iBlock) == -1) &
             Flux_VFD(:,1:nI,nJ+1,1:nK,min(2,nDim)) &
             = Flux_VYB(:,1:nI,1:nK,2,iBlock)
@@ -773,14 +776,13 @@ contains
 
     if(present(Flux_VZB) .and. nDim > 2)then
        if(DiLevelNei_IIIB(0,0,-1,iBlock) == -1) &
-            Flux_VFD(:,1:nI,1:nJ,1,nDim) = Flux_VZB(:,1:nI,1:nJ,1,iBlock) 
+            Flux_VFD(:,1:nI,1:nJ,1,nDim) = Flux_VZB(:,1:nI,1:nJ,1,iBlock)
 
        if(DiLevelNei_IIIB(0,0,+1,iBlock) == -1) &
             Flux_VFD(:,1:nI,1:nJ,nK+1,nDim) = Flux_VZB(:,1:nI,1:nJ,2,iBlock)
     end if
 
   end subroutine correct_face_flux
-
   !============================================================================
 
   subroutine apply_flux_correction(nVar, nFluid, State_VGB, Energy_GBI,&
@@ -810,8 +812,8 @@ contains
     logical:: DoReschangeOnly, DoTest
     integer:: iBlock, iNode, iLevel, MinLevel
 
-    character(*), parameter:: NameSub = 'BATL_pass_face::apply_flux_correction'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'apply_flux_correction'
+    !--------------------------------------------------------------------------
     DoTest = .false.
     if(present(DoTestIn)) DoTest = DoTestIn
 
@@ -823,7 +825,7 @@ contains
     ! Set the levels MinLevel and up which need to receive fluxes.
     if(present(iStageIn))then
        ! The flux correction is to be applied to the blocks that have
-       ! just completed their time step. These are the same as the blocks 
+       ! just completed their time step. These are the same as the blocks
        ! that need to message pass information in the next stage
        MinLevel = min_tree_level(iStageIn+1)
        if(DoTest)write(*,*) NameSub,': iStageIn=', iStageIn
@@ -848,7 +850,7 @@ contains
           if(iLevel < MinLevel .or. iLevel >= nLevelMax) CYCLE
        else
           iLevel = iTimeLevel_A(iNode)
-          ! skip time levels below MinLevel and 
+          ! skip time levels below MinLevel and
           ! blocks at maximum time AND grid level
           if(iLevel < MinLevel .or. &
                iLevel >= nTimeLevel .and. iTree_IA(Level_,iNode) >= nLevelMax)&
@@ -870,7 +872,6 @@ contains
     end do
 
   end subroutine apply_flux_correction
-
   !============================================================================
 
   subroutine apply_flux_correction_block(iBlock, nVar, nFluid, nG, &
@@ -976,7 +977,6 @@ contains
     end if
 
   end subroutine apply_flux_correction_block
-
   !============================================================================
 
   subroutine test_pass_face
@@ -1010,12 +1010,12 @@ contains
     integer:: iStage, nStage, iTimeLevel
     real:: Flux, FluxGood, FluxUnset=-77.0
 
-    logical:: DoTestMe
-    character(len=*), parameter :: NameSub = 'test_pass_face'
-    !-----------------------------------------------------------------------
-    DoTestMe = iProc == 0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'test_pass_face'
+    !--------------------------------------------------------------------------
+    DoTest = iProc == 0
 
-    if(DoTestMe) write(*,*) 'Starting ',NameSub
+    if(DoTest) write(*,*) 'Starting ',NameSub
 
     call init_tree(MaxBlockTest)
     call init_geometry( IsPeriodicIn_D = IsPeriodicTest_D(1:nDim) )
@@ -1023,7 +1023,7 @@ contains
     call set_tree_root( nRootTest_D(1:nDim))
 
     call find_tree_node( (/0.5,0.5,0.5/), iNode)
-    if(DoTestMe)write(*,*) NameSub,' middle node=',iNode
+    if(DoTest)write(*,*) NameSub,' middle node=',iNode
     call refine_tree_node(iNode)
     call distribute_tree(.true.)
     call create_grid
@@ -1039,7 +1039,7 @@ contains
        iTimeLevel_A(iNode) = modulo(iNode,4) + 5*iTree_IA(Level_,iNode)
     end do
 
-    if(DoTestMe) &
+    if(DoTest) &
          call show_tree(NameSub, DoShowNei=.true.) ! DoShowTimeLevel=.true.)
 
     do iResChangeOnly = 1, 2
@@ -1047,7 +1047,7 @@ contains
        DoResChangeOnly  = iResChangeOnly == 1
        UseTimeLevel = .not.DoResChangeOnly
 
-       if(DoTestMe)write(*,*) 'testing message_pass_face with', &
+       if(DoTest)write(*,*) 'testing message_pass_face with', &
             ' DoResChangeOnly, UseTimeLevel=',  DoResChangeOnly, UseTimeLevel
 
        Flux_VFD = 0.0
@@ -1128,7 +1128,7 @@ contains
                 write(*,*)'Error at min X face: ', &
                      'iNode,DiLevel,j,k,iDim,Flux,Good=', &
                      iNode_B(iBlock), DiLevel, j, k, iDim, Flux, FluxGood, &
-                     CellFace_DB(1,iBlock)                
+                     CellFace_DB(1,iBlock)
              end if
           end do; end do; end do
 
@@ -1205,6 +1205,7 @@ contains
 
       ! Fill in Flux_VFD with coordinates of the face center
 
+      !------------------------------------------------------------------------
       Flux_VFD(:,:,1:nJ,1:nK,1) = 0.5*CellFace_DB(1,iBlock)* &
            ( Xyz_DGB(1:nDim,0:nI  ,1:nJ,1:nK,iBlock) &
            + Xyz_DGB(1:nDim,1:nI+1,1:nJ,1:nK,iBlock) )
@@ -1220,21 +1221,21 @@ contains
            + Xyz_DGB(1:nDim,1:nI,1:nJ,1:nK+1,iBlock) )
 
     end subroutine set_flux
+    !==========================================================================
 
-    !========================================================================
     real function flux_good(DiLevel, iDir, XyzCellFace)
 
       integer, intent(in):: DiLevel, iDir
       real,    intent(in):: XyzCellFace
 
-      ! Calculate the correct flux solution in direction iDir based on the 
+      ! Calculate the correct flux solution in direction iDir based on the
       ! grid/time level change DiLevel at the given face.
       ! The coordinate XyzCellFace is the correct answer on the coarse side.
-      ! Zero is the correct value on the fine side. 
+      ! Zero is the correct value on the fine side.
       ! FluxUnset is the correct value everywhere else.
 
       real:: CellFace
-      !---------------------------------------------------------------------
+      !------------------------------------------------------------------------
       select case(DiLevel)
       case(0)
          flux_good = FluxUnset
@@ -1258,7 +1259,10 @@ contains
       end select
 
     end function flux_good
+    !==========================================================================
 
   end subroutine test_pass_face
+  !============================================================================
 
 end module BATL_pass_face
+!==============================================================================

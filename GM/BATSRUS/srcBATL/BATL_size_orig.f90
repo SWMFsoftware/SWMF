@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_size
 
@@ -7,9 +7,9 @@ module BATL_size
 
   SAVE
 
-  ! Number of cells per block in each direction. 
+  ! Number of cells per block in each direction.
   ! These values are set by the Config.pl script.
-  ! Set 1 for ignored directions! 
+  ! Set 1 for ignored directions!
   integer, parameter :: nI = 8, nJ = 8, nK = 8
 
   ! Maximum number of ghost cells set by Config.pl script.
@@ -88,8 +88,8 @@ module BATL_size
   integer, parameter:: nKp2_ = min(nK + 2, MaxK) ! k=nK+2
   integer, parameter:: nKp3_ = min(nK + 3, MaxK) ! k=nK+3
 
-  ! Indexes of AMR dimensions. 
-  ! The magic formulas should be correct from 1 to nDimAmr. 
+  ! Indexes of AMR dimensions.
+  ! The magic formulas should be correct from 1 to nDimAmr.
   integer, parameter, private :: iDimAmrTmp_D(MaxDim) = &
        (/ 1 + (2-iRatio)*(3-jRatio), 6-iRatio-jRatio, 3 /)
 
@@ -117,7 +117,7 @@ module BATL_size
 
   ! Ratio of cells in coarsening and prolongation
   integer, parameter:: IjkRatio = iRatio*jRatio*kRatio
-  
+
   ! Inverse volume ratio for Cartesian case
   real, parameter:: InvIjkRatio = 1.0/IjkRatio
 
@@ -131,3 +131,4 @@ module BATL_size
   integer, parameter:: nKindParticle = 8
 
 end module BATL_size
+!==============================================================================

@@ -1,20 +1,25 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_pass_face_field
+
   use BATL_size, ONLY: MaxBlock, nBlock, nI, nJ, nK, nIjk_D, &
        MaxDim, nDim, jDim_, kDim_
 
   use BATL_mpi, ONLY: iComm, nProc, iProc, barrier_mpi
-  
+
   use BATL_tree, ONLY: &
        iNodeNei_IIIB, DiLevelNei_IIIB, Unset_, iNode_B, &
        iTree_IA, Proc_, Block_, Unused_B
+
+  use ModUtilities, ONLY: CON_stop
+
   use ModMpi
+
   implicit none
-  
+
   SAVE
-  
+
   private ! except
   !\
   ! PUBLIC MEMBERS
@@ -25,10 +30,10 @@ module BATL_pass_face_field
   !/
   public message_pass_field
   !\
-  ! Add ghost face values of face-centered staggered vector 
+  ! Add ghost face values of face-centered staggered vector
   ! variables (such as the electric current components in PIC, which
   ! are created by the particles close to the block boundary)
-  ! to all physical faces 
+  ! to all physical faces
   !/
   public add_ghost_face_field
   public add_ghost_cell_field
@@ -36,65 +41,66 @@ module BATL_pass_face_field
   integer, parameter:: Min_=1, Max_=2
   integer:: iS_DIID(MaxDim,-1:1,Min_:Max_,MaxDim)
   integer:: iR_DIID(MaxDim,-1:1,Min_:Max_,MaxDim)
-  
+
   ! Variables related to recv and send buffers
   integer, allocatable:: iBufferS_P(:), nBufferS_P(:), nBufferR_P(:)
-  
+
   real,    allocatable:: BufferR_I(:), BufferS_I(:)
   integer :: MaxBufferS = -1, MaxBufferR = -1
   !\
   ! Counter of currents through the physical faces
   !/
-  real, allocatable :: Counter_FDB(:,:,:,:,:) 
+  real, allocatable :: Counter_FDB(:,:,:,:,:)
   integer:: nBlockMax = -1
-  
+
   integer, allocatable:: iRequestR_I(:), iRequestS_I(:), &
        iStatus_II(:,:)
 contains
-  !============================
+  !============================================================================
   subroutine allocate_pe_arrays
       ! Allocate fixed size communication arrays.
+    !--------------------------------------------------------------------------
     if(allocated(iBufferS_P))RETURN
     allocate(iBufferS_P(0:nProc-1), nBufferS_P(0:nProc-1), &
                nBufferR_P(0:nProc-1))
     allocate(iRequestR_I(nProc-1), iRequestS_I(nProc-1))
     allocate(iStatus_II(MPI_STATUS_SIZE,nProc-1))
   end subroutine allocate_pe_arrays
-  !============================
+  !============================================================================
   subroutine check_buffer
     ! Make buffers large enough
+    !--------------------------------------------------------------------------
     if(sum(nBufferR_P) > MaxBufferR) then
        if(allocated(BufferR_I)) deallocate(BufferR_I)
-       MaxBufferR = sum(nBufferR_P) 
+       MaxBufferR = sum(nBufferR_P)
        allocate(BufferR_I(MaxBufferR))
     end if
-    
+
     if(sum(nBufferS_P) > MaxBufferS) then
        if(allocated(BufferS_I)) deallocate(BufferS_I)
        MaxBufferS = sum(nBufferS_P)
        allocate(BufferS_I(MaxBufferS))
     end if
   end subroutine check_buffer
-  !============================
+  !============================================================================
   subroutine message_pass_field(nG, Field_FDB, nWidthIn)
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
-    !Array index is the coordinate of the gridpoint with +1/2 being
-    !approximated as 1. By x the physical cells are marked below
-    !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)    
-    !       _!_!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
-    !       _!_!x!x               _!_!_!_                  Ey (:,nY+2,:)
-    !       _!_!_!                x!x!_!_        Phys Face Values: 
-    !    -2  ! ! !                x!x!_!_        Ex(0,1,1),Ex(nI,1,1)...
+    ! Array index is the coordinate of the gridpoint with +1/2 being
+    ! approximated as 1. By x the physical cells are marked below
+    !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)
+    !       _! _!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
+    !       _! _!x!x               _!_!_!_                  Ey (:,nY+2,:)
+    !       _! _!_!                x!x!_!_        Phys Face Values:
+    !    -2  ! ! !                x! x!_!_        Ex(0,1,1),Ex(nI,1,1)...
     !       -2                             Ghost values: Ex(-1,1,1),Ey(0,1,1)..
     real, intent(inout) :: Field_FDB(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
          1-nG*kDim_:nK+nG*kDim_,MaxDim,MaxBlock)
 
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
-    
-    ! nWidthIn is the number of ghost face layers to be set. Default is nG.
 
+    ! nWidthIn is the number of ghost face layers to be set. Default is nG.
 
     ! Local variables
 
@@ -103,7 +109,7 @@ contains
     ! local variables corresponding to optional arguments
     integer :: nWidth
 
-    ! Various indexes 
+    ! Various indexes
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
 
@@ -116,10 +122,9 @@ contains
 
     integer :: iBufferS, iBufferR
     integer:: iRequestR, iRequestS, iError
- 
-    character(len=*), parameter:: NameSub = 'BATL_pass_face_field'
-    !--------------------------------------------------------------------------
 
+    character(len=*), parameter:: NameSub = 'message_pass_field'
+    !--------------------------------------------------------------------------
 
     call timing_start('batl_pass')
 
@@ -129,16 +134,14 @@ contains
     nWidth = nG
     if(present(nWidthIn)) nWidth = nWidthIn
 
-
     if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
          ' nWidth do not contain the ghost cells or too many')
- 
+
     ! Set index ranges based on arguments
     call set_range
 
     if(nProc > 1)call allocate_pe_arrays
     call timing_stop('init_pass')
-
 
     do iCountOnly = 1, 2
        DoCountOnly = iCountOnly == 1
@@ -247,12 +250,11 @@ contains
     call buffer_to_state
     call timing_stop('buffer_to_state')
 
-
     call timing_stop('batl_pass')
 
   contains
+    !==========================================================================
 
-    !======================================================================
     subroutine buffer_to_state
 
       ! Copy buffer into recv block of Field_FDB
@@ -276,11 +278,10 @@ contains
                if(nDim > 1) jRMax = nint(BufferR_I(iBufferR+4))
                if(nDim > 2) kRMin = nint(BufferR_I(iBufferR+5))
                if(nDim > 2) kRMax = nint(BufferR_I(iBufferR+6))
-               
+
                iBufferR = iBufferR + 2*nDim
-               
-               
-               do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax 
+
+               do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax
                   iBufferR = iBufferR + 1
                   Field_FDB(i,j,k,iDim,iBlockRecv) = &
                        BufferR_I(iBufferR)
@@ -290,7 +291,6 @@ contains
          end do
        end do
     end subroutine buffer_to_state
-
     !==========================================================================
 
     subroutine do_equal
@@ -306,7 +306,6 @@ contains
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
-      
       if(DoCountOnly)then
          ! No need to count data for local copy
          if(iProc == iProcRecv) RETURN
@@ -344,7 +343,7 @@ contains
             kSMin = iS_DIID(3,kDir,Min_,iDim)
             kSMax = iS_DIID(3,kDir,Max_,iDim)
             if((iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)==0)CYCLE
-         
+
             Field_FDB(iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iDim, &
                  iBlockRecv)= Field_FDB(iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,&
                  iDim,iBlockSend)
@@ -386,19 +385,18 @@ contains
       end if
 
     end subroutine do_equal
-
     !==========================================================================
 
     subroutine set_range
 
       integer:: iDim
-      !Array index is the coordinate of the gridpoint with +1/2 being
-      !approximated as 1. By x the physical cells are marked below
-      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)    
-      !       _!_!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
-      !       _!_!x!x               _!_!_!_                  Ey (:,nY+2,:)
-      !       _!_!_!                x!x!_!_        Phys Face Values: 
-      !    -2  ! ! !                x!x!_!_        Ex(0,1,1),Ex(nI,1,1)...
+      ! Array index is the coordinate of the gridpoint with +1/2 being
+      ! approximated as 1. By x the physical cells are marked below
+      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)
+      !       _! _!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
+      !       _! _!x!x               _!_!_!_                  Ey (:,nY+2,:)
+      !       _! _!_!                x!x!_!_        Phys Face Values:
+      !    -2  ! ! !                x! x!_!_        Ex(0,1,1),Ex(nI,1,1)...
       !       -2                           Ghost values: Ex(-1,1,1),Ey(0,1,1)..
       !------------------------------------------------------------------------
       !\
@@ -417,9 +415,9 @@ contains
          iR_DIID(:,-1,Min_,iDim) = nIjk_D + 1
          iR_DIID(:,-1,Max_,iDim) = nIjk_D + nWidth
          !\
-         ! !EXCEPT!!
+         ! ! EXCEPT!!
          ! nIJK+nWidth face at which the iDim component is assigned
-         ! is not used. Specifiaclly for nWidth=1 this face is not sent. 
+         ! is not used. Specifiaclly for nWidth=1 this face is not sent.
          iS_DIID(iDim,-1,Max_,iDim) = iS_DIID(iDim,-1,Max_,iDim) - 1
          iR_DIID(iDim,-1,Max_,iDim) = iR_DIID(iDim,-1,Max_,iDim) - 1
       end do
@@ -438,7 +436,7 @@ contains
       end do
       do iDim = 1,nDim
          !\
-         ! !EXCEPT!!! For the iDim component of the field
+         ! ! EXCEPT!!! For the iDim component of the field
          ! Send and receive faces are from 0 to nIJK_D
          !/
          iS_DIID(iDim,0,Min_,iDim) = 0
@@ -460,37 +458,37 @@ contains
          iS_DIID(:, 1,Min_,iDim) = nIjk_D + 1 - nWidth
          iS_DIID(:, 1,Max_,iDim) = nIjk_D
          !\
-         ! !EXCEPT!!! For the iDim component of the field
+         ! ! EXCEPT!!! For the iDim component of the field
          ! Recv faces are up to -1 (0 face is physical)
          !/
          iS_DIID(iDim,1,Max_,iDim) = nIjk_D(iDim) - 1
          iR_DIID(iDim,1,Max_,iDim) =  - 1
       end do
 
-
     end subroutine set_range
+    !==========================================================================
 
   end subroutine message_pass_field
-  !===========================
+  !============================================================================
   subroutine add_ghost_face_field(nG, Current_FDB, nWidthIn)
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
+    !--------------------------------------------------------------------------
     real, intent(inout), dimension(1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
          1-nG*kDim_:nK+nG*kDim_,MaxDim,MaxBlock):: Current_FDB
-    !Array index is the coordinate of the gridpoint with +1/2 being
-    !approximated as 1. By x the physical cells are marked below
-    !  Left corner        Right corner n+2                 Jz (:,:,nZ+2)    
-    !       _!_!x!x               _!_!_!_n+2     Not used: Jx (nX+2,:,:)
-    !       _!_!x!x               _!_!_!_                  Jy (:,nY+2,:)
-    !       _!_!_!                x!x!_!_        Phys Face Values: 
-    !    -2  ! ! !                x!x!_!_        Jx(0,1,1),Jx(nI,1,1)...
+    ! Array index is the coordinate of the gridpoint with +1/2 being
+    ! approximated as 1. By x the physical cells are marked below
+    !  Left corner        Right corner n+2                 Jz (:,:,nZ+2)
+    !       _! _!x!x               _!_!_!_n+2     Not used: Jx (nX+2,:,:)
+    !       _! _!x!x               _!_!_!_                  Jy (:,nY+2,:)
+    !       _! _!_!                x!x!_!_        Phys Face Values:
+    !    -2  ! ! !                x! x!_!_        Jx(0,1,1),Jx(nI,1,1)...
     !       -2                           Ghost values: Jx(-1,1,1),Jy(0,1,1)..
     !------------------------------------------------------------------------
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
-    
-    ! nWidthIn is the number of ghost face layers to be set. Default is all.
 
+    ! nWidthIn is the number of ghost face layers to be set. Default is all.
 
     ! Local variables
 
@@ -499,7 +497,7 @@ contains
     ! local variables corresponding to optional arguments
     integer :: nWidth
 
-    ! Various indexes 
+    ! Various indexes
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
 
@@ -513,7 +511,7 @@ contains
     integer :: iBufferS, iBufferR
     integer :: MaxBufferS = -1, MaxBufferR = -1
     integer:: iRequestR, iRequestS, iError
- 
+
     character(len=*), parameter:: NameSub = 'BATL_pass::add_ghost_face_field'
     !--------------------------------------------------------------------------
     call timing_start('batl_pass')
@@ -558,7 +556,6 @@ contains
 
     call timing_stop('init_pass')
 
-
     do iCountOnly = 1, 2
        DoCountOnly = iCountOnly == 1
 
@@ -567,7 +564,7 @@ contains
 
        call timing_start('local_pass')
 
-       ! Second order prolongation needs two stages: 
+       ! Second order prolongation needs two stages:
        ! first stage fills in equal and coarser ghost cells
        ! second stage uses these to prolong and fill in finer ghost cells
 
@@ -693,8 +690,8 @@ contains
     call timing_stop('batl_pass')
 
   contains
+    !==========================================================================
 
-    !======================================================================
     subroutine buffer_to_state
 
       ! Copy buffer into recv block of Current_FDB
@@ -718,11 +715,10 @@ contains
                if(nDim > 1) jRMax = nint(BufferR_I(iBufferR+4))
                if(nDim > 2) kRMin = nint(BufferR_I(iBufferR+5))
                if(nDim > 2) kRMax = nint(BufferR_I(iBufferR+6))
-               
+
                iBufferR = iBufferR + 2*nDim
-               
-               
-               do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax 
+
+               do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax
                   iBufferR = iBufferR + 1
                   Counter_FDB(i,j,k,iDim,iBlockRecv) =      &
                        Counter_FDB(i,j,k,iDim,iBlockRecv) + &
@@ -733,7 +729,6 @@ contains
          end do
        end do
     end subroutine buffer_to_state
-
     !==========================================================================
 
     subroutine do_equal
@@ -749,7 +744,6 @@ contains
       iProcRecv  = iTree_IA(Proc_,iNodeRecv)
       iBlockRecv = iTree_IA(Block_,iNodeRecv)
 
-      
       if(DoCountOnly)then
          ! No need to count data for local copy
          if(iProc == iProcRecv) RETURN
@@ -765,7 +759,6 @@ contains
             if(nDim > 2)kRMin = iR_DIID(3,kDir,Min_,iDim)
             if(nDim > 2)kRMax = iR_DIID(3,kDir,Max_,iDim)
 
- 
             ! Number of reals to send to and received from the other processor
             nSize = (iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1) + nSize
          end do
@@ -789,7 +782,7 @@ contains
             kSMin = iS_DIID(3,kDir,Min_,iDim)
             kSMax = iS_DIID(3,kDir,Max_,iDim)
             if((iRMax-iRMin+1)*(jRMax-jRMin+1)*(kRMax-kRMin+1)==0)CYCLE
-         
+
             Counter_FDB(iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iDim,iBlockRecv) =    &
                  Counter_FDB(iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iDim,iBlockRecv) &
                  + Current_FDB(iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iDim,iBlockSend)
@@ -831,21 +824,19 @@ contains
       end if
 
     end subroutine do_equal
-
     !==========================================================================
 
     subroutine set_range
 
       integer:: iDim
-      !------------------------------------------------------------------------
 
-            !Array index is the coordinate of the gridpoint with +1/2 being
-      !approximated as 1. By x the physical cells are marked below
-      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)    
-      !       _!_!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
-      !       _!_!x!x               _!_!_!_                  Ey (:,nY+2,:)
-      !       _!_!_!                x!x!_!_        Phys Face Values: 
-      !    -2  ! ! !                x!x!_!_        Ex(0,1,1),Ex(nI,1,1)...
+            ! Array index is the coordinate of the gridpoint with +1/2 being
+      ! approximated as 1. By x the physical cells are marked below
+      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)
+      !       _! _!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
+      !       _! _!x!x               _!_!_!_                  Ey (:,nY+2,:)
+      !       _! _!_!                x!x!_!_        Phys Face Values:
+      !    -2  ! ! !                x! x!_!_        Ex(0,1,1),Ex(nI,1,1)...
       !       -2                           Ghost values: Ex(-1,1,1),Ey(0,1,1)..
       !------------------------------------------------------------------------
       !\
@@ -873,7 +864,7 @@ contains
 
       iR_DIID(:, 1,Min_,:) = 1
       iR_DIID(:, 1,Max_,:) = nWidth
-  
+
       do iDim = 1,MaxDim
          iS_DIID(:, 1,Min_,iDim) = nIjk_D + 1
          iS_DIID(:, 1,Max_,iDIm) = nIjk_D + nWidth
@@ -881,34 +872,34 @@ contains
          iR_DIID(iDim,1,Min_:Max_,iDim) = iR_DIID(iDim,1,Min_:Max_,iDim) - 1
       end do
 
-
     end subroutine set_range
+    !==========================================================================
 
   end subroutine add_ghost_face_field
-  !=========================
+  !============================================================================
   subroutine add_ghost_cell_field(nVar, nG, State_VGB, nWidthIn)
     ! Arguments
     integer, intent(in) :: nG    ! number of ghost cells for 1..nDim
     integer, intent(in) :: nVar
+    !--------------------------------------------------------------------------
     real, intent(inout), dimension(1:nVar,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,&
          1-nG*kDim_:nK+nG*kDim_,MaxBlock):: State_VGB
-    !Array index is the coordinate of the gridpoint with +1/2 being
-    !approximated as 1. By x the physical cells are marked below
-    !  Left corner        Right corner n+2                 Jz (:,:,nZ+2)    
-    !       _!_!x!x               _!_!_!_n+2     Not used: Jx (nX+2,:,:)
-    !       _!_!x!x               _!_!_!_                  Jy (:,nY+2,:)
-    !       _!_!_!                x!x!_!_        Phys Face Values: 
-    !    -2  ! ! !                x!x!_!_        Jx(0,1,1),Jx(nI,1,1)...
+    ! Array index is the coordinate of the gridpoint with +1/2 being
+    ! approximated as 1. By x the physical cells are marked below
+    !  Left corner        Right corner n+2                 Jz (:,:,nZ+2)
+    !       _! _!x!x               _!_!_!_n+2     Not used: Jx (nX+2,:,:)
+    !       _! _!x!x               _!_!_!_                  Jy (:,nY+2,:)
+    !       _! _!_!                x!x!_!_        Phys Face Values:
+    !    -2  ! ! !                x! x!_!_        Jx(0,1,1),Jx(nI,1,1)...
     !       -2                           Ghost values: Jx(-1,1,1),Jy(0,1,1)..
     !------------------------------------------------------------------------
 
     ! Optional arguments
     integer, optional, intent(in) :: nWidthIn
-    
+
     ! Fill in the nVar variables in the ghost cells of Current_FDB.
     !
     ! nWidthIn is the number of ghost cell layers to be set. Default is all.
-
 
     ! Local variables
 
@@ -917,7 +908,7 @@ contains
     ! local variables corresponding to optional arguments
     integer :: nWidth
 
-    ! Various indexes 
+    ! Various indexes
     integer :: iCountOnly     ! index for 2 stage scheme for count, sendrecv
     logical :: DoCountOnly    ! logical for count vs. sendrecv stages
 
@@ -931,14 +922,12 @@ contains
     integer :: iBufferS, iBufferR
     integer :: MaxBufferS = -1, MaxBufferR = -1
     integer:: iRequestR, iRequestS, iError
- 
+
     character(len=*), parameter:: NameSub = 'BATL_pass::add_ghost_face_field'
 
     integer:: iBlock
 
-
     !--------------------------------------------------------------------------
-
 
     call timing_start('batl_pass')
 
@@ -948,16 +937,14 @@ contains
     nWidth = nG
     if(present(nWidthIn)) nWidth = nWidthIn
 
-
     if(nWidth < 1 .or. nWidth > nG) call CON_stop(NameSub// &
          ' nWidth do not contain the ghost cells or too many')
     ! Set index ranges based on arguments
     call set_range
 
     if(nProc > 1)call allocate_pe_arrays
- 
-    call timing_stop('init_pass')
 
+    call timing_stop('init_pass')
 
     do iCountOnly = 1, 2
        DoCountOnly = iCountOnly == 1
@@ -967,7 +954,7 @@ contains
 
        call timing_start('local_pass')
 
-       ! Second order prolongation needs two stages: 
+       ! Second order prolongation needs two stages:
        ! first stage fills in equal and coarser ghost cells
        ! second stage uses these to prolong and fill in finer ghost cells
 
@@ -1070,15 +1057,14 @@ contains
     call buffer_to_state
     call timing_stop('buffer_to_state')
 
-
     call timing_stop('batl_pass')
 
   contains
+    !==========================================================================
 
-    !======================================================================
     subroutine buffer_to_state
 
-      ! Copy buffer into recv block 
+      ! Copy buffer into recv block
 
       integer:: iBufferR, i, j, k
       !------------------------------------------------------------------------
@@ -1098,11 +1084,10 @@ contains
             if(nDim > 1) jRMax = nint(BufferR_I(iBufferR+4))
             if(nDim > 2) kRMin = nint(BufferR_I(iBufferR+5))
             if(nDim > 2) kRMax = nint(BufferR_I(iBufferR+6))
-            
+
             iBufferR = iBufferR + 2*nDim
-               
-               
-            do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax 
+
+            do k=kRMin,kRmax; do j=jRMin,jRMax; do i=iRMin,iRmax
                State_VGB(:,i,j,k,iBlockRecv) =      &
                     State_VGB(:,i,j,k,iBlockRecv) + &
                     BufferR_I(iBufferR+1:iBufferR+nVar)
@@ -1112,7 +1097,6 @@ contains
          end do
        end do
     end subroutine buffer_to_state
-
     !==========================================================================
 
     subroutine do_equal
@@ -1155,7 +1139,7 @@ contains
       kSMin = iS_DIID(3,kDir,Min_,1)
       kSMax = iS_DIID(3,kDir,Max_,1)
       if(iProc == iProcRecv)then
-         ! Local copy 
+         ! Local copy
          State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) =    &
               State_VGB(:,iRMin:iRMax,jRMin:jRMax,kRMin:kRMax,iBlockRecv) &
               + State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend)
@@ -1163,7 +1147,7 @@ contains
          ! Nullify the send values to avoid double counting
          !/
          State_VGB(:,iSMin:iSMax,jSMin:jSMax,kSMin:kSMax,iBlockSend) = 0.0
-            
+
       else
          ! Put data into the send buffer
          iBufferS = iBufferS_P(iProcRecv) +1
@@ -1191,19 +1175,17 @@ contains
       end if
 
     end subroutine do_equal
-
     !==========================================================================
 
     subroutine set_range
-      !------------------------------------------------------------------------
 
-            !Array index is the coordinate of the gridpoint with +1/2 being
-      !approximated as 1. By x the physical cells are marked below
-      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)    
-      !       _!_!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
-      !       _!_!x!x               _!_!_!_                  Ey (:,nY+2,:)
-      !       _!_!_!                x!x!_!_        Phys Face Values: 
-      !    -2  ! ! !                x!x!_!_        Ex(0,1,1),Ex(nI,1,1)...
+            ! Array index is the coordinate of the gridpoint with +1/2 being
+      ! approximated as 1. By x the physical cells are marked below
+      !  Left corner        Right corner n+2                 Ez (:,:,nZ+2)
+      !       _! _!x!x               _!_!_!_n+2     Not used: Ex (nX+2,:,:)
+      !       _! _!x!x               _!_!_!_                  Ey (:,nY+2,:)
+      !       _! _!_!                x!x!_!_        Phys Face Values:
+      !    -2  ! ! !                x! x!_!_        Ex(0,1,1),Ex(nI,1,1)...
       !       -2                           Ghost values: Ex(-1,1,1),Ey(0,1,1)..
       !------------------------------------------------------------------------
       !\
@@ -1224,13 +1206,15 @@ contains
       !\
       ! For x_, y_, z_ direction (the first index), the receiving block is at
       ! positive displcement with respect to the sending one
-      !/       
+      !/
       iR_DIID(:, 1,Min_,1) = 1
       iR_DIID(:, 1,Max_,1) = nWidth
       iS_DIID(:, 1,Min_,1) = nIjk_D + 1
       iS_DIID(:, 1,Max_,1) = nIjk_D + nWidth
     end subroutine set_range
+    !==========================================================================
 
   end subroutine add_ghost_cell_field
-  !==================
+  !============================================================================
 end module BATL_pass_face_field
+!==============================================================================

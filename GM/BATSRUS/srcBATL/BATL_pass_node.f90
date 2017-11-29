@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_pass_node
 
@@ -7,11 +7,12 @@ module BATL_pass_node
        IsCylindricalAxis, IsSphericalAxis, IsLatitudeAxis, Lat_, Theta_
   use ModNumConst, ONLY: cPi, cHalfPi
 
+  use ModUtilities, ONLY: CON_stop
 
   ! Possible improvements:
   ! (1) Instead of sending the receiving block number
   !     and the 3*nDim range limits and strides, we can send only a tag.
-  ! (2) Instead of waiting for receiving buffers from ALL processors, 
+  ! (2) Instead of waiting for receiving buffers from ALL processors,
   !     we can wait for ANY receiving and already start unpacking
 
   implicit none
@@ -24,16 +25,17 @@ module BATL_pass_node
   public test_pass_node
 
 contains
+  !============================================================================
 
   subroutine message_pass_node(nVar, State_VNB, NameOperatorIn, &
        UsePeriodicCoordIn)
 
     ! State_VNB contains node centered data. The same node may occur in
-    ! up to 8 different blocks. 
+    ! up to 8 different blocks.
     !
     ! NameOperatorIn = 'mean', 'min', 'max' (default is 'mean')
-    ! controls if we take the average, the minimum, or the maximum of 
-    ! the co-located values and put it back into State_VNB. 
+    ! controls if we take the average, the minimum, or the maximum of
+    ! the co-located values and put it back into State_VNB.
     !
     ! UsePeriodicCoordIn tells that nodes next to truly periodic boundaries
     ! should be combined.
@@ -52,9 +54,9 @@ contains
 
     use BATL_grid, ONLY: CoordMin_DB, CoordMax_DB
 
-    use ModMpi 
+    use ModMpi
 
-    use ModUtilities, ONLY: lower_case 
+    use ModUtilities, ONLY: lower_case
 
     ! Arguments
     integer, intent(in) :: nVar
@@ -62,7 +64,7 @@ contains
          State_VNB(nVar,1:nI+1,1:nJ+1,1:nK+1,nBlock)
 
     ! Optional arguments
-    character(len=*), optional, intent(in) :: NameOperatorIn 
+    character(len=*), optional, intent(in) :: NameOperatorIn
     logical,          optional, intent(in) :: UsePeriodicCoordIn
 
     ! Local variables
@@ -110,11 +112,12 @@ contains
     integer, allocatable :: nCount_NB(:,:,:,:)
 
     logical:: UseMin=.false., UseMax=.false., UseMean=.false.
-    character(len=*), parameter:: NameSub = 'BATL_pass_node::message_pass_node'
+
+    character(len=*), parameter:: NameSub = 'message_pass_node'
     !--------------------------------------------------------------------------
     call timing_start('pass_node')
 
-    !call timing_start('init_pass_node')
+    ! call timing_start('init_pass_node')
 
     UseMin =.false.
     UseMax =.false.
@@ -133,8 +136,8 @@ contains
        case default
           call CON_stop(NameSub// ' unknown NameOperator='//trim(NameOperator))
        end select
-    else 
-       UseMean = .true. 
+    else
+       UseMean = .true.
     end if
 
     if(UseMean) then
@@ -160,12 +163,12 @@ contains
        allocate(iStatus_II(MPI_STATUS_SIZE,nProc))
     end if
 
-    !call timing_stop('init_pass_node')
+    ! call timing_stop('init_pass_node')
 
     do iCountOnly = 1, 2
        DoCountOnly = iCountOnly == 1
 
-       !call timing_start('local_pass_node')
+       ! call timing_start('local_pass_node')
 
        if(DoCountOnly)then
           ! initialize buffer size
@@ -212,7 +215,6 @@ contains
                   kDir == +1 .and. &
                   CoordMax_DB(Lat_,iBlockSend) > +cHalfPi - 1e-8
 
-
              do jDir = -1, 1
                 if(nDim < 2 .and. jDir /= 0) CYCLE
 
@@ -244,7 +246,7 @@ contains
           end do ! kDir
        end do ! iBlockSend
 
-       !call timing_stop('local_pass_node')
+       ! call timing_stop('local_pass_node')
 
     end do ! iCountOnly
 
@@ -253,7 +255,7 @@ contains
        if(nBuffer > 0) BufferR_I(1:nBuffer) = BufferS_I(1:nBuffer)
     else
        ! post requests
-       !call timing_start('recv_pass_node')
+       ! call timing_start('recv_pass_node')
        iRequestR = 0
        iBufferR  = 1
        do iProcSend = 0, nProc - 1
@@ -264,16 +266,16 @@ contains
                iError)
           iBufferR  = iBufferR  + nBufferR_P(iProcSend)
        end do
-       !call timing_stop('recv_pass_node')
+       ! call timing_stop('recv_pass_node')
 
        if(UseRSend) then
-          !call timing_start('barrier_pass_node')
+          ! call timing_start('barrier_pass_node')
           call barrier_mpi
-          !call timing_stop('barrier_pass_node')
+          ! call timing_stop('barrier_pass_node')
        end if
 
        ! post sends
-       !call timing_start('send_pass_node')
+       ! call timing_start('send_pass_node')
        iRequestS = 0
        iBufferS  = 1
        do iProcRecv = 0, nProc-1
@@ -291,10 +293,10 @@ contains
 
           iBufferS  = iBufferS  + nBufferS_P(iProcRecv)
        end do
-       !call timing_stop('send_pass_node')
+       ! call timing_stop('send_pass_node')
 
        ! wait for all requests to be completed
-       !call timing_start('wait_pass_node')
+       ! call timing_start('wait_pass_node')
        if(iRequestR > 0) &
             call MPI_waitall(iRequestR, iRequestR_I, iStatus_II, iError)
 
@@ -302,12 +304,12 @@ contains
        if(.not.UseRSend .and. iRequestS > 0) &
             call MPI_waitall(iRequestS, iRequestS_I, iStatus_II, iError)
 
-       !call timing_stop('wait_pass_node')
+       ! call timing_stop('wait_pass_node')
     end if
 
-    !call timing_start('buffer_pass_node')
+    ! call timing_start('buffer_pass_node')
     call buffer_to_state
-    !call timing_stop('buffer_pass_node')
+    ! call timing_stop('buffer_pass_node')
 
     if(UseMean) deallocate(nCount_NB)
 
@@ -317,22 +319,22 @@ contains
     call timing_stop('pass_node')
 
   contains
-
     !==========================================================================
+
     subroutine buffer_to_state
 
       ! Copy buffer into recv block of State_VNB
 
       integer:: iBufferR, i, j, k, iVar, iBlock
       integer:: nDx,nDy,nDz
-      !------------------------------------------------------------------------
 
+      !------------------------------------------------------------------------
       jRMin = 1; jRMax = 1
       kRMin = 1; kRMax = 1
       nDy = 1; nDz = 1
 
       iBufferR = 0
-      do iProcSend = 0, nProc-1 
+      do iProcSend = 0, nProc-1
          if(nBufferR_P(iProcSend) == 0) CYCLE
 
          do
@@ -394,9 +396,7 @@ contains
          end do
       end if
 
-
     end subroutine buffer_to_state
-
     !==========================================================================
 
     subroutine do_equal
@@ -476,19 +476,18 @@ contains
       iBufferS_P(iProcRecv) = iBufferS
 
     end subroutine do_equal
-
     !==========================================================================
 
     subroutine do_restrict
 
       integer :: iS, jS, kS, iVar
       integer :: iBufferS, nSize
-      !------------------------------------------------------------------------
 
       ! For sideways communication from a fine to a coarser block
-      ! the coordinate parity of the sender block tells 
-      ! if the receiver block fills into the 
+      ! the coordinate parity of the sender block tells
+      ! if the receiver block fills into the
       ! lower (D*Recv = 0) or upper (D*Rev=1) half of the block
+      !------------------------------------------------------------------------
       iSide = 0; if(iRatio==2) iSide = modulo(iTree_IA(Coord1_,iNodeSend)-1, 2)
       jSide = 0; if(jRatio==2) jSide = modulo(iTree_IA(Coord2_,iNodeSend)-1, 2)
       kSide = 0; if(kRatio==2) kSide = modulo(iTree_IA(Coord3_,iNodeSend)-1, 2)
@@ -529,12 +528,11 @@ contains
          if(nDim > 2) kRMin = iProlongR_DII(3,kSend,Min_)
          if(nDim > 2) kRMax = iProlongR_DII(3,kSend,Max_)
 
-
          nSize = nVar*((iRMax-iRMin)/iRatio_D(1)+1) &
               *((jRMax-jRMin)/iRatio_D(2)+1) &
               *((kRMax-kRMin)/iRatio_D(3)+1) &
               + 1 + 2*nDim + nDim
-         !if(present(Time_B)) nSize = nSize + 1
+         ! if(present(Time_B)) nSize = nSize + 1
          nBufferR_P(iProcRecv) = nBufferR_P(iProcRecv) + nSize
       end if
 
@@ -616,16 +614,15 @@ contains
       iBufferS_P(iProcRecv) = iBufferS
 
     end subroutine do_restrict
-
     !==========================================================================
 
     subroutine do_prolong
 
       integer :: iS, jS, kS
       integer :: iBufferS, nSize
-      !------------------------------------------------------------------------
 
       ! Loop through the subfaces or subedges
+      !------------------------------------------------------------------------
       do kSide = (1-kDir)/2, 1-(1+kDir)/2, 3-kRatio
          kSend = (3*kDir + 3 + kSide)/2
          kRecv = kSend - 3*kDir
@@ -752,31 +749,29 @@ contains
       end do
 
     end subroutine do_prolong
-
     !==========================================================================
 
     subroutine set_range
 
       integer:: nWidthProlongS_D(MaxDim), iDim
-      !integer:: nIjkNode_D(MaxDim)
+      ! integer:: nIjkNode_D(MaxDim)
       !------------------------------------------------------------------------
-      !nIjkNode_D = nIjk_D + 1
-
+      ! nIjkNode_D = nIjk_D + 1
 
       ! Indexed by iDir/jDir/kDir for sender = -1,0,1
       iEqualS_DII(:,-1,Min_) = 1
       iEqualS_DII(:,-1,Max_) = 1
       iEqualS_DII(:, 0,Min_) = 1
       iEqualS_DII(:, 0,Max_) = nIJKNode_D
-      iEqualS_DII(:, 1,Min_) = nIJKNode_D 
+      iEqualS_DII(:, 1,Min_) = nIJKNode_D
       iEqualS_DII(:, 1,Max_) = nIJKNode_D
 
       ! Indexed by iDir/jDir/kDir for sender = -1,0,1
-      iEqualR_DII(:,-1,Min_) = nIJKNode_D 
-      iEqualR_DII(:,-1,Max_) = nIJKNode_D 
+      iEqualR_DII(:,-1,Min_) = nIJKNode_D
+      iEqualR_DII(:,-1,Max_) = nIJKNode_D
       iEqualR_DII(:, 0,Min_) = 1
       iEqualR_DII(:, 0,Max_) = nIJKNode_D
-      iEqualR_DII(:, 1,Min_) = 1 
+      iEqualR_DII(:, 1,Min_) = 1
       iEqualR_DII(:, 1,Max_) = 1
 
       ! Indexed by iDir/jDir/kDir for sender = -1,0,1
@@ -785,7 +780,7 @@ contains
       iRestrictS_DII(:, 0,Max_) = nIJKNode_D
       iRestrictS_DII(:, 1,Max_) = nIJKNode_D
       iRestrictS_DII(:,-1,Max_) = 1
-      iRestrictS_DII(:, 1,Min_) = nIJKNode_D  
+      iRestrictS_DII(:, 1,Min_) = nIJKNode_D
 
       ! Indexed by iRecv/jRecv/kRecv = 0..3
 
@@ -799,8 +794,8 @@ contains
          iRestrictR_DII(iDim,2,Min_) = nIJK_D(iDim)/iRatio_D(iDim) + 1
       end do
       iRestrictR_DII(:,2,Max_) = nIJKNode_D
-      iRestrictR_DII(:,3,Min_) = nIJKNode_D 
-      iRestrictR_DII(:,3,Max_) = nIJKNode_D 
+      iRestrictR_DII(:,3,Min_) = nIJKNode_D
+      iRestrictR_DII(:,3,Max_) = nIJKNode_D
 
       ! Number of ghost nodes sent from coarse block.
       ! Divided by resolution ratio and rounded up.
@@ -816,29 +811,29 @@ contains
          iProlongS_DII(iDim,1,Max_) = nIJK_D(iDim)/iRatio_D(iDim) + 1
          iProlongS_DII(iDim,2,Min_) = nIJK_D(iDim)/iRatio_D(iDim) + 1
          iProlongS_DII(iDim,2,Max_) = nIJKNode_D(iDim)
-         iProlongS_DII(iDim,3,Min_) = nIJKNode_D(iDim) 
+         iProlongS_DII(iDim,3,Min_) = nIJKNode_D(iDim)
          iProlongS_DII(iDim,3,Max_) = nIJKNode_D(iDim)
       end do
 
       ! Indexed by iRecv/jRecv/kRecv = 0,1,2,3
-      iProlongR_DII(:, 0,Min_) = 1 
+      iProlongR_DII(:, 0,Min_) = 1
       iProlongR_DII(:, 0,Max_) = 1
       iProlongR_DII(:, 1,Min_) = 1
       iProlongR_DII(:, 1,Max_) = nIJKNode_D
       iProlongR_DII(:, 2,Min_) = 1
       iProlongR_DII(:, 2,Max_) = nIJKNode_D
-      iProlongR_DII(:, 3,Min_) = nIJKNode_D 
-      iProlongR_DII(:, 3,Max_) = nIJKNode_D 
+      iProlongR_DII(:, 3,Min_) = nIJKNode_D
+      iProlongR_DII(:, 3,Max_) = nIJKNode_D
 
     end subroutine set_range
+    !==========================================================================
 
   end subroutine message_pass_node
-
   !============================================================================
 
   subroutine test_pass_node
 
-    ! To test the message pass for the node we generate a fine uniform grid 
+    ! To test the message pass for the node we generate a fine uniform grid
     ! for the whole domain and transfer the node values from the
     ! block nodes to the nodes on the fine grid. Then we gather all the
     ! data on the fine grid with the proper operator.
@@ -857,14 +852,13 @@ contains
     use BATL_geometry, ONLY: init_geometry
     use ModMpi, ONLY: MPI_allreduce,MPI_REAL,MPI_SUM,MPI_MIN,MPI_MAX
 
-
     integer, parameter:: MaxBlockTest            = 50
     integer, parameter:: nRootTest_D(MaxDim)     = (/3,3,3/)
     logical, parameter:: IsPeriodicTest_D(MaxDim)= .false.
     real, parameter:: DomainMin_D(MaxDim) = (/ 0.0, 0.0, 0.0 /)
     real, parameter:: DomainMax_D(MaxDim) = (/ 48.0, 48.0, 48.0 /)
 
-    integer, parameter:: nVar = 3!nDim
+    integer, parameter:: nVar = 3! nDim
     integer :: iVar
 
     character(len=4) :: NameOperator = "Min"
@@ -875,7 +869,7 @@ contains
 
     ! Variable on the nodes
     real, allocatable:: State_VNB(:,:,:,:,:)
-         
+
     integer, allocatable:: i_NB(:,:,:,:)
 
     real, allocatable, dimension(:,:,:,:,:) :: Xyz_DNB
@@ -890,12 +884,12 @@ contains
 
     integer:: iNode, iBlock, i, j, k
 
-    logical:: DoTestMe
-    character(len=*), parameter :: NameSub = 'test_pass_node'
-    !-----------------------------------------------------------------------
-    DoTestMe = iProc == 0
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'test_pass_node'
+    !--------------------------------------------------------------------------
+    DoTest = iProc == 0
 
-    if(DoTestMe) write(*,*) 'Starting ',NameSub
+    if(DoTest) write(*,*) 'Starting ',NameSub
 
     call init_tree(MaxBlockTest)
     call init_geometry( IsPeriodicIn_D = IsPeriodicTest_D(1:nDim) )
@@ -937,7 +931,7 @@ contains
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
-       iNode = (iNode_B(iBlock)-1)*(nI+1)*(nK+1)*(nJ+1) 
+       iNode = (iNode_B(iBlock)-1)*(nI+1)*(nK+1)*(nJ+1)
        do k = 1, nK+1; do j = 1, nJ+1; do i = 1, nI+1
           iNode = iNode +1
           i_NB(i,j,k,iBlock) = iNode
@@ -948,11 +942,11 @@ contains
 
        NameOperator = NameOperator_I(iOp)
 
-       if(DoTestMe) write(*,*) 'testing message_pass_node with operator=', &
+       if(DoTest) write(*,*) 'testing message_pass_node with operator=', &
             NameOperator
 
        select case(NameOperator)
-       case("mean") 
+       case("mean")
           FineGridLocal_IIIV(:,:,:,:)   = 0.0
           FineGridGlobal_IIIV(:,:,:,:)  = 0.0
           iMpiOperator = MPI_SUM
@@ -962,7 +956,7 @@ contains
           iMpiOperator = MPI_MIN
        case("max")
           FineGridLocal_IIIV(:,:,:,:)  = -1.0e8
-          FineGridGlobal_IIIV(:,:,:,:) = -1.0e8 
+          FineGridGlobal_IIIV(:,:,:,:) = -1.0e8
           iMpiOperator=MPI_MAX
        case default
           call CON_stop(NameSub//' incorrect operator name='//NameOperator)
@@ -981,11 +975,11 @@ contains
           if(Unused_B(iBlock)) CYCLE
           do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
 
-             iFG = int(Xyz_DNB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1 
+             iFG = int(Xyz_DNB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1
              jFG = int(Xyz_DNB(2,i,j,k,iBlock)*FineGridStep_D(2)) + 1
              kFG = int(Xyz_DNB(3,i,j,k,iBlock)*FineGridStep_D(3)) + 1
 
-             select case(NameOperator) 
+             select case(NameOperator)
              case("mean")
                 FineGridLocal_IIIV(iFG,jFG,kFG,1:nVar) = &
                      FineGridLocal_IIIV(iFG,jFG,kFG,1:nVar) + &
@@ -1012,13 +1006,13 @@ contains
 
        call MPI_ALLREDUCE(FineGridLocal_IIIV(1,1,1,1), &
             FineGridGlobal_IIIV(1,1,1,1),              &
-            nFineCell*(nVar+1),                        & 
+            nFineCell*(nVar+1),                        &
             MPI_REAL, iMpiOperator, iComm, iError)
 
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
           do k = 1, nKNode; do j = 1, nJNode; do i = 1, nINode
-             iFG = nint(Xyz_DNB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1 
+             iFG = nint(Xyz_DNB(1,i,j,k,iBlock)*FineGridStep_D(1)) + 1
              jFG = nint(Xyz_DNB(2,i,j,k,iBlock)*FineGridStep_D(2)) + 1
              kFG = nint(Xyz_DNB(3,i,j,k,iBlock)*FineGridStep_D(3)) + 1
              do iVar = 1, nVar
@@ -1055,5 +1049,7 @@ contains
     call clean_tree
 
   end subroutine test_pass_node
+  !============================================================================
 
 end module BATL_pass_node
+!==============================================================================

@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_region
 
@@ -13,6 +13,8 @@ module BATL_region
   use BATL_size, ONLY: nDim, Dim2_, Dim3_, j0_, nJp1_, k0_, nKp1_, &
        nI, nJ, nK, nIJK, MinI, MinJ, MinK, MaxI, MaxJ, MaxK, MaxIJK,&
        nINode, nJNode, nKNode
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 
@@ -43,7 +45,7 @@ module BATL_region
   ! Lengths of strings
   integer, parameter:: lNameArea = 20, lNameRegion = 30
 
-  type, public :: AreaType 
+  type, public :: AreaType
      character(lNameRegion):: NameRegion
      character(lNameArea)  :: NameShape
      real                  :: Resolution
@@ -66,7 +68,7 @@ module BATL_region
   ! These are set by #GRIDLEVEL/RESOLTION ... initial command
   ! Values are corrected and used in init_region
   ! The number of levels is public so that BATSRUS can do the
-  ! initial refinement loop. 
+  ! initial refinement loop.
   integer, public :: nInitialAmrLevel  = 0
 
   ! Local variables
@@ -99,7 +101,7 @@ contains
 
     logical, parameter :: DoTest = .false.
     character(len=*), parameter:: NameSub = 'init_region'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     ! Set initial resolutions (this depends on domain size set in BATL_grid)
     if(InitialResolution > 0.0) nInitialAmrLevel &
@@ -113,7 +115,7 @@ contains
     do iGeo = 1, nArea
        Area => Area_I(iGeo)
        Area%IsSimple = .false.
-       ! generalized coordinates 
+       ! generalized coordinates
        if(Area%NameShape == "brick_gen")then
           Area%IsSimple = .true.
           CYCLE
@@ -182,10 +184,11 @@ contains
     IsNewGeoParam =.false.
 
   end subroutine init_region
+  !============================================================================
 
-  !===========================================================================
   subroutine clean_region
 
+    !--------------------------------------------------------------------------
     if(allocated(iPerp_I))        deallocate(iPerp_I)
     if(allocated(SlopePerp_D))    deallocate(SlopePerp_D)
     if(allocated(IsInsideOld_I))  deallocate(IsInsideOld_I)
@@ -198,7 +201,7 @@ contains
 
     nArea                 = 0
     IsNewGeoParam         = .false.
-    InitialResolution     = -1.0 
+    InitialResolution     = -1.0
     nInitialAmrLevel      = 0
 
   end subroutine clean_region
@@ -209,7 +212,7 @@ contains
     character(len=*), intent(in):: String
 
     type(AreaType), pointer:: Area1
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     Area1 => Area_I(iRegion)
     write(*,*) "show_region for ", String,' iRegion=', iRegion
     write(*,*) "Region name      :: ", Area1%NameRegion
@@ -238,7 +241,7 @@ contains
     integer:: iArea, iSign
 
     character(len=*), parameter:: NameSub = 'i_signed_region'
-    !=========================================================================
+    !--------------------------------------------------------------------------
     if(NameRegionIn(1:1) == "-") then
        iSign = -1
        NameRegion = NameRegionIn(2:)
@@ -275,7 +278,7 @@ contains
     integer, parameter:: MaxName = 100
     integer:: nName, iName
     character(lNameRegion):: NameRegion_I(MaxName)
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     if(allocated(iRegion_I)) deallocate(iRegion_I)
     if(StringRegion == 'none') RETURN
 
@@ -294,7 +297,8 @@ contains
 
     integer:: l
     character:: CharLast
-    !------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     iPar = 0 ! default is that there is no symmetry axis
     if(nDim == 1) RETURN
 
@@ -314,8 +318,8 @@ contains
     if(nDim == 3) iPerp_I(2) = 6 - iPar - iPerp_I(1)
 
   end subroutine set_i_par_perp
-
   !============================================================================
+
   subroutine read_region_param(NameCommand, UseStrictIn)
 
     use ModReadParam,      ONLY: read_var, lStringLine
@@ -345,8 +349,8 @@ contains
     integer :: nLevelArea = 0
 
     logical, parameter:: DoTest = .false.
-    character(len=*), parameter :: NameSub='read_region_param'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'read_region_param'
+    !--------------------------------------------------------------------------
 
     UseStrict = .true.
     if(present(UseStrictIn)) UseStrict = UseStrictIn
@@ -360,7 +364,7 @@ contains
        call read_var('NameRegion', NameRegion, IsLowerCase=.true.)
     elseif(index(NameCommand,"RESOLUTION") > 0)then
        ! Read grid resolution for #RESOLUTION command
-       call read_var('AreaResolution', AreaResolution) 
+       call read_var('AreaResolution', AreaResolution)
     else
        ! Read grid level for #GRIDLEVEL command
        call read_var('nLevelArea', nLevelArea)
@@ -371,7 +375,7 @@ contains
     StringShape = adjustl(StringShape)
 
     ! 'init' or 'initial' means that the initial resolution is set,
-    ! and no area is created. 
+    ! and no area is created.
     if(StringShape(1:4) == 'init')then
        if(AreaResolution > 0)then
           InitialResolution = AreaResolution
@@ -408,7 +412,7 @@ contains
 
     ! Store the information read above
     Area%NameRegion = NameRegion
-    Area%Resolution = AreaResolution 
+    Area%Resolution = AreaResolution
     Area%Level      = -nLevelArea    ! Level is stored as a negative integer
 
     ! Now process the information read into StringShape
@@ -509,8 +513,8 @@ contains
 
     case("conex", "coney", "conez", "funnelx", "funnely", "funnelz")
        call read_var("Height", Area%Size_D(iPar))
-       if(NameShape(1:4) == "cone")then
-          ! A cone is a funnel with 0 radius on one end
+       if(NameShape(1:4) == "1.0")then
+          ! A 1.0 is a funnel with 0 radius on one end
           Area%NameShape = "funnel" // NameShape(5:5)
        else
           call read_var("RadiusSmall", Area%Radius1)
@@ -575,8 +579,8 @@ contains
     end if
 
   end subroutine read_region_param
-
   !============================================================================
+
   subroutine block_inside_regions(iRegion_I, iBlock, nValue, StringLocation, &
        IsInside, IsInside_I, Value_I)
 
@@ -585,7 +589,6 @@ contains
 
     ! Interface for the external user routine
     interface
-       !=====================================================================
        subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
             IsInside, IsInside_I, Value_I)
 
@@ -604,18 +607,18 @@ contains
     end interface
 
     ! Check the intersection of block iBlock with one or more regions
-    ! indexed by the iRegion_I array. Positive region index means 
+    ! indexed by the iRegion_I array. Positive region index means
     ! an "OR", while negative region index means "AND NOT".
     ! If the first region index is negative, then it is relative to
     ! an "all" condition. The regions are evaluated in the order
     ! they are listed in the iRegion_I array.
     !
     ! If IsInside is present and neither IsInside_I/Value_I are present,
-    ! then IsInside is set to true if the block intersects 
+    ! then IsInside is set to true if the block intersects
     ! any of the + regions and completely avoids all the - regions.
-    ! 
+    !
     ! If IsInside_I is present, it is set true for each point of the block
-    ! (defined by StringLocation) that is inside any of the +region(s) 
+    ! (defined by StringLocation) that is inside any of the +region(s)
     ! and outside all of the -regions.
     ! If IsInside is also present, it is set to IsInside = any(IsInside_I).
     !
@@ -624,9 +627,9 @@ contains
     ! value gradually decreases to 0 and the rest is set to 0 value.
     ! This is done for each point of the block defined by StringLocation.
     ! If IsInside is also present, it is set to IsInside = any(Value_I > 0).
-    ! 
-    ! The StringLocation argument tells which points of the block are to be 
-    ! evaluated for IsInside_I and/or Value_I. Possible values are 
+    !
+    ! The StringLocation argument tells which points of the block are to be
+    ! evaluated for IsInside_I and/or Value_I. Possible values are
     ! "cells", "ghosts", "xfaces", "yfaces", "zfaces", "faces", "nodes"
     ! Only the first character is significant and it is case insensitive.
 
@@ -651,8 +654,8 @@ contains
 
     ! logical:: DoTest
     logical, parameter:: DoTest = .false.
-    character(len=*), parameter:: NameSub='block_inside_regions'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'block_inside_regions'
+    !--------------------------------------------------------------------------
     ! DoTest = iBlock == 136
 
     DoBlock  = present(IsInside)
@@ -802,8 +805,8 @@ contains
     end if
 
   contains
+    !==========================================================================
 
-    !=========================================================================
     subroutine set_coord
 
       ! Set point positions in generalized coordinates
@@ -813,9 +816,9 @@ contains
       real:: Coord_D(3), CellSize_D(3), CoordMinBlock_D(3)
       real:: CoordFace1, CoordFace2, CoordFace3
       real:: CoordCell1, CoordCell2, CoordCell3
-      !----------------------------------------------------------------------
 
       ! Allocate Coord array if new or size changed
+      !------------------------------------------------------------------------
       if(allocated(Coord_DI))then
          if(size(Coord_DI) /= nDim*nPoint) deallocate(Coord_DI)
       end if
@@ -924,7 +927,7 @@ contains
                   n = n + 1
                   Coord_D = (/ CoordCell1, CoordFace2, CoordCell3 /)
                   Coord_DI(:,n) = Coord_D(1:nDim)
-                  
+
                   if(nDim == 2) CYCLE
                   n = n + 1
                   Coord_D = (/ CoordCell1, CoordCell2, CoordFace3 /)
@@ -957,7 +960,7 @@ contains
       DoSetCoord = .false.
 
     end subroutine set_coord
-    !=========================================================================
+    !==========================================================================
     subroutine set_xyz
 
       ! Set point positions in Cartesian coordinate
@@ -965,14 +968,13 @@ contains
       use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
 
       integer:: i, j, k, iC, jC, kC, n
-      !----------------------------------------------------------------------
 
       ! Allocate Xyz array if new or size changed
+      !------------------------------------------------------------------------
       if(allocated(Xyz_DI))then
          if(size(Xyz_DI) /= nDim*nPoint) deallocate(Xyz_DI)
       end if
       if(.not.allocated(Xyz_DI)) allocate(Xyz_DI(nDim,nPoint))
-
 
       select case(NameLocation)
       case('c')
@@ -1050,6 +1052,7 @@ contains
       DoSetXyz = .false.
 
     end subroutine set_xyz
+    !==========================================================================
 
   end subroutine block_inside_regions
   !============================================================================
@@ -1073,8 +1076,9 @@ contains
     integer  :: iDim, iCorner
 
     logical, parameter:: DoTest = .false.
+
     character(len=*), parameter:: NameSub = 'is_block_inside'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     DoSet = .true.
     if(present(DoSetCorner))then
        DoSet = DoSetCorner
@@ -1153,7 +1157,7 @@ contains
        ! but it is not fully inside the inner cylinder
        is_block_inside = DistMin_D(iPar) < 1 &
             .and. sum(DistMin_D(iPerp_I)**2) < 1 &
-            .and. sum(DistMax_D(iPerp_I)**2) > Radius1Sqr 
+            .and. sum(DistMax_D(iPerp_I)**2) > Radius1Sqr
     case default
        call CON_stop(NameSub //' ERROR: invalid NameShape = '//NameShape)
     end select
@@ -1177,7 +1181,7 @@ contains
     !
     ! The optional logical array IsInside_I is set to true for points inside.
     !
-    ! The optional real array Value_I is set to 
+    ! The optional real array Value_I is set to
     ! 0 if the point is fully outside the Area
     ! 1 if the point is fully inside the Area
     ! 0 to 1 if the point is in the taper region of the area (if any)
@@ -1241,7 +1245,7 @@ contains
     ! Use local variable for size
     Size_D = Area % Size_D
 
-    ! The distance from the center will be normalized by Size_D, 
+    ! The distance from the center will be normalized by Size_D,
     ! so the tapering length needs to be scaled accordingly
     Taper = Area % Taper
     DoTaper = DoValue .and. Taper > 0.0
@@ -1251,13 +1255,13 @@ contains
        ! For the smaller radius of shell and ring
        if(Radius1 > 0.0) &
             TaperFactor1_D = Slope_D/max(Radius1*Slope_D - 1, 1e-30)
-       ! Modified tapering slope for the sides of funnel, cone and doublecone
+       ! Modified tapering slope for the sides of funnel, 1.0 and doublecone
        if(.not.allocated(SlopePerp_D)) allocate(SlopePerp_D(nDim-1))
        if(iPar > 0) SlopePerp_D = Slope_D(iPerp_I) &
             /sqrt(1 + (Slope1*Size_D(iPerp_I)/Size_D(iPar))**2)
     endif
 
-    ! For now periodic boundaries are checked for 
+    ! For now periodic boundaries are checked for
     ! Cartesian coordinates and for brick_coord.
     DoPeriodic = any(IsPeriodic_D(1:nDim)) .and. &
          (IsCartesianGrid .or. NameShape == 'brick_coord')
@@ -1385,7 +1389,7 @@ contains
              Dist2= sum((TaperFactor_D(iPerp_I)*Norm_DI(iPerp_I,iPoint))**2)
              if(Dist2 >= 1)then                      ! outside perpendicular
                 Value_I(iPoint) = 0.0
-                CYCLE                                
+                CYCLE
              end if
              ! Use a roughly linear function between the elliptic cylinders
              Dist1 = sqrt(Dist1) - 1
@@ -1414,7 +1418,7 @@ contains
                 Dist2= sum((TaperFactor_D(iPerp_I)*Norm_DI(iPerp_I,iPoint))**2)
                 if(Dist2 >= 1)then                   ! outside outer radius
                    Value_I(iPoint) = 0.0
-                   CYCLE     
+                   CYCLE
                 end if
                 ! Use a roughly linear function between the ellipsoids
                 Dist1 = sqrt(Dist1) - 1
@@ -1517,11 +1521,11 @@ contains
              Value_I(iPoint) = max(0.0, min(1.0, &
                   1 - Slope_D(iPar)*(abs(Norm_DI(iPar,iPoint)) - 1)))
              if(Value_I(iPoint) == 0) CYCLE
-             ! Radius of double cone at this cross section
+             ! Radius of double 1.0 at this cross section
              Radius = abs(Norm_DI(iPar,iPoint))
              Dist1 = sum(Norm_DI(iPerp_I,iPoint)**2)
              if(Dist1 < Radius**2) CYCLE             ! inside perpendicular
-             ! Use taper factor specific for this particular cone radius
+             ! Use taper factor specific for this particular 1.0 radius
              Dist2 = sum( (SlopePerp_D/(Radius*SlopePerp_D + 1) &
                   *Norm_DI(iPerp_I,iPoint))**2 )
              if(Dist2 >= 1)then                    ! outside perpendicular
@@ -1560,5 +1564,7 @@ contains
     end if
 
   end subroutine points_inside_region
+  !============================================================================
 
 end module BATL_region
+!==============================================================================

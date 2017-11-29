@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_mpi
 
@@ -19,8 +20,8 @@ module BATL_mpi
   integer, public:: iProc=0 ! processor rank from 0 to nProc-1
 
 contains
+  !============================================================================
 
-  !==========================================================================
   subroutine init_mpi(iCommIn)
 
     ! Initialize iComm, nProc and iProc. If iCommIn is not present, set it
@@ -28,7 +29,8 @@ contains
 
     integer, optional, intent(in):: iCommIn
     integer :: iError
-    !------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(.not.present(iCommIn))then
        call MPI_init(iError)
        iComm = MPI_COMM_WORLD
@@ -39,27 +41,29 @@ contains
     call MPI_comm_size(iComm, nProc, iError)
 
   end subroutine init_mpi
-  !==========================================================================
+  !============================================================================
   subroutine clean_mpi
 
     ! This should only be called if the whole application is finished
 
     integer :: iError
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call MPI_finalize(iError)
 
   end subroutine clean_mpi
-  !==========================================================================
+  !============================================================================
   subroutine barrier_mpi
 
     use ModUtilities, ONLY: flush_unit
     use ModIoUnit,    ONLY: STDOUT_
 
     integer:: iError
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call flush_unit(STDOUT_)
     call MPI_barrier(iComm, iError)
 
   end subroutine barrier_mpi
+  !============================================================================
 
 end module BATL_mpi
+!==============================================================================

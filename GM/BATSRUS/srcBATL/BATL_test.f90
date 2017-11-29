@@ -8,6 +8,8 @@ module BATL_test
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use BATL_grid, ONLY: find_grid_block, show_grid_cell
 
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
   private ! except
@@ -46,13 +48,14 @@ module BATL_test
   character(len=20), public:: NameVarTest = ''         ! variable name to test
 
 contains
+  !============================================================================
 
   subroutine read_test_param(NameCommand)
 
     character(len=*), intent(in):: NameCommand
 
     character(len=*), parameter:: NameSub = 'read_test_param'
-    !---------------------------------------------------------
+    !--------------------------------------------------------------------------
     select case(NameCommand)
     case("#VERBOSE")
        call              read_var('lVerbose',    lVerbose)
@@ -96,7 +99,7 @@ contains
        call              read_var('iBlockTest2', iBlockTest)
        iBlockTest2 = max(1, iBlockTest2)
        call read_var('iProcTest2',  iProcTest)
-       UseTest2Cell = iProcTest2 >= 0 ! -1 switches test cell 2 off 
+       UseTest2Cell = iProcTest2 >= 0 ! -1 switches test cell 2 off
        iProcTest2  = min(nProc-1, max(-1, iProcTest2)) ! Allow -1
     case("#TESTDIM")
        call read_var('iDimTest', iDimTest)
@@ -110,7 +113,7 @@ contains
        call CON_stop(NameSub//': unknown command='//NameCommand)
     end select
   end subroutine read_test_param
-  !===========================================================================
+  !============================================================================
   subroutine find_test_cell(IsQuiet)
 
     ! Find test cell(s) based on the position
@@ -124,8 +127,8 @@ contains
 
     integer:: iTest_D(MaxDim), iError
 
-    character(len=*), parameter:: NameSub = "BATL_test::find_test_cell"
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'find_test_cell'
+    !--------------------------------------------------------------------------
     if(UseTestXyz)then
 
        ! Find grid cell based on position provided in #TESTXYZ
@@ -214,7 +217,6 @@ contains
        zTest2 = XyzTestCell2_D(3)
     end if
 
-
     if(lVerbose == 0) RETURN
     if(present(IsQuiet))then
        if(IsQuiet) RETURN
@@ -226,18 +228,18 @@ contains
          "Second test cell", iTest2, jTest2, kTest2, iBlockTest2)
 
   end subroutine find_test_cell
+  !============================================================================
 
-  !===========================================================================
   subroutine test_start(NameSub, DoTest, iBlock, i, j, k, DoTestAll)
 
-    ! If optional block index iBlock is present, restrict all actions 
+    ! If optional block index iBlock is present, restrict all actions
     ! to the test block(s) only. If optional indexes i, j, or k are
     ! present, check against the index(es) of the test cell(s).
     !
     ! Report this call on all processors if lVerbose == 100
     ! or DoTestAll is present and true.
     !
-    ! Report on the test processor(s) if lVerbose == 10 or 
+    ! Report on the test processor(s) if lVerbose == 10 or
     ! NameSub matches StringTest and lVerbose /= 0.
     !
     ! In the latter case set the optional DoTestOut to true
@@ -249,9 +251,9 @@ contains
     integer, optional, intent(in) :: iBlock    ! block index
     integer, optional, intent(in) :: i, j, k   ! cell index
     logical, optional, intent(in) :: DoTestAll ! test on all processors
-    !------------------------------------------------------------------------
 
     ! Start value for early returns
+    !--------------------------------------------------------------------------
     DoTest = .false.
 
     ! Check block index if present
@@ -312,18 +314,18 @@ contains
     end if
 
   end subroutine test_start
-  !===========================================================================
+  !============================================================================
   subroutine test_stop(NameSub, DoTest, iBlock, i, j, k)
 
-    ! If optional block index iBlock is present, restrict all actions 
+    ! If optional block index iBlock is present, restrict all actions
     ! to the test block(s) only.
     ! Write out a "finished" message if DoTest is true
 
     character(len=*),  intent(in):: NameSub
-    logical,           intent(in):: DoTest  
+    logical,           intent(in):: DoTest
     integer, optional, intent(in):: iBlock
     integer, optional, intent(in):: i, j, k
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
 
     ! Check block index if present
     if(present(iBlock))then
@@ -369,8 +371,8 @@ contains
     end if
 
   end subroutine test_stop
+  !============================================================================
 
-  !===========================================================================
   subroutine test_cell(iBlock, i, j, k, DoTestCell)
 
     ! Set DoTestCell to true if the processor, block and cell indexes
@@ -378,7 +380,8 @@ contains
 
     integer, intent(in) :: iBlock, i, j, k
     logical, intent(out):: DoTestCell
-    !------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     DoTestCell =                                                     &
          (iProc == iProcTest .and. iBlock == iBlockTest .and.        &
          i == iTest .and. j == jTest .and. k == kTest         ) .or. &
@@ -386,6 +389,7 @@ contains
          i == iTest2 .and. j == jTest2 .and. k == kTest2      )
 
   end subroutine test_cell
-  !===========================================================================
+  !============================================================================
 
 end module BATL_test
+!==============================================================================

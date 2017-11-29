@@ -1,9 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_geometry
 
   use BATL_size, ONLY: MaxDim, nDim
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 
@@ -85,8 +87,7 @@ module BATL_geometry
   real, public, parameter:: SqrtNDim = sqrt(real(nDim))
 
 contains
-
-  !=========================================================================
+  !============================================================================
 
   subroutine init_geometry(TypeGeometryIn, IsPeriodicIn_D, RgenIn_I, &
        UseFDFaceFluxIn)
@@ -98,7 +99,7 @@ contains
     logical,          optional, intent(in):: IsPeriodicIn_D(nDim)
     real,             optional, intent(in):: RgenIn_I(:)
     logical,          optional, intent(in):: UseFDFaceFluxIn
-    
+
     ! Initialize geometry for BATL
     !
     ! TypeGeometry can be
@@ -118,15 +119,14 @@ contains
     !
     ! IsPeriodic_D defines periodicity for each dimension
     !
-    ! RgenIn_I defines a mapping from a general index space to the radial 
-    ! coordinate. The index space is mapped to the 0-1 interval so the 
-    ! first element RgenIn_I corresponds to 0.0, and the last element to 1.0. 
-    ! The interpolation is done in log(R), so we get a logarithmic radial 
+    ! RgenIn_I defines a mapping from a general index space to the radial
+    ! coordinate. The index space is mapped to the 0-1 interval so the
+    ! first element RgenIn_I corresponds to 0.0, and the last element to 1.0.
+    ! The interpolation is done in log(R), so we get a logarithmic radial
     ! grid within each interval.
 
     character(len=*), parameter:: NameSub = 'init_geometry'
-    !-----------------------------------------------------------------------
-
+    !--------------------------------------------------------------------------
     TypeGeometry = 'cartesian'
     if(present(TypeGeometryIn)) TypeGeometry = TypeGeometryIn
 
@@ -181,33 +181,31 @@ contains
     end if
 
     call set_high_geometry(UseFDFaceFluxIn)
-    
-  end subroutine init_geometry
 
-  !======================================================================
+  end subroutine init_geometry
+  !============================================================================
 
   subroutine set_high_geometry(UseFDFaceFluxIn)
     logical, optional, intent(in):: UseFDFaceFluxIn
-    !----------------------------------------------------------------------
-    
+    !--------------------------------------------------------------------------
+
     if(present(UseFDFaceFluxIn)) then
        if(UseFDFaceFluxIn .and. .not. IsCartesian) UseHighFDGeometry = .true.
     endif
   end subroutine set_high_geometry
-
-  !=========================================================================
+  !============================================================================
 
   subroutine clean_geometry
 
     ! Release storage
 
+    !--------------------------------------------------------------------------
     nRgen = -1
     if(allocated(LogRgen_I)) deallocate(LogRgen_I)
 
   end subroutine clean_geometry
+  !============================================================================
 
-  !=========================================================================
-  
   subroutine xyz_to_coord(XyzIn_D, CoordOut_D)
 
     use ModCoordTransform, ONLY: atan2_check, xyz_to_sph
@@ -218,14 +216,14 @@ contains
 
     real:: x, y, r2, Dist1, Dist2, Coef1, Coef2
 
-    character(len=*), parameter:: NameSub = 'BATL_geometry::xyz_to_coord'
-    !----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'xyz_to_coord'
+    !--------------------------------------------------------------------------
 
     if(IsCartesianGrid)then
        CoordOut_D = XyzIn_D
        RETURN
     elseif(IsRotatedCartesian)then
-       CoordOut_D = matmul(XyzIn_D, GridRot_DD) 
+       CoordOut_D = matmul(XyzIn_D, GridRot_DD)
     elseif(IsCylindrical)then
        x = XyzIn_D(x_); y = XyzIn_D(y_)
        CoordOut_D(r_)   = sqrt(x**2 + y**2)
@@ -250,7 +248,7 @@ contains
              if (Dist1 > rRound0) then
                 ! Outside the undistorted region
                 ! Assume Coord = w * Xyz and Replace Xyz in transformation Coord_to_Xyz
-                ! We have a quadratic equation of w. 
+                ! We have a quadratic equation of w.
                 ! w^2-Coef1*w- 4*Dist1/(rRound1-rRound0)*(SqrtNDim*Dist1/Dist2 - 1) =0
 
                 Coef1 = -1 + rRound0/(rRound1-rRound0)*(dist1*SqrtNDim/Dist2 - 1)
@@ -260,7 +258,7 @@ contains
                 ! No distortion
                 CoordOut_D = XyzIn_D
              end if
-         
+
           else
              ! The rounded (distorted) grid is inside of the non-distorted part
              if (Dist2 < rRound1) then
@@ -275,7 +273,7 @@ contains
                 CoordOut_D = XyzIn_D / Coef2
              end if
           end if
-           
+
        else
           CoordOut_D = 0.0
        end if
@@ -297,9 +295,8 @@ contains
     end if
 
   end subroutine xyz_to_coord
+  !============================================================================
 
-  !=========================================================================
-  
   subroutine coord_to_xyz(CoordIn_D, XyzOut_D)
 
     use ModCoordTransform, ONLY: sph_to_xyz
@@ -310,8 +307,8 @@ contains
 
     real:: r, r2, Phi, Coord_D(MaxDim), Dist1, Dist2, Weight
 
-    character(len=*), parameter:: NameSub = 'BATL_geometry::coord_to_xyz'
-    !----------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'coord_to_xyz'
+    !--------------------------------------------------------------------------
 
     if(IsCartesianGrid)then
        XyzOut_D = CoordIn_D
@@ -329,7 +326,7 @@ contains
     end if
 
     if(IsCylindrical)then
-       r = Coord_D(r_); 
+       r = Coord_D(r_);
        Phi = Coord_D(Phi_)
        XyzOut_D(1) = r*cos(Phi)
        XyzOut_D(2) = r*sin(Phi)
@@ -346,7 +343,7 @@ contains
        ! L2 distance is constant on the surface of a sphere
        Dist1 = maxval(abs(CoordIn_D))
        Dist2 = sqrt(r2)
-           
+
        if (r2 > 0.0) then
           if (rRound0 < rRound1) then
              ! Non-distorted grid inside, round grid outside
@@ -361,12 +358,12 @@ contains
           endif
           ! Limit weight to be in the [0,1] interval
           Weight = min(1., max(0.0, Weight))
-          
+
           if (rRound0 < rRound1) then
              ! Expand coordinate outward
              ! For a fully rounded grid we expand the generalized coordinate
-             ! by Dist1*SqrtNDim/Dist2, so along the main diagonals there is 
-             ! no stretch and along the axes the expansion is SqrtNDim. 
+             ! by Dist1*SqrtNDim/Dist2, so along the main diagonals there is
+             ! no stretch and along the axes the expansion is SqrtNDim.
              ! For the partially rounded grid the expansion factor is reduced.
              ! The minimum expansion factor is 1 in the non-distorted region.
              XyzOut_D = (1 + Weight*(Dist1*SqrtNDim/Dist2 - 1)) * CoordIn_D
@@ -387,7 +384,6 @@ contains
     end if
 
   end subroutine coord_to_xyz
-
   !============================================================================
 
   subroutine radius_to_gen(r)
@@ -400,9 +396,9 @@ contains
     integer:: i
     real:: dCoord
 
-    character(len=*), parameter:: NameSub='BATL_geometry::radius_to_gen'
-    !-------------------------------------------------------------------------
     ! interpolate the logarithm of r
+    character(len=*), parameter:: NameSub = 'radius_to_gen'
+    !--------------------------------------------------------------------------
     call find_cell(0, nRgen-1, alog(r), &
          i, dCoord, LogRgen_I, DoExtrapolate=.true.)
 
@@ -410,7 +406,6 @@ contains
     r = (i + dCoord)/(nRgen - 1)
 
   end subroutine radius_to_gen
-
   !============================================================================
 
   subroutine gen_to_radius(r)
@@ -420,14 +415,13 @@ contains
     ! Convert generalized radial coordinate to true radial coordinate
     real, intent(inout):: r
 
-    character(len=*), parameter:: NameSub='BATL_geometry::gen_to_radius'
-    !-------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'gen_to_radius'
+    !--------------------------------------------------------------------------
 
     ! interpolate the LogRgen_I array for the general coordinate
     r = exp(linear(LogRgen_I, 0, nRgen-1, r*(nRgen-1), DoExtrapolate=.true.))
 
   end subroutine gen_to_radius
-
   !============================================================================
 
   function cart_to_rot_vector(a_D)
@@ -436,7 +430,8 @@ contains
 
     real, intent(in):: a_D(MaxDim)
     real:: cart_to_rot_vector(MaxDim)
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(IsRotatedCartesian)then
        cart_to_rot_vector = matmul(GridRot_DD, a_D)
     else
@@ -444,7 +439,6 @@ contains
     end if
 
   end function cart_to_rot_vector
-
   !============================================================================
 
   function cart_to_rot_matrix(a_DD)
@@ -453,7 +447,8 @@ contains
 
     real, intent(in):: a_DD(MaxDim,MaxDim)
     real:: cart_to_rot_matrix(MaxDim,MaxDim)
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(IsRotatedCartesian)then
        cart_to_rot_matrix = matmul(GridRot_DD, &
             matmul(a_DD, transpose(GridRot_DD)))
@@ -461,7 +456,6 @@ contains
        cart_to_rot_matrix = a_DD
     end if
   end function cart_to_rot_matrix
-
   !============================================================================
 
   function rot_to_cart_vector(a_D)
@@ -470,7 +464,8 @@ contains
 
     real, intent(in):: a_D(MaxDim)
     real:: rot_to_cart_vector(MaxDim)
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(IsRotatedCartesian)then
        rot_to_cart_vector = matmul(a_D, GridRot_DD)
     else
@@ -478,7 +473,6 @@ contains
     end if
 
   end function rot_to_cart_vector
-
   !============================================================================
 
   function rot_to_cart_matrix(a_DD)
@@ -487,7 +481,8 @@ contains
 
     real, intent(in):: a_DD(MaxDim,MaxDim)
     real:: rot_to_cart_matrix(MaxDim,MaxDim)
-    !-------------------------------------------------------------------------
+
+    !--------------------------------------------------------------------------
     if(IsRotatedCartesian)then
        rot_to_cart_matrix = matmul(transpose(GridRot_DD), &
             matmul(a_DD, GridRot_DD))
@@ -495,7 +490,6 @@ contains
        rot_to_cart_matrix = a_DD
     end if
   end function rot_to_cart_matrix
-
   !============================================================================
 
   subroutine test_geometry
@@ -508,13 +502,13 @@ contains
     real:: r, GenR
     real:: Rgen_I(5) = (/ 1.0, 1.2, 5.0, 25.0, 100.0 /)
 
-    logical:: DoTestMe
-    character(len=*), parameter :: NameSub = 'test_geometry'
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'test_geometry'
     !--------------------------------------------------------------------------
-    DoTestMe = iProc == 0
+    DoTest = iProc == 0
 
-    if(DoTestMe) write(*,*)'Starting ',NameSub
-    if(DoTestMe) write(*,*)'Testing init_geometry for Cartesian'
+    if(DoTest) write(*,*)'Starting ',NameSub
+    if(DoTest) write(*,*)'Testing init_geometry for Cartesian'
     call init_geometry
 
     if(TypeGeometry /= 'cartesian') &
@@ -535,21 +529,21 @@ contains
          write(*,*)'ERROR: init_geometry failed, ', &
          'IsPeriodic_D =', IsPeriodic_D, ' should be all false'
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for Cartesian'
+    if(DoTest) write(*,*)'Testing xyz_to_coord for Cartesian'
     Xyz_D = (/1., 2., 3./)
     call xyz_to_coord(Xyz_D, Coord_D)
     if(any(Coord_D /= Xyz_D)) &
          write(*,*)'ERROR: xyz_to_coord failed for Cartesian grid, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for Cartesian'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for Cartesian'
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(Coord_D /= Xyz_D)) &
          write(*,*)'ERROR: coord_to_xyz failed for Cartesian grid, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D
 
     if(nDim == 2)then
-       if(DoTestMe) write(*,*)'Testing init_geometry for RZ geometry'
+       if(DoTest) write(*,*)'Testing init_geometry for RZ geometry'
        IsPeriodicTest_D = (/.true., .false., .false./)
 
        call init_geometry('rz', IsPeriodicIn_D = IsPeriodicTest_D(1:nDim))
@@ -573,14 +567,14 @@ contains
             'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
             ' should be ', IsPeriodicTest_D(1:nDim)
 
-       if(DoTestMe) write(*,*)'Testing xyz_to_coord for RZ geometry'
+       if(DoTest) write(*,*)'Testing xyz_to_coord for RZ geometry'
        Xyz_D = (/1., 2., 3./)
        call xyz_to_coord(Xyz_D, Coord_D)
        if(any(Coord_D /= Xyz_D)) &
             write(*,*)'ERROR: xyz_to_coord failed for RZ grid, ', &
             'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D
 
-       if(DoTestMe) write(*,*)'Testing coord_to_xyz for RZ geometry'
+       if(DoTest) write(*,*)'Testing coord_to_xyz for RZ geometry'
        call coord_to_xyz(Coord_D, Xyz_D)
        if(any(Coord_D /= Xyz_D)) &
             write(*,*)'ERROR: coord_to_xyz failed for RZ grid, ', &
@@ -590,7 +584,7 @@ contains
 
     if(nDim == 1) RETURN
 
-    if(DoTestMe) write(*,*)'Testing init_geometry for cylindrical_lnr'
+    if(DoTest) write(*,*)'Testing init_geometry for cylindrical_lnr'
     IsPeriodicTest_D = (/.false., .true., .true./)
 
     call init_geometry('cylindrical_lnr', &
@@ -615,7 +609,7 @@ contains
          'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
          ' should be ', IsPeriodicTest_D(1:nDim)
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for cylindrical_lnr'
+    if(DoTest) write(*,*)'Testing xyz_to_coord for cylindrical_lnr'
     Xyz_D = (/1., 2., 3./)
     Good_D = (/log(sqrt(5.)), atan2(2.,1.), 3./)
     call xyz_to_coord(Xyz_D, Coord_D)
@@ -623,7 +617,7 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for cylindrical_lnr, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing init_geometry for roundcube'
+    if(DoTest) write(*,*)'Testing init_geometry for roundcube'
     IsPeriodicTest_D = (/.false., .false., .false./)
 
     call init_geometry('roundcube', &
@@ -649,11 +643,11 @@ contains
          'IsPeriodic_D =', IsPeriodic_D(1:nDim),    &
          ' should be ', IsPeriodicTest_D(1:nDim)
 
-    if(DoTestMe) write(*,*)'Testing roundcube with rRound0=200 rRound1=320'
+    if(DoTest) write(*,*)'Testing roundcube with rRound0=200 rRound1=320'
     rRound0 = 200.0
     rRound1 = 320.0
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube along X axis'
+    if(DoTest) write(*,*)'Testing xyz_to_coord for roundcube along X axis'
 
     ! points along main axes with L1 = rRound1 are most distorted
     Good_D = (/320., 0., 0./)
@@ -664,15 +658,15 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube along X axis'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for roundcube along X axis'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube along diagonal'
-    if (nDim == 3) then 
+    if(DoTest) write(*,*)'Testing xyz_to_coord for roundcube along diagonal'
+    if (nDim == 3) then
        Xyz_D  = (/300., 300., 300./)
     elseif (nDim ==2) then
        Xyz_D  = (/300.,300., 0./)
@@ -684,15 +678,15 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube along diagonal'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for roundcube along diagonal'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for arbitrary point'
-    if (nDim == 3) then                                               
+    if(DoTest) write(*,*)'Testing xyz_to_coord for arbitrary point'
+    if (nDim == 3) then
        Xyz_D  = (/397.1825374147, 264.7883582764, 132.394179138/)
        Good_D = (/300., 200., 100./)
     elseif (nDim ==2) then
@@ -705,14 +699,14 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for arbitrary point'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for arbitrary point'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube inside rRound0'
+    if(DoTest) write(*,*)'Testing xyz_to_coord for roundcube inside rRound0'
     Xyz_D  = (/100., 90., 0./)    ! Inside rRound0, points are not distorted
     Good_D = Xyz_D
     call xyz_to_coord(Xyz_D, Coord_D)
@@ -720,19 +714,19 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube inside rRound0'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for roundcube inside rRound0'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing roundcube with rRound0=1, rRound1=0.6'
+    if(DoTest) write(*,*)'Testing roundcube with rRound0=1, rRound1=0.6'
     rRound0 = 1.0
     rRound1 = 0.6
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube'
-    if (nDim==2) then 
+    if(DoTest) write(*,*)'Testing xyz_to_coord for roundcube'
+    if (nDim==2) then
        Xyz_D  = (/0.0964809, 0.1929618, 0./)
        Good_D = (/0.1,0.2,0./)
     else if (nDim == 3) then
@@ -745,14 +739,14 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for roundcube'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube'    
+    if(DoTest) write(*,*)'Testing xyz_to_coord for roundcube'
     if (nDim==2) then
        Xyz_D  = (/0.5736097, 0.4916654, 0./)
        Good_D = (/0.7, 0.6, 0./)
@@ -766,16 +760,16 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for roundcube'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
          write(*,*)'ERROR: coord_to_xyz failed for roundcube, ', &
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for roundcube along X axis'
-    if (nDim==2) then 
-       Xyz_D  = (/0.7, 0., 0./) 
+    if(DoTest) write(*,*)'Testing xyz_to_coord for roundcube along X axis'
+    if (nDim==2) then
+       Xyz_D  = (/0.7, 0., 0./)
     else if (nDim==3) then
        Xyz_D  = (/0.3, 0., 0./)
     endif
@@ -786,7 +780,7 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for roundcube, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for roundcube along X axis'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for roundcube along X axis'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
@@ -795,7 +789,7 @@ contains
 
     if(nDim < 3) RETURN
 
-    if(DoTestMe) write(*,*)'Testing init_geometry for spherical_genr'
+    if(DoTest) write(*,*)'Testing init_geometry for spherical_genr'
     IsPeriodicTest_D = (/.false., .true., .false./)
 
     call init_geometry('spherical_genr', IsPeriodicIn_D = IsPeriodicTest_D, &
@@ -835,7 +829,7 @@ contains
          'for TypeGeometry=', TypeGeometry,         &
          'exp(LogRgen_I) =', exp(LogRgen_I),' should be ',Rgen_I
 
-    if(DoTestMe) write(*,*)'Testing radius_to_gen and gen_to_radius'
+    if(DoTest) write(*,*)'Testing radius_to_gen and gen_to_radius'
     r = sqrt(Rgen_I(2)*Rgen_I(3))
     GenR = r
     call radius_to_gen(GenR)
@@ -875,7 +869,7 @@ contains
          write(*,*)'ERROR: gen_to_radius failed for spherical_genr, ', &
          'Orig r=', r,' new r =', GenR
 
-    if(DoTestMe) write(*,*)'Testing xyz_to_coord for spherical_genr'
+    if(DoTest) write(*,*)'Testing xyz_to_coord for spherical_genr'
     Xyz_D = (/9., 12., 20./)
     Good_D = (/0.75, atan2(15.,20.),  atan2(12., 9.)/)
     call xyz_to_coord(Xyz_D, Coord_D)
@@ -883,7 +877,7 @@ contains
          write(*,*)'ERROR: xyz_to_coord failed for spherical_genr, ', &
          'Xyz_D =', Xyz_D, ' Coord_D =', Coord_D,' should be ', Good_D
 
-    if(DoTestMe) write(*,*)'Testing coord_to_xyz for spherical_genr'
+    if(DoTest) write(*,*)'Testing coord_to_xyz for spherical_genr'
     Good_D = Xyz_D
     call coord_to_xyz(Coord_D, Xyz_D)
     if(any(abs(Xyz_D - Good_D) > 1e-6)) &
@@ -891,5 +885,7 @@ contains
          'Coord_D =', Coord_D, ' Xyz_D =', Xyz_D,' should be ', Good_D
 
   end subroutine test_geometry
+  !============================================================================
 
 end module BATL_geometry
+!==============================================================================

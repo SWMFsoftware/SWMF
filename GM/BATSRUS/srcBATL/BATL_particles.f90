@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_particles
 
@@ -7,6 +7,9 @@ module BATL_particles
   use BATL_grid, ONLY: check_interpolate => check_interpolate_amr_gc, &
        CoordMin_D, CoordMax_D
   use BATL_geometry, ONLY: IsCartesian, IsPeriodic_D
+
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
   private ! except
@@ -40,18 +43,18 @@ module BATL_particles
      integer:: nParticle, nParticleMax
      !\
      ! nVar*nParticleMax array. The second index numerates 'particles'.
-     !First nDim components are the cartesian coordinates the other 
-     !can be are velocities, the momentum components, gyrokinetic
-     !parameters or the physical particles, or, alternatively,
-     !the magnetic field line ID and the number of the Lagrangian
-     !fluid particle along the magnetic field line in application to
-     !M-FLAMPA
+     ! First nDim components are the cartesian coordinates the other
+     ! can be are velocities, the momentum components, gyrokinetic
+     ! parameters or the physical particles, or, alternatively,
+     ! the magnetic field line ID and the number of the Lagrangian
+     ! fluid particle along the magnetic field line in application to
+     ! M-FLAMPA
      real,    pointer  :: State_VI(:,:)
      !\
      ! (nIndex+1)*nParticleMax array with the indices enumerating
-     ! particles. It ALWAYS stores the number of block (0th index) 
-     ! which posesses an information, sufficient to interpolate 
-     ! (with the possible use of ghost cells) an information 
+     ! particles. It ALWAYS stores the number of block (0th index)
+     ! which posesses an information, sufficient to interpolate
+     ! (with the possible use of ghost cells) an information
      integer,  pointer :: iIndex_II(:,:)
   end type ParticleType
 
@@ -59,7 +62,7 @@ module BATL_particles
 
   ! offset for particle data in the send BufferSend_I
   ! NOTE: offest values start with 0
-  integer, allocatable:: iSendOffset_I(:)  
+  integer, allocatable:: iSendOffset_I(:)
   integer, allocatable:: iProcTo_I(:)! proc id to which send this particle
 
   real,    allocatable:: BufferSend_I(:)! buffer of data to be sent
@@ -70,15 +73,15 @@ module BATL_particles
 
   logical :: DoInit = .true.
 contains
+  !============================================================================
 
-  !===========================================================================
   subroutine allocate_particles()
     integer:: iKindParticle, iKindFirst, iKindLast
     !\
-    !Misc
+    ! Misc
     integer :: nVar, nIndex, nParticleMax
-    character(len=*), parameter:: NameSub=NameMod//'::allocate_particles'
-    !------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'allocate_particles'
+    !--------------------------------------------------------------------------
     if(.not.DoInit)RETURN
     DoInit = .false.
     do iKindParticle = 1, nKindParticle
@@ -96,21 +99,22 @@ contains
        Particle_I(iKindParticle)%nParticle = 0
     end do
   end subroutine allocate_particles
-  !================================
+  !============================================================================
   subroutine clean_particle_arr(iKindParticle, iParticleMin, iParticleMax)
     integer, intent(in) :: iKindParticle, iParticleMin, iParticleMax
+    !--------------------------------------------------------------------------
     if(iParticleMin > iParticleMax) RETURN
     Particle_I(iKindParticle)%State_VI(:,iParticleMin:iParticleMax) = 0.0
-    Particle_I(iKindParticle)%iIndex_II(:,iParticleMin:iParticleMax) = 0 
+    Particle_I(iKindParticle)%iIndex_II(:,iParticleMin:iParticleMax) = 0
   end subroutine clean_particle_arr
-  !================================
+  !============================================================================
   subroutine allocate_buffers
     integer          :: iKindParticle  ! loop variable
-    ! max number of particles 
-    integer          :: nParticleMax  
-    ! max size of buffer       
+    ! max number of particles
+    integer          :: nParticleMax
+    ! max size of buffer
     integer          :: nBuffer    ! size of BufferSend_I,BufferRecv_I
-    !-----------------------------------------------------------------
+    !--------------------------------------------------------------------------
     ! in order to reuse the same allocatable buffers for sending
     ! different kinds of particles, find the kind with MAX number of variables,
     ! nParticleMax as number of particles and allocate buffers accordingly
@@ -128,20 +132,20 @@ contains
     allocate(BufferRecv_I(nBuffer))
     allocate(iSendOffset_I(nParticleMax))
     allocate(iProcTo_I(nParticleMax))
-    
+
   end subroutine allocate_buffers
-  !===========================================================================
+  !============================================================================
   subroutine set_pointer_to_particles(&
        iKindParticle, State_VI, iIndex_II, &
        nVar, nIndex, nParticle, nParticleMax)
     integer,          intent(in)    :: iKindParticle
     real,    pointer, intent(inout) :: State_VI(:,:)
     integer, pointer, optional, intent(inout) :: iIndex_II(:,:)
-    integer, optional,intent(out)   :: nVar 
-    integer, optional,intent(out)   :: nIndex 
+    integer, optional,intent(out)   :: nVar
+    integer, optional,intent(out)   :: nIndex
     integer, optional,intent(out)   :: nParticle
     integer, optional,intent(out)   :: nParticleMax
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     nullify(State_VI)
     State_VI     => Particle_I(iKindParticle)%State_VI
     if(present(iIndex_II))then
@@ -157,37 +161,37 @@ contains
     if(present(nParticleMax))&
          nParticleMax =  Particle_I(iKindParticle)%nParticleMax
   end subroutine set_pointer_to_particles
-  !===========================================================================
+  !============================================================================
   subroutine mark_undefined(iKind, iParticle)
     ! mark the particle of the given kind as undefined
     integer, intent(in):: iKind, iParticle
-    !------------------------------------------------
+    !--------------------------------------------------------------------------
     ! particle is considered undefined if its block number is negative,
     ! the absolute value is kept the same to retain information on its position
     Particle_I(iKind)%iIndex_II(0,iParticle) = &
          - abs(Particle_I(iKind)%iIndex_II(0,iParticle))
     ! abs() is used to prevent making an undefined particle a defined one
   end subroutine mark_undefined
-  !===========================================================================
+  !============================================================================
   subroutine remove_undefined_particles(iKindParticle)
     ! remove all particles with undefined block: iBlock_I<0
     integer, intent(in) :: iKindParticle
     integer :: iVar, iIndex ! loop variables
     real,    pointer :: State_VI(:,:)  ! state vec for particles of this kind
-    integer, pointer :: iIndex_II(:,:) ! indices   for particles of this kind 
+    integer, pointer :: iIndex_II(:,:) ! indices   for particles of this kind
     integer          :: nVar           ! # of variables including coordinates
     integer          :: nIndex         ! # of indices including block number
     integer          :: nParticle      ! # of particles of this kind on proc
     integer          :: nParticleMax   ! max # of particles of this kind on PE
     integer          :: nUnset         ! # of particles with undefined block
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     !\
-    !Return, if no particles on the given Proc
+    ! Return, if no particles on the given Proc
     if(Particle_I(iKindParticle)%nParticle < 1)RETURN
-   
+
     call set_pointer_to_particles(iKindParticle, &
          State_VI, iIndex_II, nVar, nIndex, nParticle, nParticleMax)
- 
+
     nUnset = count(iIndex_II(0,1:nParticle)<0)
     !\
     ! Return, if there is no underfined particle
@@ -212,7 +216,7 @@ contains
     call clean_particle_arr(iKindParticle, nParticle - nUnset + 1, nParticle)
     Particle_I(iKindParticle)%nParticle = nParticle - nUnset
   end subroutine remove_undefined_particles
-  !===========================================================================
+  !============================================================================
   subroutine check_particle_location(iKindParticle,iParticle, iProcOut, &
        DoMove, IsGone)
     use BATL_tree, ONLY: Unset_
@@ -226,12 +230,12 @@ contains
     logical :: IsOut
     real   :: Xyz_D(MaxDim)! particle coordinates
     integer:: iBlock, iBlockFound, iProcFound
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     Xyz_D = 0
     Xyz_D(1:nDim)  = Particle_I(iKindParticle)%State_VI(1:nDim, iParticle)
     iBlock         = Particle_I(iKindParticle)%iIndex_II(0, iParticle)
     call check_interpolate(Xyz_D, iBlock, iProcFound, iBlockFound)
-              
+
     if(present(iProcOut))iProcOut = iProcFound
     IsOut = iBlockFound == Unset_
     if(present(IsGone))IsGone = IsOut
@@ -241,17 +245,17 @@ contains
        if(present(DoMove))  DoMove = .false.
     else
        !\
-       ! For periodic boundary conditions the coordinates may be 
+       ! For periodic boundary conditions the coordinates may be
        ! changed by check_interpolate routine
        !/
        Particle_I(iKindParticle)%State_VI(1:nDim, iParticle) &
             = Xyz_D(1:nDim)
-       ! change the block 
+       ! change the block
        Particle_I(iKindParticle)%iIndex_II(0, iParticle) = iBlockFound
        if(present(DoMove))  DoMove = iProc /= iProcFound
     end if
   end subroutine check_particle_location
-  !===========================================================================
+  !============================================================================
   subroutine message_pass_particles(iKindParticleIn)
     use BATL_tree, ONLY: Unset_
     use ModMpi
@@ -259,13 +263,13 @@ contains
     ! this subroutine passes particles between processors
     ! based on whether it is possible to interpolate background data
     ! to the current particle location
-    !--------------------------------------------------------------------------
+
     ! if present => pass only this kind
     integer, optional, intent(in):: iKindParticleIn
 
     integer          :: iKindParticle  ! loop variable
     real,    pointer :: State_VI(:,:)  ! state vec for particles of this kind
-    integer, pointer :: iIndex_II(:,:) ! blocks having particles of this kind 
+    integer, pointer :: iIndex_II(:,:) ! blocks having particles of this kind
     integer          :: nVar           ! # of variables including coordinates
     integer          :: nIndex         ! # of indices including block number
     integer          :: nParticle      ! # of particles of this kind on proc
@@ -278,7 +282,7 @@ contains
     ! NOTE: starts with 0 (ZERO)
     integer:: iSendOffset_P(0:nProc-1)
     integer:: iRecvOffset_P(0:nProc-1)
-    !--------------
+    !--------------------------------------------------------------------------
     if(.not.allocated(BufferSend_I))call allocate_buffers
     ! now buffers are allocated, perform pass for all kinds
     do iKindParticle = 1, nKindParticle
@@ -311,7 +315,7 @@ contains
       logical:: IsOut        ! particle is out of domain
       integer:: iTag, iError, iRequest, iRequest_I(2*nProc)
       integer:: iStatus_II(MPI_STATUS_SIZE, 2*nProc)
-      !-----------------------------------------------------------------------
+      !------------------------------------------------------------------------
       ! reset parameters of the message_pass for this kind of particles
       nSend_P       = 0; nRecv_P = 0
       iSendOffset_I(1:nParticle) =-1
@@ -344,7 +348,7 @@ contains
       if(DoRSend)then
          ! barrier: to guarantee that all recv's have been posted BEFORE Rsend
          call MPI_Barrier(iComm, iError)
-         
+
          do iProcTo = 0, nProc - 1
             if(iProcTo == iProc) CYCLE ! skip this proc
             iTag = iProcTo
@@ -385,7 +389,7 @@ contains
             nParticleStay = nParticleStay + 1
             iIndex_II(:, nParticleStay) = iIndex_II(:, iParticle)
             State_VI( :, nParticleStay) = State_VI( :, iParticle)
-            CYCLE 
+            CYCLE
          end if
          iSendOffset = &
               iSendOffset_P(iProcTo_I(iParticle)) + iSendOffset_I(iParticle)
@@ -412,7 +416,7 @@ contains
       if(DoRSend)then
          ! barrier: to guarantee that all recv's have been posted BEFORE Rsend
          call MPI_Barrier(iComm, iError)
-         
+
          do iProcTo = 0, nProc - 1
             if(iProcTo == iProc) CYCLE ! skip this proc
             if(nSend_P(iProcTo) > 0)then
@@ -458,8 +462,9 @@ contains
          iRecvOffset = iRecvOffset + nVar + nIndex + 1
       end do
     end subroutine pass_this_kind
+    !==========================================================================
   end subroutine message_pass_particles
-  !==========================
+  !============================================================================
   subroutine put_particles(iKindParticle, StateIn_VI, iLastIdIn, &
        iIndexIn_II, UseInputInGenCoord, DoReplace, nParticlePE)
     use BATL_mpi,      ONLY: iProc
@@ -468,7 +473,7 @@ contains
     real,            intent(in)  :: StateIn_VI(:,:)
     integer,optional,intent(in)  :: iLastIdIn
     integer,optional,intent(in)  :: iIndexIn_II(:,:)
-    logical, optional,intent(in) :: UseInputInGenCoord, DoReplace 
+    logical, optional,intent(in) :: UseInputInGenCoord, DoReplace
     integer,optional,intent(out) :: nParticlePE
     !\
     ! Data pointers for particles of a given sort
@@ -485,21 +490,22 @@ contains
     integer  :: nVarIn, nParticleIn, nIndexIn, nU_I(2)
     !\
     ! Used if there is no input index array. In this case the particle
-    ! Id, if desired, is formed as the order # of particle in the input 
-    ! array(s) + iLastId 
-    !/ 
-    integer  :: iLastId 
-    !Output parameters for check_interpolate routine:
+    ! Id, if desired, is formed as the order # of particle in the input
+    ! array(s) + iLastId
+    !/
+    integer  :: iLastId
+    ! Output parameters for check_interpolate routine:
     integer :: iProcOut, iBlockOut
-    !Coordinates, may be modified by the check_interpolate routine
+    ! Coordinates, may be modified by the check_interpolate routine
     real :: Xyz_D(MaxDim), Coord_D(MaxDim)
-    !Loop Variables
+    ! Loop Variables
     integer  :: iParticleIn, iVar
-    !Misc
+    ! Misc
     integer  :: nParticle, iParticleNew
     logical  :: DoTransform
-    character(len=*), parameter:: NameSub=NameMod//'::put_particles'
-    !--------------------
+
+    character(len=*), parameter:: NameSub = 'put_particles'
+    !--------------------------------------------------------------------------
     call set_pointer_to_particles(&
          iKindParticle, State_VI, iIndex_II, &
          nVar, nIndex, nParticleOld, nParticleMax)
@@ -510,13 +516,13 @@ contains
        end if
     end if
     nU_I = ubound(StateIn_VI)
-    nVarIn      = nU_I(1) 
+    nVarIn      = nU_I(1)
     nParticleIn = nU_I(2)
     iLastId     = 0
     if(present(iLastIdIn)) iLastId = iLastIdIn
     if(present(iIndexIn_II))then
        nU_I = ubound(iIndexIn_II)
-       nIndexIn = nU_I(1) 
+       nIndexIn = nU_I(1)
     end if
     DoTransform = .false.
     if(present(UseInputInGenCoord))DoTransform = UseInputInGenCoord
@@ -524,7 +530,7 @@ contains
     do iParticleIn = 1, nParticleIn
        ! find block and processor suitable for interpolation
        if(DoTransform)then
-          Coord_D = 0 
+          Coord_D = 0
           Coord_D(1:nDim) = StateIn_VI(1:nDim,iParticleIn)
           call coord_to_xyz(Coord_D, Xyz_D)
        else
@@ -540,7 +546,7 @@ contains
                "Start point for a field line is outside of the domain: X = ",&
                StateIn_VI(1,iParticleIn), " Y = ", &
                StateIn_VI(2,iParticleIn), " Z = ", &
-               StateIn_VI(3,iParticleIn) 
+               StateIn_VI(3,iParticleIn)
           call CON_stop(NameSub//':'//StringError)
        end if
        ! Assign particle to an appropriate processor
@@ -558,26 +564,26 @@ contains
           State_VI(iVar,iParticleNew) = StateIn_VI(iVar,iParticleIn)
        end do
        if(present(iIndexIn_II))then
-          !copy index array from inputs
+          ! copy index array from inputs
           iIndex_II(1:nIndexIn,iParticleNew) = iIndexIn_II(:,iParticleIn)
        else
-          !Create particle Id as 
-          iIndex_II(min(1,nIndex),iParticleNew) = iLastId + iParticleIn 
+          ! Create particle Id as
+          iIndex_II(min(1,nIndex),iParticleNew) = iLastId + iParticleIn
        end if
        iIndex_II(0,iParticleNew) = iBlockOut
     end do
     Particle_I(iKindParticle)%nParticle = nParticleOld + nParticle
     if(present(nParticlePE))nParticlePE = nParticle
   end subroutine put_particles
-  !==========================
-  !Tracing the trajectories of particles (end points) of a given sort, 
-  !which are displaced according to the function, displace_particle. 
-  !For example, if the if the end points of are displaced by an 
-  !elementray step size in the direction of the magnetic field, the 
-  !resulting trajectories are the magnetic field lines. The displacement 
-  !stops when the particle leaves the computational domain, or reaches 
-  !a body, or goes beyond some "soft" boundary. The integration has been 
-  !completed once all particles reach some boundary. 
+  !============================================================================
+  ! Tracing the trajectories of particles (end points) of a given sort,
+  ! which are displaced according to the function, displace_particle.
+  ! For example, if the if the end points of are displaced by an
+  ! elementray step size in the direction of the magnetic field, the
+  ! resulting trajectories are the magnetic field lines. The displacement
+  ! stops when the particle leaves the computational domain, or reaches
+  ! a body, or goes beyond some "soft" boundary. The integration has been
+  ! completed once all particles reach some boundary.
   subroutine trace_particles(iKindParticle, displace_particle, check_done)
     integer, intent(in) :: iKindParticle
     interface
@@ -590,22 +596,22 @@ contains
          ! IsEndOfSegment should be set to .true. if one of the
          ! following is true:
          ! (1) check_interpolate in the displaced location of the
-         ! particle shows that the particle left the computational 
+         ! particle shows that the particle left the computational
          ! domain. Such particle MUST be marked as "undefined":
          !\
          ! call mark_undefined(iKind, iParticle)
          !/
          ! (2) check_interpolate in the displaced location of the
-         ! particle shows that the particle location can no longer 
+         ! particle shows that the particle location can no longer
          ! be interpolated at the given PE
-         ! subroutine check_particle_location may be also used for 
+         ! subroutine check_particle_location may be also used for
          ! these two purposes, which marks undefinedparticles too.
-         ! (3) other criteria are satisfied for ending the 
-         ! trajectory of a given particle (it reaches the internal 
-         ! or "soft" boundary). Such particle MUST be 
+         ! (3) other criteria are satisfied for ending the
+         ! trajectory of a given particle (it reaches the internal
+         ! or "soft" boundary). Such particle MUST be
          ! marked as "undefined":
          !\
-         ! call mark_undefined(iKind, iParticle) 
+         ! call mark_undefined(iKind, iParticle)
          !/
        end subroutine displace_particle
        !--------------------------------------------------------------------
@@ -627,27 +633,27 @@ contains
     ! Conditions for exiting a loop or the whole routine
     logical :: IsEndOfSegment, Done
     !\
-    !Loop variable
+    ! Loop variable
     integer :: iParticle
-    !-----------
+    !--------------------------------------------------------------------------
     !\
-    !CYCLE till all particles leave the domain or
-    !check_done gives Done=.true. on all processors
+    ! CYCLE till all particles leave the domain or
+    ! check_done gives Done=.true. on all processors
     !/
-    do 
+    do
        !\
-       !For all particles at this PE
-       !/ 
+       ! For all particles at this PE
+       !/
        do iParticle = 1, Particle_I(iKindParticle)%nParticle
-          !Displace while the particle is at the PE domain
-          SEGMENT:do 
+          ! Displace while the particle is at the PE domain
+          SEGMENT:do
              call displace_particle(iParticle,IsEndOfSegment)
              !\
              ! The end of segment is achieved if the particle
              ! (1) reaches the computational domain boundary.
-             !     These particles should be marked using 
+             !     These particles should be marked using
              !     mark_undefined procedure
-             ! (2) passes to block assigned to different PE  
+             ! (2) passes to block assigned to different PE
              if(IsEndOfSegment)EXIT SEGMENT
           end do SEGMENT
        end do
@@ -666,13 +672,15 @@ contains
        end if
     end do
   contains
+    !==========================================================================
     function is_for_all_pe(DoStop) RESULT(DoStopAll)
       use ModMpi
       use BATL_mpi, ONLY  : iComm, nProc
       logical, intent(in) :: DoStop
       logical             :: DoStopAll
       integer :: iError
-      !-----------
+
+      !------------------------------------------------------------------------
       if(nProc>1)then
          call MPI_Allreduce(DoStop,&
               DoStopAll, 1, MPI_LOGICAL, MPI_LAND, iComm, iError)
@@ -680,6 +688,8 @@ contains
          DoStopAll = DoStop
       end if
     end function is_for_all_pe
+    !==========================================================================
   end subroutine trace_particles
-  !=======================
+  !============================================================================
 end module BATL_particles
+!==============================================================================
