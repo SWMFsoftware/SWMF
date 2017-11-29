@@ -212,6 +212,8 @@ CouplerMode=file(tecplot) !!off, file,  swmf
   EndOfMission::Test::LineOfSightRG=-2.0,0.0,0.0 
   EndOfMission::Test::LineOfSightNG=0,1.0,0.0
 
+  Mesh::Name=SHAP5_stefano.bdf,ConversionFactor=1.0,Format=NAS
+
   EndOfMission::Correction::NG::Mode=off
   EndOfMission::Correction::NG::DensitySinCorrectionFactor=1.0/3.8
   EndofMission::Correction::AdjustSurfaceInjectionRate=false
