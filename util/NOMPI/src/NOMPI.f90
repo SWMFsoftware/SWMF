@@ -680,6 +680,13 @@ subroutine MPI_GROUP_UNION(group1, group2, newgroup, ierror)
 
 end subroutine MPI_GROUP_UNION
 
+subroutine MPI_initialized(IsInitialized, iError)
+  logical, intent(out):: IsInitialized
+  integer, intent(out):: ierror
+  IsInitialized = .true.
+  iError = 0
+end subroutine MPI_initialized
+
 subroutine MPI_INIT(ierror)
   integer, intent(out):: ierror
   ierror=0
