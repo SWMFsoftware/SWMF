@@ -35,7 +35,6 @@ module CON_couple_mh_sp
        SC_get_particle_indexes, SC_get_particle_coords,&    !^CMP IF SC
        SC_check_use_particles                               !^CMP IF SC
 
-  use CON_global_message_pass
   use CON_axes
 
   use SP_wrapper, ONLY: &
@@ -282,21 +281,14 @@ contains
        !/
        !\
        ! Send Largrangian particle coords from SC to SP
-       if(is_proc(SC_))then
-          call set_semi_router_from_source(&
-               GDSource = SC_LocalLineGD,     &
-               GDTarget = SP_GridDescriptor,  &
-               Router               = RouterLineScSp,     &
-               n_interface_point_in_block = SC_n_particle,&
-               interface_point_coords=SC_line_interface_point,&
-               mapping              = mapping_line_sc_to_sp)
-       end if
-       call synchronize_router_source_to_target(RouterLineScSp)
-       if(is_proc(SP_))then
-          call update_semi_router_at_target(&
-               RouterLineScSp, SP_GridDescriptor)
-       end if
-       call global_message_pass(RouterLineScSp, &
+       call construct_router_from_source(&
+            GDSource = SC_LocalLineGD,     &
+            GDTarget = SP_GridDescriptor,  &
+            Router               = RouterLineScSp,     &
+            n_interface_point_in_block = SC_n_particle,&
+            interface_point_coords=SC_line_interface_point,&
+            mapping              = mapping_line_sc_to_sp)
+       call couple_comp(RouterLineScSp, &
             nVar = 3, &
             fill_buffer = SC_get_line_for_sp_and_transform, &
             apply_buffer= SP_put_line_from_sc)
@@ -369,20 +361,13 @@ contains
        !\
        ! Send coordinates of the constructed or advected 
        ! Lagrangian points from IH to SP
-       if(is_proc(IH_))then
-          call set_semi_router_from_source(&
-               GDSource = IH_LocalLineGD,         &
-               GDTarget = SP_GridDescriptor,      &
-               Router                     = RouterLineIhSp,   &
-               n_interface_point_in_block = IH_n_particle,    &
-               interface_point_coords=IH_line_interface_point,&
-               mapping                    = mapping_line_ih_to_sp)
-       end if
-       call synchronize_router_source_to_target(RouterLineIhSp)
-       if(is_proc(SP_))then
-          call update_semi_router_at_target(&
-               RouterLineIhSp, SP_GridDescriptor)
-       end if
+       call construct_router_from_source(&
+            GDSource = IH_LocalLineGD,         &
+            GDTarget = SP_GridDescriptor,      &
+            Router                     = RouterLineIhSp,   &
+            n_interface_point_in_block = IH_n_particle,    &
+            interface_point_coords=IH_line_interface_point,&
+            mapping                    = mapping_line_ih_to_sp)
        call couple_comp(RouterLineIhSp, &
             nVar = 3, &
             fill_buffer = IH_get_line_for_sp_and_transform, &
