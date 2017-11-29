@@ -119,11 +119,11 @@ contains
     ! Set grid descriptors for components
     ! Initialize routers
     !/
-    call set_standard_grid_descriptor(SP_,GridDescriptor=&
+    call set_standard_grid_descriptor(SP_,GD =&
          SP_GridDescriptor)
     if(is_proc(SP_))call set_local_gd(&
          iProc = i_proc(), &
-         GridDescriptor = SP_GridDescriptor, &
+         GD = SP_GridDescriptor, &
          LocalGD = SP_LocalGD)
 
     ! determine whether need to extract new field lines
@@ -151,15 +151,13 @@ contains
     subroutine couple_sc_sp_init
       call SC_check_use_particles()
       call set_couple_var_info(SC_, SP_)
-      call set_standard_grid_descriptor(SC_,GridDescriptor=&
-           SC_GridDescriptor)
+      call set_standard_grid_descriptor(SC_,GD=SC_GridDescriptor)
       call init_router(SC_GridDescriptor,SP_GridDescriptor,&
            RouterScSp,nMappedPointIndex=nAux)
-      call set_standard_grid_descriptor(SC_LineDD,GridDescriptor=&
-           SC_LineGridDesc)
+      call set_standard_grid_descriptor(SC_LineDD,GD=SC_LineGridDesc)
       if(is_proc(SC_))call set_local_gd(&
            iProc = i_proc(), &
-           GridDescriptor = SC_LineGridDesc, &
+           GD = SC_LineGridDesc, &
            LocalGD = SC_LocalLineGD)
       call init_router(SC_LineGridDesc, SP_GridDescriptor, RouterLineScSp, &
            nMappedPointIndex=0)
@@ -171,8 +169,8 @@ contains
       if(DoExtract)then
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
-              GridDescriptorSource  = SC_GridDescriptor, &
-              GridDescriptorTarget  = SP_LocalGD, &
+              GDSource              = SC_GridDescriptor, &
+              GDTarget              = SP_LocalGD, &
               Router                = RouterScSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= SP_interface_point_coords_for_sc, &
@@ -199,15 +197,15 @@ contains
     subroutine couple_ih_sp_init
       call IH_check_use_particles()
       call set_couple_var_info(IH_, SP_)
-      call set_standard_grid_descriptor(IH_,GridDescriptor=&
+      call set_standard_grid_descriptor(IH_,GD=&
            IH_GridDescriptor)
       call init_router(IH_GridDescriptor,SP_GridDescriptor,&
            RouterIhSp,nMappedPointIndex=nAux)
-      call set_standard_grid_descriptor(IH_LineDD,GridDescriptor=&
+      call set_standard_grid_descriptor(IH_LineDD,GD=&
            IH_LineGridDesc)
       if(is_proc(IH_))call set_local_gd(&
            iProc = i_proc(), &
-           GridDescriptor = IH_LineGridDesc, &
+           GD = IH_LineGridDesc, &
            LocalGD = IH_LocalLineGD)
       call init_router(IH_LineGridDesc, SP_GridDescriptor, RouterLineIhSp,&
            nMappedPointIndex=0)
@@ -219,8 +217,8 @@ contains
       if(DoExtract)then
          if(is_proc(SP_))&
               call set_semi_router_from_target(&
-              GridDescriptorSource  = IH_GridDescriptor, &
-              GridDescriptorTarget  = SP_LocalGD, &
+              GDSource  = IH_GridDescriptor, &
+              GDTarget  = SP_LocalGD, &
               Router                = RouterIHSp, &
               n_interface_point_in_block = SP_n_particle,&
               interface_point_coords= &
@@ -286,8 +284,8 @@ contains
        ! Send Largrangian particle coords from SC to SP
        if(is_proc(SC_))then
           call set_semi_router_from_source(&
-               GridDescriptorSource = SC_LocalLineGD,     &
-               GridDescriptorTarget = SP_GridDescriptor,  &
+               GDSource = SC_LocalLineGD,     &
+               GDTarget = SP_GridDescriptor,  &
                Router               = RouterLineScSp,     &
                n_interface_point_in_block = SC_n_particle,&
                interface_point_coords=SC_line_interface_point,&
@@ -312,16 +310,14 @@ contains
     ! Send coordinates of the points in SP to receive MHD data from SC
     if(is_proc(SP_))then
        call set_semi_router_from_target(&
-            GridDescriptorSource  = SC_GridDescriptor, &
-            GridDescriptorTarget  = SP_LocalGD, &
+            GDSource  = SC_GridDescriptor, &
+            GDTarget  = SP_LocalGD, &
             Router                = RouterScSp, &
             n_interface_point_in_block = SP_n_particle,&
             interface_point_coords= SP_interface_point_coords_for_sc, &
             mapping               = mapping_sp_to_sc, &
-            interpolate           = interpolation_amr_gc)
-       nLength = nlength_buffer_target(RouterScSp)
-       call fix_buffer(nLength,&
-            RouterScSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
+            interpolate           = interpolation_amr_gc,&
+            extra_data            = fix_buffer)
     end if
     call synchronize_router_target_to_source(RouterScSp)
     if(is_proc(SC_))then
@@ -379,8 +375,8 @@ contains
        ! from IH to SP
        if(is_proc(IH_))then
           call set_semi_router_from_source(&
-               GridDescriptorSource = IH_LocalLineGD,         &
-               GridDescriptorTarget = SP_GridDescriptor,      &
+               GDSource = IH_LocalLineGD,         &
+               GDTarget = SP_GridDescriptor,      &
                Router               = RouterLineIhSp,         &
                n_interface_point_in_block = IH_n_particle,    &
                interface_point_coords=IH_line_interface_point,&
@@ -406,16 +402,14 @@ contains
     ! send back the MHD data in these points
     if(is_proc(SP_))then
        call set_semi_router_from_target(&
-            GridDescriptorSource  = IH_GridDescriptor, &
-            GridDescriptorTarget  = SP_LocalGD, &
+            GDSource  = IH_GridDescriptor, &
+            GDTarget  = SP_LocalGD, &
             Router                = RouterIHSp, &
             n_interface_point_in_block = SP_n_particle,&
             interface_point_coords= SP_interface_point_coords_for_ih, &
             mapping               = mapping_sp_to_ih, &
-            interpolate           = interpolation_amr_gc)
-       nLength = nlength_buffer_target(RouterIhSp)
-       call fix_buffer(nLength,&
-            RouterIhSp%BufferTarget_II(nDim+1:nDim+nAux, 1:nLength))
+            interpolate           = interpolation_amr_gc,&
+            extra_data            = fix_buffer)
     end if
     call synchronize_router_target_to_source(RouterIhSp) 
     if(is_proc(IH_))then
@@ -671,17 +665,27 @@ contains
   end subroutine IH_get_line_for_sp_and_transform
   !^CMP END IH
   !==================================================================!
-  subroutine fix_buffer(nLength, Buffer_II)
-    integer, intent(in):: nLength
-    real, intent(inout):: Buffer_II(nAux,nLength)
-    integer:: i, iIndexIn, iLine, iIndexOut
+  subroutine fix_buffer(BlockIndex_I,&
+            iGridPointInBlock, nAux, Data_V)
+    use CON_coupler, ONLY: GlobalTreeNode_, BLK_, &
+         GridPointFirst_, GlobalBlock_
+    !\
+    ! Mapped point in the buffer is characterized
+    ! by any of the block indexes: global tree node number,
+    ! global block number, local block number or the number of
+    ! the first point in the block...
+    integer, intent(in) :: BlockIndex_I(1:4)
+    ! and the point number in the block
+    integer, intent(in) :: iGridPointInBlock
+    integer, intent(in) :: nAux !How many reals you may send
+    real,    intent(out):: Data_V(1:nAux)
+   
+    integer:: iIndexIn, iLine, iIndexOut
     !---------------------------------------------------------------
-    do i = 1, nLength
-       iLine    = nint(Buffer_II(1,i))
-       iIndexIn = nint(Buffer_II(2,i))
-       call SP_get_particle_index(iLine, iIndexIn, iIndexOut)
-       Buffer_II(2,i) = real(iIndexOut)
-    end do
+    iLine    = BlockIndex_I(GlobalBlock_)
+    iIndexIn = iGridPointInBlock
+    call SP_get_particle_index(iLine, iIndexIn, iIndexOut)
+    Data_V(1) = real(iLine); Data_V(2) = real(iIndexOut)
   end subroutine fix_buffer
 
  !^CMP IF SC BEGIN 
