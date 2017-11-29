@@ -1013,7 +1013,7 @@ contains
        StandardTarget_,     &! CellCentered_ or Nodes_
        nIndexTarget,        &! number of indexes for target grid
        GridDescriptorSource,& ! OUT!\
-       GridDescriptorTarget,& ! OUT!-General coupler variables 
+       LocalGDTarget,       & ! OUT!-General coupler variables 
        Router)                ! OUT!/
 
     !INPUT ARGUMENTS:
@@ -1026,7 +1026,8 @@ contains
 
     !OUTPUT ARGUMENTS:
     type(GridDescriptorType),intent(out)::GridDescriptorSource
-    type(GridDescriptorType),intent(out)::GridDescriptorTarget
+    type(GridDescriptorType) :: GridDescriptorTarget
+    type(LocalGDType)        :: LocalGDTarget
 
     !EOP
     type(RouterType)::Router
@@ -1075,6 +1076,9 @@ contains
          Router,&
          nIndexSource,&
          nIndexTarget)
+    call set_local_gd(&
+         i_proc(), GridDescriptorTarget, LocalGDTarget)
+    call clean_gd(GridDescriptorTarget)
   end subroutine init_coupler
 
   !=============================================================!
