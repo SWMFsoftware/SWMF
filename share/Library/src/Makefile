@@ -11,7 +11,8 @@ include Makefile.RULES
 # A component does not have to use the whole library.
 # The minimum reqguirement is ModIoUnit.o
 
-# This rule is used to regenerate ModMpiInterface.f90 from a modified SWMF_MPI_routines.dat
+# This rule is used to regenerate ModMpiInterface.f90 from a modified 
+# SWMF_MPI_routines.dat
 MPIINTERFACE:
 	${SCRIPTDIR}/CreateModMpi.pl
 
