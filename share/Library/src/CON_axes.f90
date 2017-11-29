@@ -162,7 +162,7 @@ module CON_axes
   use ModNumConst, ONLY: cHalfPi, cRadToDeg, cTwoPi, cTwoPi8, cUnit_DD, cTiny
   use ModConst, ONLY: rSun
   use ModPlanetConst
-  use ModUtilities, ONLY: CON_stop
+  use ModUtilities, ONLY: CON_stop, CON_set_do_test
 
   !REVISION HISTORY:
   ! 01Aug03 - Gabor Toth and Aaron Ridley  - initial version
@@ -249,12 +249,12 @@ contains
 
     integer :: iTime_I(1:7)
 
-    logical :: DoTest, DoTestMe
+    logical :: DoTestMe
     !-------------------------------------------------------------------------
 
-    if (.not.DoInitializeAxes) return
+    if (.not.DoInitializeAxes) RETURN
 
-    call CON_set_do_test(NameSub, DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTestMe)
 
     tStart = tStartIn
 
@@ -633,7 +633,7 @@ contains
     real :: TimeSimLast = -1000.0  ! Last simulation time for magnetic fields
     real :: TimeSimHgr  = -1000.0  ! Last simulation time for HGR update
     real :: Angle
-    logical :: DoTest, DoTestMe
+    logical :: DoTestMe
     !-------------------------------------------------------------------------
 
     ! Reset the helio-centered coordinate transformations if time changed
@@ -680,7 +680,7 @@ contains
 
     end if
 
-    call CON_set_do_test(NameSub, DoTest, DoTestMe)
+    call CON_set_do_test(NameSub, DoTestMe)
 
     if(DoTestMe)then
        write(*,*) NameSub,'UseAlignedAxes,UseRotation,DoUpdateB0=',&
