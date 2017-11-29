@@ -974,19 +974,3 @@ contains
   end subroutine set_gen_coord
 
 end program post_idl
-
-!=============================================================================
-
-subroutine CON_stop(String)
-
-  ! This routine is needed for ModPlotFile
-
-  implicit none
-
-  character(len=*), intent(in):: String
-  write(*,*) 'ERROR in PostIDL: '//String
-  stop
-
-end subroutine CON_stop
-
-!=============================================================================
