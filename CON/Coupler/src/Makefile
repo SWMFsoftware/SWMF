@@ -12,7 +12,6 @@ MODULES = \
 	ModInitGridStorage.o\
 	CON_grid_storage.o\
 	CON_grid_descriptor.o\
-	CON_global_vector.o\
 	CON_router.o\
 	CON_global_message_pass.o\
 	CON_coupler.o\
