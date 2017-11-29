@@ -23,6 +23,8 @@ module SP_ModAdvance
   use SP_ModDiffusion, ONLY: advance_diffusion
 
   use SP_ModLogAdvection, ONLY: advance_log_advection
+  use ModConst, ONLY: kinetic_energy_to_momentum, momentum_to_kinetic_energy,&
+       momentum_to_energy, energy_in
 
   implicit none
 
@@ -33,11 +35,6 @@ module SP_ModAdvance
   public:: TimeGlobal, iIterGlobal, &
        set_injection_param, init_advance_const, advance
   public:: DoTraceShock, UseDiffusion
-
-  real, external:: &
-       kinetic_energy_to_momentum, momentum_to_kinetic_energy, &
-       momentum_to_energy, energy_in
-
 
   !\
   ! Global interation and time

@@ -5,7 +5,7 @@
 module SP_wrapper
 
   use ModNumConst, ONLY: cHalfPi
-  use ModConst, ONLY: rSun, cProtonMass
+  use ModConst, ONLY: rSun, cProtonMass, energy_in
   use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
   use SP_ModMain, ONLY: &
        run, initialize, check, read_param, save_restart, &
@@ -181,8 +181,6 @@ contains
     real:: Weight
     real:: R
     real:: Aux
-
-    real, external:: energy_in
 
     character(len=100):: StringError
     character(len=*), parameter:: NameSub='SP_put_from_mh'
