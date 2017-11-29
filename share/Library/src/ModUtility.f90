@@ -40,10 +40,16 @@ module ModUtilities
   public:: check_allocate
   public:: greatest_common_divisor
   public:: CON_stop
+  public:: CON_set_do_test
   public:: test_mod_utility
 
   logical, public :: DoFlush = .true. ! parameter for flush_unit
   logical, public :: DoWriteCallSequence = .false. ! parameter for CON_stop
+
+  ! Parameters for CON_set_do_test
+  character(len=200), public :: StringTest = ''
+  integer, public            :: iProcTest = 0
+  integer, public            :: lVerbose = 1
 
   interface split_string
      module procedure split_string, split_string_simple
@@ -54,12 +60,57 @@ module ModUtilities
   end interface
 
 contains
+  !============================================================================
+  subroutine CON_set_do_test(String, DoTest, DoTestMe)
 
+    ! Set DoTest to true if " String " can be found in " StringTest "
+    ! If the optional DoTestMe variable is present, it is set to 
+    ! DoTestMe = DoTest .and. iProc == iProcTest, 
+    ! where iProcTest is a public variable set to the test processor index.
+    ! If only DoTest is present, it behaves like DoTestMe.
+    !
+    ! Depending on the value of the public variable lVerbose, 
+    ! different amount of output is printed:
+    ! If String matches StringTest or lVerbose==10, the test processor prints
+    !    "String CALLED"
+    ! If lVerbose==100, all processors print "String CALLED by iProc=",iProc
+
+    use ModMpi, ONLY: MPI_initialized, MPI_comm_rank, MPI_COMM_WORLD
+
+    character(len=*),  intent(in) :: String
+    logical,           intent(out):: DoTest
+    logical, optional, intent(out):: DoTestMe
+
+    logical:: IsMpiInitialized
+    integer:: iProc, iError
+    !--------------------------------------------------------------------------
+    call MPI_initialized(IsMpiInitialized, iError)
+
+    if(IsMpiInitialized) &
+         call MPI_comm_rank(MPI_COMM_WORLD, iProc, iError)
+
+    if(present(DoTestMe))then
+       DoTest   = index(' '//StringTest,' '//String//' ') > 0
+       DoTestMe = DoTest .and. iProc==iProcTest
+    else
+       if(iProc==iProcTest)then
+          DoTest = index(' '//StringTest,' '//String//' ') > 0
+       else
+          DoTest = .false.
+       end if
+    end if
+    if((DoTest .or. lVerbose>=10) .and. iProc==iProcTest)then
+       write(*,*)String,' CALLED'
+    else if(lVerbose>=100)then
+       write(*,*)String,' CALLED by iProc=', iProc
+    end if
+
+  end subroutine CON_set_do_test
   !============================================================================
   subroutine CON_stop(String, Value1, Value2, Value3, Value4)
 
     use ModIoUnit, ONLY: io_unit_clean
-    use ModMpi
+    use ModMpi, ONLY: MPI_comm_rank, MPI_COMM_WORLD, MPI_abort
 
     character(len=*), intent(in):: String
     class(*), optional, intent(in):: Value1, Value2, Value3, Value4
@@ -73,9 +124,12 @@ contains
     ! exception to produce call sequence (with NAG compiler in debugging mode).
     ! Abort execution with MPI_abort and stop.
 
+    logical:: IsMpiInitialized
     integer:: iRank, nError, iError
     !-------------------------------------------------------------------------
-    call MPI_comm_rank(MPI_COMM_WORLD, iRank, iError)
+    call MPI_initialized(IsMpiInitialized, iError)
+
+    if(IsMpiInitialized) call MPI_comm_rank(MPI_COMM_WORLD, iRank, iError)
 
     write(*,*) 'Aborting execution on processor', iRank, ' with message:'
     write(*,'(a)') String
@@ -94,7 +148,7 @@ contains
     end if
 
     ! Stop execution
-    call MPI_abort(MPI_COMM_WORLD, nError, iError)
+    if(IsMpiInitialized) call MPI_abort(MPI_COMM_WORLD, nError, iError)
     stop
 
   end subroutine CON_stop
