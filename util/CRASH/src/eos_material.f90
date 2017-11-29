@@ -1,9 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=====================Above is for ZTF
 !HERE CAL means CACculated and tabulated EOS in contrast with
 !ZTF which is the analytical fit for the Thomas-Fermi model
 module CRASH_M_EOS
+
+  use ModUtilities, ONLY: CON_stop
+
+  implicit none
+
   !The CRASH meterial number
   SAVE
   integer:: iMaterial = -1
@@ -15,7 +21,7 @@ contains
          ,avogadro,EVperK,Atomass,kB_ztf_E,kB_ztf_P	! ,ro,NI
     use ModConst,ONLY: cBoltzmann,cEV,cKToEv,cEVToK, cAtomicMass
     use CRASH_ModEos,ONLY:cAtomicMassCRASH_I
-    implicit none
+
     real,optional,intent(IN) :: ro,Natom
     if(useCrashEos)then
        if(present(ro) ) then
@@ -41,7 +47,7 @@ contains
   !=======================
   subroutine setOptions(brent,EElog,caleos)
     use CRASH_M_NLTE,only : useZbrent,useEElog
-    implicit none
+
     logical,optional,intent(IN) :: brent,EElog,caleos
     
     if(present(brent)) useZbrent=brent
@@ -130,11 +136,14 @@ end subroutine LTE_EOS_dir	! ro : in module M_localProperties
 
 !------
 subroutine LTE_EOS_inv(te,Etot,Ptot,Zbar,Cv)	! ro : in module M_localProperties
+
   use CRASH_M_localProperties,only : ro, zion
   use CRASH_M_ZTF,only : ZTF_EOS_inv,setCALEOS
   use CRASH_ModEos, ONLY: eos
   use CRASH_M_EOS,ONLY:iMaterial,useCALEOS=>UseCrashEos
-  use ModConst, ONLY:cKToEv,cEVToK
+  use ModConst, ONLY:cKToEv,cEVToK 
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   real,intent(IN) :: Etot
   real,intent(OUT) :: te,Ptot,Zbar

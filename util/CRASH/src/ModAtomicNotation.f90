@@ -1,7 +1,11 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_ModAtomicNotation
+
   use CRASH_ModAtomicMass, ONLY: nMixMax
+
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 

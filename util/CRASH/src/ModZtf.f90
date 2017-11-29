@@ -1,8 +1,13 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_M_ZTF
+
   !use CRASH_M_EOS, ONLY: useCALEOS =>useCrashEos
   !This module is used in this file only
+
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   integer,save :: nbCold=0
   real,save,allocatable,dimension(:) :: ROcolds,EEcolds,TEcolds
@@ -11,7 +16,7 @@ module CRASH_M_ZTF
   real,save :: zt		! shared variable between "ZTF_EOS_..." and ZTFdiff
   logical,save :: setCALEOS=.false.
   character(16),save :: endianCALEOS='LITTLE_ENDIAN'
-  !------
+
 contains
   !------
   subroutine getEcold_table(AtoNum)

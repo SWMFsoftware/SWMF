@@ -24,10 +24,9 @@
 !                           1 + BT72S * UM**3
 !	- analytical fit in transparent approximation
 !
-!-----------
-! \ 
+
 module CRASH_M_NLTE
-  ! /
+
   !This module solves the equation for the effective energy.
   !E_{eff} = E_{tot}^{NLTE} - (3/2) k_B x rho x Z^*(T_Z) * (T_e-T_z)
   !where E_{tot} is the input parameter for the "inverse" equation of state
@@ -37,6 +36,8 @@ module CRASH_M_NLTE
   use CRASH_M_RADIOM,only : caltz0
   use CRASH_M_projE,only : mxOut
   use CRASH_M_localProperties
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
   logical :: useLTE=.false.

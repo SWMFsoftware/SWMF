@@ -11,11 +11,13 @@
 !------- radiom.f90
 !
 
-! \
-MODULE CRASH_M_projE
-  ! /
+module CRASH_M_projE
+
   !  {U=hnu/Kte,Erad,Brad} will be projected on a working grid , with even log. spacing of U
   !
+
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   PRIVATE !Except
   public:: prep_projE, projSP_E
@@ -346,8 +348,8 @@ contains
 1101 write(*,*)'-R- nbef=',nbef,'  > mxOut=',mxOUt
     call CON_stop('- projSP_E, error=1101 -')
   end subroutine projSP_E  
-  ! \
-end MODULE CRASH_M_projE
-! /
+
+end module CRASH_M_projE
+
 !------- radiom.f90
 

@@ -1,9 +1,14 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_ModPowerLawEos
+
   use ModConst,ONLY: cRadiation
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
-  !This modelu implements the EOS of the following kind:
+
+  !This model implements the EOS of the following kind:
   !C_V = cESimT4*T^3
   !E/V = cESimT4*T^4/4
   !p   = cESimT4*T^4/12

@@ -7,7 +7,10 @@
 
 
 module CRASH_ModIonization
+
   use CRASH_ModAtomicMass,ONLY:nZMax
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   PRIVATE !Except
  !/////////////////////////////////////////////////////////////////////////////

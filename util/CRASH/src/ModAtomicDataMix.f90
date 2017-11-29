@@ -1,10 +1,15 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_ModAtomicDataMix
+
   use CRASH_ModIonization
   use CRASH_ModAtomicMass,ONLY : nZMax,nMixMax
   use CRASH_ModExcitationData,ONLY: nExcitation, UseExcitation,&
        UsePressureIonization
+
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   SAVE
   !Interface to databases

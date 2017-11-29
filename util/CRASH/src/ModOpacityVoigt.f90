@@ -2,6 +2,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !A part of the package ionmix
 module CRASH_ModOpacityVoigt
+
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   SAVE
   PRIVATE !Except

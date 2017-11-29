@@ -1,18 +1,22 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !------- radiom.f90
-! \
+
 module CRASH_M_RADIOM
   ! /
   ! The module solves the main equations of the non-LTE
   ! model
   !
   use CRASH_M_projE
+  use ModUtilities, ONLY: CON_stop
+
   !Projects the radiation energy densities in user-defined groups 
   !onto a refined grid  
-  implicit none
-  PRIVATE !Except
 
+  implicit none
+
+  PRIVATE !Except
 
   !  Flags :
   logical,save :: setXubar=.true.

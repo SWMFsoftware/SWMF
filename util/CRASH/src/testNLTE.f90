@@ -23,7 +23,7 @@ program testNLTE
        ,printVersion  !xx ,calTz0
   use CRASH_M_NLTE,only : nlte_EOS ,useLTE ,ng_rad,EoB &!, set_RO_NI &
        ,useEElog,useZbrent
-
+  use ModUtility, ONLY: CON_stop
 
   implicit none
   real :: Ni_l,Te_l,ro_l,Ee_l,Tz_l &
@@ -336,15 +336,3 @@ contains
   end subroutine setMethod
 end program testNLTE
 
-
-subroutine CON_stop(StringError)
-  implicit none
-  character (len=*), intent(in) :: StringError
-  write(*,*)StringError
-  stop
-end subroutine CON_stop
-subroutine CON_set_do_test(String,DoTest,DoTestMe)
-  implicit none
-  character (len=*), intent(in)  :: String
-  logical          , intent(out) :: DoTest, DoTestMe
-end subroutine CON_set_do_test

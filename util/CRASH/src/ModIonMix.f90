@@ -1,11 +1,16 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module CRASH_ModIonMix
+
   !This is an interface to some methods of the code iomix.f
   ! IONMIX, A CODE FOR COMPUTING THE EQUATION OF STATE AND   
   ! RADIATIVE PROPERTIES OF LTE AND NON-LTE PLASMAS.  J.J. MACFARLANE.  
   ! REF. IN COMP. PHYS. COMMUN. 56 (1989) 259 
+
   use ModNumConst
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   SAVE
   real,parameter:: con(9)=(/&

@@ -12,7 +12,8 @@ program PROPACEOS
   use CRASH_ModPartition,ONLY: Population_II,iZMin_I
   use CRASH_ModTransport,ONLY: electron_heat_conductivity, te_ti_relaxation
   use CRASH_ModStatSum, ONLY: cZMin
-  use ModUtilities, ONLY: split_string
+  use ModUtilities, ONLY: split_string, CON_stop
+
   implicit none
 
   integer,parameter::iUnit = 11, nDensity=201, nTemperature = 201
@@ -1069,19 +1070,3 @@ subroutine read_eosopa_file_main ( iUnit, &
 
 end subroutine read_eosopa_file_main
 !============================================================================
-! The following subroutines are here so that we can use SWMF library routines
-! Also some features available in SWMF mode only require empty subroutines
-! for compilation of the stand alone code.
-!============================================================================
-subroutine CON_stop(StringError)
-  implicit none
-  character (len=*), intent(in) :: StringError
-  write(*,*)StringError
-  stop
-end subroutine CON_stop
-!============================================================================
-subroutine CON_set_do_test(String,DoTest,DoTestMe)
-  implicit none
-  character (len=*), intent(in)  :: String
-  logical          , intent(out) :: DoTest, DoTestMe
-end subroutine CON_set_do_test
