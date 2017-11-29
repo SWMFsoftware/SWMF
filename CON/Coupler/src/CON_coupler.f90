@@ -20,7 +20,6 @@ module CON_coupler
        couple_comp => global_message_pass
   use CON_router
   use CON_time, ONLY: FreqType
-  use CON_test_global_message_pass
   use ModUtilities, ONLY: check_allocate
   implicit none
 
@@ -559,8 +558,6 @@ contains
          iBlock_A,                           &
          IsPeriodic_D)
     call bcast_decomposition(GridID)
-    if(DoTest)&
-         call test_global_message_pass(GridID)
   end subroutine set_grid_descriptor
   !========================================================================== 
   subroutine set_couple_var_info(iCompSource, iCompTarget)
