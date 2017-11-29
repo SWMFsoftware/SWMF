@@ -2,25 +2,18 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
-! Wrapper to call ModLinearSolver methods from C/C++ code
 
 !============================================================================
 subroutine linear_solver_wrapper(TypeSolver, Tolerance, nIteration, &
      nVar, nDim, nI, nJ, nK, nBlock, iComm, Rhs_I, x_I, &
      PrecondParam, PrecondMatrix_II, lTest) bind(C)
 
-  ! nblock = 1 for now
+  ! Wrapper to call ModLinearSolver methods from C/C++ code
 
-  ! subroutine prehepta(nBlock, n, m1, m2, PrecondParam, d, e, f, e1, f1, e2, f2)
-  !   integer, intent(in)                        :: N, M1, M2, nblock
-  !   real, intent(in)                           :: PrecondParam
-  !   real, intent(inout), dimension(n,n,nBlock) :: d
-  !   real, intent(inout), dimension(n,n,nBlock), optional :: &
-  !        e, f, e1, f1, e2, f2
   use iso_c_binding   
   use ModLinearSolver, only: get_precond_matrix, multiply_left_precond,&
        multiply_initial_guess, bicgstab,gmres,cg,LinearSolverParamType
-  use ModUtilities, ONLY: char_array_to_string
+  use ModUtilities, ONLY: char_array_to_string, CON_stop
   implicit none
 
   character(c_char), intent(in) :: TypeSolver(*) 
@@ -73,14 +66,11 @@ subroutine linear_solver_wrapper(TypeSolver, Tolerance, nIteration, &
   else if(PrecondParam < 0.0 .and. PrecondParam >= -1.0)then
      Param%TypePrecond = 'MBILU'
   else
-     write(*,*) NameSub, ' ERROR: invalid value for PrecondParam=', PrecondParam
-     call CON_stop(NameSub)
+     call CON_stop(NameSub//': invalid value for PrecondParam=', PrecondParam)
   end if
 
-  if (Param%DoPrecond .and. Param%TypeKrylov == 'CG') then
-     write(*,*) NameSub, ' ERROR: CG solver does not have preconditioner'
-     call CON_stop(NameSub)
-  end if
+  if (Param%DoPrecond .and. Param%TypeKrylov == 'CG') &
+       call CON_stop(NameSub//' CG solver does not have preconditioner')
 
   Param%TypeStop      = 'rel'
   Param%ErrorMax      = Tolerance
