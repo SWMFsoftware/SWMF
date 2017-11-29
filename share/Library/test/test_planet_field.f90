@@ -13,17 +13,6 @@ program test_planet_field
 
 end program test_planet_field
 
-subroutine CON_stop(StringError)
-
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-
-  write(*,'(a)')StringError
-
-  stop
-
-end subroutine CON_stop
 
 subroutine CON_set_do_test(String,DoTest,DoTestMe)
 

@@ -13,18 +13,6 @@ program test_axes
 
 end program test_axes
 
-subroutine CON_stop(StringError)
-
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-
-  write(*,'(a)')StringError
-
-  stop
-
-end subroutine CON_stop
-
 subroutine CON_set_do_test(String,DoTest,DoTestMe)
 
   implicit none

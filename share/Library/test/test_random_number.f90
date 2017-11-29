@@ -11,15 +11,4 @@ program test_random
 
 end program test_random
 
-subroutine CON_stop(StringError)
-
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-  !----------------------------------------------------------------------------
-  write(*,'(a)')StringError
-  write(*,'(a,i3)')'!!! SWMF_ABORT !!!'
-  stop
-
-end subroutine CON_stop
 

@@ -10,14 +10,3 @@ program test_time_convert
 
 end program test_time_convert
 
-subroutine CON_stop(StringError)
-
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-
-  write(*,'(a)')StringError
-
-  stop
-
-end subroutine CON_stop

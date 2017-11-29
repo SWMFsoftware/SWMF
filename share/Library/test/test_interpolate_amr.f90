@@ -3,8 +3,11 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !===========================TESTS============================================
 module ModTestInterpolateAMR
-  use ModInterpolateAMR, &
-       ONLY: interpolate_amr, interpolate_amr_gc, get_reference_block
+
+  use ModInterpolateAMR, ONLY: &
+       interpolate_amr, interpolate_amr_gc, get_reference_block
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
   !\
   ! Shift of the iGrid point in the stencil with respect to the
@@ -750,15 +753,4 @@ program test_interpolate_amr
 
 end program test_interpolate_amr
 
-subroutine CON_stop(StringError)
-
-  implicit none
-  character (len=*), intent(in) :: StringError
-  !----------------------------------------------------------------------------
-
-  write(*,'(a)')StringError
-  write(*,'(a)')'!!! SWMF_ABORT !!!'
-  stop
-
-end subroutine CON_stop
 

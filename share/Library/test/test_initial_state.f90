@@ -14,15 +14,3 @@ program test_initial_state
 
 end program test_initial_state
 
-subroutine CON_stop(StringError)
-
-  implicit none
-  character (len=*), intent(in) :: StringError
-  !----------------------------------------------------------------------------
-
-  write(*,'(a)')StringError
-
-  stop
-
-end subroutine CON_stop
-

@@ -101,15 +101,4 @@ program test_interpolate_cell_amr
   end do
 end program test_interpolate_cell_amr
 
-subroutine CON_stop(StringError)
-
-  implicit none
-  character (len=*), intent(in) :: StringError
-  !----------------------------------------------------------------------------
-
-  write(*,'(a)')StringError
-  write(*,'(a)')'!!! SWMF_ABORT !!!'
-  stop
-
-end subroutine CON_stop
 

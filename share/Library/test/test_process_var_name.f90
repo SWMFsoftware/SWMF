@@ -75,10 +75,4 @@ contains
 
 end program process_var_name_test
 ! =================================================================
-subroutine CON_stop(String)
-  implicit none
-  character(len=*), intent(in):: String
-  write(*,*)'ERROR: ',String
-  stop
-end subroutine CON_stop
 ! =================================================================

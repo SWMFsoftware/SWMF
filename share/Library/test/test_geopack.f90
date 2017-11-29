@@ -10,14 +10,3 @@ program test_geopack
 
 end program test_geopack
 
-subroutine CON_stop(StringError)
-
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-
-  write(*,'(a)')StringError
-
-  stop
-
-end subroutine CON_stop

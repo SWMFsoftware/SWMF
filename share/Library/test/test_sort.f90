@@ -10,14 +10,3 @@ program test_sort
 
 end program test_sort
 
-subroutine CON_stop(StringError)
-
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-
-  write(*,'(a)')StringError
-
-  stop
-
-end subroutine CON_stop

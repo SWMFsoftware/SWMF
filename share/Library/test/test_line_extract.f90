@@ -14,22 +14,4 @@ program test_line
 
 end program test_line
 
-subroutine CON_stop(StringError)
-
-  use ModMpi
-  implicit none
-
-  character (len=*), intent(in) :: StringError
-
-  integer :: iProc,iError,nError
-
-  !----------------------------------------------------------------------------
-
-  write(*,'(a)')StringError
-  call MPI_COMM_RANK(MPI_COMM_WORLD, iProc, iError)
-  write(*,'(a,i3)')'!!! SWMF_ABORT !!! requested by processor ',iProc
-  call MPI_abort(MPI_COMM_WORLD, nError, iError)
-  stop
-
-end subroutine CON_stop
 
