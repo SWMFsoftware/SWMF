@@ -3,8 +3,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModConst
 
-  ! no ONLY so all constants can be accessed via ModConst
+  ! no ONLY: so all constants can be accessed via ModConst
   use ModNumConst   
+  use ModUtilities, ONLY: CON_stop
 
   implicit none
 
@@ -46,7 +47,7 @@ module ModConst
 
   ! Vacuum permittivity 8.8542E-12[F/m]
   real, parameter:: cEps = 1.0/cMu/cLightSpeed**2
-  
+
   ! Vacuum resistance [Ohm]
   real,parameter:: cVacuumResistivity=cLightSpeed*cMu
 
@@ -73,8 +74,8 @@ module ModConst
   ! convenient combination of the fundamental constants,
   ! in CGS system, coming to the transport coefficients in 
   ! plasmas:
-  ! \Sigma_{Thomson}=\frac{8\pi}{3}\left(\frac{e^2}{m_e c^2}\right)^2 [CGS]\approx
-  ! \approx 6.65E-25 cm^2
+  ! \Sigma_{Thomson}=\frac{8\pi}{3}\left(\frac{e^2}{m_e c^2}\right)^2 [CGS]
+  ! ~ 6.65E-25 cm^2
   real, parameter:: cSigmaThomson = 6.65E-29  ![m^2]
 
   ! Number of particles per mole
@@ -114,7 +115,7 @@ module ModConst
   ! Sometimes the twice larger constant is referred to as Rydberg 
   real(Real8_), parameter:: cRyToEV = (0.50/cElectronMass)*&
        (cPlanckHBar/cBohrRadius)**2/cEV 
-  
+
   ! Here RME stands for Rest Mass Energy.
   real, parameter:: cRMEProton   = cProtonMass   * cLightSpeed**2
   real, parameter:: cRMEElectron = cElectronMass * cLightSpeed**2
@@ -138,129 +139,131 @@ module ModConst
   real, parameter:: rSun              = 0.696E+9               ! [ m]
   real, parameter:: mSun              = 1.99E+30               ! [kg]
   real, parameter:: RotationPeriodSun = 25.38 * cSecondPerDay  ! [ s]
- 
+
 contains
-  !Calculates the coefficient for the electron heat conduction coefficient 
-  !in a hydrogen plasma: q=kappa_e_0T^{5/2}\nabla T, the heat flux,q, and
-  !and the electron temperature, T, are both in SI system of units as well as
-  !the scale of length.
-  !\
-  ! Attention!!! For all applications to solar corona and inner heliosphere
-  ! it is expected that Coulomb logarithm equals 20. Therefore, the
-  ! only legitimate formula for electron heat conduction coefficient is
-  !
-  ! q=kappa_0_e(20.0)*TeSi^2*sqrt(TeSi)
-  !
-  ! This is the only place in which the use of CoulombLog=20 is documented.
-  !/
+  !============================================================================
   real function kappa_0_e(CoulombLog)
     real, intent(in):: CoulombLog
-    !-------------------------
+
+    !Calculates the coefficient for the electron heat conduction coefficient 
+    !in a hydrogen plasma: q=kappa_e_0T^{5/2}\nabla T, the heat flux,q, and
+    !and the electron temperature, T, are both in SI system of units as well as
+    !the scale of length.
+    !\
+    ! Attention!!! For all applications to solar corona and inner heliosphere
+    ! it is expected that Coulomb logarithm equals 20. Therefore, the
+    ! only legitimate formula for electron heat conduction coefficient is
+    !
+    ! q=kappa_0_e(20.0)*TeSi^2*sqrt(TeSi)
+    !
+    ! This is the only place in which the use of CoulombLog=20 is documented.
+    !/
+    !--------------------------------------------------------------------------
     kappa_0_e=3.2*3.0*cTwoPi/CoulombLog &
          *sqrt(cTwoPi*cBoltzmann/cElectronMass)*cBoltzmann &
          *((cEps/cElectronCharge)*(cBoltzmann/cElectronCharge))**2
   end function kappa_0_e
+  !============================================================================
+  real function momentum_to_energy(Momentum, NameParticle)
+
+    real,intent(in):: Momentum
+    character(LEN=*),intent(in):: NameParticle
+    !-------------------------------------------------------------------------
+    select case(NameParticle)
+    case('e','Electron','electron','ELECTRON')
+       momentum_to_energy=sqrt((Momentum*cLightSpeed)**2+&
+            cRMEElectron**2)
+    case('p','Proton','proton','PROTON')
+       momentum_to_energy=sqrt((Momentum*cLightSpeed)**2+&
+            cRMEProton**2)
+    case default
+       call CON_stop(&
+            'Do not know the rest mass energy for '//NameParticle)
+    end select
+  end function momentum_to_energy
+  !============================================================================
+  real function momentum_to_kinetic_energy(Momentum, NameParticle)
+
+    real,intent(in):: Momentum
+    character(LEN=*),intent(in):: NameParticle
+    !--------------------------------------------------------------------------
+    select case(NameParticle)
+    case('e','Electron','electron','ELECTRON')
+       momentum_to_kinetic_energy=(Momentum*cLightSpeed)**2/(&
+            sqrt((Momentum*cLightSpeed)**2+cRMEElectron**2) +&
+            cRMEElectron)
+    case('p','Proton','proton','PROTON')
+       momentum_to_kinetic_energy=(Momentum*cLightSpeed)**2/(&
+            sqrt((Momentum*cLightSpeed)**2+cRMEProton**2)   +&
+            cRMEProton)
+    case default
+       call CON_stop(&
+            'Do not know the rest mass energy for '//NameParticle)
+    end select
+  end function momentum_to_kinetic_energy
+  !============================================================================
+  real function energy_to_momentum(Energy, NameParticle)
+
+    real,intent(in):: Energy
+    character(LEN=*),intent(in):: NameParticle
+    !--------------------------------------------------------------------------
+    select case(NameParticle)
+    case('e','Electron','electron','ELECTRON')
+       energy_to_momentum=sqrt(Energy**2-cRMEElectron**2)/&
+            cLightSpeed
+    case('p','Proton','proton','PROTON')
+       energy_to_momentum=sqrt(Energy**2 - cRMEProton**2)/&
+            cLightSpeed
+    case default
+       call CON_stop(&
+            'Do not know the rest mass energy for '//NameParticle)
+    end select
+  end function energy_to_momentum
+  !============================================================================
+  real function kinetic_energy_to_momentum(Energy, NameParticle)
+
+    real,intent(in):: Energy
+    character(LEN=*),intent(in):: NameParticle
+    !--------------------------------------------------------------------------
+    select case(NameParticle)
+    case('e','Electron','electron','ELECTRON')
+       kinetic_energy_to_momentum=sqrt(&
+            Energy*(Energy + 2*cRMEElectron))/cLightSpeed
+    case('p','Proton','proton','PROTON')
+       kinetic_energy_to_momentum=sqrt(&
+            Energy*(Energy + 2*cRMEProton  ))/cLightSpeed
+    case default
+       call CON_stop(&
+            'Do not know the rest mass energy for '//NameParticle)
+    end select
+  end function kinetic_energy_to_momentum
+  !============================================================================
+  real function energy_in(NameEnergyUnit)
+
+    character(LEN=*),intent(in):: NameEnergyUnit
+    !--------------------------------------------------------------------------
+    select case (NameEnergyUnit)
+    case('J','j','Joule','joule','JOULE')
+       energy_in=1.0   ! Do Nothing
+    case('K','k','Kelvin','kelvin','KELVIN')
+       energy_in=cBoltzmann
+    case('ev','eV','EV','Ev')
+       energy_in=cEV
+    case('kEV','KeV','KEV','kev')
+       energy_in=cKEV
+    case('mEV','MeV','MEV','mev')
+       energy_in=cMEV
+    case('gEV','GeV','GEV','gev')
+       energy_in=cGEV
+    case('tEV','TeV','TEV','tev')
+       energy_in=cTEV
+    case default
+       call CON_stop(&
+            'We do not support energy units like: '//&
+            'ton of trotil equivalent, '//&
+            NameEnergyUnit//' and many other.')
+    end select
+  end function energy_in
 
 end module ModConst
-!====================================================================
-real function momentum_to_energy(Momentum,NameParticle)
-  use ModConst
-  implicit none
-  real,intent(in):: Momentum
-  character(LEN=*),intent(in):: NameParticle
-  select case(NameParticle)
-  case('e','Electron','electron','ELECTRON')
-     momentum_to_energy=sqrt((Momentum*cLightSpeed)**2+&
-          cRMEElectron**2)
-  case('p','Proton','proton','PROTON')
-     momentum_to_energy=sqrt((Momentum*cLightSpeed)**2+&
-          cRMEProton**2)
-  case default
-     call CON_stop(&
-          'Do not know the rest mass energy for '//NameParticle)
-  end select
-end function momentum_to_energy
-!====================================================================
-real function momentum_to_kinetic_energy(Momentum,NameParticle)
-  use ModConst
-  implicit none
-  real,intent(in):: Momentum
-  character(LEN=*),intent(in):: NameParticle
-  select case(NameParticle)
-  case('e','Electron','electron','ELECTRON')
-     momentum_to_kinetic_energy=(Momentum*cLightSpeed)**2/(&
-          sqrt((Momentum*cLightSpeed)**2+cRMEElectron**2) +&
-          cRMEElectron)
-  case('p','Proton','proton','PROTON')
-     momentum_to_kinetic_energy=(Momentum*cLightSpeed)**2/(&
-          sqrt((Momentum*cLightSpeed)**2+cRMEProton**2)   +&
-          cRMEProton)
-  case default
-     call CON_stop(&
-          'Do not know the rest mass energy for '//NameParticle)
-  end select
-end function momentum_to_kinetic_energy
-!====================================================================
-real function energy_to_momentum(Energy,NameParticle)
-  use ModConst
-  implicit none
-  real,intent(in):: Energy
-  character(LEN=*),intent(in):: NameParticle
-  select case(NameParticle)
-  case('e','Electron','electron','ELECTRON')
-     energy_to_momentum=sqrt(Energy**2-cRMEElectron**2)/&
-          cLightSpeed
-  case('p','Proton','proton','PROTON')
-     energy_to_momentum=sqrt(Energy**2 - cRMEProton**2)/&
-          cLightSpeed
-  case default
-     call CON_stop(&
-          'Do not know the rest mass energy for '//NameParticle)
-  end select
-end function energy_to_momentum
-!====================================================================
-real function kinetic_energy_to_momentum(Energy,NameParticle)
-  use ModConst
-  implicit none
-  real,intent(in):: Energy
-  character(LEN=*),intent(in):: NameParticle
-  select case(NameParticle)
-  case('e','Electron','electron','ELECTRON')
-     kinetic_energy_to_momentum=sqrt(&
-          Energy*(Energy + 2*cRMEElectron))/cLightSpeed
-  case('p','Proton','proton','PROTON')
-     kinetic_energy_to_momentum=sqrt(&
-          Energy*(Energy + 2*cRMEProton  ))/cLightSpeed
-  case default
-     call CON_stop(&
-          'Do not know the rest mass energy for '//NameParticle)
-  end select
-end function kinetic_energy_to_momentum
-!====================================================================
-real function energy_in(NameEnergyUnit)
-  use ModConst
-  implicit none
-  character(LEN=*),intent(in):: NameEnergyUnit
-  select case (NameEnergyUnit)
-  case('J','j','Joule','joule','JOULE')
-     energy_in=1.0   ! Do Nothing
-  case('K','k','Kelvin','kelvin','KELVIN')
-     energy_in=cBoltzmann
-  case('ev','eV','EV','Ev')
-     energy_in=cEV
-  case('kEV','KeV','KEV','kev')
-     energy_in=cKEV
-  case('mEV','MeV','MEV','mev')
-     energy_in=cMEV
-  case('gEV','GeV','GEV','gev')
-     energy_in=cGEV
-  case('tEV','TeV','TEV','tev')
-     energy_in=cTEV
-  case default
-     call CON_stop(&
-          'We do not support energy units like: '//&
-          'ton of trotil equivalent, '//&
-          NameEnergyUnit//' and many other.')
-  end select
-end function energy_in
 
