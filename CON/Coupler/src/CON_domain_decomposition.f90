@@ -1234,52 +1234,7 @@ contains
        call search_in_dd(DomainDecomposition, Xyz_D, l_neighbor_dd)
     end if
   end function l_neighbor_dd
-  !===============================================================!
-  !BOP
-  !IROUTINE: l_level_neighbor - returns the level of neghboring block    
-  !DESCRIPTION:
-  !For the global node lGlobalTreeNumber and for cell index array, 
-  !iCells\_D, which is expected but not required to be out of the 
-  !limits 1:nCells for a given DomainDecomposition, hence, for the 
-  !point which in fact out of the block lGlobalTreeNumber, and 
-  !belongs to a neighboring block, the procedure returns:
-  !     integer larger than 1 if the neghboring block is more than 
-  !                              twice coarser than lGlobalTreeNumber
-  !       1, if the neghboring block is twice coarser than lGlobalTreeNumber
-  !       0, if the neighboring block is of the same resolution
-  !      -1, if the neighboring blcok is twice finer
-  !      -2,... if the neghboring block is more than twice finer
-  !      None\_, if the point is out of the computational domain
-  !EOP
-
-  !BOP
-  !INTERFACE:
-  integer function l_level_neighbor_dd(DomainDecomposition,&
-       lGlobalTreeNumber,iCells_D)
-    !INPUT ARGUMENTS:
-    integer,intent(in)::lGlobalTreeNumber
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
-    integer,dimension(DomainDecomposition%nDim),&
-         intent(in)::iCells_D
-    !EOP
-    integer::lNeighbor
-    
-    lNeighbor=l_neighbor_dd(DomainDecomposition,&
-         lGlobalTreeNumber,iCells_D)
-    if(lNeighbor==None_)then
-       l_level_neighbor_dd=None_
-    else
-       if(.not.DomainDecomposition%IsTreeDecomposition)then
-          l_level_neighbor_dd=0
-          return
-       end if
-       l_level_neighbor_dd=int(&
-            2*DomainDecomposition%DXyzBlock_DI(1,lNeighBor)&
-            /DomainDecomposition%DXyzBlock_DI(1,lGlobalTreeNumber)&
-            -3+cTiny)
-    end if
-  end function l_level_neighbor_dd
+  !==========================
   !BOP
   !INTERFACE:
   subroutine glue_margin_dd(&

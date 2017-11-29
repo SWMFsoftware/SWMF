@@ -66,11 +66,6 @@ module CON_grid_storage
      module procedure l_neighbor_dd
   end interface
 
-  interface l_level_neighbor 
-     module procedure l_level_neighbor_id
-     module procedure l_level_neighbor_dd
-  end interface
-
   interface glue_margin
      module procedure glue_margin_id
      module procedure glue_margin_dd
@@ -576,18 +571,6 @@ contains
     l_neighbor_id=l_neighbor_dd(&
          DD_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
   end function l_neighbor_id
-  !---------------------------------------------------------------!
-  !INTERFACE:                                      
-  integer function l_level_neighbor_id(GridID_,&
-       lGlobalTreeNumber,iCells_D)
-    !INPUT ARGUMENTS:
-    integer,intent(in)::GridID_,lGlobalTreeNumber
-    integer,dimension(nDim_C(GridID_)),&
-         intent(in)::iCells_D
-    !EOP
-    l_level_neighbor_id=l_level_neighbor_DD(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
-  end function l_level_neighbor_id
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
