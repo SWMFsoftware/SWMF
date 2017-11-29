@@ -4,9 +4,10 @@ module ModBuffer
   use ModMain,     ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D
   use ModNumConst, ONLY: cPi, cTwoPi
   use CON_grid_descriptor, ONLY: GridDescriptorType, Nodes_, &
-       bilinear_interpolation, DomainDecompositionType, is_proc0, &
+       bilinear_interpolation, set_standard_grid_descriptor 
+  use CON_grid_storage, ONLY: DomainDecompositionType, is_proc0, &
        init_decomposition, get_root_decomposition, complete_grid, &
-       set_standard_grid_descriptor, bcast_decomposition
+       bcast_decomposition
   use CON_coupler,         ONLY: SC_, IH_, nVarIndexCouple, nCoupleVarGroup
   implicit none
   save
@@ -62,7 +63,7 @@ contains
        call set_standard_grid_descriptor(DD, &
             nGhostGridPoints=1,  &
             iStandard=Nodes_,&
-            GridDescriptor=LocalBufferGD)
+            GD=LocalBufferGD)
     end if
   end subroutine set_spher_buffer_grid
 end module ModBuffer
