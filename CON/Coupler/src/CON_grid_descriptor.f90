@@ -200,6 +200,11 @@ Module CON_grid_descriptor
      real,    pointer ::  XyzBlock_DB(:,:), DXyz_DB(:,:)
   end type LocalGDType
   public :: set_local_gd, LocalGDType
+  public :: clean_gd
+  interface clean_gd
+     module procedure clean_grid_descriptor
+     module procedure clean_grid_descriptor_l
+  end interface clean_gd
   public :: n_grid_points_per_block
   !\
   ! Interpolation procedures
