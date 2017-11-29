@@ -15,7 +15,6 @@ MODULES = \
 	CON_global_vector.o\
 	CON_router.o\
 	CON_global_message_pass.o\
-	CON_buffer_grid.o\
 	CON_coupler.o\
 	CON_couple_points.o\
 	CON_transfer_data.o
