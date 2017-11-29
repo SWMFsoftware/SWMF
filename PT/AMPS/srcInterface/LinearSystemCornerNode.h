@@ -543,7 +543,7 @@ void cLinearSystemCornerNode<cCornerNode>::Solve(void (*fInitialUnknownValues)(d
   int nK=_BLOCK_CELLS_Z_;
   int nBlock = PIC::DomainBlockDecomposition::nLocalBlocks;
 
-  MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_WORLD);
+  MPI_Fint iComm = MPI_Comm_c2f(MPI_GLOBAL_COMMUNICATOR);
 
   //double Rhs_I(nVar*nVar*nI*nJ*nK*nBlock)// RHS of the equation
   //double Sol_I(nVar*nVar*nI*nJ*nK*nBlock)// vector for solution
