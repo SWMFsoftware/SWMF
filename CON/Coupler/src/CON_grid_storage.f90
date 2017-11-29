@@ -25,10 +25,6 @@ module CON_grid_storage
   !structure. The procedures differ with suffix id or dd from the 
   !generic name 
   !EOP
-  interface clean_decomposition
-     module procedure clean_decomposition_id
-     module procedure clean_decomposition_dd
-  end interface
 
   interface init_decomposition
      module procedure init_decomposition_id
@@ -63,11 +59,6 @@ module CON_grid_storage
   interface is_right_boundary_d
      module procedure is_right_boundary_id
      module procedure is_right_boundary_dd
-  end interface
-
-  interface xyz_cell_d
-     module procedure xyz_cell_id
-     module procedure xyz_cell_dd
   end interface
 
   interface l_neighbor
@@ -253,22 +244,6 @@ contains
     if(GridID_>0.and.GridID_<=MaxGrid)&
          done_dd_init=DoneDDInit_C(GridID_)
   end function done_dd_init
-  !===============================================================!
-  !===============================================================!
-  !Cleaner for domain decomposition                               !
-  !BOP
-  !IROUTINE: clean_decomposition 
-  !INTERFACE:
-  subroutine clean_decomposition_id(GridID_)
-
-    !INPUT ARGUMENTS:
-    integer,intent(in)::GridID_
-    !EOP
-    if(done_dd_init(GridID_))then
-       call clean_decomposition_dd(DD_I(GridID_)%Ptr)
-       DoneDDInit_C(GridID_)=.false.
-    end if
-  end subroutine clean_decomposition_id
   !---------------------------------------------------------------!
   !===============================================================
   !BOP
@@ -589,21 +564,6 @@ contains
          is_right_boundary_dd(&
          DD_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function is_right_boundary_id
-  !---------------------------------------------------------------!
-  !BOP
-  !INTERFACE:
-  function xyz_cell_id(&
-       GridID_,lGlobalTreeNumber,iCells_D)
-    !INPUT ARGUMENTS:
-    integer,intent(in):: GridID_,lGlobalTreeNumber
-    integer,dimension(nDim_C(GridID_)),&
-         intent(in)::iCells_D
-    !EOP
-    real,dimension(nDim_C(GridID_))::xyz_cell_id
-    xyz_cell_id= xyz_cell_dd(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
-  end function xyz_cell_id
-  !---------------------------------------------------------------!
   !BOP
   !INTERFACE:                                                       
   integer function l_neighbor_id(&

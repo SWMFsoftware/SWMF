@@ -376,46 +376,6 @@ Module CON_domain_decomposition
        cAlmostHalf  = 0.5*cAlmostOne
 
 contains
-
-  !BOP
-  !INTERFACE:
-  subroutine clean_decomposition_dd(DomainDecomposition)
-
-    !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(inout)&
-         ::DomainDecomposition
-    !EOP
-
-    if(associated(DomainDecomposition%iRootMapDim_D))&
-         deallocate(DomainDecomposition%iRootMapDim_D)
-    if(associated(DomainDecomposition%XyzMin_D))&
-         deallocate(DomainDecomposition%XyzMin_D)
-    if(associated(DomainDecomposition%XyzMax_D))&
-         deallocate(DomainDecomposition%XyzMax_D)
-    if(associated(DomainDecomposition%nCells_D))&
-         deallocate(DomainDecomposition%nCells_D)
-    if(associated(DomainDecomposition%IsPeriodic_D))&
-         deallocate(DomainDecomposition%IsPeriodic_D)
-    if(associated(DomainDecomposition%iDecomposition_II))&
-         deallocate(DomainDecomposition%iDecomposition_II)
-    if(associated(DomainDecomposition%XyzBlock_DI))&
-         deallocate(DomainDecomposition%XyzBlock_DI)
-    if(associated(DomainDecomposition%DXyzBlock_DI))&
-         deallocate(DomainDecomposition%DXyzBlock_DI)
-    if(associated(DomainDecomposition%DXyzCell_DI))&
-         deallocate(DomainDecomposition%DXyzCell_DI)
-    DomainDecomposition%nAllocatedNodes=-1
-    if(DomainDecomposition%IsTreeDecomposition)then
-       if(associated(DomainDecomposition%iShift_DI))&
-            deallocate(DomainDecomposition%iShift_DI)
-       if(associated(DomainDecomposition%iRoot_I))&
-            deallocate(DomainDecomposition%iRoot_I)
-    end if
-    if(associated(DomainDecomposition%iGlobal_BP))&
-         deallocate(DomainDecomposition%iGlobal_BP)
-    if(associated(DomainDecomposition%iGlobal_A))&
-         deallocate(DomainDecomposition%iGlobal_A)
-  end subroutine clean_decomposition_dd
   !===============================================================!
   !BOP
   !INTERFACE:
@@ -1238,41 +1198,6 @@ contains
   end function is_right_boundary_dd
   !===============================================================!
   !BOP
-  !IROUTINE: xyz_cell_d - coordinates of the cell center
-  !DESCRIPTION:
-  !Returns cell center coordinates
-  !EOP
-
-  !BOP 
-  !INTERFACE:
-  function xyz_cell_dd(&
-       DomainDecomposition,lGlobalTreeNumber,iCells_D)
-    !INPUT ARGUMENTS:
-    integer,intent(in)::lGlobalTreeNumber
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
-    integer,dimension(DomainDecomposition%nDim),&
-         intent(in)::iCells_D
-    !EOP
-    real,dimension(DomainDecomposition%nDim)::xyz_cell_dd
-    integer::iDim
-    xyz_cell_dd= DomainDecomposition%XyzBlock_DI(&
-         :,lGlobalTreeNumber)+&
-         DomainDecomposition%DXyzCell_DI(&
-         :,lGlobalTreeNumber)*&
-         (real(iCells_D)-cHalf)
-    !Put the point inside the domain
-    do iDim=1,DomainDecomposition%nDim
-       if(.not.DomainDecomposition%IsPeriodic_D(iDim))CYCLE
-       xyz_cell_dd(iDim)=DomainDecomposition%XyzMin_D(iDim)+&
-            modulo(xyz_cell_dd(iDim)-&
-            DomainDecomposition%XyzMin_D(iDim),&
-            DomainDecomposition%XyzMax_D(iDim)-&
-            DomainDecomposition%XyzMin_D(iDim))
-    end do
-  end function xyz_cell_dd
-  !===============================================================!
-  !BOP
   !IROUTINE: l_neighbor - returns the number of neighboring block
   !DESCRIPTION:                                                              
   ! Tree neighbor                                                 
@@ -1300,10 +1225,13 @@ contains
          DomainDecomposition%nCells_D))then
        l_neighbor_dd=None_
     else
-       Xyz_D= xyz_cell_dd(DomainDecomposition,&
-            lGlobalTreeNumber,iCells_D)
-       call search_in_dd(DomainDecomposition,Xyz_D,&
-            l_neighbor_dd)
+       !\
+       ! Cell center coordinates
+       Xyz_D = &
+            DomainDecomposition%XyzBlock_DI(:,lGlobalTreeNumber) + &
+            DomainDecomposition%DXyzCell_DI(:,lGlobalTreeNumber)*&
+            (real(iCells_D) - 0.5)
+       call search_in_dd(DomainDecomposition, Xyz_D, l_neighbor_dd)
     end if
   end function l_neighbor_dd
   !===============================================================!
