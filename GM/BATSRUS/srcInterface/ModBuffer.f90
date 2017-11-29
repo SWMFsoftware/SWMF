@@ -2,23 +2,9 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModBuffer
   use ModMain,     ONLY: nPhiBuff, nThetaBuff, BufferMin_D, BufferMax_D
-  use ModNumConst, ONLY: cPi, cTwoPi
-  use CON_grid_descriptor, ONLY: GridDescriptorType, Nodes_, &
-       bilinear_interpolation, set_standard_grid_descriptor 
-  use CON_grid_storage, ONLY: DomainDecompositionType, is_proc0, &
-       init_decomposition, get_root_decomposition, complete_grid, &
-       bcast_decomposition
   use CON_coupler,         ONLY: SC_, IH_, nVarIndexCouple, nCoupleVarGroup
   implicit none
   save
-
-  !This is a name of a global vector, which
-  !is in the global vector storage
-  character(LEN=10)::NameBuffer
-
-  type(DomainDecompositionType),target:: LocalBufferDD
-  type(GridDescriptorType)::LocalBufferGD
-
   integer:: SourceID_ = SC_, TargetID_ = IH_
 
   integer::nVarBuff=-1
@@ -28,44 +14,6 @@ module ModBuffer
   integer, public:: nVarCouple
   integer, public:: iVar_V(nVarIndexCouple)
   logical, public:: DoCoupleVar_V(nCoupleVarGroup)  
-
-contains
-  !==========================================================================
-  subroutine set_buffer_name(NameIn,IDIn)
-    character(LEN=*),intent(in)::NameIn
-    integer,optional,intent(in)::IDIn
-    !------------------------------------------------------------------------
-
-    NameBuffer=NameIn
-    if(present(IDIn))SourceID_ = IDIn
-  end subroutine set_buffer_name
-  !==========================================================================
-  subroutine set_spher_buffer_grid(DD,CompID_,IsLocal)
-    type(DomainDecompositionType),&
-         intent(out)::DD
-    integer,intent(in)::CompID_
-    logical,intent(in)::IsLocal
-    !-----------------------------------------------------------------------
-    call init_decomposition(&
-         DD,CompID_,nDim=3,IsLocal=IsLocal)
-
-    if(is_proc0(CompID_).or.IsLocal)call get_root_decomposition(&
-         DD,&
-         iRootMapDim_D=(/1,1,1/),&
-         XyzMin_D= BufferMin_D,  &
-         XyzMax_D= BufferMax_D, &
-         nCells_D=(/1,nPhiBuff,nThetaBuff/),&
-         PE_I=(/0/))
-    if(.not.IsLocal)then
-       call bcast_decomposition(DD)
-    else
-       call complete_grid(DD)
-       call set_standard_grid_descriptor(DD, &
-            nGhostGridPoints=1,  &
-            iStandard=Nodes_,&
-            GD=LocalBufferGD)
-    end if
-  end subroutine set_spher_buffer_grid
 end module ModBuffer
 
 !==============================================================================

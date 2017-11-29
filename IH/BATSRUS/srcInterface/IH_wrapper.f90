@@ -40,7 +40,6 @@ module IH_wrapper
   public:: IH_LineDD
 
   ! Coupling with SC
-  public:: IH_set_buffer_grid
   public:: IH_set_buffer_grid_get_info
   public:: IH_save_global_buffer
   public:: IH_match_ibc
@@ -392,27 +391,6 @@ contains
     end do
 
   end subroutine IH_get_point_data
-
-  !============================================================================
-  subroutine IH_set_buffer_grid(DD)
-    use IH_ModBuffer,ONLY:&
-         set_spher_buffer_grid,set_buffer_name,&
-         DomainDecompositionType,&
-         LocalBufferDD
-    use CON_coupler,ONLY:IH_,is_proc
-
-    type(DomainDecompositionType),&
-         intent(out)::DD
-
-    call set_spher_buffer_grid(&
-         DD,IH_,IsLocal=.false.)
-    if(.not.is_proc(IH_))return
-
-    call set_spher_buffer_grid(&
-         LocalBufferDD,IH_,IsLocal=.true.)
-    call set_buffer_name('IH_from_sc')
-
-  end subroutine IH_set_buffer_grid
   !============================================================================
   subroutine IH_set_grid
 
