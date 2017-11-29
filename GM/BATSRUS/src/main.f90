@@ -307,30 +307,9 @@ contains
 end program BATSRUS
 !==============================================================================
 
-! The following subroutines are here so that we can use SWMF library routines
-! Also some features available in SWMF mode only require empty subroutines
-! for compilation of the stand alone code.
-subroutine CON_stop(StringError)
-  implicit none
-  character (len=*), intent(in) :: StringError
-  !----------------------------------------------------------------------------
-  call stop_mpi(StringError)
-end subroutine CON_stop
-!==============================================================================
-subroutine CON_set_do_test(String,DoTest,DoTestMe)
-  implicit none
-  character (len=*), intent(in)  :: String
-  logical          , intent(out) :: DoTest, DoTestMe
-
-  !----------------------------------------------------------------------------
-end subroutine CON_set_do_test
-!==============================================================================
-
-! The subroutines and functions below are defined in srcInterface for SWMF.
-subroutine update_grad_density
-  !----------------------------------------------------------------------------
-  call stop_mpi('ERROR: update_grad_density is for SWMF')
-end subroutine update_grad_density
+! The following subroutines are here for compilation of the stand alone code.
+! The subroutines and functions below are defined in srcInterface for SWMF,
+! but they still need to get compiled in stand-alone mode.
 !==============================================================================
 subroutine get_from_spher_buffer_grid(Xyz_D,nVar,State_V)
   implicit none
