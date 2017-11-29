@@ -34,7 +34,7 @@
 #include "meshAMRgeneric.h"
 
 #include "../../srcInterface/LinearSystemCornerNode.h"
-
+#include "linear_solver_wrapper_c.h"
 
 #define _UNIFORM_MESH_ 1
 #define _NONUNIFORM_MESH_ 2
@@ -48,6 +48,12 @@ double xmax[3]={3.0,2.0,3.0};
 
 int CurrentCenterNodeOffset=-1,NextCenterNodeOffset=-1;
 int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
+
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode> Solver1(1,1000);
+
+void solver1_matvec(double* VecIn, double * VecOut, int n){  
+  Solver1.MultiplyVector(VecOut,VecIn,n);
+}
 
 void PrintCenterNodeVariableList(FILE* fout,int DataSetNumber) {
   fprintf(fout,",\"test wave (center node)\"");
@@ -457,7 +463,7 @@ void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, d
   PIC::Mesh::mesh.outputMeshDataTECPLOT(wave_init_fname,0);
   
   
-  for (int iter=0; iter<51; iter++) {
+  for (int iter=0; iter<1; iter++) {
     PropagateCenterData(vProp,nVars,PIC::Mesh::mesh.rootTree);
 
     int temp=CurrentCenterNodeOffset;
@@ -488,43 +494,75 @@ void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, d
 //create the stencil for the linear equaton solver test
 void GetTestStencil(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
+  
+ MatrixRowNonZeroElementTable[0].i=i,MatrixRowNonZeroElementTable[0].j=j,MatrixRowNonZeroElementTable[0].k=k,MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
+NonZeroElementsFound=1;
+rhs=100.0;
+MatrixRowNonZeroElementTable[0].iVar=0;
+return;
+ 
+  
   //check whether the point is located at the boundary
-  for (int iface=0;iface<6;iface++) if ((node->GetNeibFace(iface,0,0)==NULL) && ((i==0)||(i==_BLOCK_CELLS_X_) || (j==0)||(j==_BLOCK_CELLS_Y_) || (k==0)||(k==_BLOCK_CELLS_Z_)) ) {
+  //boundary cell at the larger end is absorbed
+  int index[3] = {i,j,k};
+  int nCell[3] = {_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_};
+
+  // set  bc for the lower boundary
+  for (int iDim=0;iDim<3;iDim++) if ((node->GetNeibFace(iDim*2,0,0)==NULL) && index[iDim]==0 ) {
     //the point is located at the boundary of the domain
     MatrixRowNonZeroElementTable[0].i=i,MatrixRowNonZeroElementTable[0].j=j,MatrixRowNonZeroElementTable[0].k=k,MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
     MatrixRowNonZeroElementTable[0].iVar=0;
 
-    rhs=1.0;
+    rhs=100.0;   // boundary value
     NonZeroElementsFound=1;
 
     return;
   }
 
-  //the point is within the domain
-  MatrixRowNonZeroElementTable[0].i=i-1,MatrixRowNonZeroElementTable[0].j=j,MatrixRowNonZeroElementTable[0].k=k,MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
-  MatrixRowNonZeroElementTable[1].i=i+1,MatrixRowNonZeroElementTable[1].j=j,MatrixRowNonZeroElementTable[1].k=k,MatrixRowNonZeroElementTable[1].MatrixElementValue=1.0;
-
-  MatrixRowNonZeroElementTable[2].i=i,MatrixRowNonZeroElementTable[2].j=j-1,MatrixRowNonZeroElementTable[2].k=k,MatrixRowNonZeroElementTable[2].MatrixElementValue=1.0;
-  MatrixRowNonZeroElementTable[3].i=i,MatrixRowNonZeroElementTable[3].j=j+1,MatrixRowNonZeroElementTable[3].k=k,MatrixRowNonZeroElementTable[3].MatrixElementValue=1.0;
-
-  MatrixRowNonZeroElementTable[4].i=i,MatrixRowNonZeroElementTable[4].j=j,MatrixRowNonZeroElementTable[4].k=k+1,MatrixRowNonZeroElementTable[4].MatrixElementValue=1.0;
-  MatrixRowNonZeroElementTable[5].i=i,MatrixRowNonZeroElementTable[5].j=j,MatrixRowNonZeroElementTable[5].k=k-1,MatrixRowNonZeroElementTable[5].MatrixElementValue=1.0;
-
-  MatrixRowNonZeroElementTable[6].i=i,MatrixRowNonZeroElementTable[5].j=j,MatrixRowNonZeroElementTable[5].k=k,MatrixRowNonZeroElementTable[5].MatrixElementValue=-6.0;
-
-  for (int ii=0;ii<7;ii++) MatrixRowNonZeroElementTable[ii].iVar=0;
-
-  rhs=0.0;
-  NonZeroElementsFound=7;
+ 
+  int iElement = 0;
+  int nDirBoundary =0;
+  //the point is within the domain, fill matrix for neighbor cells
+  rhs =0.0;
+  for (int ii=0;ii<3; ii++){
+    int jMax =2;
+    // set bc for the neihbor cell of higher boundary
+    if (index[ii]== nCell[ii]-1 && node->GetNeibFace(2*ii+1,0,0)==NULL) {
+      jMax = 1;
+      nDirBoundary++;
+      rhs -= 100; //boundary condition
+    } 
+   
+    int addition[2]={-1,1};
+    for (int jj=0;jj<jMax;jj++){             
+      MatrixRowNonZeroElementTable[iElement].i=(ii!=0)?i:i+addition[jj];
+      MatrixRowNonZeroElementTable[iElement].j=(ii!=1)?j:j+addition[jj];
+      MatrixRowNonZeroElementTable[iElement].k=(ii!=2)?k:k+addition[jj];
+      MatrixRowNonZeroElementTable[iElement].MatrixElementValue=1.0;
+      MatrixRowNonZeroElementTable[iElement].iVar=0;
+      iElement++;
+    }
+  }
+  // for the cell itself
+  MatrixRowNonZeroElementTable[iElement].i=i;
+  MatrixRowNonZeroElementTable[iElement].j=j;
+  MatrixRowNonZeroElementTable[iElement].k=k;
+  MatrixRowNonZeroElementTable[iElement].MatrixElementValue=-6.0;
+  MatrixRowNonZeroElementTable[iElement].iVar=0;
+  iElement++;
+  
+  NonZeroElementsFound=iElement;
 }
 
 //set the initial guess for the unknowns' values
 void SetInitialGuess(double *x,PIC::Mesh::cDataCornerNode* CornerNode) {
-
+  x[0]=0.0;
 }
 
 void ProcessFinalSolution(double *x,PIC::Mesh::cDataCornerNode* CornerNode) {
-
+  char * offset=CornerNode->GetAssociatedDataBufferPointer();
+  int CurrentCornerNodeOffset =0;
+  ((double*)(offset+CurrentCornerNodeOffset))[0]=x[0];
 }
 
 
@@ -562,7 +600,8 @@ int main(int argc,char **argv) {
   sprintf(mesh,"amr.sig=%s.mesh.bin","test_mesh");
 
   PIC::Mesh::mesh.AllowBlockAllocation=false;
-  PIC::BC::ExternalBoundary::Periodic::Init(xmin,xmax,BulletLocalResolution);
+  //PIC::BC::ExternalBoundary::Periodic::Init(xmin,xmax,BulletLocalResolution);
+  PIC::Mesh::mesh.init(xmin,xmax,BulletLocalResolution);
   PIC::Mesh::mesh.memoryAllocationReport();
 
   //generate mesh or read from file
@@ -617,14 +656,14 @@ int main(int argc,char **argv) {
   PIC::Mesh::mesh.AllocateTreeBlocks();
   PIC::Mesh::mesh.InitCellMeasure();
 
-  //initiate the SWMF's GMRES solvers
-  cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode> Solver1(1,CurrentCornerNodeOffset);
+ 
 //  cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode> Solver2(2,CurrentCornerNodeOffset+sizeof(double));
 
   PIC::DomainBlockDecomposition::UpdateBlockTable();
 
   Solver1.Reset();
   Solver1.BuildMatrix(GetTestStencil);
+  linear_solver_matvec_c = solver1_matvec;
   Solver1.Solve(SetInitialGuess,ProcessFinalSolution);
 
   double *xx;
@@ -673,35 +712,14 @@ int main(int argc,char **argv) {
  
 
   // countNumbers();
+  PIC::Mesh::mesh.ParallelBlockDataExchange();
+  
+  char wave_init_fname[STRING_LENGTH];
+  sprintf(wave_init_fname,"test-solver-init.dat");   
 
-  
-  for (int iPar=0;iPar<parSize; iPar++ ){
-    newNode=PIC::Mesh::mesh.findTreeNode(xparticle[iPar]);
-    
-    if (newNode->Thread==PIC::ThisThread) {
-      PIC::Mesh::mesh.fingCellIndex(xparticle[iPar],i,j,k,newNode);
-      
-      newParticle=PIC::ParticleBuffer::GetNewParticle(newNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
-      
-      PIC::ParticleBuffer::SetV(v[iPar],newParticle);
-      PIC::ParticleBuffer::SetX(xparticle[iPar],newParticle);
-      PIC::ParticleBuffer::SetI(0,newParticle);
-    }
-  }
-  
-  printf("test3\n");
-  
-  int nTest=4;
-  double waveCenter[][3]={{1.0,0.0,0.0},{0.0,-0.5,0.0},{0.0,0.0,-0.5},{1.0,-0.5,-0.5}};
-  double waveNumber[][3]={{1.0,0.0,0.0},{0.0,-1.0,0.0},{0.0,0.0,-1.0},{4./sqrt(16.+25.+49),5./sqrt(16.+25.+49),7./sqrt(16.+25.+49)}};
-  double vProp[][3]={{1.0,0.0,0.0},{0.0,-1.0,0.0},{0.0,0.0,-1.0},{4./sqrt(16.+25.+49),5./sqrt(16.+25.+49),7./sqrt(16.+25.+49)}};
-  double waveWidth=2;
+  PIC::Mesh::mesh.outputMeshDataTECPLOT(wave_init_fname,0);
 
-  for (int iTest=0; iTest<nTest; iTest++){
-    
-    test_wave(iTest,nVars, waveCenter[iTest], waveNumber[iTest], waveWidth, vProp[iTest]);
-  
-  }
+ 
   MPI_Finalize();
   cout << "End of the run" << endl;
 
