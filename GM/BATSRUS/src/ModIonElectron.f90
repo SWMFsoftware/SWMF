@@ -13,7 +13,7 @@ module ModIonElectron
   use ModB0,       ONLY: UseB0, B0_DGB
   use ModMultiFluid, ONLY: nIonFluid, nTrueIon, Electron_, &
        iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,   &
-       ChargePerMass_I, MassIon_I, ChargeIon_I
+       iPIon_I, ChargePerMass_I, MassIon_I, ChargeIon_I
   use BATL_lib,    ONLY: nI, nJ, nK, x_, y_, z_
 
   implicit none
@@ -284,13 +284,15 @@ contains
   !============================================================================
 
   subroutine correct_electronfluid_efield(State_VG, iMin, iMax, jMin, jMax, &
-       kMin, kMax, iBlock, DoHallCurrentIn, DoGradPeIn, DoCorrectEfieldIn)
+       kMin, kMax, iBlock, DoHallCurrentIn, DoGradPeIn, DoCorrectPeIn,      &
+       DoCorrectEfieldIn)
 
     ! The subroutine will correct the electron fluid and electric field
     ! based on the Hall MHD case.
 
-    use ModSize, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
+    use ModSize,       ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nG
     use ModMultiFluid, ONLY: iPIon_I
+    use ModB0,         ONLY: UseB0, B0_DGB
     use ModCellGradient,   ONLY: calc_gradient
     use ModCurrent,        ONLY: get_current
 
@@ -298,12 +300,13 @@ contains
     integer, intent(in)    :: iMin, iMax, jMin, jMax, kMin, kMax
     integer, intent(in)    :: iBlock
     logical, optional, intent(in) :: DoHallCurrentIn, DoGradPeIn
+    logical, optional, intent(in) :: DoCorrectPeIn
     logical, optional, intent(in) :: DoCorrectEfieldIn
 
     integer :: i,j,k
-    real    :: Current_D(3), GradPe_D(3)
+    real    :: Current_D(3), GradPe_D(3), B0_D(3)
     real, allocatable :: GradPe_DG(:,:,:,:)
-    logical :: DoHallCurrent, DoGradPe, DoCorrectEfield
+    logical :: DoHallCurrent, DoGradPe, DoCorrectEfield, DoCorrectPe
 
     logical :: DoTestCell
 
@@ -321,6 +324,9 @@ contains
 
     DoGradPe = .false.
     if (present(DoGradPeIn)) DoGradPe = DoGradPeIn
+
+    DoCorrectPe = .false.
+    if (present(DoCorrectPeIn)) DoCorrectPe = DoCorrectPeIn
 
     DoCorrectEfield = .false.
     if (present(DoCorrectEfieldIn)) DoCorrectEfield = DoCorrectEfieldIn
@@ -344,8 +350,11 @@ contains
        end if
        if (DoGradPe) GradPe_D = GradPe_DG(:,i,j,k)
 
-       call correct_electronfluid_efield_cell(State_VG(:,i,j,k), &
-            Current_D, GradPe_D, DoCorrectEfield, DoTestCell)
+       B0_D = 0.0
+       if (UseB0) B0_D = B0_DGB(:,i,j,k,iBlock)
+
+       call correct_electronfluid_efield_cell(State_VG(:,i,j,k), B0_D,     &
+            Current_D, GradPe_D, DoCorrectPe, DoCorrectEfield, DoTestCell)
     end do; end do; end do
 
     if (allocated(GradPe_DG)) deallocate(GradPe_DG)
@@ -361,14 +370,16 @@ contains
     use ModCoordTransform, ONLY: cross_product
 
     real,    intent(inout) :: State_V(nVar)
+    real,    intent(in)    :: B0_D(3)
     real,    intent(in)    :: Current_D(3)
     real,    intent(in)    :: GradPe_D(3)
+    logical, intent(in)    :: DoCorrectPe
     logical, intent(in)    :: DoCorrectEfield
     logical, intent(in)    :: DoTest
 
     integer :: iVar
     real    :: nElec, InvElectronDens, uElec_D(3), Bfield_D(3), Efield_D(3)
-    real    :: uPlus_D(3)
+    real    :: uPlus_D(3), Te
     real    :: StateOld_V(nVar)
 
     integer, parameter :: ElecUx_ = iRhoUxIon_I(Electron_),  &
@@ -379,6 +390,10 @@ contains
 
     ! save the old state_V for testing
     StateOld_V = State_V
+
+    ! original electron temperature
+    Te = State_V(iPIon_I(Electron_))*MassIon_I(Electron_) &
+         /State_V(iRhoIon_I(Electron_))
 
     ! inv of electron charge density = 1/(e*ne)
     InvElectronDens = 1.0/sum( &
@@ -399,12 +414,15 @@ contains
     uElec_D  = uPlus_D - Current_D*InvElectronDens
 
     ! calculate the electric field E = -ue x B - gradpe/ne/e
-    Bfield_D = State_V(Bx_:Bz_)
+    Bfield_D = State_V(Bx_:Bz_) + B0_D
     Efield_D = -cross_product(uElec_D,Bfield_D) - GradPe_D*InvElectronDens
 
     ! correct the electron mass density and velocity
     State_V(iRhoIon_I(Electron_))  = nElec*MassFluid_I(Electron_)
     State_V(ElecUx_:ElecUz_)       = State_V(iRhoIon_I(Electron_))*uElec_D
+
+    ! correct the electron pressure based on the original Te if needed
+    if (DoCorrectPe) State_V(iPIon_I(Electron_)) = nElec*Te
 
     ! correct the electric field
     if (DoCorrectEfield) State_V(Ex_:Ez_) = Efield_D
