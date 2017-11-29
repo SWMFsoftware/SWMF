@@ -190,7 +190,7 @@ contains
           elseif(index(StringOrderMode, 'radius' ) > 0)then
              iOrderMode = Radius_
           else
-             call CON_stop(NameThisComp//':'//NameSub //&
+             call stop_mpi(NameThisComp//':'//NameSub //&
                   ": unknown ordering mode")
           end if
           !--------------------------------------------------------------
@@ -288,7 +288,7 @@ contains
     call count_new_lines() ! nLineAllProc = sum(nLineThisProc)
     nFieldLine    = nFieldLine + nLineAllProc
     if(nFieldLine > nFieldLineMax)&
-         call CON_stop(NameThisComp//':'//NameSub//&
+         call stop_mpi(NameThisComp//':'//NameSub//&
          ': Limit for number of particle field lines exceeded')
     !\
     ! Save number of regular particles
@@ -309,7 +309,7 @@ contains
     ! check if trace mode is specified
     if(present(iTraceModeIn))then
        if(abs(iTraceModeIn) > 1)&
-            call CON_stop(&
+            call stop_mpi(&
             NameThisComp//':'//NameSub//': incorrect tracing mode')
        iTraceMode = iTraceModeIn
     else
@@ -821,7 +821,7 @@ contains
             ': trying to extract line at region with zero magnetic field'//&
             ' at location X = ', &
             Xyz_D(1), ' Y = ', Xyz_D(2), ' Z = ', Xyz_D(3)
-       call CON_stop(StringError)
+       call stop_mpi(StringError)
     end if
     ! normalize vector to unity
     Dir_D(1:nDim) = B_D(1:nDim) / sum(B_D(1:nDim)**2)**0.5
@@ -1001,7 +1001,7 @@ contains
          i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
          if(State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell) <= 0)&
-              call CON_stop(NameSub//": zero or negative plasma density")
+              call stop_mpi(NameSub//": zero or negative plasma density")
          ! convert momentum to velocity
          V_D = V_D + &
               State_VGB(RhoUx_:RhoUz_,i_D(1),i_D(2),i_D(3),iBlock) / &
@@ -1069,7 +1069,7 @@ contains
           end if
        end do
     end do IND
-    if(nData /= nVarOut + nIndexOut)call CON_stop(&
+    if(nData /= nVarOut + nIndexOut)call stop_mpi(&
          'Unrecognized some of the names: '//NameVar)
     DataOut_VI = 0
     ! store variables
@@ -1119,7 +1119,7 @@ contains
        NameVar = '"X", "Y", "Z"'
        NameVar = trim(NameVar)//', "FieldLine"'
     case default
-       call CON_stop(NameSub//' ERROR invalid plot form='//plot_form(iFile))
+       call stop_mpi(NameSub//' ERROR invalid plot form='//plot_form(iFile))
     end select
 
     ! name of output files

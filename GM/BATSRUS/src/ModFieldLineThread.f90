@@ -185,7 +185,7 @@ contains
 
     call read_var('UseFieldLineThreads', UseFieldLineThreads)
     if(UseFieldLineThreads)then
-       if(iSession/=1)call CON_stop(&
+       if(iSession/=1)call stop_mpi(&
             'UseFieldLineThreads can only be set ON during the first session')
        if(.not.allocated(DoThreads_B))then
           allocate(        DoThreads_B(MaxBlock))
@@ -472,7 +472,7 @@ contains
           if(nTrial==nCoarseMax)then
              CosBRMin = ( (RStart**2-rBody**2)/nPointThreadMax +Ds**2)/&
                   (2*rBody*Ds)
-             if(CosBRMin>0.9)call CON_stop('Increase nPointThreadMax')
+             if(CosBRMin>0.9)call stop_mpi('Increase nPointThreadMax')
           end if
           POINTS: do
              iPoint = iPoint + 1
@@ -526,7 +526,7 @@ contains
        end do COARSEN
        if(R > rBody)then
           write(*,*)'iPoint, R=', iPoint, R
-          call CON_stop('Thread did not reach the photosphere!')
+          call stop_mpi('Thread did not reach the photosphere!')
        end if
 
        ! Calculate more accurately the intersection point
@@ -735,7 +735,7 @@ contains
       integer:: iTable
       !------------------------------------------------------------------------
       iTable = i_lookup_table('TR')
-      if(iTable<=0)call CON_stop('TR table is not set')
+      if(iTable<=0)call stop_mpi('TR table is not set')
 
       HeatFluxXLength = 2*PoyntingFluxPerBSi*&
            BLength*No2Si_V(UnitX_)*No2Si_V(UnitB_)
@@ -877,7 +877,7 @@ contains
        IsFirstCall=.false.
        iTable = i_lookup_table('radcool')
        if(iTable<=0)&
-            call CON_stop('Transition region table needs radcool table')
+            call stop_mpi('Transition region table needs radcool table')
 
        TeSi_I(1) = 1.0e4; LPe_I(1) = 0.0; UHeat_I(1) = 0.0
        do iTe = 2,500
@@ -962,7 +962,7 @@ contains
        if(Unused_B(iBlock))CYCLE
        if(.not.IsAllocatedThread_B(iBlock))CYCLE
        if(BoundaryThreads_B(iBlock)%iAction /= Done_)&
-            call CON_stop('An attempt to readvance not advanced threads')
+            call stop_mpi('An attempt to readvance not advanced threads')
        BoundaryThreads_B(iBlock)%iAction = iAction
     end do
 

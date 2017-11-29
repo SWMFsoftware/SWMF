@@ -783,10 +783,10 @@ contains
        !\
        ! More work is to be done for if .not.UseIdealEos or UseMultion
        !/
-       if(.not.UseIdealEos)call CON_stop(&
+       if(.not.UseIdealEos)call stop_mpi(&
             'No explicit ei heat exchange for non-idealized plasmas')
 
-       if(UseMultiion)call CON_stop(&
+       if(UseMultiion)call stop_mpi(&
             'No explicit ei heat exchange for non-idealized plasmas')
 
        do k = 1, nK; do j = 1, nJ; do i = 1, nI

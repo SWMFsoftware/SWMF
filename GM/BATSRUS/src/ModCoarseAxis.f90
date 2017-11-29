@@ -51,7 +51,7 @@ contains
     call read_var('UseCoarseAxis', UseCoarseAxis)
     call read_var('nCoarseLayer', nCoarseLayer)
     if( ( nJ/(2**nCoarseLayer) )*(2**nCoarseLayer)/=nJ)&
-         call CON_stop('nJ must be a multiple of 2^nCoarseLayer')
+         call stop_mpi('nJ must be a multiple of 2^nCoarseLayer')
     call test_stop(NameSub, DoTest)
   end subroutine read_coarse_axis_param
   !============================================================================
@@ -75,7 +75,7 @@ contains
     case(SouthHemiSph_)
        k =  1 + nCoarseLayer; kStride = -1; jMerge = 1
     case default
-       call CON_stop('Algorithmic Error in'//NameSub)
+       call stop_mpi('Algorithmic Error in'//NameSub)
     end select
 
     do kLayer = 1, nCoarseLayer

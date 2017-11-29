@@ -247,9 +247,9 @@ contains
           t_max = EndTime - StartTime
           nIter = -1
           if(IsStandAlone)then
-             if(.not.time_accurate)call CON_stop( &
+             if(.not.time_accurate)call stop_mpi( &
                   '#ENDTIME command cannot be used in steady-state mode')
-             if(.not.IsLastRead) call CON_stop(&
+             if(.not.IsLastRead) call stop_mpi(&
                   '#ENDTIME command can be used in the last session only')
           end if
        end if

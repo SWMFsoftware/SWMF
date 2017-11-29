@@ -193,7 +193,7 @@ contains
 
     call check_tr_table
     iTableTR = i_lookup_table('TR')
-    if(iTableTR<=0)call CON_stop('TR table is not set')
+    if(iTableTR<=0)call stop_mpi('TR table is not set')
     !\
     ! Dimensionless temperature floor
     !/
@@ -435,7 +435,7 @@ contains
        BoundaryThreads_B(iBlock)%PSi_III(1-nPoint:0,j,k)  = PSi_I(1:nPoint)
     case default
        write(*,*)'iAction=',iAction
-       call CON_stop('Unknown action in '//NameSub)
+       call stop_mpi('Unknown action in '//NameSub)
     end select
     !\
     ! Outputs
@@ -550,7 +550,7 @@ contains
                TeSiStart_I(iPoint),&
                PSi_I(iPoint),ResHeating_I(iPoint), ResEnthalpy_I(iPoint)
        end do
-       call CON_stop('Failure')
+       call stop_mpi('Failure')
     end if
     if(DoTestCell)then
        write(*,*)'AMajorOut=    ', AMajorOut
@@ -861,7 +861,7 @@ contains
          write(*,'(a,5es15.6)')&
               'Input parameters: TeSiIn,USiIn,USi,PeSiIn,PCoef=',&
               TeSiIn,USiIn,USi,PeSiIn,PressureTRCoef
-         call CON_stop('Algorithm failure in advance_thread')
+         call stop_mpi('Algorithm failure in advance_thread')
       end if
     end subroutine advance_thread
     !==========================================================================
@@ -884,7 +884,7 @@ contains
             write(*,*)'iPoint=',iPoint,' PSi_I(iPoint)=',&
                  PSi_I(iPoint),' TeSi_I(iPoint)=',TeSi_I(iPoint),&
                  ' TiSi_I(iPoint)=',TiSi_I(iPoint)
-            call CON_stop('Non-positive Density in '//NameSub)
+            call stop_mpi('Non-positive Density in '//NameSub)
          end if
          SqrtRho = sqrt(RhoNoDim)
          !\
@@ -1023,7 +1023,7 @@ contains
             write(*,*)'In the point Xyz=',Xyz_DGB(:,1,j,k,iBlock)
             write(*,*)'TeSiIn, PeSiIn = ', TeSiIn, PeSiIn
             write(*,*)'TeSi_I=',TeSi_I(1:nPoint)
-            call CON_stop('Stop!!!')
+            call stop_mpi('Stop!!!')
          end if
          call interpolate_lookup_table(iTableTR, TeSi_I(iPoint), 1.0e8, &
               Value_V, &
@@ -1066,7 +1066,7 @@ contains
     character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
     !--------------------------------------------------------------------------
     if (det(M_VVI(:,:,1)) == 0.0) then
-       call CON_stop('Error in tridiag: M_I(1)=0')
+       call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
     TildeM_VV = M_VVI(:,:,1)
     TildeMInv_VV = inverted(TildeM_VV)
@@ -1088,7 +1088,7 @@ contains
        if (det(TildeM_VV) == 0.0) then
           write(*,*)'j, M_I(j), L_I(j), TildeMInvDotU_I(j) = ',j, &
                M_VVI(:,:,j),L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j)
-          call CON_stop('3*3 block Tridiag failed')
+          call stop_mpi('3*3 block Tridiag failed')
        end if
        !\
        ! Next element of inverted(Tilde(M))
@@ -1271,7 +1271,7 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     if(present(iImplBlock))then
        if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
-            call CON_stop('Algorithm error in '//NameSub)
+            call stop_mpi('Algorithm error in '//NameSub)
        iAction=Impl_
     else
        iAction=BoundaryThreads_B(iBlock)%iAction
@@ -1303,7 +1303,7 @@ contains
                /State_VGB(Rho_,1,j,k,iBlock)
        end do; end do
     else
-       call CON_stop('Generic EOS is not applicable with threads')
+       call stop_mpi('Generic EOS is not applicable with threads')
     end if
     do k = 1, nK; do j = 1, nJ
        B1_D = State_VGB(Bx_:Bz_,1,j,k,iBlock)

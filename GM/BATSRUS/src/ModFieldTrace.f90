@@ -3142,7 +3142,7 @@ contains
        if(.not.IsSingleLine)NameVar = trim(NameVar)//', "Index"'
        NameVar = trim(NameVar)//', "Length"'
     case default
-       call CON_stop(NameSub//' ERROR invalid plot form='//plot_form(iFile))
+       call stop_mpi(NameSub//' ERROR invalid plot form='//plot_form(iFile))
     end select
 
     ! Write out plot files
@@ -3607,7 +3607,6 @@ contains
     character(len=*), parameter:: NameSub = 'write_plot_ieb'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     if(DoTest)write(*,*)NameSub,': starting'
 

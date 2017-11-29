@@ -1113,7 +1113,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(TypeGeometry/='rz')call CON_stop(&
+    if(TypeGeometry/='rz')call stop_mpi(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
 
     do iBeam = 1, nBeam
@@ -1200,7 +1200,7 @@ contains
     ! (2) rays at the outer r-boundary possibly start to the right of the
     !     critical density or the immediate left
 
-    if(TypeGeometry/='rz')call CON_stop(&
+    if(TypeGeometry/='rz')call stop_mpi(&
          'Dont use TypeBeam='//TypeBeam//' with TypeGeometry='//TypeGeometry)
 
 !    nRayPerHalfBeam = (nRayPerBeam - 1)/2

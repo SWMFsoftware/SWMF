@@ -1130,7 +1130,6 @@ contains
     character(len=*), parameter:: NameSub = 'write_geoind_restart'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     ! Ensure that restart files are only written from head node.
     if(iProc/=0) RETURN
@@ -1171,7 +1170,6 @@ contains
     character(len=*), parameter:: NameSub = 'read_geoind_restart'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     do iDim=1, 2
 

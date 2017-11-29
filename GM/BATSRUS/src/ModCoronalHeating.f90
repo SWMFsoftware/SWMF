@@ -217,7 +217,7 @@ contains
              end if
           end do
        else
-          call CON_stop(NameSub//': '//TypeGeometry// &
+          call stop_mpi(NameSub//': '//TypeGeometry// &
               ' geometry is not yet implemented')
        end if
        if(nProc>1)then

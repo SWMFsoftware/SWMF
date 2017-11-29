@@ -165,7 +165,6 @@ contains
     character(len=*), parameter:: NameSub = 'init_mod_magperturb'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     if(.not.(DoSaveMags .or. DoSaveGridmag .or. DoWriteIndices)) RETURN
 
@@ -281,7 +280,6 @@ contains
     character(len=*), parameter:: NameSub = 'init_geoindices'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     ! Set number of shared magnetometers.
     if(DoCalcKp)  nIndexMag = nIndexMag+nKpMag
@@ -582,7 +580,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     ! Obtain locations in correct (GSM) coordinates.
     SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
@@ -678,7 +675,6 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
     call timing_start(NameSub)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
        ! Obtain locations in correct (GSM) coordinates.
     SmgToGm_DD = transform_matrix(Time_simulation, 'SMG', TypeCoordSystem)
@@ -753,8 +749,6 @@ contains
     character(len=*), parameter:: NameSub = 'check_mag_input_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     ! Read file on the root processor
     if (iProc == 0) then
@@ -841,7 +835,6 @@ contains
     character(len=*), parameter:: NameSub = 'read_mag_input_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     ! Read file on the root processor
     if (iProc == 0) then
@@ -895,7 +888,6 @@ contains
     character(len=*), parameter:: NameSub = 'open_magnetometer_output_file'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test('open_magnetometer_output_files', DoTest, DoTest)
 
     ! Magnetometer grid file or regular file?
     if(NameGroupIn == 'stat')then
@@ -909,7 +901,7 @@ contains
        iEnd         = nMagnetometer+nGridMag
        TypeFileNow  = TypeGridFileOut
     else
-       call CON_stop('open_magnetometer_output_files: unrecognized ' // &
+       call stop_mpi('open_magnetometer_output_files: unrecognized ' // &
             'magnetometer group: '//NameGroupIn)
     end if
 
@@ -972,7 +964,6 @@ contains
     character(len=*), parameter:: NameSub = 'write_geoindices'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     ! Calculate indices on all nodes.
     if(DoCalcKp) call calc_kp
@@ -1036,7 +1027,6 @@ contains
     character(len=*), parameter:: NameSub = 'write_magnetometers'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-    call CON_set_do_test(NameSub, DoTest, DoTest)
 
     ! Configure output to cover specific magnetometer group:
     if (NameGroupIn == 'stat') then
@@ -1052,7 +1042,7 @@ contains
        TypeCoordNow = TypeCoordGrid
        TypeFileNow  = TypeGridFileOut  ! should be "2d"
     else
-       call CON_stop(NameSub// &
+       call stop_mpi(NameSub// &
             ': Unrecognized magnetometer group: '//NameGroupIn)
     end if
 
@@ -1167,7 +1157,7 @@ contains
        case('ascii', 'real4', 'real8', 'tec')
           call write_mag_2d
        case('station')
-          call CON_stop(NameSub//': separate mag files not implemented yet.')
+          call stop_mpi(NameSub//': separate mag files not implemented yet.')
        end select
 
     end if

@@ -938,7 +938,7 @@ contains
             else
                ! If this component is multyfluid and coupled to a single-fluid,
                ! stop with an error
-               call CON_stop( &
+               call stop_mpi( &
                     NameSub//': BCs for multifluid must be specified.')
             end if
          end if

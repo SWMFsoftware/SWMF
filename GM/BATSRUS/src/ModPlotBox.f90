@@ -189,13 +189,6 @@ contains
     character(len=*), parameter:: NameSub = 'set_plot_box'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    if(iBlock == iBlockTest)then
-       call CON_set_do_test(NameSub, DoTest, DoTest)
-    else
-       DoTest = .false.; DoTest = .false.
-    end if
-
-    if (DoTest) write(*,*) NameSub//' Called for iBlock=      ', iBlock
 
     ! Shift box elements with origin of box
     do k = 1, nZ
@@ -273,7 +266,7 @@ contains
     call test_start(NameSub, DoTest)
 
     ! This subroutine does not support HDF output.
-    if(plot_form(iFile) == 'hdf') call CON_stop(NameSub// &
+    if(plot_form(iFile) == 'hdf') call stop_mpi(NameSub// &
          ': HDF file type is not supported for BOX output.')
 
     ! Collect results to head node

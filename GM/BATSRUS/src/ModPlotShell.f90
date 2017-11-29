@@ -126,13 +126,6 @@ contains
     character(len=*), parameter:: NameSub = 'set_plot_shell'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    if(iBlock == iBlockTest)then
-       call CON_set_do_test(NameSub, DoTest, DoTest)
-    else
-       DoTest = .false.; DoTest = .false.
-    end if
-
-    if (DoTest) write(*,*) NameSub//' Called for iBlock=      ', iBlock
 
     ! Loop through shell points and interpolate PlotVar
     do i = 1, nR
@@ -200,7 +193,7 @@ contains
     call test_start(NameSub, DoTest)
 
     ! This subroutine does not support HDF output.
-    if(plot_form(iFile) == 'hdf') call CON_stop(NameSub// &
+    if(plot_form(iFile) == 'hdf') call stop_mpi(NameSub// &
          ': HDF file type not supported for Geo Sphere output.')
 
     ! Collect results to head node

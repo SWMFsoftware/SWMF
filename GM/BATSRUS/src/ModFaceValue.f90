@@ -162,7 +162,7 @@ contains
                 EXIT
              end if
           end do
-          if(iVar > nVar) call CON_stop(NameSub// &
+          if(iVar > nVar) call stop_mpi(NameSub// &
                ' could not find NameVarLimitRatio='//NameVar_I(i))
        end do
 
@@ -181,7 +181,7 @@ contains
        call read_var('StringLowOrderRegion', StringLowOrderRegion)
        UseLowOrderRegion = .true.
     case default
-       call CON_stop(NameSub//' invalid command='//trim(NameCommand))
+       call stop_mpi(NameSub//' invalid command='//trim(NameCommand))
     end select
 
     call test_stop(NameSub, DoTest)

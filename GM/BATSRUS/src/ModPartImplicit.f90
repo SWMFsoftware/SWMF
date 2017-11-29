@@ -1607,7 +1607,7 @@ contains
       ! Calculate div B for middle cell contribution to Powell's source terms
       !------------------------------------------------------------------------
       if(IsCartesianGrid)then
-         if(IsRzGeometry)call CON_stop('impl_divbsrc_init not working for RZ')
+         if(IsRzGeometry)call stop_mpi('impl_divbsrc_init not working for RZ')
 
          DivB_C = &
               ( Impl_VGB(Bx_,2:nI+1,1:nJ,1:nK,iBlockImpl)           &

@@ -172,7 +172,7 @@ contains
     if(iData > nBuffer)then
        write(*,*)'ERROR in load_balance: iData=',iData,&
             ' > nBuffer=',nBuffer
-       call CON_stop(NameSub//'load_balnce: increase nBuffer')
+       call stop_mpi(NameSub//'load_balnce: increase nBuffer')
     end if
 
     call test_stop(NameSub, DoTest, iBlock)

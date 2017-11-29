@@ -161,7 +161,7 @@ contains
     ! read in nGrid
     read(UnitTmp_,*,iostat=iError) nGrid
 
-    if(iError /= 0) call CON_stop(NameSub// &
+    if(iError /= 0) call stop_mpi(NameSub// &
          ' could not read nGrid from file ' // trim(NameFile))
 
     ! Allocate LogRGen_I
@@ -174,7 +174,7 @@ contains
        read(UnitTmp_, *, IOSTAT=iError) LogR
        if(iError /= 0) then
           write(*,*) NameSub,': ERROR at i=',i
-          call CON_stop(NameSub//' could not read logR from '//trim(NameFile))
+          call stop_mpi(NameSub//' could not read logR from '//trim(NameFile))
        end if
        LogRGen_I(i) = LogR
     enddo
