@@ -67,7 +67,7 @@ contains
           allocate(iVarUseCmax_I(nVar))
           iVarUseCmax_I = (/(iVar, iVar = 1, nVar)/)
        else if (StringVarUseCmax == 'default') then
-          allocate(iVarUseCmax_I(nVar))
+          allocate(iVarUseCmax_I(4))
           iVarUseCmax_I = (/Ex_, Ey_, Ez_, HypE_/)
        else
           call split_string(StringVarUseCmax, NameVarUseCmax_I, nVarUseCmax)
