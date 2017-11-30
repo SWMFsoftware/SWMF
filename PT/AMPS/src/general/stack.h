@@ -80,9 +80,9 @@ public:
   void resetStack() {
     long int databank,offset;
 
-    for (databank=0;databank<dataBufferListPointer;databank++) 
-      for (offset=0;offset<_GENERAL_STACK_DEFAULT_BUFFER_BUNK_SIZE_;offset++) 
-	elementStackList[databank][offset]=dataBufferList[databank]+offset; 
+    for (databank=0;databank<dataBufferListPointer;databank++) {
+      for (offset=0;offset<_GENERAL_STACK_DEFAULT_BUFFER_BUNK_SIZE_;offset++) elementStackList[databank][offset]=dataBufferList[databank]+offset;
+    }
 
     elementStackPointer=0;
   }
@@ -199,11 +199,14 @@ public:
 
     nMaxElements=0,elementStackList=NULL,elementStackPointer=0;
     dataBufferList=0,dataBufferList=NULL,dataBufferListSize=0,dataBufferListPointer=0;
-
   }
 
   cStack() {
     explicitConstructor();
+  }
+
+  ~cStack() {
+    clear();
   }
 
   long int capasity() {return nMaxElements-elementStackPointer;}
