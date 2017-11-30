@@ -325,7 +325,7 @@ OBJ_INTERPOLATE_AMR = \
 	test_interpolate_amr.o
 
 test_interpolate_amr_exe:
-	@(cd ../src; make ModKind.o; make ModRandomNumber.o; make ModInterpolateAMR.o)
+	@(cd ../src; make ModKind.o; make ModRandomNumber.o; make ModUtility.o; make ModInterpolateAMR.o)
 	@make test_interpolate_amr.o
 	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
 
