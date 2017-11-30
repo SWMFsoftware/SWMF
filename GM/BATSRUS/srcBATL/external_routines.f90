@@ -2,6 +2,8 @@
 subroutine user_specify_region(iArea, iBlock, nValue, NameLocation, &
      IsInside, IsInside_I, Value_I)
 
+  use ModUtilities, ONLY: CON_stop
+
   implicit none
 
   integer,   intent(in):: iArea        ! area index in BATL_region
