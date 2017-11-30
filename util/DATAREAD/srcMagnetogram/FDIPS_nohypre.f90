@@ -44,6 +44,8 @@ end module ModHypre
 !============================================================
 subroutine read_hypre_param
 
+  use ModUtilities, ONLY: CON_stop
+
   call CON_stop('FDIPS is compiled without HYPRE')
 
 end subroutine read_hypre_param
