@@ -303,9 +303,10 @@ contains
        end select
     end if
     Router%iAuxStart = Router%iCoordEnd + 1
-    Router%iAuxEnd   = Router%iCoordEnd + nMappedPointIndex
+    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
     Router%nVar      = Router%iAuxEnd
 
+    nProc=Router%nProc
     nullify(Router%BufferSource_II)
     call allocate_buffer_source(Router, nProc)
     Router%nBufferSource = nProc
@@ -313,8 +314,6 @@ contains
     call allocate_buffer_target(Router, nProc)
     Router%nBufferTarget = nProc
  
-    nProc=Router%nProc
-
     !Allocation:
     allocate(Router%nGet_P(0:nProc-1),stat=iError)
     call check_allocate(iError,'nGet_P')
@@ -2151,7 +2150,7 @@ contains
     real :: Weight_I(2**GDTarget%nDim)
     real   :: XyzPass_D(GDTarget%nDim) 
     integer:: iImage, nImage, nImageMax, nImagePart
-    integer:: nAux, nDimTarget, nIndexTarget
+    integer:: nDimTarget, nIndexTarget
     logical:: DoInterpolate
     character(len=*), parameter:: NameSub='update_semi_router_at_target'
 
@@ -2168,18 +2167,6 @@ contains
 
     DoInterpolate = present(interpolate)
 
-    !\
-    ! Stage 3 set semi-router for source
-    !/
-    ! process the data that has been received
-    !\
-    ! Temporary: to be removed
-    !/
-    Router%iCoordStart         = 1
-    Router%iCoordEnd = GDTarget%nDim
-    Router%iAuxStart = Router%iCoordEnd + 1
-    Router%nVar      = Router%iCoordEnd + Router%nMappedPointIndex
-    Router%iAuxEnd   = Router%iCoordEnd + Router%nMappedPointIndex
     nDimTarget       = GDTarget%nDim
     nIndexTarget     = Router%nIndexTarget
 
@@ -2256,7 +2243,7 @@ contains
     real,   pointer,    optional,intent(inout):: PBuffer_I(:),PBuffer_II(:,:)
     integer,allocatable,optional,intent(inout):: iBuffer_I(:),iBuffer_II(:,:)
     logical,allocatable,optional,intent(inout)::DoBuffer_I(:)
-
+    integer:: iError
     logical:: IsPresent_I(7)
     character(len=*), parameter:: NameSub= &
          'CON_router:check_buffer'
@@ -2280,7 +2267,8 @@ contains
                 RETURN
              end if
           end if
-          allocate(Buffer_I(nSize_I(1)))
+          allocate(Buffer_I(nSize_I(1)),stat=iError)
+          call check_allocate(iError,NameSub)
           RETURN
        elseif(present(PBuffer_I))then
           if(associated(PBuffer_I))then
@@ -2290,7 +2278,8 @@ contains
                 RETURN
              end if
           end if
-          allocate(PBuffer_I(nSize_I(1)))
+          allocate(PBuffer_I(nSize_I(1)),stat=iError)
+          call check_allocate(iError,NameSub)
           RETURN
        elseif(present(iBuffer_I))then
           if(allocated(iBuffer_I))then
@@ -2300,7 +2289,8 @@ contains
                 RETURN
              end if
           end if
-          allocate(iBuffer_I(nSize_I(1)))
+          allocate(iBuffer_I(nSize_I(1)),stat=iError)
+          call check_allocate(iError,NameSub)
           RETURN
        elseif(present(DoBuffer_I))then
           if(allocated(DoBuffer_I))then
@@ -2310,7 +2300,8 @@ contains
                 RETURN
              end if
           end if
-          allocate(DoBuffer_I(nSize_I(1)))
+          allocate(DoBuffer_I(nSize_I(1)),stat=iError)
+          call check_allocate(iError,NameSub)
           RETURN
        end if
     case(2)
@@ -2323,7 +2314,8 @@ contains
                 RETURN
              end if
           end if
-          allocate(Buffer_II(nSize_I(1), nSize_I(2)))
+          allocate(Buffer_II(nSize_I(1), nSize_I(2)),stat=iError)
+          call check_allocate(iError,NameSub)
           RETURN
        elseif(present(iBuffer_II))then
           if(allocated(iBuffer_II))then
@@ -2334,7 +2326,8 @@ contains
                 RETURN
              end if
           end if
-          allocate(iBuffer_II(nSize_I(1), nSize_I(2)))
+          allocate(iBuffer_II(nSize_I(1), nSize_I(2)),stat=iError)
+          call check_allocate(iError,NameSub)
           RETURN
        elseif(present(PBuffer_II))then
           if(associated(PBuffer_II))then
@@ -2345,7 +2338,8 @@ contains
                 RETURN
              end if
           end if
-          allocate(PBuffer_II(nSize_I(1), nSize_I(2)))
+          allocate(PBuffer_II(nSize_I(1), nSize_I(2)),stat=iError)
+          call check_allocate(iError,NameSub)
           RETURN
        end if
     case default
