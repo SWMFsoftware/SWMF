@@ -320,12 +320,15 @@ OBJ_INTERPOLATE_AMR = \
 	../src/ModRandomNumber.o \
 	../src/ModInterpolateAMR.o \
 	../src/ModIoUnit.o \
+	../src/ModMpi.o \
+	../src/ModMpiInterfaces.o \
+	../src/ModMpiOrig.o \
 	../src/ModUtility.o \
 	../src/ModUtility_c.o \
 	test_interpolate_amr.o
 
 test_interpolate_amr_exe:
-	@(cd ../src; make ModKind.o; make ModRandomNumber.o; make ModUtility.o; make ModInterpolateAMR.o)
+	@(cd ../src; make ModKind.o ModRandomNumber.o ModMpiOrig.o ModMpiInterfaces.o ModMpi.o ModIoUnit.o ModUtility_c.o ModUtility.o ModInterpolateAMR.o)
 	@make test_interpolate_amr.o
 	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
 
