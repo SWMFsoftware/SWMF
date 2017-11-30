@@ -287,36 +287,32 @@ contains
        end if
     end if
 
-    Router%nMappedPointIndex   = -1 !Buffers will not be initialized
+    Router%nMappedPointIndex   = 0 
     Router%iCoordStart         = 1
-    Router%iCoordEnd           = 0
-    Router%iAuxStart           = 1
-    Router%iAuxEnd             = 0
-    Router%nVar                = 0
+    Router%iCoordEnd           = GDSource%nDim
+ 
     if(present(nMappedPointIndex))then
        Router%nMappedPointIndex = &
             nMappedPointIndex
-       Router%iCoordStart         = 1
-       Router%iCoordEnd           = &
-            GDSource%nDim
-       Router%iAuxStart = Router%iCoordEnd + 1
-       Router%iAuxEnd   = Router%iCoordEnd + nMappedPointIndex
-       Router%nVar      = Router%iAuxEnd
        select case(nMappedPointIndex)
-       case(2)        
-       case(0)
-          !Do nothing, send coordinates only
+       case(0,2)        
+          !Allowed so far. Needs more work
        case default
           call CON_stop(&
                'Illegal number of mapped point indexes')
        end select
-       nullify(Router%BufferSource_II)
-       call allocate_buffer_source(Router, nProc)
-       Router%nBufferSource = nProc
-       nullify(Router%BufferTarget_II)
-       call allocate_buffer_target(Router, nProc)
-       Router%nBufferTarget = nProc
     end if
+    Router%iAuxStart = Router%iCoordEnd + 1
+    Router%iAuxEnd   = Router%iCoordEnd + nMappedPointIndex
+    Router%nVar      = Router%iAuxEnd
+
+    nullify(Router%BufferSource_II)
+    call allocate_buffer_source(Router, nProc)
+    Router%nBufferSource = nProc
+    nullify(Router%BufferTarget_II)
+    call allocate_buffer_target(Router, nProc)
+    Router%nBufferTarget = nProc
+ 
     nProc=Router%nProc
 
     !Allocation:
@@ -522,7 +518,7 @@ contains
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
-         type(LocalGDType),intent(in) ::GD
+         type(LocalGDType),intent(in) :: GD
          integer,          intent(in) :: iBlockUsed, nIndex
          logical,         intent(out) :: IsInterfacePoint
          integer,          intent(in) :: nDim
