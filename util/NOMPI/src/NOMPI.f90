@@ -576,7 +576,7 @@ end subroutine MPI_CART_SHIFT
 subroutine MPI_COMM_CREATE(comm,group,newcomm,ierror)
   integer, intent(in) :: comm,group
   integer, intent(out):: newcomm,ierror
-  newcomm=0
+  newcomm=comm
   ierror=0
 end subroutine MPI_COMM_CREATE
 
