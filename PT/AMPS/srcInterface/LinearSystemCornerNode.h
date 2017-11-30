@@ -443,11 +443,13 @@ void cLinearSystemCornerNode<cCornerNode>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBl
 
     //deallocate the allocated data buffers
     for (int thread=0;thread<PIC::nTotalThreads;thread++) {
-      if (RecvExchangeBuffer!=NULL) if (RecvExchangeBuffer[thread]!=NULL) delete [] RecvExchangeBuffer[thread];
+      if (RecvExchangeBuffer!=NULL) if (RecvExchangeBuffer[thread]!=NULL) {
+        delete [] RecvExchangeBuffer[thread];
+      }
 
       if (SendExchangeBufferElementIndex!=NULL) if (SendExchangeBufferElementIndex[thread]!=NULL) {
-        delete [] SendExchangeBufferElementIndex;
-        delete [] SendExchangeBuffer;
+        delete [] SendExchangeBufferElementIndex[thread];
+        delete [] SendExchangeBuffer[thread];
       }
     }
 
@@ -458,7 +460,7 @@ void cLinearSystemCornerNode<cCornerNode>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBl
 
     RecvExchangeBuffer=NULL,RecvExchangeBufferLength=NULL;
 
-    if (SendExchangeBuffer!=NULL) {
+    if (SendExchangeBufferElementIndex!=NULL) {
       delete [] SendExchangeBuffer;
       delete [] SendExchangeBufferLength;
       delete [] SendExchangeBufferElementIndex;
