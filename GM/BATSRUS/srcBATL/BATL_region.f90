@@ -513,8 +513,8 @@ contains
 
     case("conex", "coney", "conez", "funnelx", "funnely", "funnelz")
        call read_var("Height", Area%Size_D(iPar))
-       if(NameShape(1:4) == "1.0")then
-          ! A 1.0 is a funnel with 0 radius on one end
+       if(NameShape(1:4) == "cone")then
+          ! A cone is a funnel with 0 radius on one end
           Area%NameShape = "funnel" // NameShape(5:5)
        else
           call read_var("RadiusSmall", Area%Radius1)
@@ -816,9 +816,8 @@ contains
       real:: Coord_D(3), CellSize_D(3), CoordMinBlock_D(3)
       real:: CoordFace1, CoordFace2, CoordFace3
       real:: CoordCell1, CoordCell2, CoordCell3
-
-      ! Allocate Coord array if new or size changed
       !------------------------------------------------------------------------
+      ! Allocate Coord array if new or size changed
       if(allocated(Coord_DI))then
          if(size(Coord_DI) /= nDim*nPoint) deallocate(Coord_DI)
       end if
@@ -968,9 +967,8 @@ contains
       use BATL_grid, ONLY: Xyz_DGB, Xyz_DNB
 
       integer:: i, j, k, iC, jC, kC, n
-
-      ! Allocate Xyz array if new or size changed
       !------------------------------------------------------------------------
+      ! Allocate Xyz array if new or size changed
       if(allocated(Xyz_DI))then
          if(size(Xyz_DI) /= nDim*nPoint) deallocate(Xyz_DI)
       end if
@@ -1255,7 +1253,7 @@ contains
        ! For the smaller radius of shell and ring
        if(Radius1 > 0.0) &
             TaperFactor1_D = Slope_D/max(Radius1*Slope_D - 1, 1e-30)
-       ! Modified tapering slope for the sides of funnel, 1.0 and doublecone
+       ! Modified tapering slope for the sides of funnel, cone and doublecone
        if(.not.allocated(SlopePerp_D)) allocate(SlopePerp_D(nDim-1))
        if(iPar > 0) SlopePerp_D = Slope_D(iPerp_I) &
             /sqrt(1 + (Slope1*Size_D(iPerp_I)/Size_D(iPar))**2)
@@ -1521,11 +1519,11 @@ contains
              Value_I(iPoint) = max(0.0, min(1.0, &
                   1 - Slope_D(iPar)*(abs(Norm_DI(iPar,iPoint)) - 1)))
              if(Value_I(iPoint) == 0) CYCLE
-             ! Radius of double 1.0 at this cross section
+             ! Radius of double cone at this cross section
              Radius = abs(Norm_DI(iPar,iPoint))
              Dist1 = sum(Norm_DI(iPerp_I,iPoint)**2)
              if(Dist1 < Radius**2) CYCLE             ! inside perpendicular
-             ! Use taper factor specific for this particular 1.0 radius
+             ! Use taper factor specific for this particular cone radius
              Dist2 = sum( (SlopePerp_D/(Radius*SlopePerp_D + 1) &
                   *Norm_DI(iPerp_I,iPoint))**2 )
              if(Dist2 >= 1)then                    ! outside perpendicular
