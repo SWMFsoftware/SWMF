@@ -35,7 +35,7 @@ module CON_couple_ih_gm
        IH_get_for_gm
 
   use GM_wrapper, ONLY: GM_synchronize_refinement, &
-       GM_put_from_ih, GM_put_from_ih_buffer
+       GM_put_from_ih, GM_put_from_ih_buffer, GM_is_right_boundary_d
 
   implicit none
 
@@ -176,40 +176,38 @@ contains
 
   end subroutine couple_ih_gm
   !===============================================================!
-  logical function GM_is_west_block(lGlobalTreeNode)
+  logical function GM_is_west_block(iBlockLocal)
 
-    integer,intent(in)::lGlobalTreeNode
-    logical,dimension(3)::IsRightBoundary_D
+    integer,intent(in)  :: iBlockLocal
+    logical             ::IsRightBoundary_D(GM_grid%nDim)
     integer,parameter::x_=1
 
-    IsRightBoundary_D=is_right_boundary_d(&
-         GM_Grid%DD%Ptr,lGlobalTreeNode)
+    IsRightBoundary_D = GM_is_right_boundary_d(iBlockLocal)
     GM_is_west_block=IsRightBoundary_D(x_)
 
   end function GM_is_west_block
   !===============================================================!
   subroutine GM_west_cells(&
-       GridDescriptor,&
-       lGlobalTreeNode,&
-       nDim,&
-       Xyz_D,&
-       nIndexes,&
-       i_D,&
+       GD,        &
+       iBlockUsed,&
+       nDim,      &
+       Xyz_D,     &
+       nIndex,    &
+       i_D,       &
        IsInterfacePoint)
 
-    type(LocalGDType),intent(in):: GridDescriptor
-    integer,intent(in)::lGlobalTreeNode,nIndexes
-    integer,intent(in)::nDim
-    real,intent(inout)::Xyz_D(nDim)
-    integer,intent(inout)::i_D(nIndexes)
-    logical,intent(out)::IsInterfacePoint
+    type(LocalGDType),intent(in):: GD
+    integer,          intent(in):: iBlockUsed, nDim, nIndex
+    real,          intent(inout):: Xyz_D(nDim)
+    integer,intent(inout)       :: i_D(nIndex)
+    logical,intent(out)         :: IsInterfacePoint
 
-    logical,dimension(3)::IsLeftFace_D,IsRightFace_D
+    logical,dimension(3)::IsLeftFace_D, IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
 
     IsLeftFace_D=i_D(x_:z_)<1
     IsRightFace_D=i_D(x_:z_)>&
-         GridDescriptor%iGridPointMax_D
+         ncells_decomposition_d(GM_Grid%DD%Ptr)
     IsInterfacePoint=IsRightFace_D(x_).and..not.&
          (any(IsLeftFace_D(y_:z_)).or.any(IsRightFace_D(y_:z_)))
 

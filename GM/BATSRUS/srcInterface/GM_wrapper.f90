@@ -46,6 +46,7 @@ module GM_wrapper
   !^CMP END IE
 
   !^CMP IF IH BEGIN
+  public:: GM_is_right_boundary_d
   public:: GM_put_from_ih           ! coupling toolkit based coupler
   public:: GM_put_from_ih_buffer    ! buffer grid based coupler
   !^CMP END IH
@@ -459,5 +460,17 @@ contains
     call user_action('POINTERCOUPLING_'//NameComp_I(iComp))
 
   end subroutine GM_use_pointer
-
+  !===============
+  function GM_is_right_boundary_d(iBlock) RESULT(IsRightBoundary_D)
+    use ModParallel, ONLY: NOBLK, NeiLev
+    use BATL_size, ONLY: nDim
+    integer, intent(in) :: iBlock
+    logical :: IsRightBoundary_D(nDim)
+    integer:: iDir
+    character(len=*), parameter :: NameSub='GM_is_right_boundary_d'
+    !--------------------------
+    do iDir = 1, nDim
+       IsRightBoundary_D(iDir) = neiLEV(2*iDir,iBlock) == NOBLK
+    end do
+  end function GM_is_right_boundary_d
 end module GM_wrapper

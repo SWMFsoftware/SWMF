@@ -540,7 +540,14 @@ contains
     call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
 
   end subroutine GM_put_from_pc
-
+  !===============
+  function GM_is_right_boundary_d(iBlock) RESULT(IsRightBoundary_D)
+    integer, intent(in) :: iBlock
+    logical :: IsRightBoundary_D(3)
+    character(len=*), parameter :: NameSub='GM_is_right_boundary_d'
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end function GM_is_right_boundary_d
+  !===============
 end module GM_wrapper
 
 !==============================================================================
