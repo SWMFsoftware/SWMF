@@ -63,6 +63,9 @@ module ModIO
   real, dimension(3,MaxFile) :: ObsPos_DI
   character (LEN=20) :: NameLosTable(MaxFile)
   logical:: UseLosSimple = .false. !!! experiment with simple LOS algorithm
+  
+  ! Logical variable for OBS box type
+  logical  :: IsObsBox_I(MaxFile) = .false. 
 
   ! Variables for radiowave image
   ! ObsPos_DI is borrowed from the LOS plot

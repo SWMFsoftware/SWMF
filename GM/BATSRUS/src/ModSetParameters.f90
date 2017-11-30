@@ -159,7 +159,7 @@ contains
     character(len=lStringLine) :: NameVarsRestartTo   =''
     integer :: nVarRestartMappingFrom, nVarRestartMappingTo
 
-    character (len=50) :: plot_string,log_string
+    character (len=50) :: plot_string,log_string, TypeCoordObs
     character (len=3)  :: plot_area, plot_var
     character (len=2)  :: NameCompRead="??"
     integer :: MinBlockAll, nIJKRead_D(3), nRootRead_D(3)=1
@@ -821,7 +821,9 @@ contains
                      call read_var('dLat', plot_dx(3,iFile))
              elseif (index(plot_string, 'box')>0)then
                 plot_area = 'box'
-                call read_var('TypeCoord', TypeCoordPlot_I(iFile))
+                call read_var('TypeCoord', TypeCoordObs)
+                TypeCoordPlot_I(iFile) = TypeCoordObs(1:3)
+                IsObsBox_I(iFile) = index(TypeCoordObs,'OBS')>0
                 call read_var('x0',   plot_range(1,iFile))
                 call read_var('y0',   plot_range(2,iFile))
                 call read_var('z0',   plot_range(3,iFile))
@@ -834,27 +836,16 @@ contains
                 call read_var('zLen', plot_range(6,iFile))
                 if (plot_range(6, iFile) /= 0) &
                      call read_var('dZ', plot_dx(3,iFile))
-                call read_var('xAngle', plot_normal(1,iFile))
-                call read_var('yAngle', plot_normal(2,iFile))
-                call read_var('zAngle', plot_normal(3,iFile))
-             elseif (index(plot_string, 'sbx')>0)then
-                plot_area = 'sbx'
-                call read_var('x0',   plot_range(1,iFile))
-                call read_var('y0',   plot_range(2,iFile))
-                call read_var('z0',   plot_range(3,iFile))
-                call read_var('xLen',   plot_range(4,iFile))
-                if (plot_range(4, iFile) /= 0) &
-                     call read_var('dX',   plot_dx(1,iFile))
-                call read_var('yLen', plot_range(5,iFile))
-                if (plot_range(5, iFile) /= 0) &
-                     call read_var('dY', plot_dx(2,iFile))
-                call read_var('zLen', plot_range(6,iFile))
-                if (plot_range(6, iFile) /= 0) &
-                     call read_var('dZ', plot_dx(3,iFile))
-                call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
-                call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
-                call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
-
+                if(IsObsBox_I(iFile)) then
+                   call read_var('TiltAngle', plot_normal(1,iFile))
+                   call read_var('ObsPosX_HGI',ObsPos_DI(1,iFile))
+                   call read_var('ObsPosY_HGI',ObsPos_DI(2,iFile))
+                   call read_var('ObsPosZ_HGI',ObsPos_DI(3,iFile))
+                else
+                   call read_var('xAngle', plot_normal(1,iFile))
+                   call read_var('yAngle', plot_normal(2,iFile))
+                   call read_var('zAngle', plot_normal(3,iFile))
+                end if
              elseif (index(plot_string,'los')>0) then
                 plot_area='los'
                 ! Line of sight vector
@@ -933,7 +924,6 @@ contains
                 if (       plot_area /= 'sph' &
                      .and. plot_area /= 'shl' &
                      .and. plot_area /= 'box' &
-                     .and. plot_area /= 'sbx' &
                      .and. plot_area /= 'los' &
                      .and. plot_area /= 'rfr' &
                      .and. plot_area /= 'lin' &
@@ -3368,7 +3358,7 @@ contains
 
          ! Fix plot range for various plot areas
          select case(plot_area)
-         case('shl', 'box', 'sbx', 'eqb', 'eqr', 'lcb')
+         case('shl', 'box', 'eqb', 'eqr', 'lcb')
             ! These plot areas read all ranges from PARAM.in
             CYCLE PLOTFILELOOP
          case('cut')

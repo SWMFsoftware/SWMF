@@ -7,8 +7,11 @@ module ModPlotBox
        test_start, test_stop, iBlockTest
 
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
-       plot_form, TypeFile_I, plot_type, ObsPos_DI
-  use ModNumConst, ONLY: cDegToRad
+       plot_form, TypeFile_I, plot_type, ObsPos_DI, IsObsBox_I
+
+  use ModNumConst,       ONLY  : cDegToRad
+
+  use ModCoordTransform, ONLY  : xyz_to_lonlat
 
   implicit none
   SAVE
@@ -28,10 +31,6 @@ module ModPlotBox
   ! Rotation angles around axis, center coordinates
   real :: xAngle, yAngle, zAngle
   real :: Xyz0_D(3)
-
-  ! Variables for sbx plt box
-  logical :: DoSbx = .false.
-  real    :: Los_D(3), aUnit_D(3), bUnit_D(3)
 
   ! Local results container:
   ! Array of values written to file:
@@ -53,9 +52,6 @@ contains
     integer, intent(in)        :: iFile, nPlotVar
 
     real, dimension(3)         :: ObsPos_D
-    real                       :: ObsDistance
-
-    real                       :: ImageCenter_D(3) 
 
     logical                    :: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_box'
@@ -81,53 +77,23 @@ contains
     zMin = plot_range(3, iFile) - zLen/2
     zMax = plot_range(3, iFile) + zLen/2
 
-    if(index(plot_type(iFile),'box')>0)then
-       DoSbx = .false.
+    ! Get coordinate transformation matrix:
+    PlotToGm_DD = transform_matrix(Time_Simulation, &
+         TypeCoordPlot_I(iFile), TypeCoordSystem)
+
+    if(IsObsBox_I(iFile))then
+       ! This is the tilt (roll)
+       xAngle = plot_normal(1,iFile) * cDegtoRad
+
+       ObsPos_D = matmul(PlotToGm_DD, ObsPos_DI(:,iFile))
+
+       ! Convert observer location to longitude and latitude
+       call xyz_to_lonlat(ObsPos_D, zAngle, yAngle)
+    else
        ! Get box orientation from ModIO arrays:
        xAngle = plot_normal(1,iFile) * cDegtoRad
        yAngle = plot_normal(2,iFile) * cDegtoRad
        zAngle = plot_normal(3,iFile) * cDegtoRad
-       ! Get coordinate transformation matrix:
-       PlotToGm_DD = transform_matrix(Time_Simulation, &
-            TypeCoordPlot_I(iFile), TypeCoordSystem)
-    end if
-
-    if(index(plot_type(iFile),'sbx')>0)then
-       DoSbx = .true.
-       xAngle = 0.0
-       yAngle = 0.0
-       zAngle = 0.0
-       ! Convert to HGI
-       PlotToGm_DD = transform_matrix(Time_Simulation,'HGI', TypeCoordSystem)
-       ! Rotate observation point from HGI to the current coordinate system   
-       ObsPos_D    = matmul(PlotToGm_DD, ObsPos_DI(:,iFile))
-       ObsDistance = sqrt(sum(ObsPos_D**2))
-       ! Normalize line of sight vector pointing towards the origin
-       Los_D       = -ObsPos_D/ObsDistance
-       ! Observer distance from image plane
-       ObsDistance = abs(sum(ObsPos_D*Los_D))
-
-       ! Create unit vectors aUnit_D and bUnit_D orthogonal to the
-       ! central line of sight and cUnit_D out plane.
-       ! We use cross products of the LOS vector with one of the principal
-       ! directions (0,0,1) or (0,1,0) to make sure that the viewing plane is
-       ! aligned with the original Cartesian coordinates. In case the viewing
-       ! is roughly along the X or Y axis, we want bUnit_D to point along +Z,
-       ! a = LOS x (0,0,1), b = a x LOS ensures that b is aligned with +Z
-       aUnit_D = cross_product(Los_D, (/0.,0.,1./))
-       aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
-       bUnit_D = cross_product(aUnit_D, Los_D)
-       bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
-       ! ... and cUnit_D = -Los_D.
-
-       ! 3D vector pointing from the origin to the image center
-       ImageCenter_D = ObsPos_D + ObsDistance*Los_D &
-            - Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
-
-       ! Make offset to be relative to the Sun (and not the projected observer)
-       Xyz0_D(1) = dot_product(ImageCenter_D, -LOS_D)
-       Xyz0_D(2) = dot_product(ImageCenter_D, aUnit_D)
-       Xyz0_D(3) = dot_product(ImageCenter_D, bUnit_D)
     end if
 
     ! Set number of points:
@@ -161,7 +127,7 @@ contains
   end subroutine init_plot_box
   !============================================================================
 
-  subroutine set_plot_box(iBlock, nPlotvar, Plotvar_GV)
+  subroutine set_plot_box(iFile, iBlock, nPlotvar, Plotvar_GV)
 
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
@@ -174,6 +140,7 @@ contains
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
 
     ! Arguments
+    integer, intent(in) :: iFile
     integer, intent(in) :: iBlock
     integer, intent(in) :: nPlotvar
     real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
@@ -190,31 +157,28 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    ! Shift box elements with origin of box
+    ! Shift box elements with origin of box             
     do k = 1, nZ
-       Xyz_D(3) = zMin + (k-1)*dZ - Xyz0_D(3)
+       Xyz_D(3) = zMin + (k-1)*dZ
+       if(.not.IsObsBox_I(iFile)) Xyz_D(3) = Xyz_D(3) - Xyz0_D(3)
 
        do j = 1, nY
-          Xyz_D(2) = yMin + (j-1)*dY - Xyz0_D(2)
+          Xyz_D(2) = yMin + (j-1)*dY
+          if(.not.IsObsBox_I(iFile)) Xyz_D(2) = Xyz_D(2) - Xyz0_D(2)
 
           do i = 1, nX
-             Xyz_D(1) = xMin + (i-1)*dX - Xyz0_D(1)
+             Xyz_D(1) = xMin + (i-1)*dX
+             if(.not.IsObsBox_I(iFile)) Xyz_D(1) = Xyz_D(1) - Xyz0_D(1)
 
+             ! Rotate box
+             XyzRot_D = matmul(rot_matrix_z(-zAngle), &
+                  matmul(rot_matrix_y(-yAngle), &
+                  matmul(rot_matrix_x(-xAngle), Xyz_D)))
 
-             if(DoSbx)then
-                XyzGm_D = &
-                     -(Xyz_D(1) + Xyz0_D(1))*Los_D &
-                     +(Xyz_D(2) + Xyz0_D(2))*aUnit_D &
-                     +(Xyz_D(3) + Xyz0_D(3))*bUnit_D
-             else
-                ! Rotate box
-                XyzRot_D = matmul(rot_matrix_z(-zAngle), &
-                     matmul(rot_matrix_y(-yAngle), &
-                     matmul(rot_matrix_x(-xAngle), Xyz_D)))
+             if(.not.IsObsBox_I(iFile)) XyzRot_D = XyzRot_D + Xyz0_D
 
-                ! Shift box back and Get Gm coordinates
-                XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
-             end if
+             ! Shift box back and Get Gm coordinates
+             XyzGm_D = matmul(PlotToGm_DD, XyzRot_D)
 
              ! When inside Body keep default plot values
              if(sqrt(sum(XyzGm_D**2)) < rBody)CYCLE

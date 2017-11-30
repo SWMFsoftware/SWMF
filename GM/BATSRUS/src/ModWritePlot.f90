@@ -233,7 +233,7 @@ contains
 
     ! Spherical slices are special cases:
     DoPlotShell = plot_type1(1:3) == 'shl'
-    DoPlotBox   = plot_type1(1:3) == 'box' .or. plot_type1(1:3) == 'sbx'
+    DoPlotBox   = plot_type1(1:3) == 'box'
 
     if (DoSaveOneTecFile) then
        iUnit = io_unit_new()
@@ -420,7 +420,7 @@ contains
        if(DoPlotShell) then
           call set_plot_shell(iBlock, nPlotvar, PlotVar)
        else if (DoPlotBox) then
-          call set_plot_box(iBlock, nPlotvar, PlotVar)
+          call set_plot_box(iFile, iBlock, nPlotvar, PlotVar)
        else
           select case(plot_form(iFile))
           case('tec')
