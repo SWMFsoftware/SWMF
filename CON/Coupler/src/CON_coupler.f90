@@ -1004,16 +1004,17 @@ contains
   !=======================================================================
   !IROUTINE: init_coupler - initializes coupler between two components
   subroutine init_coupler(  &    
-       iCompSource,         &! component index for source
-       nGhostPointSource,   &! number of halo points in Source 
-       StandardSource_,     &! CellCentered_ or Nodes_
-       nIndexSource,        &! number of indexes for source grid
-       iCompTarget,         &! component index for target
-       nGhostPointTarget,   &! number of halo points in target 
-       StandardTarget_,     &! CellCentered_ or Nodes_
-       nIndexTarget,        &! number of indexes for target grid
+       iCompSource,         & ! component index for source
+       nGhostPointSource,   & ! number of halo points in Source 
+       StandardSource_,     & ! CellCentered_ or Nodes_
+       nIndexSource,        & ! number of indexes for source grid
+       iCompTarget,         & ! component index for target
+       nGhostPointTarget,   & ! number of halo points in target 
+       StandardTarget_,     & ! CellCentered_ or Nodes_
+       nIndexTarget,        & ! number of indexes for target grid
        GridDescriptorSource,& ! OUT!\
-       LocalGDTarget,       & ! OUT!-General coupler variables 
+       GridDescriptorTarget,& ! OUT!-General coupler variables 
+       LocalGDTarget,       & ! OUT! (optional)
        Router)                ! OUT!/
 
     !INPUT ARGUMENTS:
@@ -1025,9 +1026,9 @@ contains
          nGhostPointSource, nGhostPointTarget
 
     !OUTPUT ARGUMENTS:
-    type(GridDescriptorType),intent(out)::GridDescriptorSource
-    type(GridDescriptorType) :: GridDescriptorTarget
-    type(LocalGDType)        :: LocalGDTarget
+    type(GridDescriptorType), intent(out) :: GridDescriptorSource
+    type(GridDescriptorType), intent(out) :: GridDescriptorTarget
+    type(LocalGDType), optional, intent(out)     :: LocalGDTarget
 
     !EOP
     type(RouterType)::Router
@@ -1076,9 +1077,8 @@ contains
          Router,&
          nIndexSource,&
          nIndexTarget)
-    call set_local_gd(&
+    if(present(LocalGDTarget)) call set_local_gd(&
          i_proc(), GridDescriptorTarget, LocalGDTarget)
-    call clean_gd(GridDescriptorTarget)
   end subroutine init_coupler
 
   !=============================================================!

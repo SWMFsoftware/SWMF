@@ -93,9 +93,9 @@ contains
          iCompTarget=GM_,             & ! component index for target
          nGhostPointTarget=2,         & ! number of halo points in target
          GridDescriptorSource=IH_Grid,& ! OUT!\
-         LocalGDTarget  =GM_LocalGD,  & ! OUT!-General coupler variables 
+         GridDescriptorTarget=GM_Grid,& ! OUT!-General coupler variables 
+         LocalGDTarget  =GM_LocalGD,  & ! OUT!-optional 
          Router=Router)                 ! OUT!/
-    call set_standard_grid_descriptor(GM_,nGhostGridPoints=2, GD=GM_grid)
     IH_iGridRealization=-1
     GM_iGridRealization=-1
     ! Initialize the coordinate transformation
