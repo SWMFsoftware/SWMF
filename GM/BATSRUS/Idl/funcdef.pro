@@ -125,13 +125,13 @@ function funcdef,xx,w,func
      ['n0'       , '{rhos0}/mS0'                             ], $            ; number density of species 0
      ['n1'       , '{rhos1}/mS1'                             ], $            ; number density of species 1
      ['qtot'     , 'qS1*{n1}+qS0*{n0}'                       ], $            ; total charge
-     ['dqtot'    ,  '{qtot}-div({ex},{ey},x,y)*eps0'         ], $            ; error in net charge
-     ['ni'       , '{rhos1}/mi'                              ], $            ; ion number density
-     ['ne'       , '{rhos0}/me'                              ], $            ; electron number density
+     ['dqtot'    , '{qtot}-div({ex},{ey},x,y)*eps0'          ], $            ; error in net charge
+     ['ni'       , 'n1'                                      ], $            ; ion number density
+     ['ne'       , 'n0'                                      ], $            ; electron number density
      ['dqtot1d'  , '{qtot}-diff1({ex},x)*eps0'               ], $            ; error in net charge in 1D
-     ['jpx'      , 'qi*{ni}*{uxs1}+qe*{ne}*{uxs0}'           ], $            ; jx from particles
-     ['jpy'      , 'qi*{ni}*{uys1}+qe*{ne}*{uys0}'           ], $            ; jy from particles
-     ['jpz'      , 'qi*{ni}*{uzs1}+qe*{ne}*{uzs0}'           ], $            ; jz from particles
+     ['jpx'      , 'qi*{n1}*{uxs1}+qe*{n0}*{uxs0}'           ], $            ; jx from particles
+     ['jpy'      , 'qi*{n1}*{uys1}+qe*{n0}*{uys0}'           ], $            ; jy from particles
+     ['jpz'      , 'qi*{n1}*{uzs1}+qe*{n0}*{uzs0}'           ], $            ; jz from particles
      ['jp'       , 'sqrt({jpx}^2+{jpy}^2+{jpz}^2)'           ], $            ; j from particles 
      ['jppar'    , '({jpx}*{bx}+{jpy}*{by}+{jpz}*{bz})/b'    ], $            ; j parallel to field line
      ['jpperp'   , 'sqrt({jp}^2-{jppar}^2)'                  ], $            ; j perpendicular to field line
