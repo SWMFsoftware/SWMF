@@ -408,15 +408,14 @@ void cLinearSystemCornerNode<cCornerNode>::ExchageIntermediateUnknownsData(doubl
     RecvThreadCounter++;
   }
 
-  //prepare data to send and initiate the non-blocked send {
+  //prepare data to send and initiate the non-blocked send
   for (To=0;To<PIC::nTotalThreads;To++) if ((To!=PIC::ThisThread)&&(SendExchangeBufferLength[To]!=0)) {
-    int i,j,cnt=0;
+    int i;
     double *Buffer=SendExchangeBuffer[To];
 
     for (i=0;i<SendExchangeBufferLength[To];i++) {
-      int base=NodeUnknownVariableVectorLength*SendExchangeBufferElementIndex[To][i];
-
-      for (int offset=0;offset<NodeUnknownVariableVectorLength;offset++) Buffer[cnt++]=x[offset+base];
+      memcpy(Buffer,x+NodeUnknownVariableVectorLength*SendExchangeBufferElementIndex[To][i],NodeUnknownVariableVectorLength*sizeof(double));
+      Buffer+=NodeUnknownVariableVectorLength;
     }
 
     MPI_Isend(Buffer,NodeUnknownVariableVectorLength*SendExchangeBufferLength[To],MPI_DOUBLE,To,0,MPI_GLOBAL_COMMUNICATOR,SendRequest+SendThreadCounter);
