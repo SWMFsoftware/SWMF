@@ -322,7 +322,7 @@ subroutine write_timegcm_file(iter, phi_north, phi_south,   &
 
   integer :: i, j
   character (len=4), Parameter :: IO_ext=".dat"
-
+  !----------------------------------------------------------------------
   write(*,*) '=> Writing output datafiles for TIMEGCM.'
 
   call open_file(FILE=trim(NameIonoDir)//"MHD_to_TIMEGCM"//IO_ext)
@@ -402,12 +402,11 @@ subroutine read_timegcm_file
   use IE_ModIo
   implicit none
 
-  integer :: i, j, iter, nTheta, nPsi
+  integer :: i, j, nTheta, nPsi
   character (len=4), Parameter :: IO_ext=".dat"
   character (len=100) :: TIMEGCM_file
   real :: dum_lat, dum_lon, min_lat, max_lat, max_fac
   integer, dimension(1:6) :: time_array
-  real :: tgcm_time
 
   min_lat = 60.0
   max_lat = 85.0
@@ -481,7 +480,7 @@ subroutine IE_output
   implicit none
 
   integer :: iFile
-  logical :: DoSaveFile, DoSaveMagFile
+  logical :: DoSaveFile
   !--------------------------------------------------------------------------
   do iFile = 1, nFile
      DoSaveFile = .false.
@@ -531,7 +530,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
   integer, parameter :: uam_vars = 3                     !^CFG  IF TIEGCM
   integer, parameter :: aur_vars = 4
 
-  integer :: output_type, variables, year
+  integer :: output_type, variables
 
   integer :: i, j
   character(len=*), parameter :: NameSub='IE_write_output'
@@ -993,7 +992,6 @@ subroutine ionosphere_read_restart_file
   !/
   use ModProcIE 
   use ModIonosphere
-  use IE_ModMain, ONLY: LatBoundaryGM
   use IE_ModIo
   implicit none
   !---------------------------------------------------------------------------
@@ -1010,12 +1008,14 @@ subroutine ionosphere_read_restart_file
      call open_file(FILE=trim(NameRestartInDir)//"north.rst", &
           STATUS="OLD", FORM="UNFORMATTED")
 
-     read(iUnit) LatBoundaryGm
-     read(iUnit) Iono_North_Jr
-     read(iUnit) Iono_North_rho
-     read(iUnit) Iono_North_p
-     read(iUnit) Iono_North_SigmaH
-     read(iUnit) Iono_North_SigmaP
+     read(iUnit) IONO_NORTH_Phi
+     read(iUnit) IONO_NORTH_IonNumFlux
+     read(iUnit) IONO_NORTH_Joule
+     read(iUnit) IONO_NORTH_Jr
+     read(iUnit) IONO_NORTH_Ave_E   
+     read(iUnit) IONO_NORTH_EFlux 
+     read(iUnit) IONO_NORTH_SigmaP
+     read(iUnit) IONO_NORTH_SigmaH
 
      call close_file
   end if
@@ -1023,12 +1023,14 @@ subroutine ionosphere_read_restart_file
      call open_file(FILE=trim(NameRestartInDir)//"south.rst", &
           STATUS="OLD", FORM="UNFORMATTED")
 
-     read(iUnit) LatBoundaryGm
-     read(iUnit) Iono_South_Jr
-     read(iUnit) Iono_South_rho
-     read(iUnit) Iono_South_p
-     read(iUnit) Iono_South_SigmaH
-     read(iUnit) Iono_South_SigmaP
+     read(iUnit) IONO_SOUTH_Phi
+     read(iUnit) IONO_SOUTH_IonNumFlux
+     read(iUnit) IONO_SOUTH_Joule
+     read(iUnit) IONO_SOUTH_Jr
+     read(iUnit) IONO_SOUTH_Ave_E   
+     read(iUnit) IONO_SOUTH_EFlux 
+     read(iUnit) IONO_SOUTH_SigmaP
+     read(iUnit) IONO_SOUTH_SigmaH
 
      call close_file
   end if
@@ -1044,7 +1046,7 @@ subroutine ionosphere_write_restart_file
 
   use ModProcIE
   use ModIonosphere
-  use IE_ModMain, ONLY: Time_Simulation, nSolve, LatBoundaryGM
+  use IE_ModMain, ONLY: Time_Simulation, nSolve
   use IE_ModIo
   implicit none
 
@@ -1070,12 +1072,14 @@ subroutine ionosphere_write_restart_file
      call open_file(FILE=trim(NameRestartOutDir)//"north.rst", &
           FORM="UNFORMATTED")
 
-     write(iUnit) LatBoundaryGm
-     write(iUnit) Iono_North_Jr    
-     write(iUnit) Iono_North_rho   
-     write(iUnit) Iono_North_p     
-     write(iUnit) Iono_North_SigmaH
-     write(iUnit) Iono_North_SigmaP
+     write(iUnit) IONO_NORTH_Phi
+     write(iUnit) IONO_NORTH_IonNumFlux
+     write(iUnit) IONO_NORTH_Joule
+     write(iUnit) IONO_NORTH_Jr
+     write(iUnit) IONO_NORTH_Ave_E   
+     write(iUnit) IONO_NORTH_EFlux 
+     write(iUnit) IONO_NORTH_SigmaP
+     write(iUnit) IONO_NORTH_SigmaH
 
      call close_file
   end if
@@ -1083,12 +1087,14 @@ subroutine ionosphere_write_restart_file
      call open_file(FILE=trim(NameRestartOutDir)//"south.rst", &
           FORM="UNFORMATTED")
 
-     write(iUnit) LatBoundaryGm
-     write(iUnit) Iono_South_Jr
-     write(iUnit) Iono_South_rho
-     write(iUnit) Iono_South_p
-     write(iUnit) Iono_South_SigmaH
-     write(iUnit) Iono_South_SigmaP
+     write(iUnit) IONO_SOUTH_Phi
+     write(iUnit) IONO_SOUTH_IonNumFlux
+     write(iUnit) IONO_SOUTH_Joule
+     write(iUnit) IONO_SOUTH_Jr
+     write(iUnit) IONO_SOUTH_Ave_E   
+     write(iUnit) IONO_SOUTH_EFlux 
+     write(iUnit) IONO_SOUTH_SigmaP
+     write(iUnit) IONO_SOUTH_SigmaH
 
      call close_file
   end if
@@ -1104,12 +1110,11 @@ subroutine iono_getpot(isize,jsize,MHD_lat,MHD_lon,MHD_pot,MHD_Jr)
   real, intent(in), dimension(jsize) :: MHD_lon
   real, intent(out), dimension(isize,jsize) :: MHD_pot,MHD_Jr
 
-  integer :: i,j, ii,jj
+  integer :: i,j
   integer                  :: inter_lat, inter_lon
   real                     :: colat, dx_lat, dx_lon, mlt
-  logical                  :: done
   logical                  :: DoTest
-
+  !--------------------------------------------------------------------------
   do i=1,isize
      do j=1,jsize
 
