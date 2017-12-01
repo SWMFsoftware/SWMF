@@ -248,6 +248,9 @@ T 			UseDecay
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
+#RESTART
+T			DoRestart
+
 #IONOSPHERE
 5                       TypeConductanceModel
 F                       UseFullCurrent
