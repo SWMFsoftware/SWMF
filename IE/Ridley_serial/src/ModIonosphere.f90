@@ -30,8 +30,7 @@ module ModIonosphere
        IONO_Model_With_Simple_Aurora = 3,       &
        IONO_Model_With_Complex_Aurora = 4
 
-  real :: IONO_Bdp, IONO_Radius_Mag_Boundary, &
-       IONO_NORTH_Theta_Max, IONO_SOUTH_Theta_Min,     &
+  real :: IONO_Bdp,   &
        IONO_Radius, IONO_Height, Radius
 
   real :: cpcp_north=0.0, cpcp_south=0.0

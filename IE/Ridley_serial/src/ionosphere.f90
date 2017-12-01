@@ -1003,9 +1003,7 @@ subroutine ionosphere_read_restart_file
      ! Read header information
      call open_file(FILE=trim(NameRestartInDir)//"restart.H", &
           STATUS="OLD")
-     read(iUnit,*) IONO_Radius, IONO_Height,                   &
-          IONO_Bdp, IONO_Radius_Mag_Boundary,                  &
-          IONO_NORTH_Theta_Max, IONO_SOUTH_Theta_Min
+     read(iUnit,*) IONO_Radius, IONO_Height, IONO_Bdp
      call close_file
 
      ! Read north restart file
@@ -1045,6 +1043,7 @@ subroutine ionosphere_write_restart_file
   use ModProcIE
   use ModIonosphere
   use IE_ModIo
+  use IE_ModMain, ONLY: Time_Simulation, nSolve
   implicit none
 
   integer:: iError
@@ -1055,10 +1054,13 @@ subroutine ionosphere_write_restart_file
      call make_dir(NameRestartOutDir)
 
      call open_file(FILE=trim(NameRestartOutDir)//"restart.H")
-
-     write(iUnit,*) IONO_Radius, IONO_Height,                          &
-          IONO_Bdp, IONO_Radius_Mag_Boundary,                          &
-          IONO_NORTH_Theta_Max, IONO_SOUTH_Theta_Min
+     write(iUnit,*) IONO_Radius, IONO_Height, IONO_Bdp
+     write(iUnit,*)
+     write(iUnit,'(a)')'#TIMESIMULATION'
+     write(iUnit,*)time_simulation
+     write(iUnit,*)
+     write(iUnit,'(a)')'#NSTEP'
+     write(iUnit,*)nSolve
 
      call close_file
   end if
