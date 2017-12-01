@@ -139,6 +139,9 @@ public:
   //call the linear system solver, and unpack the solution afterward
   void Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),void (*fUnpackSolution)(double* x,cCornerNode* CornerNode));
 
+  //update the RHS vector
+  void UpdateRHS(double (*fSetRHS)(cCornerNode* CornerNode)));
+
   //destructor
   ~cLinearSystemCornerNode() {
     Reset();
@@ -189,6 +192,17 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
     node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
 
     //in case of the periodic boundary condition it is only the points that are inside the "real" computational domain that are considered
+    if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
+      bool BoundaryBlock=false;
+
+      for (int iface=0;iface<6;iface++) if (node->GetNeibFace(iface,0,0)==NULL) {
+        //the block is at the domain boundary, and thresefor it is a 'ghost' block that is used to impose the periodic boundary conditions
+        BoundaryBlock=true;
+        break;
+      }
+
+      if (BoundaryBlock==true) continue;
+    }
 
     //the limits are correct: the point i==_BLOCK_CELLS_X_ belongs to the onother block
     int kMax=_BLOCK_CELLS_Z_,jMax=_BLOCK_CELLS_Y_,iMax=_BLOCK_CELLS_X_;
@@ -240,6 +254,21 @@ void cLinearSystemCornerNode<cCornerNode>::BuildMatrix(void(*f)(int i,int j,int 
           }
 
           //check whether the periodic boundary conditions are in use, and the new block is on the boundary of the domain
+          if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
+            bool BoundaryBlock=false;
+
+            for (int iface=0;iface<6;iface++) if (node->GetNeibFace(iface,0,0)==NULL) {
+              //the block is at the domain boundary, and thresefor it is a 'ghost' block that is used to impose the periodic boundary conditions
+              BoundaryBlock=true;
+              break;
+            }
+
+            if (BoundaryBlock==true) {
+              //the block is at the domain boundary -> find the point located in the "real" part of the computational domain
+              MatrixRowNonZeroElementTable[ii].Node=PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(MatrixRowNonZeroElementTable[ii].Node);
+            }
+          }
+
         }
 
         //create the new Row entry
@@ -492,6 +521,16 @@ void cLinearSystemCornerNode<cCornerNode>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBl
 
   }
   else for (int i=0;i<(1<<DIM);i++) if (startNode->downNode[i]!=NULL) Reset(startNode->downNode[i]);
+}
+
+
+template <class cCornerNode>
+void cLinearSystemCornerNode<cCornerNode>::UpdateRHS(double (*fSetRHS)(cCornerNode* CornerNode)) {
+  cMatrixRow* row;
+
+  for (row=MatrixRowTable;row!=NULL;row=row->next) {
+    row->rhs=fSetRHS(row->CornerNode);
+  }
 }
 
 template <class cCornerNode>
