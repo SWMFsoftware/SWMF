@@ -515,7 +515,7 @@ subroutine ionosphere_write_output(iFile, iBlock)
   !/
   use ModIonosphere
   use IE_ModIo
-  use IE_ModMain,ONLY: Time_Array, NSOLVE, Time_Accurate, Time_Simulation,&
+  use IE_ModMain,ONLY: Time_Array, nSolve, Time_Accurate, Time_Simulation,&
        ThetaTilt
   use ModNumConst,ONLY: cRadToDeg
 
@@ -993,6 +993,7 @@ subroutine ionosphere_read_restart_file
   !/
   use ModProcIE 
   use ModIonosphere
+  use IE_ModMain, ONLY: LatBoundaryGM
   use IE_ModIo
   implicit none
   !---------------------------------------------------------------------------
@@ -1000,21 +1001,21 @@ subroutine ionosphere_read_restart_file
      write(*,*) '=> Reading restart file for ionosphere.'
      call check_dir(NameRestartInDir)
 
-     ! Read header information
-     call open_file(FILE=trim(NameRestartInDir)//"restart.H", &
-          STATUS="OLD")
-     read(iUnit,*) IONO_Radius, IONO_Height, IONO_Bdp
-     call close_file
+     ! Read header information?
+     !call open_file(FILE=trim(NameRestartInDir)//"restart.H", &
+     !     STATUS="OLD")
+     !call close_file
 
      ! Read north restart file
      call open_file(FILE=trim(NameRestartInDir)//"north.rst", &
           STATUS="OLD", FORM="UNFORMATTED")
 
-     read(iUnit) IONO_NORTH_Theta
-     read(iUnit) IONO_NORTH_Psi
-     read(iUnit) IONO_NORTH_JR
-     read(iUnit) SAVE_NORTH_SigmaH
-     read(iUnit) SAVE_NORTH_SigmaP
+     read(iUnit) LatBoundaryGm
+     read(iUnit) Iono_North_Jr
+     read(iUnit) Iono_North_rho
+     read(iUnit) Iono_North_p
+     read(iUnit) Iono_North_SigmaH
+     read(iUnit) Iono_North_SigmaP
 
      call close_file
   end if
@@ -1022,11 +1023,12 @@ subroutine ionosphere_read_restart_file
      call open_file(FILE=trim(NameRestartInDir)//"south.rst", &
           STATUS="OLD", FORM="UNFORMATTED")
 
-     read(iUnit) IONO_SOUTH_Theta
-     read(iUnit) IONO_SOUTH_Psi
-     read(iUnit) IONO_SOUTH_JR
-     read(iUnit) SAVE_SOUTH_SigmaH
-     read(iUnit) SAVE_SOUTH_SigmaP
+     read(iUnit) LatBoundaryGm
+     read(iUnit) Iono_South_Jr
+     read(iUnit) Iono_South_rho
+     read(iUnit) Iono_South_p
+     read(iUnit) Iono_South_SigmaH
+     read(iUnit) Iono_South_SigmaP
 
      call close_file
   end if
@@ -1042,8 +1044,8 @@ subroutine ionosphere_write_restart_file
 
   use ModProcIE
   use ModIonosphere
+  use IE_ModMain, ONLY: Time_Simulation, nSolve, LatBoundaryGM
   use IE_ModIo
-  use IE_ModMain, ONLY: Time_Simulation, nSolve
   implicit none
 
   integer:: iError
@@ -1054,13 +1056,12 @@ subroutine ionosphere_write_restart_file
      call make_dir(NameRestartOutDir)
 
      call open_file(FILE=trim(NameRestartOutDir)//"restart.H")
-     write(iUnit,*) IONO_Radius, IONO_Height, IONO_Bdp
+
+     write(iUnit,'(a)') "#TIMESIMULATION"
+     write(iUnit,*)     Time_Simulation
      write(iUnit,*)
-     write(iUnit,'(a)')'#TIMESIMULATION'
-     write(iUnit,*)time_simulation
-     write(iUnit,*)
-     write(iUnit,'(a)')'#NSTEP'
-     write(iUnit,*)nSolve
+     write(iUnit,'(a)') "#NSTEP"
+     write(iUnit,*)     nSolve
 
      call close_file
   end if
@@ -1069,11 +1070,12 @@ subroutine ionosphere_write_restart_file
      call open_file(FILE=trim(NameRestartOutDir)//"north.rst", &
           FORM="UNFORMATTED")
 
-     write(iUnit) IONO_NORTH_Theta
-     write(iUnit) IONO_NORTH_Psi
-     write(iUnit) IONO_NORTH_JR
-     write(iUnit) SAVE_NORTH_SigmaH
-     write(iUnit) SAVE_NORTH_SigmaP
+     write(iUnit) LatBoundaryGm
+     write(iUnit) Iono_North_Jr    
+     write(iUnit) Iono_North_rho   
+     write(iUnit) Iono_North_p     
+     write(iUnit) Iono_North_SigmaH
+     write(iUnit) Iono_North_SigmaP
 
      call close_file
   end if
@@ -1081,11 +1083,12 @@ subroutine ionosphere_write_restart_file
      call open_file(FILE=trim(NameRestartOutDir)//"south.rst", &
           FORM="UNFORMATTED")
 
-     write(iUnit) IONO_SOUTH_Theta
-     write(iUnit) IONO_SOUTH_Psi
-     write(iUnit) IONO_SOUTH_JR
-     write(iUnit) SAVE_SOUTH_SigmaH
-     write(iUnit) SAVE_SOUTH_SigmaP
+     write(iUnit) LatBoundaryGm
+     write(iUnit) Iono_South_Jr
+     write(iUnit) Iono_South_rho
+     write(iUnit) Iono_South_p
+     write(iUnit) Iono_South_SigmaH
+     write(iUnit) Iono_South_SigmaP
 
      call close_file
   end if
