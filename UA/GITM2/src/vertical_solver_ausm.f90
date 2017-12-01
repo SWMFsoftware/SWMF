@@ -6,12 +6,29 @@
 ! ------------------------------------------------------------
 !/
 
+subroutine check_ion_densities(iDen)
+
+  use ModSizeGitm
+  use ModPlanet, only: nIonsAdvect, nIons
+  real, intent(inout) :: iDen(-1:nAlts+2,nIons)
+
+  do iIon = 1, nIonsAdvect
+     do iAlt = 1, nAlts+2
+        if (iDen(iAlt, iIon) < 0.0) then
+           write(*,*) 'Found negative ion density: ',iAlt, iIon, iDen(iAlt,iIon)
+           iDen(iAlt,iIon) = iDen(iAlt-1,iIon)*0.99
+        endif
+     enddo
+  enddo
+
+end subroutine check_ion_densities
+
 subroutine advance_vertical_1d_ausm
 
   use ModVertical
   use ModPlanet, only: Mass
   use ModGITM, ONLY : Dt, iCommGITM, iProc, iUp_
-  use ModInputs, only: UseBarriers, iDebugLevel
+  use ModInputs, only: UseBarriers, iDebugLevel, UseImprovedIonAdvection
   implicit none
   !-----------------------------------------------------------
   integer :: iError, iAlt, iSpecies, iDir
@@ -145,7 +162,6 @@ subroutine advance_vertical_1d_ausm
        LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
        LogINS, NewLogINS, IVel, VertVel, NewVertVel)
 
-
 !!! note that Stage 1 -> updated by a 1/2 step
 !!! (NewLogNS - LogNS) = f(tn + Dt/2, yn + dt/2)
        Stage2LogNS(-1:nAlts+2,1:nSpecies)      = &
@@ -155,6 +171,8 @@ subroutine advance_vertical_1d_ausm
       Stage2LogINS(-1:nAlts+2,1:nIons)  = &
       Stage1LogINS(-1:nAlts+2,1:nIons)  + &
     (NewLogINS(-1:nAlts+2,1:nIons) - LogINS(-1:nAlts+2,1:nIons))
+
+      if (UseImprovedIonAdvection) call check_ion_densities(Stage2LogINS)
 
       Stage2LogRho(-1:nAlts+2)                = &
       Stage1LogRho(-1:nAlts+2)                + &
@@ -217,7 +235,6 @@ subroutine advance_vertical_1d_ausm
        LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
        LogINS, NewLogINS, IVel, VertVel, NewVertVel)
 
-
        Stage3LogNS(-1:nAlts+2,1:nSpecies)      = &
        Stage1LogNS(-1:nAlts+2,1:nSpecies)      + &
      (NewLogNS(-1:nAlts+2,1:nSpecies) - LogNS(-1:nAlts+2,1:nSpecies))
@@ -225,6 +242,8 @@ subroutine advance_vertical_1d_ausm
       Stage3LogINS(-1:nAlts+2,1:nIons)  = &
       Stage1LogINS(-1:nAlts+2,1:nIons)  + &
     (NewLogINS(-1:nAlts+2,1:nIons) - LogINS(-1:nAlts+2,1:nIons))
+
+      if (UseImprovedIonAdvection) call check_ion_densities(Stage3LogINS)
 
       Stage3LogRho(-1:nAlts+2)                = &
       Stage1LogRho(-1:nAlts+2)                + &
@@ -264,8 +283,10 @@ subroutine advance_vertical_1d_ausm
 
   DtIn = Dt
 !! Update Boundary Conditions
+
   call set_vertical_bcs(UpdatedLogRho, UpdatedLogNS, UpdatedVel_GD, &
                           UpdatedTemp, UpdatedLogINS, IVel, UpdatedVS)
+
 !
   LogNS  = UpdatedLogNS
   LogINS = UpdatedLogINS
@@ -295,6 +316,8 @@ subroutine advance_vertical_1d_ausm
       Stage4LogINS(-1:nAlts+2,1:nIons)  = &
       Stage1LogINS(-1:nAlts+2,1:nIons)  + &
     (NewLogINS(-1:nAlts+2,1:nIons) - LogINS(-1:nAlts+2,1:nIons))
+
+      if (UseImprovedIonAdvection) call check_ion_densities(Stage4LogINS)
 
       Stage4LogRho(-1:nAlts+2)                = &
       Stage1LogRho(-1:nAlts+2)                + &
@@ -357,7 +380,7 @@ subroutine advance_vertical_1d_ausm
   call advance_vertical_1stage_ausm(DtIn, &
        LogRho, LogNS, Vel_GD, Temp, NewLogRho, NewLogNS, NewVel_GD, NewTemp, &
        LogINS, NewLogINS, IVel, VertVel, NewVertVel)
-  
+
   ! This section ensures that our lower boundary conditions are maintained
   ! and not overwritten.
   FinalLogNS = Stage1LogNS
@@ -377,6 +400,8 @@ subroutine advance_vertical_1d_ausm
      (1.0/3.0)*(-1.0*Stage1LogINS(1:nAlts,:) + Stage2LogINS(1:nAlts,:)  +  &
                  2.0*Stage3LogINS(1:nAlts,:) + Stage4LogINS(1:nAlts,:)  +  &
                        (NewLogINS(1:nAlts,:) - LogINS(1:nAlts,:)) )
+
+  if (UseImprovedIonAdvection) call check_ion_densities(FinalLogINS)
 
   FinalLogRho(1:nAlts) = &
      (1.0/3.0)*(-1.0*Stage1LogRho(1:nAlts) + Stage2LogRho(1:nAlts)  +  &
@@ -806,7 +831,9 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
                 + DtIn * DiffLogINS(iAlt,iSpecies)
         endif
      enddo
+
   enddo !iAlt = 1,nAlts
+
 
   NewNS  = 0.0
   NewNT  = 0.0
@@ -1045,8 +1072,6 @@ subroutine calc_facevalues_alts_ausm(Var, VarLeft, VarRight)
 !     dVarDown          = (Var(i)   - Var(i-1)) * InvDAlt_F(i)
 
      dVarLimited(i) = Limiter_mc(dVarUp, dVarDown)
-
-!     write(*,*) dVarUp, dVarDown, dVarLimited(i)
 
   end do
 
