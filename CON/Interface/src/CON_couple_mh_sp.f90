@@ -2,7 +2,7 @@
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !^CMP FILE SP
-
+!^CMP FILE IH
 module CON_couple_mh_sp
 
   ! This coupler employs the following global arrays.
@@ -20,21 +20,20 @@ module CON_couple_mh_sp
   ! at which SP runs.
 
   use CON_coupler
+  use IH_wrapper, ONLY: IH_synchronize_refinement, &        
+       IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&
+       IH_get_scatter_line, IH_add_to_line, IH_n_particle,& 
+       IH_LineDD, IH_line_interface_point, &                
+       IH_get_particle_indexes, IH_get_particle_coords,&    
+       IH_check_use_particles                               
+ 
 
-  use IH_wrapper, ONLY: IH_synchronize_refinement, &        !^CMP IF IH
-       IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&!^CMP IF IH
-       IH_get_scatter_line, IH_add_to_line, IH_n_particle,& !^CMP IF IH
-       IH_LineDD, IH_line_interface_point, &                !^CMP IF IH
-       IH_get_particle_indexes, IH_get_particle_coords,&    !^CMP IF IH
-       IH_check_use_particles                               !^CMP IF IH
-
-  use SC_wrapper, ONLY: SC_synchronize_refinement, &        !^CMP IF SC
-       SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&!^CMP IF SC
-       SC_get_scatter_line, SC_add_to_line, SC_n_particle,& !^CMP IF SC
-       SC_LineDD, SC_line_interface_point,&                 !^CMP IF SC
-       SC_get_particle_indexes, SC_get_particle_coords,&    !^CMP IF SC
-       SC_check_use_particles                               !^CMP IF SC
-
+  use SC_wrapper, ONLY: SC_synchronize_refinement, &      !^CMP IF SC BEGIN 
+       SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&
+       SC_get_scatter_line, SC_add_to_line, SC_n_particle,& 
+       SC_LineDD, SC_line_interface_point,&                 
+       SC_get_particle_indexes, SC_get_particle_coords,&    
+       SC_check_use_particles                              !^CMP END SC
   use CON_axes
 
   use SP_wrapper, ONLY: &
@@ -50,24 +49,22 @@ module CON_couple_mh_sp
   
   private !Except
   public::couple_mh_sp_init
-  public::couple_ih_sp              !^CMP IF IH
+  public::couple_ih_sp              
   public::couple_sc_sp              !^CMP IF SC
 
   type(GridDescriptorType),save::SP_GridDescriptor !Target (Particle coords)
   type(LocalGDType),       save::SP_LocalGD        !Target (MHD data)
-  !^CMP IF IH BEGIN
   type(GridDescriptorType),save::IH_GridDescriptor !Source (MHD data)
   type(RouterType),save,private::RouterIhSp        !IH (MHD data) => SP 
   type(GridDescriptorType),save::IH_LineGridDesc   !Misc
   type(LocalGDType),       save::IH_LocalLineGD    !Source (Particle Coords)
-  type(RouterType),save,private::RouterLineIhSp    !IH (Particle coords)=>SP         
-  !^CMP END IH
-  !^CMP IF SC
+  type(RouterType),save,private::RouterLineIhSp    !IH (Particle coords)=>SP    
+  !^CMP IF SC BEGIN
   type(GridDescriptorType),save::SC_GridDescriptor !Source (MHD data)  
   type(RouterType),save,private::RouterScSp        !IH MHD data => SP
   type(GridDescriptorType),save::SC_LineGridDesc   !Misc
   type(LocalGDType),       save::SC_LocalLineGD    !Source (Particle Coords)     
-  type(RouterType),save,private::RouterLineScSp    !IH (Particle coords)=>SP       
+  type(RouterType),save,private::RouterLineScSp    !IH (Particle coords)=>SP    
   !^CMP END SC
   !\
   !Three-dimensional grids in SC and IH, 
@@ -144,9 +141,9 @@ contains
        ! put the lower boundary of the domain in SC to SP
        if(DoExtract.and.is_proc(SP_))&
             call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
-    end if
-    ! Set pair IH-SP         !^CMP END SC
-    if(use_comp(IH_)) call couple_ih_sp_init !^CMP IF IH
+    end if                   !^CMP END SC
+    ! Set pair IH-SP         
+    if(use_comp(IH_)) call couple_ih_sp_init 
     DoInit=.false.
   contains
     !===============================
@@ -217,7 +214,7 @@ contains
       call exchange_data_sc_sp(DoInit, DoExtract)
     end subroutine couple_sc_sp_init                 !^CMP END SC
     !==============================
-    subroutine couple_ih_sp_init                     !^CMP IF IH BEGIN
+    subroutine couple_ih_sp_init                     
       call IH_check_use_particles()
       call set_couple_var_info(IH_, SP_)
       !\
@@ -285,7 +282,7 @@ contains
       !First coupling with the particle info and data exchange
       call exchange_data_ih_sp(DoInit, DoExtract)
     end subroutine couple_ih_sp_init
-  end subroutine couple_mh_sp_init   !^CMP END IH
+  end subroutine couple_mh_sp_init   
   !=========================================================================
   !^CMP IF SC BEGIN
   subroutine couple_sc_sp(DataInputTime)
@@ -376,7 +373,7 @@ contains
   end subroutine exchange_data_sc_sp
   !^CMP END SC
   !================================
-  !^CMP IF IH BEGIN
+  
   subroutine couple_ih_sp(DataInputTime)     
     real,intent(in)::DataInputTime
     !----------------------------------------------------------
@@ -458,7 +455,6 @@ contains
     !on SP the updated coordinates are available for those
     !points which passed from SC to IH
   end subroutine exchange_data_ih_sp
-  !^CMP END IH
   !==================================================================!
   subroutine mapping(iCompIn, iCompOut, nDimIn, CoordIn_D, nDimOut, CoordOut_D)
     ! mapping from generalized coordinates in CompIn 
@@ -516,19 +512,6 @@ contains
             ': unknown type of geometry '//trim(TypeGeometryOut))
     end if
   end subroutine mapping
-
-  !==================================================================!
-  subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
-       IsInterfacePoint)
-    integer, intent(in) :: nDimIn
-    real,    intent(in) :: XyzIn_D(nDimIn)
-    integer, intent(in) :: nDimOut
-    real,    intent(out):: CoordOut_D(nDimOut)
-    logical, intent(out):: IsInterfacePoint
-    !------------------------------------------
-    IsInterfacePoint = .true.
-    call mapping(SP_, SC_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
-  end subroutine mapping_sp_to_sc
   !==================================================================!
   subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
@@ -541,24 +524,6 @@ contains
     IsInterfacePoint = .true.
     call mapping(SP_,IH_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
   end subroutine mapping_sp_to_ih
-  !==================================================================!
-  subroutine mapping_line_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
-       IsInterfacePoint)
-    use CON_grid_descriptor
-    integer, intent(in) :: nDimIn
-    real,    intent(in) :: XyzIn_D(nDimIn)
-    integer, intent(in) :: nDimOut
-    real,    intent(out):: CoordOut_D(nDimOut)
-    logical, intent(out):: IsInterfacePoint
-    
-    integer:: iIndex_I(2), iParticle, iCell
-    !------------------------------------------
-    IsInterfacePoint = .true.
-    iParticle = nint(XyzIn_D(1))
-    call SC_get_particle_indexes(iParticle, iIndex_I)
-    call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
-    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
-  end subroutine mapping_line_sc_to_sp
   !==================================================================!
   subroutine mapping_line_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
@@ -577,8 +542,8 @@ contains
     call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
     CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
   end subroutine mapping_line_ih_to_sp
-  !==================================================================!
-  subroutine mapping_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+  !=======================================!^CMP IF SC BEGIN
+  subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
     integer, intent(in) :: nDimIn
     real,    intent(in) :: XyzIn_D(nDimIn)
@@ -587,21 +552,27 @@ contains
     logical, intent(out):: IsInterfacePoint
     !------------------------------------------
     IsInterfacePoint = .true.
-    call mapping(SC_, SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
-  end subroutine mapping_sc_to_sp
-  !==================================================================!
-  subroutine mapping_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
+    call mapping(SP_, SC_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+  end subroutine mapping_sp_to_sc
+  !================================
+  subroutine mapping_line_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
+    use CON_grid_descriptor
     integer, intent(in) :: nDimIn
     real,    intent(in) :: XyzIn_D(nDimIn)
     integer, intent(in) :: nDimOut
     real,    intent(out):: CoordOut_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
+    
+    integer:: iIndex_I(2), iParticle, iCell
     !------------------------------------------
     IsInterfacePoint = .true.
-    call mapping(IH_,SP_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
-  end subroutine mapping_ih_to_sp
-  !==================================================================!
+    iParticle = nint(XyzIn_D(1))
+    call SC_get_particle_indexes(iParticle, iIndex_I)
+    call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
+    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
+  end subroutine mapping_line_sc_to_sp
+  !===================================!^CMP END SC
   subroutine SP_put_line_from_sc(nPartial,&
        iPutStart,&
        Put,&
@@ -621,7 +592,6 @@ contains
     iIndex_II(:,1) = Put%iCB_II(1:4,iPutStart)
     call SP_put_line(SC_,1, Buff_II, iIndex_II)
   end subroutine SP_put_line_from_sc
-  !^CMP IF IH BEGIN
   !==================================================================!
   subroutine SP_put_line_from_ih(nPartial,&
        iPutStart,&
@@ -675,7 +645,6 @@ contains
     ! perform transformation before returning
     State_V = matmul(IhToSp_DD,State_V)
   end subroutine IH_get_line_for_sp_and_transform
-  !^CMP END IH
   !==================================================================!
   subroutine fix_buffer(BlockIndex_I,&
             iGridPointInBlock, nAux, Data_V)
@@ -701,7 +670,7 @@ contains
   end subroutine fix_buffer
 
   !^CMP IF SC BEGIN 
-  !--------------------------------------------------------------------------
+  !-----------------------------------------------------------------
   subroutine SC_get_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
 
@@ -720,7 +689,7 @@ contains
     ! perform transformation before returning
     State_V(iVarBx:iVarBz)=matmul(ScToSp_DD,State_V(iVarBx:iVarBz))
   end subroutine SC_get_for_sp_and_transform
-  !=========================================================================
+  !=============================================================
   subroutine SC_get_line_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
     use ModCoordTransform, ONLY: xyz_to_rlonlat
