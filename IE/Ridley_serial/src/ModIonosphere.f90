@@ -111,8 +111,6 @@ module ModIonosphere
        IONO_SOUTH_Jx,IONO_SOUTH_Jy,IONO_SOUTH_Jz,   & !
        IONO_NORTH_TGCM_JR,                          & !TIMEGCM current !^CFG  IF TIEGCM
        IONO_SOUTH_TGCM_JR,                          & !                !^CFG  IF TIEGCM
-       IONO_NORTH_AMIE_JR,                          & !AMIE current
-       IONO_SOUTH_AMIE_JR,                          & !
        IONO_NORTH_Fake_JR,                          & !Region 2 current
        IONO_SOUTH_Fake_JR,                          &
        iono_north_im_jr, &
