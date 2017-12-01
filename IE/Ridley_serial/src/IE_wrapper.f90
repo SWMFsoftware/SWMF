@@ -623,14 +623,15 @@ contains
     use ModProcIE
     use ModIonosphere
 
-    character (len=*), parameter :: NameSub = 'IE_put_from_gm'
     integer,          intent(in) :: iSize, jSize, nVar
     real                         :: Buffer_IIV(iSize, jSize, nVar)
 
     logical :: DoTest, DoTestMe
+    character (len=*), parameter :: NameSub = 'IE_put_from_gm'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
-    if(DoTest)write(*,*)NameSub,' starting'
+    if(DoTest)write(*,*)NameSub,' starting with iSize, jSize, nVar=', &
+         iSize, jSize, nVar
 
     IsNewInput = .true.
 
@@ -683,8 +684,9 @@ contains
       write(UNITTMP_,'(a)') &
            'VARIABLES="J", "I", "Theta", "Psi", "JR", "1/B", "rho", "p"'
       write(UNITTMP_,'(a,i3.3,a,i4,a,i4,a)') &
-           'ZONE T="PE=',iProc,'", I=',jsize,', J=',isize,', K=1, F=POINT'
-      do i=1,isize; do j=1,jsize
+           'ZONE T="PE=',iProc,'", I=',IONO_nPsi,&
+           ', J=',IONO_nTheta,', K=1, F=POINT'
+      do i=1,IONO_nTheta; do j=1, IONO_nPsi
          write(UNITTMP_,'(2i4,6G14.6)') j,i, &
               Iono_North_Theta(i,j),Iono_North_Psi(i,j),Iono_North_Jr(i,j), &
               Iono_North_invB(i,j),Iono_North_rho(i,j),Iono_North_p(i,j)
@@ -706,8 +708,9 @@ contains
       write(UNITTMP_,'(a)') &
            'VARIABLES="J", "I", "Theta", "Psi", "JR", "1/B", "rho", "p"'
       write(UNITTMP_,'(a,i3.3,a,i4,a,i4,a)') &
-           'ZONE T="PE=',iProc,'", I=',jsize,', J=',isize,', K=1, F=POINT'
-      do i=1,isize; do j=1,jsize
+           'ZONE T="PE=',iProc,'", I=',IONO_nTheta, &
+           ', J=',IONO_nTheta,', K=1, F=POINT'
+      do i=1,IONO_nTheta; do j=1,IONO_nPsi
          write(UNITTMP_,'(2i4,6G14.6)') j,i, &
               Iono_South_Theta(i,j),Iono_South_Psi(i,j),Iono_South_Jr(i,j), &
               Iono_South_invB(i,j),Iono_South_rho(i,j),Iono_South_p(i,j)
@@ -950,7 +953,7 @@ contains
 
   subroutine IE_put_from_im(nPoint,iPointStart,Index,Weight,DoAdd,Buff_V,nVar)
 
-    use IE_ModMain, only:IsNewInput
+    use IE_ModMain, ONLY: IsNewInput
     use ModIonosphere
     use ModProcIE
 
@@ -1242,6 +1245,7 @@ contains
 
     use ModProcIE
     use IE_ModMain
+    use IE_ModIo, ONLY: DoRestart
     use CON_physics, ONLY: get_time, get_axes, time_real_to_int
     use ModKind
 
@@ -1257,8 +1261,7 @@ contains
     logical :: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='IE_run'
     !--------------------------------------------------------------------------
-
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
     if(DoTest)write(*,*)NameSub,': iProc,tSimulation,tSimulationLimit=',&
          iProc,tSimulation,tSimulationLimit
@@ -1270,10 +1273,19 @@ contains
     ! next coupling time in a time accurate run
     if(time_accurate)tSimulation = tSimulationLimit
 
-    if(DoTest)write(*,*)NameSub,': iProc,IsNewInput=',iProc,IsNewInput
+    if(DoTest)write(*,*)NameSub,': iProc, IsNewInput, DoRestart=', &
+         iProc, IsNewInput, DoRestart
 
-    ! Do not solve if there is no new input from GM or UA
-    if(.not.IsNewInput) RETURN
+    ! Check if there has been information coming in
+    if(.not.IsNewInput)then
+       if(DoRestart)then
+          ! Read restart files
+          call ionosphere_read_restart_file
+       else
+          ! Do not solve if there is no new input and not a restart
+          RETURN
+       end if
+    end if
 
     ! Check if we can have a reasonable magnetic field already
     call get_time(nStepOut=nStep)
@@ -1284,7 +1296,7 @@ contains
     IsNewInput = .false.
 
     ! Obtain the position of the magnetix axis
-    call get_axes(time_simulation,MagAxisTiltGsmOut = ThetaTilt)
+    call get_axes(time_simulation, MagAxisTiltGsmOut=ThetaTilt)
 
     call get_time(tStartOut=tStart)
     call time_real_to_int(tStart + time_simulation, Time_Array)
@@ -1298,17 +1310,20 @@ contains
 
     if(DoTest)write(*,*) 'done with solve'
 
-    ! Save solution (plot files) into file if required
-    call IE_output
-
-    if(DoTest)write(*,*) 'done with output'
-
     call IE_gather
-
     if(DoTest)write(*,*) 'gather done'
 
-    ! Save logfile if required
-    call IE_save_logfile
+    if(.not.DoRestart)then
+       ! Save solution (plot files) into file if required
+       call IE_output
+
+       ! Save logfile if required
+       call IE_save_logfile
+       if(DoTest)write(*,*) 'done with output'
+    end if
+
+    ! Make sure restart files are not read again
+    DoRestart = .false.
 
     if(DoTest)write(*,*) 'done with IE_run'
 
