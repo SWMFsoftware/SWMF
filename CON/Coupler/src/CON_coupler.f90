@@ -1012,6 +1012,7 @@ contains
        nGhostPointTarget,   & ! number of halo points in target 
        StandardTarget_,     & ! CellCentered_ or Nodes_
        nIndexTarget,        & ! number of indexes for target grid
+       nMappedPointIndex,   & ! number of indexes for points to send 
        GridDescriptorSource,& ! OUT!\
        GridDescriptorTarget,& ! OUT!-General coupler variables 
        LocalGDTarget,       & ! OUT! (optional)
@@ -1024,6 +1025,7 @@ contains
          StandardSource_, StandardTarget_
     integer,intent(in),optional :: &
          nGhostPointSource, nGhostPointTarget
+    integer,intent(in),optional :: nMappedPointIndex
 
     !OUTPUT ARGUMENTS:
     type(GridDescriptorType), intent(out) :: GridDescriptorSource
@@ -1076,9 +1078,11 @@ contains
          GridDescriptorTarget,&
          Router,&
          nIndexSource,&
-         nIndexTarget)
-    if(present(LocalGDTarget)) call set_local_gd(&
-         i_proc(), GridDescriptorTarget, LocalGDTarget)
+         nIndexTarget,&
+         nMappedPointIndex = nMappedPointIndex)
+    if(present(LocalGDTarget).and.is_proc(iCompTarget))&
+         call set_local_gd(i_proc(), &
+         GridDescriptorTarget, LocalGDTarget)
   end subroutine init_coupler
 
   !=============================================================!

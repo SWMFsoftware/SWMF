@@ -128,13 +128,7 @@ contains
     !\
     ! Set grid descriptors for components
     ! Initialize routers
-    !/
-    call set_standard_grid_descriptor(SP_,GD =&
-         SP_GridDescriptor)
-    if(is_proc(SP_))call set_local_gd(&
-         iProc = i_proc(), &
-         GD = SP_GridDescriptor, &
-         LocalGD = SP_LocalGD)   
+    !/ 
     ! Set pair SC-SP
     if(use_comp(SC_)) then   !^CMP IF SC BEGIN
        call couple_sc_sp_init
@@ -157,20 +151,21 @@ contains
       !SC, at the stage of the router construction. To further benefit
       !from this opportunity, two SP grid indexes are also sent from
       !SP to SC,at this stage, therefore nMappedPointIndex = 2. 
-      call set_standard_grid_descriptor(SC_,GD=SC_GridDescriptor)
-      call init_router(SC_GridDescriptor,SP_GridDescriptor,&
-           RouterScSp,nMappedPointIndex=nAux)
-      !Router is initialized. Source: SC_GridDesriptor, target SP_LocalGD
+      call init_coupler(iCompSource = SC_,          &
+           iCompTarget = SP_,                       &
+           GridDescriptorSource = SC_GridDescriptor,&
+           GridDescriptorTarget = SP_GridDescriptor,&
+           nMappedPointIndex    = nAux,             &
+           Router          = RouterScSp        ,    &
+           LocalGDTarget   = SP_LocalGD)
       !/
       !\
       ! Set local GD on the Particle_I structure
       call set_standard_grid_descriptor(SC_LineDD,GD=SC_LineGridDesc)
-      call init_router(SC_LineGridDesc, SP_GridDescriptor, RouterLineScSp, &
-           nMappedPointIndex=0)
-      if(is_proc(SC_))call set_local_gd(&
-           iProc = i_proc(), &
-           GD = SC_LineGridDesc, &
-           LocalGD = SC_LocalLineGD)
+      call init_router(SC_LineGridDesc, SP_GridDescriptor,  &
+           RouterLineScSp, nMappedPointIndex=0)
+      if(is_proc(SC_))call set_local_gd(iProc = i_proc(),   &
+            GD = SC_LineGridDesc, LocalGD = SC_LocalLineGD)
       !Router to send particles is initialized. 
       !Source SC_LocalLineGD, target SP_GridDescriptor
 
@@ -224,11 +219,16 @@ contains
       !IH, at the stage of the router construction. To further benefit
       !from this opportunity, two SP grid indexes are also sent from
       !SP to IH, at this stage, therefore nMappedPointIndex = 2.
-      call set_standard_grid_descriptor(IH_,GD=&
-           IH_GridDescriptor)
-      call init_router(IH_GridDescriptor,SP_GridDescriptor,&
-           RouterIhSp,nMappedPointIndex=nAux)
-      !Router is initialized. Source: IH_GridDesriptor, target SP_LocalGD
+      call init_coupler(iCompSource = IH_,          &
+           iCompTarget = SP_,                       &
+           GridDescriptorSource = IH_GridDescriptor,&
+           GridDescriptorTarget = SP_GridDescriptor,&
+           nMappedPointIndex    = nAux,             &
+           Router          = RouterIhSp)
+      if(.not.use_comp(SC_))then !^CMP IF SC BEGIN
+         if(is_proc(SP_))call set_local_gd(i_proc(),&
+              SP_GridDescriptor, SP_localGD)
+      end if                     !^CMP END SC
       !/
       !\
       ! Set local GD on the Particle_I structure
