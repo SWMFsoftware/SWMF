@@ -249,9 +249,9 @@ contains
 
     character(len=*), parameter:: NameSub = 'restriction_high_order_reschange'
     !--------------------------------------------------------------------------
+    DoSymInterp = .true. ! use f3...f8 to interpolate G3.
     if(present(DoSymInterpIn)) DoSymInterp = DoSymInterpIn
 
-    DoSymInterp = .true. ! use f3...f8 to interpolate G3.
     IsPositive = .false.
     if(present(IsPositiveIn)) IsPositive = IsPositiveIn
 
