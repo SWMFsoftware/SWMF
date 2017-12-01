@@ -1224,8 +1224,6 @@ contains
   subroutine IE_save_restart(tSimulation)
 
     use CON_coupler, ONLY: NameRestartOutDirComp
-    use ModProcIE, ONLY:  nProc
-    use IE_ModMain, ONLY: nSolve
     use IE_ModIo,   ONLY: NameRestartOutDir
 
     !INPUT PARAMETERS:
@@ -1281,10 +1279,18 @@ contains
        if(DoRestart)then
           ! Read restart files
           call ionosphere_read_restart_file
-       else
-          ! Do not solve if there is no new input and not a restart
-          RETURN
+          if(DoTest)write(*,*) 'read restart done'
+
+          ! Collect information onto proc 0
+          call IE_gather
+          if(DoTest)write(*,*) 'gather done'
+
+          ! Restart only once
+          DoRestart = .false.
        end if
+
+       ! Do not solve if there is no new input 
+       RETURN
     end if
 
     ! Check if we can have a reasonable magnetic field already
@@ -1313,17 +1319,12 @@ contains
     call IE_gather
     if(DoTest)write(*,*) 'gather done'
 
-    if(.not.DoRestart)then
-       ! Save solution (plot files) into file if required
-       call IE_output
+    ! Save solution (plot files) into file if required
+    call IE_output
 
-       ! Save logfile if required
-       call IE_save_logfile
-       if(DoTest)write(*,*) 'done with output'
-    end if
-
-    ! Make sure restart files are not read again
-    DoRestart = .false.
+    ! Save logfile if required
+    call IE_save_logfile
+    if(DoTest)write(*,*) 'done with output'
 
     if(DoTest)write(*,*) 'done with IE_run'
 

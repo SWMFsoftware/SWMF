@@ -9,7 +9,7 @@ program PostIONO
   !\
   ! PostProcessing variables.
   !/
-  integer :: ptLength,pvLength,ztLength
+  integer :: ptLength,pvLength
   integer :: nvars,nTheta,nPhi
   integer :: nYear,nMonth,nDay,nHour,nMinute,nSecond,nMillisecond
   integer :: i,j,n,n_step

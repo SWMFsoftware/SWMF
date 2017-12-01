@@ -32,7 +32,6 @@ subroutine IE_FindPoint(LocIn, LocOut, IsNormalGrid, iError)
 
   integer :: jTemp_I(1)
 
-  logical :: IsFound
 
   LocOut = -1.0
 
