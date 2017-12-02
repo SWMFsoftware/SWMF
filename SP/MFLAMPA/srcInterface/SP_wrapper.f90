@@ -57,7 +57,6 @@ module SP_wrapper
   public:: SP_get_cell_index
   public:: SP_get_particle_index
   public:: SP_adjust_lines
-  public:: SP_get_grid_descriptor_param
   public:: SP_get_domain_boundary
   public:: SP_put_r_min
   public:: SP_n_particle
@@ -623,19 +622,6 @@ contains
   end subroutine SP_get_particle_index
 
   !===================================================================
-
-  subroutine SP_get_grid_descriptor_param(&
-       iGridMin_D, iGridMax_D, Displacement_D)
-    integer, intent(out):: iGridMin_D(nDim)
-    integer, intent(out):: iGridMax_D(nDim)
-    real,    intent(out):: Displacement_D(nDim)
-    !-----------------------------------------
-    iGridMin_D = (/iParticleMin, 1, 1/)
-    iGridMax_D = (/iParticleMax, 1, 1/)
-    Displacement_D = 0.0
-  end subroutine SP_get_grid_descriptor_param
-  !========================================================================
-
   subroutine SP_copy_old_state
     ! copy current state to old state for all field lines
     integer:: iBegin, iEnd, iBlock

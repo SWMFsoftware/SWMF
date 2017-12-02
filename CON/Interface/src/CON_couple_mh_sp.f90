@@ -5,24 +5,10 @@
 !^CMP FILE IH
 module CON_couple_mh_sp
 
-  ! This coupler employs the following global arrays.
-  ! SP_Xyz_DI - is the array of the Lagrangian points.
-  ! A part of this array, as well as the mask 'SP_IsInIH' is only availbale
-  ! at the PE set, at which either IH or SP run. 
-  ! This coordinates are expressed in terms of
-  ! the length units and with respect to the frame of reference defined in IH.
-  ! Another part of this array, as well as the mask 'SP_IsInSC' 
-  ! is only available at the PE set, at which either SC or SP run. 
-  ! This coordinates are expressed in terms of
-  ! the length units and with respect to the frame of reference defined in SC.
-  ! SP_XyzSP - in the array of all Lagrangian points, in units and in the 
-  ! frame of reference defined at SP, is available only at the PE set, 
-  ! at which SP runs.
-
   use CON_coupler
   use IH_wrapper, ONLY: IH_synchronize_refinement, &        
        IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&
-       IH_get_scatter_line, IH_add_to_line, IH_n_particle,& 
+       IH_add_to_line, IH_n_particle,& 
        IH_LineDD, IH_line_interface_point, &                
        IH_get_particle_indexes, IH_get_particle_coords,&    
        IH_check_use_particles                               
@@ -30,7 +16,7 @@ module CON_couple_mh_sp
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &      !^CMP IF SC BEGIN 
        SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&
-       SC_get_scatter_line, SC_add_to_line, SC_n_particle,& 
+       SC_add_to_line, SC_n_particle,& 
        SC_LineDD, SC_line_interface_point,&                 
        SC_get_particle_indexes, SC_get_particle_coords,&    
        SC_check_use_particles                              !^CMP END SC
@@ -39,7 +25,7 @@ module CON_couple_mh_sp
   use SP_wrapper, ONLY: &
        SP_put_from_sc, SP_put_from_ih, SP_put_input_time, &
        SP_put_line, SP_n_particle, SP_synchronize_grid, &
-       SP_get_grid_descriptor_param, SP_do_extract, &
+       SP_do_extract, &
        SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
        SP_interface_point_coords_for_ih_extract, &
@@ -351,6 +337,12 @@ contains
          mapping               = mapping_sp_to_sc,  &
          interpolate           = interpolation_amr_gc,&
          extra_data            = fix_buffer)
+    call couple_comp(RouterScSp, &
+         nVar = nVarBuffer, &
+         fill_buffer = SC_get_for_sp_and_transform, &
+         apply_buffer= SP_put_from_sc)
+    !MHD Data from SC to SP are sent
+    !/
     !Get particles from the semi-router 
     if(is_proc(SC_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterScSp)
@@ -364,16 +356,9 @@ contains
             UseInputInGenCoord = .true.,&
             DoReplace = .true.)
     end if
-    call couple_comp(RouterScSp, &
-         nVar = nVarBuffer, &
-         fill_buffer = SC_get_for_sp_and_transform, &
-         apply_buffer= SP_put_from_sc)
-    !MHD Data from SC to SP are sent
-    !/
   end subroutine exchange_data_sc_sp
   !^CMP END SC
   !================================
-  
   subroutine couple_ih_sp(DataInputTime)     
     real,intent(in)::DataInputTime
     !----------------------------------------------------------
@@ -432,6 +417,12 @@ contains
          mapping     = mapping_sp_to_ih,     &
          interpolate = interpolation_amr_gc, &
          extra_data            = fix_buffer)
+    call couple_comp(RouterIhSp, &
+         nVar = nVarBuffer, &
+         fill_buffer = IH_get_for_sp_and_transform, &
+         apply_buffer= SP_put_from_ih)
+    !MHD data are sent
+    !/
     !Get particles from the semi-router 
     if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterIhSp)
@@ -445,15 +436,6 @@ contains
             UseInputInGenCoord = .true.,&
             DoReplace = .true.)
     end if
-    call couple_comp(RouterIhSp, &
-         nVar = nVarBuffer, &
-         fill_buffer = IH_get_for_sp_and_transform, &
-         apply_buffer= SP_put_from_ih)
-    !MHD data are sent
-    !/
-    !This coupler is performed after SC-SP coupling, so that 
-    !on SP the updated coordinates are available for those
-    !points which passed from SC to IH
   end subroutine exchange_data_ih_sp
   !==================================================================!
   subroutine mapping(iCompIn, iCompOut, nDimIn, CoordIn_D, nDimOut, CoordOut_D)

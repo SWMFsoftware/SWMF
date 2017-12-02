@@ -49,7 +49,6 @@ module IH_wrapper
   public:: IH_get_for_sp
   public:: IH_extract_line
   public:: IH_add_to_line
-  public:: IH_get_scatter_line
   public:: IH_get_a_line_point
   public:: IH_get_particle_indexes
   public:: IH_get_particle_coords
@@ -325,18 +324,6 @@ contains
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_add_to_line
-  !============================================================================
-
-  subroutine IH_get_scatter_line(nParticle, Coord_DI, iIndex_II, nAux, iAux_II)
-    integer,              intent(out):: nParticle
-    real,    allocatable, intent(out):: Coord_DI(:,:)
-    integer, allocatable, intent(out):: iIndex_II(:,:)
-    integer,              intent(in) :: nAux
-    integer, allocatable, intent(out):: iAux_II(:,:)
-    character(len=*), parameter :: NameSub='IH_get_scatter_line'
-    !--------------------------------------------------------------------------
-    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-  end subroutine IH_get_scatter_line
   !===================================================================!
   subroutine IH_get_a_line_point(&
        nPartial,iGetStart,Get,W,State_V,nVar)

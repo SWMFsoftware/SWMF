@@ -53,7 +53,6 @@ module IH_wrapper
   public:: IH_get_for_sp
   public:: IH_extract_line
   public:: IH_add_to_line
-  public:: IH_get_scatter_line
   public:: IH_get_particle_indexes
   public:: IH_get_particle_coords
   public:: IH_get_a_line_point
@@ -1373,68 +1372,19 @@ contains
     IsInterfacePoint = iIndex_I(1) <= Particle_I(KindReg_)%nParticle
     Xyz_D(1) = mod(Xyz_D(1), real(Particle_I(KindReg_)%nParticleMax))
   end subroutine IH_line_interface_point
-
-  !============================================================================
-
-  subroutine IH_get_scatter_line(nParticle, Coord_DI, iIndex_II, nAux, iAux_II)
-    use IH_BATL_lib, ONLY: nDim, xyz_to_coord, Particle_I
-    use IH_ModParticleFieldLine, ONLY: &
-         get_particle_data, KindReg_
-    integer,              intent(out):: nParticle
-    real,    allocatable, intent(out):: Coord_DI(:,:)
-    integer, allocatable, intent(out):: iIndex_II(:,:)
-    integer,              intent(in) :: nAux
-    integer, allocatable, intent(out):: iAux_II(:,:)
-
-    integer:: iParticle
-    real, allocatable:: Buff_II(:,:)
-    real:: Coord_D(nDim)
-    character(len=*), parameter:: NameSub='IH_get_scatter_line'
-    !--------------------------------------------------------------------------
-    
-    if(allocated(Coord_DI)) deallocate(Coord_DI)
-    if(allocated(iAux_II)) deallocate(iAux_II)
-    
-    if(allocated(Buff_II)) deallocate(Buff_II)
-    nParticle = Particle_I(KindReg_)%nParticle
-    allocate(Buff_II(5,nParticle))
-    ! Buff_II is allocated inside the next call
-    call get_particle_data(5, 'xx yy zz fl id', Buff_II)
-    
-    ! indices to get state vector are not available yet,
-    ! they should be determined outside of this subroutine
-    if(allocated(iIndex_II)) deallocate(iIndex_II)
-
-
-
-    allocate(Coord_DI(nDim,nParticle))
-    allocate(iAux_II(nAux,nParticle))
-
-    Coord_DI(1:nDim,1:nParticle) = Buff_II(1:nDim,1:nParticle)
-    iAux_II(1:nAux,1:nParticle) = nint(Buff_II(nDim+1:nDim+nAux,1:nParticle))
-    deallocate(Buff_II)
-
-    ! transform to generalized coordinates
-    do iParticle = 1, nParticle
-       call xyz_to_coord(Coord_DI(1:nDim, iParticle), Coord_D)
-       Coord_DI(1:nDim, iParticle) = Coord_D
-    end do
-  end subroutine IH_get_scatter_line
-
-  !============================================================================
-
+  !=====================================
   subroutine IH_get_particle_indexes(iParticle, iIndex_I)
     use IH_ModParticleFieldLine, ONLY: fl_, id_, KindReg_
     use IH_BATL_particles, ONLY: Particle_I
     integer, intent(in) :: iParticle
     integer, intent(out):: iIndex_I(2)
     character(len=*), parameter:: NameSub='IH_get_particle_indexes'
-    !--------------------------------------------------------------------------
+    !---------------------------------------
     iIndex_I(1) = Particle_I(KindReg_)%iIndex_II(fl_, iParticle)
     iIndex_I(2) = Particle_I(KindReg_)%iIndex_II(id_, iParticle)
   end subroutine IH_get_particle_indexes
 
-  !============================================================================
+  !====================================
 
   subroutine IH_get_particle_coords(iParticle, Xyz_D)
     use IH_BATL_lib, ONLY: nDim

@@ -29,7 +29,6 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_ih
   public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
-  public:: SP_get_grid_descriptor_param
   public:: SP_get_domain_boundary
   public:: SP_put_r_min
   public:: SP_n_particle
@@ -197,16 +196,6 @@ contains
     integer, intent(in):: iIndex_II(4, nParticle)
     call CON_stop('Can not put line parameters')
   end subroutine SP_put_line
-  !===================================================================
-
-  subroutine SP_get_grid_descriptor_param(&
-       iGridMin_D, iGridMax_D, Displacement_D)
-    integer, intent(out):: iGridMin_D(3)
-    integer, intent(out):: iGridMax_D(3)
-    real,    intent(out):: Displacement_D(3)
-    !-----------------------------------------
-    call CON_stop('Can not get grid descriptor parameters')
-  end subroutine SP_get_grid_descriptor_param
   !===========================
   integer function SP_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
