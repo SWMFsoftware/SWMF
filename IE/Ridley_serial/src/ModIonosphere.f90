@@ -31,11 +31,11 @@ module ModIonosphere
        IONO_Model_With_Complex_Aurora = 4
 
   real :: IONO_Bdp,   &
-       IONO_Radius, IONO_Height, Radius
+       IONO_Radius=1.0, IONO_Height=1.0, Radius
 
   real :: cpcp_north=0.0, cpcp_south=0.0
 
-  real, dimension(1:25,1:16) ::  &
+  real, dimension(25,16) ::  &
        hal_a0_up,ped_a0_up,      &
        hal_a0_do,ped_a0_do,      &
        hal_a1_up,ped_a1_up,      &
@@ -43,102 +43,144 @@ module ModIonosphere
        hal_a2_up,ped_a2_up,      &
        hal_a2_do,ped_a2_do
 
-  real, dimension(1:25) :: cond_mlts
-  real, dimension(1:16) :: cond_lats
+  real, dimension(25) :: cond_mlts
+  real, dimension(16) :: cond_lats
 
   integer :: i_cond_nmlts, i_cond_nlats
 
   !\
   ! Ionosphere Solution on the whole grid
   !/
-  real, dimension(2*IONO_nTheta-1, IONO_nPsi) :: &
-       IONO_Phi = 0.0, IONO_IonNumFlux = 0.0, &
-       IONO_Joule = 0.0, Iono_Jr = 0.0, IONO_Ave_E = 0.0, &
-       IONO_Eflux = 0.0, IONO_SigmaP = 0.0, IONO_SigmaH = 0.0
+  real, allocatable :: IONO_Phi(:,:)
+  real, allocatable :: IONO_IonNumFlux(:,:)
+  real, allocatable :: IONO_Joule(:,:)
+  real, allocatable :: IONO_Jr(:,:)
+  real, allocatable :: IONO_Ave_E(:,:)
+  real, allocatable :: IONO_Eflux(:,:)
+  real, allocatable :: IONO_SigmaP(:,:)
+  real, allocatable :: IONO_SigmaH(:,:)
 
   !\
   ! Ionosphere solution array definitions
   !/
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
-       IONO_NORTH_PHI,IONO_SOUTH_PHI,               & !Ionospheric potential
-       IONO_NORTH_X,IONO_NORTH_Y,IONO_NORTH_Z,      & !Ionospheric coordinates
-       IONO_NORTH_Theta,IONO_NORTH_Psi,             & !
-       IONO_SOUTH_X,IONO_SOUTH_Y,IONO_SOUTH_Z,      & !
-       IONO_SOUTH_Theta,IONO_SOUTH_Psi,             & !
-       IONO_NORTH_Ex,IONO_NORTH_Ey,IONO_NORTH_Ez,   & !Ionospheric electric field
-       IONO_NORTH_ETh,IONO_NORTH_EPs,               & !
-       IONO_SOUTH_Ex,IONO_SOUTH_Ey,IONO_SOUTH_Ez,   & !
-       IONO_SOUTH_ETh,IONO_SOUTH_EPs,               & !
-       IONO_NORTH_Ux,IONO_NORTH_Uy,IONO_NORTH_Uz,   & !Ionospheric flow velocities
-       IONO_NORTH_UTh,IONO_NORTH_UPs,               & !
-       IONO_SOUTH_Ux,IONO_SOUTH_Uy,IONO_SOUTH_Uz,   & !
-       IONO_SOUTH_UTh,IONO_SOUTH_UPs,               & !
-       IONO_NORTH_EFlux,IONO_NORTH_Ave_E,           & !Ionospheric particle inputs
-       IONO_SOUTH_EFlux,IONO_SOUTH_Ave_E,           & !
-       IONO_NORTH_Sigma0,                           & !Ionospheric conductances
-       IONO_NORTH_SigmaH=0.0, IONO_NORTH_SigmaP=0.0,&
-       IONO_NORTH_SigmaThTh,IONO_NORTH_SigmaThPs,   & !
-       IONO_NORTH_SigmaPsPs,                        & !
-       IONO_SOUTH_Sigma0,                           &
-       IONO_SOUTH_SigmaH=0.0, IONO_SOUTH_SigmaP=0.0,& !
-       IONO_SOUTH_SigmaThTh,IONO_SOUTH_SigmaThPs,   & !
-       IONO_SOUTH_SigmaPsPs,                        & !
-       IONO_NORTH_dSigmaThTh_dTheta,                &
-       IONO_NORTH_dSigmaThPs_dTheta,                & !Ionospheric cond. gradients
-       IONO_NORTH_dSigmaPsPs_dTheta,                &
-       IONO_NORTH_dSigmaThTh_dPsi,                  & !
-       IONO_NORTH_dSigmaThPs_dPsi,                  &
-       IONO_NORTH_dSigmaPsPs_dPsi,                  & !
-       IONO_SOUTH_dSigmaThTh_dTheta,                &
-       IONO_SOUTH_dSigmaThPs_dTheta,                & !
-       IONO_SOUTH_dSigmaPsPs_dTheta,                &
-       IONO_SOUTH_dSigmaThTh_dPsi,                  & !
-       IONO_SOUTH_dSigmaThPs_dPsi,                  &
-       IONO_SOUTH_dSigmaPsPs_dPsi,                  &
-       SAVE_NORTH_SigmaH,SAVE_NORTH_SigmaP,         &
-       SAVE_SOUTH_SigmaH,SAVE_SOUTH_SigmaP,         &
-       IONO_NORTH_Joule, IONO_SOUTH_Joule
-  
-  real, dimension(1:IONO_nTheta, 1:IONO_nPsi) ::    &
-       IONO_NORTH_IonNumFlux, IONO_SOUTH_IonNumFlux
+  real, allocatable :: IONO_NORTH_Phi(:,:)
+  real, allocatable :: IONO_SOUTH_Phi(:,:)
+  real, allocatable :: IONO_NORTH_X(:,:)
+  real, allocatable :: IONO_NORTH_Y(:,:)
+  real, allocatable :: IONO_NORTH_Z(:,:)
+  real, allocatable :: IONO_NORTH_Theta(:,:)
+  real, allocatable :: IONO_NORTH_Psi(:,:)
+  real, allocatable :: IONO_SOUTH_X(:,:)
+  real, allocatable :: IONO_SOUTH_Y(:,:)
+  real, allocatable :: IONO_SOUTH_Z(:,:)
+  real, allocatable :: IONO_SOUTH_Theta(:,:)
+  real, allocatable :: IONO_SOUTH_Psi(:,:)
+  real, allocatable :: IONO_NORTH_Ex(:,:)
+  real, allocatable :: IONO_NORTH_Ey(:,:)
+  real, allocatable :: IONO_NORTH_Ez(:,:)
+  real, allocatable :: IONO_NORTH_ETh(:,:)
+  real, allocatable :: IONO_NORTH_EPs(:,:)
+  real, allocatable :: IONO_SOUTH_Ex(:,:)
+  real, allocatable :: IONO_SOUTH_Ey(:,:)
+  real, allocatable :: IONO_SOUTH_Ez(:,:)
+  real, allocatable :: IONO_SOUTH_ETh(:,:)
+  real, allocatable :: IONO_SOUTH_EPs(:,:)
+  real, allocatable :: IONO_NORTH_Ux(:,:)
+  real, allocatable :: IONO_NORTH_Uy(:,:)
+  real, allocatable :: IONO_NORTH_Uz(:,:)
+  real, allocatable :: IONO_NORTH_UTh(:,:)
+  real, allocatable :: IONO_NORTH_UPs(:,:)
+  real, allocatable :: IONO_SOUTH_Ux(:,:)
+  real, allocatable :: IONO_SOUTH_Uy(:,:)
+  real, allocatable :: IONO_SOUTH_Uz(:,:)
+  real, allocatable :: IONO_SOUTH_UTh(:,:)
+  real, allocatable :: IONO_SOUTH_UPs(:,:)
+  real, allocatable :: IONO_NORTH_EFlux(:,:)
+  real, allocatable :: IONO_NORTH_Ave_E(:,:)
+  real, allocatable :: IONO_SOUTH_EFlux(:,:)
+  real, allocatable :: IONO_SOUTH_Ave_E(:,:)
+  real, allocatable :: IONO_NORTH_Sigma0(:,:)
+  real, allocatable :: IONO_NORTH_SigmaH(:,:)
+  real, allocatable :: IONO_NORTH_SigmaP(:,:)
+  real, allocatable :: IONO_NORTH_SigmaThTh(:,:)
+  real, allocatable :: IONO_NORTH_SigmaThPs(:,:)
+  real, allocatable :: IONO_NORTH_SigmaPsPs(:,:)
+  real, allocatable :: IONO_SOUTH_Sigma0(:,:)
+  real, allocatable :: IONO_SOUTH_SigmaH(:,:)
+  real, allocatable :: IONO_SOUTH_SigmaP(:,:)
+  real, allocatable :: IONO_SOUTH_SigmaThTh(:,:)
+  real, allocatable :: IONO_SOUTH_SigmaThPs(:,:)
+  real, allocatable :: IONO_SOUTH_SigmaPsPs(:,:)
+  real, allocatable :: IONO_NORTH_dSigmaThTh_dTheta(:,:)
+  real, allocatable :: IONO_NORTH_dSigmaThPs_dTheta(:,:)
+  real, allocatable :: IONO_NORTH_dSigmaPsPs_dTheta(:,:)
+  real, allocatable :: IONO_NORTH_dSigmaThTh_dPsi(:,:)
+  real, allocatable :: IONO_NORTH_dSigmaThPs_dPsi(:,:)
+  real, allocatable :: IONO_NORTH_dSigmaPsPs_dPsi(:,:)
+  real, allocatable :: IONO_SOUTH_dSigmaThTh_dTheta(:,:)
+  real, allocatable :: IONO_SOUTH_dSigmaThPs_dTheta(:,:)
+  real, allocatable :: IONO_SOUTH_dSigmaPsPs_dTheta(:,:)
+  real, allocatable :: IONO_SOUTH_dSigmaThTh_dPsi(:,:)
+  real, allocatable :: IONO_SOUTH_dSigmaThPs_dPsi(:,:)
+  real, allocatable :: IONO_SOUTH_dSigmaPsPs_dPsi(:,:)
+  real, allocatable :: SAVE_NORTH_SigmaH(:,:)
+  real, allocatable :: SAVE_NORTH_SigmaP(:,:)
+  real, allocatable :: SAVE_SOUTH_SigmaH(:,:)
+  real, allocatable :: SAVE_SOUTH_SigmaP(:,:)
+  real, allocatable :: IONO_NORTH_Joule(:,:)
+  real, allocatable :: IONO_SOUTH_Joule(:,:)
+  real, allocatable :: IONO_NORTH_IonNumFlux(:,:)
+  real, allocatable :: IONO_SOUTH_IonNumFlux(:,:)
+  real, allocatable :: IONO_NORTH_JR(:,:)
+  real, allocatable :: IONO_NORTH_JTh(:,:)
+  real, allocatable :: IONO_NORTH_JPs(:,:)
+  real, allocatable :: IONO_NORTH_Jx(:,:)
+  real, allocatable :: IONO_NORTH_Jy(:,:)
+  real, allocatable :: IONO_NORTH_Jz(:,:)
+  real, allocatable :: IONO_SOUTH_JR(:,:)
+  real, allocatable :: IONO_SOUTH_JTh(:,:)
+  real, allocatable :: IONO_SOUTH_JPs(:,:)
+  real, allocatable :: IONO_SOUTH_Jx(:,:)
+  real, allocatable :: IONO_SOUTH_Jy(:,:)
+  real, allocatable :: IONO_SOUTH_Jz(:,:)
+  real, allocatable :: IONO_NORTH_TGCM_JR(:,:)
+  real, allocatable :: IONO_SOUTH_TGCM_JR(:,:)
+  real, allocatable :: IONO_NORTH_Fake_JR(:,:)
+  real, allocatable :: IONO_SOUTH_Fake_JR(:,:)
+  real, allocatable :: iono_north_im_jr(:,:)
+  real, allocatable :: iono_south_im_jr(:,:)
+  real, allocatable :: iono_north_im_avee(:,:)
+  real, allocatable :: iono_south_im_avee(:,:)
+  real, allocatable :: iono_north_im_eflux(:,:)
+  real, allocatable :: iono_south_im_eflux(:,:)
 
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) ::     &
-       IONO_NORTH_JR,                               & !Ionospheric current
-       IONO_NORTH_JTh,IONO_NORTH_JPs,               &
-       IONO_NORTH_Jx,IONO_NORTH_Jy,IONO_NORTH_Jz,   &
-       IONO_SOUTH_JR,                               &
-       IONO_SOUTH_JTh,IONO_SOUTH_JPs,               &
-       IONO_SOUTH_Jx,IONO_SOUTH_Jy,IONO_SOUTH_Jz,   & !
-       IONO_NORTH_TGCM_JR,                          & !TIMEGCM current !^CFG  IF TIEGCM
-       IONO_SOUTH_TGCM_JR,                          & !                !^CFG  IF TIEGCM
-       IONO_NORTH_Fake_JR,                          & !Region 2 current
-       IONO_SOUTH_Fake_JR,                          &
-       iono_north_im_jr, &
-       iono_south_im_jr, &
-       iono_north_im_avee, &
-       iono_south_im_avee, &
-       iono_north_im_eflux, &
-       iono_south_im_eflux
+  logical, allocatable :: IsFilledWithIm(:,:)
 
-  logical :: IsFilledWithIm(1:IONO_nTheta,1:IONO_nPsi)
-
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) :: &
-       IONO_NORTH_invB, IONO_SOUTH_invB,        & !Ray tracing 1/B integral
-       IONO_NORTH_rho,  IONO_SOUTH_rho,         & !Ray tracing density integral
-       IONO_NORTH_p,    IONO_SOUTH_p,           & !Ray tracing pressure integral
-       IONO_NORTH_t,    IONO_SOUTH_t,           & !Ray tracing temperature integral
-       IONO_NORTH_dLat, IONO_SOUTH_dLat,        & !Ray tracing conjugate delta Lat (degrees)
-       IONO_NORTH_dLon, IONO_SOUTH_dLon           !Ray tracing conjugate delta Lon (degrees)
-       
+  real, allocatable :: IONO_NORTH_invB(:,:)
+  real, allocatable :: IONO_SOUTH_invB(:,:)
+  real, allocatable :: IONO_NORTH_rho(:,:)
+  real, allocatable :: IONO_SOUTH_rho(:,:)
+  real, allocatable :: IONO_NORTH_p(:,:)
+  real, allocatable :: IONO_SOUTH_p(:,:)
+  real, allocatable :: IONO_NORTH_t(:,:)
+  real, allocatable :: IONO_SOUTH_t(:,:)
+  real, allocatable :: IONO_NORTH_dLat(:,:)
+  real, allocatable :: IONO_SOUTH_dLat(:,:)
+  real, allocatable :: IONO_NORTH_dLon(:,:)
+  real, allocatable :: IONO_SOUTH_dLon(:,:)
 
   ! Pentadiagonal matrix for the Poisson equation
-  real, dimension(1:IONO_nTheta,1:IONO_nPsi) :: C_A, C_B, C_C, C_D, C_E
+  real, allocatable :: C_A(:,:)
+  real, allocatable :: C_B(:,:)
+  real, allocatable :: C_C(:,:)
+  real, allocatable :: C_D(:,:)
+  real, allocatable :: C_E(:,:)
   real, dimension(:), allocatable :: d_I, e_I, f_I, e1_I, f1_I
   logical :: north, DoPrecond
   integer :: nThetaUsed, nX
 
-  real, dimension(1:IONO_nTheta) :: dTheta_North, dTheta_South
-  real, dimension(1:IONO_nPsi)   :: dPsi_North, dPsi_South
+  real, dimension(IONO_nTheta) :: dTheta_North, dTheta_South
+  real, dimension(IONO_nPsi)   :: dPsi_North, dPsi_South
 
   data cond_mlts /  0.0,  1.0,  2.0,  3.0,  4.0,  5.0,  &
                     6.0,  7.0,  8.0,  9.0, 10.0, 11.0,  &
@@ -556,5 +598,256 @@ module ModIonosphere
         0.07,  0.06,  0.06,  0.05,  0.03,  0.04,  0.03,  0.04,  0.05,  0.05,  0.07,  0.08,  0.09,  &
         0.13,  0.16,  0.11,  0.10,  0.12,  0.11,  0.11,  0.15,  0.11,  0.11,  0.09,  0.08, &
         0.07,  0.06,  0.05,  0.04,  0.04,  0.05,  0.05,  0.06,  0.06,  0.06,  0.06,  0.07,  0.13/
+
+
+contains
+
+  subroutine init_mod_ionosphere
+
+    if(allocated(IONO_Phi)) RETURN
+
+    ! Initialize these global grid arrays to 0 (for output before solve)
+    allocate(IONO_Phi(2*IONO_nTheta-1,IONO_nPsi));        IONO_Phi = 0
+    allocate(IONO_IonNumFlux(2*IONO_nTheta-1,IONO_nPsi)); IONO_IonNumFlux = 0
+    allocate(IONO_Joule(2*IONO_nTheta-1,IONO_nPsi));      IONO_Joule = 0
+    allocate(IONO_Jr(2*IONO_nTheta-1,IONO_nPsi));         IONO_Jr = 0
+    allocate(IONO_Ave_E(2*IONO_nTheta-1,IONO_nPsi));      IONO_Ave_E = 0
+    allocate(IONO_Eflux(2*IONO_nTheta-1,IONO_nPsi));      IONO_Eflux = 0
+    allocate(IONO_SigmaP(2*IONO_nTheta-1,IONO_nPsi));     IONO_SigmaP = 0
+    allocate(IONO_SigmaH(2*IONO_nTheta-1,IONO_nPsi));     IONO_SigmaH = 0
+
+    allocate(IONO_NORTH_PHI(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_PHI(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_X(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Y(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Z(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Theta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Psi(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_X(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Y(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Z(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Theta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Psi(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Ex(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Ey(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Ez(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_ETh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_EPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Ex(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Ey(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Ez(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_ETh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_EPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Ux(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Uy(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Uz(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_UTh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_UPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Ux(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Uy(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Uz(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_UTh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_UPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_EFlux(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Ave_E(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_EFlux(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Ave_E(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Sigma0(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_SigmaH(IONO_nTheta,IONO_nPsi)); IONO_NORTH_SigmaH = 0
+    allocate(IONO_NORTH_SigmaP(IONO_nTheta,IONO_nPsi)); IONO_NORTH_SigmaP = 0
+    allocate(IONO_NORTH_SigmaThTh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_SigmaThPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_SigmaPsPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Sigma0(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_SigmaH(IONO_nTheta,IONO_nPsi)); IONO_SOUTH_SigmaH = 0
+    allocate(IONO_SOUTH_SigmaP(IONO_nTheta,IONO_nPsi)); IONO_SOUTH_SigmaP = 0
+    allocate(IONO_SOUTH_SigmaThTh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_SigmaThPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_SigmaPsPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dSigmaThTh_dTheta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dSigmaThPs_dTheta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dSigmaPsPs_dTheta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dSigmaThTh_dPsi(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dSigmaThPs_dPsi(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dSigmaPsPs_dPsi(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dSigmaThTh_dTheta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dSigmaThPs_dTheta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dSigmaPsPs_dTheta(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dSigmaThTh_dPsi(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dSigmaThPs_dPsi(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dSigmaPsPs_dPsi(IONO_nTheta,IONO_nPsi))
+    allocate(SAVE_NORTH_SigmaH(IONO_nTheta,IONO_nPsi))
+    allocate(SAVE_NORTH_SigmaP(IONO_nTheta,IONO_nPsi))
+    allocate(SAVE_SOUTH_SigmaH(IONO_nTheta,IONO_nPsi))
+    allocate(SAVE_SOUTH_SigmaP(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Joule(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Joule(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_IonNumFlux(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_IonNumFlux(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_JR(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_JTh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_JPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Jx(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Jy(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Jz(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_JR(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_JTh(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_JPs(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Jx(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Jy(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Jz(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_TGCM_JR(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_TGCM_JR(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_Fake_JR(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_Fake_JR(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_north_im_jr(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_south_im_jr(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_north_im_avee(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_south_im_avee(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_north_im_eflux(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_south_im_eflux(IONO_nTheta,IONO_nPsi))
+    allocate(IsFilledWithIm(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_invB(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_invB(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_rho(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_rho(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_p(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_p(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_t(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_t(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dLat(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dLat(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_NORTH_dLon(IONO_nTheta,IONO_nPsi))
+    allocate(IONO_SOUTH_dLon(IONO_nTheta,IONO_nPsi))
+    allocate(C_A(IONO_nTheta,IONO_nPsi))
+    allocate(C_B(IONO_nTheta,IONO_nPsi))
+    allocate(C_C(IONO_nTheta,IONO_nPsi))
+    allocate(C_D(IONO_nTheta,IONO_nPsi))
+    allocate(C_E(IONO_nTheta,IONO_nPsi))
+
+  end subroutine init_mod_ionosphere
+  !===========================================================================
+  subroutine clean_mod_ionosphere
+
+    if(.not.allocated(IONO_Phi)) RETURN
+
+    deallocate(IONO_Phi)
+    deallocate(IONO_IonNumFlux)
+    deallocate(IONO_Joule)
+    deallocate(IONO_Jr)
+    deallocate(IONO_Ave_E)
+    deallocate(IONO_Eflux)
+    deallocate(IONO_SigmaP)
+    deallocate(IONO_SigmaH)
+    deallocate(IONO_NORTH_PHI)
+    deallocate(IONO_SOUTH_PHI)
+    deallocate(IONO_NORTH_X)
+    deallocate(IONO_NORTH_Y)
+    deallocate(IONO_NORTH_Z)
+    deallocate(IONO_NORTH_Theta)
+    deallocate(IONO_NORTH_Psi)
+    deallocate(IONO_SOUTH_X)
+    deallocate(IONO_SOUTH_Y)
+    deallocate(IONO_SOUTH_Z)
+    deallocate(IONO_SOUTH_Theta)
+    deallocate(IONO_SOUTH_Psi)
+    deallocate(IONO_NORTH_Ex)
+    deallocate(IONO_NORTH_Ey)
+    deallocate(IONO_NORTH_Ez)
+    deallocate(IONO_NORTH_ETh)
+    deallocate(IONO_NORTH_EPs)
+    deallocate(IONO_SOUTH_Ex)
+    deallocate(IONO_SOUTH_Ey)
+    deallocate(IONO_SOUTH_Ez)
+    deallocate(IONO_SOUTH_ETh)
+    deallocate(IONO_SOUTH_EPs)
+    deallocate(IONO_NORTH_Ux)
+    deallocate(IONO_NORTH_Uy)
+    deallocate(IONO_NORTH_Uz)
+    deallocate(IONO_NORTH_UTh)
+    deallocate(IONO_NORTH_UPs)
+    deallocate(IONO_SOUTH_Ux)
+    deallocate(IONO_SOUTH_Uy)
+    deallocate(IONO_SOUTH_Uz)
+    deallocate(IONO_SOUTH_UTh)
+    deallocate(IONO_SOUTH_UPs)
+    deallocate(IONO_NORTH_EFlux)
+    deallocate(IONO_NORTH_Ave_E)
+    deallocate(IONO_SOUTH_EFlux)
+    deallocate(IONO_SOUTH_Ave_E)
+    deallocate(IONO_NORTH_Sigma0)
+    deallocate(IONO_NORTH_SigmaH)
+    deallocate(IONO_NORTH_SigmaP)
+    deallocate(IONO_NORTH_SigmaThTh)
+    deallocate(IONO_NORTH_SigmaThPs)
+    deallocate(IONO_NORTH_SigmaPsPs)
+    deallocate(IONO_SOUTH_Sigma0)
+    deallocate(IONO_SOUTH_SigmaH)
+    deallocate(IONO_SOUTH_SigmaP)
+    deallocate(IONO_SOUTH_SigmaThTh)
+    deallocate(IONO_SOUTH_SigmaThPs)
+    deallocate(IONO_SOUTH_SigmaPsPs)
+    deallocate(IONO_NORTH_dSigmaThTh_dTheta)
+    deallocate(IONO_NORTH_dSigmaThPs_dTheta)
+    deallocate(IONO_NORTH_dSigmaPsPs_dTheta)
+    deallocate(IONO_NORTH_dSigmaThTh_dPsi)
+    deallocate(IONO_NORTH_dSigmaThPs_dPsi)
+    deallocate(IONO_NORTH_dSigmaPsPs_dPsi)
+    deallocate(IONO_SOUTH_dSigmaThTh_dTheta)
+    deallocate(IONO_SOUTH_dSigmaThPs_dTheta)
+    deallocate(IONO_SOUTH_dSigmaPsPs_dTheta)
+    deallocate(IONO_SOUTH_dSigmaThTh_dPsi)
+    deallocate(IONO_SOUTH_dSigmaThPs_dPsi)
+    deallocate(IONO_SOUTH_dSigmaPsPs_dPsi)
+    deallocate(SAVE_NORTH_SigmaH)
+    deallocate(SAVE_NORTH_SigmaP)
+    deallocate(SAVE_SOUTH_SigmaH)
+    deallocate(SAVE_SOUTH_SigmaP)
+    deallocate(IONO_NORTH_Joule)
+    deallocate(IONO_SOUTH_Joule)
+    deallocate(IONO_NORTH_IonNumFlux)
+    deallocate(IONO_SOUTH_IonNumFlux)
+    deallocate(IONO_NORTH_JR)
+    deallocate(IONO_NORTH_JTh)
+    deallocate(IONO_NORTH_JPs)
+    deallocate(IONO_NORTH_Jx)
+    deallocate(IONO_NORTH_Jy)
+    deallocate(IONO_NORTH_Jz)
+    deallocate(IONO_SOUTH_JR)
+    deallocate(IONO_SOUTH_JTh)
+    deallocate(IONO_SOUTH_JPs)
+    deallocate(IONO_SOUTH_Jx)
+    deallocate(IONO_SOUTH_Jy)
+    deallocate(IONO_SOUTH_Jz)
+    deallocate(IONO_NORTH_TGCM_JR)
+    deallocate(IONO_SOUTH_TGCM_JR)
+    deallocate(IONO_NORTH_Fake_JR)
+    deallocate(IONO_SOUTH_Fake_JR)
+    deallocate(IONO_north_im_jr)
+    deallocate(IONO_south_im_jr)
+    deallocate(IONO_north_im_avee)
+    deallocate(IONO_south_im_avee)
+    deallocate(IONO_north_im_eflux)
+    deallocate(IONO_south_im_eflux)
+    deallocate(IsFilledWithIm)
+    deallocate(IONO_NORTH_invB)
+    deallocate(IONO_SOUTH_invB)
+    deallocate(IONO_NORTH_rho)
+    deallocate(IONO_SOUTH_rho)
+    deallocate(IONO_NORTH_p)
+    deallocate(IONO_SOUTH_p)
+    deallocate(IONO_NORTH_t)
+    deallocate(IONO_SOUTH_t)
+    deallocate(IONO_NORTH_dLat)
+    deallocate(IONO_SOUTH_dLat)
+    deallocate(IONO_NORTH_dLon)
+    deallocate(IONO_SOUTH_dLon)
+    deallocate(C_A)
+    deallocate(C_B)
+    deallocate(C_C)
+    deallocate(C_D)
+    deallocate(C_E)
+
+  end subroutine clean_mod_ionosphere
 
 end module ModIonosphere
