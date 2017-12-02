@@ -1293,6 +1293,9 @@ contains
        RETURN
     end if
 
+    ! Make sure that restart files are not used if there is new input
+    DoRestart = .false.
+
     ! Check if we can have a reasonable magnetic field already
     call get_time(nStepOut=nStep)
 
