@@ -51,6 +51,8 @@ contains
 
     integer, intent(in)        :: iFile, nPlotVar
 
+    real :: Los_D(3), aUnit_D(3), bUnit_D(3), ObsPos_D(3)
+
     logical                    :: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_box'
     !--------------------------------------------------------------------------
@@ -82,6 +84,15 @@ contains
     if(IsObsBox_I(iFile))then
        ! This is the tilt (roll)
        xAngle = plot_normal(1,iFile) * cDegtoRad
+
+       ! Translate image center from LOS coordinates to TypeCoordPlot_I(iFile)
+       ObsPos_D = ObsPos_DI(:,iFile)
+       Los_D = ObsPos_D/sqrt(sum(ObsPos_D**2))
+       aUnit_D = cross_product((/0.,0.,1./), Los_D)
+       aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
+       bUnit_D = cross_product(Los_D, aUnit_D)
+       bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
+       Xyz0_D =  Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
 
        ! Observer position is with respect to center of box.
        ! Convert observer location to longitude and latitude.
