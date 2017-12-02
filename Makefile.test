@@ -606,7 +606,7 @@ test_swpc_check:
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
 		${TESTDIR}/RB/plots/20140410_000300_e.fls.ref \
 		> test_swpc_rb.diff)
-	ls -l test_swpc_*.diff
+	ls -l test_swpc_??.diff
 
 ### test_swpc_multiion: GM+IE+IM ###
 
