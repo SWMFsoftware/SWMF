@@ -337,6 +337,7 @@ contains
     ! Since IE has a static grid the descriptor has to be set once.
     ! There can be many couplers that attempt to set the descriptor,
     ! so we must check IsInitialized.
+
     use ModProcIE
     use ModIonosphere
     use IE_ModIo
@@ -348,43 +349,40 @@ contains
     logical :: IsInitialized=.false.
     integer :: iProc_A(2)
 
-    real :: Colat_I(2*IONO_nTheta-1)
+    real :: Colat_I(2*IONO_nTheta-1) = 0.
+    real :: Longitude_I(IONO_nPsi) = 0.
 
     logical :: DoTest, DoTestMe
-
     !------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,' IsInitialized=',IsInitialized
-    if(IsInitialized) return
-    IsInitialized=.true.
+
+    if(IsInitialized) RETURN
+    IsInitialized = .true.
 
     ! IE runs on 1 or 2 PE-s so processor array is (/0,0/) or (/0,1/)
     iProc_A(1)=0
     iProc_A(2)=nProc-1
 
-    if (nProc<0)then
-       IONO_NORTH_Theta=0.
-       IONO_SOUTH_Theta=0.
-       IONO_NORTH_Psi=0.
-       IONO_Radius=1.
-       IONO_Height=1.
+    ! Coordinates can only be set on the IE processors where nProc > 0
+    if (nProc > 0)then
+       ! The colatitudes for both hemispheres
+       Colat_I(            1:  IONO_nTheta) = IONO_NORTH_Theta(:,1)
+       Colat_I(IONO_nTheta:2*IONO_nTheta-1) = IONO_SOUTH_Theta(:,1)
+       Longitude_I                          = IONO_NORTH_Psi(1,:)
     end if
 
-    ! The colatitudes for both hemispheres
-    Colat_I(            1:  IONO_nTheta) = IONO_NORTH_Theta(:,1)
-    Colat_I(IONO_nTheta:2*IONO_nTheta-1) = IONO_SOUTH_Theta(:,1)
-
     call set_grid_descriptor(                        &
-         IE_,                          &! component index
-         nDim=2,                       &! dimensionality
-         nRootBlock_D=(/2,1/),         &! north+south hemispheres
+         IE_,                                        &! component index
+         nDim=2,                                     &! dimensionality
+         nRootBlock_D=(/2,1/),                       &! north+south hemispheres
          nCell_D =(/IONO_nTheta - 1,IONO_nPsi - 1/), &! size of node based grid
-         XyzMin_D=(/cOne, cOne/),      &! min colat and longitude indexes
-         XyzMax_D=(/real(2*IONO_nTheta-1),&
-         real(IONO_nPsi)/),            &! max colat and longitude indexes
+         XyzMin_D=(/cOne, cOne/),                    &! minimum indexes
+         XyzMax_D=(/real(2*IONO_nTheta-1),           &! maximum indexes
+         real(IONO_nPsi)/),                          &
          TypeCoord='SMG',                            &! solar magnetic coord.
          Coord1_I=Colat_I,                           &! colatitudes
-         Coord2_I=IONO_NORTH_Psi(1,:),               &! longitudes
+         Coord2_I=Longitude_I,                       &! longitudes
          Coord3_I=(/IONO_Radius + IONO_Height/),     &! radial size in meters
          iProc_A = iProc_A)                           ! processor assigment
 
@@ -1135,7 +1133,7 @@ contains
     ! Initialize the Ionosphere Electrostatic (IE) module for session iSession
 
     use CON_physics,   ONLY: get_time, get_planet, get_axes
-    use ModIonosphere, ONLY: IONO_Bdp
+    use ModIonosphere, ONLY: IONO_Bdp, init_mod_ionosphere
     use IE_ModMain,    ONLY: time_accurate, time_simulation, ThetaTilt
     use IE_ModIo,      ONLY: dt_output, t_output_last
     use ModProcIE
@@ -1156,6 +1154,7 @@ contains
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
     if(IsUninitialized)then
+       call init_mod_ionosphere
        call ionosphere_fine_grid
        call ionosphere_init
 
@@ -1190,6 +1189,7 @@ contains
     use CON_physics, ONLY: get_time
     use ModTimeConvert, ONLY: time_real_to_int
     use ModKind, ONLY: Real8_
+    use ModIonosphere, ONLY: clean_mod_ionosphere
 
     !INPUT PARAMETERS:
     real,     intent(in) :: tSimulation   ! seconds from start time
@@ -1216,6 +1216,8 @@ contains
 
     if(allocated(PosMagnetometer_II)) deallocate(&
          PosMagnetometer_II, TypeCoordMag_I)
+
+    call clean_mod_ionosphere
     
   end subroutine IE_finalize
 
