@@ -457,50 +457,39 @@ contains
 
   !===================================================================
 
-  subroutine SP_put_line(iComp, nPut, Coord_DI, iIndex_II)
+  subroutine SP_put_line(iComp, Coord_D, iIndex_I)
     ! store particle coordinates extracted elsewhere
     !---------------------------------------------------------------
     integer, intent(in):: iComp
-    integer, intent(in):: nPut
-    real,    intent(in):: Coord_DI( nDim,   nPut)
-    integer, intent(in):: iIndex_II(nDim+1, nPut)
+    real,    intent(in):: Coord_D( nDim)
+    integer, intent(in):: iIndex_I(nDim+1)
 
-    ! cartesian coordinates
-    real:: Xyz_D(nDim)
-    ! radius-lon-lat coordinates
-    real:: Coord_D(nDim)
-    ! loop variables
-    integer:: iPut, iBlock, iNode
+    integer:: iBlock, iNode
     ! indices of the particle
     integer:: iLine, iParticle, iLagrID
-    logical:: PutInBuffer
-
+ 
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
-    PutInBuffer = iComp == SC_
     ! store passed particles
-    do iPut = 1, nPut
-       iBlock    = iIndex_II(4, iPut)
-       iLine     = iNode_B(iBlock)
-       iParticle = iIndex_II(1, iPut)
-       iLagrID   = iIndex_II(1, iPut) + iOffsetToLagrID_A(iLine)
+    iBlock    = iIndex_I(4)
+    iLine     = iNode_B(iBlock)
+    iParticle = iIndex_I(1)
+    iLagrID   = iIndex_I(1) + iOffsetToLagrID_A(iLine)
 
-       if(iParticle < iParticleMin)&
-            call CON_stop(NameSub//': particle index is below limit')
-       if(iParticle > iParticleMax)&
-            call CON_stop(NameSub//': particle index is above limit')
-       if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
-            call CON_stop(NameSub//': Incorrect message pass')
-
-       if(.not.PutInBuffer .and. is_in_buffer(Coord_DI(1:nDim, iPut)) )&
-            CYCLE
-
-       ! put coordinates
-       State_VIB(LagrID_,iParticle, iBlock) = real(iLagrID)
-       State_VIB(X_:Z_,  iParticle, iBlock) = Coord_DI(1:nDim, iPut)
-       iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
-       iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
-    end do
+    if(iParticle < iParticleMin)&
+         call CON_stop(NameSub//': particle index is below limit')
+    if(iParticle > iParticleMax)&
+         call CON_stop(NameSub//': particle index is above limit')
+    if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
+         call CON_stop(NameSub//': Incorrect message pass')
+    
+    if(iComp /= SC_ .and. is_in_buffer(Coord_D(1:nDim)) )&
+         RETURN
+    ! put coordinates
+    State_VIB(LagrID_,iParticle, iBlock) = real(iLagrID)
+    State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
+    iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
+    iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
   end subroutine SP_put_line
 
   !===================================================================

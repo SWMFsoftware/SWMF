@@ -6,31 +6,26 @@
 module CON_couple_mh_sp
 
   use CON_coupler
-  use IH_wrapper, ONLY: IH_synchronize_refinement, &        
-       IH_extract_line, IH_get_for_sp, IH_get_a_line_point,&
-       IH_add_to_line, IH_n_particle,& 
-       IH_LineDD, IH_line_interface_point, &                
-       IH_get_particle_indexes, IH_get_particle_coords,&    
-       IH_check_use_particles                               
+  use IH_wrapper, ONLY: IH_synchronize_refinement,  &        
+       IH_extract_line, IH_get_for_sp, IH_get_a_line_point, IH_add_to_line,      &
+       IH_n_particle, IH_LineDD, IH_line_interface_point, IH_check_use_particles,&
+       IH_get_particle_indexes, IH_get_particle_coords                              
  
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &      !^CMP IF SC BEGIN 
-       SC_extract_line, SC_get_for_sp, SC_get_a_line_point,&
-       SC_add_to_line, SC_n_particle,& 
-       SC_LineDD, SC_line_interface_point,&                 
-       SC_get_particle_indexes, SC_get_particle_coords,&    
-       SC_check_use_particles                              !^CMP END SC
+       SC_extract_line, SC_get_for_sp, SC_get_a_line_point,SC_add_to_line,       & 
+       SC_n_particle, SC_LineDD, SC_line_interface_point, SC_check_use_particles,& 
+       SC_get_particle_indexes, SC_get_particle_coords    !^CMP END SC
   use CON_axes
 
   use SP_wrapper, ONLY: &
        SP_put_from_sc, SP_put_from_ih, SP_put_input_time, &
        SP_put_line, SP_n_particle, SP_synchronize_grid, &
-       SP_do_extract, &
-       SP_get_domain_boundary, SP_put_r_min, &
+       SP_do_extract, SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
-       SP_interface_point_coords_for_ih_extract, &
-       SP_copy_old_state, SP_adjust_lines, SP_get_particle_index, &
-       SP_get_cell_index
+       SP_interface_point_coords_for_ih_extract, SP_get_cell_index, &
+       SP_copy_old_state, SP_adjust_lines, SP_get_particle_index
+       
   implicit none
   
   private !Except
@@ -47,10 +42,10 @@ module CON_couple_mh_sp
   type(RouterType),save,private::RouterLineIhSp    !IH (Particle coords)=>SP    
   !^CMP IF SC BEGIN
   type(GridDescriptorType),save::SC_GridDescriptor !Source (MHD data)  
-  type(RouterType),save,private::RouterScSp        !IH MHD data => SP
+  type(RouterType),save,private::RouterScSp        !SC MHD data => SP
   type(GridDescriptorType),save::SC_LineGridDesc   !Misc
   type(LocalGDType),       save::SC_LocalLineGD    !Source (Particle Coords)     
-  type(RouterType),save,private::RouterLineScSp    !IH (Particle coords)=>SP    
+  type(RouterType),save,private::RouterLineScSp    !SC (Particle coords)=>SP    
   !^CMP END SC
   !\
   !Three-dimensional grids in SC and IH, 
@@ -67,8 +62,7 @@ module CON_couple_mh_sp
   integer :: nLength, iError
   !\
   ! Transformation matrices
-  real,dimension(3,3) :: ScToSp_DD, IhToSp_DD
-  
+  real,dimension(3,3) :: ScToSp_DD, IhToSp_DD 
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real :: tNow
@@ -291,7 +285,6 @@ contains
     
     ScToSp_DD=transform_matrix(tNow,&
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
-
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
     call SP_synchronize_grid(RouterScSp%iCommUnion)
@@ -438,62 +431,29 @@ contains
     end if
   end subroutine exchange_data_ih_sp
   !==================================================================!
-  subroutine mapping(iCompIn, iCompOut, nDimIn, CoordIn_D, nDimOut, CoordOut_D)
+  subroutine xyz_to_coord(XyzIn_D, CoordOut_D, TypeGeometry)
     ! mapping from generalized coordinates in CompIn 
     ! to generalized coordinates in CompOut
     use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
-    integer, intent(in) :: iCompIn
-    integer, intent(in) :: iCompOut
-    integer, intent(in) :: nDimIn
-    real,    intent(in) :: CoordIn_D(nDimIn)
-    integer, intent(in) :: nDimOut
-    real,    intent(out):: CoordOut_D(nDimOut)
-
-    character(len=100):: TypeGeometryIn, TypeGeometryOut
-    real:: XyzTemp_D(nDimOut), CoordTemp_D(nDimIn)
-    real:: Convert_DD(nDimIn, nDimOut)
-    character(len=*), parameter:: NameSub='CON_couple_mh_sp:mapping'
+    real,    intent(in) :: XyzIn_D(nDim)
+    real,    intent(out):: CoordOut_D(nDim)
+    character(len=*), intent(in):: TypeGeometry
+    character(len=*), parameter:: NameSub='CON_couple_mh_sp:xyz_to_coord'
     !------------------------------------------------------------
-    if(nDimIn /= 3 .or. nDimOut /= 3)&
-         call CON_stop(NameSub//': MH or SP component is not 3D')
-    ! convert from geometry input type
-    TypeGeometryIn = Grid_C(iCompIn)%TypeGeometry
-    if(index(TypeGeometryIn, 'spherical_lnr') > 0 )then
-       ! convert log(radius) to radius first
-       CoordTemp_D = CoordIn_D
-       CoordTemp_D(1) = exp(CoordTemp_D(1))
-       call rlonlat_to_xyz(CoordTemp_D, XyzTemp_D)
-    elseif( index(TypeGeometryIn, 'spherical') > 0 )then
-       call rlonlat_to_xyz(CoordIn_D, XyzTemp_D)
-    elseif(index(TypeGeometryIn, 'cartesian') > 0 )then
-       XyzTemp_D = CoordIn_D
-    else
-       call CON_stop(NameSub//&
-            ': unknown type of geometry '//trim(TypeGeometryIn))
-    end if
-
-    ! matrix for cartesian transform  between components
-    Convert_DD = transform_matrix(tNow, &
-         Grid_C(iCompIn)%TypeCoord,  Grid_C(iCompOut)%TypeCoord)
-
-    ! geometry of iCompOut component
-    TypeGeometryOut = Grid_C(iCompOut)%TypeGeometry
-    ! rotate cartesian
-    XyzTemp_D = matmul(Convert_DD, XyzTemp_D)
     ! convert to geometry output type
-    if( index(TypeGeometryOut, 'spherical_lnr') > 0 )then
-       call xyz_to_rlonlat(XyzTemp_D, CoordOut_D)
+    if( index(TypeGeometry, 'spherical_lnr') > 0 )then
+       call xyz_to_rlonlat(XyzIn_D, CoordOut_D)
        ! convert radius to log(radius)
        if(CoordOut_D(1) > 0) CoordOut_D(1) = log(CoordOut_D(1))
-    elseif( index(TypeGeometryOut, 'spherical') > 0 )then
-       call xyz_to_rlonlat(XyzTemp_D, CoordOut_D)
-    elseif(index(TypeGeometryOut, 'cartesian') > 0 )then
-       CoordOut_D = XyzTemp_D
+    elseif( index(TypeGeometry, 'spherical') > 0 )then
+       call xyz_to_rlonlat(XyzIn_D, CoordOut_D)
+    elseif(index(TypeGeometry, 'cartesian') > 0 )then
+       CoordOut_D = XyzIn_D
     else
        call CON_stop(NameSub//&
-            ': unknown type of geometry '//trim(TypeGeometryOut))
+            ': unknown type of geometry '//trim(TypeGeometry))
     end if
-  end subroutine mapping
+  end subroutine xyz_to_coord
   !==================================================================!
   subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
@@ -502,9 +462,11 @@ contains
     integer, intent(in) :: nDimOut
     real,    intent(out):: CoordOut_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
+    real                :: XyzTemp_D(nDim)
     !------------------------------------------
-    IsInterfacePoint = .true.
-    call mapping(SP_,IH_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+    IsInterfacePoint = .true.; XyzTemp_D = matmul(XyzIn_D, IhToSp_DD)
+    call xyz_to_coord(XyzIn_D = XyzTemp_D, CoordOut_D = CoordOut_D, &
+         TypeGeometry = Grid_C(IH_)%TypeGeometry)
   end subroutine mapping_sp_to_ih
   !==================================================================!
   subroutine mapping_line_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
@@ -518,7 +480,7 @@ contains
     
     integer:: iIndex_I(2), iParticle, iCell
     !------------------------------------------
-    IsInterfacePoint = .true.
+    IsInterfacePoint = .true.; 
     iParticle = nint(XyzIn_D(1))
     call IH_get_particle_indexes(iParticle, iIndex_I)
     call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
@@ -532,9 +494,11 @@ contains
     integer, intent(in) :: nDimOut
     real,    intent(out):: CoordOut_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
+    real                :: XyzTemp_D(nDim)
     !------------------------------------------
-    IsInterfacePoint = .true.
-    call mapping(SP_, SC_,nDimIn, XyzIn_D, nDimOut, CoordOut_D)
+    IsInterfacePoint = .true.; XyzTemp_D=matmul(XyzIn_D, ScToSp_DD)
+    call xyz_to_coord(XyzIn_D = XyzTemp_D, CoordOut_D = CoordOut_D, &
+         TypeGeometry = Grid_C(SC_)%TypeGeometry)
   end subroutine mapping_sp_to_sc
   !================================
   subroutine mapping_line_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
@@ -566,33 +530,19 @@ contains
     type(WeightPtrType),intent(in)::Weight
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
-    
-    real:: Buff_II(nVar, 1)
-    integer:: iIndex_II(4,1)
     !----------------------------------------
-    Buff_II(:,1)   = Buff_I
-    iIndex_II(:,1) = Put%iCB_II(1:4,iPutStart)
-    call SP_put_line(SC_,1, Buff_II, iIndex_II)
+    call SP_put_line(SC_, Buff_I, Put%iCB_II(1:4,iPutStart))
   end subroutine SP_put_line_from_sc
   !==================================================================!
   subroutine SP_put_line_from_ih(nPartial,&
-       iPutStart,&
-       Put,&
-       Weight,&
-       DoAdd,&
-       Buff_I,nVar)
+       iPutStart, Put, Weight, DoAdd, Buff_I, nVar)
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::Weight
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
-    
-    real:: Buff_II(nVar, 1)
-    integer:: iIndex_II(4,1)
     !----------------------------------------
-    Buff_II(:,1)   = Buff_I
-    iIndex_II(:,1) = Put%iCB_II(1:4,iPutStart)
-    call SP_put_line(IH_,1, Buff_II, iIndex_II)
+    call SP_put_line(IH_,Buff_I, Put%iCB_II(1:4,iPutStart))
   end subroutine SP_put_line_from_ih
   !==================================================================!        
   subroutine IH_get_for_sp_and_transform(&
@@ -623,11 +573,11 @@ contains
     real,dimension(nVar),intent(out)::State_V
     !------------------------------------------------------------
     ! get buffer with variables
-    call IH_get_particle_coords(Get%iCB_II(1,iGetStart),State_V)
+    call IH_get_particle_coords(Get%iCB_II(1, iGetStart), State_V)
     ! perform transformation before returning
-    State_V = matmul(IhToSp_DD,State_V)
+    State_V = matmul(IhToSp_DD, State_V)
   end subroutine IH_get_line_for_sp_and_transform
-  !==================================================================!
+  !==============================================================!
   subroutine fix_buffer(BlockIndex_I,&
             iGridPointInBlock, nAux, Data_V)
     use CON_coupler, ONLY: GlobalTreeNode_, BLK_, &
@@ -644,18 +594,15 @@ contains
     real,    intent(out):: Data_V(1:nAux)
    
     integer:: iIndexIn, iLine, iIndexOut
-    !---------------------------------------------------------------
+    !-------------------------------------------------------------
     iLine    = BlockIndex_I(GlobalBlock_)
     iIndexIn = iGridPointInBlock
     call SP_get_particle_index(iLine, iIndexIn, iIndexOut)
     Data_V(1) = real(iLine); Data_V(2) = real(iIndexOut)
   end subroutine fix_buffer
-
-  !^CMP IF SC BEGIN 
-  !-----------------------------------------------------------------
+  !^CMP IF SC BEGIN    ===========================================
   subroutine SC_get_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
-
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
@@ -663,13 +610,11 @@ contains
     integer:: iVarBx, iVarBz
     !------------------------------------------------------------
     ! get buffer with variables
-    call SC_get_for_sp(&
-         nPartial,iGetStart,Get,w,State_V,nVar)
+    call SC_get_for_sp(nPartial,iGetStart,Get,w,State_V,nVar)
     ! indices of variables 
-    iVarBx = iVar_V(BxCouple_)
-    iVarBz = iVar_V(BzCouple_)
+    iVarBx = iVar_V(BxCouple_); iVarBz = iVar_V(BzCouple_)
     ! perform transformation before returning
-    State_V(iVarBx:iVarBz)=matmul(ScToSp_DD,State_V(iVarBx:iVarBz))
+    State_V(iVarBx:iVarBz) = matmul(ScToSp_DD,State_V(iVarBx:iVarBz))
   end subroutine SC_get_for_sp_and_transform
   !=============================================================
   subroutine SC_get_line_for_sp_and_transform(&
@@ -683,8 +628,7 @@ contains
     ! get buffer with variables
     call SC_get_particle_coords(Get%iCB_II(1,iGetStart),State_V)
     ! perform transformation before returning
-    State_V = matmul(ScToSp_DD,State_V)
+    State_V = matmul(ScToSp_DD, State_V)
   end subroutine SC_get_line_for_sp_and_transform
-  !==================================================================!        
-  !^CMP END SC
+  !=============================================== !^CMP END SC
 end Module CON_couple_mh_sp
