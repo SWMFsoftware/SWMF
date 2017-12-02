@@ -49,7 +49,7 @@ double xmax[3]={3.0,2.0,3.0};
 int CurrentCenterNodeOffset=-1,NextCenterNodeOffset=-1;
 int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
 
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode> Solver1(1,1000);
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1> Solver1;
 
 void solver1_matvec(double* VecIn, double * VecOut, int n){  
   Solver1.MultiplyVector(VecOut,VecIn,n);
@@ -147,7 +147,7 @@ double BulletLocalResolution(double *x) {
   double dist = xmax[0]-xmin[0];
 
 #if _TEST_MESH_MODE_==_UNIFORM_MESH_  
-  double res =4;
+  double res =2;
 #endif
 
 #if _TEST_MESH_MODE_==_NONUNIFORM_MESH_
@@ -492,15 +492,17 @@ void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, d
 
 
 //create the stencil for the linear equaton solver test
-void GetTestStencil(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+void GetTestStencil(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
+cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
-  
+  /*
  MatrixRowNonZeroElementTable[0].i=i,MatrixRowNonZeroElementTable[0].j=j,MatrixRowNonZeroElementTable[0].k=k,MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
 NonZeroElementsFound=1;
 rhs=100.0;
 MatrixRowNonZeroElementTable[0].iVar=0;
 return;
- 
+  */
   
   //check whether the point is located at the boundary
   //boundary cell at the larger end is absorbed
@@ -508,6 +510,7 @@ return;
   int nCell[3] = {_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_};
 
   // set  bc for the lower boundary
+  /*
   for (int iDim=0;iDim<3;iDim++) if ((node->GetNeibFace(iDim*2,0,0)==NULL) && index[iDim]==0 ) {
     //the point is located at the boundary of the domain
     MatrixRowNonZeroElementTable[0].i=i,MatrixRowNonZeroElementTable[0].j=j,MatrixRowNonZeroElementTable[0].k=k,MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
@@ -518,7 +521,7 @@ return;
 
     return;
   }
-
+  */
  
   int iElement = 0;
   int nDirBoundary =0;
@@ -526,18 +529,27 @@ return;
   rhs =0.0;
   for (int ii=0;ii<3; ii++){
     int jMax =2;
+    int sign=1;
     // set bc for the neihbor cell of higher boundary
     if (index[ii]== nCell[ii]-1 && node->GetNeibFace(2*ii+1,0,0)==NULL) {
       jMax = 1;
+      sign = 1; 
       nDirBoundary++;
       rhs -= 100; //boundary condition
-    } 
+    }
+
+    if (index[ii]== 0 && node->GetNeibFace(2*ii,0,0)==NULL) {
+      jMax = 1;
+      sign = -1; 
+      nDirBoundary++;
+      rhs -= 100; //boundary condition
+    }
    
     int addition[2]={-1,1};
     for (int jj=0;jj<jMax;jj++){             
-      MatrixRowNonZeroElementTable[iElement].i=(ii!=0)?i:i+addition[jj];
-      MatrixRowNonZeroElementTable[iElement].j=(ii!=1)?j:j+addition[jj];
-      MatrixRowNonZeroElementTable[iElement].k=(ii!=2)?k:k+addition[jj];
+      MatrixRowNonZeroElementTable[iElement].i=(ii!=0)?i:i+sign*addition[jj];
+      MatrixRowNonZeroElementTable[iElement].j=(ii!=1)?j:j+sign*addition[jj];
+      MatrixRowNonZeroElementTable[iElement].k=(ii!=2)?k:k+sign*addition[jj];
       MatrixRowNonZeroElementTable[iElement].MatrixElementValue=1.0;
       MatrixRowNonZeroElementTable[iElement].iVar=0;
       iElement++;
@@ -666,8 +678,8 @@ int main(int argc,char **argv) {
   linear_solver_matvec_c = solver1_matvec;
   Solver1.Solve(SetInitialGuess,ProcessFinalSolution);
 
-  double *xx;
-  Solver1.ExchageIntermediateUnknownsData(xx);
+  //double *xx;
+  //Solver1.ExchageIntermediateUnknownsData(xx);
 
   PIC::Init_AfterParser();
   PIC::Mover::Init();
