@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModRadioWaveImage
-  use ModConst, ONLY: cPi, cElectronMass, cProtonMass
+  use ModConst, ONLY: cPi, cElectronMass, cElectronChargeSquaredJm
   use BATL_lib, ONLY: iProc, MaxDim, nDim, x_, y_, z_
   use ModParticles, ONLY: allocate_particles,&
        mark_undefined, Particle_I, check_particle_location,&
@@ -23,8 +23,8 @@ module ModRadioWaveImage
   public:: nRay, SlopeX_, SlopeZ_
   integer :: nRay !=nXPixelX*nYPixel
   !\
-  !Frequency related:  in GGSE
-  real :: DensityCr = -1.0, DensityCrInv = -1.0
+  !Frequency related:  
+  real :: NElectronSiCr = -1.0, NElectronSiCrInv = -1.0
   !\
   !Tolerance parameters::
   !  minimum 100 points between a vacuum and a critical surface and
@@ -133,17 +133,14 @@ contains
     !
     real, intent(in) :: RadioFrequency
     !\
-    ! Parameters
-    real, parameter :: ProtonChargeSGSe = 4.8e-10 !SGSe
-    !\
     integer :: iError
     !------------------------------------
     !
-    ! Calculate the critical density from the frequency, in CGS
+    ! Calculate the critical density from the frequency
     !
-    DensityCr = cPi*cProtonMass*cElectronMass*1e6 &
-         *(RadioFrequency/ProtonChargeSGSe)**2
-    DensityCrInv = 1.0/DensityCr
+    NElectronSiCr = cPi*cElectronMass&
+         *RadioFrequency**2/cElectronChargeSquaredJm
+    NElectronSiCrInv = 1.0/NElectronSiCr
  
 
     call put_particles(KindRay_ ,         &
@@ -217,7 +214,7 @@ contains
     !
     integer, intent(in)   :: iParticle
     logical, intent(out)  :: IsEndOfSegment
-    real ::    GradDensity_D(MaxDim), Density, DeltaSNew  
+    real ::    GradNElectronSi_D(MaxDim), NElectronSi, DeltaSNew  
     !\
     ! Predictor
     real :: HalfDeltaS                        
@@ -280,10 +277,11 @@ contains
     ! The following routine calculates density, gradient and 
     ! step size
     !/
-    call get_local_density(Density, GradDensity_D, DeltaSNew, IsEndOfSegment)
+    call get_local_density(NElectronSi, GradNElectronSi_D, DeltaSNew,&
+         IsEndOfSegment)
     !In making radio images the ray accidentally reachig the overdense plasma 
     !region  should not be further processed 
-    if(IsEndOfSegment.or.  Density >= DensityCr)then
+    if(IsEndOfSegment.or.  NElectronSi >= NElectronSiCr)then
        IsEndOfSegment = .true.
        call mark_undefined(KindRay_,iParticle)
        RETURN
@@ -295,10 +293,10 @@ contains
     ! Original Position (at an integer point):
     PositionHalfBack_D = State_VI(x_:z_,iParticle) - &
          State_VI(SlopeX_:SlopeZ_,iParticle)*HalfDeltaS
-    Dens2DensCr = Density*DensityCrInv
+    Dens2DensCr = NElectronSi*NElectronSiCrInv
     
     DielPerm       = 1.0 - Dens2DensCr
-    GradDielPerm_D = -GradDensity_D*DensityCrInv
+    GradDielPerm_D = -GradNElectronSi_D*NElectronSiCrInv
     GradDielPerm2  = sum(GradDielPerm_D**2)
 
     GradEpsDotSlope = sum(GradDielPerm_D*&
@@ -568,18 +566,19 @@ contains
     end subroutine get_new_step_size
     !====================
     subroutine get_local_density(&
-         Density, GradDensity_D, DeltaSNew, IsBody)
+         NElectronSi, GradNElectronSi_D, DeltaSNew, IsBody)
       !USES:
       use ModAdvance, ONLY: State_VGB
       use ModVarIndexes, ONLY: Rho_
       use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB
       use ModGeometry,ONLY: CellSize_DB
-      use ModPhysics, ONLY: No2Si_V, UnitRho_
-      real,    intent(out):: Density
-      real,    intent(out):: GradDensity_D(MaxDim)
+      use ModPhysics, ONLY: No2Si_V, UnitN_
+      real,    intent(out):: NElectronSi
+      real,    intent(out):: GradNElectronSi_D(MaxDim)
       real,    intent(out):: DeltaSNew
       logical, optional, intent(out):: IsBody
-      
+      real :: Density
+      real :: GradDensity_D(MaxDim)
       !Coordinates and block #
       real     :: Xyz_D(MaxDim)
       integer  :: iBlock
@@ -609,8 +608,8 @@ contains
          DeltaSNew = DeltaSNew + &
               Weight_I(iCell)*minval(CellSize_DB(:,iBlock))
       end do
-      Density       = Density      *No2Si_V(UnitRho_)*1.0e-3
-      GradDensity_D = GradDensity_D*No2Si_V(UnitRho_)*1.0e-3
+      NElectronSi     = Density      *No2Si_V(UnitN_)
+      GradNElectronSi_D = GradDensity_D*No2Si_V(UnitN_)
     end subroutine get_local_density
     !====================
   end subroutine ray_path

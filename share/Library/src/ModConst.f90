@@ -54,6 +54,18 @@ module ModConst
   ! Fundamental charge [Coulomb]
   real, parameter:: cElectronCharge  = 1.6022E-19
 
+  !Fundamental charge squared in Joule*m, the Coulomb factor.
+  real, parameter:: cElectronChargeSquaredJm = &
+       cElectronCharge**2/(4.0*cPi*cEps)
+  !Alternative definition, this is charge of electron in CGSE,
+  !4.8e-10, squared and converted from erg*cm to J*m=1E9 erg*cm.
+  !Therefore, cElectronChargeSquaredJm = (4.8e-10)**2/1E9. It is
+  !convenient to use this parameter while evaluating non-electric
+  !quantities, such as opacity, collision rate etc, via formulae 
+  !written in CGSE. By expressing all even powers of the 
+  !elementary charge using this parameter and expressing all the 
+  !other quantities in Si, the result will be in Si.
+
   ! Planck constant  [J*s]
   real(Real8_), parameter :: cPlanckH    = 6.626069311E-34
   real(Real8_), parameter :: cPlanckHBar = cPlanckH /cTwoPi
