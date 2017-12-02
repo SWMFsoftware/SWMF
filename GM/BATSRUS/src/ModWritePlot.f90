@@ -420,7 +420,7 @@ contains
        if(DoPlotShell) then
           call set_plot_shell(iBlock, nPlotvar, PlotVar)
        else if (DoPlotBox) then
-          call set_plot_box(iFile, iBlock, nPlotvar, PlotVar)
+          call set_plot_box(iBlock, nPlotvar, PlotVar)
        else
           select case(plot_form(iFile))
           case('tec')

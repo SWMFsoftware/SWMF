@@ -51,8 +51,6 @@ contains
 
     integer, intent(in)        :: iFile, nPlotVar
 
-    real, dimension(3)         :: ObsPos_D
-
     logical                    :: DoTest
     character(len=*), parameter:: NameSub = 'init_plot_box'
     !--------------------------------------------------------------------------
@@ -85,10 +83,10 @@ contains
        ! This is the tilt (roll)
        xAngle = plot_normal(1,iFile) * cDegtoRad
 
-       ObsPos_D = matmul(PlotToGm_DD, ObsPos_DI(:,iFile))
-
-       ! Convert observer location to longitude and latitude
-       call xyz_to_lonlat(ObsPos_D, zAngle, yAngle)
+       ! Observer position is with respect to center of box.
+       ! Convert observer location to longitude and latitude.
+       ! Coordinate system is TypeCoordPlot_I(iFile)
+       call xyz_to_lonlat(ObsPos_DI(:,iFile) - Xyz0_D, zAngle, yAngle)
     else
        ! Get box orientation from ModIO arrays:
        xAngle = plot_normal(1,iFile) * cDegtoRad
@@ -127,7 +125,7 @@ contains
   end subroutine init_plot_box
   !============================================================================
 
-  subroutine set_plot_box(iFile, iBlock, nPlotvar, Plotvar_GV)
+  subroutine set_plot_box(iBlock, nPlotvar, Plotvar_GV)
 
     ! Interpolate the plot variables for block iBlock
     ! onto the spherical shell of the plot area.
@@ -140,7 +138,6 @@ contains
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
 
     ! Arguments
-    integer, intent(in) :: iFile
     integer, intent(in) :: iBlock
     integer, intent(in) :: nPlotvar
     real,    intent(in) :: PlotVar_GV(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,nPlotVar)
@@ -159,26 +156,21 @@ contains
 
     ! Shift box elements with origin of box             
     do k = 1, nZ
-       Xyz_D(3) = zMin + (k-1)*dZ
-       if(.not.IsObsBox_I(iFile)) Xyz_D(3) = Xyz_D(3) - Xyz0_D(3)
+       Xyz_D(3) = zMin + (k-1)*dZ - Xyz0_D(3)
 
        do j = 1, nY
-          Xyz_D(2) = yMin + (j-1)*dY
-          if(.not.IsObsBox_I(iFile)) Xyz_D(2) = Xyz_D(2) - Xyz0_D(2)
+          Xyz_D(2) = yMin + (j-1)*dY - Xyz0_D(2)
 
           do i = 1, nX
-             Xyz_D(1) = xMin + (i-1)*dX
-             if(.not.IsObsBox_I(iFile)) Xyz_D(1) = Xyz_D(1) - Xyz0_D(1)
+             Xyz_D(1) = xMin + (i-1)*dX - Xyz0_D(1)
 
              ! Rotate box
              XyzRot_D = matmul(rot_matrix_z(-zAngle), &
                   matmul(rot_matrix_y(-yAngle), &
                   matmul(rot_matrix_x(-xAngle), Xyz_D)))
 
-             if(.not.IsObsBox_I(iFile)) XyzRot_D = XyzRot_D + Xyz0_D
-
-             ! Shift box back and Get Gm coordinates
-             XyzGm_D = matmul(PlotToGm_DD, XyzRot_D)
+             ! Shift box back and Get Gm coordinates (i.e., TypeCoordSystem)
+             XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
 
              ! When inside Body keep default plot values
              if(sqrt(sum(XyzGm_D**2)) < rBody)CYCLE
