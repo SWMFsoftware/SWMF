@@ -3950,7 +3950,7 @@ contains
     ! neighboring block. 
     !/
     logical    :: IsFlipped_I(2**nDim)
-    integer    :: iDirFlip = 0, iDiscrFlip_D(nDim) 
+    integer    :: iDirFlip = 0
     integer, parameter :: iOrderFlip_ID(1:8,0:3) = reshape((/&
          1, 2, 3, 4, 5, 6, 7, 8,        &    !iDir = 0 no flip
          2, 1, 4, 3, 6, 5, 8, 7,        &    !iDir=1 is flipped
@@ -4123,6 +4123,7 @@ contains
       real, intent(in )     :: XyzStartBlock_D(nDim)
       logical, intent(out)  :: IsFlippedBlock 
       !----------------------------
+      integer    :: iDiscrFlip_D(nDim) 
       character(len=*), parameter:: NameSub = 'check_flip_in_block'
       logical, parameter :: DoTest = .true.
       !------------
@@ -4236,16 +4237,22 @@ contains
            iDirFlip = sum(iOrder_I(1:nDim)*iDiscrFlip_D)
     end subroutine check_flip_in_block
     !============================
-    function xyz_rel_to_block(XyzGridRel2Basic_D, XyzGridRel2Block_D)&
+    function xyz_rel_to_block(&
+         XyzGridRel2Basic_D,XyzGridRel2Block_D,iDirFlipBlock)&
          RESULT(XyzRel2Block_D)
-      real, intent(in )     :: XyzGridRel2Basic_D(nDim)
-      real, intent(in )     :: XyzGridRel2Block_D(nDim)
-      real                  :: XyzRel2Block_D(nDim)
-      !\
+      real,    intent(in) :: XyzGridRel2Basic_D(nDim)
+      real,    intent(in) :: XyzGridRel2Block_D(nDim)
+      integer, intent(in) :: iDirFlipBlock
+      real                :: XyzRel2Block_D(nDim)
+      ! index of iDiscrFlip_D starts at 0 to accomodate for iDirFlipBlock = 0
+      integer             :: iDiscrFlip_D(0:nDim)
+      !------------------------------------------------------------------
+      ! redefine iDiscrFlip_D
+      iDiscrFlip_D = 0; iDiscrFlip_D(iDirFlipBlock) = 1
       ! Combine Eqs. (1) for iDiscrFlip_D=0 and (2) for iDiscrFlip_D=1 
       ! We obtain an equation
       XyzRel2Block_D = (Xyz_D - XyzGridRel2Basic_D)* & 
-                       (1 - 2*iDiscrFlip_D)  + XyzGridRel2Block_D
+                       (1 - 2*iDiscrFlip_D(1:nDim))  + XyzGridRel2Block_D
     end function xyz_rel_to_block
     !==============================
     subroutine get_other_blocks
@@ -4372,7 +4379,8 @@ contains
       !/
       XyzMisc_D = xyz_rel_to_block(&
            XyzGridRel2Basic_D  = XyzGrid_DII(:,0,iGridInBlock), &
-           XyzGridRel2Block_D  = XyzGrid_D)*DxyzInv_D
+           XyzGridRel2Block_D  = XyzGrid_D, &
+           iDirFlipBlock       = iDirFlipBlock)*DxyzInv_D
       !\
       ! Calculate discriminator
       !/
@@ -4467,15 +4475,10 @@ contains
       !respect to the reference block, the latter point coords with
       !with respect to the current block are XyzGrid_D, so that
       !/
-      if(iDirFlipBlock > 0)then
-         XyzMisc_D = xyz_rel_to_block(&
-              XyzGridRel2Basic_D  = XyzGrid_DII(:,0,iGridInBlock), &
-              XyzGridRel2Block_D  = XyzGrid_D)*DxyzInv_D
-      else
-         XyzMisc_D = (Xyz_D - &
-               XyzGrid_DII(:,0,iGridInBlock)+ &
-               XyzGrid_D)*DxyzInv_D
-      end if
+      XyzMisc_D = xyz_rel_to_block(&
+           XyzGridRel2Basic_D  = XyzGrid_DII(:,0,iGridInBlock), &
+           XyzGridRel2Block_D  = XyzGrid_D, &
+           iDirFlipBlock       = iDirFlipBlock)*DxyzInv_D
       !\
       ! Calculate discriminator
       !/
