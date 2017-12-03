@@ -189,11 +189,14 @@ contains
   end subroutine SP_interface_point_coords_for_ih_extract
 
   !===================================================================
-  subroutine SP_put_line(iComp, nParticle, Coord_DI, iIndex_II)
-    integer, intent(in):: iComp
-    integer, intent(in):: nParticle
-    real,    intent(in):: Coord_DI( 3, nParticle)
-    integer, intent(in):: iIndex_II(4, nParticle)
+  subroutine SP_put_line(nPartial, iPutStart, Put,&
+       Weight, DoAdd, Coord_D, nVar)
+    use CON_router, ONLY: IndexPtrType, WeightPtrType
+    integer, intent(in) :: nPartial, iPutStart, nVar
+    type(IndexPtrType), intent(in) :: Put
+    type(WeightPtrType),intent(in) :: Weight
+    logical,            intent(in) :: DoAdd
+    real,               intent(in) :: Coord_D(nVar) !nVar=nDim
     call CON_stop('Can not put line parameters')
   end subroutine SP_put_line
   !===========================

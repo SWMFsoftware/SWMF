@@ -454,15 +454,14 @@ contains
     call SP_interface_point_coords(IH_, .false., &
          nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
   end subroutine SP_interface_point_coords_for_ih_extract
-
   !===================================================================
-
-  subroutine SP_put_line(iComp, Coord_D, iIndex_I)
-    ! store particle coordinates extracted elsewhere
-    !---------------------------------------------------------------
-    integer, intent(in):: iComp
-    real,    intent(in):: Coord_D( nDim)
-    integer, intent(in):: iIndex_I(nDim+1)
+  subroutine SP_put_line(nPartial, iPutStart, Put,&
+       Weight, DoAdd, Coord_D, nVar)
+    integer, intent(in) :: nPartial, iPutStart, nVar
+    type(IndexPtrType), intent(in) :: Put
+    type(WeightPtrType),intent(in) :: Weight
+    logical,            intent(in) :: DoAdd
+    real,               intent(in) :: Coord_D(nVar) !nVar=nDim
 
     integer:: iBlock, iNode
     ! indices of the particle
@@ -471,10 +470,10 @@ contains
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     ! store passed particles
-    iBlock    = iIndex_I(4)
+    iBlock    = Put%iCB_II(4,iPutStart)
     iLine     = iNode_B(iBlock)
-    iParticle = iIndex_I(1)
-    iLagrID   = iIndex_I(1) + iOffsetToLagrID_A(iLine)
+    iParticle = Put%iCB_II(1,iPutStart)
+    iLagrID   = iParticle + iOffsetToLagrID_A(iLine)
 
     if(iParticle < iParticleMin)&
          call CON_stop(NameSub//': particle index is below limit')
@@ -483,8 +482,6 @@ contains
     if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
          call CON_stop(NameSub//': Incorrect message pass')
     
-    if(iComp /= SC_ .and. is_in_buffer(Coord_D(1:nDim)) )&
-         RETURN
     ! put coordinates
     State_VIB(LagrID_,iParticle, iBlock) = real(iLagrID)
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)

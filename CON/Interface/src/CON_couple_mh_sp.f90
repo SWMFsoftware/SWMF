@@ -62,11 +62,14 @@ module CON_couple_mh_sp
   integer :: nLength, iError
   !\
   ! Transformation matrices
-  real,dimension(3,3) :: ScToSp_DD, IhToSp_DD 
+  real :: ScToSp_DD(3,3) !^CMP IF SC
+  real :: IhToSp_DD(3,3)
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real :: tNow
-
+  ! solar corona and ih upper boundaries
+  real:: RSc             !^CMP IF SC
+  real:: RIh
 contains
   !==================================================================
   subroutine couple_mh_sp_init
@@ -76,13 +79,8 @@ contains
    
     integer:: iError
 
-    ! available directions of interface between SP and MH 
-    ! (see subroutine exchange_lines below)
     integer, parameter:: &
          iInterfaceOrigin = 0, iInterfaceEnd = 1
-
-    ! solar corona and ih upper boundaries
-    real:: RSc, RIh
 
     ! whether need to extract new line (equal to .not.DoRestart
     logical:: DoExtract
@@ -311,7 +309,7 @@ contains
        call couple_comp(RouterLineScSp, &
             nVar = 3, &
             fill_buffer = SC_get_line_for_sp_and_transform, &
-            apply_buffer= SP_put_line_from_sc)
+            apply_buffer= SP_put_line)
        !Lagrangian particle coordinates are sent
        !/
     end if
@@ -337,7 +335,7 @@ contains
     !MHD Data from SC to SP are sent
     !/
     !Get particles from the semi-router 
-    if(is_proc(SC_).and..not.(DoInit.and.DoExtract))then
+    if(is_proc(SC_))then!.and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterScSp)
        call SC_add_to_line(&
             nParticle = nLength,&
@@ -370,6 +368,7 @@ contains
   !==================================================================
   subroutine exchange_data_ih_sp(DoInit, DoExtract)
     logical, intent(in) :: DoInit, DoExtract
+    integer:: iParticle, iParticleNew
     !---------------
     if(DoExtract.or..not.DoInit)then
        !\
@@ -389,7 +388,7 @@ contains
        call couple_comp(RouterLineIhSp, &
             nVar = 3, &
             fill_buffer = IH_get_line_for_sp_and_transform, &
-            apply_buffer= SP_put_line_from_ih)
+            apply_buffer= SP_put_line)
        !Particle coordinates are sent to SP
        !/
     end if
@@ -419,6 +418,18 @@ contains
     !Get particles from the semi-router 
     if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterIhSp)
+       !^CMPIF SC BEGIN
+       ! Sort out particles advected by the SC
+       !/
+       iParticleNew = 0
+       do iParticle = 1, nLength
+          if(sum(RouterIhSp%BufferSource_II(&
+            1:nDim, iParticle)**2) < RSc**2)CYCLE
+          iParticleNew  = iParticleNew +1
+          RouterIhSp%BufferSource_II(:, iParticleNew) = &
+               RouterIhSp%BufferSource_II(:, iParticle)
+       end do
+       nLength = iParticleNew
        call IH_add_to_line(&
             nParticle = nLength,&
             Xyz_DI    =  RouterIhSp%BufferSource_II(&
@@ -518,33 +529,7 @@ contains
     call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
     CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
   end subroutine mapping_line_sc_to_sp
-  !===================================!^CMP END SC
-  subroutine SP_put_line_from_sc(nPartial,&
-       iPutStart,&
-       Put,&
-       Weight,&
-       DoAdd,&
-       Buff_I,nVar)
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::Weight
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
-    !----------------------------------------
-    call SP_put_line(SC_, Buff_I, Put%iCB_II(1:4,iPutStart))
-  end subroutine SP_put_line_from_sc
-  !==================================================================!
-  subroutine SP_put_line_from_ih(nPartial,&
-       iPutStart, Put, Weight, DoAdd, Buff_I, nVar)
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::Weight
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
-    !----------------------------------------
-    call SP_put_line(IH_,Buff_I, Put%iCB_II(1:4,iPutStart))
-  end subroutine SP_put_line_from_ih
-  !==================================================================!        
+  !===================================!^CMP END SC        
   subroutine IH_get_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
 
