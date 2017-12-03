@@ -34,6 +34,7 @@ module SP_wrapper
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_do_extract
+  public:: SP_assign_lagrangian_coords
 contains
 
   subroutine SP_do_extract(DoExtract)
@@ -241,4 +242,10 @@ contains
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_get_cell_index
+  !===========================
+  subroutine SP_assign_lagrangian_coords
+    character(len=*), parameter:: NameSub='assign_lagrangian_coords'
+    !---------------------------------------------------------------
+    call CON_stop('SP_'//NameSub//': cannot call the empty version')
+  end subroutine SP_assign_lagrangian_coords
 end module SP_wrapper

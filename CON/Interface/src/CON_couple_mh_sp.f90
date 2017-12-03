@@ -24,7 +24,8 @@ module CON_couple_mh_sp
        SP_do_extract, SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
        SP_interface_point_coords_for_ih_extract, SP_get_cell_index, &
-       SP_copy_old_state, SP_adjust_lines, SP_get_particle_index
+       SP_copy_old_state, SP_adjust_lines, SP_get_particle_index, &
+       SP_assign_lagrangian_coords
        
   implicit none
   
@@ -115,7 +116,14 @@ contains
             call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
     end if                   !^CMP END SC
     ! Set pair IH-SP         
-    if(use_comp(IH_)) call couple_ih_sp_init 
+    if(use_comp(IH_)) then
+       call couple_ih_sp_init
+       if(DoExtract.and.is_proc(SP_)  &
+            .and..not.(use_comp(SC_)) &     !^CMP IF SC
+            )call SP_put_r_min(Grid_C(IH_)%Coord1_I(1))
+    end if
+    if(DoExtract.and.is_proc(SP_))&
+         call SP_assign_lagrangian_coords
     DoInit=.false.
   contains
     !===============================

@@ -62,7 +62,7 @@ module SP_wrapper
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_do_extract
-
+  public:: SP_assign_lagrangian_coords
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple = 'rho p mx my mz bx by bz'
@@ -483,7 +483,6 @@ contains
          call CON_stop(NameSub//': Incorrect message pass')
     
     ! put coordinates
-    State_VIB(LagrID_,iParticle, iBlock) = real(iLagrID)
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
     iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
     iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
@@ -635,5 +634,15 @@ contains
     R2 = sum(Xyz_D**2)
     IsInBuffer = R2 >= RBufferMin**2 .and. R2 < RBufferMax**2
   end function is_in_buffer
-
+  !========================
+  subroutine SP_assign_lagrangian_coords
+    integer :: iBlock, iParticle
+    !--------------------
+    do iBlock = 1, nBlock
+       do iParticle = &
+            iGridLocal_IB(Begin_,iBlock), iGridLocal_IB(End_, iBlock)
+          State_VIB(LagrID_,iParticle, iBlock) = real(iParticle)
+       end do
+    end do
+  end subroutine SP_assign_lagrangian_coords
 end module SP_wrapper
