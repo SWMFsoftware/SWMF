@@ -4467,9 +4467,15 @@ contains
       !respect to the reference block, the latter point coords with
       !with respect to the current block are XyzGrid_D, so that
       !/
-      XyzMisc_D = xyz_rel_to_block(&
-           XyzGridRel2Basic_D  = XyzGrid_DII(:,0,iGridInBlock), &
-           XyzGridRel2Block_D  = XyzGrid_D)*DxyzInv_D
+      if(iDirFlipBlock > 0)then
+         XyzMisc_D = xyz_rel_to_block(&
+              XyzGridRel2Basic_D  = XyzGrid_DII(:,0,iGridInBlock), &
+              XyzGridRel2Block_D  = XyzGrid_D)*DxyzInv_D
+      else
+         XyzMisc_D = (Xyz_D - &
+               XyzGrid_DII(:,0,iGridInBlock)+ &
+               XyzGrid_D)*DxyzInv_D
+      end if
       !\
       ! Calculate discriminator
       !/
@@ -4487,7 +4493,7 @@ contains
          iBlock_I(       iGridFlip)  = iBlock
          iLevelSubGrid_I(iGridFlip)  = Fine_
          IsFlipped_I(    iGridFlip)  = IsFlippedBlock
-         if(iGrid==iGridBasic)then
+         if(iGridInBlock==iGridBasic)then
             !No flip in the basic block
             !\
             ! Determine, where Xyz point is located with respect to
@@ -4647,7 +4653,6 @@ contains
       call get_reference_block(&
            nDim, Xyz_D, XyzGrid_DII(:,0,:), &
            iLevelSubgrid_I, IsOut_I, iGridPhys)
-
       if(iLevelSubgrid_I(iGridPhys)/=Fine_)then
          !\
          ! Stencil is uniform
@@ -4668,14 +4673,12 @@ contains
          !/ 
          if(iBlock_I(iGrid)==iBlock_I(iGridPhys)&
               .and.iProc_I(iGrid)==iProc_I(iGridPhys))CYCLE
-
          iBlock_I(iGrid) = iBlock_I(iGridPhys)
          iProc_I( iGrid) = iProc_I( iGridPhys)
-         if(IsFlipped_I(iGrid).neqv.IsFlipped_I(iGridPhys))&
-              iCellIndexes_DII( iDirFlip,1: nSubgrid_I(iGrid), iGrid)  =&
-              -iCellIndexes_DII(iDirFlip,1: nSubgrid_I(iGrid), iGrid)  +&
-              nCell_D(iDirFlip) +1 !Change 1<->nCell in flipped blocks
+
          iShift_D = iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys)
+         if(.not.IsFlipped_I(iGrid).and.IsFlipped_I(iGridPhys))&
+              iShift_D(iDirFlip) = -iShift_D(iDirFlip)
          !\
          ! Below we benefit from the observation that although the
          ! shift in indexes between iGrid and iGridPhys is twice iShift_D

@@ -7,7 +7,8 @@ module ModTestInterpolateAMR
   use ModInterpolateAMR, ONLY: &
        interpolate_amr, interpolate_amr_gc, get_reference_block
   use ModUtilities, ONLY: CON_stop
-
+  use ModNumConst, ONLY: cPi
+  
   implicit none
   !\
   ! Shift of the iGrid point in the stencil with respect to the
@@ -24,7 +25,6 @@ module ModTestInterpolateAMR
        1, 1, 1/),(/3,8/))
 
   integer, parameter::&
-       X_ = 1, Y_   = 2, Z_     = 3,&
        R_ = 1, Phi_ = 2, Theta_ = 3
 
   integer, parameter:: Coarse_ = 0, Fine_ = 1
@@ -47,13 +47,13 @@ module ModTestInterpolateAMR
   logical:: IsPeriodic_D(3) = .false.
 
   character(len=*), parameter:: StringType = 'cartesian'
-  logical:: IsSpherical = .false.
 
   real,    allocatable::  Coord_DB(:,:)
   real,    allocatable:: DCoord_DB(:,:)
   logical, allocatable:: Used_B(:)
 
   integer:: nRoot, nBlock
+  logical:: IsSpherical
 
   ! Indices:
   ! 1-8: Children
@@ -65,24 +65,26 @@ module ModTestInterpolateAMR
 contains
   !==================================================================
   subroutine test_interpolate_amr(&
-       nDim,IsPeriodicIn_D,&
+       nDim,IsCartesian,IsPeriodicIn_D,&
        nSample, UseGeneric, UseGhostCell)
     use ModRandomNumber, ONLY: random_real
 
+    
     integer, intent(in)::nDim, nSample
     logical, intent(in)::IsPeriodicIn_D(nDim)
+    logical, intent(in)::IsCartesian
     logical, intent(in)::UseGeneric
     logical, optional, intent(in):: UseGhostCell
 
     integer :: iIndexes_II(0:nDim+1,2**nDim)
     logical :: IsSecondOrder, IsPossible, IsOut
     real, dimension(nDim):: &
-         DcoordCoarse_D, &
-         DcoordFine_D, Coord_D, CoordPass_D,  &
+         CellSizeCoarse_D, CellSizeFine_D, &
+         Coord_D, CoordPass_D,  &
          CoordCont_D,                     &
          CoordInterpolated_D, CoordCorner_D,&
          CoordModulo_D,                   &
-         Dcoord_D
+         CellSize_D
     real    ::VarInterpolated, VarContInterpolated
     real, allocatable::Coord0_DGB(:,:,:,:,:)    
     real, allocatable::Coord_DGB(:,:,:,:,:)
@@ -90,6 +92,7 @@ contains
     integer, allocatable::DiLevelNei_IIIB(:,:,:,:)
     real, allocatable, dimension(:,:,:,:) :: Var_GB
     real    :: Weight_I(2**nDim)
+
 
     ! whether to test approximation
     logical:: DoTestApproximation
@@ -104,7 +107,14 @@ contains
     integer:: iSeed = 1
     !-------------------------------------------------------------------
     nCell_D = 1; nCell_D(1:nDim) = nCell
-    IsPeriodic_D(1:nDim)= IsPeriodicIn_D
+    IsSpherical = nDim==3 .and. .not.IsCartesian
+    if(IsCartesian)then
+       IsPeriodic_D(1:nDim)= IsPeriodicIn_D
+    else
+       IsPeriodic_D(1:nDim) = .false.
+       IsPeriodic_D(  Phi_) = .true.
+    end if
+    
     if(present(UseGhostCell))then
        DoTestApproximation = .not.any(IsPeriodicIn_D) .or. UseGhostCell
     else
@@ -113,10 +123,11 @@ contains
     call generate_grid
 
     nIndexes = nDim +1
-    CASE:do iCase = 0, 2**(2**nDim) - 2
+    CASE:do iCase = 0, 2**(2**nDim)*nRoot - 2 + (nRoot-1)
        iLevelTest_I = 0; iGrid = 0
        call set_levels(iCase)
-       !write(*,*)'Case=',iLevelTest_I(1:2**nDim)
+       !write(*,*)            'Case=',iLevelTest_I(        1:2** nDim   )
+       !if(nRoot>1) write(*,*)'     ',iLevelTest_I(2**nDim+1:2**(nDim+1))
        call fill_ghost_cells
        call fill_nei_levels
        !\
@@ -144,22 +155,21 @@ contains
                   UseGhostCell=UseGhostCell)
           else
              call find_test(nDim, Coord_D, &
-                  iProc, iBlock, CoordCorner_D, Dcoord_D, IsOut)
+                  iProc, iBlock, CoordCorner_D, CellSize_D, IsOut)
              Coord_D = CoordCorner_D + Coord_D
              call check_interpolate_test(nDim, Coord_D, iBlock, &
                   iProc, iBlockNei)
              if(iBlockNei /= iBlock) then
                 iBlock = iBlockNei
-                CoordCorner_D = Coord_DGB(:,1,1,1,iBlock) - 0.5*DcoordFine_D
-                Dcoord_D = DcoordFine_D
+                CoordCorner_D = Coord_DGB(:,1,1,1,iBlock) - 0.5*CellSizeFine_D
+                CellSize_D = CellSizeFine_D
              end if
-             call fix_coord(nDim, Coord_D, CoordCorner_D, &
-                  CoordCorner_D+nCell*Dcoord_D, CoordPass_D)
+             call fix_coord(nDim, iBlock, Coord_D, CoordPass_D)
              call interpolate_amr_gc(&
                   nDim         = nDim, &
                   Xyz_D        = CoordPass_D, &
                   XyzMin_D     = CoordCorner_D, &
-                  DXyz_D       = DCoord_D, &
+                  DXyz_D       = CellSize_D, &
                   nCell_D      = nCell_D(1:nDim), &
                   DiLevelNei_III = DiLevelNei_IIIB(:,:,:,iBlock), &
                   nCellOut     = nGridOut, &
@@ -190,6 +200,15 @@ contains
           where(IsPeriodic_D(1:nDim))
              CoordModulo_D = modulo(CoordModulo_D, DomainSize_D)
           end where
+          if(IsSpherical)then
+             if(CoordModulo_D(Theta_) < CoordMin_D(Theta_))then
+                CoordModulo_D(Theta_) = 2*CoordMin_D(Theta_) - CoordModulo_D(Theta_)
+                CoordModulo_D(Phi_  ) = modulo(CoordModulo_D(Phi_)+0.5*DOmainSize_D(Phi_), DomainSize_D(Phi_))
+             elseif(CoordModulo_D(Theta_) > CoordMax_D(Theta_))then
+                CoordModulo_D(Theta_) = 2*CoordMax_D(Theta_) - CoordModulo_D(Theta_)
+                CoordModulo_D(Phi_  ) = modulo(CoordModulo_D(Phi_)+0.5*DOmainSize_D(Phi_), DomainSize_D(Phi_))
+             end if
+          end if
           if(  DoTestApproximation.and.&
                any(abs(Coord_D - CoordModulo_D) > 1.0e-6).and.&
                IsSecondOrder)then
@@ -215,7 +234,8 @@ contains
           !/
           do iDir =1, nDim
              CoordCont_D(iDir) = Coord_D(iDir) + &
-                  SizeRatio_D(iDir)*(0.02*random_real(iSeed) - 0.01)
+                  CellSizeCoarse_D(iDir)*(0.02*random_real(iSeed) - 0.01)
+                  !DomainSize_D(iDir)*(0.02*random_real(iSeed) - 0.01)
           end do
           !\
           ! call interpolate_amr
@@ -234,22 +254,21 @@ contains
                   UseGhostCell=UseGhostCell)
           else
              call find_test(nDim, CoordCont_D, &
-                  iProc, iBlock, CoordCorner_D, Dcoord_D, IsOut)
+                  iProc, iBlock, CoordCorner_D, CellSize_D, IsOut)
              CoordCont_D = CoordCorner_D + CoordCont_D
              call check_interpolate_test(nDim, CoordCont_D, iBlock, &
                   iProc, iBlockNei)
              if(iBlockNei /= iBlock) then
                 iBlock = iBlockNei
-                CoordCorner_D = Coord_DGB(:,1,1,1,iBlock) - 0.5*DcoordFine_D
-                Dcoord_D = DcoordFine_D
+                CoordCorner_D = Coord_DGB(:,1,1,1,iBlock) - 0.5*CellSizeFine_D
+                CellSize_D = CellSizeFine_D
              end if
-             call fix_coord(nDim, CoordCont_D, CoordCorner_D, &
-                  CoordCorner_D+nCell*Dcoord_D, CoordPass_D)
+             call fix_coord(nDim, iBlock, CoordCont_D, CoordPass_D)
              call interpolate_amr_gc(&
                   nDim         = nDim, &
                   Xyz_D        = CoordPass_D, &
                   XyzMin_D     = CoordCorner_D, &
-                  DXyz_D       = DCoord_D, &
+                  DXyz_D       = CellSize_D, &
                   nCell_D      = nCell_D(1:nDim), &
                   DiLevelNei_III = DiLevelNei_IIIB(:,:,:,iBlock), &
                   nCellOut     = nGridOut, &
@@ -279,6 +298,15 @@ contains
           where(IsPeriodic_D(1:nDim))
              CoordModulo_D = modulo(CoordModulo_D, DomainSize_D)
           end where
+          if(IsSpherical)then
+             if(CoordModulo_D(Theta_) < CoordMin_D(Theta_))then
+                CoordModulo_D(Theta_) = 2*CoordMin_D(Theta_) - CoordModulo_D(Theta_)
+                CoordModulo_D(Phi_  ) = modulo(CoordModulo_D(Phi_)+0.5*DOmainSize_D(Phi_), DomainSize_D(Phi_))
+             elseif(CoordModulo_D(Theta_) > CoordMax_D(Theta_))then
+                CoordModulo_D(Theta_) = 2*CoordMax_D(Theta_) - CoordModulo_D(Theta_)
+                CoordModulo_D(Phi_  ) = modulo(CoordModulo_D(Phi_)+0.5*DOmainSize_D(Phi_), DomainSize_D(Phi_))
+             end if
+          end if
           if(  DoTestApproximation.and.&
                any(abs(CoordCont_D - CoordModulo_D) > 1.0e-6).and.&
                IsSecondOrder)then
@@ -352,23 +380,22 @@ contains
     end subroutine clean_grid
     !============================
     subroutine generate_grid
-      ! generates a grid of a StringType kind
+      ! generates the grid used in the test
       integer:: nBlockInit, iBlockChild, iChild
       !------------------------------------------
       allocate(CoordMin_D(1:nDim))
       allocate(CoordMax_D(1:nDim))
       allocate(DomainSize_D(1:nDim))
-      select case(StringType)
-      case('cartesian')
+      if(IsCartesian)then
+         ! number of root blocks
+         nRoot  = 1
          ! total number of blocks
-         nBlock       = (2**nDim) * (2**nDim+1) + 1
+         nBlock = (2**nDim) * (2**nDim+1) + 1
          ! domains boundaries and size
-         DomainSize_D        = 2*nCell*SizeRatio_D(1:nDim)
-         CoordMin_D = 0.0
-         CoordMax_D = DomainSize_D
+         DomainSize_D = 2*nCell*SizeRatio_D(1:nDim)
+         CoordMin_D   = 0.0
+         CoordMax_D   = DomainSize_D
 
-         ! number of roor blocks
-         nRoot = 1
 
          ! allocate and initialize (where needed) grid storage
          allocate( Coord_DB(1:nDim,1:nBlock))
@@ -377,16 +404,47 @@ contains
          Used_B = .false.
          allocate(iTree_IB(1:Level_,1:nBlock))
          iTree_IB = -1
-         DcoordCoarse_D        = 1*SizeRatio_D(1:nDim)
-         DcoordFine_D          = 0.5*SizeRatio_D(1:nDim)
+         CellSizeCoarse_D = 1*SizeRatio_D(1:nDim)
+         CellSizeFine_D   = 0.5*SizeRatio_D(1:nDim)
          ! initialize the root block
          Coord_DB( :,1)= CoordMin_D
          DCoord_DB(:,1)= DomainSize_D
 
          ! at the moment only one block is initialized
          nBlockInit = 1
-      case('spherical') ! used also for polar
-      end select
+      else ! spherical or polar
+         ! number of root blocks
+         nRoot  = 2
+         ! total number of blocks
+         nBlock = 2*((2**nDim) * (2**nDim+1) + 1)
+         ! domains boundaries and size
+         DomainSize_D(1:2) = (/2.0, 2*cPi/)
+         CoordMin_D(1)     = 1.0
+         CoordMin_D(2:nDim)= 0.0
+         if(nDim==3) DomainSize_D(nDim) = cPi
+         CoordMax_D   = CoordMin_D + DomainSize_D
+
+         ! allocate and initialize (where needed) grid storage
+         allocate( Coord_DB(1:nDim,1:nBlock))
+         allocate(DCoord_DB(1:nDim,1:nBlock))
+         allocate(Used_B(1:nBlock))
+         Used_B = .false.
+         allocate(iTree_IB(1:Level_,1:nBlock))
+         iTree_IB = -1
+         CellSizeCoarse_D(1)     = 1.0 / nCell
+         CellSizeCoarse_D(2:nDim)= 0.5 * cPi / nCell
+         CellSizeFine_D          = 0.5*CellSizeCoarse_D
+         ! initialize the root blocks
+         Coord_DB( :,1)= CoordMin_D
+         DCoord_DB(:,1)= DomainSize_D
+         DCoord_DB(2,1)= cPi
+         Coord_DB( :,2)= CoordMin_D
+         Coord_DB( 2,2)= CoordMin_D(2) + cPi
+         DCoord_DB(:,2)= DCoord_DB(:,1)
+
+         ! at the moment only one block is initialized
+         nBlockInit = 2
+      end if
 
       !\
       ! Refine block up to level Fine_
@@ -470,8 +528,8 @@ contains
       end do
 
       iMisc = iCase
-      iRoot = 1! + iMisc / 2**nDim
-      !      iMisc = mod(iMisc, 2**nDim)
+      iRoot = 1 + iMisc / 2**(2**nDim)
+      iMisc = mod(iMisc, 2**(2**nDim))
       iChild = 0
       do while(iMisc > 0)
          iChild = iChild + 1
@@ -488,33 +546,89 @@ contains
       end do
     end subroutine set_levels
     !============================
-    subroutine fix_coord(nDim, CoordIn_D, CoordBlockMin_D, &
-         CoordBlockMax_D, CoordOut_D)
+    subroutine fix_coord(nDim, iBlock, CoordIn_D, CoordOut_D)
       ! for periodic/flipped coordinate may need to adjust point's coordinates
-      ! for calling interpolate_amr_gc
+      ! for calling interpolate_amr_gc; 
+      ! fix depends on reference block used in interpolate_amr_gc
       integer,intent(in) :: nDim
+      integer,intent(in) :: iBlock
       real,   intent(in) :: CoordIn_D(nDim)
-      real,   intent(in) :: CoordBlockMin_D(nDim)
-      real,   intent(in) :: CoordBlockMax_D(nDim)
       real,   intent(out):: CoordOut_D(nDim)
 
-      real   :: Dcoord
+      real, dimension(nDim) :: CellSize_D, CoordBlockMin_D, CoordBlockMax_D, iDiscr_D
+      logical:: DoFix_D(nDim)
+      real:: PhiAux
+      real:: PhiAuxLo, PhiAuxHi
+      integer:: iDim
+      real, parameter:: cTol = 1E-8
+      !------------------------------------------------------------------------
+      CoordOut_D = CoordIn_D
+      CoordBlockMin_D = Coord_DB(:,iBlock)
+      CoordBlockMax_D = Coord_DB(:,iBlock) + DCoord_DB(:, iBlock)
+      if(  all(CoordOut_D < CoordBlockMax_D) .and. &
+           all(CoordOut_D >=CoordBlockMin_D))&
+           RETURN
+      CellSize_D = (CoordBlockMax_D - CoordBlockMin_D)/ nCell
+      do iDim = 1, nDim
+         if(.not.IsPeriodic_D(iDim)) CYCLE
+         if(CoordBlockMax_D(iDim)==CoordMax_D(iDim).and.&
+              CoordOut_D(iDim) - CoordMin_D(iDim) < CellSize_D(iDim)*(1+cTol))then
+            CoordOut_D(iDim) = CoordOut_D(iDim) + DomainSize_D(iDim)
+         elseif(CoordBlockMin_D(iDim)==CoordMin_D(iDim).and.&
+              CoordMax_D(iDim) - CoordOut_D(iDim) < CellSize_D(iDim)*(1+cTol))then
+            CoordOut_D(iDim) = CoordOut_D(iDim) - DomainSize_D(iDim)
+         end if
+      end do
+      if(IsSpherical)then
+         PhiAuxLo =  CoordOut_D(Phi_) - 0.5*DomainSize_D(Phi_)
+         PhiAuxHi =  CoordOut_D(Phi_) + 0.5*DomainSize_D(Phi_)
+         if(  PhiAuxLo >= CoordBlockMin_D(Phi_) - CellSize_D(Phi_)*(1+cTol) .and.&
+              PhiAuxLo <  CoordBlockMax_D(Phi_) + CellSize_D(Phi_)*(1+cTol))then
+            PhiAux = PhiAuxLo
+         elseif(PhiAuxHi >= CoordBlockMin_D(Phi_) - CellSize_D(Phi_)*(1+cTol) .and.&
+              PhiAuxHi <  CoordBlockMax_D(Phi_) + CellSize_D(Phi_)*(1+cTol))then
+            PhiAux = PhiAuxHi
+         else
+            RETURN
+         end if
+         if(CoordBlockMax_D(Theta_)==CoordMax_D(Theta_))then
+            CoordOut_D(Theta_) = 2*CoordMax_D(Theta_) - CoordOut_D(Theta_)
+            CoordOut_D(Phi_  ) = PhiAux
+         elseif(CoordBlockMin_D(Theta_)==CoordMin_D(Theta_))then
+            CoordOut_D(Theta_) = 2*CoordMin_D(Theta_) - CoordOut_D(Theta_)
+            CoordOut_D(Phi_  ) = PhiAux
+         end if
+      end if
+    end subroutine fix_coord
+    !============================
+    subroutine reverse_fix(nDim, iBlock, CoordIn_D, CoordOut_D)
+      ! for periodic/flipped coordinate may need to adjust point's coordinates
+      ! for calling interpolate_amr_gc; 
+      ! fix depends on reference block used in interpolate_amr_gc
+      integer,intent(in) :: nDim
+      integer,intent(in) :: iBlock
+      real,   intent(in) :: CoordIn_D(nDim)
+      real,   intent(out):: CoordOut_D(nDim)
+
+      real   :: CellSize, CoordBlockMin_D(nDim), CoordBlockMax_D(nDim)
       integer:: iDim
       !------------------------------------------------------------------------
       CoordOut_D = CoordIn_D
+      CoordBlockMin_D = Coord_DB(:,iBlock)
+      CoordBlockMax_D = Coord_DB(:,iBlock) + DCoord_DB(:, iBlock)
       if(  all(CoordOut_D < CoordBlockMax_D) .and. &
            all(CoordOut_D >=CoordBlockMin_D))&
            RETURN
 
       do iDim = 1, nDim
          if(.not.IsPeriodic_D(iDim)) CYCLE
-         Dcoord = &
+         CellSize = &
               (CoordBlockMax_D(iDim) - CoordBlockMin_D(iDim))/ nCell_D(iDim)
          if(CoordBlockMax_D(iDim)==CoordMax_D(iDim).and.&
-              CoordOut_D(iDim) - CoordMin_D(iDim) < Dcoord)then
+              CoordOut_D(iDim) - CoordMin_D(iDim) < CellSize)then
             CoordOut_D(iDim) = CoordOut_D(iDim) + DomainSize_D(iDim)
          elseif(CoordBlockMin_D(iDim)==CoordMin_D(iDim).and.&
-              CoordMax_D(iDim) - CoordOut_D(iDim) < Dcoord)then
+              CoordMax_D(iDim) - CoordOut_D(iDim) < CellSize)then
             CoordOut_D(iDim) = CoordOut_D(iDim) - DomainSize_D(iDim)
          end if
       end do
@@ -536,7 +650,7 @@ contains
                  DomainSize_D(Phi_))
          end if
       end if
-    end subroutine fix_coord
+    end subroutine reverse_fix
     !============================
     subroutine check_interpolate_test(nDim, Coord_D, iBlockIn, &
          iProcOut, iBlockOut)
@@ -550,7 +664,7 @@ contains
       logical:: IsOut_I(2**nDim)
       integer:: iDiscr_D(3)
       real   :: CoordCentral_D(nDim)
-      real   :: CoordNei_D(nDim), CoordCorner_D(nDim), Dcoord_D(nDim)
+      real   :: CoordNei_D(nDim), CoordCorner_D(nDim), CellSize_D(nDim)
       real   :: CoordGrid_DI(nDim, 2**nDim)
       logical:: IsOut
       integer:: iGridRef, iGrid
@@ -580,16 +694,17 @@ contains
 
       ! cell size of this block
       if(iTree_IB(Level_,iBlockIn)==Fine_)then
-         Dcoord_D = DcoordFine_D   ! the block is Finer 
+         CellSize_D = CellSizeFine_D   ! the block is Finer 
       else
-         Dcoord_D = DcoordCoarse_D ! the block is Coarse
+         CellSize_D = CellSizeCoarse_D ! the block is Coarse
       end if
 
       ! coordinates of block's junction
       where(    iDiscr_D(1:nDim) == 1)
-         CoordCentral_D = Coord_DGB(:,nCell,nCell,nCell,iBlockIn) +0.5*Dcoord_D
+         CoordCentral_D = &
+              Coord_DGB(:,nCell,nCell,nCell,iBlockIn) + 0.5*CellSize_D
       elsewhere(iDiscr_D(1:nDim) ==-1)
-         CoordCentral_D = Coord_DGB(:,1,1,1,iBlockIn) -0.5*Dcoord_D
+         CoordCentral_D = Coord_DGB(:,1,1,1,iBlockIn) - 0.5*CellSize_D
       elsewhere
          CoordCentral_D = Coord_D
       end where
@@ -597,7 +712,7 @@ contains
       ! supergrid
       do iGrid = 1, 2**nDim
          CoordGrid_DI(:, iGrid) = CoordCentral_D + &
-              (iShift_DI(1:nDim, iGrid)-0.5) * DcoordCoarse_D
+              (iShift_DI(1:nDim, iGrid)-0.5) * CellSizeCoarse_D
       end do
 
       ! find the block that has enough information to perform interpolation
@@ -614,17 +729,15 @@ contains
       end if
 
       ! it is a different block, find it
-      CoordNei_D = CoordCentral_D + 0.5*DcoordFine_D*(iShiftRef_D-0.5)
+      CoordNei_D = CoordCentral_D + 0.5*CellSizeFine_D*(iShiftRef_D-0.5)
       call find_test(nDim, CoordNei_D, &
-           iProcOut, iBlockOut, CoordCorner_D, Dcoord_D, IsOut)
-
+           iProcOut, iBlockOut, CoordCorner_D, CellSize_D, IsOut)
     end subroutine check_interpolate_test
     !===========================
     subroutine fill_nei_levels
       ! fill DiLevelNei_IIIB that store levels of neighbors
       integer:: iLevelNei, iLevel
-      real:: Coord_D(nDim)
-      real:: CoordCenter_D(nDim)
+      real, dimension(nDim):: Coord_D, CellSize_D, CoordCenter_D
       integer:: i,j,k, iIndex_I(3)
       !-----------------------------------------------
       DiLevelNei_IIIB = 0
@@ -640,7 +753,7 @@ contains
             iIndex_I = (/i,j,k/)
             Coord_D = CoordCenter_D + 0.6*iIndex_I(1:nDim) *Dcoord_DB(:,iBlock)
             call find_test(nDim, Coord_D, &
-                 iProc, iBlockNei, CoordCorner_D, Dcoord_D, IsOut)
+                 iProc, iBlockNei, CoordCorner_D, CellSize_D, IsOut)
             if(IsOut)then
                iLevelNei = Out_
             else
@@ -656,7 +769,7 @@ contains
       logical:: IsOut
       integer:: iProc, iBlock, iBlockNei, i, j ,k
       integer:: iCell_D(3), iCellIndexNei_D(3)
-      real, dimension(nDim):: Coord_D, CoordCorner_D, Dcoord_D, DcoordModulo_D
+      real, dimension(nDim):: Coord_D, CoordCorner_D, CellSize_D, DcoordModulo_D
       !-----------------------------------------------
       Coord_DGB = Coord0_DGB
       ! fill values based on whether bocks are used
@@ -672,14 +785,14 @@ contains
                        CYCLE
                   Coord_D = Coord_DGB(:,i,j,k,iBlock)
                   call find_test(nDim, Coord_D, &
-                       iProc, iBlockNei, CoordCorner_D, Dcoord_D, IsOut)
+                       iProc, iBlockNei, CoordCorner_D, CellSize_D, IsOut)
                   DcoordModulo_D = Coord_DGB(:,i,j,k,iBlock) - Coord_D - CoordCorner_D
-                  where(    DcoordModulo_D > Dcoord_D)
+                  where(    DcoordModulo_D > CellSize_D.and.IsPeriodic_D(1:nDim))
                      DcoordModulo_D = DomainSize_D
-                  elsewhere(DcoordModulo_D <-Dcoord_D)
+                  elsewhere(DcoordModulo_D <-CellSize_D.and.IsPeriodic_D(1:nDim))
                      DcoordModulo_D =-DomainSize_D
                   elsewhere
-                     DcoordModulo_D = 0.0
+                     !DcoordModulo_D = 0.0
                   end where
                   if(IsOut) CYCLE
                   ! don't fill ghost cells for Coarse_ block if nei is Fine_
@@ -688,7 +801,7 @@ contains
                        CYCLE
                   iCellIndexNei_D = 1
                   iCellIndexNei_D(1:nDim) = &
-                       nint(0.3+Coord_D(1:nDim)/Dcoord_D(1:nDim))
+                       nint(0.3+Coord_D(1:nDim)/CellSize_D(1:nDim))
                   Var_GB(i,j,k,iBlock) = &
                        Var_GB(iCellIndexNei_D(1),&
                        iCellIndexNei_D(2),&
@@ -697,10 +810,8 @@ contains
                        Coord_DGB(:,iCellIndexNei_D(1),&
                        iCellIndexNei_D(2),&
                        iCellIndexNei_D(3),iBlockNei)
-                  where(IsPeriodic_D(1:nDim))
-                     Coord_DGB(:,i,j,k,iBlock) = &
-                          Coord_DGB(:,i,j,k,iBlock) + DcoordModulo_D
-                  end where
+                  call fix_coord(nDim, iBlock, Coord_DGB(:,i,j,k,iBlock), Coord_D)
+                  Coord_DGB(:,i,j,k,iBlock) = Coord_D
                end do
             end do
          end do
@@ -709,7 +820,7 @@ contains
   end subroutine test_interpolate_amr
   !============================
   subroutine find_test(nDim, Coord_D, &
-       iProc, iBlock, CoordCorner_D, Dcoord_D, IsOut)
+       iProc, iBlock, CoordCorner_D, CellSize_D, IsOut)
     integer, intent(in) :: nDim
     !\
     ! "In"- the coordinates of the point, "out" the coordinates of the
@@ -726,7 +837,7 @@ contains
     !\
     ! Block left corner coordinates and the grid size:
     !/
-    real,    intent(out):: CoordCorner_D(nDim), Dcoord_D(nDim)
+    real,    intent(out):: CoordCorner_D(nDim), CellSize_D(nDim)
     logical, intent(out):: IsOut !Point is out of the domain.
     real, dimension(nDim):: CoordCenter_D
     integer:: iShift_D(3)
@@ -738,11 +849,24 @@ contains
     iProc = 0
     iBlock= 0
     CoordCorner_D = CoordMin_D
-    Dcoord_D      = 0.0
+    CellSize_D    = 0.0
     ! fix periodic coordinates
     where(IsPeriodic_D(1:nDim))
        Coord_D = modulo(Coord_D, DomainSize_D)
     end where
+    ! fix "flipped" coordinate
+    if(IsSpherical)then
+       if(Coord_D(Theta_) < CoordMin_D(Theta_))then
+          Coord_D(Theta_) = 2*CoordMin_D(Theta_) - Coord_D(Theta_)
+          Coord_D(Phi_  ) = &
+               modulo(Coord_D(Phi_)+0.5*DomainSize_D(Phi_),DomainSize_D(Phi_))
+       elseif(Coord_D(Theta_) > CoordMax_D(Theta_))then
+          Coord_D(Theta_) = 2*CoordMax_D(Theta_) - Coord_D(Theta_)
+          Coord_D(Phi_  ) = &
+               modulo(Coord_D(Phi_)+0.5*DomainSize_D(Phi_),DomainSize_D(Phi_))
+       end if
+    end if
+    ! check whether the point is out if the domain
     IsOut = any(Coord_D < CoordMin_D .or. Coord_D >= CoordMax_D)
     if(IsOut) RETURN
     !\
@@ -753,7 +877,6 @@ contains
             all(Coord_D <  Coord_DB(:,iRoot)+DCoord_DB(:,iRoot)))&
             EXIT
     end do
-
     !\
     ! Find into which coarse block the point fall
     !/ 
@@ -761,19 +884,17 @@ contains
     IsAboveCenter_D = Coord_D >= CoordCenter_D
     iShift_D = 0
     where(IsAboveCenter_D)iShift_D(1:nDim) = 1
-    iChild  = iChildFromShift_III(iShift_D(1),iShift_D(2),iShift_D(3))
+    iChild = iChildFromShift_III(iShift_D(1),iShift_D(2),iShift_D(3))
     iBlock = iTree_IB(iChild,iRoot)
-
     !\
     ! Check if the coarse block is used
     !/
     if(Used_B(iBlock))then
        CoordCorner_D = Coord_DB(:,iBlock)
        Coord_D       = Coord_D - CoordCorner_D
-       DCoord_D      = DCoord_DB(:,iBlock)/ nCell
+       CellSize_D    = DCoord_DB(:,iBlock) / nCell
        RETURN
     end if
-
     !\
     ! The coarser block is refined, find into which fine block 
     ! the point falls
@@ -782,14 +903,15 @@ contains
     IsAboveCenter_D = Coord_D >= CoordCenter_D
     iShift_D = 0
     where(IsAboveCenter_D)iShift_D(1:nDim) = 1
-    iChild  = iChildFromShift_III(iShift_D(1),iShift_D(2),iShift_D(3))
+    iChild = iChildFromShift_III(iShift_D(1),iShift_D(2),iShift_D(3))
     iBlock = iTree_IB(iChild,iBlock)
     CoordCorner_D = Coord_DB(:,iBlock)
     Coord_D       = Coord_D - CoordCorner_D
-    DCoord_D      = DCoord_DB(:,iBlock) / nCell
+    CellSize_D    = DCoord_DB(:,iBlock) / nCell
   end subroutine find_test
 end module ModTestInterpolateAMR
-
+!=============================================================================
+!=============================================================================
 program test_interpolate_amr
 
   use ModTestInterpolateAMR, test => test_interpolate_amr
@@ -798,6 +920,7 @@ program test_interpolate_amr
 
   call test(&
        nDim          = 2,&
+       IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.true.,.false./), &
        nSample       = 20000, &
        UseGeneric    = .true., &
@@ -805,6 +928,7 @@ program test_interpolate_amr
 
   call test(&
        nDim          = 2,&
+       IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.true./), &
        nSample       = 20000, &
        UseGeneric    = .true., &
@@ -812,13 +936,14 @@ program test_interpolate_amr
 
   call test(&
        nDim          = 2,&
+       IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.true./), &
        nSample       = 20000, &
        UseGeneric    = .false.)
 
-
   call test(&
        nDim          = 3,&
+       IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.true.,.true./), &
        nSample       = 20000, &
        UseGeneric    = .true., &
@@ -826,6 +951,7 @@ program test_interpolate_amr
 
   call test(&
        nDim          = 3,&
+       IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.false.,.true./), &
        nSample       = 20000, &
        UseGeneric    = .true., &
@@ -833,10 +959,58 @@ program test_interpolate_amr
 
   call test(&
        nDim          = 3,&
+       IsCartesian   = .false.,&
+       IsPeriodicIn_D= (/.true.,.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .false.)
+
+
+
+  call test(&
+       nDim          = 2,&
+       IsCartesian   = .true.,&
+       IsPeriodicIn_D= (/.true.,.false./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .false.)
+
+  call test(&
+       nDim          = 2,&
+       IsCartesian   = .true.,&
+       IsPeriodicIn_D= (/.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .true.)
+
+  call test(&
+       nDim          = 2,&
+       IsCartesian   = .true.,&
+       IsPeriodicIn_D= (/.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .false.)
+
+
+  call test(&
+       nDim          = 3,&
+       IsCartesian   = .true.,&
+       IsPeriodicIn_D= (/.false.,.true.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .false.)
+
+  call test(&
+       nDim          = 3,&
+       IsCartesian   = .true.,&
+       IsPeriodicIn_D= (/.false.,.false.,.true./), &
+       nSample       = 20000, &
+       UseGeneric    = .true., &
+       UseGhostCell  = .true.)
+
+  call test(&
+       nDim          = 3,&
+       IsCartesian   = .true.,&
        IsPeriodicIn_D= (/.true.,.false.,.true./), &
        nSample       = 20000, &
        UseGeneric    = .false.)
 
 end program test_interpolate_amr
-
-

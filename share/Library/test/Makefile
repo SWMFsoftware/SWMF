@@ -317,6 +317,7 @@ test_interpolate_amr.o: test_interpolate_amr.f90
 
 OBJ_INTERPOLATE_AMR = \
 	../src/ModKind.o \
+	../src/ModNumConst.o \
 	../src/ModRandomNumber.o \
 	../src/ModInterpolateAMR.o \
 	../src/ModIoUnit.o \
@@ -328,7 +329,7 @@ OBJ_INTERPOLATE_AMR = \
 	test_interpolate_amr.o
 
 test_interpolate_amr_exe:
-	@(cd ../src; make ModKind.o ModRandomNumber.o ModMpiOrig.o ModMpiInterfaces.o ModMpi.o ModIoUnit.o ModUtility_c.o ModUtility.o ModInterpolateAMR.o)
+	@(cd ../src; make ModKind.o ModNumConst.o ModRandomNumber.o ModMpiOrig.o ModMpiInterfaces.o ModMpi.o ModIoUnit.o ModUtility_c.o ModUtility.o ModInterpolateAMR.o)
 	@make test_interpolate_amr.o
 	${LINK.f90} -o test_interpolate_amr.exe ${OBJ_INTERPOLATE_AMR} ${Lflag2}
 
