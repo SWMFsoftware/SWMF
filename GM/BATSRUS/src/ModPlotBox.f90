@@ -9,7 +9,7 @@ module ModPlotBox
   use ModIO, ONLY: plot_dx, plot_range, plot_normal, TypeCoordPlot_I, &
        plot_form, TypeFile_I, plot_type, ObsPos_DI, IsObsBox_I
 
-  use ModNumConst,       ONLY  : cDegToRad
+  use ModNumConst,       ONLY  : cDegToRad, cTwoPi
 
   use ModCoordTransform, ONLY  : xyz_to_lonlat
 
@@ -98,6 +98,7 @@ contains
        ! Convert observer location to longitude and latitude.
        ! Coordinate system is TypeCoordPlot_I(iFile)
        call xyz_to_lonlat(ObsPos_DI(:,iFile) - Xyz0_D, zAngle, yAngle)
+       zAngle = cTwoPi - zAngle
     else
        ! Get box orientation from ModIO arrays:
        xAngle = plot_normal(1,iFile) * cDegtoRad
