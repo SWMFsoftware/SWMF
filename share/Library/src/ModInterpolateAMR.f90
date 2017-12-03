@@ -4677,7 +4677,7 @@ contains
          iProc_I( iGrid) = iProc_I( iGridPhys)
 
          iShift_D = iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys)
-         if(.not.IsFlipped_I(iGrid).and.IsFlipped_I(iGridPhys))&
+         if(IsFlipped_I(iGridPhys))&
               iShift_D(iDirFlip) = -iShift_D(iDirFlip)
          !\
          ! Below we benefit from the observation that although the
