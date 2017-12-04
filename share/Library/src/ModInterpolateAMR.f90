@@ -4125,7 +4125,6 @@ contains
       !----------------------------
       integer    :: iDiscrFlip_D(nDim) 
       character(len=*), parameter:: NameSub = 'check_flip_in_block'
-      logical, parameter :: DoTest = .true.
       !------------
       !\
       ! Coordinates XyzBasic_D and the grid point coordinates, 
@@ -4199,40 +4198,6 @@ contains
       ! Their difference equals -DXyzBasic_D
       ! in both cases a and b discriminator equals 1
       IsFlippedBlock = any(iDiscrFlip_D/=0)
-      if(DoTest.and.IsFlippedBlock)then
-         if(any(iDiscrFlip_D/=0.and.iDiscrFlip_D/=1))then
-            write(*,*)'XyzGridRel2Block_D=',XyzGridRel2Block_D
-            write(*,*)'XyzStartBlock_D=', XyzStartBlock_D
-            write(*,*)'XyzGridRel2Basic_D=',XyzGridRel2Basic_D
-            write(*,*)'XyzStartBasic_D=',XyzStartBasic_D
-            write(*,*)'DXyzGrid_D*nCell_D=',DXyzGrid_D*nCell_D
-            write(*,*)'iDiscrFlip_D=',iDiscrFlip_D
-            call CON_stop(NameSub//': error in the algorithm')
-         end if
-         if(sum(iDiscrFlip_D)>1)then
-            write(*,*)'XyzGridRel2Block_D=',XyzGridRel2Block_D
-            write(*,*)'XyzStartBlock_D=', XyzStartBlock_D
-            write(*,*)'XyzGridRel2Basic_D=',XyzGridRel2Basic_D
-            write(*,*)'XyzStartBasic_D=',XyzStartBasic_D
-            write(*,*)'DXyzGrid_D*nCell_D=',DXyzGrid_D*nCell_D
-            write(*,*)'iDiscrFlip_D=',iDiscrFlip_D
-            write(*,*)'iDiscrFlip_D = ', iDiscrFlip_D
-            call CON_stop(NameSub//': sum:more than one flipping direction')
-         end if
-         if(iDirFlip/=0.and.iDirFlip/=sum(iOrder_I(1:nDim)*iDiscrFlip_D))then
-            write(*,*)'iDirFlip=',iDirFlip 
-            write(*,*)'XyzGridRel2Block_D=',XyzGridRel2Block_D
-            write(*,*)'XyzStartBlock_D=', XyzStartBlock_D
-            write(*,*)'XyzGridRel2Basic_D=',XyzGridRel2Basic_D
-            write(*,*)'XyzStartBasic_D=',XyzStartBasic_D
-            write(*,*)'DXyzGrid_D*nCell_D=',DXyzGrid_D*nCell_D
-            write(*,*)'iDiscrFlip_D=',iDiscrFlip_D
-            write(*,*)'iDiscrFlip_D = ', iDiscrFlip_D
-            write(*,*)'sum(iOrder_I(1:nDim)*iDiscrFlip_D))=',&
-                 sum(iOrder_I(1:nDim)*iDiscrFlip_D)
-            call CON_stop(NameSub//': iDiscrmore than one flipping direction')
-         end if
-      end if
       if(IsFlippedBlock)&
            iDirFlip = sum(iOrder_I(1:nDim)*iDiscrFlip_D)
     end subroutine check_flip_in_block
@@ -4496,7 +4461,7 @@ contains
          iBlock_I(       iGridFlip)  = iBlock
          iLevelSubGrid_I(iGridFlip)  = Fine_
          IsFlipped_I(    iGridFlip)  = IsFlippedBlock
-         if(iGridInBlock==iGridBasic)then
+         if(iGridFlip==iGridBasic)then
             !No flip in the basic block
             !\
             ! Determine, where Xyz point is located with respect to
@@ -4680,8 +4645,14 @@ contains
          iProc_I( iGrid) = iProc_I( iGridPhys)
 
          iShift_D = iShift_DI(1:nDim,iGrid) - iShift_DI(1:nDim,iGridPhys)
+         !\
+         !If the block chosen for interpolation with the chost cells,
+         !the order of cell indexes along the flipped direction is 
+         !opposite to the order of iGrid index, adopted for the BASIC
+         !block, therefore:
          if(IsFlipped_I(iGridPhys))&
               iShift_D(iDirFlip) = -iShift_D(iDirFlip)
+         !/
          !\
          ! Below we benefit from the observation that although the
          ! shift in indexes between iGrid and iGridPhys is twice iShift_D
