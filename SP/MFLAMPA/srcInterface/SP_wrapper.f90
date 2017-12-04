@@ -17,7 +17,7 @@ module SP_wrapper
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, &
-       ParamLocal_IB, DataInputTime, &
+       ParamLocal_IB, DataInputTime, Offset_,&
        Block_, Proc_, Begin_, End_, Shock_, ShockOld_, XMin_, ZMin_, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
   use CON_comp_info
@@ -53,9 +53,6 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
   public:: SP_put_line
-  public:: SP_synchronize_grid
-  public:: SP_get_cell_index
-  public:: SP_get_particle_index
   public:: SP_adjust_lines
   public:: SP_get_domain_boundary
   public:: SP_put_r_min
@@ -66,9 +63,6 @@ module SP_wrapper
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple = 'rho p mx my mz bx by bz'
-
-  ! offset between LagrID and particle cell index
-  integer:: iOffsetToLagrID_A(nNode) = 0
 
   ! whether to save rstart files
   logical:: DoSaveRestart = .false.
@@ -463,24 +457,19 @@ contains
     logical,            intent(in) :: DoAdd
     real,               intent(in) :: Coord_D(nVar) !nVar=nDim
 
-    integer:: iBlock, iNode
     ! indices of the particle
-    integer:: iLine, iParticle, iLagrID
- 
+    integer:: iBlock, iParticle
+
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     ! store passed particles
     iBlock    = Put%iCB_II(4,iPutStart)
-    iLine     = iNode_B(iBlock)
-    iParticle = Put%iCB_II(1,iPutStart)
-    iLagrID   = iParticle + iOffsetToLagrID_A(iLine)
+    iParticle = Put%iCB_II(1,iPutStart) + iGridLocal_IB(Offset_,iBlock)
 
     if(iParticle < iParticleMin)&
          call CON_stop(NameSub//': particle index is below limit')
     if(iParticle > iParticleMax)&
          call CON_stop(NameSub//': particle index is above limit')
-    if(iGridGlobal_IA(Proc_, iLine) /= iProc)&
-         call CON_stop(NameSub//': Incorrect message pass')
     
     ! put coordinates
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
@@ -489,32 +478,32 @@ contains
   end subroutine SP_put_line
 
   !===================================================================
-
-  subroutine SP_adjust_lines(iComp)
-    integer, intent(in):: iComp
+  !\
+  ! Called from coupler after the updated grid point location are 
+  ! received from the other component (SC, IH). Determines whether some
+  ! grid points should be added/deleted
+  !/
+  subroutine SP_adjust_lines(DoAdjustStart, DoAdjustEnd)
+    !\
+    ! If DoAdjustStart, the points in the starting portion of the line are
+    ! processed, if DoAdjustEnd - the same for the end points
+    !/
+    logical, intent(in) :: DoAdjustStart, DoAdjustEnd
     ! once new geometry of lines has been put, account for some particles
     ! exiting the domain (can happen both at the beginning and the end)
-    integer:: iParticle, iBlock, iNode, iBegin, iEnd, iEndNew ! loop variables
+    integer:: iParticle, iBlock, iEndNew, iBegin, iEnd, iOffset ! loop variables
     logical:: IsMissingCurr, IsMissingPrev
-    logical:: IsSc
     real   :: R2
     
     character(len=*), parameter:: NameSub = "SP_adjust_lines"
     character(len=100):: StringError
     !--------------------------------------------------------------------
-    ! determine the calling component
-    select case(iComp)
-    case(SC_)
-       IsSc = .true.
-    case(IH_)
-       IsSc = .false.
-    case default
-       write(StringError,'(a,i2)') &
-            ": isn't implemented for interface with component ", iComp
-       call CON_stop(NameSub//StringError)
-    end select
-
     do iBlock = 1, nBlock
+       !\
+       ! Called after the grid points are received from the 
+       ! component, nullify offset
+       !/
+       if(DoAdjustStart)iGridLocal_IB(Offset_,iBlock) = 0
        iBegin = iGridLocal_IB(Begin_,iBlock)
        iEnd   = iGridLocal_IB(End_,  iBlock)
        IsMissingPrev = all(State_VIB(X_:Z_,iBegin,iBlock)==0.0)
@@ -523,7 +512,7 @@ contains
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
 
           if(IsMissingCurr .and. R2 > RBufferMin**2)then
-             if(.not.IsSc)&
+             if(DoAdjustEnd)&
                   iGridLocal_IB(End_,  iBlock) = iParticle - 1
              EXIT
           end if
@@ -536,77 +525,37 @@ contains
           end if
           IsMissingPrev = IsMissingCurr
        end do
-       ! adjust data storage
-       iEndNew= iGridLocal_IB(End_, iBlock) - &
-            (iGridLocal_IB(Begin_, iBlock) - 1)
-       if(  iGridLocal_IB(Begin_,iBlock) /= 1 .or.&
-            iGridLocal_IB(End_,  iBlock) /= iEndNew)then
+       if(DoAdjustStart.and.iGridLocal_IB(Begin_,iBlock) /= 1)then
+          !\
+          ! Offset particle arrays
+          !/
           iBegin = iGridLocal_IB(Begin_, iBlock)
-          iEnd   = iGridLocal_IB(End_,   iBlock)
+          iEnd   = iGridLocal_IB(End_,   iBlock) 
+          iOffset = 1 - iGridLocal_IB(Begin_, iBlock)
+          iEndNew= iEnd  + iOffset
           iGridLocal_IB(Begin_, iBlock) = 1
           iGridLocal_IB(End_,   iBlock) = iEndNew
-          iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Shock_, iBlock) + &
-               iEndNew - iEnd
+          iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Shock_, iBlock) +&
+               iOffset
           iGridLocal_IB(ShockOld_, iBlock) = iGridLocal_IB(ShockOld_, iBlock)+&
-               iEndNew - iEnd
-          State_VIB(:, 1:iEndNew, iBlock) = &
+               iOffset
+          iGridLocal_IB(Offset_, iBlock)   = iGridLocal_IB(Offset_, iBlock) +&
+               iOffset
+          State_VIB(:, 1:iGridLocal_IB(End_,iBlock), iBlock) = &
                State_VIB(:, iBegin:iEnd, iBlock)
-          Distribution_IIB(:,1:iEndNew, iBlock) = &
+          Distribution_IIB(:,1:iGridLocal_IB(End_,iBlock), iBlock) = &
                Distribution_IIB(:,iBegin:iEnd, iBlock)
        end if
-
     end do
     ! may need to add particles to the beginning of lines
-    if(IsSc) call append_particles
+    if(DoAdjustStart) call append_particles
+    !\
+    ! Called after the grid points are received from the 
+    ! component, nullify offset
+    !/
+    if(DoAdjustEnd)iGridLocal_IB(Offset_,1:nBlock) = 0
   end subroutine SP_adjust_lines
-
-  !===================================================================
-
-  subroutine SP_synchronize_grid(iCommSync)
-    ! synchronize offsets between LagrID and particle cell index
-    integer, intent(in):: iCommSync
-    integer:: iBlock, iNode, iError
-    !----------------------------------------------------------------
-    ! reset values of offsets on all processors
-    iOffsetToLagrID_A = 0
-
-    if(is_proc(SP_))then
-       ! each SP proc updates its own part of iOffsetLagrID_A
-       do iBlock = 1, nBlock
-          iNode = iNode_B(iBlock)
-          iOffsetToLagrID_A(iNode) = &
-               nint(State_VIB(LagrID_,1, iBlock)) - 1
-       end do
-    end if
-
-    ! update on all processors
-    if(n_proc() > 1)then
-       call MPI_Allreduce(MPI_IN_PLACE, iOffsetToLagrID_A, nNode, &
-            MPI_INTEGER, MPI_SUM, iCommSync, iError)
-    end if
-  end subroutine SP_synchronize_grid
-
-  !===================================================================
-
-  subroutine SP_get_cell_index(iNode, iLagrID, iCell)
-    ! finds cell index that corresponds to provided lagrangian index
-    integer, intent(in) :: iNode
-    integer, intent(in) :: iLagrID
-    integer, intent(out):: iCell
-    !----------------------------------------------------------------
-    iCell = iLagrID - iOffsetToLagrID_A(iNode)
-  end subroutine SP_get_cell_index
-  !===================================================================
-
-  subroutine SP_get_particle_index(iNode, iParticle, iLagrID)
-    ! finds cell index that corresponds to provided lagrangian index
-    integer, intent(in) :: iNode, iParticle
-    integer, intent(out):: iLagrID
-    !----------------------------------------------------------------
-    iLagrID  = iParticle + iOffsetToLagrID_A(iNode)
-  end subroutine SP_get_particle_index
-
-  !===================================================================
+  !=============================
   subroutine SP_copy_old_state
     ! copy current state to old state for all field lines
     integer:: iBegin, iEnd, iBlock

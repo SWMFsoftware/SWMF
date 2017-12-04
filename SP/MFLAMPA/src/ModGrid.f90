@@ -21,7 +21,7 @@ module SP_ModGrid
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
   public:: Begin_, End_, Shock_, ShockOld_, XMin_, YMin_, ZMin_, Length_
-  public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_
+  public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_, Offset_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
   public:: NameVar_V
@@ -80,12 +80,15 @@ module SP_ModGrid
   integer, parameter:: &
        Proc_  = 1, & ! Processor that has this line/node
        Block_ = 2    ! Block that has this line/node
-  integer, parameter:: nBlockIndexes = 4
+  integer, parameter:: nBlockIndexes = 5
   integer, parameter:: &
        Begin_   = 1, & ! Index of the 1st particle on this line/node
        End_     = 2, & ! Index of the last particle on this line/node
        Shock_   = 3, & ! Current location of a shock wave
-       ShockOld_= 4    ! Old location of a shock wave
+       ShockOld_= 4, & ! Old location of a shock wave
+       Offset_  = 5    ! To account for the dymaical grid distinction 
+                       ! from that updated in the other components
+  
   integer, parameter:: nBlockParam = 4
   integer, parameter:: &
        XMin_   = 1, & ! 
@@ -307,6 +310,7 @@ contains
              iGridLocal_IB(End_,     iBlock) = 1
              iGridLocal_IB(Shock_,   iBlock) = iParticleMin - 1
              iGridLocal_IB(ShockOld_,iBlock) = iParticleMin - 1
+             iGridLocal_IB(Offset_,  iBlock) = 0
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
           iGridGlobal_IA(Block_,  iNode)  = iBlock
@@ -456,6 +460,9 @@ contains
        Distribution_IIB(     :,2:iGridLocal_IB(End_, iBlock)+1, iBlock) = &
             Distribution_IIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
        iGridLocal_IB(End_, iBlock)  = iGridLocal_IB(End_, iBlock) + 1
+       !Particles ID as handled by other components keep unchanged
+       !while their order numbers in SP are increased by 1. Therefore,
+       iGridLocal_IB(Offset_, iBlock)  = iGridLocal_IB(Offset_, iBlock) + 1
        ! put the new particle just above the lower boundary
        State_VIB(X_:Z_,  1, iBlock) = &
             ParamLocal_IB(XMin_:ZMin_, iBlock) * (1.0 + cTol)
@@ -465,6 +472,7 @@ contains
        State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
             (Alpha+1) * State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
             -Alpha    * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
+       
     end do
   end subroutine append_particles
 

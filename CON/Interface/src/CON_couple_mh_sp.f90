@@ -19,13 +19,11 @@ module CON_couple_mh_sp
   use CON_axes
 
   use SP_wrapper, ONLY: &
-       SP_put_from_sc, SP_put_from_ih, SP_put_input_time, &
-       SP_put_line, SP_n_particle, SP_synchronize_grid, &
-       SP_do_extract, SP_get_domain_boundary, SP_put_r_min, &
+       SP_put_from_sc, SP_put_from_ih, SP_put_input_time, SP_put_line, &
+       SP_n_particle, SP_do_extract, SP_get_domain_boundary, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
-       SP_interface_point_coords_for_ih_extract, SP_get_cell_index, &
-       SP_copy_old_state, SP_adjust_lines, SP_get_particle_index, &
-       SP_assign_lagrangian_coords
+       SP_interface_point_coords_for_ih_extract, &
+       SP_copy_old_state, SP_adjust_lines, SP_assign_lagrangian_coords
        
   implicit none
   
@@ -293,7 +291,6 @@ contains
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
-    call SP_synchronize_grid(RouterScSp%iCommUnion)
     call exchange_data_sc_sp(DoInit=.false., DoExtract=.false.)
   end subroutine couple_sc_sp
   !=====================
@@ -321,9 +318,8 @@ contains
        !Lagrangian particle coordinates are sent
        !/
     end if
-    if(is_proc(SP_).and..not.DoInit)&
-         call SP_adjust_lines(SC_)
-    call SP_synchronize_grid(RouterScSp%iCommUnion)
+    if(is_proc(SP_).and..not.DoInit)call SP_adjust_lines(&
+         DoAdjustStart=.true.,DoAdjustEnd=.not.use_comp(IH_))
     !\
     ! Send coordinates of the points in SP to receive MHD data from SC
     call set_router(&
@@ -334,8 +330,7 @@ contains
          interface_point_coords=                    &
          SP_interface_point_coords_for_sc,          &
          mapping               = mapping_sp_to_sc,  &
-         interpolate           = interpolation_amr_gc,&
-         extra_data            = fix_buffer)
+         interpolate           = interpolation_amr_gc)
     call couple_comp(RouterScSp, &
          nVar = nVarBuffer, &
          fill_buffer = SC_get_for_sp_and_transform, &
@@ -369,8 +364,7 @@ contains
          Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
 
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
-         RouterIhSp%iCommUnion)
-    call SP_synchronize_grid(RouterIhSp%iCommUnion)  
+         RouterIhSp%iCommUnion)  
     call exchange_data_ih_sp(DoInit=.false., DoExtract=.false.)
   end subroutine couple_ih_sp
   !==================================================================
@@ -400,9 +394,8 @@ contains
        !Particle coordinates are sent to SP
        !/
     end if
-    if(is_proc(SP_).and..not.DoInit)&
-         call SP_adjust_lines(IH_)
-    call SP_synchronize_grid(RouterIhSp%iCommUnion)
+    if(is_proc(SP_).and..not.DoInit)call SP_adjust_lines(&
+         DoAdjustStart = .not.use_comp(SC_), DoAdjustEnd = .true.)
     !\
     ! Send to IH the  coordinates of points in SP and
     ! send back the MHD data in these points
@@ -415,8 +408,7 @@ contains
          interface_point_coords=             &
          SP_interface_point_coords_for_ih,   &
          mapping     = mapping_sp_to_ih,     &
-         interpolate = interpolation_amr_gc, &
-         extra_data            = fix_buffer)
+         interpolate = interpolation_amr_gc)
     call couple_comp(RouterIhSp, &
          nVar = nVarBuffer, &
          fill_buffer = IH_get_for_sp_and_transform, &
@@ -426,7 +418,7 @@ contains
     !Get particles from the semi-router 
     if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterIhSp)
-       !^CMPIF SC BEGIN
+       !^CMP IF SC BEGIN
        ! Sort out particles advected by the SC
        !/
        iParticleNew = 0
@@ -436,8 +428,8 @@ contains
           iParticleNew  = iParticleNew +1
           RouterIhSp%BufferSource_II(:, iParticleNew) = &
                RouterIhSp%BufferSource_II(:, iParticle)
-       end do
-       nLength = iParticleNew
+       end do    
+       nLength = iParticleNew     !^CMP END SC
        call IH_add_to_line(&
             nParticle = nLength,&
             Xyz_DI    =  RouterIhSp%BufferSource_II(&
@@ -497,13 +489,13 @@ contains
     real,    intent(out):: CoordOut_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
     
-    integer:: iIndex_I(2), iParticle, iCell
+    integer:: iIndex_I(2), iParticle
     !------------------------------------------
     IsInterfacePoint = .true.; 
     iParticle = nint(XyzIn_D(1))
     call IH_get_particle_indexes(iParticle, iIndex_I)
-    call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
-    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
+    CoordOut_D = xyz_grid_d(SP_GridDescriptor,&
+         iIndex_I(1),(/iIndex_I(2),1,1/))
   end subroutine mapping_line_ih_to_sp
   !=======================================!^CMP IF SC BEGIN
   subroutine mapping_sp_to_sc(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
@@ -529,13 +521,13 @@ contains
     real,    intent(out):: CoordOut_D(nDimOut)
     logical, intent(out):: IsInterfacePoint
     
-    integer:: iIndex_I(2), iParticle, iCell
+    integer:: iIndex_I(2), iParticle
     !------------------------------------------
     IsInterfacePoint = .true.
     iParticle = nint(XyzIn_D(1))
     call SC_get_particle_indexes(iParticle, iIndex_I)
-    call SP_get_cell_index(iIndex_I(1), iIndex_I(2), iCell)
-    CoordOut_D = xyz_grid_d(SP_GridDescriptor,iIndex_I(1),(/iCell,1,1/))
+    CoordOut_D = xyz_grid_d(SP_GridDescriptor,&
+         iIndex_I(1),(/iIndex_I(2),1,1/))
   end subroutine mapping_line_sc_to_sp
   !===================================!^CMP END SC        
   subroutine IH_get_for_sp_and_transform(&
@@ -570,29 +562,6 @@ contains
     ! perform transformation before returning
     State_V = matmul(IhToSp_DD, State_V)
   end subroutine IH_get_line_for_sp_and_transform
-  !==============================================================!
-  subroutine fix_buffer(BlockIndex_I,&
-            iGridPointInBlock, nAux, Data_V)
-    use CON_coupler, ONLY: GlobalTreeNode_, BLK_, &
-         GridPointFirst_, GlobalBlock_
-    !\
-    ! Mapped point in the buffer is characterized
-    ! by any of the block indexes: global tree node number,
-    ! global block number, local block number or the number of
-    ! the first point in the block...
-    integer, intent(in) :: BlockIndex_I(1:4)
-    ! and the point number in the block
-    integer, intent(in) :: iGridPointInBlock
-    integer, intent(in) :: nAux !How many reals you may send
-    real,    intent(out):: Data_V(1:nAux)
-   
-    integer:: iIndexIn, iLine, iIndexOut
-    !-------------------------------------------------------------
-    iLine    = BlockIndex_I(GlobalBlock_)
-    iIndexIn = iGridPointInBlock
-    call SP_get_particle_index(iLine, iIndexIn, iIndexOut)
-    Data_V(1) = real(iLine); Data_V(2) = real(iIndexOut)
-  end subroutine fix_buffer
   !^CMP IF SC BEGIN    ===========================================
   subroutine SC_get_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)

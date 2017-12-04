@@ -22,9 +22,6 @@ module SP_wrapper
   public:: SP_put_from_sc
   public:: SP_put_from_ih
   public:: SP_put_line
-  public:: SP_synchronize_grid
-  public:: SP_get_cell_index
-  public:: SP_get_particle_index
   public:: SP_adjust_lines
   public:: SP_interface_point_coords_for_ih
   public:: SP_interface_point_coords_for_ih_extract
@@ -213,35 +210,12 @@ contains
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_copy_old_state
   !===========================
-  subroutine SP_adjust_lines(iComp)
-    integer, intent(in):: iComp
+  subroutine SP_adjust_lines(DoAdjustStart, DoAdjustEnd)
+    Logical, intent(in):: DoAdjustStart, DoAdjustEnd
     character(len=*), parameter:: NameSub='SP_adjust_lines'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_adjust_lines
-  !===========================
-  subroutine SP_synchronize_grid(iComm)
-    integer, intent(in):: iComm
-    character(len=*), parameter:: NameSub='SP_synchronize_grid'
-    !---------------------------------------------------------------
-    call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_synchronize_grid
-  !===========================
-  subroutine SP_get_particle_index(i1,i2,i3)
-    integer, intent(in) :: i1,i2
-    integer, intent(out):: i3
-    character(len=*), parameter:: NameSub='SP_get_particle_index'
-    !---------------------------------------------------------------
-    call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_get_particle_index
-  !===========================
-  subroutine SP_get_cell_index(i1,i2,i3)
-    integer, intent(in) :: i1,i2
-    integer, intent(out):: i3
-    character(len=*), parameter:: NameSub='SP_get_cell_index'
-    !---------------------------------------------------------------
-    call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_get_cell_index
   !===========================
   subroutine SP_assign_lagrangian_coords
     character(len=*), parameter:: NameSub='assign_lagrangian_coords'
