@@ -23,7 +23,7 @@ module SP_wrapper
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
-       set_coord_system, &
+       set_coord_system, SP_, is_proc0, i_comm, i_proc0, &
        init_decomposition, get_root_decomposition, bcast_decomposition, &
        iVar_V, DoCoupleVar_V, &
        Density_, RhoCouple_, Pressure_, PCouple_, &
@@ -54,11 +54,11 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_sc
   public:: SP_put_line
   public:: SP_adjust_lines
-  public:: SP_get_domain_boundary
+  public:: SP_get_bounds_comp
   public:: SP_put_r_min
   public:: SP_n_particle
   public:: SP_copy_old_state
-  public:: SP_do_extract
+  public:: SP_check_if_do_extract
   public:: SP_assign_lagrangian_coords
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -68,12 +68,46 @@ module SP_wrapper
   logical:: DoSaveRestart = .false.
 
 contains
-  !========================================================================  
-  subroutine SP_do_extract(DoExtract)
+  !\Interface routines to be called from super-structure only  
+  subroutine SP_check_if_do_extract(DoExtract)
+    use ModMpi
     logical, intent(out):: DoExtract
-    DoExtract = .not. DoRestart
-  end subroutine SP_do_extract
-  
+
+    integer :: iError
+    !--------------
+    if(is_proc0(SP_)) DoExtract = .not. DoRestart
+    call MPI_Bcast(DoExtract, 1, MPI_LOGICAL, i_proc0(SP_), i_comm(), iError)
+  end subroutine SP_check_if_do_extract
+  !===================================================================
+  subroutine SP_get_bounds_comp(ThisModel_, RMinOut, RMaxOut)
+    use ModMpi
+    ! return the MHD boundaries as set in SP component
+    integer, intent(in )  :: ThisModel_
+    real,    intent(out)  :: RMinOut, RMaxOut
+
+    integer, parameter:: Lower_=1, Upper_=2
+    integer :: iError
+    real    :: rAux_I(2)
+    character(len=*), parameter :: NameSub = 'SP_get_bounds_comp'
+    !-----------------------------------------------------------------
+    if(is_proc0(SP_))then
+       select case(ThisModel_)
+       case(Lower_)
+          rAux_I(1) = RMin
+          rAux_I(2) = RBufferMax
+       case(Upper_)
+          rAux_I(1) = RBufferMin
+          rAux_I(2) = RMax
+       case default
+          call CON_stop('Incorrect model ID in '//NameSub)
+       end select
+    end if
+    call MPI_Bcast(rAux_I(1), 2, MPI_REAL, i_proc0(SP_), i_comm(), iError)
+       RMinOut = rAux_I(1); RMaxOut = rAux_I(2)
+    
+  end subroutine SP_get_bounds_comp 
+  ! Above routines may be called from superstructure only.
+  !/ 
   !========================================================================
   integer function SP_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
@@ -291,26 +325,7 @@ contains
          UnitX        = rSun)
   end subroutine SP_set_grid
 
-  !===================================================================
 
-  subroutine SP_get_domain_boundary(ThisModel_, RMinOut, RMaxOut)
-    ! return the MHD boundaries as set in SP component
-    integer, intent(in )  :: ThisModel_
-    real,    intent(out)  :: RMinOut, RMaxOut
-    integer, parameter:: Lower_=1, Upper_=2
-    character(len=*), parameter :: NameSub = 'SP_get_domain_boundary'
-    !-----------------------------------------------------------------
-    select case(ThisModel_)
-    case(Lower_)
-       RMinOut = RMin
-       RMaxOut = RBufferMax
-    case(Upper_)
-       RMinOut = RBufferMin
-       RMaxOut = RMax
-    case default
-       call CON_stop('Incorrect model ID in '//NameSub)
-    end select
-  end subroutine SP_get_domain_boundary
 
   !===================================================================
 
@@ -330,6 +345,7 @@ contains
 
     integer:: iBlock    ! loop variable
     !-----------------------------------------------------------------
+    write(*,*)'RMin, RMinIn=',RMin, RMinIn
     ! check whether the lower boundary has been defined before
     if(RMin > 0.0)then
     end if

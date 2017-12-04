@@ -26,20 +26,20 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_ih
   public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
-  public:: SP_get_domain_boundary
+  public:: SP_get_bounds_comp
   public:: SP_put_r_min
   public:: SP_n_particle
   public:: SP_copy_old_state
-  public:: SP_do_extract
+  public:: SP_check_if_do_extract
   public:: SP_assign_lagrangian_coords
 contains
 
-  subroutine SP_do_extract(DoExtract)
+  subroutine SP_check_if_do_extract(DoExtract)
     logical, intent(out):: DoExtract
-    character(len=*), parameter:: NameSub='SP_do_extract'
+    character(len=*), parameter:: NameSub='SP_check_if_do_extract'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_do_extract
+  end subroutine SP_check_if_do_extract
   !========================================================================  
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
 
@@ -121,14 +121,14 @@ contains
   end subroutine SP_get_line_param
   !===================================================================
 
-  subroutine SP_get_domain_boundary(ThisModel_, RMinOut, RMaxOut)
+  subroutine SP_get_bounds_comp(ThisModel_, RMinOut, RMaxOut)
     ! return the value of the solar corona boundary as set in SP component
     integer, intent(in):: ThisModel_
     real,   intent(out):: RMinOut, RMaxOut
     character(len=*), parameter:: NameSub='SP_get_solar_corona_boundary'
     !-----------------------------------------------------------------
     call CON_stop('SP: '//NameSub//' : cannot call the empty version')
-  end subroutine SP_get_domain_boundary
+  end subroutine SP_get_bounds_comp
 
   !===================================================================
 

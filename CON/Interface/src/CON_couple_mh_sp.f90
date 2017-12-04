@@ -20,7 +20,7 @@ module CON_couple_mh_sp
 
   use SP_wrapper, ONLY: &
        SP_put_from_sc, SP_put_from_ih, SP_put_input_time, SP_put_line, &
-       SP_n_particle, SP_do_extract, SP_get_domain_boundary, SP_put_r_min, &
+       SP_n_particle, SP_check_if_do_extract, SP_get_bounds_comp, SP_put_r_min, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
        SP_interface_point_coords_for_ih_extract, &
        SP_copy_old_state, SP_adjust_lines, SP_assign_lagrangian_coords
@@ -58,7 +58,7 @@ module CON_couple_mh_sp
   integer, parameter :: nAux = 2
   !\
   ! Misc
-  integer :: nLength, iError, ThisModel_
+  integer :: nLength, iError
   !\
   ! Transformation matrices
   real :: ScToSp_DD(3,3) !^CMP IF SC
@@ -76,19 +76,15 @@ module CON_couple_mh_sp
   ! solar corona and lower and upper boundaries
   real:: RScMin, RScMax             !^CMP END SC
   ! inner heliosphere lower and upper boundaries
-  real:: RIhMin, RIhMax, rAux_I(2)
+  real:: RIhMin, RIhMax
 contains
   !==================================================================
   subroutine couple_mh_sp_init
     use CON_physics, ONLY: get_time
     use ModConst
     logical,save::DoInit=.true. 
-
-    integer:: iError
-
     integer, parameter:: &
          iInterfaceOrigin = 0, iInterfaceEnd = 1
-
     ! whether need to extract new line (equal to .not.DoRestart
     logical:: DoExtract
     !----------------------------------------------------------------------
@@ -100,44 +96,18 @@ contains
     if(is_proc(SP_))call SP_put_input_time(tNow)
 
     ! determine whether need to extract new field lines
-    if(is_proc0(SP_)) call SP_do_extract(DoExtract)
-    call MPI_Bcast(DoExtract, 1, MPI_LOGICAL, i_proc0(SP_), i_comm(), iError)
+    call SP_check_if_do_extract(DoExtract)
 
-    ! Set pair SC-SP
-    if(use_comp(SC_)) then   !^CMP IF SC BEGIN
-       ! get the value of SC boundaries as set in SP
-       if(is_proc0(SP_))&
-            call SP_get_domain_boundary(Lower_, rAux_I(1), rAux_I(2))
-       call MPI_Bcast(rAux_I(1), 2, MPI_REAL, i_proc0(SP_), i_comm(), iError)
-       RScMin = rAux_I(1); RScMax = rAux_I(2)
-       call couple_sc_sp_init
-       ! put the lower boundary of the domain in SC to SP
-       if(DoExtract.and.is_proc(SP_))&
-            call SP_put_r_min(RScMin)
-    end if                   !^CMP END SC
-    ! Set pair IH-SP         
-    if(use_comp(IH_)) then
-       ! get the value of IH boundaries as set in SP
-       if(use_comp(SC_))then  !^CMP IF SC BEGIN
-          ThisModel_ = Upper_
-       else                   !^CMP END SC
-          ThisModel_ = Lower_
-       end if                 !^CMP IF SC
-       if(is_proc0(SP_))&
-            call SP_get_domain_boundary(ThisModel_, rAux_I(1), rAux_I(2))
-       call MPI_Bcast(rAux_I(1), 2, MPI_REAL, i_proc0(SP_), i_comm(), iError)
-       RIhMin = rAux_I(1); RIhMax = rAux_I(2)
-       call couple_ih_sp_init
-       if(DoExtract.and.is_proc(SP_)  &
-            .and..not.(use_comp(SC_)) &     !^CMP IF SC
-            )call SP_put_r_min(RIhMin)
-    end if
+    if(use_comp(SC_))call couple_sc_sp_init  !^CMP IF SC         
+    if(use_comp(IH_))call couple_ih_sp_init
     if(DoExtract.and.is_proc(SP_))&
          call SP_assign_lagrangian_coords
     DoInit=.false.
   contains
     !===============================
     subroutine couple_sc_sp_init             !^CMP IF SC BEGIN
+      ! get the value of SC boundaries as set in SP
+      call SP_get_bounds_comp(Lower_, RScMin, RScMax)
       call SC_check_use_particles()
       call set_couple_var_info(SC_, SP_)
       !\
@@ -158,8 +128,7 @@ contains
       !\
       ! Set local GD on the Particle_I structure
       call set_standard_grid_descriptor(SC_LineDD,GD=SC_LineGrid)
-      call init_router(SC_LineGrid, SP_Grid,  &
-           RouterLineScSp, nMappedPointIndex=0)
+      call init_router(SC_LineGrid, SP_Grid, RouterLineScSp)
       if(.not.RouterScSp%IsProc)RETURN
       if(is_proc(SC_))call set_local_gd(iProc = i_proc(),   &
            GD = SC_LineGrid, LocalGD = SC_LocalLineGrid)
@@ -197,9 +166,17 @@ contains
       end if
       !First coupling with the particle info and data exchange
       call exchange_data_sc_sp(DoInit, DoExtract)
+      ! put the lower boundary of the domain in SC to SP
+      if(DoExtract.and.is_proc(SP_)) call SP_put_r_min(RScMin)
     end subroutine couple_sc_sp_init                 !^CMP END SC
     !==============================
-    subroutine couple_ih_sp_init                     
+    subroutine couple_ih_sp_init           
+      ! get the value of IH boundaries as set in SP
+      if(use_comp(SC_))then  !^CMP IF SC BEGIN
+         call SP_get_bounds_comp(Upper_, RIhMin, RIhMax)
+      else                   !^CMP END SC
+         call SP_get_bounds_comp(Lower_, RIhMin, RIhMax)
+      end if                 !^CMP IF SC
       call IH_check_use_particles()
       call set_couple_var_info(IH_, SP_)
       !\
@@ -211,28 +188,26 @@ contains
       !SP to IH, at this stage, therefore nMappedPointIndex = 2.
       call init_coupler(iCompSource = IH_,          &
            iCompTarget = SP_,                       &
-           GridDescriptorSource = IH_Grid,&
-           GridDescriptorTarget = SP_Grid,&
+           GridDescriptorSource = IH_Grid,          &
+           GridDescriptorTarget = SP_Grid,          &
            nMappedPointIndex    = nAux,             &
            Router          = RouterIhSp)
-      if(.not.use_comp(SC_))then !^CMP IF SC BEGIN
-         if(is_proc(SP_))call set_local_gd(i_proc(),&
-              SP_Grid, SP_LocalGrid)
-      end if                     !^CMP END SC
       !/
       !\
       ! Set local GD on the Particle_I structure
       call set_standard_grid_descriptor(IH_LineDD,GD=&
            IH_LineGrid)
-      call init_router(IH_LineGrid, SP_Grid, RouterLineIhSp,&
-           nMappedPointIndex=0)
+      call init_router(IH_LineGrid, SP_Grid, RouterLineIhSp)
+      if(.not.RouterIhSp%IsProc)RETURN
+      if(.not.use_comp(SC_))then !^CMP IF SC BEGIN
+         if(is_proc(SP_))call set_local_gd(i_proc(),&
+              SP_Grid, SP_LocalGrid)
+      end if                     !^CMP END SC
       if(is_proc(IH_))call set_local_gd(&
            iProc = i_proc(), &
            GD = IH_LineGrid, &
            LocalGD = IH_LocalLineGrid)
       !Router to send particles is initialized. 
-      !Source IH_LocalLineGrid, target SP_Grid
-      if(.not.RouterIhSp%IsProc)RETURN
       call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
            RouterIhSp%iCommUnion)
       IhToSp_DD=transform_matrix(tNow,&                 
@@ -271,6 +246,9 @@ contains
       end if
       !First coupling with the particle info and data exchange
       call exchange_data_ih_sp(DoInit, DoExtract)
+      if(DoExtract.and.is_proc(SP_)  &
+            .and..not.(use_comp(SC_)) &     !^CMP IF SC
+            )call SP_put_r_min(RIhMin)
     end subroutine couple_ih_sp_init
   end subroutine couple_mh_sp_init
   !=========================================================================
