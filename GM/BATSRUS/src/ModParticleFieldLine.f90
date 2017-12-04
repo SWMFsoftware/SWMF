@@ -102,7 +102,10 @@ module ModParticleFieldLine
   integer, parameter:: nIndexParticleEnd = 4
 
   ! maximum allowed number of field lines
-  integer, parameter :: nFieldLineMax = 1000
+  integer :: nFieldLineMax
+
+  ! approximate number of particles per field line
+  integer :: nParticlePerLine
   
   ! number of active field lines
   integer:: nFieldLine = 0
@@ -152,6 +155,17 @@ contains
     case("#PARTICLELINE")
        call read_var('UseParticles', UseParticles)
        if(UseParticles)then
+          ! read info on size of the arrays to be allocated:
+          ! max total number of field lines (on all procs)
+          call read_var('nFieldLineMax', nFieldLineMax)
+          ! number of particles per field line (average)
+          call read_var('nParticlePerLine', nParticlePerLine)
+          ! check correctness
+          if(nFieldLineMax <= 0) call stop_mpi(NameSub//&
+               ': invalid max number of field lines')
+          if(nParticlePerLine <= 0) call stop_mpi(NameSub//&
+               ': invalid number of particles per field lines')              
+          !--------------------------------------------------------------
           ! read min and max values for space step
           ! based on their values space step may be
           ! - both negative => automatic (defined by grid resolution)
@@ -222,7 +236,7 @@ contains
          iKindParticle = KindReg_,  &
          nVar   = nVarParticleReg,  &
          nIndex = nIndexParticleReg,&
-         nParticleMax = 10000 * nFieldLineMax)
+         nParticleMax = nParticlePerLine * nFieldLineMax)
     call allocate_particles(&
          iKindParticle = KindEnd_  ,&
          nVar   = nVarParticleEnd  ,&
@@ -415,9 +429,10 @@ contains
       use BATL_mpi, ONLY: iComm, nProc
       integer, intent(in) :: iLineStart, iLineEnd
       integer:: iParticle, nParticle, iLine, iError
-      integer, dimension(1:nFieldLineMax):: iOffsetLocal_I, iOffset_I
-
+      integer, allocatable:: iOffsetLocal_I(:), iOffset_I(:)
       !------------------------------------------------------------------------
+      allocate(iOffsetLocal_I(1:nFieldLineMax))
+      allocate(iOffset_I(     1:nFieldLineMax))
       iOffsetLocal_I = 0; iOffset_I = 0
 
       ! set a pointer to parameters of regular particles
@@ -445,6 +460,7 @@ contains
          iIndexReg_II(id_,iParticle) = iIndexReg_II(id_,iParticle) + &
               iOffset_I(iLine)
       end do
+      deallocate(iOffsetLocal_I, iOffset_I)
     end subroutine offset_id
     !==========================================================================
   end subroutine extract_particle_line

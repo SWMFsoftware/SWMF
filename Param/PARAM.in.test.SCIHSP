@@ -254,6 +254,8 @@ pnt mhd tec		StringPlot
 
 #PARTICLELINE
 T			UseParticles
+16			nFieldLineMax
+1000			nParticlePerLine
 -1			SpaceStepMin
 -1			SpaceStepMax
 import			InitMode
@@ -396,6 +398,8 @@ T
 
 #PARTICLELINE
 T			UseParticles 
+16			nFieldLineMax
+1000			nParticlePerLine
 -1			SpaceStepMin 
 -1			SpaceStepMax 
 import			InitMode     
