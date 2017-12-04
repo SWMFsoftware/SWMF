@@ -27,7 +27,7 @@ module SP_wrapper
   public:: SP_interface_point_coords_for_ih_extract
   public:: SP_interface_point_coords_for_sc
   public:: SP_get_bounds_comp
-  public:: SP_put_r_min
+  public:: SP_set_line_foot
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_if_do_extract
@@ -132,11 +132,10 @@ contains
 
   !===================================================================
 
-  subroutine SP_put_r_min(R)
-    real, intent(in)::R
-    character(len=*), parameter:: NameSub='SP_put_r_min'
+  subroutine SP_set_line_foot
+    character(len=*), parameter:: NameSub='SP_set_line_foot'
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_put_r_min
+  end subroutine SP_set_line_foot
 
   !===================================================================
   subroutine SP_interface_point_coords_for_sc(&

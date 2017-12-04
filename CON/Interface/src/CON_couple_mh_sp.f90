@@ -20,7 +20,7 @@ module CON_couple_mh_sp
 
   use SP_wrapper, ONLY: &
        SP_put_from_sc, SP_put_from_ih, SP_put_input_time, SP_put_line, &
-       SP_n_particle, SP_check_if_do_extract, SP_get_bounds_comp, SP_put_r_min, &
+       SP_n_particle, SP_check_if_do_extract, SP_get_bounds_comp, SP_set_line_foot, &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc, &
        SP_interface_point_coords_for_ih_extract, &
        SP_copy_old_state, SP_adjust_lines, SP_assign_lagrangian_coords
@@ -166,8 +166,6 @@ contains
       end if
       !First coupling with the particle info and data exchange
       call exchange_data_sc_sp(DoInit, DoExtract)
-      ! put the lower boundary of the domain in SC to SP
-      if(DoExtract.and.is_proc(SP_)) call SP_put_r_min(RScMin)
     end subroutine couple_sc_sp_init                 !^CMP END SC
     !==============================
     subroutine couple_ih_sp_init           
@@ -246,9 +244,6 @@ contains
       end if
       !First coupling with the particle info and data exchange
       call exchange_data_ih_sp(DoInit, DoExtract)
-      if(DoExtract.and.is_proc(SP_)  &
-            .and..not.(use_comp(SC_)) &     !^CMP IF SC
-            )call SP_put_r_min(RIhMin)
     end subroutine couple_ih_sp_init
   end subroutine couple_mh_sp_init
   !=========================================================================
@@ -301,6 +296,7 @@ contains
             apply_buffer= SP_put_line)
        !Lagrangian particle coordinates are sent
        !/
+       if(DoExtract.and.is_proc(SP_)) call SP_set_line_foot
     end if
     if(is_proc(SP_).and..not.DoInit)call SP_adjust_lines(&
          DoAdjustStart=.true.,DoAdjustEnd=.not.use_comp(IH_))
@@ -377,6 +373,9 @@ contains
             apply_buffer= SP_put_line)
        !Particle coordinates are sent to SP
        !/
+       if(DoExtract.and.is_proc(SP_)  &
+            .and..not.(use_comp(SC_)) &     !^CMP IF SC
+            )call SP_set_line_foot
     end if
     if(is_proc(SP_).and..not.DoInit)call SP_adjust_lines(&
          DoAdjustStart = .not.use_comp(SC_), DoAdjustEnd = .true.)

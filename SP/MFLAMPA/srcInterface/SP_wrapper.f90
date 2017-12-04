@@ -55,7 +55,7 @@ module SP_wrapper
   public:: SP_put_line
   public:: SP_adjust_lines
   public:: SP_get_bounds_comp
-  public:: SP_put_r_min
+  public:: SP_set_line_foot
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_if_do_extract
@@ -324,15 +324,9 @@ contains
          NameVar      = NameVarCouple, &
          UnitX        = rSun)
   end subroutine SP_set_grid
-
-
-
   !===================================================================
-
-  subroutine SP_put_r_min(RMinIn)
-    ! save the lower boundary of the domain as set in other components;
+  subroutine SP_set_line_foot
     ! compute coordinates of the footprints of field lines
-    real, intent(in):: RMinIn
     
     ! existing particle with lowest index along line
     real:: Xyz1_D(nDim)
@@ -342,15 +336,8 @@ contains
     real:: Dot, S
     ! variable to compute coords of the footprints
     real:: Alpha
-
     integer:: iBlock    ! loop variable
     !-----------------------------------------------------------------
-    write(*,*)'RMin, RMinIn=',RMin, RMinIn
-    ! check whether the lower boundary has been defined before
-    if(RMin > 0.0)then
-    end if
-    RMin = RMinIn
-
     ! compute coordinates of footprints for each field lines
     do iBlock = 1, nBlock
        ! get the coordinates of lower particle
@@ -371,7 +358,7 @@ contains
        ParamLocal_IB(XMin_:ZMin_,iBlock) = Xyz1_D + Alpha * Dir1_D
        ParamLocal_IB(Length_,    iBlock) = abs(Alpha)
     end do
-  end subroutine SP_put_r_min
+  end subroutine SP_set_line_foot
 
   !===================================================================
 
