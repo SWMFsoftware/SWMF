@@ -44,6 +44,7 @@ test_help:
 	@echo "    test13                     (run GM-PT test: Europa)"
 	@echo "    test14                     (run OH-PT test)"
 	@echo "    test15                     (run SC-IH-SP test)"
+	@echo "    test15_build               (configure SC-IH-SP, run test)"
 	@echo "    test_pic                   (run GM-IPIC3D test)"
 	@echo "    test_pic2                  (run GM-PC test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
@@ -1359,6 +1360,12 @@ test14_check:
 		ls -l test14*.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
+test15_build:
+	rm -rf SP_build
+	Scripts/Configure.pl -on=SP,SC,IH -off=IM,IE,RB -d=SP_build
+	cd SP_build; ./Config.pl -install \
+	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
+	cd SP_build; make test15
 
 test15:
 	@echo "test15_compile..." > test15_scihsp.diff
