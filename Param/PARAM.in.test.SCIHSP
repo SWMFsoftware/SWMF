@@ -4,14 +4,16 @@ Begin session: 1
 T			DoEcho
 
 #DESCRIPTION
-Input file for creating a steady state solar corona with Threaded-Field-Line LC
+Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line
 
 
 #TIMEACCURATE
 T
 
 #SAVERESTART
-F                       DoSaveRestart
+T                       DoSaveRestart
+-1			DnSaveRestart
+5.0			DtSaveRestart
 
 #INCLUDE
 RESTART.in
@@ -165,8 +167,31 @@ spherical_lnr
 2			nLevelArea
 initial			NameArea
 
+#REGION
+test                  NameRegion
+box_gen                 NameShape
+5.0                     rMin
+180.0                     LonMin
+0.0                   LatMin
+32.0                    rMax
+360.0                   LonMax
+90.0                   LatMax
+
+#AMRCRITERIALEVEL
+2                       nCriteria
+Level                   TypeCriteria
+2                       RefineTo
+2                       CoarsenTo
+Level test              TypeCriteria
+3                       RefineTo
+3                       CoarsenTo
+
+
 #DOAMR
-F			DoAmr
+T			DoAmr
+-1			DnAmr
+1			DtAmr
+T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
@@ -403,10 +428,10 @@ F			UseDiffusion
 
 #ORIGIN
 2.5			ROrigin
-0			LonMin
--10			LatMin
-40			LonMax
-10			LatMax
+-10			LonMin
+25			LatMin
+10			LonMax
+90			LatMax
 
 #SAVEPLOT
 1
@@ -434,7 +459,22 @@ SP			NameTarget
 
 #STOP
 -1			MaxIter
-25			TimeMax
+22			TimeMax
 
 End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#BEGIN_COMP SC ----------------------------------------------------------------
+
+#DOAMR
+F
+
+#END_COMP SC   ----------------------------------------------------------------
+
+#STOP
+-1			MaxIter
+25			TimeMax
+
+End session: 2
 #END ##########################################################################

@@ -1374,6 +1374,8 @@ test15:
 	${MAKE} test15_rundir
 	@echo "test15_run..." >> test15_scihsp.diff
 	${MAKE} test15_run
+	@echo "test15_restart..." >> test15_scihsp.diff
+	${MAKE} test15_restart
 	@echo "test15_check..." >> test15_scihsp.diff
 	${MAKE} test15_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
@@ -1393,16 +1395,21 @@ test15_rundir:
 	cp Param/LAYOUT.in.test.SCIHSP ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
-	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
-
 
 test15_run:
+	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; ./Restart.pl
+
+test15_restart:
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 
 test15_check:
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
-	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000021_n000001.out > \
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000005.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out
 	-(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.out \
