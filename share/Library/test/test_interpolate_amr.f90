@@ -35,7 +35,7 @@ module ModTestInterpolateAMR
   !/
   integer:: iLevelTest_I(16)
   integer,parameter:: Out_  = -100
-  integer,parameter:: nCell = 2
+  integer,parameter:: nCell = 4
   integer,parameter:: nG    = 1
   !\
   ! Ratio of lengths in different dimensions
@@ -45,6 +45,8 @@ module ModTestInterpolateAMR
   ! which coordinates are periodic
   !/
   logical:: IsPeriodic_D(3) = .false.
+
+  integer :: nCell_D(3)  ! Cells per block
 
   character(len=*), parameter:: StringType = 'cartesian'
 
@@ -99,7 +101,6 @@ contains
     !Loop variables
     integer :: iCase, iSample, iGrid, iSubGrid, i, j, k, iBlock, iDir
     integer :: iProc, iBlockNei
-    integer :: nCell_D(3)  ! Cells per block
     integer :: iCell_D(3)
     integer :: nIndexes
     integer:: iMisc , nGridOut
@@ -161,8 +162,8 @@ contains
                   iProc, iBlockNei)
              if(iBlockNei /= iBlock) then
                 iBlock = iBlockNei
-                CoordCorner_D = Coord_DGB(:,1,1,1,iBlock) - 0.5*CellSizeFine_D
-                CellSize_D = CellSizeFine_D
+                CoordCorner_D = Coord_DB(:,iBlock)
+                CellSize_D = DCoord_DB(:,iBlock) / nCell_D(1:nDim)
              end if
              call fix_coord(nDim, iBlock, Coord_D, CoordPass_D)
              call interpolate_amr_gc(&
@@ -235,7 +236,6 @@ contains
           do iDir =1, nDim
              CoordCont_D(iDir) = Coord_D(iDir) + &
                   CellSizeCoarse_D(iDir)*(0.02*random_real(iSeed) - 0.01)
-                  !DomainSize_D(iDir)*(0.02*random_real(iSeed) - 0.01)
           end do
           !\
           ! call interpolate_amr
@@ -260,8 +260,8 @@ contains
                   iProc, iBlockNei)
              if(iBlockNei /= iBlock) then
                 iBlock = iBlockNei
-                CoordCorner_D = Coord_DGB(:,1,1,1,iBlock) - 0.5*CellSizeFine_D
-                CellSize_D = CellSizeFine_D
+                CoordCorner_D = Coord_DB(:,iBlock)
+                CellSize_D = DCoord_DB(:,iBlock) / nCell_D(1:nDim)
              end if
              call fix_coord(nDim, iBlock, CoordCont_D, CoordPass_D)
              call interpolate_amr_gc(&
@@ -392,7 +392,7 @@ contains
          ! total number of blocks
          nBlock = (2**nDim) * (2**nDim+1) + 1
          ! domains boundaries and size
-         DomainSize_D = 2*nCell*SizeRatio_D(1:nDim)
+         DomainSize_D = 2*nCell_D(1:nDim)*SizeRatio_D(1:nDim)
          CoordMin_D   = 0.0
          CoordMax_D   = DomainSize_D
 
@@ -431,8 +431,8 @@ contains
          Used_B = .false.
          allocate(iTree_IB(1:Level_,1:nBlock))
          iTree_IB = -1
-         CellSizeCoarse_D(1)     = 1.0 / nCell
-         CellSizeCoarse_D(2:nDim)= 0.5 * cPi / nCell
+         CellSizeCoarse_D(1)     = 1.0 / nCell_D(1)
+         CellSizeCoarse_D(2:nDim)= 0.5 * cPi / nCell_D(2:nDim)
          CellSizeFine_D          = 0.5*CellSizeCoarse_D
          ! initialize the root blocks
          Coord_DB( :,1)= CoordMin_D
@@ -497,7 +497,7 @@ contains
                   iCell_D = (/i,j,k/)
                   ! coords of cell centers
                   Coord_DGB(:,i,j,k,iBlock) = Coord_DB(:,iBlock) +&
-                       DCoord_DB(:,iBlock) * (iCell_D(1:nDim) - 0.50) / nCell
+                       DCoord_DB(:,iBlock) * (iCell_D(1:nDim) - 0.50) / nCell_D(1:nDim)
                   ! for now, fill values at physical cells only
                   if(all(iCell_D >= 1).and.all(iCell_D <= nCell_D))then
                      select case(iTree_IB(Level_,iBlock))
@@ -568,7 +568,7 @@ contains
       if(  all(CoordOut_D < CoordBlockMax_D) .and. &
            all(CoordOut_D >=CoordBlockMin_D))&
            RETURN
-      CellSize_D = (CoordBlockMax_D - CoordBlockMin_D)/ nCell
+      CellSize_D = (CoordBlockMax_D - CoordBlockMin_D)/ nCell_D(1:nDim)
       do iDim = 1, nDim
          if(.not.IsPeriodic_D(iDim)) CYCLE
          if(CoordBlockMax_D(iDim)==CoordMax_D(iDim).and.&
@@ -702,7 +702,7 @@ contains
       ! coordinates of block's junction
       where(    iDiscr_D(1:nDim) == 1)
          CoordCentral_D = &
-              Coord_DGB(:,nCell,nCell,nCell,iBlockIn) + 0.5*CellSize_D
+              Coord_DGB(:,nCell_D(1),nCell_D(2),nCell_D(3),iBlockIn) + 0.5*CellSize_D
       elsewhere(iDiscr_D(1:nDim) ==-1)
          CoordCentral_D = Coord_DGB(:,1,1,1,iBlockIn) - 0.5*CellSize_D
       elsewhere
@@ -892,7 +892,7 @@ contains
     if(Used_B(iBlock))then
        CoordCorner_D = Coord_DB(:,iBlock)
        Coord_D       = Coord_D - CoordCorner_D
-       CellSize_D    = DCoord_DB(:,iBlock) / nCell
+       CellSize_D    = DCoord_DB(:,iBlock) / nCell_D(1:nDim)
        RETURN
     end if
     !\
@@ -907,7 +907,7 @@ contains
     iBlock = iTree_IB(iChild,iBlock)
     CoordCorner_D = Coord_DB(:,iBlock)
     Coord_D       = Coord_D - CoordCorner_D
-    CellSize_D    = DCoord_DB(:,iBlock) / nCell
+    CellSize_D    = DCoord_DB(:,iBlock) / nCell_D(1:nDim)
   end subroutine find_test
 end module ModTestInterpolateAMR
 !=============================================================================
@@ -918,11 +918,13 @@ program test_interpolate_amr
 
   implicit none
 
+  integer :: nSampleTest = 10000
+
   call test(&
        nDim          = 2,&
        IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.true.,.false./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .false.)
 
@@ -930,7 +932,7 @@ program test_interpolate_amr
        nDim          = 2,&
        IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .true.)
 
@@ -938,14 +940,14 @@ program test_interpolate_amr
        nDim          = 2,&
        IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .false.)
 
   call test(&
        nDim          = 3,&
        IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.true.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .false.)
 
@@ -953,7 +955,7 @@ program test_interpolate_amr
        nDim          = 3,&
        IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.false.,.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .true.)
 
@@ -961,7 +963,7 @@ program test_interpolate_amr
        nDim          = 3,&
        IsCartesian   = .false.,&
        IsPeriodicIn_D= (/.true.,.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .false.)
 
 
@@ -970,7 +972,7 @@ program test_interpolate_amr
        nDim          = 2,&
        IsCartesian   = .true.,&
        IsPeriodicIn_D= (/.true.,.false./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .false.)
 
@@ -978,7 +980,7 @@ program test_interpolate_amr
        nDim          = 2,&
        IsCartesian   = .true.,&
        IsPeriodicIn_D= (/.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .true.)
 
@@ -986,7 +988,7 @@ program test_interpolate_amr
        nDim          = 2,&
        IsCartesian   = .true.,&
        IsPeriodicIn_D= (/.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .false.)
 
 
@@ -994,7 +996,7 @@ program test_interpolate_amr
        nDim          = 3,&
        IsCartesian   = .true.,&
        IsPeriodicIn_D= (/.false.,.true.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .false.)
 
@@ -1002,7 +1004,7 @@ program test_interpolate_amr
        nDim          = 3,&
        IsCartesian   = .true.,&
        IsPeriodicIn_D= (/.false.,.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .true., &
        UseGhostCell  = .true.)
 
@@ -1010,7 +1012,7 @@ program test_interpolate_amr
        nDim          = 3,&
        IsCartesian   = .true.,&
        IsPeriodicIn_D= (/.true.,.false.,.true./), &
-       nSample       = 20000, &
+       nSample       = nSampleTest, &
        UseGeneric    = .false.)
 
 end program test_interpolate_amr
