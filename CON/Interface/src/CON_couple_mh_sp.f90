@@ -100,8 +100,10 @@ contains
 
     if(use_comp(SC_))call couple_sc_sp_init  !^CMP IF SC         
     if(use_comp(IH_))call couple_ih_sp_init
-    if(DoExtract.and.is_proc(SP_))&
-         call SP_assign_lagrangian_coords
+    if(DoExtract.and.is_proc(SP_))then
+       call SP_set_line_foot
+       call SP_assign_lagrangian_coords
+    end if
     DoInit=.false.
   contains
     !===============================
@@ -296,7 +298,6 @@ contains
             apply_buffer= SP_put_line)
        !Lagrangian particle coordinates are sent
        !/
-       if(DoExtract.and.is_proc(SP_)) call SP_set_line_foot
     end if
     if(is_proc(SP_).and..not.DoInit)call SP_adjust_lines(&
          DoAdjustStart=.true.,DoAdjustEnd=.not.use_comp(IH_))
@@ -318,7 +319,7 @@ contains
     !MHD Data from SC to SP are sent
     !/
     !Get particles from the semi-router 
-    if(is_proc(SC_))then!.and..not.(DoInit.and.DoExtract))then
+    if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScSp)
        call SC_add_to_line(&
             nParticle = nLength,&
@@ -373,9 +374,6 @@ contains
             apply_buffer= SP_put_line)
        !Particle coordinates are sent to SP
        !/
-       if(DoExtract.and.is_proc(SP_)  &
-            .and..not.(use_comp(SC_)) &     !^CMP IF SC
-            )call SP_set_line_foot
     end if
     if(is_proc(SP_).and..not.DoInit)call SP_adjust_lines(&
          DoAdjustStart = .not.use_comp(SC_), DoAdjustEnd = .true.)
