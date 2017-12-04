@@ -123,7 +123,7 @@ public:
   void BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
 
   //exchange the data
-  void ExchageIntermediateUnknownsData(double *x);
+  void ExchangeIntermediateUnknownsData(double *x);
 
   //matrix/vector multiplication
   void MultiplyVector(double *p,double *x,int length);
@@ -426,7 +426,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::ExchageIntermediateUnknownsData(double *x) {
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::ExchangeIntermediateUnknownsData(double *x) {
   int To,From;
   MPI_Request SendRequest[PIC::nTotalThreads],RecvRequest[PIC::nTotalThreads];
   MPI_Status SendStatus[PIC::nTotalThreads],RecvStatus[PIC::nTotalThreads];
@@ -541,7 +541,13 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   int cnt,iElement,iElementMax;
   double res;
 
-  ExchageIntermediateUnknownsData(x);
+  ExchangeIntermediateUnknownsData(x);
+
+  //create the local table of the beginings of the unknown vectors
+  double *Data[PIC::nTotalThreads];
+
+  for (int thread=0;thread<PIC::nTotalThreads;thread++) Data[thread]=RecvExchangeBuffer[thread];
+  Data[PIC::ThisThread]=x;
 
   for (row=MatrixRowTable,cnt=0;row!=NULL;row=row->next,cnt++) {
     iElementMax=row->nNonZeroElements;
@@ -550,7 +556,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     for (res=0.0,iElement=0;iElement<iElementMax;iElement++) {
       memcpy(&StencilElement,Elements+iElement,sizeof(cStencilElement));
 
-      res+=StencilElement.MatrixElementValue*((StencilElement.Thread==PIC::ThisThread) ? x[StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex] : RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex]);
+      res+=StencilElement.MatrixElementValue*Data[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
     }
 
      p[cnt]=res;
