@@ -914,6 +914,19 @@ contains
     end if
     call bcast_indexes_dd(&
          DomainDecomposition)    
+
+    call MPI_Bcast(DomainDecomposition%DoGlueMargins,&
+         1,MPI_LOGICAL,iProc0,iComm,iError)
+
+    call MPI_Bcast(DomainDecomposition%iDirMinusGlue,&
+         1,MPI_INTEGER,iProc0,iComm,iError)
+
+    call MPI_Bcast(DomainDecomposition%iDirPlusGlue,&
+         1,MPI_INTEGER,iProc0,iComm,iError)
+
+    call MPI_Bcast(DomainDecomposition%iDirCycle,&
+         1,MPI_INTEGER,iProc0,iComm,iError)
+
   end subroutine bcast_decomposition_dd
   !---------------------------------------------------------------!
   !
