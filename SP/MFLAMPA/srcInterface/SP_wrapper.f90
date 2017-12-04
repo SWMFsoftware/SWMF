@@ -293,12 +293,23 @@ contains
 
   !===================================================================
 
-  subroutine SP_get_domain_boundary(RScOut, RIhOut)
-    ! return the value of the solar corona boundary as set in SP component
-    real, intent(out):: RScOut, RIhOut
+  subroutine SP_get_domain_boundary(ThisModel_, RMinOut, RMaxOut)
+    ! return the MHD boundaries as set in SP component
+    integer, intent(in )  :: ThisModel_
+    real,    intent(out)  :: RMinOut, RMaxOut
+    integer, parameter:: Lower_=1, Upper_=2
+    character(len=*), parameter :: NameSub = 'SP_get_domain_boundary'
     !-----------------------------------------------------------------
-    RScOut = RBufferMax
-    RIhOut = RMax
+    select case(ThisModel_)
+    case(Lower_)
+       RMinOut = RMin
+       RMaxOut = RBufferMax
+    case(Upper_)
+       RMinOut = RBufferMin
+       RMaxOut = RMax
+    case default
+       call CON_stop('Incorrect model ID in '//NameSub)
+    end select
   end subroutine SP_get_domain_boundary
 
   !===================================================================

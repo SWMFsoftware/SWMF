@@ -121,9 +121,10 @@ contains
   end subroutine SP_get_line_param
   !===================================================================
 
-  subroutine SP_get_domain_boundary(RScOut, RIhOut)
+  subroutine SP_get_domain_boundary(ThisModel_, RMinOut, RMaxOut)
     ! return the value of the solar corona boundary as set in SP component
-    real, intent(out):: RScOut, RIhOut
+    integer, intent(in):: ThisModel_
+    real,   intent(out):: RMinOut, RMaxOut
     character(len=*), parameter:: NameSub='SP_get_solar_corona_boundary'
     !-----------------------------------------------------------------
     call CON_stop('SP: '//NameSub//' : cannot call the empty version')

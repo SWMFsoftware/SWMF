@@ -13,7 +13,7 @@ module CON_couple_mh_sp
  
 
   use SC_wrapper, ONLY: SC_synchronize_refinement, &      !^CMP IF SC BEGIN 
-       SC_extract_line, SC_get_for_sp, SC_get_a_line_point,SC_add_to_line,       & 
+       SC_extract_line, SC_get_for_sp, SC_get_a_line_point, SC_add_to_line,      &
        SC_n_particle, SC_LineDD, SC_line_interface_point, SC_check_use_particles,& 
        SC_get_particle_indexes, SC_get_particle_coords    !^CMP END SC
   use CON_axes
@@ -58,7 +58,7 @@ module CON_couple_mh_sp
   integer, parameter :: nAux = 2
   !\
   ! Misc
-  integer :: nLength, iError
+  integer :: nLength, iError, ThisModel_
   !\
   ! Transformation matrices
   real :: ScToSp_DD(3,3) !^CMP IF SC
@@ -66,16 +66,24 @@ module CON_couple_mh_sp
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real :: tNow
-  ! solar corona and ih upper boundaries
-  real:: RSc             !^CMP IF SC
-  real:: RIh
+ 
+  integer, parameter :: Lower_ = 1 
+  !^CMP IF SC BEGIN
+  ! Short ID of MHD components. If there is only one component,
+  ! it has an identifier Lower_, otherwise, SC has identifier Lower_
+  ! while IH is Upper
+  integer, parameter :: Upper_ = 2 
+  ! solar corona and lower and upper boundaries
+  real:: RScMin, RScMax             !^CMP END SC
+  ! inner heliosphere lower and upper boundaries
+  real:: RIhMin, RIhMax, rAux_I(2)
 contains
   !==================================================================
   subroutine couple_mh_sp_init
     use CON_physics, ONLY: get_time
     use ModConst
     logical,save::DoInit=.true. 
-   
+
     integer:: iError
 
     integer, parameter:: &
@@ -96,29 +104,34 @@ contains
          call SP_do_extract(DoExtract)
     call MPI_Bcast(DoExtract, 1, MPI_LOGICAL, i_proc0(SP_), i_comm(), iError)
 
-    ! get the value of SC and IH boundary as set in SP
-    if(is_proc0(SP_))&
-         call SP_get_domain_boundary(RSc, RIh)
-    call MPI_Bcast(RSc, 1, MPI_REAL, i_proc0(SP_), i_comm(), iError)
-    call MPI_Bcast(RIh, 1, MPI_REAL, i_proc0(SP_), i_comm(), iError) 
-    ! Set SP side of the routers:
-    !\
-    ! Set grid descriptors for components
-    ! Initialize routers
-    !/ 
     ! Set pair SC-SP
     if(use_comp(SC_)) then   !^CMP IF SC BEGIN
+       ! get the value of SC boundaries as set in SP
+       if(is_proc0(SP_))&
+            call SP_get_domain_boundary(Lower_, rAux_I(1), rAux_I(2))
+       call MPI_Bcast(rAux_I(1), 2, MPI_REAL, i_proc0(SP_), i_comm(), iError)
+       RScMin = rAux_I(1); RScMax = rAux_I(2)
        call couple_sc_sp_init
        ! put the lower boundary of the domain in SC to SP
        if(DoExtract.and.is_proc(SP_))&
-            call SP_put_r_min(Grid_C(SC_)%Coord1_I(1))
+            call SP_put_r_min(RScMin)
     end if                   !^CMP END SC
     ! Set pair IH-SP         
     if(use_comp(IH_)) then
+       ! get the value of IH boundaries as set in SP
+       if(use_comp(SC_))then  !^CMP IF SC BEGIN
+          ThisModel_ = Upper_
+       else                   !^CMP END SC
+          ThisModel_ = Lower_
+       end if                 !^CMP IF SC
+       if(is_proc0(SP_))&
+            call SP_get_domain_boundary(ThisModel_, rAux_I(1), rAux_I(2))
+       call MPI_Bcast(rAux_I(1), 2, MPI_REAL, i_proc0(SP_), i_comm(), iError)
+       RIhMin = rAux_I(1); RIhMax = rAux_I(2)
        call couple_ih_sp_init
        if(DoExtract.and.is_proc(SP_)  &
             .and..not.(use_comp(SC_)) &     !^CMP IF SC
-            )call SP_put_r_min(Grid_C(IH_)%Coord1_I(1))
+            )call SP_put_r_min(RIhMin)
     end if
     if(DoExtract.and.is_proc(SP_))&
          call SP_assign_lagrangian_coords
@@ -149,9 +162,8 @@ contains
       call init_router(SC_LineGridDesc, SP_GridDescriptor,  &
            RouterLineScSp, nMappedPointIndex=0)
       if(is_proc(SC_))call set_local_gd(iProc = i_proc(),   &
-            GD = SC_LineGridDesc, LocalGD = SC_LocalLineGD)
+           GD = SC_LineGridDesc, LocalGD = SC_LocalLineGD)
       !Router to send particles is initialized. 
-      !Source SC_LocalLineGD, target SP_GridDescriptor
 
       if(.not.RouterScSp%IsProc)RETURN
       call SC_synchronize_refinement(RouterScSp%iProc0Source,&
@@ -185,7 +197,7 @@ contains
                  nIndex            = nAux, &
                  iIndexOrigin_II   = nint(RouterScSp%&
                  BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                 RSoftBoundaryIn   =  RSc, & 
+                 RSoftBoundaryIn   =  RScMax, & 
                  UseInputInGenCoord= .true.)
          end if
       end if
@@ -259,14 +271,14 @@ contains
                  nIndex            = nAux, &
                  iIndexOrigin_II   = nint(RouterIhSp%&
                  BufferSource_II(nDim+1:nDim+nAux,1:nLength)),&
-                 RSoftBoundaryIn   =  RIh, & 
+                 RSoftBoundaryIn   =  RIhMax, & 
                  UseInputInGenCoord= .true.)
          end if
       end if
       !First coupling with the particle info and data exchange
       call exchange_data_ih_sp(DoInit, DoExtract)
     end subroutine couple_ih_sp_init
-  end subroutine couple_mh_sp_init   
+  end subroutine couple_mh_sp_init
   !=========================================================================
   !^CMP IF SC BEGIN
   subroutine couple_sc_sp(DataInputTime)
@@ -418,18 +430,19 @@ contains
     !Get particles from the semi-router 
     if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterIhSp)
-       !^CMP IF SC BEGIN
-       ! Sort out particles advected by the SC
-       !/
-       iParticleNew = 0
-       do iParticle = 1, nLength
-          if(sum(RouterIhSp%BufferSource_II(&
-            1:nDim, iParticle)**2) < RSc**2)CYCLE
-          iParticleNew  = iParticleNew +1
-          RouterIhSp%BufferSource_II(:, iParticleNew) = &
-               RouterIhSp%BufferSource_II(:, iParticle)
-       end do    
-       nLength = iParticleNew     !^CMP END SC
+       if(use_comp(SC_))then        !^CMP IF SC BEGIN
+          ! Sort out particles advected by the SC
+          !/
+          iParticleNew = 0
+          do iParticle = 1, nLength
+             if(sum(RouterIhSp%BufferSource_II(&
+                  1:nDim, iParticle)**2) < RScMax**2)CYCLE
+             iParticleNew  = iParticleNew +1
+             RouterIhSp%BufferSource_II(:, iParticleNew) = &
+                  RouterIhSp%BufferSource_II(:, iParticle)
+          end do
+          nLength = iParticleNew     
+       end if                       !^CMP END SC
        call IH_add_to_line(&
             nParticle = nLength,&
             Xyz_DI    =  RouterIhSp%BufferSource_II(&
