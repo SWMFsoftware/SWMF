@@ -4768,7 +4768,10 @@ the #HALLREGION command.
 
 If the word 'rotated' is added after the area name, the area can be 
 rotated around the Z axis in 2D simulation, and by 3 angles around 
-the X, Y and Z axes (in this order) in 3D simulations. 
+the X, Y and Z axes (in this order) in 3D simulations. These are the
+Tait-Bryan angles (yaw, pitch and roll) corresponding the X-Y-Z 
+extrinsic rotations in a fixed coordinate system or Z-Y-X 
+intrinsic rotations in a rotating coordinate system. 
 
 If NameShape starts with 'user', the shape is defined by the subroutine 
 user_specify_region. Any parameters for the user region should be read 
