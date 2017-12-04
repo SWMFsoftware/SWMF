@@ -29,14 +29,13 @@ public:
   class cStencilElement {
   public:
     cCornerNode* CornerNode;
-    char* CornerNodeAssociatedData;
     int CornerNodeID;
     double MatrixElementValue;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
     int UnknownVectorIndex,iVar,Thread;
 
     cStencilElement() {
-      CornerNodeAssociatedData=NULL,node=NULL,CornerNode=NULL;
+      node=NULL,CornerNode=NULL;
       MatrixElementValue=0.0;
       UnknownVectorIndex=-1,iVar=-1,Thread=-1,CornerNodeID=-1;
     }
@@ -44,8 +43,8 @@ public:
 
   class cRhsSupportTable {
   public:
-    double Corfficient;
-    double *Data;
+    double Coefficient;
+    char *CornerNodeAssociatedDataPointer;
   };
 
   class cMatrixRow {
@@ -170,6 +169,8 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   cStencilElement* el;
   cCornerNode* CornerNode;
 
+//  int Debug=0;
+
   //reset indexing of the nodes
   Reset();
 
@@ -210,6 +211,9 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
         int NonZeroElementsFound;
         double rhs;
 
+
+//Debug++;
+
         //create the new Row entry
         cMatrixRow* NewRow=MatrixRowStack.newElement();
 
@@ -247,6 +251,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
           else if (MatrixRowNonZeroElementTable[ii].k<0) {
             MatrixRowNonZeroElementTable[ii].k+=_BLOCK_CELLS_Z_;
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(4,0,0);
+          }
+
+          if (MatrixRowNonZeroElementTable[ii].Node==NULL) {
+            exit(__LINE__,__FILE__,"Error: the block is not found");
           }
 
           //check whether the periodic boundary conditions are in use, and the new block is on the boundary of the domain
@@ -521,8 +529,8 @@ template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilL
 void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::UpdateRhs(double (*fSetRhs)(cRhsSupportTable*,int)) {
   cMatrixRow* row;
 
-  for (row=MatrixRowTable;row!=NULL;row=row->next) {
-    row->Rhs=fSetRHS(row->RhsSupportTable,row->RhsSupportLength);
+  for (row=MatrixRowTable;row!=NULL;row=row->next) if (row->RhsSupportLength!=0) {
+    row->Rhs=fSetRhs(row->RhsSupportTable,row->RhsSupportLength);
   }
 }
 
