@@ -396,7 +396,7 @@ F			DoTraceShock
 F			UseDiffusion
 
 #GRID
--1			RMin
+1.05			RMin
 19			RBufferMin
 21			RBufferMax
 220			RMax
