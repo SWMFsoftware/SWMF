@@ -302,9 +302,6 @@ contains
                   CoronalHeating_C(i,j,k), QPerQtotal_I, QparPerQtotal_I, &
                   QePerQtotal)
 
-             if (UseAnisoPe) call stop_mpi(NameSub// &
-                  ' AnisoPe for coronal heating is not implemented yet')
-
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
 
@@ -341,8 +338,6 @@ contains
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaElectronMinus1
 
-             if (UseAnisoPe) call stop_mpi(NameSub// &
-                  ' AnisoPe for radiative cooling is not implemented yet')
           else
              Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaMinus1
@@ -357,10 +352,6 @@ contains
        ! Calculate DivU = div(U_e)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
-
-          if (UseAnisoPe .and. .not. UseAnisoPressure) &
-               call stop_mpi(NameSub//                 &
-               ' UseAnisoPe cannot be applied without UseAnisoPressure')
 
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
@@ -905,10 +896,6 @@ contains
 
       integer :: iDir
 
-      ! Left and Right states
-      real :: LeftState1_V(nVar),  LeftState_V(nVar)
-      real :: RightState1_V(nVar), RightState_V(nVar)
-
       ! uPlus_D on the left and right faces
       real :: uPlusLeft_D(3),  uPlusRight_D(3)
       real :: uPlusLeft1_D(3), uPlusRight1_D(3)
@@ -917,17 +904,11 @@ contains
       !------------------------------------------------------------------------
       GradU_DD = 0.0
 
-      ! Set the left and right states for Dim1_
-      LeftState1_V  = LeftState_VX( :,i+1,j,k)
-      LeftState_V   = LeftState_VX( :,i,  j,k)
-      RightState1_V = RightState_VX(:,i+1,j,k)
-      RightState_V  = RightState_VX(:,i,  j,k)
-
       ! Obtain the uPlus_D on the corresponding faces
-      call get_uPlus(LeftState1_V,  uPlusLeft1_D )
-      call get_uPlus(LeftState_V,   uPlusLeft_D  )
-      call get_uPlus(RightState1_V, uPlusRight1_D)
-      call get_uPlus(RightState_V,  uPlusRight_D )
+      call get_uPlus(LeftState_VX( :,i+1,j,k), uPlusLeft1_D )
+      call get_uPlus(LeftState_VX( :,i,  j,k), uPlusLeft_D  )
+      call get_uPlus(RightState_VX(:,i+1,j,k), uPlusRight1_D)
+      call get_uPlus(RightState_VX(:,i,  j,k), uPlusRight_D )
 
       ! Calculate gradient tensor of u_plus
       if(IsCartesian) then
@@ -936,16 +917,11 @@ contains
               /(2*CellSize_DB(Dim1_,iBlock))
 
          if(nJ > 1) then
-            ! Set the left and right states for Dim2_
-            LeftState1_V  = LeftState_VY( :,i,j+1,k)
-            LeftState_V   = LeftState_VY( :,i,j,  k)
-            RightState1_V = RightState_VY(:,i,j+1,k)
-            RightState_V  = RightState_VY(:,i,j,  k)
-
-            call get_uPlus(LeftState1_V,  uPlusLeft1_D )
-            call get_uPlus(LeftState_V,   uPlusLeft_D  )
-            call get_uPlus(RightState1_V, uPlusRight1_D)
-            call get_uPlus(RightState_V,  uPlusRight_D )
+            ! Obtain the uPlus_D on the corresponding faces
+            call get_uPlus(LeftState_VY( :,i,j+1,k), uPlusLeft1_D )
+            call get_uPlus(LeftState_VY( :,i,j,  k), uPlusLeft_D  )
+            call get_uPlus(RightState_VY(:,i,j+1,k), uPlusRight1_D)
+            call get_uPlus(RightState_VY(:,i,j,  k), uPlusRight_D )
 
             GradU_DD(Dim2_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
@@ -953,16 +929,11 @@ contains
          end if
 
          if(nK > 1) then
-            ! Set the left and right states for Dim3_
-            LeftState1_V  = LeftState_VZ( :,i,j,k+1)
-            LeftState_V   = LeftState_VZ( :,i,j,k  )
-            RightState1_V = RightState_VZ(:,i,j,k+1)
-            RightState_V  = RightState_VZ(:,i,j,k  )
-
-            call get_uPlus(LeftState1_V,  uPlusLeft1_D )
-            call get_uPlus(LeftState_V,   uPlusLeft_D  )
-            call get_uPlus(RightState1_V, uPlusRight1_D)
-            call get_uPlus(RightState_V,  uPlusRight_D )
+            ! Obtain the uPlus_D on the corresponding faces
+            call get_uPlus(LeftState_VZ( :,i,j,k+1), uPlusLeft1_D )
+            call get_uPlus(LeftState_VZ( :,i,j,k  ), uPlusLeft_D  )
+            call get_uPlus(RightState_VZ(:,i,j,k+1), uPlusRight1_D)
+            call get_uPlus(RightState_VZ(:,i,j,k  ), uPlusRight_D )
 
             GradU_DD(Dim3_,:) = &
                  (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
