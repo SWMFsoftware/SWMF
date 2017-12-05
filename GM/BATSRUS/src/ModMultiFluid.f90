@@ -27,7 +27,7 @@ module ModMultiFluid
   integer, parameter :: nTrueIon  = nIonFluid - nElectronFluid
 
   ! Index points to the first electron fluid if UseEfield
-  integer, parameter :: Electron_ = min(nTrueIon+1,nIonFluid)
+  integer, parameter :: ElectronFirst_ = min(nTrueIon+1,nIonFluid)
 
   integer, parameter :: iUx_I(nFluid) = iRhoUx_I(1:nFluid)
   integer, parameter :: iUy_I(nFluid) = iRhoUy_I(1:nFluid)

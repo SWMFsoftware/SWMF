@@ -11,7 +11,7 @@ module ModIonElectron
   use ModPhysics, ONLY: C2light
   use ModGeometry, ONLY: true_cell
   use ModB0,       ONLY: UseB0, B0_DGB
-  use ModMultiFluid, ONLY: nIonFluid, nTrueIon, Electron_, &
+  use ModMultiFluid, ONLY: nIonFluid, nTrueIon, ElectronFirst_, &
        iRhoIon_I, iRhoUxIon_I, iRhoUyIon_I, iRhoUzIon_I,   &
        iPIon_I, ChargePerMass_I, MassIon_I, ChargeIon_I
   use BATL_lib,    ONLY: nI, nJ, nK, x_, y_, z_
@@ -337,7 +337,7 @@ contains
     if (DoGradPe) then
        if(.not. allocated(GradPe_DG)) &
             allocate(GradPe_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
-       call calc_gradient(iBlock, State_VG(iPIon_I(Electron_),:,:,:), nG, &
+       call calc_gradient(iBlock, State_VG(iPIon_I(ElectronFirst_),:,:,:),nG, &
             GradPe_DG)
     else
        GradPe_D = 0.0
@@ -385,8 +385,8 @@ contains
     real    :: uPlus_D(3), Te
     real    :: StateOld_V(nVar)
 
-    integer, parameter :: ElecUx_ = iRhoUxIon_I(Electron_),  &
-         ElecUz_ = iRhoUzIon_I(Electron_)
+    integer, parameter :: ElecUx_ = iRhoUxIon_I(ElectronFirst_),  &
+         ElecUz_ = iRhoUzIon_I(ElectronFirst_)
 
     character(len=*), parameter:: NameSub = 'correct_electronfluid_efield_cell'
     !--------------------------------------------------------------------------
@@ -395,8 +395,8 @@ contains
     StateOld_V = State_V
 
     ! original electron temperature
-    Te = State_V(iPIon_I(Electron_))*MassIon_I(Electron_) &
-         /State_V(iRhoIon_I(Electron_))
+    Te = State_V(iPIon_I(ElectronFirst_))*MassIon_I(ElectronFirst_) &
+         /State_V(iRhoIon_I(ElectronFirst_))
 
     ! inv of electron charge density = 1/(e*ne)
     InvElectronDens = 1.0/sum( &
@@ -421,11 +421,11 @@ contains
     Efield_D = -cross_product(uElec_D,Bfield_D) - GradPe_D*InvElectronDens
 
     ! correct the electron mass density and velocity
-    State_V(iRhoIon_I(Electron_))  = nElec*MassFluid_I(Electron_)
-    State_V(ElecUx_:ElecUz_)       = State_V(iRhoIon_I(Electron_))*uElec_D
+    State_V(iRhoIon_I(ElectronFirst_))  = nElec*MassFluid_I(ElectronFirst_)
+    State_V(ElecUx_:ElecUz_)       = State_V(iRhoIon_I(ElectronFirst_))*uElec_D
 
     ! correct the electron pressure based on the original Te if needed
-    if (DoCorrectPe) State_V(iPIon_I(Electron_)) = nElec*Te
+    if (DoCorrectPe) State_V(iPIon_I(ElectronFirst_)) = nElec*Te
 
     ! correct the electric field
     if (DoCorrectEfield) State_V(Ex_:Ez_) = Efield_D
