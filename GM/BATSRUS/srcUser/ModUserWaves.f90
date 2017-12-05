@@ -330,7 +330,7 @@ contains
     use ModGeometry, ONLY: x1, x2, y1, y2, z1, z2, Xyz_DGB
     use ModAdvance,  ONLY: State_VGB, RhoUx_, RhoUy_, RhoUz_, Ux_, Uy_, Uz_, &
          Bx_, By_, Bz_, rho_, Ppar_, p_, Pe_, &
-         UseElectronPressure, UseAnisoPressure, UseEfield
+         UseElectronPressure, UseAnisoPressure, UseEfield, UseAnisoPe
     use ModMultiFluid, ONLY: iRho_I, iUx_I, iUy_I, iUz_I, &
          iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
     use ModProcMH,   ONLY: iProc
@@ -718,6 +718,12 @@ contains
             State_VGB(Ppar_,:,:,:,iBlock) = ShockLeftState_V(Ppar_)*(1.0 &
             + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
             /ShockLeftState_V(p_))
+
+       if(UseAnisoPe) &
+                                ! parallel pressure
+            State_VGB(Pepar_,:,:,:,iBlock) = ShockLeftState_V(Pepar_)*(1.0 &
+            + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+            /ShockLeftState_V(Pe_))
 
        State_VGB(rho_,:,:,:,iBlock)= State_VGB(p_,:,:,:,iBlock)/Tp
 
