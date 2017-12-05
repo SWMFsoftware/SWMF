@@ -45,7 +45,7 @@ module IH_wrapper
   public:: IH_find_points
 
   ! Coupling with SP
-  public:: IH_check_use_particles
+  public:: IH_check_particles
   public:: IH_get_for_sp
   public:: IH_extract_line
   public:: IH_add_to_line
@@ -244,10 +244,10 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_set_buffer_grid
   !===================================================================!
-  subroutine IH_check_use_particles
-    character(len=*), parameter :: NameSub='IH_check_use_particles'
+  subroutine IH_check_particles
+    character(len=*), parameter :: NameSub='IH_check_particles'
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-  end subroutine IH_check_use_particles
+  end subroutine IH_check_particles
   !===================================================================!
   subroutine IH_get_for_sp(&
        nPartial,iGetStart,Get,W,State_V,nVar)
