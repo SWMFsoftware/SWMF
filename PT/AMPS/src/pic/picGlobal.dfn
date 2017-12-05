@@ -342,6 +342,13 @@ at the end of each time step
 //Free flow injection boundary mode
 #define _PIC_BC__OPEN_FLOW_INJECTION__MODE_  _PIC_BC__OPEN_FLOW_INJECTION__MODE_OFF_
 
+//Periodic boundary conditions mode
+#define _PIC_BC__PERIODIC_MODE_ _PIC_BC__PERIODIC_MODE_OFF_  
+
+//global indexes of the corner nad center nodes 
+#define _PIC_CENTER_NODE_GLOBAL_INDEX__MODE_ _PIC_MODE_OFF_
+#define _PIC_CORNER_NODE_GLOBAL_INDEX__MODE_ _PIC_MODE_OFF_
+
 // user-defined initilization of particles
 #define _PIC_USER_DEFINED_PARTICLE_INITIALIZATION__MODE_ _PIC_MODE_OFF_
 #define _PIC_USER_DEFINED_PARTICLE_INITIALIZATION__FUNC_(t1,t2,t3) _DUMMY_(t1,t2,t3)
