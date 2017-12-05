@@ -1,0 +1,171 @@
+#ECHO
+T			DoEcho
+
+#PLANET
+NONE			NamePlanet
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+TEST
+update_state
+update_state_normal calc_source
+update_state_normal calc_face_flux
+
+#TESTVAR
+pepar
+
+#TESTXYZ
+2.0
+0.0
+0.0
+
+#GRID
+10			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-30.0			xMin
+ 30.0			xMax
+-0.05			yMin
+ 0.05			yMax
+-0.05			zMin
+ 0.05			zMax
+
+#UNIFORMSTATE
+1.0			rho (left state)
+12.0			Ux
+0.0			Uy
+0.0			Uz
+0.0			Bx
+30.0			By
+0.0			Bz
+14.0			Pepar
+16.0			Pe
+14.0			Ppar
+16.0			P
+
+#USERFLAGS
+F			UseUserInnerBcs
+F			UseUserSource
+F			UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#USERINPUTBEGIN -----------------
+
+#WAVE
+Rho
+3.0			Width
+0.01			Amplitude
+12.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+P
+3.0			Width
+0.16			Amplitude
+12.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+Ppar
+3.0			Width
+0.14			Amplitude
+12.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+Pe
+3.0			Width
+0.16			Amplitude
+12.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+Pepar
+3.0			Width
+0.14			Amplitude
+12.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+#WAVE
+By
+3.0			Width
+0.3			Amplitude
+12.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
+
+
+#USERINPUTEND ---------------------
+
+#OUTERBOUNDARY
+periodic	xMinBc
+periodic	xMaxBc
+float		yMinBc
+float		yMaxBc
+float		zMinBc
+float		zMaxBc
+
+#TIMESTEPPING
+2		nStage
+0.8		CflExpl
+
+#SCHEME
+2		nOrder
+Rusanov		TypeFlux
+mc3		TypeLimiter
+1.5		LimiterBeta
+
+#SAVELOGFILE
+T		DoSaveLogfile
+raw		StringLogfile
+1		DnSaveLogfile
+-1.		DtSaveLogfile
+
+#SAVERESTART
+F		DoSaverestart
+
+#PLOTFILENAME
+second		NameMaxTimeUnit
+
+#SAVEINITIAL
+T		DoSaveInitial
+
+#SAVEPLOT
+1		nPlotfile
+1d var idl_ascii	PlotString
+-1              DnSavePlot
+0.1             DtSavePlot
+0.0             DxSavePlot
+{mhd}
+{default}
+
+#STOP
+-10		MaxIteration
+0.5		tSimulationMax
