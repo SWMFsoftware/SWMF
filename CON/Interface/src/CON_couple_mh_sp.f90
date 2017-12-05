@@ -61,8 +61,7 @@ module CON_couple_mh_sp
   ! Transformation matrices
   real :: ScToSp_DD(3,3) !^CMP IF SC
   real :: IhToSp_DD(3,3)
-  character(len=20) :: TypeGeometrySc, TypeGeometryIh
-
+ 
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
   real :: tNow
@@ -132,7 +131,6 @@ contains
       call set_standard_grid_descriptor(SC_LineDD,Grid=SC_LineGrid)
       call init_router(SC_LineGrid, SP_Grid, RouterLineScSp)
       if(.not.RouterScSp%IsProc)RETURN
-      TypeGeometrySc = Grid_C(Sc_)%TypeGeometry
       if(is_proc(SC_))call set_local_gd(iProc = i_proc(),   &
            Grid = SC_LineGrid, LocalGrid = SC_LocalLineGrid)
       !Router to send particles is initialized. 
@@ -197,7 +195,6 @@ contains
            IH_LineGrid)
       call init_router(IH_LineGrid, SP_Grid, RouterLineIhSp)
       if(.not.RouterIhSp%IsProc)RETURN
-      TypeGeometryIh = Grid_C(IH_)%TypeGeometry
       if(.not.use_comp(SC_))then !^CMP IF SC BEGIN
          if(is_proc(SP_))call set_local_gd(i_proc(),&
               SP_Grid, SP_LocalGrid)
@@ -332,7 +329,7 @@ contains
     real                :: XyzTemp_D(nDim)
     !------------------------------------------
     IsInterfacePoint = .true.; XyzTemp_D=matmul(XyzIn_D, ScToSp_DD)
-    call SC_xyz_to_coord(TypeGeometrySc, XyzTemp_D, CoordOut_D)
+    call SC_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_sc
   !================================
   subroutine mapping_line_sc_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
@@ -456,7 +453,7 @@ contains
       iParticleNew = 0
       do iParticle = 1, nLength
          Coord_D = RouterIhSp%BufferSource_II(1:nDim, iParticle)
-         call IH_coord_to_xyz(TypeGeometryIh, Coord_D, Xyz_D) 
+         call IH_coord_to_xyz(Coord_D, Xyz_D) 
          if(sum(Xyz_D**2) < RScMax**2)CYCLE
          iParticleNew  = iParticleNew + 1
          RouterIhSp%BufferSource_II(:, iParticleNew) = &
@@ -476,7 +473,7 @@ contains
     real                :: XyzTemp_D(nDim)
     !------------------------------------------
     IsInterfacePoint = .true.; XyzTemp_D = matmul(XyzIn_D, IhToSp_DD)
-    call IH_xyz_to_coord(TypeGeometryIh, XyzTemp_D, CoordOut_D)
+    call IH_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_ih
   !==================================================================!
   subroutine mapping_line_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &

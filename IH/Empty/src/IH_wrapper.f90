@@ -160,8 +160,7 @@ contains
 
   end subroutine IH_get_grid_info
   !======================================
-  subroutine IH_coord_to_xyz(TypeGeometry, CoordIn_D, XyzOut_D)
-    character(len=*), intent(in ) :: TypeGeometry
+  subroutine IH_coord_to_xyz(CoordIn_D, XyzOut_D)
     real, intent(in) :: CoordIn_D(3)
     real, intent(out):: XyzOut_D( 3)
     character(len=*), parameter :: NameSub = 'IH_coord_to_xyz'
@@ -170,8 +169,7 @@ contains
 
   end subroutine IH_coord_to_xyz
   !======================================
-  subroutine IH_xyz_to_coord(TypeGeometry, XyzIn_D, CoordOut_D)
-    character(len=*), intent(in ) :: TypeGeometry
+  subroutine IH_xyz_to_coord(XyzIn_D, CoordOut_D)
     real,             intent(in ) :: XyzIn_D(3)
     real,             intent(out) :: CoordOut_D(3)
     character(len=*), parameter   :: NameSub = 'IH_xyz_to_coord'

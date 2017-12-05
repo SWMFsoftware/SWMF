@@ -483,19 +483,20 @@ contains
     end if
   end subroutine IH_set_grid
   !============================
-  subroutine IH_xyz_to_coord(TypeGeometry, XyzIn_D, CoordOut_D)
+  subroutine IH_xyz_to_coord(XyzIn_D, CoordOut_D)
+    use CON_coupler
     use ModCoordTransform, ONLY: &
          atan2_check, xyz_to_sph, xyz_to_rlonlat
-    use ModNumConst,       ONLY: cHalfPi, cTwoPi
-    character(len=*), intent(in ) :: TypeGeometry
     real,             intent(in ) :: XyzIn_D(3)
     real,             intent(out) :: CoordOut_D(3)
 
     real               :: x, y
     integer, parameter :: x_=1, y_=2, z_=3, r_=1
     integer            :: Phi_
+    character(len=20)  :: TypeGeometry
     character(len=*), parameter :: NameSub = 'IH_xyz_to_coord'
     !----------------------------------------
+    TypeGeometry = Grid_C(IH_)%TypeGeometry
     if(TypeGeometry(1:9)  == 'cartesian')then
        CoordOut_D = XyzIn_D
        RETURN
@@ -518,17 +519,19 @@ contains
     end if
   end subroutine IH_xyz_to_coord
   !=============================
-  subroutine IH_coord_to_xyz(TypeGeometry, CoordIn_D, XyzOut_D)
+  subroutine IH_coord_to_xyz(CoordIn_D, XyzOut_D)
+    use CON_coupler
     use ModCoordTransform, ONLY: sph_to_xyz, rlonlat_to_xyz
-    character(len=*), intent(in ) :: TypeGeometry
     real, intent(in) :: CoordIn_D(3)
     real, intent(out):: XyzOut_D( 3)
 
     real               :: Coord_D(3), r, Phi
     integer, parameter :: x_=1, y_=2, z_=3, r_=1
     integer            :: Phi_, Lat_
+    character(len=20)  :: TypeGeometry
     character(len=*), parameter :: NameSub = 'IH_coord_to_xyz'
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------
+    TypeGeometry = Grid_C(IH_)%TypeGeometry
     if(TypeGeometry(1:9)  == 'cartesian')then
        XyzOut_D = CoordIn_D
        RETURN
