@@ -27,6 +27,7 @@ module IH_wrapper
 
   ! Global buffer coupling
   public:: IH_get_for_global_buffer
+  public:: IH_xyz_to_coord, IH_coord_to_xyz
 
   ! spherical buffer coupling from IH_ModBuffer (why?)
   public:: nVarCouple, iVar_V, DoCoupleVar_V
@@ -399,7 +400,8 @@ contains
     use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple, &
          UseParticles
     use IH_ModPhysics,ONLY:No2Si_V, UnitX_
-    use IH_ModGeometry, ONLY: TypeGeometry, RadiusMin, RadiusMax
+    use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
+    use IH_BATL_geometry, ONLY: TypeGeometry 
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
     use IH_ModParticleFieldLine, ONLY: KindReg_
     logical:: DoTest,DoTestMe
@@ -480,6 +482,86 @@ contains
             MH_LineDecomposition)
     end if
   end subroutine IH_set_grid
+  !============================
+  subroutine IH_xyz_to_coord(TypeGeometry, XyzIn_D, CoordOut_D)
+    use ModCoordTransform, ONLY: atan2_check, xyz_to_sph
+    use ModNumConst,       ONLY: cHalfPi, cTwoPi
+    character(len=*), intent(in ) :: TypeGeometry
+    real,             intent(in ) :: XyzIn_D(3)
+    real,             intent(out) :: CoordOut_D(3)
+
+    real               :: x, y
+    integer, parameter :: x_=1, y_=2, z_=3, r_=1
+    integer            :: Phi_, Theta_, Lat_
+    character(len=*), parameter :: NameSub = 'IH_xyz_to_coord'
+    !----------------------------------------
+    if(TypeGeometry(1:9)  == 'cartesian')then
+       CoordOut_D = XyzIn_D
+       RETURN
+    elseif(TypeGeometry(1:3)  == 'cyl')then
+       Phi_ = 2
+       x = XyzIn_D(x_); y = XyzIn_D(y_)
+       CoordOut_D(r_)   = sqrt(x**2 + y**2)
+       CoordOut_D(Phi_) = atan2_check(y, x)
+       CoordOut_D(z_)   = XyzIn_D(z_)
+    elseif(TypeGeometry(1:3)  == 'sph')then
+       call xyz_to_sph(XyzIn_D, CoordOut_D)
+    elseif(TypeGeometry(1:3)  == 'rlo')then
+       ! Use xyz to r,theta,phi conversion
+       Phi_ = 2; Theta_ = 3; Lat_ = 3
+       call xyz_to_sph(XyzIn_D, &
+            CoordOut_D(r_), CoordOut_D(Theta_), CoordOut_D(Phi_))
+       ! Convert colatitude to latitude
+       CoordOut_D(Lat_) = cHalfPi - CoordOut_D(Theta_)
+    else
+       call CON_stop(NameSub// &
+            ' not yet implemented for TypeGeometry='//TypeGeometry)
+    end if
+    if(index(TypeGeometry,'lnr')  > 0)then
+       CoordOut_D(1) = log(max(CoordOut_D(1), 1e-30))
+    end if
+  end subroutine IH_xyz_to_coord
+  !=============================
+  subroutine IH_coord_to_xyz(TypeGeometry, CoordIn_D, XyzOut_D)
+    use ModCoordTransform, ONLY: sph_to_xyz
+    use ModNumConst,       ONLY: cHalfPi
+    character(len=*), intent(in ) :: TypeGeometry
+    real, intent(in) :: CoordIn_D(3)
+    real, intent(out):: XyzOut_D( 3)
+
+    real               :: Coord_D(3), r, Phi
+    integer, parameter :: x_=1, y_=2, z_=3, r_=1
+    integer            :: Phi_, Lat_
+    character(len=*), parameter :: NameSub = 'IH_coord_to_xyz'
+    !--------------------------------------------------------------------------
+    if(TypeGeometry(1:9)  == 'cartesian')then
+       XyzOut_D = CoordIn_D
+       RETURN
+    endif
+
+    Coord_D = CoordIn_D
+    if(index(TypeGeometry,'lnr')  > 0)then
+       Coord_D(1) = exp(Coord_D(1))
+    end if
+
+    if(TypeGeometry(1:3)  == 'cyl')then
+       Phi_ = 2
+       r = Coord_D(r_); Phi = Coord_D(Phi_)
+       XyzOut_D(1) = r*cos(Phi)
+       XyzOut_D(2) = r*sin(Phi)
+       XyzOut_D(3) = Coord_D(3)
+    elseif(TypeGeometry(1:3)  == 'sph')then
+       call sph_to_xyz(Coord_D, XyzOut_D)
+    elseif(TypeGeometry(1:3)  == 'rlo')then
+       ! Use xyz to r,theta,phi conversion
+       Phi_ = 2; Lat_ = 3
+       call sph_to_xyz(Coord_D(r_), cHalfPi - Coord_D(Lat_), Coord_D(Phi_), &
+            XyzOut_D)
+    else
+       call CON_stop(NameSub// &
+            ' not yet implemented for TypeGeometry='//TypeGeometry)
+    end if
+  end subroutine IH_coord_to_xyz
 
   !===============================================================
 

@@ -21,6 +21,7 @@ module IH_wrapper
 
   ! Global buffer coupling
   public:: IH_get_for_global_buffer
+  public:: IH_xyz_to_coord, IH_coord_to_xyz
 
   integer, public:: nVarCouple
   integer, public:: iVar_V(nVarIndexCouple)
@@ -158,7 +159,26 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
 
   end subroutine IH_get_grid_info
-  !==============================================================================
+  !======================================
+  subroutine IH_coord_to_xyz(TypeGeometry, CoordIn_D, XyzOut_D)
+    character(len=*), intent(in ) :: TypeGeometry
+    real, intent(in) :: CoordIn_D(3)
+    real, intent(out):: XyzOut_D( 3)
+    character(len=*), parameter :: NameSub = 'IH_coord_to_xyz'
+    !---------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+
+  end subroutine IH_coord_to_xyz
+  !======================================
+  subroutine IH_xyz_to_coord(TypeGeometry, XyzIn_D, CoordOut_D)
+    character(len=*), intent(in ) :: TypeGeometry
+    real,             intent(in ) :: XyzIn_D(3)
+    real,             intent(out) :: CoordOut_D(3)
+    character(len=*), parameter   :: NameSub = 'IH_xyz_to_coord'
+    !---------------------
+    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
+  end subroutine IH_xyz_to_coord
+  !===============================
   subroutine IH_find_points(nDimIn, nPoint, Xyz_DI, iProc_I)
 
     integer, intent(in) :: nDimIn                ! dimension of position vectors
