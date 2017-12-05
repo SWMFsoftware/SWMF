@@ -50,10 +50,10 @@ module CON_couple_ie_im
   logical :: IsInitialized = .false.
 
   ! Variables for coupler with coupling toolkit
-  type(GridDescriptorType)::IE_Grid           ! Source
-  type(GridDescriptorType)::IM_Grid           ! Target
+  type(GridType)::IE_Grid           ! Source
+  type(GridType)::IM_Grid           ! Target
   type(RouterType),save:: RouterIeIm, RouterImIe
-  type(LocalGDType) :: IE_LocalGD, IM_LocalGD
+  type(LocalGridType) :: IE_LocalGrid, IM_LocalGrid
   logical :: DoTest, DoTestMe
 
   ! Variables for the simple coupler
@@ -96,15 +96,15 @@ contains
             StandardSource_=Nodes_,       & ! from IE nodes
             iCompTarget=IM_,              &
             nIndexTarget=2,               & ! IM grid size: iColat,iLon 
-            GridDescriptorSource=IE_Grid, &
-            GridDescriptorTarget=IM_Grid, &
-            LocalGDTarget=IM_LocalGD, &
+            GridSource=IE_Grid, &
+            GridTarget=IM_Grid, &
+            LocalGridTarget=IM_LocalGrid, &
             Router=RouterIeIm)
   
        ! It is time to leave for non-involved PEs
        if(RouterIeIm%IsProc) call set_router( &
             IE_Grid,             &
-            IM_LocalGD,                &
+            IM_LocalGrid,                &
             RouterIeIm,             & 
             mapping=map_im_to_ie,   & 
             interpolate=bilinear_interpolation) 
@@ -115,14 +115,14 @@ contains
             StandardSource_=Nodes_,       & ! from IM nodes
             iCompTarget=IE_,              &
             nIndexTarget=2,               & ! IE grid size: iColat,iLon 
-            GridDescriptorSource=IM_Grid, &
-            GridDescriptorTarget=IE_Grid, &
-            LocalGDTarget=IE_LocalGD, &
+            GridSource=IM_Grid, &
+            GridTarget=IE_Grid, &
+            LocalGridTarget=IE_LocalGrid, &
             Router=RouterImIe)
        ! Both grids are static, it is sufficient to set the router once
        if(RouterImIe%IsProc) call set_router(  &
             IM_Grid,                &
-            IE_LocalGD,             &
+            IE_LocalGrid,           &
             RouterImIe,             &
             mapping=map_ie_to_im,   &
             interpolate=bilinear_interpolation) 

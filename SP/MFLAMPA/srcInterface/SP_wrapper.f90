@@ -419,10 +419,10 @@ contains
 
   !===================================================================
   subroutine SP_interface_point_coords_for_sc(&
-       GridDescriptor, iBlockUsed, nDim, Xyz_D, nIndex,iIndex_I,&
+       Grid, iBlockUsed, nDim, Xyz_D, nIndex,iIndex_I,&
        IsInterfacePoint)
     use CON_grid_descriptor
-    type(LocalGDType),intent(in)::GridDescriptor
+    type(LocalGridType),intent(in)::Grid
     integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
@@ -435,10 +435,10 @@ contains
   end subroutine SP_interface_point_coords_for_sc
   !===================================================================
   subroutine SP_interface_point_coords_for_ih(&
-       GridDescriptor, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
+       Grid, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
     use CON_grid_descriptor
-    type(LocalGDType),intent(in)::GridDescriptor
+    type(LocalGridType),intent(in)::Grid
     integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
@@ -451,10 +451,10 @@ contains
   end subroutine SP_interface_point_coords_for_ih
   !===================================================================
   subroutine SP_interface_point_coords_for_ih_extract(&
-       GridDescriptor, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
+       Grid, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
     use CON_grid_descriptor
-    type(LocalGDType),intent(in)::GridDescriptor
+    type(LocalGridType),intent(in)::Grid
     integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)

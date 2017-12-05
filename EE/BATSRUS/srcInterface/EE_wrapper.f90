@@ -138,17 +138,17 @@ contains
     if(is_proc(EE_))then
        ! Initialize the local grid
        call init_decomposition(&
-            DomainDecomposition = MH_DomainDecomposition, &
+            Domain = MH_Domain, &
             CompID_ = EE_, &
             nDim = 3, &
             IsTreeDecomposition = .true.)
 
        ! Get the octree root array
-       call MH_get_root_decomposition(MH_DomainDecomposition)
+       call MH_get_root_decomposition(MH_Domain)
 
        ! Get the whole octree after the initial refinement
-       call MH_update_local_decomposition(MH_DomainDecomposition)
-       MH_DomainDecomposition%IsLocal=.true.
+       call MH_update_local_decomposition(MH_Domain)
+       MH_Domain%IsLocal=.true.
     end if
 
     ! Repeat the initialization at the global grid level:

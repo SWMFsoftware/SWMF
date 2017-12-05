@@ -69,9 +69,9 @@ module CON_couple_ih_gm
   real :: dTimeMappingMax = 600.0
 
   type(RouterType)         :: Router
-  type(GridDescriptorType) :: GM_Grid
-  type(GridDescriptorType) :: IH_Grid
-  type(LocalGDType)        :: GM_LocalGD
+  type(GridType) :: GM_Grid
+  type(GridType) :: IH_Grid
+  type(LocalGridType)        :: GM_LocalGrid
 
   logical :: DoInitialize=.true., DoTest, DoTestMe
 
@@ -92,9 +92,9 @@ contains
          iCompSource=IH_,             & ! component index for source
          iCompTarget=GM_,             & ! component index for target
          nGhostPointTarget=2,         & ! number of halo points in target
-         GridDescriptorSource=IH_Grid,& ! OUT!\
-         GridDescriptorTarget=GM_Grid,& ! OUT!-General coupler variables 
-         LocalGDTarget  =GM_LocalGD,  & ! OUT!-optional 
+         GridSource=IH_Grid,& ! OUT!\
+         GridTarget=GM_Grid,& ! OUT!-General coupler variables 
+         LocalGridTarget  =GM_LocalGrid,  & ! OUT!-optional 
          Router=Router)                 ! OUT!/
     IH_iGridRealization=-1
     GM_iGridRealization=-1
@@ -127,9 +127,9 @@ contains
          TimeCoupling - TimeCouplingLast > dTimeMappingMax)then  
        if(GM_iGridRealization/=i_realization(GM_))then
           !\
-          ! reset local GD
-          call clean_gd(GM_LocalGD)
-          call set_local_gd(i_proc(), GM_grid, GM_LocalGD)
+          ! reset local Grid
+          call clean_gd(GM_LocalGrid)
+          call set_local_gd(i_proc(), GM_grid, GM_LocalGrid)
        end if
        ! Set the transformation matrices, compute the position and
        ! orbital veloctiy of the Earth in IH at the coupling time.
@@ -155,8 +155,8 @@ contains
        if(DoTestMe)write(*,*)'couple_ih_gm_init XyzPlanetIh_D=',&
             XyzPlanetIh_D
        call set_router(&
-            GDSource=IH_Grid,&
-            GDTarget=GM_LocalGD,&
+            GridSource=IH_Grid,&
+            GridTarget=GM_LocalGrid,&
             Router=Router,&
             is_interface_block=GM_is_west_block,&
             interface_point_coords=GM_west_cells, &
@@ -188,7 +188,7 @@ contains
   end function GM_is_west_block
   !===============================================================!
   subroutine GM_west_cells(&
-       GD,        &
+       Grid,        &
        iBlockUsed,&
        nDim,      &
        Xyz_D,     &
@@ -196,7 +196,7 @@ contains
        i_D,       &
        IsInterfacePoint)
 
-    type(LocalGDType),intent(in):: GD
+    type(LocalGridType),intent(in):: Grid
     integer,          intent(in):: iBlockUsed, nDim, nIndex
     real,          intent(inout):: Xyz_D(nDim)
     integer,intent(inout)       :: i_D(nIndex)
@@ -207,7 +207,7 @@ contains
 
     IsLeftFace_D=i_D(x_:z_)<1
     IsRightFace_D=i_D(x_:z_)>&
-         ncells_decomposition_d(GM_Grid%DD%Ptr)
+         ncells_decomposition_d(GM_Grid%Domain%Ptr)
     IsInterfacePoint=IsRightFace_D(x_).and..not.&
          (any(IsLeftFace_D(y_:z_)).or.any(IsRightFace_D(y_:z_)))
 

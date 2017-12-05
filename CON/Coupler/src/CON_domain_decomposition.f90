@@ -75,7 +75,7 @@ Module CON_domain_decomposition
   !DESCRIPTION:
   !\begin{verbatim}                                
   !=====================DERIVED TYPE==============================
-  type DomainDecompositionType
+  type DomainType
      ! The type is to describe the domain decomposition for a        
      ! component. The component should be properly registered with   
      ! registry procedures and should have a unique ID               
@@ -359,12 +359,12 @@ Module CON_domain_decomposition
      !===============================================================
      !\end{verbatim}
 
-  end type DomainDecompositionType
+  end type DomainType
   !EOP
   !================DERIVED TYPE===================================
-  type DDPointerType
-     type(DomainDecompositionType),pointer::Ptr
-  end type DDPointerType
+  type DomainPointerType
+     type(DomainType),pointer::Ptr
+  end type DomainPointerType
 
   !Needed for searching and interpolating algorithms
   real, parameter:: &
@@ -380,15 +380,15 @@ contains
   !BOP
   !INTERFACE:
   subroutine init_decomposition_dd(&
-       DomainDecomposition,&
-       CompID_,&            !As in DomainDecompositionType
-       nDim,&               !As in DomainDecompositionType
-       IsTreeDecomposition,&!As in DomainDecompositionType
+       Domain,&
+       CompID_,&            !As in DomainType
+       nDim,&               !As in DomainType
+       IsTreeDecomposition,&!As in DomainType
        nDimTree,IsLocal)
 
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
+    type(DomainType),intent(inout)::&
+         Domain
     integer,intent(in)::CompID_,nDim
     logical,intent(in),optional::IsTreeDecomposition
     integer,intent(in),optional::nDimTree 
@@ -397,73 +397,73 @@ contains
     integer::iError,iDim,iChildFirst,iChildLast          
 
     if(use_comp(CompID_))then
-       DomainDecomposition%CompID_=CompID_
+       Domain%CompID_=CompID_
     else
        call CON_stop(&
             'Unauthorized use of the component')
     end if
 
     if(present(IsTreeDecomposition))then
-       DomainDecomposition%IsTreeDecomposition=&
+       Domain%IsTreeDecomposition=&
             IsTreeDecomposition
     else
-       DomainDecomposition%IsTreeDecomposition=.false.
+       Domain%IsTreeDecomposition=.false.
     end if
 
-    DomainDecomposition%nDim=nDim
-    if(DomainDecomposition%IsTreeDecomposition)then
+    Domain%nDim=nDim
+    if(Domain%IsTreeDecomposition)then
        if(.not.present(nDimTree))then
-          DomainDecomposition%nDimTree=nDim
+          Domain%nDimTree=nDim
        else
-          DomainDecomposition%nDimTree=nDimTree
+          Domain%nDimTree=nDimTree
        end if
-       DomainDecomposition%nChildren=&
-            2**DomainDecomposition%nDimTree
+       Domain%nChildren=&
+            2**Domain%nDimTree
     else
-       DomainDecomposition%nChildren=1       
+       Domain%nChildren=1       
     end if
 
-    nullify(DomainDecomposition%iRootMapDim_D)
-    allocate(DomainDecomposition%iRootMapDim_D(&
+    nullify(Domain%iRootMapDim_D)
+    allocate(Domain%iRootMapDim_D(&
          nDim),stat=iError)
     call check_allocate(iError,"iRootMapDim_D")
-    DomainDecomposition%iRootMapDim_D=1
+    Domain%iRootMapDim_D=1
 
-    nullify(DomainDecomposition%XyzMin_D)
-    allocate(DomainDecomposition%XyzMin_D(nDim),stat=iError)
+    nullify(Domain%XyzMin_D)
+    allocate(Domain%XyzMin_D(nDim),stat=iError)
     call check_allocate(iError,"XyzMin_D")
-    DomainDecomposition%XyzMin_D=cZero
+    Domain%XyzMin_D=cZero
 
-    nullify(DomainDecomposition%XyzMax_D)
-    allocate(DomainDecomposition%XyzMax_D(nDim),stat=iError)
+    nullify(Domain%XyzMax_D)
+    allocate(Domain%XyzMax_D(nDim),stat=iError)
     call check_allocate(iError,"XyzMax_D")
-    DomainDecomposition%XyzMax_D=cOne
+    Domain%XyzMax_D=cOne
 
-    nullify(DomainDecomposition%nCells_D)
-    allocate(DomainDecomposition%nCells_D(nDim),stat=iError)
+    nullify(Domain%nCells_D)
+    allocate(Domain%nCells_D(nDim),stat=iError)
     call check_allocate(iError,"nCells_D")
-    DomainDecomposition%nCells_D=1
+    Domain%nCells_D=1
 
-    nullify(DomainDecomposition%IsPeriodic_D)
+    nullify(Domain%IsPeriodic_D)
     allocate(&
-         DomainDecomposition%IsPeriodic_D(nDim),stat=iError)
+         Domain%IsPeriodic_D(nDim),stat=iError)
     call check_allocate(iError,"IsPeriodic_D")
-    DomainDecomposition%IsPeriodic_D=.false.
-    DomainDecomposition%DoGlueMargins=.false.
-    DomainDecomposition%iDirMinusGlue = 0 
-    DomainDecomposition%iDirPlusGlue  = 0 
-    DomainDecomposition%iDirCycle     = 0
+    Domain%IsPeriodic_D=.false.
+    Domain%DoGlueMargins=.false.
+    Domain%iDirMinusGlue = 0 
+    Domain%iDirPlusGlue  = 0 
+    Domain%iDirCycle     = 0
 
-    if(DomainDecomposition%IsTreeDecomposition)then
-       nullify(DomainDecomposition%iRoot_I)
-       call allocate_iroot(DomainDecomposition)
+    if(Domain%IsTreeDecomposition)then
+       nullify(Domain%iRoot_I)
+       call allocate_iroot(Domain)
 
-       nullify(DomainDecomposition%iShift_DI)
-       allocate(DomainDecomposition%iShift_DI&
-            (DomainDecomposition%nDimTree,&
-            DomainDecomposition%nChildren),stat=iError)
+       nullify(Domain%iShift_DI)
+       allocate(Domain%iShift_DI&
+            (Domain%nDimTree,&
+            Domain%nChildren),stat=iError)
        call check_allocate(iError,"iShift_DI")
-       DomainDecomposition%iShift_DI=0
+       Domain%iShift_DI=0
        ! A "binary" order for iShift_DI is set as a default:
        !(0,0,0,&
        ! 1,0,0,&
@@ -471,54 +471,54 @@ contains
        ! and so on
        !
        iChildLast=1
-       do iDim=1,DomainDecomposition%nDimTree
+       do iDim=1,Domain%nDimTree
           iChildFirst=iChildLast+1
           iChildLast=min(&
-               DomainDecomposition%nChildren,2*iChildLast)
+               Domain%nChildren,2*iChildLast)
           if(iChildFirst<iChildLast)exit
-          DomainDecomposition%iShift_DI(&
+          Domain%iShift_DI(&
                :,iChildFirst:iChildLast)=&
-               DomainDecomposition%iShift_DI(&
+               Domain%iShift_DI(&
                :,1:1+iChildLast-iChildFirst)
-          DomainDecomposition%iShift_DI(&
+          Domain%iShift_DI(&
                iDim,iChildFirst:iChildLast)=1
        end do
     end if
 
     if(present(IsLocal))then
-       DomainDecomposition%IsLocal=IsLocal
+       Domain%IsLocal=IsLocal
     else
-       DomainDecomposition%IsLocal=.false.
+       Domain%IsLocal=.false.
     end if
 
-    DomainDecomposition%nTreeNodes=1
-    DomainDecomposition%nAllocatedNodes=-1
+    Domain%nTreeNodes=1
+    Domain%nAllocatedNodes=-1
 
-    nullify(DomainDecomposition%iDecomposition_II)
-    nullify(DomainDecomposition%XyzBlock_DI) 
-    nullify(DomainDecomposition%DXyzBlock_DI)
-    nullify(DomainDecomposition%DXyzCell_DI)
-    call check_octree_grid_allocation(DomainDecomposition)
-    DomainDecomposition%lSearch=1
-    DomainDecomposition%iRealization=0
-    nullify(DomainDecomposition%iGlobal_BP)
-    DomainDecomposition%MinBlock=1
-    DomainDecomposition%MaxBlock=1
-    if(DomainDecomposition%IsLocal)then
-       allocate(DomainDecomposition%iGlobal_BP(1:1,&
-            0:-1+n_proc(DomainDecomposition%CompID_)),&
+    nullify(Domain%iDecomposition_II)
+    nullify(Domain%XyzBlock_DI) 
+    nullify(Domain%DXyzBlock_DI)
+    nullify(Domain%DXyzCell_DI)
+    call check_octree_grid_allocation(Domain)
+    Domain%lSearch=1
+    Domain%iRealization=0
+    nullify(Domain%iGlobal_BP)
+    Domain%MinBlock=1
+    Domain%MaxBlock=1
+    if(Domain%IsLocal)then
+       allocate(Domain%iGlobal_BP(1:1,&
+            0:-1+n_proc(Domain%CompID_)),&
             stat=iError)
     else
-       allocate(DomainDecomposition%iGlobal_BP(1:1,&
+       allocate(Domain%iGlobal_BP(1:1,&
             0:&
             i_proc_last(CompID_)),&
             stat=iError)
     end if
     call check_allocate(iError,'iGlobal_BP,first allocation')
-    DomainDecomposition%nBlockAll=1
-    nullify(DomainDecomposition%iGlobal_A)
-    allocate(DomainDecomposition%iGlobal_A(&
-         1:DomainDecomposition%nBlockAll),&
+    Domain%nBlockAll=1
+    nullify(Domain%iGlobal_A)
+    allocate(Domain%iGlobal_A(&
+         1:Domain%nBlockAll),&
          stat=iError)
     call check_allocate(iError,'iGlobal_A,first allocation')
   end subroutine init_decomposition_dd
@@ -528,63 +528,63 @@ contains
   !Checks the array allocation for a given grid desciptor and     
   !extends its dimension if required                              
 
-  subroutine check_octree_grid_allocation(DomainDecomposition)
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
+  subroutine check_octree_grid_allocation(Domain)
+    type(DomainType),intent(inout)::&
+         Domain
     integer::iError,nUbound
 
     nUbound= GlobalBlock_
-    if(DomainDecomposition%IsTreeDecomposition)&
-         nUbound=max(nUbound,DomainDecomposition%nChildren)
-    if(DomainDecomposition%nAllocatedNodes>=&
-         DomainDecomposition%nTreeNodes)return
-    if(associated(DomainDecomposition%iDecomposition_II))then
-       deallocate(DomainDecomposition%iDecomposition_II,stat=iError)
-       deallocate(DomainDecomposition%XyzBlock_DI,stat=iError)
-       deallocate(DomainDecomposition%DXyzBlock_DI,stat=iError)
-       deallocate(DomainDecomposition%DXyzCell_DI,stat=iError)
+    if(Domain%IsTreeDecomposition)&
+         nUbound=max(nUbound,Domain%nChildren)
+    if(Domain%nAllocatedNodes>=&
+         Domain%nTreeNodes)return
+    if(associated(Domain%iDecomposition_II))then
+       deallocate(Domain%iDecomposition_II,stat=iError)
+       deallocate(Domain%XyzBlock_DI,stat=iError)
+       deallocate(Domain%DXyzBlock_DI,stat=iError)
+       deallocate(Domain%DXyzCell_DI,stat=iError)
     end if
 
-    nullify(DomainDecomposition%iDecomposition_II)
+    nullify(Domain%iDecomposition_II)
     allocate(&
-         DomainDecomposition%iDecomposition_II&
+         Domain%iDecomposition_II&
          (Parent_:nUBound,&
-         DomainDecomposition%nTreeNodes)&
+         Domain%nTreeNodes)&
          ,stat=iError)
     call check_allocate(iError,'iDecomposition_II')
-    DomainDecomposition%iDecomposition_II=None_
-    DomainDecomposition%iDecomposition_II(&
+    Domain%iDecomposition_II=None_
+    Domain%iDecomposition_II(&
          MyNumberAsAChild_,:)=0
 
-    nullify(DomainDecomposition%XyzBlock_DI)
+    nullify(Domain%XyzBlock_DI)
     allocate(&
-         DomainDecomposition%XyzBlock_DI&
-         (DomainDecomposition%nDim,&
-         DomainDecomposition%nTreeNodes)&
+         Domain%XyzBlock_DI&
+         (Domain%nDim,&
+         Domain%nTreeNodes)&
          ,stat=iError)
     call  check_allocate(iError,'XyzBlock_DI')
-    DomainDecomposition% XyzBlock_DI=cZero    
+    Domain% XyzBlock_DI=cZero    
 
-    nullify(DomainDecomposition%DXyzBlock_DI)
+    nullify(Domain%DXyzBlock_DI)
     allocate(&
-         DomainDecomposition%DXyzBlock_DI&
-         (DomainDecomposition%nDim,&
-         DomainDecomposition%nTreeNodes)&
+         Domain%DXyzBlock_DI&
+         (Domain%nDim,&
+         Domain%nTreeNodes)&
          ,stat=iError)
     call  check_allocate(iError,'DXyzBlock_DI')
-    DomainDecomposition%DXyzBlock_DI=cOne
+    Domain%DXyzBlock_DI=cOne
 
-    nullify(DomainDecomposition%DXyzCell_DI)
+    nullify(Domain%DXyzCell_DI)
     allocate(&
-         DomainDecomposition%DXyzCell_DI&
-         (DomainDecomposition%nDim,&
-         DomainDecomposition%nTreeNodes)&
+         Domain%DXyzCell_DI&
+         (Domain%nDim,&
+         Domain%nTreeNodes)&
          ,stat=iError)
     call  check_allocate(iError,'DXyzCell_DI')
-    DomainDecomposition%DXyzCell_DI=cOne
+    Domain%DXyzCell_DI=cOne
 
-    DomainDecomposition%nAllocatedNodes=&
-         DomainDecomposition%nTreeNodes
+    Domain%nAllocatedNodes=&
+         Domain%nTreeNodes
   end subroutine check_octree_grid_allocation
   !==========================WITH INTERFACE=======================!
   !BOP
@@ -603,37 +603,37 @@ contains
   !BOP
   !INTERFACE:
   subroutine get_root_decomposition_dd(&
-       DomainDecomposition,&!Decomposition to be constructed
-       iRootMapDim_D,&!As in DomainDecompositionType
-       XyzMin_D,&     !As in DomainDecompositionType
-       XyzMax_D,&     !As in DomainDecompositionType
-       nCells_D,&     !As in DomainDecompositionType
+       Domain,&!Decomposition to be constructed
+       iRootMapDim_D,&!As in DomainType
+       XyzMin_D,&     !As in DomainType
+       XyzMax_D,&     !As in DomainType
+       nCells_D,&     !As in DomainType
        PE_I,&         !PE layout
        iBlock_I,&     !Local Block Number layout
-       IsPeriodic_D,& !As in DomainDecompositionType
-       iShift_DI,   & !As in DomainDecompositionType
-       DoGlueMargins,& !As in DomainDecompositionType
-       iDirMinusGlue,&!As in DomainDecompositionType
-       iDirPlusGlue,& !As in DomainDecompositionType
-       iDirCycle)     !As in DomainDecompositionType
+       IsPeriodic_D,& !As in DomainType
+       iShift_DI,   & !As in DomainType
+       DoGlueMargins,& !As in DomainType
+       iDirMinusGlue,&!As in DomainType
+       iDirPlusGlue,& !As in DomainType
+       iDirCycle)     !As in DomainType
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
-    integer,dimension(DomainDecomposition%nDim),&
+    type(DomainType),intent(inout)::&
+         Domain
+    integer,dimension(Domain%nDim),&
          intent(in)::iRootMapDim_D
-    real,dimension(DomainDecomposition%nDim),&
+    real,dimension(Domain%nDim),&
          intent(in)::XyzMin_D   
-    real,dimension(DomainDecomposition%nDim),&
+    real,dimension(Domain%nDim),&
          intent(in)::XyzMax_D
-    integer,dimension(DomainDecomposition%nDim),&
+    integer,dimension(Domain%nDim),&
          intent(in)::nCells_D
     integer,dimension(:),&
          intent(in),optional:: PE_I,iBlock_I
-    logical,dimension(DomainDecomposition%nDim),&
+    logical,dimension(Domain%nDim),&
          intent(in),optional::IsPeriodic_D
     integer,optional,&
-         dimension(DomainDecomposition%nDim,&
-         DomainDecomposition%nChildren),&
+         dimension(Domain%nDim,&
+         Domain%nChildren),&
          intent(in)::iShift_DI
     logical, intent(in), optional :: DoGlueMargins
     integer, intent(in), optional :: iDirMinusGlue
@@ -658,39 +658,39 @@ contains
     !---------------------------------------------------------------!
     !Assign the grid parameters                                     !
 
-    DomainDecomposition%iRootMapDim_D=iRootMapDim_D
+    Domain%iRootMapDim_D=iRootMapDim_D
 
-    DomainDecomposition%XyzMin_D=XyzMin_D
-    DomainDecomposition%XyzMax_D=XyzMax_D
-    DomainDecomposition%nCells_D=nCells_D
+    Domain%XyzMin_D=XyzMin_D
+    Domain%XyzMax_D=XyzMax_D
+    Domain%nCells_D=nCells_D
     if(present(DoGlueMargins)) &
-         DomainDecomposition%DoGlueMargins = DoGlueMargins
+         Domain%DoGlueMargins = DoGlueMargins
     if(present(iDirMinusGlue))&
-         DomainDecomposition%iDirMinusGlue = iDirMinusGlue
+         Domain%iDirMinusGlue = iDirMinusGlue
     if(present(iDirPlusGlue)) &
-         DomainDecomposition%iDirPlusGlue  = iDirPlusGlue
+         Domain%iDirPlusGlue  = iDirPlusGlue
     if(present(iDirCycle))    &
-         DomainDecomposition%iDirCycle     = iDirCycle
+         Domain%iDirCycle     = iDirCycle
 
     if(present(IsPeriodic_D))&
-         DomainDecomposition%IsPeriodic_D=IsPeriodic_D
+         Domain%IsPeriodic_D=IsPeriodic_D
 
-    DomainDecomposition%nTreeNodes=product(iRootMapDim_D)
-    call check_octree_grid_allocation(DomainDecomposition)
+    Domain%nTreeNodes=product(iRootMapDim_D)
+    call check_octree_grid_allocation(Domain)
 
 
-    DomainDecomposition%iDecomposition_II&
-         (MyNumberAsAChild_,1:DomainDecomposition%nTreeNodes)=0    
-    DomainDecomposition%iDecomposition_II&
-         (FirstChild_,1:DomainDecomposition%nTreeNodes)=None_
-    do lBlock=1,DomainDecomposition%nTreeNodes
-       DomainDecomposition%iDecomposition_II(Parent_,lBlock)=lBlock
+    Domain%iDecomposition_II&
+         (MyNumberAsAChild_,1:Domain%nTreeNodes)=0    
+    Domain%iDecomposition_II&
+         (FirstChild_,1:Domain%nTreeNodes)=None_
+    do lBlock=1,Domain%nTreeNodes
+       Domain%iDecomposition_II(Parent_,lBlock)=lBlock
     end do
 
-    if(DomainDecomposition%IsTreeDecomposition)then
-       call check_iroot_allocation(DomainDecomposition)
+    if(Domain%IsTreeDecomposition)then
+       call check_iroot_allocation(Domain)
        if(present(iShift_DI))&
-            DomainDecomposition%iShift_DI=iShift_DI
+            Domain%iShift_DI=iShift_DI
     end if
 
     !BOP
@@ -699,15 +699,15 @@ contains
     !decomposition blocks are balanced for an optimal load
     !EOP
     if((.not.present(PE_I)).and.(.not.present(iBlock_I)))then
-       MaxBlock=(DomainDecomposition%nTreeNodes-1)/&
-            n_proc(DomainDecomposition%CompID_)+1
-       do lBlock=1,DomainDecomposition%nTreeNodes
-          call set_pe_and_local_blk_dd(DomainDecomposition,&
+       MaxBlock=(Domain%nTreeNodes-1)/&
+            n_proc(Domain%CompID_)+1
+       do lBlock=1,Domain%nTreeNodes
+          call set_pe_and_local_blk_dd(Domain,&
                lBlock,&
                iPE=(lBlock-1)/MaxBlock,&
                iBlock=mod(lBlock,MaxBlock)+1)
        end do
-       call set_iglobal_and_bp_dd(DomainDecomposition)
+       call set_iglobal_and_bp_dd(Domain)
        return
     end if
     !BOP
@@ -716,11 +716,11 @@ contains
     !are at the root PE
     !EOP                                             
     if(present(PE_I))then
-       DomainDecomposition%iDecomposition_II&
-            (PE_,1:DomainDecomposition%nTreeNodes)=PE_I
+       Domain%iDecomposition_II&
+            (PE_,1:Domain%nTreeNodes)=PE_I
     else
-       DomainDecomposition%iDecomposition_II&
-            (PE_,1:DomainDecomposition%nTreeNodes)=0
+       Domain%iDecomposition_II&
+            (PE_,1:Domain%nTreeNodes)=0
     end if
     !BOP
     !DESCRIPTION:
@@ -739,89 +739,89 @@ contains
     !\end{verbatim}                                               
     !EOP 
     if(present(iBlock_I))then
-       DomainDecomposition%iDecomposition_II&
-            (BLK_,1:DomainDecomposition%nTreeNodes)=iBlock_I
+       Domain%iDecomposition_II&
+            (BLK_,1:Domain%nTreeNodes)=iBlock_I
     else
-       do lBlock=1, DomainDecomposition%nTreeNodes
-          DomainDecomposition%iDecomposition_II&
+       do lBlock=1, Domain%nTreeNodes
+          Domain%iDecomposition_II&
                (BLK_,lBlock)=lBlock
        end do
     end if
-    call set_iglobal_and_bp_dd(DomainDecomposition)
+    call set_iglobal_and_bp_dd(Domain)
   end subroutine get_root_decomposition_dd
   !===============================================================!
   subroutine set_pe_and_local_blk_dd(&
-       DomainDecomposition,lGlobalTreeNode,iPE,iBlock)
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
+       Domain,lGlobalTreeNode,iPE,iBlock)
+    type(DomainType),intent(inout)::&
+         Domain
     integer,intent(in)::lGlobalTreeNode,iPE,iBlock
-    if(DomainDecomposition%iDecomposition_II&
+    if(Domain%iDecomposition_II&
          (FirstChild_,lGlobalTreeNode)/=None_)call CON_stop(&
          'You can not assign pe and blk for tree node')
 
-    DomainDecomposition%iDecomposition_II&
+    Domain%iDecomposition_II&
          (BLK_,lGlobalTreeNode)=iBlock
-    DomainDecomposition%iDecomposition_II&
+    Domain%iDecomposition_II&
          (PE_,lGlobalTreeNode)=iPE
   end subroutine set_pe_and_local_blk_dd
   !===============================================================!
-  subroutine set_iglobal_and_bp_dd(DomainDecomposition)
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
+  subroutine set_iglobal_and_bp_dd(Domain)
+    type(DomainType),intent(inout)::&
+         Domain
     integer::iUpper_I(2),iLower_I(2),iError,iPE,iBlock
     integer::iGlobalNode,iGlobalBlock
-    iLower_I=lbound(DomainDecomposition%iGlobal_BP)
-    iUpper_I=ubound(DomainDecomposition%iGlobal_BP)
-    DomainDecomposition%MinBlock=minval(&
-         DomainDecomposition%iDecomposition_II(&
-         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
-         .and.DomainDecomposition%iDecomposition_II(&
-         PE_,1:DomainDecomposition%nTreeNodes)/=None_)
-    DomainDecomposition%MaxBlock=maxval(&
-         DomainDEcomposition%iDecomposition_II(&
-         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
-         .and.DomainDecomposition%iDecomposition_II(&
-         PE_,1:DomainDecomposition%nTreeNodes)/=None_)
-    DomainDecomposition%nBlockAll=count(&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
-         .and.DomainDecomposition%iDecomposition_II(&
-         PE_,1:DomainDecomposition%nTreeNodes)/=None_)
-    if(iUpper_I(1)<DomainDecomposition%MaxBlock.or.&
-         iLower_I(1)>DomainDecomposition%MinBlock)then
-       deallocate(DomainDecomposition%iGlobal_BP)
-       allocate(DomainDecomposition%iGlobal_BP(&
-            DomainDecomposition%MinBlock:&
-            DomainDecomposition%MaxBlock,&
+    iLower_I=lbound(Domain%iGlobal_BP)
+    iUpper_I=ubound(Domain%iGlobal_BP)
+    Domain%MinBlock=minval(&
+         Domain%iDecomposition_II(&
+         BLK_,1:Domain%nTreeNodes),MASK=&
+         Domain%iDecomposition_II(&
+         FirstChild_,1:Domain%nTreeNodes)==None_&
+         .and.Domain%iDecomposition_II(&
+         PE_,1:Domain%nTreeNodes)/=None_)
+    Domain%MaxBlock=maxval(&
+         Domain%iDecomposition_II(&
+         BLK_,1:Domain%nTreeNodes),MASK=&
+         Domain%iDecomposition_II(&
+         FirstChild_,1:Domain%nTreeNodes)==None_&
+         .and.Domain%iDecomposition_II(&
+         PE_,1:Domain%nTreeNodes)/=None_)
+    Domain%nBlockAll=count(&
+         Domain%iDecomposition_II(&
+         FirstChild_,1:Domain%nTreeNodes)==None_&
+         .and.Domain%iDecomposition_II(&
+         PE_,1:Domain%nTreeNodes)/=None_)
+    if(iUpper_I(1)<Domain%MaxBlock.or.&
+         iLower_I(1)>Domain%MinBlock)then
+       deallocate(Domain%iGlobal_BP)
+       allocate(Domain%iGlobal_BP(&
+            Domain%MinBlock:&
+            Domain%MaxBlock,&
             iLower_I(2):iUpper_I(2)),&
             stat=iError)
        call check_allocate(iError,'iGlobal_BP - reallocate')
     end if
-    if(ubound(DomainDecomposition%iGlobal_A,1)<&
-         DomainDecomposition%nBlockAll)then
-       deallocate(DomainDecomposition%iGlobal_A)
-       allocate(DomainDecomposition%iGlobal_A(&
-            1:DomainDecomposition%nBlockAll),&
+    if(ubound(Domain%iGlobal_A,1)<&
+         Domain%nBlockAll)then
+       deallocate(Domain%iGlobal_A)
+       allocate(Domain%iGlobal_A(&
+            1:Domain%nBlockAll),&
             stat=iError)
        call check_allocate(iError,'iGlobal_BP - reallocate')
     end if
-    DomainDecomposition%iGlobal_BP=None_
-    DomainDecomposition%iGlobal_A=None_
+    Domain%iGlobal_BP=None_
+    Domain%iGlobal_A=None_
     iGlobalBlock=0
-    do iGlobalNode=1,DomainDecomposition%nTreeNodes
-       if(.not.is_used_block_dd(DomainDecomposition,iGlobalNode))&
+    do iGlobalNode=1,Domain%nTreeNodes
+       if(.not.is_used_block_dd(Domain,iGlobalNode))&
             CYCLE
-       call pe_and_blk_dd(DomainDecomposition,iGlobalNode,&
+       call pe_and_blk_dd(Domain,iGlobalNode,&
             iPE,iBlock)
-       DomainDecomposition%iGlobal_BP(iBlock,iPE)=iGlobalNode
+       Domain%iGlobal_BP(iBlock,iPE)=iGlobalNode
        iGlobalBlock=iGlobalBlock+1
-       DomainDecomposition%iDecomposition_II(GlobalBlock_,&
+       Domain%iDecomposition_II(GlobalBlock_,&
             iGlobalNode)=iGlobalBlock
-       DomainDecomposition%iGlobal_A(iGlobalBlock)=iGlobalNode
+       Domain%iGlobal_A(iGlobalBlock)=iGlobalNode
     end do
 
   end subroutine set_iglobal_and_bp_dd
@@ -833,27 +833,27 @@ contains
   !for octree grids, allocate if required.
   ! Checks the dimension and extends the arrays if required.
   !---------------------------------------------------------------!
-  subroutine allocate_iroot(DomainDecomposition)
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
+  subroutine allocate_iroot(Domain)
+    type(DomainType),intent(inout)::&
+         Domain
     integer::iError
-    if(associated(DomainDecomposition%iRoot_I))then
-       deallocate(DomainDecomposition%iRoot_I)
+    if(associated(Domain%iRoot_I))then
+       deallocate(Domain%iRoot_I)
     end if
     allocate(&
-         DomainDecomposition%iRoot_I(product(&
-         DomainDecomposition%iRootMapDim_D)),&
+         Domain%iRoot_I(product(&
+         Domain%iRootMapDim_D)),&
          stat=iError)
     call check_allocate(iError,'iRoot_I')
-    DomainDecomposition%iRoot_I=None_
+    Domain%iRoot_I=None_
   end subroutine allocate_iroot
   !---------------------------------------------------------------!
-  subroutine check_iroot_allocation(DomainDecomposition)
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
-    if(ubound(DomainDecomposition%iRoot_I,1)<product(&
-         DomainDecomposition%iRootMapDim_D))&
-         call allocate_iroot(DomainDecomposition)
+  subroutine check_iroot_allocation(Domain)
+    type(DomainType),intent(inout)::&
+         Domain
+    if(ubound(Domain%iRoot_I,1)<product(&
+         Domain%iRootMapDim_D))&
+         call allocate_iroot(Domain)
   end subroutine check_iroot_allocation
  
   !===========================WITH INTERFACE======================!
@@ -867,64 +867,64 @@ contains
 
   !BOP
   !INTERFACE:
-  subroutine bcast_decomposition_dd(DomainDecomposition)
+  subroutine bcast_decomposition_dd(Domain)
 
     !INPUT ARGUMENTS:
-    type (DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
+    type (DomainType),intent(inout)::&
+         Domain
     !EOP
     integer::iComm 
     integer::iProc0
     integer::iError
 
-    if(DomainDecomposition%IsLocal)then
-       iComm=i_comm(DomainDecomposition%CompID_)
+    if(Domain%IsLocal)then
+       iComm=i_comm(Domain%CompID_)
        iProc0=0
     else
        iComm=i_comm()
-       iProc0=i_proc0(DomainDecomposition%CompID_)
+       iProc0=i_proc0(Domain%CompID_)
     end if
-    call MPI_Bcast(DomainDecomposition%IsPeriodic_D(1),&
-         DomainDecomposition%nDim,MPI_LOGICAL,&
+    call MPI_Bcast(Domain%IsPeriodic_D(1),&
+         Domain%nDim,MPI_LOGICAL,&
          iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%XyzMin_D(1),&
-         DomainDecomposition%nDim,MPI_REAL,&
+    call MPI_Bcast(Domain%XyzMin_D(1),&
+         Domain%nDim,MPI_REAL,&
          iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%XyzMax_D(1),&
-         DomainDecomposition%nDim,MPI_REAL,&
+    call MPI_Bcast(Domain%XyzMax_D(1),&
+         Domain%nDim,MPI_REAL,&
          iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%iRootMapDim_D(1),&
-         DomainDecomposition%nDim,MPI_INTEGER,&
+    call MPI_Bcast(Domain%iRootMapDim_D(1),&
+         Domain%nDim,MPI_INTEGER,&
          iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%nCells_D(1),&
-         DomainDecomposition%nDim,MPI_INTEGER,&
+    call MPI_Bcast(Domain%nCells_D(1),&
+         Domain%nDim,MPI_INTEGER,&
          iProc0,iComm,iError)
 
-    if(DomainDecomposition%IsTreeDecomposition)then
-       call check_iroot_allocation(DomainDecomposition)
-       call MPI_Bcast(DomainDecomposition%iShift_DI(1,1),&
-            DomainDecomposition%nDim*&
-            DomainDecomposition%nChildren,&
+    if(Domain%IsTreeDecomposition)then
+       call check_iroot_allocation(Domain)
+       call MPI_Bcast(Domain%iShift_DI(1,1),&
+            Domain%nDim*&
+            Domain%nChildren,&
             MPI_INTEGER,&
             iProc0, iComm,iError)   
     end if
     call bcast_indexes_dd(&
-         DomainDecomposition)    
+         Domain)    
 
-    call MPI_Bcast(DomainDecomposition%DoGlueMargins,&
+    call MPI_Bcast(Domain%DoGlueMargins,&
          1,MPI_LOGICAL,iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%iDirMinusGlue,&
+    call MPI_Bcast(Domain%iDirMinusGlue,&
          1,MPI_INTEGER,iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%iDirPlusGlue,&
+    call MPI_Bcast(Domain%iDirPlusGlue,&
          1,MPI_INTEGER,iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%iDirCycle,&
+    call MPI_Bcast(Domain%iDirCycle,&
          1,MPI_INTEGER,iProc0,iComm,iError)
 
   end subroutine bcast_decomposition_dd
@@ -944,10 +944,10 @@ contains
 
   !INTERFACE:
   subroutine bcast_indexes_dd(&
-       DomainDecomposition,iProcUnion,iCommUnion)
+       Domain,iProcUnion,iCommUnion)
     !INPUT ARGUMENTS:
-    type (DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
+    type (DomainType),intent(inout)::&
+         Domain
     integer,optional,intent(in)::iProcUnion,iCommUnion
 
     integer::iComm 
@@ -956,118 +956,118 @@ contains
     if(present(iProcUnion).and.present(iCommUnion))then
        iComm=iCommUnion
        iProc0=iProcUnion
-    elseif(DomainDecomposition%IsLocal)then
-       iComm=i_comm(DomainDecomposition%CompID_)
+    elseif(Domain%IsLocal)then
+       iComm=i_comm(Domain%CompID_)
        iProc0=0
     else
        iComm=i_comm()
-       iProc0=i_proc0(DomainDecomposition%CompID_)
+       iProc0=i_proc0(Domain%CompID_)
     end if
 
-    call MPI_Bcast(DomainDecomposition%nTreeNodes,&
+    call MPI_Bcast(Domain%nTreeNodes,&
          1,MPI_INTEGER,&
          iProc0, iComm,iError)   
-    call check_octree_grid_allocation(DomainDecomposition)
+    call check_octree_grid_allocation(Domain)
 
-    if(.not.DomainDecomposition%IsLocal.and.&
-         is_proc0(DomainDecomposition%CompID_))then
+    if(.not.Domain%IsLocal.and.&
+         is_proc0(Domain%CompID_))then
        ! Recalculate local PE ranks to their values in the global      !
        ! communicator (at the root pe only)                            ! 
-       where(DomainDecomposition%iDecomposition_II(&
-            FirstChild_,1:DomainDecomposition%nTreeNodes)&
+       where(Domain%iDecomposition_II(&
+            FirstChild_,1:Domain%nTreeNodes)&
             ==None_&
-            .and.DomainDecomposition%iDecomposition_II(&
-            PE_,1:DomainDecomposition%nTreeNodes)/=None_)&
-            DomainDecomposition%iDecomposition_II(&
-            PE_,1:DomainDecomposition%nTreeNodes)=&
-            i_proc0()+i_proc0(DomainDecomposition%CompID_)+&
-            DomainDecomposition%iDecomposition_II(&
-            PE_,1:DomainDecomposition%nTreeNodes)*&
-            i_proc_stride(DomainDecomposition%CompID_)
+            .and.Domain%iDecomposition_II(&
+            PE_,1:Domain%nTreeNodes)/=None_)&
+            Domain%iDecomposition_II(&
+            PE_,1:Domain%nTreeNodes)=&
+            i_proc0()+i_proc0(Domain%CompID_)+&
+            Domain%iDecomposition_II(&
+            PE_,1:Domain%nTreeNodes)*&
+            i_proc_stride(Domain%CompID_)
     end if
 
-    call MPI_Bcast(DomainDecomposition%iDecomposition_II(-1,1),&
-         (2+ubound(DomainDecomposition%iDecomposition_II,1))*&
-         DomainDecomposition%nTreeNodes,&
+    call MPI_Bcast(Domain%iDecomposition_II(-1,1),&
+         (2+ubound(Domain%iDecomposition_II,1))*&
+         Domain%nTreeNodes,&
          MPI_INTEGER,iProc0,iComm,iError)
 
-    call MPI_Bcast(DomainDecomposition%iRealization,&
+    call MPI_Bcast(Domain%iRealization,&
          1,MPI_INTEGER,&
          iProc0, iComm,iError)
 
-    call complete_grid(DomainDecomposition)
+    call complete_grid(Domain)
   end subroutine bcast_indexes_dd
   !===========================NO INTERFACE========================!
   !complete_grid recovers the geometric variables in situ         !
 
-  subroutine complete_grid(DomainDecomposition)
-    type (DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
-    real,dimension(DomainDecomposition%nDim)::DXyzRoot_D
+  subroutine complete_grid(Domain)
+    type (DomainType),intent(inout)::&
+         Domain
+    real,dimension(Domain%nDim)::DXyzRoot_D
     integer::lGlobalTreeNumber,lRoot,i,iDim,nDim
     integer::iRootCounter,lParent,iChildNumber
 
-    DXyzRoot_D=(DomainDecomposition%XyzMax_D-&
-         DomainDecomposition%XyzMin_D)/&
-         DomainDecomposition%iRootMapDim_D
-    nDim=DomainDecomposition%nDim
+    DXyzRoot_D=(Domain%XyzMax_D-&
+         Domain%XyzMin_D)/&
+         Domain%iRootMapDim_D
+    nDim=Domain%nDim
 
     iRootCounter=0
-    do lGlobalTreeNumber=1,DomainDecomposition%nTreeNodes
-       if(DomainDecomposition%iDecomposition_II(&
+    do lGlobalTreeNumber=1,Domain%nTreeNodes
+       if(Domain%iDecomposition_II(&
             MyNumberAsAChild_,lGlobalTreeNumber)==0)then
           iRootCounter=iRootCounter+1
-          DomainDecomposition%DXyzBlock_DI(&
+          Domain%DXyzBlock_DI(&
                :,lGlobalTreeNumber)=DXyzRoot_D
-          DomainDecomposition%DXyzCell_DI(&
+          Domain%DXyzCell_DI(&
                :,lGlobalTreeNumber)=DXyzRoot_D/&
-               DomainDecomposition%nCells_D
-          DomainDecomposition%iDecomposition_II(&
+               Domain%nCells_D
+          Domain%iDecomposition_II(&
                Parent_,lGlobalTreeNumber)=iRootCounter
           lRoot=iRootCounter-1
           do iDim=1,nDim
              i=mod(lRoot,&
-                  DomainDecomposition%iRootMapDim_D(iDim))
-             DomainDecomposition%XyzBlock_DI(&
+                  Domain%iRootMapDim_D(iDim))
+             Domain%XyzBlock_DI(&
                   iDim,lGlobalTreeNumber)=&
-                  DomainDecomposition%XyzMin_D(iDim)+&
+                  Domain%XyzMin_D(iDim)+&
                   i*DXyzRoot_D(iDim)
              lRoot=(lRoot-i)/&
-                  DomainDecomposition%iRootMapDim_D(iDim)
+                  Domain%iRootMapDim_D(iDim)
           end do
-          if(DomainDecomposition%IsTreeDecomposition)&
-               DomainDecomposition%iRoot_I(&
+          if(Domain%IsTreeDecomposition)&
+               Domain%iRoot_I(&
                iRootCounter)=lGlobalTreeNumber
        else
-          lParent=DomainDecomposition%iDecomposition_II(&
+          lParent=Domain%iDecomposition_II(&
                Parent_,lGlobalTreeNumber)
-          DomainDecomposition%DXyzBlock_DI(&
+          Domain%DXyzBlock_DI(&
                :,lGlobalTreeNumber)=&
-               DomainDecomposition%DXyzBlock_DI(:,lParent)
-          DomainDecomposition%DXyzBlock_DI(&
-               1:DomainDecomposition%nDimTree,lGlobalTreeNumber&
-               )=cHalf*DomainDecomposition%DXyzBlock_DI(&
-               1:DomainDecomposition%nDimTree,lGlobalTreeNumber)
-          DomainDecomposition%DXyzCell_DI(&
+               Domain%DXyzBlock_DI(:,lParent)
+          Domain%DXyzBlock_DI(&
+               1:Domain%nDimTree,lGlobalTreeNumber&
+               )=cHalf*Domain%DXyzBlock_DI(&
+               1:Domain%nDimTree,lGlobalTreeNumber)
+          Domain%DXyzCell_DI(&
                :,lGlobalTreeNumber)=&
-               DomainDecomposition%DXyzBlock_DI(&
+               Domain%DXyzBlock_DI(&
                :,lGlobalTreeNumber)/&
-               DomainDecomposition%nCells_D
-          DomainDecomposition%XyzBlock_DI(:,lGlobalTreeNumber)&
-               =DomainDecomposition%XyzBlock_DI(:,lParent)
+               Domain%nCells_D
+          Domain%XyzBlock_DI(:,lGlobalTreeNumber)&
+               =Domain%XyzBlock_DI(:,lParent)
           iChildNumber=&
-               DomainDecomposition%iDecomposition_II(&
+               Domain%iDecomposition_II(&
                MyNumberAsAChild_,lGlobalTreeNumber)
-          DomainDecomposition%XyzBlock_DI(&
-               1:DomainDecomposition%nDimTree,lGlobalTreeNumber)&
-               =DomainDecomposition%XyzBlock_DI(&
-               1:DomainDecomposition%nDimTree,lGlobalTreeNumber)&
-               +DomainDecomposition%DXyzBlock_DI(&
-               1:DomainDecomposition%nDimTree,lGlobalTreeNumber)&
-               *DomainDecomposition%iShift_DI(:,iChildNumber)
+          Domain%XyzBlock_DI(&
+               1:Domain%nDimTree,lGlobalTreeNumber)&
+               =Domain%XyzBlock_DI(&
+               1:Domain%nDimTree,lGlobalTreeNumber)&
+               +Domain%DXyzBlock_DI(&
+               1:Domain%nDimTree,lGlobalTreeNumber)&
+               *Domain%iShift_DI(:,iChildNumber)
        end if
     end do
-    call set_iglobal_and_bp_dd(DomainDecomposition)
+    call set_iglobal_and_bp_dd(Domain)
   end subroutine complete_grid
 
   !===============================================================!
@@ -1095,12 +1095,12 @@ contains
   !BOP
   !INTERFACE:
   subroutine synchronize_refinement_dd(&
-       GlobalDD,LocalDD,iProcUnion,iCommUnion)
+       GlobalDomain,LocalDomain,iProcUnion,iCommUnion)
 
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(inout)::GlobalDD
-    type(DomainDecompositionType),&
-         intent(in)::LocalDD
+    type(DomainType),intent(inout)::GlobalDomain
+    type(DomainType),&
+         intent(in)::LocalDomain
     integer,intent(in),optional::iProcUnion,iCommUnion
     !EOP
     integer::iProc0,iComm,LocalIRealization,iError
@@ -1109,30 +1109,30 @@ contains
        iProc0=iProcUnion
        iComm=iCommUnion
     else
-       iProc0=i_proc0(GlobalDD%CompID_)
+       iProc0=i_proc0(GlobalDomain%CompID_)
        iComm=i_comm()
     end if
-    if(is_proc0(GlobalDD%CompID_))&
-         LocalIRealization=LocalDD%iRealization
+    if(is_proc0(GlobalDomain%CompID_))&
+         LocalIRealization=LocalDomain%iRealization
 
     call MPI_Bcast(LocalIRealization,&
          1,MPI_INTEGER,&
          iProc0, iComm,iError)
-    call MPI_Allreduce(LocalIRealization==GlobalDD%iRealization,&
+    call MPI_Allreduce(LocalIRealization==GlobalDomain%iRealization,&
          IsSynchronized,1,MPI_LOGICAL,MPI_LAND,iComm,iError)
     if(IsSynchronized)return
-    if(is_proc0(GlobalDD%CompID_))then
-       GlobalDD%iRealization=LocalDD%iRealization
-       GlobalDD%nTreeNodes=LocalDD%nTreeNodes
-       call check_octree_grid_allocation(GlobalDD)
-       GlobalDD%iDecomposition_II(:,1:GlobalDD%nTreeNodes)=&
-            LocalDD%iDecomposition_II(:,1:LocalDD%nTreeNodes)
+    if(is_proc0(GlobalDomain%CompID_))then
+       GlobalDomain%iRealization=LocalDomain%iRealization
+       GlobalDomain%nTreeNodes=LocalDomain%nTreeNodes
+       call check_octree_grid_allocation(GlobalDomain)
+       GlobalDomain%iDecomposition_II(:,1:GlobalDomain%nTreeNodes)=&
+            LocalDomain%iDecomposition_II(:,1:LocalDomain%nTreeNodes)
     end if
     if(present(iProcUnion).and.present(iCommUnion))then
-       call bcast_indexes_dd(GlobalDD,&
+       call bcast_indexes_dd(GlobalDomain,&
             iProcUnion,iCommUnion)
     else
-       call bcast_indexes_dd(GlobalDD)
+       call bcast_indexes_dd(GlobalDomain)
     end if
   end subroutine synchronize_refinement_dd
   !BOP
@@ -1165,21 +1165,21 @@ contains
   !BOP
   !INTERFACE:
   function is_left_boundary_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
     integer,intent(in)::lGlobalTreeNumber
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !OUTPUT ARGUMENTS:
-    logical,dimension(DomainDecomposition%nDim)::&
+    logical,dimension(Domain%nDim)::&
          is_left_boundary_dd
     !EOP
-    is_left_boundary_dd=.not.(DomainDecomposition%IsPeriodic_D)&
-         .and.DomainDecomposition%XyzBlock_DI(&
+    is_left_boundary_dd=.not.(Domain%IsPeriodic_D)&
+         .and.Domain%XyzBlock_DI(&
          :,lGlobalTreeNumber)<&
-         cThird*DomainDecomposition%DXyzBlock_DI(&
+         cThird*Domain%DXyzBlock_DI(&
          :,lGlobalTreeNumber)+&
-         DomainDecomposition%XyzMin_D
+         Domain%XyzMin_D
   end function is_left_boundary_dd
   !===============================================================!
   !BOP:
@@ -1194,20 +1194,20 @@ contains
   !BOP
   !INTERFACE:
   function is_right_boundary_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
     integer,intent(in)::lGlobalTreeNumber
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
-    logical,dimension(DomainDecomposition%nDim)::&
+    type(DomainType),intent(in)::&
+         Domain
+    logical,dimension(Domain%nDim)::&
          is_right_boundary_dd
     !EOP
     is_right_boundary_dd=.not.&
-         (DomainDecomposition%IsPeriodic_D).and.&
-         DomainDecomposition%XyzBlock_DI(:,lGlobalTreeNumber)+&
-         (cOne+cThird)*DomainDecomposition%DXyzBlock_DI(&
+         (Domain%IsPeriodic_D).and.&
+         Domain%XyzBlock_DI(:,lGlobalTreeNumber)+&
+         (cOne+cThird)*Domain%DXyzBlock_DI(&
          :,lGlobalTreeNumber)>&
-         DomainDecomposition%XyzMax_D
+         Domain%XyzMax_D
   end function is_right_boundary_dd
   !===============================================================!
   !BOP
@@ -1222,40 +1222,40 @@ contains
   !BOP
   !INTERFACE:
   integer function l_neighbor_dd(&
-       DomainDecomposition,lGlobalTreeNumber,iCells_D)
+       Domain,lGlobalTreeNumber,iCells_D)
     !INPUT ARGUMENTS:
     integer,intent(in)::lGlobalTreeNumber
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
-    integer,dimension(DomainDecomposition%nDim),&
+    type(DomainType),intent(inout)::&
+         Domain
+    integer,dimension(Domain%nDim),&
          intent(in)::iCells_D
     !EOP
-    real,dimension(DomainDecomposition%nDim)::Xyz_D
-    if(any(is_left_boundary_dd( DomainDecomposition,&
+    real,dimension(Domain%nDim)::Xyz_D
+    if(any(is_left_boundary_dd( Domain,&
          lGlobalTreeNumber).and.iCells_D<1).or.&
-         any(is_right_boundary_dd(DomainDecomposition,&
+         any(is_right_boundary_dd(Domain,&
          lGlobalTreeNumber).and.iCells_D>&
-         DomainDecomposition%nCells_D))then
+         Domain%nCells_D))then
        l_neighbor_dd=None_
     else
        !\
        ! Cell center coordinates
        Xyz_D = &
-            DomainDecomposition%XyzBlock_DI(:,lGlobalTreeNumber) + &
-            DomainDecomposition%DXyzCell_DI(:,lGlobalTreeNumber)*&
+            Domain%XyzBlock_DI(:,lGlobalTreeNumber) + &
+            Domain%DXyzCell_DI(:,lGlobalTreeNumber)*&
             (real(iCells_D) - 0.5)
-       call search_in_dd(DomainDecomposition, Xyz_D, l_neighbor_dd)
+       call search_in_dd(Domain, Xyz_D, l_neighbor_dd)
     end if
   end function l_neighbor_dd
   !==========================
   !BOP
   !INTERFACE:
   subroutine glue_margin_dd(&
-       DomainDecomposition,Xyz_D)
+       Domain,Xyz_D)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
-    real,dimension(DomainDecomposition%nDim),&
+    type(DomainType),intent(in)::&
+         Domain
+    real,dimension(Domain%nDim),&
          intent(inout)::Xyz_D
     !-----------
     !\
@@ -1271,12 +1271,12 @@ contains
     real,dimension(:),pointer::XyzMin_D,XyzMax_D
     logical :: DoCycle
     !-----------------
-    nDim = DomainDecomposition%nDim
-    XyzMin_D => DomainDecomposition%XyzMin_D
-    XyzMax_D => DomainDecomposition%XyzMax_D
-    iDirCycle = DomainDecomposition%iDirCycle
-    iDirMinusGlue = DomainDecomposition%iDirMinusGlue
-    iDirPlusGlue = DomainDecomposition%iDirPlusGlue
+    nDim = Domain%nDim
+    XyzMin_D => Domain%XyzMin_D
+    XyzMax_D => Domain%XyzMax_D
+    iDirCycle = Domain%iDirCycle
+    iDirMinusGlue = Domain%iDirMinusGlue
+    iDirPlusGlue = Domain%iDirPlusGlue
     DoCycle = iDirCycle > 0.and.iDirCycle <= nDim
     do iDir = 1, nDim
        if(iDir == iDirCycle)CYCLE
@@ -1326,40 +1326,40 @@ contains
   !BOP
   !INTERFACE:
   subroutine search_in_dd(&
-       DomainDecomposition,Xyz_D,lGlobalTreeNumber)
+       Domain,Xyz_D,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(inout)::&
-         DomainDecomposition
-    real,dimension(DomainDecomposition%nDim),&
+    type(DomainType),intent(inout)::&
+         Domain
+    real,dimension(Domain%nDim),&
          intent(inout)::Xyz_D
     !OUTPUT ARGUMENTS:
     integer,intent(out)::lGlobalTreeNumber
     !EOP
-    real,dimension(DomainDecomposition%nDim)::&
+    real,dimension(Domain%nDim)::&
          XyzTrunc_D,Discr_D
-    integer,dimension(DomainDecomposition%nDim)::&
+    integer,dimension(Domain%nDim)::&
          iRootMinusOne_D,iRootMinusOneStart_D
-    integer,dimension(DomainDecomposition%nDimTree)::iShift_D
+    integer,dimension(Domain%nDimTree)::iShift_D
     integer::iChild,iDim,lFound
 
     !Start from the result of the previous search
-    lFound=DomainDecomposition%lSearch
+    lFound=Domain%lSearch
 
     !Put the point inside the domain
-    do iDim=1,DomainDecomposition%nDim
-       if(.not.DomainDecomposition%IsPeriodic_D(iDim))CYCLE
-       Xyz_D(iDim)=DomainDecomposition%XyzMin_D(iDim)+&
-            modulo(Xyz_D(iDim)-DomainDecomposition%XyzMin_D(iDim),&
-         DomainDecomposition%XyzMax_D(iDim)-&
-         DomainDecomposition%XyzMin_D(iDim))
+    do iDim=1,Domain%nDim
+       if(.not.Domain%IsPeriodic_D(iDim))CYCLE
+       Xyz_D(iDim)=Domain%XyzMin_D(iDim)+&
+            modulo(Xyz_D(iDim)-Domain%XyzMin_D(iDim),&
+         Domain%XyzMax_D(iDim)-&
+         Domain%XyzMin_D(iDim))
     end do
-    XyzTrunc_D=DomainDecomposition%XyzMin_D+&
-         max(cZero,min(Xyz_D-DomainDecomposition%XyzMin_D,&
-         cAlmostOne*(DomainDecomposition%XyzMax_D-&
-         DomainDecomposition%XyzMin_D)))
+    XyzTrunc_D=Domain%XyzMin_D+&
+         max(cZero,min(Xyz_D-Domain%XyzMin_D,&
+         cAlmostOne*(Domain%XyzMax_D-&
+         Domain%XyzMin_D)))
 
-    Discr_D=(XyzTrunc_D-DomainDecomposition%XyzBlock_DI(&
-         :,lFound))/DomainDecomposition%DXyzBlock_DI(:,lFound)
+    Discr_D=(XyzTrunc_D-Domain%XyzBlock_DI(&
+         :,lFound))/Domain%DXyzBlock_DI(:,lFound)
 
     !Recursive search starts
     do
@@ -1371,14 +1371,14 @@ contains
             min( cAlmostOne, max( cTol2, Discr_D-real(floor(Discr_D)) ) )
 
        if(any(Discr_D<cZero).or.any(Discr_D>=cOne))then
-          iChild=DomainDecomposition%iDecomposition_II(&
+          iChild=Domain%iDecomposition_II(&
                MyNumberAsAChild_,lFound)
           if(iChild==0)then  !This is a root
 
              iRootMinusOneStart_D=&
-                  nint((DomainDecomposition%XyzBlock_DI(&
-                  :,lFound)-DomainDecomposition%XyzMin_D)&
-                  /DomainDecomposition%DXyzBlock_DI(:,lFound))
+                  nint((Domain%XyzBlock_DI(&
+                  :,lFound)-Domain%XyzMin_D)&
+                  /Domain%DXyzBlock_DI(:,lFound))
              !Calculate iRoot-1,jRoot-1....
              iRootMinusOne_D=floor(Discr_D)+&
                   iRootMinusOneStart_D
@@ -1388,53 +1388,53 @@ contains
              !(jRoot-1)*RootMapDim(1)+&
              !(kRoot-1)*RootMapDim(1)*RootMapDim(2)
              lFound=1+iRootMinusOne_D(1)
-             do iDim=2,DomainDecomposition%nDim
+             do iDim=2,Domain%nDim
                 lFound=lFound+iRootMinusOne_D(iDim)*&
                      product(&
-                     DomainDecomposition%iRootMapDim_D(1:iDim-1))
+                     Domain%iRootMapDim_D(1:iDim-1))
              end do
-             if(DomainDecomposition%IsTreeDecomposition)&
-                  lFound=DomainDecomposition%iRoot_I(lFound)
+             if(Domain%IsTreeDecomposition)&
+                  lFound=Domain%iRoot_I(lFound)
           else     !End of computations for root
              !---------------------------------------------------------------!
              !Descend the octree                                             !
-             lFound=DomainDecomposition%iDecomposition_II(&
+             lFound=Domain%iDecomposition_II(&
                   Parent_,lFound)
-             Discr_D(1:DomainDecomposition%nDimTree)=&
-                  (Discr_D(1:DomainDecomposition%nDimTree)+&
-                  real(DomainDecomposition%iShift_DI(&
+             Discr_D(1:Domain%nDimTree)=&
+                  (Discr_D(1:Domain%nDimTree)+&
+                  real(Domain%iShift_DI(&
                   :,iChild)))* 0.50
           end if
        elseif&
-            (is_used_block_dd(DomainDecomposition,lFound))then
+            (is_used_block_dd(Domain,lFound))then
           EXIT ! Octree node is found
        else
           !---------------------------------------------------------------!
           !Ascend the octree: calculate the shift                         !
-          Discr_D(1:DomainDecomposition%nDimTree)=&
-               Discr_D(1:DomainDecomposition%nDimTree)&
+          Discr_D(1:Domain%nDimTree)=&
+               Discr_D(1:Domain%nDimTree)&
                *2.0
           iShift_D=int(Discr_D(&
-               1:DomainDecomposition%nDimTree))
-          Discr_D(1:DomainDecomposition%nDimTree)=&
-               Discr_D(1:DomainDecomposition%nDimTree)-&
+               1:Domain%nDimTree))
+          Discr_D(1:Domain%nDimTree)=&
+               Discr_D(1:Domain%nDimTree)-&
                real(iShift_D)
           !---------------------------------------------------------------!
           !Choose the child to ascend to                                  !
           iChild=1
           do while (any(iShift_D/=&
-               DomainDecomposition%iShift_DI(:,iChild)))
+               Domain%iShift_DI(:,iChild)))
              iChild=iChild+1
           end do
-          lFound=DomainDecomposition%iDecomposition_II(&
+          lFound=Domain%iDecomposition_II(&
                iChild,lFound)
        end if
     end do
     !---------------------------------------------------------------!
     !End of recursive search                                        !
-    Xyz_D=Xyz_D-DomainDecomposition%XyzBlock_DI(:,lFound)
+    Xyz_D=Xyz_D-Domain%XyzBlock_DI(:,lFound)
     lGlobalTreeNumber=lFound
-    DomainDecomposition%lSearch=lFound
+    Domain%lSearch=lFound
   end subroutine search_in_dd
   !===============================================================!
   !BOP
@@ -1449,9 +1449,9 @@ contains
   ! The best order to find cell number for a position of point    
   !If the block number is needed                                  
   !\begin{verbatim}                                               
-  !call search_in(DomainDecomposition,Xyz_D,lFound),              
-  !iBlock=blk_decomposition(DomainDecomposition,lFound)           
-  !call search_cell(DomainDecomposition,Xyz_D,lFound,Cells_D)     
+  !call search_in(Domain,Xyz_D,lFound),              
+  !iBlock=blk_decomposition(Domain,lFound)           
+  !call search_cell(Domain,Xyz_D,lFound,Cells_D)     
   !\end{verbatim}
   !the second step can be missed if the block number is not needed
   !The input Xyz\_D can be outside the domain,                     
@@ -1464,19 +1464,19 @@ contains
   !BOP
   !INTERFACE:
   subroutine search_cell_dd(&
-       DomainDecomposition,lGlobalTreeNumber,Xyz_D,iCells_D)
+       Domain,lGlobalTreeNumber,Xyz_D,iCells_D)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
-    real,dimension(DomainDecomposition%nDim),&
+    type(DomainType),intent(in)::&
+         Domain
+    real,dimension(Domain%nDim),&
          intent(inout)::Xyz_D
     integer,intent(in)::lGlobalTreeNumber
     !OUTPUT ARGUMENTS:
-    integer,dimension(DomainDecomposition%nDim),&
+    integer,dimension(Domain%nDim),&
          intent(out)::iCells_D
     !EOP
-    real,dimension(DomainDecomposition%nDim)::DXyzCells_D
-    DXyzCells_D=DomainDecomposition%DXyzCell_DI(&
+    real,dimension(Domain%nDim)::DXyzCells_D
+    DXyzCells_D=Domain%DXyzCell_DI(&
          :,lGlobalTreeNumber)
     iCells_D=floor(Xyz_D/DXyzCells_D)
     Xyz_D=Xyz_D-DXyzCells_D*iCells_D
@@ -1497,43 +1497,43 @@ contains
   !BOP
   !INTERFACE:
   integer function pe_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS: 
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     !EOP
-    pe_dd=DomainDecomposition%iDecomposition_II(&
+    pe_dd=Domain%iDecomposition_II(&
          PE_,lGlobalTreeNumber)
   end function  pe_dd
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
   integer function blk_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS: 
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     !EOP
-    blk_dd=DomainDecomposition%iDecomposition_II(&
+    blk_dd=Domain%iDecomposition_II(&
          BLK_,lGlobalTreeNumber)
   end function blk_dd
   !---------------------------------------------------------------!
   !BOP:
   !INTERFACE:
   subroutine pe_and_blk_dd(&
-       DomainDecomposition,lGlobalTreeNumber,iPEOut,iBlockOut)
+       Domain,lGlobalTreeNumber,iPEOut,iBlockOut)
     !INPUT ARGUMENTS: 
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     !OUTPUT ARGUMENTS
     integer,intent(out)::iPEOut,iBlockOut
     !EOP
-    iPEOut=DomainDecomposition%iDecomposition_II(&
+    iPEOut=Domain%iDecomposition_II(&
          PE_,lGlobalTreeNumber)
-    iBlockOut=DomainDecomposition%iDecomposition_II(&
+    iBlockOut=Domain%iDecomposition_II(&
          BLK_,lGlobalTreeNumber)
   end subroutine pe_and_blk_dd
   !BOP
@@ -1542,29 +1542,29 @@ contains
   !BOP
   !INTERFACE:
   integer function n_block_dd(&
-       DomainDecomposition,iPE)
+       Domain,iPE)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !EOP
     integer,intent(in)::iPE
     n_block_dd=count(&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)&
+         Domain%iDecomposition_II(&
+         FirstChild_,1:Domain%nTreeNodes)&
          ==None_.and.&
-         DomainDecomposition%iDecomposition_II(&
-         PE_,1:DomainDecomposition%nTreeNodes)==iPE)
+         Domain%iDecomposition_II(&
+         PE_,1:Domain%nTreeNodes)==iPE)
   end function n_block_dd
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
   integer function n_block_total_dd(&
-       DomainDecomposition)
+       Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !EOP
-    n_block_total_dd=DomainDecomposition%nBlockAll
+    n_block_total_dd=Domain%nBlockAll
   end function n_block_total_dd
   !===============================================================!
   !BOP
@@ -1577,102 +1577,102 @@ contains
   !BOP
   !INTERFACE:
   integer function min_block_pe_dd(&
-       DomainDecomposition,iPE)
+       Domain,iPE)
     !INPUT ARGUMENTS: 
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::iPE
     !EOP
     min_block_pe_dd=minval(&
-         DomainDecomposition%iDecomposition_II(&
-         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
-         .and. DomainDecomposition%iDecomposition_II(&
-         PE_,1:DomainDecomposition%nTreeNodes)==iPE)
+         Domain%iDecomposition_II(&
+         BLK_,1:Domain%nTreeNodes),MASK=&
+         Domain%iDecomposition_II(&
+         FirstChild_,1:Domain%nTreeNodes)==None_&
+         .and. Domain%iDecomposition_II(&
+         PE_,1:Domain%nTreeNodes)==iPE)
   end function min_block_pe_dd
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
   integer function max_block_pe_dd(&
-       DomainDecomposition,iPE) 
+       Domain,iPE) 
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::iPE
     !EOP
     max_block_pe_dd=maxval(&
-         DomainDecomposition%iDecomposition_II(&
-         BLK_,1:DomainDecomposition%nTreeNodes),MASK=&
-         DomainDecomposition%iDecomposition_II(&
-         FirstChild_,1:DomainDecomposition%nTreeNodes)==None_&
-         .and. DomainDecomposition%iDecomposition_II(&
-         PE_,1:DomainDecomposition%nTreeNodes)==iPE)
+         Domain%iDecomposition_II(&
+         BLK_,1:Domain%nTreeNodes),MASK=&
+         Domain%iDecomposition_II(&
+         FirstChild_,1:Domain%nTreeNodes)==None_&
+         .and. Domain%iDecomposition_II(&
+         PE_,1:Domain%nTreeNodes)==iPE)
   end function max_block_pe_dd
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
   integer function min_block_dd(&
-       DomainDecomposition) 
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+       Domain) 
+    type(DomainType),intent(in)::&
+         Domain
     !EOP
-    min_block_dd=DomainDecomposition%MinBlock
+    min_block_dd=Domain%MinBlock
   end function min_block_dd
   !---------------------------------------------------------------!
   !BOP
   !INTERFACE:
   integer function max_block_dd(&
-       DomainDecomposition) 
+       Domain) 
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !EOP
-    max_block_dd=DomainDecomposition%MaxBlock
+    max_block_dd=Domain%MaxBlock
 
   end function max_block_dd
   !---------------------------------------------------------------!
-  integer function iglobal_bp_dd(DomainDecomposition,iBLK,iPE)
-    type(DomainDecompositionType),intent(in)::DomainDecomposition
+  integer function iglobal_bp_dd(Domain,iBLK,iPE)
+    type(DomainType),intent(in)::Domain
     integer,intent(in)::iBLK,iPE
-    iglobal_bp_dd=DomainDecomposition%iGlobal_BP(iBLK,iPE)
+    iglobal_bp_dd=Domain%iGlobal_BP(iBLK,iPE)
   end function iglobal_bp_dd
   !---------------------------------------------------------------!
-  integer function iglobal_node_dd(DomainDecomposition,iBlockAll)
-    type(DomainDecompositionType),intent(in)::DomainDecomposition
+  integer function iglobal_node_dd(Domain,iBlockAll)
+    type(DomainType),intent(in)::Domain
     integer,intent(in)::iBlockAll
-    iglobal_node_dd=DomainDecomposition%iGlobal_A(iBlockAll)
+    iglobal_node_dd=Domain%iGlobal_A(iBlockAll)
   end function iglobal_node_dd
   !---------------------------------------------------------------!
   integer function iglobal_block_dd(&
-       DomainDecomposition,iGlobalTreeNode)
-    type(DomainDecompositionType),intent(in)::DomainDecomposition
+       Domain,iGlobalTreeNode)
+    type(DomainType),intent(in)::Domain
     integer,intent(in)::iGlobalTreeNode
-    iglobal_block_dd=DomainDecomposition%iDecomposition_II(&
+    iglobal_block_dd=Domain%iDecomposition_II(&
          GlobalBlock_,iGlobalTreeNode)
   end function iglobal_block_dd
   !---------------------------------------------------------------!
-  logical function used_bp_dd(DomainDecomposition,iBLK,iPE)
-    type(DomainDecompositionType),intent(in)::DomainDecomposition
+  logical function used_bp_dd(Domain,iBLK,iPE)
+    type(DomainType),intent(in)::Domain
     integer,intent(in)::iBLK,iPE
     integer,dimension(2)::iUpper_I,iLower_I
 
-    iUpper_I=ubound(DomainDecomposition%iGlobal_BP)
-    iLower_I=lbound(DomainDecomposition%iGlobal_BP)
+    iUpper_I=ubound(Domain%iGlobal_BP)
+    iLower_I=lbound(Domain%iGlobal_BP)
 
     used_bp_dd=.false.
     if(  iBLK>=iLower_I(1).and.&
          iBLK<=iUpper_I(1).and.&
          iPE >=iLower_I(2).and.&
          iPE <=iUpper_I(2)    )&
-         used_bp_dd=DomainDecomposition%iGlobal_BP(iBLK,iPE)/=None_
+         used_bp_dd=Domain%iGlobal_BP(iBLK,iPE)/=None_
   end function used_bp_dd
   !---------------------------------------------------------------!
   
-  subroutine set_lsearch_dd(DomainDecomposition,iGlobal)
-    type(DomainDecompositionType),intent(inout)::DomainDecomposition
+  subroutine set_lsearch_dd(Domain,iGlobal)
+    type(DomainType),intent(inout)::Domain
     integer,intent(in)::iGlobal
-    DomainDecomposition%lSearch=iGlobal
+    Domain%lSearch=iGlobal
   end subroutine set_lsearch_dd
  
   !BOP
@@ -1688,22 +1688,22 @@ contains
 
   !BOP
   !INTERFACE:
-  integer function compid_grid_dd(DomainDecomposition)
+  integer function compid_grid_dd(Domain)
     !INPUT ARGUMENTS
-    type(DomainDecompositionType),intent(in)::&
+    type(DomainType),intent(in)::&
          !EOP
-    DomainDecomposition
-    compid_grid_dd=DomainDecomposition%CompID_
+    Domain
+    compid_grid_dd=Domain%CompID_
   end function compid_grid_dd
 
   !BOP
   !INTERFACE:
-  integer function ndim_grid_dd(DomainDecomposition)
+  integer function ndim_grid_dd(Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !EOP
-    nDim_grid_dd=DomainDecomposition%nDim
+    nDim_grid_dd=Domain%nDim
   end function ndim_grid_dd
   !===============================================================!
   !BOP
@@ -1711,14 +1711,14 @@ contains
 
   !BOP
   !INTERFACE:
-  function xyz_min_grid_dd(DomainDecomposition)
+  function xyz_min_grid_dd(Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !OUTPUT ARGUMENTS:
-    real,dimension(DomainDecomposition%nDim)::xyz_min_grid_dd
+    real,dimension(Domain%nDim)::xyz_min_grid_dd
     !EOP
-    xyz_min_grid_dd=DomainDecomposition%XyzMin_D
+    xyz_min_grid_dd=Domain%XyzMin_D
   end function xyz_min_grid_dd
   !===============================================================!
   !BOP
@@ -1726,14 +1726,14 @@ contains
 
   !BOP
   !INTERFACE:
-  function xyz_max_grid_dd(DomainDecomposition)
+  function xyz_max_grid_dd(Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !OUTPUT ARGUMENTS:
-    real,dimension(DomainDecomposition%nDim)::xyz_max_grid_dd
+    real,dimension(Domain%nDim)::xyz_max_grid_dd
     !EOP
-    xyz_max_grid_dd=DomainDecomposition%XyzMax_D
+    xyz_max_grid_dd=Domain%XyzMax_D
   end function xyz_max_grid_dd
   !===============================================================!
   !BOP
@@ -1741,14 +1741,14 @@ contains
 
   !BOP
   !INTERFACE:
-  function root_map_dd(DomainDecomposition)
+  function root_map_dd(Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !OUTPUT ARGUMENTS:
-    real,dimension(DomainDecomposition%nDim)::root_map_dd
+    real,dimension(Domain%nDim)::root_map_dd
     !EOP
-    root_map_dd=DomainDecomposition%iRootMapDim_D
+    root_map_dd=Domain%iRootMapDim_D
   end function root_map_dd
   !===============================================================!
   !BOP
@@ -1756,14 +1756,14 @@ contains
 
   !BOP
   !INTERFACE:
-  function ncells_grid_dd(DomainDecomposition)
+  function ncells_grid_dd(Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !OUTPUT ARGUMENTS:
-    real,dimension(DomainDecomposition%nDim)::ncells_grid_dd
+    real,dimension(Domain%nDim)::ncells_grid_dd
     !EOP
-    ncells_grid_dd=DomainDecomposition%nCells_D
+    ncells_grid_dd=Domain%nCells_D
   end function ncells_grid_dd
   !===============================================================!
   !BOP
@@ -1771,12 +1771,12 @@ contains
 
   !BOP
   !INTERFACE:
-  integer function ntree_nodes_dd(DomainDecomposition)
+  integer function ntree_nodes_dd(Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !EOP
-    ntree_nodes_dd=DomainDecomposition%nTreeNodes
+    ntree_nodes_dd=Domain%nTreeNodes
   end function ntree_nodes_dd
   !===============================================================!
   !BOP
@@ -1785,15 +1785,15 @@ contains
   !BOP
   !INTERFACE:
   function xyz_block_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     !OUTPUT ARGUMENTS:
-    real,dimension(DomainDecomposition%nDim)::xyz_block_dd
+    real,dimension(Domain%nDim)::xyz_block_dd
     !EOP
-    xyz_block_dd=DomainDecomposition%XyzBlock_DI(&
+    xyz_block_dd=Domain%XyzBlock_DI(&
          :,lGlobalTreeNumber)
   end function xyz_block_dd
   !===============================================================!
@@ -1803,15 +1803,15 @@ contains
   !BOP
   !INTERFACE:
   function d_xyz_block_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     !OUTPUT ARGUMENTS:
-    real,dimension(DomainDecomposition%nDim)::d_xyz_block_dd
+    real,dimension(Domain%nDim)::d_xyz_block_dd
     !EOP
-    d_xyz_block_dd=DomainDecomposition%DXyzBlock_DI(&
+    d_xyz_block_dd=Domain%DXyzBlock_DI(&
          :,lGlobalTreeNumber)
   end function d_xyz_block_dd
   !===============================================================!
@@ -1821,15 +1821,15 @@ contains
   !BOP
   !INTERFACE:
   function d_xyz_cell_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     !OUTPUT ARGUMENTS:
-    real,dimension(DomainDecomposition%nDim)::d_xyz_cell_dd
+    real,dimension(Domain%nDim)::d_xyz_cell_dd
     !EOP
-    d_xyz_cell_dd=DomainDecomposition%DXyzCell_DI(&
+    d_xyz_cell_dd=Domain%DXyzCell_DI(&
          :,lGlobalTreeNumber)
   end function d_xyz_cell_dd
 
@@ -1840,26 +1840,26 @@ contains
   !BOP
   !INTERFACE:
   logical function is_used_block_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
+       Domain,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     !EOP
     is_used_block_dd=&
-         DomainDecomposition%iDecomposition_II(&
+         Domain%iDecomposition_II(&
          FirstChild_,lGlobalTreeNumber)==None_
   end function is_used_block_dd
 
   !===============================================================!
 
   logical function is_root_node_dd(&
-       DomainDecomposition,lGlobalTreeNumber)
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+       Domain,lGlobalTreeNumber)
+    type(DomainType),intent(in)::&
+         Domain
     integer,intent(in)::lGlobalTreeNumber
     is_root_node_dd=&
-         DomainDecomposition%iDecomposition_II(&
+         Domain%iDecomposition_II(&
          MyNumberAsAChild_,lGlobalTreeNumber)==0
   end function is_root_node_dd
   !===============================================================!
@@ -1868,35 +1868,35 @@ contains
 
   !BOP
   !INTERFACE:
-  integer function irealization_dd(DomainDecomposition)
+  integer function irealization_dd(Domain)
     !INPUT ARGUMENTS:
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
+    type(DomainType),intent(in)::&
+         Domain
     !EOP
-    irealization_dd=DomainDecomposition%iRealization
+    irealization_dd=Domain%iRealization
   end function irealization_dd
 
   !===============================================================!
 
-  logical function is_local_grid_dd(DomainDecomposition)
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
-    is_local_grid_dd=DomainDecomposition%IsLocal
+  logical function is_local_grid_dd(Domain)
+    type(DomainType),intent(in)::&
+         Domain
+    is_local_grid_dd=Domain%IsLocal
   end function is_local_grid_dd
   !===============================================================!
-  logical function is_tree_dd(DomainDecomposition)
-    type(DomainDecompositionType),intent(in)::&
-         DomainDecomposition
-    is_tree_dd=DomainDecomposition%IsTreeDecomposition
+  logical function is_tree_dd(Domain)
+    type(DomainType),intent(in)::&
+         Domain
+    is_tree_dd=Domain%IsTreeDecomposition
   end function is_tree_dd
   !===============================================================!
   subroutine associate_dd_pointer_dd(&
-       DomainDecomposition,DDPointer)
-    Type(DomainDecompositionType),target,intent(in)::&
-         DomainDecomposition
-    type(DDPointerType),intent(out)::DDPointer
-    nullify(DDPointer%Ptr)
-    DDPointer%Ptr=>DomainDecomposition
+       Domain,DomainPointer)
+    Type(DomainType),target,intent(in)::&
+         Domain
+    type(DomainPointerType),intent(out)::DomainPointer
+    nullify(DomainPointer%Ptr)
+    DomainPointer%Ptr=>Domain
   end subroutine associate_dd_pointer_dd
   !==============================END==============================!
 end Module CON_domain_decomposition

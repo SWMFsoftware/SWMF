@@ -1013,9 +1013,9 @@ contains
        StandardTarget_,     & ! CellCentered_ or Nodes_
        nIndexTarget,        & ! number of indexes for target grid
        nMappedPointIndex,   & ! number of indexes for points to send 
-       GridDescriptorSource,& ! OUT!\
-       GridDescriptorTarget,& ! OUT!-General coupler variables 
-       LocalGDTarget,       & ! OUT! (optional)
+       GridSource,& ! OUT!\
+       GridTarget,& ! OUT!-General coupler variables 
+       LocalGridTarget,       & ! OUT! (optional)
        Router)                ! OUT!/
 
     !INPUT ARGUMENTS:
@@ -1028,9 +1028,9 @@ contains
     integer,intent(in),optional :: nMappedPointIndex
 
     !OUTPUT ARGUMENTS:
-    type(GridDescriptorType), intent(out) :: GridDescriptorSource
-    type(GridDescriptorType), intent(out) :: GridDescriptorTarget
-    type(LocalGDType), optional, intent(out)     :: LocalGDTarget
+    type(GridType), intent(out) :: GridSource
+    type(GridType), intent(out) :: GridTarget
+    type(LocalGridType), optional, intent(out)     :: LocalGridTarget
 
     !EOP
     type(RouterType)::Router
@@ -1051,7 +1051,7 @@ contains
     call set_standard_grid_descriptor(iCompSource,        &
          nGhostPointSource,  &
          StandardSourceHere_,&
-         GridDescriptorSource)
+         GridSource)
 
     if(present(nGhostPointTarget))&
          nGhostPointTargetHere=nGhostPointTarget
@@ -1060,7 +1060,7 @@ contains
     call set_standard_grid_descriptor(iCompTarget,        &
          nGhostPointTarget,  &
          StandardTargetHere_,&
-         GridDescriptorTarget)
+         GridTarget)
 
     if(present(nIndexSource))then
        nIndexSourceHere=nIndexSource
@@ -1074,15 +1074,15 @@ contains
        nIndexTargetHere=ndim_grid(iCompTarget)+1
     end if
     call init_router(&
-         GridDescriptorSource,&
-         GridDescriptorTarget,&
+         GridSource,&
+         GridTarget,&
          Router,&
          nIndexSource,&
          nIndexTarget,&
          nMappedPointIndex = nMappedPointIndex)
-    if(present(LocalGDTarget).and.is_proc(iCompTarget))&
+    if(present(LocalGridTarget).and.is_proc(iCompTarget))&
          call set_local_gd(i_proc(), &
-         GridDescriptorTarget, LocalGDTarget)
+         GridTarget, LocalGridTarget)
   end subroutine init_coupler
 
   !=============================================================!

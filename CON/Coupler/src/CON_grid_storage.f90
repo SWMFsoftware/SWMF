@@ -10,10 +10,10 @@ module CON_grid_storage
   ! The resulted domain decompositions should be properly         
   ! registered and should obtain the unique GridID\_               
   !EOP
-  type(DDPointerType),dimension(MaxGrid),&
+  type(DomainPointerType),dimension(MaxGrid),&
        private::&
-       DD_I
-  logical,dimension(MaxGrid)::DoneDDInit_C=.false.
+       Domain_I
+  logical,dimension(MaxGrid)::DoneDomainInit_C=.false.
 
   !Introduced to bypass the HALEM compiler restrictions
   integer,dimension(MaxGrid)::nDim_C=0
@@ -21,7 +21,7 @@ module CON_grid_storage
   !DESCRIPTION:
   !INTERFACES
   !Each of the module procedures differ with the FIRST dummy     
-  !parameter, which is either GridID\_, or DomainDecompositionType 
+  !parameter, which is either GridID\_, or DomainType 
   !structure. The procedures differ with suffix id or dd from the 
   !generic name 
   !EOP
@@ -237,7 +237,7 @@ contains
     !EOP
     done_dd_init=.false.
     if(GridID_>0.and.GridID_<=MaxGrid)&
-         done_dd_init=DoneDDInit_C(GridID_)
+         done_dd_init=DoneDomainInit_C(GridID_)
   end function done_dd_init
   !---------------------------------------------------------------!
   !===============================================================
@@ -270,27 +270,27 @@ contains
          ('GridID_ is not allowed to be equal to',GridID_)
     if(done_dd_init(GridID_))call CON_stop(&
          'An attempt to reinitialize the gridID_',GridID_)
-    call init_grid_storage(DD_I,GridID_) 
+    call init_grid_storage(Domain_I,GridID_) 
     if(present(nDimTree))then
        call init_decomposition_dd(&
-            DD_I(GridID_)%Ptr,&
+            Domain_I(GridID_)%Ptr,&
             CompID_,&
             nDim,   &
             IsTreeDecomposition,&
             nDimTree)
     elseif(present(IsTreeDecomposition))then
        call init_decomposition_dd(&
-            DD_I(GridID_)%Ptr,&
+            Domain_I(GridID_)%Ptr,&
             CompID_,&
             nDim,   &
             IsTreeDecomposition)
     else     
        call init_decomposition_dd(&
-            DD_I(GridID_)%Ptr,&
+            Domain_I(GridID_)%Ptr,&
             CompID_,&
             nDim)
     end if
-    DoneDDInit_C(GridID_)=.true.
+    DoneDomainInit_C(GridID_)=.true.
     nDim_C(GridID_)=nDim
   end subroutine init_decomposition_id
   !---------------------------------------------------------------!
@@ -311,18 +311,18 @@ contains
   !INTERFACE:                                                    !
   subroutine get_root_decomposition_id(&
        GridID_,&!     !ID for Decomposition to be constructed   
-       iRootMapDim_D,&!As in DomainDecompositionType            
-       XyzMin_D,&     !As in DomainDecompositionType
-       XyzMax_D,&     !As in DomainDecompositionType
-       nCells_D,&     !As in DomainDecompositionType
+       iRootMapDim_D,&!As in DomainType            
+       XyzMin_D,&     !As in DomainType
+       XyzMax_D,&     !As in DomainType
+       nCells_D,&     !As in DomainType
        PE_I,&         !PE layout
        iBlock_I,&     !Local Block Number layout
-       IsPeriodic_D,& !As in DomainDecompositionType
-       iShift_DI, &   !As in DomainDecompositionType
-       DoGlueMargins,&!As in DomainDecompositionType
-       iDirMinusGlue,&!As in DomainDecompositionType
-       iDirPlusGlue,& !As in DomainDecompositionType
-       iDirCycle)     !As in DomainDecompositionType)     
+       IsPeriodic_D,& !As in DomainType
+       iShift_DI, &   !As in DomainType
+       DoGlueMargins,&!As in DomainType
+       iDirMinusGlue,&!As in DomainType
+       iDirPlusGlue,& !As in DomainType
+       iDirCycle)     !As in DomainType)     
 
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
@@ -367,52 +367,52 @@ contains
     !---------------------------------------------------------------!
     !Assign the grid parameters                                     !
 
-    DD_I(GridID_)%Ptr%iRootMapDim_D=iRootMapDim_D
+    Domain_I(GridID_)%Ptr%iRootMapDim_D=iRootMapDim_D
 
-    DD_I(GridID_)%Ptr%XyzMin_D=XyzMin_D
-    DD_I(GridID_)%Ptr%XyzMax_D=XyzMax_D
-    DD_I(GridID_)%Ptr%nCells_D=nCells_D
+    Domain_I(GridID_)%Ptr%XyzMin_D=XyzMin_D
+    Domain_I(GridID_)%Ptr%XyzMax_D=XyzMax_D
+    Domain_I(GridID_)%Ptr%nCells_D=nCells_D
     if(present(DoGlueMargins)) &
-         DD_I(GridID_)%Ptr%DoGlueMargins = DoGlueMargins
+         Domain_I(GridID_)%Ptr%DoGlueMargins = DoGlueMargins
     if(present(iDirMinusGlue))&
-         DD_I(GridID_)%Ptr%iDirMinusGlue = iDirMinusGlue
+         Domain_I(GridID_)%Ptr%iDirMinusGlue = iDirMinusGlue
     if(present(iDirPlusGlue)) &
-         DD_I(GridID_)%Ptr%iDirPlusGlue  = iDirPlusGlue
+         Domain_I(GridID_)%Ptr%iDirPlusGlue  = iDirPlusGlue
     if(present(iDirCycle))    &
-         DD_I(GridID_)%Ptr%iDirCycle     = iDirCycle
+         Domain_I(GridID_)%Ptr%iDirCycle     = iDirCycle
     if(present(IsPeriodic_D))&
-         DD_I(GridID_)%Ptr%IsPeriodic_D=IsPeriodic_D
+         Domain_I(GridID_)%Ptr%IsPeriodic_D=IsPeriodic_D
 
-    DD_I(GridID_)%Ptr%nTreeNodes=product(iRootMapDim_D)
-    call check_octree_grid_allocation(DD_I(GridID_)%Ptr)
+    Domain_I(GridID_)%Ptr%nTreeNodes=product(iRootMapDim_D)
+    call check_octree_grid_allocation(Domain_I(GridID_)%Ptr)
 
 
-    DD_I(GridID_)%Ptr%iDecomposition_II&
-         (MyNumberAsAChild_,1:DD_I(GridID_)%Ptr%nTreeNodes)=0    
-    DD_I(GridID_)%Ptr%iDecomposition_II&
-         (FirstChild_,1:DD_I(GridID_)%Ptr%nTreeNodes)=None_
-    do lBlock=1,DD_I(GridID_)%Ptr%nTreeNodes
-       DD_I(GridID_)%Ptr%iDecomposition_II&
-            (Parent_,1:DD_I(GridID_)%Ptr%nTreeNodes)=lBlock
+    Domain_I(GridID_)%Ptr%iDecomposition_II&
+         (MyNumberAsAChild_,1:Domain_I(GridID_)%Ptr%nTreeNodes)=0    
+    Domain_I(GridID_)%Ptr%iDecomposition_II&
+         (FirstChild_,1:Domain_I(GridID_)%Ptr%nTreeNodes)=None_
+    do lBlock=1,Domain_I(GridID_)%Ptr%nTreeNodes
+       Domain_I(GridID_)%Ptr%iDecomposition_II&
+            (Parent_,1:Domain_I(GridID_)%Ptr%nTreeNodes)=lBlock
     end do
-    if(DD_I(GridID_)%Ptr%IsTreeDecomposition)then
-       call check_iroot_allocation(DD_I(GridID_)%Ptr)
+    if(Domain_I(GridID_)%Ptr%IsTreeDecomposition)then
+       call check_iroot_allocation(Domain_I(GridID_)%Ptr)
        if(present(iShift_DI))&
-            DD_I(GridID_)%Ptr%iShift_DI=iShift_DI
+            Domain_I(GridID_)%Ptr%iShift_DI=iShift_DI
     end if
 
     !If neither PE_I nor iBlock_I is present, the root              !
     !decomposition blocks are balanced for an optimal load          !
     if((.not.present(PE_I)).and.(.not.present(iBlock_I)))then
-       MaxBlock=(DD_I(GridID_)%Ptr%nTreeNodes-1)/&
-            n_proc(DD_I(GridID_)%Ptr%CompID_)+1
-       do lBlock=1,DD_I(GridID_)%Ptr%nTreeNodes
-          DD_I(GridID_)%Ptr%iDecomposition_II&
+       MaxBlock=(Domain_I(GridID_)%Ptr%nTreeNodes-1)/&
+            n_proc(Domain_I(GridID_)%Ptr%CompID_)+1
+       do lBlock=1,Domain_I(GridID_)%Ptr%nTreeNodes
+          Domain_I(GridID_)%Ptr%iDecomposition_II&
                (BLK_,lBlock)=mod(lBlock,MaxBlock)+1
-          DD_I(GridID_)%Ptr%iDecomposition_II&
+          Domain_I(GridID_)%Ptr%iDecomposition_II&
                (PE_,lBlock)=(lBlock-1)/MaxBlock
        end do
-       call set_iglobal_and_bp_dd(DD_I(GridID_)%Ptr)
+       call set_iglobal_and_bp_dd(Domain_I(GridID_)%Ptr)
        return
     end if
 
@@ -420,11 +420,11 @@ contains
     !are at the root PE                                             
 
     if(present(PE_I))then
-       DD_I(GridID_)%Ptr%iDecomposition_II&
-            (PE_,1:DD_I(GridID_)%Ptr%nTreeNodes)=PE_I
+       Domain_I(GridID_)%Ptr%iDecomposition_II&
+            (PE_,1:Domain_I(GridID_)%Ptr%nTreeNodes)=PE_I
     else
-       DD_I(GridID_)%Ptr%iDecomposition_II&
-            (PE_,1:DD_I(GridID_)%Ptr%nTreeNodes)=0
+       Domain_I(GridID_)%Ptr%iDecomposition_II&
+            (PE_,1:Domain_I(GridID_)%Ptr%nTreeNodes)=0
     end if
 
     !If the iBlock_I is not given, they are assumed to be enumerated!
@@ -440,15 +440,15 @@ contains
     !      end do                                                   !
 
     if(present(iBlock_I))then
-       DD_I(GridID_)%Ptr%iDecomposition_II&
-            (BLK_,1:DD_I(GridID_)%Ptr%nTreeNodes)=iBlock_I
+       Domain_I(GridID_)%Ptr%iDecomposition_II&
+            (BLK_,1:Domain_I(GridID_)%Ptr%nTreeNodes)=iBlock_I
     else
-       do lBlock=1, DD_I(GridID_)%Ptr%nTreeNodes
-          DD_I(GridID_)%Ptr%iDecomposition_II&
+       do lBlock=1, Domain_I(GridID_)%Ptr%nTreeNodes
+          Domain_I(GridID_)%Ptr%iDecomposition_II&
                (BLK_,lBlock)=lBlock
        end do
     end if
-    call set_iglobal_and_bp_dd(DD_I(GridID_)%Ptr)
+    call set_iglobal_and_bp_dd(Domain_I(GridID_)%Ptr)
   end subroutine get_root_decomposition_id
   !---------------------------------------------------------------!
   !BOP
@@ -459,7 +459,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    call bcast_decomposition_dd(DD_I(GridID_)%Ptr)
+    call bcast_decomposition_dd(Domain_I(GridID_)%Ptr)
   end subroutine bcast_decomposition_id
   !---------------------------------------------------------------!
   !IROUTINE: bcast_indexes - send the indexes of the decomposition
@@ -483,10 +483,10 @@ contains
 
     if(present(iProcUnion).and.present(iCommUnion))then
        call bcast_indexes_dd(&
-            DD_I(GridID_)%Ptr,iProcUnion,iCommUnion)
+            Domain_I(GridID_)%Ptr,iProcUnion,iCommUnion)
     else
        call bcast_indexes_dd(&
-            DD_I(GridID_)%Ptr)
+            Domain_I(GridID_)%Ptr)
     end if
   end subroutine bcast_indexes_id
   !---------------------------------------------------------------!
@@ -514,20 +514,20 @@ contains
   !BOP
   !INTERFACE:
   subroutine synchronize_refinement_id(&
-       GridID_,LocalDD,iProcUnion,iCommUnion)
+       GridID_,LocalDomain,iProcUnion,iCommUnion)
 
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
-    type(DomainDecompositionType),&   !Local Grid with which the   
-         intent(in)::LocalDD          !global one is synchronized
+    type(DomainType),&   !Local Grid with which the   
+         intent(in)::LocalDomain          !global one is synchronized
     integer,intent(in),optional::iProcUnion,iCommUnion
     !EOP
     if(present(iProcUnion).and.present(iCommUnion))then
        call synchronize_refinement_dd(&
-            DD_I(GridID_)%Ptr,LocalDD,iProcUnion,iCommUnion)
+            Domain_I(GridID_)%Ptr,LocalDomain,iProcUnion,iCommUnion)
     else
        call synchronize_refinement_dd(&
-            DD_I(GridID_)%Ptr,LocalDD)
+            Domain_I(GridID_)%Ptr,LocalDomain)
     end if
   end subroutine synchronize_refinement_id
   !---------------------------------------------------------------!
@@ -543,7 +543,7 @@ contains
          is_left_boundary_id
     !EOP
     is_left_boundary_id=is_left_boundary_dd(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber)
+         Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function is_left_boundary_id
   !---------------------------------------------------------------!
   !BOP
@@ -557,7 +557,7 @@ contains
     !EOP
     is_right_boundary_id=&
          is_right_boundary_dd(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber)
+         Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function is_right_boundary_id
   !BOP
   !INTERFACE:                                                       
@@ -569,7 +569,7 @@ contains
          intent(in)::iCells_D
     !EOP
     l_neighbor_id=l_neighbor_dd(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
+         Domain_I(GridID_)%Ptr,lGlobalTreeNumber,iCells_D)
   end function l_neighbor_id
   !---------------------------------------------------------------!
   !BOP
@@ -581,7 +581,7 @@ contains
          intent(inout)::Xyz_D
     !-----------
     !EOP
-    call glue_margin_dd(DD_I(GridID_)%Ptr,Xyz_D)
+    call glue_margin_dd(Domain_I(GridID_)%Ptr,Xyz_D)
   end subroutine glue_margin_id
     
   !BOP
@@ -594,7 +594,7 @@ contains
     !OUTPUT ARGUMENTS:
     integer,intent(out)::lGlobalTreeNumber
     !EOP
-    call search_in_dd(DD_I(GridID_)%Ptr,Xyz_D,lGlobalTreeNumber)
+    call search_in_dd(Domain_I(GridID_)%Ptr,Xyz_D,lGlobalTreeNumber)
   end subroutine search_in_id
   !---------------------------------------------------------------!
   !BOP
@@ -609,7 +609,7 @@ contains
     integer,dimension(nDim_C(GridID_)),&
          intent(out)::iCells_D
     !EOP
-    call search_cell_dd(DD_I(GridID_)%Ptr,&
+    call search_cell_dd(Domain_I(GridID_)%Ptr,&
          lGlobalTreeNumber,Xyz_D,iCells_D)
   end subroutine search_cell_id
   !---------------------------------------------------------------!
@@ -620,7 +620,7 @@ contains
     !INPUT ARGUMENTS: 
     integer,intent(in)::GridID_,lGlobalTreeNumber
     !EOP
-    pe_id=DD_I(GridID_)%Ptr%iDecomposition_II(&
+    pe_id=Domain_I(GridID_)%Ptr%iDecomposition_II(&
          PE_,lGlobalTreeNumber)
   end function  pe_id
   !---------------------------------------------------------------!
@@ -632,7 +632,7 @@ contains
     !INPUT ARGUMENTS: 
     integer,intent(in)::GridID_,lGlobalTreeNumber
     !EOP
-    blk_id=DD_I(GridID_)%Ptr%iDecomposition_II(&
+    blk_id=Domain_I(GridID_)%Ptr%iDecomposition_II(&
          BLK_,lGlobalTreeNumber)
   end function blk_id
   !---------------------------------------------------------------!
@@ -645,7 +645,7 @@ contains
     !OUTPUT ARGUMENTS:
     integer,intent(out)::iPEOut,iBlockOut
     !EOP
-    call pe_and_blk_dd(DD_I(GridID_)%Ptr,&
+    call pe_and_blk_dd(Domain_I(GridID_)%Ptr,&
          lGlobalTreeNumber,iPEOut,iBlockOut) 
   end subroutine pe_and_blk_id
   !---------------------------------------------------------------!
@@ -654,7 +654,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,iPE
     !EOP
-    n_block_id=n_block_dd(DD_I(GridID_)%Ptr,iPE)
+    n_block_id=n_block_dd(Domain_I(GridID_)%Ptr,iPE)
   end function n_block_id
   !---------------------------------------------------------------!
   !BOP
@@ -663,7 +663,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    n_block_total_id=n_block_total_dd(DD_I(GridID_)%Ptr)
+    n_block_total_id=n_block_total_dd(Domain_I(GridID_)%Ptr)
   end function n_block_total_id
   !---------------------------------------------------------------!
   !BOP
@@ -672,7 +672,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,iPE
     !EOP
-    min_block_pe_id=min_block_pe_dd(DD_I(GridID_)%Ptr,iPE)
+    min_block_pe_id=min_block_pe_dd(Domain_I(GridID_)%Ptr,iPE)
   end function min_block_pe_id
   !---------------------------------------------------------------!
   !BOP
@@ -681,7 +681,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,iPE
     !EOP
-    max_block_pe_id=max_block_pe_dd(DD_I(GridID_)%Ptr,iPE)
+    max_block_pe_id=max_block_pe_dd(Domain_I(GridID_)%Ptr,iPE)
   end function max_block_pe_id
   !---------------------------------------------------------------!
   !BOP
@@ -690,7 +690,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    min_block_id=min_block_dd(DD_I(GridID_)%Ptr) 
+    min_block_id=min_block_dd(Domain_I(GridID_)%Ptr) 
   end function min_block_id
   !---------------------------------------------------------------!
   !BOP
@@ -699,33 +699,33 @@ contains
     !INPUT ARGUMENTS: 
     integer,intent(in)::GridID_
     !EOP
-    max_block_id=max_block_dd(DD_I(GridID_)%Ptr)
+    max_block_id=max_block_dd(Domain_I(GridID_)%Ptr)
   end function max_block_id
 !---------------------------------------------------------------!
   integer function iglobal_bp_id(GridID_,iBLK,iPE)
     integer,intent(in)::GridID_
     integer,intent(in)::iBLK,iPE
-    iglobal_bp_id=DD_I(GridID_)%Ptr%iGlobal_BP(iBLK,iPE)
+    iglobal_bp_id=Domain_I(GridID_)%Ptr%iGlobal_BP(iBLK,iPE)
   end function iglobal_bp_id
   !---------------------------------------------------------------!
   integer function iglobal_node_id(GridID_,iBlockAll)
     integer,intent(in)::GridID_
     integer,intent(in)::iBlockAll
-    iglobal_node_id=DD_I(GridID_)%Ptr%iGlobal_A(iBlockAll)
+    iglobal_node_id=Domain_I(GridID_)%Ptr%iGlobal_A(iBlockAll)
   end function iglobal_node_id
   !---------------------------------------------------------------!
   integer function iglobal_block_id(&
        GridID_,iGlobalTreeNode)
     integer,intent(in)::GridID_
     integer,intent(in)::iGlobalTreeNode
-    iglobal_block_id=DD_I(GridID_)%Ptr%iDecomposition_II(&
+    iglobal_block_id=Domain_I(GridID_)%Ptr%iDecomposition_II(&
          GlobalBlock_,iGlobalTreeNode)
   end function iglobal_block_id
   !---------------------------------------------------------------!
   logical function used_bp_id(GridID_,iBLK,iPE)
     integer,intent(in)::GridID_
     integer,intent(in)::iBLK,iPE
-    used_bp_id=used_bp_dd(DD_I(GridID_)%Ptr,iBLK,iPE)
+    used_bp_id=used_bp_dd(Domain_I(GridID_)%Ptr,iBLK,iPE)
   end function used_bp_id
   !---------------------------------------------------------------!
   !BOP
@@ -734,7 +734,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    compid_grid_id=compid_grid_dd(DD_I(GridID_)%Ptr)
+    compid_grid_id=compid_grid_dd(Domain_I(GridID_)%Ptr)
   end function compid_grid_id
   !---------------------------------------------------------------!
   !===============================================================!
@@ -745,7 +745,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    ndim_grid_id=ndim_grid_dd(DD_I(GridID_)%Ptr)
+    ndim_grid_id=ndim_grid_dd(Domain_I(GridID_)%Ptr)
   end function ndim_grid_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -755,7 +755,7 @@ contains
     !OUTPUT ARGUMENTS:
     real,dimension(nDim_C(GridID_))::xyz_min_grid_id
     !EOP
-    xyz_min_grid_id=xyz_min_grid_dd(DD_I(GridID_)%Ptr)
+    xyz_min_grid_id=xyz_min_grid_dd(Domain_I(GridID_)%Ptr)
   end function xyz_min_grid_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -765,7 +765,7 @@ contains
     !OUTPUT ARGUMENTS:
     real,dimension(nDim_C(GridID_))::xyz_max_grid_id
     !EOP
-    xyz_max_grid_id=xyz_max_grid_dd(DD_I(GridID_)%Ptr)
+    xyz_max_grid_id=xyz_max_grid_dd(Domain_I(GridID_)%Ptr)
   end function xyz_max_grid_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -774,7 +774,7 @@ contains
     integer,intent(in)::GridID_
     !EOP
     integer,dimension(nDim_C(GridID_))::root_map_id
-    root_map_id=root_map_dd(DD_I(GridID_)%Ptr)
+    root_map_id=root_map_dd(Domain_I(GridID_)%Ptr)
   end function root_map_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -784,7 +784,7 @@ contains
     !OUTPUT ARGUMENTS:
     integer,dimension(nDim_C(GridID_))::ncells_grid_id
     !EOP
-    ncells_grid_id=ncells_grid_dd(DD_I(GridID_)%Ptr)
+    ncells_grid_id=ncells_grid_dd(Domain_I(GridID_)%Ptr)
   end function ncells_grid_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -792,7 +792,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    ntree_nodes_id=ntree_nodes_dd(DD_I(GridID_)%Ptr)
+    ntree_nodes_id=ntree_nodes_dd(Domain_I(GridID_)%Ptr)
   end function ntree_nodes_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -803,7 +803,7 @@ contains
     real,dimension(nDim_C(GridID_)):: xyz_block_id
     !EOP
     xyz_block_id=xyz_block_dd(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber)
+         Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function xyz_block_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -814,7 +814,7 @@ contains
     real,dimension(nDim_C(GridID_)):: d_xyz_block_id
     !EOP
     d_xyz_block_id=d_xyz_block_dd(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber)
+         Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function d_xyz_block_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -825,7 +825,7 @@ contains
     real,dimension(nDim_C(GridID_)):: d_xyz_cell_id
     !EOP
     d_xyz_cell_id=d_xyz_cell_dd(&
-         DD_I(GridID_)%Ptr,lGlobalTreeNumber)
+         Domain_I(GridID_)%Ptr,lGlobalTreeNumber)
   end function d_xyz_cell_id
   !---------------------------------------------------------------!
   !INTERFACE:
@@ -833,13 +833,13 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
     !EOP
-    is_used_block_id=is_used_block_dd(DD_I(GridID_)%Ptr,&
+    is_used_block_id=is_used_block_dd(Domain_I(GridID_)%Ptr,&
          lGlobalTreeNumber)
   end function is_used_block_id
   !---------------------------------------------------------------!
   logical function is_root_node_id(GridID_,lGlobalTreeNumber)
     integer,intent(in)::GridID_,lGlobalTreeNumber
-    is_root_node_id=is_root_node_dd(DD_I(GridID_)%Ptr,&
+    is_root_node_id=is_root_node_dd(Domain_I(GridID_)%Ptr,&
          lGlobalTreeNumber)
   end function is_root_node_id
   !---------------------------------------------------------------!
@@ -848,7 +848,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    irealization_id=irealization_dd(DD_I(GridID_)%Ptr)
+    irealization_id=irealization_dd(Domain_I(GridID_)%Ptr)
   end function irealization_id
   !---------------------------------------------------------------!
   logical function is_local_grid_id(GridID_)
@@ -858,14 +858,14 @@ contains
 !---------------------------------------------------------------!
   logical function is_tree_id(GridID_)
     integer,intent(in)::GridID_
-    is_tree_id=is_tree_dd(DD_I(GridID_)%Ptr)
+    is_tree_id=is_tree_dd(Domain_I(GridID_)%Ptr)
   end function is_tree_id
   !---------------------------------------------------------------!
-  subroutine associate_dd_pointer_id(GridID_,DDPointer)
+  subroutine associate_dd_pointer_id(GridID_,DomainPointer)
     integer,intent(in)::GridID_
-    type(DDPointerType),intent(out)::DDPointer
-    nullify(DDPointer%Ptr)
-    DDPointer%Ptr=>DD_I(GridID_)%Ptr
+    type(DomainPointerType),intent(out)::DomainPointer
+    nullify(DomainPointer%Ptr)
+    DomainPointer%Ptr=>Domain_I(GridID_)%Ptr
   end subroutine associate_dd_pointer_id
   !---------------------------------------------------------------!
 end module CON_grid_storage

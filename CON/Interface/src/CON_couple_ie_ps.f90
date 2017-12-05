@@ -37,11 +37,6 @@ module CON_couple_ie_ps
   character(len=lNameVersion):: NameVersionPs
   logical :: IsInitialized = .false.
 
-  ! Variables for coupler with coupling toolkit
-  type(GridDescriptorType)::IE_Grid           ! Source
-  type(GridDescriptorType)::PS_Grid           ! Target
-  type(RouterType),save:: RouterIePs, RouterPsIe
-
   logical :: DoTest, DoTestMe
 
   ! Variables for the simple coupler

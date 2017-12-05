@@ -207,10 +207,10 @@ contains
 
     if(is_proc(GM_))then
        call init_decomposition(&
-            MH_DomainDecomposition,GM_,3,.true.)
-       call MH_get_root_decomposition(MH_DomainDecomposition)
-       call MH_update_local_decomposition(MH_DomainDecomposition)
-       MH_DomainDecomposition%IsLocal=.true.
+            MH_Domain,GM_,3,.true.)
+       call MH_get_root_decomposition(MH_Domain)
+       call MH_update_local_decomposition(MH_Domain)
+       MH_Domain%IsLocal=.true.
     end if
     call CON_set_do_test('test_grids',DoTest,DoTestMe)
 
@@ -218,7 +218,7 @@ contains
 
     call bcast_decomposition(GM_)
 
-    call synchronize_refinement(GM_,MH_domaindecomposition)
+    call synchronize_refinement(GM_,MH_Domain)
     ! Check if the decomosition for lines is needed
     if(is_proc0(GM_))UseParticleLine = UseParticles
     call MPI_bcast(UseParticleLine,1,MPI_LOGICAL,&
@@ -257,10 +257,10 @@ contains
     !EOP
 
     if(is_proc(GM_)) &
-         call MH_update_local_decomposition(MH_DomainDecomposition)
+         call MH_update_local_decomposition(MH_Domain)
 
     call synchronize_refinement(&
-         GM_,MH_domaindecomposition,iProc0,iCommUnion)
+         GM_,MH_Domain,iProc0,iCommUnion)
 
   end subroutine GM_synchronize_refinement
   !==============================================================================

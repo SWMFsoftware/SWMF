@@ -435,18 +435,18 @@ contains
        !Initialize the local grid
 
        call init_decomposition(&
-            DomainDecomposition=MH_DomainDecomposition,&
+            Domain=MH_Domain,&
             CompID_=IH_,&
             nDim=3,&
             IsTreeDecomposition=.true.)
 
        !Get the octree root array
-       call MH_get_root_decomposition(MH_DomainDecomposition)
+       call MH_get_root_decomposition(MH_Domain)
 
        !Get the whole octree after the initial refinement
-       call MH_update_local_decomposition(MH_DomainDecomposition)
+       call MH_update_local_decomposition(MH_Domain)
 
-       MH_DomainDecomposition%IsLocal=.true.
+       MH_Domain%IsLocal=.true.
     end if
     call CON_set_do_test('test_grids',DoTest,DoTestMe)
     !Repeat the initialization at the global grid level:
@@ -459,7 +459,7 @@ contains
     !Synchronize global and local grids:
     call synchronize_refinement(&
          GridID_=IH_,&
-         localDD=MH_domaindecomposition)
+         LocalDomain=MH_Domain)
     if(is_proc0(IH_))UseParticleLine = UseParticles
     call MPI_bcast(UseParticleLine,1,MPI_LOGICAL,&
          i_proc0(IH_),i_comm(),iError)
@@ -484,7 +484,8 @@ contains
   end subroutine IH_set_grid
   !============================
   subroutine IH_xyz_to_coord(TypeGeometry, XyzIn_D, CoordOut_D)
-    use ModCoordTransform, ONLY: atan2_check, xyz_to_sph
+    use ModCoordTransform, ONLY: &
+         atan2_check, xyz_to_sph, xyz_to_rlonlat
     use ModNumConst,       ONLY: cHalfPi, cTwoPi
     character(len=*), intent(in ) :: TypeGeometry
     real,             intent(in ) :: XyzIn_D(3)
@@ -492,7 +493,7 @@ contains
 
     real               :: x, y
     integer, parameter :: x_=1, y_=2, z_=3, r_=1
-    integer            :: Phi_, Theta_, Lat_
+    integer            :: Phi_
     character(len=*), parameter :: NameSub = 'IH_xyz_to_coord'
     !----------------------------------------
     if(TypeGeometry(1:9)  == 'cartesian')then
@@ -507,12 +508,7 @@ contains
     elseif(TypeGeometry(1:3)  == 'sph')then
        call xyz_to_sph(XyzIn_D, CoordOut_D)
     elseif(TypeGeometry(1:3)  == 'rlo')then
-       ! Use xyz to r,theta,phi conversion
-       Phi_ = 2; Theta_ = 3; Lat_ = 3
-       call xyz_to_sph(XyzIn_D, &
-            CoordOut_D(r_), CoordOut_D(Theta_), CoordOut_D(Phi_))
-       ! Convert colatitude to latitude
-       CoordOut_D(Lat_) = cHalfPi - CoordOut_D(Theta_)
+       call xyz_to_rlonlat(XyzIn_D, CoordOut_D)
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -523,8 +519,7 @@ contains
   end subroutine IH_xyz_to_coord
   !=============================
   subroutine IH_coord_to_xyz(TypeGeometry, CoordIn_D, XyzOut_D)
-    use ModCoordTransform, ONLY: sph_to_xyz
-    use ModNumConst,       ONLY: cHalfPi
+    use ModCoordTransform, ONLY: sph_to_xyz, rlonlat_to_xyz
     character(len=*), intent(in ) :: TypeGeometry
     real, intent(in) :: CoordIn_D(3)
     real, intent(out):: XyzOut_D( 3)
@@ -553,10 +548,7 @@ contains
     elseif(TypeGeometry(1:3)  == 'sph')then
        call sph_to_xyz(Coord_D, XyzOut_D)
     elseif(TypeGeometry(1:3)  == 'rlo')then
-       ! Use xyz to r,theta,phi conversion
-       Phi_ = 2; Lat_ = 3
-       call sph_to_xyz(Coord_D(r_), cHalfPi - Coord_D(Lat_), Coord_D(Phi_), &
-            XyzOut_D)
+       call rlonlat_to_xyz(Coord_D, XyzOut_D)
     else
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
@@ -576,11 +568,11 @@ contains
     !grid change.
 
     if(is_proc(IH_)) &
-         call MH_update_local_decomposition(MH_DomainDecomposition)
+         call MH_update_local_decomposition(MH_Domain)
 
     call synchronize_refinement(&
          GridID_=IH_,&
-         LocalDD=MH_domaindecomposition,&
+         LocalDomain=MH_Domain,&
          iProcUnion=iProc0,&
          iCommUnion=iCommUnion)
 
@@ -1437,14 +1429,14 @@ contains
 
   !==================================================================!
   subroutine IH_line_interface_point(&
-       GridDescriptor,&
+       Grid,&
        iBlockUsed,    &
        nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
-    use CON_router, ONLY: LocalGDType
+    use CON_router, ONLY: LocalGridType
     use IH_BATL_lib, ONLY: Particle_I
     use IH_ModParticleFieldLine, ONLY: KindReg_
-    type(LocalGDType),intent(in)::GridDescriptor
+    type(LocalGridType),intent(in)::Grid
     integer,intent(in)    :: iBlockUsed,nIndex
     logical,intent(out)   :: IsInterfacePoint
     integer,intent(in)    :: nDim

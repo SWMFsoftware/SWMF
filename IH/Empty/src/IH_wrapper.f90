@@ -33,7 +33,7 @@ module IH_wrapper
   public:: IH_get_for_mh_with_xyz
   public:: IH_put_from_mh
   public:: IH_n_particle
-  type(DomainDecompositionType), public:: IH_LineDD
+  type(DomainType), public:: IH_LineDD
 
   ! Coupling with SC
   public:: IH_set_buffer_grid
@@ -256,8 +256,8 @@ contains
   !===================================================================!
   subroutine IH_set_buffer_grid(DD)
 
-    use CON_router, ONLY: DomainDecompositionType
-    type(DomainDecompositionType), intent(out)::DD
+    use CON_router, ONLY: DomainType
+    type(DomainType), intent(out)::DD
 
     character(len=*), parameter :: NameSub='IH_set_buffer_grid'
 
@@ -285,12 +285,12 @@ contains
   end subroutine IH_get_for_sp
   !===================================================================!
   subroutine IH_line_interface_point(&
-       GridDescriptor,&
+       Grid,&
        iBlockUsed,    &
        nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
-    use CON_router, ONLY: LocalGDType
-    type(LocalGDType),intent(in)::GridDescriptor
+    use CON_router, ONLY: LocalGridType
+    type(LocalGridType),intent(in)::Grid
     integer,intent(in)    :: iBlockUsed,nIndex
     logical,intent(out)   :: IsInterfacePoint
     integer,intent(in)    :: nDim

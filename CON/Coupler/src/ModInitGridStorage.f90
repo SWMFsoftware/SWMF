@@ -7,11 +7,11 @@ module ModInitGridStorage
   !USES:
   use CON_world, ONLY: MaxComp
   use CON_comp_param
-  use CON_domain_decomposition, ONLY: DDPointerType, DomainDecompositionType
+  use CON_domain_decomposition, ONLY: DomainPointerType, DomainType
   implicit none
   !EOP
   integer,parameter:: MaxGrid = MaxComp+3
-  type(DomainDecompositionType),private,save,target::&
+  type(DomainType),private,save,target::&
        EeGrid, GmGrid, IeGrid, IhGrid, ImGrid, OhGrid, PcGrid, PsGrid, &
        PtGrid, PwGrid, RbGrid, ScGrid, SpGrid, UaGrid, CzGrid
 contains
@@ -23,11 +23,11 @@ contains
   !BOP
   !IROUTINE: init_grid_storage - initialize a storage for component grids
   !INTERFACE:
-  subroutine init_grid_storage(DD_I,GridID_)
+  subroutine init_grid_storage(Domain_I,GridID_)
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !INPUT/OUTPUT ARGUMENTS:
-    type(DDPointerType), dimension(MaxGrid), intent(inout) :: DD_I
+    type(DomainPointerType), dimension(MaxGrid), intent(inout) :: Domain_I
     !DESCRIPTION: 
     ! information for the global grids is stored at each of the PEs so it is
     ! important to reduce the memory requirements. This short procedure 
@@ -38,35 +38,35 @@ contains
     !EOP
     select case(GridID_)
     case(EE_)
-       DD_I(GridID_)%Ptr=>EeGrid
+       Domain_I(GridID_)%Ptr=>EeGrid
     case(GM_)
-       DD_I(GridID_)%Ptr=>GmGrid
+       Domain_I(GridID_)%Ptr=>GmGrid
     case(IE_)
-       DD_I(GridID_)%Ptr=>IeGrid
+       Domain_I(GridID_)%Ptr=>IeGrid
     case(IM_)
-       DD_I(GridID_)%Ptr=>ImGrid
+       Domain_I(GridID_)%Ptr=>ImGrid
     case(IH_)
-       DD_I(GridID_)%Ptr=>IhGrid
+       Domain_I(GridID_)%Ptr=>IhGrid
     case(OH_)
-       DD_I(GridID_)%Ptr=>OhGrid
+       Domain_I(GridID_)%Ptr=>OhGrid
     case(PC_)
-       DD_I(GridID_)%Ptr=>PcGrid
+       Domain_I(GridID_)%Ptr=>PcGrid
     case(PS_)
-       DD_I(GridID_)%Ptr=>PsGrid
+       Domain_I(GridID_)%Ptr=>PsGrid
     case(PT_)
-       DD_I(GridID_)%Ptr=>PtGrid
+       Domain_I(GridID_)%Ptr=>PtGrid
     case(PW_)
-       DD_I(GridID_)%Ptr=>PwGrid
+       Domain_I(GridID_)%Ptr=>PwGrid
     case(RB_)
-       DD_I(GridID_)%Ptr=>RbGrid
+       Domain_I(GridID_)%Ptr=>RbGrid
     case(SP_)
-       DD_I(GridID_)%Ptr=>SpGrid
+       Domain_I(GridID_)%Ptr=>SpGrid
     case(SC_)
-       DD_I(GridID_)%Ptr=>ScGrid
+       Domain_I(GridID_)%Ptr=>ScGrid
     case(UA_)
-       DD_I(GridID_)%Ptr=>UaGrid
+       Domain_I(GridID_)%Ptr=>UaGrid
     case(CZ_)
-       DD_I(GridID_)%Ptr=>CzGrid
+       Domain_I(GridID_)%Ptr=>CzGrid
     case default
        write(*,*)'ERROR in ModInitGridStorage: GridID = ',GridID_
        call CON_stop('ERRORin ModInitGridStorage: not implemented grid ID')
