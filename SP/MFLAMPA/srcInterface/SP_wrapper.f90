@@ -327,7 +327,16 @@ contains
   !===================================================================
   subroutine SP_set_line_foot
     ! compute coordinates of the footprints of field lines
-    
+    integer:: iBlock    ! loop variable
+    !-----------------------------------------------------------------
+    do iBlock = 1, nBlock
+       call SP_set_line_foot_b(iBlock)
+    end do
+  end subroutine SP_set_line_foot
+  !======================
+  subroutine SP_set_line_foot_b(iBlock)
+    integer, intent(in) :: iBlock
+
     ! existing particle with lowest index along line
     real:: Xyz1_D(nDim)
     ! direction of the field at Xyz1_D
@@ -336,32 +345,27 @@ contains
     real:: Dot, S
     ! variable to compute coords of the footprints
     real:: Alpha
-    integer:: iBlock    ! loop variable
-    !-----------------------------------------------------------------
-    ! compute coordinates of footprints for each field lines
-    do iBlock = 1, nBlock
-       ! get the coordinates of lower particle
-       Xyz1_D = State_VIB(X_:Z_, iGridLocal_IB(Begin_,iBlock), iBlock)
-
-       ! get the field direction at this location
-       Dir1_D = &
-            State_VIB((/Bx_, By_, Bz_/), iGridLocal_IB(Begin_,iBlock), iBlock)
-       Dir1_D = Dir1_D / sqrt(sum(Dir1_D**2))
-       
-       ! their dot product and its sign
-       Dot = sum(Dir1_D*Xyz1_D)
-       S   = sign(1.0, Dot)
-
-       ! Xyz0, the footprint, is distance Alpha away from Xyz1:
-       ! Xyz0 = Xyz1 + Alpha * Dir1 and R0 = RMin =>
-       Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
-       ParamLocal_IB(XMin_:ZMin_,iBlock) = Xyz1_D + Alpha * Dir1_D
-       ParamLocal_IB(Length_,    iBlock) = abs(Alpha)
-    end do
-  end subroutine SP_set_line_foot
-
+    !---------------
+    ! get the coordinates of lower particle
+    Xyz1_D = State_VIB(X_:Z_, iGridLocal_IB(Begin_,iBlock), iBlock)
+    
+    ! get the field direction at this location
+    Dir1_D = &
+         State_VIB((/Bx_, By_, Bz_/), iGridLocal_IB(Begin_,iBlock), iBlock)
+    write(*,*)'iBlock, Xyz1_D, B_D=',iBlock, Xyz1_D,Dir1_D
+    Dir1_D = Dir1_D / sqrt(sum(Dir1_D**2))
+    
+    ! their dot product and its sign
+    Dot = sum(Dir1_D*Xyz1_D)
+    S   = sign(1.0, Dot)
+    
+    ! Xyz0, the footprint, is distance Alpha away from Xyz1:
+    ! Xyz0 = Xyz1 + Alpha * Dir1 and R0 = RMin =>
+    Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
+    ParamLocal_IB(XMin_:ZMin_,iBlock) = Xyz1_D + Alpha * Dir1_D
+    ParamLocal_IB(Length_,    iBlock) = abs(Alpha)
+  end subroutine SP_set_line_foot_b
   !===================================================================
-
   subroutine SP_interface_point_coords(iComp, SendBuffer, &
        nDim, Xyz_D, nIndex, iIndex_I, IsInterfacePoint)
     ! interface points (request), which needed to be communicated
