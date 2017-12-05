@@ -1502,12 +1502,12 @@ test_anisotropic:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_anisotropic_compile:
-	./Config.pl -u=Waves -e=MhdAnisoP -f -g=100,2,2,100,1
+	./Config.pl -u=Waves -e=MhdPeAniso -f -g=100,2,2,100,1
 	$(MAKE) BATSRUS
 	make PIDL
 
 test_anisotropic_rundir: test_rundir
-	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.Alfven PARAM.in
+	cd ${TESTDIR}; cp Param/ANISOPRESSURE/PARAM.in.anisope.fastwave PARAM.in
 
 test_anisotropic_run:
 	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
@@ -1515,8 +1515,8 @@ test_anisotropic_run:
 
 test_anisotropic_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
-	    Param/ANISOPRESSURE/TestOutput/alfven_ref.out \
-	    ${TESTDIR}/RESULT/GM/1d_*t03*.out > test_anisotropic.diff)
+	    Param/ANISOPRESSURE/TestOutput/fast_anisope.out \
+	    ${TESTDIR}/RESULT/GM/1d_*t00.50*.out > test_anisotropic.diff)
 	ls -l test_anisotropic.diff
 
 ### TEST FOR COMET CG HD RUN ###
