@@ -208,8 +208,8 @@ contains
 
   subroutine xyz_to_coord(XyzIn_D, CoordOut_D)
 
-    use ModCoordTransform, ONLY: atan2_check, xyz_to_sph
-    use ModNumConst,       ONLY: cHalfPi, cTwoPi
+    use ModCoordTransform, ONLY: atan2_check, xyz_to_sph, xyz_to_rlonlat
+    use ModNumConst,       ONLY: cTwoPi
 
     real, intent(in) :: XyzIn_D(MaxDim)
     real, intent(out):: CoordOut_D(MaxDim)
@@ -232,11 +232,7 @@ contains
     elseif(IsSpherical)then
        call xyz_to_sph(XyzIn_D, CoordOut_D)
     elseif(IsRLonLat)then
-       ! Use xyz to r,theta,phi conversion
-       call xyz_to_sph(XyzIn_D, &
-            CoordOut_D(r_), CoordOut_D(Theta_), CoordOut_D(Phi_))
-       ! Convert colatitude to latitude
-       CoordOut_D(Lat_) = cHalfPi - CoordOut_D(Theta_)
+       call xyz_to_rlonlat(XyzIn_D, CoordOut_D)
     elseif(IsRoundCube)then
        r2 = sum(XyzIn_D**2)
        if (r2 > 0.0) then
@@ -299,8 +295,7 @@ contains
 
   subroutine coord_to_xyz(CoordIn_D, XyzOut_D)
 
-    use ModCoordTransform, ONLY: sph_to_xyz
-    use ModNumConst,       ONLY: cHalfPi
+    use ModCoordTransform, ONLY: sph_to_xyz, rlonlat_to_xyz
 
     real, intent(in) :: CoordIn_D(MaxDim)
     real, intent(out):: XyzOut_D(MaxDim)
@@ -334,8 +329,7 @@ contains
     elseif(IsSpherical)then
        call sph_to_xyz(Coord_D, XyzOut_D)
     elseif(IsRLonLat)then
-       call sph_to_xyz(Coord_D(r_), cHalfPi - Coord_D(Lat_), Coord_D(Phi_), &
-            XyzOut_D)
+       call rlonlat_to_xyz(Coord_D, XyzOut_D)
     elseif(IsRoundCube)then
        r2 = sum(CoordIn_D**2)
        ! L1 and L2 distances from origin
