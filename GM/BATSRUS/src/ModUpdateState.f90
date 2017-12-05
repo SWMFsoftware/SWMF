@@ -95,7 +95,7 @@ contains
     end if
 
     if(DoTest)then
-       write(*,*)NameSub,' final:'
+       write(*,*)NameSub,' final for n_step =', n_step
        do iVar=1,nVar
           write(*,'(2x,2a,es23.15)')NameVar_V(iVar),'(TestCell)  =',&
                State_VGB(iVar,iTest,jTest,kTest,iBlockTest)
