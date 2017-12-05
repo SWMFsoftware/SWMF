@@ -219,6 +219,8 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
         //call the user defined function to determine the non-zero elements of the matrix
         NewRow->RhsSupportLength=0;
+        rhs=0.0;
+
         f(i,j,k,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable,NewRow->RhsSupportLength,node);
         if (NonZeroElementsFound>MaxStencilLength) exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
 
@@ -335,7 +337,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   //allocate the exchange buffer for the data the needs to be recieved from other MPI processess
   int cnt=0,iElement;
 
-  int DataExchangeTableCounter[PIC::nTotalThreads];
+  int *DataExchangeTableCounter=new int [PIC::nTotalThreads];
   for (thread=0;thread<PIC::nTotalThreads;thread++) DataExchangeTableCounter[thread]=0;
 
   for (iRow=0,Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) {
@@ -423,6 +425,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   //deallocate 'nGlobalDataPointTable'
   delete [] nGlobalDataPointTable;
+  delete [] DataExchangeTableCounter;
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
@@ -543,11 +546,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   ExchangeIntermediateUnknownsData(x);
 
-  //create the local table of the beginings of the unknown vectors
-  double *Data[PIC::nTotalThreads];
-
-  for (int thread=0;thread<PIC::nTotalThreads;thread++) Data[thread]=RecvExchangeBuffer[thread];
-  Data[PIC::ThisThread]=x;
+  RecvExchangeBuffer[PIC::ThisThread]=x;
 
   for (row=MatrixRowTable,cnt=0;row!=NULL;row=row->next,cnt++) {
     iElementMax=row->nNonZeroElements;
@@ -556,11 +555,13 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     for (res=0.0,iElement=0;iElement<iElementMax;iElement++) {
       memcpy(&StencilElement,Elements+iElement,sizeof(cStencilElement));
 
-      res+=StencilElement.MatrixElementValue*Data[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
+      res+=StencilElement.MatrixElementValue*RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
     }
 
-     p[cnt]=res;
+     p[row->CornerNode->LinearSolverUnknownVectorIndex]=res;
   }
+
+  RecvExchangeBuffer[PIC::ThisThread]=NULL;
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
@@ -579,13 +580,13 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   //populate the buffers
   for (cnt=0,row=MatrixRowTable;row!=NULL;cnt++,row=row->next) {
     fInitialUnknownValues(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
-    SubdomainPartialRHS[cnt]=row->Rhs;
+    SubdomainPartialRHS[row->CornerNode->LinearSolverUnknownVectorIndex]=row->Rhs;
   }
 
 
   //call the iterative solver
   double Tol=1e-5;// the max iteration error allowed
-  int nIter=1000; //iter number
+  int nIter=100; //iter number
   int nVar=1; //variable number
   int nDim = 3; //dimension
   int nI=_BLOCK_CELLS_X_;
