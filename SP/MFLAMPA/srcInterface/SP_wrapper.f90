@@ -352,7 +352,6 @@ contains
     ! get the field direction at this location
     Dir1_D = &
          State_VIB((/Bx_, By_, Bz_/), iGridLocal_IB(Begin_,iBlock), iBlock)
-    write(*,*)'iBlock, Xyz1_D, B_D=',iBlock, Xyz1_D,Dir1_D
     Dir1_D = Dir1_D / sqrt(sum(Dir1_D**2))
     
     ! their dot product and its sign
