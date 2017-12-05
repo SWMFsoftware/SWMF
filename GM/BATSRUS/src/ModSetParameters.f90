@@ -113,7 +113,8 @@ contains
     use ModExpansionFactors, ONLY: NameModelSW, CoronalT0Dim, &
          read_wsa_coeff, set_empirical_model
     use ModCoronalHeating,  ONLY: read_corona_heating, &
-         init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat
+         init_coronal_heating, UseCoronalHeating, DoOpenClosedHeat, &
+         UseAlfvenWaveDissipation
     use ModFieldLineThread, ONLY: read_threads
     use ModThreadedLC,      ONLY: init_threaded_lc, read_threaded_bc
     use ModRadiativeCooling, ONLY: UseRadCooling,&
@@ -3188,8 +3189,17 @@ contains
               SpeedHypDim, ' ClightDim =', ClightDim, ''
       end if
 
-      if (UseHallResist .and. UseAnisoPe) call stop_mpi(NameSub// &
+      if (UseAnisoPe .and. .not. UseAnisoPressure)  call stop_mpi(NameSub//  &
+           ' UseAnisoPe cannot be applied without UseAnisoPressure')
+
+      if (UseAnisoPe .and. UseHallResist) call stop_mpi(NameSub// &
            ': UseAnisoPe is not implemented for Hall Mhd.')
+
+      if (UseAnisoPe .and. UseAlfvenWaveDissipation) call stop_mpi(NameSub// &
+           ' AnisoPe for coronal heating is not implemented yet')
+
+      if (UseAnisoPe .and. UseRadCooling) call stop_mpi(NameSub// &
+           ' AnisoPe for radiative cooling is not implemented yet')
 
     end subroutine correct_parameters
     !==========================================================================
