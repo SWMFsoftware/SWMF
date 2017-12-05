@@ -441,13 +441,16 @@ contains
     character(len=*), parameter:: NameSub = 'append_particles'
     !--------------------------------------------------------------------
     do iBlock = 1, nBlock
+       ! check current value of offset: if not zero, adjustments have just
+       ! been made, no need to append new particles
+       if(iGridLocal_IB(Offset_, iBlock) /= 0 )&
+            CYCLE
        ! check if the beginning of the line moved far enough from its 
        ! footprint on the solar surface
        DistanceToMin = sqrt(sum((&
             State_VIB(X_:Z_,1,iBlock) - ParamLocal_IB(XMin_:ZMin_,iBlock))**2))
        ! skip the line if it's still close to the Sun
        if(DistanceToMin * (1.0 + cTol) < ParamLocal_IB(Length_, iBlock)) CYCLE
-       
        ! append a new particle
        !-----------------------
        ! check if have enough space
@@ -472,7 +475,6 @@ contains
        State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
             (Alpha+1) * State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
             -Alpha    * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
-       
     end do
   end subroutine append_particles
 
