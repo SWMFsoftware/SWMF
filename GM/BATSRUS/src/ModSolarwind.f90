@@ -426,7 +426,7 @@ contains
   subroutine normalize_solar_wind_data
 
     use ModAdvance, ONLY: &
-         UseElectronPressure, UseAnisoPressure, UseMultiSpecies
+         UseElectronPressure, UseAnisoPressure, UseMultiSpecies, UseAnisoPe
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
          LowDensityRatio, ElectronPressureRatio
@@ -567,6 +567,9 @@ contains
              Solarwind_V(Pe_) = Solarwind_V(p_)
           end if
        end if
+
+       if(UseAnisoPe .and. .not. IsInput_V(Pepar_)) &
+            Solarwind_V(Pepar_) = Solarwind_V(Pe_)
 
        ! Put back results in big array
        Solarwind_VI(:,iData) = Solarwind_V

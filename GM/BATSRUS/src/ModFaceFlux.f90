@@ -38,8 +38,9 @@ module ModFaceFlux
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
 
   use ModMultiIon, ONLY: &
-       Pe_X, Pe_Y, Pe_Z, & ! output: Pe for grad Pe in multi-ion MHD
-       Pwave_X, Pwave_Y, Pwave_Z ! Pwave for grad Pwave in multi-ion MHD
+       Pe_X, Pe_Y, Pe_Z,          & ! output: Pe for grad Pe in multi-ion MHD
+       Pwave_X, Pwave_Y, Pwave_Z, & ! Pwave for grad Pwave in multi-ion MHD
+       PeDotArea_DX, PeDotArea_DY, PeDotArea_DZ ! Grad Pe stuff for aniso pe
 
   use ModHallResist, ONLY: UseHallResist, HallCmaxFactor, IonMassPerCharge_G, &
        IsNewBlockCurrent, HallFactor_DF, set_hall_factor_face, &
@@ -122,6 +123,7 @@ module ModFaceFlux
   real :: Enormal = 0.0                         ! normal electric field -> div E
   real :: Pe      = 0.0                         ! electron pressure -> grad Pe
   real :: Pwave   = 0.0
+  real :: PeDotArea_D(3) = (/ 0.0, 0.0, 0.0 /)  ! grad Pe stuff for aniso Pe
 
   ! Variables for normal resistivity
   real :: EtaJx, EtaJy, EtaJz, Eta = 0.0
@@ -554,7 +556,7 @@ contains
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB
+      use ModAdvance, ONLY: State_VGB, UseAnisoPe
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
       !------------------------------------------------------------------------
@@ -616,7 +618,11 @@ contains
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon)then
-            Pe_X(iFace, jFace, kFace) = Pe
+            if (.not. UseAnisoPe) then
+               Pe_X(iFace, jFace, kFace) = Pe
+            else
+               PeDotArea_DX(:, iFace, jFace, kFace) = PeDotArea_D
+            end if
             if(UseWavePressure) Pwave_X(iFace,jFace,kFace) = Pwave
          end if
 
@@ -643,7 +649,7 @@ contains
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB
+      use ModAdvance, ONLY: State_VGB, UseAnisoPe
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
       !------------------------------------------------------------------------
@@ -704,7 +710,11 @@ contains
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon)then
-            Pe_Y(iFace,jFace,kFace) = Pe
+            if (.not. UseAnisoPe) then
+               Pe_Y(iFace,jFace,kFace) = Pe
+            else
+               PeDotArea_DY(:, iFace,jFace,kFace) = PeDotArea_D
+            end if
             if(UseWavePressure) Pwave_Y(iFace,jFace,kFace) = Pwave
          end if
 
@@ -733,7 +743,7 @@ contains
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      use ModAdvance, ONLY: State_VGB
+      use ModAdvance, ONLY: State_VGB, UseAnisoPe
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iFlux
       !------------------------------------------------------------------------
@@ -793,7 +803,11 @@ contains
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon)then
-            Pe_Z(iFace,jFace,kFace) = Pe
+            if (.not. UseAnisoPe) then
+               Pe_Z(iFace,jFace,kFace) = Pe
+            else
+               PeDotArea_DZ(:, iFace,jFace,kFace) = PeDotArea_D
+            end if
             if(UseWavePressure) Pwave_Z(iFace,jFace,kFace) = Pwave
          end if
 
@@ -1088,7 +1102,8 @@ contains
   subroutine get_numerical_flux(Flux_V)
 
     use ModWaves, ONLY: UseWavePressure
-    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies
+    use ModAdvance, ONLY: DoReplaceDensity, State_VGB, UseMultiSpecies, &
+         UseAnisoPe
     use ModCharacteristicMhd, ONLY: get_dissipation_flux_mhd
     use ModCoordTransform, ONLY: cross_product
     use ModMain, ONLY: UseHyperbolicDivb, SpeedHyp, UseDtFixed
@@ -1106,6 +1121,7 @@ contains
     real :: EnLeft, EnRight, PeLeft, PeRight, PwaveLeft, PwaveRight, Jx, Jy, Jz
     real :: uLeft_D(3), uRight_D(3)
     real :: dB0_D(3), Current_D(3)
+    real :: PeDotAreaLeft_D(3), PeDotAreaRight_D(3)
 
     real :: GradPe_D(3)
     real :: InvElectronDens
@@ -1278,7 +1294,8 @@ contains
     if(DoSimple)then
        State_V = StateLeft_V
        call get_physical_flux(State_V, B0x, B0y, B0z,&
-            StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
+            StateLeftCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave, &
+            PeDotArea_D)
     else
        State_V = 0.5*(StateLeft_V + StateRight_V)
     end if
@@ -1289,11 +1306,12 @@ contains
          DoHlldwNeutral .or. DoAwNeutral .or. DoHllcNeutral)then
        ! These solvers use left and right fluxes
        call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
+            StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft, &
+            PeDotAreaLeft_D)
 
        call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
             StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
-            PwaveRight)
+            PwaveRight, PeDotAreaRight_D)
 
        if(UseRS7)then
           call modify_flux(FluxLeft_V, UnLeft_I(1))
@@ -1471,13 +1489,18 @@ contains
          if(UseElectronPressure) &
               Unormal_I(eFluid_) = 0.5*(UnLeft_I(eFluid_) + UnRight_I(eFluid_))
          if(UseMultiIon)then
-            Pe = 0.5*(PeLeft + PeRight)
+            if (.not. UseAnisoPe) then
+               Pe = 0.5*(PeLeft + PeRight)
+            else
+               PeDotArea_D = 0.5*(PeDotAreaLeft_D + PeDotAreaRight_D)
+            end if
             if(UseWavePressure) Pwave = 0.5*(PwaveLeft + PwaveRight)
          end if
       end if
 
       if (DoTestCell) then
          write(*,*) 'iFluidMin, iFluidMax, Cmax =', iFluidMin, iFluidMax, Cmax
+         write(*,*) 'iVarMin, iVarMax           =', iVarMin, iVarMax
       end if
 
     end subroutine lax_friedrichs_flux
@@ -1535,7 +1558,12 @@ contains
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
          if(UseMultiIon)then
-            Pe = WeightRight*PeRight   + WeightLeft*PeLeft
+            if (.not. UseAnisoPe) then
+               Pe = WeightRight*PeRight   + WeightLeft*PeLeft
+            else
+               PeDotArea_D = &
+                    WeightRight*PeDotAreaRight_D + WeightLeft*PeDotAreaLeft_D
+            end if
             if(UseWavePressure) &
                  Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
          end if
@@ -1671,7 +1699,12 @@ contains
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
          if(UseMultiIon)then
-            Pe = WeightRight*PeRight + WeightLeft*PeLeft
+            if (.not. UseAnisoPe) then
+               Pe = WeightRight*PeRight + WeightLeft*PeLeft
+            else
+               PeDotArea_D = &
+                    WeightRight*PeDotAreaRight_D + WeightLeft*PeDotAreaLeft_D
+            end if
             if(UseWavePressure) &
                  Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
          end if
@@ -1722,7 +1755,12 @@ contains
          if(UseElectronPressure) Unormal_I(eFluid_) = &
               WeightRight*UnRight_I(eFluid_) + WeightLeft*UnLeft_I(eFluid_)
          if(UseMultiIon)then
-            Pe = WeightRight*PeRight + WeightLeft*PeLeft
+            if (.not. UseAnisoPe) then
+               Pe = WeightRight*PeRight + WeightLeft*PeLeft
+            else
+               PeDotArea_D = &
+                    WeightRight*PeDotAreaRight_D + WeightLeft*PeDotAreaLeft_D
+            end if
             if(UseWavePressure) &
                  Pwave = WeightRight*PwaveRight + WeightLeft*PwaveLeft
          end if
@@ -1790,14 +1828,14 @@ contains
 
       if(sL >= 0.) then
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
+              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave, PeDotArea_D)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
 
       if(sR <= 0.) then
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
-              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave)
+              StateCons_V, Flux_V, Unormal_I, Enormal, Pe, Pwave, PeDotArea_D)
          if(UseRs7)call modify_flux(Flux_V, Unormal_I(1))
          RETURN
       end if
@@ -2110,11 +2148,12 @@ contains
          ! Temporary solution, should be the monotone numerical flux with
          ! modified StateLeft_V and/or StateRight_V
          call get_physical_flux(StateLeft_V, B0x, B0y, B0z,&
-              StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, PwaveLeft)
+              StateLeftCons_V, FluxLeft_V, UnLeft_I, EnLeft, PeLeft, &
+              PwaveLeft, PeDotAreaLeft_D)
 
          call get_physical_flux(StateRight_V, B0x, B0y, B0z,&
               StateRightCons_V, FluxRight_V, UnRight_I, EnRight, PeRight, &
-              PwaveRight)
+              PwaveRight, PeDotAreaRight_D)
 
          call artificial_wind
          RETURN
@@ -2309,12 +2348,12 @@ contains
   !============================================================================
 
   subroutine get_physical_flux(State_V, B0x, B0y, B0z, &
-       StateCons_V, Flux_V, Un_I, En, Pe, Pwave)
+       StateCons_V, Flux_V, Un_I, En, Pe, Pwave, PeDotArea_D)
 
     use ModMultiFluid
     use ModMain,     ONLY: UseHyperbolicDivb, SpeedHyp, UseResistivePlanet
     use ModPhysics,  ONLY: GammaMinus1, GammaElectronMinus1, GammaElectron
-    use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy
+    use ModAdvance,  ONLY: UseElectronPressure, UseElectronEntropy, UseAnisoPe
     use ModWaves
     use BATL_size,   ONLY: nDim
     use ModGeometry, ONLY: r_BLK
@@ -2327,9 +2366,10 @@ contains
     real,    intent(out):: En                  ! normal electric field
     real,    intent(out):: Pe                  ! electron pressure for multiion
     real,    intent(out):: Pwave               ! wave pressure for multiion
+    real,    intent(out):: PeDotArea_D(3)      ! grad Pe stuff for multiion aniso pe
 
     real:: Hyp, Bx, By, Bz, FullBx, FullBy, FullBz, Bn, B0n, FullBn, Un, HallUn
-    real:: FluxBx, FluxBy, FluxBz
+    real:: FluxBx, FluxBy, FluxBz, FullB2, Peperp, Pepar
     real:: FluxViscoX, FluxViscoY, FluxViscoZ
 
     integer:: iVar
@@ -2345,10 +2385,46 @@ contains
     ! Initialize wave pressure
     Pwave = 0.0
 
+    ! Initialize
+    PeDotArea_D = 0.0
+
+    ! Set magnetic variables
+    if(UseB)then
+       Bx = State_V(Bx_)
+       By = State_V(By_)
+       Bz = State_V(Bz_)
+       FullBx  = Bx + B0x
+       FullBy  = By + B0y
+       FullBz  = Bz + B0z
+       Bn      = Bx*NormalX  + By*NormalY  + Bz*NormalZ
+       B0n     = B0x*NormalX + B0y*NormalY + B0z*NormalZ
+       FullBn  = B0n + Bn
+    end if
+
     if(UseMultiIon)then
        ! Pe has to be returned for multiion only
-       if(UseElectronPressure)then
+       if(UseElectronPressure .and. .not. UseAnisoPe)then
           Pe = State_V(Pe_)
+       else if(UseElectronPressure .and. UseAnisoPe) then
+          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
+          Pe     = State_V(Pe_)
+          Pepar  = State_V(Pepar_)
+          Peperp = (3*Pe - Pepar)/2.0
+          PeDotArea_D = Peperp*Normal_D*Area + (Pepar-Peperp)*FullBn &
+               *(/FullBx,FullBy,FullBz/)/FullB2*Area
+
+          if (DoTestCell) then
+             write(*,*) NameSub, ' UseElectronPressure'
+             write(*,*) 'Pe          =', Pe
+             write(*,*) 'Pepar       =', Pepar
+             write(*,*) 'Peperp      =', Peperp
+             write(*,*) 'FullBn,B2   =', FullBn, FullB2
+             write(*,*) 'FullBxyz    =', &
+                  FullBx, FullBy, FullBz
+             write(*,*) 'Normal_D    =', Normal_D
+             write(*,*) 'Area        =', Area
+             write(*,*) 'PeDotArea_D =', PeDotArea_D
+          end if
        elseif(IsMhd)then
           Pe = State_V(p_)*PePerPtotal
        else
@@ -2364,19 +2440,6 @@ contains
        end if
     else
        Pe = 0.0
-    end if
-
-    ! Set magnetic variables
-    if(UseB)then
-       Bx = State_V(Bx_)
-       By = State_V(By_)
-       Bz = State_V(Bz_)
-       FullBx  = Bx + B0x
-       FullBy  = By + B0y
-       FullBz  = Bz + B0z
-       Bn      = Bx*NormalX  + By*NormalY  + Bz*NormalZ
-       B0n     = B0x*NormalX + B0y*NormalY + B0z*NormalZ
-       FullBn  = B0n + Bn
     end if
 
     ! Make sure this is initialized
@@ -2433,6 +2496,8 @@ contains
        if(UseElectronEntropy) &
             StateCons_V(Pe_) = State_V(Pe_)**(1/GammaElectron)
        Flux_V(Pe_) = HallUn*StateCons_V(Pe_)
+
+       if (UseAnisoPe) Flux_V(Pepar_) = HallUn*State_V(Pepar_)
     end if
 
     if(Ehot_ > 1) Flux_V(Ehot_) = HallUn*State_V(Ehot_)
@@ -2545,10 +2610,10 @@ contains
     subroutine get_boris_flux
 
       use ModPhysics, ONLY: InvGammaMinus1, Inv_C2light, InvClight
-      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e
+      real :: Rho, Ux, Uy, Uz, p, e, PeAdd
       real :: B2, FullB2, pTotal, pTotal2, uDotB, DpPerB
       real :: Ex, Ey, Ez, E2Half
 
@@ -2560,6 +2625,15 @@ contains
       Uz      = State_V(Uz_)
       p       = State_V(p_)
 
+      ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
+      ! anisotropic Pe, Peperp contributes
+      if (UseElectronPressure .and. .not. UseAnisoPe) then
+         PeAdd = State_V(Pe_)
+      else if (UseAnisoPe) then
+         ! Peperp = (3*pe - Pepar)/2
+         PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
+      end if
+         
       B2      = Bx**2 + By**2 + Bz**2
 
       ! Electric field divided by speed of light:
@@ -2576,7 +2650,7 @@ contains
 
       pTotal  = p + 0.5*B2 + B0x*Bx + B0y*By + B0z*Bz
 
-      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
+      if(UseElectronPressure) pTotal = pTotal + PeAdd
 
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
@@ -2631,7 +2705,14 @@ contains
       if(UseAnisoPressure)then
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
-         DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
+         if (.not. UseAnisoPe) then
+            ! In isotropic electron case, no electron contributions
+            DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
+         else
+            ! In anisotropic electron case, only (Pepar - Pperp) contributes
+            DpPerB = 1.5*(State_V(Ppar_) + State_V(Pepar_) &
+                 - p - State_V(Pe_))*FullBn/max(1e-30, FullB2)
+         end if
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
@@ -2649,10 +2730,10 @@ contains
     subroutine get_mhd_flux
 
       use ModPhysics, ONLY: InvGammaMinus1, inv_c2LIGHT
-      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e
+      real :: Rho, Ux, Uy, Uz, p, e, PeAdd
       real :: HallUx, HallUy, HallUz, InvRho
       real :: B2, B0B1, FullB2, pTotal, DpPerB
       real :: Gamma2
@@ -2668,6 +2749,15 @@ contains
       Uz      = State_V(Uz_)
       p       = State_V(p_)
 
+      ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
+      ! anisotropic Pe, Peperp contributes
+      if (UseElectronPressure .and. .not. UseAnisoPe) then
+         PeAdd = State_V(Pe_)
+      else if (UseAnisoPe) then
+         ! Peperp = (3*pe - Pepar)/2
+         PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
+      end if
+
       B2      = Bx**2 + By**2 + Bz**2
 
       ! Calculate energy
@@ -2677,7 +2767,7 @@ contains
       B0B1    = B0x*Bx + B0y*By + B0z*Bz
       pTotal  = p + 0.5*B2 + B0B1
 
-      if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
+      if(UseElectronPressure) pTotal = pTotal + PeAdd
 
       if(UseWavePressure)then
          if(UseWavePressureLtd)then
@@ -2773,17 +2863,55 @@ contains
       Flux_V(p_) = Un*p
 
       if(UseAnisoPressure)then
+         if (DoTestCell) then
+            write(*,*) NameSub, ' before aniso flux:'
+            write(*,*) ' Flux_V(RhoUx_) =', Flux_V(RhoUx_)
+            write(*,*) ' Flux_V(RhoUy_) =', Flux_V(RhoUy_)
+            write(*,*) ' Flux_V(RhoUz_) =', Flux_V(RhoUz_)
+         end if
+
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
-         DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
-
+         if (.not. UseAnisoPe) then
+            ! In isotropic electron case, no electron contributions
+            DpPerB = 1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
+         else
+            ! In anisotropic electron case, only (Pepar - Pperp) contributes
+            DpPerB = 1.5*(State_V(Ppar_) + State_V(Pepar_) &
+                 - p - State_V(Pe_))*FullBn/max(1e-30, FullB2)
+         end if
          Flux_V(RhoUx_) = Flux_V(RhoUx_) + FullBx*DpPerB
          Flux_V(RhoUy_) = Flux_V(RhoUy_) + FullBy*DpPerB
          Flux_V(RhoUz_) = Flux_V(RhoUz_) + FullBz*DpPerB
 
          ! f_i[Ppar] = u_i*Ppar
          Flux_V(Ppar_)  = Un*State_V(Ppar_)
+
+         if (DoTestCell) then
+            write(*,*) NameSub, ' after aniso flux:'
+            if (.not. UseAnisoPe) then
+               write(*,*) 'DpPerB  =', DpPerB
+               write(*,*) 'FullBx  =', FullBx
+               write(*,*) 'FullBy  =', FullBy
+               write(*,*) 'FullBz  =', FullBz
+               write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
+               write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
+               write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
+            else
+               write(*,*) 'DpPerB(ion) =', &
+                    1.5*(State_V(Ppar_) - p)*FullBn/max(1e-30, FullB2)
+               write(*,*) 'DpPerB(pe)  =', &
+                    1.5*(State_V(Pepar_)-State_V(Pe_))*FullBn/max(1e-30,FullB2)
+               write(*,*) 'DpPerB      =', DpPerB
+               write(*,*) 'FullBx      =', FullBx
+               write(*,*) 'FullBy      =', FullBy
+               write(*,*) 'FullBz      =', FullBz
+               write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
+               write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
+               write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
+            end if
+         end if
       end if
 
       ! de/dt = -div(E x B) = -B.curl E + E.curl B = B.dB/dt + E.j
@@ -2802,7 +2930,10 @@ contains
               - FullBn*(UxPlus*Bx + UyPlus*By + UzPlus*Bz)  &
               + (UnPlus - Un)*(B2 + B0B1)
       elseif(UseAnisoPressure)then
-         ! can only work for single fluid without Hall
+         ! 1. Can only work for single fluid without Hall
+         ! 2. This also works for anisotropic electron pressure because
+         !    pTotal and DpPerB are prepoerly calculated above with the 
+         !    flag UseAnisoPe.
          Flux_V(Energy_) = &
               Un*(pTotal + e) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz) &
@@ -2830,7 +2961,7 @@ contains
          write(*,*)'ChargeDens_I,InvRho         =', &
               ChargeDens_I, InvRho
          write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
-         write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
+         if(HallCoeff > 0.0) write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
          write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
          write(*,*)'B0x,y,z   =',B0x,B0y,B0z
          write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
@@ -2885,7 +3016,7 @@ contains
          write(*,*)'ChargeDens_I,InvElectronDens,InvRho=', &
               ChargeDens_I, InvElectronDens,InvRho
          write(*,*)'UxyzPlus  =',UxPlus,UyPlus,UzPlus
-         write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
+         if(HallCoeff > 0.0) write(*,*)'HallUxyz  =',HallUx,HallUy,HallUz
          write(*,*)'FullBxyz  =',FullBx,FullBy,FullBz
          write(*,*)'B0x,y,z   =',B0x,B0y,B0z
          write(*,*)'Flux(Bxyz)=',Flux_V(Bx_:Bz_)
@@ -2936,12 +3067,12 @@ contains
     !==========================================================================
     subroutine get_hd_flux
 
-      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
       use ModPhysics, ONLY: InvGammaMinus1_I
       use ModWaves
 
       ! Variables for conservative state and flux calculation
-      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal
+      real :: Rho, Ux, Uy, Uz, p, e, RhoUn, pTotal, PeAdd
       real :: DpPerB, FullB2
 
       ! Extract primitive variables
@@ -2952,19 +3083,31 @@ contains
       Uz      = State_V(iUz)
       p       = State_V(iP)
 
+      ! For isotropic Pe, Pe contributes the ion momentum eqn, while for
+      ! anisotropic Pe, Peperp contributes
+      if (UseElectronPressure .and. .not. UseAnisoPe) then
+         PeAdd = State_V(Pe_)
+      else if (UseAnisoPe) then
+         ! Peperp = (3*pe - Pepar)/2
+         PeAdd = (3*State_V(Pe_) - State_V(Pepar_))/2.0
+      end if
+
       ! Calculate energy
       e = InvGammaMinus1_I(iFluid)*p + 0.5*Rho*(Ux**2 + Uy**2 + Uz**2)
 
       pTotal = p
 
       if(nIonFluid == 1 .and. iFluid == 1)then
-         if(UseElectronPressure) pTotal = pTotal + State_V(Pe_)
+         if(UseElectronPressure) pTotal = pTotal + PeAdd
 
          if(UseWavePressure) &
               pTotal = pTotal +(GammaWave-1)*sum(State_V(WaveFirst_:WaveLast_))
       end if
 
       ! pTotal = pperp = 3/2*p - 1/2*ppar = p + (p - ppar)/2
+      ! This also works if UseAnisoPe = T because only pperp contributes.
+      ! In multi-ion case, there should be some corrections to the source
+      ! terms (ModMultiIon) due to anisotropic electron pressure.
       if(UseAnisoPressure .and. IsIon_I(iFluid)) &
            pTotal = pTotal + 0.5*(p - State_V(iPpar))
 
@@ -2992,6 +3135,14 @@ contains
       Flux_V(iEnergy) = Un*(pTotal + e)
 
       if(UseAnisoPressure .and. IsIon_I(iFluid))then
+         if (DoTestCell) then
+            write(*,*) NameSub, ' before aniso flux:'
+            write(*,*) 'p, PeAdd, pTotal =', p, PeAdd, pTotal
+            write(*,*) 'Flux_V(RhoUx_)   =', Flux_V(RhoUx_)
+            write(*,*) 'Flux_V(RhoUy_)   =', Flux_V(RhoUy_)
+            write(*,*) 'Flux_V(RhoUz_)   =', Flux_V(RhoUz_)
+         end if
+
          ! f_i[rhou_k] = f_i[rho_k] + (ppar - pperp)bb for anisopressure
          ! ppar - pperp = ppar - (3*p - ppar)/2 = 3/2*(ppar - p)
          FullB2 = FullBx**2 + FullBy**2 + FullBz**2
@@ -3006,6 +3157,17 @@ contains
 
          Flux_V(iEnergy) = Flux_V(iEnergy) &
               + DpPerB*(Ux*FullBx + Uy*FullBy + Uz*FullBz)
+
+         if (DoTestCell) then
+            write(*,*) NameSub, ' after aniso flux:'
+            write(*,*) 'DpPerB =', DpPerB
+            write(*,*) 'FullBx =', FullBx*DpPerB*Area
+            write(*,*) 'FullBy =', FullBy*DpPerB*Area
+            write(*,*) 'FullBz =', FullBz*DpPerB*Area
+            write(*,*) 'Flux_V(RhoUx_) =', Flux_V(RhoUx_)
+            write(*,*) 'Flux_V(RhoUy_) =', Flux_V(RhoUy_)
+            write(*,*) 'Flux_V(RhoUz_) =', Flux_V(RhoUz_)
+         end if
       end if
 
       ! Needed for adiabatic source term for electron pressure
@@ -3086,7 +3248,7 @@ contains
 
                 ! Get the flux
                 call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
-                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
+                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave, PeDotArea_D)
 
                 FluxLeft_VGD(:,i,j,k,iDim) = &
                      0.5*Area*(Flux_V + CmaxAll*Conservative_V)
@@ -3194,7 +3356,7 @@ contains
 
                 ! Get the flux
                 call get_physical_flux(Primitive_V, B0x, B0y, B0z, &
-                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave)
+                     Conservative_V, Flux_V, Un_I, En, Pe, Pwave, PeDotArea_D)
                 if(.not. UseHighFDGeometry) then
                    FluxCenter_VGD(:,i,j,k,iDim) = Flux_V*Area
                 else
@@ -3380,7 +3542,7 @@ contains
     subroutine get_boris_speed
 
       use ModPhysics, ONLY: Gamma, inv_c2LIGHT, GammaElectron
-      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure
+      use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
       real :: p, Ppar, Pperp, BnInvB2, GammaPe
@@ -3403,10 +3565,18 @@ contains
       FullBn = NormalX*FullBx + NormalY*FullBy + NormalZ*FullBz
 
       ! Calculate sound speed squared
-      if(UseAnisoPressure .and. FullB2 > 0)then
+      if(UseAnisoPressure .and. FullB2 > 0 .and. .not. UseAnisoPe)then
          ! iPparIon_I = Ppar_ for single ion MHD case. iPparIon_I is need to
          ! add the electron pressure(s) for single ion six-moment case.
          Ppar  = sum(State_V(iPparIon_I))
+         Pperp = (3*p - Ppar)/2.
+         BnInvB2 = FullBn**2/FullB2
+         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
+      else if (UseAnisoPressure .and. FullB2 > 0 .and. useAnisoPe) then
+         ! In the anisotropic electron pressure case, Pe is added to the
+         ! total pressure while Pepar is added to the total Ppar.
+         p     = p + State_V(Pe_)
+         Ppar  = Ppar + State_V(Pepar_)
          Pperp = (3*p - Ppar)/2.
          BnInvB2 = FullBn**2/FullB2
          Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2)
@@ -3414,8 +3584,8 @@ contains
          Sound2 = InvRho*Gamma*p
       end if
 
-      ! Add contribution of electron pressure
-      if(UseElectronPressure)then
+      ! Add contribution of electron pressure for the isotropic Pe case.
+      if(UseElectronPressure .and. .not. UseAnisoPe)then
          GammaPe = GammaElectron*State_V(Pe_)
          Sound2  = Sound2 + InvRho*GammaPe
       else
@@ -3494,10 +3664,10 @@ contains
            GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
-           UseAnisoPressure
+           UseAnisoPressure, UseAnisoPe
 
       real:: UnMin, UnMax
-      real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, Ppar1, Pperp
+      real:: Rho, InvRho, GammaPe, Pw, Sound2, Ppar, p, p1, Ppar1, Pperp
       real:: FullBx, FullBy, FullBz, FullBn, FullB2, BnInvB2
       real:: Alfven2, Alfven2Normal, Un, Fast2, Discr, Fast, FastDt, cWhistler
       real:: dB1dB1
@@ -3571,24 +3741,26 @@ contains
          end if
       end if
 
-      if(UseElectronPressure)then
+      if(UseElectronPressure .and. .not. UseAnisoPe)then
          ! UseElectronPressure = .false. for the five moment case
          GammaPe = GammaElectron*State_V(Pe_)
          if(UseMultiIon) GammaPe = GammaPe*MultiIonFactor
          Sound2 = Sound2 + GammaPe*InvRho
+
          if(DoTestCell) then
             write(*,*) NameSub,' GammaPe                     =', GammaPe
             write(*,*) NameSub,' after Pe correction, Sound2 =', Sound2
          end if
       else
-         GammaPe = 0.0 ! possibly needed for aniso pressure
+         ! needed for the six moment and anisotropic electron pressure
+         GammaPe = 0.0
       endif
 
       if(UseEfield) then
-         ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
          ! MultiIonFactor is used to correct Alfven2/Alfven2Normal,
          ! it must be calculated first, even for single ion fluid.
          if(nTrueIon > 1)then
+            ChargeDens_I = ChargePerMass_I*State_V(iRhoIon_I)
             MultiIonFactor = Rho*sum(              &
                  ChargeDens_I(1:nTrueIon)**2       &
                  /State_V(iRhoIon_I(1:nTrueIon)) ) &
@@ -3597,11 +3769,12 @@ contains
             MultiIonFactor = 1.0
          end if
 
-         ! Added electron pressure to Sound2 for the five moment equation.
+         ! Added electron pressure for the five moment equation.
+         ! Sound2 will be re-calculated anyway for the six moment.
          ! GammaPe = 0.0 for the six moment equation.
          if (.not. UseAnisoPressure) then
-            GammaPe = sum(Gamma_I(Electron_:nIonFluid) &
-                 *State_V(iPIon_I(Electron_:nIonFluid)) )
+            GammaPe = sum(Gamma_I(ElectronFirst_:nIonFluid) &
+                 *State_V(iPIon_I(ElectronFirst_:nIonFluid)) )
             GammaPe = GammaPe*MultiIonFactor
             Sound2  = Sound2 + GammaPe*InvRho
          end if
@@ -3672,7 +3845,7 @@ contains
       if(UseAnisoPressure .and. FullB2 > 0)then
          Ppar  = State_V(Ppar_)
          Pperp = (3*State_V(p_) - Ppar)/2.
-         if(.not. IsMhd)then
+         if(.not. IsMhd .and. .not. UseEfield)then
 !!! Most likely the parallel and perpendicular sound speeds should be added up here !!!
             do jFluid = IonFirst_+1, IonLast_
                Ppar1 = State_V(iPparIon_I(jFluid))
@@ -3680,10 +3853,38 @@ contains
                Pperp = Pperp + 0.5*(3*State_V(iP_I(jFluid)) - Ppar1)
             end do
          end if
+
+         ! For the six moment eqn, most likely all the ion pressure should
+         ! be added up to the total pressure, as well as the electron
+         ! pressure multiplies by MultiIonFactor
+         if (UseEfield) then
+            p    = sum(State_V(iPIon_I(IonFirst_:nTrueIon))) + &
+                 sum(State_V(iPIon_I(ElectronFirst_:)))*MultiIonFactor
+            Ppar = sum(State_V(iPparIon_I(IonFirst_:nTrueIon))) + &
+                 sum(State_V(iPparIon_I(ElectronFirst_:)))*MultiIonFactor
+            Pperp = 0.5*(3*p - Ppar)
+         end if
+
+         ! Added aniso Pe contribution to the total Ppar and Pperp.
+         if (UseAnisoPe) then
+            if (.not. UseMultiIon) then
+               p1    = State_V(Pe_)
+               Ppar1 = State_V(Pepar_)
+            else
+               ! most likely need to multiply MultiIonFactor, like the
+               ! multi-ion case.
+               p1    = State_V(Pe_)*MultiIonFactor
+               Ppar1 = State_V(Pepar_)*MultiIonFactor
+            end if
+            Ppar  = Ppar + Ppar1
+            Pperp = Pperp + 0.5*(3*p1 - Ppar1)
+         end if
+            
+
          BnInvB2 = FullBn**2/FullB2
-         Sound2 = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
-         Fast2 = Sound2 + Alfven2
-         Discr = sqrt(max(0.0, Fast2**2  &
+         Sound2  = InvRho*(2*Pperp + (2*Ppar - Pperp)*BnInvB2 + GammaPe)
+         Fast2   = Sound2 + Alfven2
+         Discr   = sqrt(max(0.0, Fast2**2  &
               + 4*((Pperp*InvRho)**2*BnInvB2*(1 - BnInvB2) &
               - 3*Ppar*Pperp*InvRho**2*BnInvB2*(2 - BnInvB2) &
               + 3*Ppar*Ppar*(InvRho*BnInvB2)**2 &
@@ -3708,6 +3909,8 @@ contains
               ' Ppar, Perp             =', Ppar, Pperp
          if(UseElectronPressure) write(*,*) NameSub, &
               ' State_V(Pe_)           =', State_V(Pe_)
+         if(UseAnisoPe) write(*,*) NameSub, &
+              ' State_V(Pepar_)        =', State_V(Pepar_)
          if(UseWavePressure) write(*,*) NameSub, &
               ' GammaWave, State(Waves)=', &
               GammaWave, State_V(WaveFirst_:WaveLast_)

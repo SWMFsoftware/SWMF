@@ -52,6 +52,12 @@ module ModMultiIon
        Pe_Y(0:nI+1,0:nJ+2,0:nK+1), &
        Pe_Z(0:nI+1,0:nJ+1,0:nK+2)
 
+  ! anisotropic pe dot area on the faces for grad Pe
+  real, public:: &
+       PeDotArea_DX(3,0:nI+2,0:nJ+1,0:nK+1), &
+       PeDotArea_DY(3,0:nI+1,0:nJ+2,0:nK+1), &
+       PeDotArea_DZ(3,0:nI+1,0:nJ+1,0:nK+2)
+
   ! wave pressure on the faces for grad Pwave
   real, public:: &
        Pwave_X(0:nI+2,0:nJ+1,0:nK+1), &
@@ -185,7 +191,7 @@ contains
 
     use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, &
          UseB0, UseBoris => boris_correction, UseBorisSimple
-    use ModAdvance, ONLY: State_VGB, Source_VC, &
+    use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
     use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
@@ -266,28 +272,68 @@ contains
 
           if(IsCartesianGrid)then
              ! Gradient of Pe in Cartesian/RZ case
-             Force_D(x_) = Force_D(x_) &
-                  - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/CellSize_DB(x_,iBlock)
-             if(nJ>1)&
-                  Force_D(y_) = Force_D(y_) &
-                  - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/CellSize_DB(y_,iBlock)
-             if(nK>1)&
-                  Force_D(z_) = Force_D(z_) &
-                  - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/CellSize_DB(z_,iBlock)
+             if (.not. UseAnisoPe) then
+                Force_D(x_) = Force_D(x_) &
+                     - (Pe_X(i+1,j,k) - Pe_X(i,j,k))/CellSize_DB(x_,iBlock)
+                if(nJ>1)&
+                     Force_D(y_) = Force_D(y_) &
+                     - (Pe_Y(i,j+1,k) - Pe_Y(i,j,k))/CellSize_DB(y_,iBlock)
+                if(nK>1)&
+                     Force_D(z_) = Force_D(z_) &
+                     - (Pe_Z(i,j,k+1) - Pe_Z(i,j,k))/CellSize_DB(z_,iBlock)
+             else
+                if (nDim /= 3) call stop_mpi(NameSub// &
+                     ': UseAnisoPe muse be in 3-D.')
+
+                Force_D = Force_D  - vInv * &
+                     ( PeDotArea_DX(:,i+1,j,k) - PeDotArea_DX(:,i,j,k)   &
+                     + PeDotArea_DY(:,i,j+1,k) - PeDotArea_DY(:,i,j,k)   &
+                     + PeDotArea_DZ(:,i,j,k+1) - PeDotArea_DZ(:,i,j,k) )
+
+                if (DoTestCell) then
+                   write(*,*) NameSub, ' getting ansio grad pe'
+                   write(*,*) 'vInv =', vInv
+                   write(*,*) 'PeDotArea_DX =', &
+                        PeDotArea_DX(:,i+1,j,k), PeDotArea_DX(:,i,j,k)
+                   write(*,*) 'PeDotArea_DY =', &
+                        PeDotArea_DY(:,i,j+1,k), PeDotArea_DY(:,i,j,k)
+                   write(*,*) 'PeDotArea_DZ =', &
+                        PeDotArea_DZ(:,i,j,k+1), PeDotArea_DZ(:,i,j,k)
+                end if
+             end if
           else
              ! grad Pe = (1/Volume)*Integral P_e dAreaVector over cell surface
-
-             Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
-                  ( Pe_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
-                  - Pe_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
-                  + Pe_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
-                  - Pe_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock))
-             if(nDim>2) then
+             if (.not. UseAnisoPe) then
                 Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
-                     ( Pe_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
-                     - Pe_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
-             endif
+                     ( Pe_X(i+1,j,k)*FaceNormal_DDFB(:,1,i+1,j,k,iBlock) &
+                     - Pe_X(i  ,j,k)*FaceNormal_DDFB(:,1,i  ,j,k,iBlock) &
+                     + Pe_Y(i,j+1,k)*FaceNormal_DDFB(:,2,i,j+1,k,iBlock) &
+                     - Pe_Y(i,j  ,k)*FaceNormal_DDFB(:,2,i,j  ,k,iBlock))
+                if(nDim>2) then
+                   Force_D(1:nDim) = Force_D(1:nDim) - vInv* &
+                        ( Pe_Z(i,j,k+1)*FaceNormal_DDFB(:,3,i,j,k+1,iBlock) &
+                        - Pe_Z(i,j,k  )*FaceNormal_DDFB(:,3,i,j,k  ,iBlock) )
+                endif
+             else
+                if (nDim /= 3) call stop_mpi(NameSub// &
+                     ': UseAnisoPe muse be in 3-D.')
 
+                Force_D = Force_D - vInv * &
+                     ( PeDotArea_DX(:,i+1,j,k) - PeDotArea_DX(:,i,j,k) &
+                     + PeDotArea_DY(:,i,j+1,k) - PeDotArea_DY(:,i,j,k) &
+                     + PeDotArea_DZ(:,i,j,k+1) - PeDotArea_DZ(:,i,j,k))
+
+                if (DoTestCell) then
+                   write(*,*) NameSub, ' getting ansio grad pe'
+                   write(*,*) 'vInv =', vInv
+                   write(*,*) 'PeDotArea_DX =', &
+                        PeDotArea_DX(:,i+1,j,k), PeDotArea_DX(:,i,j,k)
+                   write(*,*) 'PeDotArea_DY =', &
+                        PeDotArea_DY(:,i,j+1,k), PeDotArea_DY(:,i,j,k)
+                   write(*,*) 'PeDotArea_DZ =', &
+                        PeDotArea_DZ(:,i,j,k+1), PeDotArea_DZ(:,i,j,k)
+                end if
+             end if
           end if
           if(DoTestCell)write(*,'(2a,15es16.8)') &
                NameSub,': after grad Pe, Force_D =', Force_D

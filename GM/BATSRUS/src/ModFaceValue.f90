@@ -733,7 +733,7 @@ contains
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
          Flux_VX, Flux_VY, Flux_VZ, &
          uDotArea_XI, uDotArea_YI, uDotArea_ZI, &
-         UseElectronPressure, UseWavePressure, UseAnisoPressure, &
+         UseElectronPressure, UseWavePressure, UseAnisoPressure, UseAnisoPe, &
          LeftState_VX,      &  ! Face Left  X
          RightState_VX,     &  ! Face Right X
          LeftState_VY,      &  ! Face Left  Y
@@ -838,6 +838,7 @@ contains
              end do
           end if
           if(UseElectronPressure) UseLogLimiter_V(Pe_) = .true.
+          if(UseAnisoPe)          UseLogLimiter_V(Pepar_) = .true.
        end if
     end if
 

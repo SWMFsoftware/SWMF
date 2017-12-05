@@ -90,7 +90,7 @@ contains
     ! Variables for multi-ion MHD
     real :: InvElectronDens, uPlus_D(3), U_D(3)
 
-    logical:: DoTest
+    logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'calc_source'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
@@ -109,6 +109,9 @@ contains
 
              ! Source terms for anisotropic pressure equations
              do k = 1, nK; do j = 1, nJ; do i = 1, nI
+                DoTestCell = DoTest .and. i==iTest .and. &
+                     j==jTest .and. k==kTest
+
                 if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
                 if(UseViscosity) then
@@ -299,6 +302,9 @@ contains
                   CoronalHeating_C(i,j,k), QPerQtotal_I, QparPerQtotal_I, &
                   QePerQtotal)
 
+             if (UseAnisoPe) call stop_mpi(NameSub// &
+                  ' AnisoPe for coronal heating is not implemented yet')
+
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + CoronalHeating_C(i,j,k)*GammaElectronMinus1*QePerQtotal
 
@@ -334,6 +340,9 @@ contains
           if(UseElectronPressure)then
              Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaElectronMinus1
+
+             if (UseAnisoPe) call stop_mpi(NameSub// &
+                  ' AnisoPe for radiative cooling is not implemented yet')
           else
              Source_VC(p_,i,j,k)  = Source_VC(p_,i,j,k) &
                   + RadCooling_C(i,j,k)*GammaMinus1
@@ -347,6 +356,12 @@ contains
          .not.(UseElectronEntropy .and. UseMultiIon))then
        ! Calculate DivU = div(U_e)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          DoTestCell = DoTest .and. i==iTest .and. j==jTest .and. k==kTest
+
+          if (UseAnisoPe .and. .not. UseAnisoPressure) &
+               call stop_mpi(NameSub//                 &
+               ' UseAnisoPe cannot be applied without UseAnisoPressure')
+
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           DivU = uDotArea_XI(i+1,j,k,eFluid_) - uDotArea_XI(i,j,k,eFluid_)
           if(nJ > 1) DivU = DivU &
@@ -357,10 +372,46 @@ contains
 
           Pe = State_VGB(Pe_,i,j,k,iBlock)
 
-          ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
+          if (UseAnisoPe) then
+             ! Calculate bDotGradparU = b dot (b matmul GradU)
+
+             call calc_grad_uPlus(GradU_DD, i, j, k, iBlock)
+
+             ! Calculate unit vector parallel with full B field
+             b_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             if(UseB0) b_D = b_D + B0_DGB(:,i,j,k,iBlock)
+             b_D = b_D/sqrt(max(1e-30, sum(b_D**2)))
+
+             ! Calculate b.grad u.b
+             bDotGradparU= dot_product(b_D, matmul(b_D(1:nDim),GradU_DD))
+
+             ! p parallel: -2*ppar*b.(b.(Grad U))
+             Source_VC(Pepar_,i,j,k) = Source_VC(Pepar_,i,j,k) &
+                  - 2*State_VGB(Pepar_,i,j,k,iBlock)*bDotGradparU
+
+             ! p : 2/3*(pperp - ppar)*b.(b.(GradU))
+             !     = (p - ppar)*b.(b.(GradU))
+             Source_VC(Pe_,i,j,k)    = Source_VC(Pe_,i,j,k)      &
+                  + (State_VGB(Pe_,i,j,k,iBlock) -               &
+                  State_VGB(Pepar_,i,j,k,iBlock))*bDotGradparU
+
+             if(DoTestCell) write(*,*) ' GradU_DD=', GradU_DD
+
+             if(DoTestCell .and. (iVarTest == Pepar_ .or. iVarTest == pe_)) &
+                  call write_source('After bDotGradparUplus')
+          end if
+
+
           ! For electron entropy equation there is no such term
-          if(.not.UseElectronEntropy) Source_VC(Pe_,i,j,k) = &
-               Source_VC(Pe_,i,j,k) - GammaElectronMinus1*Pe*DivU
+          if(.not.UseElectronEntropy .and. .not. UseAnisoPe) then
+             ! Adiabatic heating for electron pressure: -(g-1)*Pe*Div(U)
+             Source_VC(Pe_,i,j,k) = &
+                  Source_VC(Pe_,i,j,k) - GammaElectronMinus1*Pe*DivU
+          else if(.not.UseElectronEntropy .and. UseAnisoPe) then
+             Source_VC(Pe_,i,j,k) = Source_VC(Pe_,i,j,k) &
+                  - (State_VGB(Pe_,i,j,k,iBlock)      &
+                  - State_VGB(Pepar_,i,j,k,iBlock)/3.0)*DivU
+          end if
 
           if(.not.UseMultiIon)then
              ! The energy equation contains the work of the electron pressure
@@ -768,6 +819,16 @@ contains
       !------------------------------------------------------------------------
       GradU_DD = 0.0
 
+      if (DoTestCell) then
+         write(*,*) 'iFluid =', iFluid
+         write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i+1,j,  k)
+         write(*,*) 'ux_D =', LeftState_VX(iUx:iUz,i,  j,  k)
+         write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j+1,k)
+         write(*,*) 'uy_D =', LeftState_VY(iUx:iUz,i,  j,  k)
+         write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k+1)
+         write(*,*) 'uz_D =', LeftState_VZ(iUx:iUz,i,  j,  k)
+      end if
+
       ! Calculate gradient tensor of velocity
       if(IsCartesian) then
          GradU_DD(Dim1_,:) = &
@@ -831,6 +892,115 @@ contains
       end if
 
     end subroutine calc_grad_u
+    !==========================================================================
+    subroutine calc_grad_uPlus(GradU_DD, i, j, k, iBlock)
+
+      ! This routine calculates the gradient tensor of uPlus_D, which is used
+      ! in anisotropic Pe.
+
+      use BATL_lib, ONLY: CellVolume_GB, Dim1_, Dim2_, Dim3_
+
+      integer, intent(in) :: i, j, k, iBlock
+      real,   intent(out) :: GradU_DD(nDim,MaxDim)
+
+      integer :: iDir
+
+      ! Left and Right states
+      real :: LeftState1_V(nVar),  LeftState_V(nVar)
+      real :: RightState1_V(nVar), RightState_V(nVar)
+
+      ! uPlus_D on the left and right faces
+      real :: uPlusLeft_D(3),  uPlusRight_D(3)
+      real :: uPlusLeft1_D(3), uPlusRight1_D(3)
+
+      character(len=*), parameter:: NameSub = 'calc_grad_uPlus'
+      !------------------------------------------------------------------------
+      GradU_DD = 0.0
+
+      ! Set the left and right states for Dim1_
+      LeftState1_V  = LeftState_VX( :,i+1,j,k)
+      LeftState_V   = LeftState_VX( :,i,  j,k)
+      RightState1_V = RightState_VX(:,i+1,j,k)
+      RightState_V  = RightState_VX(:,i,  j,k)
+
+      ! Obtain the uPlus_D on the corresponding faces
+      call get_uPlus(LeftState1_V,  uPlusLeft1_D )
+      call get_uPlus(LeftState_V,   uPlusLeft_D  )
+      call get_uPlus(RightState1_V, uPlusRight1_D)
+      call get_uPlus(RightState_V,  uPlusRight_D )
+
+      ! Calculate gradient tensor of u_plus
+      if(IsCartesian) then
+         GradU_DD(Dim1_,:) = &
+              (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D)  &
+              /(2*CellSize_DB(Dim1_,iBlock))
+
+         if(nJ > 1) then
+            ! Set the left and right states for Dim2_
+            LeftState1_V  = LeftState_VY( :,i,j+1,k)
+            LeftState_V   = LeftState_VY( :,i,j,  k)
+            RightState1_V = RightState_VY(:,i,j+1,k)
+            RightState_V  = RightState_VY(:,i,j,  k)
+
+            call get_uPlus(LeftState1_V,  uPlusLeft1_D )
+            call get_uPlus(LeftState_V,   uPlusLeft_D  )
+            call get_uPlus(RightState1_V, uPlusRight1_D)
+            call get_uPlus(RightState_V,  uPlusRight_D )
+
+            GradU_DD(Dim2_,:) = &
+                 (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
+                 /(2*CellSize_DB(Dim1_,iBlock))
+         end if
+
+         if(nK > 1) then
+            ! Set the left and right states for Dim3_
+            LeftState1_V  = LeftState_VZ( :,i,j,k+1)
+            LeftState_V   = LeftState_VZ( :,i,j,k  )
+            RightState1_V = RightState_VZ(:,i,j,k+1)
+            RightState_V  = RightState_VZ(:,i,j,k  )
+
+            call get_uPlus(LeftState1_V,  uPlusLeft1_D )
+            call get_uPlus(LeftState_V,   uPlusLeft_D  )
+            call get_uPlus(RightState1_V, uPlusRight1_D)
+            call get_uPlus(RightState_V,  uPlusRight_D )
+
+            GradU_DD(Dim3_,:) = &
+                 (uPlusLeft1_D + uPlusRight1_D - uPlusLeft_D - uPlusRight_D) &
+                 /(2*CellSize_DB(Dim1_,iBlock))
+         end if
+
+      else if(IsRzGeometry) then
+         call stop_mpi(NameSub//': RZ geometry to be implemented')
+      else
+         call stop_mpi(NameSub//': spherical to be implemented')
+      end if
+
+    end subroutine calc_grad_uPlus
+    !==========================================================================
+    subroutine get_uPlus(StateIn_V, uPlus_D)
+
+      ! This subroutine gets the uPlus_D at the corresponding face 
+      ! using the face state values StateIn_V
+
+      use ModMultiFluid, ONLY: ChargeIon_I, MassIon_I, nIonFluid
+
+      real,    intent(in)  :: StateIn_V(nVar)
+      real,    intent(out) :: uPlus_D(3)
+
+      real :: ChargeDens_I(nIonFluid)
+
+      !------------------------------------------------------------------------
+      
+      ChargeDens_I    = ChargeIon_I*StateIn_V(iRhoIon_I)/MassIon_I
+      InvElectronDens = 1.0/sum(ChargeDens_I)
+
+      uPlus_D(x_) = InvElectronDens*sum( ChargeDens_I*StateIn_V(iUxIon_I) )
+      uPlus_D(y_) = InvElectronDens*sum( ChargeDens_I*StateIn_V(iUyIon_I) )
+      uPlus_D(z_) = InvElectronDens*sum( ChargeDens_I*StateIn_V(iUzIon_I) )
+
+      if (DoTestCell) write(*,*) 'uPlus_D =', uPlus_D
+
+    end subroutine get_uPlus
     !==========================================================================
     subroutine calc_divb_source
 

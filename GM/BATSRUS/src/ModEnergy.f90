@@ -5,7 +5,7 @@ module ModEnergy
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-
+  use ModExtraVariables, ONLY: Pepar_
   use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, Hyp_, p_, Pe_, IsMhd
   use ModMultiFluid, ONLY: nFluid, iFluid, IonLast_, &
        iRho, iRhoUx, iRhoUz, iP, iP_I, DoConserveNeutrals, &
@@ -457,7 +457,7 @@ contains
     ! Keep pressure(s) in State_VGB above pMin_I limit
     ! If DoUpdateEnergy is present, also modify energy to remain consistent
 
-    use ModAdvance, ONLY: UseAnisoPressure
+    use ModAdvance, ONLY: UseAnisoPressure, UseAnisoPe
     use ModMultiFluid, ONLY: IsIon_I, iPparIon_I
 
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
@@ -533,6 +533,8 @@ contains
           do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
              State_VGB(Pe_,i,j,k,iBlock) = &
                   max(PeMin, State_VGB(Pe_,i,j,k,iBlock))
+             if(UseAnisoPe) State_VGB(Pepar_,i,j,k,iBlock)  = &
+                  max(peMin, State_VGB(Pepar_,i,j,k,iBlock))
           end do; end do; end do
        end if
        if(TeMin > 0.0)then
@@ -540,6 +542,8 @@ contains
              Ne = sum(ChargeIon_I*State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I)
              State_VGB(Pe_,i,j,k,iBlock) = &
                   max(Ne*TeMin, State_VGB(Pe_,i,j,k,iBlock))
+             if(UseAnisoPe) State_VGB(Pepar_,i,j,k,iBlock)  = &
+                  max(Ne*TeMin, State_VGB(Pepar_,i,j,k,iBlock))
           end do; end do; end do
        end if
     end if

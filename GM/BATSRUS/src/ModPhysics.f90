@@ -269,7 +269,7 @@ contains
     use ModVarIndexes
     use ModMultiFluid
     use ModAdvance, ONLY: UseElectronPressure, Pe_, UseAnisoPressure, Ppar_,&
-         UseEfield
+         UseEfield, UseAnisoPe
     use BATL_lib, ONLY: IsCartesian
 
     real :: MassBodySi
@@ -348,8 +348,8 @@ contains
     end if
 
     ! Set the charge for electron fluid(s) to -1.0 if not set
-    if(UseEfield .and. ChargeIon_I(Electron_) > 0.0) &
-         ChargeIon_I(Electron_:) = -1.0
+    if(UseEfield .and. ChargeIon_I(ElectronFirst_) > 0.0) &
+         ChargeIon_I(ElectronFirst_:) = -1.0
 
     ! Electron charge in normalized units (actually it is proton charge/mass)
     ! This is useful in formulas like n_s q_s (u_s - u_+) x B
@@ -488,6 +488,11 @@ contains
        FaceState_VI(Pe_,Body2_) = pBody2
     end if
 
+    if(UseAnisoPe) then
+       FaceState_VI(Pepar_,Body1_) = FaceState_VI(Pe_,Body1_)
+       FaceState_VI(Pepar_,Body2_) = FaceState_VI(Pe_,Body2_)
+    end if
+
     if(UseAnisoPressure)then
        FaceState_VI(Ppar_,Body1_) = BodyP_I(1)
        FaceState_VI(Ppar_,Body2_) = pBody2
@@ -514,6 +519,9 @@ contains
 
        if(UseElectronPressure) &
             FaceState_VI(Pe_, xMinBc_:zMaxBc_) = SW_p*ElectronPressureRatio
+
+       if(UseAnisoPe) FaceState_VI(Pepar_, xMinBc_:zMaxBc_) = &
+            SW_p*ElectronPressureRatio
 
        if(UseAnisoPressure) FaceState_VI(Ppar_, xMinBc_:zMaxBc_) = SW_p
 
@@ -945,7 +953,7 @@ contains
     use ModVarIndexes
     use ModMultiFluid
     use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseIdealEos, &
-         UseEfield
+         UseEfield, UseAnisoPe
     use ModMain,    ONLY: UseB
 
     integer :: iVar
@@ -1002,6 +1010,12 @@ contains
        UnitUser_V(Pe_)        = No2Io_V(UnitP_)
        NameUnitUserTec_V(Pe_) = NameTecUnit_V(UnitP_)
        NameUnitUserIdl_V(Pe_) = NameIdlUnit_V(UnitP_)
+    end if
+
+    if(UseAnisoPe) then
+       UnitUser_V(Pepar_)        = No2Io_V(UnitP_)
+       NameUnitUserTec_V(Pepar_) = NameTecUnit_V(UnitP_)
+       NameUnitUserIdl_V(Pepar_) = NameIdlUnit_V(UnitP_)
     end if
 
     if(UseAnisoPressure)then

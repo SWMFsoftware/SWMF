@@ -199,8 +199,9 @@ contains
     use ModMain
     use ModB0,         ONLY: B0_DX, B0_DY, B0_DZ
     use ModAdvance,    ONLY: UseAnisoPressure, UseElectronPressure, &
-         LeftState_VX, LeftState_VY, LeftState_VZ, &
-         RightState_VX, RightState_VY, RightState_VZ
+         LeftState_VX, LeftState_VY, LeftState_VZ,    &
+         RightState_VX, RightState_VY, RightState_VZ, &
+         UseAnisoPe
     use ModParallel,   ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModNumConst
@@ -645,6 +646,8 @@ contains
                  VarsTrueFace_V(iPparIon_I)
             if(UseElectronPressure) VarsGhostFace_V(Pe_) = &
                  VarsTrueFace_V(Pe_)
+            if(UseAnisoPe) VarsGhostFace_V(Pepar_)      = &
+                 VarsTrueFace_V(Pepar_)
 
             ! Change sign for velocities (plasma frozen into dipole field)
             VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)

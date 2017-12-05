@@ -146,7 +146,7 @@ contains
 
     use BATL_size,     ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
          j0_, nJp1_, k0_, nKp1_
-    use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure
+    use ModAdvance,    ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
     use ModConst,      ONLY: cBoltzmann, cElectronMass, cProtonMass, &
          cEps, cElectronCharge
     use ModImplicit,   ONLY: UseSemiImplicit, nVarSemi, iTeImpl
@@ -300,6 +300,9 @@ contains
           else
              allocate(PointImpl_VCB(1,nI,nJ,nK,MaxBlock))
           end if
+
+          if(UseAnisoPe) call stop_mpi(NameSub// &
+               ' heat conduction for UseAnisoPe has not been implemented yet.')
 
           UseHeatExchange = .false.
        end if

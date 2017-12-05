@@ -1236,6 +1236,9 @@ contains
        case('pperp')
           PlotVar(:,:,:,iVar) = (3*State_VGB(iP,:,:,:,iBlock) &
                -State_VGB(iPpar,:,:,:,iBlock))/2.0
+       case('peperp')
+          PlotVar(:,:,:,iVar) = (3*State_VGB(Pe_,:,:,:,iBlock) &
+               -State_VGB(Pepar_,:,:,:,iBlock))/2.0
 
        case('gradpex','gradpey', 'gradpez', 'gradper')
 
@@ -1736,7 +1739,7 @@ contains
                *No2Io_V(UnitEnergyDens_)/No2Io_V(UnitT_)
        case('e','e1','ew','erad')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitEnergyDens_)
-       case('p','pth','pperp')
+       case('p','pth','pperp','peperp')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitP_)
           plotvar_inBody(iVar) = plotvar_inBody(iVar)*No2Io_V(UnitP_)
 
@@ -1852,7 +1855,7 @@ contains
           NameUnit = NameIdlUnit_V(UnitB_)
        case('e','ew','erad')
           NameUnit = NameIdlUnit_V(UnitEnergydens_)
-       case('p','pth','pperp')
+       case('p','pth','pperp','peperp')
           NameUnit = NameIdlUnit_V(UnitP_)
        case('n')
           NameUnit = NameIdlUnit_V(UnitN_)

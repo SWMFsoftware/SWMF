@@ -2359,6 +2359,11 @@ contains
             NameConservative  = trim(NameFluid)//'HypE'
             NamePrimitive     = trim(NameFluid)//'HypE'
             NamePrimitivePlot = trim(NameFluid)//'HypE'
+         case('Pepar')
+            ! for anisotropic Pe, the primitive var is PpPpar, while
+            ! typically Peperp is added for plotting purpose
+            NamePrimitivePlot = trim(NameFluid)//'Pepar '// &
+                 trim(NameFluid)//'Peperp '
          end select
 
          ! NamePrimitive is the primitive variable names without any additional
@@ -3182,6 +3187,9 @@ contains
               'Reduce SpeedHypDim to ClightDimSpeedHypDim =', &
               SpeedHypDim, ' ClightDim =', ClightDim, ''
       end if
+
+      if (UseHallResist .and. UseAnisoPe) call stop_mpi(NameSub// &
+           ': UseAnisoPe is not implemented for Hall Mhd.')
 
     end subroutine correct_parameters
     !==========================================================================

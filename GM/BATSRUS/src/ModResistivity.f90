@@ -377,7 +377,7 @@ contains
     use ModPhysics,    ONLY: GammaElectronMinus1, InvGammaElectronMinus1
     use ModVarIndexes, ONLY: p_, Pe_, Ppar_, Bz_, Energy_
     use ModAdvance,    ONLY: Source_VC, &
-         UseElectronPressure, UseAnisoPressure
+         UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
     integer, intent(in):: iBlock
 
@@ -417,6 +417,9 @@ contains
           write(*,*) NameSub, ': initial Bz source       =', &
                Source_VC(Bz_,i,j,k)
        end if
+
+       if(UseAnisoPe) call stop_mpi(NameSub// &
+            ' for UseAnisoPe has not been implemented yet.')
 
        if(UseJouleHeating)then
           call get_current(i,j,k,iBlock,Current_D)
@@ -479,7 +482,7 @@ contains
     use ModGeometry,   ONLY: true_cell
     use ModPhysics,    ONLY: GammaMinus1, GammaElectronMinus1, IonMassPerCharge
     use ModVarIndexes, ONLY: Rho_, p_, Pe_, Ppar_
-    use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure
+    use ModAdvance,    ONLY: time_blk, State_VGB, UseAnisoPressure, UseAnisoPe
     use ModEnergy,     ONLY: calc_energy_cell
 
     real :: DtLocal
@@ -536,6 +539,9 @@ contains
              write(*,*) NameSub, ': initial State_VGB(Pe_)  =', &
                   State_VGB(Pe_,i,j,k,iBlock)
           end if
+
+          if(UseAnisoPe) call stop_mpi(NameSub// &
+               ' for UseAnisoPe has not been implemented yet.')
 
           ! Heat exchange for parallel ion pressure
           if(UseAnisoPressure)then
