@@ -239,10 +239,10 @@ T                       UseCoarseAxis
 #OUTERBOUNDARY
 fieldlinethreads	TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2
-float			TypeBc3
-float			TypeBc4
-float			TypeBc5
-float			TypeBc6
+none			TypeBc3
+none			TypeBc4
+none			TypeBc5
+none			TypeBc6
 
 #SAVEPLOT
 1			nPlotFiles
