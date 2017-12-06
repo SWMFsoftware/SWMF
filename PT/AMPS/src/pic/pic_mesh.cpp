@@ -482,7 +482,7 @@ void PIC::Mesh::buildMesh() {
 
 
 
-void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe) {
+void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe,void* Node) {
   int iCell,jCell,kCell;
   long int LocalCellNumber;
   PIC::Mesh::cDataCenterNode *CenterNode=NULL;
@@ -508,21 +508,69 @@ void PIC::Mesh::cDataBlockAMR::sendBoundaryLayerBlockData(CMPI_channel *pipe) {
   }
 
   //send the corner node associated data
-  for (kCell=0;kCell<kCellMax+1;kCell++) for (jCell=0;jCell<jCellMax+1;jCell++) for (iCell=0;iCell<iCellMax+1;iCell++) {
+  //in a block corners with indecies from 0 to 'iCellMax-1' are considered belongs to the block. The corner with index 'iCellMax' is considered belongs to the next block
+
+  //send the 'internal corners'
+  for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
     int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
     CornerNode=GetCornerNode(nd);
 
     pipe->send(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength);
   }
 
+  //send 'corners' from the 'right' boundary of the block
+  int iface,iFaceTable[3]={1,3,5};
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *NeibNode,*ThisNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*) Node;
+
+  for (int i=0;i<3;i++) {
+    iface=iFaceTable[i];
+
+    if ((NeibNode=ThisNode->GetNeibFace(iface,0,0))!=NULL) if (NeibNode->RefinmentLevel<ThisNode->RefinmentLevel) {
+      //the current block has more points than the neibour -> need to send the point that exist in the current block but not exist in the neib block
+
+      switch (iface) {
+      case 1:
+        //the plane normal to 'x' and at the maximum 'x'
+        for (iCell=iCellMax,kCell=1;kCell<kCellMax+1;kCell+=2) for (jCell=1;jCell<jCellMax+1;jCell+=2) {
+          int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
+          CornerNode=GetCornerNode(nd);
+
+          pipe->send(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength);
+        }
+        break;
+
+      case 3:
+        //the plane is normal to the 'y' direction, and is at maximum 'y'
+        for (jCell=jCellMax,kCell=1;kCell<kCellMax+1;kCell+=2) for (iCell=1;iCell<iCellMax+1;iCell+=2) {
+          int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
+          CornerNode=GetCornerNode(nd);
+
+          pipe->send(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength);
+        }
+        break;
+
+      case 5:
+        //the plane normal to 'z' and at the maximum 'z'
+        for (kCell=kCellMax,jCell=0;jCell<jCellMax;jCell+=2) for (iCell=0;iCell<iCellMax;iCell+=2) {
+          int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
+          CornerNode=GetCornerNode(nd);
+
+          pipe->send(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength);
+        }
+        break;
+      }
+    }
+
+  }
+
   pipe->send(associatedDataPointer+UserAssociatedDataOffset,totalAssociatedDataLength-UserAssociatedDataOffset);
 }
 
-void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe) {
+void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe,void *Node) {
   int iCell,jCell,kCell;
   long int LocalCellNumber;
 
-  sendBoundaryLayerBlockData(pipe);
+  sendBoundaryLayerBlockData(pipe,Node);
 
   #if DIM == 3
   static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
@@ -569,7 +617,7 @@ void PIC::Mesh::cDataBlockAMR::sendMoveBlockAnotherProcessor(CMPI_channel *pipe)
   delete [] buffer;
 }
 
-void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int From) {
+void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int From,void* Node) {
   int iCell,jCell,kCell;
   long int LocalCellNumber;
   PIC::Mesh::cDataCenterNode *CenterNode=NULL;
@@ -594,23 +642,68 @@ void PIC::Mesh::cDataBlockAMR::recvBoundaryLayerBlockData(CMPI_channel *pipe,int
     pipe->recv(CenterNode->Measure,From);
   }
 
-  //recieve the corner node associated data
-  for (kCell=0;kCell<kCellMax+1;kCell++) for (jCell=0;jCell<jCellMax+1;jCell++) for (iCell=0;iCell<iCellMax+1;iCell++) {
+  //recieve the 'internal' corner node associated data
+  for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
     int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
     CornerNode=GetCornerNode(nd);
 
     pipe->recv(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength,From);
   }
 
+  //recv 'corners' from the 'right' boundary of the block
+  int iface,iFaceTable[3]={1,3,5};
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *NeibNode,*ThisNode=(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*) Node;
+
+  for (int i=0;i<3;i++) {
+    iface=iFaceTable[i];
+
+    if ((NeibNode=ThisNode->GetNeibFace(iface,0,0))!=NULL) if (NeibNode->RefinmentLevel<ThisNode->RefinmentLevel) {
+      //the current block has more points than the neibour -> need to send the point that exist in the current block but not exist in the neib block
+
+      switch (iface) {
+      case 1:
+        //the plane normal to 'x' and at the maximum 'x'
+        for (iCell=iCellMax,kCell=1;kCell<kCellMax+1;kCell+=2) for (jCell=1;jCell<jCellMax+1;jCell+=2) {
+          int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
+          CornerNode=GetCornerNode(nd);
+
+          pipe->recv(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength,From);
+        }
+        break;
+
+      case 3:
+        //the plane is normal to the 'y' direction, and is at maximum 'y'
+        for (jCell=jCellMax,kCell=1;kCell<kCellMax+1;kCell+=2) for (iCell=1;iCell<iCellMax+1;iCell+=2) {
+          int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
+          CornerNode=GetCornerNode(nd);
+
+          pipe->recv(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength,From);
+        }
+        break;
+
+      case 5:
+        //the plane normal to 'z' and at the maximum 'z'
+        for (kCell=kCellMax,jCell=0;jCell<jCellMax;jCell+=2) for (iCell=0;iCell<iCellMax;iCell+=2) {
+          int nd=getCornerNodeLocalNumber(iCell,jCell,kCell);
+          CornerNode=GetCornerNode(nd);
+
+          pipe->recv(CornerNode->associatedDataPointer,CornerNode->totalAssociatedDataLength,From);
+        }
+        break;
+      }
+    }
+
+  }
+
   pipe->recv(associatedDataPointer+UserAssociatedDataOffset,totalAssociatedDataLength-UserAssociatedDataOffset,From);
 }
 
 //recieve all blocks' data when the blocks is moved to another processo
-void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From) {
+void PIC::Mesh::cDataBlockAMR::recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From,void *Node) {
   long int LocalCellNumber=-1;
   int i=-10,j=-10,k=-10;
 
-  recvBoundaryLayerBlockData(pipe,From);
+  recvBoundaryLayerBlockData(pipe,From,Node);
 
   long int Particle;
   char buffer[PIC::ParticleBuffer::ParticleDataLength];
