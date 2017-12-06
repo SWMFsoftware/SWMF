@@ -132,8 +132,8 @@ module SP_ModGrid
        U_      =17, & ! Magnitude of plasma bulk velocity
        B_      =18, & ! Magnitude of magnetic field
        DLogRho_=19, & ! Dln(Rho), i.e. -div(U) * Dt
-       RhoOld_ =10, & ! Background plasma density
-       BOld_   =11, & ! Magnitude of magnetic field
+       RhoOld_ =20, & ! Background plasma density
+       BOld_   =21, & ! Magnitude of magnetic field
        Flux0_  =22, & ! Total integral (simulated) particle flux
        Flux1_  =23, & ! Integral particle flux >  5 MeV (GOES Channel 1)
        Flux2_  =24, & ! Integral particle flux > 10 MeV (GOES Channel 2)
