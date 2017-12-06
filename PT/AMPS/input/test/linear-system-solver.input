@@ -9,6 +9,8 @@ makefile  SOURCES=src
 makefile  RUNDIR=run
 makefile  MPIRUN=mpirun -np 4
 
+makefile LINK_SWMF_SHARED_LIB=on
+
 makefile ExternalModules=models/exosphere
 ProjectSourceDirectory=test/srcLinearSystemSolver  
 WorkingSourceDirectory=srcTemp   !. !srcTemp !the location of the code that will be compiled (current directory == ".")
