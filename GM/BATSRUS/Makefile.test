@@ -1681,7 +1681,7 @@ test_fivemoment_alfven_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_alfven_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-10         \
 		Param/FIVEMOMENT/TestOutput/alfven_ref.out     \
 		${TESTDIR}/RESULTS/GM/1d*t00024640_*out        \
 		> test_fivemoment_alfven.diff)
@@ -1712,7 +1712,7 @@ test_fivemoment_shock_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_shock_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e10     \
 		Param/FIVEMOMENT/TestOutput/shock_ref.out \
 		${TESTDIR}/RESULTS/GM/1d*t00000002*out >  \
 		test_fivemoment_shock.diff)
@@ -1743,7 +1743,7 @@ test_fivemoment_langmuir_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_langmuir_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-10       \
 		Param/FIVEMOMENT/TestOutput/langmuir_ref.out \
 		${TESTDIR}/RESULTS/GM/1d*t00000001*out       \
 		> test_fivemoment_langmuir.diff)
