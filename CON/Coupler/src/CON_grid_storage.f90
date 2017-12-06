@@ -113,7 +113,6 @@ module CON_grid_storage
 
   interface ndim_grid
      module procedure ndim_id
-     module procedure ndim_dd
   end interface
 
   interface coord_block_d
@@ -133,7 +132,6 @@ module CON_grid_storage
 
   interface i_realization
      module procedure irealization_id
-     module procedure irealization_dd
   end interface
 
   interface associate_dd_pointer
@@ -585,7 +583,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    ndim_id=ndim_dd(Domain_I(GridID_)%Ptr)
+    ndim_id = Domain_I(GridID_)%Ptr%nDim
   end function ndim_id
   !====================
   !INTERFACE:
@@ -599,6 +597,22 @@ contains
   end function ncell_id
   !====================
   !INTERFACE:
+  function coord_min_d(GridID_)
+    !INPUT ARGUMENTS:
+    integer,intent(in)::GridID_
+    real,dimension(nDim_C(GridID_)):: coord_min_d
+    !EOP
+    coord_min_d = Domain_I(GridID_)%Ptr%CoordMin_D
+  end function coord_min_d
+  !============================
+  function coord_max_d(GridID_)
+    !INPUT ARGUMENTS:
+    integer,intent(in)::GridID_
+    real,dimension(nDim_C(GridID_)):: coord_max_d
+    !EOP
+    coord_max_d = Domain_I(GridID_)%Ptr%CoordMax_D
+  end function coord_max_d
+  !============================
   function coord_block_id(GridID_,lGlobalTreeNumber)
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_,lGlobalTreeNumber
@@ -636,7 +650,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)::GridID_
     !EOP
-    irealization_id=irealization_dd(Domain_I(GridID_)%Ptr)
+    irealization_id = Domain_I(GridID_)%Ptr%iRealization
   end function irealization_id
   !===========================
   subroutine associate_dd_pointer_id(GridID_,DomainPointer)

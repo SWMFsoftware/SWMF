@@ -338,8 +338,7 @@ contains
     call associate_dd_pointer(&
          Domain,&
          Grid%Domain)
-    Grid%nDim=ndim_grid(&
-         Domain)
+    Grid%nDim=Domain%nDim
     allocate(Grid%Displacement_D(&
          1:Grid%nDim),stat=iError)
     call check_allocate(iError,"Displacement_D")
