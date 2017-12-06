@@ -13,6 +13,7 @@ include makefile.KMAG
 INTERFACES=
 
 interface :
+	@cd ${SHAREDIR}; make DEPEND
 	${MAKE} ${INTERFACES}
 	${AR} interface.a ./*.o
 	@echo "Target 'interface' is done." 
