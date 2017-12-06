@@ -197,7 +197,7 @@ foreach $source (@source){
 	# Ignore interface .. end interface
 	$interface = 1 if /^\s*interface\b/i;
 	if($interface){
-	    $interface = 0 if /^\s*end interface$/i;
+	    $interface = 0 if /^\s*end interface\b/i;
 	    next;
 	}
 
@@ -321,7 +321,7 @@ foreach $source (@source){
 	    }
 
             # skip continuation lines
-            next if $lines[$i-1] =~ /\&\s*(\!.*)?$/;
+	    next if $lines[$i-1] =~ /\&\s*(\!.*)?$/;
 
 	    # skip use statements
 	    next if s/(\s*)use\b/$1use/i;
@@ -340,7 +340,9 @@ foreach $source (@source){
 	    # skip all other variable declarations
 	    #next if /^\s*($AnyType)/i;
 
-	    next if /^[^\!]*::/;
+	    if(/^[^\!]*\:\:/){
+		next;
+	    }
 
 	    # Where to insert separator line and related lines?
 	    if($iseparator){
