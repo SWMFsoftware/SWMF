@@ -22,6 +22,9 @@ BATL=nobatl
 TESTMODE=off
 INTERFACE=off
 
+#Link the SWMF' shared library
+LINK_SWMF_SHARED_LIB=off
+
 include Makefile.conf
 include Makefile.def
 
@@ -61,6 +64,11 @@ AMPSLINKER=${CC}
 AMPSLINKLIB= 
 
 EXTRALINKEROPTIONS=
+
+ifeq ($(LINK_SWMF_SHARED_LIB),on)
+	AMPSLINKER=${LINK.f90}
+	AMPSLINKLIB+=./share/lib/libSHARE.a
+endif
 
 #include BATL-related libraries for linking
 ifneq ($(BATL),nobatl)	
