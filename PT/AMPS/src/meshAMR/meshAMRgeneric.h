@@ -243,6 +243,28 @@ public:
   bool operator != (cAMRnodeID ID) {
     return ((*this)==ID) ? false : true;
   }
+
+  void print() {
+    CRC32 t;
+    int nbytes,i,nbits;
+
+    nbits=3*ResolutionLevel;
+    nbytes=nbits/8;
+    nbits-=8*ResolutionLevel;
+
+    //add bytes
+    t.add(ResolutionLevel);
+    t.add(id,nbytes);
+
+    //add bits
+    unsigned char r=0,ComparisonMask=0;
+    for (i=0;i<nbits;i++) ComparisonMask=(unsigned char)(ComparisonMask|(1<<i));
+
+    r=id[nbytes]&ComparisonMask;
+    t.add(r);
+
+    t.PrintChecksum("AMRnodeID");
+  }
 };
 
 template <class cBlockAMR>
@@ -10299,12 +10321,12 @@ if (TmpAllocationCounter==2437) {
 
             AllocateBlock(node);
 //            InitCellMeasure(node);
-            node->block->recvMoveBlockAnotherProcessor(&pipe,node->Thread);
+            node->block->recvMoveBlockAnotherProcessor(&pipe,node->Thread,node);
           }
           else { //the block is moved out from the processor
             if (pipe.sendThread!=thread) pipe.RedirectSendBuffer(thread);
 
-            node->block->sendMoveBlockAnotherProcessor(&pipe);
+            node->block->sendMoveBlockAnotherProcessor(&pipe,node);
             DeallocateBlock(node);
           }
 
@@ -10565,7 +10587,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
             pipe.send((char*)(&nodeid),sizeof(nodeid));
 
             //send the data
-            sendNode->block->sendBoundaryLayerBlockData(&pipe);
+            sendNode->block->sendBoundaryLayerBlockData(&pipe,sendNode);
           }
 #endif
 
@@ -10584,7 +10606,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
            pipe.send((char*)(&nodeid),sizeof(nodeid));
 
            //send the data
-           sendNode->block->sendBoundaryLayerBlockData(&pipe);
+           sendNode->block->sendBoundaryLayerBlockData(&pipe,sendNode);
          }
 
 
@@ -10599,7 +10621,7 @@ if (ThisThread==1) if ((pow(recvNode->xmin[0]+500.0,2)+pow(recvNode->xmin[1]+100
            pipe.send((char*)(&nodeid),sizeof(nodeid));
 
            //send the data
-           sendNode->block->sendBoundaryLayerBlockData(&pipe);
+           sendNode->block->sendBoundaryLayerBlockData(&pipe,sendNode);
          }
 #endif
 //         recvNode=recvNode->nextNodeThisThread;
@@ -10686,7 +10708,7 @@ if (ThisThread==2) if (pow(recvNode->xmin[0]+250.0,2)+pow(recvNode->xmin[1]+500.
 
 
 
-          recvNode->block->recvBoundaryLayerBlockData(&pipe,From);
+          recvNode->block->recvBoundaryLayerBlockData(&pipe,From,recvNode);
           pipe.recv(Signal,From);
         }
 
