@@ -48,6 +48,8 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
 
   define  _PIC_SAMPLING_MODE_  _PIC_MODE_OFF_ 
 
+  define _PIC_LINEAR_SOLVER_MODE_ _PIC_MODE_ON_ 
+
   ReferenceInjectionParticleNumber=60000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
