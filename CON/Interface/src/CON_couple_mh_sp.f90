@@ -109,6 +109,9 @@ contains
     subroutine couple_sc_sp_init             !^CMP IF SC BEGIN
       ! get the value of SC boundaries as set in SP
       call SP_get_bounds_comp(Lower_, RScMin, RScMax)
+      ! account for coord unit difference
+      RScMin = RScMin * Grid_C(SP_)%UnitX / Grid_C(SC_)%UnitX
+      RScMax = RScMax * Grid_C(SP_)%UnitX / Grid_C(SC_)%UnitX
       call SC_check_particles()
       call set_couple_var_info(SC_, SP_)
       !\
@@ -175,6 +178,9 @@ contains
       else                   !^CMP END SC
          call SP_get_bounds_comp(Lower_, RIhMin, RIhMax)
       end if                 !^CMP IF SC
+      ! account for coord unit difference
+      RIhMin = RIhMin * Grid_C(SP_)%UnitX / Grid_C(IH_)%UnitX
+      RIhMax = RIhMax * Grid_C(SP_)%UnitX / Grid_C(IH_)%UnitX
       call IH_check_particles()
       call set_couple_var_info(IH_, SP_)
       !\
@@ -329,6 +335,7 @@ contains
     real                :: XyzTemp_D(nDim)
     !------------------------------------------
     IsInterfacePoint = .true.; XyzTemp_D=matmul(XyzIn_D, ScToSp_DD)
+    XyzTemp_D = XyzTemp_D * Grid_C(SP_)%UnitX / Grid_C(SC_)%UnitX
     call SC_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_sc
   !================================
@@ -354,14 +361,16 @@ contains
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
 
-    integer:: iVarBx, iVarBz
+    integer:: iVarBx, iVarBz, iVarMx, iVarMz
     !-----------------------------------------
     ! get buffer with variables
     call SC_get_for_sp(nPartial,iGetStart,Get,w,State_V,nVar)
     ! indices of variables 
-    iVarBx = iVar_V(BxCouple_); iVarBz = iVar_V(BzCouple_)
+    iVarBx = iVar_V(BxCouple_);   iVarBz = iVar_V(BzCouple_)
+    iVarMx = iVar_V(RhoUxCouple_);iVarMz = iVar_V(RhoUzCouple_)
     ! perform transformation before returning
     State_V(iVarBx:iVarBz) = matmul(ScToSp_DD,State_V(iVarBx:iVarBz))
+    State_V(iVarMx:iVarMz) = matmul(ScToSp_DD,State_V(iVarMx:iVarMz))
   end subroutine SC_get_for_sp_and_transform
   !==========================================================
   subroutine SC_get_line_for_sp_and_transform(&
@@ -375,6 +384,7 @@ contains
     call SC_get_particle_coords(Get%iCB_II(1,iGetStart),State_V)
     ! perform transformation before returning
     State_V = matmul(ScToSp_DD, State_V)
+    State_V = State_V * Grid_C(SC_)%UnitX / Grid_C(SP_)%UnitX
   end subroutine SC_get_line_for_sp_and_transform
   !=============================================== !^CMP END SC
   subroutine couple_ih_sp(DataInputTime)     
@@ -473,6 +483,7 @@ contains
     real                :: XyzTemp_D(nDim)
     !------------------------------------------
     IsInterfacePoint = .true.; XyzTemp_D = matmul(XyzIn_D, IhToSp_DD)
+    XyzTemp_D = XyzTemp_D * Grid_C(SP_)%UnitX / Grid_C(IH_)%UnitX
     call IH_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_ih
   !==================================================================!
@@ -498,14 +509,16 @@ contains
     type(WeightPtrType),intent(in)::w
     real,dimension(nVar),intent(out)::State_V
 
-    integer:: iVarBx, iVarBz
+    integer:: iVarBx, iVarBz, iVarMx, iVarMz
     !------------------------------------------------------------
     ! get buffer with variables
     call IH_get_for_sp(nPartial,iGetStart,Get,w,State_V,nVar)
     ! indices of variables 
-    iVarBx = iVar_V(BxCouple_); iVarBz = iVar_V(BzCouple_)
+    iVarBx = iVar_V(BxCouple_);   iVarBz = iVar_V(BzCouple_)
+    iVarMx = iVar_V(RhoUxCouple_);iVarMz = iVar_V(RhoUzCouple_)
     ! perform transformation before returning
-    State_V(iVarBx:iVarBz)=matmul(IhToSp_DD,State_V(iVarBx:iVarBz))
+    State_V(iVarBx:iVarBz) = matmul(IhToSp_DD,State_V(iVarBx:iVarBz))
+    State_V(iVarMx:iVarMz) = matmul(IhToSp_DD,State_V(iVarMx:iVarMz))
   end subroutine IH_get_for_sp_and_transform
   !==================================================================!        
   subroutine IH_get_line_for_sp_and_transform(&
@@ -519,5 +532,6 @@ contains
     call IH_get_particle_coords(Get%iCB_II(1, iGetStart), State_V)
     ! perform transformation before returning
     State_V = matmul(IhToSp_DD, State_V)
+    State_V = State_V * Grid_C(IH_)%UnitX / Grid_C(SP_)%UnitX
   end subroutine IH_get_line_for_sp_and_transform
 end Module CON_couple_mh_sp
