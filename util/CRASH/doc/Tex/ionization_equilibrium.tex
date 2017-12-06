@@ -2,10 +2,10 @@
 %  For more information, see http://csem.engin.umich.edu/tools/swmf
 %% LyX 1.5.5 created this file.  For more info, see http://www.lyx.org/.
 %% Do not edit unless you really know what you are doing.
-\documentclass[english,10pt]{revtex4}
-\usepackage[T1]{fontenc}
-\usepackage[latin9]{inputenc}
-\usepackage{nicefrac}
+\documentclass[english,12pt]{article}
+%\usepackage[T1]{fontenc}
+%\usepackage[latin9]{inputenc}
+%\usepackage{nicefrac}
 
 \makeatletter
 
@@ -657,7 +657,7 @@ will also be needed for the temperature calculation in the next section.
 First of all, realize that if volume is constant and $dV=0$, then
 the change in internal energy of a system is:
 $$
-dU=dQ-dW=dQ-PdV=dQ,\ \text{and}$$
+dU=dQ-dW=dQ-PdV=dQ,\ {\rm and}$$
 \begin{equation}
 \frac{dU}{dT}=\frac{dQ}{dT}=C_{V},\label{eq:28}
 \end{equation}
@@ -677,7 +677,7 @@ Now, we need to find the partial derivative of the populations w.r.t.
 temperature. For this we can use the expression from Eq. \ref{eq:6},
 written as:
 \begin{equation}
-P_{i}=\frac{p_{i}}{\sum p_{i}},\ \text{where}\ \ \ \ \ \ \ \ \ \ p_{i}=\left(C_{0}\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i}e^{-\frac{E_{i}}{T_{eV}}},\label{eq:30}
+P_{i}=\frac{p_{i}}{\sum p_{i}},\ {\rm where}\ \ \ \ \ \ \ \ \ \ p_{i}=\left(C_{0}\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i}e^{-\frac{E_{i}}{T_{eV}}},\label{eq:30}
 \end{equation}
 where $C_{0}$ is now independent of $T_{eV}$. Thus:
 \begin{equation}
@@ -692,7 +692,7 @@ p_{i}^{\prime}=\left(C_{0}\frac{(T_{eV})^{\nicefrac{3}{2}}}{Z}\right)^{i}e^{-\fr
 \end{eqnarray}
 Also, since
 \begin{equation}
-Z=\frac{\sum ip_{i}}{\sum p_{i}},\ \text{it follows that}\ \ \ \ \ \ \ 
+Z=\frac{\sum ip_{i}}{\sum p_{i}},\ {\rm it\,follows\,that}\ \ \ \ \ \ \ 
 Z^\prime=\frac{\sum ip_{i}^{\prime}}{\sum p_{i}}-\frac{\sum ip_{i}\sum p_{i}^{\prime}}{\left(\sum p_{i}\right)^{2}},\label{eq:33}
 \end{equation}
 where we can then plug in the expression found for $p_{i}^{\prime}$
@@ -716,9 +716,9 @@ working our way up to the beginning. However first, we need to introduce
 the following transformation, which is true for any two expressions
 $a$ and $b$:
 \begin{equation}
-<ab>-<a><b>=<\delta a\ \delta b>,\ \text{where}\ \ \ \ \delta a=a-<a>\label{eq:36}\end{equation}
+<ab>-<a><b>=<\delta a\ \delta b>,\ {\rm where}\ \ \ \ \delta a=a-<a>\label{eq:36}\end{equation}
  \[
-\text{proof:}\ \ \ <(a-<a>)\ (b-<b>)>=<ab-a<b>-b<a>+<a><b>>=\]
+{\rm proof:}\ \ \ <(a-<a>)\ (b-<b>)>=<ab-a<b>-b<a>+<a><b>>=\]
  \[
 =<ab>-2<a><b>+<a><b>=<ab>-<a><b>\]
 This transformation makes the computation simpler, as well as, in
@@ -729,13 +729,13 @@ of Eq. \ref{eq:20}. Further, applying this transformation and combining
 Eq.\ref{eq:35} and Eq.\ref{eq:32} we get:
 \begin{eqnarray}
 p_{i}^{\prime}=p_{i}\left(\frac{E_{i}}{(T_{eV})^{2}}+i\ \frac{\frac{3}{2}T_{eV}\left(Z+<(\delta i)^{2}>\right)-\frac{3}{2}T_{eV}<(\delta i)^{2}>-<\delta i\ \delta E_{i}>}{(T_{eV})^{2}\left(Z+<(\delta i)^{2}>\right)}\right)=\nonumber\\
-=\frac{p_{i}}{(T_{eV})^{2}}\left(E_{i}+i\ \frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right),\ \text{and let this}=\alpha p_{i}\label{eq:37}
+=\frac{p_{i}}{(T_{eV})^{2}}\left(E_{i}+i\ \frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right),\ {\rm and\, let\, this\,}=\alpha p_{i}\label{eq:37}
 \end{eqnarray}
 Here $\alpha$ is introduced only to simplify the notation for the
 next step, which then transforms Eq.\ref{eq:31} as:
 \begin{eqnarray}
 \frac{\partial P_{i}}{\partial T_{eV}}=\frac{\alpha p_{i}}{\sum p_{i}}-\frac{p_{i}\sum\alpha p_{i}}{\left(\sum p_{i}\right)^{2}}=P_{i}(\alpha-<\alpha>)=P_{i}(\delta\alpha)=\nonumber\\
-=\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\delta i\left(\frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right)\right),\ \text{and let this}=\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\beta\delta i\right).\label{eq:38}
+=\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\delta i\left(\frac{\frac{3}{2}T_{eV}Z-<\delta i\ \delta E_{i}>}{Z+<(\delta i)^{2}>}\right)\right),\ {\rm and\, let\, this\,}=\frac{P_{i}}{(T_{eV})^{2}}\left(\delta E_{i}+\beta\delta i\right).\label{eq:38}
 \end{eqnarray}
 Here, again, we introduce $\beta$ only for simplicity of notation.
 At this point, we can finally come back to our original Eq.\ref{eq:29}.
@@ -791,7 +791,7 @@ to have an expression for $f^{\prime}(T)$, which now becomes simply
 $\partial U/\partial T=C_{V}$. Hence, we have everything needed to
 prroceed with the Newton's method:
 \begin{equation}
-T_{n+1}=T_{n}-\frac{U(T_{n})-U_{given}}{C_{V}(T_{n})},\ \text{where}\ \ U=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>\text{and}\label{eq:CalcT}
+T_{n+1}=T_{n}-\frac{U(T_{n})-U_{given}}{C_{V}(T_{n})},\ {\rm where}\ \ U=\frac{3}{2}k_{B}T(1+Z)+<E_{i}>{\rm and}\label{eq:CalcT}
 \end{equation}
 \[
 C_{V}=\frac{3}{2}(1+Z)+<\left(\frac{\delta E_{i}}{T_{eV}}\right)^{2}>+\frac{3Z\left(\frac{3}{4}<(\delta i)^{2}>+<\delta i\ \frac{\delta E_{i}}{T_{eV}}>\right)-<\delta i\ \frac{\delta E_{i}}{T_{eV}}>^{2}}{Z+<(\delta i)^{2}>},
@@ -849,7 +849,7 @@ First, let's introduce the element concentration factors $C_{j}$
 that give the part of the entire mixture, by number of heavy particles,
 that the element with index $j$ comprises:
 \begin{equation}
-C_{j}=\frac{N_{j}}{N_{a}}=\frac{{\displaystyle \sum_{i=0}^{X}N_{ij}}}{N_{a}}\text{, and hence also }\sum_{j=1}^{n}C_{j}=1\label{eq:Cj}.
+C_{j}=\frac{N_{j}}{N_{a}}=\frac{{\displaystyle \sum_{i=0}^{X}N_{ij}}}{N_{a}}{\rm,\, and\,hence\,also\,}\sum_{j=1}^{n}C_{j}=1\label{eq:Cj}.
 \end{equation}
 Here, the index i, as before, refers the i-charged ion. Furthermore,
 these concentration factors will be taken here as a given input parameter
@@ -898,7 +898,7 @@ the value of Z. Hence, the only difference in the calculation will
 be in the expression that we use for Z. Hence, transforming Eq. \ref{eq:13}
 to fit the form in Eq. \ref{eq:Zmix}, we get:
 \begin{equation}
-Z=\sum_{j=1}^{n}\left[C_{j}\frac{{\displaystyle \sum}ip_{ij}}{{\displaystyle \sum}p_{ij}}\right]\text{, where as before }p_{ij}=\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{ij}}{k_{B}T_{e}}}\label{eq:41}
+Z=\sum_{j=1}^{n}\left[C_{j}\frac{{\displaystyle \sum}ip_{ij}}{{\displaystyle \sum}p_{ij}}\right]{\rm,\, where\, as\, before\, }p_{ij}=\left(\frac{C_{1}}{Z}\right)^{i}e^{-\frac{E_{ij}}{k_{B}T_{e}}}\label{eq:41}
 \end{equation}
 Since Z has to be found iteratively anyway, we do not need to worry
 about the additional complexity introduced by the double summation
@@ -915,7 +915,7 @@ becomes:
 \begin{equation}
 Z_{n+1}=Z_{n}-\frac{Z_{n}-\sum_{j}\left[C_{j}<i>_{j}\right]}{1+\frac{1}{Z_{n}}\sum_{j}\left[C_{j}<(\delta i)^{2}>_{j}\right]}.\label{eq:IterMix}
 \end{equation}
-Here, once again, for any expression $a,\ <a>_{j}={\displaystyle \sum_{i=0}^{X}aP_{ij}\text{, and }\delta a=a-<a>}$.
+Here, once again, for any expression $a,\ <a>_{j}={\displaystyle \sum_{i=0}^{X}aP_{ij}{\rm,\, and\, }\delta a=a-<a>}$.
 This equation can then be used to find the population values and Z
 for a mixture plasma, while finding the populations exactly as for
 a single component plasma.
