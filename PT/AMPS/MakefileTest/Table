@@ -547,6 +547,25 @@ Keys=-model-data-path=/Volumes/Data01/AMPS_DATA_TEST/EARTH/ful_2 -cplr-data-path
 Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2@@(0+stampede+pleiades)
 <#
 
+
+-------------------------------------------------------------------------------
+#>
+Name=test/linear-system-solver@@(0+valeriy)
+Time=10
+
+Keys=-link-option=./share/lib/libSHARE.a -compiler-option=-I${PTDIR}/share/Library/src/@@(0+valeriy)
+
+Compile=
+>>>@echo "test_linear-system-solver_compile..." >> test_linear-system-solver.diff
+>>>cd ./share/; mkdir -p lib
+>>>cd ./share/Library/src; make LIB
+>>>./Config.pl -application=test/linear-system-solver ${TESTlinear-system-solverKEYS}
+>>>@rm -rf srcTemp
+>>>-@($(MAKE) -j8 amps)
+>>>@echo "test_linear-system-solver_compile... done" >> test_linear-system-solver.diff
+
+<#
+
 -------------------------------------------------------------------------------
 #>
 Name=test/Periodic-BC@@(0+valeriy)  
