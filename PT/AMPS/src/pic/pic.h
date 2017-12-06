@@ -2370,6 +2370,11 @@ namespace PIC {
        char *associatedDataPointer;
        bool ActiveFlag;
 
+       #if _PIC_LINEAR_SOLVER_MODE_ == _PIC_MODE_ON_
+       //the local index of the variables saved in the cornes state vector. Used only with the linear equation solver
+       int LinearSolverUnknownVectorIndex;
+       #endif
+
        inline int AssociatedDataLength() {
          return totalAssociatedDataLength;
        }
@@ -2501,12 +2506,12 @@ namespace PIC {
 
     
       //exchenge of the data between processors
-      void sendBoundaryLayerBlockData(CMPI_channel *pipe);
-      void recvBoundaryLayerBlockData(CMPI_channel *pipe,int From);
+      void sendBoundaryLayerBlockData(CMPI_channel *pipe,void *Node);
+      void recvBoundaryLayerBlockData(CMPI_channel *pipe,int From,void *Node);
 
       //send the block to abother processor
-      void sendMoveBlockAnotherProcessor(CMPI_channel *pipe);
-      void recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From);
+      void sendMoveBlockAnotherProcessor(CMPI_channel *pipe,void *Node);
+      void recvMoveBlockAnotherProcessor(CMPI_channel *pipe,int From,void *Node);
 
       //clean the sampling buffers
       void cleanDataBuffer() {
