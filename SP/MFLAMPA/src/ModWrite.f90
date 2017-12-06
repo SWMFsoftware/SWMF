@@ -11,10 +11,10 @@ module SP_ModWrite
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
        iComm, nProc, &
-       nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       nVar, nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, Begin_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, &
+       Proc_, Begin_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V
@@ -22,6 +22,8 @@ module SP_ModWrite
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
+
+  use ModUtilities, ONLY: split_string
 
   implicit none
 
@@ -219,72 +221,62 @@ contains
     subroutine process_mh
       ! process variables to plot
       ! NOTE: for iKindData == MH1D_ certain variables are always printed:
-      !       Rho_, T_, Ux_:Uz_, Bx_:Bz_
-      integer:: iVar, iVarPlot
-      !----------------------
+      !       Rho_, T_, Ux_:Uz_, Bx_:Bz_, Wave1_, Wave2_
+      integer:: iVar, iVarPlot, nStringPlot, iStringPlot
+      character(len=10) :: StringPlot_I(2*nVar)
+      !-----------------------------------------------
       ! reset
-      File_I(iFile) % nVarPlot = 0
       File_I(iFile) % DoPlot_V = .false.
-      ! coordinates are always printed
-      File_I(iFile) % DoPlot_V((/X_, Y_, Z_/)) = .true.
-      File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
-      ! distance along line -----
-      if(index(StringPlot,' dist ') > 0)then
-         File_I(iFile) % DoPlot_V(S_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
+      ! for MH1D_ minimal set of variables is printed
+      if(File_I(iFile)%iKindData == MH1D_)then
+         ! for MH1D_ minimal set of variables is printed
+         File_I(iFile) % DoPlot_V(1:nVarRead) = .true.
+      else
+         ! coordinates are always printed
+         File_I(iFile) % DoPlot_V(1:nDim) = .true.
       end if
-      ! lagrangian coord along line -----
-      if(index(StringPlot,' lagr ') > 0 .or. &
-           File_I(iFile)%iKindData == MH1D_)then
-         File_I(iFile) % DoPlot_V(LagrID_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
-      end if
-      ! plasma density ----------
-      if(index(StringPlot,' rho ') > 0 .or. &
-           File_I(iFile)%iKindData == MH1D_)then
-         File_I(iFile) % DoPlot_V(Rho_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
-      end if
-      ! lagrangian derivative of plasma density ----------
-      if(index(StringPlot,' drho ') > 0)then
-         File_I(iFile) % DoPlot_V(DLogRho_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
-      end if
-      ! temperature -------------
-      if(index(StringPlot,' temp ') > 0 .or. &
-           File_I(iFile)%iKindData == MH1D_)then
-         File_I(iFile) % DoPlot_V(T_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
-      end if
-      ! velocity ----------------
-      if(index(StringPlot,' ux ')> 0 .or. index(StringPlot,' uy ')> 0 .or. &
-           index(StringPlot,' uz ')> 0 .or.  &
-           File_I(iFile)%iKindData == MH1D_)then
-         File_I(iFile) % DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
-      end if
-      if(index(StringPlot,' |u| ')> 0)then
-         File_I(iFile) % DoPlot_V(U_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
-      end if
-      ! magnetic field ----------
-      if(index(StringPlot,' bx ')> 0 .or. index(StringPlot,' by ')> 0 .or. &
-           index(StringPlot,' bz ')> 0 .or. &
-           File_I(iFile)%iKindData == MH1D_)then
-         File_I(iFile) % DoPlot_V((/Bx_, By_, Bz_/)) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 3
-      end if
-      if(index(StringPlot,' |b| ')> 0)then
-         File_I(iFile) % DoPlot_V(B_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 1
-      end if
-      ! energy flux -------------
-      if(index(StringPlot,' flux ')> 0)then
-         File_I(iFile) % DoPlot_V(EFlux_) = .true.
-         File_I(iFile) % DoPlot_V(Flux0_:Flux6_) = .true.
-         File_I(iFile) % nVarPlot = File_I(iFile) % nVarPlot + 8
-      end if
-      !--------------------------
+
+      ! get individual variables' names
+      call split_string(StringPlot, StringPlot_I, nStringPlot)
+      do iStringPlot = 1, nStringPlot
+         select case(StringPlot_I(iStringPlot))
+         case('dist')
+            ! distance along line -----
+            File_I(iFile) % DoPlot_V(S_) = .true.
+         case('lagr')
+            ! lagrangian coord along line -----
+            File_I(iFile) % DoPlot_V(LagrID_) = .true.
+         case('rho')
+            ! plasma density ----------
+            File_I(iFile) % DoPlot_V(Rho_) = .true.
+         case('drho')
+            ! lagrangian derivative of plasma density ----------
+            File_I(iFile) % DoPlot_V(DLogRho_) = .true.
+         case('temp')
+            ! temperature -------------
+            File_I(iFile) % DoPlot_V(T_) = .true.
+         case('ux','uy','uz')
+            ! velocity ----------------
+            File_I(iFile) % DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
+         case('|u|')
+            ! velocity ----------------
+            File_I(iFile) % DoPlot_V(U_) = .true.
+         case('bx','by','bz')
+            ! magnetic field ----------
+            File_I(iFile) % DoPlot_V((/Bx_, By_, Bz_/)) = .true.
+         case('|b|')
+            ! magnetic field ----------
+            File_I(iFile) % DoPlot_V(B_) = .true.
+         case('wave', 'wave1', 'wave2')
+            ! turbulence intensity ----
+            File_I(iFile) % DoPlot_V((/Wave1_,Wave2_/)) = .true.
+         case('flux')
+            ! energy flux -------------
+            File_I(iFile) % DoPlot_V(EFlux_) = .true.
+            File_I(iFile) % DoPlot_V(Flux0_:Flux6_) = .true.
+         end select
+      end do
+      File_I(iFile) % nVarPlot = count(File_I(iFile) % DoPlot_V)
       ! indices in the state vector
       allocate(File_I(iFile) % iVarPlot_V(File_I(iFile)%nVarPlot))
       ! determine indices and names of variables

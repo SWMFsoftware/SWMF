@@ -19,7 +19,8 @@ module SP_wrapper
        iNode_B, TypeCoordSystem, &
        ParamLocal_IB, DataInputTime, Offset_,&
        Block_, Proc_, Begin_, End_, Shock_, ShockOld_, XMin_, ZMin_, Length_,&
-       LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_
+       LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
+       Wave1_, Wave2_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -28,7 +29,8 @@ module SP_wrapper
        iVar_V, DoCoupleVar_V, &
        Density_, RhoCouple_, Pressure_, PCouple_, &
        Momentum_, RhoUxCouple_, RhoUzCouple_, &
-       BField_, BxCouple_, BzCouple_
+       BField_, BxCouple_, BzCouple_, &
+       Wave_, WaveFirstCouple_
   use ModMpi
   use CON_world, ONLY: is_proc0, is_proc, n_proc
   use CON_comp_param, ONLY: SP_, SC_, IH_
@@ -62,7 +64,8 @@ module SP_wrapper
   public:: SP_assign_lagrangian_coords
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
-  character(len=*), parameter:: NameVarCouple = 'rho p mx my mz bx by bz'
+  character(len=*), parameter:: &
+       NameVarCouple = 'rho p mx my mz bx by bz i01 i02'
 
   ! whether to save rstart files
   logical:: DoSaveRestart = .false.
@@ -160,8 +163,8 @@ contains
     case('VERSION')
        call put(CompInfo,&
             Use        =.true., &
-            NameVersion='Empty', &
-            Version    =0.0)
+            NameVersion='MFLAMPA', &
+            Version    =0.90)
     case('MPI')
        call get(CompInfo, iComm=iComm, iProc=iProc, nProc=nProc)
     case('STDOUT')
@@ -202,7 +205,7 @@ contains
     type(WeightPtrType),intent(in)::W
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
-    integer:: iRho, iP, iMx, iMz, iBx, iBz
+    integer:: iRho, iP, iMx, iMz, iBx, iBz, iWave1, iWave2
     integer:: i, j, k, iBlock
     integer:: iPartial
     real:: Weight
@@ -219,12 +222,14 @@ contains
          ' but density is not')
 
     ! indices of variables in the buffer
-    iRho= iVar_V(RhoCouple_)
-    iP  = iVar_V(PCouple_)
-    iMx = iVar_V(RhoUxCouple_)
-    iMz = iVar_V(RhoUzCouple_)
-    iBx = iVar_V(BxCouple_)
-    iBz = iVar_V(BzCouple_)   
+    iRho  = iVar_V(RhoCouple_)
+    iP    = iVar_V(PCouple_)
+    iMx   = iVar_V(RhoUxCouple_)
+    iMz   = iVar_V(RhoUzCouple_)
+    iBx   = iVar_V(BxCouple_)
+    iBz   = iVar_V(BzCouple_)   
+    iWave1= iVar_V(WaveFirstCouple_)   
+    iWave2= iVar_V(WaveFirstCouple_+1)   
     ! auxilary factor to account for value of DoAdd
     Aux = 0.0
     if(DoAdd) Aux = 1.0
@@ -267,6 +272,10 @@ contains
        if(DoCoupleVar_V(BField_))&
             State_VIB(Bx_:Bz_,i,iBlock) = Aux * State_VIB(Bx_:Bz_,i,iBlock) + &
             Buff_I(iBx:iBz) * Weight
+       if(DoCoupleVar_V(Wave_))&
+            State_VIB(Wave1_:Wave2_,i,iBlock) = &
+            Aux * State_VIB(WaveFirstCouple_:WaveFirstCouple_+1,i,iBlock) + &
+            Buff_I(iWave1:iWave2) * Weight
     end do
   end subroutine SP_put_from_mh
   !===================================================================

@@ -24,6 +24,7 @@ module SP_ModGrid
   public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_, Offset_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
+  public:: Wave1_, Wave2_
   public:: NameVar_V
   public:: TypeCoordSystem
 
@@ -104,8 +105,8 @@ module SP_ModGrid
   real, allocatable:: State_VIB(:,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar     = 27
-  integer, parameter:: nVarRead = 12
+  integer, parameter:: nVar     = 29
+  integer, parameter:: nVarRead = 14
   integer, parameter:: &
        !\
        !-- The following variables MUST be in CONTIGUOUS  order --------------
@@ -123,22 +124,24 @@ module SP_ModGrid
        Bx_     =10, & !
        By_     =11, & ! Background magnetic field
        Bz_     =12, & !
+       Wave1_  =13, & !\
+       Wave2_  =14, & ! Alfven wave turbulence
        !-----------------------------------------------------------------------
-       D_      =13, & ! Distance to the next particle
-       S_      =14, & ! Distance from the beginning of the line
-       U_      =15, & ! Magnitude of plasma bulk velocity
-       B_      =16, & ! Magnitude of magnetic field
-       DLogRho_=17, & ! Dln(Rho), i.e. -div(U) * Dt
-       RhoOld_ =18, & ! Background plasma density
-       BOld_   =19, & ! Magnitude of magnetic field
-       Flux0_  =20, & ! Total integral (simulated) particle flux
-       Flux1_  =21, & ! Integral particle flux >  5 MeV (GOES Channel 1)
-       Flux2_  =22, & ! Integral particle flux > 10 MeV (GOES Channel 2)
-       Flux3_  =23, & ! Integral particle flux > 30 MeV (GOES Channel 3)
-       Flux4_  =24, & ! Integral particle flux > 50 MeV (GOES Channel 4)
-       Flux5_  =25, & ! Integral particle flux > 60 MeV (GOES Channel 5)
-       Flux6_  =26, & ! Integral particle flux >100 MeV (GOES Channel 6)
-       EFlux_  =27    ! Total integral energy flux
+       D_      =15, & ! Distance to the next particle
+       S_      =16, & ! Distance from the beginning of the line
+       U_      =17, & ! Magnitude of plasma bulk velocity
+       B_      =18, & ! Magnitude of magnetic field
+       DLogRho_=19, & ! Dln(Rho), i.e. -div(U) * Dt
+       RhoOld_ =10, & ! Background plasma density
+       BOld_   =11, & ! Magnitude of magnetic field
+       Flux0_  =22, & ! Total integral (simulated) particle flux
+       Flux1_  =23, & ! Integral particle flux >  5 MeV (GOES Channel 1)
+       Flux2_  =24, & ! Integral particle flux > 10 MeV (GOES Channel 2)
+       Flux3_  =25, & ! Integral particle flux > 30 MeV (GOES Channel 3)
+       Flux4_  =26, & ! Integral particle flux > 50 MeV (GOES Channel 4)
+       Flux5_  =27, & ! Integral particle flux > 60 MeV (GOES Channel 5)
+       Flux6_  =28, & ! Integral particle flux >100 MeV (GOES Channel 6)
+       EFlux_  =29    ! Total integral energy flux
 
   ! variable names
   character(len=10), parameter:: NameVar_V(nVar) = (/&
@@ -154,6 +157,8 @@ module SP_ModGrid
        'Bx        ', &
        'By        ', &
        'Bz        ', &
+       'Wave1     ', &
+       'Wave2     ', &
        'D         ', &
        'S         ', &
        'U         ', &

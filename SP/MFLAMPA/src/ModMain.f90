@@ -20,6 +20,7 @@ module SP_ModMain
   use SP_ModGrid, ONLY: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
+       Wave1_, Wave2_, &
        XMin_, YMin_, ZMin_, Length_, &
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_, Shock_, ShockOld_, Offset_,&
@@ -56,6 +57,7 @@ module SP_ModMain
   public:: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
+       Wave1_, Wave2_, &
        XMin_, YMin_, ZMin_, Length_, &
        iComm, iProc, nProc, nBlock, &
        Proc_, Block_, Begin_, End_, Shock_, ShockOld_, Offset_,&
