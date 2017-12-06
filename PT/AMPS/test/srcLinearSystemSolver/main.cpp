@@ -1081,6 +1081,9 @@ void SetIC() {
 
     }
   }
+
+  //exchange data in the 'ghost' blocks
+  PIC::Mesh::mesh.ParallelBlockDataExchange();
 }
 
 int main(int argc,char **argv) {
