@@ -160,8 +160,8 @@ contains
 
     ! Synchronize global and local grids:
     call synchronize_refinement( &
-         GridID_ = EE_, &
-         localDD = MH_domaindecomposition)
+         GridID_     = EE_, &
+         LocalDomain = MH_Domain)
 
   end subroutine EE_set_grid
 
@@ -415,7 +415,6 @@ contains
     use EE_ModMultiFluid,ONLY: nIonFluid
     use EE_ModEnergy,    ONLY: calc_energy
     use CON_coupler,     ONLY: Grid_C, SC_, nVarBuffer, iVarTarget_V
-
     character(len=*), intent(inout):: NameVar ! List of variables
     integer,          intent(inout):: nVar    ! Number of variables in Data_VI
     integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
@@ -426,14 +425,14 @@ contains
 
     logical :: DoCountOnly
     integer :: i, j, k, iBlock, iPoint, iVarBuffer, iVar
-    real    :: Coord_D(3)
+    real    :: Coord_D(3), Xyz_D(3)
     real    :: rMinSc
 
     character(len=*), parameter :: NameSub='EE_get_sc_region'
     !--------------------------------------------------------------------------
     DoCountOnly = nPoint < 1
-
-    rMinSc = Grid_C(SC_)%Coord1_I(1)
+    
+    rMinSc = Grid_C(SC_)%Coord2_I(1)
 
     ! Find ghost cells in the SC domain
     iPoint = 0

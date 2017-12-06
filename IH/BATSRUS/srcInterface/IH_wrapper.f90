@@ -401,7 +401,7 @@ contains
          UseParticles
     use IH_ModPhysics,ONLY:No2Si_V, UnitX_
     use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
-    use IH_BATL_geometry, ONLY: TypeGeometry 
+    use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I 
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
     use IH_ModParticleFieldLine, ONLY: KindReg_
     logical:: DoTest,DoTestMe
@@ -419,17 +419,26 @@ contains
          nDim=3,     &
          IsTreeDecomposition=.true.)
 
-    ! Note: for Cartesian grid RadiusMin=xMin and RadiusMax=xMax
-    call set_coord_system(&
-         GridID_   = IH_,&
-         TypeCoord = TypeCoordSystem,&
-         UnitX     = No2Si_V(UnitX_),&
-         nVar      = nVar, &
-         NameVar   = NameVarCouple, &
-         TypeGeometry = TypeGeometry, &
-         Coord1_I = (/ RadiusMin, RadiusMax /), &
-         Coord2_I = (/ CoordMin_D(2), CoordMax_D(2) /), &
-         Coord3_I = (/ CoordMin_D(3), CoordMax_D(3) /)  )
+    if(IsGenRadius)then
+       call set_coord_system(            &
+            GridID_   = IH_,             &
+            TypeCoord = TypeCoordSystem, &
+            UnitX     = No2Si_V(UnitX_), &
+            nVar      = nVar,            &
+            NameVar   = NameVarCouple,   &
+            TypeGeometry = TypeGeometry, &
+            Coord1_I  = LogRGen_I,       &
+            Coord2_I  = (/RadiusMin, RadiusMax/))
+    else
+       call set_coord_system(&
+            GridID_   = IH_,             &
+            TypeCoord = TypeCoordSystem, &
+            UnitX     = No2Si_V(UnitX_), &
+            nVar      = nVar,            &
+            NameVar   = NameVarCouple,   &
+            TypeGeometry = TypeGeometry, &
+            Coord2_I  = (/RadiusMin, RadiusMax/))
+    end if
 
     if(is_Proc(IH_))then
        !Initialize the local grid
@@ -516,7 +525,25 @@ contains
     end if
     if(index(TypeGeometry,'lnr')  > 0)then
        CoordOut_D(1) = log(max(CoordOut_D(1), 1e-30))
+    elseif(index(TypeGeometry,'genr') > 0)then
+       call radius_to_gen(CoordOut_D(1))
     end if
+  contains
+    subroutine radius_to_gen(r)
+      use ModInterpolate, ONLY: find_cell
+      real, intent(inout) :: r
+
+      integer       :: nRgen
+      integer       :: i
+      real          :: dCoord
+      real, pointer :: LogRgen_I(:)
+      !-------------
+      LogRgen_I=>Grid_C(IH_)%Coord1_I
+      nRgen    = Grid_C(IH_)%nCoord_D(1)
+      call find_cell(0, nRgen-1, alog(r), &
+           i, dCoord, LogRgen_I, DoExtrapolate=.true.)
+      r = (i + dCoord)/(nRgen - 1)
+    end subroutine radius_to_gen
   end subroutine IH_xyz_to_coord
   !=============================
   subroutine IH_coord_to_xyz(CoordIn_D, XyzOut_D)
@@ -526,8 +553,8 @@ contains
     real, intent(out):: XyzOut_D( 3)
 
     real               :: Coord_D(3), r, Phi
-    integer, parameter :: x_=1, y_=2, z_=3, r_=1
-    integer            :: Phi_, Lat_
+    integer, parameter :: x_=1, r_=1
+    integer            :: Phi_
     character(len=20)  :: TypeGeometry
     character(len=*), parameter :: NameSub = 'IH_coord_to_xyz'
     !-------------------------------------------------------------
@@ -540,6 +567,8 @@ contains
     Coord_D = CoordIn_D
     if(index(TypeGeometry,'lnr')  > 0)then
        Coord_D(1) = exp(Coord_D(1))
+    elseif(index(TypeGeometry,'genr') > 0)then
+       call gen_to_radius(Coord_D(1))
     end if
 
     if(TypeGeometry(1:3)  == 'cyl')then
@@ -556,6 +585,21 @@ contains
        call CON_stop(NameSub// &
             ' not yet implemented for TypeGeometry='//TypeGeometry)
     end if
+  contains
+    subroutine gen_to_radius(r)
+      use ModInterpolate, ONLY: linear
+      
+      ! Convert generalized radial coordinate to true radial coordinate
+      real, intent(inout):: r
+      integer       :: nRgen
+      real, pointer :: LogRgen_I(:)
+      !-------------
+      LogRgen_I=>Grid_C(IH_)%Coord1_I
+      nRgen    = Grid_C(IH_)%nCoord_D(1)
+      
+      ! interpolate the LogRgen_I array for the general coordinate
+      r = exp(linear(LogRgen_I, 0, nRgen-1, r*(nRgen-1), DoExtrapolate=.true.))
+    end subroutine gen_to_radius
   end subroutine IH_coord_to_xyz
 
   !===============================================================
