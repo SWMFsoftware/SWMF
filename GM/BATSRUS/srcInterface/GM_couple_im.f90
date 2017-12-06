@@ -7,7 +7,7 @@ module GM_couple_im
 
   use ModMpi
   use ModNumConst, ONLY: cRadToDeg, cDegToRad
-  use CON_coupler, ONLY: Grid_C, ncells_decomposition_d
+  use CON_coupler, ONLY: Grid_C, ncell_id
 
   use ModProcMH
   use ModMain, ONLY: n_step, &
@@ -716,7 +716,7 @@ contains
             call CON_stop(NameSub//' invalid NameVar='//NameVar)
     end if
 
-    nCells_D=ncells_decomposition_d(IM_)
+    nCells_D=ncell_id(IM_)
     if( iSizeIn /= nCells_D(1) .or. jSizeIn /= nCells_D(2) ) then
 
        write(*,*)NameSub//' grid sizes do not agree iSize,jSize,nCells=',&
@@ -877,7 +877,7 @@ contains
     jSize = jSizeIn
 
     if(.not.allocated(IM_lat))then
-       nCells_D=ncells_decomposition_d(IM_)
+       nCells_D=ncell_id(IM_)
        if(  iSize /= nCells_D(1) .or. &
             jSize /= nCells_D(2) ) then
           write(*,*)NameSub//' grid sizes do not agree iSize,jSize,nCells=',&

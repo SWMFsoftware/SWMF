@@ -7,7 +7,7 @@ subroutine initialize_ie_ua_buffers(iOutputError)
   use IE_ModMain, only: iDebugLevel
   use ModFiles
   use ModConst, only: cRadToDeg, cTwoPi
-  use CON_coupler, ONLY : Grid_C, ncells_decomposition_d, IE_
+  use CON_coupler, ONLY : Grid_C, ncell_id, IE_
 
   implicit none
 
@@ -75,7 +75,7 @@ subroutine initialize_ie_ua_buffers(iOutputError)
 
   IEi_HavenBLKs = 2 !!! IEt_Grid % Descriptor % iRootMapDim_D(1)
 
-  nCells_D      = ncells_decomposition_d(IE_) + 1
+  nCells_D      = ncell_id(IE_) + 1
   IEi_HavenLats = nCells_D(1)
   IEi_HavenMlts = nCells_D(2)
 

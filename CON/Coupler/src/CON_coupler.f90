@@ -255,13 +255,13 @@ contains
        iProc0=iProc0In
        iComm=iCommIn
     else
-       iProc0 = i_proc0(compid_grid(GridID_))
+       iProc0 = i_proc0(compid(GridID_))
        iComm=i_comm()
     end if
 
     ThisGrid => Grid_C(GridID_)
 
-    IsRoot=is_proc0(compid_grid(GridID_))
+    IsRoot=is_proc0(compid(GridID_))
 
     ! Broadcast the coordinate type
     if(IsRoot)Thisgrid%TypeCoord=TypeCoord

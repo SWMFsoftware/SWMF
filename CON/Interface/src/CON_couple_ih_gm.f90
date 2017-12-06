@@ -205,9 +205,8 @@ contains
     logical,dimension(3)::IsLeftFace_D, IsRightFace_D
     integer,parameter::x_=1,y_=2,z_=3
 
-    IsLeftFace_D=i_D(x_:z_)<1
-    IsRightFace_D=i_D(x_:z_)>&
-         ncells_decomposition_d(GM_Grid%Domain%Ptr)
+    IsLeftFace_D=i_D(x_:z_)  < 1
+    IsRightFace_D=i_D(x_:z_) > GM_Grid%Domain%Ptr%nCells_D
     IsInterfacePoint=IsRightFace_D(x_).and..not.&
          (any(IsLeftFace_D(y_:z_)).or.any(IsRightFace_D(y_:z_)))
 

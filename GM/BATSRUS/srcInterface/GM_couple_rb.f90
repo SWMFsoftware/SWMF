@@ -8,7 +8,7 @@ module GM_couple_rb
   ! Coupling with Radiation Belt component
 
   use ModMpi
-  use CON_coupler, ONLY: Grid_C, ncells_decomposition_d
+  use CON_coupler, ONLY: Grid_C, ncell_id
   use ModProcMH, ONLY: iProc
   use ModMain, ONLY: n_step
   use ModPhysics, ONLY: No2Si_V, Si2No_V, UnitP_, UnitRho_, UnitTemperature_
@@ -62,7 +62,7 @@ contains
     jSize = jSizeIn
 
     if(.not.allocated(RB_lat))then
-       nCells_D=ncells_decomposition_d(RB_)
+       nCells_D=ncell_id(RB_)
        if(  iSize /= nCells_D(1) .or. &
             jSize /= nCells_D(2) ) then
           write(*,*)NameSub//' grid sizes do not agree iSize,jSize,nCells=',&

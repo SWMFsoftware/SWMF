@@ -59,8 +59,8 @@ contains
     write(*,*)'!!! Starting show_domain_decomp'
     write(*,*)'!!! CompID_            =', Dd%CompID_
     write(*,*)'!!! nDim               =', Dd%nDim
-    write(*,*)'!!! XyzMin_D           =', Dd%XyzMin_D
-    write(*,*)'!!! XyzMax_D           =', Dd%XyzMax_D
+    write(*,*)'!!! CoordMin_D           =', Dd%CoordMin_D
+    write(*,*)'!!! CoordMax_D           =', Dd%CoordMax_D
     write(*,*)'!!! iRootMapDim_D      =', Dd%iRootMapDim_D
     write(*,*)'!!! IsTreeDecomposition=', Dd%IsTreeDecomposition
     write(*,*)'!!! nDimTree           =', Dd%nDimTree
@@ -86,9 +86,9 @@ contains
        write(*,*) iNode, Dd%iDecomposition_II(:,iNode)
     end do
 
-    write(*,*)'!!! iNode, XyzBlock_DI,  DXyz_DI'
+    write(*,*)'!!! iNode, CoordBlock_DI,  DCoord_DI'
     do iNode = 1, Dd%nTreeNodes
-       write(*,*) iNode, Dd%XyzBlock_DI(:,iNode), Dd%DXyzCell_DI(:,iNode)
+       write(*,*) iNode, Dd%CoordBlock_DI(:,iNode), Dd%DCoordCell_DI(:,iNode)
     enddo
 
     write(*,*)'!!! Done with show_domain_decomp'
@@ -107,7 +107,7 @@ contains
 
     ! Allocate arrays for nNode sized tree
     Domain%nTreeNodes = nNode
-    call check_octree_grid_allocation(Domain)
+    call check_octree_allocation(Domain)
 
     ! Here we assume that there are no holes in the BATL tree
     do iNode = 1, nNode
@@ -255,7 +255,7 @@ contains
          mod(Domain%iRealization+1, 1000)
     iLastDecomposition = iNewDecomposition
     iLastGrid          = iNewGrid
-    call complete_grid(Domain)
+    call complete(Domain)
 
   end subroutine MH_update_local_decomposition
 

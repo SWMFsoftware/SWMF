@@ -65,7 +65,7 @@ contains
     call set_router_comm(IE_,UA_,iCommIeUa,UseMe,iProc0Ua)
 
     ! This works for a NODE BASED regular IE grid only
-    nCells_D = ncells_decomposition_d(IE_) 
+    nCells_D = ncell_id(IE_) 
     iSize=nCells_D(1); jSize=nCells_D(2)
 
     write(*,*) "Initializing COUPLER!!", iSize, jSize

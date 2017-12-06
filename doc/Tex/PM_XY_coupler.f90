@@ -154,8 +154,8 @@ contains
     IsInitialized = .true.
 
     ! Get the block size iSize and jSize from the PM grid descriptor 
-    ! using the ncells_decomposition_d method of CON_coupler
-    nCells_D = ncells_decomposition_d(PM_)
+    ! using the ncell_id method of CON_coupler
+    nCells_D = ncell_id(PM_)
     iSize = nCells_D(1); jSize = nCells_D(2)
 
     ! Set UseMe to .true. for the participating PE-s

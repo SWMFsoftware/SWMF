@@ -4,7 +4,9 @@
 !MODULE: CON_grid_descriptor - for uniform or octree grids
 !INTERFACE:
 Module CON_grid_descriptor
+  use ModUtilities, ONLY: check_allocate
   use ModKind
+  use ModNumConst, ONLY: cTiny
   !This file presents the class of the grid descriptors which     
   !includes both the uniformly spaced grids (uniformly    
   !spaced with respect to some generalized coordinates) and Octree
@@ -14,7 +16,12 @@ Module CON_grid_descriptor
   !computations and the interpolation procedures                  
 
   !USES:
-  use CON_grid_storage
+  use CON_grid_storage, ONLY: DomainType, DomainPointerType, cAlmostOne,  &
+       PE_, GlobalBlock_, coord_block_d, d_coord_block_d, d_coord_cell_d, &
+       ndim_grid, is_left_boundary_d, is_right_boundary_d, i_global_block,&
+       l_neighbor, i_global_node_a, n_block, BLK_, associate_dd_pointer,  &
+       ncell_id, glue_margin, pe_and_blk, search_cell, search_in
+       
   !REVISION HISTORY:
   ! Sokolov I.V.                                                  
   ! 6.18.03-7.11.03                                               
@@ -153,11 +160,11 @@ Module CON_grid_descriptor
   ! block number accordingly and for given point indexes in the 
   ! block
   !/
-  public :: xyz_grid_d
-  interface xyz_grid_d
-     module procedure xyz_grid_d_global
-     module procedure xyz_grid_d_local
-  end interface xyz_grid_d
+  public :: coord_grid_d
+  interface coord_grid_d
+     module procedure coord_grid_d_global
+     module procedure coord_grid_d_local
+  end interface coord_grid_d
   
   public :: i_grid_point_global
   interface i_grid_point_global
@@ -197,7 +204,7 @@ Module CON_grid_descriptor
      !/
      integer:: nBlock, nPointPerBlock
      integer, pointer ::  iIndex_IB(:,:)
-     real,    pointer ::  XyzBlock_DB(:,:), DXyz_DB(:,:)
+     real,    pointer ::  CoordBlock_DB(:,:), DCoord_DB(:,:)
   end type LocalGridType
   public :: set_local_gd, LocalGridType
   public :: clean_gd
@@ -213,9 +220,9 @@ Module CON_grid_descriptor
   public :: bilinear_interpolation !For uniform or node-based grid
   public :: interpolation_amr_gc   !Employs ghostcells 
 contains
-  !ROUTINE: xyz_grid_d - the coordintes of the grid point
+  !ROUTINE: coord_grid_d - the coordintes of the grid point
   !INTERFACE:
-  function xyz_grid_d_global(Grid,&
+  function coord_grid_d_global(Grid,&
        lGlobalTreeNode,iPoints_D)
     !INPUT ARGUMENTS:     
     type(GridType),intent(in)::Grid                 
@@ -224,30 +231,30 @@ contains
          iPoints_D
     !OUTPUT ARGUMENTS:
     real,dimension(Grid%nDim)::&
-         xyz_grid_d_global
+         coord_grid_d_global
     !EOP
-    xyz_grid_d_global = xyz_block_d(Grid%Domain%Ptr,&
+    coord_grid_d_global = coord_block_d(Grid%Domain%Ptr,&
          lGlobalTreeNode)+& 
-         d_xyz_cell_d(Grid%Domain%Ptr,&
+         d_coord_cell_d(Grid%Domain%Ptr,&
          lGlobalTreeNode)*&
-         (Grid%Displacement_D - cHalf+real(iPoints_D))
-  end function xyz_grid_d_global
+         (Grid%Displacement_D - 0.50+real(iPoints_D))
+  end function coord_grid_d_global
   !===============================
-  function xyz_grid_d_local(LocalGrid,&
+  function coord_grid_d_local(LocalGrid,&
        iBlockUsed, iPoints_D)
     !INPUT ARGUMENTS:     
     type(LocalGridType), intent(in) :: LocalGrid                 
     integer,           intent(in) :: iBlockUsed
     integer,           intent(in) :: iPoints_D(LocalGrid%nDim)
     !OUTPUT ARGUMENTS:
-    real                          :: xyz_grid_d_local(LocalGrid%nDim)
+    real                          :: coord_grid_d_local(LocalGrid%nDim)
     integer :: nDim
     !EOP
     nDim = LocalGrid%nDim
-    xyz_grid_d_local = LocalGrid%XyzBlock_DB(1:nDim,iBlockUsed) +&
-         LocalGrid%DXyz_DB(1:nDim,iBlockUsed)*&
+    coord_grid_d_local = LocalGrid%CoordBlock_DB(1:nDim,iBlockUsed) +&
+         LocalGrid%DCoord_DB(1:nDim,iBlockUsed)*&
          (LocalGrid%Displacement_D - 0.50 +real(iPoints_D))
-  end function xyz_grid_d_local
+  end function coord_grid_d_local
   !===============================================================!
   !BOP
   !IROUTINE: set_standard_grid_descriptor - cell centered or node grids.
@@ -298,18 +305,14 @@ contains
     select case(iMyStandard)
     case(CellCentered_)
        Grid%Displacement_D= 0.0
-       Grid%iPointMin_D=&
-            1-nGhostGridPointsMy
-       Grid%iPointMax_D=&
-            ncells_decomposition_D(&
-            iGridID)+nGhostGridPointsMy
+       Grid%iPointMin_D = 1 - nGhostGridPointsMy
+       Grid%iPointMax_D = ncell_id(iGridID) + &
+            nGhostGridPointsMy
     case(Nodes_)
-       Grid%Displacement_D=-cHalf
-       Grid%iPointMin_D=&
-            min(1,2-nGhostGridPointsMy)
-       Grid%iPointMax_D=&
-            ncells_decomposition_D(&
-            iGridID)+nGhostGridPointsMy
+       Grid%Displacement_D=-0.50
+       Grid%iPointMin_D = min(1,2-nGhostGridPointsMy)
+       Grid%iPointMax_D = ncell_id(iGridID) + &
+            nGhostGridPointsMy
     case default
        call CON_stop('Unknown standard for Grid Descriptor')
     end select
@@ -359,17 +362,12 @@ contains
     select case(iMyStandard)
     case(CellCentered_)
        Grid%Displacement_D= 0.0
-       Grid%iPointMin_D=1-nGhostGridPointsMy
-       Grid%iPointMax_D=&
-            ncells_decomposition_d(&
-            Domain)+nGhostGridPointsMy
+       Grid%iPointMin_D = 1 - nGhostGridPointsMy
+       Grid%iPointMax_D = Domain%nCells_D + nGhostGridPointsMy
     case(Nodes_)
-       Grid%Displacement_D=-cHalf
-       Grid%iPointMin_D=&
-            min(1,2-nGhostGridPointsMy)
-       Grid%iPointMax_D=&
-            ncells_decomposition_d(&
-            Domain)+nGhostGridPointsMy
+       Grid%Displacement_D = -0.50
+       Grid%iPointMin_D = min(1,2-nGhostGridPointsMy)
+       Grid%iPointMax_D = Domain%nCells_D + nGhostGridPointsMy
     case default
        call CON_stop('Unknown standard for Grid Descriptor')
     end select
@@ -490,18 +488,18 @@ contains
          LocalGrid%iIndex_IB(GlobalTreeNode_,:))
     LocalGrid%iIndex_IB(GlobalBlock_,:) = iDomain_II(GlobalBlock_,&
          LocalGrid%iIndex_IB(GlobalTreeNode_,:))
-    allocate(LocalGrid%DXyz_DB(1:nDim,1:nBlock),stat=iError)
-    call check_allocate(iError,'LocalGrid%DXyz_DB')
-    allocate(LocalGrid%XyzBlock_DB(1:nDim,1:nBlock),stat=iError)
-    call check_allocate(iError,'LocalGrid%XyzBlock_DB')
+    allocate(LocalGrid%DCoord_DB(1:nDim,1:nBlock),stat=iError)
+    call check_allocate(iError,'LocalGrid%DCoord_DB')
+    allocate(LocalGrid%CoordBlock_DB(1:nDim,1:nBlock),stat=iError)
+    call check_allocate(iError,'LocalGrid%CoordBlock_DB')
     do iBlock = 1, nBlock
        LocalGrid%iIndex_IB(GridPointFirst_,iBlock) = (iBlock - 1)*&
             nPointPerBlock + 1
-       LocalGrid%DXyz_DB(1:nDim,iBlock)     = &
-            Grid%Domain%Ptr%DXyzCell_DI(1:nDim, &
+       LocalGrid%DCoord_DB(1:nDim,iBlock)     = &
+            Grid%Domain%Ptr%DCoordCell_DI(1:nDim, &
             LocalGrid%iIndex_IB(GlobalTreeNode_,iBlock))
-       LocalGrid%XyzBlock_DB(1:nDim,iBlock) = &
-            Grid%Domain%Ptr%XyzBlock_DI(1:nDim, &
+       LocalGrid%CoordBlock_DB(1:nDim,iBlock) = &
+            Grid%Domain%Ptr%CoordBlock_DI(1:nDim, &
             LocalGrid%iIndex_IB(GlobalTreeNode_,iBlock))
     end do
   end subroutine set_local_gd
@@ -529,8 +527,8 @@ contains
     deallocate(Grid%iPointMax_D)
     deallocate(Grid%Displacement_D)
     deallocate(Grid%iIndex_IB)
-    deallocate(Grid%XyzBlock_DB) 
-    deallocate(Grid%DXyz_DB)
+    deallocate(Grid%CoordBlock_DB) 
+    deallocate(Grid%DCoord_DB)
   end subroutine clean_grid_descriptor_l
   !===============================================================!
   !Number of cells per block
@@ -781,7 +779,7 @@ contains
   !EOP 
   !BOP
   !INTERFACE:
-  subroutine nearest_grid_points(nDim,Xyz_D,&
+  subroutine nearest_grid_points(nDim,Coord_D,&
        Grid,&
        nIndex,&
        iIndex_II,&
@@ -789,7 +787,7 @@ contains
     !INPUT ARGUMENTS:                       
     type(GridType):: Grid
     integer,      intent(in):: nDim
-    real,      intent(inout):: Xyz_D(nDim) 
+    real,      intent(inout):: Coord_D(nDim) 
     integer,      intent(in):: nIndex
 
     !OUTPUT ARGUMENTS:
@@ -799,11 +797,11 @@ contains
     !EOP
 
     real,    dimension(nDim)::&
-         XyzStored_D, DxyzCells_D,DxyzTolerance_D
+         CoordStored_D, DCoordCells_D,DCoordTolerance_D
 
     integer, dimension(nDim):: iPoints_D
     logical, dimension(nDim):: IsAtFace_D
-    real                    :: Xyz_DI(nDim,2**nDim)
+    real                    :: Coord_DI(nDim,2**nDim)
     real,          parameter:: Tolerance = 0.001
     integer::lGlobalTreeNode,iDim,iImages
     !------------------
@@ -811,30 +809,30 @@ contains
     !Initialize arrays
     !/
     iIndex_II=0;Weight_I= 0.0
-    XyzStored_D=Xyz_D
+    CoordStored_D=Coord_D
     iIndex_II(1:nDim,1)=&
          Grid%iPointMax_D+1
     do while(any(iIndex_II(1:nDim,1)>&
          Grid%iPointMax_D))
-       Xyz_D=XyzStored_D
+       Coord_D=CoordStored_D
        !\
        ! Find a block to which the point belongs
        !/
-       call search_in(Grid%Domain%Ptr,Xyz_D,lGlobalTreeNode)
-       DxyzCells_D=d_xyz_cell_d(&
+       call search_in(Grid%Domain%Ptr,Coord_D,lGlobalTreeNode)
+       DCoordCells_D=d_coord_cell_d(&
             Grid%Domain%Ptr,lGlobalTreeNode)
        !\
        ! Check if the point is out of the computational domain
        !/
        where(is_right_boundary_d(Grid%Domain%Ptr,lGlobalTreeNode))
-          Xyz_D=min(Xyz_D,cAlmostOne*d_xyz_block_d(&         
+          Coord_D=min(Coord_D,cAlmostOne*d_coord_block_d(&         
                Grid%Domain%Ptr,lGlobalTreeNode))
-          XyzStored_D=Xyz_D+xyz_block_d(&         
+          CoordStored_D=Coord_D+coord_block_d(&         
                Grid%Domain%Ptr,lGlobalTreeNode)
        end where
        where(is_left_boundary_d(Grid%Domain%Ptr,lGlobalTreeNode))
-          Xyz_D=max(Xyz_D, 0.0)
-          XyzStored_D=Xyz_D+xyz_block_d(&         
+          Coord_D=max(Coord_D, 0.0)
+          CoordStored_D=Coord_D+coord_block_d(&         
                Grid%Domain%Ptr,lGlobalTreeNode)
        end where
        !\
@@ -847,21 +845,21 @@ contains
        !\
        ! Find the nearest grid point in the block
        !/
-       Xyz_D=Xyz_D-DxyzCells_D*Grid%Displacement_D
-       iPoints_D=floor(Xyz_D/DxyzCells_D)
+       Coord_D=Coord_D-DCoordCells_D*Grid%Displacement_D
+       iPoints_D=floor(Coord_D/DCoordCells_D)
        iIndex_II(1:nDim,1)=iPoints_D+1
-       DxyzTolerance_D=Tolerance*DxyzCells_D
+       DCoordTolerance_D=Tolerance*DCoordCells_D
        !\
-       ! The vector Xyz - XyzGrid + 0.5 Dxyz
+       ! The vector Coord - CoordGrid + 0.5 DCoord
        !/
-       Xyz_D=Xyz_D-DxyzCells_D*iPoints_D
+       Coord_D=Coord_D-DCoordCells_D*iPoints_D
        !\
-       ! If the point coordintates are such that Xyz-XyzGrid=+/-0.5*Dxyz
+       ! If the point coordintates are such that Coord-CoordGrid=+/-0.5*DCoord
        ! there are several equidistant grid points
        !/
 
-       IsAtFace_D=abs(Xyz_D)<DxyzTolerance_D&
-            .or.abs(Xyz_D-DxyzCells_D )<DxyzTolerance_D
+       IsAtFace_D=abs(Coord_D)<DCoordTolerance_D&
+            .or.abs(Coord_D-DCoordCells_D )<DCoordTolerance_D
        where(is_right_boundary_d(Grid%Domain%Ptr,lGlobalTreeNode))&
             iIndex_II(1:nDim,1)=&
             min(iIndex_II(1:nDim,1),&
@@ -871,35 +869,35 @@ contains
        !/
        where(iIndex_II(1:nDim,1)>&
             Grid%iPointMax_D)&
-            XyzStored_D=XyzStored_D+DxyzTolerance_D*0.25
+            CoordStored_D=CoordStored_D+DCoordTolerance_D*0.25
     end do
     nImage=1;Weight_I(1)= 1.0
     if(.not.(any(IsAtFace_D)))return
-    Xyz_DI(:,1)=XyzStored_D
+    Coord_DI(:,1)=CoordStored_D
     do iDim=1,nDim
        if(IsAtFace_D(iDim))then
-          Xyz_DI(:,1+nImage:nImage+nImage)=Xyz_DI(:,1:nImage)
-          Xyz_DI(iDim,1:nImage)=Xyz_DI(iDim,1:nImage)-&
-               DxyzTolerance_D(iDim)
-          Xyz_DI(iDim,1+nImage:nImage+nImage)=Xyz_DI(&
+          Coord_DI(:,1+nImage:nImage+nImage)=Coord_DI(:,1:nImage)
+          Coord_DI(iDim,1:nImage)=Coord_DI(iDim,1:nImage)-&
+               DCoordTolerance_D(iDim)
+          Coord_DI(iDim,1+nImage:nImage+nImage)=Coord_DI(&
                iDim,1+nImage:nImage+nImage)+&
-               DxyzTolerance_D(iDim)
+               DCoordTolerance_D(iDim)
           nImage=nImage+nImage
        end if
     end do
     do iImages=1,nImage
        call search_in(Grid%Domain%Ptr,&
-            Xyz_DI(:,iImages),&
+            Coord_DI(:,iImages),&
             lGlobalTreeNode)
        call pe_and_blk(Grid%Domain%Ptr,&
             lGlobalTreeNode,&
             iIndex_II(0,iImages),&
             iIndex_II(nIndex,iImages))
-       Xyz_DI(:,iImages)=Xyz_DI(:,iImages)-&
-            d_xyz_cell_d(Grid%Domain%Ptr,&
+       Coord_DI(:,iImages)=Coord_DI(:,iImages)-&
+            d_coord_cell_d(Grid%Domain%Ptr,&
             lGlobalTreeNode)*Grid%Displacement_D
        call search_cell(Grid%Domain%Ptr,&
-            lGlobalTreeNode,Xyz_DI(:,iImages),&
+            lGlobalTreeNode,Coord_DI(:,iImages),&
             iIndex_II(1:nDim,iImages))
     end do
     iImages=1
@@ -934,7 +932,7 @@ contains
   !INTERFACE:
   subroutine bilinear_interpolation(&
        nDim,&
-       Xyz_D,&
+       Coord_D,&
        Grid,&
        nIndex,& 
        iIndex_II,&
@@ -942,7 +940,7 @@ contains
     !INPUT ARGUMENTS:
     integer,intent(in)      ::nDim
     type(GridType)::Grid     
-    real,intent(inout)::Xyz_D(nDim)
+    real,intent(inout)::Coord_D(nDim)
     integer,intent(in)::nIndex
     !OUTPUT ARGUMENTS
     integer, intent(out) :: iIndex_II(0:nIndex,2**nDim)
@@ -951,65 +949,65 @@ contains
     real,dimension(2**nDim),intent(out)::Weight_I
     !EOP
     real,dimension(nDim)::&
-         XyzResid_D,XyzStored_D
+         CoordResid_D,CoordStored_D
     integer,dimension(nDim)::iPoints_D
-    real,dimension(nDim):: XyzMisc_D
+    real,dimension(nDim):: CoordMisc_D
     integer,dimension(2**nDim)::lNode_I
     integer::lGlobalTreeNode,iDim,iImages,iNewStart,nImageNew
     real::WeightLeft
     logical,dimension(nDim,2**nDim)::&
          IsUp_DI,IsDown_DI
     real,dimension(nDim,0:2**nDim)::&
-         Dxyz_DI
+         DCoord_DI
     logical,dimension(nDim)::&
          IsDomainBoundaryUp_D,IsDomainBoundaryDown_D
 
     iIndex_II=0
     Weight_I= 0.0
-    XyzStored_D=Xyz_D
+    CoordStored_D=Coord_D
     IsUp_DI(:,1)=.true.
-    call search_in(Grid%Domain%Ptr,Xyz_D,lGlobalTreeNode)
+    call search_in(Grid%Domain%Ptr,Coord_D,lGlobalTreeNode)
     !Find global node number, PE and number which involved the point
     do while(any(IsUp_DI(:,1)))
        !This do loop works more than once only in case of node
-       !grid and only in case of Xyz_D point belonging to a block
+       !grid and only in case of Coord_D point belonging to a block
        !boundary. At this case the routine needs help in deciding,
        !to which block this point should be assigned. Otherwise,
        !automatically IsUp_D(:,1)=.false. after first loop pass.
-       Xyz_D=XyzStored_D-xyz_block_d(&
+       Coord_D=CoordStored_D-coord_block_d(&
             Grid%Domain%Ptr,lGlobalTreeNode)
        IsDomainBoundaryUp_D=&
             is_right_boundary_d(Grid%Domain%Ptr,lGlobalTreeNode)
        IsDomainBoundaryDown_D=&
             is_left_boundary_d(Grid%Domain%Ptr,lGlobalTreeNode)
        where(IsDomainBoundaryUp_D)
-          Xyz_D=min(Xyz_D,cAlmostOne*d_xyz_block_d(&         
+          Coord_D=min(Coord_D,cAlmostOne*d_coord_block_d(&         
                Grid%Domain%Ptr,lGlobalTreeNode))
-          XyzStored_D=Xyz_D+xyz_block_d(&         
+          CoordStored_D=Coord_D+coord_block_d(&         
                Grid%Domain%Ptr,lGlobalTreeNode)
        end where
        where(IsDomainBoundaryDown_D)
-          Xyz_D=max(Xyz_D, 0.0)
-          XyzStored_D=Xyz_D+xyz_block_d(&         
+          Coord_D=max(Coord_D, 0.0)
+          CoordStored_D=Coord_D+coord_block_d(&         
                Grid%Domain%Ptr,lGlobalTreeNode)
        end where
 
        call pe_and_blk(Grid%Domain%Ptr,lGlobalTreeNode,&
             iIndex_II(0,1),iIndex_II(nIndex,1))
 
-       !Find Dxyz for this block
-       Dxyz_DI(:,0)=d_xyz_cell_d(&         
+       !Find DCoord for this block
+       DCoord_DI(:,0)=d_coord_cell_d(&         
             Grid%Domain%Ptr,lGlobalTreeNode)
 
        !\
        !/
 
-       XyzResid_D=Xyz_D/Dxyz_DI(:,0)-&
-            Grid%Displacement_D+cHalf
-       iPoints_D=floor(XyzResid_D)
-       XyzResid_D=XyzResid_D-real(iPoints_D)
-       !Thus calculated XyzResid_D satisfies the inequalities as       !
-       !follow:XyzResid_D>=0 and XyzResid_D<1. It is used to calculte  !
+       CoordResid_D=Coord_D/DCoord_DI(:,0)-&
+            Grid%Displacement_D+0.50
+       iPoints_D=floor(CoordResid_D)
+       CoordResid_D=CoordResid_D-real(iPoints_D)
+       !Thus calculated CoordResid_D satisfies the inequalities as       !
+       !follow:CoordResid_D>=0 and CoordResid_D<1. It is used to calculte  !
        !weights for the eight grid points, among them the iPoints_D!
        !being the left one with respect to all the spatial directions  !
        iIndex_II(1:nDim,1)=iPoints_D
@@ -1036,7 +1034,7 @@ contains
 
        if(iIndex_II(iDim,1)==Grid%iPointMax_D(iDim)&
             .and.IsDomainBoundaryUp_D(iDim))CYCLE
-       if(XyzResid_D(iDim)<cTiny)CYCLE
+       if(CoordResid_D(iDim)<cTiny)CYCLE
        iNewStart=nImage+1;nImageNew=nImage+nImage
        iIndex_II(:,iNewStart:nImageNew)=&
             iIndex_II(:,1:nImage)
@@ -1049,8 +1047,8 @@ contains
        IsDown_DI(:,iNewStart:nImageNew)=IsDown_DI(:,1:nImage)
        IsDown_DI(iDim,iNewStart:nImageNew)=.false.
        Weight_I(iNewStart:nImageNew)= &
-            Weight_I(1:nImage)*XyzResid_D(iDim)
-       WeightLeft= 1.0 -XyzResid_D(iDim)
+            Weight_I(1:nImage)*CoordResid_D(iDim)
+       WeightLeft= 1.0 -CoordResid_D(iDim)
        Weight_I(1:nImage)= WeightLeft* Weight_I(1:nImage)
        nImage=nImageNew
     end do
@@ -1059,24 +1057,24 @@ contains
     do iImages=1,nImage
        if(.not.(any(IsUp_DI(:,iImages)).or.&
             any(IsDown_DI(:,iImages))))then
-          Dxyz_DI(:,iImages)=Dxyz_DI(:,0)
+          DCoord_DI(:,iImages)=DCoord_DI(:,0)
           lNode_I(iImages)=lGlobalTreeNode
        else
           lNode_I(iImages)=l_neighbor(Grid%Domain%Ptr,&
                lGlobalTreeNode,iIndex_II(&
                1:nDim,iImages))
-          XyzMisc_D=xyz_grid_d(Grid,&
+          CoordMisc_D=coord_grid_d(Grid,&
                lGlobalTreeNode,iIndex_II(&
                1:nDim,iImages))-&
-               xyz_block_d(Grid%Domain%Ptr,lNode_I(iImages))
+               coord_block_d(Grid%Domain%Ptr,lNode_I(iImages))
           call pe_and_blk(Grid%Domain%Ptr,lNode_I(iImages),&
                iIndex_II(0,iImages),iIndex_II(nIndex,iImages))
-          Dxyz_DI(:,iImages)=d_xyz_cell_d(Grid%Domain%Ptr,&
+          DCoord_DI(:,iImages)=d_coord_cell_d(Grid%Domain%Ptr,&
                lNode_I(iImages))
-          XyzMisc_D=XyzMisc_D- Dxyz_DI(:,iImages)&
+          CoordMisc_D=CoordMisc_D- DCoord_DI(:,iImages)&
                *Grid%Displacement_D
           call search_cell(Grid%Domain%Ptr,&
-               lNode_I(iImages),XyzMisc_D,&
+               lNode_I(iImages),CoordMisc_D,&
                iIndex_II(1:nDim,iImages))
        end if
     end do
@@ -1094,7 +1092,7 @@ contains
   !INTERFACE:
   subroutine interpolation_amr_gc(&
        nDim,&
-       Xyz_D,&
+       Coord_D,&
        Grid,&
        nIndex,& 
        iIndex_II,&
@@ -1103,7 +1101,7 @@ contains
     !INPUT ARGUMENTS:
     integer,   intent(in)   :: nDim
     type(GridType):: Grid     
-    real,      intent(inout):: Xyz_D(nDim)
+    real,      intent(inout):: Coord_D(nDim)
     integer,   intent(in)   :: nIndex
     !OUTPUT ARGUMENTS
     integer,   intent(out)  :: iIndex_II(0:nIndex,2**nDim)
@@ -1117,7 +1115,7 @@ contains
     ! call shared interpolation subroutine
     call interpolate_amr(&
          nDim        = nDim,&
-         XyzIn_D     = Xyz_D,&
+         XyzIn_D     = Coord_D,&
          nIndexes    = nIndex,&
          find        = find_amr,&
          nCell_D     = GridAMR%Domain%Ptr%nCells_D,&
@@ -1129,13 +1127,13 @@ contains
 
   !===============================================================!
 
-  subroutine find_amr(nDim, Xyz_D, &
-       iProc, iBlock, XyzCorner_D, Dxyz_D, IsOut)
+  subroutine find_amr(nDim, Coord_D, &
+       iProc, iBlock, CoordCorner_D, DCoord_D, IsOut)
     use ModNumConst
     integer, intent(in)   :: nDim
-    real,    intent(inout):: Xyz_D(nDim)
+    real,    intent(inout):: Coord_D(nDim)
     integer, intent(out)  :: iProc, iBlock 
-    real,    intent(out)  :: XyzCorner_D(nDim), Dxyz_D(nDim)
+    real,    intent(out)  :: CoordCorner_D(nDim), DCoord_D(nDim)
     logical, intent(out)  :: IsOut
 
     integer:: iNode
@@ -1144,32 +1142,32 @@ contains
     ! check if point's inside the domain
     IsPeriodic_D = GridAMR%Domain%Ptr%IsPeriodic_D 
     IsOut = &
-         any(GridAMR%Domain%Ptr%XyzMin_D >  Xyz_D&
+         any(GridAMR%Domain%Ptr%CoordMin_D >  Coord_D&
          .and..not.IsPeriodic_D) .or. &
-         any(GridAMR%Domain%Ptr%XyzMax_D <= Xyz_D&
+         any(GridAMR%Domain%Ptr%CoordMax_D <= Coord_D&
          .and..not.IsPeriodic_D)
     if(IsOut) then
        if(GridAMR%Domain%Ptr%DoGlueMargins)then
           !Recalculate coordinates for spherical or similar
           !grids
-          call glue_margin(GridAMR%Domain%Ptr, Xyz_D)
+          call glue_margin(GridAMR%Domain%Ptr, Coord_D)
           IsOut = &
-               any(GridAMR%Domain%Ptr%XyzMin_D >  Xyz_D&
+               any(GridAMR%Domain%Ptr%CoordMin_D >  Coord_D&
                .and..not.IsPeriodic_D) .or. &
-               any(GridAMR%Domain%Ptr%XyzMax_D <= Xyz_D&
+               any(GridAMR%Domain%Ptr%CoordMax_D <= Coord_D&
                .and..not.IsPeriodic_D)
           if(IsOut)RETURN
        else
           RETURN
        end if
     end if
-    ! call subroutine to find a node containing Xyz_D
-    ! this call changes Xyz_D to coords relative to block's corner as needed
-    call search_in(GridAMR%Domain%Ptr, Xyz_D, iNode)
+    ! call subroutine to find a node containing Coord_D
+    ! this call changes Coord_D to coords relative to block's corner as needed
+    call search_in(GridAMR%Domain%Ptr, Coord_D, iNode)
 
     ! now extract block's parameters
-    XyzCorner_D = GridAMR%Domain%Ptr%XyzBlock_DI(:, iNode)
-    Dxyz_D      = GridAMR%Domain%Ptr%DxyzCell_DI(:, iNode)
+    CoordCorner_D = GridAMR%Domain%Ptr%CoordBlock_DI(:, iNode)
+    DCoord_D      = GridAMR%Domain%Ptr%DCoordCell_DI(:, iNode)
     iProc       = GridAMR%Domain%Ptr%iDecomposition_II(PE_, iNode) 
     iBlock      = GridAMR%Domain%Ptr%iDecomposition_II(BLK_, iNode) 
   end subroutine find_amr

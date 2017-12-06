@@ -159,13 +159,13 @@ contains
     !\
     ! Check grid registration
     !/
-    Router%iCompSource = compid_grid(GridSource%Domain%Ptr)
-    Router%iCompTarget = compid_grid(GridTarget%Domain%Ptr)
+    Router%iCompSource = compid(GridSource%Domain%Ptr)
+    Router%iCompTarget = compid(GridTarget%Domain%Ptr)
     !\
     !Check if the grids are both local or both global  
     !/             !
-    if(is_local_grid(GridSource%Domain%Ptr).and.&
-         is_local_grid(GridTarget%Domain%Ptr))then
+    if(GridSource%Domain%Ptr%IsLocal.and.&
+         GridTarget%Domain%Ptr%IsLocal)then
        Router%IsLocal=.true.
 
        if( Router%iCompSource /= Router%iCompTarget)&
@@ -180,8 +180,8 @@ contains
        Router%iProc0Target=0
        Router%IsProc=is_proc(Router%iCompTarget)
 
-    elseif((.not.is_local_grid(GridSource%Domain%Ptr))&
-         .and.(.not.is_local_grid(GridTarget%Domain%Ptr)))&
+    elseif((.not.GridSource%Domain%Ptr%IsLocal)&
+         .and.(.not.GridTarget%Domain%Ptr%IsLocal))&
          then
        Router%IsLocal=.false.
        Router%iProc=i_proc()
@@ -536,7 +536,7 @@ contains
        end subroutine mapping
        !----------------------------------------------------------------------!
        subroutine interpolate(&
-            nDim, Xyz_D, Grid, &
+            nDim, Coord_D, Grid, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
          ! provides PE and indices to access images of
@@ -546,7 +546,7 @@ contains
          ! number of indices per data entry
          integer, intent(in)      :: nDim
          ! data location on Source
-         real,    intent(inout)   :: Xyz_D(nDim)
+         real,    intent(inout)   :: Coord_D(nDim)
          ! grid descriptor
          type(GridType) :: Grid
          ! indices of images, their number and interpolation weights
@@ -708,7 +708,7 @@ contains
        end subroutine mapping
        !----------------------------------------------------------------------!
        subroutine interpolate(&
-            nDim, Xyz_D, Grid, &
+            nDim, Coord_D, Grid, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
          ! provides PE and indices to access images of
@@ -718,7 +718,7 @@ contains
          ! number of indices per data entry
          integer, intent(in)      :: nDim
          ! data location on Source
-         real,    intent(inout)   :: Xyz_D(nDim)
+         real,    intent(inout)   :: Coord_D(nDim)
          ! grid descriptor
          type(GridType) :: Grid
          ! indices of images, their number and interpolation weights
@@ -770,8 +770,8 @@ contains
     integer, dimension(0:Router%nProc-1)::nPutUbound_P
     integer::nRecvUbound
 
-    real,    dimension(GridTarget%nDim) :: XyzTarget_D
-    real,    dimension(GridSource%nDim) :: XyzSource_D 
+    real,    dimension(GridTarget%nDim) :: CoordTarget_D
+    real,    dimension(GridSource%nDim) :: CoordSource_D 
     integer, dimension(GridTarget%nDim) :: iCell_D
     integer, dimension(Router%nIndexTarget)       :: iIndexRecv_I
     ! components ids
@@ -918,7 +918,7 @@ contains
              ! Generalized coordinates of the target
              ! grid point
              !/
-             XyzTarget_D = xyz_grid_d( &
+             CoordTarget_D = coord_grid_d( &
                   GridTarget,&
                   iBlockUsed,          &
                   iCell_D)
@@ -927,13 +927,13 @@ contains
              ! 1. To select or deselect this point from the interface
              ! 2. To convert (with no change in the dimensions) the
              ! grid point coordinates (say, from generalized to 
-             ! Cartesian), that is why XyzTarget_D has intent inout
+             ! Cartesian), that is why CoordTarget_D has intent inout
              if( DoCheckPoint)then
                 call interface_point_coords(&
                      GridTarget,&
                      iBlockUsed,          &
                      nDimTarget,          &
-                     XyzTarget_D,         &
+                     CoordTarget_D,         &
                      nIndexTarget,        &
                      iIndexRecv_I,        &
                      IsInterfacePoint)
@@ -951,13 +951,13 @@ contains
                 !/
                 call mapping(&
                      nDimTarget,&
-                     XyzTarget_D,&
+                     CoordTarget_D,&
                      nDimSource,&
-                     XyzSource_D, &
+                     CoordSource_D, &
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE POINTS
              else
-                XyzSource_D=XyzTarget_D
+                CoordSource_D=CoordTarget_D
              end if
              !\
              ! Now, we put the point indexes to the router 
@@ -987,7 +987,7 @@ contains
         integer :: iIndexGet_II(0:Router%nIndexSource,&
              2**GridSource%nDim)              
         real    :: Weight_I(2**GridSource%nDim) 
-        real    :: XyzPass_D(GridSource%nDim) 
+        real    :: CoordPass_D(GridSource%nDim) 
         integer :: iImage, nImage, iProcDoNotAdd
         integer :: iProcLookUp_I(2**GridSource%nDim)             
         integer :: nProcToGet, iProcToGet
@@ -997,11 +997,11 @@ contains
         character(len=200):: &
              StringErrorFormat, StringErrorMessage
         !--------------------      
-        XyzPass_D = XyzSource_D
+        CoordPass_D = CoordSource_D
         if( DoInterpolate)then
            call interpolate(  &
                 nDimSource,   &
-                XyzPass_D,    &
+                CoordPass_D,    &
                 GridSource,     &
                 nIndexSource, &
                 iIndexGet_II, &
@@ -1010,7 +1010,7 @@ contains
         else
            call nearest_grid_points(&
                 nDim           = nDimSource, &
-                Xyz_D          = XyzPass_D, &
+                Coord_D          = CoordPass_D, &
                 Grid = GridSource, &
                 nIndex         = nIndexSource, &
                 iIndex_II      = iIndexGet_II, &
@@ -1021,7 +1021,7 @@ contains
            write(StringErrorFormat,'(a,i3,a)') '(a,',nDimSource,'es15.7)'
            write(StringErrorMessage,StringErrorFormat)&
                 NameSub//': Interpolation failed at location ', &
-                XyzSource_D
+                CoordSource_D
            call CON_stop(StringErrorMessage)
         end if
 
@@ -1075,7 +1075,7 @@ contains
               ! coordinates on Source
               Router%BufferTarget_II(&
                    Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
-                   XyzSource_D
+                   CoordSource_D
               if(nAux > 0)then   
                  if(present(extra_data))then
                     call extra_data(&
@@ -1249,7 +1249,7 @@ contains
     type(GridType),intent(in)   :: GridSource
     interface
        subroutine interpolate(&
-            nDim, Xyz_D, Grid, &
+            nDim, Coord_D, Grid, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
          ! provides PE and indices to access images of
@@ -1259,7 +1259,7 @@ contains
          ! number of indices per data entry
          integer, intent(in):: nDim
          ! data location on Source
-         real,    intent(inout):: Xyz_D(nDim)
+         real,    intent(inout):: Coord_D(nDim)
          ! grid descriptor
          type(GridType):: Grid
          ! indices of images, their number and interpolation weights
@@ -1334,18 +1334,18 @@ contains
         integer:: iIndexGet_II(&
              0:GridSource%nDim+1, &
              2**GridSource%nDim)
-        real :: XyzSource_D(GridSource%nDim)
-        real :: XyzPass_D(GridSource%nDim) 
+        real :: CoordSource_D(GridSource%nDim)
+        real :: CoordPass_D(GridSource%nDim) 
         real :: Weight_I(2**GridSource%nDim)
         integer:: iImage, nImage, nImagePart, iToGet
         !-----------------------------
-        XyzSource_D = Router%BufferSource_II(&
+        CoordSource_D = Router%BufferSource_II(&
              Router%iCoordStart:Router%iCoordEnd, iBuffer)
-        XyzPass_D = XyzSource_D
+        CoordPass_D = CoordSource_D
         if( DoInterpolate)then
            call interpolate(  &
                 nDimSource,   &
-                XyzPass_D,    &
+                CoordPass_D,    &
                 GridSource,     &
                 nIndexSource, &
                 iIndexGet_II, &
@@ -1354,7 +1354,7 @@ contains
         else
            call nearest_grid_points(&
                 nDim           = nDimSource, &
-                Xyz_D          = XyzPass_D, &
+                Coord_D          = CoordPass_D, &
                 Grid             = GridSource, &
                 nIndex         = nIndexSource, &
                 iIndex_II      = iIndexGet_II, &
@@ -1463,7 +1463,7 @@ contains
        end subroutine mapping
        !=====================
        subroutine interpolate(&
-            nDim, Xyz_D, Grid, &
+            nDim, Coord_D, Grid, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
          ! provides PE and indices to access images of
@@ -1473,7 +1473,7 @@ contains
          ! number of indices per data entry
          integer, intent(in)     :: nDim
          ! data location on Source
-         real,    intent(inout)  :: Xyz_D(nDim)
+         real,    intent(inout)  :: Coord_D(nDim)
          ! grid descriptor
          type(GridType):: Grid
          ! indices of images, their number and interpolation weights
@@ -1594,7 +1594,7 @@ contains
        subroutine interface_point_coords(&
             Grid,&
             lGlobalTreeNode,&
-            nDim, Xyz_D, nIndex, iIndex_I,&
+            nDim, Coord_D, nIndex, iIndex_I,&
             IsInterfacePoint)
          use CON_grid_descriptor
          implicit none
@@ -1602,7 +1602,7 @@ contains
          integer,intent(in)    :: lGlobalTreeNode,nIndex
          logical,intent(out)   :: IsInterfacePoint
          integer,intent(in)    :: nDim
-         real,   intent(inout) :: Xyz_D(nDim)
+         real,   intent(inout) :: Coord_D(nDim)
          integer,intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
        !====================================
@@ -1617,7 +1617,7 @@ contains
        end subroutine mapping
        !=====================
        subroutine interpolate(&
-            nDim, Xyz_D, Grid, &
+            nDim, Coord_D, Grid, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Source's grid; 
          ! provides PE and indices to access images of
@@ -1627,7 +1627,7 @@ contains
          ! number of indices per data entry
          integer, intent(in)     :: nDim
          ! data location on Source
-         real,    intent(inout)  :: Xyz_D(nDim)
+         real,    intent(inout)  :: Coord_D(nDim)
          ! grid descriptor
          type(GridType):: Grid
          ! indices of images, their number and interpolation weights
@@ -1659,8 +1659,8 @@ contains
     integer, dimension(0:Router%nProc-1)::nGetUbound_P
     integer::nSendUbound
 
-    real,    dimension(GridTarget%nDim) :: XyzTarget_D
-    real,    dimension(GridSource%nDim) :: XyzSource_D 
+    real,    dimension(GridTarget%nDim) :: CoordTarget_D
+    real,    dimension(GridSource%nDim) :: CoordSource_D 
     integer, dimension(GridSource%nDim) :: iCell_D
     integer, dimension(Router%nIndexSource)       :: iIndexSend_I
     ! components ids
@@ -1808,7 +1808,7 @@ contains
              ! Generalized coordinates of the Source
              ! grid point
              !/
-             XyzSource_D = xyz_grid_d(&
+             CoordSource_D = coord_grid_d(&
                   GridSource,&
                   iBlockUsed,&
                   iCell_D)
@@ -1817,13 +1817,13 @@ contains
              ! 1. To select or deselect this point from the interface
              ! 2. To convert (with no change in the dimensions) the
              ! grid point coordinates (say, from generalized to 
-             ! Cartesian), that is why XyzSource_D has intent inout
+             ! Cartesian), that is why CoordSource_D has intent inout
              if( DoCheckPoint)then
                 call interface_point_coords(&
                      GridSource,    &
                      iBlockUsed,  &
                      nDimSource,  &
-                     XyzSource_D, &
+                     CoordSource_D, &
                      nIndexSource,&
                      iIndexSend_I,&
                      IsInterfacePoint)
@@ -1841,9 +1841,9 @@ contains
                 !/
                 call mapping(&
                      nDimSource,&
-                     XyzSource_D,&
+                     CoordSource_D,&
                      nDimTarget,&
-                     XyzTarget_D, &
+                     CoordTarget_D, &
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE POINTS
              else
@@ -1851,7 +1851,7 @@ contains
                 ! Otherwise, the coordinates in the source
                 ! are the same as those in the oputput from 
                 !
-                XyzTarget_D=XyzSource_D
+                CoordTarget_D=CoordSource_D
              end if
              !\
              ! Now, we put the point indexes to the router 
@@ -1881,7 +1881,7 @@ contains
         integer :: iIndexPut_II(0:Router%nIndexTarget,&
              2**GridTarget%nDim)              
         real    :: Weight_I(2**GridTarget%nDim) 
-        real    :: XyzPass_D(GridTarget%nDim) 
+        real    :: CoordPass_D(GridTarget%nDim) 
         integer :: iImage, nImage!, iProcDoNotAdd
         integer :: iProcLookUp_I(2**GridTarget%nDim)             
         integer :: nProcToPut, iProcToPut
@@ -1892,11 +1892,11 @@ contains
         character(len=200):: &
              StringErrorFormat, StringErrorMessage
         !--------------------      
-        XyzPass_D = XyzTarget_D
+        CoordPass_D = CoordTarget_D
         if( DoInterpolate)then
            call interpolate(  &
                 nDimTarget,   &
-                XyzPass_D,    &
+                CoordPass_D,    &
                 GridTarget,     &
                 nIndexTarget, &
                 iIndexPut_II, &
@@ -1905,7 +1905,7 @@ contains
         else
            call nearest_grid_points(&
                 nDim           = nDimTarget, &
-                Xyz_D          = XyzPass_D, &
+                Coord_D          = CoordPass_D, &
                 Grid             = GridTarget, &
                 nIndex         = nIndexTarget, &
                 iIndex_II      = iIndexPut_II, &
@@ -1916,7 +1916,7 @@ contains
            write(StringErrorFormat,'(a,i3,a)') '(a,',nDimTarget,'es15.7)'
            write(StringErrorMessage,StringErrorFormat)&
                 NameSub//': Interpolation failed at location ', &
-                XyzTarget_D
+                CoordTarget_D
            call CON_stop(StringErrorMessage)
         end if
         
@@ -1969,7 +1969,7 @@ contains
               ! coordinates on Source
               Router%BufferSource_II(&
                    Router%iCoordStart:Router%iCoordEnd, nBuffer)=&
-                   XyzTarget_D
+                   CoordTarget_D
               if(nAux > 0)then  
                  iAux_I(iPointInBlock_) = iPointInBlock
                  iAux_I(iBlockAll_    ) = GridSource%iIndex_IB(&
@@ -2118,7 +2118,7 @@ contains
     type(GridType),intent(in)   :: GridTarget
     interface
        subroutine interpolate(&
-            nDim, Xyz_D, Grid, &
+            nDim, Coord_D, Grid, &
             nIndex, iIndex_II, nImage, Weight_I)
          ! interpolation on Target's grid; 
          ! provides PE and indices to access images of
@@ -2128,7 +2128,7 @@ contains
          ! number of indices per data entry
          integer, intent(in):: nDim
          ! data location on Source
-         real,    intent(inout):: Xyz_D(nDim)
+         real,    intent(inout):: Coord_D(nDim)
          ! grid descriptor
          type(GridType):: Grid
          ! indices of images, their number and interpolation weights
@@ -2146,9 +2146,9 @@ contains
     integer:: iIndexPut_II(&
          0:GridTarget%nDim+1, &
          2**GridTarget%nDim)
-    real :: XyzTarget_D(GridTarget%nDim)
+    real :: CoordTarget_D(GridTarget%nDim)
     real :: Weight_I(2**GridTarget%nDim)
-    real   :: XyzPass_D(GridTarget%nDim) 
+    real   :: CoordPass_D(GridTarget%nDim) 
     integer:: iImage, nImage, nImageMax, nImagePart
     integer:: nDimTarget, nIndexTarget
     logical:: DoInterpolate
@@ -2185,13 +2185,13 @@ contains
          i_proc_stride(iCompSource)
        do iBuffer = nRecvCumSum + 1, &
             nRecvCumSum + Router%nRecv_P(iProcFrom)
-          XyzTarget_D = Router%BufferTarget_II(&
+          CoordTarget_D = Router%BufferTarget_II(&
                Router%iCoordStart:Router%iCoordEnd, iBuffer)
-          XyzPass_D = XyzTarget_D
+          CoordPass_D = CoordTarget_D
           if(DoInterpolate)then
              call interpolate(&
                   nDimTarget,&
-                  XyzPass_D,&
+                  CoordPass_D,&
                   GridTarget,&
                   nIndexTarget,&
                   iIndexPut_II,&
@@ -2200,7 +2200,7 @@ contains
           else
              call nearest_grid_points(&
                   nDim           = nDimTarget, &
-                  Xyz_D          = XyzPass_D, &
+                  Coord_D          = CoordPass_D, &
                   Grid             = GridTarget, &
                   nIndex         = nIndexTarget, &
                   iIndex_II      = iIndexPut_II, &

@@ -344,7 +344,7 @@ contains
     !------------------------------------------
     IsInterfacePoint = .true.; iParticle = nint(XyzIn_D(1))
     call SC_get_particle_indexes(iParticle, iIndex_I)
-    CoordOut_D = xyz_grid_d(SP_Grid, iIndex_I(1),(/iIndex_I(2),1,1/))
+    CoordOut_D = coord_grid_d(SP_Grid, iIndex_I(1),(/iIndex_I(2),1,1/))
   end subroutine mapping_line_sc_to_sp             
   !===========================================
   subroutine SC_get_for_sp_and_transform(&
@@ -488,7 +488,7 @@ contains
     !------------------------------------------
     IsInterfacePoint = .true.; iParticle = nint(XyzIn_D(1))
     call IH_get_particle_indexes(iParticle, iIndex_I)
-    CoordOut_D = xyz_grid_d(SP_Grid, iIndex_I(1), (/iIndex_I(2),1,1/))
+    CoordOut_D = coord_grid_d(SP_Grid, iIndex_I(1), (/iIndex_I(2),1,1/))
   end subroutine mapping_line_ih_to_sp
   !====================================      
   subroutine IH_get_for_sp_and_transform(&
