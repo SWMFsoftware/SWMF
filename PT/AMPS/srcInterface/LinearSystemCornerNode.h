@@ -163,7 +163,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
 void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-  int i,j,k,thread;
+  int i,j,k,thread,nLocalNode;
   int iRow=0;
   cMatrixRow* Row;
   cStencilElement* el;
@@ -181,7 +181,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   list<cLinearSystemCornerNodeDataRequestListElement> DataRequestList[PIC::nTotalThreads];
 
   //build the matrix
-  for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+  for (nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
     node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
 
     //in case of the periodic boundary condition it is only the points that are inside the "real" computational domain that are considered
@@ -367,6 +367,27 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
       el->Thread=el->node->Thread;
     }
   }
+
+  //re-count the 'internal' corner nodes so they follow the i,j,k order as well as rows
+  for (Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) Row->CornerNode->LinearSolverUnknownVectorIndex=-1;
+
+  for (iRow=0,Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) {
+    if (Row->CornerNode->LinearSolverUnknownVectorIndex>=0) exit(__LINE__,__FILE__,"Error: a courner node is double counted");
+
+    Row->CornerNode->LinearSolverUnknownVectorIndex=iRow;
+  }
+
+  //verify that all all corner nodes have been counted
+  for (Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) for (iElement=0;iElement<Row->nNonZeroElements;iElement++) {
+    int n;
+
+    if ((n=Row->Elements[iElement].CornerNode->LinearSolverUnknownVectorIndex)<0) {
+      exit(__LINE__,__FILE__,"Error: an uncounted corner node has been found");
+    }
+
+    Row->Elements[iElement].UnknownVectorIndex=n;
+  }
+
 
   //exchange the request lists
   int From,To;
@@ -558,7 +579,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
       res+=StencilElement.MatrixElementValue*RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
     }
 
-     p[row->CornerNode->LinearSolverUnknownVectorIndex]=res;
+     p[cnt]=res;
   }
 
   RecvExchangeBuffer[PIC::ThisThread]=NULL;
@@ -580,7 +601,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   //populate the buffers
   for (cnt=0,row=MatrixRowTable;row!=NULL;cnt++,row=row->next) {
     fInitialUnknownValues(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
-    SubdomainPartialRHS[row->CornerNode->LinearSolverUnknownVectorIndex]=row->Rhs;
+    SubdomainPartialRHS[cnt]=row->Rhs;
   }
 
 
@@ -604,16 +625,16 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   double ** precond_matrix_II;// pointer to precondition matrix; us  null if no preconditioner
   int lTest=1;//1: need test output; 0: no test statement
 
-  printf("nBlock:%d\n",nBlock);
+/*  printf("nBlock:%d\n",nBlock);
   for (int ii=0; ii<cnt;ii++){
     printf("No.%d, RHS_I:%f\n", ii, Rhs_I[ii]);
-  }
+  }*/
 
   linear_solver_wrapper("GMRES", &Tol,&nIter, &nVar, &nDim,&nI, &nJ, &nK, &nBlock, &iComm, Rhs_I,Sol_I, &PrecondParam, NULL, &lTest);
 
-  for (int ii=0; ii<cnt;ii++){
+/*  for (int ii=0; ii<cnt;ii++){
     printf("No.%d, Sol_I:%f\n", ii, Sol_I[ii]);
-  }
+  }*/
 
 
   //unpack the solution
