@@ -484,21 +484,21 @@ contains
          ! find the particle just above the given radius
          do iParticle = iFirst , iLast
             Radius0 = sum(State_VIB(X_:Z_, iParticle, iBlock)**2)**0.5
-            if( Radius0 > File_I(iFile) % Radius) EXIT
+            if( Radius0 > File_I(iFile) % Radius) then
+               iAbove = iParticle
+               !check if line started above output sphere, i.e. no intersection
+               DoPrint_I(iNode) = iAbove == iFirst
+               EXIT
+            end if
             ! check if reached the end, i.e. there is no intersection
             if(iParticle == iLast) &
                  DoPrint_I(iNode) = .false.
          end do
-         !check if field line started above output sphere, i.e. no intersection
-         if(iParticle == iFirst) &
-              DoPrint_I(iNode) = .false.
 
          ! if no intersection found -> proceed to the next line
          if(.not.DoPrint_I(iNode)) CYCLE
 
-         !intersection is found -> get data at that location
-         iAbove = iParticle
-         
+         ! intersection is found -> get data at that location;
          ! interpolate data and fill buffer
          Radius0 = sum(State_VIB(X_:Z_, iAbove-1, iBlock)**2)**0.5
          Radius1 = sum(State_VIB(X_:Z_, iAbove,   iBlock)**2)**0.5
@@ -603,15 +603,16 @@ contains
          ! find the particle just above the given radius
          do iParticle = iFirst , iLast
             Radius0 = sum(State_VIB(X_:Z_, iParticle, iBlock)**2)**0.5
-            if( Radius0 > File_I(iFile) % Radius) EXIT
+            if( Radius0 > File_I(iFile) % Radius)then
+               iAbove = iParticle
+               !check if line started above output sphere, i.e. no intersection
+               DoPrint = iAbove == iFirst
+               EXIT
+            end if
             ! check if reached the end, i.e. there is no intersection
             if(iParticle == iLast) &
                  DoPrint = .false.
          end do
-         !check if field line started above output sphere, i.e. no intersection
-         if(iParticle == iFirst) &
-              DoPrint = .false.
-
          ! if no intersection found -> proceed to the next line
          if(.not.DoPrint) CYCLE
 
@@ -650,9 +651,6 @@ contains
          !\
          ! add new data
          nDataLine = nDataLine+1
-
-         !intersection is found -> get data at that location
-         iAbove = iParticle
 
          ! interpolate data and fill buffer
          Radius0 = sum(State_VIB(X_:Z_, iAbove-1, iBlock)**2)**0.5
