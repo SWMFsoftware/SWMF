@@ -30,16 +30,16 @@ module SP_wrapper
   public:: SP_set_line_foot
   public:: SP_n_particle
   public:: SP_copy_old_state
-  public:: SP_check_if_do_extract
+  public:: SP_check_ready_for_mh
   public:: SP_assign_lagrangian_coords
 contains
 
-  subroutine SP_check_if_do_extract(DoExtract)
-    logical, intent(out):: DoExtract
-    character(len=*), parameter:: NameSub='SP_check_if_do_extract'
+  subroutine SP_check_ready_for_mh(IsReady)
+    logical, intent(out):: IsReady
+    character(len=*), parameter:: NameSub='SP_check_ready_for_mh'
     !---------------------------------------------------------------
-    call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_check_if_do_extract
+    call CON_stop(NameSub//': cannot call the empty version')
+  end subroutine SP_check_ready_for_mh
   !========================================================================  
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
 

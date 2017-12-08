@@ -60,7 +60,7 @@ module SP_wrapper
   public:: SP_set_line_foot
   public:: SP_n_particle
   public:: SP_copy_old_state
-  public:: SP_check_if_do_extract
+  public:: SP_check_ready_for_mh
   public:: SP_assign_lagrangian_coords
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
@@ -72,15 +72,19 @@ module SP_wrapper
 
 contains
   !\Interface routines to be called from super-structure only  
-  subroutine SP_check_if_do_extract(DoExtract)
+  subroutine SP_check_ready_for_mh(IsReady)
     use ModMpi
-    logical, intent(out):: DoExtract
+    logical, intent(out):: IsReady
 
     integer :: iError
+    character(len=*), parameter:: NameSub='SP_check_ready_for_mh'
     !--------------
-    if(is_proc0(SP_)) DoExtract = .not. DoRestart
-    call MPI_Bcast(DoExtract, 1, MPI_LOGICAL, i_proc0(SP_), i_comm(), iError)
-  end subroutine SP_check_if_do_extract
+    ! when restarting, line data is available, i.e. ready to couple with mh;
+    ! get value at SP root and broadcast to all SWMF processors
+    if(is_proc0(SP_)) &
+         IsReady = DoRestart
+    call MPI_Bcast(IsReady, 1, MPI_LOGICAL, i_proc0(SP_), i_comm(), iError)
+  end subroutine SP_check_ready_for_mh
   !===================================================================
   subroutine SP_get_bounds_comp(ThisModel_, RMinOut, RMaxOut)
     use ModMpi

@@ -8,17 +8,17 @@ module CON_couple_mh_sp
   use CON_coupler
   use IH_wrapper, ONLY: IH_synchronize_refinement, IH_extract_line,           &
        IH_get_for_mh, IH_get_a_line_point, IH_add_to_line, IH_n_particle,     &
-       IH_line_interface_point, IH_get_particle_indexes, IH_check_particles,  &
+       IH_line_interface_point, IH_get_particle_indexes,IH_check_ready_for_sp,&
         IH_LineDD, IH_get_particle_coords, IH_xyz_to_coord, IH_coord_to_xyz   
   !^CMP IF SC BEGIN 
   use SC_wrapper, ONLY: SC_synchronize_refinement, SC_extract_line,           &
        SC_get_for_mh, SC_get_a_line_point, SC_add_to_line, SC_n_particle,     &
-       SC_line_interface_point, SC_get_particle_indexes, SC_check_particles,  & 
+       SC_line_interface_point, SC_get_particle_indexes,SC_check_ready_for_sp,&
        SC_LineDD, SC_get_particle_coords, SC_xyz_to_coord    
   !^CMP END SC
   use SP_wrapper, ONLY: &
        SP_put_from_sc, SP_put_from_ih, SP_put_input_time, SP_put_line,        &
-       SP_n_particle, SP_check_if_do_extract, SP_get_bounds_comp,             &
+       SP_n_particle, SP_check_ready_for_mh, SP_get_bounds_comp,              &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc,    &
        SP_interface_point_coords_for_ih_extract, SP_set_line_foot,            &
        SP_copy_old_state, SP_adjust_lines, SP_assign_lagrangian_coords
@@ -86,6 +86,8 @@ contains
          iInterfaceOrigin = 0, iInterfaceEnd = 1
     ! whether need to extract new line (equal to .not.DoRestart
     logical:: DoExtract
+    ! whether a component is ready for coupling
+    logical:: IsReady
     !----------------------------------------------------------------------
     if(.not.DoInit)return
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -94,8 +96,10 @@ contains
     call get_time(tSimulationOut=tNow)
     if(is_proc(SP_))call SP_put_input_time(tNow)
 
-    ! determine whether need to extract new field lines
-    call SP_check_if_do_extract(DoExtract)
+    ! determine whether SP is ready for coupling with MH
+    call SP_check_ready_for_mh(IsReady)
+    ! if not ready => need to extract new field lines
+    DoExtract = .not.IsReady
 
     if(use_comp(SC_))call couple_sc_sp_init  !^CMP IF SC         
     if(use_comp(IH_))call couple_ih_sp_init
@@ -112,7 +116,15 @@ contains
       ! account for coord unit difference
       RScMin = RScMin * Grid_C(SP_)%UnitX / Grid_C(SC_)%UnitX
       RScMax = RScMax * Grid_C(SP_)%UnitX / Grid_C(SC_)%UnitX
-      call SC_check_particles()
+
+      ! Check whether SC is ready for coupling with SP;
+      call SC_check_ready_for_sp(IsReady)
+      if(.not.IsReady)&
+           ! SC has no means to provide necessary information to SP
+           call CON_stop(&
+           "SC component is not ready for coupling with SP component,"//&
+           " can't initialize coupling")
+
       call set_couple_var_info(SC_, SP_)
       !\
       !Initialize coupler from SC (source )to SP (target)
@@ -181,7 +193,15 @@ contains
       ! account for coord unit difference
       RIhMin = RIhMin * Grid_C(SP_)%UnitX / Grid_C(IH_)%UnitX
       RIhMax = RIhMax * Grid_C(SP_)%UnitX / Grid_C(IH_)%UnitX
-      call IH_check_particles()
+
+      ! Check whether IH is ready for coupling with SP;
+      call IH_check_ready_for_sp(IsReady)
+      if(.not.IsReady)&
+           ! IH has no means to provide necessary information to SP
+           call CON_stop(&
+           "IH component is not ready for coupling with SP component,"//&
+           " can't initialize coupling")
+
       call set_couple_var_info(IH_, SP_)
       !\
       !Initialize coupler from IH (source )to SP (target)

@@ -49,7 +49,7 @@ module IH_wrapper
   public:: IH_find_points
 
   ! Coupling with SP
-  public:: IH_check_particles
+  public:: IH_check_ready_for_sp
   public:: IH_extract_line
   public:: IH_add_to_line
   public:: IH_get_particle_indexes
@@ -1566,12 +1566,19 @@ contains
   end subroutine IH_put_from_mh
 
   !============================================================================
-  subroutine IH_check_particles
+  subroutine IH_check_ready_for_sp(IsReady)
+    use ModMpi
+    use CON_coupler, ONLY: is_proc0, i_proc0, i_comm
     use IH_ModMain, ONLY: UseParticles
-    if(.not.UseParticles)&
-         call CON_stop("Particle line isn't set in the PARAM file,"//&
-         " add #PARTICLELINE section")
-  end subroutine IH_check_particles
+    logical, intent(out):: IsReady
+
+    integer :: iError
+    !------------------------------------------------
+    ! get value at IH root and broadcast to all SWMF processors
+    if(is_proc0(IH_)) &
+         IsReady = UseParticles
+    call MPI_Bcast(IsReady, 1, MPI_LOGICAL, i_proc0(IH_), i_comm(), iError)
+  end subroutine IH_check_ready_for_sp
   !============================================================================
 
   subroutine IH_get_for_gm(&
