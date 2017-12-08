@@ -339,8 +339,7 @@ contains
             Xyz_DI = RouterScSp%BufferSource_II(1:nDim, 1:nLength),&
             nIndex    = nAux,                                      &
             iIndex_II = nint(RouterScSp%BufferSource_II(           &
-            nDim+1:nDim+nAux, 1:nLength)),                         &      
-            UseInputInGenCoord = .true., DoReplace = .true.)
+            nDim+1:nDim+nAux, 1:nLength)))
     end if
   end subroutine exchange_data_sc_sp
   !=========================
@@ -470,9 +469,7 @@ contains
             1:nDim, 1:nLength), &
             nIndex    = nAux,   &
             iIndex_II = nint(RouterIhSp%BufferSource_II(&
-            nDim+1:nDim+nAux, 1:nLength)),&      
-            UseInputInGenCoord = .true.,&
-            DoReplace = .true.)
+            nDim+1:nDim+nAux, 1:nLength)))
     end if
   contains                                         !^CMP IF SC BEGIN
     subroutine sort_out_sc_particles

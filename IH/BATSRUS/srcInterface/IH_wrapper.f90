@@ -1259,20 +1259,21 @@ contains
 
   !============================================================================
 
-  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II,&
-       UseInputInGenCoord, DoReplace)
-    use IH_BATL_lib, ONLY: nDim
-    use IH_ModParticleFieldLine, ONLY: add_to_particle_line
+  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II)
+    use IH_BATL_lib, ONLY: nDim, put_particles
+    use IH_ModParticleFieldLine, ONLY: KindReg_
     ! add particles with specified coordinates to the already existing lines
     integer, intent(in):: nParticle
     real,    intent(in):: Xyz_DI(nDim, nParticle)
     integer, intent(in):: nIndex
     integer, intent(in):: iIndex_II(nIndex, nParticle)
-    logical, intent(in) :: UseInputInGenCoord
-    logical, intent(in) :: DoReplace
     !------------------------------------------------------------------------
-    call add_to_particle_line(nParticle, Xyz_DI, iIndex_II, &
-         UseInputInGenCoord, DoReplace)
+    call put_particles(&
+         iKindParticle      = KindReg_ ,&
+         StateIn_VI         = Xyz_DI   ,&
+         iIndexIn_II        = iIndex_II,&
+         UseInputInGenCoord = .true.   ,&
+         DoReplace          = .true.     )
   end subroutine IH_add_to_line
 
   !==================================================================!

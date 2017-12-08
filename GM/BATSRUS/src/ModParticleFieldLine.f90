@@ -31,7 +31,6 @@ module ModParticleFieldLine
   public:: read_particle_line_param
   public:: init_particle_line
   public:: extract_particle_line
-  public:: add_to_particle_line
   public:: advect_particle_line
   public:: get_particle_data
   public:: write_plot_particle
@@ -864,32 +863,6 @@ contains
     end if
     call test_stop(NameSub, DoTest)
   end subroutine get_b_dir
-  !============================================================================
-  subroutine add_to_particle_line(nParticleIn, XyzIn_DI, iIndexIn_II,&
-       UseInputInGenCoord, DoReplace)
-    ! add particles with specified coordinates to the already existing lines
-    integer, intent(in):: nParticleIn
-    real,    intent(in):: XyzIn_DI(MaxDim, nParticleIn)
-    integer, intent(in):: iIndexIn_II(:,:)
-
-    ! An input can be in generalized coordinates
-    logical, optional,intent(in) :: UseInputInGenCoord
-
-    ! Whether to replace ALL old particles with the input
-    logical, optional, intent(in):: DoReplace
-    !\
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'add_to_particle_line'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-    call put_particles(&
-         iKindParticle      = KindReg_          ,&
-         StateIn_VI         = XyzIn_DI          ,&
-         iIndexIn_II        = iIndexIn_II       ,&
-         UseInputInGenCoord = UseInputInGenCoord,&
-         DoReplace          = DoReplace          )
-    call test_stop(NameSub, DoTest)
-  end subroutine add_to_particle_line
   !============================================================================
 
   subroutine advect_particle_line
