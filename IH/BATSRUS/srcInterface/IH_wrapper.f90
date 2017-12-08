@@ -35,7 +35,6 @@ module IH_wrapper
   ! Coupling toolkit
   public:: IH_synchronize_refinement
   public:: IH_get_for_mh
-  public:: IH_get_for_mh_with_xyz
   public:: IH_put_from_mh
   public:: IH_n_particle
   public:: IH_LineDD
@@ -51,7 +50,6 @@ module IH_wrapper
 
   ! Coupling with SP
   public:: IH_check_particles
-  public:: IH_get_for_sp
   public:: IH_extract_line
   public:: IH_add_to_line
   public:: IH_get_particle_indexes
@@ -1073,7 +1071,7 @@ contains
          RhoCouple_, RhoUxCouple_, &
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_, PeCouple_, PparCouple_,&
          WaveFirstCouple_, WaveLastCouple_, Bfield_, Wave_, AnisoPressure_, &
-         ElectronPressure_, EhotCouple_, &
+         ElectronPressure_, EhotCouple_, Momentum_, &
          CollisionlessHeatFlux_
 
     !INPUT ARGUMENTS:
@@ -1122,7 +1120,7 @@ contains
     Weight = W%Weight_I(iGetStart)
 
     State_V(iRhoCouple)= State_VGB(rho_,i,j,k,iBlock)*Weight
-    State_V(iRhoUxCouple:iRhoUzCouple) = &
+    if(DoCoupleVar_V(Momentum_))State_V(iRhoUxCouple:iRhoUzCouple) = &
          State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*Weight
 
     if(DoCoupleVar_V(Bfield_)) then
@@ -1165,7 +1163,7 @@ contains
        State_V(iRhoCouple) = &
             State_V(iRhoCouple) + &
             State_VGB(rho_,i,j,k,iBlock)*Weight 
-       State_V(iRhoUxCouple:iRhoUzCouple) = &
+        if(DoCoupleVar_V(Momentum_))State_V(iRhoUxCouple:iRhoUzCouple) = &
             State_V(iRhoUxCouple:iRhoUzCouple) + &
             State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
        if(DoCoupleVar_V(Bfield_)) then
@@ -1213,7 +1211,7 @@ contains
     ! Convert to SI units
     State_V(iRhoCouple) = &
          State_V(iRhoCouple) * No2Si_V(UnitRho_)
-    State_V(iRhoUxCouple:iRhoUzCouple)= &
+    if(DoCoupleVar_V(Momentum_))State_V(iRhoUxCouple:iRhoUzCouple)= &
          State_V(iRhoUxCouple:iRhoUzCouple) *No2Si_V(UnitRhoU_)
     State_V(iPCouple) = State_V(iPCouple) * No2Si_V(UnitP_)
 
@@ -1235,203 +1233,6 @@ contains
          State_V(iEhotCouple)*No2Si_V(UnitEnergyDens_)
 
   end subroutine IH_get_for_mh
-  
-  !===========================================================================
-
-  subroutine IH_get_for_mh_with_xyz(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
-
-    !USES:
-    use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use IH_ModB0,         ONLY: B0_DGB
-    use IH_ModPhysics,    ONLY: &
-         No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
-         UnitEnergyDens_
-    use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_
-    use IH_ModMain,       ONLY: UseB0
-    use IH_BATL_lib,      ONLY: Xyz_DGB
-    use CON_coupler,   ONLY: iVar_V, DoCoupleVar_V,&
-         RhoCouple_, RhoUxCouple_, RhoUzCouple_, &
-         PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_, &
-         PparCouple_, WaveFirstCouple_, WaveLastCouple_, &
-         Bfield_, Wave_, AnisoPressure_, CollisionlessHeatFlux_, &
-         ElectronPressure_
-    use CON_router, ONLY: IndexPtrType, WeightPtrType
-
-    !INPUT ARGUMENTS:
-    integer,intent(in)               :: nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)    :: Get
-    type(WeightPtrType),intent(in)   :: W
-    real,dimension(nVar),intent(out) ::State_V
-
-    integer::iGet, i, j, k, iBlock
-    real :: Weight
-
-    character (len=*), parameter :: NameSub='IH_get_for_mh_with_xyz'
-
-    !The meaning of state intdex in buffer and in model can be 
-    !different.
-    integer   :: &
-         iRhoCouple,       &
-         iRhoUxCouple,     &
-         iRhoUzCouple,     &
-         iPCouple,         &
-         iPeCouple,        &
-         iPparCouple,      &
-         iBxCouple,        &
-         iBzCouple,        &
-         iWaveFirstCouple, &
-         iWaveLastCouple,  &
-         iEhotCouple,      &
-         BuffX_,           &
-         BuffZ_
-
-    !--------------------------------------------------------------------------
-    ! get variable indices in buffer
-    iRhoCouple       = iVar_V(RhoCouple_)
-    iRhoUxCouple     = iVar_V(RhoUxCouple_)
-    iRhoUzCouple     = iVar_V(RhoUzCouple_)
-    iPCouple         = iVar_V(PCouple_)
-    iPeCouple        = iVar_V(PeCouple_)
-    iPparCouple      = iVar_V(PparCouple_)
-    iBxCouple        = iVar_V(BxCouple_)
-    iBzCouple        = iVar_V(BzCouple_)
-    iWaveFirstCouple = iVar_V(WaveFirstCouple_)
-    iWaveLastCouple  = iVar_V(WaveLastCouple_)
-    iEhotCouple      = iVar_V(EhotCouple_)
-
-    BuffX_ = nVar - 2
-    BuffZ_ = nVar
-
-    i      = Get%iCB_II(1,iGetStart)
-    j      = Get%iCB_II(2,iGetStart)
-    k      = Get%iCB_II(3,iGetStart)
-    iBlock = Get%iCB_II(4,iGetStart)
-    Weight = W%Weight_I(iGetStart)
-
-    State_V(iRhoCouple)= State_VGB(rho_,i,j,k,iBlock)*Weight
-    State_V(iRhoUxCouple:iRhoUzCouple) = &
-         State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)*Weight
-
-    if(DoCoupleVar_V(Bfield_)) then
-       if(UseB0)then
-          State_V(iBxCouple:iBzCouple) = &
-               (State_VGB(Bx_:Bz_,i,j,k,iBlock)+ B0_DGB(:,i,j,k,iBlock))*Weight
-       else
-          State_V(iBxCouple:iBzCouple) = &
-               State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
-       end if
-    end if
-
-    if(DoCoupleVar_V(Wave_)) &
-         State_V(iWaveFirstCouple:iWaveLastCouple) = &
-         State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Weight
-
-    State_V(iPCouple)  = State_VGB(p_,i,j,k,iBlock)*Weight
-
-    if(DoCoupleVar_V(ElectronPressure_))then
-       State_V(iPeCouple) = &
-            State_VGB(Pe_,i,j,k,iBlock)*Weight
-    else if(UseElectronPressure)then
-       State_V(iPCouple) = &
-            State_V(iPCouple) + State_VGB(Pe_,i,j,k,iBlock)*Weight
-    end if
-
-    if(DoCoupleVar_V(AnisoPressure_)) State_V(iPparCouple) = &
-         State_VGB(Ppar_,i,j,k,iBlock)*Weight
-
-    if(DoCoupleVar_V(CollisionlessHeatFlux_)) State_V(iEhotCouple) = &
-         State_VGB(Ehot_,i,j,k,iBlock)*Weight
-
-    State_V(BuffX_:BuffZ_) = &
-         Xyz_DGB(:,i,j,k,iBlock)*State_VGB(rho_,i,j,k,iBlock)*Weight
-
-    do iGet=iGetStart+1,iGetStart+nPartial-1
-       i      = Get%iCB_II(1,iGet)
-       j      = Get%iCB_II(2,iGet)
-       k      = Get%iCB_II(3,iGet)
-       iBlock = Get%iCB_II(4,iGet)
-       Weight = W%Weight_I(iGet)
-
-       State_V(iRhoCouple) = &
-            State_V(iRhoCouple) + &
-            State_VGB(rho_,i,j,k,iBlock)*Weight
-       State_V(iRhoUxCouple:iRhoUzCouple) = &
-            State_V(iRhoUxCouple:iRhoUzCouple) + &
-            State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock) *Weight
-       if(DoCoupleVar_V(Bfield_)) then
-          if(UseB0)then
-             State_V(iBxCouple:iBzCouple) = &
-                  State_V(iBxCouple:iBzCouple) + &
-                  (State_VGB(Bx_:Bz_,i,j,k,iBlock) + &
-                  B0_DGB(:,i,j,k,iBlock))*Weight
-          else
-             State_V(iBxCouple:iBzCouple) = &
-                  State_V(iBxCouple:iBzCouple) + &
-                  State_VGB(Bx_:Bz_,i,j,k,iBlock)*Weight
-          end if
-       end if
-
-       if(DoCoupleVar_V(Wave_)) &
-            State_V(iWaveFirstCouple:iWaveLastCouple) = &
-            State_V(iWaveFirstCouple:iWaveLastCouple) + &
-            State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Weight
-
-       if(DoCoupleVar_V(AnisoPressure_)) State_V(iPparCouple) = &
-            State_V(iPparCouple) + &
-            State_VGB(Ppar_,i,j,k,iBlock)*Weight
-
-       if(DoCoupleVar_V(CollisionlessHeatFlux_)) State_V(iEhotCouple) = &
-            State_V(iEhotCouple) + &
-            State_VGB(Ehot_,i,j,k,iBlock)*Weight
-
-       if(DoCoupleVar_V(ElectronPressure_))then
-          State_V(iPeCouple) = State_V(iPeCouple) + &
-               State_VGB(Pe_,i,j,k,iBlock)*Weight
-          State_V(iPCouple) = State_V(iPCouple) + &
-               State_VGB(p_,i,j,k,iBlock) *Weight
-
-       else if(UseElectronPressure)then
-          State_V(iPCouple) = State_V(iPCouple) &
-               + (State_VGB(p_,i,j,k,iBlock) + &
-               State_VGB(Pe_,i,j,k,iBlock))*Weight
-       else
-          State_V(iPCouple) = State_V(iPCouple) + &
-               State_VGB(p_,i,j,k,iBlock) *Weight
-       end if
-
-       State_V(BuffX_:BuffZ_) = State_V(BuffX_:BuffZ_) + &
-            Xyz_DGB(:,i,j,k,iBlock)*State_VGB(rho_,i,j,k,iBlock)*Weight
-    end do
-
-    ! Convert to SI units
-    State_V(iRhoCouple) = &
-         State_V(iRhoCouple) * No2Si_V(UnitRho_)
-    State_V(iRhoUxCouple:iRhoUzCouple)= &
-         State_V(iRhoUxCouple:iRhoUzCouple) *No2Si_V(UnitRhoU_)
-    State_V(iPCouple) = State_V(iPCouple) * No2Si_V(UnitP_)
-
-    if(DoCoupleVar_V(Bfield_)) State_V(iBxCouple:iBzCouple) = &
-         State_V(iBxCouple:iBzCouple)*No2Si_V(UnitB_)
-
-    if(DoCoupleVar_V(Wave_)) &
-         State_V(iWaveFirstCouple:iWaveLastCouple) = &
-         State_V(iWaveFirstCouple:iWaveLastCouple) &
-         * No2Si_V(UnitEnergyDens_)
-
-    if(DoCoupleVar_V(ElectronPressure_)) State_V(iPeCouple) = &
-         State_V(iPeCouple)*No2Si_V(UnitP_)
-
-    if(DoCoupleVar_V(AnisoPressure_))State_V(iPparCouple) = &
-         State_V(iPparCouple)*No2Si_V(UnitP_)
-
-    if(DoCoupleVar_V(CollisionlessHeatFlux_))State_V(iEhotCouple) = &
-         State_V(iEhotCouple)*No2Si_V(UnitEnergyDens_)
-
-
-  end subroutine IH_get_for_mh_with_xyz
-
   !============================================================================
 
   subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, nIndex, &
@@ -1765,83 +1566,12 @@ contains
   end subroutine IH_put_from_mh
 
   !============================================================================
-
   subroutine IH_check_particles
     use IH_ModMain, ONLY: UseParticles
     if(.not.UseParticles)&
          call CON_stop("Particle line isn't set in the PARAM file,"//&
          " add #PARTICLELINE section")
   end subroutine IH_check_particles
-
-  !============================================================================
-
-  subroutine IH_get_for_sp(nPartial,iGetStart,Get,W,State_V,nVar)
-    !USES:
-    use IH_ModAdvance, ONLY: State_VGB, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_
-    use IH_ModB0,      ONLY: B0_DGB
-    use IH_ModPhysics, ONLY: No2Si_V, UnitRho_,UnitP_,UnitRhoU_,UnitB_
-    use CON_router
-    use CON_coupler, ONLY: iVar_V, DoCoupleVar_V, &
-         Density_, Pressure_, Momentum_, BField_, &
-         RhoCouple_, RhoUxCouple_, RhoUzCouple_, PCouple_, BxCouple_, BzCouple_
-    use IH_ModMain,  ONLY: UseB0
-
-    !INPUT ARGUMENTS:
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
-    real,dimension(nVar),intent(out)::State_V
-    ! cell and block indices
-    integer:: i, j, k, iBlock
-    ! loop variable
-    integer:: iGet
-    ! variable indices in State_V
-    integer:: iRho, iMx, iMz, iBx, iBz, iP
-    ! interpolation weight
-    real :: Weight
-    !--------------------------------------------------------------------------
-    ! get variable indices in buffer
-    iRho= iVar_V(RhoCouple_)
-    iMx = iVar_V(RhoUxCouple_)
-    iMz = iVar_V(RhoUzCouple_)
-    iP  = iVar_V(PCouple_)
-    iBx = iVar_V(BxCouple_)
-    iBz = iVar_V(BzCouple_)   
-
-    ! reset buffer
-    State_V = 0
-    do iGet=iGetStart,iGetStart+nPartial-1
-       ! cell and block indices and interpolation weight
-       i      = Get%iCB_II(1,iGet)
-       j      = Get%iCB_II(2,iGet)
-       k      = Get%iCB_II(3,iGet)
-       iBlock = Get%iCB_II(4,iGet)
-       Weight = W%Weight_I(iGet)
-       ! fill buffer with coupled variables
-       if(DoCoupleVar_V(Density_)) State_V(iRho) = State_V(iRho) + &
-            Weight*State_VGB(rho_,i,j,k,iBlock)
-       if(DoCoupleVar_V(Pressure_))&
-            State_V(iP) = State_V(iP) + Weight*State_VGB(P_,i,j,k,iBlock)
-       if(DoCoupleVar_V(Momentum_)) State_V(iMx:iMz) = State_V(iMx:iMz) + &
-            Weight*State_VGB(rhoUx_:rhoUz_,i,j,k,iBlock)
-       if(DoCoupleVar_V(BField_))then
-          if(UseB0)then
-             State_V(iBx:iBz) = State_V(iBx:iBz) + &
-                  Weight*(State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
-          else
-             State_V(iBx:iBz) = State_V(iBx:iBz) + &
-                  Weight*State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          end if
-       end if
-    end do
-
-    ! Convert momentum to velocity and convert everything to SI units
-    if(DoCoupleVar_V(Density_ )) State_V(iRho)   = State_V(iRho)    *No2Si_V(UnitRho_)
-    if(DoCoupleVar_V(Momentum_)) State_V(iMx:iMz)= State_V(iMx:iMz) *No2Si_V(UnitRhoU_)
-    if(DoCoupleVar_V(BField_  )) State_V(iBx:iBz)= State_V(iBx:iBz) *No2Si_V(UnitB_)
-    if(DoCoupleVar_V(Pressure_)) State_V(iP)     = State_V(iP)      *No2Si_V(UnitP_)
-  end subroutine IH_get_for_sp
-
   !============================================================================
 
   subroutine IH_get_for_gm(&
