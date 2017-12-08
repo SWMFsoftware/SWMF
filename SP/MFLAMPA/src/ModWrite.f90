@@ -17,7 +17,7 @@ module SP_ModWrite
        Proc_, Begin_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
-       NameVar_V
+       NameVar_V, TypeCoordSystem
 
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
 
@@ -177,7 +177,7 @@ contains
                   File_I(iFile)%nVarPlot, iParticleMin:iParticleMax))
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
-                  'ParticleID '//trim(File_I(iFile) % NameVarPlot)
+                  trim(File_I(iFile) % NameVarPlot)
              if(DoTraceShock)&
                   File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
@@ -233,7 +233,7 @@ contains
          File_I(iFile) % DoPlot_V(1:nVarRead) = .true.
       else
          ! coordinates are always printed
-         File_I(iFile) % DoPlot_V(1:nDim) = .true.
+         File_I(iFile) % DoPlot_V(X_:Z_) = .true.
       end if
 
       ! get individual variables' names
@@ -243,9 +243,6 @@ contains
          case('dist')
             ! distance along line -----
             File_I(iFile) % DoPlot_V(S_) = .true.
-         case('lagr')
-            ! lagrangian coord along line -----
-            File_I(iFile) % DoPlot_V(LagrID_) = .true.
          case('rho')
             ! plasma density ----------
             File_I(iFile) % DoPlot_V(Rho_) = .true.
@@ -363,6 +360,8 @@ contains
       !------------------------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
+      ! header for the file
+      character(len=200):: StringHeader
       ! loop variables
       integer:: iBlock, iParticle, iVarPlot
       ! indexes of corresponding node, latitude and longitude
@@ -378,6 +377,9 @@ contains
       character(len=8):: StringTime
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile) % nVarPlot
+      StringHeader = &
+           'MFLAMPA: data along a field line; '//&
+           'Coordindate system: '//trim(TypeCoordSystem)           
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
          call get_node_indexes(iNode, iLon, iLat)
@@ -407,16 +409,17 @@ contains
          RShock = sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
          ! print data to file
          call save_plot_file(&
-              NameFile     = NameFile, &
-              TypeFileIn   = File_I(iFile) % TypeFile, &
-              nDimIn       = 1, &
-              TimeIn       = TimeGlobal, &
-              nStepIn      = iIterGlobal, &
-              CoordMinIn_D = (/real(iFirst)/), &
-              CoordMaxIn_D = (/real(iLast)/), &
-              NameVarIn    = File_I(iFile) % NameVarPlot, &
-              VarIn_VI     = &
-              File_I(iFile) % Buffer_II(1:nVarPlot,iFirst:iLast),&
+              NameFile      = NameFile, &
+              StringHeaderIn= StringHeader, &
+              TypeFileIn    = File_I(iFile) % TypeFile, &
+              nDimIn        = 1, &
+              TimeIn        = TimeGlobal, &
+              nStepIn       = iIterGlobal, &
+              CoordMinIn_D  = (/State_VIB(LagrID_,iFirst,iBlock)/), &
+              CoordMaxIn_D  = (/State_VIB(LagrID_,iLast,iBlock)/), &
+              NameVarIn     = File_I(iFile) % NameVarPlot, &
+              VarIn_VI      = &
+              File_I(iFile) % Buffer_II(2:nVarPlot,iFirst:iLast),&
               ! additionally print the shock location both as
               ! index and radial distance
               ParamIn_I    = pack(&
@@ -487,7 +490,7 @@ contains
             if( Radius0 > File_I(iFile) % Radius) then
                iAbove = iParticle
                !check if line started above output sphere, i.e. no intersection
-               DoPrint_I(iNode) = iAbove == iFirst
+               DoPrint_I(iNode) = iAbove /= iFirst
                EXIT
             end if
             ! check if reached the end, i.e. there is no intersection
@@ -606,7 +609,7 @@ contains
             if( Radius0 > File_I(iFile) % Radius)then
                iAbove = iParticle
                !check if line started above output sphere, i.e. no intersection
-               DoPrint = iAbove == iFirst
+               DoPrint = iAbove /= iFirst
                EXIT
             end if
             ! check if reached the end, i.e. there is no intersection
