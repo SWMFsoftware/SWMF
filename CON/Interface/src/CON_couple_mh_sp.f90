@@ -7,12 +7,12 @@ module CON_couple_mh_sp
   use CON_axes
   use CON_coupler
   use IH_wrapper, ONLY: IH_synchronize_refinement, IH_extract_line,           &
-       IH_get_for_sp, IH_get_a_line_point, IH_add_to_line, IH_n_particle,     &
+       IH_get_for_mh, IH_get_a_line_point, IH_add_to_line, IH_n_particle,     &
        IH_line_interface_point, IH_get_particle_indexes, IH_check_particles,  &
         IH_LineDD, IH_get_particle_coords, IH_xyz_to_coord, IH_coord_to_xyz   
   !^CMP IF SC BEGIN 
   use SC_wrapper, ONLY: SC_synchronize_refinement, SC_extract_line,           &
-       SC_get_for_sp, SC_get_a_line_point, SC_add_to_line, SC_n_particle,     &
+       SC_get_for_mh, SC_get_a_line_point, SC_add_to_line, SC_n_particle,     &
        SC_line_interface_point, SC_get_particle_indexes, SC_check_particles,  & 
        SC_LineDD, SC_get_particle_coords, SC_xyz_to_coord    
   !^CMP END SC
@@ -364,7 +364,7 @@ contains
     integer:: iVarBx, iVarBz, iVarMx, iVarMz
     !-----------------------------------------
     ! get buffer with variables
-    call SC_get_for_sp(nPartial,iGetStart,Get,w,State_V,nVar)
+    call SC_get_for_mh(nPartial,iGetStart,Get,w,State_V,nVar)
     ! indices of variables 
     iVarBx = iVar_V(BxCouple_);   iVarBz = iVar_V(BzCouple_)
     iVarMx = iVar_V(RhoUxCouple_);iVarMz = iVar_V(RhoUzCouple_)
@@ -512,7 +512,7 @@ contains
     integer:: iVarBx, iVarBz, iVarMx, iVarMz
     !------------------------------------------------------------
     ! get buffer with variables
-    call IH_get_for_sp(nPartial,iGetStart,Get,w,State_V,nVar)
+    call IH_get_for_mh(nPartial,iGetStart,Get,w,State_V,nVar)
     ! indices of variables 
     iVarBx = iVar_V(BxCouple_);   iVarBz = iVar_V(BzCouple_)
     iVarMx = iVar_V(RhoUxCouple_);iVarMz = iVar_V(RhoUzCouple_)
