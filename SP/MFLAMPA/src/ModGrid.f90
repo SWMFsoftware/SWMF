@@ -17,14 +17,14 @@ module SP_ModGrid
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, ParamLocal_IB, iNode_II, iNode_B
-  public:: State_VIB, Distribution_IIB
+  public:: State_VIB, Flux_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
   public:: Begin_, End_, Shock_, ShockOld_, XMin_, YMin_, ZMin_, Length_
   public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_, Offset_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
-  public:: Wave1_, Wave2_
+  public:: Wave1_, Wave2_,FluxMax_
   public:: NameVar_V
   public:: TypeCoordSystem
 
@@ -103,9 +103,10 @@ module SP_ModGrid
   ! 2nd index - particle index along the field line
   ! 3rd index - local block number
   real, allocatable:: State_VIB(:,:,:)
+  real, allocatable:: Flux_VIB( :,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar     = 29
+  integer, parameter:: nVar     = 29, FluxMax_ = 29
   integer, parameter:: nVarRead = 14
   integer, parameter:: &
        !\
@@ -144,7 +145,7 @@ module SP_ModGrid
        EFlux_  =29    ! Total integral energy flux
 
   ! variable names
-  character(len=10), parameter:: NameVar_V(nVar) = (/&
+  character(len=10), parameter:: NameVar_V(EFlux_) = (/&
        'LagrID    ', &
        'X         ', &
        'Y         ', &
@@ -296,6 +297,8 @@ contains
     call check_allocate(iError, NameSub//'ParamLocal_IB')
     allocate(State_VIB(nVar,iParticleMin:iParticleMax,nBlock), stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
+    allocate(Flux_VIB(Flux0_:FluxMax_,iParticleMin:iParticleMax,nBlock), &
+         stat=iError); call check_allocate(iError, 'Flux_VIB')
     allocate(Distribution_IIB(&
          nMomentumBin,iParticleMin:iParticleMax,nBlock), &
          stat=iError)
@@ -330,7 +333,7 @@ contains
     ! reset and fill data containers
     !/
     Distribution_IIB = tiny(1.0)
-    State_VIB = -1
+    State_VIB = -1; Flux_VIB = -1
 
     if(DoReadInput)then
        if(IsSetOrigin)&
