@@ -27,7 +27,7 @@ module SP_ModMain
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       Distribution_IIB, &
+       Distribution_IIB, Flux_VIB, &
        ParamLocal_IB, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes, fix_grid_consistency, &
        append_particles
@@ -64,7 +64,7 @@ module SP_ModMain
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       Distribution_IIB, ParamLocal_IB, TypeCoordSystem,& 
+       Flux_VIB, Distribution_IIB, ParamLocal_IB, TypeCoordSystem,& 
        get_node_indexes, append_particles
 
   ! Methods and variables from ModWrite
