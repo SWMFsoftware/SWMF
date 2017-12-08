@@ -30,7 +30,7 @@ module SP_wrapper
        Density_, RhoCouple_, Pressure_, PCouple_, &
        Momentum_, RhoUxCouple_, RhoUzCouple_, &
        BField_, BxCouple_, BzCouple_, &
-       Wave_, WaveFirstCouple_
+       Wave_, WaveFirstCouple_, WaveLastCouple_
   use ModMpi
   use CON_world, ONLY: is_proc0, is_proc, n_proc
   use CON_comp_param, ONLY: SP_, SC_, IH_
@@ -64,8 +64,8 @@ module SP_wrapper
   public:: SP_assign_lagrangian_coords
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
-  character(len=*), parameter:: &
-       NameVarCouple = 'rho p mx my mz bx by bz i01 i02'
+  character(len=*), parameter:: NameVarCouple =&
+       'rho p mx my mz bx by bz i01 i02 pe'
 
   ! whether to save rstart files
   logical:: DoSaveRestart = .false.
@@ -228,8 +228,8 @@ contains
     iMz   = iVar_V(RhoUzCouple_)
     iBx   = iVar_V(BxCouple_)
     iBz   = iVar_V(BzCouple_)   
-    iWave1= iVar_V(WaveFirstCouple_)   
-    iWave2= iVar_V(WaveFirstCouple_+1)   
+    iWave1= iVar_V(WaveFirstCouple_)
+    iWave2= iVar_V(WaveLastCouple_)
     ! auxilary factor to account for value of DoAdd
     Aux = 0.0
     if(DoAdd) Aux = 1.0
@@ -273,8 +273,7 @@ contains
             State_VIB(Bx_:Bz_,i,iBlock) = Aux * State_VIB(Bx_:Bz_,i,iBlock) + &
             Buff_I(iBx:iBz) * Weight
        if(DoCoupleVar_V(Wave_))&
-            State_VIB(Wave1_:Wave2_,i,iBlock) = &
-            Aux * State_VIB(WaveFirstCouple_:WaveFirstCouple_+1,i,iBlock) + &
+            State_VIB(Wave1_:Wave2_,i,iBlock) = Aux * State_VIB(Wave1_:Wave2_,i,iBlock) + &
             Buff_I(iWave1:iWave2) * Weight
     end do
   end subroutine SP_put_from_mh
