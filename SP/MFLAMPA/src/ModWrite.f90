@@ -23,7 +23,7 @@ module SP_ModWrite
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
-  use ModUtilities, ONLY: split_string
+  use ModUtilities, ONLY: split_string, lower_case
 
   implicit none
 
@@ -223,7 +223,7 @@ contains
       ! NOTE: for iKindData == MH1D_ certain variables are always printed:
       !       Rho_, T_, Ux_:Uz_, Bx_:Bz_, Wave1_, Wave2_
       integer:: iVar, iVarPlot, nStringPlot, iStringPlot
-      character(len=10) :: StringPlot_I(2*nVar)
+      character(len=10) :: StringPlot_I(2*nVar), NameVarLowerCase
       !-----------------------------------------------
       ! reset
       File_I(iFile) % DoPlot_V = .false.
@@ -235,40 +235,28 @@ contains
          ! coordinates are always printed
          File_I(iFile) % DoPlot_V(X_:Z_) = .true.
       end if
-
+      !\
+      ! determine, which variables were requested to be in the output file
+      !/
+      ! make comparison case insensitive: convert strings to lower case
+      call lower_case(StringPlot)
       ! get individual variables' names
       call split_string(StringPlot, StringPlot_I, nStringPlot)
       do iStringPlot = 1, nStringPlot
+         ! check names of individual variables
+         do iVar = 1, nVar
+            NameVarLowerCase = NameVar_V(iVar)
+            call lower_case(NameVarLowerCase)
+            if(StringPlot_I(iStringPlot) == NameVarLowerCase)&
+                 File_I(iFile) % DoPlot_V(iVar) = .true.
+         end do
+         ! check common groups of variables
          select case(StringPlot_I(iStringPlot))
-         case('dist')
-            ! distance along line -----
-            File_I(iFile) % DoPlot_V(S_) = .true.
-         case('rho')
-            ! plasma density ----------
-            File_I(iFile) % DoPlot_V(Rho_) = .true.
-         case('drho')
-            ! lagrangian derivative of plasma density ----------
-            File_I(iFile) % DoPlot_V(DLogRho_) = .true.
-         case('temp')
-            ! temperature -------------
-            File_I(iFile) % DoPlot_V(T_) = .true.
-         case('ux','uy','uz')
-            ! velocity ----------------
-            File_I(iFile) % DoPlot_V((/Ux_, Uy_, Uz_/)) = .true.
-         case('|u|')
-            ! velocity ----------------
-            File_I(iFile) % DoPlot_V(U_) = .true.
-         case('bx','by','bz')
-            ! magnetic field ----------
-            File_I(iFile) % DoPlot_V((/Bx_, By_, Bz_/)) = .true.
-         case('|b|')
-            ! magnetic field ----------
-            File_I(iFile) % DoPlot_V(B_) = .true.
-         case('wave', 'wave1', 'wave2')
-            ! turbulence intensity ----
+         case('wave')
+            ! turbulence intensities
             File_I(iFile) % DoPlot_V((/Wave1_,Wave2_/)) = .true.
          case('flux')
-            ! energy flux -------------
+            ! particle and eneregy fluxes
             File_I(iFile) % DoPlot_V(EFlux_) = .true.
             File_I(iFile) % DoPlot_V(Flux0_:Flux6_) = .true.
          end select
@@ -796,10 +784,6 @@ contains
     !-------------------------------------------------------------------------
     ! energy limits of GOES channels
     EChannel_I = (/5,10,30,50,60,100/) * energy_in('MeV')
-    ! reset values
-    EFlux = 0.0
-    Flux_I= 0.0
-    Norm  = 0.0
     do iBlock = 1, nBlock
        do iParticle = &
             iGridLocal_IB(Begin_, iBlock), &
@@ -807,6 +791,11 @@ contains
           !\
           ! Integration loop with midpoint rule
           !/
+          ! reset values
+          EFlux = 0.0
+          Flux_I= 0.0
+          Norm  = 0.0
+          Flux  = 0.0
           do iBin = 1, nMomentumBin - 1
              ! the flux increment from iBin
              dFlux = 0.5 * &
