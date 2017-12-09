@@ -248,27 +248,24 @@ contains
     iIndexReg_II => Particle_I(KindReg_)%iIndex_II
     if(nLineInit > 0)&
          ! extract initial field lines
-         call extract_particle_line(nLineInit, XyzLineInit_DI)
+         call extract_particle_line(XyzLineInit_DI)
     call test_stop(NameSub, DoTest)
   end subroutine init_particle_line
   !============================================================================
-  subroutine extract_particle_line(nFieldLineIn, XyzStart_DI, iTraceModeIn, &
-       iIndexStart_II,&
-       UseInputInGenCoord)
-    ! extract nFieldLineIn magnetic field lines starting at XyzStart_DI;
+  subroutine extract_particle_line(Xyz_DI, iTraceModeIn, &
+       iIndex_II, UseInputInGenCoord)
+    ! extract nFieldLineIn magnetic field lines starting at Xyz_DI;
     ! the whole field lines are extracted, i.e. they are traced forward
     ! and backward up until it reaches boundaries of the domain;
     ! requested coordinates may be different for different processor,
     ! if a certain line can't be started on a given processor, it is
     ! ignored, thus duplicates are avoided
     ! NOTE: different sets of lines may be request on different processors!
-
-    integer,         intent(in)::nFieldLineIn
-    real,            intent(in)::XyzStart_DI(MaxDim, nFieldLineIn)
+    real,            intent(in) ::Xyz_DI(:, :)
     ! mode of tracing (forward, backward or both ways)
-    integer,optional,intent(in)::iTraceModeIn
+    integer,optional,intent(in) ::iTraceModeIn
     ! initial particle indices for starting particles
-    integer,optional,intent(in) :: iIndexStart_II(:,:)
+    integer,optional,intent(in) :: iIndex_II(:,:)
 
     ! An input can be in generalized coordinates
     logical, optional,intent(in) :: UseInputInGenCoord
@@ -290,9 +287,9 @@ contains
     call test_start(NameSub, DoTest)
     call  put_particles(&
          iKindParticle      = KindEnd_,          &
-         StateIn_VI         = XyzStart_DI,       &
+         StateIn_VI         = Xyz_DI,            &
          iLastIdIn          = nFieldLine,        &
-         iIndexIn_II        = iIndexStart_II,    &
+         iIndexIn_II        = iIndex_II,         &
          UseInputInGenCoord = UseInputInGenCoord,&
          DoReplace          = .true.,            &
          nParticlePE        = nLineThisProc)

@@ -281,16 +281,12 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_get_particle_coords
   !===================================================================!
-  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, &
-       nIndex, iIndexOrigin_II, RSoftBoundaryIn, UseInputInGenCoord)
-    integer,          intent(in) :: nLine
-    real,             intent(in) :: XyzOrigin_DI(3, 1)
+  subroutine IH_extract_line(Xyz_DI, iTraceMode, &
+       iIndex_II, RSoftBoundary)
+    real,             intent(in) :: Xyz_DI(:, :)
     integer,          intent(in) :: iTraceMode
-    integer,          intent(in) :: nIndex
-    integer,          intent(in) :: iIndexOrigin_II(1,1) 
-    real,    optional,intent(in) :: RSoftBoundaryIn
-    logical, optional,intent(in) :: UseInputInGenCoord
-
+    integer,          intent(in) :: iIndex_II(:,:) 
+    real,             intent(in) :: RSoftBoundary
     character(len=*), parameter :: NameSub='IH_extract_line'
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')

@@ -183,15 +183,12 @@ contains
             !Put in place the origin points of the MF lines.
             nLength = nlength_buffer_source(RouterScSp)
             call SC_extract_line(&
-                 nLine              = nLength                  ,&
-                 XyzOrigin_DI =   RouterScSp%BufferSource_II(   &
-                 1:nDim,1:nLength)                             ,&
+                 Xyz_DI = RouterScSp%BufferSource_II(1:nDim    ,&
+                 1:nLength)                                    ,&
                  iTraceMode         = iInterfaceOrigin         ,&
-                 nIndex             = nAux                     ,&
-                 iIndexOrigin_II = nint(RouterScSp%             &
-                 BufferSource_II(nDim+1:nDim+nAux,1:nLength))  ,&
-                 RSoftBoundaryIn    =  RScMax, & 
-                 UseInputInGenCoord = .true.)
+                 iIndex_II = nint(RouterScSp% BufferSource_II(  &
+                 nDim+1:nDim+nAux,1:nLength))                  ,& 
+                 RSoftBoundary    =  RScMax)
          end if
       end if
       !First coupling with the particle info and data exchange
@@ -254,28 +251,25 @@ contains
          !to send the particle coordinates backward (SP=>IH)
          if(is_proc(SP_))&
               call SP_put_interface_bounds(RScMax, RIhMax)
-         call set_router(                                                   &
-              GridSource                 = IH_Grid                         ,&
-              GridTarget                 = SP_LocalGrid                    ,&
-              Router                     = RouterIHSp                      ,&
-              n_interface_point_in_block = SP_n_particle                   ,&
-              interface_point_coords=                                       &
-              SP_interface_point_coords                                    ,&
-              mapping               = mapping_sp_to_IH                     ,&
+         call set_router(                                                 &
+              GridSource                 = IH_Grid                       ,&
+              GridTarget                 = SP_LocalGrid                  ,&
+              Router                     = RouterIHSp                    ,&
+              n_interface_point_in_block = SP_n_particle                 ,&
+              interface_point_coords=                                     &
+              SP_interface_point_coords                                  ,&
+              mapping               = mapping_sp_to_IH                   ,&
               interpolate           = interpolation_amr_gc) 
          call synchronize_router_target_to_source(RouterIhSp)
          if(is_proc(IH_))then
             !Put in place the origin points of the MF lines.
             nLength = nlength_buffer_source(RouterIhSp)
             call IH_extract_line(&
-                 nLine             = nLength,                                &
-                 XyzOrigin_DI = RouterIhSp%BufferSource_II(1:nDim,1:nLength),&
-                 iTraceMode        = iInterfaceEnd,                          &
-                 nIndex            = nAux,                                   &
-                 iIndexOrigin_II   = nint(RouterIhSp%&
-                 BufferSource_II(nDim+1:nDim+nAux,1:nLength)),               &
-                 RSoftBoundaryIn   =  RIhMax,                                & 
-                 UseInputInGenCoord= .true.)
+                 Xyz_DI = RouterIhSp%BufferSource_II(1:nDim,1:nLength)  ,&
+                 iTraceMode        = iInterfaceEnd                       ,&
+                 iIndex_II         = nint(RouterIhSp%                     &
+                 BufferSource_II(nDim+1:nDim+nAux,1:nLength))            ,&
+                 RSoftBoundary   =  RIhMax)
          end if
       end if
       !First coupling with the particle info and data exchange

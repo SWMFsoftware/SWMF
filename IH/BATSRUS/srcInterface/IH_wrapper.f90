@@ -1233,26 +1233,22 @@ contains
   end subroutine IH_get_for_mh
   !============================================================================
 
-  subroutine IH_extract_line(nLine, XyzOrigin_DI, iTraceMode, nIndex, &
-       iIndexOrigin_II, RSoftBoundaryIn,UseInputInGenCoord)
+  subroutine IH_extract_line(Xyz_DI, iTraceMode, &
+       iIndex_II, RSoftBoundary)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, &
-         ONLY: extract_particle_line, RSoftBoundary
-    integer,          intent(in) :: nLine
-    real,             intent(in) :: XyzOrigin_DI(nDim, nLine)
+         ONLY: extract_particle_line, RSoftBoundaryBats=>RSoftBoundary
+    real,             intent(in) :: Xyz_DI(:,:)
     integer,          intent(in) :: iTraceMode
-    integer,          intent(in) :: nIndex
-    integer,          intent(in) :: iIndexOrigin_II(nIndex, nLine)
-    real,    optional,intent(in) :: RSoftBoundaryIn
-    logical, optional,intent(in) :: UseInputInGenCoord
-    character(len=*), parameter:: NameSub='IH_extract_line'
+    integer,          intent(in) :: iIndex_II(:,:)
+    real,             intent(in) :: RSoftBoundary
+    character(len=*), parameter  :: NameSub='IH_extract_line'
     !--------------------------------------------------------------------------
-    ! set the soft boundary if provided
-    if(present(RSoftBoundaryIn))&
-         RSoftBoundary = RSoftBoundaryIn
+    ! set the soft boundary 
+         RSoftBoundaryBats = RSoftBoundary
     ! extract field lines starting at input points
-    call extract_particle_line(nLine,XyzOrigin_DI,iTraceMode,iIndexOrigin_II,&
-         UseInputInGenCoord)
+    call extract_particle_line(Xyz_DI,iTraceMode,iIndex_II,&
+         UseInputInGenCoord=.true.)
   end subroutine IH_extract_line
 
   !============================================================================
