@@ -26,11 +26,17 @@ module CON_couple_mh_sp
        SC_get_for_mh, SC_LineDD
   !^CMP END SC
   use SP_wrapper, ONLY: &
-       SP_put_from_sc, SP_put_from_ih, SP_put_input_time, SP_put_line,        &
-       SP_n_particle, SP_check_ready_for_mh, SP_get_bounds_comp,              &
-       SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc,    &
-       SP_interface_point_coords_for_ih_extract, SP_set_line_foot,            &
-       SP_copy_old_state, SP_adjust_lines
+       SP_check_ready_for_mh    ,&  !If returns .false., extract the mf lines
+       SP_get_bounds_comp       ,&  !Provides RScMin/Max and/or RIhMin/Max
+       SP_put_input_time        ,&  !Marks the time of input to label data set
+       SP_put_from_sc           ,&  !\Put MHD info from SC to SP. !^CMP IF SC
+       SP_put_from_ih           ,&  !/Put MHD info from IH to SP
+       SP_n_particle            ,&  !Number of "points" in a given line in SP
+       SP_put_line              ,&  !Put particle Xyz from SC/IH to SP
+       SP_interface_point_coords_for_ih,& !Return points with RIhMin<R<RIhMax
+       SP_interface_point_coords_for_ih_extract,& !Same  with RScMax<R<RIhMax
+       SP_interface_point_coords_for_sc,& !Same with RScMin<R<RScMax^CMP IF SC
+       SP_set_line_foot, SP_copy_old_state, SP_adjust_lines
        
   implicit none
   
@@ -39,18 +45,18 @@ module CON_couple_mh_sp
   public::couple_ih_sp              
   public::couple_sc_sp              !^CMP IF SC
 
-  type(GridType),save::SP_Grid           !Target (Particle coords)
-  type(LocalGridType),       save::SP_LocalGrid      !Target (MHD data)
-  type(GridType),save::IH_Grid           !Source (MHD data)
+  type(GridType)     , save::SP_Grid           !Target (Particle coords)
+  type(LocalGridType), save::SP_LocalGrid      !Target (MHD data)
+  type(GridType)     , save::IH_Grid           !Source (MHD data)
   type(RouterType),save,private::RouterIhSp        !IH (MHD data) => SP 
-  type(GridType),save::IH_LineGrid       !Misc
-  type(LocalGridType),       save::IH_LocalLineGrid  !Source (MHD data) 
+  type(GridType)     , save::IH_LineGrid       !Misc
+  type(LocalGridType), save::IH_LocalLineGrid  !Source (MHD data) 
   type(RouterType),save,private::RouterLineIhSp    !IH (Particle coords)=>SP    
   !^CMP IF SC BEGIN
-  type(GridType),save::SC_Grid !Source (MHD data)  
+  type(GridType)     , save::SC_Grid           !Source (MHD data)  
   type(RouterType),save,private::RouterScSp        !SC MHD data => SP
-  type(GridType),save::SC_LineGrid       !Misc
-  type(LocalGridType),       save::SC_LocalLineGrid  !Source (Particle Coords) 
+  type(GridType)     , save::SC_LineGrid       !Misc
+  type(LocalGridType), save::SC_LocalLineGrid  !Source (Particle Coords) 
   type(RouterType),save,private::RouterLineScSp    !SC (Particle coords)=>SP    
   !^CMP END SC
   !\
@@ -68,8 +74,8 @@ module CON_couple_mh_sp
   integer :: nLength, iError
   !\
   ! Transformation matrices
-  real :: ScToSp_DD(3,3) !^CMP IF SC
-  real :: IhToSp_DD(3,3)
+  real    :: ScToSp_DD(3,3) !^CMP IF SC
+  real    :: IhToSp_DD(3,3)
  
   logical::DoTest,DoTestMe
   character(LEN=*),parameter::NameSub='couple_mh_sp'
