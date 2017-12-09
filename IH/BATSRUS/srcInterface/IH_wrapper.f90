@@ -54,9 +54,7 @@ module IH_wrapper
   public:: IH_put_particles
   public:: IH_get_particle_indexes
   public:: IH_get_particle_coords
-  public:: IH_get_a_line_point
-  public:: IH_line_interface_point
-
+ 
   ! Coupling with GM
   public:: IH_get_for_gm
 
@@ -1273,26 +1271,6 @@ contains
          UseInputInGenCoord = .true.   ,&
          DoReplace          = .true.     )
   end subroutine IH_put_particles
-
-  !==================================================================!
-  subroutine IH_line_interface_point(&
-       Grid,&
-       iBlockUsed,    &
-       nDim, Xyz_D, nIndex, iIndex_I,&
-       IsInterfacePoint)
-    use CON_router, ONLY: LocalGridType
-    use IH_BATL_lib, ONLY: Particle_I
-    use IH_ModParticleFieldLine, ONLY: KindReg_
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)    :: iBlockUsed,nIndex
-    logical,intent(out)   :: IsInterfacePoint
-    integer,intent(in)    :: nDim
-    real,   intent(inout) :: Xyz_D(nDim)
-    integer,intent(inout) :: iIndex_I(nIndex)
-    !----------------------------------------------------------
-    IsInterfacePoint = iIndex_I(1) <= Particle_I(KindReg_)%nParticle
-    Xyz_D(1) = mod(Xyz_D(1), real(Particle_I(KindReg_)%nParticleMax))
-  end subroutine IH_line_interface_point
   !=====================================
   subroutine IH_get_particle_indexes(iParticle, iIndex_I)
     use IH_ModParticleFieldLine, ONLY: fl_, id_, KindReg_
@@ -1304,9 +1282,7 @@ contains
     iIndex_I(1) = Particle_I(KindReg_)%iIndex_II(fl_, iParticle)
     iIndex_I(2) = Particle_I(KindReg_)%iIndex_II(id_, iParticle)
   end subroutine IH_get_particle_indexes
-
   !====================================
-
   subroutine IH_get_particle_coords(iParticle, Xyz_D)
     use IH_BATL_lib, ONLY: nDim
     use IH_ModParticleFieldLine, ONLY: KindReg_
@@ -1316,58 +1292,6 @@ contains
     !--------------------------------------------------------------
     Xyz_D = Particle_I(KindReg_)%State_VI(1:nDim, iParticle)
   end subroutine IH_get_particle_coords
-
-  !============================================================================
-
-  subroutine IH_get_a_line_point(nPartial,iGetStart,Get,W,State_V,nVar)
-    !USES:
-    use IH_ModAdvance,ONLY: State_VGB, Bx_, Bz_
-    use IH_ModB0,     ONLY: B0_DGB
-    use IH_BATL_lib,  ONLY: CellSize_DB
-    use IH_ModMain,   ONLY: UseB0
-    use CON_router
-
-    !INPUT ARGUMENTS:
-    integer,             intent(in) ::nPartial, iGetStart, nVar
-    type(IndexPtrType),  intent(in) ::Get
-    type(WeightPtrType), intent(in) ::W
-    real,                intent(out)::State_V(nVar)
-
-    integer::iGet, i, j, k, iBlock
-    real :: Weight
-    !--------------------------------------------------------------------------
-
-    i      = Get%iCB_II(1,iGetStart)
-    j      = Get%iCB_II(2,iGetStart)
-    k      = Get%iCB_II(3,iGetStart)
-    iBlock = Get%iCB_II(4,iGetStart)
-    Weight = W%Weight_I(iGetStart)
-    if(UseB0)then
-       State_V(1:3)= &
-            Weight*(State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(:,i,j,k,iBlock))
-    else
-       State_V(1:3)= &
-            Weight*State_VGB(Bx_:Bz_,i,j,k,iBlock)
-    end if
-    State_V(4:6)= CellSize_DB(:,iBlock)*Weight
-
-    do iGet=iGetStart+1,iGetStart+nPartial-1
-       i      = Get%iCB_II(1,iGet)
-       j      = Get%iCB_II(2,iGet)
-       k      = Get%iCB_II(3,iGet)
-       iBlock = Get%iCB_II(4,iGet)
-       Weight = W%Weight_I(iGet)
-       if(UseB0)then
-          State_V(1:3) = State_V(1:3)+ &
-               Weight*(State_VGB(Bx_:Bz_,i,j,k,iBlock) &
-               + B0_DGB(:,i,j,k,iBlock))
-       else
-          State_V(1:3) = State_V(1:3) + Weight*State_VGB(Bx_:Bz_,i,j,k,iBlock)
-       end if
-       State_V(4:6) = State_V(4:6) + Weight*CellSize_DB(:,iBlock)
-    end do
-  end subroutine IH_get_a_line_point
-
   !============================================================================
   !BOP
   !ROUTINE: IH_put_from_mh - transform and put the data got from MH

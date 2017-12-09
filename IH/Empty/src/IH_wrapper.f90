@@ -47,13 +47,10 @@ module IH_wrapper
 
   ! Coupling with SP
   public:: IH_check_ready_for_sp
-  public:: IH_get_for_sp
   public:: IH_extract_line
-  public:: IH_add_to_line
-  public:: IH_get_a_line_point
+  public:: IH_put_particles
   public:: IH_get_particle_indexes
   public:: IH_get_particle_coords
-  public:: IH_line_interface_point
 
   ! Coupling with GM
   public:: IH_get_for_gm
@@ -268,38 +265,6 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_check_ready_for_sp
   !===================================================================!
-  subroutine IH_get_for_sp(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
-    use CON_router, ONLY: IndexPtrType, WeightPtrType
-
-    !INPUT ARGUMENTS:
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
-    real,dimension(nVar),intent(out)::State_V
-
-    character(len=*), parameter :: NameSub='IH_get_for_sp'
-
-    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-  end subroutine IH_get_for_sp
-  !===================================================================!
-  subroutine IH_line_interface_point(&
-       Grid,&
-       iBlockUsed,    &
-       nDim, Xyz_D, nIndex, iIndex_I,&
-       IsInterfacePoint)
-    use CON_router, ONLY: LocalGridType
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)    :: iBlockUsed,nIndex
-    logical,intent(out)   :: IsInterfacePoint
-    integer,intent(in)    :: nDim
-    real,   intent(inout) :: Xyz_D(nDim)
-    integer,intent(inout) :: iIndex_I(nIndex)
-    character(len=*), parameter :: NameSub='IH_line_interface_point'
-    !----------------------------------------------------------
-    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-  end subroutine IH_line_interface_point
-  !===================================================================!
   subroutine IH_get_particle_indexes(iParticle, iIndex_I)
     integer, intent(in) :: iParticle
     integer, intent(out):: iIndex_I(2)
@@ -331,30 +296,13 @@ contains
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
   end subroutine IH_extract_line
   !============================================================================
-  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II)
-    integer, intent(in) :: nParticle
-    real,    intent(in) :: Xyz_DI(3, 1)
-    integer, intent(in) :: nIndex
-    integer, intent(in) :: iIndex_II(1,1)
-    character(len=*), parameter :: NameSub='IH_add_to_line'
+  subroutine IH_put_particles(Xyz_DI, iIndex_II)
+    real,    intent(in) :: Xyz_DI(:, :)
+    integer, intent(in) :: iIndex_II(:,:)
+    character(len=*), parameter :: NameSub='IH_put_particles'
     !----------------------------------------------------------------
     call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-  end subroutine IH_add_to_line
-  !===================================================================!
-  subroutine IH_get_a_line_point(&
-       nPartial,iGetStart,Get,W,State_V,nVar)
-
-    use CON_router, ONLY: IndexPtrType, WeightPtrType
-
-    integer,intent(in)::nPartial,iGetStart,nVar
-    type(IndexPtrType),intent(in)::Get
-    type(WeightPtrType),intent(in)::W
-    real,dimension(nVar),intent(out)::State_V
-
-    character(len=*), parameter :: NameSub='IH_get_a_line_point'
-
-    call CON_stop(NameSub//': IH_ERROR: empty version cannot be used!')
-  end subroutine IH_get_a_line_point
+  end subroutine IH_put_particles
   !===================================================================!
   subroutine IH_put_from_mh(nPartial,&
        iPutStart,&
