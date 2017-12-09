@@ -61,7 +61,7 @@ module SP_wrapper
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_ready_for_mh
-  public:: SP_assign_lagrangian_coords
+
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple =&
@@ -629,15 +629,4 @@ contains
     R2 = sum(Xyz_D**2)
     IsInBuffer = R2 >= RBufferMin**2 .and. R2 < RBufferMax**2
   end function is_in_buffer
-  !========================
-  subroutine SP_assign_lagrangian_coords
-    integer :: iBlock, iParticle
-    !--------------------
-    do iBlock = 1, nBlock
-       do iParticle = &
-            iGridLocal_IB(Begin_,iBlock), iGridLocal_IB(End_, iBlock)
-          State_VIB(LagrID_,iParticle, iBlock) = real(iParticle)
-       end do
-    end do
-  end subroutine SP_assign_lagrangian_coords
 end module SP_wrapper

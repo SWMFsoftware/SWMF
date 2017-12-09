@@ -30,7 +30,7 @@ module CON_couple_mh_sp
        SP_n_particle, SP_check_ready_for_mh, SP_get_bounds_comp,              &
        SP_interface_point_coords_for_ih, SP_interface_point_coords_for_sc,    &
        SP_interface_point_coords_for_ih_extract, SP_set_line_foot,            &
-       SP_copy_old_state, SP_adjust_lines, SP_assign_lagrangian_coords
+       SP_copy_old_state, SP_adjust_lines
        
   implicit none
   
@@ -114,7 +114,6 @@ contains
     if(use_comp(IH_))call couple_ih_sp_init
     if(DoExtract.and.is_proc(SP_))then
        call SP_set_line_foot
-       call SP_assign_lagrangian_coords
     end if
     DoInit=.false.
   contains

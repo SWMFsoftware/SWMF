@@ -260,7 +260,7 @@ contains
 
     logical, intent(in):: DoReadInput
     integer:: iError
-    integer:: iLat, iLon, iNode, iBlock, iProcNode
+    integer:: iLat, iLon, iNode, iBlock, iProcNode, iParticle
     character(LEN=*),parameter:: NameSub='SP:init_grid'
     !--------------------------------------------------------------------------
     !\
@@ -335,6 +335,13 @@ contains
     Distribution_IIB = tiny(1.0)
     State_VIB = -1; Flux_VIB = -1
 
+    !\
+    ! reset lagrangian ids
+    !/
+    do iParticle = 1, nParticle
+       State_VIB(LagrID_, iParticle, 1:nBlock) = real(iParticle)
+    end do
+
     if(DoReadInput)then
        if(IsSetOrigin)&
             write(*,*)NameSub//": input files are provided, "//&
@@ -351,7 +358,6 @@ contains
              call rlonlat_to_xyz(&
                   (/ROrigin, LonMin+(iLon-0.5)*DLon, LatMin+(iLat-0.5)*DLat/),&
                   State_VIB(X_:Z_,1,iBlock))
-             State_VIB(LagrID_,1,iBlock) = 1
           end if
        end do
     end do

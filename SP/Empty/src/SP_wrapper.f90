@@ -31,7 +31,7 @@ module SP_wrapper
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_ready_for_mh
-  public:: SP_assign_lagrangian_coords
+
 contains
 
   subroutine SP_check_ready_for_mh(IsReady)
@@ -216,10 +216,4 @@ contains
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_adjust_lines
-  !===========================
-  subroutine SP_assign_lagrangian_coords
-    character(len=*), parameter:: NameSub='assign_lagrangian_coords'
-    !---------------------------------------------------------------
-    call CON_stop('SP_'//NameSub//': cannot call the empty version')
-  end subroutine SP_assign_lagrangian_coords
 end module SP_wrapper
