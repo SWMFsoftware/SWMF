@@ -51,9 +51,7 @@ module SP_wrapper
   public:: SP_put_input_time
   public:: SP_put_from_sc
   public:: SP_put_from_ih
-  public:: SP_interface_point_coords_for_ih
-  public:: SP_interface_point_coords_for_ih_extract
-  public:: SP_interface_point_coords_for_sc
+  public:: SP_interface_point_coords
   public:: SP_put_line
   public:: SP_adjust_lines
   public:: SP_get_bounds_comp
@@ -61,12 +59,13 @@ module SP_wrapper
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_ready_for_mh
+  public:: SP_put_interface_bounds
 
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple =&
        'rho p mx my mz bx by bz i01 i02 pe'
-
+  real :: rInterfaceMin, rInterfaceMax
   ! whether to save rstart files
   logical:: DoSaveRestart = .false.
 
@@ -194,12 +193,10 @@ contains
   end subroutine SP_save_restart
 
   !=========================================================
-
   subroutine SP_put_input_time(TimeIn)
     real,     intent(in)::TimeIn
     DataInputTime = TimeIn
   end subroutine SP_put_input_time
-
   !===================================================================
 
   subroutine SP_put_from_mh(iComp, nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
@@ -277,8 +274,9 @@ contains
             State_VIB(Bx_:Bz_,i,iBlock) = Aux * State_VIB(Bx_:Bz_,i,iBlock) + &
             Buff_I(iBx:iBz) * Weight
        if(DoCoupleVar_V(Wave_))&
-            State_VIB(Wave1_:Wave2_,i,iBlock) = Aux * State_VIB(Wave1_:Wave2_,i,iBlock) + &
-            Buff_I(iWave1:iWave2) * Weight
+            State_VIB(Wave1_:Wave2_,i,iBlock) = &
+            Aux*State_VIB(Wave1_:Wave2_,i,iBlock) + &
+            Buff_I(iWave1:iWave2)*Weight
     end do
   end subroutine SP_put_from_mh
   !===================================================================
@@ -391,108 +389,44 @@ contains
     ! use distance between first two particles on the line
     ParamLocal_IB(Length_,    iBlock) = Dist1
   end subroutine SP_set_line_foot_b
+  !================================
+  subroutine SP_put_interface_bounds(rMinIn, rMaxIn)
+    real, intent(in) :: rMinIn, rMaxIn
+    !-----------------
+    rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn
+  end subroutine SP_put_interface_bounds
   !===================================================================
-  subroutine SP_interface_point_coords(iComp, SendBuffer, &
-       nDim, Xyz_D, nIndex, iIndex_I, IsInterfacePoint)
+  subroutine SP_interface_point_coords(Grid, iBlockUsed, nDim, Xyz_D, &
+       nIndex, iIndex_I, IsInterfacePoint)
     ! interface points (request), which needed to be communicated
     ! to other components to perform field line extraction and
     ! perform further coupling with SP:
     ! the framework tries to determine Xyz_D of such points,
     ! SP changes them to the correct values
-    integer,intent(in)   :: iComp
-    logical,intent(in)   :: SendBuffer
+    use CON_grid_descriptor
+    type(LocalGridType),intent(in)::Grid
+    integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
     integer,intent(in)   :: nIndex
     integer,intent(inout):: iIndex_I(nIndex)
     logical,intent(out)  :: IsInterfacePoint
-    !---------------------------------------------------------------
     integer:: iParticle, iBlock
     real:: R2
-    logical:: IsSc
-    character(len=100):: StringError
     character(len=*), parameter:: NameSub='SP_interface_point_coords'
     !----------------------------------------------------------------
-    ! choose the request buffer based iComp and reset its size counter
-    select case(iComp)
-    case(SC_)
-       IsSc = .true.
-    case(IH_)
-       IsSc = .false.
-    case default
-       write(StringError,'(a,i2)') &
-            ": isn't implemented for interface with component ", iComp
-       call CON_stop(NameSub//StringError)
-    end select
-
     iParticle = iIndex_I(1)
     iBlock    = iIndex_I(4)
-    ! first, check whether the particle is within bounds and within the domain
+    ! Check whether the particle is within interface bounds
     R2 = sum(State_VIB(X_:Z_,iParticle,iBlock)**2)
     IsInterfacePoint = &
-         iParticle >= iGridLocal_IB(Begin_,iBlock) .and. &
-         iParticle <= iGridLocal_IB(End_,  iBlock) .and. &
-         R2 >= RMin**2 .and. R2 < RMax**2
-    ! second, check whether the particle is within the appropriate domain
-    if(IsInterfacePoint)&
-         IsInterfacePoint = &
-         is_in_buffer(State_VIB(X_:Z_, iParticle, iBlock)) .and. SendBuffer .or.&
-         .not.(IsSc.eqv.R2>RBufferMax**2)
-    ! lastly, fix coordinates and index
+         R2 >= rInterfaceMin**2 .and. R2 < rInterfaceMax**2
+    ! Fix coordinates to be used in mapping
     if(IsInterfacePoint)then
        Xyz_D = State_VIB(X_:Z_, iParticle, iBlock)
     end if
   end subroutine SP_interface_point_coords
-
-  !===================================================================
-  subroutine SP_interface_point_coords_for_sc(&
-       Grid, iBlockUsed, nDim, Xyz_D, nIndex,iIndex_I,&
-       IsInterfacePoint)
-    use CON_grid_descriptor
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)   :: iBlockUsed
-    integer,intent(in)   :: nDim
-    real,   intent(inout):: Xyz_D(nDim)
-    integer,intent(in)   :: nIndex
-    integer,intent(inout):: iIndex_I(nIndex)
-    logical,intent(out)  :: IsInterfacePoint
-    !---------------------------------------------------------------
-    call SP_interface_point_coords(SC_, .true., &
-         nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
-  end subroutine SP_interface_point_coords_for_sc
-  !===================================================================
-  subroutine SP_interface_point_coords_for_ih(&
-       Grid, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
-       IsInterfacePoint)
-    use CON_grid_descriptor
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)   :: iBlockUsed
-    integer,intent(in)   :: nDim
-    real,   intent(inout):: Xyz_D(nDim)
-    integer,intent(in)   :: nIndex
-    integer,intent(inout):: iIndex_I(nIndex)
-    logical,intent(out)  :: IsInterfacePoint
-    !---------------------------------------------------------------
-    call SP_interface_point_coords(IH_, .true., &
-         nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
-  end subroutine SP_interface_point_coords_for_ih
-  !===================================================================
-  subroutine SP_interface_point_coords_for_ih_extract(&
-       Grid, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
-       IsInterfacePoint)
-    use CON_grid_descriptor
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)   :: iBlockUsed
-    integer,intent(in)   :: nDim
-    real,   intent(inout):: Xyz_D(nDim)
-    integer,intent(in)   :: nIndex
-    integer,intent(inout):: iIndex_I(nIndex)
-    logical,intent(out)  :: IsInterfacePoint
-    !---------------------------------------------------------------
-    call SP_interface_point_coords(IH_, .false., &
-         nDim,Xyz_D,nIndex,iIndex_I, IsInterfacePoint)
-  end subroutine SP_interface_point_coords_for_ih_extract
-  !===================================================================
+  !============================
   subroutine SP_put_line(nPartial, iPutStart, Put,&
        Weight, DoAdd, Coord_D, nVar)
     integer, intent(in) :: nPartial, iPutStart, nVar

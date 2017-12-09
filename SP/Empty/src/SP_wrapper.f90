@@ -23,10 +23,9 @@ module SP_wrapper
   public:: SP_put_from_ih
   public:: SP_put_line
   public:: SP_adjust_lines
-  public:: SP_interface_point_coords_for_ih
-  public:: SP_interface_point_coords_for_ih_extract
-  public:: SP_interface_point_coords_for_sc
+  public:: SP_interface_point_coords
   public:: SP_get_bounds_comp
+  public:: SP_put_interface_bounds
   public:: SP_set_line_foot
   public:: SP_n_particle
   public:: SP_copy_old_state
@@ -138,7 +137,7 @@ contains
   end subroutine SP_set_line_foot
 
   !===================================================================
-  subroutine SP_interface_point_coords_for_sc(&
+  subroutine SP_interface_point_coords(&
        Grid, iBlockUsed, nDim, Xyz_D, nIndex,iIndex_I,&
        IsInterfacePoint)
     use CON_grid_descriptor
@@ -152,40 +151,14 @@ contains
     character(len=*), parameter:: NameSub='SP_interface_point_coords_for_sc'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_interface_point_coords_for_sc
-  !===================================================================
-  subroutine SP_interface_point_coords_for_ih(&
-       Grid, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
-       IsInterfacePoint)
-    use CON_grid_descriptor
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)   :: iBlockUsed
-    integer,intent(in)   :: nDim
-    real,   intent(inout):: Xyz_D(nDim)
-    integer,intent(in)   :: nIndex
-    integer,intent(inout):: iIndex_I(nIndex)
-    logical,intent(out)  :: IsInterfacePoint
-    character(len=*), parameter:: NameSub='SP_interface_point_coords_for_ih'
+  end subroutine SP_interface_point_coords
+  !=======================================
+  subroutine SP_put_interface_bounds(rMinIn, rMaxIn)
+    real, intent(in):: rMinIn, rMaxIn
+    character(len=*), parameter:: NameSub='SP_put_interface_bounds'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_interface_point_coords_for_ih
-  !===================================================================
-  subroutine SP_interface_point_coords_for_ih_extract(&
-       Grid, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,&
-       IsInterfacePoint)
-    use CON_grid_descriptor
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)   :: iBlockUsed
-    integer,intent(in)   :: nDim
-    real,   intent(inout):: Xyz_D(nDim)
-    integer,intent(in)   :: nIndex
-    integer,intent(inout):: iIndex_I(nIndex)
-    logical,intent(out)  :: IsInterfacePoint
-    character(len=*), parameter:: NameSub='SP_interface_point_coords_for_ih'
-    !---------------------------------------------------------------
-    call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_interface_point_coords_for_ih_extract
-
+  end subroutine SP_put_interface_bounds
   !===================================================================
   subroutine SP_put_line(nPartial, iPutStart, Put,&
        Weight, DoAdd, Coord_D, nVar)
