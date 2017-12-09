@@ -51,7 +51,7 @@ module IH_wrapper
   ! Coupling with SP
   public:: IH_check_ready_for_sp
   public:: IH_extract_line
-  public:: IH_add_to_line
+  public:: IH_put_particles
   public:: IH_get_particle_indexes
   public:: IH_get_particle_coords
   public:: IH_get_a_line_point
@@ -1259,14 +1259,12 @@ contains
 
   !============================================================================
 
-  subroutine IH_add_to_line(nParticle, Xyz_DI, nIndex, iIndex_II)
+  subroutine IH_put_particles(Xyz_DI, iIndex_II)
     use IH_BATL_lib, ONLY: nDim, put_particles
     use IH_ModParticleFieldLine, ONLY: KindReg_
     ! add particles with specified coordinates to the already existing lines
-    integer, intent(in):: nParticle
-    real,    intent(in):: Xyz_DI(nDim, nParticle)
-    integer, intent(in):: nIndex
-    integer, intent(in):: iIndex_II(nIndex, nParticle)
+    real,    intent(in):: Xyz_DI(:,:)
+    integer, intent(in):: iIndex_II(:,:)
     !------------------------------------------------------------------------
     call put_particles(&
          iKindParticle      = KindReg_ ,&
@@ -1274,7 +1272,7 @@ contains
          iIndexIn_II        = iIndex_II,&
          UseInputInGenCoord = .true.   ,&
          DoReplace          = .true.     )
-  end subroutine IH_add_to_line
+  end subroutine IH_put_particles
 
   !==================================================================!
   subroutine IH_line_interface_point(&

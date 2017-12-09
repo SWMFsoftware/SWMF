@@ -7,12 +7,12 @@ module CON_couple_mh_sp
   use CON_axes
   use CON_coupler
   use IH_wrapper, ONLY: IH_synchronize_refinement, IH_extract_line,           &
-       IH_get_for_mh, IH_get_a_line_point, IH_add_to_line, IH_n_particle,     &
+       IH_get_for_mh, IH_get_a_line_point, IH_put_particles, IH_n_particle,   &
        IH_line_interface_point, IH_get_particle_indexes,IH_check_ready_for_sp,&
-        IH_LineDD, IH_get_particle_coords, IH_xyz_to_coord, IH_coord_to_xyz   
+       IH_LineDD, IH_get_particle_coords, IH_xyz_to_coord, IH_coord_to_xyz   
   !^CMP IF SC BEGIN 
   use SC_wrapper, ONLY: SC_synchronize_refinement, SC_extract_line,           &
-       SC_get_for_mh, SC_get_a_line_point, SC_add_to_line, SC_n_particle,     &
+       SC_get_for_mh, SC_get_a_line_point, SC_put_particles, SC_n_particle,   &
        SC_line_interface_point, SC_get_particle_indexes,SC_check_ready_for_sp,&
        SC_LineDD, SC_get_particle_coords, SC_xyz_to_coord    
   !^CMP END SC
@@ -307,7 +307,7 @@ contains
             GridTarget = SP_Grid,  &
             Router               = RouterLineScSp,     &
             n_interface_point_in_block = SC_n_particle,&
-            interface_point_coords=SC_line_interface_point,&
+            !interface_point_coords=SC_line_interface_point,&
             mapping              = mapping_line_sc_to_sp)
        call couple_comp(RouterLineScSp, &
             nVar = 3, &
@@ -334,10 +334,8 @@ contains
     !By the way get particle coords from the router buffer 
     if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScSp)
-       call SC_add_to_line(                                        &
-            nParticle = nLength,                                   &
+       call SC_put_particles(&
             Xyz_DI = RouterScSp%BufferSource_II(1:nDim, 1:nLength),&
-            nIndex    = nAux,                                      &
             iIndex_II = nint(RouterScSp%BufferSource_II(           &
             nDim+1:nDim+nAux, 1:nLength)))
     end if
@@ -463,11 +461,8 @@ contains
     if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterIhSp)
        if(use_comp(SC_))call sort_out_sc_particles   !^CMP IF SC
-       call IH_add_to_line(&
-            nParticle = nLength,&
-            Xyz_DI    =  RouterIhSp%BufferSource_II(&
-            1:nDim, 1:nLength), &
-            nIndex    = nAux,   &
+       call IH_put_particles(&
+            Xyz_DI=RouterIhSp%BufferSource_II(1:nDim, 1:nLength), &
             iIndex_II = nint(RouterIhSp%BufferSource_II(&
             nDim+1:nDim+nAux, 1:nLength)))
     end if
