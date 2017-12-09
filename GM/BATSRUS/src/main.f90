@@ -23,7 +23,7 @@ program BATSRUS
        IsLastRead, &
        dn_timing, UseTiming, UseTimingAll, iUnitTiming
   use ModSetParameters, ONLY: set_parameters
-  use ModWriteProgress, ONLY: write_progress
+  use ModWriteProgress, ONLY: write_progress, write_runtime_values
   use ModRestartFile, ONLY: NameRestartInDir
   use CON_planet, ONLY: init_planet_const, set_planet_defaults
 
@@ -115,6 +115,7 @@ program BATSRUS
         if(iProc==0)write(*,*)'Resetting timing counters after setup.'
         call timing_reset('#all',3)
      else
+        call write_runtime_values
         call BATS_init_session
      end if
 
