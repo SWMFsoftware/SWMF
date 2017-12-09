@@ -99,6 +99,11 @@ public:
 
   cMatrixRowNonZeroElementTable MatrixRowNonZeroElementTable[MaxStencilLength];
 
+  //provcess the right boundary
+  int nVirtualBlocks;
+  void ProcessRightDomainBoundary(int *RecvDataPointCounter,void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
+
+
   //constructor
   cLinearSystemCornerNode() {
     MatrixRowTable=NULL,MatrixRowLast=NULL;
@@ -110,11 +115,14 @@ public:
     //partial data of the linear system to be solved
     SubdomainPartialRHS=NULL,SubdomainPartialUnknownsVector=NULL;
     SubdomainPartialUnknownsVectorLength=0;
+
+    nVirtualBlocks=0;
   }
 
   //void reset the data of the obsect to the default state
   void Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
   void Reset();
+
 
   //reset indexing of the nodes
   void ResetUnknownVectorIndex(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
@@ -140,6 +148,8 @@ public:
 
     MatrixRowStack.~cStack();
   }
+
+
 };
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
@@ -161,6 +171,238 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::ProcessRightDomainBoundary(int* RecvDataPointCounter,void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
+  int i,j,k,iface,iblock;
+  cMatrixRow* NewRow;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  cStencilElement* el;
+//  int Index=PIC::DomainBlockDecomposition::nLocalBlocks*_BLOCK_CELLS_Z_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_X_;
+  int kMax=_BLOCK_CELLS_Z_,jMax=_BLOCK_CELLS_Y_,iMax=_BLOCK_CELLS_X_;
+
+//  int Debug=0;
+
+  struct cOffset {
+    int di,dj,dk;
+  };
+
+
+  nVirtualBlocks=0;
+
+//  return ;
+
+  cOffset xOffset[1]={{_BLOCK_CELLS_X_,0,0}};
+  cOffset yOffset[1]={{0,_BLOCK_CELLS_Y_,0}};
+  cOffset zOffset[1]={{0,0,_BLOCK_CELLS_Z_}};
+
+  cOffset xyOffset[3]={{_BLOCK_CELLS_X_,0,0},{0,_BLOCK_CELLS_Y_,0},{_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,0}};
+  cOffset xzOffset[3]={{_BLOCK_CELLS_X_,0,0},{0,0,_BLOCK_CELLS_Z_},{_BLOCK_CELLS_X_,0,_BLOCK_CELLS_Z_}};
+  cOffset yzOffset[3]={{0,_BLOCK_CELLS_Y_,0},{0,0,_BLOCK_CELLS_Z_},{0,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_}};
+
+  cOffset xyzOffset[7]={{_BLOCK_CELLS_X_,0,0},{0,_BLOCK_CELLS_Y_,0},{0,0,_BLOCK_CELLS_Z_},
+      {_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,0},{_BLOCK_CELLS_X_,0,_BLOCK_CELLS_Z_},{0,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_},
+      {_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_}};
+
+  for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+    bool flag=false;
+
+    node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
+
+    if (node->Thread==PIC::ThisThread) for (iface=1;iface<6;iface+=2) if (node->GetNeibFace(iface,0,0)==NULL) {
+      flag=true;
+      break;
+    }
+
+    if (flag==false) continue;
+
+/*Debug++;
+
+//debug -> count the number of rows and blocks
+int ntotbl=0;
+for ( cMatrixRow* Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
+
+    //the block has at least one face at the 'right' boundary of the domain
+    //determine the combination of the faces that are at the boundary
+    int xBoundaryFace=0,yBoundaryFace=0,zBoundaryFace=0;
+
+    if (node->GetNeibFace(1,0,0)==NULL) xBoundaryFace=10;
+    if (node->GetNeibFace(3,0,0)==NULL) yBoundaryFace=100;
+    if (node->GetNeibFace(5,0,0)==NULL) zBoundaryFace=1000;
+
+    //build "virtual" blocks for the combination of the boundaries
+    cOffset *OffsetTable;
+    int OffsetTableLength;
+
+    switch (xBoundaryFace+yBoundaryFace+zBoundaryFace) {
+     case 10+0+0:
+      OffsetTable=xOffset;
+      OffsetTableLength=1;
+      break;
+
+     case 0+100+0:
+      OffsetTable=yOffset;
+      OffsetTableLength=1;
+      break;
+
+     case 0+0+1000:
+      OffsetTable=zOffset;
+      OffsetTableLength=1;
+      break;
+
+     case 10+100+0:
+      OffsetTable=xyOffset;
+      OffsetTableLength=3;
+      break;
+
+     case 10+0+1000:
+      OffsetTable=xzOffset;
+      OffsetTableLength=3;
+      break;
+
+     case 0+100+1000:
+      OffsetTable=yzOffset;
+      OffsetTableLength=3;
+      break;
+
+     case 10+100+1000:
+      OffsetTable=xyzOffset;
+      OffsetTableLength=7;
+      break;
+    }
+
+    nVirtualBlocks+=OffsetTableLength;
+
+    //loop through all 'virtual' blocks
+    for (iblock=0;iblock<OffsetTableLength;iblock++) {
+      //loop through all 'internal' corner nodes of the block
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) for (int iVar=0;iVar<NodeUnknownVariableVectorLength;iVar++) {
+        if ( (i+OffsetTable[iblock].di<=_BLOCK_CELLS_X_) && (j+OffsetTable[iblock].dj<=_BLOCK_CELLS_Y_) && (k+OffsetTable[iblock].dk<=_BLOCK_CELLS_Z_) ) {
+          //the point is located at the boundary of the domain and the user-defined funtion is needed to be called to get the interpolation stencil
+          int NonZeroElementsFound;
+          double rhs;
+
+          NewRow=MatrixRowStack.newElement();
+
+          //call the user defined function to determine the non-zero elements of the matrix
+          NewRow->RhsSupportLength=0;
+          rhs=0.0;
+
+          f(i+OffsetTable[iblock].di,j+OffsetTable[iblock].dj,k+OffsetTable[iblock].dk,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable,NewRow->RhsSupportLength,node);
+          if (NonZeroElementsFound>MaxStencilLength) exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
+
+          //populate the new row
+          NewRow->i=i+OffsetTable[iblock].di,NewRow->j=j+OffsetTable[iblock].dj,NewRow->k=k+OffsetTable[iblock].dk;
+          NewRow->iVar=iVar;
+          NewRow->node=node;
+          NewRow->Rhs=rhs;
+          NewRow->CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(NewRow->i,NewRow->j,NewRow->k));
+          NewRow->nNonZeroElements=NonZeroElementsFound;
+
+          //add the new row to the matrix
+          if (MatrixRowTable==NULL) {
+            MatrixRowLast=NewRow;
+            MatrixRowTable=NewRow;
+            NewRow->next=NULL;
+          }
+          else {
+            MatrixRowLast->next=NewRow;
+            MatrixRowLast=NewRow;
+            NewRow->next=NULL;
+          }
+
+          //add to the row non-zero elements
+          for (int ii=0;ii<NonZeroElementsFound;ii++) {
+            MatrixRowNonZeroElementTable[ii].Node=node;
+
+            if ((MatrixRowNonZeroElementTable[ii].i>=iMax) && (MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(1,0,0)!=NULL)) {
+              MatrixRowNonZeroElementTable[ii].i-=_BLOCK_CELLS_X_;
+              MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(1,0,0);
+            }
+            else if (MatrixRowNonZeroElementTable[ii].i<0) {
+              MatrixRowNonZeroElementTable[ii].i+=_BLOCK_CELLS_X_;
+              MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(0,0,0);
+            }
+
+            if ((MatrixRowNonZeroElementTable[ii].j>=jMax) && (MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(3,0,0)!=NULL)) {
+              MatrixRowNonZeroElementTable[ii].j-=_BLOCK_CELLS_Y_;
+              MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(3,0,0);
+            }
+            else if (MatrixRowNonZeroElementTable[ii].j<0) {
+              MatrixRowNonZeroElementTable[ii].j+=_BLOCK_CELLS_Y_;
+              MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(2,0,0);
+            }
+
+            if ((MatrixRowNonZeroElementTable[ii].k>=kMax) && (MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(5,0,0)!=NULL)) {
+              MatrixRowNonZeroElementTable[ii].k-=_BLOCK_CELLS_Z_;
+              MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(5,0,0);
+            }
+            else if (MatrixRowNonZeroElementTable[ii].k<0) {
+              MatrixRowNonZeroElementTable[ii].k+=_BLOCK_CELLS_Z_;
+              MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(4,0,0);
+            }
+
+            if (MatrixRowNonZeroElementTable[ii].Node==NULL) {
+              exit(__LINE__,__FILE__,"Error: the block is not found");
+            }
+
+            cCornerNode* CornerNode=MatrixRowNonZeroElementTable[ii].Node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[ii].i,MatrixRowNonZeroElementTable[ii].j,MatrixRowNonZeroElementTable[ii].k));
+
+            if (CornerNode==NULL) exit(__LINE__,__FILE__,"Error: something is wrong");
+
+            el=NewRow->Elements+ii;
+
+            el->CornerNode=CornerNode;
+            el->CornerNodeID=PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[ii].i,MatrixRowNonZeroElementTable[ii].j,MatrixRowNonZeroElementTable[ii].k);
+            el->UnknownVectorIndex=-1;
+            el->MatrixElementValue=MatrixRowNonZeroElementTable[ii].MatrixElementValue;
+            el->node=MatrixRowNonZeroElementTable[ii].Node;
+            el->iVar=iVar;
+
+            //count the number of the element that are needed
+            if (CornerNode->LinearSolverUnknownVectorIndex==-1) {
+              RecvDataPointCounter[MatrixRowNonZeroElementTable[ii].Node->Thread]++;
+              CornerNode->LinearSolverUnknownVectorIndex=-2;
+            }
+          }
+        }
+        else {
+          //the point is outside of the domain
+          NewRow=MatrixRowStack.newElement();
+
+          NewRow->i=-1000000,NewRow->j=-1000000,NewRow->k=-1000000;
+          NewRow->iVar=iVar;
+          NewRow->node=node;
+          NewRow->Rhs=1.0;
+          NewRow->CornerNode=NULL;
+          NewRow->nNonZeroElements=1;
+          NewRow->RhsSupportLength=0;
+
+          NewRow->Elements[0].CornerNode=NULL;
+          NewRow->Elements[0].CornerNodeID=-1;
+          NewRow->Elements[0].UnknownVectorIndex=-1; //Index;
+          NewRow->Elements[0].MatrixElementValue=1.0;
+          NewRow->Elements[0].node=node;
+          NewRow->Elements[0].iVar=iVar;
+
+          //add the new row to the matrix
+          if (MatrixRowTable==NULL) {
+            MatrixRowLast=NewRow;
+            MatrixRowTable=NewRow;
+            NewRow->next=NULL;
+          }
+          else {
+            MatrixRowLast->next=NewRow;
+            MatrixRowLast=NewRow;
+            NewRow->next=NULL;
+          }
+
+//          if (iVar==0) Index++;
+        }
+      }
+    }
+  }
+}
+
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
 void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   int i,j,k,thread,nLocalNode;
@@ -169,7 +411,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   cStencilElement* el;
   cCornerNode* CornerNode;
 
-//  int Debug=0;
+  int Debug=0;
 
   //reset indexing of the nodes
   Reset();
@@ -228,7 +470,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
         for (int ii=0;ii<NonZeroElementsFound;ii++) {
           MatrixRowNonZeroElementTable[ii].Node=node;
 
-          if (MatrixRowNonZeroElementTable[ii].i>=iMax) {
+          if ((MatrixRowNonZeroElementTable[ii].i>=iMax) && (MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(1,0,0)!=NULL)) {
             MatrixRowNonZeroElementTable[ii].i-=_BLOCK_CELLS_X_;
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(1,0,0);
           }
@@ -237,7 +479,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(0,0,0);
           }
 
-          if (MatrixRowNonZeroElementTable[ii].j>=jMax) {
+          if ((MatrixRowNonZeroElementTable[ii].j>=jMax) && (MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(3,0,0)!=NULL)) {
             MatrixRowNonZeroElementTable[ii].j-=_BLOCK_CELLS_Y_;
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(3,0,0);
           }
@@ -246,7 +488,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(2,0,0);
           }
 
-          if (MatrixRowNonZeroElementTable[ii].k>=kMax) {
+          if ((MatrixRowNonZeroElementTable[ii].k>=kMax) && (MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(5,0,0)!=NULL)) {
             MatrixRowNonZeroElementTable[ii].k-=_BLOCK_CELLS_Z_;
             MatrixRowNonZeroElementTable[ii].Node=MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(5,0,0);
           }
@@ -333,6 +575,15 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     }
   }
 
+/*  //debug -> count the number of rows and blocks
+  int ntotbl=0;
+  for (Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
+
+
+  //add 'virtual' blocks at the right boundary of the domain
+  ProcessRightDomainBoundary(RecvDataPointCounter,f);
+
+
   //allocate the data buffers for the partial vectors and link the pointers points that are inside the subdomian
   //allocate the exchange buffer for the data the needs to be recieved from other MPI processess
   int cnt=0,iElement;
@@ -345,47 +596,58 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     for (iElement=0;iElement<Row->nNonZeroElements;iElement++) {
       el=Row->Elements+iElement;
 
-      if (el->CornerNode->LinearSolverUnknownVectorIndex==-2) {
-        //the node is still not linked to the 'partial data vector'
-        el->CornerNode->LinearSolverUnknownVectorIndex=DataExchangeTableCounter[el->node->Thread]++;
+      if (el->CornerNode!=NULL) {
+        if (el->CornerNode->LinearSolverUnknownVectorIndex==-2) {
+          //the node is still not linked to the 'partial data vector'
+          el->CornerNode->LinearSolverUnknownVectorIndex=DataExchangeTableCounter[el->node->Thread]++;
 
-        if (el->node->Thread!=PIC::ThisThread) {
-          //add the point to the data request list
-          cLinearSystemCornerNodeDataRequestListElement DataRequestListElement;
-          cAMRnodeID NodeID;
+          if (el->node->Thread!=PIC::ThisThread) {
+            //add the point to the data request list
+            cLinearSystemCornerNodeDataRequestListElement DataRequestListElement;
+            cAMRnodeID NodeID;
 
-          PIC::Mesh::mesh.GetAMRnodeID(NodeID,el->node);
-          DataRequestListElement.CornerNodeID=el->CornerNodeID;
-          DataRequestListElement.NodeID=NodeID;
+            PIC::Mesh::mesh.GetAMRnodeID(NodeID,el->node);
+            DataRequestListElement.CornerNodeID=el->CornerNodeID;
+            DataRequestListElement.NodeID=NodeID;
 
-          DataRequestList[el->node->Thread].push_back(DataRequestListElement);
+            DataRequestList[el->node->Thread].push_back(DataRequestListElement);
+          }
         }
 
+        el->UnknownVectorIndex=el->CornerNode->LinearSolverUnknownVectorIndex;
+        el->Thread=el->node->Thread;
       }
-
-      el->UnknownVectorIndex=el->CornerNode->LinearSolverUnknownVectorIndex;
-      el->Thread=el->node->Thread;
+      else {
+        //the point is within the 'virtual' block
+        el->UnknownVectorIndex=DataExchangeTableCounter[el->node->Thread]++;
+        el->Thread=el->node->Thread;
+      }
     }
   }
 
   //re-count the 'internal' corner nodes so they follow the i,j,k order as well as rows
-  for (Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) Row->CornerNode->LinearSolverUnknownVectorIndex=-1;
+  for (Row=MatrixRowTable;Row!=NULL;Row=Row->next) if (Row->CornerNode!=NULL) Row->CornerNode->LinearSolverUnknownVectorIndex=-1;
 
   for (iRow=0,Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) {
-    if (Row->CornerNode->LinearSolverUnknownVectorIndex>=0) exit(__LINE__,__FILE__,"Error: a courner node is double counted");
+    if (Row->CornerNode!=NULL) {
+      if (Row->CornerNode->LinearSolverUnknownVectorIndex>=0) exit(__LINE__,__FILE__,"Error: a courner node is double counted");
 
-    Row->CornerNode->LinearSolverUnknownVectorIndex=iRow;
+      Row->CornerNode->LinearSolverUnknownVectorIndex=iRow;
+    }
+    else Row->Elements[0].UnknownVectorIndex=iRow; //rows corresponding to the virtual blocks has only one non-zero element
   }
 
   //verify that all all corner nodes have been counted
   for (Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) for (iElement=0;iElement<Row->nNonZeroElements;iElement++) {
     int n;
 
-    if ((n=Row->Elements[iElement].CornerNode->LinearSolverUnknownVectorIndex)<0) {
-      exit(__LINE__,__FILE__,"Error: an uncounted corner node has been found");
-    }
+    if (Row->Elements[iElement].CornerNode!=NULL) {
+      if ((n=Row->Elements[iElement].CornerNode->LinearSolverUnknownVectorIndex)<0) {
+        exit(__LINE__,__FILE__,"Error: an uncounted corner node has been found");
+      }
 
-    Row->Elements[iElement].UnknownVectorIndex=n;
+      Row->Elements[iElement].UnknownVectorIndex=n;
+    }
   }
 
 
@@ -592,16 +854,46 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   //count the total number of the variables, and create the data buffers
   if (SubdomainPartialRHS==NULL) {
-    for (row=MatrixRowTable;row!=NULL;row=row->next) SubdomainPartialUnknownsVectorLength+=NodeUnknownVariableVectorLength;
+    for (SubdomainPartialUnknownsVectorLength=0,row=MatrixRowTable;row!=NULL;row=row->next) SubdomainPartialUnknownsVectorLength+=NodeUnknownVariableVectorLength;
 
     SubdomainPartialRHS=new double [SubdomainPartialUnknownsVectorLength];
     SubdomainPartialUnknownsVector=new double [SubdomainPartialUnknownsVectorLength];
   }
 
+  //calculate the mean value of the Rhs that could be used later for the point located in the 'virtual' blocks
+  int i;
+  double MeanRhs[NodeUnknownVariableVectorLength];
+  int MeanRhsCounter[NodeUnknownVariableVectorLength];
+
+  for (i=0;i<NodeUnknownVariableVectorLength;i++) MeanRhs[i]=0.0,MeanRhsCounter[i]=0;
+
+  for (row=MatrixRowTable;row!=NULL;cnt++,row=row->next) if (row->CornerNode) {
+    MeanRhs[row->iVar]+=row->Rhs;
+    MeanRhsCounter[row->iVar]++;
+  }
+
+  for (i=0;i<NodeUnknownVariableVectorLength;i++) {
+    if (MeanRhsCounter[i]==0) MeanRhs[i]=0.0;
+    else MeanRhs[i]/=MeanRhsCounter[i];
+  }
+
+
   //populate the buffers
   for (cnt=0,row=MatrixRowTable;row!=NULL;cnt++,row=row->next) {
-    fInitialUnknownValues(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
-    SubdomainPartialRHS[cnt]=row->Rhs;
+    if (row->CornerNode!=NULL) {
+      if (cnt%NodeUnknownVariableVectorLength==0) {
+        fInitialUnknownValues(SubdomainPartialUnknownsVector+NodeUnknownVariableVectorLength*row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
+      }
+
+      SubdomainPartialRHS[cnt]=row->Rhs;
+    }
+    else {
+      //the point is located in the 'virtual' block
+      SubdomainPartialUnknownsVector[row->iVar+NodeUnknownVariableVectorLength*row->Elements->UnknownVectorIndex]=MeanRhs[row->iVar];
+      SubdomainPartialRHS[cnt]=MeanRhs[row->iVar];
+    }
+
+
   }
 
 
@@ -613,7 +905,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   int nI=_BLOCK_CELLS_X_;
   int nJ=_BLOCK_CELLS_Y_;
   int nK=_BLOCK_CELLS_Z_;
-  int nBlock = PIC::DomainBlockDecomposition::nLocalBlocks;
+  int nBlock = PIC::DomainBlockDecomposition::nLocalBlocks+nVirtualBlocks;
 
   MPI_Fint iComm = MPI_Comm_c2f(MPI_GLOBAL_COMMUNICATOR);
 
@@ -638,7 +930,9 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
 
   //unpack the solution
-  for (row=MatrixRowTable;row!=NULL;row=row->next) fUnpackSolution(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
+  for (row=MatrixRowTable;row!=NULL;row=row->next) if (row->CornerNode!=NULL)  {
+    fUnpackSolution(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
+  }
 
   //execute the data exchange between 'ghost' blocks
   PIC::Mesh::mesh.ParallelBlockDataExchange();
