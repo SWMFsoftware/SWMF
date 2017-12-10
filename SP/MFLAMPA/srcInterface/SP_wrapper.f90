@@ -32,7 +32,7 @@ module SP_wrapper
        Wave_, WaveFirstCouple_, WaveLastCouple_
   use ModMpi
   use CON_world, ONLY: is_proc0, is_proc, n_proc
-  use CON_comp_param, ONLY: SP_, SC_, IH_
+  !use CON_comp_param, ONLY: SP_, SC_, IH_
 
   implicit none
 
@@ -53,7 +53,6 @@ module SP_wrapper
   public:: SP_put_line
   public:: SP_adjust_lines
   public:: SP_get_bounds_comp
-  public:: SP_set_line_foot
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_ready_for_mh
@@ -315,61 +314,6 @@ contains
          NameVar      = NameVarCouple, &
          UnitX        = rSun)
   end subroutine SP_set_grid
-  !===================================================================
-  subroutine SP_set_line_foot
-    ! compute coordinates of the footprints of field lines
-    integer:: iBlock    ! loop variable
-    !-----------------------------------------------------------------
-    do iBlock = 1, nBlock
-       call SP_set_line_foot_b(iBlock)
-    end do
-  end subroutine SP_set_line_foot
-  !======================
-  subroutine SP_set_line_foot_b(iBlock)
-    integer, intent(in) :: iBlock
-
-    ! existing particle with lowest index along line
-    real:: Xyz1_D(nDim)
-    ! direction of the field at Xyz1_D and segment vectors between particles
-    real, dimension(nDim):: Dir0_D, Dist1_D, Dist2_D
-    ! dot product Xyz1 and Dir1 and its sign
-    real:: Dot, S
-    ! distances between particles
-    real:: Dist1, Dist2
-    ! variable to compute coords of the footprints
-    real:: Alpha
-    !---------------
-    ! get the coordinates of lower particle
-    Xyz1_D = State_VIB(X_:Z_, iGridLocal_IB(Begin_,iBlock), iBlock)
-
-    ! generally, field direction isn't known
-    ! approximate it using directions of first 2 segments of the line
-    Dist1_D = &
-         State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock),   iBlock) - &
-         State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+1, iBlock)
-    Dist1 = sqrt(sum(Dist1_D**2))
-    Dist2_D = &
-         State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+1, iBlock) - &
-         State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+2, iBlock)
-    Dist2 = sqrt(sum(Dist2_D**2))
-    Dir0_D = ((2*Dist1+Dist2)*Dist1_D - Dist1*Dist2_D) / (Dist1 + Dist2)
-
-    Dir0_D = Dir0_D / sqrt(sum(Dir0_D**2))
-
-    ! dot product and sign: used in computation below
-    Dot = sum(Dir0_D*Xyz1_D)
-    S   = sign(1.0, Dot)
-
-    ! Xyz0, the footprint, is distance Alpha away from Xyz1:
-    ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = RMin =>
-    Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
-
-    ! store new footpoint of the line
-    ParamLocal_IB(XMin_:ZMin_,iBlock) = Xyz1_D + Alpha * Dir0_D
-    ! length is used to decide when need to append new particles:
-    ! use distance between first two particles on the line
-    ParamLocal_IB(Length_,    iBlock) = Dist1
-  end subroutine SP_set_line_foot_b
   !================================
   subroutine SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
     integer, intent(in) :: iModelIn
@@ -434,12 +378,12 @@ contains
   ! received from the other component (SC, IH). Determines whether some
   ! grid points should be added/deleted
   !/
-  subroutine SP_adjust_lines(DoAdjustStart, DoAdjustEnd)
+  subroutine SP_adjust_lines(DoInit, DoAdjustStart, DoAdjustEnd)
     !\
     ! If DoAdjustStart, the points in the starting portion of the line are
     ! processed, if DoAdjustEnd - the same for the end points
     !/
-    logical, intent(in) :: DoAdjustStart, DoAdjustEnd
+    logical, intent(in) :: DoInit, DoAdjustStart, DoAdjustEnd
     ! once new geometry of lines has been put, account for some particles
     ! exiting the domain (can happen both at the beginning and the end)
     integer:: iParticle, iBlock, iEndNew, iBegin, iEnd, iOffset ! loop variables
@@ -449,6 +393,14 @@ contains
     character(len=*), parameter:: NameSub = "SP_adjust_lines"
     character(len=100):: StringError
     !--------------------------------------------------------------------
+    if(DoInit)then
+       if(DoAdjustStart)then
+          do iBlock = 1, nBlock
+             call SP_set_line_foot_b(iBlock)
+          end do
+       end if
+       RETURN
+    end if
     do iBlock = 1, nBlock
        !\
        ! Called after the grid points are received from the 
@@ -507,6 +459,52 @@ contains
     ! component, nullify offset
     !/
     if(DoAdjustEnd)iGridLocal_IB(Offset_,1:nBlock) = 0
+  contains
+    subroutine SP_set_line_foot_b(iBlock)
+      integer, intent(in) :: iBlock
+
+      ! existing particle with lowest index along line
+      real:: Xyz1_D(nDim)
+      ! direction of the field at Xyz1_D and segment vectors between particles
+      real, dimension(nDim):: Dir0_D, Dist1_D, Dist2_D
+      ! dot product Xyz1 and Dir1 and its sign
+      real:: Dot, S
+      ! distances between particles
+      real:: Dist1, Dist2
+      ! variable to compute coords of the footprints
+      real:: Alpha
+      !---------------
+      ! get the coordinates of lower particle
+      Xyz1_D = State_VIB(X_:Z_, iGridLocal_IB(Begin_,iBlock), iBlock)
+
+      ! generally, field direction isn't known
+      ! approximate it using directions of first 2 segments of the line
+      Dist1_D = &
+           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock),   iBlock) - &
+           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+1, iBlock)
+      Dist1 = sqrt(sum(Dist1_D**2))
+      Dist2_D = &
+           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+1, iBlock) - &
+           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+2, iBlock)
+      Dist2 = sqrt(sum(Dist2_D**2))
+      Dir0_D = ((2*Dist1+Dist2)*Dist1_D - Dist1*Dist2_D) / (Dist1 + Dist2)
+
+      Dir0_D = Dir0_D / sqrt(sum(Dir0_D**2))
+
+      ! dot product and sign: used in computation below
+      Dot = sum(Dir0_D*Xyz1_D)
+      S   = sign(1.0, Dot)
+
+      ! Xyz0, the footprint, is distance Alpha away from Xyz1:
+      ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = RMin =>
+      Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
+
+      ! store new footpoint of the line
+      ParamLocal_IB(XMin_:ZMin_,iBlock) = Xyz1_D + Alpha * Dir0_D
+      ! length is used to decide when need to append new particles:
+      ! use distance between first two particles on the line
+      ParamLocal_IB(Length_,    iBlock) = Dist1
+    end subroutine SP_set_line_foot_b
   end subroutine SP_adjust_lines
   !=============================
   subroutine SP_copy_old_state

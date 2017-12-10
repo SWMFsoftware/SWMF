@@ -25,7 +25,6 @@ module SP_wrapper
   public:: SP_interface_point_coords
   public:: SP_get_bounds_comp
   public:: SP_put_interface_bounds
-  public:: SP_set_line_foot
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_ready_for_mh
@@ -110,21 +109,13 @@ contains
   !===================================================================
 
   subroutine SP_get_bounds_comp(ThisModel_, RMinOut, RMaxOut)
-    ! return the value of the solar corona boundary as set in SP component
+    ! return the values of component boundaries as set in SP component
     integer, intent(in):: ThisModel_
     real,   intent(out):: RMinOut, RMaxOut
     character(len=*), parameter:: NameSub='SP_get_solar_corona_boundary'
     !-----------------------------------------------------------------
     call CON_stop('SP: '//NameSub//' : cannot call the empty version')
   end subroutine SP_get_bounds_comp
-
-  !===================================================================
-
-  subroutine SP_set_line_foot
-    character(len=*), parameter:: NameSub='SP_set_line_foot'
-    call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_set_line_foot
-
   !===================================================================
   subroutine SP_interface_point_coords(&
        nDim, Xyz_D, nIndex, iIndex_I,&
@@ -134,7 +125,7 @@ contains
     integer,intent(in)   :: nIndex
     integer,intent(inout):: iIndex_I(nIndex)
     logical,intent(out)  :: IsInterfacePoint
-    character(len=*), parameter:: NameSub='SP_interface_point_coords_for_sc'
+    character(len=*), parameter:: NameSub='SP_interface_point_coords'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_interface_point_coords
@@ -163,15 +154,15 @@ contains
     !----------------------------
     call CON_stop('Can not find nParticle for empty SP')
   end function SP_n_particle
-  !========================================================================
+  !=================================================================
   subroutine SP_copy_old_state
     character(len=*), parameter:: NameSub='SP_copy_old_state'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_copy_old_state
   !===========================
-  subroutine SP_adjust_lines(DoAdjustStart, DoAdjustEnd)
-    Logical, intent(in):: DoAdjustStart, DoAdjustEnd
+  subroutine SP_adjust_lines(DoInit, DoAdjustStart, DoAdjustEnd)
+    Logical, intent(in):: DoInit, DoAdjustStart, DoAdjustEnd
     character(len=*), parameter:: NameSub='SP_adjust_lines'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
