@@ -49,8 +49,6 @@ module SP_wrapper
   ! coupling with MHD components
   public:: SP_put_input_time
   public:: SP_put_from_mh
-  public:: SP_put_from_sc
-  public:: SP_put_from_ih
   public:: SP_interface_point_coords
   public:: SP_put_line
   public:: SP_adjust_lines
@@ -199,9 +197,9 @@ contains
   end subroutine SP_put_input_time
   !===================================================================
 
-  !subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-  subroutine SP_put_from_mh(iComp, nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-    integer, intent(in):: iComp
+  subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  !subroutine SP_put_from_mh(iComp, nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  !  integer, intent(in):: iComp
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::W
@@ -243,14 +241,16 @@ contains
        Weight = W%Weight_I(   iPutStart + iPartial)
        if(is_in_buffer(State_VIB(X_:Z_,i,iBlock)))then
           R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
-  !        select case(Model_)
-  !        case(Lower_)
-          select case(iComp)
-          case(SC_)
+          select case(Model_)
+          case(Lower_)
+          !select case(iComp)
+          !case(SC_)
+             !if(Model_/=Lower_)call CON_stop('Incorrect Model_for SC_')
              Weight = Weight * (0.50 - 0.50 * &
                   tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
-          !case(Upper_)
-          case(IH_)
+          case(Upper_)
+          !case(IH_)
+             !if(Model_/=Upper_)call CON_stop('Incorrect Model_for IH_')
              Aux = 1.0   
              Weight = Weight * (0.50 + 0.50 * &
                   tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
@@ -281,27 +281,6 @@ contains
     end do
   end subroutine SP_put_from_mh
   !============================
-  !===================================================================
-  subroutine SP_put_from_sc(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::W
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
-    !------------------------------------------------------------
-    call SP_put_from_mh(SC_,nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-  end subroutine SP_put_from_sc
-  !===================================================================
-  subroutine SP_put_from_ih(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::W
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
-    !------------------------------------------------------------
-    call SP_put_from_mh(IH_,nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-  end subroutine SP_put_from_ih
-  !===================================================================
   subroutine SP_set_grid
     logical, save:: IsInitialized = .false.
     !------------------------------------------------------------
@@ -536,7 +515,7 @@ contains
     integer, parameter:: nVarReset  = 11
     integer, parameter:: &
          VarReset_I(nVarReset) = (/X_,Y_,Z_,Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
-    !--------------------------------------------------------------------------
+    !-----------------------------------------------------------------------
     do iBlock = 1, nBlock
        iBegin = iGridLocal_IB(Begin_,iBlock)
        iEnd   = iGridLocal_IB(End_,  iBlock)

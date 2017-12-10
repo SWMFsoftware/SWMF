@@ -20,9 +20,9 @@ module CON_couple_mh_sp
        IH_LineDD      !1D "grid": Coord = real(iParticle + iProc*nParticleMax)
                
   !^CMP IF SC BEGIN 
-  use SC_wrapper, ONLY: SC_check_ready_for_sp, SC_synchronize_refinement,     &
-       SC_extract_line, SC_put_particles, SC_n_particle,                      &
-       SC_get_particle_coords, SC_get_particle_indexes, SC_xyz_to_coord,      &
+  use SC_wrapper, ONLY: SC_check_ready_for_sp, SC_synchronize_refinement,    &
+       SC_extract_line, SC_put_particles, SC_n_particle,                     &
+       SC_get_particle_coords, SC_get_particle_indexes, SC_xyz_to_coord,     &
        SC_get_for_mh, SC_LineDD
   !^CMP END SC
   use SP_wrapper, ONLY: &
@@ -30,9 +30,7 @@ module CON_couple_mh_sp
        SP_get_bounds_comp       ,&  !Provides RScMin/Max and/or RIhMin/Max
        SP_put_interface_bounds  ,&  !Sets interaface bounds for each coupling
        SP_put_input_time        ,&  !Marks the time of input to label data set
-       SP_put_from_sc           ,&  !\Put MHD info from SC to SP. !^CMP IF SC
-       SP_put_from_ih           ,&  !/Put MHD info from IH to SP
-       !SP_put_from_mh           ,&  !Put MHD info from SC or IH to SP
+       SP_put_from_mh           ,&  !Put MHD info from SC or IH to SP
        SP_n_particle            ,&  !Number of "points" in a given line in SP
        SP_put_line              ,&  !Put particle Xyz from SC/IH to SP
        SP_interface_point_coords,&  !Check if point is within interface
@@ -338,7 +336,7 @@ contains
     call couple_comp(RouterScSp,                      &
          nVar = nVarBuffer,                           &
          fill_buffer = SC_get_for_sp_and_transform,   &
-         apply_buffer= SP_put_from_sc)
+         apply_buffer= SP_put_from_mh)
     !By the way get particle coords from the router buffer 
     if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScSp)
@@ -466,7 +464,7 @@ contains
     call couple_comp(RouterIhSp                            ,&
          nVar        = nVarBuffer                          ,&
          fill_buffer = IH_get_for_sp_and_transform         ,&
-         apply_buffer= SP_put_from_ih)
+         apply_buffer= SP_put_from_mh)
     !By the way get particle coords from the router buffer 
     if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterIhSp)

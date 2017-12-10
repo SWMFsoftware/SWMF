@@ -19,8 +19,7 @@ module SP_wrapper
   ! coupling with MHD components
   public:: SP_get_line_param
   public:: SP_put_input_time
-  public:: SP_put_from_sc
-  public:: SP_put_from_ih
+  public:: SP_put_from_mh
   public:: SP_put_line
   public:: SP_adjust_lines
   public:: SP_interface_point_coords
@@ -89,8 +88,9 @@ contains
     real,     intent(in)::TimeIn
     call CON_stop('Can not call SP_get_input_time')
   end subroutine SP_put_input_time
+ 
   !===================================================================
-  subroutine SP_put_from_sc(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
+  subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
     use CON_router, ONLY: IndexPtrType, WeightPtrType
 
     integer,intent(in)::nPartial,iPutStart,nVar
@@ -98,19 +98,8 @@ contains
     type(WeightPtrType),intent(in)::W
     logical,intent(in)::DoAdd
     real,dimension(nVar),intent(in)::Buff_I
-    call CON_stop('Can not put ih data')
-  end subroutine SP_put_from_sc
-  !===================================================================
-  subroutine SP_put_from_ih(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-    use CON_router, ONLY: IndexPtrType, WeightPtrType
-
-    integer,intent(in)::nPartial,iPutStart,nVar
-    type(IndexPtrType),intent(in)::Put
-    type(WeightPtrType),intent(in)::W
-    logical,intent(in)::DoAdd
-    real,dimension(nVar),intent(in)::Buff_I
-    call CON_stop('Can not put ih data')
-  end subroutine SP_put_from_ih
+    call CON_stop('Can not put mh data')
+  end subroutine SP_put_from_mh
   !===================================================================
   subroutine SP_get_line_param(DsOut, XyzOut_D, DSCOut, DIHOut)
 
