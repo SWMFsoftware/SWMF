@@ -33,6 +33,8 @@
 #include "cCutBlockSet.h"
 #include "meshAMRgeneric.h"
 
+#include "stencil.h"
+
 #include "../../srcInterface/LinearSystemCornerNode.h"
 #include "linear_solver_wrapper_c.h"
 
@@ -819,6 +821,42 @@ return;
     *((double*)(StateVectorBS+NextCornerNodeOffset))=ValueBC;
   }
 
+  //build the stencil
+  static bool InitFlag=false;
+  static cStencil Stencil;
+  static cStencil::cStencilElement* StencilTable;
+  static int StencilTableLength=0;
+
+  if (InitFlag==false) {
+    InitFlag=true;
+
+    cStencil dx,dy,dz;
+
+    dx.add(1.0,1,0,0);
+    dx.add(-1.0,0,0,0);
+
+    dy.add(1.0,0,1,0);
+    dy.add(-1.0,0,0,0);
+
+    dz.add(1.0,0,0,1);
+    dz.add(-1.0,0,0,0);
+
+    Stencil=dx;
+    Stencil.SubstractShifted(dx,-1,0,0);
+
+    Stencil+=dy;
+    Stencil.SubstractShifted(dy,0,-1,0);
+
+    Stencil+=dz;
+    Stencil.SubstractShifted(dz,0,0,-1);
+
+    Stencil*=-c;
+    Stencil.add(1.0,0,0,0);
+
+    StencilTable=Stencil.GetStencil();
+    StencilTableLength=Stencil.StencilLength;
+  }
+
 
   //boundary
   if ( ((i==0)&&(node->GetNeibFace(0,0,0)==NULL)) ||
@@ -839,6 +877,21 @@ return;
     RhsSupportLength=0;
   }
   else {
+    for (int ii=0;ii<StencilTableLength;ii++) {
+      MatrixRowNonZeroElementTable[ii].i=i+StencilTable[ii].i;
+      MatrixRowNonZeroElementTable[ii].j=j+StencilTable[ii].j;
+      MatrixRowNonZeroElementTable[ii].k=k+StencilTable[ii].k;
+      MatrixRowNonZeroElementTable[ii].MatrixElementValue=StencilTable[ii].a;
+      MatrixRowNonZeroElementTable[ii].iVar=0;
+    }
+
+    RhsSupportTable[0].Coefficient=1.0;
+    RhsSupportTable[0].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
+
+    RhsSupportLength=1;
+    NonZeroElementsFound=StencilTableLength;
+
+/*
     //the point is inside the domain
     //x-direction
     MatrixRowNonZeroElementTable[0].i=i+1;
@@ -908,7 +961,7 @@ return;
     RhsSupportTable[6].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
 
     RhsSupportLength=7;
-    NonZeroElementsFound=7;
+    NonZeroElementsFound=7;*/
   }
 
   //set the RHS value
