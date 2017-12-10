@@ -32,6 +32,7 @@ module CON_couple_mh_sp
        SP_put_input_time        ,&  !Marks the time of input to label data set
        SP_put_from_sc           ,&  !\Put MHD info from SC to SP. !^CMP IF SC
        SP_put_from_ih           ,&  !/Put MHD info from IH to SP
+       !SP_put_from_mh           ,&  !Put MHD info from SC or IH to SP
        SP_n_particle            ,&  !Number of "points" in a given line in SP
        SP_put_line              ,&  !Put particle Xyz from SC/IH to SP
        SP_interface_point_coords,&  !Check if point is within interface
@@ -132,11 +133,8 @@ contains
 
       ! Check whether SC is ready for coupling with SP;
       call SC_check_ready_for_sp(IsReady)
-      if(.not.IsReady)&
-           ! SC has no means to provide necessary information to SP
-           call CON_stop(&
-           "SC component is not ready for coupling with SP component,"//&
-           " can't initialize coupling")
+      if(.not.IsReady) call CON_stop(&
+           "SC component not ready for "//NameSub//" correct PARAM.in")
 
       call set_couple_var_info(SC_, SP_)
       !\
@@ -146,14 +144,13 @@ contains
       !SC, at the stage of the router construction. To further benefit
       !from this opportunity, two SP grid indexes are also sent from
       !SP to SC,at this stage, therefore nMappedPointIndex = 2. 
-      call init_coupler(iCompSource = SC_,          &
-           iCompTarget = SP_,                       &
-           GridSource = SC_Grid,&
-           GridTarget = SP_Grid,&
-           nMappedPointIndex    = nAux,             &
-           Router          = RouterScSp        ,    &
+      call init_coupler(iCompSource = SC_          ,&
+           iCompTarget       = SP_                 ,&
+           GridSource        = SC_Grid             ,&
+           GridTarget        = SP_Grid             ,&
+           nMappedPointIndex = nAux                ,&
+           Router            = RouterScSp          ,&
            LocalGridTarget   = SP_LocalGrid)
-      !/
       !\
       ! Set local GD on the Particle_I structure
       call set_standard_grid_descriptor(SC_LineDD,Grid=SC_LineGrid)
@@ -170,7 +167,7 @@ contains
          !use router intended for sending MHD data  (SC => SP) 
          !to send the particle coordinates backward (SP=>SC).
          if(is_proc(SP_))&
-              call SP_put_interface_bounds(RScMin, RScMax)
+              call SP_put_interface_bounds(Lower_, RScMin, RScMax)
          call set_router(&
               GridSource            = SC_Grid                  ,&
               GridTarget            = SP_LocalGrid             ,&
@@ -183,12 +180,12 @@ contains
             !Put in place the origin points of the MF lines.
             nLength = nlength_buffer_source(RouterScSp)
             call SC_extract_line(&
-                 Xyz_DI = RouterScSp%BufferSource_II(1:nDim    ,&
+                 Xyz_DI     = RouterScSp%BufferSource_II(1:nDim,&
                  1:nLength)                                    ,&
-                 iTraceMode         = iInterfaceOrigin         ,&
-                 iIndex_II = nint(RouterScSp% BufferSource_II(  &
+                 iTraceMode = iInterfaceOrigin                 ,&
+                 iIndex_II  = nint(RouterScSp% BufferSource_II( &
                  nDim+1:nDim+nAux,1:nLength))                  ,& 
-                 RSoftBoundary    =  RScMax)
+                 RSoftBoundary = RScMax)
          end if
       end if
       !First coupling with the particle info and data exchange
@@ -208,12 +205,8 @@ contains
 
       ! Check whether IH is ready for coupling with SP;
       call IH_check_ready_for_sp(IsReady)
-      if(.not.IsReady)&
-           ! IH has no means to provide necessary information to SP
-           call CON_stop(&
-           "IH component is not ready for coupling with SP component,"//&
-           " can't initialize coupling")
-
+      if(.not.IsReady) call CON_stop(&
+           "IH component not ready for "//NameSub//" correct PARAM.in")
       call set_couple_var_info(IH_, SP_)
       !\
       !Initialize coupler from IH (source )to SP (target)
@@ -237,9 +230,8 @@ contains
          if(is_proc(SP_))call set_local_gd(i_proc(),&
               SP_Grid, SP_LocalGrid)
       end if                     !^CMP END SC
-      if(is_proc(IH_))call set_local_gd(&
-           iProc = i_proc(), &
-           Grid = IH_LineGrid, &
+      if(is_proc(IH_))call set_local_gd(iProc = i_proc(),&
+           Grid      = IH_LineGrid                      ,&
            LocalGrid = IH_LocalLineGrid)
       !Router to send particles is initialized. 
       call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
@@ -249,34 +241,38 @@ contains
       if(DoExtract)then
          !use the router intended for sending MHD data IH => SP 
          !to send the particle coordinates backward (SP=>IH)
-         if(is_proc(SP_))&
-              call SP_put_interface_bounds(RScMax, RIhMax)
-         call set_router(                                                 &
-              GridSource                 = IH_Grid                       ,&
-              GridTarget                 = SP_LocalGrid                  ,&
-              Router                     = RouterIHSp                    ,&
-              n_interface_point_in_block = SP_n_particle                 ,&
-              interface_point_coords=                                     &
-              SP_interface_point_coords                                  ,&
-              mapping               = mapping_sp_to_IH                   ,&
+         if(is_proc(SP_))then
+            if(use_comp(SC_))then             !^CMP IF SC BEGIN
+               call SP_put_interface_bounds(Upper_, RScMax, RIhMax)
+            else                              !^CMP END SC
+               call SP_put_interface_bounds(Lower_, RIhMin, RIhMax)
+            end if                            !^CMP IF SC
+         end if
+           !Put in place the origin points of the MF lines.
+         call set_router(                                            &
+              GridSource                 = IH_Grid                  ,&
+              GridTarget                 = SP_LocalGrid             ,&
+              Router                     = RouterIHSp               ,&
+              n_interface_point_in_block = SP_n_particle            ,&
+              interface_point_coords=                                &
+              SP_interface_point_coords                             ,&
+              mapping               = mapping_sp_to_IH              ,&
               interpolate           = interpolation_amr_gc) 
-         call synchronize_router_target_to_source(RouterIhSp)
          if(is_proc(IH_))then
-            !Put in place the origin points of the MF lines.
             nLength = nlength_buffer_source(RouterIhSp)
-            call IH_extract_line(&
-                 Xyz_DI = RouterIhSp%BufferSource_II(1:nDim,1:nLength)  ,&
-                 iTraceMode        = iInterfaceEnd                       ,&
-                 iIndex_II         = nint(RouterIhSp%                     &
-                 BufferSource_II(nDim+1:nDim+nAux,1:nLength))            ,&
-                 RSoftBoundary   =  RIhMax)
+            call IH_extract_line(Xyz_DI =                            &
+                 RouterIhSp%BufferSource_II(1:nDim,1:nLength)       ,&
+                 iTraceMode        = iInterfaceEnd                  ,&
+                 iIndex_II         = nint(RouterIhSp%                &
+                 BufferSource_II(nDim+1:nDim+nAux,1:nLength))       ,&
+                 RSoftBoundary     =  RIhMax)
          end if
       end if
       !First coupling with the particle info and data exchange
       call exchange_data_ih_sp(DoInit, DoExtract)
     end subroutine couple_ih_sp_init
   end subroutine couple_mh_sp_init
-  !=========================================================================
+  !==================================================================
   !^CMP IF SC BEGIN
   subroutine couple_sc_sp(DataInputTime)
     use CON_global_message_pass
@@ -329,7 +325,7 @@ contains
     
     ! Set router SC=> SP to  receive MHD data 
     if(is_proc(SP_))&
-         call SP_put_interface_bounds(RScMin, RScMax)
+         call SP_put_interface_bounds(Lower_, RScMin, RScMax)
     call set_router(&
          GridSource  = SC_Grid,                       &
          GridTarget  = SP_LocalGrid,                  &
@@ -346,9 +342,9 @@ contains
     !By the way get particle coords from the router buffer 
     if(is_proc(SC_))then
        nLength = nlength_buffer_source(RouterScSp)
-       call SC_put_particles(&
-            Xyz_DI = RouterScSp%BufferSource_II(1:nDim, 1:nLength),&
-            iIndex_II = nint(RouterScSp%BufferSource_II(           &
+       call SC_put_particles(Xyz_DI =                     &
+            RouterScSp%BufferSource_II(1:nDim, 1:nLength),&
+            iIndex_II = nint(RouterScSp%BufferSource_II(  &
             nDim+1:nDim+nAux, 1:nLength)))
     end if
   end subroutine exchange_data_sc_sp
@@ -457,30 +453,30 @@ contains
     !
     ! Set router SC=> SP to  receive MHD data
     if(is_proc(SP_))&
-         call SP_put_interface_bounds(RIhMin, RIhMax) 
+         call SP_put_interface_bounds(Upper_, RIhMin, RIhMax) 
     call set_router(                                        & 
-         GridSource    = IH_Grid,                           &
-         GridTarget    = SP_LocalGrid,                      &
-         Router      = RouterIHSp,                          &
-         n_interface_point_in_block = SP_n_particle,        &
+         GridSource    = IH_Grid                           ,&
+         GridTarget    = SP_LocalGrid                      ,&
+         Router      = RouterIHSp                          ,&
+         n_interface_point_in_block = SP_n_particle        ,&
          interface_point_coords=                            &
-         SP_interface_point_coords,                         &
-         mapping     = mapping_sp_to_ih,                    &
+         SP_interface_point_coords                         ,&
+         mapping     = mapping_sp_to_ih                    ,&
          interpolate = interpolation_amr_gc)
-    call couple_comp(RouterIhSp, &
-         nVar = nVarBuffer, &
-         fill_buffer = IH_get_for_sp_and_transform, &
+    call couple_comp(RouterIhSp                            ,&
+         nVar        = nVarBuffer                          ,&
+         fill_buffer = IH_get_for_sp_and_transform         ,&
          apply_buffer= SP_put_from_ih)
     !By the way get particle coords from the router buffer 
     if(is_proc(IH_).and..not.(DoInit.and.DoExtract))then
        nLength = nlength_buffer_source(RouterIhSp)
-       if(use_comp(SC_))call sort_out_sc_particles   !^CMP IF SC
-       call IH_put_particles(&
-            Xyz_DI=RouterIhSp%BufferSource_II(1:nDim, 1:nLength), &
-            iIndex_II = nint(RouterIhSp%BufferSource_II(&
+       if(use_comp(SC_))call sort_out_sc_particles     !^CMP IF SC
+       call IH_put_particles(Xyz_DI =                      &
+            RouterIhSp%BufferSource_II(1:nDim, 1:nLength), &
+            iIndex_II = nint(RouterIhSp%BufferSource_II(   &
             nDim+1:nDim+nAux, 1:nLength)))
     end if
-  contains                                          !^CMP IF SC BEGIN
+  contains                                       !^CMP IF SC BEGIN
     subroutine sort_out_sc_particles
       ! Sort out particles to be advected by the SC
       integer:: iParticle, iParticleNew
@@ -499,20 +495,6 @@ contains
     end subroutine sort_out_sc_particles                 !^CMP END SC
   end subroutine exchange_data_ih_sp
   !==================================================================!
-  subroutine i_particle(&
-       Grid, iBlockUsed, nDim, Xyz_D, nIndex, iIndex_I,IsInterfacePoint)
-    !Just converts the number of point in the grid "lines" to real one,
-    !to be used as an input parameter for the mapping procedure 
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)    :: iBlockUsed,nIndex
-    logical,intent(out)   :: IsInterfacePoint
-    integer,intent(in)    :: nDim
-    real,   intent(inout) :: Xyz_D(nDim)
-    integer,intent(inout) :: iIndex_I(nIndex)
-    !----------------------------------------------------------
-    IsInterfacePoint = .true.; Xyz_D(1)= real(iIndex_I(1))
-  end subroutine i_particle
-  !==================================================================!
   subroutine mapping_sp_to_ih(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
        IsInterfacePoint)
     integer, intent(in) :: nDimIn
@@ -527,8 +509,19 @@ contains
     call IH_xyz_to_coord(XyzTemp_D, CoordOut_D)
   end subroutine mapping_sp_to_ih
   !==================================================================!
-  subroutine mapping_line_ih_to_sp(nDimIn, XyzIn_D, nDimOut, CoordOut_D, &
-       IsInterfacePoint)
+  subroutine i_particle(nDim, Xyz_D, nIndex, iIndex_I,IsInterfacePoint)
+    !Just converts the number of point in the grid "lines" to real one,
+    !to be used as an input parameter for the mapping procedure 
+    integer,intent(in)    :: nDim, nIndex
+    logical,intent(out)   :: IsInterfacePoint
+    real,   intent(inout) :: Xyz_D(nDim)
+    integer,intent(inout) :: iIndex_I(nIndex)
+    !----------------------------------------------------------
+    IsInterfacePoint = .true.; Xyz_D(1)= real(iIndex_I(1))
+  end subroutine i_particle
+  !==================================================================!
+  subroutine mapping_line_ih_to_sp(nDimIn, XyzIn_D, &
+       nDimOut, CoordOut_D, IsInterfacePoint)
     integer, intent(in) :: nDimIn
     real,    intent(in) :: XyzIn_D(nDimIn)
     integer, intent(in) :: nDimOut
@@ -537,13 +530,16 @@ contains
     
     integer:: iIndex_I(2), iParticle
     !------------------------------------------
+    !Convert back the above converted particle number
     IsInterfacePoint = .true.; iParticle = nint(XyzIn_D(1))
     call IH_get_particle_indexes(iParticle, iIndex_I)
+    !Convert particle indexes to SP gen coords, so that the nearest_cell
+    !program in the router coud figure out where it should be put in SP
     CoordOut_D = coord_grid_d(SP_Grid, iIndex_I(1), (/iIndex_I(2),1,1/))
   end subroutine mapping_line_ih_to_sp
   !====================================      
   subroutine IH_get_for_sp_and_transform(&
-       nPartial,iGetStart,Get,w,State_V,nVar)
+       nPartial, iGetStart, Get, w, State_V, nVar)
     integer,intent(in)::nPartial,iGetStart,nVar
     type(IndexPtrType),intent(in)::Get
     type(WeightPtrType),intent(in)::w
@@ -560,7 +556,7 @@ contains
     State_V(iVarBx:iVarBz) = matmul(IhToSp_DD,State_V(iVarBx:iVarBz))
     State_V(iVarMx:iVarMz) = matmul(IhToSp_DD,State_V(iVarMx:iVarMz))
   end subroutine IH_get_for_sp_and_transform
-  !==================================================================!        
+  !=================================================================!        
   subroutine IH_get_line_for_sp_and_transform(&
        nPartial,iGetStart,Get,w,State_V,nVar)
     integer,intent(in)::nPartial,iGetStart,nVar

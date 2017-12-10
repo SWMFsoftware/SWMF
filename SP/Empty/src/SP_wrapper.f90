@@ -138,11 +138,8 @@ contains
 
   !===================================================================
   subroutine SP_interface_point_coords(&
-       Grid, iBlockUsed, nDim, Xyz_D, nIndex,iIndex_I,&
+       nDim, Xyz_D, nIndex, iIndex_I,&
        IsInterfacePoint)
-    use CON_grid_descriptor
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
     integer,intent(in)   :: nIndex
@@ -153,7 +150,8 @@ contains
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_interface_point_coords
   !=======================================
-  subroutine SP_put_interface_bounds(rMinIn, rMaxIn)
+  subroutine SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
+    integer, intent(in) :: iModelIn
     real, intent(in):: rMinIn, rMaxIn
     character(len=*), parameter:: NameSub='SP_put_interface_bounds'
     !---------------------------------------------------------------

@@ -511,16 +511,11 @@ contains
        end function n_interface_point_in_block
        !=======================================
        subroutine interface_point_coords( &
-            Grid,               &
-            iBlockUsed,                   &
             nDim, Xyz_D, nIndex, iIndex_I,&
             IsInterfacePoint)
-         use CON_grid_descriptor
          implicit none
-         type(LocalGridType),intent(in) :: Grid
-         integer,          intent(in) :: iBlockUsed, nIndex
+         integer,          intent(in) :: nDim, nIndex
          logical,         intent(out) :: IsInterfacePoint
-         integer,          intent(in) :: nDim
          real,          intent(inout) :: Xyz_D(nDim)
          integer,       intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
@@ -683,16 +678,11 @@ contains
        end function n_interface_point_in_block
        !=======================================
        subroutine interface_point_coords( &
-            Grid,               &
-            iBlockUsed,                   &
             nDim, Xyz_D, nIndex, iIndex_I,&
             IsInterfacePoint)
-         use CON_grid_descriptor
          implicit none
-         type(LocalGridType),intent(in) ::Grid
-         integer,          intent(in) :: iBlockUsed, nIndex
+         integer,          intent(in) :: nDim, nIndex
          logical,         intent(out) :: IsInterfacePoint
-         integer,          intent(in) :: nDim
          real,          intent(inout) :: Xyz_D(nDim)
          integer,       intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
@@ -930,12 +920,10 @@ contains
              ! Cartesian), that is why CoordTarget_D has intent inout
              if( DoCheckPoint)then
                 call interface_point_coords(&
-                     GridTarget,&
-                     iBlockUsed,          &
-                     nDimTarget,          &
+                     nDimTarget,            &
                      CoordTarget_D,         &
-                     nIndexTarget,        &
-                     iIndexRecv_I,        &
+                     nIndexTarget,          &
+                     iIndexRecv_I,          &
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE POINTS
                 !\
@@ -1437,17 +1425,12 @@ contains
          integer,intent(in) :: iBlockLocal
        end function n_interface_point_in_block
        !==============================
-       subroutine interface_point_coords(&
-            Grid,&
-            lGlobalTreeNode,&
+       subroutine interface_point_coords( &
             nDim, Xyz_D, nIndex, iIndex_I,&
             IsInterfacePoint)
-         use CON_grid_descriptor
          implicit none
-         type(LocalGridType),intent(in)::Grid
-         integer,intent(in)    :: lGlobalTreeNode,nIndex
+         integer,intent(in)    :: nDim, nIndex
          logical,intent(out)   :: IsInterfacePoint
-         integer,intent(in)    :: nDim
          real,   intent(inout) :: Xyz_D(nDim)
          integer,intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
@@ -1591,17 +1574,12 @@ contains
          integer,intent(in) :: iBlockLocal
        end function n_interface_point_in_block
        !==============================
-       subroutine interface_point_coords(&
-            Grid,&
-            lGlobalTreeNode,&
+       subroutine interface_point_coords(   &
             nDim, Coord_D, nIndex, iIndex_I,&
             IsInterfacePoint)
-         use CON_grid_descriptor
          implicit none
-         type(LocalGridType),intent(in)::Grid
-         integer,intent(in)    :: lGlobalTreeNode,nIndex
+         integer,intent(in)    :: nDim, nIndex
          logical,intent(out)   :: IsInterfacePoint
-         integer,intent(in)    :: nDim
          real,   intent(inout) :: Coord_D(nDim)
          integer,intent(inout) :: iIndex_I(nIndex)
        end subroutine interface_point_coords
@@ -1820,12 +1798,10 @@ contains
              ! Cartesian), that is why CoordSource_D has intent inout
              if( DoCheckPoint)then
                 call interface_point_coords(&
-                     GridSource,    &
-                     iBlockUsed,  &
-                     nDimSource,  &
-                     CoordSource_D, &
-                     nIndexSource,&
-                     iIndexSend_I,&
+                     nDimSource            ,&
+                     CoordSource_D         ,&
+                     nIndexSource          ,&
+                     iIndexSend_I          ,&
                      IsInterfacePoint)
                 if(.not.IsInterfacePoint)CYCLE POINTS
                 !\

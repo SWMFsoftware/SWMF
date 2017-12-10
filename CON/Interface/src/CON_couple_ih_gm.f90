@@ -188,16 +188,12 @@ contains
   end function GM_is_west_block
   !===============================================================!
   subroutine GM_west_cells(&
-       Grid,        &
-       iBlockUsed,&
        nDim,      &
        Xyz_D,     &
        nIndex,    &
        i_D,       &
        IsInterfacePoint)
-
-    type(LocalGridType),intent(in):: Grid
-    integer,          intent(in):: iBlockUsed, nDim, nIndex
+    integer,          intent(in):: nDim, nIndex
     real,          intent(inout):: Xyz_D(nDim)
     integer,intent(inout)       :: i_D(nIndex)
     logical,intent(out)         :: IsInterfacePoint

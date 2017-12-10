@@ -4,7 +4,6 @@
 !=============================================================!
 module SP_wrapper
 
-  use ModNumConst, ONLY: cHalfPi
   use ModConst, ONLY: rSun, cProtonMass, energy_in
   use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
   use SP_ModMain, ONLY: &
@@ -12,7 +11,7 @@ module SP_wrapper
        get_node_indexes, append_particles, &
        DoRestart, &
        iComm, iProc, nProc, &
-       nDim, nNode, nLat, nLon, nBlock,&
+       nDim, nLat, nLon, nBlock,&
        iParticleMin, iParticleMax, nParticle,&
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
@@ -49,6 +48,7 @@ module SP_wrapper
 
   ! coupling with MHD components
   public:: SP_put_input_time
+  public:: SP_put_from_mh
   public:: SP_put_from_sc
   public:: SP_put_from_ih
   public:: SP_interface_point_coords
@@ -65,6 +65,8 @@ module SP_wrapper
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple =&
        'rho p mx my mz bx by bz i01 i02 pe'
+  integer :: Model_
+  integer, parameter:: Lower_=1, Upper_=2
   real :: rInterfaceMin, rInterfaceMax
   ! whether to save rstart files
   logical:: DoSaveRestart = .false.
@@ -90,8 +92,6 @@ contains
     ! return the MHD boundaries as set in SP component
     integer, intent(in )  :: ThisModel_
     real,    intent(out)  :: RMinOut, RMaxOut
-
-    integer, parameter:: Lower_=1, Upper_=2
     integer :: iError
     real    :: rAux_I(2)
     character(len=*), parameter :: NameSub = 'SP_get_bounds_comp'
@@ -199,6 +199,7 @@ contains
   end subroutine SP_put_input_time
   !===================================================================
 
+  !subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
   subroutine SP_put_from_mh(iComp, nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
     integer, intent(in):: iComp
     integer,intent(in)::nPartial,iPutStart,nVar
@@ -210,13 +211,12 @@ contains
     integer:: i, j, k, iBlock
     integer:: iPartial
     real:: Weight
-    real:: R
-    real:: Aux
+    real:: R, Aux
 
     character(len=100):: StringError
     character(len=*), parameter:: NameSub='SP_put_from_mh'
     !------------------------------------------------------------
-    ! check consistency: momentum and pressure are needed together with density
+    !check consistency of DoCoupleVar_V
     if(.not. DoCoupleVar_V(Density_) .and. &
          (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
          call CON_Stop(NameSub//': pressure or momentum is coupled,'//&
@@ -231,10 +231,8 @@ contains
     iBz   = iVar_V(BzCouple_)   
     iWave1= iVar_V(WaveFirstCouple_)
     iWave2= iVar_V(WaveLastCouple_)
-    ! auxilary factor to account for value of DoAdd
-    Aux = 0.0
-    if(DoAdd) Aux = 1.0
-
+    Aux = 0
+    if(DoAdd)Aux = 1.0
     do iPartial = 0, nPartial-1
        ! cell and block indices
        i      = Put%iCB_II(1, iPutStart + iPartial)
@@ -245,33 +243,36 @@ contains
        Weight = W%Weight_I(   iPutStart + iPartial)
        if(is_in_buffer(State_VIB(X_:Z_,i,iBlock)))then
           R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
+  !        select case(Model_)
+  !        case(Lower_)
           select case(iComp)
           case(SC_)
              Weight = Weight * (0.50 - 0.50 * &
                   tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
+          !case(Upper_)
           case(IH_)
-             Aux    = 1.0
+             Aux = 1.0   
              Weight = Weight * (0.50 + 0.50 * &
                   tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
           case default
              write(StringError,'(a,i2)') &
-                  ": isn't implemented for interface with component ", iComp
+                  ": isn't implemented for interface with component ", Model_
              call CON_stop(NameSub//StringError)
           end select
        end if
        ! put the data
        ! NOTE: State_VIB must be reset to zero before putting coupled data
        if(DoCoupleVar_V(Density_))&
-            State_VIB(Rho_,i,iBlock) = Aux * State_VIB(Rho_,i,iBlock) + &
+            State_VIB(Rho_,i,iBlock) = Aux*State_VIB(Rho_,i,iBlock) + &
             Buff_I(iRho)/cProtonMass * Weight
        if(DoCoupleVar_V(Pressure_))&
-            State_VIB(T_,i,iBlock) = Aux * State_VIB(T_,i,iBlock) + &
+            State_VIB(T_,i,iBlock) = Aux*State_VIB(T_,i,iBlock) + &
             Buff_I(iP)/Buff_I(iRho)*cProtonMass/energy_in('kev') * Weight
        if(DoCoupleVar_V(Momentum_))&
-            State_VIB(Ux_:Uz_,i,iBlock) = Aux * State_VIB(Ux_:Uz_,i,iBlock) + &
+            State_VIB(Ux_:Uz_,i,iBlock) = Aux*State_VIB(Ux_:Uz_,i,iBlock) + &
             Buff_I(iMx:iMz) / Buff_I(iRho) * Weight
        if(DoCoupleVar_V(BField_))&
-            State_VIB(Bx_:Bz_,i,iBlock) = Aux * State_VIB(Bx_:Bz_,i,iBlock) + &
+            State_VIB(Bx_:Bz_,i,iBlock) = Aux*State_VIB(Bx_:Bz_,i,iBlock) + &
             Buff_I(iBx:iBz) * Weight
        if(DoCoupleVar_V(Wave_))&
             State_VIB(Wave1_:Wave2_,i,iBlock) = &
@@ -279,6 +280,7 @@ contains
             Buff_I(iWave1:iWave2)*Weight
     end do
   end subroutine SP_put_from_mh
+  !============================
   !===================================================================
   subroutine SP_put_from_sc(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
     integer,intent(in)::nPartial,iPutStart,nVar
@@ -390,22 +392,20 @@ contains
     ParamLocal_IB(Length_,    iBlock) = Dist1
   end subroutine SP_set_line_foot_b
   !================================
-  subroutine SP_put_interface_bounds(rMinIn, rMaxIn)
-    real, intent(in) :: rMinIn, rMaxIn
+  subroutine SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
+    integer, intent(in) :: iModelIn
+    real,    intent(in) :: rMinIn, rMaxIn
     !-----------------
-    rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn
+    rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn; Model_ = iModelIn
   end subroutine SP_put_interface_bounds
   !===================================================================
-  subroutine SP_interface_point_coords(Grid, iBlockUsed, nDim, Xyz_D, &
+  subroutine SP_interface_point_coords(nDim, Xyz_D, &
        nIndex, iIndex_I, IsInterfacePoint)
     ! interface points (request), which needed to be communicated
     ! to other components to perform field line extraction and
     ! perform further coupling with SP:
     ! the framework tries to determine Xyz_D of such points,
     ! SP changes them to the correct values
-    use CON_grid_descriptor
-    type(LocalGridType),intent(in)::Grid
-    integer,intent(in)   :: iBlockUsed
     integer,intent(in)   :: nDim
     real,   intent(inout):: Xyz_D(nDim)
     integer,intent(in)   :: nIndex
@@ -443,12 +443,6 @@ contains
     ! store passed particles
     iBlock    = Put%iCB_II(4,iPutStart)
     iParticle = Put%iCB_II(1,iPutStart) + iGridLocal_IB(Offset_,iBlock)
-
-    if(iParticle < iParticleMin)&
-         call CON_stop(NameSub//': particle index is below limit')
-    if(iParticle > iParticleMax)&
-         call CON_stop(NameSub//': particle index is above limit')
-    
     ! put coordinates
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
     iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
