@@ -29,7 +29,7 @@ module SP_ModMain
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, &
        ParamLocal_IB, TypeCoordSystem,&
-       set_grid_param, init_grid, get_node_indexes, fix_grid_consistency, &
+       set_grid_param, init_grid, get_node_indexes, &
        append_particles
   
   use SP_ModAdvance, ONLY: &
@@ -230,7 +230,59 @@ contains
     TimeGlobal = min(DataInputTime,TimeLimit)
     
     call write_output(IsInitialOutput=.not.DoRun)
+  contains
+    !============================================================================
 
+    subroutine fix_grid_consistency
+      use SP_ModGrid, ONLY: U_, D_, S_, DLogRho_, distance_to_next
+      ! recompute some values (magnitudes of plasma velocity and magnetic field)
+      ! so they are consistent with components for all lines
+      integer:: iBlock, iParticle, iBegin, iEnd
+      !--------------------------------------------------------------------------
+      do iBlock = 1, nBlock
+         iBegin = iGridLocal_IB(Begin_,iBlock)
+         iEnd   = iGridLocal_IB(End_,  iBlock)
+         do iParticle = iBegin, iEnd
+            ! if particle has left the domain -> cut the rest of the line
+            if(sum(State_VIB(X_:Z_, iParticle, iBlock)**2) > RMax**2)then
+               iGridLocal_IB(End_,  iBlock) = iParticle - 1
+               EXIT
+            end if
+            ! plasma speed
+            State_VIB(U_,iParticle, iBlock) = &
+                 sqrt(sum(State_VIB(Ux_:Uz_,iParticle,iBlock)**2))
+            
+            ! divergence of plasma velocity
+            if(DataInputTime > TimeGlobal) then
+               State_VIB(DLogRho_,iParticle,iBlock) = log(&
+                    State_VIB(Rho_,iParticle,iBlock) / &
+                    State_VIB(RhoOld_,iParticle,iBlock))
+            end if
+            ! magnetic field
+            State_VIB(B_,iParticle, iBlock) = &
+                 sqrt(sum(State_VIB(Bx_:Bz_,iParticle,iBlock)**2))
+
+            ! distances between particles
+            if(iParticle < iGridLocal_IB(End_,  iBlock))&
+                 State_VIB(D_, iParticle, iBlock) = &
+                 distance_to_next(iParticle, iBlock)
+
+            ! distance from the beginning of the line
+            if(iParticle == iGridLocal_IB(Begin_,  iBlock))then
+               State_VIB(S_, iParticle, iBlock) = 0.0
+            else
+               State_VIB(S_, iParticle, iBlock) = &
+                    State_VIB(S_, iParticle-1, iBlock) + &
+                    State_VIB(D_, iParticle-1, iBlock)
+            end if
+         end do
+         ! location of shock
+         if(iGridLocal_IB(ShockOld_, iBlock) < iParticleMin)&
+              iGridLocal_IB(ShockOld_, iBlock)= iBegin
+         if(iGridLocal_IB(Shock_, iBlock) < iParticleMin)&
+              iGridLocal_IB(Shock_, iBlock)   = iBegin
+      end do
+    end subroutine fix_grid_consistency
   end subroutine run
 
   !============================================================================
