@@ -63,7 +63,7 @@ module SP_wrapper
   character(len=*), parameter:: NameVarCouple =&
        'rho p mx my mz bx by bz i01 i02 pe'
   integer :: Model_
-  integer, parameter:: Lower_=1, Upper_=2
+  integer, parameter:: Lower_=0, Upper_=1
   real :: rInterfaceMin, rInterfaceMax
   ! whether to save rstart files
   logical:: DoSaveRestart = .false.
