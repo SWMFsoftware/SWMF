@@ -819,6 +819,105 @@ return;
     *((double*)(StateVectorBS+NextCornerNodeOffset))=ValueBC;
   }
 
+
+  //boundary
+  if ( ((i==0)&&(node->GetNeibFace(0,0,0)==NULL)) ||
+      ((j==0)&&(node->GetNeibFace(2,0,0)==NULL)) ||
+      ((k==0)&&(node->GetNeibFace(4,0,0)==NULL)) ||
+      ((i==_BLOCK_CELLS_X_)&&(node->GetNeibFace(1,0,0)==NULL)) ||
+      ((j==_BLOCK_CELLS_Y_)&&(node->GetNeibFace(3,0,0)==NULL)) ||
+      ((k==_BLOCK_CELLS_Z_)&&(node->GetNeibFace(5,0,0)==NULL)) ) {
+    //the point is at the boundary
+    MatrixRowNonZeroElementTable[0].i=i;
+    MatrixRowNonZeroElementTable[0].j=j;
+    MatrixRowNonZeroElementTable[0].k=k;
+    MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
+    MatrixRowNonZeroElementTable[0].iVar=0;
+
+    rhs=ValueBC;
+    NonZeroElementsFound=1;
+    RhsSupportLength=0;
+  }
+  else {
+    //the point is inside the domain
+    //x-direction
+    MatrixRowNonZeroElementTable[0].i=i+1;
+    MatrixRowNonZeroElementTable[0].j=j;
+    MatrixRowNonZeroElementTable[0].k=k;
+    MatrixRowNonZeroElementTable[0].MatrixElementValue=-c;
+    MatrixRowNonZeroElementTable[0].iVar=0;
+
+    RhsSupportTable[0].Coefficient=0.0;
+    RhsSupportTable[0].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i+1,j,k))->GetAssociatedDataBufferPointer();
+
+    MatrixRowNonZeroElementTable[1].i=i-1;
+    MatrixRowNonZeroElementTable[1].j=j;
+    MatrixRowNonZeroElementTable[1].k=k;
+    MatrixRowNonZeroElementTable[1].MatrixElementValue=-c;
+    MatrixRowNonZeroElementTable[1].iVar=0;
+
+    RhsSupportTable[1].Coefficient=0.0;
+    RhsSupportTable[1].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i-1,j,k))->GetAssociatedDataBufferPointer();
+
+    //y-direction
+    MatrixRowNonZeroElementTable[2].i=i;
+    MatrixRowNonZeroElementTable[2].j=j+1;
+    MatrixRowNonZeroElementTable[2].k=k;
+    MatrixRowNonZeroElementTable[2].MatrixElementValue=-c;
+    MatrixRowNonZeroElementTable[2].iVar=0;
+
+    RhsSupportTable[2].Coefficient=0.0;
+    RhsSupportTable[2].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j+1,k))->GetAssociatedDataBufferPointer();
+
+    MatrixRowNonZeroElementTable[3].i=i;
+    MatrixRowNonZeroElementTable[3].j=j-1;
+    MatrixRowNonZeroElementTable[3].k=k;
+    MatrixRowNonZeroElementTable[3].MatrixElementValue=-c;
+    MatrixRowNonZeroElementTable[3].iVar=0;
+
+    RhsSupportTable[3].Coefficient=0.0;
+    RhsSupportTable[3].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j-1,k))->GetAssociatedDataBufferPointer();
+
+    //z-direction
+    MatrixRowNonZeroElementTable[4].i=i;
+    MatrixRowNonZeroElementTable[4].j=j;
+    MatrixRowNonZeroElementTable[4].k=k+1;
+    MatrixRowNonZeroElementTable[4].MatrixElementValue=-c;
+    MatrixRowNonZeroElementTable[4].iVar=0;
+
+    RhsSupportTable[4].Coefficient=0.0;
+    RhsSupportTable[4].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k+1))->GetAssociatedDataBufferPointer();
+
+    MatrixRowNonZeroElementTable[5].i=i;
+    MatrixRowNonZeroElementTable[5].j=j;
+    MatrixRowNonZeroElementTable[5].k=k-1;
+    MatrixRowNonZeroElementTable[5].MatrixElementValue=-c;
+    MatrixRowNonZeroElementTable[5].iVar=0;
+
+    RhsSupportTable[5].Coefficient=0.0;
+    RhsSupportTable[5].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k-1))->GetAssociatedDataBufferPointer();
+
+    //self
+    MatrixRowNonZeroElementTable[6].i=i;
+    MatrixRowNonZeroElementTable[6].j=j;
+    MatrixRowNonZeroElementTable[6].k=k;
+    MatrixRowNonZeroElementTable[6].MatrixElementValue=1.0+6.0*c;
+    MatrixRowNonZeroElementTable[6].iVar=0;
+
+    RhsSupportTable[6].Coefficient=1.0;
+    RhsSupportTable[6].CornerNodeAssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
+
+    RhsSupportLength=7;
+    NonZeroElementsFound=7;
+  }
+
+  //set the RHS value
+  if (RhsSupportLength!=0) for (i=0,rhs=0.0;i<RhsSupportLength;i++) rhs+=*((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))*RhsSupportTable[i].Coefficient;
+
+
+  return;
+
+  /*
   //populate the spencil
   if ( ((i==0)&&(node->GetNeibFace(0,0,0)==NULL)) || ((j==0)&&(node->GetNeibFace(2,0,0)==NULL)) || ((k==0)&&(node->GetNeibFace(4,0,0)==NULL)) ) {
     //the point is at the left boundary
@@ -1013,7 +1112,7 @@ return;
   }
 
   //set the RHS value
-  if (RhsSupportLength!=0) for (i=0,rhs=0.0;i<RhsSupportLength;i++) rhs+=*((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))*RhsSupportTable[i].Coefficient;
+  if (RhsSupportLength!=0) for (i=0,rhs=0.0;i<RhsSupportLength;i++) rhs+=*((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))*RhsSupportTable[i].Coefficient;*/
 }
 
 //update RHS vector
@@ -1225,10 +1324,10 @@ int main(int argc,char **argv) {
   }
 
 
-  Solver1.Reset();
+/*  Solver1.Reset();
   Solver1.BuildMatrix(GetTestStencil);
   linear_solver_matvec_c = solver1_matvec;
-  Solver1.Solve(SetInitialGuess,ProcessFinalSolution);
+  Solver1.Solve(SetInitialGuess,ProcessFinalSolution);*/
 
   //double *xx;
   //Solver1.ExchageIntermediateUnknownsData(xx);
