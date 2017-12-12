@@ -214,27 +214,29 @@ contains
     NameFile = trim(NameRestartOutDir)//trim(NameHeaderFile)
 
     call open_file(file=NameFile, NameCaller=NameSub)
-
+    write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#RESTART'
     write(UnitTmp_,'(a)')'T'
-
+    write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
     write(UnitTmp_,'(i8,a32)') nParticle,'nParticle'
     write(UnitTmp_,'(i8,a32)') nLon,     'nLon'
     write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
-
+    write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NSTEP'
     write(UnitTmp_,'(i8,a32)')iIterGlobal,'nStep'
-
+    write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
     write(UnitTmp_,'(es22.15,a18)')TimeGlobal,'tSimulation'
-
+    write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#GRID'
     write(UnitTmp_,'(es22.15,a18)')RMin,      'RMin'
     write(UnitTmp_,'(es22.15,a18)')RBufferMin,'RBufferMin'
     write(UnitTmp_,'(es22.15,a18)')RBufferMax,'RBufferMax'
     write(UnitTmp_,'(es22.15,a18)')RMax,      'RMin'
-   
+    write(UnitTmp_,*)
+    write(UnitTMP_,'(a)')'#END'
+    write(UnitTmp_,*)
     call close_file
 
   end subroutine write_restart_header
