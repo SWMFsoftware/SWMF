@@ -48,11 +48,14 @@
 double xmin[3]={-1.0,-3.0,-4.0};
 double xmax[3]={3.0,2.0,3.0};
 
+int nVars=3; //number of variables in center associated data
+double Background[3]={100.0,-20.0,10.0};
+
 int CurrentCenterNodeOffset=-1,NextCenterNodeOffset=-1;
 int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
 
 cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1> Solver1;
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7> SolverTimeDependent;
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7> SolverTimeDependent;
 
 void solver1_matvec(double* VecIn, double * VecOut, int n){  
   Solver1.MultiplyVector(VecOut,VecIn,n);
@@ -98,22 +101,25 @@ void PrintCenterNodeData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int Cen
 }
 
 void PrintCornerNodeVariableList(FILE* fout,int DataSetNumber) {
-  fprintf(fout,",\"test wave (corner node)\"");
+  for (int i=0;i<nVars; i++) fprintf(fout,", \"test wave (corner node)[i=%i]\"",i);
 }
 
 void PrintCornerNodeData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CornerNodeThread,PIC::Mesh::cDataCornerNode *CornerNode) {
   int idim;
   double t;
 
-  if (pipe->ThisThread==CornerNodeThread) {
-    t= *((double*)(CornerNode->GetAssociatedDataBufferPointer()+CurrentCornerNodeOffset));
-  }
 
-  if (pipe->ThisThread==0) {
-    if (CornerNodeThread!=0) pipe->recv(t,CornerNodeThread);
-    fprintf(fout,"%e ",t);
+  for (int i=0;i<nVars;i++) {
+    if (pipe->ThisThread==CornerNodeThread) {
+      t= ((double*)(CornerNode->GetAssociatedDataBufferPointer()+CurrentCornerNodeOffset))[i];
+    }
+
+    if (pipe->ThisThread==0) {
+      if (CornerNodeThread!=0) pipe->recv(t,CornerNodeThread);
+      fprintf(fout,"%e ",t);
+    }
+    else pipe->send(t);
   }
-  else pipe->send(t);
 }
 
 
@@ -797,8 +803,8 @@ return;
 }
 
 
-void GetTestStencilTimeDependent1(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
+void GetTestStencilTimeDependent1(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
   /*
@@ -810,7 +816,7 @@ return;
   */
 
   static char *StateVectorBS=NULL;
-  static double ValueBC=100;
+  static double ValueBC=Background[iVar];
 
   double c=0.05;
 
@@ -870,9 +876,9 @@ return;
     MatrixRowNonZeroElementTable[0].j=j;
     MatrixRowNonZeroElementTable[0].k=k;
     MatrixRowNonZeroElementTable[0].MatrixElementValue=1.0;
-    MatrixRowNonZeroElementTable[0].iVar=0;
+    MatrixRowNonZeroElementTable[0].iVar=iVar;
 
-    rhs=ValueBC;
+    rhs=Background[iVar];
     NonZeroElementsFound=1;
     RhsSupportLength=0;
   }
@@ -882,7 +888,7 @@ return;
       MatrixRowNonZeroElementTable[ii].j=j+StencilTable[ii].j;
       MatrixRowNonZeroElementTable[ii].k=k+StencilTable[ii].k;
       MatrixRowNonZeroElementTable[ii].MatrixElementValue=StencilTable[ii].a;
-      MatrixRowNonZeroElementTable[ii].iVar=0;
+      MatrixRowNonZeroElementTable[ii].iVar=iVar;
     }
 
     RhsSupportTable[0].Coefficient=1.0;
@@ -965,7 +971,7 @@ return;
   }
 
   //set the RHS value
-  if (RhsSupportLength!=0) for (i=0,rhs=0.0;i<RhsSupportLength;i++) rhs+=*((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))*RhsSupportTable[i].Coefficient;
+  if (RhsSupportLength!=0) for (i=0,rhs=0.0;i<RhsSupportLength;i++) rhs+=((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))[iVar]*RhsSupportTable[i].Coefficient;
 
 
   return;
@@ -1169,11 +1175,11 @@ return;
 }
 
 //update RHS vector
-double UpdateRhs(cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7>::cRhsSupportTable* RhsSupportTable,int RhsSupportLength) {
+double UpdateRhs(int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7>::cRhsSupportTable* RhsSupportTable,int RhsSupportLength) {
   int i;
   double res=0.0;
 
-  for (i=0;i<RhsSupportLength;i++) res+=*((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))*RhsSupportTable[i].Coefficient;
+  for (i=0;i<RhsSupportLength;i++) res+=((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))[iVar]*RhsSupportTable[i].Coefficient;
 
   return res;
 }
@@ -1181,13 +1187,13 @@ double UpdateRhs(cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7>::cRhs
 
 //set the initial guess for the unknowns' values
 void SetInitialGuess(double *x,PIC::Mesh::cDataCornerNode* CornerNode) {
-  x[0]=0.0;
+  for (int i=0;i<nVars;i++) x[i]=Background[i];
 }
 
 void ProcessFinalSolution(double *x,PIC::Mesh::cDataCornerNode* CornerNode) {
-  char * offset=CornerNode->GetAssociatedDataBufferPointer();
+  char* offset=CornerNode->GetAssociatedDataBufferPointer();
 
-  ((double*)(offset+NextCornerNodeOffset))[0]=x[0];
+  for (int i=0;i<nVars;i++) ((double*)(offset+NextCornerNodeOffset))[i]=x[i];
 }
 
 void ProcessFinalSolutionTimeDependent(double *x,PIC::Mesh::cDataCornerNode* CornerNode) {
@@ -1197,40 +1203,35 @@ void ProcessFinalSolutionTimeDependent(double *x,PIC::Mesh::cDataCornerNode* Cor
 }
 
 
-void SetIC() {
+void SetIC(int nVars) {
   int i,j,k;
   char *offset;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   double x[3];
+  double x0All[3][3]={{0.0,0.0,0.0},{0.0,-1.5,-1.5},{0.0,1.5,1.5}};
+  double x0l[3];
 
-  for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
-    for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
-      node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
+  for (int s=0;s<nVars;s++) {
+    for (i=0;i<3;i++) x0l[i]=x0All[s][i];
 
-      offset=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
+    for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+      for (k=0;k<_BLOCK_CELLS_Z_+1;k++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
+        node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
 
-      x[0]=node->xmin[0]+(i*(node->xmax[0]-node->xmin[0]))/_BLOCK_CELLS_X_;
-      x[1]=node->xmin[1]+(j*(node->xmax[1]-node->xmin[1]))/_BLOCK_CELLS_Y_;
-      x[2]=node->xmin[2]+(k*(node->xmax[2]-node->xmin[2]))/_BLOCK_CELLS_Z_;
+        offset=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
 
-      double r=100.0,x0=sqrt(x[0]*x[0]+x[1]*x[1]+x[2]*x[2]);
+        x[0]=node->xmin[0]+(i*(node->xmax[0]-node->xmin[0]))/_BLOCK_CELLS_X_;
+        x[1]=node->xmin[1]+(j*(node->xmax[1]-node->xmin[1]))/_BLOCK_CELLS_Y_;
+        x[2]=node->xmin[2]+(k*(node->xmax[2]-node->xmin[2]))/_BLOCK_CELLS_Z_;
 
-      if (x0<1.0) r=100.0*(1.0-pow(x0-1.0,2));
+        double r=Background[s],x0=sqrt(pow(x[0]-x0l[0],2)+pow(x[1]-x0l[1],2)+pow(x[2]-x0l[2],2));
 
-      *((double*)(offset+CurrentCornerNodeOffset))=r;
-      *((double*)(offset+NextCornerNodeOffset))=r;
+        if (x0<1.0) r=Background[s]*(1.0-pow(x0-1.0,2));
 
-/*      if ( ((i==0)&&(node->GetNeibFace(0,0,0)==NULL)) || ((i==_BLOCK_CELLS_X_)&&(node->GetNeibFace(1,0,0)==NULL)) ||
-           ((j==0)&&(node->GetNeibFace(2,0,0)==NULL)) || ((j==_BLOCK_CELLS_Y_)&&(node->GetNeibFace(3,0,0)==NULL)) ||
-           ((k==0)&&(node->GetNeibFace(4,0,0)==NULL)) || ((k==_BLOCK_CELLS_Z_)&&(node->GetNeibFace(5,0,0)==NULL)) ) {
-        *((double*)(offset+CurrentCornerNodeOffset))=100.0;
-        *((double*)(offset+NextCornerNodeOffset))=100.0;
+        ((double*)(offset+CurrentCornerNodeOffset))[s]=r;
+        ((double*)(offset+NextCornerNodeOffset))[s]=r;
+
       }
-      else {
-        *((double*)(offset+CurrentCornerNodeOffset))=0.0;
-        *((double*)(offset+NextCornerNodeOffset))=0.0;
-      }*/
-
     }
   }
 
@@ -1242,7 +1243,7 @@ int main(int argc,char **argv) {
   PIC::InitMPI();
   PIC::Init_BeforeParser();
 
-  int nVars=3; //number of variables in center associated data
+//  int nVars=3; //number of variables in center associated data
   int RelativeOffset=0;
   
 #if _TEST_MESH_MODE_==_NONUNIFORM_MESH_
@@ -1349,7 +1350,7 @@ int main(int argc,char **argv) {
 
 
 
-  SetIC();
+  SetIC(3);
   SolverTimeDependent.Reset();
 //  SolverTimeDependent.BuildMatrix(GetTestStencilTimeDependent);
 
