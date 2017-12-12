@@ -1179,7 +1179,7 @@ double UpdateRhs(int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7
   int i;
   double res=0.0;
 
-  for (i=0;i<RhsSupportLength;i++) res+=((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCenterNodeOffset))[iVar]*RhsSupportTable[i].Coefficient;
+  for (i=0;i<RhsSupportLength;i++) res+=((double*)(RhsSupportTable[i].CornerNodeAssociatedDataPointer+CurrentCornerNodeOffset))[iVar]*RhsSupportTable[i].Coefficient;
 
   return res;
 }
