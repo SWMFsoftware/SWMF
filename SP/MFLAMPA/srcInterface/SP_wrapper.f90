@@ -65,9 +65,6 @@ module SP_wrapper
   integer :: Model_
   integer, parameter:: Lower_=0, Upper_=1
   real :: rInterfaceMin, rInterfaceMax
-  ! whether to save rstart files
-  logical:: DoSaveRestart = .false.
-
 contains
   !\Interface routines to be called from super-structure only  
   subroutine SP_check_ready_for_mh(IsReady)
@@ -145,10 +142,9 @@ contains
   subroutine SP_finalize(TimeSimulation)
     real,intent(in)::TimeSimulation
     real:: TimeAux ! to satisfy intent of arguments in run()
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------------------
     TimeAux = TimeSimulation
     call run(TimeAux, TimeSimulation, .true.)
-    if(DoSaveRestart) call SP_save_restart(TimeSimulation)
   end subroutine SP_finalize
 
   !=========================================================
@@ -184,8 +180,10 @@ contains
 
   subroutine SP_save_restart(TimeSimulation) 
     real,     intent(in) :: TimeSimulation 
-    !------------------------------------
-    DoSaveRestart = .true.
+    real:: TimeAux ! to satisfy intent of arguments in run()
+    !--------------------------------------------------------------------
+    TimeAux = TimeSimulation
+    call run(TimeAux, TimeSimulation)
     call save_restart
   end subroutine SP_save_restart
 

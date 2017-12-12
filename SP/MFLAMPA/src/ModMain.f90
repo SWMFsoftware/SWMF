@@ -15,7 +15,7 @@ module SP_ModMain
        set_read_mh_data_param, read_mh_data, DoReadMhData
 
   use SP_ModRestart, ONLY: &
-       write_restart, read_restart
+       save_restart=>write_restart, read_restart
 
   use SP_ModGrid, ONLY: &
        nVar, &
@@ -160,13 +160,6 @@ contains
     if(DoRestart)&
          call read_restart
   end subroutine initialize
-
-  !============================================================================
-
-  subroutine save_restart
-    call write_restart
-  end subroutine save_restart
-
   !============================================================================
 
   subroutine run(TimeInOut, TimeLimit, DoFinalizeIn)
