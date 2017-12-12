@@ -10,10 +10,6 @@ Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line
 #TIMEACCURATE
 T
 
-#SAVERESTART
-T                       DoSaveRestart
--1			DnSaveRestart
-5.0			DtSaveRestart
 
 #INCLUDE
 RESTART.in
