@@ -315,7 +315,6 @@ contains
     else
        IsInitialOutputLocal = .false.
     end if
-    write(*,*)'write_output TimeGlobal=',TimeGlobal
     if(nFile == 0) RETURN
     if(.not.IsInitialOutputLocal)call get_integral_flux
     do iFile = 1, nFile
@@ -382,16 +381,10 @@ contains
          ! get min and max particle indexes on this field line
          iFirst = iGridLocal_IB(Begin_, iBlock)
          iLast  = iGridLocal_IB(End_,   iBlock)
-
-         do iParticle = iFirst, iLast
-            ! fill the output buffer
-            do iVarPlot = 1, nVarPlot
-               File_I(iFile) % Buffer_II(iVarPlot, iParticle) = &
-                    State_VIB(File_I(iFile) % iVarPlot_V(iVarPlot), &
-                    iParticle, iBlock)
-            end do
-         end do
-
+         ! fill the output buffer
+         File_I(iFile) % Buffer_II(1:nVarPlot, iFirst:iLast) = &
+              State_VIB(File_I(iFile) % iVarPlot_V(1:nVarPlot), &
+              iFirst:iLast, iBlock)
          ! shock location
          iShock = iGridLocal_IB(Shock_,iBlock)
          RShock = sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
