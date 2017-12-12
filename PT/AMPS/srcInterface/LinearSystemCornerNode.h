@@ -140,7 +140,7 @@ public:
   void Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),void (*fUnpackSolution)(double* x,cCornerNode* CornerNode));
 
   //update the RHS vector
-  void UpdateRhs(double (*fSetRhs)(cRhsSupportTable*,int));
+  void UpdateRhs(double (*fSetRhs)(int,cRhsSupportTable*,int));
 
   //destructor
   ~cLinearSystemCornerNode() {
@@ -628,13 +628,16 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   //re-count the 'internal' corner nodes so they follow the i,j,k order as well as rows
   for (Row=MatrixRowTable;Row!=NULL;Row=Row->next) if (Row->CornerNode!=NULL) Row->CornerNode->LinearSolverUnknownVectorIndex=-1;
 
-  for (iRow=0,Row=MatrixRowTable;Row!=NULL;iRow++,Row=Row->next) {
+  for (iRow=0,Row=MatrixRowTable;Row!=NULL;Row=Row->next) {
     if (Row->CornerNode!=NULL) {
-      if (Row->CornerNode->LinearSolverUnknownVectorIndex>=0) exit(__LINE__,__FILE__,"Error: a courner node is double counted");
-
-      Row->CornerNode->LinearSolverUnknownVectorIndex=iRow;
+      if (Row->iVar==0) {
+        if (Row->CornerNode->LinearSolverUnknownVectorIndex>=0) exit(__LINE__,__FILE__,"Error: a courner node is double counted");
+        Row->CornerNode->LinearSolverUnknownVectorIndex=iRow;
+      }
     }
     else Row->Elements[0].UnknownVectorIndex=iRow; //rows corresponding to the virtual blocks has only one non-zero element
+
+    if (Row->iVar==NodeUnknownVariableVectorLength-1) iRow++; //all rows pointing to the same 'CornerNode' have the same 'iRow'
   }
 
   //verify that all all corner nodes have been counted
@@ -812,11 +815,11 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength, int MaxRhsSupportLength>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::UpdateRhs(double (*fSetRhs)(cRhsSupportTable*,int)) {
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength, MaxRhsSupportLength>::UpdateRhs(double (*fSetRhs)(int,cRhsSupportTable*,int)) {
   cMatrixRow* row;
 
   for (row=MatrixRowTable;row!=NULL;row=row->next) if (row->RhsSupportLength!=0) {
-    row->Rhs=fSetRhs(row->RhsSupportTable,row->RhsSupportLength);
+    row->Rhs=fSetRhs(row->iVar,row->RhsSupportTable,row->RhsSupportLength);
   }
 }
 
@@ -867,7 +870,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   for (i=0;i<NodeUnknownVariableVectorLength;i++) MeanRhs[i]=0.0,MeanRhsCounter[i]=0;
 
-  for (row=MatrixRowTable;row!=NULL;cnt++,row=row->next) if (row->CornerNode) {
+  for (row=MatrixRowTable;row!=NULL;cnt++,row=row->next) if (row->CornerNode!=NULL) {
     MeanRhs[row->iVar]+=row->Rhs;
     MeanRhsCounter[row->iVar]++;
   }
@@ -900,7 +903,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   //call the iterative solver
   double Tol=1e-5;// the max iteration error allowed
   int nIter=100; //iter number
-  int nVar=1; //variable number
+  int nVar=NodeUnknownVariableVectorLength; //variable number
   int nDim = 3; //dimension
   int nI=_BLOCK_CELLS_X_;
   int nJ=_BLOCK_CELLS_Y_;
@@ -931,7 +934,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   //unpack the solution
   for (row=MatrixRowTable;row!=NULL;row=row->next) if (row->CornerNode!=NULL)  {
-    fUnpackSolution(SubdomainPartialUnknownsVector+row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
+    fUnpackSolution(SubdomainPartialUnknownsVector+NodeUnknownVariableVectorLength*row->CornerNode->LinearSolverUnknownVectorIndex,row->CornerNode);
   }
 
   //execute the data exchange between 'ghost' blocks
