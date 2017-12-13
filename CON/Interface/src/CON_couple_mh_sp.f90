@@ -28,8 +28,7 @@ module CON_couple_mh_sp
   use SP_wrapper, ONLY: &
        SP_check_ready_for_mh    ,&  !If returns .false., extract the mf lines
        SP_get_bounds_comp       ,&  !Provides RScMin/Max and/or RIhMin/Max
-       SP_put_interface_bounds  ,&  !Sets interaface bounds for each coupling
-       SP_put_input_time        ,&  !Marks the time of input to label data set
+       SP_put_coupling_param    ,&  !Set time and interaface bounds
        SP_put_from_mh           ,&  !Put MHD info from SC or IH to SP
        SP_n_particle            ,&  !Number of "points" in a given line in SP
        SP_put_line              ,&  !Put particle Xyz from SC/IH to SP
@@ -154,8 +153,7 @@ contains
       !Router to send particles is initialized. 
       if(.not.DoExtract)RETURN
       if(is_proc(SP_))&
-           call SP_put_interface_bounds(Lower_, RScMin, RScMax)
-      if(is_proc(SP_))call SP_put_input_time(tNow)
+           call SP_put_coupling_param(Lower_, RScMin, RScMax,tNow)
       call SC_synchronize_refinement(RouterScSp%iProc0Source,&
            RouterScSp%iCommUnion)
       ScToSp_DD=transform_matrix(tNow,&                 
@@ -192,6 +190,7 @@ contains
       else                   !^CMP END SC
          call SP_get_bounds_comp(Lower_, RIhMin, RIhMax)
       end if                 !^CMP IF SC
+
       ! Check whether IH is ready for coupling with SP;
       call IH_check_ready_for_sp(IsReady)
       if(.not.IsReady) call CON_stop(&
@@ -234,13 +233,12 @@ contains
       !Router to send particles is initialized. 
       if(.not.DoExtract)RETURN
       if(is_proc(SP_))then
-         if(use_comp(SC_))then             !^CMP IF SC BEGIN
-            call SP_put_interface_bounds(Upper_, RScMax, RIhMax)
-         else                              !^CMP END SC
-            call SP_put_interface_bounds(Lower_, RIhMin, RIhMax)
-         end if                            !^CMP IF SC
+         if(use_comp(SC_))then  !^CMP IF SC BEGIN
+            call SP_put_coupling_param(Upper_, RIhMin, RIhMax, tNow)
+         else                   !^CMP END SC
+            call SP_put_coupling_param(Lower_, RIhMin, RIhMax, tNow)
+         end if                 !^CMP IF SC
       end if
-      if(is_proc(SP_))call SP_put_input_time(tNow)
       call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
            RouterIhSp%iCommUnion)
       IhToSp_DD=transform_matrix(tNow,&                 
@@ -277,11 +275,9 @@ contains
     if(.not.RouterScSp%IsProc)return
 
     tNow=DataInputTime
-    if(is_proc(SP_))then
-       call SP_put_interface_bounds(Lower_, RScMin, RScMax)
-       call SP_put_input_time(DataInputTime)
-       !if(.not.DoInit)call SP_copy_old_state
-    end if
+    if(is_proc(SP_))call SP_put_coupling_param(&
+         Lower_, RScMin, RScMax, DataInputTime)
+      
     ScToSp_DD=transform_matrix(tNow,&
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
@@ -391,10 +387,8 @@ contains
     !----------------------------------------------------------
     if(.not.RouterIhSp%IsProc)return
     tNow = DataInputTime
-    if(is_proc(SP_))then
-       call SP_put_interface_bounds(Upper_, RIhMin, RIhMax)
-       call SP_put_input_time(DataInputTime)
-    end if
+    if(is_proc(SP_)) call SP_put_coupling_param(&
+         Upper_, RIhMin, RIhMax, DataInputTime)
     IhToSp_DD=transform_matrix(tNow,&
          Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&

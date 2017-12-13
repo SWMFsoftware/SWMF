@@ -18,13 +18,12 @@ module SP_wrapper
 
   ! coupling with MHD components
   public:: SP_get_line_param
-  public:: SP_put_input_time
   public:: SP_put_from_mh
   public:: SP_put_line
   public:: SP_adjust_lines
   public:: SP_interface_point_coords
   public:: SP_get_bounds_comp
-  public:: SP_put_interface_bounds
+  public:: SP_put_coupling_param
   public:: SP_n_particle
   public:: SP_copy_old_state
   public:: SP_check_ready_for_mh
@@ -81,12 +80,6 @@ contains
     real,     intent(in) :: TimeSimulation 
     call CON_stop('Can not call SP_save restart')
   end subroutine SP_save_restart
-  !=========================================================
-  subroutine SP_put_input_time(TimeIn)
-
-    real,     intent(in)::TimeIn
-    call CON_stop('Can not call SP_get_input_time')
-  end subroutine SP_put_input_time
  
   !===================================================================
   subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
@@ -130,13 +123,14 @@ contains
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_interface_point_coords
   !=======================================
-  subroutine SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
+  subroutine SP_put_coupling_param(iModelIn, rMinIn, rMaxIn, TimeIn)
+    real,     intent(in)::TimeIn
     integer, intent(in) :: iModelIn
     real, intent(in):: rMinIn, rMaxIn
-    character(len=*), parameter:: NameSub='SP_put_interface_bounds'
+    character(len=*), parameter:: NameSub='SP_put_coupling_param'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
-  end subroutine SP_put_interface_bounds
+  end subroutine SP_put_coupling_param
   !===================================================================
   subroutine SP_put_line(nPartial, iPutStart, Put,&
        Weight, DoAdd, Coord_D, nVar)

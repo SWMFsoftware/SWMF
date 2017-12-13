@@ -46,7 +46,6 @@ module SP_wrapper
   public:: SP_finalize
 
   ! coupling with MHD components
-  public:: SP_put_input_time
   public:: SP_put_from_mh
   public:: SP_interface_point_coords
   public:: SP_put_line
@@ -54,7 +53,6 @@ module SP_wrapper
   public:: SP_get_bounds_comp
   public:: SP_n_particle
   public:: SP_check_ready_for_mh
-  public:: SP_put_interface_bounds
   public:: SP_put_coupling_param
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
