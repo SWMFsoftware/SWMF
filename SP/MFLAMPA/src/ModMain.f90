@@ -119,6 +119,7 @@ contains
           call read_var('nStep',iIterGlobal)
        case('#TIMESIMULATION')
           call read_var('tSimulation',TimeGlobal)
+          DataInputTime = TimeGlobal
        case('#GRID', '#ORIGIN')
           call set_grid_param(NameCommand)
        case('#DORUN')
@@ -153,8 +154,9 @@ contains
     else
        RETURN
     end if
-    iIterGlobal = 0
-    TimeGlobal = TimeStart
+    iIterGlobal   = 0
+    TimeGlobal    = TimeStart
+    DataInputTime = TimeStart
     call init_advance_const
     call init_grid(DoRestart .or. DoReadMhData)
     if(DoRestart)&
