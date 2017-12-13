@@ -166,7 +166,7 @@ contains
        end if
 
        ! reset variables' names
-       File_I(iFile) % NameVarPlot = ''
+       File_I(iFile) % NameVarPlot = ' '//NameVar_V(LagrID_)
 
        ! based on kind of data process the requested output
        select case(File_I(iFile) % iKindData)
@@ -400,7 +400,7 @@ contains
               CoordMaxIn_D  = (/State_VIB(LagrID_,iLast,iBlock)/), &
               NameVarIn     = File_I(iFile) % NameVarPlot, &
               VarIn_VI      = &
-              File_I(iFile) % Buffer_II(2:nVarPlot,iFirst:iLast),&
+              File_I(iFile) % Buffer_II(1:nVarPlot,iFirst:iLast),&
               ! additionally print the shock location both as
               ! index and radial distance
               ParamIn_I    = pack(&

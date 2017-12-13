@@ -7,7 +7,7 @@ module SP_ModRestart
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
-       iProc, &
+       iProc, Z_,&
        nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
        Distribution_IIB,  ParamLocal_IB, &
@@ -31,7 +31,7 @@ module SP_ModRestart
   public:: NameRestartInDir, NameRestartOutDir
 
   integer, parameter:: nBufferMax = &
-       nBlockParam+nBlockIndexes+nParticle*(nVarRead+nMomentumBin)
+       nBlockParam+nBlockIndexes+nParticle*(Z_+nMomentumBin)
   real, allocatable:: Buffer_I(:)
 
 
@@ -104,7 +104,7 @@ contains
 
        do iParticle = iFirst, iLast
           ! background plasma paramters
-          do i = 1, nVarRead
+          do i = 0, Z_
              nBuffer = nBuffer + 1
              Buffer_I(nBuffer) = State_VIB(i, iParticle, iBlock)
           end do
@@ -187,7 +187,7 @@ contains
 
        do iParticle = iFirst, iLast
           ! background plasma paramters
-          do i = 1, nVarRead
+          do i = 0, Z_
              nBuffer = nBuffer + 1
              State_VIB(i, iParticle, iBlock) = Buffer_I(nBuffer)
           end do

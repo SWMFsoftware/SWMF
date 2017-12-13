@@ -14,7 +14,7 @@ module SP_ModReadMhData
        nVarRead, nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, Begin_, End_, X_, Y_, Z_, Bx_, By_, Bz_, &
+       Proc_, Begin_, End_, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
        NameVar_V
 
@@ -48,6 +48,9 @@ module SP_ModReadMhData
   ! buffer is larger than the data needed to be read in the case 
   ! the input file has additional data
   real:: Buffer_II(nVar,nParticle)
+  !
+  ! buffer for Lagrangian coordinate
+  real:: Buffer_I(nParticle)
 
   real:: TimeRead, TimeReadStart, TimeReadMax, DtRead
   integer:: iIterRead, iIterReadStart, DnRead
@@ -137,8 +140,10 @@ contains
             NameFile   = NameFile,&
             TypeFileIn = TypeFile,&
             n1out      = nParticleInput,&
+            Coord1Out_I= Buffer_I,&
             VarOut_VI  = Buffer_II)
-
+       State_VIB(LagrID_   , 1:nParticleInput, iBlock) = &
+            Buffer_I(             1:nParticleInput)
        State_VIB(1:nVarRead, 1:nParticleInput, iBlock) = &
             Buffer_II(1:nVarRead, 1:nParticleInput)
 

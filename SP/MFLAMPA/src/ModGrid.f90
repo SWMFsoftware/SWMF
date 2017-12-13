@@ -13,7 +13,8 @@ module SP_ModGrid
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: append_particles
-  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nBlockIndexes, nBlockParam
+  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nBlockIndexes, &
+       nBlockParam
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, ParamLocal_IB, iNode_II, iNode_B
@@ -106,46 +107,46 @@ module SP_ModGrid
   real, allocatable:: Flux_VIB( :,:,:)
   !----------------------------------------------------------------------------
   ! Number of variables in the state vector and their identifications
-  integer, parameter:: nVar     = 29, FluxMax_ = 29
-  integer, parameter:: nVarRead = 14
+  integer, parameter:: nVar     = 28, FluxMax_ = 28
+  integer, parameter:: nVarRead = 13
   integer, parameter:: &
        !\
        !-- The following variables MUST be in CONTIGUOUS  order --------------
        !-- used in subroutines read_mh_data, write_restart, read_restart -----
        !-- DO NOT CHANGE WITHOUT CAREFULL CONSIDERATION !!! ------------------
-       LagrID_ = 1, & ! Lagrangian id
-       X_      = 2, & ! 
-       Y_      = 3, & ! Cartesian coordinates
-       Z_      = 4, & ! 
-       Rho_    = 5, & ! Background plasma density
-       T_      = 6, & ! Background temperature
-       Ux_     = 7, & !
-       Uy_     = 8, & ! Background plasma bulk velocity
-       Uz_     = 9, & !
-       Bx_     =10, & !
-       By_     =11, & ! Background magnetic field
-       Bz_     =12, & !
-       Wave1_  =13, & !\
-       Wave2_  =14, & ! Alfven wave turbulence
+       LagrID_ = 0, & ! Lagrangian id
+       X_      = 1, & ! 
+       Y_      = 2, & ! Cartesian coordinates
+       Z_      = 3, & ! 
+       Rho_    = 4, & ! Background plasma density
+       T_      = 5, & ! Background temperature
+       Ux_     = 6, & !
+       Uy_     = 7, & ! Background plasma bulk velocity
+       Uz_     = 8, & !
+       Bx_     = 9, & !
+       By_     =10, & ! Background magnetic field
+       Bz_     =11, & !
+       Wave1_  =12, & !\
+       Wave2_  =13, & ! Alfven wave turbulence
        !-----------------------------------------------------------------------
-       D_      =15, & ! Distance to the next particle
-       S_      =16, & ! Distance from the beginning of the line
-       U_      =17, & ! Magnitude of plasma bulk velocity
-       B_      =18, & ! Magnitude of magnetic field
-       DLogRho_=19, & ! Dln(Rho), i.e. -div(U) * Dt
-       RhoOld_ =20, & ! Background plasma density
-       BOld_   =21, & ! Magnitude of magnetic field
-       Flux0_  =22, & ! Total integral (simulated) particle flux
-       Flux1_  =23, & ! Integral particle flux >  5 MeV (GOES Channel 1)
-       Flux2_  =24, & ! Integral particle flux > 10 MeV (GOES Channel 2)
-       Flux3_  =25, & ! Integral particle flux > 30 MeV (GOES Channel 3)
-       Flux4_  =26, & ! Integral particle flux > 50 MeV (GOES Channel 4)
-       Flux5_  =27, & ! Integral particle flux > 60 MeV (GOES Channel 5)
-       Flux6_  =28, & ! Integral particle flux >100 MeV (GOES Channel 6)
-       EFlux_  =29    ! Total integral energy flux
+       D_      =14, & ! Distance to the next particle
+       S_      =15, & ! Distance from the beginning of the line
+       U_      =16, & ! Magnitude of plasma bulk velocity
+       B_      =17, & ! Magnitude of magnetic field
+       DLogRho_=18, & ! Dln(Rho), i.e. -div(U) * Dt
+       RhoOld_ =19, & ! Background plasma density
+       BOld_   =20, & ! Magnitude of magnetic field
+       Flux0_  =21, & ! Total integral (simulated) particle flux
+       Flux1_  =22, & ! Integral particle flux >  5 MeV (GOES Channel 1)
+       Flux2_  =23, & ! Integral particle flux > 10 MeV (GOES Channel 2)
+       Flux3_  =24, & ! Integral particle flux > 30 MeV (GOES Channel 3)
+       Flux4_  =25, & ! Integral particle flux > 50 MeV (GOES Channel 4)
+       Flux5_  =26, & ! Integral particle flux > 60 MeV (GOES Channel 5)
+       Flux6_  =27, & ! Integral particle flux >100 MeV (GOES Channel 6)
+       EFlux_  =28    ! Total integral energy flux
 
   ! variable names
-  character(len=10), parameter:: NameVar_V(EFlux_) = (/&
+  character(len=10), parameter:: NameVar_V(LagrID_:EFlux_) = (/&
        'LagrID    ', &
        'X         ', &
        'Y         ', &
@@ -295,7 +296,8 @@ contains
     call check_allocate(iError, NameSub//'iGridLocal_IB')
     allocate(ParamLocal_IB(nBlockParam, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'ParamLocal_IB')
-    allocate(State_VIB(nVar,iParticleMin:iParticleMax,nBlock), stat=iError)
+    allocate(State_VIB(LagrID_:nVar,iParticleMin:iParticleMax,nBlock), &
+         stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
     allocate(Flux_VIB(Flux0_:FluxMax_,iParticleMin:iParticleMax,nBlock), &
          stat=iError); call check_allocate(iError, 'Flux_VIB')
