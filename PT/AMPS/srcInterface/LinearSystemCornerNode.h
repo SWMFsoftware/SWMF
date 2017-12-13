@@ -100,7 +100,7 @@ public:
   cMatrixRowNonZeroElementTable MatrixRowNonZeroElementTable[MaxStencilLength];
 
   //provcess the right boundary
-  int nVirtualBlocks;
+  int nVirtualBlocks,nRealBlocks;
   void ProcessRightDomainBoundary(int *RecvDataPointCounter,void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
 
 
@@ -116,7 +116,7 @@ public:
     SubdomainPartialRHS=NULL,SubdomainPartialUnknownsVector=NULL;
     SubdomainPartialUnknownsVectorLength=0;
 
-    nVirtualBlocks=0;
+    nVirtualBlocks=0,nRealBlocks=0;
   }
 
   //void reset the data of the obsect to the default state
@@ -413,6 +413,8 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   int Debug=0;
 
+  nRealBlocks=0;
+
   //reset indexing of the nodes
   Reset();
 
@@ -427,7 +429,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
 
     //in case of the periodic boundary condition it is only the points that are inside the "real" computational domain that are considered
-/*    if (_PIC_BC__PERIODIC_MODE_!=_PIC_BC__PERIODIC_MODE_OFF_) {
+    if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
       bool BoundaryBlock=false;
 
       for (int iface=0;iface<6;iface++) if (node->GetNeibFace(iface,0,0)==NULL) {
@@ -437,24 +439,17 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
       }
 
       if (BoundaryBlock==true) continue;
-    }*/
+    }
+
+    nRealBlocks++;
 
     //the limits are correct: the point i==_BLOCK_CELLS_X_ belongs to the onother block
     int kMax=_BLOCK_CELLS_Z_,jMax=_BLOCK_CELLS_Y_,iMax=_BLOCK_CELLS_X_;
-
-/*  commented to exclude accounting for the "right" boundary effect
-    if (node->GetNeibFace(1,0,0)==NULL) iMax=_BLOCK_CELLS_X_+1;
-    if (node->GetNeibFace(3,0,0)==NULL) jMax=_BLOCK_CELLS_Y_+1;
-    if (node->GetNeibFace(5,0,0)==NULL) kMax=_BLOCK_CELLS_Z_+1;
-*/
 
     for (k=0;k<kMax;k++) for (j=0;j<jMax;j++) for (i=0;i<iMax;i++) {
       for (int iVar=0;iVar<NodeUnknownVariableVectorLength;iVar++) {
         int NonZeroElementsFound;
         double rhs;
-
-
-//Debug++;
 
         //create the new Row entry
         cMatrixRow* NewRow=MatrixRowStack.newElement();
@@ -502,10 +497,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
           }
 
           //check whether the periodic boundary conditions are in use, and the new block is on the boundary of the domain
-/*          if (_PIC_BC__PERIODIC_MODE_!=_PIC_BC__PERIODIC_MODE_OFF_) {
+          if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
             bool BoundaryBlock=false;
 
-            for (int iface=0;iface<6;iface++) if (node->GetNeibFace(iface,0,0)==NULL) {
+            for (int iface=0;iface<6;iface++) if (MatrixRowNonZeroElementTable[ii].Node->GetNeibFace(iface,0,0)==NULL) {
               //the block is at the domain boundary, and thresefor it is a 'ghost' block that is used to impose the periodic boundary conditions
               BoundaryBlock=true;
               break;
@@ -515,7 +510,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
               //the block is at the domain boundary -> find the point located in the "real" part of the computational domain
               MatrixRowNonZeroElementTable[ii].Node=PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(MatrixRowNonZeroElementTable[ii].Node);
             }
-          }*/
+          }
 
         }
 
@@ -575,13 +570,11 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     }
   }
 
-/*  //debug -> count the number of rows and blocks
-  int ntotbl=0;
-  for (Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
-
 
   //add 'virtual' blocks at the right boundary of the domain
-  ProcessRightDomainBoundary(RecvDataPointCounter,f);
+  if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_OFF_) {
+    ProcessRightDomainBoundary(RecvDataPointCounter,f);
+  }
 
 
   //allocate the data buffers for the partial vectors and link the pointers points that are inside the subdomian
@@ -908,7 +901,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   int nI=_BLOCK_CELLS_X_;
   int nJ=_BLOCK_CELLS_Y_;
   int nK=_BLOCK_CELLS_Z_;
-  int nBlock = PIC::DomainBlockDecomposition::nLocalBlocks+nVirtualBlocks;
+  int nBlock = nRealBlocks+nVirtualBlocks;
 
   MPI_Fint iComm = MPI_Comm_c2f(MPI_GLOBAL_COMMUNICATOR);
 
