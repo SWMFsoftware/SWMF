@@ -3,8 +3,7 @@ module SP_ModReadMhData
   ! This module contains methods for reading input MH data
 
   use SP_ModSize, ONLY: &
-       nDim, nLat, nLon, nNode, &
-       iParticleMin, iParticleMax, nParticle,&
+       nDim, nLat, nLon, nNode, nParticleMax, &
        nMomentumBin, &
        Particle_, OriginLat_, OriginLon_
 
@@ -47,10 +46,10 @@ module SP_ModReadMhData
 
   ! buffer is larger than the data needed to be read in the case 
   ! the input file has additional data
-  real:: Buffer_II(nVar,nParticle)
+  real:: Buffer_II(nVar,nParticleMax)
   !
   ! buffer for Lagrangian coordinate
-  real:: Buffer_I(nParticle)
+  real:: Buffer_I(nParticleMax)
 
   real:: TimeRead, TimeReadStart, TimeReadMax, DtRead
   integer:: iIterRead, iIterReadStart, DnRead

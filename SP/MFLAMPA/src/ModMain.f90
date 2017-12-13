@@ -4,8 +4,7 @@
 module SP_ModMain
 
   use SP_ModSize, ONLY: &
-       nDim, nLat, nLon, nNode, &
-       iParticleMin, iParticleMax, nParticle,&
+       nDim, nLat, nLon, nNode, nParticleMax, &
        Particle_, OriginLat_, OriginLon_
   
   use SP_ModWrite, ONLY: &
@@ -49,8 +48,7 @@ module SP_ModMain
 
   ! Methods and variables from ModSize
   public:: &
-       nDim, nLat, nLon, nNode, &
-       iParticleMin, iParticleMax, nParticle,&
+       nDim, nLat, nLon, nNode, nParticleMax,&
        Particle_, OriginLat_, OriginLon_
 
   ! Methods and variables from ModGrid
@@ -104,14 +102,14 @@ contains
        case('#RESTART')
           call read_var('DoRestart',DoRestart)
        case('#CHECKGRIDSIZE')
-          call read_var('nParticle',nParticleCheck)
+          call read_var('nParticleMax',nParticleCheck)
           call read_var('nLon',     nLonCheck)
           call read_var('nLat',     nLatCheck)
           if(iProc==0.and.any(&
-               (/nParticle,     nLon,     nLat/) /= &
+               (/nParticleMax,     nLon,     nLat/) /= &
                (/nParticleCheck,nLonCheck,nLatCheck/)))then
-             write(*,*)'Code is compiled with nParticle,nLon,nLat=',&
-                  (/nParticle, nLon, nLat/)
+             write(*,*)'Code is compiled with nParticleMax,nLon,nLat=',&
+                  (/nParticleMax, nLon, nLat/)
              call CON_stop(&
                   'Change nParticle,nLon,nLat with Config.pl -g & recompile!')
           end if
@@ -272,9 +270,9 @@ contains
             end if
          end do
          ! location of shock
-         if(iGridLocal_IB(ShockOld_, iBlock) < iParticleMin)&
+         if(iGridLocal_IB(ShockOld_, iBlock) < 1)&
               iGridLocal_IB(ShockOld_, iBlock)= iBegin
-         if(iGridLocal_IB(Shock_, iBlock) < iParticleMin)&
+         if(iGridLocal_IB(Shock_, iBlock) < 1)&
               iGridLocal_IB(Shock_, iBlock)   = iBegin
       end do
     end subroutine fix_grid_consistency

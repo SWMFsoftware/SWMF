@@ -3,8 +3,7 @@ module SP_ModWrite
   ! This module contains methods for writing output files
 
   use SP_ModSize, ONLY: &
-       nDim, nLat, nLon, nNode, &
-       iParticleMin, iParticleMax, nParticle,&
+       nDim, nLat, nLon, nNode, nParticleMax,&
        nMomentumBin, &
        Particle_, OriginLat_, OriginLon_
 
@@ -174,7 +173,7 @@ contains
              call process_mh
              ! prepare the output data container
              allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot, iParticleMin:iParticleMax))
+                  File_I(iFile)%nVarPlot, 1:nParticleMax))
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)
@@ -207,7 +206,7 @@ contains
              call process_distr
              ! prepare the output data container
              allocate(File_I(iFile) % &
-                  Buffer_II(nMomentumBin,iParticleMin:iParticleMax))
+                  Buffer_II(nMomentumBin,1:nParticleMax))
           case(Distr2D_)
              call process_distr
              ! prepare the output data container
@@ -713,7 +712,7 @@ contains
          iFirst = iGridLocal_IB(Begin_, iBlock)
          iLast  = iGridLocal_IB(End_,   iBlock)
          
-         do iParticle = iParticleMin, iParticleMax
+         do iParticle = 1, nParticleMax
             ! reset values outside the line's range
             if(iParticle < iFirst .or. iParticle > iLast)then
                File_I(iFile) % Buffer_II(:,iParticle) = 0.0

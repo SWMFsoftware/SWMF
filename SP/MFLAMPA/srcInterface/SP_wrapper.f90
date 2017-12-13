@@ -10,8 +10,7 @@ module SP_wrapper
        get_node_indexes, append_particles, &
        DoRestart, &
        iComm, iProc, nProc, &
-       nDim, nLat, nLon, nBlock,&
-       iParticleMin, iParticleMax, nParticle,&
+       nDim, nLat, nLon, nBlock, nParticleMax, &
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, &
@@ -31,7 +30,6 @@ module SP_wrapper
        Wave_, WaveFirstCouple_, WaveLastCouple_
   use ModMpi
   use CON_world, ONLY: is_proc0, is_proc, n_proc
-  !use CON_comp_param, ONLY: SP_, SC_, IH_
 
   implicit none
 
@@ -288,9 +286,9 @@ contains
          call get_root_decomposition(&
          GridID_       = SP_,&
          iRootMapDim_D = (/1, nLon, nLat/),&
-         CoordMin_D    = (/real(iParticleMin)-0.5, LonMin, LatMin/),&
-         CoordMax_D    = (/real(iParticleMax)+0.5, LonMax, LatMax/),&
-         nCells_D      = (/nParticle , 1, 1/),&
+         CoordMin_D    = (/0.5, LonMin, LatMin/),&
+         CoordMax_D    = (/real(nParticleMax)+0.5, LonMax, LatMax/),&
+         nCells_D      = (/nParticleMax, 1, 1/),&
          PE_I          = iGridGlobal_IA(Proc_,:),&
          iBlock_I      = iGridGlobal_IA(Block_,:))
     call bcast_decomposition(SP_)

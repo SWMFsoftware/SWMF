@@ -2,8 +2,7 @@ module SP_ModGrid
 
   use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, nMomentumBin, nPitchAngleBin, &
-       iParticleMin, iParticleMax, nParticle,&
-       Particle_, OriginLat_, OriginLon_
+       nParticleMax, Particle_, OriginLat_, OriginLon_
 
   implicit none
 
@@ -296,13 +295,13 @@ contains
     call check_allocate(iError, NameSub//'iGridLocal_IB')
     allocate(ParamLocal_IB(nBlockParam, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'ParamLocal_IB')
-    allocate(State_VIB(LagrID_:nVar,iParticleMin:iParticleMax,nBlock), &
+    allocate(State_VIB(LagrID_:nVar,1:nParticleMax,nBlock), &
          stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
-    allocate(Flux_VIB(Flux0_:FluxMax_,iParticleMin:iParticleMax,nBlock), &
+    allocate(Flux_VIB(Flux0_:FluxMax_,1:nParticleMax,nBlock), &
          stat=iError); call check_allocate(iError, 'Flux_VIB')
     allocate(Distribution_IIB(&
-         nMomentumBin,iParticleMin:iParticleMax,nBlock), &
+         nMomentumBin,1:nParticleMax,nBlock), &
          stat=iError)
     call check_allocate(iError, NameSub//'Distribution_IIB')
     !\
@@ -318,8 +317,8 @@ contains
              iNode_B(iBlock) = iNode
              iGridLocal_IB(Begin_,   iBlock) = 1
              iGridLocal_IB(End_,     iBlock) = 1
-             iGridLocal_IB(Shock_,   iBlock) = iParticleMin - 1
-             iGridLocal_IB(ShockOld_,iBlock) = iParticleMin - 1
+             iGridLocal_IB(Shock_,   iBlock) = 0
+             iGridLocal_IB(ShockOld_,iBlock) = 0
              iGridLocal_IB(Offset_,  iBlock) = 0
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
@@ -335,12 +334,12 @@ contains
     ! reset and fill data containers
     !/
     Distribution_IIB = tiny(1.0)
-    State_VIB = -1; Flux_VIB = -1
-
+    State_VIB = -1; Flux_VIB = -1; ParamLocal_IB = -1
+    
     !\
     ! reset lagrangian ids
     !/
-    do iParticle = 1, nParticle
+    do iParticle = 1, nParticleMax
        State_VIB(LagrID_, iParticle, 1:nBlock) = real(iParticle)
     end do
 
@@ -418,7 +417,7 @@ contains
        ! append a new particle
        !-----------------------
        ! check if have enough space
-       if(nParticle == iGridLocal_IB(End_, iBlock))&
+       if(nParticleMax == iGridLocal_IB(End_, iBlock))&
             call CON_Stop(NameSub//&
             ': not enough memory allocated to append a new particle')
        ! shift the grid:

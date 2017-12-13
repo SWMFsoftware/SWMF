@@ -3,7 +3,7 @@ module SP_ModRestart
   ! This module contains methods for writing output files
 
   use SP_ModSize, ONLY: &
-       nLon, nLat, nParticle, nMomentumBin
+       nLon, nLat, nParticleMax, nMomentumBin
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
@@ -31,7 +31,7 @@ module SP_ModRestart
   public:: NameRestartInDir, NameRestartOutDir
 
   integer, parameter:: nBufferMax = &
-       nBlockParam+nBlockIndexes+nParticle*(Z_+nMomentumBin)
+       nBlockParam+nBlockIndexes+nParticleMax*(Z_+nMomentumBin)
   real, allocatable:: Buffer_I(:)
 
 
@@ -219,7 +219,7 @@ contains
     write(UnitTmp_,'(a)')'T'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
-    write(UnitTmp_,'(i8,a32)') nParticle,'nParticle'
+    write(UnitTmp_,'(i8,a32)') nParticleMax,'nParticleMax'
     write(UnitTmp_,'(i8,a32)') nLon,     'nLon'
     write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
     write(UnitTmp_,*)

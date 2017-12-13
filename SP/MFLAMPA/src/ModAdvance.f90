@@ -8,7 +8,7 @@ module SP_ModAdvance
 
   use ModCoordTransform, ONLY: rlonlat_to_xyz
 
-  use SP_ModSize, ONLY: iParticleMin, iParticleMax, nMomentumBin, nDim
+  use SP_ModSize, ONLY: nParticleMax, nMomentumBin, nDim
 
   use SP_ModGrid, ONLY: &
        X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
@@ -68,13 +68,13 @@ module SP_ModAdvance
   !-----------------------------
   ! variables shared between subroutines in this module
   integer:: iBegin, iEnd, iBlock, iShock
-  real, dimension(iParticleMin:iParticleMax):: Rho_I, RhoOld_I, U_I, T_I
-  real, dimension(iParticleMin:iParticleMax):: DLogRho_I
-  real, dimension(iParticleMin:iParticleMax):: Radius_I, B_I,   BOld_I
-  real, dimension(iParticleMin:iParticleMax):: FermiFirst_I
+  real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
+  real, dimension(1:nParticleMax):: DLogRho_I
+  real, dimension(1:nParticleMax):: Radius_I, B_I,   BOld_I
+  real, dimension(1:nParticleMax):: FermiFirst_I
   !-----------------------------
   ! df/dt = DOuter * d(DInner * df/dx)/dx
-  real, dimension(iParticleMin:iParticleMax):: DOuter_I, DInner_I, DInnerInj_I
+  real, dimension(1:nParticleMax):: DOuter_I, DInner_I, DInnerInj_I
   !-----------------------------
   ! level of turbulence
   real:: BOverDeltaB2 = 1.0

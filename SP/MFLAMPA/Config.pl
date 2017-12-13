@@ -64,13 +64,13 @@ sub get_settings{
     open(FILE, $NameSizeFile) or die "$ERROR could not open $NameSizeFile\n";
     while(<FILE>){
 	next if /^\s*!/;
-	$nP   =$1 if /\bnParticle\s*=[^0-9]*(\d+)/i;
+	$nP   =$1 if /\bnParticleMax\s*=[^0-9]*(\d+)/i;
 	$nLat =$1 if /\bnLat\s*=[^0-9]*(\d+)/i;
 	$nLon =$1 if /\bnLon\s*=[^0-9]*(\d+)/i;
     }
     close FILE;
 
-    die "$ERROR could not read nParticle from $NameSizeFile\n" 
+    die "$ERROR could not read nParticleMax from $NameSizeFile\n" 
 	unless length($nP);                         
 
     die "$ERROR could not read nLat from $NameSizeFile\n" 
@@ -95,7 +95,7 @@ sub set_grid_size{
 	die "$ERROR -g=$GridSize must be 3 integers\n";
     }
     # Check the grid size (to be set)
-    die "$ERROR nParticle=$nP must be positive\n" if $nP<=0;
+    die "$ERROR nParticleMax=$nP must be positive\n" if $nP<=0;
     die "$ERROR nLat=$nLat must be positive\n" if $nLat<=0;
     die "$ERROR nLon=$nLon must be positive\n" if $nLon<=0;
 
@@ -105,7 +105,7 @@ sub set_grid_size{
     @ARGV = ($NameSizeFile);
     while(<>){
 	if(/^\s*!/){print; next} # Skip commented out lines
-	s/\b(nParticle\s*=[^0-9]*)(\d+)/$1$nP/i;
+	s/\b(nParticleMax\s*=[^0-9]*)(\d+)/$1$nP/i;
 	s/\b(nLat\s*=[^0-9]*)(\d+)/$1$nLat/i;
 	s/\b(nLon\s*=[^0-9]*)(\d+)/$1$nLon/i;
 	print;
@@ -132,7 +132,7 @@ Additional options for MFLAMPA/Config.pl:
 sub current_settings{
 
     $Settings .= 
-	"Number of particles per line   : nParticle=$nP\n";
+	"Number of particles per line   : nParticleMax=$nP\n";
     $Settings .=
 	"Size of grid on source surface : nLon=$nLon, nLat=$nLat\n";
 

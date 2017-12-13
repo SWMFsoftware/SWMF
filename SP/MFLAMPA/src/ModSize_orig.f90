@@ -9,8 +9,7 @@ module SP_ModSize
   public:: &
        nDim, nMomentumBin, nPitchAngleBin, IsPitchAngleAveraged, &
        Particle_, OriginLat_, OriginLon_, &
-       nLat, nLon, nNode, &
-       iParticleMin, iParticleMax, nParticle
+       nLat, nLon, nNode, nParticleMax
 
   ! Dimensionality
   integer, parameter:: nDim = 3
@@ -23,11 +22,8 @@ module SP_ModSize
 
       
 
-  ! Min and Max possible index of a particle along a field line,
-  ! both are set by Config.pl
-  integer, parameter:: iParticleMin = 1
-  integer, parameter:: nParticle    = 1000
-  integer, parameter:: iParticleMax = iParticleMin + nParticle - 1
+  ! Max possible index of a particle on a line set by Config.pl
+  integer, parameter:: nParticleMax = 1000
 
   ! angular grid at origin surface
   integer, parameter:: nLon  = 4
