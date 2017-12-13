@@ -5,7 +5,6 @@
 module SP_wrapper
 
   use ModConst, ONLY: rSun, cProtonMass, energy_in
-  use ModCoordTransform, ONLY: xyz_to_rlonlat, rlonlat_to_xyz
   use SP_ModMain, ONLY: &
        run, initialize, check, read_param, save_restart, &
        get_node_indexes, append_particles, &
@@ -54,10 +53,9 @@ module SP_wrapper
   public:: SP_adjust_lines
   public:: SP_get_bounds_comp
   public:: SP_n_particle
-  public:: SP_copy_old_state
   public:: SP_check_ready_for_mh
   public:: SP_put_interface_bounds
-
+  public:: SP_put_coupling_param
   ! variables requested via coupling: coordinates, 
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple =&
@@ -187,19 +185,7 @@ contains
     call save_restart
   end subroutine SP_save_restart
 
-  !=========================================================
-  subroutine SP_put_input_time(TimeIn)
-    real,     intent(in)::TimeIn
-    if(DataInputTime >= TimeIn)RETURN
-    select case(Model_)
-    case(Lower_)
-       call SP_copy_old_state
-    case(Upper_)
-       call CON_stop(&
-            "Time in coupling to IH differs from that to SC")
-    end select
-    DataInputTime = TimeIn
-  end subroutine SP_put_input_time
+
   !===================================================================
 
   subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
@@ -321,12 +307,51 @@ contains
          UnitX        = rSun)
   end subroutine SP_set_grid
   !================================
+  subroutine SP_put_coupling_param(iModelIn, rMinIn, rMaxIn, TimeIn)
+    integer, intent(in) :: iModelIn
+    real,    intent(in) :: rMinIn, rMaxIn
+    real,     intent(in)::TimeIn
+    !-----------------
+    call SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
+    call SP_put_input_time(TimeIn)
+  end subroutine SP_put_coupling_param
   subroutine SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
     integer, intent(in) :: iModelIn
     real,    intent(in) :: rMinIn, rMaxIn
     !-----------------
     rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn; Model_ = iModelIn
   end subroutine SP_put_interface_bounds
+  !=========================================================
+  subroutine SP_put_input_time(TimeIn)
+    real,     intent(in)::TimeIn
+    if(DataInputTime >= TimeIn)RETURN
+    select case(Model_)
+    case(Lower_)
+       call copy_old_state
+    case(Upper_)
+       call CON_stop(&
+            "Time in coupling to IH differs from that to SC")
+    case default
+       call CON_stop("Wrong model name")
+    end select
+    DataInputTime = TimeIn
+  contains
+    subroutine copy_old_state
+      use SP_ModGrid, ONLY: nVarRead
+      ! copy current state to old state for all field lines
+      integer:: iBegin, iEnd, iBlock
+      !-----------------------------------------------------------------------
+      do iBlock = 1, nBlock
+         iBegin = iGridLocal_IB(Begin_,iBlock)
+         iEnd   = iGridLocal_IB(End_,  iBlock)
+         State_VIB((/RhoOld_,BOld_/), iBegin:iEnd, iBlock) = &
+              State_VIB((/Rho_,B_/),  iBegin:iEnd, iBlock)
+         ! reset other variables
+         State_VIB(1:nVarRead,iBegin:iEnd, iBlock) = 0.0
+      end do
+    end subroutine Copy_old_state
+
+  end subroutine SP_put_input_time
   !===================================================================
   subroutine SP_interface_point_coords(nDim, Xyz_D, &
        nIndex, iIndex_I, IsInterfacePoint)
@@ -513,23 +538,7 @@ contains
     end subroutine SP_set_line_foot_b
   end subroutine SP_adjust_lines
   !=============================
-  subroutine SP_copy_old_state
-    ! copy current state to old state for all field lines
-    integer:: iBegin, iEnd, iBlock
-    integer, parameter:: nVarReset  = 11
-    integer, parameter:: &
-         VarReset_I(nVarReset) = (/X_,Y_,Z_,Rho_,Bx_,By_,Bz_,T_,Ux_,Uy_,Uz_/)
-    !-----------------------------------------------------------------------
-    do iBlock = 1, nBlock
-       iBegin = iGridLocal_IB(Begin_,iBlock)
-       iEnd   = iGridLocal_IB(End_,  iBlock)
-       State_VIB((/RhoOld_,BOld_/), iBegin:iEnd, iBlock) = &
-            State_VIB((/Rho_,B_/),  iBegin:iEnd, iBlock)
-       ! reset other variables
-       State_VIB(VarReset_I,iBegin:iEnd, iBlock) = 0.0
-    end do
-  end subroutine SP_copy_old_state
-
+ 
   !========================================================================
 
   function is_in_buffer(Xyz_D) Result(IsInBuffer)

@@ -104,7 +104,6 @@ contains
     !The initialization can be done only once
 
     call get_time(tSimulationOut=tNow)
-    if(is_proc(SP_))call SP_put_input_time(tNow)
 
     ! determine whether SP is ready for coupling with MH
     call SP_check_ready_for_mh(IsReady)
@@ -156,6 +155,7 @@ contains
       if(.not.DoExtract)RETURN
       if(is_proc(SP_))&
            call SP_put_interface_bounds(Lower_, RScMin, RScMax)
+      if(is_proc(SP_))call SP_put_input_time(tNow)
       call SC_synchronize_refinement(RouterScSp%iProc0Source,&
            RouterScSp%iCommUnion)
       ScToSp_DD=transform_matrix(tNow,&                 
@@ -240,6 +240,7 @@ contains
             call SP_put_interface_bounds(Lower_, RIhMin, RIhMax)
          end if                            !^CMP IF SC
       end if
+      if(is_proc(SP_))call SP_put_input_time(tNow)
       call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
            RouterIhSp%iCommUnion)
       IhToSp_DD=transform_matrix(tNow,&                 
