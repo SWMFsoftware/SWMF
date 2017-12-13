@@ -62,7 +62,7 @@ module SP_wrapper
   ! field line and particles indexes
   character(len=*), parameter:: NameVarCouple =&
        'rho p mx my mz bx by bz i01 i02 pe'
-  integer :: Model_
+  integer :: Model_ = -1
   integer, parameter:: Lower_=0, Upper_=1
   real :: rInterfaceMin, rInterfaceMax
 contains
@@ -190,6 +190,14 @@ contains
   !=========================================================
   subroutine SP_put_input_time(TimeIn)
     real,     intent(in)::TimeIn
+    if(DataInputTime >= TimeIn)RETURN
+    select case(Model_)
+    case(Lower_)
+       call SP_copy_old_state
+    case(Upper_)
+       call CON_stop(&
+            "Time in coupling to IH differs from that to SC")
+    end select
     DataInputTime = TimeIn
   end subroutine SP_put_input_time
   !===================================================================
