@@ -13,7 +13,7 @@ module SP_ModWrite
        nVar, nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, Begin_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
+       Proc_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V, TypeCoordSystem
@@ -352,8 +352,8 @@ contains
       integer:: iBlock, iParticle, iVarPlot
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
-      ! index of first/last particle on the field line
-      integer:: iFirst, iLast
+      ! index of last particle on the field line
+      integer:: iLast
       ! for better readability
       integer:: nVarPlot
       ! shock location
@@ -378,12 +378,11 @@ contains
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
-         iFirst = iGridLocal_IB(Begin_, iBlock)
          iLast  = iGridLocal_IB(End_,   iBlock)
          ! fill the output buffer
-         File_I(iFile) % Buffer_II(1:nVarPlot, iFirst:iLast) = &
+         File_I(iFile) % Buffer_II(1:nVarPlot, 1:iLast) = &
               State_VIB(File_I(iFile) % iVarPlot_V(1:nVarPlot), &
-              iFirst:iLast, iBlock)
+              1:iLast, iBlock)
          ! shock location
          iShock = iGridLocal_IB(Shock_,iBlock)
          RShock = sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
@@ -395,11 +394,11 @@ contains
               nDimIn        = 1, &
               TimeIn        = TimeGlobal, &
               nStepIn       = iIterGlobal, &
-              CoordMinIn_D  = (/State_VIB(LagrID_,iFirst,iBlock)/), &
+              CoordMinIn_D  = (/State_VIB(LagrID_,1,iBlock)/), &
               CoordMaxIn_D  = (/State_VIB(LagrID_,iLast,iBlock)/), &
               NameVarIn     = File_I(iFile) % NameVarPlot, &
               VarIn_VI      = &
-              File_I(iFile) % Buffer_II(1:nVarPlot,iFirst:iLast),&
+              File_I(iFile) % Buffer_II(1:nVarPlot,1:iLast),&
               ! additionally print the shock location both as
               ! index and radial distance
               ParamIn_I    = pack(&
@@ -425,7 +424,7 @@ contains
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
       ! index of first/last particle on the field line
-      integer:: iFirst, iLast
+      integer:: iLast
       ! index of particle just above the radius
       integer:: iAbove
       ! radii of particles, added for readability
@@ -460,17 +459,16 @@ contains
               File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
               '_t'//StringTime//'_n', iIterGlobal, File_I(iFile) % NameFormat
 
-         ! get min and max particle indexes on this field line
-         iFirst = iGridLocal_IB(Begin_, iBlock)
+         ! get max particle indexes on this field line
          iLast  = iGridLocal_IB(End_,   iBlock)
 
          ! find the particle just above the given radius
-         do iParticle = iFirst , iLast
+         do iParticle = 1 , iLast
             Radius0 = sum(State_VIB(X_:Z_, iParticle, iBlock)**2)**0.5
             if( Radius0 > File_I(iFile) % Radius) then
                iAbove = iParticle
                !check if line started above output sphere, i.e. no intersection
-               DoPrint_I(iNode) = iAbove /= iFirst
+               DoPrint_I(iNode) = iAbove /= 1
                EXIT
             end if
             ! check if reached the end, i.e. there is no intersection
@@ -548,7 +546,7 @@ contains
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
       ! index of first/last particle on the field line
-      integer:: iFirst, iLast
+      integer:: iLast
       ! index of particle just above the radius
       integer:: iAbove
       ! radii of particles, added for readability
@@ -579,17 +577,16 @@ contains
          iNode = iNode_B(iBlock)
          call get_node_indexes(iNode, iLon, iLat)
 
-         ! get min and max particle indexes on this field line
-         iFirst = iGridLocal_IB(Begin_, iBlock)
+         ! get max particle indexes on this field line
          iLast  = iGridLocal_IB(End_,   iBlock)
 
          ! find the particle just above the given radius
-         do iParticle = iFirst , iLast
+         do iParticle = 1 , iLast
             Radius0 = sum(State_VIB(X_:Z_, iParticle, iBlock)**2)**0.5
             if( Radius0 > File_I(iFile) % Radius)then
                iAbove = iParticle
                !check if line started above output sphere, i.e. no intersection
-               DoPrint = iAbove /= iFirst
+               DoPrint = iAbove /= 1
                EXIT
             end if
             ! check if reached the end, i.e. there is no intersection
@@ -682,7 +679,7 @@ contains
       ! indexes of corresponding node, latitude and longitude
       integer:: iNode, iLat, iLon
       ! index of first/last particle on the field line
-      integer:: iFirst, iLast
+      integer:: iLast
       ! scale and conversion factor
       real:: Scale_I(nMomentumBin), Factor_I(nMomentumBin)
       real:: Unity_I(nMomentumBin) = 1.0
@@ -708,13 +705,12 @@ contains
               '_t'//StringTime//'_n',iIterGlobal,&
               File_I(iFile) % NameFormat
 
-         ! get min and max particle indexes on this field line
-         iFirst = iGridLocal_IB(Begin_, iBlock)
+         ! get max particle indexes on this field line
          iLast  = iGridLocal_IB(End_,   iBlock)
          
          do iParticle = 1, nParticleMax
             ! reset values outside the line's range
-            if(iParticle < iFirst .or. iParticle > iLast)then
+            if(iParticle > iLast)then
                File_I(iFile) % Buffer_II(:,iParticle) = 0.0
                CYCLE
             end if
@@ -731,9 +727,9 @@ contains
               TimeIn     = TimeGlobal, &
               nStepIn    = iIterGlobal, &
               Coord1In_I = Scale_I, &
-              Coord2In_I = State_VIB(S_,iFirst:iLast,iBlock), &
+              Coord2In_I = State_VIB(S_,1:iLast,iBlock), &
               NameVarIn  = File_I(iFile) % NameVarPlot, &
-              VarIn_II   = File_I(iFile) % Buffer_II(:,iFirst:iLast) &
+              VarIn_II   = File_I(iFile) % Buffer_II(:,1:iLast) &
               )
       end do     
     end subroutine write_distr_1d
@@ -777,9 +773,7 @@ contains
     ! energy limits of GOES channels
     EChannel_I = (/5,10,30,50,60,100/) * energy_in('MeV')
     do iBlock = 1, nBlock
-       do iParticle = &
-            iGridLocal_IB(Begin_, iBlock), &
-            iGridLocal_IB(End_, iBlock)
+       do iParticle = 1, iGridLocal_IB(End_, iBlock)
           !\
           ! Integration loop with midpoint rule
           !/

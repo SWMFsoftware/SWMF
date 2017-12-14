@@ -13,7 +13,7 @@ module SP_ModReadMhData
        nVarRead, nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, Begin_, End_, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
+       Proc_, End_, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
        NameVar_V
 
@@ -146,7 +146,6 @@ contains
        State_VIB(1:nVarRead, 1:nParticleInput, iBlock) = &
             Buffer_II(1:nVarRead, 1:nParticleInput)
 
-       iGridLocal_IB(Begin_,iBlock) = 1
        iGridLocal_IB(End_,  iBlock) = nParticleInput
     end do
 

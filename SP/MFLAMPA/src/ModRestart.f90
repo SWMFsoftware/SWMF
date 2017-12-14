@@ -11,7 +11,7 @@ module SP_ModRestart
        nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
        Distribution_IIB,  ParamLocal_IB, &
-       Begin_, End_, &
+       End_, &
        nBlockParam, nBlockIndexes
 
    use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
@@ -66,7 +66,7 @@ contains
     !
     integer:: nBuffer
     ! index of first/last particle on the field line
-    integer:: iFirst, iLast
+    integer:: iLast
 
     character(len=*), parameter:: NameSub = 'SP:write_restart'
     !--------------------------------------------------------------------------
@@ -98,11 +98,10 @@ contains
           Buffer_I(nBuffer) = ParamLocal_IB(i, iBlock)
        end do
 
-       ! get min and max particle indexes on this field line
-       iFirst = iGridLocal_IB(Begin_, iBlock)
+       ! get max particle indexes on this field line
        iLast  = iGridLocal_IB(End_,   iBlock)
 
-       do iParticle = iFirst, iLast
+       do iParticle = 1, iLast
           ! background plasma paramters
           do i = 0, Z_
              nBuffer = nBuffer + 1
@@ -122,7 +121,7 @@ contains
             TypeFileIn = 'real8', &
             TimeIn     = TimeGlobal, &
             nStepIn    = iIterGlobal, &
-            CoordMinIn_D = (/real(iFirst)/), &
+            CoordMinIn_D = (/real(1)/), &
             CoordMaxIn_D = (/real(iLast)/), &
             VarIn_I    = Buffer_I(1:nBuffer)&
             )
@@ -144,7 +143,7 @@ contains
     !
     integer:: nBuffer
     ! index of first/last particle on the field line
-    integer:: iFirst, iLast
+    integer:: iLast
 
     character(len=*), parameter:: NameSub = 'SP:read_restart'
     !--------------------------------------------------------------------------
@@ -182,10 +181,9 @@ contains
        end do
 
        ! get min and max particle indexes on this field line
-       iFirst = iGridLocal_IB(Begin_, iBlock)
        iLast  = iGridLocal_IB(End_,   iBlock)
 
-       do iParticle = iFirst, iLast
+       do iParticle = 1, iLast
           ! background plasma paramters
           do i = 0, Z_
              nBuffer = nBuffer + 1

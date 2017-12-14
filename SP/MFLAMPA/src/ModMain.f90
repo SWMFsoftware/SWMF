@@ -22,7 +22,7 @@ module SP_ModMain
        Wave1_, Wave2_, &
        XMin_, YMin_, ZMin_, Length_, &
        iComm, iProc, nProc, nBlock, &
-       Proc_, Block_, Begin_, End_, Shock_, ShockOld_, Offset_,&
+       Proc_, Block_, End_, Shock_, ShockOld_, Offset_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
@@ -58,7 +58,7 @@ module SP_ModMain
        Wave1_, Wave2_, &
        XMin_, YMin_, ZMin_, Length_, &
        iComm, iProc, nProc, nBlock, &
-       Proc_, Block_, Begin_, End_, Shock_, ShockOld_, Offset_,&
+       Proc_, Block_, End_, Shock_, ShockOld_, Offset_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
@@ -230,12 +230,11 @@ contains
       use SP_ModGrid, ONLY: U_, D_, S_, DLogRho_, distance_to_next
       ! recompute some values (magnitudes of plasma velocity and magnetic field)
       ! so they are consistent with components for all lines
-      integer:: iBlock, iParticle, iBegin, iEnd
+      integer:: iBlock, iParticle, iEnd
       !--------------------------------------------------------------------------
       do iBlock = 1, nBlock
-         iBegin = iGridLocal_IB(Begin_,iBlock)
          iEnd   = iGridLocal_IB(End_,  iBlock)
-         do iParticle = iBegin, iEnd
+         do iParticle = 1, iEnd
             ! if particle has left the domain -> cut the rest of the line
             if(sum(State_VIB(X_:Z_, iParticle, iBlock)**2) > RMax**2)then
                iGridLocal_IB(End_,  iBlock) = iParticle - 1
@@ -261,7 +260,7 @@ contains
                  distance_to_next(iParticle, iBlock)
 
             ! distance from the beginning of the line
-            if(iParticle == iGridLocal_IB(Begin_,  iBlock))then
+            if(iParticle == 1)then
                State_VIB(S_, iParticle, iBlock) = 0.0
             else
                State_VIB(S_, iParticle, iBlock) = &
@@ -271,9 +270,9 @@ contains
          end do
          ! location of shock
          if(iGridLocal_IB(ShockOld_, iBlock) < 1)&
-              iGridLocal_IB(ShockOld_, iBlock)= iBegin
+              iGridLocal_IB(ShockOld_, iBlock)= 1
          if(iGridLocal_IB(Shock_, iBlock) < 1)&
-              iGridLocal_IB(Shock_, iBlock)   = iBegin
+              iGridLocal_IB(Shock_, iBlock)   = 1
       end do
     end subroutine fix_grid_consistency
   end subroutine run

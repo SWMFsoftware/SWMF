@@ -15,7 +15,7 @@ module SP_wrapper
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, &
        ParamLocal_IB, DataInputTime, Offset_,&
-       Block_, Proc_, Begin_, End_, Shock_, ShockOld_, XMin_, ZMin_, Length_,&
+       Block_, Proc_, End_, Shock_, ShockOld_, XMin_, ZMin_, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
        Wave1_, Wave2_
   use CON_comp_info
@@ -335,17 +335,16 @@ contains
     subroutine copy_old_state
       use SP_ModGrid, ONLY: nVarRead
       ! copy current state to old state for all field lines
-      integer:: iBegin, iEnd, iBlock
+      integer:: iEnd, iBlock
       !-----------------------------------------------------------------------
       do iBlock = 1, nBlock
-         iBegin = iGridLocal_IB(Begin_,iBlock)
          iEnd   = iGridLocal_IB(End_,  iBlock)
-         State_VIB((/RhoOld_,BOld_/), iBegin:iEnd, iBlock) = &
-              State_VIB((/Rho_,B_/),  iBegin:iEnd, iBlock)
+         State_VIB((/RhoOld_,BOld_/), 1:iEnd, iBlock) = &
+              State_VIB((/Rho_,B_/),  1:iEnd, iBlock)
          ! reset other variables
-         State_VIB(1:nVarRead,iBegin:iEnd, iBlock) = 0.0
+         State_VIB(1:nVarRead,1:iEnd, iBlock) = 0.0
       end do
-    end subroutine Copy_old_state
+    end subroutine copy_old_state
 
   end subroutine SP_put_input_time
   !===================================================================
@@ -395,7 +394,6 @@ contains
     iParticle = Put%iCB_II(1,iPutStart) + iGridLocal_IB(Offset_,iBlock)
     ! put coordinates
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
-    iGridLocal_IB(Begin_,iBlock)=MIN(iGridLocal_IB(Begin_,iBlock),iParticle)
     iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
   end subroutine SP_put_line
 
@@ -413,7 +411,7 @@ contains
     logical, intent(in) :: DoInit, DoAdjustStart, DoAdjustEnd
     ! once new geometry of lines has been put, account for some particles
     ! exiting the domain (can happen both at the beginning and the end)
-    integer:: iParticle, iBlock, iEndNew, iBegin, iEnd, iOffset ! loop variables
+    integer:: iParticle, iBlock, iBegin,  iEnd, iOffset ! loop variables
     logical:: IsMissingCurr, IsMissingPrev
     real   :: R2
     
@@ -434,11 +432,11 @@ contains
        ! component, nullify offset
        !/
        if(DoAdjustStart)iGridLocal_IB(Offset_,iBlock) = 0
-       iBegin = iGridLocal_IB(Begin_,iBlock)
+       iBegin = 1
        iEnd   = iGridLocal_IB(End_,  iBlock)
-       IsMissingPrev = all(State_VIB(X_:Z_,iBegin,iBlock)==0.0)
-       R2 = sum(State_VIB(X_:Z_,iBegin,iBlock)**2)
-       do iParticle = iBegin + 1, iEnd
+       IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
+       R2 = sum(State_VIB(X_:Z_,1,iBlock)**2)
+       do iParticle = 2, iEnd
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
 
           if(IsMissingCurr .and. R2 > RBufferMin**2)then
@@ -450,21 +448,18 @@ contains
           if(.not.IsMissingCurr)then
              R2 = sum(State_VIB(X_:Z_,iParticle,iBlock)**2)
              if(IsMissingPrev)then
-                iGridLocal_IB(Begin_,  iBlock) = iParticle
+                iBegin = iParticle
              end if
           end if
           IsMissingPrev = IsMissingCurr
        end do
-       if(DoAdjustStart.and.iGridLocal_IB(Begin_,iBlock) /= 1)then
+       if(DoAdjustStart.and.iBegin /= 1)then
           !\
           ! Offset particle arrays
           !/
-          iBegin = iGridLocal_IB(Begin_, iBlock)
           iEnd   = iGridLocal_IB(End_,   iBlock) 
-          iOffset = 1 - iGridLocal_IB(Begin_, iBlock)
-          iEndNew= iEnd  + iOffset
-          iGridLocal_IB(Begin_, iBlock) = 1
-          iGridLocal_IB(End_,   iBlock) = iEndNew
+          iOffset = 1 - iBegin
+          iGridLocal_IB(End_,   iBlock) = iEnd  + iOffset
           iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Shock_, iBlock) +&
                iOffset
           iGridLocal_IB(ShockOld_, iBlock) = iGridLocal_IB(ShockOld_, iBlock)+&
@@ -502,17 +497,17 @@ contains
       real:: Alpha
       !---------------
       ! get the coordinates of lower particle
-      Xyz1_D = State_VIB(X_:Z_, iGridLocal_IB(Begin_,iBlock), iBlock)
+      Xyz1_D = State_VIB(X_:Z_, 1, iBlock)
 
       ! generally, field direction isn't known
       ! approximate it using directions of first 2 segments of the line
       Dist1_D = &
-           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock),   iBlock) - &
-           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+1, iBlock)
+           State_VIB((/X_, Y_, Z_/), 1, iBlock) - &
+           State_VIB((/X_, Y_, Z_/), 2, iBlock)
       Dist1 = sqrt(sum(Dist1_D**2))
       Dist2_D = &
-           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+1, iBlock) - &
-           State_VIB((/X_, Y_, Z_/), iGridLocal_IB(Begin_,iBlock)+2, iBlock)
+           State_VIB((/X_, Y_, Z_/), 2, iBlock) - &
+           State_VIB((/X_, Y_, Z_/), 3, iBlock)
       Dist2 = sqrt(sum(Dist2_D**2))
       Dir0_D = ((2*Dist1+Dist2)*Dist1_D - Dist1*Dist2_D) / (Dist1 + Dist2)
 

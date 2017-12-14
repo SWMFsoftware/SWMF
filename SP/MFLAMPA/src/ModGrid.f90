@@ -20,7 +20,7 @@ module SP_ModGrid
   public:: State_VIB, Flux_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
-  public:: Begin_, End_, Shock_, ShockOld_, XMin_, YMin_, ZMin_, Length_
+  public:: End_, Shock_, ShockOld_, XMin_, YMin_, ZMin_, Length_
   public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_, Offset_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
@@ -81,13 +81,12 @@ module SP_ModGrid
   integer, parameter:: &
        Proc_  = 1, & ! Processor that has this line/node
        Block_ = 2    ! Block that has this line/node
-  integer, parameter:: nBlockIndexes = 5
+  integer, parameter:: nBlockIndexes = 4
   integer, parameter:: &
-       Begin_   = 1, & ! Index of the 1st particle on this line/node
-       End_     = 2, & ! Index of the last particle on this line/node
-       Shock_   = 3, & ! Current location of a shock wave
-       ShockOld_= 4, & ! Old location of a shock wave
-       Offset_  = 5    ! To account for the dymaical grid distinction 
+       End_     = 1, & ! Index of the last particle on this line/node
+       Shock_   = 2, & ! Current location of a shock wave
+       ShockOld_= 3, & ! Old location of a shock wave
+       Offset_  = 4    ! To account for the dymaical grid distinction 
                        ! from that updated in the other components
   
   integer, parameter:: nBlockParam = 4
@@ -315,7 +314,6 @@ contains
           iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
           if(iProcNode==iProc)then
              iNode_B(iBlock) = iNode
-             iGridLocal_IB(Begin_,   iBlock) = 1
              iGridLocal_IB(End_,     iBlock) = 1
              iGridLocal_IB(Shock_,   iBlock) = 0
              iGridLocal_IB(ShockOld_,iBlock) = 0

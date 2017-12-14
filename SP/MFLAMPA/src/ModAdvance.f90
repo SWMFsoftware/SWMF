@@ -12,7 +12,7 @@ module SP_ModAdvance
 
   use SP_ModGrid, ONLY: &
        X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
-       Begin_, End_, Shock_, ShockOld_, DLogRho_, &
+       End_, Shock_, ShockOld_, DLogRho_, &
        nBlock, &
        State_VIB, Distribution_IIB, iGridLocal_IB, &
        MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
@@ -67,7 +67,7 @@ module SP_ModAdvance
   real:: CFLMax = 0.9
   !-----------------------------
   ! variables shared between subroutines in this module
-  integer:: iBegin, iEnd, iBlock, iShock
+  integer:: iEnd, iBlock, iShock
   real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
   real, dimension(1:nParticleMax):: DLogRho_I
   real, dimension(1:nParticleMax):: Radius_I, B_I,   BOld_I
@@ -135,7 +135,7 @@ contains
     integer:: iBlock, iParticle, iMomentumBin
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
-       do iParticle = iGridLocal_IB(Begin_,iBlock), iGridLocal_IB(End_,iBlock)
+       do iParticle = 1, iGridLocal_IB(End_,iBlock)
           do iMomentumBin = 1, nMomentumBin
              Distribution_IIB(iMomentumBin,iParticle,iBlock) = &
                   cTiny / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
@@ -155,14 +155,14 @@ contains
     integer:: iShockCandidate
     !--------------------------------------------------------------------------
     if(.not.DoTraceShock)then
-       iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Begin_, iBlock)
+       iGridLocal_IB(Shock_, iBlock) = 1
        RETURN
     end if
 
     ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
     ! shock never moves back
     iSearchMin= max(iGridLocal_IB(ShockOld_, iBlock), &
-         iGridLocal_IB(Begin_, iBlock) + nWidth )
+         1 + nWidth )
     iSearchMax= iGridLocal_IB(End_, iBlock) - nWidth - 1
     iShockCandidate = iSearchMin - 1 + maxloc(&
          DLogRho_I(iSearchMin:iSearchMax),&
@@ -242,7 +242,7 @@ contains
     integer:: iParticle
     real:: Density, Momentum
     !----------------------------------------
-    do iParticle = iBegin, iEnd
+    do iParticle = 1, iEnd
        ! default injection distribution, see Sokolov et al., 2004, eq (3)
        Density = Rho_I(iParticle)
        Momentum= kinetic_energy_to_momentum(&
@@ -258,36 +258,36 @@ contains
   subroutine set_diffusion
     ! set diffusion coefficient for the current line
     !--------------------------------------------------------------------------
-    DOuter_I(iBegin:iEnd) = B_I(iBegin:iEnd)
+    DOuter_I(1:iEnd) = B_I(1:iEnd)
     if(.not.UseRealDiffusionUpstream)then
        ! Sokolov et al., 2004: eq (4), 
        ! note: P = Energy * Vel / C**2
-       DInnerInj_I(iBegin:iEnd) = &
+       DInnerInj_I(1:iEnd) = &
             BOverDeltaB2*&
             cGyroRadius*(MomentumInj*cLightSpeed)**2/&
-            (B_I(iBegin:iEnd)**2*TotalEnergyInj) / RSun**2
+            (B_I(1:iEnd)**2*TotalEnergyInj) / RSun**2
     else
        ! diffusion is different up- and down-stream
        ! Sokolov et al. 2004, paragraphs before and after eq (4)
-       where(Radius_I(iBegin:iEnd) > 0.9 * Radius_I(iShock))
+       where(Radius_I(1:iEnd) > 0.9 * Radius_I(iShock))
           ! upstream:
-          DInnerInj_I(iBegin:iEnd) = &
-               0.2/3.0 * Radius_I(iBegin:iEnd) / RSun * &
-               (MomentumInj*cLightSpeed**2)/(B_I(iBegin:iEnd)*TotalEnergyInj)*&
+          DInnerInj_I(1:iEnd) = &
+               0.2/3.0 * Radius_I(1:iEnd) / RSun * &
+               (MomentumInj*cLightSpeed**2)/(B_I(1:iEnd)*TotalEnergyInj)*&
                (MomentumInj*cLightSpeed/energy_in('GeV'))**(1.0/3)
        elsewhere
           ! downstream
-          DInnerInj_I(iBegin:iEnd)=&
+          DInnerInj_I(1:iEnd)=&
                cGyroRadius*(MomentumInj*cLightSpeed)**2 / RSun**2/&
-               (B_I(iBegin:iEnd)**2 * TotalEnergyInj)/&
+               (B_I(1:iEnd)**2 * TotalEnergyInj)/&
                (10.0*CInj*MachAlfven) / &
-               min(1.0, 1.0/0.9 * Radius_I(iBegin:iEnd)/Radius_I(iShock))
+               min(1.0, 1.0/0.9 * Radius_I(1:iEnd)/Radius_I(iShock))
        end where
     end if
 
     ! set the boundary condition for diffusion
-    Distribution_IIB(2:nMomentumBin, iBegin, iBlock) = &
-         Distribution_IIB(1, iBegin, iBlock) * &
+    Distribution_IIB(2:nMomentumBin, 1, iBlock) = &
+         Distribution_IIB(1, 1, iBlock) * &
          (MomentumScale_I(1) / MomentumScale_I(2:nMomentumBin))**SpectralIndex
   end subroutine set_diffusion
 
@@ -296,7 +296,7 @@ contains
   subroutine set_fermi_first_order
     ! first order Fermi acceleration for the current line
     !--------------------------------------------------------------------------
-    FermiFirst_I(iBegin:iEnd) = DLogRho_I(iBegin:iEnd) / (3*DLogMomentum)
+    FermiFirst_I(1:iEnd) = DLogRho_I(1:iEnd) / (3*DLogMomentum)
  end subroutine set_fermi_first_order
 
   !===========================================================================
@@ -326,17 +326,16 @@ contains
     do iBlock = 1, nBlock
 
        ! the active particles on the line
-       iBegin = iGridLocal_IB(Begin_, iBlock)
        iEnd   = iGridLocal_IB(End_, iBlock)
        ! various data along the line
-       Radius_I(iBegin:iEnd) = &
-            sqrt(sum(State_VIB(X_:Z_, iBegin:iEnd, iBlock)**2, 1))
-       Rho_I(    iBegin:iEnd) = State_VIB(Rho_,    iBegin:iEnd,iBlock)
-       U_I(      iBegin:iEnd) = State_VIB(U_,      iBegin:iEnd,iBlock)
-       T_I(      iBegin:iEnd) = State_VIB(T_,      iBegin:iEnd,iBlock)
-       BOld_I(   iBegin:iEnd) = State_VIB(BOld_,   iBegin:iEnd,iBlock)
-       RhoOld_I( iBegin:iEnd) = State_VIB(RhoOld_, iBegin:iEnd,iBlock)
-       DLogRho_I(iBegin:iEnd) = State_VIB(DLogRho_,iBegin:iEnd,iBlock)!log(Rho_I(iBegin:iEnd)/RhoOld_I(iBegin:iEnd))
+       Radius_I(1:iEnd) = &
+            sqrt(sum(State_VIB(X_:Z_, 1:iEnd, iBlock)**2, 1))
+       Rho_I(    1:iEnd) = State_VIB(Rho_,    1:iEnd,iBlock)
+       U_I(      1:iEnd) = State_VIB(U_,      1:iEnd,iBlock)
+       T_I(      1:iEnd) = State_VIB(T_,      1:iEnd,iBlock)
+       BOld_I(   1:iEnd) = State_VIB(BOld_,   1:iEnd,iBlock)
+       RhoOld_I( 1:iEnd) = State_VIB(RhoOld_, 1:iEnd,iBlock)
+       DLogRho_I(1:iEnd) = State_VIB(DLogRho_,1:iEnd,iBlock)!log(Rho_I(1:iEnd)/RhoOld_I(1:iEnd)
 
        ! identify shock in the data
        call get_shock_location
@@ -356,15 +355,15 @@ contains
        do iProgress = 1, nProgress
           ! account for change in the background up to the current moment
           Alpha = real(iProgress) / real(nProgress)
-          Rho_I(iBegin:iEnd) = State_VIB(RhoOld_,iBegin:iEnd,iBlock) +Alpha *&
-               (State_VIB(Rho_,  iBegin:iEnd,iBlock) - &
-               State_VIB(RhoOld_,iBegin:iEnd,iBlock))
+          Rho_I(1:iEnd) = State_VIB(RhoOld_,1:iEnd,iBlock) +Alpha *&
+               (State_VIB(Rho_,  1:iEnd,iBlock) - &
+               State_VIB(RhoOld_,1:iEnd,iBlock))
 
-          DLogRho_I(iBegin:iEnd)=log(Rho_I(iBegin:iEnd)/RhoOld_I(iBegin:iEnd))
+          DLogRho_I(1:iEnd)=log(Rho_I(1:iEnd)/RhoOld_I(1:iEnd))
 
-          B_I(iBegin:iEnd) = State_VIB(BOld_,iBegin:iEnd,iBlock) + Alpha*&
-               (State_VIB(B_,  iBegin:iEnd,iBlock) - &
-               State_VIB(BOld_,iBegin:iEnd,iBlock))
+          B_I(1:iEnd) = State_VIB(BOld_,1:iEnd,iBlock) + Alpha*&
+               (State_VIB(B_,  1:iEnd,iBlock) - &
+               State_VIB(BOld_,1:iEnd,iBlock))
           iShock = iShockOld + iProgress
 
           ! find the shock alfven mach number, also steepen the shock
@@ -379,14 +378,14 @@ contains
           ! in momentum space
           call set_fermi_first_order
 
-          RhoOld_I(iBegin:iEnd) = Rho_I(iBegin:iEnd)
-          BOld_I(  iBegin:iEnd) = B_I(  iBegin:iEnd)
+          RhoOld_I(1:iEnd) = Rho_I(1:iEnd)
+          BOld_I(  1:iEnd) = B_I(  1:iEnd)
 
           Dt = DtProgress
           nStep = 1
           if(nStep>1)then
              Dt = Dt / nStep
-             FermiFirst_I(iBegin:iEnd) = FermiFirst_I(iBegin:iEnd) / nStep
+             FermiFirst_I(1:iEnd) = FermiFirst_I(1:iEnd) / nStep
           end if
 
           ! compute diffusion along the field line
@@ -396,7 +395,7 @@ contains
              call set_advection_boundary_condition
 
              ! advection in the momentum space
-             do iParticle = iBegin+1, iEnd
+             do iParticle = 2, iEnd
                 call advance_log_advection(&
                      FermiFirst_I(iParticle),nMomentumBin-2,1,1,&
                      Distribution_IIB(1:nMomentumBin,iParticle,iBlock), &
@@ -407,23 +406,23 @@ contains
              if(.not.UseDiffusion) CYCLE
              do iMomentumBin = 1, nMomentumBin
                 Momentum = exp((iMomentumBin-1) * DLogMomentum)
-                DInner_I(iBegin:iEnd) =&
-                     DInnerInj_I(iBegin:iEnd) * Momentum**2 * &
+                DInner_I(1:iEnd) =&
+                     DInnerInj_I(1:iEnd) * Momentum**2 * &
                      TotalEnergyInj/&
                      momentum_to_energy(Momentum*MomentumInj,NameParticle)
                 if(UseRealDiffusionUpstream)then
-                   where(Radius_I(iBegin:iEnd) > 0.9*Radius_I(iShock))
+                   where(Radius_I(1:iEnd) > 0.9*Radius_I(iShock))
                       ! upstream:
-                      DInner_I(iBegin:iEnd) = &
-                           DInner_I(iBegin:iEnd) / Momentum**(2.0/3)
+                      DInner_I(1:iEnd) = &
+                           DInner_I(1:iEnd) / Momentum**(2.0/3)
                    end where
                 end if
-                DInner_I(iBegin:iEnd) = max(DInner_I(iBegin:iEnd),&
-                     DiffCoeffMin/DOuter_I(iBegin:iEnd))
-                call advance_diffusion(Dt, iEnd-iBegin+1,&
-                     State_VIB(D_,iBegin:iEnd,iBlock), &
-                     Distribution_IIB(iMomentumBin,iBegin:iEnd,iBlock),&
-                     DOuter_I(iBegin:iEnd), DInner_I(iBegin:iEnd))
+                DInner_I(1:iEnd) = max(DInner_I(1:iEnd),&
+                     DiffCoeffMin/DOuter_I(1:iEnd))
+                call advance_diffusion(Dt, iEnd,&
+                     State_VIB(D_,1:iEnd,iBlock), &
+                     Distribution_IIB(iMomentumBin,1:iEnd,iBlock),&
+                     DOuter_I(1:iEnd), DInner_I(1:iEnd))
              end do
 
           end do
