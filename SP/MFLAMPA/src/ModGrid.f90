@@ -16,11 +16,11 @@ module SP_ModGrid
        nBlockParam
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
-  public:: iGridGlobal_IA, iGridLocal_IB, ParamLocal_IB, iNode_II, iNode_B
+  public:: iGridGlobal_IA, iGridLocal_IB, FootPoint_VB, iNode_II, iNode_B
   public:: State_VIB, Flux_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
-  public:: End_, Shock_, ShockOld_, XMin_, YMin_, ZMin_, Length_
+  public:: nParticle_B, Shock_, ShockOld_, Length_
   public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_, Offset_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
@@ -73,27 +73,23 @@ module SP_ModGrid
   ! 1st index - identification of info field
   ! 2nd index - node number / block number
   integer, allocatable:: iGridGlobal_IA(:,:)
-  integer, allocatable:: iGridLocal_IB(:,:)
-  real,    allocatable:: ParamLocal_IB(:,:)
+  integer, allocatable:: iGridLocal_IB(:,:), nParticle_B(:)
+  real,    allocatable:: FootPoint_VB(:,:)
   !----------------------------------------------------------------------------
   ! Number of info fields per node/block and their identifications
   integer, parameter:: nNodeIndexes = 2
   integer, parameter:: &
        Proc_  = 1, & ! Processor that has this line/node
        Block_ = 2    ! Block that has this line/node
-  integer, parameter:: nBlockIndexes = 4
+  integer, parameter:: nBlockIndexes = 3
   integer, parameter:: &
-       End_     = 1, & ! Index of the last particle on this line/node
-       Shock_   = 2, & ! Current location of a shock wave
-       ShockOld_= 3, & ! Old location of a shock wave
-       Offset_  = 4    ! To account for the dymaical grid distinction 
+       Shock_   = 1, & ! Current location of a shock wave
+       ShockOld_= 2, & ! Old location of a shock wave
+       Offset_  = 3    ! To account for the dymaical grid distinction 
                        ! from that updated in the other components
   
   integer, parameter:: nBlockParam = 4
-  integer, parameter:: &
-       XMin_   = 1, & ! 
-       YMin_   = 2, & ! Foot-prints of the field lines on the surface R=RMin;
-       ZMin_   = 3, & ! 
+  integer, parameter:: & 
        Length_ = 4    ! init length of segment 1-2: control for new particles
                       ! being appended to the beginnings of lines
   !----------------------------------------------------------------------------
@@ -290,10 +286,12 @@ contains
     call check_allocate(iError, NameSub//'iNode_B')
     allocate(iGridGlobal_IA(nNodeIndexes, nNode), stat=iError)
     call check_allocate(iError, NameSub//'iGridGlobal_IA')
+    allocate(nParticle_B(nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'nParticle_B')
     allocate(iGridLocal_IB(nBlockIndexes, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'iGridLocal_IB')
-    allocate(ParamLocal_IB(nBlockParam, nBlock), stat=iError)
-    call check_allocate(iError, NameSub//'ParamLocal_IB')
+    allocate(FootPoint_VB(nBlockParam, nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'FootPoint_VB')
     allocate(State_VIB(LagrID_:nVar,1:nParticleMax,nBlock), &
          stat=iError)
     call check_allocate(iError, NameSub//'State_VIB')
@@ -314,10 +312,8 @@ contains
           iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
           if(iProcNode==iProc)then
              iNode_B(iBlock) = iNode
-             iGridLocal_IB(End_,     iBlock) = 1
-             iGridLocal_IB(Shock_,   iBlock) = 0
-             iGridLocal_IB(ShockOld_,iBlock) = 0
-             iGridLocal_IB(Offset_,  iBlock) = 0
+             nParticle_B(     iBlock) = 1
+             iGridLocal_IB(:, iBlock) = 0
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
           iGridGlobal_IA(Block_,  iNode)  = iBlock
@@ -332,7 +328,7 @@ contains
     ! reset and fill data containers
     !/
     Distribution_IIB = tiny(1.0)
-    State_VIB = -1; Flux_VIB = -1; ParamLocal_IB = -1
+    State_VIB = -1; Flux_VIB = -1; FootPoint_VB = -1
     
     !\
     ! reset lagrangian ids
@@ -409,33 +405,35 @@ contains
        ! check if the beginning of the line moved far enough from its 
        ! footprint on the solar surface
        DistanceToMin = sqrt(sum((&
-            State_VIB(X_:Z_,1,iBlock) - ParamLocal_IB(XMin_:ZMin_,iBlock))**2))
+            State_VIB(X_:Z_,1,iBlock) - FootPoint_VB(X_:Z_,iBlock))**2))
        ! skip the line if it's still close to the Sun
-       if(DistanceToMin * (1.0 + cTol) < ParamLocal_IB(Length_, iBlock)) CYCLE
+       if(DistanceToMin * (1.0 + cTol) < FootPoint_VB(Length_, iBlock)) CYCLE
        ! append a new particle
        !-----------------------
        ! check if have enough space
-       if(nParticleMax == iGridLocal_IB(End_, iBlock))&
+       if(nParticleMax == nParticle_B( iBlock))&
             call CON_Stop(NameSub//&
             ': not enough memory allocated to append a new particle')
        ! shift the grid:
-       State_VIB(     :,2:iGridLocal_IB(End_, iBlock)+1, iBlock) = &
-            State_VIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
-       Distribution_IIB(     :,2:iGridLocal_IB(End_, iBlock)+1, iBlock) = &
-            Distribution_IIB(:,1:iGridLocal_IB(End_, iBlock),   iBlock)
-       iGridLocal_IB(End_, iBlock)  = iGridLocal_IB(End_, iBlock) + 1
+       State_VIB(     :,2:nParticle_B( iBlock)+1, iBlock) = &
+            State_VIB(:,1:nParticle_B( iBlock),   iBlock)
+       Distribution_IIB(     :,2:nParticle_B( iBlock)+1, iBlock) = &
+            Distribution_IIB(:,1:nParticle_B( iBlock),   iBlock)
+       nParticle_B( iBlock)  = nParticle_B( iBlock) + 1
        !Particles ID as handled by other components keep unchanged
        !while their order numbers in SP are increased by 1. Therefore,
        iGridLocal_IB(Offset_, iBlock)  = iGridLocal_IB(Offset_, iBlock) + 1
        ! put the new particle just above the lower boundary
        State_VIB(X_:Z_,  1, iBlock) = &
-            ParamLocal_IB(XMin_:ZMin_, iBlock) * (1.0 + cTol)
+            FootPoint_VB(X_:Z_, iBlock) * (1.0 + cTol)
        State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
        ! for old values of background parameters use extrapolation
        Alpha = DistanceToMin / (DistanceToMin + State_VIB(D_, 2, iBlock))
        State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
-            (Alpha+1) * State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
-            -Alpha    * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
+            (Alpha + 1)*State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
+            -Alpha     * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
+       Distribution_IIB(:,1,iBlock) = Distribution_IIB(:,2,iBlock) + &
+            Alpha*(Distribution_IIB(:,2,iBlock) - Distribution_IIB(:,3,iBlock))
     end do
   end subroutine append_particles
 

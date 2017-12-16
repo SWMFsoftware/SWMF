@@ -13,7 +13,7 @@ module SP_ModReadMhData
        nVarRead, nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, End_, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
+       Proc_, nParticle_B, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
        NameVar_V
 
@@ -96,6 +96,8 @@ contains
     case('idl','ascii')
        TypeFile = 'ascii'
        NameFormat='.out'
+    case('real4','real8')
+       NameFormat='.out'
     case default
        call CON_stop(NameSub//': input format was not set in PARAM.in')
     end select
@@ -146,7 +148,7 @@ contains
        State_VIB(1:nVarRead, 1:nParticleInput, iBlock) = &
             Buffer_II(1:nVarRead, 1:nParticleInput)
 
-       iGridLocal_IB(End_,  iBlock) = nParticleInput
+       nParticle_B(  iBlock) = nParticleInput
     end do
 
     ! advance read time and iteration
@@ -167,12 +169,12 @@ contains
     !--------------------------------------------------------------------------
     ! This is the value if the time is too large
     StringTime = '99999999'
-    if(Time < 100.0*86400) &
+    if(Time < 8640000) &
          write(StringTime,'(i2.2,i2.2,i2.2,i2.2)') &
-         int(                  Time          /86400.), & ! # days
-         int((Time-(86400.*int(Time/86400.)))/ 3600.), & ! # hours
-         int((Time-( 3600.*int(Time/ 3600.)))/   60.), & ! # minutes
-         int( Time-(   60.*int(Time/   60.)))            ! # seconds
+         int(                  Time          /86400), & ! # days
+         int((Time-(86400*int(Time/86400)))/ 3600), & ! # hours
+         int((Time-( 3600*int(Time/ 3600)))/   60), & ! # minutes
+         int( Time-(  60*int(Time/   60)))           ! # seconds
   end subroutine get_time_string
 
 end module SP_ModReadMhData

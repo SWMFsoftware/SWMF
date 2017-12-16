@@ -14,8 +14,8 @@ module SP_wrapper
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, &
-       ParamLocal_IB, DataInputTime, Offset_,&
-       Block_, Proc_, End_, Shock_, ShockOld_, XMin_, ZMin_, Length_,&
+       FootPoint_VB, DataInputTime, Offset_,&
+       Block_, Proc_, nParticle_B, Shock_, ShockOld_, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
        Wave1_, Wave2_
   use CON_comp_info
@@ -105,7 +105,7 @@ contains
   !========================================================================
   integer function SP_n_particle(iBlockLocal)
     integer, intent(in) :: iBlockLocal
-    SP_n_particle = iGridLocal_IB(End_,  iBlockLocal)
+    SP_n_particle = nParticle_B(  iBlockLocal)
   end function SP_n_particle
 
   !========================================================================
@@ -338,7 +338,7 @@ contains
       integer:: iEnd, iBlock
       !-----------------------------------------------------------------------
       do iBlock = 1, nBlock
-         iEnd   = iGridLocal_IB(End_,  iBlock)
+         iEnd   = nParticle_B(  iBlock)
          State_VIB((/RhoOld_,BOld_/), 1:iEnd, iBlock) = &
               State_VIB((/Rho_,B_/),  1:iEnd, iBlock)
          ! reset other variables
@@ -394,7 +394,7 @@ contains
     iParticle = Put%iCB_II(1,iPutStart) + iGridLocal_IB(Offset_,iBlock)
     ! put coordinates
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
-    iGridLocal_IB(End_,  iBlock)=MAX(iGridLocal_IB(End_,  iBlock),iParticle)
+    nParticle_B(  iBlock)=MAX(nParticle_B(  iBlock),iParticle)
   end subroutine SP_put_line
 
   !===================================================================
@@ -433,7 +433,7 @@ contains
        !/
        if(DoAdjustStart)iGridLocal_IB(Offset_,iBlock) = 0
        iBegin = 1
-       iEnd   = iGridLocal_IB(End_,  iBlock)
+       iEnd   = nParticle_B(  iBlock)
        IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
        R2 = sum(State_VIB(X_:Z_,1,iBlock)**2)
        do iParticle = 2, iEnd
@@ -441,7 +441,7 @@ contains
 
           if(IsMissingCurr .and. R2 > RBufferMin**2)then
              if(DoAdjustEnd)&
-                  iGridLocal_IB(End_,  iBlock) = iParticle - 1
+                  nParticle_B(  iBlock) = iParticle - 1
              EXIT
           end if
 
@@ -457,18 +457,18 @@ contains
           !\
           ! Offset particle arrays
           !/
-          iEnd   = iGridLocal_IB(End_,   iBlock) 
+          iEnd   = nParticle_B(   iBlock) 
           iOffset = 1 - iBegin
-          iGridLocal_IB(End_,   iBlock) = iEnd  + iOffset
+          nParticle_B(   iBlock) = iEnd  + iOffset
           iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Shock_, iBlock) +&
                iOffset
           iGridLocal_IB(ShockOld_, iBlock) = iGridLocal_IB(ShockOld_, iBlock)+&
                iOffset
           iGridLocal_IB(Offset_, iBlock)   = iGridLocal_IB(Offset_, iBlock) +&
                iOffset
-          State_VIB(:, 1:iGridLocal_IB(End_,iBlock), iBlock) = &
+          State_VIB(:, 1:nParticle_B(iBlock), iBlock) = &
                State_VIB(:, iBegin:iEnd, iBlock)
-          Distribution_IIB(:,1:iGridLocal_IB(End_,iBlock), iBlock) = &
+          Distribution_IIB(:,1:nParticle_B(iBlock), iBlock) = &
                Distribution_IIB(:,iBegin:iEnd, iBlock)
           ! need to recalculate footpoints
           call SP_set_line_foot_b(iBlock)
@@ -522,10 +522,10 @@ contains
       Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
 
       ! store new footpoint of the line
-      ParamLocal_IB(XMin_:ZMin_,iBlock) = Xyz1_D + Alpha * Dir0_D
+      FootPoint_VB(X_:Z_,iBlock) = Xyz1_D + Alpha * Dir0_D
       ! length is used to decide when need to append new particles:
       ! use distance between first two particles on the line
-      ParamLocal_IB(Length_,    iBlock) = Dist1
+      FootPoint_VB(Length_,    iBlock) = Dist1
     end subroutine SP_set_line_foot_b
   end subroutine SP_adjust_lines
   !=============================

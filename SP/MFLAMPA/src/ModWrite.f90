@@ -13,7 +13,7 @@ module SP_ModWrite
        nVar, nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
-       Proc_, End_, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
+       Proc_, nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V, TypeCoordSystem
@@ -378,7 +378,7 @@ contains
               File_I(iFile) % NameFormat
 
          ! get min and max particle indexes on this field line
-         iLast  = iGridLocal_IB(End_,   iBlock)
+         iLast  = nParticle_B(   iBlock)
          ! fill the output buffer
          File_I(iFile) % Buffer_II(1:nVarPlot, 1:iLast) = &
               State_VIB(File_I(iFile) % iVarPlot_V(1:nVarPlot), &
@@ -460,7 +460,7 @@ contains
               '_t'//StringTime//'_n', iIterGlobal, File_I(iFile) % NameFormat
 
          ! get max particle indexes on this field line
-         iLast  = iGridLocal_IB(End_,   iBlock)
+         iLast  = nParticle_B(   iBlock)
 
          ! find the particle just above the given radius
          do iParticle = 1 , iLast
@@ -578,7 +578,7 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! get max particle indexes on this field line
-         iLast  = iGridLocal_IB(End_,   iBlock)
+         iLast  = nParticle_B(   iBlock)
 
          ! find the particle just above the given radius
          do iParticle = 1 , iLast
@@ -706,7 +706,7 @@ contains
               File_I(iFile) % NameFormat
 
          ! get max particle indexes on this field line
-         iLast  = iGridLocal_IB(End_,   iBlock)
+         iLast  = nParticle_B(   iBlock)
          
          do iParticle = 1, nParticleMax
             ! reset values outside the line's range
@@ -773,7 +773,7 @@ contains
     ! energy limits of GOES channels
     EChannel_I = (/5,10,30,50,60,100/) * energy_in('MeV')
     do iBlock = 1, nBlock
-       do iParticle = 1, iGridLocal_IB(End_, iBlock)
+       do iParticle = 1, nParticle_B( iBlock)
           !\
           ! Integration loop with midpoint rule
           !/

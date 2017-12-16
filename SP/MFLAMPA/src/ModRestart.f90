@@ -10,8 +10,8 @@ module SP_ModRestart
        iProc, Z_,&
        nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
-       Distribution_IIB,  ParamLocal_IB, &
-       End_, &
+       Distribution_IIB,  FootPoint_VB, &
+       nParticle_B, &
        nBlockParam, nBlockIndexes
 
    use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
@@ -85,8 +85,8 @@ contains
             '.rst'
 
        ! fill the output buffer
-       nBuffer = 0
-
+       nBuffer = 1
+       Buffer_I(nBuffer) = nParticle_B(iBlock)
        ! general parameters
        do i = 1, nBlockIndexes
           nBuffer = nBuffer + 1
@@ -95,11 +95,11 @@ contains
        end do
        do i = 1, nBlockParam
           nBuffer = nBuffer + 1
-          Buffer_I(nBuffer) = ParamLocal_IB(i, iBlock)
+          Buffer_I(nBuffer) = FootPoint_VB(i, iBlock)
        end do
 
        ! get max particle indexes on this field line
-       iLast  = iGridLocal_IB(End_,   iBlock)
+       iLast  = nParticle_B(iBlock)
 
        do iParticle = 1, iLast
           ! background plasma paramters
@@ -167,7 +167,7 @@ contains
             )
 
        ! process buffer
-       nBuffer = 0
+       nBuffer = 1; nParticle_B(iBlock) = nint(Buffer_I(nBuffer))
 
        ! general parameters
        do i = 1, nBlockIndexes
@@ -177,11 +177,11 @@ contains
 
        do i = 1, nBlockParam
           nBuffer = nBuffer + 1
-          ParamLocal_IB(i, iBlock) = Buffer_I(nBuffer)
+          FootPoint_VB(i, iBlock) = Buffer_I(nBuffer)
        end do
 
        ! get min and max particle indexes on this field line
-       iLast  = iGridLocal_IB(End_,   iBlock)
+       iLast  = nParticle_B(iBlock)
 
        do iParticle = 1, iLast
           ! background plasma paramters

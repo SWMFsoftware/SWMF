@@ -19,15 +19,14 @@ module SP_ModMain
   use SP_ModGrid, ONLY: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
-       Wave1_, Wave2_, &
-       XMin_, YMin_, ZMin_, Length_, &
+       Wave1_, Wave2_, Length_, &
        iComm, iProc, nProc, nBlock, &
-       Proc_, Block_, End_, Shock_, ShockOld_, Offset_,&
+       Proc_, Block_, nParticle_B, Shock_, ShockOld_, Offset_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, &
-       ParamLocal_IB, TypeCoordSystem,&
+       FootPoint_VB, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes, &
        append_particles
   
@@ -55,14 +54,13 @@ module SP_ModMain
   public:: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
-       Wave1_, Wave2_, &
-       XMin_, YMin_, ZMin_, Length_, &
+       Wave1_, Wave2_, Length_, &
        iComm, iProc, nProc, nBlock, &
-       Proc_, Block_, End_, Shock_, ShockOld_, Offset_,&
+       Proc_, Block_, nParticle_B, Shock_, ShockOld_, Offset_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       Distribution_IIB, ParamLocal_IB, TypeCoordSystem,& 
+       Distribution_IIB, FootPoint_VB, TypeCoordSystem,& 
        get_node_indexes, append_particles
 
   ! Methods and variables from ModWrite
@@ -233,11 +231,11 @@ contains
       integer:: iBlock, iParticle, iEnd
       !--------------------------------------------------------------------------
       do iBlock = 1, nBlock
-         iEnd   = iGridLocal_IB(End_,  iBlock)
+         iEnd   = nParticle_B(  iBlock)
          do iParticle = 1, iEnd
             ! if particle has left the domain -> cut the rest of the line
             if(sum(State_VIB(X_:Z_, iParticle, iBlock)**2) > RMax**2)then
-               iGridLocal_IB(End_,  iBlock) = iParticle - 1
+               nParticle_B(  iBlock) = iParticle - 1
                EXIT
             end if
             ! plasma speed
@@ -255,7 +253,7 @@ contains
                  sqrt(sum(State_VIB(Bx_:Bz_,iParticle,iBlock)**2))
 
             ! distances between particles
-            if(iParticle < iGridLocal_IB(End_,  iBlock))&
+            if(iParticle < nParticle_B(  iBlock))&
                  State_VIB(D_, iParticle, iBlock) = &
                  distance_to_next(iParticle, iBlock)
 

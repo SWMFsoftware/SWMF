@@ -12,7 +12,7 @@ module SP_ModAdvance
 
   use SP_ModGrid, ONLY: &
        X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
-       End_, Shock_, ShockOld_, DLogRho_, &
+       nParticle_B, Shock_, ShockOld_, DLogRho_, &
        nBlock, &
        State_VIB, Distribution_IIB, iGridLocal_IB, &
        MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
@@ -135,7 +135,7 @@ contains
     integer:: iBlock, iParticle, iMomentumBin
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
-       do iParticle = 1, iGridLocal_IB(End_,iBlock)
+       do iParticle = 1, nParticle_B(iBlock)
           do iMomentumBin = 1, nMomentumBin
              Distribution_IIB(iMomentumBin,iParticle,iBlock) = &
                   cTiny / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
@@ -163,7 +163,7 @@ contains
     ! shock never moves back
     iSearchMin= max(iGridLocal_IB(ShockOld_, iBlock), &
          1 + nWidth )
-    iSearchMax= iGridLocal_IB(End_, iBlock) - nWidth - 1
+    iSearchMax= nParticle_B( iBlock) - nWidth - 1
     iShockCandidate = iSearchMin - 1 + maxloc(&
          DLogRho_I(iSearchMin:iSearchMax),&
          1, MASK = Radius_I(iSearchMin:iSearchMax) > 1.2)
@@ -326,7 +326,7 @@ contains
     do iBlock = 1, nBlock
 
        ! the active particles on the line
-       iEnd   = iGridLocal_IB(End_, iBlock)
+       iEnd   = nParticle_B( iBlock)
        ! various data along the line
        Radius_I(1:iEnd) = &
             sqrt(sum(State_VIB(X_:Z_, 1:iEnd, iBlock)**2, 1))
