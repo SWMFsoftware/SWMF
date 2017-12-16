@@ -7,7 +7,7 @@ module SP_ModRestart
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
-       iProc, Z_,&
+       iProc, LagrID_, Z_,&
        nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
        Distribution_IIB,  FootPoint_VB, &
@@ -30,9 +30,9 @@ module SP_ModRestart
   public:: set_restart_param, write_restart, read_restart
   public:: NameRestartInDir, NameRestartOutDir
 
-  integer, parameter:: nBufferMax = &
-       nBlockParam+nBlockIndexes+nParticleMax*(Z_+nMomentumBin)
-  real, allocatable:: Buffer_I(:)
+  !integer, parameter:: nBufferMax = &
+  !     nBlockParam+nBlockIndexes+nParticleMax*(Z_+nMomentumBin)
+  !real, allocatable:: Buffer_I(:)
 
 
   !----------------------------------------------------------------------------
@@ -51,28 +51,21 @@ contains
     character(len=*), parameter :: NameSub='SP:set_restart_param'
     !--------------------------------------------------------------------------
   end subroutine set_restart_param
-
   !============================================================================
-
   subroutine write_restart
+    use ModIoUnit,     ONLY: UnitTmp_
+    use ModUtilities,  ONLY: open_file, close_file
     ! write the restart data
  
     ! name of the output file
     character(len=100):: NameFile
-    ! loop variables
-    integer:: iBlock, iParticle, i
+    ! loop variable
+    integer:: iBlock
     ! indexes of corresponding node, latitude and longitude
     integer:: iNode, iLat, iLon
-    !
-    integer:: nBuffer
-    ! index of first/last particle on the field line
-    integer:: iLast
-
     character(len=*), parameter:: NameSub = 'SP:write_restart'
     !--------------------------------------------------------------------------
-    if(.not.allocated(Buffer_I))&
-         allocate(Buffer_I(nBufferMax))
-
+ 
     call write_restart_header
 
     do iBlock = 1, nBlock
@@ -83,73 +76,32 @@ contains
        write(NameFile,'(a,i3.3,a,i3.3,a)') &
             trim(NameRestartOutDir)//'data_',iLon,'_',iLat,&
             '.rst'
-
-       ! fill the output buffer
-       nBuffer = 1
-       Buffer_I(nBuffer) = nParticle_B(iBlock)
-       ! general parameters
-       do i = 1, nBlockIndexes
-          nBuffer = nBuffer + 1
-          Buffer_I(nBuffer) = &
-               real(iGridLocal_IB(i, iBlock))
-       end do
-       do i = 1, nBlockParam
-          nBuffer = nBuffer + 1
-          Buffer_I(nBuffer) = FootPoint_VB(i, iBlock)
-       end do
-
-       ! get max particle indexes on this field line
-       iLast  = nParticle_B(iBlock)
-
-       do iParticle = 1, iLast
-          ! background plasma paramters
-          do i = 0, Z_
-             nBuffer = nBuffer + 1
-             Buffer_I(nBuffer) = State_VIB(i, iParticle, iBlock)
-          end do
-
-          ! distribution
-          do i = 1, nMomentumBin
-             nBuffer = nBuffer + 1
-             Buffer_I(nBuffer) = Distribution_IIB(i, iParticle, iBlock)
-          end do
-       end do
-
-       ! print data to file
-       call save_plot_file(&
-            NameFile   = NameFile, &
-            TypeFileIn = 'real8', &
-            TimeIn     = TimeGlobal, &
-            nStepIn    = iIterGlobal, &
-            CoordMinIn_D = (/real(1)/), &
-            CoordMaxIn_D = (/real(iLast)/), &
-            VarIn_I    = Buffer_I(1:nBuffer)&
-            )
+       call open_file(file=NameFile, form='UNFORMATTED',&
+            NameCaller=NameSub)
+       write(UnitTmp_)real(nParticle_B(iBlock)),&
+            real(iGridLocal_IB(:, iBlock))
+       write(UnitTmp_)&
+            FootPoint_VB(:, iBlock),&
+            State_VIB(LagrID_:Z_,1:nParticle_B(iBlock), iBlock),&
+            Distribution_IIB(:,1:nParticle_B(iBlock), iBlock)
+       call close_file
     end do
-
   end subroutine write_restart
-
   !============================================================================
-
   subroutine read_restart
     ! read the restart data
 
     ! name of the input file
     character(len=100):: NameFile
     ! loop variables
-    integer:: iBlock, iParticle, i
+    integer:: iBlock
     ! indexes of corresponding node, latitude and longitude
     integer:: iNode, iLat, iLon
-    !
-    integer:: nBuffer
-    ! index of first/last particle on the field line
-    integer:: iLast
-
+    real   :: Aux, Aux_I(nBlockIndexes) !For reading integers
+    integer:: iError
     character(len=*), parameter:: NameSub = 'SP:read_restart'
     !--------------------------------------------------------------------------
-    if(.not.allocated(Buffer_I))&
-         allocate(Buffer_I(nBufferMax))
-
+   
     do iBlock = 1, nBlock
        iNode = iNode_B(iBlock)
        call get_node_indexes(iNode, iLon, iLat)
@@ -158,49 +110,26 @@ contains
        write(NameFile,'(a,i3.3,a,i3.3,a)') &
             trim(NameRestartInDir)//'data_',iLon,'_',iLat,&
             '.rst'
-
-       ! read data from file
-       call read_plot_file(&
-            NameFile   = NameFile, &
-            TypeFileIn = 'real8', &
-            VarOut_I    = Buffer_I(:)&
-            )
-
+       call open_file(file=NameFile,  status='old',&
+            form='UNFORMATTED', NameCaller=NameSub)
+       read(UnitTmp_,iostat = iError)Aux, Aux_I
+       if(iError>0)then
+          write(*,*)'Error in reading nPoint in Block=', iBlock
+          call close_file
+          call CON_stop('Run stops')
+       end if
        ! process buffer
-       nBuffer = 1; nParticle_B(iBlock) = nint(Buffer_I(nBuffer))
-
+       nParticle_B(iBlock) = nint(Aux)
        ! general parameters
-       do i = 1, nBlockIndexes
-          nBuffer = nBuffer + 1
-          iGridLocal_IB(i, iBlock) = nint(Buffer_I(nBuffer))
-       end do
-
-       do i = 1, nBlockParam
-          nBuffer = nBuffer + 1
-          FootPoint_VB(i, iBlock) = Buffer_I(nBuffer)
-       end do
-
-       ! get min and max particle indexes on this field line
-       iLast  = nParticle_B(iBlock)
-
-       do iParticle = 1, iLast
-          ! background plasma paramters
-          do i = 0, Z_
-             nBuffer = nBuffer + 1
-             State_VIB(i, iParticle, iBlock) = Buffer_I(nBuffer)
-          end do
-
-          ! distribution
-          do i = 1, nMomentumBin
-             nBuffer = nBuffer + 1
-             Distribution_IIB(i, iParticle, iBlock) = Buffer_I(nBuffer)
-          end do
-       end do
+       iGridLocal_IB(:, iBlock) = nint(Aux_I)
+       read(UnitTmp_, iostat = iError) &
+            FootPoint_VB(:, iBlock),&
+            State_VIB(LagrID_:Z_,1:nParticle_B(iBlock), iBlock),&
+            Distribution_IIB(:,1:nParticle_B(iBlock), iBlock)
+       call close_file
     end do
-
   end subroutine read_restart
-
-
+  !==========================
   subroutine write_restart_header
 
     ! full name of the header file
