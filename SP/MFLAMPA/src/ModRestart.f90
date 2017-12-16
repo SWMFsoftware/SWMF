@@ -11,8 +11,7 @@ module SP_ModRestart
        nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
        Distribution_IIB,  FootPoint_VB, &
-       nParticle_B, &
-       nBlockParam, nBlockIndexes
+       nParticle_B, nBlockIndexes
 
    use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
 
@@ -29,11 +28,6 @@ module SP_ModRestart
  
   public:: set_restart_param, write_restart, read_restart
   public:: NameRestartInDir, NameRestartOutDir
-
-  !integer, parameter:: nBufferMax = &
-  !     nBlockParam+nBlockIndexes+nParticleMax*(Z_+nMomentumBin)
-  !real, allocatable:: Buffer_I(:)
-
 
   !----------------------------------------------------------------------------
   ! the restart directory

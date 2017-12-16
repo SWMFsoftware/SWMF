@@ -12,8 +12,7 @@ module SP_ModGrid
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
   public:: append_particles
-  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nBlockIndexes, &
-       nBlockParam
+  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nBlockIndexes
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
   public:: iGridGlobal_IA, iGridLocal_IB, FootPoint_VB, iNode_II, iNode_B
@@ -87,8 +86,6 @@ module SP_ModGrid
        ShockOld_= 2, & ! Old location of a shock wave
        Offset_  = 3    ! To account for the dymaical grid distinction 
                        ! from that updated in the other components
-  
-  integer, parameter:: nBlockParam = 4
   integer, parameter:: & 
        Length_ = 4    ! init length of segment 1-2: control for new particles
                       ! being appended to the beginnings of lines
@@ -290,7 +287,7 @@ contains
     call check_allocate(iError, NameSub//'nParticle_B')
     allocate(iGridLocal_IB(nBlockIndexes, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'iGridLocal_IB')
-    allocate(FootPoint_VB(nBlockParam, nBlock), stat=iError)
+    allocate(FootPoint_VB(LagrID_:Length_, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'FootPoint_VB')
     allocate(State_VIB(LagrID_:nVar,1:nParticleMax,nBlock), &
          stat=iError)
@@ -427,6 +424,7 @@ contains
        State_VIB(X_:Z_,  1, iBlock) = &
             FootPoint_VB(X_:Z_, iBlock) * (1.0 + cTol)
        State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
+       FootPoint_VB(LagrID_,iBlock) = State_VIB(LagrID_, 1, iBlock) - 1.0
        ! for old values of background parameters use extrapolation
        Alpha = DistanceToMin / (DistanceToMin + State_VIB(D_, 2, iBlock))
        State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
