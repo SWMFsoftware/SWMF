@@ -6,18 +6,14 @@ module SP_ModAdvance
 
   use ModConst, ONLY: cPi, cMu, cProtonMass, cGyroradius, cLightSpeed, RSun
 
-  use ModCoordTransform, ONLY: rlonlat_to_xyz
-
   use SP_ModSize, ONLY: nParticleMax, nMomentumBin, nDim
 
   use SP_ModGrid, ONLY: &
        X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
-       nParticle_B, Shock_, ShockOld_, DLogRho_, &
-       nBlock, &
+       nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock, &
        State_VIB, Distribution_IIB, iGridLocal_IB, &
        MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
-       DMomentumOverDEnergy_I, &
-       distance_to_next
+       DMomentumOverDEnergy_I
 
   use SP_ModDiffusion, ONLY: advance_diffusion
 
@@ -31,7 +27,7 @@ module SP_ModAdvance
   
   private ! except
 
-  public:: TimeGlobal, iIterGlobal, &
+  public:: TimeGlobal, iIterGlobal, set_initial_condition, &
        set_injection_param, init_advance_const, advance
   public:: DoTraceShock, UseDiffusion
 
@@ -66,8 +62,6 @@ module SP_ModAdvance
   ! limitation of CFL number
   real:: CFLMax = 0.9
   !-----------------------------
-  ! variables shared between subroutines in this module
-  integer:: iEnd, iBlock, iShock
   real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
   real, dimension(1:nParticleMax):: DLogRho_I
   real, dimension(1:nParticleMax):: Radius_I, B_I,   BOld_I
@@ -135,7 +129,7 @@ contains
     integer:: iBlock, iParticle, iMomentumBin
     !--------------------------------------------------------------------------
     do iBlock = 1, nBlock
-       do iParticle = 1, nParticle_B(iBlock)
+       do iParticle = 1, nParticleMax
           do iMomentumBin = 1, nMomentumBin
              Distribution_IIB(iMomentumBin,iParticle,iBlock) = &
                   cTiny / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
@@ -147,7 +141,8 @@ contains
 
   !============================================================================
 
-  subroutine get_shock_location
+  subroutine get_shock_location(iBlock)
+    integer, intent(in) :: iBlock
     ! find location of a shock wave on every field line
     !--------------------------------------------------------------------------
     ! loop variable
@@ -163,7 +158,7 @@ contains
     ! shock never moves back
     iSearchMin= max(iGridLocal_IB(ShockOld_, iBlock), &
          1 + nWidth )
-    iSearchMax= nParticle_B( iBlock) - nWidth - 1
+    iSearchMax= nParticle_B(iBlock) - nWidth - 1
     iShockCandidate = iSearchMin - 1 + maxloc(&
          DLogRho_I(iSearchMin:iSearchMax),&
          1, MASK = Radius_I(iSearchMin:iSearchMax) > 1.2)
@@ -171,155 +166,20 @@ contains
     if(DLogRho_I(iShockCandidate) > 0.0)&
          iGridLocal_IB(Shock_, iBlock) = iShockCandidate
   end subroutine get_shock_location
-  !============================================================================
-
-  function mach_alfven() result(MachAlfven)
-    ! alfvenic mach number for the current line
-    real:: MachAlfven
-
-    real:: SpeedAlfven, SpeedUpstream
-    !--------------------------------------------
-    ! speed upstream is relative to the shock:
-    ! \rho_u * (U_u - V_{shock}) = \rho_d * (U_d - V_{shock})
-    SpeedUpstream = Rho_I(iShock+1-nWidth)*&
-         (U_I(  iShock+1-nWidth) - U_I(  iShock+nWidth))/ &
-         (Rho_I(iShock+1-nWidth) - Rho_I(iShock+nWidth))
-    SpeedAlfven = &
-         B_I(iShock+nWidth) / sqrt(cMu*cProtonMass*Rho_I(iShock+nWidth))
-    MachAlfven = SpeedUpstream / SpeedAlfven
-  end function mach_alfven
-
   !===========================================================================
-
-  subroutine steepen_shock
-    ! change the density profile near the shock front so it becomes steeper
-    ! for the current line
-    integer:: iParticle ! loop variable
-    real   :: DLogRhoBackground, DLogRhoExcess, Misc, Length
-    !--------------------------------------------------------------------------
-    ! compute the background value of DLogRho as average in the upstream 
-    DLogRhoBackground = 0.0
-
-    ! find the excess of DLogRho within the shock compared to background
-    ! averaged over length
-    DLogRhoExcess = 0.0
-    Length = 0.0
-    do iParticle = iShock - nWidth, iShock + nWidth - 1
-       Misc = 0.5 * (DLogRho_I(iParticle) + DLogRho_I(iParticle+1)) - &
-            DLogRhoBackground
-       if(Misc > 0.0)then
-          DLogRhoExcess = DLogRhoExcess + &
-               Misc * State_VIB(D_, iParticle, iBlock)
-          Length = Length + State_VIB(D_, iParticle, iBlock)
-       end if
-    end do
-
-    ! check for zero excess
-    if(DLogRhoExcess == 0.0)&
-         RETURN
-    ! otherwise, get the averaged value
-    DLogRhoExcess = DLogRhoExcess / Length
-
-    ! apply the result within the shock width
-    DLogRho_I(iShock-nWidth:iShock+nWidth) = min(&
-         DLogRhoBackground, &
-         DLogRho_I(iShock-nWidth:iShock+nWidth))
-    DLogRho_I(iShock) = DLogRhoExcess + DLogRhoBackground
-    
-    ! also, sharpen the magnitude of the magnetic field
-    ! post shock part
-    B_I(  iShock+1-nWidth:iShock+1) = maxval(B_I(  iShock+1-nWidth:iShock+1))
-    ! pre shock part
-    B_I(  iShock+1:iShock+nWidth) = minval(B_I(  iShock+1:iShock+nWidth))
-  end subroutine steepen_shock
-
-  !===========================================================================
-
-  subroutine set_advection_boundary_condition
-    ! set boundary conditions on each particle on the current line
-    !----------------------------------------
-    ! loop variable
-    integer:: iParticle
-    real:: Density, Momentum
-    !----------------------------------------
-    do iParticle = 1, iEnd
-       ! default injection distribution, see Sokolov et al., 2004, eq (3)
-       Density = Rho_I(iParticle)
-       Momentum= kinetic_energy_to_momentum(&
-            State_VIB(T_,iParticle,iBlock)*UnitEnergy,NameParticle)
-       Distribution_IIB(1,iParticle,iBlock) = &
-            0.25/cPi/(SpectralIndex-3) * CInj * Density / &
-            Momentum**3 * (Momentum/MomentumInj)**SpectralIndex
-    end do
-  end subroutine set_advection_boundary_condition
-
-  !===========================================================================
-
-  subroutine set_diffusion
-    ! set diffusion coefficient for the current line
-    !--------------------------------------------------------------------------
-    DOuter_I(1:iEnd) = B_I(1:iEnd)
-    if(.not.UseRealDiffusionUpstream)then
-       ! Sokolov et al., 2004: eq (4), 
-       ! note: P = Energy * Vel / C**2
-       DInnerInj_I(1:iEnd) = &
-            BOverDeltaB2*&
-            cGyroRadius*(MomentumInj*cLightSpeed)**2/&
-            (B_I(1:iEnd)**2*TotalEnergyInj) / RSun**2
-    else
-       ! diffusion is different up- and down-stream
-       ! Sokolov et al. 2004, paragraphs before and after eq (4)
-       where(Radius_I(1:iEnd) > 0.9 * Radius_I(iShock))
-          ! upstream:
-          DInnerInj_I(1:iEnd) = &
-               0.2/3.0 * Radius_I(1:iEnd) / RSun * &
-               (MomentumInj*cLightSpeed**2)/(B_I(1:iEnd)*TotalEnergyInj)*&
-               (MomentumInj*cLightSpeed/energy_in('GeV'))**(1.0/3)
-       elsewhere
-          ! downstream
-          DInnerInj_I(1:iEnd)=&
-               cGyroRadius*(MomentumInj*cLightSpeed)**2 / RSun**2/&
-               (B_I(1:iEnd)**2 * TotalEnergyInj)/&
-               (10.0*CInj*MachAlfven) / &
-               min(1.0, 1.0/0.9 * Radius_I(1:iEnd)/Radius_I(iShock))
-       end where
-    end if
-
-    ! set the boundary condition for diffusion
-    Distribution_IIB(2:nMomentumBin, 1, iBlock) = &
-         Distribution_IIB(1, 1, iBlock) * &
-         (MomentumScale_I(1) / MomentumScale_I(2:nMomentumBin))**SpectralIndex
-  end subroutine set_diffusion
-
-  !===========================================================================
-
-  subroutine set_fermi_first_order
-    ! first order Fermi acceleration for the current line
-    !--------------------------------------------------------------------------
-    FermiFirst_I(1:iEnd) = DLogRho_I(1:iEnd) / (3*DLogMomentum)
- end subroutine set_fermi_first_order
-
-  !===========================================================================
-
   subroutine advance(TimeLimit)
     ! advance the solution in time
     real, intent(in):: TimeLimit
-    integer:: iShockOld, iMomentumBin
-    integer:: nProgress, iProgress
-    integer:: iStep, nStep
-    integer:: iParticle
+    integer:: iEnd, iBlock, iParticle, iShock, iShockOld
+    integer:: Momentum, iMomentumBin
+    integer:: nProgress, iProgress, iStep
+    !Subcycling advection multiple times per each diffusion step, if desired
+    integer, parameter:: nStep = 1
     real   :: Alpha
-    real:: Momentum, DiffCoeffMin =1.0E+04 /RSun
+    real::  DiffCoeffMin =1.0E+04 /RSun
     real:: DtFull, DtProgress, Dt
-    logical, save:: IsFirstCall = .true.
-
     character(len=*), parameter:: NameSub = 'SP:advance'
     !--------------------------------------------------------------------------
-    if(IsFirstCall)then
-       IsFirstCall = .false.
-       call set_initial_condition
-    end if
-
     ! the full time step
     DtFull = TimeLimit - TimeGlobal
     ! go line by line and advance the solution
@@ -335,10 +195,11 @@ contains
        T_I(      1:iEnd) = State_VIB(T_,      1:iEnd,iBlock)
        BOld_I(   1:iEnd) = State_VIB(BOld_,   1:iEnd,iBlock)
        RhoOld_I( 1:iEnd) = State_VIB(RhoOld_, 1:iEnd,iBlock)
-       DLogRho_I(1:iEnd) = State_VIB(DLogRho_,1:iEnd,iBlock)!log(Rho_I(1:iEnd)/RhoOld_I(1:iEnd)
+       !log(Rho_I(1:iEnd)/RhoOld_I(1:iEnd)
+       DLogRho_I(1:iEnd) = State_VIB(DLogRho_,1:iEnd,iBlock)
 
        ! identify shock in the data
-       call get_shock_location
+       call get_shock_location(iBlock)
 
        ! find how far shock has travelled on this line: nProgress
        iShock    = iGridLocal_IB(Shock_,   iBlock)
@@ -376,13 +237,14 @@ contains
 
           ! 1st order Fermi acceleration is responsible for advection 
           ! in momentum space
-          call set_fermi_first_order
+          ! first order Fermi acceleration for the current line
+          !--------------------------------------------------------
+          FermiFirst_I(1:iEnd) = DLogRho_I(1:iEnd) / (3*DLogMomentum)
 
           RhoOld_I(1:iEnd) = Rho_I(1:iEnd)
           BOld_I(  1:iEnd) = B_I(  1:iEnd)
 
           Dt = DtProgress
-          nStep = 1
           if(nStep>1)then
              Dt = Dt / nStep
              FermiFirst_I(1:iEnd) = FermiFirst_I(1:iEnd) / nStep
@@ -424,11 +286,119 @@ contains
                      Distribution_IIB(iMomentumBin,1:iEnd,iBlock),&
                      DOuter_I(1:iEnd), DInner_I(1:iEnd))
              end do
-
           end do
-          
        end do
     end do
+  contains
+    function mach_alfven() result(MachAlfven)
+      ! alfvenic mach number for the current line
+      real:: MachAlfven
+      
+      real:: SpeedAlfven, SpeedUpstream
+      !--------------------------------------------
+      ! speed upstream is relative to the shock:
+      ! \rho_u * (U_u - V_{shock}) = \rho_d * (U_d - V_{shock})
+      SpeedUpstream = Rho_I(iShock+1-nWidth)*&
+           (U_I(  iShock+1-nWidth) - U_I(  iShock+nWidth))/ &
+           (Rho_I(iShock+1-nWidth) - Rho_I(iShock+nWidth))
+      SpeedAlfven = &
+           B_I(iShock+nWidth) / sqrt(cMu*cProtonMass*Rho_I(iShock+nWidth))
+      MachAlfven = SpeedUpstream / SpeedAlfven
+    end function mach_alfven
+    !=======================
+    subroutine steepen_shock
+      ! change the density profile near the shock front so it becomes steeper
+      ! for the current line
+      integer:: iParticle ! loop variable
+      real   :: DLogRhoBackground, DLogRhoExcess, Misc, Length
+      !--------------------------------------------------------------------------
+      ! compute the background value of DLogRho as average in the upstream 
+      DLogRhoBackground = 0.0
+
+      ! find the excess of DLogRho within the shock compared to background
+      ! averaged over length
+      DLogRhoExcess = 0.0
+      Length = 0.0
+      do iParticle = iShock - nWidth, iShock + nWidth - 1
+         Misc = 0.5 * (DLogRho_I(iParticle) + DLogRho_I(iParticle+1)) - &
+              DLogRhoBackground
+         if(Misc > 0.0)then
+            DLogRhoExcess = DLogRhoExcess + &
+                 Misc * State_VIB(D_, iParticle, iBlock)
+            Length = Length + State_VIB(D_, iParticle, iBlock)
+         end if
+      end do
+
+      ! check for zero excess
+      if(DLogRhoExcess == 0.0)RETURN
+      ! otherwise, get the averaged value
+      DLogRhoExcess = DLogRhoExcess / Length
+
+      ! apply the result within the shock width
+      DLogRho_I(iShock-nWidth:iShock+nWidth) = min(&
+           DLogRhoBackground, &
+           DLogRho_I(iShock-nWidth:iShock+nWidth))
+      DLogRho_I(iShock) = DLogRhoExcess + DLogRhoBackground
+
+      ! also, sharpen the magnitude of the magnetic field
+      ! post shock part
+      B_I(  iShock+1-nWidth:iShock+1) = maxval(B_I(  iShock+1-nWidth:iShock+1))
+      ! pre shock part
+      B_I(  iShock+1:iShock+nWidth) = minval(B_I(  iShock+1:iShock+nWidth))
+    end subroutine steepen_shock
+    !=============================================================
+    subroutine set_diffusion
+      ! set diffusion coefficient for the current line
+      !--------------------------------------------------------------------------
+      DOuter_I(1:iEnd) = B_I(1:iEnd)
+      if(.not.UseRealDiffusionUpstream)then
+         ! Sokolov et al., 2004: eq (4), 
+         ! note: P = Energy * Vel / C**2
+         DInnerInj_I(1:iEnd) = &
+              BOverDeltaB2*&
+              cGyroRadius*(MomentumInj*cLightSpeed)**2/&
+              (B_I(1:iEnd)**2*TotalEnergyInj) / RSun**2
+      else
+         ! diffusion is different up- and down-stream
+         ! Sokolov et al. 2004, paragraphs before and after eq (4)
+         where(Radius_I(1:iEnd) > 0.9 * Radius_I(iShock))
+            ! upstream:
+            DInnerInj_I(1:iEnd) = &
+                 0.2/3.0 * Radius_I(1:iEnd) / RSun * &
+                 (MomentumInj*cLightSpeed**2)/(B_I(1:iEnd)*TotalEnergyInj)*&
+                 (MomentumInj*cLightSpeed/energy_in('GeV'))**(1.0/3)
+         elsewhere
+            ! downstream
+            DInnerInj_I(1:iEnd)=&
+                 cGyroRadius*(MomentumInj*cLightSpeed)**2 / RSun**2/&
+                 (B_I(1:iEnd)**2 * TotalEnergyInj)/&
+                 (10.0*CInj*MachAlfven) / &
+                 min(1.0, 1.0/0.9 * Radius_I(1:iEnd)/Radius_I(iShock))
+         end where
+      end if
+
+      ! set the boundary condition for diffusion
+      Distribution_IIB(2:nMomentumBin, 1, iBlock) = &
+           Distribution_IIB(1, 1, iBlock) * &
+           (MomentumScale_I(1) / MomentumScale_I(2:nMomentumBin))**SpectralIndex
+    end subroutine set_diffusion
+    !===========================================================================
+    subroutine set_advection_boundary_condition
+      ! set boundary conditions on each particle on the current line
+      !----------------------------------------
+      ! loop variable
+      integer:: iParticle
+      real:: Density, Momentum
+      !----------------------------------------
+      do iParticle = 1, iEnd
+         ! default injection distribution, see Sokolov et al., 2004, eq (3)
+         Density = Rho_I(iParticle)
+         Momentum= kinetic_energy_to_momentum(&
+              State_VIB(T_,iParticle,iBlock)*UnitEnergy,NameParticle)
+         Distribution_IIB(1,iParticle,iBlock) = &
+              0.25/cPi/(SpectralIndex-3) * CInj * Density / &
+              Momentum**3 * (Momentum/MomentumInj)**SpectralIndex
+      end do
+    end subroutine set_advection_boundary_condition
   end subroutine advance
-  
 end module SP_ModAdvance
