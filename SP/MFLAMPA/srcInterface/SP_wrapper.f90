@@ -8,7 +8,6 @@ module SP_wrapper
   use SP_ModMain, ONLY: &
        run, initialize, check, read_param, save_restart, &
        get_node_indexes, DoRestart, &
-       iComm, iProc, nProc, &
        nDim, nLat, nLon, nBlock, nParticleMax, &
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iShock_IB, State_VIB, Distribution_IIB,&
@@ -144,6 +143,7 @@ contains
   !=========================================================
 
   subroutine SP_set_param(CompInfo,TypeAction)
+    use SP_ModProc
     type(CompInfoType),intent(inout):: CompInfo
     character(len=*),  intent(in)   :: TypeAction
 
