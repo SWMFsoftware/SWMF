@@ -1,3 +1,7 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+!=============================================================!
 module SP_ModAdvance
 
   ! The module contains methods for advancing the solution in time
@@ -9,11 +13,9 @@ module SP_ModAdvance
   use SP_ModSize, ONLY: nParticleMax, nMomentumBin, nDim
 
   use SP_ModGrid, ONLY: &
-       X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
-       nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock, &
-       State_VIB, Distribution_IIB, iShock_IB, &
-       MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
-       DMomentumOverDEnergy_I
+       X_,Y_,Z_, D_, S_, R_, Rho_, RhoOld_, Ux_,Uy_,Uz_, U_, Bx_, By_,Bz_,&
+       B_, BOld_, T_, nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock, &
+       State_VIB, Distribution_IIB, iShock_IB
 
   use SP_ModDiffusion, ONLY: advance_diffusion
 
@@ -27,9 +29,11 @@ module SP_ModAdvance
   
   private ! except
 
-  public:: TimeGlobal, iIterGlobal, set_initial_condition, &
-       set_injection_param, init_advance_const, advance
-  public:: DoTraceShock, UseDiffusion
+  public:: TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion
+  public:: init_advance_const, set_injection_param, advance, &
+       set_initial_condition
+  public::  EnergyScale_I, MomentumScale_I, &
+       LogEnergyScale_I, LogMomentumScale_I, DMomentumOverDEnergy_I
 
   !\
   ! Global interation and time
@@ -62,6 +66,13 @@ module SP_ModAdvance
   ! limitation of CFL number
   real:: CFLMax = 0.9
   !-----------------------------
+  ! scale with respect to Momentum and log(Momentum)
+  real:: MomentumScale_I(nMomentumBin)
+  real:: LogMomentumScale_I(nMomentumBin)
+  real:: EnergyScale_I(nMomentumBin)
+  real:: LogEnergyScale_I(nMomentumBin)
+  real:: DMomentumOverDEnergy_I(nMomentumBin)
+  !Local arrays
   real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
   real, dimension(1:nParticleMax):: DLogRho_I
   real, dimension(1:nParticleMax):: Radius_I, B_I,   BOld_I
@@ -106,7 +117,7 @@ contains
     ! convert energies to momenta
     MomentumInj  = kinetic_energy_to_momentum(EnergyInj, NameParticle)
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
-    ! also compute total injection energy
+    ! total injection energy (including the rest mass energy
     TotalEnergyInj = momentum_to_energy(MomentumInj, NameParticle)
     DLogMomentum = log(MomentumMax/MomentumInj) / nMomentumBin
     do iMomentumBin = 1, nMomentumBin
@@ -188,8 +199,7 @@ contains
        ! the active particles on the line
        iEnd   = nParticle_B( iBlock)
        ! various data along the line
-       Radius_I(1:iEnd) = &
-            sqrt(sum(State_VIB(X_:Z_, 1:iEnd, iBlock)**2, 1))
+       Radius_I( 1:iEnd) = State_VIB(R_,      1:iEnd,iBlock)
        Rho_I(    1:iEnd) = State_VIB(Rho_,    1:iEnd,iBlock)
        U_I(      1:iEnd) = State_VIB(U_,      1:iEnd,iBlock)
        T_I(      1:iEnd) = State_VIB(T_,      1:iEnd,iBlock)
@@ -206,7 +216,6 @@ contains
        iShockOld = iShock_IB(ShockOld_,iBlock)
        nProgress = MAX(1, iShock - iShockOld)
        iShockOld = MIN(iShockOld, iShock-1)
-       iShock_IB(ShockOld_,iBlock) = iShock
 
        ! each particles shock has crossed should be
        ! processed separately => reduce the time step

@@ -2,6 +2,7 @@
 ! portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module SP_ModMain
+  use SP_ModProc, ONLY: iProc
 
   use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, nParticleMax, &
@@ -17,10 +18,9 @@ module SP_ModMain
        save_restart=>write_restart, read_restart
 
   use SP_ModGrid, ONLY: &
-       nVar, &
+       nVar, copy_old_state,&
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
-       Wave1_, Wave2_, Length_, &
-       iComm, iProc, nProc, nBlock, &
+       Wave1_, Wave2_, Length_, nBlock, &
        Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
@@ -55,8 +55,7 @@ module SP_ModMain
   public:: &
        nVar, &
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
-       Wave1_, Wave2_, Length_, &
-       iComm, iProc, nProc, nBlock, &
+       Wave1_, Wave2_, Length_, nBlock, &
        Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
@@ -220,14 +219,14 @@ contains
     
     call write_output(IsInitialOutput=.not.DoRun)
   contains
-    !============================================================================
-
+    !=====================================================================
     subroutine fix_grid_consistency
-      use SP_ModGrid, ONLY: U_, D_, S_, DLogRho_, distance_to_next
+      use SP_ModGrid, ONLY: DLogRho_, get_other_state_var
       ! recompute some values (magnitudes of plasma velocity and magnetic field)
       ! so they are consistent with components for all lines
       integer:: iBlock, iParticle, iEnd
-      !--------------------------------------------------------------------------
+      !----------------------------------------------------------------------
+      call get_other_state_var
       do iBlock = 1, nBlock
          iEnd   = nParticle_B(  iBlock)
          do iParticle = 1, iEnd
@@ -235,40 +234,16 @@ contains
             if(sum(State_VIB(X_:Z_, iParticle, iBlock)**2) > RMax**2)then
                nParticle_B(  iBlock) = iParticle - 1
                EXIT
-            end if
-            ! plasma speed
-            State_VIB(U_,iParticle, iBlock) = &
-                 sqrt(sum(State_VIB(Ux_:Uz_,iParticle,iBlock)**2))
-            
+            end if            
             ! divergence of plasma velocity
             if(DataInputTime > TimeGlobal) then
                State_VIB(DLogRho_,iParticle,iBlock) = log(&
-                    State_VIB(Rho_,iParticle,iBlock) / &
+                    State_VIB(Rho_,iParticle,iBlock)/&
                     State_VIB(RhoOld_,iParticle,iBlock))
-            end if
-            ! magnetic field
-            State_VIB(B_,iParticle, iBlock) = &
-                 sqrt(sum(State_VIB(Bx_:Bz_,iParticle,iBlock)**2))
-
-            ! distances between particles
-            if(iParticle < nParticle_B(  iBlock))&
-                 State_VIB(D_, iParticle, iBlock) = &
-                 distance_to_next(iParticle, iBlock)
-
-            ! distance from the beginning of the line
-            if(iParticle == 1)then
-               State_VIB(S_, iParticle, iBlock) = 0.0
-            else
-               State_VIB(S_, iParticle, iBlock) = &
-                    State_VIB(S_, iParticle-1, iBlock) + &
-                    State_VIB(D_, iParticle-1, iBlock)
             end if
          end do
          ! location of shock
-         if(iShock_IB(ShockOld_, iBlock) < 1)&
-              iShock_IB(ShockOld_, iBlock)= 1
-         if(iShock_IB(Shock_, iBlock) < 1)&
-              iShock_IB(Shock_, iBlock)   = 1
+         iShock_IB(:, iBlock) = max( iShock_IB(:, iBlock), 1)
       end do
     end subroutine fix_grid_consistency
   end subroutine run
@@ -282,20 +257,6 @@ contains
     ! Make output and check input directories
     if(iProc==0) call make_dir(NamePlotDir)
   end subroutine check
-  !===================
-  subroutine copy_old_state
-    use SP_ModGrid, ONLY: nVarRead
-    ! copy current state to old state for all field lines
-    integer:: iEnd, iBlock
-    !-----------------------------------------------------------------------
-    do iBlock = 1, nBlock
-       iEnd   = nParticle_B(  iBlock)
-       State_VIB((/RhoOld_,BOld_/), 1:iEnd, iBlock) = &
-            State_VIB((/Rho_,B_/),  1:iEnd, iBlock)
-       ! reset variables to be read from file or received via coupler
-       State_VIB(1:nVarRead,1:iEnd, iBlock) = 0.0
-    end do
-  end subroutine copy_old_state
   !============================================================================
   subroutine offset(iBlock, iOffset, AlphaIn)
     ! shift in the data arrays is required if the grid point(s) is  
