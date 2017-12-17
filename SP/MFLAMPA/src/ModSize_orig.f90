@@ -8,8 +8,8 @@ module SP_ModSize
   private ! except
   public:: &
        nDim, nMomentumBin, nPitchAngleBin, IsPitchAngleAveraged, &
-       Particle_, OriginLat_, OriginLon_, &
-       nLat, nLon, nNode, nParticleMax
+       Particle_,  OriginLon_, OriginLat_, &
+       nLon, nLat, nNode, nParticleMax
 
   ! Dimensionality
   integer, parameter:: nDim = 3
@@ -17,8 +17,8 @@ module SP_ModSize
   ! Indices of internal cooridnates
   integer, parameter:: &
        Particle_  = 1, & ! Index along  field line
-       OriginLon_ = 2, & ! Latitude of field line origin
-       OriginLat_ = 3    ! Longitude  of field line origin
+       OriginLon_ = 2, & ! Longitude of field line origin
+       OriginLat_ = 3    ! Latitude  of field line origin
 
       
 
@@ -28,7 +28,7 @@ module SP_ModSize
   ! angular grid at origin surface
   integer, parameter:: nLon  = 4
   integer, parameter:: nLat  = 4
-  integer, parameter:: nNode = nLat * nLon
+  integer, parameter:: nNode = nLon*nLat
 
   ! number of bins in the distribution (see ModGrid);
   integer, parameter:: nMomentumBin   = 100
