@@ -8,8 +8,16 @@ include Makefile.DEPEND
 
 
 OBJECTS = \
-	ModSize.o ModMain.o ModWrite.o ModGrid.o ModAdvance.o \
-	ModDiffusion.o ModLogAdvection.o ModReadMhData.o ModRestart.o
+	ModAdvance.o \
+	ModDiffusion.o \
+	ModGrid.o \
+	ModLogAdvection.o \
+	ModMain.o \
+	ModProc.o \
+	ModReadMhData.o \
+	ModRestart.o \
+	ModSize.o \
+	ModWrite.o   
 
 SEPEXE = ${BINDIR}/SEP.exe
 
