@@ -1,3 +1,7 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+!=============================================================!
 module SP_ModWrite
 
   ! This module contains methods for writing output files
@@ -9,16 +13,15 @@ module SP_ModWrite
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
-       iComm, nProc, &
        nVar, nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, &
-       Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
-       DMomentumOverDEnergy_I, FootPoint_VB,&
+       Distribution_IIB, FootPoint_VB,&
        Proc_, nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V, TypeCoordSystem
 
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock, & 
+       LogEnergyScale_I, LogMomentumScale_I, DMomentumOverDEnergy_I
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
@@ -420,7 +423,8 @@ contains
 
     subroutine write_mh_2d
       use ModMpi
-      use CON_world, ONLY: is_proc0, i_proc0
+      use SP_ModProc,     ONLY: iComm, nProc
+      use CON_world,      ONLY: is_proc0, i_proc0
       use CON_comp_param, ONLY: SP_
       ! write output with 2D MH data in the format to be read by IDL/TECPLOT;
       ! single file is created for all field lines, name format is
@@ -767,7 +771,8 @@ contains
   !===========================================================================
   subroutine get_integral_flux
     use SP_ModGrid, ONLY: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_,&
-         Flux5_, Flux6_, FluxMax_, EnergyScale_I, MomentumScale_I
+         Flux5_, Flux6_, FluxMax_ 
+    use SP_ModAdvance, ONLY: EnergyScale_I, MomentumScale_I
     use ModConst, ONLY: energy_in
     ! compute the total (simulated) integral flux of particles as well as
     ! particle flux in the 6 GOES channels; also compute total energy flux
