@@ -11,7 +11,7 @@ module SP_ModAdvance
   use SP_ModGrid, ONLY: &
        X_,Y_,Z_, D_,S_,Rho_,RhoOld_, Ux_,Uy_,Uz_,U_, Bx_,By_,Bz_,B_,BOld_, T_,&
        nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock, &
-       State_VIB, Distribution_IIB, iGridLocal_IB, &
+       State_VIB, Distribution_IIB, iShock_IB, &
        MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I,&
        DMomentumOverDEnergy_I
 
@@ -150,13 +150,13 @@ contains
     integer:: iShockCandidate
     !--------------------------------------------------------------------------
     if(.not.DoTraceShock)then
-       iGridLocal_IB(Shock_, iBlock) = 1
+       iShock_IB(Shock_, iBlock) = 1
        RETURN
     end if
 
     ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
     ! shock never moves back
-    iSearchMin= max(iGridLocal_IB(ShockOld_, iBlock), &
+    iSearchMin= max(iShock_IB(ShockOld_, iBlock), &
          1 + nWidth )
     iSearchMax= nParticle_B(iBlock) - nWidth - 1
     iShockCandidate = iSearchMin - 1 + maxloc(&
@@ -164,7 +164,7 @@ contains
          1, MASK = Radius_I(iSearchMin:iSearchMax) > 1.2)
 
     if(DLogRho_I(iShockCandidate) > 0.0)&
-         iGridLocal_IB(Shock_, iBlock) = iShockCandidate
+         iShock_IB(Shock_, iBlock) = iShockCandidate
   end subroutine get_shock_location
   !===========================================================================
   subroutine advance(TimeLimit)
@@ -202,11 +202,11 @@ contains
        call get_shock_location(iBlock)
 
        ! find how far shock has travelled on this line: nProgress
-       iShock    = iGridLocal_IB(Shock_,   iBlock)
-       iShockOld = iGridLocal_IB(ShockOld_,iBlock)
+       iShock    = iShock_IB(Shock_,   iBlock)
+       iShockOld = iShock_IB(ShockOld_,iBlock)
        nProgress = MAX(1, iShock - iShockOld)
        iShockOld = MIN(iShockOld, iShock-1)
-       iGridLocal_IB(ShockOld_,iBlock) = iShock
+       iShock_IB(ShockOld_,iBlock) = iShock
 
        ! each particles shock has crossed should be
        ! processed separately => reduce the time step

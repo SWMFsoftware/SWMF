@@ -11,10 +11,10 @@ module SP_ModGrid
   private ! except
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
-  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nBlockIndexes
+  public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nShockParam
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
-  public:: iGridGlobal_IA, iGridLocal_IB, FootPoint_VB, iNode_II, iNode_B
+  public:: iGridGlobal_IA, iShock_IB, FootPoint_VB, iNode_II, iNode_B
   public:: State_VIB, Flux_VIB, Distribution_IIB
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
@@ -71,7 +71,7 @@ module SP_ModGrid
   ! 1st index - identification of info field
   ! 2nd index - node number / block number
   integer, allocatable:: iGridGlobal_IA(:,:)
-  integer, allocatable:: iGridLocal_IB(:,:), nParticle_B(:)
+  integer, allocatable:: iShock_IB(:,:), nParticle_B(:)
   real,    allocatable:: FootPoint_VB(:,:)
   !----------------------------------------------------------------------------
   ! Number of info fields per node/block and their identifications
@@ -79,7 +79,7 @@ module SP_ModGrid
   integer, parameter:: &
        Proc_  = 1, & ! Processor that has this line/node
        Block_ = 2    ! Block that has this line/node
-  integer, parameter:: nBlockIndexes = 3
+  integer, parameter:: nShockParam = 2
   integer, parameter:: &
        Shock_   = 1, & ! Current location of a shock wave
        ShockOld_= 2    ! Old location of a shock wave
@@ -241,7 +241,6 @@ contains
   end subroutine set_grid_param
 
   !============================================================================
-
   subroutine init_grid(DoReadInput)
     ! allocate the grid used in this model
     use ModUtilities, ONLY: check_allocate
@@ -282,8 +281,8 @@ contains
     call check_allocate(iError, NameSub//'iGridGlobal_IA')
     allocate(nParticle_B(nBlock), stat=iError)
     call check_allocate(iError, NameSub//'nParticle_B')
-    allocate(iGridLocal_IB(nBlockIndexes, nBlock), stat=iError)
-    call check_allocate(iError, NameSub//'iGridLocal_IB')
+    allocate(iShock_IB(nShockParam, nBlock), stat=iError)
+    call check_allocate(iError, NameSub//'iShock_IB')
     allocate(FootPoint_VB(LagrID_:Length_, nBlock), stat=iError)
     call check_allocate(iError, NameSub//'FootPoint_VB')
     allocate(State_VIB(LagrID_:nVar,1:nParticleMax,nBlock), &
@@ -307,7 +306,7 @@ contains
           if(iProcNode==iProc)then
              iNode_B(iBlock) = iNode
              nParticle_B(     iBlock) = 1
-             iGridLocal_IB(:, iBlock) = 0
+             iShock_IB(:, iBlock) = 0
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
           iGridGlobal_IA(Block_,  iNode)  = iBlock

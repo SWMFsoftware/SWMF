@@ -10,7 +10,7 @@ module SP_ModReadMhData
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
        iComm, &
-       nVarRead, nVar, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       nVarRead, nVar, nBlock, State_VIB, iShock_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, &
        Proc_, nParticle_B, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &

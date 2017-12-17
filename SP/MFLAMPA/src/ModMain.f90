@@ -24,7 +24,7 @@ module SP_ModMain
        Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
-       iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
+       iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, &
        FootPoint_VB, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes
@@ -60,7 +60,7 @@ module SP_ModMain
        Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
-       iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
+       iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, FootPoint_VB, TypeCoordSystem,& 
        get_node_indexes
 
@@ -265,10 +265,10 @@ contains
             end if
          end do
          ! location of shock
-         if(iGridLocal_IB(ShockOld_, iBlock) < 1)&
-              iGridLocal_IB(ShockOld_, iBlock)= 1
-         if(iGridLocal_IB(Shock_, iBlock) < 1)&
-              iGridLocal_IB(Shock_, iBlock)   = 1
+         if(iShock_IB(ShockOld_, iBlock) < 1)&
+              iShock_IB(ShockOld_, iBlock)= 1
+         if(iShock_IB(Shock_, iBlock) < 1)&
+              iShock_IB(Shock_, iBlock)   = 1
       end do
     end subroutine fix_grid_consistency
   end subroutine run
@@ -331,8 +331,8 @@ contains
     else
        call CON_stop('No algorithm for iOffset >1 in '//NameSub)
     end if
-    iGridLocal_IB(ShockOld_, iBlock) = &
-         iGridLocal_IB(ShockOld_, iBlock) + iOffset
+    iShock_IB(ShockOld_, iBlock) = &
+         iShock_IB(ShockOld_, iBlock) + iOffset
     nParticle_B(iBlock) = nParticle_B( iBlock) + iOffset
   end subroutine offset
 end module SP_ModMain

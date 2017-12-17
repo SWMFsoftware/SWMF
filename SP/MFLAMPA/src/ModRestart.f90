@@ -8,10 +8,10 @@ module SP_ModRestart
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
        iProc, LagrID_, Z_,&
-       nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
        Distribution_IIB,  FootPoint_VB, &
-       nParticle_B, nBlockIndexes
+       nParticle_B, nShockParam
 
    use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
 
@@ -73,7 +73,7 @@ contains
        call open_file(file=NameFile, form='UNFORMATTED',&
             NameCaller=NameSub)
        write(UnitTmp_)real(nParticle_B(iBlock)),&
-            real(iGridLocal_IB(:, iBlock))
+            real(iShock_IB(:, iBlock))
        write(UnitTmp_)&
             FootPoint_VB(:, iBlock),&
             State_VIB(LagrID_:Z_,1:nParticle_B(iBlock), iBlock),&
@@ -91,7 +91,7 @@ contains
     integer:: iBlock
     ! indexes of corresponding node, latitude and longitude
     integer:: iNode, iLat, iLon
-    real   :: Aux, Aux_I(nBlockIndexes) !For reading integers
+    real   :: Aux, Aux_I(nShockParam) !For reading integers
     integer:: iError
     character(len=*), parameter:: NameSub = 'SP:read_restart'
     !--------------------------------------------------------------------------
@@ -115,7 +115,7 @@ contains
        ! process buffer
        nParticle_B(iBlock) = nint(Aux)
        ! general parameters
-       iGridLocal_IB(:, iBlock) = nint(Aux_I)
+       iShock_IB(:, iBlock) = nint(Aux_I)
        read(UnitTmp_, iostat = iError) &
             FootPoint_VB(:, iBlock),&
             State_VIB(LagrID_:Z_,1:nParticle_B(iBlock), iBlock),&

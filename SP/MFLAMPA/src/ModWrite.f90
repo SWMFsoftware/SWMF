@@ -10,7 +10,7 @@ module SP_ModWrite
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
        iComm, nProc, &
-       nVar, nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
+       nVar, nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
        DMomentumOverDEnergy_I, FootPoint_VB,&
        Proc_, nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
@@ -391,7 +391,7 @@ contains
          Param_I(LagrID_:Z_) = FootPoint_VB(LagrID_:Z_,iBlock)
          ! shock location
          if(DoTraceShock)then
-            iShock = iGridLocal_IB(Shock_,iBlock)
+            iShock = iShock_IB(Shock_,iBlock)
             Param_I(RShock_) = &
                  sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
             Param_I(RShock_-1) = real(iShock)
