@@ -12,7 +12,7 @@ module SP_ModWrite
        iComm, nProc, &
        nVar, nVarRead, nBlock, State_VIB, iGridLocal_IB, iNode_B, &
        Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
-       DMomentumOverDEnergy_I, &
+       DMomentumOverDEnergy_I, FootPoint_VB,&
        Proc_, nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
@@ -108,7 +108,7 @@ contains
     ! set parameters of output files: file format, kind of output etc.
     character(len=300):: StringPlot
     ! loop variables
-    integer:: iFile, iNode
+    integer:: iFile, iNode, iVar
     character(len=*), parameter :: NameSub='SP:set_write_param'
     !--------------------------------------------------------------------------
     ! initialize auxilary array
@@ -165,7 +165,7 @@ contains
        end if
 
        ! reset variables' names
-       File_I(iFile) % NameVarPlot = ' '//NameVar_V(LagrID_)
+       File_I(iFile) % NameVarPlot = NameVar_V(LagrID_)
 
        ! based on kind of data process the requested output
        select case(File_I(iFile) % iKindData)
@@ -177,6 +177,11 @@ contains
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)
+             do iVar = LagrID_,Z_
+                File_I(iFile)%NameVarPlot = &
+                     trim(File_I(iFile)%NameVarPlot)//&
+                     ' '//NameVar_V(iVar)  
+             end do
              if(DoTraceShock)&
                   File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
@@ -251,9 +256,6 @@ contains
          end do
          ! check common groups of variables
          select case(StringPlot_I(iStringPlot))
-         case('wave')
-            ! turbulence intensities
-            File_I(iFile) % DoPlot_V((/Wave1_,Wave2_/)) = .true.
          case('flux')
             ! particle and eneregy fluxes
             File_I(iFile) % DoPlot_V(EFlux_) = .true.
@@ -357,8 +359,10 @@ contains
       ! for better readability
       integer:: nVarPlot
       ! shock location
-      integer:: iShock
+      integer:: iShock, iParamLast
       real   :: RShock
+      integer, parameter:: RShock_ = Z_ + 2
+      real :: Param_I(LagrID_:RShock_)
       ! timestamp
       character(len=8):: StringTime
       !------------------------------------------------------------------------
@@ -383,9 +387,18 @@ contains
          File_I(iFile) % Buffer_II(1:nVarPlot, 1:iLast) = &
               State_VIB(File_I(iFile) % iVarPlot_V(1:nVarPlot), &
               1:iLast, iBlock)
+         !Parameters
+         Param_I(LagrID_:Z_) = FootPoint_VB(LagrID_:Z_,iBlock)
          ! shock location
-         iShock = iGridLocal_IB(Shock_,iBlock)
-         RShock = sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
+         if(DoTraceShock)then
+            iShock = iGridLocal_IB(Shock_,iBlock)
+            Param_I(RShock_) = &
+                 sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
+            Param_I(RShock_-1) = real(iShock)
+            iParamLast = RShock_
+         else
+            iParamLast = Z_
+         end if
          ! print data to file
          call save_plot_file(&
               NameFile      = NameFile, &
@@ -399,11 +412,7 @@ contains
               NameVarIn     = File_I(iFile) % NameVarPlot, &
               VarIn_VI      = &
               File_I(iFile) % Buffer_II(1:nVarPlot,1:iLast),&
-              ! additionally print the shock location both as
-              ! index and radial distance
-              ParamIn_I    = pack(&
-              (/real(iShock), RShock/),DoTraceShock)&
-              )
+              ParamIn_I    = Param_I(LagrID_:iParamLast))
       end do
     end subroutine write_mh_1d
 
