@@ -1,3 +1,7 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+!=============================================================!
 module SP_ModReadMhData
 
   ! This module contains methods for reading input MH data
@@ -9,11 +13,9 @@ module SP_ModReadMhData
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
-       iComm, &
        nVarRead, nVar, nBlock, State_VIB, iShock_IB, iNode_B, &
-       Distribution_IIB, LogEnergyScale_I, LogMomentumScale_I, &
-       DMomentumOverDEnergy_I, &
-       Proc_, nParticle_B, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
+       Distribution_IIB, &
+       nParticle_B, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
        NameVar_V
 
