@@ -1,3 +1,7 @@
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
+!  For more information, see http://csem.engin.umich.edu/tools/swmf
+!=============================================================!
 module SP_ModRestart
 
   ! This module contains methods for writing output files
@@ -6,8 +10,7 @@ module SP_ModRestart
        nLon, nLat, nParticleMax, nMomentumBin
 
   use SP_ModGrid, ONLY: &
-       get_node_indexes, &
-       iProc, LagrID_, Z_,&
+       get_node_indexes, LagrID_, Z_,&
        nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
        Distribution_IIB,  FootPoint_VB, &
@@ -125,7 +128,7 @@ contains
   end subroutine read_restart
   !==========================
   subroutine write_restart_header
-
+    use SP_ModProc, ONLY: iProc
     ! full name of the header file
     character(len=100):: NameFile
 
