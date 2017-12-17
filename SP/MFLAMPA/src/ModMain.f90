@@ -21,18 +21,18 @@ module SP_ModMain
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        Wave1_, Wave2_, Length_, &
        iComm, iProc, nProc, nBlock, &
-       Proc_, Block_, nParticle_B, Shock_, ShockOld_, Offset_,&
+       Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, &
        FootPoint_VB, TypeCoordSystem,&
-       set_grid_param, init_grid, get_node_indexes, &
-       append_particles
+       set_grid_param, init_grid, get_node_indexes
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
-       advance, set_injection_param, init_advance_const
+       advance, set_injection_param, init_advance_const,    &
+       set_initial_condition
 
   implicit none
 
@@ -42,8 +42,9 @@ module SP_ModMain
   real :: DataInputTime
   ! Methods and variables from this module 
   public:: &
-       read_param, initialize, run, check, save_restart, &
-       TimeGlobal, iIterGlobal, DataInputTime, DoRestart
+       read_param, initialize, run, check, save_restart,  &
+       TimeGlobal, iIterGlobal, DataInputTime, DoRestart, & 
+       copy_old_state, offset
 
   ! Methods and variables from ModSize
   public:: &
@@ -56,12 +57,12 @@ module SP_ModMain
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
        Wave1_, Wave2_, Length_, &
        iComm, iProc, nProc, nBlock, &
-       Proc_, Block_, nParticle_B, Shock_, ShockOld_, Offset_,&
+       Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iGridLocal_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        Distribution_IIB, FootPoint_VB, TypeCoordSystem,& 
-       get_node_indexes, append_particles
+       get_node_indexes
 
   ! Methods and variables from ModWrite
 
@@ -155,8 +156,8 @@ contains
     DataInputTime = TimeStart
     call init_advance_const
     call init_grid(DoRestart .or. DoReadMhData)
-    if(DoRestart)&
-         call read_restart
+    call set_initial_condition 
+    if(DoRestart) call read_restart
   end subroutine initialize
   !============================================================================
 
@@ -180,13 +181,10 @@ contains
        ! the final data file has alredy been read, no new data is available
        !/
        if(DoFinalize) RETURN
-
+       call copy_old_state
        !\
        ! Read the background data from file
        !/
-       ! copy old state
-       State_VIB((/RhoOld_,BOld_/), :, 1:nBlock) = &
-            State_VIB((/Rho_,B_/),  :, 1:nBlock)
        call read_mh_data(DataInputTime)
        TimeInOut = DataInputTime
     else
@@ -284,5 +282,57 @@ contains
     ! Make output and check input directories
     if(iProc==0) call make_dir(NamePlotDir)
   end subroutine check
-
+  !===================
+  subroutine copy_old_state
+    use SP_ModGrid, ONLY: nVarRead
+    ! copy current state to old state for all field lines
+    integer:: iEnd, iBlock
+    !-----------------------------------------------------------------------
+    do iBlock = 1, nBlock
+       iEnd   = nParticle_B(  iBlock)
+       State_VIB((/RhoOld_,BOld_/), 1:iEnd, iBlock) = &
+            State_VIB((/Rho_,B_/),  1:iEnd, iBlock)
+       ! reset variables to be read from file or received via coupler
+       State_VIB(1:nVarRead,1:iEnd, iBlock) = 0.0
+    end do
+  end subroutine copy_old_state
+  !============================================================================
+  subroutine offset(iBlock, iOffset, AlphaIn)
+    ! shift in the data arrays is required if the grid point(s) is  
+    ! appended or removed at the foot point of the magnetic field line
+    !SHIFTED ARE:  State_VIB((/RhoOld_,BOld_/),:,:), Distribution_IIB,
+    !ShockOld, nParticle_B
+    integer, intent(in)        :: iBlock
+    integer, intent(in)        :: iOffset
+    real, optional, intent(in) :: AlphaIn
+    real :: Alpha
+    character(len=*), parameter :: NameSub = "SP: offset"
+    !------------
+    Alpha = 0
+    if(present(AlphaIn))Alpha=AlphaIn
+    if(iOffset==0)then
+       RETURN
+    elseif(iOffset==1)then
+       State_VIB((/RhoOld_,BOld_/),2:nParticle_B(iBlock)+1,iBlock) &
+            = State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock)
+       Distribution_IIB(:,2:nParticle_B( iBlock)+iOffset, iBlock)&
+            = Distribution_IIB(:,1:nParticle_B( iBlock), iBlock)
+       State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
+            (Alpha + 1)*State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
+            -Alpha     * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
+       Distribution_IIB(:,1,iBlock) = Distribution_IIB(:,2,iBlock) + &
+            Alpha*(Distribution_IIB(:,2,iBlock) - Distribution_IIB(:,3,iBlock))
+    elseif(iOffset < 0)then
+       State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock)+iOffset,iBlock) &
+            =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock),&
+            iBlock)
+       Distribution_IIB(:,1:nParticle_B( iBlock)+iOffset, iBlock)&
+            = Distribution_IIB(:,1-iOffset:nParticle_B( iBlock), iBlock)
+    else
+       call CON_stop('No algorithm for iOffset >1 in '//NameSub)
+    end if
+    iGridLocal_IB(ShockOld_, iBlock) = &
+         iGridLocal_IB(ShockOld_, iBlock) + iOffset
+    nParticle_B(iBlock) = nParticle_B( iBlock) + iOffset
+  end subroutine offset
 end module SP_ModMain

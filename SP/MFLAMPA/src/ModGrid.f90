@@ -11,7 +11,6 @@ module SP_ModGrid
   private ! except
 
   public:: set_grid_param, init_grid, get_node_indexes, distance_to_next
-  public:: append_particles
   public:: iComm, iProc, nProc, nBlock, Proc_, Block_, nBlockIndexes
   public:: LatMin, LatMax, LonMin, LonMax
   public:: RMin, RBufferMin, RBufferMax, RMax, ROrigin
@@ -20,7 +19,7 @@ module SP_ModGrid
   public:: MomentumScale_I, LogMomentumScale_I, EnergyScale_I, LogEnergyScale_I
   public:: DMomentumOverDEnergy_I
   public:: nParticle_B, Shock_, ShockOld_, Length_
-  public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_, Offset_
+  public:: nVar, nVarRead,  X_, Y_, Z_, D_, S_, LagrID_
   public:: Rho_,T_, Ux_,Uy_,Uz_,U_,DLogRho_, Bx_,By_,Bz_,B_, RhoOld_,BOld_
   public:: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
   public:: Wave1_, Wave2_,FluxMax_
@@ -83,9 +82,7 @@ module SP_ModGrid
   integer, parameter:: nBlockIndexes = 3
   integer, parameter:: &
        Shock_   = 1, & ! Current location of a shock wave
-       ShockOld_= 2, & ! Old location of a shock wave
-       Offset_  = 3    ! To account for the dymaical grid distinction 
-                       ! from that updated in the other components
+       ShockOld_= 2    ! Old location of a shock wave
   integer, parameter:: & 
        Length_ = 4    ! init length of segment 1-2: control for new particles
                       ! being appended to the beginnings of lines
@@ -370,11 +367,6 @@ contains
   !============================================================================
 
   function distance_to_next(iParticle, iBlock) result(Distance)
-    ! the function returns distance to the next particle measured in Rs;
-    ! formula for distance between 2 points in rlonlat system:
-    !  Distance**2 = R1**2 + R2**2 - 
-    !     2*R1*R2*(Cos(Lat1)*Cos(Lat2) * Cos(Lon1-Lon2) + Sin(Lat1)*Sin(Lat2))
-    ! NOTE: function doesn't check whether iParticle is last on the field line
     integer, intent(in):: iParticle
     integer, intent(in):: iBlock
     real               :: Distance
@@ -383,56 +375,4 @@ contains
          State_VIB(X_:Z_, iParticle,   iBlock) - &
          State_VIB(X_:Z_, iParticle+1, iBlock))**2))
   end function distance_to_next
-
-  !============================================================================
-
-  subroutine append_particles
-    !appends a new particle at the beginning of lines if necessary
-    integer:: iBlock
-    real:: DistanceToMin, Alpha
-    real, parameter:: cTol = 1E-06
-
-    character(len=*), parameter:: NameSub = 'append_particles'
-    !--------------------------------------------------------------------
-    do iBlock = 1, nBlock
-       ! check current value of offset: if not zero, adjustments have just
-       ! been made, no need to append new particles
-       if(iGridLocal_IB(Offset_, iBlock) /= 0 )&
-            CYCLE
-       ! check if the beginning of the line moved far enough from its 
-       ! footprint on the solar surface
-       DistanceToMin = sqrt(sum((&
-            State_VIB(X_:Z_,1,iBlock) - FootPoint_VB(X_:Z_,iBlock))**2))
-       ! skip the line if it's still close to the Sun
-       if(DistanceToMin * (1.0 + cTol) < FootPoint_VB(Length_, iBlock)) CYCLE
-       ! append a new particle
-       !-----------------------
-       ! check if have enough space
-       if(nParticleMax == nParticle_B( iBlock))&
-            call CON_Stop(NameSub//&
-            ': not enough memory allocated to append a new particle')
-       ! shift the grid:
-       State_VIB(     :,2:nParticle_B( iBlock)+1, iBlock) = &
-            State_VIB(:,1:nParticle_B( iBlock),   iBlock)
-       Distribution_IIB(     :,2:nParticle_B( iBlock)+1, iBlock) = &
-            Distribution_IIB(:,1:nParticle_B( iBlock),   iBlock)
-       nParticle_B( iBlock)  = nParticle_B( iBlock) + 1
-       !Particles ID as handled by other components keep unchanged
-       !while their order numbers in SP are increased by 1. Therefore,
-       iGridLocal_IB(Offset_, iBlock)  = iGridLocal_IB(Offset_, iBlock) + 1
-       ! put the new particle just above the lower boundary
-       State_VIB(X_:Z_,  1, iBlock) = &
-            FootPoint_VB(X_:Z_, iBlock) * (1.0 + cTol)
-       State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
-       FootPoint_VB(LagrID_,iBlock) = State_VIB(LagrID_, 1, iBlock) - 1.0
-       ! for old values of background parameters use extrapolation
-       Alpha = DistanceToMin / (DistanceToMin + State_VIB(D_, 2, iBlock))
-       State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
-            (Alpha + 1)*State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
-            -Alpha     * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
-       Distribution_IIB(:,1,iBlock) = Distribution_IIB(:,2,iBlock) + &
-            Alpha*(Distribution_IIB(:,2,iBlock) - Distribution_IIB(:,3,iBlock))
-    end do
-  end subroutine append_particles
-
 end module SP_ModGrid

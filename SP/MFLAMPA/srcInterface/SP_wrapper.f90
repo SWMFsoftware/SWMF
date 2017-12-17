@@ -7,15 +7,13 @@ module SP_wrapper
   use ModConst, ONLY: rSun, cProtonMass, energy_in
   use SP_ModMain, ONLY: &
        run, initialize, check, read_param, save_restart, &
-       get_node_indexes, append_particles, &
-       DoRestart, &
+       get_node_indexes, DoRestart, &
        iComm, iProc, nProc, &
        nDim, nLat, nLon, nBlock, nParticleMax, &
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
        iGridGlobal_IA, iGridLocal_IB, State_VIB, Distribution_IIB,&
-       iNode_B, TypeCoordSystem, &
-       FootPoint_VB, DataInputTime, Offset_,&
-       Block_, Proc_, nParticle_B, Shock_, ShockOld_, Length_,&
+       iNode_B, TypeCoordSystem, FootPoint_VB, DataInputTime, &
+       Block_, Proc_, nParticle_B, Shock_, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
        Wave1_, Wave2_
   use CON_comp_info
@@ -59,6 +57,7 @@ module SP_wrapper
   integer :: Model_ = -1
   integer, parameter:: Lower_=0, Upper_=1
   real :: rInterfaceMin, rInterfaceMax
+  integer, allocatable :: iOffset_B(:)
 contains
   !\Interface routines to be called from super-structure only  
   subroutine SP_check_ready_for_mh(IsReady)
@@ -129,6 +128,7 @@ contains
          RETURN
     IsInitialized = .true.
     call initialize(TimeSimulation)
+    allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine SP_init_session
 
   !======================================================================
@@ -185,8 +185,6 @@ contains
   !===================================================================
 
   subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-  !subroutine SP_put_from_mh(iComp, nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
-  !  integer, intent(in):: iComp
     integer,intent(in)::nPartial,iPutStart,nVar
     type(IndexPtrType),intent(in)::Put
     type(WeightPtrType),intent(in)::W
@@ -319,6 +317,7 @@ contains
   end subroutine SP_put_interface_bounds
   !=========================================================
   subroutine SP_put_input_time(TimeIn)
+    use SP_ModMain, ONLY: copy_old_state
     real,     intent(in)::TimeIn
     if(DataInputTime >= TimeIn)RETURN
     select case(Model_)
@@ -331,21 +330,6 @@ contains
        call CON_stop("Wrong model name")
     end select
     DataInputTime = TimeIn
-  contains
-    subroutine copy_old_state
-      use SP_ModGrid, ONLY: nVarRead
-      ! copy current state to old state for all field lines
-      integer:: iEnd, iBlock
-      !-----------------------------------------------------------------------
-      do iBlock = 1, nBlock
-         iEnd   = nParticle_B(  iBlock)
-         State_VIB((/RhoOld_,BOld_/), 1:iEnd, iBlock) = &
-              State_VIB((/Rho_,B_/),  1:iEnd, iBlock)
-         ! reset other variables
-         State_VIB(1:nVarRead,1:iEnd, iBlock) = 0.0
-      end do
-    end subroutine copy_old_state
-
   end subroutine SP_put_input_time
   !===================================================================
   subroutine SP_interface_point_coords(nDim, Xyz_D, &
@@ -391,7 +375,7 @@ contains
     !----------------------------------------------------------------
     ! store passed particles
     iBlock    = Put%iCB_II(4,iPutStart)
-    iParticle = Put%iCB_II(1,iPutStart) + iGridLocal_IB(Offset_,iBlock)
+    iParticle = Put%iCB_II(1,iPutStart) + iOffset_B(iBlock)
     ! put coordinates
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
     nParticle_B(  iBlock)=MAX(nParticle_B(  iBlock),iParticle)
@@ -404,6 +388,7 @@ contains
   ! grid points should be added/deleted
   !/
   subroutine SP_adjust_lines(DoInit, DoAdjustStart, DoAdjustEnd)
+    use SP_ModMain, ONLY: offset
     !\
     ! If DoAdjustStart, the points in the starting portion of the line are
     ! processed, if DoAdjustEnd - the same for the end points
@@ -431,7 +416,7 @@ contains
        ! Called after the grid points are received from the 
        ! component, nullify offset
        !/
-       if(DoAdjustStart)iGridLocal_IB(Offset_,iBlock) = 0
+       if(DoAdjustStart)iOffset_B(iBlock) = 0
        iBegin = 1
        iEnd   = nParticle_B(  iBlock)
        IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
@@ -457,19 +442,14 @@ contains
           !\
           ! Offset particle arrays
           !/
-          iEnd   = nParticle_B(   iBlock) 
+          iEnd   = nParticle_B(iBlock) 
           iOffset = 1 - iBegin
-          nParticle_B(   iBlock) = iEnd  + iOffset
           iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Shock_, iBlock) +&
                iOffset
-          iGridLocal_IB(ShockOld_, iBlock) = iGridLocal_IB(ShockOld_, iBlock)+&
-               iOffset
-          iGridLocal_IB(Offset_, iBlock)   = iGridLocal_IB(Offset_, iBlock) +&
-               iOffset
-          State_VIB(:, 1:nParticle_B(iBlock), iBlock) = &
-               State_VIB(:, iBegin:iEnd, iBlock)
-          Distribution_IIB(:,1:nParticle_B(iBlock), iBlock) = &
-               Distribution_IIB(:,iBegin:iEnd, iBlock)
+          iOffset_B(iBlock) = iOffset
+          State_VIB(     X_:Z_, 1:iEnd+iOffset, iBlock) = &
+               State_VIB(X_:Z_, iBegin:iEnd,    iBlock)
+          call offset(iBlock, iOffset)
           ! need to recalculate footpoints
           call SP_set_line_foot_b(iBlock)
        end if
@@ -480,7 +460,7 @@ contains
     ! Called after the grid points are received from the 
     ! component, nullify offset
     !/
-    if(DoAdjustEnd)iGridLocal_IB(Offset_,1:nBlock) = 0
+    if(DoAdjustEnd)iOffset_B(1:nBlock) = 0
   contains
     subroutine SP_set_line_foot_b(iBlock)
       integer, intent(in) :: iBlock
@@ -528,6 +508,49 @@ contains
       FootPoint_VB(Length_,    iBlock) = Dist1
       FootPoint_VB(LagrID_,    iBlock) = State_VIB(LagrID_,1,iBlock) - 1.0
     end subroutine SP_set_line_foot_b
+    !================================
+    subroutine append_particles
+      !appends a new particle at the beginning of lines if necessary
+      integer:: iBlock
+      real:: DistanceToMin, Alpha
+      real, parameter:: cTol = 1E-06
+      
+      character(len=*), parameter:: NameSub = 'append_particles'
+      !--------------------------------------------------------------------
+      do iBlock = 1, nBlock
+         ! check current value of offset: if not zero, adjustments have just
+         ! been made, no need to append new particles
+         if(iOffset_B(iBlock) /= 0 )CYCLE
+         ! check if the beginning of the line moved far enough from its 
+         ! footprint on the solar surface
+         DistanceToMin = sqrt(sum((&
+              State_VIB(X_:Z_,1,iBlock) - FootPoint_VB(X_:Z_,iBlock))**2))
+         ! skip the line if it's still close to the Sun
+         if(DistanceToMin * (1.0 + cTol) < FootPoint_VB(Length_, iBlock)) CYCLE
+         ! append a new particle
+         !-----------------------
+         ! check if have enough space
+         if(nParticleMax == nParticle_B( iBlock))&
+              call CON_Stop(NameSub//&
+              ': not enough memory allocated to append a new particle')
+         ! for old values of background parameters use extrapolation
+         Alpha = DistanceToMin / (DistanceToMin + sqrt(sum(&
+              (State_VIB(X_:Z_,2,iBlock) - State_VIB(X_:Z_,1,iBlock))**2)))
+         call offset(iBlock, iOffset=1, AlphaIn=Alpha)
+         !Particles ID as handled by other components keep unchanged
+         !while their order numbers in SP are increased by 1. Therefore,
+         iOffset_B(iBlock)  = iOffset_B(iBlock) + 1
+         State_VIB(X_:Z_   ,2:nParticle_B( iBlock) + 1, iBlock)&
+              = State_VIB(X_:Z_,1:nParticle_B( iBlock),   iBlock)
+         ! put the new particle just above the lower boundary
+         State_VIB(X_:Z_,  1, iBlock) = &
+              FootPoint_VB(X_:Z_, iBlock) * (1.0 + cTol)
+         State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
+         FootPoint_VB(LagrID_,iBlock) = State_VIB(LagrID_, 1, iBlock) - 1.0
+         iGridLocal_IB(Shock_, iBlock) = iGridLocal_IB(Shock_, iBlock) + 1
+      end do
+    end subroutine append_particles
+  !==============================
   end subroutine SP_adjust_lines
   !=============================
  
