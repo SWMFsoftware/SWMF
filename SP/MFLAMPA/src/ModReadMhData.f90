@@ -12,9 +12,9 @@ module SP_ModReadMhData
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
-       nVarRead, nVar, nBlock, State_VIB, iShock_IB, iNode_B, &
+       nVarRead, nVar, nBlock, State_VIB, iShock_IB, iNode_B, FootPoint_VB, &
        nParticle_B, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
-       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, NameVar_V
+       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, Shock_, NameVar_V
 
   use ModPlotFile, ONLY: read_plot_file
 
@@ -118,9 +118,14 @@ contains
     integer:: iNode, iLat, iLon
     ! number of particles saved in the input file
     integer:: nParticleInput
+    ! auxilary parameter index
+    integer, parameter:: RShock_ = Z_ + 2
+    ! additional parameters of lines
+    real:: Param_I(LagrID_:RShock_)
     ! timestamp
     character(len=8):: StringTime
     !------------------------------------------------------------------------
+
     ! the simulation time corresponding to the input file
     TimeOut = TimeRead
 
@@ -141,13 +146,21 @@ contains
             TypeFileIn = TypeFile,&
             n1out      = nParticleInput,&
             Coord1Out_I= Buffer_I,&
-            VarOut_VI  = Buffer_II)
+            VarOut_VI  = Buffer_II,&
+            ParamOut_I = Param_I(LagrID_:RShock_)&
+            )
        State_VIB(LagrID_   , 1:nParticleInput, iBlock) = &
             Buffer_I(             1:nParticleInput)
        State_VIB(1:nVarRead, 1:nParticleInput, iBlock) = &
             Buffer_II(1:nVarRead, 1:nParticleInput)
 
        nParticle_B(  iBlock) = nParticleInput
+
+       !Parameters
+       FootPoint_VB(LagrID_:Z_,iBlock) = Param_I(LagrID_:Z_)
+       ! shock location
+       iShock_IB(Shock_,iBlock) = nint(Param_I(RShock_-1))
+
     end do
 
     ! advance read time and iteration
