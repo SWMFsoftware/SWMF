@@ -137,11 +137,11 @@ contains
     integer:: iBlock, iParticle, iMomentumBin, iError
     !----------------------------------------------------------
     allocate(Distribution_IIB(&
-         nP,1:nParticleMax,nBlock), stat=iError)
+         0:nP+1,1:nParticleMax,nBlock), stat=iError)
     call check_allocate(iError, 'Distribution_IIB')
     do iBlock = 1, nBlock
        do iParticle = 1, nParticleMax
-          do iMomentumBin = 1, nP +1
+          do iMomentumBin = 0, nP+1
              Distribution_IIB(iMomentumBin,iParticle,iBlock) = &
                   cTiny / kinetic_energy_to_momentum(EnergyMax,&
                   NameParticle)/(MomentumScale_I(iMomentumBin))**2
@@ -401,9 +401,9 @@ contains
       end if
 
       ! set the boundary condition for diffusion
-      Distribution_IIB(2:nP, 1, iBlock) = &
-           Distribution_IIB(1, 1, iBlock) * &
-           (MomentumScale_I(1)/MomentumScale_I(2:nP))**SpectralIndex
+      Distribution_IIB(1:nP+1, 1, iBlock) = &
+           Distribution_IIB(0, 1, iBlock) * &
+           (MomentumScale_I(1)/MomentumScale_I(1:nP+1))**SpectralIndex
     end subroutine set_diffusion
     !=========================================================================
     subroutine set_advection_boundary_condition
