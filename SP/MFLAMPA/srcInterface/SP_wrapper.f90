@@ -504,8 +504,8 @@ contains
       ! store new footpoint of the line
       FootPoint_VB(X_:Z_,iBlock) = Xyz1_D + Alpha * Dir0_D
       ! length is used to decide when need to append new particles:
-      ! use distance between first two particles on the line
-      FootPoint_VB(Length_,    iBlock) = Dist1
+      ! use distance between 2nd and 3rd particles on the line
+      FootPoint_VB(Length_,    iBlock) = Dist2
       FootPoint_VB(LagrID_,    iBlock) = State_VIB(LagrID_,1,iBlock) - 1.0
     end subroutine SP_set_line_foot_b
     !================================
