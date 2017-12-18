@@ -1399,6 +1399,7 @@ test15_rundir:
 test15_run:
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
+	cd ${TESTDIR}; rm -rf RESTART_t0025.0000s
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl
 
