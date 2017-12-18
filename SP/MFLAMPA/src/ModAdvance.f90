@@ -6,16 +6,15 @@ module SP_ModAdvance
 
   ! The module contains methods for advancing the solution in time
 
-  use ModNumConst, ONLY: cTiny
+  use ModNumConst,ONLY: cPi, cTiny
 
-  use ModConst, ONLY: cPi, cMu, cProtonMass, cGyroradius, cLightSpeed, RSun
+  use ModConst,   ONLY: cMu, cProtonMass, cGyroradius, cLightSpeed, RSun
 
-  use SP_ModSize, ONLY: nParticleMax, nMomentumBin, nDim
+  use SP_ModSize, ONLY: nParticleMax, nP=>nMomentum
 
-  use SP_ModGrid, ONLY: &
-       X_,Y_,Z_, D_, S_, R_, Rho_, RhoOld_, Ux_,Uy_,Uz_, U_, Bx_, By_,Bz_,&
-       B_, BOld_, T_, nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock, &
-       State_VIB, iShock_IB
+  use SP_ModGrid, ONLY: State_VIB, iShock_IB, D_,  R_, Rho_, RhoOld_, U_, &
+       B_, BOld_, T_, nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock
+       
 
   use SP_ModDiffusion, ONLY: advance_diffusion
 
@@ -67,21 +66,19 @@ module SP_ModAdvance
   real:: CFLMax = 0.9
   !-----------------------------
   ! scale with respect to Momentum and log(Momentum)
-  real:: MomentumScale_I(nMomentumBin)
-  real:: LogMomentumScale_I(nMomentumBin)
-  real:: EnergyScale_I(nMomentumBin)
-  real:: LogEnergyScale_I(nMomentumBin)
-  real:: DMomentumOverDEnergy_I(nMomentumBin)
- !-----------------------------------------------------------------------------------!
-    !          Grid in the momentum space                                               !
-    !iP     0     1                         nP   nP+1                                   !
-    !       |     |    ....                 |     |                                     !
-    !P      P_inj P_inj*exp(\Delta (Ln P))  P_Max P_Max*exp(\Delta (Ln P))              !
-    !-------- This is because we put two boundary conditions: the background value at   !
-    !the right one and the physical condition at the left one, for the distribution     !
-    !                                    function                                       !
-    !-----------------------------------------------------------------------------------!
+  real:: MomentumScale_I(0:nP+1)
+  real:: LogMomentumScale_I(0:nP+1)
+  real:: EnergyScale_I(0:nP+1)
+  real:: LogEnergyScale_I(0:nP+1)
+  real:: DMomentumOverDEnergy_I(0:nP+1)
   !\
+  !          Grid in the momentum space
+  !iP     0     1                         nP   nP+1
+  !       |     |    ....                 |     | 
+  !P      P_inj P_inj*exp(\Delta (Ln P))  P_Max P_Max*exp(\Delta (Ln P))
+  !This is because we put two boundary conditions: the background value at
+  !the right one and the physical condition at the left one, for the 
+  !distribution function
   ! Velosity Distribution Function (VDF) 
   ! Number of bins in the distribution is set in ModSize
   ! 1st index - log(momentum) bin
@@ -89,19 +86,10 @@ module SP_ModAdvance
   ! 3rd index - local block number
   real, public, allocatable:: Distribution_IIB(:,:,:)
   !/
-  !Local arrays
-  real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
-  real, dimension(1:nParticleMax):: DLogRho_I
-  real, dimension(1:nParticleMax):: Radius_I, B_I,   BOld_I
-  real, dimension(1:nParticleMax):: FermiFirst_I
-  !-----------------------------
-  ! df/dt = DOuter * d(DInner * df/dx)/dx
-  real, dimension(1:nParticleMax):: DOuter_I, DInner_I, DInnerInj_I
+
   !-----------------------------
   ! level of turbulence
   real:: BOverDeltaB2 = 1.0
-  !-----------------------------
-  real:: MachAlfven
   !-----------------------------
   integer:: nWidth = 50
   !-----------------------------
@@ -136,10 +124,10 @@ contains
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
     ! total injection energy (including the rest mass energy
     TotalEnergyInj = momentum_to_energy(MomentumInj, NameParticle)
-    DLogMomentum = log(MomentumMax/MomentumInj) / nMomentumBin
-    do iMomentumBin = 1, nMomentumBin
+    DLogMomentum = log(MomentumMax/MomentumInj) / nP
+    do iMomentumBin = 0, nP +1
        LogMomentumScale_I(iMomentumBin) = &
-            log(MomentumInj) + (iMomentumBin-1) * DLogMomentum
+            log(MomentumInj) + iMomentumBin * DLogMomentum
        MomentumScale_I(iMomentumBin) = exp(LogMomentumScale_I(iMomentumBin))
        EnergyScale_I(iMomentumBin) = momentum_to_kinetic_energy(&
             MomentumScale_I(iMomentumBin), NameParticle)
@@ -158,11 +146,11 @@ contains
     integer:: iBlock, iParticle, iMomentumBin, iError
     !----------------------------------------------------------
     allocate(Distribution_IIB(&
-         nMomentumBin,1:nParticleMax,nBlock), stat=iError)
+         nP,1:nParticleMax,nBlock), stat=iError)
     call check_allocate(iError, 'Distribution_IIB')
     do iBlock = 1, nBlock
        do iParticle = 1, nParticleMax
-          do iMomentumBin = 1, nMomentumBin
+          do iMomentumBin = 1, nP +1
              Distribution_IIB(iMomentumBin,iParticle,iBlock) = &
                   cTiny / kinetic_energy_to_momentum(EnergyMax,&
                   NameParticle)/(MomentumScale_I(iMomentumBin))**2
@@ -188,14 +176,13 @@ contains
 
     ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
     ! shock never moves back
-    iSearchMin= max(iShock_IB(ShockOld_, iBlock), &
-         1 + nWidth )
-    iSearchMax= nParticle_B(iBlock) - nWidth - 1
+    iSearchMin = max(iShock_IB(ShockOld_, iBlock), 1 + nWidth )
+    iSearchMax = nParticle_B(iBlock) - nWidth - 1
     iShockCandidate = iSearchMin - 1 + maxloc(&
-         DLogRho_I(iSearchMin:iSearchMax),&
-         1, MASK = Radius_I(iSearchMin:iSearchMax) > 1.2)
+         State_VIB(DLogRho_,iSearchMin:iSearchMax,iBlock),&
+         1, MASK = State_VIB(R_,iSearchMin:iSearchMax,iBlock) > 1.2)
 
-    if(DLogRho_I(iShockCandidate) > 0.0)&
+    if(State_VIB(DLogRho_,iShockCandidate,iBlock) > 0.0)&
          iShock_IB(Shock_, iBlock) = iShockCandidate
   end subroutine get_shock_location
   !===========================================================================
@@ -210,6 +197,14 @@ contains
     real   :: Alpha
     real::  DiffCoeffMin =1.0E+04 /RSun
     real:: DtFull, DtProgress, Dt
+    real:: MachAlfven
+    !Local arrays
+    real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
+    real, dimension(1:nParticleMax):: Radius_I, B_I, BOld_I 
+    real, dimension(1:nParticleMax):: DLogRho_I, FermiFirst_I
+    !-----------------------------
+    ! df/dt = DOuter * d(DInner * df/dx)/dx
+    real, dimension(1:nParticleMax):: DOuter_I, DInner_I, DInnerInj_I
     character(len=*), parameter:: NameSub = 'SP:advance'
     !--------------------------------------------------------------------------
     ! the full time step
@@ -275,28 +270,28 @@ contains
           BOld_I(  1:iEnd) = B_I(  1:iEnd)
 
           Dt = DtProgress
-          if(nStep>1)then
+          if(nStep>1)then !Currently not used
              Dt = Dt / nStep
              FermiFirst_I(1:iEnd) = FermiFirst_I(1:iEnd) / nStep
           end if
 
           ! compute diffusion along the field line
           call set_diffusion
-          do iStep = 1, nStep
+          do iStep = 1, nStep !Currently nStep = 1
              ! update bc for advection
              call set_advection_boundary_condition
 
              ! advection in the momentum space
              do iParticle = 2, iEnd
                 call advance_log_advection(&
-                     FermiFirst_I(iParticle),nMomentumBin-2,1,1,&
-                     Distribution_IIB(1:nMomentumBin,iParticle,iBlock), &
-                     .true.,DLogMomentum)
+                     FermiFirst_I(iParticle),nP,1,1,&
+                     Distribution_IIB(0:nP+1,iParticle,iBlock), &
+                     .false.)
              end do
 
              ! diffusion along the field line
              if(.not.UseDiffusion) CYCLE
-             do iMomentumBin = 1, nMomentumBin
+             do iMomentumBin = 1, nP
                 Momentum = exp((iMomentumBin-1) * DLogMomentum)
                 DInner_I(1:iEnd) =&
                      DInnerInj_I(1:iEnd) * Momentum**2 * &
@@ -324,16 +319,16 @@ contains
       ! alfvenic mach number for the current line
       real:: MachAlfven
       
-      real:: SpeedAlfven, SpeedUpstream
+      real:: SpeedAlfvenUpstream, SpeedUpstream
       !--------------------------------------------
       ! speed upstream is relative to the shock:
       ! \rho_u * (U_u - V_{shock}) = \rho_d * (U_d - V_{shock})
       SpeedUpstream = Rho_I(iShock+1-nWidth)*&
-           (U_I(  iShock+1-nWidth) - U_I(  iShock+nWidth))/ &
-           (Rho_I(iShock+1-nWidth) - Rho_I(iShock+nWidth))
-      SpeedAlfven = &
-           B_I(iShock+nWidth) / sqrt(cMu*cProtonMass*Rho_I(iShock+nWidth))
-      MachAlfven = SpeedUpstream / SpeedAlfven
+           (U_I(  iShock + 1 - nWidth) - U_I(  iShock + nWidth))/ &
+           (Rho_I(iShock + 1 - nWidth) - Rho_I(iShock + nWidth))
+      SpeedAlfvenUpstream = B_I(iShock + nWidth)/ &
+           sqrt(cMu*cProtonMass*Rho_I(iShock + nWidth))
+      MachAlfven = SpeedUpstream / SpeedAlfvenUpstream
     end function mach_alfven
     !=======================
     subroutine steepen_shock
@@ -354,7 +349,7 @@ contains
               DLogRhoBackground
          if(Misc > 0.0)then
             DLogRhoExcess = DLogRhoExcess + &
-                 Misc * State_VIB(D_, iParticle, iBlock)
+                 Misc*State_VIB(D_, iParticle, iBlock)
             Length = Length + State_VIB(D_, iParticle, iBlock)
          end if
       end do
@@ -372,22 +367,24 @@ contains
 
       ! also, sharpen the magnitude of the magnetic field
       ! post shock part
-      B_I(  iShock+1-nWidth:iShock+1) = maxval(B_I(  iShock+1-nWidth:iShock+1))
+      B_I(iShock+1-nWidth:iShock+1) = maxval(B_I(iShock+1-nWidth:iShock+1))
       ! pre shock part
-      B_I(  iShock+1:iShock+nWidth) = minval(B_I(  iShock+1:iShock+nWidth))
+      B_I(iShock+1:iShock+nWidth  ) = minval(B_I(iShock+1:iShock+nWidth))
     end subroutine steepen_shock
     !=============================================================
     subroutine set_diffusion
       ! set diffusion coefficient for the current line
-      !--------------------------------------------------------------------------
+      !-----------------------------------------------------------
       DOuter_I(1:iEnd) = B_I(1:iEnd)
+      !DInner = DiffusionCoeff/B_)
       if(.not.UseRealDiffusionUpstream)then
          ! Sokolov et al., 2004: eq (4), 
-         ! note: P = Energy * Vel / C**2
-         DInnerInj_I(1:iEnd) = &
-              BOverDeltaB2*&
+         ! note: P = TotalEnergy * Vel / C**2
+         ! Gyroradius = cGyroRadius * momentum / |B|
+         ! DInner = (B/\delta B)**2*Gyroradius*Vel/|B| 
+         DInnerInj_I(1:iEnd) = BOverDeltaB2*&
               cGyroRadius*(MomentumInj*cLightSpeed)**2/&
-              (B_I(1:iEnd)**2*TotalEnergyInj) / RSun**2
+              (B_I(1:iEnd)**2*TotalEnergyInj)/RSun**2
       else
          ! diffusion is different up- and down-stream
          ! Sokolov et al. 2004, paragraphs before and after eq (4)
@@ -408,26 +405,25 @@ contains
       end if
 
       ! set the boundary condition for diffusion
-      Distribution_IIB(2:nMomentumBin, 1, iBlock) = &
+      Distribution_IIB(2:nP, 1, iBlock) = &
            Distribution_IIB(1, 1, iBlock) * &
-           (MomentumScale_I(1) / MomentumScale_I(2:nMomentumBin))**SpectralIndex
+           (MomentumScale_I(1)/MomentumScale_I(2:nP))**SpectralIndex
     end subroutine set_diffusion
-    !===========================================================================
+    !=========================================================================
     subroutine set_advection_boundary_condition
       ! set boundary conditions on each particle on the current line
       !----------------------------------------
       ! loop variable
       integer:: iParticle
-      real:: Density, Momentum
+      real   :: MomentumTi  !Momentum for the thermal energy k_BTi
       !----------------------------------------
       do iParticle = 1, iEnd
          ! default injection distribution, see Sokolov et al., 2004, eq (3)
-         Density = Rho_I(iParticle)
-         Momentum= kinetic_energy_to_momentum(&
+         MomentumTi = kinetic_energy_to_momentum(&
               State_VIB(T_,iParticle,iBlock)*UnitEnergy,NameParticle)
-         Distribution_IIB(1,iParticle,iBlock) = &
-              0.25/cPi/(SpectralIndex-3) * CInj * Density / &
-              Momentum**3 * (Momentum/MomentumInj)**SpectralIndex
+         Distribution_IIB(0,iParticle,iBlock) = &
+              0.25/cPi/(SpectralIndex-3)*CInj*Rho_I(iParticle)/ &
+              MomentumTi**3 * (MomentumTi/MomentumInj)**SpectralIndex
       end do
     end subroutine set_advection_boundary_condition
   end subroutine advance

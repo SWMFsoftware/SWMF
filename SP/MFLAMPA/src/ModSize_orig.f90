@@ -7,7 +7,7 @@ module SP_ModSize
 
   private ! except
   public:: &
-       nDim, nMomentumBin, nPitchAngleBin, IsPitchAngleAveraged, &
+       nDim, nMomentum, nPitchAngle, IsPitchAngleAveraged, &
        Particle_,  OriginLon_, OriginLat_, &
        nLon, nLat, nNode, nParticleMax
 
@@ -30,11 +30,11 @@ module SP_ModSize
   integer, parameter:: nLat  = 4
   integer, parameter:: nNode = nLon*nLat
 
-  ! number of bins in the distribution (see ModGrid);
-  integer, parameter:: nMomentumBin   = 100
-  integer, parameter:: nPitchAngleBin = 1  
+  ! number of points along the phase coords (see ModAdvance);
+  integer, parameter:: nMomentum   = 100
+  integer, parameter:: nPitchAngle = 1  
 
   ! whether to use pitch-angle averaged equations
-  logical, parameter:: IsPitchAngleAveraged = nPitchAngleBin == 1
+  logical, parameter:: IsPitchAngleAveraged = nPitchAngle == 1
 
 end module SP_ModSize

@@ -8,7 +8,7 @@ module SP_ModWrite
 
   use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, nParticleMax,&
-       nMomentumBin, &
+       nMomentum, &
        Particle_, OriginLat_, OriginLon_
 
   use SP_ModGrid, ONLY: &
@@ -215,7 +215,7 @@ contains
           call process_distr
           ! prepare the output data container
           allocate(File_I(iFile) % &
-               Buffer_II(nMomentumBin,1:nParticleMax))
+               Buffer_II(nMomentum,1:nParticleMax))
        end select
     end do
 
@@ -682,8 +682,8 @@ contains
       ! index of first/last particle on the field line
       integer:: iLast
       ! scale and conversion factor
-      real:: Scale_I(nMomentumBin), Factor_I(nMomentumBin)
-      real:: Unity_I(nMomentumBin) = 1.0
+      real:: Scale_I(0:nMomentum+1), Factor_I(0:nMomentum+1)
+      real:: Unity_I(0:nMomentum+1) = 1.0
       ! timestamp
       character(len=8):: StringTime
       !------------------------------------------------------------------------
@@ -765,7 +765,7 @@ contains
     ! compute the total (simulated) integral flux of particles as well as
     ! particle flux in the 6 GOES channels; also compute total energy flux
     !------------------------------------------------------------------------
-    integer:: iBlock, iParticle, iBin, iFlux ! loop variables
+    integer:: iBlock, iParticle, iP, iFlux ! loop variables
     real   :: EFlux ! the value of energy flux
     real   :: EChannel_I(6) ! energy limits of GOES channels
     real   :: dFlux, dFlux1 ! increments
@@ -784,15 +784,15 @@ contains
           Flux_I= 0.0
           Norm  = 0.0
           Flux  = 0.0
-          do iBin = 1, nMomentumBin - 1
-             ! the flux increment from iBin
+          do iP = 1, nMomentum - 1
+             ! the flux increment from iP
              dFlux = 0.5 * &
-                  (EnergyScale_I(iBin+1) - EnergyScale_I(iBin)) * (&
-                  Distribution_IIB(iBin,  iParticle,iBlock)*&
-                  MomentumScale_I(iBin)**2 &
+                  (EnergyScale_I(iP+1) - EnergyScale_I(iP)) * (&
+                  Distribution_IIB(iP,  iParticle,iBlock)*&
+                  MomentumScale_I(iP)**2 &
                   +&
-                  Distribution_IIB(iBin+1,iParticle,iBlock)*&
-                  MomentumScale_I(iBin+1)**2)
+                  Distribution_IIB(iP+1,iParticle,iBlock)*&
+                  MomentumScale_I(iP+1)**2)
 
              ! increase the total flux
              Flux = Flux + dFlux
@@ -800,47 +800,47 @@ contains
              ! increase FOES channels' fluxes
              do iFlux = 1, 6
                 ! check whether reached the channel's cut-off level
-                if(EnergyScale_I(iBin+1) < EChannel_I(iFlux))&
+                if(EnergyScale_I(iP+1) < EChannel_I(iFlux))&
                      CYCLE
 
-                if(EnergyScale_I(iBin+1) >= EChannel_I(iFlux))then
+                if(EnergyScale_I(iP+1) >= EChannel_I(iFlux))then
                    Flux_I(iFlux) = Flux_I(iFlux) + dFlux
                 else
                    ! channel cutoff level is often in the middle of a bin;
                    ! compute partial flux increment
                    dFlux1 =&
-                        ((-0.50*(EnergyScale_I(iBin) + EChannel_I(iFlux)) + &
-                        EnergyScale_I(iBin+1) )*&
-                        Distribution_IIB(iBin,iParticle,iBlock)*&
-                        MomentumScale_I(iBin)**2  &
-                        -0.50*(EnergyScale_I(iBin)-EChannel_I(iFlux))*&
-                        Distribution_IIB(iBin+1,iParticle,iBlock)*&
-                        MomentumScale_I(iBin+1)**2)*&
-                        (EnergyScale_I(iBin)-EChannel_I(iFlux))/&
-                        (EnergyScale_I(iBin+1)-EnergyScale_I(iBin))
+                        ((-0.50*(EnergyScale_I(iP) + EChannel_I(iFlux)) + &
+                        EnergyScale_I(iP+1) )*&
+                        Distribution_IIB(iP,iParticle,iBlock)*&
+                        MomentumScale_I(iP)**2  &
+                        -0.50*(EnergyScale_I(iP)-EChannel_I(iFlux))*&
+                        Distribution_IIB(iP+1,iParticle,iBlock)*&
+                        MomentumScale_I(iP+1)**2)*&
+                        (EnergyScale_I(iP)-EChannel_I(iFlux))/&
+                        (EnergyScale_I(iP+1)-EnergyScale_I(iP))
                    Flux_I(iFlux) = Flux_I(iFlux) + dFlux1
                 end if
              end do
 
              ! increase total energy flux
              EFlux = EFlux + 0.5 * &
-                  (EnergyScale_I(iBin+1) - EnergyScale_I(iBin)) * (&
-                  Distribution_IIB(iBin,  iParticle,iBlock)*&
-                  EnergyScale_I(iBin) * &
-                  MomentumScale_I(iBin)**2 &
+                  (EnergyScale_I(iP+1) - EnergyScale_I(iP)) * (&
+                  Distribution_IIB(iP,  iParticle,iBlock)*&
+                  EnergyScale_I(iP) * &
+                  MomentumScale_I(iP)**2 &
                   +&
-                  Distribution_IIB(iBin+1,iParticle,iBlock)*&
-                  EnergyScale_I(iBin+1) * &
-                  MomentumScale_I(iBin+1)**2)
+                  Distribution_IIB(iP+1,iParticle,iBlock)*&
+                  EnergyScale_I(iP+1) * &
+                  MomentumScale_I(iP+1)**2)
 
              ! normalization factor
              Norm = Norm + 0.5 * &
-                  (MomentumScale_I(iBin+1) - MomentumScale_I(iBin)) * (&
-                  Distribution_IIB(iBin,  iParticle, iBlock) * &
-                  MomentumScale_I(iBin)**2 &
+                  (MomentumScale_I(iP+1) - MomentumScale_I(iP)) * (&
+                  Distribution_IIB(iP,  iParticle, iBlock) * &
+                  MomentumScale_I(iP)**2 &
                   + &
-                  Distribution_IIB(iBin+1,iParticle, iBlock) * &
-                  MomentumScale_I(iBin+1)**2)
+                  Distribution_IIB(iP+1,iParticle, iBlock) * &
+                  MomentumScale_I(iP+1)**2)
           end do
 
           ! store the results
