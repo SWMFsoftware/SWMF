@@ -7,11 +7,13 @@ program spectrum
 
   implicit none
 
-  ! Variables for DEM calculation
+  ! Variables for DEM and EM calculation
   logical                     :: DoDEM = .false., DoSpectrum = .false.
-  real,allocatable            :: DEM_I(:), Te_I(:)
+  logical                     :: DoEM = .false.
+  real,allocatable            :: DEM_I(:), Te_I(:), EM_I(:)
   real                        :: LogTeMinDEM, LogTeMaxDEM, DLogTeDEM
   character(len=200)          :: NameDEMFile = 'dem.out'
+  character(len=200)          :: NameEMFile = 'em.out'
 
   ! Logical variables of running modes
   logical                     :: IsVerbose =  .false., IsDebug = .false.
@@ -64,7 +66,7 @@ program spectrum
   real,allocatable            :: Var_VIII(:,:,:,:)
   ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
   real                        :: ProtonElectronRatio = 0.83
-  real                        :: dx = 1.!, dy = 1., dz = 1., dVperd2 = 1., dOmega= 1.
+  real                        :: dx = 1., dy = 1., dz = 1.!, dVperd2 = 1., dOmega= 1.
 
   ! Extend transition region
   logical :: DoExtendTransitionRegion = .false.
@@ -180,7 +182,7 @@ program spectrum
   
   ! Loop over Chianti lines
   if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
-
+!nLineAll = 1.
   do iLine = 1,nLineAll
      if (.not. IsOneLine)call calc_flux
      if (IsOneLine .and.  &
@@ -211,6 +213,8 @@ contains
     character(len=5)               :: TypeFileDEM = 'ascii'
     character(len=200)             :: StringHeaderDEM = &
          '[K] [cm^-5 K^-1]'
+    character(len=200)             :: StringHeaderEM = &
+         '[K] [cm^-3]'
 
     character(len=*), parameter    :: NameSub = 'calc_dem'
     !------------------------------------------------------------------------ 
@@ -218,10 +222,11 @@ contains
     ! Set up temperature grid and allocate variables
     nLogTeDEM = nint((LogTeMaxDEM-LogTeMinDEM)/DLogTeDEM)
 
-    allocate(Te_I(nLogTeDEM), DEM_I(nLogTeDEM+1))
+    allocate(Te_I(nLogTeDEM), DEM_I(nLogTeDEM+1), EM_I(nLogTeDEM+1))
 
     DEM_I = 0
-    
+    EM_I = 0
+
     do iTe=1,nLogTeDEM
        Te_I(iTe) = 10**(LogTeMinDEM+DLogTeDEM * iTe)
     end do
@@ -245,25 +250,37 @@ contains
              ! DEM value is Ne*N_H *dh/dT in [cm^-5 K^-1]
              DEM_I(iTe) = DEM_I(iTe) + &
                   (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 &
-                  / ProtonElectronRatio * DxLocal*1e2 / DLogTeDEM / &
+                  / ProtonElectronRatio * DxLocal / DLogTeDEM / &
                   Var_VIII(te_,i,j,k)/log(10.)
+             ! EM value is Ne*N *dV in [cm^-3]
+             EM_I(iTe) = EM_I(iTe) + &
+                  (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 &
+                  / ProtonElectronRatio * DxLocal * dy * dz
           end do
        end do
     end do
-   
+
     do iTe=1,nLogTeDEM 
        Te_I(iTe) = LogTeMinDEM+DLogTeDEM * iTe
     end do
 
     call save_plot_file(NameFile = NameDEMFile, &
-               TypeFileIn     = TypeFileDEM,      &
-               StringHeaderIn = StringHeaderDEM,  &
-               NameVarIn      = "Temperature DEM",     &
-               nDimIn         = 1,                     &
-               Coord1In_I     = Te_I(1:nLogTeDEM-1),           &
-               VarIn_I     = DEM_I(1:nLogTeDEM-1))
+         TypeFileIn     = TypeFileDEM,      &
+         StringHeaderIn = StringHeaderDEM,  &
+         NameVarIn      = "Temperature DEM",     &
+         nDimIn         = 1,                     &
+         Coord1In_I     = Te_I(1:nLogTeDEM-1),           &
+         VarIn_I     = DEM_I(1:nLogTeDEM-1))
 
-    deallocate(Te_I,DEM_I)
+    call save_plot_file(NameFile = NameEMFile, &
+         TypeFileIn     = TypeFileDEM,      &
+         StringHeaderIn = StringHeaderEM,  &
+         NameVarIn      = "Temperature EM",     &
+         nDimIn         = 1,                     &
+         Coord1In_I     = Te_I(1:nLogTeDEM-1),           &
+         VarIn_I     = EM_I(1:nLogTeDEM-1))
+
+    deallocate(Te_I,DEM_I, EM_I)
 
   end subroutine calc_dem
   
@@ -467,7 +484,7 @@ contains
     real                           :: TShift
     character(len=*), parameter    :: NameSub='calc_flux'
     !------------------------------------------------------------------------
-
+    
     allocate(Glambda_II(MinI:MaxI,MinJ:MaxJ))
 
     Aion     = LineTable_I(iLine)%Aion
@@ -479,12 +496,14 @@ contains
     do kPixel=1,n3
        do jPixel=1,n2
           do i=1,n1
+
              if(IsOnePixel .and. (kPixel/=kOnePixel .or. &
                   jPixel/=jOnePixel .or. i/=iOnePixel))CYCLE
              ! Cells inside body or behind the solar disk
              if(all(Var_VIII(1:7,i,jPixel,kPixel)==0))CYCLE
 
              Lambda   = LineTable_I(iLine)%LineWavelength
+
              ! Doppler shift while x axis is oriented towards observer
              if(IsDoppler)then
                 Lambda_shifted = (-Var_VIII(ux_,i,jPixel,kPixel)/cLightSpeed &
@@ -503,17 +522,13 @@ contains
                    EXIT
                 end if
              end do
-             if(iInterval == -1 .and. .not. IsOneLine)then
-                write(*,*)"Lambda = ",Lambda," will be left out!"
-                write(*,*)"Intervals begin and end = ", &
-                     WavelengthInterval_II(:,:)
-                EXIT
-             endif
+
+             if(iInterval == -1)EXIT
 
              iBin =0
              do
                 iBin=iBin+1
-                if ((Lambda > &
+                if((Lambda > &
                      SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)) &
                      .and.&
                      (Lambda < & 
@@ -522,12 +537,9 @@ contains
                    iCenter=iBin
                    EXIT
                 end if
-                if (SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
+                if(SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin+1) > &
                      WavelengthInterval_II(2,iInterval))EXIT
-                if (iBin==nBin)then
-                   write(*,*)"Lambda = ",Lambda," will be left out!"
-                   EXIT
-                endif
+                if (iBin==nBin)EXIT
              end do
 
              ! Calculate Elzasser variables
@@ -562,7 +574,14 @@ contains
              ! Add thermal and non-thermal broadening
              DLambdaSI2 = LambdaSI**2 * (Uth2 + Unth2)/cLightSpeed**2
 
-             ! Add instrumental broadening (if any)
+             ! Add 70 mA for Hinode/EIS 2'' slit
+             ! 70 mA is in FWHM, that's 7e-12 m
+             ! FWHM = 2sqrt(2ln2)*sigma
+             ! sigma = FWHM/(2sqrt(2ln2))
+             ! sigma^2 = (7e-12)^2 /(4*2*ln2)
+             DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
+             
+             ! Add instrumental broadening (if any)            
              if(IsInstrument)DLambdaSI2 = DLambdaSI2 + DLambdaInstr2
 
              ! Convert [m] --> [A]
@@ -625,6 +644,8 @@ contains
              LabelTable_III(iLine,jPixel,kPixel)%FluxMono = &
                   FluxMono /(sqrt(2*cPi) * DLambda)
 
+
+             
              call disperse_line(iInterval, iCenter, Lambda, DLambda, FluxMono)
           end do
        end do
@@ -867,7 +888,9 @@ contains
 
        case("#DEM")
           DoDEM = .true.
+          DoEM = .true.
           call read_var('NameDEMFile',NameDEMFile)
+          call read_var('NameEMFile',NameEMFile)
           call read_var('DoSpectrum',DoSpectrum)
           call read_var('LogTeMinDEM',LogTeMinDEM)
           call read_var('LogTeMaxDEM',LogTeMaxDEM)
@@ -1141,6 +1164,8 @@ contains
     end do
 
     dx = (CoordMax_D(iDimLOS)-CoordMin_D(iDimLOS))/n1 * rSun *1e2
+    dy = (CoordMax_D(iDimVertical)-CoordMin_D(iDimVertical))/n2 * rSun *1e2
+    dz = (CoordMax_D(iDimHorizontal)-CoordMin_D(iDimHorizontal))/n3 * rSun *1e2
 
   end subroutine read_data
 
@@ -1233,7 +1258,7 @@ contains
        read(UnitTmp_,*,iostat=iError) &
             NameIon, Aion, nLevelFrom, nLevelTo, LineWavelength, &
             LogN, LogT, LogG
-
+  
        if(iError  /= 0 .and. iError /= -1)then
           write(*,*)'iError = ',iError
           write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
@@ -1275,7 +1300,7 @@ contains
           ! Create intensity table
           allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
           LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
-
+                    
           ! Storage is done
           DoStore = .false.
        end if
