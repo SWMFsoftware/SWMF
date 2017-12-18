@@ -42,7 +42,6 @@ module SP_ModWrite
      ! kind of data printed to a file
      integer:: iKindData
      ! format of a file
-     integer:: iFormat
      character(len=4 ):: NameFormat
      character(len=20):: TypeFile
      ! whether it is the first call
@@ -86,13 +85,7 @@ module SP_ModWrite
        MH2D_      = 1, & ! at given radius as Lon-Lat plot
        MHTime_    = 2, & ! at given radius for each line as time series 
        ! Distribution
-       Distr1D_   = 3, & ! along each line
-       Distr2D_   = 4, & !  at given radius as Lon-Lat plot
-       DistrTime_ = 5    ! at given radius for each line as time series 
-  ! Format of output files
-  integer, parameter:: &
-       Tec_ = 0, &
-       Idl_ = 1
+       Distr1D_   = 3    ! along each line
   ! Scale for writing distribution
   integer, parameter:: &
        MomentumScale_= 1, &
@@ -112,6 +105,8 @@ contains
     character(len=300):: StringPlot
     ! loop variables
     integer:: iFile, iNode, iVar
+    integer:: nStringPlot
+    character(len=20):: TypeFile, KindData, StringPlot_I(2*nVar)
     character(len=*), parameter :: NameSub='SP:set_write_param'
     !--------------------------------------------------------------------------
     ! initialize auxilary array
@@ -133,95 +128,96 @@ contains
        StringPlot = ''
        call read_var('StringPlot', StringPlot)
 
-       ! the format of output file must be set
-       if(    index(StringPlot,'tec') > 0)then
-          File_I(iFile) % iFormat   = Tec_
+       ! make comparison case insensitive: convert strings to lower case
+       call lower_case(StringPlot)
+
+       ! put individual variables' and format names in separate array entries
+       call split_string(StringPlot, StringPlot_I, nStringPlot)
+
+       ! data kind is the first entry
+       KindData = StringPlot_I(1)
+       ! check whether set properly
+       select case(KindData)
+       case('mh1d')
+          File_I(iFile) % iKindData = MH1D_
+       case('mh2d')
+          File_I(iFile) % iKindData = MH2D_
+       case('mhtime')
+          File_I(iFile) % iKindData = MHTime_
+       case('distr1d')
+          File_I(iFile) % iKindData = Distr1D_
+       case default
+          call CON_stop(NameSub//&
+               ": kind of data isn't properly set in PARAM.in")
+       end select
+
+       ! format of output is the last entry
+       TypeFile = StringPlot_I(nStringPlot)
+       ! check whether set properly
+       select case(TypeFile)
+       case('tec')
           File_I(iFile) % NameFormat='.dat'
           File_I(iFile) % TypeFile  ='tec'
-       elseif(index(StringPlot,'idl') > 0)then
-          File_I(iFile) % iFormat   = Idl_
+       case('idl','ascii')
           File_I(iFile) % NameFormat='.out'
           File_I(iFile) % TypeFile  ='ascii'
-       else
-          call CON_stop(NameSub//': output format was not set in PARAM.in')
-       end if
-
-       ! the kind of output data must be set
-       if(    index(StringPlot,'mh1d' )    > 0)then
-          File_I(iFile) % iKindData = MH1D_
-       elseif(index(StringPlot,'mh2d')    > 0)then
-          File_I(iFile) % iKindData = MH2d_
-       elseif(index(StringPlot,'mhtime')    > 0)then
-          File_I(iFile) % iKindData = MHTime_
-       elseif(index(StringPlot,'distr1d')  > 0)then
-          File_I(iFile) % iKindData = Distr1D_
-       elseif(index(StringPlot,'distr2d') > 0)then
-          File_I(iFile) % iKindData = Distr2d_
+       case('real4','real8')
+          File_I(iFile) % NameFormat='.out'
+          File_I(iFile) % TypeFile  = TypeFile
+       case default
           call CON_stop(NameSub//&
-               ': spherical output for distribution is not implemented yet')
-       elseif(index(StringPlot,'distrtime')    > 0)then
-          File_I(iFile) % iKindData = DistrTime_
-          call CON_stop(NameSub//&
-               ': time series output for distribution is not implemented yet')
-       else
-          call CON_stop(NameSub//': kind of data was not set in PARAM.in')
-       end if
+               ": output format isn't properly set in PARAM.in")
+       end select
 
        ! reset variables' names
        File_I(iFile) % NameVarPlot = NameVar_V(LagrID_)
 
        ! based on kind of data process the requested output
        select case(File_I(iFile) % iKindData)
-          case(MH1D_)
-             call process_mh
-             ! prepare the output data container
-             allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot, 1:nParticleMax))
-             ! add particle index to variable names
-             File_I(iFile) % NameVarPlot = &
-                  trim(File_I(iFile) % NameVarPlot)
-             do iVar = LagrID_,Z_
-                File_I(iFile)%NameVarPlot = &
-                     trim(File_I(iFile)%NameVarPlot)//&
-                     ' '//NameVar_V(iVar)  
-             end do
-             if(DoTraceShock)&
-                  File_I(iFile) % NameVarPlot = &
-                  trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
-          case(MH2D_)
-             call process_mh
-             ! prepare the output data container
-             allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot, nNode))
-             ! add line index to variable names
-             File_I(iFile) % NameVarPlot = &
-                  'LineIndex '//trim(File_I(iFile) % NameVarPlot)
-             ! get radius
-             call read_var('Radius [Rs]', File_I(iFile) % Radius)
-          case(MHTime_)
-             call process_mh
-             ! prepare the output data container
-             allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot, 1))
-             ! add time interval index to variable names
-             File_I(iFile) % NameVarPlot = &
-                  'TimeIntervalIndex '//trim(File_I(iFile) % NameVarPlot)
-             ! get radius
-             call read_var('Radius [Rs]', File_I(iFile) % Radius)
-             ! reset indicator of the first call
-             File_I(iFile) % IsFirstCall = .true.
-          case(Distr1D_)
-             call process_distr
-             ! prepare the output data container
-             allocate(File_I(iFile) % &
-                  Buffer_II(nMomentumBin,1:nParticleMax))
-          case(Distr2D_)
-             call process_distr
-             ! prepare the output data container
-             allocate(File_I(iFile) % Buffer_II(nMomentumBin, nNode))
-             ! get radius
-             call read_var('Radius [Rs]', File_I(iFile) % Radius)
-       end select       
+       case(MH1D_)
+          call process_mh
+          ! prepare the output data container
+          allocate(File_I(iFile) % Buffer_II(&
+               File_I(iFile)%nVarPlot, 1:nParticleMax))
+          ! add particle index to variable names
+          File_I(iFile) % NameVarPlot = &
+               trim(File_I(iFile) % NameVarPlot)
+          do iVar = LagrID_,Z_
+             File_I(iFile)%NameVarPlot = &
+                  trim(File_I(iFile)%NameVarPlot)//&
+                  ' '//NameVar_V(iVar)  
+          end do
+          if(DoTraceShock)&
+               File_I(iFile) % NameVarPlot = &
+               trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
+       case(MH2D_)
+          call process_mh
+          ! prepare the output data container
+          allocate(File_I(iFile) % Buffer_II(&
+               File_I(iFile)%nVarPlot, nNode))
+          ! add line index to variable names
+          File_I(iFile) % NameVarPlot = &
+               'LineIndex '//trim(File_I(iFile) % NameVarPlot)
+          ! get radius
+          call read_var('Radius [Rs]', File_I(iFile) % Radius)
+       case(MHTime_)
+          call process_mh
+          ! prepare the output data container
+          allocate(File_I(iFile) % Buffer_II(&
+               File_I(iFile)%nVarPlot, 1))
+          ! add time interval index to variable names
+          File_I(iFile) % NameVarPlot = &
+               'TimeIntervalIndex '//trim(File_I(iFile) % NameVarPlot)
+          ! get radius
+          call read_var('Radius [Rs]', File_I(iFile) % Radius)
+          ! reset indicator of the first call
+          File_I(iFile) % IsFirstCall = .true.
+       case(Distr1D_)
+          call process_distr
+          ! prepare the output data container
+          allocate(File_I(iFile) % &
+               Buffer_II(nMomentumBin,1:nParticleMax))
+       end select
     end do
 
   contains
@@ -229,8 +225,8 @@ contains
       ! process variables to plot
       ! NOTE: for iKindData == MH1D_ certain variables are always printed:
       !       Rho_, T_, Ux_:Uz_, Bx_:Bz_, Wave1_, Wave2_
-      integer:: iVar, iVarPlot, nStringPlot, iStringPlot
-      character(len=10) :: StringPlot_I(2*nVar), NameVarLowerCase
+      integer:: iVar, iVarPlot, iStringPlot
+      character(len=10) ::  NameVarLowerCase
       !-----------------------------------------------
       ! reset
       File_I(iFile) % DoPlot_V = .false.
@@ -245,11 +241,7 @@ contains
       !\
       ! determine, which variables were requested to be in the output file
       !/
-      ! make comparison case insensitive: convert strings to lower case
-      call lower_case(StringPlot)
-      ! get individual variables' names
-      call split_string(StringPlot, StringPlot_I, nStringPlot)
-      do iStringPlot = 1, nStringPlot
+      do iStringPlot = 2, nStringPlot - 1
          ! check names of individual variables
          do iVar = 1, nVar
             NameVarLowerCase = NameVar_V(iVar)
@@ -337,8 +329,6 @@ contains
           call write_mh_time
        case(Distr1D_)
           call write_distr_1d
-       case(Distr2D_)
-          !call write_distr_2d
        end select
     end do
 
