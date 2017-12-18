@@ -30,8 +30,8 @@ module SP_ModMain
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
-       Distribution_IIB, advance, set_injection_param,     &
-       init_advance_const, set_initial_condition
+       Distribution_IIB, advance, set_momentum_param,       &
+       init_advance, init_distribution_function
 
   implicit none
 
@@ -126,9 +126,9 @@ contains
        case('#COORDSYSTEM',"#COORDINATESYSTEM")
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
-          call set_injection_param
+          call set_momentum_param
        case('#TEST')
-          ! various test modes that allow to disable certain features
+          ! various test modes allowing to disable certain features
           call read_var('DoTraceShock', DoTraceShock)
           call read_var('UseDiffusion', UseDiffusion)
        case default
@@ -152,9 +152,9 @@ contains
     iIterGlobal   = 0
     TimeGlobal    = TimeStart
     DataInputTime = TimeStart
-    call init_advance_const
+    call init_advance
     call init_grid(DoRestart .or. DoReadMhData)
-    call set_initial_condition 
+    call init_distribution_function 
     if(DoRestart) call read_restart
   end subroutine initialize
   !============================================================================

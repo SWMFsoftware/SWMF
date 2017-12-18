@@ -7,38 +7,28 @@ module SP_ModAdvance
   ! The module contains methods for advancing the solution in time
 
   use ModNumConst,ONLY: cPi, cTiny
-
-  use ModConst,   ONLY: cMu, cProtonMass, cGyroradius, cLightSpeed, RSun
-
+  use ModConst,   ONLY: cLightSpeed,&
+       kinetic_energy_to_momentum, momentum_to_energy, energy_in
   use SP_ModSize, ONLY: nParticleMax, nP=>nMomentum
-
-  use SP_ModGrid, ONLY: State_VIB, iShock_IB, D_,  R_, Rho_, RhoOld_, U_, &
-       B_, BOld_, T_, nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock
-       
-
-  use SP_ModDiffusion, ONLY: advance_diffusion
-
-  use SP_ModLogAdvection, ONLY: advance_log_advection
-  use ModConst, ONLY: kinetic_energy_to_momentum, momentum_to_kinetic_energy,&
-       momentum_to_energy, energy_in
-
+  use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
+       Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B     
   implicit none
-
   SAVE
-  
-  private ! except
+  PRIVATE ! except
+  !Public members:
+  public:: set_momentum_param !read settings for grid over momentum
+  public:: init_advance       !Initialize grid in the phase space
+  public:: init_distribution_function  !Initialize Distribution_IIB
+  public::  advance           !Advance solution Distribution_IIB
 
-  public:: TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion
-  public:: init_advance_const, set_injection_param, advance, &
-       set_initial_condition
+  public:: DoTraceShock, UseDiffusion
   public::  EnergyScale_I, MomentumScale_I, &
        LogEnergyScale_I, LogMomentumScale_I, DMomentumOverDEnergy_I
 
   !\
   ! Global interation and time
-  !-----------------------------
-  real   :: TimeGlobal  = -1.0
-  integer:: iIterGlobal = -1
+  real,    public :: TimeGlobal  = -1.0
+  integer, public :: iIterGlobal = -1
   !-----------------------------
   ! units of energy
   character(len=*), parameter:: NameEUnit = 'kev'
@@ -100,18 +90,19 @@ module SP_ModAdvance
 
 contains
   
-  subroutine set_injection_param
+  subroutine set_momentum_param
     use ModReadParam, ONLY: read_var
     !---------------------------------------------
     call read_var('EnergyInj',    EnergyInj)
     call read_var('EnergyMax',    EnergyMax)
     call read_var('SpectralIndex',SpectralIndex)
     call read_var('Efficiency',   CInj)
-  end subroutine set_injection_param
+  end subroutine set_momentum_param
 
   !============================================================================
 
-  subroutine init_advance_const
+  subroutine init_advance
+    use ModConst, ONLY: momentum_to_kinetic_energy
     ! compute all needed constants
     integer:: iMomentumBin, iBlock, iParticle
     !---------------------------------------------
@@ -133,14 +124,14 @@ contains
             MomentumScale_I(iMomentumBin), NameParticle)
        LogEnergyScale_I(iMomentumBin) = log(EnergyScale_I(iMomentumBin))
        DMomentumOverDEnergy_I(iMomentumBin) = &
-            momentum_to_energy(MomentumScale_I(iMomentumBin), NameParticle) / &
+            momentum_to_energy(MomentumScale_I(iMomentumBin), NameParticle)/&
             (MomentumScale_I(iMomentumBin) * cLightSpeed**2)
     end do
-  end subroutine init_advance_const
+  end subroutine init_advance
 
   !============================================================================
   
-  subroutine set_initial_condition
+  subroutine init_distribution_function
     use ModUtilities,      ONLY: check_allocate
     ! set the initial distribution on all lines
     integer:: iBlock, iParticle, iMomentumBin, iError
@@ -157,7 +148,7 @@ contains
           end do
        end do
     end do
-  end subroutine set_initial_condition
+  end subroutine init_distribution_function
 
   !===================================================================
 
@@ -185,9 +176,14 @@ contains
     if(State_VIB(DLogRho_,iShockCandidate,iBlock) > 0.0)&
          iShock_IB(Shock_, iBlock) = iShockCandidate
   end subroutine get_shock_location
-  !===========================================================================
+  !=========================================================================
   subroutine advance(TimeLimit)
-    ! advance the solution in time
+    ! advance the solution in time with accounting for
+    ! diffusion and Fermi acceleration 
+    use SP_ModDiffusion,    ONLY: advance_diffusion
+    use SP_ModLogAdvection, ONLY: advance_log_advection
+    use ModConst,           ONLY: cMu, cProtonMass, cGyroradius, RSun
+    use SP_ModGrid,         ONLY: D_, Rho_, RhoOld_, B_, BOld_, U_, T_
     real, intent(in):: TimeLimit
     integer:: iEnd, iBlock, iParticle, iShock, iShockOld
     integer:: Momentum, iMomentumBin
