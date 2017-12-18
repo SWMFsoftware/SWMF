@@ -6,18 +6,15 @@ module SP_ModReadMhData
 
   ! This module contains methods for reading input MH data
 
-  use SP_ModSize, ONLY: &
-       nDim, nLat, nLon, nNode, nParticleMax, &
-       nMomentumBin, &
-       Particle_, OriginLat_, OriginLon_
+  use SP_ModSize, ONLY: nDim, nParticleMax, nMomentumBin
+
+  use SP_ModAdvance, ONLY: Distribution_IIB
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
        nVarRead, nVar, nBlock, State_VIB, iShock_IB, iNode_B, &
-       Distribution_IIB, &
        nParticle_B, LagrID_, X_, Y_, Z_, Bx_, By_, Bz_, &
-       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, &
-       NameVar_V
+       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, EFlux_, NameVar_V
 
   use ModPlotFile, ONLY: read_plot_file
 

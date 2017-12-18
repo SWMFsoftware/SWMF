@@ -13,15 +13,15 @@ module SP_ModWrite
 
   use SP_ModGrid, ONLY: &
        get_node_indexes, &
-       nVar, nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, &
-       Distribution_IIB, FootPoint_VB,&
+       nVar, nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, FootPoint_VB ,&
        Proc_, nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V, TypeCoordSystem
 
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock, & 
-       LogEnergyScale_I, LogMomentumScale_I, DMomentumOverDEnergy_I
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock   , & 
+       LogEnergyScale_I, LogMomentumScale_I, DMomentumOverDEnergy_I, &
+       Distribution_IIB
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 

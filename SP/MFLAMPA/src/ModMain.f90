@@ -25,14 +25,13 @@ module SP_ModMain
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       Distribution_IIB, &
        FootPoint_VB, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
-       advance, set_injection_param, init_advance_const,    &
-       set_initial_condition
+       Distribution_IIB, advance, set_injection_param,     &
+       init_advance_const, set_initial_condition
 
   implicit none
 

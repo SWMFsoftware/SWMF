@@ -15,7 +15,7 @@ module SP_ModAdvance
   use SP_ModGrid, ONLY: &
        X_,Y_,Z_, D_, S_, R_, Rho_, RhoOld_, Ux_,Uy_,Uz_, U_, Bx_, By_,Bz_,&
        B_, BOld_, T_, nParticle_B, Shock_, ShockOld_, DLogRho_, nBlock, &
-       State_VIB, Distribution_IIB, iShock_IB
+       State_VIB, iShock_IB
 
   use SP_ModDiffusion, ONLY: advance_diffusion
 
@@ -72,6 +72,23 @@ module SP_ModAdvance
   real:: EnergyScale_I(nMomentumBin)
   real:: LogEnergyScale_I(nMomentumBin)
   real:: DMomentumOverDEnergy_I(nMomentumBin)
+ !-----------------------------------------------------------------------------------!
+    !          Grid in the momentum space                                               !
+    !iP     0     1                         nP   nP+1                                   !
+    !       |     |    ....                 |     |                                     !
+    !P      P_inj P_inj*exp(\Delta (Ln P))  P_Max P_Max*exp(\Delta (Ln P))              !
+    !-------- This is because we put two boundary conditions: the background value at   !
+    !the right one and the physical condition at the left one, for the distribution     !
+    !                                    function                                       !
+    !-----------------------------------------------------------------------------------!
+  !\
+  ! Velosity Distribution Function (VDF) 
+  ! Number of bins in the distribution is set in ModSize
+  ! 1st index - log(momentum) bin
+  ! 2nd index - particle index along the field line
+  ! 3rd index - local block number
+  real, public, allocatable:: Distribution_IIB(:,:,:)
+  !/
   !Local arrays
   real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
   real, dimension(1:nParticleMax):: DLogRho_I
@@ -136,21 +153,25 @@ contains
   !============================================================================
   
   subroutine set_initial_condition
+    use ModUtilities,      ONLY: check_allocate
     ! set the initial distribution on all lines
-    integer:: iBlock, iParticle, iMomentumBin
-    !--------------------------------------------------------------------------
+    integer:: iBlock, iParticle, iMomentumBin, iError
+    !----------------------------------------------------------
+    allocate(Distribution_IIB(&
+         nMomentumBin,1:nParticleMax,nBlock), stat=iError)
+    call check_allocate(iError, 'Distribution_IIB')
     do iBlock = 1, nBlock
        do iParticle = 1, nParticleMax
           do iMomentumBin = 1, nMomentumBin
              Distribution_IIB(iMomentumBin,iParticle,iBlock) = &
-                  cTiny / kinetic_energy_to_momentum(EnergyMax,NameParticle)/&
-               (MomentumScale_I(iMomentumBin))**2
+                  cTiny / kinetic_energy_to_momentum(EnergyMax,&
+                  NameParticle)/(MomentumScale_I(iMomentumBin))**2
           end do
        end do
     end do
   end subroutine set_initial_condition
 
-  !============================================================================
+  !===================================================================
 
   subroutine get_shock_location(iBlock)
     integer, intent(in) :: iBlock

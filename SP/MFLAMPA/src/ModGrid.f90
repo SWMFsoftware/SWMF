@@ -5,9 +5,7 @@
 module SP_ModGrid
   !Multi-line grid, D.Borovikov & I.Sokolov, Dec,17, 2017.
   !Further revision history:
-  use SP_ModSize, ONLY: &
-       nDim, nLat, nLon, nNode, nMomentumBin, nPitchAngleBin, &
-       nParticleMax, Particle_, OriginLat_, OriginLon_
+  use SP_ModSize, ONLY: nDim, nLon, nLat, nNode, nParticleMax
 
   implicit none
 
@@ -159,14 +157,6 @@ module SP_ModGrid
        'Flux_GOES6', &
        'EFlux     '  /)
   !/
-  !\
-  ! Velosity Distribution Function (VDF) 
-  ! Number of bins in the distribution is set in ModSize
-  ! 1st index - log(momentum) bin
-  ! 2nd index - particle index along the field line
-  ! 3rd index - local block number
-  real, public, allocatable:: Distribution_IIB(:,:,:)
-  !/
   !Misc
   ! Mark that grid or lines' origin have been set
   logical:: IsSetGrid   = .false.
@@ -278,10 +268,6 @@ contains
     call check_allocate(iError, NameSub//'State_VIB')
     allocate(Flux_VIB(Flux0_:FluxMax_,1:nParticleMax,nBlock), &
          stat=iError); call check_allocate(iError, 'Flux_VIB')
-    allocate(Distribution_IIB(&
-         nMomentumBin,1:nParticleMax,nBlock), &
-         stat=iError)
-    call check_allocate(iError, NameSub//'Distribution_IIB')
     !\
     ! fill grid containers
     !/
@@ -292,9 +278,9 @@ contains
           iNode_II(iLon, iLat) = iNode
           iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
           if(iProcNode==iProc)then
-             iNode_B(iBlock) = iNode
-             nParticle_B(     iBlock) = 1
-             iShock_IB(:, iBlock) = 0
+             iNode_B(     iBlock) = iNode
+             nParticle_B( iBlock) = 1
+             iShock_IB(:, iBlock) = 1
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
           iGridGlobal_IA(Block_,  iNode)  = iBlock
@@ -308,7 +294,6 @@ contains
     !\
     ! reset and fill data containers
     !/
-    Distribution_IIB = tiny(1.0)
     State_VIB = -1; Flux_VIB = -1; FootPoint_VB = -1
     
     !\
@@ -352,19 +337,20 @@ contains
   subroutine copy_old_state
     ! copy current state to old state for all field lines
     integer:: iEnd, iBlock
-    !-----------------------------------------------------------------------
+    !----------------------------------------------------------
     do iBlock = 1, nBlock
        iEnd   = nParticle_B(  iBlock)
+       iShock_IB(ShockOld_,iBlock) = iShock_IB(Shock_, iBlock)
        State_VIB((/RhoOld_,BOld_/), 1:iEnd, iBlock) = &
             State_VIB((/Rho_,B_/),  1:iEnd, iBlock)
-       ! reset variables to be read from file or received via coupler
+       !reset variables read from file or received via coupler
        State_VIB(1:nVarRead,1:iEnd, iBlock) = 0.0
     end do
   end subroutine copy_old_state
   !===================
   subroutine get_other_state_var
     integer:: iBlock, iParticle, iEnd
-    !----------------------------------------------------------------------
+    !---------------------------------------------------------
     do iBlock = 1, nBlock
        iEnd   = nParticle_B(  iBlock)
        do iParticle = 1, iEnd
