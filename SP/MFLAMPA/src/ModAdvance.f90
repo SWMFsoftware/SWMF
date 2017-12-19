@@ -176,48 +176,64 @@ contains
   end subroutine get_shock_location
   !=========================================================================
   subroutine advance(TimeLimit)
-    ! advance the solution in time with accounting for
-    ! diffusion and Fermi acceleration 
+    ! advance the solution of the diffusive kinetic equation:               
+    !            f_t+[(1/3)*(d(ln rho)/dt]*f_{ln p}=B*d/ds[D/B*df/ds]
+    ! with accounting for diffusion and Fermi acceleration 
+    ! from TimeGlobal to TimeLimit
+    ! Prototype: FLAMPA/src/SP_main, case("RUN"), Roussev&Sokolov2008
+    ! Version: Borovikov&Sokolov, Dec.19 2017, distinctions:
+    ! (1) no turbulence (2) new shock finder and (3) new steepen_shock
     use SP_ModDiffusion,    ONLY: advance_diffusion
     use SP_ModLogAdvection, ONLY: advance_log_advection
     use ModConst,           ONLY: cMu, cProtonMass, cGyroradius, RSun
     use SP_ModGrid,         ONLY: D_, Rho_, RhoOld_, B_, BOld_, U_, T_
     real, intent(in):: TimeLimit
-    integer:: iEnd, iBlock, iParticle, iShock, iShockOld
-    integer:: iP
-    real   :: MomentumRatio !!!!NEED TO CHECK!!!
-    integer:: nProgress, iProgress, iStep
-    !Subcycling advection multiple times per each diffusion step, if desired
+    !\
+    ! Loop variables
+    integer:: iP, iParticle, iBlock
+    !/
+    !\
+    !For a given block: nParticle_B, iShock_IB:
+    integer:: iEnd, iShock, iShockOld
+    !/
+    !\
+    ! Upper limit and variable for the Loop which makes
+    ! a time step so short that the shock wave passes
+    ! a single grid interval per a progress step:
+    integer:: iProgress, nProgress,  iStep
+    !Subcycling is not applied
     integer, parameter:: nStep = 1
     real   :: Alpha
     real::  DiffCoeffMin =1.0E+04 /RSun
     real:: DtFull, DtProgress, Dt
     real:: MachAlfven
-    !Local arrays
-    real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, U_I, T_I
-    real, dimension(1:nParticleMax):: Radius_I, B_I, BOld_I 
+    real   :: MomentumRatio !!!!NEED TO CHECK!!!
+    !\
+    !Local arrays to store the state vector
+    real, dimension(1:nParticleMax):: Radius_I, U_I, T_I
+    real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, B_I, BOld_I 
     real, dimension(1:nParticleMax):: DLogRho_I, FermiFirst_I
-    !-----------------------------
+    !\
+    ! Coefficients in the diffusion operator
     ! df/dt = DOuter * d(DInner * df/dx)/dx
-    real, dimension(1:nParticleMax):: DOuter_I, DInner_I, DInnerInj_I
+    real, dimension(1:nParticleMax):: &
+         DOuter_I, DInner_I, DInnerInj_I
+    !/
     character(len=*), parameter:: NameSub = 'SP:advance'
-    !--------------------------------------------------------------------------
-    ! the full time step
+    !---------------------------------------------------------------
+    ! the full time interval
     DtFull = TimeLimit - TimeGlobal
     ! go line by line and advance the solution
-    do iBlock = 1, nBlock
+    BLOCK:do iBlock = 1, nBlock
 
        ! the active particles on the line
        iEnd   = nParticle_B( iBlock)
        ! various data along the line
        Radius_I( 1:iEnd) = State_VIB(R_,      1:iEnd,iBlock)
-       Rho_I(    1:iEnd) = State_VIB(Rho_,    1:iEnd,iBlock)
        U_I(      1:iEnd) = State_VIB(U_,      1:iEnd,iBlock)
        T_I(      1:iEnd) = State_VIB(T_,      1:iEnd,iBlock)
        BOld_I(   1:iEnd) = State_VIB(BOld_,   1:iEnd,iBlock)
        RhoOld_I( 1:iEnd) = State_VIB(RhoOld_, 1:iEnd,iBlock)
-       !log(Rho_I(1:iEnd)/RhoOld_I(1:iEnd)
-       DLogRho_I(1:iEnd) = State_VIB(DLogRho_,1:iEnd,iBlock)
 
        ! identify shock in the data
        call get_shock_location(iBlock)
@@ -230,10 +246,10 @@ contains
 
        ! each particles shock has crossed should be
        ! processed separately => reduce the time step
-       DtProgress = DtFull / nProgress
+       DtProgress = DtFull/nProgress
 
        ! go over each crossed particle
-       do iProgress = 1, nProgress
+       PROGRESS:do iProgress = 1, nProgress
           ! account for change in the background up to the current moment
           Alpha = real(iProgress) / real(nProgress)
           Rho_I(1:iEnd) = State_VIB(RhoOld_,1:iEnd,iBlock) +Alpha *&
@@ -272,7 +288,7 @@ contains
 
           ! compute diffusion along the field line
           call set_diffusion
-          do iStep = 1, nStep !Currently nStep = 1
+          STEP:do iStep = 1, nStep !Currently nStep = 1
              ! update bc for advection
              call set_advection_bc
 
@@ -285,8 +301,8 @@ contains
              end do
 
              ! diffusion along the field line
-             if(.not.UseDiffusion) CYCLE
-             do iP = 1, nP
+             if(.not.UseDiffusion) CYCLE 
+             MOMENTUM:do iP = 1, nP
                 MomentumRatio = exp((iP-1) * DLogP)
                 DInner_I(1:iEnd) =&
                      DInnerInj_I(1:iEnd) * MomentumRatio**2 * &
@@ -305,10 +321,10 @@ contains
                      State_VIB(D_,1:iEnd,iBlock), &
                      Distribution_IIB(iP,1:iEnd,iBlock),&
                      DOuter_I(1:iEnd), DInner_I(1:iEnd))
-             end do
-          end do
-       end do
-    end do
+             end do MOMENTUM
+          end do STEP
+       end do PROGRESS
+    end do BLOCK
   contains
     function mach_alfven() result(MachAlfven)
       ! alfvenic mach number for the current line
