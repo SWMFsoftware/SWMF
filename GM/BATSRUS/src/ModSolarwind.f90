@@ -430,7 +430,8 @@ contains
     use ModPhysics, ONLY: &
          Io2No_V, UnitTemperature_, UnitN_, UnitRho_, UnitP_, UnitU_, UnitB_, &
          LowDensityRatio, ElectronPressureRatio
-    use ModMultiFluid
+    use ModMultiFluid, ONLY: select_fluid, iFluid, iRho, iUx, iUy, iUz, &
+         iP, iPIon_I, MassIon_I, UseMultiIon
     use ModConst
 
     integer:: iData
@@ -548,7 +549,7 @@ contains
              Solarwind_V(iUz) = Solarwind_V(Uz_)
           end if
 
-       end do ! iFluid
+       end do
 
        ! Fix total pressure if necessary
        if(IsMhd .and. UseMultiIon)then
