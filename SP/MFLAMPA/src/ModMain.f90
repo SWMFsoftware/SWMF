@@ -30,8 +30,7 @@ module SP_ModMain
   
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
-       Distribution_IIB, advance, set_momentum_param,       &
-       init_advance, init_distribution_function
+       Distribution_IIB, advance, set_momentum_param
 
   implicit none
 
@@ -144,6 +143,7 @@ contains
   !============================================================================
 
   subroutine initialize
+    use SP_ModAdvance, ONLY: init_distribution_function
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
@@ -152,9 +152,7 @@ contains
     else
        RETURN
     end if
-
     DataInputTime = TimeGlobal
-    call init_advance
     call init_grid(DoRestart .or. DoReadMhData)
     call init_read_mh_data
     call init_distribution_function 
@@ -163,6 +161,7 @@ contains
   !============================================================================
 
   subroutine run(TimeInOut, TimeLimit)
+    use SP_ModGrid, ONLY: get_other_state_var
     ! advance the solution in time
     real, intent(inout):: TimeInOut
     real, intent(in)   :: TimeLimit
@@ -177,15 +176,20 @@ contains
        ! Read the background data from file
        !/
        call read_mh_data(DataInputTime)
+       !Read from file: State_VIB(0:nRead,::) for the time moment
+       !DataInputTime
        TimeInOut = DataInputTime
     else
+       !Reaceived from coupler: : State_VIB(0:nRead,::) for the 
+       !time moment DataInputTime
        TimeInOut = TimeLimit
     end if
-
     !\
-    ! recompute the derived variables, e.g. magnitude of velocity etc.
+    ! recompute the derived components of state vector, e.g. 
+    ! magnitude of magnetic field and velocity etc.
     !/
-    call fix_grid_consistency
+    call get_other_state_var
+    call fix_grid_consistency   !????
 
     !\
     ! write the initial background state to the output file
@@ -195,15 +199,14 @@ contains
        call write_output(IsInitialOutput = .true.)
        IsFirstCall = .false.
     end if
-
     !\
     ! if no new background data loaded, don't advance in time
     !/
-    if(DataInputTime <= TimeGlobal)&
-         RETURN
-    if(DoRun) &
-         ! run the model
-         call advance(min(DataInputTime,TimeLimit))
+    if(DataInputTime <= TimeGlobal) RETURN
+    !\
+    ! run the model
+    !/
+    if(DoRun) call advance(min(DataInputTime,TimeLimit))
 
     ! update time & iteration counters
     iIterGlobal = iIterGlobal + 1
@@ -212,20 +215,11 @@ contains
   contains
     !=====================================================================
     subroutine fix_grid_consistency
-      use SP_ModGrid, ONLY: DLogRho_, get_other_state_var
-      ! recompute some values (magnitudes of plasma velocity and magnetic field)
-      ! so they are consistent with components for all lines
-      integer:: iBlock, iParticle, iEnd
+      use SP_ModGrid, ONLY: DLogRho_
+      integer:: iBlock, iParticle
       !----------------------------------------------------------------------
-      call get_other_state_var
       do iBlock = 1, nBlock
-         iEnd   = nParticle_B(  iBlock)
-         do iParticle = 1, iEnd
-            ! if particle has left the domain -> cut the rest of the line
-            if(sum(State_VIB(X_:Z_, iParticle, iBlock)**2) > RMax**2)then
-               nParticle_B(  iBlock) = iParticle - 1
-               EXIT
-            end if            
+         do iParticle = 1, nParticle_B(  iBlock)            
             ! divergence of plasma velocity
             if(DataInputTime > TimeGlobal) then
                State_VIB(DLogRho_,iParticle,iBlock) = log(&
@@ -238,9 +232,7 @@ contains
       end do
     end subroutine fix_grid_consistency
   end subroutine run
-
   !============================================================================
-
   subroutine check
     use ModUtilities, ONLY: make_dir
     character(LEN=*),parameter:: NameSub='SP:check'

@@ -9,29 +9,19 @@ module SP_ModAdvance
        kinetic_energy_to_momentum, momentum_to_energy, energy_in
   use SP_ModSize, ONLY: nParticleMax, nP=>nMomentum
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
-       Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B     
+       Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B
+  use SP_ModUnit, ONLY: NameEUnit, UnitEnergy, NameParticle    
   implicit none
   SAVE
   PRIVATE ! except
   !Public members:
   public:: set_momentum_param !read settings for grid over momentum
-  public:: init_advance       !Initialize grid in the phase space
   public:: init_distribution_function  !Initialize Distribution_IIB
-  public::  advance           !Advance solution Distribution_IIB
-
+  public:: advance            !Advance solution Distribution_IIB
   !\
   ! Global interation and time
   real,    public :: TimeGlobal  = 0.0
   integer, public :: iIterGlobal = 0
-  !/
-  !\
-  ! unit of SEP energy is also applicable for ion temperature
-  character(len=*), parameter :: NameEUnit = 'kev'
-  real, public                :: UnitEnergy
-  ! simulated particles, used for converting momentum to energy
-  ! is back. For different sorts of ions the sqrt(A) factor needs
-  ! to be used in these relations.
-  character(len=*), parameter :: NameParticle = 'proton'
   !/
   !\
   !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
@@ -70,9 +60,16 @@ module SP_ModAdvance
   ! 3rd index - local block number
   real, public, allocatable:: Distribution_IIB(:,:,:)
   !/
-  ! Momentum and log(Momentum) in the grid points
+  !\
+  ! Functions to convert the grid index to momentum and energy
+  !/
+  !\
+  ! Momentum and log(Momentum) at the grid points
   real, public:: Momentum_I(0:nP+1)
   real, public:: LogMomentum_I(0:nP+1)
+  !/
+  !\
+  ! Energy and log(Energy) at the grid points
   real, public:: Energy_I(0:nP+1)
   real, public:: LogEnergy_I(0:nP+1)
   real, public:: DMomentumOverDEnergy_I(0:nP+1)
@@ -80,9 +77,9 @@ module SP_ModAdvance
   !\
   !!!!!!!!!!!!!!!!!!!!!!!!!Local parameters!!!!!!!!!!!!!!!
   ! level of turbulence
-  real:: BOverDeltaB2 = 1.0
+  real, parameter    :: BOverDeltaB2 = 1.0
   !\
-  integer:: nWidth = 50
+  integer, parameter :: nWidth = 50
   !/
   !\
   logical:: UseRealDiffusionUpstream = .true.
@@ -99,14 +96,15 @@ contains
     call read_var('Efficiency',   CInj)
   end subroutine set_momentum_param
 
-  !============================================================================
-
-  subroutine init_advance
+  !=================================================================
+  
+  subroutine init_distribution_function
     use ModConst, ONLY: momentum_to_kinetic_energy
-    ! compute all needed constants
-    integer:: iP, iBlock, iParticle
-    !---------------------------------------------
-    ! account for units of energy
+    use ModUtilities,      ONLY: check_allocate
+    ! set the initial distribution on all lines
+    integer:: iBlock, iParticle, iP, iError
+    !----------------------------------------------------------
+ ! account for units of energy
     UnitEnergy = energy_in(NameEUnit)
     EnergyInj = EnergyInj * UnitEnergy
     EnergyMax = EnergyMax * UnitEnergy
@@ -115,7 +113,10 @@ contains
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
     ! total injection energy (including the rest mass energy
     TotalEnergyInj = momentum_to_energy(MomentumInj, NameParticle)
-    DLogP = log(MomentumMax/MomentumInj) / nP
+    DLogP = log(MomentumMax/MomentumInj)/nP
+    !\
+    ! Functions to convert the grid index to momentum and energy
+    !/
     do iP = 0, nP +1
        LogMomentum_I(iP) = &
             log(MomentumInj) + iP * DLogP
@@ -127,27 +128,21 @@ contains
             momentum_to_energy(Momentum_I(iP), NameParticle)/&
             (Momentum_I(iP) * cLightSpeed**2)
     end do
-  end subroutine init_advance
-
-  !============================================================================
-  
-  subroutine init_distribution_function
-    use ModUtilities,      ONLY: check_allocate
-    ! set the initial distribution on all lines
-    integer:: iBlock, iParticle, iP, iError
-    !----------------------------------------------------------
+    !\
+    ! Distribution function
+    !/    
     allocate(Distribution_IIB(&
          0:nP+1,1:nParticleMax,nBlock), stat=iError)
     call check_allocate(iError, 'Distribution_IIB')
-    ! initialization depends on momentum, however, it
-    ! corresponds to a constant differential flux 
-    ! (intensity), which ensures uniform backgound 
-    ! while visualizing this quantity
+    ! initialization depends on momentum, however, this corresponds
+    ! to a constant differential flux (intensity), thus ensuring
+    ! uniform backgound while visualizing this quantity
     do iBlock = 1, nBlock
        do iParticle = 1, nParticleMax
           do iP = 0, nP +1
              Distribution_IIB(iP,iParticle,iBlock) = &
-                  cTiny/MomentumMax/(Momentum_I(iP))**2
+                  cTiny/MomentumMax/Momentum_I(iP)**2
+
           end do
        end do
     end do

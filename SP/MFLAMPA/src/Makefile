@@ -17,6 +17,7 @@ OBJECTS = \
 	ModReadMhData.o \
 	ModRestart.o \
 	ModSize.o \
+	ModUnit.o \
 	ModWrite.o   
 
 SEPEXE = ${BINDIR}/SEP.exe
