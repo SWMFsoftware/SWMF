@@ -323,6 +323,7 @@ end subroutine timing_stop_c
 subroutine timing_start(name)
   !USES
   use ModTiming
+  use omp_lib
   implicit none
   !INPUT ARGUMENTS:
   character (LEN=*), intent(in):: name
@@ -333,6 +334,8 @@ subroutine timing_start(name)
   !----------------------------------------------------------------------------
   if(.not.UseTiming)RETURN
 
+  !$ if (omp_get_thread_num() /= 0) RETURN
+  
   current_depth = current_depth + 1
 
   if(max_depth >= 0 .and. current_depth > max_depth) RETURN
@@ -347,7 +350,7 @@ subroutine timing_start(name)
   ! New name
   if(ntiming==maxtiming-1)write(*,*) &
        'WARNING: number of timings has reached maxtiming in ModTiming'
-
+  
   if(ntiming==maxtiming) RETURN ! Cannot add more timing
 
   ntiming=ntiming+1
@@ -378,6 +381,7 @@ end subroutine timing_start
 subroutine timing_stop(name)
   !USES:
   use ModTiming
+  use omp_lib
   implicit none
   !INPUT ARGUMENTS:
   character (LEN=*), intent(in):: name
@@ -390,6 +394,8 @@ subroutine timing_stop(name)
   !----------------------------------------------------------------------------
   if(.not.UseTiming)RETURN
 
+  !$ if( omp_get_thread_num() /= 0 ) RETURN
+  
   current_depth = current_depth - 1
 
   if(max_depth >= 0 .and. current_depth >= max_depth) RETURN
