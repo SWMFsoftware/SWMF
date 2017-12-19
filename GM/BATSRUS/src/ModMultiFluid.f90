@@ -7,7 +7,8 @@ module ModMultiFluid
        test_start, test_stop
 
   use ModVarIndexes
-
+  use omp_lib
+  
   implicit none
   save
 
@@ -79,6 +80,10 @@ module ModMultiFluid
        TNeutralsISW=0.0  , TNeutralsISW_dim=0.0  , &
        mProtonMass
 
+  ! OpenMP declaration
+  !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
+  !$omp threadprivate( iFluid, iUx, iUy, iUz )
+  
 contains
   !============================================================================
 

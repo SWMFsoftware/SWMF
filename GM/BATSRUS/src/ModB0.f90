@@ -17,7 +17,8 @@ module ModB0
   use BATL_size, ONLY: MaxDim, nDim, MaxBlock, nI, nJ, nK, &
        MinI, MaxI, MinJ, MaxJ, MinK, MaxK
   use ModMain, ONLY: UseB, UseB0, UseConstrainB
-
+  use omp_lib
+  
   implicit none
   SAVE
 
@@ -71,6 +72,10 @@ module ModB0
   integer:: iTableB0 = -1
   real:: rMinB0=1.0, rMaxB0=30.0, dLonB0=0.0, FactorB0=1.0
 
+  !$omp threadprivate( B0_DX, B0_DY, B0_DZ )
+  !$omp threadprivate( CurlB0_DC, DivB0_C )
+  !$omp threadprivate( iTableB0, rMinB0, rMaxB0, dLonB0, FactorB0 )
+  
 contains
   !============================================================================
   subroutine read_b0_param(NameCommand)
@@ -128,6 +133,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
+    !$omp parallel
+    !$omp single
     if(.not.allocated(B0_DGB))then
        allocate( &
             B0_DGB(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock), &
@@ -138,7 +145,10 @@ contains
        B0ResChange_DXSB = 0.0
        B0ResChange_DYSB = 0.0
        B0ResChange_DZSB = 0.0
+    end if
+    !$omp end single
 
+    if( .not.allocated(B0_DX) ) then
        if(UseConstrainB)then
           ! The current implementation of CT requires fluxes
           ! between ghost cells. Not a good solution.
@@ -167,6 +177,7 @@ contains
        rMaxB0 = Param_I(2)
        if(nParam > 2) dLonB0 = Param_I(3)*cDegToRad
     end if
+    !$omp end parallel
 
     call test_stop(NameSub, DoTest)
   end subroutine init_mod_b0
@@ -297,6 +308,7 @@ contains
     if(IsCartesian .and. nDim==2) Coef = 0.25
     if(IsCartesian .and. nDim==3) Coef = 0.125
 
+    
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
        if(DiLevelNei_IIIB(-1,0,0,iBlock) == +1) then

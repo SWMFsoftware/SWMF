@@ -17,7 +17,8 @@ module ModAdvance
        nIFace, nJFace, nKFace
   use ModIO,         ONLY: iUnitOut, write_prefix
   use ModProcMH,     ONLY: iProc, nProc
-
+  use omp_lib
+  
   implicit none
   save
 
@@ -183,6 +184,23 @@ module ModAdvance
        ExplBlock_=3,        & ! Blocks changing with the explicit scheme
        ImplBlock_=4           ! Blocks changing with the implicit scheme
 
+  ! For OpenMP declaration  
+  !$omp threadprivate( Source_VC )
+  !$omp threadprivate( LeftState_VX, RightState_VX )
+  !$omp threadprivate( LeftState_VY, RightState_VY )
+  !$omp threadprivate( LeftState_VZ, RightState_VZ )
+  !$omp threadprivate( UseLowOrderOnly, UseLowOrder )
+  !$omp threadprivate( UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z )
+  !$omp threadprivate( UseLowOrderRegion )
+  !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
+  !$omp threadprivate( EDotFA_X, EDotFA_Y, EDotFA_Z )
+  !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
+  !$omp threadprivate( FluxLeft_VGD, FluxRight_VGD )
+  !$omp threadprivate( FluxCenter_VGD )
+  !$omp threadprivate( Weight_IVX, Weight_IVY, Weight_IVZ )
+  !$omp threadprivate( uDotArea_XI, uDotArea_YI, uDotArea_ZI )
+  !$omp threadprivate( bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ )
+  
 contains
   !============================================================================
 
@@ -204,6 +222,8 @@ contains
        Source_VCB = 0
     endif
 
+
+    !$omp parallel
     if(UseB .and. (UseMultiIon .or. .not.IsMhd) &
          .and. .not. allocated(bCrossArea_DX))then
        allocate(bCrossArea_DX(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
@@ -216,7 +236,8 @@ contains
        allocate(EDotFA_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
        allocate(EDotFA_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     end if
-
+    !$omp end parallel
+    
     if(allocated(State_VGB)) RETURN
 
     ! The arrays below are allocated at the beginning (if at all)
@@ -234,6 +255,13 @@ contains
     allocate(iTypeAdvance_BP(MaxBlock,0:nProc-1))
     allocate(iTypeAdvance_B(MaxBlock))
 
+    allocate(IsLowOrderOnly_B(MaxBlock))
+    IsLowOrderOnly_B = .true.
+
+    iTypeAdvance_B  = SkippedBlock_
+    iTypeAdvance_BP = SkippedBlock_
+
+    !$omp parallel
     ! The current implementation of the constrained transport scheme
     ! requires fluxes between ghost cells. Should be eliminated, and then
     ! all faces would be allocated to the usual nI+1,nJ,nK and permutations.
@@ -254,13 +282,8 @@ contains
     allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
-
-    allocate(IsLowOrderOnly_B(MaxBlock))
-    IsLowOrderOnly_B = .true.
-
-    iTypeAdvance_B  = SkippedBlock_
-    iTypeAdvance_BP = SkippedBlock_
-
+    !$omp end parallel
+    
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'init_mod_advance allocated arrays'

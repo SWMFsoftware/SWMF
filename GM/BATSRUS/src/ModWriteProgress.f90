@@ -24,7 +24,8 @@ contains
     use ModIO, ONLY: iUnitOut, write_prefix
     use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModVarIndexes, ONLY: NameEquation
-
+    use omp_lib
+    
     integer, intent(in) :: inopt
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_progress'
@@ -41,13 +42,16 @@ contains
        call write_prefix; write(iUnitOut,'(a)') &
             "          for 3D Heliospheric Flows"
        call write_prefix; write(iUnitOut,'(a)') &
-            " University of Michigan, 1995-2007"
+            " University of Michigan, 1995-2017"
        write(iUnitOut,*)
        if(IsStandAlone)then
           call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a)') &
                ' BATSRUS version ',CodeVersion,&
                ' is running as '//NameThisComp//' on ',nProc,' PE(s)'
           write(iUnitOut,*)
+          !$ print *, 'Thread(s) per MPI =',omp_get_max_threads()
+          !$ print *, "MPI+OpenMP hybrid program"
+          !$ write(iUnitOut,*)
        end if
        call write_prefix; write(iUnitOut,'(a)') &
             ' EQUATIONS:   '//NameEquation
@@ -84,7 +88,7 @@ contains
     use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, UseSplitSemiImplicit, &
          TypeSemiImplicit
     use ModPointImplicit, ONLY: UsePointImplicit
-    use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid, iFluid
+    use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid
     use ModFaceFlux,   ONLY: TypeFluxNeutral
     use CON_planet,    ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
          RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
@@ -95,6 +99,7 @@ contains
          IsLogRadius, IsGenRadius
     use ModUserInterface ! user_action
 
+    integer :: iFluid
     character(len=100):: String, StringFormat
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_runtime_values'

@@ -5,7 +5,7 @@
 module ModAdvanceExplicit
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iThread
 
   implicit none
   private ! except
@@ -45,7 +45,8 @@ contains
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
     use ModElectricField, ONLY: get_num_electric_field
-
+    use omp_lib
+    
     logical, intent(in) :: DoCalcTimestep
     integer, intent(in) :: iStageMax ! advance only part way
     integer :: iBlock
@@ -113,6 +114,8 @@ contains
        if(DoTest)write(*,*)NameSub,' done message pass'
 
        ! Multi-block solution update.
+       !$omp parallel
+       !$omp do
        do iBlock = 1, nBlock
 
           if (Unused_B(iBlock)) CYCLE
@@ -150,7 +153,7 @@ contains
           call timing_start('calc_sources')
           call calc_source(iBlock)
           call timing_stop('calc_sources')
-
+          
           ! Calculate time step (both local and global
           ! for the block) used in multi-stage update
           ! for steady state calculations.
@@ -162,7 +165,7 @@ contains
           call timing_start('update_state')
           call update_state(iBlock)
           call timing_stop('update_state')
-
+          
           if(DoCalcElectricField .and. iStage == nStage) &
                call get_num_electric_field(iBlock)
 
@@ -187,7 +190,10 @@ contains
           call set_block_data(iBlock)
 
        end do ! Multi-block solution update loop.
+       !$omp end do
+       !$omp end parallel
 
+       
        if(DoTest)write(*,*)NameSub,' done update blocks'
 
        if(.not.UseOptimizeMpi) call barrier_mpi2('expl2')

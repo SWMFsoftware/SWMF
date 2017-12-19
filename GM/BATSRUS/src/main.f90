@@ -30,21 +30,34 @@ program BATSRUS
   use ModReadParam
 
   use ModMpi
+  use omp_lib
 
   implicit none
 
   integer :: iSession=1
   integer :: iError
+  integer, parameter :: required=MPI_THREAD_SINGLE
+  integer :: provided ! Provided level of MPI threading support
   real(Real8_) :: CpuTimeStart
 
   !----------------------------------------------------------------------------
   !\
   ! Initialization of MPI/parallel message passing.
   !/
-  call MPI_INIT(iError)
+  call MPI_Init_Thread(required, provided, iError)
   iComm = MPI_COMM_WORLD
   call MPI_COMM_RANK (iComm, iProc, iError)
   call MPI_COMM_SIZE (iComm, nProc, iError)
+
+  ! Check the threading support level
+  if (provided .lt. required) then
+     ! Insufficient support, degrade to 1 thread and warn the user         
+     if (iProc .eq. 0) then
+        write(*,*) "Warning:  This MPI implementation provides ",   &
+             "insufficient threading support. Switching to pure MPI..."
+     end if
+     !$ call omp_set_num_threads(1)
+  end if
 
   !\
   ! Initialize some basic variables for the stand alone code

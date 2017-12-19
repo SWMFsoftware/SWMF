@@ -58,7 +58,8 @@ module ModFaceFlux
   use ModCoronalHeating, ONLY: IsNewBlockAlfven
   use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, Visco_DDI,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
-
+  use omp_lib
+  
   implicit none
 
   ! Number of fluxes including pressure and energy fluxes
@@ -181,6 +182,37 @@ module ModFaceFlux
 
   character(len=*), private, parameter :: NameMod="ModFaceFlux"
 
+  ! OpenMP declaration
+  !$omp threadprivate( iFluidMin, iFLuidMax, iVarMin, iVarMax )
+  !$omp threadprivate( iEnergyMin, iEnergyMax )
+  !$omp threadprivate( IsBoundary )
+  !$omp threadprivate( iBlockFace )
+  !$omp threadprivate( iDimFace )
+  !$omp threadprivate( iFace, jFace, kFace )
+  !$omp threadprivate( iLeft, jLeft, kLeft, iRight, jRight, kRight )
+  !$omp threadprivate( StateLeft_V, StateRight_V, FluxLeft_V, FluxRight_V )
+  !$omp threadprivate( StateLeftCons_V, StateRightCons_V )
+  !$omp threadprivate( DissipationFlux_V )
+  !$omp threadprivate( B0x, B0y, B0z )
+  !$omp threadprivate( DiffBb )
+  !$omp threadprivate( DeltaBnL, DeltaBnR )
+  !$omp threadprivate( Area, Area2, AreaX, AreaY, AreaZ )
+  !$omp threadprivate( CmaxDt )
+  !$omp threadprivate( Unormal_I, UnLeft_I, UnRight_I )
+  !$omp threadprivate( bCrossArea_D, Enormal, Pe, Pwave )
+  !$omp threadprivate( EtaJx, EtaJy, EtaJz, Eta )
+  !$omp threadprivate( InvDxyz, HallCoeff, HallJx, HallJy, HallJz )
+  !$omp threadprivate( BiermannCoeff, GradXPeNe, GradYPeNe, GradZPeNe )
+  !$omp threadprivate( Pe_G )
+  !$omp threadprivate( ViscoCoeff )
+  !$omp threadprivate( DiffCoef, EradFlux, RadDiffCoef, HeatFlux, IonHeatFlux )
+  !$omp threadprivate( HeatCondCoefNormal )
+  !$omp threadprivate( Normal_D, NormalX, NormalY, NormalZ )
+  !$omp threadprivate( Tangent1_D, Tangent2_D )
+  !$omp threadprivate( B0n, B0t1, B0t2 )
+  !$omp threadprivate( UnL, Ut1L, Ut2L, B1nL, B1t1L, B1t2L )
+  !$omp threadprivate( UnR, Ut1R, Ut2R, B1nR, B1t1R, B1t2R )
+  
 contains
   !============================================================================
 
@@ -613,7 +645,7 @@ contains
          ! Correct Unormal_I to make div(u) achieve 6th order.
          if(UseFDFaceFlux) call correct_u_normal(x_)
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
-
+         
          if(UseB .and. UseBoris) &
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 

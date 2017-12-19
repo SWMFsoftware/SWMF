@@ -324,8 +324,8 @@ module ModMain
   logical :: UseResistivePlanet = .false.
 
   ! use particles in the simulation
-  logical:: UseParticles = .false.
-
+  logical :: UseParticles = .false.
+  
   ! Variables related to another component coupled directly with pointers
   integer           :: nVarComp2
   character(len=200):: NameVarComp2

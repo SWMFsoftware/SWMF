@@ -14,7 +14,8 @@ module ModFaceValue
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrderOnly, UseLowOrder, &
        UseLowOrderRegion, UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z, &
        IsLowOrderOnly_B
-
+  use omp_lib
+  
   implicit none
 
   private ! except
@@ -109,6 +110,18 @@ module ModFaceValue
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
 
+  ! OpenMP declaration
+  !!$omp threadprivate( iVarSmooth_V, iVarSmoothIndex_I ) !questionable?
+  !!$omp threadprivate( iRegionLowOrder_I ) !this is questionable? 
+  !!$omp threadprivate( iVarLimitRatio_I )
+  !$omp threadprivate( Primitive_VG )
+  !$omp threadprivate( UseTrueCell, IsTrueCell_I )
+  !$omp threadprivate( UseLowOrder_I )
+  !$omp threadprivate( dVarLimR_VI, dVarLimL_VI, Primitive_VI )
+  !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
+  !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
+  !$omp threadprivate( WeightL_II, WeightR_II)
+  
 contains
   !============================================================================
   subroutine read_face_value_param(NameCommand)
