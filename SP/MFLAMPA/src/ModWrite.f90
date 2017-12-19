@@ -25,7 +25,9 @@ module SP_ModWrite
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
-  use ModUtilities, ONLY: split_string, lower_case
+  use ModUtilities, ONLY: split_string, lower_case, open_file, close_file
+
+  use ModIoUnit,    ONLY: UnitTmp_
 
   implicit none
 
@@ -292,35 +294,36 @@ contains
 
   !============================================================================
 
-  subroutine write_output(IsInitialOutput)
+  subroutine write_output(IsInitialOutputIn)
     ! write the output data
-    logical, intent(in), optional:: IsInitialOutput
+    logical, intent(in), optional:: IsInitialOutputIn
 
     ! loop variables
     integer:: iFile
     integer:: iKindData
 
-    logical:: IsInitialOutputLocal
+    logical:: IsInitialOutput
 
     character(len=*), parameter:: NameSub = 'SP:write_output'
     !--------------------------------------------------------------------------
     ! check whether this is a call for initial output
-    if(present(IsInitialOutput))then
-       IsInitialOutputLocal = IsInitialOutput
+    if(present(IsInitialOutputIn))then
+       IsInitialOutput = IsInitialOutputIn
     else
-       IsInitialOutputLocal = .false.
+       IsInitialOutput = .false.
     end if
     if(nFile == 0) RETURN
-    if(.not.IsInitialOutputLocal)call get_integral_flux
+    if(.not.IsInitialOutput)call get_integral_flux
     do iFile = 1, nFile
        iKindData = File_I(iFile) % iKindData
 
        ! during initial call only background 1D data is printed
-       if(IsInitialOutputLocal .and. iKindData /= MH1D_)&
+       if(IsInitialOutput .and. iKindData /= MH1D_)&
             iKindData = -1
            
        select case(iKindData)
        case(MH1D_)
+          call write_mh_1d_header
           call write_mh_1d
        case(MH2D_)
           call write_mh_2d
@@ -332,6 +335,71 @@ contains
     end do
 
   contains
+
+    subroutine write_mh_1d_header
+      use SP_ModProc, ONLY: iProc
+      ! write the header file that contains necessary information for reading
+      ! input files in a separate run
+      !
+      ! number of output files so far
+      integer, save:: nFile = 0 
+      ! loop variable
+      integer:: iStamp
+      ! stamps
+      character(len=8):: StringTime
+      character(len=17),allocatable,save:: StringStamp_I(:), StringAux_I(:)
+      ! name of the header file
+      character(len=100):: NameFile, NameHeaderFile = 'MH_data.H'
+      character(len=*), parameter:: NameSub='write_mh_1d_header'
+      !------------------------------------------------------------------------
+      ! performed on root proc only
+      if (iProc/=0) RETURN
+      ! full name of the header file
+      NameFile = trim(NamePlotDir)//trim(NameHeaderFile)
+
+      ! check the size of the container with files' time-iteration stamps
+      if(.not.allocated(StringStamp_I))then
+         allocate(StringStamp_I(1))
+      end if
+      if(ubound(StringStamp_I,1) == nFile)then
+         allocate(StringAux_I(nFile))
+         StringAux_I(1:nFile) = StringStamp_I(1:nFile)
+         deallocate(StringStamp_I)
+         allocate(StringStamp_I(2*nFile))
+         StringStamp_I(1:nFile) = StringAux_I(1:nFile)
+         deallocate(StringAux_I)
+      end if
+
+      ! increase the file counter
+      nFile = nFile + 1
+
+      ! create time-iteration stamp
+      call get_time_string(TimeGlobal, StringTime)
+      write(StringStamp_I(nFile),'(a,i6.6)') &
+           't'//StringTime//'_n',iIterGlobal
+
+      ! write the header file
+      call open_file(file=NameFile, NameCaller=NameSub)
+      write(UnitTmp_,*)
+      write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
+      write(UnitTmp_,'(i8,a32)') nParticleMax,'nParticleMax'
+      write(UnitTmp_,'(i8,a32)') nLon,     'nLon'
+      write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
+      write(UnitTmp_,*)
+      write(UnitTmp_,'(a)')'#MHDATA'
+      write(UnitTmp_,'(a18,a22)')trim(File_I(iFile)%TypeFile),'  TypeFile'
+      write(UnitTmp_,'(i8,a32)')nFile,'nFile'
+      do iStamp = 1, nFile
+         write(UnitTmp_,'(a22,a18)')StringStamp_I(iStamp),'NameFileStamp'
+      end do
+      write(UnitTmp_,*)
+      write(UnitTMP_,'(a)')'#END'
+      write(UnitTmp_,*)
+      call close_file
+
+    end subroutine write_mh_1d_header
+
+    !========================================================================
 
     subroutine write_mh_1d
       ! write output with 1D MH data in the format to be read by IDL/TECPLOT;

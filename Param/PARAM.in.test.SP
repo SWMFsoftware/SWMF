@@ -12,12 +12,6 @@ T
 
 #BEGIN_COMP SP ----------------------------------------------------------------
 
-#TIMESIMULATION
-20.0
-
-#NSTEP
-0
-
 #DORUN
 F
 
@@ -42,8 +36,9 @@ F			UseDiffusion
 T
 MH_data
 ascii
-1
-1
+
+#INCLUDE
+MH_data/MH_data.H
 
 #SAVEPLOT
 1

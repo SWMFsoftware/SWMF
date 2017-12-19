@@ -124,8 +124,8 @@ contains
           call read_var('DoRun',DoRun)
        case('#SAVEPLOT')
           call set_write_param
-       case('#READMHDATA')
-          call set_read_mh_data_param
+       case('#READMHDATA','#MHDATA')
+          call set_read_mh_data_param(NameCommand)
        case('#COORDSYSTEM',"#COORDINATESYSTEM")
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
@@ -152,11 +152,11 @@ contains
     else
        RETURN
     end if
-    DataInputTime = TimeGlobal
     call init_grid(DoRestart .or. DoReadMhData)
-    call init_read_mh_data
+    call init_read_mh_data ! if input files are used, TimeGlobal is set here
     call init_distribution_function 
     if(DoRestart) call read_restart
+    DataInputTime = TimeGlobal
   end subroutine initialize
   !============================================================================
 
@@ -167,6 +167,18 @@ contains
     real, intent(in)   :: TimeLimit
     logical, save:: IsFirstCall = .true.
     !------------------------------
+    !\
+    ! write the initial background state to the output file
+    !/
+    if(IsFirstCall)then
+       ! print the initial state
+       call write_output(IsInitialOutputIn = .true.)
+       IsFirstCall = .false.
+    end if
+
+    !\
+    ! May need to read background data from files
+    !/
     if(DoReadMhData)then
        !\
        ! copy some variables from the previous time step
@@ -192,14 +204,6 @@ contains
     call fix_grid_consistency   !????
 
     !\
-    ! write the initial background state to the output file
-    !/
-    if(IsFirstCall)then
-       ! print the initial state
-       call write_output(IsInitialOutput = .true.)
-       IsFirstCall = .false.
-    end if
-    !\
     ! if no new background data loaded, don't advance in time
     !/
     if(DataInputTime <= TimeGlobal) RETURN
@@ -211,7 +215,7 @@ contains
     ! update time & iteration counters
     iIterGlobal = iIterGlobal + 1
     TimeGlobal = min(DataInputTime,TimeLimit)
-    call write_output(IsInitialOutput=.not.DoRun)
+    call write_output(IsInitialOutputIn=.not.DoRun)
   contains
     !=====================================================================
     subroutine fix_grid_consistency
