@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan,
-!  portions used with permission
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module BATL_mpi
 
@@ -18,52 +18,67 @@ module BATL_mpi
   integer, public:: iComm   ! MPI communicator for the group of processors
   integer, public:: nProc=1 ! number of processors in this group
   integer, public:: iProc=0 ! processor rank from 0 to nProc-1
+  integer, public:: nThread ! number of threads in one processor
+  integer, public:: iThread ! thread rank from 0 to nThread
 
 contains
-  !============================================================================
-
+  !==========================================================================
   subroutine init_mpi(iCommIn)
 
     ! Initialize iComm, nProc and iProc. If iCommIn is not present, set it
     ! to MPI_COMM_WORLD and also call MPI_init
-
+    ! hyzhou:
+    ! Add MPI multi-thread level support.
+    
     integer, optional, intent(in):: iCommIn
     integer :: iError
-
-    !--------------------------------------------------------------------------
+    integer, parameter :: required=MPI_THREAD_SINGLE
+    integer :: provided ! Provided level of MPI threading support
+    !------------------------------------------------------------------------
     if(.not.present(iCommIn))then
-       call MPI_init(iError)
+       !call MPI_init(iError)
        iComm = MPI_COMM_WORLD
+       call MPI_Init_Thread(required, provided, iError)
     else
        iComm = iCommIn
     end if
     call MPI_comm_rank(iComm, iProc, iError)
     call MPI_comm_size(iComm, nProc, iError)
 
+    ! Check the threading support level
+    if (provided .lt. required) then
+       ! Insufficient support, degrade to 1 thread and warn the user         
+       if (iProc .eq. 0) then
+          write(*,*) "Warning:  This MPI implementation provides ",   &
+               "insufficient threading support. Switching to pure MPI..."
+       end if
+       !$ call omp_set_num_threads(1)
+    end if
+    
   end subroutine init_mpi
-  !============================================================================
+  !==========================================================================
+
   subroutine clean_mpi
 
     ! This should only be called if the whole application is finished
 
     integer :: iError
-    !--------------------------------------------------------------------------
+    !------------------------------------------------------------------------
     call MPI_finalize(iError)
 
   end subroutine clean_mpi
-  !============================================================================
+  !==========================================================================
   subroutine barrier_mpi
 
     use ModUtilities, ONLY: flush_unit
     use ModIoUnit,    ONLY: STDOUT_
 
     integer:: iError
-    !--------------------------------------------------------------------------
+    !-----------------------------------------------------------------------
     call flush_unit(STDOUT_)
     call MPI_barrier(iComm, iError)
 
   end subroutine barrier_mpi
-  !============================================================================
+  !=========================================================================
 
 end module BATL_mpi
-!==============================================================================

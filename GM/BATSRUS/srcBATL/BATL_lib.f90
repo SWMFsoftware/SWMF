@@ -33,7 +33,7 @@ module BATL_lib
   integer, public, allocatable:: iVectorVar_I(:)
 
   logical, public:: IsBatlInitialized = .false.
-
+  
   ! Inherited from BATL_size
   public:: MaxDim, nDim, Dim1_, Dim2_, Dim3_, iDim_, jDim_, kDim_
   public:: nDimAmr, iDimAmr_D
@@ -45,7 +45,7 @@ module BATL_lib
 
   ! Inherited from BATL_mpi
   public:: init_mpi, clean_mpi, barrier_mpi
-  public:: iComm, nProc, iProc
+  public:: iComm, nProc, iProc, nThread, iThread          
 
   ! Inherited from BATL_tree
   public:: MaxNode, nNode, nNodeUsed, nRoot_D
@@ -179,7 +179,7 @@ contains
     ! during the whole run.
     ! At the base level the domain is decomposed into the root blocks.
     !
-    ! The optional nRootIn_D argument provides the number of root blocks
+    ! The optional nRootIn_D argument provides the number of root blocks 
     ! in each dimension. The default is a single root block at the base level.
     !
     ! The optional TypeGeometry describes the geometry of the coordinate
@@ -189,12 +189,11 @@ contains
     ! The optional IsPeriodicIn_D argument tells if a certain direction
     ! is periodic or not.
     !
-    ! At the completion of this subroutine, the domain and the block-tree
+    ! At the completion of this subroutine, the domain and the block-tree 
     ! are initialized, the root blocks are distributed and their coordinates
     ! cell volumes, face areas, etc. are all set.
     !
-
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------------------
     if(IsBatlInitialized) RETURN
 
     call init_tree(MaxBlockIn)
@@ -222,9 +221,9 @@ contains
   end subroutine init_batl
   !============================================================================
   subroutine clean_batl
-
+    
+    !------------------------------------------------------------------------
     ! Free up memory
-    !--------------------------------------------------------------------------
     call clean_amr_criteria
     call clean_grid
     call clean_geometry
@@ -246,8 +245,8 @@ contains
     ! (cell volume, face areas, etc.) are all set.
 
     integer:: iBlock
+    !------------------------------------------------------------------------
 
-    !--------------------------------------------------------------------------
     if(present(DoRefine_B))then
        do iBlock = 1, nBlock
           if(Unused_B(iBlock)) CYCLE
@@ -277,7 +276,7 @@ contains
     logical, intent(in), optional:: DoRefine_B(MaxBlock)  ! request to refine
     logical, intent(in), optional:: DoCoarsen_B(MaxBlock) ! request to coarsen
     logical, intent(in), optional:: DoBalanceEachLevelIn  ! balance per level?
-    integer,intent(in),  optional:: iTypeBalance_A(MaxNode)! balance by types
+    integer,intent(in),  optional:: iTypeBalance_A(MaxNode)!balance by types
     integer,intent(inout),optional::iTypeNode_A(MaxNode)  ! adapt node types
     logical, intent(in), optional:: &
          Used_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)  ! used cells
@@ -309,7 +308,7 @@ contains
     optional:: pack_extra_data, unpack_extra_data
 
     ! If UseHighOrderAMRIn is true, 5th (6th) order accuracy will be achieved
-    ! for refined (coarsened) blocks.
+    ! for refined (coarsened) blocks. 
     logical, intent(in), optional:: UseHighOrderAMRIn
 
     ! Default values of each states. Used for high order AMR. If the default
@@ -338,7 +337,7 @@ contains
     ! The nExtraData, pack_extra_data and unpack_extra_data arguments
     ! allow sending nExtraData real numbers together with the blocks.
     !
-    ! Refinement and coarsening is primarily based on the iStatusNew_A array
+    ! Refinement and coarsening is primarily based on the iStatusNew_A array 
     ! (available via the BATL_lib module) that is indexed by nodes
     ! (so a processor can request refinement for a non-local block).
     ! It should be set to the values Refine_ and Coarsen_. The AMR algorithm
@@ -430,8 +429,8 @@ contains
          unpack_extra_data=unpack_extra_data, &
          UseHighOrderAMRIn=UseHighOrderAMRIn, &
          DefaultStateIn_V=DefaultStateIn_V)
-
-    ! This logical tells find_neighbor (called by move_tree) to check
+    
+    ! This logical tells find_neighbor (called by move_tree) to check 
     ! if the neighbor levels of a block (otherwise not affected by AMR) changed
     DoCheckResChange = nDim == 3 .and. IsNodeBasedGrid &
          .and. .not.IsCartesianGrid
@@ -448,6 +447,4 @@ contains
 
   end subroutine regrid_batl
   !============================================================================
-
 end module BATL_lib
-!==============================================================================
