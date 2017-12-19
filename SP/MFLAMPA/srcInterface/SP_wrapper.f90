@@ -127,7 +127,7 @@ contains
     if(IsInitialized)&
          RETURN
     IsInitialized = .true.
-    call initialize(TimeSimulation)
+    call initialize
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine SP_init_session
 

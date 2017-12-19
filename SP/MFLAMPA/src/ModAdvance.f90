@@ -21,8 +21,8 @@ module SP_ModAdvance
 
   !\
   ! Global interation and time
-  real,    public :: TimeGlobal  = -1.0
-  integer, public :: iIterGlobal = -1
+  real,    public :: TimeGlobal  = 0.0
+  integer, public :: iIterGlobal = 0
   !/
   !\
   ! unit of SEP energy is also applicable for ion temperature
@@ -147,7 +147,7 @@ contains
        do iParticle = 1, nParticleMax
           do iP = 0, nP +1
              Distribution_IIB(iP,iParticle,iBlock) = &
-                  cTiny/MomentumMaxMax/(Momentum_I(iP))**2
+                  cTiny/MomentumMax/(Momentum_I(iP))**2
           end do
        end do
     end do

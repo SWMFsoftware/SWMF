@@ -12,6 +12,8 @@ module SP_ModReadMhData
        nVarRead, nVar, nBlock, iShock_IB, iNode_B, FootPoint_VB, &
        nParticle_B,  State_VIB, LagrID_, Z_, Shock_, NameVar_V
 
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
+
   use ModPlotFile, ONLY: read_plot_file
 
   implicit none
@@ -21,7 +23,7 @@ module SP_ModReadMhData
   private ! except
  
   public:: &
-       set_read_mh_data_param, read_mh_data, &
+       set_read_mh_data_param, init_read_mh_data, read_mh_data, &
        DoReadMhData
 
 
@@ -73,13 +75,6 @@ contains
     !
     call read_var('TypeFile', TypeFile)
 
-    ! time and iteration of the first file to be read
-    call read_var('TimeReadStart',  TimeReadStart)
-    call read_var('iIterReadStart', iIterReadStart)
-
-    TimeRead = TimeReadStart
-    iIterRead= iIterReadStart
-
     ! time step
     call read_var('DtRead', DtRead)
     call read_var('DnRead', DnRead)
@@ -97,6 +92,15 @@ contains
        call CON_stop(NameSub//': input format was not set in PARAM.in')
     end select
   end subroutine set_read_mh_data_param
+
+  !============================================================================
+
+  subroutine init_read_mh_data
+    ! initialize by setting the time and interation index of input files
+    !-------------------------------------------------------------------------
+    TimeRead = TimeGlobal
+    iIterRead= iIterGlobal
+  end subroutine init_read_mh_data
 
   !============================================================================
 

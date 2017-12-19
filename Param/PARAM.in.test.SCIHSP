@@ -413,6 +413,12 @@ pnt mhd tec		StringPlot
 
 #BEGIN_COMP SP ----------------------------------------------------------------
 
+#TIMESIMULATION
+20.0
+
+#NSTEP
+0
+
 #DORUN
 F
 

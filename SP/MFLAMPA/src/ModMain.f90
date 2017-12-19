@@ -12,7 +12,7 @@ module SP_ModMain
        set_write_param, write_output, NamePlotDir
 
   use SP_ModReadMhData, ONLY: &
-       set_read_mh_data_param, read_mh_data, DoReadMhData
+       set_read_mh_data_param, init_read_mh_data, read_mh_data, DoReadMhData
 
   use SP_ModRestart, ONLY: &
        save_restart=>write_restart, read_restart
@@ -143,9 +143,8 @@ contains
 
   !============================================================================
 
-  subroutine initialize(TimeStart)
+  subroutine initialize
     ! initialize the model
-    real, intent(in):: TimeStart
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
     if(DoInit)then
@@ -153,11 +152,11 @@ contains
     else
        RETURN
     end if
-    iIterGlobal   = 0
-    TimeGlobal    = TimeStart
-    DataInputTime = TimeStart
+
+    DataInputTime = TimeGlobal
     call init_advance
     call init_grid(DoRestart .or. DoReadMhData)
+    call init_read_mh_data
     call init_distribution_function 
     if(DoRestart) call read_restart
   end subroutine initialize
@@ -209,7 +208,6 @@ contains
     ! update time & iteration counters
     iIterGlobal = iIterGlobal + 1
     TimeGlobal = min(DataInputTime,TimeLimit)
-    
     call write_output(IsInitialOutput=.not.DoRun)
   contains
     !=====================================================================
