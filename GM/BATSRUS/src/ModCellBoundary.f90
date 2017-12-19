@@ -41,7 +41,7 @@ contains
     use ModPhysics, ONLY: UseOutflowPressure, pOutFlow, CellState_VI, &
          nVectorVar,iVectorVar_I
     use ModSemiImplVar, ONLY: nVectorSemi, iVectorSemi_I
-    use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
+    use ModMultiFluid, ONLY: nFluid, iRhoUx_I, iRhoUy_I, iRhoUz_I
     use ModImplicit, ONLY: TypeSemiImplicit, iVarSemiMin, iVarSemiMax, &
          iErImplFirst, iErImplLast
     use ModResistivity, ONLY: BxImpl_, ByImpl_, BzImpl_
@@ -66,7 +66,7 @@ contains
     ! Type of boundary for one side
     character(len=30):: TypeBc
 
-    integer:: iVar
+    integer:: iVar, iFluid
 
     ! Coefficient +1 or -1 for symmetric vs. anti-symmetric BCs
     real, allocatable:: SymmCoeff_V(:)
