@@ -92,8 +92,13 @@ public:
     double MatrixElementValue;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *Node;
 
+    //the following are needed only in case when the periodic bounday conditinos are imposed
+    bool BoundaryNodeFlag;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *OriginalNode;
+
     cMatrixRowNonZeroElementTable() {
       i=0,j=0,k=0,iVar=0,MatrixElementValue=0.0,Node=NULL;
+      BoundaryNodeFlag=false,OriginalNode=NULL;
     }
   };
 
@@ -506,6 +511,9 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
               break;
             }
 
+            MatrixRowNonZeroElementTable[ii].BoundaryNodeFlag=BoundaryBlock;
+            MatrixRowNonZeroElementTable[ii].OriginalNode=MatrixRowNonZeroElementTable[ii].Node;
+
             if (BoundaryBlock==true) {
               //the block is at the domain boundary -> find the point located in the "real" part of the computational domain
               MatrixRowNonZeroElementTable[ii].Node=PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(MatrixRowNonZeroElementTable[ii].Node);
@@ -537,7 +545,18 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
         //add to the row non-zero elements
         for (int iElement=0;iElement<NonZeroElementsFound;iElement++) {
           el=NewRow->Elements+iElement;
-          CornerNode=MatrixRowNonZeroElementTable[iElement].Node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[iElement].i,MatrixRowNonZeroElementTable[iElement].j,MatrixRowNonZeroElementTable[iElement].k));
+
+          if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_OFF_) {
+            CornerNode=MatrixRowNonZeroElementTable[iElement].Node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[iElement].i,MatrixRowNonZeroElementTable[iElement].j,MatrixRowNonZeroElementTable[iElement].k));
+          }
+          else  {
+            if (MatrixRowNonZeroElementTable[iElement].BoundaryNodeFlag==false) {
+              CornerNode=MatrixRowNonZeroElementTable[iElement].Node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[iElement].i,MatrixRowNonZeroElementTable[iElement].j,MatrixRowNonZeroElementTable[iElement].k));
+            }
+            else {
+              CornerNode=MatrixRowNonZeroElementTable[iElement].OriginalNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[iElement].i,MatrixRowNonZeroElementTable[iElement].j,MatrixRowNonZeroElementTable[iElement].k));
+            }
+          }
 
           el->CornerNode=CornerNode;
           el->CornerNodeID=PIC::Mesh::mesh.getCornerNodeLocalNumber(MatrixRowNonZeroElementTable[iElement].i,MatrixRowNonZeroElementTable[iElement].j,MatrixRowNonZeroElementTable[iElement].k);
@@ -931,7 +950,16 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   }
 
   //execute the data exchange between 'ghost' blocks
-  PIC::Mesh::mesh.ParallelBlockDataExchange();
+  switch (_PIC_BC__PERIODIC_MODE_) {
+  case _PIC_BC__PERIODIC_MODE_OFF_:
+    PIC::Mesh::mesh.ParallelBlockDataExchange();
+    break;
+
+  case _PIC_BC__PERIODIC_MODE_ON_:
+    PIC::BC::ExternalBoundary::Periodic::UpdateData();
+    break;
+  }
+
 }
 
 #endif /* _LINEARSYSTEMCORNERNODE_H_ */
