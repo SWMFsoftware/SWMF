@@ -20,7 +20,7 @@ module SP_ModWrite
        NameVar_V, TypeCoordSystem
 
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock, & 
-       LogEnergyScale_I, LogMomentumScale_I, DMomentumOverDEnergy_I, &
+       LogEnergy_I, LogMomentum_I, DMomentumOverDEnergy_I, &
        Distribution_IIB
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
@@ -88,8 +88,8 @@ module SP_ModWrite
        Distr1D_   = 3    ! along each line
   ! Scale for writing distribution
   integer, parameter:: &
-       MomentumScale_= 1, &
-       EnergyScale_  = 2
+       Momentum_= 1, &
+       Energy_  = 2
   !----------------------------------------------------------------------------
   ! the output directory
   character (len=100) :: NamePlotDir="SP/IO2/"
@@ -276,11 +276,11 @@ contains
       !------------------------
       File_I(iFile) % nVarPlot = 1
       if(    index(StringPlot, 'momentum') > 0)then
-         File_I(iFile) % iScale = MomentumScale_
+         File_I(iFile) % iScale = Momentum_
          File_I(iFile) % NameVarPlot = &
               'Log10Momentum Distance Log10Distribution'
       elseif(index(StringPlot, 'energy') > 0)then
-         File_I(iFile) % iScale = EnergyScale_
+         File_I(iFile) % iScale = Energy_
          File_I(iFile) % NameVarPlot = &
               'Log10Energy Distance Log10Distribution'
       else
@@ -688,11 +688,11 @@ contains
       character(len=8):: StringTime
       !------------------------------------------------------------------------
       select case(File_I(iFile) % iScale)
-      case(MomentumScale_)
-         Scale_I = LogMomentumScale_I / log(10.)
+      case(Momentum_)
+         Scale_I = LogMomentum_I / log(10.)
          Factor_I= Unity_I
-      case(EnergyScale_)
-         Scale_I = LogEnergyScale_I / log(10.)
+      case(Energy_)
+         Scale_I = LogEnergy_I / log(10.)
          Factor_I= DMomentumOverDEnergy_I
       end select
       do iBlock = 1, nBlock
@@ -760,7 +760,7 @@ contains
   subroutine get_integral_flux
     use SP_ModGrid, ONLY: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_,&
          Flux5_, Flux6_, FluxMax_ 
-    use SP_ModAdvance, ONLY: EnergyScale_I, MomentumScale_I
+    use SP_ModAdvance, ONLY: Energy_I, Momentum_I
     use ModConst, ONLY: energy_in
     ! compute the total (simulated) integral flux of particles as well as
     ! particle flux in the 6 GOES channels; also compute total energy flux
@@ -787,12 +787,12 @@ contains
           do iP = 1, nMomentum - 1
              ! the flux increment from iP
              dFlux = 0.5 * &
-                  (EnergyScale_I(iP+1) - EnergyScale_I(iP)) * (&
+                  (Energy_I(iP+1) - Energy_I(iP)) * (&
                   Distribution_IIB(iP,  iParticle,iBlock)*&
-                  MomentumScale_I(iP)**2 &
+                  Momentum_I(iP)**2 &
                   +&
                   Distribution_IIB(iP+1,iParticle,iBlock)*&
-                  MomentumScale_I(iP+1)**2)
+                  Momentum_I(iP+1)**2)
 
              ! increase the total flux
              Flux = Flux + dFlux
@@ -800,47 +800,47 @@ contains
              ! increase FOES channels' fluxes
              do iFlux = 1, 6
                 ! check whether reached the channel's cut-off level
-                if(EnergyScale_I(iP+1) < EChannel_I(iFlux))&
+                if(Energy_I(iP+1) < EChannel_I(iFlux))&
                      CYCLE
 
-                if(EnergyScale_I(iP+1) >= EChannel_I(iFlux))then
+                if(Energy_I(iP+1) >= EChannel_I(iFlux))then
                    Flux_I(iFlux) = Flux_I(iFlux) + dFlux
                 else
                    ! channel cutoff level is often in the middle of a bin;
                    ! compute partial flux increment
                    dFlux1 =&
-                        ((-0.50*(EnergyScale_I(iP) + EChannel_I(iFlux)) + &
-                        EnergyScale_I(iP+1) )*&
+                        ((-0.50*(Energy_I(iP) + EChannel_I(iFlux)) + &
+                        Energy_I(iP+1) )*&
                         Distribution_IIB(iP,iParticle,iBlock)*&
-                        MomentumScale_I(iP)**2  &
-                        -0.50*(EnergyScale_I(iP)-EChannel_I(iFlux))*&
+                        Momentum_I(iP)**2  &
+                        -0.50*(Energy_I(iP)-EChannel_I(iFlux))*&
                         Distribution_IIB(iP+1,iParticle,iBlock)*&
-                        MomentumScale_I(iP+1)**2)*&
-                        (EnergyScale_I(iP)-EChannel_I(iFlux))/&
-                        (EnergyScale_I(iP+1)-EnergyScale_I(iP))
+                        Momentum_I(iP+1)**2)*&
+                        (Energy_I(iP)-EChannel_I(iFlux))/&
+                        (Energy_I(iP+1)-Energy_I(iP))
                    Flux_I(iFlux) = Flux_I(iFlux) + dFlux1
                 end if
              end do
 
              ! increase total energy flux
              EFlux = EFlux + 0.5 * &
-                  (EnergyScale_I(iP+1) - EnergyScale_I(iP)) * (&
+                  (Energy_I(iP+1) - Energy_I(iP)) * (&
                   Distribution_IIB(iP,  iParticle,iBlock)*&
-                  EnergyScale_I(iP) * &
-                  MomentumScale_I(iP)**2 &
+                  Energy_I(iP) * &
+                  Momentum_I(iP)**2 &
                   +&
                   Distribution_IIB(iP+1,iParticle,iBlock)*&
-                  EnergyScale_I(iP+1) * &
-                  MomentumScale_I(iP+1)**2)
+                  Energy_I(iP+1) * &
+                  Momentum_I(iP+1)**2)
 
              ! normalization factor
              Norm = Norm + 0.5 * &
-                  (MomentumScale_I(iP+1) - MomentumScale_I(iP)) * (&
+                  (Momentum_I(iP+1) - Momentum_I(iP)) * (&
                   Distribution_IIB(iP,  iParticle, iBlock) * &
-                  MomentumScale_I(iP)**2 &
+                  Momentum_I(iP)**2 &
                   + &
                   Distribution_IIB(iP+1,iParticle, iBlock) * &
-                  MomentumScale_I(iP+1)**2)
+                  Momentum_I(iP+1)**2)
           end do
 
           ! store the results
