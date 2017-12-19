@@ -66,6 +66,10 @@ module SP_ModMain
 
   ! Methods and variables from ModAdvance
 
+  ! Methods and variables from ModReadMhData
+  public:: &
+       DoReadMhData
+
   !\
   ! Logicals for actions
   !----------------------------------------------------------------------------
@@ -159,26 +163,16 @@ contains
   end subroutine initialize
   !============================================================================
 
-  subroutine run(TimeInOut, TimeLimit, DoFinalizeIn)
+  subroutine run(TimeInOut, TimeLimit)
     ! advance the solution in time
-    real,              intent(inout):: TimeInOut
-    real,              intent(in)   :: TimeLimit
-    logical, optional, intent(in)   :: DoFinalizeIn
-    logical:: DoFinalize
+    real, intent(inout):: TimeInOut
+    real, intent(in)   :: TimeLimit
     logical, save:: IsFirstCall = .true.
     !------------------------------
-    if(present(DoFinalizeIn))then
-       DoFinalize = DoFinalizeIn
-    else
-       DoFinalize = .false.
-    end if
-
     if(DoReadMhData)then
        !\
-       ! data flow is different when read MHD data from file:
-       ! the final data file has alredy been read, no new data is available
+       ! copy some variables from the previous time step
        !/
-       if(DoFinalize) RETURN
        call copy_old_state
        !\
        ! Read the background data from file

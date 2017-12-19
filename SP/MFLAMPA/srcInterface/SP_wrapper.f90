@@ -14,7 +14,8 @@ module SP_wrapper
        iNode_B, TypeCoordSystem, FootPoint_VB, DataInputTime, &
        Block_, Proc_, nParticle_B, Shock_, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
-       Wave1_, Wave2_
+       Wave1_, Wave2_, &
+       DoReadMhData
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -136,8 +137,11 @@ contains
     real,intent(in)::TimeSimulation
     real:: TimeAux ! to satisfy intent of arguments in run()
     !--------------------------------------------------------------------
+    ! if data are read from files, no special finalization is needed
+    if(DoReadMhData) &
+         RETURN
     TimeAux = TimeSimulation
-    call run(TimeAux, TimeSimulation, .true.)
+    call run(TimeAux, TimeSimulation)
   end subroutine SP_finalize
 
   !=========================================================
@@ -173,14 +177,15 @@ contains
   !=========================================================
 
   subroutine SP_save_restart(TimeSimulation) 
-    real,     intent(in) :: TimeSimulation 
+    real, intent(in) :: TimeSimulation 
     real:: TimeAux ! to satisfy intent of arguments in run()
     !--------------------------------------------------------------------
     TimeAux = TimeSimulation
-    call run(TimeAux, TimeSimulation)
+    ! if data are read from files, no need for additional run
+    if(.not.DoReadMhData)&
+         call run(TimeAux, TimeSimulation)
     call save_restart
   end subroutine SP_save_restart
-
 
   !===================================================================
 
