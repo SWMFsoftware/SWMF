@@ -1378,6 +1378,14 @@ test15:
 	${MAKE} test15_restart
 	@echo "test15_check..." >> test15_scihsp.diff
 	${MAKE} test15_check
+	@echo "test15_sp_compile..." > test15_sp.diff
+	${MAKE} test15_sp_compile
+	@echo "test15_sp_rundir..." >> test15_sp.diff
+	${MAKE} test15_sp_rundir
+	@echo "test15_sp_run..." >> test15_sp.diff
+	${MAKE} test15_sp_run
+	@echo "test15_sp_check..." >> test15_sp.diff
+	${MAKE} test15_sp_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test15_compile:
@@ -1416,6 +1424,34 @@ test15_check:
 		${TESTDIR}/RESULTS/SP/MH_data.out \
 		${TESTDIR}/RESULTS/SP/MH_data.ref \
 		> test15_scihsp.diff)
+		ls -l test15*.diff
+
+test15_sp_compile:
+	./Config.pl -v=Empty,SP/MFLAMPA
+	./Config.pl -g=SP:2000,4,4
+	${MAKE} SWMF
+	make PIDL
+
+test15_sp_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SP ${TESTDIR}/LAYOUT.in
+	cp -r SP/MFLAMPA/data/input/test15/MH_data ${TESTDIR}/
+
+test15_sp_run:
+	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
+
+test15_sp_check:
+	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
+	    ${TESTDIR}/RESULTS/SP/MH_data.out
+	-(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-6 -b \
+		${TESTDIR}/RESULTS/SP/MH_data.out \
+		${TESTDIR}/RESULTS/SP/MH_data.ref \
+		> test15_sp.diff)
 		ls -l test15*.diff
 
 ### ESMF test ###
