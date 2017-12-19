@@ -1410,7 +1410,7 @@ test15_restart:
 
 test15_check:
 	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
-	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000005.out > \
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out
 	-(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.out \
