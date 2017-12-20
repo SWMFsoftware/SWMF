@@ -116,6 +116,7 @@ foreach $day (@days){
 	    "<pre>\n";
 	while(<RESULTS>){
 	    last if /===========/;
+            s/Domain Users//;
 	    my @item = split(' ',$_);
 	    my $test = $item[-1]; $test =~ s/\.diff$//;
 	    my $size = $item[4];
