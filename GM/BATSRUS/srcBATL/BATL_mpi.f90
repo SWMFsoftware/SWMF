@@ -15,70 +15,67 @@ module BATL_mpi
   public:: clean_mpi      ! finalize MPI
   public:: barrier_mpi    ! use an MPI barrier to synchronize processors
 
-  integer, public:: iComm   ! MPI communicator for the group of processors
-  integer, public:: nProc=1 ! number of processors in this group
-  integer, public:: iProc=0 ! processor rank from 0 to nProc-1
-  integer, public:: nThread ! number of threads in one processor
-  integer, public:: iThread ! thread rank from 0 to nThread
+  integer, public:: iComm       ! MPI communicator for the group of processors
+  integer, public:: nProc = 1   ! number of processors in this group
+  integer, public:: iProc = 0   ! processor rank from 0 to nProc-1
+  integer, public:: nThread = 1 ! number of threads per MPI process
+  integer, public:: iThread = 0 ! thread rank from 0 to nThread-1
 
 contains
-  !==========================================================================
+  !============================================================================
   subroutine init_mpi(iCommIn)
 
     ! Initialize iComm, nProc and iProc. If iCommIn is not present, set it
     ! to MPI_COMM_WORLD and also call MPI_init
-    ! hyzhou:
-    ! Add MPI multi-thread level support.
     
     integer, optional, intent(in):: iCommIn
     integer :: iError
-    integer, parameter :: required=MPI_THREAD_SINGLE
-    integer :: provided ! Provided level of MPI threading support
-    !------------------------------------------------------------------------
+
+    ! OpenMP support levels
+    integer, parameter :: lSupportRequired = MPI_THREAD_SINGLE
+    integer            :: lSupportProvided = MPI_THREAD_SINGLE 
+    !--------------------------------------------------------------------------
     if(.not.present(iCommIn))then
-       !call MPI_init(iError)
        iComm = MPI_COMM_WORLD
-       call MPI_Init_Thread(required, provided, iError)
+       call MPI_init_thread(lSupportRequired, lSupportProvided, iError)
+       ! Check the threading support level
+       if (lSupportProvided < lSupportRequired) then
+          if (iProc == 0) write(*,*) &
+               "Warning:  This MPI implementation provides ",   &
+               "insufficient threading support. Switching to pure MPI..."
+          !$ call omp_set_num_threads(1)
+       end if
     else
        iComm = iCommIn
     end if
     call MPI_comm_rank(iComm, iProc, iError)
     call MPI_comm_size(iComm, nProc, iError)
-
-    ! Check the threading support level
-    if (provided .lt. required) then
-       ! Insufficient support, degrade to 1 thread and warn the user         
-       if (iProc .eq. 0) then
-          write(*,*) "Warning:  This MPI implementation provides ",   &
-               "insufficient threading support. Switching to pure MPI..."
-       end if
-       !$ call omp_set_num_threads(1)
-    end if
     
   end subroutine init_mpi
-  !==========================================================================
+  !============================================================================
 
   subroutine clean_mpi
 
     ! This should only be called if the whole application is finished
 
     integer :: iError
-    !------------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call MPI_finalize(iError)
 
   end subroutine clean_mpi
-  !==========================================================================
+  !============================================================================
   subroutine barrier_mpi
 
     use ModUtilities, ONLY: flush_unit
     use ModIoUnit,    ONLY: STDOUT_
 
     integer:: iError
-    !-----------------------------------------------------------------------
+    !--------------------------------------------------------------------------
     call flush_unit(STDOUT_)
     call MPI_barrier(iComm, iError)
 
   end subroutine barrier_mpi
-  !=========================================================================
+  !============================================================================
 
 end module BATL_mpi
+!==============================================================================
