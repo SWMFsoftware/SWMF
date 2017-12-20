@@ -692,6 +692,14 @@ subroutine MPI_INIT(ierror)
   ierror=0
 end subroutine MPI_INIT
 
+subroutine MPI_INIT_THREAD(required, provided, ierror)
+  integer, intent(in) :: required
+  integer, intent(out):: provided
+  integer, intent(out):: ierror
+  provided = required
+  ierror=0
+end subroutine MPI_INIT_THREAD
+
 subroutine MPI_WAIT(request,status,ierror)
   integer, intent(inout) :: request
   integer, intent(out)   :: status(*), ierror
