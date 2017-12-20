@@ -200,7 +200,7 @@ return ;
     RhsSupportLength_CornerNodes=6;
     NonZeroElementsFound=7;
 
-  if (RhsSupportLength_CornerNodes!=0) for (i=0,rhs=0.0;i<RhsSupportLength_CornerNodes;i++) rhs+=*((double*)(RhsSupportTable_CornerNodes[i].AssociatedDataPointer+CurrentCenterNodeOffset))*RhsSupportTable_CornerNodes[i].Coefficient;
+  if (RhsSupportLength_CornerNodes!=0) for (i=0,rhs=0.0;i<RhsSupportLength_CornerNodes;i++) rhs+=*((double*)(RhsSupportTable_CornerNodes[i].AssociatedDataPointer+CurrentCornerNodeOffset))*RhsSupportTable_CornerNodes[i].Coefficient;
 
   }
 
