@@ -479,9 +479,7 @@ contains
 
     subroutine write_mh_2d
       use ModMpi
-      use SP_ModProc,     ONLY: iComm, nProc
-      use CON_world,      ONLY: is_proc0, i_proc0
-      use CON_comp_param, ONLY: SP_
+      use SP_ModProc,     ONLY: iComm, nProc, iProc
       ! write output with 2D MH data in the format to be read by IDL/TECPLOT;
       ! single file is created for all field lines, name format is
       ! MH_data_R=<Radius [AU]>_t<ddhhmmss>_n<iIter>.{out/dat}
@@ -565,24 +563,24 @@ contains
       
       ! gather interpolated data on the source processor
       if(nProc > 1)then
-         if(is_proc0(SP_))then
+         if(iProc==0)then
             call MPI_Reduce(MPI_IN_PLACE, File_I(iFile) % Buffer_II, &
                  nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
-                 i_proc0(SP_), iComm, iError)
+                 0, iComm, iError)
             call MPI_Reduce(MPI_IN_PLACE, DoPrint_I, &
                  nNode, MPI_Logical, MPI_Land, &
-                 i_proc0(SP_), iComm, iError)
+                 0, iComm, iError)
          else
             call MPI_Reduce(File_I(iFile) % Buffer_II, File_I(iFile) % Buffer_II,&
                  nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
-                 i_proc0(SP_), iComm, iError)
+                 0, iComm, iError)
             call MPI_Reduce(DoPrint_I, DoPrint_I, &
                  nNode, MPI_Logical, MPI_Land, &
-                 i_proc0(SP_), iComm, iError)
+                 0, iComm, iError)
          end if
       end if
 
-      if(is_proc0(SP_))&
+      if(iProc==0)&
            ! print data to file
            call save_plot_file(&
            NameFile     = NameFile, &
