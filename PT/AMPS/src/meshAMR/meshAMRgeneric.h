@@ -5696,6 +5696,17 @@ if (CallsCounter==83) {
 
     //count the number of blocks on the mesh 
     if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      //in case when the periodic boundary conditions are applied
+      //nodes adjustent to the boundary of the domain is not considered
+      if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
+        cTreeNodeAMR<cBlockAMR>** NeibTable=startNode->neibNodeFace;
+
+        for (int i=0;i<4*6;i++) {
+          if (NeibTable[i]==NULL) return;
+        }
+      }
+
+
       meshBlocksNumber++;
       SendRequest=false;
 
@@ -6519,6 +6530,15 @@ if (_MESH_DIMENSION_ == 3)  if ((cell->r<0.0001)&&(fabs(cell->GetX()[0])+fabs(ce
     }
 
     if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      //in case when the periodic boundary conditions are applied
+      //nodes adjustent to the boundary of the domain is not considered
+      if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
+        cTreeNodeAMR<cBlockAMR>** NeibTable=startNode->neibNodeFace;
+
+        for (int i=0;i<4*6;i++) {
+          if (NeibTable[i]==NULL) return;
+        }
+      }
 
       flag=false;
       if (ThisThread==0) flag=true;
