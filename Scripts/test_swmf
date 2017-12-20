@@ -60,10 +60,13 @@ cvs co -D "`date +%m/%d/%Y` 19:00" SWMF BATL HYPRE >& /dev/null
 mv BATL SWMF/
 mv HYPRE SWMF/util
 cd SWMF
-./Config.pl -install -compiler=gfortran -hypre >& test_swmf.log
+./Config.pl -install -compiler=gfortran -hypre -openmp >& test_swmf.log
 cd BATL
-./Config.pl -install -compiler=gfortran >>& ../test_swmf.log
+./Config.pl -install -compiler=gfortran -openmp >>& ../test_swmf.log
 cd ..
+
+# 1 OpenMP thread per MPI process
+setenv OMP_NUM_THREADS 1
 
 #
 # Directory on herot. The date is set when the test starts!
