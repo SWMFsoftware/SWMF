@@ -1,5 +1,47 @@
+Begin session: 1
+
+#ECHO
+T			DoEcho
+
+#DESCRIPTION
+Input for testing MFLAMPA model for SEPs, uses input files with background data
+
+
+#DORUN
+F
 
 #TEST
-T
+F			DoTraceShock
+F			UseDiffusion
 
-#END
+#GRID
+1.05			RMin
+19			RBufferMin
+21			RBufferMax
+220			RMax
+
+#ORIGIN
+2.5			ROrigin
+-10			LonMin
+25			LatMin
+10			LonMax
+90			LatMax
+
+#READMHDATA
+T
+MH_data
+ascii
+
+#INCLUDE
+MH_data/MH_data.H
+
+#SAVEPLOT
+1
+mh1d idl
+
+#STOP
+-1			MaxIter
+30			TimeMax
+
+End session: 1
+#END ##########################################################################
