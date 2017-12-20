@@ -42,17 +42,21 @@ module SP_ModMain
 
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
-  real    :: TimeMax = -1.0, CpuTimeMax = -1.0
-  integer ::nIterMax = -1
-  logical :: UseStopFile = .true.
-  logical :: IsLastRead=.false.
+  real   :: TimeMax = -1.0, CpuTimeMax = -1.0
+  integer::nIterMax = -1
+  logical:: UseStopFile = .true.
+  logical:: IsLastRead=.false.
+  ! Indicator of stand alone mode
+  logical:: IsStandAlone=.false.
   !/
 
+  !\
   !Timing variables
   logical:: UseTiming = .true.
   integer:: nTiming = -2
   integer:: nTimingDepth = -1
   character(len=10):: TimingStyle = 'cumm'
+  !/
 
   ! Methods and variables from this module 
   public:: &
@@ -60,7 +64,7 @@ module SP_ModMain
        TimeGlobal, iIterGlobal, DataInputTime, DoRestart,     & 
        UseTiming, nTiming, nTimingDepth, TimingStyle,         &
        IsLastRead, UseStopFile, CpuTimeMax, TimeMax, nIterMax,&
-       copy_old_state, offset
+       IsStandAlone, copy_old_state, offset
 
   ! Methods and variables from ModSize
   public:: &
@@ -97,11 +101,13 @@ contains
 
   subroutine read_param(TypeAction)
     ! Read input parameters for SP component
-    use ModReadParam, ONLY: read_var, read_line, read_command, i_session_read
+    use ModReadParam, ONLY: &
+         read_var, read_line, read_command, i_session_read, read_echo_set
     character (len=*), intent(in)     :: TypeAction ! What to do  
 
     ! aux variables 
     integer:: nParticleCheck, nLonCheck, nLatCheck
+    logical:: DoEcho
     ! The name of the command
     character (len=100) :: NameCommand
     character (len=*), parameter :: NameSub='SP:read_param'
@@ -141,11 +147,11 @@ contains
           call set_write_param
        case('#READMHDATA','#MHDATA')
           call set_read_mh_data_param(NameCommand)
-       case('#COORDSYSTEM',"#COORDINATESYSTEM")
+       case('#COORDSYSTEM','#COORDINATESYSTEM')
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
           call set_momentum_param
-       case("#TIMING")
+       case('#TIMING')
           if(i_session_read() /= 1)&
                CYCLE
           call read_var('UseTiming',UseTiming)
@@ -158,23 +164,40 @@ contains
           ! various test modes allowing to disable certain features
           call read_var('DoTraceShock', DoTraceShock)
           call read_var('UseDiffusion', UseDiffusion)
-       case("#END")
+       case('#END')
           IsLastRead=.true.
           EXIT
-       case("#RUN")
+       case('#RUN')
           IsLastRead=.false.
           EXIT
-       case("#STOP")
+       case('#STOP')
           call read_var('MaxIteration',nIterMax)
           call read_var('tSimulationMax',TimeMax)
-       case("#CPUTIMEMAX")
+       case('#CPUTIMEMAX')
           call read_var('CpuTimeMax',CpuTimeMax)
-       case("#CHECKSTOPFILE")
+       case('#CHECKSTOPFILE')
           call read_var('UseStopFile',UseStopFile)
+       case('#DESCRIPTION')
+          call check_stand_alone
+       case('#ECHO')
+          call check_stand_alone
+          call read_var('DoEcho', DoEcho)
+          if(iProc==0)call read_echo_set(DoEcho)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select
     end do
+  contains
+    subroutine check_stand_alone
+      ! certain options are only available for stand alone mode;
+      ! check whether the mode is used and stop the code if it's no the case
+      !------------------------------------------------------------------------
+      if(IsStandAlone)&
+           RETURN
+      call CON_stop(NameSub//': command '//trim(NameCommand)//&
+           ' is only allowed in stand alone mode, correct PARAM.in')
+    end subroutine check_stand_alone
+
   end subroutine read_param
 
   !============================================================================
@@ -229,7 +252,7 @@ contains
        !DataInputTime
        TimeInOut = DataInputTime
     else
-       !Reaceived from coupler: : State_VIB(0:nRead,::) for the 
+       !Received from coupler: : State_VIB(0:nRead,::) for the 
        !time moment DataInputTime
        TimeInOut = TimeLimit
     end if
@@ -260,7 +283,7 @@ contains
       do iBlock = 1, nBlock
          do iParticle = 1, nParticle_B(  iBlock)            
             ! divergence of plasma velocity
-            
+
             State_VIB(DLogRho_,iParticle,iBlock) = log(&
                  State_VIB(Rho_,iParticle,iBlock)/&
                  State_VIB(RhoOld_,iParticle,iBlock))

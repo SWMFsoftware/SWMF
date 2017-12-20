@@ -5,10 +5,8 @@ program MFLAMPA
   use ModKind
   use SP_ModProc,  ONLY: iProc, nProc, iComm
   use ModUtilities, ONLY: remove_file, touch_file
-  !use PIC_ModMain,  ONLY: nTiming, iStep, tMax, IsLastRead, &
-  !     tSimulation, IsFirstSession 
   use SP_ModMain, ONLY: &
-       nTiming, IsLastRead, &
+       nTiming, IsLastRead, IsStandAlone, &
        iIterGlobal, TimeGlobal, TimeMax, nIterMax, &
        SP_read_param => read_param, &
        SP_check      => check, &
@@ -48,6 +46,11 @@ program MFLAMPA
      call remove_file('MFLAMPA.STOP')
   end if
   
+  !\
+  ! Mark the run as a stand alone
+  !/
+  IsStandAlone = .true.
+
   !\
   ! Read input parameter file. Provide the default restart file for #RESTART
   !/

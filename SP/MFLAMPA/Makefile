@@ -2,10 +2,10 @@
 #  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
-DEFAULT_TARGET = SEP
+DEFAULT_TARGET = MFLAMPA
 
-SEP:
-	cd src; make SEP
+MFLAMPA:
+	cd src; make MFLAMPA
 
 SHELL =/bin/sh
 include Makefile.def 
@@ -26,7 +26,7 @@ LIB:    install
 
 rundir: 
 	mkdir -p ${RUNDIR}/SP ${RUNDIR}/SP/restartOUT ${RUNDIR}/SP/restartIN ${RUNDIR}/SP/MHDATA ${RUNDIR}/SP/IO2
-	cd ${RUNDIR}; ln -s ${DIR}/bin/SEP.exe .
+	cd ${RUNDIR}; ln -s ${DIR}/bin/MFLAMPA.exe .
 
 clean:  install
 	@(if [ -r "Makefile.conf" ]; then \
