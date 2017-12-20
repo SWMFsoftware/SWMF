@@ -3,18 +3,15 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program BATSRUS
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, lVerbose
-
+  use BATL_lib, ONLY: lVerbose, init_mpi, clean_mpi
   use ModBatsrusMethods, ONLY: &
        BATS_init_session, &
        BATS_setup, &
        BATS_advance, &
        BATS_save_files, &
        BATS_finalize
-
   use ModKind
-  use ModProcMH, ONLY: iComm, iProc, nProc
+  use ModProcMH, ONLY: iComm, iProc
   use ModUtilities, ONLY: remove_file, touch_file
   use ModMain, ONLY: &
        IsStandAlone, &
@@ -30,34 +27,17 @@ program BATSRUS
   use ModReadParam
 
   use ModMpi
-  use omp_lib
 
   implicit none
 
   integer :: iSession=1
-  integer :: iError
-  integer, parameter :: required=MPI_THREAD_SINGLE
-  integer :: provided ! Provided level of MPI threading support
   real(Real8_) :: CpuTimeStart
 
   !----------------------------------------------------------------------------
   !\
   ! Initialization of MPI/parallel message passing.
   !/
-  call MPI_Init_Thread(required, provided, iError)
-  iComm = MPI_COMM_WORLD
-  call MPI_COMM_RANK (iComm, iProc, iError)
-  call MPI_COMM_SIZE (iComm, nProc, iError)
-
-  ! Check the threading support level
-  if (provided .lt. required) then
-     ! Insufficient support, degrade to 1 thread and warn the user         
-     if (iProc .eq. 0) then
-        write(*,*) "Warning:  This MPI implementation provides ",   &
-             "insufficient threading support. Switching to pure MPI..."
-     end if
-     !$ call omp_set_num_threads(1)
-  end if
+  call init_mpi
 
   !\
   ! Initialize some basic variables for the stand alone code
@@ -97,7 +77,7 @@ program BATSRUS
   !\
   ! Read input parameter file. Provide the default restart file for #RESTART
   !/
-  call read_file('PARAM.in',iComm,trim(NameRestartInDir)//'restart.H')
+  call read_file('PARAM.in', iComm, trim(NameRestartInDir)//'restart.H')
 
   SESSIONLOOP: do
      call read_init('  ', iSessionIn=iSession)
@@ -196,7 +176,7 @@ program BATSRUS
   !/
   if(iProc==0) call touch_file('BATSRUS.SUCCESS')
 
-  call MPI_finalize(iError)
+  call clean_mpi
 
 contains
   !============================================================================
@@ -221,7 +201,7 @@ contains
     use ModMain, ONLY: cputime_max, check_stopfile
 
     logical :: IsTimeToStop
-
+    integer :: iError
     !--------------------------------------------------------------------------
     IsTimeToStop = .false.
 
@@ -237,7 +217,7 @@ contains
        end if
     end if
 
-    call MPI_BCAST(IsTimeToStop,1,MPI_LOGICAL,0,iComm,iError)
+    call MPI_BCAST(IsTimeToStop, 1, MPI_LOGICAL, 0, iComm, iError)
 
   end function is_time_to_stop
   !============================================================================
@@ -262,7 +242,6 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'show_progress'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if( UseTiming .and. iProc==0 &
          .and. dn_progress1>0 .and. mod(n_step,dn_progress1) == 0 ) then
 
@@ -314,7 +293,6 @@ contains
        write(*,*)
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine show_progress
   !============================================================================
 
