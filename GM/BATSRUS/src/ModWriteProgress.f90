@@ -27,6 +27,7 @@ contains
     use omp_lib
     
     integer, intent(in) :: inopt
+    integer:: MaxThread = 1
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'write_progress'
     !--------------------------------------------------------------------------
@@ -45,13 +46,12 @@ contains
             " University of Michigan, 1995-2017"
        write(iUnitOut,*)
        if(IsStandAlone)then
-          call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a)') &
-               ' BATSRUS version ',CodeVersion,&
-               ' is running as '//NameThisComp//' on ',nProc,' PE(s)'
+          !$ MaxThread = omp_get_max_threads()
+          call write_prefix; write(iUnitOut,'(a,f4.2,a,i6,a,i3,a)') &
+               ' BATSRUS version ',CodeVersion, &
+               ' is running as '//NameThisComp//' on ', nProc, &
+               ' PE(s) with up to', MaxThread, ' OpenMP threads/PE'
           write(iUnitOut,*)
-          !$ print *, 'Thread(s) per MPI =',omp_get_max_threads()
-          !$ print *, "MPI+OpenMP hybrid program"
-          !$ write(iUnitOut,*)
        end if
        call write_prefix; write(iUnitOut,'(a)') &
             ' EQUATIONS:   '//NameEquation
