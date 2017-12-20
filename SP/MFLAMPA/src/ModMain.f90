@@ -7,7 +7,7 @@ module SP_ModMain
   use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, nParticleMax, &
        Particle_, OriginLat_, OriginLon_
-  
+
   use SP_ModWrite, ONLY: &
        set_write_param, write_output, NamePlotDir
 
@@ -21,13 +21,13 @@ module SP_ModMain
        nVar, copy_old_state,&
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        Wave1_, Wave2_, Length_, nBlock, &
-       Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
+       Proc_, Block_, nParticle_B, Shock_, ShockOld_, DLogRho_,&
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        FootPoint_VB, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes
-  
+
   use SP_ModAdvance, ONLY: &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
        Distribution_IIB, advance, set_momentum_param
@@ -79,10 +79,6 @@ module SP_ModMain
        Distribution_IIB, FootPoint_VB, TypeCoordSystem,& 
        get_node_indexes
 
-  ! Methods and variables from ModWrite
-
-  ! Methods and variables from ModAdvance
-
   ! Methods and variables from ModReadMhData
   public:: &
        DoReadMhData
@@ -97,8 +93,6 @@ module SP_ModMain
   ! perform initialization
   logical:: DoInit = .true.
   !/
-
-
 contains
 
   subroutine read_param(TypeAction)
@@ -244,12 +238,11 @@ contains
     ! magnitude of magnetic field and velocity etc.
     !/
     call get_other_state_var
-    call fix_grid_consistency   !????
-
     !\
     ! if no new background data loaded, don't advance in time
     !/
     if(DataInputTime <= TimeGlobal) RETURN
+    call lagr_time_derivative
     !\
     ! run the model
     !/
@@ -261,24 +254,49 @@ contains
     call write_output(IsInitialOutputIn=.not.DoRun)
   contains
     !=====================================================================
-    subroutine fix_grid_consistency
-      use SP_ModGrid, ONLY: DLogRho_
+    subroutine lagr_time_derivative
       integer:: iBlock, iParticle
       !----------------------------------------------------------------------
       do iBlock = 1, nBlock
          do iParticle = 1, nParticle_B(  iBlock)            
             ! divergence of plasma velocity
-            if(DataInputTime > TimeGlobal) then
-               State_VIB(DLogRho_,iParticle,iBlock) = log(&
-                    State_VIB(Rho_,iParticle,iBlock)/&
-                    State_VIB(RhoOld_,iParticle,iBlock))
-            end if
+            
+            State_VIB(DLogRho_,iParticle,iBlock) = log(&
+                 State_VIB(Rho_,iParticle,iBlock)/&
+                 State_VIB(RhoOld_,iParticle,iBlock))
          end do
          ! location of shock
-         iShock_IB(:, iBlock) = max( iShock_IB(:, iBlock), 1)
+         call get_shock_location(iBlock)
       end do
-    end subroutine fix_grid_consistency
+    end subroutine lagr_time_derivative
   end subroutine run
+  !=================
+  subroutine get_shock_location(iBlock)
+    use SP_ModAdvance, ONLY: nWidth
+    use SP_ModGrid,    ONLY: R_
+    integer, intent(in) :: iBlock
+    ! find location of a shock wave on every field line
+    !--------------------------------------------------------------------------
+    ! loop variable
+    integer:: iSearchMin, iSearchMax
+    integer:: iShockCandidate
+    !--------------------------------------------------------------------------
+    if(.not.DoTraceShock)then
+       iShock_IB(Shock_, iBlock) = 1
+       RETURN
+    end if
+
+    ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
+    ! shock never moves back
+    iSearchMin = max(iShock_IB(ShockOld_, iBlock), 1 + nWidth )
+    iSearchMax = nParticle_B(iBlock) - nWidth - 1
+    iShockCandidate = iSearchMin - 1 + maxloc(&
+         State_VIB(DLogRho_,iSearchMin:iSearchMax,iBlock),&
+         1, MASK = State_VIB(R_,iSearchMin:iSearchMax,iBlock) > 1.2)
+
+    if(State_VIB(DLogRho_,iShockCandidate,iBlock) > 0.0)&
+         iShock_IB(Shock_, iBlock) = iShockCandidate
+  end subroutine get_shock_location
   !============================================================================
   subroutine check
     use ModUtilities, ONLY: make_dir

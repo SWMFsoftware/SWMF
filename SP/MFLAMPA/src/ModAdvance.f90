@@ -79,7 +79,7 @@ module SP_ModAdvance
   ! level of turbulence
   real, parameter    :: BOverDeltaB2 = 1.0
   !\
-  integer, parameter :: nWidth = 50
+  integer, public, parameter :: nWidth = 50
   !/
   !\
   logical:: UseRealDiffusionUpstream = .true.
@@ -89,25 +89,36 @@ contains
   
   subroutine set_momentum_param
     use ModReadParam, ONLY: read_var
+    use SP_ModProc,   ONLY: iProc
     !---------------------------------------------
     call read_var('EnergyInj',    EnergyInj)
     call read_var('EnergyMax',    EnergyMax)
     call read_var('SpectralIndex',SpectralIndex)
     call read_var('Efficiency',   CInj)
+    ! account for units of energy
+    UnitEnergy = energy_in(NameEUnit)
+    if(iProc==0)then
+       write(*,'(a,E11.4,a)')'SP: For solar energetic '//NameParticle//&
+            's and for ion temperature the unit energy is '//&
+            NameEUnit//', which is ',UnitEnergy,' J' 
+       write(*,'(a,E11.4,a,E11.4,a)')'SP: Maximum energy is ',EnergyMax,&
+            ' '//NameEUnit//', which is ',EnergyMax*UnitEnergy,' J'
+       write(*,'(a,E11.4,a,E11.4,a)')'SP: Injection energy is ',EnergyInj,&
+      ' '//NameEUnit//', which is ',EnergyInj*UnitEnergy,' J'
+    end if
+    !Convert to SI
+    EnergyInj = EnergyInj * UnitEnergy
+    EnergyMax = EnergyMax * UnitEnergy
   end subroutine set_momentum_param
-
   !=================================================================
-  
   subroutine init_distribution_function
     use ModConst, ONLY: momentum_to_kinetic_energy
     use ModUtilities,      ONLY: check_allocate
     ! set the initial distribution on all lines
     integer:: iBlock, iParticle, iP, iError
     !----------------------------------------------------------
- ! account for units of energy
+    ! account for units of energy
     UnitEnergy = energy_in(NameEUnit)
-    EnergyInj = EnergyInj * UnitEnergy
-    EnergyMax = EnergyMax * UnitEnergy
     ! convert energies to momenta
     MomentumInj  = kinetic_energy_to_momentum(EnergyInj, NameParticle)
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
@@ -126,7 +137,7 @@ contains
        LogEnergy_I(iP) = log(Energy_I(iP))
        DMomentumOverDEnergy_I(iP) = &
             momentum_to_energy(Momentum_I(iP), NameParticle)/&
-            (Momentum_I(iP) * cLightSpeed**2)
+            (Momentum_I(iP)*cLightSpeed**2)
     end do
     !\
     ! Distribution function
@@ -142,39 +153,11 @@ contains
           do iP = 0, nP +1
              Distribution_IIB(iP,iParticle,iBlock) = &
                   cTiny/MomentumMax/Momentum_I(iP)**2
-
           end do
        end do
     end do
   end subroutine init_distribution_function
-
   !===================================================================
-
-  subroutine get_shock_location(iBlock)
-    integer, intent(in) :: iBlock
-    ! find location of a shock wave on every field line
-    !--------------------------------------------------------------------------
-    ! loop variable
-    integer:: iSearchMin, iSearchMax
-    integer:: iShockCandidate
-    !--------------------------------------------------------------------------
-    if(.not.DoTraceShock)then
-       iShock_IB(Shock_, iBlock) = 1
-       RETURN
-    end if
-
-    ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
-    ! shock never moves back
-    iSearchMin = max(iShock_IB(ShockOld_, iBlock), 1 + nWidth )
-    iSearchMax = nParticle_B(iBlock) - nWidth - 1
-    iShockCandidate = iSearchMin - 1 + maxloc(&
-         State_VIB(DLogRho_,iSearchMin:iSearchMax,iBlock),&
-         1, MASK = State_VIB(R_,iSearchMin:iSearchMax,iBlock) > 1.2)
-
-    if(State_VIB(DLogRho_,iShockCandidate,iBlock) > 0.0)&
-         iShock_IB(Shock_, iBlock) = iShockCandidate
-  end subroutine get_shock_location
-  !=========================================================================
   subroutine advance(TimeLimit)
     ! advance the solution of the diffusive kinetic equation:               
     !            f_t+[(1/3)*(d(ln rho)/dt]*f_{ln p}=B*d/ds[D/B*df/ds]
@@ -200,17 +183,35 @@ contains
     ! Upper limit and variable for the Loop which makes
     ! a time step so short that the shock wave passes
     ! a single grid interval per a progress step:
-    integer:: iProgress, nProgress,  iStep
-    !Subcycling is not applied
+    integer:: iProgress, nProgress
+    !Subcycling is not applied, obsolete:
+    integer :: iStep
     integer, parameter:: nStep = 1
+    !/
+    !\
+    ! coefficient to interpolate  "old" and "new"
     real   :: Alpha
-    real::  DiffCoeffMin =1.0E+04 /RSun
+    !/
+    !\
+    ! Lower imit to floor the spatial diffusion coefficient For a
+    ! given spatial and temporal resolution, the value of the  
+    ! diffusion coefficient should be artificially increased to get       
+    ! the diffusion length to be larger than the shock front width, 
+    ! which even for the steepened shock is as wide as a mesh size
+    ! of the Largangian grid, State_VIB(D_,:,:)*RSun. In this way, 
+    ! the Lagrangian grid resolution is sufficient to resolve a 
+    ! precursor in the upstream distribution of 
+    ! DiffCoeffMin=0 (default value), we do NOT enhance   
+    ! the diffusion coefficient! Physically, DiffCoeffMin 
+    ! should be given by the product of shock wave speed  
+    ! and local grid spacing. 
+    real, parameter::  DiffCoeffMin =1.0E+04 /RSun
     real:: DtFull, DtProgress, Dt
     real:: MachAlfven
     real   :: MomentumRatio !!!!NEED TO CHECK!!!
     !\
     !Local arrays to store the state vector
-    real, dimension(1:nParticleMax):: Radius_I, U_I, T_I
+    real, dimension(1:nParticleMax):: Radius_I, U_I
     real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, B_I, BOld_I 
     real, dimension(1:nParticleMax):: DLogRho_I, FermiFirst_I
     !\
@@ -231,12 +232,8 @@ contains
        ! various data along the line
        Radius_I( 1:iEnd) = State_VIB(R_,      1:iEnd,iBlock)
        U_I(      1:iEnd) = State_VIB(U_,      1:iEnd,iBlock)
-       T_I(      1:iEnd) = State_VIB(T_,      1:iEnd,iBlock)
        BOld_I(   1:iEnd) = State_VIB(BOld_,   1:iEnd,iBlock)
        RhoOld_I( 1:iEnd) = State_VIB(RhoOld_, 1:iEnd,iBlock)
-
-       ! identify shock in the data
-       call get_shock_location(iBlock)
 
        ! find how far shock has travelled on this line: nProgress
        iShock    = iShock_IB(Shock_,   iBlock)
