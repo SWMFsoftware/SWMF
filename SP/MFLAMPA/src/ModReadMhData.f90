@@ -46,7 +46,7 @@ module SP_ModReadMhData
   real:: Buffer_I(nParticleMax)
 
   ! number of input files
-  integer:: nFile = 0
+  integer:: nFileRead = 0
   ! index of a current input file
   integer:: iFileRead
 
@@ -93,13 +93,13 @@ contains
        end select
        
        ! number of input files
-       call read_var('nFile', nFile)
+       call read_var('nFileRead', nFileRead)
 
        ! prepare the container for file names
-       allocate(NameFileStamp_I(nFile))
+       allocate(NameFileStamp_I(nFileRead))
        
        ! list of files
-       do iFile = 1, nFile
+       do iFile = 1, nFileRead
           call read_var('NameFile', NameFileStamp_I(iFile))
        end do
     end select
@@ -115,7 +115,7 @@ contains
          RETURN
     iFileRead= 0
     ! check whether increments are properly set
-    if(nFile <= 0)&
+    if(nFileRead <= 0)&
          call CON_stop(NameSub//&
          " invalid number of input files, change PARAM.in")
     ! read the first input file

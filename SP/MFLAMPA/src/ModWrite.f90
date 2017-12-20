@@ -77,7 +77,7 @@ module SP_ModWrite
   !\
   !----------------------------------------------------------------------------
   ! Number of output files
-  integer:: nFile = 0
+  integer:: nFileOut = 0
   ! The output files
   type(TypeOutputFile), allocatable:: File_I(:)
   ! Types of output files in terms of output dataa
@@ -116,16 +116,16 @@ contains
        iNodeIndex_I(iNode) = iNode
     end do
     ! number of output files
-    call read_var('nFile', nFile)
+    call read_var('nFileOut', nFileOut)
     ! check correctness
-    if(nFile == 0) RETURN ! no output file requested
-    if(nFile  < 0) call CON_stop(NameSub//': incorrect SAVEPLOT section')
+    if(nFileOut == 0) RETURN ! no output file requested
+    if(nFileOut  < 0) call CON_stop(NameSub//': incorrect SAVEPLOT section')
 
     ! allocate the storage for file info
-    allocate(File_I(nFile))
+    allocate(File_I(nFileOut))
 
     ! read info about each file
-    do iFile = 1, nFile
+    do iFile = 1, nFileOut
        ! reset and read the file info
        StringPlot = ''
        call read_var('StringPlot', StringPlot)
@@ -312,9 +312,9 @@ contains
     else
        IsInitialOutput = .false.
     end if
-    if(nFile == 0) RETURN
+    if(nFileOut == 0) RETURN
     if(.not.IsInitialOutput)call get_integral_flux
-    do iFile = 1, nFile
+    do iFile = 1, nFileOut
        iKindData = File_I(iFile) % iKindData
 
        ! during initial call only background 1D data is printed
@@ -341,8 +341,8 @@ contains
       ! write the header file that contains necessary information for reading
       ! input files in a separate run
       !
-      ! number of output files so far
-      integer, save:: nFile = 0 
+      ! number of different output file stamps so far
+      integer, save:: nStamp = 0 
       ! loop variable
       integer:: iStamp
       ! stamps
@@ -361,21 +361,21 @@ contains
       if(.not.allocated(StringStamp_I))then
          allocate(StringStamp_I(1))
       end if
-      if(ubound(StringStamp_I,1) == nFile)then
-         allocate(StringAux_I(nFile))
-         StringAux_I(1:nFile) = StringStamp_I(1:nFile)
+      if(ubound(StringStamp_I,1) == nStamp)then
+         allocate(StringAux_I(nStamp))
+         StringAux_I(1:nStamp) = StringStamp_I(1:nStamp)
          deallocate(StringStamp_I)
-         allocate(StringStamp_I(2*nFile))
-         StringStamp_I(1:nFile) = StringAux_I(1:nFile)
+         allocate(StringStamp_I(2*nStamp))
+         StringStamp_I(1:nStamp) = StringAux_I(1:nStamp)
          deallocate(StringAux_I)
       end if
 
       ! increase the file counter
-      nFile = nFile + 1
+      nStamp = nStamp + 1
 
       ! create time-iteration stamp
       call get_time_string(TimeGlobal, StringTime)
-      write(StringStamp_I(nFile),'(a,i6.6)') &
+      write(StringStamp_I(nStamp),'(a,i6.6)') &
            't'//StringTime//'_n',iIterGlobal
 
       ! write the header file
@@ -388,8 +388,8 @@ contains
       write(UnitTmp_,*)
       write(UnitTmp_,'(a)')'#MHDATA'
       write(UnitTmp_,'(a18,a22)')trim(File_I(iFile)%TypeFile),'  TypeFile'
-      write(UnitTmp_,'(i8,a32)')nFile,'nFile'
-      do iStamp = 1, nFile
+      write(UnitTmp_,'(i8,a32)')nStamp,'nFileRead'
+      do iStamp = 1, nStamp
          write(UnitTmp_,'(a22,a18)')StringStamp_I(iStamp),'NameFileStamp'
       end do
       write(UnitTmp_,*)
