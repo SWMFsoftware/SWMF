@@ -37,11 +37,29 @@ module SP_ModMain
   SAVE
 
   private ! except
+
   real :: DataInputTime
+
+  !\
+  ! Stopping conditions. These variables are only used in stand alone mode.
+  real    :: TimeMax = -1.0, CpuTimeMax = -1.0
+  integer ::nIterMax = -1
+  logical :: UseStopFile = .true.
+  logical :: IsLastRead=.false.
+  !/
+
+  !Timing variables
+  logical:: UseTiming = .true.
+  integer:: nTiming = -2
+  integer:: nTimingDepth = -1
+  character(len=10):: TimingStyle = 'cumm'
+
   ! Methods and variables from this module 
   public:: &
-       read_param, initialize, run, check, save_restart,  &
-       TimeGlobal, iIterGlobal, DataInputTime, DoRestart, & 
+       read_param, initialize, run, check, save_restart,      &
+       TimeGlobal, iIterGlobal, DataInputTime, DoRestart,     & 
+       UseTiming, nTiming, nTimingDepth, TimingStyle,         &
+       IsLastRead, UseStopFile, CpuTimeMax, TimeMax, nIterMax,&
        copy_old_state, offset
 
   ! Methods and variables from ModSize
@@ -85,7 +103,7 @@ contains
 
   subroutine read_param(TypeAction)
     ! Read input parameters for SP component
-    use ModReadParam, ONLY: read_var, read_line, read_command
+    use ModReadParam, ONLY: read_var, read_line, read_command, i_session_read
     character (len=*), intent(in)     :: TypeAction ! What to do  
 
     ! aux variables 
@@ -96,7 +114,10 @@ contains
     !--------------------------------------------------------------------------
     ! Read the corresponding section of input file
     do
-       if(.not.read_line() ) EXIT
+       if(.not.read_line() ) then
+          IsLastRead = .true.
+          EXIT
+       end if
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
        case('#RESTART')
@@ -130,10 +151,32 @@ contains
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
           call set_momentum_param
+       case("#TIMING")
+          if(i_session_read() /= 1)&
+               CYCLE
+          call read_var('UseTiming',UseTiming)
+          if(.not.UseTiming)&
+               CYCLE
+          call read_var('DnTiming',nTiming)
+          call read_var('nDepthTiming',nTimingDepth)
+          call read_var('TypeTimingReport',TimingStyle)
        case('#TEST')
           ! various test modes allowing to disable certain features
           call read_var('DoTraceShock', DoTraceShock)
           call read_var('UseDiffusion', UseDiffusion)
+       case("#END")
+          IsLastRead=.true.
+          EXIT
+       case("#RUN")
+          IsLastRead=.false.
+          EXIT
+       case("#STOP")
+          call read_var('MaxIteration',nIterMax)
+          call read_var('tSimulationMax',TimeMax)
+       case("#CPUTIMEMAX")
+          call read_var('CpuTimeMax',CpuTimeMax)
+       case("#CHECKSTOPFILE")
+          call read_var('UseStopFile',UseStopFile)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select
@@ -243,6 +286,15 @@ contains
     !--------------------------------------------------------------------------
     ! Make output and check input directories
     if(iProc==0) call make_dir(NamePlotDir)
+    !\
+    ! Initialize timing
+    !/
+    if(iProc==0)then
+       call timing_active(UseTiming)
+       call timing_step(0)
+       call timing_depth(nTimingDepth)
+       call timing_report_style(TimingStyle)
+    end if
   end subroutine check
   !============================================================================
   subroutine offset(iBlock, iOffset, AlphaIn)
