@@ -1167,10 +1167,7 @@ contains
     Real :: InvDx, InvDy, InvDz
     real :: Vector1_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'get_face_curl'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
@@ -1262,7 +1259,6 @@ contains
        call calc_gencoord_curl
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
 
