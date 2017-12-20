@@ -6,7 +6,7 @@ include ../Makefile.def
 include ../Makefile.conf
 include Makefile.DEPEND
 
-
+# Object files included into the library
 OBJECTS = \
 	ModAdvance.o \
 	ModDiffusion.o \
@@ -20,21 +20,22 @@ OBJECTS = \
 	ModUnit.o \
 	ModWrite.o   
 
-SEPEXE = ${BINDIR}/SEP.exe
+# Object files not included into the library
+OBJECTS_EXE = SP_stand_alone.o
 
+EXE = ${BINDIR}/MFLAMPA.exe
 
 SEARCH_EXTRA = -I${LIBRARYDIR} -I${COUPLERDIR}
 
-
-
 MY_LIB = libMFLAMPA.a
+
+# Other required libraries
+LIBSHARE  = ${LIBDIR}/libSHARE.a
+LIBTIMING = ${LIBDIR}/libTIMING.a
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCH} \
-		${MODULES} ${OBJECTS} SP_stand_alone.o
-
-SEP:		DEPEND
-		make ${SEPEXE}
+		${MODULES} ${OBJECTS}
 
 LIB:	DEPEND
 	make ${MY_LIB}
@@ -47,26 +48,25 @@ ${MY_LIB}: ${MODULES} ${OBJECTS} \
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+# Additional ibraries should be compiled first
+${OBJECTS_EXE}: ${LIBSHARE} ${LIBTIMING} ${MY_LIB}
 
-${SEPEXE}: ${MY_LIB} SP_stand_alone.o ${LIBDIR}/libSHARE.a
-	@(if [ ${OS} = "Darwin" ];         then make SEP_for_Darwin; \
-	else                                    make SEP_general; fi)
 
-SEP_general:
-	${LINK.f90} -o ${SEPEXE} SP_stand_alone.o \
-		-L. -lMFLAMPA -L${LIBDIR} -lSHARE ${Lflag1}
+MFLAMPA:
+	make ${EXE}
+	@echo ' '
+	@echo Program MFLAMPA has been brought up to date.
+	@echo ' '  
 
-SEP_for_Darwin:
+${EXE}: ${OBJECTS_EXE}
 	rm -rf Tmp_; mkdir Tmp_
 	cd Tmp_; \
 		ar -x ../${MY_LIB}; \
-		ar -x ${LIBDIR}/libSHARE.a
-	${LINK.f90} -o ${SEPEXE} SP_stand_alone.o Tmp_/*.o \
+		ar -x ${LIBTIMING}; \
+		ar -x ${LIBSHARE}
+	${LINK.f90} -o ${EXE} ${OBJECTS_EXE} Tmp_/*.o \
 		${Lflag1}
-	rm -rf Tmp_
-
-
-
+	rm -rf Tmp_ 
 
 clean: cleanfiles
 
