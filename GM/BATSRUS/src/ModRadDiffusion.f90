@@ -306,10 +306,8 @@ contains
 
     real :: FaceGrad_D(3), DiffCoefL, DiffCoefR
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_radiation_energy_flux'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(IsNewBlockRadDiffusion) &
          Erad_WG(1,:,:,:) = State_VGB(Erad_,:,:,:,iBlock)
 
@@ -328,7 +326,6 @@ contains
 
     EradFlux = -RadDiffCoef*sum(Normal_D*FaceGrad_D)
 
-    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
 

@@ -254,10 +254,8 @@ contains
     integer:: iBlockLast = -1
 
     ! Exclude body cells
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_current'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(.not.True_Cell(i,j,k,iBlock) .and. .not.present(DoIgnoreBody))then
        Current_D = 0.0
 
@@ -430,7 +428,6 @@ contains
        Current_D = Current_D + CurlB0_DC(:,i,j,k)
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
     subroutine calc_cartesian_j

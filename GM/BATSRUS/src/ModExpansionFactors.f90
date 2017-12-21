@@ -520,10 +520,8 @@ contains
     !\
     ! Calculate cell-centered spherical coordinates::
     !/
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_interpolated'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     Rin_PFSSM   = sqrt(xInput**2+yInput**2+zInput**2)
     !\
     ! Avoid calculating inside a critical radius = 0.5*Rsun
@@ -589,7 +587,6 @@ contains
          & Node_D(Phi_):Node_D(Phi_)+1,&
          & Node_D(Theta_):Node_D(Theta_)+1))
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_interpolated
   !============================================================================
 

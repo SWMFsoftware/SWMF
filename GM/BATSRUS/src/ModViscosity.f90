@@ -119,7 +119,7 @@ contains
   end subroutine viscosity_init
   !============================================================================
 
-  subroutine  viscosity_clean
+  subroutine viscosity_clean
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'viscosity_clean'
@@ -221,11 +221,8 @@ contains
     logical :: IsNewBlock = .true.
     real, parameter :: TraceCoeff = 2.0/3.0
     integer :: i,j,k
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_viscosity_tensor'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     ! Get velocity vector for the block, only done ones per block
     if(IsNewBlockViscosity) then
        do iFluid = iFluidMin, iFluidMax
@@ -284,7 +281,6 @@ contains
        Visco_DDI(:,:,iFluid) = ViscoCoeff*Visco_DDI(:,:,iFluid)
     end do
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_viscosity_tensor
   !============================================================================
 

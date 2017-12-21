@@ -787,10 +787,8 @@ contains
     Real :: InvDx, InvDy, InvDz
     real, allocatable :: Var1_IG(:,:,:,:)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_face_gradient_field'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
@@ -934,7 +932,6 @@ contains
 
     end do
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_face_gradient_field
   !============================================================================
 
@@ -980,10 +977,8 @@ contains
     !/
     logical :: UseFirstOrderBc
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_face_gradient'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     InvDx = 1.0/CellSize_DB(x_,iBlock)
     InvDy = 1.0/CellSize_DB(y_,iBlock)
     InvDz = 1.0/CellSize_DB(z_,iBlock)
@@ -1144,7 +1139,7 @@ contains
     if(.not.IsCartesianGrid) then
        FaceGrad_D = matmul(FaceGrad_D, DcoordDxyz_DDFD(:,:,i,j,k,iDir))
     end if
-    call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine get_face_gradient
   !============================================================================
 
