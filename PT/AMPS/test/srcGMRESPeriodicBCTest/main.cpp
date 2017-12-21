@@ -92,10 +92,14 @@ namespace TransportEquation {
     MatrixRowNonZeroElementTable[2].iVar=0;
 
 
-    RhsSupportTable_CornerNodes[0].Coefficient=1.0;
+    RhsSupportTable_CornerNodes[0].Coefficient=-0.001; 
     RhsSupportTable_CornerNodes[0].AssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i-1,j,k))->GetAssociatedDataBufferPointer();
-    RhsSupportLength_CornerNodes=1;
 
+    RhsSupportTable_CornerNodes[1].Coefficient=0.001;
+    RhsSupportTable_CornerNodes[1].AssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i+1,j,k))->GetAssociatedDataBufferPointer();
+
+
+    RhsSupportLength_CornerNodes=2;
     RhsSupportLength_CenterNodes=0;
     NonZeroElementsFound=3;
 
@@ -221,15 +225,15 @@ return ;
 
   //set the initial guess
   void SetInitialGuess(double* x,PIC::Mesh::cDataCornerNode* CornerNode) {
-   x[0]=*((double*)(CornerNode->GetAssociatedDataBufferPointer()+CurrentCornerNodeOffset));
- //   x[0]=0.0;
+//   x[0]=*((double*)(CornerNode->GetAssociatedDataBufferPointer()+CurrentCornerNodeOffset));
+   x[0]=0.0;
   }
 
   //process the solution vector
   void ProcessFinalSolution(double* x,PIC::Mesh::cDataCornerNode* CornerNode) {
     char *offset=CornerNode->GetAssociatedDataBufferPointer();
 
-    ((double*)(offset+NextCornerNodeOffset))[0]=x[0]; ///+((double*)(offset+CurrentCornerNodeOffset))[0];
+    ((double*)(offset+NextCornerNodeOffset))[0]=x[0]+((double*)(offset+CurrentCornerNodeOffset))[0];
   }
 
 
