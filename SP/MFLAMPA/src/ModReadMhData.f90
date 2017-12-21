@@ -10,9 +10,10 @@ module SP_ModReadMhData
 
   use SP_ModGrid, ONLY: get_node_indexes, &
        nVarRead, nVar, nBlock, iShock_IB, iNode_B, FootPoint_VB, &
-       nParticle_B,  State_VIB, LagrID_, Z_, Shock_, NameVar_V
+       nParticle_B, State_VIB, NameVar_V, &
+       LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
 
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, Distribution_IIB
 
   use ModPlotFile, ONLY: read_plot_file
 
@@ -24,9 +25,10 @@ module SP_ModReadMhData
 
   private ! except
  
+
   public:: &
        set_read_mh_data_param, init_read_mh_data, read_mh_data, &
-       DoReadMhData
+       offset, DoReadMhData
 
 
   !\
@@ -119,13 +121,14 @@ contains
          call CON_stop(NameSub//&
          " invalid number of input files, change PARAM.in")
     ! read the first input file
-    call read_mh_data(TimeGlobal)
+    call read_mh_data(TimeGlobal, DoOffsetIn = .false.)
   end subroutine init_read_mh_data
 
   !============================================================================
 
-  subroutine read_mh_data(TimeOut)
-    real,    intent(out):: TimeOut
+  subroutine read_mh_data(TimeOut, DoOffsetIn)
+    real,              intent(out):: TimeOut
+    logical, optional, intent(in ):: DoOffsetIn
     ! read 1D MH data, which are produced by write_mh_1d n ModWrite
     ! separate file is read for each field line, name format is (usually)
     ! MH_data_<iLon>_<iLat>_t<ddhhmmss>_n<iIter>.{out/dat}
@@ -138,13 +141,27 @@ contains
     integer:: iNode, iLat, iLon
     ! number of particles saved in the input file
     integer:: nParticleInput
+    ! size of the offset to apply compared to the previous state
+    integer:: iOffset
+    ! local value of DoOffset
+    logical:: DoOffset
+    ! auxilary variables to apply positive offset (particles are appended)
+    real:: DistanceToMin, Alpha
     ! auxilary parameter index
     integer, parameter:: RShock_ = Z_ + 2
     ! additional parameters of lines
     real:: Param_I(LagrID_:RShock_)
     ! timestamp
     character(len=8):: StringTime
+    character(len=*), parameter:: NameSub = "SP:read_mh_data"
     !------------------------------------------------------------------------
+    ! check whether need to apply offset, default is .true.
+    if(present(DoOffsetIn))then
+       DoOffset = DoOffsetIn
+    else
+       DoOffset = .true.
+    end if
+
     ! increase file counter
     iFileRead = iFileRead + 1
 
@@ -168,6 +185,16 @@ contains
             VarOut_VI  = Buffer_II,&
             ParamOut_I = Param_I(LagrID_:RShock_)&
             )
+
+       ! find offset in data between new and old states
+       if(DoOffset)then
+          ! amount of the offset is determined from difference between LagrID_
+          ! of old value in State_VIB and new value in Buffer_I
+          iOffset = State_VIB(LagrID_,1,iBlock) - Buffer_I(1)
+       else
+          iOffset = 0
+       end if
+
        State_VIB(LagrID_   , 1:nParticleInput, iBlock) = &
             Buffer_I(             1:nParticleInput)
        State_VIB(1:nVarRead, 1:nParticleInput, iBlock) = &
@@ -175,11 +202,25 @@ contains
 
        nParticle_B(  iBlock) = nParticleInput
 
+       
        !Parameters
        FootPoint_VB(LagrID_:Z_,iBlock) = Param_I(LagrID_:Z_)
        ! shock location
        iShock_IB(Shock_,iBlock) = nint(Param_I(RShock_-1))
 
+       ! apply offset
+       if(iOffset==0) CYCLE
+       if(iOffset < 0)then
+          call offset(iBlock, iOffset)
+       end if
+       ! now offset is positive and can only be 1
+       if(iOffset > 1) call CON_stop(NameSub//&
+            ": invalid value of offset between data in consecutive states")
+       DistanceToMin = sqrt(sum((&
+            State_VIB(X_:Z_,1,iBlock) - FootPoint_VB(X_:Z_,iBlock))**2))
+       Alpha = DistanceToMin / (DistanceToMin + sqrt(sum(&
+            (State_VIB(X_:Z_,2,iBlock) - State_VIB(X_:Z_,1,iBlock))**2)))
+       call offset(iBlock, iOffset, Alpha)
     end do
 
   end subroutine read_mh_data
@@ -204,4 +245,44 @@ contains
          int( Time-(  60*int(Time/   60)))           ! # seconds
   end subroutine get_time_string
 
+  !============================================================================
+
+  subroutine offset(iBlock, iOffset, AlphaIn)
+    ! shift in the data arrays is required if the grid point(s) is  
+    ! appended or removed at the foot point of the magnetic field line
+    !SHIFTED ARE:  State_VIB((/RhoOld_,BOld_/),:,:), Distribution_IIB,
+    !ShockOld, nParticle_B
+    integer, intent(in)        :: iBlock
+    integer, intent(in)        :: iOffset
+    real, optional, intent(in) :: AlphaIn
+    real :: Alpha
+    character(len=*), parameter :: NameSub = "SP: offset"
+    !------------
+    Alpha = 0
+    if(present(AlphaIn))Alpha=AlphaIn
+    if(iOffset==0)then
+       RETURN
+    elseif(iOffset==1)then
+       State_VIB((/RhoOld_,BOld_/),2:nParticle_B(iBlock)+1,iBlock) &
+            = State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock)
+       Distribution_IIB(:,2:nParticle_B( iBlock)+iOffset, iBlock)&
+            = Distribution_IIB(:,1:nParticle_B( iBlock), iBlock)
+       State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
+            (Alpha + 1)*State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
+            -Alpha     * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
+       Distribution_IIB(:,1,iBlock) = Distribution_IIB(:,2,iBlock) + &
+            Alpha*(Distribution_IIB(:,2,iBlock) - Distribution_IIB(:,3,iBlock))
+    elseif(iOffset < 0)then
+       State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock)+iOffset,iBlock) &
+            =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock),&
+            iBlock)
+       Distribution_IIB(:,1:nParticle_B( iBlock)+iOffset, iBlock)&
+            = Distribution_IIB(:,1-iOffset:nParticle_B( iBlock), iBlock)
+    else
+       call CON_stop('No algorithm for iOffset >1 in '//NameSub)
+    end if
+    iShock_IB(ShockOld_, iBlock) = &
+         iShock_IB(ShockOld_, iBlock) + iOffset
+    nParticle_B(iBlock) = nParticle_B( iBlock) + iOffset
+  end subroutine offset
 end module SP_ModReadMhData

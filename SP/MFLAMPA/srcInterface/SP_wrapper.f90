@@ -458,8 +458,8 @@ contains
           iShock_IB(Shock_, iBlock) = iShock_IB(Shock_, iBlock) +&
                iOffset
           iOffset_B(iBlock) = iOffset
-          State_VIB(     X_:Z_, 1:iEnd+iOffset, iBlock) = &
-               State_VIB(X_:Z_, iBegin:iEnd,    iBlock)
+          State_VIB(     LagrID_:Z_, 1:iEnd+iOffset, iBlock) = &
+               State_VIB(LagrID_:Z_, iBegin:iEnd,    iBlock)
           call offset(iBlock, iOffset)
           ! need to recalculate footpoints
           call SP_set_line_foot_b(iBlock)
@@ -551,11 +551,11 @@ contains
          !Particles ID as handled by other components keep unchanged
          !while their order numbers in SP are increased by 1. Therefore,
          iOffset_B(iBlock)  = iOffset_B(iBlock) + 1
-         State_VIB(X_:Z_   ,2:nParticle_B( iBlock) + 1, iBlock)&
-              = State_VIB(X_:Z_,1:nParticle_B( iBlock),   iBlock)
+         State_VIB(       X_:Z_,2:nParticle_B(iBlock) + 1, iBlock)&
+              = State_VIB(X_:Z_,1:nParticle_B(iBlock),     iBlock)
          ! put the new particle just above the lower boundary
-         State_VIB(X_:Z_,  1, iBlock) = &
-              FootPoint_VB(X_:Z_, iBlock) * (1.0 + cTol)
+         State_VIB(LagrID_:Z_,  1, iBlock) = &
+              FootPoint_VB(LagrID_:Z_, iBlock) * (1.0 + cTol)
          State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
          FootPoint_VB(LagrID_,iBlock) = State_VIB(LagrID_, 1, iBlock) - 1.0
          iShock_IB(Shock_, iBlock) = iShock_IB(Shock_, iBlock) + 1
