@@ -3,22 +3,13 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module SP_ModMain
   use SP_ModProc, ONLY: iProc
-
-  use SP_ModSize, ONLY: &
-       nDim, nLat, nLon, nNode, nParticleMax, &
+  use SP_ModSize, ONLY: nDim, nLat, nLon, nNode, nParticleMax, &
        Particle_, OriginLat_, OriginLon_
-
-  use SP_ModWrite, ONLY: &
-       set_write_param, write_output, NamePlotDir
-
+  use SP_ModWrite, ONLY: set_write_param, write_output, NamePlotDir
   use SP_ModReadMhData, ONLY: &
        set_read_mh_data_param, init_read_mh_data, read_mh_data, DoReadMhData
-
-  use SP_ModRestart, ONLY: &
-       save_restart=>write_restart, read_restart
-
-  use SP_ModGrid, ONLY: &
-       nVar, copy_old_state,&
+  use SP_ModRestart, ONLY: save_restart=>write_restart, read_restart
+  use SP_ModGrid, ONLY: nVar, copy_old_state,&
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
        Wave1_, Wave2_, Length_, nBlock, &
        Proc_, Block_, nParticle_B, Shock_, ShockOld_, DLogRho_,&
@@ -27,10 +18,10 @@ module SP_ModMain
        iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        FootPoint_VB, TypeCoordSystem,&
        set_grid_param, init_grid, get_node_indexes
-
-  use SP_ModAdvance, ONLY: &
+  use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
        Distribution_IIB, advance, set_momentum_param
+  use ModKind, ONLY: Real8_
 
   implicit none
 
@@ -86,7 +77,6 @@ module SP_ModMain
   ! Methods and variables from ModReadMhData
   public:: &
        DoReadMhData
-
   !\
   ! Logicals for actions
   !----------------------------------------------------------------------------
@@ -100,6 +90,7 @@ module SP_ModMain
 contains
 
   subroutine read_param(TypeAction)
+    use ModTimeConvert, ONLY: time_int_to_real
     ! Read input parameters for SP component
     use ModReadParam, ONLY: &
          read_var, read_line, read_command, i_session_read, read_echo_set
@@ -150,10 +141,10 @@ contains
        case('#COORDSYSTEM','#COORDINATESYSTEM')
           call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
        case('#INJECTION')
+          if(i_session_read() /= 1)CYCLE
           call set_momentum_param
        case('#TIMING')
-          if(i_session_read() /= 1)&
-               CYCLE
+          if(i_session_read() /= 1)CYCLE
           call read_var('UseTiming',UseTiming)
           if(.not.UseTiming)&
                CYCLE
@@ -165,17 +156,22 @@ contains
           call read_var('DoTraceShock', DoTraceShock)
           call read_var('UseDiffusion', UseDiffusion)
        case('#END')
+          call check_stand_alone
           IsLastRead=.true.
           EXIT
        case('#RUN')
+          call check_stand_alone
           IsLastRead=.false.
           EXIT
        case('#STOP')
+          call check_stand_alone
           call read_var('MaxIteration',nIterMax)
           call read_var('tSimulationMax',TimeMax)
        case('#CPUTIMEMAX')
+          call check_stand_alone
           call read_var('CpuTimeMax',CpuTimeMax)
        case('#CHECKSTOPFILE')
+          call check_stand_alone
           call read_var('UseStopFile',UseStopFile)
        case('#DESCRIPTION')
           call check_stand_alone
@@ -183,6 +179,17 @@ contains
           call check_stand_alone
           call read_var('DoEcho', DoEcho)
           if(iProc==0)call read_echo_set(DoEcho)
+       case("#STARTTIME", "#SETREALTIME")
+          if(i_session_read() /= 1)CYCLE
+          call check_stand_alone
+          call read_var('iYear'  ,iStartTime_I(1))
+          call read_var('iMonth' ,iStartTime_I(2))
+          call read_var('iDay'   ,iStartTime_I(3))
+          call read_var('iHour'  ,iStartTime_I(4))
+          call read_var('iMinute',iStartTime_I(5))
+          call read_var('iSecond',iStartTime_I(6))
+          iStartTime_I(7) = 0
+          call time_int_to_real(iStartTime_I, StartTime)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select

@@ -58,6 +58,7 @@ module SP_wrapper
   integer, parameter:: Lower_=0, Upper_=1
   real :: rInterfaceMin, rInterfaceMax
   integer, allocatable :: iOffset_B(:)
+  logical :: DoCheck = .true.
 contains
   !\Interface routines to be called from super-structure only  
   subroutine SP_check_ready_for_mh(IsReady)
@@ -147,7 +148,9 @@ contains
   !=========================================================
 
   subroutine SP_set_param(CompInfo,TypeAction)
+    use SP_ModAdvance, ONLY: StartTime, TimeGlobal
     use SP_ModProc
+    use CON_physics, ONLY: get_time
     type(CompInfoType),intent(inout):: CompInfo
     character(len=*),  intent(in)   :: TypeAction
 
@@ -164,6 +167,9 @@ contains
     case('STDOUT')
        ! placeholder
     case('CHECK')
+       if(.not.DoCheck)RETURN
+       DoCheck = .false.
+       call get_time(tSimulationOut = TimeGlobal, tStartOut = StartTime)
        call check
     case('READ')
        call read_param(TypeAction)

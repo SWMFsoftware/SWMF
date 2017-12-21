@@ -10,7 +10,8 @@ module SP_ModAdvance
   use SP_ModSize, ONLY: nParticleMax, nP=>nMomentum
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
        Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B
-  use SP_ModUnit, ONLY: NameEUnit, UnitEnergy, NameParticle    
+  use SP_ModUnit, ONLY: NameEUnit, UnitEnergy, NameParticle  
+  use ModKind,    ONLY: Real8_  
   implicit none
   SAVE
   PRIVATE ! except
@@ -22,6 +23,9 @@ module SP_ModAdvance
   ! Global interation and time
   real,    public :: TimeGlobal  = 0.0
   integer, public :: iIterGlobal = 0
+  ! This is the same default value as in the SWMF
+  integer, public :: iStartTime_I(7) = (/2000,3,21,10,45,0,0/)
+  real(Real8_), public          :: StartTime
   !/
   !\
   !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!

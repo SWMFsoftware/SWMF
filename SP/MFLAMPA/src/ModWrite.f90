@@ -28,6 +28,7 @@ module SP_ModWrite
   use ModUtilities, ONLY: split_string, lower_case, open_file, close_file
 
   use ModIoUnit,    ONLY: UnitTmp_
+  use ModTimeConvert, ONLY: time_real_to_int
 
   implicit none
 
@@ -412,10 +413,10 @@ contains
       write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
       write(UnitTmp_,*)
       write(UnitTmp_,'(a)')'#MHDATA'
-      write(UnitTmp_,'(a18,a22)')trim(File_I(iFile)%TypeFile),'  TypeFile'
+      write(UnitTmp_,'(a,a22)')trim(File_I(iFile)%TypeFile),'  TypeFile'
       write(UnitTmp_,'(i8,a32)')nStamp,'nFileRead'
       do iStamp = 1, nStamp
-         write(UnitTmp_,'(a22,a18)')StringStamp_I(iStamp),'NameFileStamp'
+         write(UnitTmp_,'(a,a18)')StringStamp_I(iStamp),'NameFileStamp'
       end do
       write(UnitTmp_,*)
       write(UnitTMP_,'(a)')'#END'
