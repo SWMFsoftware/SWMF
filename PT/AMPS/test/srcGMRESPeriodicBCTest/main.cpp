@@ -243,7 +243,7 @@ return ;
     Solver.UpdateRhs(UpdateRhs);
 
     linear_solver_matvec_c = matvec;
-    Solver.Solve(SetInitialGuess,ProcessFinalSolution);
+    Solver.Solve(SetInitialGuess,ProcessFinalSolution,1.0E-5,100);
   }
 }
 
