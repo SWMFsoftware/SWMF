@@ -659,8 +659,8 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'hypre_set_matrix_block'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     iBlock = iBlockFromSemi_B(iBlockSemi)
+    call test_start(NameSub, DoTest, iBlock)
 
     ! DoDebug = iProc == iProcTest
 

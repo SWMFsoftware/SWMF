@@ -140,10 +140,8 @@ contains
     real:: EffectiveCollisionRate, Dens2DensCr
     real,parameter::CoulombLog = 5.0
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_absorption'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     Dens2DensCr = min(1.0, NeSI/DensityCrSi)
     ! calculate the effective collision frequency
     ! write(*,*)'NeSi=',NeSi,' Dens2DensCr=',Dens2DensCr
@@ -174,7 +172,6 @@ contains
     ! Convert to the dimensionless form:
     Absorption =  Absorption*No2Si_V(UnitX_)
 
-    call test_stop(NameSub, DoTest)
   end subroutine calc_absorption
   !============================================================================
 
