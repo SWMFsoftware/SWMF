@@ -255,6 +255,8 @@ contains
     ! Start value for early returns
     !--------------------------------------------------------------------------
     DoTest = .false.
+    if(lVerbose == 0) RETURN
+    if(lVerbose == 1 .and. StringTest == '') RETURN
 
     ! Check block index if present
     if(present(iBlock))then
@@ -300,8 +302,6 @@ contains
        end if
     end if
 
-    if(lVerbose == 0) RETURN
-
     if(lVerbose == 100 .or. ((lVerbose == 10 .or. DoTest) &
          .and. (iProc == iProcTest .or. iProc == iProcTest2)))then
        if(present(iBlock))then
@@ -326,6 +326,8 @@ contains
     integer, optional, intent(in):: iBlock
     integer, optional, intent(in):: i, j, k
     !--------------------------------------------------------------------------
+    if(lVerbose == 0) RETURN
+    if(lVerbose == 1 .and. StringTest == '') RETURN
 
     ! Check block index if present
     if(present(iBlock))then
