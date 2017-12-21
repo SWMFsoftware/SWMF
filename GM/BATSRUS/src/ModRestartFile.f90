@@ -1298,14 +1298,27 @@ contains
 
        do iVarMapping = 1, nVarRestartMapping
           do iVar = 1, nVar
-             if (NameVarRestartTo_V(iVarMapping) == NameVarLower_V(iVar)) &
-                  iVarTo_I(iVarMapping) = iVar
+             if (NameVarRestartTo_V(iVarMapping) /= NameVarLower_V(iVar)) CYCLE
+             iVarTo_I(iVarMapping) = iVar
+             EXIT
           end do
+
           do iVarRead = 1, nVarRestart
-             if (NameVarRestartFrom_V(iVarMapping) &
-                  == NameVarRestart_V(iVarRead)) &
-                  iVarFrom_I(iVarMapping) = iVarRead
+             if (NameVarRestartFrom_V(iVarMapping) /= &
+                  NameVarRestart_V(iVarRead)) CYCLE
+             iVarFrom_I(iVarMapping) = iVarRead
+             EXIT
           end do
+
+          if (iVarFrom_I(iVarMapping) < 0 .or.                         &
+               iVarFrom_I(iVarMapping) > nVarRestart .and. iProc == 0) &
+               call stop_mpi(NameSub//                                 &
+               ': unknown NameVar in NameVarsRestartFrom')
+
+          if (iVarTo_I(iVarMapping) < 0 .or.                  &
+               iVarTo_I(iVarMapping) > nVar .and. iProc == 0) &
+               call stop_mpi(NameSub//': unknown NameVar in NameVarsRestartTo')
+
           iVarMatch_V(iVarTo_I(iVarMapping)) = iVarFrom_I(iVarMapping)
        end do
     end if
