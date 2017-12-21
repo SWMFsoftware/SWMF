@@ -555,11 +555,8 @@ contains
 
     real :: Temperature, OpacityPlanck, DiffusionRad
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     if(present(EinternalIn))then
        Temperature = EinternalIn*Si2No_V(UnitEnergyDens_) &
             *(Gamma - 1.0)/State_V(Rho_)
@@ -602,8 +599,7 @@ contains
 
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
-
-    call test_stop(NameSub, DoTest, iBlock)
+  
   end subroutine user_material_properties
   !============================================================================
 

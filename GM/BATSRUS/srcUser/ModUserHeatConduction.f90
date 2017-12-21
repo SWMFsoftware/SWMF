@@ -1245,11 +1245,8 @@ contains
     real :: Cv, HeatCond
     real :: EeSi, Ee, NatomicSi
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
 
@@ -1357,7 +1354,6 @@ contains
     if(present(PlanckOut_W)) &
          PlanckOut_W = cRadiationNo*Te**4*No2Si_V(UnitEnergyDens_)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
   !============================================================================
 

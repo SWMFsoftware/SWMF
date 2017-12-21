@@ -1508,10 +1508,8 @@ contains
     integer :: iWave
     real :: PlanckSi
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
@@ -1639,7 +1637,6 @@ contains
        end do
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
 

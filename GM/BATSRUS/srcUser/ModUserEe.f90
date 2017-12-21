@@ -599,11 +599,8 @@ contains
     real :: Fraction = 0.0, CoolingFunctionCgs = 0.0, &
          MassDensCgs, NumberDensCgs
     real :: Chianti(1:1)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_radiative_cooling'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     MassDensCgs     = State_V(rho_)/Si2No_V(UnitRho_)*1.e-3
     NumberDensCgs   = MassDensCgs/(mu*cProtonMass*1.e3)
 
@@ -632,7 +629,6 @@ contains
        RadiativeCooling = 0.
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_radiative_cooling
   !============================================================================
 
@@ -784,10 +780,8 @@ contains
     real :: pSi, EinternalSi, RhoSi, TeSi
     real :: Value_V(1:5)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
@@ -823,7 +817,6 @@ contains
     if(present(CvOut)) CvOut = Value_V(4)
     if(present(GammaOut)) GammaOut = Value_V(5)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
   !============================================================================
 

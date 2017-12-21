@@ -777,10 +777,8 @@ contains
     real :: pSi, EinternalSi, RhoSi, TeSi
     real :: Value_V(1:5)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     ! Density, transformed to SI
     RhoSi = No2Si_V(UnitRho_)*State_V(Rho_)
 
@@ -816,7 +814,6 @@ contains
     if(present(CvOut)) CvOut = Value_V(4)
     if(present(GammaOut)) GammaOut = Value_V(5)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
   !============================================================================
 

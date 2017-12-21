@@ -3248,13 +3248,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(iBlock==iBlockTest.and.i==iTest.and.j==jTest.and.k==kTest &
-         .and.iProc==iProcTest) then
-    else
-       DoTest=.false.; DoTest=.false.
-    end if
+    call test_start(NameSub, DoTest, iBlock, i, j, k)
 
     nIon_I(1:nIonFluid) = &
          State_VGB(iRhoIon_I,i,j,k,iBlock)/MassIon_I*NO2SI_V(UnitN_)
@@ -3316,6 +3310,7 @@ contains
        write(*,*)''
     end if
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine user_material_properties
   !============================================================================
 

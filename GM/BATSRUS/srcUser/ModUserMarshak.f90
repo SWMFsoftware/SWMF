@@ -300,11 +300,8 @@ contains
     real :: Rho, Pressure, Temperature
     real :: RhoSi, pSi, TemperatureSi
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
 
@@ -350,7 +347,6 @@ contains
     if(present(HeatCondOut)) HeatCondOut = 0.0
     if(present(TeTiRelaxOut)) TeTiRelaxOut = 0.0
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
   !============================================================================
 

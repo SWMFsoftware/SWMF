@@ -621,11 +621,8 @@ contains
     real :: RhoSi, pSi, TeSi
     real :: PlanckSi, EgSi
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     Rho = State_V(Rho_)
     RhoSi = Rho*No2Si_V(Rho_)
 
@@ -746,7 +743,6 @@ contains
     if(present(OpacityEmissionOut_W)) &
          OpacityEmissionOut_W = OpacityPlanckOut_W
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_material_properties
   !============================================================================
 

@@ -1823,7 +1823,6 @@ contains
     real :: nIon_I(nIonFluid)
 
     real :: xmin, xmax, HeatCondFactor, widthmax, widthmin, xMaxyz, xMinyz
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_material_properties'
     !--------------------------------------------------------------------------
@@ -1889,7 +1888,7 @@ contains
        end if
        write(*,*)''
     end if
-    call test_stop(NameSub, DoTest, iBlock, i, j, k)
+    call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine user_material_properties
   !============================================================================
