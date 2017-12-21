@@ -145,7 +145,7 @@ public:
   void MultiplyVector(double *p,double *x,int length);
 
   //call the linear system solver, and unpack the solution afterward
-  void Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),void (*fUnpackSolution)(double* x,cCornerNode* CornerNode));
+  void Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),void (*fUnpackSolution)(double* x,cCornerNode* CornerNode),double Tol,int nMaxIter);
 
   //update the RHS vector
   void UpdateRhs(double (*fSetRhs)(int,cRhsSupportTable*,int,cRhsSupportTable*,int));
@@ -469,7 +469,18 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
         rhs=0.0;
 
         f(i,j,k,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable_CornerNodes,NewRow->RhsSupportLength_CornerNodes,NewRow->RhsSupportTable_CenterNodes,NewRow->RhsSupportLength_CenterNodes,node);
-        if (NonZeroElementsFound>MaxStencilLength) exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
+
+        if (NonZeroElementsFound>MaxStencilLength) {
+          exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
+        }
+
+        if (NewRow->RhsSupportLength_CenterNodes>MaxRhsSupportLength_CenterNodes) {
+          exit(__LINE__,__FILE__,"Error: NewRow->RhsSupportLength_CenterNodes>MaxRhsSupportLength_CenterNodes; Need to increase the value of MaxRhsSupportLength_CenterNodes");
+        }
+
+        if (NewRow->RhsSupportLength_CornerNodes>MaxRhsSupportLength_CornerNodes) {
+          exit(__LINE__,__FILE__,"Error: NewRow->RhsSupportLength_CornerNodes>MaxRhsSupportLength_CornerNodes; Need to increase the value of MaxRhsSupportLength_CornerNodes");
+        }
 
         //scan through the found stencil and correct blocks and indexing is needed
         for (int ii=0;ii<NonZeroElementsFound;ii++) {
@@ -868,7 +879,11 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),void (*fUnpackSolution)(double* x,cCornerNode* CornerNode)) {
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),
+      void (*fUnpackSolution)(double* x,cCornerNode* CornerNode),
+      double Tol, //the residual tolerance. The recommended value is 1e-5;
+      int nMaxIter //the max iteration error allowed. The recommended value is 100
+      ) {
   cMatrixRow* row;
   int GlobalVariableIndex,cnt;
 
@@ -912,14 +927,9 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
       SubdomainPartialUnknownsVector[row->iVar+NodeUnknownVariableVectorLength*row->Elements->UnknownVectorIndex]=MeanRhs[row->iVar];
       SubdomainPartialRHS[cnt]=MeanRhs[row->iVar];
     }
-
-
   }
 
-
   //call the iterative solver
-  double Tol=1e-5;// the max iteration error allowed
-  int nIter=100; //iter number
   int nVar=NodeUnknownVariableVectorLength; //variable number
   int nDim = 3; //dimension
   int nI=_BLOCK_CELLS_X_;
@@ -937,17 +947,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   double ** precond_matrix_II;// pointer to precondition matrix; us  null if no preconditioner
   int lTest=1;//1: need test output; 0: no test statement
 
-/*  printf("nBlock:%d\n",nBlock);
-  for (int ii=0; ii<cnt;ii++){
-    printf("No.%d, RHS_I:%f\n", ii, Rhs_I[ii]);
-  }*/
-
-  linear_solver_wrapper("GMRES", &Tol,&nIter, &nVar, &nDim,&nI, &nJ, &nK, &nBlock, &iComm, Rhs_I,Sol_I, &PrecondParam, NULL, &lTest);
-
-/*  for (int ii=0; ii<cnt;ii++){
-    printf("No.%d, Sol_I:%f\n", ii, Sol_I[ii]);
-  }*/
-
+  linear_solver_wrapper("GMRES", &Tol,&nMaxIter, &nVar, &nDim,&nI, &nJ, &nK, &nBlock, &iComm, Rhs_I,Sol_I, &PrecondParam, NULL, &lTest);
 
   //unpack the solution
   for (row=MatrixRowTable;row!=NULL;row=row->next) if (row->CornerNode!=NULL)  {
