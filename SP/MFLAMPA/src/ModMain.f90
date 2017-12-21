@@ -274,7 +274,7 @@ contains
     ! update time & iteration counters
     iIterGlobal = iIterGlobal + 1
     TimeGlobal = min(DataInputTime,TimeLimit)
-    call write_output(IsInitialOutputIn=.not.DoRun)
+    call write_output
   contains
     !=====================================================================
     subroutine lagr_time_derivative

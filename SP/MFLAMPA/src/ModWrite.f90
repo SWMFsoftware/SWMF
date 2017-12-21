@@ -67,6 +67,8 @@ module SP_ModWrite
      !/
      ! scale of distribution function (momentum or energy)
      integer:: iScale
+     ! type out output (CDF or differential energy flow)
+     integer:: iTypeDistr
      !\
      ! Data on the sphere
      !/
@@ -92,6 +94,10 @@ module SP_ModWrite
   integer, parameter:: &
        Momentum_= 1, &
        Energy_  = 2
+  ! Output types for distribution
+  integer, parameter:: &
+       CDF_ = 1, &
+       DEF_ = 2
   !----------------------------------------------------------------------------
   ! the output directory
   character (len=100) :: NamePlotDir="SP/IO2/"
@@ -275,20 +281,39 @@ contains
     !------------------------------------------------------------------------
     subroutine process_distr
       ! process output parameters for distribution output
-      !------------------------
+      integer:: iStringPlot
+      character(len=20):: NameVar, NameScale
+      !-------------------------------------------------
+      ! only 1 variable is printed
       File_I(iFile) % nVarPlot = 1
-      if(    index(StringPlot, 'momentum') > 0)then
-         File_I(iFile) % iScale = Momentum_
-         File_I(iFile) % NameVarPlot = &
-              'Log10Momentum Distance Log10Distribution'
-      elseif(index(StringPlot, 'energy') > 0)then
-         File_I(iFile) % iScale = Energy_
-         File_I(iFile) % NameVarPlot = &
-              'Log10Energy Distance Log10Distribution'
-      else
-         call CON_stop(NameSub//&
-              ': type of scale for distribution output wasnot set in PARAM.in')
-      end if
+      ! reset string with variables' names and put defaults
+      NameScale = 'Log10Momentum'
+      NameVar   = 'Log10DiffEnergyFlux'
+      File_I(iFile) % iScale     = Momentum_
+      File_I(iFile) % iTypeDistr = DEF_
+      do iStringPlot = 2, nStringPlot - 1
+         ! may contain type of output scale (momentum/energy)
+         ! or utput variable (canonical distr func/differential energy flux)
+         select case(StringPlot_I(iStringPlot))
+         case('momentum')
+            File_I(iFile) % iScale = Momentum_
+            NameScale = 'Log10Momentum'
+         case('energy')
+            File_I(iFile) % iScale = Energy_
+            NameScale = 'Log10Energy'
+         case('cdf')
+            ! canonical distribution function
+            File_I(iFile) % iTypeDistr = CDF_
+            NameVar = 'Log10Distribution'
+         case('def')
+            ! differential energy flux
+            File_I(iFile) % iTypeDistr = DEF_
+            NameVar = 'Log10DiffEnergyFlux'
+         end select
+      end do
+      ! form the name with variables' names'
+      File_I(iFile) % NameVarPlot = &
+           trim(NameScale)//' Distance '//trim(NameVar)
     end subroutine process_distr
   end subroutine set_write_param
 
@@ -784,6 +809,15 @@ contains
             ! the actual distribution
             File_I(iFile) % Buffer_II(:,iParticle) = &
                  log10(Distribution_IIB(:,iParticle,iBlock) * Factor_I(:))
+            ! account for the requested output
+            select case(File_I(iFile) % iTypeDistr)
+            case(CDF_)
+               ! do nothing
+            case(DEF_)
+               File_I(iFile) % Buffer_II(:,iParticle) = &
+                    File_I(iFile) % Buffer_II(:,iParticle) + &
+                    2*LogMomentum_I/log(10.)
+            end select
          end do
 
          ! print data to file
