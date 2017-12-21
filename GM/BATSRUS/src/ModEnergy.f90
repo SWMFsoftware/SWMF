@@ -246,14 +246,12 @@ contains
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     integer :: i, j, k
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_pressure'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
 
-    if(DoTest)write(*,*)NameSub, &
-         ': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
-         iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax
+    !if(DoTest)write(*,*)NameSub, &
+    !     ': iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax=', &
+    !     iMin,iMax,jMin,jMax,kMin,kMax,iFluidMin,iFluidMax
 
     do iFluid = iFluidMin, iFluidMax
        call select_fluid
@@ -286,12 +284,11 @@ contains
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax, DoUpdateEnergy = .true.)
 
-    if(DoTest)then
-       write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
-       write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
-    end if
+    !if(DoTest)then
+    !   write(*,*)NameSub,':Energy_GBI=',Energy_GBI(iTest,jTest,kTest,iBlock,:)
+    !   write(*,*)NameSub,':State_VGB=',State_VGB(:,iTest,jTest,kTest,iBlock)
+    !end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_pressure
   !============================================================================
 
@@ -306,11 +303,8 @@ contains
     integer, intent(in) :: iMin, iMax, jMin, jMax, kMin, kMax, iBlock
     integer, intent(in) :: iFluidMin, iFluidMax
     integer::i,j,k
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_energy'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     call limit_pressure(iMin, iMax, jMin, jMax, kMin, kMax, &
          iBlock, iFluidMin, iFluidMax)
 
@@ -347,7 +341,6 @@ contains
 
     end do
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_energy
   !============================================================================
 
@@ -467,10 +460,8 @@ contains
     integer:: i, j, k
     real :: NumDens, p, pMin, Ne
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'limit_pressure'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     do iFluid = iFluidMin, iFluidMax
        if(pMin_I(iFluid) < 0.0) CYCLE
        pMin = pMin_I(iFluid)
@@ -548,7 +539,6 @@ contains
        end if
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine limit_pressure
   !============================================================================
 

@@ -71,10 +71,8 @@ contains
     real,   intent(out) :: RadiativeCooling
     integer,intent(out),optional::iError
     real :: NumberDensCgs
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_radiative_cooling'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(present(iError))iError=0
     if(UseMultiIon)then
        NumberDensCgs = &
@@ -97,7 +95,6 @@ contains
           RadiativeCooling = RadiativeCooling * (TeChromosphereSi/TeModSi)**2.5
        endif
     end if
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_radiative_cooling
   !============================================================================
   real function radiative_cooling(TeSiIn, NumberDensCgs,iError)
@@ -159,10 +156,8 @@ contains
     real, intent(in) :: TeSi
     real, intent(out):: CoolingFunctionCgs
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cooling_function_fit'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(TeSi <= 8e3)then
        CoolingFunctionCgs = (1.0606e-6*TeSi)**11.7
     elseif(TeSi <= 2e4)then
@@ -183,7 +178,6 @@ contains
        CoolingFunctionCgs = 10**(-26.6)*sqrt(TeSi)
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_cooling_function_fit
   !============================================================================
   real function cooling_function_integral_si(TeTransitionRegionSi)
@@ -233,10 +227,8 @@ contains
          (cProtonMass * cGravityAcceleration)
 
     real:: HeightSi_C(1:nI,1:nJ,1:nK), BarometricScaleSi, Amplitude
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'add_chromosphere_heating'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     HeightSi_C = (r_BLK(1:nI,1:nJ,1:nK,iBlock) - 1) * Si2No_V(UnitX_)
     if(UseStar)then
        BarometricScaleSi = TeChromosphereSi *  cBarometricScalePerT*RadiusStar**2/MassStar
@@ -250,7 +242,6 @@ contains
          CoronalHeating_C = CoronalHeating_C + &
          Amplitude * exp(-HeightSi_C/BarometricScaleSi)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine add_chromosphere_heating
   !============================================================================
   subroutine calc_reb_density(iSide, iFace, jFace, kFace, iBlock,&
@@ -302,11 +293,8 @@ contains
 
     integer :: iDir=0
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_reb_density'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     if(present(TeChromoSiIn))then
        TeChromoSi = TeChromoSiIn
     else
@@ -367,7 +355,6 @@ contains
     DensityReb = sqrt((qCondSi + qHeatSi) / RadIntegralSi) &
          * Si2No_V(UnitN_)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_reb_density
   !============================================================================
 end module ModRadiativeCooling
