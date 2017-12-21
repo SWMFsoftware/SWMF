@@ -173,8 +173,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_read_inputs
 
     use ModReadParam
@@ -281,7 +279,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    call test_start(NameSub, DoTest, iBlockBc)
     if(iBoundary /= body1_ .and. iBoundary /= 1)then
        write(*,*) NameSub,': iBoundary=', iBoundary
        call stop_mpi(NameSub//' is not implemented for this boundary!')
@@ -426,7 +424,6 @@ contains
   end subroutine user_set_face_boundary
   !============================================================================
 
-  !-------------------------------------------------------------------
   subroutine user_normalization
 
     use ModConst, ONLY: cAU, cProtonMass
@@ -450,7 +447,6 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_normalization
   !============================================================================
-  !-------------------------------------------------------------------
 
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 

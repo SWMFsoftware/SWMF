@@ -956,10 +956,8 @@ contains
     real :: RhoCme, Ucme_D(3), Bcme_D(3), pCme
     real :: BrCme, BrCme_D(3), UrCme, UrCme_D(3), UtCme_D(3)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
 
     rUnit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
     !\
@@ -1085,7 +1083,6 @@ contains
        end if
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
   subroutine user_set_resistivity(iBlock, Eta_G)

@@ -32,8 +32,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_calc_sources(iBlock)
 
     use ModAdvance, ONLY: Source_VC
@@ -620,14 +618,11 @@ contains
     use ModB0, ONLY: B0_DX
 
     real, intent(out):: VarsGhostFace_V(nVar)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     call get_solar_wind_point(TimeBc, FaceCoords_D(x_), VarsGhostFace_V)
     VarsGhostFace_V(Bx_:Bz_) = VarsGhostFace_V(Bx_:Bz_) - B0_DX(:,iFace, jFace, kFace)
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 

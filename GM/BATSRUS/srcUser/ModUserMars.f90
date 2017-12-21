@@ -1304,11 +1304,8 @@ contains
     real:: uRot_D(3)
     real:: cosSZA
     real:: uDotR
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     if(iBoundary == ExtraBc_)then
        VarsGhostFace_V = FaceState_VI(:,xMinBc_)
        RETURN
@@ -1352,7 +1349,6 @@ contains
        VarsGhostFace_V(Ux_:Uz_) = VarsGhostFace_V(Ux_:Uz_) + 2*uRot_D
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 
@@ -1501,10 +1497,8 @@ contains
     real,dimension(0:nMax,0:nMax), save :: Factor1_II, Factor2_II, Factor3_II
     logical :: DoSetFactor = .true.
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'MarsB0'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(DoSetFactor)then
        DoSetFactor = .false.
        do m = 0, nMax
@@ -1605,7 +1599,6 @@ contains
 
     call timing_stop('crustal')
 
-    call test_stop(NameSub, DoTest)
   end subroutine MarsB0
   !============================================================================
 

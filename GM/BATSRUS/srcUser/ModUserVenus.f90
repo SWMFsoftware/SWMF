@@ -1043,10 +1043,9 @@ contains
     real:: xFace, yFace, zFace, rFace, rFace2
     real:: CosSZA
     real:: uDotR, bDotR
-    logical:: DoTest
+
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
 
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
@@ -1093,7 +1092,6 @@ contains
        write(*,*)'unknown type of user inner bcs'
     end select
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 

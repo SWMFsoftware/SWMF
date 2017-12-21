@@ -193,8 +193,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_calc_sources(iBlock)
 
     use ModPointImplicit, ONLY: UsePointImplicit_B,UsePointImplicit,&
@@ -1282,10 +1280,9 @@ contains
     real:: uDotR_I(nFluid), bDotR
     integer:: i,j,k
     logical:: DoTestCell
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    call test_start(NameSub, DoTestCell, iBlockBc, iFace, jFace, kFace)
 
     if(iBoundary == ExtraBc_)then
        VarsGhostFace_V = FaceState_VI(:,xMinBc_)
@@ -1293,9 +1290,6 @@ contains
     elseif(iBoundary /= Body1_)then
        call stop_mpi(NameSub//' invalid iBoundary value')
     end if
-
-    DoTestCell = DoTest &
-         .and. iFace==iTest .and. jFace==jTest .and. kFace==kTest
 
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
@@ -1359,7 +1353,7 @@ contains
        VarsGhostFace_V(iRhoUz_I) = VarsGhostFace_V(iRhoUz_I) + 2*uRot_D(3)
     end if
 
-    call test_stop(NameSub, DoTest)
+    call test_stop(NameSub, DoTestCell, iBlockBc, iFace, jFace, kFace)
   end subroutine user_set_face_boundary
   !============================================================================
 

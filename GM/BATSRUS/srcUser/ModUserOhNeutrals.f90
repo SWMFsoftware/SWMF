@@ -275,7 +275,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
+    call test_start(NameSub, DoTest, iBlockBc)
 
     if(iBoundary /= body1_) &
          call stop_mpi(NameSub//' only inner BC is implemented!')

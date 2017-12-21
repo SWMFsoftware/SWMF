@@ -36,8 +36,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_init_session
 
     use CON_planet,     ONLY: RadiusPlanet, MassPlanet
@@ -415,11 +413,8 @@ contains
 
     real, intent(out):: VarsGhostFace_V(nVar)
     real ::  bUnit_D(3)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     ! If I am trying to use float BC for rho and p, no need for this
     VarsGhostFace_V = FaceState_VI(:,iBoundary)
 
@@ -442,7 +437,6 @@ contains
             sum(bUnit_D*VarsTrueFace_V(iUx:iUz))*bUnit_D
     end do
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 

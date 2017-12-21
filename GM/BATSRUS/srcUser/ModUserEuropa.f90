@@ -299,10 +299,8 @@ contains
     real, intent(out):: VarsGhostFace_V(nVar)
 
     real:: UdotR, URefl_D(1:3)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     UdotR = dot_product(VarsTrueFace_V(Ux_:Uz_),FaceCoords_D)* &
          2.0/dot_product(FaceCoords_D,FaceCoords_D)
     URefl_D = FaceCoords_D*UdotR
@@ -315,7 +313,7 @@ contains
        VarsGhostFace_V(RhoUx_:RhoUz_) = 0.0
        ! VarsGhostFace_V(Bx_:Bz_) = 0.0 float mag. field
     endif
-    call test_stop(NameSub, DoTest)
+
   end subroutine user_set_face_boundary
   !============================================================================
 

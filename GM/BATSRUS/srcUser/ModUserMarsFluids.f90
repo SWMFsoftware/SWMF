@@ -1760,11 +1760,8 @@ contains
     real:: cosSZA
     real:: uDotR_I(nFluid)
     logical:: DoTestCell
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     if(iBoundary == ExtraBc_)then
        VarsGhostFace_V = FaceState_VI(:,xMinBc_)
        RETURN
@@ -1834,7 +1831,6 @@ contains
        VarsGhostFace_V(iRhoUz_I) = VarsGhostFace_V(iRhoUz_I) + 2*uRot_D(3)
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 
@@ -2289,8 +2285,6 @@ contains
     real :: sint, sinp, cost, cosp, uB
 
     !--------------------------------------------------------------------------
-    call timing_start('user_get_b0')
-
     X0 = X1*cos(thetilt)-Z1*sin(thetilt)
     Y0 = Y1
     Z0 = X1*sin(thetilt)+Z1*cos(thetilt)
@@ -2339,7 +2333,6 @@ contains
     B1(2)=B1(2)/uB
     B1(3)=B1(3)/uB
 
-    call timing_stop('user_get_b0')
   end subroutine user_get_b0
   !============================================================================
 
@@ -2359,10 +2352,8 @@ contains
     real,dimension(0:nMax,0:nMax), save :: Factor1_II, Factor2_II, Factor3_II
     logical :: DoSetFactor = .true.
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'MarsB0'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(DoSetFactor)then
        DoSetFactor = .false.
        do m = 0, nMax
@@ -2463,7 +2454,6 @@ contains
 
     call timing_stop('crustal')
 
-    call test_stop(NameSub, DoTest)
   end subroutine MarsB0
   !============================================================================
 

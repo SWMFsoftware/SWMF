@@ -24,8 +24,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_init_session
     use EEE_ModMain,    ONLY: EEE_initialize
     use ModIO,          ONLY: write_prefix, iUnitOut
@@ -76,10 +74,8 @@ contains
     real :: RhoCME,UCME_D(MaxDim),BCME_D(MaxDim),pCME
     real :: BCMEn,BCMEn_D(MaxDim),UCMEn,UCMEn_D(MaxDim),UCMEt_D(MaxDim)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     RFace_D  = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
     U_D (x_:z_)  = VarsTrueFace_V(Ux_:Uz_)
@@ -181,7 +177,6 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2*OmegaBody*FaceCoords_D(x_)
     end if
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 
@@ -205,10 +200,8 @@ contains
                          ! are scaled as functions of UFinal/UMin ratio
     real :: Temperature
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_plasma_parameters_cell'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     call get_gamma_emp( &
          Xyz_DGB(x_,iCell,jCell,kCell,iBlock), &
          Xyz_DGB(y_,iCell,jCell,kCell,iBlock), &
@@ -227,7 +220,6 @@ contains
 
     PresCell = DensCell*Temperature
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_plasma_parameters_cell
   !============================================================================
 

@@ -185,8 +185,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_read_inputs
     use ModProcMH,    ONLY: iProc
     use ModReadParam
@@ -511,25 +509,19 @@ contains
     real :: SourceLossMax, vdtmin
     real :: RhoUTimesSrhoU  ! for output the testing results
 
-    !
-
-    !\
     ! Variable meanings:
     !   Srho: Source terms for the continuity equation
     !   SE,SP: Source terms for the energy (conservative) and presure
     !          (primative) equations
     !   SrhoUx,SrhoUy,SrhoUz:  Source terms for the momentum equation
     !   SBx,SBy,SBz:  Souce terms for the magnetic field equations
-    !/
+
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_sources'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
-    !
 
-    !\
     ! Compute Titan ionospheric source terms.
-    !/
     MaxBlockData = (1 + MaxNuSpecies + 2*MaxSpecies)*nIJK
 
     if(iBlock /= iBlockLast)then
@@ -1150,10 +1142,8 @@ contains
     integer :: m
     real:: uDotR, bDotR
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
     ZFace = FaceCoords_D(3)
@@ -1213,7 +1203,6 @@ contains
        write(*,*)'unknown type of user inner bcs'
     end select
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 

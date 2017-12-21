@@ -118,8 +118,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_read_inputs
     use ModMain
     use ModProcMH,    ONLY: iProc
@@ -1064,10 +1062,7 @@ contains
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
-    DoTest = iBlockBc == iBlockTest
-    ! DoTest = iFace == iTest .and. jFace == jTest .and. kFace == kTest .and. DoTest
+    call test_start(NameSub, DoTest, iBlockBc)
 
     !     if(DoTest)write(*,*)'face: iFace,jFace,kFace,iSide=',&
     !          iFace,jFace,kFace,iSide
@@ -1091,7 +1086,7 @@ contains
 
     end do
 
-    call test_stop(NameSub, DoTest)
+    call test_stop(NameSub, DoTest, iBlockBc)
   end subroutine user_set_face_boundary
   !============================================================================
 

@@ -291,11 +291,8 @@ contains
     real :: Density, Temperature, FullBr
     real :: Runit_D(3), U_D(3)
     real :: B1_D(3), B1t_D(3), B1r_D(3), FullB_D(3)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
-
     Runit_D = FaceCoords_D/sqrt(sum(FaceCoords_D**2))
 
     U_D   = VarsTrueFace_V(Ux_:Uz_)
@@ -335,7 +332,7 @@ contains
        VarsGhostFace_V(Uy_) = VarsGhostFace_V(Uy_) &
             + 2.0*OmegaBody*FaceCoords_D(x_)
     end if
-    call test_stop(NameSub, DoTest)
+
   end subroutine user_set_face_boundary
   !============================================================================
 

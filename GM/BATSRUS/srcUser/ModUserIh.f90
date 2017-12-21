@@ -31,7 +31,6 @@ module ModUser
 contains
   !============================================================================
 
-
   subroutine user_read_inputs
 
     use ModMain,      ONLY: lVerbose, TypeCoordSystem
@@ -181,10 +180,8 @@ contains
     real     :: Br0, Rho0, p0, r0, UrSw, N0, T0, MassFlux
     real     :: RotationSpeed
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_parker_sln_cell'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     ! Normalize and convert input parameters for rho, u, B, p
     r0   = rRefIo * cAu * Si2No_V(UnitX_)
     UrSw = UrSwIo*1000*Si2No_V(UnitU_)
@@ -268,7 +265,6 @@ contains
        call CON_stop('ERROR in get_parker_sln_cell')
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_parker_sln_cell
   !============================================================================
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -281,10 +277,8 @@ contains
 
     real :: x, y, z, r, State_V(nVar), U_D(3)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     x = FaceCoords_D(x_)
     y = FaceCoords_D(y_)
     z = FaceCoords_D(z_)
@@ -294,7 +288,6 @@ contains
 
     ! VarsGhostFace_V(Rho_) =  2.0*State_V(Rho_) - VarsTrueFace_V(Rho_)
 
-    call test_stop(NameSub, DoTest)
   end subroutine user_set_face_boundary
   !============================================================================
 
