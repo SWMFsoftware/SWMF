@@ -1111,10 +1111,8 @@ contains
     real, save:: Omega_D(3)
     logical   :: IsUninitialized = .true.
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_corotation_velocity'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     select case(TypeCoordSystem)
     case('HGI')
        ! In the HGI system the Solar angular velocity vector points towards +Z
@@ -1134,7 +1132,6 @@ contains
     ! The corotation velocity is u = Omega x R
     uRot_D = cross_product(Omega_D, Xyz_D)
 
-    call test_stop(NameSub, DoTest)
   end subroutine calc_corotation_velocity
   !============================================================================
 
