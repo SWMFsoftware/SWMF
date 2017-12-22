@@ -119,12 +119,16 @@ module SP_ModWrite
   character(len=20 ):: TypeHeaderFile
   ! name of the tag list file
   character(len=100):: NameTagFile = 'MH_data.lst'
-
   !/
+  !\
+  !Fromat for saving time tag. If .true. the time tag format is
+  !YYYYMMDDHHMMSS 
+  logical, public:: UseDateTime = .false. 
 contains
 
-  subroutine set_write_param
+  subroutine set_write_param(NameCommand)
     use ModReadParam, ONLY: read_var
+    character(len=*), intent(in):: NameCommand
     ! set parameters of output files: file format, kind of output etc.
     character(len=300):: StringPlot
     ! loop variables
@@ -133,124 +137,132 @@ contains
     character(len=20):: TypeFile, KindData, StringPlot_I(2*nVar)
     character(len=*), parameter :: NameSub='SP:set_write_param'
     !--------------------------------------------------------------------------
-    ! initialize auxilary arrays
-    do iNode = 1, nNode
-       iNodeIndex_I(iNode) = iNode
-    end do
-    ! number of output files
-    call read_var('nFileOut', nFileOut)
-    ! check correctness
-    if(nFileOut == 0) RETURN ! no output file requested
-    if(nFileOut  < 0) call CON_stop(NameSub//': incorrect SAVEPLOT section')
+    select case(NameCommand)
+    case("#SAVEPLOT")
+       ! initialize auxilary arrays
+       do iNode = 1, nNode
+          iNodeIndex_I(iNode) = iNode
+       end do
+       ! number of output files
+       call read_var('nFileOut', nFileOut)
+       ! check correctness
+       if(nFileOut == 0) RETURN ! no output file requested
+       if(nFileOut  < 0) call CON_stop(NameSub//': incorrect SAVEPLOT section')
+       
+       ! allocate the storage for file info
+       allocate(File_I(nFileOut))
+       
+       ! read info about each file
+       do iFile = 1, nFileOut
+          ! reset and read the file info
+          StringPlot = ''
+          call read_var('StringPlot', StringPlot)
+          
+          ! make comparison case insensitive: convert strings to lower case
+          call lower_case(StringPlot)
+          
+          ! put individual variables' and format names in separate array entries
+          call split_string(StringPlot, StringPlot_I, nStringPlot)
+          
+          ! data kind is the first entry
+          KindData = StringPlot_I(1)
+          ! check whether set properly
+          select case(KindData)
+          case('mh1d')
+             File_I(iFile) % iKindData = MH1D_
+          case('mh2d')
+             File_I(iFile) % iKindData = MH2D_
+          case('mhtime')
+             File_I(iFile) % iKindData = MHTime_
+          case('distr1d')
+             File_I(iFile) % iKindData = Distr1D_
+          case default
+             call CON_stop(NameSub//&
+                  ": kind of data isn't properly set in PARAM.in")
+          end select
+          
+          ! format of output is the last entry
+          TypeFile = StringPlot_I(nStringPlot)
+          ! check whether set properly
+          select case(TypeFile)
+          case('tec')
+             File_I(iFile) % NameFormat='.dat'
+             File_I(iFile) % TypeFile  ='tec'
+          case('idl','ascii')
+             File_I(iFile) % NameFormat='.out'
+             File_I(iFile) % TypeFile  ='ascii'
+          case('real4','real8')
+             File_I(iFile) % NameFormat='.out'
+             File_I(iFile) % TypeFile  = TypeFile
+          case default
+             call CON_stop(NameSub//&
+                  ": output format isn't properly set in PARAM.in")
+          end select
+          
+          ! reset variables' names
+          File_I(iFile) % NameVarPlot = NameVar_V(LagrID_)
+          
+          ! based on kind of data process the requested output
+          select case(File_I(iFile) % iKindData)
+          case(MH1D_)
+             call process_mh
+             ! prepare the output data container
+             allocate(File_I(iFile) % Buffer_II(&
+                  File_I(iFile)%nVarPlot, 1:nParticleMax))
+             ! add particle index to variable names
+             File_I(iFile) % NameVarPlot = &
+                  trim(File_I(iFile) % NameVarPlot)
+             do iVar = LagrID_,Z_
+                File_I(iFile)%NameVarPlot = &
+                     trim(File_I(iFile)%NameVarPlot)//&
+                     ' '//NameVar_V(iVar)  
+             end do
+             File_I(iFile) % NameVarPlot = &
+                  trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
+             TypeHeaderFile = File_I(iFile) % TypeFile
+             DoWriteHeader = .true.
+          case(MH2D_)
+             call process_mh
+             ! prepare the output data container
+             allocate(File_I(iFile) % Buffer_II(&
+                  File_I(iFile)%nVarPlot, nNode))
+             ! add line index to variable names
+             File_I(iFile) % NameVarPlot = &
+                  'LineIndex '//trim(File_I(iFile) % NameVarPlot)
+             ! get radius
+             call read_var('Radius [Rs]', File_I(iFile) % Radius)
+          case(MHTime_)
+             call process_mh
+             ! prepare the output data container
+             allocate(File_I(iFile) % Buffer_II(&
+                  File_I(iFile)%nVarPlot, 1))
+             ! add time interval index to variable names
+             File_I(iFile) % NameVarPlot = &
+                  'TimeIntervalIndex '//trim(File_I(iFile) % NameVarPlot)
+             ! get radius
+             call read_var('Radius [Rs]', File_I(iFile) % Radius)
+             ! reset indicator of the first call
+             File_I(iFile) % IsFirstCall = .true.
+          case(Distr1D_)
+             call process_distr
+             ! prepare the output data container
+             allocate(File_I(iFile) % &
+                  Buffer_II(nP,1:nParticleMax))
+          end select
+       end do
 
-    ! allocate the storage for file info
-    allocate(File_I(nFileOut))
-
-    ! read info about each file
-    do iFile = 1, nFileOut
-       ! reset and read the file info
-       StringPlot = ''
-       call read_var('StringPlot', StringPlot)
-
-       ! make comparison case insensitive: convert strings to lower case
-       call lower_case(StringPlot)
-
-       ! put individual variables' and format names in separate array entries
-       call split_string(StringPlot, StringPlot_I, nStringPlot)
-
-       ! data kind is the first entry
-       KindData = StringPlot_I(1)
-       ! check whether set properly
-       select case(KindData)
-       case('mh1d')
-          File_I(iFile) % iKindData = MH1D_
-       case('mh2d')
-          File_I(iFile) % iKindData = MH2D_
-       case('mhtime')
-          File_I(iFile) % iKindData = MHTime_
-       case('distr1d')
-          File_I(iFile) % iKindData = Distr1D_
-       case default
-          call CON_stop(NameSub//&
-               ": kind of data isn't properly set in PARAM.in")
-       end select
-
-       ! format of output is the last entry
-       TypeFile = StringPlot_I(nStringPlot)
-       ! check whether set properly
-       select case(TypeFile)
-       case('tec')
-          File_I(iFile) % NameFormat='.dat'
-          File_I(iFile) % TypeFile  ='tec'
-       case('idl','ascii')
-          File_I(iFile) % NameFormat='.out'
-          File_I(iFile) % TypeFile  ='ascii'
-       case('real4','real8')
-          File_I(iFile) % NameFormat='.out'
-          File_I(iFile) % TypeFile  = TypeFile
-       case default
-          call CON_stop(NameSub//&
-               ": output format isn't properly set in PARAM.in")
-       end select
-
-       ! reset variables' names
-       File_I(iFile) % NameVarPlot = NameVar_V(LagrID_)
-
-       ! based on kind of data process the requested output
-       select case(File_I(iFile) % iKindData)
-       case(MH1D_)
-          call process_mh
-          ! prepare the output data container
-          allocate(File_I(iFile) % Buffer_II(&
-               File_I(iFile)%nVarPlot, 1:nParticleMax))
-          ! add particle index to variable names
-          File_I(iFile) % NameVarPlot = &
-               trim(File_I(iFile) % NameVarPlot)
-          do iVar = LagrID_,Z_
-             File_I(iFile)%NameVarPlot = &
-                  trim(File_I(iFile)%NameVarPlot)//&
-                  ' '//NameVar_V(iVar)  
-          end do
-          File_I(iFile) % NameVarPlot = &
-               trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
-          TypeHeaderFile = File_I(iFile) % TypeFile
-          DoWriteHeader = .true.
-       case(MH2D_)
-          call process_mh
-          ! prepare the output data container
-          allocate(File_I(iFile) % Buffer_II(&
-               File_I(iFile)%nVarPlot, nNode))
-          ! add line index to variable names
-          File_I(iFile) % NameVarPlot = &
-               'LineIndex '//trim(File_I(iFile) % NameVarPlot)
-          ! get radius
-          call read_var('Radius [Rs]', File_I(iFile) % Radius)
-       case(MHTime_)
-          call process_mh
-          ! prepare the output data container
-          allocate(File_I(iFile) % Buffer_II(&
-               File_I(iFile)%nVarPlot, 1))
-          ! add time interval index to variable names
-          File_I(iFile) % NameVarPlot = &
-               'TimeIntervalIndex '//trim(File_I(iFile) % NameVarPlot)
-          ! get radius
-          call read_var('Radius [Rs]', File_I(iFile) % Radius)
-          ! reset indicator of the first call
-          File_I(iFile) % IsFirstCall = .true.
-       case(Distr1D_)
-          call process_distr
-          ! prepare the output data container
-          allocate(File_I(iFile) % &
-               Buffer_II(nP,1:nParticleMax))
-       end select
-    end do
-
-    !\
-    ! Check consistency
-    !/
-    ! only 1 MH1D file can be requested
-    if(count(File_I(1:nFileOut) % iKindData == MH1D_,1) > 1)&
-         call CON_stop(NameSub//": only one MH1D output file can be requested")
+       !\
+       ! Check consistency
+       !/
+       ! only 1 MH1D file can be requested
+       if(count(File_I(1:nFileOut) % iKindData == MH1D_,1) > 1)&
+            call CON_stop(NameSub//&
+            ": only one MH1D output file can be requested")
+    case("#USEDATETIME")
+       call read_var('UseDateTime',UseDateTime)
+    case default
+       call CON_stop('Unknown command '//NameCommand//' in SP:'//NameSub)
+    end select
 
   contains
     subroutine process_mh
@@ -425,7 +437,7 @@ contains
       integer, parameter:: RShock_ = Z_ + 2
       real :: Param_I(LagrID_:RShock_)
       ! timetag
-      character(len=8):: StringTime
+      character(len=15):: StringTime
       character(len=*), parameter:: NameSub='write_mh_1d'
       !------------------------------------------------------------------------
       !\
@@ -434,13 +446,19 @@ contains
       if(iProc==0)then
          ! increase the file counter
          nTag = nTag + 1
-         ! create time-iteration tag
-         call get_time_string(TimeGlobal, StringTime)
          ! add to the tag list file
          NameFile = trim(NamePlotDir)//trim(NameTagFile)
          call open_file(file=NameFile, position='append', status='unknown', &
               NameCaller=NameSub)
-         write(UnitTmp_,'(a,i6.6)') 't'//StringTime//'_n',iIterGlobal
+         if(UseDateTime)then
+            ! create date_time-iteration tag
+            call get_date_time_string(TimeGlobal, StringTime)
+            write(UnitTmp_,'(a,i6.6)') 'e'//StringTime//'_n',iIterGlobal
+         else
+            ! create time-iteration tag
+            call get_time_string(TimeGlobal, StringTime(1:8))
+            write(UnitTmp_,'(a,i6.6)') 't'//StringTime(1:8)//'_n',iIterGlobal
+         end if
          call close_file
       end if
       !\
@@ -453,14 +471,20 @@ contains
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
          call get_node_indexes(iNode, iLon, iLat)
-
          ! set the file name
-         call get_time_string(TimeGlobal, StringTime)
-         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-              trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
-              '_t'//StringTime//'_n',iIterGlobal,&
-              File_I(iFile) % NameFormat
-
+         if(UseDateTime)then
+            call get_date_time_string(TimeGlobal, StringTime)
+            write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
+                 trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
+                 '_e'//StringTime//'_n',iIterGlobal,&
+                 File_I(iFile) % NameFormat
+         else
+            call get_time_string(TimeGlobal, StringTime(1:8))
+            write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
+                 trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
+                 '_t'//StringTime(1:8)//'_n',iIterGlobal,&
+                 File_I(iFile) % NameFormat
+         end if
          ! get min and max particle indexes on this field line
          iLast  = nParticle_B(   iBlock)
          ! fill the output buffer
@@ -524,7 +548,7 @@ contains
       ! skip a field line if it fails to reach radius of output sphere
       logical:: DoPrint_I(nNode)
       ! timetag
-      character(len=8):: StringTime
+      character(len=15):: StringTime
       character(len=*), parameter:: NameSub='write_mh_2d'
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile) % nVarPlot
@@ -540,12 +564,21 @@ contains
          iNode = iNode_B(iBlock)
 
          ! set the file name
-         call get_time_string(TimeGlobal, StringTime)
-         write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
-              trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
-              File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
-              '_t'//StringTime//'_n', iIterGlobal, File_I(iFile) % NameFormat
-
+         if(UseDateTime)then
+            call get_date_time_string(TimeGlobal, StringTime)
+            write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
+                 trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
+                 File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
+                 '_e'//StringTime//'_n', iIterGlobal, &
+                 File_I(iFile) % NameFormat
+         else
+            call get_time_string(TimeGlobal, StringTime(1:8))
+            write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
+                 trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
+                 File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
+                 '_t'//StringTime(1:8)//'_n', iIterGlobal, &
+                 File_I(iFile) % NameFormat
+         end if
          ! get max particle indexes on this field line
          iLast  = nParticle_B(   iBlock)
 
@@ -771,7 +804,7 @@ contains
       real:: Scale_I(0:nP+1), Factor_I(0:nP+1)
       real:: Unity_I(0:nP+1) = 1.0
       ! timetag
-      character(len=8):: StringTime
+      character(len=15):: StringTime
       character(len=*), parameter:: NameSub='write_distr_1d'
       !------------------------------------------------------------------------
       select case(File_I(iFile) % iScale)
@@ -787,12 +820,19 @@ contains
          call get_node_indexes(iNode, iLon, iLat)
 
          ! set the file name
-         call get_time_string(TimeGlobal, StringTime)
-         write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-              trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
-              '_t'//StringTime//'_n',iIterGlobal,&
-              File_I(iFile) % NameFormat
-
+         if(UseDateTime)then
+            call get_date_time_string(TimeGlobal, StringTime)
+            write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
+                 trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
+                 '_e'//StringTime//'_n',iIterGlobal,&
+                 File_I(iFile) % NameFormat
+         else
+            call get_time_string(TimeGlobal, StringTime(1:8))
+            write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
+                 trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
+                 '_t'//StringTime(1:8)//'_n',iIterGlobal,&
+                 File_I(iFile) % NameFormat
+         end if
          ! get max particle indexes on this field line
          iLast  = nParticle_B(   iBlock)
 
@@ -885,6 +925,23 @@ contains
          int((Time-( 3600.*int(Time/ 3600.)))/   60.), & ! # minutes
          int( Time-(   60.*int(Time/   60.)))            ! # seconds
   end subroutine get_time_string
+  !
+  subroutine get_date_time_string(Time, StringTime)
+    use SP_ModAdvance, ONLY: StartTime
+    use ModTimeConvert,ONLY: time_real_to_int
+    ! the subroutine converts real variable Time into a string,
+    ! the structure of the string is 'ddhhmmss', 
+    ! i.e shows number of days, hours, minutes and seconds 
+    ! after the beginning of the simulation
+    real,              intent(in) :: Time
+    character(len=15), intent(out):: StringTime
+    integer :: iTime_I(7)
+    !--------------------------------------------------------------------------
+    call time_real_to_int(StartTime+Time, iTime_I)
+    write(StringTime,'(i4.4,i2.2,i2.2,a,i2.2,i2.2,i2.2)')&
+         iTime_I(1:3),'_',iTime_I(4:6)
+         
+  end subroutine get_date_time_string
   !===========================================================================
   subroutine get_integral_flux
     use SP_ModGrid, ONLY: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_,&
