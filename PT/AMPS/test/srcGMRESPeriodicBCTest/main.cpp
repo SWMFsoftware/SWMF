@@ -576,7 +576,7 @@ PIC::BC::ExternalBoundary::Periodic::UpdateData();
       NextCornerNodeOffset=t;
 
       char fname[100];
-      sprintf(fname,"test.out=%i.dat",niter);
+      sprintf(fname,"%s/test.out=%i.dat",PIC::OutputDataFileDirectory,niter);
       if (niter%5==0) PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,0);
     }
 
@@ -604,7 +604,7 @@ PIC::BC::ExternalBoundary::Periodic::UpdateData();
 //    SolverTransportEquation.UpdateRhs(UpdateRhsTransportEquation);
 
     char fname[100];
-    sprintf(fname,"Transport.out=%i.dat",niter);
+    sprintf(fname,"%s/Transport.out=%i.dat",PIC::OutputDataFileDirectory,niter);
     if (niter%10==0) PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,0);
   }
  
