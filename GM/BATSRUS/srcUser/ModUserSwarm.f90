@@ -18,7 +18,7 @@ module ModUser
   use ModUserEmpty ,                                   &
        IMPLEMENTED1 => user_read_inputs,               &
        IMPLEMENTED2 => user_init_session,              &
-       IMPLEMENTED3 => user_set_ICs,                   &
+       IMPLEMENTED3 => user_set_ics,                   &
        IMPLEMENTED4 => user_initial_perturbation,      &
        IMPLEMENTED5 => user_set_cell_boundary,              &
        IMPLEMENTED6 => user_calc_sources,              &
@@ -75,8 +75,6 @@ module ModUser
 
 contains
   !============================================================================
-
-
 
   subroutine user_read_inputs
     use ModMain,      ONLY: lverbose
@@ -167,7 +165,7 @@ contains
     call test_stop(NameSub, DoTest)
   end subroutine user_init_session
   !============================================================================
-  subroutine user_set_ICs(iBlock)
+  subroutine user_set_ics(iBlock)
 
     use ModAdvance,     ONLY: State_VGB
     use ModGeometry,    ONLY: r_BLK
@@ -181,7 +179,7 @@ contains
     integer :: i
     real :: InitialState_V(3), InitialRho, InitialExtraE, InitialP
     logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_set_ICs'
+    character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
@@ -205,7 +203,7 @@ contains
     end do
 
     call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_set_ICs
+  end subroutine user_set_ics
   !============================================================================
 
   subroutine user_initial_perturbation
@@ -546,9 +544,6 @@ contains
   end subroutine user_calc_sources
   !============================================================================
 
-  !----------------------------------------------!
-  !  subroutines containing energy source terms  !
-  !----------------------------------------------!
   subroutine get_vertical_damping(State_V, r, Runit_D, DampingRhoUr, &
        DampingEnergy)
     use ModPhysics,     ONLY: Si2No_V, UnitT_
@@ -558,10 +553,8 @@ contains
     real, intent(out):: DampingRhoUr, DampingEnergy
 
     real :: RhoUr
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_vertical_damping'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     if(r > r_photo)then
        RhoUr = sum(State_V(RhoUx_:RhoUz_)*Runit_D)
        DampingRhoUr  = -RhoUr/ &
@@ -572,7 +565,6 @@ contains
        DampingRhoUr  = 0.
        DampingEnergy = 0.
     end if
-    call test_stop(NameSub, DoTest)
   end subroutine get_vertical_damping
   !============================================================================
   subroutine get_radiative_cooling(State_V, TeSi, r, RadiativeCooling)
@@ -595,10 +587,8 @@ contains
     real :: CoolingTableOut_I(1)
     real, parameter :: RadNorm = 1e22
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_radiative_cooling'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     MassDensCgs     = State_V(rho_)/Si2No_V(UnitRho_)*1.e-3
     NumberDensCgs   = MassDensCgs/(mu*cProtonMass*1.e3)
 
@@ -624,7 +614,6 @@ contains
        RadiativeCooling = 0.
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_radiative_cooling
   !============================================================================
 
@@ -695,7 +684,6 @@ contains
 
     integer :: i, j, k
 
-    character (len=*), parameter :: Name='user_set_plot_var'
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -735,7 +723,7 @@ contains
        end do; end do; end do
     case default
        IsFound = .false.
-       call stop_mpi(Name//': unknown plot variables = '//NameVar)
+       call stop_mpi(NameSub//': unknown plot variables = '//NameVar)
     end select
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_plot_var
