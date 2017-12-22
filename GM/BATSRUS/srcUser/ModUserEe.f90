@@ -83,8 +83,6 @@ module ModUser
 contains
   !============================================================================
 
-
-
   subroutine user_read_inputs
     use ModMain,      ONLY: lverbose
     use ModProcMH,    ONLY: iProc
@@ -204,7 +202,7 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if((iProc==iProcTest) .and. (iBlock==1))then
+    if(iProc==iProcTest .and. iBlock==1)then
        write(*,*)'Initializing Flux Emergence problem'
        write(*,*)'Parameters:'
        write(*,*)'iProc = ',iProc
@@ -212,8 +210,6 @@ contains
             'InitialBz = ',InitialBz
        write(*,*)'InitialDensity = ',InitialDensity,'InitialTemperature = ', &
             InitialTemperature, ' in CGS units'
-    else
-       DoTest=.false.; DoTest=.false.
     end if
 
     if (Unused_B(iBlock)) RETURN
@@ -553,19 +549,14 @@ contains
   end subroutine user_calc_sources
   !============================================================================
 
-  !----------------------------------------------!
-  !  subroutines containing energy source terms  !
-  !----------------------------------------------!
   subroutine get_vertical_damping(State_V, Z_V, DampingRhoUz, DampingEnergy)
     use ModPhysics,     ONLY: Si2No_V, UnitT_
     use ModVarIndexes,  ONLY: rhoUz_, rho_, nVar
 
     real, intent(in) :: State_V(nVar), Z_V
     real, intent(out):: DampingRhoUz, DampingEnergy
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_vertical_damping'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     ! if(UseUniformInitialState)then
     !   DampingRhoUz  = -State_V(rhoUz_)/ &
     !        (TimeVerticalDamping*Si2No_V(UnitT_))
@@ -581,7 +572,6 @@ contains
        DampingRhoUz  = 0.
        DampingEnergy = 0.
     end if
-    call test_stop(NameSub, DoTest)
   end subroutine get_vertical_damping
   !============================================================================
   subroutine get_radiative_cooling(State_V, TeSi, Z_V, RadiativeCooling)
@@ -646,10 +636,8 @@ contains
     integer:: i,j,k
     real   :: MassDensFloor, EnergyFloor, EinternalSi, PressureSi
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_update_states'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     ! Define the minimum mass density and energy value
     ! Corresponding to ~NumberDensFloor and 200 K plasma
     MassDensFloor  = NumberDensFloor*1e6*cProtonMass*Si2No_V(UnitRho_)
@@ -676,7 +664,6 @@ contains
     ! calculate the total energy
     call calc_energy_cell(iBlock)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_update_states
   !============================================================================
 

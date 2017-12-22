@@ -419,9 +419,11 @@ contains
 
     integer:: nStepLonSun = -1
     real, save :: NormalSun_D(3)
-
+    logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+
     ! We can use the saved values if
     ! not too much time or time step has passed since the last save
     if(  use_block_data(iBlock)                                      .and. &
@@ -575,6 +577,8 @@ contains
 
     ! Store for future time steps
     call put_block_data(iBlock, nVar, VarsGhostFace_V)
+
+    call test_stop(NameSub, DoTest, iBlock)
 
   end subroutine user_set_face_boundary
   !============================================================================

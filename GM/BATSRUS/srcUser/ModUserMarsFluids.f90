@@ -233,9 +233,10 @@ contains
     real :: A0=-1143.33, A1=323.767, A2=-35.0431, A3=1.69073, A4=-0.0306575
     real :: B0=-1233.29, B1=347.764, B2=-37.4128, B3=1.79337, B4=-0.0322777
     real :: IonNeuRate_II(1:nIonFluid,1:nNuSpecies)
-    logical :: DoTestCell
 
     integer :: iLastGrid=-100, iLastDecomposition=-100
+
+    logical:: DoTestCell
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -1769,8 +1770,7 @@ contains
        call stop_mpi(NameSub//' invalid iBoundary value')
     end if
 
-    DoTestCell = DoTest &
-         .and. iFace==iTest .and. jFace==jTest .and. kFace==kTest
+    call test_start(NameSub, DoTestCell, iBlockBc, iFace, jFace, kFace)
 
     XFace = FaceCoords_D(1)
     YFace = FaceCoords_D(2)
@@ -1830,6 +1830,8 @@ contains
        VarsGhostFace_V(iRhoUy_I) = VarsGhostFace_V(iRhoUy_I) + 2*uRot_D(2)
        VarsGhostFace_V(iRhoUz_I) = VarsGhostFace_V(iRhoUz_I) + 2*uRot_D(3)
     end if
+
+    call test_stop(NameSub, DoTestCell, iBlockBc, iFace, jFace, kFace)
 
   end subroutine user_set_face_boundary
   !============================================================================
@@ -2038,7 +2040,6 @@ contains
     real ::CosSZA
     integer:: i, j, k
     logical:: DoTestCell
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_neutral_density'
     !--------------------------------------------------------------------------
