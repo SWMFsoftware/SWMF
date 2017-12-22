@@ -136,7 +136,7 @@ contains
           call set_grid_param(NameCommand)
        case('#DORUN')
           call read_var('DoRun',DoRun)
-       case('#SAVEPLOT')
+       case('#SAVEPLOT','#USEDATETIME')
           call set_write_param(NameCommand)
        case('#READMHDATA','#MHDATA')
           call set_read_mh_data_param(NameCommand)
