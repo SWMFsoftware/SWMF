@@ -25,12 +25,6 @@ F			UseDiffusion
 21			RBufferMax
 220			RMax
 
-#ORIGIN
-2.5			ROrigin
--10			LonMin
-25			LatMin
-10			LonMax
-90			LatMax
 
 #READMHDATA
 T
