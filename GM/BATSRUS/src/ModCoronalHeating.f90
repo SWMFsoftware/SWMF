@@ -272,16 +272,12 @@ contains
     real, intent(out) :: CoronalHeating
 
     real :: HeatFunction
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_coronal_heating'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     call get_heat_function(i, j, k, iBlock, HeatFunction)
 
     CoronalHeating = HeatFactor*HeatFunction
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_coronal_heating
   !============================================================================
 
@@ -298,10 +294,8 @@ contains
 
     real :: Bmagnitude, B_D(3)
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_function'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(UseB0) then
        B_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
     else
@@ -329,7 +323,6 @@ contains
        end if
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_heat_function
   !============================================================================
 
@@ -526,6 +519,7 @@ contains
 
     call test_stop(NameSub, DoTest)
   end subroutine read_corona_heating
+
   !============================================================================
   subroutine init_coronal_heating
     use ModPhysics, ONLY: Si2No_V, UnitEnergyDens_, UnitT_, UnitB_, UnitX_, &
@@ -587,11 +581,8 @@ contains
     real :: FractionB, Bcell
 
     real :: WaveDissipation_V(WaveFirst_:WaveLast_)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_cell_heating'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     if(UseB0)then
        B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock) + B0_DGB(x_:z_,i,j,k,iBlock)
     else
@@ -656,7 +647,6 @@ contains
 
     endif
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_cell_heating
   !============================================================================
 
@@ -794,11 +784,8 @@ contains
          CoronalHeating
 
     real :: EwavePlus, EwaveMinus, FullB_D(3), FullB, Coef
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_alfven_wave_dissipation'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     if(UseB0)then
        FullB_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
     else
@@ -819,7 +806,6 @@ contains
 
     CoronalHeating = sum(WaveDissipation_V)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine calc_alfven_wave_dissipation
   !============================================================================
 
@@ -839,11 +825,8 @@ contains
     real :: FullB_D(3), FullB, Coef
     real :: EwavePlus, EwaveMinus
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'turbulent_cascade'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     ! Low-frequency cascade due to small-scale nonlinearities
 
     if(UseB0)then
@@ -864,7 +847,6 @@ contains
 
     CoronalHeating = sum(WaveDissipation_V)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine turbulent_cascade
   !============================================================================
 
@@ -967,10 +949,8 @@ contains
     real, intent(out) :: GradLogAlfven_D(nDim)
 
     real, save :: LogAlfven_FD(0:nI+1,j0_:nJp1_,k0_:nKp1_,nDim)
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_grad_log_alfven_speed'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(IsNewBlockAlfven)then
        call get_log_alfven_speed
 
@@ -998,7 +978,6 @@ contains
        GradLogAlfven_D = GradLogAlfven_D/CellVolume_GB(i,j,k,iBlock)
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   contains
     !==========================================================================
 
@@ -1070,10 +1049,8 @@ contains
 
     real :: DxInvHalf, DyInvHalf, DzInvHalf
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_curl_u'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(IsCartesianGrid)then
        DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
        DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
@@ -1132,7 +1109,6 @@ contains
        CurlU_D(:) = 0.5*CurlU_D(:)/CellVolume_GB(i,j,k,iBlock)
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_curl_u
   !============================================================================
 
@@ -1166,11 +1142,8 @@ contains
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingTotal
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     if(UseStochasticHeating)then
        ! Damping rates and wave energy partition based on Chandran et al.[2011]
 
@@ -1291,7 +1264,6 @@ contains
        call stop_mpi(NameSub//' Unknown heat partitioning')
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine apportion_coronal_heating
   !============================================================================
 

@@ -352,14 +352,11 @@ contains
     logical :: UseFirstOrderBc = .false.
     logical :: UseLeftStateOnly = .false., UseRightStateOnly = .false.
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_flux'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    !\
     ! Use first order flux across the computational domain boundary with
     ! threaded-field-line-model
-    !/
+
     if(UseFieldLineThreads)then
        UseFirstOrderBc = far_field_BCs_BLK(iBlock)
     else
@@ -463,7 +460,7 @@ contains
     else
        HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
     end if
-    call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine get_heat_flux
   !============================================================================
 
@@ -488,11 +485,8 @@ contains
     real :: B_D(3), Bnorm, Bunit_D(3), TeSi, Te
     real :: HeatCoefSi, HeatCoef
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_heat_cond_coef'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
     if(UseB0)then
        select case(iDir)
        case(1)
@@ -581,7 +575,6 @@ contains
        HeatCond_D = HeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_heat_cond_coef
   !============================================================================
 
@@ -602,10 +595,8 @@ contains
     real :: HeatCondL_D(3), HeatCondR_D(3), HeatCond_D(3), HeatCondFactor
     real :: FaceGrad_D(3), CvL, CvR
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_ion_heat_flux'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(IsNewBlockIonHeatCond)then
        if(UseIdealEos .and. .not.DoUserIonHeatConduction)then
           do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
@@ -646,7 +637,6 @@ contains
     end if
     HeatCondCoefNormal = sum(HeatCond_D*Normal_D)/min(CvL,CvR)
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_ion_heat_flux
   !============================================================================
 
@@ -667,10 +657,8 @@ contains
     real :: B_D(3), Bnorm, Bunit_D(3), Ti
     real :: IonHeatCoefSi, IonHeatCoef
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_ion_heat_cond_coef'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(UseB0)then
        select case(iDir)
        case(1)
@@ -704,7 +692,6 @@ contains
 
     HeatCond_D = IonHeatCoef*sum(Bunit_D*Normal_D)*Bunit_D
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_ion_heat_cond_coef
   !============================================================================
 
@@ -739,8 +726,9 @@ contains
 
   end function heat_cond_factor
   !============================================================================
-  ! Non-split operator, (almost) explicit ei heat energy exchange
   subroutine calc_ei_heat_exchange
+
+    ! Non-split operator, (almost) explicit ei heat energy exchange
 
     use ModMain,       ONLY: Cfl, nBlock, Unused_B, nI, nJ, nK
     use ModGeometry,   ONLY: true_cell
@@ -836,10 +824,10 @@ contains
   end subroutine calc_ei_heat_exchange
   !============================================================================
 
-  ! Operator split, semi-implicit subroutines
-
   subroutine get_impl_heat_cond_state(SemiAll_VCB, DconsDsemiAll_VCB, &
        DeltaSemiAll_VCB, DoCalcDeltaIn)
+
+    ! Operator split, semi-implicit subroutines
 
     use ModVarIndexes,   ONLY: nVar, Rho_, p_, Pe_, Ppar_, Ehot_
     use ModAdvance,      ONLY: State_VGB, UseIdealEos, UseElectronPressure, &

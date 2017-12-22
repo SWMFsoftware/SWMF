@@ -115,10 +115,8 @@ contains
     real :: r
     real :: GammaCollisionless
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'get_gamma_collisionless'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest)
     r = sqrt(sum(x_D**2))
 
     if(UseElectronPressure)then
@@ -143,7 +141,6 @@ contains
             exp(-((r-rCollisional)/(rCollisionless-rCollisional))**2)
     end if
 
-    call test_stop(NameSub, DoTest)
   end subroutine get_gamma_collisionless
   !============================================================================
 
