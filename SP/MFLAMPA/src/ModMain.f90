@@ -5,10 +5,11 @@ module SP_ModMain
   use SP_ModProc, ONLY: iProc
   use SP_ModSize, ONLY: nDim, nLat, nLon, nNode, nParticleMax, &
        Particle_, OriginLat_, OriginLon_
-  use SP_ModWrite, ONLY: set_write_param, write_output, NamePlotDir
+  use SP_ModWrite, ONLY: set_write_param, write_output, finalize_write,&
+       NamePlotDir
   use SP_ModReadMhData, ONLY: &
        set_read_mh_data_param, init_read_mh_data, read_mh_data, &
-       offset, DoReadMhData
+       finalize_read_mh_data, offset, DoReadMhData
   use SP_ModRestart, ONLY: save_restart=>write_restart, read_restart
   use SP_ModGrid, ONLY: nVar, copy_old_state,&
        LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
@@ -52,7 +53,7 @@ module SP_ModMain
 
   ! Methods and variables from this module 
   public:: &
-       read_param, initialize, run, check, save_restart,      &
+       read_param, initialize, finalize, run, check, save_restart, &
        TimeGlobal, iIterGlobal, DataInputTime, DoRestart,     & 
        UseTiming, nTiming, nTimingDepth, TimingStyle,         &
        IsLastRead, UseStopFile, CpuTimeMax, TimeMax, nIterMax,&
@@ -226,6 +227,17 @@ contains
     if(DoRestart) call read_restart
     DataInputTime = TimeGlobal
   end subroutine initialize
+
+  !============================================================================
+
+  subroutine finalize
+    ! finalize the model
+    character(LEN=*),parameter:: NameSub='SP:finalize'
+    !------------------------------------------------------------------------
+    call finalize_write
+    call finalize_read_mh_data
+  end subroutine finalize
+
   !============================================================================
 
   subroutine run(TimeInOut, TimeLimit)

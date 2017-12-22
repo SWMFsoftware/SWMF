@@ -17,7 +17,8 @@ module SP_ModReadMhData
 
   use ModPlotFile, ONLY: read_plot_file
 
-  use ModUtilities, ONLY: fix_dir_name
+  use ModUtilities, ONLY: fix_dir_name, open_file, close_file
+  use ModIoUnit, ONLY: io_unit_new
 
   implicit none
 
@@ -28,13 +29,15 @@ module SP_ModReadMhData
 
   public:: &
        set_read_mh_data_param, init_read_mh_data, read_mh_data, &
-       offset, DoReadMhData
+       finalize_read_mh_data, offset, DoReadMhData
 
 
   !\
   !----------------------------------------------------------------------------
   ! the input directory
   character (len=100):: NameInputDir=""
+  ! the name with list of file tags
+  character (len=100):: NameTagFile=""
   ! the input file name base
   character (len=100):: NameFileBase="MH_data"
   character (len=4)  :: NameFormat
@@ -51,9 +54,8 @@ module SP_ModReadMhData
   integer:: nFileRead = 0
   ! index of a current input file
   integer:: iFileRead
-
-  ! time/iteration stamps of input files
-  character(len=17), allocatable:: NameFileStamp_I(:)
+  ! IO unit for file with list of tags
+  integer:: iIOTag
 
   logical:: DoReadMhData = .false.
   !/
@@ -97,13 +99,8 @@ contains
        ! number of input files
        call read_var('nFileRead', nFileRead)
 
-       ! prepare the container for file names
-       allocate(NameFileStamp_I(nFileRead))
-       
-       ! list of files
-       do iFile = 1, nFileRead
-          call read_var('NameFile', NameFileStamp_I(iFile))
-       end do
+       ! name of the file with the list of tags
+       call read_var('NameTagFile', NameTagFile)
     end select
   end subroutine set_read_mh_data_param
 
@@ -120,9 +117,20 @@ contains
     if(nFileRead <= 0)&
          call CON_stop(NameSub//&
          " invalid number of input files, change PARAM.in")
+    ! open the file with the list of tags
+    iIOTag = io_unit_new()
+    call open_file(iUnitIn=iIOTag, &
+         file=trim(NameInputDir)//trim(NameTagFile), status='old')
     ! read the first input file
     call read_mh_data(TimeGlobal, DoOffsetIn = .false.)
   end subroutine init_read_mh_data
+
+  !============================================================================
+
+  subroutine finalize_read_mh_data
+    ! close currentl opend files
+    if(DoReadMhData) call close_file(iUnitIn=iIOTag)
+  end subroutine finalize_read_mh_data
 
   !============================================================================
 
@@ -151,8 +159,8 @@ contains
     integer, parameter:: RShock_ = Z_ + 2
     ! additional parameters of lines
     real:: Param_I(LagrID_:RShock_)
-    ! timestamp
-    character(len=8):: StringTime
+    ! timetag
+    character(len=20):: StringTag
     character(len=*), parameter:: NameSub = "SP:read_mh_data"
     !------------------------------------------------------------------------
     ! check whether need to apply offset, default is .true.
@@ -165,15 +173,18 @@ contains
     ! increase file counter
     iFileRead = iFileRead + 1
 
+    ! get the tag for files
+    read(iIOTag,'(a)') StringTag
+
     ! read the data
     do iBlock = 1, nBlock
        iNode = iNode_B(iBlock)
        call get_node_indexes(iNode, iLon, iLat)
-
+       
        ! set the file name
        write(NameFile,'(a,i3.3,a,i3.3,a)') &
             trim(NameInputDir)//trim(NameFileBase)//'_',iLon,'_',iLat,&
-            '_'//NameFileStamp_I(iFileRead)//NameFormat
+            '_'//trim(StringTag)//NameFormat
 
        ! read the header first
        call read_plot_file(&

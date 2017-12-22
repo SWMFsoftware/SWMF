@@ -11,8 +11,8 @@ program MFLAMPA
        SP_read_param => read_param, &
        SP_check      => check, &
        SP_initialize => initialize, &
-       SP_run        => run!, &
-       !SP_finalize   => finalize
+       SP_run        => run, &
+       SP_finalize   => finalize
 
   use ModReadParam, ONLY: read_file, read_init
   use ModMpi
@@ -120,7 +120,7 @@ program MFLAMPA
   if(nTiming > -3)call timing_report_total
 
   !Finish writing to log file
-  !call SP_finalize
+  call SP_finalize
 
   !\
   ! Touch MFLAMPA.SUCCESS

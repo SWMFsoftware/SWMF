@@ -22,11 +22,14 @@ module SP_ModWrite
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock, & 
        Energy_I, Momentum_I, TotalEnergy_I, Distribution_IIB
 
+  use SP_ModProc, ONLY: iComm, iProc, nProc
+
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
   use ModUtilities, ONLY: split_string, lower_case, open_file, close_file
 
-  use ModIoUnit,    ONLY: UnitTmp_
+  use ModIoUnit, ONLY: UnitTmp_
+
   use ModTimeConvert, ONLY: time_real_to_int
 
   implicit none
@@ -34,8 +37,8 @@ module SP_ModWrite
   SAVE
 
   private ! except
- 
-  public:: set_write_param, write_output, NamePlotDir
+
+  public:: set_write_param, write_output, finalize_write, NamePlotDir
 
   type TypeOutputFile
      !\
@@ -106,9 +109,20 @@ module SP_ModWrite
   !----------------------------------------------------------------------------
   ! auxilary array, used to write data on a sphere
   integer:: iNodeIndex_I(nNode)
+  !----------------------------------------------------------------------------
+  ! info for MH1D header and tag list
+  logical:: DoWriteHeader = .false.
+  ! number of different output file tags
+  integer:: nTag = 0 
+  ! name of the header file
+  character(len=100):: NameHeaderFile = 'MH_data.H'
+  character(len=20 ):: TypeHeaderFile
+  ! name of the tag list file
+  character(len=100):: NameTagFile = 'MH_data.lst'
+
   !/
 contains
-  
+
   subroutine set_write_param
     use ModReadParam, ONLY: read_var
     ! set parameters of output files: file format, kind of output etc.
@@ -199,6 +213,8 @@ contains
           end do
           File_I(iFile) % NameVarPlot = &
                trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
+          TypeHeaderFile = File_I(iFile) % TypeFile
+          DoWriteHeader = .true.
        case(MH2D_)
           call process_mh
           ! prepare the output data container
@@ -228,6 +244,13 @@ contains
                Buffer_II(nP,1:nParticleMax))
        end select
     end do
+
+    !\
+    ! Check consistency
+    !/
+    ! only 1 MH1D file can be requested
+    if(count(File_I(1:nFileOut) % iKindData == MH1D_,1) > 1)&
+         call CON_stop(NameSub//": only one MH1D output file can be requested")
 
   contains
     subroutine process_mh
@@ -321,6 +344,14 @@ contains
 
   !============================================================================
 
+  subroutine finalize_write
+    ! close currently opened output units
+    !----------------------------------------------------------------
+    if(DoWriteHeader) call write_mh_1d_header
+  end subroutine finalize_write
+
+  !============================================================================
+
   subroutine write_output(IsInitialOutputIn)
     use ModConst,     ONLY: cLightSpeed
     ! write the output data
@@ -356,10 +387,9 @@ contains
        ! during initial call only background 1D data is printed
        if(IsInitialOutput .and. iKindData /= MH1D_)&
             iKindData = -1
-           
+
        select case(iKindData)
        case(MH1D_)
-          call write_mh_1d_header
           call write_mh_1d
        case(MH2D_)
           call write_mh_2d
@@ -371,72 +401,7 @@ contains
     end do
 
   contains
-
-    subroutine write_mh_1d_header
-      use SP_ModProc, ONLY: iProc
-      ! write the header file that contains necessary information for reading
-      ! input files in a separate run
-      !
-      ! number of different output file stamps so far
-      integer, save:: nStamp = 0 
-      ! loop variable
-      integer:: iStamp
-      ! stamps
-      character(len=8):: StringTime
-      character(len=17),allocatable,save:: StringStamp_I(:), StringAux_I(:)
-      ! name of the header file
-      character(len=100):: NameFile, NameHeaderFile = 'MH_data.H'
-      character(len=*), parameter:: NameSub='write_mh_1d_header'
-      !------------------------------------------------------------------------
-      ! performed on root proc only
-      if (iProc/=0) RETURN
-      ! full name of the header file
-      NameFile = trim(NamePlotDir)//trim(NameHeaderFile)
-
-      ! check the size of the container with files' time-iteration stamps
-      if(.not.allocated(StringStamp_I))then
-         allocate(StringStamp_I(1))
-      end if
-      if(ubound(StringStamp_I,1) == nStamp)then
-         allocate(StringAux_I(nStamp))
-         StringAux_I(1:nStamp) = StringStamp_I(1:nStamp)
-         deallocate(StringStamp_I)
-         allocate(StringStamp_I(2*nStamp))
-         StringStamp_I(1:nStamp) = StringAux_I(1:nStamp)
-         deallocate(StringAux_I)
-      end if
-
-      ! increase the file counter
-      nStamp = nStamp + 1
-
-      ! create time-iteration stamp
-      call get_time_string(TimeGlobal, StringTime)
-      write(StringStamp_I(nStamp),'(a,i6.6)') &
-           't'//StringTime//'_n',iIterGlobal
-
-      ! write the header file
-      call open_file(file=NameFile, NameCaller=NameSub)
-      write(UnitTmp_,*)
-      write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
-      write(UnitTmp_,'(i8,a32)') nParticleMax,'nParticleMax'
-      write(UnitTmp_,'(i8,a32)') nLon,     'nLon'
-      write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
-      write(UnitTmp_,*)
-      write(UnitTmp_,'(a)')'#MHDATA'
-      write(UnitTmp_,'(a,a22)')trim(File_I(iFile)%TypeFile),'  TypeFile'
-      write(UnitTmp_,'(i8,a32)')nStamp,'nFileRead'
-      do iStamp = 1, nStamp
-         write(UnitTmp_,'(a,a18)')StringStamp_I(iStamp),'NameFileStamp'
-      end do
-      write(UnitTmp_,*)
-      write(UnitTMP_,'(a)')'#END'
-      write(UnitTmp_,*)
-      call close_file
-
-    end subroutine write_mh_1d_header
-
-    !========================================================================
-
+    
     subroutine write_mh_1d
       ! write output with 1D MH data in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
@@ -459,9 +424,28 @@ contains
       real   :: RShock
       integer, parameter:: RShock_ = Z_ + 2
       real :: Param_I(LagrID_:RShock_)
-      ! timestamp
+      ! timetag
       character(len=8):: StringTime
+      character(len=*), parameter:: NameSub='write_mh_1d'
       !------------------------------------------------------------------------
+      !\
+      !  Update number of time tags and write to tag list file
+      !/
+      if(iProc==0)then
+         ! increase the file counter
+         nTag = nTag + 1
+         ! create time-iteration tag
+         call get_time_string(TimeGlobal, StringTime)
+         ! add to the tag list file
+         NameFile = trim(NamePlotDir)//trim(NameTagFile)
+         call open_file(file=NameFile, position='append', status='unknown', &
+              NameCaller=NameSub)
+         write(UnitTmp_,'(a,i6.6)') 't'//StringTime//'_n',iIterGlobal
+         call close_file
+      end if
+      !\
+      ! Write ouput files themselves
+      !/
       nVarPlot = File_I(iFile) % nVarPlot
       StringHeader = &
            'MFLAMPA: data along a field line; '//&
@@ -512,10 +496,9 @@ contains
     end subroutine write_mh_1d
 
     !=========================================================================
-
+    
     subroutine write_mh_2d
       use ModMpi
-      use SP_ModProc,     ONLY: iComm, nProc, iProc
       ! write output with 2D MH data in the format to be read by IDL/TECPLOT;
       ! single file is created for all field lines, name format is
       ! MH_data_R=<Radius [AU]>_t<ddhhmmss>_n<iIter>.{out/dat}
@@ -540,13 +523,14 @@ contains
       integer:: iError
       ! skip a field line if it fails to reach radius of output sphere
       logical:: DoPrint_I(nNode)
-      ! timestamp
+      ! timetag
       character(len=8):: StringTime
+      character(len=*), parameter:: NameSub='write_mh_2d'
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile) % nVarPlot
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
-      
+
       ! reset, all field lines are printed unless fail to reach output sphere
       DoPrint_I = .true.
 
@@ -596,7 +580,7 @@ contains
          end do
 
       end do
-      
+
       ! gather interpolated data on the source processor
       if(nProc > 1)then
          if(iProc==0)then
@@ -635,12 +619,12 @@ contains
     end subroutine write_mh_2d
 
     !=========================================================================
-
+    
     subroutine write_mh_time
       ! write output w/time series MH data in format to be read by IDL/TECPLOT;
       ! a file is created for each field lines, name format is
       ! MH_data_R=<Radius [AU]>_<iLon>_<iLat>.{out/dat}
-      ! the file has no timestamp as it is updated during the run
+      ! the file has no timetag as it is updated during the run
       !------------------------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
@@ -664,11 +648,11 @@ contains
       integer:: nDataLine
       ! current size of the buffer
       integer:: nBufferSize
+      character(len=*), parameter:: NameSub='write_mh_time'
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile) % nVarPlot
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
-
 
       ! go over all lines on the processor and find the point of intersection
       ! with output sphere if present
@@ -710,7 +694,7 @@ contains
          ! if file already exists -> read its content
          nDataLine = 0
          if(.not.File_I(iFile)%IsFirstCall)then
-            
+
             ! first, determine its size
             call read_plot_file(&
                  NameFile   = NameFile, &
@@ -769,7 +753,7 @@ contains
     end subroutine write_mh_time
 
     !=========================================================================
-    
+
     subroutine write_distr_1d
       ! write file with distribution in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
@@ -786,8 +770,9 @@ contains
       ! scale and conversion factor
       real:: Scale_I(0:nP+1), Factor_I(0:nP+1)
       real:: Unity_I(0:nP+1) = 1.0
-      ! timestamp
+      ! timetag
       character(len=8):: StringTime
+      character(len=*), parameter:: NameSub='write_distr_1d'
       !------------------------------------------------------------------------
       select case(File_I(iFile) % iScale)
       case(Momentum_)
@@ -810,7 +795,7 @@ contains
 
          ! get max particle indexes on this field line
          iLast  = nParticle_B(   iBlock)
-         
+
          do iParticle = 1, nParticleMax
             ! reset values outside the line's range
             if(iParticle > iLast)then
@@ -843,10 +828,43 @@ contains
               NameVarIn  = File_I(iFile) % NameVarPlot, &
               VarIn_II   = File_I(iFile) % Buffer_II(:,1:iLast) &
               )
-      end do     
+      end do
     end subroutine write_distr_1d
 
   end subroutine write_output
+
+  !============================================================================
+
+  subroutine write_mh_1d_header
+    ! write the header file that contains necessary information for reading
+    ! input files in a separate run
+    !
+    ! full name of the header file
+    character(len=100):: NameFile
+    character(len=*), parameter:: NameSub='write_mh_1d_header'
+    !------------------------------------------------------------------------
+    ! performed on root proc only
+    if (iProc/=0) RETURN
+
+    ! full name of the header file
+    NameFile = trim(NamePlotDir)//trim(NameHeaderFile)
+    ! write the header file
+    call open_file(file=NameFile, NameCaller=NameSub)
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
+    write(UnitTmp_,'(i8,a32)') nParticleMax,'nParticleMax'
+    write(UnitTmp_,'(i8,a32)') nLon,     'nLon'
+    write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#MHDATA'
+    write(UnitTmp_,'(a,a)')trim(TypeHeaderFile),'  TypeFile'
+    write(UnitTmp_,'(i8,a32)')nTag,'nFileRead'
+    write(UnitTmp_,'(a,a)')trim(NameTagFile), '  NameTagFile'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#END'
+    write(UnitTmp_,*)
+    call close_file
+  end subroutine write_mh_1d_header
 
   !==========================================================================
 

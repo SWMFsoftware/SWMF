@@ -6,7 +6,7 @@ module SP_wrapper
 
   use ModConst, ONLY: rSun, cProtonMass, energy_in
   use SP_ModMain, ONLY: &
-       run, initialize, check, read_param, save_restart, &
+       run, initialize, finalize, check, read_param, save_restart, &
        get_node_indexes, DoRestart, &
        nDim, nLat, nLon, nBlock, nParticleMax, &
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
@@ -143,6 +143,7 @@ contains
          RETURN
     TimeAux = TimeSimulation
     call run(TimeAux, TimeSimulation)
+    call finalize
   end subroutine SP_finalize
 
   !=========================================================
