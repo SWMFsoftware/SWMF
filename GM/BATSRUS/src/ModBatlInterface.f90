@@ -30,13 +30,10 @@ contains
     integer:: iBlock, iError
     real   :: CellSize1Root
 
-    logical:: DotestMe
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_batsrus_grid'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
-
     ! Tell if the grid and/or the tree has changed
     if(IsNewDecomposition) iNewDecomposition = mod(iNewDecomposition+1,10000)
     if(IsNewTree) iNewGrid = mod( iNewGrid+1, 10000)
@@ -402,10 +399,8 @@ contains
     integer:: nCellNew
     real:: WeightTotal
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'interpolate_grid_amr_gc'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     ! call interpolation routine from BATL_grid
     call BATL_interpolate(XyzIn_D, iBlock, nCell, iCell_II, Weight_I)
 
@@ -443,7 +438,6 @@ contains
        if(present(IsBody)) IsBody = .false.
     end if
 
-    call test_stop(NameSub, DoTest, iBlock)
   end subroutine interpolate_grid_amr_gc
   !============================================================================
 
