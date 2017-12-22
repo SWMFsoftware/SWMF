@@ -77,7 +77,9 @@ module SP_ModAdvance
   !/
   !\
   !!!!!!!!!!!!!!!!!!!!!!!!!Local parameters!!!!!!!!!!!!!!!
-  ! level of turbulence
+  real:: CFL=0.9        !Controls the maximum allowed time step
+  ! level of turbulence: Ratio of regular to irregual magnetic field,
+  ! squared. 
   real, parameter    :: BOverDeltaB2 = 1.0
   !\
   integer, public, parameter :: nWidth = 50
@@ -147,9 +149,12 @@ contains
     ! uniform backgound while visualizing this quantity
     do iBlock = 1, nBlock
        do iParticle = 1, nParticleMax
+          ! Overall density of the fast particles is of the order 
+          ! of 10^-6 m^-3. Integral flux is less than 100 per
+          ! (m^2 ster s). Differential background flux is constant.
           do iP = 0, nP +1
-             Distribution_IIB(iP,iParticle,iBlock) = &
-                  cTiny/MomentumMax/Momentum_I(iP)**2
+             Distribution_IIB(iP,iParticle,iBlock) = 0.10*&
+                  cTiny/(MomentumMax*Momentum_I(iP)**2)
           end do
        end do
     end do
@@ -162,7 +167,8 @@ contains
     ! from TimeGlobal to TimeLimit
     ! Prototype: FLAMPA/src/SP_main, case("RUN"), Roussev&Sokolov2008
     ! Version: Borovikov&Sokolov, Dec.19 2017, distinctions:
-    ! (1) no turbulence (2) new shock finder and (3) new steepen_shock
+    ! (1) no turbulence (2) new shock finder moved to SP_ModMain,
+    ! and (3) new steepen_shock
     use SP_ModDiffusion,    ONLY: advance_diffusion
     use SP_ModLogAdvection, ONLY: advance_log_advection
     use ModConst,           ONLY: cMu, cProtonMass, cGyroradius, RSun
@@ -170,24 +176,25 @@ contains
     real, intent(in):: TimeLimit
     !\
     ! Loop variables
-    integer:: iP, iParticle, iBlock
+    integer  :: iP, iParticle, iBlock
     !/
     !\
     !For a given block: nParticle_B, iShock_IB:
-    integer:: iEnd, iShock, iShockOld
+    integer  :: iEnd, iShock, iShockOld
     !/
     !\
     ! Upper limit and variable for the Loop which makes
     ! a time step so short that the shock wave passes
     ! a single grid interval per a progress step:
-    integer:: iProgress, nProgress
-    !Subcycling is not applied, obsolete:
-    integer :: iStep
-    integer, parameter:: nStep = 1
+    integer  :: iProgress, nProgress
+    ! Upper limit and variable for the loop which makes a 
+    ! time step so short that the CFL for the (explicit) 
+    ! advection is less that CFL declared abobe. 
+    integer  :: iStep, nStep
     !/
     !\
     ! coefficient to interpolate  "old" and "new"
-    real   :: Alpha
+    real     :: Alpha
     !/
     !\
     ! Lower imit to floor the spatial diffusion coefficient For a
@@ -203,13 +210,24 @@ contains
     ! should be given by the product of shock wave speed  
     ! and local grid spacing. 
     real, parameter::  DiffCoeffMin =1.0E+04 /RSun
-    real:: DtFull, DtProgress, Dt
-    real:: MachAlfven
-    real   :: MomentumRatio !!!!NEED TO CHECK!!!
+    ! Full difference between DataInputTime and TimeGlobal
+    real      :: DtFull
+    ! Time step in the PROGRESS Loop, DtFull/nProgress
+    real      :: DtProgress 
+    ! Time step in the STEP Loop, DtProgress/nStep
+    real      :: Dt
+    real      :: MachAlfven
     !\
-    !Local arrays to store the state vector
-    real, dimension(1:nParticleMax):: Radius_I, U_I
-    real, dimension(1:nParticleMax):: Rho_I, RhoOld_I, B_I, BOld_I 
+    ! Local arrays to store the state vector
+    ! Heliocentric distance, in R_S
+    real      :: Radius_I(1:nParticleMax)
+    ! Plasma speed, [m/s]
+    real      :: U_I(     1:nParticleMax)
+    ! Plasma density, [a.m.u./m3]
+    real, dimension(1:nParticleMax):: Rho_I, RhoOld_I
+    ! Interplanetary magnetic field, [T]
+    real, dimension(1:nParticleMax):: B_I, BOld_I
+    ! Lagrangian derivatives 
     real, dimension(1:nParticleMax):: DLogRho_I, FermiFirst_I
     !\
     ! Coefficients in the diffusion operator
@@ -270,17 +288,21 @@ contains
           ! first order Fermi acceleration for the current line
           !--------------------------------------------------------
           FermiFirst_I(1:iEnd) = DLogRho_I(1:iEnd) / (3*DLogP)
-
+          !\
+          ! Check if the number of time steps is greater than 1:
+          !/
+          nStep = 1+int(maxval(abs(FermiFirst_I(2:iEnd)))/CFL)
           RhoOld_I(1:iEnd) = Rho_I(1:iEnd)
           BOld_I(  1:iEnd) = B_I(  1:iEnd)
 
           Dt = DtProgress
-          if(nStep>1)then !Currently not used
+          if(nStep>1)then 
              Dt = Dt / nStep
              FermiFirst_I(1:iEnd) = FermiFirst_I(1:iEnd) / nStep
           end if
-
           ! compute diffusion along the field line
+          ! we calculate: "Outer diffusion"=B_I and
+          ! "Inner diffusion at the injection energy (iP=0)
           call set_diffusion
           STEP:do iStep = 1, nStep !Currently nStep = 1
              ! update bc for advection
@@ -293,18 +315,21 @@ contains
                      Distribution_IIB(0:nP+1,iParticle,iBlock),&
                      .false.)
              end do
-
+             if(.not.UseDiffusion) CYCLE STEP 
              ! diffusion along the field line
-             if(.not.UseDiffusion) CYCLE 
              MOMENTUM:do iP = 1, nP
+                ! For each momentum account for dependence
+                ! of the diffusion coefficient on momentum
+                ! D\propto r_L*v\propto Momentum**2/TotalEnergy
                 DInner_I(1:iEnd) = &
                      DInnerInj_I(1:iEnd)*Momentum_I(iP)**2*    &
                      TotalEnergyInj/(TotalEnergy_I(iP)*MomentumInj**2)
                 if(UseRealDiffusionUpstream)then
                    where(Radius_I(1:iEnd) > 0.9*Radius_I(iShock))
-                      ! upstream:
-                      DInner_I(1:iEnd) = &
-                           DInner_I(1:iEnd)/MomentumRatio**(2.0/3)
+                      ! upstream: reset the diffusion coefficient to
+                      ! (1/6)(0.4AU)*(R/1AU)*v*(pc/1GeV)^(1/3) 
+                      DInner_I(1:iEnd) = DInner_I(1:iEnd)/&
+                           (Momentum_I(iP)/MomentumInj)**(2.0/3)
                    end where
                 end if
                 DInner_I(1:iEnd) = max(DInner_I(1:iEnd),&
@@ -376,6 +401,10 @@ contains
       !-----------------------------------------------------------
       DOuter_I(1:iEnd) = B_I(1:iEnd)
       !DInner = DiffusionCoeff/B_)
+      !\
+      ! Compute the diffusion coefficient at the
+      ! injection energy:
+      !/
       if(.not.UseRealDiffusionUpstream)then
          ! Sokolov et al., 2004: eq (4), 
          ! note: Momentum = TotalEnergy * Vel / C**2
@@ -388,22 +417,28 @@ contains
          ! diffusion is different up- and down-stream
          ! Sokolov et al. 2004, paragraphs before and after eq (4)
          where(Radius_I(1:iEnd) > 0.9 * Radius_I(iShock))
-            ! upstream:
+            ! upstream: reset the diffusion coefficient to 
+            ! (1/6)(0.4AU)*(R/1AU)*v*(pc/1GeV)^(1/3) 
             DInnerInj_I(1:iEnd) = &
-                 0.2/3.0 * Radius_I(1:iEnd) / RSun * &
+                 0.20/3.0 * Radius_I(1:iEnd)/RSun*&
                  (MomentumInj*cLightSpeed**2)/(B_I(1:iEnd)*TotalEnergyInj)*&
                  (MomentumInj*cLightSpeed/energy_in('GeV'))**(1.0/3)
          elsewhere
-            ! downstream
+            ! downstream we use the estimate for (\delta B/B) 
+            ! (see detail in Sokolov, 2004):
+            ! (\delta B/B)**2 = (\delta B/B)**2_SW*(R/R_SW)
+            ! where SW means "shock wave". For the SW we use an
+            ! estimate from  from Lee (1983): 
+            ! (\delta B/B)**2_SW = const(=10 below)*CInj*MachAlfven
             DInnerInj_I(1:iEnd)=&
-                 cGyroRadius*(MomentumInj*cLightSpeed)**2 / RSun**2/&
-                 (B_I(1:iEnd)**2 * TotalEnergyInj)/&
-                 (10.0*CInj*MachAlfven) / &
+                 cGyroRadius*(MomentumInj*cLightSpeed)**2/RSun**2/&
+                 (B_I(1:iEnd)**2*TotalEnergyInj)/&
+                 (10.0*CInj*MachAlfven)/&
                  min(1.0, 1.0/0.9 * Radius_I(1:iEnd)/Radius_I(iShock))
          end where
       end if
 
-      ! set the boundary condition for diffusion
+      ! set the left boundary condition for diffusion
       Distribution_IIB(1:nP+1, 1, iBlock) = &
            Distribution_IIB(0, 1, iBlock) * &
            (Momentum_I(0)/Momentum_I(1:nP+1))**SpectralIndex
