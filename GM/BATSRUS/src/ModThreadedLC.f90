@@ -1288,6 +1288,7 @@ contains
           RETURN
        end if
     end if
+    call timing_start('set_thread_bc')
     !\
     ! Start from floating boundary values
     !/
@@ -1452,7 +1453,11 @@ contains
        end if
     end do; end do
     BoundaryThreads_B(iBlock)%iAction = Done_
+
+    call timing_stop('set_thread_bc')
+
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine set_field_line_thread_bc
   !============================================================================
 end module ModThreadedLC
