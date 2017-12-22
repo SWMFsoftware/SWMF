@@ -1096,8 +1096,8 @@ The echoing either goes to the standard output or into the log files
 depending on the UseStdout variable, which can be set in the
 #STDOUT command.
 
-The default value for DoEcho is .false., but it is a good idea to
-set it to true at the beginning of the PARAM.in file.
+The default value for DoEcho is true and it is a good idea
+to leave it that way.
 </command>
 
 <command name="FLUSH">
