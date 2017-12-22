@@ -13,7 +13,8 @@ module SP_ModReadMhData
        nParticle_B, State_VIB, NameVar_V, &
        LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
 
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, Distribution_IIB
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, &
+       Distribution_IIB, DoTraceShock
 
   use ModPlotFile, ONLY: read_plot_file
 
@@ -213,11 +214,9 @@ contains
 
        nParticle_B(  iBlock) = nParticleInput
 
-       
+      
        !Parameters
        FootPoint_VB(LagrID_:Z_,iBlock) = Param_I(LagrID_:Z_)
-       ! shock location
-       iShock_IB(Shock_,iBlock) = nint(Param_I(RShock_-1))
 
        ! apply offset
        if(iOffset==0) CYCLE
@@ -292,7 +291,8 @@ contains
     else
        call CON_stop('No algorithm for iOffset >1 in '//NameSub)
     end if
-    iShock_IB(ShockOld_, iBlock) = &
+    if(DoTraceShock)&
+         iShock_IB(ShockOld_, iBlock) = &
          iShock_IB(ShockOld_, iBlock) + iOffset
     nParticle_B(iBlock) = nParticle_B( iBlock) + iOffset
   end subroutine offset

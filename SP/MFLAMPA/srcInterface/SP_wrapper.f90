@@ -10,9 +10,9 @@ module SP_wrapper
        get_node_indexes, DoRestart, &
        nDim, nLat, nLon, nBlock, nParticleMax, &
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
-       iGridGlobal_IA, iShock_IB, State_VIB, Distribution_IIB,&
+       iGridGlobal_IA, State_VIB, Distribution_IIB,&
        iNode_B, TypeCoordSystem, FootPoint_VB, DataInputTime, &
-       Block_, Proc_, nParticle_B, Shock_, Length_,&
+       Block_, Proc_, nParticle_B, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
        Wave1_, Wave2_, &
        DoReadMhData
@@ -456,8 +456,6 @@ contains
           !/
           iEnd   = nParticle_B(iBlock) 
           iOffset = 1 - iBegin
-          iShock_IB(Shock_, iBlock) = iShock_IB(Shock_, iBlock) +&
-               iOffset
           iOffset_B(iBlock) = iOffset
           State_VIB(     LagrID_:Z_, 1:iEnd+iOffset, iBlock) = &
                State_VIB(LagrID_:Z_, iBegin:iEnd,    iBlock)
@@ -559,7 +557,6 @@ contains
               FootPoint_VB(LagrID_:Z_, iBlock) * (1.0 + cTol)
          State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
          FootPoint_VB(LagrID_,iBlock) = State_VIB(LagrID_, 1, iBlock) - 1.0
-         iShock_IB(Shock_, iBlock) = iShock_IB(Shock_, iBlock) + 1
       end do
     end subroutine append_particles
   !==============================

@@ -253,8 +253,13 @@ contains
        ! find how far shock has travelled on this line: nProgress
        iShock    = iShock_IB(Shock_,   iBlock)
        iShockOld = iShock_IB(ShockOld_,iBlock)
-       nProgress = MAX(1, iShock - iShockOld)
-       iShockOld = MIN(iShockOld, iShock-1)
+       if(DoTraceShock)then
+          nProgress = MAX(1, iShock - iShockOld)
+          iShockOld = MIN(iShockOld, iShock-1)
+       else
+          nProgress = 1
+          iShockOld = 0
+       end if
 
        ! each particles shock has crossed should be
        ! processed separately => reduce the time step
@@ -276,7 +281,7 @@ contains
           iShock = iShockOld + iProgress
 
           ! find the shock alfven mach number, also steepen the shock
-          if(iShock < iEnd - nWidth .and. iShock > nWidth)then
+          if(iShock < iEnd - nWidth.and.iShock > nWidth.and.DoTraceShock)then
              MachAlfven = mach_alfven()
              call steepen_shock
           else
