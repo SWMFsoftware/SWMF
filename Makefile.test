@@ -1369,6 +1369,10 @@ test15_build:
 
 test15:
 	rm -f test15*.diff
+	${MAKE} test15_scihsp
+	${MAKE} test15_sp
+
+test15_scihsp:
 	@echo "test15_compile..." > test15_scihsp.diff
 	${MAKE} test15_compile
 	@echo "test15_rundir..." >> test15_scihsp.diff
@@ -1379,6 +1383,8 @@ test15:
 	${MAKE} test15_restart
 	@echo "test15_check..." >> test15_scihsp.diff
 	${MAKE} test15_check
+
+test15_sp:
 	@echo "test15_sp_compile..." > test15_sp.diff
 	${MAKE} test15_sp_compile
 	@echo "test15_sp_rundir..." >> test15_sp.diff
@@ -1438,7 +1444,8 @@ test15_sp_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SP ${TESTDIR}/LAYOUT.in
-	cp -r SP/MFLAMPA/data/input/test15/MH_data ${TESTDIR}/
+	cp SP/MFLAMPA/data/input/test15/MH_data.tgz ${TESTDIR}/
+	cd ${TESTDIR}; tar xzvf MH_data.tgz
 
 test15_sp_run:
 	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in

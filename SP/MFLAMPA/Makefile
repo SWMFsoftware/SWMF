@@ -141,7 +141,8 @@ test_mflampa_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR} STANDALONE=YES SPDIR=`pwd`
 	cd ${TESTDIR}; cp -f Param/PARAM.test PARAM.in
-	cp -r data/input/test15/MH_data ${TESTDIR}/
+	cp data/input/test15/MH_data.tgz ${TESTDIR}/
+	cd ${TESTDIR}; tar xzvf MH_data.tgz
 
 test_mflampa_run:
 	cd ${TESTDIR}; ${MPIRUN} ./MFLAMPA.exe | tee -a runlog
