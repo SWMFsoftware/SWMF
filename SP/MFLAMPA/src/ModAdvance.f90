@@ -30,7 +30,7 @@ module SP_ModAdvance
   !\
   !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
   ! Injection and maximal energy in the simulation
-  ! To be read from the PARAM.in file
+  ! To be read from the PARAM.in file: KINETIC energies
   real:: EnergyInj=10.0, EnergyMax=1.0E+07
   ! Injection and max momentum in the simulation
   real:: MomentumInj, MomentumMax
@@ -38,7 +38,8 @@ module SP_ModAdvance
   ! of momentum and total energy equals:
   ! velocity =  momentum*cLightSpeed**2/TotalEnergy
   real:: TotalEnergyInj
-  ! Size of a  log-momentum mesh
+  ! Size of a  log-momentum mesh. For momentum we use both the 
+  ! denotaion, P, and a word, momentum - whichever is more covenient
   real:: DLogP        !log(MomentumMax/MomentumInj)/nP
   !/
   !\
@@ -46,6 +47,16 @@ module SP_ModAdvance
   ! Injection efficiency and assumed spectral index with the energy
   ! range k_BT_i< Energy < EnergyInjection, to be read from PARAM.in 
   real:: CInj = 1.0, SpectralIndex = 5.0
+  !/
+  !\
+  ! Functions to convert the grid index to momentum and energy
+  !/
+  !\
+  ! Momentum and energy at the grid points
+  real, public:: Momentum_I(0:nP+1)
+  real, public:: Energy_I(0:nP+1)
+  ! Total energy, including the rest mass energy
+  real, public:: TotalEnergy_I(0:nP+1)
   !/
   !\
   !!!!!!!!!!!!!!Grid in the momentum space                 !!!!!!
@@ -63,20 +74,6 @@ module SP_ModAdvance
   ! 2nd index - particle index along the field line
   ! 3rd index - local block number
   real, public, allocatable:: Distribution_IIB(:,:,:)
-  !/
-  !\
-  ! Functions to convert the grid index to momentum and energy
-  !/
-  !\
-  ! Momentum and log(Momentum) at the grid points
-  real, public:: Momentum_I(0:nP+1)
-  real, public:: LogMomentum_I(0:nP+1)
-  !/
-  !\
-  ! Energy and log(Energy) at the grid points
-  real, public:: Energy_I(0:nP+1)
-  real, public:: LogEnergy_I(0:nP+1)
-  real, public:: DMomentumOverDEnergy_I(0:nP+1)
   !/
   !\
   !!!!!!!!!!!!!!!!!!!!!!!!!Local parameters!!!!!!!!!!!!!!!
@@ -133,15 +130,11 @@ contains
     ! Functions to convert the grid index to momentum and energy
     !/
     do iP = 0, nP +1
-       LogMomentum_I(iP) = &
-            log(MomentumInj) + iP * DLogP
-       Momentum_I(iP) = exp(LogMomentum_I(iP))
+       Momentum_I(iP) = MomentumInj*exp(iP*DLogP)
        Energy_I(iP) = momentum_to_kinetic_energy(&
             Momentum_I(iP), NameParticle)
-       LogEnergy_I(iP) = log(Energy_I(iP))
-       DMomentumOverDEnergy_I(iP) = &
-            momentum_to_energy(Momentum_I(iP), NameParticle)/&
-            (Momentum_I(iP)*cLightSpeed**2)
+       TotalEnergy_I(iP) = &
+            momentum_to_energy(Momentum_I(iP), NameParticle)
     end do
     !\
     ! Distribution function
@@ -304,11 +297,9 @@ contains
              ! diffusion along the field line
              if(.not.UseDiffusion) CYCLE 
              MOMENTUM:do iP = 1, nP
-                MomentumRatio = exp((iP-1) * DLogP)
-                DInner_I(1:iEnd) =&
-                     DInnerInj_I(1:iEnd) * MomentumRatio**2 * &
-                     TotalEnergyInj/&
-                     momentum_to_energy(MomentumRatio*MomentumInj,NameParticle)
+                DInner_I(1:iEnd) = &
+                     DInnerInj_I(1:iEnd)*Momentum_I(iP)**2*    &
+                     TotalEnergyInj/(TotalEnergy_I(iP)*MomentumInj**2)
                 if(UseRealDiffusionUpstream)then
                    where(Radius_I(1:iEnd) > 0.9*Radius_I(iShock))
                       ! upstream:

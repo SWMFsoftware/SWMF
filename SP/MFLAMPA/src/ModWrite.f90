@@ -8,7 +8,7 @@ module SP_ModWrite
 
   use SP_ModSize, ONLY: &
        nDim, nLat, nLon, nNode, nParticleMax,&
-       nMomentum, &
+       nP=>nMomentum, &
        Particle_, OriginLat_, OriginLon_
 
   use SP_ModGrid, ONLY: &
@@ -20,8 +20,7 @@ module SP_ModWrite
        NameVar_V, TypeCoordSystem
 
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock, & 
-       LogEnergy_I, LogMomentum_I, DMomentumOverDEnergy_I, &
-       Distribution_IIB
+       Energy_I, Momentum_I, TotalEnergy_I, Distribution_IIB
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
@@ -99,6 +98,8 @@ module SP_ModWrite
   integer, parameter:: &
        CDF_ = 1, &
        DEF_ = 2
+  real :: Log10Momentum_I(0:nP+1), Log10Energy_I(0:nP+1), &
+            DMomentumOverDEnergy_I(0:nP+1) 
   !----------------------------------------------------------------------------
   ! the output directory
   character (len=100) :: NamePlotDir="SP/IO2/"
@@ -118,7 +119,7 @@ contains
     character(len=20):: TypeFile, KindData, StringPlot_I(2*nVar)
     character(len=*), parameter :: NameSub='SP:set_write_param'
     !--------------------------------------------------------------------------
-    ! initialize auxilary array
+    ! initialize auxilary arrays
     do iNode = 1, nNode
        iNodeIndex_I(iNode) = iNode
     end do
@@ -224,7 +225,7 @@ contains
           call process_distr
           ! prepare the output data container
           allocate(File_I(iFile) % &
-               Buffer_II(nMomentum,1:nParticleMax))
+               Buffer_II(nP,1:nParticleMax))
        end select
     end do
 
@@ -321,6 +322,7 @@ contains
   !============================================================================
 
   subroutine write_output(IsInitialOutputIn)
+    use ModConst,     ONLY: cLightSpeed
     ! write the output data
     logical, intent(in), optional:: IsInitialOutputIn
 
@@ -339,7 +341,15 @@ contains
        IsInitialOutput = .false.
     end if
     if(nFileOut == 0) RETURN
-    if(.not.IsInitialOutput)call get_integral_flux
+    if(IsInitialOutput)then
+       !Array for plotting distribution function
+       Log10Momentum_I = log10(Momentum_I) 
+       Log10Energy_I = log10(Energy_I)
+       DMomentumOverDEnergy_I = TotalEnergy_I/&
+            (Momentum_I*cLightSpeed**2)
+    else
+       call get_integral_flux
+    end if
     do iFile = 1, nFileOut
        iKindData = File_I(iFile) % iKindData
 
@@ -774,17 +784,17 @@ contains
       ! index of first/last particle on the field line
       integer:: iLast
       ! scale and conversion factor
-      real:: Scale_I(0:nMomentum+1), Factor_I(0:nMomentum+1)
-      real:: Unity_I(0:nMomentum+1) = 1.0
+      real:: Scale_I(0:nP+1), Factor_I(0:nP+1)
+      real:: Unity_I(0:nP+1) = 1.0
       ! timestamp
       character(len=8):: StringTime
       !------------------------------------------------------------------------
       select case(File_I(iFile) % iScale)
       case(Momentum_)
-         Scale_I = LogMomentum_I / log(10.)
+         Scale_I = Log10Momentum_I
          Factor_I= Unity_I
       case(Energy_)
-         Scale_I = LogEnergy_I / log(10.)
+         Scale_I = Log10Energy_I
          Factor_I= DMomentumOverDEnergy_I
       end select
       do iBlock = 1, nBlock
@@ -809,7 +819,7 @@ contains
             end if
             ! the actual distribution
             File_I(iFile) % Buffer_II(:,iParticle) = &
-                 log10(Distribution_IIB(:,iParticle,iBlock) * Factor_I(:))
+                 log10(Distribution_IIB(1:nP,iParticle,iBlock)*Factor_I(1:nP))
             ! account for the requested output
             select case(File_I(iFile) % iTypeDistr)
             case(CDF_)
@@ -817,7 +827,7 @@ contains
             case(DEF_)
                File_I(iFile) % Buffer_II(:,iParticle) = &
                     File_I(iFile) % Buffer_II(:,iParticle) + &
-                    2*LogMomentum_I/log(10.)
+                    2*Log10Momentum_I
             end select
          end do
 
@@ -885,7 +895,7 @@ contains
           Flux_I= 0.0
           Norm  = 0.0
           Flux  = 0.0
-          do iP = 1, nMomentum - 1
+          do iP = 1, nP - 1
              ! the flux increment from iP
              dFlux = 0.5 * &
                   (Energy_I(iP+1) - Energy_I(iP)) * (&
