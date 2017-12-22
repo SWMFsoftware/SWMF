@@ -1368,6 +1368,7 @@ test15_build:
 	cd SP_build; make test15
 
 test15:
+	rm -f test15*.diff
 	@echo "test15_compile..." > test15_scihsp.diff
 	${MAKE} test15_compile
 	@echo "test15_rundir..." >> test15_scihsp.diff
