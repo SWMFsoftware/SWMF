@@ -137,7 +137,7 @@ contains
        case('#DORUN')
           call read_var('DoRun',DoRun)
        case('#SAVEPLOT')
-          call set_write_param
+          call set_write_param(NameCommand)
        case('#READMHDATA','#MHDATA')
           call set_read_mh_data_param(NameCommand)
        case('#COORDSYSTEM','#COORDINATESYSTEM')
