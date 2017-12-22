@@ -160,7 +160,7 @@ contains
     ! additional parameters of lines
     real:: Param_I(LagrID_:RShock_)
     ! timetag
-    character(len=20):: StringTag
+    character(len=50):: StringTag
     character(len=*), parameter:: NameSub = "SP:read_mh_data"
     !------------------------------------------------------------------------
     ! check whether need to apply offset, default is .true.
