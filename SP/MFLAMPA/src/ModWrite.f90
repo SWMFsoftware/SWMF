@@ -857,9 +857,9 @@ contains
     write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#MHDATA'
-    write(UnitTmp_,'(a,a)')trim(TypeHeaderFile),'  TypeFile'
+    write(UnitTmp_,'(a,a35)')trim(TypeHeaderFile),'  TypeFile'
     write(UnitTmp_,'(i8,a32)')nTag,'nFileRead'
-    write(UnitTmp_,'(a,a)')trim(NameTagFile), '  NameTagFile'
+    write(UnitTmp_,'(a,a29)')trim(NameTagFile), '  NameTagFile'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#END'
     write(UnitTmp_,*)
