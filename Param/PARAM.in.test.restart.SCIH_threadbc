@@ -1,10 +1,5 @@
-Begin session: 1
-
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
-Input file for creating a steady state solar corona
+Time accurate SC-IH run with SC switched off in second session
 
 #TIMEACCURATE
 T                       DoTimeAccurate
@@ -25,8 +20,7 @@ F                       DoSaveRestart
 #INCLUDE
 RESTART.in
 
-
-#BEGIN_COMP SC --------------------------------------------------------------
+#BEGIN_COMP SC ----------------------------------------------------------------
 
 #INCLUDE
 SC/restartIN/restart.H	
@@ -48,9 +42,9 @@ T                       UseFieldLineThreads
 1.0e-3                  DsThreadMin
 
 #THREADEDBC
-T	  UseAlignedVelocity
-T         DoConvergenceCheck
-limited   TypeBc
+T			UseAlignedVelocity
+T			DoConvergenceCheck
+limited			TypeBc
 
 #BODY
 T			UseBody
@@ -113,8 +107,8 @@ T			UseHeatFluxRegion
 -8.0			rCollisionless
 
 #HEATFLUXCOLLISIONLESS
-T            UseHeatFluxCollisionless
-1.05            CollisionlessAlpha  
+T			UseHeatFluxCollisionless
+1.05            	CollisionlessAlpha  
 
 #TEST
 krylov radiative_cooling
@@ -128,9 +122,9 @@ GMRES			TypeKrylov
 1.0e-5			ErrorMaxKrylov
 10			MaxMatvecKrylov
 
-#PRECONDITIONER
-left            TypePrecondSide (left, symmetric, right)
-bilu            TypePrecond (MBILU)
+SEMIPRECONDITIONER
+T			DoPrecond
+bilu			TypePrecond
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -147,7 +141,6 @@ load			NameCommand
 SC/Param/TR.dat
 ascii			TypeFile
 
-----------------------------------------------------
 #AMR
 -1			DnRefine
 
@@ -166,9 +159,9 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #LIMITER
-T
-T
-F
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -218,25 +211,21 @@ z=0 VAR idl		StringPlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p
 g rbody
-rfr idl rwi
--1
-10.0
--67.92
-200.40
--26.91
-1.5 GHz 500 MHz 100 MHz
-4.0
-4.0
-100
-100
+rfr idl rwi		StringPlot
+-1  			DnSavePlot
+10.0			DtSavePlot
+-67.92			ObsPosX
+200.40			ObsPosY
+-26.91			ObsPosZ
+1.5 GHz 500 MHz 100 MHz		StringRadioFrequency
+4.0 	    	    	xSizeImage
+4.0			ySizeImage
+100			nPixX
+100			nPixY
 
+#END_COMP SC ------------------------------------------------------------------
 
-#SAVEINITIAL
-F			DoSaveInitial
-
-#END_COMP SC ----------------------------------------------------------------
-
-#BEGIN_COMP IH -------------------------------------------------------------
+#BEGIN_COMP IH ----------------------------------------------------------------
 
 #INCLUDE
 IH/restartIN/restart.H
@@ -348,8 +337,8 @@ F                       UseJouleHeating
 T                       UseHeatExchange
 
 #HEATFLUXCOLLISIONLESS
-T            UseHeatFluxCollisionless
-1.05            CollisionlessAlpha  
+T			UseHeatFluxCollisionless
+1.05            	CollisionlessAlpha  
 
 #SCHEME
 2			nOrder
@@ -370,7 +359,6 @@ T			UseDivbDiffusion
 F			UseProjection
 F			UseConstrainB
 
-
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
@@ -378,7 +366,7 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
-T
+T			DoSaveInitial
 
 #SAVEPLOT
 4			nPlotFiles
@@ -400,12 +388,11 @@ z=0 VAR idl		StringPlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
-buf MHD idl
--1
-50.0
+buf MHD idl		StringPlot
+-1  			DnSavePlot
+50.0			DtSavePlot
 
-
-#END_COMP IH ---------------------------------------------------------------
+#END_COMP IH ------------------------------------------------------------------
 
 #COMPONENT
 IH			NameComp
@@ -419,14 +406,15 @@ IH			NameTarget
 
 #STOP
 -1			MaxIter
-100			TimeMax
-#RUN
+100.0			TimeMax
+
+#RUN ##########################################################################
 
 #COMPONENT
-SC
-F
+SC			NameComp
+F			UseComp
 
-#BEGIN_COMP IH
+#BEGIN_COMP IH ----------------------------------------------------------------
 
 #SAVEPLOT
 3			nPlotFiles
@@ -448,10 +436,11 @@ z=0 VAR idl		StringPlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
-#END_COMP IH
+
+#END_COMP IH ------------------------------------------------------------------
 
 #STOP
--1
-1000.0
+-1			MaxIter
+1000.0			TimeMax
 
 #END ##########################################################################
