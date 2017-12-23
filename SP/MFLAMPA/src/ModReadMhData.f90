@@ -3,23 +3,17 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=============================================================!
 module SP_ModReadMhData
-
   ! This module contains methods for reading input MH data
-
-  use SP_ModSize, ONLY: nDim, nParticleMax
-
-  use SP_ModGrid, ONLY: get_node_indexes, &
-       nVarRead, nVar, nBlock, iShock_IB, iNode_B, FootPoint_VB, &
-       nParticle_B, State_VIB, NameVar_V, &
-       LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
-
+  use SP_ModSize,    ONLY: nDim, nParticleMax
+  use SP_ModGrid,    ONLY: get_node_indexes, nVarRead, nVar, nBlock,&
+       iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB, &
+       NameVar_V, LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, &
        Distribution_IIB, DoTraceShock
-
-  use ModPlotFile, ONLY: read_plot_file
-
-  use ModUtilities, ONLY: fix_dir_name, open_file, close_file
-  use ModIoUnit, ONLY: io_unit_new
+  use SP_ModWrite,   ONLY: nFileRead=>nTag
+  use ModPlotFile,   ONLY: read_plot_file
+  use ModUtilities,  ONLY: fix_dir_name, open_file, close_file
+  use ModIoUnit,     ONLY: io_unit_new
 
   implicit none
 
@@ -43,7 +37,6 @@ module SP_ModReadMhData
   character (len=100):: NameFileBase="MH_data"
   character (len=4)  :: NameFormat
   character (len=20) :: TypeFile
-
   ! buffer is larger than the data needed to be read in the case 
   ! the input file has additional data
   real:: Buffer_II(nVar,nParticleMax)
@@ -51,10 +44,6 @@ module SP_ModReadMhData
   ! buffer for Lagrangian coordinate
   real:: Buffer_I(nParticleMax)
 
-  ! number of input files
-  integer:: nFileRead = 0
-  ! index of a current input file
-  integer:: iFileRead
   ! IO unit for file with list of tags
   integer:: iIOTag
 
@@ -66,8 +55,6 @@ contains
     use ModReadParam, ONLY: read_var
     ! set parameters of input files with background data
     character (len=*), intent(in):: NameCommand ! From PARAM.in  
-    ! loop variables
-    integer:: iFile
     character(len=*), parameter :: NameSub='SP:set_read_mh_data_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
@@ -96,10 +83,8 @@ contains
        case default
           call CON_stop(NameSub//': input format was not set in PARAM.in')
        end select
-       
        ! number of input files
        call read_var('nFileRead', nFileRead)
-
        ! name of the file with the list of tags
        call read_var('NameTagFile', NameTagFile)
     end select
@@ -111,13 +96,7 @@ contains
     ! initialize by setting the time and interation index of input files
     character (len=*), parameter :: NameSub='SP:init_read_mh_data'
     !-------------------------------------------------------------------------
-    if(.not.DoReadMhData)&
-         RETURN
-    iFileRead= 0
-    ! check whether increments are properly set
-    if(nFileRead <= 0)&
-         call CON_stop(NameSub//&
-         " invalid number of input files, change PARAM.in")
+    if(.not.DoReadMhData) RETURN
     ! open the file with the list of tags
     iIOTag = io_unit_new()
     call open_file(iUnitIn=iIOTag, &
@@ -170,9 +149,6 @@ contains
     else
        DoOffset = .true.
     end if
-
-    ! increase file counter
-    iFileRead = iFileRead + 1
 
     ! get the tag for files
     read(iIOTag,'(a)') StringTag
