@@ -151,5 +151,7 @@ test_mflampa_check:
 	cat ${TESTDIR}/SP/IO2/MH_data_*_*_t00000030_n000010.out > \
 	    ${TESTDIR}/SP/IO2/MH_data.out
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-6 -a=1e-6 \
-		Param/TestOutput/test_mflampa/MH_data.ref ${TESTDIR}/SP/IO2/MH_data.out > test_mflampa.diff	
+		Param/TestOutput/test_mflampa/MH_data.ref \
+	${TESTDIR}/SP/IO2/MH_data.out > test_mflampa.diff
+	ls -lt test_mflampa.diff
 
