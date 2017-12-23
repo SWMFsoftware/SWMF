@@ -1438,7 +1438,7 @@ test15_check:
 		SP/MFLAMPA/data/input/test15/MH_data/.
 		cp ${TESTDIR}/RESULTS/SP/MH_data.H \
 		SP/MFLAMPA/data/input/test15/MH_data/.
-		cp ${TESTDIR}/RESULTS/SP/MH_data*t*n*.out \
+		cp ${TESTDIR}/RESULTS/SP/MH_data*n*.out \
 		SP/MFLAMPA/data/input/test15/MH_data/.
 
 test15_sp_compile:

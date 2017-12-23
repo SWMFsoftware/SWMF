@@ -443,6 +443,9 @@ F			UseDiffusion
 1
 mh1d idl
 
+#USEDATETIME
+T
+
 #END_COMP SP   ----------------------------------------------------------------
 
 #COUPLE1
