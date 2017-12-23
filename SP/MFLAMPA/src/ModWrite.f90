@@ -4,27 +4,16 @@
 !=============================================================!
 module SP_ModWrite
   ! This module contains methods for writing output files
-  use SP_ModSize, ONLY: nDim, nLat, nLon, nNode, nParticleMax,   &
-       nP=>nMomentum, Particle_, OriginLat_, OriginLon_
+  use SP_ModSize, ONLY: nNode, nParticleMax, nP=>nMomentum
   use SP_ModGrid, ONLY: get_node_indexes, nVar, nVarRead, nBlock,&
-       State_VIB, iShock_IB, iNode_B, FootPoint_VB,  Proc_,      &
-       nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
-       B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
-       EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
-       NameVar_V, TypeCoordSystem
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock, & 
-       Energy_I, Momentum_I, TotalEnergy_I, Distribution_IIB
-  use SP_ModProc, ONLY: iComm, iProc, nProc
-
-
-
+       State_VIB, iShock_IB, iNode_B, nParticle_B, Shock_, X_, Z_,&
+       NameVar_V, TypeCoordSystem, LagrID_,&
+       EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, Distribution_IIB
+  use SP_ModProc, ONLY: iProc
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
-
-  use ModUtilities, ONLY: split_string, lower_case, open_file, close_file
-
+  use ModUtilities, ONLY: open_file, close_file
   use ModIoUnit, ONLY: UnitTmp_
-
-  use ModTimeConvert, ONLY: time_real_to_int
   implicit none
 
   SAVE
@@ -93,11 +82,12 @@ module SP_ModWrite
   integer, parameter:: &
        CDF_ = 1, &
        DEF_ = 2
-  real :: Log10Momentum_I(0:nP+1), Log10Energy_I(0:nP+1), &
-            DMomentumOverDEnergy_I(0:nP+1) 
+  ! Arrays used to visualize the distribution function
+  real              :: Log10Momentum_I(0:nP+1), Log10Energy_I(0:nP+1)
+  real              :: DMomentumOverDEnergy_I(0:nP+1) 
   !----------------------------------------------------------------------------
   ! the output directory
-  character (len=100) :: NamePlotDir="SP/IO2/"
+  character(len=*), parameter :: NamePlotDir="SP/IO2/"
   !----------------------------------------------------------------------------
   ! auxilary array, used to write data on a sphere
   integer:: iNodeIndex_I(nNode)
@@ -105,12 +95,12 @@ module SP_ModWrite
   ! info for MH1D header and tag list
   logical:: DoWriteHeader = .false.
   ! number of different output file tags
-  integer, public:: nTag = 0  
+  integer, public    :: nTag = 0  
   ! name of the header file
-  character(len=100):: NameHeaderFile = 'MH_data.H'
-  character(len=20 ):: TypeHeaderFile
+  character(len=*), parameter :: NameHeaderFile = 'MH_data.H'
+  character(len=20)           :: TypeHeaderFile
   ! name of the tag list file
-  character(len=100):: NameTagFile = 'MH_data.lst'
+  character(len=*), parameter :: NameTagFile = 'MH_data.lst'
   !/
   !\
   !Fromat for saving time tag. If .true. the time tag format is
@@ -121,6 +111,7 @@ module SP_ModWrite
 contains
 
   subroutine set_write_param(NameCommand)
+    use ModUtilities, ONLY: split_string, lower_case
     use ModReadParam, ONLY: read_var
     character(len=*), intent(in):: NameCommand
     ! set parameters of output files: file format, kind of output etc.
@@ -361,7 +352,8 @@ contains
   !============================================================================
 
   subroutine write_output(IsInitialOutputIn)
-    use ModConst,     ONLY: cLightSpeed
+    use ModConst,      ONLY: cLightSpeed
+    use SP_ModAdvance, ONLY: Energy_I, Momentum_I, TotalEnergy_I
     ! write the output data
     logical, intent(in), optional:: IsInitialOutputIn
 
@@ -412,6 +404,8 @@ contains
   contains
     
     subroutine write_mh_1d
+      use SP_ModGrid,    ONLY: FootPoint_VB
+      use SP_ModAdvance, ONLY: DoTraceShock
       ! write output with 1D MH data in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
       ! MH_data_<iLon>_<iLat>_n<ddhhmmss>_n<iIter>.{out/dat}
@@ -519,6 +513,7 @@ contains
     !=========================================================================
     
     subroutine write_mh_2d
+      use SP_ModProc, ONLY: iComm, nProc
       use ModMpi
       ! write output with 2D MH data in the format to be read by IDL/TECPLOT;
       ! single file is created for all field lines, name format is
@@ -785,6 +780,7 @@ contains
     !=========================================================================
 
     subroutine write_distr_1d
+      use SP_ModGrid, ONLY: S_
       ! write file with distribution in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
       ! Distribution_<iLon>_<iLat>_t<ddhhmmss>_n<iIter>.{out/dat}
@@ -873,6 +869,7 @@ contains
   !============================================================================
 
   subroutine write_mh_1d_header
+     use SP_ModSize, ONLY: nLat, nLon
     ! write the header file that contains necessary information for reading
     ! input files in a separate run
     !
