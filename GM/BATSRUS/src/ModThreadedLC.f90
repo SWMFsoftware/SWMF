@@ -3,8 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module ModThreadedLC
 
-  use BATL_lib, ONLY: &
-       test_start, test_stop, jTest, kTest, iBlockTest, iProcTest
+  use BATL_lib, ONLY: test_start, test_stop
   use ModFieldLineThread, ONLY: &
        BoundaryThreads, BoundaryThreads_B, cExchangeRateSi,      &
        LengthPAvrSi_, UHeat_, HeatFluxLength_, DHeatFluxXOverU_, &
@@ -317,11 +316,8 @@ contains
     !/
     real :: HeatFlux2TR
 
-    logical :: DoTestCell
     character(len=*), parameter:: NameSub = 'solve_boundary_thread'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTestCell, iBlock, j=j, k=k)
-
+    !-------------------------------------------------------------------
     !\
     ! Initialize all output parameters from 0D solution
     !/
@@ -346,24 +342,6 @@ contains
     TeSiMax        = &
           BoundaryThreads_B(iBlock) % TMax_II(j,k)*No2Si_V(UnitTemperature_)
     ConsMax = cTwoSevenths*HeatCondParSi*TeSiMax**3.50
-
-    if(DoTestCell)then
-       write(*,*)'TeSiIn=       ',TeSiIn,' K '
-       write(*,*)'PeSiIn = ', PeSiIn
-       write(*,*)'NeSiIn = ', PeSiIn/(TeSiIn*cBoltzmann)
-       write(*,*)'Dimensionless density (input)=',RhoNoDimCoef*PeSiIn/TeSiIn
-       write(*,*)'AMinorIn=     ', AMinorIn
-       write(*,*)'USiIn,USi=        ',USiIn,' ',USi,' m/s'
-       write(*,*)'Thread Length=', &
-            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) &
-            ,' m = ',  Si2No_V(UnitX_)*&
-            BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' Rs'
-       write(*,*)'TeSiMax=       ',TeSiMax
-       write(*,*)'iAction=',iAction
-       write(*,*)'0D model results'
-       write(*,*)'Pressure 0D=',PeSiOut
-       write(*,*)'RhoNoDimOut=', RhoNoDimOut
-    end if
 
     nPoint = BoundaryThreads_B(iBlock)% nPoint_II(j,k)
     if(iAction/=DoInit_)then
@@ -418,11 +396,6 @@ contains
        DTeOverDsSiOut = max(0.0,(TeSi_I(nPoint) - TeSi_I(nPoint-1))/&
             (BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k) - &
             BoundaryThreads_B(iBlock)% LengthSi_III(-1,j,k)))
-       if(DoTestCell)then
-          write(*,*)'Final dT/ds=  ',DTeOverDsSiOut,&
-               ', dT/ds*Length=',DTeOverDsSiOut*&
-               BoundaryThreads_B(iBlock)% LengthSi_III(0,j,k),' K'
-       end if
        RETURN
     case(Heat_)
        call advance_thread(IsTimeAccurate=.true.)
@@ -552,23 +525,6 @@ contains
        end do
        call stop_mpi('Failure')
     end if
-    if(DoTestCell)then
-       write(*,*)'AMajorOut=    ', AMajorOut
-       write(*,*)'Before correction:'
-       write(*,*)'Pressure 1D (SI) = ',FirstOrderPeSi
-       write(*,*)'RhoNoDimOut      = ',FirstOrderRho
-       write(*,*)'Last two electron temperature values=',&
-            TeSi_I(nPoint-1:nPoint)
-       write(*,*)'Last two ion temperature values=',&
-            TiSi_I(nPoint-1:nPoint)
-       write(*,*)'Last two pressure values=', PSi_I(nPoint-1:nPoint)
-       write(*,*)'Barometric factor=',BarometricFactor
-       write(*,*)'DeltaTeFactor=',DeltaTeFactor
-       write(*,*)'Corrected:'
-       write(*,*)'Pressure 1D (SI) = ',PeSiOut
-       write(*,*)'RhoNoDimOut      = ',RhoNoDimOut
-    end if
-
   contains
     !==========================================================================
     subroutine set_pressure
@@ -831,20 +787,6 @@ contains
               PSi_I(1:nPoint-1)**2/(&
               (Z*TeSi_I(1:nPoint-1) + TiSi_I(1:nPoint-1))**2*&
               TeSi_I(1:nPoint-1)**1.5)
-         !\
-         ! Check convergence
-         !/
-         if(DoTestCell.and.DoConvergenceCheck)then
-            write(*,'(a,i4)')&
-                 'TeOld abs(DCons) Cons abs(DCons)/Cons Res_V TNew at iIter=',&
-                 iIter
-            do iPoint=1,nPoint
-               write(*,'(i4,6es15.6)')iPoint, TeSiOld_I(iPoint),  &
-                    abs(DCons_VI(Cons_,iPoint)),Cons_I(iPoint),         &
-                    abs(DCons_VI(Cons_,iPoint))/Cons_I(iPoint),         &
-                    Res_VI(Cons_,iPoint), TeSi_I(iPoint)
-            end do
-         end if
          if(all(abs(DCons_VI(Cons_,1:nPoint-1))<cTol*Cons_I(1:nPoint-1)))EXIT
       end do
       if(any(abs(DCons_VI(Cons_,1:nPoint-1))>cTol*Cons_I(1:nPoint-1))&
@@ -1222,7 +1164,7 @@ contains
   end subroutine solve_a_plus_minus
   !============================================================================
   subroutine set_field_line_thread_bc(nGhost, iBlock, nVarState, State_VG, &
-               iImplBlock, IsLinear)
+               iImplBlock)
 
     use EEE_ModCommonVariables, ONLY: UseCme
     use EEE_ModMain,            ONLY: EEE_get_state_BC
@@ -1247,8 +1189,6 @@ contains
 
     ! Optional arguments when called by semi-implicit scheme
     integer, optional, intent(in):: iImplBlock
-    logical, optional, intent(in):: IsLinear
-
     !\
     ! Determines, which action should be done with the thread
     ! before setting the BC
@@ -1265,10 +1205,8 @@ contains
     !/
     real:: RhoCme, Ucme_D(3), Bcme_D(3), pCme
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_field_line_thread_bc'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
     if(present(iImplBlock))then
        if(BoundaryThreads_B(iBlock)%iAction/=Done_)&
             call stop_mpi('Algorithm error in '//NameSub)
@@ -1277,18 +1215,6 @@ contains
        iAction=BoundaryThreads_B(iBlock)%iAction
     end if
     if(iAction==Done_)RETURN
-    if(present(iImplBlock))then
-       if(IsLinear)then
-          !\
-          ! Version Easter 2015
-          !/
-          do k = MinK, MaxK; do j = MinJ, maxJ
-             State_VG(iTeImpl,0,j,k) = 0.0
-          end do; end do
-          RETURN
-       end if
-    end if
-    call timing_start('set_thread_bc')
     !\
     ! Start from floating boundary values
     !/
@@ -1325,15 +1251,6 @@ contains
        !\
        ! Calculate input parameters for solving the thread
        !/
-       if(DoTest.and.j==jTest.and.k==kTest)then
-          write(*,*)'Direction B=', BDir_D
-          write(*,*)'Direction R=', DirR_D
-          write(*,*)'Magnetic fields: B0True =', B0_DGB(:, 1, j, k, iBlock)
-          write(*,*)'Magnetic fields: B0Ghost=', B0_DGB(:, 0, j, k, iBlock)
-          write(*,*)'B1_D=', B1_D
-          write(*,*)NameSub//': before limiting TeGhost=',&
-               Te_G(0, j, k)*No2Si_V(UnitTemperature_)
-       end if
        Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
             BoundaryThreads_B(iBlock) % TMax_II(j,k)))
        UAbsMax = 0.10*sqrt(Te_G(0,j,k))
@@ -1346,10 +1263,6 @@ contains
             State_VGB(Rho_, 1, j, k, iBlock)
        U = sum(U_D*BDir_D)
        U = sign(min(abs(U), UAbsMax), U)
-       if(DoTest.and.j==jTest.and.k==kTest)then
-          write(*,*)'U_D=',U_D
-          write(*,*)'Direction U', U_D/sqrt(sum(U_D**2))
-       end if
 
        PeSi = PeFraction*State_VGB(iP, 1, j, k, iBlock)&
             *(Te_G(0,j,k)/Te_G(1,j,k))*No2Si_V(UnitEnergyDens_)
@@ -1374,10 +1287,6 @@ contains
           !/
           Te_G(0, j, k) = max(TeMin,min(Te_G(0, j, k), &
                BoundaryThreads_B(iBlock) % TMax_II(j,k)))
-          if(DoTest.and.j==jTest.and.k==kTest)then
-             write(*,*)NameSub//': reset TeGhost=',&
-                  Te_G(0, j, k)*No2Si_V(UnitTemperature_)
-          end if
           State_VG(iTeImpl, 0, j, k) = Te_G(0, j, k)
           CYCLE
        end if
@@ -1453,11 +1362,6 @@ contains
        end if
     end do; end do
     BoundaryThreads_B(iBlock)%iAction = Done_
-
-    call timing_stop('set_thread_bc')
-
-    call test_stop(NameSub, DoTest, iBlock)
-
   end subroutine set_field_line_thread_bc
   !============================================================================
 end module ModThreadedLC
