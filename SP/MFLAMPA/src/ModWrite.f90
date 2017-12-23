@@ -3,26 +3,20 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=============================================================!
 module SP_ModWrite
-
   ! This module contains methods for writing output files
-
-  use SP_ModSize, ONLY: &
-       nDim, nLat, nLon, nNode, nParticleMax,&
-       nP=>nMomentum, &
-       Particle_, OriginLat_, OriginLon_
-
-  use SP_ModGrid, ONLY: &
-       get_node_indexes, &
-       nVar, nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, FootPoint_VB,&
-       Proc_, nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
+  use SP_ModSize, ONLY: nDim, nLat, nLon, nNode, nParticleMax,   &
+       nP=>nMomentum, Particle_, OriginLat_, OriginLon_
+  use SP_ModGrid, ONLY: get_node_indexes, nVar, nVarRead, nBlock,&
+       State_VIB, iShock_IB, iNode_B, FootPoint_VB,  Proc_,      &
+       nParticle_B, Shock_, X_, Y_, Z_, Bx_, By_, Bz_, Wave1_,Wave2_,&
        B_, Ux_, Uy_, Uz_, U_, Rho_, T_, S_, LagrID_, DLogRho_,  &
        EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_, &
        NameVar_V, TypeCoordSystem
-
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock, & 
        Energy_I, Momentum_I, TotalEnergy_I, Distribution_IIB
-
   use SP_ModProc, ONLY: iComm, iProc, nProc
+
+
 
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
 
@@ -31,7 +25,6 @@ module SP_ModWrite
   use ModIoUnit, ONLY: UnitTmp_
 
   use ModTimeConvert, ONLY: time_real_to_int
-
   implicit none
 
   SAVE
@@ -78,7 +71,6 @@ module SP_ModWrite
      ! radius of the sphere the data to be written at
      real:: Radius
   end type TypeOutputFile
-
   !\
   !----------------------------------------------------------------------------
   ! Number of output files
@@ -113,7 +105,7 @@ module SP_ModWrite
   ! info for MH1D header and tag list
   logical:: DoWriteHeader = .false.
   ! number of different output file tags
-  integer:: nTag = 0 
+  integer, public:: nTag = 0  
   ! name of the header file
   character(len=100):: NameHeaderFile = 'MH_data.H'
   character(len=20 ):: TypeHeaderFile
@@ -123,7 +115,9 @@ module SP_ModWrite
   !\
   !Fromat for saving time tag. If .true. the time tag format is
   !YYYYMMDDHHMMSS 
-  logical, public:: UseDateTime = .false. 
+  logical, public:: UseDateTime = .false.
+  ! If DoSaveInitial=.false.,the initial file is not saved 
+  logical :: DoSaveInitial = .true.
 contains
 
   subroutine set_write_param(NameCommand)
@@ -260,6 +254,8 @@ contains
             ": only one MH1D output file can be requested")
     case("#USEDATETIME")
        call read_var('UseDateTime',UseDateTime)
+    case('#SAVEINITIAL')
+       call read_var('DoSaveInitial',DoSaveInitial)
     case default
        call CON_stop('Unknown command '//NameCommand//' in SP:'//NameSub)
     end select
@@ -390,6 +386,7 @@ contains
        Log10Energy_I = log10(Energy_I)
        DMomentumOverDEnergy_I = TotalEnergy_I/&
             (Momentum_I*cLightSpeed**2)
+       if(.not.DoSaveInitial)RETURN
     else
        call get_integral_flux
     end if
@@ -445,7 +442,7 @@ contains
       !/
       if(iProc==0)then
          ! increase the file counter
-         nTag = nTag + 1
+         nTag = nTag +1
          ! add to the tag list file
          NameFile = trim(NamePlotDir)//trim(NameTagFile)
          call open_file(file=NameFile, position='append', status='unknown', &
