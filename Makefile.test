@@ -1432,6 +1432,14 @@ test15_check:
 		${TESTDIR}/RESULTS/SP/MH_data.ref \
 		> test15_scihsp.diff)
 		ls -l test15*.diff
+		rm -rf SP/MFLAMPA/data/input/test15/MH_data/
+		mkdir SP/MFLAMPA/data/input/test15/MH_data/
+		cp ${TESTDIR}/RESULTS/SP/MH_data.lst \
+		SP/MFLAMPA/data/input/test15/MH_data/.
+		cp ${TESTDIR}/RESULTS/SP/MH_data.H \
+		SP/MFLAMPA/data/input/test15/MH_data/.
+		cp ${TESTDIR}/RESULTS/SP/MH_data*t*n*.out \
+		SP/MFLAMPA/data/input/test15/MH_data/.
 
 test15_sp_compile:
 	./Config.pl -v=Empty,SP/MFLAMPA
@@ -1442,13 +1450,12 @@ test15_sp_compile:
 test15_sp_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
+	mkdir ${TESTDIR}/MH_data/
 	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SP ${TESTDIR}/LAYOUT.in
-	cp SP/MFLAMPA/data/input/test15/MH_data.tgz ${TESTDIR}/
-	cd ${TESTDIR}; tar xzvf MH_data.tgz
+	cp -r SP/MFLAMPA/data/input/test15/MH_data/*.* ${TESTDIR}/MH_data/.
 
 test15_sp_run:
-	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
@@ -1460,6 +1467,7 @@ test15_sp_check:
 		${TESTDIR}/RESULTS/SP/MH_data.out \
 		${TESTDIR}/RESULTS/SP/MH_data.ref \
 		> test15_sp.diff)
+		rm -rf SP/MFLAMPA/data/input/test15/MH_data/
 		ls -l test15*.diff
 
 ### ESMF test ###
