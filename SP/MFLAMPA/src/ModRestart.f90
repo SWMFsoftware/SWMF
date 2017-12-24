@@ -3,29 +3,21 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !=============================================================!
 module SP_ModRestart
-
   ! This module contains methods for writing output files
-
   use SP_ModSize,   ONLY: nLon, nLat, nParticleMax
-
   use SP_ModGrid,   ONLY: get_node_indexes, LagrID_, Z_,&
        nVarRead, nBlock, State_VIB, iShock_IB, iNode_B, &
        RMin, RBufferMin, RBufferMax, RMax, &
        FootPoint_VB, nParticle_B, nShockParam
-
-  use SP_ModAdvance,ONLY: Distribution_IIB, TimeGlobal, iIterGlobal
-
+  use SP_ModDistribution, ONLY: Distribution_IIB
+  use SP_ModAdvance,ONLY: TimeGlobal, iIterGlobal
   use ModPlotFile,  ONLY: save_plot_file, read_plot_file
-
   use ModUtilities, ONLY: open_file, close_file
   use ModIoUnit,    ONLY: UnitTmp_
-
   implicit none
-
   SAVE
-
   private ! except
- 
+  !Public members
   public:: set_restart_param, write_restart, read_restart
   public:: NameRestartInDir, NameRestartOutDir
 

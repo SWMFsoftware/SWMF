@@ -10,7 +10,7 @@ module SP_wrapper
        get_node_indexes, DoRestart, &
        nDim, nLat, nLon, nBlock, nParticleMax, &
        RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
-       iGridGlobal_IA, State_VIB, Distribution_IIB,&
+       iGridGlobal_IA, State_VIB, &
        iNode_B, TypeCoordSystem, FootPoint_VB, DataInputTime, &
        Block_, Proc_, nParticle_B, Length_,&
        LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
@@ -135,12 +135,15 @@ contains
   !======================================================================
 
   subroutine SP_finalize(TimeSimulation)
+    use SP_ModWrite, ONLY: finalize_write
     real,intent(in)::TimeSimulation
     real:: TimeAux ! to satisfy intent of arguments in run()
     !--------------------------------------------------------------------
     ! if data are read from files, no special finalization is needed
-    if(DoReadMhData) &
-         RETURN
+    if(DoReadMhData) then
+       call finalize_write
+       RETURN
+    end if
     TimeAux = TimeSimulation
     call run(TimeAux, TimeSimulation)
     call finalize

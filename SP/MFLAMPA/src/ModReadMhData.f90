@@ -8,9 +8,9 @@ module SP_ModReadMhData
   use SP_ModGrid,    ONLY: get_node_indexes, nVarRead, nVar, nBlock,&
        iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB, &
        NameVar_V, LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, &
-       Distribution_IIB, DoTraceShock
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
   use SP_ModWrite,   ONLY: nFileRead=>nTag
+  use SP_ModDistribution, ONLY: Distribution_IIB, offset
   use ModPlotFile,   ONLY: read_plot_file
   use ModUtilities,  ONLY: fix_dir_name, open_file, close_file
   use ModIoUnit,     ONLY: io_unit_new
@@ -230,46 +230,4 @@ contains
          int((Time-( 3600*int(Time/ 3600)))/   60), & ! # minutes
          int( Time-(  60*int(Time/   60)))           ! # seconds
   end subroutine get_time_string
-
-  !============================================================================
-
-  subroutine offset(iBlock, iOffset, AlphaIn)
-    ! shift in the data arrays is required if the grid point(s) is  
-    ! appended or removed at the foot point of the magnetic field line
-    !SHIFTED ARE:  State_VIB((/RhoOld_,BOld_/),:,:), Distribution_IIB,
-    !ShockOld, nParticle_B
-    integer, intent(in)        :: iBlock
-    integer, intent(in)        :: iOffset
-    real, optional, intent(in) :: AlphaIn
-    real :: Alpha
-    character(len=*), parameter :: NameSub = "SP: offset"
-    !------------
-    Alpha = 0
-    if(present(AlphaIn))Alpha=AlphaIn
-    if(iOffset==0)then
-       RETURN
-    elseif(iOffset==1)then
-       State_VIB((/RhoOld_,BOld_/),2:nParticle_B(iBlock)+1,iBlock) &
-            = State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock)
-       Distribution_IIB(:,2:nParticle_B( iBlock)+iOffset, iBlock)&
-            = Distribution_IIB(:,1:nParticle_B( iBlock), iBlock)
-       State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
-            (Alpha + 1)*State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
-            -Alpha     * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
-       Distribution_IIB(:,1,iBlock) = Distribution_IIB(:,2,iBlock) + &
-            Alpha*(Distribution_IIB(:,2,iBlock) - Distribution_IIB(:,3,iBlock))
-    elseif(iOffset < 0)then
-       State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock)+iOffset,iBlock) &
-            =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock),&
-            iBlock)
-       Distribution_IIB(:,1:nParticle_B( iBlock)+iOffset, iBlock)&
-            = Distribution_IIB(:,1-iOffset:nParticle_B( iBlock), iBlock)
-    else
-       call CON_stop('No algorithm for iOffset >1 in '//NameSub)
-    end if
-    if(DoTraceShock)&
-         iShock_IB(ShockOld_, iBlock) = &
-         iShock_IB(ShockOld_, iBlock) + iOffset
-    nParticle_B(iBlock) = nParticle_B( iBlock) + iOffset
-  end subroutine offset
 end module SP_ModReadMhData

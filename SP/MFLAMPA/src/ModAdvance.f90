@@ -4,20 +4,20 @@
 !=============================================================!
 module SP_ModAdvance
   ! The module contains methods for advancing the solution in time
-  use ModNumConst,ONLY: cPi, cTiny
-  use ModConst,   ONLY: cLightSpeed,&
-       kinetic_energy_to_momentum, momentum_to_energy, energy_in
-  use SP_ModSize, ONLY: nParticleMax, nP=>nMomentum
+  use ModNumConst,ONLY: cPi
+  use ModConst,   ONLY: cLightSpeed, energy_in
+  use SP_ModSize, ONLY: nParticleMax
+  use SP_ModDistribution, ONLY: nP, Distribution_IIB, Momentum_I,&
+        TotalEnergy_I, MomentumMax, MomentumInj, TotalEnergyInj ,&
+        DLogP, EnergyInj, EnergyMax
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
        Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B
-  use SP_ModUnit, ONLY: NameEUnit, UnitEnergy, NameParticle  
   use ModKind,    ONLY: Real8_  
   implicit none
   SAVE
   PRIVATE ! except
   !Public members:
   public:: set_momentum_param !read settings for grid over momentum
-  public:: init_distribution_function  !Initialize Distribution_IIB
   public:: advance            !Advance solution Distribution_IIB
   !\
   ! Global interation and time
@@ -28,52 +28,10 @@ module SP_ModAdvance
   real(Real8_), public          :: StartTime
   !/
   !\
-  !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
-  ! Injection and maximal energy in the simulation
-  ! To be read from the PARAM.in file: KINETIC energies
-  real:: EnergyInj=10.0, EnergyMax=1.0E+07
-  ! Injection and max momentum in the simulation
-  real:: MomentumInj, MomentumMax
-  ! Total energy, including the rest mass energy. Velocity in terms
-  ! of momentum and total energy equals:
-  ! velocity =  momentum*cLightSpeed**2/TotalEnergy
-  real:: TotalEnergyInj
-  ! Size of a  log-momentum mesh. For momentum we use both the 
-  ! denotaion, P, and a word, momentum - whichever is more covenient
-  real:: DLogP        !log(MomentumMax/MomentumInj)/nP
-  !/
-  !\
   !||||||||||||||Boundary condition at the injection energy!!!!!!
   ! Injection efficiency and assumed spectral index with the energy
   ! range k_BT_i< Energy < EnergyInjection, to be read from PARAM.in 
   real:: CInj = 1.0, SpectralIndex = 5.0
-  !/
-  !\
-  ! Functions to convert the grid index to momentum and energy
-  !/
-  !\
-  ! Momentum and energy at the grid points
-  real, public:: Momentum_I(0:nP+1)
-  real, public:: Energy_I(0:nP+1)
-  ! Total energy, including the rest mass energy
-  real, public:: TotalEnergy_I(0:nP+1)
-  !/
-  !\
-  !!!!!!!!!!!!!!Grid in the momentum space                 !!!!!!
-  !iP     0     1                         nP   nP+1
-  !       |     |    ....                 |     | 
-  !P      P_inj P_inj*exp(\Delta(log P))  P_Max P_Max*exp(\Delta(log P))
-  ! This is because we put two boundary conditions: the background value at
-  ! the right one and the physical condition at the left one, for the 
-  ! velocity distribution function
-  !/
-  !\
-  ! Velosity Distribution Function (VDF) 
-  ! Number of points along the momentum axis is set in ModSize
-  ! 1st index - log(momentum)
-  ! 2nd index - particle index along the field line
-  ! 3rd index - local block number
-  real, public, allocatable:: Distribution_IIB(:,:,:)
   !/
   !\
   !!!!!!!!!!!!!!!!!!!!!!!!!Local parameters!!!!!!!!!!!!!!!
@@ -89,7 +47,6 @@ module SP_ModAdvance
   logical, public:: DoTraceShock = .true., UseDiffusion = .true.
   !/
 contains
-  
   subroutine set_momentum_param
     use ModReadParam, ONLY: read_var
     use SP_ModProc,   ONLY: iProc
@@ -98,68 +55,8 @@ contains
     call read_var('EnergyMax',    EnergyMax)
     call read_var('SpectralIndex',SpectralIndex)
     call read_var('Efficiency',   CInj)
-    ! account for units of energy
-    UnitEnergy = energy_in(NameEUnit)
-    if(iProc==0)then
-       write(*,'(a,E11.4,a)')'SP: For solar energetic '//NameParticle//&
-            's and for ion temperature the unit energy is '//&
-            NameEUnit//', which is ',UnitEnergy,' J' 
-       write(*,'(a,E11.4,a,E11.4,a)')'SP: Maximum energy is ',EnergyMax,&
-            ' '//NameEUnit//', which is ',EnergyMax*UnitEnergy,' J'
-       write(*,'(a,E11.4,a,E11.4,a)')'SP: Injection energy is ',EnergyInj,&
-      ' '//NameEUnit//', which is ',EnergyInj*UnitEnergy,' J'
-    end if
-    !Convert to SI
-    EnergyInj = EnergyInj * UnitEnergy
-    EnergyMax = EnergyMax * UnitEnergy
   end subroutine set_momentum_param
-  !=================================================================
-  subroutine init_distribution_function
-    use ModConst, ONLY: momentum_to_kinetic_energy
-    use ModUtilities,      ONLY: check_allocate
-    ! set the initial distribution on all lines
-    integer:: iBlock, iParticle, iP, iError
-    !----------------------------------------------------------
-    ! account for units of energy
-    UnitEnergy = energy_in(NameEUnit)
-    ! convert energies to momenta
-    MomentumInj  = kinetic_energy_to_momentum(EnergyInj, NameParticle)
-    MomentumMax  = kinetic_energy_to_momentum(EnergyMax, NameParticle)
-    ! total injection energy (including the rest mass energy
-    TotalEnergyInj = momentum_to_energy(MomentumInj, NameParticle)
-    DLogP = log(MomentumMax/MomentumInj)/nP
-    !\
-    ! Functions to convert the grid index to momentum and energy
-    !/
-    do iP = 0, nP +1
-       Momentum_I(iP) = MomentumInj*exp(iP*DLogP)
-       Energy_I(iP) = momentum_to_kinetic_energy(&
-            Momentum_I(iP), NameParticle)
-       TotalEnergy_I(iP) = &
-            momentum_to_energy(Momentum_I(iP), NameParticle)
-    end do
-    !\
-    ! Distribution function
-    !/    
-    allocate(Distribution_IIB(&
-         0:nP+1,1:nParticleMax,nBlock), stat=iError)
-    call check_allocate(iError, 'Distribution_IIB')
-    ! initialization depends on momentum, however, this corresponds
-    ! to a constant differential flux (intensity), thus ensuring
-    ! uniform backgound while visualizing this quantity
-    do iBlock = 1, nBlock
-       do iParticle = 1, nParticleMax
-          ! Overall density of the fast particles is of the order 
-          ! of 10^-6 m^-3. Integral flux is less than 100 per
-          ! (m^2 ster s). Differential background flux is constant.
-          do iP = 0, nP +1
-             Distribution_IIB(iP,iParticle,iBlock) = 0.10*&
-                  cTiny/(MomentumMax*Momentum_I(iP)**2)
-          end do
-       end do
-    end do
-  end subroutine init_distribution_function
-  !===================================================================
+  !============================
   subroutine advance(TimeLimit)
     ! advance the solution of the diffusive kinetic equation:               
     !            f_t+[(1/3)*(d(ln rho)/dt]*f_{ln p}=B*d/ds[D/B*df/ds]
@@ -450,6 +347,7 @@ contains
     end subroutine set_diffusion
     !=========================================================================
     subroutine set_advection_bc
+      use SP_ModUnit, ONLY: UnitEnergy, kinetic_energy_to_momentum  
       ! set boundary conditions on grid point on the current line
       ! LOCAL VARIABLES:
       integer:: iParticle   ! loop variable
@@ -458,7 +356,7 @@ contains
       do iParticle = 1, iEnd
          ! injection(Ti, Rho), see Sokolov et al., 2004, eq (3)
          MomentumTi = kinetic_energy_to_momentum(&
-              State_VIB(T_,iParticle,iBlock)*UnitEnergy,NameParticle)
+              State_VIB(T_,iParticle,iBlock)*UnitEnergy)
          Distribution_IIB(0,iParticle,iBlock) = &
               0.25/cPi/(SpectralIndex-3)*CInj*Rho_I(iParticle)/ &
               MomentumTi**3 * (MomentumTi/MomentumInj)**SpectralIndex

@@ -22,7 +22,8 @@ module SP_ModMain
        set_grid_param, init_grid, get_node_indexes
   use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
-       Distribution_IIB, advance, set_momentum_param
+       set_momentum_param, advance
+  use SP_ModDistribution, ONLY:  offset
   use ModKind, ONLY: Real8_
 
   implicit none
@@ -73,7 +74,7 @@ module SP_ModMain
        LatMin, LatMax, LonMin, LonMax, &
        RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
        iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       Distribution_IIB, FootPoint_VB, TypeCoordSystem,& 
+       FootPoint_VB, TypeCoordSystem,& 
        get_node_indexes
 
   ! Methods and variables from ModReadMhData
@@ -212,7 +213,7 @@ contains
   !============================================================================
 
   subroutine initialize
-    use SP_ModAdvance, ONLY: init_distribution_function
+    use SP_ModDistribution, ONLY: init_distribution_function
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
@@ -234,6 +235,7 @@ contains
     ! finalize the model
     character(LEN=*),parameter:: NameSub='SP:finalize'
     !------------------------------------------------------------------------
+    write(*,*)'Finalize'
     call finalize_write
     call finalize_read_mh_data
   end subroutine finalize

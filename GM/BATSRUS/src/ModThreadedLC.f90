@@ -1205,7 +1205,6 @@ contains
     !/
     real:: RhoCme, Ucme_D(3), Bcme_D(3), pCme
 
-    logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_field_line_thread_bc'
     !--------------------------------------------------------------------------
     if(present(iImplBlock))then
@@ -1217,7 +1216,6 @@ contains
     end if
     if(iAction==Done_)RETURN
 
-    call test_start(NameSub, DoTest, iBlock)
     call timing_start('set_thread_bc')
     !\
     ! Start from floating boundary values
@@ -1368,8 +1366,6 @@ contains
     BoundaryThreads_B(iBlock)%iAction = Done_
 
     call timing_stop('set_thread_bc')
-    call test_stop(NameSub, DoTest, iBlock)
-
   end subroutine set_field_line_thread_bc
   !============================================================================
 end module ModThreadedLC

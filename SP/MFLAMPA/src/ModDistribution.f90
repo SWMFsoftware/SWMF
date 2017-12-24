@@ -15,12 +15,11 @@ module SP_ModDistribution
   SAVE
   PRIVATE ! except
   !Public members:
-  public:: set_momentum_param !read settings for grid over momentum
   public:: init_distribution_function  !Initialize Distribution_IIB
   public:: offset
   public:: get_integral_flux
-  public:: nP,  CInj, SpectralIndex, TotalEnergyInj, DLogP, &
-       MomentumMax, MomentumInj
+  public:: nP,  TotalEnergyInj, MomentumInj, MomentumMax,  DLogP, &
+       EnergyInj, EnergyMax
   !\
   !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
   ! Injection and maximal energy in the simulation
@@ -35,12 +34,6 @@ module SP_ModDistribution
   ! Size of a  log-momentum mesh. For momentum we use both the 
   ! denotaion, P, and a word, momentum - whichever is more covenient
   real:: DLogP        !log(MomentumMax/MomentumInj)/nP
-  !/
-  !\
-  !||||||||||||||Boundary condition at the injection energy!!!!!!
-  ! Injection efficiency and assumed spectral index with the energy
-  ! range k_BT_i< Energy < EnergyInjection, to be read from PARAM.in 
-  real:: CInj = 1.0, SpectralIndex = 5.0
   !/
   !\
   ! Functions to convert the grid index to momentum and energy
@@ -70,16 +63,6 @@ module SP_ModDistribution
   real, public, allocatable:: Distribution_IIB(:,:,:)
   !/
 contains
-  
-  subroutine set_momentum_param
-    use ModReadParam, ONLY: read_var
-    use SP_ModProc,   ONLY: iProc
-    !---------------------------------------------
-    call read_var('EnergyInj',    EnergyInj)
-    call read_var('EnergyMax',    EnergyMax)
-    call read_var('SpectralIndex',SpectralIndex)
-    call read_var('Efficiency',   CInj)
-  end subroutine set_momentum_param
   !=================================================================
   subroutine init_distribution_function
     use SP_ModUnit,   ONLY: momentum_to_kinetic_energy

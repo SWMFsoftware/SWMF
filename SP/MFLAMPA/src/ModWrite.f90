@@ -7,9 +7,9 @@ module SP_ModWrite
   use SP_ModSize, ONLY: nNode, nParticleMax, nP=>nMomentum
   use SP_ModGrid, ONLY: get_node_indexes, nVar, nVarRead, nBlock,&
        State_VIB, iShock_IB, iNode_B, nParticle_B, Shock_, X_, Z_,&
-       NameVar_V, TypeCoordSystem, LagrID_,&
-       EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_, Flux5_, Flux6_
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, Distribution_IIB
+       NameVar_V, TypeCoordSystem, LagrID_, Flux0_, FluxMax_, Flux_VIB
+  use SP_ModDistribution, ONLY: Energy_I, Momentum_I, Distribution_IIB
+  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
   use SP_ModProc, ONLY: iProc
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
   use ModUtilities, ONLY: open_file, close_file
@@ -42,11 +42,11 @@ module SP_ModWrite
      ! MH data
      !/
      ! variables from the state vector to be written
-     logical:: DoPlot_V(nVar)
+     logical:: DoPlot_V(X_:FluxMax_)
      ! total number of variables to be written
-     integer:: nVarPlot
+     integer:: nVarPlot, nFluxPlot
      ! their indices in the state vector
-     integer, pointer:: iVarPlot_V(:)
+     integer, pointer:: iVarPlot_V(:), iFluxPlot_V(:)
      !\
      ! Distribution
      !/
@@ -193,7 +193,8 @@ contains
              call process_mh
              ! prepare the output data container
              allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot, 1:nParticleMax))
+                  File_I(iFile)%nVarPlot + File_I(iFile)%nFluxPlot,&
+                  1:nParticleMax))
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)
@@ -210,7 +211,8 @@ contains
              call process_mh
              ! prepare the output data container
              allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot, nNode))
+                  File_I(iFile)%nVarPlot + File_I(iFile)%nFluxPlot,&
+                  nNode))
              ! add line index to variable names
              File_I(iFile) % NameVarPlot = &
                   'LineIndex '//trim(File_I(iFile) % NameVarPlot)
@@ -220,7 +222,7 @@ contains
              call process_mh
              ! prepare the output data container
              allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot, 1))
+                  File_I(iFile)%nVarPlot + File_I(iFile)%nFluxPlot, 1))
              ! add time interval index to variable names
              File_I(iFile) % NameVarPlot = &
                   'TimeIntervalIndex '//trim(File_I(iFile) % NameVarPlot)
@@ -235,7 +237,6 @@ contains
                   Buffer_II(nP,1:nParticleMax))
           end select
        end do
-
        !\
        ! Check consistency
        !/
@@ -274,33 +275,46 @@ contains
       !/
       do iStringPlot = 2, nStringPlot - 1
          ! check names of individual variables
-         do iVar = 1, nVar
+         do iVar = 1, FluxMax_
             NameVarLowerCase = NameVar_V(iVar)
             call lower_case(NameVarLowerCase)
             if(StringPlot_I(iStringPlot) == NameVarLowerCase)&
-                 File_I(iFile) % DoPlot_V(iVar) = .true.
+                 File_I(iFile)%DoPlot_V(iVar) = .true.
          end do
          ! check common groups of variables
          select case(StringPlot_I(iStringPlot))
          case('flux')
-            ! particle and eneregy fluxes
-            File_I(iFile) % DoPlot_V(EFlux_) = .true.
-            File_I(iFile) % DoPlot_V(Flux0_:Flux6_) = .true.
+            ! particle and energy fluxes
+            File_I(iFile)%DoPlot_V(Flux0_:FluxMax_) = .true.
          end select
       end do
-      File_I(iFile) % nVarPlot = count(File_I(iFile) % DoPlot_V)
+      File_I(iFile)%nVarPlot  = count(File_I(iFile)%DoPlot_V(1:nVar))
+      File_I(iFile)%nFluxPlot = &
+           count(File_I(iFile)%DoPlot_V(Flux0_:FluxMax_))
       ! indices in the state vector
-      allocate(File_I(iFile) % iVarPlot_V(File_I(iFile)%nVarPlot))
+      allocate(File_I(iFile)%iVarPlot_V(File_I(iFile)%nVarPlot))
       ! determine indices and names of variables
-      iVarPlot = 1
+      iVarPlot = 0
       do iVar = 1, nVar
-         if(.not.File_I(iFile) % DoPlot_V(iVar)) CYCLE
-         File_I(iFile) % NameVarPlot = &
-              trim(File_I(iFile) % NameVarPlot)//' '//&
+         if(.not.File_I(iFile)%DoPlot_V(iVar)) CYCLE
+         File_I(iFile)%NameVarPlot = &
+              trim(File_I(iFile)%NameVarPlot)//' '//&
               trim(NameVar_V(iVar))
-         File_I(iFile) % iVarPlot_V(iVarPlot) = iVar
          iVarPlot = iVarPlot + 1
+         File_I(iFile)%iVarPlot_V(iVarPlot) = iVar
       end do
+      if(File_I(iFile)%nFluxPlot > 0)then
+         allocate(File_I(iFile)%iFluxPlot_V(File_I(iFile)%nFluxPlot))
+         iVarPlot = 0
+         do iVar = Flux0_, FluxMax_
+            if(.not.File_I(iFile)%DoPlot_V(iVar)) CYCLE
+            File_I(iFile)%NameVarPlot = &
+                 trim(File_I(iFile)%NameVarPlot)//' '//&
+                 trim(NameVar_V(iVar))
+            iVarPlot = iVarPlot + 1
+            File_I(iFile) % iFluxPlot_V(iVarPlot) = iVar
+         end do
+      end if
     end subroutine process_mh
     !------------------------------------------------------------------------
     subroutine process_distr
@@ -340,20 +354,16 @@ contains
            trim(NameScale)//' Distance '//trim(NameVar)
     end subroutine process_distr
   end subroutine set_write_param
-
   !============================================================================
-
   subroutine finalize_write
     ! close currently opened output units
     !----------------------------------------------------------------
     if(DoWriteHeader) call write_mh_1d_header
   end subroutine finalize_write
-
   !============================================================================
-
   subroutine write_output(IsInitialOutputIn)
-    use ModConst,      ONLY: cLightSpeed
-    use SP_ModAdvance, ONLY: Energy_I, Momentum_I, TotalEnergy_I
+    use ModConst,           ONLY: cLightSpeed
+    use SP_ModDistribution, ONLY: TotalEnergy_I, get_integral_flux
     ! write the output data
     logical, intent(in), optional:: IsInitialOutputIn
 
@@ -421,7 +431,7 @@ contains
       ! index of last particle on the field line
       integer:: iLast
       ! for better readability
-      integer:: nVarPlot
+      integer:: nVarPlot, nFluxPlot
       ! shock location
       integer:: iShock
       real   :: RShock
@@ -436,7 +446,7 @@ contains
       !/
       if(iProc==0)then
          ! increase the file counter
-         nTag = nTag +1
+         nTag = nTag + 1
          ! add to the tag list file
          NameFile = trim(NamePlotDir)//trim(NameTagFile)
          call open_file(file=NameFile, position='append', status='unknown', &
@@ -455,7 +465,8 @@ contains
       !\
       ! Write ouput files themselves
       !/
-      nVarPlot = File_I(iFile) % nVarPlot
+      nVarPlot  = File_I(iFile)%nVarPlot
+      nFluxPlot = File_I(iFile)%nFluxPlot
       StringHeader = &
            'MFLAMPA: data along a field line; '//&
            'Coordindate system: '//trim(TypeCoordSystem)           
@@ -482,6 +493,11 @@ contains
          File_I(iFile) % Buffer_II(1:nVarPlot, 1:iLast) = &
               State_VIB(File_I(iFile) % iVarPlot_V(1:nVarPlot), &
               1:iLast, iBlock)
+         if(nFluxPlot > 0)File_I(iFile)%Buffer_II(&
+              nVarPlot + 1:nVarPlot + nFluxPlot, 1:iLast) = &
+              Flux_VIB(File_I(iFile)%iFluxPlot_V(1:nFluxPlot), &
+              1:iLast, iBlock)
+              
          !Parameters
          Param_I(LagrID_:Z_) = FootPoint_VB(LagrID_:Z_,iBlock)
          ! shock location
@@ -505,7 +521,7 @@ contains
               CoordMaxIn_D  = (/State_VIB(LagrID_,iLast,iBlock)/), &
               NameVarIn     = File_I(iFile) % NameVarPlot, &
               VarIn_VI      = &
-              File_I(iFile) % Buffer_II(1:nVarPlot,1:iLast),&
+              File_I(iFile) % Buffer_II(1:nVarPlot + nFluxPlot,1:iLast),&
               ParamIn_I    = Param_I(LagrID_:RShock_))
       end do
     end subroutine write_mh_1d
@@ -534,7 +550,7 @@ contains
       ! interpolation weight
       real:: Weight
       ! for better readability
-      integer:: nVarPlot
+      integer:: nVarPlot, nFluxPlot
       ! MPI error
       integer:: iError
       ! skip a field line if it fails to reach radius of output sphere
@@ -543,7 +559,8 @@ contains
       character(len=15):: StringTime
       character(len=*), parameter:: NameSub='write_mh_2d'
       !------------------------------------------------------------------------
-      nVarPlot = File_I(iFile) % nVarPlot
+      nVarPlot = File_I(iFile)%nVarPlot
+      nFluxPlot= File_I(iFile)%nFluxPlot
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
 
@@ -572,7 +589,7 @@ contains
                  File_I(iFile) % NameFormat
          end if
          ! get max particle indexes on this field line
-         iLast  = nParticle_B(   iBlock)
+         iLast  = nParticle_B(iBlock)
 
          ! find the particle just above the given radius
          do iParticle = 1 , iLast
@@ -602,6 +619,12 @@ contains
             File_I(iFile) % Buffer_II(iVarPlot, iNode) = &
                  State_VIB(iVarIndex, iAbove-1, iBlock) * (1-Weight) + &
                  State_VIB(iVarIndex, iAbove,   iBlock) *    Weight
+         end do
+         do iVarPlot = 1, nFluxPlot
+            iVarIndex = File_I(iFile)%iFluxPlot_V(iVarPlot)
+            File_I(iFile) % Buffer_II(iVarPlot + nVarPlot, iNode) = &
+                 Flux_VIB(iVarIndex, iAbove-1, iBlock) * (1-Weight) + &
+                 Flux_VIB(iVarIndex, iAbove,   iBlock) *    Weight
          end do
 
       end do
@@ -666,7 +689,7 @@ contains
       ! interpolation weight
       real:: Weight
       ! for better readability
-      integer:: nVarPlot
+      integer:: nVarPlot, nFluxPlot
       ! skip a field line if it fails to reach radius of output sphere
       logical:: DoPrint
       ! size of the already written data
@@ -675,7 +698,8 @@ contains
       integer:: nBufferSize
       character(len=*), parameter:: NameSub='write_mh_time'
       !------------------------------------------------------------------------
-      nVarPlot = File_I(iFile) % nVarPlot
+      nVarPlot = File_I(iFile)%nVarPlot
+      nFluxPlot= File_I(iFile)%nFluxPlot
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
 
@@ -708,13 +732,11 @@ contains
          ! if no intersection found -> proceed to the next line
          if(.not.DoPrint) CYCLE
 
-
          ! set the file name
          write(NameFile,'(a,i4.4,f0.2,a,i3.3,a,i3.3,a)') &
               trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
               File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
               '_', iLon, '_', iLat, File_I(iFile) % NameFormat
-
          !\
          ! if file already exists -> read its content
          nDataLine = 0
@@ -728,9 +750,9 @@ contains
             ! if buffer is too small then reallocate it
             nBufferSize = ubound(File_I(iFile)%Buffer_II, 2)
             if(nBufferSize < nDataLine + 1)then
-               deallocate(File_I(iFile) % Buffer_II)
-               allocate(File_I(iFile) % Buffer_II(&
-                    File_I(iFile)%nVarPlot, 2*nBufferSize))
+               deallocate(File_I(iFile)%Buffer_II)
+               allocate(File_I(iFile)%Buffer_II(&
+                    nVarPlot + nFluxPlot, 2*nBufferSize))
             end if
 
             ! read the data itself
@@ -742,7 +764,7 @@ contains
 
          !\
          ! add new data
-         nDataLine = nDataLine+1
+         nDataLine = nDataLine + 1
 
          ! interpolate data and fill buffer
          Radius0 = sum(State_VIB(X_:Z_, iAbove-1, iBlock)**2)**0.5
@@ -750,10 +772,16 @@ contains
          Weight  = (File_I(iFile)%Radius - Radius0) / (Radius1 - Radius0)
          ! interpolate each requested variable
          do iVarPlot = 1, nVarPlot
-            iVarIndex = File_I(iFile) % iVarPlot_V(iVarPlot)
-            File_I(iFile) % Buffer_II(iVarPlot, nDataLine) = &
+            iVarIndex = File_I(iFile)%iVarPlot_V(iVarPlot)
+            File_I(iFile)%Buffer_II(iVarPlot, nDataLine) = &
                  State_VIB(iVarIndex, iAbove-1, iBlock) * (1-Weight) + &
                  State_VIB(iVarIndex, iAbove,   iBlock) *    Weight
+         end do
+         do iVarPlot = 1, nFluxPlot
+            iVarIndex = File_I(iFile)%iFluxPlot_V(iVarPlot)
+            File_I(iFile)%Buffer_II(iVarPlot + nVarPlot, nDataLine) = &
+                 Flux_VIB(iVarIndex, iAbove-1, iBlock) * (1-Weight) + &
+                 Flux_VIB(iVarIndex, iAbove,   iBlock) *    Weight
          end do
 
          ! reprint data to file
@@ -767,18 +795,14 @@ contains
               CoordMaxIn_D = (/real(iIterGlobal)/), &
               NameVarIn    = File_I(iFile) % NameVarPlot, &
               VarIn_VI     = &
-              File_I(iFile) % Buffer_II(1:nVarPlot,1:nDataLine)&
-              )
+              File_I(iFile) % Buffer_II(1:nVarPlot,1:nDataLine))
       end do
 
       ! mark that the first call is done
       if(File_I(iFile)%IsFirstCall)&
            File_I(iFile)%IsFirstCall = .false.
-
     end subroutine write_mh_time
-
     !=========================================================================
-
     subroutine write_distr_1d
       use SP_ModGrid, ONLY: S_
       ! write file with distribution in the format to be read by IDL/TECPLOT;
@@ -800,7 +824,7 @@ contains
       character(len=15):: StringTime
       character(len=*), parameter:: NameSub='write_distr_1d'
       !------------------------------------------------------------------------
-      select case(File_I(iFile) % iScale)
+      select case(File_I(iFile)%iScale)
       case(Momentum_)
          Scale_I = Log10Momentum_I
          Factor_I= Unity_I
@@ -859,15 +883,11 @@ contains
               Coord1In_I = Scale_I, &
               Coord2In_I = State_VIB(S_,1:iLast,iBlock), &
               NameVarIn  = File_I(iFile) % NameVarPlot, &
-              VarIn_II   = File_I(iFile) % Buffer_II(:,1:iLast) &
-              )
+              VarIn_II   = File_I(iFile) % Buffer_II(:,1:iLast))
       end do
     end subroutine write_distr_1d
-
   end subroutine write_output
-
-  !============================================================================
-
+  !==========================================================================
   subroutine write_mh_1d_header
      use SP_ModSize, ONLY: nLat, nLon
     ! write the header file that contains necessary information for reading
@@ -899,9 +919,7 @@ contains
     write(UnitTmp_,*)
     call close_file
   end subroutine write_mh_1d_header
-
   !==========================================================================
-
   subroutine get_time_string(Time, StringTime)
     ! the subroutine converts real variable Time into a string,
     ! the structure of the string is 'ddhhmmss', 
@@ -919,7 +937,7 @@ contains
          int((Time-( 3600.*int(Time/ 3600.)))/   60.), & ! # minutes
          int( Time-(   60.*int(Time/   60.)))            ! # seconds
   end subroutine get_time_string
-  !
+  !=============================
   subroutine get_date_time_string(Time, StringTime)
     use SP_ModAdvance, ONLY: StartTime
     use ModTimeConvert,ONLY: time_real_to_int
@@ -936,98 +954,4 @@ contains
          iTime_I(1:3),'_',iTime_I(4:6)
          
   end subroutine get_date_time_string
-  !===========================================================================
-  subroutine get_integral_flux
-    use SP_ModGrid, ONLY: EFlux_, Flux0_, Flux1_, Flux2_, Flux3_, Flux4_,&
-         Flux5_, Flux6_, FluxMax_ 
-    use SP_ModAdvance, ONLY: Energy_I, Momentum_I
-    use ModConst, ONLY: energy_in
-    ! compute the total (simulated) integral flux of particles as well as
-    ! particle flux in the 6 GOES channels; also compute total energy flux
-    !------------------------------------------------------------------------
-    integer:: iBlock, iParticle, iP, iFlux ! loop variables
-    real   :: EFlux ! the value of energy flux
-    real   :: EChannel_I(6) ! energy limits of GOES channels
-    real   :: dFlux, dFlux1 ! increments
-    real   :: Flux, Flux_I(6) ! the value of particle flux
-    real   :: Norm  ! normalization factor
-    !-------------------------------------------------------------------------
-    ! energy limits of GOES channels
-    EChannel_I = (/5,10,30,50,60,100/) * energy_in('MeV')
-    do iBlock = 1, nBlock
-       do iParticle = 1, nParticle_B( iBlock)
-          !\
-          ! Integration loop with midpoint rule
-          !/
-          ! reset values
-          EFlux = 0.0
-          Flux_I= 0.0
-          Norm  = 0.0
-          Flux  = 0.0
-          do iP = 1, nP - 1
-             ! the flux increment from iP
-             dFlux = 0.5 * &
-                  (Energy_I(iP+1) - Energy_I(iP)) * (&
-                  Distribution_IIB(iP,  iParticle,iBlock)*&
-                  Momentum_I(iP)**2 &
-                  +&
-                  Distribution_IIB(iP+1,iParticle,iBlock)*&
-                  Momentum_I(iP+1)**2)
-
-             ! increase the total flux
-             Flux = Flux + dFlux
-
-             ! increase FOES channels' fluxes
-             do iFlux = 1, 6
-                ! check whether reached the channel's cut-off level
-                if(Energy_I(iP+1) < EChannel_I(iFlux))&
-                     CYCLE
-
-                if(Energy_I(iP+1) >= EChannel_I(iFlux))then
-                   Flux_I(iFlux) = Flux_I(iFlux) + dFlux
-                else
-                   ! channel cutoff level is often in the middle of a bin;
-                   ! compute partial flux increment
-                   dFlux1 =&
-                        ((-0.50*(Energy_I(iP) + EChannel_I(iFlux)) + &
-                        Energy_I(iP+1) )*&
-                        Distribution_IIB(iP,iParticle,iBlock)*&
-                        Momentum_I(iP)**2  &
-                        -0.50*(Energy_I(iP)-EChannel_I(iFlux))*&
-                        Distribution_IIB(iP+1,iParticle,iBlock)*&
-                        Momentum_I(iP+1)**2)*&
-                        (Energy_I(iP)-EChannel_I(iFlux))/&
-                        (Energy_I(iP+1)-Energy_I(iP))
-                   Flux_I(iFlux) = Flux_I(iFlux) + dFlux1
-                end if
-             end do
-
-             ! increase total energy flux
-             EFlux = EFlux + 0.5 * &
-                  (Energy_I(iP+1) - Energy_I(iP)) * (&
-                  Distribution_IIB(iP,  iParticle,iBlock)*&
-                  Energy_I(iP) * &
-                  Momentum_I(iP)**2 &
-                  +&
-                  Distribution_IIB(iP+1,iParticle,iBlock)*&
-                  Energy_I(iP+1) * &
-                  Momentum_I(iP+1)**2)
-
-             ! normalization factor
-             Norm = Norm + 0.5 * &
-                  (Momentum_I(iP+1) - Momentum_I(iP)) * (&
-                  Distribution_IIB(iP,  iParticle, iBlock) * &
-                  Momentum_I(iP)**2 &
-                  + &
-                  Distribution_IIB(iP+1,iParticle, iBlock) * &
-                  Momentum_I(iP+1)**2)
-          end do
-
-          ! store the results
-          State_VIB(Flux0_,        iParticle, iBlock) = Flux        / Norm
-          State_VIB(Flux1_:Flux6_, iParticle, iBlock) = Flux_I(1:6) / Norm
-          State_VIB(EFlux_,        iParticle, iBlock) = EFlux       / Norm
-       end do
-    end do
-  end subroutine get_integral_flux
 end module SP_ModWrite
