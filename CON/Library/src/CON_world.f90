@@ -1,4 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan, 
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 !               Space Weather Modeling Framework (SWMF)                !
@@ -59,6 +60,7 @@ module  CON_world
   !
   use ModMpi
   use ModIoUnit, ONLY : UNITTMP_, io_unit_clean
+  use ModUtilities, ONLY: CON_stop
   use CON_comp_param
   use CON_comp_info, &
        comp_info_init  => init, &
@@ -75,7 +77,6 @@ module  CON_world
   public :: world_init      ! constructor initializes registry for components
   public :: world_setup     ! set registry values (reads from LAYOUT.in)
   public :: world_clean     ! destructor cleans up
-  public :: world_abort     ! abort execution
   public :: n_comp          ! return number of components
   public :: use_comp        ! return true if component is used
   public :: i_comp          ! return component ID for list index
@@ -214,22 +215,6 @@ contains
     call io_unit_clean
 
   end subroutine world_clean
-  !===============================================================!
-  subroutine world_abort(String, iValue, Value)
-    character (len=*), intent(in) :: String
-    integer, optional, intent(in) :: iValue
-    real,    optional, intent(in) :: Value
-    integer :: iError,nError
-    !-------------------------------------------------------------------------
-    write(*,'(a)',ADVANCE='NO') String
-    if(present(iValue)) write(*,*) iValue
-    if(present(Value))  write(*,*)  Value
-    write(*,*)
-    write(*,*)'!!! Stopping execution !!! requested by processor ', i_proc()
-    call io_unit_clean
-    call MPI_abort(i_comm(), nError, iError)
-    stop
-  end subroutine world_abort
   !===========================================================================
   logical function is_proc_world()
     is_proc_world = iProcWorld>=0
@@ -331,13 +316,13 @@ contains
        if(.not. IsExisting) then
           write(*,'(4a)')  NameSub,' SWMF_ERROR: the map file ',NameMapFile, &
                ' does not exist in the current directory'
-          call world_abort('Please create file '//NameMapFile)
+          call CON_stop('Please create file '//NameMapFile)
        endif
 
        open(UNITTMP_,file=NameMapFile,iostat=iError,status="old",action="read")
        if(iError/=0) then
           write(*,'(3a)') NameSub,' SWMF_ERROR: can not open file ',NameMapFile
-          call world_abort('Please check the file permissions of ' &
+          call CON_stop('Please check the file permissions of ' &
                //NameMapFile)
        endif
 
@@ -349,7 +334,7 @@ contains
              close (UNITTMP_)
              write(*,'(a)') NameSub//' SWMF_ERROR: could not find '// &
                   StringStart//' in file '//NameMapFile
-             call world_abort('Please edit file '//NameMapFile)
+             call CON_stop('Please edit file '//NameMapFile)
           end if
           if (String == StringStart) EXIT
        end do
@@ -363,7 +348,7 @@ contains
              write(*,'(a,i2,a)')  NameSub// &
                   ' SWMF_ERROR: can not read line after',&
                   nLine,' lines from the file '//NameMapFile
-             call world_abort('Please edit '//NameMapFile)
+             call CON_stop('Please edit '//NameMapFile)
           end if
           nLine          = nLine + 1
        end if
@@ -371,7 +356,7 @@ contains
        call MPI_bcast(String,len(String),MPI_CHARACTER,0,iCommWorld,iError)
 
        if(String == StringEnd) then
-          if (nComp == 0) call world_abort(NameSub // &
+          if (nComp == 0) call CON_stop(NameSub // &
                'SWMF_ERROR: no components specified in the file='//NameMapFile)
           exit RECLOOP
        endif
@@ -383,7 +368,7 @@ contains
                ' SWMF_ERROR: can not read component name and PE range from "'&
                //trim(String)//'" at line ',nLine, &
                ' from the file '//NameMapFile
-          call world_abort('Please edit '//NameMapFile)
+          call CON_stop('Please edit '//NameMapFile)
        end if
 
        Name = adjustl(Name)
@@ -395,7 +380,7 @@ contains
              write(*,'(a,i2,a)')  NameSub// &
                   ' SWMF_ERROR: invalid component name '//trim(Name)// &
                   ' at line ',nLine,' in the file '//NameMapFile
-             call world_abort('Please edit '//NameMapFile)
+             call CON_stop('Please edit '//NameMapFile)
           endif
        endif
        nComp = nComp + 1
@@ -407,7 +392,7 @@ contains
                ' has been already registered as component ',&
                lComp_I(iComp),' and now again as component ',&
                nComp,' at line ',nLine,' in file '//NameMapFile
-          call world_abort(NameSub//' SWMF_ERROR Please edit '//NameMapFile)
+          call CON_stop(NameSub//' SWMF_ERROR Please edit '//NameMapFile)
           CYCLE RECLOOP
        end if
 
@@ -453,7 +438,7 @@ contains
                ' SWMF_ERROR: cannot produce layout for component '// &
                Name_C(lComp)//' using processor range ',&
                iProcRange_IC(:,lComp)
-          call world_abort(&
+          call CON_stop(&
                'Please edit '//NameMapFile//' or increase number of PEs')
        end if
     end do
@@ -489,7 +474,7 @@ contains
           write(*,'(a,i3,a,i3)')NameSub//' SWMF_ERROR iComp '// &
                NameComp_I(iComp)//' is not found among the ',&
                nComp,' registered components, lComp=',lComp
-          call world_abort('Error in the caller method')
+          call CON_stop('Error in the caller method')
        end if
     end if
 
@@ -510,7 +495,7 @@ contains
     if(.not.is_valid_comp_name(NameComp))then
        write(*,'(a)')NameSub//' SWMF_ERROR name '//NameComp// &
             ' is not a valid component name'
-       call world_abort('Error in the caller method')
+       call CON_stop('Error in the caller method')
     end if
 
     lComp = lComp_I(i_comp(NameComp))
@@ -521,7 +506,7 @@ contains
           write(*,'(a,i3,a,i3)')NameSub//' SWMF_ERROR component '// &
                NameComp//' is not found among the ',&
                nComp,' registered components, lComp=',lComp
-          call world_abort('Error in the caller method')
+          call CON_stop('Error in the caller method')
        end if
     end if
 
@@ -541,14 +526,14 @@ contains
     if(lComp<1.or.lComp>nComp)then
        write(*,'(a,i3,a,i3)')NameSub//' SWMF_ERROR lComp=',lComp,&
             ' is out of range 1..nComp=',nComp
-       call world_abort('Error in caller method')
+       call CON_stop('Error in caller method')
     end if
     iComp=iComp_C(lComp)
     if(iComp<1.or.iComp>MaxComp)then
        write(*,'(a,i3,a,i3,a,i3)')NameSub//' SWMF_ERROR lComp=',lComp,&
             ' gives iComp=',iComp,&
             ' which is out of range 1..MaxComp=',MaxComp
-       call world_abort(NameSub//'iComp_C array is not set correctly')
+       call CON_stop(NameSub//'iComp_C array is not set correctly')
     end if
     i_comp_id = iComp
 

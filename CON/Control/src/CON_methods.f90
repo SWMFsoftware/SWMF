@@ -53,8 +53,7 @@ end subroutine CON_set_do_test
 subroutine CON_stop(StringError)
 
   !USES:
-  use ModMpi
-  use CON_world, ONLY: world_abort
+  use ModUtilities, ONLY: util_stop => CON_stop
   implicit none
 
   !INPUT ARGUMENTS:
@@ -62,13 +61,13 @@ subroutine CON_stop(StringError)
 
   !DESCRIPTION:
   ! This subroutine is used to abort the run with an error report.
-  ! It provides an external subroutine interface to CON\_world::world\_abort.
-  ! Open IO units are closed and empty output files are deleted before abort.
+  ! It provides an external subroutine interface to ModUtilities::CON_stop.
+  ! Open I/O units are closed and empty output files are deleted before abort.
   ! This will only be done on the aborting processor(s).
   !EOP
   !----------------------------------------------------------------------------
   !BOC
-  call world_abort(StringError)
+  call util_stop(StringError)
   !EOC
 end subroutine CON_stop
 
