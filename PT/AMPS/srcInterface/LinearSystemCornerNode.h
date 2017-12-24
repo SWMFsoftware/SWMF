@@ -153,8 +153,6 @@ public:
   //destructor
   ~cLinearSystemCornerNode() {
     Reset();
-
-    MatrixRowStack.~cStack();
   }
 
 
