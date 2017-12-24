@@ -29,10 +29,7 @@
 subroutine CON_set_do_test(String,DoTest,DoTestMe)
 
   !USES:
-  use CON_world
-  use CON_variables, ONLY: StringTest, tStartTest, nIterStartTest, iProcTest,&
-       lVerbose
-  use CON_time, ONLY: DoTimeAccurate, tSimulation, nIteration
+  use ModUtilities, ONLY: util_set_do_test => CON_set_do_test
 
   implicit none
 
@@ -42,52 +39,11 @@ subroutine CON_set_do_test(String,DoTest,DoTestMe)
   logical          , intent(out) :: DoTest, DoTestMe
 
   !DESCRIPTION:
-  ! Based on the input String and the test variables set 
-  ! the output variables. Normally DoTest is true if the String
-  ! can be found in StringTest, while DoTestMe is true if
-  ! DoTest is true and the processor rank is equal to iProcTest.
-  ! This behaviour maybe modified by nIterStartTest and tStartTest
-  ! which can define the starting iteration and time for the test.
-  ! Also the high verbosity levels will produce extra information.
+  ! See ModUtilities.
   !EOP
   !----------------------------------------------------------------------------
   !BOC
-  if(nIteration >= nIterStartTest .or. &
-       (DoTimeAccurate .and. tSimulation>=tStartTest))then
-
-     DoTest   = i_sub_string(' '//StringTest,' '//String//' ')>0
-     DoTestMe = DoTest .and. i_proc()==iProcTest
-     if(DoTestMe)then
-        write(*,*)String,' at iter=',nIteration
-     else if(lVerbose>=100)then
-        write(*,*)String,' CALLED by me=',i_proc(),' at iter=',nIteration
-     else if(i_proc()==iProcTest .and. lVerbose>=10 )then
-        write(*,*)String,' CALLED at iter=',nIteration
-     endif
-  else
-     DoTest   = .false.
-     DoTestMe = .false.
-  end if
-  !EOC
-contains
-  !===========================================================================
-
-  integer function i_sub_string(StringA,StringB)
-
-    ! This is needed to avoid some SGI f90 compiler bug 
-    ! (which results in a memory leak) if we use
-    !
-    ! index(' '//StringTest,' '//str//' ')
-    !
-    ! directly.
-
-    implicit none
-
-    character (len=*), intent(in) :: StringA, StringB
-
-    i_sub_string=index(StringA, StringB)
-
-  end function i_sub_string
+  call util_set_do_test(String, DoTest, DoTestMe)
 
 end subroutine CON_set_do_test
 

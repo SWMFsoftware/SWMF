@@ -324,11 +324,6 @@ contains
 
           call read_var('iProcTest', iProcTest)
 
-       case('#TESTTIME')
-          
-          call read_var('nIterStartTest', nIterStartTest)
-          call read_var('tStartTest',     tStartTest)
-
        case("#TIMING")
 
           call read_var('UseTiming',UseTiming)

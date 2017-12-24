@@ -6,6 +6,7 @@
 module CON_variables
   !USES:
   use ModReadParam, ONLY: lStringLine
+  use ModUtilities, ONLY: lVerbose, StringTest, iProcTest
 
   implicit none
 
@@ -29,20 +30,9 @@ module CON_variables
   logical :: UseTiming = .true.
   integer :: DnTiming  = -2       ! Show timing at the end of run only
   
-  ! How verbose should we be
-  integer :: lVerbose = 1
-  
   ! How strict shoule we be. 
   ! If true stop with error if false write warning but try to correct problem.
   logical :: UseStrict=.true.
-
-  ! Names of subroutines to be tested
-  character (len=lStringLine) :: StringTest = ' '
-
-  ! Time to start testing
-  real    :: tStartTest     = -1.0
-  integer :: nIterStartTest = -1
-  integer :: iProcTest      = 0
 
   !EOC
 end module CON_variables
