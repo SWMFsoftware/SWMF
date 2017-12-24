@@ -4,7 +4,7 @@
 !=============================================================!
 module SP_ModGrid
   !Multi-line grid, D.Borovikov & I.Sokolov, Dec,17, 2017.
-  !Further revision history:
+  !Dec.23 2017: exclude fluxes from the state vector.
   use SP_ModSize, ONLY: nDim, nLon, nLat, nNode, nParticleMax
 
   implicit none
@@ -89,7 +89,7 @@ module SP_ModGrid
   real, public, allocatable:: State_VIB(:,:,:)
   real, public, allocatable:: Flux_VIB( :,:,:)
   ! Number of variables in the state vector and their identifications
-  integer, public, parameter :: nVarRead = 13, nVar = 29, FluxMax_ = 29,&
+  integer, public, parameter :: nVarRead = 13, nVar = 21, FluxMax_ = 29,&
        !\
        LagrID_ = 0, & ! Lagrangian id           ^saved/     ^set to 0 in
        X_      = 1, & !                         |read in    |copy_old_state
