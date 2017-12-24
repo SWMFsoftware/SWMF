@@ -407,21 +407,6 @@ The test information will be written from iProcTest when DoTestMe is used
 in the SWMF. Default value is 0.
 </command>
 
-<command name="TESTTIME">
-	<parameter name="nIterStartTest" type="integer" min="-1" 
-		   			 		default="-1"/>
-	<parameter name="tStartTest" type="real" min="-1"
-							default="-1"/>
-
-#TESTTIME
-10			nIterStartTest
-5.0			tStartTest
-
-The test information will be written if the number of iterations 
-exceed nIterStartTest or time exceeds tStarTest (in time accurate
-mode). Default value is -1 for both.
-</command>
-
 <command name="VERBOSE">
 	<parameter name="iVarTest" type="integer" input="select">
 		<option name="errors and warnings only" value="0" />
