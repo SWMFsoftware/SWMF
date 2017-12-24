@@ -455,6 +455,8 @@ PARALLEL = mpiexec
 NPFLAG   = -n
 NP       = 2
 MPIRUN   = \${PARALLEL} \${NPFLAG} \${NP}
+NTHREAD  = 2
+OMPIRUN  = export OMP_NUM_THREADS=\${NTHREAD}; \${MPIRUN}
 ";
 	if($DryRun){
 	    print "write into $MakefileDef:\n$header";
