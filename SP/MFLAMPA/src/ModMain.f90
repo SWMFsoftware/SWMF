@@ -19,7 +19,7 @@ module SP_ModMain
        RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
        iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
        FootPoint_VB, TypeCoordSystem,&
-       set_grid_param, init_grid, get_node_indexes
+       set_grid_param=>read_param, init_grid=>init, get_node_indexes
   use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
        set_momentum_param, advance
@@ -213,7 +213,8 @@ contains
   !============================================================================
 
   subroutine initialize
-    use SP_ModDistribution, ONLY: init_distribution_function
+    use SP_ModDistribution, ONLY: init_distribution_function=>init
+    use SP_ModUnit        , ONLY: init_unit=>init    
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
@@ -223,8 +224,9 @@ contains
        RETURN
     end if
     call init_grid(DoRestart .or. DoReadMhData)
-    call init_read_mh_data ! if input files are used, TimeGlobal is set here
-    call init_distribution_function 
+    call init_unit
+    call init_distribution_function
+    call init_read_mh_data ! if input files are used, TimeGlobal is set here 
     if(DoRestart) call read_restart
     DataInputTime = TimeGlobal
   end subroutine initialize

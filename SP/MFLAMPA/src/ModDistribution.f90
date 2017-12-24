@@ -8,14 +8,14 @@ module SP_ModDistribution
   use ModNumConst,ONLY: cTiny
   use ModConst,   ONLY: cLightSpeed, energy_in
   use SP_ModSize, ONLY: nParticleMax, nP=>nMomentum
-  use SP_ModUnit, ONLY: NameEUnit, UnitEnergy, &
+  use SP_ModUnit, ONLY: UnitEnergy=>UnitParticleEnergy, &
        kinetic_energy_to_momentum, momentum_to_energy
   use SP_ModGrid, ONLY: nBlock, nParticle_B
   implicit none
   SAVE
   PRIVATE ! except
   !Public members:
-  public:: init_distribution_function  !Initialize Distribution_IIB
+  public:: init              !Initialize Distribution_IIB
   public:: offset
   public:: get_integral_flux
   public:: nP,  TotalEnergyInj, MomentumInj, MomentumMax,  DLogP, &
@@ -62,16 +62,17 @@ module SP_ModDistribution
   ! 3rd index - local block number
   real, public, allocatable:: Distribution_IIB(:,:,:)
   !/
+  logical :: DoInit = .true.
 contains
   !=================================================================
-  subroutine init_distribution_function
+  subroutine init
     use SP_ModUnit,   ONLY: momentum_to_kinetic_energy
     use ModUtilities, ONLY: check_allocate
     ! set the initial distribution on all lines
     integer:: iBlock, iParticle, iP, iError
     !----------------------------------------------------------
-    ! account for units of energy
-    UnitEnergy = energy_in(NameEUnit)
+    if(.not.DoInit)RETURN
+    DoInit = .false.
     ! convert energies to momenta
     MomentumInj  = kinetic_energy_to_momentum(EnergyInj*UnitEnergy)
     MomentumMax  = kinetic_energy_to_momentum(EnergyMax*UnitEnergy)
@@ -106,7 +107,7 @@ contains
           end do
        end do
     end do
-  end subroutine init_distribution_function
+  end subroutine init
   !============================================================
   subroutine offset(iBlock, iOffset, AlphaIn)
     use SP_ModGrid, ONLY: &

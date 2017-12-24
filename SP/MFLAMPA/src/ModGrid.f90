@@ -5,6 +5,7 @@
 module SP_ModGrid
   !Multi-line grid, D.Borovikov & I.Sokolov, Dec,17, 2017.
   !Dec.23 2017: exclude fluxes from the state vector.
+  !Dec.24 2017: standard init and read_param
   use SP_ModSize, ONLY: nDim, nLon, nLat, nNode, nParticleMax
 
   implicit none
@@ -13,8 +14,8 @@ module SP_ModGrid
 
   private ! except
   !Public members:
-  public:: set_grid_param  !read parameters related to grid 
-  public:: init_grid       !Initialize arrays on the grid
+  public:: read_param      !read parameters related to grid 
+  public:: init            !Initialize arrays on the grid
   public:: copy_old_state  !save old arrays before getting new ones  
   public:: get_other_state_var !Auxiliary components of state vector 
  
@@ -161,12 +162,13 @@ module SP_ModGrid
   ! Mark that grid or lines' origin have been set
   logical:: IsSetGrid   = .false.
   logical:: IsSetOrigin = .false.
+  logical:: DoInit = .true.
 contains  
-  subroutine set_grid_param(NameCommand)
+  subroutine read_param(NameCommand)
     use ModReadParam, ONLY: read_var
     use ModNumConst, ONLY : cDegToRad
-    character (len=*), intent(in):: NameCommand ! From PARAM.in  
-    character(len=*), parameter  :: NameSub = 'SP:set_grid_param'
+    character(len=*), intent(in):: NameCommand ! From PARAM.in  
+    character(len=*), parameter :: NameSub = 'SP:set_grid_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
     case('#ORIGIN')
@@ -215,10 +217,9 @@ contains
             ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
        IsSetGrid = .true.
     end select
-  end subroutine set_grid_param
-
+  end subroutine read_param
   !==========================================================================
-  subroutine init_grid(DoReadInput)
+  subroutine init(DoReadInput)
     ! allocate the grid used in this model
     use ModUtilities,      ONLY: check_allocate
     use ModCoordTransform, ONLY: rlonlat_to_xyz
@@ -229,6 +230,8 @@ contains
     integer:: iLat, iLon, iNode, iBlock, iProcNode, iParticle
     character(LEN=*),parameter:: NameSub='SP:init_grid'
     !-------------------------------------------------------------------------
+    if(.not.DoInit)RETURN
+    DoInit = .false.
     !\
     ! Check if everything's ready for initialization
     !/
@@ -322,7 +325,7 @@ contains
           end if
        end do
     end do
-  end subroutine init_grid
+  end subroutine init
   !============================================================================
   subroutine get_node_indexes(iNodeIn, iLonOut, iLatOut)
     ! return angular grid's indexes corresponding to this node

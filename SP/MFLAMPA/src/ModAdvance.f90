@@ -347,7 +347,7 @@ contains
     end subroutine set_diffusion
     !=========================================================================
     subroutine set_advection_bc
-      use SP_ModUnit, ONLY: UnitEnergy, kinetic_energy_to_momentum  
+      use SP_ModUnit, ONLY: UnitParticleEnergy, kinetic_energy_to_momentum  
       ! set boundary conditions on grid point on the current line
       ! LOCAL VARIABLES:
       integer:: iParticle   ! loop variable
@@ -356,7 +356,7 @@ contains
       do iParticle = 1, iEnd
          ! injection(Ti, Rho), see Sokolov et al., 2004, eq (3)
          MomentumTi = kinetic_energy_to_momentum(&
-              State_VIB(T_,iParticle,iBlock)*UnitEnergy)
+              State_VIB(T_,iParticle,iBlock)*UnitParticleEnergy)
          Distribution_IIB(0,iParticle,iBlock) = &
               0.25/cPi/(SpectralIndex-3)*CInj*Rho_I(iParticle)/ &
               MomentumTi**3 * (MomentumTi/MomentumInj)**SpectralIndex
