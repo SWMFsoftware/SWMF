@@ -9,6 +9,7 @@ include Makefile.DEPEND
 # Object files included into the library
 OBJECTS = \
 	ModAdvance.o \
+	ModDistribution.o \
 	ModDiffusion.o \
 	ModGrid.o \
 	ModLogAdvection.o \
