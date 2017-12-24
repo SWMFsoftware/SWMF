@@ -49,9 +49,6 @@ test:
 
 # !!! NOTE: In the above list "test_func" should be the last test
 
-# Default number of OpenMP threads/MPI process if used
-NTHREAD = 2
-
 # All tests are done in this directory:
 TESTDIR = run_test
 
@@ -190,7 +187,7 @@ test_shocktube_rundir: test_rundir
 	cd ${TESTDIR}; cp Param/SHOCKTUBE/PARAM.in.hyp PARAM.in
 
 test_shocktube_run:
-	cd ${TESTDIR}; export OMP_NUM_THREADS=${NTHREAD}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./BATSRUS.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULT
 
 test_shocktube_check:
