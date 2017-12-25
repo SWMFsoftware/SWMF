@@ -16,15 +16,21 @@ module SP_ModDistribution
   PRIVATE ! except
   !Public members:
   public:: init              !Initialize Distribution_IIB
-  public:: offset
-  public:: get_integral_flux
-  public:: nP,  TotalEnergyInj, MomentumInj, MomentumMax,  DLogP, &
-       EnergyInj, EnergyMax
+  public:: read_param        !Read momentum grid parameters  
+  public:: offset            !Sync. index in State_VIB and Dist_IIB 
+  public:: get_integral_flux !Calculate Flux_VIB
+  public:: nP                !Number of points in the momentum grid 
+  public:: MomentumInj       !Mimimum momentum value in SI
+  public:: MomentumMax       !Maximum momentum value in SI
+  public:: EnergyInjIo       !Energy in kev for MomentumInj 
+  public:: EnergyMaxIo       !Energy in keV for MomentumMax
+  public:: DLogP             !Mesh size for log(momentum) grid
+  public:: TotalEnergyInj    !TBD
   !\
   !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
   ! Injection and maximal energy in the simulation
   ! To be read from the PARAM.in file: KINETIC energies
-  real:: EnergyInj=10.0, EnergyMax=1.0E+07
+  real:: EnergyInjIo=10.0, EnergyMaxIo=1.0E+07
   ! Injection and max momentum in the simulation
   real:: MomentumInj, MomentumMax
   ! Total energy, including the rest mass energy. Velocity in terms
@@ -74,8 +80,8 @@ contains
     if(.not.DoInit)RETURN
     DoInit = .false.
     ! convert energies to momenta
-    MomentumInj  = kinetic_energy_to_momentum(EnergyInj*UnitEnergy)
-    MomentumMax  = kinetic_energy_to_momentum(EnergyMax*UnitEnergy)
+    MomentumInj  = kinetic_energy_to_momentum(EnergyInjIo*UnitEnergy)
+    MomentumMax  = kinetic_energy_to_momentum(EnergyMaxIo*UnitEnergy)
     ! total injection energy (including the rest mass energy
     TotalEnergyInj = momentum_to_energy(MomentumInj)
     DLogP = log(MomentumMax/MomentumInj)/nP
@@ -108,6 +114,30 @@ contains
        end do
     end do
   end subroutine init
+  !============================================================
+   subroutine read_param(NameCommand)
+    use ModReadParam, ONLY: read_var
+    use SP_ModProc,   ONLY: iProc
+    character(len=*), intent(in):: NameCommand ! From PARAM.in  
+    character(len=*), parameter :: NameSub='SP:read_param_distribution'
+    integer:: nPCheck = nP
+    !----------------------------------------------------------
+    select case(NameCommand)
+    case('#MOMENTUMGRID')
+       !Read unit to be used for particle energy: eV, keV, GeV
+       call read_var('EnergyMin',EnergyInjIo)
+       call read_var('EnergyMax',EnergyMaxIo)
+       call read_var('nP'       ,nPCheck    )
+       if(nP/=nPCheck)then
+          if(iProc==0)write(*,'(a,i6,a,i6)')NameSub//' '//&
+               'Code is configured with nMomentum=',nP,&
+               ' while value read from PARAM.in is nP=',nPCheck 
+          call CON_stop('Modify PARAM.in or reconfigure SP/MFLAMPA')
+       end if
+    case default
+       call CON_stop(NameSub//'Unknown command '//NameCommand)
+    end select
+  end subroutine read_param
   !============================================================
   subroutine offset(iBlock, iOffset, AlphaIn)
     use SP_ModGrid, ONLY: &

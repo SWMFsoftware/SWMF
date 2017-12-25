@@ -9,7 +9,7 @@ module SP_ModAdvance
   use SP_ModSize, ONLY: nParticleMax
   use SP_ModDistribution, ONLY: nP, Distribution_IIB, Momentum_I,&
         TotalEnergy_I, MomentumMax, MomentumInj, TotalEnergyInj ,&
-        DLogP, EnergyInj, EnergyMax
+        DLogP, EnergyInjIo, EnergyMaxIo
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
        Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B
   use ModKind,    ONLY: Real8_  
@@ -51,8 +51,8 @@ contains
     use ModReadParam, ONLY: read_var
     use SP_ModProc,   ONLY: iProc
     !---------------------------------------------
-    call read_var('EnergyInj',    EnergyInj)
-    call read_var('EnergyMax',    EnergyMax)
+    call read_var('EnergyInjIo',    EnergyInjIo)
+    call read_var('EnergyMaxIo',    EnergyMaxIo)
     call read_var('SpectralIndex',SpectralIndex)
     call read_var('Efficiency',   CInj)
   end subroutine set_momentum_param
