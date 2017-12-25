@@ -6,6 +6,7 @@ module SP_ModGrid
   !Multi-line grid, D.Borovikov & I.Sokolov, Dec,17, 2017.
   !Dec.23 2017: exclude fluxes from the state vector.
   !Dec.25 2017: standard init and read_param
+  !Dec.25 2017: rename nVarRead=>nMHData, add NoShock_ param.
   use SP_ModSize, ONLY: nDim, nLon, nLat, nNode, nParticleMax
   use SP_ModProc, ONLY: iProc
   implicit none
@@ -74,6 +75,7 @@ module SP_ModGrid
        Shock_   = 1, & ! Current location of a shock wave
        ShockOld_= 2    ! Old location of a shock wave
   integer, public, allocatable:: iShock_IB(:,:)
+  integer, public, parameter:: NoShock_ = 1
   !/ 
   !\
   ! Information about the magnetic field line foot point:
@@ -90,7 +92,7 @@ module SP_ModGrid
   real, public, allocatable:: State_VIB(:,:,:)
   real, public, allocatable:: Flux_VIB( :,:,:)
   ! Number of variables in the state vector and their identifications
-  integer, public, parameter :: nVarRead = 13, nVar = 21, FluxMax_ = 29,&
+  integer, public, parameter :: nMHData = 13, nVar = 21, FluxMax_ = 29,&
        !\
        LagrID_ = 0, & ! Lagrangian id           ^saved/     ^set to 0 in
        X_      = 1, & !                         |read in    |copy_old_state
@@ -300,7 +302,7 @@ contains
           if(iProcNode==iProc)then
              iNode_B(     iBlock) = iNode
              nParticle_B( iBlock) = 1
-             iShock_IB(:, iBlock) = 1
+             iShock_IB(:, iBlock) = NoShock_
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
           iGridGlobal_IA(Block_,  iNode)  = iBlock
@@ -364,7 +366,7 @@ contains
        State_VIB((/RhoOld_,BOld_/), 1:iEnd, iBlock) = &
             State_VIB((/Rho_,B_/),  1:iEnd, iBlock)
        !reset variables read from file or received via coupler
-       State_VIB(1:nVarRead,1:iEnd, iBlock) = 0.0
+       State_VIB(1:nMHData,1:iEnd, iBlock) = 0.0
     end do
   end subroutine copy_old_state
   !===================

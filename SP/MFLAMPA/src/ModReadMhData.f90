@@ -5,7 +5,7 @@
 module SP_ModReadMhData
   ! This module contains methods for reading input MH data
   use SP_ModSize,    ONLY: nDim, nParticleMax
-  use SP_ModGrid,    ONLY: get_node_indexes, nVarRead, nVar, nBlock,&
+  use SP_ModGrid,    ONLY: get_node_indexes, nMHData, nVar, nBlock,&
        iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB, &
        NameVar_V, LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
@@ -185,8 +185,8 @@ contains
 
        State_VIB(LagrID_   , 1:nParticleInput, iBlock) = &
             Buffer_I(             1:nParticleInput)
-       State_VIB(1:nVarRead, 1:nParticleInput, iBlock) = &
-            Buffer_II(1:nVarRead, 1:nParticleInput)
+       State_VIB(1:nMHData, 1:nParticleInput, iBlock) = &
+            Buffer_II(1:nMHData, 1:nParticleInput)
 
        nParticle_B(  iBlock) = nParticleInput
 

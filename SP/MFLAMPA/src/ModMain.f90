@@ -308,35 +308,41 @@ contains
   !=================
   subroutine get_shock_location(iBlock)
     use SP_ModAdvance, ONLY: nWidth
-    use SP_ModGrid,    ONLY: R_
+    use SP_ModGrid,    ONLY: R_, NoShock_
     integer, intent(in) :: iBlock
-    ! find location of a shock wave on every field line
-    !--------------------------------------------------------------------------
-    ! loop variable
-    integer:: iSearchMin, iSearchMax
+    !\
+    ! find location of a shock wave on a given line (block)
+    !/
+    !\
+    ! Do not search too close to the Sun
+    integer         :: iShockMin
+    real, parameter :: RShockMin = 1.20  !*RSun
+    ! Do not search too close to the heliosphere boundary
+    integer:: iShockMax
+    ! Misc
     integer:: iShockCandidate
-    !--------------------------------------------------------------------------
+    !---------------------------------------------------------------------
     if(.not.DoTraceShock)then
-       iShock_IB(Shock_, iBlock) = 1
+       iShock_IB(Shock_, iBlock) = NoShock_
        RETURN
     end if
 
     ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
     ! shock never moves back
-    iSearchMin = max(iShock_IB(ShockOld_, iBlock), 1 + nWidth )
-    iSearchMax = nParticle_B(iBlock) - nWidth - 1
-    iShockCandidate = iSearchMin - 1 + maxloc(&
-         State_VIB(DLogRho_,iSearchMin:iSearchMax,iBlock),&
-         1, MASK = State_VIB(R_,iSearchMin:iSearchMax,iBlock) > 1.2)
+    iShockMin = max(iShock_IB(ShockOld_, iBlock), 1 + nWidth )
+    iShockMax = nParticle_B(iBlock) - nWidth - 1
+    iShockCandidate = iShockMin - 1 + maxloc(&
+         State_VIB(DLogRho_,iShockMin:iShockMax,iBlock),&
+         1, MASK = State_VIB(R_,iShockMin:iShockMax,iBlock) > RShockMin)
 
     if(State_VIB(DLogRho_,iShockCandidate,iBlock) > 0.0)&
          iShock_IB(Shock_, iBlock) = iShockCandidate
   end subroutine get_shock_location
-  !============================================================================
+  !=======================================================================
   subroutine check
     use ModUtilities, ONLY: make_dir
     character(LEN=*),parameter:: NameSub='SP:check'
-    !--------------------------------------------------------------------------
+    !---------------------------------------------------------------------
     ! Make output and check input directories
     if(iProc==0) call make_dir(NamePlotDir)
     !\

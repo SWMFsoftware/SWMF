@@ -5,7 +5,7 @@
 module SP_ModWrite
   ! This module contains methods for writing output files
   use SP_ModSize, ONLY: nNode, nParticleMax, nP=>nMomentum
-  use SP_ModGrid, ONLY: get_node_indexes, nVar, nVarRead, nBlock,&
+  use SP_ModGrid, ONLY: get_node_indexes, nVar, nMHData, nBlock,&
        State_VIB, iShock_IB, iNode_B, nParticle_B, Shock_, X_, Z_,&
        NameVar_V, TypeCoordSystem, LagrID_, Flux0_, FluxMax_, Flux_VIB
   use SP_ModDistribution, ONLY: Energy_I, Momentum_I, Distribution_IIB
@@ -265,7 +265,7 @@ contains
       ! for MH1D_ minimal set of variables is printed
       if(File_I(iFile)%iKindData == MH1D_)then
          ! for MH1D_ minimal set of variables is printed
-         File_I(iFile) % DoPlot_V(1:nVarRead) = .true.
+         File_I(iFile) % DoPlot_V(1:nMHData) = .true.
       else
          ! coordinates are always printed
          File_I(iFile) % DoPlot_V(X_:Z_) = .true.

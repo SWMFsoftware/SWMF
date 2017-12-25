@@ -133,8 +133,8 @@ contains
   end subroutine read_param
   !============================================================
   subroutine offset(iBlock, iOffset, AlphaIn)
-    use SP_ModGrid, ONLY: &
-         BOld_, RhoOld_, nParticle_B, ShockOld_, iShock_IB,  State_VIB
+    use SP_ModGrid, ONLY: NoShock_, BOld_, RhoOld_, ShockOld_, &
+         iShock_IB,  State_VIB
     ! shift in the data arrays is required if the grid point(s) is  
     ! appended or removed at the foot point of the magnetic field line
     !SHIFTED ARE:  State_VIB((/RhoOld_,BOld_/),:,:), Distribution_IIB,
@@ -145,11 +145,10 @@ contains
     real :: Alpha
     character(len=*), parameter :: NameSub = "SP: offset"
     !------------
-    Alpha = 0
-    if(present(AlphaIn))Alpha=AlphaIn
-    if(iOffset==0)then
-       RETURN
-    elseif(iOffset==1)then
+    if(iOffset==0)RETURN
+    if(iOffset==1)then
+       Alpha = 0
+       if(present(AlphaIn))Alpha=AlphaIn
        State_VIB((/RhoOld_,BOld_/),2:nParticle_B(iBlock)+1,iBlock) &
             = State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock)
        Distribution_IIB(:,2:nParticle_B( iBlock)+iOffset, iBlock)&
@@ -168,7 +167,7 @@ contains
     else
        call CON_stop('No algorithm for iOffset >1 in '//NameSub)
     end if
-    if(iShock_IB(ShockOld_, iBlock)>1)&
+    if(iShock_IB(ShockOld_, iBlock)/=NoShock_)&
          iShock_IB(ShockOld_, iBlock) = &
          max(iShock_IB(ShockOld_, iBlock) + iOffset, 1)
     nParticle_B(iBlock) = nParticle_B( iBlock) + iOffset
