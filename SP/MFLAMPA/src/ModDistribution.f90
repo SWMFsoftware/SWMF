@@ -25,7 +25,6 @@ module SP_ModDistribution
   public:: EnergyInjIo       !Energy in kev for MomentumInj 
   public:: EnergyMaxIo       !Energy in keV for MomentumMax
   public:: DLogP             !Mesh size for log(momentum) grid
-  public:: TotalEnergyInj    !TBD
   !\
   !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
   ! Injection and maximal energy in the simulation
@@ -33,10 +32,6 @@ module SP_ModDistribution
   real:: EnergyInjIo=10.0, EnergyMaxIo=1.0E+07
   ! Injection and max momentum in the simulation
   real:: MomentumInj, MomentumMax
-  ! Total energy, including the rest mass energy. Velocity in terms
-  ! of momentum and total energy equals:
-  ! velocity =  momentum*cLightSpeed**2/TotalEnergy
-  real:: TotalEnergyInj
   ! Size of a  log-momentum mesh. For momentum we use both the 
   ! denotaion, P, and a word, momentum - whichever is more covenient
   real:: DLogP        !log(MomentumMax/MomentumInj)/nP
@@ -81,9 +76,7 @@ contains
     DoInit = .false.
     ! convert energies to momenta
     MomentumInj  = kinetic_energy_to_momentum(EnergyInjIo*UnitEnergy)
-    MomentumMax  = kinetic_energy_to_momentum(EnergyMaxIo*UnitEnergy)
-    ! total injection energy (including the rest mass energy
-    TotalEnergyInj = momentum_to_energy(MomentumInj)
+    MomentumMax  = kinetic_energy_to_momentum(EnergyMaxIo*UnitEnergy)  
     DLogP = log(MomentumMax/MomentumInj)/nP
     !\
     ! Functions to convert the grid index to momentum and energy

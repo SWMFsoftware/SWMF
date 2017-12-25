@@ -16,8 +16,7 @@ module SP_ModMain
        RBufferMax, RMax, iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
        RhoOld_
   use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
-       TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
-       set_momentum_param, advance
+       TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, advance
   use SP_ModDistribution, ONLY:  offset
   use ModKind, ONLY: Real8_
 
@@ -84,6 +83,7 @@ contains
     use SP_ModGrid    , ONLY: read_param_grid=>read_param
     use SP_ModUnit    , ONLY: read_param_unit=>read_param
     use SP_ModDistribution, ONLY:read_param_dist=>read_param
+    use SP_ModAdvance , ONLY: read_param_adv =>read_param
     use ModTimeConvert, ONLY: time_int_to_real
     ! Read input parameters for SP component
     use ModReadParam, ONLY: &
@@ -115,20 +115,22 @@ contains
           !/
        case('#GRID', '#ORIGIN', '#COORDSYSTEM', '#COORDINATESYSTEM',&
             '#CHECKGRIDSIZE')
+          if(i_session_read() /= 1)CYCLE
           call read_param_grid(NameCommand)
        case('#PARTICLEENERGYUNIT')
+          if(i_session_read() /= 1)CYCLE
           call read_param_unit(NameCommand)
        case('#MOMENTUMGRID')
+          if(i_session_read() /= 1)CYCLE
           call read_param_dist(NameCommand)
+       case('#INJECTION','#CFL')
+          call read_param_adv(NameCommand)
        case('#SAVEPLOT','#USEDATETIME','#SAVEINITIAL')
           call set_write_param(NameCommand)
        case('#READMHDATA','#MHDATA')
           call set_read_mh_data_param(NameCommand)
        case('#DORUN')
           call read_var('DoRun',DoRun)
-       case('#INJECTION')
-          if(i_session_read() /= 1)CYCLE
-          call set_momentum_param
        case('#TIMING')
           if(i_session_read() /= 1)CYCLE
           call read_var('UseTiming',UseTiming)
@@ -198,7 +200,8 @@ contains
   subroutine initialize
     use SP_ModGrid        , ONLY: init_grid=>init
     use SP_ModUnit        , ONLY: init_unit=>init 
-    use SP_ModDistribution, ONLY: init_dist=>init   
+    use SP_ModDistribution, ONLY: init_dist=>init  
+    use SP_ModAdvance     , ONLY: init_advance=>init
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
@@ -210,6 +213,7 @@ contains
     call init_grid(DoRestart .or. DoReadMhData)
     call init_unit
     call init_dist
+    call init_advance
     call init_read_mh_data ! if input files are used, TimeGlobal is set here 
     if(DoRestart) call read_restart
     DataInputTime = TimeGlobal

@@ -8,7 +8,7 @@ module SP_ModAdvance
   use ModConst,   ONLY: cLightSpeed, energy_in
   use SP_ModSize, ONLY: nParticleMax
   use SP_ModDistribution, ONLY: nP, Distribution_IIB, Momentum_I,&
-        TotalEnergy_I, MomentumMax, MomentumInj, TotalEnergyInj ,&
+        TotalEnergy_I, MomentumMax, MomentumInj,&
         DLogP, EnergyInjIo, EnergyMaxIo
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
        Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B
@@ -17,8 +17,9 @@ module SP_ModAdvance
   SAVE
   PRIVATE ! except
   !Public members:
-  public:: set_momentum_param !read settings for grid over momentum
-  public:: advance            !Advance solution Distribution_IIB
+  public:: init        !Initialize reused variables 
+  public:: read_param  !read injection parameters
+  public:: advance     !Advance solution Distribution_IIB
   !\
   ! Global interation and time
   real,    public :: TimeGlobal  = 0.0
@@ -34,6 +35,12 @@ module SP_ModAdvance
   real:: CInj = 1.0, SpectralIndex = 5.0
   !/
   !\
+  ! Total energy, including the rest mass energy. Velocity in terms
+  ! of momentum and total energy equals:
+  ! velocity =  momentum*cLightSpeed**2/TotalEnergy
+  real:: TotalEnergyInj
+  !/
+  !\
   !!!!!!!!!!!!!!!!!!!!!!!!!Local parameters!!!!!!!!!!!!!!!
   real:: CFL=0.9        !Controls the maximum allowed time step
   ! level of turbulence: Ratio of regular to irregual magnetic field,
@@ -46,16 +53,33 @@ module SP_ModAdvance
   logical:: UseRealDiffusionUpstream = .true.
   logical, public:: DoTraceShock = .true., UseDiffusion = .true.
   !/
+  logical :: DoInit = .true.
 contains
-  subroutine set_momentum_param
+  subroutine init
+    !----------------------------------------------------------
+    if(.not.DoInit)RETURN
+    DoInit = .false.
+    ! total injection energy (including the rest mass energy
+    TotalEnergyInj =  TotalEnergy_I(0) 
+  end subroutine init
+  !===========================================================
+  subroutine read_param(NameCommand)
     use ModReadParam, ONLY: read_var
-    use SP_ModProc,   ONLY: iProc
+    character(len=*), intent(in):: NameCommand ! From PARAM.in  
+    character(len=*), parameter :: NameSub='SP:read_param_adv'
     !---------------------------------------------
-    call read_var('EnergyInjIo',    EnergyInjIo)
-    call read_var('EnergyMaxIo',    EnergyMaxIo)
-    call read_var('SpectralIndex',SpectralIndex)
-    call read_var('Efficiency',   CInj)
-  end subroutine set_momentum_param
+    select case(NameCommand)
+    case('#INJECTION')
+       call read_var('EnergyInjIo',    EnergyInjIo)
+       call read_var('EnergyMaxIo',    EnergyMaxIo)
+       call read_var('SpectralIndex',SpectralIndex)
+       call read_var('Efficiency',   CInj)
+    case('#CFL')
+       call read_var('Cfl',CFL)
+    case default
+       call CON_stop(NameSub//'Unknown command '//NameCommand)
+    end select
+  end subroutine read_param
   !============================
   subroutine advance(TimeLimit)
     ! advance the solution of the diffusive kinetic equation:               
