@@ -14,7 +14,7 @@ module SP_ModMain
        Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_, Length_, nBlock,&
        nParticle_B, Shock_, ShockOld_, DLogRho_, RMin, RBufferMin,       &
        RBufferMax, RMax, iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
-       init_grid=>init, RhoOld_
+       RhoOld_
   use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
        set_momentum_param, advance
@@ -83,6 +83,7 @@ contains
   subroutine read_param
     use SP_ModGrid    , ONLY: read_param_grid=>read_param
     use SP_ModUnit    , ONLY: read_param_unit=>read_param
+    use SP_ModDistribution, ONLY:read_param_dist=>read_param
     use ModTimeConvert, ONLY: time_int_to_real
     ! Read input parameters for SP component
     use ModReadParam, ONLY: &
@@ -117,6 +118,8 @@ contains
           call read_param_grid(NameCommand)
        case('#PARTICLEENERGYUNIT')
           call read_param_unit(NameCommand)
+       case('#MOMENTUMGRID')
+          call read_param_dist(NameCommand)
        case('#SAVEPLOT','#USEDATETIME','#SAVEINITIAL')
           call set_write_param(NameCommand)
        case('#READMHDATA','#MHDATA')
@@ -193,8 +196,9 @@ contains
   !============================================================================
 
   subroutine initialize
-    use SP_ModDistribution, ONLY: init_distribution_function=>init
-    use SP_ModUnit        , ONLY: init_unit=>init    
+    use SP_ModGrid        , ONLY: init_grid=>init
+    use SP_ModUnit        , ONLY: init_unit=>init 
+    use SP_ModDistribution, ONLY: init_dist=>init   
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
@@ -205,7 +209,7 @@ contains
     end if
     call init_grid(DoRestart .or. DoReadMhData)
     call init_unit
-    call init_distribution_function
+    call init_dist
     call init_read_mh_data ! if input files are used, TimeGlobal is set here 
     if(DoRestart) call read_restart
     DataInputTime = TimeGlobal

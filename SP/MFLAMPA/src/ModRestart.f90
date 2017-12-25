@@ -118,6 +118,7 @@ contains
   !==========================
   subroutine write_restart_header
     use SP_ModProc, ONLY: iProc
+    use SP_ModDistribution, ONLY: nP, EnergyInjIo, EnergyMaxIo
     ! full name of the header file
     character(len=100):: NameFile
 
@@ -142,11 +143,10 @@ contains
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
     write(UnitTmp_,'(es22.15,a18)')TimeGlobal,'tSimulation'
     write(UnitTmp_,*)
-    write(UnitTmp_,'(a)')'#GRID'
-    write(UnitTmp_,'(es22.15,a18)')RMin,      'RMin'
-    write(UnitTmp_,'(es22.15,a18)')RBufferMin,'RBufferMin'
-    write(UnitTmp_,'(es22.15,a18)')RBufferMax,'RBufferMax'
-    write(UnitTmp_,'(es22.15,a18)')RMax,      'RMin'
+    write(UnitTmp_,'(a)')'#MOMENTUMGRID'
+    write(UnitTmp_,'(es22.15,a18)')EnergyInjIo,'EnergyMin'
+    write(UnitTmp_,'(es22.15,a18)')EnergyMaxIo,'EnergyMax'
+    write(UnitTmp_,'(i8,a32)')nP,'nP'
     write(UnitTmp_,*)
     write(UnitTMP_,'(a)')'#END'
     write(UnitTmp_,*)
