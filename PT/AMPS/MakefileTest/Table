@@ -553,6 +553,7 @@ Keys=-model-data-path=${PTDIR}/../../../AMPS_DATA_TEST/EARTH/ful_2  -cplr-data-p
 Name=test/linear-system-solver@@(0+valeriy)
 Time=10
 
+Outs=Diffusion.out=190
 Keys=-link-option=./share/lib/libSHARE.a -compiler-option=-I${PTDIR}/share/Library/src/@@(0+valeriy)
 
 Compile=
