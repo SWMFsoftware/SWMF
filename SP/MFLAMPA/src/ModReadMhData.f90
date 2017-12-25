@@ -9,7 +9,7 @@ module SP_ModReadMhData
        iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB, &
        NameVar_V, LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
-  use SP_ModWrite,   ONLY: nFileRead=>nTag
+  use SP_ModPlot,   ONLY: nFileRead=>nTag
   use SP_ModDistribution, ONLY: Distribution_IIB, offset
   use ModPlotFile,   ONLY: read_plot_file
   use ModUtilities,  ONLY: fix_dir_name, open_file, close_file

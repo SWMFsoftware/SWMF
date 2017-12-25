@@ -4,8 +4,7 @@
 module SP_ModMain
   use SP_ModProc,    ONLY: iProc
   use SP_ModSize,    ONLY: nDim, nLat, nLon, nNode, nParticleMax
-  use SP_ModWrite,   ONLY: set_write_param, write_output, finalize_write,&
-       NamePlotDir
+  use SP_ModPlot,    ONLY: save_plot_all, NamePlotDir
   use SP_ModReadMhData, ONLY: &
        set_read_mh_data_param, init_read_mh_data, read_mh_data, &
        finalize_read_mh_data, offset, DoReadMhData
@@ -84,6 +83,7 @@ contains
     use SP_ModUnit    , ONLY: read_param_unit=>read_param
     use SP_ModDistribution, ONLY:read_param_dist=>read_param
     use SP_ModAdvance , ONLY: read_param_adv =>read_param
+    use SP_ModPlot    , ONLY: read_param_plot=>read_param
     use ModTimeConvert, ONLY: time_int_to_real
     ! Read input parameters for SP component
     use ModReadParam, ONLY: &
@@ -126,12 +126,13 @@ contains
        case('#INJECTION','#CFL')
           call read_param_adv(NameCommand)
        case('#SAVEPLOT','#USEDATETIME','#SAVEINITIAL')
-          call set_write_param(NameCommand)
+          call read_param_plot(NameCommand)
        case('#READMHDATA','#MHDATA')
           call set_read_mh_data_param(NameCommand)
        case('#DORUN')
           call read_var('DoRun',DoRun)
        case('#TIMING')
+          call check_stand_alone
           if(i_session_read() /= 1)CYCLE
           call read_var('UseTiming',UseTiming)
           if(.not.UseTiming)&
@@ -187,21 +188,19 @@ contains
       ! certain options are only available for stand alone mode;
       ! check whether the mode is used and stop the code if it's no the case
       !------------------------------------------------------------------------
-      if(IsStandAlone)&
-           RETURN
+      if(IsStandAlone)RETURN
       call CON_stop(NameSub//': command '//trim(NameCommand)//&
            ' is only allowed in stand alone mode, correct PARAM.in')
     end subroutine check_stand_alone
 
   end subroutine read_param
-
   !============================================================================
-
   subroutine initialize
     use SP_ModGrid        , ONLY: init_grid=>init
     use SP_ModUnit        , ONLY: init_unit=>init 
     use SP_ModDistribution, ONLY: init_dist=>init  
     use SP_ModAdvance     , ONLY: init_advance=>init
+    use SP_ModPlot        , ONLY: init_plot=>init
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
@@ -214,19 +213,18 @@ contains
     call init_unit
     call init_dist
     call init_advance
+    call init_plot
     call init_read_mh_data ! if input files are used, TimeGlobal is set here 
     if(DoRestart) call read_restart
     DataInputTime = TimeGlobal
   end subroutine initialize
-
   !============================================================================
-
   subroutine finalize
+    use SP_ModPlot, ONLY: finalize_plot=>finalize
     ! finalize the model
     character(LEN=*),parameter:: NameSub='SP:finalize'
     !------------------------------------------------------------------------
-    write(*,*)'Finalize'
-    call finalize_write
+    call finalize_plot
     call finalize_read_mh_data
   end subroutine finalize
 
@@ -244,7 +242,7 @@ contains
     !/
     if(IsFirstCall)then
        ! print the initial state
-       call write_output(IsInitialOutputIn = .true.)
+       call save_plot_all(IsInitialOutputIn = .true.)
        IsFirstCall = .false.
     end if
 
@@ -286,7 +284,7 @@ contains
     ! update time & iteration counters
     iIterGlobal = iIterGlobal + 1
     TimeGlobal = min(DataInputTime,TimeLimit)
-    call write_output
+    call save_plot_all
   contains
     !=====================================================================
     subroutine lagr_time_derivative
@@ -340,11 +338,8 @@ contains
   end subroutine get_shock_location
   !=======================================================================
   subroutine check
-    use ModUtilities, ONLY: make_dir
     character(LEN=*),parameter:: NameSub='SP:check'
     !---------------------------------------------------------------------
-    ! Make output and check input directories
-    if(iProc==0) call make_dir(NamePlotDir)
     !\
     ! Initialize timing
     !/

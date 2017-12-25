@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================!
+!=================================================================!
 module SP_wrapper
 
   use ModConst, ONLY: rSun, cProtonMass, energy_in
@@ -136,13 +136,13 @@ contains
 
   subroutine SP_finalize(TimeSimulation)
     use SP_ModMain , ONLY: finalize
-    use SP_ModWrite, ONLY: finalize_write
+    use SP_ModPlot , ONLY: finalize_plot=>finalize
     real,intent(in)::TimeSimulation
     real:: TimeAux ! to satisfy intent of arguments in run()
     !--------------------------------------------------------------------
     ! if data are read from files, no special finalization is needed
     if(DoReadMhData) then
-       call finalize_write
+       call finalize_plot
        RETURN
     end if
     TimeAux = TimeSimulation

@@ -1,27 +1,36 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================!
-module SP_ModWrite
-  ! This module contains methods for writing output files
-  use SP_ModSize, ONLY: nNode, nParticleMax, nP=>nMomentum
-  use SP_ModGrid, ONLY: get_node_indexes, nVar, nMHData, nBlock,&
+!=================================================================!
+module SP_ModPlot
+  !\
+  ! Methods for saving plots
+  !/
+  use SP_ModSize, ONLY: nNode, nParticleMax
+  use SP_ModGrid, ONLY: get_node_indexes, nVar, nMHData, nBlock,  &
        State_VIB, iShock_IB, iNode_B, nParticle_B, Shock_, X_, Z_,&
-       NameVar_V, TypeCoordSystem, LagrID_, Flux0_, FluxMax_, Flux_VIB
-  use SP_ModDistribution, ONLY: Energy_I, Momentum_I, Distribution_IIB
+       R_, NameVar_V, TypeCoordSystem, LagrID_, Flux0_, FluxMax_, &
+       Flux_VIB
+  use SP_ModDistribution, ONLY: nP, Energy_I, Momentum_I,         &
+       Distribution_IIB
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal
   use SP_ModProc, ONLY: iProc
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
   use ModUtilities, ONLY: open_file, close_file
   use ModIoUnit, ONLY: UnitTmp_
   implicit none
-
   SAVE
-
   private ! except
-
-  public:: set_write_param, write_output, finalize_write, NamePlotDir
-
+  !\
+  !Public members
+  public:: init         ! Initialize module parameters
+  public:: read_param   ! Read module parameters
+  public:: save_plot_all! Save output (plot) files 
+  public:: finalize     ! Save final list  
+  ! the output directory
+  character(len=*), public, parameter :: NamePlotDir="SP/IO2/"
+  !/
+  !\
   type TypeOutputFile
      !\
      ! General information
@@ -60,9 +69,9 @@ module SP_ModWrite
      ! radius of the sphere the data to be written at
      real:: Radius
   end type TypeOutputFile
+  !/
   !\
-  !----------------------------------------------------------------------------
-  ! Number of output files
+  ! Number of plot file types
   integer:: nFileOut = 0
   ! The output files
   type(TypeOutputFile), allocatable:: File_I(:)
@@ -71,36 +80,39 @@ module SP_ModWrite
        ! Background mhd data
        MH1D_      = 0, & ! along each line
        MH2D_      = 1, & ! at given radius as Lon-Lat plot
-       MHTime_    = 2, & ! at given radius for each line as time series 
+       MHTime_    = 2, & ! at given radius as time series for lines 
        ! Distribution
        Distr1D_   = 3    ! along each line
-  ! Scale for writing distribution
-  integer, parameter:: &
-       Momentum_= 1, &
+  !/
+  !\
+  ! Momentum/energy axis for 2D plots 
+  integer, parameter:: & 
+       Momentum_= 1,   &
        Energy_  = 2
-  ! Output types for distribution
+  ! Output types for distribution function
   integer, parameter:: &
-       CDF_ = 1, &
+       CDF_ = 1,       &
        DEF_ = 2
   ! Arrays used to visualize the distribution function
-  real              :: Log10Momentum_I(0:nP+1), Log10Energy_I(0:nP+1)
-  real              :: DMomentumOverDEnergy_I(0:nP+1) 
-  !----------------------------------------------------------------------------
-  ! the output directory
-  character(len=*), parameter :: NamePlotDir="SP/IO2/"
-  !----------------------------------------------------------------------------
+  real, dimension(0:nP+1) :: Log10Momentum_I, Log10Energy_I,      &
+       DMomentumOverDEnergy_I 
+  !/
+  !\
   ! auxilary array, used to write data on a sphere
   integer:: iNodeIndex_I(nNode)
-  !----------------------------------------------------------------------------
+  !/
+  !\
   ! info for MH1D header and tag list
   logical:: DoWriteHeader = .false.
-  ! number of different output file tags
-  integer, public    :: nTag = 0  
   ! name of the header file
   character(len=*), parameter :: NameHeaderFile = 'MH_data.H'
-  character(len=20)           :: TypeHeaderFile
   ! name of the tag list file
-  character(len=*), parameter :: NameTagFile = 'MH_data.lst'
+  character(len=*), parameter :: NameTagFile  = 'MH_data.lst'
+  ! number of different output file tags
+  integer,  public            :: nTag = 0 
+  !/
+  !\ 
+  character(len=20)           :: TypeMHDataFile
   !/
   !\
   !Fromat for saving time tag. If .true. the time tag format is
@@ -108,9 +120,21 @@ module SP_ModWrite
   logical, public:: UseDateTime = .false.
   ! If DoSaveInitial=.false.,the initial file is not saved 
   logical :: DoSaveInitial = .true.
+  logical :: DoInit        = .true.
 contains
-
-  subroutine set_write_param(NameCommand)
+  subroutine init
+    use ModConst,           ONLY: cLightSpeed
+    use SP_ModDistribution, ONLY: TotalEnergy_I
+    if(.not.DoInit) RETURN
+    DoInit = .false.
+    !Array for plotting distribution function
+    Log10Momentum_I    = log10(Momentum_I) 
+    Log10Energy_I      = log10(Energy_I)
+    DMomentumOverDEnergy_I = TotalEnergy_I/&
+         (Momentum_I*cLightSpeed**2)
+  end subroutine init
+  !===============================================================
+  subroutine read_param(NameCommand)
     use ModUtilities, ONLY: split_string, lower_case
     use ModReadParam, ONLY: read_var
     character(len=*), intent(in):: NameCommand
@@ -205,7 +229,7 @@ contains
              end do
              File_I(iFile) % NameVarPlot = &
                   trim(File_I(iFile) % NameVarPlot)//' iShock RShock'
-             TypeHeaderFile = File_I(iFile) % TypeFile
+             TypeMHDataFile = File_I(iFile) % TypeFile
              DoWriteHeader = .true.
           case(MH2D_)
              call process_mh
@@ -253,6 +277,7 @@ contains
     end select
 
   contains
+    !=============================================================
     subroutine process_mh
       ! process variables to plot
       ! NOTE: for iKindData == MH1D_ certain variables are always printed:
@@ -316,7 +341,7 @@ contains
          end do
       end if
     end subroutine process_mh
-    !------------------------------------------------------------------------
+    !=============================================================
     subroutine process_distr
       ! process output parameters for distribution output
       integer:: iStringPlot
@@ -353,17 +378,10 @@ contains
       File_I(iFile) % NameVarPlot = &
            trim(NameScale)//' Distance '//trim(NameVar)
     end subroutine process_distr
-  end subroutine set_write_param
-  !============================================================================
-  subroutine finalize_write
-    ! close currently opened output units
-    !----------------------------------------------------------------
-    if(DoWriteHeader) call write_mh_1d_header
-  end subroutine finalize_write
-  !============================================================================
-  subroutine write_output(IsInitialOutputIn)
-    use ModConst,           ONLY: cLightSpeed
-    use SP_ModDistribution, ONLY: TotalEnergy_I, get_integral_flux
+  end subroutine read_param
+  !===============================================================
+  subroutine save_plot_all(IsInitialOutputIn)
+    use SP_ModDistribution, ONLY: get_integral_flux
     ! write the output data
     logical, intent(in), optional:: IsInitialOutputIn
 
@@ -374,7 +392,7 @@ contains
     logical:: IsInitialOutput
 
     character(len=*), parameter:: NameSub = 'SP:write_output'
-    !--------------------------------------------------------------------------
+    !------------------------------------------------------------
     ! check whether this is a call for initial output
     if(present(IsInitialOutputIn))then
        IsInitialOutput = IsInitialOutputIn
@@ -383,11 +401,6 @@ contains
     end if
     if(nFileOut == 0) RETURN
     if(IsInitialOutput)then
-       !Array for plotting distribution function
-       Log10Momentum_I = log10(Momentum_I) 
-       Log10Energy_I = log10(Energy_I)
-       DMomentumOverDEnergy_I = TotalEnergy_I/&
-            (Momentum_I*cLightSpeed**2)
        if(.not.DoSaveInitial)RETURN
     else
        call get_integral_flux
@@ -410,16 +423,16 @@ contains
           call write_distr_1d
        end select
     end do
-
   contains
-    
+    !=============================================================    
     subroutine write_mh_1d
-      use SP_ModGrid,    ONLY: FootPoint_VB
-      use SP_ModAdvance, ONLY: DoTraceShock
-      ! write output with 1D MH data in the format to be read by IDL/TECPLOT;
-      ! separate file is created for each field line, name format is
+      use SP_ModGrid,    ONLY: FootPoint_VB, NoShock_
+      !\
+      ! write output with 1D MH data in the format to be read by 
+      ! IDL/TECPLOT; separate file is created for each field line, 
+      ! name format is:
       ! MH_data_<iLon>_<iLat>_n<ddhhmmss>_n<iIter>.{out/dat}
-      !------------------------------------------------------------------------
+      !/
       ! name of the output file
       character(len=100):: NameFile
       ! header for the file
@@ -501,10 +514,9 @@ contains
          !Parameters
          Param_I(LagrID_:Z_) = FootPoint_VB(LagrID_:Z_,iBlock)
          ! shock location
-         if(DoTraceShock)then
-            iShock = iShock_IB(Shock_,iBlock)
-            Param_I(RShock_) = &
-                 sqrt(sum(State_VIB(X_:Z_,iShock,iBlock)**2))
+         if(iShock_IB(Shock_,iBlock)/=NoShock_)then
+            iShock             = iShock_IB(Shock_,iBlock)
+            Param_I(RShock_)   = State_VIB(R_,iShock,iBlock)
             Param_I(RShock_-1) = real(iShock)
          else
             Param_I(RShock_-1:RShock_) = -1.0
@@ -525,16 +537,14 @@ contains
               ParamIn_I    = Param_I(LagrID_:RShock_))
       end do
     end subroutine write_mh_1d
-
-    !=========================================================================
-    
+    !=============================================================
     subroutine write_mh_2d
       use SP_ModProc, ONLY: iComm, nProc
       use ModMpi
       ! write output with 2D MH data in the format to be read by IDL/TECPLOT;
       ! single file is created for all field lines, name format is
       ! MH_data_R=<Radius [AU]>_t<ddhhmmss>_n<iIter>.{out/dat}
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
       ! loop variables
@@ -553,48 +563,52 @@ contains
       integer:: nVarPlot, nFluxPlot
       ! MPI error
       integer:: iError
-      ! skip a field line if it fails to reach radius of output sphere
+      ! skip a field line not reaching radius of output sphere
       logical:: DoPrint_I(nNode)
       ! timetag
       character(len=15):: StringTime
       character(len=*), parameter:: NameSub='write_mh_2d'
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------
       nVarPlot = File_I(iFile)%nVarPlot
       nFluxPlot= File_I(iFile)%nFluxPlot
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
 
-      ! reset, all field lines are printed unless fail to reach output sphere
+      ! reset, all field lines are printed reaching output sphere
       DoPrint_I = .true.
 
-      ! go over all lines on the processor and find the point of intersection
-      ! with output sphere if present
+      ! go over all lines on the processor and find the point of 
+      ! intersection with output sphere if present
       do iBlock = 1, nBlock
          iNode = iNode_B(iBlock)
 
          ! set the file name
          if(UseDateTime)then
             call get_date_time_string(TimeGlobal, StringTime)
-            write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
-                 trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
-                 File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
+            write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)')  &
+                 trim(NamePlotDir)//'MH_data_R=',     &
+                 int(File_I(iFile)%Radius),           &
+                 File_I(iFile)%Radius - &
+                 int(File_I(iFile)%Radius),           &
                  '_e'//StringTime//'_n', iIterGlobal, &
                  File_I(iFile) % NameFormat
          else
             call get_time_string(TimeGlobal, StringTime(1:8))
-            write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)') &
-                 trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
-                 File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
-                 '_t'//StringTime(1:8)//'_n', iIterGlobal, &
-                 File_I(iFile) % NameFormat
+            write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)')  &
+                 trim(NamePlotDir)//'MH_data_R=',     &
+                 int(File_I(iFile) % Radius),         &
+                 File_I(iFile) % Radius -             &
+                 int(File_I(iFile)%Radius),           &
+                 '_t'//StringTime(1:8)//'_n',         &
+                 iIterGlobal, File_I(iFile)%NameFormat
          end if
          ! get max particle indexes on this field line
          iLast  = nParticle_B(iBlock)
 
          ! find the particle just above the given radius
          do iParticle = 1 , iLast
-            Radius0 = sum(State_VIB(X_:Z_, iParticle, iBlock)**2)**0.5
-            if( Radius0 > File_I(iFile) % Radius) then
+            Radius0 = State_VIB(R_, iParticle, iBlock)
+            if( Radius0 > File_I(iFile)%Radius) then
                iAbove = iParticle
                !check if line started above output sphere, i.e. no intersection
                DoPrint_I(iNode) = iAbove /= 1
@@ -639,8 +653,9 @@ contains
                  nNode, MPI_Logical, MPI_Land, &
                  0, iComm, iError)
          else
-            call MPI_Reduce(File_I(iFile) % Buffer_II, File_I(iFile) % Buffer_II,&
-                 nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
+            call MPI_Reduce(File_I(iFile)%Buffer_II, &
+                 File_I(iFile)%Buffer_II,&
+                 nNode*File_I(iFile)%nVarPlot, MPI_REAL, MPI_Sum,&
                  0, iComm, iError)
             call MPI_Reduce(DoPrint_I, DoPrint_I, &
                  nNode, MPI_Logical, MPI_Land, &
@@ -656,24 +671,21 @@ contains
            nDimIn       = 1, &
            TimeIn       = TimeGlobal, &
            nStepIn      = iIterGlobal, &
-           Coord1In_I   = real(pack(iNodeIndex_I, MASK=DoPrint_I)), &
+           Coord1In_I   = real(pack(iNodeIndex_I, MASK=DoPrint_I)),&
            NameVarIn    = File_I(iFile) % NameVarPlot, &
            VarIn_VI     = &
            reshape(&
            pack(File_I(iFile) % Buffer_II(1:nVarPlot,1:nNode),&
            MASK = spread(DoPrint_I, 1, nVarPlot)), &
-           (/nVarPlot, count(DoPrint_I)/))&
-           )
+           (/nVarPlot, count(DoPrint_I)/)))
     end subroutine write_mh_2d
-
-    !=========================================================================
-    
+    !=============================================================
     subroutine write_mh_time
       ! write output w/time series MH data in format to be read by IDL/TECPLOT;
       ! a file is created for each field lines, name format is
       ! MH_data_R=<Radius [AU]>_<iLon>_<iLat>.{out/dat}
       ! the file has no timetag as it is updated during the run
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
       ! loop variables
@@ -802,13 +814,14 @@ contains
       if(File_I(iFile)%IsFirstCall)&
            File_I(iFile)%IsFirstCall = .false.
     end subroutine write_mh_time
-    !=========================================================================
+    !=============================================================
     subroutine write_distr_1d
       use SP_ModGrid, ONLY: S_
+      !\
       ! write file with distribution in the format to be read by IDL/TECPLOT;
       ! separate file is created for each field line, name format is
       ! Distribution_<iLon>_<iLat>_t<ddhhmmss>_n<iIter>.{out/dat}
-      !------------------------------------------------------------------------
+      !/
       ! name of the output file
       character(len=100):: NameFile
       ! loop variables
@@ -823,7 +836,7 @@ contains
       ! timetag
       character(len=15):: StringTime
       character(len=*), parameter:: NameSub='write_distr_1d'
-      !------------------------------------------------------------------------
+      !-----------------------------------------------------------
       select case(File_I(iFile)%iScale)
       case(Momentum_)
          Scale_I = Log10Momentum_I
@@ -886,24 +899,20 @@ contains
               VarIn_II   = File_I(iFile) % Buffer_II(:,1:iLast))
       end do
     end subroutine write_distr_1d
-  end subroutine write_output
-  !==========================================================================
-  subroutine write_mh_1d_header
+  end subroutine save_plot_all
+  !===============================================================
+  subroutine finalize
      use SP_ModSize, ONLY: nLat, nLon
-    ! write the header file that contains necessary information for reading
-    ! input files in a separate run
-    !
-    ! full name of the header file
-    character(len=100):: NameFile
+    ! write the header file that contains necessary information 
+    ! for reading input files in a separate run
     character(len=*), parameter:: NameSub='write_mh_1d_header'
-    !------------------------------------------------------------------------
+    !-------------------------------------------------------------
+    if(.not.DoWriteHeader)RETURN
     ! performed on root proc only
     if (iProc/=0) RETURN
-
-    ! full name of the header file
-    NameFile = trim(NamePlotDir)//trim(NameHeaderFile)
     ! write the header file
-    call open_file(file=NameFile, NameCaller=NameSub)
+    call open_file(file= trim(NamePlotDir)//trim(NameHeaderFile),&
+         NameCaller=NameSub)
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#CHECKGRIDSIZE'
     write(UnitTmp_,'(i8,a32)') nParticleMax,'nParticleMax'
@@ -911,15 +920,15 @@ contains
     write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#MHDATA'
-    write(UnitTmp_,'(a,a35)')trim(TypeHeaderFile),'  TypeFile'
+    write(UnitTmp_,'(a,a35)')trim(TypeMHDataFile),'  TypeFile'
     write(UnitTmp_,'(i8,a32)')nTag,'nFileRead'
     write(UnitTmp_,'(a,a29)')trim(NameTagFile), '  NameTagFile'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#END'
     write(UnitTmp_,*)
     call close_file
-  end subroutine write_mh_1d_header
-  !==========================================================================
+  end subroutine finalize
+  !===============================================================
   subroutine get_time_string(Time, StringTime)
     ! the subroutine converts real variable Time into a string,
     ! the structure of the string is 'ddhhmmss', 
@@ -927,7 +936,7 @@ contains
     ! after the beginning of the simulation
     real,             intent(in) :: Time
     character(len=8), intent(out):: StringTime
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------
     ! This is the value if the time is too large
     StringTime = '99999999'
     if(Time < 100.0*86400) &
@@ -937,7 +946,7 @@ contains
          int((Time-( 3600.*int(Time/ 3600.)))/   60.), & ! # minutes
          int( Time-(   60.*int(Time/   60.)))            ! # seconds
   end subroutine get_time_string
-  !=============================
+  !===============================================================
   subroutine get_date_time_string(Time, StringTime)
     use SP_ModAdvance, ONLY: StartTime
     use ModTimeConvert,ONLY: time_real_to_int
@@ -948,10 +957,9 @@ contains
     real,              intent(in) :: Time
     character(len=15), intent(out):: StringTime
     integer :: iTime_I(7)
-    !--------------------------------------------------------------------------
+    !-------------------------------------------------------------
     call time_real_to_int(StartTime+Time, iTime_I)
     write(StringTime,'(i4.4,i2.2,i2.2,a,i2.2,i2.2,i2.2)')&
          iTime_I(1:3),'_',iTime_I(4:6)
-         
   end subroutine get_date_time_string
-end module SP_ModWrite
+end module SP_ModPlot
