@@ -438,7 +438,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
           //sample the contribution of the surface element to the isntrument observation
           //nude gauge density
-          t=tNudeGaugeDensity/nTotalTests;
+          t=(nTotalTests!=0) ? tNudeGaugeDensity/nTotalTests : 0.0;
           localNudeGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
           CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.NudeGaugeDensityContribution[spec]+=t;
 
@@ -446,13 +446,13 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
           localNudeGaugeFlux=0.0;
 
           //ram gauge density
-          t=tRamGaugeDensity/nTotalTests;
+          t= (nTotalTests!=0) ? tRamGaugeDensity/nTotalTests : 0.0;
           localRamGaugeDensity+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
           CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeDensityContribution[spec]+=t;
 
 
           //ram gauge flux
-          t=tRamGaugeFlux/nTotalTests;
+          t=(nTotalTests!=0) ? tRamGaugeFlux/nTotalTests : 0.0;
           localRamGaugeFlux+=t*CutCell::BoundaryTriangleFaces[iSurfaceElement].SurfaceArea;
           CutCell::BoundaryTriangleFaces[iSurfaceElement].UserData.RamGaugeFluxContribution[spec]+=t;
 
@@ -633,7 +633,7 @@ void RosinaSample::Liouville::Evaluate() {
     printf("VARIABLES=\"i\", \"Nude Gauge Pressure\", \"Nude Gauge Density\", \"Nude Gauge Flux\",  \"Ram Gauge Pressure\", \"Ram Gauge Density\", \"Ram Gauge Flux\", \"Seconds From The First Point\", \"Nude Guage Nucleus Solid angle\", \"Ram Gauge Nucleus Solid Angle\", \"Altitude\", \"Closest Surface Element Source Rate [m^-2 s^-1]\", \"Nude Gauge COPS Measurements\", \"Ram Gauge COPS Measurements\", \"Original Total Source Rate\", \"Modified Total Source Rate\" \n");
   }
 
-  for (iPoint=0*950;iPoint<RosinaSample::nPoints;iPoint+=RosinaDataSimulationStep) {
+  for (iPoint=RosinaSample::iStartRosinaAnalysisDataPont;iPoint<RosinaSample::nPoints;iPoint+=RosinaDataSimulationStep) {
     //process the location only if the Nude gauge solid angle is above the cutoff 'CutoffNudeGaugeSolidAngle'
     int ProcessPoinFlag=true;
 
@@ -1087,17 +1087,12 @@ void RosinaSample::Liouville::Evaluate() {
       char fname[200];
 
       //determine the "field of view map" for the given configuration and output the surface data file
-      for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+      if (Comet::OutputFieldViewMapMode==true) for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
         bool FieldOfViewRG=false,FieldOfViewNG=false;
         double x[3],ll[3],xIntersection[3];
 
         CutCell::BoundaryTriangleFaces[iface].GetRandomPosition(x);
         for (idim=0;idim<3;idim++) ll[idim]=Rosina[iPoint].x[idim]-x[idim];
-/* 
-if (PIC::ThisThread==0) printf("%i\n",iface);
- MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-*/
-
 
         if (PIC::RayTracing::FindFistIntersectedFace(x,ll,xIntersection,true,CutCell::BoundaryTriangleFaces+iface)==-1) {
           //the location can be seen from the spacecraft.
@@ -1112,17 +1107,13 @@ if (PIC::ThisThread==0) printf("%i\n",iface);
         }
       }
 
-//      sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
-//      CutCell::PrintSurfaceData(fname);
-
       //save binary file of the surface contribution
       FILE *fSource;
       int iface,spec;
 
-
       double *t=new double [CutCell::nBoundaryTriangleFaces];
-      double *tallNG=new double [CutCell::nBoundaryTriangleFaces];
-      double *tallRG=new double [CutCell::nBoundaryTriangleFaces];
+      double *tAllNG=new double [CutCell::nBoundaryTriangleFaces];
+      double *tAllRG=new double [CutCell::nBoundaryTriangleFaces];
       bool *VisibilityFlagNG=new bool [CutCell::nBoundaryTriangleFaces];
       bool *VisibilityFlagRG=new bool [CutCell::nBoundaryTriangleFaces];
 
@@ -1132,21 +1123,21 @@ if (PIC::ThisThread==0) printf("%i\n",iface);
           VisibilityFlagNG[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_NudeGauge;
         }
 
-        MPI_Reduce(t,tallNG,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Reduce(t,tAllNG,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
         for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
           t[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.RamGaugeFluxContribution[spec];
           VisibilityFlagRG[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.FieldOfView_RamGauge;
         }
 
-        MPI_Reduce(t,tallRG,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+        MPI_Reduce(t,tAllRG,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
 
         if (PIC::ThisThread==0) {
           double minNudeGaugeDensityContribution=-1.0,maxNudeGaugeDensityContribution=-1.0;
 
           for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
             if ((minNudeGaugeDensityContribution<0.0)||(minNudeGaugeDensityContribution>t[iface])) minNudeGaugeDensityContribution=t[iface];
-            if ((maxNudeGaugeDensityContribution<0.0)||(maxNudeGaugeDensityContribution<tallNG[iface])) maxNudeGaugeDensityContribution=tallNG[iface];
+            if ((maxNudeGaugeDensityContribution<0.0)||(maxNudeGaugeDensityContribution<tAllNG[iface])) maxNudeGaugeDensityContribution=tAllNG[iface];
           }
 
           std::cout << "minNudeGaugeDensityContribution(spec=" << spec <<")=" << minNudeGaugeDensityContribution << std::endl << std::flush;
@@ -1155,19 +1146,19 @@ if (PIC::ThisThread==0) printf("%i\n",iface);
           sprintf(fname,"%s/SurfaceContributions.spec=%i.iPoint=%i.bin",PIC::OutputDataFileDirectory,spec,iPoint);
           fSource=fopen(fname,"w");
 
-          fwrite(tallNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
-          fwrite(VisibilityFlagNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+          fwrite(tAllNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+          fwrite(VisibilityFlagNG,sizeof(bool),CutCell::nBoundaryTriangleFaces,fSource);
 
-          fwrite(tallNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
-          fwrite(VisibilityFlagRG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+          fwrite(tAllNG,sizeof(double),CutCell::nBoundaryTriangleFaces,fSource);
+          fwrite(VisibilityFlagRG,sizeof(bool),CutCell::nBoundaryTriangleFaces,fSource);
 
           fclose(fSource);
         }
       }
 
       delete [] t;
-      delete [] tallNG;
-      delete [] tallRG;
+      delete [] tAllNG;
+      delete [] tAllRG;
       delete [] VisibilityFlagNG;
       delete [] VisibilityFlagRG;
 
