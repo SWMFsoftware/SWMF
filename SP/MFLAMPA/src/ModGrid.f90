@@ -5,9 +5,9 @@
 module SP_ModGrid
   !Multi-line grid, D.Borovikov & I.Sokolov, Dec,17, 2017.
   !Dec.23 2017: exclude fluxes from the state vector.
-  !Dec.24 2017: standard init and read_param
+  !Dec.25 2017: standard init and read_param
   use SP_ModSize, ONLY: nDim, nLon, nLat, nNode, nParticleMax
-
+  use SP_ModProc, ONLY: iProc
   implicit none
 
   SAVE
@@ -27,7 +27,7 @@ module SP_ModGrid
   !\
   ! Grid size, boundaries, coordinates
   ! Starting position of field lines in Rs
-  real, public :: ROrigin = 2.5
+  real         :: ROrigin = 2.5
   ! Size of angular grid, latitude and longitude, at origin 
   ! surface R=ROrigin
   real, public ::  LonMin, LonMax, LatMin, LatMax
@@ -168,6 +168,8 @@ contains
     use ModReadParam, ONLY: read_var
     use ModNumConst, ONLY : cDegToRad
     character(len=*), intent(in):: NameCommand ! From PARAM.in  
+    !Misc
+    integer :: nParticleCheck, nLonCheck, nLatCheck
     character(len=*), parameter :: NameSub = 'SP:set_grid_param'
     !--------------------------------------------------------------------------
     select case(NameCommand)
@@ -206,7 +208,6 @@ contains
        call read_var('RBufferMin', RBufferMin)
        call read_var('RBufferMax', RBufferMax)
        call read_var('RMax',RMax)
-
        ! check consistency
        if(RBufferMin < 0.0 .or.RBufferMax < 0.0 .or.RMax < 0.0)&
             call CON_stop(NameSub//&
@@ -216,6 +217,22 @@ contains
             call CON_stop(NameSub//&
             ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
        IsSetGrid = .true.
+       case('#CHECKGRIDSIZE')
+          call read_var('nParticleMax',nParticleCheck)
+          call read_var('nLon',     nLonCheck)
+          call read_var('nLat',     nLatCheck)
+          if(iProc==0.and.any(&
+               (/nParticleMax,     nLon,     nLat/) /= &
+               (/nParticleCheck,nLonCheck,nLatCheck/)))then
+             write(*,*)'Code is compiled with nParticleMax,nLon,nLat=',&
+                  (/nParticleMax, nLon, nLat/)
+             call CON_stop(&
+                  'Change nParticle,nLon,nLat with Config.pl -g & recompile!')
+          end if
+       case('#COORDSYSTEM','#COORDINATESYSTEM')
+          call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
+       case default
+          call CON_stop(NameSub//' Unknown command '//NameCommand)
     end select
   end subroutine read_param
   !==========================================================================
@@ -223,7 +240,7 @@ contains
     ! allocate the grid used in this model
     use ModUtilities,      ONLY: check_allocate
     use ModCoordTransform, ONLY: rlonlat_to_xyz
-    use SP_ModProc,        ONLY: iProc, nProc
+    use SP_ModProc,        ONLY: nProc
 
     logical, intent(in):: DoReadInput
     integer:: iError

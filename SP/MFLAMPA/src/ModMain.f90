@@ -2,24 +2,19 @@
 ! portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 module SP_ModMain
-  use SP_ModProc, ONLY: iProc
-  use SP_ModSize, ONLY: nDim, nLat, nLon, nNode, nParticleMax, &
-       Particle_, OriginLat_, OriginLon_
-  use SP_ModWrite, ONLY: set_write_param, write_output, finalize_write,&
+  use SP_ModProc,    ONLY: iProc
+  use SP_ModSize,    ONLY: nDim, nLat, nLon, nNode, nParticleMax
+  use SP_ModWrite,   ONLY: set_write_param, write_output, finalize_write,&
        NamePlotDir
   use SP_ModReadMhData, ONLY: &
        set_read_mh_data_param, init_read_mh_data, read_mh_data, &
        finalize_read_mh_data, offset, DoReadMhData
   use SP_ModRestart, ONLY: save_restart=>write_restart, read_restart
-  use SP_ModGrid, ONLY: nVar, copy_old_state,&
-       LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, BOld_, RhoOld_,&
-       Wave1_, Wave2_, Length_, nBlock, &
-       Proc_, Block_, nParticle_B, Shock_, ShockOld_, DLogRho_,&
-       LatMin, LatMax, LonMin, LonMax, &
-       RMin, RBufferMin, RBufferMax, RMax, ROrigin, &
-       iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       FootPoint_VB, TypeCoordSystem,&
-       set_grid_param=>read_param, init_grid=>init, get_node_indexes
+  use SP_ModGrid,    ONLY: copy_old_state, LagrID_, X_,  Y_, Z_, Rho_,   &
+       Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_, Length_, nBlock,&
+       nParticle_B, Shock_, ShockOld_, DLogRho_, RMin, RBufferMin,       &
+       RBufferMax, RMax, iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
+       init_grid=>init, RhoOld_
   use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, &
        set_momentum_param, advance
@@ -62,24 +57,17 @@ module SP_ModMain
 
   ! Methods and variables from ModSize
   public:: &
-       nDim, nLat, nLon, nNode, nParticleMax,&
-       Particle_, OriginLat_, OriginLon_
+       nDim, nLat, nLon, nNode, nParticleMax
 
   ! Methods and variables from ModGrid
   public:: &
-       nVar, &
-       LagrID_,X_,Y_,Z_,Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_, BOld_,&
-       Wave1_, Wave2_, Length_, nBlock, &
-       Proc_, Block_, nParticle_B, Shock_, ShockOld_,&
-       LatMin, LatMax, LonMin, LonMax, &
-       RMin, RBufferMin, RBufferMax, RMax, ROrigin,&
-       iShock_IB, iGridGlobal_IA, iNode_II, iNode_B, State_VIB, &
-       FootPoint_VB, TypeCoordSystem,& 
-       get_node_indexes
+       LagrID_,X_, Y_, Z_, Rho_, Bx_, Bz_, Ux_, Uz_, T_, &
+       Wave1_, Wave2_, Length_, nBlock, nParticle_B, Shock_,   &
+       ShockOld_, RMin, RBufferMin, RBufferMax, RMax,          &
+       iShock_IB, iNode_B, State_VIB, FootPoint_VB
 
   ! Methods and variables from ModReadMhData
-  public:: &
-       DoReadMhData, offset
+  public:: DoReadMhData, offset
   !\
   ! Logicals for actions
   !----------------------------------------------------------------------------
@@ -92,13 +80,13 @@ module SP_ModMain
   !/
 contains
 
-  subroutine read_param(TypeAction)
+  subroutine read_param
+    use SP_ModGrid    , ONLY: read_param_grid=>read_param
+    use SP_ModUnit    , ONLY: read_param_unit=>read_param
     use ModTimeConvert, ONLY: time_int_to_real
     ! Read input parameters for SP component
     use ModReadParam, ONLY: &
          read_var, read_line, read_command, i_session_read, read_echo_set
-    character (len=*), intent(in)     :: TypeAction ! What to do  
-
     ! aux variables 
     integer:: nParticleCheck, nLonCheck, nLatCheck
     logical:: DoEcho
@@ -116,33 +104,25 @@ contains
        select case(NameCommand)
        case('#RESTART')
           call read_var('DoRestart',DoRestart)
-       case('#CHECKGRIDSIZE')
-          call read_var('nParticleMax',nParticleCheck)
-          call read_var('nLon',     nLonCheck)
-          call read_var('nLat',     nLatCheck)
-          if(iProc==0.and.any(&
-               (/nParticleMax,     nLon,     nLat/) /= &
-               (/nParticleCheck,nLonCheck,nLatCheck/)))then
-             write(*,*)'Code is compiled with nParticleMax,nLon,nLat=',&
-                  (/nParticleMax, nLon, nLat/)
-             call CON_stop(&
-                  'Change nParticle,nLon,nLat with Config.pl -g & recompile!')
-          end if
        case('#NSTEP')
           call read_var('nStep',iIterGlobal)
        case('#TIMESIMULATION')
           call read_var('tSimulation',TimeGlobal)
           DataInputTime = TimeGlobal
-       case('#GRID', '#ORIGIN')
-          call set_grid_param(NameCommand)
-       case('#DORUN')
-          call read_var('DoRun',DoRun)
+          !\
+          ! read parameters for each module
+          !/
+       case('#GRID', '#ORIGIN', '#COORDSYSTEM', '#COORDINATESYSTEM',&
+            '#CHECKGRIDSIZE')
+          call read_param_grid(NameCommand)
+       case('#PARTICLEENERGYUNIT')
+          call read_param_unit(NameCommand)
        case('#SAVEPLOT','#USEDATETIME','#SAVEINITIAL')
           call set_write_param(NameCommand)
        case('#READMHDATA','#MHDATA')
           call set_read_mh_data_param(NameCommand)
-       case('#COORDSYSTEM','#COORDINATESYSTEM')
-          call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
+       case('#DORUN')
+          call read_var('DoRun',DoRun)
        case('#INJECTION')
           if(i_session_read() /= 1)CYCLE
           call set_momentum_param

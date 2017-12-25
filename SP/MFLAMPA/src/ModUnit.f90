@@ -16,6 +16,7 @@ module SP_ModUnit
   private !Except
   ! public members
   public :: init               ! Initialize
+  public :: read_param         ! Read particle energy unit
   public :: UnitParticleEnergy ! Energy unit is SI
   public :: NameVarUnit_V      ! Units for state vector components
   ! Convert particle momentum to energy or kinetic energy and
@@ -83,6 +84,8 @@ contains
   end subroutine read_param
   !==============
   subroutine init
+    character(len=*), parameter :: NameSub='SP:init_unit'
+    !------------------
     if(.not.DoInit)RETURN
     DoInit = .false.
      ! account for units of energy

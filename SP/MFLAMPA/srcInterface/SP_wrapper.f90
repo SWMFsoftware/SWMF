@@ -6,16 +6,15 @@ module SP_wrapper
 
   use ModConst, ONLY: rSun, cProtonMass, energy_in
   use SP_ModMain, ONLY: &
-       run, initialize, finalize, check, read_param, save_restart, &
-       get_node_indexes, DoRestart, &
+       run, save_restart, &
+       DoRestart, DoReadMhData, &
        nDim, nLat, nLon, nBlock, nParticleMax, &
-       RMin, RBufferMin, RBufferMax, RMax, LatMin, LatMax, LonMin, LonMax, &
-       iGridGlobal_IA, State_VIB, &
-       iNode_B, TypeCoordSystem, FootPoint_VB, DataInputTime, &
-       Block_, Proc_, nParticle_B, Length_,&
-       LagrID_,X_,Y_,Z_, Rho_, Bx_,By_,Bz_,B_, Ux_,Uy_,Uz_, T_, RhoOld_,BOld_,&
-       Wave1_, Wave2_, &
-       DoReadMhData
+       RMin, RBufferMin, RBufferMax, RMax, &
+        State_VIB, &
+       iNode_B, FootPoint_VB, DataInputTime, &
+       nParticle_B, Length_,&
+       LagrID_,X_, Y_, Z_, Rho_, Bx_, Bz_,  Ux_, Uz_, T_, &
+       Wave1_, Wave2_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -120,6 +119,7 @@ contains
   !========================================================================
 
   subroutine SP_init_session(iSession,TimeSimulation)
+    use SP_ModMain, ONLY: initialize
     integer,  intent(in) :: iSession         ! session number (starting from 1)
     real,     intent(in) :: TimeSimulation   ! seconds from start time
 
@@ -135,6 +135,7 @@ contains
   !======================================================================
 
   subroutine SP_finalize(TimeSimulation)
+    use SP_ModMain , ONLY: finalize
     use SP_ModWrite, ONLY: finalize_write
     real,intent(in)::TimeSimulation
     real:: TimeAux ! to satisfy intent of arguments in run()
@@ -153,6 +154,7 @@ contains
 
   subroutine SP_set_param(CompInfo,TypeAction)
     use SP_ModAdvance, ONLY: StartTime, TimeGlobal
+    use SP_ModMain   , ONLY: check, read_param
     use SP_ModProc
     use CON_physics, ONLY: get_time
     type(CompInfoType),intent(inout):: CompInfo
@@ -176,7 +178,7 @@ contains
        call get_time(tSimulationOut = TimeGlobal, tStartOut = StartTime)
        call check
     case('READ')
-       call read_param(TypeAction)
+       call read_param
     case('GRID')
        call SP_set_grid
     case default
@@ -282,6 +284,8 @@ contains
   end subroutine SP_put_from_mh
   !============================
   subroutine SP_set_grid
+    use SP_ModGrid, ONLY: LatMin, LatMax, LonMin, LonMax,&
+         iGridGlobal_IA, Block_, Proc_, TypeCoordSystem
     logical, save:: IsInitialized = .false.
     !------------------------------------------------------------
     if(IsInitialized)&
