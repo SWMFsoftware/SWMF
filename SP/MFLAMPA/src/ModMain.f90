@@ -5,9 +5,7 @@ module SP_ModMain
   use SP_ModProc,    ONLY: iProc
   use SP_ModSize,    ONLY: nDim, nLat, nLon, nNode, nParticleMax
   use SP_ModPlot,    ONLY: save_plot_all, NamePlotDir
-  use SP_ModReadMhData, ONLY: &
-       set_read_mh_data_param, init_read_mh_data, read_mh_data, &
-       finalize_read_mh_data, offset, DoReadMhData
+  use SP_ModReadMhData, ONLY: read_mh_data, DoReadMhData
   use SP_ModRestart, ONLY: save_restart=>write_restart, read_restart
   use SP_ModGrid,    ONLY: copy_old_state, LagrID_, X_,  Y_, Z_, Rho_,   &
        Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_, Length_, nBlock,&
@@ -84,6 +82,7 @@ contains
     use SP_ModDistribution, ONLY:read_param_dist=>read_param
     use SP_ModAdvance , ONLY: read_param_adv =>read_param
     use SP_ModPlot    , ONLY: read_param_plot=>read_param
+    use SP_ModReadMHData, ONLY:read_param_mhdata=>read_param
     use ModTimeConvert, ONLY: time_int_to_real
     ! Read input parameters for SP component
     use ModReadParam, ONLY: &
@@ -125,18 +124,15 @@ contains
           call read_param_dist(NameCommand)
        case('#INJECTION','#CFL')
           call read_param_adv(NameCommand)
-       case('#SAVEPLOT','#USEDATETIME','#SAVEINITIAL')
+       case('#SAVEPLOT','#USEDATETIME','#SAVEINITIAL','#NTAG')
           call read_param_plot(NameCommand)
        case('#READMHDATA','#MHDATA')
-          call set_read_mh_data_param(NameCommand)
+          call read_param_mhdata(NameCommand)
        case('#DORUN')
           call read_var('DoRun',DoRun)
        case('#TIMING')
-          call check_stand_alone
-          if(i_session_read() /= 1)CYCLE
           call read_var('UseTiming',UseTiming)
-          if(.not.UseTiming)&
-               CYCLE
+          if(.not.UseTiming) CYCLE
           call read_var('DnTiming',nTiming)
           call read_var('nDepthTiming',nTimingDepth)
           call read_var('TypeTimingReport',TimingStyle)
@@ -201,31 +197,29 @@ contains
     use SP_ModDistribution, ONLY: init_dist=>init  
     use SP_ModAdvance     , ONLY: init_advance=>init
     use SP_ModPlot        , ONLY: init_plot=>init
+    use SP_ModReadMhData  , ONLY: init_mhdata=>init
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------------
-    if(DoInit)then
-       DoInit=.false.
-    else
-       RETURN
-    end if
-    call init_grid(DoRestart .or. DoReadMhData)
+    if(DoInit)call init_grid(DoRestart .or. DoReadMhData)
     call init_unit
     call init_dist
     call init_advance
     call init_plot
-    call init_read_mh_data ! if input files are used, TimeGlobal is set here 
+    call init_mhdata ! if input files are used, TimeGlobal is set here 
     if(DoRestart) call read_restart
-    DataInputTime = TimeGlobal
+    if(DoInit)DataInputTime = TimeGlobal
+    DoInit=.false.
   end subroutine initialize
   !============================================================================
   subroutine finalize
-    use SP_ModPlot, ONLY: finalize_plot=>finalize
+    use SP_ModPlot,       ONLY: finalize_plot=>finalize
+    use SP_ModReadMhData, ONLY: finalize_read=>finalize
     ! finalize the model
     character(LEN=*),parameter:: NameSub='SP:finalize'
     !------------------------------------------------------------------------
     call finalize_plot
-    call finalize_read_mh_data
+    call finalize_read
   end subroutine finalize
 
   !============================================================================
