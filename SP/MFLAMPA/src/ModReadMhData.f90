@@ -1,59 +1,48 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================!
+!==================================================================
 module SP_ModReadMhData
   ! This module contains methods for reading input MH data
   use SP_ModSize,    ONLY: nDim, nParticleMax
   use SP_ModGrid,    ONLY: get_node_indexes, nMHData, nVar, nBlock,&
-       iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB, &
+       iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB,   &
        NameVar_V, LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
   use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
-  use SP_ModPlot,   ONLY: nFileRead=>nTag
   use SP_ModDistribution, ONLY: Distribution_IIB, offset
   use ModPlotFile,   ONLY: read_plot_file
   use ModUtilities,  ONLY: fix_dir_name, open_file, close_file
   use ModIoUnit,     ONLY: io_unit_new
-
   implicit none
-
   SAVE
-
   private ! except
- 
-
-  public:: &
-       set_read_mh_data_param, init_read_mh_data, read_mh_data, &
-       finalize_read_mh_data, offset, DoReadMhData
-
-
   !\
-  !----------------------------------------------------------------------------
+  !Public members
+  public:: init         ! Initialize module variables
+  public:: read_param   ! Read module variables
+  public:: read_mh_data ! Read MH_data from files
+  public:: finalize     ! Finalize module variables DoReadMhData
+  ! If the folliwing logical is true, read MH_data from files 
+  logical, public :: DoReadMhData = .false.
+  !/
+  !\
   ! the input directory
-  character (len=100):: NameInputDir=""
+  character(len=100)         :: NameInputDir=""
   ! the name with list of file tags
-  character (len=100):: NameTagFile=""
+  character(len=100)         :: NameTagFile=""
   ! the input file name base
-  character (len=100):: NameFileBase="MH_data"
-  character (len=4)  :: NameFormat
-  character (len=20) :: TypeFile
-  ! buffer is larger than the data needed to be read in the case 
-  ! the input file has additional data
-  real:: Buffer_II(nVar,nParticleMax)
-
-  ! buffer for Lagrangian coordinate
-  real:: Buffer_I(nParticleMax)
+  character(len=4)           :: NameFileExtension
+  character(len=20)          :: TypeMhDataFile
 
   ! IO unit for file with list of tags
   integer:: iIOTag
 
-  logical:: DoReadMhData = .false.
-  !/
 contains
-  
-  subroutine set_read_mh_data_param(NameCommand)
+  !================================================================
+  subroutine read_param(NameCommand)
     use ModReadParam, ONLY: read_var
     ! set parameters of input files with background data
+    integer :: nFileRead
     character (len=*), intent(in):: NameCommand ! From PARAM.in  
     character(len=*), parameter :: NameSub='SP:set_read_mh_data_param'
     !--------------------------------------------------------------------------
@@ -66,20 +55,18 @@ contains
        ! the input directory
        call read_var('NameInputDir', NameInputDir)
        call fix_dir_name(NameInputDir) ! adds "/" if not present
-       
     case('#MHDATA')
        ! type of data files
-       call read_var('TypeFile', TypeFile)
-
+       call read_var('TypeMhDataFile', TypeMhDataFile)
        ! the format of output file must be set
-       select case(trim(TypeFile))
+       select case(trim(TypeMhDataFile))
        case('tec')
-          NameFormat='.dat'
+          NameFileExtension='.dat'
        case('idl','ascii')
-          TypeFile = 'ascii'
-          NameFormat='.out'
+          TypeMhDataFile = 'ascii'
+          NameFileExtension='.out'
        case('real4','real8')
-          NameFormat='.out'
+          NameFileExtension='.out'
        case default
           call CON_stop(NameSub//': input format was not set in PARAM.in')
        end select
@@ -88,11 +75,9 @@ contains
        ! name of the file with the list of tags
        call read_var('NameTagFile', NameTagFile)
     end select
-  end subroutine set_read_mh_data_param
-
+  end subroutine read_param
   !============================================================================
-
-  subroutine init_read_mh_data
+  subroutine init
     ! initialize by setting the time and interation index of input files
     character (len=*), parameter :: NameSub='SP:init_read_mh_data'
     !-------------------------------------------------------------------------
@@ -103,18 +88,15 @@ contains
          file=trim(NameInputDir)//trim(NameTagFile), status='old')
     ! read the first input file
     call read_mh_data(TimeGlobal, DoOffsetIn = .false.)
-  end subroutine init_read_mh_data
-
+  end subroutine init
   !============================================================================
-
-  subroutine finalize_read_mh_data
+  subroutine finalize
     ! close currentl opend files
     if(DoReadMhData) call close_file(iUnitIn=iIOTag)
-  end subroutine finalize_read_mh_data
-
+  end subroutine finalize
   !============================================================================
-
   subroutine read_mh_data(TimeOut, DoOffsetIn)
+    use SP_ModPlot,    ONLY: NameMHData
     real,              intent(out):: TimeOut
     logical, optional, intent(in ):: DoOffsetIn
     ! read 1D MH data, which are produced by write_mh_1d n ModWrite
@@ -134,7 +116,7 @@ contains
     ! local value of DoOffset
     logical:: DoOffset
     ! auxilary variables to apply positive offset (particles are appended)
-    real:: DistanceToMin, Alpha
+    real:: Distance2ToMin, Distance3To2, Alpha
     ! auxilary parameter index
     integer, parameter:: RShock_ = Z_ + 2
     ! additional parameters of lines
@@ -149,85 +131,61 @@ contains
     else
        DoOffset = .true.
     end if
-
+    !\
     ! get the tag for files
     read(iIOTag,'(a)') StringTag
-
+    !/
     ! read the data
-    do iBlock = 1, nBlock
+    BLOCK:do iBlock = 1, nBlock
        iNode = iNode_B(iBlock)
        call get_node_indexes(iNode, iLon, iLat)
-       
+       !\ 
        ! set the file name
        write(NameFile,'(a,i3.3,a,i3.3,a)') &
-            trim(NameInputDir)//trim(NameFileBase)//'_',iLon,'_',iLat,&
-            '_'//trim(StringTag)//NameFormat
-
+            trim(NameInputDir)//NameMHData//'_',iLon,&
+            '_',iLat, '_'//trim(StringTag)//NameFileExtension
+       !/
        ! read the header first
-       call read_plot_file(&
-            NameFile   = NameFile,&
-            TypeFileIn = TypeFile,&
-            TimeOut    = TimeOut,&
-            n1out      = nParticleInput,&
-            Coord1Out_I= Buffer_I,&
-            VarOut_VI  = Buffer_II,&
-            ParamOut_I = Param_I(LagrID_:RShock_)&
-            )
-
+       call read_plot_file(NameFile          ,&
+            TypeFileIn = TypeMhDataFile      ,&
+            TimeOut    = TimeOut             ,&
+            n1out      = nParticle_B(iBlock) ,&
+            ParamOut_I = Param_I(LagrID_:RShock_))
        ! find offset in data between new and old states
        if(DoOffset)then
-          ! amount of the offset is determined from difference between LagrID_
-          ! of old value in State_VIB and new value in Buffer_I
-          iOffset = State_VIB(LagrID_,1,iBlock) - Buffer_I(1)
+          ! amount of the offset is determined from difference 
+          ! in LagrID_ 
+          iOffset = FootPoint_VB(LagrID_,iBlock) - Param_I(LagrID_)
        else
           iOffset = 0
        end if
-
-       State_VIB(LagrID_   , 1:nParticleInput, iBlock) = &
-            Buffer_I(             1:nParticleInput)
-       State_VIB(1:nMHData, 1:nParticleInput, iBlock) = &
-            Buffer_II(1:nMHData, 1:nParticleInput)
-
-       nParticle_B(  iBlock) = nParticleInput
-
-      
        !Parameters
        FootPoint_VB(LagrID_:Z_,iBlock) = Param_I(LagrID_:Z_)
-
+       !\
+       ! read MH data
+       call read_plot_file(NameFile          ,&
+            TypeFileIn = TypeMhDataFile      ,&
+            Coord1Out_I= State_VIB(LagrID_   ,&
+            1:nParticle_B(iBlock),iBlock)    ,&
+            VarOut_VI  = State_VIB(1:nMHData ,&
+            1:nParticle_B(iBlock),iBlock))
+       if(iOffset==0) CYCLE BLOCK 
+       !\
        ! apply offset
-       if(iOffset==0) CYCLE
        if(iOffset < 0)then
           call offset(iBlock, iOffset)
+       elseif(iOffset > 1)then
+          call CON_stop(NameSub//&
+               ": invalid offset between consecutive states")
+       else !iOffset = 1
+          Distance2ToMin = sqrt(sum((State_VIB(X_:Z_,2,iBlock) - &
+               FootPoint_VB(X_:Z_,iBlock))**2))
+          Distance3To2   = sqrt(sum((State_VIB(X_:Z_,3,iBlock) - &
+                State_VIB(X_:Z_,2,iBlock))**2))
+          Alpha = Distance2ToMin/(Distance2ToMin + Distance3To2)
+          call offset(iBlock, iOffset, Alpha)
        end if
-       ! now offset is positive and can only be 1
-       if(iOffset > 1) call CON_stop(NameSub//&
-            ": invalid value of offset between data in consecutive states")
-       DistanceToMin = sqrt(sum((&
-            State_VIB(X_:Z_,1,iBlock) - FootPoint_VB(X_:Z_,iBlock))**2))
-       Alpha = DistanceToMin / (DistanceToMin + sqrt(sum(&
-            (State_VIB(X_:Z_,2,iBlock) - State_VIB(X_:Z_,1,iBlock))**2)))
-       call offset(iBlock, iOffset, Alpha)
-    end do
-
+       !/
+    end do BLOCK
   end subroutine read_mh_data
-
-  !==========================================================================
-
-  subroutine get_time_string(Time, StringTime)
-    ! the subroutine converts real variable Time into a string,
-    ! the structure of the string is 'ddhhmmss', 
-    ! i.e shows number of days, hours, minutes and seconds 
-    ! after the beginning of the simulation
-    real,             intent(in) :: Time
-    character(len=8), intent(out):: StringTime
-    !--------------------------------------------------------------------------
-    ! This is the value if the time is too large
-    StringTime = '99999999'
-    if(Time < 8640000) &
-         write(StringTime,'(i2.2,i2.2,i2.2,i2.2)') &
-         int(                  Time          /86400), & ! # days
-         int((Time-(86400*int(Time/86400)))/ 3600), & ! # hours
-         int((Time-( 3600*int(Time/ 3600)))/   60), & ! # minutes
-         int( Time-(  60*int(Time/   60)))           ! # seconds
-  end subroutine get_time_string
 end module SP_ModReadMhData
