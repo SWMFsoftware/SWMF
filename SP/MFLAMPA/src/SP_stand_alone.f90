@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!==================================================================
 program MFLAMPA
   use ModKind
   use SP_ModProc,  ONLY: iProc, nProc, iComm
@@ -50,9 +51,8 @@ program MFLAMPA
   ! Mark the run as a stand alone
   !/
   IsStandAlone = .true.
-
   !\
-  ! Read input parameter file. Provide the default restart file for #RESTART
+  ! Read PARAM.in file. Provide default restart file for #RESTART
   !/
   call read_file('PARAM.in',iComm)
  
@@ -64,10 +64,10 @@ program MFLAMPA
      !\
      ! Set and check input parameters for this session
      !/
-     call SP_read_param('READ')
+     call SP_read_param
      call SP_check
      !\
-     ! Time execution (timing parameters were set by MH_set_parameters)
+     ! Time execution (timing parameters set by SP_read_param)
      !/
      if(IsFirstSession)then
         call timing_start('MFLAMPA')
@@ -80,7 +80,8 @@ program MFLAMPA
      if(IsFirstSession)then
         call timing_stop('setup')
         if(nTiming > -3) call timing_report_total
-        if(iProc==0) write(*,*)'Resetting timing counters after setup.'
+        if(iProc==0)&
+             write(*,*)'Resetting timing counters after setup.'
         call timing_reset('#all',3)
      end if
 
