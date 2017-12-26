@@ -117,6 +117,7 @@ contains
   end subroutine read_restart
   !==========================
   subroutine write_restart_header
+    use SP_ModPlot, ONLY: nTag
     use SP_ModProc, ONLY: iProc
     use SP_ModDistribution, ONLY: nP, EnergyInjIo, EnergyMaxIo
     ! full name of the header file
@@ -142,6 +143,9 @@ contains
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
     write(UnitTmp_,'(es22.15,a18)')TimeGlobal,'tSimulation'
+    write(UnitTmp_,*)
+    write(UnitTmp_,'(a)')'#NTAG'
+    write(UnitTmp_,'(i8,a32)')nTag,'nTag'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#MOMENTUMGRID'
     write(UnitTmp_,'(es22.15,a18)')EnergyInjIo,'EnergyMin'
