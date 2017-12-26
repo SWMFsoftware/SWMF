@@ -687,7 +687,14 @@ contains
                Coord3Out_I(k) = Coord
        end do; end do; end do
     end do
-
+    !Reduce nVar, if some variables are not needed
+    
+    if(present(VarOut_VI))   nVar = min(nVar,size(VarOut_VI  ,1))
+    if(present(VarOut_VII))  nVar = min(nVar,size(VarOut_VII ,1))
+    if(present(VarOut_VIII)) nVar = min(nVar,size(VarOut_VIII,1))
+    if(present(VarOut_IV))   nVar = min(nVar,size(VarOut_IV  ,2))
+    if(present(VarOut_IIV))  nVar = min(nVar,size(VarOut_IIV ,3))
+    if(present(VarOut_IIIV)) nVar = min(nVar,size(VarOut_IIIV,4))
     ! Fill in output variable arrays
     do iVar = 1, nVar
        n = 0
