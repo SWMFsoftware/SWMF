@@ -132,26 +132,20 @@ contains
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine SP_init_session
 
-  !======================================================================
+  !=================================================================
 
   subroutine SP_finalize(TimeSimulation)
     use SP_ModMain , ONLY: finalize
-    use SP_ModPlot , ONLY: finalize_plot=>finalize
     real,intent(in)::TimeSimulation
     real:: TimeAux ! to satisfy intent of arguments in run()
-    !--------------------------------------------------------------------
+    !---------------------------------------------------------------
     ! if data are read from files, no special finalization is needed
-    if(DoReadMhData) then
-       call finalize_plot
-       RETURN
-    end if
     TimeAux = TimeSimulation
-    call run(TimeAux, TimeSimulation)
+    if(.not.DoReadMhData)&
+         call run(TimeAux, TimeSimulation)
     call finalize
   end subroutine SP_finalize
-
-  !=========================================================
-
+  !================================================================
   subroutine SP_set_param(CompInfo,TypeAction)
     use SP_ModAdvance, ONLY: StartTime, TimeGlobal
     use SP_ModMain   , ONLY: check, read_param
@@ -161,7 +155,7 @@ contains
     character(len=*),  intent(in)   :: TypeAction
 
     character(len=*), parameter :: NameSub='SP_set_param'
-    !-------------------------------------------------------------------------
+    !--------------------------------------------------------------
     select case(TypeAction)
     case('VERSION')
        call put(CompInfo,&
@@ -185,9 +179,7 @@ contains
        call CON_stop('Can not call SP_set_param for '//trim(TypeAction))
     end select
   end subroutine SP_set_param
-
   !=========================================================
-
   subroutine SP_save_restart(TimeSimulation) 
     real, intent(in) :: TimeSimulation 
     real:: TimeAux ! to satisfy intent of arguments in run()
@@ -198,7 +190,6 @@ contains
          call run(TimeAux, TimeSimulation)
     call save_restart
   end subroutine SP_save_restart
-
   !===================================================================
 
   subroutine SP_put_from_mh(nPartial,iPutStart,Put,W,DoAdd,Buff_I,nVar)
@@ -245,14 +236,9 @@ contains
           R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
           select case(Model_)
           case(Lower_)
-          !select case(iComp)
-          !case(SC_)
-             !if(Model_/=Lower_)call CON_stop('Incorrect Model_for SC_')
              Weight = Weight * (0.50 - 0.50 * &
                   tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
           case(Upper_)
-          !case(IH_)
-             !if(Model_/=Upper_)call CON_stop('Incorrect Model_for IH_')
              Aux = 1.0   
              Weight = Weight * (0.50 + 0.50 * &
                   tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
@@ -291,7 +277,6 @@ contains
     if(IsInitialized)&
          RETURN
     IsInitialized = .true.
-
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
          GridID_ = SP_,&
@@ -309,7 +294,6 @@ contains
          PE_I          = iGridGlobal_IA(Proc_,:),&
          iBlock_I      = iGridGlobal_IA(Block_,:))
     call bcast_decomposition(SP_)
-
     ! Coordinate system is Heliographic Inertial Coordinate System (HGI)
     ! with length measured in solar radii
     call set_coord_system(&
@@ -328,6 +312,7 @@ contains
     call SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
     call SP_put_input_time(TimeIn)
   end subroutine SP_put_coupling_param
+  !===============================
   subroutine SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
     integer, intent(in) :: iModelIn
     real,    intent(in) :: rMinIn, rMaxIn
@@ -399,7 +384,6 @@ contains
     State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
     nParticle_B(  iBlock)=MAX(nParticle_B(  iBlock),iParticle)
   end subroutine SP_put_line
-
   !===================================================================
   !\
   ! Called from coupler after the updated grid point location are 
@@ -407,7 +391,7 @@ contains
   ! grid points should be added/deleted
   !/
   subroutine SP_adjust_lines(DoInit, DoAdjustStart, DoAdjustEnd)
-    use SP_ModMain, ONLY: offset
+    use SP_ModDistribution, ONLY: offset
     !\
     ! If DoAdjustStart, the points in the starting portion of the line are
     ! processed, if DoAdjustEnd - the same for the end points
@@ -534,37 +518,37 @@ contains
       
       character(len=*), parameter:: NameSub = 'append_particles'
       !--------------------------------------------------------------------
-      do iBlock = 1, nBlock
+      BLOCK:do iBlock = 1, nBlock
          ! check current value of offset: if not zero, adjustments have just
          ! been made, no need to append new particles
-         if(iOffset_B(iBlock) /= 0 )CYCLE
+         if(iOffset_B(iBlock) /= 0 )CYCLE BLOCK
          ! check if the beginning of the line moved far enough from its 
          ! footprint on the solar surface
          DistanceToMin = sqrt(sum((&
               State_VIB(X_:Z_,1,iBlock) - FootPoint_VB(X_:Z_,iBlock))**2))
          ! skip the line if it's still close to the Sun
-         if(DistanceToMin * (1.0 + cTol) < FootPoint_VB(Length_, iBlock)) CYCLE
+         if(DistanceToMin*(1.0 + cTol) < FootPoint_VB(Length_, iBlock))&
+              CYCLE BLOCK
          ! append a new particle
          !-----------------------
          ! check if have enough space
-         if(nParticleMax == nParticle_B( iBlock))&
-              call CON_Stop(NameSub//&
+         if(nParticleMax == nParticle_B( iBlock))call CON_Stop(NameSub//&
               ': not enough memory allocated to append a new particle')
          ! for old values of background parameters use extrapolation
          Alpha = DistanceToMin / (DistanceToMin + sqrt(sum(&
               (State_VIB(X_:Z_,2,iBlock) - State_VIB(X_:Z_,1,iBlock))**2)))
-         call offset(iBlock, iOffset=1, AlphaIn=Alpha)
          !Particles ID as handled by other components keep unchanged
          !while their order numbers in SP are increased by 1. Therefore,
-         iOffset_B(iBlock)  = iOffset_B(iBlock) + 1
-         State_VIB(       X_:Z_,2:nParticle_B(iBlock) + 1, iBlock)&
-              = State_VIB(X_:Z_,1:nParticle_B(iBlock),     iBlock)
+         iOffset_B(iBlock)  = 1
+         State_VIB(       LagrID_:Z_,2:nParticle_B(iBlock) + 1, iBlock)&
+              = State_VIB(LagrID_:Z_,1:nParticle_B(iBlock),     iBlock)
+         call offset(iBlock, iOffset=iOffset_B(iBlock), AlphaIn=Alpha)
          ! put the new particle just above the lower boundary
          State_VIB(LagrID_:Z_,  1, iBlock) = &
-              FootPoint_VB(LagrID_:Z_, iBlock) * (1.0 + cTol)
+              FootPoint_VB(LagrID_:Z_, iBlock)*(1.0 + cTol)
          State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
          FootPoint_VB(LagrID_,iBlock) = State_VIB(LagrID_, 1, iBlock) - 1.0
-      end do
+      end do BLOCK
     end subroutine append_particles
   !==============================
   end subroutine SP_adjust_lines
