@@ -12,6 +12,7 @@ extern int SphericalNucleusTest_Mode;
 
 namespace RosinaSample {
   const int nPoints=1150;
+  const int iStartRosinaAnalysisDataPont=0;
 
   //split the cell when sample Rosina measurements
   const int CellFractionationFactor=1;
