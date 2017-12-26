@@ -445,9 +445,6 @@ mh1d idl
 #SAVEINITIAL
 F
 
-#INCLUDE
-SP/IO2/MH_data.H
-
 #END_COMP SP   ----------------------------------------------------------------
 
 #COUPLE1
