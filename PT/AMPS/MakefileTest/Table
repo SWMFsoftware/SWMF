@@ -565,6 +565,14 @@ Compile=
 >>>-@($(MAKE) -j8 amps)
 >>>@echo "test_linear-system-solver_compile... done" >> test_linear-system-solver.diff
 
+Check=
+>>>@echo "test_linear-system-solver_check..." >> test_linear-system-solver$(TESTlinear-system-solver-REF).diff
+>>>-@$(foreach OUT,$(TESTlinear-system-solverOUTFILES),                                 \
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=1.0E-6 $(TESTlinear-system-solverDIR)/PT/plots/$(OUT).dat         \
+>>>output/test_linear-system-solver/$(OUT)$(TESTlinear-system-solver-REF).ref_np`ls $(TESTlinear-system-solverDIR)/PT/thread* |wc -l |tr -d ' '`  > test_linear-system-solver$(TESTlinear-system-solver-REF).diff);) 
+>>>@ls -l test_linear-system-solver$(TESTlinear-system-solver-REF).diff
+>>>@echo Test test_linear-system-solver has finished: `date`
+
 <#
 
 #>
