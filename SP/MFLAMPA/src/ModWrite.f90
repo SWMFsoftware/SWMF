@@ -31,15 +31,35 @@ module SP_ModPlot
   character(len=*), public, parameter :: NamePlotDir="SP/IO2/"
   !/
   !\
-  type TypeOutputFile
+  ! Number of plot file types
+  integer:: nFileOut = 0
+  ! Types of output files in terms of output dataa
+  integer, parameter:: &
+       ! Background mhd data
+       MH1D_      = 0, & ! along each line
+       MH2D_      = 1, & ! at given radius as Lon-Lat plot
+       MHTime_    = 2, & ! at given radius as time series for lines 
+       ! Distribution
+       Distr1D_   = 3    ! along each line
+  ! Momentum or energy axis to use for 2D plots 
+  integer, parameter:: & 
+       Momentum_= 1,   &
+       Energy_  = 2
+  ! Plot types for distribution function
+  integer, parameter:: &
+       CDF_ = 1,       &
+       DEF_ = 2
+  !/
+  !\
+  type TypePlotFile
      !\
      ! General information
      !/
      ! kind of data printed to a file
-     integer:: iKindData
-     ! format of a file
-     character(len=4 ):: NameFormat
-     character(len=20):: TypeFile
+     integer:: iKindData   !=MH1D_or MH2D_ or MHTime_ or Distr1D_ 
+     ! file name extension
+     character(len=4 ):: NameFileExtension  !.out, .tec etc
+     character(len=20):: TypeFile           !tec, idl, ascii, real8
      ! whether it is the first call
      ! USED ONLY IN write_mh_time  FOR NOW!!!
      logical:: IsFirstCall
@@ -52,47 +72,29 @@ module SP_ModPlot
      !/
      ! variables from the state vector to be written
      logical:: DoPlot_V(X_:FluxMax_)
-     ! total number of variables to be written
+     ! total numbers of variables to be written
      integer:: nVarPlot, nFluxPlot
-     ! their indices in the state vector
+     ! their indices in the state vectors
      integer, pointer:: iVarPlot_V(:), iFluxPlot_V(:)
      !\
      ! Distribution
      !/
-     ! scale of distribution function (momentum or energy)
-     integer:: iScale
+     ! Momentum or energy axis to use for 2D plots 
+     integer:: iScale      ! =Momentum_ or Energy_
      ! type out output (CDF or differential energy flow)
-     integer:: iTypeDistr
+     integer:: iTypeDistr  ! =CDF_ or EDF_
      !\
      ! Data on the sphere
      !/
      ! radius of the sphere the data to be written at
      real:: Radius
-  end type TypeOutputFile
+  end type TypePlotFile
   !/
   !\
-  ! Number of plot file types
-  integer:: nFileOut = 0
-  ! The output files
-  type(TypeOutputFile), allocatable:: File_I(:)
-  ! Types of output files in terms of output dataa
-  integer, parameter:: &
-       ! Background mhd data
-       MH1D_      = 0, & ! along each line
-       MH2D_      = 1, & ! at given radius as Lon-Lat plot
-       MHTime_    = 2, & ! at given radius as time series for lines 
-       ! Distribution
-       Distr1D_   = 3    ! along each line
+  ! All plot files
+  type(TypePlotFile), allocatable:: File_I(:)
   !/
   !\
-  ! Momentum/energy axis for 2D plots 
-  integer, parameter:: & 
-       Momentum_= 1,   &
-       Energy_  = 2
-  ! Output types for distribution function
-  integer, parameter:: &
-       CDF_ = 1,       &
-       DEF_ = 2
   ! Arrays used to visualize the distribution function
   real, dimension(0:nP+1) :: Log10Momentum_I, Log10Energy_I,      &
        DMomentumOverDEnergy_I 
@@ -104,22 +106,26 @@ module SP_ModPlot
   !\
   ! info for MH1D header and tag list
   logical:: DoWriteHeader = .false.
+  character(len=*), parameter, public :: NameMHData = "MH_data"
   ! name of the header file
-  character(len=*), parameter :: NameHeaderFile = 'MH_data.H'
+  character(len=*), parameter :: NameHeaderFile = NameMHData//'.H'
   ! name of the tag list file
-  character(len=*), parameter :: NameTagFile  = 'MH_data.lst'
+  character(len=*), parameter :: NameTagFile  = NameMHData//'.lst'
   ! number of different output file tags
   integer,  public            :: nTag = 0 
   !/
   !\ 
-  character(len=20)           :: TypeMHDataFile
+  character(len=20)           :: TypeMHDataFile 
   !/
   !\
   !Fromat for saving time tag. If .true. the time tag format is
   !YYYYMMDDHHMMSS 
   logical, public:: UseDateTime = .false.
-  ! If DoSaveInitial=.false.,the initial file is not saved 
+  !/
+  !\
+  ! If DoSaveInitial=.false.,the initial files are not saved 
   logical :: DoSaveInitial = .true.
+  !/
   logical :: DoInit        = .true.
 contains
   subroutine init
@@ -195,13 +201,13 @@ contains
           ! check whether set properly
           select case(TypeFile)
           case('tec')
-             File_I(iFile) % NameFormat='.dat'
+             File_I(iFile) % NameFileExtension='.dat'
              File_I(iFile) % TypeFile  ='tec'
           case('idl','ascii')
-             File_I(iFile) % NameFormat='.out'
+             File_I(iFile) % NameFileExtension='.out'
              File_I(iFile) % TypeFile  ='ascii'
           case('real4','real8')
-             File_I(iFile) % NameFormat='.out'
+             File_I(iFile) % NameFileExtension='.out'
              File_I(iFile) % TypeFile  = TypeFile
           case default
              call CON_stop(NameSub//&
@@ -265,15 +271,18 @@ contains
        ! Check consistency
        !/
        ! only 1 MH1D file can be requested
-       if(count(File_I(1:nFileOut) % iKindData == MH1D_,1) > 1)&
+       if(count(File_I(1:nFileOut)%iKindData == MH1D_,1) > 1)&
             call CON_stop(NameSub//&
             ": only one MH1D output file can be requested")
     case("#USEDATETIME")
        call read_var('UseDateTime',UseDateTime)
     case('#SAVEINITIAL')
        call read_var('DoSaveInitial',DoSaveInitial)
+    case('#NTAG')
+       call read_var('nTag', nTag)
     case default
-       call CON_stop('Unknown command '//NameCommand//' in SP:'//NameSub)
+       call CON_stop('Unknown command '//NameCommand//' in '//&
+            NameSub)
     end select
 
   contains
@@ -490,15 +499,15 @@ contains
          if(UseDateTime)then
             call get_date_time_string(TimeGlobal, StringTime)
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-                 trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
+                 trim(NamePlotDir)//NameMHData//'_',iLon,'_',iLat,&
                  '_e'//StringTime//'_n',iIterGlobal,&
-                 File_I(iFile) % NameFormat
+                 File_I(iFile)%NameFileExtension
          else
             call get_time_string(TimeGlobal, StringTime(1:8))
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
-                 trim(NamePlotDir)//'MH_data_',iLon,'_',iLat,&
+                 trim(NamePlotDir)//NameMHData//'_',iLon,'_',iLat,&
                  '_t'//StringTime(1:8)//'_n',iIterGlobal,&
-                 File_I(iFile) % NameFormat
+                 File_I(iFile)%NameFileExtension
          end if
          ! get min and max particle indexes on this field line
          iLast  = nParticle_B(   iBlock)
@@ -586,21 +595,21 @@ contains
          if(UseDateTime)then
             call get_date_time_string(TimeGlobal, StringTime)
             write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)')  &
-                 trim(NamePlotDir)//'MH_data_R=',     &
+                 trim(NamePlotDir)//NameMHData//'_R=',     &
                  int(File_I(iFile)%Radius),           &
                  File_I(iFile)%Radius - &
                  int(File_I(iFile)%Radius),           &
                  '_e'//StringTime//'_n', iIterGlobal, &
-                 File_I(iFile) % NameFormat
+                 File_I(iFile) % NameFileExtension
          else
             call get_time_string(TimeGlobal, StringTime(1:8))
             write(NameFile,'(a,i4.4,f0.2,a,i6.6,a)')  &
-                 trim(NamePlotDir)//'MH_data_R=',     &
+                 trim(NamePlotDir)//NameMHData//'_R=',     &
                  int(File_I(iFile) % Radius),         &
                  File_I(iFile) % Radius -             &
                  int(File_I(iFile)%Radius),           &
                  '_t'//StringTime(1:8)//'_n',         &
-                 iIterGlobal, File_I(iFile)%NameFormat
+                 iIterGlobal, File_I(iFile)%NameFileExtension
          end if
          ! get max particle indexes on this field line
          iLast  = nParticle_B(iBlock)
@@ -746,9 +755,10 @@ contains
 
          ! set the file name
          write(NameFile,'(a,i4.4,f0.2,a,i3.3,a,i3.3,a)') &
-              trim(NamePlotDir)//'MH_data_R=', int(File_I(iFile) % Radius), &
+              trim(NamePlotDir)//NameMHData//'_R=', &
+              int(File_I(iFile)%Radius),&
               File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
-              '_', iLon, '_', iLat, File_I(iFile) % NameFormat
+              '_', iLon, '_', iLat, File_I(iFile) % NameFileExtension
          !\
          ! if file already exists -> read its content
          nDataLine = 0
@@ -855,13 +865,13 @@ contains
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
                  trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
                  '_e'//StringTime//'_n',iIterGlobal,&
-                 File_I(iFile) % NameFormat
+                 File_I(iFile) % NameFileExtension
          else
             call get_time_string(TimeGlobal, StringTime(1:8))
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
                  trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
                  '_t'//StringTime(1:8)//'_n',iIterGlobal,&
-                 File_I(iFile) % NameFormat
+                 File_I(iFile) % NameFileExtension
          end if
          ! get max particle indexes on this field line
          iLast  = nParticle_B(   iBlock)
@@ -885,7 +895,6 @@ contains
                     2*Log10Momentum_I
             end select
          end do
-
          ! print data to file
          call save_plot_file(&
               NameFile   = NameFile, &
