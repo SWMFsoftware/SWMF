@@ -14,7 +14,6 @@ module SP_ModMain
        RhoOld_
   use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
        TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, advance
-  use SP_ModDistribution, ONLY:  offset
   use ModKind, ONLY: Real8_
 
   implicit none
@@ -63,7 +62,7 @@ module SP_ModMain
        iShock_IB, iNode_B, State_VIB, FootPoint_VB
 
   ! Methods and variables from ModReadMhData
-  public:: DoReadMhData, offset
+  public:: DoReadMhData
   !\
   ! Logicals for actions
   !----------------------------------------------------------------------------

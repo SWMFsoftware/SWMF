@@ -450,9 +450,9 @@ contains
           iOffset_B(iBlock) = iOffset
           State_VIB(     LagrID_:Z_, 1:iEnd+iOffset, iBlock) = &
                State_VIB(LagrID_:Z_, iBegin:iEnd,    iBlock)
-          call offset(iBlock, iOffset)
           ! need to recalculate footpoints
           call SP_set_line_foot_b(iBlock)
+          call offset(iBlock, iOffset)
        end if
     end do
     ! may need to add particles to the beginning of lines
@@ -513,7 +513,7 @@ contains
     subroutine append_particles
       !appends a new particle at the beginning of lines if necessary
       integer:: iBlock
-      real:: DistanceToMin, Alpha
+      real:: DistanceToMin
       real, parameter:: cTol = 1E-06
       
       character(len=*), parameter:: NameSub = 'append_particles'
@@ -529,25 +529,23 @@ contains
          ! skip the line if it's still close to the Sun
          if(DistanceToMin*(1.0 + cTol) < FootPoint_VB(Length_, iBlock))&
               CYCLE BLOCK
+         !\
          ! append a new particle
-         !-----------------------
          ! check if have enough space
          if(nParticleMax == nParticle_B( iBlock))call CON_Stop(NameSub//&
               ': not enough memory allocated to append a new particle')
-         ! for old values of background parameters use extrapolation
-         Alpha = DistanceToMin / (DistanceToMin + sqrt(sum(&
-              (State_VIB(X_:Z_,2,iBlock) - State_VIB(X_:Z_,1,iBlock))**2)))
          !Particles ID as handled by other components keep unchanged
          !while their order numbers in SP are increased by 1. Therefore,
          iOffset_B(iBlock)  = 1
          State_VIB(       LagrID_:Z_,2:nParticle_B(iBlock) + 1, iBlock)&
               = State_VIB(LagrID_:Z_,1:nParticle_B(iBlock),     iBlock)
-         call offset(iBlock, iOffset=iOffset_B(iBlock), AlphaIn=Alpha)
          ! put the new particle just above the lower boundary
          State_VIB(LagrID_:Z_,  1, iBlock) = &
               FootPoint_VB(LagrID_:Z_, iBlock)*(1.0 + cTol)
          State_VIB(LagrID_,1, iBlock) = State_VIB(LagrID_, 2, iBlock) - 1.0
          FootPoint_VB(LagrID_,iBlock) = State_VIB(LagrID_, 1, iBlock) - 1.0
+         call offset(iBlock, iOffset=iOffset_B(iBlock))
+         !/
       end do BLOCK
     end subroutine append_particles
   !==============================

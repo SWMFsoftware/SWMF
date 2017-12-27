@@ -132,32 +132,37 @@ contains
     end select
   end subroutine read_param
   !============================================================
-  subroutine offset(iBlock, iOffset, AlphaIn)
+  subroutine offset(iBlock, iOffset)
     use SP_ModGrid, ONLY: NoShock_, BOld_, RhoOld_, ShockOld_, &
-         iShock_IB,  State_VIB
+         iShock_IB,  State_VIB, X_, Z_, FootPoint_VB
     ! shift in the data arrays is required if the grid point(s) is  
     ! appended or removed at the foot point of the magnetic field line
     !SHIFTED ARE:  State_VIB((/RhoOld_,BOld_/),:,:), Distribution_IIB,
     !ShockOld, nParticle_B
     integer, intent(in)        :: iBlock
     integer, intent(in)        :: iOffset
-    real, optional, intent(in) :: AlphaIn
-    real :: Alpha
+    real :: Alpha, Distance2ToMin, Distance3To2
     character(len=*), parameter :: NameSub = "SP: offset"
     !------------
     if(iOffset==0)RETURN
     if(iOffset==1)then
-       Alpha = 0
-       if(present(AlphaIn))Alpha=AlphaIn
        State_VIB((/RhoOld_,BOld_/),2:nParticle_B(iBlock)+1,iBlock) &
             = State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock)
        Distribution_IIB(:,2:nParticle_B( iBlock)+iOffset, iBlock)&
             = Distribution_IIB(:,1:nParticle_B( iBlock), iBlock)
+       !\
+       ! Extrapolate state vector components and VDF at iparticle=1
+       Distance2ToMin = sqrt(sum((State_VIB(X_:Z_,2,iBlock) - &
+               FootPoint_VB(X_:Z_,iBlock))**2))
+          Distance3To2   = sqrt(sum((State_VIB(X_:Z_,3,iBlock) - &
+                State_VIB(X_:Z_,2,iBlock))**2))
+          Alpha = Distance2ToMin/(Distance2ToMin + Distance3To2)
        State_VIB((/RhoOld_, BOld_/), 1, iBlock) = &
             (Alpha + 1)*State_VIB((/RhoOld_, BOld_/), 2, iBlock) &
             -Alpha     * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
        Distribution_IIB(:,1,iBlock) = Distribution_IIB(:,2,iBlock) + &
-            Alpha*(Distribution_IIB(:,2,iBlock) - Distribution_IIB(:,3,iBlock))
+            Alpha*(Distribution_IIB(:,2,iBlock) - &
+            Distribution_IIB(:,3,iBlock))
     elseif(iOffset < 0)then
        State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock)+iOffset,iBlock) &
             =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock),&

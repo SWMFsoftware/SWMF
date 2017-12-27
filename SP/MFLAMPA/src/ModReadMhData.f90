@@ -116,7 +116,6 @@ contains
     ! local value of DoOffset
     logical:: DoOffset
     ! auxilary variables to apply positive offset (particles are appended)
-    real:: Distance2ToMin, Distance3To2, Alpha
     ! auxilary parameter index
     integer, parameter:: RShock_ = Z_ + 2
     ! additional parameters of lines
@@ -168,24 +167,11 @@ contains
             Coord1Out_I= State_VIB(LagrID_   ,&
             1:nParticle_B(iBlock),iBlock)    ,&
             VarOut_VI  = State_VIB(1:nMHData ,&
-            1:nParticle_B(iBlock),iBlock))
-       if(iOffset==0) CYCLE BLOCK 
+            1:nParticle_B(iBlock),iBlock)) 
        !\
        ! apply offset
-       if(iOffset < 0)then
-          call offset(iBlock, iOffset)
-       elseif(iOffset > 1)then
-          call CON_stop(NameSub//&
-               ": invalid offset between consecutive states")
-       else !iOffset = 1
-          Distance2ToMin = sqrt(sum((State_VIB(X_:Z_,2,iBlock) - &
-               FootPoint_VB(X_:Z_,iBlock))**2))
-          Distance3To2   = sqrt(sum((State_VIB(X_:Z_,3,iBlock) - &
-                State_VIB(X_:Z_,2,iBlock))**2))
-          Alpha = Distance2ToMin/(Distance2ToMin + Distance3To2)
-          call offset(iBlock, iOffset, Alpha)
-       end if
        !/
+       call offset(iBlock, iOffset)
     end do BLOCK
   end subroutine read_mh_data
 end module SP_ModReadMhData
