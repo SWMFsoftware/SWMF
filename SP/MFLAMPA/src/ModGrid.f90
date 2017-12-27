@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================!
+!==================================================================
 module SP_ModGrid
   !Multi-line grid, D.Borovikov & I.Sokolov, Dec,17, 2017.
   !Dec.23 2017: exclude fluxes from the state vector.
@@ -10,7 +10,6 @@ module SP_ModGrid
   use SP_ModSize, ONLY: nDim, nLon, nLat, nNode, nParticleMax
   use SP_ModProc, ONLY: iProc
   implicit none
-
   SAVE
 
   private ! except
@@ -31,7 +30,7 @@ module SP_ModGrid
   real         :: ROrigin = 2.5
   ! Size of angular grid, latitude and longitude, at origin 
   ! surface R=ROrigin
-  real, public ::  LonMin, LonMax, LatMin, LatMax
+  real         :: LonMin, LonMax, LatMin, LatMax
   !Sell size on the origin surface, per line
   real         ::  DLon, DLat
   ! Lower/Upper boundary of the domain in Rs
@@ -80,8 +79,8 @@ module SP_ModGrid
   !\
   ! Information about the magnetic field line foot point:
   ! the Lagrangian (0) and Cartesian (1:3) coordinates, and
-  integer, public, parameter :: &! init length of segment 1-2: control 
-       Length_ = 4               ! appending  new particles 
+  integer, public, parameter :: &! init length of segment 1-2: 
+       Length_ = 4               ! control appending  new particles 
   real, public, allocatable:: FootPoint_VB(:,:)
   !/
   !\
@@ -91,45 +90,47 @@ module SP_ModGrid
   ! 3rd index - local block number
   real, public, allocatable:: State_VIB(:,:,:)
   real, public, allocatable:: Flux_VIB( :,:,:)
-  ! Number of variables in the state vector and their identifications
-  integer, public, parameter :: nMHData = 13, nVar = 21, FluxMax_ = 29,&
+  ! Number of variables in the state vector and the identifications
+  integer, public, parameter :: nMHData = 13, nVar = 21,          &
        !\
-       LagrID_ = 0, & ! Lagrangian id           ^saved/     ^set to 0 in
-       X_      = 1, & !                         |read in    |copy_old_state
-       Y_      = 2, & ! Cartesian coordinates   |restart    |
-       Z_      = 3, & !                         v/          |saved to 
-       Rho_    = 4, & ! Background plasma density           |mhd1
-       T_      = 5, & ! Background temperature              | 
-       Ux_     = 6, & !                                     |may be
-       Uy_     = 7, & ! Background plasma bulk velocity     |read from
-       Uz_     = 8, & !                                     |mhd1
-       Bx_     = 9, & !                                     |or
-       By_     =10, & ! Background magnetic field           |received 
-       Bz_     =11, & !                                     |from
-       Wave1_  =12, & !\                                    |coupler
-       Wave2_  =13, & ! Alfven wave turbulence              v
-       !-----------------------------------------------------------------------
-       D_      =14, & ! Distance to the next particle   ^
-       S_      =15, & ! Distance from the foot point    |derivatives from
-       R_      =16, & ! Heliocentric distance           |the mhd1, set in
-       U_      =17, & ! Plasma speed                    |get_other_state_var
-       B_      =18, & ! Magnitude of magnetic field     v
+       LagrID_ = 0, & ! Lagrangian id           ^saved/   ^set to 0
+       X_      = 1, & !                         |read in  |in copy_ 
+       Y_      = 2, & ! Cartesian coordinates   |restart  |old_stat
+       Z_      = 3, & !                         v/        |saved to 
+       Rho_    = 4, & ! Background plasma density         |mhd1
+       T_      = 5, & ! Background temperature            | 
+       Ux_     = 6, & !                                   |may be
+       Uy_     = 7, & ! Background plasma bulk velocity   |read from
+       Uz_     = 8, & !                                   |mhd1
+       Bx_     = 9, & !                                   |or
+       By_     =10, & ! Background magnetic field         |received 
+       Bz_     =11, & !                                   |from
+       Wave1_  =12, & !\                                  |coupler
+       Wave2_  =13, & ! Alfven wave turbulence            v
+       !/
+       !\
+       D_      =14, & ! Distance to the next particle  ^derived from
+       S_      =15, & ! Distance from the foot point   |MHdata in
+       R_      =16, & ! Heliocentric distance          |get_other_
+       U_      =17, & ! Plasma speed                   |state_var
+       B_      =18, & ! Magnitude of magnetic field    v
        DLogRho_=19, & ! Dln(Rho), i.e. -div(U) * Dt
-       RhoOld_ =20, & ! Background plasma density       !\copy_old_state
-       BOld_   =21, & ! Magnitude of magnetic field     !/
+       RhoOld_ =20, & ! Background plasma density      !\copy_
+       BOld_   =21, & ! Magnitude of magnetic field    !/old_state
        Flux0_  =22, & ! Total integral (simulated) particle flux
-       Flux1_  =23, & ! Integral particle flux >  5 MeV (GOES Channel 1)
-       Flux2_  =24, & ! Integral particle flux > 10 MeV (GOES Channel 2)
-       Flux3_  =25, & ! Integral particle flux > 30 MeV (GOES Channel 3)
-       Flux4_  =26, & ! Integral particle flux > 50 MeV (GOES Channel 4)
-       Flux5_  =27, & ! Integral particle flux > 60 MeV (GOES Channel 5)
-       Flux6_  =28, & ! Integral particle flux >100 MeV (GOES Channel 6)
-       EFlux_  =29    ! Total integral energy flux
+       Flux1_  =23, & ! Integral particle flux >  5 MeV (GOES Ch.1)
+       Flux2_  =24, & ! Integral particle flux > 10 MeV (GOES Ch.2)
+       Flux3_  =25, & ! Integral particle flux > 30 MeV (GOES Ch.3)
+       Flux4_  =26, & ! Integral particle flux > 50 MeV (GOES Ch.4)
+       Flux5_  =27, & ! Integral particle flux > 60 MeV (GOES Ch.5)
+       Flux6_  =28, & ! Integral particle flux >100 MeV (GOES Ch.6)
+       EFlux_  =29, & ! Total integral energy flux
+       FluxMax_ = 29
   !/
   !\
   ! variable names
-  character(len=10), public, parameter:: NameVar_V(LagrID_:EFlux_) = (/&
-       'LagrID    ', &
+  character(len=10), public, parameter:: NameVar_V(LagrID_:EFlux_)&
+        = (/'LagrID    ', &
        'X         ', &
        'Y         ', &
        'Z         ', &
@@ -338,9 +339,8 @@ contains
           iNode = iNode_II(iLon, iLat)
           iBlock = iGridGlobal_IA(Block_, iNode)
           if(iProc == iGridGlobal_IA(Proc_, iNode))then
-             call rlonlat_to_xyz(&
-                  (/ROrigin, LonMin+(iLon-0.5)*DLon, LatMin+(iLat-0.5)*DLat/),&
-                  State_VIB(X_:Z_,1,iBlock))
+             call rlonlat_to_xyz((/ROrigin, LonMin + (iLon - 0.5)*DLon, &
+                  LatMin + (iLat - 0.5)*DLat/), State_VIB(X_:Z_,1,iBlock))
           end if
        end do
     end do
