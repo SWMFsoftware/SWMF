@@ -22,7 +22,7 @@ module SP_ModAdvance
   public:: advance     !Advance solution Distribution_IIB
   !\
   ! Global interation and time
-  real,    public :: TimeGlobal  = 0.0
+  real,    public :: SPTime  = 0.0
   integer, public :: iIterGlobal = 0
   ! This is the same default value as in the SWMF
   integer, public :: iStartTime_I(7) = (/2000,3,21,10,45,0,0/)
@@ -85,7 +85,7 @@ contains
     ! advance the solution of the diffusive kinetic equation:               
     !            f_t+[(1/3)*(d(ln rho)/dt]*f_{ln p}=B*d/ds[D/B*df/ds]
     ! with accounting for diffusion and Fermi acceleration 
-    ! from TimeGlobal to TimeLimit
+    ! from SPTime to TimeLimit
     ! Prototype: FLAMPA/src/SP_main, case("RUN"), Roussev&Sokolov2008
     ! Version: Borovikov&Sokolov, Dec.19 2017, distinctions:
     ! (1) no turbulence (2) new shock finder moved to SP_ModMain,
@@ -131,7 +131,7 @@ contains
     ! should be given by the product of shock wave speed  
     ! and local grid spacing. 
     real, parameter::  DiffCoeffMin =1.0E+04 /RSun
-    ! Full difference between DataInputTime and TimeGlobal
+    ! Full difference between DataInputTime and SPTime
     real      :: DtFull
     ! Time step in the PROGRESS Loop, DtFull/nProgress
     real      :: DtProgress 
@@ -159,7 +159,7 @@ contains
     character(len=*), parameter:: NameSub = 'SP:advance'
     !---------------------------------------------------------------
     ! the full time interval
-    DtFull = TimeLimit - TimeGlobal
+    DtFull = TimeLimit - SPTime
     ! go line by line and advance the solution
     BLOCK:do iBlock = 1, nBlock
 

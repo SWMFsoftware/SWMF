@@ -113,7 +113,12 @@ contains
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
     !--------------------------------------------------------------------------
-    call run(TimeSimulation,TimeSimulationLimit)
+    call run(TimeSimulationLimit)
+    if(DoReadMhData)then
+       TimeSimulation = DataInputTime
+    else
+       TimeSimulation = TimeSimulationLimit
+    end if
   end subroutine SP_run
 
   !========================================================================
@@ -137,17 +142,14 @@ contains
   subroutine SP_finalize(TimeSimulation)
     use SP_ModMain , ONLY: finalize
     real,intent(in)::TimeSimulation
-    real:: TimeAux ! to satisfy intent of arguments in run()
     !---------------------------------------------------------------
     ! if data are read from files, no special finalization is needed
-    TimeAux = TimeSimulation
-    if(.not.DoReadMhData)&
-         call run(TimeAux, TimeSimulation)
+    if(.not.DoReadMhData)call run(TimeSimulation)
     call finalize
   end subroutine SP_finalize
   !================================================================
   subroutine SP_set_param(CompInfo,TypeAction)
-    use SP_ModAdvance, ONLY: StartTime, TimeGlobal
+    use SP_ModAdvance, ONLY: StartTime, SPTime
     use SP_ModMain   , ONLY: check, read_param
     use SP_ModProc
     use CON_physics, ONLY: get_time
@@ -169,7 +171,7 @@ contains
     case('CHECK')
        if(.not.DoCheck)RETURN
        DoCheck = .false.
-       call get_time(tSimulationOut = TimeGlobal, tStartOut = StartTime)
+       call get_time(tSimulationOut = SPTime, tStartOut = StartTime)
        call check
     case('READ')
        call read_param
@@ -182,12 +184,9 @@ contains
   !=========================================================
   subroutine SP_save_restart(TimeSimulation) 
     real, intent(in) :: TimeSimulation 
-    real:: TimeAux ! to satisfy intent of arguments in run()
     !--------------------------------------------------------------------
-    TimeAux = TimeSimulation
     ! if data are read from files, no need for additional run
-    if(.not.DoReadMhData)&
-         call run(TimeAux, TimeSimulation)
+    if(.not.DoReadMhData)call run(TimeSimulation)
     call save_restart
   end subroutine SP_save_restart
   !===================================================================

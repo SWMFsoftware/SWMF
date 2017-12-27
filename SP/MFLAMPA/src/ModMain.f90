@@ -13,7 +13,7 @@ module SP_ModMain
        RBufferMax, RMax, iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
        RhoOld_
   use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
-       TimeGlobal, iIterGlobal, DoTraceShock, UseDiffusion, advance
+       SPTime, iIterGlobal, DoTraceShock, UseDiffusion, advance
   use ModKind, ONLY: Real8_
 
   implicit none
@@ -45,7 +45,7 @@ module SP_ModMain
   ! Methods and variables from this module 
   public:: &
        read_param, initialize, finalize, run, check, save_restart, &
-       TimeGlobal, iIterGlobal, DataInputTime, DoRestart,     & 
+       SPTime, iIterGlobal, DataInputTime, DoRestart,     & 
        UseTiming, nTiming, nTimingDepth, TimingStyle,         &
        IsLastRead, UseStopFile, CpuTimeMax, TimeMax, nIterMax,&
        IsStandAlone, copy_old_state
@@ -106,8 +106,8 @@ contains
        case('#NSTEP')
           call read_var('nStep',iIterGlobal)
        case('#TIMESIMULATION')
-          call read_var('tSimulation',TimeGlobal)
-          DataInputTime = TimeGlobal
+          call read_var('tSimulation',SPTime)
+          DataInputTime = SPTime
           !\
           ! read parameters for each module
           !/
@@ -205,9 +205,9 @@ contains
     call init_dist
     call init_advance
     call init_plot
-    call init_mhdata ! if input files are used, TimeGlobal is set here 
+    call init_mhdata ! if input files are used, SPTime is set here 
     if(DoRestart) call read_restart
-    if(DoInit)DataInputTime = TimeGlobal
+    !if(DoInit)DataInputTime = SPTime
     DoInit=.false.
   end subroutine initialize
   !============================================================================
@@ -223,10 +223,9 @@ contains
 
   !============================================================================
 
-  subroutine run(TimeInOut, TimeLimit)
+  subroutine run(TimeLimit)
     use SP_ModGrid, ONLY: get_other_state_var
     ! advance the solution in time
-    real, intent(inout):: TimeInOut
     real, intent(in)   :: TimeLimit
     logical, save:: IsFirstCall = .true.
     !------------------------------
@@ -251,13 +250,8 @@ contains
        ! Read the background data from file
        !/
        call read_mh_data(DataInputTime)
-       !Read from file: State_VIB(0:nRead,::) for the time moment
+       !Read from file: State_VIB(0:nMHData,::) for the time moment
        !DataInputTime
-       TimeInOut = DataInputTime
-    else
-       !Received from coupler: : State_VIB(0:nRead,::) for the 
-       !time moment DataInputTime
-       TimeInOut = TimeLimit
     end if
     !\
     ! recompute the derived components of state vector, e.g. 
@@ -267,7 +261,7 @@ contains
     !\
     ! if no new background data loaded, don't advance in time
     !/
-    if(DataInputTime <= TimeGlobal) RETURN
+    if(DataInputTime <= SPTime) RETURN
     call lagr_time_derivative
     !\
     ! run the model
@@ -276,7 +270,7 @@ contains
 
     ! update time & iteration counters
     iIterGlobal = iIterGlobal + 1
-    TimeGlobal = min(DataInputTime,TimeLimit)
+    SPTime = min(DataInputTime,TimeLimit)
     call save_plot_all
   contains
     !=====================================================================

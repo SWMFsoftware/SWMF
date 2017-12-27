@@ -8,7 +8,7 @@ module SP_ModReadMhData
   use SP_ModGrid,    ONLY: get_node_indexes, nMHData, nVar, nBlock,&
        iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB,   &
        NameVar_V, LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
-  use SP_ModAdvance, ONLY: TimeGlobal, iIterGlobal, DoTraceShock
+  use SP_ModAdvance, ONLY: SPTime, iIterGlobal, DoTraceShock
   use SP_ModDistribution, ONLY: Distribution_IIB, offset
   use ModPlotFile,   ONLY: read_plot_file
   use ModUtilities,  ONLY: fix_dir_name, open_file, close_file
@@ -87,7 +87,7 @@ contains
     call open_file(iUnitIn=iIOTag, &
          file=trim(NameInputDir)//trim(NameTagFile), status='old')
     ! read the first input file
-    call read_mh_data(TimeGlobal, DoOffsetIn = .false.)
+    call read_mh_data(SPTime, DoOffsetIn = .false.)
   end subroutine init
   !============================================================================
   subroutine finalize

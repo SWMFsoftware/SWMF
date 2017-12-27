@@ -8,7 +8,7 @@ program MFLAMPA
   use ModUtilities, ONLY: remove_file, touch_file
   use SP_ModMain, ONLY: &
        nTiming, IsLastRead, IsStandAlone, &
-       iIterGlobal, TimeGlobal, TimeMax, nIterMax, &
+       iIterGlobal, SPTime, TimeMax, nIterMax, &
        SP_read_param => read_param, &
        SP_check      => check, &
        SP_initialize => initialize, &
@@ -24,7 +24,6 @@ program MFLAMPA
   integer:: iSession = 1  
   real(Real8_) :: CpuTimeStart
   logical:: IsFirstSession = .true.
-  real:: Time
   !------------------------------------------------
   !\                                                                        
   ! Initialization of MPI/parallel message passing.                        
@@ -75,7 +74,6 @@ program MFLAMPA
      end if
      if(IsFirstSession)then
         call SP_initialize
-        Time = TimeGlobal
      end if
      if(IsFirstSession)then
         call timing_stop('setup')
@@ -91,9 +89,9 @@ program MFLAMPA
         call timing_step(iIterGlobal + 1)
         
         if(TimeMax > 0.0)then
-           call SP_run(Time, TimeMax)
+           call SP_run(TimeMax)
         else
-           call SP_run(Time, huge(0.0))
+           call SP_run(huge(0.0))
         end if
 
         call show_progress
@@ -139,7 +137,7 @@ contains
     IsStopCondition = .false.
 
     if(nIterMax >= 0  .and.iIterGlobal >=nIterMax) IsStopCondition = .true.
-    if( TimeMax >  0.0.and. TimeGlobal >= TimeMax) IsStopCondition = .true.
+    if( TimeMax >  0.0.and. SPTime >= TimeMax) IsStopCondition = .true.
 
   end function stop_condition_true
   !===============================
