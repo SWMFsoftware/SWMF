@@ -450,6 +450,7 @@ contains
           iOffset_B(iBlock) = iOffset
           State_VIB(     LagrID_:Z_, 1:iEnd+iOffset, iBlock) = &
                State_VIB(LagrID_:Z_, iBegin:iEnd,    iBlock)
+          nParticle_B(iBlock) = nParticle_B(iBlock) + iOffset
           ! need to recalculate footpoints
           call SP_set_line_foot_b(iBlock)
           call offset(iBlock, iOffset)
@@ -539,6 +540,7 @@ contains
          iOffset_B(iBlock)  = 1
          State_VIB(       LagrID_:Z_,2:nParticle_B(iBlock) + 1, iBlock)&
               = State_VIB(LagrID_:Z_,1:nParticle_B(iBlock),     iBlock)
+         nParticle_B(iBlock) = nParticle_B(iBlock) + 1
          ! put the new particle just above the lower boundary
          State_VIB(LagrID_:Z_,  1, iBlock) = &
               FootPoint_VB(LagrID_:Z_, iBlock)*(1.0 + cTol)

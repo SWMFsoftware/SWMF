@@ -109,8 +109,6 @@ contains
     integer:: iBlock
     ! indexes of corresponding node, latitude and longitude
     integer:: iNode, iLat, iLon
-    ! number of particles saved in the input file
-    integer:: nParticleInput
     ! size of the offset to apply compared to the previous state
     integer:: iOffset
     ! local value of DoOffset

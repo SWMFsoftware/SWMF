@@ -146,10 +146,10 @@ contains
     !------------
     if(iOffset==0)RETURN
     if(iOffset==1)then
-       State_VIB((/RhoOld_,BOld_/),2:nParticle_B(iBlock)+1,iBlock) &
-            = State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock)
-       Distribution_IIB(:,2:nParticle_B( iBlock)+iOffset, iBlock)&
-            = Distribution_IIB(:,1:nParticle_B( iBlock), iBlock)
+       State_VIB((/RhoOld_,BOld_/),2:nParticle_B(iBlock),iBlock) &
+            = State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock)-1,iBlock)
+       Distribution_IIB(:,2:nParticle_B(iBlock), iBlock)&
+            = Distribution_IIB(:,1:nParticle_B(iBlock)-1, iBlock)
        !\
        ! Extrapolate state vector components and VDF at iparticle=1
        Distance2ToMin = sqrt(sum((State_VIB(X_:Z_,2,iBlock) - &
@@ -164,18 +164,17 @@ contains
             Alpha*(Distribution_IIB(:,2,iBlock) - &
             Distribution_IIB(:,3,iBlock))
     elseif(iOffset < 0)then
-       State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock)+iOffset,iBlock) &
-            =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock),&
+       State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock) &
+            =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock)-iOffset,&
             iBlock)
-       Distribution_IIB(:,1:nParticle_B( iBlock)+iOffset, iBlock)&
-            = Distribution_IIB(:,1-iOffset:nParticle_B( iBlock), iBlock)
+       Distribution_IIB(:,1:nParticle_B(iBlock), iBlock)&
+            = Distribution_IIB(:,1-iOffset:nParticle_B(iBlock)-iOffset, iBlock)
     else
        call CON_stop('No algorithm for iOffset >1 in '//NameSub)
     end if
     if(iShock_IB(ShockOld_, iBlock)/=NoShock_)&
          iShock_IB(ShockOld_, iBlock) = &
          max(iShock_IB(ShockOld_, iBlock) + iOffset, 1)
-    nParticle_B(iBlock) = nParticle_B( iBlock) + iOffset
   end subroutine offset
   !===========================================================================
   subroutine get_integral_flux
