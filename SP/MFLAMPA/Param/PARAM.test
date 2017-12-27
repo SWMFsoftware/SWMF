@@ -6,42 +6,47 @@ T			DoEcho
 #DESCRIPTION
 Input for testing MFLAMPA model for SEPs, uses input files with background data
 
+#STARTTIME
+2012
+01
+23
+04
+00
+0
+0.0
+
+#USEDATETIME
+T
 
 #DORUN
-F
+T
 
 #TEST
 F			DoTraceShock
-F			UseDiffusion
+T			UseDiffusion
 
 #GRID
-1.05			RMin
-19			RBufferMin
+1.15			RMin
+19.7			RBufferMin
 21			RBufferMax
 220			RMax
 
-#ORIGIN
-2.5			ROrigin
--10			LonMin
-25			LatMin
-10			LonMax
-90			LatMax
 
 #READMHDATA
 T
-MH_data
-ascii
+MH_data_e20120123_040000
+real8
 
 #INCLUDE
-MH_data/MH_data.H
+MH_data_e20120123_040000/MH_data.H
 
 #SAVEPLOT
 1
-mh1d idl
+mh1d ascii
 
 #STOP
 -1			MaxIter
-30			TimeMax
+600			TimeMax
 
 End session: 1
 #END ##########################################################################
