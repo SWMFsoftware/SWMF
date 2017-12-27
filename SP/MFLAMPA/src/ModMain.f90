@@ -207,7 +207,7 @@ contains
     call init_plot
     call init_mhdata ! if input files are used, SPTime is set here 
     if(DoRestart) call read_restart
-    !if(DoInit)DataInputTime = SPTime
+    if(DoInit)DataInputTime = SPTime
     DoInit=.false.
   end subroutine initialize
   !============================================================================
