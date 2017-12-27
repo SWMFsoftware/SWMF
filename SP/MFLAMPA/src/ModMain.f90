@@ -332,8 +332,12 @@ contains
   end subroutine get_shock_location
   !=======================================================================
   subroutine check
+    use ModUtilities, ONLY: make_dir
     character(LEN=*),parameter:: NameSub='SP:check'
     !---------------------------------------------------------------------
+    ! Make output directory
+    if(iProc==0) call make_dir(NamePlotDir)
+
     !\
     ! Initialize timing
     !/
