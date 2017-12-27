@@ -81,8 +81,8 @@ contains
     real,    intent(out)  :: RMinOut, RMaxOut
     integer :: iError
     real    :: rAux_I(2)
-    character(len=*), parameter :: NameSub = 'SP_get_bounds_comp'
-    !-----------------------------------------------------------------
+    character(len=*), parameter :: NameSub = 'SP_get_bounds_comp' 
+    !--------------------------------------------------------------
     if(is_proc0(SP_))then
        select case(ThisModel_)
        case(Lower_)
@@ -269,8 +269,8 @@ contains
   end subroutine SP_put_from_mh
   !============================
   subroutine SP_set_grid
-    use SP_ModGrid, ONLY: LatMin, LatMax, LonMin, LonMax,&
-         iGridGlobal_IA, Block_, Proc_, TypeCoordSystem
+    use SP_ModGrid, ONLY: iGridGlobal_IA, Block_, Proc_, &
+          TypeCoordSystem
     logical, save:: IsInitialized = .false.
     !------------------------------------------------------------
     if(IsInitialized)&
@@ -287,8 +287,8 @@ contains
          call get_root_decomposition(&
          GridID_       = SP_,&
          iRootMapDim_D = (/1, nLon, nLat/),&
-         CoordMin_D    = (/0.5, LonMin, LatMin/),&
-         CoordMax_D    = (/real(nParticleMax)+0.5, LonMax, LatMax/),&
+         CoordMin_D    = (/0.50, 0.50, 0.50/),&
+         CoordMax_D    = (/nParticleMax, nLon, nLat/) + 0.50,&
          nCells_D      = (/nParticleMax, 1, 1/),&
          PE_I          = iGridGlobal_IA(Proc_,:),&
          iBlock_I      = iGridGlobal_IA(Block_,:))
