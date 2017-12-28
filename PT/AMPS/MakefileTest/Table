@@ -595,6 +595,14 @@ Compile=
 >>>-@($(MAKE) -j8 amps)
 >>>@echo "test_periodic-bc-gmres_compile... done" >> test_periodic-bc-gmres.diff
 
+Check=
+>>>@echo "test_periodic-bc-gmres_check..." >> test_periodic-bc-gmres$(TESTperiodic-bc-gmres-REF).diff
+>>>-@$(foreach OUT,$(TESTperiodic-bc-gmresOUTFILES),                                 \
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=1.0E-20 $(TESTperiodic-bc-gmresDIR)/PT/plots/$(OUT).dat         \
+>>>output/test_periodic-bc-gmres/$(OUT)$(TESTperiodic-bc-gmres-REF).ref_np`ls $(TESTperiodic-bc-gmresDIR)/PT/thread* |wc -l |tr -d ' '` > test_periodic-bc-gmres$(TESTperiodic-bc-gmres-REF).diff);) 
+>>>@ls -l test_periodic-bc-gmres$(TESTperiodic-bc-gmres-REF).diff
+>>>@echo Test test_periodic-bc-gmres has finished: `date`
+
 <#
 
 -------------------------------------------------------------------------------
