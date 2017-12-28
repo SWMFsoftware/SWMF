@@ -7,7 +7,7 @@ module SP_ModReadMhData
   use SP_ModSize,    ONLY: nDim, nParticleMax
   use SP_ModGrid,    ONLY: get_node_indexes, nMHData, nVar, nBlock,&
        iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB,   &
-       NameVar_V, LagrID_, X_, Z_, Shock_, ShockOld_, RhoOld_, BOld_
+       NameVar_V, LagrID_, X_, Z_, Rho_
   use SP_ModAdvance, ONLY: SPTime, iIterGlobal, DoTraceShock
   use SP_ModDistribution, ONLY: Distribution_IIB, offset
   use ModPlotFile,   ONLY: read_plot_file
@@ -99,10 +99,12 @@ contains
     use SP_ModPlot,    ONLY: NameMHData
     real,              intent(out):: TimeOut
     logical, optional, intent(in ):: DoOffsetIn
+    !\
     ! read 1D MH data, which are produced by write_mh_1d n ModWrite
-    ! separate file is read for each field line, name format is (usually)
-    ! MH_data_<iLon>_<iLat>_t<ddhhmmss>_n<iIter>.{out/dat}
-    !------------------------------------------------------------------------
+    ! separate file is read for each field line, name format is 
+    ! (usually)MH_data_<iLon>_<iLat>_t<ddhhmmss>_n<iIter>.{out/dat}
+    !/
+    !\
     ! name of the input file
     character(len=100):: NameFile
     ! loop variables
@@ -113,7 +115,7 @@ contains
     integer:: iOffset
     ! local value of DoOffset
     logical:: DoOffset
-    ! auxilary variables to apply positive offset (particles are appended)
+    ! auxilary variables to apply positive offset for appended particles
     ! auxilary parameter index
     integer, parameter:: RShock_ = Z_ + 2
     ! additional parameters of lines
@@ -166,6 +168,8 @@ contains
             1:nParticle_B(iBlock),iBlock)    ,&
             VarOut_VI  = State_VIB(1:nMHData ,&
             1:nParticle_B(iBlock),iBlock)) 
+       if(State_VIB(Rho_,nParticle_B(iBlock),iBlock)<=0.0)&
+            nParticle_B(iBlock) = nParticle_B(iBlock) - 1
        !\
        ! apply offset
        !/
