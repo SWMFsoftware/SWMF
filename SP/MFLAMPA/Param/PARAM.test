@@ -45,7 +45,7 @@ MH_data_e20120123_040000/MH_data.H
 mh1d ascii
 
 #STOP
--1			MaxIter
+-1			nIterMax
 600			TimeMax
 
 End session: 1
