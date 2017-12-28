@@ -26,8 +26,8 @@ module SP_ModMain
 
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
-  real   :: TimeMax = -1.0, CpuTimeMax = -1.0
-  integer::nIterMax = -1
+  real   :: TimeMax  = -1.0, CpuTimeMax = -1.0
+  integer:: nIterMax = -1
   logical:: UseStopFile = .true.
   logical:: IsLastRead=.false.
   ! Indicator of stand alone mode
@@ -149,8 +149,8 @@ contains
           EXIT
        case('#STOP')
           call check_stand_alone
-          call read_var('MaxIteration',nIterMax)
-          call read_var('tSimulationMax',TimeMax)
+          call read_var('nIterMax',nIterMax)
+          call read_var('TimeMax' ,TimeMax)
        case('#CPUTIMEMAX')
           call check_stand_alone
           call read_var('CpuTimeMax',CpuTimeMax)

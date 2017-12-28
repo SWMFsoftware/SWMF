@@ -57,7 +57,7 @@ contains
        call fix_dir_name(NameInputDir) ! adds "/" if not present
     case('#MHDATA')
        ! type of data files
-       call read_var('TypeMhDataFile', TypeMhDataFile)
+       call read_var('TypeFile', TypeMhDataFile)
        ! the format of output file must be set
        select case(trim(TypeMhDataFile))
        case('tec')
