@@ -1,9 +1,9 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================!
+!==================================================================
 module SP_ModDistribution
-  ! The module contains the velocity (momentum) distribution function
+  ! The module contains the velocity/momentum distribution function
   ! and methods for initializing it as well as the offset routine.
   use ModNumConst,ONLY: cTiny
   use ModConst,   ONLY: cLightSpeed, energy_in
@@ -26,7 +26,7 @@ module SP_ModDistribution
   public:: EnergyMaxIo       !Energy in keV for MomentumMax
   public:: DLogP             !Mesh size for log(momentum) grid
   !\
-  !!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
+!!!!!!!!!!!!!!!Grid along the nomentum axis              !!!!!!
   ! Injection and maximal energy in the simulation
   ! To be read from the PARAM.in file: KINETIC energies
   real:: EnergyInjIo=10.0, EnergyMaxIo=1.0E+07
@@ -47,13 +47,13 @@ module SP_ModDistribution
   real, public:: TotalEnergy_I(0:nP+1)
   !/
   !\
-  !!!!!!!!!!!!!!Grid in the momentum space                 !!!!!!
+!!!!!!!!!!!!!!Grid in the momentum space                 !!!!!!
   !iP     0     1                         nP   nP+1
   !       |     |    ....                 |     | 
-  !P      P_inj P_inj*exp(\Delta(log P))  P_Max P_Max*exp(\Delta(log P))
-  ! This is because we put two boundary conditions: the background value at
-  ! the right one and the physical condition at the left one, for the 
-  ! velocity distribution function
+  !P      P_inj P_inj*exp(\Delta(log P))  P_Max P_Max*exp(DLogP)
+  ! This is because we put two boundary conditions: the background
+  ! value at the right one and the physical condition at the left  
+  ! one, for the velocity distribution function
   !/
   !\
   ! Velosity Distribution Function (VDF) 
@@ -65,7 +65,7 @@ module SP_ModDistribution
   !/
   logical :: DoInit = .true.
 contains
-  !=================================================================
+  !================================================================
   subroutine init
     use SP_ModUnit,   ONLY: momentum_to_kinetic_energy
     use ModUtilities, ONLY: check_allocate
@@ -107,14 +107,14 @@ contains
        end do
     end do
   end subroutine init
-  !============================================================
-   subroutine read_param(NameCommand)
+  !================================================================
+  subroutine read_param(NameCommand)
     use ModReadParam, ONLY: read_var
     use SP_ModProc,   ONLY: iProc
     character(len=*), intent(in):: NameCommand ! From PARAM.in  
-    character(len=*), parameter :: NameSub='SP:read_param_distribution'
+    character(len=*), parameter :: NameSub='SP:read_param_dist'
     integer:: nPCheck = nP
-    !----------------------------------------------------------
+    !--------------------------------------------------------------
     select case(NameCommand)
     case('#MOMENTUMGRID')
        !Read unit to be used for particle energy: eV, keV, GeV
@@ -131,14 +131,14 @@ contains
        call CON_stop(NameSub//'Unknown command '//NameCommand)
     end select
   end subroutine read_param
-  !============================================================
+  !================================================================
   subroutine offset(iBlock, iOffset)
     use SP_ModGrid, ONLY: NoShock_, BOld_, RhoOld_, ShockOld_, &
          iShock_IB,  State_VIB, X_, Z_, FootPoint_VB
     ! shift in the data arrays is required if the grid point(s) is  
-    ! appended or removed at the foot point of the magnetic field line
-    !SHIFTED ARE:  State_VIB((/RhoOld_,BOld_/),:,:), Distribution_IIB,
-    !ShockOld, nParticle_B
+    ! appended or removed at the foot point of the magnetic field 
+    ! line. SHIFTED ARE: State_VIB(/RhoOld_,BOld_),Distribution_IIB
+    ! as well as ShockOld_
     integer, intent(in)        :: iBlock
     integer, intent(in)        :: iOffset
     real :: Alpha, Distance2ToMin, Distance3To2
@@ -165,10 +165,11 @@ contains
             Distribution_IIB(:,3,iBlock))
     elseif(iOffset < 0)then
        State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock) &
-            =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock)-iOffset,&
-            iBlock)
+            =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock)&
+       - iOffset, iBlock)
        Distribution_IIB(:,1:nParticle_B(iBlock), iBlock)&
-            = Distribution_IIB(:,1-iOffset:nParticle_B(iBlock)-iOffset, iBlock)
+            = Distribution_IIB(:,1-iOffset:nParticle_B(iBlock)-iOffset, &
+            iBlock)
     else
        call CON_stop('No algorithm for iOffset >1 in '//NameSub)
     end if
