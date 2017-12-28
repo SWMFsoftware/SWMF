@@ -12,18 +12,11 @@ module SP_ModMain
        nParticle_B, Shock_, ShockOld_, DLogRho_, RMin, RBufferMin,       &
        RBufferMax, RMax, iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
        RhoOld_
-  use SP_ModAdvance, ONLY: StartTime, iStartTime_I, &
-       SPTime, iIterGlobal, DoTraceShock, UseDiffusion, advance
-  use ModKind, ONLY: Real8_
-
+  use SP_ModAdvance, ONLY: DoTraceShock, UseDiffusion, advance
+  use SP_ModTime,    ONLY: SPTime, DataInputTime, iIter
   implicit none
-
   SAVE
-
   private ! except
-
-  real :: DataInputTime
-
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
   real   :: TimeMax  = -1.0, CpuTimeMax = -1.0
@@ -45,7 +38,7 @@ module SP_ModMain
   ! Methods and variables from this module 
   public:: &
        read_param, initialize, finalize, run, check, save_restart, &
-       SPTime, iIterGlobal, DataInputTime, DoRestart,     & 
+       SPTime, iIter, DataInputTime, DoRestart,     & 
        UseTiming, nTiming, nTimingDepth, TimingStyle,         &
        IsLastRead, UseStopFile, CpuTimeMax, TimeMax, nIterMax,&
        IsStandAlone, copy_old_state
@@ -78,11 +71,11 @@ contains
   subroutine read_param
     use SP_ModGrid    , ONLY: read_param_grid=>read_param
     use SP_ModUnit    , ONLY: read_param_unit=>read_param
+    use SP_ModTime    , ONLY: read_param_time=>read_param
     use SP_ModDistribution, ONLY:read_param_dist=>read_param
     use SP_ModAdvance , ONLY: read_param_adv =>read_param
     use SP_ModPlot    , ONLY: read_param_plot=>read_param
     use SP_ModReadMHData, ONLY:read_param_mhdata=>read_param
-    use ModTimeConvert, ONLY: time_int_to_real
     ! Read input parameters for SP component
     use ModReadParam, ONLY: &
          read_var, read_line, read_command, i_session_read, read_echo_set
@@ -103,11 +96,6 @@ contains
        select case(NameCommand)
        case('#RESTART')
           call read_var('DoRestart',DoRestart)
-       case('#NSTEP')
-          call read_var('nStep',iIterGlobal)
-       case('#TIMESIMULATION')
-          call read_var('tSimulation',SPTime)
-          DataInputTime = SPTime
           !\
           ! read parameters for each module
           !/
@@ -163,17 +151,13 @@ contains
           call check_stand_alone
           call read_var('DoEcho', DoEcho)
           if(iProc==0)call read_echo_set(DoEcho)
+       case('#NSTEP','#TIMESIMULATION')
+          if(i_session_read() /= 1)CYCLE
+          call read_param_time(NameCommand)
        case("#STARTTIME", "#SETREALTIME")
           if(i_session_read() /= 1)CYCLE
           call check_stand_alone
-          call read_var('iYear'  ,iStartTime_I(1))
-          call read_var('iMonth' ,iStartTime_I(2))
-          call read_var('iDay'   ,iStartTime_I(3))
-          call read_var('iHour'  ,iStartTime_I(4))
-          call read_var('iMinute',iStartTime_I(5))
-          call read_var('iSecond',iStartTime_I(6))
-          iStartTime_I(7) = 0
-          call time_int_to_real(iStartTime_I, StartTime)
+          call read_param_time(NameCommand)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select
@@ -207,7 +191,6 @@ contains
     call init_plot
     call init_mhdata ! if input files are used, SPTime is set here 
     if(DoRestart) call read_restart
-    if(DoInit)DataInputTime = SPTime
     DoInit=.false.
   end subroutine initialize
   !============================================================================
@@ -249,7 +232,7 @@ contains
        !\
        ! Read the background data from file
        !/
-       call read_mh_data(DataInputTime)
+       call read_mh_data()
        !Read from file: State_VIB(0:nMHData,::) for the time moment
        !DataInputTime
     end if
@@ -269,7 +252,7 @@ contains
     if(DoRun) call advance(min(DataInputTime,TimeLimit))
 
     ! update time & iteration counters
-    iIterGlobal = iIterGlobal + 1
+    iIter = iIter + 1
     SPTime = min(DataInputTime,TimeLimit)
     call save_plot_all
   contains

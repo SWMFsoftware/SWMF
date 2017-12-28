@@ -8,7 +8,7 @@ module SP_ModReadMhData
   use SP_ModGrid,    ONLY: get_node_indexes, nMHData, nVar, nBlock,&
        iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB,   &
        NameVar_V, LagrID_, X_, Z_, Rho_
-  use SP_ModAdvance, ONLY: SPTime, iIterGlobal, DoTraceShock
+  use SP_ModTime, ONLY: SPTime, DataInputTime
   use SP_ModDistribution, ONLY: Distribution_IIB, offset
   use ModPlotFile,   ONLY: read_plot_file
   use ModUtilities,  ONLY: fix_dir_name, open_file, close_file
@@ -87,7 +87,8 @@ contains
     call open_file(iUnitIn=iIOTag, &
          file=trim(NameInputDir)//trim(NameTagFile), status='old')
     ! read the first input file
-    call read_mh_data(SPTime, DoOffsetIn = .false.)
+    call read_mh_data(DoOffsetIn = .false.)
+    SPTime = DataInputTime
   end subroutine init
   !============================================================================
   subroutine finalize
@@ -95,9 +96,8 @@ contains
     if(DoReadMhData) call close_file(iUnitIn=iIOTag)
   end subroutine finalize
   !============================================================================
-  subroutine read_mh_data(TimeOut, DoOffsetIn)
+  subroutine read_mh_data(DoOffsetIn)
     use SP_ModPlot,    ONLY: NameMHData
-    real,              intent(out):: TimeOut
     logical, optional, intent(in ):: DoOffsetIn
     !\
     ! read 1D MH data, which are produced by write_mh_1d n ModWrite
@@ -147,7 +147,7 @@ contains
        ! read the header first
        call read_plot_file(NameFile          ,&
             TypeFileIn = TypeMhDataFile      ,&
-            TimeOut    = TimeOut             ,&
+            TimeOut    = DataInputTime       ,&
             n1out      = nParticle_B(iBlock) ,&
             ParamOut_I = Param_I(LagrID_:RShock_))
        ! find offset in data between new and old states

@@ -10,7 +10,7 @@ module SP_ModRestart
        RMin, RBufferMin, RBufferMax, RMax, &
        FootPoint_VB, nParticle_B, nShockParam
   use SP_ModDistribution, ONLY: Distribution_IIB
-  use SP_ModAdvance,ONLY: SPTime, iIterGlobal
+  use SP_ModTime,   ONLY: SPTime, iIter
   use ModPlotFile,  ONLY: save_plot_file, read_plot_file
   use ModUtilities, ONLY: open_file, close_file
   use ModIoUnit,    ONLY: UnitTmp_
@@ -139,7 +139,7 @@ contains
     write(UnitTmp_,'(i8,a32)') nLat,     'nLat'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NSTEP'
-    write(UnitTmp_,'(i8,a32)')iIterGlobal,'nStep'
+    write(UnitTmp_,'(i8,a32)')iIter,'nStep'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
     write(UnitTmp_,'(es22.15,a18)')SPTime,'tSimulation'

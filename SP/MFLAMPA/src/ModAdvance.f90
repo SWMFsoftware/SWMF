@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================!
+!==================================================================
 module SP_ModAdvance
   ! The module contains methods for advancing the solution in time
   use ModNumConst,ONLY: cPi
@@ -11,8 +11,7 @@ module SP_ModAdvance
         TotalEnergy_I, MomentumMax, MomentumInj,&
         DLogP, EnergyInjIo, EnergyMaxIo
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
-       Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B
-  use ModKind,    ONLY: Real8_  
+       Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B 
   implicit none
   SAVE
   PRIVATE ! except
@@ -20,14 +19,6 @@ module SP_ModAdvance
   public:: init        !Initialize reused variables 
   public:: read_param  !read injection parameters
   public:: advance     !Advance solution Distribution_IIB
-  !\
-  ! Global interation and time
-  real,    public :: SPTime  = 0.0
-  integer, public :: iIterGlobal = 0
-  ! This is the same default value as in the SWMF
-  integer, public :: iStartTime_I(7) = (/2000,3,21,10,45,0,0/)
-  real(Real8_), public          :: StartTime
-  !/
   !\
   !||||||||||||||Boundary condition at the injection energy!!!!!!
   ! Injection efficiency and assumed spectral index with the energy
@@ -77,7 +68,7 @@ contains
     case('#CFL')
        call read_var('Cfl',CFL)
     case default
-       call CON_stop(NameSub//'Unknown command '//NameCommand)
+       call CON_stop(NameSub//' Unknown command '//NameCommand)
     end select
   end subroutine read_param
   !============================
@@ -90,6 +81,7 @@ contains
     ! Version: Borovikov&Sokolov, Dec.19 2017, distinctions:
     ! (1) no turbulence (2) new shock finder moved to SP_ModMain,
     ! and (3) new steepen_shock
+    use SP_ModTime,         ONLY: SPTime
     use SP_ModDiffusion,    ONLY: advance_diffusion
     use SP_ModLogAdvection, ONLY: advance_log_advection
     use ModConst,           ONLY: cMu, cProtonMass, cGyroradius, RSun

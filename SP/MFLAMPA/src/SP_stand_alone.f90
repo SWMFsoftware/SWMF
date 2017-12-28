@@ -8,7 +8,7 @@ program MFLAMPA
   use ModUtilities, ONLY: remove_file, touch_file
   use SP_ModMain, ONLY: &
        nTiming, IsLastRead, IsStandAlone, &
-       iIterGlobal, SPTime, TimeMax, nIterMax, &
+       iIter, SPTime, TimeMax, nIterMax, &
        SP_read_param => read_param, &
        SP_check      => check, &
        SP_initialize => initialize, &
@@ -86,7 +86,7 @@ program MFLAMPA
      TIMELOOP: do
         if(stop_condition_true())exit TIMELOOP
         if(is_time_to_stop())exit SESSIONLOOP
-        call timing_step(iIterGlobal + 1)
+        call timing_step(iIter + 1)
         
         if(TimeMax > 0.0)then
            call SP_run(TimeMax)
@@ -136,7 +136,7 @@ contains
     !--------------------------
     IsStopCondition = .false.
 
-    if(nIterMax >= 0  .and.iIterGlobal >=nIterMax) IsStopCondition = .true.
+    if(nIterMax >= 0  .and.iIter >=nIterMax) IsStopCondition = .true.
     if( TimeMax >  0.0.and. SPTime >= TimeMax) IsStopCondition = .true.
 
   end function stop_condition_true
@@ -174,7 +174,7 @@ contains
     !/
     ! Show speed as cells/second/PE/step
     if( UseTiming .and. iProc==0 &
-         .and. nProgress1>0 .and. mod(iIterGlobal,nProgress1) == 0 ) then
+         .and. nProgress1>0 .and. mod(iIter,nProgress1) == 0 ) then
        CpuTimeMFLAMPA = timing_func_d('sum',1,'MFLAMPA','MFLAMPA')
        CpuTimeAdvance = timing_func_d('sum',1,'advance','MFLAMPA')
        !\
@@ -183,9 +183,9 @@ contains
     end if
 
     ! Show timing tables
-    if(nTiming>0.and.mod(iIterGlobal,nTiming)==0) then
+    if(nTiming>0.and.mod(iIter,nTiming)==0) then
        call timing_report
-    else if(nProgress2>0.and.mod(iIterGlobal,nProgress2) == 0) then
+    else if(nProgress2>0.and.mod(iIter,nProgress2) == 0) then
        call timing_tree(2,2)
     end if
 

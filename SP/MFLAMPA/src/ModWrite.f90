@@ -13,7 +13,7 @@ module SP_ModPlot
        Flux_VIB
   use SP_ModDistribution, ONLY: nP, Energy_I, Momentum_I,         &
        Distribution_IIB
-  use SP_ModAdvance, ONLY: SPTime, iIterGlobal
+  use SP_ModTime, ONLY: SPTime, iIter
   use SP_ModProc, ONLY: iProc
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
   use ModUtilities, ONLY: open_file, close_file
@@ -476,11 +476,11 @@ contains
          if(UseDateTime)then
             ! create date_time-iteration tag
             call get_date_time_string(SPTime, StringTime)
-            write(UnitTmp_,'(a,i6.6)') 'e'//StringTime//'_n',iIterGlobal
+            write(UnitTmp_,'(a,i6.6)') 'e'//StringTime//'_n',iIter
          else
             ! create time-iteration tag
             call get_time_string(SPTime, StringTime(1:8))
-            write(UnitTmp_,'(a,i6.6)') 't'//StringTime(1:8)//'_n',iIterGlobal
+            write(UnitTmp_,'(a,i6.6)') 't'//StringTime(1:8)//'_n',iIter
          end if
          call close_file
       end if
@@ -500,13 +500,13 @@ contains
             call get_date_time_string(SPTime, StringTime)
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
                  trim(NamePlotDir)//NameMHData//'_',iLon,'_',iLat,&
-                 '_e'//StringTime//'_n',iIterGlobal,&
+                 '_e'//StringTime//'_n',iIter,&
                  File_I(iFile)%NameFileExtension
          else
             call get_time_string(SPTime, StringTime(1:8))
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
                  trim(NamePlotDir)//NameMHData//'_',iLon,'_',iLat,&
-                 '_t'//StringTime(1:8)//'_n',iIterGlobal,&
+                 '_t'//StringTime(1:8)//'_n',iIter,&
                  File_I(iFile)%NameFileExtension
          end if
          ! get min and max particle indexes on this field line
@@ -537,7 +537,7 @@ contains
               TypeFileIn    = File_I(iFile) % TypeFile, &
               nDimIn        = 1, &
               TimeIn        = SPTime, &
-              nStepIn       = iIterGlobal, &
+              nStepIn       = iIter, &
               CoordMinIn_D  = (/State_VIB(LagrID_,1,iBlock)/), &
               CoordMaxIn_D  = (/State_VIB(LagrID_,iLast,iBlock)/), &
               NameVarIn     = File_I(iFile) % NameVarPlot, &
@@ -599,7 +599,7 @@ contains
                  int(File_I(iFile)%Radius),           &
                  File_I(iFile)%Radius - &
                  int(File_I(iFile)%Radius),           &
-                 '_e'//StringTime//'_n', iIterGlobal, &
+                 '_e'//StringTime//'_n', iIter, &
                  File_I(iFile) % NameFileExtension
          else
             call get_time_string(SPTime, StringTime(1:8))
@@ -609,7 +609,7 @@ contains
                  File_I(iFile) % Radius -             &
                  int(File_I(iFile)%Radius),           &
                  '_t'//StringTime(1:8)//'_n',         &
-                 iIterGlobal, File_I(iFile)%NameFileExtension
+                 iIter, File_I(iFile)%NameFileExtension
          end if
          ! get max particle indexes on this field line
          iLast  = nParticle_B(iBlock)
@@ -679,7 +679,7 @@ contains
            TypeFileIn   = File_I(iFile) % TypeFile, &
            nDimIn       = 1, &
            TimeIn       = SPTime, &
-           nStepIn      = iIterGlobal, &
+           nStepIn      = iIter, &
            Coord1In_I   = real(pack(iNodeIndex_I, MASK=DoPrint_I)),&
            NameVarIn    = File_I(iFile) % NameVarPlot, &
            VarIn_VI     = &
@@ -812,9 +812,9 @@ contains
               TypeFileIn   = File_I(iFile) % TypeFile, &
               nDimIn       = 1, &
               TimeIn       = SPTime, &
-              nStepIn      = iIterGlobal, &
-              CoordMinIn_D = (/real(iIterGlobal - nDataLine + 1)/), &
-              CoordMaxIn_D = (/real(iIterGlobal)/), &
+              nStepIn      = iIter, &
+              CoordMinIn_D = (/real(iIter - nDataLine + 1)/), &
+              CoordMaxIn_D = (/real(iIter)/), &
               NameVarIn    = File_I(iFile) % NameVarPlot, &
               VarIn_VI     = &
               File_I(iFile) % Buffer_II(1:nVarPlot,1:nDataLine))
@@ -864,13 +864,13 @@ contains
             call get_date_time_string(SPTime, StringTime)
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
                  trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
-                 '_e'//StringTime//'_n',iIterGlobal,&
+                 '_e'//StringTime//'_n',iIter,&
                  File_I(iFile) % NameFileExtension
          else
             call get_time_string(SPTime, StringTime(1:8))
             write(NameFile,'(a,i3.3,a,i3.3,a,i6.6,a)') &
                  trim(NamePlotDir)//'Distribution_',iLon,'_',iLat,&
-                 '_t'//StringTime(1:8)//'_n',iIterGlobal,&
+                 '_t'//StringTime(1:8)//'_n',iIter,&
                  File_I(iFile) % NameFileExtension
          end if
          ! get max particle indexes on this field line
@@ -901,7 +901,7 @@ contains
               TypeFileIn = File_I(iFile) % TypeFile, &
               nDimIn     = 2, &
               TimeIn     = SPTime, &
-              nStepIn    = iIterGlobal, &
+              nStepIn    = iIter, &
               Coord1In_I = Scale_I, &
               Coord2In_I = State_VIB(S_,1:iLast,iBlock), &
               NameVarIn  = File_I(iFile) % NameVarPlot, &
@@ -957,7 +957,7 @@ contains
   end subroutine get_time_string
   !===============================================================
   subroutine get_date_time_string(Time, StringTime)
-    use SP_ModAdvance, ONLY: StartTime
+    use SP_ModTime,    ONLY: StartTime
     use ModTimeConvert,ONLY: time_real_to_int
     ! the subroutine converts real variable Time into a string,
     ! the structure of the string is 'ddhhmmss', 

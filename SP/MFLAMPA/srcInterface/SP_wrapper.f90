@@ -3,8 +3,6 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !==================================================================
 module SP_wrapper
-
-  use ModConst, ONLY: rSun, cProtonMass, energy_in
   use SP_ModUnit, ONLY: EnergyUnit=>UnitParticleEnergy
   use SP_ModMain, ONLY: &
        run, save_restart, &
@@ -26,15 +24,12 @@ module SP_wrapper
        Momentum_, RhoUxCouple_, RhoUzCouple_, &
        BField_, BxCouple_, BzCouple_, &
        Wave_, WaveFirstCouple_, WaveLastCouple_
+  use ModConst, ONLY: rSun, cProtonMass
   use ModMpi
   use CON_world, ONLY: is_proc0, is_proc, n_proc
-
   implicit none
-
   save
-
   private ! except
-
   public:: SP_set_param
   public:: SP_init_session
   public:: SP_run
@@ -60,7 +55,8 @@ module SP_wrapper
   integer, allocatable :: iOffset_B(:)
   logical :: DoCheck = .true.
 contains
-  !\Interface routines to be called from super-structure only  
+  !\
+  !Interface routines to be called from super-structure only  
   subroutine SP_check_ready_for_mh(IsReady)
     use ModMpi
     logical, intent(out):: IsReady
@@ -70,8 +66,7 @@ contains
     !--------------
     ! when restarting, line data is available, i.e. ready to couple with mh;
     ! get value at SP root and broadcast to all SWMF processors
-    if(is_proc0(SP_)) &
-         IsReady = DoRestart
+    if(is_proc0(SP_)) IsReady = DoRestart
     call MPI_Bcast(IsReady, 1, MPI_LOGICAL, i_proc0(SP_), i_comm(), iError)
   end subroutine SP_check_ready_for_mh
   !===================================================================
@@ -98,7 +93,6 @@ contains
     end if
     call MPI_Bcast(rAux_I(1), 2, MPI_REAL, i_proc0(SP_), i_comm(), iError)
        RMinOut = rAux_I(1); RMaxOut = rAux_I(2)
-    
   end subroutine SP_get_bounds_comp 
   ! Above routines may be called from superstructure only.
   !/ 
@@ -107,9 +101,7 @@ contains
     integer, intent(in) :: iBlockLocal
     SP_n_particle = nParticle_B(  iBlockLocal)
   end function SP_n_particle
-
   !========================================================================
-
   subroutine SP_run(TimeSimulation,TimeSimulationLimit)
     real,intent(inout)::TimeSimulation
     real,intent(in)::TimeSimulationLimit
@@ -121,9 +113,7 @@ contains
        TimeSimulation = TimeSimulationLimit
     end if
   end subroutine SP_run
-
   !========================================================================
-
   subroutine SP_init_session(iSession,TimeSimulation)
     use SP_ModMain, ONLY: initialize
     integer,  intent(in) :: iSession         ! session number (starting from 1)
@@ -137,9 +127,7 @@ contains
     call initialize
     allocate(iOffset_B(nBlock)); iOffset_B = 0
   end subroutine SP_init_session
-
   !=================================================================
-
   subroutine SP_finalize(TimeSimulation)
     use SP_ModMain , ONLY: finalize
     real,intent(in)::TimeSimulation
@@ -150,8 +138,8 @@ contains
   end subroutine SP_finalize
   !================================================================
   subroutine SP_set_param(CompInfo,TypeAction)
-    use SP_ModAdvance, ONLY: StartTime, SPTime
-    use SP_ModMain   , ONLY: check, read_param
+    use SP_ModTime,  ONLY: StartTime, SPTime
+    use SP_ModMain,  ONLY: check, read_param
     use SP_ModProc
     use CON_physics, ONLY: get_time
     type(CompInfoType),intent(inout):: CompInfo
@@ -173,13 +161,14 @@ contains
        if(.not.DoCheck)RETURN
        DoCheck = .false.
        call get_time(tSimulationOut = SPTime, tStartOut = StartTime)
+       DataInputTime = SPTime
        call check
     case('READ')
        call read_param
     case('GRID')
        call SP_set_grid
     case default
-       call CON_stop('Can not call SP_set_param for '//trim(TypeAction))
+       call CON_stop('Cannot call SP_set_param for '//trim(TypeAction))
     end select
   end subroutine SP_set_param
   !=========================================================
@@ -273,15 +262,13 @@ contains
           TypeCoordSystem
     logical, save:: IsInitialized = .false.
     !------------------------------------------------------------
-    if(IsInitialized)&
-         RETURN
+    if(IsInitialized)RETURN
     IsInitialized = .true.
     ! Initialize 3D grid with NON-TREE structure
     call init_decomposition(&
          GridID_ = SP_,&
          CompID_ = SP_,&
          nDim    = nDim)
-
     ! Construct decomposition
     if(is_proc0(SP_))&
          call get_root_decomposition(&
@@ -304,36 +291,22 @@ contains
   end subroutine SP_set_grid
   !================================
   subroutine SP_put_coupling_param(iModelIn, rMinIn, rMaxIn, TimeIn)
-    integer, intent(in) :: iModelIn
-    real,    intent(in) :: rMinIn, rMaxIn
-    real,     intent(in)::TimeIn
-    !-----------------
-    call SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
-    call SP_put_input_time(TimeIn)
-  end subroutine SP_put_coupling_param
-  !===============================
-  subroutine SP_put_interface_bounds(iModelIn, rMinIn, rMaxIn)
-    integer, intent(in) :: iModelIn
-    real,    intent(in) :: rMinIn, rMaxIn
-    !-----------------
-    rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn; Model_ = iModelIn
-  end subroutine SP_put_interface_bounds
-  !=========================================================
-  subroutine SP_put_input_time(TimeIn)
     use SP_ModMain, ONLY: copy_old_state
+    integer, intent(in) :: iModelIn
+    real,    intent(in) :: rMinIn, rMaxIn
     real,     intent(in)::TimeIn
+    !-----------------
+    rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn 
+    Model_ = iModelIn
     if(DataInputTime >= TimeIn)RETURN
-    select case(Model_)
-    case(Lower_)
-       call copy_old_state
-    case(Upper_)
-       call CON_stop(&
-            "Time in coupling to IH differs from that to SC")
-    case default
-       call CON_stop("Wrong model name")
-    end select
+    !New coupling time, get it and save old state
     DataInputTime = TimeIn
-  end subroutine SP_put_input_time
+    if(Model_==Lower_)then
+       call copy_old_state
+    else
+       call CON_stop("Time in IHSP coupling differs from that in SCSP")
+    end if
+  end subroutine SP_put_coupling_param
   !===================================================================
   subroutine SP_interface_point_coords(nDim, Xyz_D, &
        nIndex, iIndex_I, IsInterfacePoint)
@@ -351,16 +324,14 @@ contains
     real:: R2
     character(len=*), parameter:: NameSub='SP_interface_point_coords'
     !----------------------------------------------------------------
-    iParticle = iIndex_I(1)
-    iBlock    = iIndex_I(4)
+    iParticle = iIndex_I(1); iBlock    = iIndex_I(4)
     ! Check whether the particle is within interface bounds
     R2 = sum(State_VIB(X_:Z_,iParticle,iBlock)**2)
     IsInterfacePoint = &
          R2 >= rInterfaceMin**2 .and. R2 < rInterfaceMax**2
     ! Fix coordinates to be used in mapping
-    if(IsInterfacePoint)then
-       Xyz_D = State_VIB(X_:Z_, iParticle, iBlock)
-    end if
+    if(IsInterfacePoint)&
+         Xyz_D = State_VIB(X_:Z_, iParticle, iBlock)
   end subroutine SP_interface_point_coords
   !============================
   subroutine SP_put_line(nPartial, iPutStart, Put,&
@@ -378,7 +349,8 @@ contains
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
     R2 = sum(Coord_D(1:nDim)**2)
-    if(R2<=RMin**2.or.R2>=RMax**2)RETURN
+    !Sort out particles out of the SP domain
+    if(R2<RMin**2.or.R2>=RMax**2)RETURN
     ! store passed particles
     iBlock    = Put%iCB_II(4,iPutStart)
     iParticle = Put%iCB_II(1,iPutStart) + iOffset_B(iBlock)
@@ -412,9 +384,6 @@ contains
        do iBlock = 1, nBlock
           call SP_set_line_foot_b(iBlock)
        end do
-       !\
-       !
-       !/
     end if
     BLOCK:do iBlock = 1, nBlock
        !\
@@ -492,17 +461,15 @@ contains
 
       ! generally, field direction isn't known
       ! approximate it using directions of first 2 segments of the line
-      Dist1_D = &
-           State_VIB((/X_, Y_, Z_/), 1, iBlock) - &
-           State_VIB((/X_, Y_, Z_/), 2, iBlock)
+      Dist1_D = State_VIB(X_:Z_, 1, iBlock) - &
+           State_VIB(X_:Z_, 2, iBlock)
       Dist1 = sqrt(sum(Dist1_D**2))
-      Dist2_D = &
-           State_VIB((/X_, Y_, Z_/), 2, iBlock) - &
-           State_VIB((/X_, Y_, Z_/), 3, iBlock)
+      Dist2_D = State_VIB(X_:Z_, 2, iBlock) - &
+           State_VIB(X_:Z_, 3, iBlock)
       Dist2 = sqrt(sum(Dist2_D**2))
-      Dir0_D = ((2*Dist1+Dist2)*Dist1_D - Dist1*Dist2_D) / (Dist1 + Dist2)
+      Dir0_D = ((2*Dist1 + Dist2)*Dist1_D - Dist1*Dist2_D)/(Dist1 + Dist2)
 
-      Dir0_D = Dir0_D / sqrt(sum(Dir0_D**2))
+      Dir0_D = Dir0_D/sqrt(sum(Dir0_D**2))
 
       ! dot product and sign: used in computation below
       Dot = sum(Dir0_D*Xyz1_D)
@@ -561,8 +528,7 @@ contains
     end subroutine append_particles
   !==============================
   end subroutine SP_adjust_lines
-  !=============================
- 
+  !============================= 
   function is_in_buffer(Xyz_D) Result(IsInBuffer)
     real,   intent(in) :: Xyz_D(nDim)
     logical:: IsInBuffer
