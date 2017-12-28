@@ -5,6 +5,7 @@
 module SP_wrapper
 
   use ModConst, ONLY: rSun, cProtonMass, energy_in
+  use SP_ModUnit, ONLY: EnergyUnit=>ParticleEnergyUnit
   use SP_ModMain, ONLY: &
        run, save_restart, &
        DoRestart, DoReadMhData, &
@@ -209,9 +210,8 @@ contains
     !check consistency of DoCoupleVar_V
     if(.not. DoCoupleVar_V(Density_) .and. &
          (DoCoupleVar_V(Pressure_) .or. DoCoupleVar_V(Momentum_)))&
-         call CON_Stop(NameSub//': pressure or momentum is coupled,'//&
-         ' but density is not')
-
+         call CON_Stop(NameSub//': pressure or momentum is coupled,'&
+         //' but density is not')
     ! indices of variables in the buffer
     iRho  = iVar_V(RhoCouple_)
     iP    = iVar_V(PCouple_)
@@ -235,26 +235,26 @@ contains
           R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
           select case(Model_)
           case(Lower_)
-             Weight = Weight * (0.50 - 0.50 * &
-                  tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
+             Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
+                  RBufferMax - RBufferMin)/(RBufferMax - RBufferMin)))
           case(Upper_)
              Aux = 1.0   
-             Weight = Weight * (0.50 + 0.50 * &
-                  tanh(2*(2*R-RBufferMax-RBufferMin)/(RBufferMax-RBufferMin)))
+             Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
+                  RBufferMax - RBufferMin)/(RBufferMax-RBufferMin)))
           case default
              write(StringError,'(a,i2)') &
-                  ": isn't implemented for interface with component ", Model_
+                  ": isn't implemented for interface with component "&
+                  , Model_
              call CON_stop(NameSub//StringError)
           end select
        end if
        ! put the data
-       ! NOTE: State_VIB must be reset to zero before putting coupled data
        if(DoCoupleVar_V(Density_))&
-            State_VIB(Rho_,i,iBlock) = Aux*State_VIB(Rho_,i,iBlock) + &
-            Buff_I(iRho)/cProtonMass * Weight
+            State_VIB(Rho_,i,iBlock) = Aux*State_VIB(Rho_,i,iBlock) &
+            + Buff_I(iRho)/cProtonMass*Weight
        if(DoCoupleVar_V(Pressure_))&
             State_VIB(T_,i,iBlock) = Aux*State_VIB(T_,i,iBlock) + &
-            Buff_I(iP)/Buff_I(iRho)*cProtonMass/energy_in('kev') * Weight
+            Buff_I(iP)/Buff_I(iRho)*cProtonMass/EnergyUnit*Weight
        if(DoCoupleVar_V(Momentum_))&
             State_VIB(Ux_:Uz_,i,iBlock) = Aux*State_VIB(Ux_:Uz_,i,iBlock) + &
             Buff_I(iMx:iMz) / Buff_I(iRho) * Weight
@@ -373,9 +373,12 @@ contains
 
     ! indices of the particle
     integer:: iBlock, iParticle
-
+    !Misc
+    real :: R2
     character(len=*), parameter:: NameSub='SP_put_line'
     !----------------------------------------------------------------
+    R2 = sum(Coord_D(1:nDim)**2)
+    if(R2<=RMin**2.or.R2>=RMax**2)RETURN
     ! store passed particles
     iBlock    = Put%iCB_II(4,iPutStart)
     iParticle = Put%iCB_II(1,iPutStart) + iOffset_B(iBlock)
@@ -421,8 +424,9 @@ contains
        if(DoAdjustStart)iOffset_B(iBlock) = 0
        iBegin = 1
        iEnd   = nParticle_B(  iBlock)
-       IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
        R2 = sum(State_VIB(X_:Z_,1,iBlock)**2)
+       IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0).or.&
+            R2<=RMin2
        PARTICLE:do iParticle = 2, iEnd
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
 
@@ -444,7 +448,7 @@ contains
           end if
           IsMissingPrev = IsMissingCurr
        end do PARTICLE
-       if(DoAdjustStart.and.iBegin /= 1)then
+       if(DoAdjustStart.and.iBegin/=1)then
           !\
           ! Offset particle arrays
           !/
@@ -463,9 +467,12 @@ contains
     if(DoAdjustStart) call append_particles
     !\
     ! Called after the grid points are received from the 
-    ! component, nullify offset
+    ! component, nullify offset. Alternatively, if the points
+    ! are received from SC via initial coupling, there is no
+    ! need to apply offset in IH, because there are no points
+    ! in IH yet and no need to correct their ID 
     !/
-    if(DoAdjustEnd)iOffset_B(1:nBlock) = 0
+    if(DoAdjustEnd.or.DoInit)iOffset_B(1:nBlock) = 0
   contains
     subroutine SP_set_line_foot_b(iBlock)
       integer, intent(in) :: iBlock

@@ -317,7 +317,8 @@ contains
     !\
     ! reset and fill data containers
     !/
-    State_VIB = -1; Flux_VIB = -1; FootPoint_VB = -1
+    State_VIB = -1; State_VIB(1:nMHData,:,:) = 0.0
+    Flux_VIB = -1; FootPoint_VB = -1
     
     !\
     ! reset lagrangian ids
