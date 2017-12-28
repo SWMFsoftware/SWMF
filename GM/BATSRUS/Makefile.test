@@ -8,6 +8,7 @@ test:
 	-@($(MAKE) test_spectrum)
 	-@($(MAKE) test_fluxemergence)
 	-@($(MAKE) test_shocktube)
+	Config.pl -noopenmp
 	-@($(MAKE) test_shockramp)
 	./Config.pl -ng=2
 	-@($(MAKE) test_partsteady)
@@ -179,7 +180,7 @@ test_shocktube:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_shocktube_compile:
-	./Config.pl -u=Default -e=MhdHyp -g=64,4,1,10,1
+	./Config.pl -openmp -u=Default -e=MhdHyp -g=64,4,1,10,1
 	$(MAKE) BATSRUS
 	make PIDL
 
