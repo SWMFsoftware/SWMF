@@ -584,6 +584,9 @@ sub set_openmp_{
 
     # Set the OpenMP compilation flags in $MakefileConf
 
+    # Clean the code so it gets recompiled with consistent openmp flag
+    &shell_command('make clean');
+
     # OpenMp will be NewOpenMp after changes
     $OpenMp = $NewOpenMp;
 
