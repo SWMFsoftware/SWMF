@@ -275,6 +275,12 @@ if($NewPrecision and $NewPrecision ne $Precision){
 # Link with MPI vs. NOMPI library if required
 &set_mpi_ if $NewMpi and $NewMpi ne $Mpi;
 
+if($Compiler eq "nagfor" and $Debug eq "yes" and 
+   ($NewOpenMp eq "yes" or $OpenMp eq "yes")){
+    warn "$WARNING: nagfor with debugging cannot use OpenMP!\n";
+    $NewOpenMp = "no";
+}
+
 # Switch on or off the OPENMPFLAG
 &set_openmp_ if $NewOpenMp and $NewOpenMp ne $OpenMp;
 
