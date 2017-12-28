@@ -18,6 +18,7 @@ OBJECTS = \
 	ModReadMhData.o \
 	ModRestart.o \
 	ModSize.o \
+	ModTime.o \
 	ModUnit.o \
 	ModWrite.o   
 
