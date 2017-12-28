@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=================================================================!
+!==================================================================
 module SP_wrapper
 
   use ModConst, ONLY: rSun, cProtonMass, energy_in
@@ -380,8 +380,8 @@ contains
     iBlock    = Put%iCB_II(4,iPutStart)
     iParticle = Put%iCB_II(1,iPutStart) + iOffset_B(iBlock)
     ! put coordinates
-    State_VIB(X_:Z_,  iParticle, iBlock) = Coord_D(1:nDim)
-    nParticle_B(  iBlock)=MAX(nParticle_B(  iBlock),iParticle)
+    State_VIB(X_:Z_,iParticle, iBlock) = Coord_D(1:nDim)
+    nParticle_B(iBlock) = MAX(nParticle_B(iBlock), iParticle)
   end subroutine SP_put_line
   !===================================================================
   !\
@@ -405,15 +405,15 @@ contains
     character(len=*), parameter:: NameSub = "SP_adjust_lines"
     character(len=100):: StringError
     !--------------------------------------------------------------------
-    if(DoInit)then
-       if(DoAdjustStart)then
-          do iBlock = 1, nBlock
-             call SP_set_line_foot_b(iBlock)
-          end do
-       end if
-       RETURN
+    if(DoInit.and.DoAdjustStart)then
+       do iBlock = 1, nBlock
+          call SP_set_line_foot_b(iBlock)
+       end do
+       !\
+       !
+       !/
     end if
-    do iBlock = 1, nBlock
+    BLOCK:do iBlock = 1, nBlock
        !\
        ! Called after the grid points are received from the 
        ! component, nullify offset
@@ -423,13 +423,13 @@ contains
        iEnd   = nParticle_B(  iBlock)
        IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
        R2 = sum(State_VIB(X_:Z_,1,iBlock)**2)
-       do iParticle = 2, iEnd
+       PARTICLE:do iParticle = 2, iEnd
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
 
           if(IsMissingCurr .and. R2 > RBufferMin**2)then
              if(DoAdjustEnd)&
                   nParticle_B(  iBlock) = iParticle - 1
-             EXIT
+             EXIT PARTICLE
           end if
 
           if(.not.IsMissingCurr)then
@@ -437,9 +437,13 @@ contains
              if(IsMissingPrev)then
                 iBegin = iParticle
              end if
+             if(DoAdjustEnd.and.R2> RMax**2)then
+                nParticle_B(iBlock) = iParticle - 1
+                EXIT PARTICLE
+             end if
           end if
           IsMissingPrev = IsMissingCurr
-       end do
+       end do PARTICLE
        if(DoAdjustStart.and.iBegin /= 1)then
           !\
           ! Offset particle arrays
@@ -447,14 +451,14 @@ contains
           iEnd   = nParticle_B(iBlock) 
           iOffset = 1 - iBegin
           iOffset_B(iBlock) = iOffset
-          State_VIB(     LagrID_:Z_, 1:iEnd+iOffset, iBlock) = &
-               State_VIB(LagrID_:Z_, iBegin:iEnd,    iBlock)
+          State_VIB(LagrID_:Z_, 1:iEnd+iOffset, iBlock) = &
+               State_VIB(LagrID_:Z_,iBegin:iEnd,iBlock)
           nParticle_B(iBlock) = nParticle_B(iBlock) + iOffset
           ! need to recalculate footpoints
           call SP_set_line_foot_b(iBlock)
           call offset(iBlock, iOffset)
        end if
-    end do
+    end do BLOCK
     ! may need to add particles to the beginning of lines
     if(DoAdjustStart) call append_particles
     !\
