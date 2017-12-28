@@ -5,7 +5,7 @@
 module SP_wrapper
 
   use ModConst, ONLY: rSun, cProtonMass, energy_in
-  use SP_ModUnit, ONLY: EnergyUnit=>ParticleEnergyUnit
+  use SP_ModUnit, ONLY: EnergyUnit=>UnitParticleEnergy
   use SP_ModMain, ONLY: &
        run, save_restart, &
        DoRestart, DoReadMhData, &
@@ -425,8 +425,7 @@ contains
        iBegin = 1
        iEnd   = nParticle_B(  iBlock)
        R2 = sum(State_VIB(X_:Z_,1,iBlock)**2)
-       IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0).or.&
-            R2<=RMin2
+       IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
        PARTICLE:do iParticle = 2, iEnd
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
 
