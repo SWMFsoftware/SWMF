@@ -9,6 +9,7 @@ module SP_ModGrid
   !Dec.25 2017: rename nVarRead=>nMHData, add NoShock_ param.
   use SP_ModSize, ONLY: nDim, nLon, nLat, nNode, nParticleMax
   use SP_ModProc, ONLY: iProc
+  use ModNumConst,ONLY: cTwoPi, cPi
   implicit none
   SAVE
 
@@ -30,7 +31,8 @@ module SP_ModGrid
   real         :: ROrigin = 2.5
   ! Size of angular grid, latitude and longitude, at origin 
   ! surface R=ROrigin
-  real         :: LonMin, LonMax, LatMin, LatMax
+  real         :: LonMin = 0.0, LonMax = cTwoPi 
+  real         :: LatMin = -0.50*cPi, LatMax = 0.50*cPi
   !Sell size on the origin surface, per line
   real         ::  DLon, DLat
   ! Lower/Upper boundary of the domain in Rs
@@ -203,7 +205,7 @@ contains
        LatMax = LatMax*cDegToRad
        LatMin = LatMin*cDegToRad
        ! angular grid's step
-       DLat = (LatMax - LatMin) / nLat
+       DLat = (LatMax - LatMin)/nLat
 
        IsSetOrigin = .true.
     case('#GRID')

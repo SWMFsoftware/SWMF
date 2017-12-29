@@ -8,8 +8,7 @@ module SP_ModAdvance
   use ModConst,   ONLY: cLightSpeed, energy_in
   use SP_ModSize, ONLY: nParticleMax
   use SP_ModDistribution, ONLY: nP, Distribution_IIB, Momentum_I,&
-        TotalEnergy_I, MomentumMax, MomentumInj,&
-        DLogP, EnergyInjIo, EnergyMaxIo
+        TotalEnergy_I, MomentumMax, MomentumInj, DLogP
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
        Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B 
   implicit none
@@ -61,8 +60,6 @@ contains
     !---------------------------------------------
     select case(NameCommand)
     case('#INJECTION')
-       call read_var('EnergyInjIo',    EnergyInjIo)
-       call read_var('EnergyMaxIo',    EnergyMaxIo)
        call read_var('SpectralIndex',SpectralIndex)
        call read_var('Efficiency',   CInj)
     case('#CFL')

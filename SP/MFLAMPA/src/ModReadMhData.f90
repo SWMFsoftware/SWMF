@@ -5,7 +5,7 @@
 module SP_ModReadMhData
   ! This module contains methods for reading input MH data
   use SP_ModSize,    ONLY: nDim, nParticleMax
-  use SP_ModGrid,    ONLY: get_node_indexes, nMHData,  nBlock,    &
+  use SP_ModGrid,    ONLY: get_node_indexes, nMHData,  nBlock, Z_,&
        iNode_B, FootPoint_VB, nParticle_B, State_VIB,  LagrID_
   use SP_ModTime,    ONLY: SPTime, DataInputTime
   use SP_ModDistribution, ONLY: offset
