@@ -4,8 +4,62 @@
 
 List of SP commands used in the PARAM.in file
 
-<set name="NameRestartOutDir" type="string" value="$_NameComp/restartOUT"/>
-<set name="NamePlotDir"       type="string" value="$_NameComp/plots"/>
+<commandgroup name="GRID">
+
+<command name="ORIGIN">
+	<parameter name="ROrigin" type="real" default="2.5" />
+	<parameter name="LonMin"  type="real" default="0.0" />
+	<parameter name="LatMin"  type="real" default="-1.5708" />
+	<parameter name="LonMax"  type="real" default="6.2832" />
+	<parameter name="LatMax"  type="real" default="1.5708" />
+
+#ORIGIN
+2.5            ROrigin
+0.0             LonMin
+-70.0           LatMin
+360.0           LonMax
+70.0            LatMax
+
+</command>
+
+<command name="GRID">
+	<parameter name="RMin" type="real" default="-1.0" />
+	<parameter name="RBufferMin"  type="real" default="-1.0" />
+	<parameter name="RBufferMax"  type="real" default="-1.0" />
+	<parameter name="RMax"  type="real" default="-1.0" />
+
+#GRID
+1.15              RMin
+19.0        RBufferMin
+21.0        RBufferMax
+220.0             RMax
+
+</command>
+
+</commandgroup>
+
+<commandgroup name="ADVANCE">
+
+<command name="INJECTION">
+	<parameter name="CInj" type="real" default="1.0" />
+	<parameter name="SpectralIndex" type="real" default="5.0" />
+
+#INJECTION
+5.0     SpectralIndex
+1.0     Efficency
+
+</command>
+
+<command name="CFL">
+	<parameter name="Cfl" type="real" default="1.0" />
+
+#CFL
+1.0     Cfl
+
+</command>
+	
+
+</commandgroup>
 
 <commandgroup name="ACTION">
 
@@ -28,11 +82,7 @@ T	DoRun
 The default values are shown.
 </command>
 
-<command name="SAVEMHDATA">
-	<parameter name="SaveMhData" type="logical" default="F" />
-
-#SAVEMHDATA
-T	SaveMhData
+<command name="">
 
 
 The default values are shown.
