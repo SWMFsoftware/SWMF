@@ -8,7 +8,7 @@ help:
 	@echo ""
 	@echo "Targets:"
 	@echo ""
-	@echo "PDF          - produces USERMANUAL.pdf DESIGN.pdf STANDARDS.pdf"
+	@echo "PDF          - produces USERMANUAL.pdf"
 	@echo ""
 	@echo "clean        - rm -rf *.aux *.log *.toc *.dvi *~"
 	@echo ""
