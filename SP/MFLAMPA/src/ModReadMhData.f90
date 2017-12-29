@@ -5,11 +5,10 @@
 module SP_ModReadMhData
   ! This module contains methods for reading input MH data
   use SP_ModSize,    ONLY: nDim, nParticleMax
-  use SP_ModGrid,    ONLY: get_node_indexes, nMHData, nVar, nBlock,&
-       iShock_IB, iNode_B, FootPoint_VB, nParticle_B, State_VIB,   &
-       NameVar_V, LagrID_, X_, Z_, Rho_
-  use SP_ModTime, ONLY: SPTime, DataInputTime
-  use SP_ModDistribution, ONLY: Distribution_IIB, offset
+  use SP_ModGrid,    ONLY: get_node_indexes, nMHData,  nBlock,    &
+       iNode_B, FootPoint_VB, nParticle_B, State_VIB,  LagrID_
+  use SP_ModTime,    ONLY: SPTime, DataInputTime
+  use SP_ModDistribution, ONLY: offset
   use ModPlotFile,   ONLY: read_plot_file
   use ModUtilities,  ONLY: fix_dir_name, open_file, close_file
   use ModIoUnit,     ONLY: io_unit_new
@@ -168,8 +167,6 @@ contains
             1:nParticle_B(iBlock),iBlock)    ,&
             VarOut_VI  = State_VIB(1:nMHData ,&
             1:nParticle_B(iBlock),iBlock)) 
-       if(State_VIB(Rho_,nParticle_B(iBlock),iBlock)<=0.0)&
-            nParticle_B(iBlock) = nParticle_B(iBlock) - 1
        !\
        ! apply offset
        !/
