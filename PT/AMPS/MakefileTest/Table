@@ -145,11 +145,19 @@ Keys=-spice-path=/work/02452/vtenishe/SPICE/cspice -spice-kernels=/work/02452/vt
 Compile=
 >>>@echo "test_CG-Rosina-Liouville_compile..." > test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 >>>./Config.pl -application=cg-end-of-mission-rosina -amps-test=on -amps-test=on $(TESTCG-Rosina-LiouvilleKEYS)
+
 >>>cd srcCG; mv Comet.cpp Comet.cpp--original
 >>>cd srcCG; cvs update -r END-OF-THE-MISSION--ROSINA-COPS--MODEL Comet.cpp
+
+>>>cd srcCG; mv main.cpp main.cpp--original
+>>>cd srcCG; cvs update -r END-OF-THE-MISSION--ROSINA-COPS--MODEL main.cpp
+
 >>>rm -rf srcTemp
 >>>@($(MAKE) -j8 amps)
+
 >>>cd srcCG; mv Comet.cpp--original Comet.cpp
+>>>cd srcCG; mv main.cpp--original main.cpp
+
 >>>@echo "test_CG-Rosina-Liouville_compile... done" >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 
 Run=
