@@ -61,7 +61,7 @@ subroutine CON_stop(StringError)
 
   !DESCRIPTION:
   ! This subroutine is used to abort the run with an error report.
-  ! It provides an external subroutine interface to ModUtilities::CON_stop.
+  ! It provides an external subroutine interface to ModUtilities::CON\_stop.
   ! Open I/O units are closed and empty output files are deleted before abort.
   ! This will only be done on the aborting processor(s).
   !EOP
