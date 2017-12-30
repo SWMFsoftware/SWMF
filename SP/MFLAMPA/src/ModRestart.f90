@@ -1,7 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan, 
 !  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
-!=============================================================!
+!==================================================================
 module SP_ModRestart
   ! This module contains methods for writing output files
   use SP_ModSize,   ONLY: nLon, nLat, nParticleMax
@@ -18,27 +18,20 @@ module SP_ModRestart
   SAVE
   private ! except
   !Public members
-  public:: set_restart_param, write_restart, read_restart
+  public:: save_restart, read_restart
   public:: NameRestartInDir, NameRestartOutDir
 
-  !----------------------------------------------------------------------------
+  !----------------------------------------------------------------
   ! the restart directory
   character (len=100) :: NameRestartOutDir="SP/restartOUT/"
   character (len=100) :: NameRestartInDir ="SP/restartIN/"
   ! name of the header file
   character (len=100) :: NameHeaderFile   ="restart.H"
-  !----------------------------------------------------------------------------
+  !----------------------------------------------------------------
   !/
 contains
-  
-  subroutine set_restart_param
-    use ModReadParam, ONLY: read_var
-    ! set parameters of restart files
-    character(len=*), parameter :: NameSub='SP:set_restart_param'
-    !--------------------------------------------------------------------------
-  end subroutine set_restart_param
-  !============================================================================
-  subroutine write_restart
+  !================================================================
+  subroutine save_restart
     use ModIoUnit,     ONLY: UnitTmp_
     use ModUtilities,  ONLY: open_file, close_file
     ! write the restart data
@@ -49,8 +42,8 @@ contains
     integer:: iBlock
     ! indexes of corresponding node, latitude and longitude
     integer:: iNode, iLat, iLon
-    character(len=*), parameter:: NameSub = 'SP:write_restart'
-    !--------------------------------------------------------------------------
+    character(len=*), parameter:: NameSub = 'SP:save_restart'
+    !--------------------------------------------------------------
  
     call write_restart_header
 
@@ -72,8 +65,8 @@ contains
             Distribution_IIB(:,1:nParticle_B(iBlock), iBlock)
        call close_file
     end do
-  end subroutine write_restart
-  !============================================================================
+  end subroutine save_restart
+  !================================================================
   subroutine read_restart
     ! read the restart data
 
@@ -86,7 +79,7 @@ contains
     real   :: Aux, Aux_I(nShockParam) !For reading integers
     integer:: iError
     character(len=*), parameter:: NameSub = 'SP:read_restart'
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------------
    
     do iBlock = 1, nBlock
        iNode = iNode_B(iBlock)
@@ -115,7 +108,7 @@ contains
        call close_file
     end do
   end subroutine read_restart
-  !==========================
+  !================================================================
   subroutine write_restart_header
     use SP_ModPlot, ONLY: nTag
     use SP_ModProc, ONLY: iProc
@@ -124,7 +117,7 @@ contains
     character(len=100):: NameFile
 
     character(len=*), parameter:: NameSub='write_restart_header'
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------------
     if (iProc/=0) RETURN
     NameFile = trim(NameRestartOutDir)//trim(NameHeaderFile)
 
@@ -155,7 +148,5 @@ contains
     write(UnitTMP_,'(a)')'#END'
     write(UnitTmp_,*)
     call close_file
-
   end subroutine write_restart_header
-
 end module SP_ModRestart

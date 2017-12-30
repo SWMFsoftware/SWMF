@@ -7,12 +7,12 @@ module SP_ModMain
   use SP_ModSize,    ONLY: nDim, nLat, nLon, nNode, nParticleMax
   use SP_ModPlot,    ONLY: save_plot_all, NamePlotDir
   use SP_ModReadMhData, ONLY: read_mh_data, DoReadMhData
-  use SP_ModRestart, ONLY: save_restart=>write_restart, read_restart
-  use SP_ModGrid,    ONLY: copy_old_state, LagrID_, X_,  Y_, Z_, Rho_,   &
-       Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_, Length_, nBlock,&
-       nParticle_B, Shock_, ShockOld_, DLogRho_,       &
-       iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
-       RhoOld_
+  use SP_ModRestart, ONLY: save_restart, read_restart
+  use SP_ModGrid,    ONLY: copy_old_state, LagrID_, X_,  Y_, Z_,  &
+       Rho_, Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_,    &
+       Length_, nBlock, nParticle_B, Shock_, ShockOld_, DLogRho_, &
+       RhoOld_, iShock_IB, iNode_B, State_VIB, FootPoint_VB
+       
   use SP_ModAdvance, ONLY: DoTraceShock, UseDiffusion, advance
   use SP_ModTime,    ONLY: SPTime, DataInputTime, iIter
   implicit none
@@ -27,9 +27,9 @@ module SP_ModMain
   real         :: LonMin = 0.0, LonMax = 360.0 
   real         :: LatMin = -70.0, LatMax = 70.0
   ! Lower/Upper boundary of the domain in Rs
-  real         :: RMin=-1.0, RMax = -1.0
+  real         :: RScMin=-1.0, RIhMax = -1.0
   ! Boundaries of the buffer layer between SC and IH Rs
-  real         :: RBufferMin=-1.0, RBufferMax=-1.0
+  real         :: RIhMin=-1.0, RScMax=-1.0
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
   real   :: TimeMax  = -1.0, CpuTimeMax = -1.0
@@ -64,7 +64,7 @@ module SP_ModMain
   public:: &
        LagrID_,X_, Y_, Z_, Rho_, Bx_, Bz_, Ux_, Uz_, T_, &
        Wave1_, Wave2_, Length_, nBlock, nParticle_B, Shock_,   &
-       ShockOld_, RMin, RBufferMin, RBufferMax, RMax,          &
+       ShockOld_, RScMin, RIhMin, RScMax, RIhMax,          &
        iShock_IB, iNode_B, State_VIB, FootPoint_VB
 
   ! Methods and variables from ModReadMhData
@@ -113,16 +113,18 @@ contains
           ! read parameters for each module
           !/
        case('#ORIGIN')
+          if(IsStandAlone)CYCLE
           call read_var('ROrigin', ROrigin)
           call read_var('LonMin', LonMin)
           call read_var('LatMin', LatMin)
           call read_var('LonMax', LonMax)
           call read_var('LatMax', LatMax)
        case('#COMPDOMAINS','#GRID')
-          call read_var('RMin',RMin)
-          call read_var('RBufferMin', RBufferMin)
-          call read_var('RBufferMax', RBufferMax)
-          call read_var('RMax',RMax)
+          if(IsStandAlone)CYCLE
+          call read_var('RScMin',RScMin)
+          call read_var('RIhMin', RIhMin)
+          call read_var('RScMax', RScMax)
+          call read_var('RIhMax',RIhMax)
        case('#COORDSYSTEM', '#COORDINATESYSTEM',&
             '#CHECKGRIDSIZE')
           if(i_session_read() /= 1)CYCLE
@@ -208,12 +210,12 @@ contains
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
     !--------------------------------------------------------------------
-    if(DoInit)call init_grid
+    call init_grid
     call init_unit
     call init_dist
     call init_advance
     call init_plot
-    call init_mhdata ! if input files are used, SPTime is set here 
+    call init_mhdata 
     if(DoRestart) call read_restart
     if((.not.IsStandAlone).and.(.not.DoRestart).and.(.not.DoReadMhData))&
          call get_origin_points
@@ -263,7 +265,6 @@ contains
     call finalize_plot
     call finalize_read
   end subroutine finalize
-
   !============================================================================
 
   subroutine run(TimeLimit)
@@ -373,21 +374,21 @@ contains
     !---------------------------------------------------------------------
     if(.not.IsStandAlone)then
        ! check if the domains for SC and IH are correctly set
-       if(RMin < 0.0.or. RBufferMin < 0.0 .or.RBufferMax < 0.0 .or.RMax < 0.0)&
+       if(RScMin < 0.0.or. RIhMin < 0.0 .or.RScMax < 0.0 .or.RIhMax < 0.0)&
             call CON_stop(NameSub//&
             ': RScMin, RScMax, RIhMin, RIhMax must be set to positive values')
-       if(any((/RMax, RBufferMax/) < RBufferMin) .or. RMax < RBufferMax)&
+       if(any((/RIhMax, RScMax/) < RIhMin) .or. RIhMax < RScMax)&
             call CON_stop(NameSub//&
-           ': inconsistent values of RBufferMin, RBufferMax, RMax')
+           ': inconsistent values of RIhMin, RScMax, RIhMax')
        if(.not.(DoRestart.or.DoReadMhData))then
           ! check consistency of the origin point parameters
           if(LonMax <= LonMin .or. LatMax <= LatMin)&
                call CON_stop(NameSub//': Origin surface grid is inconsistent')
-          if(ROrigin <= RMin)call CON_stop(NameSub//&
-               ': ROrigin, if set, must be greater than RMin')
-          if(any((/RBufferMin, RBufferMax, RMax/) < ROrigin))&
+          if(ROrigin <= RScMin)call CON_stop(NameSub//&
+               ': ROrigin, if set, must be greater than RScMin')
+          if(any((/RIhMin, RScMax, RIhMax/) < ROrigin))&
                call CON_stop(NameSub//&
-               ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
+               ': inconsistent values of ROrigin, RIhMin, RScMax, RIhMax')
        end if
     end if
     ! Make output directory

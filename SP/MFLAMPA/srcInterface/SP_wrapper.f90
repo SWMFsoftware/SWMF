@@ -8,7 +8,8 @@ module SP_wrapper
        run, save_restart, &
        DoRestart, DoReadMhData, &
        nDim, nLat, nLon, nBlock, nParticleMax, &
-       RMin, RBufferMin, RBufferMax, RMax, &
+       RMin=>RScMin, RBufferMin=>RIhMin, &
+       RBufferMax=>RScMax, RMax=>RIhMax, &
         State_VIB, &
        iNode_B, FootPoint_VB, DataInputTime, &
        nParticle_B, Length_,&
