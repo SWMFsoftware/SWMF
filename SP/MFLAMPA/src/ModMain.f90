@@ -1,6 +1,7 @@
 !  Copyright (C) 2002 Regents of the University of Michigan
 ! portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
+!==================================================================
 module SP_ModMain
   use SP_ModProc,    ONLY: iProc
   use SP_ModSize,    ONLY: nDim, nLat, nLon, nNode, nParticleMax
@@ -9,14 +10,26 @@ module SP_ModMain
   use SP_ModRestart, ONLY: save_restart=>write_restart, read_restart
   use SP_ModGrid,    ONLY: copy_old_state, LagrID_, X_,  Y_, Z_, Rho_,   &
        Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_, Length_, nBlock,&
-       nParticle_B, Shock_, ShockOld_, DLogRho_, RMin, RBufferMin,       &
-       RBufferMax, RMax, iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
+       nParticle_B, Shock_, ShockOld_, DLogRho_,       &
+       iShock_IB, iNode_B, State_VIB, FootPoint_VB,    &
        RhoOld_
   use SP_ModAdvance, ONLY: DoTraceShock, UseDiffusion, advance
   use SP_ModTime,    ONLY: SPTime, DataInputTime, iIter
   implicit none
   SAVE
   private ! except
+  !\
+  ! Grid size, boundaries, coordinates
+  ! Starting position of field lines in Rs
+  real         :: ROrigin = 2.5
+  ! Size of angular grid, latitude and longitude, at origin 
+  ! surface R=ROrigin
+  real         :: LonMin = 0.0, LonMax = 360.0 
+  real         :: LatMin = -70.0, LatMax = 70.0
+  ! Lower/Upper boundary of the domain in Rs
+  real         :: RMin=-1.0, RMax = -1.0
+  ! Boundaries of the buffer layer between SC and IH Rs
+  real         :: RBufferMin=-1.0, RBufferMax=-1.0
   !\
   ! Stopping conditions. These variables are only used in stand alone mode.
   real   :: TimeMax  = -1.0, CpuTimeMax = -1.0
@@ -99,7 +112,18 @@ contains
           !\
           ! read parameters for each module
           !/
-       case('#GRID', '#ORIGIN', '#COORDSYSTEM', '#COORDINATESYSTEM',&
+       case('#ORIGIN')
+          call read_var('ROrigin', ROrigin)
+          call read_var('LonMin', LonMin)
+          call read_var('LatMin', LatMin)
+          call read_var('LonMax', LonMax)
+          call read_var('LatMax', LatMax)
+       case('#COMPDOMAINS','#GRID')
+          call read_var('RMin',RMin)
+          call read_var('RBufferMin', RBufferMin)
+          call read_var('RBufferMax', RBufferMax)
+          call read_var('RMax',RMax)
+       case('#COORDSYSTEM', '#COORDINATESYSTEM',&
             '#CHECKGRIDSIZE')
           if(i_session_read() /= 1)CYCLE
           call read_param_grid(NameCommand)
@@ -183,15 +207,51 @@ contains
     use SP_ModReadMhData  , ONLY: init_mhdata=>init
     ! initialize the model
     character(LEN=*),parameter:: NameSub='SP:initialize'
-    !--------------------------------------------------------------------------
-    if(DoInit)call init_grid(DoRestart .or. DoReadMhData)
+    !--------------------------------------------------------------------
+    if(DoInit)call init_grid
     call init_unit
     call init_dist
     call init_advance
     call init_plot
     call init_mhdata ! if input files are used, SPTime is set here 
     if(DoRestart) call read_restart
+    if((.not.IsStandAlone).and.(.not.DoRestart).and.(.not.DoReadMhData))&
+         call get_origin_points
     DoInit=.false.
+  contains
+    subroutine get_origin_points
+      use ModNumConst,       ONLY: cDegToRad
+      use ModCoordTransform, ONLY: rlonlat_to_xyz
+      use SP_ModGrid,        ONLY: Block_, Proc_, iGridGlobal_IA, iNode_II 
+      integer:: iLat, iLon, iNode, iBlock      
+      !Sell size on the origin surface, per line
+      real         ::  DLon, DLat
+      !--------------------------
+      ! convert angels from degrees to radians
+      LonMax = LonMax*cDegToRad
+      LonMin = LonMin*cDegToRad
+      ! angular grid's step
+      DLon = (LonMax - LonMin)/nLon
+      
+      ! convert angels from degrees to radians
+      LatMax = LatMax*cDegToRad
+      LatMin = LatMin*cDegToRad
+      ! angular grid's step
+      DLat = (LatMax - LatMin)/nLat
+      
+      
+      do iLat = 1, nLat
+         do iLon = 1, nLon
+            iNode = iNode_II(iLon, iLat)
+            iBlock = iGridGlobal_IA(Block_, iNode)
+            if(iProc == iGridGlobal_IA(Proc_, iNode))then
+               nParticle_B(iBlock) = 1
+               call rlonlat_to_xyz((/ROrigin, LonMin + (iLon - 0.5)*DLon, &
+                    LatMin + (iLat - 0.5)*DLat/), State_VIB(X_:Z_,1,iBlock))
+            end if
+         end do
+      end do
+    end subroutine get_origin_points
   end subroutine initialize
   !============================================================================
   subroutine finalize
@@ -311,9 +371,27 @@ contains
     use ModUtilities, ONLY: make_dir
     character(LEN=*),parameter:: NameSub='SP:check'
     !---------------------------------------------------------------------
+    if(.not.IsStandAlone)then
+       ! check if the domains for SC and IH are correctly set
+       if(RMin < 0.0.or. RBufferMin < 0.0 .or.RBufferMax < 0.0 .or.RMax < 0.0)&
+            call CON_stop(NameSub//&
+            ': RScMin, RScMax, RIhMin, RIhMax must be set to positive values')
+       if(any((/RMax, RBufferMax/) < RBufferMin) .or. RMax < RBufferMax)&
+            call CON_stop(NameSub//&
+           ': inconsistent values of RBufferMin, RBufferMax, RMax')
+       if(.not.(DoRestart.or.DoReadMhData))then
+          ! check consistency of the origin point parameters
+          if(LonMax <= LonMin .or. LatMax <= LatMin)&
+               call CON_stop(NameSub//': Origin surface grid is inconsistent')
+          if(ROrigin <= RMin)call CON_stop(NameSub//&
+               ': ROrigin, if set, must be greater than RMin')
+          if(any((/RBufferMin, RBufferMax, RMax/) < ROrigin))&
+               call CON_stop(NameSub//&
+               ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
+       end if
+    end if
     ! Make output directory
     if(iProc==0) call make_dir(NamePlotDir)
-
     !\
     ! Initialize timing
     !/

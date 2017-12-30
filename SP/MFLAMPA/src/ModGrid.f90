@@ -25,20 +25,6 @@ module SP_ModGrid
   !\
   ! Grid info
   !/
-  !\
-  ! Grid size, boundaries, coordinates
-  ! Starting position of field lines in Rs
-  real         :: ROrigin = 2.5
-  ! Size of angular grid, latitude and longitude, at origin 
-  ! surface R=ROrigin
-  real         :: LonMin = 0.0, LonMax = cTwoPi 
-  real         :: LatMin = -0.50*cPi, LatMax = 0.50*cPi
-  !Sell size on the origin surface, per line
-  real         ::  DLon, DLat
-  ! Lower/Upper boundary of the domain in Rs
-  real, public :: RMin=-1.0, RMax = -1.0
-  ! Boundaries of the buffer layer between SC and IH Rs
-  real, public :: RBufferMin=-1.0, RBufferMax=-1.0
   ! Number of blocks on this processor
   integer, public              :: nBlock
   ! Number of particles per block (line):
@@ -163,110 +149,54 @@ module SP_ModGrid
        'Flux_GOES6', &
        'EFlux     '  /)
   !/
-  !Misc
-  ! Mark that grid or lines' origin have been set
-  logical:: IsSetGrid   = .false.
-  logical:: IsSetOrigin = .false.
   logical:: DoInit = .true.
 contains  
+  !================================================================
   subroutine read_param(NameCommand)
     use ModReadParam, ONLY: read_var
-    use ModNumConst, ONLY : cDegToRad
     character(len=*), intent(in):: NameCommand ! From PARAM.in  
     !Misc
     integer :: nParticleCheck, nLonCheck, nLatCheck
     character(len=*), parameter :: NameSub = 'SP:set_grid_param'
-    !--------------------------------------------------------------------------
+    !--------------------------------------------------------------
     select case(NameCommand)
-    case('#ORIGIN')
-       call read_var('ROrigin', ROrigin)
-       call read_var('LonMin', LonMin)
-       call read_var('LatMin', LatMin)
-       call read_var('LonMax', LonMax)
-       call read_var('LatMax', LatMax)
-
-       ! check consistency
-       if(LonMax <= LonMin .or. LatMax <= LatMin)&
-            call CON_stop(NameSub//': Origin surface grid is inconsistent')
-       if(ROrigin < 0.0)&
-            call CON_stop(NameSub//&
-            ': ROrigin, if set, must have a positive values')
-       if(any((/RBufferMin, RBufferMax, RMax/) < ROrigin) .and. IsSetGrid)&
-            call CON_stop(NameSub//&
-            ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
-
-       ! convert angels from degrees to radians
-       LonMax = LonMax*cDegToRad
-       LonMin = LonMin*cDegToRad
-       ! angular grid's step
-       DLon = (LonMax - LonMin) / nLon
-
-       ! convert angels from degrees to radians
-       LatMax = LatMax*cDegToRad
-       LatMin = LatMin*cDegToRad
-       ! angular grid's step
-       DLat = (LatMax - LatMin)/nLat
-
-       IsSetOrigin = .true.
-    case('#GRID')
-       call read_var('RMin',RMin)
-       call read_var('RBufferMin', RBufferMin)
-       call read_var('RBufferMax', RBufferMax)
-       call read_var('RMax',RMax)
-       ! check consistency
-       if(RBufferMin < 0.0 .or.RBufferMax < 0.0 .or.RMax < 0.0)&
-            call CON_stop(NameSub//&
-            ': RBufferMin, RBufferMax, RMax must be set to positive values')
-       if(any((/RMax, RBufferMax/) < RBufferMin) .or. RMax < RBufferMax .or. &
-            any((/RBufferMin, RBufferMax, RMax/) < ROrigin) .and. IsSetOrigin)&
-            call CON_stop(NameSub//&
-            ': inconsistent values of ROrigin, RBufferMin, RBufferMax, RMax')
-       IsSetGrid = .true.
-       case('#CHECKGRIDSIZE')
-          call read_var('nParticleMax',nParticleCheck)
-          call read_var('nLon',     nLonCheck)
-          call read_var('nLat',     nLatCheck)
-          if(iProc==0.and.any(&
-               (/nParticleMax,     nLon,     nLat/) /= &
-               (/nParticleCheck,nLonCheck,nLatCheck/)))then
-             write(*,*)'Code is compiled with nParticleMax,nLon,nLat=',&
-                  (/nParticleMax, nLon, nLat/)
-             call CON_stop(&
-                  'Change nParticle,nLon,nLat with Config.pl -g & recompile!')
-          end if
-       case('#COORDSYSTEM','#COORDINATESYSTEM')
-          call read_var('TypeCoordSystem',TypeCoordSystem,IsUpperCase=.true.)
-       case default
-          call CON_stop(NameSub//' Unknown command '//NameCommand)
+    case('#CHECKGRIDSIZE')
+       call read_var('nParticleMax',nParticleCheck)
+       call read_var('nLon',     nLonCheck)
+       call read_var('nLat',     nLatCheck)
+       if(iProc==0.and.any(&
+            (/nParticleMax,     nLon,     nLat/) /= &
+            (/nParticleCheck,nLonCheck,nLatCheck/)))then
+          write(*,*)&
+               'Code is compiled with nParticleMax,nLon,nLat=',&
+               (/nParticleMax, nLon, nLat/)
+          call CON_stop(&
+               'Change nParticle,nLon,nLat with Config.pl -g ')
+       end if
+    case('#COORDSYSTEM','#COORDINATESYSTEM')
+       call read_var('TypeCoordSystem', TypeCoordSystem, &
+            IsUpperCase=.true.)
+    case default
+       call CON_stop(NameSub//' Unknown command '//NameCommand)
     end select
   end subroutine read_param
-  !==========================================================================
-  subroutine init(DoReadInput)
+  !===============================================================
+  subroutine init
     ! allocate the grid used in this model
     use ModUtilities,      ONLY: check_allocate
-    use ModCoordTransform, ONLY: rlonlat_to_xyz
     use SP_ModProc,        ONLY: nProc
 
-    logical, intent(in):: DoReadInput
     integer:: iError
     integer:: iLat, iLon, iNode, iBlock, iProcNode, iParticle
     character(LEN=*),parameter:: NameSub='SP:init_grid'
-    !-------------------------------------------------------------------------
+    !-------------------------------------------------------------
     if(.not.DoInit)RETURN
     DoInit = .false.
     !\
-    ! Check if everything's ready for initialization
-    !/
-    if(.not.IsSetGrid)&
-         call CON_stop(NameSub//': grid is not set in PARAM.in file')
-    if(.not.IsSetOrigin .and. .not. DoReadInput)&
-         call CON_stop(NameSub//": neither lines' origin is set, "//&
-         "nor input files are provided; change PARAM.in file!!!")
-    !\
     ! distribute nodes between processors
     !/
-    if(nNode < nProc)&
-         call CON_stop(NameSub//': There are more processors than field lines')
+    if(nNode < nProc)call CON_stop(NameSub//&
+         ': There are more processors than field lines')
     nBlock = ((iProc+1)*nNode) / nProc - (iProc*nNode) / nProc
     !\
     ! check consistency
@@ -304,7 +234,7 @@ contains
           iProcNode = ceiling(real(iNode*nProc)/nNode) - 1
           if(iProcNode==iProc)then
              iNode_B(     iBlock) = iNode
-             nParticle_B( iBlock) = 1
+             nParticle_B( iBlock) = 0
              iShock_IB(:, iBlock) = NoShock_
           end if
           iGridGlobal_IA(Proc_,   iNode)  = iProcNode
@@ -328,27 +258,8 @@ contains
     do iParticle = 1, nParticleMax
        State_VIB(LagrID_, iParticle, 1:nBlock) = real(iParticle)
     end do
-
-    if(DoReadInput)then
-       if(IsSetOrigin)&
-            write(*,*)NameSub//": input files are provided, "//&
-            "but lines' origin is set in PARAM.in. "//&
-            "The latter will be IGNORED!!!"
-       RETURN
-    end if
-    
-    do iLat = 1, nLat
-       do iLon = 1, nLon
-          iNode = iNode_II(iLon, iLat)
-          iBlock = iGridGlobal_IA(Block_, iNode)
-          if(iProc == iGridGlobal_IA(Proc_, iNode))then
-             call rlonlat_to_xyz((/ROrigin, LonMin + (iLon - 0.5)*DLon, &
-                  LatMin + (iLat - 0.5)*DLat/), State_VIB(X_:Z_,1,iBlock))
-          end if
-       end do
-    end do
   end subroutine init
-  !============================================================================
+  !================================================================
   subroutine get_node_indexes(iNodeIn, iLonOut, iLatOut)
     ! return angular grid's indexes corresponding to this node
     integer, intent(in) :: iNodeIn
@@ -372,7 +283,7 @@ contains
        State_VIB(1:nMHData,1:iEnd, iBlock) = 0.0
     end do
   end subroutine copy_old_state
-  !===================
+  !================================================================
   subroutine get_other_state_var
     integer:: iBlock, iParticle, iEnd
     !---------------------------------------------------------
