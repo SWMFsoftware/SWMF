@@ -1,40 +1,234 @@
 <!-- The syntax is described by share/Scripts/CheckParam.pl and the manual -->
 
 <commandList name="MFLAMPA: SP Component">
+<set name="NameComp"          type="string" value="$SP"/>
+<set name="NameRestartOutDir" type="string" value="$NameComp/restartOUT"/>
+<set name="NamePlotDir"       type="string" value="$NameComp/IO2"/>
 
-List of SP commands used in the PARAM.in file
+List of commands used in the PARAM.in file for MFLAMPA configured as the SP 
+component of the SWMF.
+<command name="COMPDOMAINS">
+	<parameter name="RMin" type="real" min="-1" default="-1" />
+	<parameter name="RBufferMin"  type="real" min="-1" default="-1" />
+	<parameter name="RBufferMax"  type="real" min="-1" default="-1" />
+	<parameter name="RMax"  type="real" min="-1" default="-1" />
+Sets the ranges of helecentric distances for domains in SC and IH exchanging
+data with SP.
 
-<commandgroup name="GRID">
+#COMPDOMAINS
+1.15            RScMin [Rs]
+19.0            RIhMin [Rs]
+21.0            RScMax [Rs]
+220.0           RIHMax [Rs]
+
+</command>
 
 <command name="ORIGIN">
-	<parameter name="ROrigin" type="real" default="2.5" />
-	<parameter name="LonMin"  type="real" default="0.0" />
-	<parameter name="LatMin"  type="real" default="-1.5708" />
-	<parameter name="LonMax"  type="real" default="6.2832" />
-	<parameter name="LatMax"  type="real" default="1.5708" />
+	<parameter name="ROrigin" type="real" min="1" default="2.5"/>
+	<parameter name="LonMin"  type="real" min="0" max="359" default="0"/>
+	<parameter name="LatMin"  type="real" min="-90" max="89" default="-70"/>
+	<parameter name="LonMax"  type="real" min="1" max="360" default="360"/>
+	<parameter name="LatMax"  type="real" min="-89" max="90" default="70"/>
 
+Origin points on the surface R=ROrigin in the intervals of longitude,
+(LonMin,LonMax) and latitude, (LatMin,LatMax). Originating from these
+points are the magnetic field lines traced down from ROrigin to RScMin
+and up from ROrigin to RIhMax. 
+ 
 #ORIGIN
-2.5            ROrigin
-0.0             LonMin
--70.0           LatMin
-360.0           LonMax
-70.0            LatMax
+2.5            ROrigin [Rs]
+0.0             LonMin [deg]
+-70.0           LatMin [deg]
+360.0           LonMax [deg]
+70.0            LatMax [deg]
+
+</command>
+commandgroup name="STAND ALONE MODE">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+<command name="DESCRIPTION" if="$_IsStandAlone">
+	<parameter name="StringDescription" type="string" length="100" />
+
+#DESCRIPTION
+This is a test run for coupled MFLAMPA-SC-IH
+
+This command is only used in the stand alone mode.
+
+The StringDescription string can be used to describe the simulation
+for which the parameter file is written. The #DESCRIPTION command and
+the StringDescription string are saved into the restart file,
+which helps in identifying the restart files.
+
+The default value is ``Please describe me!", which is self explanatory.
+</command>
+
+<command name="BEGIN_COMP" multiple="T" if="$_IsStandAlone">
+
+This command is allowed in stand alone mode only for the sake of the 
+test suite, which contains these commands when the framework is tested.
+</command>
+
+<command name="END_COMP" multiple="T" if="$_IsStandAlone">
+
+This command is allowed in stand alone mode only for the sake of the 
+test suite, which contains these commands when the framework is tested.
+</command>
+
+<command name="RUN" if="$_IsStandAlone">
+
+#RUN
+
+This command is only used in stand alone mode.
+
+The #RUN command does not have any parameters. It signals the end
+of the current session, and makes BATSRUS execute the session with
+the current set of parameters. The parameters for the next session
+start after the #RUN command. For the last session there is no
+need to use the #RUN command, since the #END command or simply
+the end of the PARAM.in file makes BATSRUS execute the last session.
+</command>
+
+<command name="END">
+
+#END
+
+The #END command signals the end of the included file or the
+end of the PARAM.in file. Lines following the #END command are
+ignored. It is not required to use the #END command. The end
+of the included file or PARAM.in file is equivalent with an 
+#END command in the last line.
+</command>
+
+</commandgroup>
+<commandgroup name="STOPPING CRITERIA">
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!! STOPPING CRITERIA !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+The commands in this group only work in stand alone mode.
+
+<command name="STOP" if="$_IsStandAlone">
+	<parameter name="nIterMax" type="integer" min="-1" default="-1" />
+	<parameter name="TimeMax" type="real"  min="-1" default="-1" />
+
+#STOP
+-1			nIterMax
+600.0			TimeMax [sec]
+
+This command is only used in stand alone mode.
+
+The MaxIteration variable contains the
+maximum number of iterations {\it since the beginning of the current run}
+(in case of a restart, the time steps done before the restart do not count).
+If nIteration reaches this value the session is finished.
+The tSimulationMax variable contains the maximum simulation time
+relative to the initial time determined by the #STARTTIME command.
+If tSimulation reaches this value the session is finished.
+
+Using a negative value for either variables means that the
+corresponding condition is  not checked. 
+
+Either the #STOP or the #ENDTIME command must be used in every session.
+</command>
+
+<command name="ENDTIME" if="$_IsStandAlone">
+	<parameter name="iYear"   type="integer" default="2000" />
+	<parameter name="iMonth"  type="integer" min="1" max="12" default="3"/>
+	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
+	<parameter name="iHour"   type="integer" min="0" max="23" default="0"/>
+	<parameter name="iMinute" type="integer" min="0" max="59" default="0"/>
+	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
+
+#ENDTIME
+2000			iYear
+   3			iMonth
+  22			iDay
+  10			iHour
+  45			iMinute
+   0			iSecond
+
+This command can only be used in time accurate mode and in the final session.
+
+The #ENDTIME command sets the date and time in Greenwich Mean Time
+(GMT) or Universal Time (UT) when the simulation should be ended.
+This is an alternative to the #STOP command in the final session.
+This time is stored in the final restart file as the start time for
+the restarted run, and the tSimulation parameter of the #TIMESIMULATION 
+and the nStep parameter of the #NSTEP commands are set to zero.
+This avoids accumulation of tSimulation or nStep for continuously
+restarted runs.
+
+There is no default value.
+</command>
+
+<command name="CHECKSTOPFILE" if="$_IsStandAlone">
+	<parameter name="DoCheckStopFile" type="logical" default="T" />
+
+#CHECKSTOPFILE
+T			DoCheckStopFile
+
+This command is only used in stand alone mode.
+
+If DoCheckStopFile is true then the code checks if the
+BATSRUS.STOP file exists in the run directory. This file is deleted at
+the beginning of the run, so the user must explicitly create the file
+with e.g. the "touch BATSRUS.STOP" UNIX command.
+If the file is found in the run directory,
+the execution stops in a graceful manner.
+Restart files and plot files are saved as required by the
+appropriate parameters.
+
+The default is DoCheckStopFile=.true.
+</command>
+
+<command name="CPUTIMEMAX" if="$_IsStandAlone">
+	<parameter name="CpuTimeMax" type="real" min="-1" default="-1" />
+
+#CPUTIMEMAX
+3600                    CpuTimeMax [sec]
+
+This command is only used in stand alone mode.
+
+The CpuTimeMax variable contains the maximum allowed CPU time (wall clock
+time) for the execution of the current run. If the CPU time reaches
+this time, the execution stops in a graceful manner.
+Restart files and plot files are saved as required by the
+appropriate parameters.
+This command is very useful when the code is submitted to a batch
+queue with a limited wall clock time.
+
+The default value is -1.0, which means that the CPU time is not checked.
+To do the check the CpuTimeMax variable has to be set to a positive value.
+</command>
+</commandgroup>
+
+
+<commandgroup name="GRID">
+Parameters of the Lagrangian grid used in MFLAMPA 
+<command name="CHECKGRIDSIZE">
+	<parameter name="nParticleMax" type="integer" default="2000" />
+	<parameter name="nLon"  type="integer" default="20" />
+	<parameter name="nLat"  type="integer" default="20" />
+Check if the configured parameters of the Lagrangian grid match those
+assumed in the input files
+
+#CHECKGRIDSIZE
+ 2000     nParticleMax
+   20     nLon
+   20     nLat
+</command>
+
+<command name="COORDSYSTEM">
+	<parameter name="TypeCoordSystem" type="string" default="HGR" />
+Type of heliocentric coordinate system used in MFLAMPA (HGI, HGR, HGC).
+
+#COORDSYSTEM
+HGR       TypeCoordSystem
 
 </command>
 
-<command name="GRID">
-	<parameter name="RMin" type="real" default="-1.0" />
-	<parameter name="RBufferMin"  type="real" default="-1.0" />
-	<parameter name="RBufferMax"  type="real" default="-1.0" />
-	<parameter name="RMax"  type="real" default="-1.0" />
-
-#GRID
-1.15              RMin
-19.0        RBufferMin
-21.0        RBufferMax
-220.0             RMax
-
-</command>
 
 </commandgroup>
 
