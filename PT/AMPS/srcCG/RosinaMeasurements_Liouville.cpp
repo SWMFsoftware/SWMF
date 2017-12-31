@@ -390,7 +390,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
                   A=SourceRate*pow(beta,3)/(Pi*sqrtPi);
-                  tNudeGaugeDensity+=1.0/(2.0*pow(r,2)*pow(beta,2))  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
+                  tNudeGaugeDensity+=A*1.0/(2.0*pow(r,2)*pow(beta,2))  *   (1.0+NudeGaugeDensitySinCorrectionFactor*sinLineOfSightAngle);
                   break;
 
                 default:
@@ -424,7 +424,7 @@ void RosinaSample::Liouville::EvaluateLocation(int spec,double& OriginalSourceRa
 
                 case _ROSINA_SAMPLE__LIOUVILLE__VECOLITY_DISTRIBUTION_MODE__VELOCITY_MAXWELLIAN_:
                   A=SourceRate*pow(beta,3)/(Pi*sqrtPi);
-                  tRamGaugeFlux+=sqrtPi/(4.0*pow(r,2)*pow(beta,3)) * pow(cosLineOfSightAngle,2);
+                  tRamGaugeFlux+=A*sqrtPi/(4.0*pow(r,2)*pow(beta,3)) * pow(cosLineOfSightAngle,2);
                   break;
 
                 default:
@@ -742,7 +742,9 @@ void RosinaSample::Liouville::Evaluate() {
     bool FluxCorrectionFlag=false;
 
  
-    if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_OFF_) FluxCorrectionFlag=false; 
+    if (_PIC_NIGHTLY_TEST_MODE_==_PIC_MODE_ON_) FluxCorrectionFlag=false; 
+
+//    FluxCorrectionFlag=false;
 
     if (FluxCorrectionFlag==true) { //(false) {
       static bool InitFlag=false;
@@ -756,39 +758,57 @@ void RosinaSample::Liouville::Evaluate() {
 
         class cCorectionEntry {
         public:
-          double refMax,refMean,refMin;
-          double *refData;
+          double MaxRG[_TOTAL_SPECIES_NUMBER_],MeanRG[_TOTAL_SPECIES_NUMBER_],MinRG[_TOTAL_SPECIES_NUMBER_];
+          double MaxNG[_TOTAL_SPECIES_NUMBER_],MeanNG[_TOTAL_SPECIES_NUMBER_],MinNG[_TOTAL_SPECIES_NUMBER_];
+          double **RG,**NG;
 
           void Set(const char *fname) {
             FILE *fRef=fopen(fname,"r");
 
-            refData=new double [CutCell::nBoundaryTriangleFaces];
-            fread(refData,CutCell::nBoundaryTriangleFaces,sizeof(double),fRef);
+            NG=new double* [PIC::nTotalSpecies];
+            RG=new double* [PIC::nTotalSpecies];
 
-            refMax=refData[0];
-            refMin=refData[0];
-            refMean=0.0;
+            for (int spec=0;spec<PIC::nTotalSpecies;spec++) { 
+              RG[spec]=new double [CutCell::nBoundaryTriangleFaces];
+              NG[spec]=new double [CutCell::nBoundaryTriangleFaces];
 
-            for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
-              if (refMax<refData[iface]) refMax=refData[iface];
-              if (refMin>refData[iface]) refMin=refData[iface];
-              refMean+=refData[iface];
+              fread(RG[spec],sizeof(double),CutCell::nBoundaryTriangleFaces,fRef);
+              fread(NG[spec],sizeof(double),CutCell::nBoundaryTriangleFaces,fRef);
+
+              MaxRG[spec]=RG[spec][0];
+              MinRG[spec]=RG[spec][0];
+              MeanRG[spec]=0.0;
+
+              MaxNG[spec]=NG[spec][0];
+              MinNG[spec]=NG[spec][0];
+              MeanNG[spec]=0.0;
+
+              for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+                if (MaxRG[spec]<RG[spec][iface]) MaxRG[spec]=RG[spec][iface];
+                if (MinRG[spec]>RG[spec][iface]) MinRG[spec]=RG[spec][iface];
+                MeanRG[spec]+=RG[spec][iface];
+
+                if (MaxNG[spec]<NG[spec][iface]) MaxNG[spec]=NG[spec][iface];
+                if (MinNG[spec]>NG[spec][iface]) MinNG[spec]=NG[spec][iface];
+                MeanNG[spec]+=NG[spec][iface];
+              }
+
+              MeanRG[spec]/=CutCell::nBoundaryTriangleFaces;
+              MeanNG[spec]/=CutCell::nBoundaryTriangleFaces;
+
             }
 
-            refMean/=CutCell::nBoundaryTriangleFaces;
-
-            std::cout << std::endl << "Ref Data File=" << fname << ", refMin=" << refMin << ", refMean=" << refMean << ", refMax=" << refMax << std::endl << std::flush;
             fclose(fRef);
           }
 
           cCorectionEntry() {
-            refMax=-1.0,refMin=-1.0,refMean=-1.0;
-            refData=NULL;
+//            refMax=-1.0,refMin=-1.0,refMean=-1.0;
+//            refData=NULL;
           }
 
           cCorectionEntry(const char* fname) {
-            refMax=-1.0,refMin=-1.0,refMean=-1.0;
-            refData=NULL;
+//            refMax=-1.0,refMin=-1.0,refMean=-1.0;
+//            refData=NULL;
 
             Set(fname);
           }
@@ -802,6 +822,7 @@ void RosinaSample::Liouville::Evaluate() {
         double RefMultiplier=0.5;
 
         //open the reference files
+/*
        cCorectionEntry p1046spec0("NudeGaugeDensityContribution.spec=0.iPoint=1046.bin");
        cCorectionEntry p1058spec0("NudeGaugeDensityContribution.spec=0.iPoint=1058.bin");
        cCorectionEntry p948spec0("NudeGaugeDensityContribution.spec=0.iPoint=948.bin");
@@ -815,15 +836,35 @@ void RosinaSample::Liouville::Evaluate() {
        bool ApplyRefCorrection_p1028spec0=false;
        bool ApplyRefCorrection_p1028spec1=false;
        bool ApplyRefCorrection_p1043spec0=false;
+*/
+
+       bool ApplyRefCorrection_p1143=false;
+       bool ApplyRefCorrection_p1147=false;
+
+        cCorectionEntry p1143("CorrectionData.iPoint=1143.bin");
+        cCorectionEntry p1147("CorrectionData.iPoint=1147.bin");
+
 
         //create the correction mask table
         for (iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
           CorrectionMaskTable[iface]=1.0; //0.0001*ref3Mean*ref7Mean;
           //if (Reference7[iface]*Reference5[iface]>ref5Mean*ref7Mean) CorrectionMaskTable[iface]*=Reference7[iface]*Reference3[iface];
 
-          if (ApplyRefCorrection_p1028spec0==true) {
-            if ( (p1028spec0.refData[iface]/p1028spec0.refMax>5.0E-2) && (p1043spec0.refData[iface]/p1043spec0.refMax<1.0E-1) )  CorrectionMaskTable[iface]/=2.0E0;
+          if (ApplyRefCorrection_p1143==true) {
+            if (p1143.NG[0][iface]/p1143.MaxNG[0]>10.0*p1143.RG[0][iface]/p1143.MaxRG[0])  CorrectionMaskTable[iface]*=1.0E1;
+
+//printf("EEEEEE\n");
+
+//            if ( (p1143.NG[0][iface]/p1143.MaxNG[0]>5.0E-5)  )  CorrectionMaskTable[iface]*=2.0E1;
+
+
           }
+
+          if (ApplyRefCorrection_p1147==true) {
+           // if (p1147.NG[0][iface]/p1147.MaxNG[0]>p1143.NG[0][iface]/p1143.MaxNG[0]) CorrectionMaskTable[iface]*=8.0; 
+           if (p1147.NG[0][iface]>0.4*p1147.MaxNG[0]) CorrectionMaskTable[iface]*=40.0;
+          }
+    
 
           //if (Reference3[iface]>0.0) CorrectionMaskTable[iface]*=Reference3[iface]/ref3Max;
           //if (Reference7[iface]/ref7Max>8.0E-1) CorrectionMaskTable[iface]*=2.0;
@@ -1161,6 +1202,38 @@ void RosinaSample::Liouville::Evaluate() {
       delete [] tAllRG;
       delete [] VisibilityFlagNG;
       delete [] VisibilityFlagRG;
+
+
+
+      //save output file containing the contribution to the ram and nude guage measurements for each species 
+      FILE *fout;
+      double *NG=new double [CutCell::nBoundaryTriangleFaces];
+      double *RG=new double [CutCell::nBoundaryTriangleFaces];
+      double *buffer=new double [CutCell::nBoundaryTriangleFaces];
+
+      if (PIC::ThisThread==0) {
+        sprintf(fname,"%s/CorrectionData.iPoint=%i.bin",PIC::OutputDataFileDirectory,iPoint);
+        fout=fopen(fname,"w");
+      }
+
+      for (int spec=0;spec<PIC::nTotalSpecies;spec++) {
+        for (int iface=0;iface<CutCell::nBoundaryTriangleFaces;iface++) {
+          RG[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.RamGaugeFluxContribution[spec];
+          NG[iface]=CutCell::BoundaryTriangleFaces[iface].UserData.NudeGaugeDensityContribution[spec];
+        }
+
+        MPI_Reduce(RG,buffer,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+        if (PIC::ThisThread==0) fwrite(buffer,sizeof(double),CutCell::nBoundaryTriangleFaces,fout);
+
+        MPI_Reduce(NG,buffer,CutCell::nBoundaryTriangleFaces,MPI_DOUBLE,MPI_SUM,0,MPI_GLOBAL_COMMUNICATOR);
+        if (PIC::ThisThread==0) fwrite(buffer,sizeof(double),CutCell::nBoundaryTriangleFaces,fout);
+      }
+
+      delete [] NG;
+      delete [] RG;
+      delete [] buffer;
+
+      if (PIC::ThisThread==0) fclose(fout);
 
       //output surface data file
       sprintf(fname,"%s/SurfaceContributionParameters.iPoint=%i.dat",PIC::OutputDataFileDirectory,iPoint);
