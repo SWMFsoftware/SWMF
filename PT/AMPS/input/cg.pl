@@ -390,6 +390,7 @@ while ($line=<InputFile>) {
           
           if ($InputLine eq "ON") {
             $mode="true";
+            ampsConfigLib::ChangeValueOfVariable("bool FluxCorrectionFlag","true","main/RosinaMeasurements_Liouville.cpp");
           }  
           else {
             $mode="false";
