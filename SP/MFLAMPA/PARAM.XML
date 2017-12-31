@@ -43,25 +43,34 @@ and up from ROrigin to RIhMax.
 70.0            LatMax [deg]
 
 </command>
-commandgroup name="STAND ALONE MODE">
+<commandgroup name="STAND ALONE MODE">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!! STAND ALONE PARAMETERS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-<command name="DESCRIPTION" if="$_IsStandAlone">
-	<parameter name="StringDescription" type="string" length="100" />
 
-#DESCRIPTION
-This is a test run for coupled MFLAMPA-SC-IH
+<command name="STARTTIME" alias="SETREALTIME" if="$_IsStandAlone">
+	<parameter name="iYear"   type="integer" default="2000" />
+	<parameter name="iMonth"  type="integer" min="1" max="12" default="3"/>
+	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
+	<parameter name="iHour"   type="integer" min="0" max="23" default="10"/>
+	<parameter name="iMinute" type="integer" min="0" max="59" default="45"/>
+	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
 
-This command is only used in the stand alone mode.
+#STARTTIME
+2000			iYear
+   3			iMonth
+  22			iDay
+  10			iHour
+  45			iMinute
+   0			iSecond
 
-The StringDescription string can be used to describe the simulation
-for which the parameter file is written. The #DESCRIPTION command and
-the StringDescription string are saved into the restart file,
-which helps in identifying the restart files.
+This command can only be used in the first session.
 
-The default value is ``Please describe me!", which is self explanatory.
+The #STARTTIME command sets the date and time in Greenwich Mean Time
+(GMT) or Universal Time (UT) when the simulation starts.
+
+There is no default value.
 </command>
 
 <command name="BEGIN_COMP" multiple="T" if="$_IsStandAlone">
@@ -119,49 +128,20 @@ The commands in this group only work in stand alone mode.
 
 This command is only used in stand alone mode.
 
-The MaxIteration variable contains the
+The nIterMax variable contains the
 maximum number of iterations {\it since the beginning of the current run}
 (in case of a restart, the time steps done before the restart do not count).
 If nIteration reaches this value the session is finished.
-The tSimulationMax variable contains the maximum simulation time
+The TimeMax variable contains the maximum simulation time
 relative to the initial time determined by the #STARTTIME command.
 If tSimulation reaches this value the session is finished.
 
 Using a negative value for either variables means that the
 corresponding condition is  not checked. 
 
-Either the #STOP or the #ENDTIME command must be used in every session.
+The #STOP command must be used in every session.
 </command>
 
-<command name="ENDTIME" if="$_IsStandAlone">
-	<parameter name="iYear"   type="integer" default="2000" />
-	<parameter name="iMonth"  type="integer" min="1" max="12" default="3"/>
-	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
-	<parameter name="iHour"   type="integer" min="0" max="23" default="0"/>
-	<parameter name="iMinute" type="integer" min="0" max="59" default="0"/>
-	<parameter name="iSecond" type="integer" min="0" max="59" default="0"/>
-
-#ENDTIME
-2000			iYear
-   3			iMonth
-  22			iDay
-  10			iHour
-  45			iMinute
-   0			iSecond
-
-This command can only be used in time accurate mode and in the final session.
-
-The #ENDTIME command sets the date and time in Greenwich Mean Time
-(GMT) or Universal Time (UT) when the simulation should be ended.
-This is an alternative to the #STOP command in the final session.
-This time is stored in the final restart file as the start time for
-the restarted run, and the tSimulation parameter of the #TIMESIMULATION 
-and the nStep parameter of the #NSTEP commands are set to zero.
-This avoids accumulation of tSimulation or nStep for continuously
-restarted runs.
-
-There is no default value.
-</command>
 
 <command name="CHECKSTOPFILE" if="$_IsStandAlone">
 	<parameter name="DoCheckStopFile" type="logical" default="T" />
@@ -215,20 +195,46 @@ Check if the configured parameters of the Lagrangian grid match those
 assumed in the input files
 
 #CHECKGRIDSIZE
- 2000     nParticleMax
-   20     nLon
-   20     nLat
+ 1000     nParticleMax
+    4     nLon
+    4     nLat
 </command>
 
-<command name="COORDSYSTEM">
-	<parameter name="TypeCoordSystem" type="string" default="HGR" />
+<command name="COORDSYSTEM" alias="COORDINATESYSTEM" if="$_IsFirstSession">
+	<parameter name="TypeCoordSystem" type="string" input="select"/>
+		<option name="HGR" default="T"/>
+		<option name="HGI"/>
+		<option name="HGC"/>
+
 Type of heliocentric coordinate system used in MFLAMPA (HGI, HGR, HGC).
 
 #COORDSYSTEM
-HGR       TypeCoordSystem
+HGI       TypeCoordSystem
+
+</command>
+</commandgroup>
+</commandgroup>
+
+<commandgroup name="ADVANCE">
+
+<command name="INJECTION">
+	<parameter name="CInj" type="real" default="1.0" />
+	<parameter name="SpectralIndex" type="real" default="5.0" />
+
+#INJECTION
+5.0     SpectralIndex
+1.0     Efficency
 
 </command>
 
+<command name="CFL">
+	<parameter name="Cfl" type="real" default="1.0" />
+
+#CFL
+1.0     Cfl
+
+</command>
+	
 
 </commandgroup>
 
@@ -328,8 +334,6 @@ The #STOP command sets the stopping condition for the SP during standalone
 execution. Tmax sets the stop time in timeaccurate mode. and MaxStep sets the 
 maximum number of iterations for non-timeaccurate mode.
 </command>
-
-
 
 </commandgroup>
 

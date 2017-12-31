@@ -171,8 +171,6 @@ contains
        case('#CHECKSTOPFILE')
           call check_stand_alone
           call read_var('UseStopFile',UseStopFile)
-       case('#DESCRIPTION')
-          call check_stand_alone
        case('#ECHO')
           call check_stand_alone
           call read_var('DoEcho', DoEcho)
@@ -390,6 +388,9 @@ contains
                call CON_stop(NameSub//&
                ': inconsistent values of ROrigin, RIhMin, RScMax, RIhMax')
        end if
+    else
+       if(DoRestart)call CON_stop(NameSub//&
+            'Restart save/read are not implemented for the stand-alone mode')
     end if
     ! Make output directory
     if(iProc==0) call make_dir(NamePlotDir)

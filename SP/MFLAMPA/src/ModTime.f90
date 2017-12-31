@@ -73,7 +73,7 @@ contains
        case('#NSTEP')
           call read_var('nStep',iIter)
        case('#TIMESIMULATION')
-          call read_var('tSimulation',SPTime)
+          call read_var('SPTime',SPTime)
           !The last time input occurred the same time
           DataInputTime = SPTime
        case("#STARTTIME", "#SETREALTIME")
