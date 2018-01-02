@@ -615,7 +615,7 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
-Name=test/Periodic-BC@@(0+valeriy)  
+Name=test/Periodic-BC  
 Time=6
 
 Check=
@@ -650,28 +650,28 @@ Check=
 
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test0-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test0-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-test=0-wave.diff
+>>>output/test_Periodic-BC/test0-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-test=0-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test1-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test1-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-test=1-wave.diff
+>>>output/test_Periodic-BC/test1-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-test=1-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test2-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test2-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-test=2-wave.diff
+>>>output/test_Periodic-BC/test2-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-test=2-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test3-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test3-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-test=3-wave.diff
+>>>output/test_Periodic-BC/test3-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-test=3-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test0-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test0-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-test=0-wave.diff
+>>>output/test_Periodic-BC/test0-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-test=0-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test1-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test1-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-test=1-wave.diff
+>>>output/test_Periodic-BC/test1-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-test=1-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test2-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test2-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-test=2-wave.diff
+>>>output/test_Periodic-BC/test2-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-test=2-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/test3-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC/test3-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-test=3-wave.diff
+>>>output/test_Periodic-BC/test3-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-test=3-wave.diff
 
 >>>@ls -l test_Periodic-BC-test=0-wave.diff
 >>>@ls -l test_Periodic-BC-test=1-wave.diff
@@ -679,7 +679,7 @@ Check=
 >>>@ls -l test_Periodic-BC-test=3-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BCDIR}/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.dat  \
->>>output/test_Periodic-BC/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC--particle.diff
+>>>output/test_Periodic-BC/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BCDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC--particle.diff
 >>>@ls -l test_Periodic-BC--particle.diff
 
 >>>@cat test_Periodic-BC-test=0-wave.diff test_Periodic-BC-test=1-wave.diff test_Periodic-BC-test=2-wave.diff test_Periodic-BC-test=3-wave.diff test_Periodic-BC--particle.diff > test_Periodic-BC.diff 
@@ -689,7 +689,7 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
-Name=test/Periodic-BC-NonUniform@@(0+valeriy)  
+Name=test/Periodic-BC-NonUniform  
 Time=6
 
 Check=
@@ -724,28 +724,28 @@ Check=
 
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test0-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test0-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-NonUniform-test=0-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test0-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-NonUniform-test=0-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test1-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test1-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-NonUniform-test=1-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test1-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-NonUniform-test=1-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test2-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test2-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-NonUniform-test=2-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test2-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-NonUniform-test=2-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test3-wave-init-updated.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test3-wave-init-updated.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-NonUniform-test=3-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test3-wave-init-updated.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-NonUniform-test=3-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test0-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test0-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-NonUniform-test=0-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test0-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-NonUniform-test=0-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test1-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test1-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-NonUniform-test=1-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test1-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-NonUniform-test=1-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test2-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test2-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-NonUniform-test=2-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test2-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-NonUniform-test=2-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/test3-wave50.dat.Reduced.Step=10.dat      \
->>>output/test_Periodic-BC-NonUniform/test3-wave50.dat.Reduced.Step=10.ref_np4  >> test_Periodic-BC-NonUniform-test=3-wave.diff
+>>>output/test_Periodic-BC-NonUniform/test3-wave50.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  >> test_Periodic-BC-NonUniform-test=3-wave.diff
 
 >>>@ls -l test_Periodic-BC-NonUniform-test=0-wave.diff
 >>>@ls -l test_Periodic-BC-NonUniform-test=1-wave.diff
@@ -753,7 +753,7 @@ Check=
 >>>@ls -l test_Periodic-BC-NonUniform-test=3-wave.diff
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTPeriodic-BC-NonUniformDIR}/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.dat  \
->>>output/test_Periodic-BC-NonUniform/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.ref_np4  > test_Periodic-BC-NonUniform--particle.diff
+>>>output/test_Periodic-BC-NonUniform/amps.TrajectoryTracking.out=19.s=0.H2O.dat.Reduced.Step=10.ref_np`ls ${TESTPeriodic-BC-NonUniformDIR}/PT/thread* |wc -l |tr -d ' '`  > test_Periodic-BC-NonUniform--particle.diff
 >>>@ls -l test_Periodic-BC-NonUniform--particle.diff
 
 >>>@cat test_Periodic-BC-NonUniform-test=0-wave.diff test_Periodic-BC-NonUniform-test=1-wave.diff test_Periodic-BC-NonUniform-test=2-wave.diff test_Periodic-BC-NonUniform-test=3-wave.diff test_Periodic-BC-NonUniform--particle.diff > test_Periodic-BC-NonUniform.diff
