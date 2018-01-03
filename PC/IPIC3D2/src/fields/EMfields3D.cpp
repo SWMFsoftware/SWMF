@@ -2707,9 +2707,9 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   if (get_col().getCase()=="GEM")       	fixBnGEM();
   if (get_col().getCase()=="GEMnoPert") 	fixBnGEM();
   if (get_col().getCase()=="GEMDoubleHarris") 	fixBnGEM();
-  #ifdef BATSRUS
+#ifdef BATSRUS
   if (get_col().getCase()=="BATSRUS")           fixB_BATSRUS();
-  #endif
+#endif
   
   // OpenBC:
   if (get_col().getCase()!="BATSRUS")
@@ -2725,13 +2725,6 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   scale(temp2Y, Jyh, -FourPI / c, nxn, nyn, nzn);
   scale(temp2Z, Jzh, -FourPI / c, nxn, nyn, nzn);
 
-  
-  /* -- dipole SOURCE version using J_ext,This is not initialized, causing program crash over 2048 processes
-  addscale(-FourPI/c,temp2X,Jx_ext,nxn,nyn,nzn);
-  addscale(-FourPI/c,temp2Y,Jy_ext,nxn,nyn,nzn);
-  addscale(-FourPI/c,temp2Z,Jz_ext,nxn,nyn,nzn);
-  // -- end of dipole SOURCE version using J_ext*/
-
   sum(temp2X, tempXN, nxn, nyn, nzn);
   sum(temp2Y, tempYN, nxn, nyn, nzn);
   sum(temp2Z, tempZN, nxn, nyn, nzn);
@@ -2739,15 +2732,16 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   scale(temp2Y, delt, nxn, nyn, nzn);
   scale(temp2Z, delt, nxn, nyn, nzn);
 
-
-  if (get_col().getuseGradRho()){
-    communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
-    grid->gradC2N(tempX, tempY, tempZ, rhoh);
   
-    scale(tempX, -delt * delt * FourPI, nxn, nyn, nzn);
-    scale(tempY, -delt * delt * FourPI, nxn, nyn, nzn);
-    scale(tempZ, -delt * delt * FourPI, nxn, nyn, nzn);
-  }
+  // -gradRhoRatio*delt*delt*grad(4pi*rhoh)---------
+  double gradRhoRatio = get_col().get_gradRhoRatio(); 
+  communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);
+  grid->gradC2N(tempX, tempY, tempZ, rhoh);      
+  scale(tempX, -delt * delt * FourPI * gradRhoRatio, nxn, nyn, nzn);
+  scale(tempY, -delt * delt * FourPI * gradRhoRatio, nxn, nyn, nzn);
+  scale(tempZ, -delt * delt * FourPI * gradRhoRatio, nxn, nyn, nzn);
+  //----------------------------
+
   // sum E, past values
   sum(tempX, Ex, nxn, nyn, nzn);
   sum(tempY, Ey, nxn, nyn, nzn);
@@ -2867,56 +2861,58 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   // move from krylov space to physical space
   solver2phys(vectX,vectY,vectZ,vector,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);  
   
-  #ifdef BATSRUS
+#ifdef BATSRUS
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(vectX,vectY,vectZ,doSolveForChange);
-  #endif
+#endif
 
   grid->lapN2N(imageX, vectX,this);
   grid->lapN2N(imageY, vectY,this);
   grid->lapN2N(imageZ, vectZ,this);
 
-  // scale delt*delt
-  scale(imageX, -delt * delt, nxn, nyn, nzn);
-  scale(imageY, -delt * delt, nxn, nyn, nzn);
-  scale(imageZ, -delt * delt, nxn, nyn, nzn);
+  // (-delt*delt - cDiff)*lap(E) --------------- (1)
+  double cDiff = get_col().get_cDiff()*0.5*dx*dx;
+  scale(imageX, -delt * delt - cDiff, nxn, nyn, nzn);
+  scale(imageY, -delt * delt - cDiff, nxn, nyn, nzn);
+  scale(imageZ, -delt * delt - cDiff, nxn, nyn, nzn);
+  //------------------------------------------------
 
   MUdot(Dx, Dy, Dz, vectX, vectY, vectZ);
 
+  double gradRhoRatio = col->get_gradRhoRatio();
 
-  if(col->getuseGradRho()){
-    grid->divN2C(divC, Dx, Dy, Dz);
-  
-    communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
+  // -delt*delt*gradRhoRatio*grad(div(D))--------- (2)
+  grid->divN2C(divC, Dx, Dy, Dz);  
+  communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
+  grid->gradC2N(tempX, tempY, tempZ, divC);
+  scale(tempX, -delt*delt*gradRhoRatio, nxn, nyn, nzn);
+  scale(tempY, -delt*delt*gradRhoRatio, nxn, nyn, nzn);
+  scale(tempZ, -delt*delt*gradRhoRatio, nxn, nyn, nzn);
+  sum(imageX, tempX, nxn, nyn, nzn);
+  sum(imageY, tempY, nxn, nyn, nzn);
+  sum(imageZ, tempZ, nxn, nyn, nzn);
+  //----------------------------------------------------------
 
-    grid->gradC2N(tempX, tempY, tempZ, divC);
-    
-    scale(tempX, -delt*delt, nxn, nyn, nzn);
-    scale(tempY, -delt*delt, nxn, nyn, nzn);
-    scale(tempZ, -delt*delt, nxn, nyn, nzn);
 
-    sum(imageX, tempX, nxn, nyn, nzn);
-    sum(imageY, tempY, nxn, nyn, nzn);
-    sum(imageZ, tempZ, nxn, nyn, nzn);
-  }else{
-    // Apply grad(div(E)) term.
-    grid->divN2C(divC, vectX, vectY, vectZ);    
-    communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
-    grid->gradC2N(tempX, tempY, tempZ, divC);
-    
-    scale(tempX, delt*delt, nxn, nyn, nzn);
-    scale(tempY, delt*delt, nxn, nyn, nzn);
-    scale(tempZ, delt*delt, nxn, nyn, nzn);
+  // delt*delt*(1-gradRhoRatio)*grad(div(E))--------- (3)
+  double coef = delt*delt*(1-gradRhoRatio);
+  grid->divN2C(divC, vectX, vectY, vectZ);    
+  communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
+  grid->gradC2N(tempX, tempY, tempZ, divC);    
+  scale(tempX, coef, nxn, nyn, nzn);
+  scale(tempY, coef, nxn, nyn, nzn);
+  scale(tempZ, coef, nxn, nyn, nzn);
+  sum(imageX, tempX, nxn, nyn, nzn);
+  sum(imageY, tempY, nxn, nyn, nzn);
+  sum(imageZ, tempZ, nxn, nyn, nzn);
+  //----------------------------------------
+   
 
-    sum(imageX, tempX, nxn, nyn, nzn);
-    sum(imageY, tempY, nxn, nyn, nzn);
-    sum(imageZ, tempZ, nxn, nyn, nzn);
- }
-
-  // -lap(E(n +theta)) - grad(div(mu dot E(n + theta)) + eps dot E(n + theta)
+  // (1)+(2)+(3)+D
   sum(imageX, Dx, nxn, nyn, nzn);
   sum(imageY, Dy, nxn, nyn, nzn);
   sum(imageZ, Dz, nxn, nyn, nzn);
 
+  // (1)+(2)+(3)+D+E
   sum(imageX, vectX, nxn, nyn, nzn);
   sum(imageY, vectY, nxn, nyn, nzn);
   sum(imageZ, vectZ, nxn, nyn, nzn);
@@ -3823,8 +3819,6 @@ void EMfields3D::calculateHatFunctions()
       sum(Jyh, Jysh, nxn, nyn, nzn, is);
       sum(Jzh, Jzsh, nxn, nyn, nzn, is);
     }
-
-
   }else{
     for (int is=0; is < ns; is++){
       grid->divSymmTensorN2C(tempXC, tempYC, tempZC, pXXsn, pXYsn, pXZsn, pYYsn, pYZsn, pZZsn, is);
@@ -7548,6 +7542,7 @@ void EMfields3D::print(void) const {
 EMfields3D::~EMfields3D() {
   delete [] qom;
   delete [] rhoINIT;
+  delete [] DriftSpecies;
   for(int i=0;i<sizeMomentsArray;i++) { delete moments10Array[i]; }
   for(int i=0;i<sizeMomentsArray;i++) { delete moments13Array[i]; }
   delete [] moments10Array;

@@ -204,10 +204,12 @@ class Collective
     bool testparticle_output_is_off()const;
     bool field_output_is_off()const;
 
-    bool getuseGradRho()const{return useGradRho;};
     bool getuseAccurateJ()const{return useAccurateJ;};
     bool getuseExplicitMover()const{return useExplicitMover;};
     bool getdoCorrectWeight()const{return doCorrectWeight;}
+    double get_gradRhoRatio()const{return gradRhoRatio;};
+    double get_cDiff()const{return cDiff;};
+
     int get_iSpeciesLightest()const{return iSpeciesLightest;}
     
     /*! Boundary condition selection for BCFace for the electric field components */
@@ -449,14 +451,12 @@ class Collective
     // for details.
     bool useAccurateJ;
 
-    // useGradRho = true: use grad(net_charge) in the equation for E.
-    // useGradRho = false: use grad(div(E)) in the equation for E.
-    // For energy conserving scheme, useGradRho should be false.
-    bool useGradRho;
-
     // useExplicitMover = true: it is assumed the particle location is at the
     // half time stage, and an explicit particle mover will be used. 
     bool useExplicitMover; 
+
+    double gradRhoRatio;
+    double cDiff;
 
     
 

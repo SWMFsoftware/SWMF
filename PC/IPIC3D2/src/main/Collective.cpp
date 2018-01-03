@@ -196,7 +196,6 @@ void Collective::ReadInput(string inputfile) {
     // Energy conserving method related commands.
     useECSIM = config.read< bool >("useECSIM", false);
     useAccurateJ = config.read< bool >("useAccurateJ", false);
-    useGradRho = config.read< bool >("useGradRho", true);
     useExplicitMover = config.read< bool >("useExplicitMover", false);
   }
 
@@ -1625,12 +1624,14 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
   useECSIM = false;
   useAccurateJ = false;
-  useGradRho = true;
   useExplicitMover = false; 
+  gradRhoRatio = 1.0;
+  cDiff = 0; 
   
   doCorrectWeight = false;
 
   useUniformPart = false; 
+
 
   // The way to set the value of qom is very wired. Change it. --Yuxi
   qom = new double[1];
@@ -1707,21 +1708,22 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param, "useECSIM", &useECSIM);
       if(useECSIM){
 	useAccurateJ = true;
-	useGradRho = false;
 	useExplicitMover = true;
 	th = 0.5; 
+	gradRhoRatio = 0; 
       }else{
 	useAccurateJ = false;
-	useGradRho = true;
 	useExplicitMover = false;
 	th = 1; 	
+	gradRhoRatio = 1; 
       }
     }
     else if( Command == "#DISCRETIZATION"){
-      read_var(param, "useGradRho", &useGradRho);
       read_var(param, "useAccurateJ", &useAccurateJ);
-      read_var(param, "useExplicitMover", &useExplicitMover);
+      read_var(param, "useExplicitMover", &useExplicitMover);     
       read_var(param,"th",           &th);
+      read_var(param,"gradRhoRatio", &gradRhoRatio);
+      read_var(param,"cDiff", &cDiff);
     }
     else if( Command == "#POISSON"){
       bool doCorrection;
@@ -2165,8 +2167,6 @@ void Collective::PostProcParam() {
 
   // Checking parameters.
   if(0==MPIdata::get_rank()){
-    if(useECSIM && useGradRho)
-      eprintf("Error: useECSIM and useGradRho can not be true at the same time!!");
     if(useECSIM && !useExplicitMover)
       eprintf("Error: the explicit mover should be used for energy conserving scheme!!");
     if(!useECSIM && useExplicitMover)
