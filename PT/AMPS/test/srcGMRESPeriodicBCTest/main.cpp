@@ -75,13 +75,13 @@ namespace TransportEquation {
     MatrixRowNonZeroElementTable[0].i=i-1;
     MatrixRowNonZeroElementTable[0].j=j;
     MatrixRowNonZeroElementTable[0].k=k;
-    MatrixRowNonZeroElementTable[0].MatrixElementValue=-0.001;
+    MatrixRowNonZeroElementTable[0].MatrixElementValue=-0.1;
     MatrixRowNonZeroElementTable[0].iVar=0;
 
     MatrixRowNonZeroElementTable[1].i=i+1;
     MatrixRowNonZeroElementTable[1].j=j;
     MatrixRowNonZeroElementTable[1].k=k;
-    MatrixRowNonZeroElementTable[1].MatrixElementValue=0.001;
+    MatrixRowNonZeroElementTable[1].MatrixElementValue=0.1;
     MatrixRowNonZeroElementTable[1].iVar=0;
 
 
@@ -92,14 +92,14 @@ namespace TransportEquation {
     MatrixRowNonZeroElementTable[2].iVar=0;
 
 
-    RhsSupportTable_CornerNodes[0].Coefficient=-0.001; 
-    RhsSupportTable_CornerNodes[0].AssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i-1,j,k))->GetAssociatedDataBufferPointer();
+    RhsSupportTable_CornerNodes[0].Coefficient=1.0; 
+    RhsSupportTable_CornerNodes[0].AssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
 
-    RhsSupportTable_CornerNodes[1].Coefficient=0.001;
-    RhsSupportTable_CornerNodes[1].AssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i+1,j,k))->GetAssociatedDataBufferPointer();
+ //   RhsSupportTable_CornerNodes[1].Coefficient=0.1;
+ //   RhsSupportTable_CornerNodes[1].AssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i+1,j,k))->GetAssociatedDataBufferPointer();
 
 
-    RhsSupportLength_CornerNodes=2;
+    RhsSupportLength_CornerNodes=1;
     RhsSupportLength_CenterNodes=0;
     NonZeroElementsFound=3;
 
@@ -233,7 +233,7 @@ return ;
   void ProcessFinalSolution(double* x,PIC::Mesh::cDataCornerNode* CornerNode) {
     char *offset=CornerNode->GetAssociatedDataBufferPointer();
 
-    ((double*)(offset+NextCornerNodeOffset))[0]=x[0]+((double*)(offset+CurrentCornerNodeOffset))[0];
+    ((double*)(offset+NextCornerNodeOffset))[0]=x[0]; //+((double*)(offset+CurrentCornerNodeOffset))[0];
   }
 
 
