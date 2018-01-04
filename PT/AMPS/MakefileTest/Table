@@ -587,18 +587,18 @@ Check=
 <#
 
 #>
-Name=test/periodic-bc-gmres@@(0+valeriy)
+Name=test/periodic-bc-gmres 
 Time=3
 
 Outs=Transport.out=190
 
-Keys=-link-option=./share/lib/libSHARE.a -compiler-option=-I${PTDIR}/share/Library/src/@@(0+valeriy)
+Keys=-link-option=./share/lib/libSHARE.a -compiler-option=-I${PTDIR}/share/Library/src/
 
 Compile=
 >>>@echo "test_periodic-bc-gmres_compile..." >> test_periodic-bc-gmres.diff
 >>>cd ./share/; mkdir -p lib
 >>>cd ./share/Library/src; make LIB
->>>./Config.pl -application=test/periodic-bc-gmres ${TESTlinear-system-solverKEYS}
+>>>./Config.pl -application=test/periodic-bc-gmres ${TESTperiodic-bc-gmresKEYS}
 >>>@rm -rf srcTemp
 >>>-@($(MAKE) -j8 amps)
 >>>@echo "test_periodic-bc-gmres_compile... done" >> test_periodic-bc-gmres.diff
