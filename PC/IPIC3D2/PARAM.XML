@@ -249,6 +249,31 @@ If useECSIM is true, then the Energy Conserving Semi-Implicit Method (ECSIM)
 
 </command>
 
+<command name="DISCRETIZATION">
+  <parameter name="theta" type="real" >
+  <parameter name="gradRhoRatio" type="real" default="0" >
+  <parameter name="cDiff" type="real" default="0" >
+
+#DISCRETIZATION
+0.5                        theta
+0.0                        gradRhoRatio
+0.0                        cDiff
+
+This command should be used after #ENERGYCONSERVING. For ECSIM, theta=0.5 is
+the default to achieve the exact energy conserving. In practice, theta=0.51
+has good energy conserving property and can also help to supress numerical
+noise and instabilities. For iPIC3D, theta=1 is the default.
+
+'gradRhoRatio' is the coefficient of a term used to supress the (div(E)-charge)
+error. It is between 0 and 1. 'cDiff' is a positive coefficient of the numerical
+diffusion that is used to smooth the electric field. cDiff=1 is a reasonable
+choice. 
+
+See iPIC3D-ECSIM_Algorithm.tex for more details. 
+
+</command>
+
+
 <command name="CORRECTWEIGHT">
   <parameter name="doCorrectWeight" type="logical" default="F"/>
   

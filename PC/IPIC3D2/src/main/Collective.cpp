@@ -1719,8 +1719,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       }
     }
     else if( Command == "#DISCRETIZATION"){
-      read_var(param, "useAccurateJ", &useAccurateJ);
-      read_var(param, "useExplicitMover", &useExplicitMover);     
+      //read_var(param, "useAccurateJ", &useAccurateJ);
+      //read_var(param, "useExplicitMover", &useExplicitMover);     
       read_var(param,"th",           &th);
       read_var(param,"gradRhoRatio", &gradRhoRatio);
       read_var(param,"cDiff", &cDiff);
