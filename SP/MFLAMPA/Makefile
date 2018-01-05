@@ -74,8 +74,8 @@ MACHINE = `hostname | sed -e 's/\..*//;s/[0-9]*$$//'`
 COMPONENT = SP
 
 rundir:
-	mkdir -p ${RUNDIR}/${COMPONENT} ${RUNDIR}/${COMPONENT}/restartIn \
-		${RUNDIR}/${COMPONENT}/restartOut ${RUNDIR}/${COMPONENT}/IO2
+	mkdir -p ${RUNDIR}/${COMPONENT} ${RUNDIR}/${COMPONENT}/restartIN \
+		${RUNDIR}/${COMPONENT}/restartOUT ${RUNDIR}/${COMPONENT}/IO2
 	cd ${RUNDIR}/${COMPONENT}; \
 		ln -s ${SPDIR}/Param .
 	@(if [ "$(STANDALONE)" != "NO" ]; then \
