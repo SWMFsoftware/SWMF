@@ -213,7 +213,6 @@ HGI       TypeCoordSystem
 
 </command>
 </commandgroup>
-</commandgroup>
 
 <commandgroup name="ADVANCE">
 
@@ -282,58 +281,47 @@ T	DoRun
 The default values are shown.
 </command>
 
-<command name="">
+</commandgroup>
 
+<commandgroup name="INPUT/OUTPUT">
+<command name="USEDATETIME">
+	 <parameter name="UseDateTime" type="logical" default="F" />
 
-The default values are shown.
+#USEDATETIME
+T          UseDateTime 
+
+Set the format for the output file names like _eYYYYMMDD_HHMMSS tagging
+the file with real date and UT tume instant. When unset (default) the
+time tag looks like _tHHMMSS, where HHMMSS is the simulation time in hours-
+minutes-seconds passed after the initial time (set by the command #STARTTIME)
+
 </command>
 
-<command name="DOREADMHDATA">
+<command name="SAVEINITIAL">
+	 <parameter name="DoSaveInitial" type="logical" default="T" />
+
+#SAVEINITIAL
+T          DoSaveInitial 
+
+As the default (DoSaveInitial=T) the MFLAMPA saves datasets (at least the
+MHD information) starting from the initial state prior to the run. However,
+once MFLAMPA restarts, it is useful to set DoSaveInitial to F, in order
+to avoid rewriting the output files and eliminate duplicate tags in the file
+tag list, becuase the same output files and tags were saved at the end of 
+previous run.
+ 
+</command>
+
+<command name="MHDATA" alias="READMHDATA" if="$_IsFirstSession">
 	<parameter name="DoReadMhData" type="logical" default="F" />
 
-#DOREADMHDATA
+#DOMHDATA
 T	DoReadMhData
 
 
 The default values are shown.
 </command>
 
-
-</commandgroup>
-
-<commandgroup name="INPUT/OUTPUT">
-
-<command name="TEST">
-	<parameter name="DoTest" type="logical" default="F" />
-#TEST
-F		DoTest
-
-Set test 
-</command>
-
-<command name="END">
-
-#END
-
-The #END command signals the end of the included file or the
-end of the PARAM.in file. Lines following the #END command are
-ignored. It is not required to use the #END command. The end
-of the included file or PARAM.in file is equivalent with an 
-#END command in the last line.
-</command>
-
-<command name="STOP">
-	<parameter name="Tmax" type="real" min="-1" default="10" />
-	<parameter name="MaxStep" type="integer" min="-1" default="-1" />
-
-#STOP
-10			Tmax
--1			MaxStep
-
-The #STOP command sets the stopping condition for the SP during standalone 
-execution. Tmax sets the stop time in timeaccurate mode. and MaxStep sets the 
-maximum number of iterations for non-timeaccurate mode.
-</command>
 
 </commandgroup>
 
