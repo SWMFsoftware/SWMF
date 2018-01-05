@@ -197,6 +197,9 @@ void Collective::ReadInput(string inputfile) {
     useECSIM = config.read< bool >("useECSIM", false);
     useAccurateJ = config.read< bool >("useAccurateJ", false);
     useExplicitMover = config.read< bool >("useExplicitMover", false);
+
+    gradRhoRatio = config.read< double >("gradRhoRatio", 1.0);
+    cDiff = config.read< double >("cDiff", 0.0);
   }
 
   //read everything from input file, if restart is true, overwrite the setting - bug fixing
