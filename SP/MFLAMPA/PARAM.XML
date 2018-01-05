@@ -12,14 +12,14 @@ component of the SWMF.
 	<parameter name="RBufferMin"  type="real" min="-1" default="-1" />
 	<parameter name="RBufferMax"  type="real" min="-1" default="-1" />
 	<parameter name="RMax"  type="real" min="-1" default="-1" />
-Sets the ranges of helecentric distances for domains in SC and IH exchanging
+Sets the ranges of heliocentric distances for domains in SC and IH exchanging
 data with SP.
 
 #COMPDOMAINS
 1.15            RScMin [Rs]
 19.0            RIhMin [Rs]
 21.0            RScMax [Rs]
-220.0           RIHMax [Rs]
+220.0           RIhMax [Rs]
 
 </command>
 
@@ -92,11 +92,11 @@ test suite, which contains these commands when the framework is tested.
 This command is only used in stand alone mode.
 
 The #RUN command does not have any parameters. It signals the end
-of the current session, and makes BATSRUS execute the session with
+of the current session, and makes MFLAMPA execute the session with
 the current set of parameters. The parameters for the next session
 start after the #RUN command. For the last session there is no
 need to use the #RUN command, since the #END command or simply
-the end of the PARAM.in file makes BATSRUS execute the last session.
+the end of the PARAM.in file makes MFLAMPA execute the last session.
 </command>
 
 <command name="END">
@@ -152,9 +152,9 @@ T			DoCheckStopFile
 This command is only used in stand alone mode.
 
 If DoCheckStopFile is true then the code checks if the
-BATSRUS.STOP file exists in the run directory. This file is deleted at
+MFLAMPA.STOP file exists in the run directory. This file is deleted at
 the beginning of the run, so the user must explicitly create the file
-with e.g. the "touch BATSRUS.STOP" UNIX command.
+with e.g. the "touch MFLAMPA.STOP" UNIX command.
 If the file is found in the run directory,
 the execution stops in a graceful manner.
 Restart files and plot files are saved as required by the
@@ -212,29 +212,6 @@ Type of heliocentric coordinate system used in MFLAMPA (HGI, HGR, HGC).
 HGI       TypeCoordSystem
 
 </command>
-</commandgroup>
-
-<commandgroup name="ADVANCE">
-
-<command name="INJECTION">
-	<parameter name="CInj" type="real" default="1.0" />
-	<parameter name="SpectralIndex" type="real" default="5.0" />
-
-#INJECTION
-5.0     SpectralIndex
-1.0     Efficency
-
-</command>
-
-<command name="CFL">
-	<parameter name="Cfl" type="real" default="1.0" />
-
-#CFL
-1.0     Cfl
-
-</command>
-	
-
 </commandgroup>
 
 <commandgroup name="ADVANCE">
