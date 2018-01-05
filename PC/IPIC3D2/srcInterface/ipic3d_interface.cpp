@@ -10,6 +10,30 @@
 using namespace iPic3D;
 using namespace std;
 
+int nIPIC;
+int *iSimCycle;
+
+// pointer to all IPIC3D 
+iPic3D::c_Solver **SimRun;
+
+// pointer to the stringstream object that contains the param.in
+std::stringstream *param;
+
+// first time for region
+bool firstcall[nmaxIPIC];
+bool isFirstSession, isInitilized;
+
+//store start time
+double starttime[nmaxIPIC];
+static double timenow;
+
+// Store variables asosiated with comunicating the grid to and from GM
+// When we recive data form BATSRUS we need to split it up and give it to
+// the respective SimRun object. This to arrays will be used for this purpus.
+int nGridPntSim[nmaxIPIC];  //number of grid pints *ndim used for each sim box
+int nShiftGridPntSim[nmaxIPIC]; //fist index for each sims grid ponts
+
+
 int ipic3d_init_mpi_(MPI_Fint *iComm,signed int* iProc,signed int* nProc){
   // fortran communicator tranlated to C comunicator
   MPI_Comm c_iComm = MPI_Comm_f2c(*iComm);
@@ -27,7 +51,6 @@ int ipic3d_init_mpi_(MPI_Fint *iComm,signed int* iProc,signed int* nProc){
   numProc    = *nProc; 
   param      = NULL;
   nIPIC      = 0;
-  iIPIC      = 0;
   SimRun  = new iPic3D::c_Solver *[nmaxIPIC];
   iSimCycle = new int[nmaxIPIC];
 
@@ -66,7 +89,6 @@ int ipic3d_read_param_(char *paramIn, int *nlines, int *ncharline, int *iProc){
   std::stringstream  *ss;
   ss = char_to_stringstream(paramIn, (*nlines)*(*ncharline), *ncharline, *iProc); 
   param = ss;
-  iIPIC++;
   isFirstSession = false;
   return(0);
 }
