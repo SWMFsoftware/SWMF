@@ -1,10 +1,9 @@
+Input for testing MFLAMPA model for SEPs, uses input files with background data
+
 Begin session: 1
 
 #ECHO
 T			DoEcho
-
-#DESCRIPTION
-Input for testing MFLAMPA model for SEPs, uses input files with background data
 
 #STARTTIME
 2012
