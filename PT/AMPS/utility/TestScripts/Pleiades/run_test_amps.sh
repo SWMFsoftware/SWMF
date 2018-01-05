@@ -30,7 +30,6 @@ source /usr/share/modules/init/csh
 # note: it is better to have these variables set in the beginning of rc file
 source $HOME/.cshrc
 
-module load boost/1.62
 # set the working directory
 set WorkDir = $HOME  
 
