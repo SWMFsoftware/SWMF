@@ -404,12 +404,13 @@ void PIC::BC::ExternalBoundary::Periodic::GetBoundaryExtensionLength() {
   }
   */
   //double maxLevel= *std::max_element(level,level+3);
-  int nLevel=ceil(log2(rCell/HighestBoundaryResolution))-1;
+  int nLevel=ceil(log2(rCell/HighestBoundaryResolution));
 
   bool levelFind=false;
   printf("$PREFIX: max level in user requested domain:%d\n",nLevel);
 
-  for (int iLevel=nLevel-1;iLevel<nLevel+2;iLevel++){
+  for (int iLevel=nLevel-2;iLevel<nLevel+3;iLevel++){
+    if (iLevel<1) continue;
     for(int i=0;i<3;i++){
       BoundaryDx[i]=(xmaxOriginal[i]-xminOriginal[i])/(pow(2.,iLevel)-1.)/2;
       dx[i]=BoundaryDx[i]/nBlkArr[i];
