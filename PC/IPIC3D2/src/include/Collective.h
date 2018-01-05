@@ -37,7 +37,6 @@
 #include "Grid3DCU.h"
 #include "aligned_vector.h"
 class ConfigFile;
-using namespace std;
 
 class Collective
 #ifdef BATSRUS

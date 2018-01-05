@@ -53,7 +53,6 @@ declare_dprintvar_fileLine(const char *);
 declare_dprintvar_fileLine(const void *);
 
 #ifdef BATSRUS
-using namespace std;
 extern Collective * _col0;
 extern Grid3DCU * _grid0;
 extern VCtopology3D * _vct0;

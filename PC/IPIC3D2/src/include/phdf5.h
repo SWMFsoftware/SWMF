@@ -29,7 +29,6 @@
 #include "mpi.h"
 #include "arraysfwd.h"
 #include <string>
-using namespace std;
 
 class PHDF5fileClass{
 #ifndef NO_HDF5
