@@ -11,7 +11,7 @@ chomp($hostname);
 my $hostname_full = `hostname -f`;
 
 my $Stampede = 'stampede';
-if ($hostname_full =~ m/stampede/) {
+if ($hostname_full =~ m/login2/) {
   $hostname = $Stampede;
 }
 
