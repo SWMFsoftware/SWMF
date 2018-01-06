@@ -40,7 +40,7 @@ set WorkDir = $HOME
 #set WorkDir =         <#
 
 #>Stampede #############
-set WorkDir = $SCRATCH  
+ set WorkDir = $SCRATCH
 
 # Go to your home directory
 cd $WorkDir
@@ -70,12 +70,6 @@ mkdir -p Intel; cp -r AMPS Intel/;
 #>PGIAll ############################
 #mkdir -p PGI;   cp -r AMPS PGI/;  <#
 
-# copy job files to the AMPS directory on supercomputers
-#>Pleiades ###############################################
-#cp AMPS/utility/TestScripts/test_amps.pleiades.*.job . <#
-#>Stampede ###############################################
-cp AMPS/utility/TestScripts/test_amps.stampede.*.job . 
-
 # install AMPS
 #>GNUAll ###################################################################
 cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                        #
@@ -90,34 +84,48 @@ cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 #cd $WorkDir/Tmp_AMPS_test/PGI/AMPS                                        #
 #./Config.pl -install -compiler=pgf90,pgccmpicxx      >& test_amps.log    <#
 
-# compile AMPS tests
+
+# copy job files to the AMPS directory on supercomputers
+# #>Pleiades ###############################################
+# #cp AMPS/utility/TestScripts/test_amps.pleiades.*.job . <#
+# #>Stampede ###############################################
+cp utility/TestScripts/test_amps.stampede.*.job ../.. 
+
+# Compile AMPS tests
 cd $WorkDir/Tmp_AMPS_test
-rm -rf AmpsCompilingGNUComplete
-rm -rf AmpsCompilingIntelComplete
+rm -f AmpsCompilingIntelComplete
+rm -f AmpsCompilingGNUComplete
 
-$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Stampede/CompileGNUPStampede.sh  & 
-$WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/Stampede/CompileIntelStampede.sh  &
+AMPS/utility/TestScripts/Stampede/CompileGNUPStampede.sh &
+AMPS/utility/TestScripts/Stampede/CompileIntelStampede.sh &
 
-#Waite compileing is compiling is finished
 #waite untill all compilation is complete
-while ((! -f AmpsCompilingIntelComplete) || (! -f AmpsCompilingGNUComplete))
+while ((! -f AmpsCompilingIntelComplete) || (! -f AmpsCompilingGNUComplete) )
   sleep 60
 end
 
+rm -f AmpsCompilingIntelComplete
+rm -f AmpsCompilingGNUComplete
+
+echo Compiling of AMPS is completed
+
 # Run test
+#>Stampede ####################################
 set submit = '/usr/bin/sbatch'              
 
-foreach job (test_amps.*.job)                #
+cd $WorkDir/Tmp_AMPS_test                    #
+rm -f AmpsTestDone
+
+foreach job (test_amps.stampede.all*.job)                #
   sbatch $job 
 
   while (! -f AmpsTestDone)
     sleep 60
   end
 
-  sleep 300 
+  sleep 180
   rm -f AmpsTestDone
 end                                         
-
 
 #>Yellowstone #################################
 #/usr/bin/bsub < test_amps.job               <#
