@@ -111,48 +111,21 @@ echo Compiling of AMPS is completed
 
 # Run test
 #>Stampede ####################################
-set submit = '/usr/bin/sbatch'              
+foreach job (test_amps.stampede.all*.job) # 
+  set JobCompletedFlag='false'
+  sbatch $job
 
-cd $WorkDir/Tmp_AMPS_test                    #
-rm -f AmpsTestDone
-
-foreach job (test_amps.stampede.all*.job)                #
-  sbatch $job 
-
-  while (! -f AmpsTestDone)
+  while ($JobCompletedFlag == 'false')
     sleep 60
+
+    if (`squeue -u vtenishe | grep AMPS_tes` == "") then
+      set JobCompletedFlag='true'
+    endif
   end
 
+  echo $job is completed
   sleep 180
-  rm -f AmpsTestDone
-end                                         
+end
 
-#>Yellowstone #################################
-#/usr/bin/bsub < test_amps.job               <#
-
-# Other machines
-
-# GNU compiled tests
-
-#>Valeriy ########################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_gnu.valeriy <#
-
-#>GNUOther ####################################
-#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-#make test_run >>& test_amps.log             <#
-
-# Intel compiled tests
-
-#>Valeriy ########################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_intel.valeriy <#
-
-#>IntelOther ##################################
-#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-#make test_run >>& test_amps.log             <#
-
-# PGI compiled tests
-
-#>PGIOther ####################################
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#make test_run >>& test_amps.log             <#
+echo The test routine is completed
 
