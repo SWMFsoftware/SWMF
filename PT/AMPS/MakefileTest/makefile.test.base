@@ -26,7 +26,7 @@ test_all:
 test_compile:
 	@rm -rf *.diff
 	cd ./share/; mkdir -p lib
-	cd ./share/Library/src; make LIB
+	-(cd ./share/Library/src; make LIB) 
 	-@($(MAKE) test_<APP>_compile && $(MAKE) test_<APP>_rundir)
 
 test_run:
