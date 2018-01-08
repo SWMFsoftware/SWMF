@@ -1524,6 +1524,8 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   nGMRESRestart = 100; 
   NiterMover = 3;
 
+  useIPIC3DSolver = true;
+
   //------------------------------------------------
   // #BCIPIC
   // PHI Electrostatic Potential
@@ -1809,11 +1811,14 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     //     read_var(param,"TrackParticleID", &TrackParticleID[is]);
 
     //   }
-    // }
+    // 
     else if( Command == "#SOLVER"){
       read_var(param,"GMREStol", &GMREStol);
       read_var(param,"nGMRESRestart", &nGMRESRestart);
       read_var(param,"NiterMover", &NiterMover);      
+    }
+    else if( Command == "#IPIC3DSOLVER"){
+      read_var(param, "useIPIC3DSolver", &useIPIC3DSolver);
     }
     else if( Command == "#SAVEPLOT"){
       read_var(param,"SaveDirName",            &SaveDirName);

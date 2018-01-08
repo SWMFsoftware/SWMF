@@ -39,6 +39,9 @@
 #include "ipicmath.h" // for roundup_to_multiple
 #include "Alloc.h"
 #include "asserts.h"
+#ifdef BATSRUS
+#include "LinearSolver.h"
+#endif
 #ifndef NO_HDF5
 #endif
 
@@ -2544,6 +2547,11 @@ void EMfields3D::calculateE(int cycle)
   // Solve dE = E^{n+1} - E^{n} instead E^{n+1}
   bool doSolveForChange = col->getCase()=="BATSRUS";  
   //doSolveForChange = false;
+
+  bool useIPIC3DSolver = true; 
+#ifdef BATSRUS
+  useIPIC3DSolver = col->get_useIPIC3DSolver();
+#endif
   
   array3_double divE     (nxc, nyc, nzc);
   array3_double gradPHIX (nxn, nyn, nzn);
@@ -2612,10 +2620,40 @@ void EMfields3D::calculateE(int cycle)
     eqValue (0.0, xkrylov, n3SolveNode);              // x=0 as we solve for the change
   }
   
+#ifdef BATSRUS
+  if(! useIPIC3DSolver){
+    linear_solver_matvec_c = iPIC3D_MaxwellImage;
+
+    int nVarSolve = 3;
+    int nIter = 10000;
+    int nDimIn = nDimMax;
+    int nI = inmaxsolve - inminsolve + 1;
+    int nJ = jnmaxsolve - jnminsolve + 1;
+    int nK = knmaxsolve - knminsolve + 1;
+    int nBlock = 1;
+    MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_MYSIM);
+    double precond_matrix_II[1][1];
+    precond_matrix_II[0][0] = 0; 
+    // parameter to choose preconditioner types
+    //0:No precondition; 1: BILU; 2:DILU;
+    //[-1,0): MBILU;   
+    double PrecondParam=0;
+    int lTest = vct->getCartesian_rank() == 0;
+
+    linear_solver_wrapper("GMRES", &GMREStol, &nIter, &nVarSolve, &nDimIn,
+			  &nI, &nJ, &nK, &nBlock, &iComm, bkrylov,
+			  xkrylov, &PrecondParam, precond_matrix_II[0], 
+			  &lTest);
+  }
+#endif
+  if(useIPIC3DSolver){
   // solve A.xKrylob = bKrylov for x being the change in E field (dE)
   GMRES(&Field::MaxwellImage, xkrylov, n3SolveNode,
 	bkrylov, nGMRESRestart, 200, GMREStol,doSolveForChange, this);
+  }
 
+ 
+  
   // move from krylov space to physical space: Eth = dE
   solver2phys(Exth,Eyth,Ezth,xkrylov,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
 
@@ -2841,7 +2879,7 @@ void EMfields3D::MaxwellSource(double *bkrylov)
 // communication.  Note that it would also be possible, if
 // desired, to give duplicated nodes equal weight by
 // rescaling their values in these two methods.
-// 
+//
 void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
 {
   const Collective *col = &get_col();
@@ -2948,10 +2986,8 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
 
   // move from physical space to krylov space
   phys2solver(im, imageX, imageY, imageZ,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
-
+  
 }
-
-
 
 /*! Calculate PI dot (vectX, vectY, vectZ) */
 void EMfields3D::PIdot(arr3_double PIdotX, arr3_double PIdotY, arr3_double PIdotZ, const_arr3_double vectX, const_arr3_double vectY, const_arr3_double vectZ, int ns)

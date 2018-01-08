@@ -38,7 +38,7 @@ OBJECTS_EXE = \
 
 EXE = ${BINDIR}/IPIC3D.exe
 
-SEARCH_C = -Iinclude
+SEARCH_C = -Iinclude -I${SHAREDIR}
 
 FLAGC_EXTRA = ${SEARCH_C} \
 	${FLAGC_LOCAL}

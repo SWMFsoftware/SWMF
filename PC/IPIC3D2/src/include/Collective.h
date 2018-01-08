@@ -209,6 +209,8 @@ class Collective
     double get_gradRhoRatio()const{return gradRhoRatio;};
     double get_cDiff()const{return cDiff;};
 
+    bool get_useIPIC3DSolver()const{return useIPIC3DSolver;};
+    
     int get_iSpeciesLightest()const{return iSpeciesLightest;}
     
     /*! Boundary condition selection for BCFace for the electric field components */
@@ -457,7 +459,8 @@ class Collective
     double gradRhoRatio;
     double cDiff;
 
-    
+    // Use the iPIC3D linear solver or the SWMF solver; 
+    bool useIPIC3DSolver;     
 
 #ifdef BATSRUS
  public:    

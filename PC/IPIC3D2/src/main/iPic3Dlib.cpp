@@ -1853,4 +1853,9 @@ void c_Solver:: find_output_list(int iPlot){
   }    
 
 }
+
+
+void c_Solver::EM_MaxwellImage(double *vecIn, double *vecOut, int n){
+  EMf->MaxwellImage(vecOut, vecIn, true);
+}
 #endif

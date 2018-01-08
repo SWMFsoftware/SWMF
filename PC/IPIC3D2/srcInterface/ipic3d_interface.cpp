@@ -11,6 +11,7 @@ using namespace iPic3D;
 using namespace std;
 
 int nIPIC;
+int iIPIC; 
 int *iSimCycle;
 
 // pointer to all IPIC3D 
@@ -160,7 +161,7 @@ int ipic3d_run_(double *time){
   timing_start(nameFunc);
 
   for(int i = 0; i < nIPIC; i++){ 
- 
+    iIPIC = i; 
    if (SimRun[i]->get_myrank() == 0)
        cout << " ======= Cycle " << iSimCycle[i] << ", dt=" << SimRun[i]->getDt() << " ======= " << endl;
 

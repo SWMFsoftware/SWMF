@@ -13,6 +13,7 @@ static MPI_Comm ipic3dComm = MPI_COMM_NULL;
 
 const int nmaxIPIC = 100;
 extern int nIPIC;
+extern int iIPIC; 
 extern int *iSimCycle;
 
 // pointer to all IPIC3D 
