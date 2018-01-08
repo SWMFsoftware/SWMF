@@ -64,9 +64,9 @@ module ModPhysics
   ! Artificial speed of light set by #LIGHTSPEED
   real:: ClightDim = -1.0
 
-  ! speed of light, inverse, square, inverse of square, boris correction
-  real :: Clight, InvClight, C2light, Inv_C2light
-  real :: Boris_Clight_Factor = 1.0
+  ! speed of light, inverse, square, inverse of square, reduction factor
+  real :: Clight, InvClight, C2light, InvClight2
+  real :: ClightFactor = 1.0
 
   ! normalized radiation constant (Erad = cRadiationNo*Trad**4)
   real :: cRadiationNo
@@ -377,11 +377,11 @@ contains
     if(ClightDim > 0.0)then
        Clight   = ClightDim * Io2No_V(UnitU_)
     else
-       Clight   = Boris_Clight_Factor * cLightSpeed * Si2No_V(UnitU_)
+       Clight   = ClightFactor * cLightSpeed * Si2No_V(UnitU_)
     end if
-    C2light     = cLIGHT**2
-    InvClight   = 1.0/cLight
-    Inv_C2light = 1.0/c2LIGHT
+    C2light     = Clight**2
+    InvClight   = 1/Clight
+    InvClight2  = 1/C2light
 
     ! normalize the radiation constant
     cRadiationNo = cRadiation &

@@ -79,24 +79,26 @@ contains
 
     use ModMain
     use ModPhysics
+    use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModIO,        ONLY: iUnitOut, write_prefix
     use ModProcMH,    ONLY: iProc, nProc
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
     use ModAdvance,   ONLY: FluxType, UseEfield
     use ModGeometry,  ONLY: x1, x2, y1, y2, z1, z2, CellSizeMin, CellSizeMax, &
          nTrueCells, count_true_cells
-    use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, UseSplitSemiImplicit, &
-         TypeSemiImplicit
+    use ModImplicit,  ONLY: UseImplicit, UseSemiImplicit, &
+         UseSplitSemiImplicit, TypeSemiImplicit
     use ModPointImplicit, ONLY: UsePointImplicit
     use ModMultiFluid, ONLY: IonFirst_, UseNeutralFluid
     use ModFaceFlux,   ONLY: TypeFluxNeutral
-    use CON_planet,    ONLY: NamePlanet, IsPlanetModified, Planet_, NewPlanet_, &
+    use CON_planet,    ONLY: NamePlanet, IsPlanetModified, &
+         Planet_, NewPlanet_, &
          RadiusPlanet, MassPlanet, TiltRotation, OmegaPlanet, OmegaOrbit, &
          IonosphereHeight
     use ModIonElectron, ONLY: iVarUseCmax_I
     use ModMpi
-    use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK, nLevelMin, nLevelMax,&
-         IsLogRadius, IsGenRadius
+    use BATL_lib, ONLY: nNodeUsed, nRoot_D, nIJK_D, nIJK, &
+         nLevelMin, nLevelMax, IsLogRadius, IsGenRadius
     use ModUserInterface ! user_action
 
     integer :: iFluid
@@ -202,7 +204,7 @@ contains
 
     call write_prefix; write(iUnitOut,*)
     call write_prefix; write(iUnitOut,'(10X,2(A13,ES13.5))')&
-         'ClightFactor:',boris_clight_factor,', Clight:    ',Clight
+         'ClightFactor:', ClightFactor,', Clight:    ',Clight
     call write_prefix; write(iUnitOut,*)
 
     if(NameThisComp == 'GM' .and. SW_n > 0.0)then
@@ -295,15 +297,15 @@ contains
     else
        write(iUnitOut,'(10x,a,f4.2)') '    Cfl:    ', Cfl
     end if
-    if(boris_correction)then
+    if(UseBorisCorrection)then
        call write_prefix
        write(iUnitOut,'(10X,a,f10.4)') &
-            "    with Boris correction, factor =", boris_cLIGHT_factor
+            "    with Boris correction, factor =", ClightFactor
     end if
     if(UseBorisSimple)then
        call write_prefix
        write(iUnitOut,'(10X,a,f10.4)') &
-            "   with simple Boris correction, factor =", boris_cLIGHT_factor
+            "   with simple Boris correction, factor =", ClightFactor
     end if
     if(UseEfield) then
        call write_prefix

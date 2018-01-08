@@ -1073,6 +1073,7 @@ contains
     use ModMain,          ONLY: clean_mod_main
     use ModAdvance,       ONLY: clean_mod_advance
     use ModBlockData,     ONLY: clean_mod_block_data
+    use ModBorisCorrection, ONLY: clean_mod_boris_correction
     use ModGeometry,      ONLY: clean_mod_geometry
     use ModNodes,         ONLY: clean_mod_nodes
     use ModConstrainDivB, ONLY: clean_mod_ct
@@ -1093,6 +1094,7 @@ contains
     call clean_batl
     call user_action("clean module")
     call clean_mod_advance
+    call clean_mod_boris_correction
     call clean_mod_main
     call clean_mod_block_data
     call clean_mod_ct

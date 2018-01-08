@@ -740,7 +740,7 @@ contains
          UseHighResChange
 
     use ModGeometry, ONLY : true_cell, body_BLK
-    use ModPhysics, ONLY: GammaWave, c2LIGHT, inv_c2LIGHT
+    use ModPhysics, ONLY: GammaWave, C2light, InvClight2
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
@@ -1470,7 +1470,7 @@ contains
       ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
       BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
       B2Full = BxFull**2 + ByFull**2 + BzFull**2
-      RhoC2Inv  = 1/(Primitive_VG(rho_,i,j,k)*c2LIGHT)
+      RhoC2Inv  = 1/(Primitive_VG(rho_,i,j,k)*C2light)
       uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
            Primitive_VG(rhoUy_,i,j,k)*ByFull + &
            Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
@@ -2048,7 +2048,7 @@ contains
             BzFull = LeftState_VX(Bz_,i,j,k)
          end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  = inv_c2LIGHT*RhoInv
+         RhoC2Inv  = InvClight2*RhoInv
          LeftState_VX(Ux_,i,j,k)=LeftState_VX(Ux_,i,j,k)*RhoInv
          LeftState_VX(Uy_,i,j,k)=LeftState_VX(Uy_,i,j,k)*RhoInv
          LeftState_VX(Uz_,i,j,k)=LeftState_VX(Uz_,i,j,k)*RhoInv
@@ -2078,7 +2078,7 @@ contains
             BzFull = RightState_VX(Bz_,i,j,k)
          end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =inv_c2LIGHT*RhoInv
+         RhoC2Inv  =InvClight2*RhoInv
          RightState_VX(Ux_,i,j,k)=RightState_VX(Ux_,i,j,k)*RhoInv
          RightState_VX(Uy_,i,j,k)=RightState_VX(Uy_,i,j,k)*RhoInv
          RightState_VX(Uz_,i,j,k)=RightState_VX(Uz_,i,j,k)*RhoInv
@@ -2120,7 +2120,7 @@ contains
             BzFull = LeftState_VY(Bz_,i,j,k)
          end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =inv_c2LIGHT*RhoInv
+         RhoC2Inv  =InvClight2*RhoInv
          LeftState_VY(Ux_,i,j,k)=LeftState_VY(Ux_,i,j,k)*RhoInv
          LeftState_VY(Uy_,i,j,k)=LeftState_VY(Uy_,i,j,k)*RhoInv
          LeftState_VY(Uz_,i,j,k)=LeftState_VY(Uz_,i,j,k)*RhoInv
@@ -2150,7 +2150,7 @@ contains
             BzFull = RightState_VY(Bz_,i,j,k)
          end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv=inv_c2LIGHT*RhoInv
+         RhoC2Inv=InvClight2*RhoInv
          RightState_VY(Ux_,i,j,k)=RightState_VY(Ux_,i,j,k)*RhoInv
          RightState_VY(Uy_,i,j,k)=RightState_VY(Uy_,i,j,k)*RhoInv
          RightState_VY(Uz_,i,j,k)=RightState_VY(Uz_,i,j,k)*RhoInv
@@ -2193,7 +2193,7 @@ contains
             BzFull = LeftState_VZ(Bz_,i,j,k)
          end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =inv_c2LIGHT*RhoInv
+         RhoC2Inv  =InvClight2*RhoInv
          LeftState_VZ(Ux_,i,j,k)=LeftState_VZ(Ux_,i,j,k)*RhoInv
          LeftState_VZ(Uy_,i,j,k)=LeftState_VZ(Uy_,i,j,k)*RhoInv
          LeftState_VZ(Uz_,i,j,k)=LeftState_VZ(Uz_,i,j,k)*RhoInv
@@ -2223,7 +2223,7 @@ contains
             BzFull = RightState_VZ(Bz_,i,j,k)
          end if
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =inv_c2LIGHT*RhoInv
+         RhoC2Inv  =InvClight2*RhoInv
          RightState_VZ(Ux_,i,j,k)=RightState_VZ(Ux_,i,j,k)*RhoInv
          RightState_VZ(Uy_,i,j,k)=RightState_VZ(Uy_,i,j,k)*RhoInv
          RightState_VZ(Uz_,i,j,k)=RightState_VZ(Uz_,i,j,k)*RhoInv

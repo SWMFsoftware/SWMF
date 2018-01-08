@@ -12,7 +12,8 @@ module ModFaceFlux
   use ModMain,       ONLY: UseB, UseB0, cLimit
   use ModMain,       ONLY: UseRadDiffusion, UseHeatConduction, &
        UseIonHeatConduction, DoThinCurrentSheet
-  use ModMain,       ONLY: UseBorisSimple, UseBoris => boris_correction
+  use ModBorisCorrection, ONLY: UseBorisSimple, UseBorisCorrection, &
+       EDotFA_X, EDotFA_Y, EDotFA_Z                     ! output: E.Area
   use ModGeometry,   ONLY: true_cell
   use BATL_lib,      ONLY: IsCartesianGrid, IsCartesian, IsRzGeometry, &
        Xyz_DGB, CellSize_DB, CellFace_DB, CellFace_DFB, FaceNormal_DDFB, &
@@ -25,7 +26,6 @@ module ModFaceFlux
        RightState_VX, RightState_VY, RightState_VZ, & ! input: right face state
        Flux_VX, Flux_VY, Flux_VZ,        & ! output: flux*Area
        VdtFace_x, VdtFace_y, VdtFace_z,  & ! output: cMax*Area for CFL
-       EDotFA_X, EDotFA_Y, EDotFA_Z,     & ! output: E.Area
        uDotArea_XI, uDotArea_YI, uDotArea_ZI,& ! output: U.Area for P source
        bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ,& ! output: B x Area for J
        UseIdealEos, UseElectronPressure, &
@@ -646,7 +646,7 @@ contains
          if(UseFDFaceFlux) call correct_u_normal(x_)
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
          
-         if(UseB .and. UseBoris) &
+         if(UseB .and. UseBorisCorrection) &
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon)then
@@ -738,7 +738,7 @@ contains
          if(UseFDFaceFlux) call correct_u_normal(y_)
          uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
-         if(UseB .and. UseBoris) &
+         if(UseB .and. UseBorisCorrection) &
               EDotFA_Y(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon)then
@@ -831,7 +831,7 @@ contains
          if(UseFDFaceFlux) call correct_u_normal(z_)
          uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
-         if(UseB .and. UseBoris) &
+         if(UseB .and. UseBorisCorrection) &
               EDotFA_Z(iFace,jFace,kFace) = Enormal*Area
 
          if(UseB .and. UseMultiIon)then
@@ -2481,7 +2481,7 @@ contains
        call select_fluid
        if(iFluid == 1 .and. IsMhd)then
           ! Calculate MHD flux for first fluid
-          if(UseBoris)then
+          if(UseBorisCorrection)then
              call get_boris_flux
           else
              call get_mhd_flux
@@ -2641,7 +2641,7 @@ contains
 
     subroutine get_boris_flux
 
-      use ModPhysics, ONLY: InvGammaMinus1, Inv_C2light, InvClight
+      use ModPhysics, ONLY: InvGammaMinus1, InvClight, InvClight2
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
@@ -2702,9 +2702,9 @@ contains
       ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
       uDotB   = Ux*FullBx + Uy*FullBy + Uz*FullBz
       FullB2  = FullBx**2 + FullBy**2 + FullBz**2
-      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*uDotB)*inv_c2LIGHT
-      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*uDotB)*inv_c2LIGHT
-      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*uDotB)*inv_c2LIGHT
+      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*uDotB)*InvClight2
+      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*uDotB)*InvClight2
+      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*uDotB)*InvClight2
 
       ! The full energy contains the electric field energy
       StateCons_V(Energy_) = e + E2Half
@@ -2761,7 +2761,7 @@ contains
 
     subroutine get_mhd_flux
 
-      use ModPhysics, ONLY: InvGammaMinus1, inv_c2LIGHT
+      use ModPhysics, ONLY: InvGammaMinus1, InvClight2
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
@@ -2985,7 +2985,7 @@ contains
 
       if(UseBorisSimple)then
          ! Correct the momentum using the (1+VA2/c^2)
-         Gamma2 = 1.0 + (FullBx**2 + FullBy**2 + FullBz**2)/Rho*inv_c2LIGHT
+         Gamma2 = 1.0 + (FullBx**2 + FullBy**2 + FullBz**2)/Rho*InvClight2
          StateCons_V(RhoUx_:RhoUz_) = StateCons_V(RhoUx_:RhoUz_)*Gamma2
       end if
 
@@ -3462,7 +3462,7 @@ contains
              UnRight= maxval(UnRight_I(1:nIonFluid))
           end if
 
-          if(UseBoris .or. (UseEfield .and. nTrueIon ==1))then
+          if(UseBorisCorrection .or. (UseEfield .and. nTrueIon ==1))then
              ! In the five- and six-moment case, we should use Boris speed for
              ! numerical diffusion for single ion case. For multi-ion five- and
              ! six-moment we should call the UseBorisSimple correction in
@@ -3573,7 +3573,7 @@ contains
 
     subroutine get_boris_speed
 
-      use ModPhysics, ONLY: Gamma, inv_c2LIGHT, GammaElectron
+      use ModPhysics, ONLY: Gamma, InvClight2, GammaElectron
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
@@ -3636,13 +3636,13 @@ contains
       Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
 
       ! "Alfven Lorentz" factor
-      GammaA2 = 1.0/(1.0 + Alfven2*inv_c2LIGHT)
+      GammaA2 = 1.0/(1.0 + Alfven2*InvClight2)
 
       ! 1-gA^2*Un^2/c^2
-      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*inv_c2LIGHT)
+      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*InvClight2)
 
       ! Modified speeds
-      Sound2Boris        = Sound2        *GammaA2*(1+Alfven2Normal*inv_c2LIGHT)
+      Sound2Boris        = Sound2        *GammaA2*(1+Alfven2Normal*InvClight2)
       Alfven2Boris       = Alfven2       *GammaA2*GammaU2
       Alfven2NormalBoris = Alfven2Normal *GammaA2*GammaU2
 
@@ -3692,7 +3692,7 @@ contains
     subroutine get_mhd_speed
 
       use ModB0,       ONLY: UseCurlB0
-      use ModPhysics,  ONLY: Inv_C2Light, ElectronPressureRatio, &
+      use ModPhysics,  ONLY: InvClight2, ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
@@ -3973,7 +3973,7 @@ contains
       ! Fast speed multipled by the face area
       if(UseBorisSimple .or. (UseEfield))then
          Fast = sqrt( 0.5*(Fast2 + Discr) &
-              /       (1.0 + Alfven2*Inv_C2light) )
+              /       (1.0 + Alfven2*InvClight2) )
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
       end if

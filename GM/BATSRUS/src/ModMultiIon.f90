@@ -189,12 +189,12 @@ contains
     !    or can be a fixed fraction (ElectronTemperatureRatio) of the total
     !    pressure.
 
-    use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, &
-         UseB0, UseBoris => boris_correction, UseBorisSimple
+    use ModMain,    ONLY: MaxDim, nI, nJ, nK, x_, y_, z_, UseB0
+    use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModAdvance, ONLY: State_VGB, Source_VC, UseAnisoPe, &
          bCrossArea_DX, bCrossArea_DY, bCrossArea_DZ, UseElectronPressure
     use ModB0,      ONLY: B0_DGB, UseCurlB0, CurlB0_DC
-    use ModPhysics, ONLY: InvClight2 => Inv_C2light, ElectronTemperatureRatio
+    use ModPhysics, ONLY: InvClight2, ElectronTemperatureRatio
     use ModCoordTransform, ONLY: cross_product
     use ModWaves,   ONLY: UseWavePressure
     use BATL_lib,   ONLY: IsCartesianGrid, FaceNormal_DDFB, CellVolume_GB, &
@@ -369,7 +369,7 @@ contains
                NameSub,': after grad Pwave, Force_D =', Force_D
        end if
 
-       if(UseBoris .or. UseBorisSimple)then
+       if(UseBorisCorrection .or. UseBorisSimple)then
           ! Simplified Boris correction
           ! (see the ASTRONUM 2009 proceedings paper by Toth et al.)
           ! Divide the number density by
@@ -441,14 +441,14 @@ contains
 
     use ModPointImplicit, ONLY:  UsePointImplicit, IsPointImplSource, &
          IsPointImplPerturbed, DsDu_VVC
-    use ModMain,    ONLY: nI, nJ, nK, UseB0,&
-                          UseBoris => boris_correction, UseBorisSimple
+    use ModMain,    ONLY: nI, nJ, nK, UseB0
     use ModAdvance, ONLY: State_VGB, Source_VC
     use ModB0,      ONLY: B0_DGB
     use BATL_lib,   ONLY: Xyz_DGB
     use ModPhysics, ONLY: ElectronCharge, InvGammaMinus1_I, &
-         InvClight2 => Inv_C2light, Si2No_V, No2Si_V, Io2No_V, &
+         InvClight2, Si2No_V, No2Si_V, Io2No_V, &
          UnitTemperature_, UnitT_, UnitU_
+    use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
 
     use ModMain,    ONLY: x_, y_, z_
     use ModCoordTransform, ONLY: cross_product
@@ -537,7 +537,7 @@ contains
 
        ChargeDensBoris_I = ChargeDens_I
 
-       if(UseBoris .or. UseBorisSimple)then
+       if(UseBorisCorrection .or. UseBorisSimple)then
           ! See the ASTRONUM 2009 proceedings paper by Toth et al.
           !
           ! Boris correction: divide the number density by
@@ -587,7 +587,7 @@ contains
           InvuCutOff2  = 1.0/(Io2No_V(UnitU_)*uCutOffDim)**2
        end if
        if(DoTestCell)then
-          if(UseBoris)write(*,'(2a,15es16.8)') NameSub,'Ga2=',Ga2
+          if(UseBorisCorrection)write(*,'(2a,15es16.8)') NameSub,'Ga2=',Ga2
           write(*,'(2a,15es16.8)') NameSub,' FullB_D  =', FullB_D
           write(*,'(2a,15es16.8)') NameSub,' uPlus_D  =', uPlus_D
        end if

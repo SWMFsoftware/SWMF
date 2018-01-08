@@ -11,7 +11,6 @@ module ModAdvance
   use ModSemiImplVar, ONLY: UseStableImplicit
   use ModMultiFluid, ONLY: UseMultiIon
   use ModMain,       ONLY: UseB, UseRotatingFrame, UseGravity, &
-       boris_correction, &
        iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace, &
        iMinFace2, iMaxFace2, jMinFace2, jMaxFace2, kMinFace2, kMaxFace2, &
        nIFace, nJFace, nKFace
@@ -137,10 +136,6 @@ module ModAdvance
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
 
-  ! Electric field . area vector for div(E) in Boris correction
-  real, allocatable:: &
-       EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:)
-
   ! Fluxes are for conservative variables (momentum)
   real, allocatable:: Flux_VX(:,:,:,:), Flux_VY(:,:,:,:), Flux_VZ(:,:,:,:)
 
@@ -193,7 +188,6 @@ module ModAdvance
   !$omp threadprivate( UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z )
   !$omp threadprivate( UseLowOrderRegion )
   !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
-  !$omp threadprivate( EDotFA_X, EDotFA_Y, EDotFA_Z )
   !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
   !$omp threadprivate( FluxLeft_VGD, FluxRight_VGD )
   !$omp threadprivate( FluxCenter_VGD )
@@ -229,12 +223,6 @@ contains
        allocate(bCrossArea_DX(MaxDim,nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
        allocate(bCrossArea_DY(MaxDim,iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
        allocate(bCrossArea_DZ(MaxDim,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
-    end if
-
-    if(UseB .and. boris_correction .and. .not.allocated(EDotFA_X))then
-       allocate(EDotFA_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
-       allocate(EDotFA_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
-       allocate(EDotFA_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     end if
     !$omp end parallel
     
@@ -324,9 +312,6 @@ contains
     if(allocated(bCrossArea_DX))   deallocate(bCrossArea_DX)
     if(allocated(bCrossArea_DY))   deallocate(bCrossArea_DY)
     if(allocated(bCrossArea_DZ))   deallocate(bCrossArea_DZ)
-    if(allocated(EDotFA_X))        deallocate(EDotFA_X)
-    if(allocated(EDotFA_Y))        deallocate(EDotFA_Y)
-    if(allocated(EDotFA_Z))        deallocate(EDotFA_Z)
     if(allocated(ExNum_CB))        deallocate(ExNum_CB)
     if(allocated(EyNum_CB))        deallocate(EyNum_CB)
     if(allocated(EzNum_CB))        deallocate(EzNum_CB)

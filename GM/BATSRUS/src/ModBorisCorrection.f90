@@ -1,18 +1,96 @@
 module ModBorisCorrection
 
-  use ModVarIndexes,     ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_
-  use ModPhysics,        ONLY: c2Light, inv_c2light
+  use ModVarIndexes,     ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, IsMhd
+  use ModPhysics,        ONLY: c2Light, InvClight2, ClightFactor
   use ModCoordTransform, ONLY: cross_product
 
   implicit none
   private ! except
 
+  public:: init_mod_boris_correction  ! initialize module
+  public:: clean_mod_boris_correction ! clean module
+  public:: read_boris_param    ! read parameters for (simple) Boris correction
   public:: mhd_to_boris        ! from classical to semi-relativistic variables
   public:: boris_to_mhd        ! from semi-relativistic to classical variables
   public:: mhd_to_boris_simple ! from RhoU to (1+B^2/(Rho*c^2))*RhoU
   public:: boris_simple_to_mhd ! from (1+B^2/(Rho*c^2))*RhoU to RhoU
 
+  logical, public:: UseBorisCorrection = .false.
+  logical, public:: UseBorisSimple = .false.
+
+  ! Electric field . area vector for div(E) in Boris correction
+  real, allocatable, public:: &
+       EDotFA_X(:,:,:), EDotFA_Y(:,:,:), EDotFA_Z(:,:,:)
+
+  !$omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
+
 contains
+  !============================================================================
+  subroutine init_mod_boris_correction
+
+    use ModMain, ONLY: &
+         iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
+    use BATL_lib, ONLY: nI, nJ, nK
+    !--------------------------------------------------------------------------
+    !$omp parallel
+    if(.not.allocated(EDotFA_X))then
+       allocate(EDotFA_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
+       allocate(EDotFA_Y(iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace))
+       allocate(EDotFA_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
+    end if
+    !$omp end parallel
+
+  end subroutine init_mod_boris_correction
+
+  !============================================================================
+  subroutine clean_mod_boris_correction
+
+    if(allocated(EDotFA_X)) deallocate(EDotFA_X)
+    if(allocated(EDotFA_Y)) deallocate(EDotFA_Y)
+    if(allocated(EDotFA_Z)) deallocate(EDotFA_Z)
+
+  end subroutine clean_mod_boris_correction
+
+  !============================================================================
+  subroutine read_boris_param(NameCommand)
+
+    use ModReadParam, ONLY: read_var
+
+    character(len=*), intent(in):: NameCommand
+
+    character(len=*), parameter:: NameSub = 'read_boris_param'
+    !--------------------------------------------------------------------------
+    select case(NameCommand)
+    case("#BORIS")
+       call read_var('UseBorisCorrection', UseBorisCorrection)
+       if(UseBorisCorrection) then
+          call read_var('ClightFactor', CLightFactor)
+          if(IsMhd)then
+             UseBorisSimple = .false.
+          else
+             ! For non-MHD equations only simplified Boris correction
+             ! is possible
+             UseBorisSimple     = .true.
+             UseBorisCorrection = .false.
+          end if
+       else
+          ClightFactor = 1.0
+       end if
+
+    case("#BORISSIMPLE")
+       call read_var('UseBorisSimple', UseBorisSimple)
+       if(UseBorisSimple) then
+          call read_var('ClightFactor', ClightFactor)
+          UseBorisCorrection=.false.
+       else
+          ClightFactor = 1.0
+       end if
+    case default
+       call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
+    end select
+
+  end subroutine read_boris_param
+
   !============================================================================
   subroutine mhd_to_boris(State_V, Energy, B0_D)
 
@@ -37,12 +115,12 @@ contains
     !
     ! RhoUBoris = RhoU + (RhoU B^2 - B RhoU.B)/(Rho c^2)
     !           = U*(Rho + B^2/c^2 - B U.B/c^2
-    State_V(RhoUx_:RhoUz_) = u_D*(Rho + sum(b_D**2)*inv_c2LIGHT) &
-         - b_D*sum(u_D*b_D)*inv_c2LIGHT
+    State_V(RhoUx_:RhoUz_) = u_D*(Rho + sum(b_D**2)*InvClight2) &
+         - b_D*sum(u_D*b_D)*InvClight2
 
     ! e_Boris = e + (UxB)^2/(2 c^2)   eq 92
     if(present(Energy)) &
-         Energy = Energy + 0.5*sum(cross_product(u_D, b_D)**2)*inv_c2LIGHT
+         Energy = Energy + 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
 
   end subroutine mhd_to_boris
   !============================================================================
@@ -76,7 +154,7 @@ contains
     if(present(Energy))then
        ! e = e_boris - (U x B)^2/(2 c^2)   eq 92
        u_D = State_V(RhoUx_:RhoUz_)/State_V(Rho_)
-       Energy = Energy - 0.5*sum(cross_product(u_D, b_D)**2)*inv_c2LIGHT
+       Energy = Energy - 0.5*sum(cross_product(u_D, b_D)**2)*InvClight2
     end if
 
   end subroutine boris_to_mhd

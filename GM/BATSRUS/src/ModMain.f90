@@ -47,10 +47,7 @@ module ModMain
   real :: Cfl
   real :: CflOrig
   real, allocatable :: dt_BLK(:)
-  logical :: time_accurate = .true.,   &
-       boris_correction    = .false.,  &
-       UseBorisSimple      = .false.,  &
-       time_loop           = .false.
+  logical :: time_accurate = .true.,  time_loop = .false.
 
   ! Limiting speed in the numerical diffusive flux (for implicit scheme only)
   real :: Climit = -1.0

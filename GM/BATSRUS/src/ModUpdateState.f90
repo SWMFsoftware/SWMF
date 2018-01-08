@@ -349,8 +349,8 @@ contains
     !==========================================================================
     subroutine update_explicit
 
-      use ModBorisCorrection, ONLY: mhd_to_boris, boris_to_mhd, &
-           mhd_to_boris_simple, boris_simple_to_mhd
+      use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
+           mhd_to_boris, boris_to_mhd, mhd_to_boris_simple, boris_simple_to_mhd
 
       ! Allocatable storage for classical 4th order Runge-Kutta scheme
       real, allocatable, save:: Rk4_VCB(:,:,:,:,:), Rk4_CBI(:,:,:,:,:)
@@ -360,7 +360,7 @@ contains
       integer:: iFluid, iRho
       !------------------------------------------------------------------------
 
-      if(boris_correction) then
+      if(UseBorisCorrection) then
          ! Convert StateOld_VGB and State_VGB from classical MHD variables
          ! to semi-relativistic MHD variable
          do k=1,nK; do j=1,nJ; do i=1,nI
@@ -553,7 +553,7 @@ contains
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
-      if(boris_correction) then
+      if(UseBorisCorrection) then
          ! Convert StateOld_VGB and State_VGB back from
          ! semi-relativistic to classical MHD variables
          do k=1,nK; do j=1,nJ; do i=1,nI
@@ -771,6 +771,7 @@ contains
 
     use ModProcMH
     use ModMain
+    use ModBorisCorrection, ONLY: UseBorisCorrection
     use ModImplicit, ONLY: UsePartImplicit
     use ModAdvance
     use ModB0, ONLY: B0_DGB
@@ -1233,7 +1234,7 @@ contains
          write(*,*)NameSub,' old     state=',StateOld_VGB(:,i,j,k,iBlock)
       end if
 
-      if(boris_correction .and. nFluid==1) then
+      if(UseBorisCorrection .and. nFluid==1) then
 
          ! Convert old state
          fullBx = B0_DC(x_,i,j,k) + &

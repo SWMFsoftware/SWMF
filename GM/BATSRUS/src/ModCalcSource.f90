@@ -50,6 +50,8 @@ contains
          Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_
     use ModViscosity,     ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
+    use ModBorisCorrection, ONLY: UseBorisCorrection, &
+         EDotFA_X, EDotFA_Y, EDotFA_Z
     use ModUserInterface ! user_calc_sources
 
     integer, intent(in):: iBlock
@@ -624,11 +626,11 @@ contains
             call write_source('After curl B0')
     end if
 
-    if(UseB .and. boris_correction &
-         .and. boris_cLIGHT_factor < 0.9999 &
+    if(UseB .and. UseBorisCorrection &
+         .and. ClightFactor < 0.9999 &
          .and. index(StringTest,'nodivE')<1) then
 
-       Coef = (boris_cLIGHT_factor**2 - 1.0)*inv_c2LIGHT
+       Coef = (ClightFactor**2 - 1.0)*InvClight2
        FullB_DC = State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock)
        if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
        do k = 1, nK; do j = 1, nJ; do i = 1, nI

@@ -122,6 +122,8 @@ contains
     use ModCoarseAxis, ONLY: read_coarse_axis_param
     use ModWaves, ONLY: read_waves_param, check_waves
     use ModLdem, ONLY: UseLdem, NameLdemFile, iRadiusLdem, read_ldem
+    use ModBorisCorrection, ONLY: read_boris_param, UseBorisCorrection, &
+         init_mod_boris_correction
 
     use ModUser, ONLY: NameUserModule, VersionUserModule
     use ModUserInterface ! user_read_inputs, user_init_session
@@ -318,6 +320,7 @@ contains
        call init_mod_boundary_cells
        call init_mod_nodes
        call user_action("initialize module")
+       if(UseB .and. UseBorisCorrection) call init_mod_boris_correction
        if(UseB0)            call init_mod_b0
        if(UseRaytrace)      call init_mod_field_trace
        if(UseConstrainB)    call init_mod_ct
@@ -1309,31 +1312,8 @@ contains
        case('#LIGHTSPEED')
           call read_var('ClightDim', ClightDim)
 
-       case("#BORIS")
-          if(.not.UseB)CYCLE READPARAM
-          call read_var('UseBorisCorrection', boris_correction)
-          if(boris_correction) then
-             call read_var('BorisClightFactor', boris_cLight_factor)
-             if(IsMhd)then
-                UseBorisSimple = .false.
-             else
-                ! For non-MHD equations only simplified Boris correction
-                ! is possible
-                UseBorisSimple   = .true.
-                boris_correction = .false.
-             end if
-          else
-             boris_cLIGHT_factor = 1.0
-          end if
-
-       case("#BORISSIMPLE")
-          call read_var('UseBorisSimple',UseBorisSimple)
-          if(UseBorisSimple) then
-             call read_var('BorisClightFactor',boris_cLIGHT_factor)
-             boris_correction=.false.
-          else
-             boris_cLIGHT_factor = 1.0
-          end if
+       case('#BORIS', '#BORISSIMPLE')
+          if(UseB) call read_boris_param(NameCommand)
 
        case("#DIVB")
           if(.not.UseB)CYCLE READPARAM
@@ -2946,7 +2926,7 @@ contains
 
       ! Check CFL number
       if(.not.time_accurate .and. iProc==0)then
-         if(boris_correction)then
+         if(UseBorisCorrection)then
             if(Cfl > 0.65) then
                write(*,'(a)')NameSub// &
                     ' WARNING: CFL number above 0.65 may be unstable'// &
@@ -2954,7 +2934,7 @@ contains
                if (UseStrict) call stop_mpi('Correct PARAM.in!')
             end if
          else
-            if(cfl > 0.85)then
+            if(Cfl > 0.85)then
                write(*,'(a)')NameSub// &
                     ' WARNING: CFL number above 0.85 may be unstable'// &
                     ' for local timestepping !!!'
@@ -2965,28 +2945,28 @@ contains
 
       ! Boris correction checks
       if((FluxType(1:3)=='Roe' .or. FluxTypeImpl(1:3)=='Roe') &
-           .and. boris_correction)then
+           .and. UseBorisCorrection)then
          if (iProc == 0) then
             write(*,'(a)')NameSub//&
                  ' WARNING: Boris correction not available for Roe flux !!!'
             if(UseStrict)call stop_mpi('Correct PARAM.in!')
-            write(*,*)NameSub//' Setting boris_correction = .false.'
+            write(*,*)NameSub//' Setting UseBoris = .false.'
          end if
-         boris_correction = .false.
-         boris_cLIGHT_factor = 1.0
+         UseBorisCorrection = .false.
+         ClightFactor = 1.0
       end if
 
-      if(boris_correction .and. UseHallResist .and. &
+      if(UseBorisCorrection .and. UseHallResist .and. &
            TypeSemiImplicit /= 'resisthall' .and. &
            TypeSemiImplicit /= 'resistivity')then
          if(iProc==0)then
             write(*,'(a)') NameSub//' WARNING: '//&
                  'Boris correction only works with semi-implicit Hall MHD!!!'
             if (UseStrict) call stop_mpi('Correct PARAM.in!')
-            write(*,*)NameSub//' Setting boris_correction = .false.'
+            write(*,*)NameSub//' Setting UseBoris = .false.'
          end if
-         boris_correction = .false.
-         boris_cLIGHT_factor = 1.0
+         UseBorisCorrection = .false.
+         ClightFactor = 1.0
       end if
 
       ! Check parameters for implicit
@@ -3565,7 +3545,7 @@ contains
            (UseTvdResChange .or. UseAccurateResChange))
       if(UseHighResChange) DoOneCoarserLayer = .false.
 
-      DoLimitMomentum = boris_correction .and. DoOneCoarserLayer
+      DoLimitMomentum = UseBorisCorrection .and. DoOneCoarserLayer
 
       if(UseMultiIon)DoLimitMomentum = .false.
 
@@ -3616,7 +3596,7 @@ contains
             end do
          end if
 
-         if (boris_cLight_factor /=1 .or. cLightDim > 0) &
+         if (ClightFactor /=1 .or. ClightDim > 0) &
               StringParam = trim(StringParam)//' clight'
 
          ! Replace '{default}' with StringParam

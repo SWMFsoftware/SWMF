@@ -612,9 +612,9 @@ contains
          TypeCoordSystem, CodeVersion
     use ModGeometry, ONLY: nTrueCells
     use ModFaceValue, ONLY: TypeLimiter, BetaLimiter
-    use ModMain, ONLY: boris_correction
     use ModPhysics, ONLY : &
-         ThetaTilt, Rbody, boris_cLIGHT_factor, BodyNDim_I, Gamma_I
+         ThetaTilt, Rbody, ClightFactor, BodyNDim_I, Gamma_I
+    use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple
     use ModAdvance, ONLY : FluxType
     use ModMultiFluid, ONLY: IonFirst_
     use ModIoUnit, ONLY: UnitTmp_
@@ -649,8 +649,8 @@ contains
          'AUXDATA BODYNUMDENSITY="',trim(adjustl(stmp)),'"'
 
     ! BORIS
-    if(boris_correction)then
-       write(stmp,'(a,f8.4)')'T ',boris_cLIGHT_factor
+    if(UseBorisCorrection .or. UseBorisSimple)then
+       write(stmp,'(a,f8.4)')'T ', ClightFactor
     else
        write(stmp,'(a)')'F'
     end if
