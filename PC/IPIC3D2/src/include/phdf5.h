@@ -30,6 +30,8 @@
 #include "arraysfwd.h"
 #include <string>
 
+using std::string;
+
 class PHDF5fileClass{
 #ifndef NO_HDF5
   public:
