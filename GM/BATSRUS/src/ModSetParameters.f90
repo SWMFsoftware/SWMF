@@ -29,6 +29,7 @@ contains
     use ModImplicit
     use ModSemiImplicit, ONLY: read_semi_impl_param, init_mod_semi_impl
     use ModPartImplicit, ONLY: read_part_impl_param, init_mod_part_impl
+    use ModLinearSolver, ONLY: UseAccurateSum
     use ModImplHypre, ONLY: hypre_read_param
     use ModPhysics
     use ModProjectDivB, ONLY: read_project_divb_param, DivBMax
@@ -553,6 +554,9 @@ contains
        case("#POINTIMPLICIT")
           call read_point_implicit_param
 
+       case("#LINEARSOLVERACCURATESUM")
+          call read_var('UseAccurateSum', UseAccurateSum)
+          
        case("#IMPLICIT", &
             "#IMPLCRITERIA", "#IMPLICITCRITERIA", "#STEPPINGCRITERIA", &
             "#PARTIMPL", "#PARTIMPLICIT",     &
