@@ -53,9 +53,7 @@ developers: Stefano Markidis, Giovanni Lapenta
 #define RANDNUM rand()*invRandMax
 #endif
 
-using std::cout;
-using std::cerr;
-using std::endl;
+using namespace std;
 
 #define MIN_VAL   1E-16
 // particles processed together

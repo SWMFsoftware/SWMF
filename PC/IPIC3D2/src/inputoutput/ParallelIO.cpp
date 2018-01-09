@@ -34,6 +34,8 @@
 #include <iostream>
 #include <sstream>
 
+using namespace std;
+
 /*! Function used to write the EM fields using the parallel HDF5 library */
 void WriteOutputParallel(Grid3DCU *grid, EMfields3D *EMf, Particles3Dcomm *part, CollectiveIO *col, VCtopology3D *vct, int cycle){
 

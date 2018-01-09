@@ -38,6 +38,8 @@
 #include "aligned_vector.h"
 class ConfigFile;
 
+using std::string;
+
 class Collective
 #ifdef BATSRUS
 : public InterfaceFluid

@@ -34,6 +34,8 @@
 #include "string.h"
 #include "Particles3Dcomm.h"
 
+using namespace std;
+
 // order must agree with Enum in Collective.h
 static const char *enumNames[] =
 {

@@ -46,6 +46,7 @@
 
 #include "Moments.h" // for debugging
 
+using namespace std;
 using namespace iPic3D;
 //MPIdata* iPic3D::c_Solver::mpi=0;
 
