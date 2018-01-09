@@ -1253,7 +1253,7 @@ contains
 
   end subroutine user_get_b0
   !============================================================================
-    subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
+  subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut, &
        CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
@@ -1277,6 +1277,7 @@ contains
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
     use ModConst
+    use ModWaves,      ONLY: FrequencySi_W`
 
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
@@ -1302,6 +1303,13 @@ contains
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
+    real :: FrequencySi
+    !------------------
+    ! Assign frequency of radioemission
+    FrequencySi = FrequencySi_W(WafeFirst_) 
+    !
+    OpacityEmissionOut_W = 0.0
+    PlankOut_W = 0.0
   end subroutine user_material_properties
 end module ModUser
 !==============================================================================

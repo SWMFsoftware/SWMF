@@ -383,6 +383,9 @@ contains
     !==================
     subroutine advance_ray
       use ModCoordTransform, ONLY: cross_product
+      use ModUser, ONLY: user_material_properties
+      use ModVarIndexes, ONLY: nVar
+      use ModWaves,      ONLY: nWave, WaveFirst_, WaveLast_, FrequencySi_W
       !\
       ! Omega = \nabla n/n\times d\vec{x}/ds
       ! Analogous to the magnetic field times q/m in the
@@ -406,10 +409,14 @@ contains
       real  ::  RelGradRefrInx_D(MaxDim)
       !\
       !Misc
-      real :: Coef, Curv
+      real :: Coef, Curv, State_V(nVar)
       !\
       ! Ray ID
       integer :: iRay
+      !\
+      ! Realistic emission
+      !/
+      real, dimension(nWave):: PlanckSpectrum_W, AbsorptionCoef_W
       !---------------
       iRay = iIndex_II(Ray_,iParticle)
       if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack)&
@@ -473,6 +480,22 @@ contains
 
 
          ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
+         !\
+         ! Get state vector at the mid point of the newly added ray segment
+         !/
+         State_V = -1
+         !\
+         ! Calculate absorption coefficient
+         !/
+         call user_material_properties(State_V, &
+              OpacityEmissionOut_W = AbsorptionCoef_W,&
+              PlankOut_W = PlanckSpectrum_W)
+         !\
+         ! Realistic emission
+         !/
+         !Intensity_I(iRay) = Intensity_I(iRay)  &
+         !+ ParabLen*AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
+         !* FrequencySi_W(WaveLast_)
          Intensity_I(iRay) = Intensity_I(iRay)  &
               + ParabLen*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
       else 

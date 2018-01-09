@@ -37,6 +37,7 @@ contains
     use ModVarIndexes, ONLY: Rho_
     use BATL_lib, ONLY:  nI, nJ, nK, MaxDim
     use ModUtilities, ONLY: join_string
+    use ModWaves,     ONLY: WaveFirst_, WaveLast_, FrequencySi_W
     !
     ! Arguments
     !
@@ -234,6 +235,8 @@ contains
           write(*,*) 'RAYTRACE START: rIntegration = ', &
                rIntegration
        end if
+       FrequencySi_W(WaveFirst_) = RadioFrequency_I(iFreq)
+       FrequencySi_W(WaveLast_ ) = 1
        call ray_bunch_intensity(RadioFrequency_I(iFreq))
        Intensity_IIV(:,:,iFreq) = &
             reshape(Intensity_I(1:nRay), (/nXPixel,nYPixel/))
