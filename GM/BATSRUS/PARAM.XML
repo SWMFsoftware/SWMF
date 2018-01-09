@@ -4350,6 +4350,22 @@ The output is a single file in IDL or Tecplot format.
 Default is nPlotFile=0, so no plot files are saved.
 </command>
 
+<command name="RADIOEMISSION">
+	<parameter name="TypeRadioEmission" type="string" input="select">
+		<option name="simplistic" default="T" />
+		<option name="bremsstrahlung" />
+
+A command closely related to 'rfr' plots is 
+\begin{verbatim}
+#RADIOEMISSION
+simplistic
+\end{verbatim}
+It allows the selection of mechanisms for radio emission ('bremsstrahlung' or
+'simplistic' mechanism, which interpolates between Bremsstrahlung and 
+contributions from non-thermal emission at critical and quarter-of-critical, 
+densities, the different contributions being weighted quite arbitrarily.
+</command>
+
 <command name="SAVETECPLOT">
 	 <parameter name="DoSaveOneTecFile" type="logical" default="F" />
 #SAVETECPLOT

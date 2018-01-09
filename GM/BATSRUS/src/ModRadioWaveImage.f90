@@ -489,7 +489,7 @@ contains
          !/
          call user_material_properties(State_V, &
               OpacityEmissionOut_W = AbsorptionCoef_W,&
-              PlankOut_W = PlanckSpectrum_W)
+              PlanckOut_W = PlanckSpectrum_W)
          !\
          ! Realistic emission
          !/

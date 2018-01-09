@@ -61,7 +61,14 @@ module ModUser
   logical:: FrampStart = .false.
   logical:: UrZero = .false.
   logical:: UpdateWithParker = .true.
-
+  !\
+  ! Different mechanisms for radioemission
+  ! 'simplistic' - interpolation between Bremsstrahlung and contributions
+  ! from non-thermal emission at critical and quarter-of-critical, 
+  ! densities, the different contributions being weighted quite arbitrarily.
+  ! 'bremsstrahlung' - emission due to the electron-ion collisions
+  !/
+  character(len=20):: TypeRadioEmission = 'simplistic'
 contains
   !============================================================================
 
@@ -95,6 +102,9 @@ contains
        case("#CHROMOBC")
           call read_var('nChromoSi', nChromoSi)
           call read_var('tChromoSi', tChromoSi)
+
+       case('#RADIOEMISSION')
+          call read_var('TypeRadioEmission',TypeRadioEmission)
 
        case("#LINETIEDBC")
           call read_var('UseUparBc', UseUparBc)
@@ -1256,9 +1266,13 @@ contains
   subroutine user_material_properties(State_V, i, j, k, iBlock, iDir, &
        EinternalIn, TeIn, NatomicOut, AverageIonChargeOut, &
        EinternalOut, TeOut, PressureOut, &
-       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut, &
-       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W, &
+       CvOut, GammaOut, HeatCondOut, IonHeatCondOut, TeTiRelaxOut,         &
+       OpacityPlanckOut_W, OpacityEmissionOut_W, OpacityRosselandOut_W,    &
        PlanckOut_W)
+    use ModConst, ONLY : cBoltzmann, cPlanckH, cElectronMass, cTwoPi, cPi, &
+         cLightSpeed, cElectronCharge, cElectronChargeSquaredJm
+    use ModVarIndexes, ONLY: Pe_, Rho_
+    use ModPhysics, ONLY: No2Si_V, UnitX_, UnitTemperature_, UnitN_
 
     ! The State_V vector is in normalized units, all other physical
     ! quantities are in SI.
@@ -1277,7 +1291,7 @@ contains
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
     use ModConst
-    use ModWaves,      ONLY: FrequencySi_W`
+    use ModWaves,      ONLY: FrequencySi_W
 
     real, intent(in) :: State_V(nVar)
     integer, optional, intent(in):: i, j, k, iBlock, iDir  ! cell/face index
@@ -1303,13 +1317,23 @@ contains
     ! Multi-group specific interface. The variables are respectively:
     !  Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
-    real :: FrequencySi
+    real :: FrequencySi, ElectronTemperatureSi, ElectronDensitySi
     !------------------
     ! Assign frequency of radioemission
-    FrequencySi = FrequencySi_W(WafeFirst_) 
+    FrequencySi = FrequencySi_W(WaveFirst_) 
     !
     OpacityEmissionOut_W = 0.0
-    PlankOut_W = 0.0
+    PlanckOut_W = 0.0
+    ElectronDensitySi = State_V(Rho_)*No2Si_V(UnitN_)
+    ElectronTemperatureSi = State_V(Pe_)/State_V(Rho_)*&
+         No2Si_V(UnitTemperature_)
+    select case( trim(TypeRadioEmission) )
+    case('simplistic')
+    case('bremsstrahlung')
+    case default
+       call CON_stop('Unknown radio emission mechanism ='&
+            //TypeRadioEmission)
+    end select
   end subroutine user_material_properties
 end module ModUser
 !==============================================================================
