@@ -3768,6 +3768,20 @@ No magnetometer grid file is saved by default.
 			<parameter name="NameLosTable" type="string" length="100"
 				   if="$plotvar =~ /tbl/i"/>
                 </if>
+ 		<if expr="$plotarea =~ /\brfr\b/">
+			<parameter name="ObsPosX" type="real" default="-215"/>
+			<parameter name="ObsPosY" type="real" default="0"/>
+			<parameter name="ObsPosZ" type="real" default="0"/>
+			<parameter name="StringRadioFrequency" type="string" length="100"/>
+			<parameter name="xSizeImage" type="real" min="0"
+								default="32"/>
+			<parameter name="ySizeImage" type="real" min="0"
+								default="32"/>
+			<parameter name="nPixX" type="integer" min="2"
+								default="200"/>
+			<parameter name="nPixY" type="integer" min="2"
+								default="200"/>
+                </if>
 		<if expr="$plotarea =~ /\blin\b/">
 			<parameter name="NameLine" type="string" 
 			input="select">
@@ -3842,7 +3856,7 @@ No magnetometer grid file is saved by default.
 		</if>
 	</for>
 #SAVEPLOT
-16			nPlotFile
+17			nPlotFile
 cut MHD tcp		StringPlot ! 3d cell centered Tecplot with MHD data
 100			DnSavePlot
 -1.			DtSavePlot
@@ -3987,6 +4001,17 @@ HGR                     TypeCoordPlot
 0.0                     xAngle [deg]
 90.0                    yAngle [deg]
 0.0                     zAngle [deg]
+rfr tec rwi             StringPlot
+10                      DnSavePlot
+-1.0                    DtSavePlot
+ -67.92			ObsPosX
+ 200.40			ObsPosY
+ -26.91			ObsPosZ
+1.5 GHz 500 MHz 100 MHz    StringRadioFrequency
+4.0 	    	    	xSizeImage
+4.0			ySizeImage
+100			nPixX
+100			nPixY
 
 The #SAVEPLOT command determines the number and type of plot files
 saved from BATS-R-US. 
@@ -4255,6 +4280,25 @@ the adiabatic index (g) or indexes (g1..g9 if they are not equal,
 and the radius of the inner boundary (r) if present. The electron
 mass (me) is saved if there is an electron fluid, 
 and the adiabatic index of electrons (ge) if it is different from gamma.\\
+
+The refracting rays based plots (PlotArea 'rfr') plots calculate integrals 
+along the curved rays (distorted by refraction) of the (radio) emissivity 
+in the solar (stellar) corona  and create a 2D Cartesian square
+shaped grid of the integrated intensity. Only the circle enclosed in the
+square is actually calculated and the corners are filled in with
+zeros.  The image plane always contains the origin of the
+computational domain (usually the center of the Sun).  The
+image plane is orthogonal to the line coonecting the  observers position 
+to the center of the Sun. The variables which control the direction of
+the lines of sight and the grid position and resolution are the
+following:
+\begin{verbatim}
+ ObsPosX,ObsPosY,ObsPosZ - the position of the observer in the 
+                           coordinate system of the component
+ StringRadioFrequency    - the frequency or list of frequencies
+ xSizeImage, ySizeImage  - the size of the radio image
+ nPixX, nPixY            - the number of pixels in each direction
+\end{verbatim}
 
 Most plot files are written in parallel: each processor
 writes out part of the data. These intermediate files are ASCII in 'tec'
