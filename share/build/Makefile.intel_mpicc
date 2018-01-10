@@ -3,7 +3,7 @@ C_COMPILER_NAME=intel_mpicc
 
 COMPILE.c     = icc
 COMPILE.mpicc = mpiicc
-COMPILE.mpicxx= mpicpc
+COMPILE.mpicxx= mpiicpc
 
 CPPLIB = -lstdc++ -lmpi_cxx
 
