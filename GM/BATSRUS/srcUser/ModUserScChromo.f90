@@ -1318,6 +1318,7 @@ contains
     !  Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
     real :: FrequencySi, ElectronTemperatureSi, ElectronDensitySi
+    real :: GauntFactor
     !------------------
     ! Assign frequency of radioemission
     FrequencySi = FrequencySi_W(WaveFirst_) 
@@ -1327,9 +1328,22 @@ contains
     ElectronDensitySi = State_V(Rho_)*No2Si_V(UnitN_)
     ElectronTemperatureSi = State_V(Pe_)/State_V(Rho_)*&
          No2Si_V(UnitTemperature_)
+    GauntFactor = 10.0
     select case( trim(TypeRadioEmission) )
     case('simplistic')
     case('bremsstrahlung')
+       !\
+       ! Bremsstrahlung spectrum for Radio satisfies well the condition: 
+       ! hv<<k_BT. So the B(v,T) can be written after Taylor expansion
+       ! as follows.
+       !/
+       PlanckOut_W = 2.0*FrequencySi*FrequencySi*cBoltzmann*& 
+               ElectronTemperatureSi/cLightSpeed/cLightSpeed
+       OpacityEmissionOut_W = 4.0/3.0*(cTwoPi/3)**0.5/cPlanckH*&
+               cElectronChargeSquaredJm**3*&
+               ElectronDensitySi**2/FrequencySi**2/&
+               (cBoltzmann*ElectronTemperatureSi*&
+               cElectronMass)**1.5/cLightSpeed*GauntFactor
     case default
        call CON_stop('Unknown radio emission mechanism ='&
             //TypeRadioEmission)
