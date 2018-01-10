@@ -159,6 +159,8 @@ contains
   end subroutine ray_bunch_intensity
   !=========
   subroutine ray_path(iParticle, IsEndOfSegment)
+    use ModVarIndexes, ONLY: nVar, Rho_
+    use ModPhysics, ONLY: No2Si_V, UnitN_
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
     ! specified by its Cartesian Xyz_DI and its direction cosines 
@@ -214,7 +216,15 @@ contains
     !
     integer, intent(in)   :: iParticle
     logical, intent(out)  :: IsEndOfSegment
-    real ::    GradNElectronSi_D(MaxDim), NElectronSi, DeltaSNew  
+    !\
+    ! State vector interpolated to the mid point of the new ray segment
+    !/
+    real ::   State_V(nVar)
+    !\
+    ! Density, its gradient and the grid size interpolated to the same
+    ! point
+    !/
+    real ::   GradNElectronSi_D(MaxDim), NElectronSi, DeltaSNew  
     !\
     ! Predictor
     real :: HalfDeltaS                        
@@ -277,8 +287,9 @@ contains
     ! The following routine calculates density, gradient and 
     ! step size
     !/
-    call get_local_density(NElectronSi, GradNElectronSi_D, DeltaSNew,&
+    call get_local_density(State_V, GradNElectronSi_D, DeltaSNew,&
          IsEndOfSegment)
+    nElectronSi = State_V(Rho_)*No2Si_V(UnitN_)
     !In making radio images the ray accidentally reachig the overdense plasma 
     !region  should not be further processed 
     if(IsEndOfSegment.or.  NElectronSi >= NElectronSiCr)then
@@ -384,7 +395,6 @@ contains
     subroutine advance_ray
       use ModCoordTransform, ONLY: cross_product
       use ModUser, ONLY: user_material_properties
-      use ModVarIndexes, ONLY: nVar
       use ModWaves,      ONLY: nWave, WaveFirst_, WaveLast_, FrequencySi_W
       !\
       ! Omega = \nabla n/n\times d\vec{x}/ds
@@ -409,7 +419,7 @@ contains
       real  ::  RelGradRefrInx_D(MaxDim)
       !\
       !Misc
-      real :: Coef, Curv, State_V(nVar)
+      real :: Coef, Curv
       !\
       ! Ray ID
       integer :: iRay
@@ -589,18 +599,17 @@ contains
     end subroutine get_new_step_size
     !====================
     subroutine get_local_density(&
-         NElectronSi, GradNElectronSi_D, DeltaSNew, IsBody)
+         State_V, GradNElectronSi_D, DeltaSNew, IsBody)
       !USES:
       use ModAdvance, ONLY: State_VGB
-      use ModVarIndexes, ONLY: Rho_
+      use ModVarIndexes, ONLY: nVar
       use ModCellGradient, ONLY: GradDensity_DGB => GradVar_DGB
       use ModGeometry,ONLY: CellSize_DB
       use ModPhysics, ONLY: No2Si_V, UnitN_
-      real,    intent(out):: NElectronSi
+      real,    intent(out):: State_V(nVar)
       real,    intent(out):: GradNElectronSi_D(MaxDim)
       real,    intent(out):: DeltaSNew
       logical, optional, intent(out):: IsBody
-      real :: Density
       real :: GradDensity_D(MaxDim)
       !Coordinates and block #
       real     :: Xyz_D(MaxDim)
@@ -620,18 +629,17 @@ contains
       if(IsBody)then
          call mark_undefined(KindRay_,iParticle);RETURN
       end if
-      Density = 0.0; GradDensity_D = 0.0; DeltaSNew = 0.0
+      State_V = 0.0; GradDensity_D = 0.0; DeltaSNew = 0.0
       do iCell = 1, nCell
          i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)
-         Density = Density + &
-              State_VGB(Rho_,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
+         State_V = State_V + &
+              State_VGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
          GradDensity_D = GradDensity_D + &
               GradDensity_DGB(:,i_D(1),i_D(2),i_D(3),iBlock)*Weight_I(iCell)
          DeltaSNew = DeltaSNew + &
               Weight_I(iCell)*minval(CellSize_DB(:,iBlock))
       end do
-      NElectronSi     = Density      *No2Si_V(UnitN_)
       GradNElectronSi_D = GradDensity_D*No2Si_V(UnitN_)
     end subroutine get_local_density
     !====================
