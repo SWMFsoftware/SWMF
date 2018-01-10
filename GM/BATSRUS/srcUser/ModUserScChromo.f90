@@ -1318,6 +1318,7 @@ contains
     !  Group Planckian spectral energy density
     real, optional, intent(out) :: PlanckOut_W(nWave)      ! [J/m^3]
     real :: FrequencySi, ElectronTemperatureSi, ElectronDensitySi
+    real :: ElectronDensitySiCr, Dens2DensCr
     real, parameter :: GauntFactor = 10.0
     !------------------
     ! Assign frequency of radioemission
@@ -1330,18 +1331,27 @@ contains
          No2Si_V(UnitTemperature_)
     select case( trim(TypeRadioEmission) )
     case('simplistic')
+       !\
+       ! Calculate the critical density from the frequency
+       !/
+       ElectronDensitySiCr = cPi*cElectronMass&
+            *FrequencySi**2/cElectronChargeSquaredJm
+       Dens2DensCr = ElectronDensitySi/ElectronDensitySiCr
+       PlanckOut_W = 1.0  !Just a proxy
+       OpacityEmissionOut_W(1) = (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
     case('bremsstrahlung')
        !\
        ! Bremsstrahlung spectrum for Radio satisfies well the condition: 
        ! hv<<k_BT. So the B(v,T) can be written after Taylor expansion
        ! as follows.
        !/
-       PlanckOut_W = 2.0*FrequencySi*FrequencySi*cBoltzmann*& 
-               ElectronTemperatureSi/cLightSpeed/cLightSpeed
-       OpacityEmissionOut_W = 4.0/3.0*sqrt(2.0*cPi/3.0)*cElectronChargeSquaredJm**3*&
-               ElectronDensitySi**2/(FrequencySi**2*&
-               sqrt(cBoltzmann*ElectronTemperatureSi*&cElectronMass)**3/cLightSpeed)*&
-               GauntFactor
+       PlanckOut_W = 2.0*FrequencySi**2*cBoltzmann*& 
+               ElectronTemperatureSi/cLightSpeed**2
+       OpacityEmissionOut_W = 4.0/3.0*sqrt(2.0*cPi/3.0)*&
+            (  cElectronChargeSquaredJm/&
+            sqrt(cBoltzmann*ElectronTemperatureSi*cElectronMass) )**3*&
+            ( ElectronDensitySi/FrequencySi  )**2&
+            /cLightSpeed*GauntFactor
     case default
        call CON_stop('Unknown radio emission mechanism ='&
             //TypeRadioEmission)

@@ -493,7 +493,6 @@ contains
          !\
          ! Get state vector at the mid point of the newly added ray segment
          !/
-         State_V = -1
          !\
          ! Calculate absorption coefficient
          !/
@@ -503,11 +502,11 @@ contains
          !\
          ! Realistic emission
          !/
-         !Intensity_I(iRay) = Intensity_I(iRay)  &
-         !+ ParabLen*AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
-         !* FrequencySi_W(WaveLast_)
          Intensity_I(iRay) = Intensity_I(iRay)  &
-              + ParabLen*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
+         + ParabLen*AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
+         * FrequencySi_W(WaveLast_) !Multiply by a spectral width
+         !Intensity_I(iRay) = Intensity_I(iRay)  &
+         !     + ParabLen*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
       else 
 
          ! Make a step using Boris' algorithm
@@ -539,9 +538,23 @@ contains
               State_VI(x_:z_,iParticle) &
               + State_VI(SlopeX_:SlopeZ_,iParticle)&
               *HalfDeltaS
+         !\
+         ! Get state vector at the mid point of the newly added ray segment
+         !/
+         !\
+         ! Calculate absorption coefficient
+         !/
+         call user_material_properties(State_V, &
+              OpacityEmissionOut_W = AbsorptionCoef_W,&
+              PlanckOut_W = PlanckSpectrum_W)
+         !\
+         ! Realistic emission
+         !/
          Intensity_I(iRay) = Intensity_I(iRay) &
               + State_VI(Ds_,iParticle)*&
-              (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
+              AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
+              *FrequencySi_W(WaveLast_) !Multiply by a spectral width
+             ! (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
       end if
     end subroutine advance_ray
     !====================
