@@ -18,3 +18,7 @@ $Hdf5 eq "yes" and $Compiler !~ /(cray|ifort)ftn/
 # There is no point optimizing this code, speed up compilation
 1
 	${COMPILE.f90} ${Cflag0} ModSetParameters.f90
+
+# compiling ModWritePlot takes a long time with ifort with -O2
+$Compiler eq "ifort"
+	${COMPILE.f90} ${Cflag1} ModWritePlot.f90
