@@ -1285,8 +1285,8 @@ contains
 
     use ModMain,       ONLY: nI, UseERadInput
     use ModAdvance,    ONLY: State_VGB, UseElectronPressure
-    use ModPhysics,    ONLY: No2Si_V, UnitRho_, UnitP_, &
-         InvGammaMinus1, UnitEnergyDens_
+    use ModPhysics,    ONLY: No2Si_V, Si2No_V, UnitRho_, UnitP_, &
+         InvGammaMinus1, UnitEnergyDens_, UnitX_
     use ModVarIndexes, ONLY: nVar, Rho_, p_, nWave, &
          WaveFirst_,WaveLast_, &
          Pe_, ExtraEint_
@@ -1355,7 +1355,8 @@ contains
             (  cElectronChargeSquaredJm/&
             sqrt(cBoltzmann*ElectronTemperatureSi*cElectronMass) )**3*&
             ( ElectronDensitySi/FrequencySi  )**2&
-            /cLightSpeed*GauntFactor*Si2No_V               ! [dimensionless]
+            /cLightSpeed*GauntFactor&  ! [1/m]
+            /Si2No_V(UnitX_)           ! [dimensionless]
     case default
        call CON_stop('Unknown radio emission mechanism ='&
             //TypeRadioEmission)

@@ -491,7 +491,8 @@ contains
 
          ParabLen = sqrt(sum((2*StepX_D)**2) + sum(StepY_D**2))
          !\
-         ! Get state vector at the mid point of the newly added ray segment
+         ! Above we got state vector at the mid point of the newly 
+         ! added ray segment
          !/
          !\
          ! Calculate absorption coefficient
@@ -501,13 +502,12 @@ contains
               PlanckOut_W = PlanckSpectrum_W)
          !\
          ! Realistic emission. Intensity in same units as blackbody irradiance
-         ! B(v,T): [W m^-2 sr^-1 Hz^-1]
+         ! B(v,T): [W m^{-2} srad^{-1} Hz^{-1}], for the Bremsstrahlung, 
+         ! or dimensionless for simplistic emission mechanism (B=1)
          !/
          Intensity_I(iRay) = Intensity_I(iRay)  &
          + ParabLen*AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
          * FrequencySi_W(WaveLast_) !Multiply by a spectral width
-         !Intensity_I(iRay) = Intensity_I(iRay)  &
-         !     + ParabLen*(Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
       else 
 
          ! Make a step using Boris' algorithm
@@ -540,7 +540,8 @@ contains
               + State_VI(SlopeX_:SlopeZ_,iParticle)&
               *HalfDeltaS
          !\
-         ! Get state vector at the mid point of the newly added ray segment
+         ! Above we got state vector at the mid point of the newly 
+         ! added ray segment
          !/
          !\
          ! Calculate absorption coefficient
@@ -549,13 +550,15 @@ contains
               OpacityEmissionOut_W = AbsorptionCoef_W,&
               PlanckOut_W = PlanckSpectrum_W)
          !\
-         ! Realistic emission
+         ! Realistic emission. Intensity in same units as blackbody 
+         ! irradiance (PlanckSpectrum_W(1)), 
+         ! B(v,T): [W m^{-2} srad^{-1} Hz^{-1}], for the Bremsstrahlung, 
+         ! or dimensionless for simplistic emission mechanism (B=1)
          !/
          Intensity_I(iRay) = Intensity_I(iRay) &
               + State_VI(Ds_,iParticle)*&
               AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
               *FrequencySi_W(WaveLast_) !Multiply by a spectral width
-             ! (Dens2DensCr**2)*(0.50 - Dens2DensCr)**2
       end if
     end subroutine advance_ray
     !====================
