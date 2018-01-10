@@ -1342,16 +1342,20 @@ contains
     case('bremsstrahlung')
        !\
        ! Bremsstrahlung spectrum for Radio satisfies well the condition: 
-       ! hv<<k_BT. So the B(v,T) can be written after Taylor expansion
-       ! as follows.
+       ! hv<<k_BT. So the B(v,T), which is indicated here are PlanckOut_W,
+       ! can be written after Taylor expansion as follows.
        !/
        PlanckOut_W = 2.0*FrequencySi**2*cBoltzmann*& 
-               ElectronTemperatureSi/cLightSpeed**2
+               ElectronTemperatureSi/cLightSpeed**2 ! [W m^-2 sr^-1 Hz^-1]
+       !\
+       ! We choose absorption coefficient which is [1/m]  to be dimensionless 
+       ! and thus multiply it by length of segment.
+       !/ 
        OpacityEmissionOut_W = 4.0/3.0*sqrt(2.0*cPi/3.0)*&
             (  cElectronChargeSquaredJm/&
             sqrt(cBoltzmann*ElectronTemperatureSi*cElectronMass) )**3*&
             ( ElectronDensitySi/FrequencySi  )**2&
-            /cLightSpeed*GauntFactor
+            /cLightSpeed*GauntFactor*Si2No_V               ! [dimensionless]
     case default
        call CON_stop('Unknown radio emission mechanism ='&
             //TypeRadioEmission)

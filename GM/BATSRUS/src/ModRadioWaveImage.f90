@@ -500,7 +500,8 @@ contains
               OpacityEmissionOut_W = AbsorptionCoef_W,&
               PlanckOut_W = PlanckSpectrum_W)
          !\
-         ! Realistic emission
+         ! Realistic emission. Intensity in same units as blackbody irradiance
+         ! B(v,T): [W m^-2 sr^-1 Hz^-1]
          !/
          Intensity_I(iRay) = Intensity_I(iRay)  &
          + ParabLen*AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
