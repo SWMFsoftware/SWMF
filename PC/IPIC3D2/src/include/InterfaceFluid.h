@@ -117,6 +117,7 @@ class InterfaceFluid
   double Lnorm, Unorm, Mnorm, Qnorm; // normalization units for length, velocity, mass and charge
                                      // Normalized q/m ==1 for proton in CGS units  
   long    nS; // number of particle species
+  int nSIn; // number of particle species before splitting. 
   double *MoMi_S; // masses for the particles species
   double *QoQi_S; // charge for each particle species
   double PeRatio; // temperature ratio for electrons: PeRatio = Pe/Ptotal
@@ -198,6 +199,14 @@ class InterfaceFluid
   // Variables for test setup.
   bool doTestEMWave;
   double waveVec_D[3], phase0, amplE_D[3]; 
+
+  // The same particle species (such as the electrons) can be split into two
+  // or more 'species' in the PIC side based on some creteria, such as the
+  // polarity of the magnetic field. This feature can be used to distinguish
+  // the particles from different sources. 
+  bool doSplitSpecies;
+  string splitType; 
+  int *iSPic2Mhd_I;
   
  public:
   // These variables are also used in PSKOutput.h
@@ -539,6 +548,8 @@ class InterfaceFluid
       delArr2(plotRangeMin_ID,nDimMax);
       delArr2(plotRangeMax_ID,nDimMax);
     }    
+
+    if(doSplitSpecies) delete [] iSPic2Mhd_I;
   }
 
   /** Find out if we will sync with fluid solution at this time/cycle */
@@ -1104,6 +1115,7 @@ class InterfaceFluid
     inline double getFluidU(const Type x, const Type y,const Type z, 
 			    const int is, const int * iU_I, const int iJ)const
     {
+      if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
       // Assume qe = -qi;
       double U,Rho,J, Rhoit, Qit, Rhot;
 
@@ -1144,7 +1156,8 @@ class InterfaceFluid
 	    Rhoit += Numi*MoMi_S[iIon+1];
 	    Qit   += Numi*QoQi_S[iIon+1];
 	    }
-	  moq = Rhoit/Qit;
+	  moq = 0;
+	  if(Qit !=0) moq = Rhoit/Qit;
 	}else moq = MoMi_S[0]/QoQi_S[0];
 
 	Rhot = 0;
@@ -1153,7 +1166,8 @@ class InterfaceFluid
 	
 	getInterpolatedValue(x,y,z,&U,iU_I[0]);
 	getInterpolatedValue(x,y,z,&J,iJ);	
-	U -= moq*J/Rhot;
+
+	if(Rhot != 0)U -= moq*J/Rhot;
       }
       return(U);
     }
@@ -1162,11 +1176,12 @@ class InterfaceFluid
   template <typename Type>
     inline double getFluidUth(const Type x, const Type y ,const Type z, const int is)const
     {
-      double Uth, p, ni;
-
+      if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
+      double Uth=0, p, ni;
+      
       p  = getFluidP(x,y,z,is);
       ni = getFluidRhoNum(x,y,z,is);
-      Uth = sqrt(p/(ni*MoMi_S[is]));
+      if(ni>0) Uth = sqrt(p/(ni*MoMi_S[is]));
       return(Uth);
     }
   
@@ -1233,6 +1248,7 @@ class InterfaceFluid
   /** get total pressure for species from fluid */
   template <typename Type>	
     inline double getFluidP(const Type x, const Type y,const Type z, const int is)const{
+    if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
     double P, Pe, Pi;
 
     if(useElectronFluid){
@@ -1270,6 +1286,7 @@ class InterfaceFluid
   /** get parallel thermal presure for species from a fluid*/ 
   template <typename Type>	
     inline double getFluidPpar(const Type x, const Type y,const Type z, const int is)const{
+    if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
     // Need to check whether this function works correctly! -- Yuxi
     double P;
     if(useMultiSpecies || useMultiFluid){
@@ -1312,6 +1329,8 @@ class InterfaceFluid
   template <typename Type>
     inline double getFluidRhoNum(const Type x,const Type  y, const Type z, const int is)const{
     double Rho, NumDens;
+    
+    if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
     
     if(useElectronFluid){
       getInterpolatedValue(x,y,z,&Rho,iRho_I[is]);
@@ -1400,6 +1419,21 @@ class InterfaceFluid
       nIon = nFluid + nSpecies - 1; // Assuming one electron species. 
       nS = nIon + 1; // + electron
     }
+
+    nSIn = nS; 
+    if(doSplitSpecies){
+      if(splitType=="Bx" || splitType=="By" || splitType=="Bz"){
+	nS *=2;
+	iSPic2Mhd_I = new int[nS];
+	for(int i = 0; i<nS; i++){
+	  iSPic2Mhd_I[i] = floor((i+0.5)/2.0);
+	}
+      }else{
+	cout<<" splitType = "<<splitType<<" is not found!"<<endl;
+	abort();
+      }
+    }
+     
     
     useMultiFluid   = nIonFluid > 1;
     useMultiSpecies = nSpecies > 1;
@@ -1502,20 +1536,22 @@ class InterfaceFluid
     for(int i =0; i<nDim; i++)
       nNodeGst_D[i] += 1;
     
+    
     QoQi_S = new double[nS];
     MoMi_S = new double[nS];
+
 
 
     /** Do not change the order of the following lines. */
     n = 0;
     if(useElectronFluid){
-      for(int i = 0; i < nS; ++i){
+      for(int i = 0; i < nSIn; ++i){
 	QoQi_S[i] = paramreal[n++];
 	MoMi_S[i] = paramreal[n++];
       }      
     }else{
       QoQi_S[0] = -1.0;
-      for(int i = 1; i < nS; ++i){
+      for(int i = 1; i < nSIn; ++i){
 	QoQi_S[i] = paramreal[n++];
 	MoMi_S[i] = paramreal[n++];
       }      
@@ -2102,8 +2138,6 @@ class InterfaceFluid
     double qom_el;
     int npx, npy, npz;
 
-    SumMass = 0.0;
-
     //tmp store old values 
     qom_el = qom[0];
     npx = npcelx[0];
@@ -2124,6 +2158,31 @@ class InterfaceFluid
     if(!useElectronFluid){
       MoMi_S[0] = QoQi_S[0]/qom_el;
     }
+
+    SumMass = 0.0;
+    for(int is = 0; is < nSIn; is++)
+      SumMass   += MoMi_S[is];
+    
+
+    if(doSplitSpecies){
+      
+      // Fix the values of MoMi_S and QoQi_S;
+      double *MoMi0_S = new double[nSIn];
+      double *QoQi0_S = new double[nSIn];
+      for(int i = 0; i<nSIn; i++){
+	MoMi0_S[i] = MoMi_S[i];
+	QoQi0_S[i] = QoQi_S[i];
+      }
+
+      int idx; 
+      for(int i = 0; i<nS; i++){
+	idx = iSPic2Mhd_I[i];
+	QoQi_S[i] = QoQi0_S[idx]; 
+	MoMi_S[i] = MoMi0_S[idx]; 
+      }
+      delete [] MoMi0_S; 
+      delete [] QoQi0_S;     
+    }
  
     //iones
     for(int is = 0; is < nS; is++){
@@ -2132,9 +2191,6 @@ class InterfaceFluid
       npcely[is] = npy;
       npcelz[is] = npz;
     }
-
-    for(int is = 0; is < nS; is++)
-      SumMass   += MoMi_S[is];
 
 
     if(thisrank == 0 ){
@@ -2392,7 +2448,32 @@ class InterfaceFluid
       }
     } // iDim   
   }
-  
+
+
+  template <typename Type>	
+  bool do_deposit_particle(const int iSpecies,const  Type x, const Type y, const Type z)const{    
+    bool doDeposit;
+    if(doSplitSpecies){
+      int iVar; 
+      if(splitType=="Bx") iVar = iBx;
+      if(splitType=="By") iVar = iBy;
+      if(splitType=="Bz") iVar = iBz; 
+      double var;
+      getInterpolatedValue(x,y,z,&var,iVar);
+      // var >0, deposit to the even species
+      // var <=0, deposit to the odd species
+      if( (var > 0 && iSpecies % 2==0) || (var <= 0 && iSpecies % 2==1) ) doDeposit=true;
+
+
+      if(doDeposit && iSpecies==0 && y<0){
+	cout<<" y = "<<y<<" var = "<<var<<endl;
+      }
+    }else{
+      doDeposit = true; 
+    }
+    
+    return doDeposit; 
+  }
   
   // The begining 'physical' point of this IPIC region. Assume there is one 
   // layer PIC ghost cell.
@@ -2418,6 +2499,7 @@ class InterfaceFluid
 
   int getnVarFluid()const{return(nVarFluid);}
   int getnIon()const{return(nIon);}
+  int get_nS()const{return nS;}
   int get_nFluid()const{return(nFluid);}
 
   double getSi2NoL()const{return(Si2NoL);}
@@ -2499,6 +2581,16 @@ class InterfaceFluid
   double get_maxUth()const{return maxUth;}
 
   bool get_useUniformPart()const{return useUniformPart;}
+
+  bool get_doSplitSpecies()const{return doSplitSpecies;}
+
+  int get_iSPic2Mhd_I(int i)const{
+    if(doSplitSpecies){
+      return iSPic2Mhd_I[i];
+    }else{
+      return i;
+    }
+  }
 };
 
 

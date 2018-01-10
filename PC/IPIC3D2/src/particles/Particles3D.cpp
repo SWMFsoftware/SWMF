@@ -176,6 +176,7 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
   double x0,y0,z0, u, v, w;
   int ns0, iSample;
   ns0 = ns; 
+  bool doSplitSpecies = col->get_doSplitSpecies(); 
 
 #ifdef PSEUDRAND
   if(col->getUseRandomPerCell()){
@@ -212,21 +213,26 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
 	  harvest =   RANDNUM ;
 	  z = (kk + harvest)*(dz/npcelz) + grid->getZN(i, j, k);
 	}
-	// q = charge
-	x0=x; y0=y; z0=z;
-	const double q =  (qom/fabs(qom))*(col->getFluidRhoNum(x0, y0, z0, ns0)
-					   /npcel) * (1.0 / grid->getInvVOL());
-
-	iSample = 0;
-	u = 0;
-	v = 0;
-	w = 0;
-	//while(iSample==0 || u*u+v*v+w*w>1.0){
-	// Set particle velocity
-	MaxwellianVelocityFromFluidCell(x, y, z, &u, &v, &w);
-	++iSample;
-	//}
-	create_new_particle(u,v,w,q,x,y,z);
+	
+	
+	if(!doSplitSpecies || col->do_deposit_particle(ns0,x,y,z)){
+	  // q = charge
+	  x0=x; y0=y; z0=z;
+	  const double q =  (qom/fabs(qom))*(col->getFluidRhoNum(x0, y0, z0, ns0)
+					     /npcel) * (1.0 / grid->getInvVOL());
+	  
+	  iSample = 0;
+	  u = 0;
+	  v = 0;
+	  w = 0;
+	  //while(iSample==0 || u*u+v*v+w*w>1.0){
+	  // Set particle velocity
+	  MaxwellianVelocityFromFluidCell(x, y, z, &u, &v, &w);
+	  ++iSample;
+	  //}
+	  create_new_particle(u,v,w,q,x,y,z);
+	  if(ns0==0 && y<0)cout<<"y = "<<y<<endl;
+	}
       }
 }
 

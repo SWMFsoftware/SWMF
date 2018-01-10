@@ -1639,6 +1639,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
   useUniformPart = false; 
 
+  doSplitSpecies = false; 
 
   // The way to set the value of qom is very wired. Change it. --Yuxi
   qom = new double[1];
@@ -1782,6 +1783,12 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"npcely", &npcely[0]);
       read_var(param,"npcelz", &npcelz[0]);
     }
+    else if( Command == "#SPLITSPECIES" ){
+      read_var(param, "doSplitSpecies", &doSplitSpecies);
+      read_var(param, "splitType", &splitType);
+    }
+
+    
     // else if( Command == "#SPECIES" && !RESTART1){
     //   read_var(param,"ns",                &ns);
     //   npcelx =          new int[ns];
