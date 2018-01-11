@@ -67,8 +67,10 @@ contains
        write(*,'(2x,a,2es23.15)') &
             'Z fluxes L,R =',Flux_VZ(iVarTest,iTest,jTest,kTest),&
             Flux_VZ(iVarTest,iTest,jTest,kTest+1)
-       write(*,'(2x,a,es23.15)')'source=',Source_VC(iVarTest,iTest,jTest,kTest)
-       write(*,'(2x,a,es23.15)')'fluxes=',(Flux_VX(iVarTest,iTest,jTest,kTest) &
+       write(*,'(2x,a,es23.15)')'source=',&
+            Source_VC(iVarTest,iTest,jTest,kTest)
+       write(*,'(2x,a,es23.15)')'fluxes=', &
+            +(Flux_VX(iVarTest,iTest,jTest,kTest) &
             -Flux_VX(iVarTest,iTest+1,jTest,kTest)                        &
             +Flux_VY(iVarTest,iTest,jTest,kTest)                          &
             -Flux_VY(iVarTest,iTest,jTest+1,kTest)                        &
