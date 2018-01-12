@@ -1111,7 +1111,8 @@ contains
 
              plot_type(iFile) = plot_area//'_'//plot_var
           end do
-
+       case("#NOREFACTION")
+          call read_var('UseNoRefraction', UseNoRefraction)
        case("#SAVEPLOTNAME")
           call read_var('IsPlotName_n',IsPlotName_n)
           call read_var('IsPlotName_t',IsPlotName_t)

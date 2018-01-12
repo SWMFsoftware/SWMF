@@ -160,7 +160,8 @@ contains
   !=========
   subroutine ray_path(iParticle, IsEndOfSegment)
     use ModVarIndexes, ONLY: nVar, Rho_
-    use ModPhysics, ONLY: No2Si_V, UnitN_
+    use ModPhysics,    ONLY: No2Si_V, UnitN_
+    use ModIO,         ONLY: UseNoRefraction
     !   The subroutine ray_path() makes raytracing and emissivity integration
     ! along ray paths. It works on a group of rays (a beam). Each ray is
     ! specified by its Cartesian Xyz_DI and its direction cosines 
@@ -349,6 +350,7 @@ contains
       real :: Curv
       !-------------------
       DoReturn = .false.
+      if(UseNoRefraction)RETURN
       !\
       !The curvature squared characterizes the magnitude of
       !the tranverse gradient of the dielectric permittivity
@@ -429,7 +431,33 @@ contains
       real, dimension(nWave):: PlanckSpectrum_W, AbsorptionCoef_W
       !---------------
       iRay = iIndex_II(Ray_,iParticle)
-      if ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack)&
+      if(UseNoRefraction)then
+         !Ray is a straight line
+         State_VI(x_:z_,iParticle) = &
+              State_VI(x_:z_,iParticle) &
+              + State_VI(SlopeX_:SlopeZ_,iParticle)&
+              *HalfDeltaS
+         !\
+         ! Above we got state vector at the mid point of the newly 
+         ! added ray segment
+         !/
+         !\
+         ! Calculate absorption coefficient
+         !/
+         call user_material_properties(State_V, &
+              OpacityEmissionOut_W = AbsorptionCoef_W,&
+              PlanckOut_W = PlanckSpectrum_W)
+         !\
+         ! Realistic emission. Intensity in same units as blackbody 
+         ! irradiance (PlanckSpectrum_W(1)), 
+         ! B(v,T): [W m^{-2} srad^{-1} Hz^{-1}], for the Bremsstrahlung, 
+         ! or dimensionless for simplistic emission mechanism (B=1)
+         !/
+         Intensity_I(iRay) = Intensity_I(iRay) &
+              + State_VI(Ds_,iParticle)*&
+              AbsorptionCoef_W(1)*PlanckSpectrum_W(1)&
+              *FrequencySi_W(WaveLast_) !Multiply by a spectral width
+      elseif ((3*GradEpsDotSlope*HalfDeltaS <= -DielPermHalfBack)&
            .or.(State_VI(Ds_,iParticle)<StepMin.and.&
            GradEpsDotSlope<0)) then
          ! Switch to the opposite branch of parabolic trajectory
@@ -607,7 +635,8 @@ contains
       !   The ray is reverted to "gentle" or "shallow"
       !/
       if (iIndex_II(Steepness_,iParticle)==OK_.or.DielPermHalfBack .gt. &
-           State_VI(Dist2Cr_,iParticle)*sqrt(GradDielPerm2)) then
+           State_VI(Dist2Cr_,iParticle)*sqrt(GradDielPerm2)&
+           .or.UseNoRefraction) then
          iIndex_II(Steepness_,iParticle) = OK_
          State_VI(Ds_,iParticle) = &
               max(2 - State_VI(Ds_,iParticle)/StepSizeNew, 1.0)*&

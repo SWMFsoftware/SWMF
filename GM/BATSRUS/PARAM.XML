@@ -4366,6 +4366,20 @@ contributions from non-thermal emission at critical and quarter-of-critical,
 densities, the different contributions being weighted quite arbitrarily.
 </command>
 
+<command name="NOREFRACTION">
+	<parameter name="UseNoRefraction" type="logical" default="F">
+
+Another command closely related to 'rfr' plots is 
+\begin{verbatim}
+#NOREFRACTION
+T               UseNoRefraction
+\end{verbatim}
+It allows the user to switch off  the radio wave referaction to evaluate,
+how the refraction (which is switched on by default) affects the images.
+
+</command>
+
+
 <command name="SAVETECPLOT">
 	 <parameter name="DoSaveOneTecFile" type="logical" default="F" />
 #SAVETECPLOT

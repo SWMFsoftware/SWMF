@@ -74,6 +74,7 @@ module ModIO
   ! String read from PARAM.in, like '1500kHz, 11MHz, 42.7MHz, 1.08GHz':
   character(len=100), dimension(MaxFile) :: StringRadioFrequency_I
   real, dimension(MaxFile,nPlotRfrFreqMax) :: RadioFrequency_II
+  logical :: UseNoRefraction = .false.
 
   ! Variables for field/stream/current line files
   logical :: IsSingleLine_I(MaxPlotFile)      ! One subfile for the plot file?
