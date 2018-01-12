@@ -1318,7 +1318,7 @@ contains
        case('#LIGHTSPEED')
           call read_var('ClightDim', ClightDim)
 
-       case('#BORIS', '#BORISSIMPLE')
+       case('#BORIS', '#BORISSIMPLE', '#BORISREGION')
           if(UseB) call read_boris_param(NameCommand)
 
        case("#DIVB")

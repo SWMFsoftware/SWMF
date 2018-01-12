@@ -24,14 +24,25 @@ module ModBorisCorrection
 
   !$omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
 
+  ! Local variables ---------------
+
+  ! Description of the region where Boris correction is used
+  character(len=200):: StringBorisRegion = 'none'
+
+  ! Indexes of regions defined with the #REGION commands
+  integer, allocatable:: iRegionBoris_I(:)
+
 contains
   !============================================================================
   subroutine init_mod_boris_correction
 
     use ModMain, ONLY: &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-    use BATL_lib, ONLY: nI, nJ, nK
+    use BATL_lib, ONLY: nI, nJ, nK, get_region_indexes
     !--------------------------------------------------------------------------
+    ! Get signed indexes for Boris region(s)
+    call get_region_indexes(StringBorisRegion, iRegionBoris_I)
+
     !$omp parallel
     if(.not.allocated(EDotFA_X))then
        allocate(EDotFA_X(nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace))
@@ -85,6 +96,10 @@ contains
        else
           ClightFactor = 1.0
        end if
+
+    case("#BORISREGION")
+        call read_var('StringBorisRegion', StringBorisRegion)
+
     case default
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
     end select
