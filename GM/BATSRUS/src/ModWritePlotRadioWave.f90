@@ -398,9 +398,9 @@ contains
     !
     do iFreq = 1, nFreq
        if ((Frequency_I(iFreq) > 0.0) .and. (Frequency_I(iFreq)<1e3)) then
-          write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq), '_Hz'
+          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq), '_Hz'
        else if((Frequency_I(iFreq)>=1e3) .and. (Frequency_I(iFreq)<1e6)) then
-          write(NameVar_I(iFreq),'(a,f6.2,a)') Frequency_I(iFreq)/1e3, '_kHz'
+          write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e3, '_kHz'
        else if((Frequency_I(iFreq) >= 1e6) .and. (Frequency_I(iFreq)<1e9)) then
           write(NameVar_I(iFreq),'(f6.2,a)') Frequency_I(iFreq)/1e6, '_MHz'
        else if((Frequency_I(iFreq) >= 1e9).and.(Frequency_I(iFreq)<1e12)) then
