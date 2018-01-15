@@ -10,7 +10,7 @@ module SP_ModAdvance
   use SP_ModDistribution, ONLY: nP, Distribution_IIB, Momentum_I,&
         TotalEnergy_I, MomentumMax, MomentumInj, DLogP
   use SP_ModGrid, ONLY: State_VIB, iShock_IB,   R_,   &
-       Shock_, ShockOld_, DLogRho_, nBlock, nParticle_B 
+       Shock_, ShockOld_, DLogRho_, Wave1_, Wave2_, nBlock, nParticle_B 
   implicit none
   SAVE
   PRIVATE ! except
@@ -33,9 +33,6 @@ module SP_ModAdvance
   !\
   !!!!!!!!!!!!!!!!!!!!!!!!!Local parameters!!!!!!!!!!!!!!!
   real:: CFL=0.9        !Controls the maximum allowed time step
-  ! level of turbulence: Ratio of regular to irregual magnetic field,
-  ! squared. 
-  real, parameter    :: BOverDeltaB2 = 1.0
   !\
   integer, public, parameter :: nWidth = 50
   !/
@@ -312,6 +309,7 @@ contains
     end subroutine steepen_shock
     !=============================================================
     subroutine set_diffusion
+      use ModConst,   ONLY: cMu
       ! set diffusion coefficient for the current line
       !-----------------------------------------------------------
       DOuter_I(1:iEnd) = B_I(1:iEnd)
@@ -325,7 +323,9 @@ contains
          ! note: Momentum = TotalEnergy * Vel / C**2
          ! Gyroradius = cGyroRadius * momentum / |B|
          ! DInner = (B/\delta B)**2*Gyroradius*Vel/|B| 
-         DInnerInj_I(1:iEnd) = BOverDeltaB2*&
+         DInnerInj_I(1:iEnd) = &
+              B_I(1:iEnd)**2/&
+              (2*cMu*sum(State_VIB(Wave1_:Wave2_,1:iEnd,iBlock),1))*&
               cGyroRadius*(MomentumInj*cLightSpeed)**2/&
               (B_I(1:iEnd)**2*TotalEnergyInj)/RSun**2
       else
