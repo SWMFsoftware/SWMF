@@ -20,7 +20,9 @@ public:
   cAMRnodeID NodeID;
 };
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
 class cLinearSystemCornerNode {
 public:
   double *SubdomainPartialRHS,*SubdomainPartialUnknownsVector;
@@ -34,10 +36,22 @@ public:
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
     int UnknownVectorIndex,iVar,Thread;
 
+    //the user-model parameters neede for recalculating of the matrix coefficients
+    double ConstParameterTable[MaxMatixElementParameterTableLength];
+    int MatixElementParameterTableLength;
+
+    //the user-defined support used for recalculating the matrix coefficients
+    void *SupportTable[MaxMatrixElementSupportTableLength];
+    int MatrixElementSupportLength;
+
     cStencilElement() {
       node=NULL,CornerNode=NULL;
       MatrixElementValue=0.0;
       UnknownVectorIndex=-1,iVar=-1,Thread=-1,CornerNodeID=-1;
+      MatixElementParameterTableLength=0,MatrixElementSupportLength=0;
+
+      for (int i=0;i<MaxMatixElementParameterTableLength;i++) ConstParameterTable[i]=0.0;
+      for (int i=0;i<MaxMatrixElementSupportTableLength;i++) SupportTable[i]=NULL;
     }
   };
 
@@ -99,9 +113,22 @@ public:
     bool BoundaryNodeFlag;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *OriginalNode;
 
+    //the user-model parameters neede for recalculating of the matrix coefficients
+    double ConstParameterTable[MaxMatixElementParameterTableLength];
+    int MatixElementParameterTableLength;
+
+    //the user-defined support used for recalculating the matrix coefficients
+    void *SupportTable[MaxMatrixElementSupportTableLength];
+    int MatrixElementSupportLength;
+
     cMatrixRowNonZeroElementTable() {
       i=0,j=0,k=0,iVar=0,MatrixElementValue=0.0,Node=NULL;
       BoundaryNodeFlag=false,OriginalNode=NULL;
+
+      MatixElementParameterTableLength=0,MatrixElementSupportLength=0;
+
+      for (int i=0;i<MaxMatixElementParameterTableLength;i++) ConstParameterTable[i]=0.0;
+      for (int i=0;i<MaxMatrixElementSupportTableLength;i++) SupportTable[i]=NULL;
     }
   };
 
@@ -150,6 +177,9 @@ public:
   //update the RHS vector
   void UpdateRhs(double (*fSetRhs)(int,cRhsSupportTable*,int,cRhsSupportTable*,int));
 
+  //update non-zero coefficients of the matrix
+  void UpdateMatrixNonZeroCoefficients(void (*UpdateMatrixRow)(cMatrixRow*));
+
   //destructor
   ~cLinearSystemCornerNode() {
     Reset();
@@ -158,8 +188,10 @@ public:
 
 };
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::ResetUnknownVectorIndex(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::ResetUnknownVectorIndex(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     PIC::Mesh::cDataBlockAMR *block=NULL;
     PIC::Mesh::cDataCornerNode *CornerNode=NULL;
@@ -176,8 +208,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   else for (int i=0;i<(1<<DIM);i++) if (node->downNode[i]!=NULL) ResetUnknownVectorIndex(node->downNode[i]);
 }
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::ProcessRightDomainBoundary(int* RecvDataPointCounter,void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::ProcessRightDomainBoundary(int* RecvDataPointCounter,void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
   int i,j,k,iface,iblock;
   cMatrixRow* NewRow;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
@@ -293,6 +327,8 @@ for ( cMatrixRow* Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
           NewRow->RhsSupportLength_CenterNodes=0;
           rhs=0.0;
 
+          for (int ii=0;ii<MaxStencilLength;ii++) MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength=0,MatrixRowNonZeroElementTable[ii].MatrixElementSupportLength=0;
+
           f(i+OffsetTable[iblock].di,j+OffsetTable[iblock].dj,k+OffsetTable[iblock].dk,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable_CornerNodes,NewRow->RhsSupportLength_CornerNodes,NewRow->RhsSupportTable_CenterNodes,NewRow->RhsSupportLength_CenterNodes,node);
           if (NonZeroElementsFound>MaxStencilLength) exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
 
@@ -364,6 +400,12 @@ for ( cMatrixRow* Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
             el->node=MatrixRowNonZeroElementTable[ii].Node;
             el->iVar=iVar;
 
+            el->MatixElementParameterTableLength=MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength;
+            memcpy(el->ConstParameterTable,MatrixRowNonZeroElementTable[ii].ConstParameterTable,el->MatixElementParameterTableLength*sizeof(double));
+
+            el->MatrixElementSupportLength=MatrixRowNonZeroElementTable[ii].MatrixElementSupportLength;
+            memcpy(el->SupportTable,MatrixRowNonZeroElementTable[ii].SupportTable,el->MatrixElementSupportLength*sizeof(void*));
+
             //count the number of the element that are needed
             if (CornerNode->LinearSolverUnknownVectorIndex==-1) {
               RecvDataPointCounter[MatrixRowNonZeroElementTable[ii].Node->Thread]++;
@@ -409,8 +451,10 @@ for ( cMatrixRow* Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
   }
 }
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node)) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
   int i,j,k,thread,nLocalNode;
   int iRow=0;
@@ -465,6 +509,8 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
         NewRow->RhsSupportLength_CornerNodes=0;
         NewRow->RhsSupportLength_CenterNodes=0;
         rhs=0.0;
+
+        for (int ii=0;ii<MaxStencilLength;ii++) MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength=0,MatrixRowNonZeroElementTable[ii].MatrixElementSupportLength=0;
 
         f(i,j,k,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable_CornerNodes,NewRow->RhsSupportLength_CornerNodes,NewRow->RhsSupportTable_CenterNodes,NewRow->RhsSupportLength_CenterNodes,node);
 
@@ -583,6 +629,12 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
           el->MatrixElementValue=MatrixRowNonZeroElementTable[iElement].MatrixElementValue;
           el->node=MatrixRowNonZeroElementTable[iElement].Node;
           el->iVar=iVar;
+
+          el->MatixElementParameterTableLength=MatrixRowNonZeroElementTable[iElement].MatixElementParameterTableLength;
+          memcpy(el->ConstParameterTable,MatrixRowNonZeroElementTable[iElement].ConstParameterTable,el->MatixElementParameterTableLength*sizeof(double));
+
+          el->MatrixElementSupportLength=MatrixRowNonZeroElementTable[iElement].MatrixElementSupportLength;
+          memcpy(el->SupportTable,MatrixRowNonZeroElementTable[iElement].SupportTable,el->MatrixElementSupportLength*sizeof(void*));
 
           //count the number of the element that are needed
           if (MatrixRowNonZeroElementTable[iElement].Node->Thread==PIC::ThisThread) {
@@ -745,8 +797,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   delete [] DataExchangeTableCounter;
 }
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::ExchangeIntermediateUnknownsData(double *x) {
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::ExchangeIntermediateUnknownsData(double *x) {
   int To,From;
   MPI_Request SendRequest[PIC::nTotalThreads],RecvRequest[PIC::nTotalThreads];
   MPI_Status SendStatus[PIC::nTotalThreads],RecvStatus[PIC::nTotalThreads];
@@ -779,13 +833,17 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 }
 
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::Reset() {
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::Reset() {
   Reset(PIC::Mesh::mesh.rootTree);
 }
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
 
   if ((startNode==PIC::Mesh::mesh.rootTree)&&(RecvExchangeBuffer!=NULL)) {
     //clear the row stack
@@ -845,8 +903,21 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 }
 
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::UpdateRhs(double (*fSetRhs)(int,cRhsSupportTable*,int,cRhsSupportTable*,int)) {
+//update non-zero coefficients of the matrix
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::UpdateMatrixNonZeroCoefficients(void (*UpdateMatrixRow)(cMatrixRow*)) {
+  cMatrixRow* row;
+
+  for (row=MatrixRowTable;row!=NULL;row=row->next) UpdateMatrixRow(row);
+}
+
+
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::UpdateRhs(double (*fSetRhs)(int,cRhsSupportTable*,int,cRhsSupportTable*,int)) {
   cMatrixRow* row;
 
   for (row=MatrixRowTable;row!=NULL;row=row->next) if ((row->RhsSupportLength_CornerNodes!=0)||(row->RhsSupportLength_CenterNodes!=0)) {
@@ -854,8 +925,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   }
 }
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::MultiplyVector(double *p,double *x,int length) {
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::MultiplyVector(double *p,double *x,int length) {
   cMatrixRow* row;
   cStencilElement StencilElement,*Elements;
   int cnt,iElement,iElementMax;
@@ -881,8 +954,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   RecvExchangeBuffer[PIC::ThisThread]=NULL;
 }
 
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes>::Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatixElementParameterTableLength,MaxMatrixElementSupportTableLength>::Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),
       void (*fUnpackSolution)(double* x,cCornerNode* CornerNode),
       double Tol, //the residual tolerance. The recommended value is 1e-5;
       int nMaxIter //the max iteration error allowed. The recommended value is 100
