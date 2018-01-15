@@ -9,9 +9,15 @@ use strict;
 
 our $Component = "SP";
 our $Code = "MFLAMPA";
+our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments= @ARGV;
 
-require "../../share/Scripts/Config.pl";
+my $config     = "share/Scripts/Config.pl";
+if(-f $config){
+    require $config;
+}else{
+    require "../../$config";
+}
 
 # Variables inherited from share/Scripts/Config.pl
 our %Remaining; # Unprocessed arguments

@@ -39,15 +39,11 @@ help:
 	@echo '    distclean     (equivalent to ./Config.pl -uninstall)'
 #------------------------------------------------------------------------
 
-install: Makefile.def.orig src/ModSize.f90
+install: src/ModSize.f90
 	touch ${INSTALLFILES}
 
 src/ModSize.f90: src/ModSize_orig.f90
 	cp -f src/ModSize_orig.f90 src/ModSize.f90
-
-Makefile.def.orig:
-	mv Makefile.def Makefile.def.orig
-	cp Makefile.def.orig Makefile.def
 
 LIB:    install
 	cd src;          make LIB
@@ -84,7 +80,7 @@ rundir:
 		cp ${DIR}/share/JobScripts/job.*${MACHINE}* ${RUNDIR}/; \
 		cp ${DIR}/share/JobScripts/*.${MACHINE}.pl ${RUNDIR}/; \
 		rm -f ${RUNDIR}/*_TMP_* ${DIR}/share/JobScripts/*_TMP_*; \
-		cp -f Param/PARAM.DEFAULT ${RUNDIR}/PARAM.in; \
+		cp -f Param/PARAM.test ${RUNDIR}/PARAM.in; \
 		touch ${RUNDIR}/core; chmod 444 ${RUNDIR}/core; \
 		cd ${RUNDIR}; ln -s ${BINDIR}/${DEFAULT_EXE} .; \
 		ln -s ${COMPONENT}/* .; \
