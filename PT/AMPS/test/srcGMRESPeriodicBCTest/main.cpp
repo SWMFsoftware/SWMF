@@ -57,7 +57,7 @@ int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
 
 //the solver used for solving the implicit wave transport equation
 namespace TransportEquation {
-  cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1> Solver;
+  cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1,1,1> Solver;
 
   double c[3]={-0.4,0.0,0.0};
 
@@ -66,9 +66,9 @@ namespace TransportEquation {
   }
 
   //create the stencil for the linear equaton solver test
-  void GetTestStencilTimeDependent(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
-    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1>::cRhsSupportTable* RhsSupportTable_CornerNodes,int& RhsSupportLength_CornerNodes,
-    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int& RhsSupportLength_CenterNodes, 
+  void GetTestStencilTimeDependent(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1,1,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
+    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1,1,1>::cRhsSupportTable* RhsSupportTable_CornerNodes,int& RhsSupportLength_CornerNodes,
+    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1,1,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int& RhsSupportLength_CenterNodes, 
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
 
@@ -213,8 +213,8 @@ return ;
 
   //update the RHS vector
   double UpdateRhs(int iVar,
-    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1>::cRhsSupportTable* RhsSupportTable_CornerNodes,int RhsSupportLength_CornerNodes,
-    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int RhsSupportLength_CenterNodes) {
+    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1,1,1>::cRhsSupportTable* RhsSupportTable_CornerNodes,int RhsSupportLength_CornerNodes,
+    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,6,1,1,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int RhsSupportLength_CenterNodes) {
     int i;
     double res=0.0;
 
