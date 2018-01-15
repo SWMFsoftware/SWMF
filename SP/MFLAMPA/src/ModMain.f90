@@ -344,6 +344,8 @@ contains
     ! Do not search too close to the Sun
     integer         :: iShockMin
     real, parameter :: RShockMin = 1.20  !*RSun
+    ! Threshold for shock tracing
+    real, parameter :: DLogRhoThreshold = 0.01
     ! Do not search too close to the heliosphere boundary
     integer:: iShockMax
     ! Misc
@@ -360,9 +362,10 @@ contains
     iShockMax = nParticle_B(iBlock) - nWidth - 1
     iShockCandidate = iShockMin - 1 + maxloc(&
          State_VIB(DLogRho_,iShockMin:iShockMax,iBlock),&
-         1, MASK = State_VIB(R_,iShockMin:iShockMax,iBlock) > RShockMin)
-
-    if(State_VIB(DLogRho_,iShockCandidate,iBlock) > 0.0)&
+         1, MASK = &
+         State_VIB(R_,      iShockMin:iShockMax,iBlock) > RShockMin .and. &
+         State_VIB(DLogRho_,iShockMin:iShockMax,iBlock) > DLogRhoThreshold)
+    if(iShockCandidate >= iShockMin)&
          iShock_IB(Shock_, iBlock) = iShockCandidate
   end subroutine get_shock_location
   !=======================================================================

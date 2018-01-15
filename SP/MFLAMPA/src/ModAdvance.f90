@@ -276,7 +276,7 @@ contains
       ! for the current line
       integer:: iParticle ! loop variable
       real   :: DLogRhoExcessIntegral, DLogRhoExcess
-      real, parameter:: DLogRhoBackground = 0.0
+      real, parameter:: DLogRhoBackground = 0.01
       !---------------------------------------------------------------------
       ! find the excess of DLogRho within the shock compared to background
       ! averaged over length
