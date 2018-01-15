@@ -54,8 +54,8 @@ double Background[3]={100.0,-20.0,10.0};
 int CurrentCenterNodeOffset=-1,NextCenterNodeOffset=-1;
 int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
 
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1,1> Solver1;
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1> SolverTimeDependent;
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1,1,1,1> Solver1;
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1,1,1> SolverTimeDependent;
 
 void solver1_matvec(double* VecIn, double * VecOut, int n){  
   Solver1.MultiplyVector(VecOut,VecIn,n);
@@ -505,8 +505,8 @@ void test_wave(int iTest, int nVars, double * waveCenter, double * waveNumber, d
 
 
 //create the stencil for the linear equaton solver test
-void GetTestStencil(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1,1>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
+void GetTestStencil(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1,1,1,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,1,1,1,1>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
   /*
@@ -581,8 +581,8 @@ return;
 
 
 //create the stencil for the linear equaton solver test
-void GetTestStencilTimeDependent(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7,1>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
+void GetTestStencilTimeDependent(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7,1,1,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,1,7,7,1,1,1>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
   /*
@@ -803,9 +803,9 @@ return;
 }
 
 
-void GetTestStencilTimeDependent1(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
-cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,
+void GetTestStencilTimeDependent1(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1,1,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1,1,1>::cRhsSupportTable* RhsSupportTable,int &RhsSupportLength,
+cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1,1,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
 
   /*
@@ -1177,8 +1177,8 @@ return;
 
 //update RHS vector
 double UpdateRhs(int iVar,
-    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1>::cRhsSupportTable* RhsSupportTable,int RhsSupportLength,
-    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int RhsSupportLength_CenterNodes) {
+    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1,1,1>::cRhsSupportTable* RhsSupportTable,int RhsSupportLength,
+    cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,7,7,1,1,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int RhsSupportLength_CenterNodes) {
   int i;
   double res=0.0;
 
