@@ -29,7 +29,7 @@ include Makefile.conf
 include Makefile.def
 
 
-#include the local makefile (defined the AMPS' compiling variables)  
+#include the local $(MAKE)file (defined the AMPS' compiling variables)  
 include Makefile.local
 
 #the default value of the c++ compiler flags
@@ -185,26 +185,26 @@ ${WSD}:
 LIB: 
 	@(if [ -d ${WSD} ]; then rm -rf ${WSD}; fi)
 	$(MAKE) ${WSD}
-	make LIB_after_build
+	$(MAKE) LIB_after_build
 	(if [ "$(STANDALONE)" == "NO" ]; then \
-		cd srcInterface; make LIB SEARCH_C="${SEARCH_C}"; fi)
+		cd srcInterface; $(MAKE) LIB SEARCH_C="${SEARCH_C}"; fi)
 
 LIB_after_build: 
 ifeq ($(INTERFACE),on)
-	cd ${WSD}/interface; make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
+	cd ${WSD}/interface; $(MAKE) SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
 endif
-	cd ${WSD}/general;                     make SEARCH_C="${SEARCH_C_GENERAL}" 
-	cd ${WSD}/meshAMR;                     make SEARCH_C="${SEARCH_C}" 
-	cd ${WSD}/pic;                         make SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
-	cd ${WSD}/species;                     make SEARCH_C="${SEARCH_C}"
-	cd ${WSD}/models/exosphere;            make SEARCH_C="${SEARCH_C}"
-	cd ${WSD}/models/surface;              make SEARCH_C="${SEARCH_C}"
-	cd ${WSD}/models/electron_impact;      make SEARCH_C="${SEARCH_C}"
-	cd ${WSD}/models/sputtering;           make SEARCH_C="${SEARCH_C}"
-	cd ${WSD}/models/dust;                 make SEARCH_C="${SEARCH_C}"
-	cd ${WSD}/models/charge_exchange;      make SEARCH_C="${SEARCH_C}"
-	cd ${WSD}/models/photolytic_reactions; make SEARCH_C="${SEARCH_C}" 
-	cd ${WSD}/main; make SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/general;                     $(MAKE) SEARCH_C="${SEARCH_C_GENERAL}" 
+	cd ${WSD}/meshAMR;                     $(MAKE) SEARCH_C="${SEARCH_C}" 
+	cd ${WSD}/pic;                         $(MAKE) SEARCH_C="${SEARCH_C}" SEARCH="${SEARCH_F}" 
+	cd ${WSD}/species;                     $(MAKE) SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/exosphere;            $(MAKE) SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/surface;              $(MAKE) SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/electron_impact;      $(MAKE) SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/sputtering;           $(MAKE) SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/dust;                 $(MAKE) SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/charge_exchange;      $(MAKE) SEARCH_C="${SEARCH_C}"
+	cd ${WSD}/models/photolytic_reactions; $(MAKE) SEARCH_C="${SEARCH_C}" 
+	cd ${WSD}/main; $(MAKE) SEARCH_C="${SEARCH_C}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
 ifeq ($(SPICE),nospice)
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/exosphere/*.o models/surface/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
@@ -224,8 +224,8 @@ amps:
 
 amps_after_build: LIB_after_build 
 	@rm -f amps
-	cd ${WSD}/main; make amps SEARCH_C="${SEARCH_C}"
-	make amps_link
+	cd ${WSD}/main; $(MAKE) amps SEARCH_C="${SEARCH_C}"
+	$(MAKE) amps_link
 
 amps_link:
 	${AMPSLINKER} -o amps srcTemp/main/main.a srcTemp/libAMPS.a \
