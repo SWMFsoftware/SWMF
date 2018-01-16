@@ -358,46 +358,43 @@ contains
 
        VarsGhostFace_V(NeuRho_:Ne4P_) = VarsTrueFace_V(NeuRho_:Ne4P_)
       
-       if(body1) then
-          ! PopII leaves the domain at a supersonic velocity 
-          ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
-          ! For the transient case when it flows inward, we use a fraction of ions
-          
-          if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
-             VarsGhostFace_V(Ne2Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne2_)
-             VarsGhostFace_V(Ne2P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne2_)
-             VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-                  uBcFactor_I(Ne2_)
-          else
-             VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
-          end if
-          
-          ! Pop III has the velocity and temperature of the ions at inner boundary
-          ! the density is taken to be a fraction of the ions
-          
-          if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
-             VarsGhostFace_V(Ne3Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne3_)
-             VarsGhostFace_V(Ne3P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne3_)
-             VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-                  uBcFactor_I(Ne3_)
-          else
-             VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
-          end if
-          
-          ! Pop IV 
-          
-          if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
-             VarsGhostFace_V(Ne4Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne4_)
-             VarsGhostFace_V(Ne4P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne4_)
-             VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
-                  uBcFactor_I(Ne4_)
-          else
-             VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
-          end if
-       endif
-    
+       ! PopII leaves the domain at a supersonic velocity 
+       ! (50km/s while for their temperature 1.E5K their C_s=30km/s)
+       ! For the transient case when it flows inward, we use a fraction of ions
+       
+       if( sum(VarsTrueFace_V(Ne2Ux_:Ne2Uz_)*FaceCoords_D) > 0.0)then
+          VarsGhostFace_V(Ne2Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne2_)
+          VarsGhostFace_V(Ne2P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne2_)
+          VarsGhostFace_V(Ne2Ux_:Ne2Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+               uBcFactor_I(Ne2_)
+       else
+          VarsGhostFace_V(Ne2Rho_:Ne2P_) = VarsTrueFace_V(Ne2Rho_:Ne2P_)
+       end if
+       
+       ! Pop III has the velocity and temperature of the ions at inner boundary
+       ! the density is taken to be a fraction of the ions
+       
+       if( sum(VarsTrueFace_V(Ne3Ux_:Ne3Uz_)*FaceCoords_D) > 0.0)then
+          VarsGhostFace_V(Ne3Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne3_)
+          VarsGhostFace_V(Ne3P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne3_)
+          VarsGhostFace_V(Ne3Ux_:Ne3Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+               uBcFactor_I(Ne3_)
+       else
+          VarsGhostFace_V(Ne3Rho_:Ne3P_) = VarsTrueFace_V(Ne3Rho_:Ne3P_)
+       end if
+       
+       ! Pop IV 
+       
+       if( sum(VarsTrueFace_V(Ne4Ux_:Ne4Uz_)*FaceCoords_D) > 0.0)then
+          VarsGhostFace_V(Ne4Rho_) = VarsGhostFace_V(Rho_) * RhoBcFactor_I(Ne4_)
+          VarsGhostFace_V(Ne4P_)   = VarsGhostFace_V(p_)   * RhoBcFactor_I(Ne4_)
+          VarsGhostFace_V(Ne4Ux_:Ne4Uz_) = VarsGhostFace_V(Ux_:Uz_) * &
+               uBcFactor_I(Ne4_)
+       else
+          VarsGhostFace_V(Ne4Rho_:Ne4P_) = VarsTrueFace_V(Ne4Rho_:Ne4P_)
+       end if
     endif
-
+    
     if(DoTest)then
        write(*,*) NameSub,' FaceCoord=', FaceCoords_D
        write(*,*) NameSub,' i,j,kFace=', iFace, jFace, kFace
@@ -1140,7 +1137,7 @@ contains
           call select_region(iBlock)
           PlotVar_G(1:nI,1:nJ,1:nK) = iFluidProduced_C
        else
-          call CON_stop(NameSub//': no neutral fluids present')
+          PlotVar_G(1:nI,1:nJ,1:nK) = 0.0
        endif
     case('mach')
        ! C.P. edited to add PUI
