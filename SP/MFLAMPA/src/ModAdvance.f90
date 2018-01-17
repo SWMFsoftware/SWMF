@@ -46,7 +46,7 @@ contains
     !----------------------------------------------------------
     if(.not.DoInit)RETURN
     DoInit = .false.
-    ! total injection energy (including the rest mass energy
+    ! total injection energy (including the rest mass energy)
     TotalEnergyInj =  TotalEnergy_I(0) 
   end subroutine init
   !===========================================================
@@ -243,6 +243,9 @@ contains
                       DInner_I(1:iEnd) = DInner_I(1:iEnd)/&
                            (Momentum_I(iP)/MomentumInj)**(2.0/3)
                    end where
+                else
+                   DInner_I(1:iEnd) = DInner_I(1:iEnd)/&
+                        (Momentum_I(iP)/MomentumInj)**(2.0/3)
                 end if
                 DInner_I(1:iEnd) = max(DInner_I(1:iEnd),&
                      DiffCoeffMin/DOuter_I(1:iEnd))
@@ -319,15 +322,26 @@ contains
       ! injection energy:
       !/
       if(.not.UseRealDiffusionUpstream)then
+         !\
          ! Sokolov et al., 2004: eq (4), 
          ! note: Momentum = TotalEnergy * Vel / C**2
          ! Gyroradius = cGyroRadius * momentum / |B|
          ! DInner = (B/\delta B)**2*Gyroradius*Vel/|B| 
+         !/
+         !\
+         ! effective level of turbulence is different for different momenta:
+         ! (\delta B)**2 \propto Gyroradius^(1/3)
+         ! we scale it with reference point:  
+         ! mean free path  ~ RSun @ 1AU for 1GeV proton
+         ! (B/\delta B)**2 ~ 1    @ 1AU
+         ! thus (e1,e2 are turbulent energies): 
+         ! DInner = B^2/(2*cMu*(e1+e2))*10*(Gyroradius*RSun**2)**(1/3)*Vel/|B|
+         !/
          DInnerInj_I(1:iEnd) = &
-              B_I(1:iEnd)**2/&
+              B_I(1:iEnd)/&
               (2*cMu*sum(State_VIB(Wave1_:Wave2_,1:iEnd,iBlock),1))*&
-              cGyroRadius*(MomentumInj*cLightSpeed)**2/&
-              (B_I(1:iEnd)**2*TotalEnergyInj)/RSun**2
+              10*(RSun**2*cGyroRadius*MomentumInj/B_I(1:iEnd))**(1.0/3)*&
+              MomentumInj*cLightSpeed**2/TotalEnergyInj/RSun**2
       else
          ! diffusion is different up- and down-stream
          ! Sokolov et al. 2004, paragraphs before and after eq (4)
@@ -357,6 +371,7 @@ contains
       Distribution_IIB(1:nP+1, 1, iBlock) = &
            Distribution_IIB(0, 1, iBlock) * &
            (Momentum_I(0)/Momentum_I(1:nP+1))**SpectralIndex
+
     end subroutine set_diffusion
     !=========================================================================
     subroutine set_advection_bc
