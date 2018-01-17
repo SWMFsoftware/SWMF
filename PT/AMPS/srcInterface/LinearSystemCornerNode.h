@@ -37,21 +37,21 @@ public:
     int UnknownVectorIndex,iVar,Thread;
 
     //the user-model parameters neede for recalculating of the matrix coefficients
-    double ConstParameterTable[MaxMatixElementParameterTableLength];
+    double MatixElementParameterTable[MaxMatixElementParameterTableLength];
     int MatixElementParameterTableLength;
 
     //the user-defined support used for recalculating the matrix coefficients
-    void *SupportTable[MaxMatrixElementSupportTableLength];
-    int MatrixElementSupportLength;
+    void *MatrixElementSupportTable[MaxMatrixElementSupportTableLength];
+    int MatrixElementSupportTableLength;
 
     cStencilElement() {
       node=NULL,CornerNode=NULL;
       MatrixElementValue=0.0;
       UnknownVectorIndex=-1,iVar=-1,Thread=-1,CornerNodeID=-1;
-      MatixElementParameterTableLength=0,MatrixElementSupportLength=0;
+      MatixElementParameterTableLength=0,MatrixElementSupportTableLength=0;
 
-      for (int i=0;i<MaxMatixElementParameterTableLength;i++) ConstParameterTable[i]=0.0;
-      for (int i=0;i<MaxMatrixElementSupportTableLength;i++) SupportTable[i]=NULL;
+      for (int i=0;i<MaxMatixElementParameterTableLength;i++) MatixElementParameterTable[i]=0.0;
+      for (int i=0;i<MaxMatrixElementSupportTableLength;i++) MatrixElementSupportTable[i]=NULL;
     }
   };
 
@@ -114,21 +114,21 @@ public:
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *OriginalNode;
 
     //the user-model parameters neede for recalculating of the matrix coefficients
-    double ConstParameterTable[MaxMatixElementParameterTableLength];
+    double MatixElementParameterTable[MaxMatixElementParameterTableLength];
     int MatixElementParameterTableLength;
 
     //the user-defined support used for recalculating the matrix coefficients
-    void *SupportTable[MaxMatrixElementSupportTableLength];
-    int MatrixElementSupportLength;
+    void *MatrixElementSupportTable[MaxMatrixElementSupportTableLength];
+    int MatrixElementSupportTableLength;
 
     cMatrixRowNonZeroElementTable() {
       i=0,j=0,k=0,iVar=0,MatrixElementValue=0.0,Node=NULL;
       BoundaryNodeFlag=false,OriginalNode=NULL;
 
-      MatixElementParameterTableLength=0,MatrixElementSupportLength=0;
+      MatixElementParameterTableLength=0,MatrixElementSupportTableLength=0;
 
-      for (int i=0;i<MaxMatixElementParameterTableLength;i++) ConstParameterTable[i]=0.0;
-      for (int i=0;i<MaxMatrixElementSupportTableLength;i++) SupportTable[i]=NULL;
+      for (int i=0;i<MaxMatixElementParameterTableLength;i++) MatixElementParameterTable[i]=0.0;
+      for (int i=0;i<MaxMatrixElementSupportTableLength;i++) MatrixElementSupportTable[i]=NULL;
     }
   };
 
@@ -327,7 +327,7 @@ for ( cMatrixRow* Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
           NewRow->RhsSupportLength_CenterNodes=0;
           rhs=0.0;
 
-          for (int ii=0;ii<MaxStencilLength;ii++) MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength=0,MatrixRowNonZeroElementTable[ii].MatrixElementSupportLength=0;
+          for (int ii=0;ii<MaxStencilLength;ii++) MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength=0,MatrixRowNonZeroElementTable[ii].MatrixElementSupportTableLength=0;
 
           f(i+OffsetTable[iblock].di,j+OffsetTable[iblock].dj,k+OffsetTable[iblock].dk,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable_CornerNodes,NewRow->RhsSupportLength_CornerNodes,NewRow->RhsSupportTable_CenterNodes,NewRow->RhsSupportLength_CenterNodes,node);
           if (NonZeroElementsFound>MaxStencilLength) exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
@@ -401,10 +401,10 @@ for ( cMatrixRow* Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
             el->iVar=iVar;
 
             el->MatixElementParameterTableLength=MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength;
-            memcpy(el->ConstParameterTable,MatrixRowNonZeroElementTable[ii].ConstParameterTable,el->MatixElementParameterTableLength*sizeof(double));
+            memcpy(el->MatixElementParameterTable,MatrixRowNonZeroElementTable[ii].MatixElementParameterTable,el->MatixElementParameterTableLength*sizeof(double));
 
-            el->MatrixElementSupportLength=MatrixRowNonZeroElementTable[ii].MatrixElementSupportLength;
-            memcpy(el->SupportTable,MatrixRowNonZeroElementTable[ii].SupportTable,el->MatrixElementSupportLength*sizeof(void*));
+            el->MatrixElementSupportTableLength=MatrixRowNonZeroElementTable[ii].MatrixElementSupportTableLength;
+            memcpy(el->MatrixElementSupportTable,MatrixRowNonZeroElementTable[ii].MatrixElementSupportTable,el->MatrixElementSupportTableLength*sizeof(void*));
 
             //count the number of the element that are needed
             if (CornerNode->LinearSolverUnknownVectorIndex==-1) {
@@ -510,7 +510,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
         NewRow->RhsSupportLength_CenterNodes=0;
         rhs=0.0;
 
-        for (int ii=0;ii<MaxStencilLength;ii++) MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength=0,MatrixRowNonZeroElementTable[ii].MatrixElementSupportLength=0;
+        for (int ii=0;ii<MaxStencilLength;ii++) MatrixRowNonZeroElementTable[ii].MatixElementParameterTableLength=0,MatrixRowNonZeroElementTable[ii].MatrixElementSupportTableLength=0;
 
         f(i,j,k,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable_CornerNodes,NewRow->RhsSupportLength_CornerNodes,NewRow->RhsSupportTable_CenterNodes,NewRow->RhsSupportLength_CenterNodes,node);
 
@@ -631,10 +631,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
           el->iVar=iVar;
 
           el->MatixElementParameterTableLength=MatrixRowNonZeroElementTable[iElement].MatixElementParameterTableLength;
-          memcpy(el->ConstParameterTable,MatrixRowNonZeroElementTable[iElement].ConstParameterTable,el->MatixElementParameterTableLength*sizeof(double));
+          memcpy(el->MatixElementParameterTable,MatrixRowNonZeroElementTable[iElement].MatixElementParameterTable,el->MatixElementParameterTableLength*sizeof(double));
 
-          el->MatrixElementSupportLength=MatrixRowNonZeroElementTable[iElement].MatrixElementSupportLength;
-          memcpy(el->SupportTable,MatrixRowNonZeroElementTable[iElement].SupportTable,el->MatrixElementSupportLength*sizeof(void*));
+          el->MatrixElementSupportTableLength=MatrixRowNonZeroElementTable[iElement].MatrixElementSupportTableLength;
+          memcpy(el->MatrixElementSupportTable,MatrixRowNonZeroElementTable[iElement].MatrixElementSupportTable,el->MatrixElementSupportTableLength*sizeof(void*));
 
           //count the number of the element that are needed
           if (MatrixRowNonZeroElementTable[iElement].Node->Thread==PIC::ThisThread) {
