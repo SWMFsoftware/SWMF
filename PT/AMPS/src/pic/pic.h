@@ -3207,6 +3207,40 @@ namespace PIC {
     void UpdateBlockTable();
   }
 
+  //field solver
+  namespace FieldSolver {
+    //electromagnetic field solvers
+    namespace Electromagnetic {
+      //Energy conserving field solver (same as used in the IPIC3D)
+      namespace ECSIM {
+
+         //init the solver
+         void Init();
+         void Init_IC();
+
+         //update the matrix
+         void UpdateMatrix();
+
+         //set initiall conditions for the electric and magnetic fields
+         typedef void (*fSetIC)();
+         extern fSetIC SetIC;
+
+         void SetIC_default();
+
+      }
+    }
+
+    //electrostatic field solvers
+    namespace Electrostatic {
+
+    }
+
+    //Init the solvers
+    void Init();
+    void Init_IC();
+  }
+
+
   //the mode of the internal degrees of freedom
   namespace IDF {
 
@@ -3423,6 +3457,12 @@ namespace PIC {
 
     int Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
     void BorisSplitAcceleration_default(double *accl, double *rotation, int spec,long int ptr,double *x,double *v,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode);
+
+    //particle mover for the energy conserving scheme (Stefano Markidis et al., 2010, Mathematics and Computers in Simulation 80 (2010) 1509–1519
+    int Markidis2010(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
+
+    //particle mover that is used in iPIC3D (G. Lapenta/JournalofComputationalPhysics334(2017)349–366)
+    int Lapenta2017(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode);
   }
 
 
