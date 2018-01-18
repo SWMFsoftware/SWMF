@@ -355,4 +355,7 @@ at the end of each time step
 //the mode of the particle trajectory integration backward in time
 #define _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_  _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__DISABLED_
 
+//definitions of the field solver 
+#define _PIC_FILED_SOLVER_MODE_ _PIC_FILED_SOLVER_MODE__OFF_
+
 #endif //_PIC_GLOBAL_DEFINITIONS_H_  

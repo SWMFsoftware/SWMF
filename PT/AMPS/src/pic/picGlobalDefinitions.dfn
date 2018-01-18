@@ -186,6 +186,7 @@ species number (between reactions). Each segment is saved in the trajectory file
 //the interpolation scheme that is used in coupler
 #define _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_   0
 #define _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_     1
+#define _PIC_COUPLER__INTERPOLATION_MODE__CORNER_BASED_LINEAR_      2
 
 //the type of the linear interpolation routine
 #define _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_      0
@@ -292,7 +293,9 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC__EXIT_CODE__LAST_BLOCK__CheckParticleList_                     -16
 #define _PIC__EXIT_CODE__LAST_BLOCK__ExchangeStatisticData_                 -17
 
-
+//Definitions of the field solver
+#define _PIC_FILED_SOLVER_MODE__OFF_                                 0
+#define _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_   1
 
 
 
