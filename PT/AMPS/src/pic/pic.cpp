@@ -1766,6 +1766,9 @@ void PIC::Init_BeforeParser() {
     }
   }
 
+
+  //Init the field solver
+  if (_PIC_FILED_SOLVER_MODE_!=_PIC_FILED_SOLVER_MODE__OFF_) PIC::FieldSolver::Init();
 }
 
 void PIC::Init_AfterParser() {
@@ -1871,7 +1874,6 @@ void PIC::Init_AfterParser() {
 
   //when cut-cells are used init the cut-cell access coutner
   if (_AMR__CUT_CELL__MODE_==_AMR__CUT_CELL__MODE__ON_) PIC::Mesh::IrregularSurface::CutFaceAccessCounter::Init();
-
 }
 
 //====================================================
