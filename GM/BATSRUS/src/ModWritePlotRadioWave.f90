@@ -373,9 +373,11 @@ contains
           Frequency_I(nFreq) = 1e6*Frequency_I(nFreq)
        case('GHz', 'GHZ', 'Ghz')
           Frequency_I(nFreq) = 1e9*Frequency_I(nFreq)
+       case('THz', 'THZ', 'Thz')
+          Frequency_I(nFreq) = 1e12*Frequency_I(nFreq)
        case default
           write(*,*) '+++ Unrecognized frequency unit "'//trim(NameFreqUnit) &
-               //'". Use only Hz, kHz, MHz, or GHz'
+               //'". Use only Hz, kHz, MHz, GHz, or THz'
           stop
        end select
 
