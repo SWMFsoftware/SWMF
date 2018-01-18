@@ -348,6 +348,8 @@ void PIC::CPLR::DATAFILE::Init() {
 
 
   if (Offset::PlasmaBulkVelocity.allocate==true) {
+    if (Offset::PlasmaBulkVelocity.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::PlasmaBulkVelocity");
+
     Offset::PlasmaBulkVelocity.active=true;
     Offset::PlasmaBulkVelocity.RelativeOffset=RelativeOffset;
 
@@ -358,6 +360,8 @@ void PIC::CPLR::DATAFILE::Init() {
 
 
   if (Offset::PlasmaTemperature.allocate==true) {
+    if (Offset::PlasmaTemperature.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::PlasmaTemperature");
+
     Offset::PlasmaTemperature.active=true;
     Offset::PlasmaTemperature.RelativeOffset=RelativeOffset;
 
@@ -368,6 +372,8 @@ void PIC::CPLR::DATAFILE::Init() {
 
 
   if (Offset::PlasmaIonPressure.allocate==true) {
+    if (Offset::PlasmaIonPressure.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::PlasmaIonPressure");
+
     Offset::PlasmaIonPressure.active=true;
     Offset::PlasmaIonPressure.RelativeOffset=RelativeOffset;
 
@@ -378,6 +384,8 @@ void PIC::CPLR::DATAFILE::Init() {
 
 
   if (Offset::PlasmaElectronPressure.allocate==true) {
+    if (Offset::PlasmaElectronPressure.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::PlasmaElectronPressure");
+
     Offset::PlasmaElectronPressure.active=true;
     Offset::PlasmaElectronPressure.RelativeOffset=RelativeOffset;
 
@@ -388,6 +396,8 @@ void PIC::CPLR::DATAFILE::Init() {
 
 
   if (Offset::MagneticField.allocate==true) {
+    if (Offset::MagneticField.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::MagneticField");
+
     Offset::MagneticField.active=true;
     Offset::MagneticField.RelativeOffset=RelativeOffset;
 
@@ -397,6 +407,8 @@ void PIC::CPLR::DATAFILE::Init() {
   }
 
   if (Offset::ElectricField.allocate==true) {
+    if (Offset::ElectricField.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::ElectricField");
+
     Offset::ElectricField.active=true;
     Offset::ElectricField.RelativeOffset=RelativeOffset;
 
@@ -407,6 +419,8 @@ void PIC::CPLR::DATAFILE::Init() {
 
 
   if (Offset::MagneticFieldGradient.allocate==true) {
+    if (Offset::MagneticFieldGradient.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::MagneticFieldGradient");
+
     Offset::MagneticFieldGradient.active=true;
     Offset::MagneticFieldGradient.RelativeOffset=RelativeOffset;
 
@@ -416,6 +430,8 @@ void PIC::CPLR::DATAFILE::Init() {
   }
 
   if (Offset::MagneticFluxFunction.allocate==true) {
+    if (Offset::MagneticFluxFunction.RelativeOffset!=-1) exit(__LINE__,__FILE__,"Error: reinitialization of Offset::MagneticFluxFunction");
+
     Offset::MagneticFluxFunction.active=true;
     Offset::MagneticFluxFunction.RelativeOffset=RelativeOffset;
 
