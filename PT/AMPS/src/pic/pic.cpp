@@ -32,7 +32,7 @@ int *PIC::Sampling::SimulatedSpeciesParticleNumber=NULL;
 //====================================================
 //perform one time step
 int PIC::TimeStep() {
-   double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,PhotoChemistryTime=0.0,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
+   double UserDefinedMPI_RoutineExecutionTime=0.0,ParticleMovingTime,FieldSolverTime=0.0,PhotoChemistryTime=0.0,InjectionBoundaryTime,ParticleExchangeTime,IterationExecutionTime,SamplingTime,StartTime=MPI_Wtime();
    double ParticleCollisionTime=0.0,BackgroundAtmosphereCollisionTime=0.0;
    double UserDefinedParticleProcessingTime=0.0;
    static double summIterationExecutionTime=0.0;
@@ -292,6 +292,24 @@ int PIC::TimeStep() {
   PIC::ParticleBuffer::CheckParticleList();
 #endif
 
+  //update elecrtic and magnetic fields
+  #if _PIC_FIELD_SOLVER_MODE_==_PIC_FIELD_SOLVER_MODE__OFF_
+  //do nothing
+  #else
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__FieldSolver_;
+  FieldSolverTime=MPI_Wtime();
+
+  switch (_PIC_FIELD_SOLVER_MODE_) {
+  case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
+    FieldSolver::Electromagnetic::ECSIM::TimeStep();
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: unknown value of _PIC_FIELD_SOLVER_MODE_");
+  }
+
+  FieldSolverTime=MPI_Wtime()-FieldSolverTime;
+  #endif //_PIC_FIELD_SOLVER_MODE_
+
   IterationExecutionTime=MPI_Wtime()-StartTime;
   summIterationExecutionTime+=IterationExecutionTime;
 
@@ -367,6 +385,7 @@ int PIC::TimeStep() {
     long int nInjectedParticles;
     double UserDefinedMPI_RoutineExecutionTime;
     double UserDefinedParticleProcessingTime;
+    double FieldSolverTime;
     int SimulatedModelParticleNumber[PIC::nTotalSpecies];
   };
 
@@ -400,6 +419,7 @@ int PIC::TimeStep() {
     localRunStatisticData.nInjectedParticles=PIC::BC::nTotalInjectedParticles;
     localRunStatisticData.UserDefinedMPI_RoutineExecutionTime=UserDefinedMPI_RoutineExecutionTime;
     localRunStatisticData.UserDefinedParticleProcessingTime=UserDefinedParticleProcessingTime;
+    localRunStatisticData.FieldSolverTime=FieldSolverTime;
 
     for (int s=0;s<PIC::nTotalSpecies;s++) localRunStatisticData.SimulatedModelParticleNumber[s]=PIC::Sampling::SimulatedSpeciesParticleNumber[s];
 
@@ -441,9 +461,10 @@ int PIC::TimeStep() {
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:15:\t Particle Collision Time\n");
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:16:\t Background Atmosphere Collision Time\n");
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX:17:\t User Defined Particle Processing Time\n");
+      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:18:\t Field Solver Time\n");
 
 
-//      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\t\t 15\t 16\t 17\n");
+//      fprintf(PIC::DiagnospticMessageStream,"$PREFIX:1\t 2\t 3\t\t 4\t\t 5\t\t 6\t\t 7\t\t 8\t\t 9\t\t 10\t 11\t 12\t 13\t\t 14\t\t 15\t 16\t 17\t\t18\n");
 
 
       fprintf(PIC::DiagnospticMessageStream,"$PREFIX: ");
@@ -452,7 +473,7 @@ int PIC::TimeStep() {
 
 
       for (thread=0;thread<PIC::Mesh::mesh.nTotalThreads;thread++) {
-        fprintf(PIC::DiagnospticMessageStream,"$PREFIX: %12d %12d %10e %10e %10e %10e %10e %10e %10e %10e %12d %12d %10e %10e %10e %10e %10e\n",
+        fprintf(PIC::DiagnospticMessageStream,"$PREFIX: %12d %12d %10e %10e %10e %10e %10e %10e %10e %10e %12d %12d %10e %10e %10e %10e %10e %10e\n",
             thread,
             (int)ExchangeBuffer[thread].TotalParticlesNumber,
             ExchangeBuffer[thread].TotalInterationRunTime,
@@ -470,7 +491,8 @@ int PIC::TimeStep() {
             ExchangeBuffer[thread].UserDefinedMPI_RoutineExecutionTime,
             ExchangeBuffer[thread].ParticleCollisionTime,
             ExchangeBuffer[thread].BackgroundAtmosphereCollisionTime,
-            ExchangeBuffer[thread].UserDefinedParticleProcessingTime);
+            ExchangeBuffer[thread].UserDefinedParticleProcessingTime,
+            ExchangeBuffer[thread].FieldSolverTime);
 
         nTotalModelParticles+=ExchangeBuffer[thread].TotalParticlesNumber;
         nTotalInjectedParticels+=ExchangeBuffer[thread].nInjectedParticles;
