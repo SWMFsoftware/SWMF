@@ -782,10 +782,6 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
   static long int nCall=0;
   nCall++;
 
-  //advance the particle location
-  for (idim=0;idim<3;idim++) xFinal[idim]=xInit[idim]+dtTotal*vInit[idim];
-
-  newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 
   //interpolate the fields acting upon on the particle at the NEW location of the particle (Appendix D, Eq 2)
   double t[3],E[3]={0.0,0.0,0.0},B[3]={0.0,0.0,0.0};
@@ -793,16 +789,16 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
   switch ( _PIC_FIELD_SOLVER_MODE_) {
   case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
     //interpolate the elecric field (corner nodes)
-    PIC::InterpolationRoutines::CornerBased::cStencil ElectricFieldStencil=*PIC::InterpolationRoutines::CornerBased::InitStencil(xFinal,newNode);
+    PIC::InterpolationRoutines::CornerBased::cStencil ElectricFieldStencil=*PIC::InterpolationRoutines::CornerBased::InitStencil(xFinal,startNode);
 
     for (int iStencil=0;iStencil<ElectricFieldStencil.Length;iStencil++) {
-      memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset,3*sizeof(double));
+      memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfTimeStep,3*sizeof(double));
 
       for (idim=0;idim<3;idim++) E[idim]+=ElectricFieldStencil.Weight[iStencil]*t[idim];
     }
 
     //interpolate the magnetic field (center nodes)
-    PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil=*PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xFinal,newNode);
+    PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil=*PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xFinal,startNode);
 
     for (int iStencil=0;iStencil<MagneticFieldStencil.Length;iStencil++) {
       memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset,3*sizeof(double));
@@ -812,7 +808,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
 
     break;
   default:
-    PIC::CPLR::InitInterpolationStencil(xInit,newNode);
+    PIC::CPLR::InitInterpolationStencil(xInit,startNode);
     PIC::CPLR::GetBackgroundElectricField(E);
     PIC::CPLR::GetBackgroundMagneticField(B);
   }
@@ -859,6 +855,11 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
 
     vFinal[idim]=2.0*vp-vInit[idim];
   }
+
+  //advance the particle location
+  for (idim=0;idim<3;idim++) xFinal[idim]=xInit[idim]+dtTotal*vFinal[idim];
+
+  newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 
   //interaction with the faces of the block and internal surfaces
   //check whether the particle trajectory is intersected the spherical body
