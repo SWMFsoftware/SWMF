@@ -524,6 +524,16 @@ sub ReadMainBlock {
         $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
         $MoverIntegrator='PIC::Mover::Relativistic::Boris';
       }
+      
+      elsif ($s0 eq "LAPENTA2017") {
+        $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
+        $MoverIntegrator='PIC::Mover::Lapenta2017';
+      }           
+      elsif ($s0 eq "MARKIDIS2010") {
+        $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__BORIS_';
+        $MoverIntegrator='PIC::Mover::Markidis2010';
+      }
+      
       elsif ($s0 eq "GUIDINGCENTER") {
         $MoverIntegratorMode='_PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_';
         $MoverIntegrator='PIC::Mover::GuidingCenter::Mover_SecondOrder';
