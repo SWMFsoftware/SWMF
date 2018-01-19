@@ -28,6 +28,7 @@ test:
 	-@($(MAKE) test_awsomfluids)		
 	-@($(MAKE) test_chromo)
 	-@($(MAKE) test_outerhelio)
+	-@($(MAKE) test_outerheliopui)
 	-@($(MAKE) test_earthsph)
 	-@($(MAKE) test_2bodyplot)
 	-@($(MAKE) test_titan)
@@ -102,6 +103,7 @@ test_help:
 	@echo "    test_multifluid            (run multi-fluid test)"
 	@echo "    test_multiion              (run multi-ion test)"
 	@echo "    test_outerhelio            (run Outer Heliosphere test)"
+	@echo "    test_outerheliopui         (run Outer Heliosphere w/ PUIs test)"
 	@echo "    test_partsteady            (run part steady test)"
 	@echo "    test_region2d              (run 2D BATL region test)"
 	@echo "    test_saturn                (run Saturn test)"
@@ -796,6 +798,37 @@ test_outerhelio_check:
 		Param/OUTERHELIO/TestOutput/log_n000000.log \
 		${TESTDIR}/RESULTS/OH/log_n000000.log > test_outerhelio.diff)
 	ls -l test_outerhelio.diff
+
+test_outerheliopui:
+	@echo "test_outerheliopui_compile..." > test_outerheliopui.diff
+	$(MAKE) test_outerheliopui_compile
+	@echo "test_outerheliopui_rundir..." >> test_outerheliopui.diff
+	$(MAKE) test_outerheliopui_rundir
+	@echo "test_outerheliopui_run..." >> test_outerheliopui.diff
+	$(MAKE) test_outerheliopui_run
+	@echo "test_outerheliopui_check..." >> test_outerheliopui.diff
+	$(MAKE) test_outerheliopui_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_outerheliopui_compile:
+	./Config.pl -u=OuterHelioPui -e=OuterHelioPui -g=4,4,4,3500,1
+	$(MAKE) BATSRUS
+	make PIDL
+
+test_outerheliopui_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPONENT=OH STANDALONE=YES GMDIR=`pwd`
+	cd ${TESTDIR}; cp Param/OUTERHELIO/PARAM.in.pui ./PARAM.in
+
+test_outerheliopui_run:
+	cd ${TESTDIR}; ${MPIRUN} ./BATSRUS.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test_outerheliopui_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
+		Param/OUTERHELIO/TestOutput/log_n000000_pui.log \
+		${TESTDIR}/RESULTS/OH/log_n000000.log > test_outerheliopui.diff)
+	ls -l test_outerheliopui.diff
 
 ### FUNCTIONALITY TEST SUITE ###
 
