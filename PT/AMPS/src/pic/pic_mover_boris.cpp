@@ -481,7 +481,7 @@ int PIC::Mover::Boris(long int ptr, double dtTotal,cTreeNodeAMR<PIC::Mesh::cData
 
 
  //particle mover for the energy conserving scheme (Stefano Markidis et al., 2010, Mathematics and Computers in Simulation 80 (2010) 1509–1519
-int PIC::Mover::Markidis2010(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+int PIC::Mover::Markidis2010(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
   PIC::ParticleBuffer::byte *ParticleData;
   double vInit[3],xInit[3]={0.0,0.0,0.0},vFinal[3],xFinal[3],B[3],E[3];
@@ -492,6 +492,43 @@ int PIC::Mover::Markidis2010(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDat
   PIC::ParticleBuffer::GetX(xInit,ParticleData);
   spec=PIC::ParticleBuffer::GetI(ParticleData);
 
+  //the description of the boundaries of the block faces
+  struct cExternalBoundaryFace {
+    double norm[3];
+    int nX0[3];
+    double e0[3],e1[3],x0[3];
+    double lE0,lE1;
+  };
+
+  static bool initExternalBoundaryFaceTable=false;
+
+  static cExternalBoundaryFace ExternalBoundaryFaceTable[6]={
+      {{-1.0,0.0,0.0}, {0,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{1.0,0.0,0.0}, {1,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,-1.0,0.0}, {0,0,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{0.0,1.0,0.0}, {0,1,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,0.0,-1.0}, {0,0,0}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}, {{0.0,0.0,1.0}, {0,0,1}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}
+  };
+
+  if (initExternalBoundaryFaceTable==false) {
+    initExternalBoundaryFaceTable=true;
+
+    for (int nface=0;nface<6;nface++) {
+      double cE0=0.0,cE1=0.0;
+
+      for (idim=0;idim<3;idim++) {
+        ExternalBoundaryFaceTable[nface].x0[idim]=(ExternalBoundaryFaceTable[nface].nX0[idim]==0) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim];
+
+        cE0+=pow(((ExternalBoundaryFaceTable[nface].e0[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+        cE1+=pow(((ExternalBoundaryFaceTable[nface].e1[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+      }
+
+      ExternalBoundaryFaceTable[nface].lE0=sqrt(cE0);
+      ExternalBoundaryFaceTable[nface].lE1=sqrt(cE1);
+    }
+  }
+
+  static long int nCall=0;
+  nCall++;
+
   //interpolate the fields acting upon on the particle
   PIC::CPLR::InitInterpolationStencil(xInit,startNode);
   PIC::CPLR::GetBackgroundElectricField(E);
@@ -499,7 +536,7 @@ int PIC::Mover::Markidis2010(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDat
 
   double v_prime[3],QdT_over_m,QdT_over_2m;
 
-  QdT_over_m=PIC::MolecularData::GetElectricCharge(spec)*dt/PIC::MolecularData::GetMass(spec);
+  QdT_over_m=PIC::MolecularData::GetElectricCharge(spec)*dtTotal/PIC::MolecularData::GetMass(spec);
   QdT_over_2m=0.5*QdT_over_m;
 
   //Eq 22
@@ -514,7 +551,7 @@ int PIC::Mover::Markidis2010(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDat
 
   for (idim=0;idim<3;idim++) {
     vFinal[idim]=Denominator*(v_prime[idim]+QdT_over_2m*n1[idim]+n2*B[idim]);
-    xFinal[idim]=xInit[idim]+dt*vFinal[idim];
+    xFinal[idim]=xInit[idim]+dtTotal*vFinal[idim];
   }
 
   //interaction with the faces of the block and internal surfaces
@@ -538,7 +575,7 @@ int PIC::Mover::Markidis2010(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDat
     newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 
     //apply the boundary condition
-    code=ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dt,(void*)newNode,BoundaryElement);
+    code=ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,BoundaryElement);
 
     if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
       PIC::ParticleBuffer::DeleteParticle(ptr);
@@ -697,7 +734,7 @@ int PIC::Mover::Markidis2010(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDat
 
 
 //particle mover that is used in iPIC3D (G. Lapenta/JournalofComputationalPhysics334(2017)349–366)
-int PIC::Mover::Lapenta2017(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
+int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode) {
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *newNode=NULL;
   PIC::ParticleBuffer::byte *ParticleData;
   double vInit[3],xInit[3]={0.0,0.0,0.0},vFinal[3],xFinal[3];
@@ -708,43 +745,83 @@ int PIC::Mover::Lapenta2017(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cData
   PIC::ParticleBuffer::GetX(xInit,ParticleData);
   spec=PIC::ParticleBuffer::GetI(ParticleData);
 
+  //the description of the boundaries of the block faces
+  struct cExternalBoundaryFace {
+    double norm[3];
+    int nX0[3];
+    double e0[3],e1[3],x0[3];
+    double lE0,lE1;
+  };
+
+  static bool initExternalBoundaryFaceTable=false;
+
+  static cExternalBoundaryFace ExternalBoundaryFaceTable[6]={
+      {{-1.0,0.0,0.0}, {0,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{1.0,0.0,0.0}, {1,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,-1.0,0.0}, {0,0,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{0.0,1.0,0.0}, {0,1,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,0.0,-1.0}, {0,0,0}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}, {{0.0,0.0,1.0}, {0,0,1}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}
+  };
+
+  if (initExternalBoundaryFaceTable==false) {
+    initExternalBoundaryFaceTable=true;
+
+    for (int nface=0;nface<6;nface++) {
+      double cE0=0.0,cE1=0.0;
+
+      for (idim=0;idim<3;idim++) {
+        ExternalBoundaryFaceTable[nface].x0[idim]=(ExternalBoundaryFaceTable[nface].nX0[idim]==0) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim];
+
+        cE0+=pow(((ExternalBoundaryFaceTable[nface].e0[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+        cE1+=pow(((ExternalBoundaryFaceTable[nface].e1[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+      }
+
+      ExternalBoundaryFaceTable[nface].lE0=sqrt(cE0);
+      ExternalBoundaryFaceTable[nface].lE1=sqrt(cE1);
+    }
+  }
+
+  static long int nCall=0;
+  nCall++;
+
   //advance the particle location
-  for (idim=0;idim<3;idim++) xFinal[idim]=xInit[idim]+dt*vInit[idim];
+  for (idim=0;idim<3;idim++) xFinal[idim]=xInit[idim]+dtTotal*vInit[idim];
 
   newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 
   //interpolate the fields acting upon on the particle at the NEW location of the particle (Appendix D, Eq 2)
   double t[3],E[3]={0.0,0.0,0.0},B[3]={0.0,0.0,0.0};
 
-  #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_  //for the nightly test use the same field interpolation scheme as for other tests
-  PIC::CPLR::InitInterpolationStencil(xInit,newNode);
-  PIC::CPLR::GetBackgroundElectricField(E);
-  PIC::CPLR::GetBackgroundMagneticField(B);
-  #else // _PIC_NIGHTLY_TEST_MODE_
-  //interpolate the elecric field (corner nodes)
-  PIC::InterpolationRoutines::CornerBased::cStencil ElectricFieldStencil=*PIC::InterpolationRoutines::CornerBased::InitStencil(xFinal,newNode);
+  switch ( _PIC_FIELD_SOLVER_MODE_) {
+  case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
+    //interpolate the elecric field (corner nodes)
+    PIC::InterpolationRoutines::CornerBased::cStencil ElectricFieldStencil=*PIC::InterpolationRoutines::CornerBased::InitStencil(xFinal,newNode);
 
-  for (int iStencil=0;iStencil<ElectricFieldStencil.Length;iStencil++) {
-    memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset,3*sizeof(double));
+    for (int iStencil=0;iStencil<ElectricFieldStencil.Length;iStencil++) {
+      memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset,3*sizeof(double));
 
-    for (idim=0;idim<3;idim++) E[idim]+=ElectricFieldStencil.Weight[iStencil]*t[idim];
+      for (idim=0;idim<3;idim++) E[idim]+=ElectricFieldStencil.Weight[iStencil]*t[idim];
+    }
+
+    //interpolate the magnetic field (center nodes)
+    PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil=*PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xFinal,newNode);
+
+    for (int iStencil=0;iStencil<MagneticFieldStencil.Length;iStencil++) {
+      memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset,3*sizeof(double));
+
+      for (idim=0;idim<3;idim++) B[idim]+=MagneticFieldStencil.Weight[iStencil]*t[idim];
+    }
+
+    break;
+  default:
+    PIC::CPLR::InitInterpolationStencil(xInit,newNode);
+    PIC::CPLR::GetBackgroundElectricField(E);
+    PIC::CPLR::GetBackgroundMagneticField(B);
   }
-
-  //interpolate the magnetic field (center nodes)
-  PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil=*PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xFinal,newNode);
-
-  for (int iStencil=0;iStencil<MagneticFieldStencil.Length;iStencil++) {
-    memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset,3*sizeof(double));
-
-    for (idim=0;idim<3;idim++) B[idim]+=MagneticFieldStencil.Weight[iStencil]*t[idim];
-  }
-  #endif //_PIC_NIGHTLY_TEST_MODE_
 
   //advance the particle velocity
   double QdT_over_m,QdT_over_2m,alpha[3][3];
   double c0,QdT_over_2m_squared;
 
-  QdT_over_m=PIC::MolecularData::GetElectricCharge(spec)*dt/PIC::MolecularData::GetMass(spec);
+  QdT_over_m=PIC::MolecularData::GetElectricCharge(spec)*dtTotal/PIC::MolecularData::GetMass(spec);
   QdT_over_2m=0.5*QdT_over_m;
   QdT_over_2m_squared=QdT_over_2m*QdT_over_2m;
 
@@ -804,7 +881,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dt,cTreeNodeAMR<PIC::Mesh::cData
     newNode=PIC::Mesh::mesh.findTreeNode(xFinal,startNode);
 
     //apply the boundary condition
-    code=ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dt,(void*)newNode,BoundaryElement);
+    code=ParticleSphereInteraction(spec,ptr,xFinal,vFinal,dtTotal,(void*)newNode,BoundaryElement);
 
     if (code==_PARTICLE_DELETED_ON_THE_FACE_) {
       PIC::ParticleBuffer::DeleteParticle(ptr);
