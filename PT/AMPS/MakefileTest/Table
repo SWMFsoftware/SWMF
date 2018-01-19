@@ -1088,6 +1088,35 @@ Check=
 Name=test/model-dust
 Time=2
 <#
+
+-------------------------------------------------------------------------------
+
+#>
+Name=test/Mover-Lapenta2017 
+Time=4
+
+Ref=2{icc}@@(0+valeriy)
+Ref=1{gcc}@@(0+valeriy)
+Ref=8{pgcc}@@(0+valeriy)
+
+Ref=5{gcc}@@(0+pleiades)
+Ref=6{icc}@@(0+pleiades)
+Ref=7{pgcc}@@(0+pleiades)
+
+Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+valeriy)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+pleiades)
+Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/work/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+stampede)
+
+CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Lapenta@@(0+valeriy)
+CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Lapenta@@(0+pleiades)
+
+Check=
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMover-Lapenta2017DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
+>>>${TESTMover-Lapenta2017CUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTMover-Lapenta2017-REF).ref_np`ls ${TESTMover-Lapenta2017DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Lapenta2017$(TESTMover-Lapenta2017-REF).diff
+>>>@ls -l test_Mover-Lapenta2017$(TESTMover-Lapenta2017-REF).diff
+>>>@echo Test test_Mover-Lapenta2017 has finished: `date`
+<#
+
 -------------------------------------------------------------------------------
 
 #>
