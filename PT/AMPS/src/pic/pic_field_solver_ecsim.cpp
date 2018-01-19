@@ -14,12 +14,12 @@ PIC::FieldSolver::Electromagnetic::ECSIM::fSetIC PIC::FieldSolver::Electromagnet
 
 //The global initialization procedure
 void PIC::FieldSolver::Init() {
-  switch (_PIC_FILED_SOLVER_MODE_) {
+  switch (_PIC_FIELD_SOLVER_MODE_) {
   case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
     PIC::FieldSolver::Electromagnetic::ECSIM::Init();
     break;
   default:
-    exit(__LINE__,__FILE__,"Error: The field solver Init() has been called with an unknown _PIC_FILED_SOLVER_MODE_ value");
+    exit(__LINE__,__FILE__,"Error: The field solver Init() has been called with an unknown _PIC_FIELD_SOLVER_MODE_ value");
   }
 }
 

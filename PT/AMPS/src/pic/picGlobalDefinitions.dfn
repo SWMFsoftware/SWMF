@@ -294,7 +294,7 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC__EXIT_CODE__LAST_BLOCK__ExchangeStatisticData_                 -17
 
 //Definitions of the field solver
-#define _PIC_FILED_SOLVER_MODE__OFF_                                 0
+#define _PIC_FIELD_SOLVER_MODE__OFF_                                 0
 #define _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_   1
 
 

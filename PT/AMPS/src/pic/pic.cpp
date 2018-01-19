@@ -1768,7 +1768,7 @@ void PIC::Init_BeforeParser() {
 
 
   //Init the field solver
-  if (_PIC_FILED_SOLVER_MODE_!=_PIC_FILED_SOLVER_MODE__OFF_) PIC::FieldSolver::Init();
+  if (_PIC_FIELD_SOLVER_MODE_!=_PIC_FIELD_SOLVER_MODE__OFF_) PIC::FieldSolver::Init();
 }
 
 void PIC::Init_AfterParser() {
