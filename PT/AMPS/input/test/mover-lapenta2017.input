@@ -1,0 +1,26 @@
+
+
+#include input/test/mover-base.input
+
+#main
+!  MoverIntegratorMode=Boris
+! MoverIntegratorMode=GuidingCenter
+  MoverIntegratorMode=Lapenta2017 
+
+  DEBUGGERMODE=ON
+
+  ErrorLog=PT
+  Prefix=AMPS
+  DiagnosticStream=PT
+  OutputDirectory=PT/plots
+#endmain
+
+#block ../input/ccmc.pl
+  SimulationMode= IndividualParticlesOnly !EntireFlow, IndividualParticleOnly
+  InjectionLocationFile=ccmc.InjectionLocation.dat
+#endblock
+
+#interface
+  cell_centered_linear_interpolation_mode=swmf 
+  cell_centered_linear_interpolation_src=default
+#endinterface
