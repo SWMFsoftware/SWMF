@@ -1,0 +1,367 @@
+#ECHO
+T
+
+#COMPONENT
+OH
+
+#PLANET
+NONE
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#BODY
+T                       UseBody (rest of parameters read if true)
+30.0                    rBody (user units)
+0.01                    BodyNDim(1) (/cc) number density for sw ions
+2.0E4                   BodyTDim(K)(1) temperature for sw ions
+9.45E-4			BodyNDim(2) for PUIs
+8.20E6                  BodyTdim(2) 
+0.18                    BodyNDim(3) for 1st neutral fluid
+6519.0                  BodyTDim(3)
+7.E-5                   BodyNDim(4) for 2nd neutral fluid
+6519.0                  BodyTDim(4)
+7.8E-3                  BodyNDim(5) for 3rd neutral fluid
+1.609E3                 BodyTDim(5)
+0.18                    BodyNDim(6) for 4th neutral fluid 
+6519.0                  BodyTDim(6)
+
+#IOUNITS
+USER
+
+#NORMALIZATION
+USER
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-1500.0			xMin
+ 1500.0			xMax
+-1500.0			yMin
+ 1500.0			yMax
+-1500.0			zMin
+ 1500.0			zMax
+
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea
+
+#GRIDLEVEL
+5			nLevelArea (usually 11)
+initial			NameArea
+
+#GRIDLEVEL
+11                      nLevel
+shell0                  NameArea
+30.0			Radius1
+30.2			Radius2
+
+#GRIDRESOLUTION
+35.937
+box
+0.0
+-600
+-600
+-600
+600
+600
+
+#GRIDRESOLUTION
+17.969
+box
+-153.0
+-340.0
+-340.0
+-600.0
+340.0
+340.0
+
+#GRIDRESOLUTION
+8.984
+box
+-109.0
+-200.0
+-200.0
+-400.0
+200.0
+200.0
+
+#GRIDRESOLUTION
+4.492
+box
+-59.64
+-136.0
+-136.0
+-272.0
+136.0
+136.0
+
+#GRIDRESOLUTION
+3.0
+box
+-71.31
+-85.0
+-85.0
+-170.0
+85.0
+85.0
+
+#GRIDRESOLUTION
+1.5
+box
+-20.00
+-42.0
+-42.0
+-68.0
+42.0
+42.0
+
+#GRIDRESOLUTION
+0.7
+box
+-5.0
+-40.0
+-40.0
+-40.0
+40.0
+40.0
+
+#INNERBOUNDARY
+user
+
+#OUTERBOUNDARY
+user                    TypeBcOuter_E(East_) user
+outflow                 TypeBcOuter_E(West_) 
+outflow                 TypeBcOuter_E(South_) 
+outflow                 TypeBcOuter_E(North_) 
+outflow                 TypeBcOuter_E(Bot_) 
+outflow		        TypeBcOuter_E(Top_) 
+
+#TIMEACCURATE           
+F			IsTimeAccurate
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde           	TypeFluxNeutral 
+
+#SCHEME
+1			nOrder
+Linde			TypeFlux
+
+#TIMESTEPPING
+1                       nStage (1 or 2)
+0.80                    CflExpl
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart 
+1000			DoSaveRestart 
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+3			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnOutput
+-1.0			DtOuput
+-1.0			DxOutput
+y=0 VAR idl		StringPlot
+10			DnOutput
+-1.0			DtOuput
+-1.0			DxOutput
+fluid mach		NameVar
+rbody			NameParam
+z=0 MHD idl		StringPlot
+10			DnOutput
+-1.0			DtOuput
+-1.0			DxOutput
+
+#MULTIIONSTATE
+T			UseSingleIonVelocity
+F               	UseSingleIonTemperature
+
+#MULTIION
+1e-10			LowDensityRatio
+1e-10           	LowPressureRatio
+F               	DoRestrictMultiIon
+
+#MHDIONS
+T			DoAddRho
+T               	DoAddRhoU
+
+#USERFLAGS
+T                       UseUserInnerBcs
+F                       UseUserSource
+T                       UseUserPerturbation
+T                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#OHBOUNDARY
+T
+0.05			RhoNeuFactor
+1.0			uNeuFactor
+1.E-2			RhoNe2Factor
+0.2			uNe2Factor
+1.E-2			RhoNe3Factor
+1.0			uNe3Factor
+1.E-3			RhoNe4Factor
+0.1			uNe4Factor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW_dim
+6519.0          	TNeutralsISW_dim
+26.3            	UxNeutralsISW_dim
+0.3             	UyNeutralsISW_dim
+-2.3            	UzNeutralsISW_dim
+1.0             	mNeutralsmp
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+! This is same as rbody in #BODY
+#GLOBALHELIOSPHERE
+30.
+
+#SOLARWINDH              
+0.00874             	 SWH_rho_dim [n/cc]
+2.0E4                    SWH_T_dim [K]
+417.07                   SWH_Ux_dim [km/s]
+0.0                      SWH_Uy_dim [km/s]
+0.0                      SWH_Uz_dim [km/s]
+7.17E-03                 SWH_Bx_dim [nT]
+0.0                      SWH_By_dim [nT]
+0.0                      SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4			 PU3_rho_dim [n/cc]
+8.20E6                 	 PU3_T_dim [K]
+417.07                   PU3_Ux_dim [km/s]
+0                        PU3_Uy_dim [km/s]
+0                        PU3_Uz_dim [km/s]
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0               	VLISW_T_dim
+26.3               	VLISW_Ux_dim
+0.3                	VLISW_Uy_dim
+-2.3              	VLISW_Uz_dim
+0.4111            	VLISW_Bx_dim
+-0.0748            	VLISW_By_dim
+-0.1296             	VLISW_Bz_dim
+
+#REGIONS
+6.E5
+100.0
+0.9
+1.5
+50.0
+1.0
+
+#SOURCES
+F			UseSourceSWH
+F 			UseSourcePu3
+F 			UseSourceNeu
+F 			UseSourceNe2
+F 			UseSourceNe3
+F 			UseSourceNe4
+
+#USERINPUTEND ----------------------------------------------------------
+
+
+#STOP
+25
+-1.0
+
+#RUN ####################################################################
+
+#SCHEME
+2
+Linde
+minmod
+
+#STOP
+50
+-1.0
+
+#RUN ####################################################################
+
+#USERFLAGS
+T                       UseUserInnerBcs
+T                       UseUserSource
+T                       UseUserPerturbation
+T                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#TIMESTEPPING
+2                       nStage
+0.6                     CflExpl
+
+! Applies to the ions only if UseRusanovForNeutrals is true in #MULTIFLUID
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+mc                      TypeLimiter
+1.5                     LimiterBeta
+
+! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#SAVERESTART
+T                       DoSaveRestart
+1000                    DoSaveRestart
+-1.0                    DtSaveRestart
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOURCES
+T			UseSourceSWH
+T       		UseSourcePu3
+T       		UseSourceNeu
+T       		UseSourceNe2
+T       		UseSourceNe3
+T       		UseSourceNe4
+
+#USERINPUTEND ----------------------------------------------------------
+
+#STOP
+75			MaxIter
+-1.0                    tSimMax
+
+#END
