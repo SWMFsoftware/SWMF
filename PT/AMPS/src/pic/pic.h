@@ -3214,6 +3214,9 @@ namespace PIC {
       //Energy conserving field solver (same as used in the IPIC3D)
       namespace ECSIM {
 
+         //offset to the intermediate value of the electric field
+         extern int OffsetE_HalfTimeStep;
+
          //init the solver
          void Init();
          void Init_IC();

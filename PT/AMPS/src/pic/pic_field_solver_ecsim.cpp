@@ -11,6 +11,7 @@
 #include "pic.h"
 
 PIC::FieldSolver::Electromagnetic::ECSIM::fSetIC PIC::FieldSolver::Electromagnetic::ECSIM::SetIC=PIC::FieldSolver::Electromagnetic::ECSIM::SetIC_default;
+int PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfTimeStep=-1;
 
 //The global initialization procedure
 void PIC::FieldSolver::Init() {
