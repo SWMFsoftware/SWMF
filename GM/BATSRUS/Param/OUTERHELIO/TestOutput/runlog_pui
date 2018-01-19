@@ -1,0 +1,673 @@
+
+ BATSRUS: Block Adaptive Tree Solar-Wind Roe Upwind Scheme
+          for 3D Heliospheric Flows
+ University of Michigan, 1995-2017
+
+ BATSRUS version 9.20 is running as GM on      2 PE(s) with up to  1 OpenMP threads/PE
+
+ EQUATIONS:   MHD + PUI and four neutrals
+ USER MODULE: Outer Heliosphere with 4 neutrals and 2 ion fluids, Opher & Toth 1.00
+
+ModReadParam::read_file: read and broadcast nLine= 366 lines of text
+ ----- Starting Session  1  ------
+ GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
+
+#ECHO
+T		DoEcho
+
+#COMPONENT
+OH		NameComp
+
+#PLANET
+NONE		NamePlanet
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+
+#BODY
+T                       UseBody (rest of parameters read if true)
+30.0                    rBody (user units)
+0.01                    BodyNDim(1) (/cc) number density for sw ions
+2.0E4                   BodyTDim(K)(1) temperature for sw ions
+9.45E-4			BodyNDim(2) for PUIs
+8.20E6                  BodyTdim(2)		BodyTDim
+0.18                    BodyNDim(3) for 1st neutral fluid
+6519.0                  BodyTDim(3)
+7.E-5                   BodyNDim(4) for 2nd neutral fluid
+6519.0                  BodyTDim(4)
+7.8E-3                  BodyNDim(5) for 3rd neutral fluid
+1.609E3                 BodyTDim(5)
+0.18                    BodyNDim(6) for 4th neutral fluid
+6519.0                  BodyTDim(6)
+
+#IOUNITS
+USER		TypeIoUnit
+
+#NORMALIZATION
+USER		TypeNormalization
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-1500.0			xMin
+ 1500.0			xMax
+-1500.0			yMin
+ 1500.0			yMax
+-1500.0			zMin
+ 1500.0			zMax
+
+#GRIDLEVEL
+2			nLevelArea
+all			NameArea		StringShape
+
+#GRIDLEVEL
+5			nLevelArea (usually 11)
+initial			NameArea		StringShape
+
+#GRIDLEVEL
+11                      nLevel		nLevelArea
+shell0                  NameArea		StringShape
+30.0			Radius1		RadiusInner
+30.2			Radius2
+
+#GRIDRESOLUTION
+35.937		AreaResolution
+box		StringShape
+0.0		XyzMinBox
+-600		XyzMinBox
+-600		XyzMinBox
+-600		XyzMaxBox
+600		XyzMaxBox
+600		XyzMaxBox
+
+#GRIDRESOLUTION
+17.969		AreaResolution
+box		StringShape
+-153.0		XyzMinBox
+-340.0		XyzMinBox
+-340.0		XyzMinBox
+-600.0		XyzMaxBox
+340.0		XyzMaxBox
+340.0		XyzMaxBox
+
+#GRIDRESOLUTION
+8.984		AreaResolution
+box		StringShape
+-109.0		XyzMinBox
+-200.0		XyzMinBox
+-200.0		XyzMinBox
+-400.0		XyzMaxBox
+200.0		XyzMaxBox
+200.0		XyzMaxBox
+
+#GRIDRESOLUTION
+4.492		AreaResolution
+box		StringShape
+-59.64		XyzMinBox
+-136.0		XyzMinBox
+-136.0		XyzMinBox
+-272.0		XyzMaxBox
+136.0		XyzMaxBox
+136.0		XyzMaxBox
+
+#GRIDRESOLUTION
+3.0		AreaResolution
+box		StringShape
+-71.31		XyzMinBox
+-85.0		XyzMinBox
+-85.0		XyzMinBox
+-170.0		XyzMaxBox
+85.0		XyzMaxBox
+85.0		XyzMaxBox
+
+#GRIDRESOLUTION
+1.5		AreaResolution
+box		StringShape
+-20.00		XyzMinBox
+-42.0		XyzMinBox
+-42.0		XyzMinBox
+-68.0		XyzMaxBox
+42.0		XyzMaxBox
+42.0		XyzMaxBox
+
+#GRIDRESOLUTION
+0.7		AreaResolution
+box		StringShape
+-5.0		XyzMinBox
+-40.0		XyzMinBox
+-40.0		XyzMinBox
+-40.0		XyzMaxBox
+40.0		XyzMaxBox
+40.0		XyzMaxBox
+
+#INNERBOUNDARY
+user		TypeBcInner
+
+#OUTERBOUNDARY
+user                    TypeBcOuter_E(East_) user		TypeCellBc
+outflow                 TypeBcOuter_E(West_)		TypeCellBc
+outflow                 TypeBcOuter_E(South_)		TypeCellBc
+outflow                 TypeBcOuter_E(North_)		TypeCellBc
+outflow                 TypeBcOuter_E(Bot_)		TypeCellBc
+outflow		        TypeBcOuter_E(Top_)		TypeCellBc
+
+#TIMEACCURATE
+F			IsTimeAccurate		DoTimeAccurate
+
+#NEUTRALFLUID
+F			DoConserveNeutrals
+Linde           	TypeFluxNeutral
+
+#SCHEME
+1			nOrder
+Linde			TypeFlux
+
+#TIMESTEPPING
+1                       nStage (1 or 2)
+0.80                    CflExpl
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#SAVERESTART
+T			DoSaveRestart
+1000			DoSaveRestart		DnSaveRestart
+-1.0			DtSaveRestart
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+1			DnSaveLogfile
+-1.			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+3			nPlotFile
+y=0 MHD idl		StringPlot
+10			DnOutput		DnSavePlot
+-1.0			DtOuput		DtSavePlot
+-1.0			DxOutput		DxSavePlot
+y=0 VAR idl		StringPlot
+10			DnOutput		DnSavePlot
+-1.0			DtOuput		DtSavePlot
+-1.0			DxOutput		DxSavePlot
+fluid mach		NameVar		NameVars
+rbody			NameParam		NamePars
+z=0 MHD idl		StringPlot
+10			DnOutput		DnSavePlot
+-1.0			DtOuput		DtSavePlot
+-1.0			DxOutput		DxSavePlot
+
+#MULTIIONSTATE
+T			UseSingleIonVelocity
+F               	UseSingleIonTemperature
+
+#MULTIION
+1e-10			LowDensityRatio
+1e-10           	LowPressureRatio
+F               	DoRestrictMultiIon
+
+#MHDIONS
+T			DoAddRho
+T               	DoAddRhoU
+
+#USERFLAGS
+T                       UseUserInnerBcs
+F                       UseUserSource
+T                       UseUserPerturbation
+T                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#OHBOUNDARY
+T		DoOhNeutralBc
+0.05			RhoNeuFactor		RhoBcFactor
+1.0			uNeuFactor		uBcFactor
+1.E-2			RhoNe2Factor		RhoBcFactor
+0.2			uNe2Factor		uBcFactor
+1.E-2			RhoNe3Factor		RhoBcFactor
+1.0			uNe3Factor		uBcFactor
+1.E-3			RhoNe4Factor		RhoBcFactor
+0.1			uNe4Factor		uBcFactor
+
+#OHNEUTRALS
+0.18			RhoNeutralsISW_dim
+6519.0          	TNeutralsISW_dim
+26.3            	UxNeutralsISW_dim
+0.3             	UyNeutralsISW_dim
+-2.3            	UzNeutralsISW_dim
+1.0             	mNeutralsmp		mProtonMass
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#GLOBALHELIOSPHERE
+30.		Rbody
+
+#SOLARWINDH
+0.00874             	 SWH_rho_dim [n/cc]
+2.0E4                    SWH_T_dim [K]
+417.07                   SWH_Ux_dim [km/s]
+0.0                      SWH_Uy_dim [km/s]
+0.0                      SWH_Uz_dim [km/s]
+7.17E-03                 SWH_Bx_dim [nT]
+0.0                      SWH_By_dim [nT]
+0.0                      SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4			 PU3_rho_dim [n/cc]		Pu3_rho_dim
+8.20E6                 	 PU3_T_dim [K]		Pu3_T_dim
+417.07                   PU3_Ux_dim [km/s]		Pu3_Ux_dim
+0                        PU3_Uy_dim [km/s]		Pu3_Uy_dim
+0                        PU3_Uz_dim [km/s]		Pu3_Uz_dim
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0               	VLISW_T_dim
+26.3               	VLISW_Ux_dim
+0.3                	VLISW_Uy_dim
+-2.3              	VLISW_Uz_dim
+0.4111            	VLISW_Bx_dim
+-0.0748            	VLISW_By_dim
+-0.1296             	VLISW_Bz_dim
+
+#REGIONS
+6.E5		TempPop1LimitDim
+100.0		uPop1LimitDim
+0.9		MachPop2Limit
+1.5		MachPop3Limit
+50.0		rPop3Limit
+1.0		MachPop4Limit
+
+#SOURCES
+F			UseSourceSWH		UseSWHSource
+F 			UseSourcePu3		UsePu3Source
+F 			UseSourceNeu		UseNeuSource
+F 			UseSourceNe2		UseNe2Source
+F 			UseSourceNe3		UseNe3Source
+F 			UseSourceNe4		UseNe4Source
+
+#USERINPUTEND ----------------------------------------------------------
+ USERINPUTEND
+
+#STOP
+25		MaxIteration
+-1.0		tSimulationMax
+
+#RUN ####################################################################
+ OH_set_parameters: CHECK iSession = 1
+  
+ The code is configured with nG= 2  ghost cell layers.
+ The selected scheme requires nGUsed= 1  layers!
+init_mod_advance allocated arrays
+init_mod_geometry allocated arrays
+init_mod_nodes allocated arrays
+init_mod_field_trace
+ allocated arrays
+ BATS_setup starting initial refinement level, nBlockAll = 1 1
+ BATS_setup starting initial refinement level, nBlockAll = 2 8
+ BATS_setup starting initial refinement level, nBlockAll = 3 64
+ BATS_setup starting initial refinement level, nBlockAll = 4 120
+ BATS_setup starting initial refinement level, nBlockAll = 5 652
+     total blocks =  3228
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: USER            Normalization: USER
+
+          Gamma:         1.66666667  1.66666667  1.66666667  1.66666667  1.66666667  1.66666667  1.66666667
+
+          rBody:         3.00000E+01, rPlanet:     6.96000E+08
+          BodyNDim:      1.00000E-02, BodyTDim:    2.00000E+04
+          BodyNDim:      9.45000E-04, BodyTDim:    8.20000E+06
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          BodyNDim:      7.00000E-05, BodyTDim:    6.51900E+03
+          BodyNDim:      7.80000E-03, BodyTDim:    1.60900E+03
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          BdpDim:        0.00000E+00, Tilt [deg]:  0.00000E+00
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      1.80727E+04
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          1st-order scheme
+          Linde flux function
+          Linde flux for neutral fluids
+          Steady state calculation
+          Explicit time stepping
+          Point-implicit time stepping
+              nStage: 1
+              Cfl:    0.80
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax and MaxBlock      =  1614 3500
+   Total number of blocks used =  3228
+   Total number of cells       =  206592
+   Total number of true cells  =  206584
+   Min and max AMR levels      =  2 5
+   Min and max cell size in x/r=   23.4375000000000000   1.8750000000000000E+02
+
+ root blocks:        1       1       1
+ nIJK_D:             4       4       4
+ x:            -1.50000000E+03  1.50000000E+03
+ y:            -1.50000000E+03  1.50000000E+03
+ z:            -1.50000000E+03  1.50000000E+03
+
+saved ifile= 1 type=restart    at n_step=      0
+saved ifile= 6 type=y=0_mhd    at n_step=      0
+saved ifile= 7 type=y=0_var    at n_step=      0
+saved ifile= 8 type=z=0_mhd    at n_step=      0
+-------------------------------------------------------------------------------
+SORTED TIMING at step       0    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                   2.71    100.00         1         1
+-------------------------------------------------------------------------------
+setup                     2.71    100.00         1         1
+save_plot                 0.67     24.81         1         3
+write_restart_files       0.58     21.50         1         1
+exch_msgs                 0.41     14.98         1         2
+batl_pass                 0.19      6.87         1         3
+local_pass                0.16      5.81         1         6
+save_logfile              0.04      1.38         1         1
+wait_pass                 0.02      0.86         1         3
+integrate_domain          0.01      0.49         1         1
+buffer_to_state           0.00      0.10         1         3
+init_pass                 0.00      0.09         1         3
+-------------------------------------------------------------------------------
+ Resetting timing counters after setup.
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4631773958881959E-07
+saved ifile= 6 type=y=0_mhd    at n_step=     10
+saved ifile= 7 type=y=0_var    at n_step=     10
+saved ifile= 8 type=z=0_mhd    at n_step=     10
+Speed is  79435.5 c/s/p after     14.3 s at N =      10
+saved ifile= 6 type=y=0_mhd    at n_step=     20
+saved ifile= 7 type=y=0_var    at n_step=     20
+saved ifile= 8 type=z=0_mhd    at n_step=     20
+Speed is  78553.2 c/s/p after     28.3 s at N =      20
+ ----- End of Session    1  ------
+ ----- Starting Session  2  ------
+ OH_set_parameters: READ iSession = 2  iLine= 297  nLine = 1000
+
+#SCHEME
+2		nOrder
+Linde		TypeFlux
+minmod		TypeLimiter
+
+#STOP
+50		MaxIteration
+-1.0		tSimulationMax
+
+#RUN ####################################################################
+ OH_set_parameters: CHECK iSession = 2
+  
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: USER            Normalization: USER
+
+          Gamma:         1.66666667  1.66666667  1.66666667  1.66666667  1.66666667  1.66666667  1.66666667
+
+          rBody:         3.00000E+01, rPlanet:     6.96000E+08
+          BodyNDim:      1.00000E-02, BodyTDim:    2.00000E+04
+          BodyNDim:      9.45000E-04, BodyTDim:    8.20000E+06
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          BodyNDim:      7.00000E-05, BodyTDim:    6.51900E+03
+          BodyNDim:      7.80000E-03, BodyTDim:    1.60900E+03
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          BdpDim:        0.00000E+00, Tilt [deg]:  0.00000E+00
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      1.80727E+04
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-order scheme with minmod limiter
+          Linde flux function
+          Linde flux for neutral fluids
+          Steady state calculation
+          Explicit time stepping
+          Point-implicit time stepping
+              nStage: 2
+              Cfl:    0.80
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax and MaxBlock      =  1614 3500
+   Total number of blocks used =  3228
+   Total number of cells       =  206592
+   Total number of true cells  =  206584
+   Min and max AMR levels      =  2 5
+   Min and max cell size in x/r=   23.4375000000000000   1.8750000000000000E+02
+
+ root blocks:        1       1       1
+ nIJK_D:             4       4       4
+ x:            -1.50000000E+03  1.50000000E+03
+ y:            -1.50000000E+03  1.50000000E+03
+ z:            -1.50000000E+03  1.50000000E+03
+
+saved ifile= 6 type=y=0_mhd    at n_step=     30
+saved ifile= 7 type=y=0_var    at n_step=     30
+saved ifile= 8 type=z=0_mhd    at n_step=     30
+Speed is  34259.5 c/s/p after     51.2 s at N =      30
+saved ifile= 6 type=y=0_mhd    at n_step=     40
+saved ifile= 7 type=y=0_var    at n_step=     40
+saved ifile= 8 type=z=0_mhd    at n_step=     40
+Speed is  33859.5 c/s/p after     82.5 s at N =      40
+saved ifile= 6 type=y=0_mhd    at n_step=     50
+saved ifile= 7 type=y=0_var    at n_step=     50
+saved ifile= 8 type=z=0_mhd    at n_step=     50
+Speed is  34157.8 c/s/p after    113.7 s at N =      50
+ ----- End of Session    2  ------
+ ----- Starting Session  3  ------
+ OH_set_parameters: READ iSession = 3  iLine= 308  nLine = 1000
+
+#USERFLAGS
+T                       UseUserInnerBcs
+T                       UseUserSource
+T                       UseUserPerturbation
+T                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#TIMESTEPPING
+2                       nStage
+0.6                     CflExpl
+
+#SCHEME
+2                       nOrder
+Linde                   TypeFlux
+mc                      TypeLimiter
+1.5                     LimiterBeta
+
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#SAVERESTART
+T                       DoSaveRestart
+1000                    DoSaveRestart		DnSaveRestart
+-1.0                    DtSaveRestart
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOURCES
+T			UseSourceSWH		UseSWHSource
+T       		UseSourcePu3		UsePu3Source
+T       		UseSourceNeu		UseNeuSource
+T       		UseSourceNe2		UseNe2Source
+T       		UseSourceNe3		UseNe3Source
+T       		UseSourceNe4		UseNe4Source
+
+#USERINPUTEND ----------------------------------------------------------
+ USERINPUTEND
+
+#STOP
+75			MaxIter		MaxIteration
+-1.0                    tSimMax		tSimulationMax
+ OH_set_parameters: CHECK iSession = 3
+  
+
+    Begin Numerical Simulation
+    --------------------------
+
+
+    Physical Parameters
+    -------------------
+
+          I/O Unit type: USER            Normalization: USER
+
+          Gamma:         1.66666667  1.66666667  1.66666667  1.66666667  1.66666667  1.66666667  1.66666667
+
+          rBody:         3.00000E+01, rPlanet:     6.96000E+08
+          BodyNDim:      1.00000E-02, BodyTDim:    2.00000E+04
+          BodyNDim:      9.45000E-04, BodyTDim:    8.20000E+06
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          BodyNDim:      7.00000E-05, BodyTDim:    6.51900E+03
+          BodyNDim:      7.80000E-03, BodyTDim:    1.60900E+03
+          BodyNDim:      1.80000E-01, BodyTDim:    6.51900E+03
+          BdpDim:        0.00000E+00, Tilt [deg]:  0.00000E+00
+
+          UseBody2: .false.
+
+          ClightFactor:  1.00000E+00, Clight:      1.80727E+04
+
+
+    MHD Numerical Solution Parameters
+    ---------------------------------
+
+          2nd-order scheme with mc limiter
+              BetaLimiter = 1.50
+          Linde flux function
+          Linde flux for neutral fluids
+          Steady state calculation
+          Explicit time stepping
+          Point-implicit time stepping
+              nStage: 2
+              Cfl:    0.60
+
+    Other Runtime Parameters
+    ------------------------
+
+ Available processors: nProc =  2
+
+ After initial grid setup:
+   nBlockMax and MaxBlock      =  1614 3500
+   Total number of blocks used =  3228
+   Total number of cells       =  206592
+   Total number of true cells  =  206584
+   Min and max AMR levels      =  2 5
+   Min and max cell size in x/r=   23.4375000000000000   1.8750000000000000E+02
+
+ root blocks:        1       1       1
+ nIJK_D:             4       4       4
+ x:            -1.50000000E+03  1.50000000E+03
+ y:            -1.50000000E+03  1.50000000E+03
+ z:            -1.50000000E+03  1.50000000E+03
+
+saved ifile= 6 type=y=0_mhd    at n_step=     60
+saved ifile= 7 type=y=0_var    at n_step=     60
+saved ifile= 8 type=z=0_mhd    at n_step=     60
+Speed is  17971.5 c/s/p after    172.5 s at N =      60
+saved ifile= 6 type=y=0_mhd    at n_step=     70
+saved ifile= 7 type=y=0_var    at n_step=     70
+saved ifile= 8 type=z=0_mhd    at n_step=     70
+Speed is  18085.2 c/s/p after    230.7 s at N =      70
+
+    Finished Numerical Simulation
+    -----------------------------
+saved ifile= 1 type=restart    at n_step=     75
+saved ifile= 6 type=y=0_mhd    at n_step=     75
+saved ifile= 7 type=y=0_var    at n_step=     75
+saved ifile= 8 type=z=0_mhd    at n_step=     75
+
+    Finished Saving Output Files
+    ----------------------------
+-------------------------------------------------------------------------------
+SORTED TIMING from step       0 to      75    on PE    0
+name                       sec   percent     #iter    #calls
+-------------------------------------------------------------------------------
+BATSRUS                 260.74    100.00         1         1
+-------------------------------------------------------------------------------
+advance                 252.08     96.68        75        75
+calc_fluxes              93.11     35.71        75    201750
+update_state             77.71     29.80        75    201750
+update_point_implici     59.65     22.88        25     40350
+exch_msgs                29.63     11.36        77       127
+calc_facevalues          24.94      9.57        75    201750
+batl_pass                16.77      6.43        77       127
+local_pass               15.72      6.03        77       254
+calc_sources             10.92      4.19        75    201750
+calc_face_bfo             5.53      2.12        75     93750
+save_plot                 5.40      2.07         8        24
+update_check              4.99      1.92        75       125
+calc_fluxes_bfo           3.79      1.45        75     93750
+save_logfile              2.11      0.81        75        75
+integrate_domain          0.72      0.28        75        75
+send_cons_flux            0.67      0.26        75       125
+wait_pass                 0.64      0.25        77       127
+write_restart_files       0.58      0.22         1         1
+buffer_to_state           0.40      0.15        77       127
+set_face_boundary         0.01      0.00        75       500
+init_pass                 0.00      0.00        77       127
+barrier-expl1             0.00      0.00        75       125
+barrier-expl2             0.00      0.00        75       125
+-------------------------------------------------------------------------------
+clean_mod_advance deallocated arrays
+clean_mod_geometry deallocated arrays
+clean_mod_nodes deallocated arrays
+clean_mod_raytrace deallocated arrays
+Error_report for Time step reduction, min(factor)
+ OCCURED first= 1  last= 75  count_max= 105  count_sum= 105
+ VALUES min=   1.4631773958881959E-07  max=   0.7399736832316086  mean=   0.1627205907765100  last=   0.6393172543559879  last_sum=   0.6393172543559879
+
