@@ -1092,7 +1092,7 @@ Time=2
 -------------------------------------------------------------------------------
 
 #>
-Name=test/Mover-Lapenta2017 
+Name=test/Individual_Trajectories--Lapenta2017 
 Time=4
 
 Ref=2{icc}@@(0+valeriy)
@@ -1111,17 +1111,17 @@ CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTP
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Lapenta@@(0+pleiades)
 
 Check=
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMover-Lapenta2017DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>${TESTMover-Lapenta2017CUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTMover-Lapenta2017-REF).ref_np`ls ${TESTMover-Lapenta2017DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Lapenta2017$(TESTMover-Lapenta2017-REF).diff
->>>@ls -l test_Mover-Lapenta2017$(TESTMover-Lapenta2017-REF).diff
->>>@echo Test test_Mover-Lapenta2017 has finished: `date`
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--Lapenta2017DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
+>>>${TESTIndividual_Trajectories--Lapenta2017CUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTIndividual_Trajectories--Lapenta2017-REF).ref_np`ls ${TESTIndividual_Trajectories--Lapenta2017DIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--Lapenta2017$(TESTIndividual_Trajectories--Lapenta2017-REF).diff
+>>>@ls -l test_Individual_Trajectories--Lapenta2017$(TESTIndividual_Trajectories--Lapenta2017-REF).diff
+>>>@echo Test test_Individual_Trajectories--Lapenta2017 has finished: `date`
 <#
 
 
 -------------------------------------------------------------------------------
 
 #>
-Name=test/Mover-Markidis2010 
+Name=test/Individual_Trajectories--Markidis2010 
 Time=4
 
 Ref=2{icc}@@(0+valeriy)
@@ -1141,10 +1141,10 @@ CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTP
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Markidis@@(0+pleiades)
 
 Check=
->>>-@${SCRIPTDIR}/DiffNum.pl ${TESTMover-Markidis2010DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
->>>${TESTMover-Markidis2010CUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTMover-Markidis2010-REF).ref_np`ls ${TESTMover-Markidis2010DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Markidis2010$(TESTMover-Markidis2010-REF).diff
->>>@ls -l test_Mover-Markidis2010$(TESTMover-Markidis2010-REF).diff
->>>@echo Test test_Mover-Markidis2010 has finished: `date`
+>>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--Markidis2010DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
+>>>${TESTIndividual_Trajectories--Markidis2010CUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories$(TESTIndividual_Trajectories--Markidis2010-REF).ref_np`ls ${TESTIndividual_Trajectories--Markidis2010DIR}/PT/thread* |wc -l |tr -d ' '` > test_Individual_Trajectories--Markidis2010$(TESTMover-Markidis2010-REF).diff
+>>>@ls -l test_Individual_Trajectories--Markidis2010$(TESTIndividual_Trajectories--Markidis2010-REF).diff
+>>>@echo Test test_Individual_Trajectories--Markidis2010 has finished: `date`
 <#
 
 
@@ -1392,6 +1392,50 @@ Check=
 >>>@ls -l test_Mover-guiding-center${TESTMover-guiding-center-REF}.diff
 >>>@echo Test test_Mover-guiding-center has finished: `date`
 <#
+
+-------------------------------------------------------------------------------
+#>
+Name=test/Mover-Lapenta2017@@(0+valeriy)
+Time=7
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
+
+Compile=
+>>>@echo "test_Mover-Lapenta2017_compile..." > test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
+>>>./Config.pl -application=test/Mover-Lapenta2017 -cplr-data-path=${TESTMover-Lapenta2017KEYS} -model-data-path=${TESTMover-Lapenta2017KEYS} -link-option=-lc++ -amps-test=on
+>>>rm -rf srcTemp
+>>>@($(MAKE) -j8 amps)
+>>>@echo "test_Mover-Lapenta2017_compile... done" >> test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
+
+Check=
+>>>@echo "test_Mover-Lapenta2017_check..." >> test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Lapenta2017DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>${TESTMover-Lapenta2017KEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Lapenta2017-REF}.ref_np`ls ${TESTMover-Lapenta2017DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
+>>>@ls -l test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
+>>>@echo Test test_Mover-Lapenta2017 has finished: `date`
+<#
+
+#>
+Name=test/Mover-Markidis2010@@(0+valeriy)
+Time=7
+
+Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
+
+Compile=
+>>>@echo "test_Mover-Markidis2010_compile..." > test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
+>>>./Config.pl -application=test/Mover-Markidis2010 -cplr-data-path=${TESTMover-Markidis2010KEYS} -model-data-path=${TESTMover-Markidis2010KEYS} -link-option=-lc++ -amps-test=on
+>>>rm -rf srcTemp
+>>>@($(MAKE) -j8 amps)
+>>>@echo "test_Mover-Markidis2010_compile... done" >> test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
+
+Check=
+>>>@echo "test_Mover-Markidis2010_check..." >> test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
+>>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Markidis2010DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
+>>>${TESTMover-Markidis2010KEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Markidis2010-REF}.ref_np`ls ${TESTMover-Markidis2010DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
+>>>@ls -l test_Mover-Markidis2010${TESTMoverMarkidis2010-REF}.diff
+>>>@echo Test test_Mover-Markidis2010 has finished: `date`
+<#
+
 
 -------------------------------------------------------------------------------
 #>
