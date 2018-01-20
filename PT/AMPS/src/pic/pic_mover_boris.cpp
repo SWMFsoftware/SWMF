@@ -843,7 +843,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
   alpha[1][1]=c0*(1.0+BB[1][1]);
   alpha[1][2]=c0*(-P[0]+BB[1][2]);
 
-  alpha[2][0]=c0*(-P[1]+BB[2][1]);
+  alpha[2][0]=c0*(-P[1]+BB[2][0]);
   alpha[2][1]=c0*(P[0]+BB[2][1]);
   alpha[2][2]=c0*(1.0+BB[2][2]);
 
