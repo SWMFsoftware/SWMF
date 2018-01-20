@@ -1,20 +1,17 @@
 
 
-#include input/ccmc.input
+#include input/test/mover-base.input
 
 #main
-  ErrorLog=PT/amps_error.log
+  MoverIntegratorMode=Markidis2010 !Lapenta2017 !Boris
+! MoverIntegratorMode=GuidingCenter
+
+  DEBUGGERMODE=ON
+
+  ErrorLog=PT
+  Prefix=AMPS
   DiagnosticStream=PT
   OutputDirectory=PT/plots
-
-  ForceRepeatableSimulationPath=on ! on,off
-  StdoutErrorLog=off !on,off -> print out error message on the screen
-
-  TimeStepMode=SpeciesGlobalTimeStep !SingleGlobalTimeStep !SingleGlobalTimeStep, SpeciesGlobalTimeStep, SingleLocalTimeStep, SpeciesLocalTimeStep
-  CouplerMode=file(kameleon) !ices !swmf !!!ices !!off, ices, swmf
-
-!  MoverIntegratorMode=Boris !!Boris !GuidingCenter !Boris-relativistic
-  MoverIntegratorMode=Markidis2010 !!!Lapenta2017
 #endmain
 
 #block ../input/ccmc.pl
