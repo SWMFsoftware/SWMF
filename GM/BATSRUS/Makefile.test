@@ -811,7 +811,7 @@ test_outerheliopui:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_outerheliopui_compile:
-	./Config.pl -u=OuterHelioPui -e=OuterHelioPui -g=4,4,4,3500,1
+	./Config.pl -u=OuterHelioPUI -e=OuterHelioPUI -g=4,4,4,3500,1
 	$(MAKE) BATSRUS
 	make PIDL
 
