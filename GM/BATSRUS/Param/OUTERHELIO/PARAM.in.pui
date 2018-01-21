@@ -1,11 +1,8 @@
-#ECHO
-T
-
 #COMPONENT
-OH
+OH			NameComponent
 
 #PLANET
-NONE
+NONE			NamePlanet
 
 #GRAVITY
 F                       UseGravity (rest of parameters read if true)
@@ -28,13 +25,13 @@ T                       UseBody (rest of parameters read if true)
 6519.0                  BodyTDim(6)
 
 #IOUNITS
-USER
+USER			TypeIoUnit
 
 #NORMALIZATION
-USER
+USER			TypeNormalization
 
 #PLOTFILENAME
-year                   NameMaxTimeUnit
+year			NameMaxTimeUnit
 
 #GRID
 1			nRootBlockX
@@ -132,7 +129,7 @@ box
 40.0
 
 #INNERBOUNDARY
-user
+user			TypeBcInner
 
 #OUTERBOUNDARY
 user                    TypeBcOuter_E(East_) user
@@ -220,7 +217,7 @@ F                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #OHBOUNDARY
-T
+T			UseOhNeutralBc
 0.05			RhoNeuFactor
 1.0			uNeuFactor
 1.E-2			RhoNe2Factor
@@ -272,12 +269,12 @@ T
 -0.1296             	VLISW_Bz_dim
 
 #REGIONS
-6.E5
-100.0
-0.9
-1.5
-50.0
-1.0
+6.E5			TempPop1LimitDim
+100.0			uPop1LimitDim
+0.9			MachPop2Limit
+1.5			MachPop3Limit
+50.0			rPop3Limit
+0.5			MachPop4Limit
 
 #SOURCES
 F			UseSourceSWH
@@ -289,21 +286,20 @@ F 			UseSourceNe4
 
 #USERINPUTEND ----------------------------------------------------------
 
-
 #STOP
-25
--1.0
+25			MaxIteration
+-1.0			tSimulationMax
 
 #RUN ####################################################################
 
 #SCHEME
-2
-Linde
-minmod
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
 
 #STOP
-50
--1.0
+50			MaxIteration
+-1.0			tSimulationMax
 
 #RUN ####################################################################
 

@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #COMPONENT
 OH			NameComponent
 
@@ -208,7 +205,7 @@ F                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #OHBOUNDARY
-T
+T			UseOhNeutralBc
 0.05			RhoNeuFactor
 1.0			uNeuFactor
 1.E-2			RhoNe2Factor
