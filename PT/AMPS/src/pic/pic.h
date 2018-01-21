@@ -3680,6 +3680,7 @@ namespace PIC {
       }
 
       cStencilGeneric() {flush();}
+      cStencilGeneric(bool InitFlag) {if (InitFlag==true) flush();}
     };
 
     //corner based interpolation routines
