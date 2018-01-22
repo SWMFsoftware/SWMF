@@ -1400,6 +1400,9 @@ Time=7
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
+CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Lapenta2017@@(0+valeriy)
+CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/test_Mover/Lapenta2017@@(0+pleiades)
+
 Compile=
 >>>@echo "test_Mover-Lapenta2017_compile..." > test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
 >>>./Config.pl -application=test/Mover-Lapenta2017 -cplr-data-path=${TESTMover-Lapenta2017KEYS} -model-data-path=${TESTMover-Lapenta2017KEYS} -link-option=-lc++ -amps-test=on
@@ -1410,7 +1413,7 @@ Compile=
 Check=
 >>>@echo "test_Mover-Lapenta2017_check..." >> test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Lapenta2017DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
->>>${TESTMover-Lapenta2017KEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Lapenta2017-REF}.ref_np`ls ${TESTMover-Lapenta2017DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
+>>>${TESTMover-Lapenta2017CUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories${TESTMover-Lapenta2017-REF}.ref_np`ls ${TESTMover-Lapenta2017DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
 >>>@ls -l test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
 >>>@echo Test test_Mover-Lapenta2017 has finished: `date`
 <#
@@ -1420,6 +1423,9 @@ Name=test/Mover-Markidis2010@@(0+valeriy)
 Time=7
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
+
+CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Markidis2010@@(0+valeriy)
+CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/test_Mover/Markidis2010@@(0+pleiades)
 
 Compile=
 >>>@echo "test_Mover-Markidis2010_compile..." > test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
@@ -1431,7 +1437,7 @@ Compile=
 Check=
 >>>@echo "test_Mover-Markidis2010_check..." >> test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
 >>>-${SCRIPTDIR}/DiffNum.pl ${TESTMover-Markidis2010DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat          \
->>>${TESTMover-Markidis2010KEYS}/output/test_CCMC-Individual_Trajectories${TESTMover-Markidis2010-REF}.ref_np`ls ${TESTMover-Markidis2010DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
+>>>${TESTMover-Markidis2010CUSTOMREFSOLUTIONPATHS}/test_CCMC-Individual_Trajectories${TESTMover-Markidis2010-REF}.ref_np`ls ${TESTMover-Markidis2010DIR}/PT/thread* |wc -l |tr -d ' '` > test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
 >>>@ls -l test_Mover-Markidis2010${TESTMoverMarkidis2010-REF}.diff
 >>>@echo Test test_Mover-Markidis2010 has finished: `date`
 <#
