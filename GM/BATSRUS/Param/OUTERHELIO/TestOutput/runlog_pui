@@ -286,7 +286,7 @@ T			UseOhNeutralBc		DoOhNeutralBc
 0.9			MachPop2Limit
 1.5			MachPop3Limit
 50.0			rPop3Limit
-0.5			MachPop4Limit
+1.0			MachPop4Limit
 
 #SOURCES
 F			UseSourceSWH		UseSWHSource
@@ -384,29 +384,29 @@ saved ifile= 8 type=z=0_mhd    at n_step=      0
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   2.50    100.00         1         1
+BATSRUS                   2.49    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     2.50    100.00         1         1
-save_plot                 0.63     25.25         1         3
-write_restart_files       0.62     24.74         1         1
-exch_msgs                 0.32     12.69         1         2
-batl_pass                 0.11      4.37         1         3
-local_pass                0.10      4.10         1         6
-save_logfile              0.03      1.32         1         1
-integrate_domain          0.01      0.56         1         1
-wait_pass                 0.00      0.18         1         3
-buffer_to_state           0.00      0.08         1         3
+setup                     2.49    100.00         1         1
+save_plot                 0.64     25.49         1         3
+write_restart_files       0.60     23.99         1         1
+exch_msgs                 0.33     13.17         1         2
+batl_pass                 0.11      4.61         1         3
+local_pass                0.11      4.32         1         6
+save_logfile              0.03      1.30         1         1
+integrate_domain          0.01      0.54         1         1
+wait_pass                 0.00      0.16         1         3
+buffer_to_state           0.00      0.12         1         3
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
  First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4631773958881959E-07
 saved ifile= 6 type=y=0_mhd    at n_step=     10
 saved ifile= 7 type=y=0_var    at n_step=     10
 saved ifile= 8 type=z=0_mhd    at n_step=     10
-Speed is  82730.3 c/s/p after     13.6 s at N =      10
+Speed is  80787.5 c/s/p after     13.7 s at N =      10
 saved ifile= 6 type=y=0_mhd    at n_step=     20
 saved ifile= 7 type=y=0_var    at n_step=     20
 saved ifile= 8 type=z=0_mhd    at n_step=     20
-Speed is  82022.0 c/s/p after     27.0 s at N =      20
+Speed is  81903.2 c/s/p after     27.1 s at N =      20
  ----- End of Session    1  ------
  ----- Starting Session  2  ------
  OH_set_parameters: READ iSession = 2  iLine= 293  nLine = 1000
@@ -483,15 +483,15 @@ minmod			TypeLimiter
 saved ifile= 6 type=y=0_mhd    at n_step=     30
 saved ifile= 7 type=y=0_var    at n_step=     30
 saved ifile= 8 type=z=0_mhd    at n_step=     30
-Speed is  36194.8 c/s/p after     48.7 s at N =      30
+Speed is  36278.3 c/s/p after     48.8 s at N =      30
 saved ifile= 6 type=y=0_mhd    at n_step=     40
 saved ifile= 7 type=y=0_var    at n_step=     40
 saved ifile= 8 type=z=0_mhd    at n_step=     40
-Speed is  36262.5 c/s/p after     78.1 s at N =      40
+Speed is  36170.7 c/s/p after     78.3 s at N =      40
 saved ifile= 6 type=y=0_mhd    at n_step=     50
 saved ifile= 7 type=y=0_var    at n_step=     50
 saved ifile= 8 type=z=0_mhd    at n_step=     50
-Speed is  36207.2 c/s/p after    107.5 s at N =      50
+Speed is  35967.6 c/s/p after    107.7 s at N =      50
  ----- End of Session    2  ------
  ----- Starting Session  3  ------
  OH_set_parameters: READ iSession = 3  iLine= 304  nLine = 1000
@@ -614,11 +614,11 @@ T       		UseSourceNe4		UseNe4Source
 saved ifile= 6 type=y=0_mhd    at n_step=     60
 saved ifile= 7 type=y=0_var    at n_step=     60
 saved ifile= 8 type=z=0_mhd    at n_step=     60
-Speed is  18529.0 c/s/p after    164.3 s at N =      60
+Speed is  18548.8 c/s/p after    164.6 s at N =      60
 saved ifile= 6 type=y=0_mhd    at n_step=     70
 saved ifile= 7 type=y=0_var    at n_step=     70
 saved ifile= 8 type=z=0_mhd    at n_step=     70
-Speed is  18588.3 c/s/p after    220.8 s at N =      70
+Speed is  18637.5 c/s/p after    221.1 s at N =      70
 
     Finished Numerical Simulation
     -----------------------------
@@ -633,28 +633,28 @@ saved ifile= 8 type=z=0_mhd    at n_step=     75
 SORTED TIMING from step       0 to      75    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 250.03    100.00         1         1
+BATSRUS                 250.20    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 242.15     96.85        75        75
-calc_fluxes              91.08     36.43        75    201750
-update_state             76.75     30.69        75    201750
-update_point_implici     59.45     23.78        25     40350
-calc_facevalues          24.64      9.85        75    201750
-exch_msgs                24.04      9.61        77       127
-batl_pass                11.27      4.51        77       127
-calc_sources             10.48      4.19        75    201750
-local_pass               10.38      4.15        77       254
-calc_face_bfo             5.31      2.12        75     93750
-save_plot                 5.06      2.02         8        24
-update_check              4.97      1.99        75       125
+advance                 242.33     96.86        75        75
+calc_fluxes              91.13     36.42        75    201750
+update_state             76.68     30.65        75    201750
+update_point_implici     59.40     23.74        25     40350
+calc_facevalues          24.71      9.88        75    201750
+exch_msgs                24.09      9.63        77       127
+batl_pass                11.30      4.52        77       127
+calc_sources             10.49      4.19        75    201750
+local_pass               10.39      4.15        77       254
+calc_face_bfo             5.39      2.16        75     93750
+save_plot                 5.09      2.03         8        24
+update_check              4.98      1.99        75       125
 calc_fluxes_bfo           3.67      1.47        75     93750
-save_logfile              1.71      0.68        75        75
+save_logfile              1.70      0.68        75        75
 integrate_domain          0.73      0.29        75        75
-write_restart_files       0.65      0.26         1         1
-wait_pass                 0.53      0.21        77       127
-send_cons_flux            0.44      0.18        75       125
+write_restart_files       0.60      0.24         1         1
+wait_pass                 0.55      0.22        77       127
+send_cons_flux            0.45      0.18        75       125
 buffer_to_state           0.35      0.14        77       127
-barrier-expl2             0.01      0.01        75       125
+barrier-expl2             0.01      0.00        75       125
 barrier-expl1             0.01      0.00        75       125
 set_face_boundary         0.01      0.00        75       500
 init_pass                 0.00      0.00        77       127
@@ -664,6 +664,6 @@ clean_mod_geometry deallocated arrays
 clean_mod_nodes deallocated arrays
 clean_mod_raytrace deallocated arrays
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 75  count_max= 104  count_sum= 104
- VALUES min=   1.4631773958881959E-07  max=   0.8936990191566749  mean=   0.1743458100236427  last=   0.6014335744110637  last_sum=   0.6014335744110637
+ OCCURED first= 1  last= 75  count_max= 105  count_sum= 105
+ VALUES min=   1.4631773958881959E-07  max=   0.7399736832316086  mean=   0.1627205907765100  last=   0.6393172543559879  last_sum=   0.6393172543559879
 
