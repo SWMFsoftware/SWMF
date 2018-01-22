@@ -8,18 +8,15 @@
  EQUATIONS:   MHD + PUI and four neutrals
  USER MODULE: Outer Heliosphere with 4 neutrals and 2 ion fluids, Opher & Toth 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 366 lines of text
+ModReadParam::read_file: read and broadcast nLine= 362 lines of text
  ----- Starting Session  1  ------
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
-#ECHO
-T		DoEcho
-
 #COMPONENT
-OH		NameComp
+OH			NameComponent
 
 #PLANET
-NONE		NamePlanet
+NONE			NamePlanet
 
 #GRAVITY
 F                       UseGravity (rest of parameters read if true)
@@ -41,13 +38,13 @@ T                       UseBody (rest of parameters read if true)
 6519.0                  BodyTDim(6)
 
 #IOUNITS
-USER		TypeIoUnit
+USER			TypeIoUnit
 
 #NORMALIZATION
-USER		TypeNormalization
+USER			TypeNormalization
 
 #PLOTFILENAME
-year                   NameMaxTimeUnit
+year			NameMaxTimeUnit
 
 #GRID
 1			nRootBlockX
@@ -145,7 +142,7 @@ box		StringShape
 40.0		XyzMaxBox
 
 #INNERBOUNDARY
-user		TypeBcInner
+user			TypeBcInner
 
 #OUTERBOUNDARY
 user                    TypeBcOuter_E(East_) user		TypeCellBc
@@ -233,7 +230,7 @@ F                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #OHBOUNDARY
-T		DoOhNeutralBc
+T			UseOhNeutralBc		DoOhNeutralBc
 0.05			RhoNeuFactor		RhoBcFactor
 1.0			uNeuFactor		uBcFactor
 1.E-2			RhoNe2Factor		RhoBcFactor
@@ -284,12 +281,12 @@ T		DoOhNeutralBc
 -0.1296             	VLISW_Bz_dim
 
 #REGIONS
-6.E5		TempPop1LimitDim
-100.0		uPop1LimitDim
-0.9		MachPop2Limit
-1.5		MachPop3Limit
-50.0		rPop3Limit
-1.0		MachPop4Limit
+6.E5			TempPop1LimitDim
+100.0			uPop1LimitDim
+0.9			MachPop2Limit
+1.5			MachPop3Limit
+50.0			rPop3Limit
+0.5			MachPop4Limit
 
 #SOURCES
 F			UseSourceSWH		UseSWHSource
@@ -303,8 +300,8 @@ F 			UseSourceNe4		UseNe4Source
  USERINPUTEND
 
 #STOP
-25		MaxIteration
--1.0		tSimulationMax
+25			MaxIteration
+-1.0			tSimulationMax
 
 #RUN ####################################################################
  OH_set_parameters: CHECK iSession = 1
@@ -387,42 +384,41 @@ saved ifile= 8 type=z=0_mhd    at n_step=      0
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   2.71    100.00         1         1
+BATSRUS                   2.50    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     2.71    100.00         1         1
-save_plot                 0.67     24.81         1         3
-write_restart_files       0.58     21.50         1         1
-exch_msgs                 0.41     14.98         1         2
-batl_pass                 0.19      6.87         1         3
-local_pass                0.16      5.81         1         6
-save_logfile              0.04      1.38         1         1
-wait_pass                 0.02      0.86         1         3
-integrate_domain          0.01      0.49         1         1
-buffer_to_state           0.00      0.10         1         3
-init_pass                 0.00      0.09         1         3
+setup                     2.50    100.00         1         1
+save_plot                 0.63     25.25         1         3
+write_restart_files       0.62     24.74         1         1
+exch_msgs                 0.32     12.69         1         2
+batl_pass                 0.11      4.37         1         3
+local_pass                0.10      4.10         1         6
+save_logfile              0.03      1.32         1         1
+integrate_domain          0.01      0.56         1         1
+wait_pass                 0.00      0.18         1         3
+buffer_to_state           0.00      0.08         1         3
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
  First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4631773958881959E-07
 saved ifile= 6 type=y=0_mhd    at n_step=     10
 saved ifile= 7 type=y=0_var    at n_step=     10
 saved ifile= 8 type=z=0_mhd    at n_step=     10
-Speed is  79435.5 c/s/p after     14.3 s at N =      10
+Speed is  82730.3 c/s/p after     13.6 s at N =      10
 saved ifile= 6 type=y=0_mhd    at n_step=     20
 saved ifile= 7 type=y=0_var    at n_step=     20
 saved ifile= 8 type=z=0_mhd    at n_step=     20
-Speed is  78553.2 c/s/p after     28.3 s at N =      20
+Speed is  82022.0 c/s/p after     27.0 s at N =      20
  ----- End of Session    1  ------
  ----- Starting Session  2  ------
- OH_set_parameters: READ iSession = 2  iLine= 297  nLine = 1000
+ OH_set_parameters: READ iSession = 2  iLine= 293  nLine = 1000
 
 #SCHEME
-2		nOrder
-Linde		TypeFlux
-minmod		TypeLimiter
+2			nOrder
+Linde			TypeFlux
+minmod			TypeLimiter
 
 #STOP
-50		MaxIteration
--1.0		tSimulationMax
+50			MaxIteration
+-1.0			tSimulationMax
 
 #RUN ####################################################################
  OH_set_parameters: CHECK iSession = 2
@@ -487,18 +483,18 @@ minmod		TypeLimiter
 saved ifile= 6 type=y=0_mhd    at n_step=     30
 saved ifile= 7 type=y=0_var    at n_step=     30
 saved ifile= 8 type=z=0_mhd    at n_step=     30
-Speed is  34259.5 c/s/p after     51.2 s at N =      30
+Speed is  36194.8 c/s/p after     48.7 s at N =      30
 saved ifile= 6 type=y=0_mhd    at n_step=     40
 saved ifile= 7 type=y=0_var    at n_step=     40
 saved ifile= 8 type=z=0_mhd    at n_step=     40
-Speed is  33859.5 c/s/p after     82.5 s at N =      40
+Speed is  36262.5 c/s/p after     78.1 s at N =      40
 saved ifile= 6 type=y=0_mhd    at n_step=     50
 saved ifile= 7 type=y=0_var    at n_step=     50
 saved ifile= 8 type=z=0_mhd    at n_step=     50
-Speed is  34157.8 c/s/p after    113.7 s at N =      50
+Speed is  36207.2 c/s/p after    107.5 s at N =      50
  ----- End of Session    2  ------
  ----- Starting Session  3  ------
- OH_set_parameters: READ iSession = 3  iLine= 308  nLine = 1000
+ OH_set_parameters: READ iSession = 3  iLine= 304  nLine = 1000
 
 #USERFLAGS
 T                       UseUserInnerBcs
@@ -618,11 +614,11 @@ T       		UseSourceNe4		UseNe4Source
 saved ifile= 6 type=y=0_mhd    at n_step=     60
 saved ifile= 7 type=y=0_var    at n_step=     60
 saved ifile= 8 type=z=0_mhd    at n_step=     60
-Speed is  17971.5 c/s/p after    172.5 s at N =      60
+Speed is  18529.0 c/s/p after    164.3 s at N =      60
 saved ifile= 6 type=y=0_mhd    at n_step=     70
 saved ifile= 7 type=y=0_var    at n_step=     70
 saved ifile= 8 type=z=0_mhd    at n_step=     70
-Speed is  18085.2 c/s/p after    230.7 s at N =      70
+Speed is  18588.3 c/s/p after    220.8 s at N =      70
 
     Finished Numerical Simulation
     -----------------------------
@@ -637,37 +633,37 @@ saved ifile= 8 type=z=0_mhd    at n_step=     75
 SORTED TIMING from step       0 to      75    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 260.74    100.00         1         1
+BATSRUS                 250.03    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 252.08     96.68        75        75
-calc_fluxes              93.11     35.71        75    201750
-update_state             77.71     29.80        75    201750
-update_point_implici     59.65     22.88        25     40350
-exch_msgs                29.63     11.36        77       127
-calc_facevalues          24.94      9.57        75    201750
-batl_pass                16.77      6.43        77       127
-local_pass               15.72      6.03        77       254
-calc_sources             10.92      4.19        75    201750
-calc_face_bfo             5.53      2.12        75     93750
-save_plot                 5.40      2.07         8        24
-update_check              4.99      1.92        75       125
-calc_fluxes_bfo           3.79      1.45        75     93750
-save_logfile              2.11      0.81        75        75
-integrate_domain          0.72      0.28        75        75
-send_cons_flux            0.67      0.26        75       125
-wait_pass                 0.64      0.25        77       127
-write_restart_files       0.58      0.22         1         1
-buffer_to_state           0.40      0.15        77       127
+advance                 242.15     96.85        75        75
+calc_fluxes              91.08     36.43        75    201750
+update_state             76.75     30.69        75    201750
+update_point_implici     59.45     23.78        25     40350
+calc_facevalues          24.64      9.85        75    201750
+exch_msgs                24.04      9.61        77       127
+batl_pass                11.27      4.51        77       127
+calc_sources             10.48      4.19        75    201750
+local_pass               10.38      4.15        77       254
+calc_face_bfo             5.31      2.12        75     93750
+save_plot                 5.06      2.02         8        24
+update_check              4.97      1.99        75       125
+calc_fluxes_bfo           3.67      1.47        75     93750
+save_logfile              1.71      0.68        75        75
+integrate_domain          0.73      0.29        75        75
+write_restart_files       0.65      0.26         1         1
+wait_pass                 0.53      0.21        77       127
+send_cons_flux            0.44      0.18        75       125
+buffer_to_state           0.35      0.14        77       127
+barrier-expl2             0.01      0.01        75       125
+barrier-expl1             0.01      0.00        75       125
 set_face_boundary         0.01      0.00        75       500
 init_pass                 0.00      0.00        77       127
-barrier-expl1             0.00      0.00        75       125
-barrier-expl2             0.00      0.00        75       125
 -------------------------------------------------------------------------------
 clean_mod_advance deallocated arrays
 clean_mod_geometry deallocated arrays
 clean_mod_nodes deallocated arrays
 clean_mod_raytrace deallocated arrays
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 75  count_max= 105  count_sum= 105
- VALUES min=   1.4631773958881959E-07  max=   0.7399736832316086  mean=   0.1627205907765100  last=   0.6393172543559879  last_sum=   0.6393172543559879
+ OCCURED first= 1  last= 75  count_max= 104  count_sum= 104
+ VALUES min=   1.4631773958881959E-07  max=   0.8936990191566749  mean=   0.1743458100236427  last=   0.6014335744110637  last_sum=   0.6014335744110637
 
