@@ -788,7 +788,12 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
   PIC::InterpolationRoutines::CornerBased::cStencil ElectricFieldStencil(false);
   PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil(false);
 
+  #if _PIC_FIELD_SOLVER_MODE_ == _PIC_FIELD_SOLVER_MODE__OFF_
+  PIC::CPLR::InitInterpolationStencil(xInit,startNode);
+  PIC::CPLR::GetBackgroundElectricField(E);
+  PIC::CPLR::GetBackgroundMagneticField(B);
 
+  #else //_PIC_FIELD_SOLVER_MODE__OFF_
   switch ( _PIC_FIELD_SOLVER_MODE_) {
   case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
     //interpolate the elecric field (corner nodes)
@@ -811,10 +816,9 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
 
     break;
   default:
-    PIC::CPLR::InitInterpolationStencil(xInit,startNode);
-    PIC::CPLR::GetBackgroundElectricField(E);
-    PIC::CPLR::GetBackgroundMagneticField(B);
+    exit(__LINE__,__FILE__,"Error: unknown value of _PIC_FIELD_SOLVER_MODE_");
   }
+  #endif //_PIC_FIELD_SOLVER_MODE__OFF_
 
   //advance the particle velocity
   double QdT_over_m,QdT_over_2m,alpha[3][3];
