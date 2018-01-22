@@ -800,7 +800,11 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
     ElectricFieldStencil=*(PIC::InterpolationRoutines::CornerBased::InitStencil(xFinal,startNode));
 
     for (int iStencil=0;iStencil<ElectricFieldStencil.Length;iStencil++) {
+<<<<<<< pic_mover_boris.cpp
+      memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfStep,3*sizeof(double));
+=======
       memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfTimeStep,3*sizeof(double));
+>>>>>>> 1.23
 
       for (idim=0;idim<3;idim++) E[idim]+=ElectricFieldStencil.Weight[iStencil]*t[idim];
     }
