@@ -274,7 +274,7 @@ T			UseOhNeutralBc
 0.9			MachPop2Limit
 1.5			MachPop3Limit
 50.0			rPop3Limit
-0.5			MachPop4Limit
+1.0			MachPop4Limit
 
 #SOURCES
 F			UseSourceSWH
