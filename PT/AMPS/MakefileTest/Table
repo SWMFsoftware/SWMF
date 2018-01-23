@@ -102,6 +102,7 @@ Ref=7{pgcc}@@(0+pleiades)
 
 Keys=-cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/COPS@@(0+valeriy)
 Keys=-cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/COPS -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/COPS@@(0+pleiades) 
+Keys=-cplr-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/COPS -model-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/COPS@@(0+stampede)
 
 Check=
 >>>@echo "test_COPS_check..." >> test_COPS$(TESTCOPS-REF).diff
