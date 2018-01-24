@@ -3207,43 +3207,6 @@ namespace PIC {
     void UpdateBlockTable();
   }
 
-  //field solver
-  namespace FieldSolver {
-    //electromagnetic field solvers
-    namespace Electromagnetic {
-      //Energy conserving field solver (same as used in the IPIC3D)
-      namespace ECSIM {
-
-         //offset to the intermediate value of the electric field
-         extern int OffsetE_HalfTimeStep;
-
-         //init the solver
-         void Init();
-         void Init_IC();
-
-         //update the matrix
-         void UpdateMatrix();
-
-         //set initiall conditions for the electric and magnetic fields
-         typedef void (*fSetIC)();
-         extern fSetIC SetIC;
-
-         void SetIC_default();
-
-      }
-    }
-
-    //electrostatic field solvers
-    namespace Electrostatic {
-
-    }
-
-    //Init the solvers
-    void Init();
-    void Init_IC();
-  }
-
-
   //the mode of the internal degrees of freedom
   namespace IDF {
 
@@ -3687,6 +3650,7 @@ namespace PIC {
     namespace CornerBased {
       typedef PIC::InterpolationRoutines::cStencilGeneric<PIC::Mesh::cDataCornerNode> cStencil;
       extern cStencil* StencilTable;
+      extern double InterpolationCoefficientTable_LocalNodeOrder[8];
 
       //interpolation functions
       cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
@@ -5304,6 +5268,45 @@ namespace PIC {
 
 }
 
+//field solver
+#include "../../srcInterface/LinearSystemCornerNode.h"
+
+namespace PIC {
+  namespace FieldSolver {
+    //electromagnetic field solvers
+    namespace Electromagnetic {
+      //Energy conserving field solver (same as used in the IPIC3D)
+      namespace ECSIM {
+
+         //offset to the intermediate value of the electric field
+         extern int OffsetE_HalfTimeStep;
+
+         //init the solver
+         void Init();
+         void Init_IC();
+
+         //update the matrix
+         void UpdateMatrix();
+
+         //set initiall conditions for the electric and magnetic fields
+         typedef void (*fSetIC)();
+         extern fSetIC SetIC;
+
+         void SetIC_default();
+
+      }
+    }
+
+    //electrostatic field solvers
+    namespace Electrostatic {
+
+    }
+
+    //Init the solvers
+    void Init();
+    void Init_IC();
+  }
+}
 
 #endif
 
