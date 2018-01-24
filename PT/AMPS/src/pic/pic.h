@@ -3650,6 +3650,7 @@ namespace PIC {
     namespace CornerBased {
       typedef PIC::InterpolationRoutines::cStencilGeneric<PIC::Mesh::cDataCornerNode> cStencil;
       extern cStencil* StencilTable;
+      //The table contains weight for each node and the order of local is enforced.
       extern double InterpolationCoefficientTable_LocalNodeOrder[8];
 
       //interpolation functions
@@ -5272,40 +5273,79 @@ namespace PIC {
 #include "../../srcInterface/LinearSystemCornerNode.h"
 
 namespace PIC {
-  namespace FieldSolver {
+namespace FieldSolver {
     //electromagnetic field solvers
     namespace Electromagnetic {
-      //Energy conserving field solver (same as used in the IPIC3D)
-      namespace ECSIM {
-
-         //offset to the intermediate value of the electric field
-         extern int OffsetE_HalfTimeStep;
-
-         //init the solver
-         void Init();
-         void Init_IC();
-
-         //update the matrix
-         void UpdateMatrix();
-
-         //set initiall conditions for the electric and magnetic fields
-         typedef void (*fSetIC)();
-         extern fSetIC SetIC;
-
-         void SetIC_default();
-
-      }
+        //Energy conserving field solver (same as used in the IPIC3D)
+        namespace ECSIM {
+            extern int CurrentEOffset, OffsetE_HalfTimeStep;
+            extern cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1> Solver;
+            //	extern cLinearSystemCornerNode Solver;
+            extern int ExOffsetIndex, EyOffsetIndex, EzOffsetIndex;
+            extern int JxOffsetIndex, JyOffsetIndex, JzOffsetIndex;
+            extern int BxOffsetIndex, ByOffsetIndex, BzOffsetIndex;
+            extern int MassMatrixOffsetIndex;
+            
+            extern double cDt;
+            extern double theta;
+            
+            // matrix operation for the matrix solver
+            void matvec(double* VecIn, double * VecOut, int n);
+            
+            //construct the matrix stencil
+            void GetStencil(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1>::cMatrixRowNonZeroElementTable* MatrixRowNonZeroElementTable,int& NonZeroElementsFound,double& rhs,
+                            cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1>::cRhsSupportTable* RhsSupportTable_CornerNodes,int& RhsSupportLength_CornerNodes,
+                            cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int& RhsSupportLength_CenterNodes,
+                            cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+            //compute B^(n+1) from B^(n) and E^(n+theta)
+            void UpdateB();
+            //compute E^(n+1) from E^(n) and E^(n+theta)
+            void UpdateE();
+            
+            //init the solver
+            void Init();
+            void Init_IC();
+            
+            //update the matrix element
+            void UpdateMatrixElement(cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1>::cMatrixRow* row);
+            //update the Rhs of the Ax=b
+            double UpdateRhs(int iVar,
+                             cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1>::cRhsSupportTable* RhsSupportTable_CornerNodes,int RhsSupportLength_CornerNodes,
+                             cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1>::cRhsSupportTable* RhsSupportTable_CenterNodes,int RhsSupportLength_CenterNodes);
+            //set initial guess
+            void SetInitialGuess(double* x,PIC::Mesh::cDataCornerNode* CornerNode);
+            //process final solution
+            void ProcessFinalSolution(double* x,PIC::Mesh::cDataCornerNode* CornerNode);
+            
+            void BuildMatrix();
+            void TimeStep();
+            
+            namespace output {
+                void PrintCenterNodeVariableList(FILE* fout,int DataSetNumber);
+                void PrintCornerNodeVariableList(FILE* fout,int DataSetNumber);
+                void InterpolateCenterNode(PIC::Mesh::cDataCenterNode** InterpolationList,double *InterpolationCoeficients,int nInterpolationCoeficients,PIC::Mesh::cDataCenterNode *CenterNode);
+                
+                void PrintCenterNodeData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CenterNodeThread,PIC::Mesh::cDataCenterNode *CenterNode);
+                void PrintCornerNodeData(FILE* fout,int DataSetNumber,CMPI_channel *pipe,int CornerNodeThread,PIC::Mesh::cDataCornerNode *CornerNode);
+            }
+            //set initiall conditions for the electric and magnetic fields
+            typedef void (*fSetIC)();
+            extern fSetIC SetIC;
+            
+            void SetIC_default();
+            
+        }
     }
-
+    
     //electrostatic field solvers
     namespace Electrostatic {
-
+        
     }
-
+    
     //Init the solvers
     void Init();
     void Init_IC();
-  }
+}
 }
 
 #endif
