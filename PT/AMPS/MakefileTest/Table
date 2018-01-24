@@ -1407,7 +1407,7 @@ CustomRefSolutionPaths=/scratch/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Lapenta
 
 Compile=
 >>>@echo "test_Mover-Lapenta2017_compile..." > test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
->>>./Config.pl -application=test/Mover-Lapenta2017 -cplr-data-path=${TESTMover-Lapenta2017KEYS} -model-data-path=${TESTMover-Lapenta2017KEYS} -link-option=-lc++ -amps-test=on
+>>>./Config.pl -application=test/Mover-Lapenta2017 -cplr-data-path=${TESTMover-Lapenta2017KEYS} -model-data-path=${TESTMover-Lapenta2017KEYS} -amps-test=on
 >>>rm -rf srcTemp
 >>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-Lapenta2017_compile... done" >> test_Mover-Lapenta2017${TESTMover-Lapenta2017-REF}.diff
@@ -1432,7 +1432,7 @@ CustomRefSolutionPaths=/scratch/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Markidi
 
 Compile=
 >>>@echo "test_Mover-Markidis2010_compile..." > test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
->>>./Config.pl -application=test/Mover-Markidis2010 -cplr-data-path=${TESTMover-Markidis2010KEYS} -model-data-path=${TESTMover-Markidis2010KEYS} -link-option=-lc++ -amps-test=on
+>>>./Config.pl -application=test/Mover-Markidis2010 -cplr-data-path=${TESTMover-Markidis2010KEYS} -model-data-path=${TESTMover-Markidis2010KEYS} -amps-test=on
 >>>rm -rf srcTemp
 >>>@($(MAKE) -j8 amps)
 >>>@echo "test_Mover-Markidis2010_compile... done" >> test_Mover-Markidis2010${TESTMover-Markidis2010-REF}.diff
