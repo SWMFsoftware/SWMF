@@ -2370,10 +2370,10 @@ namespace PIC {
        char *associatedDataPointer;
        bool ActiveFlag;
 
-       #if _PIC_LINEAR_SOLVER_MODE_ == _PIC_MODE_ON_
+//       #if _PIC_LINEAR_SOLVER_MODE_ == _PIC_MODE_ON_
        //the local index of the variables saved in the cornes state vector. Used only with the linear equation solver
        int LinearSolverUnknownVectorIndex;
-       #endif
+//       #endif
 
        inline int AssociatedDataLength() {
          return totalAssociatedDataLength;
