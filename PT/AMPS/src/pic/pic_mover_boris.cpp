@@ -797,7 +797,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
   switch ( _PIC_FIELD_SOLVER_MODE_) {
   case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
     //interpolate the elecric field (corner nodes)
-    ElectricFieldStencil=*(PIC::InterpolationRoutines::CornerBased::InitStencil(xFinal,startNode));
+    ElectricFieldStencil=*(PIC::InterpolationRoutines::CornerBased::InitStencil(xInit,startNode));
 
     for (int iStencil=0;iStencil<ElectricFieldStencil.Length;iStencil++) {
       memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfTimeStep,3*sizeof(double));
@@ -806,7 +806,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
     }
 
     //interpolate the magnetic field (center nodes)
-    MagneticFieldStencil=*(PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xFinal,startNode));
+    MagneticFieldStencil=*(PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInit,startNode));
 
     for (int iStencil=0;iStencil<MagneticFieldStencil.Length;iStencil++) {
       memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset,3*sizeof(double));
