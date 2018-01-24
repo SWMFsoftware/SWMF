@@ -17,6 +17,10 @@ int PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::iBlockFoundCurr
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::BlockFound[PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::nBlockFoundMax];
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::last=NULL;
 
+//the locally ordered interpolation coeffcients for the corner based interpolation procedure
+double PIC::InterpolationRoutines::CornerBased::InterpolationCoefficientTable_LocalNodeOrder[8]={0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+
+
 // macro switch is needed in the case some other interpolation is used
 // and interface function is not compiled
 #if _PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
@@ -683,28 +687,36 @@ PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::C
       switch (iStencil+2*jStencil+4*kStencil) {
       case 0+0*2+0*4:
         w=(1.0-xLoc[0])*(1.0-xLoc[1])*(1.0-xLoc[2]);
+        InterpolationCoefficientTable_LocalNodeOrder[0]=w;
         break;
       case 1+0*2+0*4:
         w=xLoc[0]*(1.0-xLoc[1])*(1.0-xLoc[2]);
+        InterpolationCoefficientTable_LocalNodeOrder[1]=w;
         break;
       case 0+1*2+0*4:
         w=(1.0-xLoc[0])*xLoc[1]*(1.0-xLoc[2]);
+        InterpolationCoefficientTable_LocalNodeOrder[3]=w;
         break;
       case 1+1*2+0*4:
         w=xLoc[0]*xLoc[1]*(1.0-xLoc[2]);
+        InterpolationCoefficientTable_LocalNodeOrder[2]=w;
         break;
 
       case 0+0*2+1*4:
         w=(1.0-xLoc[0])*(1.0-xLoc[1])*xLoc[2];
+        InterpolationCoefficientTable_LocalNodeOrder[4]=w;
         break;
       case 1+0*2+1*4:
         w=xLoc[0]*(1.0-xLoc[1])*xLoc[2];
+        InterpolationCoefficientTable_LocalNodeOrder[5]=w;
         break;
       case 0+1*2+1*4:
         w=(1.0-xLoc[0])*xLoc[1]*xLoc[2];
+        InterpolationCoefficientTable_LocalNodeOrder[7]=w;
         break;
       case 1+1*2+1*4:
         w=xLoc[0]*xLoc[1]*xLoc[2];
+        InterpolationCoefficientTable_LocalNodeOrder[6]=w;
         break;
 
       default:
@@ -712,6 +724,38 @@ PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::C
       }
 
       Stencil.AddCell(w,CornerNode);
+    }
+    else {
+      switch (iStencil+2*jStencil+4*kStencil) {
+      case 0+0*2+0*4:
+        InterpolationCoefficientTable_LocalNodeOrder[0]=0.0;
+        break;
+      case 1+0*2+0*4:
+        InterpolationCoefficientTable_LocalNodeOrder[1]=0.0;
+        break;
+      case 0+1*2+0*4:
+        InterpolationCoefficientTable_LocalNodeOrder[3]=0.0;
+        break;
+      case 1+1*2+0*4:
+        InterpolationCoefficientTable_LocalNodeOrder[2]=0.0;
+        break;
+
+      case 0+0*2+1*4:
+        InterpolationCoefficientTable_LocalNodeOrder[4]=0.0;
+        break;
+      case 1+0*2+1*4:
+        InterpolationCoefficientTable_LocalNodeOrder[5]=0.0;
+        break;
+      case 0+1*2+1*4:
+        InterpolationCoefficientTable_LocalNodeOrder[7]=0.0;
+        break;
+      case 1+1*2+1*4:
+        InterpolationCoefficientTable_LocalNodeOrder[6]=0.0;
+        break;
+
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is not defined");
+      }
     }
   }
 
