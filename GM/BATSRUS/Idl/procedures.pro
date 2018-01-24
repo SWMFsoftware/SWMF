@@ -943,7 +943,7 @@ pro animate_data
 
            wnames=variables(ndim:ndim+nw-1)
 
-           do_transform
+           do_transform,ifile
 
            linestyle=0
            if multix*multiy lt nplot*nfile then $
@@ -2645,8 +2645,12 @@ pro do_transform,ifile
   usereg = (transform eq 'unpolar') or $
            (gencoord and (transform eq 'polar' or transform eq 'regular' $
                           or transform eq 'sphere'))
+  
+  ;; no transformation is done for a single file if dotransform=='n'
+  ;; and wreg has elements if usereg is true.
 
-  if dotransform eq 'n' and (not usereg or keyword_set(wreg)) then return
+  if dotransform eq 'n' and n_elements(ifile) eq 0 and (not usereg or keyword_set(wreg))$
+  then return
 
   if transform eq 'my' or transform eq 'm' then $
      do_my_transform,ifile,variables,x,w,xreg,wreg,usereg $
