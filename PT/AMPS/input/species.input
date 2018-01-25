@@ -92,6 +92,9 @@
   mass=1.0*_AMU_
   charge=1.0
 
+#component=ANTIPROTON	
+  mass=1.0*_AMU_				
+  charge=-1.0  
 
 #component=H_PLUS1
   mass=1.0*_AMU_
