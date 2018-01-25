@@ -1400,6 +1400,8 @@ Name=test/Mover-Lapenta2017
 Time=7
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
+Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
+Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
 
 CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Lapenta2017@@(0+valeriy)
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/test_Mover/Lapenta2017@@(0+pleiades)
@@ -1425,6 +1427,8 @@ Name=test/Mover-Markidis2010
 Time=7
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
+Keys=/work/02452/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+stampede)
+Keys=/nobackupp8/vtenishe/AMPS_DATA_TEST/test_Mover/Boris@@(0+pleiades)
 
 CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Markidis2010@@(0+valeriy)
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/test_Mover/Markidis2010@@(0+pleiades)
