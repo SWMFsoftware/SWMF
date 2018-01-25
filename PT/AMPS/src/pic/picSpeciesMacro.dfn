@@ -29,6 +29,7 @@
 #define _CH4_SPEC_            -23
 #define _CO2_SPEC_            -25
 #define _N2_HOT_SPEC_         -26
+#define _ANTIPROTON_SPEC_     -27
 
 #define _DUST_SPEC_           -999
 
