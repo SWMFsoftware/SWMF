@@ -3651,7 +3651,7 @@ namespace PIC {
       typedef PIC::InterpolationRoutines::cStencilGeneric<PIC::Mesh::cDataCornerNode> cStencil;
       extern cStencil* StencilTable;
       //The table contains weight for each node and the order of local is enforced.
-      extern double InterpolationCoefficientTable_LocalNodeOrder[8];
+      extern thread_local double InterpolationCoefficientTable_LocalNodeOrder[8];
 
       //interpolation functions
       cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);

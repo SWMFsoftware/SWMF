@@ -18,7 +18,7 @@ cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered
 cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* PIC::InterpolationRoutines::CellCentered::Linear::INTERFACE::last=NULL;
 
 //the locally ordered interpolation coeffcients for the corner based interpolation procedure
-double PIC::InterpolationRoutines::CornerBased::InterpolationCoefficientTable_LocalNodeOrder[8]={0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
+thread_local double PIC::InterpolationRoutines::CornerBased::InterpolationCoefficientTable_LocalNodeOrder[8]={0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
 
 // macro switch is needed in the case some other interpolation is used
@@ -643,7 +643,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
 //init stencil for the corner based interpolation
 PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::CornerBased::InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   int iStencil,jStencil,kStencil,iX[3],nd,idim;
-  double w,xLoc[3],xStencil[3],dx[3],xMinNode[3],xMaxNode[3];
+  double w,xLoc[3],dx[3],xMinNode[3],xMaxNode[3];
   PIC::Mesh::cDataCornerNode* CornerNode;
   PIC::Mesh::cDataBlockAMR *block;
 
