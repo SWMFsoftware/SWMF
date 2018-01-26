@@ -105,7 +105,7 @@ void RosinaSample::Init(double etMin,double etMax) {
 
   }
 
-  for (i=0;i<nPoints;i++) {
+  for (i=iStartRosinaAnalysisDataPont;i<nPoints;i++) {
     utc2et_c(ObservationTime[i],&et);
     spkezr_c("ROSETTA",et,"67P/C-G_CK","none","CHURYUMOV-GERASIMENKO",RosettaState,&ltlocal);
 
