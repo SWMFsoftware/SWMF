@@ -35,13 +35,19 @@ list<PIC::CPLR::SWMF::fSendCenterPointData> PIC::CPLR::SWMF::SendCenterPointData
 
 //set the interpolation stencil that is used for interpolation in the coupler
 void PIC::CPLR::InitInterpolationStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
-#if _PIC_COUPLER__INTERPOLATION_MODE_ ==  _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_
+  switch( _PIC_COUPLER__INTERPOLATION_MODE_) {
+  case _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_CONSTANT_:
     PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(x,node);
-#elif _PIC_COUPLER__INTERPOLATION_MODE_ == _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_
+    break;
+  case  _PIC_COUPLER__INTERPOLATION_MODE__CELL_CENTERED_LINEAR_:
     PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(x,node);
-#else
+    break;
+  case _PIC_COUPLER__INTERPOLATION_MODE__CORNER_BASED_LINEAR_:
+    PIC::InterpolationRoutines::CornerBased::InitStencil(x,node);
+    break;
+  default:
     exit(__LINE__,__FILE__,"Error: the option is unknown");
-#endif
+  }
 }
 
 
