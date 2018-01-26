@@ -287,10 +287,22 @@ int PIC::TimeStep() {
   ParticleMovingTime=MPI_Wtime()-ParticleMovingTime;
 
   //check the consistence of the particles lists
-#if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+  #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
   ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__CheckParticleList_;
   PIC::ParticleBuffer::CheckParticleList();
-#endif
+  #endif
+
+
+  //syncronize processors and exchange particle data
+  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__ExchangeParticleData_;
+  ParticleExchangeTime=MPI_Wtime();
+  PIC::Parallel::ExchangeParticleData();
+  ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
+
+  //if the periodeic boundary conditions are in use -> exchange particles between 'real' and 'ghost' blocks
+  #if _PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_
+  PIC::BC::ExternalBoundary::Periodic::UpdateData();
+  #endif
 
   //update elecrtic and magnetic fields
   #if _PIC_FIELD_SOLVER_MODE_==_PIC_FIELD_SOLVER_MODE__OFF_
@@ -307,17 +319,16 @@ int PIC::TimeStep() {
     exit(__LINE__,__FILE__,"Error: unknown value of _PIC_FIELD_SOLVER_MODE_");
   }
 
+  //if the periodeic boundary conditions are in use -> exchange new values of the electric and magnetic fields between 'real' and 'ghost' blocks
+  #if _PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_
+  PIC::BC::ExternalBoundary::Periodic::UpdateData();
+  #endif
+
   FieldSolverTime=MPI_Wtime()-FieldSolverTime;
   #endif //_PIC_FIELD_SOLVER_MODE_
 
   IterationExecutionTime=MPI_Wtime()-StartTime;
   summIterationExecutionTime+=IterationExecutionTime;
-
-  //syncrinie processors and exchnge particle data
-  ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__ExchangeParticleData_;
-  ParticleExchangeTime=MPI_Wtime();
-  PIC::Parallel::ExchangeParticleData();
-  ParticleExchangeTime=MPI_Wtime()-ParticleExchangeTime;
 
   //in case the dust model is turned on: re-distribute the dust particles in the velocity groups
   #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
