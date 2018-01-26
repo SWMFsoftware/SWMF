@@ -657,10 +657,9 @@ PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::C
 
   //get the local coordinate for the interpolation point location
   for (idim=0;idim<3;idim++) {
+    if ((x[idim]<xMinNode[idim])||(x[idim]>xMaxNode[idim])) exit(__LINE__,__FILE__,"Error: the point is out of block");
+
     xLoc[idim]=(x[idim]-xMinNode[idim])/dx[idim];
-
-    if ((xLoc[idim]<0.0)||(xLoc[idim]>1.0)) exit(__LINE__,__FILE__,"Error: the point is out of block");
-
     iX[idim]=(int)(xLoc[idim]);
     xLoc[idim]-=iX[idim];
   }
