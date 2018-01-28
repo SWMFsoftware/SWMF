@@ -78,6 +78,15 @@ my $PathName;
 #hostName only print once
 my $HostNameFlag=0;
 
+#determine whether time limit is set in the command line 
+foreach (@ARGV) {
+  if (/^-test-run-time=(.*)$/i) {
+    $TimeLimit=$1;
+
+    print "New Test run time limit is set of $TimeLimit \n";
+  }
+} 
+
 #process table with test description
 while (@Table) {
   my $refTable;
@@ -170,7 +179,7 @@ push(@Final,@FinalApps);
 write_content($fFinal,"include");
 &write_content($fFinal,@Final);
 
-return 1;
+#return 1;
 
 #------------------------------------------------------------------------------
 sub read_content {
