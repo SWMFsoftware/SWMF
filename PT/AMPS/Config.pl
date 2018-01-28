@@ -25,7 +25,7 @@ if (! -e "Makefile.local") {
 # build AMPS' Makefile.test
 foreach (@Arguments) { 
     if(/^-install/) {
-      require "utility/TestScripts/BuildTest.pl";
+      `utility/TestScripts/BuildTest.pl`;
      
       #create .general.conf if not exists
       `touch .general.conf` unless (-e ".general.conf");
