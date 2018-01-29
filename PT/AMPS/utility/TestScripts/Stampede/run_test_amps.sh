@@ -53,6 +53,9 @@ cd Tmp_AMPS_test
 rm -rf AMPS */AMPS
 
 # Checkout the latest code version
+set  CVSROOT=vtenishe@herot.engin.umich.edu:/CVS/FRAMEWORK/
+set  CVS_RSH=ssh
+
 cvs co -D "`date +%m/%d/%Y` 23:20" AMPS 
 cd AMPS
 cvs co -D "`date +%m/%d/%Y` 23:20" AMPS_data 
@@ -74,6 +77,8 @@ mkdir -p Intel; cp -r AMPS Intel/;
 #>GNUAll ###################################################################
 cd $WorkDir/Tmp_AMPS_test/GNU/AMPS                                        #
 ./Config.pl -install -compiler=gfortran,gcc_mpicc    >& test_amps.log    
+utility/TestScripts/BuildTest.pl -test-run-time=60
+
 #>IntelAll #################################################################
 cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 ./Config.pl -install -compiler=ifortmpif90,iccmpicxx >& test_amps.log    
@@ -89,6 +94,9 @@ cd $WorkDir/Tmp_AMPS_test/Intel/AMPS                                      #
 # #>Pleiades ###############################################
 # #cp AMPS/utility/TestScripts/test_amps.pleiades.*.job . <#
 # #>Stampede ###############################################
+rm -f utility/TestScripts/test_amps.stampede.all.overtime*.job
+utility/TestScripts/BuildTest.pl -test-run-time=60 
+
 cp utility/TestScripts/test_amps.stampede.*.job ../.. 
 
 # Compile AMPS tests
@@ -112,19 +120,32 @@ echo Compiling of AMPS is completed
 # Run test
 #>Stampede ####################################
 foreach job (test_amps.stampede.all*.job) # 
-  set JobCompletedFlag='false'
-  sbatch $job
+  rm -rf AmpsTestComplete
+  @ iTest=0
 
-  while ($JobCompletedFlag == 'false')
-    sleep 60
+  while ($iTest<2) 
+    sbatch $job
 
-    if (`squeue -u vtenishe | grep AMPS_tes` == "") then
-      set JobCompletedFlag='true'
-    endif
+    echo $job is submitted 
+    set JobCompletedFlag='false'
+
+    while ($JobCompletedFlag == 'false')
+      sleep 60
+
+      if (`squeue -u vtenishe | grep AMPS_tes` == "") then
+        set JobCompletedFlag='true'
+      endif
+    end
+
+    echo $job is completed
+    sleep 120
+
+    if (-e AmpsTestDone) then 
+      break
+    endif 
+
+    @ iTest++ 
   end
-
-  echo $job is completed
-  sleep 180
 end
 
 echo The test routine is completed
