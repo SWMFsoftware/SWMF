@@ -198,7 +198,7 @@ test_rundir_Prerun:
 	cp input/testfiles/PARAM.in.test.Prerun ${TESTDIR}/PARAM.in
 
 test_run:
-	cd ${TESTDIR}; ${MPIRUN} ./cimi.exe > runlog 
+	cd ${TESTDIR}; ${MPIRUN} ./cimi.exe | tee runlog 
 
 # reduced set of checks for the SWMF nightly tests
 test_check:
@@ -293,7 +293,7 @@ test_check_dipole:
 		>> test_cimi_dipole.diff
 
 test_check_eq:
-	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+	-${SCRIPTDIR}/DiffNum.pl -b -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CIMIeq.outs \
 		output/CIMIeq.outs \
 		> test_cimi.diff
