@@ -158,7 +158,7 @@ subroutine cimi_run(delta_t)
      call timing_start('cimi_output')
      call cimi_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
           sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm,dmm,dk,xlat,dphi, &
-          re_m,Hiono,vp,vL,flux,FAC_C,phot,Ppar_IC,Pressure_IC,PressurePar_IC, &
+          re_m,Hiono,vp,vL,flux,FAC_C,phot,Ppar_IC,Pressure_IC,PressurePar_IC,&
           vlEa,vpEa,psd)
      call timing_stop('cimi_output')
      
@@ -1904,7 +1904,7 @@ subroutine cimi_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
      sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm, &
      dmm,dk,xlat,dphi,re_m,Hiono,vl,vp, &
      flux,fac,phot,Ppar_IC,Pressure_IC,PressurePar_IC,vlEa,vpEa,psd)
-  !-----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   ! Routine calculates CIMI output, flux, fac and phot from f2
   ! Routine also converts the particle drifts from (m,K) space to (E,a) space
   !
@@ -1937,13 +1937,16 @@ subroutine cimi_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   real Pressure0, Pressure1, PressurePar1, Coeff
   integer :: iStatus_I(MPI_STATUS_SIZE), iError
   logical, parameter :: DoCalcFac=.true.
+
+  !---------------------------------------------------------------------------
   flux=0.
   fac=0.
   eta=0.
   phot=0.
   Ppar_IC = 0.
   PressurePar_IC = 0.
-
+  psd = 0.
+  
   ! Some constants for pressure, fac calculations
   rion=re_m+Hiono*1000.                      ! ionosphere distance in meter
   do n=1,nspec
@@ -1957,7 +1960,7 @@ subroutine cimi_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   ! Calculate CIMI ion density (m^-3), Den_IC, and flux (cm^-2 s^-1 keV^-1 sr^-1)
   ! at fixed energy & pitch-angle grids 
 
- ! aloge=log10(energy)
+  ! aloge=log10(energy)
   jloop1: do j=MinLonPar,MaxLonPar
      iloop1: do i=1,iba(j)
         ftv1=ftv(i,j)     ! ftv1: flux tube volume in m^3/Wb
