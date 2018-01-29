@@ -1104,12 +1104,16 @@ Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
 
+Ref=5{gcc}@@(0+stampede)
+Ref=6{icc}@@(0+stampede)
+
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+stampede)
 
 CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Lapenta@@(0+valeriy)
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Lapenta@@(0+pleiades)
+CustomRefSolutionPaths=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Lapenta@@(0+stampede)
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--Lapenta2017DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
@@ -1133,6 +1137,9 @@ Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
 
+Ref=5{gcc}@@(0+stampede)
+Ref=6{icc}@@(0+stampede)
+
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+stampede)
@@ -1140,6 +1147,7 @@ Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/scratch/024
 
 CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Markidis@@(0+valeriy)
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Markidis@@(0+pleiades)
+CustomRefSolutionPaths=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/Markidis@@(0+stampede)
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--Markidis2010DIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
@@ -1163,12 +1171,16 @@ Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
 
+Ref=5{gcc}@@(0+stampede)
+Ref=6{icc}@@(0+stampede)
+
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS  -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+stampede)
 
 CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/BORIS@@(0+valeriy)
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/BORIS@@(0+pleiades)
+CustomRefSolutionPaths=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/BORIS@@(0+stampede)
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--BorisDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
@@ -1190,12 +1202,16 @@ Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
 
+Ref=5{gcc}@@(0+stampede)
+Ref=6{icc}@@(0+stampede)
+
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+pleiades)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS -cplr-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/BORIS@@(0+stampede)
 
 CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/BORIS-RELATIVISTIC@@(0+valeriy)
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/BORIS-RELATIVISTIC@@(0+pleiades)
+CustomRefSolutionPaths=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/BORIS-RELATIVISTIC@@(0+stampede)
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--Boris-relativisticDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
@@ -1216,6 +1232,9 @@ Ref=8{pgcc}@@(0+valeriy)
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
+
+Ref=5{gcc}@@(0+stampede)
+Ref=6{icc}@@(0+stampede)
 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER  -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER@@(0+valeriy)
 Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER  -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/GUIDING-CENTER@@(0+pleiades)
@@ -1453,7 +1472,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Mover-Boris@@(0+valeriy)
-Time=7
+Time=20
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
@@ -1475,7 +1494,7 @@ Check=
 
 #>
 Name=test/Mover-Boris@@(0+stampede+pleiades)
-Time=7
+Time=20
 
 Ref=2{gcc}@@(0+stampede)
 
@@ -1500,7 +1519,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Mover-Boris-relativistic@@(0+valeriy)
-Time=5
+Time=20
 
 Keys=/Volumes/Data01/AMPS_DATA_TEST/test_Mover/Boris@@(0+valeriy)
 
@@ -1522,7 +1541,7 @@ Check=
 
 #>
 Name=test/Mover-Boris-relativistic@@(0+stampede+pleiades)
-Time=5
+Time=20
 
 Ref=2{gcc}@@(0+stampede)
 
@@ -1547,7 +1566,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=Europa-test1
-Time=2
+Time=3
 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/EUROPA@@(0+valeriy) 
 Keys=-boost-path=noboost -kameleon-path=nokameleon -cplr-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/EUROPA@@(0+stampede) 
@@ -1642,7 +1661,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Collision-Test-NTC 
-Time=2
+Time=3
 
 Check=
 >>>@echo "test_Collision-Test-NTC_check..." >> test_Collision-Test-NTC.diff
@@ -1679,7 +1698,7 @@ Check=
 
 #>
 Name=test/Collision-Test-MF
-Time=2
+Time=4
 
 Check=
 >>>@echo "test_Collision-Test-MF_check..." >> test_Collision-Test-MF.diff
@@ -1716,7 +1735,7 @@ Check=
 -------------------------------------------------------------------------------
 #>
 Name=test/Chemistry-Test
-Time=2
+Time=4
 
 Check=
 >>>@echo "test_Chemistry-Test_check..." >> test_Chemistry-Test.diff
@@ -1735,7 +1754,7 @@ Check=
 /------------------------------------------------------------------------------
 #>
 Name=test/Mars-Hot-Oxygen
-Time=17 
+Time=50 
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
@@ -1885,6 +1904,9 @@ Ref=8{pgcc}@@(0+valeriy)
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
+
+Ref=5{gcc}@@(0+stampede)
+Ref=6{icc}@@(0+stampede)
 
 Check=
 >>>@echo "test_Sphere-drag-coefficient_check..." >> test_Sphere-drag-coefficient$(TESTSphere-drag-coefficient-REF).diff
