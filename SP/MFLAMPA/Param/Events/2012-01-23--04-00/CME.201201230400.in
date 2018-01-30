@@ -1,0 +1,16 @@
+#CME
+T                   UseCme
+T                   DoAddFluxRope
+208.50              LongitudeCme
+29.50               LatitudeCme
+357.28              OrientationCme
+GL                  TypeCme
+0.60                Stretch
+1.80                Distance
+0.56                Radius
+-11.18               BStrength
+0.0                 Density
+1.0                 ModulationRho
+1.0                 ModulationP
+
+#END

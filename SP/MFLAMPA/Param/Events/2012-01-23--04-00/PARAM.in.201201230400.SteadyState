@@ -1,0 +1,567 @@
+./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA && \
+./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe && \
+./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe && \
+./Config.pl -g=SC:4,4,4,450,1,IH:8,8,4,1600,1,SP:20000,10,10
+
+
+Begin session: 1
+
+#ECHO
+T                       DoEcho
+
+#DESCRIPTION
+Creating a steady state SC and IH with Threaded-Field-Line Low Corona
+
+#TIMEACCURATE
+F                       DoTimeAccurate
+
+
+!   CCMC version with the included start time file
+
+#STARTTIME
+2012
+01
+23
+04
+00
+0
+0.0
+
+
+#SAVERESTART
+T                       DoSaveRestart
+20000                   DnSaveRestart
+-1                      DtSaveRestart
+
+
+#BEGIN_COMP SC --------------------------------------------------------------
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#PLASMA
+1.0                     IonMass [amu]
+1.0                     AverageIonCharge [e]
+1.0                     ElectronTemperatureRatio
+
+#FIELDLINETHREAD
+T                       UseFieldLineThreads
+100                     nPointInThreadMax
+2.0e-3                  DsThreadMin
+
+#BODY
+T                       UseBody
+1.0                     rBody
+1.5e8                   BodyNDim
+1.5e6                   BodyTDim
+
+#BODY
+F                       UseBody
+
+
+!CCMC version with included magnetogram file
+#MAGNETOGRAM
+T                       UseMagnetogram
+1.0                     rMagnetogram
+2.5                     rSourceSurface
+0.0                     HeightInnerBc
+SC/CR2119.dat           NameMagnetogramFile
+12                      nHeaderLine
+-1.0                    PhiShift
+1.0                     UnitB
+
+#USECURLB0
+T                       UseCurlB0
+2.5                     rCurrentFreeB0
+
+#USER_FLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+T                       UseUserICs
+F                       UseUserSpecifyRefinement
+T                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+F                       UseUserUpdateStates
+
+
+!---CCMC version
+
+#POYNTINGFLUX
+1.0e6                   PoyntingFluxPerBSi [J/m^2/s/T]
+
+#CORONALHEATING
+turbulentcascade        TypeCoronalHeating
+T                       UseWaveReflection
+1.5e5                   LperpTimesSqrtBSi
+
+
+!----CCMC version
+#HEATPARTITIONING
+stochasticheating     TypeHeatPartitioning
+0.17                  StochasticExponent
+0.18                  StochasticAmplitude
+
+#HEATCONDUCTION
+T                       UseHeatConduction
+spitzer                 TypeHeatConduction
+
+#HEATFLUXREGION
+T                       UseHeatFluxRegion
+5.0                     rCollisional
+-8.0                    rCollisionless
+
+
+#HEATFLUXCOLLISIONLESS
+T                       UseHeatFluxCollisionless
+1.05                    CollisionlessAlpha
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+parcond                 TypeSemiImplicit
+
+#SEMIKRYLOV
+GMRES                   TypeKrylov
+1.0e-5                  ErrorMaxKrylov
+10                      MaxMatvecKrylov
+
+#PRECONDITIONER
+left            TypePrecondSide (left, symmetric, right)
+bilu            TypePrecond (MBILU)
+
+#RADIATIVECOOLING
+T                       UseRadCooling
+
+#LOOKUPTABLE
+radcool                 NameTable
+load                    NameCommand
+SC/Param/RadCoolCorona.dat
+ascii                   TypeFile
+
+#LOOKUPTABLE
+TR                      NameTable
+load                    NameCommand
+SC/Param/TR.dat
+ascii                   TypeFile
+
+#COARSEAXIS
+F                       UsePoleDiffusion
+T                       UseCoarseAxis
+2                       nCoarseLayer
+
+---------------------------------------------------
+#GRIDGEOMETRY
+spherical_lnr
+
+! Use a true sphere, so box is made much larger
+#GRID
+2                       nRootBlockX
+2                       nRootBlockY
+2                       nRootBlockZ
+-100.0                  xMin
+ 100.0                  xMax
+-100.0                  yMin
+ 100.0                  yMax
+-100.0                  zMin
+ 100.0                  zMax
+
+#LIMITRADIUS
+1.15                    rMin
+24.0                    rMax
+
+----------------------------------------------------
+#AMRREGION
+InnerShell              NameRegion
+box_gen                 TypeRegion
+1.15                    Radius1
+0.0
+-70.0
+1.7                     Radius2
+360.0
+70.0
+
+
+#REGION
+lowlat                  NameRegion
+box_gen                 NameShape
+1.0                     rMin
+0.0                     LonMin
+-70.0                   LatMin
+32.0                    rMax
+360.0                   LonMax
++70.0                   LatMax
+
+#INCLUDE
+CME_AMR.in
+
+#AMRCRITERIALEVEL
+4                       nCriteria
+Level                   TypeCriteria
+3                       RefineTo
+3                       CoarsenTo
+Level Innershell        TypeCriteria
+4                       RefineTo
+4                       CoarsenTo
+currentsheet +lowlat    TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+4                       MaxLevel
+Level CMEbox            TypeCriteria
+5                       RefineTo
+5                       CoarsenTo
+
+#GRIDLEVEL
+4                       nLevelArea
+initial                 NameArea
+
+#DOAMR
+T                       DoAmr
+20001                   DnAmr
+-1.0                    DtAmr
+F                       IsStrictAmr
+
+#TIMESTEPPING
+2                       nStage
+0.8                     CflExpl
+
+#MINIMUMPRESSURE
+1E-9                    pMinDim
+1E-9                    peMinDim
+
+#MINIMUMTEMPERATURE
+5e4
+5e4
+
+#MINIMUMDENSITY
+1e-24
+
+#SCHEME
+2                       nOrder (1 or 2)
+Sokolov                 TypeFlux (Roe, Rusanov, Linde, Sokolov
+mc3                     TypeLimiter
+1.2                     LimiterBeta
+
+#LIMITER
+T
+T
+F
+
+#NONCONSERVATIVE
+T                       UseNonConservative
+
+#MESSAGEPASS
+all                     TypeMessagePass
+
+#TVDRESCHANGE
+T                       UseTVDResChange
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+1                       DnSaveLogfile
+-1.                     DtSaveLogfile
+
+
+#OUTERBOUNDARY
+fieldlinethreads        TypeBcEast   user for spherical and user_outerbcs
+float                   TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+SAVEPLOT
+2                       nPlotFiles
+3d FUL idl
+60000                   DnSavePlot
+-1.                     DtSavePlot
+-1                      DxSavePlot
+x=0 VAR idl             StringPlot
+1000                    DnSavePlot
+-1.                     DtSavePlot
+-1.0                    DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p pe b1x b1y b1z
+g rbody
+
+#SAVEINITIAL
+F                       DoSaveInitial
+
+#END_COMP SC ----------------------------------------------------------------
+
+#BEGIN_COMP IH -------------------------------------------------------------
+
+
+#COORDSYSTEM
+HGR                     TypeCoordSystem
+
+#BODY
+T                       UseBody
+19.0                    rBody
+3.0E+8                  BodyNDim
+3.5E+6                  BodyTDim
+
+#PLASMA
+1.0                     IonMass [amu]
+1.0                     AverageIonCharge [e]
+1.0                     ElectronTemperatureRatio
+
+#GRID
+1                       nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-250.0                  xMin
+ 250.0                  xMax
+-250.0                  yMin
+ 250.0                  yMax
+-250.0                  zMin
+ 250.0                  zMax
+
+#AMRREGION
+OuterShell              NameRegion
+shell0                  TypeRegion
+19.0                    Radius1
+21.55                   Radius2
+
+
+#AMRREGION
+coneIH_CME              NameRegion
+conex rotated           StringShape
+0.0                     xPosition
+0.0                     yPosition
+0.0                     zPosition
+220.0                   Height
+127.0                   Radius
+0.0                     xrotate
+  21.0                  yrotate
+ 192.0                  zrotate
+
+
+
+#AMRCRITERIALEVEL
+4                       nCriteria
+Level                   TypeCriteria
+4                       RefineTo
+4                       CoarsenTo
+Level OuterShell        TypeCriteria
+8                       RefineTo
+8                       CoarsenTo
+currentsheet            TypeCriteria
+0.5                     CoarsenLimit
+0.5                     RefineLimit
+8                       MaxLevel
+level +coneIH_CME       TypeCriteria
+7
+7
+
+#GRIDLEVEL
+8                       nLevelArea
+initial                 NameArea
+
+#INNERBOUNDARY
+buffergrid              TypeBcInner
+
+#BUFFERGRID
+2                       nRBuff
+180                     nPhiBuff
+90                      nThetaBuff
+18.0                    rBuffMin
+21.55                   rBuffMax
+0.0                     PhiBuffMin
+360.                    PhiBuffMax
+-90.0                   LatBuffMin
+90.0                    LatBuffMax
+
+
+#OUTERBOUNDARY
+float                   TypeBcEast
+float                   TypeBcWest
+float                   TypeBcSouth
+float                   TypeBcNorth
+float                   TypeBcBottom
+float                   TypeBcTop
+
+#RESCHANGE
+T                       UseAccurateResChange
+
+#USER_FLAGS
+F                       UseUserInnerBcs
+F                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+F                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+T                       UseUserInitSession
+F                       UseUserUpdateStates
+
+
+#CORONALHEATING
+turbulentcascade        TypeCoronalHeating
+T                       UseWaveReflection
+1.5e5                   LperpTimesSqrtBSi
+
+#RESISTIVITY
+T                       UseResistivity
+user                    TypeResistivity
+0.0                     Eta0Si     ! not used
+
+#RESISTIVITYOPTIONS
+F                       UseResistiveFlux
+F                       UseJouleHeating
+T                       UseHeatExchange
+
+
+#HEATFLUXCOLLISIONLESS
+T                       UseHeatFluxCollisionless
+1.05                    CollisionlessAlpha
+
+
+
+
+#SCHEME
+2                       nOrder
+Sokolov                 TypeFlux
+mc3                     TypeLimiter
+1.2                     LimiterBeta
+
+#NONCONSERVATIVE
+T                       UseNonConservative
+
+#TIMESTEPPING
+2                       nStage
+0.8                     CflExpl
+
+#DIVB
+T                       UseDivbSource
+T                       UseDivbDiffusion
+F                       UseProjection
+F                       UseConstrainB
+
+#SAVELOGFILE
+T                       DoSaveLogfile
+RAW                     StringLogfile
+100                     DnSaveLogfile
+-1.                     DtSaveLogfile
+
+#SAVEINITIAL
+T
+
+SAVEPLOT
+4                       nPlotFiles
+3d FUL idl              StringPlot
+5000                    DnSavePlot
+-1.                     DtSavePlot
+-1                      DxSavePlot
+x=0 VAR idl             StringPlot
+1000                    DnSavePlot
+-1.                     DtSavePlot
+-1.0                    DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p pe b1x b1y b1z
+g rbody
+z=0 VAR idl             StringPlot
+1000                    DnSavePlot
+-1.                     DtSavePlot
+-1.0                    DxSavePlot
+rho ux uy uz ti te bx by bz I01 I02 p pe b1x b1y b1z
+g rbody
+buf MHD idl
+5000
+-1.0
+
+
+#END_COMP IH ---------------------------------------------------------------
+
+#COMPONENT
+IH                      NameComp
+F                       UseComp
+
+
+#COMPONENT
+SP                      NameComp
+F                       UseComp
+
+#STOP
+60000                   MaxIteration
+-1.0                    tSimulationMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#BEGIN_COMP SC ----------------------------------------------------------------
+
+#AMR
+-1                      DnRefine
+
+#END_COMP SC   ----------------------------------------------------------------
+
+
+#COMPONENT
+IH                      NameComp
+T                       UseComp
+
+#COUPLE1
+SC                      NameSource
+IH                      NameTarget
+1                       DnCouple
+-1.0                    DtCouple
+
+#STOP
+60001                   MaxIter
+-1                      TimeMax
+
+End session: 2
+#RUN ##########################################################################
+Begin session: 3
+
+#COUPLE1
+SC                      NameSource
+IH                      NameTarget
+-1                      DnCouple
+-1.0                    DtCouple
+
+#COMPONENT
+SC                      NameComp
+F                       UseComp
+
+#BEGIN_COMP IH ----------------------------------------------------------------
+
+#DOAMR
+T                       DoAmr
+1001                    DnAmr
+-1.0                    DtAmr
+F                       IsStrictAmr
+
+#END_COMP IH   ----------------------------------------------------------------
+
+#STOP
+64000                   MaxIter
+-1.0                    TimeMax
+
+End session: 3
+#RUN ##########################################################################
+Begin session: 4
+
+#BEGIN_COMP IH ----------------------------------------------------------------
+
+#AMR
+-1            DnRefine
+
+#END_COMP IH   ----------------------------------------------------------------
+
+#STOP
+65000            MaxIter
+-1.0            TimeMax
+
+
+End session: 3
+#END ############################################################

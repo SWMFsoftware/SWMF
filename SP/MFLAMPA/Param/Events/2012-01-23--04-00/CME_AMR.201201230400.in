@@ -1,0 +1,11 @@
+#AMRREGION
+CMEbox
+box_gen
+1.15
+186.10              XyzMinBox Longitude
+18.30              XyzMinBox Latitude
+22.00               XyzMaxBox Radius
+230.90              XyzMaxBox Longitude
+40.70               XyzMaxBox Latitude
+
+#END
