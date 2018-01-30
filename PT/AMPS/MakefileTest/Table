@@ -1242,6 +1242,8 @@ Keys=-boost-path=noboost -kameleon-path=nokameleon -model-data-path=/scratch/024
 
 CustomRefSolutionPaths=/Volumes/Data01/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/GUIDING-CENTER@@(0+valeriy)
 CustomRefSolutionPaths=/nobackup/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/GUIDING-CENTER@@(0+pleiades)
+CustomRefSolutionPaths=/scratch/02452/vtenishe/AMPS_DATA_TEST/INDIVIDUAL-TRAJECTORY/OUTPUT/GUIDING-CENTER@@(0+stampede)
+
 
 Check=
 >>>-@${SCRIPTDIR}/DiffNum.pl ${TESTIndividual_Trajectories--guiding-centerDIR}/PT/plots/test_CCMC-Individual_Trajectories.dat         \
