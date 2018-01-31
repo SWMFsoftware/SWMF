@@ -117,9 +117,11 @@ subroutine cimi_run(delta_t)
   if (IsFirstCall .and. .not.IsRestart) then
      !set initial state when no restarting
      call initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
+     call initial_extra
      IsFirstCall=.false.
   elseif(IsFirstCall .and. IsRestart) then
      ib0=iba
+     call initial_extra
      IsFirstCall=.false.
   endif
   
@@ -804,9 +806,9 @@ subroutine cimi_init
 
 end subroutine cimi_init
 
-!-------------------------------------------------------------------------------
+!------------------------------------------------------------------------------
 subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
-  !-----------------------------------------------------------------------------
+  !----------------------------------------------------------------------------
   ! Routine setup initial distribution.
   ! 
   ! Input: nspec,np,nt,iba,Den_IC,Temp_IC,amu,vel,xjac
@@ -814,10 +816,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   !         (through common block cinitial_f2)
   use ModIoUnit, ONLY: UnitTmp_
   use ModGmCimi, ONLY: Den_IC, Temp_IC, Temppar_IC, DoAnisoPressureGMCoupling
-  use ModCimi,   ONLY: f2, nOperator, driftin, driftout, &
-       eChangeOperator_VICI, echangeLocal, eChangeGlobal, &
-       pChangeOperator_VICI, eTimeAccumult_ICI, pTimeAccumult_ICI, &
-       rbsumLocal, rbsumGlobal, rcsumLocal, rcsumGlobal
+  use ModCimi,   ONLY: f2
   use ModCimiInitialize,   ONLY: IsEmptyInitial, IsDataInitial, IsRBSPData, &
        IsGmInitial
   use ModCimiGrid,ONLY: nm,nk,MinLonPar,MaxLonPar,iProc,nProc,iComm,d4Element_C,neng
@@ -829,7 +828,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
 
   integer,parameter :: np1=51,nt1=48,nspec1=1  
   !integer,parameter :: nm=35,nk=28 ! dimension of CIMI magnetic moment and K
- 
+
   integer nspec,np,nt,iba(nt),ib0(nt),n,j,i,k,m, iError
   real amu_I(nspec),vel(nspec,np,nt,nm,nk)
   real velperp2, velpar2
@@ -841,9 +840,10 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   integer :: il, ie, iunit
   real, allocatable :: roi(:), ei(:), fi(:,:)
   real :: roii, e1,x, fluxi,psd2,etemp
-  
+
   character(11) :: NameFile='quiet_x.fin'
   character(5) :: FilePrefix='xxxxx'
+  !---------------------------------------------------------------------------
   pi=acos(-1.)
 
   ib0=iba
@@ -919,7 +919,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
 
         ei(:)=log10(ei(:))                      ! take log of ei         
         fi(:,:)=log10(fi(:,:))                  ! take log of fi
-        
+
         !interpolate data from quiet.fin files to CIMI grid
         do j=MinLonPar,MaxLonPar
            do i=1,irm(j)
@@ -927,21 +927,21 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
               do m=1,nk
                  do k=1,iw2(n,m)
                     e1=log10(ekev(n,i,j,k,m)) 
-                   ! if (e1.le.ei(ie)) then
+                    ! if (e1.le.ei(ie)) then
                     if (e1.ge.ei(ie)) e1=ei(ie)    ! flat dist at high E
-                       if (e1.lt.ei(1)) e1=ei(1)    ! flat dist. at low E
-                       if (roii.lt.roi(1)) roii=roi(1) ! flat dist @ lowL
-                       if (roii.gt.roi(il)) roii=roi(il) ! flat @ high L
-                       call lintp2IM(roi,ei,fi,il,ie,roii,e1,x)
-                       fluxi=10.**x          ! flux in (cm^2 s sr keV)^-1
-                       psd2=fluxi/(1.6e19*pp(n,i,j,k,m))/pp(n,i,j,k,m)
-                   !   if (testDiff_aa) psd2=psd2*sinA(i,j,m)*sinA(i,j,m)  !  
-                       if (testDiff_EE.or.testDiff_aE)  psd2=1.
-                       f2(n,i,j,k,m)=psd2*xjac(n,i,k)*1.e20*1.e19 
-                   ! endif
+                    if (e1.lt.ei(1)) e1=ei(1)    ! flat dist. at low E
+                    if (roii.lt.roi(1)) roii=roi(1) ! flat dist @ lowL
+                    if (roii.gt.roi(il)) roii=roi(il) ! flat @ high L
+                    call lintp2IM(roi,ei,fi,il,ie,roii,e1,x)
+                    fluxi=10.**x          ! flux in (cm^2 s sr keV)^-1
+                    psd2=fluxi/(1.6e19*pp(n,i,j,k,m))/pp(n,i,j,k,m)
+                    !   if (testDiff_aa) psd2=psd2*sinA(i,j,m)*sinA(i,j,m)  !  
+                    if (testDiff_EE.or.testDiff_aE)  psd2=1.
+                    f2(n,i,j,k,m)=psd2*xjac(n,i,k)*1.e20*1.e19 
+                    ! endif
                  enddo                            ! end of k loop
               enddo                               ! end of m loop
-              
+
            enddo                                  ! end of i loop
         enddo                                     ! end of j loop
         deallocate (roi,ei,fi)
@@ -949,7 +949,19 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
      enddo                                        ! end of n loop
   end if
 
-! Setup variables for energy gain/loss from each process
+end subroutine initial_f2
+!==============================================================================
+subroutine initial_extra
+
+  use ModCimiPlanet, ONLY: nSpec
+  use ModCimiGrid,   ONLY: nP, nT, nEng
+  use ModCimi,   ONLY: nOperator, driftin, driftout, &
+       eChangeOperator_VICI, echangeLocal, eChangeGlobal, &
+       pChangeOperator_VICI, eTimeAccumult_ICI, pTimeAccumult_ICI, &
+       rbsumLocal, rbsumGlobal, rcsumLocal, rcsumGlobal
+
+  !----------------------------------------------------------------------------
+  ! Setup variables for energy gain/loss from each process
   eChangeOperator_VICI(1:nspec,1:np,1:nt,1:neng+2,1:nOperator)=0.0
   pChangeOperator_VICI(1:nspec,1:np,1:nt,1:neng+2,1:nOperator)=0.0
   eTimeAccumult_ICI(1:nspec,1:np,1:nt,1:neng+2) = 0.0
@@ -969,7 +981,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   driftin(1:nspec)=0.      ! energy gain due injection
   driftout(1:nspec)=0.     ! energy loss due drift-out loss
 
-end subroutine initial_f2
+end subroutine initial_extra
 
 
 !-------------------------------------------------------------------------------
@@ -1818,13 +1830,14 @@ subroutine sume_cimi(OperatorName)
   real    :: weight,ekev1,weighte,dee,dpe
   integer n,i,j,k,m,iError,kk
   real gride1(0:je+1),e0(ip,ir,je+2),p0(ip,ir,je+2)
+  !----------------------------------------------------------------------------
+  ! Set up gride1(0) and gride1(je+1)
+  gride1(0)=0.
+  gride1(je+1)=1.e10     ! arbitrary large number
 
-! Set up gride1(0) and gride1(je+1)
-      gride1(0)=0.
-      gride1(je+1)=1.e10     ! arbitrary large number
+  ! Calculate esum, psum, etc.
 
-! Calculate esum, psum, etc.
-    do n=1,nspec
+  do n=1,nspec
        eChangeLocal(n, OperatorName) = 0.
        e0(1:ip,MinLonPar:MaxLonPar,1:je+2)=&
             esum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)
@@ -1832,6 +1845,8 @@ subroutine sume_cimi(OperatorName)
             psum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)
        esum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)=0.
        psum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)=0.
+       rbsum(n) = 0.0
+       rcsum(n) = 0.0
        gride1(1:je)=Ebound(n,1:je)
 
        do j=MinLonPar,MaxLonPar
