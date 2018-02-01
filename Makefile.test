@@ -754,6 +754,79 @@ test_swpc_multispecies_check:
 		>> test_swpc_multispecies_ie.diff)
 	ls -l test_swpc_multispecies_*.diff
 
+### test_swpc_cimi: GM+IE+IM/CIMI ###
+
+test_swpc_cimi:
+	@echo "test_swpc_cimi_compile..." > test_swpc_cimi_gm.diff
+	@echo "test_swpc_cimi_compile..." > test_swpc_cimi_ie.diff
+	${MAKE} test_swpc_cimi_compile
+	@echo "test_swpc_cimi_rundir..." >> test_swpc_cimi_gm.diff
+	@echo "test_swpc_cimi_rundir..." >> test_swpc_cimi_ie.diff
+	${MAKE} test_swpc_cimi_rundir
+	@echo "test_swpc_cimi_run..." >> test_swpc_cimi_gm.diff
+	@echo "test_swpc_cimi_run..." >> test_swpc_cimi_ie.diff
+	${MAKE} test_swpc_cimi_run
+	@echo "test_swpc_cimi_restart..." >> test_swpc_cimi_gm.diff
+	@echo "test_swpc_cimi_restart..." >> test_swpc_cimi_ie.diff
+	${MAKE} test_swpc_cimi_restart
+	@echo "test_swpc_cimi_check..." >> test_swpc_cimi_gm.diff
+	@echo "test_swpc_cimi_check..." >> test_swpc_cimi_ie.diff
+	${MAKE} test_swpc_cimi_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test_swpc_cimi_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,IM:EarthHO
+	${MAKE} SWMF
+	make PIDL
+
+test_swpc_cimi_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
+	cp ${TESTDIR}/LAYOUT.in_test_cimi ${TESTDIR}/LAYOUT.in
+	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_cimi_init
+	perl -pi -e 's/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_cimi_restart
+	cp ${TESTDIR}/PARAM.in_cimi_init ${TESTDIR}/PARAM.in
+
+test_swpc_cimi_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
+
+test_swpc_cimi_restart:
+	cd ${TESTDIR}; cp PARAM.in_cimi_restart PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
+	cd ${TESTDIR}; ./PostProc.pl -noptec
+
+test_swpc_cimi_check:
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
+		Param/SWPC/TestOutputCimi/log_e20140410-000200.log \
+		> test_swpc_cimi_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
+		Param/SWPC/TestOutputCimi/magnetometers_e20140410-000200.mag \
+		>> test_swpc_cimi_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
+		Param/SWPC/TestOutputCimi/mag_grid_e20140410-000300.out \
+		>> test_swpc_cimi_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
+		Param/SWPC/TestOutputCimi/geoindex_e20140410-000200.log \
+		>> test_swpc_cimi_gm.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
+		Param/SWPC/TestOutputCimi/IE_t140410_000200.log \
+		> test_swpc_cimi_ie.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
+		Param/SWPC/TestOutputCimi/it140410_000300_000.idl \
+		>> test_swpc_cimi_ie.diff)
+	ls -l test_swpc_cimi_*.diff
+
 
 ### Test3: GM+IE+IM=CIMI ###
 
