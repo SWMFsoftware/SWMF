@@ -3650,8 +3650,13 @@ namespace PIC {
     namespace CornerBased {
       typedef PIC::InterpolationRoutines::cStencilGeneric<PIC::Mesh::cDataCornerNode> cStencil;
       extern cStencil* StencilTable;
+
       //The table contains weight for each node and the order of local is enforced.
+      #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
       extern thread_local double InterpolationCoefficientTable_LocalNodeOrder[8];
+      #else
+      extern double InterpolationCoefficientTable_LocalNodeOrder[8];
+      #endif //_COMPILATION_MODE_
 
       //interpolation functions
       cStencil *InitStencil(double *x,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=NULL);
