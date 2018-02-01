@@ -473,7 +473,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   int RecvDataPointCounter[PIC::nTotalThreads];
   for (thread=0;thread<PIC::nTotalThreads;thread++) RecvDataPointCounter[thread]=0;
 
-  list<cLinearSystemCornerNodeDataRequestListElement> DataRequestList[PIC::nTotalThreads];
+  list<cLinearSystemCornerNodeDataRequestListElement> *DataRequestList=new list<cLinearSystemCornerNodeDataRequestListElement> [PIC::nTotalThreads];
 
   //build the matrix
   for (nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
@@ -795,6 +795,8 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   //deallocate 'nGlobalDataPointTable'
   delete [] nGlobalDataPointTable;
   delete [] DataExchangeTableCounter;
+
+  delete [] DataRequestList;
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
