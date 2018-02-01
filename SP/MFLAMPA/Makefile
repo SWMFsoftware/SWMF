@@ -108,7 +108,6 @@ allclean: install
 		rm -f ../../Makefile.conf; \
 	fi)
 	rm -f Makefile.def *~
-	mv Makefile.def.orig Makefile.def
 
 #\
 # Testing
