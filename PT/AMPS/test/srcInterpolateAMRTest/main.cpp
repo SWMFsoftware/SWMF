@@ -109,9 +109,6 @@ void fix_coords(double* x){
 }
 //-----------------------------------------------------------------------------
 int main(int argc,char **argv) {
-  // alias
-  namespace Interpolation = PIC::InterpolationRoutines::CellCentered;
-
   //execute the test only on ONE processor
   PIC::InitMPI();
 
@@ -131,63 +128,92 @@ int main(int argc,char **argv) {
 
     // output file name
     char fname[400];
-    sprintf(fname,"%s/test_InterpolateAMR-test.dat",PIC::OutputDataFileDirectory);
-
-    fstream fout;
+    fstream foutCenterBased,foutCornerBased;
     bool open_file = true;
-    bool fail = false;
-    Interpolation::cStencil* Stencil;
 
-    if (PIC::ThisThread==0) for(iCase=0; iCase<nCase && !fail; iCase++) {
+    PIC::InterpolationRoutines::CellCentered::cStencil *CenterBasedStencil;
+    PIC::InterpolationRoutines::CornerBased::cStencil *CornerBasedStencil;
+
+    if (PIC::ThisThread==0) for (iCase=0;iCase<nCase;iCase++) {
       amps_init();
 
       if (open_file==true) {
-        fout.open(fname, fstream::out);
+        sprintf(fname,"%s/test_InterpolateAMR-CenterBased-test.dat",PIC::OutputDataFileDirectory);
+        foutCenterBased.open(fname, fstream::out);
+
+        sprintf(fname,"%s/test_InterpolateAMR-CornerBased-test.dat",PIC::OutputDataFileDirectory);
+        foutCornerBased.open(fname, fstream::out);
+
         open_file=false;
       }
 
-      int i,nPoint = 100000;
-      double x0[3], x1[3], *xcell, diff;
+      int i,nPoint=100000;
+      double x0[3],x1CornerBased[3],x1CenterBased[3],*xcell,diff;
 
-      for (int iPoint=0; iPoint < nPoint && !fail; iPoint++) {
+      for (int iPoint=0;iPoint<nPoint;iPoint++) {
         //      cout <<"\riCase="<<iCase<<" iPoint="<<iPoint<<"       ";
         // generate test point
-        for (i=0; i<3; i++) {
-          x0[i] = XMin[i] + 0.5*dxCell + rnd() * (XMax[i] - XMin[i] - dxCell);
-          x1[i] = 0;
+        for (i=0;i<3;i++) {
+          x0[i]=XMin[i]+0.5*dxCell+rnd()*(XMax[i]-XMin[i]-dxCell);
+          x1CornerBased[i]=0.0,x1CenterBased[i]=0.0;
         }
 
-        // get interpolation stencil
-        Stencil = Interpolation::Linear::InitStencil(x0,NULL);
+        //get the interpolation stencil
+        CenterBasedStencil=PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(x0,NULL);
+        CornerBasedStencil=PIC::InterpolationRoutines::CornerBased::InitStencil(x0,NULL);
 
         //check order of interpolation
-        for (int icell=0; icell<Stencil->Length; icell++) {
-          xcell = Stencil -> cell[icell] -> GetX();
+        for (int icell=0; icell<CenterBasedStencil->Length; icell++) {
+          xcell=CenterBasedStencil->cell[icell]->GetX();
           fix_coords(xcell);
 
-          for (i=0; i<3; i++) x1[i] += xcell[i] * Stencil->Weight[icell];
+          for (i=0; i<3; i++) x1CenterBased[i]+=xcell[i]*CenterBasedStencil->Weight[icell];
         }
 
-        for (diff=0.0,i=0; i<3; i++) diff+= pow((x1[i]-x0[i])/(0.5*(x1[i]+x0[i])),2);
+        for (diff=0.0,i=0;i<3;i++) diff+=pow((x1CenterBased[i]-x0[i])/(0.5*(x1CenterBased[i]+x0[i])),2);
 
-        diff = pow(diff, 0.5);
+        diff=pow(diff,0.5);
 
-        if (diff > 0.001) {
-          fout << "iCase="   << iCase << " iPoint=" << iPoint  << " x=" << x0[0] << " " << x0[1] << " " << x0[2] << " diff=" << diff << "\nStencil:\n";
+        if (diff>0.001) {
+          foutCenterBased << "iCase="   << iCase << " iPoint=" << iPoint  << " x=" << x0[0] << " " << x0[1] << " " << x0[2] << " diff=" << diff << "\nStencil:\n";
 
-          for (int icell=0; icell<Stencil->Length; icell++) {
-            xcell = Stencil->cell[icell] -> GetX();
+          for (int icell=0; icell<CenterBasedStencil->Length; icell++) {
+            xcell = CenterBasedStencil->cell[icell]->GetX();
             fix_coords(xcell);
 
-            fout << "Cell " << icell << ": " << xcell[0] << " " << xcell[1] << " " << xcell[2] << " Weight=" << Stencil->Weight[icell] << endl;
+            foutCenterBased << "Cell " << icell << ": " << xcell[0] << " " << xcell[1] << " " << xcell[2] << " Weight=" << CenterBasedStencil->Weight[icell] << endl;
           }
-
-          fail = true;
         }
+
+        //check the corner-based interpolation procedure
+        for (int iCorner=0; iCorner<CornerBasedStencil->Length; iCorner++) {
+          xcell=CornerBasedStencil->cell[iCorner]->GetX();
+          fix_coords(xcell);
+
+          for (i=0; i<3; i++) x1CornerBased[i]+=xcell[i]*CornerBasedStencil->Weight[iCorner];
+        }
+
+        for (diff=0.0,i=0;i<3;i++) diff+=pow((x1CornerBased[i]-x0[i])/(0.5*(x1CornerBased[i]+x0[i])),2);
+
+        diff=pow(diff,0.5);
+
+        if (diff>0.001) {
+          foutCornerBased << "iCase="   << iCase << " iPoint=" << iPoint  << " x=" << x0[0] << " " << x0[1] << " " << x0[2] << " diff=" << diff << "\nStencil:\n";
+
+          for (int iCorner=0; iCorner<CornerBasedStencil->Length; iCorner++) {
+            xcell = CornerBasedStencil->cell[iCorner]->GetX();
+            fix_coords(xcell);
+
+            foutCornerBased << "Cell " << iCorner << ": " << xcell[0] << " " << xcell[1] << " " << xcell[2] << " Weight=" << CornerBasedStencil->Weight[iCorner] << endl;
+          }
+        }
+
+
       }
     }
 
-    fout.close();
+    foutCenterBased.close();
+    foutCornerBased.close();
   }
 
   //finish execution of the test
