@@ -4354,7 +4354,7 @@ Default is nPlotFile=0, so no plot files are saved.
 	<parameter name="TypeRadioEmission" type="string" input="select">
 		<option name="simplistic" default="T" />
 		<option name="bremsstrahlung" />
-
+	</parameter>
 A command closely related to 'rfr' plots is 
 \begin{verbatim}
 #RADIOEMISSION
@@ -4367,7 +4367,7 @@ densities, the different contributions being weighted quite arbitrarily.
 </command>
 
 <command name="NOREFRACTION">
-	<parameter name="UseNoRefraction" type="logical" default="F">
+	<parameter name="UseNoRefraction" type="logical" default="F"/>
 
 Another command closely related to 'rfr' plots is 
 \begin{verbatim}
