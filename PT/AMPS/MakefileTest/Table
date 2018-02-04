@@ -1847,7 +1847,7 @@ Check=
 >>>@echo "test_InterpolateAMR-AMPS-test_check..." >> test_InterpolateAMR-AMPS-test.diff
 
 Check=
->>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
+>>>@echo "test_InterpolateAMR-AMPS-test_check..." >> test_InterpolateAMR-AMPS-test.diff
 >>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-AMPS-test/PT/plots/test_InterpolateAMR-CenterBased-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-AMPS-CenterBased-test.diff 
 >>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-AMPS-test/PT/plots/test_InterpolateAMR-CornerBased-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-AMPS-CornerBased-test.diff 
 >>>@cat test_InterpolateAMR-AMPS-CenterBased-test.diff test_InterpolateAMR-AMPS-CornerBased-test.diff > test_InterpolateAMR-AMPS-test.diff
