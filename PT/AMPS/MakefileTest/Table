@@ -1828,7 +1828,7 @@ Run=
 
 Check=
 >>>@echo "test_InterpolateAMR-test_check..." >> test_InterpolateAMR-test.diff
->>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-test/PT/plots/test_InterpolateAMR-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-test.diff 
+>>>-@${SCRIPTDIR}/DiffNum.pl ${PTDIR}/run_test_InterpolateAMR-test/PT/plots/test_InterpolateAMR-CenterBased-test.dat output/test_InterpolateAMR-test/test_InterpolateAMR-test.ref > test_InterpolateAMR-test.diff 
 >>>@ls -l test_InterpolateAMR-test.diff 
 >>>@echo Test test_InterpolateAMR-test has finished: `date`
 <#
