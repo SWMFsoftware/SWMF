@@ -1,11 +1,15 @@
-!instrumental broadening
-
 program spectrum
 
   use ModConst, ONLY           : cLightSpeed, cBoltzmann, cProtonMass, cAU, &
        cPi, rSun
 
+  use ModMPI
+
+
   implicit none
+
+  ! MPI variables
+  integer                     :: iProc, nProc, iComm = MPI_COMM_WORLD
 
   ! Variables for DEM and EM calculation
   logical                     :: DoDEM = .false., DoSpectrum = .false.
@@ -38,7 +42,7 @@ program spectrum
   character(len=200)          :: TypeDataFile
 
   ! Variables for instrument (if any)
-  logical                     :: IsInstrument = .false.
+  logical                     :: IsInstrument = .false., IsEIS = .false.
   character(len=200)          :: NameInstrument
   integer                     :: nPixel ! Number of pixels along slit
   integer                     :: nWavelengthBin, iWavelengthBin
@@ -66,7 +70,8 @@ program spectrum
   real,allocatable            :: Var_VIII(:,:,:,:)
   ! For H:He 10:1 fully ionized plasma the proton:electron ratio is 1/(1+2*0.1)
   real                        :: ProtonElectronRatio = 0.83
-  real                        :: dx = 1., dy = 1., dz = 1.!, dVperd2 = 1., dOmega= 1.
+  real                        :: dx = 1., dy = 1., dz = 1.
+  !, dVperd2 = 1., dOmega= 1.
 
   ! Extend transition region
   logical :: DoExtendTransitionRegion = .false.
@@ -102,6 +107,7 @@ program spectrum
   integer                     :: iWavelengthInterval, nWavelengthInterval
   integer                     :: nMaxLine, nLineFound
   real, allocatable           :: WavelengthInterval_II(:,:) 
+
   ! For Doppler-shift wavelength intervals are shifted by 10% of speed of light
   real, allocatable           :: WavelengthIntervalShifted_II(:,:) 
 
@@ -149,12 +155,18 @@ program spectrum
 
   type(LabelTableType), allocatable :: LabelTable_III(:,:,:)
 
+  ! For MPI_reduce in the main program 
+
+  integer :: iInterval
+
   character(len=*), parameter :: NameSub = 'spectrum.f90'
 
   !---------------------------------------------------------------------------
   write(*,*)'Spectrum.exe starting'
 
-!!!  call MPI_init(iError)
+  call MPI_init(iError)
+  call MPI_comm_rank(iComm, iProc, iError)
+  call MPI_comm_size(iComm, nProc, iError)
 
   call read_param
 
@@ -175,28 +187,38 @@ program spectrum
   call read_table
 
   nLineAll = min(nMaxLine,nLineFound)
-  
+
   ! Allocate table for labels
   allocate(LabelTable_III(nLineAll,n2,n3))
   if(IsVerbose)write(*,*)'allocated LabelTable_III'
-  
+
   ! Loop over Chianti lines
   if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
-!nLineAll = 1.
+!!! !nLineAll = 1.
+
   do iLine = 1,nLineAll
      if (.not. IsOneLine)call calc_flux
      if (IsOneLine .and.  &
           OneLineWavelength == LineTable_I(iLine)%LineWavelength)call calc_flux
   end do
 
-  call save_all
-  if(IsVerbose)write(*,*)'done with save_all'
-  call save_label
-  if(IsVerbose)write(*,*)'done with save_label'
 
-  write(*,*)'Spectrum.exe ending'
+  do iInterval = 1, nWavelengthinterval
+     call mpi_reduce_real_array(SpectrumTable_I(iInterval)%Spectrum_III, &
+          size(SpectrumTable_I(iInterval)%Spectrum_III), MPI_SUM, 0, &
+          iComm, iError)
+  end do
 
-!!!  call MPI_finalize(iError)
+  if(iProc==0)then 
+     call save_all
+     if(IsVerbose)write(*,*)'done with save_all'
+     call save_label
+     if(IsVerbose)write(*,*)'done with save_label'
+  end if
+
+  call MPI_finalize(iError)
+
+  if(iProc==0)write(*,*)'Spectrum.exe ending'
 
 contains
 
@@ -231,8 +253,8 @@ contains
        Te_I(iTe) = 10**(LogTeMinDEM+DLogTeDEM * iTe)
     end do
 
-    do k=1,n3
-       do j=1,n2
+    do k = 1, n3
+       do j = 1, n2
           do i=1,n1
              ! Cells inside or behind solar body
              if(all(Var_VIII(1:7,i,j,k)==0))CYCLE
@@ -283,7 +305,7 @@ contains
     deallocate(Te_I,DEM_I, EM_I)
 
   end subroutine calc_dem
-  
+
   !==========================================================================
   subroutine set_data_block
     ! When no data file input is used set up uniform data values in defined box
@@ -384,10 +406,10 @@ contains
     character(len=200)   :: StringHeaderSpectrum = &
          '[A] [erg sr^-1 cm^-2 A^-1]'
     real,allocatable            :: &
-         Intensity_VIII(:,:,:,:), CoordWave_I(:), CoordPixel_DII(:,:,:)
+         Intensity_VIII(:,:,:,:), CoordWave_I(:), CoordPixelJ_I(:),CoordPixelK_I(:)
 
     integer:: nWave, iWaveInterval, nWaveInterval, iWaveBin, iWave, & 
-         nWaveBin, nWaveAll
+         nWaveBin, nWaveAll, j, k
     real                        :: DWaveBin, WavelengthMin, WavelengthMax
     character(len=*), parameter :: NameSub = 'save_all'
     !------------------------------------------------------------------------
@@ -400,7 +422,20 @@ contains
 
     allocate( &
          Intensity_VIII(1,nWaveAll,n2,n3), &
-         CoordWave_I(nWaveAll), CoordPixel_DII(2,n2,n3))
+         CoordWave_I(nWaveAll), CoordPixelJ_I(n2), CoordPixelK_I(n3))
+
+    if(IsDataBLock)then
+       if(n3/=0)then
+          do k = 1, n3
+             CoordPixelK_I(k) = float(k)/float(n3) 
+          end do
+       end if
+       if(n2/=0)then
+          do j = 1, n2
+             CoordPixelJ_I(j) = float(j)/float(n2)
+          end do
+       end if
+    end if
 
     ! Number of wave length processed so far
     nWave = 0
@@ -429,36 +464,67 @@ contains
     end do
 
     ! nDim = 1 if n2 = n3 = 1, nDim = 2 if n3 = 1 /= n2 otherwise nDim= 3
-    if(n3==1)then
-       if(n2==1)then
-          call save_plot_file(NameFile = NameSpectrumFile, &
-               TypeFileIn     = TypeFileSpectrum,      &
-               StringHeaderIn = StringHeaderSpectrum,  &
-               NameVarIn      = "wavelength flux",     &
-               Coord1In_I     = CoordWave_I,           &
-               VarIn_VI       = Intensity_VIII(:,:,1,1))
+    if(IsDataBlock)then
+       if(n3==1)then
+          if(n2==1)then
+             call save_plot_file(NameFile = NameSpectrumFile, &
+                  TypeFileIn     = TypeFileSpectrum,      &
+                  StringHeaderIn = StringHeaderSpectrum,  &
+                  NameVarIn      = "wavelength flux",     &
+                  Coord1In_I     = CoordWave_I,           &
+                  VarIn_VI       = Intensity_VIII(:,:,1,1))
+          else
+             call save_plot_file(NameFile = NameSpectrumFile, &
+                  TypeFileIn     = TypeFileSpectrum,      &
+                  StringHeaderIn = StringHeaderSpectrum,  &
+                  NameVarIn      = "wavelength y flux",   &
+                  Coord1In_I     = CoordWave_I,           &
+                  Coord2In_I     = CoordPixelJ_I,        &
+                  VarIn_VII      = Intensity_VIII(:,:,:,1))
+          endif
        else
           call save_plot_file(NameFile = NameSpectrumFile, &
                TypeFileIn     = TypeFileSpectrum,      &
                StringHeaderIn = StringHeaderSpectrum,  &
-               NameVarIn      = "wavelength y flux",   &
+               NameVarIn      = "wavelength x y flux", &
+               Coord1In_I     = CoordWave_I,           &
+               Coord2In_I     = CoordPixelJ_I,      &
+               Coord3In_I     = CoordPixelK_I,        &
+               VarIn_VIII      = Intensity_VIII)
+       endif
+
+    else
+       if(n3==1)then
+          if(n2==1)then
+             call save_plot_file(NameFile = NameSpectrumFile, &
+                  TypeFileIn     = TypeFileSpectrum,      &
+                  StringHeaderIn = StringHeaderSpectrum,  &
+                  NameVarIn      = "wavelength flux",     &
+                  Coord1In_I     = CoordWave_I,           &
+                  VarIn_VI       = Intensity_VIII(:,:,1,1))
+          else
+             call save_plot_file(NameFile = NameSpectrumFile, &
+                  TypeFileIn     = TypeFileSpectrum,      &
+                  StringHeaderIn = StringHeaderSpectrum,  &
+                  NameVarIn      = "wavelength y flux",   &
+                  CoordMinIn_D   = CoordMin_D,            &
+                  CoordMaxIn_D   = CoordMax_D,            &
+                  Coord1In_I     = CoordWave_I,           &
+                  VarIn_VII      = Intensity_VIII(:,:,:,1))
+          endif
+       else
+          call save_plot_file(NameFile = NameSpectrumFile, &
+               TypeFileIn     = TypeFileSpectrum,      &
+               StringHeaderIn = StringHeaderSpectrum,  &
+               NameVarIn      = "wavelength x y flux", &
                CoordMinIn_D   = CoordMin_D,            &
                CoordMaxIn_D   = CoordMax_D,            &
                Coord1In_I     = CoordWave_I,           &
-               VarIn_VII      = Intensity_VIII(:,:,:,1))
+               VarIn_VIII      = Intensity_VIII)
        endif
-    else
-       call save_plot_file(NameFile = NameSpectrumFile, &
-            TypeFileIn     = TypeFileSpectrum,      &
-            StringHeaderIn = StringHeaderSpectrum,  &
-            NameVarIn      = "wavelength x y flux", &
-            CoordMinIn_D   = CoordMin_D,            &
-            CoordMaxIn_D   = CoordMax_D,            &
-            Coord1In_I     = CoordWave_I,           &
-            VarIn_VIII      = Intensity_VIII)
-    endif
-    
-    deallocate(Intensity_VIII, CoordWave_I, CoordPixel_DII)
+    end if
+
+    deallocate(Intensity_VIII, CoordWave_I, CoordPixelJ_I, CoordPixelK_I)
 
   end subroutine save_all
 
@@ -484,7 +550,7 @@ contains
     real                           :: TShift
     character(len=*), parameter    :: NameSub='calc_flux'
     !------------------------------------------------------------------------
-    
+
     allocate(Glambda_II(MinI:MaxI,MinJ:MaxJ))
 
     Aion     = LineTable_I(iLine)%Aion
@@ -495,8 +561,9 @@ contains
 
     do kPixel=1,n3
        do jPixel=1,n2
+          ! Each pixel is done by one processor
+          if(modulo(kPixel*n2+jPixel,nProc)/=iProc)CYCLE
           do i=1,n1
-
              if(IsOnePixel .and. (kPixel/=kOnePixel .or. &
                   jPixel/=jOnePixel .or. i/=iOnePixel))CYCLE
              ! Cells inside body or behind the solar disk
@@ -579,8 +646,8 @@ contains
              ! FWHM = 2sqrt(2ln2)*sigma
              ! sigma = FWHM/(2sqrt(2ln2))
              ! sigma^2 = (7e-12)^2 /(4*2*ln2)
+!!!                if(IsEIS)DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
              DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
-             
              ! Add instrumental broadening (if any)            
              if(IsInstrument)DLambdaSI2 = DLambdaSI2 + DLambdaInstr2
 
@@ -644,10 +711,9 @@ contains
              LabelTable_III(iLine,jPixel,kPixel)%FluxMono = &
                   FluxMono /(sqrt(2*cPi) * DLambda)
 
-
-             
              call disperse_line(iInterval, iCenter, Lambda, DLambda, FluxMono)
           end do
+
        end do
     end do
 
@@ -704,6 +770,7 @@ contains
 
     ! Update bins between begin and end indices by adding the Gaussian 
     ! distribution
+
     do iBin = iBegin , iEnd
        ! Get wavelength from the center of the bin
        LambdaBin = SpectrumTable_I(iInterval)%SpectrumGrid_I(iBin)
@@ -720,6 +787,7 @@ contains
        ! Update bin with flux
        SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) = &
             SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) + Flux
+
     end do
 
   end subroutine disperse_line
@@ -735,7 +803,7 @@ contains
     integer                     :: iPixel
     character(len=*), parameter :: NameSub='read_param'
     !------------------------------------------------------------------------
-    call read_file('SPECTRUM.in', iCommIn=MPI_COMM_SELF)
+    call read_file('SPECTRUM.in')
 
     call read_init('  ') 
 
@@ -801,6 +869,7 @@ contains
 
           select case(NameInstrument)
           case("EIS")
+             IsEIS = .true.
              nWavelengthInterval = 2
              nPixel = 512
              allocate(DLambdaInstr_I(nPixel))
@@ -1258,7 +1327,7 @@ contains
        read(UnitTmp_,*,iostat=iError) &
             NameIon, Aion, nLevelFrom, nLevelTo, LineWavelength, &
             LogN, LogT, LogG
-  
+
        if(iError  /= 0 .and. iError /= -1)then
           write(*,*)'iError = ',iError
           write(*,*)'last line = ',NameIon, Aion, nLevelFrom, nLevelTo, &
@@ -1300,7 +1369,7 @@ contains
           ! Create intensity table
           allocate(LineTable_I(iLine)%g_II(iMin:iMax,jMin:jMax))
           LineTable_I(iLine)%g_II = g_II(iMin:iMax,jMin:jMax)
-                    
+
           ! Storage is done
           DoStore = .false.
        end if

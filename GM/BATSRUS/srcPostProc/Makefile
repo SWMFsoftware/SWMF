@@ -15,7 +15,7 @@ LIBSHARE  = ${LIBDIR}/libSHARE.a
 # Post processing executables
 #
 ${BINDIR}/SPECTRUM.exe: ${LIBDIR}/libSHARE.a spectrum.o
-	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag2} 
+	${LINK.f90} -o ${BINDIR}/SPECTRUM.exe spectrum.o -L${LIBDIR} -lSHARE ${Lflag1} 
 
 SPECTRUM:
 	make ${BINDIR}/SPECTRUM.exe
