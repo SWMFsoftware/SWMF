@@ -514,6 +514,12 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
         f(i,j,k,iVar,MatrixRowNonZeroElementTable,NonZeroElementsFound,rhs,NewRow->RhsSupportTable_CornerNodes,NewRow->RhsSupportLength_CornerNodes,NewRow->RhsSupportTable_CenterNodes,NewRow->RhsSupportLength_CenterNodes,node);
 
+        if (NonZeroElementsFound==0) {
+          //the point is not included into the matrix
+          MatrixRowStack.deleteElement(NewRow);
+          continue;
+        }
+
         if (NonZeroElementsFound>MaxStencilLength) {
           exit(__LINE__,__FILE__,"Error: NonZeroElementsFound>=nMaxMatrixNonzeroElement; Need to increase the value of nMaxMatrixNonzeroElement");
         }
