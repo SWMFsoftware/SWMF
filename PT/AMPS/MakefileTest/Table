@@ -136,6 +136,66 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
+Name=CG-Rosina-Liouville--Trajectory 
+Time=3
+
+Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit-120316/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2 @@(0+valeriy)
+Keys=-spice-path=/home3/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/nobackupp8/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2 -cplr-data-path=/nobackupp8/vtenishe/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2@@(0+pleiades)
+Keys=-spice-path=/scratch/02452/vtenishe/SPICE/cspice -spice-kernels=/scratch/02452/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2 -cplr-data-path=/scratch/02452/vtenishe/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2@@(0+stampede)
+
+
+Compile=
+>>>@echo "test_CG-Rosina-Liouville--Trajectory_compile..." > test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+>>>@cd input; mv cg-end-of-mission-rosina.input cg-end-of-mission-rosina.input--original
+>>>@cd input; cvs update -r CG_Rosina_Liouville__dev_branch_071117 cg-end-of-mission-rosina.input
+
+>>>@mkdir -p Temp
+>>>@cd Temp; cvs co -r CG_Rosina_Liouville__dev_branch_071117 AMPS
+
+>>>@cp -r srcCG srcCG--original
+>>>@cp -r Temp/AMPS/srcCG .
+
+>>>@cp -r src src--original
+>>>@cp -r Temp/AMPS/src .
+
+>>>./Config.pl -application=cg-end-of-mission-rosina -amps-test=on -amps-test=on $(TESTCG-Rosina-Liouville--TrajectoryKEYS)
+>>>./Config.pl -amps-test=off
+>>>@($(MAKE) -j8 amps)
+>>>./Config.pl -amps-test=on
+
+>>>@rm -rf Temp
+>>>rm -rf src 
+>>>mv src--original src
+
+>>>rm -rf srcCG
+>>>mv srcCG--original srcCG
+
+>>>mv input/cg-end-of-mission-rosina.input--original input/cg-end-of-mission-rosina.input
+>>>@echo "test_CG-Rosina-Liouville--Trajectory_compile... done" >> test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+
+Check= 
+>>>@echo "test_CG-Rosina-Liouville--Trajectory_check..." >> test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+
+>>>@${TESTCG-Rosina-Liouville--TrajectoryDIR}/../utility/ReduceFile.pl ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/SurfaceTriangulation.dat 40
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/SurfaceTriangulation.dat.Reduced.Step=40 output/test_CG-Rosina-Liouville--Trajectory/SurfaceTriangulation.dat.Reduced.Step=40$(TESTCG-Rosina-Liouville--Trajectory-REF).ref_np`ls $(TESTCG-Rosina-Liouville--TrajectoryDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville--Triangulation$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/Liouville.spec=SUM.dat  output/test_CG-Rosina-Liouville--Trajectory/Liouville.spec=SUM$(TESTCG-Rosina-Liouville--Trajectory-REF).ref_np`ls $(TESTCG-Rosina-Liouville--TrajectoryDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville--COPS-Data$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/Liouville.spec=SUM.dat  output/test_CG-Rosina-Liouville--Trajectory/Liouville.spec=SUM$(TESTCG-Rosina-Liouville-Trajectory-REF).ref_np`ls $(TESTCG-Rosina-Liouville--TrajectoryDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+
+>>>@ls -l test_CG-Rosina-Liouville--Triangulation$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+>>>@ls -l test_CG-Rosina-Liouville--COPS-Data$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+>>>@ls -l test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+>>>@echo Test test_CG-Rosina-Liouville--Trajectory has finished: `date`
+
+<#
+
+
+
+
+
+
+#>
 Name=CG-Rosina-Liouville
 Time=3
 
