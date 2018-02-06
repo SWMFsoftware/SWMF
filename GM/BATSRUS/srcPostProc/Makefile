@@ -76,7 +76,7 @@ test_spectrum_compile: SPECTRUM_chianti_tbl.dat
 	make SPECTRUM
 
 test_spectrum_run:
-	./SPECTRUM.exe > test-spectrum.log
+	${MPIRUN} ./SPECTRUM.exe > test-spectrum.log
 
 test_spectrum_check:
 	${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 -a=1e-12 \
