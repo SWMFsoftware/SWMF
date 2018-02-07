@@ -410,7 +410,7 @@ contains
 
     real :: TimeSimulationOrig, HallCmaxFactorOrig
 
-    logical :: DoTestKrylov, DoTestKrylovMe
+    logical :: DoTestKrylov
 
     logical :: UseUpdateCheckOrig, UsePointImplicitOrig, &
          DoFixAxisOrig, UseCoarseAxisOrig
@@ -423,6 +423,7 @@ contains
     character(len=*), parameter:: NameSub = 'advance_part_impl'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
+
     if(DoTest) write(*,*)NameSub,' starting at step=',n_step
 
     ! Initialize some variables in ModImplicit
@@ -648,9 +649,11 @@ contains
        ! the inner loop only needs to reduce the error somewhat.
        if(UseNewton) ImplParam%ErrorMax = 0.1
 
+       call test_start('krylov', DoTestKrylov)
        call solve_linear_multiblock(ImplParam, &
             nVar, nDim, nI, nJ, nK, nBlockImpl, iComm, &
-            impl_matvec, Rhs_I, x_I, DoTestKrylovMe, JacImpl_VVCIB)
+            impl_matvec, Rhs_I, x_I, DoTestKrylov, JacImpl_VVCIB)
+       call test_stop('krylov', DoTestKrylov)
 
        if(DoTest .and. nBlockImpl>0)&
             write(*,*)NameSub,': final     x_I(test)=',x_I(nTest)
