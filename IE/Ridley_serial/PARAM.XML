@@ -36,7 +36,7 @@ Default is iDebugLevel=-1 which is no debug info on any and iDebugProc=0.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! OUTPUT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="RESTART">
-	<parameter name="DoRestart" tyep="logical" default="F"/>
+	<parameter name="DoRestart" type="logical" default="F"/>
 
 #RESTART
 T			DoRestart
