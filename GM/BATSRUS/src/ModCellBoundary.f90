@@ -15,9 +15,11 @@ module ModCellBoundary
   ! Public methods
   public :: set_cell_boundary, set_edge_corner_ghost
 
+  ! Index range for the ghost cell region (for ModUser::user_set_cell_boundary)
+  integer, public:: iMin, iMax, jMin, jMax, kMin, kMax
+  
   ! Local variables
-  ! (but we could make them public for ModUser::user_set_cell_boundary)
-  integer:: iMin, iMax, jMin, jMax, kMin, kMax, iSide, iSideMin, iSideMax
+  integer:: iSide, iSideMin, iSideMax
 
 contains
   !============================================================================
