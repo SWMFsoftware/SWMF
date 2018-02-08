@@ -4029,11 +4029,12 @@ StringPlot must contain the following 3 parts in the following order
 \begin{verbatim}
 PlotForm PlotArea PlotVar
 \end{verbatim}
-Each of these parts can have different values. Most (but not all) combinations are valid.
+Each of these parts can have different values. 
+Most (but not all) combinations are valid.
 The PlotForm can have one of the following values:
 \begin{verbatim}
 tec             - Node based Tecplot format
-tcp             - Cell centered Tecplot format (implemented for 3d and cut only)
+tcp             - Cell centered Tecplot format
 hdf             - HDF5 format (for VisIt)
 idl/idl_real4   - Single precision binary "IDL" format
 idl_real8       - Double precision binary "IDL" format
@@ -4355,30 +4356,26 @@ Default is nPlotFile=0, so no plot files are saved.
 		<option name="simplistic" default="T" />
 		<option name="bremsstrahlung" />
 	</parameter>
-A command closely related to 'rfr' plots is 
-\begin{verbatim}
 #RADIOEMISSION
-simplistic
-\end{verbatim}
+simplistic               TypeRadioEmission
+
+This command is used for 'rfr' plots (see #SAVEPLOT).
 It allows the selection of mechanisms for radio emission ('bremsstrahlung' or
 'simplistic' mechanism, which interpolates between Bremsstrahlung and 
-contributions from non-thermal emission at critical and quarter-of-critical, 
+contributions from non-thermal emission at critical and quarter-of-critical
 densities, the different contributions being weighted quite arbitrarily.
+Default is 'simplistic'.
 </command>
 
 <command name="NOREFRACTION">
 	<parameter name="UseNoRefraction" type="logical" default="F"/>
-
-Another command closely related to 'rfr' plots is 
-\begin{verbatim}
 #NOREFRACTION
 T               UseNoRefraction
-\end{verbatim}
-It allows the user to switch off  the radio wave referaction to evaluate,
-how the refraction (which is switched on by default) affects the images.
 
+This command allows switching off the radio wave referaction to evaluate
+how the refraction affects the images obtained with 'rfr' plots
+(see #SAVEPLOT). Default is switched on (UseNoRefraction=F).
 </command>
-
 
 <command name="SAVETECPLOT">
 	 <parameter name="DoSaveOneTecFile" type="logical" default="F" />
