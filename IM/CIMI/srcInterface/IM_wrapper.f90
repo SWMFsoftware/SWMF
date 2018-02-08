@@ -215,12 +215,16 @@ contains
   !===========================================================================
 
   subroutine IM_save_restart(TimeSimulation)
-    use ModCimiRestart, ONLY: cimi_write_restart
+
+    use CON_coupler, ONLY: NameRestartOutDirComp
+    use ModCimiRestart, ONLY: cimi_write_restart, NameRestartOutDir
 
     real,     intent(in) :: TimeSimulation   ! seconds from start time
-    character(len=*), parameter :: NameSub='IM_save_restart'
 
+    character(len=*), parameter :: NameSub='IM_save_restart'
     !-------------------------------------------------------------------------
+    if(NameRestartOutDirComp /= '') NameRestartOutDir = NameRestartOutDirComp
+
     call cimi_write_restart
 
   end subroutine IM_save_restart
