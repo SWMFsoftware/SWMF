@@ -30,7 +30,7 @@ module ModPlotBox
 
   ! Rotation angles around axis, center coordinates
   real :: xAngle, yAngle, zAngle
-  real :: Xyz0_D(3), Xyz0Hgi_D(3)
+  real :: Xyz0_D(3), Xyz0Plot_D(3)
 
   ! Local results container:
   ! Array of values written to file:
@@ -62,49 +62,51 @@ contains
     if(allocated(PlotVar_VIII)) RETURN
 
     ! Get box resolution, center and size from ModIO arrays:
-    dX   = abs(plot_dx(1, iFile))
-    dY   = abs(plot_dx(2, iFile))
-    dZ   = abs(plot_dx(3, iFile))
-    Xyz0_D = plot_range(1:3, iFile)
-    xLen = plot_range(4, iFile)
-    yLen = plot_range(5, iFile)
-    zLen = plot_range(6, iFile)
+    dX     = abs(plot_dx(1,iFile))
+    dY     = abs(plot_dx(2,iFile))
+    dZ     = abs(plot_dx(3,iFile))
+    Xyz0_D = plot_range(1:3,iFile) ! either in LOS or Plot coordinates
+    xLen   = plot_range(4,iFile)
+    yLen   = plot_range(5,iFile)
+    zLen   = plot_range(6,iFile)
 
-    xMin = plot_range(1, iFile) - xLen/2
-    xMax = plot_range(1, iFile) + xLen/2
-    yMin = plot_range(2, iFile) - yLen/2
-    yMax = plot_range(2, iFile) + yLen/2
-    zMin = plot_range(3, iFile) - zLen/2
-    zMax = plot_range(3, iFile) + zLen/2
+    xMin   = plot_range(1,iFile) - xLen/2
+    xMax   = plot_range(1,iFile) + xLen/2
+    yMin   = plot_range(2,iFile) - yLen/2
+    yMax   = plot_range(2,iFile) + yLen/2
+    zMin   = plot_range(3,iFile) - zLen/2
+    zMax   = plot_range(3,iFile) + zLen/2
 
     ! Get coordinate transformation matrix:
     PlotToGm_DD = transform_matrix(Time_Simulation, &
          TypeCoordPlot_I(iFile), TypeCoordSystem)
 
+    ! Check if box center is given in "observer" frame or in TypeCoordPlot
     if(IsObsBox_I(iFile))then
        ! This is the tilt (roll)
        xAngle = plot_normal(1,iFile) * cDegtoRad
 
        ! Translate image center from LOS coordinates to TypeCoordPlot_I(iFile)
-       ObsPos_D = ObsPos_DI(:,iFile)
-       Los_D = ObsPos_D/sqrt(sum(ObsPos_D**2))
-       aUnit_D = cross_product((/0.,0.,1./), Los_D)
-       aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
-       bUnit_D = cross_product(Los_D, aUnit_D)
-       bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
-       Xyz0Hgi_D =  Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
+       ObsPos_D   = ObsPos_DI(:,iFile)
+       Los_D      = ObsPos_D/sqrt(sum(ObsPos_D**2))
+       aUnit_D    = cross_product((/0.,0.,1./), Los_D)
+       aUnit_D    = aUnit_D/sqrt(sum(aUnit_D**2))
+       bUnit_D    = cross_product(Los_D, aUnit_D)
+       bUnit_D    = bUnit_D/sqrt(sum(bUnit_D**2)) ! this should not be needed
+       Xyz0Plot_D = Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
 
        ! Observer position is with respect to center of box.
        ! Convert observer location to longitude and latitude.
        ! Coordinate system is TypeCoordPlot_I(iFile)
-       call xyz_to_lonlat(ObsPos_DI(:,iFile) - Xyz0Hgi_D, zAngle, yAngle)
+       call xyz_to_lonlat(ObsPos_DI(:,iFile) - Xyz0Plot_D, zAngle, yAngle)
        zAngle = cTwoPi - zAngle
     else
        ! Get box orientation from ModIO arrays:
        xAngle = plot_normal(1,iFile) * cDegtoRad
        yAngle = plot_normal(2,iFile) * cDegtoRad
        zAngle = plot_normal(3,iFile) * cDegtoRad
-       Xyz0Hgi_D =  Xyz0_D
+       ! Center of box in this case is given in TypeCoordPlot
+       Xyz0Plot_D = Xyz0_D
     end if
 
     ! Set number of points:
@@ -183,7 +185,7 @@ contains
                   matmul(rot_matrix_x(-xAngle), Xyz_D)))
 
              ! Shift box back and Get Gm coordinates (i.e., TypeCoordSystem)
-             XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0Hgi_D)
+             XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0Plot_D)
 
              ! When inside Body keep default plot values
              if(sqrt(sum(XyzGm_D**2)) < rBody)CYCLE
