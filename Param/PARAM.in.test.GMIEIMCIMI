@@ -1,8 +1,5 @@
 Begin session: 1
 
-#ECHO
-T
-
 #TIMEACCURATE
 T			DoTimeAccurate
 
@@ -11,7 +8,7 @@ T			DoTimeAccurate
 100			DnShowProgressLong
 
 #DESCRIPTION
-Test for GM-IM-IE.
+Test for GM-IM/CIMI-IE.
 
 #PLANET
 EARTH			NamePlanet
