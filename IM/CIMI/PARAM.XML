@@ -99,12 +99,24 @@ Sets minimum pressure passed to GM.
 
 
 <command name="RESTART">
-	<parameter name="IsRestart" type="logical" />
+        <parameter name="DoRestart" type="logical" default="F"/>
+	<parameter name="DoReadRestartSatellite" type="logical" default="F"/>
 
 #RESTART
-F		IsRestart
+F		DoRestart
+F               DoReadRestartSatellite
 
-Determine whether or not to continue a previous run.
+The DoRestart logical determines whether or not to continue from a previous run.
+The DoReadRestartSatellite logical determines if the satellite restart information
+should be read.
+
+This command, together with #TIMESIMULATION, is saved into the restart header file
+file that can be included for restart as
+
+#INCLUDE
+IM/restartIN/restart.H
+
+By default the code starts without a restart (see #INITIALF2).
 </command>
 
 <command name="INITIALF2">
