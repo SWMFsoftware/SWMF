@@ -88,6 +88,9 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
+#ANISOPRESSUREIM
+T			DoAnisoPressureIMCoupling
+
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
 T                       UseCpcpBc  (rest is read if true)
@@ -296,13 +299,10 @@ parabola		TypeConservCrit_I
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
-#ANISOPRESSUREIM
-T			DoAnisoPressureIMCoupling
-
 ! Setting 1
 #IMCOUPLING
 20.0                    TauCoupleIm
-T                       DoImSatTrace
+F                       DoImSatTrace
 T                       DoCoupleImPressure
 T                       DoCoupleImDensity
 0.01			DensityCoupleFloor
