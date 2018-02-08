@@ -30,7 +30,7 @@ module ModPlotBox
 
   ! Rotation angles around axis, center coordinates
   real :: xAngle, yAngle, zAngle
-  real :: Xyz0_D(3)
+  real :: Xyz0_D(3), Xyz0Hgi_D(3)
 
   ! Local results container:
   ! Array of values written to file:
@@ -92,12 +92,12 @@ contains
        aUnit_D = aUnit_D/sqrt(sum(aUnit_D**2))
        bUnit_D = cross_product(Los_D, aUnit_D)
        bUnit_D = bUnit_D/sqrt(sum(bUnit_D**2))
-       Xyz0_D =  Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
+       Xyz0Hgi_D =  Xyz0_D(1)*Los_D + Xyz0_D(2)*aUnit_D + Xyz0_D(3)*bUnit_D
 
        ! Observer position is with respect to center of box.
        ! Convert observer location to longitude and latitude.
        ! Coordinate system is TypeCoordPlot_I(iFile)
-       call xyz_to_lonlat(ObsPos_DI(:,iFile) - Xyz0_D, zAngle, yAngle)
+       call xyz_to_lonlat(ObsPos_DI(:,iFile) - Xyz0Hgi_D, zAngle, yAngle)
        zAngle = cTwoPi - zAngle
     else
        ! Get box orientation from ModIO arrays:
@@ -182,7 +182,7 @@ contains
                   matmul(rot_matrix_x(-xAngle), Xyz_D)))
 
              ! Shift box back and Get Gm coordinates (i.e., TypeCoordSystem)
-             XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0_D)
+             XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0Hgi_D)
 
              ! When inside Body keep default plot values
              if(sqrt(sum(XyzGm_D**2)) < rBody)CYCLE
