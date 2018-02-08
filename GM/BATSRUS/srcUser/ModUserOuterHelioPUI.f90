@@ -27,6 +27,8 @@
 ! November 2017 - use Solar Wind Pressure and Temp for the Mach Number for REGIONS definition
 ! for inner boundary the solar pressure is iostropic (dont have any dependence with magnetic field
 ! took off inner boundary at 30AU
+! adding possibilty of using user boundaries for other faces besides EAst - Feb 08, 2018
+!
 module ModUser
 
   use BATL_lib, ONLY: &
@@ -450,31 +452,37 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     ! The ISM enters at the east boundary (negative x)
+    ! February 08, 2018 - I added the possibility that we can use user conditions in other boundaries as well
 
     use ModMain
     use ModVarIndexes
     use ModProcMH
     use ModAdvance, ONLY : State_VGB
     use ModMultiFluid
+    use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
 
     integer,intent(in)::iBlock, iSide
     character (len=*),intent(in) :: TypeBc
     logical,intent(out) :: IsFound
 
-    integer :: i, iVar
+    integer ::  iVar
+    !!merav
+    integer :: i, j, k
+    !!merav
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
     IsFound = .true.
-    State_VGB(SWHrho_,-1:2,:,:,iBlock)=VLISW_rho
-    State_VGB(SWHrhoUx_,-1:2,:,:,iBlock)=VLISW_rho*VLISW_Ux
-    State_VGB(SWHrhoUy_,-1:2,:,:,iBlock)=VLISW_rho*VLISW_Uy
-    State_VGB(SWHrhoUz_,-1:2,:,:,iBlock)=VLISW_rho*VLISW_Uz
-    State_VGB(Bx_,-1:2,:,:,iBlock)=VLISW_Bx
-    State_VGB(By_,-1:2,:,:,iBlock)=VLISW_By
-    State_VGB(Bz_,-1:2,:,:,iBlock)=VLISW_Bz
-    State_VGB(SWHp_,-1:2,:,:,iBlock)=VLISW_p
+
+    State_VGB(SWHrho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_rho
+    State_VGB(SWHrhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_rho*VLISW_Ux
+    State_VGB(SWHrhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_rho*VLISW_Uy
+    State_VGB(SWHrhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_rho*VLISW_Uz
+    State_VGB(Bx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_Bx
+    State_VGB(By_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_By
+    State_VGB(Bz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_Bz
+    State_VGB(SWHp_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)=VLISW_p
 
     if(UseNeutralFluid)then
        !
@@ -482,12 +490,11 @@ contains
        ! The separation between Pop IV and Pop I is arbitrary so
        ! we took the separation as Vlad in x=-1500AU
 
-       State_VGB(Ne4Rho_,-1:2,:,:,iBlock)   = RhoNeutralsISW
-       State_VGB(Ne4RhoUx_,-1:2,:,:,iBlock) = RhoNeutralsISW*UxNeutralsISW
-       State_VGB(Ne4RhoUy_,-1:2,:,:,iBlock) = RhoNeutralsISW*UyNeutralsISW
-       State_VGB(Ne4RhoUz_,-1:2,:,:,iBlock) = RhoNeutralsISW*UzNeutralsISW
-       State_VGB(Ne4P_,-1:2,:,:,iBlock)     = PNeutralsISW
-
+       State_VGB(Ne4Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = RhoNeutralsISW
+       State_VGB(Ne4RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = RhoNeutralsISW*UxNeutralsISW
+       State_VGB(Ne4RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = RhoNeutralsISW*UyNeutralsISW
+       State_VGB(Ne4RhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = RhoNeutralsISW*UzNeutralsISW
+       State_VGB(Ne4P_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)     = PNeutralsISW
        !
        ! In general you should specify as many values as many incoming
        ! characteristic waves are present. For a neutral fluid this
@@ -496,29 +503,61 @@ contains
 
        !
        !\
-       
        ! PopII and III supersonic outflow
        !/
-       
-       do iVar = NeuRho_, Ne3P_; do i = -1, 2
-          State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
-       end do; end do
+       do iVar = NeuRho_, Ne3P_
+          select case(iSide)
+          case(1)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) =  State_VGB(iVar,1,j,k,iBlock) 
+             end do; end do; end do
+          case(2)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) =  State_VGB(iVar,nI,j,k,iBlock) 
+             end do; end do; end do
+          case(3)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,1,k,iBlock)  
+             end do; end do; end do
+          case(4)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,nJ,k,iBlock) 
+             end do; end do; end do
+          case(5)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,1,iBlock) 
+             end do; end do; end do
+          case(6)
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                State_VGB(iVar,i,j,k,iBlock) = State_VGB(iVar,i,j,nK,iBlock)  
+             end do; end do; end do
+          end select
+
+       end do
     end if
 
-    ! do iVar = Pu3Rho_, Pu3P_; do i = -1, 2
-    !   State_VGB(iVar,i,:,:,iBlock) = State_VGB(iVar,3,:,:,iBlock)
-    State_VGB(Pu3Rho_,-1:2,:,:,iBlock) = 10E-6*VLISW_rho
-    State_VGB(Pu3RhoUx_,-1:2,:,:,iBlock) = 10E-6*VLISW_rho*VLISW_Ux
-    State_VGB(Pu3RhoUy_,-1:2,:,:,iBlock) =10E-6*VLISW_rho*VLISW_Uy
-    State_VGB(Pu3RhoUz_,-1:2,:,:,iBlock) =10E-6*VLISW_rho*VLISW_Uz
-    State_VGB(Pu3P_,-1:2,:,:,iBlock) = 10E-6*VLISW_p
-    ! end do; end do
+    State_VGB(Pu3Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 10E-6*VLISW_rho
+    State_VGB(Pu3RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 10E-6*VLISW_rho*VLISW_Ux
+    State_VGB(Pu3RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) =10E-6*VLISW_rho*VLISW_Uy
+    State_VGB(Pu3RhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) =10E-6*VLISW_rho*VLISW_Uz
+    State_VGB(Pu3P_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 10E-6*VLISW_p
 
-    State_VGB(Rho_,-1:2,:,:,iBlock)  = State_VGB(SWHRho_,-1:2,:,:,iBlock) +  State_VGB(Pu3Rho_,-1:2,:,:,iBlock)
-    State_VGB(P_,-1:2,:,:,iBlock)  = State_VGB(SWHP_,-1:2,:,:,iBlock) + State_VGB(Pu3P_,-1:2,:,:,iBlock)
-    State_VGB(RhoUx_,-1:2,:,:,iBlock)  = (State_VGB(SWHRhoUx_,-1:2,:,:,iBlock) +  State_VGB(Pu3RhoUx_,-1:2,:,:,iBlock))
-    State_VGB(RhoUy_,-1:2,:,:,iBlock)  = (State_VGB(SWHRhoUy_,-1:2,:,:,iBlock) +  State_VGB(Pu3RhoUy_,-1:2,:,:,iBlock))
-    State_VGB(RhoUz_,-1:2,:,:,iBlock)  = (State_VGB(SWHRhoUz_,-1:2,:,:,iBlock) +  State_VGB(Pu3RhoUz_,-1:2,:,:,iBlock))
+    ! Total fluid to be eliminated
+    State_VGB(Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)  = &
+         State_VGB(SWHRho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) +  &
+         State_VGB(Pu3Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
+    State_VGB(P_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)  = &
+         State_VGB(SWHP_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) + &
+         State_VGB(Pu3P_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
+    State_VGB(RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)  = &
+         State_VGB(SWHRhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) +  &
+         State_VGB(Pu3RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
+    State_VGB(RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)  = &
+         State_VGB(SWHRhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) +  &
+         State_VGB(Pu3RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
+    State_VGB(RhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)  = &
+         State_VGB(SWHRhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) +  &
+         State_VGB(Pu3RhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_cell_boundary
