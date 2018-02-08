@@ -104,6 +104,7 @@ contains
        xAngle = plot_normal(1,iFile) * cDegtoRad
        yAngle = plot_normal(2,iFile) * cDegtoRad
        zAngle = plot_normal(3,iFile) * cDegtoRad
+       Xyz0Hgi_D =  Xyz0_D
     end if
 
     ! Set number of points:
