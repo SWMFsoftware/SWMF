@@ -97,6 +97,9 @@ module ModUser
   logical :: UseSwBC        = .false.
   logical :: UseReflectedBC = .false.
 
+  ! Inner boundary condition for magnetic field
+  character (len=10) :: TypeBfieldBody = 'zero'
+
   ! Perturbed initial condition parameters:
   real :: R0PerturbedSi  = 1e6, R0Perturbed
   real :: R1PerturbedSi  = 2e6, R1Perturbed
@@ -304,6 +307,8 @@ contains
              if(iProc==0) call stop_mpi( &
                   NameSub//' invalid body type='//trim(NameCommand))
           end select
+       case("#TYPEBFIELDBODY")
+          call read_var('TypeBfieldBody', TypeBfieldBody)
        case("#TESTFACECOORDS")
           call read_var('FaceCoordsX', FaceCoordsX)
           call read_var('FaceCoordsY', FaceCoordsY)
@@ -799,7 +804,8 @@ contains
     use ModFaceBoundary, ONLY: iFace, jFace, kFace, FaceCoords_D, &
          iBoundary, VarsTrueFace_V, iSide, iBlock => iBlockBc, TimeBc
     use ModGeometry,    ONLY: ExtraBc_, Xyz_DGB
-    use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V
+    use ModPhysics, ONLY: UnitRho_, BodyRho_I, BodyP_I, Si2No_V, UnitN_, &
+         UnitTemperature_
     use ModSolarwind,    ONLY: get_solar_wind_point
     use ModBlockData, ONLY: use_block_data, clean_block_data, &
          get_block_data, put_block_data
@@ -824,7 +830,7 @@ contains
 
     ! if (iProc /= 0) DoTestHere = .false.
 
-!!! Outer boundaries
+    ! Outer boundaries
     if(iBoundary >0) then
        call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
 
@@ -835,7 +841,7 @@ contains
 
     if (iBoundary /= ExtraBc_) call stop_mpi(NameSub//' bad iBoundary value')
 
-!!! Body boundaries
+    ! Body boundaries
     ! Default body boundary conditions
     if (UseSwBC) then
        ! Boundary condition with solar wind values
@@ -847,7 +853,7 @@ contains
        call get_solar_wind_point(TimeBc, FaceCoords_D, VarsGhostFace_V)
     else
        if (DoWriteOnce .and. .not. UseReflectedBC) then
-          !          write(*,*) NameSub, ': floating body conditions.'
+          ! write(*,*) NameSub, ': floating body conditions.'
           DoWriteOnce = .false.
        end if
 
@@ -856,7 +862,7 @@ contains
        VarsGhostFace_V = VarsTrueFace_V
     end if
 
-    !! Neutral boundary conditions -----------------------------------------
+    ! Neutral boundary conditions -----------------------------------------
     if (DoUseCGShape) then
 
        ! We can use the saved values if no AMR is done
@@ -982,12 +988,34 @@ contains
     ! Calculate the normal velocity
     uNormal = sqrt(TempCometLocal)*TempToUnormal
 
-    VarsGhostFace_V(Neu1Ux_:Neu1Uz_) = Normal_D*uNormal
-    VarsGhostFace_V(Neu1Rho_)    = ProductionRateLocal/uNormal*MassFluid_I(nFluid)
-    VarsGhostFace_V(Neu1P_)      = &
-         VarsGhostFace_V(Neu1Rho_)*TempCometLocal*TempToPressure
+    if (.not. DoUseHaserBackground) then
+       ! illumniated case if the Haser background is not applied
+       VarsGhostFace_V(Neu1Ux_:Neu1Uz_) = Normal_D*uNormal
+       VarsGhostFace_V(Neu1Rho_)        = ProductionRateLocal/uNormal  &
+            *MassFluid_I(nFluid)
+       VarsGhostFace_V(Neu1P_)          =                              &
+            VarsGhostFace_V(Neu1Rho_)*TempCometLocal*TempToPressure
+    else
+       ! Haser background
+       VarsGhostFace_V(Neu1Rho_)        =  Qprod/                 &
+            (4.*cPi*rSphericalBodySi**2*uHaser )*                 &
+            exp(-vHI*rSphericalBodySi/uHaser)*                    &
+            Si2No_V(UnitN_) * MassFluid_I(nFluid)
+       VarsGhostFace_V(Neu1Ux_:Neu1Uz_) = 0.0
+       VarsGhostFace_V(Neu1P_)          = VarsGhostFace_V(Neu1Rho_)/   &
+            MassFluid_I(nFluid)*TempNeuMinSi*Si2No_V(UnitTemperature_)
+    end if
 
     if (.not. UseSwBC) call set_ion_face_boundary
+
+    IsIlluminated = .false.
+
+    ! Store for future time steps
+    if (DoUseCGShape)  then
+       call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
+       call put_block_data(iBlock, 3, Normal_D)
+       call put_block_data(iBlock, 3, NormalFace_D)
+    end if
 
     if (DoTestHere .and. IsIlluminated .and. CosAngle > 0.5) then
        FaceCoordsTest_D = FaceCoords_D
@@ -1019,15 +1047,6 @@ contains
        write(*,*) 'Neu1p         =', VarsGhostFace_V(Neu1p_)
        DoTestHere=.false.
        nStepPritSetFace = n_step
-    end if
-
-    IsIlluminated = .false.
-
-    ! Store for future time steps
-    if (DoUseCGShape)  then
-       call put_block_data(iBlock, 5, VarsGhostFace_V(Neu1Rho_:Neu1P_))
-       call put_block_data(iBlock, 3, Normal_D)
-       call put_block_data(iBlock, 3, NormalFace_D)
     end if
 
     call test_stop(NameSub, DoTest)
@@ -1084,7 +1103,7 @@ contains
          if (UseReflectedBC) then
             ! Reflected raidal velocity uG = uT - 2*u_normal
             if (DoWriteOnce) then
-               !               write(*,*) NameSub, ': reflected boundary condition'
+               ! write(*,*) NameSub, ': reflected boundary condition'
                DoWriteOnce = .false.
             end if
 
@@ -1131,7 +1150,14 @@ contains
       end do
 
       ! magnetic field on the comet body should be 0
-      VarsGhostFace_V(Bx_:Bz_) = 0.0
+      if (TypeBfieldBody == 'zero') then
+         VarsGhostFace_V(Bx_:Bz_) = 0.0
+      else if (TypeBfieldBody == 'absorbed') then
+         if (sum(VarsGhostFace_V(Bx_:Bz_)*Normal_D) > 0) &
+              VarsGhostFace_V(Bx_:Bz_) = 0.0
+      else 
+         call stop_mpi(NameSub//' unknow TypeBfieldBody')
+      end if
 
       if(UseElectronPressure .and. uIonMeanNormal > 0.0) then
          ! Assume that electron velocity is the same as the mean ion velocity.
@@ -1139,6 +1165,10 @@ contains
          ! at the body if outflow, float otherwise
          VarsGhostFace_V(Pe_) = nElec*TempNeuMin
       end if
+
+      ! fixed bc for Hyp_
+      if(Hyp_>1) VarsGhostFace_V(Hyp_) = 0
+
     end subroutine set_ion_face_boundary
     !==========================================================================
     !----------------------------------------------------------------------
@@ -1863,16 +1893,27 @@ contains
 
     do k=1,nK; do j=1,nJ; do i=1,nI
        if (DoUseHaserBackground) then
-          State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/ &
-               (4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2*uHaser ) * &
-               exp(-vHI*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/uHaser)* &
-               Si2No_V(UnitN_) * MassFluid_I(nFluid)
-          State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) = &
-               State_VGB(Neu1Rho_,i,j,k,iBlock)*uHaser*Si2No_V(UnitU_)*&
-               Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
-          State_VGB(Neu1P_,i,j,k,iBlock)     = &
-               State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid) &
-               *TempNeuMinSi*Si2No_V(UnitTemperature_)
+          if (R_BLK(i,j,k,iBlock) > rSphericalBody) then
+             State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/                        &
+                  (4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2*uHaser ) * &
+                  exp(-vHI*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/uHaser)*       &
+                  Si2No_V(UnitN_) * MassFluid_I(nFluid)
+             State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) =                     &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)*uHaser*Si2No_V(UnitU_)* &
+                  Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             State_VGB(Neu1P_,i,j,k,iBlock)     =                          &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)     &
+                  *TempNeuMinSi*Si2No_V(UnitTemperature_)
+          else
+             State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/                  &
+                  (4.*cPi*rSphericalBodySi**2*uHaser )*                 &
+                  exp(-vHI*rSphericalBodySi/uHaser)*                    &
+                  Si2No_V(UnitN_) * MassFluid_I(nFluid)
+             State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) = 0.0
+             State_VGB(Neu1P_,i,j,k,iBlock)     =                       &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)  &
+                  *TempNeuMinSi*Si2No_V(UnitTemperature_)
+          end if
        else if (DoUseUniformNeuBackground) then
           State_VGB(Neu1Rho_,i,j,k,iBlock) = nNeuUniform*MassFluid_I(nFluid)
           State_VGB(Neu1Ux_, i,j,k,iBlock) = UxNeuUniform
@@ -2964,16 +3005,27 @@ contains
        if (.not. true_cell(i,j,k,iBlock)) CYCLE
 
        if (DoUseHaserBackground) then
-          State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/ &
-               (4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2*uHaser ) * &
-               exp(-vHI*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/uHaser)* &
-               Si2No_V(UnitN_) * MassFluid_I(nFluid)
-          State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) = &
-               State_VGB(Neu1Rho_,i,j,k,iBlock)*uHaser*Si2No_V(UnitU_)*&
-               Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
-          State_VGB(Neu1P_,i,j,k,iBlock)     = &
-               State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid) &
-               *TempNeuMinSi*Si2No_V(UnitTemperature_)
+          if (R_BLK(i,j,k,iBlock) > rSphericalBody) then
+             State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/                        &
+                  (4.*cPi*(R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_))**2*uHaser ) * &
+                  exp(-vHI*R_BLK(i,j,k,iBlock)*No2Si_V(UnitX_)/uHaser)*       &
+                  Si2No_V(UnitN_) * MassFluid_I(nFluid)
+             State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) =                     &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)*uHaser*Si2No_V(UnitU_)* &
+                  Xyz_DGB(:,i,j,k,iBlock)/R_BLK(i,j,k,iBlock)
+             State_VGB(Neu1P_,i,j,k,iBlock)     =                          &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)     &
+                  *TempNeuMinSi*Si2No_V(UnitTemperature_)
+          else
+             State_VGB(Neu1Rho_,i,j,k,iBlock) = Qprod/                  &
+                  (4.*cPi*rSphericalBodySi**2*uHaser )*                 &
+                  exp(-vHI*rSphericalBodySi/uHaser)*                    &
+                  Si2No_V(UnitN_) * MassFluid_I(nFluid)
+             State_VGB(Neu1Ux_:Neu1Uz_,i,j,k,iBlock) = 0.0
+             State_VGB(Neu1P_,i,j,k,iBlock)     =                       &
+                  State_VGB(Neu1Rho_,i,j,k,iBlock)/MassFluid_I(nFluid)  &
+                  *TempNeuMinSi*Si2No_V(UnitTemperature_)
+          end if
        else if (DoUseUniformNeuBackground) then
           State_VGB(Neu1Rho_,i,j,k,iBlock) = nNeuUniform*MassFluid_I(nFluid)
           State_VGB(Neu1Ux_, i,j,k,iBlock) = UxNeuUniform
@@ -3094,9 +3146,11 @@ contains
          TeSI,nElec,i,j,k,iBlock,fen_I(1:nNeuFluid),fei_I(1:nIonFluid))
 
     eiSigma_I(1:nIonFluid) = &
-         cElectronCharge**2*nElec/((fei_I(1:nIonFluid)+1E-20)*cElectronMass)
+         cElectronCharge**2*max(nElec, 1e-15)/ &
+         ((fei_I(1:nIonFluid)+1E-20)*cElectronMass)
     enSigma_I(1:nNeuFluid) = &
-         cElectronCharge**2*nElec/((fen_I(1:nNeuFluid)+1E-20)*cElectronMass)
+         cElectronCharge**2*max(nElec, 1e-15)/ &
+         ((fen_I(1:nNeuFluid)+1E-20)*cElectronMass)
 
     ! Eta_G is calculated from both conductivities using Kirchhoff's rule:
     ! 1/sigma_tot = 1/eiSigma_I+1/enSigma_I
