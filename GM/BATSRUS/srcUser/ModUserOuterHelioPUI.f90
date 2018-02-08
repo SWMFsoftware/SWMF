@@ -536,11 +536,11 @@ contains
        end do
     end if
 
-    State_VGB(Pu3Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 10E-6*VLISW_rho
-    State_VGB(Pu3RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 10E-6*VLISW_rho*VLISW_Ux
-    State_VGB(Pu3RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) =10E-6*VLISW_rho*VLISW_Uy
-    State_VGB(Pu3RhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) =10E-6*VLISW_rho*VLISW_Uz
-    State_VGB(Pu3P_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 10E-6*VLISW_p
+    State_VGB(Pu3Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 1E-5*VLISW_rho
+    State_VGB(Pu3RhoUx_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 1E-5*VLISW_rho*VLISW_Ux
+    State_VGB(Pu3RhoUy_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) =1E-5*VLISW_rho*VLISW_Uy
+    State_VGB(Pu3RhoUz_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) =1E-5*VLISW_rho*VLISW_Uz
+    State_VGB(Pu3P_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock) = 1E-5*VLISW_p
 
     ! Total fluid to be eliminated
     State_VGB(Rho_,iMin:iMax,jMin:jMax,kMin:kMax,iBlock)  = &
@@ -715,8 +715,8 @@ contains
        !    State_VGB(Pu3P_,i,j,k,iBlock)   = State_VGB(Pu3Rho_,i,j,k,iBlock)*Pu3_T_dim *Io2No_V(UnitTemperature_)
        ! else
        ! set to small value
-       !   State_VGB(Pu3Rho_,i,j,k,iBlock) = 10E-6*State_VGB(Rho_,i,j,k,iBlock)
-       !   State_VGB(Pu3P_,i,j,k,iBlock) = 10E-6*State_VGB(P_,i,j,k,iBlock)
+       !   State_VGB(Pu3Rho_,i,j,k,iBlock) = 1E-5*State_VGB(Rho_,i,j,k,iBlock)
+       !   State_VGB(Pu3P_,i,j,k,iBlock) = 1E-5*State_VGB(P_,i,j,k,iBlock)
        ! end if
 
        ! momentum
