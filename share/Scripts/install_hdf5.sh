@@ -580,6 +580,9 @@ function build_hdf5
     perl -pi -e 's/,\s*\&/\n  INTEGER(HID_T)  \&/ if /H5T_STD_U32LE/ and $.==109' \
 	fortran/src/H5f90global.f90
 
+    # Fix the configure script
+    perl -pi -e '$_="#!#$_" if /\-commons|OLD_HEADER_FILENAME/' configure;
+
     cf_darwin=""
     if [[ "$OPSYS" == "Darwin" ]]; then
         export DYLD_LIBRARY_PATH=${SZIPINSTALLDIR}/lib:$DYLD_LIBRARY_PATH
