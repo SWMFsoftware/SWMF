@@ -6989,7 +6989,7 @@ The nudging is ramped up linearly within dLatSmootIm degrees along the magnetic
 latitude direction. Default is -1.0, which means no smoothing.
 </command>
 
-<command name="MULTIFLUIDIM">
+<command name="MULTIFLUIDIM" if="$_IsFirstSession">
 	<parameter name ="DoMultiFluidIMCoupling" type="logical" default="F"/>
 
 #MULTIFLUIDIM
@@ -7003,6 +7003,23 @@ and IM passes GM the same four more variables.
 The default value is DoMultiFluidIMCoupling = false, MHD variables are 
 exchanged between GM and IM.
 </command>
+
+<command name="ANISOPRESSUREIM" if="$_IsFirstSession">
+	<parameter name ="DoAnisoPressureIMCoupling" type="logical" default="F"/>
+
+#ANISOPRESSUREIM
+F			DoAnisoPressureIMCoupling
+
+If DoAnisoPressureIMCoupling is true, the information exchanged between GM and IM 
+allows for pressure anisotropy. This only makes sense if BATSRUS is configured
+with anisotropic pressure equations and the IM model allows for non-isotropic
+pressure (which is all models except RCM).
+
+The default value is DoAnisoPressureIMCoupling = false, which means that
+isotropy is assumed in the coupling (even if both GM and IM allow for
+anisotropy).
+</command>
+
 
 <command name="PICUNIT">
 	 <parameter name="xUnitPicSi" type="real" min="0" default="1"/>
