@@ -5,10 +5,8 @@ source $HOME/.cshrc
 
 set WorkDir = /nobackup/`whoami`
 
-module purge;
-module load gcc/6.2                         
-module load mpi-sgi;
-module load boost/1.62
+module unload comp-intel
+module load gcc                          
 
 echo -n "Compiling GNU....."                 
 cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           

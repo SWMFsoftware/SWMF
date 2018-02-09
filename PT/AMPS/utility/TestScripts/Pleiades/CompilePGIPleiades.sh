@@ -5,9 +5,8 @@ source $HOME/.cshrc
 
 set WorkDir = /nobackup/`whoami`
 
-module purge;
-module load comp-pgi/17.1           
-module load mpi-sgi/mpt
+module unload comp-intel
+module load comp-pgi 
 
 echo -n "Compiling PGI....."                 
 cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           
