@@ -160,7 +160,7 @@ Compile=
 
 >>>./Config.pl -application=cg-end-of-mission-rosina -amps-test=on -amps-test=on $(TESTCG-Rosina-Liouville--TrajectoryKEYS)
 >>>./Config.pl -amps-test=off
->>>@($(MAKE) -j8 amps)
+>>>-@($(MAKE) -j8 amps)
 >>>./Config.pl -amps-test=on
 
 >>>@rm -rf Temp
