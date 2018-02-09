@@ -32,4 +32,4 @@
 # mkdir -p $TMPDIR
 
 ### Run the executable
-mpiexec_mpt dplace -s 1 ./SWMF.exe
+mpiexec_mpt dplace -s 1 ./SWMF.exe > runlog_`date +%y%m%d%H%M`
