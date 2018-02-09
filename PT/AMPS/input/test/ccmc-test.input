@@ -1,7 +1,0 @@
-
-#include input/ccmc.input
-
-#General
- define _CCMC_TEST__NO_KAMELEON_CALLS_
- define _CCMC_TEST__NO_KAMELEON_CALLS__DOMAIN_LIMITS_
-#endGeneral

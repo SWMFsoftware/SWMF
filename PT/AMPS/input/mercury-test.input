@@ -1,9 +1,0 @@
-
-
-#include input/mercury.input
-
-#General
-  BlockCells=5,5,5
-
-  define _MERCURY_MESH_RESOLUTION_MODE_  _MERCURY_MESH_RESOLUTION_MODE__TEST_
-#endGeneral
