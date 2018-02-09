@@ -696,7 +696,7 @@ Compile=
 -------------------------------------------------------------------------------
 #>
 Name=test/lightwave-current-off 
-Time=3
+Time=2
 
 Outs=
 
@@ -710,6 +710,13 @@ Compile=
 >>>@rm -rf srcTemp
 >>>-@($(MAKE) -j8 amps)
 >>>@echo "test_lightwave-current-off_compile... done" >> test_lightwave-current-off.diff
+
+Check=
+>>>@echo "test_lightwave-current-off_check..." >> test_lightwave-current-off$(TESTlightwave-current-off-REF).diff
+>>>-(${SCRIPTDIR}/DiffNum.pl $(TESTlightwave-current-offDIR)/LightWave.out=19.dat \ 
+>>>output/test_lightwave-current-off/LightWave.out=19.ref_np`ls $(TESTlightwave-current-offDIR)/PT/thread* |wc -l |tr -d ' '`  > test_lightwave-current-off$(TESTlightwave-current-off-REF).diff;)  
+>>>@ls -l test_lightwave-current-off$(TESTlightwave-current-off-REF).diff
+>>>@echo Test test_lightwave-current-off has finished: `date`
 
 <#
 
