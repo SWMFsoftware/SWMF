@@ -965,7 +965,8 @@ contains
     use ModAdvance, ONLY : time_BLK, &
          State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
          ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
-         UseMultiSpecies
+         UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB,&
+         UseAdaptiveLowOrder
     use ModLoadBalance, ONLY: iTypeBalance_A
     use ModB0, ONLY: B0_DGB
     use ModGeometry
@@ -1609,6 +1610,22 @@ contains
           if(allocated(iRegionLowOrder_I)) call block_inside_regions( &
                iRegionLowOrder_I, iBlock, size(PlotVar(:,:,:,iVar)), 'ghost', &
                Value_I=PlotVar(MinI,MinJ,MinK,iVar))
+       case('lowcritx')
+          PlotVar(:,:,:,iVar) = 0
+          ! LowOrderCrit_XB is actually face based. 
+          if(allocated(LowOrderCrit_XB)) &
+               PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+               LowOrderCrit_XB(1:nI,1:nJ,1:nK,iBlock)
+       case('lowcrity')
+          PlotVar(:,:,:,iVar) = 0
+          if(allocated(LowOrderCrit_YB)) &
+               PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+               LowOrderCrit_YB(1:nI,1:nJ,1:nK,iBlock)
+       case('lowcritz')
+          PlotVar(:,:,:,iVar) = 0
+          if(allocated(LowOrderCrit_ZB)) &
+               PlotVar(1:nI,1:nJ,1:nK,iVar) = &
+               LowOrderCrit_ZB(1:nI,1:nJ,1:nK,iBlock)
        case('proc')
           PlotVar(:,:,:,iVar) = iProc
        case('blk','block')

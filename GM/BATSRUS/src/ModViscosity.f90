@@ -53,7 +53,7 @@ module ModViscosity
 
   ! Artificial viscosity.
   logical, public :: UseArtificialVisco = .false.
-  real,    public :: AlphaVisco
+  real,    public :: AlphaVisco, BetaVisco
 
 contains
   !============================================================================
@@ -75,6 +75,7 @@ contains
     case('#ARTIFICIALVISCOSITY')
        call read_var('UseArtificialVisco', UseArtificialVisco)
        if(UseArtificialVisco)call read_var('AlphaVisco', AlphaVisco)
+       if(UseArtificialVisco)call read_var('BetaVisco', BetaVisco)
     case('#VISCOSITYREGION')
        call read_var('StringViscosityRegion', StringViscoRegion)
     case default

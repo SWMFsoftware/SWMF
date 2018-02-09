@@ -20,9 +20,10 @@ contains
     use ModMain
     use ModFaceBoundary, ONLY: set_face_boundary
     use ModFaceFlux,   ONLY: calc_face_flux, calc_cell_flux
-    use ModFaceValue,  ONLY: calc_face_value
+    use ModFaceValue,  ONLY: calc_face_value, calc_cell_norm_velocity, &
+         set_low_order_face
     use ModAdvance,    ONLY: UseUpdateCheck, DoFixAxis, DoCalcElectricField, &
-         DoInterpolateFlux
+         DoInterpolateFlux, UseAdaptiveLowOrder
     use ModCoarseAxis, ONLY: UseCoarseAxis, coarsen_axis_cells
     use ModB0,         ONLY: set_b0_face
     use ModParallel,   ONLY: neiLev
@@ -45,6 +46,7 @@ contains
     use ModConstrainDivB, ONLY: Bface2Bcenter, get_vxb, bound_vxb, constrain_b
     use ModFixAxisCells, ONLY: fix_axis_cells
     use ModElectricField, ONLY: get_num_electric_field
+    use ModViscosity, ONLY: UseArtificialVisco
     use omp_lib
     
     logical, intent(in) :: DoCalcTimestep
@@ -73,6 +75,12 @@ contains
        if(.not.UseOptimizeMpi) call barrier_mpi2('expl1')
 
        if(UseResistivity)  call set_resistivity
+
+       if(iStage==1) then
+          if(UseArtificialVisco .or. UseAdaptiveLowOrder) &
+               call calc_cell_norm_velocity
+          call set_low_order_face
+       endif
 
        if(DoConserveFlux) then
           do iBlock = 1, nBlock

@@ -32,8 +32,7 @@ module ModFaceFlux
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
        UseFDFaceFlux, FluxCenter_VGD, &
-       UseLowOrderOnly, UseLowOrder, &
-       UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z
+       UseLowOrder, IsLowOrderOnly_B
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
 
@@ -407,7 +406,8 @@ contains
   !============================================================================
   subroutine calc_face_flux(DoResChangeOnly, iBlock)
 
-    use ModAdvance,  ONLY: TypeFlux => FluxType
+    use ModAdvance,  ONLY: TypeFlux => FluxType,&
+         LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
     use ModParallel, ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModMain,     ONLY: nIFace, nJFace, nKFace, &
@@ -415,10 +415,14 @@ contains
          UseHyperbolicDivb
     use ModImplicit, ONLY: TypeSemiImplicit, UseSemiHallResist
     use ModWaves,    ONLY: UseWavePressure
-    use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco
+    use ModViscosity, ONLY: UseArtificialVisco, AlphaVisco, BetaVisco
 
     logical, intent(in) :: DoResChangeOnly
     integer, intent(in) :: iBlock
+
+    real:: FaceDivU_I(nFluid)
+    integer:: cLowOrder = 1
+    real:: cSmall = 1e-6
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'calc_face_flux'
@@ -588,7 +592,7 @@ contains
 
     subroutine get_flux_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB, UseAnisoPe
+      use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IX
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
       !------------------------------------------------------------------------
@@ -637,15 +641,18 @@ contains
 
          call get_numerical_flux(Flux_VX(:,iFace, jFace, kFace))
 
-         if(UseArtificialVisco) call add_artificial_viscosity( &
-              Flux_VX(:,iFace, jFace, kFace))
+         if(UseArtificialVisco) then
+            FaceDivU_I = FaceDivU_IX(:,iFace, jFace, kFace)
+            call add_artificial_viscosity( &
+                 Flux_VX(:,iFace, jFace, kFace))
+         endif
 
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
          if(UseFDFaceFlux) call correct_u_normal(x_)
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
-         
+
          if(UseB .and. UseBorisCorrection) &
               EDotFA_X(iFace,jFace,kFace) = Enormal*Area
 
@@ -662,13 +669,14 @@ contains
               bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
       end do; end do; end do
 
-      if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
+      if(UseFDFaceFlux .and. .not.IsLowOrderOnly_B(iBlockFace)) then
          ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
          ! is 6th order.
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
-               if(UseLowOrder_X(iFace,jFace,kFace)) CYCLE
-            end if
+               if(LowOrderCrit_XB(iFace,jFace,kFace,iBlockFace) &
+                    >=cLowOrder-cSmall) cycle
+            endif
             do iFlux = 1, nFlux
                Flux_VX(iFlux,iFace,jFace,kFace) = &
                     correct_face_value(Flux_VX(iFlux,iFace,jFace,kFace),&
@@ -681,7 +689,7 @@ contains
 
     subroutine get_flux_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
-      use ModAdvance, ONLY: State_VGB, UseAnisoPe
+      use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IY
       integer, intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       integer:: iFlux
       !------------------------------------------------------------------------
@@ -730,8 +738,11 @@ contains
 
          call get_numerical_flux(Flux_VY(:, iFace, jFace, kFace))
 
-         if(UseArtificialVisco) call add_artificial_viscosity( &
-              Flux_VY(:,iFace, jFace, kFace))
+         if(UseArtificialVisco) then
+            FaceDivU_I = FaceDivU_IY(:,iFace, jFace, kFace)
+            call add_artificial_viscosity( &
+                 Flux_VY(:,iFace, jFace, kFace))
+         endif
 
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
 
@@ -757,11 +768,12 @@ contains
 
       ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
       ! is 6th order.
-      if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
+      if(UseFDFaceFlux .and. .not.IsLowOrderOnly_B(iBlockFace)) then
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
-               if(UseLowOrder_Y(iFace,jFace,kFace)) CYCLE
-            end if
+               if(LowOrderCrit_YB(iFace,jFace,kFace,iBlockFace) &
+                    >=cLowOrder-cSmall) cycle
+            endif
             do iFlux = 1, nFlux
                Flux_VY(iFlux,iFace,jFace,kFace) = &
                     correct_face_value(&
@@ -775,7 +787,7 @@ contains
 
     subroutine get_flux_z(iMin, iMax, jMin, jMax, kMin, kMax)
 
-      use ModAdvance, ONLY: State_VGB, UseAnisoPe
+      use ModAdvance, ONLY: State_VGB, UseAnisoPe, FaceDivU_IZ
       integer, intent(in):: iMin, iMax, jMin, jMax, kMin, kMax
       integer:: iFlux
       !------------------------------------------------------------------------
@@ -823,8 +835,11 @@ contains
 
          call get_numerical_flux(Flux_VZ(:, iFace, jFace, kFace))
 
-         if(UseArtificialVisco) call add_artificial_viscosity( &
-              Flux_VZ(:,iFace, jFace, kFace))
+         if(UseArtificialVisco) then
+            FaceDivU_I = FaceDivU_IZ(:,iFace, jFace, kFace)
+            call add_artificial_viscosity( &
+                 Flux_VZ(:,iFace, jFace, kFace))
+         endif
 
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
 
@@ -848,11 +863,13 @@ contains
 
       end do; end do; end do
 
-      if(UseFDFaceFlux .and. .not.UseLowOrderOnly) then
+      if(UseFDFaceFlux .and. .not.IsLowOrderOnly_B(iBlockFace)) then
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
-               if(UseLowOrder_Z(iFace,jFace,kFace)) CYCLE
-            end if
+               if(LowOrderCrit_ZB(iFace,jFace,kFace,iBlockFace) &
+                    >=cLowOrder-cSmall) cycle
+            endif
+
             do iFlux = 1, nFlux
                Flux_VZ(iFlux,iFace,jFace,kFace) = &
                     correct_face_value(Flux_VZ(iFlux,iFace,jFace,kFace),&
@@ -864,22 +881,73 @@ contains
     !==========================================================================
 
     subroutine add_artificial_viscosity(Flux_V)
-      use ModAdvance, ONLY: State_VGB, Energy_GBI
+      ! This subroutine adds artificial viscosity to the fluid 
+      ! density/moment/energy/pressure equations, but not the EM field equations.
+      ! The algorithm is implemented based on the paper of 
+      ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper 
+      ! for more details. 
+
+      use ModAdvance, ONLY: State_VGB, Energy_GBI, UseMultiSpecies
+      use ModPhysics, ONLY: Gamma_I
       real,     intent(inout) :: Flux_V(nFlux)
+      real :: Coef
 
+      real:: FaceDivU, Sound3, s1, s2
+      integer :: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iVar
+
+      character(len=*), parameter:: NameSub = 'add_artificial_viscosity'
       !------------------------------------------------------------------------
-      if(all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace))) then
+      if(.not.all(true_cell(iLeft:iFace,jLeft:jFace,kLeft:kFace,iBlockFace))) RETURN;
 
-         Flux_V(1:nVar) = Flux_V(1:nVar) - AlphaVisco*CmaxDt* &
-              (State_VGB(1:nVar,iFace,jFace,kFace,iBlockFace) - &
-              State_VGB(1:nVar,iLeft,jLeft,kLeft,iBlockFace))* &
-              Area
+      do iFluid = 1, nFluid
+         iRho   = iRho_I(iFluid)
+         iRhoUx = iRhoUx_I(iFluid)
+         iRhoUy = iRhoUy_I(iFluid)
+         iRhoUz = iRhoUz_I(iFluid)
+         iP     = iP_I(iFluid)
 
-         Flux_V(nVar+1:nFlux) = Flux_V(nVar+1:nFlux) - AlphaVisco*CmaxDt* &
-              (Energy_GBI(iFace,jFace,kFace,iBlockFace,:) - &
-              Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,:))* &
-              Area
-      endif
+         ! Calculate the 5th-order artificial viscosity. 
+         ! See eq(36) of P. McCorquodale and P. Colella (2010), where
+         ! a 4th-order viscosity term is presented.
+         s1 = State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace)/ &
+              State_VGB(iRho,iLeft,jLeft,kLeft, iBlockFace)
+         s2 = State_VGB(iP,iFace,jFace,kFace,iBlockFace)/ &
+              State_VGB(iRho,iFace,jFace,kFace, iBlockFace)
+         
+         Sound3 = sqrt((min(s1, s2)*Gamma_I(iFluid)))**3
+
+         FaceDivU = min(abs(FaceDivU_I(iFluid)), abs(CmaxDt))                  
+         Coef = AlphaVisco*FaceDivU*Area* &
+              min(1.0, abs(FaceDivU**3/Sound3)/BetaVisco)
+
+         Flux_V(iRho) = Flux_V(iRho) - Coef* &
+              (State_VGB(iRho,iFace,jFace,kFace,iBlockFace) - &
+              State_VGB(iRho,iLeft,jLeft,kLeft,iBlockFace))
+
+         Flux_V(iRhoUx:iRhoUz) = Flux_V(iRhoUx:iRhoUz) - Coef* &
+              (State_VGB(iRhoUx:iRhoUz,iFace,jFace,kFace,iBlockFace) - &
+              State_VGB(iRhoUx:iRhoUz,iLeft,jLeft,kLeft,iBlockFace))
+
+         Flux_V(iP) = Flux_V(iP) - Coef* &
+              (State_VGB(iP,iFace,jFace,kFace,iBlockFace) - &
+              State_VGB(iP,iLeft,jLeft,kLeft,iBlockFace))   
+
+         ! Energy flux
+         Flux_V(nVar+iFluid) = Flux_V(nVar+iFluid) - Coef* &
+              (Energy_GBI(iFace,jFace,kFace,iBlockFace,iFluid) - &
+              Energy_GBI(iLeft,jLeft,kLeft,iBlockFace,iFluid))
+
+         If(iFluid == 1) then
+            ! Diffuse scalars with the same coef of the first fluid. 
+            do iVar=ScalarFirst_, ScalarLast_
+               Flux_V(iVar) = &
+                    Flux_V(iVar) - Coef* &
+                    (State_VGB(iVar,iFace,jFace,kFace,iBlockFace) - &
+                    State_VGB(iVar,iLeft,jLeft,kLeft,iBlockFace))
+            end do
+         endif
+      enddo
+
     end subroutine add_artificial_viscosity
     !==========================================================================
 
@@ -3724,7 +3792,7 @@ contains
          write(*,'(a9,es13.5)') 'B0y  =', B0y
          write(*,'(a9,es13.5)') 'B0z  =', B0z
       end if
-
+      
       Rho = State_V(iRhoIon_I(1))
       Sound2 = State_V(iPIon_I(1))*Gamma_I(1)/Rho
       Un = sum( State_V(iUxIon_I(1):iUzIon_I(1))*Normal_D )

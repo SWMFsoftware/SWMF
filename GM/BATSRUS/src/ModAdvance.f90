@@ -118,6 +118,17 @@ module ModAdvance
 
   real, allocatable :: DivB1_GB(:,:,:,:)
 
+  ! Switch between low and high order schemes 
+  logical:: UseLowOrder     = .false.  ! some faces are low order
+  logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
+  logical:: UseLowOrderRegion = .false.
+  logical:: UseAdaptiveLowOrder = .false. 
+  real, allocatable:: LowOrderCrit_XB(:,:,:,:),LowOrderCrit_YB(:,:,:,:), &
+       LowOrderCrit_ZB(:,:,:,:) ! The ratio of the low order face values
+
+  ! Cell centered velocities in ijk direction.
+  real, allocatable:: Vel_IDGB(:,:,:,:,:,:) 
+
   ! Face centered variables for the current block
 
   ! Primitive variables (velocity) extrapolated from left and right
@@ -125,14 +136,12 @@ module ModAdvance
   real, allocatable:: LeftState_VY(:,:,:,:), RightState_VY(:,:,:,:)
   real, allocatable:: LeftState_VZ(:,:,:,:), RightState_VZ(:,:,:,:)
 
-  ! Switch between low and high order schemes for a given block
-  logical:: UseLowOrderOnly = .false.  ! whole block is low order
-  logical:: UseLowOrder     = .false.  ! some faces are low order
-  logical, allocatable:: &
-       UseLowOrder_X(:,:,:), UseLowOrder_Y(:,:,:), UseLowOrder_Z(:,:,:)
-  logical, allocatable:: IsLowOrderOnly_B(:) ! Is the whole block low order?
-  logical:: UseLowOrderRegion = .false.
-
+  ! Face centered div(U)*dl
+  real, allocatable:: FaceDivU_IX(:,:,:,:)
+  real, allocatable:: FaceDivU_IY(:,:,:,:)
+  real, allocatable:: FaceDivU_IZ(:,:,:,:)
+  !$omp threadprivate( FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ )
+  
   ! V/dt for CFL time step limit
   real, allocatable:: VdtFace_X(:,:,:), VdtFace_Y(:,:,:), VdtFace_Z(:,:,:)
 
@@ -185,7 +194,6 @@ module ModAdvance
   !$omp threadprivate( LeftState_VY, RightState_VY )
   !$omp threadprivate( LeftState_VZ, RightState_VZ )
   !$omp threadprivate( UseLowOrderOnly, UseLowOrder )
-  !$omp threadprivate( UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z )
   !$omp threadprivate( UseLowOrderRegion )
   !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
   !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
@@ -270,6 +278,10 @@ contains
     allocate(VdtFace_Z(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(Flux_VZ(nVar+nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1))
     allocate(uDotArea_ZI(iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,nFluid+1))
+
+    allocate(FaceDivU_IX(nFluid,1:nIFace,jMinFace:jMaxFace,kMinFace:kMaxFace))
+    allocate(FaceDivU_IY(nFluid,iMinFace:iMaxFace,1:nJFace,kMinFace:kMaxFace))
+    allocate(FaceDivU_IZ(nFluid,iMinFace:iMaxFace,jMinFace:jMaxFace,1:nKFace))
     !$omp end parallel
     
     if(iProc==0)then
@@ -321,11 +333,15 @@ contains
     if(allocated(Weight_IVX))      deallocate(Weight_IVX)
     if(allocated(Weight_IVY))      deallocate(Weight_IVY)
     if(allocated(Weight_IVZ))      deallocate(Weight_IVZ)
-    if(allocated(UseLowOrder_X))   deallocate(UseLowOrder_X)
-    if(allocated(UseLowOrder_Y))   deallocate(UseLowOrder_Y)
-    if(allocated(UseLowOrder_Z))   deallocate(UseLowOrder_Z)
     if(allocated(IsLowOrderOnly_B))deallocate(IsLowOrderOnly_B)
-
+    if(allocated(FaceDivU_IX))     deallocate(FaceDivU_IX)
+    if(allocated(FaceDivU_IY))     deallocate(FaceDivU_IY)
+    if(allocated(FaceDivU_IZ))     deallocate(FaceDivU_IZ)
+    if(allocated(LowOrderCrit_XB)) deallocate(LowOrderCrit_XB)
+    if(allocated(LowOrderCrit_YB)) deallocate(LowOrderCrit_YB)
+    if(allocated(LowOrderCrit_ZB)) deallocate(LowOrderCrit_ZB)
+    if(allocated(Vel_IDGB))        deallocate(Vel_IDGB)
+    
     if(iProc==0)then
        call write_prefix
        write(iUnitOut,'(a)') 'clean_mod_advance deallocated arrays'

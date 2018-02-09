@@ -11,11 +11,10 @@ module ModFaceValue
   use ModSize, ONLY: nI, nJ, nK, nG, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
        x_, y_, z_, nDim, jDim_, kDim_
   use ModVarIndexes
-  use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrderOnly, UseLowOrder, &
-       UseLowOrderRegion, UseLowOrder_X, UseLowOrder_Y, UseLowOrder_Z, &
-       IsLowOrderOnly_B
+  use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
+       UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder
   use omp_lib
-  
+
   implicit none
 
   private ! except
@@ -23,6 +22,8 @@ module ModFaceValue
   public:: read_face_value_param
   public:: calc_face_value
   public:: correct_monotone_restrict
+  public:: set_low_order_face
+  public:: calc_cell_norm_velocity
 
   logical, public :: UseAccurateResChange = .false.
   logical, public :: UseTvdResChange      = .true.
@@ -35,6 +36,10 @@ module ModFaceValue
   real,             public :: BetaLimiter = 1.0
   character(len=6), public :: TypeLimiter = 'minmod'
   character(len=6), public :: TypeLimiter5= 'mp'
+
+  logical, public :: UseAccurateExtremum = .true.
+  integer:: nLowOrder = 2
+  real:: VelCrit, pCritLow, pCritHigh
 
   ! Logical switch for 5th order scheme: use cweno5 or mp5 scheme.
   logical, public ::  UseCweno = .false.
@@ -107,13 +112,16 @@ module ModFaceValue
   real, allocatable:: FaceL_I(:), FaceR_I(:)
   real:: Prim_VG(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
+  real:: LowOrderCrit_I(1:MaxIJK+1)
+  !$omp threadprivate( LowOrderCrit_I )
+
   ! The weight of the four low order polynomials of cweno5
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
 
   ! OpenMP declaration
-  !!$omp threadprivate( iVarSmooth_V, iVarSmoothIndex_I ) !questionable?
-  !!$omp threadprivate( iRegionLowOrder_I ) !this is questionable? 
-  !!$omp threadprivate( iVarLimitRatio_I )
+!!$omp threadprivate( iVarSmooth_V, iVarSmoothIndex_I ) !questionable?
+!!$omp threadprivate( iRegionLowOrder_I ) !this is questionable? 
+!!$omp threadprivate( iVarLimitRatio_I )
   !$omp threadprivate( Primitive_VG )
   !$omp threadprivate( UseTrueCell, IsTrueCell_I )
   !$omp threadprivate( UseLowOrder_I )
@@ -121,7 +129,7 @@ module ModFaceValue
   !$omp threadprivate( iMin, iMax, jMin, jMax, kMin, kMax )
   !$omp threadprivate( Cell_I, Cell2_I, Face_I, FaceL_I, FaceR_I, Prim_VG )
   !$omp threadprivate( WeightL_II, WeightR_II)
-  
+
 contains
   !============================================================================
   subroutine read_face_value_param(NameCommand)
@@ -193,6 +201,18 @@ contains
     case("#LOWORDERREGION")
        call read_var('StringLowOrderRegion', StringLowOrderRegion)
        UseLowOrderRegion = .true.
+    case("#ADAPTIVELOWORDER")
+       call read_var('UseAdaptiveLowOrder', UseAdaptiveLowOrder)
+       if(UseAdaptiveLowOrder) then
+          call read_var('nLowOrder', nLowOrder)
+          call read_var('pCritLow',  pCritLow)
+          call read_var('pCritHigh', pCritHigh)
+          call read_var('VelCrit',   VelCrit)
+       endif
+       if(.not.(nLowOrder==1 .or. nLowOrder==2)) &
+            call stop_mpi(NameSub//' nLowOrder should be 1 or 2!!')
+       if(pCritLow < (pCritHigh-1e-15)) &
+            call stop_mpi(NameSub//' pCritLow should be >= pCritHigh')
     case default
        call stop_mpi(NameSub//' invalid command='//trim(NameCommand))
     end select
@@ -740,7 +760,7 @@ contains
          UseHighResChange
 
     use ModGeometry, ONLY : true_cell, body_BLK
-    use ModPhysics, ONLY: GammaWave, C2light, InvClight2
+    use ModPhysics, ONLY: GammaWave, C2light, InvClight2, Gamma_I
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
@@ -752,12 +772,16 @@ contains
          LeftState_VY,      &  ! Face Left  Y
          RightState_VY,     &  ! Face Right Y
          LeftState_VZ,      &  ! Face Left  Z
-         RightState_VZ         ! Face Right Z
+         RightState_VZ,     &  ! Face Right Z
+         LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
+
 
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
 
     use ModEnergy, ONLY: calc_pressure
+
+    use ModViscosity, ONLY: UseArtificialVisco
 
     use BATL_lib, ONLY: CellFace_DB
 
@@ -825,13 +849,6 @@ contains
     endif
 
     UseTrueCell = body_BLK(iBlock)
-
-    ! Set variables related to low vs. high order scheme
-    if(nOrder>2) then
-       call set_low_order_face
-    else
-       IsLowOrderOnly_B(iBlock) = .true.
-    endif
 
     UseLogLimiter   = nOrder > 1 .and. (UseLogRhoLimiter .or. UseLogPLimiter)
     UseLogLimiter_V = .false.
@@ -1013,6 +1030,10 @@ contains
        end if
     end if
 
+    if(UseArtificialVisco) call calc_face_div_u(iBlock)
+
+
+
     !\
     ! Now the first or second order face values are calcuted
     !/
@@ -1044,7 +1065,7 @@ contains
 
        if (.not.DoResChangeOnly)then
           ! Calculate all face values with high order scheme
-          if(nOrder==2 .or. UseLowOrderOnly)then
+          if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
              ! Second order scheme
              call get_faceX_second(&
                   1,nIFace,jMinFace,jMaxFace,kMinFace,kMaxFace)
@@ -1105,7 +1126,7 @@ contains
           end if
 
        else if(DoResChangeOnly) then
-          if(nOrder==2 .or. UseLowOrderOnly)then
+          if(nOrder==2 .or. IsLowOrderOnly_B(iBlock))then
              ! Second order face values at resolution changes
              if(neiLeast(iBlock)==+1)&
                   call get_faceX_second(1,1,1,nJ,1,nK)
@@ -1501,11 +1522,13 @@ contains
     end subroutine calc_primitives_boris
     !==========================================================================
     subroutine get_facex_high(iMin,iMax,jMin,jMax,kMin,kMax)
+      use ModAdvance, ONLY: FaceDivU_IX
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
       integer:: iVar, iSort
       logical:: IsSmoothIndictor
+
       !------------------------------------------------------------------------
 
       if(TypeLimiter == 'no')then
@@ -1515,29 +1538,37 @@ contains
                  c1over12*(Primitive_VG(:,i-2,j,k) + Primitive_VG(:,i+1,j,k))
          end do; end do; end do
       else
-         do k = kMin, kMax; do j = jMin, jMax
-            if(UseLowOrder)then
-               UseLowOrder_I(iMin:iMax) = UseLowOrder_X(iMin:iMax,j,k)
-               Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
 
-               ! IsTrueCell needed by limiter_body and ppm4 limiter
-               IsTrueCell_I(iMin-nG:iMax-1+nG) = &
-                    true_cell(iMin-nG:iMax-1+nG,j,k,iBlock)
-               ! Get 2nd order limited slopes
-               if(UseTrueCell)then
-                  call limiter_body(iMin, iMax, BetaLimiter)
+         do k = kMin, kMax; do j = jMin, jMax
+            if(UseLowOrder) then
+               Primitive_VI(:,iMin-2:iMax+1)=Primitive_VG(:,iMin-2:iMax+1,j,k)
+               if(nLowOrder==2) then
+                  ! IsTrueCell needed by limiter_body and ppm4 limiter
+                  IsTrueCell_I(iMin-nG:iMax-1+nG) = &
+                       true_cell(iMin-nG:iMax-1+nG,j,k,iBlock)
+                  ! Get 2nd order limited slopes
+                  if(UseTrueCell)then
+                     call limiter_body(iMin, iMax, BetaLimiter)
+                  else
+                     call limiter(iMin, iMax, BetaLimiter)
+                  end if
                else
-                  call limiter(iMin, iMax, BetaLimiter)
-               end if
-               ! Store 2nd order accurate face values
+                  dVarLimL_VI = 0; dVarLimR_VI = 0
+               endif
+               ! Store 1st/2nd order accurate face values
                do i = iMin, iMax
                   ! if(UseLowOrder_I(i))then...
                   LeftState_VX(:,i,j,k) =Primitive_VI(:,i-1)+dVarLimL_VI(:,i-1)
-                  RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)
+                  RightState_VX(:,i,j,k)=Primitive_VI(:,i)  -dVarLimR_VI(:,i)                 
                end do
-            end if
+            endif
 
             if(.not.DoInterpolateFlux)then
+               if(UseLowOrder) then
+                  LowOrderCrit_I(iMin:iMax) = &
+                       LowOrderCrit_XB(iMin:iMax,j,k,iBlock) 
+               endif
+
                iVarSmoothLast = 0
                do iSort = 1, nVar
                   if(UseCweno) then
@@ -1563,6 +1594,7 @@ contains
                      FaceL_I(iMin:iMax) = LeftState_VX(iVar,iMin:iMax,j,k)
                      FaceR_I(iMin:iMax) = RightState_VX(iVar,iMin:iMax,j,k)
                   end if
+
 
                   call limit_var(iMin, iMax, iVar, &
                        DoCalcWeightIn = IsSmoothIndictor)
@@ -1652,7 +1684,7 @@ contains
     end subroutine get_facex_high
     !==========================================================================
     subroutine get_facey_high(iMin,iMax,jMin,jMax,kMin,kMax)
-
+      use ModAdvance, ONLY: FaceDivU_IY
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VY(:,:,:,:)
@@ -1668,24 +1700,32 @@ contains
          end do; end do; end do
       else
          do k = kMin, kMax; do i = iMin, iMax
-            if(UseLowOrder)then
-               UseLowOrder_I(jMin:jMax) = UseLowOrder_Y(i,jMin:jMax,k)
+            if(UseLowOrder) then
                Primitive_VI(:,jMin-2:jMax+1)=Primitive_VG(:,i,jMin-2:jMax+1,k)
 
-               IsTrueCell_I(jMin-nG:jMax-1+nG) = &
-                    true_cell(i,jMin-nG:jMax-1+nG,k,iBlock)
-               if(UseTrueCell)then
-                  call limiter_body(jMin, jMax, BetaLimiter)
+               if(nLowOrder==2) then
+                  IsTrueCell_I(jMin-nG:jMax-1+nG) = &
+                       true_cell(i,jMin-nG:jMax-1+nG,k,iBlock)
+                  if(UseTrueCell)then
+                     call limiter_body(jMin, jMax, BetaLimiter)
+                  else
+                     call limiter(jMin, jMax, BetaLimiter)
+                  end if
                else
-                  call limiter(jMin, jMax, BetaLimiter)
-               end if
+                  dVarLimL_VI = 0; dVarLimR_VI = 0
+               endif
                do j = jMin, jMax
                   LeftState_VY(:,i,j,k) =Primitive_VI(:,j-1)+dVarLimL_VI(:,j-1)
                   RightState_VY(:,i,j,k)=Primitive_VI(:,j)  -dVarLimR_VI(:,j)
                end do
-            end if
+            endif
 
             if(.not.DoInterpolateFlux)then
+               if(UseLowOrder) then
+                  LowOrderCrit_I(jMin:jMax) = &
+                       LowOrderCrit_YB(i,jMin:jMax,k,iBlock)
+               endif
+
                iVarSmoothLast = 0
                do iSort = 1, nVar
                   if(UseCweno) then
@@ -1820,22 +1860,32 @@ contains
          do j = jMin, jMax; do i = iMin, iMax
 
             if(UseLowOrder)then
-               UseLowOrder_I(kMin:kMax) = UseLowOrder_Z(i,j,kMin:kMax)
                Primitive_VI(:,kMin-2:kMax+1)=Primitive_VG(:,i,j,kMin-2:kMax+1)
-               IsTrueCell_I(kMin-nG:kMax-1+nG) = &
-                    true_cell(i,j,kMin-nG:kMax-1+nG,iBlock)
-               if(UseTrueCell)then
-                  call limiter_body(kMin, kMax, BetaLimiter)
+
+               if(nLowOrder==2) then
+                  IsTrueCell_I(kMin-nG:kMax-1+nG) = &
+                       true_cell(i,j,kMin-nG:kMax-1+nG,iBlock)
+                  if(UseTrueCell)then
+                     call limiter_body(kMin, kMax, BetaLimiter)
+                  else
+                     call limiter(kMin, kMax, BetaLimiter)
+                  end if
                else
-                  call limiter(kMin, kMax, BetaLimiter)
-               end if
+                  dVarLimL_VI = 0; dVarLimR_VI = 0
+               endif
                do k = kMin, kMax
                   LeftState_VZ(:,i,j,k) =Primitive_VI(:,k-1)+dVarLimL_VI(:,k-1)
-                  RightState_VZ(:,i,j,k)=Primitive_VI(:,k)  -dVarLimR_VI(:,k)
+                  RightState_VZ(:,i,j,k)=Primitive_VI(:,k)  -dVarLimR_VI(:,k)                  
                end do
             end if
 
             if(.not.DoInterpolateFlux)then
+               if(UseLowOrder) then
+                  LowOrderCrit_I(kMin:kMax) = &
+                       LowOrderCrit_ZB(i,j,kMin:kMax,iBlock) 
+
+               endif
+
                iVarSmoothLast = 0
                do iSort = 1, nVar
                   if(UseCweno) then
@@ -1878,6 +1928,7 @@ contains
                ! Copy points along i direction into 1D array
                Cell_I(kMin-nG:kMax-1+nG) = &
                     Primitive_VG(Uz_,i,j,kMin-nG:kMax-1+nG)
+
                call limit_var(kMin, kMax, Uz_)
                uDotArea_ZI(i,j,kMin:kMax,1) = CellFace_DB(3,iBlock) &
                     *0.5*(FaceL_I(kMin:kMax) + FaceR_I(kMin:kMax))
@@ -2963,71 +3014,420 @@ contains
     end subroutine flatten
     !==========================================================================
 
-    subroutine set_low_order_face
-
-      use BATL_lib, ONLY: block_inside_regions
-
-      ! Set which faces should use low (up to second) order scheme
-      ! Set logicals for the current block
-
-      integer:: i, j, k
-      character(len=*), parameter:: NameSub = 'set_low_order_face'
-      !------------------------------------------------------------------------
-      UseLowOrderOnly = .false.
-      UseLowOrder = UseTrueCell .or. UseLowOrderRegion
-      IsLowOrderOnly_B(iBlock) = .false.
-      if(.not.UseLowOrder) RETURN
-
-      if(.not.allocated(UseLowOrder_X)) then
-         allocate(             UseLowOrder_X(nI+1,nJ,nK))
-         if(nDim > 1) allocate(UseLowOrder_Y(nI,nJ+1,nK))
-         if(nDim > 2) allocate(UseLowOrder_Z(nI,nJ,nK+1))
-      end if
-
-      if(allocated(iRegionLowOrder_I)) then
-
-         call block_inside_regions(iRegionLowOrder_I, iBlock, &
-              size(UseLowOrder_X), 'xface', IsInside_I=UseLowOrder_X)
-         UseLowOrderOnly = all(UseLowOrder_X)
-
-         if(nDim > 1)then
-            call block_inside_regions(iRegionLowOrder_I, iBlock, &
-                 size(UseLowOrder_Y), 'yface', IsInside_I=UseLowOrder_Y)
-            UseLowOrderOnly = UseLowOrderOnly .and. all(UseLowOrder_Y)
-         end if
-
-         if(nDim > 2)then
-            call block_inside_regions(iRegionLowOrder_I, iBlock, &
-                 size(UseLowOrder_Z), 'zface', IsInside_I=UseLowOrder_Z)
-            UseLowOrderOnly = UseLowOrderOnly .and. all(UseLowOrder_Z)
-         end if
-
-      else if(UseTrueCell)then
-         ! The 5th order schemes need 3 cells on both sides of the face
-         do k=1, nK; do j=1, nJ; do i = 1, nI+1
-            UseLowOrder_X(i,j,k) = &
-                 .not.all(true_cell(i-3:i+2,j,k,iBlock))
-         end do; end do; end do
-         if(nDim > 1)then
-            do k=1, nK; do j=1, nJ+1; do i = 1, nI
-               UseLowOrder_Y(i,j,k) = &
-                    .not.all(true_cell(i,j-3:j+2,j,iBlock))
-            end do; end do; end do
-         end if
-         if(nDim > 2)then
-            do k=1, nK+1; do j=1, nJ; do i = 1, nI
-               UseLowOrder_Z(i,j,k) = &
-                    .not.all(true_cell(i,j,k-3:k+2,iBlock))
-            end do; end do; end do
-         end if
-      end if
-
-      if(UseLowOrderOnly) IsLowOrderOnly_B(iBlock) = .true.
-    end subroutine set_low_order_face
-    !==========================================================================
-
   end subroutine calc_face_value
   !============================================================================
+
+  subroutine set_low_order_face
+
+    use ModMain,  ONLY: MaxBlock, iMinFace, iMaxFace, jMinFace, jMaxFace, &
+         kMinFace, kMaxFace, nIFace, nJFace, nKFace, nOrder, nBlock
+    use ModGeometry, ONLY : true_cell
+    use ModB0
+    use ModPhysics, ONLY: Gamma_I
+    use ModAdvance, ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
+         State_VGB
+    use BATL_lib, ONLY: block_inside_regions, Unused_B, MaxDim
+
+    ! Set which faces should use low (up to second) order scheme
+    ! Set logicals for the current block
+
+    integer:: iBlock
+    logical:: UseLowOrderOnly
+
+    integer:: i, j, k
+    real:: LowOrderCrit_X(nIFace,nJ,nK)
+    real:: LowOrderCrit_Y(nI,nJFace,nK)
+    real:: LowOrderCrit_Z(nI,nJ,nKFace)
+    integer:: cLowOrder = 1
+    real:: cSmall = 1e-6
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'set_low_order_face'
+    !------------------------------------------------------------------------
+
+    call test_start(NameSub, DoTest)
+
+    if(nOrder<=2) then
+       IsLowOrderOnly_B = .true.
+    else
+       UseLowOrder = UseTrueCell .or. UseLowOrderRegion .or. UseAdaptiveLowOrder
+       if(UseLowOrder) then
+          do iBlock = 1, nBlock
+             if (Unused_B(iBlock)) CYCLE
+             UseLowOrderOnly = .false.
+             IsLowOrderOnly_B(iBlock) = .false.
+
+             if(.not. allocated(LowOrderCrit_XB)) then
+                allocate(LowOrderCrit_XB( &
+                     nI+1,jMinFace:jMaxFace,kMinFace:kMaxFace,MaxBlock))
+                allocate(LowOrderCrit_YB( &
+                     iMinFace:iMaxFace,nJ+1,kMinFace:kMaxFace,MaxBlock))
+                allocate(LowOrderCrit_ZB( &
+                     iMinFace:iMaxFace,jMinFace:jMaxFace,nK+1,MaxBlock))
+             endif
+
+             LowOrderCrit_XB(:,:,:,iBlock) = 0
+             LowOrderCrit_YB(:,:,:,iBlock) = 0
+             LowOrderCrit_ZB(:,:,:,iBlock) = 0         
+
+             ! Get the LowOrderCrit based on physical criteria. The vale of 
+             ! 'LowOrderCrit_*B' is the ratio of the low order face value. 
+             if(UseAdaptiveLowOrder) call set_physics_based_low_order_face
+
+             if(allocated(iRegionLowOrder_I)) then
+
+                call block_inside_regions(iRegionLowOrder_I, iBlock, &
+                     size(LowOrderCrit_X), 'xface',Value_I=LowOrderCrit_X)
+                LowOrderCrit_XB(:,:,:,iBlock) = &
+                     max(LowOrderCrit_X,LowOrderCrit_XB(:,:,:,iBlock))
+                UseLowOrderOnly = all(LowOrderCrit_XB(:,:,:,iBlock) &
+                     >= cLowOrder-cSmall)
+
+                if(nDim > 1)then
+                   call block_inside_regions(iRegionLowOrder_I, iBlock, &
+                        size(LowOrderCrit_Y), 'yface', Value_I=LowOrderCrit_Y)
+                   ! Use low order if the face is inside the low order region OR
+                   ! satisfies the physical condition.
+                   LowOrderCrit_YB(:,:,:,iBlock) = &
+                        max(LowOrderCrit_Y,LowOrderCrit_YB(:,:,:,iBlock))
+                   UseLowOrderOnly = UseLowOrderOnly .and. &
+                        all(LowOrderCrit_YB(:,:,:,iBlock) >= cLowOrder-cSmall)
+                end if
+
+                if(nDim > 2)then
+                   call block_inside_regions(iRegionLowOrder_I, iBlock, &
+                        size(LowOrderCrit_Z), 'zface', Value_I=LowOrderCrit_Z)
+                   LowOrderCrit_ZB(:,:,:,iBlock) = &
+                        max(LowOrderCrit_Z,LowOrderCrit_ZB(:,:,:,iBlock))
+                   UseLowOrderOnly = UseLowOrderOnly .and. &
+                        all(LowOrderCrit_ZB(:,:,:,iBlock) >= cLowOrder-cSmall)
+                end if
+
+             else if(UseTrueCell)then
+                ! The 5th order schemes need 3 cells on both sides of the face
+                do k=1, nK; do j=1, nJ; do i = 1, nI+1
+                   if(.not.all(true_cell(i-3:i+2,j,k,iBlock))) &
+                        LowOrderCrit_XB(i,j,k,iBlock) = cLowOrder
+                end do; end do; end do
+                if(nDim > 1)then
+                   do k=1, nK; do j=1, nJ+1; do i = 1, nI
+                      if(.not.all(true_cell(i,j-3:j+2,j,iBlock))) &
+                           LowOrderCrit_YB(i,j,k,iBlock) = cLowOrder
+                   end do; end do; end do
+                end if
+                if(nDim > 2)then
+                   do k=1, nK+1; do j=1, nJ; do i = 1, nI
+                      if(.not.all(true_cell(i,j,k-3:k+2,iBlock))) &
+                           LowOrderCrit_ZB(i,j,k,iBlock) = cLowOrder
+                   end do; end do; end do
+                end if
+             end if
+
+             if(UseLowOrderOnly) IsLowOrderOnly_B(iBlock) = .true.
+
+          enddo ! iBlock
+       endif ! UseLowOrder
+    endif ! nOrder
+    call test_stop(NameSub, DoTest)
+
+  contains
+
+    subroutine set_physics_based_low_order_face
+      use ModMain, ONLY:MaxBlock
+      use ModAdvance, ONLY:Vel_IDGB
+      use ModMultiFluid, ONLY: nFluid
+      use ModPhysics, ONLY: Gamma_I
+      !--------------------------------------------------------------------
+
+      integer :: iFace, jFace, kFace
+      real:: State_VI(nVar,-3:2)
+      logical:: DoTest
+      character(len=*), parameter:: NameSub = 'set_physics_based_low_order_face'
+      !--------------------------------------------------------------------------
+
+      call test_start(NameSub, DoTest)
+
+      ! Face along x-direction
+      do kFace=kMinFace,kMaxFace; do jFace=jMinFace,jMaxFace; do iFace=1,nIFace
+         State_VI = State_VGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
+         if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
+              B0_DGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
+
+         !write(*,*)'iFace = ',iFace
+         LowOrderCrit_XB(iFace,jFace,kFace,iBlock) = &
+              low_order_face_criteria( State_VI, &
+              Vel_IDGB(:,x_,iFace-3:iFace+2,jFace,kFace,iBlock))
+      enddo; enddo; enddo
+
+      if(nDim>1) then
+         ! Face along y-direction
+         do kFace=kMinFace,kMaxFace; do jFace=1,nJFace; do iFace=iMinFace,iMaxFace
+            State_VI = State_VGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
+            if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
+                 B0_DGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
+            LowOrderCrit_YB(iFace,jFace,kFace,iBlock) = &
+                 low_order_face_criteria(State_VI, &
+                 Vel_IDGB(:,y_,iFace,jFace-3:jFace+2,kFace,iBlock))
+         enddo; enddo; enddo
+      endif
+
+      if(nDim>2) then
+         ! Face along z-direction
+         do kFace=kMinFace,kMaxFace; do jFace=1,nJFace; do iFace=iMinFace,iMaxFace
+            State_VI = State_VGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
+            if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
+                 B0_DGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
+            LowOrderCrit_ZB(iFace,jFace,kFace,iBlock) = &
+                 low_order_face_criteria(State_VI, &
+                 Vel_IDGB(:,z_,iFace,jFace,kFace-3:kFace+2,iBlock))
+         enddo; enddo; enddo       
+      endif
+
+      call test_stop(NameSub, DoTest)
+
+    end subroutine set_physics_based_low_order_face
+    !============================================================================
+    real function low_order_face_criteria(State_VI, Vel_II)      
+      use ModMain, ONLY: UseB0, UseB
+      real, intent(in):: State_VI(nVar,-3:2)
+      real, intent(in):: Vel_II(nFluid,-3:2)
+
+      integer:: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP
+      real:: pTotal_I(-3:2), Sound_I(-3:2)
+      real:: crit, pRatio, VelRatio, SoundMin
+      !--------------------------------------------------------------------
+
+      pTotal_I = 0
+      VelRatio = 0
+      do iFluid = 1, nFluid
+         iRho   = iRho_I(iFluid)
+         iRhoUx = iRhoUx_I(iFluid)
+         iRhoUy = iRhoUy_I(iFluid)
+         iRhoUz = iRhoUz_I(iFluid)
+         iP     = iP_I(iFluid)
+
+         pTotal_I = pTotal_I + State_VI(iP,:)
+
+         Sound_I  = sqrt(State_VI(iP,:)/State_VI(iRho,:)*Gamma_I(iFluid))
+         SoundMin = minval(Sound_I)
+         VelRatio = max(VelRatio, &
+              (maxval(Vel_II(iFluid,:))-minval(Vel_II(iFluid,:)))/SoundMin)
+      enddo
+
+      crit = 0
+      if(VelRatio > VelCrit) then
+         if(UseB) then
+            pTotal_I = pTotal_I + 0.5*(State_VI(Bx_,:)**2 + &
+                 State_VI(By_,:)**2 + State_VI(Bz_,:)**2)
+         endif
+
+         pRatio = maxval(pTotal_I)/minval(pTotal_I)
+         ! pRatio >= pCritLow    -> low order
+         ! pRatio < pCritHigh    -> high order
+         ! otherwise             -> linear combination of low and high order
+         ! This function returns the ratio of the low order face value
+         if(pRatio >= pCritLow) then
+            crit = 1
+         elseif(pRatio < pCritHigh) then
+            crit = 0
+         else
+            crit = (pRatio - pCritHigh)/(pCritLow - pCritHigh)
+         endif
+      endif
+
+      low_order_face_criteria = crit 
+
+    end function low_order_face_criteria
+    !============================================================================
+
+  end subroutine set_low_order_face
+  !==========================================================================
+
+  subroutine calc_cell_norm_velocity
+    use ModMain, ONLY: MaxBlock, nBlock
+    use BATL_lib, ONLY: Xyz_DGB, IsCartesian, Unused_B, MaxDim, &
+         iDim_, jDim_, kDim_
+    use ModAdvance, ONLY: Vel_IDGB, State_VGB
+    use ModMultiFluid, ONLY: nFluid
+
+    !--------------------------------------------------------------------
+    integer:: iBlock
+
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax, i, j, k, iDim
+    real :: ijkDir_DD(MaxDim, MaxDim)
+
+    integer :: iFluid, iRho, iRhoUx, iRhoUy, iRhoUz
+
+    logical :: DoTest
+    character(len=*), parameter:: NameSub = 'calc_cell_norm_velocity'
+    !--------------------------------------------------------------------
+    call test_start(NameSub, DoTest)
+
+    if(.not. allocated(Vel_IDGB)) &
+         allocate(Vel_IDGB(nFluid,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+
+    iMin = 1 - nG;       iMax = nI + nG
+    jMin = 1 - nG*jDim_; jMax = nJ + nG*jDim_
+    kMin = 1 - nG*kDim_; kMax = nK + nG*kDim_
+
+    do iBlock = 1, nBlock
+       if (Unused_B(iBlock)) CYCLE
+       do iFluid = 1, nFluid
+          iRho = iRho_I(iFluid)
+          iRhoUx = iRhoUx_I(iFluid)
+          iRhoUy = iRhoUy_I(iFluid)
+          iRhoUz = iRhoUz_I(iFluid)
+
+          if(IsCartesian) then
+             Vel_IDGB(iFluid,x_,:,:,:,iBlock) = &
+                  State_VGB(iRhoUx,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
+             Vel_IDGB(iFluid,y_,:,:,:,iBlock) = &
+                  State_VGB(iRhoUy,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
+             Vel_IDGB(iFluid,z_,:,:,:,iBlock) = &
+                  State_VGB(iRhoUz,:,:,:,iBlock)/State_VGB(iRho,:,:,:,iBlock)
+          else 
+             ! Convert cell center velocity in xyz direction into grid 
+             ! aligned direction.
+             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+                ijkDir_DD = 0
+
+                ijkDir_DD(:,x_) = Xyz_DGB(:,min(i+iDim_,iMax),j,k,iBlock) - &
+                     Xyz_DGB(:,max(i-iDim_,iMin),j,k,iBlock)
+                ijkDir_DD(:,x_) = ijkDir_DD(:,x_)/sqrt(sum(ijkDir_DD(:,x_)**2))
+
+                if(nDim>1) then
+                   ijkDir_DD(:,y_) = Xyz_DGB(:,i,min(j+jDim_,jMax),k,iBlock) - &
+                        Xyz_DGB(:,i,max(j-jDim_,jMin),k,iBlock)
+                   ijkDir_DD(:,y_) = ijkDir_DD(:,y_)/sqrt(sum(ijkDir_DD(:,y_)**2))
+                endif
+
+                if(nDim>2) then
+                   ijkDir_DD(:,z_) = Xyz_DGB(:,i,j,min(k+kDim_,kMax),iBlock) - &
+                        Xyz_DGB(:,i,j,max(k-kDim_,kMin),iBlock)
+                   ijkDir_DD(:,z_) = ijkDir_DD(:,z_)/sqrt(sum(ijkDir_DD(:,z_)**2))
+                endif
+
+                do iDim = 1, MaxDim
+                   Vel_IDGB(iFluid,iDim,i,j,k,iBlock) =  &                       
+                        sum(State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock)* &
+                        ijkDir_DD(:,iDim))/State_VGB(iRho,i,j,k,iBlock)
+                enddo
+
+             enddo; enddo; enddo
+
+          endif ! IsCartesian
+       enddo ! iFluid
+    enddo ! iBlock
+
+    call test_stop(NameSub, DoTest)
+  end subroutine calc_cell_norm_velocity
+  !============================================================================
+
+  subroutine calc_face_div_u(iBlock)
+    ! This subroutine 'estimates' div(V)*dl at the cell faces, where
+    ! 'dl' is the cell size. 
+    ! The algorithm is implemented based on the paper of 
+    ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper 
+    ! for more details. 
+
+    use ModAdvance, ONLY: State_VGB, FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ, &
+         Vel_IDGB
+    use BATL_size,   ONLY: nDim, MaxDim, iDim_, jDim_, kDim_
+    use BATL_lib, ONLY: Xyz_DGB, IsCartesian
+    use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
+         kMaxFace, nIFace, nJFace, nKFace
+    integer, intent(in)::iBlock
+
+    integer :: iRho, iRhoUx, iRhoUy, iRhoUz
+    integer :: iFluid, iFace, jFace, kFace
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax, i, j, k, iDim
+    real :: ijkDir_DD(MaxDim, MaxDim)
+
+    real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+
+    character(len=*), parameter:: NameSub = 'calc_face_div_u'
+    !------------------------------------------------------------------------
+
+    call timing_start(NameSub)
+
+    iMin = 1 - nG;       iMax = nI + nG
+    jMin = 1 - nG*jDim_; jMax = nJ + nG*jDim_
+    kMin = 1 - nG*kDim_; kMax = nK + nG*kDim_
+
+    do iFluid = 1, nFluid
+       iRho = iRho_I(iFluid)
+       iRhoUx = iRhoUx_I(iFluid)
+       iRhoUy = iRhoUy_I(iFluid)
+       iRhoUz = iRhoUz_I(iFluid)
+
+       Vel_DG = Vel_IDGB(iFluid,:,:,:,:,iBlock)
+
+       ! Assume dl ~ dx ~ dy ~ dz, then FaceDivU_IX/Y/Z = div(U)*dl
+       ! See eq(35) of P. McCorquodale and P. Colella (2010)
+       do kFace=kMinFace,kMaxFace; do jFace=jMinFace,jMaxFace; do iFace=1,nIFace
+          FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
+               (Vel_DG(x_,iFace,jFace,kFace) - &
+               Vel_DG(x_,iFace-1,jFace,kFace)) 
+
+          if(nDim>1) FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
+               FaceDivU_IX(iFluid,iFace,jFace,kFace)+ &
+               (Vel_DG(y_,iFace,jFace+1,kFace) - &
+               Vel_DG(y_,iFace,jFace-1,kFace) + &
+               Vel_DG(y_,iFace-1,jFace+1,kFace) - &
+               Vel_DG(y_,iFace-1,jFace-1,kFace))/4
+
+
+          if(nDim>2) FaceDivU_IX(iFluid,iFace,jFace,kFace) = &
+               FaceDivU_IX(iFluid,iFace,jFace,kFace)+ &
+               (Vel_DG(z_,iFace,jFace,kFace+1) - &
+               Vel_DG(z_,iFace,jFace,kFace-1) + &
+               Vel_DG(z_,iFace-1,jFace,kFace+1) - &
+               Vel_DG(z_,iFace-1,jFace,kFace-1))/4
+
+       enddo; enddo; enddo
+
+       If(nDim>1) then
+          do kFace=kMinFace,kMaxFace; do jFace=1,nJFace; do iFace=iMinFace,iMaxFace
+             FaceDivU_IY(iFluid,iFace,jFace,kFace) = &
+                  (Vel_DG(y_,iFace,jFace,kFace) - &
+                  Vel_DG(y_,iFace,jFace-1,kFace)) + &
+                  (Vel_DG(x_,iFace+1,jFace,kFace) - &
+                  Vel_DG(x_,iFace-1,jFace,kFace) + &
+                  Vel_DG(x_,iFace+1,jFace-1,kFace) - &
+                  Vel_DG(x_,iFace-1,jFace-1,kFace))/4
+
+             if(nDim>2) FaceDivU_IY(iFluid,iFace,jFace,kFace) = &
+                  FaceDivU_IY(iFluid,iFace,jFace,kFace) + &
+                  (Vel_DG(z_,iFace,jFace,kFace+1) - &
+                  Vel_DG(z_,iFace,jFace,kFace-1) + &
+                  Vel_DG(z_,iFace,jFace-1,kFace+1) - &
+                  Vel_DG(z_,iFace,jFace-1,kFace-1))/4
+          enddo; enddo; enddo
+       endif
+
+
+       if(nDim>2) then
+          do kFace=1,nKFace; do jFace=jMinFace,jMaxFace; do iFace=iMinFace,iMaxFace
+             FaceDivU_IZ(iFluid,iFace,jFace,kFace) = &
+                  (Vel_DG(z_,iFace,jFace,kFace) - &
+                  Vel_DG(z_,iFace,jFace,kFace-1)) + &
+                  (Vel_DG(x_,iFace+1,jFace,kFace) - &
+                  Vel_DG(x_,iFace-1,jFace,kFace) + &
+                  Vel_DG(x_,iFace+1,jFace,kFace-1) - &
+                  Vel_DG(x_,iFace-1,jFace,kFace-1))/4 + &
+                  (Vel_DG(y_,iFace,jFace+1,kFace) - &
+                  Vel_DG(y_,iFace,jFace-1,kFace) + &
+                  Vel_DG(y_,iFace,jFace+1,kFace-1) - &
+                  Vel_DG(y_,iFace,jFace-1,kFace-1))/4
+          enddo; enddo; enddo
+       endif
+
+    enddo ! iFluid
+
+    call timing_stop(NameSub)
+  end subroutine calc_face_div_u
+  !============================================================================
+
   subroutine limiter_mp(lMin, lMax, Cell_I, Cell2_I, iVar)
 
     integer, intent(in):: lMin, lMax  ! face index range, e.g. 1...nI+1
@@ -3066,6 +3466,10 @@ contains
 
     integer:: l
 
+    real:: sMin, sMax, SoundMin, diff1, diff2_I(3)
+
+    real:: beta = 0.3, r0, RatioVel, FaceLowOrder
+
     character(len=*), parameter:: NameSub = 'limiter_mp'
     !--------------------------------------------------------------------------
 
@@ -3077,16 +3481,20 @@ contains
     ! Limit left face first. Loop index l is for cell center, and face l+1/2
     do l = lMin-1, lMax-1
 
-       ! Skip faces using the low order scheme
-       if(UseLowOrder)then
-          if(UseLowOrder_I(l+1)) CYCLE
-       endif
-
        Cellmm = Cell_I(l-2)
        Cellm  = Cell_I(l-1)
        Cell   = Cell_I(l)
        Cellp  = Cell_I(l+1)
        Cellpp = Cell_I(l+2)
+
+       if(UseLowOrder) then
+          if(LowOrderCrit_I(l+1) >=1) then
+             CYCLE
+          else
+             FaceLowOrder = FaceL_I(l+1)
+          endif
+
+       endif
 
        if(UseFDFaceFlux) then
           ! Get the 5th order face value.
@@ -3102,16 +3510,27 @@ contains
        if( (FaceOrig - Cell)*(FaceOrig - FaceMp) <= 1e-12)then
           FaceL_I(l+1) = FaceOrig
        else
-          D2p = minmod4(4*D2_I(l) - D2_I(l+1),4*D2_I(l+1) - D2_I(l), &
-               D2_I(l), D2_I(l+1))
-
-          D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
-               D2_I(l), D2_I(l-1))
 
           UpperLimit = Cell + 4*(Cell - Cellm)
           Average    = 0.5*(Cell + Cellp)
-          Median     = Average - 0.5*D2p
-          LargeCurve = Cell + 0.5*(Cell - Cellm) + cFourThird*D2m
+
+          diff1 = max(abs(Cell2_I(l)-Cell2_I(l-1)),1e-14)
+          diff2_I(1) = abs(0.5*(Cell2_I(l-2) + Cell2_I(l) - 2*Cell2_I(l-1)))
+          diff2_I(2) = abs(0.5*(Cell2_I(l-1) + Cell2_I(l+1) - 2*Cell2_I(l)))
+          diff2_I(3) = abs(0.5*(Cell2_I(l) + Cell2_I(l+2) - 2*Cell2_I(l+1)))
+
+          if(UseAccurateExtremum .or. maxval(diff2_I)/diff1 <0.5) then
+             D2p = minmod4(4*D2_I(l) - D2_I(l+1),4*D2_I(l+1) - D2_I(l), &
+                  D2_I(l), D2_I(l+1))
+             D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
+                  D2_I(l), D2_I(l-1))
+
+             Median     = Average - 0.5*D2p
+             LargeCurve = Cell + 0.5*(Cell - Cellm) + cFourThird*D2m
+          else 
+             Median     = Cell 
+             LargeCurve = UpperLimit 
+          endif
 
           ! Note: FaceMin <= Cell, FaceMax >= Cell, so FaceMin <= FaceMax
           FaceMin = max(min(Cell, Cellp, Median), &
@@ -3124,6 +3543,12 @@ contains
           FaceL_I(l+1) = min(FaceMax, max(FaceMin, FaceOrig))
 
        end if
+
+
+       if(UseLowOrder) then
+          FaceL_I(l+1) = (1-LowOrderCrit_I(l+1))*FaceL_I(l+1) + &
+               LowOrderCrit_I(l+1)*FaceLowOrder                    
+       endif
 
        ! If the face value is a very small fraction of the cell
        ! then switch to first order scheme. This can occur at
@@ -3142,15 +3567,20 @@ contains
     ! Limit right face. Loop index l is for cell center, and face l-1/2
     do l = lMin, lMax
 
-       if(UseLowOrder)then
-          if(UseLowOrder_I(l)) CYCLE
-       endif
-
        Cellmm = Cell2_I(l-2)
        Cellm  = Cell2_I(l-1)
        Cell   = Cell2_I(l)
        Cellp  = Cell2_I(l+1)
        Cellpp = Cell2_I(l+2)
+
+
+       if(UseLowOrder) then
+          if(LowOrderCrit_I(l) >=1) then
+             CYCLE
+          else
+             FaceLowOrder = FaceR_I(l)
+          endif
+       endif
 
        if(UseFDFaceFlux) then
           ! FaceOrig
@@ -3167,16 +3597,26 @@ contains
           FaceR_I(l) = FaceOrig
        else
 
-          D2p = minmod4(4*D2_I(l) - D2_I(l+1),4*D2_I(l+1) - D2_I(l), &
-               D2_I(l), D2_I(l+1))
-
-          D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
-               D2_I(l), D2_I(l-1))
-
           UpperLimit = Cell + 4*(Cell - Cellp)
           Average    = 0.5*(Cell + Cellm)
-          Median     = Average - 0.5*D2m
-          LargeCurve = Cell + 0.5*(Cell - Cellp) + cFourThird*D2p
+
+          diff1 = max(abs(Cell2_I(l)-Cell2_I(l-1)),1e-14)
+          diff2_I(1) = abs(0.5*(Cell2_I(l-2) + Cell2_I(l) - 2*Cell2_I(l-1)))
+          diff2_I(2) = abs(0.5*(Cell2_I(l-1) + Cell2_I(l+1) - 2*Cell2_I(l)))
+          diff2_I(3) = abs(0.5*(Cell2_I(l) + Cell2_I(l+2) - 2*Cell2_I(l+1)))
+
+          if(UseAccurateExtremum .or. maxval(diff2_I)/diff1 <0.5 ) then
+             D2p = minmod4(4*D2_I(l) - D2_I(l+1),4*D2_I(l+1) - D2_I(l), &
+                  D2_I(l), D2_I(l+1))
+             D2m = minmod4(4*D2_I(l) - D2_I(l-1),4*D2_I(l-1) - D2_I(l), &
+                  D2_I(l), D2_I(l-1))
+
+             Median     = Average - 0.5*D2m
+             LargeCurve = Cell + 0.5*(Cell - Cellp) + cFourThird*D2p
+          else
+             Median     = Cell
+             LargeCurve = UpperLimit
+          endif
 
           ! Note: FaceMin <= Cell, FaceMax >= Cell, so FaceMin <= FaceMax
           FaceMin = max(min(Cell, Cellm, Median), &
@@ -3189,6 +3629,11 @@ contains
           FaceR_I(l) = min(FaceMax, max(FaceMin, FaceOrig))
 
        end if
+
+       if(UseLowOrder) then
+          FaceR_I(l) = (1-LowOrderCrit_I(l))*FaceR_I(l) + &
+               LowOrderCrit_I(l)*FaceLowOrder
+       endif
 
        ! Check fraction limit
        if(present(iVar))then
@@ -3899,6 +4344,7 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine correct_monotone_restrict
   !============================================================================
+
 
 end module ModFaceValue
 !==============================================================================

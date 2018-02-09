@@ -58,7 +58,7 @@ contains
          UseTvdResChange, UseAccurateResChange, &
          UseVolumeIntegral4, UseFaceIntegral4, UseLimiter4, nGUsed, &
          DoLimitMomentum, BetaLimiter, TypeLimiter, read_face_value_param, &
-         TypeLimiter5, UseCweno,&
+         TypeLimiter5, UseCweno, &
          iVarSmooth_V, iVarSmoothIndex_I, &
          StringLowOrderRegion, iRegionLowOrder_I
     use ModPartSteady,    ONLY: UsePartSteady, MinCheckVar, MaxCheckVar, &
@@ -1233,7 +1233,7 @@ contains
           call read_var('DoBurgers', DoBurgers)
 
        case('#LIMITER', '#RESCHANGE', '#RESOLUTIONCHANGE', '#TVDRESCHANGE', &
-            '#LIMITPTOTAL', '#FLATTENING', '#LOWORDERREGION')
+            '#LIMITPTOTAL', '#FLATTENING', '#LOWORDERREGION', '#ADAPTIVELOWORDER')
           call read_face_value_param(NameCommand)
 
        case("#NONCONSERVATIVE")
@@ -2826,7 +2826,8 @@ contains
          if(FluxTypeImpl=='Godunov') FluxTypeImpl = 'Linde'
       end if
 
-      UseBdf2 = nStage > 1 .and. time_accurate
+      if(i_line_command("#IMPLSTEP") < 0) &
+           UseBdf2 = nStage > 1 .and. time_accurate
 
       ! Make sure periodic boundary conditions are symmetric
       do i=Coord1MinBc_,Coord3MinBc_,2
