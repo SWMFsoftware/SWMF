@@ -116,30 +116,31 @@ contains
     !EOP
 
     ! True if first session will be read
-    logical :: IsFirstRead=.true. 
+    logical :: IsFirstRead = .true. 
 
     ! Logical for echo of commands
-    logical :: DoEcho=.false.
+    logical :: DoEcho = .true.
 
     ! One line of input and command name
     character (len=lStringLine) :: StringLine, NameCommand
 
     ! Current line number and total number of lines
     ! Must be SAVE-d or initialized
-    integer :: iLine=0
+    integer :: iLine = 0
 
     ! Temporary variables
     integer :: nByteRealRead
     real    :: FracSecond ! Default precision is sufficient for reading
 
-    integer            :: nDepthTiming  = -1
-    character (len=10) :: TypeTimingReport  = 'cumu'
-    logical            :: UseTimingAll = .false.
-
     ! Timing parameters
-    character (lNameVersion) :: NameVersion
-    real               :: VersionNumber
-    logical            :: IsOn
+    integer           :: nDepthTiming = -1
+    character(len=10) :: TypeTimingReport  = 'cumu'
+    logical           :: UseTimingAll = .false.
+
+    ! Version
+    character(lNameVersion):: NameVersion
+    real                   :: VersionNumber
+    logical                :: IsOn
 
     ! Beginning line number and number of lines for component parameters
     integer :: iLineModule, nLineModule
@@ -153,7 +154,6 @@ contains
     character (len=lNameComp) :: NameComp, NameComp1, NameComp2
     character (len=lNameComp) :: NameSourceTarget_I(2)
     character (len=lStringLine) :: NameSourceTarget
-
     !-------------------------------------------------------------------------
     if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
 
@@ -220,27 +220,25 @@ contains
 
                 ! Decide where to write STDOUT
                 if(UseStdout)then
-                   iUnitOut=STDOUT_
+                   iUnitOut = STDOUT_
                 else
-                   call get_comp_info(NameComp,iUnitOut=iUnitOut)
+                   call get_comp_info(NameComp, iUnitOut=iUnitOut)
                 end if
                 ! Initialize ModReadParam
-                call read_init(NameComp,iSession,iLineModule,iLine-1,iUnitOut)
+                call read_init(NameComp, iSession, iLineModule, iLine-1, iUnitOut)
                 
                 ! Echo component input on root PE of component
                 if(is_proc0())        call read_echo_set(.false.)
                 if(is_proc0(NameComp))call read_echo_set(DoEcho)
 
                 ! Set the parameters for the component
-                call set_param_comp(NameComp,'READ')
+                call set_param_comp(NameComp, 'READ')
 
-                if(is_proc0(NameComp))then
-                   if(     UseStdout)call flush_unit(STDOUT_)
-                   if(.not.UseStdout)call flush_unit(iUnitOut)
-                end if
+                ! Flush output on root processor of the component
+                if(is_proc0(NameComp))call flush_unit(iUnitOut)
 
                 ! reset ModReadParam to read the CON parameters
-                call read_init('  ',iSession,iLine)
+                call read_init('  ', iSession, iLine)
 
                 ! Echo CON input on root PE of CON
                 if(is_proc0(NameComp))call read_echo_set(.false.)
@@ -775,18 +773,18 @@ contains
 
        if(.not.UseStdout)then
           ! Get the unit number from the registry
-          call get_comp_info(iComp,iUnitOut=iUnitOut)
+          call get_comp_info(iComp, iUnitOut=iUnitOut)
           ! Check if unit has been set
           if(iUnitOut==STDOUT_)then
              ! Construct the unique file name for each component and PE
              write(NameFile,'(a,i4.4,a)') trim(NameStdoutDir)// &
                   NameComp_I(iComp),i_proc(),NameStdoutExt
              ! Get a new unit number
-             iUnitOut=io_unit_new()
+             iUnitOut = io_unit_new()
              ! Open the file
              call open_file(iUnitOut, FILE=NameFile)
              ! Store the unit number into the registry
-             call put_comp_info(iComp,iUnitOut=iUnitOut)
+             call put_comp_info(iComp, iUnitOut=iUnitOut)
           end if
           ! Tell the component to write into a file
           call set_param_comp(iComp,"FILEOUT")
