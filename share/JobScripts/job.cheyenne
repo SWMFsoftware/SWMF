@@ -1,0 +1,35 @@
+#!/bin/tcsh
+
+# Information:
+# https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne
+
+# Name of run
+#PBS -N SWMF
+
+# Account to be charged
+#PBS -A UMIC0006
+
+# Up to 12 hours (6 hours for share queue)
+#PBS -l walltime=12:00:00
+
+# Queues:
+# premium # 150% charge
+# regular # 100% charge (also interactive)
+# economy #  70% charge
+# share   # 100% charge up to 18 cores for debugging/serial jobs (postprocess)
+#PBS -q regular
+#PBS -j oe
+#PBS -m abe
+
+# Send email notifications:
+### PBS -M UMUSERNAME@umich.edu
+
+# There are 36 cores / node
+#PBS -l select=32:ncpus=36:mpiprocs=36
+
+### Set TMPDIR as recommended
+# setenv TMPDIR /glade/scratch/username/temp
+# mkdir -p $TMPDIR
+
+### Run the executable
+mpiexec_mpt dplace -s 1 ./SWMF.exe
