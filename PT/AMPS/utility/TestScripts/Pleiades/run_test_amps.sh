@@ -128,65 +128,9 @@ rm -f AmpsTestComplete
 echo " done."
 
 # compile AMPS tests
-
-# GNU compiler
-
-#>Valeriy ######################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_gnu.valeriy <#
-
-#>Pleiades ####################################
-module load gcc/6.2                         #
-module load mpi-sgi;                        
 $HOME/bin/CompileGNUPleiades.sh &
-
-#>Stampede ####################################
-#module load gcc/4.9.1                        #
-#module load mvapich2/2.1                    <#
-
-#>GNUAll ######################################
-#jecho -n "Compiling GNU....."                 # 
-#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-#make test_compile >>& test_amps.log          #
-#echo " done."                                
-
-# Intel compiler 
-
-#>Valeriy ########################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_intel.valeriy <#
-
-#>Pleiades>Yellowstone>Stampede ###############
-module purge;                               
-
-#>Pleiades ####################################
 $HOME/bin/CompileIntelPleiades.sh &
-
-#>Stampede ####################################
-#module load intel/15.0.2;                    #
-#module load mvapich2/2.1;                   <#
-
-
-#>IntelAll ####################################
-#echo -n "Compiling Intel....."               #
-#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-#make test_compile >>& test_amps.log          #
-#echo " done."                                
-
-# PGI compiler
-
-#>Pleiades>Yellowstone ########################
-module purge;                               
-
 $HOME/bin/CompilePGIPleiades.sh &
-
-#>Pleiades ####################################
-
-
-#>PGIAll ######################################
-#echo -n "Compiling PGI....."                 # 
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#make test_compile >>& test_amps.log          #
-#echo " done."                                
-
 
 # Run test
 # Super computers
@@ -205,60 +149,12 @@ rm -f AmpsCompilingPGIComplete
 echo Compiling of AMPS is completed
 
 #########################################
+#Execute the tests 
+source $HOME/.cshrc
+#$HOME/bin/RunAllPleiades.sh
 
-rm -f AmpsTestComplete
-
-foreach job (test_amps.pleiades.all.*job)                #
-  #execute the next part of the tests
-  /PBS/bin/qsub $job
-
-  #waite while the set of test is finished
-  #and then proceed with the new part of 
-  #the tests 
-  while (! -f AmpsTestComplete) 
-    sleep 60
-  end
-
-  sleep 300 
-  rm -f AmpsTestComplete
-end                                         
+perl $HOME/bin/RunAllPleiades.pl
 
 
-#>Stampede ####################################
-#set submit = '/usr/bin/sbatch'              <#
-#>Stampede ####################################
-#cd $WorkDir/Tmp_AMPS_test                    #
-#@ delay = 2                                  #
-#foreach job (test_amps.*.job)                #
-#  echo "$submit $job"|at now+$delay minutes  #
-#  @ delay = $delay + 121                     #
-#end                                         <#
-#>Yellowstone #################################
-#/usr/bin/bsub < test_amps.job               <#
 
-# Other machines
-
-# GNU compiled tests
-
-#>Valeriy ########################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_gnu.valeriy <#
-
-#>GNUOther ####################################
-#cd $WorkDir/Tmp_AMPS_test/GNU/AMPS           #
-#make test_run >>& test_amps.log             <#
-
-# Intel compiled tests
-
-#>Valeriy ########################################################################
-#source $WorkDir/Tmp_AMPS_test/AMPS/utility/TestScripts/CompilerSetup/set_mpi_intel.valeriy <#
-
-#>IntelOther ##################################
-#cd $WorkDir/Tmp_AMPS_test/Intel/AMPS         #
-#make test_run >>& test_amps.log             <#
-
-# PGI compiled tests
-
-#>PGIOther ####################################
-#cd $WorkDir/Tmp_AMPS_test/PGI/AMPS           #
-#make test_run >>& test_amps.log             <#
 
