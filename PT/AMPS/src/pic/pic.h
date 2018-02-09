@@ -5284,6 +5284,7 @@ namespace FieldSolver {
         //Energy conserving field solver (same as used in the IPIC3D)
         namespace ECSIM {
             extern int CurrentEOffset, OffsetE_HalfTimeStep;
+	    extern int CurrentBOffset, PrevBOffset;
             extern cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1> Solver;
             //	extern cLinearSystemCornerNode Solver;
             extern int ExOffsetIndex, EyOffsetIndex, EzOffsetIndex;
@@ -5293,7 +5294,7 @@ namespace FieldSolver {
             
             extern double cDt;
             extern double theta;
-            
+	    extern double LightSpeed;
             // matrix operation for the matrix solver
             void matvec(double* VecIn, double * VecOut, int n);
             
