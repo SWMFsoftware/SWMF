@@ -35,7 +35,7 @@ CMPI_channel PIC::BC::ExternalBoundary::Periodic::pipe;
 
 //update data between the 'real' and 'ghost' blocks
 void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
-  int i,j,k,iBlockPair,RealBlockThread,GhostBlockThread;
+  int iBlockPair,RealBlockThread,GhostBlockThread;
 
   //loop through all block pairs
   for (iBlockPair=0;iBlockPair<BlockPairTableLength;iBlockPair++) {
@@ -343,7 +343,7 @@ double PIC::BC::ExternalBoundary::Periodic::ModifiedLocalResolution(double* x) {
 
 double PIC::BC::ExternalBoundary::Periodic::GetHighestRequestedBoundaryResolution(int SamplingPoints) {
   double xTest[3],x0[3],e0[3],e1[3],de0=0.0,de1=0.0,c0,c1,locRes,res=xmaxOriginal[0]-xminOriginal[0];
-  int iface,i,j,idim,iTest;
+  int iface,idim,iTest;
 
   //select the number of test points in each dimentions
   int nTotalTests=(SamplingPoints>25) ? SamplingPoints : 1024;
@@ -384,7 +384,6 @@ double PIC::BC::ExternalBoundary::Periodic::GetHighestRequestedBoundaryResolutio
 
 
 void PIC::BC::ExternalBoundary::Periodic::GetBoundaryExtensionLength() {
-  double level[3];
   int nBlkArr[3]={_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_};
   double dx[3];
 
