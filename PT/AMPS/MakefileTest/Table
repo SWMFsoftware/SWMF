@@ -676,6 +676,45 @@ Check=
 
 -------------------------------------------------------------------------------
 #>
+Name=test/lightwave-current-on@@(0+) 
+Time=3
+
+Outs=
+
+Keys=-link-option=./share/lib/libSHARE.a -compiler-option=-I${PTDIR}/share/Library/src/ -I${PTDIR}/srcInterface/
+
+Compile=
+>>>@echo "test_lightwave-current-on_compile..." >> test_lightwave-current-on.diff
+>>>cd ./share/; mkdir -p lib
+>>>cd ./share/Library/src; make LIB
+>>>./Config.pl -application=test/lightwave-current-on ${TESTlightwave-current-onKEYS}
+>>>@rm -rf srcTemp
+>>>-@($(MAKE) -j8 amps)
+>>>@echo "test_lightwave-current-on_compile... done" >> test_lightwave-current-on.diff
+
+<#
+-------------------------------------------------------------------------------
+#>
+Name=test/lightwave-current-off 
+Time=3
+
+Outs=
+
+Keys=-link-option=./share/lib/libSHARE.a -compiler-option=-I${PTDIR}/share/Library/src/
+
+Compile=
+>>>@echo "test_lightwave-current-off_compile..." >> test_lightwave-current-off.diff
+>>>cd ./share/; mkdir -p lib
+>>>cd ./share/Library/src; make LIB
+>>>./Config.pl -application=test/lightwave-current-off ${TESTlightwave-current-offKEYS}
+>>>@rm -rf srcTemp
+>>>-@($(MAKE) -j8 amps)
+>>>@echo "test_lightwave-current-off_compile... done" >> test_lightwave-current-off.diff
+
+<#
+
+-------------------------------------------------------------------------------
+#>
 Name=test/Periodic-BC  
 Time=6
 
