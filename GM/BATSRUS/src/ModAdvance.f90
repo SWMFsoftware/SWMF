@@ -193,7 +193,7 @@ module ModAdvance
   !$omp threadprivate( LeftState_VX, RightState_VX )
   !$omp threadprivate( LeftState_VY, RightState_VY )
   !$omp threadprivate( LeftState_VZ, RightState_VZ )
-  !$omp threadprivate( UseLowOrderOnly, UseLowOrder )
+  !$omp threadprivate( UseLowOrder )
   !$omp threadprivate( UseLowOrderRegion )
   !$omp threadprivate( VdtFace_X, VdtFace_Y, VdtFace_Z )
   !$omp threadprivate( Flux_VX, Flux_VY, Flux_VZ )
