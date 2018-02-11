@@ -156,7 +156,21 @@ while ($line=<InputFile>) {
     ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
     ### EndOfMission::Test ####
-    if ($InputLine eq "TEST") {
+    if ($InputLine eq "CALCULATEPRESSUREFLAG") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+      if ($InputLine eq "TRUE") {
+        ampsConfigLib::ChangeValueOfVariable("bool CalculatePressureFlag","true","main/RosinaMeasurements_Liouville.cpp");
+      }
+      elsif ($InputLine eq "FALSE") {
+        ampsConfigLib::ChangeValueOfVariable("bool CalculatePressureFlag","false","main/RosinaMeasurements_Liouville.cpp");
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
+    elsif ($InputLine eq "TEST") {
       #settings of the spherical test 
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
 
