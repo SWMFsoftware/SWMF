@@ -156,7 +156,7 @@ Compile=
 >>>@cp -r src src--original
 >>>@cp -r Temp/AMPS/src .
 
->>>./Config.pl -application=test/cg-end-of-mission-rosina-trajectory -amps-test=on -amps-test=on $(TESTCG-Rosina-Liouville--TrajectoryKEYS)
+>>>./Config.pl -application=test/cg-end-of-mission-rosina-trajectory -amps-test=on $(TESTCG-Rosina-Liouville--TrajectoryKEYS)
 >>>./Config.pl -amps-test=off
 >>>-@($(MAKE) -j8 amps)
 >>>./Config.pl -amps-test=on
@@ -212,7 +212,7 @@ Compile=
 >>>@cp -r src src--original
 >>>@cp -r Temp/AMPS/src .
 
->>>./Config.pl -application=test/cg-end-of-mission-rosina $(TESTCG-Rosina-LiouvilleKEYS)
+>>>./Config.pl -application=test/cg-end-of-mission-rosina -amps-test=on $(TESTCG-Rosina-LiouvilleKEYS)
 >>>-@($(MAKE) -j8 amps)
 
 >>>@rm -rf Temp
