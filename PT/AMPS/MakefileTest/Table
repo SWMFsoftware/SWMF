@@ -146,8 +146,6 @@ Keys=-spice-path=/scratch/02452/vtenishe/SPICE/cspice -spice-kernels=/scratch/02
 
 Compile=
 >>>@echo "test_CG-Rosina-Liouville--Trajectory_compile..." > test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
->>>@cd input; mv cg-end-of-mission-rosina.input cg-end-of-mission-rosina.input--original
->>>@cd input; cvs update -r CG_Rosina_Liouville__dev_branch_071117 cg-end-of-mission-rosina.input
 
 >>>@mkdir -p Temp
 >>>@cd Temp; cvs co -r CG_Rosina_Liouville__dev_branch_071117 AMPS
@@ -170,7 +168,6 @@ Compile=
 >>>rm -rf srcCG
 >>>mv srcCG--original srcCG
 
->>>mv input/cg-end-of-mission-rosina.input--original input/cg-end-of-mission-rosina.input
 >>>@echo "test_CG-Rosina-Liouville--Trajectory_compile... done" >> test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
 
 Check= 
@@ -205,19 +202,25 @@ Keys=-spice-path=/scratch/02452/vtenishe/SPICE/cspice -spice-kernels=/scratch/02
 
 Compile=
 >>>@echo "test_CG-Rosina-Liouville_compile..." > test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
->>>./Config.pl -application=cg-end-of-mission-rosina -amps-test=on -amps-test=on $(TESTCG-Rosina-LiouvilleKEYS)
 
->>>cd srcCG; mv Comet.cpp Comet.cpp--original
->>>cd srcCG; cvs update -r END-OF-THE-MISSION--ROSINA-COPS--MODEL Comet.cpp
+>>>@mkdir -p Temp
+>>>@cd Temp; cvs co -r CG_Rosina_Liouville__dev_branch_071117 AMPS
 
->>>cd srcCG; mv main.cpp main.cpp--original
->>>cd srcCG; cvs update -r END-OF-THE-MISSION--ROSINA-COPS--MODEL main.cpp
+>>>@cp -r srcCG srcCG--original
+>>>@cp -r Temp/AMPS/srcCG .
 
->>>rm -rf srcTemp
->>>@($(MAKE) -j8 amps)
+>>>@cp -r src src--original
+>>>@cp -r Temp/AMPS/src .
 
->>>cd srcCG; mv Comet.cpp--original Comet.cpp
->>>cd srcCG; mv main.cpp--original main.cpp
+>>>./Config.pl -application=test/cg-end-of-mission-rosina $(TESTCG-Rosina-LiouvilleKEYS)
+>>>-@($(MAKE) -j8 amps)
+
+>>>@rm -rf Temp
+>>>rm -rf src 
+>>>mv src--original src
+
+>>>rm -rf srcCG
+>>>mv srcCG--original srcCG
 
 >>>@echo "test_CG-Rosina-Liouville_compile... done" >> test_CG-Rosina-Liouville$(TESTCG-Rosina-Liouville-REF).diff
 
