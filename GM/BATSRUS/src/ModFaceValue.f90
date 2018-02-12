@@ -3050,12 +3050,12 @@ contains
     if(nOrder<=2) then
        IsLowOrderOnly_B = .true.
     else
+       IsLowOrderOnly_B = .false.
        UseLowOrder = UseTrueCell .or. UseLowOrderRegion .or. UseAdaptiveLowOrder
        if(UseLowOrder) then
           do iBlock = 1, nBlock
              if (Unused_B(iBlock)) CYCLE
              UseLowOrderOnly = .false.
-             IsLowOrderOnly_B(iBlock) = .false.
 
              if(.not. allocated(LowOrderCrit_XB)) then
                 allocate(LowOrderCrit_XB( &
