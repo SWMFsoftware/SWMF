@@ -135,8 +135,8 @@ private:
 
   //generate the table of CRC remainders for all possible bytes 
   void generare_crc_table() { 
-    register int i, j;  
-    register unsigned long crc_accum;
+    int i, j;
+    unsigned long crc_accum;
 
     for (i=0;i<256;i++) { 
       crc_accum=((unsigned long)i<<24);
