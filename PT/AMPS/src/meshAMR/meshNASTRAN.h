@@ -143,8 +143,8 @@ public:
       
 
     //check the distances between nodes
-    register long int nNode0,nNode1;
-    register long int nd,nfc,id;
+    long int nNode0,nNode1;
+    long int nd,nfc,id;
     double d,*xNode0,*xNode1;
 
     for (nNode0=0;nNode0<nnodes;nNode0++) {
@@ -449,7 +449,7 @@ public:
 
 
     //renumerate nodes
-    register long int id;
+    long int id;
 
 
     for (nfc=0;nfc<nfaces;nfc++) for (idim=0;idim<3;idim++) {

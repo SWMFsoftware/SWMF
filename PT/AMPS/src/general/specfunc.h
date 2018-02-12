@@ -157,7 +157,7 @@ public:
   void add(T* buffer, long int size) {
     char *data_blk_ptr=(char*)buffer;
     long int data_blk_size=size*sizeof(T); 
-    register long int i,j;
+    long int i,j;
 
     for (j=0;j<data_blk_size;j++) { 
       i=((int)(crc_accum>>24)^ *data_blk_ptr++)&0xff;
