@@ -170,6 +170,20 @@ while ($line=<InputFile>) {
         die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
       }
     }
+    elsif ($InputLine eq "OUTPUTSURFACEMODELDATAFLAG") {
+      ($InputLine,$InputComment)=split(' ',$InputComment,2);
+
+      if ($InputLine eq "TRUE") {
+        ampsConfigLib::ChangeValueOfVariable("bool OutputSurfaceModelDataFlag","true","main/RosinaMeasurements_Liouville.cpp");
+      }
+      elsif ($InputLine eq "FALSE") {
+        ampsConfigLib::ChangeValueOfVariable("bool OutputSurfaceModelDataFlag","false","main/RosinaMeasurements_Liouville.cpp");
+      }
+      else {
+        warn("Option is unknown ($InputLine), line=$InputFileLineNumber ($InputFileName)");
+        die "Option is unknown, line=$InputFileLineNumber ($InputFileName)\n";
+      }
+    }
     elsif ($InputLine eq "TEST") {
       #settings of the spherical test 
       ($InputLine,$InputComment)=split(' ',$InputComment,2);
