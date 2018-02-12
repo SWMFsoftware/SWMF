@@ -3,4 +3,5 @@
 
 #block ../input/cg.pl !process settings of the moon module
   EndOfMission::CalculatePressureFlag=false !true !false
+  EndOfMission::OutputSurfaceModelDataFlag=false !true, false
 #endblock
