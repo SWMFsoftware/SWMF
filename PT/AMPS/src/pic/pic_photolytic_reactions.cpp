@@ -47,7 +47,7 @@ void PIC::ChemicalReactions::PhotolyticReactions::SetSpeciesTotalPhotolyticLifeT
 
 int PIC::ChemicalReactions::PhotolyticReactions::PhotolyticReaction(double *x,long int ptr,int &spec,double &TimeInterval,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
   int code=_PHOTOLYTIC_REACTIONS_NO_TRANSPHORMATION_;
-  register double p,lifetime,c;
+  double p,lifetime,c;
   bool flag;
 
   lifetime=_PIC_PHOTOLYTIC_REACTIONS__TOTAL_LIFETIME_(x,spec,ptr,flag,node);

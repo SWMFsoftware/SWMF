@@ -49,7 +49,7 @@ void PIC::Distribution::MaxwellianVelocityDistribution(double *v,const double *B
 double PIC::Distribution::InjectMaxwellianDistribution(double *v,const double *BulkFlowVelocity,double Temp,double *ExternalNormal,int spec,int WeightCorrectionMode) {
   int idim;
   double sc,beta,u,c,a,c1;
-  register double dotProduct=0.0;
+  double dotProduct=0.0;
 
   double ParticleWeightCorrection=1.0;
 
@@ -100,7 +100,7 @@ double PIC::Distribution::InjectMaxwellianDistribution(double *v,const double *B
 #elif DIM == 2
     exit(__LINE__,__FILE__,"not tested yet");
 
-    register double t;
+    double t;
     t=-(fabs(u+sc)/beta);
     v3[0]=t*ExternalNormal[0],v3[1]=t*ExternalNormal[1],v3[2]=0.0;
 
@@ -118,7 +118,7 @@ double PIC::Distribution::InjectMaxwellianDistribution(double *v,const double *B
 
     for (idim=0;idim<3;idim++) v[idim]=v1[idim]+v2[idim]+v3[idim];
 #elif DIM == 3
-    register double t;
+    double t;
 
     for (t=-(fabs(u+sc)/beta),idim=0;idim<DIM;idim++) v3[idim]=t*ExternalNormal[idim];
 

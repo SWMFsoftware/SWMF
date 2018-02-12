@@ -440,15 +440,15 @@ void PIC::Mesh::initCellSamplingDataBuffer() {
 
 //flush and switch the sampling buffers in 'center' nodes
 void PIC::Mesh::flushCompletedSamplingBuffer(cDataCenterNode* node) {
-  register int i,length=PIC::Mesh::sampleSetDataLength/sizeof(double);
-  register double *ptr;
+  int i,length=PIC::Mesh::sampleSetDataLength/sizeof(double);
+  double *ptr;
 
   for (i=0,ptr=(double*)(node->GetAssociatedDataBufferPointer()+PIC::Mesh::completedCellSampleDataPointerOffset);i<length;i++,ptr++) *ptr=0.0;
 }
 
 void PIC::Mesh::flushCollectingSamplingBuffer(cDataCenterNode* node) {
-  register int i,length=PIC::Mesh::sampleSetDataLength/sizeof(double);
-  register double *ptr;
+  int i,length=PIC::Mesh::sampleSetDataLength/sizeof(double);
+  double *ptr;
 
   for (i=0,ptr=(double*)(node->GetAssociatedDataBufferPointer()+PIC::Mesh::collectingCellSampleDataPointerOffset);i<length;i++,ptr++) *ptr=0.0;
 }
