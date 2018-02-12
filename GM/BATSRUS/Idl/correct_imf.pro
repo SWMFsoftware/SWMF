@@ -101,7 +101,7 @@ for i=0,nPoint-1 do begin
         epoch = epoch0 + NewTime(i)*1d3
         cdf_epoch, epoch, year, month, day, hour, min, sec, msc, /break
         printf,1,year,month,day,hour,min,sec,msc,w(i,ibx:nVar-1),$
-          format='(i5,5i3,i4,7f11.2,f13.2)'
+          format='(i4,5i3.2,i4,7f11.2,f13.2)'
     endif
 endfor
 close,1
