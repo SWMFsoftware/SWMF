@@ -2361,6 +2361,7 @@ contains
       ! Assume face ghost cells are accurate.
       IsAccurateFace_GB(-2:0,      1:nJ,1:nK,iBlock) = .true.
       IsAccurateFace_GB(nI+1:nI+3, 1:nJ,1:nK,iBlock) = .true.
+      if(nJ == 1) RETURN
       IsAccurateFace_GB(1:nI,   -2:0,   1:nK,iBlock) = .true.
       IsAccurateFace_GB(1:nI,nJ+1:nJ+3, 1:nK,iBlock) = .true.
       if(nK == 1) RETURN
