@@ -682,7 +682,7 @@ public:
 
 #elif _MESH_DIMENSION_ == 2
      //determine weather the neibNode is a face or a corner node
-     register int code=abs(i)+abs(j);
+     int code=abs(i)+abs(j);
 
      if (code==2) { //corner node
        if (i==-1) res=(j==-1) ? neibNodeCorner[0] : neibNodeCorner[2];
@@ -701,7 +701,7 @@ public:
 
 #elif _MESH_DIMENSION_ == 3
      //determine weather the neibNode is a face or a corner node
-     register int code=abs(i)+abs(j)+abs(k);
+     int code=abs(i)+abs(j)+abs(k);
 
      if (code==3) { //corner node
        if (i==-1) i=0;
@@ -767,19 +767,19 @@ public:
   //check if a node is a neighbor of the 'this node'
   bool CheckNeibNode(cTreeNodeAMR* neibNode) {
     //check the connections through the corner nodes
-    for (register int nd=0;nd<(1<<_MESH_DIMENSION_);nd++) if (GetNeibCorner(nd)==neibNode) {
+    for (int nd=0;nd<(1<<_MESH_DIMENSION_);nd++) if (GetNeibCorner(nd)==neibNode) {
       return true;
     }
 
     //check the connection through the faces
 #if _MESH_DIMENSION_ == 2
-    register int nface,i;
+    int nface,i;
 
     for (nface=0;nface<4;nface++) for (i=0;i<2;i++) if (GetNeibFace(nface,i,0)==neibNode) {
       return true;
     }
 #elif _MESH_DIMENSION_ == 3
-    register int nface,i,j;
+    int nface,i,j;
 
     for (nface=0;nface<6;nface++) for (i=0;i<2;i++) for (j=0;j<2;j++) if (GetNeibFace(nface,i,j)==neibNode) {
       return true;
@@ -789,7 +789,7 @@ public:
 
     //check connections through the edges
 #if _MESH_DIMENSION_ == 3
-    for (register int nedge=0;nedge<12;nedge++) for (i=0;i<2;i++) if (GetNeibEdge(nedge,i)==neibNode) {
+    for (int nedge=0;nedge<12;nedge++) for (i=0;i<2;i++) if (GetNeibEdge(nedge,i)==neibNode) {
       return true;
     }
 #endif
@@ -1013,7 +1013,7 @@ public:
   } blockDescriptor; 
 
   double CellMeasure(int i,int j, int k) {
-    register double vol;
+    double vol;
 
     vol=(_MESH_AMR_XMAX_[0]-_MESH_AMR_XMIN_[0])*(_MESH_AMR_XMAX_[1]-_MESH_AMR_XMIN_[1])*(_MESH_AMR_XMAX_[2]-_MESH_AMR_XMIN_[2]);
 
@@ -1956,7 +1956,7 @@ Start:
     }
 
 #if  _AMR_DEBUG_MODE_ == _AMR_DEBUG_MODE_ON_
-    if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
+    if (res!=NULL) for (int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
 #endif
     return res;
   }
@@ -2027,7 +2027,7 @@ Start:
     }
 
 #if  _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
-    if (res!=NULL) for (register int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
+    if (res!=NULL) for (int idim=0;idim<_MESH_DIMENSION_;idim++) if ((x[idim]<res->xmin[idim])||(res->xmax[idim]<x[idim])) exit(__LINE__,__FILE__,"Error: did'nt find the tree node");
 #endif
     return res;
   }
@@ -4874,7 +4874,7 @@ if (startNode->Temp_ID==15) {
 #if _AMR_DEBUGGER_MODE_ == _AMR_DEBUGGER_MODE_ON_
 #if _CHECK_MESH_CONSISTANCY_ == _ON_AMR_MESH_
 
-     for (register int nface=0;nface<2*_MESH_DIMENSION_;nface++) {
+     for (int nface=0;nface<2*_MESH_DIMENSION_;nface++) {
        neibNode=startNode->GetNeibFace(nface,0,0);
        if (neibNode!=NULL) if (neibNode->CheckNeibNode(startNode)==true) exit(__LINE__,__FILE__,"Error: the mesh is not consistent");
      }
@@ -4990,7 +4990,7 @@ if (startNode->Temp_ID==15) {
 
 #elif _MESH_DIMENSION_ == 3
 
-     register int nDownNode,nList;
+     int nDownNode,nList;
      int nd;
      cTreeNodeAMR<cBlockAMR>* t,*downNode;
 
@@ -5018,7 +5018,7 @@ if (startNode->Temp_ID==15) {
 
 
      for (nDownNode=0;nDownNode<8;nDownNode++) {
-       register int nface,iFace,jFace;
+       int nface,iFace,jFace;
 
        downNode=startNode->downNode[nDownNode];
 
@@ -5067,7 +5067,7 @@ if (startNode->Temp_ID==15) {
 
 
      for (nDownNode=0;nDownNode<8;nDownNode++) {
-       register int iEdge,nedge;
+       int iEdge,nedge;
 
        downNode=startNode->downNode[nDownNode];
 
@@ -5114,7 +5114,7 @@ if (startNode->Temp_ID==15) {
 
 
      for (nDownNode=0;nDownNode<8;nDownNode++) {
-       register int nUpFace,iFace,jFace,nNeibFace,nface;
+       int nUpFace,iFace,jFace,nNeibFace,nface;
 
        downNode=startNode->downNode[nDownNode];
 
@@ -5269,7 +5269,7 @@ if (startNode->Temp_ID==15) {
 
 
      for (nDownNode=0;nDownNode<8;nDownNode++) {
-       register int nUpEdge,iEdge,nNeibCornerNode,nedge,nCornerNode;
+       int nUpEdge,iEdge,nNeibCornerNode,nedge,nCornerNode;
 
        downNode=startNode->downNode[nDownNode];
 
@@ -5387,7 +5387,7 @@ if (startNode->Temp_ID==15) {
      static const int ExternalNodesEdgeCornerConnectionMap_downNode_List_Length=6;
 
      for (nDownNode=0;nDownNode<8;nDownNode++) {
-       register int nUpFace,iFace,jFace,nNeibEdge,nedge,iEdge;
+       int nUpFace,iFace,jFace,nNeibEdge,nedge,iEdge;
 
        downNode=startNode->downNode[nDownNode];
 
@@ -5418,12 +5418,12 @@ if (startNode->Temp_ID==15) {
        if (neibNode->CheckNeibNode(startNode)==true) exit(__LINE__,__FILE__,"Error: the mesh is not consistent");
      }
 
-     for (register int nface=0;nface<2*_MESH_DIMENSION_;nface++) for (i=0;i<2;i++) for (j=0;j<2;j++) {
+     for (int nface=0;nface<2*_MESH_DIMENSION_;nface++) for (i=0;i<2;i++) for (j=0;j<2;j++) {
        neibNode=startNode->GetNeibFace(nface,i,j);
        if (neibNode!=NULL) if (neibNode->CheckNeibNode(startNode)==true) exit(__LINE__,__FILE__,"Error: the mesh is not consistent");
      }
 
-     for (register int nedge=0;nedge<12;nedge++) for (register int iEdge=0;iEdge<2;iEdge++) {
+     for (int nedge=0;nedge<12;nedge++) for (int iEdge=0;iEdge<2;iEdge++) {
        neibNode=startNode->GetNeibEdge(nedge,iEdge);
        if (neibNode!=NULL) if (neibNode->CheckNeibNode(startNode)==true) exit(__LINE__,__FILE__,"Error: the mesh is not consistent");
      }
@@ -5433,8 +5433,8 @@ if (startNode->Temp_ID==15) {
      /*
      //clean connections of startNode
      for (nd=0;nd<(1<<_MESH_DIMENSION_);nd++) startNode->SetNeibCorner(NULL,nd);
-     for (register int nface=0;nface<2*_MESH_DIMENSION_;nface++) for (i=0;i<2;i++) for (j=0;j<2;j++) startNode->SetNeibFace(NULL,nface,i,j);
-     for (register int nedge=0;nedge<12;nedge++) for (register int iEdge=0;iEdge<2;iEdge++) startNode->SetNeibEdge(NULL,nedge,iEdge);
+     for (int nface=0;nface<2*_MESH_DIMENSION_;nface++) for (i=0;i<2;i++) for (j=0;j<2;j++) startNode->SetNeibFace(NULL,nface,i,j);
+     for (int nedge=0;nedge<12;nedge++) for (int iEdge=0;iEdge<2;iEdge++) startNode->SetNeibEdge(NULL,nedge,iEdge);
 */
 
 #endif
