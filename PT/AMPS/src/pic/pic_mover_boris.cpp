@@ -784,7 +784,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
 
 
   //interpolate the fields acting upon on the particle at the NEW location of the particle (Appendix D, Eq 2)
-  double t[3],E[3]={0.0,0.0,0.0},B[3]={0.0,0.0,0.0};
+  double E[3]={0.0,0.0,0.0},B[3]={0.0,0.0,0.0};
   PIC::InterpolationRoutines::CornerBased::cStencil ElectricFieldStencil(false);
   PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil(false);
 
@@ -794,6 +794,8 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
   PIC::CPLR::GetBackgroundMagneticField(B);
 
   #else //_PIC_FIELD_SOLVER_MODE__OFF_
+  double t[3];
+
   switch ( _PIC_FIELD_SOLVER_MODE_) {
   case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
     //interpolate the elecric field (corner nodes)
