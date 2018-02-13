@@ -1,1 +1,1 @@
-set path=(/opt/pgi/osx86-64/17.4/bin /opt/pgi/osx86-64/17.4/include /opt/pgi/osx86-64/17.4/lib /opt/pgi/osx86-64/17.4/mpi/mpich/bin ${path})
+set path=(/opt/pgi/osx86-64/17.10/bin /opt/pgi/osx86-64/17.10/include /opt/pgi/osx86-64/17.10/lib /opt/pgi/osx86-64/17.10/mpi/mpich/bin ${path})
