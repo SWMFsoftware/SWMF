@@ -155,6 +155,7 @@ public:
   }
 
   //void reset the data of the obsect to the default state
+  void DeleteDataBuffers();
   void Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
   void Reset();
 
@@ -182,7 +183,7 @@ public:
 
   //destructor
   ~cLinearSystemCornerNode() {
-    Reset();
+    if (RecvExchangeBuffer!=NULL) DeleteDataBuffers();
   }
 
 
@@ -840,20 +841,11 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   MPI_Waitall(SendThreadCounter,SendRequest,SendStatus);
 }
 
-
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
 int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
 int MaxMatrixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatrixElementParameterTableLength,MaxMatrixElementSupportTableLength>::Reset() {
-  Reset(PIC::Mesh::mesh.rootTree);
-}
-
-template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
-int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
-int MaxMatrixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
-void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatrixElementParameterTableLength,MaxMatrixElementSupportTableLength>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
-
-  if ((startNode==PIC::Mesh::mesh.rootTree)&&(RecvExchangeBuffer!=NULL)) {
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatrixElementParameterTableLength,MaxMatrixElementSupportTableLength>::DeleteDataBuffers() {
+  if (RecvExchangeBuffer!=NULL) {
     //clear the row stack
     MatrixRowStack.resetStack();
 
@@ -892,7 +884,21 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     MatrixRowTable=NULL,MatrixRowLast=NULL;
     SubdomainPartialRHS=NULL,SubdomainPartialUnknownsVector=NULL;
   }
+}
 
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatrixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatrixElementParameterTableLength,MaxMatrixElementSupportTableLength>::Reset() {
+  Reset(PIC::Mesh::mesh.rootTree);
+}
+
+template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
+int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
+int MaxMatrixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
+void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatrixElementParameterTableLength,MaxMatrixElementSupportTableLength>::Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode) {
+
+  if ((startNode==PIC::Mesh::mesh.rootTree)&&(RecvExchangeBuffer!=NULL)) DeleteDataBuffers();
 
   if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
     PIC::Mesh::cDataBlockAMR *block=NULL;
