@@ -56,6 +56,7 @@ double xmax[3]={2.0,2.0,2.0};
 int CurrentCenterNodeOffset=-1,NextCenterNodeOffset=-1;
 int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
 
+int iCase;
 
 void SetIC() {
   
@@ -63,14 +64,22 @@ void SetIC() {
     char *offset;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
     double cPi = 3.14159265;
-    //    double waveNumber[3]={cPi/2/sqrt(2),cPi/2/sqrt(2),0.0};
-    double waveNumber[3]={cPi/2,0.0,0.0}; 
+    double waveNumber[3]={0.0,0.0,0.0};
+
+    if (iCase!=1){
+      waveNumber[0]=cPi/2;
+    }else{
+      waveNumber[0]=cPi/2;
+      waveNumber[1]=cPi/2;     
+    }
+  
     double x[3];
    
     using namespace PIC::FieldSolver::Electromagnetic::ECSIM;
     int nBreak=0;
 
     printf("User Set IC called\n");
+    printf("Set IC case number:%d\n",iCase);
     for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
       node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
       
@@ -103,13 +112,15 @@ void SetIC() {
 	     
 	      //1e9 charge in species.input
 	      if (_CURRENT_MODE_==_PIC_MODE_OFF_){ 
-		/*((double*)(offset+CurrentEOffset))[ExOffsetIndex]=-E/sqrt(2);
+		if (iCase==1){
+		((double*)(offset+CurrentEOffset))[ExOffsetIndex]=-E/sqrt(2);
 		((double*)(offset+CurrentEOffset))[EyOffsetIndex]=E/sqrt(2);
 		((double*)(offset+CurrentEOffset))[EzOffsetIndex]=0.0;
-		*/
+		}else{
 		((double*)(offset+CurrentEOffset))[ExOffsetIndex]=0.0;                                                           
                 ((double*)(offset+CurrentEOffset))[EyOffsetIndex]=E; 
 		((double*)(offset+CurrentEOffset))[EzOffsetIndex]=E;      
+		}
 		
 	      ((double*)(offset+OffsetE_HalfTimeStep))[ExOffsetIndex]=0.0;
 	      ((double*)(offset+OffsetE_HalfTimeStep))[EyOffsetIndex]=0.0;
@@ -151,10 +162,15 @@ void SetIC() {
 	    
 	      if (_CURRENT_MODE_==_PIC_MODE_OFF_){
 	      
-		((double*)(offset+CurrentBOffset))[BxOffsetIndex]=0.0;
-		((double*)(offset+CurrentBOffset))[ByOffsetIndex]=B;
-		((double*)(offset+CurrentBOffset))[BzOffsetIndex]=-B;
-		
+		if (iCase==1){
+		  ((double*)(offset+CurrentBOffset))[BxOffsetIndex]=0.0;
+		  ((double*)(offset+CurrentBOffset))[ByOffsetIndex]=0.0;
+		  ((double*)(offset+CurrentBOffset))[BzOffsetIndex]=B;
+		}else{
+		  ((double*)(offset+CurrentBOffset))[BxOffsetIndex]=0.0;
+		  ((double*)(offset+CurrentBOffset))[ByOffsetIndex]=B;
+		  ((double*)(offset+CurrentBOffset))[BzOffsetIndex]=-B;
+		}
 		
 		((double*)(offset+PrevBOffset))[BxOffsetIndex]=0.0;
 		((double*)(offset+PrevBOffset))[ByOffsetIndex]=0.0;
@@ -243,7 +259,7 @@ int main(int argc,char **argv) {
   printf("current mode off!\n");
 #endif
 
-  PIC::FieldSolver::Electromagnetic::ECSIM::SetIC=SetIC;
+
 
   //seed the random number generator
   rnd_seed(100);
@@ -367,86 +383,104 @@ int main(int argc,char **argv) {
       break;
   }
   //PIC::FieldSolver::Init(); 
-   PIC::FieldSolver::Electromagnetic::ECSIM::Init_IC();
- 
-
-  switch (_PIC_BC__PERIODIC_MODE_) {
-  case _PIC_BC__PERIODIC_MODE_OFF_:
-      PIC::Mesh::mesh.ParallelBlockDataExchange();
-      break;
-      
-  case _PIC_BC__PERIODIC_MODE_ON_:
-    PIC::BC::ExternalBoundary::Periodic::UpdateData();
-      break;
-  }
-  PIC::Mesh::mesh.outputMeshDataTECPLOT("ic.dat",0);
-  
-
-  int  totalIter;
+  PIC::FieldSolver::Electromagnetic::ECSIM::SetIC=SetIC;
+    
+  int  totalIter,CaseNumber;
   if (_CURRENT_MODE_==_PIC_MODE_OFF_){
-    totalIter = 4/PIC::FieldSolver::Electromagnetic::ECSIM::cDt;
+    CaseNumber=2;// one at 0 degree, one propagates at 45 degree
   }else{
-    totalIter = 3;
+    CaseNumber=1;
   }
- 
-  // countNumbers();
 
-  
-  for (int iPar=0;iPar<parSize; iPar++ ){
-    newNode=PIC::Mesh::mesh.findTreeNode(xparticle[iPar]);
-    
-    if (newNode->Thread==PIC::ThisThread) {
-      PIC::Mesh::mesh.fingCellIndex(xparticle[iPar],i,j,k,newNode);
-      
-      newParticle=PIC::ParticleBuffer::GetNewParticle(newNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
-      
-      PIC::ParticleBuffer::SetV(v[iPar],newParticle);
-      PIC::ParticleBuffer::SetX(xparticle[iPar],newParticle);
-      PIC::ParticleBuffer::SetI(species[iPar],newParticle);
+
+  for (iCase=0;iCase<CaseNumber;iCase++){
+    printf("iCase:%d\n",iCase);
+    PIC::FieldSolver::Electromagnetic::ECSIM::Init_IC();
+
+    if (_CURRENT_MODE_==_PIC_MODE_OFF_){
+	totalIter = 4/PIC::FieldSolver::Electromagnetic::ECSIM::cDt;
+    }else{
+      totalIter = 3;
     }
-  }
- 
+    
 
+
+     
     switch (_PIC_BC__PERIODIC_MODE_) {
-  case _PIC_BC__PERIODIC_MODE_OFF_:
+    case _PIC_BC__PERIODIC_MODE_OFF_:
       PIC::Mesh::mesh.ParallelBlockDataExchange();
       break;
       
-  case _PIC_BC__PERIODIC_MODE_ON_:
-    PIC::BC::ExternalBoundary::Periodic::UpdateData();
+    case _PIC_BC__PERIODIC_MODE_ON_:
+      PIC::BC::ExternalBoundary::Periodic::UpdateData();
       break;
-  }
-
-  for (int niter=0;niter<totalIter;niter++) {
-    
-    //PIC::Mesh::mesh.outputMeshDataTECPLOT("1.dat",0);
-    
-    //TransportEquation::TimeStep();
+    }
+    PIC::Mesh::mesh.outputMeshDataTECPLOT("ic.dat",0);
   
-    PIC::TimeStep();
-    //PIC::FieldSolver::Electromagnetic::ECSIM::TimeStep();
+ 
+    // countNumbers();
 
-    //PIC::Mesh::mesh.outputMeshDataTECPLOT("2.dat",0);
-
+  
+    for (int iPar=0;iPar<parSize; iPar++ ){
+      newNode=PIC::Mesh::mesh.findTreeNode(xparticle[iPar]);
+    
+      if (newNode->Thread==PIC::ThisThread) {
+	PIC::Mesh::mesh.fingCellIndex(xparticle[iPar],i,j,k,newNode);
+      
+	newParticle=PIC::ParticleBuffer::GetNewParticle(newNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+      
+	PIC::ParticleBuffer::SetV(v[iPar],newParticle);
+	PIC::ParticleBuffer::SetX(xparticle[iPar],newParticle);
+	PIC::ParticleBuffer::SetI(species[iPar],newParticle);
+      }
+    }
+ 
 
     switch (_PIC_BC__PERIODIC_MODE_) {
     case _PIC_BC__PERIODIC_MODE_OFF_:
       PIC::Mesh::mesh.ParallelBlockDataExchange();
       break;
-
+      
     case _PIC_BC__PERIODIC_MODE_ON_:
       PIC::BC::ExternalBoundary::Periodic::UpdateData();
       break;
     }
 
-
-    char fname[100];
-    sprintf(fname,"LightWave.out=%i.dat",niter);
-    // if (niter%10==0) PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,0);
+    for (int niter=0;niter<totalIter;niter++) {
+    
+      //PIC::Mesh::mesh.outputMeshDataTECPLOT("1.dat",0);
+    
+      //TransportEquation::TimeStep();
   
-    PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,0);
-  }
+      PIC::TimeStep();
+      //PIC::FieldSolver::Electromagnetic::ECSIM::TimeStep();
 
+      //PIC::Mesh::mesh.outputMeshDataTECPLOT("2.dat",0);
+
+
+      switch (_PIC_BC__PERIODIC_MODE_) {
+      case _PIC_BC__PERIODIC_MODE_OFF_:
+	PIC::Mesh::mesh.ParallelBlockDataExchange();
+	break;
+
+      case _PIC_BC__PERIODIC_MODE_ON_:
+	PIC::BC::ExternalBoundary::Periodic::UpdateData();
+	break;
+      }
+
+
+      char fname[100];
+      if (_CURRENT_MODE_==_PIC_MODE_OFF_){
+	sprintf(fname,"LightWaveCase%i.out=%i.dat",iCase,niter);
+      }else{
+	sprintf(fname,"PIC_particle.out=%i.dat",niter);
+      }
+    
+      // if (niter%10==0) PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,0);
+  
+      PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,0);
+    }
+  }
 
   MPI_Finalize();
   cout << "End of the run" << endl;
