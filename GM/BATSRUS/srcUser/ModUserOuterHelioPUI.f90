@@ -28,13 +28,17 @@
 ! for inner boundary the solar pressure is iostropic (dont have any dependence with magnetic field
 ! took off inner boundary at 30AU
 ! adding possibilty of using user boundaries for other faces besides EAst - Feb 08, 2018
-!
+! February 2018, Gabor - fixed code to work with separate multi-ion velocities
+! added #USERSOURCE command to switch explicit/point-implicit user source terms
+! Tests show that the default explicit evaluation works, while the point-implicit evaluation
+! is not robust enough. 
+
 module ModUser
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest
 
-  use ModSize,     ONLY: nI, nJ, nK, MaxBlock
+  use ModSize,     ONLY: nI, nJ, nK
   use ModMain
   use ModPhysics
   use ModAdvance,  ONLY : State_VGB
@@ -63,7 +67,7 @@ module ModUser
        NameUserModule = 'Outer Heliosphere with 4 neutrals and 2 ion fluids, Opher & Toth'
 
   ! Named indexes for fluids
-  integer, parameter :: ALL_ =1 , SWH_ = 2, Pu3_ = 3, Neu_ = 4, Ne2_ = 5, Ne3_ = 6, Ne4_= 7 ! defined in ModEquation
+  integer, parameter :: SWH_ = 2, Pu3_ = 3, Neu_ = 4, Ne2_ = 5, Ne3_ = 6, Ne4_= 7 ! defined in ModEquation
 
   logical :: UseSource_I(SWH_:Ne4_) = .true.
 
@@ -73,8 +77,7 @@ module ModUser
   integer :: iTableSolarWind = -1 ! initialization is needed
 
   ! SWH variables.
-  !/
-  real :: SWH_a_dim=0.0  , &
+  real :: &
        SWH_rho=0.0, SWH_rho_dim=0.0, &
        SWH_p=0.0  , SWH_T_dim  =0.0, &
        SWH_Ux=0.0 , SWH_Ux_dim=0.0 , &
@@ -82,24 +85,9 @@ module ModUser
        SWH_Uz=0.0 , SWH_Uz_dim=0.0 , &
        SWH_Bx=0.0 , SWH_Bx_dim=0.0 , &
        SWH_By=0.0 , SWH_By_dim=0.0 , &
-       SWH_Bz=0.0 , SWH_Bz_dim=0.0 , &
-       SWH_B_factor=0.0
+       SWH_Bz=0.0 , SWH_Bz_dim=0.0
 
-  ! Is this used?
-  real, dimension(0:1) :: &
-       SWH_rho_t,  &
-       SWH_p_t  ,  &
-       SWH_Ux_t ,  &
-       SWH_Uy_t ,  &
-       SWH_Uz_t ,  &
-       SWH_Bx_t ,  &
-       SWH_By_t ,  &
-       SWH_Bz_t ,  &
-       SWH_time_t
-  !
   ! VLISM variables.
-  !/
-  real ::      SW_B_factor=0.0
   real ::      VLISW_T_dim=0.0  , &
        VLISW_a_dim=0.0  , &
        VLISW_rho=0.0 , VLISW_rho_dim=0.0, &
@@ -114,31 +102,18 @@ module ModUser
 
   real :: VLISW_p_dim1=0.0, VLISW_p1=0.0
 
-  real :: SWH_p1=0.0, PNeutralsISW1=0.0, PU3_p1=0.0
+  real :: SWH_p1=0.0, PU3_p1=0.0
 
-  real :: SWfast_T_dim=0.0, &
-       SWfast_a_dim=0.0, &
-       SWfast_rho=0.0, SWfast_rho_dim=0.0, &
-       SWfast_p=0.0  , SWfast_p_dim=0.0  , &
-       SWfast_Ux=0.0 , SWfast_Ux_dim=0.0 , &
-       SWfast_Uy=0.0 , SWfast_Uy_dim=0.0 , &
-       SWfast_Uz=0.0 , SWfast_Uz_dim=0.0,  &
-       SWfast_Bx=0.0 , SWfast_Bx_dim=0.0 , &
-       SWfast_By=0.0 , SWfast_By_dim=0.0 , &
-       SWfast_Bz=0.0 , SWfast_Bz_dim=0.0 , &
-       SWfast_B_factor=0.0
+  real:: &
+       SWfast_rho_dim=0.0, &
+       SWfast_Ux_dim=0.0 , &
+       SWfast_Uy_dim=0.0 , &
+       SWfast_Uz_dim=0.0
 
   ! B. Zieger commented out 05/17/2012
   ! specified by use statement in MH_set_parameters
 
   real :: mNeutrals
-
-  real, dimension(0:1) :: &
-       RhoNeutralsISW_t,  &
-       PneutralsISW_t  ,  &
-       UxNeutralsISW_t ,  &
-       UyNeutralsISW_t ,  &
-       UzNeutralsISW_t
 
   ! Velocity, temperature, Mach number and radius limits for the populations
   real :: TempPop1LimitDim = 1e5    ! [K]
@@ -150,32 +125,21 @@ module ModUser
 
   integer :: iFluidProduced_C(nI, nJ, nK)
 
-  real :: Pu3_a_dim=0.0  , &
+  real :: &
        Pu3_rho=0.0, Pu3_rho_dim=0.0, &
        Pu3_p=0.0  , Pu3_T_dim  =0.0, &
        Pu3_Ux=0.0 , Pu3_Ux_dim=0.0 , &
        Pu3_Uy=0.0 , Pu3_Uy_dim=0.0 , &
        Pu3_Uz=0.0 , Pu3_Uz_dim=0.0
-  ! Is this used?
-  real, dimension(0:1) :: &
-       Pu3_rho_t,  &
-       Pu3_p_t  ,  &
-       Pu3_Ux_t ,  &
-       Pu3_Uy_t ,  &
-       Pu3_Uz_t ,  &
-       Pu3_time_t
-  ! some extra variables for constant pressure at inner boundary
-  real :: pPUI_30 = 0.0 , &
-       pSolarWind_30 = 0.0
-  ! merav
+
   ! Variables for the reflective shape
-  real:: rCylinder = -1.0, zCylinder = -1.0
-  real:: rCrescent = -1.0, xCrescentCenter = -1.0
-  real:: rHelioPause = -1.0, TempHelioPauseSi = -1.0, TempHelioPause = -1.0
 
   ! Freeze neutrals (with user_update_states
   logical:: DoFreezeNeutral = .false.
 
+  ! Use point-implicit user source term
+  logical:: UsePointImplUserSource = .false.
+  
 contains
   !============================================================================
 
@@ -185,7 +149,6 @@ contains
     use ModReadParam
 
     character (len=100) :: NameCommand
-    character (len=*), parameter :: Name='user_read_inputs'
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
@@ -247,6 +210,10 @@ contains
           call read_var('MachPop3Limit',    MachPop3Limit)
           call read_var('rPop3Limit',       rPop3Limit)
           call read_var('MachPop4Limit',    MachPop4Limit)
+          
+       case("#USERSOURCE")
+          call read_var('UsePointImplUserSource', UsePointImplUserSource)
+
        case default
           if(iProc==0) call stop_mpi( &
                'read_inputs: unrecognized command: '//NameCommand)
@@ -272,7 +239,7 @@ contains
     ! C.P. edited
     real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, p_frac, Ptot, Pmag, PmagEquator
+    real :: pSolarWind,pPUI, Pmag, PmagEquator
 
     real :: XyzSph_DD(3,3)
 
@@ -326,12 +293,7 @@ contains
 
     !    pSolarWind = SWH_p + PmagEquator - Pmag
     pPUI = PU3_p
-
     pSolarWind = SWH_p
-
-    ! new inner boundary pressures
-    pPUI_30 = pPUI
-    PSolarWind_30 = pSolarWind
 
     ! Apply boundary conditions for ions
     VarsGhostFace_V(SWHRho_)    = SWH_rho
@@ -568,7 +530,7 @@ contains
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     ! C.P. edited
-    use ModPhysics,  ONLY: rBody, No2Si_V, UnitX_
+    use ModPhysics,  ONLY: rBody
     use ModCoordTransform, ONLY: rot_xyz_sph
     ! C.P. added
     use ModConst, ONLY: cAU
@@ -576,7 +538,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
-    real :: x, y, z, r, rho0
+    real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
 
@@ -803,9 +765,7 @@ contains
 
     ! merav
     ! C.P. edited
-    real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, p_frac, Ptot, Pmag, PmagEquator
 
     integer,intent(in):: iBlock
 
@@ -854,7 +814,6 @@ contains
 
       use BATL_lib,       ONLY: Xyz_DGB
       use ModCoordTransform, ONLY: rot_xyz_sph
-      use ModLookupTable,    ONLY: interpolate_lookup_table
       use ModEnergy,      ONLY: calc_energy
 
       integer,intent(in):: i, j, k, iBlock
@@ -863,7 +822,7 @@ contains
       real :: Rho, Ur, Temp, p, x, y, z, r, Latitude
       real :: Bsph_D(3), Vsph_D(3)
       ! merav
-      real :: b_D(3), v_D(3),vPUI_D(3), vPUISph_D(3)
+      real :: v_D(3),vPUI_D(3), vPUISph_D(3)
       real :: XyzSph_DD(3,3) ! rotation matrix Xyz_D = matmul(XyzSph_DD,Sph_D)
 
       real, parameter:: LengthCycle = 662206313.647 ! length of solar cycle
@@ -1047,7 +1006,6 @@ contains
     use ModPhysics
     use ModConst, ONLY: cAU, cProtonMass
     !
-    character (len=*), parameter :: Name='user_io_units'
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_io_units'
     !--------------------------------------------------------------------------
@@ -1156,7 +1114,6 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-    character (len=*), parameter :: Name='user_set_plot_var'
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
@@ -1245,7 +1202,7 @@ contains
     !
 
     use ModProcMH
-    use ModPointImplicit, ONLY:  UsePointImplicit, UsePointImplicit_B, &
+    use ModPointImplicit, ONLY:  UsePointImplicit, &
          IsPointImplSource, IsPointImplPerturbed
     use ModMain
     use ModVarIndexes
@@ -1255,7 +1212,6 @@ contains
 
     integer, intent(in) :: iBlock
 
-    character (len=*), parameter :: Name='user_calc_sources'
 
     real :: cth
     real :: State_V(nVar)
@@ -1267,6 +1223,7 @@ contains
          I0xp_I, I0px_I, I2xp_I, I2px_I, &
          JxpUx_I, JxpUy_I, JxpUz_I, JpxUx_I, JpxUy_I, JpxUz_I, &
          Kxp_I, Kpx_I, Qepx_I, QmpxUx_I, QmpxUy_I, QmpxUz_I
+
     ! For PU3
     real, dimension(nFluid) :: &
          URelSPu3_I, URelSPu3dim_I, UStarPu3_I=0, SigmaPu3_I, RatePu3_I=0, &
@@ -1275,16 +1232,9 @@ contains
          Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
          Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
 
-    logical:: UseSourceNe2P = .true., UseEnergySource = .true.
 
     integer :: i, j, k
 
-    ! Do not provide explicit source term when point-implicit scheme is used
-    ! IsPointImplSource is true only when called from ModPointImplicit
-
-    ! As per Gabor's recommendation for explicit user sources
-
-    ! if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
@@ -1293,10 +1243,17 @@ contains
     if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
 
     call test_start(NameSub, DoTest, iBlock)
-    if(IsPointImplSource) RETURN
+
+    ! Check if user sources are to be evaluated explicitly or point-implicit
+    if(UsePointImplUserSource)then
+       ! Do not evaluate user source term explicitly
+       if(UsePointImplicit .and. .not. IsPointImplSource) RETURN
+    else
+       ! Evaluate user source term explicitly only
+       if(IsPointImplSource) RETURN
+    end if
 
     !  calculating some constants cBoltzmann is J/K
-
     cth = 2.0*cBoltzmann/mNeutrals
 
     ! ALL FLUIDS, including total ion
@@ -1308,7 +1265,8 @@ contains
 
        ! Extract conservative variables
        State_V = State_VGB(:, i, j, k, iBlock)
-       ! Production rates of neutrals through charge exchange between sw ions and neutrals, 0 rate for sw ions with other ions
+       ! Production rates of neutrals through charge exchange between
+       ! sw ions and neutrals, 0 rate for sw ions with other ions
 
        ! This calculates the array for flow values for all populations
        Ux_I  = State_V(iRhoUx_I)/State_V(iRho_I)
@@ -1683,7 +1641,6 @@ contains
       ! S(p) = (gamma-1)[S(e) - u.S(rhou) + 0.5 u**2 S(rho)]
 
       real:: Source_V(nVar + nFluid)
-      integer:: iVar
 
       !------------------------------------------------------------------------
       Source_V = 0.0
@@ -1943,18 +1900,19 @@ contains
          Ne4Rho_,Ne4RhoUx_,Ne4RhoUy_,Ne4RhoUz_,Ne4P_
 
     use ModPointImplicit, ONLY: &
-         iVarPointImpl_I, IsPointImplMatrixSet, EpsPointImpl_V
+         iVarPointImpl_I, IsPointImplMatrixSet
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_init_point_implicit'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
     ! Allocate and set iVarPointImpl_I
-
-    if(useNeutralFluid)then
+    if(.not.UsePointImplUserSource)then
+       ! User source terms are evaluated explicitly
+       allocate(iVarPointImpl_I(0))
+    else if(UseNeutralFluid)then
        ! All the fluid (4 neutral fluid and 2 ion) variables are implicit
        allocate(iVarPointImpl_I(30))
-       
        iVarPointImpl_I = &
             (/SWHRho_,SWHRhoUx_, SWHRhoUy_, SWHRhoUz_,SWHP_, &
             Pu3Rho_, Pu3RhoUx_, Pu3RhoUy_, Pu3RhoUz_, Pu3P_, &
@@ -1962,24 +1920,19 @@ contains
             Ne2Rho_, Ne2RhoUx_, Ne2RhoUy_, Ne2RhoUz_, Ne2P_, &
             Ne3Rho_, Ne3RhoUx_, Ne3RhoUy_, Ne3RhoUz_, Ne3P_, &
             Ne4Rho_, Ne4RhoUx_, Ne4RhoUy_, Ne4RhoUz_, Ne4P_ /)
+       IsPointImplMatrixSet = .false.
     else
        ! running OH without the neutral fluids so only the  2 ion variables are implicit
        allocate(iVarPointImpl_I(10))
-       
        iVarPointImpl_I = &
             (/SWHRho_,SWHRhoUx_, SWHRhoUy_, SWHRhoUz_,SWHP_, &
             Pu3Rho_, Pu3RhoUx_, Pu3RhoUy_, Pu3RhoUz_, Pu3P_ /)
+       IsPointImplMatrixSet = .false.
     end if
 
     ! Because the second and third populations of neutrals have initially
-    ! very small values I'm
-    ! setting EpsPointImpl_V to be small for these variables ??? !!!
+    ! very small values, setting EpsPointImpl_V to be small for these variables ??? !!!
     ! EpsPointImpl_V(Ne2Rho_:Ne4P_) = 1.e-11
-
-    ! Tell the point implicit scheme if dS/dU will be set analytically
-    ! If this is set to true the DsDu_VVC matrix has to be set.
-
-    IsPointImplMatrixSet = .false.
 
     call test_stop(NameSub, DoTest)
   end subroutine user_init_point_implicit
