@@ -220,6 +220,9 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
   
   // double cLighgt, dt;
   double x[3];
+  //power of 3 array created
+  //for some pgi compilers that cannot convert result of pow() from double to int correctly
+  int pow3_arr[3]={1,3,9};
   int index[3] = {i,j,k};
   int nCell[3] = {_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_};
   double dx[3],coeff[3],coeffSqr[3],coeff4[3]; 
@@ -294,7 +297,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
   // printf("test3:%f\n",MatrixRowNonZeroElementTable[iVar*27].MatrixElementParameterTable[0] );
   // eg. Ex, i-1,j,k and i+1,j,k;  Ey, i,j-1,k and i,j+1,k
 
-  int tempInd =pow(3,iVar);//iVar=0:1; iVar=1:3; iVar=2:9
+  int tempInd =pow3_arr[iVar];//iVar=0:1; iVar=1:3; iVar=2:9
 
   //   MatrixRowNonZeroElementTable[27*iVar+tempInd].MatrixElementValue += coeffSqr[iVar];
   MatrixRowNonZeroElementTable[27*iVar+tempInd].MatrixElementParameterTable[0] += coeffSqr[iVar];
@@ -315,7 +318,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
 	if (iDim==iVarNext) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
       */
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarNext)+iVarNext*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarNext]+iVarNext*27;
       double tempCoeff = 0.25*coeff[iVar]*coeff[iVarNext];
       if (ii!=jj) tempCoeff *= -1;
       //	  MatrixRowNonZeroElementTable[iElement].MatrixElementValue += tempCoeff;
@@ -334,7 +337,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
 	if (iDim==iVarPrev) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
       */
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarPrev)+iVarPrev*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarPrev]+iVarPrev*27;
       double tempCoeff = 0.25*coeff[iVar]*coeff[iVarPrev];
       if (ii!=jj) tempCoeff *= -1;
       //MatrixRowNonZeroElementTable[iElement].MatrixElementValue += tempCoeff;
@@ -386,7 +389,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
     int addition[2]={-1,1};
     for (int jj=0;jj<2;jj++){             
  
-      int iElement = iVar*27+(jj+1)*pow(3,ii);
+      int iElement = iVar*27+(jj+1)*pow3_arr[ii];
       RhsSupportTable_CornerNodes[iElement].Coefficient += coeffSqr[ii];
     }
   }
@@ -403,7 +406,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
   RhsSupportTable_CornerNodes[iVar*27].Coefficient += 2*coeffSqr[iVar]; 
   // printf("test3:%f\n",MatrixRowNonZeroElementTable[iVar*27].MatrixElementParameterTable[0] );
   // eg. Ex, i-1,j,k and i+1,j,k;  Ey, i,j-1,k and i,j+1,k
-  tempInd =pow(3,iVar);//iVar=0:1; iVar=1:3; iVar=2:9
+  tempInd =pow3_arr[iVar];//iVar=0:1; iVar=1:3; iVar=2:9
   //   MatrixRowNonZeroElementTable[27*iVar+tempInd].MatrixElementValue += coeffSqr[iVar];
   RhsSupportTable_CornerNodes[27*iVar+tempInd].Coefficient -= coeffSqr[iVar];
   // printf("test4:%f\n",MatrixRowNonZeroElementTable[iVar*27+tempInd].MatrixElementParameterTable[0] );
@@ -427,7 +430,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
 	if (iDim==iVarNext) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
       */
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarNext)+iVarNext*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarNext]+iVarNext*27;
       double tempCoeff = -0.25*coeff[iVar]*coeff[iVarNext];
       if (ii!=jj) tempCoeff *= -1;
       RhsSupportTable_CornerNodes[iElement].Coefficient += tempCoeff;
@@ -447,7 +450,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::GetStencil(int i,int j,int k,int 
 	if (iDim==iVarPrev) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
       */
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarPrev)+iVarPrev*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarPrev]+iVarPrev*27;
       double tempCoeff = -0.25*coeff[iVar]*coeff[iVarPrev];
       if (ii!=jj) tempCoeff *= -1;
       RhsSupportTable_CornerNodes[iElement].Coefficient += tempCoeff;
@@ -644,6 +647,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
   
   // double cLighgt, dt;
   double x[3];
+  int pow3_arr[3]={1,3,9};
   int index[3] = {i,j,k};
   int nCell[3] = {_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_};
   double dx[3],coeff[3],coeffSqr[3],coeff4[3]; 
@@ -714,7 +718,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
   // printf("test3:%f\n",MatrixRowNonZeroElementTable[iVar*27].MatrixElementParameterTable[0] );
   // eg. Ex, i-1,j,k and i+1,j,k;  Ey, i,j-1,k and i,j+1,k
 
-  int tempInd =pow(3,iVar);//iVar=0:1; iVar=1:3; iVar=2:9
+  int tempInd =pow3_arr[iVar];//iVar=0:1; iVar=1:3; iVar=2:9
 
   //   MatrixRowNonZeroElementTable[27*iVar+tempInd].MatrixElementValue += coeffSqr[iVar];
   MatrixRowNonZeroElementTable[27*iVar+tempInd].MatrixElementParameterTable[0] += coeffSqr[iVar];
@@ -735,7 +739,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
 	if (iDim==iVar) *indexValuePtr[iDim]=index[iDim]+indexAdd[ii];
 	if (iDim==iVarNext) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarNext)+iVarNext*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarNext]+iVarNext*27;
       double tempCoeff = 0.25*coeff[iVar]*coeff[iVarNext];
       if (ii!=jj) tempCoeff *= -1;
       //	  MatrixRowNonZeroElementTable[iElement].MatrixElementValue += tempCoeff;
@@ -752,7 +756,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
 	if (iDim==iVar) *indexValuePtr[iDim]=index[iDim]+indexAdd[ii];
 	if (iDim==iVarPrev) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarPrev)+iVarPrev*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarPrev]+iVarPrev*27;
       double tempCoeff = 0.25*coeff[iVar]*coeff[iVarPrev];
       if (ii!=jj) tempCoeff *= -1;
       //MatrixRowNonZeroElementTable[iElement].MatrixElementValue += tempCoeff;
@@ -807,7 +811,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
 	 int jNode=(ii!=1)?j:j+addition[jj];
 	 int kNode=(ii!=2)?k:k+addition[jj];
       */
-      int iElement = iVar*27+(jj+1)*pow(3,ii);
+      int iElement = iVar*27+(jj+1)*pow3_arr[ii];
       RhsSupportTable_CornerNodes[iElement].Coefficient += coeffSqr[ii];
     }
   }
@@ -825,7 +829,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
   // printf("test3:%f\n",MatrixRowNonZeroElementTable[iVar*27].MatrixElementParameterTable[0] );
   // eg. Ex, i-1,j,k and i+1,j,k;  Ey, i,j-1,k and i,j+1,k
 
-  tempInd =pow(3,iVar);//iVar=0:1; iVar=1:3; iVar=2:9
+  tempInd =pow3_arr[iVar];//iVar=0:1; iVar=1:3; iVar=2:9
 
   //   MatrixRowNonZeroElementTable[27*iVar+tempInd].MatrixElementValue += coeffSqr[iVar];
   RhsSupportTable_CornerNodes[27*iVar+tempInd].Coefficient -= coeffSqr[iVar];
@@ -848,7 +852,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
 	if (iDim==iVar) *indexValuePtr[iDim]=index[iDim]+indexAdd[ii];
 	if (iDim==iVarNext) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarNext)+iVarNext*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarNext]+iVarNext*27;
       double tempCoeff = -0.25*coeff[iVar]*coeff[iVarNext];
       if (ii!=jj) tempCoeff *= -1;
       RhsSupportTable_CornerNodes[iElement].Coefficient += tempCoeff;
@@ -866,7 +870,7 @@ void GetStencilOld(int i,int j,int k,int iVar,cLinearSystemCornerNode<PIC::Mesh:
 	if (iDim==iVar) *indexValuePtr[iDim]=index[iDim]+indexAdd[ii];
 	if (iDim==iVarPrev) *indexValuePtr[iDim]=index[iDim]+indexAdd[jj];
       }
-      int iElement=(ii+1)*pow(3,iVar)+(jj+1)*pow(3,iVarPrev)+iVarPrev*27;
+      int iElement=(ii+1)*pow3_arr[iVar]+(jj+1)*pow3_arr[iVarPrev]+iVarPrev*27;
       double tempCoeff = -0.25*coeff[iVar]*coeff[iVarPrev];
       if (ii!=jj) tempCoeff *= -1;
       RhsSupportTable_CornerNodes[iElement].Coefficient += tempCoeff;
