@@ -163,13 +163,8 @@ subroutine move_line
 
   ! Get the velocity of field line advection from a
   ! bilinear interpolation.
-  !N. Perlongo 2015 - sTheta variable keeps southern hemisphere in domain
-  if (ThetaLine_I(iLine) > 90 * cDegToRad) then
-     sTheta = 180*cDegToRad-ThetaLine_I(iLine)
-  else
-     sTheta = ThetaLine_I(iLine)
-  endif
-
+  sTheta = ThetaLine_I(iLine)
+ 
 
   UthetaLine_I(iLine) = bilinear(uExBtheta_C,1,nPhi,1,nTheta, &
        (/ PhiLine_I(iLine)/Dphi+1.0,sTheta/Dtheta+1.0 /) )
@@ -183,12 +178,6 @@ subroutine move_line
   EfluxLine_I(iLine)     = bilinear(Eflux_G, 0,nPhi+1,0,nTheta+1, &
        (/ PhiLine_I(iLine)/Dphi+1.0,sTheta/Dtheta+1.0 /) )
 
-
-  !N. Perlongo 2015 - Correction for wrong Utheta direction in southern hemisphere
-  if (.NOT.IsNorth_I(iLine)) then
-      UthetaLine_I(iLine)= -1*UthetaLine_I(iLine)
-  !   UphiLine_I(iLine)= -1*UphiLine_I(iLine)
-  endif
  
   ! save ExB velocity to get joule heating
   if (UseJouleHeating) then

@@ -29,7 +29,10 @@ subroutine polar_wind
   logical,save  :: IsFirstCall=.true.
   real    :: Jr, DtVariable
   real    :: NewState_GV(-1:maxGrid,nVar)
-  
+
+  ! AMU in grams
+  real, parameter :: AMUinGrams=1.6606655E-24
+    
   !for particle coupling
   real,allocatable :: Density_IC(:,:),Velocity_IC(:,:),Temperature_IC(:,:)
   real,allocatable :: HeatFlux_IC(:,:)
@@ -180,23 +183,24 @@ subroutine polar_wind
               ! matches the heatflux of the particles. 
               !-kappa (T(i+1)-T(i))/dr = Qpart
               ! T(i+1)=T(i) - dr*Qpart/kappa
+              ! note that kappa is set from eq. 5.168 or Schunk and Nagy
+              ! ignoring the collisional term
               State_GV(iAltParticle+1,iT_I(iSpecies))=&
                    State_GV(iAltParticle,iT_I(iSpecies))&
                    -DrBnd*HeatFlux_IC(iSpecies,iAltParticle+1)&
-                   /HeatCon_GI(iAltParticle+1,iSpecies)
+                   /4.96e-8*State_GV(iAltParticle,iT_I(iSpecies))**(-2.5)&
+                   *sqrt(Mass_I(iSpecies)/AMUinGrams)
 
               State_GV(iAltParticle+2,iT_I(iSpecies))=&
                    State_GV(iAltParticle+1,iT_I(iSpecies))&
                    -DrBnd*HeatFlux_IC(iSpecies,iAltParticle+2)&
-                   /HeatCon_GI(iAltParticle+2,iSpecies)
-
+                   /4.96e-8*State_GV(iAltParticle+1,iT_I(iSpecies))**(-2.5)&
+                   *sqrt(Mass_I(iSpecies)/AMUinGrams)
 
               State_GV(iAltParticle+1:iAltParticle+2,iP_I(iSpecies))=&
                    State_GV(iAltParticle+1:iAltParticle+2,iT_I(iSpecies))&
                    *(Rgas_I(iSpecies)&
                    *State_GV(iAltParticle+1:iAltParticle+2,iRho_I(iSpecies)))
-                            
-              
 
               State_GV(iAltParticle+3:nDim,iRho_I(iSpecies))=&
                    Density_IC(iSpecies,iAltParticle+3:nDim)*Mass_I(iSpecies)

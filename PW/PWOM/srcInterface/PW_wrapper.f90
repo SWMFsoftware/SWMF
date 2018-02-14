@@ -281,7 +281,7 @@ contains
 
     integer :: i, j, iVar, nThetaIono, nPhiIono
     !--------------------------------------------------------------------------
-    if(iBlock /= north_) RETURN
+    !if(iBlock /= north_) RETURN
 
     if(.not.allocated(Phi_G))then
        nThetaIono = Grid_C(IE_) % nCoord_D(1)

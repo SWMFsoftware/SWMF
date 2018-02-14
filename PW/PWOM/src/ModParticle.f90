@@ -2985,7 +2985,7 @@ contains
              DensityOut_IC(iSpecies,iAlt) = DensityMin
              VelocityOut_IC(iSpecies,iAlt)    = 0.0
              TemperatureOut_IC(iSpecies,iAlt) = TemperatureMin
-             HeatFlux_IC(iSpecies,iAlt) = 0.0
+             HeatFluxOut_IC(iSpecies,iAlt) = 0.0
           else
              !interpolate
              DensityOut_IC(iSpecies,iAlt)  = &
