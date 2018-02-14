@@ -308,7 +308,7 @@ Time=54
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
@@ -460,7 +460,7 @@ Time=17
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
@@ -477,7 +477,7 @@ Time=2
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
@@ -1131,7 +1131,7 @@ Time=4
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=7{pgcc}@@(0+pleiades)
 Ref=5{gcc}@@(0+pleiades)
@@ -1157,7 +1157,7 @@ Ref=4{icc}@@(0+stampede)
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
 Ref=7{pgcc}@@(0+pleiades)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 
 Keys=-spice-path=/Users/vtenishe/SPICE/Toolkit/cspice -spice-kernels=/Users/vtenishe/SPICE/Kernels/ROSETTA/kernels -model-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2 -cplr-data-path=/Volumes/Data01/AMPS_DATA_TEST/ROSETTA/amr-sig=0xd7058cc2a680a3a2 @@(0+valeriy)
@@ -1207,7 +1207,7 @@ Time=4
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
@@ -1240,7 +1240,7 @@ Time=4
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
@@ -1274,7 +1274,7 @@ Time=4
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
@@ -1336,7 +1336,7 @@ Time=4
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
@@ -1974,7 +1974,7 @@ Time=1
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=3{gcc}@@(0+stampede)
 Ref=4{icc}@@(0+stampede)
@@ -2021,7 +2021,7 @@ Keys=-model-data-path=${PTDIR}/data/input/DragCoefficient
 
 Ref=2{icc}@@(0+valeriy)
 Ref=1{gcc}@@(0+valeriy)
-Ref=8{pgcc}@@(0+valeriy)
+Ref=1{pgcc}@@(0+valeriy)
 
 Ref=5{gcc}@@(0+pleiades)
 Ref=6{icc}@@(0+pleiades)
