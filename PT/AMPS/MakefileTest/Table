@@ -716,8 +716,17 @@ Compile=
 
 Check=
 >>>@echo "test_lightwave-current-off_check..." >> test_lightwave-current-off$(TESTlightwave-current-off-REF).diff
->>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTlightwave-current-offDIR)/LightWave.out=19.dat \ 
->>>output/test_lightwave-current-off/LightWave.out=19.ref_np`ls $(TESTlightwave-current-offDIR)/PT/thread* |wc -l |tr -d ' '`  > test_lightwave-current-off$(TESTlightwave-current-off-REF).diff;)  
+
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTlightwave-current-offDIR)/LightWaveCase0.out=19.dat \ 
+>>>output/test_lightwave-current-off/LightWave.out=19.ref_np`ls $(TESTlightwave-current-offDIR)/PT/thread* |wc -l |tr -d ' '`  > test_lightwave-current-off--degrees=0$(TESTlightwave-current-off-REF).diff;) 
+
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTlightwave-current-offDIR)/LightWaveCase1.out=19.dat \ 
+>>>output/test_lightwave-current-off/LightWaveCase1.out=19.ref_np`ls $(TESTlightwave-current-offDIR)/PT/thread* |wc -l |tr -d ' '`  > test_lightwave-current-off--degrees=45$(TESTlightwave-current-off-REF).diff;) 
+
+>>>@cat test_lightwave-current-off--degrees=0$(TESTlightwave-current-off-REF).diff test_lightwave-current-off--degrees=45$(TESTlightwave-current-off-REF).diff > test_lightwave-current-off$(TESTlightwave-current-off-REF).diff
+
+>>>@ls -l test_lightwave-current-off--degrees=0$(TESTlightwave-current-off-REF).diff
+>>>@ls -l test_lightwave-current-off--degrees=45$(TESTlightwave-current-off-REF).diff
 >>>@ls -l test_lightwave-current-off$(TESTlightwave-current-off-REF).diff
 >>>@echo Test test_lightwave-current-off has finished: `date`
 
