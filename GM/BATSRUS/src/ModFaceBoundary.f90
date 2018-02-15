@@ -923,7 +923,7 @@ contains
                VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
                     VarsTrueFace_V(iRho_I(iFluid):iP_I(iFluid))
 
-               do iFluid = 3,nFluid
+               do iFluid = IonLast_+2, nFluid
                   if(sum(VarsTrueFace_V(iRhoUx_I(iFluid):iRhoUz_I(iFluid)) * &
                        FaceCoords_D) <= 0.0)then
                      VarsGhostFace_V(iRho_I(iFluid):iP_I(iFluid)) = &
