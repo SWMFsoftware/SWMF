@@ -571,16 +571,16 @@ see the appropriate strings.
 	<parameter name="iTest"      type="integer" min="-2"
 		max="$_GridSize[0]+2" default="1" />
 	<parameter name="jTest"      type="integer" min="-2"
-		max="$_GridSize[1]+2" default="1" />
+		max="$_GridSize[1]+2" default="1" if="$nDim/=1" />
 	<parameter name="kTest"      type="integer" min="-2"
-		max="$_GridSize[2]+2" default="1" />
+		max="$_GridSize[2]+2" default="1" if="$nDim==3" />
 	<parameter name="iBlockTest" type="integer" min="1"
 		max="$_GridSize[3]"   default="1" />
 	<parameter name="iProcTest"  type="integer" min="0" />
 #TESTIJK
 1                       iTest           (cell index for testing)
-1                       jTest           (cell index for testing)
-1                       kTest           (cell index for testing)
+1                       jTest           (read for nDim = 2 or 3)
+1                       kTest           (read for nDim = 3)
 1                       iBlockTest      (block index for testing)
 0                       iProcTest       (processor index for testing)
 
@@ -1670,6 +1670,54 @@ By default the density at the inner boundary is determined by the body
 density given in the #BODY (same as #MAGNETOSPHERE) command.
 </command>
 
+<command name="OHBOUNDARY">
+  <parameter name="UseOhNeutralBc" type="logical" default="F"/>
+  <if expr="$UseOhNeutralBc">
+    <parameter name="RhoNeuFactor" type="real" min="0" default="1"/>
+    <parameter name="uNeuFactor"   type="real" min="0" default="1"/>      
+  </if>
+
+#OHBOUNDARY
+T                       UseOhNeutralBc (rest of parameters are read if true)
+0.05                    RhoNeuFactor
+1.0                     uNeuFactor
+1.E-2                   RhoNeuFactor for Ne2
+0.2                     uNeuFactor for Ne2
+
+Read in density and velocity factors for each neutral fluid. These
+factors are used to set the boundary conditions for the neutral fluids
+in the outer heliosphere component. If the flow points outward from
+the domain, the boundary condition is floating. If it points inward,
+the density, pressure and velocity are set as RhoNeuFactor*Rho1,
+RhoNeuFactor*P1 and uNeuFactor*u1, where Rho1, p1, u1 are the density,
+pressure and velocity of the first fluid.
+
+Default is UseOhNeutralBc false.
+</command>
+
+<command name="OHNEUTRALS">
+  <parameter name="RhoNeutralsISW" type="real" min="0"/>
+  <parameter name="TNeutralsISW"   type="real" min="0"/>
+  <parameter name="UxNeutralsISW"  type="real"/>
+  <parameter name="UyNeutralsISW"  type="real"/>
+  <parameter name="UzNeutralsISW"  type="real"/>
+  <parameter name="mNeutral"       type="real" min="0" default="1"/>
+  
+#OHNEUTRALS
+0.18                    RhoNeutralsISW [amu/cc]
+6519.0                  TNeutralsISW   [K]
+26.3                    UxNeutralsISW  [km/s]
+0.3                     UyNeutralsISW  [km/s]
+-2.3                    UzNeutralsISW  [km/s]
+1.0                     mNeutral       [amu]
+
+Upstream boundary conditions for the neutrals in outer heliosphere component.
+The density, temperature and velocity components are given by the first five
+parameters. The mNeutral parameter defines the mass of the neutrals in
+proton mass. There are no default values, so this command is required for the OH
+component.
+</command>
+
 </commandgroup>
 
 <commandgroup name="GRID GEOMETRY">
@@ -1678,9 +1726,9 @@ density given in the #BODY (same as #MAGNETOSPHERE) command.
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 <command name="GRIDBLOCK" if="$_IsFirstSession">
-	<parameter name="MaxBlock" type="integer" min="1" default="400"/>
-	<parameter name="MaxBlockImpl" type="integer" 
-	 	    min="1" max="$MaxBlock" default="1"/>
+  <parameter name="MaxBlock" type="integer" min="1" default="400"/>
+  <parameter name="MaxBlockImpl" type="integer" 
+	     min="1" max="$MaxBlock" default="1"/>
 
 #GRIDBLOCK
 400		MaxBlock
@@ -6262,7 +6310,7 @@ Default values are false for both parameters.
 	<parameter name="CollisionCoefDim" type="real" min="-1" />
 	<parameter name="TauCutOffDim" type="real" min="-1" default="1000"/>
 	<if expr="$TauCutOffDim&gt;0">
-		<parameter name="uCutOffDim" type="real" min="-1" 
+		<parameter name="uCutOffDim" type="real" min="-2" 
 			default="100"/>
 		<parameter name="nPowerCutOff" type="integer" min="1" max="3"
 			default="2" />
@@ -6285,12 +6333,14 @@ Kelvin, $n$ is the number density measured in $/cm^{-3}$ and the
 resulting rate is in units of $1/s$.
 Note that this feature is implemented but it has not been tested yet.
 
+The TauCutOffDim parameter determines if the relative velocity between
+ion fluids should be limited and at what rate.
+If TauCutOffDim is positive, it gives the time rate of the friction.
 If the TauCutOffDim parameter is negative the relative velocity of the
 ion fluids (especially parallel to the magnetic field) can become very
 large. In reality the streaming instability limits the relative speed. 
-Instead of trying to model the effect of the streaming instability,
+Instead of trying to model the streaming instability directly,
 in the current implementation we apply a simple friction term.
-If TauCutOffDim is positive, it gives the time rate of the friction.
 
 The uCutOffDim determines the speed difference (in input units, 
 typically km/s), at which the friction term becomes large. 
@@ -6298,6 +6348,8 @@ Setting uCutoffDim = -1.0 switches to a physics based cut-off
 velocity which is defined as B/sqrt[rho1*rho2/(rho1+rho2)]
 where B is the magnetic field magnitude, and rho1 and rho2 are 
 the densities of the two ion fluids in normalized units.
+Setting uCutoffDim = -2.0 applies a cut-off velocity based on the
+total Alfven speed B/sqrt(rho1+rho2). 
 
 The nPowerCutOff is the exponent applied
 to the square of the velocity difference. The friction force is
