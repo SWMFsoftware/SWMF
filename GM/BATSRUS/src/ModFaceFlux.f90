@@ -31,7 +31,7 @@ module ModFaceFlux
        UseIdealEos, UseElectronPressure, &
        eFluid_, &                        ! index for electron fluid (nFluid+1)
        UseEfield, &                      ! electric field
-       UseFDFaceFlux, FluxCenter_VGD, &
+       FluxCenter_VGD, DoCorrectFace, &
        UseLowOrder, IsLowOrderOnly_B
 
   use ModPhysics, ONLY: ElectronPressureRatio, PePerPtotal
@@ -483,7 +483,7 @@ contains
 
     if(UseViscosity) call set_visco_factor_face(iBlock)
 
-    if(UseFDFaceFlux) call calc_simple_cell_flux(iBlock)
+    if(DoCorrectFace) call calc_simple_cell_flux(iBlock)
     if (DoResChangeOnly) then
        if(neiLeast(iBlock) == 1) &
             call get_flux_x(1,1,1,nJ,1,nK)
@@ -650,7 +650,7 @@ contains
          VdtFace_x(iFace, jFace, kFace)       = CmaxDt*Area
 
          ! Correct Unormal_I to make div(u) achieve 6th order.
-         if(UseFDFaceFlux) call correct_u_normal(x_)
+         if(DoCorrectFace) call correct_u_normal(x_)
          uDotArea_XI(iFace, jFace, kFace,:)   = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
@@ -669,7 +669,7 @@ contains
               bCrossArea_DX(:,iFace,jFace,kFace) = bCrossArea_D
       end do; end do; end do
 
-      if(UseFDFaceFlux .and. .not.IsLowOrderOnly_B(iBlockFace)) then
+      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
          ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx
          ! is 6th order.
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
@@ -746,7 +746,7 @@ contains
 
          VdtFace_y(iFace, jFace, kFace)       = CmaxDt*Area
 
-         if(UseFDFaceFlux) call correct_u_normal(y_)
+         if(DoCorrectFace) call correct_u_normal(y_)
          uDotArea_YI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
@@ -768,7 +768,7 @@ contains
 
       ! For FD method, modify flux so that df/dx=(f(j+1/2)-f(j-1/2))/dx (x=xj)
       ! is 6th order.
-      if(UseFDFaceFlux .and. .not.IsLowOrderOnly_B(iBlockFace)) then
+      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
                if(LowOrderCrit_YB(iFace,jFace,kFace,iBlockFace) &
@@ -843,7 +843,7 @@ contains
 
          VdtFace_z(iFace, jFace, kFace)       = CmaxDt*Area
 
-         if(UseFDFaceFlux) call correct_u_normal(z_)
+         if(DoCorrectFace) call correct_u_normal(z_)
          uDotArea_ZI(iFace, jFace, kFace, :)  = Unormal_I*Area
 
          if(UseB .and. UseBorisCorrection) &
@@ -863,7 +863,7 @@ contains
 
       end do; end do; end do
 
-      if(UseFDFaceFlux .and. .not.IsLowOrderOnly_B(iBlockFace)) then
+      if(DoCorrectFace .and. .not.IsLowOrderOnly_B(iBlockFace)) then
          do kFace = kMin, kMax; do jFace = jMin, jMax; do iFace = iMin, iMax
             if(UseLowOrder)then
                if(LowOrderCrit_ZB(iFace,jFace,kFace,iBlockFace) &

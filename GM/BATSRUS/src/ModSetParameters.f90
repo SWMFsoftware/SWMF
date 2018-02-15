@@ -1178,6 +1178,7 @@ contains
           if(nOrder == 5) then
              ! Some of the settings below can be overwritten by #SCHEME5
              UseFDFaceFlux    = .true.
+             DoCorrectFace    = .true. 
              UseCweno         = .false.
              ! HighResChange does not work for 1D, but works for 2D and 3D
              UseHighResChange = nDIm > 1
@@ -1203,7 +1204,8 @@ contains
           call read_var('UseFDFaceFlux', UseFDFaceFlux)
           call read_Var('TypeLimiter5', TypeLimiter5, IsLowerCase=.true.)
           call read_var('UseHighResChange', UseHighResChange)
-          call read_var('UseHighOrderAMR',UseHighOrderAMR)
+          call read_var('UseHighOrderAMR',UseHighOrderAMR)          
+          if(UseFDFaceFlux) call read_var('DoCorrectFace',DoCorrectFace)
 
           ! If it is not 'cweno', mp5 scheme will be used.
           UseCweno = TypeLimiter5 == 'cweno'
@@ -1221,12 +1223,10 @@ contains
           !    call sort_smooth_indicator
           ! endif
 
-          if(UseFDFaceFlux .and. UseHighResChange) &
-               DoConserveFlux   = .false.
+          if(UseFDFaceFlux) DoConserveFlux   = .false.
 
           if(.not.UseHighResChange) then
              nOrderProlong  = 2
-             DoConserveFlux = .true.
           end if
 
        case('#BURGERSEQUATION')

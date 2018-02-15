@@ -153,7 +153,7 @@ module ModAdvance
   real, allocatable:: FluxLeft_VGD(:,:,:,:,:), FluxRight_VGD(:,:,:,:,:)
 
   ! Variables for ECHO scheme
-  logical:: UseFDFaceFlux = .false.
+  logical:: UseFDFaceFlux = .false., DoCorrectFace = .false.
   real, allocatable:: FluxCenter_VGD(:,:,:,:,:)
 
   ! CWENO weight used to limit flux.
