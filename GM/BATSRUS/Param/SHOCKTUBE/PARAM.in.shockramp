@@ -100,6 +100,19 @@ mc3                     TypeLimiter
 0.6		CflExpl
 
 
+#ADAPTIVELOWORDER
+T		UseAdaptiveLowOrder
+2		nLowOrder
+2.0		pCritLow
+1.5		pCritHigh
+2.0		VelCrit
+
+#ARTIFICIALVISCOSITY
+T		UseArtificialViscosity
+0.3		AlphaVisco
+0.3		BetaVisco
+
+
 #SAVELOGFILE
 F		DoSaveLogfile
 
@@ -122,11 +135,12 @@ box			NameArea
 
 #REGION
 rightside		NameRegion
-box			NameArea
+box tapered		NameArea
 3.0			xMin
 0.0			yMin
 4.0			xMax
 1.0			yMax
+0.1			taper
 
 #LOWORDERREGION
 +tophalf +rightside
@@ -137,7 +151,7 @@ z=0 var idl_ascii       PlotString
 -1                       DnSavePlot
 0.01                     DtSavePlot
 0.0                     DxSavePlot
-rho ux uy uz p dx loworder
+rho ux uy uz p dx loworder lowcritx lowcrity lowcritz
 g                       NamePar
 
 #STOP
