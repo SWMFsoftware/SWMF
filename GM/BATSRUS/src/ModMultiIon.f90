@@ -662,7 +662,10 @@ contains
                    ! CollisionRate =
                    !  1/tau * min(rho^iIon, rho^jIon) * (du2/u_0^2)^n
 
-                   if(uCutOffDim < 0.0)then
+                   if(uCutOffDim < -1.01)then
+                      ! Use simple Alfven speed B/sqrt(rho1+rho2)
+                      InvUCutOff2 = (Rho_I(iIon) + Rho_I(jIon))/sum(FullB_D**2)
+                   elseif(uCutOffDim < 0.0)then
                       ! Use properly "averaged" Alfven speed
                       ! for the cut-off velocity based on
                       ! "On the physical realization of two-dimensional
