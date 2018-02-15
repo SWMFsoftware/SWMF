@@ -5699,9 +5699,45 @@ The default is the second order Rusanov scheme with the minmod limiter.
 This command is only useful if the nOrder is larger than 2 in the #SCHEME
 command. In this case the StringLowOrderRegion string can specify a region
 where the low (second) order scheme is used. The regions must be described
-with the #REGION command. 
+with the #REGION command. A linear combination of a low order and high 
+order face value is used in the tapering region.
 
 The default is to apply the high order scheme everywhere.
+</command>
+
+
+<command name="ADAPTIVELOWORDER">
+	 <parameter name="UseAdaptiveLowOrder" type="logical" default="F"/>
+	 <if expr="$UseAdaptiveLowOrder">
+	   <parameter name="nLowOrder" type="integer" min="1" max="2" />
+	   <parameter name="pCritLow"  type="real" min="1" />
+	   <parameter name="pCritHigh" type="real" min="1" />
+	   <parameter name="VelCrit"   type="real" min="0" />
+	</if>
+
+#ADAPTIVELOWORDER
+T                      UseAdaptiveLowOrder
+2                      nLowOrder
+2.0                    PCritLow
+1.5                    PCritHigh
+2.0                    VelCrit 
+
+The role of this command is similar to #LOWORDERREGION. #LOWORDERREGION 
+selects the faces use 1st/2nd order face values based on the geometry, 
+while this comamd selectes low order faces based on local physical conditions,
+which are total pressure jump and normal velocity difference in the current
+implementation. The low order value could be 1st or 2nd, which is set by 
+nLowOrder.
+
+For each face, its 6 neighbor cells (3 cells on each side) are used as criteria.
+Among these 6 cells, let's denote the ratio between maximum and minimum pressure
+as pRatio, and the difference between the lagest and smallest march number as 
+dVel. When dVel is smaller than VelCrit, then the high order schemes are used. 
+When dVel is larger than VelCrit, further check the value of pRatio. If pRatio is 
+larger/smaller that pCritLow/pCritHigh, then a low/high order face value will be
+used, otherwise, use a linear combination of the low and high order value. 
+
+
 </command>
 
 <command name="SCHEME4" if="$_IsFirstSession">
@@ -7628,6 +7664,29 @@ When a second body is used the gravity direction for the second body
 is independent of the GravityDir value.  Gravity due to the second body
 is radially inward toward the second body.
 </command>
+
+
+<command name="ARTIFICIALVISCOSITY">
+	 <parameter name="UseArtificialViscosity" type="logical" default="F"/>
+	 <parameter name="AlphaVisco" type="real" min="0" 
+	 	    if="$UseArtificialViscosity"  />
+	 <parameter name="BetaVisco" type="real" min="0" 
+	 	    if="$UseArtificialViscosity"  />
+
+#ARTIFICIALVISCOSITY
+T		UseArtificialViscosity
+0.3             AlphaVisco
+0.3             BetaVisco
+
+This command adds artificial viscosity (diffusion) to the density, moments 
+and pressure equations based on the section 2.5.2 of the  paper by 
+P. McCorquodale and P. Colella (2010). The larger/smaller AlphaVisco/BetaVisco
+is the larger the artificial viscosity will be. AlphaVisco should be non-negative
+and BetaVisco should be positive. The recommended values are shown above. 
+
+Default is no artificial viscosity.
+</command>
+
 
 <command name="VISCOSITY">
 	 <parameter name="UseViscosity" type="logical" default="F"/>
