@@ -69,7 +69,7 @@ module ModMultiFluid
   character (len=20) :: NameFluid = ''
 
   ! Variables for setting fluid boundary condition separately from MHD variables.
-  logical :: IsFullyCoupledfluid = .true. , DoOhNeutralBc
+  logical :: IsFullyCoupledfluid = .true. , DoOhNeutralBc = .false.
   real    :: RhoBcFactor_I(nFluid) = 1.0, uBcFactor_I(nFluid) = 1.
 
   real    :: RhoNeutralsISW=0.0, RhoNeutralsISW_dim=0.0 , &
@@ -78,7 +78,7 @@ module ModMultiFluid
        UyNeutralsISW=0.0 , UyNeutralsISW_dim=0.0 , &
        UzNeutralsISW=0.0 , UzNeutralsISW_dim=0.0 , &
        TNeutralsISW=0.0  , TNeutralsISW_dim=0.0  , &
-       mProtonMass
+       mProtonMass=1.0
 
   ! OpenMP declaration
   !$omp threadprivate( iRho, iRhoUx, iRhoUy, iRhoUz, iPpar, iP, iEnergy )
