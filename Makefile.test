@@ -831,7 +831,7 @@ test_swpc_amps_build:
 	rm -rf ${BUILD}
 	Scripts/Configure.pl -d=${BUILD} -on=PT
 	cd ${BUILD}; rm -rf IM/HEIDI IM/CRCM IE/RIM util/HYPRE
-	cd ${BUILD}; ./Config.pl -install -nompi\
+	cd ${BUILD}; ./Config.pl -install \
 	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd ${BUILD}; make test_swpc_amps
 
