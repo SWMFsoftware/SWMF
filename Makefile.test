@@ -861,8 +861,7 @@ test_swpc_amps:
 test_swpc_amps_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE,PT/AMPS
 	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd
-	./Config.pl -o=PT:-application=test/earth-test-swmf,\
-	spice-path=nospice,amps-test=on
+	./Config.pl -o=PT:application=test/earth-test-swmf,spice-path=nospice,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
 
