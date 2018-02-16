@@ -93,7 +93,6 @@ endif
 # include interface with external FORTRAN subroutines
 ifeq ($(INTERFACE),on)
 	AMPSLINKER=${LINK.f90}
-	AMPSLINKLIB+=${WSD}/interface/interface.a	
 endif 
 
 #when OpenMP is used add the appropriate compiler flag and library
@@ -206,6 +205,7 @@ endif
 	cd ${WSD}/models/photolytic_reactions; $(MAKE) SEARCH_C="${SEARCH_C}" 
 	cd ${WSD}/main; $(MAKE) SEARCH_C="${SEARCH_C}"
 	cp -f ${WSD}/main/mainlib.a ${WSD}/libAMPS.a
+
 ifeq ($(SPICE),nospice)
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/exosphere/*.o models/surface/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o
 else
@@ -214,6 +214,10 @@ else
 	cp ${SPICE}/lib/cspice.a ${WSD}/tmpSPICE
 	cd ${WSD}/tmpSPICE; ar -x cspice.a
 	cd ${WSD}; ${AR} libAMPS.a general/*.o meshAMR/*.o pic/*.o species/*.o models/exosphere/*.o models/surface/*.o models/electron_impact/*.o models/sputtering/*.o models/dust/*.o models/charge_exchange/*.o models/photolytic_reactions/*.o tmpSPICE/*.o
+endif
+
+ifeq ($(INTERFACE),on)
+	cd ${WSD}; ${AR} libAMPS.a interface/*.o
 endif
 
 .PHONY: amps
