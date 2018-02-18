@@ -131,13 +131,52 @@ contains
   subroutine init
     use ModConst,           ONLY: cLightSpeed
     use SP_ModDistribution, ONLY: TotalEnergy_I
+    ! storage for existing tags (possible during restart
+    character(len=50),allocatable:: StringTag_I(:)
+    ! full tag file name
+    character(len=100)::NameFile
+    ! loop variable
+    integer:: iTag
+    
+    character(len=*),parameter:: NameSub='SP:ModPlot:init'
+    !--------------------------------------------------
     if(.not.DoInit) RETURN
     DoInit = .false.
-    !Array for plotting distribution function
+    ! Array for plotting distribution function
     Log10Momentum_I    = log10(Momentum_I) 
     Log10Energy_I      = log10(Energy_I)
     DMomentumOverDEnergy_I = TotalEnergy_I/&
          (Momentum_I*cLightSpeed**2)
+    
+    !\
+    ! Reset/trim NameTagFile if nTag==0/nTag>0; the latter happens at restart.
+    !
+    ! During the run new tags are continuously appended to NameTagFile,
+    ! however, only when the run is succesfully finalized the list of tags is
+    ! considered to be valid, i.e. new #NTAG is written to the header file.
+    !
+    ! If previous run hasn't been properly finalized, NameTagFile may be
+    ! inconsistent with nTag, therefore the file is trimmed according to nTag
+    !/
+    if(iProc/=0) RETURN ! done only by the root
+    ! full file name
+    NameFile = trim(NamePlotDir)//trim(NameTagFile)
+    if(nTag>0)then 
+       allocate(StringTag_I(nTag))
+       call open_file(file=NameFile, status='old', NameCaller=NameSub)
+       do iTag = 1, nTag
+          read(UnitTmp_,'(a)') StringTag_I(iTag)
+       end do
+       call close_file
+    end if
+    call open_file(file=NameFile, status='replace', NameCaller=NameSub)
+    if(nTag > 0)then
+       do iTag = 1, nTag
+          write(UnitTmp_,*) StringTag_I(iTag)
+       end do
+       deallocate(StringTag_I)
+    end if
+    call close_file
   end subroutine init
   !===============================================================
   subroutine read_param(NameCommand)
