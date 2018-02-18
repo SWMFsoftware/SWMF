@@ -119,6 +119,8 @@ contains
     integer, parameter:: RShock_ = Z_ + 2
     ! additional parameters of lines
     real:: Param_I(LagrID_:RShock_)
+    ! data input time before reading new data file
+    real:: DataInputTimeOld
     ! timetag
     character(len=50):: StringTag
     character(len=*), parameter:: NameSub = "SP:read_mh_data"
@@ -133,6 +135,8 @@ contains
     ! get the tag for files
     read(iIOTag,'(a)') StringTag
     !/
+    ! save the current data input time
+    DataInputTimeOld = DataInputTime
     ! read the data
     BLOCK:do iBlock = 1, nBlock
        iNode = iNode_B(iBlock)
@@ -151,6 +155,13 @@ contains
             ParamOut_I = Param_I(LagrID_:RShock_))
        ! find offset in data between new and old states
        if(DoOffset)then
+          ! check consistency: time counter MUST advance
+          if(DataInputTimeOld >= DataInputTime)then
+             call CON_stop(NameSub//&
+                  ': time counter didnt advance when reading mh data file '//&
+                  'with tag '//trim(StringTag)//&
+                  '; the tag may be repeated in '//trim(NameTagFile))
+          end if
           ! amount of the offset is determined from difference 
           ! in LagrID_ 
           iOffset = FootPoint_VB(LagrID_,iBlock) - Param_I(LagrID_)
