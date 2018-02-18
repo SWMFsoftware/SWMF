@@ -476,12 +476,29 @@ contains
       Dot = sum(Dir0_D*Xyz1_D)
       S   = sign(1.0, Dot)
 
-      ! Xyz0, the footprint, is distance Alpha away from Xyz1:
-      ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = RMin =>
-      Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
+      !\
+      ! there are 2 possible failures of the algorithm:
+      ! Failure (1): 
+      ! no intersection of smoothly extended line with the sphere R = RMin
+      if(Dot**2 - sum(Xyz1_D**2) + RMin**2 < 0)then
+         ! project first particle for new footpoint
+         FootPoint_VB(X_:Z_,iBlock) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+      else
+         ! Xyz0, the footprint, is distance Alpha away from Xyz1:
+         ! Xyz0 = Xyz1 + Alpha * Dir0 and R0 = RMin =>
+         Alpha = S * sqrt(Dot**2 - sum(Xyz1_D**2) + RMin**2) - Dot
+         ! Failure (2): 
+         ! intersection is too far from the current beginning of the line,
+         ! use distance between 2nd and 3rd particles on the line as measure
+         if(abs(Alpha) > Dist2)then
+            ! project first particle for new footpoint
+            FootPoint_VB(X_:Z_,iBlock) = Xyz1_D * RMin / sqrt(sum(Xyz1_D**2))
+         else
+            ! store newly found footpoint of the line
+            FootPoint_VB(X_:Z_,iBlock) = Xyz1_D + Alpha * Dir0_D
+         end if
+      end if
 
-      ! store new footpoint of the line
-      FootPoint_VB(X_:Z_,iBlock) = Xyz1_D + Alpha * Dir0_D
       ! length is used to decide when need to append new particles:
       ! use distance between 2nd and 3rd particles on the line
       FootPoint_VB(Length_,    iBlock) = Dist2
