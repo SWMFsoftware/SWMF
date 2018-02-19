@@ -5851,12 +5851,14 @@ The default values are shown in the example.
 	</parameter>   
 	<parameter name="UseHighResChange" type="logical" default="T"/>
 	<parameter name="UseHighOrderAMR"  type="logical" default="T"/>	
+	<parameter name="DoCorrectFace"  type="logical" default="T"/>	
 
 #SCHEME5
 T			UseFDFaceFlux
 MP5			TyperLimiter5
 T			UseHighResChange
 T			UseHighOrderAMR	
+T                       DoCorrectFace
 
 UseFDFaceFlux is meaningful only when nOrder is 5 (see #SCHEME). If it is true,
 a finite difference space discretization, which is 5th order accurate for 
@@ -5878,6 +5880,10 @@ If UseHighOrderAMR is true, 5th order interpolation is used for
 grid refinement and coarsening, so the scheme is 5th order accurate
 even with dynamic AMR. If false, the second order refinement and
 coarsening algorithms are used.
+
+DoCorrectFace is true by default when 5th order FD scheme is used. The 
+face values are corrected so that the 1st order derivatives df/dx are 5th 
+order accurate when DoCorrectFace is true. 
 
 NOTE 1: This command has no effect unless nOrder is set to 5 in 
 the #SCHEME command.
