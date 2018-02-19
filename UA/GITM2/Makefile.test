@@ -39,8 +39,8 @@ test_rundir:
 
 test_gitm_earth:
 	$(MAKE) test_gitm_earth_1d
-	$(MAKE) test_gitm_earth_eclipse
-	$(MAKE) test_gitm_earth_3d
+#	$(MAKE) test_gitm_earth_eclipse
+#	$(MAKE) test_gitm_earth_3d
 
 test_gitm_earth_1d:
 	@echo "test_gitm_earth_1d_compile..." > test_gitm_earth_1d.diff
@@ -137,7 +137,7 @@ test_gitm_earth_3d_check:
 
 test_gitm_mars:
 	make test_gitm_mars_1d
-	make test_gitm_mars_3d
+#	make test_gitm_mars_3d
 
 test_gitm_mars_1d:
 	@echo "test_gitm_mars_1d_compile..." > test_gitm_mars_1d.diff
