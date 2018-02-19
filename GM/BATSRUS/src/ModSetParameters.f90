@@ -1201,11 +1201,12 @@ contains
           ! If UseFDFaceFlux is true, use ECHO scheme, which is based on
           ! L. Del Zanna, O. Zanotti, N. Bucciantini, P. Londrillo,&
           ! Astronomy and Astrophysics, 473 (2007), pp.11-30.
-          call read_var('UseFDFaceFlux', UseFDFaceFlux)
+          call read_var('UseFDFaceFlux', UseFDFaceFlux)          
           call read_Var('TypeLimiter5', TypeLimiter5, IsLowerCase=.true.)
           call read_var('UseHighResChange', UseHighResChange)
           call read_var('UseHighOrderAMR',UseHighOrderAMR)          
           if(UseFDFaceFlux) call read_var('DoCorrectFace',DoCorrectFace)
+          if(.not.UseFDFaceFlux) DoCorrectFace = .false.
 
           ! If it is not 'cweno', mp5 scheme will be used.
           UseCweno = TypeLimiter5 == 'cweno'
