@@ -339,18 +339,18 @@ namespace Vector3D {
     }
   }
 
-  inline void Normalize(double *x) {
-    double l=Length(x);
+  inline void Normalize(double *x,double NewLength=1.0) {
+    double l=NewLength/Length(x);
 
-    for (int idim=0;idim<3;idim++) x[idim]/=l;
+    for (int idim=0;idim<3;idim++) x[idim]*=l;
   }
 
   //distribute the vector direction
   namespace Distribution {
     //uniform distribution of the
-    inline void Uniform(double *a) {
+    inline void Uniform(double *a,double length=1.0) {
       for (int i=0;i<3;i++) a[i]=sqrt(-log(rnd()))*cos(PiTimes2*rnd());
-      Vector3D::Normalize(a);
+      Vector3D::Normalize(a,length);
     }
 
     namespace Circle {
