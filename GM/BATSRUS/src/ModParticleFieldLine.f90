@@ -119,6 +119,10 @@ module ModParticleFieldLine
   logical:: UseCorrection=.false.
   real:: RCorrectionMin = 0.0, RCorrectionMax = Huge(1.0)
 
+  ! field line random walk (FLRW)
+  logical:: UseFLRW = .false.
+  real:: DiffusionFLRW = 0.0
+
   ! initialization related info
   integer:: nLineInit
   real, allocatable:: XyzLineInit_DI(:,:)
@@ -216,6 +220,13 @@ contains
              call read_var('RCorrectionMax', RCorrectionMax)
              if(RCorrectionMax < 0.0) RCorrectionMax = Huge(1.0)
           end if
+       end if
+    case("#PARTICLELINERANDOMWALK")
+       ! field line random walk may be enabled
+       call read_var('UseFLRW', UseFLRW)
+       if(UseFLRW)then
+          ! read the value of field line diffusion coefficient
+          call read_var('DiffusionFLRW', DiffusionFLRW)
        end if
     end select
     call test_stop(NameSub, DoTest)
@@ -628,6 +639,8 @@ contains
       StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle)/RNew*&
            ( ROld + StateEnd_VI(Ds_, iParticle)*sum(DirLine_D*DirR_D) )
 
+      if(UseFLRW) call apply_random_walk(DirLine_D)
+
       ! update location and schedule for message pass
       call check_particle_location(  &
            iKindParticle = KindEnd_ ,&
@@ -747,6 +760,49 @@ contains
       Dir_D = cDirOldDotDirNewMin*StateEnd_VI(DirX_:DirZ_,iParticle) + &
            sqrt(1 - cDirOldDotDirNewMin**2)*Dir_D
     end subroutine correct
+    !==========================================================================
+    subroutine apply_random_walk(Dir_D)
+      use ModCoordTransform, ONLY: cross_product
+      use ModRandomNumber, ONLY: random_real
+      use ModPhysics, ONLY: No2Si_V, UnitX_
+      use ModConst, ONLY: cAu 
+      use ModNumConst, ONLY: cTwoPi
+      ! add components perpendicular to the current direction of the line
+      ! to achieve the effect of field line random walk
+      real, intent(in) :: Dir_D(MaxDim)
+
+      ! current radial distance
+      real:: Radius
+      
+      ! 2 perpendicular directions to Dir_D
+      real:: DirPerp1_D(MaxDim), DirPerp2_D(MaxDim)
+
+      ! random numbers: 2 uniform and 2 normal (see Box-Muller algorithm)
+      real:: RndUnif1, RndUnif2, RndGauss1, RndGauss2
+      ! seed for random number generator
+      integer, save:: iSeed=0
+      !---------------------------------------------------------------------
+      ! first, find perpendicular directions
+      DirPerp1_D = cross_product((/1.0,0.0,0.0/),Dir_D)
+      if(all(DirPerp1_D==0.0))&
+           DirPerp1_D = cross_product((/0.0,1.0,0.0/),Dir_D)
+      DirPerp1_D = DirPerp1_D / sqrt(sum(DirPerp1_D**2))
+      DirPerp2_D = cross_product(DirPerp1_D, Dir_D )
+      
+      ! find 2D gaussian
+      RndUnif1  = random_real(iSeed)
+      RndUnif2  = random_real(iSeed)
+      RndGauss1 = sqrt(-2*log(RndUnif1)) * cos(cTwoPi*RndUnif2)
+      RndGauss2 = sqrt(-2*log(RndUnif1)) * sin(cTwoPi*RndUnif2)
+
+      ! displace the particle
+      Radius = sqrt(sum(StateEnd_VI(x_:z_,iParticle)**2))
+      ! see Laitinen et al. (2016), doi:10.1051/0004-6361/201527801
+      StateEnd_VI(x_:z_,iParticle) = StateEnd_VI(x_:z_,iParticle) + &
+                  sqrt(2 * Radius * No2Si_V(UnitX_) / cAu *&
+                  DiffusionFLRW * StateEnd_VI(Ds_, iParticle)&
+                  ) * (DirPerp1_D * RndGauss1 + DirPerp2_D * RndGauss2)
+    end subroutine apply_random_walk
     !==========================================================================
   end subroutine particle_line
   !============================================================================

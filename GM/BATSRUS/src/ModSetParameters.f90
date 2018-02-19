@@ -636,7 +636,7 @@ contains
        case("#COULOMBLOG")
           call read_var('CoulombLog', CoulombLog)
 
-       case("#PARTICLELINE")
+       case("#PARTICLELINE","#PARTICLELINERANDOMWALK")
           call read_particle_line_param(NameCommand)
 
        case("#SAVELOGFILE")
