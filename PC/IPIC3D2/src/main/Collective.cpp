@@ -1526,7 +1526,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   nGMRESRestart = 100; 
   NiterMover = 3;
 
-  useIPIC3DSolver = true;
+  useIPIC3DSolver = false;
 
   //------------------------------------------------
   // #BCIPIC

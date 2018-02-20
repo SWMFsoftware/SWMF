@@ -259,24 +259,31 @@ z=0 all idl_ascii       StringPlot
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #ELECTRON
--100.0                                  Charge/mass ratio (qom)
+-100.0		        Charge/mass ratio (qom)
 
 
 #TIMESTEPPING
-T					UseSWMFDt
+T			UseSWMFDt
 
 #ENERGYCONSERVING
-T
+T                       UseECSIM
+
+
+#DISCRETIZATION
+0.51		        theta
+0.1                     gradRhoRatio
+0.1                     cDiff
+
 
 #PARTICLES
-10					Particles per cell in X
-10					Particles per cell in Y
-1					Particles per cell in Z
+10			Particles per cell in X
+10			Particles per cell in Y
+1			Particles per cell in Z
 
 #SOLVER
-1.0e-6					GMREStol
-100					nGMRESRestart
-3					NiterMover 
+1.0e-6			GMREStol
+100			nGMRESRestart
+3			NiterMover 
 
 
 #SAVEIDL
