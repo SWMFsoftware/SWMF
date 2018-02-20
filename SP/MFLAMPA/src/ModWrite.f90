@@ -172,7 +172,7 @@ contains
     call open_file(file=NameFile, status='replace', NameCaller=NameSub)
     if(nTag > 0)then
        do iTag = 1, nTag
-          write(UnitTmp_,*) StringTag_I(iTag)
+          write(UnitTmp_,'(a)') StringTag_I(iTag)
        end do
        deallocate(StringTag_I)
     end if
