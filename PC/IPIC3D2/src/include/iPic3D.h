@@ -176,6 +176,7 @@ namespace iPic3D {
     void SetCycle(int iCycle);
 
     void EM_MaxwellImage(double *vecIn, double *vecOut, int n);    
+    void EM_PoissonImage(double *vecIn, double *vecOut, int n);    
   private:
     static const int x_=0, y_=1, z_=2;
     static const int nDimMax=3;

@@ -1487,7 +1487,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // Set default parameters.
   // #CASE 
   Case               = "BATSRUS";
-  PoissonCorrection  = "no";
   SimName            = "MHD-EPIC";
 
   //#NSYN
@@ -1521,6 +1520,13 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 
   CGtol      = 1.0e-8;
   
+  // #POISSON
+  PoissonCorrection  = "no";
+
+  // #EFIELDSOLVER
+  EFieldTol = 1.0e-6;
+  EFieldIter = 200; 
+
   // #SOLVER
   GMREStol   = 1.0e-8;
   nGMRESRestart = 100; 
@@ -1738,10 +1744,13 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param, "doPoissonCorrection", &doCorrection);
       if(doCorrection){	
 	read_var(param, "correctionCycle", &PoissonCorrectionCycle);
+	read_var(param, "PoissonTol",      &PoissonTol);
+	read_var(param, "PoissonIter",     &PoissonIter);
 	PoissonCorrection = "yes";
       }else{
 	PoissonCorrection = "no";
       }	
+
     }
     else if( Command == "#GRID" && !RESTART1){
       read_var(param,"nxc",       &nxc);
@@ -1787,44 +1796,15 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param, "doSplitSpecies", &doSplitSpecies);
       read_var(param, "splitType", &splitType);
     }
-
-    
-    // else if( Command == "#SPECIES" && !RESTART1){
-    //   read_var(param,"ns",                &ns);
-    //   npcelx =          new int[ns];
-    //   npcely =          new int[ns];
-    //   npcelz =          new int[ns];
-    //   qom =             new double[ns];
-    //   uth =             new double[ns];
-    //   vth =             new double[ns];
-    //   wth =             new double[ns];
-    //   u0  =             new double[ns];
-    //   v0  =             new double[ns];
-    //   w0  =             new double[ns];
-    //   rhoINIT =         new double[ns];
-    //   rhoINJECT =       new double[ns];
-    //   TrackParticleID = new bool[ns];
-    //   for(int is=0; is<ns; is++){
-    //     read_var(param,"npcelx",          &npcelx[is]);
-    //     read_var(param,"npcely",          &npcely[is]);
-    //     read_var(param,"npcelz",          &npcelz[is]);
-    //     read_var(param,"qom",             &qom[is]);
-    //     read_var(param,"uth",             &uth[is]);
-    //     read_var(param,"vth",             &vth[is]);
-    //     read_var(param,"wth",             &wth[is]);
-    //     read_var(param,"u0",              &u0[is]);
-    //     read_var(param,"v0",              &v0[is]);
-    //     read_var(param,"w0",              &w0[is]);
-    //     read_var(param,"rhoINIT",         &rhoINIT[is]);
-    //     read_var(param,"rhoINJECT",       &rhoINJECT[is]);
-    //     read_var(param,"TrackParticleID", &TrackParticleID[is]);
-
-    //   }
-    // 
     else if( Command == "#SOLVER"){
+      cout<<"Warning:: the parameters for the E field solver should be set by command #EFIELDSOLVER!"<<endl;
       read_var(param,"GMREStol", &GMREStol);
       read_var(param,"nGMRESRestart", &nGMRESRestart);
       read_var(param,"NiterMover", &NiterMover);      
+    }
+    else if( Command == "#EFIELDSOLVER"){
+      read_var(param,"EFieldTol",  &EFieldTol);
+      read_var(param,"EFieldIter", &EFieldIter);
     }
     else if( Command == "#IPIC3DSOLVER"){
       read_var(param, "useIPIC3DSolver", &useIPIC3DSolver);

@@ -224,6 +224,9 @@ The magnetic field is set from B = k/|k| x E.
 100                    nGMRESRestart
 3                      NiterMover
 
+Warning: this command is obsolete because the linear solver in SWMF
+is used by default, and the related parameters are set by command
+#EFIELDSOLVER and #POISSON
 
 These parameters control the field solver and the particle mover. 'GMREStol' is
 the tolerance of the GMRES E field solver, which will restart every
@@ -237,6 +240,38 @@ is removed because CG is not used anymore.
 is 0.1.
 
 </command>
+
+
+<command name="EFIELDSOLVER">
+  <parameter name="EFieldTol"  type="real"    default="1e-6"/>
+  <parameter name="EFieldIter" type="integer" default="200"/>
+  
+#EFIELDSOLVER
+1e-6                     EFieldTol
+200                      EFieldIter
+
+The tolerance and the maximum iteration number of the electric field 
+GMRES solver. The default values are shown above. 
+
+</command>
+
+<command name="POISSON">
+  <parameter name="DoPoissonCorrection"  type="logical"  default="F"/>
+  <parameter name="PoissonCorrectionCycle"  type="integer" />
+  <parameter name="PoissonTol"  type="real"    />
+  <parameter name="PoissonIter" type="integer" />
+
+  
+#POISSON
+T                         DoCorrection
+1                         PoissonCorrectionCycle
+0.1                       PoissonTol
+20                        PoissonIter
+
+This command is off by default. 
+
+</command>
+
 
 <command name="ENERGYCONSERVING">
   <parameter name="useECSIM" type="logical" default="F"/>

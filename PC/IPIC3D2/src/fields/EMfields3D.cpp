@@ -2575,36 +2575,69 @@ void EMfields3D::calculateE(int cycle)
   if(doSolveForChange)
     eqValue(0.0, dxkrylov, n3SolveNode);
 
-    if (PoissonCorrection &&  cycle%PoissonCorrectionCycle == 0) {
-                double PoissonTol = 0.1;
-		double *xkrylovPoisson = new double[nSolveCell];
-		double *bkrylovPoisson = new double[nSolveCell];
-		eqValue(0.0, xkrylovPoisson, nSolveCell);
+  if (PoissonCorrection &&  cycle%PoissonCorrectionCycle == 0) {
+    double PoissonTol = 0.1;
+    double *xkrylovPoisson = new double[nSolveCell];
+    double *bkrylovPoisson = new double[nSolveCell];
+    eqValue(0.0, xkrylovPoisson, nSolveCell);
 		
-		grid->divN2C(divE, Ex, Ey, Ez);
-		scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
-		sum(divE, tempC, nxc, nyc, nzc);
-		// move to krylov space
-		phys2solver(bkrylovPoisson, divE, icMinSolve,icMaxSolve,
-			    jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
-		  if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING using GMRes***" << endl;
-		  GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, nGMRESRestart, 200, PoissonTol,false, this);
+    grid->divN2C(divE, Ex, Ey, Ez);
+    scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
+    sum(divE, tempC, nxc, nyc, nzc);
+    // move to krylov space
+    phys2solver(bkrylovPoisson, divE, icMinSolve,icMaxSolve,
+		jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
 
-		  solver2phys(PHI, xkrylovPoisson, icMinSolve,icMaxSolve,
-			      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
+
+    if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING ***" << endl;
 #ifdef BATSRUS
-		  fixPHI_BATSRUS();
-#endif
-		  communicateCenterBC(nxc, nyc, nzc, PHI, 2, 2, 2, 2, 2, 2, vct,this);
-		  // calculate the gradient
-		  grid->gradC2N(gradPHIX, gradPHIY, gradPHIZ, PHI);
-		  // sub
-		  sub(Ex, gradPHIX, nxn, nyn, nzn);
-		  sub(Ey, gradPHIY, nxn, nyn, nzn);
-		  sub(Ez, gradPHIZ, nxn, nyn, nzn);
+    if(! useIPIC3DSolver){
+      linear_solver_matvec_c = iPIC3D_PoissonImage;
 
-		  delete[]xkrylovPoisson;
-		  delete[]bkrylovPoisson;
+      int nVarSolve = 1;
+      PoissonTol = col->get_PoissonTol();      
+      int nIter = col->get_PoissonIter();
+      int nDimIn = nDimMax;
+      int nI = icMaxSolve - icMinSolve + 1;
+      int nJ = jcMaxSolve - jcMinSolve + 1;
+      int nK = kcMaxSolve - kcMinSolve + 1;
+      int nBlock = 1;
+      MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_MYSIM);
+      double precond_matrix_II[1][1];
+      precond_matrix_II[0][0] = 0; 
+      // parameter to choose preconditioner types
+      //0:No precondition; 1: BILU; 2:DILU;
+      //[-1,0): MBILU;   
+      double PrecondParam=0;
+      int lTest = vct->getCartesian_rank() == 0;
+
+      linear_solver_wrapper("GMRES", &PoissonTol, &nIter, &nVarSolve, &nDimIn,
+			    &nI, &nJ, &nK, &nBlock, &iComm, bkrylovPoisson,
+			    xkrylovPoisson, &PrecondParam, precond_matrix_II[0], 
+			    &lTest);
+    }
+#endif
+
+    if(useIPIC3DSolver){
+      GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, nGMRESRestart, 200, PoissonTol,false, this);
+    }
+
+
+    solver2phys(PHI, xkrylovPoisson, icMinSolve,icMaxSolve,
+		jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
+#ifdef BATSRUS
+    fixPHI_BATSRUS();
+#endif
+    communicateCenterBC(nxc, nyc, nzc, PHI, 2, 2, 2, 2, 2, 2, vct,this);
+    // calculate the gradient
+    grid->gradC2N(gradPHIX, gradPHIY, gradPHIZ, PHI);
+    // sub
+    sub(Ex, gradPHIX, nxn, nyn, nzn);
+    sub(Ey, gradPHIY, nxn, nyn, nzn);
+    sub(Ez, gradPHIZ, nxn, nyn, nzn);
+
+    delete[]xkrylovPoisson;
+    delete[]bkrylovPoisson;
   }                             // end of divergence cleaning
 
   if (vct->getCartesian_rank() == 0)
@@ -2625,7 +2658,8 @@ void EMfields3D::calculateE(int cycle)
     linear_solver_matvec_c = iPIC3D_MaxwellImage;
 
     int nVarSolve = 3;
-    int nIter = 10000;
+    int nIter = col->get_EFieldIter();
+    double EFieldTol = col->get_EFieldTol();
     int nDimIn = nDimMax;
     int nI = inmaxsolve - inminsolve + 1;
     int nJ = jnmaxsolve - jnminsolve + 1;
@@ -2640,7 +2674,7 @@ void EMfields3D::calculateE(int cycle)
     double PrecondParam=0;
     int lTest = vct->getCartesian_rank() == 0;
 
-    linear_solver_wrapper("GMRES", &GMREStol, &nIter, &nVarSolve, &nDimIn,
+    linear_solver_wrapper("GMRES", &EFieldTol, &nIter, &nVarSolve, &nDimIn,
 			  &nI, &nJ, &nK, &nBlock, &iComm, bkrylov,
 			  xkrylov, &PrecondParam, precond_matrix_II[0], 
 			  &lTest);

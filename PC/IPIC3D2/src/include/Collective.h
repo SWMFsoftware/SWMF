@@ -189,12 +189,16 @@ class Collective
     string getPclOutputTag()const{return ParticlesOutputTag;}
     string getPoissonCorrection()const{ return (PoissonCorrection); }
     int getPoissonCorrectionCycle()const{ return (PoissonCorrectionCycle); }
+    double get_PoissonTol()const{return PoissonTol;}
+    int get_PoissonIter()const{return PoissonIter;}
     int getLast_cycle()const{ return (last_cycle); }
     double getVinj()const{ return (Vinj); }
     double getCGtol()const{ return (CGtol); }
     double getGMREStol()const{ return (GMREStol); }
     double get_nGMRESRestart()const{ return (nGMRESRestart); }
     int getNiterMover()const{ return (NiterMover); }
+    int get_EFieldIter()const{return EFieldIter;}
+    double get_EFieldTol()const{return EFieldTol;}
     int getFieldOutputCycle()const{ return (FieldOutputCycle); }
     int getParticlesOutputCycle()const{ return (ParticlesOutputCycle); }
     int getTestParticlesOutputCycle()const{ return (TestParticlesOutputCycle); }
@@ -338,6 +342,9 @@ class Collective
     /*! Poisson correction flag */
     string PoissonCorrection;
     int PoissonCorrectionCycle;
+    double PoissonTol; 
+    int PoissonIter; 
+
     /*! TrackParticleID */
     //bool *TrackParticleID;
     /*! SaveDirName */
@@ -420,6 +427,9 @@ class Collective
     int NiterMover;
     /* The restart cycle for GMRES field solver */
     int nGMRESRestart;
+    
+    double EFieldTol;
+    int EFieldIter;
 
     /*! Output for field */
     int FieldOutputCycle;

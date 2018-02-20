@@ -1857,6 +1857,15 @@ void c_Solver:: find_output_list(int iPlot){
 
 
 void c_Solver::EM_MaxwellImage(double *vecIn, double *vecOut, int n){
-  EMf->MaxwellImage(vecOut, vecIn, true);
+  bool doSolveForChange = true;
+  EMf->MaxwellImage(vecOut, vecIn, doSolveForChange);
 }
+
+void c_Solver::EM_PoissonImage(double *vecIn, double *vecOut, int n){
+  bool doSolveForChange = true;
+  EMf->PoissonImage(vecOut, vecIn, doSolveForChange);
+}
+
+
+
 #endif

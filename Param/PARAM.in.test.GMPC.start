@@ -280,12 +280,6 @@ T                       UseECSIM
 10			Particles per cell in Y
 1			Particles per cell in Z
 
-#SOLVER
-1.0e-6			GMREStol
-100			nGMRESRestart
-3			NiterMover 
-
-
 #SAVEIDL
 2
 z=0 fluid ascii si			StringPlot

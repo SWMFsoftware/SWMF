@@ -183,10 +183,9 @@ g
 3			Particles per cell in Y
 3			Particles per cell in Z
 
-#SOLVER
-1.0e-8			GMREStol
-100			nGMRESRestart
-3			NiterMover 
+#EFIELDSOLVER
+1e-8			Tol
+200			NIterMax
 
 #SAVEIDL
 1				nPlot
