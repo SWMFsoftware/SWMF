@@ -576,7 +576,7 @@ contains
 
     ! Use face values from #BOUNDARYSTATE commands
     do iBoundary = SolidBc_, 2*nDim
-       if (.not.UseFaceBoundaryState_I(iBoundary) .and. &
+       if (.not.UseFaceBoundaryState_I(iBoundary) .or.                       &
             .not.UseFaceBoundaryStateHuman_I(iBoundary)) CYCLE
 
        if (UseFaceBoundaryState_I(iBoundary) .and.                           &
@@ -612,7 +612,7 @@ contains
        if (.not.UseCellBoundaryState_I(iBoundary) .and. &
             .not.UseCellBoundaryStateHuman_I(iBoundary)) CYCLE
 
-       if (UseCellBoundaryState_I(iBoundary) .and.                           &
+       if (UseCellBoundaryState_I(iBoundary) .or.                            &
             UseCellBoundaryStateHuman_I(iBoundary))  call stop_mpi(NameSub// &
             ' BOUNDARYSTATE and BOUNDARYSTATEHUMAN cannot be used together.')
 
