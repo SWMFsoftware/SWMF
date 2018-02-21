@@ -1856,7 +1856,7 @@ contains
           end if
 
        case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &
-            "#MAGNETICINNERBOUNDARY", "#OUTFLOWCRITERIA")
+            "#MAGNETICINNERBOUNDARY", "#OUTFLOWCRITERIA", "#YOUNGBOUNDARY")
           call read_face_boundary_param(NameCommand)
 
        case("#GRAVITY")

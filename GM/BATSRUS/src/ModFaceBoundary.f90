@@ -63,6 +63,10 @@ module ModFaceBoundary
   logical:: UseCpcpBc = .false.
   real:: Rho0Cpcp_I(nIonDensity) = 18.0, RhoPerCpcp_I(nIonDensity) = 0.2
 
+  ! Young et al dependent density function at the inner boundary
+  logical :: UseYoungBc = .false. ! Use YoungBCs?
+  real    :: f107Young  = 150.0   ! F10.7 for Young et al.
+
   ! Shall we make B1_radial = 0 at the inner boundary?
   logical:: DoReflectInnerB1 = .false.
 
@@ -110,6 +114,14 @@ contains
              call read_var('RhoPerCpcp', RhoPerCpcp_I(iDensity))
           end do
        end if
+
+    case("#YOUNGBOUNDARY")
+       call read_var('UseYoungBc', UseYoungBc)
+       if(UseYoungBc) then
+          call read_var('YoungF107', F107young)
+       end if
+       write(*,*) "Young et al IBC activated, F10.7=", F107Young
+       
     case("#MAGNETICINNERBOUNDARY")
        call read_var('DoReflectInnnerB1', DoReflectInnerB1)
     case default
@@ -205,14 +217,16 @@ contains
     use ModParallel,   ONLY: &
          neiLtop, neiLbot, neiLeast, neiLwest, neiLnorth, neiLsouth
     use ModNumConst
-    use ModPhysics,    ONLY: PolarRho_I, PolarU_I, PolarP_I, &
+    use ModPhysics,    ONLY: PolarRho_I, PolarU_I, PolarP_I, BodyNDim_I, &
          Io2No_V, No2Si_V, UnitRho_, UnitElectric_, UnitX_
     use ModSolarwind,  ONLY: get_solar_wind_point
     use ModIeCoupling, ONLY: logvar_ionosphere, calc_inner_bc_velocity
 
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB
-
+    use ModGroundMagPerturb, ONLY: Kp
+    use ModProcMH,   ONLY: iProc
+    
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
 
@@ -223,6 +237,9 @@ contains
 
     ! External function for ionosphere
     real:: RhoCpcp_I(nIonDensity)
+
+    ! Variables for Young et al variable mass density:
+    real :: ratOH, fracH, fracO
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
@@ -240,6 +257,32 @@ contains
          RhoCpcp_I = Io2No_V(UnitRho_)*(Rho0Cpcp_I + RhoPerCpcp_I &
          * 0.5*(logvar_ionosphere('cpcpn') + logvar_ionosphere('cpcps')) &
          * (No2Si_V(UnitElectric_)*No2Si_V(UnitX_))/1000.0)
+
+    ! Use Young et al. 1982 empirical relationship to set
+    ! inner boundary density based on expected composition.
+    if(UseYoungBc .and. UseIe)then
+       ! Apply empirical formula from Young et al. to get the ratio
+       ! of minor species to H+:
+       ratOH = 4.5E-2 * exp(0.17*Kp + 0.01*f107Young) ! Eq. 5, pg. 9088
+       !ratHeH= 0.618182*ratOH*exp(-0.24*Kp - 0.011*f107Young) + 0.011*ratOH
+
+       ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
+       ! is both light and very minor.
+       fracH = 1.0 / (1.0 + ratOH)
+       fracO = ratOH  * fracH
+
+       ! Use species fractions to obtain the total mass density.
+       RhoCpcp_I = Io2No_V(UnitRho_) * BodyNDim_I * (fracH + 16.0*fracO)
+
+       ! Debug some stuff:
+       !if(iProc==0)then
+       !   write(*,*) "DEBUG YOUNG ET AL IBCs:"
+       !   write(*,*) "  Young et al parameters: Kp, F107 = ", Kp, F107Young
+       !   write(*,*) "  FracO, FracH = ", fracO, fracH
+       !   write(*,*) "  Initial, resulting mass dens = ", &
+       !        BodyNDim_I(1), BodyNDim_I(1)*(fracH + 16.0*fracO)
+       !endif
+    endif
 
     !\
     ! Apply face boundary conditions as required.
@@ -630,7 +673,7 @@ contains
             end where
 
             ! Apply CPCP dependent density if required
-            if(UseCpcpBc .and. UseIe)then
+            if( (UseYoungBc .or. UseCpcpBc) .and. UseIe)then
                if(UseMultiSpecies)then
                   VarsGhostFace_V(SpeciesFirst_:SpeciesLast_) = &
                        RhoCpcp_I(1:nSpecies)
