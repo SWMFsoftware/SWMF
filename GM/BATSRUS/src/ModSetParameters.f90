@@ -197,6 +197,8 @@ contains
     integer :: iNameBoundary, nNameBoundary
     real    :: BoundaryStateDim_V(1:nVar)
 
+    character(len=30) :: NameHuman_V(nVar)
+    real    :: BoundaryStateHumanDim_V(nVar)
     !--------------------------------------------------------------------------
     NameSub(1:2) = NameThisComp
 
@@ -1952,6 +1954,74 @@ contains
              end select
           end do
 
+       case("#BOUNDARYSTATEHUMAN")
+          ! Read boundary states for multiple boundaries.
+          call read_var('StringBoundary', StringBoundary, IsLowerCase=.true.)
+          do iVar = 1, nVar
+             call read_var(NameHuman_V(iVar), BoundaryStateHumanDim_V(iVar))
+          end do
+
+          call split_string(StringBoundary, NameBoundary_I, nNameBoundary)
+
+          do iNameBoundary = 1, nNameBoundary
+             select case(NameBoundary_I(iNameBoundary))
+
+             case('solid','-3')
+                UseFaceBoundaryStateHuman_I(SolidBc_) = .true.
+                FaceStateDim_VI(:,SolidBc_) = BoundaryStateHumanDim_V
+             case('body2','-2')
+                UseFaceBoundaryStateHuman_I(body2_) = .true.
+                FaceStateDim_VI(:,body2_) = BoundaryStateHumanDim_V
+             case('body1','-1')
+                UseFaceBoundaryStateHuman_I(body1_) = .true.
+                FaceStateDim_VI(:,body1_) = BoundaryStateHumanDim_V
+             case('extra','0')
+                UseFaceBoundaryStateHuman_I(ExtraBc_) = .true.
+                FaceStateDim_VI(:,ExtraBc_) = BoundaryStateHumanDim_V
+             case('xminbox')
+                UseFaceBoundaryStateHuman_I(xMinBc_) = .true.
+                FaceStateDim_VI(:,xMinBc_) = BoundaryStateHumanDim_V
+             case('xmaxbox')
+                UseFaceBoundaryStateHuman_I(xMaxBc_) = .true.
+                FaceStateDim_VI(:,xMaxBc_) = BoundaryStateHumanDim_V
+             case('yminbox')
+                UseFaceBoundaryStateHuman_I(yMinBc_) = .true.
+                FaceStateDim_VI(:,yMinBc_) = BoundaryStateHumanDim_V
+             case('ymaxbox')
+                UseFaceBoundaryStateHuman_I(yMaxBc_) = .true.
+                FaceStateDim_VI(:,yMaxBc_) = BoundaryStateHumanDim_V
+             case('zminbox')
+                UseFaceBoundaryStateHuman_I(zMinBc_) = .true.
+                FaceStateDim_VI(:,zMinBc_) = BoundaryStateHumanDim_V
+             case('zmaxbox')
+                UseFaceBoundaryStateHuman_I(zMaxBc_) = .true.
+                FaceStateDim_VI(:,zMaxBc_) = BoundaryStateHumanDim_V
+
+             case('coord1min','1')
+                UseCellBoundaryStateHuman_I(Coord1MinBc_) = .true.
+                CellStateDim_VI(:,Coord1MinBc_) = BoundaryStateHumanDim_V
+             case('coord1max','2')
+                UseCellBoundaryStateHuman_I(Coord1MaxBc_) = .true.
+                CellStateDim_VI(:,Coord1MaxBc_) = BoundaryStateHumanDim_V
+             case('coord2min','3')
+                UseCellBoundaryStateHuman_I(Coord2MinBc_) = .true.
+                CellStateDim_VI(:,Coord2MinBc_) = BoundaryStateHumanDim_V
+             case('coord2max','4')
+                UseCellBoundaryStateHuman_I(Coord2MaxBc_) = .true.
+                CellStateDim_VI(:,Coord2MaxBc_) = BoundaryStateHumanDim_V
+             case('coord3min','5')
+                UseCellBoundaryStateHuman_I(Coord3MinBc_) = .true.
+                CellStateDim_VI(:,Coord3MinBc_) = BoundaryStateHumanDim_V
+             case('coord3max','6')
+                UseCellBoundaryStateHuman_I(Coord3MaxBc_) = .true.
+                CellStateDim_VI(:,Coord3MaxBc_) = BoundaryStateHumanDim_V
+
+             case default
+                call stop_mpi(NameSub//' ERROR: incorrect boundary name='//&
+                     NameBoundary_I(iNameBoundary))
+             end select
+          end do
+
        case("#DIPOLEBODY2")
           if(.not.is_first_session())CYCLE READPARAM
           call read_var('BdpDimBody2x',BdpDimBody2_D(1))
@@ -2268,6 +2338,7 @@ contains
       character(len=3)  :: NameWave
       character(len=2)  :: NameMaterial
       character(len=50) :: NamePrimitive, NamePrimitivePlot, NameConservative
+      character(len=50) :: NameHuman
       character(len=50) :: String, NameFluid
       character(len=500):: StringConservative, StringPrimitivePlot
       character(len=500):: StringPrimitiveOrig
@@ -2324,17 +2395,23 @@ contains
          NameConservative  = trim(NameFluid)//trim(String)
          NamePrimitive     = trim(NameFluid)//trim(String)
          NamePrimitivePlot = trim(NameFluid)//trim(String)
+         NameHuman         = trim(NameFluid)//trim(String)
 
          select case(String)
+         case('Rho')
+            NameHuman         = trim(NameFluid)//'NumDens'
          case('Mx')
             NamePrimitive     = trim(NameFluid)//'Ux'
             NamePrimitivePlot = trim(NameFluid)//'Ux'
+            NameHuman         = trim(NameFluid)//'Ux'
          case('My')
             NamePrimitive     = trim(NameFluid)//'Uy'
             NamePrimitivePlot = trim(NameFluid)//'Uy'
+            NameHuman         = trim(NameFluid)//'Uy'
          case('Mz')
             NamePrimitive     = trim(NameFluid)//'Uz'
             NamePrimitivePlot = trim(NameFluid)//'Uz'
+            NameHuman         = trim(NameFluid)//'Uz'
          case('Ppar')
             ! for anisotropic pressure, the primitive var is Ppar, while
             ! typically Pperp is added for plotting purpose
@@ -2342,11 +2419,13 @@ contains
                  trim(NameFluid)//'Pperp'
          case('P')
             NameConservative  = trim(NameFluid)//'E'
+            NameHuman         = trim(NameFluid)//'Temperature'
          case('Hype')
             ! also tries to make HypE look better.
             NameConservative  = trim(NameFluid)//'HypE'
             NamePrimitive     = trim(NameFluid)//'HypE'
             NamePrimitivePlot = trim(NameFluid)//'HypE'
+            NameHuman         = trim(NameFluid)//'HypE'
          case('Pepar')
             ! for anisotropic Pe, the primitive var is PpPpar, while
             ! typically Peperp is added for plotting purpose
@@ -2357,8 +2436,9 @@ contains
          ! NamePrimitive is the primitive variable names without any additional
          ! variable names (i.e. Pperp) for plotting purposes
          NamePrimitive_V(iVar) = trim(NamePrimitive)
+         NameHuman_V(iVar)     = trim(NameHuman)
 
-         ! overwrite the wave vars, trying to be consistent with previou
+         ! overwrite the wave vars, trying to be consistent with previous
          ! equation files
          if (iVar >= WaveFirst_ .and. iVar <= WaveLast_ .and. WaveLast_ >1)then
             if (iVar == WaveFirst_) then
@@ -2370,7 +2450,7 @@ contains
             end if
          end if
 
-         ! overwrite the material vars, trying to be consistent with previou
+         ! overwrite the material vars, trying to be consistent with previous
          ! equation files
          if (iVar >= MaterialFirst_ .and. iVar <= MaterialLast_ .and. &
               MaterialLast_ > 1) then
