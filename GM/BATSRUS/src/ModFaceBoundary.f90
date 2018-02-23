@@ -272,7 +272,7 @@ contains
        fracO = ratOH  * fracH
 
        ! Use species fractions to obtain the total mass density.
-       RhoCpcp_I = Io2No_V(UnitRho_) * BodyNDim_I * (fracH + 16.0*fracO)
+       RhoCpcp_I = Io2No_V(UnitRho_) * BodyNDim_I(1) * (fracH + 16.0*fracO)
 
        ! Debug some stuff:
        !if(iProc==0)then
