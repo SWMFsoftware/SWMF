@@ -225,7 +225,6 @@ contains
     use CON_axes,      ONLY: transform_matrix
     use BATL_lib,      ONLY: Xyz_DGB
     use ModGroundMagPerturb, ONLY: Kp
-    use ModProcMH,   ONLY: iProc
     
     logical, dimension(MinI:MaxI,MinJ:MaxJ,MinK:MaxK), intent(in):: &
          IsBodyCell_G, IsTrueCell_G
@@ -239,7 +238,7 @@ contains
     real:: RhoCpcp_I(nIonDensity)
 
     ! Variables for Young et al variable mass density:
-    real :: ratOH, fracH, fracO
+    real :: RatioOH, FracH, FracO
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'set_face_bc'
@@ -263,16 +262,16 @@ contains
     if(UseYoungBc .and. UseIe)then
        ! Apply empirical formula from Young et al. to get the ratio
        ! of minor species to H+:
-       ratOH = 4.5E-2 * exp(0.17*Kp + 0.01*f107Young) ! Eq. 5, pg. 9088
+       RatioOH = 4.5E-2 * exp(0.17*Kp + 0.01*F107Young) ! Eq. 5, pg. 9088
        !ratHeH= 0.618182*ratOH*exp(-0.24*Kp - 0.011*f107Young) + 0.011*ratOH
 
        ! Get fraction of total for H+ and O+.  Combine He+ with H+ as it
        ! is both light and very minor.
-       fracH = 1.0 / (1.0 + ratOH)
-       fracO = ratOH  * fracH
+       FracH = 1.0 / (1.0 + RatioOH)
+       FracO = RatioOH  * FracH
 
        ! Use species fractions to obtain the total mass density.
-       RhoCpcp_I = Io2No_V(UnitRho_) * BodyNDim_I(1) * (fracH + 16.0*fracO)
+       RhoCpcp_I = Io2No_V(UnitRho_) * BodyNDim_I(IonFirst_)*(FracH + 16*FracO)
 
        ! Debug some stuff:
        !if(iProc==0)then
@@ -280,7 +279,7 @@ contains
        !   write(*,*) "  Young et al parameters: Kp, F107 = ", Kp, F107Young
        !   write(*,*) "  FracO, FracH = ", fracO, fracH
        !   write(*,*) "  Initial, resulting mass dens = ", &
-       !        BodyNDim_I(1), BodyNDim_I(1)*(fracH + 16.0*fracO)
+       !        BodyNDim_I(IonFirst_), BodyNDim_I(IonFirst_)*(FracH + 16*FracO)
        !endif
     endif
 
