@@ -598,8 +598,8 @@ contains
                FaceState_VI(iRho_I, iBoundary)*FaceState_VI(iP_I, iBoundary)
 
           ! convert number density to mass density
-          FaceState_VI(iRho_I, iBoundary) = &
-               FaceState_VI(iRho_I, iBoundary)*MassFluid_I
+          FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
+               FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary)*MassFluid_I
        end if
 
     end do
@@ -631,8 +631,8 @@ contains
                CellState_VI(iRho_I, iBoundary)*CellState_VI(iP_I, iBoundary)
 
           ! convert number density to mass density
-          CellState_VI(iRho_I, iBoundary) = &
-               CellState_VI(iRho_I, iBoundary)*MassFluid_I
+          CellState_VI(iRho_I(IonFirst_:nFluid), iBoundary) = &
+               CellState_VI(iRho_I(IonFirst_:nFluid), iBoundary)*MassFluid_I
        end if
     end do
 
