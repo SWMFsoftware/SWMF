@@ -268,6 +268,81 @@ while ($line=<InputFile>) {
     }  
   }
   
+  
+  #locations of points where the cutoff rigidity and the energetic particle flux are calculated
+  elsif ($InputLine eq "CUTOFFTESTLOCATIONS") {
+    ($s0,$InputComment)=split(' ',$InputComment,2);
+    
+    if ($s0 eq "ON") {
+      my $nTotalLocations=0;
+      my (@x0All,@x1All,@x2All,@SpecAll,@TimeAll,@SourceAll,@nPartAll);
+
+      
+      while (defined $InputComment) {
+        ($s0,$InputComment)=split(' ',$InputComment,2);
+        
+        if ($s0 eq "NTOTALPARTICLES") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          ampsConfigLib::ChangeValueOfVariable("int Earth::CutoffRigidity::IndividualLocations::nTotalTestParticlesPerLocations",$s0,"main/CutoffRigidity.cpp");         
+        }
+        elsif ($s0 eq "NINJECTIONITERATIONS") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);
+          ampsConfigLib::ChangeValueOfVariable("int Earth::CutoffRigidity::IndividualLocations::nParticleInjectionIterations",$s0,"main/CutoffRigidity.cpp");         
+        }
+        elsif ($s0 eq "EMAX") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);      
+          ampsConfigLib::ChangeValueOfVariable("double Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit",$s0,"main/CutoffRigidity.cpp");   
+        }
+        elsif ($s0 eq "EMIN") {
+          ($s0,$InputComment)=split(' ',$InputComment,2);      
+          ampsConfigLib::ChangeValueOfVariable("double Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit",$s0,"main/CutoffRigidity.cpp");   
+        }
+        elsif ($s0 eq "X") {
+          my ($x0,$x1,$x2);
+          
+          ($x0,$x1,$x2,$InputComment)=split(' ',$InputComment,4);
+          
+          push(@x0All,$x0);
+          push(@x1All,$x1);
+          push(@x2All,$x2);    
+          $nTotalLocations++;       
+        }
+        else {
+          die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+        }
+      }    
+      
+      #combine all entries
+      if ($nTotalLocations!=0) {
+        my $l0="";
+        
+        for (my $i=0;$i<$nTotalLocations;$i++) {
+          if ($i!=0) {
+            $l0=$l0.",";            
+          }
+          
+          $l0=$l0."{".$x0All[$i].",".$x1All[$i].",".$x2All[$i]."}";
+        }
+        
+        ampsConfigLib::ChangeValueOfVariable("int CutoffRigidityTestLocationTableLength",$nTotalLocations,"main/CutoffRigidity.cpp");
+        ampsConfigLib::ChangeValueOfVariable("double CutoffRigidityTestLocationTable\\[\\]\\[3\\]","{".$l0."}","main/CutoffRigidity.cpp");    
+      }
+      else {
+        ampsConfigLib::ChangeValueOfVariable("int Earth::CutoffRigidity::nTotalTestLocations","0","main/CutoffRigidity.cpp");
+      }
+       
+    }
+    elsif ($s0 eq "OFF") {
+      #skip the test of the line
+      ampsConfigLib::ChangeValueOfVariable("int Earth::CutoffRigidity::nTotalTestLocations","0","main/CutoffRigidity.cpp");
+    }
+    else {
+      die "Cannot recognize $s0, line $InputFileLineNumber ($line) in $InputFileName.Assembled\n";
+    }
+    
+  }
+  
+  
   #parameters of the impulse source 
   elsif ($InputLine eq "IMPULSESOURCE") {
     ($s0,$InputComment)=split(' ',$InputComment,2);
