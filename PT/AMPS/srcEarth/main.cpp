@@ -40,8 +40,8 @@ int main(int argc,char **argv) {
 
   amps_init_mesh();
 
-  Earth::CutoffRigidity::Init_BeforeParser();
-  Earth::CutoffRigidity::AllocateCutoffRigidityTable();
+/*  Earth::CutoffRigidity::Init_BeforeParser();
+  Earth::CutoffRigidity::AllocateCutoffRigidityTable();*/
 
   amps_init();
 

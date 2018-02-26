@@ -311,6 +311,9 @@ void amps_init_mesh() {
  //init the volume of the cells'
  PIC::Mesh::mesh.InitCellMeasure();
 
+ //init the cutoff rigidity data
+ Earth::CutoffRigidity::Init_BeforeParser();
+ Earth::CutoffRigidity::AllocateCutoffRigidityTable();
 
  //init the datastructure for registering of the velocity vectors of the particles that cross the boundary of the domain
  Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate();
