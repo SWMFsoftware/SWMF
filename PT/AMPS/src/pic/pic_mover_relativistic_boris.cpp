@@ -20,6 +20,40 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
   double mass,uMinus[3],ElectricCharge,E[3],B[3],QdT_over_twoM;
   int idim,i,j,k,spec;
 
+  //the description of the boundaries of the block faces
+  struct cExternalBoundaryFace {
+    double norm[3];
+    int nX0[3];
+    double e0[3],e1[3],x0[3];
+    double lE0,lE1;
+  };
+
+  static bool initExternalBoundaryFaceTable=false;
+
+  static cExternalBoundaryFace ExternalBoundaryFaceTable[6]={
+      {{-1.0,0.0,0.0}, {0,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{1.0,0.0,0.0}, {1,0,0}, {0,1,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,-1.0,0.0}, {0,0,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0}, {{0.0,1.0,0.0}, {0,1,0}, {1,0,0},{0,0,1},{0,0,0}, 0.0,0.0},
+      {{0.0,0.0,-1.0}, {0,0,0}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}, {{0.0,0.0,1.0}, {0,0,1}, {1,0,0},{0,1,0},{0,0,0}, 0.0,0.0}
+  };
+
+  if (initExternalBoundaryFaceTable==false) {
+    initExternalBoundaryFaceTable=true;
+
+    for (int nface=0;nface<6;nface++) {
+      double cE0=0.0,cE1=0.0;
+
+      for (idim=0;idim<3;idim++) {
+        ExternalBoundaryFaceTable[nface].x0[idim]=(ExternalBoundaryFaceTable[nface].nX0[idim]==0) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim];
+
+        cE0+=pow(((ExternalBoundaryFaceTable[nface].e0[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+        cE1+=pow(((ExternalBoundaryFaceTable[nface].e1[idim]+ExternalBoundaryFaceTable[nface].nX0[idim]<0.5) ? PIC::Mesh::mesh.rootTree->xmin[idim] : PIC::Mesh::mesh.rootTree->xmax[idim])-ExternalBoundaryFaceTable[nface].x0[idim],2);
+      }
+
+      ExternalBoundaryFaceTable[nface].lE0=sqrt(cE0);
+      ExternalBoundaryFaceTable[nface].lE1=sqrt(cE1);
+    }
+  }
+
   static long int nCall=0;
   nCall++;
 
@@ -137,6 +171,99 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
       int code=_PARTICLE_DELETED_ON_THE_FACE_;
 
       //call the function that process particles that leaved the coputational domain
+      #if _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__DELETE_
+      //do nothing -> the particle deleting code is already set
+      #else
+       //call the function that process particles that leaved the coputational domain
+//       if (ProcessOutsideDomainParticles!=NULL) {
+         //determine through which face the particle left the domain
+
+      int nface,nIntersectionFace;
+      double tVelocityIncrement,cx,cv,r0[3],dt,vMiddle[3]={0.5*(vInit[0]+vFinal[0]),0.5*(vInit[1]+vFinal[1]),0.5*(vInit[2]+vFinal[2])},c,dtIntersection=-1.0;
+
+      for (nface=0;nface<6;nface++) {
+        for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
+          r0[idim]=xInit[idim]-ExternalBoundaryFaceTable[nface].x0[idim];
+          cx+=r0[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+          cv+=vMiddle[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+        }
+
+        if (cv>0.0) {
+          dt=-cx/cv;
+
+          if ((dtIntersection<0.0)||(dt<dtIntersection)&&(dt>0.0)) {
+            double cE0=0.0,cE1=0.0;
+
+            for (idim=0;idim<3;idim++) {
+              c=r0[idim]+dt*vMiddle[idim];
+
+              cE0+=c*ExternalBoundaryFaceTable[nface].e0[idim],cE1+=c*ExternalBoundaryFaceTable[nface].e1[idim];
+            }
+
+            if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0>ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1>ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
+
+            nIntersectionFace=nface,dtIntersection=dt;
+          }
+        }
+      }
+
+      if (nIntersectionFace==-1) exit(__LINE__,__FILE__,"Error: cannot find the face of the intersection");
+
+      for (idim=0,tVelocityIncrement=((dtIntersection/dtTotalIn<1) ? dtIntersection/dtTotalIn : 1);idim<3;idim++) {
+        xInit[idim]+=dtIntersection*vMiddle[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+        vInit[idim]+=tVelocityIncrement*(vFinal[idim]-vInit[idim]);
+      }
+
+      newNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
+
+      if (newNode==NULL) {
+        //the partcle is outside of the domain -> correct particle location and determine the newNode;
+        double xmin[3],xmax[3];
+        int ii;
+
+        memcpy(xmin,PIC::Mesh::mesh.xGlobalMin,3*sizeof(double));
+        memcpy(xmax,PIC::Mesh::mesh.xGlobalMax,3*sizeof(double));
+
+        for (ii=0;ii<3;ii++) {
+          if (xmin[ii]>=xInit[ii]) xInit[ii]=xmin[ii]+PIC::Mesh::mesh.EPS;
+          if (xmax[ii]<=xInit[ii]) xInit[ii]=xmax[ii]-PIC::Mesh::mesh.EPS;
+        }
+
+        newNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
+
+        if (newNode==NULL) exit(__LINE__,__FILE__,"Error: cannot find the node");
+      }
+
+      switch (_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_) {
+      case _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_:
+        code=ProcessOutsideDomainParticles(ptr,xInit,vInit,nIntersectionFace,newNode);
+        break;
+
+      case  _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__PERIODIC_CONDITION_:
+        exit(__LINE__,__FILE__,"Error: not implemented");
+        break;
+
+      case _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__SPECULAR_REFLECTION_:
+        //reflect the particle back into the domain
+        {
+          double c=0.0;
+          for (int idim=0;idim<3;idim++) c+=ExternalBoundaryFaceTable[nIntersectionFace].norm[idim]*vInit[idim];
+          for (int idim=0;idim<3;idim++) vInit[idim]-=2.0*c*ExternalBoundaryFaceTable[nIntersectionFace].norm[idim];
+        }
+
+        code=_PARTICLE_REJECTED_ON_THE_FACE_;
+        break;
+      default:
+        exit(__LINE__,__FILE__,"Error: the option is unknown");
+      }
+
+
+
+      memcpy(vFinal,vInit,3*sizeof(double));
+      memcpy(xFinal,xInit,3*sizeof(double));
+#endif //_PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_ == _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__DELETE
+
+
       switch(code) {
       case _PARTICLE_DELETED_ON_THE_FACE_:
         PIC::ParticleBuffer::DeleteParticle(ptr);
