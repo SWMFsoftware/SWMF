@@ -118,7 +118,7 @@ long int Earth::BoundingBoxInjection::InjectionProcessor(int spec,cTreeNodeAMR<P
 
              v=PIC::ParticleBuffer::GetV(tempParticleData);
 
-             if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::TestInjectedParticleProperties(spec,x,v,nface)==false) continue;
+             if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::TestInjectedParticleProperties(spec,x,v,0,nface)==false) continue;
            }
 
            //generate a new particle
