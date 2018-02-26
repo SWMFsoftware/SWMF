@@ -147,6 +147,10 @@ double InitLoadMeasure(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
 
 void amps_init_mesh() {
 
+  //init Earth magnetosphere model
+  Earth::Init();
+  Earth::Sampling::ParticleData::Init();
+
   //if (strcmp(Earth::Mesh::sign,"new")==0) 
 { //full mesh
 
@@ -351,7 +355,8 @@ void amps_init_mesh() {
    //init the PIC solver
    PIC::Init_AfterParser ();
    PIC::Mover::Init();
-   
+
+
    //set up the sampling routine
    //combine all species into the same distribution function
    vector<int> SpeciesTable;
@@ -379,6 +384,9 @@ void amps_init_mesh() {
    if (Earth::ImpulseSource::Mode==true) {
      Earth::ImpulseSource::InitParticleWeight();
    }
+   else if (Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength!=0) {
+     for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(s,1.0);
+   }
    else {
      PIC::ParticleWeightTimeStep::LocalBlockInjectionRate=Earth::BoundingBoxInjection::InjectionRate;
      for (int s=0;s<PIC::nTotalSpecies;s++) PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(s);
@@ -392,6 +400,9 @@ void amps_init_mesh() {
    
    if (Earth::ImpulseSource::Mode==true) {
      PIC::BC::UserDefinedParticleInjectionFunction=Earth::ImpulseSource::InjectParticles;
+   }
+   else if (Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength!=0) {
+     //do nothing: particles will be injected by the "user" procedure
    }
    else {
      PIC::BC::BlockInjectionBCindicatior=Earth::BoundingBoxInjection::InjectionIndicator;
@@ -407,6 +418,9 @@ void amps_init_mesh() {
    
 
    //init the nackground magnetic field
+#if _PIC_COUPLER_MODE_ == _PIC_COUPLER_MODE__SWMF_
+   //do nothing; the feald will be recieved through coupling with BATSRUS
+#else
    switch (_PIC_COUPLER_MODE_) {
    case _PIC_COUPLER_MODE__DATAFILE_ :
 
@@ -543,6 +557,7 @@ void amps_init_mesh() {
    default:
      exit(__LINE__,__FILE__,"Error: the option is unknown");
    }
+#endif //_PIC_COUPLER_MODE_
 
 
 
@@ -551,7 +566,7 @@ void amps_init_mesh() {
 
 
 //  if (_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE_==_PIC_OUTPUT_MACROSCOPIC_FLOW_DATA_MODE__TECPLOT_ASCII_) {
-    PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
+//    PIC::Mesh::mesh.outputMeshDataTECPLOT("loaded.SavedCellData.dat",0);
 //  }
 
 
