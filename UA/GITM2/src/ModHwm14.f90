@@ -351,7 +351,9 @@ subroutine initqwm(filename)
     nnode = nlev + p
     allocate(nb(0:nnode),order(ncomp,0:nnode),vnode(0:nnode))
     read(23) vnode
-    vnode(3) = 0.0
+    if (nnode > 0) then
+        vnode(3) = 0.0
+    endif
     allocate(mparm(nbf,0:nlev))
     mparm = 0.0d0
     do i = 0,nlev-p+1-2
