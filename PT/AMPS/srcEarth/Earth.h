@@ -144,6 +144,26 @@ namespace Earth {
     const double RigidityTestMinEnergy=1.0*MeV2J;
     const double RigidityTestMaxEnergy=1.0E4*MeV2J;
 
+    //calculation of the cutoff rigidity in discrete locations
+    namespace IndividualLocations {
+      extern int xTestLocationTableLength;
+      extern double** xTestLocationTable;
+      extern double MaxEnergyLimit;
+      extern double MinEnergyLimit;
+
+      extern int nTotalTestParticlesPerLocations;  //the total number of model particles ejected from a test location
+
+      //the total number of iteartion over which the model particles will be ejected.
+      //This is needed to more quially distribute injectino of the model particles and, as a result, get a stoothes distribution of the particles in the domain to improve the parallel performance
+      extern int nParticleInjectionIterations;
+    }
+
+    //offset in the particle state vector pointing to the index describing the index of the origin location of the particles
+    namespace ParticleDataOffset {
+      extern long int OriginLocationIndex;
+      extern long int OriginalSpeed;
+    }
+
     namespace OutputDataFile {
       void PrintVariableList(FILE* fout);
       void PrintDataStateVector(FILE* fout,long int nZenithPoint,long int nAzimuthalPoint,long int *SurfaceElementsInterpolationList,
@@ -197,15 +217,15 @@ namespace Earth {
       extern bool ApplyInjectionPhaseSpaceLimiting;
       extern bool EnableSampleParticleProperty;
 
-      void RegisterParticleProperties(int spec,double *x,double *v,int iface);
-      bool TestInjectedParticleProperties(int spec,double *x,double *v,int iface);
+      void RegisterParticleProperties(int spec,double *x,double *v,int iOriginLocation,int iface);
+      bool TestInjectedParticleProperties(int spec,double *x,double *v,int iTestLocation,int iface);
       void SmoothSampleTable();
 
       void Allocate();
       int GetVelocityVectorIndex(int spec,double *v,int iface);
 
       const int SampleMaskNumberPerSpatialDirection=4;
-      extern cBitwiseFlagTable SampleTable[PIC::nTotalSpecies][6][SampleMaskNumberPerSpatialDirection][SampleMaskNumberPerSpatialDirection];
+      extern cBitwiseFlagTable *****SampleTable;//[PIC::nTotalSpecies][6][SampleMaskNumberPerSpatialDirection][SampleMaskNumberPerSpatialDirection];
       extern double dX[6][2]; //spatial size corresponding to SampleTable
 
       //exchange the table among all processors
