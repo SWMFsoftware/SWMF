@@ -223,6 +223,7 @@ namespace Earth {
 
       void Allocate();
       int GetVelocityVectorIndex(int spec,double *v,int iface);
+      void ConvertVelocityVectorIndex2Velocity(int spec,double *v,int iface,int Index);
 
       const int SampleMaskNumberPerSpatialDirection=4;
       extern cBitwiseFlagTable *****SampleTable;//[PIC::nTotalSpecies][6][SampleMaskNumberPerSpatialDirection][SampleMaskNumberPerSpatialDirection];
