@@ -11,7 +11,7 @@ use strict;
 # Default compiler per machine or OS
 my %Compiler = (
 		"Linux"               => "nagfor",
-		"Darwin"              => "nagfor",
+		"Darwin"              => "nagfor,clang_mpicc",
 		"OSF1"                => "f90",
 		"IRIX64"              => "f90",
 		"AIX"                 => "xlf90",
