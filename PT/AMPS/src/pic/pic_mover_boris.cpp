@@ -811,7 +811,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
     MagneticFieldStencil=*(PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInit,startNode));
 
     for (int iStencil=0;iStencil<MagneticFieldStencil.Length;iStencil++) {
-      memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset,3*sizeof(double));
+      memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::PrevBOffset,3*sizeof(double));
 
       for (idim=0;idim<3;idim++) B[idim]+=MagneticFieldStencil.Weight[iStencil]*t[idim];
     }
