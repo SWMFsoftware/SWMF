@@ -606,17 +606,6 @@ Note that the user should set #TESTIJK or #TESTXYZ, not both.  If both
 are set, the final one in the session will set the test point.
 </command>
 
-<command name="TESTTIME">
-	<parameter name="nIterTest" type="integer" min="-1" default="-1"   />
-	<parameter name="TimeTest"  type="real"    min="-1" default="1e30" />
-
-#TESTTIME
--1                      nIterTest       (iteration number to start testing)
-10.5                    TimeTest        (time to start testing in seconds)
-
-The time step and physical time to start testing.
-</command>
-
 <command name="TESTVAR">
 	<parameter name="NameTestVar" type="string" length="20" case="lower"
 		   default="1" />
