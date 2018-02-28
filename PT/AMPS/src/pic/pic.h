@@ -4985,6 +4985,10 @@ namespace PIC {
         double GetHighestRequestedBoundaryResolution(int SamplingPoints);
         void GetBoundaryExtensionLength();
 
+        //user-defined function that process the associated data vectors of the 'real' and 'ghost' cells. Result need to be saved in 'RealAssociatedData'
+        typedef void (*fUserProcessBoundaryNodeAssociatedData)(char *RealBlockAssociatedData,char *GhostBlockAssociatedData);
+        extern fUserProcessBoundaryNodeAssociatedData ProcessCenterNodeAssociatedData,ProcessCornerNodeAssociatedData;
+
         //manager of the information update between the real and ghost blocks
         void UpdateData();
 

@@ -33,6 +33,10 @@ int PIC::BC::ExternalBoundary::Periodic::BlockPairTableLength=0;
 //thecommunication channel for message exchange between MPI processes
 CMPI_channel PIC::BC::ExternalBoundary::Periodic::pipe;
 
+//user-defined function that process the srtate vectors of the 'real' and 'ghost' cells
+PIC::BC::ExternalBoundary::Periodic::fUserProcessBoundaryNodeAssociatedData PIC::BC::ExternalBoundary::Periodic::ProcessCenterNodeAssociatedData=NULL;
+PIC::BC::ExternalBoundary::Periodic::fUserProcessBoundaryNodeAssociatedData PIC::BC::ExternalBoundary::Periodic::ProcessCornerNodeAssociatedData=NULL;
+
 //update data between the 'real' and 'ghost' blocks
 void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
   int iBlockPair,RealBlockThread,GhostBlockThread;
@@ -109,6 +113,8 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
     CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
 
     if ((CenterNodeGhostBlock!=NULL)&&(CenterNodeGhostBlock!=NULL)) {
+      if (ProcessCenterNodeAssociatedData!=NULL) ProcessCenterNodeAssociatedData(CenterNodeRealBlock->GetAssociatedDataBufferPointer(),CenterNodeGhostBlock->GetAssociatedDataBufferPointer());
+
       memcpy(CenterNodeGhostBlock->GetAssociatedDataBufferPointer(),CenterNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
     }
     else if ( ((CenterNodeGhostBlock!=NULL)&&(CenterNodeRealBlock==NULL)) || ((CenterNodeGhostBlock==NULL)&&(CenterNodeRealBlock!=NULL)) ) {
@@ -125,6 +131,8 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
     CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
 
     if ((CornerNodeGhostBlock!=NULL)&&(CornerNodeGhostBlock!=NULL)) {
+      if (ProcessCornerNodeAssociatedData!=NULL) ProcessCornerNodeAssociatedData(CornerNodeRealBlock->GetAssociatedDataBufferPointer(),CornerNodeGhostBlock->GetAssociatedDataBufferPointer());
+
       memcpy(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
     }
     else if ( ((CornerNodeGhostBlock!=NULL)&&(CornerNodeRealBlock==NULL)) || ((CornerNodeGhostBlock==NULL)&&(CornerNodeRealBlock!=NULL)) ) {
