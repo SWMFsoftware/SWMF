@@ -12,7 +12,7 @@ timing:
 
 test: 
 	@rm -f *.diff
-	-@($(MAKE) test_gitm_earth)
+#	-@($(MAKE) test_gitm_earth)
 	-@($(MAKE) test_gitm_mars)
 	@ls -l *.diff
 
