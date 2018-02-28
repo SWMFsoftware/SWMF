@@ -340,9 +340,9 @@ namespace Vector3D {
   }
 
   inline void Normalize(double *x,double NewLength=1.0) {
-    double l=NewLength/Length(x);
+    double l=Length(x)/NewLength;
 
-    for (int idim=0;idim<3;idim++) x[idim]*=l;
+    for (int idim=0;idim<3;idim++) x[idim]/=l;
   }
 
   //distribute the vector direction
