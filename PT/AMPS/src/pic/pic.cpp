@@ -283,7 +283,11 @@ int PIC::TimeStep() {
   //move existing particles
   ExitErrorCode=_PIC__EXIT_CODE__LAST_BLOCK__MoveParticles_;
   ParticleMovingTime=MPI_Wtime();
-  PIC::Mover::MoveParticles();
+  static bool isFirstMove=true;
+  if (!isFirstMove || _PIC_FIELD_SOLVER_MODE_!=_PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_){
+    PIC::Mover::MoveParticles();
+  }
+  isFirstMove=false;
   ParticleMovingTime=MPI_Wtime()-ParticleMovingTime;
 
   //check the consistence of the particles lists
