@@ -206,7 +206,7 @@ export DO_FORTRAN="yes"
 export ON_FORTRAN="on"
 verify="no"
 ON_verify="off"
-export DO_STATIC_BUILD="no"
+export DO_STATIC_BUILD="yes"
 export USE_VISIBILITY_HIDDEN="no"
 export VISIT_INSTALL_PREFIX=""
 export VISIT_BUILD_MODE="Release"
@@ -581,7 +581,7 @@ function build_hdf5
 	fortran/src/H5f90global.f90
 
     # Fix the configure script
-    perl -pi -e '$_="#!#$_" if /\-commons|OLD_HEADER_FILENAME|H5_NO_STD/' configure;
+#    perl -pi -e '$_="#!#$_" if /\-commons|OLD_HEADER_FILENAME|H5_NO_STD/' configure;
 
     cf_darwin=""
     if [[ "$OPSYS" == "Darwin" ]]; then
@@ -604,8 +604,8 @@ function build_hdf5
     # configure, we wrap the invokation in 'sh -c "..."' syntax
     echo "Invoking command to configure HDF5"
     # HDF5 is not supported on OSX but it works that is the reason for the --enable-unsupported flag 
-    echo "./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported CXX=${CXX_COMPILER} --enable-cxx --prefix=${HDF5INSTALLDIR} ${cf_szip}"
-    ./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported CXX=${CXX_COMPILER} --enable-cxx --prefix=${HDF5INSTALLDIR} ${cf_szip}
+    echo "./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported CXX=${CXX_COMPILER} --enable-cxx --prefix=${HDF5INSTALLDIR} --disable-shared ${cf_szip}"
+    ./configure CC=${C_COMPILER} FC=${COMPILEF90} --enable-parallel --enable-fortran --enable-unsupported CXX=${CXX_COMPILER} --enable-cxx --prefix=${HDF5INSTALLDIR} --disable-shared ${cf_szip}
     if [[ $? != 0 ]] ; then
        echo "HDF5 configure failed.  Giving up"
        return 1
@@ -632,7 +632,7 @@ function build_hdf5
     fi
 
     # comment out arbitrary Fortran compiler flags
-    perl -pi -e 's/^H5BLD_FFLAGS/#H5BLD_FFLAGS/' bin/h5pfc
+#    perl -pi -e 's/^H5BLD_FFLAGS/#H5BLD_FFLAGS/' bin/h5pfc
 
     cd "$START_DIR"
 
