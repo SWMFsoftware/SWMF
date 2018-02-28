@@ -1670,6 +1670,27 @@ By default the density at the inner boundary is determined by the body
 density given in the #BODY (same as #MAGNETOSPHERE) command.
 </command>
 
+<command name="YOUNGBOUNDARY">
+	<parameter name="UseYoungBc" type="logical" default="F"/>
+	<if expr="$UseYoungBc">
+	    <parameter name="F107Young" type="real" min="0" default="150.0"/>
+	</if>
+#YOUNGBOUNDARY
+T                       UseYoungBc  (rest is read if true)
+150.0                   F107Young
+
+NOTE: For this feature the inner boundary type has to
+be "ionosphere" and the GM and IE components have to be coupled together.
+Kp must be calculated via #GEOMAGINDICES.
+
+This option sets the mass density via the Young et al. 1982 empirical
+relationship for composition.  It uses Kp (calculated by GM/BATSRUS)
+and F10.7 flux (given as command argument) to determine the ratio of O+ to H+.
+The mass density of the inner boundary will be adjusted to match this ratio.
+The total number density is taken as constant from the #BODY command.
+
+</command>
+
 <command name="OHBOUNDARY">
   <parameter name="UseOhNeutralBc" type="logical" default="F"/>
   <if expr="$UseOhNeutralBc">
