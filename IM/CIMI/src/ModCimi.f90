@@ -7,9 +7,10 @@ Module ModCimi
 
   real    :: dt=1., dtmax=1. ! typical time step of cimi
   real    :: Time = 0.0
-  logical :: UseMcLimiter=.false.,UseStrongDiff=.false.
+  logical :: UseMcLimiter = .false., UseStrongDiff = .false., UseDecay = .false.
   real    :: BetaLimiter = 1.5
   real    :: Pmin = 1e-2
+  real    :: DecayTimescale = 36000. ! Seconds
   real, allocatable:: SDtime(:,:,:,:), f2(:,:,:,:,:)
   real, allocatable:: phot(:,:,:), Ppar_IC(:,:,:), &
        Pressure_IC(:,:,:), PressurePar_IC(:,:,:)
@@ -26,8 +27,9 @@ Module ModCimi
   real, allocatable :: &
        preF(:,:,:,:), preP(:,:,:,:), Eje1(:,:,:) ! presipitation output
   integer, parameter :: &
-       nOperator = 7, OpDrift_=1, OpBfield_=2, OpChargeEx_=3, &
-       OpWaves_=4, OpStrongDiff_=5, OpLossCone_=6, OpLossCone0_=7
+       nOperator = 8, OpDrift_ = 1, OpBfield_ = 2, OpChargeEx_ = 3, &
+       OpWaves_ = 4, OpStrongDiff_ = 5, OpDecay_ = 6, &
+       OpLossCone_ = 7, OpLossCone0_ = 8
 ! Note order and number of operators has been changed Waves are added
 ! and OpLossCone0_=7 is previous in time OpLossCone (needed for
 ! precipitation)
@@ -46,8 +48,8 @@ contains
     if(allocated(f2)) RETURN
 
     allocate(                         &
-         SDtime(np,nt,nm,nk),         &
          f2(nspec,np1,nt1,nm,nk),     &
+         SDtime(np,nt,nm,nk),         &
          phot(nspec,np,nt),           &
          Ppar_IC(nspec,np,nt),        &
          Pressure_IC(nspec,np,nt),    &
@@ -56,10 +58,6 @@ contains
          Bmin_C(np,nt))
     ! minimum B field along each field line
     ! passed from GM to IM, now as an output of IM
-
-    ! Not clear why these need initialization !!!
-    FAC_C = 0.0
-    Pressure_IC = 0.0
 
     ! now allocate arrays for energy tracking
     allocate(eChangeOperator_VICI(nspec,np,nt,neng+2,nOperator), &

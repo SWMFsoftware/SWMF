@@ -46,13 +46,13 @@ Module ModCimiPlanet
 !  integer, parameter :: nLogVars = 8
   character(len=500), parameter :: & 
        NamePlotVarLog=&
-       'it t '// &
+       'it t dst '// &
        'RbSumH RcSumH HpDrift HpBfield HpChargeEx HpWaves '// &
-       'HpStrongDiff HpLossCone HpDriftIn HpDriftOut '// &
+       'HpStrongDiff HpDecay HpLossCone HpDriftIn HpDriftOut '// &
        'RbSumO RcSumO OpDrift OpBfield OpChargeEx OpWaves '// &
-       'OpStrongDiff OpLossCone OpDriftIn OpDriftOut '// &
-       'RbSume RcSume eDrift  eBfield  eChargeEx  eWaves  '// &
-       'eStrongDiff  eLossCone  eDriftIn  eDriftOut'
+       'OpStrongDiff OpDecay OpLossCone OpDriftIn OpDriftOut '// &
+       'RbSume RcSume  eDrift  eBfield  eChargeEx  eWaves '// &
+       ' eStrongDiff  eDecay  eLossCone  eDriftIn  eDriftOut'
 
 
 end Module ModCimiPlanet

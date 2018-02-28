@@ -1,19 +1,19 @@
-subroutine IM_plot_fieldline(nAlt,iLat,iLon,Length_I,RadialDist_I,Bfield_I)
+subroutine IM_plot_fieldline(nAlt,iLat,iLon,tSimulation,Length_I,RadialDist_I,Bfield_I)
 
   use ModIoUnit, ONLY: UnitTmp_
   use ModNumConst, ONLY:cDegToRad
   implicit none
   
   integer, intent(in) :: nAlt,iLat,iLon
-  real   , intent(in) :: Length_I(nAlt),RadialDist_I(nAlt),Bfield_I(nAlt)
-  integer :: i
+  real   , intent(in) :: tSimulation,Length_I(nAlt),RadialDist_I(nAlt),Bfield_I(nAlt)
+  integer :: i,iTimeOut
   real :: Gamma = 5.0/3.0 
   Character(len=100) :: NameFieldLine
 !-----------------------------------------------------------------------------
 
-
-  write(NameFieldLine,"(a,i2.2,i2.2,a)") &
-       'IM/FieldLine',iLat,iLon,'.idl'
+  iTimeOut=int(tSimulation)
+  write(NameFieldLine,"(a,i2.2,i2.2,a,i8.8,a)") &
+       'IM/FieldLine',iLat,iLon,'_',iTimeOut,'.idl'
   open(UnitTmp_,FILE=NameFieldLine)
 
   write (UnitTmp_,"(a79)") 'RB_line'

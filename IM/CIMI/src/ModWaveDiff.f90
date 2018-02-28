@@ -5,6 +5,11 @@ Module DensityTemp
   implicit none
   
   real 			:: 	density( ir, ip ) = 0.0
+
+  ! plasmaspheric density (m^-3) to define plasmapause; needed to
+  ! avoid applying chorus and hiss at the same time
+  real			:: 	densityP = 20.e6
+
   
   !public method
   public :: simple_plasmasphere
@@ -493,16 +498,13 @@ contains
            ckeV_log(iwc),ukeV_log(iwu),hkeV_log(iwh)
       real u_max,u_max_log,ompe1,ro1,emin,emax,x0,x2,x,cDaoao
       real u_mx,u_mx_log,factor1,factor_1,DDm,DDp,ump_mx,xlam,alam,dpsd,ao_d
-      real densityP,edmin,edmax
+      real edmin,edmax
       character(len=6)  ::  tchar
 
 
      u_max=5.              ! magic number for numerical method from M.C. Fok
      u_max_log=log10(u_max)
      Upower0=10000.        ! coeff based on UB chorus power of (100pT)^2
-     densityP=20.e6        ! plasmaspheric density (m^-3) to define
-                           ! plasmapause; needed to avoid applying
-                           ! chorus and hiss at the same time
 
      ckeV_log(:)=log10(ckeV(:))
      ukeV_log(:)=log10(ukeV(:))
@@ -734,13 +736,12 @@ contains
          factor1,gjac_1,gjac1,gjac(iw),E1(0:iw),Ep,DEE(0:iw+1), &
          DDm,DDp,DEEc,DEEu,DEEh,u_mx,ump_mx,Enor(iw),dEn(iw), & ! CHECKED
          WM1,Wo,Cfactor,Ufactor,edmin,edmax, & ! CHECKED
-         ckeV_log(iwc),ukeV_log(iwu),hkeV_log(iwh),Ep_log,densityP ! CHECKED
+         ckeV_log(iwc),ukeV_log(iwu),hkeV_log(iwh),Ep_log ! CHECKED
     
     Eo=511.               ! electron rest energy in keV
     xlam=0.5              ! implicitness in solving diffusion equation
     alam=1.-xlam
     Upower0=10000.        ! coeff based on UB chorus power of (100pT)^2
-    densityP=2.e7         ! plasmaspheric density (m^-3) to define plasmapause
     
     ckeV_log(:)=log10(ckeV(:))
     ukeV_log(:)=log10(ukeV(:))
@@ -1058,7 +1059,7 @@ end subroutine interpolate_ae
 ! accumulative error and instability will be washed away with other
 ! dominant processes like convection and precipitation.
   subroutine diffuse_aE(f2,dt,xjac,iw2,iba,time)
-     use DensityTemp, ONLY: density
+     use DensityTemp
      use ModMPI
      use ModCimiGrid,   ONLY: MinLonPar,MaxLonPar
 
@@ -1077,13 +1078,12 @@ end subroutine interpolate_ae
            gjacA(0:ik+1),Dae(ie,0:ik+1),Cfactor,Ufactor,Hfactor,DaEc,DaEu,DaEh,&
            u1(ie,ik),u2(ie,ik),u3(ie,ik),dtda2,dtda2dE2,Dkm,Dk_1m,Dkm_1,Dkm1, &
            Dk1m,gjacE(ie),ompe1,ro1,emin,emax,x0,x2,x, &
-           ckeV_log(iwc),ukeV_log(iwu),hkeV_log(iwh),densityP,f2d1(ie,0:ik+1),f2d2(ie,0:ik+1),time
+           ckeV_log(iwc),ukeV_log(iwu),hkeV_log(iwh), &
+           f2d1(ie,0:ik+1),f2d2(ie,0:ik+1),time
  character(len=6) :: tchar
 
   Eo=511.               ! electron rest energy in keV
   Upower0=10000.        ! coeff based on UB chorus power of (100pT)^2
-  densityP=2.e7         ! plasmaspheric density (m^-3) to define plasmapause
-  
 
   ckeV_log(:)=log10(ckeV(:))
   ukeV_log(:)=log10(ukeV(:))

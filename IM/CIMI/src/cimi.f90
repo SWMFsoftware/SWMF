@@ -3,15 +3,16 @@ subroutine cimi_run(delta_t)
   use ModConst,       ONLY: cLightSpeed, cElectronCharge
   use ModCimiInitialize, ONLY: xmm,xk,dphi,dmm,dk,delE,dmu, xjac
   use ModCimi,        ONLY: f2,dt, Time, phot, Ppar_IC, Pressure_IC, &
-                            PressurePar_IC,FAC_C, Bmin_C, &
+                            PressurePar_IC, FAC_C, Bmin_C, &
                             OpDrift_, OpBfield_, OpChargeEx_, &
                             OpWaves_, OpStrongDiff_, OpLossCone_, &
+                            OpDecay_, UseDecay, &
                             rbsumLocal, rbsumGlobal, &
-                            rcsumLocal,rcsumGlobal,&
-                            driftin, driftout, IsStandAlone,&
-                            preP,preF,Eje1,UseStrongDiff,&
-                            eChangeOperator_VICI,nOperator,&
-                            eChangeLocal,eChangeGlobal
+                            rcsumLocal, rcsumGlobal, &
+                            driftin, driftout, IsStandAlone, &
+                            preP, preF, Eje1, UseStrongDiff, &
+                            eChangeOperator_VICI, nOperator, &
+                            eChangeLocal, eChangeGlobal
   use ModCimiPlanet,  ONLY: re_m, dipmom, Hiono, nspec, amu_I, &
                             dFactor_I,tFactor_I
   use ModCimiTrace,  ONLY: &
@@ -121,7 +122,6 @@ subroutine cimi_run(delta_t)
      IsFirstCall=.false.
   elseif(IsFirstCall .and. IsRestart) then
      ib0=iba
-     call initial_extra
      IsFirstCall=.false.
   endif
   
@@ -160,7 +160,7 @@ subroutine cimi_run(delta_t)
      call timing_start('cimi_output')
      call cimi_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
           sinA,energy,sinAo,delE,dmu,amu_I,xjac,pp,xmm,dmm,dk,xlat,dphi, &
-          re_m,Hiono,vp,vL,flux,FAC_C,phot,Ppar_IC,Pressure_IC,PressurePar_IC,&
+          re_m,Hiono,vp,vL,flux,FAC_C,phot,Ppar_IC,Pressure_IC,PressurePar_IC, &
           vlEa,vpEa,psd)
      call timing_stop('cimi_output')
      
@@ -183,8 +183,8 @@ subroutine cimi_run(delta_t)
 
      if (DoSaveFlux) call Cimi_plot_fls(rc,flux,time,Lstar_C,Lstar_max)
      if (DoSavePSD) call Cimi_plot_psd(rc,psd,xmm,xk,time)
-     if (DoSaveFlux.or.DoSavePSD) call &
-        Cimi_plot_Lstar(rc,xk,time,Lstarm,Lstar_maxm)
+     if (DoSaveFlux .or. DoSavePSD) &
+          call Cimi_plot_Lstar(rc,xk,time,Lstarm,Lstar_maxm)
      if (DoSaveDrifts) then
         call Cimi_plot_vl(rc,vlEa,time)
         call Cimi_plot_vp(rc,vpEa,time)
@@ -269,6 +269,13 @@ subroutine cimi_run(delta_t)
         call StrongDiff(iba)
         call sume_cimi(OpStrongDiff_)
         call timing_stop('cimi_StrongDiff')
+     endif
+     
+     if (UseDecay) then
+        call timing_start('cimi_Decay')
+        call CalcDecay_cimi(dt)
+        call sume_cimi(OpDecay_)
+        call timing_stop('cimi_Decay')
      endif
      
      call timing_start('cimi_lossconeIM')
@@ -537,6 +544,8 @@ subroutine cimi_run(delta_t)
 
         if (DoSaveFlux) call Cimi_plot_fls(rc,flux,time,Lstar_C,Lstar_max)
         if (DoSavePSD) call Cimi_plot_psd(rc,psd,xmm,xk,time)
+        if (DoSaveFlux .or. DoSavePSD) &
+             call Cimi_plot_Lstar(rc,xk,time,Lstarm,Lstar_maxm)
         if (DoSaveDrifts) then
            call Cimi_plot_vl(rc,vlEa,time)
            call Cimi_plot_vp(rc,vpEa,time)
@@ -747,22 +756,31 @@ subroutine cimi_init
   enddo
 
   ! CIMI magnetic moment, xmm1
- do n=1,nspec
-  xmm(n,1)=energy(n,1)*cElectronCharge/(dipmom/(2*re_m)**3.0)
-!  dmm(n,1)=xmm(n,1)*2.              
-  rw=1.55 
-  rw1=(rw-1.)/sqrt(rw)
-  xmm(n,0)=xmm(n,1)/rw                      
-  !do i=2,nm                    
-  !   dmm(n,i)=dmm(n,1)*rw**(i-1)           
-  !   xmm(n,i)=xmm(n,i-1)+0.5*(dmm(n,i-1)+dmm(n,i))
-  !enddo
-  do i=1,nm            ! This setup makes xmm(k+0.5)=sqrt(xmm(k)*xmm(k+1))
-         xmm(n,i)=xmm(n,i-1)*rw
-         dmm(n,i)=xmm(n,i)*rw1
+  ! This setup makes xmm(k+0.5)=sqrt(xmm(k)*xmm(k+1))
+  do n=1,nspec
+     xmm(n,1)=energy(n,1)*cElectronCharge/(dipmom/(2*re_m)**3.0)
+     rw=1.55 
+     rw1=(rw-1.)/sqrt(rw)
+     xmm(n,0)=xmm(n,1)/rw                      
+     do i=1,nm            ! This setup makes xmm(k+0.5)=sqrt(xmm(k)*xmm(k+1))
+        xmm(n,i)=xmm(n,i-1)*rw
+        dmm(n,i)=xmm(n,i)*rw1
+     enddo
+     xmm(n,nm+1)=xmm(n,nm)*rw
   enddo
-      xmm(n,nm+1)=xmm(n,nm)*rw
- enddo
+
+  ! OLD INITIALIZATION of CIMI magnetic moment, xmm1
+  ! This setup has been saved and commented out here for comparison
+  ! with older simulations
+!!$  do n=1,nspec
+!!$     xmm(n,1)=energy(n,1)*cElectronCharge/(dipmom/(2*re_m)**3.0)
+!!$     dmm(n,1)=xmm(n,1)*2.              
+!!$     rw=1.55 
+!!$     do i=2,nm                    
+!!$        dmm(n,i)=dmm(n,1)*rw**(i-1)           
+!!$        xmm(n,i)=xmm(n,i-1)+0.5*(dmm(n,i-1)+dmm(n,i))
+!!$     enddo
+!!$  enddo
 
   ! CIMI K, xk
   rsi=1.47
@@ -828,7 +846,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
 
   integer,parameter :: np1=51,nt1=48,nspec1=1  
   !integer,parameter :: nm=35,nk=28 ! dimension of CIMI magnetic moment and K
-
+ 
   integer nspec,np,nt,iba(nt),ib0(nt),n,j,i,k,m, iError
   real amu_I(nspec),vel(nspec,np,nt,nm,nk)
   real velperp2, velpar2
@@ -840,7 +858,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
   integer :: il, ie, iunit
   real, allocatable :: roi(:), ei(:), fi(:,:)
   real :: roii, e1,x, fluxi,psd2,etemp
-
+  
   character(11) :: NameFile='quiet_x.fin'
   character(5) :: FilePrefix='xxxxx'
   !---------------------------------------------------------------------------
@@ -919,7 +937,7 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
 
         ei(:)=log10(ei(:))                      ! take log of ei         
         fi(:,:)=log10(fi(:,:))                  ! take log of fi
-
+        
         !interpolate data from quiet.fin files to CIMI grid
         do j=MinLonPar,MaxLonPar
            do i=1,irm(j)
@@ -927,21 +945,21 @@ subroutine initial_f2(nspec,np,nt,iba,amu_I,vel,xjac,ib0)
               do m=1,nk
                  do k=1,iw2(n,m)
                     e1=log10(ekev(n,i,j,k,m)) 
-                    ! if (e1.le.ei(ie)) then
+                   ! if (e1.le.ei(ie)) then
                     if (e1.ge.ei(ie)) e1=ei(ie)    ! flat dist at high E
-                    if (e1.lt.ei(1)) e1=ei(1)    ! flat dist. at low E
-                    if (roii.lt.roi(1)) roii=roi(1) ! flat dist @ lowL
-                    if (roii.gt.roi(il)) roii=roi(il) ! flat @ high L
-                    call lintp2IM(roi,ei,fi,il,ie,roii,e1,x)
-                    fluxi=10.**x          ! flux in (cm^2 s sr keV)^-1
-                    psd2=fluxi/(1.6e19*pp(n,i,j,k,m))/pp(n,i,j,k,m)
-                    !   if (testDiff_aa) psd2=psd2*sinA(i,j,m)*sinA(i,j,m)  !  
-                    if (testDiff_EE.or.testDiff_aE)  psd2=1.
-                    f2(n,i,j,k,m)=psd2*xjac(n,i,k)*1.e20*1.e19 
-                    ! endif
+                       if (e1.lt.ei(1)) e1=ei(1)    ! flat dist. at low E
+                       if (roii.lt.roi(1)) roii=roi(1) ! flat dist @ lowL
+                       if (roii.gt.roi(il)) roii=roi(il) ! flat @ high L
+                       call lintp2IM(roi,ei,fi,il,ie,roii,e1,x)
+                       fluxi=10.**x          ! flux in (cm^2 s sr keV)^-1
+                       psd2=fluxi/(1.6e19*pp(n,i,j,k,m))/pp(n,i,j,k,m)
+                   !   if (testDiff_aa) psd2=psd2*sinA(i,j,m)*sinA(i,j,m)  !  
+                       if (testDiff_EE.or.testDiff_aE)  psd2=1.
+                       f2(n,i,j,k,m)=psd2*xjac(n,i,k)*1.e20*1.e19 
+                   ! endif
                  enddo                            ! end of k loop
               enddo                               ! end of m loop
-
+              
            enddo                                  ! end of i loop
         enddo                                     ! end of j loop
         deallocate (roi,ei,fi)
@@ -953,14 +971,24 @@ end subroutine initial_f2
 !==============================================================================
 subroutine initial_extra
 
-  use ModCimiPlanet, ONLY: nSpec
-  use ModCimiGrid,   ONLY: nP, nT, nEng
-  use ModCimi,   ONLY: nOperator, driftin, driftout, &
+  use ModCimiPlanet, 	ONLY: nSpec
+  use ModCimiGrid,   	ONLY: nP, nT, nEng
+  use ModCimi,   	ONLY: nOperator, driftin, driftout, &
        eChangeOperator_VICI, echangeLocal, eChangeGlobal, &
        pChangeOperator_VICI, eTimeAccumult_ICI, pTimeAccumult_ICI, &
-       rbsumLocal, rbsumGlobal, rcsumLocal, rcsumGlobal
+       rbsumLocal, rbsumGlobal, rcsumLocal, rcsumGlobal, &
+       SDtime, phot, Ppar_IC, Pressure_IC, PressurePar_IC, FAC_C, Bmin_C
 
   !----------------------------------------------------------------------------
+
+  ! Initialize allocated variables in ModCimi to 0.
+  phot(1:nspec,1:np,1:nt) = 0.0
+  Ppar_IC(1:nspec,1:np,1:nt) = 0.0
+  Pressure_IC(1:nspec,1:np,1:nt) = 0.0
+  PressurePar_IC(1:nspec,1:np,1:nt) = 0.0
+  FAC_C(1:np,1:nt) = 0.0
+  Bmin_C(1:np,1:nt) = 0.0
+
   ! Setup variables for energy gain/loss from each process
   eChangeOperator_VICI(1:nspec,1:np,1:nt,1:neng+2,1:nOperator)=0.0
   pChangeOperator_VICI(1:nspec,1:np,1:nt,1:neng+2,1:nOperator)=0.0
@@ -1701,7 +1729,44 @@ subroutine StrongDiff(iba)
   return
 end subroutine StrongDiff
 
+!***********************************************************************   
+!
+!                           CalcDecay_cimi
+!
+!  Routine calculates the change of Ring Current phase space density
+!  (PSD - f2 variable) resulting from an exponential decay rate
+!  specified by DecayTimescale (in seconds) in PARAM.in by the user.
+!  The Decay term is only applied to the ion species; electrons are
+!  not affected since electron PSD contains both ring current and
+!  radiation belt electrons.  Rapid loss of electron PSD is controlled
+!  with the StrongDiff routine immediately above.
+!
+! Version History:
+! 2018-02-20 CMK: Added and tested
+!
+!***********************************************************************
+subroutine CalcDecay_cimi(deltaT)
 
+  use ModCimi,       	ONLY: f2, DecayTimescale
+  use ModCimiGrid,   	ONLY: np, nt, nm, nk, MinLonPar, MaxLonPar
+  use ModCimiPlanet, 	ONLY: nspec
+  use ModCimiTrace, 	ONLY: iba
+
+  implicit none
+
+  real, intent(in) :: deltaT
+
+  integer n,i,j,k,m
+  real DecayRate
+  !-----------------------------------------------------------------------
+
+  DecayRate = EXP( -( deltaT / DecayTimescale ) )
+
+  f2(1:nspec-1,:,:,:,:) = f2(1:nspec-1,:,:,:,:) * DecayRate
+
+  return
+  
+end subroutine CalcDecay_cimi
 
 !-------------------------------------------------------------------------------
 subroutine lossconeIM(np,nt,nm,nk,nspec,iba,alscone,f2)
@@ -1811,104 +1876,110 @@ subroutine sume_cimi(OperatorName)
 ! 	because it's total energy
 !  
 !!!!!!!!!!!!!!!!
-  use ModCimi,       ONLY: &
-       f2,rbsum=>rbsumLocal,rbsumGlobal,rcsum=>rcsumLocal,rcsumGlobal,&
-       xle=>eChangeOperator_VICI,ple=>pChangeOperator_VICI, &
-       eChangeGlobal,eChangeLocal, &
-       esum=>eTimeAccumult_ICI,psum=>pTimeAccumult_ICI
-  use ModCimiTrace, ONLY: iba,irm,ekev,ro,iw2
-  use ModCimiGrid,   ONLY: &
-       nProc,iProc,iComm, MinLonPar,MaxLonPar,d4Element_C, &
-       ip=>np,ir=>nt,im=>nm,ik=>nk,je=>neng,Energy,Ebound
-  use ModCimiPlanet, ONLY: nspec
+  use ModCimi,       	ONLY: &
+       f2, rbsum => rbsumLocal, rbsumGlobal, &
+       rcsum => rcsumLocal, rcsumGlobal, &
+       xle => eChangeOperator_VICI, ple => pChangeOperator_VICI, &
+       eChangeGlobal, eChangeLocal, &
+       esum => eTimeAccumult_ICI, psum => pTimeAccumult_ICI
+  use ModCimiTrace, 	ONLY: iba, ekev, ro, iw2
+  use ModCimiGrid,   	ONLY: &
+       nProc, iProc, iComm, MinLonPar, MaxLonPar, d4Element_C, &
+       ip => np, ir => nt, im => nm, ik => nk, je => neng, &
+       Energy, Ebound
+  use ModCimiPlanet, 	ONLY: nspec
   use ModMPI
-  use ModWaveDiff,    ONLY: testDiff_aE 
+  use ModWaveDiff,    	ONLY: testDiff_aE 
 
   implicit none
 
   integer OperatorName   ! defined in ModCimi
-  real    :: weight,ekev1,weighte,dee,dpe
-  integer n,i,j,k,m,iError,kk
-  real gride1(0:je+1),e0(ip,ir,je+2),p0(ip,ir,je+2)
+  real    :: weight, ekev1, weighte, dee, dpe
+  integer n, i, j, k, m, iError, kk
+  real gride1(0:je+1), e0(ip,ir,je+2), p0(ip,ir,je+2)
   !----------------------------------------------------------------------------
+
   ! Set up gride1(0) and gride1(je+1)
   gride1(0)=0.
   gride1(je+1)=1.e10     ! arbitrary large number
 
   ! Calculate esum, psum, etc.
-
   do n=1,nspec
-       eChangeLocal(n, OperatorName) = 0.
-       e0(1:ip,MinLonPar:MaxLonPar,1:je+2)=&
-            esum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)
-       p0(1:ip,MinLonPar:MaxLonPar,1:je+2)=&
-            psum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)
-       esum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)=0.
-       psum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)=0.
-       rbsum(n) = 0.0
-       rcsum(n) = 0.0
-       gride1(1:je)=Ebound(n,1:je)
+     rbsum(n)=0.
+     rcsum(n)=0.
+     eChangeLocal(n, OperatorName) = 0.
+     e0(1:ip,MinLonPar:MaxLonPar,1:je+2)=&
+          esum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)
+     p0(1:ip,MinLonPar:MaxLonPar,1:je+2)=&
+          psum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)
+     esum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)=0.
+     psum(n,1:ip,MinLonPar:MaxLonPar,1:je+2)=0.
+     gride1(1:je)=Ebound(n,1:je)
+     
+     do j=MinLonPar,MaxLonPar
+        do i=1,iba(j)
+           do m=1,ik
+              do k=1,iw2(n,m)
+                 ekev1=ekev(n,i,j,k,m)
+                 weight=d4Element_C(n,i,k,m)*f2(n,i,j,k,m)
+                 weighte=ekev1*weight
+                 psum(n,i,j,je+2)=psum(n,i,j,je+2)+weight
+                 esum(n,i,j,je+2)=esum(n,i,j,je+2)+weighte
+                 rbsum(n)=rbsum(n)+weighte
+                 if (ro(i,j).le.6.6) rcsum(n)=rcsum(n)+weighte
+                 kkloop: do kk=1,je+1
+                    if ( ekev1 .gt. gride1(kk-1) .and. &
+                         ekev1 .le. gride1(kk) ) then
+                       psum(n,i,j,kk)=psum(n,i,j,kk)+weight
+                       esum(n,i,j,kk)=esum(n,i,j,kk)+weighte
+                       exit kkloop
+                    endif
+                 enddo kkloop
+              enddo
+           enddo
+           
+           do kk=1,je+2
+              dee = esum(n,i,j,kk) - e0(i,j,kk)
+              xle(n,i,j,kk,OperatorName) = &
+                   xle(n,i,j,kk,OperatorName) + dee
+              dpe=psum(n,i,j,kk)-p0(i,j,kk)
+              ple(n,i,j,kk,OperatorName) = &
+                   ple(n,i,j,kk,OperatorName) + dpe
+           enddo
+           
+           eChangeLocal(n, OperatorName) = &
+                eChangeLocal(n, OperatorName) + &
+                xle(n,i,j,je+2,OperatorName)
+           
+        enddo                ! end of do i=1,iba(j)
+     enddo                   ! end of do j=MinLonPar,MaxLonPar
+     
+     if (nProc > 1) then
 
-       do j=MinLonPar,MaxLonPar
-          do i=1,irm(j)
-                do m=1,ik
-                   do k=1,iw2(n,m)
-                      ekev1=ekev(n,i,j,k,m)
-                      weight=d4Element_C(n,i,k,m)*f2(n,i,j,k,m)
-                      weighte=ekev1*weight
-                      psum(n,i,j,je+2)=psum(n,i,j,je+2)+weight
-                      esum(n,i,j,je+2)=esum(n,i,j,je+2)+weighte
-                      rbsum(n)=rbsum(n)+weighte
-                      if (ro(i,j).le.6.6) rcsum(n)=rcsum(n)+weighte
-                      kkloop: do kk=1,je+1
-                         if ( ekev1 .gt. gride1(kk-1) .and. &
-                              ekev1 .le. gride1(kk) ) then
-                            psum(n,i,j,kk)=psum(n,i,j,kk)+weight
-                            esum(n,i,j,kk)=esum(n,i,j,kk)+weighte
-                            exit kkloop
-                         endif
-                      enddo kkloop
-                   enddo
-                enddo
+        call MPI_REDUCE(&
+             rbsum(n), rbsumGlobal(n), 1, &
+             MPI_REAL, MPI_SUM, 0, iComm, iError)
+        call MPI_REDUCE(&
+             rcsum(n), rcsumGlobal(n), 1, &
+             MPI_REAL, MPI_SUM, 0, iComm, iError)
+        call MPI_REDUCE(&
+             eChangeLocal(n, OperatorName), &
+             eChangeGlobal(n, OperatorName), 1, &
+             MPI_REAL, MPI_SUM, 0, iComm, iError)
 
-             do kk=1,je+2
-                dee = esum(n,i,j,kk) - e0(i,j,kk)
-                xle(n,i,j,kk,OperatorName) = &
-                     xle(n,i,j,kk,OperatorName) + dee
-                dpe=psum(n,i,j,kk)-p0(i,j,kk)
-                ple(n,i,j,kk,OperatorName) = &
-                     ple(n,i,j,kk,OperatorName) + dpe
-             enddo
+     else 
 
-             eChangeLocal(n, OperatorName) = &
-                  eChangeLocal(n, OperatorName) + &
-                  xle(n,i,j,je+2,OperatorName)
-             
-          enddo                ! end of do i=1,iba(j)
-       enddo                   ! end of do j=MinLonPar,MaxLonPar
-
-       if (nProc > 1) then
-          call MPI_REDUCE(&
-               rbsum(n), rbsumGlobal(n), 1, &
-               MPI_REAL, MPI_SUM, 0, iComm, iError)
-          call MPI_REDUCE(&
-               rcsum(n), rcsumGlobal(n), 1, &
-               MPI_REAL, MPI_SUM, 0, iComm, iError)
-          call MPI_REDUCE(&
-               eChangeLocal(n, OperatorName),&
-               eChangeGlobal(n, OperatorName), 1, &
-               MPI_REAL, MPI_SUM, 0, iComm, iError)
-       else 
-          rbsumGlobal(n) = rbsum(n)
-          rcsumGlobal(n) = rcsum(n)
-          eChangeGlobal(n,OperatorName) = &
-               eChangeLocal(n,OperatorName)
-       endif
-
-    enddo                      ! end of do n=1,nSpecies
-
-    if (testDiff_aE) &
-         write(*,*) 'tot particles, el: ',psum(nspec,30,5,je+2)
+        rbsumGlobal(n) = rbsum(n)
+        rcsumGlobal(n) = rcsum(n)
+        eChangeGlobal(n,OperatorName) = &
+             eChangeLocal(n,OperatorName)
+        
+     endif
+     
+  enddo                      ! end of do n=1,nSpecies
+  
+  if (testDiff_aE) &
+       write(*,*) 'tot particles, el: ',psum(nspec,30,5,je+2)
 
 end subroutine sume_cimi
 
@@ -1975,7 +2046,7 @@ subroutine cimi_output(np,nt,nm,nk,nspec,neng,npit,iba,ftv,f2,ekev, &
   ! Calculate CIMI ion density (m^-3), Den_IC, and flux (cm^-2 s^-1 keV^-1 sr^-1)
   ! at fixed energy & pitch-angle grids 
 
-  ! aloge=log10(energy)
+ ! aloge=log10(energy)
   jloop1: do j=MinLonPar,MaxLonPar
      iloop1: do i=1,iba(j)
         ftv1=ftv(i,j)     ! ftv1: flux tube volume in m^3/Wb

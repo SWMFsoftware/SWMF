@@ -346,6 +346,7 @@ contains
              write(UnitTmp_,"(f10.6,5i6,6x,'! rc in Re,nr,ip,nm,nk,ntime')") &
                   rc,nLat-1,nLon,nint(nm/2.),nint(nk/2.),nprint
              write(UnitTmp_,'(1p,7e11.3)') (xk(k)*sqrt(1.e9)/re_m,k=1,nk,2)
+!!$             write(*,*) "PSD Array", xmm(n,:)*6.25e6
              write(UnitTmp_,'(1p,7e11.3)') (xmm(n,m)*6.25e6,m=1,nm,2)
              write(UnitTmp_,'(10f8.3)') (xlat(i),i=2,nLat)
           else
@@ -603,21 +604,19 @@ contains
 
   !============================================================================
   subroutine cimi_plot_log(Time)
+    use ModNumConst, 	ONLY: cPi
+    use ModConst, 	ONLY: cElectronCharge, cMu, cPi
+    use ModPlanetConst,	ONLY: Earth_, DipoleStrengthPlanet_I, rPlanet_I
     use ModCimiPlanet,  ONLY: nSpecies=>nspec,NamePlotVarLog
     use ModCimiRestart, ONLY: IsRestart
     use ModIoUnit,      ONLY: UnitTmp_
     use ModCIMI,        ONLY: nOperator,driftin,driftout,&
          rbsumGlobal,rcsumGlobal,dt,eChangeGlobal
-    use ModCimiGrid,    ONLY: ir=>nt,ip=>np,im=>nm,ik=>nk,je=>neng,nproc
     implicit none
     
     real, intent(in) :: Time
-    integer, parameter :: nLogVars = 8
     logical, save :: IsFirstCall=.true.
-    integer       :: iSpecies,iOperator, i, j, k 
-    integer*8       :: count
-    character(len=100) eChange_String
-    character(len=10) nLat_Format
+    integer       :: iSpecies
     !--------------------------------------------------------------------------
 
     ! Open file and write header if no restart on first call
@@ -634,20 +633,37 @@ contains
     endif
 
     ! Write out iteration number (just use time in seconds)
-    write(UnitTmp_,'(i7)',ADVANCE='NO') nint(Time/dt)
+    write(UnitTmp_,'(I18)',ADVANCE='NO') nint(Time/dt)
 
     ! write time 
-    write(UnitTmp_,'(1es13.5)',ADVANCE='NO') time
+    write(UnitTmp_,'(1es18.08E3)',ADVANCE='NO') time
 
-  ! write out the operator changes
+    ! write dst calculated from the Dessler-Parker-Schopke relation.
+    ! Magnetic field depression deltaB at Earth's Center given by
+    !
+    ! 	      deltaB = - mu_0 / 2 / pi * U_R / B_E / R_E^3,
+    !
+    ! where mu_0 is the vacuum permeability, U_R is the total total
+    ! ring current energy given by the sum over species of rbsum, B_E
+    ! is the strength of Earth's dipole magnetic field, and R_E is the
+    ! Earth's radius.
+    !
+    ! Reference: Eq. 3.36 of Baumjohann and Treumann (2012), "Basic
+    ! Space Plasma Physics, Revised Edition," Imperial College Press.
+    write(UnitTmp_,'(1es18.08E3)',ADVANCE='NO') &
+         -0.5 * cMu / cPi / ABS( DipoleStrengthPlanet_I( Earth_ ) ) / &
+         rPlanet_I( Earth_ ) ** 3 * &
+         SUM( rbsumglobal ) * 1000. * cElectronCharge * 10 ** ( 9. )
+
+    ! write out the operator changes
     do iSpecies=1,nSpecies
        if (iSpecies < nSpecies) then
-          write(UnitTmp_,'(11es18.8E3)',ADVANCE='NO') & 
+          write(UnitTmp_,'(11es18.08E3)',ADVANCE='NO') & 
                rbsumglobal(iSpecies), rcsumglobal(iSpecies), &
                eChangeGlobal(iSpecies,1:nOperator-1), &
                driftin(iSpecies), driftout(iSpecies)
        else
-          write(UnitTmp_,'(11es18.8E3)') & 
+          write(UnitTmp_,'(11es18.08E3)') & 
                rbsumglobal(iSpecies), rcsumglobal(iSpecies), &
                eChangeGlobal(iSpecies,1:nOperator-1), &
                driftin(iSpecies), driftout(iSpecies)
@@ -756,15 +772,15 @@ contains
           
     if (IsFirstCall .and. .not. IsRestart) then
        open(unit=UnitTmp_,file='IM/plots/Cimi.lstar',status='unknown')
-       write(UnitTmp_,"(f10.6,5i6,6x,'! rc in Re,nr,ip,nm,nk,ntime')") &
-            rc,nLat-1,nLon,nint(nk/2.),nprint
+       write(UnitTmp_,"(f10.6,4i6,6x,'! rc in Re,nr,ip,nm,nk,ntime')") &
+            rc, nLat-1, nLon, nint(nk/2.), nprint            
        write(UnitTmp_,'(1p,7e11.3)') (xk(k)*sqrt(1.e9)/re_m,k=1,nk,2)
-       write(UnitTmp_,'(10f8.3)') (xlat(i),i=2,nLat)
+       write(UnitTmp_,'(8f8.3)') (xlat(i),i=2,nLat)
     else
        open(unit=UnitTmp_,file='IM/plots/Cimi.lstar',status='old',&
            position='append')
     endif
-    write(UnitTmp_,'(10f8.3)') &
+    write(UnitTmp_,'(8f8.3)') &
          time/3600.,(Lstar_maxm(m),m=1,nk)
     do iLat=2,nLat            
        do iLon=1,nLon
@@ -776,10 +792,10 @@ contains
           if (iLat.gt.irm(iLon)) bm1(1:nk)=bm(irm(iLon),iLon,1:nk)
              xmlt1=xmlto(iLat,iLon)
           if (iLat.gt.irm(iLon)) xmlt1=xmlto(irm(iLon),iLon)
-          write(UnitTmp_,'(f7.2,f6.1,2f8.3,1pe11.3)') &
+          write(UnitTmp_,'(f7.2,f6.1,2f8.3)') &
                lat,xmlt(iLon),ro1,xmlt1
-          write(UnitTmp_,'(13f8.3)') (Lstarm(iLat,iLon,k),k=1,nk,2)
-          write(UnitTmp_,'(1p,13E10.3)') (bm1(k),k=1,nk,2)
+          write(UnitTmp_,'(7F08.3)') (Lstarm(iLat,iLon,k),k=1,nk,2)
+          write(UnitTmp_,'(1p,7E10.3)') (bm1(k),k=1,nk,2)
        enddo
     enddo
     close(UnitTmp_)

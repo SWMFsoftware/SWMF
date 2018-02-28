@@ -318,6 +318,30 @@ test_check_Prerun:
 		output/CimiFlux_e.fls.Prerun \
 		>> test_cimi_Prerun.diff
 	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/IM/plots/sat_rbspa_hflux_t000060.sat \
+		output/sat_rbspa_hflux_t000060.sat \
+		>> test_cimi_Prerun.diff
+	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/IM/plots/sat_rbspb_hflux_t000060.sat \
+		output/sat_rbspb_hflux_t000060.sat \
+		>> test_cimi_Prerun.diff
+	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/IM/plots/sat_rbspa_oflux_t000060.sat \
+		output/sat_rbspa_oflux_t000060.sat \
+		>> test_cimi_Prerun.diff
+	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/IM/plots/sat_rbspb_oflux_t000060.sat \
+		output/sat_rbspb_oflux_t000060.sat \
+		>> test_cimi_Prerun.diff
+	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/IM/plots/sat_rbspa_eflux_t000060.sat \
+		output/sat_rbspa_eflux_t000060.sat \
+		>> test_cimi_Prerun.diff
+	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+		${TESTDIR}/IM/plots/sat_rbspb_eflux_t000060.sat \
+		output/sat_rbspb_eflux_t000060.sat \
+		>> test_cimi_Prerun.diff
+	-${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/IM/plots/CimiPSD_h.psd \
 		output/CimiPSD_h.psd.Prerun \
 		>> test_cimi_Prerun.diff

@@ -7,9 +7,9 @@ subroutine CIMI_set_parameters(NameAction)
   use ModCimiPlot,       ONLY: DtOutput, DoSavePlot, DoSaveFlux, DoSaveDrifts,&
        DoSaveLog, UseSeparatePlotFiles, DtLogOut,DoSavePSD
   use ModCimiTrace,     ONLY: UseEllipse, UseSmooth, UseCorotation, &
-       UsePotential, SmoothWindow, imod
+       UsePotential, SmoothWindow, imod, iLatTest, iLonTest, rb
   use ModCimi,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin,&
-       IsStandAlone, UseStrongDiff, dt, dtmax
+       IsStandAlone, UseStrongDiff, UseDecay, DecayTimescale, dt, dtmax
   use ModCimiRestart,    ONLY: IsRestart,DtSaveRestart
   use ModCimiPlanet,     ONLY: nspec
   use ModImTime,         ONLY: iStartTime_I, TimeMax
@@ -21,6 +21,7 @@ subroutine CIMI_set_parameters(NameAction)
        DiffStartT,HissWavesD, ChorusWavesD,ChorusUpperBandD, &
        testDiff_aa, testDiff_EE, testDiff_aE, &
        NameAeFile, read_ae_wdc_kyoto
+  use DensityTemp, 	 ONLY: densityP
   use ModImSat,          ONLY: DtSatOut, DoWritePrerunSat, UsePrerunSat, &
        DtReadSat, DoWriteSats, ReadRestartSat
   use ModCimiGrid
@@ -221,6 +222,11 @@ subroutine CIMI_set_parameters(NameAction)
         if(UsePrerun)          call read_var('DtRead',   DtRead)
         if(UsePrerun .or. DoWritePrerun) UseGm=.true.
 
+     case('#DECAY')
+        call read_var('UseDecay',UseDecay)
+        if ( UseDecay ) &
+             call read_var('DecayTimescale in seconds', DecayTimescale)
+        
      case('#STRONGDIFFUSION')
         call read_var('UseStrongDiff',UseStrongDiff)
         
@@ -254,6 +260,15 @@ subroutine CIMI_set_parameters(NameAction)
         call read_var('IMDeltaT [s]',dt)
         call read_var('IMDeltaTMax [s]',dtmax)
 
+     case('#TESTFIELDLINE')
+        call read_var('iLatTest',iLatTest)
+        call read_var('iLonTest',iLonTest)
+        
+     case('#PLASMAPAUSEDENSITY')
+        call read_var('DensityP [m^3]',densityP)
+        
+     case('#SETRB')
+        call read_var('rb [R_E]', rb)
         
      end select
      

@@ -13,11 +13,13 @@ contains
 
   subroutine cimi_read_restart
     use ModCimiPlanet,ONLY: nspec
-    use ModCimiGrid,  ONLY: np,nt,nm,nk,neng
+    use ModCimiGrid,  ONLY: np,nt,nm,nk,neng,d4Element_C
     use ModCimi,      ONLY: f2, phot, Pressure_IC, PressurePar_IC, FAC_C, &
-         Ppar_IC, Bmin_C, eTimeAccumult_ICI, eChangeOperator_VICI, &
-         driftin, driftout, rbsumGlobal, nOperator
-    use ModCimiTrace,ONLY: iba
+         Ppar_IC, Bmin_C, &
+         eTimeAccumult_ICI, eChangeOperator_VICI, eChangeGlobal, &
+         pTimeAccumult_ICI, pChangeOperator_VICI, &
+         driftin, driftout, rbsumGlobal, rcsumGlobal, nOperator
+    use ModCimiTrace, ONLY: iba
     use ModGmCimi,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
     use ModUtilities, ONLY: open_file, close_file
@@ -26,7 +28,7 @@ contains
 
     integer :: iError
 
-    character(len=*), parameter:: NameSub = 'cimi_read_restart'
+    character(len=*), parameter:: NameSub = 'cimi_read_restart'    
     !--------------------------------------------------------------------------
     !When nProc>1, proc0 reads and then bcasts restart infor
     !when only 1 proc is used then just read restart info
@@ -45,7 +47,11 @@ contains
        read(UnitTmp_) Bmin_C
        read(UnitTmp_) eTimeAccumult_ICI
        read(UnitTmp_) eChangeOperator_VICI
-       read(UnitTmp_) rbsumglobal
+       read(UnitTmp_) eChangeGlobal
+       read(UnitTmp_) pTimeAccumult_ICI
+       read(UnitTmp_) pChangeOperator_VICI
+       read(UnitTmp_) rbsumGlobal
+       read(UnitTmp_) rcsumGlobal
        read(UnitTmp_) driftin
        read(UnitTmp_) driftout
        call close_file
@@ -66,11 +72,18 @@ contains
             		MPI_REAL, 0, iComm, iError)
        call MPI_bcast(eChangeOperator_VICI, nspec*np*nt*nOperator*(neng+2), &
             		MPI_REAL, 0, iComm, iError)
-       call MPI_bcast(rbsumglobal, nspec, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(eChangeGlobal, nspec * nOperator, &
+            		MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(pTimeAccumult_ICI, nspec*np*nt*(neng+2), &
+            		MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(pChangeOperator_VICI, nspec*np*nt*nOperator*(neng+2), &
+            		MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(rbsumGlobal, nspec, MPI_REAL, 0, iComm, iError)
+       call MPI_bcast(rcsumGlobal, nspec, MPI_REAL, 0, iComm, iError)
        call MPI_bcast(driftin, nspec, MPI_REAL, 0, iComm, iError)
        call MPI_bcast(driftout, nspec, MPI_REAL, 0, iComm, iError)
     endif
-
+    
   end subroutine cimi_read_restart
 
   !============================================================================
@@ -79,8 +92,9 @@ contains
     use ModCimiGrid,  ONLY: np,nt,nm,nk,neng,MinLonPar,MaxLonPar
     use ModCimi,      ONLY: f2,time, phot, Pressure_IC, PressurePar_IC, &
          FAC_C, Ppar_IC, Bmin_C, &
-         eTimeAccumult_ICI, eChangeOperator_VICI, &
-         driftin, driftout, rbsumGlobal, nOperator
+         eTimeAccumult_ICI, eChangeOperator_VICI, eChangeGlobal, &
+         pTimeAccumult_ICI, pChangeOperator_VICI, &
+         driftin, driftout, rbsumGlobal, rcsumGlobal, nOperator
     use ModCimiTrace,ONLY: iba    
     use ModGmCimi,    ONLY: Den_IC
     use ModIoUnit,    ONLY: UnitTmp_
@@ -171,9 +185,18 @@ contains
              if (iProc==0) &
                   eTimeAccumult_ICI(iSpecies,:,:,iEnergy)=BufferRecv_C(:,:)
 
+             !gather pTimeAccumult_ICI
+             BufferSend_C(:,:)=&
+                  pTimeAccumult_ICI(iSpecies,:,:,iEnergy)
+             call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), iSendCount, &
+                  MPI_REAL, BufferRecv_C, iRecieveCount_P, iDisplacement_P, &
+                  MPI_REAL, 0, iComm, iError)
+             if (iProc==0) &
+                  pTimeAccumult_ICI(iSpecies,:,:,iEnergy)=BufferRecv_C(:,:)
+
              do iOperator = 1, nOperator
 
-                !gather eTimeAccumult_VICI
+                !gather eChangeOperator_VICI
                 BufferSend_C(:,:)=&
                      eChangeOperator_VICI(iSpecies,:,:,iEnergy,iOperator)
                 call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), &
@@ -182,6 +205,17 @@ contains
                      MPI_REAL, 0, iComm, iError)
                 if (iProc==0) &
                      eChangeOperator_VICI(iSpecies,:,:,iEnergy,iOperator)=&
+                     	   BufferRecv_C(:,:)
+                
+                !gather pChangeOperator_VICI
+                BufferSend_C(:,:)=&
+                     pChangeOperator_VICI(iSpecies,:,:,iEnergy,iOperator)
+                call MPI_GATHERV(BufferSend_C(:,MinLonPar:MaxLonPar), &
+                     iSendCount, &
+                     MPI_REAL, BufferRecv_C, iRecieveCount_P, iDisplacement_P, &
+                     MPI_REAL, 0, iComm, iError)
+                if (iProc==0) &
+                     pChangeOperator_VICI(iSpecies,:,:,iEnergy,iOperator)=&
                      	   BufferRecv_C(:,:)
                 
              enddo ! end iOperator loop
@@ -217,7 +251,11 @@ contains
        write(UnitTmp_) Bmin_C
        write(UnitTmp_) eTimeAccumult_ICI
        write(UnitTmp_) eChangeOperator_VICI
-       write(UnitTmp_) rbsumglobal
+       write(UnitTmp_) eChangeGlobal
+       write(UnitTmp_) pTimeAccumult_ICI
+       write(UnitTmp_) pChangeOperator_VICI
+       write(UnitTmp_) rbsumGlobal
+       write(UnitTmp_) rcsumGlobal
        write(UnitTmp_) driftin
        write(UnitTmp_) driftout
        call close_file

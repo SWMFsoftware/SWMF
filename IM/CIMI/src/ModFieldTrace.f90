@@ -16,7 +16,7 @@ Module ModCimiTrace
        tanA2(:,:,:), volume(:,:), bm(:,:,:), gamma(:,:,:,:),&
        xo(:,:), yo(:,:), tya(:,:,:), gridoc(:,:)
 
-  real:: parmod(10), rb
+  real	  :: parmod(10), rb = 10.0
 
   integer :: irm(ip),irm0(ip),iba(ip)
 
@@ -25,14 +25,16 @@ Module ModCimiTrace
   logical :: UseEllipse = .true.
   logical :: UseCorotation = .true.
   logical :: UsePotential = .true.
-
+  
   logical :: UseSmooth = .false.
   real    :: SmoothWindow
 
   integer :: imod=3
 
   real :: NonMonoLength, NonMonoLengthThresh
-  
+
+  integer :: iLatTest = -1, iLonTest = -1
+
   real :: DtUpdateB ! update frequency of Bfield 
 contains
   subroutine init_mod_field_trace
@@ -89,8 +91,6 @@ contains
     real    :: dssm,rm1,rme,rl,cost,bsn,bsndss,dssp,bsp,ss,ss1,ss2,bm_n
     real    :: bnibm_n,sim,bmmx,rmm, bs_n,tya33,h33,xmass,c2mo,c4mo2,ro2,pp1
     real    :: pijkm,pc,c2m,e,q,tcone1,tcone2,x,DeltaRMax
-    integer :: iLatTest = -1, iLonTest = -1
-!!$    integer :: iLatTest = 51, iLonTest = 27
 
     integer :: imax
     real :: R_12,R_24,xmltr,xBoundary(ip),BufferSend_I(ip),MajorAxis,MinorAxis,&
@@ -110,11 +110,9 @@ contains
        a_I(iTaylor)=a_I(iTaylor-1)*(2.*iTaylor-3.)/(2.*iTaylor)
        b_I(iTaylor)=b_I(iTaylor-1)*(2.*iTaylor-1.)/(2.*iTaylor)
     enddo
-    if (UseExpandedGrid) then
-       rb=15.0               ! nightside outer boundary in RE
-    else
-       rb=10.0               ! nightside outer boundary in RE
-    endif
+
+    if ( UseExpandedGrid ) rb = 15.0
+
     iopt=1               ! dummy parameter in t96_01 and t04_s 
     rlim=2.*rb
     xmltlim=2.           ! limit of field line warping in hour
@@ -145,6 +143,7 @@ contains
           call recalc(iCurrentTime_I(1),iday1,iCurrentTime_I(4),iCurrentTime_I(5),iCurrentTime_I(6))
        endif
     endif
+
     !  Start field line tracing.  
     call timing_start('cimi_trace')
     LONGITUDE: do j=MinLonPar,MaxLonPar
@@ -163,9 +162,10 @@ contains
 
 
           if (i==iLatTest .and. j==iLonTest) then
+             write(*,*) "Time: ",t
              write(*,*) "npf1,xlati1*180.0/3.14,xmlt1,ro1"
              write(*,*) npf1,xlati1*180.0/3.14,xmlt1,ro1
-             call IM_plot_fieldline(npf1,i,j,dssa,ra,bba) 
+             call IM_plot_fieldline(npf1,i,j,t,dssa,ra,bba) 
           endif
           volume(i,j)=volume1
           ro(i,j)=ro1
