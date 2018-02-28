@@ -378,10 +378,10 @@ function download_file
 }
 function bv_szip_info
 {
-export SZIP_FILE=${SZIP_FILE:-"szip-2.1.tar.gz"}
-export SZIP_VERSION=${SZIP_VERSION:-"2.1"}
+export SZIP_FILE=${SZIP_FILE:-"szip-2.1.1.tar.gz"}
+export SZIP_VERSION=${SZIP_VERSION:-"2.1.1"}
 export SZIP_COMPATIBILITY_VERSION=${SZIP_COMPATIBILITY_VERSION:-"2.0"}
-export SZIP_BUILD_DIR=${SZIP_BUILD_DIR:-"szip-2.1"}
+export SZIP_BUILD_DIR=${SZIP_BUILD_DIR:-"szip-2.1.1"}
 export SZIP_URL=${SZIP_URL:-"http://www.hdfgroup.org/ftp/lib-external/szip/${SZIP_VERSION}/src"}
 export SZIP_MD5_CHECKSUM="9cc9125a58b905a4148e4e2fda3fabc6"
 export SZIP_SHA256_CHECKSUM=""
@@ -581,7 +581,7 @@ function build_hdf5
 	fortran/src/H5f90global.f90
 
     # Fix the configure script
-    perl -pi -e '$_="#!#$_" if /\-commons|OLD_HEADER_FILENAME/' configure;
+    perl -pi -e '$_="#!#$_" if /\-commons|OLD_HEADER_FILENAME|H5_NO_STD/' configure;
 
     cf_darwin=""
     if [[ "$OPSYS" == "Darwin" ]]; then
