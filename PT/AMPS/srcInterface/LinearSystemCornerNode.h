@@ -1037,7 +1037,7 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   double * Sol_I=SubdomainPartialUnknownsVector;
   double PrecondParam=0; // not use preconditioner
   double ** precond_matrix_II;// pointer to precondition matrix; us  null if no preconditioner
-  int lTest=1;//1: need test output; 0: no test statement
+  int lTest=(PIC::ThisThread==0);//1: need test output; 0: no test statement
 
   linear_solver_wrapper("GMRES", &Tol,&nMaxIter, &nVar, &nDim,&nI, &nJ, &nK, &nBlock, &iComm, Rhs_I,Sol_I, &PrecondParam, NULL, &lTest);
 
