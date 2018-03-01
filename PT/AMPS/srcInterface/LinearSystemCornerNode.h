@@ -399,7 +399,7 @@ for ( cMatrixRow* Row=MatrixRowTable;Row!=NULL;Row=Row->next) ntotbl++;*/
             el->UnknownVectorIndex=-1;
             el->MatrixElementValue=MatrixRowNonZeroElementTable[ii].MatrixElementValue;
             el->node=MatrixRowNonZeroElementTable[ii].Node;
-            el->iVar=iVar;
+            el->iVar=MatrixRowNonZeroElementTable[ii].iVar;
 
             el->MatrixElementParameterTableLength=MatrixRowNonZeroElementTable[ii].MatrixElementParameterTableLength;
             memcpy(el->MatrixElementParameterTable,MatrixRowNonZeroElementTable[ii].MatrixElementParameterTable,el->MatrixElementParameterTableLength*sizeof(double));
