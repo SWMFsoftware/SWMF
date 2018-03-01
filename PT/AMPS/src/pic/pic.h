@@ -5326,7 +5326,9 @@ namespace FieldSolver {
             void SetInitialGuess(double* x,PIC::Mesh::cDataCornerNode* CornerNode);
             //process final solution
             void ProcessFinalSolution(double* x,PIC::Mesh::cDataCornerNode* CornerNode);
-            
+	    
+	    void ProcessPeriodicJMassMatrix(char * realData, char * ghostData);
+
             void BuildMatrix();
             void TimeStep();
             
