@@ -74,6 +74,7 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
   define _TEST_MESH_MODE_ _UNIFORM_MESH_
   define _CURRENT_MODE_ _PIC_MODE_ON_
   define _PIC_FIELD_SOLVER_MODE_ _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_
+  define _PIC_FIELD_SOLVER_INPUT_UNIT_  _PIC_FIELD_SOLVER_INPUT_UNIT_NORM_
 
 #endGeneral
 
@@ -88,6 +89,7 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
   define _TARGET_ _TARGET_NONE_
 
   addPhysicalModelHeader=PeriodicBCTest.dfn
+
 #endblock
 
 #end
