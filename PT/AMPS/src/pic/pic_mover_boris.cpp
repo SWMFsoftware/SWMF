@@ -824,12 +824,27 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
 
   //advance the particle velocity
   double QdT_over_m,QdT_over_2m,alpha[3][3];
-  double c0,QdT_over_2m_squared;
+  double c0,QdT_over_2m_squared,mass,chargeQ;
+  
+  
+  double LightSpeed =1;
+ 
+#if _PIC_FIELD_SOLVER_INPUT_UNIT_== _PIC_FIELD_SOLVER_INPUT_UNIT_NORM_
+  double mass_conv =1.0/_AMU_;
+  double charge_conv=1.0/ElectronCharge;
+#elif _PIC_FIELD_SOLVER_INPUT_UNIT_== _PIC_FIELD_SOLVER_INPUT_UNIT_SI_
+  double mass_conv =1.0;
+  double charge_conv=1.0;
+#endif
 
-  QdT_over_m=PIC::MolecularData::GetElectricCharge(spec)*dtTotal/PIC::MolecularData::GetMass(spec);
+
+  chargeQ = PIC::MolecularData::GetElectricCharge(spec)*charge_conv; 
+  mass= PIC::MolecularData::GetMass(spec)*mass_conv;
+  QdT_over_m=chargeQ*dtTotal/mass;
   QdT_over_2m=0.5*QdT_over_m;
   QdT_over_2m_squared=QdT_over_2m*QdT_over_2m;
 
+  
   double BB[3][3],P[3];
 
   for (i=0;i<3;i++) {
