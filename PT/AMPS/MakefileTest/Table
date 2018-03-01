@@ -692,8 +692,15 @@ Compile=
 >>>cd ./share/Library/src; make LIB
 >>>./Config.pl -application=test/lightwave-current-on ${TESTlightwave-current-onKEYS}
 >>>@rm -rf srcTemp
->>>-@(${TESTMPIRUN1}  amps)
+>>>-@($(MAKE) -j8  amps)
 >>>@echo "test_lightwave-current-on_compile... done" >> test_lightwave-current-on.diff
+
+Run=
+>>>@echo "test_lightwave-current-on_run..." >> test_lightwave-current-on.diff
+>>>@echo Test test_lightwave-current-on has started: `date`
+>>>-@cd ${TESTlightwave-current-onDIR};${TESTMPIRUN1} ./amps
+>>>@echo "test_lightwave-current-on_run... done" >> test_lightwave-current-on.diff
+
 
 Check=
 >>>@echo "test_lightwave-current-on_check..." >> test_lightwave-current-on$(TESTlightwave-current-on-REF).diff
