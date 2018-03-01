@@ -38,6 +38,14 @@
 
 #include "PeriodicBCTest.dfn"
 
+
+//for lapenta mover
+
+#include "pic.h"
+#include "Exosphere.dfn"
+#include "Exosphere.h"
+
+
 int nVars=3; //number of variables in center associated data
 double Background[3]={100.0,-20.0,10.0};
 
@@ -342,8 +350,8 @@ int main(int argc,char **argv) {
   PIC::BC::ExternalBoundary::Periodic::InitBlockPairTable();
   }
   //-387.99e2
-  double v[10][3]={{-1.0, 0.0, 0.0},{1.0,0.0, 0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0},{0.0,0.0,0.0},{1,1,1},{0.8,0.8,-1}};
-  double xparticle[10][3]={{0.125,0.125,0.125},{0.125,0.125,0.125},{1,1,-1},{-1,1,-1},{-1,-1,1},{1,-1,1},{1,1,1},{-1,1,1},{2.9,0.9,2.9},{2.9,0.9,2.9}};
+  double v[10][3]={{0.0, -1.0, 0.0},{0.0,1.0, 0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0},{0.0,0.0,0.0},{1,1,1},{0.8,0.8,-1}};
+  double xparticle[10][3]={{0.125,1.875,0.125},{0.125,1.875,0.125},{1,1,-1},{-1,1,-1},{-1,-1,1},{1,-1,1},{1,1,1},{-1,1,1},{2.9,0.9,2.9},{2.9,0.9,2.9}};
   int s,i,j,k;
   int species[10]={0,1,0,1,0,1,0,1,0,1};
   
@@ -400,7 +408,7 @@ int main(int argc,char **argv) {
     if (_CURRENT_MODE_==_PIC_MODE_OFF_){
 	totalIter = 4/PIC::FieldSolver::Electromagnetic::ECSIM::cDt;
     }else{
-      totalIter = 3;
+      totalIter = 7;
     }
     
 
