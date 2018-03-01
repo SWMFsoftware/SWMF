@@ -298,6 +298,9 @@ species number (between reactions). Each segment is saved in the trajectory file
 #define _PIC_FIELD_SOLVER_MODE__OFF_                                 0
 #define _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_              1
 
+//input unit of the field solver
+#define	 _PIC_FIELD_SOLVER_INPUT_UNIT_NORM_  0
+#define  _PIC_FIELD_SOLVER_INPUT_UNIT_SI_  1
 
 
 
