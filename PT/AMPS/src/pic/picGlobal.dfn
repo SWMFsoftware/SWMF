@@ -358,4 +358,7 @@ at the end of each time step
 //definitions of the field solver 
 #define _PIC_FIELD_SOLVER_MODE_ _PIC_FIELD_SOLVER_MODE__OFF_
 
+//input unit for the field solver
+#define _PIC_FIELD_SOLVER_INPUT_UNIT_ _PIC_FIELD_SOLVER_INPUT_UNIT_SI_
+
 #endif //_PIC_GLOBAL_DEFINITIONS_H_  
