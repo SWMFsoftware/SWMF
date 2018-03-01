@@ -184,13 +184,12 @@ module ModPhysics
   real :: ShockLeftState_V(nVar)=0.0, ShockRightState_V(nVar)=0.0
   real :: ShockPosition = 0.0, ShockSlope = 0.0
 
-  ! Logicals for using Boundary State
-  logical :: UseFaceBoundaryState_I(SolidBc_:zMaxBc_) = .false.
-  logical :: UseCellBoundaryState_I(Coord1MinBc_:Coord3MaxBc_) = .false.
-
-  ! Logicals for using Boundary State
-  logical :: UseFaceBoundaryStateHuman_I(SolidBc_:zMaxBc_) = .false.
-  logical :: UseCellBoundaryStateHuman_I(Coord1MinBc_:Coord3MaxBc_) = .false.
+  ! Options for using Boundary State:
+  ! 0 - not use boundary state (by default).
+  ! 1 - use boundary sate (#BOUNDARYSTATE).
+  ! 2 - use boundary state in num dens and temperature (#BOUNDARYSTATE_NT).
+  integer :: iFaceBoundaryState_I(SolidBc_:zMaxBc_)          = 0
+  integer :: iCellBoundaryState_I(Coord1MinBc_:Coord3MaxBc_) = 0
 
   ! State for the boundary conditions
   real, dimension(nVar,SolidBc_:zMaxBc_):: &
@@ -238,7 +237,6 @@ module ModPhysics
   ! Mapping between state array indices and unit conversion array indices
   integer, dimension(nVar) :: iUnitCons_V
   integer, dimension(nVar) :: iUnitPrim_V
-  integer, dimension(nVar) :: iUnitHuman_V
 
   character (len=20), dimension(nIoUnit) :: &
        NameIdlUnit_V, NameTecUnit_V, NameSiUnit_V
@@ -576,28 +574,30 @@ contains
 
     ! Use face values from #BOUNDARYSTATE commands
     do iBoundary = SolidBc_, 2*nDim
-       if (.not.UseFaceBoundaryState_I(iBoundary) .and.                      &
-            .not.UseFaceBoundaryStateHuman_I(iBoundary)) CYCLE
+       if (iFaceBoundaryState_I(iBoundary) == 0) CYCLE
 
-       if (UseFaceBoundaryState_I(iBoundary) .and.                           &
-            UseFaceBoundaryStateHuman_I(iBoundary))  call stop_mpi(NameSub// &
-            ' BOUNDARYSTATE and BOUNDARYSTATEHUMAN cannot be used together.')
+       if (iFaceBoundaryState_I(iBoundary)  < 0 .or.                     &
+            iFaceBoundaryState_I(iBoundary) > 2) call stop_mpi(NameSub// &
+            ' incorrect iFaceBoundaryState_I')
 
-       if (UseFaceBoundaryState_I(iBoundary)) FaceState_VI(:,iBoundary) =    &
+       FaceState_VI(:,iBoundary) = &
             FaceStateDim_VI(:,iBoundary) * Io2No_V(iUnitPrim_V)
 
-       if (UseFaceBoundaryStateHuman_I(iBoundary)) then
-          ! convert IO to NO unit first
-          ! iRho_I are in the unit of number density
-          ! iP_I are in the unit of temperature
-          FaceState_VI(:,iBoundary) = &
-               FaceStateDim_VI(:,iBoundary) * Io2No_V(iUnitHuman_V)
+       ! Fix unit conversion For #BOUNDARYSTATE_NT
+       if (iFaceBoundaryState_I(iBoundary) == 2) then
+          ! overwrite iRho_I, the unit conversion should be UnitN_
+          FaceState_VI(iRho_I,iBoundary) = FaceStateDim_VI(iRho_I,iBoundary) &
+               *Io2No_V(UnitN_)
 
-          ! convert temperature to pressure
-          FaceState_VI(iP_I, iBoundary)   = &
-               FaceState_VI(iRho_I, iBoundary)*FaceState_VI(iP_I, iBoundary)
+          ! overwrite iP_I, the unit conversion should be UnitTemperature_
+          FaceState_VI(iP_I, iBoundary)   = FaceStateDim_VI(iP_I, iBoundary) &
+               *Io2No_V(UnitTemperature_)
 
-          ! convert number density to mass density
+          ! iP_I in NO units are n*T
+          FaceState_VI(iP_I, iBoundary) = FaceState_VI(iP_I, iBoundary)   &
+               *FaceState_VI(iRho_I, iBoundary)
+
+          ! Finally convert number density to mass density
           FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
                FaceState_VI(iRho_I(IonFirst_:nFluid),iBoundary)*MassFluid_I
        end if
@@ -609,30 +609,32 @@ contains
 
     ! Use cell values from #BOUNDARYSTATE commands given in primitive variables
     do iBoundary = 1, 2*nDim
-       if (.not.UseCellBoundaryState_I(iBoundary) .and. &
-            .not.UseCellBoundaryStateHuman_I(iBoundary)) CYCLE
+       if (iCellBoundaryState_I(iBoundary) == 0) CYCLE
 
-       if (UseCellBoundaryState_I(iBoundary) .and.                           &
-            UseCellBoundaryStateHuman_I(iBoundary))  call stop_mpi(NameSub// &
-            ' BOUNDARYSTATE and BOUNDARYSTATEHUMAN cannot be used together.')
+       if (iCellBoundaryState_I(iBoundary)  < 0 .or.                     &
+            iCellBoundaryState_I(iBoundary) > 2) call stop_mpi(NameSub// &
+            ' incorrect iCellBoundaryState_I')
 
-       if (UseCellBoundaryState_I(iBoundary)) CellState_VI(:,iBoundary) =    &
+       CellState_VI(:,iBoundary) = &
             CellStateDim_VI(:,iBoundary) * Io2No_V(iUnitPrim_V)
 
-       if (UseCellBoundaryStateHuman_I(iBoundary)) then
-          ! convert IO to NO unit first
-          ! iRho_I are in the unit of number density
-          ! iP_I are in the unit of temperature
-          CellState_VI(:,iBoundary) = &
-               CellStateDim_VI(:,iBoundary) * Io2No_V(iUnitHuman_V)
+       ! Fix unit conversion For #BOUNDARYSTATE_NT
+       if (iCellBoundaryState_I(iBoundary) == 2) then
+          ! overwrite iRho_I, the unit conversion should be UnitN_
+          CellState_VI(iRho_I,iBoundary) = CellStateDim_VI(iRho_I,iBoundary) &
+               *Io2No_V(UnitN_)
 
-          ! convert temperature to pressure
-          CellState_VI(iP_I, iBoundary)   = &
-               CellState_VI(iRho_I, iBoundary)*CellState_VI(iP_I, iBoundary)
+          ! overwrite iP_I, the unit conversion should be UnitTemperature_
+          CellState_VI(iP_I, iBoundary)   = CellStateDim_VI(iP_I, iBoundary) &
+               *Io2No_V(UnitTemperature_)
 
-          ! convert number density to mass density
-          CellState_VI(iRho_I(IonFirst_:nFluid), iBoundary) = &
-               CellState_VI(iRho_I(IonFirst_:nFluid), iBoundary)*MassFluid_I
+          ! iP_I in NO units are n*T
+          CellState_VI(iP_I, iBoundary) = CellState_VI(iP_I, iBoundary)   &
+               *CellState_VI(iRho_I, iBoundary)
+
+          ! Finally convert number density to mass density
+          CellState_VI(iRho_I(IonFirst_:nFluid),iBoundary) = &
+               CellState_VI(iRho_I(IonFirst_:nFluid),iBoundary)*MassFluid_I
        end if
     end do
 
@@ -957,45 +959,36 @@ contains
        call extract_fluid_name(NameVar)
        select case(NameVar)
        case('rho')
-          iUnitCons_V(iVar)  = UnitRho_
-          iUnitPrim_V(iVar)  = UnitRho_
-          iUnitHuman_V(iVar) = UnitN_
+          iUnitCons_V(iVar) = UnitRho_
+          iUnitPrim_V(iVar) = UnitRho_
        case('mx','my','mz','rhoux','rhouy','rhouz')
-          iUnitCons_V(iVar)  = UnitRhoU_
-          iUnitPrim_V(iVar)  = UnitU_
-          iUnitHuman_V(iVar) = UnitU_
+          iUnitCons_V(iVar) = UnitRhoU_
+          iUnitPrim_V(iVar) = UnitU_
        case('bx','by','bz','hyp')
-          iUnitCons_V(iVar)  = UnitB_
-          iUnitPrim_V(iVar)  = UnitB_
-          iUnitHuman_V(iVar) = UnitB_
+          iUnitCons_V(iVar) = UnitB_
+          iUnitPrim_V(iVar) = UnitB_
        case('p','pe', 'ppar')
-          iUnitCons_V(iVar)  = UnitP_
-          iUnitPrim_V(iVar)  = UnitP_
-          iUnitHuman_V(iVar) = UnitTemperature_
+          iUnitCons_V(iVar) = UnitP_
+          iUnitPrim_V(iVar) = UnitP_
        case('e', 'ew', 'ehot', 'eint')
-          iUnitCons_V(iVar)  = UnitEnergyDens_
-          iUnitPrim_V(iVar)  = UnitEnergyDens_
-          iUnitHuman_V(iVar) = UnitEnergyDens_
+          iUnitCons_V(iVar) = UnitEnergyDens_
+          iUnitPrim_V(iVar) = UnitEnergyDens_
        case('ex', 'ey', 'ez','hype')
-          iUnitCons_V(iVar)  = UnitElectric_
-          iUnitPrim_V(iVar)  = UnitElectric_
-          iUnitHuman_V(iVar) = UnitElectric_
+          iUnitCons_V(iVar) = UnitElectric_
+          iUnitPrim_V(iVar) = UnitElectric_
        case default
           if(iVar >= SpeciesFirst_ .and. iVar <= SpeciesLast_)then
-             iUnitCons_V(iVar)  = UnitRho_
-             iUnitPrim_V(iVar)  = UnitRho_
-             iUnitHuman_V(iVar) = UnitN_
+             iUnitCons_V(iVar) = UnitRho_
+             iUnitPrim_V(iVar) = UnitRho_
           elseif(WaveFirst_ <= iVar .and. iVar <= WaveLast_)then
-             iUnitCons_V(iVar)  = UnitEnergyDens_
-             iUnitPrim_V(iVar)  = UnitEnergyDens_
-             iUnitHuman_V(iVar) = UnitEnergyDens_
+             iUnitCons_V(iVar) = UnitEnergyDens_
+             iUnitPrim_V(iVar) = UnitEnergyDens_
           else
              if(iProc == 0) write(*,*) NameSub,': ',NameVar, &
                   ' was not found to set iUnitState_V,', &
                   ' using UnitUnity_ instead.'
-             iUnitCons_V(iVar)  = UnitUnity_
-             iUnitPrim_V(iVar)  = UnitUnity_
-             iUnitHuman_V(iVar) = UnitUnity_
+             iUnitCons_V(iVar) = UnitUnity_
+             iUnitPrim_V(iVar) = UnitUnity_
           end if
        end select
     end do
