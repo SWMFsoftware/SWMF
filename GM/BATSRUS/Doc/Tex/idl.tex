@@ -390,9 +390,13 @@ bottomline=3, headerline=0
    The plots are normally shown in physical coordinates, i.e.
    {\bf axistype='coord'}, but the axes can also run in cell indices 
    if {\bf axistype='cells'} is set (that works for structured grid only!).
-   If {\bf fixaspect=1} the aspect ratio of the plot will be the same
-   as the true aspect ratio of the two axes, while {\bf fixaspect=0} lets
-   the plot fit into the plotting window tightly. 
+   If {\bf fixaspect=1} or -1 the aspect ratio of the plot will be the same
+   as the true aspect ratio of the two axes, while {\bf fixaspect=0} allows
+   the aspect ratio to adjust so that 
+   the plot fits into the plotting window tightly. The {\bf fixaspect=-1}
+   setting preserves the aspect ratio but it allows adjusting the spacing 
+   between rows and columns of subplots independent of the shape
+   of the plotting window (this can result in large margins).
    The variables {\bf bottomline} and {\bf headerline} control the number
    of values shown at the bottom from {\bf time, it, nx} and at the top 
    from {\bf headline, nx}.
@@ -795,7 +799,7 @@ The spacing between subplots can be adjusted with the
 {\bf plot\_spacex} and {\bf plot\_spacey} variables.
 The spacing is measured in character size (which depends on !p.charsize).
 The default values are 3 for both, which is usually sufficient to
-show the axis labels. Setting both to zero (and also fixaspect=0)
+show the axis labels. Setting both to zero (and also fixaspect=0 or -1)
 can result in tigthly packed plots. 
 
 To save space, the axis labels and axis titles are normally only shown 
