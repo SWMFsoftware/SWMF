@@ -6619,5 +6619,7 @@ pro reset_axis
 
   !x.tickname = strarr(60)
   !y.tickname = strarr(60)
+  if !x.title eq ' ' then !x.title = ''
+  if !y.title eq ' ' then !y.title = ''
 
 end
