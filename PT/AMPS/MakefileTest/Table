@@ -178,11 +178,15 @@ Check=
 
 >>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/Liouville.spec=SUM.dat  output/test_CG-Rosina-Liouville--Trajectory/Liouville.spec=SUM$(TESTCG-Rosina-Liouville--Trajectory-REF).ref_np`ls $(TESTCG-Rosina-Liouville--TrajectoryDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville--COPS-Data$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
 
->>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/Liouville.spec=SUM.dat  output/test_CG-Rosina-Liouville--Trajectory/Liouville.spec=SUM$(TESTCG-Rosina-Liouville-Trajectory-REF).ref_np`ls $(TESTCG-Rosina-Liouville--TrajectoryDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/TrajectoryAll.dat  output/test_CG-Rosina-Liouville--Trajectory/TrajectoryAll$(TESTCG-Rosina-Liouville-Trajectory-REF).ref_np`ls $(TESTCG-Rosina-Liouville--TrajectoryDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville--Trajectory-All$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+
+>>>-@${SCRIPTDIR}/DiffNum.pl -a=4.0E-13 ${TESTCG-Rosina-Liouville--TrajectoryDIR}/PT/plots/TrajectoryLastMeasurements.dat  output/test_CG-Rosina-Liouville--Trajectory/TrajectoryLastMeasurements$(TESTCG-Rosina-Liouville-Trajectory-REF).ref_np`ls $(TESTCG-Rosina-Liouville--TrajectoryDIR)/PT/thread* |wc -l |tr -d ' '`  > test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+
 
 >>>@ls -l test_CG-Rosina-Liouville--Triangulation$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
 >>>@ls -l test_CG-Rosina-Liouville--COPS-Data$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
 >>>@ls -l test_CG-Rosina-Liouville--Trajectory$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
+>>>@ls -l test_CG-Rosina-Liouville--Trajectory-All$(TESTCG-Rosina-Liouville--Trajectory-REF).diff
 >>>@echo Test test_CG-Rosina-Liouville--Trajectory has finished: `date`
 
 <#
