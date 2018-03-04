@@ -25,6 +25,13 @@ ${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
 	${AR} ${MY_LIB} ${OBJECTS}
 
+IGRF:	
+	make ${BINDIR}/IGRF.exe
+
+${BINDIR}/IGRF.exe: Igrf.o
+		${LINK.f90} -o ${BINDIR}/IGRF.exe \
+		Igrf.o ${Lflag1}
+
 clean: cleanfiles
 
 distclean: clean

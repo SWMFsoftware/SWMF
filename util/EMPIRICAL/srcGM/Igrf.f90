@@ -41,413 +41,60 @@ program IGRF12
   IMPLICIT NONE
   !*--IGRF1242
   !*** Start of declarations inserted by SPAG
-  real:: alt, clt, d, date, dd ,df, dh, ds, &
+  real:: alt, clt, d, date, dd ,df, dh, &
        dx, dy, dz, f, f1, fact, h, s, x, xln
-  real:: xlnd, xlnf, xlni, xlt, xltd, xltf, xlti, y, z
-  INTEGER i , idd , idec , idecm , idf , idh , idm , ids , idx ,    &
-       idy , idz , ifl , ih , imx , inc , incm , iopt , itype ,  ix
-  INTEGER iy , iz , ln , lnd , lnf , lni , lnm , lt , ltd , ltf ,   &
-       lti , ltm , ncount , nf
+  real::   xlt,   y, z
+  INTEGER:: idd , idec , idecm , idf , idh , idx ,    &
+       idy , idz , ih , inc , incm ,  ix
+  INTEGER:: iy , iz , nf
   !*** End of declarations inserted by SPAG
-  CHARACTER*1 ia
-  CHARACTER*11 type
-  CHARACTER*20 name
-  real, parameter:: dtmn=1900.0, dtmx = 2025.0
-  !
-  !
-  WRITE (6,*)
-  WRITE (6,*)'******************************************************'
-  WRITE (6,*)'*              IGRF SYNTHESIS PROGRAM                *'
-  WRITE (6,*)'*                                                    *'
-  WRITE (6,*)'* A program for the computation of geomagnetic       *'
-  WRITE (6,*)'* field elements from the International Geomagnetic  *'
-  WRITE (6,*)'* Reference Field (12th generation) as revised in    *'
-  WRITE (6,*)'* December 2014 by the IAGA Working Group V-MOD.     *'
-  WRITE (6,*)'*                                                    *'
-  WRITE (6,*)'* It is valid for dates from 1900.0 to 2020.0,       *'
-  WRITE (6,*)'* values up to 2025.0 will be computed but with      *'
-  WRITE (6,*)'* reduced accuracy. Values for dates before 1945.0   *'
-  WRITE (6,*)'* and after 2010.0 are non-definitive, otherwise the *'
-  WRITE (6,*)'* values are definitive.                             *'
-  WRITE (6,*)'*                                                    *'
-  WRITE (6,*)'* Susan Macmillan          British Geological Survey *'
-  WRITE (6,*)'*                           IAGA Working Group V-MOD *'
-  WRITE (6,*)'******************************************************'
   fact = 180.0/3.141592654
-  ncount = 0
+  
+  READ (5,*) date, xlt, xln, alt
   !
-100 WRITE (6,*) 'Enter value for coordinate system:'
-  WRITE (6,*)                                                       &
-       '1 - geodetic (shape of Earth is approximated by a spheroid)'
-  WRITE (6,*)                                                       &
-       '2 - geocentric (shape of Earth is approximated by a sphere)'
-  READ (5,*) itype
-  IF ( itype.LT.1 .OR. itype.GT.2 ) GOTO 100
-  IF ( itype.EQ.1 ) type = ' geodetic  '
-  IF ( itype.EQ.2 ) type = ' geocentric'
-  !
-200 WRITE (6,*) 'Choose an option:'
-  WRITE (6,*) '1 - values at one or more locations & dates'
-  WRITE (6,*) '2 - values at yearly intervals at one location'
-  WRITE (6,*) '3 - values on a latitude/longitude grid at one date'
-  READ (5,*) iopt
-  IF ( iopt.LT.1 .OR. iopt.GT.3 ) GOTO 200
-  IF ( iopt.EQ.3 ) THEN
-     !
-     !     GRID OF VALUES...
-     !
-250  WRITE (6,*) 'Enter value for MF/SV flag:'
-     WRITE (6,*) '0 for main field (MF)'
-     WRITE (6,*) '1 for secular variation (SV)'
-     WRITE (6,*) '2 for both'
-     WRITE (6,*) '9 to quit'
-     READ (5,*) ifl
-     IF ( ifl.EQ.9 ) STOP
-     IF ( ifl.NE.0 .AND. ifl.NE.1 .AND. ifl.NE.2 ) GOTO 250
-     !
-     WRITE (6,*) 'Enter initial value, final value & increment or'
-     WRITE (6,*) 'decrement of latitude, in degrees & decimals'
-     READ (5,*) xlti , xltf , xltd
-     lti = NINT(1000.0*xlti)
-     ltf = NINT(1000.0*xltf)
-     ltd = NINT(1000.0*xltd)
-     WRITE (6,*) 'Enter initial value, final value & increment or'
-     WRITE (6,*) 'decrement of longitude, in degrees & decimals'
-     READ (5,*) xlni , xlnf , xlnd
-     lni = NINT(1000.0*xlni)
-     lnf = NINT(1000.0*xlnf)
-     lnd = NINT(1000.0*xlnd)
-     IF ( lti.LT.-90000 .OR. lti.GT.90000 ) GOTO 1400
-     IF ( ltf.LT.-90000 .OR. ltf.GT.90000 ) GOTO 1400
-     IF ( lni.LT.-360000 .OR. lni.GT.360000 ) GOTO 1500
-     IF ( lnf.LT.-360000 .OR. lnf.GT.360000 ) GOTO 1500
-     WRITE (6,*) 'Enter date in years A.D.'
-     READ (5,*) date
-     IF ( date.LT.dtmn .OR. date.GT.dtmx ) GOTO 900
-     IF ( itype.EQ.1 ) THEN
-        WRITE (6,*) 'Enter altitude in km'
-     ELSE
-        WRITE (6,*) 'Enter radial distance in km (>3485 km)'
-     ENDIF
-     READ (5,*) alt
-     IF ( itype.EQ.2 .AND. alt.LE.3485.0 ) GOTO 1000
-     WRITE (6,99002) date , alt , type
-99002 FORMAT (' Date =',F9.3,5X,'Altitude =',F10.3,' km',5X,         &
-          A11//'      Lat     Long',7X,'D',7X,'I',7X,'H',7X,'X', &
-          7X,'Y',7X,'Z',7X,'F')
-     !
-     lt = lti
-     GOTO 600
-  ELSE
-     !
-300  WRITE (6,*)                                                    &
-          'Enter value for format of latitudes and longitudes:'
-     WRITE (6,*) '1 - in degrees & minutes'
-     WRITE (6,*) '2 - in decimal degrees'
-     READ (5,*) idm
-     IF ( idm.LT.1 .OR. idm.GT.2 ) GOTO 300
-     IF ( ncount.EQ.0 ) GOTO 500
-  ENDIF
-  !
-400 WRITE (6,*)                                                       &
-       'Do you want values for another date & position? (y/n)'
-  READ (5,'(A1)') ia
-  IF ( ia.NE.'Y' .AND. ia.NE.'y' .AND. ia.NE.'N' .AND. ia.NE.'n' )  &
-       GOTO 400
-  IF ( ia.EQ.'N' .OR. ia.EQ.'n' ) THEN
-     WRITE (6,99003)
-99003 FORMAT (' D is declination (+ve east)'/                        &
-          ' I is inclination (+ve down)'/                        &
-          ' H is horizontal intensity'/' X is north component'/  &
-          ' Y is east component'/                                &
-          ' Z is vertical component (+ve down)'/                 &
-          ' F is total intensity')
-     WRITE (6,99004)
-99004 FORMAT (/' SV is secular variation (annual rate of change)')
-     IF ( itype.EQ.2 ) THEN
-        WRITE (6,*)                                                &
-             'These elements are relative to the geocentric coordinate system'
-     ELSE
-        WRITE (6,*)
-     ENDIF
-     STOP
-  ENDIF
-  !
-500 ncount = 1
-  IF ( iopt.NE.2 ) THEN
-     WRITE (6,*) 'Enter date in years A.D.'
-     READ (5,*) date
-     IF ( date.LT.dtmn .OR. date.GT.dtmx ) GOTO 900
-  ENDIF
-
-  IF ( itype.EQ.1 ) THEN
-     WRITE (6,*) 'Enter altitude in km'
-  ELSE
-     WRITE (6,*) 'Enter radial distance in km (>3485 km)'
-  ENDIF
-  READ (5,*) alt
-  IF ( itype.EQ.2 .AND. alt.LE.3485.0 ) GOTO 1000
-  !
-  IF ( idm.EQ.1 ) THEN
-     WRITE (6,*) 'Enter latitude & longitude in degrees & minutes'
-     WRITE (6,*) '(if either latitude or longitude is between -1'
-     WRITE (6,*) 'and 0 degrees, enter the minutes as negative).'
-     WRITE (6,*) 'Enter 4 integers'
-     READ (5,*) ltd , ltm , lnd , lnm
-     IF ( ltd.LT.-90 .OR. ltd.GT.90 .OR. ltm.LE.-60 .OR. ltm.GE.60 )&
-          GOTO 1200
-     IF ( lnd.LT.-360 .OR. lnd.GT.360 .OR. lnm.LE.-60 .OR.          &
-          lnm.GE.60 ) GOTO 1300
-     IF ( ltm.LT.0 .AND. ltd.NE.0 ) GOTO 1200
-     IF ( lnm.LT.0 .AND. lnd.NE.0 ) GOTO 1300
-     CALL DMDDEC(ltd,ltm,xlt)
-     CALL DMDDEC(lnd,lnm,xln)
-  ELSE
-     WRITE (6,*) 'Enter latitude & longitude in decimal degrees'
-     READ (5,*) xlt , xln
-     IF ( xlt.LT.-90.0 .OR. xlt.GT.90.0 ) GOTO 1100
-     IF ( xln.LT.-360.0 .OR. xln.GT.360.0 ) THEN
-        !
-        WRITE (6,99005) xln
-99005   FORMAT (' ***** Error *****'/' XLN =',F10.3,                &
-             ' - out of range')
-        STOP
-     ENDIF
-  ENDIF
-  !
-  WRITE (*,*) 'Enter place name (20 characters maximum)'
-  READ (*,'(A)') name
   clt = 90.0 - xlt
-  IF ( clt.LT.0.0 .OR. clt.GT.180.0 ) GOTO 1200
-  IF ( xln.LE.-360.0 .OR. xln.GE.360.0 ) GOTO 1300
-  IF ( iopt.EQ.2 ) THEN
-     !
-     !
-     !     SERIES OF VALUES AT ONE LOCATION...
-     !
-     IF ( idm.EQ.1 ) THEN
-        WRITE (6,99006) ltd , ltm , type , lnd , lnm , alt , name
-99006   FORMAT ('Lat',2I4,A11,'  Long ',2I4,F10.3,' km ',A20)
-     ELSE
-        WRITE (6,99007) xlt , type , xln , alt , name
-99007   FORMAT ('Lat',F8.3,A11,'  Long ',F8.3,F10.3,' km ',A20)
-     ENDIF
-     WRITE (6,99008)
-99008 FORMAT (3X,'DATE',7X,'D',3X,'SV',6X,'I',2X,'SV',6X,'H',4X,'SV',&
-          7X,'X',4X,'SV',7X,'Y',4X,'SV',7X,'Z',4X,'SV',6X,'F',4X,&
-          'SV')
-     imx = dtmx - dtmn - 5
-     DO i = 1 , imx
-        date = dtmn - 0.5 + i
-        CALL IGRF12SYN(0,date,itype,alt,clt,xln,x,y,z,f)
-        d = fact*ATAN2(y,x)
-        h = SQRT(x*x+y*y)
-        s = fact*ATAN2(z,h)
-        ih = NINT(h)
-        ix = NINT(x)
-        iy = NINT(y)
-        iz = NINT(z)
-        nf = NINT(f)
-        !
-        CALL IGRF12SYN(1,date,itype,alt,clt,xln,dx,dy,dz,f1)
-        dd = (60.0*fact*(x*dy-y*dx))/(h*h)
-        dh = (x*dx+y*dy)/h
-        ds = (60.0*fact*(h*dz-z*dh))/(f*f)
-        df = (h*dh+z*dz)/f
-        idd = NINT(dd)
-        idh = NINT(dh)
-        ids = NINT(ds)
-        idx = NINT(dx)
-        idy = NINT(dy)
-        idz = NINT(dz)
-        idf = NINT(df)
-        !
-        WRITE (6,99009) date , d , idd , s , ids , ih , idh , ix , &
-             idx , iy , idy , iz , idz , nf , idf
-99009   FORMAT (1X,F6.1,F8.2,I5,F7.2,I4,I7,I6,3(I8,I6),I7,I6)
-     ENDDO
-     ifl = 2
-     GOTO 800
-  ELSE
-     !
-     CALL IGRF12SYN(0,date,itype,alt,clt,xln,x,y,z,f)
-     d = fact*ATAN2(y,x)
-     h = SQRT(x*x+y*y)
-     s = fact*ATAN2(z,h)
-     CALL DDECDM(d,idec,idecm)
-     CALL DDECDM(s,inc,incm)
-     !
-     CALL IGRF12SYN(1,date,itype,alt,clt,xln,dx,dy,dz,f1)
-     dd = (60.0*fact*(x*dy-y*dx))/(h*h)
-     dh = (x*dx+y*dy)/h
-     ds = (60.0*fact*(h*dz-z*dh))/(f*f)
-     df = (h*dh+z*dz)/f
-     !
-     IF ( idm.EQ.1 ) THEN
-        WRITE (6,99010) date , ltd , ltm , type , lnd , lnm , alt ,&
-             name
-99010   FORMAT (1X,F8.3,' Lat',2I4,A11,' Long ',2I4,F10.3,' km ',   &
-             A20)
-     ELSE
-        WRITE (6,99011) date , xlt , type , xln , alt , name
-99011   FORMAT (1X,F8.3,' Lat',F8.3,A11,' Long ',F8.3,F10.3,' km ', &
-             A20)
-     ENDIF
-     !
-     idd = NINT(dd)
-     WRITE (6,99012) idec , idecm , idd
-99012 FORMAT (15X,'D =',I5,' deg',I4,' min',4X,'SV =',I8,' min/yr')
-     !
-     ids = NINT(ds)
-     WRITE (6,99013) inc , incm , ids
-99013 FORMAT (15X,'I =',I5,' deg',I4,' min',4X,'SV =',I8,' min/yr')
-     !
-     ih = NINT(h)
-     idh = NINT(dh)
-     WRITE (6,99014) ih , idh
-99014 FORMAT (15X,'H =',I8,' nT     ',5X,'SV =',I8,' nT/yr')
-     !
-     ix = NINT(x)
-     idx = NINT(dx)
-     WRITE (6,99015) ix , idx
-99015 FORMAT (15X,'X =',I8,' nT     ',5X,'SV =',I8,' nT/yr')
-     !
-     iy = NINT(y)
-     idy = NINT(dy)
-     WRITE (6,99016) iy , idy
-99016 FORMAT (15X,'Y =',I8,' nT     ',5X,'SV =',I8,' nT/yr')
-     !
-     iz = NINT(z)
-     idz = NINT(dz)
-     WRITE (6,99017) iz , idz
-99017 FORMAT (15X,'Z =',I8,' nT     ',5X,'SV =',I8,' nT/yr')
-     !
-     nf = NINT(f)
-     idf = NINT(df)
-     WRITE (6,99018) nf , idf
-99018 FORMAT (15X,'F =',I8,' nT     ',5X,'SV =',I8,' nT/yr'/)
-     !
-     GOTO 400
-  ENDIF
-600 xlt = lt
-  xlt = 0.001*xlt
-  clt = 90.0 - xlt
-  IF ( clt.LT.-0.001 .OR. clt.GT.180.001 ) GOTO 1100
-  ln = lni
-700 xln = ln
-  xln = 0.001*xln
-  IF ( xln.LE.-360.0 ) xln = xln + 360.0
-  IF ( xln.GE.360.0 ) xln = xln - 360.0
-  CALL IGRF12SYN(0,date,itype,alt,clt,xln,x,y,z,f)
+  !
+  CALL IGRF12SYN(0,date,1,alt,clt,xln,x,y,z,f)
   d = fact*ATAN2(y,x)
   h = SQRT(x*x+y*y)
   s = fact*ATAN2(z,h)
+  CALL DDECDM(d,idec,idecm)
+  CALL DDECDM(s,inc,incm)
+  !
+  CALL IGRF12SYN(1,date,1,alt,clt,xln,dx,dy,dz,f1)
+  dd = (60.0*fact*(x*dy-y*dx))/(h*h)
+  dh = (x*dx+y*dy)/h
+  df = (h*dh+z*dz)/f
+  !
+  idd = NINT(dd)
+  WRITE (6,99012) idec*60+idecm , idd
+99012 FORMAT (' #',15X,'D =',I8,' min    ',5X,'SV =',I8,' min/yr         |')
+  !
   ih = NINT(h)
+  idh = NINT(dh)
+  WRITE (6,99014) ih , idh
+99014 FORMAT (' #',15X,'H =',I8,' nT     ',5X,'SV =',I8,' nT/yr          |')
+  !
   ix = NINT(x)
+  idx = NINT(dx)
+  WRITE (6,99015) ix , idx
+99015 FORMAT (' #',15X,'X =',I8,' nT     ',5X,'SV =',I8,' nT/yr          |')
+  !
   iy = NINT(y)
+  idy = NINT(dy)
+  WRITE (6,99016) iy , idy
+99016 FORMAT (' #',15X,'Y =',I8,' nT     ',5X,'SV =',I8,' nT/yr          |')
+  !
   iz = NINT(z)
+  idz = NINT(dz)
+  WRITE (6,99017) iz , idz
+99017 FORMAT (' #',15X,'Z =',I8,' nT     ',5X,'SV =',I8,' nT/yr          |')
+  !
   nf = NINT(f)
-  IF ( ifl.NE.0 ) THEN
-     CALL IGRF12SYN(1,date,itype,alt,clt,xln,dx,dy,dz,f1)
-     idx = NINT(dx)
-     idy = NINT(dy)
-     idz = NINT(dz)
-     dd = (60.0*fact*(x*dy-y*dx))/(h*h)
-     idd = NINT(dd)
-     dh = (x*dx+y*dy)/h
-     idh = NINT(dh)
-     ds = (60.0*fact*(h*dz-z*dh))/(f*f)
-     ids = NINT(ds)
-     df = (h*dh+z*dz)/f
-     idf = NINT(df)
-  ENDIF
-  !
-  IF ( ifl.EQ.0 ) WRITE (6,99031) xlt , xln , d , s , ih , ix ,    &
-       iy , iz , nf
-  IF ( ifl.EQ.1 ) WRITE (6,99019) xlt , xln , idd , ids , idh ,    &
-       idx , idy , idz , idf
-99019 FORMAT (2F9.3,7I8)
-  IF ( ifl.EQ.2 ) THEN
-     WRITE (6,99031) xlt , xln , d , s , ih , ix , iy , iz , nf
-     WRITE (6,99020) idd , ids , idh , idx , idy , idz , idf
-99020 FORMAT (14X,'SV: ',7I8)
-  ENDIF
-  !
-  ln = ln + lnd
-  IF ( lnd.LT.0 ) THEN
-     IF ( ln.GE.lnf ) GOTO 700
-  ELSEIF ( ln.LE.lnf ) THEN
-     GOTO 700
-  ENDIF
-  lt = lt + ltd
-  IF ( ltd.LT.0 ) THEN
-     IF ( lt.GE.ltf ) GOTO 600
-  ELSEIF ( lt.LE.ltf ) THEN
-     GOTO 600
-  ENDIF
-800 IF ( ifl.EQ.0 .OR. ifl.EQ.2 ) THEN
-     WRITE (6,99021)
-99021 FORMAT (/' D is declination in degrees (+ve east)'/            &
-          ' I is inclination in degrees (+ve down)'/             &
-          ' H is horizontal intensity in nT'/                    &
-          ' X is north component in nT'/                         &
-          ' Y is east component in nT'/                          &
-          ' Z is vertical component in nT (+ve down)'/           &
-          ' F is total intensity in nT')
-     IF ( ifl.NE.0 ) WRITE (6,99022)
-99022 FORMAT (' SV is secular variation (annual rate of change)'/    &
-          ' Units for SV: minutes/yr (D & I); nT/yr (H,X,Y,Z & F)'&
-          )
-     IF ( itype.EQ.2 ) WRITE (6,*)                                 &
-          'These elements are relative to the geocentric coordinate system'
-  ELSE
-     WRITE (6,99023)
-99023 FORMAT (/' D is SV in declination in minutes/yr (+ve east)'/   &
-          ' I is SV in inclination in minutes/yr (+ve down)'/    &
-          ' H is SV in horizontal intensity in nT/yr'/           &
-          ' X is SV in north component in nT/yr'/                &
-          ' Y is SV in east component in nT/yr'/                 &
-          ' Z is SV in vertical component in nT/yr (+ve down)'/  &
-          ' F is SV in total intensity in nT/yr')
-     IF ( itype.EQ.2 ) WRITE (6,*)                                 &
-          'These elements are relative to the geocentric coordinate system'
-  ENDIF
+  idf = NINT(df)
+  WRITE (6,99018) nf , idf
+99018 FORMAT (' #',15X,'F =',I8,' nT     ',5X,'SV =',I8,' nT/yr          |')
   STOP
-  !
-900 WRITE (6,99024) date
-99024 FORMAT (' ***** Error *****'//' DATE =',F9.3,' - out of range')
-  STOP
-  !
-1000 WRITE (6,99025) alt , itype
-99025 FORMAT (' ***** Error *****'//' A value of ALT =',F10.3,           &
-       ' is not allowed when ITYPE =',I2)
-  STOP
-  !
-1100 WRITE (6,99026) xlt
-99026 FORMAT (' ***** Error *****'/' XLT =',F9.3,' - out of range')
-  STOP
-  !
-1200 WRITE (6,99027) ltd , ltm
-99027 FORMAT (' ***** Error *****'//' Latitude out of range',' - LTD =', &
-       I6,5X,'LTM =',I4)
-  STOP
-  !
-1300 WRITE (6,99028) lnd , lnm
-99028 FORMAT (' ***** Error *****'//' Longitude out of range',' - LND =',&
-       I8,5X,'LNM =',I4)
-  STOP
-  !
-1400 WRITE (6,99029) lti , ltf
-99029 FORMAT (' ***** Error *****'//                                     &
-       ' Latitude limits of table out of range - LTI =',I6,5X,   &
-       ' LTF =',I6)
-  STOP
-  !
-1500 WRITE (6,99030) lni , lnf
-99030 FORMAT (' ***** Error *****'//                                    &
-       ' Longitude limits of table out of range - LNI =',I8,5X,  &
-       ' LNF =',I8)
-99031 FORMAT (2F9.3,2F8.2,5I8)
 END PROGRAM IGRF12
 !*==DMDDEC.spg  processed by SPAG 6.72Dc at 01:10 on 10 Feb 2018
 !
@@ -953,95 +600,80 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
   X = 0.0
   Y = 0.0
   Z = 0.0
-  IF ( Date.LT.1900.0 .OR. Date.GT.2025.0 ) THEN
+ 
+  IF ( Date.GE.2015.0 ) THEN
      !
-     !     error return if date out of bounds
+     t = Date - 2015.0
+     tc = 1.0
+     IF ( Isv.EQ.1 ) THEN
+        t = 1.0
+        tc = 0.0
+     ENDIF
      !
-     F = 1.0D8
-     WRITE (6,99001) Date
-99001 FORMAT (/' This subroutine will not work with a date of',f9.3, &
-          '.  Date must be in the range 1900.0.ge.date',         &
-          '.le.2025.0. On return f = 1.0d8., x = y = z = 0.')
-     GOTO 99999
+     !     pointer for last coefficient in pen-ultimate set of MF coefficients...
+     !
+     ll = 3060
+     nmx = 13
+     nc = nmx*(nmx+2)
+     kmx = (nmx+1)*(nmx+2)/2
   ELSE
-     IF ( Date.GT.2020.0 ) WRITE (6,99002) Date
-99002 FORMAT (/' This version of the IGRF is intended for use up',   &
-          ' to 2020.0.'/' values for',f9.3,' will be computed',  &
-          ' but may be of reduced accuracy'/)
-     IF ( Date.GE.2015.0 ) THEN
-        !
-        t = Date - 2015.0
-        tc = 1.0
-        IF ( Isv.EQ.1 ) THEN
-           t = 1.0
-           tc = 0.0
-        ENDIF
-        !
-        !     pointer for last coefficient in pen-ultimate set of MF coefficients...
-        !
-        ll = 3060
-        nmx = 13
+     t = 0.2*(Date-1900.0)
+     ll = t
+     one = ll
+     t = t - one
+     !
+     !     SH models before 1995.0 are only to degree 10
+     !
+     IF ( Date.LT.1995.0 ) THEN
+        nmx = 10
         nc = nmx*(nmx+2)
+        ll = nc*ll
         kmx = (nmx+1)*(nmx+2)/2
      ELSE
-        t = 0.2*(Date-1900.0)
-        ll = t
-        one = ll
-        t = t - one
+        nmx = 13
+        nc = nmx*(nmx+2)
+        ll = 0.2*(Date-1995.0)
         !
-        !     SH models before 1995.0 are only to degree 10
+        !     19 is the number of SH models that extend to degree 10
         !
-        IF ( Date.LT.1995.0 ) THEN
-           nmx = 10
-           nc = nmx*(nmx+2)
-           ll = nc*ll
-           kmx = (nmx+1)*(nmx+2)/2
-        ELSE
-           nmx = 13
-           nc = nmx*(nmx+2)
-           ll = 0.2*(Date-1995.0)
-           !
-           !     19 is the number of SH models that extend to degree 10
-           !
-           ll = 120*19 + nc*ll
-           kmx = (nmx+1)*(nmx+2)/2
-        ENDIF
-        tc = 1.0 - t
-        IF ( Isv.EQ.1 ) THEN
-           tc = -0.2
-           t = 0.2
-        ENDIF
+        ll = 120*19 + nc*ll
+        kmx = (nmx+1)*(nmx+2)/2
      ENDIF
-     r = Alt
-     one = Colat*0.017453292
-     ct = COS(one)
-     st = SIN(one)
-     one = Elong*0.017453292
-     cl(1) = COS(one)
-     sl(1) = SIN(one)
-     cd = 1.0
-     sd = 0.0
-     l = 1
-     m = 1
-     n = 0
-     IF ( Itype.NE.2 ) THEN
-        !
-        !     conversion from geodetic to geocentric coordinates
-        !     (using the WGS84 spheroid)
-        !
-        a2 = 40680631.6
-        b2 = 40408296.0
-        one = a2*st*st
-        two = b2*ct*ct
-        three = one + two
-        rho = SQRT(three)
-        r = SQRT(Alt*(Alt+2.0*rho)+(a2*one+b2*two)/three)
-        cd = (Alt+rho)/r
-        sd = (a2-b2)/rho*ct*st/r
-        one = ct
-        ct = ct*cd - st*sd
-        st = st*cd + one*sd
+     tc = 1.0 - t
+     IF ( Isv.EQ.1 ) THEN
+        tc = -0.2
+        t = 0.2
      ENDIF
+  ENDIF
+  r = Alt
+  one = Colat*0.017453292
+  ct = COS(one)
+  st = SIN(one)
+  one = Elong*0.017453292
+  cl(1) = COS(one)
+  sl(1) = SIN(one)
+  cd = 1.0
+  sd = 0.0
+  l = 1
+  m = 1
+  n = 0
+  IF ( Itype.NE.2 ) THEN
+     !
+     !     conversion from geodetic to geocentric coordinates
+     !     (using the WGS84 spheroid)
+     !
+     a2 = 40680631.6
+     b2 = 40408296.0
+     one = a2*st*st
+     two = b2*ct*ct
+     three = one + two
+     rho = SQRT(three)
+     r = SQRT(Alt*(Alt+2.0*rho)+(a2*one+b2*two)/three)
+     cd = (Alt+rho)/r
+     sd = (a2-b2)/rho*ct*st/r
+     one = ct
+     ct = ct*cd - st*sd
+     st = st*cd + one*sd
   ENDIF
   !
   ratio = 6371.2/r
@@ -1111,4 +743,4 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
   F = SQRT(X*X+Y*Y+Z*Z)
   !
   RETURN
-99999 END SUBROUTINE IGRF12SYN
+END SUBROUTINE IGRF12SYN
