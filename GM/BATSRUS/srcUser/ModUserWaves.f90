@@ -99,7 +99,7 @@ module ModUser
   character (len=200)   :: VarsUpdate
   integer, parameter    :: nVarsUpdateMax = 20
   integer               :: nVarsUpdate
-  character(len=10)     :: VarsUpdate_I(nVarsUpdateMax)
+  character(len=20)     :: VarsUpdate_I(nVarsUpdateMax)
   integer, allocatable  :: iVarsUpdate_I(:)
 
   ! Enable user units of length in input file
@@ -130,7 +130,7 @@ contains
 
     character(len=100) :: NameCommand
     character(len=500) :: StringVar
-    character(len=10)  :: NameVar
+    character(len=20)  :: NameVar
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_read_inputs'
     !--------------------------------------------------------------------------
