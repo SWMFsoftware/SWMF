@@ -1701,7 +1701,6 @@ subroutine StDiTime(dt,vel,volume,rc,re_m,xme,iba)
      enddo
   enddo
   
-  return
 end subroutine StDiTime
 
 
@@ -1726,7 +1725,6 @@ subroutine StrongDiff(iba)
      enddo
   enddo
   
-  return
 end subroutine StrongDiff
 
 !***********************************************************************   
@@ -1760,12 +1758,10 @@ subroutine CalcDecay_cimi(deltaT)
   real DecayRate
   !-----------------------------------------------------------------------
 
-  DecayRate = EXP( -( deltaT / DecayTimescale ) )
+  DecayRate = exp(-deltaT/DecayTimescale)
 
   f2(1:nspec-1,:,:,:,:) = f2(1:nspec-1,:,:,:,:) * DecayRate
 
-  return
-  
 end subroutine CalcDecay_cimi
 
 !-------------------------------------------------------------------------------
@@ -2531,10 +2527,7 @@ subroutine lintp2IM(x,y,v,nx,ny,x1,y1,v1)
   q11=a*b
   v1=q00*v(i,j)+q01*v(i,j1)+q10*v(i1,j)+q11*v(i1,j1)
   
-  return
 end subroutine lintp2IM
-
-
 
 !--------------------------------------------------------------------------
 subroutine locate1IM(xx,n,x,j)
@@ -2638,7 +2631,7 @@ end subroutine locate1IM
 !
       if(b(1).eq.0.)then
         ier = 1
-        return
+        RETURN
       endif
       ier = 0
       bet=b(1)
@@ -2654,7 +2647,7 @@ end subroutine locate1IM
 !
         if(bet.eq.0.)then
           ier = 2
-          return
+          RETURN
         endif
         u(j)=(r(j)-a(j)*u(j-1))/bet
 11    continue
