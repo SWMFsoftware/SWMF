@@ -1668,7 +1668,7 @@ contains
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = pic_find_region(iBlock,i,j,k)
           end do; end do; end do
-       case('netc')
+       case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &
                   sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
@@ -1767,7 +1767,8 @@ contains
           plotvar_inBody(iVar) = plotvar_inBody(iVar)*No2Io_V(UnitP_)
 
           ! EXTRA MHD variables
-       case('n')
+       case('n', 'qtot')
+          ! Number and charge densities
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitN_)
        case('t','temp')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitTemperature_)
@@ -1821,6 +1822,7 @@ contains
     end do ! iVar
 
     call test_stop(NameSub, DoTest, iBlock)
+
   end subroutine dimensionalize_plotvar
   !============================================================================
 
