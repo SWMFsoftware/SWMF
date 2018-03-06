@@ -987,7 +987,8 @@ contains
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use ModMultiFluid, ONLY: extract_fluid_name,   &
          UseMultiIon, nIonFluid, MassIon_I, iPpar, &
-         IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I
+         IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
+         ChargePerMass_I
     use ModWaves, ONLY: UseWavePressure
     use ModLaserHeating, ONLY: LaserHeating_CB
     use ModCurrent, ONLY: get_current
@@ -1666,6 +1667,11 @@ contains
        case('pic')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = pic_find_region(iBlock,i,j,k)
+          end do; end do; end do
+       case('netc')
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             PlotVar(i,j,k,iVar) = &
+                  sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
           end do; end do; end do
 
        case default
