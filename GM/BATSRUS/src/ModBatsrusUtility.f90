@@ -411,7 +411,7 @@ subroutine get_iVar(NameVar, iVar)
   use ModMultiFluid, ONLY: extract_fluid_name, iFluid
   use ModUtilities,  ONLY: lower_case
 
-  character(len=20), intent(inout) :: NameVar
+  character(len=*), intent(inout)  :: NameVar
   integer,intent(out)              :: iVar
 
   integer :: iVarLoop, iError
