@@ -988,7 +988,7 @@ contains
     use ModMultiFluid, ONLY: extract_fluid_name,   &
          UseMultiIon, nIonFluid, MassIon_I, iPpar, &
          IsMhd, iFluid, iRho, iRhoUx, iRhoUy, iRhoUz, iP, iRhoIon_I, &
-         ChargePerMass_I
+         ChargeIon_I
     use ModWaves, ONLY: UseWavePressure
     use ModLaserHeating, ONLY: LaserHeating_CB
     use ModCurrent, ONLY: get_current
@@ -1671,7 +1671,7 @@ contains
        case('qtot')
           do k = 1, nK; do j = 1, nJ; do i = 1, nI
              PlotVar(i,j,k,iVar) = &
-                  sum(ChargePerMass_I*State_VGB(iRhoIon_I,i,j,k,iBlock))
+                  sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
           end do; end do; end do
 
        case default
@@ -1921,6 +1921,8 @@ contains
           NameUnit = trim(NameIdlUnit_V(UnitX_))//'3'
        case('eta','visco')
           NameUnit = 'm2/s'
+       case('qtot')
+          NameUnit = 'e'//NameIdlUnit_V(UnitN_)
        case default
           ! Set default or user defined unit
           NameUnit = NameUnitUserIdl_I(iPlotVar)
