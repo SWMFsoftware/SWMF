@@ -46,9 +46,6 @@ contains
     type(CompInfoType), intent(inout) :: CompInfo   ! component information
 
     character (len=*), parameter :: NameSub='IM_set_param'
-    integer :: iError
-    character (len=100) :: NameCommand
-    logical             :: UseStrict=.true.
 
     !------------------------------------------------------------------------
     UseGm = Couple_CC(GM_, IM_) % DoThis
@@ -94,11 +91,9 @@ contains
 
     use ModCimiGrid,      ONLY: np, nt, xlat, phi
     use ModNumConst,      ONLY: cDegToRad
-    use CON_coupler,      ONLY: set_grid_descriptor, is_proc, IM_
+    use CON_coupler,      ONLY: set_grid_descriptor, IM_
 
     character (len=*), parameter :: NameSub='IM_set_grid'
-    integer :: iSize,jSize
-    real, dimension (:,:), allocatable :: gridLat,gridLT
     real :: Radius_I(1)
     logical :: IsInitialized=.false.
     logical :: DoTest, DoTestMe
@@ -141,7 +136,6 @@ contains
 
   subroutine IM_init_session(iSession, TimeSimulation)
 
-    use ModCimiGrid,      ONLY: np, xlat
     use ModCimi,          ONLY: init_mod_cimi, Time
     use ModCimiTrace,    ONLY: init_mod_field_trace
     use ModImTime
@@ -170,7 +164,7 @@ contains
   subroutine IM_run(TimeSimulation,TimeSimulationLimit)
 
     use CON_time,   ONLY: DoTimeAccurate
-    use ModCimi,    ONLY: Time, dt, dtmax,iProc
+    use ModCimi,    ONLY: dt, dtmax
 
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
     real, intent(inout):: TimeSimulation   ! current time of component
@@ -233,7 +227,7 @@ contains
   subroutine IM_put_from_gm_crcm(Buffer_IIV,BufferKp,iSizeIn,jSizeIn,nVarIn,&
        BufferLine_VI,nVarLine,nPointLine,NameVar,tSimulation)
     use ModGmCIMI
-    use ModCimiGrid,  ONLY: nLat => np, nLon => nt, iProc, nProc
+    use ModCimiGrid,  ONLY: nLat => np, nLon => nt, iProc
     use ModCimiPlanet,ONLY: rEarth => re_m
     use ModTsyInput,  ONLY: xnswa,vswa,bxw,byw,bzw,nsw,iyear,iday,UseSmooth
     use ModPrerunField,ONLY: DoWritePrerun, save_prerun
@@ -248,7 +242,6 @@ contains
     character (len=*),intent(in) :: NameVar
     real, intent(in) :: tSimulation
 
-    real, parameter :: noValue=-99999.
     real :: SwDensMax, SwVelMax, SwDensMin, SwVelMin
     integer :: n,iLat,iLon
     logical :: DoTest, DoTestMe
@@ -361,7 +354,7 @@ contains
     !Solar wind values
     if(IsFirstCall .or. (.not. UseSmooth)) then
        xnswa(1) = Buffer_IIV(1,1,6)*1.0e-6                   !m^-3 -->/cc
-       vswa (1) = sqrt(sum(Buffer_IIV(2:4,1,6)**2.0))*1.0e-3 !m/s-->km/s
+       vswa (1) = sqrt(sum(Buffer_IIV(2:4,1,6)**2))*1.0e-3   !m/s-->km/s
     else
        ! Update Solar wind value, but do not let them change 
        ! more than 5 percent per update
@@ -371,7 +364,7 @@ contains
        SwVelMin  = 0.95*vswa(1)
        xnswa(1) = min(SwDensMax,Buffer_IIV(1,1,6)*1.0e-6)
        xnswa(1) = max(SwDensMin,xnswa(1))
-       vswa(1)  = min(SwVelMax,sqrt(sum(Buffer_IIV(2:4,1,6)**2.0))*1.0e-3)
+       vswa(1)  = min(SwVelMax,sqrt(sum(Buffer_IIV(2:4,1,6)**2))*1.0e-3)
        vswa(1)  = max(SwVelMin,vswa(1))
     endif
     bxw(1) = Buffer_IIV(5,1,6)*1.0e9      !T --> nT
@@ -445,7 +438,6 @@ contains
     ! Puts satellite locations and names from GM into IM.
     use ModImSat, ONLY: nImSats, DoWriteSats, ReadRestartSat, &
          NameSat_I, SatLoc_3I
-    use ModNumConst,   ONLY: cDegToRad
     use ModCimiGrid,   ONLY: iProc
     use ModIoUnit,     ONLY: UnitTmp_
 
@@ -524,7 +516,6 @@ contains
          DoAnisoPressureGMCoupling
     use ModCimiTrace,ONLY: iba
     use ModCimiPlanet,ONLY: nspec,amu_I
-    use ModNumConst,  ONLY: cRadToDeg
     use ModConst,     ONLY: cProtonMass
     use ModIoUnit, ONLY: UnitTmp_
 
@@ -535,11 +526,10 @@ contains
     character (len=*),intent(in)                       :: NameVar
 
     !LOCAL VARIABLES:
-    real :: tSimulation
     integer, parameter :: pres_=1, dens_=2, parpres_=3, bmin_=4,&
          Hpres_=3, Opres_=4, Hdens_=5, Odens_=6
 
-    integer :: i,j,k
+    integer :: i,j
     logical :: DoTest, DoTestMe
     character(len=100) :: NameOut
     !--------------------------------------------------------------------------
@@ -714,7 +704,7 @@ contains
     type(IndexPtrType),intent(in) :: Index
     type(WeightPtrType),intent(in):: Weight
     logical,intent(in)            :: DoAdd
-    integer :: iBlock,i,j
+    integer ::i,j
     !--------------------------------------------------------------------------
     if(nPoint>1)then
        write(*,*)NameSub,': nPoint,iPointStart,Weight=',&
