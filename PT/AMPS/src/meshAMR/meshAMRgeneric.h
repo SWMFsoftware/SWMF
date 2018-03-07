@@ -331,6 +331,8 @@ public:
   cTreeNodeAMR *DomainSurfaceBoundaryList_Prev, *DomainSurfaceBoundaryList_Next;
   #endif
 
+  //the pointer to the next block located at the bottom of the graph's branch
+  cTreeNodeAMR *nextBranchBottomNode;
 
   //the list of the cut-face descriptors
 #if _AMR__CUT_CELL__MODE_ ==  _AMR__CUT_CELL__MODE__ON_
@@ -1097,6 +1099,9 @@ class cMeshAMRgeneric : public cAMRexit {
 public:
   cTreeNodeAMR<cBlockAMR>  *rootTree;
 
+  //the fist node located at the bottom of a graph's branch
+  cTreeNodeAMR<cBlockAMR> *BranchBottomNodeList;
+
   //the stream for output of the mesh diagnisotic information
   FILE *DiagnospticMessageStream;
 
@@ -1859,6 +1864,9 @@ public:
      #endif
 
      nMpiBarrierCalls=0;
+
+     //init the pointer to the first node located at the bottom of the graph's branch
+     BranchBottomNodeList=NULL;
   }
 
   //register the 'internal boundary' (the surface determining cut cells)
@@ -6154,6 +6162,24 @@ if (CallsCounter==83) {
     return res;
   } 
 
+
+  //create a list that connects all blocks located at the bottom of the graph's branches
+  void CreateBottomBranckNodeList(cTreeNodeAMR<cBlockAMR>  *startNode) {
+    if (startNode==rootTree) BranchBottomNodeList=NULL;
+
+    if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      //the node is located at the bottom of a brach -> add it to the list
+      startNode->nextBranchBottomNode=BranchBottomNodeList;
+      BranchBottomNodeList=startNode;
+    }
+    else {
+      cTreeNodeAMR<cBlockAMR> *downNode;
+
+      for (int i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) CreateBottomBranckNodeList(downNode);
+    }
+  }
+
+
   void buildMesh() {
     int level;
     bool flag;
@@ -6185,6 +6211,9 @@ if (CallsCounter==83) {
 
     //determine the resolution limits for each block
     SetNodeNeibResolutionLevelLimit();
+
+    //build the list connecting nodes locaed at the bottom of the graph's branches
+    CreateBottomBranckNodeList(rootTree);
 
     //end function message
     if (rank==0) {
