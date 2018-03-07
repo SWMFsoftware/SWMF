@@ -170,8 +170,8 @@ subroutine CIMI_set_parameters(NameAction)
              call CON_STOP('IsDataInitial only works with EarthHO or EarthH')  
 
      case('#TYPEBOUNDARY')
-        call read_var('TypeBoundary',TypeBoundary)
-        if(TypeBoundary == 'Ellipse') then
+        call read_var('TypeBoundary',TypeBoundary,IsLowerCase=.true.)
+        if(TypeBoundary == 'ellipse') then
            UseEllipse = .true.
         else
            UseEllipse = .false.
