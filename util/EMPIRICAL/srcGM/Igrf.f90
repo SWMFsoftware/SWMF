@@ -1,4 +1,3 @@
-!*==IGRF12.spg  processed by SPAG 6.72Dc at 01:10 on 10 Feb 2018
 program IGRF12
   !
   !     This is a program for synthesising geomagnetic field values from the
@@ -39,13 +38,11 @@ program IGRF12
   !     Adapted for 12th generation
   !
   IMPLICIT NONE
-  !*--IGRF1242
-  !*** Start of declarations inserted by SPAG
   real:: alt, clt, d, date, dd ,df, dh, &
-       dx, dy, dz, f, f1, fact, h, s, x, xln
+       dx, dy, dz, f, f1, fact, h, x, xln
   real::   xlt,   y, z
   INTEGER:: idd , idec , idecm , idf , idh , idx ,    &
-       idy , idz , ih , inc , incm ,  ix
+       idy , idz , ih , ix
   INTEGER:: iy , iz , nf
   !*** End of declarations inserted by SPAG
   fact = 180.0/3.141592654
@@ -54,14 +51,13 @@ program IGRF12
   !
   clt = 90.0 - xlt
   !
-  CALL IGRF12SYN(0,date,1,alt,clt,xln,x,y,z,f)
+  CALL IGRF12SYN(0,date,alt,clt,xln,x,y,z,f)
   d = fact*ATAN2(y,x)
   h = SQRT(x*x+y*y)
-  s = fact*ATAN2(z,h)
+  if(d < 0.0)d = d + 360.0
   CALL DDECDM(d,idec,idecm)
-  CALL DDECDM(s,inc,incm)
   !
-  CALL IGRF12SYN(1,date,1,alt,clt,xln,dx,dy,dz,f1)
+  CALL IGRF12SYN(1,date,alt,clt,xln,dx,dy,dz,f1)
   dd = (60.0*fact*(x*dy-y*dx))/(h*h)
   dh = (x*dx+y*dy)/h
   df = (h*dh+z*dz)/f
@@ -96,22 +92,7 @@ program IGRF12
 99018 FORMAT (' #',15X,'F =',I8,' nT     ',5X,'SV =',I8,' nT/yr          |')
   STOP
 END PROGRAM IGRF12
-!*==DMDDEC.spg  processed by SPAG 6.72Dc at 01:10 on 10 Feb 2018
-!
-SUBROUTINE DMDDEC(I,M,X)
-  IMPLICIT NONE
-  !*--DMDDEC489
-  !*** Start of declarations inserted by SPAG
-  real:: de , em , X
-  INTEGER I , M
-  !*** End of declarations inserted by SPAG
-  de = I
-  em = M
-  IF ( I.LT.0 ) em = -em
-  X = de + em/60.0
-END SUBROUTINE DMDDEC
-!*==DDECDM.spg  processed by SPAG 6.72Dc at 01:10 on 10 Feb 2018
-!
+!==========================
 SUBROUTINE DDECDM(X,I,M)
   IMPLICIT NONE
   !*--DDECDM503
@@ -137,7 +118,8 @@ SUBROUTINE DDECDM(X,I,M)
 END SUBROUTINE DDECDM
 !*==IGRF12SYN.spg  processed by SPAG 6.72Dc at 01:10 on 10 Feb 2018
 
-SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
+SUBROUTINE IGRF12SYN(Isv,Date,Alt,Colat,Elong,X,Y,Z,F)
+  IMPLICIT NONE
   !
   !     This is a synthesis routine for the 12th generation IGRF as agreed
   !     in December 2014 by IAGA Working Group V-MOD. It is valid 1900.0 to
@@ -146,22 +128,25 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
   !   INPUT
   !     isv   = 0 if main-field values are required
   !     isv   = 1 if secular variation values are required
+  integer, intent(in)::isv
   !     date  = year A.D. Must be greater than or equal to 1900.0 and
   !             less than or equal to 2025.0. Warning message is given
   !             for dates greater than 2020.0. Must be double precision.
-  !     itype = 1 if geodetic (spheroid)
-  !     itype = 2 if geocentric (sphere)
+  real, intent(in) :: Date
   !     alt   = height in km above sea level if itype = 1
   !           = distance from centre of Earth in km if itype = 2 (>3485 km)
+  real, intent(in) :: Alt
   !     colat = colatitude (0-180)
+  real, intent(in) :: colat
   !     elong = east-longitude (0-360)
+  real, intent(in)  :: eLong
   !     alt, colat and elong must be double precision.
   !   OUTPUT
   !     x     = north component (nT) if isv = 0, nT/year if isv = 1
   !     y     = east component (nT) if isv = 0, nT/year if isv = 1
   !     z     = vertical component (nT) if isv = 0, nT/year if isv = 1
   !     f     = total intensity (nT) if isv = 0, rubbish if isv = 1
-  !
+  real, intent(out) :: X, Y, Z, F
   !     To get the other geomagnetic elements (D, I, H and secular
   !     variations dD, dH, dI and dF) use routines ptoc and ptocsv.
   !
@@ -177,17 +162,11 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
   !     to even) included as these are the coefficients published in Excel
   !     spreadsheet July 2005.
   !
-  IMPLICIT NONE
-  !*--IGRF12SYN567
-  !*** Start of declarations inserted by SPAG
-  real:: a2 , Alt , b2 , cd , Colat , ct , Date ,    &
-       Elong , F , fm , fn 
-  real::  gmm , gn 
-  INTEGER i , Isv , Itype , j , k , kmx , l , ll , lm , m , n , nc ,&
+  real   :: a2,  b2, cd, ct,  fm, fn, gmm , gn 
+  INTEGER:: i , j , k , kmx , l , ll , lm , m , n , nc ,&
        nmx
   real:: one , r, ratio, rho, rr, sd,   &
-       st , t , tc , three , two , X , Y , Z
-  !*** End of declarations inserted by SPAG
+       st , t , tc , three , two
   real:: gh(3451) , g0(120) , g1(120) , g2(120) , g3(120) ,      &
        g4(120) , g5(120) , g6(120) , g7(120) , g8(120) ,       &
        g9(120) , ga(120) , gb(120) , gc(120) , gd(120) ,       &
@@ -219,7 +198,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
   EQUIVALENCE (gp,gh(2866))
   EQUIVALENCE (gq,gh(3061))
   EQUIVALENCE (gr,gh(3256))
-  !
+  !Year 1900
   DATA g0/ - 31543. , -2298. , 5922. , -677. , 2905. , -1061. ,     &
        924. , 1121. , 1022. , -1469. , -330. , 1256. , 3. , 572. ,  &
        523. , 876. , 628. , 195. , 660. , -69. , -361. , -210. ,    &
@@ -233,6 +212,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        1. , -2. , -2. , 8. , 2. , 10. , -1. , -2. , -1. , 2. , -3. ,&
        -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. , -4. , 4. ,   &
        0. , 0. , -2. , 2. , 4. , 2. , 0. , 0. , -6./
+  !Year 1905
   DATA g1/ - 31464. , -2298. , 5909. , -728. , 2928. , -1086. ,     &
        1041. , 1065. , 1037. , -1494. , -357. , 1239. , 34. , 635. ,&
        480. , 880. , 643. , 203. , 653. , -77. , -380. , -201. ,    &
@@ -246,6 +226,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        12. , -3. , 1. , -2. , -2. , 8. , 2. , 10. , 0. , -2. , -1. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -2. , 2. , 4. , 2. , 0. , 0. , -6./
+  !Year 1910
   DATA g2/ - 31354. , -2297. , 5898. , -769. , 2948. , -1128. ,     &
        1176. , 1000. , 1058. , -1524. , -389. , 1223. , 62. , 705. ,&
        425. , 884. , 660. , 211. , 644. , -90. , -400. , -189. ,    &
@@ -259,6 +240,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        12. , -3. , 1. , -2. , -2. , 8. , 2. , 10. , 0. , -2. , -1. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -2. , 2. , 4. , 2. , 0. , 0. , -6./
+  !Year 1915
   DATA g3/ - 31212. , -2306. , 5875. , -802. , 2956. , -1191. ,     &
        1309. , 917. , 1084. , -1559. , -421. , 1212. , 84. , 778. , &
        360. , 887. , 678. , 218. , 631. , -109. , -416. , -173. ,   &
@@ -272,6 +254,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        12. , -3. , 1. , -2. , -2. , 8. , 2. , 10. , 0. , -2. , -1. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -2. , 1. , 4. , 2. , 0. , 0. , -6./
+  !Year 1920
   DATA g4/ - 31060. , -2317. , 5845. , -839. , 2959. , -1259. ,     &
        1407. , 823. , 1111. , -1600. , -445. , 1205. , 103. , 839. ,&
        293. , 889. , 695. , 220. , 616. , -134. , -424. , -153. ,   &
@@ -285,6 +268,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        12. , -3. , 1. , -2. , -2. , 9. , 2. , 10. , 0. , -2. , -1. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -2. , 1. , 4. , 3. , 0. , 0. , -6./
+  !Year 1925
   DATA g5/ - 30926. , -2318. , 5817. , -893. , 2969. , -1334. ,     &
        1471. , 728. , 1140. , -1645. , -462. , 1202. , 119. , 881. ,&
        229. , 891. , 711. , 216. , 601. , -163. , -426. , -130. ,   &
@@ -298,6 +282,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        12. , -3. , 1. , -2. , -2. , 9. , 2. , 10. , 0. , -2. , -1. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -2. , 1. , 4. , 3. , 0. , 0. , -6./
+  !Year 1930
   DATA g6/ - 30805. , -2316. , 5808. , -951. , 2980. , -1424. ,     &
        1517. , 644. , 1172. , -1692. , -480. , 1205. , 133. , 907. ,&
        166. , 896. , 727. , 205. , 584. , -195. , -422. , -109. ,   &
@@ -311,6 +296,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        12. , -3. , 1. , -2. , -2. , 9. , 3. , 10. , 0. , -2. , -2. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -2. , 1. , 4. , 3. , 0. , 0. , -6./
+  !Year 1935
   DATA g7/ - 30715. , -2306. , 5812. , -1018. , 2984. , -1520. ,    &
        1550. , 586. , 1206. , -1740. , -494. , 1215. , 146. , 918. ,&
        101. , 903. , 744. , 188. , 565. , -226. , -415. , -90. ,    &
@@ -324,6 +310,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        11. , -3. , 1. , -3. , -2. , 9. , 3. , 11. , 0. , -2. , -2. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -1. , 2. , 4. , 3. , 0. , 0. , -6./
+  !Year 1940
   DATA g8/ - 30654. , -2292. , 5821. , -1106. , 2981. , -1614. ,    &
        1566. , 528. , 1240. , -1790. , -499. , 1232. , 163. , 916. ,&
        43. , 914. , 762. , 169. , 550. , -252. , -405. , -72. ,     &
@@ -337,6 +324,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        11. , -3. , 1. , -3. , -2. , 9. , 3. , 11. , 1. , -2. , -2. ,&
        2. , -3. , -4. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 6. ,   &
        -4. , 4. , 0. , 0. , -1. , 2. , 4. , 3. , 0. , 0. , -6./
+  !Year 1945
   DATA g9/ - 30594. , -2285. , 5810. , -1244. , 2990. , -1702. ,    &
        1578. , 477. , 1282. , -1834. , -499. , 1255. , 186. , 913. ,&
        -11. , 944. , 776. , 144. , 544. , -276. , -421. , -55. ,    &
@@ -350,6 +338,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        16. , 4. , -3. , 9. , -4. , 6. , -3. , 1. , -4. , 8. , -3. , &
        11. , 5. , 1. , 1. , 2. , -20. , -5. , -1. , -1. , -6. , 8. ,&
        6. , -1. , -4. , -3. , -2. , 5. , 0. , -2. , -2./
+  !Year 1950
   DATA ga/ - 30554. , -2250. , 5815. , -1341. , 2998. , -1810. ,    &
        1576. , 381. , 1297. , -1889. , -476. , 1274. , 206. , 896. ,&
        -46. , 954. , 792. , 136. , 528. , -278. , -408. , -37. ,    &
@@ -363,6 +352,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        2. , 5. , 2. , -5. , 8. , -2. , 8. , 3. , -11. , 8. , -7. ,  &
        -8. , 4. , 13. , -1. , -2. , 13. , -10. , -4. , 2. , 4. ,    &
        -3. , 12. , 6. , 3. , -3. , 2. , 6. , 10. , 11. , 3. , 8./
+  !Year 1955
   DATA gb/ - 30500. , -2215. , 5820. , -1440. , 3003. , -1898. ,    &
        1581. , 291. , 1302. , -1944. , -462. , 1288. , 216. , 882. ,&
        -83. , 958. , 796. , 133. , 510. , -274. , -397. , -23. ,    &
@@ -376,6 +366,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        2. , 6. , 4. , -2. , 1. , 10. , 2. , 7. , 2. , -6. , 5. ,    &
        5. , -3. , -5. , -4. , -1. , 0. , 2. , -8. , -3. , -2. , 7. ,&
        -4. , 4. , 1. , -2. , -3. , 6. , 7. , -2. , -1. , 0. , -3./
+  !Year 1960
   DATA gc/ - 30421. , -2169. , 5791. , -1555. , 3002. , -1967. ,    &
        1590. , 206. , 1302. , -1992. , -414. , 1289. , 224. , 878. ,&
        -130. , 957. , 800. , 135. , 504. , -278. , -394. , 3. ,     &
@@ -389,6 +380,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        4. , -3. , -1. , 9. , -2. , 8. , 3. , 0. , -1. , 5. , 1. ,   &
        -3. , 4. , 4. , 1. , 0. , 0. , -1. , 2. , 4. , -5. , 6. ,    &
        1. , 1. , -1. , -1. , 6. , 2. , 0. , 0. , -7./
+  !Year 1965
   DATA gd/ - 30334. , -2119. , 5776. , -1662. , 2997. , -2016. ,    &
        1594. , 114. , 1297. , -2038. , -404. , 1292. , 240. , 856. ,&
        -165. , 957. , 804. , 148. , 479. , -269. , -390. , 13. ,    &
@@ -402,6 +394,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        -4. , -1. , -5. , -1. , 10. , 5. , 10. , 1. , -4. , -2. ,    &
        1. , -2. , -3. , 2. , 2. , 1. , -5. , 2. , -2. , 6. , 4. ,   &
        -4. , 4. , 0. , 0. , -2. , 2. , 3. , 2. , 0. , 0. , -6./
+  !Year 1970
   DATA ge/ - 30220. , -2068. , 5737. , -1781. , 3000. , -2047. ,    &
        1611. , 25. , 1287. , -2091. , -366. , 1278. , 251. , 838. , &
        -196. , 952. , 800. , 167. , 461. , -266. , -395. , 26. ,    &
@@ -415,6 +408,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        -4. , -1. , -5. , 0. , 10. , 3. , 11. , 1. , -2. , -1. , 1. ,&
        -3. , -3. , 1. , 2. , 1. , -5. , 3. , -1. , 4. , 6. , -4. ,  &
        4. , 0. , 1. , -1. , 0. , 3. , 3. , 1. , -1. , -4./
+  !Year 1975
   DATA gf/ - 30100. , -2013. , 5675. , -1902. , 3010. , -2067. ,    &
        1632. , -68. , 1276. , -2144. , -333. , 1260. , 262. , 830. ,&
        -223. , 946. , 791. , 191. , 438. , -265. , -405. , 39. ,    &
@@ -428,6 +422,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        -4. , -1. , -5. , -1. , 10. , 4. , 11. , 1. , -3. , -2. ,    &
        1. , -3. , -3. , 1. , 2. , 1. , -5. , 3. , -2. , 4. , 5. ,   &
        -4. , 4. , -1. , 1. , -1. , 0. , 3. , 3. , 1. , -1. , -5./
+  !Year 1980
   DATA gg/ - 29992. , -1956. , 5604. , -1997. , 3027. , -2129. ,    &
        1663. , -200. , 1281. , -2180. , -336. , 1251. , 271. ,      &
        833. , -252. , 938. , 782. , 212. , 398. , -257. , -419. ,   &
@@ -441,6 +436,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        9. , 9. , -5. , -3. , -6. , -1. , 9. , 7. , 10. , 2. , -6. , &
        -5. , 2. , -4. , -4. , 1. , 2. , 0. , -5. , 3. , -2. , 6. ,  &
        5. , -4. , 3. , 0. , 1. , -1. , 2. , 4. , 3. , 0. , 0. , -6./
+  !year 1985
   DATA gi/ - 29873. , -1905. , 5500. , -2072. , 3044. , -2197. ,    &
        1687. , -306. , 1296. , -2208. , -310. , 1247. , 284. ,      &
        829. , -297. , 936. , 780. , 232. , 361. , -249. , -424. ,   &
@@ -454,6 +450,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        9. , -6. , -3. , -6. , -1. , 9. , 7. , 9. , 1. , -7. , -5. , &
        2. , -4. , -4. , 1. , 3. , 0. , -5. , 3. , -2. , 6. , 5. ,   &
        -4. , 3. , 0. , 1. , -1. , 2. , 4. , 3. , 0. , 0. , -6./
+  !Year 1990
   DATA gj/ - 29775. , -1848. , 5406. , -2131. , 3059. , -2279. ,    &
        1686. , -373. , 1314. , -2239. , -284. , 1248. , 293. ,      &
        802. , -352. , 939. , 780. , 247. , 325. , -240. , -423. ,   &
@@ -468,6 +465,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        -6. , 2. , -3. , -4. , 2. , 2. , 1. , -5. , 3. , -2. , 6. ,  &
        4. , -4. , 3. , 0. , 1. , -2. , 3. , 3. , 3. , -1. , 0. ,    &
        -6./
+  !year 1995
   DATA gk/ - 29692. , -1784. , 5306. , -2200. , 3070. , -2366. ,    &
        1681. , -413. , 1335. , -2267. , -262. , 1249. , 302. ,      &
        759. , -427. , 940. , 780. , 262. , 290. , -236. , -418. ,   &
@@ -482,6 +480,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        -8. , -8. , 3. , -3. , -6. , 1. , 2. , 0. , -4. , 4. , -1. , &
        5. , 4. , -5. , 2. , -1. , 2. , -2. , 5. , 1. , 1. , -2. ,   &
        0. , -7. , 75*0./
+  !Year 2000
   DATA gl/ - 29619.4 , -1728.2 , 5186.1 , -2267.7 , 3068.4 ,        &
        -2481.6 , 1670.9 , -458.0 , 1339.6 , -2288.0 , -227.6 ,      &
        1252.1 , 293.4 , 714.5 , -491.1 , 932.3 , 786.8 , 272.6 ,    &
@@ -506,6 +505,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        0.2 , 0.1 , 1.8 , -0.4 , -0.4 , 1.3 , -1.0 , -0.4 , -0.1 ,   &
        0.7 , 0.7 , -0.4 , 0.3 , 0.3 , 0.6 , -0.1 , 0.3 , 0.4 ,      &
        -0.2 , 0.0 , -0.5 , 0.1 , -0.9/
+  !Year 2005
   DATA gm/ - 29554.63 , -1669.05 , 5077.99 , -2337.24 , 3047.69 ,   &
        -2594.50 , 1657.76 , -515.43 , 1336.30 , -2305.83 , -198.86 ,&
        1246.39 , 269.72 , 672.51 , -524.72 , 920.55 , 797.96 ,      &
@@ -533,6 +533,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        1.72 , -0.43 , -0.54 , 1.18 , -1.07 , -0.37 , -0.04 , 0.75 , &
        0.63 , -0.26 , 0.21 , 0.35 , 0.53 , -0.05 , 0.38 , 0.41 ,    &
        -0.22 , -0.10 , -0.57 , -0.18 , -0.82/
+  !Year 2010
   DATA gp/ - 29496.57 , -1586.42 , 4944.26 , -2396.06 , 3026.34 ,   &
        -2708.54 , 1668.17 , -575.73 , 1339.85 , -2326.54 , -160.40 ,&
        1232.10 , 251.75 , 633.73 , -537.03 , 912.66 , 808.97 ,      &
@@ -560,6 +561,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        1.66 , -0.45 , -0.59 , 1.08 , -1.14 , -0.31 , -0.07 , 0.78 , &
        0.54 , -0.18 , 0.10 , 0.38 , 0.49 , 0.02 , 0.44 , 0.42 ,     &
        -0.25 , -0.26 , -0.53 , -0.26 , -0.79/
+  !Year 2015 
   DATA gq/ - 29442.0 , -1501.0 , 4797.1 , -2445.1 , 3012.9 ,        &
        -2845.6 , 1676.7 , -641.9 , 1350.7 , -2352.3 , -115.3 ,      &
        1225.6 , 244.9 , 582.0 , -538.4 , 907.6 , 813.7 , 283.3 ,    &
@@ -584,6 +586,7 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        0.4 , 0.4 , 0.5 , 1.6 , -0.5 , -0.5 , 1.0 , -1.2 , -0.2 ,    &
        -0.1 , 0.8 , 0.4 , -0.1 , -0.1 , 0.3 , 0.4 , 0.1 , 0.5 ,     &
        0.5 , -0.3 , -0.4 , -0.4 , -0.3 , -0.8/
+  !Year 2020 Extrapolation coefficients
   DATA gr/10.3 , 18.1 , -26.6 , -8.7 , -3.3 , -27.4 , 2.1 , -14.1 , &
        3.4 , -5.5 , 8.2 , -0.7 , -0.4 , -10.1 , 1.8 , -0.7 , 0.2 ,  &
        -1.3 , -9.1 , 5.3 , 4.1 , 2.9 , -4.3 , -5.2 , -0.2 , 0.5 ,   &
@@ -593,6 +596,9 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
        -0.2 , 0.1 , -0.3 , -0.6 , -0.6 , -0.8 , 0.1 , 0.2 , -0.2 ,  &
        0.2 , 0.0 , -0.3 , -0.6 , 0.3 , 0.5 , 0.1 , -0.2 , 0.5 ,     &
        0.4 , -0.2 , 0.1 , -0.3 , -0.4 , 0.3 , 0.3 , 0.0 , 115*0.0/
+  !Magnetic dipole in notations of Franz & Harper 2002
+  real :: Dipole_D(3), H11, G11, G10, PoleLong, CosPoleLong, SinPoleLong,&
+        PoleColat, CosPoleColat, SinPoleColat, xMag, yMag, zMag
 
   !
   !     set initial values
@@ -650,31 +656,60 @@ SUBROUTINE IGRF12SYN(Isv,Date,Itype,Alt,Colat,Elong,X,Y,Z,F)
   ct = COS(one)
   st = SIN(one)
   one = Elong*0.017453292
-  cl(1) = COS(one)
-  sl(1) = SIN(one)
+  cl(1) = COS(one)          !cos(Longitude)
+  sl(1) = SIN(one)          !sin(Longitude)
+  if(Isv ==0)then
+     !Report magnetic coordinates
+     Dipole_D = tc*gh(ll+1:ll+3)+t*gh(ll+1+nc:ll+1+nc)
+     H11 = Dipole_D(3)
+     G11 = Dipole_D(2)
+     G10 = Dipole_D(1)
+     !Magnetic pole longitude
+     PoleLong = atan(H11/G11)
+     SinPoleLong = sin(PoleLong)
+     CosPoleLong = cos(PoleLong)
+     !Magnetic pole colatitude
+     PoleColat = atan((G11*CosPoleLong + H11*SinPoleLong)/G10)
+     CosPoleColat = cos(PoleColat)
+     SinPoleColat = sin(PoleColat)
+     !calculate coordinates of direction vector from geo center to the 
+     !observation point while converted to MAG coordinate system
+     !xMag = sin(colat)* cos(PoleColat)*cos(Longitude - PoleLong) -
+     !       cos(colat)*sin(PoleColat)
+     !yMag = sin(colat)* sin(Longitude - PoleLong) -
+     !       cos(colat)*sin(PoleColat)
+     !zMag = cos(colat)*cos(PoleColat) +
+     !       sin(colat)*sin(PoleColat)*cos(Longitude - PoleLong)
+     xMag = st*(cl(1)*CosPoleLong + sl(1)*SinPoleLong)
+     yMag = st*(sl(1)*CosPoleLong - cl(1)*SinPoleLong)
+     zMag = ct*CosPoleColat + xMag*SinPoleColat
+     xMag = xMag*CosPoleColat - ct*SinPoleColat
+     write(6,'(a,f7.3,40X,a)')' # Magnetic Latitude  ',&
+          asin(zMag)/0.017453292,'|'
+     write(6,'(a,f7.3,40X,a)')' # Magnetic Longitude ',&
+          modulo(atan2(yMag,xMag)/0.017453292,360.0),'|'
+  end if
   cd = 1.0
   sd = 0.0
   l = 1
   m = 1
   n = 0
-  IF ( Itype.NE.2 ) THEN
-     !
-     !     conversion from geodetic to geocentric coordinates
-     !     (using the WGS84 spheroid)
-     !
-     a2 = 40680631.6
-     b2 = 40408296.0
-     one = a2*st*st
-     two = b2*ct*ct
-     three = one + two
-     rho = SQRT(three)
-     r = SQRT(Alt*(Alt+2.0*rho)+(a2*one+b2*two)/three)
-     cd = (Alt+rho)/r
-     sd = (a2-b2)/rho*ct*st/r
-     one = ct
-     ct = ct*cd - st*sd
-     st = st*cd + one*sd
-  ENDIF
+  !
+  !     conversion from geodetic to geocentric coordinates
+  !     (using the WGS84 spheroid)
+  !
+  a2 = 40680631.6
+  b2 = 40408296.0
+  one = a2*st*st
+  two = b2*ct*ct
+  three = one + two
+  rho = SQRT(three)
+  r = SQRT(Alt*(Alt+2.0*rho)+(a2*one+b2*two)/three)
+  cd = (Alt+rho)/r
+  sd = (a2-b2)/rho*ct*st/r
+  one = ct
+  ct = ct*cd - st*sd
+  st = st*cd + one*sd
   !
   ratio = 6371.2/r
   rr = ratio*ratio
