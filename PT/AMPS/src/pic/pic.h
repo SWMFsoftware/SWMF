@@ -2370,15 +2370,14 @@ namespace PIC {
        char *associatedDataPointer;
        char FlagTable;
 
-       //set and read 'active flag': zero's bit of the 'FlagTable'
-       bool TestActiveFlag() {
-         char mask=1;
-
+       //set and test the flags
+       bool TestFlag(int ibit) {
+         char mask=1<<ibit;
          return (FlagTable&mask!=0) ? true : false;
        }
 
-       void SetActiveFlag(bool flag) {
-         char mask=1;
+       void SetFlag(bool flag,int ibit) {
+         char mask=1<<ibit;
 
          if (flag==true) {
            FlagTable|=mask;
@@ -2389,45 +2388,18 @@ namespace PIC {
          }
        }
 
+       //set and read 'active flag': zero's bit of the 'FlagTable'
+       bool TestActiveFlag() {return TestFlag(0);}
+       void SetActiveFlag(bool flag) {SetFlag(flag,0);}
 
        //subdomain modifiable flag: the corner node can be modified with in the subdomain (it does not at the 'right' boundary of any block that are located at the boundary of the subdomain
        //First bit of the 'FlagTable'
-       bool TestSubDomainModifiableFlag() {
-         char mask=1<<1;
-
-         return (FlagTable&mask!=0) ? true : false;
-       }
-
-       void SetSubDomainModifiableFlag(bool flag) {
-         char mask=1<<1;
-
-         if (flag==true) {
-           FlagTable|=mask;
-         }
-         else {
-           mask=~mask;
-           FlagTable&=mask;
-         }
-       }
+       bool TestSubDomainModifiableFlag() {return TestFlag(1);}
+       void SetSubDomainModifiableFlag(bool flag) {SetFlag(flag,1);}
 
        //'processed' flag (third bit of 'FlagTable')
-       bool TestProcessedFlag() {
-         char mask=1<<2;
-
-         return (FlagTable&mask!=0) ? true : false;
-       }
-
-       void SetProcessedFlag(bool flag) {
-         char mask=1<<2;
-
-         if (flag==true) {
-           FlagTable|=mask;
-         }
-         else {
-           mask=~mask;
-           FlagTable&=mask;
-         }
-       }
+       bool TestProcessedFlag() {return TestFlag(2);}
+       void SetProcessedFlag(bool flag) {SetFlag(flag,2);}
 
 
 //       #if _PIC_LINEAR_SOLVER_MODE_ == _PIC_MODE_ON_
