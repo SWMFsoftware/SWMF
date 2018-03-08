@@ -214,8 +214,6 @@ void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
     }
   }
 
-  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
-
   //second pass of the data exchange
   iDataExchangePass=1;
 
@@ -232,6 +230,8 @@ void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
       }
     }
   }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
 
   //update the associated data in the subdomain 'boundary layer' of blocks
   PIC::Mesh::mesh.ParallelBlockDataExchange();
