@@ -6164,7 +6164,7 @@ if (CallsCounter==83) {
 
 
   //create a list that connects all blocks located at the bottom of the graph's branches
-  void CreateBottomBranckNodeList(cTreeNodeAMR<cBlockAMR>  *startNode) {
+  void CreateBottomBranchNodeList(cTreeNodeAMR<cBlockAMR>  *startNode) {
     if (startNode==rootTree) BranchBottomNodeList=NULL;
 
     if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
@@ -6175,7 +6175,7 @@ if (CallsCounter==83) {
     else {
       cTreeNodeAMR<cBlockAMR> *downNode;
 
-      for (int i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) CreateBottomBranckNodeList(downNode);
+      for (int i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) CreateBottomBranchNodeList(downNode);
     }
   }
 
@@ -6213,7 +6213,7 @@ if (CallsCounter==83) {
     SetNodeNeibResolutionLevelLimit();
 
     //build the list connecting nodes locaed at the bottom of the graph's branches
-    CreateBottomBranckNodeList(rootTree);
+    CreateBottomBranchNodeList(rootTree);
 
     //end function message
     if (rank==0) {
@@ -7968,6 +7968,9 @@ nMPIops++;
 
     //determine the range of a block neighbor's relution level
     SetNodeNeibResolutionLevelLimit();
+
+    //build the list connecting nodes locaed at the bottom of the graph's branches
+    CreateBottomBranchNodeList(rootTree);
   }
 
   //create the memory allocation report
