@@ -2368,7 +2368,67 @@ namespace PIC {
        static int totalAssociatedDataLength;
 
        char *associatedDataPointer;
-       bool ActiveFlag;
+       char FlagTable;
+
+       //set and read 'active flag': zero's bit of the 'FlagTable'
+       bool TestActiveFlag() {
+         char mask=1;
+
+         return (FlagTable&mask!=0) ? true : false;
+       }
+
+       void SetActiveFlag(bool flag) {
+         char mask=1;
+
+         if (flag==true) {
+           FlagTable|=mask;
+         }
+         else {
+           mask=~mask;
+           FlagTable&=mask;
+         }
+       }
+
+
+       //subdomain modifiable flag: the corner node can be modified with in the subdomain (it does not at the 'right' boundary of any block that are located at the boundary of the subdomain
+       //First bit of the 'FlagTable'
+       bool TestSubDomainModifiableFlag() {
+         char mask=1<<1;
+
+         return (FlagTable&mask!=0) ? true : false;
+       }
+
+       void SetSubDomainModifiableFlag(bool flag) {
+         char mask=1<<1;
+
+         if (flag==true) {
+           FlagTable|=mask;
+         }
+         else {
+           mask=~mask;
+           FlagTable&=mask;
+         }
+       }
+
+       //'processed' flag (third bit of 'FlagTable')
+       bool TestProcessedFlag() {
+         char mask=1<<2;
+
+         return (FlagTable&mask!=0) ? true : false;
+       }
+
+       void SetProcessedFlag(bool flag) {
+         char mask=1<<2;
+
+         if (flag==true) {
+           FlagTable|=mask;
+         }
+         else {
+           mask=~mask;
+           FlagTable&=mask;
+         }
+       }
+
 
 //       #if _PIC_LINEAR_SOLVER_MODE_ == _PIC_MODE_ON_
        //the local index of the variables saved in the cornes state vector. Used only with the linear equation solver
@@ -2404,7 +2464,8 @@ namespace PIC {
 
       cDataCornerNode() : cBasicCornerNode() {
         associatedDataPointer=NULL;
-        ActiveFlag=false;
+        SetActiveFlag(false);
+        SetSubDomainModifiableFlag(false);
       }
     };
   
@@ -3495,8 +3556,15 @@ namespace PIC {
      //exchenge paricles between iterations
      void ExchangeParticleData();
 
+     //process the corner node associated data for nodes located at the boundary of the subdomain and at the boundary of the computational domain
+     void ProcessCornerBlockBoundaryNodes();
+
      //Latency of the run
      extern double Latency;
+
+     //processing 'corner' and 'center' node associated data vectors when perform syncronization
+     typedef void (*fUserDefiendProcessNodeAssociatedData)(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+     extern fUserDefiendProcessNodeAssociatedData ProcessCenterNodeAssociatedData,ProcessCornerNodeAssociatedData,CopyCenterNodeAssociatedData,CopyCornerNodeAssociatedData;
   }
 
   namespace Debugger {
@@ -4973,6 +5041,8 @@ namespace PIC {
         void InitBlockPairTable();
 
         //functions for exchanging of the information between the real and ghost blocks
+        extern int iDataExchangePass; //data exchange is performed in 2 passes
+
         void ExchangeBlockDataMPI(cBlockPairTable& BlockPair);
         void ExchangeBlockDataLocal(cBlockPairTable& BlockPair);
 
@@ -4985,12 +5055,13 @@ namespace PIC {
         double GetHighestRequestedBoundaryResolution(int SamplingPoints);
         void GetBoundaryExtensionLength();
 
-        //user-defined function that process the associated data vectors of the 'real' and 'ghost' cells. Result need to be saved in 'RealAssociatedData'
-        typedef void (*fUserProcessBoundaryNodeAssociatedData)(char *RealBlockAssociatedData,char *GhostBlockAssociatedData);
-        extern fUserProcessBoundaryNodeAssociatedData ProcessCenterNodeAssociatedData,ProcessCornerNodeAssociatedData;
-
         //manager of the information update between the real and ghost blocks
         void UpdateData();
+
+        //send particles from 'ghost' to 'real' blocks
+        void ExchangeParticles();
+        void ExchangeParticlesMPI(cBlockPairTable& BlockPair);
+        void ExchangeParticlesLocal(cBlockPairTable& BlockPair);
 
         //pointer to user-defined local resolution function
         typedef double (*fUserResolutionFunction)(double*);
