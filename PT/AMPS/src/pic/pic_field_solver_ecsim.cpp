@@ -921,9 +921,9 @@ void UpdateJMassMatrix(){
     break;
     
   case _PIC_BC__PERIODIC_MODE_ON_:
-    PIC::BC::ExternalBoundary::Periodic::ProcessCornerNodeAssociatedData=PIC::FieldSolver::Electromagnetic::ECSIM::ProcessPeriodicJMassMatrix;    
+    PIC::Parallel::ProcessCornerNodeAssociatedData=PIC::FieldSolver::Electromagnetic::ECSIM::ProcessPeriodicJMassMatrix;    
     PIC::BC::ExternalBoundary::Periodic::UpdateData();
-    PIC::BC::ExternalBoundary::Periodic::ProcessCornerNodeAssociatedData=NULL;
+    PIC::Parallel::ProcessCornerNodeAssociatedData=NULL;
     break;
   }
 
