@@ -33,12 +33,11 @@ int PIC::BC::ExternalBoundary::Periodic::BlockPairTableLength=0;
 //thecommunication channel for message exchange between MPI processes
 CMPI_channel PIC::BC::ExternalBoundary::Periodic::pipe;
 
-//user-defined function that process the srtate vectors of the 'real' and 'ghost' cells
-PIC::BC::ExternalBoundary::Periodic::fUserProcessBoundaryNodeAssociatedData PIC::BC::ExternalBoundary::Periodic::ProcessCenterNodeAssociatedData=NULL;
-PIC::BC::ExternalBoundary::Periodic::fUserProcessBoundaryNodeAssociatedData PIC::BC::ExternalBoundary::Periodic::ProcessCornerNodeAssociatedData=NULL;
+//there are two passes of the information exchange
+int PIC::BC::ExternalBoundary::Periodic::iDataExchangePass=0;
 
-//update data between the 'real' and 'ghost' blocks
-void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
+//mode particle between 'real' and 'ghost' blocks
+void PIC::BC::ExternalBoundary::Periodic::ExchangeParticles() {
   int iBlockPair,RealBlockThread,GhostBlockThread;
 
   //loop through all block pairs
@@ -48,30 +47,26 @@ void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
 
     if ((GhostBlockThread==PIC::ThisThread)||(RealBlockThread==PIC::ThisThread)) {
       if (GhostBlockThread==RealBlockThread) {
-        ExchangeBlockDataLocal(BlockPairTable[iBlockPair]);
+        ExchangeParticlesLocal(BlockPairTable[iBlockPair]);
       }
       else {
-        ExchangeBlockDataMPI(BlockPairTable[iBlockPair]);
+        ExchangeParticlesMPI(BlockPairTable[iBlockPair]);
       }
     }
   }
-
-  //update the associated data in the subdomain 'boundary layer' of blocks
-  PIC::Mesh::mesh.ParallelBlockDataExchange();
 }
 
-//process the data update for the 'ghost' block
-void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable& BlockPair) {
+void PIC::BC::ExternalBoundary::Periodic::ExchangeParticlesLocal(cBlockPairTable& BlockPair) {
   int i,j,k,idim;
   long int ptr,NextPtr;
   double *x;
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *GhostBlock=BlockPair.GhostBlock;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *RealBlock=BlockPair.RealBlock;
-  
+
   double dx[3]; //displacement from realblock to ghostbloock
   for (int i=0;i<3;i++) dx[i]=RealBlock->xmin[i]-GhostBlock->xmin[i];
-  
+
   //attach particle list from the 'ghost' block to the 'real block'
   for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) if ((ptr=GhostBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)])!=-1) {
     //find the last particle in the block
@@ -104,44 +99,9 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
     RealBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=GhostBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
     GhostBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
   }
-
-  //copy the associated data from 'RealBlock' to the 'GhostBlock
-  PIC::Mesh::cDataCenterNode *CenterNodeGhostBlock,*CenterNodeRealBlock;
-
-  for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-    CenterNodeGhostBlock=GhostBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
-    CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
-
-    if ((CenterNodeGhostBlock!=NULL)&&(CenterNodeGhostBlock!=NULL)) {
-      if (ProcessCenterNodeAssociatedData!=NULL) ProcessCenterNodeAssociatedData(CenterNodeRealBlock->GetAssociatedDataBufferPointer(),CenterNodeGhostBlock->GetAssociatedDataBufferPointer());
-
-      memcpy(CenterNodeGhostBlock->GetAssociatedDataBufferPointer(),CenterNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
-    }
-    else if ( ((CenterNodeGhostBlock!=NULL)&&(CenterNodeRealBlock==NULL)) || ((CenterNodeGhostBlock==NULL)&&(CenterNodeRealBlock!=NULL)) ) {
-      exit(__LINE__,__FILE__,"Error: center node distribution in the \"ghost\" and \"real\" blocks is inconsistent");
-    }
-  }
-
-  //copy the 'corner' node's associated data
-  PIC::Mesh::cDataCornerNode *CornerNodeGhostBlock,*CornerNodeRealBlock;
-
-  //corner nodes with indicies [0,_BLOCK_CELLS_?_-1] are considered modifiable in the block
-  for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-    CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
-    CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
-
-    if ((CornerNodeGhostBlock!=NULL)&&(CornerNodeGhostBlock!=NULL)) {
-      if (ProcessCornerNodeAssociatedData!=NULL) ProcessCornerNodeAssociatedData(CornerNodeRealBlock->GetAssociatedDataBufferPointer(),CornerNodeGhostBlock->GetAssociatedDataBufferPointer());
-
-      memcpy(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
-    }
-    else if ( ((CornerNodeGhostBlock!=NULL)&&(CornerNodeRealBlock==NULL)) || ((CornerNodeGhostBlock==NULL)&&(CornerNodeRealBlock!=NULL)) ) {
-      exit(__LINE__,__FILE__,"Error: corner node distribution in the \"ghost\" and \"real\" blocks is inconsistent");
-    }
-  }
 }
 
-void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& BlockPair) {
+void PIC::BC::ExternalBoundary::Periodic::ExchangeParticlesMPI(cBlockPairTable& BlockPair) {
   int i,j,k;
   long int ptr,NewParticle,NextPtr;
 
@@ -180,7 +140,7 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
         PIC::ParticleBuffer::DeleteParticle_withoutTrajectoryTermination(ptr,true);
         ptr=NextPtr;
       }
-   
+
       GhostBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
     }
 
@@ -227,47 +187,233 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& 
 
   //flush the pipe
   pipe.flush();
+}
+
+
+//update data between the 'real' and 'ghost' blocks
+void PIC::BC::ExternalBoundary::Periodic::UpdateData() {
+  int iBlockPair,RealBlockThread,GhostBlockThread;
+
+  //exchange particle data
+  ExchangeParticles();
+
+  //first pass of the data exchange
+  iDataExchangePass=0;
+
+  for (iBlockPair=0;iBlockPair<BlockPairTableLength;iBlockPair++) {
+    GhostBlockThread=BlockPairTable[iBlockPair].GhostBlock->Thread;
+    RealBlockThread=BlockPairTable[iBlockPair].RealBlock->Thread;
+
+    if ((GhostBlockThread==PIC::ThisThread)||(RealBlockThread==PIC::ThisThread)) {
+      if (GhostBlockThread==RealBlockThread) {
+        ExchangeBlockDataLocal(BlockPairTable[iBlockPair]);
+      }
+      else {
+        ExchangeBlockDataMPI(BlockPairTable[iBlockPair]);
+      }
+    }
+  }
+
+  MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
+
+  //second pass of the data exchange
+  iDataExchangePass=1;
+
+  for (iBlockPair=0;iBlockPair<BlockPairTableLength;iBlockPair++) {
+    GhostBlockThread=BlockPairTable[iBlockPair].GhostBlock->Thread;
+    RealBlockThread=BlockPairTable[iBlockPair].RealBlock->Thread;
+
+    if ((GhostBlockThread==PIC::ThisThread)||(RealBlockThread==PIC::ThisThread)) {
+      if (GhostBlockThread==RealBlockThread) {
+        ExchangeBlockDataLocal(BlockPairTable[iBlockPair]);
+      }
+      else {
+        ExchangeBlockDataMPI(BlockPairTable[iBlockPair]);
+      }
+    }
+  }
+
+  //update the associated data in the subdomain 'boundary layer' of blocks
+  PIC::Mesh::mesh.ParallelBlockDataExchange();
+}
+
+//process the data update for the 'ghost' block
+void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable& BlockPair) {
+  int i,j,k,idim;
+
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *GhostBlock=BlockPair.GhostBlock;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *RealBlock=BlockPair.RealBlock;
+  
+  //copy the associated data from 'RealBlock' to the 'GhostBlock
+  PIC::Mesh::cDataCenterNode *CenterNodeGhostBlock,*CenterNodeRealBlock;
+  PIC::Mesh::cDataCornerNode *CornerNodeGhostBlock,*CornerNodeRealBlock;
+
+
+  switch (iDataExchangePass) {
+  case 0:
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+      CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+
+      if ((CornerNodeGhostBlock!=NULL)&&(CornerNodeGhostBlock!=NULL)) {
+        if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) {
+          PIC::Parallel::ProcessCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer());
+        }
+        else {
+          if (PIC::Parallel::CopyCornerNodeAssociatedData!=NULL) {
+            PIC::Parallel::CopyCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer());
+          }
+          else{
+            memcpy(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+          }
+        }
+      }
+      else if ( ((CornerNodeGhostBlock!=NULL)&&(CornerNodeRealBlock==NULL)) || ((CornerNodeGhostBlock==NULL)&&(CornerNodeRealBlock!=NULL)) ) {
+        exit(__LINE__,__FILE__,"Error: corner node distribution in the \"ghost\" and \"real\" blocks is inconsistent");
+      }
+    }
+
+    break;
+  case 1:
+    //copy the "right" boundary of the "real" block AND copy the "center" node associated data
+    for (k=1;k<_BLOCK_CELLS_Z_+1;k++) for (j=1;j<_BLOCK_CELLS_Y_+1;j++) for (i=1;i<_BLOCK_CELLS_X_+1;i++) {
+      CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+      CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+
+      if ((CornerNodeGhostBlock!=NULL)&&(CornerNodeGhostBlock!=NULL)) {
+        if (PIC::Parallel::CopyCornerNodeAssociatedData!=NULL) {
+          PIC::Parallel::CopyCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeGhostBlock->GetAssociatedDataBufferPointer());
+        }
+        else {
+          memcpy(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+        }
+      }
+      else if ( ((CornerNodeGhostBlock!=NULL)&&(CornerNodeRealBlock==NULL)) || ((CornerNodeGhostBlock==NULL)&&(CornerNodeRealBlock!=NULL)) ) {
+        exit(__LINE__,__FILE__,"Error: corner node distribution in the \"ghost\" and \"real\" blocks is inconsistent");
+      }
+    }
+
+
+    //copy content of the "center" nodes
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      CenterNodeGhostBlock=GhostBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+      CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+
+      if ((CenterNodeGhostBlock!=NULL)&&(CenterNodeGhostBlock!=NULL)) {
+        if (PIC::Parallel::CopyCenterNodeAssociatedData!=NULL) {
+          PIC::Parallel::CopyCenterNodeAssociatedData(CenterNodeRealBlock->GetAssociatedDataBufferPointer(),CenterNodeGhostBlock->GetAssociatedDataBufferPointer());
+        }
+        else {
+          memcpy(CenterNodeGhostBlock->GetAssociatedDataBufferPointer(),CenterNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+        }
+      }
+      else if ( ((CenterNodeGhostBlock!=NULL)&&(CenterNodeRealBlock==NULL)) || ((CenterNodeGhostBlock==NULL)&&(CenterNodeRealBlock!=NULL)) ) {
+        exit(__LINE__,__FILE__,"Error: center node distribution in the \"ghost\" and \"real\" blocks is inconsistent");
+      }
+    }
+
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is unknoen");
+  }
+
+}
+
+void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataMPI(cBlockPairTable& BlockPair) {
+  int i,j,k;
+  int GhostBlockThread=BlockPair.GhostBlock->Thread;
+  int RealBlockThread=BlockPair.RealBlock->Thread;
+
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *GhostBlock=BlockPair.GhostBlock;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *RealBlock=BlockPair.RealBlock;
 
   //send the associated buffer data from the 'real' to 'ghost' blocks
   PIC::Mesh::cDataCenterNode *CenterNodeGhostBlock,*CenterNodeRealBlock;
   PIC::Mesh::cDataCornerNode *CornerNodeGhostBlock,*CornerNodeRealBlock;
 
- 
-  if (GhostBlockThread==PIC::ThisThread) {
-    pipe.RedirectRecvBuffer(RealBlockThread);
+  //temporary associated data buffer
+  char tempCornerNodeAssociatedData[PIC::Mesh::cDataCornerNode::totalAssociatedDataLength],*AssociatedDataPointer;
+  MPI_Status status;
 
-    //recv 'center' nodes
+  switch (iDataExchangePass) {
+  case 0:
     for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      CenterNodeGhostBlock=GhostBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
-      pipe.recv((char*)(CenterNodeGhostBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength,RealBlockThread);
+     if (GhostBlockThread==PIC::ThisThread) {
+        CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+
+        MPI_Recv(tempCornerNodeAssociatedData,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_CHAR,RealBlockThread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+
+        if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) {
+          PIC::Parallel::ProcessCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),tempCornerNodeAssociatedData);
+        }
+        else {
+          if (PIC::Parallel::CopyCornerNodeAssociatedData!=NULL) {
+            PIC::Parallel::CopyCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),tempCornerNodeAssociatedData);
+          }
+          else{
+            memcpy(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),tempCornerNodeAssociatedData,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+          }
+        }
+      }
+      else if (RealBlockThread==PIC::ThisThread) {
+        CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+        AssociatedDataPointer=CornerNodeRealBlock->GetAssociatedDataBufferPointer();
+
+        MPI_Send(AssociatedDataPointer,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_CHAR,GhostBlockThread,0,MPI_GLOBAL_COMMUNICATOR);
+      }
     }
 
-    //recv 'corner' nodes
-    //the limits are correct
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
-      pipe.recv((char*)(CornerNodeGhostBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,RealBlockThread);
+    break;
+  case 1:
+    //copy the "right" boundary of the "real" block AND copy the "center" node associated data
+    //copy the boundary from the 'ghost' block
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) if ((i==_BLOCK_CELLS_X_)||(j==_BLOCK_CELLS_Y_)||(k==_BLOCK_CELLS_Z_)) {
+     if (GhostBlockThread==PIC::ThisThread) {
+        CornerNodeGhostBlock=GhostBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+
+        MPI_Recv(tempCornerNodeAssociatedData,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_CHAR,RealBlockThread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+
+        if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) {
+          PIC::Parallel::ProcessCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),tempCornerNodeAssociatedData);
+        }
+        else {
+          if (PIC::Parallel::CopyCornerNodeAssociatedData!=NULL) {
+            PIC::Parallel::CopyCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),tempCornerNodeAssociatedData);
+          }
+          else{
+            memcpy(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),tempCornerNodeAssociatedData,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+          }
+        }
+      }
+      else if (RealBlockThread==PIC::ThisThread) {
+        CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+        AssociatedDataPointer=CornerNodeRealBlock->GetAssociatedDataBufferPointer();
+
+        MPI_Send(AssociatedDataPointer,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_CHAR,GhostBlockThread,0,MPI_GLOBAL_COMMUNICATOR);
+      }
     }
+
+
+    //copy content of the "center" nodes
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      if (GhostBlockThread==PIC::ThisThread) {
+        CenterNodeGhostBlock=GhostBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+        AssociatedDataPointer=CenterNodeGhostBlock->GetAssociatedDataBufferPointer();
+
+        MPI_Recv(AssociatedDataPointer,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength,MPI_CHAR,RealBlockThread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+      }
+      else if (RealBlockThread==PIC::ThisThread) {
+        CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+        AssociatedDataPointer=CenterNodeRealBlock->GetAssociatedDataBufferPointer();
+
+        MPI_Send(AssociatedDataPointer,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength,MPI_CHAR,GhostBlockThread,0,MPI_GLOBAL_COMMUNICATOR);
+      }
+    }
+
+    break;
+  default:
+    exit(__LINE__,__FILE__,"Error: the option is unknoen");
   }
-  else if (RealBlockThread==PIC::ThisThread) {
-    pipe.RedirectSendBuffer(GhostBlockThread);
-
-    //send 'center' nodes
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
-      pipe.send((char*)(CenterNodeRealBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
-    }
-
-    //send 'corner' nodes
-    //the limits are correct 
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
-      pipe.send((char*)(CornerNodeRealBlock->GetAssociatedDataBufferPointer()),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
-    }
-  }
-
-  //flush the pipe
-  pipe.flush();
 }
 
 
