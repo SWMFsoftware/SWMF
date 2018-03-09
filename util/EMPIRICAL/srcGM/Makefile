@@ -20,7 +20,6 @@ LIB:
 	@echo
 	@echo ${MY_LIB} has been brought up to date.
 	@echo
-	make IGRF
 
 ${MY_LIB}: ${OBJECTS}
 	rm -f ${MY_LIB}
