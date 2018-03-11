@@ -2368,7 +2368,28 @@ namespace PIC {
        static int totalAssociatedDataLength;
 
        char *associatedDataPointer;
-       char FlagTable;
+       unsigned char FlagTable;
+       static unsigned char FlagTableStatusVector;
+
+       //reserve and release flag
+       static bool CheckoutFlag(int ibit) {
+         char mask=1<<ibit;
+         bool res=false;
+
+         if (FlagTableStatusVector&mask==0) {
+           FlagTableStatusVector|=mask;
+           res=true;
+         }
+
+         return res;
+       }
+
+       static void ReleaseFlag(int ibit) {
+         char mask=1<<ibit;
+
+         mask=~mask;
+         FlagTableStatusVector&=mask;
+       }
 
        //set and test the flags
        bool TestFlag(int ibit) {

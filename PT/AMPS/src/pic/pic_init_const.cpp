@@ -43,3 +43,6 @@ int PIC::ModelTestRun::nTotalIteraction=-1;
 //the path to the input data of the user model
 char PIC::UserModelInputDataPath[_MAX_STRING_LENGTH_PIC_]="/Users/dborovik/AMPS_dev/new_sampling_generic/AMPS/data/input/SEP3D";
 
+//the default value of the status vector
+unsigned char PIC::Mesh::cDataCornerNode::FlagTableStatusVector=0b111;
+
