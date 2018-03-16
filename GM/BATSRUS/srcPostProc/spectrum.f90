@@ -990,6 +990,9 @@ contains
           IsResponseFunction = .true.
           call read_var('NameResponseFunctionFile', NameResponseFunctionFile)
 
+       case("#PROTONELECTRONRATIO")
+          call read_var('ProtonElectronRatio',ProtonElectronRatio)
+
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
 
