@@ -383,11 +383,14 @@ contains
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
        nWavelengthBin = nint((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
-       allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
-            nWavelengthBin))
+       if(.not. IsResponseFunction)then
+          allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
+               nWavelengthBin))
+          SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
+       end if
        allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(&
             nWavelengthBin+1))
-       SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
+       
        SpectrumTable_I(iWavelengthinterval)%nBin=nBin
        do iWavelengthBin=1,nWavelengthBin+1
           ! Values of each wavelength bin correspond to the center of the bin
@@ -400,7 +403,7 @@ contains
        allocate(LOSImage_II(n2,n3))
        LOSImage_II = 0.0
     endif
-    
+
   end subroutine set_data_block
   !==========================================================================
   subroutine save_all
@@ -449,7 +452,7 @@ contains
     if(IsResponseFunction)then
        call save_plot_file(NameFile = NameSpectrumFile, &
             TypeFileIn     = 'ascii',      &
-            StringHeaderIn = '[DN]',  &
+            StringHeaderIn = '[DN/s]',  &
             NameVarIn      = "x y Intensity",     &
             nDimIn         = 2,                     &
             CoordMinIn_D   = CoordMin_D(2:3),            &
@@ -694,7 +697,7 @@ contains
              ! Solid angle obtained by the emitting surface at 1AU distance
              ! dOmega = dy*dz / (1.496e11)**2
 
-             ! dVperd2/dOmega = dx * 1e2
+             ! dVperd2/dOmega = dx * 1e2 or dx in CGS
 
              FluxMono = Gint * (10.0**LogNe)**2 / (4*cPi) * dx
 
@@ -804,7 +807,7 @@ contains
           end do
           LOSImage_II(jPixel,kPixel) = &
                LOSImage_II(jPixel,kPixel) + Flux * ResponseFactor_I(jBin) * &
-               (ResponseLambda_I(2)-ResponseLambda_I(1))
+               SizeWavelengthBin
        else
 
           ! Update bin with flux
@@ -1084,7 +1087,7 @@ contains
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
        nWavelengthBin = nint((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
-       if(.not.IsResponseFunction)then
+       if(.not. IsResponseFunction)then
           allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
                nWavelengthBin))
           SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
