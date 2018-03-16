@@ -274,6 +274,7 @@ contains
        call check_particle_location(KindRay_, iParticle,&
             DoMove=DoMove, IsGone = IsGone)
        if(IsGone)then
+          call mark_undefined(KindRay_,iParticle)
           IsEndOfSegment = .true.
           RETURN
        elseif(DoMove)then

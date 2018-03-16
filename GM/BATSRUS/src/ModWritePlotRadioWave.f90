@@ -306,7 +306,7 @@ contains
   !============================================================================
 
   subroutine parse_freq_string(NameVarAll, Frequency_I, NameVar_I, nFreq)
-
+    use ModProcMH, ONLY: iProc
     use ModIO, ONLY: nPlotRfrFreqMax
 
     !\
@@ -394,6 +394,14 @@ contains
     ! Just in case: make all the frequencies positive
     !/
     Frequency_I = abs(Frequency_I)
+    if(iProc/=0)then
+       !\
+       ! Do need NameVar_V, just initialize it
+       !/
+       do iFreq = 1, nFreq; NameVar_I(iFreq)=' '; end do
+       call test_stop(NameSub, DoTest)
+       RETURN
+    end if
 
     !
     ! Create standard frequency value array
