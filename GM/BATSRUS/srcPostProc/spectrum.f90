@@ -5,7 +5,6 @@ program spectrum
 
   use ModMPI
 
-
   implicit none
 
   ! MPI variables
@@ -28,13 +27,19 @@ program spectrum
 
   real                        :: LogTeMin = 3.
 
+  ! Variables for LOS image reconstruction
+  logical                     :: IsResponseFunction = .false.
+  character(len=200)          :: NameResponseFunctionFile = 'response.out'
+  real, allocatable           :: ResponseLambda_I(:), ResponseFactor_I(:), &
+       LOSimage_II(:,:)
+  integer                     :: nResponseBin
+
   !One line option
   logical                     :: IsOneLine = .false.
   real                        :: OneLineWavelength
 
   ! Variables for output file
   character(len=200)          :: NameSpectrumFile = 'spectrum.out'
-  character(len=200)          :: NameLabelFile = 'label.out'
 
   ! Variables for input files
   character(len=200)          :: StringLine 
@@ -46,7 +51,6 @@ program spectrum
   character(len=200)          :: NameInstrument
   integer                     :: nPixel ! Number of pixels along slit
   integer                     :: nWavelengthBin, iWavelengthBin
-  real,allocatable            :: DLambdaInstr_I(:) ! Instrumental broadening
   real                        :: SizeWavelengthBin ! Resolution in wavelength
 
   ! Variables for solar wind input data file (if any)
@@ -55,7 +59,7 @@ program spectrum
   logical                     :: IsPe = .false.
   logical                     :: IsPpar = .false., IsPperp = .false.
   logical                     :: IsNoAlfven = .false. ! Ignore Alfven waves
-  logical                     :: IsDoppler = .true. ! Calculate Doppler shift
+  logical                     :: IsDoppler = .false. ! Calculate Doppler shift
   integer                     :: n1Block, n2Block, n3Block ! Define data size
   integer                     :: iOnePixel, jOnePixel, kOnePixel
   ! Rotation angles for box variable rotation
@@ -146,15 +150,6 @@ program spectrum
 
   type(SpectrumTableType), allocatable :: SpectrumTable_I(:)
 
-  ! Derived type for the Labels
-  type LabelTableType
-     character(len=6)         :: NameIon
-     real                     :: Lambda
-     real                     :: FluxMono
-  end type LabelTableType
-
-  type(LabelTableType), allocatable :: LabelTable_III(:,:,:)
-
   ! For MPI_reduce in the main program 
 
   integer :: iInterval
@@ -169,6 +164,10 @@ program spectrum
   call MPI_comm_size(iComm, nProc, iError)
 
   call read_param
+
+  if(IsResponseFunction)then
+     call read_responsefunction
+  endif
 
   if(IsDataFile)then
      call read_data
@@ -186,41 +185,73 @@ program spectrum
 
   call read_table
 
-  nLineAll = min(nMaxLine,nLineFound)
+  if(IsDoppler)deallocate(WavelengthIntervalShifted_II)
 
-  ! Allocate table for labels
-  allocate(LabelTable_III(nLineAll,n2,n3))
-  if(IsVerbose)write(*,*)'allocated LabelTable_III'
+  nLineAll = min(nMaxLine,nLineFound)
 
   ! Loop over Chianti lines
   if(IsVerbose)write(*,*)'IsOneLine = ', IsOneLine
 !!! !nLineAll = 1.
-
   do iLine = 1,nLineAll
      if (.not. IsOneLine)call calc_flux
      if (IsOneLine .and.  &
           OneLineWavelength == LineTable_I(iLine)%LineWavelength)call calc_flux
   end do
 
+  deallocate(Var_VIII, LineTable_I)
 
-  do iInterval = 1, nWavelengthinterval
-     call mpi_reduce_real_array(SpectrumTable_I(iInterval)%Spectrum_III, &
-          size(SpectrumTable_I(iInterval)%Spectrum_III), MPI_SUM, 0, &
+  if(IsResponseFunction)then
+     call mpi_reduce_real_array(LOSimage_II, &
+          size(LOSimage_II), MPI_SUM, 0, &
           iComm, iError)
-  end do
+  else
+     do iInterval = 1, nWavelengthinterval
+        call mpi_reduce_real_array(SpectrumTable_I(iInterval)%Spectrum_III, &
+             size(SpectrumTable_I(iInterval)%Spectrum_III), MPI_SUM, 0, &
+             iComm, iError)
+     end do
+  end if
 
   if(iProc==0)then 
      call save_all
      if(IsVerbose)write(*,*)'done with save_all'
-     call save_label
-     if(IsVerbose)write(*,*)'done with save_label'
   end if
+
+  deallocate(WavelengthInterval_II, SpectrumTable_I)
 
   call MPI_finalize(iError)
 
   if(iProc==0)write(*,*)'Spectrum.exe ending'
 
 contains
+
+  !==========================================================================
+  subroutine read_responsefunction
+
+    use ModPlotFile,         ONLY: read_plot_file
+
+    character(len=*), parameter    :: NameSub = 'read_response'
+    !------------------------------------------------------------------------ 
+
+    call read_plot_file(NameFile = NameResponseFunctionFile, &
+         n1Out = nResponseBin, &
+         iErrorOut = iError)
+
+    if(iError /= 0) call CON_stop( &
+         NameSub//' could not header from '//trim(NameResponseFunctionFile))
+
+    allocate(ResponseLambda_I(nResponseBin), ResponseFactor_I(nResponseBin))
+
+    call read_plot_file(NameFile = NameResponseFunctionFile, &
+         TypeFileIn = 'ascii',                               &
+         VarOut_I   = ResponseFactor_I,                      &
+         CoordOut_I = ResponseLambda_I,                      & 
+         iErrorOut  = iError)
+
+    if(iError /= 0) call CON_stop( &
+         NameSub//' could not data from '//trim(NameResponseFunctionFile))
+
+  end subroutine read_responsefunction
 
   !==========================================================================
   subroutine calc_dem
@@ -364,35 +395,13 @@ contains
                = MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
        end do
     end do
+
+    if(IsResponseFunction)then 
+       allocate(LOSImage_II(n2,n3))
+       LOSImage_II = 0.0
+    endif
+    
   end subroutine set_data_block
-  !==========================================================================
-  subroutine save_label
-    integer, parameter             :: iUnitOut = 18
-
-    character(len=*), parameter    :: NameSub = 'save_label'
-    !------------------------------------------------------------------------
-
-    open(unit=iUnitOut,file=NameLabelFile,action='write')
-    write(iUnitOut,*)"SPECTRUM output file - labels of lines"
-    write(iUnitOut,*)"found spectral lines: nLineAll = ",nLineAll
-    write(iUnitOut,*)"pixels in grid: n2 X n3 = ",n2 ," X ", n3
-    write(iUnitOut,*)"jPixel kPixel NameIon Lambda FluxMono"
-    write(iUnitOut,*)"Number of data lines in this file = ",nLineAll*n2*n3
-
-    do jPixel = 1,n2
-       do kPixel = 1,n3
-          do iLine = 1,nLineAll
-             write(iUnitOut,*)jPixel,kPixel, &
-                  LabelTable_III(iLine,jPixel,kPixel)%NameIon, &
-                  LabelTable_III(iLine,jPixel,kPixel)%Lambda, &
-                  LabelTable_III(iLine,jPixel,kPixel)%FluxMono
-          end do
-       end do
-    end do
-
-    close(unit=iUnitOut)
-
-  end subroutine save_label
   !==========================================================================
   subroutine save_all
 
@@ -437,94 +446,107 @@ contains
        end if
     end if
 
-    ! Number of wave length processed so far
-    nWave = 0
-    ! Loop over intervals
-    if(IsVerbose) write(*,*)"  nWaveInterval = ",nWaveInterval
-    do iWaveInterval = 1, nWaveInterval
-
-       ! Number of wave length in this interval
-       nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
-       WavelengthMin = WavelengthInterval_II(1,iWaveInterval)
-       WavelengthMax = WavelengthInterval_II(2,iWaveInterval)
-       DWaveBin = (WavelengthMax - WavelengthMin)/nWaveBin
-
-       ! Loop over wave lengths in this interval
-       do iWaveBin = 1, nWaveBin
-          ! Global wave length index
-          iWave = nWave + iWaveBin
-
-          ! Save intensity and coordinate into global array
-          Intensity_VIII(1,iWave,:,:) = &
-               SpectrumTable_I(iWaveInterval)%Spectrum_III(:,:,iWaveBin)
-          CoordWave_I(iWave) = WavelengthMin + (iWaveBin - 0.5)*DWaveBin
-       end do
-       ! Finished processing this interval
-       nWave = nWave + nWaveBin
-    end do
-
-    ! nDim = 1 if n2 = n3 = 1, nDim = 2 if n3 = 1 /= n2 otherwise nDim= 3
-    if(IsDataBlock)then
-       if(n3==1)then
-          if(n2==1)then
-             call save_plot_file(NameFile = NameSpectrumFile, &
-                  TypeFileIn     = TypeFileSpectrum,      &
-                  StringHeaderIn = StringHeaderSpectrum,  &
-                  NameVarIn      = "wavelength flux",     &
-                  Coord1In_I     = CoordWave_I,           &
-                  VarIn_VI       = Intensity_VIII(:,:,1,1))
-          else
-             call save_plot_file(NameFile = NameSpectrumFile, &
-                  TypeFileIn     = TypeFileSpectrum,      &
-                  StringHeaderIn = StringHeaderSpectrum,  &
-                  NameVarIn      = "wavelength y flux",   &
-                  Coord1In_I     = CoordWave_I,           &
-                  Coord2In_I     = CoordPixelJ_I,        &
-                  VarIn_VII      = Intensity_VIII(:,:,:,1))
-          endif
-       else
-          call save_plot_file(NameFile = NameSpectrumFile, &
-               TypeFileIn     = TypeFileSpectrum,      &
-               StringHeaderIn = StringHeaderSpectrum,  &
-               NameVarIn      = "wavelength x y flux", &
-               Coord1In_I     = CoordWave_I,           &
-               Coord2In_I     = CoordPixelJ_I,      &
-               Coord3In_I     = CoordPixelK_I,        &
-               VarIn_VIII      = Intensity_VIII)
-       endif
-
+    if(IsResponseFunction)then
+       call save_plot_file(NameFile = NameSpectrumFile, &
+            TypeFileIn     = 'ascii',      &
+            StringHeaderIn = '[DN]',  &
+            NameVarIn      = "x y Intensity",     &
+            nDimIn         = 2,                     &
+            CoordMinIn_D   = CoordMin_D(2:3),            &
+            CoordMaxIn_D   = CoordMax_D(2:3), &
+            VarIn_II     = LOSImage_II)
+       deallocate(ResponseLambda_I, ResponseFactor_I, LOSimage_II)
     else
-       if(n3==1)then
-          if(n2==1)then
-             call save_plot_file(NameFile = NameSpectrumFile, &
-                  TypeFileIn     = TypeFileSpectrum,      &
-                  StringHeaderIn = StringHeaderSpectrum,  &
-                  NameVarIn      = "wavelength flux",     &
-                  Coord1In_I     = CoordWave_I,           &
-                  VarIn_VI       = Intensity_VIII(:,:,1,1))
+       ! Number of wave length processed so far
+       nWave = 0
+       ! Loop over intervals
+       if(IsVerbose) write(*,*)"  nWaveInterval = ",nWaveInterval
+       do iWaveInterval = 1, nWaveInterval
+
+          ! Number of wave length in this interval
+          nWaveBin = SpectrumTable_I(iWaveInterval)%nBin
+          WavelengthMin = WavelengthInterval_II(1,iWaveInterval)
+          WavelengthMax = WavelengthInterval_II(2,iWaveInterval)
+          DWaveBin = (WavelengthMax - WavelengthMin)/nWaveBin
+
+          ! Loop over wave lengths in this interval
+          do iWaveBin = 1, nWaveBin
+             ! Global wave length index
+             iWave = nWave + iWaveBin
+
+             ! Save intensity and coordinate into global array
+             Intensity_VIII(1,iWave,:,:) = &
+                  SpectrumTable_I(iWaveInterval)%Spectrum_III(:,:,iWaveBin)
+             CoordWave_I(iWave) = WavelengthMin + (iWaveBin - 0.5)*DWaveBin
+          end do
+          ! Finished processing this interval
+          nWave = nWave + nWaveBin
+       end do
+
+       ! nDim = 1 if n2 = n3 = 1, nDim = 2 if n3 = 1 /= n2 otherwise nDim= 3
+       if(IsDataBlock)then
+          if(n3==1)then
+             if(n2==1)then
+                call save_plot_file(NameFile = NameSpectrumFile, &
+                     TypeFileIn     = TypeFileSpectrum,      &
+                     StringHeaderIn = StringHeaderSpectrum,  &
+                     NameVarIn      = "wavelength flux",     &
+                     Coord1In_I     = CoordWave_I,           &
+                     VarIn_VI       = Intensity_VIII(:,:,1,1))
+             else
+                call save_plot_file(NameFile = NameSpectrumFile, &
+                     TypeFileIn     = TypeFileSpectrum,      &
+                     StringHeaderIn = StringHeaderSpectrum,  &
+                     NameVarIn      = "wavelength y flux",   &
+                     Coord1In_I     = CoordWave_I,           &
+                     Coord2In_I     = CoordPixelJ_I,        &
+                     VarIn_VII      = Intensity_VIII(:,:,:,1))
+             endif
           else
              call save_plot_file(NameFile = NameSpectrumFile, &
                   TypeFileIn     = TypeFileSpectrum,      &
                   StringHeaderIn = StringHeaderSpectrum,  &
-                  NameVarIn      = "wavelength y flux",   &
+                  NameVarIn      = "wavelength x y flux", &
+                  Coord1In_I     = CoordWave_I,           &
+                  Coord2In_I     = CoordPixelJ_I,      &
+                  Coord3In_I     = CoordPixelK_I,        &
+                  VarIn_VIII      = Intensity_VIII)
+          endif
+
+       else
+          if(n3==1)then
+             if(n2==1)then
+                call save_plot_file(NameFile = NameSpectrumFile, &
+                     TypeFileIn     = TypeFileSpectrum,      &
+                     StringHeaderIn = StringHeaderSpectrum,  &
+                     NameVarIn      = "wavelength flux",     &
+                     Coord1In_I     = CoordWave_I,           &
+                     VarIn_VI       = Intensity_VIII(:,:,1,1))
+             else
+                call save_plot_file(NameFile = NameSpectrumFile, &
+                     TypeFileIn     = TypeFileSpectrum,      &
+                     StringHeaderIn = StringHeaderSpectrum,  &
+                     NameVarIn      = "wavelength y flux",   &
+                     CoordMinIn_D   = CoordMin_D,            &
+                     CoordMaxIn_D   = CoordMax_D,            &
+                     Coord1In_I     = CoordWave_I,           &
+                     VarIn_VII      = Intensity_VIII(:,:,:,1))
+             endif
+          else
+             call save_plot_file(NameFile = NameSpectrumFile, &
+                  TypeFileIn     = TypeFileSpectrum,      &
+                  StringHeaderIn = StringHeaderSpectrum,  &
+                  NameVarIn      = "wavelength x y flux", &
                   CoordMinIn_D   = CoordMin_D,            &
                   CoordMaxIn_D   = CoordMax_D,            &
                   Coord1In_I     = CoordWave_I,           &
-                  VarIn_VII      = Intensity_VIII(:,:,:,1))
+                  VarIn_VIII      = Intensity_VIII)
           endif
-       else
-          call save_plot_file(NameFile = NameSpectrumFile, &
-               TypeFileIn     = TypeFileSpectrum,      &
-               StringHeaderIn = StringHeaderSpectrum,  &
-               NameVarIn      = "wavelength x y flux", &
-               CoordMinIn_D   = CoordMin_D,            &
-               CoordMaxIn_D   = CoordMax_D,            &
-               Coord1In_I     = CoordWave_I,           &
-               VarIn_VIII      = Intensity_VIII)
-       endif
-    end if
+       end if
 
-    deallocate(Intensity_VIII, CoordWave_I, CoordPixelJ_I, CoordPixelK_I)
+       deallocate(Intensity_VIII, CoordWave_I, CoordPixelJ_I, CoordPixelK_I)
+
+    endif
 
   end subroutine save_all
 
@@ -544,19 +566,14 @@ contains
     real                           :: B_D(3), Bnorm_D(3)
     real                           :: Unth2, Uth2
     real                           :: Gint, LogNe, LogTe, Rho
-    real, allocatable              :: Glambda_II(:,:)
     real                           :: Tlos
     real                           :: Aion
     real                           :: TShift
     character(len=*), parameter    :: NameSub='calc_flux'
     !------------------------------------------------------------------------
 
-    allocate(Glambda_II(MinI:MaxI,MinJ:MaxJ))
-
     Aion     = LineTable_I(iLine)%Aion
-    ! Fill in LabelTabel%NameIon
-    LabelTable_III(iLine,:,:)%NameIon = LineTable_I(iLine)%NameIon
-
+ 
     if(IsOnePixel)write(*,*)'n1 n2 n3 i j k =',n1,n2,n3,i,jPixel,kPixel
 
     do kPixel=1,n3
@@ -646,8 +663,8 @@ contains
              ! FWHM = 2sqrt(2ln2)*sigma
              ! sigma = FWHM/(2sqrt(2ln2))
              ! sigma^2 = (7e-12)^2 /(4*2*ln2)
-!!!                if(IsEIS)DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
-             DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
+             if(IsEIS)DLambdaInstr2 = (7e-12)**2/(8*log(2.)) 
+
              ! Add instrumental broadening (if any)            
              if(IsInstrument)DLambdaSI2 = DLambdaSI2 + DLambdaInstr2
 
@@ -660,9 +677,9 @@ contains
              jTMin  = LineTable_I(iLine)%jMin
              iNMax  = LineTable_I(iLine)%iMax
              jTMax  = LineTable_I(iLine)%jMax
-             Glambda_II = LineTable_I(iLine)%g_II(:,:)
-
-             Gint = bilinear(Glambda_II, iNMin, iNMax, jTMin, jTMax, &
+             
+             Gint = bilinear(LineTable_I(iLine)%g_II(:,:), &
+                  iNMin, iNMax, jTMin, jTMax, &
                   (/ LogNe/DLogN , LogTe/DLogT /),DoExtrapolate=.true.)
 
              ! When Gint becomes negative due to extrapolation -> move to next
@@ -706,14 +723,8 @@ contains
                 write(*,*)'                                                   '
              endif
 
-             ! Fill in LabelTabel%Lambda,FluxMono
-             LabelTable_III(iLine,:,:)%Lambda = Lambda
-             LabelTable_III(iLine,jPixel,kPixel)%FluxMono = &
-                  FluxMono /(sqrt(2*cPi) * DLambda)
-
              call disperse_line(iInterval, iCenter, Lambda, DLambda, FluxMono)
           end do
-
        end do
     end do
 
@@ -744,6 +755,8 @@ contains
     real                        :: LambdaBin, LambdaBegin, LambdaEnd
     real                        :: LambdaDist
 
+    integer                     :: jBin
+
     character(len=*), parameter :: NameSub='disperse_line'
     !------------------------------------------------------------------------
 
@@ -760,7 +773,7 @@ contains
     end do
 
     ! Start at iBegin for efficiency and
-    ! stop at nWaveBin-1 so iEnd = mWaveBin if no EXIT was performed
+    ! stop at nWaveBin-1 so iEnd = nWaveBin if no EXIT was performed
     do iEnd = iBegin, nWaveBin-1
        if (LambdaEnd < SpectrumTable_I(iInterval)%SpectrumGrid_I(iEnd)) EXIT
     end do
@@ -784,10 +797,21 @@ contains
        ! Calculate total monochromatic flux 
        Flux = FluxMono*Phi
 
-       ! Update bin with flux
-       SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) = &
-            SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) + Flux
+       if(IsResponseFunction)then
+          ! Calculate LOS image intensity in DN units
+          do jBin = 1, nResponseBin
+             if (LambdaBin < ResponseLambda_I(jBin)) EXIT
+          end do
+          LOSImage_II(jPixel,kPixel) = &
+               LOSImage_II(jPixel,kPixel) + Flux * ResponseFactor_I(jBin) * &
+               (ResponseLambda_I(2)-ResponseLambda_I(1))
+       else
 
+          ! Update bin with flux
+          SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) = &
+               SpectrumTable_I(iInterval)%Spectrum_III(jPixel,kPixel,iBin) + &
+               Flux
+       end if
     end do
 
   end subroutine disperse_line
@@ -827,7 +851,6 @@ contains
 
        case("#OUTFILE")
           call read_var('NameSpectrumFile',NameSpectrumFile)
-          call read_var('NameLabelFile',NameLabelFile)
 
        case("#DATAFILE")
           IsDataFile = .true.
@@ -872,11 +895,6 @@ contains
              IsEIS = .true.
              nWavelengthInterval = 2
              nPixel = 512
-             allocate(DLambdaInstr_I(nPixel))
-
-             do iPixel=1,nPixel
-                DLambdaInstr_I(iPixel) = 0.0
-             end do
 
              SizeWavelengthBin = 0.0223
              if(IsNoInstrument)then
@@ -919,7 +937,7 @@ contains
              call read_var('TeUni',TeUni)
           else 
              write(*,*) NameSub // ' WARNING: check temperature setting' // &
-                  'Select either 1-, 2-(proton+electron), or 3 temperature' // & 
+                  'Select 1, 2 (proton+electron), or 3 temperature' // & 
                   '(electron+anisotropic proton) model!' 
           endif
           call read_var('I01Uni',I01Uni)
@@ -964,6 +982,10 @@ contains
           call read_var('LogTeMinDEM',LogTeMinDEM)
           call read_var('LogTeMaxDEM',LogTeMaxDEM)
           call read_var('DLogTeDEM',DLogTeDEM)
+
+       case("#RESPONSEFUNCTION")
+          IsResponseFunction = .true.
+          call read_var('NameResponseFunctionFile', NameResponseFunctionFile)
 
        case default
           write(*,*) NameSub // ' WARNING: unknown #COMMAND '
@@ -1062,13 +1084,14 @@ contains
        MaxWavelength = WavelengthInterval_II(2,iWavelengthInterval)
        nWavelengthBin = nint((MaxWavelength-MinWavelength)/SizeWavelengthBin)
        nBin = nWavelengthBin
-
-       allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
-            nWavelengthBin))
+       if(.not.IsResponseFunction)then
+          allocate(SpectrumTable_I(iWavelengthinterval)%Spectrum_III(n2,n3, &
+               nWavelengthBin))
+          SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
+       end if
        allocate(SpectrumTable_I(iWavelengthinterval)%SpectrumGrid_I(&
             nWavelengthBin+1))
 
-       SpectrumTable_I(iWavelengthinterval)%Spectrum_III(:,:,:)=0.0
        SpectrumTable_I(iWavelengthinterval)%nBin=nBin
        do iWavelengthBin=1,nWavelengthBin+1
           ! Values of each wavelength bin correspond to the center of the bin
@@ -1076,6 +1099,11 @@ contains
                = MinWavelength + (iWavelengthBin-.5)*SizeWavelengthBin
        end do
     end do
+
+    if(IsResponseFunction)then
+       allocate(LOSimage_II(n2,n3))
+       LOSImage_II = 0.0
+    end if
 
     if (IsUniData) then
        ! cm^-3 --> kg/m^3
@@ -1460,7 +1488,6 @@ subroutine CON_stop(String)
   write(*,*)'CON_stop called on with String='
   write(*,*) String
 
-!!!  call MPI_abort(MPI_COMM_WORLD, nError, iError)
   stop
   
 end subroutine CON_stop
