@@ -2373,7 +2373,7 @@ namespace PIC {
 
        //reserve and release flag
        static bool CheckoutFlag(int ibit) {
-         char mask=1<<ibit;
+         unsigned char mask=1<<ibit;
          bool res=false;
 
          if (FlagTableStatusVector&mask==0) {
@@ -2385,7 +2385,7 @@ namespace PIC {
        }
 
        static void ReleaseFlag(int ibit) {
-         char mask=1<<ibit;
+         unsigned char mask=1<<ibit;
 
          mask=~mask;
          FlagTableStatusVector&=mask;
@@ -2393,12 +2393,14 @@ namespace PIC {
 
        //set and test the flags
        bool TestFlag(int ibit) {
-         char mask=1<<ibit;
-         return (FlagTable&mask!=0) ? true : false;
+         unsigned char mask=1<<ibit;
+
+         mask=FlagTable&mask;
+         return (mask!=0) ? true : false;
        }
 
        void SetFlag(bool flag,int ibit) {
-         char mask=1<<ibit;
+         unsigned char mask=1<<ibit;
 
          if (flag==true) {
            FlagTable|=mask;
@@ -3556,8 +3558,11 @@ namespace PIC {
      extern double Latency;
 
      //processing 'corner' and 'center' node associated data vectors when perform syncronization
-     typedef void (*fUserDefiendProcessNodeAssociatedData)(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
-     extern fUserDefiendProcessNodeAssociatedData ProcessCenterNodeAssociatedData,ProcessCornerNodeAssociatedData,CopyCenterNodeAssociatedData,CopyCornerNodeAssociatedData;
+     typedef void (*fUserDefinedProcessNodeAssociatedData)(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+     extern fUserDefinedProcessNodeAssociatedData ProcessCenterNodeAssociatedData,ProcessCornerNodeAssociatedData,CopyCenterNodeAssociatedData,CopyCornerNodeAssociatedData;
+
+     //default function for copying the corner node associated data
+     void CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
   }
 
   namespace Debugger {
