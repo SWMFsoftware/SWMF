@@ -224,7 +224,7 @@ public:
 
     nbits=3*ResolutionLevel;
     nbytes=nbits/8;
-    nbits-=8*ResolutionLevel;
+    nbits-=8*nbytes;
 
     //compare bytes
     for (i=0;i<nbytes;i++) if (id[i]!=ID.id[i]) return false;
@@ -232,8 +232,9 @@ public:
     //compare bits
     unsigned char ComparisonMask=0;
 
-//      for (i=0;i<nbits;i++) ComparisonMask+=(1<<i); substituted by the following
-    for (i=0;i<nbits;i++) ComparisonMask=(unsigned char)(ComparisonMask|(1<<i));
+    for (i=0;i<nbits;i++) {
+      ComparisonMask|=(unsigned char)(1<<i);
+    }
 
     if ((id[nbytes]&ComparisonMask)!=(ID.id[nbytes]&ComparisonMask)) return false;
 
