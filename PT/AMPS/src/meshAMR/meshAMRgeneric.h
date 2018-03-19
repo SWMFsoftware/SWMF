@@ -1671,7 +1671,7 @@ public:
     GetAMRnodeID(rootTree->AMRnodeID,rootTree);
 
 
-    nMeshModificationCounter++,meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
+    nMeshModificationCounter=0,meshNodesNumber=0,meshBlocksNumber=0,meshModifiedFlag=true,meshModifiedFlag_CreateNewSpaceFillingCurve=true,meshModifiedFlag_CountMeshElements=true,meshMaximumRefinmentLevel=0;
 
     rootTree->upNode=NULL;
     rootTree->block=rootBlock;
