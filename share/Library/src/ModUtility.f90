@@ -82,7 +82,7 @@ contains
     logical, optional, intent(out):: DoTestMe
 
     logical:: IsMpiInitialized
-    integer:: iProc, iError
+    integer:: iProc=0, iError
     !--------------------------------------------------------------------------
     call MPI_initialized(IsMpiInitialized, iError)
 
@@ -125,13 +125,13 @@ contains
     ! Abort execution with MPI_abort and stop.
 
     logical:: IsMpiInitialized
-    integer:: iRank, nError, iError
+    integer:: iProc=0, nError, iError
     !-------------------------------------------------------------------------
     call MPI_initialized(IsMpiInitialized, iError)
 
-    if(IsMpiInitialized) call MPI_comm_rank(MPI_COMM_WORLD, iRank, iError)
+    if(IsMpiInitialized) call MPI_comm_rank(MPI_COMM_WORLD, iProc, iError)
 
-    write(*,*) 'Aborting execution on processor', iRank, ' with message:'
+    write(*,*) 'Aborting execution on processor', iProc, ' with message:'
     write(*,'(a)') String
     if(present(Value1)) call write_value(Value1)
     if(present(Value2)) call write_value(Value2)
@@ -144,7 +144,7 @@ contains
     ! Create call sequence if requested
     if(DoWriteCallSequence)then
        write(*,*)'Making floating point exception to write call sequence!'
-       write(*,*) sqrt(-1.0-iRank)
+       write(*,*) sqrt(-1.0-iProc)
     end if
 
     ! Stop execution
