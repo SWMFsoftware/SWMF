@@ -1,6 +1,3 @@
-#ECHO
-T
-
 VERBOSE
 100
 
@@ -15,10 +12,10 @@ PW_get_for_gm GM_put_from_pw CON_couple_all::couple_two_comp
 Run GM and IE and PW in time accurate mode
 
 #PLANET
-EARTH
+EARTH			NamePlanet
 
 #SAVERESTART
-F
+F			DoSaveRestart
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -157,19 +154,18 @@ GM/Param/TESTSUITE/Inputfiles/IMF_NSturning_1nT.dat   NameUpstreamFile
 Rusanov			TypeFlux
 
 #SAVEPLOT
-3                       nPlotFile
-x=0 FUL idl             StringPlot
+2                       nPlotFile
+y=0 VAR idl             StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-y=0 FUL idl             StringPlot
+-1.                     DxSavePlot
+{MHD} ex ey ez expot eypot ezpot exind eyind ezind dive potE
+{default}      	     	NameParam
+y=0 VAR tec             StringPlot
 -1                      DnSavePlot
 10.			DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
-z=0 FUL idl             StringPlot
--1                      DnSavePlot
-10.			DtSavePlot
--1.                     DxSavePlot (resolution, 0. maximum, -1. unstructured)
+{MHD} ex ey ez expot eypot ezpot exind eyind ezind dive potE
+{default}      	     	NameParam
 
 #END_COMP GM ###############################################################
 
@@ -216,23 +212,23 @@ PW			NameComp2
 1.0                     Dtcouple
 
 #COUPLE1
-PW
-GM
--1
-1.0
+PW			NameComp1
+GM			NameComp2
+-1			DnCouple
+1.0			Dtcouple
 
 #BEGIN_COMP PW ############################################################
 
 #ROTATION
-F
+F			UseRotation
 
 #FIELDLINE
-4	nTotalLine
+4			nTotalLine
 
 #SAVEPLOT
-1.0	DtSavePlot
--1	DnSavePlot
-T	SaveFirst
+1.0			DtSavePlot
+-1			DnSavePlot
+T			SaveFirst
 
 #END_COMP PW ##############################################################
 
@@ -262,7 +258,6 @@ gradlogP                TypeRefine
 Rcurrents               TypeRefine
 -1.0                    CoarsenLimit
 -1.0                    RefineLimit
-
 
 
 #SCHEME
