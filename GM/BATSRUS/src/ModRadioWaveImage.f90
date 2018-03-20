@@ -677,6 +677,11 @@ contains
          call mark_undefined(KindRay_,iParticle);RETURN
       end if
       State_V = 0.0; GradDensity_D = 0.0; DeltaSNew = 0.0
+      if(nCell<1)then
+         write(*,*)'Particcle Xyz_D=',Xyz_D
+         call CON_stop(&
+           NameSub//': cannot interpolate the particle') 
+      end if
       do iCell = 1, nCell
          i_D = 1
          i_D(1:nDim) = iCell_II(1:nDim, iCell)

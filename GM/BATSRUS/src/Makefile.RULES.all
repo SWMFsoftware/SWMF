@@ -22,3 +22,7 @@ $Hdf5 eq "yes" and $Compiler !~ /(cray|ifort)ftn/
 # compiling ModWritePlot takes a long time with ifort with -O2
 $Compiler eq "ifort"
 	${COMPILE.f90} ${Cflag1} ModWritePlot.f90
+
+# 
+$Compiler eq "nagfor"
+	${COMPILE.f90} ${Cflag0} ModRadioWaveImage.f90
