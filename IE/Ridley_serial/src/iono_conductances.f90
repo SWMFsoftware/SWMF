@@ -247,28 +247,10 @@ subroutine FACs_to_fluxes(iModel, iBlock)
 
   if (iModel.eq.4 .or. iModel.eq.5) then
 
-     i_cond_nlats = 16
-     i_cond_nmlts = 24
-
-     do j = 1, i_cond_nlats
-
-        hal_a0_up(i_cond_nmlts+1,j) = hal_a0_up(1,j)
-        ped_a0_up(i_cond_nmlts+1,j) = ped_a0_up(1,j)
-        hal_a0_do(i_cond_nmlts+1,j) = hal_a0_do(1,j)
-        ped_a0_do(i_cond_nmlts+1,j) = ped_a0_do(1,j)
-        hal_a1_up(i_cond_nmlts+1,j) = hal_a1_up(1,j)
-        ped_a1_up(i_cond_nmlts+1,j) = ped_a1_up(1,j)
-        hal_a1_do(i_cond_nmlts+1,j) = hal_a1_do(1,j)
-        ped_a1_do(i_cond_nmlts+1,j) = ped_a1_do(1,j)
-        hal_a2_up(i_cond_nmlts+1,j) = hal_a2_up(1,j)
-        ped_a2_up(i_cond_nmlts+1,j) = ped_a2_up(1,j)
-        hal_a2_do(i_cond_nmlts+1,j) = hal_a2_do(1,j)
-        ped_a2_do(i_cond_nmlts+1,j) = ped_a2_do(1,j)
-
-     enddo
-
+     ! Calculate grid spacing for conductance grid
      dlat = (cond_lats(1) - cond_lats(2))*cDegToRad
      dmlt = (cond_mlts(2) - cond_mlts(1))*cPi/12.0
+
 
      select case(iBlock)
      case(1)

@@ -191,7 +191,9 @@ contains
             call read_var('F10.7 Flux',f107_flux)
             call read_var('StarLightPedConductance',StarLightPedConductance)
             call read_var('PolarCapPedConductance',PolarCapPedConductance)
-
+         case("#CONDUCTANCEFILES")
+            call read_var('NameFileHall',     NameHalFile)
+            call read_var('NameFilePedersen', NamePedFile)
          case("#IM")
             call read_var('TypeImCouple',TypeImCouple)
             call lower_case(TypeImCouple)
