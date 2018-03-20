@@ -434,6 +434,7 @@ program post_idl
      ! Read Tecplot file header
      do iHeaderTec = 1, nHeaderTec
         read(UnitTmp_,*) StringTecHeader
+        if(IsVerbose)write(*,*) 'StringTecHeader=', trim(StringTecHeader)
      end do
      ! Read the coordinates and variables at the nodes
      do iNodeTec = 1, nNodeTec
