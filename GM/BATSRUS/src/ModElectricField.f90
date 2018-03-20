@@ -157,7 +157,7 @@ contains
     end if
 
     DoHallCurrent = .false.
-    if (DoHallCurrentIn) DoHallCurrent = DoHallCurrentIn
+    if (present(DoHallCurrentIn)) DoHallCurrent = DoHallCurrentIn
 
     if (DoHallCurrent) then
        ! get_current cannot be called in ghost cells
@@ -278,7 +278,8 @@ contains
     if(nStepLast == n_step) RETURN
     nStepLast = n_step
 
-    if(.not.allocated(DivE_CB)) allocate(DivE_CB(nI,nJ,nK,nBlock))
+    if(allocated(DivE_CB)) deallocate(DivE_CB)
+    allocate(DivE_CB(nI,nJ,nK,nBlock))
 
     do iBlock = 1, nBlock
        if(Unused_B(iBlock)) CYCLE
