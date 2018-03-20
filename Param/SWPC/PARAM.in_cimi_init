@@ -379,7 +379,7 @@ MINIMUMPRESSURETOGM
 F			DoSaveFlux
 F			DoSaveDrifts
 F			DoSavePSD
-F			UseSeparatePlotFiles
+T			UseSeparatePlotFiles
 
 #TYPEBOUNDARY
 circle                  TypeBoundary
