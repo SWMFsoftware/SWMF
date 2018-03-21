@@ -695,7 +695,7 @@ contains
       if(nProc > 1)then
          if(iProc==0)then
             call MPI_Reduce(MPI_IN_PLACE, File_I(iFile) % Buffer_II, &
-                 nNode * File_I(iFile) % nVarPlot, MPI_REAL, MPI_Sum, &
+                 nNode * (nVarPlot + nFluxPlot), MPI_REAL, MPI_Sum, &
                  0, iComm, iError)
             call MPI_Reduce(MPI_IN_PLACE, DoPrint_I, &
                  nNode, MPI_Logical, MPI_Land, &
@@ -703,7 +703,7 @@ contains
          else
             call MPI_Reduce(File_I(iFile)%Buffer_II, &
                  File_I(iFile)%Buffer_II,&
-                 nNode*File_I(iFile)%nVarPlot, MPI_REAL, MPI_Sum,&
+                 nNode * (nVarPlot + nFluxPlot), MPI_REAL, MPI_Sum,&
                  0, iComm, iError)
             call MPI_Reduce(DoPrint_I, DoPrint_I, &
                  nNode, MPI_Logical, MPI_Land, &
@@ -723,9 +723,9 @@ contains
            NameVarIn    = File_I(iFile) % NameVarPlot, &
            VarIn_VI     = &
            reshape(&
-           pack(File_I(iFile) % Buffer_II(1:nVarPlot,1:nNode),&
-           MASK = spread(DoPrint_I, 1, nVarPlot)), &
-           (/nVarPlot, count(DoPrint_I)/)))
+           pack(File_I(iFile) % Buffer_II(1:nVarPlot+nFluxPlot,1:nNode),&
+           MASK = spread(DoPrint_I, 1, nVarPlot+nFluxPlot)), &
+           (/nVarPlot+nFluxPlot, count(DoPrint_I)/)))
     end subroutine write_mh_2d
     !=============================================================
     subroutine write_mh_time

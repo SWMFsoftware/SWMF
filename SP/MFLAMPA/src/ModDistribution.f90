@@ -190,7 +190,7 @@ contains
     real   :: EChannel_I(6) ! energy limits of GOES channels
     real   :: dFlux, dFlux1 ! increments
     real   :: Flux, Flux_I(6) ! the value of particle flux
-    real   :: Norm  ! normalization factor
+    real   :: Norm            ! normalization factor
     !-------------------------------------------------------------------------
     ! energy limits of GOES channels
     EChannel_I = (/5,10,30,50,60,100/) * energy_in('MeV')
@@ -264,9 +264,9 @@ contains
           end do
 
           ! store the results
-          Flux_VIB(Flux0_,        iParticle, iBlock) = Flux        / Norm
-          Flux_VIB(Flux1_:Flux6_, iParticle, iBlock) = Flux_I(1:6) / Norm
-          Flux_VIB(EFlux_,        iParticle, iBlock) = EFlux       / Norm
+          Flux_VIB(Flux0_,       iParticle, iBlock) = Flux
+          Flux_VIB(Flux1_:Flux6_,iParticle, iBlock) = Flux_I(1:6)
+          Flux_VIB(EFlux_,       iParticle, iBlock) = EFlux
        end do
     end do
   end subroutine get_integral_flux
