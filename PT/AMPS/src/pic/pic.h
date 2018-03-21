@@ -3563,6 +3563,7 @@ namespace PIC {
 
      //default function for copying the corner node associated data
      void CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+     void CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
   }
 
   namespace Debugger {
@@ -5037,9 +5038,6 @@ namespace PIC {
 
         //init the list of the ghost blocks
         void InitBlockPairTable();
-
-        //functions for exchanging of the information between the real and ghost blocks
-        extern int iDataExchangePass; //data exchange is performed in 2 passes
 
         void ExchangeBlockDataMPI(cBlockPairTable& BlockPair);
         void ExchangeBlockDataLocal(cBlockPairTable& BlockPair);
