@@ -13,12 +13,17 @@ double PIC::Parallel::EmergencyLoadRebalancingFactor=3.0;
 double PIC::Parallel::Latency=0.0;
 
 //processing 'corner' and 'center' node associated data vectors when perform syncronization
-PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::ProcessCenterNodeAssociatedData=NULL,PIC::Parallel::ProcessCornerNodeAssociatedData=CopyCornerNodeAssociatedData_default;
-PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CopyCenterNodeAssociatedData=NULL,PIC::Parallel::CopyCornerNodeAssociatedData=CopyCornerNodeAssociatedData_default;
+PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::ProcessCenterNodeAssociatedData=NULL,PIC::Parallel::ProcessCornerNodeAssociatedData=NULL;
+PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CopyCenterNodeAssociatedData=PIC::Parallel::CopyCenterNodeAssociatedData_default;
+PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CopyCornerNodeAssociatedData=PIC::Parallel::CopyCornerNodeAssociatedData_default;
 
 //default function forprocessing of the corner node associated data
 void PIC::Parallel::CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData) {
   memcpy(TargetBlockAssociatedData,SourceBlockAssociatedData,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+}
+
+void PIC::Parallel::CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData) {
+  memcpy(TargetBlockAssociatedData,SourceBlockAssociatedData,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
 }
 
 //====================================================
@@ -455,8 +460,6 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
   };
 
 
-
-
   //find a corner node in neighbour blocks
   auto FindCornerNbN = [&] (int &iNode,int &jNode,int &kNode,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &NeibNode,PIC::Mesh::cDataCornerNode *CornerNode,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node) {
     bool res=false;
@@ -505,10 +508,9 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       }
     }
 
+    NeibNode=NULL;
     return res;
   };
-
-
 
   auto GetCornerNode = [&] (int &iNode,int &jNode,int &kNode,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* &NodeOut,cAMRnodeID NodeidIn) {
     PIC::Mesh::cDataCornerNode *res=NULL;
@@ -674,15 +676,80 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
     return res;
   };
 
+  auto TestCheckFace = [&] (int iface,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *neibNode;
+    int i,j;
+
+    //check face neighbors
+    for (i=0;i<2;i++) for (j=0;j<2;j++) {
+      if ((neibNode=node->GetNeibFace(iface,i,j))!=NULL) {
+        if (node->Thread!=neibNode->Thread) {
+         //the check need to be performed
+         return true;
+        }
+
+        if (node->RefinmentLevel==neibNode->RefinmentLevel) break;
+      }
+    }
+
+    //check edge neighbors
+    static const int EdgeFaceTable[6][4]={{4,11,7,8},{5,10,6,9}, {0,9,3,8},{1,10,2,11}, {0,5,1,4},{3,6,2,7}};
+
+    for (int iedge=0;iedge<4;iedge++) {
+      for (i=0;i<2;i++) {
+        if ((neibNode=node->GetNeibEdge(EdgeFaceTable[iface][iedge],i))!=NULL) {
+          if (node->Thread!=neibNode->Thread) {
+            //the check need to be performed
+            return true;
+          }
+
+          if (node->RefinmentLevel==neibNode->RefinmentLevel) break;
+        }
+      }
+    }
+
+    //check corner neighbors
+    static const int CornerFaceTable[6][4]={{0,3,7,4},{1,2,6,5}, {0,1,5,4},{3,2,6,7}, {0,1,2,3},{4,5,6,7}};
+
+    for (i=0;i<4;i++) if ((neibNode=node->GetNeibCorner(CornerFaceTable[iface][i]))!=NULL) if (node->Thread!=neibNode->Thread) {
+      //the check need to be performed
+      return true;
+    }
+
+    return false;
+  };
+
+  auto TestRealBoundaryFace = [&] (int iface,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node) {
+    int i,j;
+    PIC::Mesh::cDataCornerNode *CornerNode;
+    bool StartBlockExternalFlag,NeibBlockExternalFlag;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *neibNode;
+
+    StartBlockExternalFlag=(PIC::Mesh::mesh.ExternalBoundaryBlock(node)==_EXTERNAL_BOUNDARY_BLOCK_) ? true : false;
+
+    for (i=0;i<2;i++) for (j=0;j<2;j++) if ((neibNode=node->GetNeibFace(iface,i,j))!=NULL) {
+      NeibBlockExternalFlag=(PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) ? true : false;
+
+      if (((StartBlockExternalFlag==true)&&(NeibBlockExternalFlag==false)) || ((StartBlockExternalFlag==false)&&(NeibBlockExternalFlag==true))) {
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+
+    return false;
+  };
 
 
   if (nMeshModificationCounter!=PIC::Mesh::mesh.nMeshModificationCounter) {
     //the mesh or the domain decomposition has been modified. Need to create a new communucation table
     int NewTableLength=0;
+    int iNode,jNode,kNode,FlagSum;
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* ActualNode;
+    bool meshModifiedFlag_CountMeshElements=PIC::Mesh::mesh.meshModifiedFlag_CountMeshElements;
 
-    //update the coundater
-    nMeshModificationCounter=PIC::Mesh::mesh.nMeshModificationCounter;
-
+    //reset the flags
     ResetProcessedFlag();
 
     //determine the new length of the table
@@ -690,70 +757,35 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       if ((_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_OFF_)||(PIC::Mesh::mesh.ExternalBoundaryBlock(node)!=_EXTERNAL_BOUNDARY_BLOCK_)) {
         int flag;
         bool TemporaralyAllocatedBlock=false;
+        cAMRnodeID nodeid=node->AMRnodeID;
 
-        block=node->block;
-
-        if (block==NULL) {
-          if (VerifyAllocatedNeighbourBlock(node)==true) {
-            TemporaralyAllocatedBlock=true;
-            PIC::Mesh::mesh.AllocateBlock(node);
-            block=node->block;
-
-  /*          //set default values of the 'processed' flag to the corner nodes thqt belongs to teh temporarily allocated node only
-            for (int i=0;i<_BLOCK_CELLS_X_+1;i++) for (int j=0;j<_BLOCK_CELLS_Y_+1;j++)  for (int k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-              int iNode,jNode,kNode;
-              cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* NeibNode;
-              PIC::Mesh::cDataCornerNode *CornerNode;
-
-              CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
-
-              if (FindCornerNbN(iNode,jNode,kNode,NeibNode,CornerNode,node)==false) {
-                CornerNode->SetProcessedFlag(true);
-              }
-              else {
-                CornerNode->SetProcessedFlag(false);
-              }
-
-            }*/
+        //for (int i=0;i<_BLOCK_CELLS_X_+1;i++) for (int j=0;j<_BLOCK_CELLS_Y_+1;j++)  for (int k=0;k<_BLOCK_CELLS_Z_+1;k++) {
+        for (iface=0;iface<6;iface++) if (TestCheckFace(iface,node)==true) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
+          //determine whether the corner node has been already processes
+          if (node->Thread==PIC::ThisThread) {
+            CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+            flag=(CornerNode->TestProcessedFlag()==true) ? 0 : 1;
           }
-        }
 
-        for (int i=0;i<_BLOCK_CELLS_X_+1;i++) for (int j=0;j<_BLOCK_CELLS_Y_+1;j++)  for (int k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-          flag=1;
-          CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+          MPI_Bcast(&flag,1,MPI_INT,node->Thread,MPI_GLOBAL_COMMUNICATOR);
 
-          if (CornerNode!=NULL) {
-            if (TemporaralyAllocatedBlock==false) {
-              if (CornerNode->TestProcessedFlag()==true) flag=0;
-              CornerNode->SetProcessedFlag(true);
-            }
-            else {
-              //the block has been temporarely allocated. Search for the corner node in the neighbouring blocks
-              int ii,jj,kk;
-              cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* NeibNode;
+          if (flag==0) continue;
 
-              if (FindCornerNbN(ii,jj,kk,NeibNode,CornerNode,node)==true) {
-                //the corner node has been found in a neighbouring block
+          //the corner node has not been processed yet
+          iNode=i,jNode=j,kNode=k;
 
-                if (CornerNode->TestProcessedFlag()==true) flag=0;
-                CornerNode->SetProcessedFlag(true);
-              } else flag=0;
-            }
-          } else flag=0;
+          if ((CornerNode=GetCornerNode(iNode,jNode,kNode,ActualNode,nodeid))!=NULL) {
+            //the corner node exists at the current MPI process
+            CornerNode->SetProcessedFlag(true);
+            flag=1;
+          }
+          else flag=0;
 
-          //combine the array of flags
-          int FlagTable[PIC::nTotalThreads],FlagSum;
+          MPI_Allreduce(&flag,&FlagSum,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
-          MPI_Allgather(&flag,1,MPI_INT,FlagTable,1,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
-          for (thread=0,FlagSum=0;thread<PIC::nTotalThreads;thread++) FlagSum+=FlagTable[thread];
-
-          if ((flag==1)&&(FlagSum!=1)) {
+          if (FlagSum>1) {
             NewTableLength++;
           }
-        }
-
-        if (TemporaralyAllocatedBlock==true) {
-          PIC::Mesh::mesh.DeallocateBlock(node);
         }
       }
     }
@@ -768,84 +800,59 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
     ResetProcessedFlag();
 
     //populate the Stencil Table
-    for (iStencil=0,node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) if (PIC::Mesh::mesh.ExternalBoundaryBlock(node)!=_EXTERNAL_BOUNDARY_BLOCK_) {
+    for (iStencil=0,node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
       if ((_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_OFF_)||(PIC::Mesh::mesh.ExternalBoundaryBlock(node)!=_EXTERNAL_BOUNDARY_BLOCK_)) {
         int flag;
         bool TemporaralyAllocatedBlock=false;
+        cAMRnodeID nodeid=node->AMRnodeID;
 
-        block=node->block;
-
-        if (block==NULL) {
-          if (VerifyAllocatedNeighbourBlock(node)==true) {
-            TemporaralyAllocatedBlock=true;
-            PIC::Mesh::mesh.AllocateBlock(node);
-            block=node->block;
-
+        //for (int i=0;i<_BLOCK_CELLS_X_+1;i++) for (int j=0;j<_BLOCK_CELLS_Y_+1;j++)  for (int k=0;k<_BLOCK_CELLS_Z_+1;k++) {
+        for (iface=0;iface<6;iface++) if (TestCheckFace(iface,node)==true) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
+          //determine whether the corner node has been already processes
+          if (node->Thread==PIC::ThisThread) {
+            CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+            flag=(CornerNode->TestProcessedFlag()==true) ? 0 : 1;
           }
-        }
 
-        for (int i=0;i<_BLOCK_CELLS_X_+1;i++) for (int j=0;j<_BLOCK_CELLS_Y_+1;j++) for (int k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-          int iNeibNode,jNeibNode,kNeibNode;
-          cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* NeibNode;
+          MPI_Bcast(&flag,1,MPI_INT,node->Thread,MPI_GLOBAL_COMMUNICATOR);
 
-          flag=1;
-          CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+          if (flag==0) continue;
 
-          if (CornerNode!=NULL) {
-            if (TemporaralyAllocatedBlock==false) {
-              if (CornerNode->TestProcessedFlag()==true) flag=0;
-              CornerNode->SetProcessedFlag(true);
-            }
-            else {
-              //the block has been temporarely allocated. Search for the corner node in the neighbouring blocks
-              if (FindCornerNbN(iNeibNode,jNeibNode,kNeibNode,NeibNode,CornerNode,node)==true) {
-                //the corner node has been found in a neighbouring block
+          //the corner node has not been processed yet
+          iNode=i,jNode=j,kNode=k;
 
-                if (CornerNode->TestProcessedFlag()==true) flag=0;
-                CornerNode->SetProcessedFlag(true);
-              }
-            }
-          } else flag=0;
+          if ((CornerNode=GetCornerNode(iNode,jNode,kNode,ActualNode,nodeid))!=NULL) {
+            //the corner node exists at the current MPI process
+            CornerNode->SetProcessedFlag(true);
+            flag=1;
+          }
+          else flag=0;
 
+          MPI_Allreduce(&flag,&FlagSum,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
-          //combine the array of flags
-          int FlagTable[PIC::nTotalThreads],FlagSum;
-
-          MPI_Allgather(&flag,1,MPI_INT,FlagTable,1,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
-          for (thread=0,FlagSum=0;thread<PIC::nTotalThreads;thread++) FlagSum+=FlagTable[thread];
-
-          if ((flag==1)&&(FlagSum!=1)) {
-            //the thread will participate in the data exchage
+          if (FlagSum>1) {
             StencilTable[iStencil].StencilLength=0;
 
-            if (TemporaralyAllocatedBlock==false) {
-              StencilTable[iStencil].iCornerNode=i,StencilTable[iStencil].jCornerNode=j,StencilTable[iStencil].kCornerNode=k;
-              StencilTable[iStencil].nodeid=node->AMRnodeID;
-              StencilTable[iStencil].node=node;
-              StencilTable[iStencil].CornerNode=CornerNode;
-              StencilTable[iStencil].AssociatedDataPointer=CornerNode->GetAssociatedDataBufferPointer();
-            }
-            else {
-              StencilTable[iStencil].iCornerNode=iNeibNode,StencilTable[iStencil].jCornerNode=jNeibNode,StencilTable[iStencil].kCornerNode=kNeibNode;
-              StencilTable[iStencil].nodeid=NeibNode->AMRnodeID;
-              StencilTable[iStencil].node=NeibNode;
-              StencilTable[iStencil].CornerNode=CornerNode;
-              StencilTable[iStencil].AssociatedDataPointer=CornerNode->GetAssociatedDataBufferPointer();
-            }
+            StencilTable[iStencil].iCornerNode=iNode,StencilTable[iStencil].jCornerNode=jNode,StencilTable[iStencil].kCornerNode=kNode;
+            StencilTable[iStencil].nodeid=ActualNode->AMRnodeID;
+            StencilTable[iStencil].node=ActualNode;
+            StencilTable[iStencil].CornerNode=CornerNode;
+            StencilTable[iStencil].AssociatedDataPointer=(CornerNode!=NULL) ? CornerNode->GetAssociatedDataBufferPointer() : NULL;
 
-            for (thread=0;thread<PIC::nTotalThreads;thread++) if (FlagTable[thread]==1) StencilTable[iStencil].StencilThreadTable[StencilTable[iStencil].StencilLength++]=thread;
+            //combine information of which MPI processes has a copy of the current corner node
+            int FlagTable[PIC::nTotalThreads];
+
+            MPI_Allgather(&flag,1,MPI_INT,FlagTable,1,MPI_INT,MPI_GLOBAL_COMMUNICATOR);
+
+            for (thread=0;thread<PIC::nTotalThreads;thread++) if (FlagTable[thread]==1) {
+              StencilTable[iStencil].StencilThreadTable[StencilTable[iStencil].StencilLength++]=thread;
+            }
 
             iStencil++;
           }
         }
-
-        if (TemporaralyAllocatedBlock==true) {
-          PIC::Mesh::mesh.DeallocateBlock(node);
-        }
       }
     }
-
-
 
     if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
       //In case when the periodic boundary conditions are inforced
@@ -853,12 +860,11 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       list<cStencilPBC> StencilListPBC;
       cBlockTable BlockTable; //contains information of all blocks that containes a given corner node
 
-
       ResetProcessedFlag();
 
       for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode)  {
         if (PIC::Mesh::mesh.ExternalBoundaryBlock(node)==_EXTERNAL_BOUNDARY_BLOCK_)  {
-          for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++)  for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
+          for (iface=0;iface<6;iface++) if (TestRealBoundaryFace(iface,node)==true) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
             //the analysis will be performed by the MPI process that the block belongs to
             int ii,jj,kk,ff,iNeighbour,BoundaryNodeFlag=false;
             cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* neibNode;
@@ -1168,13 +1174,18 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
     }
   }
+
+    //update the coundater
+    nMeshModificationCounter=PIC::Mesh::mesh.nMeshModificationCounter;
+    PIC::Mesh::mesh.meshModifiedFlag_CountMeshElements=meshModifiedFlag_CountMeshElements;
   }
+
 
   //performe the data exchange session
   char recvAssociatedDataBuffer[PIC::Mesh::cDataCornerNode::totalAssociatedDataLength];
 
   //1. combine 'corner' node data
-  for (iStencil=0;iStencil<StencilTableLength;iStencil++) {
+  if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) for (iStencil=0;iStencil<StencilTableLength;iStencil++) {
     int iThread;
 
     if (StencilTable[iStencil].StencilLength>1) {
@@ -1218,9 +1229,8 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
     }
   }
 
-
   //2. processes the 'real' domain boundary in case periodic boundary conditions are in use
-  for (iStencil=0;iStencil<StencilTablePBCLength;iStencil++) {
+  if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) for (iStencil=0;iStencil<StencilTablePBCLength;iStencil++) {
      int iThread,thread,ipoint;
 
      if (StencilTablePBC[iStencil].InvolvedFlag==true) {
@@ -1295,6 +1305,5 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
        }
      }
   }
-
 }
 
