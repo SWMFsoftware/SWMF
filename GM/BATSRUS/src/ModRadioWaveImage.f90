@@ -679,7 +679,7 @@ contains
       State_V = 0.0; GradDensity_D = 0.0; DeltaSNew = 0.0
       if(nCell<1)then
          write(*,*)'Particcle Xyz_D=',Xyz_D
-         call CON_stop(&
+         call stop_mpi(&
            NameSub//': cannot interpolate the particle') 
       end if
       do iCell = 1, nCell
