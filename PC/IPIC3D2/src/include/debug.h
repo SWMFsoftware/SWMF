@@ -52,6 +52,8 @@ declare_dprintvar_fileLine(double);
 declare_dprintvar_fileLine(const char *);
 declare_dprintvar_fileLine(const void *);
 
+void process_mem_usage(string tag);
+
 #ifdef BATSRUS
 extern Collective * _col0;
 extern Grid3DCU * _grid0;
