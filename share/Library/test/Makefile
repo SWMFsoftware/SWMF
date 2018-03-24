@@ -338,7 +338,9 @@ test_interpolate_amr:
 	@make test_interpolate_amr_exe		>> test_interpolate_amr.diff
 	@echo ./test_interpolate_amr.exe	>> test_interpolate_amr.diff
 	-@(./test_interpolate_amr.exe > test_interpolate_amr.diff)
+	@if [ -s test_interpolate_amr.diff ]; then echo "test_interpolate_amr run..." >> test_interpolate_amr.diff; fi
 	@ls -l test_interpolate_amr.diff
+
 #######################################################################
 test_interpolate_cell_amr.o: test_interpolate_cell_amr.f90
 	${COMPILE.f90} ${Cflag0} test_interpolate_cell_amr.f90
