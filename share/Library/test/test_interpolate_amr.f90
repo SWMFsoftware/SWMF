@@ -214,6 +214,11 @@ contains
                any(abs(Coord_D - CoordModulo_D) > 1.0e-6).and.&
                IsSecondOrder)then
              write(*,*)'Approximation test failed'
+             write(*,*)'nDim=',nDim
+             write(*,*)'IsCartesian=',IsCartesian
+             write(*,*)'IsPeriodic_D=',IsPeriodic_D
+             write(*,*)'UseGeneric=',UseGeneric
+             write(*,*)'UseGhostCell=',UseGhostCell
              write(*,*)'Grid:', iLevelTest_I(1:2**nDim)
              write(*,*)'nGridOut=',nGridOut
              write(*,*)'Point=', Coord_D
@@ -311,6 +316,11 @@ contains
                any(abs(CoordCont_D - CoordModulo_D) > 1.0e-6).and.&
                IsSecondOrder)then
              write(*,*)'Approximation test failed'
+             write(*,*)'nDim=',nDim
+             write(*,*)'IsCartesian=',IsCartesian
+             write(*,*)'IsPeriodic_D=',IsPeriodic_D
+             write(*,*)'UseGeneric=',UseGeneric
+             write(*,*)'UseGhostCell=',UseGhostCell
              write(*,*)'Grid:', iLevelTest_I(1:2**nDim)
              write(*,*)'nGridOut=',nGridOut
              write(*,*)'PointCont=', CoordCont_D
@@ -329,6 +339,11 @@ contains
           end if
           if(abs(VarContInterpolated - VarInterpolated) > nDim*0.01)then
              write(*,*)'Continuity test failed'
+             write(*,*)'nDim=',nDim
+             write(*,*)'IsCartesian=',IsCartesian
+             write(*,*)'IsPeriodic_D=',IsPeriodic_D
+             write(*,*)'UseGeneric=',UseGeneric
+             write(*,*)'UseGhostCell=',UseGhostCell
              write(*,*)'Grid:', iLevelTest_I
              write(*,*)'nGridOut=',nGridOut
              write(*,*)'CoordCont=', CoordCont_D
@@ -918,7 +933,7 @@ program test_interpolate_amr
 
   implicit none
 
-  integer :: nSampleTest = 10000
+  integer :: nSampleTest = 100000
 
   call test(&
        nDim          = 2,&
