@@ -3762,6 +3762,10 @@ contains
          iCellOut_II(:, nCellOut) = iCellOut_II(:,iGrid)
          Weight_I(nCellOut) = Weight_I(iGrid)
       end do
+      if(nCellOut == 0)&
+           call CON_stop(&
+           "ModInterpolateAMR:interpolate_amr_gc: "//&
+           "All points in interpolation stencil have been sorted out!")
     end subroutine sort_out
   end subroutine interpolate_amr_gc
   !============================================================================
@@ -4791,10 +4795,6 @@ contains
     integer:: nGrid, iGrid
     !/
     !\
-    ! To improve the algorithm stability against roundoff errors
-    !/
-    real           :: cTol2
-    !\
     ! !Number of integers in the cell index. Normally this is nDim
     ! however, a flexibility to allow any other value is useful.
     integer:: nCellId 
@@ -5119,6 +5119,10 @@ contains
          iOrder_I(nGridOut) = iOrder_I(iGrid)
          Weight_I(nGridOut) = Weight_I(iGrid)
       end do ALL
+      if(nGridOut == 0)&
+           call CON_stop(&
+           "ModInterpolateAMR:interpolate_extended_stencil: "//&
+           "All points in interpolation stencil have been sorted out!")
     end subroutine sort_out
   end subroutine interpolate_extended_stencil
 end module ModInterpolateAMR
