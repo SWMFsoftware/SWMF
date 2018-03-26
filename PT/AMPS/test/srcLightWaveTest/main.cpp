@@ -109,7 +109,7 @@ void SetIC() {
 	    
 	    PIC::Mesh::cDataCornerNode *CornerNode= node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
 	    if (CornerNode!=NULL){
-	      offset=CornerNode->GetAssociatedDataBufferPointer();
+	      offset=CornerNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
 	      
 	      x[0]=node->xmin[0]+(i*(node->xmax[0]-node->xmin[0]))/_BLOCK_CELLS_X_;
 	      x[1]=node->xmin[1]+(j*(node->xmax[1]-node->xmin[1]))/_BLOCK_CELLS_Y_;
@@ -159,7 +159,7 @@ void SetIC() {
 	     
 	    PIC::Mesh::cDataCenterNode *CenterNode= node->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
 	    if (CenterNode!=NULL){
-	      offset=node->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
+	      offset=node->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset;
 
 	      x[0]=node->xmin[0]+((i+0.5)*(node->xmax[0]-node->xmin[0]))/_BLOCK_CELLS_X_;
 	      x[1]=node->xmin[1]+((j+0.5)*(node->xmax[1]-node->xmin[1]))/_BLOCK_CELLS_Y_;
