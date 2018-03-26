@@ -1246,13 +1246,14 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::output::InterpolateCenterNode(PIC
   for (iDim =0;iDim<3; iDim++) Wave[iDim]=0.0;
 
   for (i=0;i<nInterpolationCoeficients;i++) {
-    SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+CurrentBOffset;
+       SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+CurrentBOffset;
+       // SamplingBuffer=InterpolationList[i]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset;
     Wave[0] += (((double*)SamplingBuffer)[0])*InterpolationCoeficients[i];
     Wave[1] += (((double*)SamplingBuffer)[1])*InterpolationCoeficients[i];
     Wave[2] += (((double*)SamplingBuffer)[2])*InterpolationCoeficients[i];
   }
 
-  memcpy(CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset,Wave,3*sizeof(double));
+  memcpy(CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+CurrentBOffset,Wave,3*sizeof(double));
 
 }
 
@@ -1261,7 +1262,10 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::output::PrintCenterNodeData(FILE*
   double * t;
 
   if (pipe->ThisThread==CenterNodeThread) {
-    t= (double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+CurrentBOffset);
+       t= (double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+CurrentBOffset);
+       // t= (double*)(CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset);
+
+    
   }
   
   if (pipe->ThisThread==0) {
