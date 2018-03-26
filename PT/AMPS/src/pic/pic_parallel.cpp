@@ -13,6 +13,26 @@ double PIC::Parallel::EmergencyLoadRebalancingFactor=3.0;
 double PIC::Parallel::Latency=0.0;
 
 //processing 'corner' and 'center' node associated data vectors when perform syncronization
+PIC::Parallel::CornerBlockBoundaryNodes::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData=NULL;
+PIC::Parallel::CornerBlockBoundaryNodes::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData=NULL;
+PIC::Parallel::CornerBlockBoundaryNodes::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CornerBlockBoundaryNodes::CopyCenterNodeAssociatedData=NULL; 
+bool PIC::Parallel::CornerBlockBoundaryNodes::ActiveFlag=false;
+void PIC::Parallel::CornerBlockBoundaryNodes::SetActiveFlag(bool flag) {ActiveFlag=flag;}
+
+//default function forprocessing of the corner node associated data
+void PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData) {
+  memcpy(TargetBlockAssociatedData,SourceBlockAssociatedData,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+}
+
+void PIC::Parallel::CornerBlockBoundaryNodes::CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData) {
+  memcpy(TargetBlockAssociatedData,SourceBlockAssociatedData,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+}
+
+//-----------------------------------------------------------------
+
+
+/*
+//processing 'corner' and 'center' node associated data vectors when perform syncronization
 PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::ProcessCenterNodeAssociatedData=NULL,PIC::Parallel::ProcessCornerNodeAssociatedData=NULL;
 PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CopyCenterNodeAssociatedData=PIC::Parallel::CopyCenterNodeAssociatedData_default;
 PIC::Parallel::fUserDefinedProcessNodeAssociatedData PIC::Parallel::CopyCornerNodeAssociatedData=PIC::Parallel::CopyCornerNodeAssociatedData_default;
@@ -25,6 +45,7 @@ void PIC::Parallel::CopyCornerNodeAssociatedData_default(char *TargetBlockAssoci
 void PIC::Parallel::CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData) {
   memcpy(TargetBlockAssociatedData,SourceBlockAssociatedData,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
 }
+*/ 
 
 //====================================================
 //Exchange particles between Processors
@@ -336,6 +357,8 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
   char *CornerNodeAssociatedData;
   PIC::Mesh::cDataBlockAMR *block;
   MPI_Status status;
+
+  if (CornerBlockBoundaryNodes::ActiveFlag==false) return;
 
   const int iFaceMin[6]={0,_BLOCK_CELLS_X_,0,0,0,0};
   const int iFaceMax[6]={0,_BLOCK_CELLS_X_,_BLOCK_CELLS_X_,_BLOCK_CELLS_X_,_BLOCK_CELLS_X_,_BLOCK_CELLS_X_};
@@ -1185,7 +1208,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
   char recvAssociatedDataBuffer[PIC::Mesh::cDataCornerNode::totalAssociatedDataLength];
 
   //1. combine 'corner' node data
-  if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) for (iStencil=0;iStencil<StencilTableLength;iStencil++) {
+  if (PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData!=NULL) for (iStencil=0;iStencil<StencilTableLength;iStencil++) {
     int iThread;
 
     if (StencilTable[iStencil].StencilLength>1) {
@@ -1196,10 +1219,10 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
         for (iThread=1;iThread<StencilTable[iStencil].StencilLength;iThread++) {
           MPI_Recv(recvAssociatedDataBuffer,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_BYTE,StencilTable[iStencil].StencilThreadTable[iThread],iStencil,MPI_GLOBAL_COMMUNICATOR,&status);
 
-          if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) {
-            PIC::Parallel::ProcessCornerNodeAssociatedData(StencilTable[iStencil].AssociatedDataPointer,recvAssociatedDataBuffer);
+          if (PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData!=NULL) {
+            PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData(StencilTable[iStencil].AssociatedDataPointer,recvAssociatedDataBuffer);
           }
-          else exit(__LINE__,__FILE__,"Error: PIC::Parallel::ProcessCornerNodeAssociatedData is not defined");
+          else exit(__LINE__,__FILE__,"Error: PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData is not defined");
         }
 
         //send out the state vector to MPI processes that have contributed to it
@@ -1216,8 +1239,8 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
           //recieve the associated data
           MPI_Recv(recvAssociatedDataBuffer,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_BYTE,StencilTable[iStencil].StencilThreadTable[0],iStencil,MPI_GLOBAL_COMMUNICATOR,&status);
 
-          if (PIC::Parallel::CopyCornerNodeAssociatedData!=NULL) {
-            PIC::Parallel::CopyCornerNodeAssociatedData(StencilTable[iStencil].AssociatedDataPointer,recvAssociatedDataBuffer);
+          if (PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData!=NULL) {
+            PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData(StencilTable[iStencil].AssociatedDataPointer,recvAssociatedDataBuffer);
           }
           else{
             memcpy(StencilTable[iStencil].AssociatedDataPointer,recvAssociatedDataBuffer,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
@@ -1230,7 +1253,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
   }
 
   //2. processes the 'real' domain boundary in case periodic boundary conditions are in use
-  if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) for (iStencil=0;iStencil<StencilTablePBCLength;iStencil++) {
+  if (PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData!=NULL) for (iStencil=0;iStencil<StencilTablePBCLength;iStencil++) {
      int iThread,thread,ipoint;
 
      if (StencilTablePBC[iStencil].InvolvedFlag==true) {
@@ -1241,19 +1264,19 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
            //the current thread is the processing manager of the stencil
            if (StencilTablePBC[iStencil].SourceThreadTable[ipoint]==PIC::ThisThread) {
              //the data are located with the same MPI process
-             if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) {
-               PIC::Parallel::ProcessCornerNodeAssociatedData(AssociateDataVector,StencilTablePBC[iStencil].PointTable[ipoint].AssociatedDataPointer);
+             if (PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData!=NULL) {
+               PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData(AssociateDataVector,StencilTablePBC[iStencil].PointTable[ipoint].AssociatedDataPointer);
              }
-             else exit(__LINE__,__FILE__,"Error: PIC::Parallel::ProcessCornerNodeAssociatedData is not defined");
+             else exit(__LINE__,__FILE__,"Error: PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData is not defined");
            }
            else {
              //the data need to be recieved before processing
              MPI_Recv(recvAssociatedDataBuffer,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_BYTE,StencilTablePBC[iStencil].SourceThreadTable[ipoint],iStencil,MPI_GLOBAL_COMMUNICATOR,&status);
 
-             if (PIC::Parallel::ProcessCornerNodeAssociatedData!=NULL) {
-               PIC::Parallel::ProcessCornerNodeAssociatedData(AssociateDataVector,recvAssociatedDataBuffer);
+             if (PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData!=NULL) {
+               PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData(AssociateDataVector,recvAssociatedDataBuffer);
              }
-             else exit(__LINE__,__FILE__,"Error: PIC::Parallel::ProcessCornerNodeAssociatedData is not defined");
+             else exit(__LINE__,__FILE__,"Error: PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData is not defined");
            }
 
          }
@@ -1268,10 +1291,10 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
          int cnt=0;
 
          //copy processes associated data vector into a temporary buffer
-         if (PIC::Parallel::CopyCornerNodeAssociatedData!=NULL) {
-           PIC::Parallel::CopyCornerNodeAssociatedData(recvAssociatedDataBuffer,AssociateDataVector);
+         if (PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData!=NULL) {
+           PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData(recvAssociatedDataBuffer,AssociateDataVector);
          }
-         else exit(__LINE__,__FILE__,"Error: PIC::Parallel::CopyCornerNodeAssociatedData is not defined");
+         else exit(__LINE__,__FILE__,"Error: PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData is not defined");
 
 
          //copy/send thecontent of the processed associated data buffer to all MPI processes that are involved in the stencil
@@ -1280,7 +1303,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
            if (thread==PIC::ThisThread) {
              //copy the processes associated data
-             PIC::Parallel::CopyCornerNodeAssociatedData(StencilTablePBC[iStencil].PointTable[ipoint].AssociatedDataPointer,recvAssociatedDataBuffer);
+             PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData(StencilTablePBC[iStencil].PointTable[ipoint].AssociatedDataPointer,recvAssociatedDataBuffer);
            }
            else {
              //send processes associated data vector
@@ -1298,7 +1321,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
              MPI_Status status;
 
              MPI_Recv(recvAssociatedDataBuffer,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,MPI_BYTE,StencilTablePBC[iStencil].ProcessingThread,0,MPI_GLOBAL_COMMUNICATOR,&status);
-             PIC::Parallel::CopyCornerNodeAssociatedData(StencilTablePBC[iStencil].PointTable[ipoint].AssociatedDataPointer,recvAssociatedDataBuffer);
+             PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData(StencilTablePBC[iStencil].PointTable[ipoint].AssociatedDataPointer,recvAssociatedDataBuffer);
            }
          }
 
