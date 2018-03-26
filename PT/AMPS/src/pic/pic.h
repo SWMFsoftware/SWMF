@@ -3548,6 +3548,21 @@ namespace PIC {
      //(PIC::Parallel::CumulativeLatency>PIC::Parallel::EmergencyLoadRebalancingFactor*PIC::Parallel::RebalancingTime)
      extern double EmergencyLoadRebalancingFactor;
 
+     //process the corner node associated data for nodes located at the boundary of the subdomain and at the boundary of the computational domain
+     namespace CornerBlockBoundaryNodes {
+       extern bool ActiveFlag;
+       void SetActiveFlag(bool flag);
+       void ProcessNodes();
+
+       //processing 'corner' and 'center' node associated data vectors when perform syncronization
+       typedef void (*fUserDefinedProcessNodeAssociatedData)(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+       extern fUserDefinedProcessNodeAssociatedData ProcessCornerNodeAssociatedData,CopyCenterNodeAssociatedData,CopyCornerNodeAssociatedData;
+
+       //default function for copying the corner node associated data
+       void CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+       void CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+     }
+
      //exchenge paricles between iterations
      void ExchangeParticleData();
 
@@ -3557,6 +3572,7 @@ namespace PIC {
      //Latency of the run
      extern double Latency;
 
+/*
      //processing 'corner' and 'center' node associated data vectors when perform syncronization
      typedef void (*fUserDefinedProcessNodeAssociatedData)(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
      extern fUserDefinedProcessNodeAssociatedData ProcessCenterNodeAssociatedData,ProcessCornerNodeAssociatedData,CopyCenterNodeAssociatedData,CopyCornerNodeAssociatedData;
@@ -3564,6 +3580,7 @@ namespace PIC {
      //default function for copying the corner node associated data
      void CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
      void CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+*/
   }
 
   namespace Debugger {
@@ -5068,6 +5085,14 @@ namespace PIC {
 
         //init the boundary conditions manager and the mesh that will be used in the simulation
         void Init(double* xmin,double* xmax,double (*localResuestedResolutionFunction)(double*));
+
+        //processing 'corner' and 'center' node associated data vectors when perform syncronization
+        typedef void (*fUserDefinedProcessNodeAssociatedData)(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+        extern fUserDefinedProcessNodeAssociatedData CopyCenterNodeAssociatedData,CopyCornerNodeAssociatedData;
+
+        //default function for copying the corner node associated data
+        void CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
+        void CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData);
       }
 
     }
@@ -5395,6 +5420,7 @@ namespace FieldSolver {
             void ProcessFinalSolution(double* x,PIC::Mesh::cDataCornerNode* CornerNode);
 	    
 	    void ProcessPeriodicJMassMatrix(char * realData, char * ghostData);
+            void CopyPeriodicJMassMatrix(char * realData, char * ghostData);
 
             void BuildMatrix();
             void TimeStep();
