@@ -933,7 +933,7 @@ program test_interpolate_amr
 
   implicit none
 
-  integer :: nSampleTest = 100000
+  integer :: nSampleTest = 1000
 
   call test(&
        nDim          = 2,&
