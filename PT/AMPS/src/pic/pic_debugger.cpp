@@ -315,3 +315,254 @@ void PIC::Sampling::CatchOutLimitSampledValue() {
 }
 
 
+//==========================================================================================
+//get checksum of the corner and center node associated data
+void PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+  int i,j,k;
+  PIC::Mesh::cDataCornerNode *CornerNode;
+  PIC::Mesh::cDataBlockAMR *block;
+
+  static int EntryCounter;  //used to ensure the same allocation of the blocks and nodes
+  static CRC32 CheckSum;
+  static CMPI_channel pipe(1000000);
+  static int initflag=false;
+
+  //coundate of the fucntion calls
+  static int nCallCounter=0;
+
+  if (startNode==NULL) {
+    startNode=PIC::Mesh::mesh.rootTree;
+    EntryCounter=0;
+    CheckSum.clear();
+
+    nCallCounter++;
+
+    if (initflag==false) {
+      initflag=true;
+
+      if (PIC::ThisThread==0) {
+        pipe.openRecvAll();
+      }
+      else {
+        pipe.openSend(0);
+      }
+    }
+  }
+
+  //add the associated node data
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if ((startNode->Thread==PIC::ThisThread)||(PIC::ThisThread==0)) {
+      EntryCounter++;
+      CheckSum.add(EntryCounter);
+
+      block=startNode->block;
+
+      for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
+        EntryCounter++;
+        CheckSum.add(EntryCounter);
+
+        for (j=0;j<_BLOCK_CELLS_Y_+1;j++) {
+          EntryCounter++;
+          CheckSum.add(EntryCounter);
+
+          for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
+            EntryCounter++;
+            CheckSum.add(EntryCounter);
+
+            if (startNode->Thread==0) {
+              //the associated data is located the the root
+              if (block!=NULL) if ((CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+                CheckSum.add(CornerNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+              }
+            }
+            else {
+              if (PIC::ThisThread==0) {
+                //recieve the data vector
+                bool DataSendMode;
+
+                pipe.recv(DataSendMode,startNode->Thread);
+
+                if (DataSendMode==true) {
+                  char *ptr;
+
+                  ptr=pipe.recvPointer<char>(PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,startNode->Thread);
+                  CheckSum.add(ptr,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+                }
+              }
+              else {
+                //send the data vector
+                bool DataSendMode;
+
+                if (block!=NULL) {
+                  if ((CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+                    DataSendMode=true;
+                    pipe.send(DataSendMode);
+
+                    pipe.send(CornerNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+                  }
+                  else {
+                    DataSendMode=false;
+                    pipe.send(DataSendMode);
+                  }
+                }
+                else {
+                  DataSendMode=false;
+                  pipe.send(DataSendMode);
+                }
+
+              }
+            }
+
+          }
+
+        }
+      }
+    }
+  }
+  else {
+    //add daugher blocks
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) GetCornerNodeAssociatedDataSignature(nline,fname,downNode);
+  }
+
+  //output the checksum
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    pipe.flush();
+
+    if (PIC::ThisThread==0) {
+      char msg[500];
+
+      sprintf(msg," line=%ld, file=%s (Call Counter=%i)",nline,fname,nCallCounter);
+      CheckSum.PrintChecksumSingleThread(msg);
+    }
+  }
+}
+
+void PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+  int i,j,k;
+  PIC::Mesh::cDataCenterNode *CenterNode;
+  PIC::Mesh::cDataBlockAMR *block;
+
+  static int EntryCounter;  //used to ensure the same allocation of the blocks and nodes
+  static CRC32 CheckSum;
+  static CMPI_channel pipe(1000000);
+  static int initflag=false;
+
+  //coundate of the fucntion calls
+  static int nCallCounter=0;
+
+  if (startNode==NULL) {
+    startNode=PIC::Mesh::mesh.rootTree;
+    EntryCounter=0;
+    CheckSum.clear();
+
+    nCallCounter++;
+
+    if (initflag==false) {
+      initflag=true;
+
+      if (PIC::ThisThread==0) {
+        pipe.openRecvAll();
+      }
+      else {
+        pipe.openSend(0);
+      }
+    }
+  }
+
+  //add the associated node data
+  if (startNode->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+    if ((startNode->Thread==PIC::ThisThread)||(PIC::ThisThread==0)) {
+      EntryCounter++;
+      CheckSum.add(EntryCounter);
+
+      block=startNode->block;
+
+      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+        EntryCounter++;
+        CheckSum.add(EntryCounter);
+
+        for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+          EntryCounter++;
+          CheckSum.add(EntryCounter);
+
+          for (i=0;i<_BLOCK_CELLS_X_;i++) {
+            EntryCounter++;
+            CheckSum.add(EntryCounter);
+
+            if (startNode->Thread==0) {
+              //the associated data is located the the root
+              if (block!=NULL) if ((CenterNode=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k)))!=NULL) {
+                CheckSum.add(CenterNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+              }
+            }
+            else {
+              if (PIC::ThisThread==0) {
+                //recieve the data vector
+                bool DataSendMode;
+
+                pipe.recv(DataSendMode,startNode->Thread);
+
+                if (DataSendMode==true) {
+                  char *ptr;
+
+                  ptr=pipe.recvPointer<char>(PIC::Mesh::cDataCenterNode::totalAssociatedDataLength,startNode->Thread);
+                  CheckSum.add(ptr,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+                }
+              }
+              else {
+                //send the data vector
+                bool DataSendMode;
+
+                if (block!=NULL) {
+                  if ((CenterNode=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k)))!=NULL) {
+                    DataSendMode=true;
+                    pipe.send(DataSendMode);
+
+                    pipe.send(CenterNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+                  }
+                  else {
+                    DataSendMode=false;
+                    pipe.send(DataSendMode);
+                  }
+                }
+                else {
+                  DataSendMode=false;
+                  pipe.send(DataSendMode);
+                }
+
+              }
+            }
+
+          }
+
+        }
+      }
+    }
+  }
+  else {
+    //add daugher blocks
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *downNode;
+
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) GetCenterNodeAssociatedDataSignature(nline,fname,downNode);
+  }
+
+  //output the checksum
+  if (startNode==PIC::Mesh::mesh.rootTree) {
+    pipe.flush();
+
+    if (PIC::ThisThread==0) {
+      char msg[500];
+
+      sprintf(msg," line=%ld, file=%s (Call Counter=%i)",nline,fname,nCallCounter);
+      CheckSum.PrintChecksumSingleThread(msg);
+    }
+  }
+}
+
+
+
+
+
+
