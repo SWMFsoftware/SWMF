@@ -606,6 +606,14 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::ProcessPeriodicJMassMatrix(char *
 
 }
 
+void PIC::FieldSolver::Electromagnetic::ECSIM::CopyPeriodicJMassMatrix(char * realData, char * ghostData){
+
+  using namespace PIC::FieldSolver::Electromagnetic::ECSIM;
+
+  for (int ii=0;ii<3;ii++)   ((double*)realData)[JxOffsetIndex+ii]=((double*)ghostData)[JxOffsetIndex+ii];
+  for (int ii=0;ii<243;ii++) ((double*)realData)[MassMatrixOffsetIndex+ii]=((double*)ghostData)[MassMatrixOffsetIndex+ii];
+}
+
 
 
 void UpdateJMassMatrix(){
@@ -921,9 +929,18 @@ void UpdateJMassMatrix(){
     break;
     
   case _PIC_BC__PERIODIC_MODE_ON_:
-    PIC::Parallel::ProcessCornerNodeAssociatedData=PIC::FieldSolver::Electromagnetic::ECSIM::ProcessPeriodicJMassMatrix;    
+    PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData=PIC::FieldSolver::Electromagnetic::ECSIM::ProcessPeriodicJMassMatrix;    
+
+    PIC::Parallel::CornerBlockBoundaryNodes::ProcessCornerNodeAssociatedData=PIC::FieldSolver::Electromagnetic::ECSIM::ProcessPeriodicJMassMatrix;
+    PIC::Parallel::CornerBlockBoundaryNodes::CopyCornerNodeAssociatedData=PIC::FieldSolver::Electromagnetic::ECSIM::CopyPeriodicJMassMatrix;
+    PIC::Parallel::CornerBlockBoundaryNodes::SetActiveFlag(true);
+
+
     PIC::BC::ExternalBoundary::Periodic::UpdateData();
-    PIC::Parallel::ProcessCornerNodeAssociatedData=NULL;
+
+    PIC::Parallel::CornerBlockBoundaryNodes::SetActiveFlag(false);
+
+//    PIC::Parallel::ProcessCornerNodeAssociatedData=NULL;
     break;
   }
 
