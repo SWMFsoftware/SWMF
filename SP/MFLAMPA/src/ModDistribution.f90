@@ -162,7 +162,13 @@ contains
             -Alpha     * State_VIB((/RhoOld_, BOld_/), 3, iBlock)
        Distribution_IIB(:,1,iBlock) = Distribution_IIB(:,2,iBlock) + &
             Alpha*(Distribution_IIB(:,2,iBlock) - &
-            Distribution_IIB(:,3,iBlock))
+            Distribution_IIB(:,3,iBlock))       
+       ! extrapolation may introduced negative values 
+       ! for strictly positive quantities; such occurences need fixing
+       where(State_VIB((/RhoOld_,BOld_/),1,iBlock) <= 0.0)
+          State_VIB((/RhoOld_,BOld_/),1,iBlock) = &
+               0.01 * State_VIB((/RhoOld_,BOld_/),2,iBlock)
+       end where
     elseif(iOffset < 0)then
        State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock) &
             =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock)&
