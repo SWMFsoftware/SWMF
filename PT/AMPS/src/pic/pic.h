@@ -3629,6 +3629,10 @@ namespace PIC {
 
       for (i=0;i<lengthArray;i++) CatchOutLimitValue(valArray[i],line,fname);
     }
+
+    //get check sum of the associated data
+    void GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+    void GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
   }
 
   namespace Alarm {
