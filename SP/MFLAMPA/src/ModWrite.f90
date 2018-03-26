@@ -16,7 +16,7 @@ module SP_ModPlot
   use SP_ModTime, ONLY: SPTime, iIter
   use SP_ModProc, ONLY: iProc
   use ModPlotFile, ONLY: save_plot_file, read_plot_file
-  use ModUtilities, ONLY: open_file, close_file
+  use ModUtilities, ONLY: open_file, close_file, remove_file
   use ModIoUnit, ONLY: UnitTmp_
   implicit none
   SAVE
@@ -254,7 +254,7 @@ contains
           end select
           
           ! reset variables' names
-          File_I(iFile) % NameVarPlot = NameVar_V(LagrID_)
+          File_I(iFile) % NameVarPlot = ''
           
           ! based on kind of data process the requested output
           select case(File_I(iFile) % iKindData)
@@ -266,6 +266,7 @@ contains
                   1:nParticleMax))
              ! add particle index to variable names
              File_I(iFile) % NameVarPlot = &
+                  NameVar_V(LagrID_)//' '//&
                   trim(File_I(iFile) % NameVarPlot)
              do iVar = LagrID_,Z_
                 File_I(iFile)%NameVarPlot = &
@@ -289,12 +290,13 @@ contains
              call read_var('Radius [Rs]', File_I(iFile) % Radius)
           case(MHTime_)
              call process_mh
-             ! prepare the output data container
+             ! prepare the output data container;
+             ! note extra space reserved for time of the output
              allocate(File_I(iFile) % Buffer_II(&
-                  File_I(iFile)%nVarPlot + File_I(iFile)%nFluxPlot, 1))
+                  1 + File_I(iFile)%nVarPlot + File_I(iFile)%nFluxPlot, 1))
              ! add time interval index to variable names
              File_I(iFile) % NameVarPlot = &
-                  'TimeIntervalIndex '//trim(File_I(iFile) % NameVarPlot)
+                  'Time '//trim(File_I(iFile) % NameVarPlot)
              ! get radius
              call read_var('Radius [Rs]', File_I(iFile) % Radius)
              ! reset indicator of the first call
@@ -595,6 +597,8 @@ contains
       !-----------------------------------------------------------
       ! name of the output file
       character(len=100):: NameFile
+      ! header of the output file
+      character(len=200):: StringHeader
       ! loop variables
       integer:: iBlock, iParticle, iVarPlot, iVarIndex
       ! indexes of corresponding node, latitude and longitude
@@ -619,6 +623,11 @@ contains
       !-----------------------------------------------------------
       nVarPlot = File_I(iFile)%nVarPlot
       nFluxPlot= File_I(iFile)%nFluxPlot
+      ! header for the output file
+      StringHeader = &
+           'MFLAMPA: data on a sphere at fixed heliocentric distance; '//&
+           'Coordindate system: '//trim(TypeCoordSystem)           
+
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
 
@@ -714,14 +723,15 @@ contains
       if(iProc==0)&
            ! print data to file
            call save_plot_file(&
-           NameFile     = NameFile, &
-           TypeFileIn   = File_I(iFile) % TypeFile, &
-           nDimIn       = 1, &
-           TimeIn       = SPTime, &
-           nStepIn      = iIter, &
-           Coord1In_I   = real(pack(iNodeIndex_I, MASK=DoPrint_I)),&
-           NameVarIn    = File_I(iFile) % NameVarPlot, &
-           VarIn_VI     = &
+           NameFile      = NameFile, &
+           StringHeaderIn= StringHeader, &
+           TypeFileIn    = File_I(iFile) % TypeFile, &
+           nDimIn        = 1, &
+           TimeIn        = SPTime, &
+           nStepIn       = iIter, &
+           Coord1In_I    = real(pack(iNodeIndex_I, MASK=DoPrint_I)),&
+           NameVarIn     = File_I(iFile) % NameVarPlot, &
+           VarIn_VI      = &
            reshape(&
            pack(File_I(iFile) % Buffer_II(1:nVarPlot+nFluxPlot,1:nNode),&
            MASK = spread(DoPrint_I, 1, nVarPlot+nFluxPlot)), &
@@ -756,10 +766,39 @@ contains
       integer:: nDataLine
       ! current size of the buffer
       integer:: nBufferSize
+      ! whether the output file already exists
+      logical:: IsPresent
+      ! header for the file
+      character(len=200):: StringHeader
       character(len=*), parameter:: NameSub='write_mh_time'
       !------------------------------------------------------------------------
       nVarPlot = File_I(iFile)%nVarPlot
       nFluxPlot= File_I(iFile)%nFluxPlot
+      ! set header
+      StringHeader = &
+           'MFLAMPA: data on a field line at fixed heliocentric distance; '//&
+           'Coordindate system: '//trim(TypeCoordSystem)           
+
+      !\
+      ! at first call, remove files if they exist to reset time series output
+      !/
+      if(File_I(iFile) % IsFirstCall)then
+         ! mark that the 1st call has alredy happened
+         File_I(iFile) % IsFirstCall = .false.
+         ! go over list of lines and remove file for each one
+         do iBlock = 1, nBlock
+            iNode = iNode_B(iBlock)
+            call get_node_indexes(iNode, iLon, iLat)
+            ! set the file name
+            write(NameFile,'(a,i4.4,f0.2,a,i3.3,a,i3.3,a)') &
+                 trim(NamePlotDir)//NameMHData//'_R=', &
+                 int(File_I(iFile)%Radius),&
+                 File_I(iFile) % Radius - int(File_I(iFile) % Radius), &
+                 '_', iLon, '_', iLat, File_I(iFile) % NameFileExtension
+            call remove_file(NameFile)
+         end do
+      end if
+
       ! reset the output buffer
       File_I(iFile) % Buffer_II = 0
 
@@ -801,7 +840,8 @@ contains
          !\
          ! if file already exists -> read its content
          nDataLine = 0
-         if(.not.File_I(iFile)%IsFirstCall)then
+         inquire(FILE=NameFile, EXIST=IsPresent)
+         if(IsPresent)then
 
             ! first, determine its size
             call read_plot_file(&
@@ -813,20 +853,22 @@ contains
             if(nBufferSize < nDataLine + 1)then
                deallocate(File_I(iFile)%Buffer_II)
                allocate(File_I(iFile)%Buffer_II(&
-                    nVarPlot + nFluxPlot, 2*nBufferSize))
+                    nVarPlot + nFluxPlot + 1, 2*nBufferSize))
             end if
 
             ! read the data itself
             call read_plot_file(&
                  NameFile   = NameFile, &
-                 TypeFileIn = File_I(iFile) % TypeFile,&
-                 VarOut_VI  = File_I(iFile) % Buffer_II)
+                 TypeFileIn = File_I(iFile)%TypeFile,&
+                 Coord1Out_I= File_I(iFile)%Buffer_II(1+nVarPlot+nFluxPlot,:),&
+                 VarOut_VI  = File_I(iFile)%Buffer_II(1:nVarPlot+nFluxPlot,:))
          end if
 
          !\
          ! add new data
          nDataLine = nDataLine + 1
-
+         ! put time into buffer
+         File_I(iFile)%Buffer_II(nVarPlot+nFluxPlot+1,nDataLine) = SPTime
          ! interpolate data and fill buffer
          Radius0 = sum(State_VIB(X_:Z_, iAbove-1, iBlock)**2)**0.5
          Radius1 = sum(State_VIB(X_:Z_, iAbove,   iBlock)**2)**0.5
@@ -847,21 +889,19 @@ contains
 
          ! reprint data to file
          call save_plot_file(&
-              NameFile     = NameFile, &
-              TypeFileIn   = File_I(iFile) % TypeFile, &
-              nDimIn       = 1, &
-              TimeIn       = SPTime, &
-              nStepIn      = iIter, &
-              CoordMinIn_D = (/real(iIter - nDataLine + 1)/), &
-              CoordMaxIn_D = (/real(iIter)/), &
-              NameVarIn    = File_I(iFile) % NameVarPlot, &
-              VarIn_VI     = &
-              File_I(iFile) % Buffer_II(1:nVarPlot,1:nDataLine))
+              NameFile      = NameFile, &
+              StringHeaderIn= StringHeader, &
+              TypeFileIn    = File_I(iFile) % TypeFile, &
+              nDimIn        = 1, &
+              TimeIn        = SPTime, &
+              nStepIn       = iIter, &
+              Coord1In_I    = &
+              File_I(iFile) % Buffer_II(1+nVarPlot+nFluxPlot,1:nDataLine), &
+              NameVarIn     = File_I(iFile) % NameVarPlot, &
+              VarIn_VI      = &
+              File_I(iFile) % Buffer_II(1:nVarPlot+nFluxPlot,1:nDataLine))
       end do
 
-      ! mark that the first call is done
-      if(File_I(iFile)%IsFirstCall)&
-           File_I(iFile)%IsFirstCall = .false.
     end subroutine write_mh_time
     !=============================================================
     subroutine write_distr_1d
