@@ -33,6 +33,24 @@ int PIC::BC::ExternalBoundary::Periodic::BlockPairTableLength=0;
 //thecommunication channel for message exchange between MPI processes
 CMPI_channel PIC::BC::ExternalBoundary::Periodic::pipe;
 
+
+
+
+PIC::BC::ExternalBoundary::Periodic::fUserDefinedProcessNodeAssociatedData PIC::BC::ExternalBoundary::Periodic::CopyCornerNodeAssociatedData=PIC::BC::ExternalBoundary::Periodic::CopyCornerNodeAssociatedData_default;
+PIC::BC::ExternalBoundary::Periodic::fUserDefinedProcessNodeAssociatedData PIC::BC::ExternalBoundary::Periodic::CopyCenterNodeAssociatedData=PIC::BC::ExternalBoundary::Periodic::CopyCenterNodeAssociatedData_default;
+
+//default function forprocessing of the corner node associated data
+void PIC::BC::ExternalBoundary::Periodic::CopyCornerNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData) {
+  memcpy(TargetBlockAssociatedData,SourceBlockAssociatedData,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+}
+
+void PIC::BC::ExternalBoundary::Periodic::CopyCenterNodeAssociatedData_default(char *TargetBlockAssociatedData,char *SourceBlockAssociatedData) {
+  memcpy(TargetBlockAssociatedData,SourceBlockAssociatedData,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+}
+
+
+
+
 //mode particle between 'real' and 'ghost' blocks
 void PIC::BC::ExternalBoundary::Periodic::ExchangeParticles() {
   int iBlockPair,RealBlockThread,GhostBlockThread;
@@ -233,8 +251,8 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
     CornerNodeRealBlock=RealBlock->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
 
     if ((CornerNodeGhostBlock!=NULL)&&(CornerNodeGhostBlock!=NULL)) {
-      if (PIC::Parallel::CopyCornerNodeAssociatedData!=NULL) {
-        PIC::Parallel::CopyCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer());
+      if (CopyCornerNodeAssociatedData!=NULL) {
+        CopyCornerNodeAssociatedData(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer());
       }
       else{
         memcpy(CornerNodeGhostBlock->GetAssociatedDataBufferPointer(),CornerNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
@@ -251,8 +269,8 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeBlockDataLocal(cBlockPairTable
     CenterNodeRealBlock=RealBlock->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
 
     if ((CenterNodeGhostBlock!=NULL)&&(CenterNodeGhostBlock!=NULL)) {
-      if (PIC::Parallel::CopyCenterNodeAssociatedData!=NULL) {
-        PIC::Parallel::CopyCenterNodeAssociatedData(CenterNodeGhostBlock->GetAssociatedDataBufferPointer(),CenterNodeRealBlock->GetAssociatedDataBufferPointer());
+      if (CopyCenterNodeAssociatedData!=NULL) {
+        CopyCenterNodeAssociatedData(CenterNodeGhostBlock->GetAssociatedDataBufferPointer(),CenterNodeRealBlock->GetAssociatedDataBufferPointer());
       }
       else {
         memcpy(CenterNodeGhostBlock->GetAssociatedDataBufferPointer(),CenterNodeRealBlock->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
