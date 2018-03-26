@@ -2112,8 +2112,57 @@ namespace PIC {
       //      long int FirstCellParticle,tempParticleMovingList;
       
       char *associatedDataPointer;
-      bool ActiveFlag;
-      
+      unsigned char FlagTable;
+      static unsigned char FlagTableStatusVector;
+
+      //reserve and release flag
+      static bool CheckoutFlag(int ibit) {
+        unsigned char mask=1<<ibit;
+        bool res=false;
+
+        if (FlagTableStatusVector&mask==0) {
+          FlagTableStatusVector|=mask;
+          res=true;
+        }
+
+        return res;
+      }
+
+      static void ReleaseFlag(int ibit) {
+        unsigned char mask=1<<ibit;
+
+        mask=~mask;
+        FlagTableStatusVector&=mask;
+      }
+
+      //set and test the flags
+      bool TestFlag(int ibit) {
+        unsigned char mask=1<<ibit;
+
+        mask=FlagTable&mask;
+        return (mask!=0) ? true : false;
+      }
+
+      void SetFlag(bool flag,int ibit) {
+        unsigned char mask=1<<ibit;
+
+        if (flag==true) {
+          FlagTable|=mask;
+        }
+        else {
+          mask=~mask;
+          FlagTable&=mask;
+        }
+      }
+
+      //set and read 'active flag': zero's bit of the 'FlagTable'
+      bool TestActiveFlag() {return TestFlag(0);}
+      void SetActiveFlag(bool flag) {SetFlag(flag,0);}
+
+      //'processed' flag (second bit of 'FlagTable')
+      bool TestProcessedFlag() {return TestFlag(1);}
+      void SetProcessedFlag(bool flag) {SetFlag(flag,1);}
+
       inline int AssociatedDataLength() {
         return totalAssociatedDataLength;
       }
@@ -2140,7 +2189,7 @@ namespace PIC {
       //init the buffers
       cDataCenterNode() : cBasicCenterNode() {
         associatedDataPointer=NULL;
-        ActiveFlag=false;
+        SetActiveFlag(false);
       }
         
       // access sampled macroscopic parameters;

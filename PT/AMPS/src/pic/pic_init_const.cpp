@@ -45,4 +45,5 @@ char PIC::UserModelInputDataPath[_MAX_STRING_LENGTH_PIC_]="/Users/dborovik/AMPS_
 
 //the default value of the status vector
 unsigned char PIC::Mesh::cDataCornerNode::FlagTableStatusVector=7; ///0b111;
+unsigned char PIC::Mesh::cDataCenterNode::FlagTableStatusVector=3; ///0b011;
 
