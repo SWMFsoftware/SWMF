@@ -629,47 +629,41 @@ void UpdateJMassMatrix(){
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
   double ParticleEnergy=0.0;
 
-  //init J and MassMatrix to 0
-  for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
-      
-    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
-    if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
-      bool BoundaryBlock=false;
-      
-      for (int iface=0;iface<6;iface++) if (node->GetNeibFace(iface,0,0)==NULL) {
-	  //the block is at the domain boundary, and thresefor it is a 'ghost' block that is used to impose the periodic boundary conditions
-	  BoundaryBlock=true;
-	  break;
-	}
-      
-      if (BoundaryBlock==true) continue;
-    }
-
-    if (node->Thread!=PIC::ThisThread) continue;
-     
-    block=node->block;
-    
-    for (int k=0;k<_BLOCK_CELLS_Z_;k++) {
-      for (int j=0;j<_BLOCK_CELLS_Y_;j++)  {
-        for (int i=0;i<_BLOCK_CELLS_X_;i++) {
-	  char * offset=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer();
-	  for (int ii=0;ii<3;ii++)   ((double*)offset)[JxOffsetIndex+ii]=0.0;
-	  for (int ii=0;ii<243;ii++) ((double*)offset)[MassMatrixOffsetIndex+ii]=0.0;
-	}
-      }
-    }
-  }
   
-  switch (_PIC_BC__PERIODIC_MODE_) {
-  case _PIC_BC__PERIODIC_MODE_OFF_:
-    PIC::Mesh::mesh.ParallelBlockDataExchange();
-    break;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
+  PIC::Mesh::cDataCornerNode *CornerNode;
 
-  case _PIC_BC__PERIODIC_MODE_ON_:
-    PIC::BC::ExternalBoundary::Periodic::UpdateData();
-    break;
+  int ii,i,j,k;
+  char *AssociatedData;
+
+  //reset 'processed' flag
+  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+    PIC::Mesh::cDataBlockAMR *block=node->block;
+
+    if (block!=NULL) for (i=0;i<_BLOCK_CELLS_X_+1;i++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
+      PIC::Mesh::cDataCornerNode *CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+
+      if (CornerNode!=NULL) CornerNode->SetProcessedFlag(false);
+    }
   }
 
+
+  //reset values of J and MassMatrix to 0 
+  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+    PIC::Mesh::cDataBlockAMR *block=node->block;
+
+    if (block!=NULL) for (i=0;i<_BLOCK_CELLS_X_+1;i++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
+      PIC::Mesh::cDataCornerNode *CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+
+      if (CornerNode!=NULL) if (CornerNode->TestProcessedFlag()==false) {
+        CornerNode->SetProcessedFlag(true);
+        AssociatedData=CornerNode->GetAssociatedDataBufferPointer();
+
+          for (int ii=0;ii<3;ii++)   ((double*)AssociatedData)[JxOffsetIndex+ii]=0.0;
+          for (int ii=0;ii<243;ii++) ((double*)AssociatedData)[MassMatrixOffsetIndex+ii]=0.0;
+      } 
+    }
+  }
 
   int nparticle=0;
   // update J and MassMatrix
