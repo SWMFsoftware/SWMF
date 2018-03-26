@@ -47,7 +47,8 @@ contains
     use ModB0,            ONLY: set_b0_source, UseB0Source, UseCurlB0, &
          rCurrentFreeB0, DivB0_C, CurlB0_DC, B0_DGB, B0_DX, B0_DY, B0_DZ
     use BATL_lib,         ONLY: IsCartesian, IsRzGeometry, &
-         Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_
+         Xyz_DGB, CellSize_DB, CellVolume_GB, x_, y_, z_, Dim1_, Dim2_, Dim3_, &
+         correct_face_value
     use ModViscosity,     ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModBorisCorrection, ONLY: UseBorisCorrection, &
@@ -981,6 +982,7 @@ contains
       real:: DxInvHalf, DyInvHalf, DzInvHalf, DivBInternal_C(1:nI,1:nJ,1:nK)
       real:: dB1nFace1, dB1nFace2, dB1nFace3, dB1nFace4, dB1nFace5, dB1nFace6
 
+      real:: BCorrect0, BCorrect1
       !------------------------------------------------------------------------
       DxInvHalf = 0.5/CellSize_DB(x_,iBlock)
       DyInvHalf = 0.5/CellSize_DB(y_,iBlock)
@@ -989,63 +991,111 @@ contains
       do k = 1, nK; do j = 1, nJ; do i = 1, nI
          if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-         dB1nFace1 = DxInvHalf*&
-              (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
+         if((IsMhd.and.UseB0) .or. (.not.DoCorrectFace)) then
 
-         dB1nFace2 = DxInvHalf*&
-              (RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))
+            dB1nFace1 = DxInvHalf*&
+                 (RightState_VX(Bx_,i,j,k)-LeftState_VX(Bx_,i,j,k))
 
-         if(nJ > 1)then
-            dB1nFace3 = DyInvHalf* &
-                 (RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))
+            dB1nFace2 = DxInvHalf*&
+                 (RightState_VX(Bx_,i+1,j,k)-LeftState_VX(Bx_,i+1,j,k))
 
-            dB1nFace4 = DyInvHalf* &
-                 (RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
-         end if
+            if(nJ > 1)then
+               dB1nFace3 = DyInvHalf* &
+                    (RightState_VY(By_,i,j,k)-LeftState_VY(By_,i,j,k))
 
-         if(nK > 1)then
-            dB1nFace5 = DzInvHalf * &
-                 (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
+               dB1nFace4 = DyInvHalf* &
+                    (RightState_VY(By_,i,j+1,k)-LeftState_VY(By_,i,j+1,k))
+            end if
 
-            dB1nFace6 = DzInvHalf * &
-                 (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
-         end if
+            if(nK > 1)then
+               dB1nFace5 = DzInvHalf * &
+                    (RightState_VZ(Bz_,i,j,k)-LeftState_VZ(Bz_,i,j,k))
 
-         DivBInternal_C(i,j,k) = &
-              2*DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))
+               dB1nFace6 = DzInvHalf * &
+                    (RightState_VZ(Bz_,i,j,k+1)-LeftState_VZ(Bz_,i,j,k+1))
+            end if
 
-         if(nJ > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-              2*DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))
+            DivBInternal_C(i,j,k) = &
+                 2*DxInvHalf*(LeftState_VX(Bx_,i+1,j,k) -RightState_VX(Bx_,i,j,k))
 
-         if(nK > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
-              2*DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k))
+            if(nJ > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
+                 2*DyInvHalf*(LeftState_VY(By_,i,j+1,k) -RightState_VY(By_,i,j,k))
 
-         DivB1_GB(i,j,k,iBlock)  = DivBInternal_C(i,j,k) &
-              + dB1nFace1 + dB1nFace2
+            if(nK > 1) DivBInternal_C(i,j,k) = DivBInternal_C(i,j,k) + &
+                 2*DzInvHalf*(LeftState_VZ(Bz_,i,j,k+1) -RightState_VZ(Bz_,i,j,k))
 
-         if(nJ > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
-              + dB1nFace3 + dB1nFace4
 
-         if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
-              + dB1nFace5 + dB1nFace6
+            ! Momentum source term from B0 only needed for div(B^2/2 - BB)
+            ! discretization
+            if(IsMhd.and.UseB0) then
+               Source_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    Source_VC(RhoUx_:RhoUz_,i,j,k) &
+                    -B0_DX(:,i,j,k)*dB1nFace1    &
+                    -B0_DX(:,i+1,j,k)*dB1nFace2
 
-         ! Momentum source term from B0 only needed for div(B^2/2 - BB)
-         ! discretization
-         if(.not.(IsMhd.and.UseB0)) CYCLE
+               if(nJ > 1) &
+                    Source_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    Source_VC(RhoUx_:RhoUz_,i,j,k) &
+                    -B0_DY(:,i,j,k)*dB1nFace3   &
+                    -B0_DY(:,i,j+1,k)*dB1nFace4
 
-         Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
-              -B0_DX(:,i,j,k)*dB1nFace1    &
-              -B0_DX(:,i+1,j,k)*dB1nFace2
+               if(nK > 1) &
+                    Source_VC(RhoUx_:RhoUz_,i,j,k) = &
+                    Source_VC(RhoUx_:RhoUz_,i,j,k) &
+                    -B0_DZ(:,i,j,k)*dB1nFace5     &
+                    -B0_DZ(:,i,j,k+1)*dB1nFace6
+            endif
+         endif
 
-         if(nJ > 1) &
-              Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
-              -B0_DY(:,i,j,k)*dB1nFace3   &
-              -B0_DY(:,i,j+1,k)*dB1nFace4
+         if(DoCorrectFace) then
+            ! Correct the face value so that the first order derivate is 
+            ! high-order accurate. 
 
-         if(nK > 1) &
-              Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
-              -B0_DZ(:,i,j,k)*dB1nFace5     &
-              -B0_DZ(:,i,j,k+1)*dB1nFace6
+            BCorrect0 = correct_face_value( &
+                 0.5*(RightState_VX(Bx_,i,j,k) + LeftState_VX(Bx_,i,j,k)), &
+                 State_VGB(Bx_,i-2:i+1,j,k,iBlock))
+
+            BCorrect1 = correct_face_value( &
+                 0.5*(LeftState_VX(Bx_,i+1,j,k) + RightState_VX(Bx_,i+1,j,k)), &
+                 State_VGB(Bx_,i-1:i+2,j,k,iBlock))
+
+            DivB1_GB(i,j,k,iBlock) = 2*DxInvHalf*(BCorrect1 - BCorrect0)
+
+            if(nJ>1) then
+               BCorrect0 = correct_face_value( &
+                    0.5*(RightState_VY(By_,i,j,k) + LeftState_VY(By_,i,j,k)), &
+                    State_VGB(By_,i,j-2:j+1,k,iBlock))
+
+               BCorrect1 = correct_face_value( &
+                    0.5*(LeftState_VY(By_,i,j+1,k)+RightState_VY(By_,i,j+1,k)),&
+                    State_VGB(By_,i,j-1:j+2,k,iBlock))
+
+               DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
+                    2*DyInvHalf*(BCorrect1 - BCorrect0)
+            endif
+
+            if(nK>1) then
+               BCorrect0 = correct_face_value( &
+                    0.5*(RightState_VZ(Bz_,i,j,k) + LeftState_VZ(Bz_,i,j,k)), &
+                    State_VGB(Bz_,i,j,k-2:k+1,iBlock))
+
+               BCorrect1 = correct_face_value( &
+                    0.5*(LeftState_VZ(Bz_,i,j,k+1)+RightState_VZ(Bz_,i,j,k+1)),&
+                    State_VGB(Bz_,i,j,k-1:k+2,iBlock))               
+
+               DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) + &
+                    2*DzInvHalf*(BCorrect1 - BCorrect0)
+            endif
+         else
+            DivB1_GB(i,j,k,iBlock)  = DivBInternal_C(i,j,k) &
+                 + dB1nFace1 + dB1nFace2
+
+            if(nJ > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
+                 + dB1nFace3 + dB1nFace4
+
+            if(nK > 1) DivB1_GB(i,j,k,iBlock) = DivB1_GB(i,j,k,iBlock) &
+                 + dB1nFace5 + dB1nFace6
+         endif
 
       end do; end do; end do
 
