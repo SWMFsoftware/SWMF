@@ -2761,7 +2761,7 @@ contains
     !\
     ! To find the sort of corner stencil
     !/
-    integer:: iCase, iDir, iGrid
+    integer:: iCase, iDir, iGrid, iDim
 
     !\
     ! Error message
@@ -2972,12 +2972,21 @@ contains
           if(iLevel_I(iOrder_I(iGrid))==Fine_)then
              nFine   = nFine   + 1
              iOrder_I(    (/nFine,iGrid/)) = iOrder_I(    (/iGrid,nFine/))
-             XyzGrid_DI(:,(/nFine,iGrid/)) = XyzGrid_DI(:,(/iGrid,nFine/)) 
+             !\
+             ! Original version:
+             !XyzGrid_DI(:,(/nFine,iGrid/)) = &
+             !     XyzGrid_DI(:,(/iGrid,nFine/))
+             !XyzGrid_DI(:,(/nFine + 4,iGrid + 4 /)) =  &
+             !     XyzGrid_DI(:,(/iGrid + 4, nFine + 4/))
+             do iDim=1,nDim
+                XyzGrid_DI(iDim,(/nFine,iGrid/)) = &
+                     XyzGrid_DI(iDim,(/iGrid,nFine/))
+                XyzGrid_DI(iDim,(/nFine + 4,iGrid + 4 /)) =  &
+                     XyzGrid_DI(iDim,(/iGrid + 4, nFine + 4/))
+             end do
              Weight_I(    (/nFine,iGrid/)) = Weight_I(    (/iGrid,nFine/))
              iOrder_I(     (/nFine + 4,iGrid + 4/)) = &
                   iOrder_I(     (/iGrid + 4,nFine + 4/))
-             XyzGrid_DI(:,(/nFine + 4,iGrid + 4 /)) =  &
-                  XyzGrid_DI(:,(/iGrid + 4, nFine + 4/)) 
           end if
        end do
        nCoarse = nGridOut2 - nFine
