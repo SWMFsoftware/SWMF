@@ -8007,11 +8007,17 @@ used.
 	 <parameter name="TauGLobalSi" type="real" default="-1"/>
 		
 #ANISOTROPICPRESSURE
-T			UseConstantTau 
-10			TauInstabilitySi (only read if UseConstantTau is true)
-100			TauGlobalSi
+T			UseConstantTau_I 
+10			TauInstabilitySi_I
+100			TauGlobalSi_I
+T			UseConstantTau_I 
+10			TauInstabilitySi_I
+100			TauGlobalSi_I
 
-Set parameters for the pressure relaxation term.
+Set parameters for the pressure relaxation term for each fluid. Note that
+in the previous version, TauInstabilitySi will only be read if UseConstantTau 
+is true. However, this version TauInstabilitySi will be read even 
+UseConstantTau is false.
 
 If UseConstantTau is set to false, use the growth-rate based relaxation time. 
 This is the default and also recommended.
