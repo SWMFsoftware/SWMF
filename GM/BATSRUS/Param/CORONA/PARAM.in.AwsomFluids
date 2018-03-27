@@ -77,8 +77,12 @@ stochasticheating	TypeHeatPartitioning
 0.18			StochasticAmplitude
 
 #ANISOTROPICPRESSURE
-F			UseConstantTau
-1e5			TauGlobalSi
+F			UseConstantTau_I
+-1			TauInstabilitySi_I
+1e5			TauGlobalSi_I
+T			UseConstantTau_I
+-1			TauInstabilitySi_I
+-1			UseConstantTau_I
 
 #HEATCONDUCTION
 T			UseHeatConduction
