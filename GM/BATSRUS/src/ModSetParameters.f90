@@ -617,10 +617,11 @@ contains
           call read_var('UseElectronEntropy', UseElectronEntropy)
 
        case("#ANISOTROPICPRESSURE")
-          call read_var('UseConstantTau', UseConstantTau)
-          if(UseConstantTau) &
-               call read_var('TauInstabilitySi', TauInstabilitySi)
-          call read_var('TauGlobalSi', TauGlobalSi)
+          do iFluid = 1, nFluid
+             call read_var('UseConstantTau_I', UseConstantTau_I(iFluid))
+             call read_var('TauInstabilitySi_I', TauInstabilitySi_I(iFluid))
+             call read_var('TauGlobalSi_I', TauGlobalSi_I(iFluid))
+          end do
 
        case("#EXTRAINTERNALENERGY")
           call read_var('ExtraEintMinSi', ExtraEintMinSi)

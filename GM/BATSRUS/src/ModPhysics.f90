@@ -164,9 +164,9 @@ module ModPhysics
   real :: pOutflowSi = -1.0, pOutflow = -1.0
 
   ! Relaxation time for anisotropic pressure
-  logical :: UseConstantTau = .false.
-  real    :: TauInstabilitySi = -1.0, TauInstability
-  real    :: TauGlobalSi = -1.0, TauGlobal
+  logical :: UseConstantTau_I(nFluid)   = .false.
+  real    :: TauInstabilitySi_I(nFluid) = -1.0, TauInstability_I(nFluid)
+  real    :: TauGlobalSi_I(nFluid)      = -1.0, TauGlobal_I(nFluid)
 
   !\
   ! General variables for the second body
@@ -657,8 +657,8 @@ contains
     ExtraEintMin = ExtraEintMinSi*Si2No_V(UnitEnergyDens_)
 
     ! Relaxation parameters for anisotropic ion pressure
-    TauInstability  = TauInstabilitySi*Si2No_V(UnitT_)
-    TauGlobal  = TauGlobalSi*Si2No_V(UnitT_)
+    TauInstability_I  = TauInstabilitySi_I*Si2No_V(UnitT_)
+    TauGlobal_I  = TauGlobalSi_I*Si2No_V(UnitT_)
 
     !\
     ! Now do the magnetic field stuff

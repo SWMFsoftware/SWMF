@@ -1623,15 +1623,20 @@ contains
          time_accurate, Cfl, dt
     use ModB0,      ONLY: B0_DGB
     use ModAdvance, ONLY: State_VGB, time_BLK
-    use ModPhysics, ONLY: UseConstantTau, TauInstability, &
-         IonMassPerCharge, TauGlobal
+    use ModPhysics, ONLY: UseConstantTau_I, TauInstability_I, &
+         IonMassPerCharge, TauGlobal_I
     use ModGeometry, ONLY: true_cell
+    use ModMultiFluid, ONLY: select_fluid, iFluid, iP, iPpar
+    use ModVarIndexes, ONLY: nFluid
 
     ! Variables for anisotropic pressure
     real:: B_D(3), B2, p, Ppar, Pperp, Dp, DtCell
     real:: InvGyroFreq, PparOverLimit, Deltapf, Deltapm
 
     integer:: i, j, k, iBlock
+
+    logical :: UseConstantTau
+    real    :: TauInstability, TauGlobal
 
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'fix_anisotropy'
@@ -1642,89 +1647,99 @@ contains
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
 
-          ! Avoid Pperp < 0
-          State_VGB(Ppar_,i,j,k,iBlock) = &
-               min(3*State_VGB(p_,i,j,k,iBlock),State_VGB(Ppar_,i,j,k,iBlock))
+          do iFluid = 1, nFluid
 
-          ! Do not apply the relaxation term in this case
-          if(UseConstantTau .and. TauInstability < 0.0) CYCLE
+             call select_fluid
 
-          B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
-          if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
-          B2     = sum(B_D**2)
-          Ppar   = State_VGB(Ppar_,i,j,k,iBlock)
-          p = State_VGB(p_,i,j,k,iBlock)
-          Pperp  = (3*p - Ppar)/2.
-          if(.not. time_accurate)then
-             DtCell = Cfl*time_BLK(i,j,k,iBlock)
-          else
-             DtCell = dt
-          end if
+             UseConstantTau = UseConstantTau_I(iFluid)
+             TauInstability = TauInstability_I(iFluid)
+             TauGlobal      = TauGlobal_I(iFluid)
 
-          InvGyroFreq = IonMassPerCharge/max(1e-8, sqrt(B2))
+             ! Avoid Pperp < 0
+             State_VGB(iPpar,i,j,k,iBlock) = &
+                  min(3*State_VGB(ip,i,j,k,iBlock),State_VGB(iPpar,i,j,k,iBlock))
 
-          ! Find the instability that changes ppar the most
-          Dp = 0.0
+             ! Do not apply the relaxation term in this case
+             if(UseConstantTau .and. TauInstability < 0.0) CYCLE
 
-          ! This is what global relaxation would do
-          if(TauGlobal > 0) Dp = DtCell*(p - Ppar)/(DtCell + TauGlobal)
-
-          ! Check for the firehose, mirror and ion cyclotron instabilities
-          ! Limit anisotropy to instability criteria in unstable regions
-          if(Ppar - Pperp > B2)then
-             ! firehose
-             ! by how much the instability limit is exceeded:
-             ! ppar - ppar_marginalstable
-             PparOverLimit = Ppar - p - 2/3.*B2
-
-             ! Calc firehose relaxation time based on the maximum
-             ! growth rate calculated from eqn (2) of Hall [1981]
-             ! with theta = 0 and ppar < 4*pperp
-             ! MaxGrowthRate =
-             !    0.5*GyroFreq*Delta pf/sqrt(ppar*(pperp-ppar/4))
-             ! where Delta pf = ppar-pperp-B^2 = 3/2*PparOverLimit
-             if(.not. UseConstantTau)then
-                Deltapf = 3/2.*PparOverLimit
-                TauInstability = 2.0*InvGyroFreq* &
-                     sqrt(max(3.0*Ppar*(Pperp-0.25*Ppar),1e-8))/Deltapf
+             B_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+             if(UseB0) B_D = B_D + B0_DGB(:,i,j,k,iBlock)
+             B2     = sum(B_D**2)
+             Ppar   = State_VGB(iPpar,i,j,k,iBlock)
+             p = State_VGB(ip,i,j,k,iBlock)
+             Pperp  = (3*p - Ppar)/2.
+             if(.not. time_accurate)then
+                DtCell = Cfl*time_BLK(i,j,k,iBlock)
+             else
+                DtCell = dt
              end if
-             Dp = min(Dp, -DtCell*PparOverLimit/(DtCell + TauInstability))
 
-          else
-             if(Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
-                ! mirror
-                ! ppar_marginalstable - ppar
-                PparOverLimit = (B2 + 6.0*p &
-                     - sqrt(B2**2 + 12.0*B2*p + 9.0*p**2))/3. - Ppar
+             InvGyroFreq = IonMassPerCharge/max(1e-8, sqrt(B2))
 
-                ! Calc mirror relaxation time based on the maximum
-                ! growth rate from eqn (7) of Southwood [1993],
-                ! with the wavelength at maximum growth from eqn (21)
-                ! of Hall [1980]
+             ! Find the instability that changes ppar the most
+             Dp = 0.0
+
+             ! This is what global relaxation would do
+             if(TauGlobal > 0) Dp = DtCell*(p - Ppar)/(DtCell + TauGlobal)
+
+             ! Check for the firehose, mirror and ion cyclotron instabilities
+             ! Limit anisotropy to instability criteria in unstable regions
+             if(Ppar - Pperp > B2)then
+                ! firehose
+                ! by how much the instability limit is exceeded:
+                ! ppar - ppar_marginalstable
+                PparOverLimit = Ppar - p - 2/3.*B2
+
+                ! Calc firehose relaxation time based on the maximum
+                ! growth rate calculated from eqn (2) of Hall [1981]
+                ! with theta = 0 and ppar < 4*pperp
                 ! MaxGrowthRate =
-                !    4/3/sqrt(5)*GyroFreq*sqrt(2*Delta pm/ppar)
-                ! where Delta pm = pperp-ppar-B^2*ppar/(2*pperp)
+                !    0.5*GyroFreq*Delta pf/sqrt(ppar*(pperp-ppar/4))
+                ! where Delta pf = ppar-pperp-B^2 = 3/2*PparOverLimit
                 if(.not. UseConstantTau)then
-                   Deltapm = Pperp - Ppar - 0.5*B2*Ppar/Pperp
-                   TauInstability = 0.75*InvGyroFreq*sqrt(2.5*Ppar/Deltapm)
+                   Deltapf = 3/2.*PparOverLimit
+                   TauInstability = 2.0*InvGyroFreq* &
+                        sqrt(max(3.0*Ppar*(Pperp-0.25*Ppar),1e-8))/Deltapf
                 end if
-                Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
-             end if
-             if(Pperp > Ppar + 0.3*sqrt(0.5*B2*Ppar))then
-                ! ion cyclotron
-                ! ppar_marginalstable - ppar
-                PparOverLimit = (sqrt(0.01*B2 + 2.0*p) &
-                     - 0.1*sqrt(B2))**2/2. - Ppar
+                Dp = min(Dp, -DtCell*PparOverLimit/(DtCell + TauInstability))
 
-                ! Estimate ion cyclotron relaxation time from
-                ! observations in the magnetosphere and theories
-                if(.not. UseConstantTau) &
-                     TauInstability = 100*InvGyroFreq
+             else
+                if(Pperp**2 > Ppar*Pperp + 0.5*B2*Ppar)then
+                   ! mirror
+                   ! ppar_marginalstable - ppar
+                   PparOverLimit = (B2 + 6.0*p &
+                        - sqrt(B2**2 + 12.0*B2*p + 9.0*p**2))/3. - Ppar
 
-                Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
+                   ! Calc mirror relaxation time based on the maximum
+                   ! growth rate from eqn (7) of Southwood [1993],
+                   ! with the wavelength at maximum growth from eqn (21)
+                   ! of Hall [1980]
+                   ! MaxGrowthRate =
+                   !    4/3/sqrt(5)*GyroFreq*sqrt(2*Delta pm/ppar)
+                   ! where Delta pm = pperp-ppar-B^2*ppar/(2*pperp)
+                   if(.not. UseConstantTau)then
+                      Deltapm = Pperp - Ppar - 0.5*B2*Ppar/Pperp
+                      TauInstability = 0.75*InvGyroFreq*sqrt(2.5*Ppar/Deltapm)
+                   end if
+                   Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
+                end if
+                if(Pperp > Ppar + 0.3*sqrt(0.5*B2*Ppar))then
+                   ! ion cyclotron
+                   ! ppar_marginalstable - ppar
+                   PparOverLimit = (sqrt(0.01*B2 + 2.0*p) &
+                        - 0.1*sqrt(B2))**2/2. - Ppar
+
+                   ! Estimate ion cyclotron relaxation time from
+                   ! observations in the magnetosphere and theories
+                   if(.not. UseConstantTau) &
+                        TauInstability = 100*InvGyroFreq
+
+                   Dp = max(Dp, DtCell*PparOverLimit/(DtCell + TauInstability))
+                end if
              end if
-          end if
-          State_VGB(Ppar_,i,j,k,iBlock) = Ppar + Dp
+             State_VGB(iPpar,i,j,k,iBlock) = Ppar + Dp
+
+          end do
        end do; end do; end do
     end do
 
