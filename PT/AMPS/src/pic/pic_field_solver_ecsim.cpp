@@ -37,6 +37,9 @@ int PIC::FieldSolver::Electromagnetic::ECSIM::ByOffsetIndex=1;
 int PIC::FieldSolver::Electromagnetic::ECSIM::BzOffsetIndex=2;
 int PIC::FieldSolver::Electromagnetic::ECSIM::MassMatrixOffsetIndex;
 
+//location of the solver's data in the corner node associated data vector
+int PIC::FieldSolver::Electromagnetic::ECSIM::CornerNodeAssociatedDataOffsetBegin=-1,PIC::FieldSolver::Electromagnetic::ECSIM::CornerNodeAssociatedDataOffsetLast=-1;
+
 double dtTotal = 0.0;
 double PIC::FieldSolver::Electromagnetic::ECSIM::cDt=0.0;
 double PIC::FieldSolver::Electromagnetic::ECSIM::theta =0.5;
@@ -91,6 +94,9 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::Init() {
   //Electric field is in the corner nodes
   using namespace PIC::FieldSolver::Electromagnetic::ECSIM;    
 
+  CornerNodeAssociatedDataOffsetBegin=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
+
   if (PIC::CPLR::DATAFILE::Offset::MagneticField.active==true) {
     exit(__LINE__,__FILE__,"Error: reinitialization of the magnetic field offset");
   }
@@ -134,6 +140,8 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::Init() {
   PIC::Mesh::PrintDataCornerNode.push_back(PIC::FieldSolver::Electromagnetic::ECSIM::output::PrintCornerNodeData);
   
   //  PIC::FieldSolver::Electromagnetic::ECSIM::Init_IC(); 
+
+  CornerNodeAssociatedDataOffsetLast=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength-1; //CornerNodeAssociatedDataOffsetLast still belongs to the solver
 }
 
 void PIC::FieldSolver::Electromagnetic::ECSIM::Init_IC() {
@@ -221,7 +229,7 @@ void computeMassMatrixOffsetTable(){
   initMassMatrixOffsetTable=true;
 }
 
-double LaplacianCoeff[3][27]={{-0.5,0.25,0.25,-0.25,0.125,0.125,-0.25,0.125,0.125,
+static const double LaplacianCoeff[3][27]={{-0.5,0.25,0.25,-0.25,0.125,0.125,-0.25,0.125,0.125,
 			       -0.25,0.125,0.125,-0.125,0.0625,0.0625,-0.125,0.0625,0.0625,
 			       -0.25,0.125,0.125,-0.125,0.0625,0.0625,-0.125,0.0625,0.0625},
 			      {-0.5,-0.25,-0.25,0.25,0.125,0.125,0.25,0.125,0.125,
@@ -231,7 +239,7 @@ double LaplacianCoeff[3][27]={{-0.5,0.25,0.25,-0.25,0.125,0.125,-0.25,0.125,0.12
 			       0.25,0.125,0.125,0.125,0.0625,0.0625,0.125,0.0625,0.0625,
 			       0.25,0.125,0.125,0.125,0.0625,0.0625,0.125,0.0625,0.0625}};
 
-double graddiv[3][3][27]={{{-0.5,0.25,0.25,-0.25,0.125,0.125,-0.25,0.125,0.125,
+static const double graddiv[3][3][27]={{{-0.5,0.25,0.25,-0.25,0.125,0.125,-0.25,0.125,0.125,
 				-0.25,0.125,0.125,-0.125,0.0625,0.0625,-0.125,0.0625,0.0625,
 				-0.25,0.125,0.125,-0.125,0.0625,0.0625,-0.125,0.0625,0.0625},
 			       {0,0,0,0,0.125,-0.125,0,-0.125,0.125,0,0,0,0,0.0625,-0.0625,0,
@@ -646,41 +654,8 @@ void UpdateJMassMatrix(){
   char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
   double ParticleEnergy=0.0;
 
-    
-  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node;
-  PIC::Mesh::cDataCornerNode *CornerNode;
-
-  int ii,i,j,k;
-  char *AssociatedData;
-
-  //reset 'processed' flag
-  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
-    PIC::Mesh::cDataBlockAMR *block=node->block;
-
-    if (block!=NULL) for (i=0;i<_BLOCK_CELLS_X_+1;i++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-      PIC::Mesh::cDataCornerNode *CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
-
-      if (CornerNode!=NULL) CornerNode->SetProcessedFlag(false);
-    }
-  }
-
-  //reset values of J and MassMatrix to 0 
-  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
-    PIC::Mesh::cDataBlockAMR *block=node->block;
-
-    if (block!=NULL) for (i=0;i<_BLOCK_CELLS_X_+1;i++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-      PIC::Mesh::cDataCornerNode *CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
-
-      if (CornerNode!=NULL) if (CornerNode->TestProcessedFlag()==false) {
-        CornerNode->SetProcessedFlag(true);
-        AssociatedData=CornerNode->GetAssociatedDataBufferPointer();
-
-          for (int ii=0;ii<3;ii++)   ((double*)AssociatedData)[JxOffsetIndex+ii]=0.0;
-          for (int ii=0;ii<243;ii++) ((double*)AssociatedData)[MassMatrixOffsetIndex+ii]=0.0;
-      } 
-    }
-  }
-
+  PIC::Mesh::SetCornerNodeAssociatedDataValue(0.0,3,JxOffsetIndex*sizeof(double));
+  PIC::Mesh::SetCornerNodeAssociatedDataValue(0.0,243,MassMatrixOffsetIndex*sizeof(double));
 
   int nparticle=0;
   // update J and MassMatrix
