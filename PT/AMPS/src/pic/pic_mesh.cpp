@@ -981,9 +981,31 @@ unsigned int PIC::Mesh::GetMeshTreeSignature(void *startNodeIn,int nline,const c
   return Signature.checksum();
 }
 
+//=====================================================================================
+//reset values of the 'corner' node associated data vector
+void PIC::Mesh::SetCornerNodeAssociatedDataValue(void *DataBuffer,int DataBufferLength,int DataBufferOffset) {
+  int i,j,k;
 
+  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+    PIC::Mesh::cDataBlockAMR *block=node->block;
 
+    if (block!=NULL) for (i=0;i<_BLOCK_CELLS_X_+1;i++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
+      PIC::Mesh::cDataCornerNode *CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
 
+      if (CornerNode!=NULL) memcpy(CornerNode->GetAssociatedDataBufferPointer()+DataBufferOffset,DataBuffer,DataBufferLength);
+    }
+  }
+}
+
+void PIC::Mesh::SetCornerNodeAssociatedDataValue(double NewValue,int ResetElementNumber,int DataBufferOffset) {
+  double DataBuffer[ResetElementNumber];
+
+  //init the data buffer
+  for (int i=0;i<ResetElementNumber;i++) DataBuffer[i]=NewValue;
+
+  //reset the associated data vector
+  SetCornerNodeAssociatedDataValue(DataBuffer,ResetElementNumber*sizeof(double),DataBufferOffset);
+}
 
 
 
