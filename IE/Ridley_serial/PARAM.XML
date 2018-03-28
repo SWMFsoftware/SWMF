@@ -365,6 +365,51 @@ xyz			NameOfSolarModel
 This command cannot be used in the SWMF.
 </command>
 
+
+<command name="CONDUCTANCEFILES">
+  <parameter name="NameHalFile" type="STRING" default="cond_hal_coeffs.dat"
+	     length="100"/>
+  <parameter name="NamePedFile" type="STRING" default="cond_ped_coeffs.dat"
+	     length="100"/>
+
+#CONDUCTANCEFILES
+cond_hal_coeffs.dat	NameHalFile
+cond_ped_coeffs.dat	NamePedFile
+
+Set the file names for the coefficients used in the empirical conductance
+model.  This is the default model when iConductanceModel is set to 4 or 5
+in the #IONOSPHERE PARAM.  Default values are shown; default files are
+automatically copied to the run directory upon creation.  Any files read
+with this command are expected to be placed into the IE folder of the
+run directory.
+
+The empirical conductance model estimates the auroral conductance between 
+latitudes 60 degs and 90 degs using an empirical function of the form 
+$\Sigma = \Sigma_0 - \Sigma_1e^{-\Sigma_2|J_{||}|}$, where the coefficients
+$\Sigma_{0, 1, 2}$ are constants for different lat-MLT configurations. The 
+coefficient $\Sigma_1$, and occasionally $\Sigma_0$ are subsequently enhanced
+by the auroral oval function. The degree and type of enhancement is dependent 
+on the kind of auroral oval/conductance model used (see #IONOSPHERE and/or
+#AURORALOVAL commands for more information).
+
+The default coefficient files are stored in IE/Ridley_serial/input; they are
+copied to the run directory's IE folder automatically.  These files are
+based off of curve fits between the Hall/Pedersen Conductance (in mho) at 110 
+km altitude and Upward/Downward Field Aligned Current (in $\mu A/m^2$) derived
+from AMIE results for the month of Jan 1997 (refer Ridley et al, 2004 for more
+info). 
+
+Files must be placed into the IE folder of the run directory.  They are required
+to have a uniform MLT/lon grid.  Header information, such as the number of
+points in both the latitude and magnetic local time directions, must be included.
+Points in MLT should not overlap midnight (i.e., there should not be an
+entry for both 00 MLT and 24 MLT).
+
+An example of the required format can be found in Ridley_serial/input/.
+
+
+</command>
+
 <command name="AURORALOVAL">
   <parameter name="UseOval" type="logical" default="T"/>
   <if expr="$UseOval">
