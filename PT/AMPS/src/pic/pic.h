@@ -2779,6 +2779,11 @@ namespace PIC {
 
     //get the interpolation stencil (used only when the lineat interpolation is set)
     int GetCenterNodesInterpolationCoefficients(double *x,double *CoefficientsList,PIC::Mesh::cDataCenterNode **InterpolationStencil,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode,int nMaxCoefficients);
+
+    //reset the associated data to a "default" values
+    void SetCornerNodeAssociatedDataValue(void *DataBuffer,int DataBufferLength,int DataBufferOffset);
+    void SetCornerNodeAssociatedDataValue(double NewValue,int ResetElementNumber,int DataBufferOffset);
+
   } 
   // namespace Mesh ===========================================================
 
@@ -5433,7 +5438,7 @@ namespace FieldSolver {
         //Energy conserving field solver (same as used in the IPIC3D)
         namespace ECSIM {
             extern int CurrentEOffset, OffsetE_HalfTimeStep;
-	    extern int CurrentBOffset, PrevBOffset;
+            extern int CurrentBOffset, PrevBOffset;
             extern cLinearSystemCornerNode<PIC::Mesh::cDataCornerNode,3,81,82,16,1,1> Solver;
             //	extern cLinearSystemCornerNode Solver;
             extern int ExOffsetIndex, EyOffsetIndex, EzOffsetIndex;
@@ -5443,7 +5448,12 @@ namespace FieldSolver {
             
             extern double cDt;
             extern double theta;
-	    extern double LightSpeed;
+            extern double LightSpeed;
+
+            //location of the solver's data in the corner node associated data vector
+            extern int CornerNodeAssociatedDataOffsetBegin,CornerNodeAssociatedDataOffsetLast;  //CornerNodeAssociatedDataOffsetLast still belongs to the solver
+
+
             // matrix operation for the matrix solver
             void matvec(double* VecIn, double * VecOut, int n);
             
@@ -5472,7 +5482,7 @@ namespace FieldSolver {
             //process final solution
             void ProcessFinalSolution(double* x,PIC::Mesh::cDataCornerNode* CornerNode);
 	    
-	    void ProcessPeriodicJMassMatrix(char * realData, char * ghostData);
+            void ProcessPeriodicJMassMatrix(char * realData, char * ghostData);
             void CopyPeriodicJMassMatrix(char * realData, char * ghostData);
 
             void BuildMatrix();
