@@ -18,12 +18,14 @@
  * limitations under the License.
  */
 
-
+#include <fstream>
+#include "math.h"
 #ifndef NO_MPI
   #include "MPIdata.h" // for get_rank
 #endif
 #include "ompdefs.h" // for omp_get_thread_num
 #include "debug.h"
+
 
 #define implement_dprintvar_fileLine(code,type) \
   void printvar_fileLine(const char* func, const char* file, int line, \
@@ -156,9 +158,10 @@ void process_mem_usage(string tag)
   using std::ios_base;
   using std::ifstream;
   using std::string;
+  using std::cout;
+  using std::endl;
 
   double vm_usage     = 0.0;
-  double resident_set = 0.0;
 
   // 'file' stat seems to give the most reliable results
   //
@@ -185,10 +188,7 @@ void process_mem_usage(string tag)
 
     stat_stream.close();
 
-    long page_size_kb = sysconf(_SC_PAGE_SIZE) / 1024; // in case x86-64 is configured to use 2MB pages
     vm_usage     = vsize / 1024.0/1024.0;
-    resident_set = rss * page_size_kb;
-
     double memMax;
     MPI_Allreduce(&vm_usage, &memMax, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_MYSIM);
     if(fabs(vm_usage-memMax)<1e-6){                                     

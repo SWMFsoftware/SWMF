@@ -26,11 +26,10 @@
 
 #include <cstdarg>
 #include <cstdio>
-
+#include <string>
 #include "errors.h"
 
 #ifdef BATSRUS
-#include <string>
 #include <iostream>
 #include <fstream>
 #include "VCtopology3D.h"
@@ -38,6 +37,7 @@
 #include "Grid3DCU.h"
 #endif
 
+using std::string;
 void fprintf_fileLine(FILE * fptr, const char *type, const char *func,
   const char *file, int line_number, const char *format, ...);
 
