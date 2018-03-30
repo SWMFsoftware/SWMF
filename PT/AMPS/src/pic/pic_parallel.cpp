@@ -765,7 +765,14 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
   };
 
 
-  if (nMeshModificationCounter!=PIC::Mesh::mesh.nMeshModificationCounter) {
+  //determine whether the mesh/domain decomposition have been changed
+  int localMeshChangeFlag,globalMeshChangeFlag;
+
+  localMeshChangeFlag=(nMeshModificationCounter==PIC::Mesh::mesh.nMeshModificationCounter) ? 0 : 1;
+  MPI_Allreduce(&localMeshChangeFlag,&globalMeshChangeFlag,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+
+  if (globalMeshChangeFlag!=0) {
     //the mesh or the domain decomposition has been modified. Need to create a new communucation table
     int NewTableLength=0;
     int iNode,jNode,kNode,FlagSum;
