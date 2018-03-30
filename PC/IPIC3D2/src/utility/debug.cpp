@@ -19,6 +19,7 @@
  */
 
 #include <fstream>
+#include <iostream>
 #include "math.h"
 #ifndef NO_MPI
   #include "MPIdata.h" // for get_rank
