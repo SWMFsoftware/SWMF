@@ -3687,6 +3687,31 @@ namespace PIC {
     //get check sum of the associated data
     void GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
     void GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+
+    //get signature of a data buffer
+    template <typename  T>
+    inline void GetDataBufferSignature(T* DataBuffer,int DataBifferLength,int line,const char *fname,bool ParallelFlag=false) {
+      CRC32 CheckSum;
+
+      CheckSum.add(DataBuffer,DataBifferLength);
+
+      if (ParallelFlag==true) {
+        CheckSum.PrintChecksum(line,fname);
+      }
+      else {
+        CheckSum. PrintChecksumThread(line,fname,PIC::ThisThread);
+      }
+    }
+
+    //test whether any MPI message to be recieved
+    inline bool ProbeUnreadMPIMessage() {
+      int res=false;
+      MPI_Status status;
+
+      MPI_Iprobe(MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_GLOBAL_COMMUNICATOR,&res,&status);
+
+      return res;
+    }
   }
 
   namespace Alarm {
