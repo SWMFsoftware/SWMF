@@ -309,16 +309,69 @@ See iPIC3D-ECSIM_Algorithm.tex for more details.
 </command>
 
 
-<command name="CORRECTWEIGHT">
-  <parameter name="doCorrectWeight" type="logical" default="F"/>
-  
-#CORRECTWEIGHT
-T                        doCorrectWeight
+<command name="DIVE">
+  <parameter name="divECleanType" type="string"/>
+  <parameter name="nPower" type="integer" minimum="0" maximum="2"/>
+  <parameter name="divECleanTol" type="real"/>
+  <parameter name="divECleanIter" type="integer"/>
+  <parameter name="nIterNonLinear" type="integer"/>
 
-If doCorrectWeight is true, at the end of each iteration, after the update
-of the EM field and particles, the weights of the electrons will be corrected
-to reduce the difference between div(E) and 4*pi*rho, where rho is the net
-charge. (We may need to change this command in the near future. --Yuxi)
+  
+#DIVE
+weight_estimate 
+	    
+#DIVE
+weight          divECleanType
+1          nPower
+1e-8            divECleanTol
+50              divECleanIter
+	    
+#DIVE
+position_light  divECleanType
+1          nPower
+1e-8            divECleanTol
+50              divECleanIter
+3               nIterNonLinear	    	 	   
+
+#DIVE
+position_all    divECleanType
+1          nPower
+1e-8            divECleanTol
+50              divECleanIter
+3               nIterNonLinear	    	 	   
+	    
+#DIVE
+position_estimate_phi  divECleanType
+
+Changing the particle postions by adding a small displacement dx, or the 
+weights by multiplying the weight by a vaule rp close to 1, to satisfy 
+the Gaussi's law: div(E)=net charge. The correction can be done by estimating 
+the changes (weight_estimate, position_estimate_phi) or calculating the
+changes accurately (weight, position_light, position_all). The accurate 
+corrections need to solve an linear equation system, so the tolerance and 
+the maximum iteration number should be specified. For the position 
+corrections, the equation system is non-linear, and the non-linear iteration
+number nIterNonLinear should be set. 
+
+For the accurate corrections, sum(dx^2*qp^nPower) or sum((rp-1)^2*qp^nPower)
+are minimized for position or weight correction, respectively. nPower=1 is 
+the optimized choice. 
+
+'position_light' or 'weight' only correct the lightest species, which is 
+usually the electron,  and 'position_all' corrects all species. 
+
+</command>
+
+<command name="CELLCENTERDENSITY">
+  <parameter name="doCalcRhocDirectly" type="logical" default="F"/>
+  
+#CELLCENTERDENSITY
+F                        doCalcRhocDirectly
+
+Calculating cell center densities by particle-cell center interpolation,
+or interpolations from node densities. 
+
+Default is false, but it is turn on if #DIVE is used.  
 
 </command>
 
