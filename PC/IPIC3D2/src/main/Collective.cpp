@@ -1695,34 +1695,27 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	 1) #DIVE
 	    weight_estimate 
 	    
-	    #DIVE
-	    weight_estimate_node
-	    	    
-
 	 2) #DIVE
 	    weight          divECleanType
-	    nPower          nPower
+	    1              nPower
 	    1e-8            divECleanTol
 	    50              divECleanIter
 	    
 	 3) #DIVE
 	    position_light  divECleanType
-	    nPower          nPower
+	    1          nPower
 	    1e-8            divECleanTol
 	    50              divECleanIter
 	    3               nIterNonLinear	    	 	   
 
 	 4) #DIVE
 	    position_all    divECleanType
-	    nPower          nPower
+	    1               nPower
 	    1e-8            divECleanTol
 	    50              divECleanIter
 	    3               nIterNonLinear	    	 	   
 	    
 	 5) #DIVE
-	    position_estimate  divECleanType
-
-	    #DIVE
 	    position_estimate_phi  divECleanType
 	    
       */
