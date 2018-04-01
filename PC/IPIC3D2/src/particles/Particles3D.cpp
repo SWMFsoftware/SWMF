@@ -174,9 +174,8 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
   bool useUniformPart = col->get_useUniformPart();
   double harvest;
   double x0,y0,z0, u, v, w;
-  int ns0, iSample;
+  int ns0;
   ns0 = ns; 
-  bool doSplitSpecies = col->get_doSplitSpecies(); 
 
 #ifdef PSEUDRAND
   if(col->getUseRandomPerCell()){
@@ -201,10 +200,10 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
 	// Assign particle positions: uniformly spaced.
 	// x_cellnode + dx_particle*(0.5+index_particle)
 
-	if(useUniformPart){
+	if(useUniformPart){	  
 	  x = (ii + .5)*(dx/npcelx) + grid->getXN(i, j, k);
 	  y = (jj + .5)*(dy/npcely) + grid->getYN(i, j, k);
-	  z = (kk + .5)*(dz/npcelz) + grid->getZN(i, j, k);
+	  z = (kk + .5)*(dz/npcelz) + grid->getZN(i, j, k);	  
 	}else{
 	  harvest =   RANDNUM ;
 	  x = (ii + harvest)*(dx/npcelx) + grid->getXN(i, j, k);
@@ -213,27 +212,22 @@ inline void Particles3D::MaxwellianFromFluidCell(int i, int j, int k)
 	  harvest =   RANDNUM ;
 	  z = (kk + harvest)*(dz/npcelz) + grid->getZN(i, j, k);
 	}
-	
-	
-	if(!doSplitSpecies || col->do_deposit_particle(ns0,x,y,z)){
-	  // q = charge
-	  x0=x; y0=y; z0=z;
-	  const double q =  (qom/fabs(qom))*(col->getFluidRhoNum(x0, y0, z0, ns0)
-					     /npcel) * (1.0 / grid->getInvVOL());
-	  
-	  iSample = 0;
+		
+	// q = charge
+	x0=x; y0=y; z0=z;
+	double q =  (qom/fabs(qom))*(col->getPICRhoNum(x0, y0, z0, ns0)
+					   /npcel) * (1.0 / grid->getInvVOL());
+	if(q !=0){
 	  u = 0;
 	  v = 0;
 	  w = 0;
-	  //while(iSample==0 || u*u+v*v+w*w>1.0){
 	  // Set particle velocity
-	  MaxwellianVelocityFromFluidCell(x, y, z, &u, &v, &w);
-	  ++iSample;
-	  //}
-	  create_new_particle(u,v,w,q,x,y,z);
-	  if(ns0==0 && y<0)cout<<"y = "<<y<<endl;
-	}
+	  MaxwellianVelocityFromFluidCell(x, y, z, &u, &v, &w);	  
+	  create_new_particle(u,v,w,q,x,y,z);	 	  	  
+	}	
+
       }
+  
 }
 
 
@@ -248,27 +242,27 @@ inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const 
     rand3 = RANDNUM;
     rand4 = RANDNUM;
 
-    col->setFluidansioUth(X, Y, Z, U, V, W, rand1, rand2, rand3, rand4, ns);
-    (*U) += col->getFluidUx(X, Y, Z, ns);
-    (*V) += col->getFluidUy(X, Y, Z, ns);
-    (*W) += col->getFluidUz(X, Y, Z, ns);
+    col->setFluidAnisoUth(X, Y, Z, U, V, W, rand1, rand2, rand3, rand4, ns);
+    (*U) += col->getPICUx(X, Y, Z, ns);
+    (*V) += col->getPICUy(X, Y, Z, ns);
+    (*W) += col->getPICUz(X, Y, Z, ns);
   } else {
     // u = X velocity
     harvest =   RANDNUM;
     prob  = sqrt(-2.0 * log(1.0 - .999999999 * harvest));
     harvest =   RANDNUM;
     theta = 2.0*M_PI*harvest;
-    Uth = col->getFluidUth(X, Y, Z, ns);
+    Uth = col->getPICUth(X, Y, Z, ns);
     
-    (*U) = col->getFluidUx(X, Y, Z, ns) + Uth * prob * cos(theta);
+    (*U) = col->getPICUx(X, Y, Z, ns) + Uth * prob * cos(theta);
     // v = Y velocity
-    (*V) = col->getFluidUy(X, Y, Z, ns) + Uth * prob * sin(theta);
+    (*V) = col->getPICUy(X, Y, Z, ns) + Uth * prob * sin(theta);
     // w = Z velocity
     harvest =   RANDNUM;
     prob  = sqrt(-2.0 * log(1.0 - .999999999 * harvest));
     harvest =   RANDNUM;
     theta = 2.0 * M_PI * harvest;
-    (*W) = col->getFluidUz(X, Y, Z, ns) + Uth * prob * cos(theta);
+    (*W) = col->getPICUz(X, Y, Z, ns) + Uth * prob * cos(theta);
     
   }
 }
@@ -2691,170 +2685,396 @@ double Particles3D::deleteParticlesInsideSphere2DPlaneXZ(double R, double x_cent
   return(Q_removed);
 }
 
-void Particles3D::correctWeight(Field *EMf){
+
+void Particles3D::correctWeight(Field *EMf, string correctType){
   // Modify the weights of the lightest species based on the
   // difference of div(E) and net charge on nodes. 
   const double  invFourPI =1./(16*atan(1.0));
   double ratio;
-  int nOrder = 2;
 
-  // Cell based correction does not works well. Leave the code here for the
-  // experiments in the future.
-  bool isNodeBased = true; 
+  const int nxc = grid->getNXC();
+  const int nyc = grid->getNYC();
+  const int nzc = grid->getNZC();
+  array3_double phi(nxc, nyc, nzc); 
+  const double  FourPI =16*atan(1.0);
+  const int nPower = col->get_nPowerWeight();
 
-  double rmin = 0.9,rmax = 1.1;
-
-  if(isNodeBased){
-
-    const int nxn = grid->getNXN();
-    const int nyn = grid->getNYN();
-    const int nzn = grid->getNZN();
-
-    array3_double error_G(nxn,nyn,nzn);
-
-    for(int i = 0; i < nxn; i++)
-      for(int j = 0; j < nyn; j++)
-	for(int k = 0; k < nzn; k++){
-	  double rhos = EMf->getRHOns(i,j,k,ns);
-	  if(fabs(rhos)>1e-99){
-	    error_G[i][j][k] =
-	      (EMf->getRHOn(i,j,k) - invFourPI*EMf->getdivEn(i,j,k))
-	      /rhos;
-	  }else{
-	    error_G[i][j][k] = 0; 
-	  }
+  if(correctType.substr(0,15) != "weight_estimate"){
+    // Set phi. Is there a way to directly used PHI in EMf??
+    for(int i = 0; i<nxc; i++)
+      for(int j = 0; j<nyc; j++)
+	for(int k = 0; k<nzc; k++){
+	  phi[i][j][k] = EMf->getPHI(i,j,k);
 	}
-  
-    if(nOrder ==1){
-      for (int pidx = 0; pidx < getNOP(); pidx++) {
-	SpeciesParticle* pcl = &_pcls[pidx];
 
-	const double xp = pcl->get_x();
-	const double yp = pcl->get_y();
-	const double zp = pcl->get_z();
-	const double qi = pcl->get_q();
+    double weight_I[8];
+    int ix, iy, iz;
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      SpeciesParticle* pcl = &_pcls[pidx];
 
-	// The node index where the particel
-	const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
-	const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
-	const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));
+      const double xp = pcl->get_x();
+      const double yp = pcl->get_y();
+      const double zp = pcl->get_z();
+      const double qi = pcl->get_q();
+      double coef = pow(qi,1-nPower); 
+      if(nPower==1) coef = qom/fabs(qom);
 
-	ratio = max(rmin, min(1 - error_G[ix][iy][iz],rmax)); //  rmin < ratio < rmax
-	pcl->set_q(qi*ratio);
+      grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I, true);
+
+      const double w000 = weight_I[0];
+      const double w001 = weight_I[1];
+      const double w010 = weight_I[2];
+      const double w011 = weight_I[3];
+      const double w100 = weight_I[4];
+      const double w101 = weight_I[5];
+      const double w110 = weight_I[6];
+      const double w111 = weight_I[7];
       
-      }
-    }else if(nOrder == 2){
-    
-      double weight_I[8], value;
-      int ix, iy, iz;
-    
-      for (int pidx = 0; pidx < getNOP(); pidx++) {
-	SpeciesParticle* pcl = &_pcls[pidx];
+      ratio = 0;
+      ratio -= w000*phi[ix][iy][iz];
+      ratio -= w001*phi[ix][iy][iz-1];
+      ratio -= w010*phi[ix][iy-1][iz];
+      ratio -= w011*phi[ix][iy-1][iz-1];
+      ratio -= w100*phi[ix-1][iy][iz];
+      ratio -= w101*phi[ix-1][iy][iz-1];
+      ratio -= w110*phi[ix-1][iy-1][iz];
+      ratio -= w111*phi[ix-1][iy-1][iz-1];
 
-	const double xp = pcl->get_x();
-	const double yp = pcl->get_y();
-	const double zp = pcl->get_z();
-	const double qi = pcl->get_q();
-
-	grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I);
-
-	const double w000 = weight_I[0];
-	const double w001 = weight_I[1];
-	const double w010 = weight_I[2];
-	const double w011 = weight_I[3];
-	const double w100 = weight_I[4];
-	const double w101 = weight_I[5];
-	const double w110 = weight_I[6];
-	const double w111 = weight_I[7];
-      
-	double error = 0; 
-	error += w000*error_G[ix][iy][iz];
-	error += w001*error_G[ix][iy][iz-1];
-	error += w010*error_G[ix][iy-1][iz];
-	error += w011*error_G[ix][iy-1][iz-1];
-	error += w100*error_G[ix-1][iy][iz];
-	error += w101*error_G[ix-1][iy][iz-1];
-	error += w110*error_G[ix-1][iy-1][iz];
-	error += w111*error_G[ix-1][iy-1][iz-1];
-
-	ratio = max(rmin, min(1 - error,rmax)); //  rmin < ratio < rmax
-	pcl->set_q(qi*ratio);      
-      }
+      ratio = 1 - FourPI*coef*ratio;
+      ratio = max(1e-3,ratio);
+      //cout<<" ratio = "<<ratio<<endl;; 
+      pcl->set_q(qi*ratio);      
     }
-
   }else{
+    
+    // Cell based correction does not works well. Leave the code here for the
+    // experiments in the future.
+    bool isNodeBased = (correctType=="weight_estimate_node"); 
+    int nOrder = 2;
+    double rmin = 0.9,rmax = 1.1;
 
-    const int nxc = grid->getNXC();
-    const int nyc = grid->getNYC();
-    const int nzc = grid->getNZC();
+    if(isNodeBased){
 
-    array3_double error_G(nxc,nyc,nzc);
+      const int nxn = grid->getNXN();
+      const int nyn = grid->getNYN();
+      const int nzn = grid->getNZN();
 
-    for(int i = 0; i < nxc; i++)
-      for(int j = 0; j < nyc; j++)
-	for(int k = 0; k < nzc; k++){
-	  error_G[i][j][k] =
-	    (EMf->getRHOc(i,j,k) - invFourPI*EMf->getdivEc(i,j,k))
-	    /EMf->getRHOcs(i,j,k,ns);
-	}
+      array3_double error_G(nxn,nyn,nzn);
+
+      for(int i = 0; i < nxn; i++)
+	for(int j = 0; j < nyn; j++)
+	  for(int k = 0; k < nzn; k++){
+	    double rhos = EMf->getRHOns(i,j,k,ns);
+	    if(fabs(rhos)>1e-99){
+	      error_G[i][j][k] =
+		(EMf->getRHOn(i,j,k) - invFourPI*EMf->getdivEn(i,j,k))
+		/rhos;
+	    }else{
+	      error_G[i][j][k] = 0; 
+	    }
+	  }
   
-    if(nOrder ==1){
-      for (int pidx = 0; pidx < getNOP(); pidx++) {
-	SpeciesParticle* pcl = &_pcls[pidx];
+      if(nOrder ==1){
+	for (int pidx = 0; pidx < getNOP(); pidx++) {
+	  SpeciesParticle* pcl = &_pcls[pidx];
 
-	const double xp = pcl->get_x();
-	const double yp = pcl->get_y();
-	const double zp = pcl->get_z();
-	const double qi = pcl->get_q();
+	  const double xp = pcl->get_x();
+	  const double yp = pcl->get_y();
+	  const double zp = pcl->get_z();
+	  const double qi = pcl->get_q();
 
-	// The cell center index where the particel
-	const int ix = 1 + int (floor((xp - xstart) * inv_dx));
-	const int iy = 1 + int (floor((yp - ystart) * inv_dy));
-	const int iz = 1 + int (floor((zp - zstart) * inv_dz));
+	  // The node index where the particel
+	  const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
+	  const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
+	  const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));
 
-	ratio = max(rmin, min(1 - error_G[ix][iy][iz],rmax)); //  rmin < ratio < rmax      
-	pcl->set_q(qi*ratio);
-      }
-    }else if(nOrder == 2){
-    
-      double weight_I[8], value;
-      int ix, iy, iz;
-    
-      for (int pidx = 0; pidx < getNOP(); pidx++) {
-	SpeciesParticle* pcl = &_pcls[pidx];
-
-	const double xp = pcl->get_x();
-	const double yp = pcl->get_y();
-	const double zp = pcl->get_z();
-	const double qi = pcl->get_q();
-
-	grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I, true);
-
-	const double w000 = weight_I[0];
-	const double w001 = weight_I[1];
-	const double w010 = weight_I[2];
-	const double w011 = weight_I[3];
-	const double w100 = weight_I[4];
-	const double w101 = weight_I[5];
-	const double w110 = weight_I[6];
-	const double w111 = weight_I[7];
+	  ratio = max(rmin, min(1 - error_G[ix][iy][iz],rmax)); //  rmin < ratio < rmax
+	  pcl->set_q(qi*ratio);
       
-	double error = 0; 
-	error += w000*error_G[ix][iy][iz];
-	error += w001*error_G[ix][iy][iz-1];
-	error += w010*error_G[ix][iy-1][iz];
-	error += w011*error_G[ix][iy-1][iz-1];
-	error += w100*error_G[ix-1][iy][iz];
-	error += w101*error_G[ix-1][iy][iz-1];
-	error += w110*error_G[ix-1][iy-1][iz];
-	error += w111*error_G[ix-1][iy-1][iz-1];
+	}
+      }else if(nOrder == 2){
+    
+	double weight_I[8], value;
+	int ix, iy, iz;
+    
+	for (int pidx = 0; pidx < getNOP(); pidx++) {
+	  SpeciesParticle* pcl = &_pcls[pidx];
 
-	ratio = (1 - error);
-	ratio = max(rmin, min(1 - error,rmax)); //  rmin < ratio < rmax
-	pcl->set_q(qi*ratio);      
+	  const double xp = pcl->get_x();
+	  const double yp = pcl->get_y();
+	  const double zp = pcl->get_z();
+	  const double qi = pcl->get_q();
+
+	  grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I);
+
+	  const double w000 = weight_I[0];
+	  const double w001 = weight_I[1];
+	  const double w010 = weight_I[2];
+	  const double w011 = weight_I[3];
+	  const double w100 = weight_I[4];
+	  const double w101 = weight_I[5];
+	  const double w110 = weight_I[6];
+	  const double w111 = weight_I[7];
+      
+	  double error = 0; 
+	  error += w000*error_G[ix][iy][iz];
+	  error += w001*error_G[ix][iy][iz-1];
+	  error += w010*error_G[ix][iy-1][iz];
+	  error += w011*error_G[ix][iy-1][iz-1];
+	  error += w100*error_G[ix-1][iy][iz];
+	  error += w101*error_G[ix-1][iy][iz-1];
+	  error += w110*error_G[ix-1][iy-1][iz];
+	  error += w111*error_G[ix-1][iy-1][iz-1];
+
+	  ratio = max(rmin, min(1 - error,rmax)); //  rmin < ratio < rmax
+	  pcl->set_q(qi*ratio);      
+	}
+      }
+
+    }else{
+
+      const int nxc = grid->getNXC();
+      const int nyc = grid->getNYC();
+      const int nzc = grid->getNZC();
+
+      array3_double error_G(nxc,nyc,nzc);
+
+      for(int i = 0; i < nxc; i++)
+	for(int j = 0; j < nyc; j++)
+	  for(int k = 0; k < nzc; k++){
+	    error_G[i][j][k] =
+	      (EMf->getRHOc(i,j,k) - invFourPI*EMf->getdivEc(i,j,k))
+	      /EMf->getRHOcs(i,j,k,ns);
+	  }
+  
+      if(nOrder ==1){
+	for (int pidx = 0; pidx < getNOP(); pidx++) {
+	  SpeciesParticle* pcl = &_pcls[pidx];
+
+	  const double xp = pcl->get_x();
+	  const double yp = pcl->get_y();
+	  const double zp = pcl->get_z();
+	  const double qi = pcl->get_q();
+
+	  // The cell center index where the particel
+	  const int ix = 1 + int (floor((xp - xstart) * inv_dx));
+	  const int iy = 1 + int (floor((yp - ystart) * inv_dy));
+	  const int iz = 1 + int (floor((zp - zstart) * inv_dz));
+
+	  ratio = max(rmin, min(1 - error_G[ix][iy][iz],rmax)); //  rmin < ratio < rmax      
+	  pcl->set_q(qi*ratio);
+	}
+      }else if(nOrder == 2){
+    
+	double weight_I[8], value;
+	int ix, iy, iz;
+    
+	for (int pidx = 0; pidx < getNOP(); pidx++) {
+	  SpeciesParticle* pcl = &_pcls[pidx];
+
+	  const double xp = pcl->get_x();
+	  const double yp = pcl->get_y();
+	  const double zp = pcl->get_z();
+	  const double qi = pcl->get_q();
+
+	  grid->getInterpolateWeight(xp,yp,zp,ix,iy,iz,weight_I, true);
+
+	  const double w000 = weight_I[0];
+	  const double w001 = weight_I[1];
+	  const double w010 = weight_I[2];
+	  const double w011 = weight_I[3];
+	  const double w100 = weight_I[4];
+	  const double w101 = weight_I[5];
+	  const double w110 = weight_I[6];
+	  const double w111 = weight_I[7];
+      
+	  double error = 0; 
+	  error += w000*error_G[ix][iy][iz];
+	  error += w001*error_G[ix][iy][iz-1];
+	  error += w010*error_G[ix][iy-1][iz];
+	  error += w011*error_G[ix][iy-1][iz-1];
+	  error += w100*error_G[ix-1][iy][iz];
+	  error += w101*error_G[ix-1][iy][iz-1];
+	  error += w110*error_G[ix-1][iy-1][iz];
+	  error += w111*error_G[ix-1][iy-1][iz-1];
+
+	  ratio = (1 - error);
+	  ratio = max(rmin, min(1 - error,rmax)); //  rmin < ratio < rmax
+	  pcl->set_q(qi*ratio);      
+	}
       }
     }
   }
 
 }
 
+void Particles3D::correctPartPos(Field *EMf, string correctType){
+  // phi is defined at cell center. Its size is nxc*nyc*nzc
+  const int x_=0, y_=1, z_=2; 
+  const int nxc = grid->getNXC();
+  const int nyc = grid->getNYC();
+  const int nzc = grid->getNZC();
+  array3_double phi(nxc, nyc, nzc); 
+
+  const double  FourPI =16*atan(1.0);
+  const double invFourPI = 1./FourPI;
+  double eps_D[3];
+  double epsMax=0; // 20% of the cell size; 
+
+
+  if(correctType != "position_estimate"){
+    // Set phi. Is there a way to directly used PHI in EMf??
+    for(int i = 0; i<nxc; i++)
+      for(int j = 0; j<nyc; j++)
+	for(int k = 0; k<nzc; k++){
+	  phi[i][j][k] = EMf->getPHI(i,j,k);
+	}
+  }
+
+  if(correctType == "position_all" ||
+     correctType == "position_light"){
+  
+  const int nPower = col->get_nPowerWeight();
+  double weights_IIID[2][2][2][3];
+  for (int pidx = 0; pidx < getNOP(); pidx++) {
+    SpeciesParticle* pcl = &_pcls[pidx];
+    
+    const double xp = pcl->get_x();
+    const double yp = pcl->get_y();
+    const double zp = pcl->get_z();
+
+    // cell center index
+    const int ix = int (floor((xp - xstart) * inv_dx + 0.5));
+    const int iy = int (floor((yp - ystart) * inv_dy + 0.5));
+    const int iz = int (floor((zp - zstart) * inv_dz + 0.5));	    
+    
+    const double xi0   = xp - grid->getXC(ix);
+    const double eta0  = yp - grid->getYC(iy);
+    const double zeta0 = zp - grid->getZC(iz);
+    const double xi1   = grid->getXC(ix+1) - xp;
+    const double eta1  = grid->getYC(iy+1) - yp;
+    const double zeta1 = grid->getZC(iz+1) - zp;
+
+    const double invVOL = grid->getInvVOL();
+    const double qi = pcl->get_q();    
+    double coef; 
+
+    weights_IIID[1][1][1][x_] = eta0*zeta0*invVOL;
+    weights_IIID[1][1][1][y_] = xi0*zeta0*invVOL;
+    weights_IIID[1][1][1][z_] = xi0*eta0*invVOL;
+	      
+    // xi0*eta0*zeta1*invVOL;
+    weights_IIID[1][1][0][x_] = eta0*zeta1*invVOL; 
+    weights_IIID[1][1][0][y_] = xi0*zeta1*invVOL; 
+    weights_IIID[1][1][0][z_] = -xi0*eta0*invVOL; 
+
+    // xi0*eta1*zeta0*invVOL;
+    weights_IIID[1][0][1][x_] = eta1*zeta0*invVOL;
+    weights_IIID[1][0][1][y_] = -xi0*zeta0*invVOL;
+    weights_IIID[1][0][1][z_] = xi0*eta1*invVOL;
+
+    // xi0*eta1*zeta1*invVOL;
+    weights_IIID[1][0][0][x_] = eta1*zeta1*invVOL;
+    weights_IIID[1][0][0][y_] = -xi0*zeta1*invVOL;
+    weights_IIID[1][0][0][z_] = -xi0*eta1*invVOL;
+
+    // xi1*eta0*zeta0*invVOL;
+    weights_IIID[0][1][1][x_] = -eta0*zeta0*invVOL;
+    weights_IIID[0][1][1][y_] = xi1*zeta0*invVOL;
+    weights_IIID[0][1][1][z_] = xi1*eta0*invVOL;
+
+
+    // xi1*eta0*zeta1*invVOL;
+    weights_IIID[0][1][0][x_] = -eta0*zeta1*invVOL;
+    weights_IIID[0][1][0][y_] = xi1*zeta1*invVOL;
+    weights_IIID[0][1][0][z_] = -xi1*eta0*invVOL;
+	      
+
+    // xi1*eta1*zeta0*invVOL;
+    weights_IIID[0][0][1][x_] = -eta1*zeta0*invVOL;
+    weights_IIID[0][0][1][y_] = -xi1*zeta0*invVOL;
+    weights_IIID[0][0][1][z_] = xi1*eta1*invVOL;
+
+    // xi1*eta1*zeta1*invVOL;
+    weights_IIID[0][0][0][x_] = -eta1*zeta1*invVOL;
+    weights_IIID[0][0][0][y_] = -xi1*zeta1*invVOL;
+    weights_IIID[0][0][0][z_] = -xi1*eta1*invVOL;	     
+
+
+    eps_D[0] = 0; eps_D[1] = 0; eps_D[2] = 0; 
+    for(int i = 0; i<2; i++)
+      for(int j = 0; j<2; j++)
+	for(int k = 0; k<2; k++)
+	  for(int iDim = 0; iDim<3; iDim++){
+	    eps_D[iDim] += FourPI*phi[ix+i][iy+j][iz+k]*weights_IIID[i][j][k][iDim];
+	  }
+
+    coef = pow(qi,1-nPower);
+    if(nPower==1) coef = qom/fabs(qom);
+
+    for(int iDim = 0; iDim<3; iDim++){
+      eps_D[iDim] *= coef;      
+    }
+
+
+    for(int iDim = 0; iDim<3; iDim++){
+      if(fabs(eps_D[iDim]*inv_dx) > epsMax) epsMax = fabs(eps_D[iDim]*inv_dx);
+    }
+       
+    pcl->set_x(xp + eps_D[0]);
+    pcl->set_y(yp + eps_D[1]);
+    pcl->set_z(zp + eps_D[2]);
+  }
+
+  }else if(correctType == "position_estimate_phi"){
+    for (int pidx = 0; pidx < getNOP(); pidx++) {
+      SpeciesParticle* pcl = &_pcls[pidx];
+    
+      const double xp = pcl->get_x();
+      const double yp = pcl->get_y();
+      const double zp = pcl->get_z();
+
+      // cell center index
+      const int ix = int (floor((xp - xstart) * inv_dx + 0.5));
+      const int iy = int (floor((yp - ystart) * inv_dy + 0.5));
+      const int iz = int (floor((zp - zstart) * inv_dz + 0.5));	    
+
+      double coef = 1./EMf->getRHOcs(ix,iy,iz,ns)*invFourPI*0.25; 
+      eps_D[x_] = -inv_dx*coef*
+	(phi[ix+1][iy][iz]      - phi[ix][iy][iz] + 
+	 phi[ix+1][iy][iz+1]    - phi[ix][iy][iz+1] + 
+	 phi[ix+1][iy+1][iz]    - phi[ix][iy+1][iz] + 
+	 phi[ix+1][iy+1][iz+1]  - phi[ix][iy+1][iz+1] );  
+      eps_D[y_] = -inv_dy*coef*
+	(phi[ix][iy+1][iz]     - phi[ix][iy][iz] + 
+	 phi[ix][iy+1][iz+1]   - phi[ix][iy][iz+1] + 
+	 phi[ix+1][iy+1][iz]   - phi[ix+1][iy][iz] + 
+	 phi[ix+1][iy+1][iz+1] - phi[ix+1][iy][iz+1]  );  
+      eps_D[z_] = -inv_dz*coef*
+	(phi[ix][iy][iz+1]     - phi[ix][iy][iz] +
+	 phi[ix][iy+1][iz+1]   - phi[ix][iy+1][iz] +
+	 phi[ix+1][iy][iz+1]   - phi[ix+1][iy][iz] +
+	 phi[ix+1][iy+1][iz+1] - phi[ix+1][iy+1][iz] );  
+
+      for(int iDim = 0; iDim<3; iDim++){
+	if(fabs(eps_D[iDim]*inv_dx) > epsMax) epsMax = fabs(eps_D[iDim]*inv_dx);
+      }
+
+      pcl->set_x(xp + eps_D[0]);
+      pcl->set_y(yp + eps_D[1]);
+      pcl->set_z(zp + eps_D[2]);            
+    }
+
+  }else if(correctType == "position_estimate"){
+    cout<<"correctType = "<<correctType<<" has not been implemented!"<<endl;
+  }
+
+  double epsMaxLocal = epsMax;
+
+  MPI_Reduce(&epsMaxLocal, &epsMax, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_MYSIM);
+
+  if(MPIdata::get_rank() == 0){
+    cout<<"Particle position correction: epsMax = "<<epsMax<<endl;
+  }
+
+}

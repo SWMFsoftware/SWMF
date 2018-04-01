@@ -1030,12 +1030,12 @@ public:
 	  
 	  Rhoe = 0; PeXX = 0; PeYY = 0; PeZZ = 0; Pe = 0; PeXY = 0; PeXZ = 0; PeYZ = 0; 
 	  Mx = 0; My = 0; Mz = 0; 
-	  for(int i=0; i<nS; i++){
-	    int iSpecies = _col->get_iSPic2Mhd_I(i);
-	    if( iSpecies == 0){ 
+	  for(int iSpecies=0; iSpecies<nS; iSpecies++){
+	    int iMHD=iSpecies;
+	    if(doSplitSpecies) iMHD = _col->get_iSPic2Mhd_I(iSpecies);
+	    if( iMHD == 0){ 
 	      // Electron
 	      QoMe = _col->getQOM(iSpecies);
-	      
 	      double Rhoe0 = weightedValue(_field->getRHOns(),ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111)/QoMe;
 
 	      if(fabs(Rhoe0)>0){
@@ -1053,14 +1053,21 @@ public:
 	      Mz += Rhoe0*Uze;
 
 	      Rhoe +=Rhoe0; 
+	      
+	      double PeXX0, PeYY0, PeZZ0;
 
-	      PeXX  += weightedValue(Pxx,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	      PeYY  += weightedValue(Pyy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	      PeZZ  += weightedValue(Pzz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
-	      Pe   += (PeXX + PeYY + PeZZ)/3.0;
+	      PeXX0  = weightedValue(Pxx,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	      PeYY0  = weightedValue(Pyy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	      PeZZ0  = weightedValue(Pzz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+	      
+	      PeXX  += PeXX0;
+	      PeYY  += PeYY0;
+	      PeZZ  += PeZZ0;
+	      Pe   += (PeXX0 + PeYY0 + PeZZ0)/3.0;
 	      PeXY += weightedValue(Pxy,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
 	      PeXZ += weightedValue(Pxz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
 	      PeYZ += weightedValue(Pyz,ix,iy,iz,iSpecies,w000,w001,w010,w011,w100,w101,w110,w111);
+
 	    }
 	  }
 
@@ -1076,7 +1083,7 @@ public:
 	
 	  for(int iSpecies=0; iSpecies<nS; ++iSpecies){
 	    int iIon; 
-	    iIon = _col->get_iSPic2Mhd_I(iSpecies) - 1; // The first species is electron;
+	    iIon = _col->get_iSPic2Mhd_I(iSpecies) - 1; // The first species is electron;	    
 
 	    if(iIon>=0){
 	      QoMi = _col->getQOM(iSpecies);

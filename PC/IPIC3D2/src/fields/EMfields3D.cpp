@@ -209,7 +209,8 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Jz_ext(nxn,nyn,nzn)
 {
   // Define mass matrix.
-  M_GII = newArr5(double, nxn, nyn, nzn, 3*3*3, 9);
+  M_GII = newArr5(double, nxn, nyn, nzn, ngp, n9);
+  M_CI  = newArr4(double, nxc, nyc, nzc, ngp);
 
   // External imposed fields
   //
@@ -315,167 +316,82 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
     moments10Array[i] = new Moments10(nxn,nyn,nzn);
     moments13Array[i] = new Moments13(nxn,nyn,nzn);
   }
+        
+  //----Define MPI Derived Data types for Halo Exchange.   Begin------------------
+  // Three Grids:
+  //  1) center array (nxc*nyc*nzc)
+  //  2) node array (nxc+1)*(nyc+1)*(nzc+1)
+  //  3) the auxiliary array for ghost cell swaping (nxc+2)*(nyc+2)*(nzc+2)
+  nGridMpiData = 3; 
+  int nSend;
+  nSend = 1;      mpiDataIdx[nSend] = 0;
+  nSend = ngp;    mpiDataIdx[nSend] = 1;
+  nSend = ngp*n9; mpiDataIdx[nSend] = 2; 
+  
+  const int nKey = mpiDataIdx.size()*nGridMpiData;
+  
+  yzFacetype =new MPI_Datatype[nKey];  
+  xzFacetype =new MPI_Datatype[nKey]; 
+  xyFacetype =new MPI_Datatype[nKey]; 
+  xEdgetype  =new MPI_Datatype[nKey]; 
+  yEdgetype  =new MPI_Datatype[nKey]; 
+  zEdgetype  =new MPI_Datatype[nKey]; 
+  xEdgetype2 =new MPI_Datatype[nKey]; 
+  yEdgetype2 =new MPI_Datatype[nKey]; 
+  zEdgetype2 =new MPI_Datatype[nKey]; 
+  cornertype =new MPI_Datatype[nKey]; 
+
+  int nDouble, idx;
+  for(int iLayAdd = 0; iLayAdd < nGridMpiData; iLayAdd++ ){
+    const int nx = nxc + iLayAdd;
+    const int ny = nyc + iLayAdd;
+    const int nz = nzc + iLayAdd;
+    map<int, int>::const_iterator mpiIter = mpiDataIdx.begin();
+    while(mpiIter !=mpiDataIdx.end()){
+      nDouble = mpiIter->first; 
+      idx = (mpiIter->second) + iLayAdd*nGridMpiData;
+      mpiIter++;
+
+      //For face exchange on X dir
+      MPI_Type_vector((ny-2),(nz-2)*nDouble,nz*nDouble, MPI_DOUBLE, &yzFacetype[idx]);
+      MPI_Type_commit(&yzFacetype[idx]);
     
+      //For face exchange on Y dir
+      MPI_Type_hvector((nx-2),(nz-2)*nDouble,(nDouble*nz*ny*sizeof(double)), MPI_DOUBLE, &xzFacetype[idx]);
+      MPI_Type_commit(&xzFacetype[idx]);
+
+      MPI_Type_vector((ny-2), nDouble, nz*nDouble, MPI_DOUBLE, &yEdgetype[idx]);
+      MPI_Type_commit(&yEdgetype[idx]);
     
+      //For face exchangeg on Z dir
+      MPI_Type_hvector((nx-2), 1, (nDouble*nz*ny*sizeof(double)), yEdgetype[idx], &xyFacetype[idx]);
+      MPI_Type_commit(&xyFacetype[idx]);
     
-    //Define MPI Derived Data types for Center Halo Exchange
-    //For face exchange on X dir
-    MPI_Type_vector((nyc-2),(nzc-2),nzc, MPI_DOUBLE, &yzFacetypeC);
-    MPI_Type_commit(&yzFacetypeC);
+      //2 yEdgeType can be merged into one message
+      MPI_Type_hvector(2, 1, nDouble*(nz-1)*sizeof(double), yEdgetype[idx], &yEdgetype2[idx]);
+      MPI_Type_commit(&yEdgetype2[idx]);
     
-    //For face exchange on Y dir
-    MPI_Type_hvector((nxc-2),(nzc-2),(nzc*nyc*sizeof(double)), MPI_DOUBLE, &xzFacetypeC);
-    MPI_Type_commit(&xzFacetypeC);
-
-    MPI_Type_vector((nyc-2), 1, nzc, MPI_DOUBLE, &yEdgetypeC);
-    MPI_Type_commit(&yEdgetypeC);
+      MPI_Type_contiguous((nz-2)*nDouble,MPI_DOUBLE, &zEdgetype[idx]);
+      MPI_Type_commit(&zEdgetype[idx]);
     
-    //For face exchangeg on Z dir
-    MPI_Type_hvector((nxc-2), 1, (nzc*nyc*sizeof(double)), yEdgetypeC, &xyFacetypeC);
-    MPI_Type_commit(&xyFacetypeC);
+      MPI_Type_hvector(2, (nz-2)*nDouble,nDouble*(nx-1)*(ny*nz)*sizeof(double), MPI_DOUBLE, &zEdgetype2[idx]);
+      MPI_Type_commit(&zEdgetype2[idx]);
     
-    //2 yEdgeType can be merged into one message
-    MPI_Type_hvector(2, 1,(nzc-1)*sizeof(double), yEdgetypeC, &yEdgetypeC2);
-    MPI_Type_commit(&yEdgetypeC2);
+      MPI_Type_vector((nx-2), nDouble, nDouble*ny*nz, MPI_DOUBLE, &xEdgetype[idx]);
+      MPI_Type_commit(&xEdgetype[idx]);
+      MPI_Type_hvector(2, 1, nDouble*(ny-1)*nz*sizeof(double), xEdgetype[idx], &xEdgetype2[idx]);
+      MPI_Type_commit(&xEdgetype2[idx]);
     
-    MPI_Type_contiguous((nzc-2),MPI_DOUBLE, &zEdgetypeC);
-    MPI_Type_commit(&zEdgetypeC);
-    
-    MPI_Type_hvector(2, (nzc-2),(nxc-1)*(nyc*nzc)*sizeof(double), MPI_DOUBLE, &zEdgetypeC2);
-    MPI_Type_commit(&zEdgetypeC2);
-    
-    MPI_Type_vector((nxc-2), 1, nyc*nzc, MPI_DOUBLE, &xEdgetypeC);
-    MPI_Type_commit(&xEdgetypeC);
-    MPI_Type_hvector(2, 1, (nyc-1)*nzc*sizeof(double), xEdgetypeC, &xEdgetypeC2);
-    MPI_Type_commit(&xEdgetypeC2);
-    
-    //corner used to communicate in x direction
-    int blocklengthC[]={1,1,1,1};
-    int displacementsC[]={0,nzc-1,(nyc-1)*nzc,nyc*nzc-1};
-    MPI_Type_indexed(4, blocklengthC, displacementsC, MPI_DOUBLE, &cornertypeC);
-    MPI_Type_commit(&cornertypeC);
+      //corner used to communicate in x direction
+      int blocklength[]={nDouble,nDouble,nDouble,nDouble};
+      int displacements[]={0,(nz-1)*nDouble,(ny-1)*nz*nDouble,(ny*nz-1)*nDouble};
+      MPI_Type_indexed(4, blocklength, displacements, MPI_DOUBLE, &cornertype[idx]);
+      MPI_Type_commit(&cornertype[idx]);
+   
+    }//mpiIter
 
-
-
-    //Define MPI Derived Data types for Node Halo Exchange
-    //For face exchange on X dir
-    MPI_Type_vector((nyn-2),(nzn-2),nzn, MPI_DOUBLE, &yzFacetypeN);
-    MPI_Type_commit(&yzFacetypeN);
-
-    //For face exchange on Y dir
-    MPI_Type_hvector((nxn-2),(nzn-2),(nzn*nyn*sizeof(double)), MPI_DOUBLE, &xzFacetypeN);
-    MPI_Type_commit(&xzFacetypeN);
-
-    MPI_Type_vector((nyn-2), 1, nzn, MPI_DOUBLE, &yEdgetypeN);
-    MPI_Type_commit(&yEdgetypeN);
-
-    //For face exchangeg on Z dir
-    MPI_Type_hvector((nxn-2), 1, (nzn*nyn*sizeof(double)), yEdgetypeN, &xyFacetypeN);
-    MPI_Type_commit(&xyFacetypeN);
-
-    //2 yEdgeType can be merged into one message
-    MPI_Type_hvector(2, 1,(nzn-1)*sizeof(double), yEdgetypeN, &yEdgetypeN2);
-    MPI_Type_commit(&yEdgetypeN2);
-
-    MPI_Type_contiguous((nzn-2),MPI_DOUBLE, &zEdgetypeN);
-    MPI_Type_commit(&zEdgetypeN);
-
-    MPI_Type_hvector(2, (nzn-2),(nxn-1)*(nyn*nzn)*sizeof(double), MPI_DOUBLE, &zEdgetypeN2);
-    MPI_Type_commit(&zEdgetypeN2);
-
-    MPI_Type_vector((nxn-2), 1, nyn*nzn, MPI_DOUBLE, &xEdgetypeN);
-    MPI_Type_commit(&xEdgetypeN);
-    MPI_Type_hvector(2, 1, (nyn-1)*nzn*sizeof(double), xEdgetypeN, &xEdgetypeN2);
-    MPI_Type_commit(&xEdgetypeN2);
-
-    //corner used to communicate in x direction
-    int blocklengthN[]={1,1,1,1};
-    int displacementsN[]={0,nzn-1,(nyn-1)*nzn,nyn*nzn-1};
-    MPI_Type_indexed(4, blocklengthN, displacementsN, MPI_DOUBLE, &cornertypeN);
-    MPI_Type_commit(&cornertypeN);
-
-
-
-    //---------------------- Data type for Mass Matrix.   Begin------------------
-    const int nDouble = 27*9;
-    //For face exchange on X dir
-    MPI_Type_vector((nyc-2),(nzc-2)*nDouble,nzc*nDouble, MPI_DOUBLE, &yzFacetypeMC);
-    MPI_Type_commit(&yzFacetypeMC);
-    
-    //For face exchange on Y dir
-    MPI_Type_hvector((nxc-2),(nzc-2)*nDouble,(nDouble*nzc*nyc*sizeof(double)), MPI_DOUBLE, &xzFacetypeMC);
-    MPI_Type_commit(&xzFacetypeMC);
-
-    MPI_Type_vector((nyc-2), nDouble, nzc*nDouble, MPI_DOUBLE, &yEdgetypeMC);
-    MPI_Type_commit(&yEdgetypeMC);
-    
-    //For face exchangeg on Z dir
-    MPI_Type_hvector((nxc-2), 1, (nDouble*nzc*nyc*sizeof(double)), yEdgetypeMC, &xyFacetypeMC);
-    MPI_Type_commit(&xyFacetypeMC);
-    
-    //2 yEdgeType can be merged into one message
-    MPI_Type_hvector(2, 1, nDouble*(nzc-1)*sizeof(double), yEdgetypeMC, &yEdgetypeMC2);
-    MPI_Type_commit(&yEdgetypeMC2);
-    
-    MPI_Type_contiguous((nzc-2)*nDouble,MPI_DOUBLE, &zEdgetypeMC);
-    MPI_Type_commit(&zEdgetypeMC);
-    
-    MPI_Type_hvector(2, (nzc-2)*nDouble,nDouble*(nxc-1)*(nyc*nzc)*sizeof(double), MPI_DOUBLE, &zEdgetypeMC2);
-    MPI_Type_commit(&zEdgetypeMC2);
-    
-    MPI_Type_vector((nxc-2), nDouble, nDouble*nyc*nzc, MPI_DOUBLE, &xEdgetypeMC);
-    MPI_Type_commit(&xEdgetypeMC);
-    MPI_Type_hvector(2, 1, nDouble*(nyc-1)*nzc*sizeof(double), xEdgetypeMC, &xEdgetypeMC2);
-    MPI_Type_commit(&xEdgetypeMC2);
-    
-    //corner used to communicate in x direction
-    int blocklengthMC[]={nDouble,nDouble,nDouble,nDouble};
-    int displacementsMC[]={0,(nzc-1)*nDouble,(nyc-1)*nzc*nDouble,(nyc*nzc-1)*nDouble};
-    MPI_Type_indexed(4, blocklengthMC, displacementsMC, MPI_DOUBLE, &cornertypeMC);
-    MPI_Type_commit(&cornertypeMC);
-
-    //For face exchange on X dir
-    MPI_Type_vector((nyn-2),(nzn-2)*nDouble,nzn*nDouble, MPI_DOUBLE, &yzFacetypeMN);
-    MPI_Type_commit(&yzFacetypeMN);
-
-    //For face exchange on Y dir
-    MPI_Type_hvector((nxn-2),(nzn-2)*nDouble,(nDouble*nzn*nyn*sizeof(double)), MPI_DOUBLE, &xzFacetypeMN);
-    MPI_Type_commit(&xzFacetypeMN);
-
-    MPI_Type_vector((nyn-2), nDouble, nDouble*nzn, MPI_DOUBLE, &yEdgetypeMN);
-    MPI_Type_commit(&yEdgetypeMN);
-
-    //For face exchangeg on Z dir
-    MPI_Type_hvector((nxn-2), 1, (nDouble*nzn*nyn*sizeof(double)), yEdgetypeMN, &xyFacetypeMN);
-    MPI_Type_commit(&xyFacetypeMN);
-
-    //2 yEdgeType can be merged into one message
-    MPI_Type_hvector(2, 1,nDouble*(nzn-1)*sizeof(double), yEdgetypeMN, &yEdgetypeMN2);
-    MPI_Type_commit(&yEdgetypeMN2);
-
-    MPI_Type_contiguous((nzn-2)*nDouble,MPI_DOUBLE, &zEdgetypeMN);
-    MPI_Type_commit(&zEdgetypeMN);
-
-    MPI_Type_hvector(2, (nzn-2)*nDouble, nDouble*(nxn-1)*(nyn*nzn)*sizeof(double), MPI_DOUBLE, &zEdgetypeMN2);
-    MPI_Type_commit(&zEdgetypeMN2);
-
-    MPI_Type_vector((nxn-2), nDouble, nDouble*nyn*nzn, MPI_DOUBLE, &xEdgetypeMN);
-    MPI_Type_commit(&xEdgetypeMN);
-    MPI_Type_hvector(2, 1, nDouble*(nyn-1)*nzn*sizeof(double), xEdgetypeMN, &xEdgetypeMN2);
-    MPI_Type_commit(&xEdgetypeMN2);
-
-    //corner used to communicate in x direction
-    int blocklengthMN[]={nDouble,nDouble,nDouble,nDouble};
-    int displacementsMN[]={0,(nzn-1)*nDouble,(nyn-1)*nzn*nDouble,(nyn*nzn-1)*nDouble};
-    MPI_Type_indexed(4, blocklengthMN, displacementsMN, MPI_DOUBLE, &cornertypeMN);
-    MPI_Type_commit(&cornertypeMN);
-    //---------------------- Data type for Mass Matrix.   End------------------
-
-
-
-
-
-
+  }
+  //----Define MPI Derived Data types for Halo Exchange   End------------------
 
     
     if (col->getWriteMethod() == "pvtk" || col->getWriteMethod() == "nbcvtk"){
@@ -511,55 +427,34 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
     }
 
 }
+
 void EMfields3D::freeDataType(){
-  MPI_Type_free(&yzFacetypeC);
-  MPI_Type_free(&xzFacetypeC);
-  MPI_Type_free(&xyFacetypeC);
-  MPI_Type_free(&xEdgetypeC);
-  MPI_Type_free(&yEdgetypeC);
-  MPI_Type_free(&zEdgetypeC);
-  MPI_Type_free(&xEdgetypeC2);
-  MPI_Type_free(&yEdgetypeC2);
-  MPI_Type_free(&zEdgetypeC2);
-  MPI_Type_free(&cornertypeC);
+  const int nKey = mpiDataIdx.size()*nGridMpiData;
+  for(int iCount = 0; iCount<nKey; iCount++){
+    MPI_Type_free(&yzFacetype[iCount]);
+    MPI_Type_free(&xzFacetype[iCount]);
+    MPI_Type_free(&xyFacetype[iCount]);
+    MPI_Type_free(&xEdgetype[iCount]);
+    MPI_Type_free(&yEdgetype[iCount]);
+    MPI_Type_free(&zEdgetype[iCount]);
+    MPI_Type_free(&xEdgetype2[iCount]);
+    MPI_Type_free(&yEdgetype2[iCount]);
+    MPI_Type_free(&zEdgetype2[iCount]);
+    MPI_Type_free(&cornertype[iCount]);    
+  }
 
-  MPI_Type_free(&yzFacetypeN);
-  MPI_Type_free(&xzFacetypeN);
-  MPI_Type_free(&xyFacetypeN);
-  MPI_Type_free(&xEdgetypeN);
-  MPI_Type_free(&yEdgetypeN);
-  MPI_Type_free(&zEdgetypeN);
-  MPI_Type_free(&xEdgetypeN2);
-  MPI_Type_free(&yEdgetypeN2);
-  MPI_Type_free(&zEdgetypeN2);
-  MPI_Type_free(&cornertypeN);
-
-  MPI_Type_free(&yzFacetypeMC);
-  MPI_Type_free(&xzFacetypeMC);
-  MPI_Type_free(&xyFacetypeMC);
-  MPI_Type_free(&xEdgetypeMC);
-  MPI_Type_free(&yEdgetypeMC);
-  MPI_Type_free(&zEdgetypeMC);
-  MPI_Type_free(&xEdgetypeMC2);
-  MPI_Type_free(&yEdgetypeMC2);
-  MPI_Type_free(&zEdgetypeMC2);
-  MPI_Type_free(&cornertypeMC);
-
-  MPI_Type_free(&yzFacetypeMN);
-  MPI_Type_free(&xzFacetypeMN);
-  MPI_Type_free(&xyFacetypeMN);
-  MPI_Type_free(&xEdgetypeMN);
-  MPI_Type_free(&yEdgetypeMN);
-  MPI_Type_free(&zEdgetypeMN);
-  MPI_Type_free(&xEdgetypeMN2);
-  MPI_Type_free(&yEdgetypeMN2);
-  MPI_Type_free(&zEdgetypeMN2);
-  MPI_Type_free(&cornertypeMN);
-
-  
-  //MPI_Type_free(&procview);
-  //MPI_Type_free(&xyzcomp);
+    delete [] yzFacetype;
+    delete [] xzFacetype;
+    delete [] xyFacetype;
+    delete [] xEdgetype;
+    delete [] yEdgetype;
+    delete [] zEdgetype;
+    delete [] xEdgetype2;
+    delete [] yEdgetype2;
+    delete [] zEdgetype2;
+    delete [] cornertype;    
 }
+
 
 // This was Particles3Dcomm::interpP2G()
 void EMfields3D::sumMomentsOld(const Particles3Dcomm& pcls)
@@ -1084,8 +979,8 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part, bool doCalcMomentsO
   for(int i1 = 0; i1 < nxn; i1++ )
     for(int j1 = 0; j1 < nyn; j1++)
       for(int k1 = 0; k1 < nzn; k1++)
-	for(int gp = 0; gp < 27; gp++)
-	  for(int iR = 0; iR < 9; iR++)
+	for(int gp = 0; gp < ngp; gp++)
+	  for(int iR = 0; iR < n9; iR++)
 	    M_GII[i1][j1][k1][gp][iR] = 0;
   }
 
@@ -1198,7 +1093,6 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part, bool doCalcMomentsO
 	weights_III[1][1][1] = xi0 * eta0 * zeta0 * invVOL;	
 	
 	const double dto2 = .5 * dt, qdto2mc = qom[is] * dto2 / c;
-
 	// Change the name 'weights'!!! It is also used outside the 'useAccurateJ' scope!!! -- Yuxi
 	double weights[8] ALLOC_ALIGNED;
 	int cx,cy,cz;
@@ -1280,15 +1174,18 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part, bool doCalcMomentsO
 		      kp = k2 - k1 + 1;
 		      weight = wg*weights_III[i2-ix+1][j2-iy+1][k2-iz+1];
 		      gp = ip*9 + jp*3 + kp;
-		      M_GII[i1][j1][k1][gp][0] += alpha_DD[0][0]*weight;
-		      M_GII[i1][j1][k1][gp][1] += alpha_DD[0][1]*weight;
-		      M_GII[i1][j1][k1][gp][2] += alpha_DD[0][2]*weight;                                    
-		      M_GII[i1][j1][k1][gp][3] += alpha_DD[1][0]*weight;
-		      M_GII[i1][j1][k1][gp][4] += alpha_DD[1][1]*weight;
-		      M_GII[i1][j1][k1][gp][5] += alpha_DD[1][2]*weight;                                    
-		      M_GII[i1][j1][k1][gp][6] += alpha_DD[2][0]*weight;
-		      M_GII[i1][j1][k1][gp][7] += alpha_DD[2][1]*weight;
-		      M_GII[i1][j1][k1][gp][8] += alpha_DD[2][2]*weight;                                    
+
+		      double *M_I = M_GII[i1][j1][k1][gp];
+		      
+		      M_I[0] += alpha_DD[0][0]*weight;
+		      M_I[1] += alpha_DD[0][1]*weight;
+		      M_I[2] += alpha_DD[0][2]*weight;                                    
+		      M_I[3] += alpha_DD[1][0]*weight;
+		      M_I[4] += alpha_DD[1][1]*weight;
+		      M_I[5] += alpha_DD[1][2]*weight;                                    
+		      M_I[6] += alpha_DD[2][0]*weight;
+		      M_I[7] += alpha_DD[2][1]*weight;
+		      M_I[8] += alpha_DD[2][2]*weight;                                    
 		     } // k2		  	      		  
 		  } // j2                            
 		}// if (ip > 0)
@@ -1393,10 +1290,388 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part, bool doCalcMomentsO
   }
   
   if(col->getuseAccurateJ()){
-    communicateInterp(nxn, nyn, nzn, M_GII, vct,this);
-    communicateNode_P(nxn, nyn, nzn, M_GII, vct, this);
+    communicateInterp(nxn, nyn, nzn, ngp, n9, M_GII, vct, this);
+    communicateNode_P(nxn, nyn, nzn, ngp, n9, M_GII, vct, this);
   }
 }
+
+
+
+void EMfields3D::calc_cell_center_density(const Particles3Dcomm* part,
+					  bool doCalcDensityOnly){
+  const Collective *col = &get_col();
+  if(col->get_DoCalcRhocDirectly()){
+    // Calculate cell center densities rhocs from particles
+    sum_cell_center_density(part, doCalcDensityOnly);
+  }else{
+    // Interpolate rhocs from rhons
+    interpDensitiesN2C();	   
+  }
+}
+
+void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly){
+  const Collective *col = &get_col();
+  const VirtualTopology3D *vct = &get_vct();
+
+  const Grid *grid = &get_grid();
+
+  const double inv_dx = 1.0 / dx;
+  const double inv_dy = 1.0 / dy;
+  const double inv_dz = 1.0 / dz;
+
+  const double xstart = grid->getXstart();
+  const double ystart = grid->getYstart();
+  const double zstart = grid->getZstart();
+
+  
+  const int iSpeciesCorrect = col->get_iSpeciesLightest();
+  const string divECleanType = col->get_divECleanType();
+  bool doCalcMatrix;
+  bool doCorrectWeight = (divECleanType=="weight");
+
+  for(int iSpecies = 0; iSpecies<ns; iSpecies++)
+    for(int i = 0; i<nxc; i++)
+      for(int j = 0; j<nyc; j++)
+    	for(int k = 0; k<nzc; k++){
+    	  rhocs[iSpecies][i][j][k] = 0; 
+    	}
+
+  if(!doCalcDensityOnly)
+    for(int i = 0; i<nxc; i++)
+      for(int j = 0; j<nyc; j++)
+	for(int k = 0; k<nzc; k++)
+	  for(int i4 = 0; i4<ngp; i4++)
+	    M_CI[i][j][k][i4] = 0;   
+
+#pragma omp parallel
+  {
+    double weights_III[2][2][2];  
+    double weights_IIID[2][2][2][nDimMax];
+    for (int species_idx = 0; species_idx < ns; species_idx++){
+      const Particles3Dcomm& pcls = part[species_idx];
+      assert_eq(pcls.get_particleType(), ParticleType::AoS);
+      const int is = pcls.get_species_num();
+      assert_eq(species_idx,is);
+
+      const int nop = pcls.getNOP();
+
+      doCalcMatrix = (!doCalcDensityOnly && 
+		      (is==iSpeciesCorrect || 
+		       divECleanType=="position_all") &&
+		      divECleanType.substr(0,15) != "weight_estimate");
+      
+#pragma omp barrier
+#pragma omp for
+      for (int pidx = 0; pidx < nop; pidx++)
+	{
+	  const SpeciesParticle& pcl = pcls.get_pcl(pidx);
+	  const double xp = pcl.get_x();      
+	  const double yp = pcl.get_y();
+	  const double zp = pcl.get_z();
+
+	  const int ix = int (floor((xp - xstart) * inv_dx + 0.5));
+	  const int iy = int (floor((yp - ystart) * inv_dy + 0.5));
+	  const int iz = int (floor((zp - zstart) * inv_dz + 0.5));	    
+
+	  const double xi0   = xp - grid->getXC(ix);
+	  const double eta0  = yp - grid->getYC(iy);
+	  const double zeta0 = zp - grid->getZC(iz);
+	  const double xi1   = grid->getXC(ix+1) - xp;
+	  const double eta1  = grid->getYC(iy+1) - yp;
+	  const double zeta1 = grid->getZC(iz+1) - zp;
+
+	  const double qi = pcl.get_q();
+	  const double invVOLqi = invVOL*qi;
+
+	  const double weight0 = invVOL*xi0;
+	  const double weight1 = invVOL*xi1;
+	  const double weight00 = weight0*eta0;
+	  const double weight01 = weight0*eta1;
+	  const double weight10 = weight1*eta0;
+	  const double weight11 = weight1*eta1;	  
+
+	  
+          weights_III[1][1][1]= weight00 * zeta0; 
+          weights_III[1][1][0]= weight00 * zeta1; 
+          weights_III[1][0][1]= weight01 * zeta0; 
+          weights_III[1][0][0]= weight01 * zeta1;
+          weights_III[0][1][1]= weight10 * zeta0;
+          weights_III[0][1][0]= weight10 * zeta1;
+          weights_III[0][0][1]= weight11 * zeta0;
+          weights_III[0][0][0]= weight11 * zeta1;
+
+	  for(int ii = 0; ii<2; ii++)
+	    for(int jj = 0; jj<2; jj++)
+	      for(int kk=0; kk<2; kk++)
+		rhocs[is][ix+ii][iy+jj][iz+kk] += weights_III[ii][jj][kk]*qi;
+
+	  if(doCalcMatrix){
+	    const int nPower = col->get_nPowerWeight();
+	    
+	    const int iMin = ix;
+	    const int jMin = iy;
+	    const int kMin = iz;
+	    const int iMax = ix + 1;
+	    const int jMax = iy + 1;
+	    const int kMax = iz + 1;
+	    
+
+	    if(doCorrectWeight){
+	      // The weights_III calculated for cell center density 
+	      // interpolation is w_pc, which is the same for the weight
+	      // correction with minimizing sum(0.5*(r_p-1)^2*q^nPower), where
+	      // nPower is 2; 
+	      // When nPower is 0, the interpolation function is w_pc*q.
+	      // qi*w_pc. 
+
+	      double coef=1.0;
+	      if(nPower==1) coef = fabs(qi);
+	      if(nPower==0) coef = qi*qi;
+		
+	      double weight, wg;
+	      int gp, ip, jp, kp;
+	      for (int i1 = iMin; i1 <= iMax; i1++)
+		for (int j1 = jMin; j1 <= jMax; j1++)
+		  for (int k1 = kMin; k1 <= kMax; k1++) {
+		    wg = invVOL*weights_III[i1 - iMin][j1 - jMin][k1 - kMin];
+		    for (int i2 = iMin; i2 <= iMax; i2++)
+		      for (int j2 = jMin; j2 <= jMax; j2++)
+			for (int k2 = kMin; k2 <= kMax; k2++) {
+			  weight =
+			    wg * weights_III[i2 - iMin][j2 - jMin][k2 - kMin];
+			  ip = i2 - i1 + 1;
+			  jp = j2 - j1 + 1;
+			  kp = k2 - k1 + 1;
+			  gp = ip * 9 + jp * 3 + kp;			
+			  M_CI[i1][j1][k1][gp] += weight*coef;			
+			}// k2
+		  }// k1
+
+	    }else{
+	      // Particle position correction. 
+
+	      weights_IIID[1][1][1][x_] = eta0*zeta0*invVOL;
+	      weights_IIID[1][1][1][y_] = xi0*zeta0*invVOL;
+	      weights_IIID[1][1][1][z_] = xi0*eta0*invVOL;
+	      
+	      // xi0*eta0*zeta1*invVOL;
+	      weights_IIID[1][1][0][x_] = eta0*zeta1*invVOL; 
+	      weights_IIID[1][1][0][y_] = xi0*zeta1*invVOL; 
+	      weights_IIID[1][1][0][z_] = -xi0*eta0*invVOL; 
+
+	      // xi0*eta1*zeta0*invVOL;
+	      weights_IIID[1][0][1][x_] = eta1*zeta0*invVOL;
+	      weights_IIID[1][0][1][y_] = -xi0*zeta0*invVOL;
+	      weights_IIID[1][0][1][z_] = xi0*eta1*invVOL;
+
+	      // xi0*eta1*zeta1*invVOL;
+	      weights_IIID[1][0][0][x_] = eta1*zeta1*invVOL;
+	      weights_IIID[1][0][0][y_] = -xi0*zeta1*invVOL;
+	      weights_IIID[1][0][0][z_] = -xi0*eta1*invVOL;
+
+	      // xi1*eta0*zeta0*invVOL;
+	      weights_IIID[0][1][1][x_] = -eta0*zeta0*invVOL;
+	      weights_IIID[0][1][1][y_] = xi1*zeta0*invVOL;
+	      weights_IIID[0][1][1][z_] = xi1*eta0*invVOL;
+
+
+	      // xi1*eta0*zeta1*invVOL;
+	      weights_IIID[0][1][0][x_] = -eta0*zeta1*invVOL;
+	      weights_IIID[0][1][0][y_] = xi1*zeta1*invVOL;
+	      weights_IIID[0][1][0][z_] = -xi1*eta0*invVOL;
+	      
+
+	      // xi1*eta1*zeta0*invVOL;
+	      weights_IIID[0][0][1][x_] = -eta1*zeta0*invVOL;
+	      weights_IIID[0][0][1][y_] = -xi1*zeta0*invVOL;
+	      weights_IIID[0][0][1][z_] = xi1*eta1*invVOL;
+
+	      // xi1*eta1*zeta1*invVOL;
+	      weights_IIID[0][0][0][x_] = -eta1*zeta1*invVOL;
+	      weights_IIID[0][0][0][y_] = -xi1*zeta1*invVOL;
+	      weights_IIID[0][0][0][z_] = -xi1*eta1*invVOL;	     
+	      
+
+	      double coef=1;
+	      if(nPower==1) coef = fabs(qi);
+	      if(nPower==0) coef = qi*qi;	    	    	 	    
+
+	      double weight, wg_D[3];
+	      int gp, ip, jp, kp;
+	      for (int i1 = iMin; i1 <= iMax; i1++)
+		for (int j1 = jMin; j1 <= jMax; j1++)
+		  for (int k1 = kMin; k1 <= kMax; k1++) {
+		    double *M_I = M_CI[i1][j1][k1];
+		    for(int iDim = 0; iDim < nDimMax; iDim++)
+		      wg_D[iDim] = invVOL*
+			weights_IIID[i1 - iMin][j1 - jMin][k1 - kMin][iDim];
+		    
+		    for (int i2 = iMin; i2 <= iMax; i2++)
+		      for (int j2 = jMin; j2 <= jMax; j2++)
+			for (int k2 = kMin; k2 <= kMax; k2++) {			 
+
+			  const double tmp0 = wg_D[0] *
+			    weights_IIID[i2-iMin][j2-jMin][k2-kMin][0];
+			  const double tmp1 = wg_D[1] *
+			    weights_IIID[i2-iMin][j2-jMin][k2-kMin][1];
+			  const double tmp2 = wg_D[2] *
+			    weights_IIID[i2-iMin][j2-jMin][k2-kMin][2];
+			  weight = tmp0 + tmp1 + tmp2; 
+			  
+
+			  // for(int iDim = 0; iDim<nDimMax; iDim++){
+			  //   weight += wg_D[iDim] * 
+			  //     weights_IIID[i2-iMin][j2-jMin][k2-kMin][iDim];
+			  // }
+
+
+			  ip = i2 - i1 + 1;
+			  jp = j2 - j1 + 1;
+			  kp = k2 - k1 + 1;
+			  gp = ip * 9 + jp * 3 + kp;			
+			  M_I[gp] += weight*coef;			
+			  
+			  // cout<<"i1 = "<<i1<<" j1 = "<<j1<<" k1 = "<<k1<<" gp = "<<gp
+			  //     <<" weight = "<<weight<<" M = "<<M_CI[i1][j1][k1][gp]
+			  //     <<endl;
+
+			}// k2
+		  }// k1
+
+	    }
+
+	  } 
+
+        }// pidx
+      
+
+
+      
+      
+      
+      for(int i=0;i<nxc;i++)
+	for(int j=0;j<nyc;j++)
+	  for(int k=0;k<nzc;k++){
+	    rhocs[is][i][j][k] *=invVOL;
+	  }
+
+
+
+    }// iSpecies    
+  }
+
+
+  // for(int i =1; i<nxc-1; i++)
+  //   for(int j = 1; j<nyc-1; j++)
+  //     for(int k = 1; k<nzc-1; k++){
+  // 	for(int gp=0; gp<27; gp++){
+  // 	  double m = M_CI[i][j][k][gp];
+	  
+  // 	  if(m !=0) cout<<"0 i = "<<i<<" j = "<<j<<" k = "<<k<<" gp = "<<gp
+  // 			<<" m = "<<m<<endl;
+	  
+  // 	}
+
+	
+  //     }
+
+
+
+
+  if(!doCalcDensityOnly){
+    communicateSwapAddGhostCell(nxc, nyc, nzc, ngp, M_CI, vct, this);
+    communicateCenter_P(nxc, nyc, nzc, ngp, M_CI, vct, this);
+  }
+
+
+
+  // for(int i =1; i<nxc-1; i++)
+  //   for(int j = 1; j<nyc-1; j++)
+  //     for(int k = 1; k<nzc-1; k++){
+  // 	for(int gp=0; gp<27; gp++){
+  // 	  double m = M_CI[i][j][k][gp];
+	  
+  // 	  if(m !=0) cout<<"1 i = "<<i<<" j = "<<j<<" k = "<<k<<" gp = "<<gp
+  // 			<<" m = "<<m<<endl;
+	  
+  // 	}
+
+	
+  //     }
+
+
+
+
+
+  for(int is = 0; is < ns; is++){
+    double ***moment = convert_to_arr3(rhocs[is]);
+    communicateSwapAddGhostCell(nxc, nyc, nzc, moment, vct, this);
+    communicateCenterBC_P(nxc, nyc, nzc, moment, 2, 2, 2, 2, 2, 2, vct, this);
+
+    const double signq = qom[is]/(fabs(qom[is]));
+
+#ifdef BATSRUS
+    // Apply 1st-order accurate boundary conditions. 
+    if (vct->getXleft_neighbor_P() == MPI_PROC_NULL) 
+      for (int i = 0; i < nyc; i++)
+	for (int k = 0; k < nzc; k++){
+	  // The right hand side returns the values at nodes. Only 1st-order accurate. 
+	  rhocs[is][0][i][k] = signq*col->getPICRhoNum(0,i,k,is);
+	  rhocs[is][1][i][k] = signq*col->getPICRhoNum(1,i,k,is);
+	}
+
+    
+    if (vct->getYleft_neighbor_P() == MPI_PROC_NULL)
+      for (int i = 0; i < nxc; i++)
+	for (int k = 0; k < nzc; k++){
+	  rhocs[is][i][0][k] = signq*col->getPICRhoNum(i,0,k,is);
+	  rhocs[is][i][1][k] = signq*col->getPICRhoNum(i,1,k,is);
+	}
+    
+    if (vct->getZleft_neighbor_P() == MPI_PROC_NULL) 
+      for (int i = 0; i < nxc; i++)
+	for (int j = 0; j < nyc; j++){
+	  rhocs[is][i][j][0] = signq*col->getPICRhoNum(i,j,0,is);
+	  rhocs[is][i][j][1] = signq*col->getPICRhoNum(i,j,1,is);
+	}
+
+
+    if (vct->getXright_neighbor_P() == MPI_PROC_NULL) 
+      for (int i = 0; i < nyc; i++)
+	for (int k = 0; k < nzc; k++){
+	  rhocs[is][nxc - 1][i][k] = signq*col->getPICRhoNum(nxc-1,i,k,is);
+	  rhocs[is][nxc - 2][i][k] = signq*col->getPICRhoNum(nxc-2,i,k,is);
+	}
+
+
+    if (vct->getYright_neighbor_P() == MPI_PROC_NULL) 
+      for (int i = 0; i < nxc; i++)
+	for (int k = 0; k < nzc; k++){
+	  rhocs[is][i][nyc - 1][k] = signq*col->getPICRhoNum(i,nyc-1,k,is);
+	  rhocs[is][i][nyc - 2][k] = signq*col->getPICRhoNum(i,nyc-2,k,is);
+	}
+
+
+    if (vct->getZright_neighbor_P() == MPI_PROC_NULL) 
+      for (int i = 0; i < nxc; i++)
+	for (int j = 0; j < nyc; j++){
+	  rhocs[is][i][j][nzc - 1] = signq*col->getPICRhoNum(i,j,nzc-1,is);
+	  rhocs[is][i][j][nzc - 2] = signq*col->getPICRhoNum(i,j,nzc-2,is);
+	}    
+#endif
+  }
+
+
+  eqValue(0,rhon,nxc,nyc,nzc);
+  for (int is = 0; is < ns; is++)
+    for (register int i = 0; i < nxc; i++)
+      for (register int j = 0; j < nyc; j++)
+        for (register int k = 0; k < nzc; k++){
+          rhoc[i][j][k] += rhocs[is][i][j][k];
+	}
+
+}
+
 
 #ifdef __MIC__
 // add moment weights to all ten moments for the cell of the particle
@@ -2553,7 +2828,6 @@ void EMfields3D::calculateE(int cycle)
   useIPIC3DSolver = col->get_useIPIC3DSolver();
 #endif
   
-  array3_double divE     (nxc, nyc, nzc);
   array3_double gradPHIX (nxn, nyn, nzn);
   array3_double gradPHIY (nxn, nyn, nzn);
   array3_double gradPHIZ (nxn, nyn, nzn);
@@ -2566,7 +2840,6 @@ void EMfields3D::calculateE(int cycle)
   // set to zero all the stuff 
   eqValue(0.0, xkrylov, n3SolveNode);
   eqValue(0.0, bkrylov, n3SolveNode);
-  eqValue(0.0, divE, nxc, nyc, nzc);
   eqValue(0.0, tempC, nxc, nyc, nzc);
   eqValue(0.0, gradPHIX, nxn, nyn, nzn);
   eqValue(0.0, gradPHIY, nxn, nyn, nzn);
@@ -2575,70 +2848,23 @@ void EMfields3D::calculateE(int cycle)
   if(doSolveForChange)
     eqValue(0.0, dxkrylov, n3SolveNode);
 
+
   if (PoissonCorrection &&  cycle%PoissonCorrectionCycle == 0) {
-    double PoissonTol = 0.1;
-    double *xkrylovPoisson = new double[nSolveCell];
-    double *bkrylovPoisson = new double[nSolveCell];
-    eqValue(0.0, xkrylovPoisson, nSolveCell);
-		
-    grid->divN2C(divE, Ex, Ey, Ez);
-    scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
-    sum(divE, tempC, nxc, nyc, nzc);
-    // move to krylov space
-    phys2solver(bkrylovPoisson, divE, icMinSolve,icMaxSolve,
-		jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
-
-
-    if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING ***" << endl;
 #ifdef BATSRUS
-    if(! useIPIC3DSolver){
-      linear_solver_matvec_c = iPIC3D_PoissonImage;
-
-      int nVarSolve = 1;
-      PoissonTol = col->get_PoissonTol();      
-      int nIter = col->get_PoissonIter();
-      int nDimIn = nDimMax;
-      int nI = icMaxSolve - icMinSolve + 1;
-      int nJ = jcMaxSolve - jcMinSolve + 1;
-      int nK = kcMaxSolve - kcMinSolve + 1;
-      int nBlock = 1;
-      MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_MYSIM);
-      double precond_matrix_II[1][1];
-      precond_matrix_II[0][0] = 0; 
-      // parameter to choose preconditioner types
-      //0:No precondition; 1: BILU; 2:DILU;
-      //[-1,0): MBILU;   
-      double PrecondParam=0;
-      int lTest = vct->getCartesian_rank() == 0;
-
-      linear_solver_wrapper("GMRES", &PoissonTol, &nIter, &nVarSolve, &nDimIn,
-			    &nI, &nJ, &nK, &nBlock, &iComm, bkrylovPoisson,
-			    xkrylovPoisson, &PrecondParam, precond_matrix_II[0], 
-			    &lTest);
-    }
+    calculate_PHI(iPIC3D_PoissonImage,
+		  col->get_PoissonTol(),
+		  col->get_PoissonIter(),true);
+#else
+    calculate_PHI(NULL, 0.1, 20, true);
 #endif
-
-    if(useIPIC3DSolver){
-      GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, nGMRESRestart, 200, PoissonTol,false, this);
-    }
-
-
-    solver2phys(PHI, xkrylovPoisson, icMinSolve,icMaxSolve,
-		jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
-#ifdef BATSRUS
-    fixPHI_BATSRUS();
-#endif
-    communicateCenterBC(nxc, nyc, nzc, PHI, 2, 2, 2, 2, 2, 2, vct,this);
+    
     // calculate the gradient
     grid->gradC2N(gradPHIX, gradPHIY, gradPHIZ, PHI);
-    // sub
     sub(Ex, gradPHIX, nxn, nyn, nzn);
     sub(Ey, gradPHIY, nxn, nyn, nzn);
     sub(Ez, gradPHIZ, nxn, nyn, nzn);
-
-    delete[]xkrylovPoisson;
-    delete[]bkrylovPoisson;
   }                             // end of divergence cleaning
+
 
   if (vct->getCartesian_rank() == 0)
     cout << "*** MAXWELL SOLVER ***" << endl;
@@ -2751,6 +2977,148 @@ void EMfields3D::calculateE(int cycle)
   if(doSolveForChange) delete[] dxkrylov;
 }
 
+
+//------------------------------------------------------
+void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
+			       int nIter, bool useFloatPHI){
+  /*
+    Input:
+    1) FuncImage: the function to calculate A*x for linear solver. 
+    2) krylovTol: the tolerance of the iterative solver. Default is 1e-6.
+    3) nIter: the maximum iteration number. Default is 50. 
+    4) useFloatPHI: if useFloatPHI is true, then use float boundary 
+       condition for PHI, otherwise, PHI is fixed to 0 at boundaries. 
+       Default is 'true'.
+   */
+  const Collective *col = &get_col();
+  const VirtualTopology3D * vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  bool useIPIC3DSolver = true; 
+#ifdef BATSRUS
+  useIPIC3DSolver = col->get_useIPIC3DSolver();
+#endif
+
+  double xkrylovPoisson[nSolveCell];
+  double bkrylovPoisson[nSolveCell];
+  array3_double divE     (nxc, nyc, nzc);
+
+  eqValue(0.0, divE, nxc, nyc, nzc);
+  eqValue(0.0, xkrylovPoisson, nSolveCell);
+  eqValue(0.0, PHI, nxc, nyc, nzc);
+  
+  grid->divN2C(divE, Ex, Ey, Ez);
+  scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
+  
+  sum(divE, tempC, nxc, nyc, nzc);
+  // move to krylov space
+
+  phys2solver(bkrylovPoisson, divE, icMinSolve,icMaxSolve,
+	      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
+  if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING ***" << endl;
+#ifdef BATSRUS
+  if(! useIPIC3DSolver){
+    linear_solver_matvec_c = FuncImage;
+
+    int nVarSolve = 1;
+    int nDimIn = nDimMax;
+    int nI = icMaxSolve - icMinSolve + 1;
+    int nJ = jcMaxSolve - jcMinSolve + 1;
+    int nK = kcMaxSolve - kcMinSolve + 1;
+    int nBlock = 1;
+    MPI_Fint iComm = MPI_Comm_c2f(MPI_COMM_MYSIM);
+
+    double **precond_matrix_II;
+    
+    int nVector = nVarSolve*nVarSolve*nI*nJ*nK;
+    precond_matrix_II = newArr2(double, 2*nDimIn+1, nVector);
+
+    int idx; 
+    int nDimTrue = nDimIn; 
+    if(nI==1) nDimTrue--;
+    if(nJ==1) nDimTrue--;
+    if(nK==1) nDimTrue--;
+    
+    for(int i = 0; i<nI; i++)
+      for(int j = 0; j<nJ; j++)
+	for(int k = 0; k<nK; k++)
+	  {
+	    idx = k + j*nK + i*nK*nJ;
+	    precond_matrix_II[0][idx] =  -2*nDimTrue;	    
+	    precond_matrix_II[1][idx] = (i !=    0)? 1:0; // iSub
+	    precond_matrix_II[2][idx] = (i != nI-1)? 1:0; // iSup
+	    precond_matrix_II[3][idx] = (j !=    0)? 1:0; // jSub
+	    precond_matrix_II[4][idx] = (j != nJ-1)? 1:0; // jSup	    
+	    precond_matrix_II[5][idx] = (k !=    0)? 1:0; // kSub
+	    precond_matrix_II[6][idx] = (k != nK-1)? 1:0; // kSup      
+    }
+
+    // parameter to choose preconditioner types
+    //0:No precondition; 1: BILU; 2:DILU;
+    //[-1,0): MBILU;   
+    double PrecondParam=2;
+    int lTest = vct->getCartesian_rank() == 0;
+
+    linear_solver_wrapper("GMRES", &krylovTol, &nIter, &nVarSolve, &nDimIn,
+			  &nI, &nJ, &nK, &nBlock, &iComm, bkrylovPoisson,
+			  xkrylovPoisson, &PrecondParam, precond_matrix_II[0], 
+			  &lTest);
+    delArr2(precond_matrix_II, 2*nDimIn+1);
+  }
+#endif
+
+    
+  if(useIPIC3DSolver){
+  GMRES(&Field::PoissonImage, xkrylovPoisson, nSolveCell, bkrylovPoisson, nGMRESRestart, 200, krylovTol,false, this);
+}
+
+  solver2phys(PHI, xkrylovPoisson, icMinSolve,icMaxSolve,
+    jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
+
+#ifdef BATSRUS
+  if(useFloatPHI) fixPHI_BATSRUS();
+#endif  
+  communicateCenterBC(nxc, nyc, nzc, PHI, 2, 2, 2, 2, 2, 2, vct,this);
+
+}
+
+
+void EMfields3D::matvec_weight_correction(double *image, double *vector){
+
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  // allocate 2 three dimensional service vectors
+  array3_double temp(nxc, nyc, nzc);
+  array3_double im(nxc, nyc, nzc);
+  eqValue(0.0, image, nSolveCell);
+  eqValue(0.0, temp, nxc, nyc, nzc);
+  eqValue(0.0, im, nxc, nyc, nzc);
+  // move from krylov space to physical space and communicate ghost cells
+  solver2phys(temp, vector, icMinSolve,icMaxSolve,
+	      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
+
+  communicateCenterBC_P(nxc, nyc, nzc, temp, 2, 2, 2, 2, 2, 2, vct, this);
+
+  int gp; // g' 
+  for(int i =1; i<nxc-1; i++)
+    for(int j = 1; j<nyc-1; j++)
+      for(int k = 1; k<nzc-1; k++)
+	  for(int i2 = i-1; i2 <= i+1; i2++)
+	    for(int j2 = j-1; j2 <= j+1; j2++)
+	      for(int k2 = k-1; k2 <= k+1; k2++){
+		gp = (i2-i+1)*9+(j2-j+1)*3+k2-k+1;
+		im[i][j][k] += temp[i2][j2][k2]*M_CI[i][j][k][gp];	       
+		
+	      }	
+
+  scale(im,FourPI*FourPI,nxc,nyc,nzc);      
+  
+  // move from physical space to krylov space
+  phys2solver(image, im, icMinSolve, icMaxSolve,
+	      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
+
+}
 
 /*! Calculate sorgent for Maxwell solver */
 void EMfields3D::MaxwellSource(double *bkrylov)
@@ -3067,25 +3435,19 @@ void EMfields3D::MUdot(arr3_double MUdotX, arr3_double MUdotY, arr3_double MUdot
 	  MUdotX[i][j][k] = 0.0;
 	  MUdotY[i][j][k] = 0.0;
 	  MUdotZ[i][j][k] = 0.0;	  
+
 	  int gp; // g' 
 	  for(int i2 = i-1; i2 <= i+1; i2++)
 	    for(int j2 = j-1; j2 <= j+1; j2++)
 	      for(int k2 = k-1; k2 <= k+1; k2++){
 		gp = (i2-i+1)*9+(j2-j+1)*3+k2-k+1;
-		MUdotX[i][j][k] +=
-		  (vectX[i2][j2][k2]*M_GII[i][j][k][gp][0] +
-		  vectY[i2][j2][k2]*M_GII[i][j][k][gp][1] +
-		   vectZ[i2][j2][k2]*M_GII[i][j][k][gp][2])*c0; 
-
-		MUdotY[i][j][k] +=
-		  (vectX[i2][j2][k2]*M_GII[i][j][k][gp][3] +
-		  vectY[i2][j2][k2]*M_GII[i][j][k][gp][4] +
-		   vectZ[i2][j2][k2]*M_GII[i][j][k][gp][5])*c0; 
-		  
-		MUdotZ[i][j][k] +=
-		  (vectX[i2][j2][k2]*M_GII[i][j][k][gp][6] +
-		  vectY[i2][j2][k2]*M_GII[i][j][k][gp][7] +
-		   vectZ[i2][j2][k2]*M_GII[i][j][k][gp][8])*c0;		
+		const double *M_I = M_GII[i][j][k][gp];
+		const double& vctX = vectX[i2][j2][k2];
+		const double& vctY = vectY[i2][j2][k2];
+		const double& vctZ = vectZ[i2][j2][k2];
+		MUdotX[i][j][k] += (vctX*M_I[0] + vctY*M_I[1] + vctZ*M_I[2])*c0;
+		MUdotY[i][j][k] += (vctX*M_I[3] + vctY*M_I[4] + vctZ*M_I[5])*c0; 
+		MUdotZ[i][j][k] += (vctX*M_I[6] + vctY*M_I[7] + vctZ*M_I[8])*c0;
 	      }
 	}
     return;
@@ -3468,6 +3830,7 @@ void EMfields3D::adjustNonPeriodicDensities(int is)
         pZZsn[is][i][j][nzn - 2] *= 2;
     }
   }
+
 }
 
 void EMfields3D::ConstantChargeOpenBCv2()
@@ -3867,15 +4230,15 @@ void EMfields3D::calculateHatFunctions()
       }
       
       // Pass Jxs[is] is better!! -Yuxi      
-      fixVarBCnode(Jxs,&Collective::getFluidJx<int>,col->getnIsotropic(),is);
-      fixVarBCnode(Jys,&Collective::getFluidJy<int>,col->getnIsotropic(),is);
-      fixVarBCnode(Jzs,&Collective::getFluidJz<int>,col->getnIsotropic(),is);
-      fixVarBCnode(pXXsn,&Collective::getFluidPxx<int>,col->getnIsotropic(),is);      
-      fixVarBCnode(pXYsn,&Collective::getFluidPxy<int>,col->getnIsotropic(),is);
-      fixVarBCnode(pXZsn,&Collective::getFluidPxz<int>,col->getnIsotropic(),is);
-      fixVarBCnode(pYYsn,&Collective::getFluidPyy<int>,col->getnIsotropic(),is);
-      fixVarBCnode(pYZsn,&Collective::getFluidPyz<int>,col->getnIsotropic(),is);
-      fixVarBCnode(pZZsn,&Collective::getFluidPzz<int>,col->getnIsotropic(),is);
+      fixVarBCnode(Jxs,&Collective::getPICJx<int>,col->getnIsotropic(),is);
+      fixVarBCnode(Jys,&Collective::getPICJy<int>,col->getnIsotropic(),is);
+      fixVarBCnode(Jzs,&Collective::getPICJz<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pXXsn,&Collective::getPICPxx<int>,col->getnIsotropic(),is);      
+      fixVarBCnode(pXYsn,&Collective::getPICPxy<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pXZsn,&Collective::getPICPxz<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pYYsn,&Collective::getPICPyy<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pYZsn,&Collective::getPICPyz<int>,col->getnIsotropic(),is);
+      fixVarBCnode(pZZsn,&Collective::getPICPzz<int>,col->getnIsotropic(),is);
     }
 #endif
 
@@ -4020,12 +4383,12 @@ void EMfields3D::communicateGhostP2G(int ns)
   }
   
   if(get_col().getCase()=="BATSRUS"){
-    // setFluidBC_P is already called at the beginning of each iteration
+    // setNodePlasmaBC is already called at the beginning of each iteration
     // to set BC for IPIC3D. Here, at the end of iteration, it is called
     // again to correcto the boundary nodes so that the output and the
     // hat values (see calculatehatfunctions()) can have the right values. 
 #ifdef BATSRUS
-    setFluidBC_P(ns);
+    setNodePlasmaBC(ns);
 #endif
   }else{
     // calculate the correct densities on the boundaries
@@ -4279,7 +4642,7 @@ void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
 	  for (int k=0; k < nzn; k++)
 	    {
 	      // WARNING getFluidRho contains "case" statment
-	      rhons[is][i][j][k] = col->getFluidRhoNum(i,j,k,is);
+	      rhons[is][i][j][k] = col->getPICRhoNum(i,j,k,is);
 	    }
 
     // interpolate from cell centers to nodes (corners of cells)
@@ -4350,7 +4713,7 @@ void EMfields3D::initBATSRUS(VirtualTopology3D * vct, Grid * grid,
 	 } // for 
  }
 
-void EMfields3D::setFluidBC_P(int is)
+void EMfields3D::setNodePlasmaBC(int is)
 {
   const VirtualTopology3D *vct = &get_vct();
   const Collective *col = &get_col();
@@ -4360,16 +4723,16 @@ void EMfields3D::setFluidBC_P(int is)
     for (int i = 1; i < nyn - 1; i++)
       for (int k = 1; k < nzn - 1; k++)
 	{
-	  rhons[is][1][i][k] = signq*col->getFluidRhoNum(1,i,k,is);
-	  Jxs  [is][1][i][k] = col->getFluidJx(1,i,k,is);
-	  Jys  [is][1][i][k] = col->getFluidJy(1,i,k,is);
-	  Jzs  [is][1][i][k] = col->getFluidJz(1,i,k,is);
-	  pXXsn[is][1][i][k] = col->getFluidPxx(1,i,k,is);
-	  pXYsn[is][1][i][k] = col->getFluidPxy(1,i,k,is);
-	  pXZsn[is][1][i][k] = col->getFluidPxz(1,i,k,is);
-	  pYYsn[is][1][i][k] = col->getFluidPyy(1,i,k,is);
-	  pYZsn[is][1][i][k] = col->getFluidPyz(1,i,k,is);
-	  pZZsn[is][1][i][k] = col->getFluidPzz(1,i,k,is);
+	  rhons[is][1][i][k] = signq*col->getPICRhoNum(1,i,k,is);
+	  Jxs  [is][1][i][k] = col->getPICJx(1,i,k,is);
+	  Jys  [is][1][i][k] = col->getPICJy(1,i,k,is);
+	  Jzs  [is][1][i][k] = col->getPICJz(1,i,k,is);
+	  pXXsn[is][1][i][k] = col->getPICPxx(1,i,k,is);
+	  pXYsn[is][1][i][k] = col->getPICPxy(1,i,k,is);
+	  pXZsn[is][1][i][k] = col->getPICPxz(1,i,k,is);
+	  pYYsn[is][1][i][k] = col->getPICPyy(1,i,k,is);
+	  pYZsn[is][1][i][k] = col->getPICPyz(1,i,k,is);
+	  pZZsn[is][1][i][k] = col->getPICPzz(1,i,k,is);
 	}
   }
   
@@ -4377,82 +4740,83 @@ void EMfields3D::setFluidBC_P(int is)
     for (int i = 1; i < nxn - 1; i++)
       for (int k = 1; k < nzn - 1; k++)
 	{
-	  rhons[is][i][1][k] = signq*col->getFluidRhoNum(i,1,k,is);
-	  Jxs  [is][i][1][k] = col->getFluidJx(i,1,k,is);
-	  Jys  [is][i][1][k] = col->getFluidJy(i,1,k,is);
-	  Jzs  [is][i][1][k] = col->getFluidJz(i,1,k,is);
-	  pXXsn[is][i][1][k] = col->getFluidPxx(i,1,k,is);
-	  pXYsn[is][i][1][k] = col->getFluidPxy(i,1,k,is);
-	  pXZsn[is][i][1][k] = col->getFluidPxz(i,1,k,is);
-	  pYYsn[is][i][1][k] = col->getFluidPyy(i,1,k,is);
-	  pYZsn[is][i][1][k] = col->getFluidPyz(i,1,k,is);
-	  pZZsn[is][i][1][k] = col->getFluidPzz(i,1,k,is);
+	  rhons[is][i][1][k] = signq*col->getPICRhoNum(i,1,k,is);
+	  Jxs  [is][i][1][k] = col->getPICJx(i,1,k,is);
+	  Jys  [is][i][1][k] = col->getPICJy(i,1,k,is);
+	  Jzs  [is][i][1][k] = col->getPICJz(i,1,k,is);
+	  pXXsn[is][i][1][k] = col->getPICPxx(i,1,k,is);
+	  pXYsn[is][i][1][k] = col->getPICPxy(i,1,k,is);
+	  pXZsn[is][i][1][k] = col->getPICPxz(i,1,k,is);
+	  pYYsn[is][i][1][k] = col->getPICPyy(i,1,k,is);
+	  pYZsn[is][i][1][k] = col->getPICPyz(i,1,k,is);
+	  pZZsn[is][i][1][k] = col->getPICPzz(i,1,k,is);
 	}
   }
   if (vct->getZleft_neighbor_P() == MPI_PROC_NULL) {
     for (int i = 1; i < nxn - 1; i++)
       for (int j = 1; j < nyn - 1; j++)
 	{
-	  rhons[is][i][j][1] = signq*col->getFluidRhoNum(i,j,1,is);
-	  Jxs  [is][i][j][1] = col->getFluidJx(i,j,1,is);
-	  Jys  [is][i][j][1] = col->getFluidJy(i,j,1,is);
-	  Jzs  [is][i][j][1] = col->getFluidJz(i,j,1,is);
-	  pXXsn[is][i][j][1] = col->getFluidPxx(i,j,1,is);
-	  pXYsn[is][i][j][1] = col->getFluidPxy(i,j,1,is);
-	  pXZsn[is][i][j][1] = col->getFluidPxz(i,j,1,is);
-	  pYYsn[is][i][j][1] = col->getFluidPyy(i,j,1,is);
-	  pYZsn[is][i][j][1] = col->getFluidPyz(i,j,1,is);
-	  pZZsn[is][i][j][1] = col->getFluidPzz(i,j,1,is);
+	  rhons[is][i][j][1] = signq*col->getPICRhoNum(i,j,1,is);
+	  Jxs  [is][i][j][1] = col->getPICJx(i,j,1,is);
+	  Jys  [is][i][j][1] = col->getPICJy(i,j,1,is);
+	  Jzs  [is][i][j][1] = col->getPICJz(i,j,1,is);
+	  pXXsn[is][i][j][1] = col->getPICPxx(i,j,1,is);
+	  pXYsn[is][i][j][1] = col->getPICPxy(i,j,1,is);
+	  pXZsn[is][i][j][1] = col->getPICPxz(i,j,1,is);
+	  pYYsn[is][i][j][1] = col->getPICPyy(i,j,1,is);
+	  pYZsn[is][i][j][1] = col->getPICPyz(i,j,1,is);
+	  pZZsn[is][i][j][1] = col->getPICPzz(i,j,1,is);
 	}
   }
   if (vct->getXright_neighbor_P() == MPI_PROC_NULL) {
     for (int i = 1; i < nyn - 1; i++)
       for (int k = 1; k < nzn - 1; k++)
 	{
-	  rhons[is][nxn - 2][i][k] = signq*col->getFluidRhoNum(nxn-2,i,k,is);
-	  Jxs  [is][nxn - 2][i][k] = col->getFluidJx(nxn-2,i,k,is);
-	  Jys  [is][nxn - 2][i][k] = col->getFluidJy(nxn-2,i,k,is);
-	  Jzs  [is][nxn - 2][i][k] = col->getFluidJz(nxn-2,i,k,is);
-	  pXXsn[is][nxn - 2][i][k] = col->getFluidPxx(nxn-2,i,k,is);
-	  pXYsn[is][nxn - 2][i][k] = col->getFluidPxy(nxn-2,i,k,is);
-	  pXZsn[is][nxn - 2][i][k] = col->getFluidPxz(nxn-2,i,k,is);
-	  pYYsn[is][nxn - 2][i][k] = col->getFluidPyy(nxn-2,i,k,is);
-	  pYZsn[is][nxn - 2][i][k] = col->getFluidPyz(nxn-2,i,k,is);
-	  pZZsn[is][nxn - 2][i][k] = col->getFluidPzz(nxn-2,i,k,is);
+	  rhons[is][nxn - 2][i][k] = signq*col->getPICRhoNum(nxn-2,i,k,is);
+	  Jxs  [is][nxn - 2][i][k] = col->getPICJx(nxn-2,i,k,is);
+	  Jys  [is][nxn - 2][i][k] = col->getPICJy(nxn-2,i,k,is);
+	  Jzs  [is][nxn - 2][i][k] = col->getPICJz(nxn-2,i,k,is);
+	  pXXsn[is][nxn - 2][i][k] = col->getPICPxx(nxn-2,i,k,is);
+	  pXYsn[is][nxn - 2][i][k] = col->getPICPxy(nxn-2,i,k,is);
+	  pXZsn[is][nxn - 2][i][k] = col->getPICPxz(nxn-2,i,k,is);
+	  pYYsn[is][nxn - 2][i][k] = col->getPICPyy(nxn-2,i,k,is);
+	  pYZsn[is][nxn - 2][i][k] = col->getPICPyz(nxn-2,i,k,is);
+	  pZZsn[is][nxn - 2][i][k] = col->getPICPzz(nxn-2,i,k,is);
 	}
   }
   if (vct->getYright_neighbor_P() == MPI_PROC_NULL) {
     for (int i = 1; i < nxn - 1; i++)
       for (int k = 1; k < nzn - 1; k++)
 	{
-	  rhons[is][i][nyn - 2][k] = signq*col->getFluidRhoNum(i,nyn-2,k,is);
-	  Jxs  [is][i][nyn - 2][k] = col->getFluidJx(i,nyn-2,k,is);
-	  Jys  [is][i][nyn - 2][k] = col->getFluidJy(i,nyn-2,k,is);
-	  Jzs  [is][i][nyn - 2][k] = col->getFluidJz(i,nyn-2,k,is);
-	  pXXsn[is][i][nyn - 2][k] = col->getFluidPxx(i,nyn-2,k,is);
-	  pXYsn[is][i][nyn - 2][k] = col->getFluidPxy(i,nyn-2,k,is);
-	  pXZsn[is][i][nyn - 2][k] = col->getFluidPxz(i,nyn-2,k,is);
-	  pYYsn[is][i][nyn - 2][k] = col->getFluidPyy(i,nyn-2,k,is);
-	  pYZsn[is][i][nyn - 2][k] = col->getFluidPyz(i,nyn-2,k,is);
-	  pZZsn[is][i][nyn - 2][k] = col->getFluidPzz(i,nyn-2,k,is);
+	  rhons[is][i][nyn - 2][k] = signq*col->getPICRhoNum(i,nyn-2,k,is);
+	  Jxs  [is][i][nyn - 2][k] = col->getPICJx(i,nyn-2,k,is);
+	  Jys  [is][i][nyn - 2][k] = col->getPICJy(i,nyn-2,k,is);
+	  Jzs  [is][i][nyn - 2][k] = col->getPICJz(i,nyn-2,k,is);
+	  pXXsn[is][i][nyn - 2][k] = col->getPICPxx(i,nyn-2,k,is);
+	  pXYsn[is][i][nyn - 2][k] = col->getPICPxy(i,nyn-2,k,is);
+	  pXZsn[is][i][nyn - 2][k] = col->getPICPxz(i,nyn-2,k,is);
+	  pYYsn[is][i][nyn - 2][k] = col->getPICPyy(i,nyn-2,k,is);
+	  pYZsn[is][i][nyn - 2][k] = col->getPICPyz(i,nyn-2,k,is);
+	  pZZsn[is][i][nyn - 2][k] = col->getPICPzz(i,nyn-2,k,is);
 	}
   }
   if (vct->getZright_neighbor_P() == MPI_PROC_NULL) {
     for (int i = 1; i < nxn - 1; i++)
       for (int j = 1; j < nyn - 1; j++)
 	{
-	  rhons[is][i][j][nzn - 2] = signq*col->getFluidRhoNum(i,j,nzn-2,is);
-	  Jxs  [is][i][j][nzn - 2] = col->getFluidJx(i,j,nzn-2,is);
-	  Jys  [is][i][j][nzn - 2] = col->getFluidJy(i,j,nzn-2,is);
-	  Jzs  [is][i][j][nzn - 2] = col->getFluidJz(i,j,nzn-2,is);
-	  pXXsn[is][i][j][nzn - 2] = col->getFluidPxx(i,j,nzn-2,is);
-	  pXYsn[is][i][j][nzn - 2] = col->getFluidPxy(i,j,nzn-2,is);
-	  pXZsn[is][i][j][nzn - 2] = col->getFluidPxz(i,j,nzn-2,is);
-	  pYYsn[is][i][j][nzn - 2] = col->getFluidPyy(i,j,nzn-2,is);
-	  pYZsn[is][i][j][nzn - 2] = col->getFluidPyz(i,j,nzn-2,is);
-	  pZZsn[is][i][j][nzn - 2] = col->getFluidPzz(i,j,nzn-2,is);
+	  rhons[is][i][j][nzn - 2] = signq*col->getPICRhoNum(i,j,nzn-2,is);
+	  Jxs  [is][i][j][nzn - 2] = col->getPICJx(i,j,nzn-2,is);
+	  Jys  [is][i][j][nzn - 2] = col->getPICJy(i,j,nzn-2,is);
+	  Jzs  [is][i][j][nzn - 2] = col->getPICJz(i,j,nzn-2,is);
+	  pXXsn[is][i][j][nzn - 2] = col->getPICPxx(i,j,nzn-2,is);
+	  pXYsn[is][i][j][nzn - 2] = col->getPICPxy(i,j,nzn-2,is);
+	  pXZsn[is][i][j][nzn - 2] = col->getPICPxz(i,j,nzn-2,is);
+	  pYYsn[is][i][j][nzn - 2] = col->getPICPyy(i,j,nzn-2,is);
+	  pYZsn[is][i][j][nzn - 2] = col->getPICPyz(i,j,nzn-2,is);
+	  pZZsn[is][i][j][nzn - 2] = col->getPICPzz(i,j,nzn-2,is);
 	}
   }
+  
 }
 
 
@@ -4488,7 +4852,33 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
     
   // }
 
-  if(col->getdoTestEMWave()){
+  bool useUserIC;
+  useUserIC = false;
+
+  if(useUserIC){
+    // Users can define EM initial conditions here, and then 
+    // the initial conditions from MHD will be ignored. 
+    double Ex0=0, Ey0=0, Ez0=0; 
+    for (int i=0; i < nxn; i++)
+      for (int j=0; j < nyn; j++)
+	for (int k=0; k < nzn; k++){
+	  double xn, yn, zn, kdotx;
+	  if(i<nxn/3){
+	    Ex0 = 0;
+	  }else if(i<2*nxn/3){
+	    Ex0 = 1e-1; 
+	  }else{
+	    Ex0 = 0; 
+	  }
+	  fluidEx[i][j][k] = Ex0;
+	  fluidEy[i][j][k] = Ey0;
+	  fluidEz[i][j][k] = Ez0;
+	  fluidBxn[i][j][k] = 0;
+	  fluidByn[i][j][k] = 0;
+	  fluidBzn[i][j][k] = 0;
+	}
+
+  }else if(col->getdoTestEMWave()){
     double k_D[3], E0_D[3], phi0;
     int x_=0, y_=1, z_=2;
     
@@ -4540,7 +4930,7 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
   dt  = col->getFluidDt();
   delt = c * th * dt;
 
-  for(int is=0; is<ns;is++) setFluidBC_P(is);
+  for(int is=0; is<ns;is++) setNodePlasmaBC(is);
 }
 
 /** fix the E boundary when running with batsrus*/
@@ -4751,7 +5141,6 @@ of icMinSolve ... kcMaxSolve.
 For convenience, the PHI value at cell 0 and nxc-1 is also proved based on 
 floating BC. 
 */
-
 void EMfields3D::fixPHI_BATSRUS(){
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
@@ -4990,7 +5379,8 @@ double EMfields3D::calDtMax(double dx, double dy, double dz, double dt, int &iEr
 
     double uth;          
     MPI_Allreduce(&uthLocal, &uth, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_MYSIM);
-
+    
+    uth = max(uth, 1e-99);
     dtMax = min(dtMax, min(dx/uth, min(dy/uth, dz/uth)));
     
     if(get_vct().getCartesian_rank() == 0){
@@ -5146,7 +5536,22 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     i = iIn; j=jIn; k=kIn;
   }
   
-  if(var.substr(0,1)=="q"){
+  if(var.substr(0,2)=="qc"){
+    // "qc", "qcS0", "qdS1"...
+    if(var.size()==2){
+      value = rhoc[i][j][k];
+    }else{
+      // "qcS0"...
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      value = rhocs[is][i][j][k];
+    }
+    value *= No2OutV*No2OutB/No2OutL;
+  }else if(var.substr(0,1)=="q"){
     // "q", "qS0", "qS1"...
     if(var.size()==1){
       value = 0;
@@ -5163,11 +5568,28 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       ss>>is;
       value = rhons[is][i][j][k];
     }
-
-    // !!!!!!!!!!!!!!!!!!!!!!!!!!
-    // Change density is not converted to SI or planet unit
-    // !!!!!!!!!!!!!!!!!!!!!!!
-
+    value *= No2OutV*No2OutB/No2OutL;
+  }else if(var.substr(0,4)=="rhoc"){
+    // "rho", "rhoS0", "rhoS1"...
+    if(var.size()==4){
+      value = 0;
+      for(int is=0; is<ns; is++){
+	value += rhocs[is][i][j][k]/qom[is];
+      }      
+    }else{
+      string::size_type pos;
+      stringstream ss;
+      int is;
+      pos = var.find_first_of("0123456789");
+      ss<<var.substr(pos);
+      ss>>is;
+      if(is>=ns){
+	value=0;
+      }else{
+	value = rhocs[is][i][j][k]/qom[is];
+      }
+    }
+    value *= No2OutRho;
   }else if(var.substr(0,3)=="rho"){
     // "rho", "rhoS0", "rhoS1"...
     if(var.size()==3){
@@ -5182,7 +5604,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = rhons[is][i][j][k]/qom[is];
+      if(is>=ns){
+	value=0;
+      }else{
+	value = rhons[is][i][j][k]/qom[is];
+      }
     }
     value *= No2OutRho;
   }else if(var.substr(0,2)=="pS"){
@@ -5194,10 +5620,14 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     pos = var.find_first_of("0123456789");
     ss<<var.substr(pos);
     ss>>is;
-    value = (calPxx(is,i,j,k,isFluidP) +
-	     calPyy(is,i,j,k,isFluidP) +
-	     calPzz(is,i,j,k,isFluidP)) /3.0;
-    value *= No2OutP;
+    if(is>=ns){
+      value=0;
+    }else{
+      value = (calPxx(is,i,j,k,isFluidP) +
+	       calPyy(is,i,j,k,isFluidP) +
+	       calPzz(is,i,j,k,isFluidP)) /3.0;
+      value *= No2OutP;
+    }
   }else if(var.substr(0,3)=="pXX" || var.substr(0,3) == "kXX"){
     bool isFluidP;
     isFluidP = var.substr(0,1)=="p";
@@ -5213,7 +5643,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = calPxx(is,i,j,k,isFluidP);
+      if(is>=ns){
+	value=0;
+      }else{
+	value = calPxx(is,i,j,k,isFluidP);
+      }
     }
     value *= No2OutP;
   }else if(var.substr(0,3)=="pYY" || var.substr(0,3) == "kYY"){
@@ -5231,7 +5665,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = calPyy(is,i,j,k,isFluidP);
+      if(is>=ns){
+	value=0;
+      }else{	
+	value = calPyy(is,i,j,k,isFluidP);
+      }
     }
     value *= No2OutP; 
   }else if(var.substr(0,3)=="pZZ" || var.substr(0,3) == "kZZ"){
@@ -5249,7 +5687,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = calPzz(is,i,j,k,isFluidP);
+      if(is>=ns){
+	value=0;
+      }else{
+	value = calPzz(is,i,j,k,isFluidP);
+      }
     }
     value *= No2OutP;
   }else if(var.substr(0,3)=="pXY" || var.substr(0,3) == "kXY"){
@@ -5285,7 +5727,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = calPxz(is,i,j,k,isFluidP);
+      if(is>=ns){
+	value=0;
+      }else{
+	value = calPxz(is,i,j,k,isFluidP);
+      }
     }
     value *= No2OutP;
   }else if(var.substr(0,3)=="pYZ" || var.substr(0,3) == "kYZ"){
@@ -5303,7 +5749,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = calPyz(is,i,j,k,isFluidP);
+      if(is>=ns){
+	value=0;
+      }else{
+	value = calPyz(is,i,j,k,isFluidP);
+      }
     }
     value *= No2OutP;
   }else if(var.substr(0,3)=="jxh"){
@@ -5319,7 +5769,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = Jxsh[is][i][j][k];
+      if(is>=ns){
+	value=0;
+      }else{
+	value = Jxsh[is][i][j][k];
+      }
     }
     value *= No2OutJ;
   }else if(var.substr(0,3)=="jyh"){
@@ -5335,7 +5789,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = Jysh[is][i][j][k];
+      if(is>=ns){
+	value=0;
+      }else{
+	value = Jysh[is][i][j][k];
+      }
     }
     value *= No2OutJ;
   }else if(var.substr(0,3)=="jzh"){
@@ -5351,7 +5809,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = Jzsh[is][i][j][k];
+      if(is>=ns){
+	value=0;
+      }else{
+	value = Jzsh[is][i][j][k];
+      }
     }
     value *= No2OutJ;
   }else if(var.substr(0,3)=="uxh"){
@@ -5362,9 +5824,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     ss<<var.substr(pos);
     ss>>is;
     value = 0; 
-    if(rhons[is][i][j][k] != 0)
-      value = Jxsh[is][i][j][k]/rhons[is][i][j][k];
-    value *= No2OutV;
+    if(is<ns){
+      if(rhons[is][i][j][k] != 0)
+	value = Jxsh[is][i][j][k]/rhons[is][i][j][k];
+      value *= No2OutV;
+    }
   }else if(var.substr(0,3)=="uyh"){
     string::size_type pos;
     stringstream ss;
@@ -5372,10 +5836,12 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     pos = var.find_first_of("0123456789");
     ss<<var.substr(pos);
     ss>>is;
-    value = 0; 
-    if(rhons[is][i][j][k] != 0)
-      value = Jysh[is][i][j][k]/rhons[is][i][j][k];
-    value *= No2OutV;
+    value = 0;
+    if(is<ns){ 
+      if(rhons[is][i][j][k] != 0)
+	value = Jysh[is][i][j][k]/rhons[is][i][j][k];
+      value *= No2OutV;
+    }
   }else if(var.substr(0,3)=="uzh"){
     string::size_type pos;
     stringstream ss;
@@ -5383,10 +5849,12 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     pos = var.find_first_of("0123456789");
     ss<<var.substr(pos);
     ss>>is;
-        value = 0; 
-    if(rhons[is][i][j][k] != 0)
-      value = Jzsh[is][i][j][k]/rhons[is][i][j][k];
-    value *= No2OutV;
+    value = 0; 
+    if(is<ns){ 
+      if(rhons[is][i][j][k] != 0)
+	value = Jzsh[is][i][j][k]/rhons[is][i][j][k];
+      value *= No2OutV;
+    }
   }else if(var.substr(0,2)=="jx"){
     if(var.size()==2){
       value = 0;
@@ -5400,7 +5868,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = Jxs[is][i][j][k];
+      if(is>=ns){
+	value=0;
+      }else{
+	value = Jxs[is][i][j][k];
+      }
     }
     value *= No2OutJ;
   }else if(var.substr(0,2)=="jy"){
@@ -5416,7 +5888,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
+      if(is>=ns){
+	value=0;
+      }else{
       value = Jys[is][i][j][k];
+      }
     }
     value *= No2OutJ;
   }else if(var.substr(0,2)=="jz"){
@@ -5432,7 +5908,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       pos = var.find_first_of("0123456789");
       ss<<var.substr(pos);
       ss>>is;
-      value = Jzs[is][i][j][k];
+      if(is>=ns){
+	value=0;
+      }else{
+	value = Jzs[is][i][j][k];
+      }
     }
     value *= No2OutJ;
   }else if(var.substr(0,2)=="ux"){
@@ -5443,9 +5923,11 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     ss<<var.substr(pos);
     ss>>is;
     value = 0; 
-    if(rhons[is][i][j][k] != 0)
-      value = Jxs[is][i][j][k]/rhons[is][i][j][k];
-    value *= No2OutV;
+    if(is<ns){
+      if(rhons[is][i][j][k] != 0)
+	value = Jxs[is][i][j][k]/rhons[is][i][j][k];
+      value *= No2OutV;
+    }
   }else if(var.substr(0,2)=="uy"){
     string::size_type pos;
     stringstream ss;
@@ -5453,10 +5935,12 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     pos = var.find_first_of("0123456789");
     ss<<var.substr(pos);
     ss>>is;
-    value = 0; 
-    if(rhons[is][i][j][k] != 0)
-      value = Jys[is][i][j][k]/rhons[is][i][j][k];
-    value *= No2OutV;
+    value = 0;
+    if(is<ns){ 
+      if(rhons[is][i][j][k] != 0)
+	value = Jys[is][i][j][k]/rhons[is][i][j][k];
+      value *= No2OutV;
+    }
   }else if(var.substr(0,2)=="uz"){
     string::size_type pos;
     stringstream ss;
@@ -5465,9 +5949,16 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     ss<<var.substr(pos);
     ss>>is;
     value = 0; 
-    if(rhons[is][i][j][k] != 0)
-      value = Jzs[is][i][j][k]/rhons[is][i][j][k];
-    value *= No2OutV;
+    if(is<ns){
+      if(rhons[is][i][j][k] != 0)
+	value = Jzs[is][i][j][k]/rhons[is][i][j][k];
+      value *= No2OutV;
+    }
+  }else if(var.substr(0,5)=="divEc"){
+    value = divEc[i][j][k];
+    value *= No2OutV*No2OutB/No2OutL;
+  }else if(var.substr(0,3)=="phi"){
+    value = PHI[i][j][k];
   }else if(var.substr(0,2)=="Ex"){
     value = Ex[i][j][k];
     value *= No2OutV*No2OutB;
@@ -7617,6 +8108,7 @@ EMfields3D::~EMfields3D() {
   for(int i=0;i<sizeMomentsArray;i++) { delete moments13Array[i]; }
   delete [] moments10Array;
   delete [] moments13Array;
-  delArr5(M_GII, nxn, nyn, nzn, 27);
+  delArr5(M_GII, nxn, nyn, nzn, ngp);
+  delArr4(M_CI,  nxc, nyc, nzc);
   freeDataType();
 }

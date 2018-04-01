@@ -104,7 +104,8 @@ class Particles3D:public Particles3Dcomm {
     /** relativistic mover with a Predictor-Corrector scheme */
     int mover_relativistic(Field * EMf);
     // Correct the weights of electrons. 
-    void correctWeight(Field *EMf);
+    void correctWeight(Field *EMf, string correctType);
+    void correctPartPos(Field *EMf, string correctType);
    private:
     /** repopulate particles in a single cell */
     void populate_cell_with_particles(int i, int j, int k, double q,

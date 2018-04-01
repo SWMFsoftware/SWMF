@@ -67,7 +67,7 @@ namespace iPic3D {
 	     stringstream *param = NULL, int iIPIC = 0, int *paramint = NULL,
 	     double *griddim = NULL, double *paramreal = NULL,
 	     stringstream *ss = NULL, bool doCoupling=false);
-    void CalculateMoments(bool doCorrectWeights = false);
+    void CalculateMoments(bool doCleanDivE = false);
     void CalculateField(int cycle);
     bool ParticlesMover();
     void CalculateB();
@@ -177,6 +177,7 @@ namespace iPic3D {
 
     void EM_MaxwellImage(double *vecIn, double *vecOut, int n);    
     void EM_PoissonImage(double *vecIn, double *vecOut, int n);    
+    void EM_matvec_weight_correction(double *vecIn, double *vecOut, int n);    
   private:
     static const int x_=0, y_=1, z_=2;
     static const int nDimMax=3;

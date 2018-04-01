@@ -23,6 +23,7 @@ OBJECTS = \
 	PSKOutput3D/PSKhdf5adaptor.o\
 	solvers/CG.o\
 	solvers/GMRES.o\
+	solvers/LinearSolver.o\
 	utility/asserts.o\
 	utility/debug.o\
 	utility/IDgenerator.o\

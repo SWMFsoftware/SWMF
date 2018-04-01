@@ -211,12 +211,19 @@ class Collective
 
     bool getuseAccurateJ()const{return useAccurateJ;};
     bool getuseExplicitMover()const{return useExplicitMover;};
-    bool getdoCorrectWeight()const{return doCorrectWeight;}
+
+    // divE cleaning
+    string get_divECleanType()const{return divECleanType;}
+    bool get_doCleanDivE()const{return doCleanDivE;}    
+    double get_divECleanTol()const{return divECleanTol;}
+    int get_divECleanIter()const{return divECleanIter;}
+    int get_nPowerWeight()const{return nPowerWeight;}
+    int get_nIterNonLinear()const{return nIterNonLinear;}
+    bool get_DoCalcRhocDirectly()const{return DoCalcRhocDirectly;}
+
     double get_gradRhoRatio()const{return gradRhoRatio;};
     double get_cDiff()const{return cDiff;};
-
     bool get_useIPIC3DSolver()const{return useIPIC3DSolver;};
-    
     int get_iSpeciesLightest()const{return iSpeciesLightest;}
     
     /*! Boundary condition selection for BCFace for the electric field components */
@@ -339,6 +346,9 @@ class Collective
     string wmethod;
     /*! Simulation name */
     string SimName;
+
+
+
     /*! Poisson correction flag */
     string PoissonCorrection;
     int PoissonCorrectionCycle;
@@ -449,12 +459,21 @@ class Collective
     /*! Call Finalize() at end of program execution (true by default) */
     bool CallFinalize;
 
-    // Change particle weight so that div(E) - 4*pi*rho ~ 0
-    bool doCorrectWeight;
     // The index of the species that has maximum abs(qom);
     int iSpeciesLightest; 
 
+    // div(E) cleaning.
+    string divECleanType;
+    int nPowerWeight; // The minimized value is: sum(0.5*dx^2*q^nPowerWeight)
+    bool doCleanDivE;
+    double divECleanTol;
+    int divECleanIter;
+    int nIterNonLinear; // Non-linear iteration # for position correction.
 
+    // If DoCalcRhocDirectly = true, then calculate cell center density
+    // from particles directly, instead of interpolating from node density.
+    bool DoCalcRhocDirectly; 
+    
     // Energy Conserving Semi-Implicit Mothod is developed based
     // Lapenta [2016] (JCP). 
     bool useECSIM; 

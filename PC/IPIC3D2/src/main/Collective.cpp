@@ -200,6 +200,10 @@ void Collective::ReadInput(string inputfile) {
     useAccurateJ = config.read< bool >("useAccurateJ", false);
     useExplicitMover = config.read< bool >("useExplicitMover", false);
 
+    // div(E)  cleaniing related commands.
+    divECleanType = config.read< string >("divECleanType","");
+    DoCalcRhocDirectly = config.read< bool >("DoCalcRhocDirectly", false);
+
     gradRhoRatio = config.read< double >("gradRhoRatio", 1.0);
     cDiff = config.read< double >("cDiff", 0.0);
   }
@@ -1532,6 +1536,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   nGMRESRestart = 100; 
   NiterMover = 3;
 
+  PoissonTol = 0.1;
+  PoissonIter = 100;
+
   useIPIC3DSolver = false;
 
   //------------------------------------------------
@@ -1641,11 +1648,22 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   gradRhoRatio = 1.0;
   cDiff = 0; 
   
-  doCorrectWeight = false;
+
+  // div(E) cleaning
+  divECleanType = "";
+  nPowerWeight = 2; 
+  divECleanTol = 1e-6;
+  divECleanIter = 50;
+  nIterNonLinear = 1; 
+  doCleanDivE = false;
 
   useUniformPart = false; 
 
+  DoCalcRhocDirectly = false; 
+ 
   doSplitSpecies = false; 
+
+  
 
   // The way to set the value of qom is very wired. Change it. --Yuxi
   qom = new double[1];
@@ -1671,9 +1689,72 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     else if( Command == "#INJECT" && !RESTART1){
       read_var(param,"Vinj", &Vinj);
     }
-    else if( Command == "#CORRECTWEIGHT"){
-      read_var(param,"doCorrectWeight", &doCorrectWeight);
+    else if( Command == "#DIVE"){
+      /*
+	Examples:
+	 1) #DIVE
+	    weight_estimate 
+	    
+	    #DIVE
+	    weight_estimate_node
+	    	    
+
+	 2) #DIVE
+	    weight          divECleanType
+	    nPower          nPower
+	    1e-8            divECleanTol
+	    50              divECleanIter
+	    
+	 3) #DIVE
+	    position_light  divECleanType
+	    nPower          nPower
+	    1e-8            divECleanTol
+	    50              divECleanIter
+	    3               nIterNonLinear	    	 	   
+
+	 4) #DIVE
+	    position_all    divECleanType
+	    nPower          nPower
+	    1e-8            divECleanTol
+	    50              divECleanIter
+	    3               nIterNonLinear	    	 	   
+	    
+	 5) #DIVE
+	    position_estimate  divECleanType
+
+	    #DIVE
+	    position_estimate_phi  divECleanType
+	    
+      */
+      
+      read_var(param,"divECleanType", &divECleanType);
+      if(divECleanType.substr(0,15) !="weight_estimate" &&
+	 divECleanType !="position_estimate"){
+	read_var(param,"nPower",&nPowerWeight);
+	read_var(param,"divECleanTol",  &divECleanTol);
+	read_var(param,"divECleanIter", &divECleanIter);
+	if(divECleanType == "position_light" ||
+	   divECleanType == "position_all")
+	  read_var(param,"nIterNonLinear",&nIterNonLinear);
+      }
+      
+      if(divECleanType == "weight" ||
+	 divECleanType.substr(0,15) == "weight_estimate" ||
+	 divECleanType == "position_light" ||
+	 divECleanType == "position_all" ||
+	 divECleanType == "position_estimate" ||
+	 divECleanType == "position_estimate_phi"){
+	 doCleanDivE = true;
+	 DoCalcRhocDirectly = true;
+      }else{
+	cout<<"Error: divECleanType = "<<divECleanType
+	    <<" is not recognized!"<<endl;
+	abort();
+      }
     }
+    else if( Command == "#CELLCENTERDENSITY"){
+      read_var(param,"DoCalcRhocDirectly",  &DoCalcRhocDirectly);
+    }    
     else if( Command == "#PARAMS"){
       read_var(param,"th",           &th);
       read_var(param,"c",            &c);
@@ -1739,6 +1820,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"gradRhoRatio", &gradRhoRatio);
       read_var(param,"cDiff", &cDiff);
     }
+
+
+
     else if( Command == "#POISSON"){
       bool doCorrection;
       read_var(param, "doPoissonCorrection", &doCorrection);
@@ -1752,6 +1836,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       }	
 
     }
+
     else if( Command == "#GRID" && !RESTART1){
       read_var(param,"nxc",       &nxc);
       read_var(param,"nyc",       &nyc);
@@ -2092,9 +2177,11 @@ void Collective::FinilizeInit(){
   // Seting thermal veloity to max of the domain
   if(!RESTART1)
     for(int is=0;is<ns;is++){
-      uth[is] = getMaxFluidUth(is,0);
-      vth[is] = getMaxFluidUth(is,1);
-      wth[is] = getMaxFluidUth(is,2);
+      double isMHD = is; 
+      if(get_doSplitSpecies()) isMHD = get_iSPic2Mhd_I(is);
+      uth[is] = getMaxFluidUth(isMHD,0);
+      vth[is] = getMaxFluidUth(isMHD,1);
+      wth[is] = getMaxFluidUth(isMHD,2);
       //cout << "max uth[" << is << "] = " << uth[is] <<endl;
     }
 

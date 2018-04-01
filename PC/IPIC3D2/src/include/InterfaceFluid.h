@@ -116,10 +116,19 @@ class InterfaceFluid
   double MhdNo2SiL; // Length in BATSRUS normalized unit -> Si
   double Lnorm, Unorm, Mnorm, Qnorm; // normalization units for length, velocity, mass and charge
                                      // Normalized q/m ==1 for proton in CGS units  
+
+  //-------------------------------------------------------------------
+  // nSIn is the number of species exists at the MHD side. PIC may use 
+  // two or more species to represent one MHD species. nS is the nuber of the 
+  // PIC species. 
   long    nS; // number of particle species
-  int nSIn; // number of particle species before splitting. 
+  int nSIn; // number of particle species before splitting.   
   double *MoMi_S; // masses for the particles species
   double *QoQi_S; // charge for each particle species
+  double *MoMi0_S; // masses for the particles species before splitting
+  double *QoQi0_S; // charge for each particle species before splitting
+  //-------------------------------------------------------------------
+
   double PeRatio; // temperature ratio for electrons: PeRatio = Pe/Ptotal
   double SumMass; // Sum of masses of each particle species
   int nOverlap; // Number of grid point from boundary where we have MHD+PIC solution
@@ -413,13 +422,17 @@ class InterfaceFluid
     if(useMhdPe)Si2No_V[iPe] = Si2NoP;
     if(useMultiSpecies) Si2No_V[iRhoTotal] = Si2NoRho;
     
-    for(int iFluid=0; iFluid<nFluid; ++iFluid){
-      Si2No_V[iRho_I[iFluid]]     = Si2NoRho;
-      Si2No_V[iRhoUx_I[iFluid]]   = Si2NoM;
-      Si2No_V[iRhoUy_I[iFluid]]   = Si2NoM;
-      Si2No_V[iRhoUz_I[iFluid]]   = Si2NoM;
-      Si2No_V[iP_I[iFluid]]       = Si2NoP;
-      if(useAnisoP)Si2No_V[iPpar_I[iFluid]] = Si2NoP;
+    int iMax;
+    iMax = nFluid;
+    if(useMultiSpecies) iMax = nIon; 
+
+    for(int i=0; i<iMax; ++i){
+      Si2No_V[iRho_I[i]]     = Si2NoRho;
+      Si2No_V[iRhoUx_I[i]]   = Si2NoM;
+      Si2No_V[iRhoUy_I[i]]   = Si2NoM;
+      Si2No_V[iRhoUz_I[i]]   = Si2NoM;
+      Si2No_V[iP_I[i]]       = Si2NoP;
+      if(useAnisoP)Si2No_V[iPpar_I[i]] = Si2NoP;
     }
 
     // Get back to SI units
@@ -464,11 +477,11 @@ class InterfaceFluid
 	  if(doGetFromGM(i,j,k)){
 	    if(useMultiSpecies){
 	      Rhot=0;
-	      for(int iFluid=0; iFluid<nFluid; ++iFluid){
+	      for(int iIon=0; iIon<nIon; ++iIon){
 		// Rho = sum(Rhoi) + Rhoe;
 		Rhot +=
-		  State_GV[i][j][k][iRho_I[iFluid]]*(1+MoMi_S[0]/MoMi_S[iFluid+1]);
-	      }// iFluid
+		  State_GV[i][j][k][iRho_I[iIon]]*(1+MoMi0_S[0]/MoMi0_S[iIon+1]);
+	      }// iIon
 
 	      State_GV[i][j][k][iUx_I[0]] /= Rhot;
 	      State_GV[i][j][k][iUy_I[0]] /= Rhot;
@@ -516,6 +529,10 @@ class InterfaceFluid
   ~InterfaceFluid(){
     delete [] MoMi_S;
     delete [] QoQi_S;
+
+    delete [] MoMi0_S;
+    delete [] QoQi0_S;
+
     delArr4(State_GV,nxnLG,nynLG,nznLG);
     delArr4(Bc_GD,nxnLG,nynLG,nznLG);
 
@@ -934,6 +951,15 @@ class InterfaceFluid
   
   /** get Pxx from fluid */
   template <typename Type>	
+    inline double getPICPxx(const Type x, const Type y,const Type z, const int is)const{
+    double Pxx;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Pxx = getFluidPxx(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Pxx;
+  }
+  template <typename Type>	
     inline double getFluidPxx(const Type x, const Type y,const Type z, const int is)const{
     double Pxx;
     if(useAnisoP){
@@ -952,10 +978,19 @@ class InterfaceFluid
     }else{
       Pxx = getFluidP(x,y,z,is);
     }
-    return(QoQi_S[is]*(Pxx/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUx(x,y,z,is),2)));
+    return(QoQi0_S[is]*(Pxx/MoMi0_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUx(x,y,z,is),2)));
   }
   
   /** get Pyy from fluid */
+  template <typename Type>	
+    inline double getPICPyy(const Type x, const Type y,const Type z, const int is)const{
+    double Pyy;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Pyy = getFluidPyy(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Pyy;
+  }
   template <typename Type>	
     inline double getFluidPyy(const Type x, const Type y,const Type z, const int is)const{
     double Pyy; 
@@ -974,10 +1009,19 @@ class InterfaceFluid
     }else{
       Pyy = getFluidP(x,y,z,is);
     }
-    return(QoQi_S[is]*(Pyy/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUy(x,y,z,is),2)));	
+    return(QoQi0_S[is]*(Pyy/MoMi0_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUy(x,y,z,is),2)));	
   }
   
   /** get Pzz from fluid */
+  template <typename Type>	
+    inline double getPICPzz(const Type x, const Type y,const Type z, const int is)const{
+    double Pzz;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Pzz = getFluidPzz(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Pzz; 
+  }
   template <typename Type>	
     inline double getFluidPzz(const Type x, const Type y,const Type z, const int is)const{
     double Pzz;
@@ -998,11 +1042,20 @@ class InterfaceFluid
       Pzz = getFluidP(x,y,z,is);
     }
 
-    return(QoQi_S[is]*(Pzz/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUz(x,y,z,is),2)));
+    return(QoQi0_S[is]*(Pzz/MoMi0_S[is] + getFluidRhoNum(x,y,z,is)*pow(getFluidUz(x,y,z,is),2)));
     
   }
   
   /** get Pxy from fluid */
+  template <typename Type>	
+    inline double getPICPxy(const Type x, const Type y,const Type z, const int is)const{
+    double Pxy;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Pxy = getFluidPxy(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Pxy;
+  }
   template <typename Type>	
     inline double getFluidPxy(const Type x, const Type y,const Type z, const int is)const{
     double Pxy;
@@ -1023,10 +1076,19 @@ class InterfaceFluid
       Pxy = 0; 
     }
 
-    return(QoQi_S[is]*(Pxy/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUy(x,y,z,is)));
+    return(QoQi0_S[is]*(Pxy/MoMi0_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUy(x,y,z,is)));
   }
   
   /** get Pxz from fluid */
+  template <typename Type>	
+    inline double getPICPxz(const Type x, const Type y,const Type z, const int is)const{
+    double Pxz;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Pxz = getFluidPxz(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Pxz;
+  }
   template <typename Type>	
     inline double getFluidPxz(const Type x, const Type y,const Type z, const int is)const{
     double Pxz;
@@ -1047,10 +1109,19 @@ class InterfaceFluid
       Pxz = 0; 
     }
 
-    return(QoQi_S[is]*(Pxz/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUz(x,y,z,is)));
+    return(QoQi0_S[is]*(Pxz/MoMi0_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUx(x,y,z,is)*getFluidUz(x,y,z,is)));
   }
   
   /** get Pyz from fluid */
+  template <typename Type>	
+    inline double getPICPyz(const Type x, const Type y,const Type z, const int is)const{
+    double Pyz;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Pyz = getFluidPyz(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Pyz;
+  }
   template <typename Type>	
     inline double getFluidPyz(const Type x, const Type y,const Type z, const int is)const{
     double Pyz;
@@ -1071,28 +1142,67 @@ class InterfaceFluid
       Pyz = 0; 
     }
 
-    return(QoQi_S[is]*(Pyz/MoMi_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUy(x,y,z,is)*getFluidUz(x,y,z,is)));
+    return(QoQi0_S[is]*(Pyz/MoMi0_S[is] + getFluidRhoNum(x,y,z,is)*getFluidUy(x,y,z,is)*getFluidUz(x,y,z,is)));
   }
   
+
+
   /** get Jx from fluid */
   template <typename Type>	
+    inline double getPICJx(const Type x, const Type y,const Type z, const int is)const{
+    double Jx;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Jx = getFluidJx(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Jx;
+  }
+
+  template <typename Type>	
     inline double getFluidJx(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*getFluidU(x,y,z,is,iUx_I,iJx)*getFluidRhoNum(x,y,z,is));
+    return(QoQi0_S[is]*getFluidU(x,y,z,is,iUx_I,iJx)*getFluidRhoNum(x,y,z,is));
   }
   
   /** get Jy from fluid */
   template <typename Type>	
+    inline double getPICJy(const Type x, const Type y,const Type z, const int is)const{
+    double Jy;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];        
+    Jy = getFluidJy(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Jy;
+  }
+  template <typename Type>	
     inline double getFluidJy(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*getFluidU(x,y,z,is,iUy_I,iJy)*getFluidRhoNum(x,y,z,is));
+    return(QoQi0_S[is]*getFluidU(x,y,z,is,iUy_I,iJy)*getFluidRhoNum(x,y,z,is));
   }
   
   /** get Jz from fluid */
   template <typename Type>	
+    inline double getPICJz(const Type x, const Type y,const Type z, const int is)const{
+    double Jz;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Jz = getFluidJz(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Jz;
+  }
+  template <typename Type>	
     inline double getFluidJz(const Type x, const Type y,const Type z, const int is)const{
-    return(QoQi_S[is]*getFluidU(x,y,z,is,iUz_I,iJz)*getFluidRhoNum(x,y,z,is));	
+    return(QoQi0_S[is]*getFluidU(x,y,z,is,iUz_I,iJz)*getFluidRhoNum(x,y,z,is));	
   }
   
   /** get bulk velocity Ux from fluid */
+  template <typename Type>	
+    inline double getPICUx(const Type x, const Type y,const Type z, const int is)const{
+    double Ux;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Ux = getFluidUx(x,y,z,iMHD);
+    return Ux;
+  }
   template <typename Type>	
     inline double getFluidUx(const Type x, const Type y,const Type z, const int is)const{
     return(getFluidU(x,y,z,is,iUx_I,iJx)); 
@@ -1100,11 +1210,29 @@ class InterfaceFluid
   
   /** get bulk velocity Uy from fluid */
   template <typename Type>	
+    inline double getPICUy(const Type x, const Type y,const Type z, const int is)const{
+    double Uy;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Uy = getFluidUy(x,y,z,iMHD);
+    return Uy;
+  }
+  template <typename Type>	
     inline double getFluidUy(const Type x, const Type y,const Type z, const int is)const{
     return(getFluidU(x,y,z,is,iUy_I,iJy));
   }
   
   /** get bulk velocity Uz from fluid */
+  template <typename Type>	
+    inline double getPICUz(const Type x, const Type y,const Type z, const int is)const{
+    double Uz;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Uz = getFluidUz(x,y,z,iMHD);
+    return Uz;
+  }
   template <typename Type>	
     inline double getFluidUz(const Type x, const Type y,const Type z, const int is)const{
     return(getFluidU(x,y,z,is,iUz_I,iJz)); 
@@ -1115,7 +1243,7 @@ class InterfaceFluid
     inline double getFluidU(const Type x, const Type y,const Type z, 
 			    const int is, const int * iU_I, const int iJ)const
     {
-      if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
+      //if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
       // Assume qe = -qi;
       double U,Rho,J, Rhoit, Qit, Rhot;
 
@@ -1129,7 +1257,7 @@ class InterfaceFluid
 	  double Ui, ni, ne; 
 	  getInterpolatedValue(x,y,z,&J,iJ);
 	  ne = getFluidRhoNum(x,y,z,0);
-	  U  = J/(QoQi_S[0]*ne);
+	  U  = J/(QoQi0_S[0]*ne);
 
 	  for(int iIon=0; iIon<nIon; ++iIon){
 	    Ui = getFluidU(x,y,z,iIon+1,iU_I,iJ);
@@ -1153,16 +1281,17 @@ class InterfaceFluid
 	  Rhoit = 0; Qit = 0;
 	  for(int iIon=0; iIon<nIon; ++iIon){
 	    Numi   = getFluidRhoNum(x,y,z,iIon+1);
-	    Rhoit += Numi*MoMi_S[iIon+1];
-	    Qit   += Numi*QoQi_S[iIon+1];
+	    Rhoit += Numi*MoMi0_S[iIon+1];
+	    Qit   += Numi*QoQi0_S[iIon+1];
 	    }
 	  moq = 0;
 	  if(Qit !=0) moq = Rhoit/Qit;
-	}else moq = MoMi_S[0]/QoQi_S[0];
+	}else moq = MoMi0_S[0]/QoQi0_S[0];
 
 	Rhot = 0;
-	for(int is0=0; is0<nS; ++is0)
-	  Rhot += MoMi_S[is0]*getFluidRhoNum(x,y,z,is0);
+	for(int is0=0; is0<nSIn; ++is0){
+	  Rhot += MoMi0_S[is0]*getFluidRhoNum(x,y,z,is0);
+	}
 	
 	getInterpolatedValue(x,y,z,&U,iU_I[0]);
 	getInterpolatedValue(x,y,z,&J,iJ);	
@@ -1174,20 +1303,38 @@ class InterfaceFluid
   
   /** get thermal velocity at location x, y, z for fluid is */
   template <typename Type>
+    inline double getPICUth(const Type x, const Type y ,const Type z, const int is)const{
+    double Uth;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Uth = getFluidUth(x,y,z,iMHD);
+    return Uth;
+  }
+  template <typename Type>
     inline double getFluidUth(const Type x, const Type y ,const Type z, const int is)const
     {
-      if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
+      //if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
       double Uth=0, p, ni;
       
       p  = getFluidP(x,y,z,is);
       ni = getFluidRhoNum(x,y,z,is);
-      if(ni>0) Uth = sqrt(p/(ni*MoMi_S[is]));
+      if(ni>0) Uth = sqrt(p/(ni*MoMi0_S[is]));
       return(Uth);
     }
   
   /** set thermal velocity in magnetic cordinates for a given position */
   template <typename Type>
-    inline void setFluidansioUth(const Type x, const Type y ,const Type z,
+    inline void setPICAnisoUth(const Type x, const Type y ,const Type z,
+				 double *u, double *v, double *w, 
+				 const double rand1, const double rand2, 
+				 const double rand3, const double rand4, 
+				 const int is)const{
+    setFluidAnisoUth(x,y,z,u,v,w,rand1,rand2,rand3,rand4,is);
+  }
+
+  template <typename Type>
+    inline void setFluidAnisoUth(const Type x, const Type y ,const Type z,
 				 double *u, double *v, double *w, 
 				 const double rand1, const double rand2, 
 				 const double rand3, const double rand4, 
@@ -1199,8 +1346,8 @@ class InterfaceFluid
       // indexes for the norm_DD matix
       int Norm_, Perp1_, Perp2_, X_, Y_, Z_;
 
-      if(useMultiFluid || useMultiSpecies){
-	cout<<" setFluidanisoUth has not implemented for multifluid/multispecies!!!"<<endl;
+      if(useMultiFluid || useMultiSpecies || doSplitSpecies){
+	cout<<" setFluidanisoUth has not implemented for multifluid/multispecies/doSplitSpecies!!!"<<endl;
 	abort();	
       }
       
@@ -1228,11 +1375,11 @@ class InterfaceFluid
       //Get the thermal verlocities
       prob  = sqrt(-2.0*log(1.0-.999999999*rand1));
       theta = 2.0*M_PI*rand2;
-      Uthpar = sqrt(Ppar/(MoMi_S[is]*ni))*prob*cos(theta);
+      Uthpar = sqrt(Ppar/(MoMi0_S[is]*ni))*prob*cos(theta);
   
       prob  = sqrt(-2.0*log(1.0-.999999999*rand3));
       theta = 2.0*M_PI*rand4;
-      Uthperp  = sqrt(Pperp/(MoMi_S[is]*ni))*prob;
+      Uthperp  = sqrt(Pperp/(MoMi0_S[is]*ni))*prob;
       Uthperp1 = Uthperp*cos(theta);
       Uthperp2 = Uthperp*sin(theta);
   
@@ -1247,8 +1394,17 @@ class InterfaceFluid
   
   /** get total pressure for species from fluid */
   template <typename Type>	
+    inline double getPICP(const Type x, const Type y,const Type z, const int is)const{
+    double P;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    P = getFluidP(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return P;
+  }
+  template <typename Type>	
     inline double getFluidP(const Type x, const Type y,const Type z, const int is)const{
-    if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
+    //if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
     double P, Pe, Pi;
 
     if(useElectronFluid){
@@ -1285,12 +1441,21 @@ class InterfaceFluid
   
   /** get parallel thermal presure for species from a fluid*/ 
   template <typename Type>	
+    inline double getPICPpar(const Type x, const Type y,const Type z, const int is)const{
+    double Ppar;
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];    
+    Ppar = getFluidPpar(x,y,z,iMHD)*RatioPIC2MHD(x,y,z,is);
+    return Ppar;
+  }
+  template <typename Type>	
     inline double getFluidPpar(const Type x, const Type y,const Type z, const int is)const{
-    if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
+    //if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
     // Need to check whether this function works correctly! -- Yuxi
     double P;
-    if(useMultiSpecies || useMultiFluid){
-      cout<<" getFluidPpar has not implemented for multifluid/multispecies!!"<<endl;
+    if(useMultiSpecies || useMultiFluid || doSplitSpecies){
+      cout<<" getFluidPpar has not implemented for multifluid/multispecies/doSplitSpecies!!"<<endl;
       abort();      
     }
 
@@ -1327,33 +1492,43 @@ class InterfaceFluid
 
   /** this should return NUMBER DENSITY from fluid */
   template <typename Type>
+    inline double getPICRhoNum(const Type x,const Type  y, const Type z, const int is)const{
+    double RhoNum; 
+    int iMHD;
+    iMHD = is;
+    if(doSplitSpecies) iMHD = iSPic2Mhd_I[is];        
+    RhoNum = getFluidRhoNum(x, y, z, iMHD)*RatioPIC2MHD(x,y,z,is);    
+
+    return RhoNum;
+  }
+
+  template <typename Type>
     inline double getFluidRhoNum(const Type x,const Type  y, const Type z, const int is)const{
     double Rho, NumDens;
     
-    if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
+    //if(doSplitSpecies && !do_deposit_particle(is, x, y, z)) return 0; 
     
     if(useElectronFluid){
       getInterpolatedValue(x,y,z,&Rho,iRho_I[is]);
-      NumDens = Rho/MoMi_S[is];	      
+      NumDens = Rho/MoMi0_S[is];	      
     }else if(useMultiFluid || useMultiSpecies){
       if(is == 0){
 	// Electron
 	NumDens = 0; 
 	for(int iIon=0; iIon<nIon; ++iIon){
 	  getInterpolatedValue(x,y,z,&Rho,iRho_I[iIon]);
-	  NumDens += Rho/MoMi_S[iIon+1];
+	  NumDens += Rho/MoMi0_S[iIon+1];
 	}
       }else{
 	// Ion
 	getInterpolatedValue(x,y,z,&Rho,iRho_I[is-1]);
-	NumDens = Rho/MoMi_S[is];
+	NumDens = Rho/MoMi0_S[is];
       }      
     }else{
       // Electrons and iones have same density, ignoring is
       getInterpolatedValue(x,y,z,&Rho,iRho_I[0]);
       NumDens = Rho/SumMass;
     }
-
     return(NumDens);
   }
   
@@ -1428,6 +1603,21 @@ class InterfaceFluid
 	for(int i = 0; i<nS; i++){
 	  iSPic2Mhd_I[i] = floor((i+0.5)/2.0);
 	}
+      }else if(splitType=="ElectronOnly"){
+	// Assume there are two ion species/fluids in MHD
+	if(nS != 3){
+	  cout<<"'ElectronOnly' type splitting is not supported for nSpecies = "
+	      <<nSpecies<<" nFluid = "<<nFluid<<" nS = "<<nS<<endl;
+	  abort();
+	}
+	nS +=1;
+	iSPic2Mhd_I = new int[nS];
+	iSPic2Mhd_I[0] = 0;
+	iSPic2Mhd_I[1] = 0; 
+	for(int i = 2; i<nS; i++){
+	  iSPic2Mhd_I[i] = i-1;
+	}
+	
       }else{
 	cout<<" splitType = "<<splitType<<" is not found!"<<endl;
 	abort();
@@ -1440,15 +1630,15 @@ class InterfaceFluid
     
     nVarCoupling= nVarFluid + 3; // nVarFluid + (Jx, Jy, Jz)
     
-    iRho_I   = new int[nFluid];
-    iRhoUx_I = new int[nFluid];
-    iRhoUy_I = new int[nFluid];
-    iRhoUz_I = new int[nFluid];
-    iUx_I    = new int[nFluid];
-    iUy_I    = new int[nFluid];
-    iUz_I    = new int[nFluid];
-    iPpar_I  = new int[nFluid];
-    iP_I     = new int[nFluid];      
+    iRho_I   = new int[nS];
+    iRhoUx_I = new int[nS];
+    iRhoUy_I = new int[nS];
+    iRhoUz_I = new int[nS];
+    iUx_I    = new int[nS];
+    iUy_I    = new int[nS];
+    iUz_I    = new int[nS];
+    iPpar_I  = new int[nS];
+    iP_I     = new int[nS];      
 
     int n = 8;
     if(useMultiSpecies){
@@ -1586,17 +1776,17 @@ class InterfaceFluid
     assert_ge(dx_D[1],0.0);
     assert_ge(dx_D[2],0.0);
 
-    if(!useElectronFluid){
-      assert_eq(QoQi_S[0],-1.0*QoQi_S[1]);
-      for(int iIon = 1; iIon<nIon; ++iIon){
-	if(QoQi_S[iIon+1] != QoQi_S[1]){
-	  cout<<" So far, -qe = qi1 = qi2 = qi3... is assumed. QoQi_S[1]= "
-	      <<QoQi_S[1]<<" and QoQi_S["<<iIon+1<<"]= "<<QoQi_S[iIon+1]
-	      <<" are not valided!!"<<endl;
-	  abort();
-	}
-      }
-    }
+    /* if(!useElectronFluid){ */
+    /*   assert_eq(QoQi0_S[0],-1.0*QoQi0_S[1]); */
+    /*   for(int iIon = 1; iIon<nIon; ++iIon){ */
+    /* 	if(QoQi0_S[iIon+1] != QoQi0_S[1]){ */
+    /* 	  cout<<" So far, -qe = qi1 = qi2 = qi3... is assumed. QoQi0_S[1]= " */
+    /* 	      <<QoQi0_S[1]<<" and QoQi0_S["<<iIon+1<<"]= "<<QoQi0_S[iIon+1] */
+    /* 	      <<" are not valided!!"<<endl; */
+    /* 	  abort(); */
+    /* 	} */
+    /*   } */
+    /* } */
     
     if(useMultiFluid && !useMhdPe) {
       cout<<" Use multi-fluid but do not use electron pressure. This case is not supported so far!!!"<<endl;
@@ -2164,24 +2354,23 @@ class InterfaceFluid
       SumMass   += MoMi_S[is];
     
 
-    if(doSplitSpecies){
-      
-      // Fix the values of MoMi_S and QoQi_S;
-      double *MoMi0_S = new double[nSIn];
-      double *QoQi0_S = new double[nSIn];
-      for(int i = 0; i<nSIn; i++){
-	MoMi0_S[i] = MoMi_S[i];
-	QoQi0_S[i] = QoQi_S[i];
-      }
 
+      
+    // Fix the values of MoMi_S and QoQi_S;
+    MoMi0_S = new double[nSIn];
+    QoQi0_S = new double[nSIn];
+    for(int i = 0; i<nSIn; i++){
+      MoMi0_S[i] = MoMi_S[i];
+      QoQi0_S[i] = QoQi_S[i];
+    }
+
+    if(doSplitSpecies){
       int idx; 
       for(int i = 0; i<nS; i++){
 	idx = iSPic2Mhd_I[i];
 	QoQi_S[i] = QoQi0_S[idx]; 
 	MoMi_S[i] = MoMi0_S[idx]; 
       }
-      delete [] MoMi0_S; 
-      delete [] QoQi0_S;     
     }
  
     //iones
@@ -2451,38 +2640,46 @@ class InterfaceFluid
 
 
   template <typename Type>	
-  bool do_deposit_particle(const int iSpecies,const  Type x, const Type y, const Type z)const{    
-    bool doDeposit;
+  inline double RatioPIC2MHD(const Type x, const Type y,const Type z, const int is)const{
+    double Ratio;
     if(doSplitSpecies){
-      int iVar; 
-      if(splitType=="Bx") iVar = iBx;
-      if(splitType=="By") iVar = iBy;
-      if(splitType=="Bz") iVar = iBz; 
-      double var;
-      getInterpolatedValue(x,y,z,&var,iVar);
-      // var >0, deposit to the even species
-      // var <=0, deposit to the odd species
-      if( (var > 0 && iSpecies % 2==0) || (var <= 0 && iSpecies % 2==1) ) doDeposit=true;
+      int iMHD;
+      iMHD = is;
+      iMHD = iSPic2Mhd_I[is];        
+      
+      if(splitType=="Bx" || splitType=="By" || splitType=="Bz"){
+	int iVar;
+	if(splitType=="Bx") iVar = iBx;
+	if(splitType=="By") iVar = iBy;
+	if(splitType=="Bz") iVar = iBz; 
+	double var;
+	getInterpolatedValue(x,y,z,&var,iVar);
 
-
-      if(doDeposit && iSpecies==0 && y<0){
-	cout<<" y = "<<y<<" var = "<<var<<endl;
+	// var >0, deposit to the even species
+	// var <=0, deposit to the odd species     
+	Ratio = 0; 
+	if( (var > 0 && is % 2==0) || (var <= 0 && is % 2==1) ) Ratio=1;
+      }else if(splitType=="ElectronOnly"){
+	Ratio = 1;
+	if(is==0 || is==1){
+	  // Assume there are one electron and two ion species before splitting. 
+	  double Ion1, Ion2, IonTot;
+	  Ion1 = getFluidRhoNum(x,y,z,1); // ion species 1
+	  Ion2 = getFluidRhoNum(x,y,z,2); // ion species 1
+	  IonTot = Ion1 + Ion2;                                                            
+          Ratio = 0;                                                                       
+          if(IonTot>0 && is==0) Ratio = Ion1/IonTot;                                       
+          if(IonTot>0 && is==1) Ratio = Ion2/IonTot;
+	}
       }
     }else{
-      doDeposit = true; 
+      Ratio = 1; 
     }
-    
-    return doDeposit; 
+    return Ratio;
   }
-  
+
   // The begining 'physical' point of this IPIC region. Assume there is one 
   // layer PIC ghost cell.
-  /* double getPhyXMin()const{return phyMin_D[0];} */
-  /* double getPhyYMin()const{return phyMin_D[1];} */
-  /* double getPhyZMin()const{return phyMin_D[2];} */
-  /* double getPhyXMax()const{return phyMax_D[0];} */
-  /* double getPhyYMax()const{return phyMax_D[1];} */
-  /* double getPhyZMax()const{return phyMax_D[2];} */
   double getphyMin(int i)const{return phyMin_D[i];}
   bool getdoRotate()const{return doRotate;}
   double getRDD(int i, int j)const{return R_DD[i][j];}
@@ -2591,6 +2788,7 @@ class InterfaceFluid
       return i;
     }
   }
+  string get_splitType()const{return splitType;}
 };
 
 

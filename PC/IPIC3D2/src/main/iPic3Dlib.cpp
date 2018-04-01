@@ -100,6 +100,7 @@ c_Solver::~c_Solver()
     
     for(int iPlot=0;iPlot<nPlotFile;iPlot++){
       delete [] pointList_IID[iPlot];
+      delete [] Var_II[iPlot];
     }
 
     delete [] pointList_IID;
@@ -368,7 +369,7 @@ int c_Solver::Init(int argc, char **argv, double inittime,
   return 0;
 }
 
-void c_Solver::CalculateMoments(bool doCorrectWeights) {
+void c_Solver::CalculateMoments(bool doCleanDivEIn) {
 
   timeTasks_set_main_task(TimeTasks::MOMENTS);
 
@@ -408,21 +409,52 @@ void c_Solver::CalculateMoments(bool doCorrectWeights) {
         break;
       case Parameters::AoS
 	:
-        EMf->setZeroPrimaryMoments();
-	EMf->setZeroDerivedMoments();
-        convertParticlesToAoS();		
+	convertParticlesToAoS();		
+#ifdef BATSRUS
+	if(doCleanDivEIn && col->get_doCleanDivE()){
+	  // Do not clean divE by changing particle position/weight at the
+	  // initilization stage. 	
 
-	if(col->getdoCorrectWeight() && doCorrectWeights){
-	  // Do not correct weights at the initialization stage.
-	  EMf->sumMoments_AoS(part, true);	
-	  EMf->sumOverSpecies();
-	  EMf->interpDensitiesN2C();
-	  int isLight = col->get_iSpeciesLightest();
-	  part[isLight].correctWeight(EMf);
-	  EMf->setZeroPrimaryMoments();
+	  string divEClean = col->get_divECleanType();
+	  for(int iNonLinear=0; iNonLinear < col->get_nIterNonLinear(); 
+	      iNonLinear++){
+	    
+	    EMf->setZeroDerivedMoments(); // move this part into calc_cell_center_density!!!!!!!  -- Yuxi
+	    EMf->calc_cell_center_density(part,false);	  
+	    
+	    if(divEClean == "position_estimate_phi"){
+	      EMf->calculate_PHI(iPIC3D_PoissonImage,
+				 col->get_divECleanTol(),
+				 col->get_divECleanIter(), true);
+
+	    }else if(divEClean.substr(0,15) != "weight_estimate"){
+	      EMf->calculate_PHI(iPIC3D_matvec_weight_correction,
+				 col->get_divECleanTol(),
+				 col->get_divECleanIter(), false);
+	    }
+	   
+	    int isLight = col->get_iSpeciesLightest();
+	    if(divEClean.substr(0,6)=="weight"){
+	      part[isLight].correctWeight(EMf,divEClean);
+	    } else if(divEClean.substr(0,8)=="position"){
+	      int ns = col->getNs();
+	      bool doCorrectAll = (divEClean=="position_all");
+	      for(int is=0; is<ns; is++){
+		if(is==isLight || doCorrectAll){
+		  part[is].correctPartPos(EMf, divEClean);
+		  part[is].delete_outside_particles();
+		  part[is].separate_and_send_particles();
+		  part[is].recommunicate_particles_until_done(1);
+		}// if
+	      }// for is
+	    }
+	  }// iNonLinear       
 	}
-       
+#endif
+
+	EMf->setZeroPrimaryMoments();
 	EMf->sumMoments_AoS(part);
+	
         break;
       case Parameters::AoSintr:
         EMf->setZeroPrimaryMoments();
@@ -443,16 +475,10 @@ void c_Solver::CalculateMoments(bool doCorrectWeights) {
   }else if(col->getCase()=="Dipole2D") {
 	EMf->ConstantChargePlanet2DPlaneXZ(col->getL_square(),col->getx_center(),col->getz_center());
   }
-  // Set a constant charge in the OpenBC boundaries
-  //EMf->ConstantChargeOpenBC();
-  
-  EMf->interpDensitiesN2C();
+
+  EMf->calc_cell_center_density(part,true); 
 
 
-
-
-
-  
 #ifdef BATSRUS
   EMf->calculateFluidPressure();
 #endif
@@ -609,6 +635,8 @@ bool c_Solver::ParticlesMover()
 	  testpart[i].recommunicate_particles_until_done(1);
   }
 
+  process_mem_usage("After moving particles: ");
+  
   return (false);
 }
 
@@ -1866,6 +1894,8 @@ void c_Solver::EM_PoissonImage(double *vecIn, double *vecOut, int n){
   EMf->PoissonImage(vecOut, vecIn, doSolveForChange);
 }
 
-
+void c_Solver::EM_matvec_weight_correction(double *vecIn, double *vecOut, int n){
+  EMf->matvec_weight_correction(vecOut, vecIn);
+}
 
 #endif
