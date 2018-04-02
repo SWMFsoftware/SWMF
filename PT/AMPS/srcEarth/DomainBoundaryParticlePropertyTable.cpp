@@ -126,6 +126,33 @@ int Earth::CutoffRigidity::DomainBoundaryParticleProperty::GetVelocityVectorInde
   return iAzimuthInterval+(iCosZenithInterval+iLogEnergyLevel*nCosZenithIntervals)*nAzimuthIntervals;
 }
 
+void Earth::CutoffRigidity::DomainBoundaryParticleProperty::ConvertVelocityVectorIndex2Velocity(int spec,double *v,int iface,int Index) {
+  int idim,iCosZenithInterval,iAzimuthInterval,iLogEnergyLevel;
+
+  iAzimuthInterval=Index%nAzimuthIntervals;
+  Index/=nAzimuthIntervals;
+
+  iCosZenithInterval=Index%nCosZenithIntervals;
+  iLogEnergyLevel=Index/nCosZenithIntervals;
+
+  double Speed,Energy,ZenithAngle,AzimuthAngle,cosZenithAngle,sinZenithAngle,cosAzimuthAngle,sinAzimuthAngle;
+
+  Energy=exp((0.5+iLogEnergyLevel)*nLogEnergyLevels+logEmin);
+  ZenithAngle=acos((iCosZenithInterval+0.5)*dCosZenithAngle);
+  AzimuthAngle=(iAzimuthInterval+0.5)*dAzimuthAngle;
+
+  cosZenithAngle=cos(ZenithAngle);
+  sinZenithAngle=sin(ZenithAngle);
+
+  cosAzimuthAngle=cos(AzimuthAngle);
+  sinAzimuthAngle=sin(AzimuthAngle);
+
+  Speed=Relativistic::E2Speed(Energy,PIC::MolecularData::GetMass(spec));
+
+  for (idim=0;idim<3;idim++) v[idim]=Speed*(InternalFaceNorm[iface][idim]*sinZenithAngle+cosZenithAngle*(e0FaceFrame[iface][idim]*cosAzimuthAngle+e1FaceFrame[iface][idim]*sinAzimuthAngle));
+}
+
+
 //init the namespace
 void Earth::CutoffRigidity::DomainBoundaryParticleProperty::Init() {
   int iface;
