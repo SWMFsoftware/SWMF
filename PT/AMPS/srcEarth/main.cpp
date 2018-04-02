@@ -131,7 +131,138 @@ int main(int argc,char **argv) {
       MPI_Allreduce(&LacalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
     }
     while (GlobalParticleNumber!=0);
+
+
+    //determine the flux and eneregy spectra of the energetic particles in the poins of the observation
+    if (true) {
+      double ***EnergySpectrum,**TotalFlux,v[3],KineticEnergy,Speed,DiffFlux,dSurface,norm;
+      int offset,iTestsLocation,spec,i,j,iface,iTable,jTable,Index,iBit,iByte,iE;
+
+      const int nTotalEnergySpectrumIntervals=100;
+      const double logMinEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit);
+      const double logMaxEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit);
+      const double dE=(logMaxEnergyLimit-logMinEnergyLimit)/nTotalEnergySpectrumIntervals;
+
+      //allocate the data buffers
+      TotalFlux=new double* [Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength];
+      TotalFlux[0]=new double [Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength*PIC::nTotalSpecies];
+      for (iTestsLocation=1;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) TotalFlux[iTestsLocation]=TotalFlux[iTestsLocation-1]+PIC::nTotalSpecies;
+
+      EnergySpectrum=new double** [Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength];
+      EnergySpectrum[0]=new double* [Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength*PIC::nTotalSpecies];
+      for (iTestsLocation=1;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) EnergySpectrum[iTestsLocation]=EnergySpectrum[iTestsLocation-1]+PIC::nTotalSpecies;
+
+      EnergySpectrum[0][0]=new double [Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength*PIC::nTotalSpecies*nTotalEnergySpectrumIntervals];
+
+      for (offset=0,iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+        EnergySpectrum[iTestsLocation][spec]=EnergySpectrum[0][0]+offset;
+        offset+=nTotalEnergySpectrumIntervals;
+      }
+
+      //set the values of the buffers to zero
+      for (iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+        TotalFlux[iTestsLocation][spec]=0.0;
+
+        for (i=0;i<nTotalEnergySpectrumIntervals;i++) EnergySpectrum[iTestsLocation][spec][i]=0.0;
+      }
+
+      //calculate the flux and energey spectrum
+      for (iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) {
+        for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+          for (iface=0;iface<6;iface++) {
+            //surface area of the element of the surface mesh that covers the boundary of the computational domain
+            dSurface=Earth::CutoffRigidity::DomainBoundaryParticleProperty::dX[iface][0]*Earth::CutoffRigidity::DomainBoundaryParticleProperty::dX[iface][1];
+
+            //loop through the mesh that covers face 'iface' on the computational domain
+            for (iTable=0;iTable<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleMaskNumberPerSpatialDirection;iTable++) {
+              for (jTable=0;jTable<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleMaskNumberPerSpatialDirection;jTable++) {
+                Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iTestsLocation][spec][iface][iTable][jTable].Gather();
+
+                for (iByte=0;iByte<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iTestsLocation][spec][iface][iTable][jTable].FlagTableLength[0];iByte++) for (iBit=0;iBit<8;iBit++) {
+                  Index=iBit+8*iByte;
+
+                  if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iTestsLocation][spec][iface][iTable][jTable].Test(Index)==true) {
+                    //at least one particle that corrsponds to 'Index' has been detected. Add a contribution of such particles to the total energy spectrum and flux as observed at the point of the observation 'iTestsLocation'
+
+                    Earth::CutoffRigidity::DomainBoundaryParticleProperty::ConvertVelocityVectorIndex2Velocity(spec,v,iface,Index);
+                    Speed=Vector3D::Length(v);
+                    KineticEnergy=Relativistic::Speed2E(Speed,PIC::MolecularData::GetMass(spec));
+
+                    //probability density that particles has velocity 'v'
+                    DiffFlux=GCR_BADAVI2011ASR::Hydrogen::GetDiffFlux(KineticEnergy);
+
+                    //determine the contributio of the particles into the 'observed' flux and energy spectrum
+                    TotalFlux[iTestsLocation][spec]+=DiffFlux*dSurface;
+
+                    //determine contribution of the particles to the energy flux
+                    iE=(log10(KineticEnergy)-logMaxEnergyLimit)/dE;
+                    if (iE<0) iE=0;
+                    if (iE>=nTotalEnergySpectrumIntervals) iE=nTotalEnergySpectrumIntervals-1;
+
+                    EnergySpectrum[iTestsLocation][spec][iE]+=DiffFlux*dSurface;
+                  }
+                }
+              }
+            }
+          }
+
+          //normalize the energy spectrum
+          for (iE=0,norm=0.0;iE<nTotalEnergySpectrumIntervals;iE++) norm+=EnergySpectrum[iTestsLocation][spec][iE]*dE;
+          if (norm>0) EnergySpectrum[iTestsLocation][spec][iE]/=norm;
+        }
+      }
+
+      //output sampled particles flux and energy spectrum
+      if (PIC::ThisThread==0) {
+        //sampled energy spectrum
+        FILE *fout;
+        int spec,iTestsLocation,iE;
+        char fname[400];
+
+        for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+          sprintf(fname,"EnergySpectrum[s=%i].dat",spec);
+          fout=fopen(fname,"w");
+
+          fprintf(fout,"VARIABLES=\"log10(Kinetic Energy[MeV]\"");
+          for (iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) fprintf(fout,", \"Spectrum (iTestsLocation=%i)\"",iTestsLocation);
+          fprintf(fout,"\n");
+
+          for (iE=0;iE<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength+1;iE++) {
+            fprintf(fout,"%e  ",pow(logMinEnergyLimit+iE*dE,10)*J2MeV);
+
+            for (iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) fprintf(fout,"%e  ",EnergySpectrum[iTestsLocation][spec][iE]);
+            fprintf(fout,"\n");
+          }
+        }
+
+        //The total energetic particle flux
+        for (spec=0;spec<PIC::nTotalSpecies;spec++) for (iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) {
+          printf("spec=%i, iTestsLocation=%i: Flux=%e\n",spec,iTestsLocation,TotalFlux[iTestsLocation][spec]);
+        }
+      }
+
+
+
+      //de-allocate the data buffers
+      delete [] TotalFlux[0];
+      delete [] TotalFlux;
+
+      delete [] EnergySpectrum[0][0];
+      delete [] EnergySpectrum[0];
+      delete [] EnergySpectrum;
+
+    }
+    else {
+      //non-uniform distribution of the injected particles
+      exit(__LINE__,__FILE__,"Error: not implemented");
+    }
+
+
+
   }
+
+
+
 
   //time step with the backward integration integration
   if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::ActiveFlag==true) {
