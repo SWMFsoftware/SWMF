@@ -3699,7 +3699,7 @@ namespace PIC {
         CheckSum.PrintChecksum(line,fname);
       }
       else {
-        CheckSum. PrintChecksumThread(line,fname,PIC::ThisThread);
+        CheckSum.PrintChecksumThread(line,fname,PIC::ThisThread);
       }
     }
 
