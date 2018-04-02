@@ -144,6 +144,7 @@ public:
   }; 
 
   ~CMPI_channel() {
+     flush();
      remove();
   } 
 
