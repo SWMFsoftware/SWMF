@@ -94,6 +94,15 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
     }
     else dt=dtTotalIn;
 
+    dtTotalIn-=dt;
+
+    #if _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_ == _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_
+    switch (BackwardTimeIntegrationMode) {
+    case _PIC_MODE_ON_ :
+      dt=-dt;
+    }
+    #endif
+
     //convert velocity into momentum and advance particle half time step
     QdT_over_twoM=ElectricCharge*dt/(2.0*mass);
     for (idim=0;idim<3;idim++) uMinus[idim]=gamma*vInit[idim]+QdT_over_twoM*E[idim];
@@ -179,39 +188,81 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
          //determine through which face the particle left the domain
 
       int nface,nIntersectionFace;
-      double tVelocityIncrement,cx,cv,r0[3],dt,vMiddle[3]={0.5*(vInit[0]+vFinal[0]),0.5*(vInit[1]+vFinal[1]),0.5*(vInit[2]+vFinal[2])},c,dtIntersection=-1.0;
+      double tVelocityIncrement,cx,cv,r0[3],dtEffective,vEffective[3]={0.5*(vInit[0]+vFinal[0]),0.5*(vInit[1]+vFinal[1]),0.5*(vInit[2]+vFinal[2])},c,dtIntersection=-1.0;
+
+      switch (BackwardTimeIntegrationMode) {
+      case _PIC_MODE_ON_:
+        for (idim=0;idim<3;idim++) vEffective[idim]=xInit[idim]-xFinal[idim];
+        break;
+      default:
+        for (idim=0;idim<3;idim++) vEffective[idim]=xFinal[idim]-xInit[idim];
+      }
 
       for (nface=0;nface<6;nface++) {
+
+       #if _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_ == _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_
+        switch (BackwardTimeIntegrationMode) {
+        case _PIC_MODE_ON_:
+          for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
+            r0[idim]=xFinal[idim]-ExternalBoundaryFaceTable[nface].x0[idim];
+            cx+=r0[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+            cv+=vEffective[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+          }
+
+          dtEffective=(cv<0.0) ? -cx/cv : -1.0;
+
+          break;
+        default:
+          for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
+            r0[idim]=xInit[idim]-ExternalBoundaryFaceTable[nface].x0[idim];
+            cx+=r0[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+            cv+=vEffective[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+          }
+
+          dtEffective=(cv>0.0) ? -cx/cv : -1.0;
+        }
+        #else  //_PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_
         for (idim=0,cx=0.0,cv=0.0;idim<3;idim++) {
           r0[idim]=xInit[idim]-ExternalBoundaryFaceTable[nface].x0[idim];
           cx+=r0[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
-          cv+=vMiddle[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
+          cv+=vEffective[idim]*ExternalBoundaryFaceTable[nface].norm[idim];
         }
 
-        if (cv>0.0) {
-          dt=-cx/cv;
+        dtEffective=(cv>0.0) ? -cx/cv : -1.0;
+        #endif  //_PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_
 
-          if ((dtIntersection<0.0)||(dt<dtIntersection)&&(dt>0.0)) {
+        if (dtEffective>0.0) {
+          if ((dtIntersection<0.0)||(dtEffective<dtIntersection)&&(dtEffective>0.0)) {
             double cE0=0.0,cE1=0.0;
 
             for (idim=0;idim<3;idim++) {
-              c=r0[idim]+dt*vMiddle[idim];
+              c=r0[idim]+dtEffective*vEffective[idim];
 
               cE0+=c*ExternalBoundaryFaceTable[nface].e0[idim],cE1+=c*ExternalBoundaryFaceTable[nface].e1[idim];
             }
 
             if ((cE0<-PIC::Mesh::mesh.EPS)||(cE0>ExternalBoundaryFaceTable[nface].lE0+PIC::Mesh::mesh.EPS) || (cE1<-PIC::Mesh::mesh.EPS)||(cE1>ExternalBoundaryFaceTable[nface].lE1+PIC::Mesh::mesh.EPS)) continue;
 
-            nIntersectionFace=nface,dtIntersection=dt;
+            nIntersectionFace=nface,dtIntersection=dtEffective;
           }
         }
       }
 
       if (nIntersectionFace==-1) exit(__LINE__,__FILE__,"Error: cannot find the face of the intersection");
 
-      for (idim=0,tVelocityIncrement=((dtIntersection/dtTotalIn<1) ? dtIntersection/dtTotalIn : 1);idim<3;idim++) {
-        xInit[idim]+=dtIntersection*vMiddle[idim]-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
-        vInit[idim]+=tVelocityIncrement*(vFinal[idim]-vInit[idim]);
+
+      switch (BackwardTimeIntegrationMode) {
+      case _PIC_MODE_ON_:
+        for (idim=0;idim<3;idim++) {
+          xInit[idim]=xFinal[idim]+dtIntersection*(xInit[idim]-xFinal[idim])-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+          vInit[idim]=vFinal[idim]+dtIntersection*(vInit[idim]-vFinal[idim]);
+        }
+        break;
+      default:
+        for (idim=0;idim<3;idim++) {
+          xInit[idim]+=dtIntersection*(xFinal[idim]-xInit[idim])-ExternalBoundaryFaceTable[nface].norm[idim]*PIC::Mesh::mesh.EPS;
+          vInit[idim]+=dtIntersection*(vFinal[idim]-vInit[idim]);
+        }
       }
 
       newNode=PIC::Mesh::mesh.findTreeNode(xInit,startNode);
@@ -274,7 +325,7 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
     }
 
 
-    dtTotalIn-=dt;
+
     startNode=newNode;
     memcpy(xInit,xFinal,3*sizeof(double));
     memcpy(vInit,vFinal,3*sizeof(double));
