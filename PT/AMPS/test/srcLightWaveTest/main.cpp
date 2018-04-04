@@ -350,7 +350,7 @@ int main(int argc,char **argv) {
   PIC::BC::ExternalBoundary::Periodic::InitBlockPairTable();
   }
   //-387.99e2
-  double v[10][3]={{0.0, -1.0, 0.0},{0.0,1.0, 0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0.0},{0.0,0.0,0},{0.0,0.0,0.0},{1,1,1},{0.8,0.8,-1}};
+  double v[10][3]={{1.0, 1.0, 1.0},{-1.0,1.0, 1.0},{1.0,-1.0,1.0},{-1.0,-1.0,1.0},{1.0,1.0,-1.0},{-1.0,1.0,-1.0},{1.0,-1.0,-1.0},{-1.0,-1.0,-1.0},{1,1,1},{0.8,0.8,-1}};
   double xparticle[10][3]={{0.125,1.875,0.125},{0.125,1.875,0.125},{1,1,-1},{-1,1,-1},{-1,-1,1},{1,-1,1},{1,1,1},{-1,1,1},{2.9,0.9,2.9},{2.9,0.9,2.9}};
   int s,i,j,k;
   int species[10]={0,1,0,1,0,1,0,1,0,1};
@@ -429,17 +429,28 @@ int main(int argc,char **argv) {
     // countNumbers();
 
   
-    for (int iPar=0;iPar<parSize; iPar++ ){
-      newNode=PIC::Mesh::mesh.findTreeNode(xparticle[iPar]);
-    
-      if (newNode->Thread==PIC::ThisThread) {
-	PIC::Mesh::mesh.fingCellIndex(xparticle[iPar],i,j,k,newNode);
-      
-	newParticle=PIC::ParticleBuffer::GetNewParticle(newNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
-      
-	PIC::ParticleBuffer::SetV(v[iPar],newParticle);
-	PIC::ParticleBuffer::SetX(xparticle[iPar],newParticle);
-	PIC::ParticleBuffer::SetI(species[iPar],newParticle);
+    //for (int iPar=0;iPar<parSize; iPar++ ){
+    for (int ii=0;ii<9;ii++){
+      for(int jj=0;jj<9;jj++){
+	for(int kk=0;kk<9;kk++){
+	  double xLocation[3]={ii*0.25-2,jj*0.25-2,kk*0.25-2};
+	  newNode=PIC::Mesh::mesh.findTreeNode(xLocation);
+	  for (int iPar=0;iPar<8;iPar++){
+	    if (newNode->Thread==PIC::ThisThread) {
+	      PIC::Mesh::mesh.fingCellIndex(xLocation,i,j,k,newNode);
+	    
+	      newParticle=PIC::ParticleBuffer::GetNewParticle(newNode->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+	     
+	      PIC::ParticleBuffer::SetV(v[iPar],newParticle);
+	      PIC::ParticleBuffer::SetX(xLocation,newParticle);
+	      PIC::ParticleBuffer::SetI(0,newParticle);
+	    	    	      
+	    }
+	    
+	  }
+	  // }
+	
+	}
       }
     }
  
