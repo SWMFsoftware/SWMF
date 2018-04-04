@@ -1,4 +1,4 @@
-
+# Default target
 default : GITM
 
 include Makefile.def
