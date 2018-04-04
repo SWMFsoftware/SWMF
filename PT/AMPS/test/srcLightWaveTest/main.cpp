@@ -428,7 +428,7 @@ int main(int argc,char **argv) {
  
     // countNumbers();
 
-  
+#if _CURRENT_MODE_==_PIC_MODE_ON_
     //for (int iPar=0;iPar<parSize; iPar++ ){
     for (int ii=0;ii<9;ii++){
       for(int jj=0;jj<9;jj++){
@@ -453,7 +453,7 @@ int main(int argc,char **argv) {
 	}
       }
     }
- 
+#endif
 
     switch (_PIC_BC__PERIODIC_MODE_) {
     case _PIC_BC__PERIODIC_MODE_OFF_:
