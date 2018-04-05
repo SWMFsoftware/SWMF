@@ -1,5 +1,10 @@
 subroutine CIMI_set_parameters(NameAction)
 
+  !\
+  ! Description:
+  ! This subroutine gets the inputs for CIMI
+  !/
+
   use ModIoUnit,         ONLY: UnitTmp_, io_unit_new
   use ModReadParam
   use ModCimiInitialize, ONLY: IsEmptyInitial,IsDataInitial,IsRBSPData, &
@@ -11,7 +16,7 @@ subroutine CIMI_set_parameters(NameAction)
   use ModCimi,           ONLY: UseMcLimiter, BetaLimiter, time, Pmin,&
        IsStandAlone, UseStrongDiff, UseDecay, DecayTimescale, dt, dtmax
   use ModCimiRestart,    ONLY: IsRestart,DtSaveRestart
-  use ModCimiPlanet,     ONLY: nspec
+  use ModCimiPlanet,     ONLY: nspec, dFactor_I, tFactor_I
   use ModImTime,         ONLY: iStartTime_I, TimeMax
   use ModCimiBoundary,   ONLY: UseBoundaryEbihara,UseYoungEtAl
   use ModIeCimi,         ONLY: UseWeimer
@@ -28,23 +33,21 @@ subroutine CIMI_set_parameters(NameAction)
   
   implicit none
 
-  logical 			:: DoEcho=.false.
-  character (len=100)           :: NameCommand
   character (len=*), intent(in) :: NameAction
   character (len=7)             :: TypeBoundary
   character (len=3)             :: NameModel
-  character (len=*), parameter  :: NameSub = 'CIMI_set_parameters'
+  character (len=5)             :: TypeComposition='FIXED'
+
+  logical 			:: DoEcho = .true.
+  character (len=100)           :: NameCommand
 
   character (len=100) :: cTempLine
   character (len=100), dimension(100) :: cTempLines
   
-  integer :: iError, iDate
+  integer :: iError, iDate, iSpec
   real :: DensitySW, VelSW, BxSW, BySW,BzSW
-  !\
-  ! Description:
-  ! This subroutine gets the inputs for CIMI
-  !/
 
+  character (len=*), parameter  :: NameSub = 'CIMI_set_parameters'
   !---------------------------------------------------------------------------
   
   do
@@ -227,6 +230,17 @@ subroutine CIMI_set_parameters(NameAction)
         if ( UseDecay ) &
              call read_var('DecayTimescale in seconds', DecayTimescale)
         
+     case('#COMPOSITION')
+        call read_var('TypeComposition', TypeComposition, IsUpperCase=.true.)
+        select case(TypeComposition)
+        case('FIXED')
+           do iSpec = 1, nSpec
+              call read_var('DensityFraction', dFactor_I(iSpec))
+           end do
+        case default
+           call CON_stop(NameSub//': unknown TypeComposition='//TypeComposition)
+        end select
+
      case('#STRONGDIFFUSION')
         call read_var('UseStrongDiff',UseStrongDiff)
         
