@@ -730,7 +730,7 @@ void UpdateJMassMatrix(){
 	  
 	    while (ptrNext!=-1) {
 	      nparticle++;
-	
+	      double LocalParticleWeight;
 	      ptr=ptrNext;
 	      ParticleData=ParticleDataNext;	  	    
 	      memcpy(tempParticleData,ParticleData,PIC::ParticleBuffer::ParticleDataLength);
@@ -738,7 +738,12 @@ void UpdateJMassMatrix(){
 	      PIC::ParticleBuffer::GetV(vInit,(PIC::ParticleBuffer::byte*)tempParticleData);
 	      PIC::ParticleBuffer::GetX(xInit,(PIC::ParticleBuffer::byte*)tempParticleData);
 	      spec=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData);
-	    
+	      
+	      
+              LocalParticleWeight=block->GetLocalParticleWeight(spec);
+              LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData);
+
+
 	      double temp[3], B[3]={0.0,0.0,0.0};
 	      PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil(false);
 	      //interpolate the magnetic field from center nodes to particle location
@@ -763,6 +768,11 @@ void UpdateJMassMatrix(){
 
 	      chargeQ = PIC::MolecularData::GetElectricCharge(spec)*charge_conv; 
 	      mass= PIC::MolecularData::GetMass(spec)*mass_conv;
+	      //effect of particle weight
+	     
+	      chargeQ *= LocalParticleWeight;
+	      mass *= LocalParticleWeight;
+
 	      QdT_over_m=chargeQ*dtTotal/mass;
 	      QdT_over_2m=0.5*QdT_over_m;
 	      QdT_over_2m_squared=QdT_over_2m*QdT_over_2m;
