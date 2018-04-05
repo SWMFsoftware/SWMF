@@ -21,10 +21,7 @@ install: src/ModSize.f90
 	touch ${INSTALLFILES}
 	@(if [ ! -d srcData ]; then ln -s data/input srcData; fi)
 
-#
-#       General Housekeeping
-#
-
+# serial code uses NOMPI library
 NOMPI:
 	@echo "will make NOMPI"
 	@echo ${NOMPIDIR}
@@ -42,7 +39,7 @@ GITM:
 POST:
 	@cd $(MAINDIR);  make POST
 
-GITM2 = ${DIR}/UA/GITM2
+GITM2 = ${MYDIR}
 
 LIB:
 	cd $(ABDIR)     ; make                                         LIB
