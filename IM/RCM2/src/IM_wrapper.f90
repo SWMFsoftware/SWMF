@@ -54,11 +54,10 @@ contains
     character (len=100):: NameCommand, StringPlot
     character (len=20) :: StringTypeIonosphere='', StringTypeOuterboundary='',&
          LossFactorString=''
-    logical             :: DoEcho=.false.
-    logical             :: UseStrict=.true.
+    logical :: DoEcho = .true.
+    logical :: UseStrict = .true.
     integer :: iFile
-    real :: FractionH, FractionO, SunspotNumber, F107MonthlyMean, &
-         DayOfYear,tau_in=0.0
+    real :: SunspotNumber, F107MonthlyMean, DayOfYear, tau_in=0.0
     real :: tmpReal
     !-------------------------------------------------------------------------
 
@@ -145,16 +144,16 @@ contains
 
              end do
           case("#COMPOSITION")
-             call read_var('NameCompModel', NameCompModel)
-             if(NameCompModel .eq. 'FIXED') then
-                call read_var('FractionH',FractionH)
-                call read_var('FractionO',FractionO)
-             else if(NameCompModel .eq. 'YOUNG')then
+             call read_var('NameCompModel', NameCompModel, IsUpperCase=.true.)
+             select case(NameCompModel)
+                case('FIXED')
+                call read_var('FractionH', x_h)
+                call read_var('FractionO', x_o)
+             case('YOUNG')
                 call read_var('F107', f107Young)
-             else
+             case default
                 call CON_stop('IM: Unrecognized NameCompModel:'//NameCompModel)
-             end if
-             x_h=FractionH; x_o=FractionO
+             end select
           case("#CHARGEEXCHANGE")
              call read_var('UseChargeExchange',L_dktime)
              if(L_dktime)then
