@@ -66,6 +66,121 @@ int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
 
 int iCase;
 
+
+long int PrepopulateDomain(int spec,double NumberDensity,double Temperature) {
+  int iCell,jCell,kCell;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  PIC::Mesh::cDataCenterNode *cell;
+  long int nd,nGlobalInjectedParticles,nLocalInjectedParticles=0;
+  double Velocity[3];
+  /*
+  //local copy of the block's cells
+  int cellListLength=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::ThisThread]->block->GetCenterNodeListLength();
+  PIC::Mesh::cDataCenterNode *cellList[cellListLength];
+  */
+  //particle ejection parameters
+  double ParticleWeight;//beta=PIC::MolecularData::GetMass(spec)/(2*Kbol*Temperature);
+
+#if DIM == 3
+  static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
+#elif DIM == 2
+  const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=1;
+#elif DIM == 1
+  const int iCellMax=_BLOCK_CELLS_X_,jCellMax=1,kCellMax=1;
+#else
+  exit(__LINE__,__FILE__,"Error: the option is not defined");
+#endif
+
+  //the boundaries of the block and middle point of the cell
+  double *xmin,*xmax,*xMiddle;
+  double x[3],v[3],anpart;
+  int npart,idim;
+
+  //  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
+  //  {
+        for (int nLocalNode=0;nLocalNode<PIC::DomainBlockDecomposition::nLocalBlocks;nLocalNode++) {
+      
+    cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * node=PIC::DomainBlockDecomposition::BlockTable[nLocalNode];
+    if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
+      bool BoundaryBlock=false;
+      
+      for (int iface=0;iface<6;iface++) if (node->GetNeibFace(iface,0,0)==NULL) {
+	  //the block is at the domain boundary, and thresefor it is a 'ghost' block that is used to impose the periodic boundary conditions
+	  BoundaryBlock=true;
+	  break;
+	}
+      
+      if (BoundaryBlock==true) continue;
+    }
+
+    if (node->Thread!=PIC::ThisThread) continue;
+
+
+    // }
+    //local copy of the block's cells
+    int cellListLength=node->block->GetCenterNodeListLength();
+    PIC::Mesh::cDataCenterNode *cellList[cellListLength];
+  
+    memcpy(cellList,node->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
+
+    xmin=node->xmin,xmax=node->xmax;
+
+    //particle stat weight
+    #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+    ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
+    #else
+    ParticleWeight=node->block->GetLocalParticleWeight(spec);
+    #endif
+
+    for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
+      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+      cell=cellList[nd];
+      xMiddle=cell->GetX();
+
+      //inject particles into the cell
+      anpart=NumberDensity*cell->Measure/ParticleWeight;
+      npart=(int)(anpart);
+      //if (rnd()<anpart-npart) npart++;
+      nLocalInjectedParticles+=npart;
+
+      while (npart-->0) {
+	/*
+        x[0]=xMiddle[0]+(xmax[0]-xmin[0])/_BLOCK_CELLS_X_*(rnd()-0.5);
+        x[1]=xMiddle[1]+(xmax[1]-xmin[1])/_BLOCK_CELLS_Y_*(rnd()-0.5);
+        x[2]=xMiddle[2]+(xmax[2]-xmin[2])/_BLOCK_CELLS_Z_*(rnd()-0.5);	
+	*/
+	
+	x[0]=xMiddle[0];
+        x[1]=xMiddle[1];
+        x[2]=xMiddle[2];
+       
+
+	if (spec==1){
+	  Velocity[0]=0.05*sin(Pi*(x[0]+x[1])); // ocillate in x direction
+	  Velocity[1]=0.05*sin(Pi*(x[0]+x[1]));
+ 
+	}else if (spec==0){
+	  Velocity[0]=0.0;
+	  Velocity[1]=0.0;
+	}
+	
+	//Velocity[1]=0.0;
+	Velocity[2]=0.0;
+        for (idim=0;idim<3;idim++) v[idim]=cos(2*Pi*rnd())*sqrt(-log(rnd())*(2*Kbol*Temperature)/PIC::MolecularData::GetMass(spec))+Velocity[idim];
+
+        //initiate the new particle
+        PIC::ParticleBuffer::InitiateParticle(x,v,NULL,&spec,NULL,_PIC_INIT_PARTICLE_MODE__ADD2LIST_,(void*)node);
+      }
+      //end of the particle injection block
+    }
+  }
+
+  MPI_Allreduce(&nLocalInjectedParticles,&nGlobalInjectedParticles,1,MPI_LONG,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+  return nGlobalInjectedParticles;
+}
+
+
+
 void SetIC() {
   
     int i,j,k;
@@ -350,7 +465,7 @@ int main(int argc,char **argv) {
   PIC::BC::ExternalBoundary::Periodic::InitBlockPairTable();
   }
   //-387.99e2
-  double v[10][3]={{1.0, 1.0, 1.0},{-1.0,1.0, 1.0},{1.0,-1.0,1.0},{-1.0,-1.0,1.0},{1.0,1.0,-1.0},{-1.0,1.0,-1.0},{1.0,-1.0,-1.0},{-1.0,-1.0,-1.0},{1,1,1},{0.8,0.8,-1}};
+  double v[14][3]={{1.0, 1.0, 1.0},{-1.0,1.0, 1.0},{1.0,-1.0,1.0},{-1.0,-1.0,1.0},{1.0,1.0,-1.0},{-1.0,1.0,-1.0},{1.0,-1.0,-1.0},{-1.0,-1.0,-1.0},{1,0,0},{-1,0,0},{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
   double xparticle[10][3]={{0.125,1.875,0.125},{0.125,1.875,0.125},{1,1,-1},{-1,1,-1},{-1,-1,1},{1,-1,1},{1,1,1},{-1,1,1},{2.9,0.9,2.9},{2.9,0.9,2.9}};
   int s,i,j,k;
   int species[10]={0,1,0,1,0,1,0,1,0,1};
@@ -371,8 +486,8 @@ int main(int argc,char **argv) {
   // PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(0);
   //PIC::ParticleWeightTimeStep::initParticleWeight_ConstantWeight(1);
   
-  PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(0,1.0);
-  PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(1,1.0);
+  PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(0,0.0625);
+  PIC::ParticleWeightTimeStep::SetGlobalParticleWeight(1,0.0625);
 
   PIC::DomainBlockDecomposition::UpdateBlockTable();
 
@@ -397,7 +512,7 @@ int main(int argc,char **argv) {
   if (_CURRENT_MODE_==_PIC_MODE_OFF_){
     CaseNumber=2;// one at 0 degree, one propagates at 45 degree
   }else{
-    CaseNumber=1;
+    CaseNumber=2;//one particle energy test, one langmuir wave test
   }
 
 
@@ -430,12 +545,13 @@ int main(int argc,char **argv) {
 
 #if _CURRENT_MODE_==_PIC_MODE_ON_
     //for (int iPar=0;iPar<parSize; iPar++ ){
+    if (iCase==0){
     for (int ii=0;ii<9;ii++){
       for(int jj=0;jj<9;jj++){
 	for(int kk=0;kk<9;kk++){
 	  double xLocation[3]={ii*0.25-2,jj*0.25-2,kk*0.25-2};
 	  newNode=PIC::Mesh::mesh.findTreeNode(xLocation);
-	  for (int iPar=0;iPar<8;iPar++){
+	  for (int iPar=0;iPar<14;iPar++){
 	    if (newNode->Thread==PIC::ThisThread) {
 	      PIC::Mesh::mesh.fingCellIndex(xLocation,i,j,k,newNode);
 	    
@@ -444,8 +560,7 @@ int main(int argc,char **argv) {
 	      PIC::ParticleBuffer::SetV(v[iPar],newParticle);
 	      PIC::ParticleBuffer::SetX(xLocation,newParticle);
 	      PIC::ParticleBuffer::SetI(0,newParticle);
-              PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticle);
-	    	    	      
+	      PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticle);
 	    }
 	    
 	  }
@@ -453,6 +568,24 @@ int main(int argc,char **argv) {
 	
 	}
       }
+    }
+    }
+
+    if (iCase==1){
+      double protonNumDensity=4, antiprotonNumDensity=4;
+      double Temperature=0.0;
+      long int popNum1,popNum2;
+      //PrepopulateDomain(int spec,double NumberDensity,double Temperature);
+      popNum1=PrepopulateDomain(0,protonNumDensity,Temperature);
+      popNum2=PrepopulateDomain(1,antiprotonNumDensity,Temperature);
+      printf("popNum1:%ld,popNum2:%ld\n",popNum1,popNum2);
+
+      int LocalParticleNumber=PIC::ParticleBuffer::GetAllPartNum();
+      int GlobalParticleNumber;
+      MPI_Allreduce(&LocalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      printf("LocalParticleNumber,GlobalParticleNumber,iThread:%d,%d,%d\n",LocalParticleNumber,GlobalParticleNumber,PIC::ThisThread);
+      std::cout<<"LocalParticleNumber: "<<LocalParticleNumber<<" GlobalParticleNumber:"<<GlobalParticleNumber<<std::endl;
+
     }
 #endif
 
@@ -493,7 +626,7 @@ int main(int argc,char **argv) {
       if (_CURRENT_MODE_==_PIC_MODE_OFF_){
 	sprintf(fname,"LightWaveCase%i.out=%i.dat",iCase,niter);
       }else{
-	sprintf(fname,"PIC_particle.out=%i.dat",niter);
+	sprintf(fname,"PIC_particle_case%i.out=%i.dat",iCase,niter);
       }
     
       // if (niter%10==0) PIC::Mesh::mesh.outputMeshDataTECPLOT(fname,0);
