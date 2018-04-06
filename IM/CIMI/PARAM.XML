@@ -43,6 +43,8 @@ This command specifies the simulation time.
 #SAVEPLOT
 2		DtSavePlot
 F		DoSaveFlux
+F               DoSaveDrifts
+F               DoSavePSD
 F		UseSeparatePlotFiles
 
 Define frequency of plots. When DoSaveFlux is false, only integrated 
