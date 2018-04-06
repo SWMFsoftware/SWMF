@@ -702,9 +702,18 @@ Compile=
 Check=
 >>>@echo "test_lightwave-current-on_check..." >> test_lightwave-current-on$(TESTlightwave-current-on-REF).diff
 
->>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTlightwave-current-onDIR)/PIC_particle.out=6.dat \ 
->>>output/test_lightwave-current-on/PIC_particle.out=6.ref_np`ls $(TESTlightwave-current-onDIR)/PT/thread* |wc -l |tr -d ' '`  > test_lightwave-current-on$(TESTlightwave-current-on-REF).diff;) 
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTlightwave-current-onDIR)/PIC_particle_case0.out=6.dat \ 
+>>>output/test_lightwave-current-on/PIC_particle_case0.out=6.ref_np`ls $(TESTlightwave-current-onDIR)/PT/thread* |wc -l |tr -d ' '`  > test_particle_energy$(TESTlightwave-current-on-REF).diff;) 
 
+
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTlightwave-current-onDIR)/PIC_particle_case1.out=6.dat \ 
+>>>output/test_lightwave-current-on/PIC_particle_case1.out=6.ref_np`ls $(TESTlightwave-current-onDIR)/PT/thread* |wc -l |tr -d ' '`  > test_langmuir_wave$(TESTlightwave-current-on-REF).diff;) 
+
+
+>>>@cat test_particle_energy$(TESTlightwave-current-on-REF).diff test_langmuir_wave$(TESTlightwave-current-on-REF).diff > test_lightwave-current-on$(TESTlightwave-current-on-REF).diff
+
+>>>@ls -l test_particle_energy$(TESTlightwave-current-on-REF).diff
+>>>@ls -l test__langmuir_wave$(TESTlightwave-current-on-REF).diff
 >>>@ls -l test_lightwave-current-on$(TESTlightwave-current-on-REF).diff
 >>>@echo Test test_lightwave-current-on has finished: `date`
 
