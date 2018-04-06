@@ -444,6 +444,7 @@ int main(int argc,char **argv) {
 	      PIC::ParticleBuffer::SetV(v[iPar],newParticle);
 	      PIC::ParticleBuffer::SetX(xLocation,newParticle);
 	      PIC::ParticleBuffer::SetI(0,newParticle);
+              PIC::ParticleBuffer::SetIndividualStatWeightCorrection(1.0,newParticle);
 	    	    	      
 	    }
 	    
