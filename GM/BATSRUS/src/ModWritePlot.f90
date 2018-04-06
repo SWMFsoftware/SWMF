@@ -983,7 +983,7 @@ contains
          set_hall_factor_cell, HallFactor_C, IsHallBlock
     use ModResistivity, ONLY: Eta_GB, Eta0
     use ModFaceGradient, ONLY: get_face_curl
-    use ModCellGradient, ONLY: calc_gradient
+    use ModCellGradient, ONLY: calc_divergence, calc_gradient
     use ModPointImplicit, ONLY: UsePointImplicit_B
     use ModMultiFluid, ONLY: extract_fluid_name,   &
          UseMultiIon, nIonFluid, MassIon_I, iPpar, &
@@ -1467,25 +1467,11 @@ contains
              PlotVar(1:nI,1:nJ,1:nK,iVar) = ViscoFactor_C
           end if
        case('divb')
-          if(.not.IsCartesian)call stop_mpi( &
-               NameSub//': for non cartesian grids only absdivb works')
-
           if(.not.UseConstrainB)then
-             ! Div B from central differences
-             do k = 1, nK; do j = 1, nJ; do i =1, nI
-                if(.not. true_cell(i,j,k,iBlock)) CYCLE
-                PlotVar(i,j,k,iVar) = 0.5* &
-                     ( State_VGB(Bx_,i+1,j,k,iBlock) &
-                     - State_VGB(Bx_,i-1,j,k,iBlock))/CellSize_DB(x_,iBlock)
-                if(nJ > 1) PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + 0.5* &
-                     ( State_VGB(By_,i,j+1,k,iBlock) &
-                     - State_VGB(By_,i,j-1,k,iBlock))/CellSize_DB(y_,iBlock)
-                if(nK > 1) PlotVar(i,j,k,iVar) = PlotVar(i,j,k,iVar) + 0.5* &
-                     ( State_VGB(Bz_,i,j,k+1,iBlock)  &
-                     - State_VGB(Bz_,i,j,k-1,iBlock))/CellSize_DB(z_,iBlock)
-             end do; end do; end do
+             call calc_divergence(iBlock, State_VGB(Bx_:Bz_,:,:,:,iBlock), &
+                  nG, PlotVar(:,:,:,iVar), UseBodyCellIn=.true.)
           else
-             ! Div B from face fluxes
+             ! Div B from face fluxes                                       
              do k = 1, nK; do j = 1, nJ; do i =1, nI
                 if(.not. true_cell(i,j,k,iBlock)) CYCLE
                 PlotVar(i,j,k,iVar) = &
