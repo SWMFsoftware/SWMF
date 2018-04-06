@@ -353,7 +353,7 @@ the maximum iteration number should be specified. For the position
 corrections, the equation system is non-linear, and the non-linear iteration
 number nIterNonLinear should be set. 
 
-For the accurate corrections, sum(dx^2*qp^nPower) or sum((rp-1)^2*qp^nPower)
+For the accurate corrections, $sum(dx^2*qp^nPower)$ or $sum((rp-1)^2*qp^nPower)$
 are minimized for position or weight correction, respectively. nPower=1 is 
 the optimized choice. 
 
