@@ -29,6 +29,7 @@ test_help:
 	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
 	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
+	@echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI test for SWPC)"
 	@echo "    test1                      (run GM-IE-PW test)"
 	@echo "    test2                      (run multifluid GM-IM coupling test)"
 	@echo "    test3                      (run GM-IE-CIMI test)"
@@ -59,6 +60,7 @@ test:
 	-@(${MAKE} test_swpc)
 	-@(${MAKE} test_swpc_multiion)
 	-@(${MAKE} test_swpc_multispecies)
+	-@(${MAKE} test_swpc_cimi)
 	-@(${MAKE} test1)
 	-@(${MAKE} test3)
 	-@(${MAKE} test4)
