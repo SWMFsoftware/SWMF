@@ -37,6 +37,8 @@ int PIC::FieldSolver::Electromagnetic::ECSIM::ByOffsetIndex=1;
 int PIC::FieldSolver::Electromagnetic::ECSIM::BzOffsetIndex=2;
 int PIC::FieldSolver::Electromagnetic::ECSIM::MassMatrixOffsetIndex;
 
+int PIC::FieldSolver::Electromagnetic::ECSIM::nMeshModificationCounter=-1;
+
 //location of the solver's data in the corner node associated data vector
 int PIC::FieldSolver::Electromagnetic::ECSIM::CornerNodeAssociatedDataOffsetBegin=-1,PIC::FieldSolver::Electromagnetic::ECSIM::CornerNodeAssociatedDataOffsetLast=-1;
 
@@ -1180,12 +1182,30 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::BuildMatrix() {
   using namespace PIC::FieldSolver::Electromagnetic::ECSIM;    
   Solver.Reset();
   Solver.BuildMatrix(GetStencil);
+  nMeshModificationCounter=PIC::Mesh::mesh.nMeshModificationCounter;
 }
-
 
 void PIC::FieldSolver::Electromagnetic::ECSIM::TimeStep() {
   using namespace PIC::FieldSolver::Electromagnetic::ECSIM;    
+
+  //rebuild the matrix if needed 
+  //determine whether the mesh/domain decomposition have been changed
+  int localMeshChangeFlag,globalMeshChangeFlag;
+
+  localMeshChangeFlag=(nMeshModificationCounter==PIC::Mesh::mesh.nMeshModificationCounter) ? 0 : 1;
+  MPI_Allreduce(&localMeshChangeFlag,&globalMeshChangeFlag,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+  if (globalMeshChangeFlag!=0) {
+    double StartTime=MPI_Wtime();
+
+    Solver.Reset();
+    Solver.BuildMatrix(GetStencil);
+
+    nMeshModificationCounter=PIC::Mesh::mesh.nMeshModificationCounter;
+    PIC::Parallel::RebalancingTime+=MPI_Wtime()-StartTime;
+  }
    
+  //perform the rest of the field solver calculstions
   UpdateJMassMatrix(); 
   Solver.UpdateRhs(UpdateRhs); 
   Solver.UpdateMatrixNonZeroCoefficients(UpdateMatrixElement);

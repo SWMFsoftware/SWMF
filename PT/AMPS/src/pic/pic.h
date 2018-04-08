@@ -5475,6 +5475,9 @@ namespace FieldSolver {
             extern double theta;
             extern double LightSpeed;
 
+            //'nMeshModificationCounter'containes the value of PIC::Mesh::mesh.nMeshModificationCounter at time when the matrix has been built. The varialbe is used to trigger rebuilding of the matrix 
+            extern int nMeshModificationCounter;
+
             //location of the solver's data in the corner node associated data vector
             extern int CornerNodeAssociatedDataOffsetBegin,CornerNodeAssociatedDataOffsetLast;  //CornerNodeAssociatedDataOffsetLast still belongs to the solver
 
