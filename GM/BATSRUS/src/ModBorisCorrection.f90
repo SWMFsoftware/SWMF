@@ -66,6 +66,7 @@ contains
   subroutine read_boris_param(NameCommand)
 
     use ModReadParam, ONLY: read_var
+    use ModMultiFluid, ONLY: nIonFluid
 
     character(len=*), intent(in):: NameCommand
 
@@ -76,7 +77,7 @@ contains
        call read_var('UseBorisCorrection', UseBorisCorrection)
        if(UseBorisCorrection) then
           call read_var('ClightFactor', CLightFactor)
-          if(IsMhd)then
+          if(IsMhd .and. nIonFluid == 1)then
              UseBorisSimple = .false.
           else
              ! For non-MHD equations only simplified Boris correction
