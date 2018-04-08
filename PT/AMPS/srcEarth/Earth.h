@@ -148,6 +148,7 @@ namespace Earth {
     namespace IndividualLocations {
       extern int xTestLocationTableLength;
       extern double** xTestLocationTable;
+      extern double *CutoffRigidityTable;
       extern double MaxEnergyLimit;
       extern double MinEnergyLimit;
 
