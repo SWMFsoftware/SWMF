@@ -45,7 +45,7 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
 
 #General
   RequestedParticleBufferLength=1500000
-  FirstPrintedOutputFile=10000000
+  FirstPrintedOutputFile=1
 
   define  _PIC_SAMPLING_MODE_  _PIC_MODE_OFF_ 
   define _PIC_BC__PERIODIC_MODE_ _PIC_BC__PERIODIC_MODE_ON_
@@ -54,7 +54,7 @@ CouplerMode=off !!file(tecplot) !!off, file,  swmf
   ReferenceInjectionParticleNumber=60000
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=off !on,off
-  InitialSampleLength=10
+  InitialSampleLength=3
   TestRunTotalIteration=50
 
   NastranSurfaceUserData=on
