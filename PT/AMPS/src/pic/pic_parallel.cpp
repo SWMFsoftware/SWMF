@@ -778,6 +778,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
     int iNode,jNode,kNode,FlagSum;
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* ActualNode;
     bool meshModifiedFlag_CountMeshElements=PIC::Mesh::mesh.meshModifiedFlag_CountMeshElements;
+    double StartTime=MPI_Wtime();
 
     //reset the flags
     ResetProcessedFlag();
@@ -1208,6 +1209,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
     //update the coundater
     nMeshModificationCounter=PIC::Mesh::mesh.nMeshModificationCounter;
     PIC::Mesh::mesh.meshModifiedFlag_CountMeshElements=meshModifiedFlag_CountMeshElements;
+    PIC::Parallel::RebalancingTime+=MPI_Wtime()-StartTime;
   }
 
 
