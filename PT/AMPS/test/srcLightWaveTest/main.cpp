@@ -443,7 +443,7 @@ int main(int argc,char **argv) {
   MPI_Barrier(MPI_GLOBAL_COMMUNICATOR);
   
 
-  //PIC::Mesh::initCellSamplingDataBuffer();
+  PIC::Mesh::initCellSamplingDataBuffer();
 
   PIC::Mesh::mesh.CreateNewParallelDistributionLists();
 
