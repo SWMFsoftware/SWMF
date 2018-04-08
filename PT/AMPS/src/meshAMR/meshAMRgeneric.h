@@ -7372,11 +7372,37 @@ nMPIops++;
 
 
   void outputMeshTECPLOT(const char *fname) {
+    int nMeshModificationCounterLocal;
+    bool meshModifiedFlagLocal,meshModifiedFlag_CountMeshElementsLocal;
+
+    //set the state of the variables before starting of the output procedure
+    nMeshModificationCounterLocal=nMeshModificationCounter;
+    meshModifiedFlagLocal=meshModifiedFlag;
+    meshModifiedFlag_CountMeshElementsLocal=meshModifiedFlag_CountMeshElements;
+
     outputMeshTECPLOTinternal(fname,false,-1,_AMR_CONNECTIVITY_LIST_MODE_GLOBAL_NODE_NUMBER_);
+
+    //reset the statre of the variables to their original values
+    nMeshModificationCounter=nMeshModificationCounterLocal;
+    meshModifiedFlag=meshModifiedFlagLocal;
+    meshModifiedFlag_CountMeshElements=meshModifiedFlag_CountMeshElementsLocal;
   }
 
   void outputMeshDataTECPLOT(const char *fname,int DataSetnumber=-1) {
+    int nMeshModificationCounterLocal;
+    bool meshModifiedFlagLocal,meshModifiedFlag_CountMeshElementsLocal;
+
+    //set the state of the variables before starting of the output procedure
+    nMeshModificationCounterLocal=nMeshModificationCounter;
+    meshModifiedFlagLocal=meshModifiedFlag;
+    meshModifiedFlag_CountMeshElementsLocal=meshModifiedFlag_CountMeshElements;
+
     outputMeshTECPLOTinternal(fname,true,DataSetnumber,_AMR_CONNECTIVITY_LIST_MODE_GLOBAL_NODE_NUMBER_);
+
+    //reset the statre of the variables to their original values
+    nMeshModificationCounter=nMeshModificationCounterLocal;
+    meshModifiedFlag=meshModifiedFlagLocal;
+    meshModifiedFlag_CountMeshElements=meshModifiedFlag_CountMeshElementsLocal;
   }
 
   //==============================================================================
