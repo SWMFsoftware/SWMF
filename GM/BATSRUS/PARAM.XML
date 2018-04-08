@@ -6609,18 +6609,23 @@ Default is UseClimit false.
 T			UseBorisCorrection
 1.0			BorisClightFactor !Only if UseBorisCorrection is true
 
-If UseBorisCorrection is set to true, the semi-relativistic MHD equations 
-are solved. The semi-relativistic MHD equations limit the Alfven speed to
+If UseBorisCorrection is set to true and there is only a single
+ion fluid, then the semi-relativistic MHD equations are solved. 
+If there are multiple ion fluids, the code automatically switches to the 
+"simple Boris correction" described at the #SIMPLEBORIS command.
+
+The semi-relativistic MHD equations limit the Alfven speed to
 the speed of light. The speed of light can be artificially reduced by
 the BorisClightFactor. Set BorisClightFactor=1.0 for true semi-relativistic
-MHD. BorisClightFactor less than 1 can be used to allow larger explicit time steps,
-and to reduce the numerical diffusion. Typical values are 0.01 to 0.02
-which set the speed of light to 3000km/s to 6000km/s, respectively.
-Note that semi-relativistic MHD gives the same steady state solution 
-as normal MHD analytically, but there can be differences due to discretization errors,
-in particular the Boris correction reduces the numerical diffusion. 
-See Toth et al. 2011 (Journal of Geophysical Research, 116, A07211, doi:10.1029/2010JA016370)
-for an in-depth discussion.
+MHD. BorisClightFactor less than 1 can be used to allow larger explicit 
+time steps and to reduce the numerical diffusion. 
+Typical values are 0.01 to 0.02, which set the speed of light to 3,000km/s 
+and 6,000km/s, respectively. Note that semi-relativistic MHD gives the 
+same steady state solution as normal MHD analytically, but there can be 
+differences due to discretization errors, in particular the Boris 
+correction reduces the numerical diffusion. 
+See Toth et al. 2011 (Journal of Geophysical Research, 116, A07211, 
+doi:10.1029/2010JA016370) for an in-depth discussion.
 
 See also the #BORISSIMPLE command as an alternative. Note that you cannot set
 both UseBorisCorrection and UseBorisSimple to true.
@@ -6636,12 +6641,22 @@ Default is UseBorisCorrection=.false.
 T			UseBorisSimple
 0.05			BorisClightFactor !Only if UseBorisSimple is true
 
-Default is UseBorisSimple=.false. 
-Use simplified semi-relativistic MHD with speed of light reduced by the
-BorisClightFactor. This is only useful with BorisClightFactor less than 1.
-Should give the same steady state as normal MHD, but there can be a
-difference due to discretization errors.
+Use simplified semi-relativistic MHD. For single fluid MHD this means
+that the time derivative of the momentum density is multiplied with a 
+factor $(1+vA^2/c^2)$, which reduces the change of velocity.
+For the multi-ion MHD the JxB - grad(Pe) forces acting on the fluids are 
+reduced by the same factor (which has a similar effect).
+
+The speed of light can be reduced by the BorisClightFactor. 
+This scheme is only useful with BorisClightFactor less than 1.
+The single fluid case should give the same steady state as normal MHD, 
+but there can be a difference due to discretization errors.
+The multi-ion MHD case will not even give the same steady state 
+analytically as the unmodified multi-ion MHD.
 You can use either Boris or BorisSimple but not both.
+For multi-ion MHD only the simple Boris scheme is available.
+
+Default is UseBorisSimple=.false. 
 </command>
 
 <command name="USEB0">
