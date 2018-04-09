@@ -1,6 +1,0 @@
-Makefile.DEPEND
-*.mod
-ModGridDescriptor.f90
-ModBuffer.f90
-SC_wrapper.f90
-

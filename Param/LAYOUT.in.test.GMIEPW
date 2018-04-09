@@ -1,8 +1,0 @@
-This is the layout for running GM, IE, PW
-with different root PE-s for testing.
-
-#COMPONENTMAP
-GM	0 9999 1
-IE      1 2    1
-PW      3 3    1
-#END

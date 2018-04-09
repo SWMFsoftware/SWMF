@@ -1,3 +1,0 @@
-RUNDIR = ${MYDIR}/run
-BINDIR = ${MYDIR}/bin
-SCRIPTDIR = ${MYDIR}/share/Scripts
