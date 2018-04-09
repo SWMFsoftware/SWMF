@@ -778,7 +778,8 @@ test_swpc_cimi:
 
 test_swpc_cimi_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,IM:EarthHO
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP
+	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
 	make PIDL
 
