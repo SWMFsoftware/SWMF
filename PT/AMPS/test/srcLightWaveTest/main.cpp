@@ -66,6 +66,42 @@ int CurrentCornerNodeOffset=-1,NextCornerNodeOffset=-1;
 
 int iCase;
 
+void CleanParticles(){
+  
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+
+  for (node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) if (node->block!=NULL) {
+   
+     long int *  FirstCellParticleTable=node->block->FirstCellParticleTable;
+     if (FirstCellParticleTable==NULL) continue;
+     for (int k=0;k<_BLOCK_CELLS_Z_;k++) {
+       for (int j=0;j<_BLOCK_CELLS_Y_;j++)  {
+	 for (int i=0;i<_BLOCK_CELLS_X_;i++) {
+	   long int * ptr=FirstCellParticleTable+(i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k));
+	   while ((*ptr)!=-1) PIC::ParticleBuffer::DeleteParticle(*ptr,*ptr);
+
+//////
+/*
+long int next,ptr=FirstCellParticleTable[(i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k))]; 
+
+while (ptr!=-1) {
+
+  next=PIC::ParticleBuffer::GetNext(ptr);
+  PIC::ParticleBuffer::DeleteParticle(ptr);
+  ptr=next; 
+}
+
+FirstCellParticleTable[(i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k))]=-1;
+*/
+
+/////	   
+	 }   
+       }
+     }
+     
+  }
+
+}
 
 long int PrepopulateDomain(int spec,double NumberDensity,double Temperature) {
   int iCell,jCell,kCell;
@@ -81,6 +117,15 @@ long int PrepopulateDomain(int spec,double NumberDensity,double Temperature) {
   //particle ejection parameters
   double ParticleWeight;//beta=PIC::MolecularData::GetMass(spec)/(2*Kbol*Temperature);
 
+#ifndef DIM
+#error ERROR: DIM is used but not defined
+#endif
+#ifndef DIM
+#error ERROR: DIM is used but not defined
+#endif
+#ifndef DIM
+#error ERROR: DIM is used but not defined
+#endif
 #if DIM == 3
   static const int iCellMax=_BLOCK_CELLS_X_,jCellMax=_BLOCK_CELLS_Y_,kCellMax=_BLOCK_CELLS_Z_;
 #elif DIM == 2
@@ -126,6 +171,12 @@ long int PrepopulateDomain(int spec,double NumberDensity,double Temperature) {
     xmin=node->xmin,xmax=node->xmax;
 
     //particle stat weight
+#ifndef _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
+#error ERROR: _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_ is used but not defined
+#endif
+#ifndef _SIMULATION_PARTICLE_WEIGHT_MODE_
+#error ERROR: _SIMULATION_PARTICLE_WEIGHT_MODE_ is used but not defined
+#endif
     #if  _SIMULATION_PARTICLE_WEIGHT_MODE_ == _SPECIES_DEPENDENT_GLOBAL_PARTICLE_WEIGHT_
     ParticleWeight=PIC::ParticleWeightTimeStep::GlobalParticleWeight[spec];
     #else
@@ -170,6 +221,7 @@ long int PrepopulateDomain(int spec,double NumberDensity,double Temperature) {
 
         //initiate the new particle
         PIC::ParticleBuffer::InitiateParticle(x,v,NULL,&spec,NULL,_PIC_INIT_PARTICLE_MODE__ADD2LIST_,(void*)node);
+	
       }
       //end of the particle injection block
     }
@@ -345,10 +397,22 @@ double localTimeStep(int spec,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode)
 double BulletLocalResolution(double *x) {                                                                                           
   double dist = xmax[0]-xmin[0];
 
+#ifndef _UNIFORM_MESH_
+#error ERROR: _UNIFORM_MESH_ is used but not defined
+#endif
+#ifndef _TEST_MESH_MODE_
+#error ERROR: _TEST_MESH_MODE_ is used but not defined
+#endif
 #if _TEST_MESH_MODE_==_UNIFORM_MESH_  
   double res = 3;
 #endif
 
+#ifndef _NONUNIFORM_MESH_
+#error ERROR: _NONUNIFORM_MESH_ is used but not defined
+#endif
+#ifndef _TEST_MESH_MODE_
+#error ERROR: _TEST_MESH_MODE_ is used but not defined
+#endif
 #if _TEST_MESH_MODE_==_NONUNIFORM_MESH_
   double highRes = dist/32.0, lowRes= dist/2.0;     
   double res =(5-1)/dist*(x[0]-xmin[0])+1;  
@@ -367,16 +431,40 @@ int main(int argc,char **argv) {
 
   int RelativeOffset=0;
   
+#ifndef _NONUNIFORM_MESH_
+#error ERROR: _NONUNIFORM_MESH_ is used but not defined
+#endif
+#ifndef _TEST_MESH_MODE_
+#error ERROR: _TEST_MESH_MODE_ is used but not defined
+#endif
 #if _TEST_MESH_MODE_==_NONUNIFORM_MESH_
   printf("non-uniform mesh!\n");
+#endif
+#ifndef _UNIFORM_MESH_
+#error ERROR: _UNIFORM_MESH_ is used but not defined
+#endif
+#ifndef _TEST_MESH_MODE_
+#error ERROR: _TEST_MESH_MODE_ is used but not defined
 #endif
 #if _TEST_MESH_MODE_==_UNIFORM_MESH_
   printf("uniform mesh!\n");
 #endif
 
 
+#ifndef _PIC_MODE_ON_
+#error ERROR: _PIC_MODE_ON_ is used but not defined
+#endif
+#ifndef _CURRENT_MODE_
+#error ERROR: _CURRENT_MODE_ is used but not defined
+#endif
 #if _CURRENT_MODE_==_PIC_MODE_ON_
   printf("current on!\n");
+#endif
+#ifndef _PIC_MODE_OFF_
+#error ERROR: _PIC_MODE_OFF_ is used but not defined
+#endif
+#ifndef _CURRENT_MODE_
+#error ERROR: _CURRENT_MODE_ is used but not defined
 #endif
 #if _CURRENT_MODE_==_PIC_MODE_OFF_
   printf("current mode off!\n");
@@ -543,6 +631,12 @@ int main(int argc,char **argv) {
  
     // countNumbers();
 
+#ifndef _PIC_MODE_ON_
+#error ERROR: _PIC_MODE_ON_ is used but not defined
+#endif
+#ifndef _CURRENT_MODE_
+#error ERROR: _CURRENT_MODE_ is used but not defined
+#endif
 #if _CURRENT_MODE_==_PIC_MODE_ON_
     //for (int iPar=0;iPar<parSize; iPar++ ){
     if (iCase==0){
@@ -551,7 +645,7 @@ int main(int argc,char **argv) {
 	for(int kk=0;kk<9;kk++){
 	  double xLocation[3]={ii*0.25-2,jj*0.25-2,kk*0.25-2};
 	  newNode=PIC::Mesh::mesh.findTreeNode(xLocation);
-	  for (int iPar=0;iPar<14;iPar++){
+	  for (int iPar=0;iPar<8;iPar++){
 	    if (newNode->Thread==PIC::ThisThread) {
 	      PIC::Mesh::mesh.fingCellIndex(xLocation,i,j,k,newNode);
 	    
@@ -575,15 +669,25 @@ int main(int argc,char **argv) {
       double protonNumDensity=4, antiprotonNumDensity=4;
       double Temperature=0.0;
       long int popNum1,popNum2;
-      //PrepopulateDomain(int spec,double NumberDensity,double Temperature);
-      popNum1=PrepopulateDomain(0,protonNumDensity,Temperature);
-      popNum2=PrepopulateDomain(1,antiprotonNumDensity,Temperature);
-      printf("popNum1:%ld,popNum2:%ld\n",popNum1,popNum2);
-
       int LocalParticleNumber=PIC::ParticleBuffer::GetAllPartNum();
       int GlobalParticleNumber;
       MPI_Allreduce(&LocalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-      printf("LocalParticleNumber,GlobalParticleNumber,iThread:%d,%d,%d\n",LocalParticleNumber,GlobalParticleNumber,PIC::ThisThread);
+      printf("Before cleaning, LocalParticleNumber,GlobalParticleNumber,iThread:%d,%d,%d\n",LocalParticleNumber,GlobalParticleNumber,PIC::ThisThread);
+      std::cout<<"LocalParticleNumber: "<<LocalParticleNumber<<" GlobalParticleNumber:"<<GlobalParticleNumber<<std::endl;
+
+      CleanParticles();
+      LocalParticleNumber=PIC::ParticleBuffer::GetAllPartNum();
+      MPI_Allreduce(&LocalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      printf("After cleaning, LocalParticleNumber,GlobalParticleNumber,iThread:%d,%d,%d\n",LocalParticleNumber,GlobalParticleNumber,PIC::ThisThread);
+
+      //PrepopulateDomain(int spec,double NumberDensity,double Temperature);
+      popNum1=PrepopulateDomain(0,protonNumDensity,Temperature);
+      popNum2=PrepopulateDomain(1,antiprotonNumDensity,Temperature);
+ 
+
+      LocalParticleNumber=PIC::ParticleBuffer::GetAllPartNum();
+      MPI_Allreduce(&LocalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+      printf("After prepopulating, LocalParticleNumber,GlobalParticleNumber,iThread:%d,%d,%d\n",LocalParticleNumber,GlobalParticleNumber,PIC::ThisThread);
       std::cout<<"LocalParticleNumber: "<<LocalParticleNumber<<" GlobalParticleNumber:"<<GlobalParticleNumber<<std::endl;
 
     }
