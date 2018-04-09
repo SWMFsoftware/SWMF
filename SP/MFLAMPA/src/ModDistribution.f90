@@ -169,6 +169,10 @@ contains
           State_VIB((/RhoOld_,BOld_/),1,iBlock) = &
                0.01 * State_VIB((/RhoOld_,BOld_/),2,iBlock)
        end where
+       where(Distribution_IIB(:,1,iBlock) <= 0.0)
+          Distribution_IIB(:,1,iBlock) = &
+               0.01 * Distribution_IIB(:,2,iBlock)
+       end where
     elseif(iOffset < 0)then
        State_VIB((/RhoOld_,BOld_/),1:nParticle_B(iBlock),iBlock) &
             =  State_VIB((/RhoOld_,BOld_/),1-iOffset:nParticle_B(iBlock)&
@@ -229,7 +233,7 @@ contains
                 if(Energy_I(iP+1) < EChannel_I(iFlux))&
                      CYCLE
 
-                if(Energy_I(iP+1) >= EChannel_I(iFlux))then
+                if(Energy_I(iP) >= EChannel_I(iFlux))then
                    Flux_I(iFlux) = Flux_I(iFlux) + dFlux
                 else
                    ! channel cutoff level is often in the middle of a bin;
