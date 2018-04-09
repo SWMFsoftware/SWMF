@@ -58,38 +58,39 @@ The default value is false.
 </command>
 
 <command name="SAVEPLOT">
-	<parameter name="nFilesPlot" type="integer" min="0" max="9"
-		default="0" />
-	<for from="1" to="$nFilesPlot">
-		<parameter name="StringPlot" type="strings" min="3" max="3">
-			<part name="plotarea" type="string" input="select" 
-								required="T">
-				<option name="2D vars." value="2d/2D" 
-								default="T"/>
-				<option name="3D vars." value="3d/2D"/>
-			</part>
-			<part name="plotvar" type="string" input="select"
-								required="T">
-				<option name="minimum set" 
-					value="min/MIN" default="T"/>
-				<option name="maximum set" 
-					value="max/MAX/rcm/RCM"/>
-				<option name="CCMC set 1" 
-					value="mc1/MC1/mc1/Mc1"/>
-				<option name="CCMC set 2" 
-					value="mc2/MC2/mc2/Mc2"/>
-			</part>
-			<part name="plotformat" type="string" input="select" 
-								required="T">
-				<option name="TECPLOT" value="tec/TEC" 
-								default="T"/>
-				<option name="IDL"     value="idl/IDL"
-						if="$plotarea =~ /2d/i" />
-			</part>
-		</parameter>
-		<parameter name="DnSavePlot" type="integer" min="-1" />
-		<parameter name="iDtSavePlot" type="integer" min="-1" />
-	</for>
+  <parameter name="nFilesPlot" type="integer" min="0" max="9"
+	     default="0" />
+  <for from="1" to="$nFilesPlot">
+    <parameter name="StringPlot" type="strings" min="3" max="3">
+      <part name="plotarea" type="string" input="select" 
+	    required="T">
+	<option name="2D vars." value="2d/2D" 
+		default="T"/>
+	<option name="3D vars." value="3d/2D"/>
+      </part>
+      <part name="plotvar" type="string" input="select"
+	    required="T">
+	<option name="minimum set" 
+		value="min/MIN" default="T"/>
+	<option name="maximum set" 
+		value="max/MAX/rcm/RCM"/>
+	<option name="CCMC set 1" 
+		value="mc1/MC1/mc1/Mc1"/>
+	<option name="CCMC set 2" 
+		value="mc2/MC2/mc2/Mc2"/>
+      </part>
+      <part name="plotformat" type="string" input="select" 
+	    required="T">
+	<option name="TECPLOT" value="tec/TEC" 
+		default="T"/>
+	<option name="IDL"     value="idl/IDL"
+		if="$plotarea =~ /2d/i" />
+      </part>
+    </parameter>
+    <parameter name="DnSavePlot" type="integer" min="-1" />
+    <parameter name="iDtSavePlot" type="integer" min="-1" />
+  </for>
+
 #SAVEPLOT
 4			nFilesPlot
 2d min idl		StringPlot
@@ -195,14 +196,13 @@ value is 5 seconds.
 !!!!!!!!!!!!!!!!! PHYSICS PARAMETERS  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="COMPOSITION">
-  <parameter name="NameCompModel" type="string"  case="upper" default="FIXED"
-	     input="select">
-    <option name="FIXED"/>
+  <parameter name="NameCompModel" type="string"  case="upper" input="select">
+    <option name="FIXED" default="T"/>
     <option name="YOUNG"/>
   </parameter>
   <if expr="$NameCompModel eq 'FIXED'">
-    <parameter name="FractionH" type="real" default="0.7"/>
-    <parameter name="FractionO" type="real" default="0.3"/>
+    <parameter name="FractionH" type="real" min="0" max="1" default="0.7"/>
+    <parameter name="FractionO" type="real" min="0" max="1" default="1-$FractionH"/>
   </if>
   <if expr="$NameCompModel eq 'YOUNG'">
     <parameter name="F107" type="real"/>
@@ -229,8 +229,9 @@ empirical relationship is used to set composition dynamically.
 This relationship sets the composition via Kp index (obtained via coupling
 with the GM component) and the F10.7 proxy for solar EUV flux.  If this model
 is selected, F10.7 flux must be given as a parameter.
-Coupling with a multi-ion MHD code removes this adjustable parameter.  Default
-action is to used the FIXED composition with 70\% H+.
+Coupling with a multi-ion MHD code removes this adjustable parameter.
+
+Default values are shown by the first example.
 
 </command>
 	
