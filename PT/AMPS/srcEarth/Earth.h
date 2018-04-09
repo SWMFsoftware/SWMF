@@ -182,7 +182,7 @@ namespace Earth {
     }
 
     //save the location of the particle origin, and the particle rigidity
-    extern long int InitialRigidityOffset,InitialLocationOffset;
+    extern long int InitialRigidityOffset,InitialLocationOffset,IntegratedPathLengthOffset;
 
     //sample the rigidity mode
     extern bool SampleRigidityMode;
