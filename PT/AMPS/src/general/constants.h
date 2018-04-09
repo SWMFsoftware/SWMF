@@ -45,6 +45,8 @@
 #define MEV2J                MeV2J 
 #define J2KeV                (1.0/KeV2J)
 #define J2MeV                (1.0/MeV2J)
+#define GeV2J                (1.0E9*eV2J)
+#define GEV2J                GeV2J
 
 //convert time units
 #define Min2Sec 60.0
