@@ -238,7 +238,17 @@ F			DoSavePSD
 T			UseSeparatePlotFiles
 
 #TYPEBOUNDARY
-circle                  TypeBoundary
+ellipse                 TypeBoundary
+
+#DECAY
+T                       UseDecay
+36000.0                 DecayTimescale [s]
+
+#COMPOSITION
+FIXED                   TypeComposition
+0.8                     DensityFraction H+
+0.2                     DensityFraction O+
+1.0                     DensityFraction e-
 
 #SAVELOG
 5.0			DtLogOut

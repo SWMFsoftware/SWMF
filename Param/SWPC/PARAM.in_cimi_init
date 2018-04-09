@@ -368,9 +368,6 @@ T			UseBorisCorrection
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
-#RESTART
-F
-
 MINIMUMPRESSURETOGM
 1e-2			MinimumPressureToGM
 
@@ -382,7 +379,17 @@ F			DoSavePSD
 T			UseSeparatePlotFiles
 
 #TYPEBOUNDARY
-circle                  TypeBoundary
+ellipse                TypeBoundary
+
+#DECAY
+T                       UseDecay
+36000.0                 DecayTimescale [s]
+
+#COMPOSITION
+FIXED                   TypeComposition
+0.8                     DensityFraction H+
+0.2                     DensityFraction O+
+1.0                     DensityFraction e-
 
 #INITIALF2
 F			IsEmptyF2
