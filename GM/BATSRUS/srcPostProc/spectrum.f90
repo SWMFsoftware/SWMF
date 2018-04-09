@@ -1202,8 +1202,8 @@ contains
 
        if(Xangle /= 0.0 .or. Yangle /= 0.0 .or. Zangle /= 0.0)then
           ! Apply rotation on vector variables
-          Rot_DD = matmul(rot_matrix_z(-Zangle), &
-               matmul(rot_matrix_y(-Yangle), rot_matrix_x(-Xangle)))
+          Rot_DD = matmul(rot_matrix_z(Zangle), &
+               matmul(rot_matrix_y(Yangle), rot_matrix_x(Xangle)))
 
           if(IsDebug)then
              write(*,*)'angles = ',Param_I
