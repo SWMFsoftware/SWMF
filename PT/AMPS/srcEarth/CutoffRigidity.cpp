@@ -16,6 +16,7 @@
 bool Earth::CutoffRigidity::SampleRigidityMode=false;
 long int Earth::CutoffRigidity::InitialRigidityOffset=-1;
 long int Earth::CutoffRigidity::InitialLocationOffset=-1;
+long int Earth::CutoffRigidity::IntegratedPathLengthOffset=-1;
 double*** Earth::CutoffRigidity::CutoffRigidityTable=NULL;
 
 //enable/disable the particle injection procedure
@@ -26,6 +27,7 @@ int Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength=0;
 double** Earth::CutoffRigidity::IndividualLocations::xTestLocationTable=NULL;
 double Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit=0.0;
 double Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit=0.0;
+double *Earth::CutoffRigidity::IndividualLocations::CutoffRigidityTable=NULL;
 
 double CutoffRigidityTestLocationTable[][3]={{0.0,0.0,0.0}};
 int CutoffRigidityTestLocationTableLength=0;
@@ -42,6 +44,7 @@ void Earth::CutoffRigidity::Init_BeforeParser() {
     //request data for sampling of the cutoff rigidity in the particle state vector
     PIC::ParticleBuffer::RequestDataStorage(InitialRigidityOffset,sizeof(double));
     PIC::ParticleBuffer::RequestDataStorage(InitialLocationOffset,3*sizeof(double));
+    PIC::ParticleBuffer::RequestDataStorage(IntegratedPathLengthOffset,sizeof(double));
   }
 
   //allocate 'IndividualLocations::xTestLocationTable'
@@ -50,8 +53,15 @@ void Earth::CutoffRigidity::Init_BeforeParser() {
 
     IndividualLocations::xTestLocationTable=new double* [CutoffRigidityTestLocationTableLength];
     IndividualLocations::xTestLocationTable[0]=new double [3*CutoffRigidityTestLocationTableLength];
+    IndividualLocations::CutoffRigidityTable=new double [CutoffRigidityTestLocationTableLength];
+
     for (int i=1;i<CutoffRigidityTestLocationTableLength;i++) IndividualLocations::xTestLocationTable[i]=IndividualLocations::xTestLocationTable[i-1]+3;
-    for (int i=0;i<CutoffRigidityTestLocationTableLength;i++) for (int j=0;j<3;j++) IndividualLocations::xTestLocationTable[i][j]=CutoffRigidityTestLocationTable[i][j];
+
+    for (int i=0;i<CutoffRigidityTestLocationTableLength;i++) {
+      for (int j=0;j<3;j++) IndividualLocations::xTestLocationTable[i][j]=CutoffRigidityTestLocationTable[i][j];
+
+      IndividualLocations::CutoffRigidityTable[i]=-1.0;
+    }
 
 
     PIC::ParticleBuffer::RequestDataStorage(Earth::CutoffRigidity::ParticleDataOffset::OriginLocationIndex,sizeof(int));
@@ -99,18 +109,31 @@ int Earth::CutoffRigidity::ProcessOutsideDomainParticles(long int ptr,double* xI
     spec=PIC::ParticleBuffer::GetI(ParticleData);
     x=(double*)(ParticleData+InitialLocationOffset);
 
-    //get coordinates of the point of origin of the particle
-    Earth::Planet->GetSurfaceElementProjectionIndex(x,iZenith,iAzimuth);
-
     Rigidity=*((double*)(ParticleData+InitialRigidityOffset));
-    if ((CutoffRigidityTable[spec][iZenith][iAzimuth]<0.0)||(CutoffRigidityTable[spec][iZenith][iAzimuth]>Rigidity)) CutoffRigidityTable[spec][iZenith][iAzimuth]=Rigidity;
+
+    //get coordinates of the point of origin of the particle
+    if (Earth::Planet!=NULL) {
+      Earth::Planet->GetSurfaceElementProjectionIndex(x,iZenith,iAzimuth);
+      if ((CutoffRigidityTable[spec][iZenith][iAzimuth]<0.0)||(CutoffRigidityTable[spec][iZenith][iAzimuth]>Rigidity)) CutoffRigidityTable[spec][iZenith][iAzimuth]=Rigidity;
+    }
   }
 
   //register the particle velocity vector
   int iOriginIndex=0;
 
-  if (Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength!=0) iOriginIndex=*((int*)(ParticleData+Earth::CutoffRigidity::ParticleDataOffset::OriginLocationIndex));
-  DomainBoundaryParticleProperty::RegisterParticleProperties(PIC::ParticleBuffer::GetI(ptr),xInit,vInit,iOriginIndex,nIntersectionFace);
+  if (Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength!=0) {
+    iOriginIndex=*((int*)(ParticleData+Earth::CutoffRigidity::ParticleDataOffset::OriginLocationIndex));
+
+    DomainBoundaryParticleProperty::RegisterParticleProperties(PIC::ParticleBuffer::GetI(ptr),xInit,vInit,iOriginIndex,nIntersectionFace);
+
+    if (SampleRigidityMode==true) {
+      //sample the cutoff rigidity
+      if ((IndividualLocations::CutoffRigidityTable[iOriginIndex]<0.0)||(Rigidity<IndividualLocations::CutoffRigidityTable[iOriginIndex])) {
+        IndividualLocations::CutoffRigidityTable[iOriginIndex]=Rigidity;
+      }
+    }
+  }
+
 
   return _PARTICLE_DELETED_ON_THE_FACE_;
 }
