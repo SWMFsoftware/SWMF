@@ -170,6 +170,37 @@ of electron PSD is controlled with the #STRONGDIFFUSION routine.
 The default is UseDecay false.
 </command>
 
+<command name="COMPOSITION">
+  <parameter name="NameCompModel" type="string"  case="upper" input="select">
+    <option name="FIXED" default="T"/>
+  </parameter>
+  <if expr="$NameCompModel eq 'FIXED'">
+    <parameter name="FractionH" type="real" min="0" max="1" default="0.85"/>
+    <parameter name="FractionO" type="real" min="0" max="1" default="1-$FractionH"/>
+    <parameter name="FractionElectron" type="real" min="0" max="1" default="1.0"/>
+  </if>
+
+#COMPOSITION
+FIXED                   NameCompModel  
+0.85      		FractionH
+0.15      		FractionO
+1.0                     FractionElectron
+
+When CIMI is coupled with a single fluid MHD code, the boundary conditions
+obtained from GM do not determine the composition of the plasma.
+This command sets the assumed fraction of H+ and O+.   The combined global-inner
+magnetospheric dynamics strongly depends on these values.
+NameCompModel selects the model used to set the composition.
+Currently only "FIXED" is implemented. The fraction of O+, H+ and electrons
+are given by the next three parameters.
+The first two should add up to 1, and the electron number density should be 1,
+so in fact only the first parameter is adjustable, the rest is provided for
+testing purposes only.
+
+Default values are shown.
+
+</command>
+
 </commandgroup>
 
 </commandList>
