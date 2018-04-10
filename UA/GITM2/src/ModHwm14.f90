@@ -41,14 +41,14 @@
 
 module hwm
     use ModKind
-    integer(4)           :: nmaxhwm = 0        ! maximum degree hwmqt
-    integer(4)           :: omaxhwm = 0        ! maximum order hwmqt
-    integer(4)           :: nmaxdwm = 0        ! maximum degree hwmqt
-    integer(4)           :: mmaxdwm = 0        ! maximum order hwmqt
-    integer(4)           :: nmaxqdc = 0        ! maximum degree of coordinate coversion
-    integer(4)           :: mmaxqdc = 0        ! maximum order of coordinate coversion
-    integer(4)           :: nmaxgeo = 0        ! maximum of nmaxhwm, nmaxqd
-    integer(4)           :: mmaxgeo = 0        ! maximum of omaxhwm, nmaxqd
+    integer           :: nmaxhwm = 0        ! maximum degree hwmqt
+    integer           :: omaxhwm = 0        ! maximum order hwmqt
+    integer           :: nmaxdwm = 0        ! maximum degree hwmqt
+    integer           :: mmaxdwm = 0        ! maximum order hwmqt
+    integer           :: nmaxqdc = 0        ! maximum degree of coordinate coversion
+    integer           :: mmaxqdc = 0        ! maximum order of coordinate coversion
+    integer           :: nmaxgeo = 0        ! maximum of nmaxhwm, nmaxqd
+    integer           :: mmaxgeo = 0        ! maximum of omaxhwm, nmaxqd
 
     real(Real8_),allocatable  :: gpbar(:,:),gvbar(:,:),gwbar(:,:) ! alfs for geo coordinates
     real(Real8_),allocatable  :: spbar(:,:),svbar(:,:),swbar(:,:) ! alfs MLT calculation
@@ -73,6 +73,7 @@ subroutine hwm14(iyd,sec,alt,glat,glon,stl,f107a,f107,ap,path,w)
     character(250),intent(in) :: path
 
     pathdefault = path
+
     if (hwminit) call inithwm()
 
     call hwmqt(iyd,sec,alt,glat,glon,stl,f107a,f107,ap,w)
@@ -94,7 +95,7 @@ module alf
     use ModKind
     implicit none
 
-    integer(4)              :: nmax0,mmax0
+    integer              :: nmax0,mmax0
 
     ! static normalizational coeffiecents
 
@@ -112,7 +113,7 @@ contains
 
         implicit none
 
-        integer(4), intent(in)  :: nmax, mmax
+        integer, intent(in)  :: nmax, mmax
         real(Real8_), intent(in)     :: theta
         real(Real8_), intent(out)    :: P(0:nmax,0:mmax)
         real(Real8_), intent(out)    :: V(0:nmax,0:mmax)
@@ -121,7 +122,8 @@ contains
         integer(Int8_)              :: n, m
         real(Real8_)                 :: x, y
         real(Real8_), parameter      :: p00 = 0.70710678118654746d0
-
+        W = 0
+        V = 0
         P(0,0) = p00
         x = dcos(theta)
         y = dsin(theta)
@@ -157,7 +159,7 @@ contains
 
         implicit none
 
-        integer(4), intent(in) :: nmaxin, mmaxin
+        integer, intent(in) :: nmaxin, mmaxin
         integer(Int8_)             :: n, m   ! 64 bits to avoid overflow for (m,n) > 60
 
         nmax0 = nmaxin
@@ -203,14 +205,14 @@ module qwm
     use ModKind
     implicit none
 
-    integer(4)                 :: nbf              ! Count of basis terms per model level
-    integer(4)                 :: maxn             ! latitude
-    integer(4)                 :: maxs,maxm,maxl   ! seasonal,stationary,migrating
-    integer(4)                 :: maxo
+    integer                 :: nbf              ! Count of basis terms per model level
+    integer                 :: maxn             ! latitude
+    integer                 :: maxs,maxm,maxl   ! seasonal,stationary,migrating
+    integer                 :: maxo
 
-    integer(4)                 :: p                ! B-splines order, p=4 cubic, p=3 quadratic
-    integer(4)                 :: nlev             ! e.g. Number of B-spline nodes
-    integer(4)                 :: nnode            ! nlev + p
+    integer                 :: p                ! B-splines order, p=4 cubic, p=3 quadratic
+    integer                 :: nlev             ! e.g. Number of B-spline nodes
+    integer                 :: nnode            ! nlev + p
 
     real(Real8_)                    :: alttns           ! Transition 1
     real(Real8_)                    :: altsym           ! Transition 2
@@ -219,24 +221,24 @@ module qwm
     real(Real8_)                    :: e2(0:4)
     real(Real8_),parameter          :: H = 60.0d0
 
-    integer(4),allocatable     :: nb(:)            ! total number of basis functions @ level
-    integer(4),allocatable     :: order(:,:)       ! spectral content @ level
+    integer,allocatable     :: nb(:)            ! total number of basis functions @ level
+    integer,allocatable     :: order(:,:)       ! spectral content @ level
     real(Real8_),allocatable        :: vnode(:)         ! Vertical Altitude Nodes
     real(Real8_),allocatable        :: mparm(:,:)       ! Model Parameters
     real(Real8_),allocatable        :: tparm(:,:)       ! Model Parameters
 
     real(Real8_)                    :: previous(1:5) = -1.0d32
-    integer(4)                 :: priornb = 0
+    integer                 :: priornb = 0
 
     real(Real8_),allocatable        :: fs(:,:),fm(:,:),fl(:,:)
     real(Real8_),allocatable        :: bz(:),bm(:)
 
     real(Real8_),allocatable        :: zwght(:)
-    integer(4)                 :: lev
+    integer                 :: lev
 
-    integer(4)                 :: cseason = 0
-    integer(4)                 :: cwave = 0
-    integer(4)                 :: ctide = 0
+    integer                 :: cseason = 0
+    integer                 :: cwave = 0
+    integer                 :: ctide = 0
 
     logical                    :: content(5) = .true.          ! Season/Waves/Tides
     logical                    :: component(0:1) = .true.      ! Compute zonal/meridional
@@ -253,11 +255,11 @@ module dwm
     use ModKind
     implicit none
 
-    integer(4)                 :: nterm             ! Number of terms in the model
-    integer(4)                 :: nmax,mmax         ! Max latitudinal degree
-    integer(4)                 :: nvshterm          ! # of VSH basis functions
+    integer                 :: nterm             ! Number of terms in the model
+    integer                 :: nmax,mmax         ! Max latitudinal degree
+    integer                 :: nvshterm          ! # of VSH basis functions
 
-    integer(4),allocatable     :: termarr(:,:)      ! 3 x nterm index of coupled terms
+    integer,allocatable     :: termarr(:,:)      ! 3 x nterm index of coupled terms
     real(Real4_),allocatable        :: coeff(:)          ! Model coefficients
     real(Real4_),allocatable        :: vshterms(:,:)     ! VSH basis values
     real(Real4_),allocatable        :: termval(:,:)      ! Term values to which coefficients are applied
@@ -283,8 +285,7 @@ subroutine inithwm()
     use alf,only:initalf
     implicit none
 
-    integer(4)           :: nmax0, mmax0
-
+    integer           :: nmax0, mmax0
     qwmdefault = trim(pathdefault)//trim(qwmdefault)
     dwmdefault = trim(pathdefault)//trim(dwmdefault)
     call initqwm(qwmdefault)
@@ -337,14 +338,13 @@ subroutine initqwm(filename)
     implicit none
 
     character(128),intent(in)      :: filename
-    integer(4)                     :: i,j
-    integer(4)                     :: ncomp
+    integer                     :: i,j
+    integer                     :: ncomp
 
     if (allocated(vnode)) then
         deallocate(order,nb,vnode,mparm,tparm)
         deallocate(fs,fm,fl,zwght,bz,bm)
     endif
-
     call findandopen(filename,23)
     read(23) nbf,maxs,maxm,maxl,maxn,ncomp
     read(23) nlev,p
@@ -402,16 +402,16 @@ contains
 
         implicit none
 
-        integer(4),intent(in)     :: order(8)
-        integer(4),intent(in)     :: nb
+        integer,intent(in)     :: order(8)
+        integer,intent(in)     :: nb
         real(Real8_),intent(inout)     :: mparm(nb)
         real(Real8_),intent(out)       :: tparm(nb)
 
-        integer(4)                :: c,m,n,s,l
+        integer                :: c,m,n,s,l
 
-        integer(4)                :: amaxs,amaxn
-        integer(4)                :: pmaxm,pmaxs,pmaxn
-        integer(4)                :: tmaxl,tmaxs,tmaxn
+        integer                :: amaxs,amaxn
+        integer                :: pmaxm,pmaxs,pmaxn
+        integer                :: tmaxl,tmaxs,tmaxn
 
         amaxs = order(1)
         amaxn = order(2)
@@ -523,11 +523,11 @@ subroutine hwmqt(IYD,SEC,ALT,GLAT,GLON,STL,F107A,F107,AP,W)
     real(Real8_)                 :: vb,wb
     real(Real8_)                 :: theta,sc
 
-    integer(4)              :: b,c,d,m,n,s,l
+    integer              :: b,c,d,m,n,s,l
 
-    integer(4)              :: amaxs,amaxn
-    integer(4)              :: pmaxm,pmaxs,pmaxn
-    integer(4)              :: tmaxl,tmaxs,tmaxn
+    integer              :: amaxs,amaxn
+    integer              :: pmaxm,pmaxs,pmaxn
+    integer              :: tmaxl,tmaxs,tmaxn
 
     logical                 :: refresh(5)
 
@@ -537,7 +537,6 @@ subroutine hwmqt(IYD,SEC,ALT,GLAT,GLON,STL,F107A,F107,AP,W)
     ! ====================================================================
     ! Update VSH model terms based on any change in the input parameters
     ! ====================================================================
-
     if (qwminit) call initqwm(qwmdefault)
 
     input(1) = dble(mod(IYD,1000))
@@ -588,7 +587,6 @@ subroutine hwmqt(IYD,SEC,ALT,GLAT,GLON,STL,F107A,F107,AP,W)
     endif
 
     ! Latitude
-
     theta = (90.0d0 - input(4))*deg2rad
     if (input(4) .ne. glatalf) then
         AA = (90.0d0 - input(4))*deg2rad        ! theta = colatitude in radians
@@ -770,19 +768,19 @@ subroutine vertwght(alt,wght,iz)
 
     real(Real8_),intent(in)      :: alt
     real(Real8_),intent(out)     :: wght(4)
-    integer(4),intent(out)  :: iz
+    integer,intent(out)  :: iz
 
     real(Real8_)             :: we(0:4)
 
-    iz = findspan(nnode-p-1_4,p,alt,vnode) - p
+    iz = findspan(nnode-p-1,p,alt,vnode) - p
 
     iz = min(iz,26)
 
     wght(1) = bspline(p,nnode,vnode,iz,alt)
-    wght(2) = bspline(p,nnode,vnode,iz+1_4,alt)
+    wght(2) = bspline(p,nnode,vnode,iz+1,alt)
     if (iz .le. 25) then
-        wght(3) = bspline(p,nnode,vnode,iz+2_4,alt)
-        wght(4) = bspline(p,nnode,vnode,iz+3_4,alt)
+        wght(3) = bspline(p,nnode,vnode,iz+2,alt)
+        wght(4) = bspline(p,nnode,vnode,iz+3,alt)
         return
     endif
     if (alt .gt. alttns) then
@@ -792,9 +790,9 @@ subroutine vertwght(alt,wght,iz)
         we(3) = exp(-(alt - alttns)/H)
         we(4) = 1.0d0
     else
-        we(0) = bspline(p,nnode,vnode,iz+2_4,alt)
-        we(1) = bspline(p,nnode,vnode,iz+3_4,alt)
-        we(2) = bspline(p,nnode,vnode,iz+4_4,alt)
+        we(0) = bspline(p,nnode,vnode,iz+2,alt)
+        we(1) = bspline(p,nnode,vnode,iz+3,alt)
+        we(2) = bspline(p,nnode,vnode,iz+4,alt)
         we(3) = 0.0d0
         we(4) = 0.0d0
     endif
@@ -810,15 +808,15 @@ contains
         implicit none
 
         real(Real8_)     :: bspline
-        integer(4)  :: p,m
+        integer  :: p,m
         real(Real8_)     :: V(0:m)
-        integer(4)  :: i
+        integer  :: i
         real(Real8_)     :: u
 
         real(Real8_)     :: N(0:p+1)
         real(Real8_)     :: Vleft,Vright
         real(Real8_)     :: saved,temp
-        integer(4)  :: j,k
+        integer  :: j,k
 
         if ((i .eq. 0) .and. (u .eq. V(0))) then
             bspline = 1.d0
@@ -874,14 +872,14 @@ contains
     ! Function to locate the knot span
     ! =====================================================
 
-    integer(4) function findspan(n,p,u,V)
+    integer function findspan(n,p,u,V)
 
         implicit none
 
-        integer(4),intent(in)   :: n,p
+        integer,intent(in)   :: n,p
         real(Real8_),intent(in)      :: u
         real(Real8_),intent(in)      :: V(0:n+1)
-        integer(4)              :: low,mid,high
+        integer              :: low,mid,high
 
         if (u .ge. V(n+1)) then
             findspan = n
@@ -918,7 +916,7 @@ subroutine initdwm(nmaxout,mmaxout)
     use dwm
     implicit none
 
-    integer(4),intent(out)     :: nmaxout, mmaxout
+    integer,intent(out)     :: nmaxout, mmaxout
 
     call findandopen(dwmdefault,23)
     if (allocated(termarr)) deallocate(termarr,coeff)
@@ -973,7 +971,6 @@ subroutine dwm07(IYD,SEC,ALT,GLAT,GLON,AP,DW)
     if (ap(2) .ne. aplast) then
       kp = ap2kp(ap(2))
     endif
-
     !CONVERT GEO LAT/LON TO QD LAT/LON
     if ((glat .ne. glatlast) .or. (glon .ne. glonlast)) then
       call gd2qd(glat,glon,mlat,mlon,f1e,f1n,f2e,f2n)
@@ -1022,7 +1019,7 @@ subroutine dwm07b(mlt, mlat, kp, mmpwind, mzpwind)
     real(Real4_),intent(out)       :: mzpwind   !Zon. disturbance wind (+east, QD coordinates)
 
     ! Local variables
-    integer(4)                :: iterm, ivshterm, n, m
+    integer                :: iterm, ivshterm, n, m
     real(Real4_)                   :: termvaltemp(0:1)
     real(Real4_),save              :: kpterms(0:2)
     real(Real4_)                   :: latwgtterm
@@ -1116,7 +1113,7 @@ function ap2kp(ap0)
                                          12.,13.,14.,15.,16.,17.,18.,19.,20.,21., &
                                          22.,23.,24.,25.,26.,27./) / 3.0
   real(Real4_)               :: ap0, ap, ap2kp
-  integer(4)         :: i
+  integer         :: i
 
 
   ap = ap0
@@ -1149,7 +1146,7 @@ module gd2qdc
     use ModKind
     implicit none
 
-    integer(4)               :: nterm, nmax, mmax  !Spherical harmonic expansion parameters
+    integer               :: nterm, nmax, mmax  !Spherical harmonic expansion parameters
 
     real(Real8_), allocatable     :: coeff(:,:)         !Coefficients for spherical harmonic expansion
     real(Real8_), allocatable     :: xcoeff(:)          !Coefficients for x coordinate
@@ -1175,8 +1172,8 @@ contains
         implicit none
 
         character(250) :: datafile
-        integer(4)     :: iterm, n
-        integer(4)     :: j
+        integer     :: iterm, n
+        integer     :: j
 
         datafile = trim(pathdefault)//'gd2qd.dat'
 
@@ -1230,7 +1227,7 @@ subroutine gd2qd(glatin,glon,qlat,qlon,f1e,f1n,f2e,f2n)
     real(Real4_), intent(out)        :: qlat, qlon
     real(Real4_), intent(out)        :: f1e, f1n, f2e, f2n
 
-    integer(4)               :: n, m, i
+    integer               :: n, m, i
     real(Real8_)                  :: glat, theta, phi
     real(Real8_)                  :: mphi, cosmphi, sinmphi
     real(Real8_)                  :: x, y, z
@@ -1315,7 +1312,7 @@ function mltcalc(qlat,qlon,day,ut)
     real(Real4_), intent(in)      :: qlat, qlon, day, ut
     real(Real4_)                  :: mltcalc
 
-    integer(4)               :: n, m, i
+    integer               :: n, m, i
     real(Real8_)                  :: asunglat, asunglon, asunqlon
     real(Real8_)                  :: glat, theta, phi
     real(Real8_)                  :: mphi, cosmphi, sinmphi
@@ -1370,7 +1367,7 @@ subroutine kpspl3(kp, kpterms)
     real(Real4_), intent(in)       :: kp
     real(Real4_), intent(out)      :: kpterms(0:2)
 
-    integer(4)                :: i, j
+    integer                :: i, j
     real(Real4_)                   :: x, kpspl(0:6)
     real(Real4_), parameter        :: node(0:7)=(/-10., -8., 0., 2., 5., 8., 18., 20./)
 
