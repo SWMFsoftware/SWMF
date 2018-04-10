@@ -36,19 +36,19 @@ int main(int argc,char **argv) {
   static int LastDataOutputFileNumber=0;
 
 
-
+  Earth::CutoffRigidity::SampleRigidityMode=true;
 
   amps_init_mesh();
 
-/*  Earth::CutoffRigidity::Init_BeforeParser();
-  Earth::CutoffRigidity::AllocateCutoffRigidityTable();*/
+  Earth::CutoffRigidity::Init_BeforeParser();
+  Earth::CutoffRigidity::AllocateCutoffRigidityTable();
 
   amps_init();
 
 
 
 
-  PIC::RequiredSampleLength=60;
+//  PIC::RequiredSampleLength=60;
 
 
 #if _PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_ON_
@@ -56,6 +56,10 @@ int main(int argc,char **argv) {
 #else
   int nTotalIterations = 100000001;
 #endif
+
+
+  int nMaxIterations=10000;
+  int IterationCounter=0,localParticleGenerationFlag=0,globalParticleGenerationFlag;
 
   //estimate the total flux and rigidity in a set of the defined locations
   if (Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength!=0) {
@@ -67,6 +71,9 @@ int main(int argc,char **argv) {
     Earth::CutoffRigidity::DomainBoundaryParticleProperty::EnableSampleParticleProperty=true;
 
     do {
+      //reset the partilce generation flag
+      localParticleGenerationFlag=0;
+
       //Inject new particles
       if (nTotalInjectedParticles<Earth::CutoffRigidity::IndividualLocations::nTotalTestParticlesPerLocations) {
         nTotalInjectedParticles+=nIngectedParticlePerIteration;
@@ -105,13 +112,110 @@ int main(int argc,char **argv) {
               PIC::ParticleBuffer::SetX(x,newParticleData);
               PIC::ParticleBuffer::SetI(spec,newParticleData);
 
+              //set the particle generation flag
+              localParticleGenerationFlag=1;
+
+              //apply condition of tracking the particle
+              if (_PIC_PARTICLE_TRACKER_MODE_ == _PIC_MODE_ON_) {
+                PIC::ParticleTracker::InitParticleID(newParticleData);
+                PIC::ParticleTracker::ApplyTrajectoryTrackingCondition(x,v,spec,newParticleData,(void*)startNode);
+              }
+
               *((int*)(newParticleData+Earth::CutoffRigidity::ParticleDataOffset::OriginLocationIndex))=iLocation;
               *((double*)(newParticleData+Earth::CutoffRigidity::ParticleDataOffset::OriginalSpeed))=sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]);
+
+              //set the initial value of the integrate path length
+              if (Earth::CutoffRigidity::IntegratedPathLengthOffset!=-1) {
+                *((double*)(newParticleData+Earth::CutoffRigidity::IntegratedPathLengthOffset))=0.0;
+              }
+
+              //set up the particle rigidity
+              if (Earth::CutoffRigidity::InitialRigidityOffset!=-1) {
+                double momentum,charge,rigidity;
+
+                charge=PIC::MolecularData::GetElectricCharge(spec);
+
+                momentum=Relativistic::Speed2Momentum(speed,mass);
+                rigidity=(charge>0.0) ? momentum/charge : 0.0;
+
+                *((double*)(newParticleData+Earth::CutoffRigidity::InitialRigidityOffset))=rigidity;
+              }
+
+              //save the original location of the particle
+              if (Earth::CutoffRigidity::InitialLocationOffset!=-1) {
+                memcpy(newParticleData+Earth::CutoffRigidity::InitialLocationOffset,x,3*sizeof(double));
+              }
+
+
             }
           }
         }
       }
 
+
+      //limit the integration time (remove particle moving in trapped orbits)
+      if ((true)&&(Earth::CutoffRigidity::InitialLocationOffset!=-1)) {
+        //determine min altitude;
+        static double rMax=-1.0;
+        double r;
+        int idim;
+
+        if (rMax<0.0) {
+          for (int iLocation=0;iLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iLocation++) {
+            r=Vector3D::Length(Earth::CutoffRigidity::IndividualLocations::xTestLocationTable[iLocation]);
+
+            if ((rMax<0.0)||(r>rMax)) rMax=r;
+          }
+        }
+
+        //estimation of the domain length
+        double IntegratioinLengthMax=sqrt(pow(PIC::Mesh::mesh.xGlobalMax[0]-PIC::Mesh::mesh.xGlobalMin[0],2)+
+            pow(PIC::Mesh::mesh.xGlobalMax[1]-PIC::Mesh::mesh.xGlobalMin[1],2)+
+            pow(PIC::Mesh::mesh.xGlobalMax[2]-PIC::Mesh::mesh.xGlobalMin[2],2));
+
+        //increase the limit of the total integrated oath length
+        IntegratioinLengthMax/=4.0;
+
+        IntegratioinLengthMax=2.0*Pi*rMax;
+
+        //loop through all blocks
+        for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+          int ptr,next;
+          PIC::Mesh::cDataBlockAMR *block=node->block;
+          double dt,l,v;
+          PIC::ParticleBuffer::byte *ParticleData;
+
+          if (sqrt(pow(node->xmax[0]+node->xmin[0],2)+pow(node->xmax[1]+node->xmin[1],2)+pow(node->xmax[2]+node->xmin[2],2))/2.0>rMax) continue;
+
+          if (block!=NULL) for (int i=0;i<_BLOCK_CELLS_X_;i++) for (int j=0;j<_BLOCK_CELLS_Y_;j++) for (int k=0;k<_BLOCK_CELLS_Z_;k++) {
+             ptr=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+             while (ptr!=-1) {
+               //loop through all particles and determin which are trapped and does not contribute to the incoming radiation
+               ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+
+               v=Vector3D::Length(PIC::ParticleBuffer::GetV(ParticleData));
+               next=PIC::ParticleBuffer::GetNext(ParticleData);
+
+               dt=block->GetLocalTimeStep(PIC::ParticleBuffer::GetI(ParticleData));
+
+               //update estimation of the total integration path length
+               l=*((double*)(ParticleData+Earth::CutoffRigidity::IntegratedPathLengthOffset));
+               l+=v*dt;
+               *((double*)(ParticleData+Earth::CutoffRigidity::IntegratedPathLengthOffset))=l;
+
+
+               if (l>IntegratioinLengthMax) {
+                 //the particle is below the minimum altitude
+                 PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+               }
+
+               ptr=next;
+             }
+
+          }
+        }
+      }
 
       //preform the next iteration
       amps_time_step();
@@ -129,8 +233,22 @@ int main(int argc,char **argv) {
       //get the total number of particles in the system
       LacalParticleNumber=PIC::ParticleBuffer::GetAllPartNum();
       MPI_Allreduce(&LacalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+      //determine whether any particle has been generated during the current iteration
+      MPI_Allreduce(&localParticleGenerationFlag,&globalParticleGenerationFlag,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
+
+      if (globalParticleGenerationFlag!=0) {
+        //at least one particle has been generated -> reset the iteration counter
+        IterationCounter=0;
+      }
+      else {
+        //increment the iteration counter
+        IterationCounter++;
+      }
+
+
     }
-    while (GlobalParticleNumber!=0);
+    while ((GlobalParticleNumber!=0)&&(IterationCounter<nMaxIterations));
 
 
     //determine the flux and eneregy spectra of the energetic particles in the poins of the observation
@@ -144,6 +262,9 @@ int main(int argc,char **argv) {
       const double dE=(logMaxEnergyLimit-logMinEnergyLimit)/nTotalEnergySpectrumIntervals;
 
       //allocate the data buffers
+      //TotalFlux[iLocation][spec]
+      //EnergySpectrum[iLocation][spec][iEnergyInterval]
+
       TotalFlux=new double* [Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength];
       TotalFlux[0]=new double [Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength*PIC::nTotalSpecies];
       for (iTestsLocation=1;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) TotalFlux[iTestsLocation]=TotalFlux[iTestsLocation-1]+PIC::nTotalSpecies;
@@ -195,7 +316,7 @@ int main(int argc,char **argv) {
                     TotalFlux[iTestsLocation][spec]+=DiffFlux*dSurface;
 
                     //determine contribution of the particles to the energy flux
-                    iE=(log10(KineticEnergy)-logMaxEnergyLimit)/dE;
+                    iE=(log10(KineticEnergy)-logMinEnergyLimit)/dE;
                     if (iE<0) iE=0;
                     if (iE>=nTotalEnergySpectrumIntervals) iE=nTotalEnergySpectrumIntervals-1;
 
@@ -220,19 +341,25 @@ int main(int argc,char **argv) {
         char fname[400];
 
         for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-          sprintf(fname,"EnergySpectrum[s=%i].dat",spec);
+          sprintf(fname,"%s/EnergySpectrum[s=%i].dat",PIC::OutputDataFileDirectory,spec);
           fout=fopen(fname,"w");
 
           fprintf(fout,"VARIABLES=\"log10(Kinetic Energy[MeV]\"");
           for (iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) fprintf(fout,", \"Spectrum (iTestsLocation=%i)\"",iTestsLocation);
           fprintf(fout,"\n");
 
-          for (iE=0;iE<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength+1;iE++) {
-            fprintf(fout,"%e  ",pow(logMinEnergyLimit+iE*dE,10)*J2MeV);
+          for (iE=0;iE<nTotalEnergySpectrumIntervals;iE++) {
+            double log10e=logMinEnergyLimit+iE*dE;
+            double e=pow(10,log10e);
+
+            e*=J2MeV;
+            fprintf(fout,"%e  ",e);
 
             for (iTestsLocation=0;iTestsLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iTestsLocation++) fprintf(fout,"%e  ",EnergySpectrum[iTestsLocation][spec][iE]);
             fprintf(fout,"\n");
           }
+
+          fclose(fout);
         }
 
         //The total energetic particle flux
@@ -261,6 +388,12 @@ int main(int argc,char **argv) {
 
   }
 
+
+  //finish the run
+  MPI_Finalize();
+  cout << "End of the run:" << PIC::nTotalSpecies << endl;
+
+  return EXIT_SUCCESS;
 
 
 
