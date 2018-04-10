@@ -99,7 +99,8 @@ int Earth::CutoffRigidity::DomainBoundaryParticleProperty::GetVelocityVectorInde
 
   //getermine the energy level
   Energy=Relativistic::Speed2E(Speed,PIC::MolecularData::GetMass(spec));
-  iLogEnergyLevel=(int)(log(Energy)-logEmin)/nLogEnergyLevels;
+  iLogEnergyLevel=(int)(log(Energy)-logEmin)/dLogE;
+
   if (iLogEnergyLevel<0) iLogEnergyLevel=0;
   if (iLogEnergyLevel>=nLogEnergyLevels) iLogEnergyLevel=nLogEnergyLevels-1;
 
@@ -137,7 +138,7 @@ void Earth::CutoffRigidity::DomainBoundaryParticleProperty::ConvertVelocityVecto
 
   double Speed,Energy,ZenithAngle,AzimuthAngle,cosZenithAngle,sinZenithAngle,cosAzimuthAngle,sinAzimuthAngle;
 
-  Energy=exp((0.5+iLogEnergyLevel)*nLogEnergyLevels+logEmin);
+  Energy=exp((0.5+iLogEnergyLevel)*dLogE+logEmin);
   ZenithAngle=acos((iCosZenithInterval+0.5)*dCosZenithAngle);
   AzimuthAngle=(iAzimuthInterval+0.5)*dAzimuthAngle;
 
