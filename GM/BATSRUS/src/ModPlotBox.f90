@@ -37,7 +37,8 @@ module ModPlotBox
   real, allocatable :: PlotVar_VIII(:,:,:,:)
 
   ! Coordinate conversion matrix
-  real:: PlotToGm_DD(3,3)
+  real :: PlotToGm_DD(3,3)
+  real :: Rot_DD(3,3)
 
 contains
   !============================================================================
@@ -47,8 +48,8 @@ contains
 
     use ModMain,           ONLY: time_simulation, TypeCoordSystem
     use CON_axes,          ONLY: transform_matrix
-    use ModCoordTransform, ONLY: show_rot_matrix, cross_product
-
+    use ModCoordTransform, ONLY: show_rot_matrix, cross_product, &
+         rot_matrix_x, rot_matrix_y, rot_matrix_z
     integer, intent(in)        :: iFile, nPlotVar
 
     real :: Los_D(3), aUnit_D(3), bUnit_D(3), ObsPos_D(3)
@@ -108,6 +109,9 @@ contains
        ! Center of box in this case is given in TypeCoordPlot
        Xyz0Plot_D = Xyz0_D
     end if
+
+    Rot_DD = matmul(PlotToGm_DD, matmul(rot_matrix_z(-zAngle), &
+         matmul(rot_matrix_y(-yAngle), rot_matrix_x(-xAngle))))
 
     ! Set number of points:
     nX = nint((xMax - xMin)/dX) + 1
@@ -251,7 +255,8 @@ contains
        do iVar=1, nPlotVar
           NameVar = trim(NameVar)  // ' ' // trim(NameVar_V(iVar))
        end do
-       NameVar = trim(NameVar) // ' xAngle yAngle zAngle'
+       NameVar = trim(NameVar) // &
+            ' Rot11 Rot21 Rot31 Rot12 Rot22 Rot32 Rot13 Rot23 Rot33'
 
        ! Correct for double counting in MPI_reduce_real_array
        do k = 1, nZ
@@ -271,7 +276,7 @@ contains
             StringHeaderIn=NameUnit, &
             nStepIn=n_step, &
             TimeIn=time_simulation, &
-            ParamIn_I = (/ xAngle, yAngle, zAngle /), &
+            ParamIn_I = (/ ((Rot_DD(i,j), i=1,3), j=1,3) /), &
             NameVarIn = NameVar, &
             CoordMinIn_D = (/ xMin, yMin, zMin /), &
             CoordMaxIn_D = (/ xMax, yMax, zMax /), &

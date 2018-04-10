@@ -1029,8 +1029,8 @@ contains
     integer                     :: nVarName, iVar
 
     real                        :: MinWavelength, MaxWavelength
-    real                        :: Xangle, Yangle, Zangle, Rot_DD(3,3)
-    real                        :: Param_I(3)
+    real                        :: Rot_DD(3,3)
+    real                        :: Param_I(9)
     real,allocatable            :: VarIn_VIII(:,:,:,:)
     real                        :: Coord, Dz1, Dz2
 
@@ -1066,9 +1066,7 @@ contains
          NameSub//' could not read data from '//trim(NameDataFile))
 
     ! Assign angles of rotated box
-    Xangle = Param_I(1)
-    Yangle = Param_I(2)
-    Zangle = Param_I(3)
+    Rot_DD = reshape(Param_I(:9), (/ 3, 3 /))
 
     ! Assign var names to indexes, drop unused data, convert to SI
     call split_string(NameVar, MaxNameVar, NameVar_V, nVarName)
@@ -1200,26 +1198,18 @@ contains
           end select
        end do
 
-       if(Xangle /= 0.0 .or. Yangle /= 0.0 .or. Zangle /= 0.0)then
-          ! Apply rotation on vector variables
-          Rot_DD = matmul(rot_matrix_z(Zangle), &
-               matmul(rot_matrix_y(Yangle), rot_matrix_x(Xangle)))
+       if(IsDebug)then
+          write(*,*)'ux_,uz_,bx_,bz_=', ux_,uz_,bx_,bz_
+          write(*,*)'Rot_DD=', Rot_DD
+          write(*,*)'Before: u_D=', Var_VIII(ux_:uz_,1,1,1)
+       endif
 
-          if(IsDebug)then
-             write(*,*)'angles = ',Param_I
-             write(*,*)'ux_,uz_,bx_,bz_=', ux_,uz_,bx_,bz_
-             write(*,*)'Rot_DD=', Rot_DD
-             write(*,*)'Before: u_D=', Var_VIII(ux_:uz_,1,1,1)
-          endif
+       do k = 1, n3; do j = 1, n2; do i = 1, n1
+          Var_VIII(ux_:uz_,i,j,k) = matmul(Var_VIII(ux_:uz_,i,j,k), Rot_DD)
+          Var_VIII(bx_:bz_,i,j,k) = matmul(Var_VIII(bx_:bz_,i,j,k), Rot_DD)
+       end do; end do; end do
 
-          do k = 1, n3; do j = 1, n2; do i = 1, n1
-             Var_VIII(ux_:uz_,i,j,k) = matmul(Rot_DD, Var_VIII(ux_:uz_,i,j,k))
-             Var_VIII(bx_:bz_,i,j,k) = matmul(Rot_DD, Var_VIII(bx_:bz_,i,j,k))
-          end do; end do; end do
-
-          if(IsDebug)write(*,*)'After: u_D=', Var_VIII(ux_:uz_,1,1,1)
-
-       end if
+       if(IsDebug)write(*,*)'After: u_D=', Var_VIII(ux_:uz_,1,1,1)
     endif
 
     deallocate(VarIn_VIII)
