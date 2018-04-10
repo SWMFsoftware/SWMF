@@ -97,9 +97,8 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
     dtTotalIn-=dt;
 
     #if _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_ == _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_
-    switch (BackwardTimeIntegrationMode) {
-    case _PIC_MODE_ON_ :
-      dt=-dt;
+    if  (BackwardTimeIntegrationMode==_PIC_MODE_ON_) {
+      for (idim=0;idim<3;idim++) B[idim]=-B[idim],E[idim]=-E[idim];
     }
     #endif
 
@@ -133,10 +132,26 @@ int PIC::Mover::Relativistic::Boris(long int ptr,double dtTotalIn,cTreeNodeAMR<P
     for (idim=0;idim<3;idim++) uFinal[idim]=uPlus[idim]+QdT_over_twoM*E[idim];
     gamma=sqrt(1.0+(uFinal[0]*uFinal[0]+uFinal[1]*uFinal[1]+uFinal[2]*uFinal[2])/(SpeedOfLight*SpeedOfLight));
 
+    #if _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_ == _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_
+    switch (BackwardTimeIntegrationMode) {
+    case _PIC_MODE_OFF_:
+      for (idim=0;idim<3;idim++) {
+        vFinal[idim]=uFinal[idim]/gamma;
+        xFinal[idim]=xInit[idim]+vFinal[idim]*dt;
+      }
+      break;
+    case _PIC_MODE_ON_:
+      for (idim=0;idim<3;idim++) {
+        vFinal[idim]=uFinal[idim]/gamma;
+        xFinal[idim]=xInit[idim]-vFinal[idim]*dt;
+      }
+    }
+    #else  //_PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_
     for (idim=0;idim<3;idim++) {
       vFinal[idim]=uFinal[idim]/gamma;
       xFinal[idim]=xInit[idim]+vFinal[idim]*dt;
     }
+    #endif //_PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_
 
     //interaction with the faces of the block and internal surfaces
     //check whether the particle trajectory is intersected the spherical body
