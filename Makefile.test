@@ -948,7 +948,8 @@ test3:
 
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,IM:EarthHO
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdAnisoP
+	./Config.pl -o=IM:GridDefault,EarthHO
 	${MAKE} SWMF
 	make PIDL
 
