@@ -118,8 +118,8 @@ module apxshmodule
     use ModKind
     implicit none
 
-    integer(4)               :: nterm, nmax, mmax, lmax, nepoch, ntermsh
-    integer(4)               :: vecflag
+    integer               :: nterm, nmax, mmax, lmax, nepoch, ntermsh
+    integer               :: vecflag
 
     real(Real8_), allocatable     :: coeff0(:,:,:)
     real(Real8_), allocatable     :: qcoeff0(:,:), gcoeff0(:,:)
@@ -165,9 +165,9 @@ subroutine loadapxsh(datafilenew,epochnew)
     implicit none
 
     character(128)              :: datafilenew, datafilelast=''
-    real(Real4_)                     :: epochnew, epochlast=-999.0
+    real(Real8_)                     :: epochnew, epochlast=-999.0
     real(Real8_)                     :: we0, we1
-    integer(4)                  :: iepoch0, iepoch1, iterm, icoord
+    integer                  :: iepoch0, iepoch1, iterm, icoord
 
     !CHECK FILE, GET DIMENSIONS, AND ALLOCATE ARRAYS
     if ((datafilenew .ne. datafilelast) .or. (loadflag)) then
@@ -297,11 +297,11 @@ subroutine apxg2q(glat,glon,alt,vecflagin,qlatout,qlonout,f1,f2,f)
     implicit none
 
     real(Real4_), intent(in)         :: glat, glon, alt
-    integer(4), intent(in)      :: vecflagin
+    integer, intent(in)      :: vecflagin
     real(Real4_), intent(out)        :: qlatout, qlonout
     real(Real4_), intent(out)        :: f1(1:2), f2(1:2), f
 
-    integer(4)               :: i, l, iterm, itermsh
+    integer               :: i, l, iterm, itermsh
     real(Real8_)                  :: theta, phi
     real(Real8_)                  :: costheta, Jtemp, J, r
 
@@ -415,13 +415,13 @@ subroutine apxg2all(glat,glon,alt,hr,vecflagin, &
     implicit none
 
     real(Real4_), intent(in)         :: glat, glon, alt, hr
-    integer(4), intent(in)      :: vecflagin
+    integer, intent(in)      :: vecflagin
     real(Real4_), intent(out)        :: qlatout, qlonout, mlat, mlon
     real(Real4_), intent(out)        :: f1(1:2), f2(1:2), f
     real(Real4_), intent(out)        :: d1(1:3), d2(1:3), d3(1:3), d
     real(Real4_), intent(out)        :: e1(1:3), e2(1:3), e3(1:3)
 
-    integer(4)               :: i
+    integer               :: i
     real(Real8_)                  :: cosmlat, Rrat, denom
 
     if (loadflag) then
@@ -504,7 +504,7 @@ subroutine apxq2g(qlat0,qlon0,alt,prec,glatout,glonout,error)
     real(Real4_), intent(in)         :: qlat0, qlon0, alt, prec
     real(Real4_), intent(out)        :: glatout, glonout, error
 
-    integer(4)               :: l, iterm, itermsh, vecflagin, niter
+    integer               :: l, iterm, itermsh, vecflagin, niter
     real(Real4_)                  :: qlatout, qlonout, errorlast
     real(Real4_)                  :: mlon, f1(1:2), f2(1:2), f
     real(Real8_)                  :: theta, phi
@@ -633,7 +633,7 @@ subroutine shcalc(theta,phi)
 
     real(Real8_), intent(in)      :: theta, phi
 
-    integer(4)               :: n, m, i, i1
+    integer               :: n, m, i, i1
     real(Real8_)                  :: mphi, cosmphi, sinmphi
 
     call alfbasis(nmax,mmax,theta,pbar,vbar,wbar)
@@ -674,8 +674,8 @@ module alfbasismodule
     use ModKind
     implicit none
 
-    integer(4)           :: nmax0
-    integer(4)           :: mmax0
+    integer           :: nmax0
+    integer           :: mmax0
     real(Real8_), allocatable :: anm(:,:)
     real(Real8_), allocatable :: cm(:)
     real(Real8_), allocatable :: bnm(:,:)
@@ -694,7 +694,7 @@ subroutine alfbasisinit(nmax0in,mmax0in)
 
     implicit none
 
-    integer(4), intent(in) :: nmax0in, mmax0in
+    integer, intent(in) :: nmax0in, mmax0in
     integer(Int8_)             :: n, m
 
     nmax0 = nmax0in
@@ -736,13 +736,13 @@ subroutine alfbasis(nmax,mmax,theta,P,V,W)
 
     implicit none
 
-    integer(4), intent(in)  :: nmax, mmax
+    integer, intent(in)  :: nmax, mmax
     real(Real8_), intent(in)     :: theta
     real(Real8_), intent(out)    :: P(0:nmax,0:mmax)
     real(Real8_), intent(out)    :: V(0:nmax,0:mmax)
     real(Real8_), intent(out)    :: W(0:nmax,0:mmax)
 
-    integer(4)              :: n, m
+    integer              :: n, m
     real(Real8_)                 :: x, y
     real(Real8_), parameter      :: p00=0.70710678118654746D0
 
