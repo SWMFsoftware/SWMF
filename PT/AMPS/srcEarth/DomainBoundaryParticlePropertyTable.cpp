@@ -12,8 +12,8 @@
 #include "pic.h"
 #include "specfunc.h"
 
-double Earth::CutoffRigidity::DomainBoundaryParticleProperty::logEmax=log(1.0E6*MeV2J);
-double Earth::CutoffRigidity::DomainBoundaryParticleProperty::logEmin=log(1.0E6*MeV2J);
+double Earth::CutoffRigidity::DomainBoundaryParticleProperty::logEmax=log(1.0E1*GeV2J);
+double Earth::CutoffRigidity::DomainBoundaryParticleProperty::logEmin=log(1.0E1*MeV2J);
 
 int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nAzimuthIntervals=10;
 int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nCosZenithIntervals=10;
