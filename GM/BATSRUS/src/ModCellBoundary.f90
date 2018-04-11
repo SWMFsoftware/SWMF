@@ -120,10 +120,17 @@ contains
        write(*,*)'iGhost, jGhost, kGhost  =',iGhost, jGhost, kGhost
        write(*,*)'iGhost2,jGhost2,kGhost2 =',iGhost2,jGhost2,kGhost2
        do iVar = 1, nVarState
-          write(*,*)'initial',NameVar_V(iVar),   'cell,ghost,ghost2=',&
-               State_VG(iVar,iTest,jTest,kTest),&
-               State_VG(iVar,Ighost,Jghost,Kghost), &
-               State_VG(iVar,Ighost2,Jghost2,Kghost2)
+          if(.not.present(iImplBlock)) then
+             write(*,*)'initial',NameVar_V(iVar),   'cell,ghost,ghost2=',&
+                  State_VG(iVar,iTest,jTest,kTest),&
+                  State_VG(iVar,Ighost,Jghost,Kghost), &
+                  State_VG(iVar,Ighost2,Jghost2,Kghost2)
+             else
+                write(*,*)'initial impl var',iVar, 'cell,ghost,ghost2=',&
+                  State_VG(iVar,iTest,jTest,kTest),&
+                  State_VG(iVar,Ighost,Jghost,Kghost), &
+                  State_VG(iVar,Ighost2,Jghost2,Kghost2)
+             end if
        end do
     end if
 
@@ -198,7 +205,7 @@ contains
           if(present(iImplBlock)) TypeBc = trim(TypeBc)//'_semi'
        end if
 
-       if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax..kMax=', &
+       if(DoTest) write(*,*) NameSub,' iSide, Type iMin,iMax...kMax=', &
             iSide, TypeBc, iMin, iMax, jMin, jMax, kMin, kMax
 
        select case(TypeBc)
@@ -375,13 +382,20 @@ contains
 
     if(DoTest)then
        do iVar = 1, nVarState
-          write(*,*)'final',NameVar_V(iVar),'   cell,ghost,ghost2=',&
-               State_VG(iVar,iTest,jTest,kTest),&
-               State_VG(iVar,Ighost,Jghost,Kghost),&
-               State_VG(iVar,Ighost2,Jghost2,Kghost2)
+          if(.not.present(iImplBlock)) then
+             write(*,*)'final',NameVar_V(iVar),   'cell,ghost,ghost2=',&
+                  State_VG(iVar,iTest,jTest,kTest),&
+                  State_VG(iVar,Ighost,Jghost,Kghost), &
+                  State_VG(iVar,Ighost2,Jghost2,Kghost2)
+             else
+                write(*,*)'final impl var',iVar, 'cell,ghost,ghost2=',&
+                  State_VG(iVar,iTest,jTest,kTest),&
+                  State_VG(iVar,Ighost,Jghost,Kghost), &
+                  State_VG(iVar,Ighost2,Jghost2,Kghost2)
+          end if
        end do
     end if
-
+       
     deallocate(SymmCoeff_V)
 
     call test_stop(NameSub, DoTest, iBlock)
