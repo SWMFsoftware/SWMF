@@ -155,6 +155,8 @@ subroutine calc_collisions(iBlock)
   ! This is an average of O2 and N2, since NO doesn't exist
   IonCollisions(:,:,:,iO_4SP_,iNO_) =&
        6.73e-16*NDensityS(:,:,:,iNO_,iBlock)
+  IonCollisions(:,:,:,iO_4SP_,iHe_) =&
+       0.0*NDensityS(:,:,:,iHe_,iBlock)
 
   Collisions(:,:,:,iVIN_) = IonCollisions(:,:,:,iO_4SP_,1)
   do iSpecies = 2, nSpecies
