@@ -1,6 +1,0 @@
-# This is how to run on MIRA/CETUS
-# The -n is the number of nodes (one node has 16 cores).
-# The --mode c16 is the number MPI processes per node.
-# The -t 10 is the maximum walltime in minutes.
-#
-# qsub -n 10 --mode c16 -t 10 ./SWMF.exe
