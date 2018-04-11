@@ -42,7 +42,8 @@ module ModPlanet
   character (len=20) :: cSpecies(nSpeciesTotal)
   character (len=20) :: cIons(nIons)
 
-  real :: Mass(nSpeciesTotal), MassI(nIons)
+  real :: Mass(nSpeciesTotal) = 0.0
+  real :: MassI(nIons) = 0.0
 
   real :: Vibration(nSpeciesTotal)
 

@@ -23,8 +23,8 @@ module ModVertical
 !  real, dimension(-1:nAlts+2,nIonsAdvect) :: NewLogINS
 !  real, dimension(-1:nAlts+2,nIonsAdvect) :: LogINS
 
-  real, dimension(-1:nAlts+2,nIons) :: NewLogINS
-  real, dimension(-1:nAlts+2,nIons) :: LogINS
+  real, dimension(-1:nAlts+2,nIons) :: NewLogINS = 0.0
+  real, dimension(-1:nAlts+2,nIons) :: LogINS = 0.0
 !  real, dimension(1:2,nIons) :: OldLogINSc
 
 

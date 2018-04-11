@@ -558,6 +558,8 @@ subroutine calc_scaled_euv
      call stop_gitm("Stopping in euv_ionization_heat")
   endif
 
+  f107_Ratio = 0.0
+
   if (UseEUVData) then
 
      call Set_Euv(iError, CurrentTime, EndTime)
@@ -649,7 +651,6 @@ subroutine calc_scaled_euv
         fexvir = 0.
         hlya = 3.E+11 + 0.4E+10 * (f107-70.)
         heiew = 0.
-
         xuvfac = 4.0 - f107_ratio
         if (xuvfac < 1.0) xuvfac = 1.0
 

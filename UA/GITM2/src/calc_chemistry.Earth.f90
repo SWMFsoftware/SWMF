@@ -37,12 +37,12 @@ subroutine calc_chemistry(iBlock)
   real :: ChemicalHeatingSubI, ChemicalHeatingSubE
   real :: Emission(nEmissions), EmissionTotal(nEmissions)
   real, dimension(nLons,nLats,nAlts) :: &
-       tr3d, tr33d,te12d, tr3m0443d, tr3m083d, tr3m043d, &
-       tn3d, ti3d, ti33d, ti103d,ti93d, ti153d, ti3m0443d, ti3m0243d, &
-       ti3m0233d, ti3m1163d, ti10m0673d, ti3m0453d, ti10m2123d, ti3m0873d, &
-       ti3m0523d, ti9m0923d, ti3m0553d, ti15m0233d, &
-       te3m0393d, te3m0853d, te33d, te3m053d,te3m073d,&
-       te12m0563d,te227d, te3m0913d, te3m0813d
+       tr3d = 0, tr33d = 0,te12d = 0, tr3m0443d = 0, tr3m083d = 0, tr3m043d = 0, &
+       tn3d = 0, ti3d = 0, ti33d = 0, ti103d = 0,ti93d = 0, ti153d = 0, ti3m0443d = 0, ti3m0243d = 0, &
+       ti3m0233d = 0, ti3m1163d = 0, ti10m0673d = 0, ti3m0453d = 0, ti10m2123d = 0, ti3m0873d = 0, &
+       ti3m0523d = 0, ti9m0923d = 0, ti3m0553d = 0, ti15m0233d = 0, &
+       te3m0393d = 0, te3m0853d = 0, te33d = 0, te3m053d = 0,te3m073d = 0,&
+       te12m0563d = 0,te227d = 0, te3m0913d = 0, te3m0813d = 0
 
   real, dimension(nLons,nLats,nAlts) :: &
        teffective_n2, teffective_o2, teffective_no, u2, mb, mbb, &
@@ -279,7 +279,6 @@ subroutine calc_chemistry(iBlock)
 
            tn1 = exp(107.8/tn)
            tn06 = exp(67.5/tn)
-
            rr_opn2 = min(5.0e-19,4.5e-20*tr3**2)
 
            k1_n2_point = k1_n2(iLon,iLat,iAlt)

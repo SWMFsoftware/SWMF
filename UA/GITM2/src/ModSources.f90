@@ -101,17 +101,17 @@ module ModSources
   real, allocatable :: AuroralHeatingRate(:,:,:,:)
   real, allocatable :: IonPrecipIonRateS(:,:,:,:,:)
   real, allocatable :: IonPrecipHeatingRate(:,:,:,:)
-  real :: ChemicalHeatingRate(nLons, nLats, nAlts)
-  real :: ChemicalHeatingRateIon(nLons, nLats, nAlts)
-  real :: ChemicalHeatingRateEle(nLons, nLats, nAlts)
+  real :: ChemicalHeatingRate(nLons, nLats, nAlts) = 0.0
+  real :: ChemicalHeatingRateIon(nLons, nLats, nAlts) = 0.0
+  real :: ChemicalHeatingRateEle(nLons, nLats, nAlts) = 0.0
 
   
 
-  real :: HorizontalTempSource(nLons, nLats, nAlts)
+  real :: HorizontalTempSource(nLons, nLats, nAlts) = 0.0
 
-  real :: Diffusion(nLons, nLats, nAlts, nSpecies)
-  real :: NeutralFriction(nLons, nLats, nAlts, nSpecies)
-  real :: IonNeutralFriction(nLons, nLats, nAlts, nSpecies)
+  real :: Diffusion(nLons, nLats, nAlts, nSpecies) = 0.0
+  real :: NeutralFriction(nLons, nLats, nAlts, nSpecies) = 0.0
+  real :: IonNeutralFriction(nLons, nLats, nAlts, nSpecies) = 0.0
 
   real, allocatable :: KappaEddyDiffusion(:,:,:,:)
 

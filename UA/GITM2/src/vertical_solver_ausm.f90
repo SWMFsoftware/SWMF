@@ -579,8 +579,7 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
   ! ----------------------------------------------------
   real, dimension(1:nAlts)    :: VertVisc
   real, dimension(1:nAlts)    :: ThermalCond
-
-
+  NewVertVel = 0.0
   !--------------------------------------------------------------------------
   !--------------------------------------------------------------------------
   Vel0 = 100.0 ! initial velocity in m/s

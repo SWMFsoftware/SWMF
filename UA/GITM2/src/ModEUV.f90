@@ -122,16 +122,16 @@ module ModEUV
 
   ! JMB:  07/11/2017:  PhotoElectron Contribution Arrays
   real, allocatable :: O2PERateS(:,:,:,:,:)
-  real , Dimension(1:Num_Wavelengths_High,3) :: pelecratio_O2 
+  real , Dimension(1:Num_Wavelengths_High,3) :: pelecratio_O2 = 0.0
 
   real, allocatable :: N2PERateS(:,:,:,:,:)
-  real , Dimension(1:Num_Wavelengths_High,3) :: pelecratio_N2 
+  real , Dimension(1:Num_Wavelengths_High,3) :: pelecratio_N2 = 0.0
 
   real, allocatable :: CH4PERateS(:,:,:,:,:)
-  real , Dimension(1:Num_Wavelengths_High,11) :: pelecratio_CH4 
+  real , Dimension(1:Num_Wavelengths_High,11) :: pelecratio_CH4 = 0.0
 
   real, allocatable :: OPERateS(:,:,:,:,:)
-  real , Dimension(1:Num_Wavelengths_High,3) :: pelecratio_O 
+  real , Dimension(1:Num_Wavelengths_High,3) :: pelecratio_O = 0.0
 
 !! Nighttime EUV Ionization Rates
  !! Begin Nighttime

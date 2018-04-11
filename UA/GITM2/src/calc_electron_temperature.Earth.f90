@@ -436,12 +436,12 @@ subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeati
   real(Real8_), dimension(-1:nLons+2,-1:nLats+2,0:nAlts+1) :: te_con, ti_con
   real(Real8_), dimension(-1:nLons+2,-1:nLats+2) :: dtedphe, dtidphe, dtedtheta, dtidtheta
   real(Real8_), dimension(-1:nLons+2,-1:nLats+2) :: dledphe, dlidphe, dledtheta, dlidtheta
-  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: Qphe, Qenc, Qeic, Qiec, &
-       Qinc_t, Qinc_v, Qnic_t, Qnic_v, iAdvection, Qaurora, QprecipIon, &
-       Qencp, Qeicp, Qiecp, Qinc_tp, Qrotp, Qfp, Qexcp, Qvib_o2p, Qvib_n2p, &
-       Qencm, Qeicm, Qiecm, Qinc_tm, Qrotm, Qfm, Qexcm, Qvib_o2m, Qvib_n2m, &
-       Qrot, Qf, Qeic_v, Qenc_v, Qexc, Qvib_o2, Qvib_n2, &
-       Qeconhm, Qeconhp,Qiconhm, Qiconhp  !! Conduction perpendicular to field lines  
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: Qphe = 0, Qenc = 0, Qeic = 0, Qiec = 0, &
+       Qinc_t = 0, Qinc_v = 0, Qnic_t = 0, Qnic_v = 0, iAdvection = 0, Qaurora = 0, QprecipIon = 0, &
+       Qencp = 0, Qeicp = 0, Qiecp = 0, Qinc_tp = 0, Qrotp = 0, Qfp = 0, Qexcp = 0, Qvib_o2p = 0, Qvib_n2p = 0, &
+       Qencm = 0, Qeicm = 0, Qiecm = 0, Qinc_tm = 0, Qrotm = 0, Qfm = 0, Qexcm = 0, Qvib_o2m = 0, Qvib_n2m = 0, &
+       Qrot = 0, Qf, Qeic_v = 0, Qenc_v = 0, Qexc = 0, Qvib_o2 = 0, Qvib_n2 = 0, &
+       Qeconhm = 0, Qeconhp = 0,Qiconhm = 0, Qiconhp = 0  !! Conduction perpendicular to field lines
   !! Magnetic dip/declination angles, Conductivities
   real(Real8_), dimension(nLons,nLats,0:nAlts+1) :: cos2dip, magh2, sin2dec, cos2dec, sindec, cosdec 
   real(Real8_), dimension(nLons,nLats) :: sin2theta, sintheta, costheta !! polar angle

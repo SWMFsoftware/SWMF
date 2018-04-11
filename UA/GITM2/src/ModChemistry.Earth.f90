@@ -14,8 +14,8 @@
   implicit None
     
     real :: Ions(nIons),Neutrals(nSpeciesTotal), eDensity
-    real :: tr, tr3, te3, te12d, te227d, te3m07, te12m056, te3m05, te3m039, te3m085
-    real :: tr3m044,  tr3m08, tr3m04, te22m05, ti, tn, tn1, tn06, rr_opn2
+    real :: tr = 0, tr3 = 0, te3 = 0, te12d = 0, te227d = 0, te3m07 = 0, te12m056 = 0, te3m05 = 0, te3m039 = 0, te3m085 = 0
+    real :: tr3m044 = 0,  tr3m08 = 0, tr3m04 = 0, te22m05 = 0, ti = 0, tn = 0, tn1 = 0, tn06 = 0, rr_opn2 = 0
     logical :: useNeutralConstituent(nSpeciesTotal),useIonConstituent(nIons)
     integer :: nittot = 0
 contains
