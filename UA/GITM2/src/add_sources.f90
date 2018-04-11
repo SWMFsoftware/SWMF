@@ -49,7 +49,8 @@ subroutine add_sources
      ! JMB:  07/13/2017.
      ! 2nd order conduction update:  Separately add Conduction to this
      ! because Conduction now spans(0:nAlts+1)
-     Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
+     if (UsePerturbation) then
+        Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
           Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
           LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
           /TempUnit(1:nLons,1:nLats,1:nAlts)&
@@ -62,6 +63,20 @@ subroutine add_sources
           ) &
           + ChemicalHeatingRate &
           + UserHeatingRate(1:nLons, 1:nLats, 1:nAlts, iBlock)
+     else
+        Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) = &
+          Temperature(1:nLons, 1:nLats, 1:nAlts, iBlock) + Dt * ( &
+          LowAtmosRadRate(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          /TempUnit(1:nLons,1:nLats,1:nAlts)&
+          - RadCooling(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          + EuvHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          + PhotoElectronHeating(1:nLons, 1:nLats, 1:nAlts, iBlock) &
+          + AuroralHeating &
+          + JouleHeating &
+          + ElectronHeating &
+          ) &
+          + ChemicalHeatingRate
+     endif
 
      Temperature(1:nLons, 1:nLats, 0:nAlts+1, iBlock) = &
           Temperature(1:nLons, 1:nLats, 0:nAlts+1, iBlock) &
