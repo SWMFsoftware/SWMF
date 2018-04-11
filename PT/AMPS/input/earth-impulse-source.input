@@ -1,7 +1,7 @@
 
 #main
 
-SpeciesList=H_PLUS1 
+SpeciesList=H_PLUS1, Electron 
 
 ErrorLog=error.log
 Prefix=AMPS
@@ -42,11 +42,11 @@ ForceRepeatableSimulationPath=off ! on,off
 StdoutErrorLog=off !on,off -> print out error message on the screen
 
 
-CouplerMode=file(tecplot) !!T96 !!geopack !!!!(batsrus) !!!ices !!off, ices, swmf
+CouplerMode=T96 !!!file(batsrus) !file(batsrus) !!T96 !!geopack !!!!(batsrus) !!!ices !!off, ices, swmf
 
 TimeStepMode=SpeciesGlobalTimeStep
 ParticleWeightMode=SpeciesGlobalParticleWeight
-ParticleWeightCorrectionMode=on
+ParticleWeightCorrectionMode=off !!on
 
 MoverIntegratorMode=Boris-relativistic
 
@@ -64,7 +64,11 @@ MoverIntegratorMode=Boris-relativistic
   MaxMeshRefinmentLevel=12
   EnforceRequestedMeshResolution=on !on,off
 
+  FirstPrintedOutputFile=100000000
+
   RequestedParticleBufferLength=15000000
+
+  InitialSampleLength=1000
 
   BlockCells=4,4,4
   GhostCells=1,1,1
@@ -73,9 +77,17 @@ MoverIntegratorMode=Boris-relativistic
   NastranSurfaceUserData=on !!!on, off
   ControlParticleInsideNastranSurface=on !!!on,of
 
-  TrajectoryTracing=off
+  TrajectoryTracing=on 
+  MaxSampledTrajectoryNumber=1000
 
- define _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node) Earth::Sampling::ParticleData::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)
+  define _PIC_PARTICLE_TRACKER_MODE_ _PIC_MODE_ON_
+  define _PIC_PARTICLE_TRACKER__RUNTIME_OUTPUT_ _PIC_MODE_ON_
+
+  define _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE_ _PIC_PARTICLE_MOVER__BACKWARD_TIME_INTEGRATION_MODE__ENABLED_ 
+
+define _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE_  _PIC_PARTICLE_DOMAIN_BOUNDARY_INTERSECTION_PROCESSING_MODE__USER_FUNCTION_
+
+ !!!define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node) Earth::Sampling::ParticleData::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s,node)
 
   define _PIC_OUTPUT__DRIFT_VELOCITY__MODE_ _PIC_MODE_ON_
   define _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE_  _PIC_OUTPUT__CELL_CORNER_INTERPOLATION_STENCIL_MODE__LINEAR_
@@ -114,18 +126,12 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 !  define _PIC_PARTICLE_MOVER__GENERIC_TRANSFORMATION_PROCESSOR_(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode) ElectricallyChargedDust::Charging::UpdateGrainCharge__EQUILIBRIUM_POTENTIAL(xInit,xFinal,vFinal,spec,ptr,ParticleData,dtMin,startNode)
 
 
-define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Earth::ParticleMover(ptr,LocalTimeStep,node)
+ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Earth::ParticleMover(ptr,LocalTimeStep,node)
 
 
-  define _PIC_DYNAMIC_LOAD_BALANCING__MIN_ITERATION_BETWEEN_LOAD_REBALANCING_ 15
-  define _PIC_RUNTIME_STAT_OUTPUT__MAX_ITERATION_NUMBER_ 5
-
-!define _PIC__OPENMP_THREAD_SPLIT_MODE_   _PIC__OPENMP_THREAD_SPLIT_MODE__CELLS_
-! define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
- define _PIC__OPENMP_THREAD_SPLIT_MODE_ _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
-
-  !define _PIC_DYNAMIC_LOAD_BALANCING_MODE_  _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
-  define _PIC_DYNAMIC_LOAD_BALANCING_MODE_ _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+!the mesh resoution close to Europa
+! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__FULL_
+! define _EUROPA_MESH_RESOLUTION_MODE_  _EUROPA_MESH_RESOLUTION_MODE__REDUCED_
 
 #endGeneral
 
@@ -133,8 +139,8 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Ear
   cell_centered_linear_interpolation_mode=amps !!off !amps,swmf,off  
   cell_centered_linear_interpolation_src=default
 
-  geopack=on 
-  T96=on 
+  geopack=on
+  T96=on
 #endinterface
 
 
@@ -165,12 +171,34 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Ear
   GCR=on
   SEP=off
 
-! ParticleDataSamplingMode=on
+  CutOffTestLocations=on \\
+    emin=100.0*Mev2J \\
+    emax=10000.0*Mev2J \\
+    nTotalParticles=500 \\
+    nInjectionIterations=10 \\
+    x=300.0E3+_RADIUS_(_TARGET_),0,0 \\ 
+    x=500.0E3+_RADIUS_(_TARGET_),0,0 \\
+    x=500.0E3+_RADIUS_(_TARGET_),0,500.0E3+_RADIUS_(_TARGET_) \\ 
+    x=1000.0E3+_RADIUS_(_TARGET_),0,1000.0E3+_RADIUS_(_TARGET_)   
 
-  ImpulseSource=on \\
+  ImpulseSource=off \\
     Spectrum=constant(1.0E1*MeV2J) \\ 
-    New: x=9000.0E3,0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=5.0E6 \\
-    New: x=5.7E7,0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=5.0E6    
+    New: x=300.0E3+_RADIUS_(_TARGET_),0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=2.0E6 \\
+    New: x=500.0E3+_RADIUS_(_TARGET_),0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=2.0E6 \\   
+    New: x=2.0*_RADIUS_(_TARGET_),0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=2.0E6 \\
+    New: x=4.0*_RADIUS_(_TARGET_),0,0; spec=H_PLUS1,time=0,Source=1.0E11,npart=2.0E6
+
+  SphericalShells=off \\
+    x=125.0E3+_RADIUS_(_TARGET_),400.0E3+_RADIUS_(_TARGET_), \\
+       1.5*_RADIUS_(_TARGET_),2.0*_RADIUS_(_TARGET_),5.0*_RADIUS_(_TARGET_), \\
+       10.0*_RADIUS_(_TARGET_),15.0*_RADIUS_(_TARGET_) \\
+    emin=1.0*MeV2J \\
+    emax=50.0*MeV2J \\
+    nLevels=10
+
+
+  ParticleDataSamplingMode=on \\
+    function=Earth::Sampling::ParticleData::SampleParticleData
 
 #endBlock
 
@@ -183,7 +211,7 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Ear
 
 
   define _TARGET_ _EARTH_ 
-! define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
+!  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
 !  define _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) Europa::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight,tempSamplingBuffer,s) 
 !  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE_ _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_MODE__ON_
 !  define _PIC__USER_DEFINED__MPI_MODEL_DATA_EXCHANGE_() Europa::ExchangeSurfaceAreaDensity()
@@ -233,7 +261,7 @@ define _PIC_PARTICLE_MOVER__MOVE_PARTICLE_TIME_STEP_(ptr,LocalTimeStep,node) Ear
 !    SourceRate(O2)=1.69E22, BulkVelocity(O2)=6000.0  
 
 
-! Source:ExternalDomainBoundaryInjection=off !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
+ Source:ExternalDomainBoundaryInjection=on !on, off -> initialize the injection processes ID for particle injection through the external boundary of the domain
 
 !  Source:UserDefined=off \\ !on,off
 !    SourceProcessCode=Plume  \\
