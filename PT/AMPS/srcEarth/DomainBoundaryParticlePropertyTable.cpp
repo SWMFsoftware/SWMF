@@ -15,9 +15,9 @@
 double Earth::CutoffRigidity::DomainBoundaryParticleProperty::logEmax=log(1.0E1*GeV2J);
 double Earth::CutoffRigidity::DomainBoundaryParticleProperty::logEmin=log(1.0E1*MeV2J);
 
-int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nAzimuthIntervals=10;
-int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nCosZenithIntervals=10;
-int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nLogEnergyLevels=10;
+int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nAzimuthIntervals=50;
+int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nCosZenithIntervals=50;
+int Earth::CutoffRigidity::DomainBoundaryParticleProperty::nLogEnergyLevels=50;
 
 double Earth::CutoffRigidity::DomainBoundaryParticleProperty::dCosZenithAngle=1.0/Earth::CutoffRigidity::DomainBoundaryParticleProperty::nCosZenithIntervals;
 double Earth::CutoffRigidity::DomainBoundaryParticleProperty::dAzimuthAngle=2.0*Pi/Earth::CutoffRigidity::DomainBoundaryParticleProperty::nAzimuthIntervals;
@@ -43,6 +43,10 @@ bool Earth::CutoffRigidity::DomainBoundaryParticleProperty::EnableSampleParticle
 //allocate the particle property sample table
 void Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate() {
   int s,iface,i,j,iThreadOpenMP,iTestLocation;
+
+  logEmax=log(1.02*Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit);
+  logEmin=log(0.8*Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit);
+  dLogE=(logEmax-logEmin)/nLogEnergyLevels;
 
   int offset,nlocs=std::max(1,Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength);
 
@@ -99,7 +103,7 @@ int Earth::CutoffRigidity::DomainBoundaryParticleProperty::GetVelocityVectorInde
 
   //getermine the energy level
   Energy=Relativistic::Speed2E(Speed,PIC::MolecularData::GetMass(spec));
-  iLogEnergyLevel=(int)(log(Energy)-logEmin)/dLogE;
+  iLogEnergyLevel=(int)((log(Energy)-logEmin)/dLogE);
 
   if (iLogEnergyLevel<0) iLogEnergyLevel=0;
   if (iLogEnergyLevel>=nLogEnergyLevels) iLogEnergyLevel=nLogEnergyLevels-1;
@@ -130,11 +134,17 @@ int Earth::CutoffRigidity::DomainBoundaryParticleProperty::GetVelocityVectorInde
 void Earth::CutoffRigidity::DomainBoundaryParticleProperty::ConvertVelocityVectorIndex2Velocity(int spec,double *v,int iface,int Index) {
   int idim,iCosZenithInterval,iAzimuthInterval,iLogEnergyLevel;
 
-  iAzimuthInterval=Index%nAzimuthIntervals;
+/*  iAzimuthInterval=Index%nAzimuthIntervals;
   Index/=nAzimuthIntervals;
 
   iCosZenithInterval=Index%nCosZenithIntervals;
-  iLogEnergyLevel=Index/nCosZenithIntervals;
+  iLogEnergyLevel=Index/nCosZenithIntervals;*/
+
+  iLogEnergyLevel=Index/(nCosZenithIntervals*nAzimuthIntervals);
+  Index=Index%(nCosZenithIntervals*nAzimuthIntervals);
+
+  iCosZenithInterval=Index/nAzimuthIntervals;
+  iAzimuthInterval=Index%nAzimuthIntervals;
 
   double Speed,Energy,ZenithAngle,AzimuthAngle,cosZenithAngle,sinZenithAngle,cosAzimuthAngle,sinAzimuthAngle;
 
