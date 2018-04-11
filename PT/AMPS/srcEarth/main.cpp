@@ -256,7 +256,7 @@ int main(int argc,char **argv) {
       double ***EnergySpectrum,**TotalFlux,v[3],KineticEnergy,Speed,DiffFlux,dSurface,norm;
       int offset,iTestsLocation,spec,i,j,iface,iTable,jTable,Index,iBit,iByte,iE;
 
-      const int nTotalEnergySpectrumIntervals=100;
+      const int nTotalEnergySpectrumIntervals=25;
       const double logMinEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit);
       const double logMaxEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit);
       const double dE=(logMaxEnergyLimit-logMinEnergyLimit)/nTotalEnergySpectrumIntervals;
