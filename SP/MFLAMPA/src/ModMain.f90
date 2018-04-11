@@ -38,6 +38,10 @@ module SP_ModMain
   logical:: IsLastRead=.false.
   ! Indicator of stand alone mode
   logical:: IsStandAlone=.false.
+  ! Whether and when to save the restart file (STAND ALONE ONLY)
+  logical:: DoSaveRestart=.false.
+  integer:: DnSaveRestart=-1,  nIterSinceRestart = 0
+  real   :: DtSaveRestart=-1.0, TimeSinceRestart = 0.0
   !/
 
   !\
@@ -182,6 +186,14 @@ contains
           if(i_session_read() /= 1)CYCLE
           call check_stand_alone
           call read_param_time(NameCommand)
+       case('#SAVERESTART')
+          if(i_session_read() /= 1)CYCLE
+          call check_stand_alone
+          call read_var("DoSaveRestart",DoSaveRestart)
+          call read_var("DnSaveRestart",DnSaveRestart)
+          call read_var("DtSaveRestart",DtSaveRestart)
+          if(DtSaveRestart < 0. .and. DnSaveRestart < 0)&
+               call CON_stop(NameSub//': incorrectly set '//NameCommand)
        case default
           call CON_stop(NameSub//': Unknown command '//NameCommand)
        end select
@@ -201,7 +213,7 @@ contains
   subroutine initialize
     use SP_ModGrid        , ONLY: init_grid=>init
     use SP_ModUnit        , ONLY: init_unit=>init 
-    use SP_ModDistribution, ONLY: init_dist=>init  
+    use SP_ModDistribution, ONLY: init_dist=>init
     use SP_ModAdvance     , ONLY: init_advance=>init
     use SP_ModPlot        , ONLY: init_plot=>init
     use SP_ModReadMhData  , ONLY: init_mhdata=>init
@@ -213,7 +225,7 @@ contains
     call init_dist
     call init_advance
     call init_plot
-    call init_mhdata 
+    call init_mhdata
     if(DoRestart) call read_restart
     if((.not.IsStandAlone).and.(.not.DoRestart).and.(.not.DoReadMhData))&
          call get_origin_points
@@ -270,6 +282,7 @@ contains
     ! advance the solution in time
     real, intent(in)   :: TimeLimit
     logical, save:: IsFirstCall = .true.
+    real:: Dt ! time increment in the current call
     !------------------------------
     !\
     ! write the initial background state to the output file
@@ -304,6 +317,7 @@ contains
     ! if no new background data loaded, don't advance in time
     !/
     if(DataInputTime <= SPTime) RETURN
+
     call lagr_time_derivative
     !\
     ! run the model
@@ -312,8 +326,25 @@ contains
 
     ! update time & iteration counters
     iIter = iIter + 1
-    SPTime = min(DataInputTime,TimeLimit)
+    Dt = min(DataInputTime,TimeLimit) - SPTime
+    SPTime = SPTime + Dt
     call save_plot_all
+    
+    ! save restart in the stand alone mod
+    if(IsStandAlone .and. DoSaveRestart)then
+       nIterSinceRestart = nIterSinceRestart + 1
+       TimeSinceRestart  = TimeSinceRestart  + Dt 
+       if(  DtSaveRestart > 0..and.  TimeSinceRestart >= DtSaveRestart .or. &
+            DnSaveRestart > 0 .and. nIterSinceRestart == DnSaveRestart)then
+          call save_restart
+          if(DtSaveRestart > 0.)then
+             TimeSinceRestart  = modulo(TimeSinceRestart, DtSaveRestart)
+          else
+             TimeSinceRestart = 0.
+          end if
+          nIterSinceRestart = 0
+       end if
+    end if
   contains
     !=====================================================================
     subroutine lagr_time_derivative
@@ -322,7 +353,6 @@ contains
       do iBlock = 1, nBlock
          do iParticle = 1, nParticle_B(  iBlock)            
             ! divergence of plasma velocity
-
             State_VIB(DLogRho_,iParticle,iBlock) = log(&
                  State_VIB(Rho_,iParticle,iBlock)/&
                  State_VIB(RhoOld_,iParticle,iBlock))
@@ -391,9 +421,6 @@ contains
                call CON_stop(NameSub//&
                ': inconsistent values of ROrigin, RIhMin, RScMax, RIhMax')
        end if
-    else
-       if(DoRestart)call CON_stop(NameSub//&
-            'Restart save/read are not implemented for the stand-alone mode')
     end if
     ! Make output directory
     if(iProc==0) call make_dir(NamePlotDir)
