@@ -1,7 +1,7 @@
 module ModCellGradient
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iTest, jTest, kTest
 
   ! Calculate cell centered gradient and divergence
 
@@ -66,9 +66,7 @@ contains
 
     if(UseBodyCell .or. .not. body_blk(iBlock)) then
        if(IsCartesian)then
-
           ! Simple central differencing
-
           InvDxHalf = 0.5/CellSize_DB(1,iBlock)
           InvDyHalf = 0.5/CellSize_DB(2,iBlock)
           InvDzHalf = 0.5/CellSize_DB(3,iBlock)
@@ -187,6 +185,21 @@ contains
              Div_G(i,j,k) = Div_G(i,j,k)*0.5/CellVolume_GB(i,j,k,iBlock)
           end do; end do; end do
        end if
+    end if
+
+    if(DoTest)then
+       write(*,*) NameSub, 'Var_DG(ijk)=', Var_DG(:,iTest,jTest,kTest)
+       write(*,*) NameSub, 'Var_DG(i-1)=', Var_DG(:,iTest-1,jTest,kTest)
+       write(*,*) NameSub, 'Var_DG(i+1)=', Var_DG(:,iTest+1,jTest,kTest)
+       if(nDim > 1)then
+          write(*,*) NameSub, 'Var_DG(j-1)=', Var_DG(:,iTest,jTest-1,kTest)
+          write(*,*) NameSub, 'Var_DG(j+1)=', Var_DG(:,iTest,jTest+1,kTest)
+       end if
+       if(nDim > 2)then
+          write(*,*) NameSub, 'Var_DG(k-1)=', Var_DG(:,iTest,jTest,kTest-1)
+          write(*,*) NameSub, 'Var_DG(k+1)=', Var_DG(:,iTest,jTest,kTest+1)
+       end if
+       write(*,*) NameSub, ' Div_G=',Div_G(iTest,jTest,kTest)
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
