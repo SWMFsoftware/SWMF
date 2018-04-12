@@ -485,9 +485,9 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
 
   real :: LogNum(-1:nAlts+2)
 
-  real, dimension(1:nAlts)    :: GradLogRho, DivVel, GradTemp, GradTempKoM, &
-       DiffLogRho, DiffTemp, GradTmp, DiffTmp, DiffLogNum, GradLogNum, &
-       DiviVel
+  real, dimension(1:nAlts)    :: GradLogRho = 0.0, DivVel = 0.0, GradTemp = 0.0, GradTempKoM = 0.0, &
+       DiffLogRho = 0.0, DiffTemp = 0.0, GradTmp = 0.0, DiffTmp = 0.0, DiffLogNum = 0.0, GradLogNum = 0.0, &
+       DiviVel = 0.0
   real, dimension(1:nAlts,3) :: GradVel_CD, DiffVel_CD
   real, dimension(1:nAlts,3) :: GradiVel_CD, DiffiVel_CD
 
@@ -838,7 +838,6 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
   NewNS  = 0.0
   NewNT  = 0.0
   NewRho = 0.0
-
   do iAlt = -1, nAlts+2
      do iSpecies = 1, nSpecies
          NewNS(iAlt,iSpecies) = NewRhoS(iAlt,iSpecies)/Mass(iSpecies)
@@ -849,8 +848,8 @@ subroutine advance_vertical_1stage_ausm( DtIn, &
          NewNT(iAlt) = NewNT(iAlt) + &
                NewNS(iAlt,iSpecies)
      enddo 
-  enddo 
-
+  enddo
+  iAlt = nAlts+2
 
   if (iAlt >= (nAlts - nAltsSponge)) then
      NuSP = AmpSP*(1.0 - cos( pi*(kSP - (nAlts - iAlt))/kSP) )
