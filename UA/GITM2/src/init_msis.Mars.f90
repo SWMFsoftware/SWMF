@@ -83,8 +83,10 @@ subroutine init_msis
   do iblock = 1, nblocks
      do ilon = 1,nlons
         do ilat = 1,nlats
-           jlat = nint((latitude(ilat,iblock)*180.0/pi+93.75)/7.5)
-           klon = nint((longitude(ilon,iblock)*180.0/pi+5.0)/10.0)
+           !jlat = nint((latitude(ilat,iblock)*180.0/pi+93.75)/7.5)
+           jlat = nint((latitude(ilat,iblock)+93.75)/7.5)
+           !klon = nint((longitude(ilon,iblock)*180.0/pi+5.0)/10.0)
+           klon = nint((longitude(ilon,iblock)+5.0)/10.0)
            SurfaceAlbedo(ilon,ilat,iblock) = dummyalbedo(jlat,klon)
            tinertia(ilon,ilat,iblock) = dummyti(jlat,klon)
       enddo
@@ -404,7 +406,7 @@ subroutine init_msis
 
      write(*,*) '==> Now Completing Mars Background Composition: END', iBlock   
 
-     call calc_electron_temperature(iBlock)
+     !call calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm,iHeating,lame,lami) (being called from add_sources.f90)
 
   enddo
 
