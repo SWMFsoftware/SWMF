@@ -51,9 +51,9 @@ module ModPlanet
   character (len=20) :: cSpecies(nSpeciesTotal)
   character (len=20) :: cIons(nIons)
 
-  real :: Mass(nSpeciesTotal), MassI(nIons)
+  real :: Mass(nSpeciesTotal) = 0.0, MassI(nIons) = 0.0
 
-  real :: Vibration(nSpeciesTotal)
+  real :: Vibration(nSpeciesTotal) = 0.0
 
   integer, parameter :: nEmissionWavelengths = 1
   integer, parameter :: nPhotoBins = 1
@@ -126,8 +126,9 @@ module ModPlanet
   real, parameter :: SecondsPerYear = DaysPerYear * Rotation_Period
   
   !Used as a damping term in Vertical solver.
-  real, dimension(nAlts) :: VertTau = 1.0e9 
-
+  real, dimension(nAlts+2) :: VertTau = 1.0e9   ! Changed from nAlts to nAlts + 2
+                                                ! Check if(UseDamping) condition in vertical_solver_ausm.f90
+                                                ! LHR (04/12/2018)
   logical :: IsEarth = .false.
   logical :: IsMars = .true.
   logical :: IsTitan = .false.
@@ -570,7 +571,7 @@ module ModPlanet
 !      WREFCO2, WREFH2O
 
 !#####################################################
-real*4 :: dummyalbedo(24,36), dummyti(24,36)
+real*4 :: dummyalbedo(24,36) = 0.0, dummyti(24,36) = 0.0
 
 contains
 
