@@ -1,5 +1,4 @@
-
-subroutine calc_electron_temperature(iBlock)
+subroutine calc_electron_temperature(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm,iHeating,lame,lami)
 
   !  Take Tion and Telec values from empirical datasets from Viking (settei.F)
   !  -- Pre-MAVEN
@@ -8,6 +7,15 @@ subroutine calc_electron_temperature(iBlock)
 
   use ModGITM
   use ModPlanet, only : ialtminiono
+  use ModSizeGitm
+  use ModRates
+  use ModEUV
+  use ModSources
+  use ModConstants
+  use ModTime
+  use ModInputs
+  use ModUserGITM
+  use ModKind
 
   implicit none
 
@@ -19,6 +27,10 @@ subroutine calc_electron_temperature(iBlock)
   real,parameter :: Z0 = 241.
   real,parameter :: H0 = 60.
   real,parameter :: TE180 = 810.
+
+  real(Real8_), intent(in), dimension(0:nLons+1,0:nLats+1,0:nAlts+1) :: &
+    eHeatingp, iHeatingp, eHeatingm, &
+    iHeatingm, iHeating, lame, lami
 
   call report("Electron Density", 2)
   !Electron Temperature
@@ -99,7 +111,21 @@ end subroutine calc_electron_temperature
 
 subroutine calc_electron_ion_sources(iBlock,eHeatingp,iHeatingp,eHeatingm,iHeatingm, iHeating, lame, lami)
 
-  ElectronHeating = 0.0
+  use ModSizeGitm
+  use ModGITM
+  use ModPlanet
+  use ModRates
+  use ModEUV
+  use ModSources
+  use ModConstants
+  use ModUserGITM
+  use ModTime
+  use ModInputs
+
+  real(Real8_), dimension(0:nLons+1,0:nLats+1,0:nAlts+1), intent(out) :: eHeatingp, iHeatingp, eHeatingm, &
+    iHeatingm, iHeating, lame, lami
+
+  ElectronHeating = 1.0
 
 end subroutine calc_electron_ion_sources
 
