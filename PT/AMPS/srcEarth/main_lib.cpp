@@ -316,7 +316,7 @@ void amps_init_mesh() {
  Earth::CutoffRigidity::AllocateCutoffRigidityTable();
 
  //init the datastructure for registering of the velocity vectors of the particles that cross the boundary of the domain
- Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate();
+ Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate(std::max(1,Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength));
  Earth::CutoffRigidity::DomainBoundaryParticleProperty::Init();
 
  //turn on the reverse time integraion of the particle trajectory
@@ -490,7 +490,8 @@ void amps_init_mesh() {
 
              if (startNode->block!=NULL) {
                #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-               #pragma omp parallel for schedule(dynamic,1) default (none) shared (PIC::Mesh::mesh,iMin,jMin,kMin,S,PIC::CPLR::DATAFILE::Offset::MagneticField,PIC::CPLR::DATAFILE::Offset::ElectricField,startNode)
+               #pragma omp parallel for schedule(dynamic,1) default (none) shared (PIC::Mesh::mesh,iMin,jMin,kMin,S,PIC::CPLR::DATAFILE::Offset::MagneticField, \
+                   PIC::CPLR::DATAFILE::Offset::ElectricField,startNode,PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin,PIC::CPLR::DATAFILE::MULTIFILE::CurrDataFileOffset)
                #endif
 
                for (ii=0;ii<S;ii++) {
