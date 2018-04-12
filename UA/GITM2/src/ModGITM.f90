@@ -75,25 +75,25 @@ real, allocatable :: SpeciesDensityOld(:,:,:,:,:)
   real, allocatable :: dKe(:,:,:,:)
 
   ! JMB:  06/24/2016
-  real, dimension(nSpecies) :: ThermalDiffCoefS
+  real, dimension(nSpecies) :: ThermalDiffCoefS = 0.0
 
   real, dimension(nLons, nLats, nBlocksMax) :: &
        SurfaceAlbedo, SurfaceTemp,SubsurfaceTemp, tinertia, &
        dSubsurfaceTemp, dSurfaceTemp
 
   real, allocatable :: cp(:,:,:,:)
-  real :: ViscCoef(0:nLons+1,0:nLats+1, 0:nAlts+1)
-  real :: ViscCoefS(0:nLons+1,0:nLats+1, 0:nAlts+1,1:nSpecies)
+  real :: ViscCoef(0:nLons+1,0:nLats+1, 0:nAlts+1) = 0.0
+  real :: ViscCoefS(0:nLons+1,0:nLats+1, 0:nAlts+1,1:nSpecies) = 0.0
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
-       MeanIonMass, MeanMajorMass
+       MeanIonMass = 0.0, MeanMajorMass = 0.0
 
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2) :: &
        e_gyro, i_gyro
 
-  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: Collisions
+  real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, 3) :: Collisions = 0.0
   real, dimension(-1:nLons+2, -1:nLats+2, -1:nAlts+2, nIonsAdvect, nSpecies) :: &
-       IonCollisions
+       IonCollisions = 0.0
 
   real, allocatable :: B0(:,:,:,:,:)
   real, allocatable :: MLatitude(:,:,:,:)
@@ -245,6 +245,68 @@ contains
     allocate(PhotoEFluxU(nLons,nLats,nAlts,nPhotoBins,nBlocks))
     allocate(PhotoEFluxD(nLons,nLats,nAlts,nPhotoBins,nBlocks))
     allocate(PhotoEFluxTotal(nLons,nLats,nAlts,nBlocks,2))
+    dLonDist_GB = 0.0
+    InvDLonDist_GB = 0.0
+    dLonDist_FB = 0.0
+    InvDLonDist_FB = 0.0
+    dLatDist_GB = 0.0
+    InvDLatDist_GB = 0.0
+    dLatDist_FB = 0.0
+    InvDLatDist_FB = 0.0
+    Altitude_GB = 0.0
+    dAlt_GB = 0.0
+    RadialDistance_GB = 0.0
+    InvRadialDistance_GB = 0.0
+    Gravity_GB = 0.0
+    CellVolume = 0.0
+    dAltDLon_CB = 0.0
+    dAltDLat_CB = 0.0
+    Rho = 0.0
+    Temperature = 0.0
+    Pressure = 0.0
+    NDensity = 0.0
+    eTemperature = 1.0
+    ITemperature = 1.0
+    IPressure = 0.0
+    ePressure = 0.0
+    SpeciesDensity = 0.0
+    SpeciesDensityOld = 0.0
+    LogRhoS = 0.0
+    LogNS = 0.0
+    VerticalVelocity = 0.0
+    NDensityS = 0.0
+    IDensityS = 1.0
+    IRIDensity = 0.0
+    Gamma = 0.0
+    KappaTemp = 0.0
+    Ke = 0.0
+    dKe = 0.0
+    cp = 0.0
+    B0 = 0.0
+    MLatitude = 0.0
+    MLongitude = 0.0
+    DipAngle = 0.0
+    DecAngle = 0.0
+    b0_d1 = 0.0
+    b0_d2 = 0.0
+    b0_d3 = 0.0
+    b0_e1 = 0.0
+    b0_e2 = 0.0
+    b0_e3 = 0.0
+    b0_cD = 0.0
+    b0_Be3 = 0.0
+    cMax_GDB = 0.0
+    IonPressureGradient = 0.0
+    Potential = 0.0
+    Velocity = 0.0
+    IVelocity = 0.0
+    Emissions = 0.0
+    vEmissionRate = 0.0
+    PhotoElectronDensity = 0.0
+    PhotoElectronRate = 0.0
+    PhotoEFluxU = 0.0
+    PhotoEFluxD = 0.0
+    PhotoEFluxTotal = 0.0
   end subroutine init_mod_gitm
   !=========================================================================
   subroutine clean_mod_gitm
