@@ -1,5 +1,7 @@
 #^CFG FILE TESTING
 
+include Makefile.conf
+
 ### TESTS FOR THE STAND-ALONE GITM ###
 
 TIMINGFILE =./.test_file_timing.txt
@@ -82,8 +84,8 @@ test_gitm_earth_3d:
 
 # Plain 1D
 test_gitm_earth_1d_compile:
-	./Config.pl -Earth -g=1,1,50,4 -debug
-	$(MAKE) GITM
+	./Config.pl -Earth -g=1,1,50,4
+	$(MAKE) GITM DEBUG="${DEBUGFLAG}"
 
 test_gitm_earth_1d_rundir: test_rundir
 	cd ${TESTDIR}; cp UA/DataIn/UAM.in.1d ./UAM.in
