@@ -82,7 +82,7 @@ test_gitm_earth_3d:
 
 # Plain 1D
 test_gitm_earth_1d_compile:
-	./Config.pl -Earth -g=1,1,50,4
+	./Config.pl -Earth -g=1,1,50,4 -debug
 	$(MAKE) GITM
 
 test_gitm_earth_1d_rundir: test_rundir
