@@ -26,7 +26,7 @@ subroutine calc_chemistry(iBlock)
   real :: dttotal, dtsub, dtMin
   real :: tli(nIons), tsi(nIons), tln(nSpeciesTotal), tsn(nSpeciesTotal)
 
-  real :: EmissionTotals(nEmissions), F
+  real :: EmissionTotals(nEmissions) = 0.0, F
 
   logical :: doImplicit = .true.
   !---------------------------------------------------------------------------

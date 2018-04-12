@@ -11,9 +11,9 @@ module ModSources
   !/
 
   real, dimension(nLons, nLats, nAlts) :: &
-       NOCooling, OCooling, ElectronHeating, &
-       AuroralHeating, JouleHeating, IonPrecipHeating, &
-       EddyCond,EddyCondAdia
+       NOCooling = 0.0, OCooling = 0.0, ElectronHeating = 0.0, &
+       AuroralHeating = 0.0, JouleHeating = 0.0, IonPrecipHeating = 0.0, &
+       EddyCond = 0.0,EddyCondAdia = 0.0
 
   real, dimension(nLons, nLats, 0:nAlts+1) :: MoleConduction
 
@@ -50,10 +50,10 @@ module ModSources
 
   
   integer, parameter :: nReactions = 26
-  real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions)
-  real :: ChemicalHeatingS(nReactions)
-  real :: NeutralSourcesTotal(nAlts, nSpeciesTotal)
-  real :: NeutralLossesTotal(nAlts, nSpeciesTotal)
+  real :: ChemicalHeatingSpecies(nLons, nLats, nAlts,nReactions) = 0.0
+  real :: ChemicalHeatingS(nReactions) = 0.0
+  real :: NeutralSourcesTotal(nAlts, nSpeciesTotal) = 0.0
+  real :: NeutralLossesTotal(nAlts, nSpeciesTotal) = 0.0
   real, allocatable :: ISourcesTotal(:,:,:,:,:)
   real, allocatable :: ILossesTotal(:,:,:,:,:)
 
