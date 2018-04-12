@@ -109,7 +109,7 @@ subroutine logfile(dir)
 
   real    :: minTemp, maxTemp, localVar, minVertVel, maxVertVel
   real    :: AverageTemp, AverageVertVel, TotalVolume, Bx, By, Bz, Vx, Hpi
-  real    :: HPn, HPs, SSLon, SSLat, SSVTEC
+  real    :: HPn = 0.0, HPs = 0.0, SSLon, SSLat, SSVTEC
   integer :: iError
 
   if (.not. IsOpenLogFile .and. iProc == 0) then
@@ -198,11 +198,11 @@ subroutine logfile(dir)
   LocalVar = HemisphericPowerNorth
   call MPI_REDUCE(LocalVar, HPn, 1, MPI_REAL, MPI_SUM, &
        0, iCommGITM, iError)
-
+  HPn = 0.0
   LocalVar = HemisphericPowerSouth
   call MPI_REDUCE(LocalVar, HPs, 1, MPI_REAL, MPI_SUM, &
        0, iCommGITM, iError)
-
+  HPs = 0.0
   LocalVar = SSVTEC
   call MPI_REDUCE(LocalVar, SSVTEC, 1, MPI_REAL, MPI_MAX, &
        0, iCommGITM, iError) 
@@ -220,7 +220,7 @@ subroutine logfile(dir)
      call get_hpi(CurrentTime,Hpi,iError)
 
      if (Is1D) SSVTEC = -1.0
-     
+     write(*,*) Hpn, Hps
      write(iLogFileUnit_,"(i8,i5,5i3,i4,f8.4,6f13.5,8f9.1,10f10.5,10f10.5,10f8.3)") &
           iStep, iTimeArray, dt, minTemp, maxTemp, AverageTemp, &
           minVertVel, maxVertVel, AverageVertVel,&
