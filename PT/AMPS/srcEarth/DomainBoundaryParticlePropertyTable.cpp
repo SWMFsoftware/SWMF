@@ -39,17 +39,39 @@ double Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters
 bool Earth::CutoffRigidity::DomainBoundaryParticleProperty::ApplyInjectionPhaseSpaceLimiting=false;
 bool Earth::CutoffRigidity::DomainBoundaryParticleProperty::EnableSampleParticleProperty=true;
 
+//de-allocate sampling buffers
+void Earth::CutoffRigidity::DomainBoundaryParticleProperty::Deallocate() {
+  if (SampleTable!=NULL) {
+    delete [] SampleTable[0][0][0][0];
+    delete [] SampleTable[0][0][0];
+    delete [] SampleTable[0][0];
+    delete [] SampleTable[0];
+    delete [] SampleTable;
+  }
+
+  SampleTable=NULL;
+}
 
 //allocate the particle property sample table
-void Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate() {
+void Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate(int nlocs) {
   int s,iface,i,j,iThreadOpenMP,iTestLocation;
 
   logEmax=log(1.02*Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit);
   logEmin=log(0.8*Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit);
   dLogE=(logEmax-logEmin)/nLogEnergyLevels;
 
-  int offset,nlocs=std::max(1,Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength);
+  int offset;
 
+  //de-allocate the sampling tables in case they have been allocated
+  if (SampleTable!=NULL) {
+    delete [] SampleTable[0][0][0][0];
+    delete [] SampleTable[0][0][0];
+    delete [] SampleTable[0][0];
+    delete [] SampleTable[0];
+    delete [] SampleTable;
+  }
+
+  //allocate the sampling tables
   SampleTable=new cBitwiseFlagTable**** [nlocs];
   SampleTable[0]=new cBitwiseFlagTable*** [PIC::nTotalSpecies*nlocs];
 
