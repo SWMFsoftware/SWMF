@@ -367,6 +367,8 @@ void SampleIndividualLocations(int nMaxIterations) {
 
   }
 
+  //release sampling buffers
+  Earth::CutoffRigidity::DomainBoundaryParticleProperty::Deallocate();
 }
 
 
@@ -379,13 +381,43 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
 
   int nZenithElements=50;
   int nAzimuthalElements=50;
-  int nTotalInjectedParticlePerPoint=100;
+  int nTotalInjectedParticlePerPoint=25;
 
   cInternalSphericalData Sphere;
   Sphere.SetGeneralSurfaceMeshParameters(nZenithElements,nAzimuthalElements);
   Sphere.SetSphereGeometricalParameters(x,Radius);
 
-  Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate(nZenithElements*nAzimuthalElements);
+//  Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate(nZenithElements*nAzimuthalElements);
+
+  double ***EnergySpectrum,**TotalFlux,KineticEnergy,Speed,DiffFlux,dSurface,norm;
+  int offset,iTestsLocation,spec,i,j,iface,iTable,jTable,Index,iBit,iByte,iE;
+
+  const int nTotalEnergySpectrumIntervals=50;
+  const double logMinEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit);
+  const double logMaxEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit);
+  const double dE=(logMaxEnergyLimit-logMinEnergyLimit)/nTotalEnergySpectrumIntervals;
+
+  TotalFlux=new double* [nZenithElements*nAzimuthalElements];
+  TotalFlux[0]=new double [nZenithElements*nAzimuthalElements*PIC::nTotalSpecies];
+  for (iTestsLocation=1;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) TotalFlux[iTestsLocation]=TotalFlux[iTestsLocation-1]+PIC::nTotalSpecies;
+
+  EnergySpectrum=new double** [nZenithElements*nAzimuthalElements];
+  EnergySpectrum[0]=new double* [nZenithElements*nAzimuthalElements*PIC::nTotalSpecies];
+  for (iTestsLocation=1;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) EnergySpectrum[iTestsLocation]=EnergySpectrum[iTestsLocation-1]+PIC::nTotalSpecies;
+
+  EnergySpectrum[0][0]=new double [nZenithElements*nAzimuthalElements*PIC::nTotalSpecies*nTotalEnergySpectrumIntervals];
+
+  for (offset=0,iTestsLocation=0;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    EnergySpectrum[iTestsLocation][spec]=EnergySpectrum[0][0]+offset;
+    offset+=nTotalEnergySpectrumIntervals;
+  }
+
+  //set the values of the buffers to zero
+  for (iTestsLocation=0;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) for (spec=0;spec<PIC::nTotalSpecies;spec++) {
+    TotalFlux[iTestsLocation][spec]=0.0;
+
+    for (i=0;i<nTotalEnergySpectrumIntervals;i++) EnergySpectrum[iTestsLocation][spec][i]=0.0;
+  }
 
 
   //estimate the total flux and rigidity in a set of the defined locations
@@ -397,46 +429,79 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
     PIC::Mover::BackwardTimeIntegrationMode=_PIC_MODE_ON_;
     Earth::CutoffRigidity::DomainBoundaryParticleProperty::EnableSampleParticleProperty=true;
 
-    do {
-      //reset the partilce generation flag
-      localParticleGenerationFlag=0;
 
-      //Inject new particles
-      int iZenithElement,iAzimutalElement;
+    //loop through a part of the sphere
+    int iZenithElementStart=0,iZenithElementFinish=0,iAzimutalElementStart=0,iAzimutalElementFinish=0;
 
-      if (nTotalInjectedParticles<nTotalInjectedParticlePerPoint) {
-        nTotalInjectedParticles+=nIngectedParticlePerIteration;
+    const int nSphereIndexIncrement=25;
+    int iSphereIndex,iSphereIndexMin,iSphereIndexMax;
 
-        //inject the new portion of the particles
-        for (int spec=0;spec<PIC::nTotalSpecies;spec++) for (iZenithElement=0;iZenithElement<nZenithElements;iZenithElement++) for (iAzimutalElement=0;iAzimutalElement<nAzimuthalElements;iAzimutalElement++) {
-          int idim,iCell,jCell,kCell;
-          cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode;
+    iSphereIndexMin=0;
+    iSphereIndexMax=std::min(nSphereIndexIncrement,nZenithElements*nAzimuthalElements);
 
-          iLocation=Sphere.GetLocalSurfaceElementNumber(iZenithElement,iAzimutalElement);
+    //allocate the buffers for output of the final resuts
 
-          for (idim=0;idim<3;idim++) x[idim]=Earth::CutoffRigidity::IndividualLocations::xTestLocationTable[iLocation][idim];
+    while ((iSphereIndexMin<nZenithElements*nAzimuthalElements)&&(iSphereIndexMax<nZenithElements*nAzimuthalElements)) {
+      IterationCounter=0,nTotalInjectedParticles=0;
 
-          Sphere.GetSurfaceElementRandomPoint(x,iZenithElement,iAzimutalElement);
-          startNode=PIC::Mesh::mesh.findTreeNode(x);
+      //allocate the sampling buffer
+      Earth::CutoffRigidity::DomainBoundaryParticleProperty::Allocate(iSphereIndexMax-iSphereIndexMin+1);
 
-          if (startNode->Thread==PIC::ThisThread) {
+
+      do {
+        //reset the partilce generation flag
+        localParticleGenerationFlag=0;
+
+        //Inject new particles
+        int iZenithElement,iAzimutalElement;
+
+        if (nTotalInjectedParticles<nTotalInjectedParticlePerPoint) {
+          nTotalInjectedParticles+=nIngectedParticlePerIteration;
+
+          //inject the new portion of the particles
+          for (int spec=0;spec<PIC::nTotalSpecies;spec++) for (iSphereIndex=iSphereIndexMin;iSphereIndex<=iSphereIndexMax;iSphereIndex++) {
+            //          for (iZenithElement=0;iZenithElement<nZenithElements;iZenithElement++) for (iAzimutalElement=0;iAzimutalElement<nAzimuthalElements;iAzimutalElement++) {
+
+            iZenithElement=iSphereIndex/nZenithElements;
+            iAzimutalElement=iSphereIndex%nZenithElements;
+
+            int idim,iCell,jCell,kCell;
+            cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* startNode;
+
+            iLocation=iSphereIndex-iSphereIndexMin; //Sphere.GetLocalSurfaceElementNumber(iZenithElement,iAzimutalElement);
+
+
+
+//          if (startNode->Thread==PIC::ThisThread) {
             //generate a new particle velocity
             double mass,speed,energy,rigidity,momentum;
+            int nd;
 
             static double logMinEnergyLimit=log(Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit);
             static double logMaxEnergyLimit=log(Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit);
 
             mass=PIC::MolecularData::GetMass(spec);
 
-            if (PIC::Mesh::mesh.fingCellIndex(x,iCell,jCell,kCell,startNode,false)==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
-
             for (int iNewParticle=0;iNewParticle<nIngectedParticlePerIteration;iNewParticle++) {
               //location of the new particles
-              Vector3D::Distribution::Uniform(x,Radius);
+//               Vector3D::Distribution::Uniform(x,Radius);
 
+
+              Sphere.GetSurfaceElementRandomPoint(x,iZenithElement,iAzimutalElement);
               startNode=PIC::Mesh::mesh.findTreeNode(x);
+
               if (startNode->Thread!=PIC::ThisThread) continue;
 
+              if ((nd=PIC::Mesh::mesh.fingCellIndex(x,iCell,jCell,kCell,startNode,false))==-1) exit(__LINE__,__FILE__,"Error: cannot find the cellwhere the particle is located");
+
+              #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
+              PIC::Mesh::cDataCenterNode *cell;
+
+              cell=startNode->block->GetCenterNode(nd);
+
+              if (cell==NULL) exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
+              if (cell->Measure<=0.0) exit(__LINE__,__FILE__,"Error: the cell measure is not initialized");
+              #endif
 
               //generate energy of the new particle
               energy=exp(logMinEnergyLimit+rnd()*(logMaxEnergyLimit-logMinEnergyLimit));
@@ -486,153 +551,54 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
                 memcpy(newParticleData+Earth::CutoffRigidity::InitialLocationOffset,x,3*sizeof(double));
               }
 
-
             }
           }
         }
-      }
+
+        //preform the next iteration
+        amps_time_step();
+
+        static int LastDataOutputFileNumber=-1;
+
+        if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
+          PIC::RequiredSampleLength*=2;
+          if (PIC::RequiredSampleLength>50000) PIC::RequiredSampleLength=50000;
 
 
-      //limit the integration time (remove particle moving in trapped orbits)
-      if ((true)&&(Earth::CutoffRigidity::InitialLocationOffset!=-1)) {
-        //determine min altitude;
-        static double rMax=-1.0;
-        double r;
-        int idim;
-
-        if (rMax<0.0) {
-          for (int iLocation=0;iLocation<Earth::CutoffRigidity::IndividualLocations::xTestLocationTableLength;iLocation++) {
-            r=Vector3D::Length(Earth::CutoffRigidity::IndividualLocations::xTestLocationTable[iLocation]);
-
-            if ((rMax<0.0)||(r>rMax)) rMax=r;
-          }
+          LastDataOutputFileNumber=PIC::DataOutputFileNumber;
+          if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
         }
 
-        //estimation of the domain length
-        double IntegratioinLengthMax=sqrt(pow(PIC::Mesh::mesh.xGlobalMax[0]-PIC::Mesh::mesh.xGlobalMin[0],2)+
-            pow(PIC::Mesh::mesh.xGlobalMax[1]-PIC::Mesh::mesh.xGlobalMin[1],2)+
-            pow(PIC::Mesh::mesh.xGlobalMax[2]-PIC::Mesh::mesh.xGlobalMin[2],2));
 
-        //increase the limit of the total integrated oath length
-        IntegratioinLengthMax/=4.0;
+        //get the total number of particles in the system
+        LacalParticleNumber=PIC::ParticleBuffer::GetAllPartNum();
+        MPI_Allreduce(&LacalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
-        IntegratioinLengthMax=2.0*Pi*rMax;
+        //determine whether any particle has been generated during the current iteration
+        MPI_Allreduce(&localParticleGenerationFlag,&globalParticleGenerationFlag,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
 
-        //loop through all blocks
-        for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
-          int ptr,next;
-          PIC::Mesh::cDataBlockAMR *block=node->block;
-          double dt,l,v;
-          PIC::ParticleBuffer::byte *ParticleData;
-
-          if (sqrt(pow(node->xmax[0]+node->xmin[0],2)+pow(node->xmax[1]+node->xmin[1],2)+pow(node->xmax[2]+node->xmin[2],2))/2.0>rMax) continue;
-
-          if (block!=NULL) for (int i=0;i<_BLOCK_CELLS_X_;i++) for (int j=0;j<_BLOCK_CELLS_Y_;j++) for (int k=0;k<_BLOCK_CELLS_Z_;k++) {
-             ptr=block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
-
-             while (ptr!=-1) {
-               //loop through all particles and determin which are trapped and does not contribute to the incoming radiation
-               ParticleData=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
-
-               v=Vector3D::Length(PIC::ParticleBuffer::GetV(ParticleData));
-               next=PIC::ParticleBuffer::GetNext(ParticleData);
-
-               dt=block->GetLocalTimeStep(PIC::ParticleBuffer::GetI(ParticleData));
-
-               //update estimation of the total integration path length
-               l=*((double*)(ParticleData+Earth::CutoffRigidity::IntegratedPathLengthOffset));
-               l+=v*dt;
-               *((double*)(ParticleData+Earth::CutoffRigidity::IntegratedPathLengthOffset))=l;
-
-
-               if (l>IntegratioinLengthMax) {
-                 //the particle is below the minimum altitude
-                 PIC::ParticleBuffer::DeleteParticle(ptr,block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
-               }
-
-               ptr=next;
-             }
-
-          }
+        if (globalParticleGenerationFlag!=0) {
+          //at least one particle has been generated -> reset the iteration counter
+          IterationCounter=0;
         }
+        else {
+          //increment the iteration counter
+          IterationCounter++;
+        }
+
+
       }
+      while ((GlobalParticleNumber!=0)&&(IterationCounter<nMaxIterations));
 
-      //preform the next iteration
-      amps_time_step();
-
-      static int LastDataOutputFileNumber=-1;
-
-      if ((PIC::DataOutputFileNumber!=0)&&(PIC::DataOutputFileNumber!=LastDataOutputFileNumber)) {
-        PIC::RequiredSampleLength*=2;
-        if (PIC::RequiredSampleLength>50000) PIC::RequiredSampleLength=50000;
-
-
-        LastDataOutputFileNumber=PIC::DataOutputFileNumber;
-        if (PIC::Mesh::mesh.ThisThread==0) cout << "The new sample length is " << PIC::RequiredSampleLength << endl;
-      }
-
-
-      //get the total number of particles in the system
-      LacalParticleNumber=PIC::ParticleBuffer::GetAllPartNum();
-      MPI_Allreduce(&LacalParticleNumber,&GlobalParticleNumber,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-
-      //determine whether any particle has been generated during the current iteration
-      MPI_Allreduce(&localParticleGenerationFlag,&globalParticleGenerationFlag,1,MPI_INT,MPI_SUM,MPI_GLOBAL_COMMUNICATOR);
-
-      if (globalParticleGenerationFlag!=0) {
-        //at least one particle has been generated -> reset the iteration counter
-        IterationCounter=0;
-      }
-      else {
-        //increment the iteration counter
-        IterationCounter++;
-      }
-
-
-    }
-    while ((GlobalParticleNumber!=0)&&(IterationCounter<nMaxIterations));
-
-
-    //determine the flux and eneregy spectra of the energetic particles in the poins of the observation
-    if (true) {
-      double ***EnergySpectrum,**TotalFlux,v[3],KineticEnergy,Speed,DiffFlux,dSurface,norm;
-      int offset,iTestsLocation,spec,i,j,iface,iTable,jTable,Index,iBit,iByte,iE;
-
-      const int nTotalEnergySpectrumIntervals=25;
-      const double logMinEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MinEnergyLimit);
-      const double logMaxEnergyLimit=log10(Earth::CutoffRigidity::IndividualLocations::MaxEnergyLimit);
-      const double dE=(logMaxEnergyLimit-logMinEnergyLimit)/nTotalEnergySpectrumIntervals;
-
-      //allocate the data buffers
-      //TotalFlux[iLocation][spec]
-      //EnergySpectrum[iLocation][spec][iEnergyInterval]
-
-
-
-      TotalFlux=new double* [nZenithElements*nAzimuthalElements];
-      TotalFlux[0]=new double [nZenithElements*nAzimuthalElements*PIC::nTotalSpecies];
-      for (iTestsLocation=1;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) TotalFlux[iTestsLocation]=TotalFlux[iTestsLocation-1]+PIC::nTotalSpecies;
-
-      EnergySpectrum=new double** [nZenithElements*nAzimuthalElements];
-      EnergySpectrum[0]=new double* [nZenithElements*nAzimuthalElements*PIC::nTotalSpecies];
-      for (iTestsLocation=1;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) EnergySpectrum[iTestsLocation]=EnergySpectrum[iTestsLocation-1]+PIC::nTotalSpecies;
-
-      EnergySpectrum[0][0]=new double [nZenithElements*nAzimuthalElements*PIC::nTotalSpecies*nTotalEnergySpectrumIntervals];
-
-      for (offset=0,iTestsLocation=0;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-        EnergySpectrum[iTestsLocation][spec]=EnergySpectrum[0][0]+offset;
-        offset+=nTotalEnergySpectrumIntervals;
-      }
-
-      //set the values of the buffers to zero
-      for (iTestsLocation=0;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) for (spec=0;spec<PIC::nTotalSpecies;spec++) {
-        TotalFlux[iTestsLocation][spec]=0.0;
-
-        for (i=0;i<nTotalEnergySpectrumIntervals;i++) EnergySpectrum[iTestsLocation][spec][i]=0.0;
-      }
 
       //calculate the flux and energey spectrum
-      for (iTestsLocation=0;iTestsLocation<nZenithElements*nAzimuthalElements;iTestsLocation++) {
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel for schedule(dynamic,1) default (none)  \
+    private (iSphereIndex,spec,iface,dSurface,iTable,jTable,iByte,iBit,Index,Speed,KineticEnergy,DiffFlux,iE,norm,v) \
+    shared (iSphereIndexMin,iSphereIndexMax,Earth::CutoffRigidity::DomainBoundaryParticleProperty::dX,Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleMaskNumberPerSpatialDirection, \
+        Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable,TotalFlux,EnergySpectrum)
+#endif
+      for (iSphereIndex=iSphereIndexMin;iSphereIndex<=iSphereIndexMax;iSphereIndex++) {
         for (spec=0;spec<PIC::nTotalSpecies;spec++) {
           for (iface=0;iface<6;iface++) {
             //surface area of the element of the surface mesh that covers the boundary of the computational domain
@@ -641,12 +607,12 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
             //loop through the mesh that covers face 'iface' on the computational domain
             for (iTable=0;iTable<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleMaskNumberPerSpatialDirection;iTable++) {
               for (jTable=0;jTable<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleMaskNumberPerSpatialDirection;jTable++) {
-                Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iTestsLocation][spec][iface][iTable][jTable].Gather();
+                Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iSphereIndex-iSphereIndexMin][spec][iface][iTable][jTable].Gather();
 
-                for (iByte=0;iByte<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iTestsLocation][spec][iface][iTable][jTable].FlagTableLength[0];iByte++) for (iBit=0;iBit<8;iBit++) {
+                for (iByte=0;iByte<Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iSphereIndex-iSphereIndexMin][spec][iface][iTable][jTable].FlagTableLength[0];iByte++) for (iBit=0;iBit<8;iBit++) {
                   Index=iBit+8*iByte;
 
-                  if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iTestsLocation][spec][iface][iTable][jTable].Test(Index)==true) {
+                  if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::SampleTable[iSphereIndex-iSphereIndexMin][spec][iface][iTable][jTable].Test(Index)==true) {
                     //at least one particle that corrsponds to 'Index' has been detected. Add a contribution of such particles to the total energy spectrum and flux as observed at the point of the observation 'iTestsLocation'
 
                     Earth::CutoffRigidity::DomainBoundaryParticleProperty::ConvertVelocityVectorIndex2Velocity(spec,v,iface,Index);
@@ -657,14 +623,14 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
                     DiffFlux=GCR_BADAVI2011ASR::Hydrogen::GetDiffFlux(KineticEnergy);
 
                     //determine the contributio of the particles into the 'observed' flux and energy spectrum
-                    TotalFlux[iTestsLocation][spec]+=DiffFlux*dSurface;
+                    TotalFlux[iSphereIndex][spec]+=DiffFlux*dSurface;
 
                     //determine contribution of the particles to the energy flux
                     iE=(log10(KineticEnergy)-logMinEnergyLimit)/dE;
                     if (iE<0) iE=0;
                     if (iE>=nTotalEnergySpectrumIntervals) iE=nTotalEnergySpectrumIntervals-1;
 
-                    EnergySpectrum[iTestsLocation][spec][iE]+=DiffFlux*dSurface;
+                    EnergySpectrum[iSphereIndex][spec][iE]+=DiffFlux*dSurface;
                   }
                 }
               }
@@ -672,11 +638,21 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
           }
 
           //normalize the energy spectrum
-          for (iE=0,norm=0.0;iE<nTotalEnergySpectrumIntervals;iE++) norm+=EnergySpectrum[iTestsLocation][spec][iE]*dE;
-          if (norm>0) EnergySpectrum[iTestsLocation][spec][iE]/=norm;
+          for (iE=0,norm=0.0;iE<nTotalEnergySpectrumIntervals;iE++) norm+=EnergySpectrum[iSphereIndex][spec][iE]*dE;
+          if (norm>0) EnergySpectrum[iSphereIndex][spec][iE]/=norm;
         }
       }
 
+      //Increment the sohere element index range
+      iSphereIndexMin=iSphereIndexMax+1;
+      iSphereIndexMax+=nSphereIndexIncrement;
+      if (iSphereIndexMax>nZenithElements*nAzimuthalElements-1) iSphereIndexMax=nZenithElements*nAzimuthalElements-1;
+    }
+
+
+
+    //determine the flux and eneregy spectra of the energetic particles in the poins of the observation
+    if (true) {
       //output sampled particles flux and energy spectrum
       if (PIC::ThisThread==0) {
         //sampled energy spectrum
@@ -735,7 +711,7 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
         pipe.openRecvAll();
 
         //open the output file
-        sprintf(fname,"%s/CutoffRigidity[R=%s].dat",PIC::OutputDataFileDirectory,Radius);
+        sprintf(fname,"%s/CutoffRigidity[R=%e].dat",PIC::OutputDataFileDirectory,Radius);
         fout2d=fopen(fname,"w");
 
         fprintf(fout2d,"VARIABLES=\"Lon\", \"Lat\"");
@@ -846,6 +822,8 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
 
   }
 
+  //release sampling buffers
+  Earth::CutoffRigidity::DomainBoundaryParticleProperty::Deallocate();
 }
 
 
