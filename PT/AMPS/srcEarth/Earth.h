@@ -148,7 +148,7 @@ namespace Earth {
     namespace IndividualLocations {
       extern int xTestLocationTableLength;
       extern double** xTestLocationTable;
-      extern double *CutoffRigidityTable;
+      extern double **CutoffRigidityTable; //[spec][location];
       extern double MaxEnergyLimit;
       extern double MinEnergyLimit;
 
@@ -222,7 +222,8 @@ namespace Earth {
       bool TestInjectedParticleProperties(int spec,double *x,double *v,int iTestLocation,int iface);
       void SmoothSampleTable();
 
-      void Allocate();
+      void Deallocate(); //deallocate sampling buffsers
+      void Allocate(int nloc); //nloc-> the total number of the particle source locatinos
       int GetVelocityVectorIndex(int spec,double *v,int iface);
       void ConvertVelocityVectorIndex2Velocity(int spec,double *v,int iface,int Index);
 
