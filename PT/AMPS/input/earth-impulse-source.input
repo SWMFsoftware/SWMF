@@ -174,7 +174,7 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
   CutOffTestLocations=on \\
     emin=100.0*Mev2J \\
     emax=10000.0*Mev2J \\
-    nTotalParticles=500 \\
+    nTotalParticles=5000 \\
     nInjectionIterations=10 \\
     x=300.0E3+_RADIUS_(_TARGET_),0,0 \\ 
     x=500.0E3+_RADIUS_(_TARGET_),0,0 \\
@@ -209,6 +209,8 @@ define _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ _PIC_DEBUGGER_MODE__VARIA
 
 ! ReferenceGroundBasedObservationTime="2008-05-18T00:00:00","2008-07-06T00:00:00","2008-11-07T00:00:00","2007-11-12T00:00:00","2007-06-03T00:00:00"
 
+
+define _PIC__OPENMP_THREAD_SPLIT_MODE_   _PIC__OPENMP_THREAD_SPLIT_MODE__PARTICLES_
 
   define _TARGET_ _EARTH_ 
 !  define _PIC_PARTICLE_MOVER__TOTAL_PARTICLE_ACCELERATION_(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) Europa::TotalParticleAcceleration(acclMiddle,spec,ptr,xMiddle,vMiddle,middleNode) 
