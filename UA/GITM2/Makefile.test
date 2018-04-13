@@ -1,7 +1,5 @@
 #^CFG FILE TESTING
 
-include Makefile.conf
-
 ### TESTS FOR THE STAND-ALONE GITM ###
 
 TIMINGFILE =./.test_file_timing.txt
@@ -85,7 +83,7 @@ test_gitm_earth_3d:
 # Plain 1D
 test_gitm_earth_1d_compile:
 	./Config.pl -Earth -g=1,1,50,4
-	$(MAKE) GITM DEBUG="${DEBUGFLAG}"
+	$(MAKE) GITM
 
 test_gitm_earth_1d_rundir: test_rundir
 	cd ${TESTDIR}; cp UA/DataIn/UAM.in.1d ./UAM.in
@@ -169,7 +167,8 @@ test_gitm_mars_3d:
 # ----------------------------------------------------
 
 test_gitm_mars_1d_compile:
-	./Config.pl -Mars -g=1,1,120,4
+	./Config.pl -Mars
+	./Config.pl -g=1,1,120,4
 	$(MAKE) GITM
 
 test_gitm_mars_1d_rundir: test_rundir
@@ -189,7 +188,8 @@ test_gitm_mars_1d_check:
 # ----------------------------------------------------
 
 test_gitm_mars_3d_compile:
-	./Config.pl -Mars -g=8,4,120,4
+	./Config.pl -Mars
+	./Config.pl -g=8,4,120,4
 	$(MAKE) GITM
 
 test_gitm_mars_3d_rundir: test_rundir
