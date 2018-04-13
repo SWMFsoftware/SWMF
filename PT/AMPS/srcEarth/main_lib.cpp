@@ -28,7 +28,7 @@
 #include "T96Interface.h"
 
 
-const double rSphere=_RADIUS_(_TARGET_);
+const double rSphere=_EARTH__RADIUS_;
 
 double xMaxDomain=5; //modeling the vicinity of the planet
 double yMaxDomain=5; //the minimum size of the domain in the direction perpendicular to the direction to the sun
