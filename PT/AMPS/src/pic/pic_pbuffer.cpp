@@ -764,3 +764,47 @@ void PIC::ParticleBuffer::Thread::RebalanceParticleList() {
   }
 
 }
+
+//===============================================================================================
+//Delete all particles that exist in the system
+void PIC::ParticleBuffer::DeleteAllParticles() {
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
+  int ptr,i,j,k,next;
+
+  for (node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) if (node->block!=NULL) {
+    for (k=0;k<_BLOCK_CELLS_Z_;k++) {
+      for (j=0;j<_BLOCK_CELLS_Y_;j++) {
+        for (i=0;i<_BLOCK_CELLS_X_;i++) {
+          ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
+
+          while (ptr!=-1) {
+            next=PIC::ParticleBuffer::GetNext(ptr);
+            PIC::ParticleBuffer::DeleteParticle(ptr);
+            ptr=next;
+          }
+
+          node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]=-1;
+        }
+      }
+    }
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

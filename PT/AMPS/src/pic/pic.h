@@ -1983,6 +1983,8 @@ namespace PIC {
     void DeleteParticle(long int,long int&);
     void DeleteParticle_withoutTrajectoryTermination(long int,bool RandomThreadOpenMP=false);
 
+    void DeleteAllParticles();
+
     void CloneParticle(long int,long int);
     void CloneParticle(byte*,byte*);
 
