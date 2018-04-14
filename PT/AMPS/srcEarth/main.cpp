@@ -229,6 +229,8 @@ void SampleIndividualLocations(int nMaxIterations) {
     }
     while ((GlobalParticleNumber!=0)&&(IterationCounter<nMaxIterations));
 
+    //delete all particles that still present in the system
+    PIC::ParticleBuffer::DeleteAllParticles();
 
     //determine the flux and eneregy spectra of the energetic particles in the poins of the observation
     if (true) {
@@ -642,6 +644,9 @@ void SampleSphericalMaplLocations(double Radius,int nMaxIterations) {
           if (norm>0) EnergySpectrum[iSphereIndex][spec][iE]/=norm;
         }
       }
+
+      //delete all particles that still present in the system
+      PIC::ParticleBuffer::DeleteAllParticles();
 
       //Increment the sohere element index range
       iSphereIndexMin=iSphereIndexMax+1;
