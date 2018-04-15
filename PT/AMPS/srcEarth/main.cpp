@@ -857,7 +857,7 @@ int main(int argc,char **argv) {
   int nTotalIterations = 100000001;
 #endif
 
-
+if (_PIC_NIGHTLY_TEST_MODE_ == _PIC_MODE_OFF_) {
   int nMaxIterations=10; //000;
 
   //estimate the total flux and rigidity in a set of the defined locations
@@ -874,6 +874,7 @@ int main(int argc,char **argv) {
   cout << "End of the run:" << PIC::nTotalSpecies << endl;
 
   return EXIT_SUCCESS;
+}
 
   //time step with the backward integration integration
   if (Earth::CutoffRigidity::DomainBoundaryParticleProperty::SamplingParameters::ActiveFlag==true) {
