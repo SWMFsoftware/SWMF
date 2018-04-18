@@ -273,6 +273,7 @@ T                       UseECSIM
 0.51		        theta
 0.1                     gradRhoRatio
 0.1                     cDiff
+0.0			ratioDivC2C
 
 
 #PARTICLES
