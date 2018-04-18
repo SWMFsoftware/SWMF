@@ -88,7 +88,12 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeParticlesLocal(cBlockPairTable
     NextPtr=PIC::ParticleBuffer::GetNext(ptr);
 
     //shift the location of the first particle
-    for (idim=0,x=PIC::ParticleBuffer::GetX(ptr);idim<3;idim++) x[idim]+=dx[idim];
+    for (idim=0,x=PIC::ParticleBuffer::GetX(ptr);idim<3;idim++) {
+      x[idim]+=dx[idim];
+
+      if (x[idim]<RealBlock->xmin[idim]) x[idim]=RealBlock->xmin[idim];
+      if (x[idim]>=RealBlock->xmax[idim]) x[idim]=RealBlock->xmax[idim]-1.0E-10*(RealBlock->xmax[idim]-RealBlock->xmin[idim]);
+    }  
 
     if (NextPtr!=-1) {
       //the list containes more than one particle => process them
@@ -96,7 +101,12 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeParticlesLocal(cBlockPairTable
         ptr=NextPtr;
 
         //shift location of the particle
-        for (idim=0,x=PIC::ParticleBuffer::GetX(ptr);idim<3;idim++) x[idim]+=dx[idim];
+        for (idim=0,x=PIC::ParticleBuffer::GetX(ptr);idim<3;idim++) {
+          x[idim]+=dx[idim];
+ 
+          if (x[idim]<RealBlock->xmin[idim]) x[idim]=RealBlock->xmin[idim];
+          if (x[idim]>=RealBlock->xmax[idim]) x[idim]=RealBlock->xmax[idim]-1.0E-10*(RealBlock->xmax[idim]-RealBlock->xmin[idim]);
+        }
 
         //get the next particle in the list
         NextPtr=PIC::ParticleBuffer::GetNext(ptr);
@@ -183,7 +193,13 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeParticlesMPI(cBlockPairTable& 
 
           //shift location of the particle
           x=PIC::ParticleBuffer::GetX((PIC::ParticleBuffer::byte *)tempParticleData);
-          for (int idim=0;idim<3;idim++) x[idim]+=dx[idim];
+
+          for (int idim=0;idim<3;idim++) {
+            x[idim]+=dx[idim];
+
+            if (x[idim]<RealBlock->xmin[idim]) x[idim]=RealBlock->xmin[idim];
+            if (x[idim]>=RealBlock->xmax[idim]) x[idim]=RealBlock->xmax[idim]-1.0E-10*(RealBlock->xmax[idim]-RealBlock->xmin[idim]);
+          }
 
           //generate a new particle
           NewParticle=PIC::ParticleBuffer::GetNewParticle(RealBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
