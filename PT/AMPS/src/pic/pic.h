@@ -3690,6 +3690,9 @@ namespace PIC {
     void GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
     void GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
 
+    //get the signature of the particle population
+    void GetParticlePopulationSignature(long int nline,const char* fname);
+
     //get signature of a data buffer
     template <typename  T>
     inline void GetDataBufferSignature(T* DataBuffer,int DataBifferLength,int line,const char *fname,bool ParallelFlag=false) {
