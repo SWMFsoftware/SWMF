@@ -86,9 +86,17 @@ class EMfields3D                // :public Field
     void initTaylorGreen();
     /*! Calculate Electric field using the implicit Maxwell solver */
     void calculateE(int cycle);    
+    void calc_gradDivE(arr3_double gradDivEx_G, 
+		       arr3_double gradDivEy_G, 
+		       arr3_double gradDivEz_G, 
+		       arr3_double Ex_G, 
+		       arr3_double Ey_G, 
+		       arr3_double Ez_G,
+		       double coefCompact); 
+
     void matvec_weight_correction(double *vecOut, double *vecIn);
     /*! Solve PHI for Poisson equation. */
-    void calculate_PHI(MATVEC FuncImage, double krylovTol=1e-6, int nIter=50, bool useFloatPHI=true); 
+    void calculate_PHI(MATVEC FuncImage, double krylovTol=1e-6, int nIter=50, bool useFloatPHI=true, bool doCalcError=true); 
     /*! Image of Poisson Solver (for SOLVER) */
     void PoissonImage(double *image, double *vector, bool doSolveForChange);
     /*! Image of Maxwell Solver (for Solver) */
@@ -104,6 +112,10 @@ class EMfields3D                // :public Field
     void ConstantChargeOpenBCv2();
     /*! Calculate Magnetic field with the implicit solver: calculate B defined on nodes With E(n+ theta) computed, the magnetic field is evaluated from Faraday's law */
     void calculateB();
+
+    /* void calc_energy_error(); */
+    /* void fix_energy(); */
+
     /*! fix B on the boundary for gem challange */
     void fixBcGEM();
     void fixBnGEM();
@@ -138,6 +150,8 @@ class EMfields3D                // :public Field
     void smooth(double value, arr4_double vector, int is, int type);
     /*! smooth the electric field */
     void smoothE();
+
+    void boxSmooth(arr3_double vector, int nx, int ny, int nz, int nSmooth);
 
     /*! copy the field data to the array used to move the particles */
     void set_fieldForPcls();
@@ -481,6 +495,12 @@ class EMfields3D                // :public Field
     array3_double Exth;
     array3_double Eyth;
     array3_double Ezth;
+
+    array3_double Exthp;
+    array3_double Eythp;
+    array3_double Ezthp;
+
+    array3_double energyError_G; 
 
     // magnetic field components defined on central points between nodes
     //

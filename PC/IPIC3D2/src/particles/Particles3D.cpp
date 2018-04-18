@@ -2914,15 +2914,25 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
   const int nxc = grid->getNXC();
   const int nyc = grid->getNYC();
   const int nzc = grid->getNZC();
+
   array3_double phi(nxc, nyc, nzc); 
 
   const double  FourPI =16*atan(1.0);
   const double invFourPI = 1./FourPI;
   double eps_D[3];
-  double epsMax=0; // 20% of the cell size; 
+  double epsMax=0;
 
 
-  if(correctType != "position_estimate"){
+  if(correctType == "position_estimate"){
+    for(int i = 0; i<nxc; i++)
+      for(int j = 0; j<nyc; j++)
+	for(int k = 0; k<nzc; k++){
+	  phi[i][j][k] = 	    
+	    (EMf->getRHOc(i,j,k) - invFourPI*EMf->getdivEc(i,j,k))
+	    /EMf->getRHOcs(i,j,k,ns);
+
+	}    
+  }else{
     // Set phi. Is there a way to directly used PHI in EMf??
     for(int i = 0; i<nxc; i++)
       for(int j = 0; j<nyc; j++)
@@ -3026,7 +3036,55 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
     pcl->set_z(zp + eps_D[2]);
   }
 
-  }else if(correctType == "position_estimate_phi"){
+  }else if(correctType == "position_estimate_phi" ||
+	   correctType == "position_estimate"){
+    
+    /*
+      Example: 
+
+      |___|___|___|___|___|__|
+      |   | c4|c3 |   |   |  |
+      |___|___|___|___|___|__|
+      |   | c1| c2|   |   |  |
+      |___|___|___|___|___|__|                                
+
+      Particles encircled by the cell centers c1, c2 c3 and c4 (2D) are 
+      displaced with the same displacement (eps_GD), which is decided
+      either by the error at the cell centers (position_estimate) or 
+      the phi (position_estimate_phi) obtained by solving the
+      Poisson equtaion.       
+     */
+
+    const int nxn = grid->getNXN();
+    const int nyn = grid->getNYN();
+    const int nzn = grid->getNZN();
+    
+    array4_double eps_GD(nxn, nyn, nzn, 3); 
+
+    for(int ix = 1; ix<nxn-1; ix++)
+      for(int iy = 1; iy<nyn-1; iy++)
+	for(int iz = 1; iz<nzn-1; iz++){	  
+	  eps_GD[ix][iy][iz][x_] = 0.25*
+	    (phi[ix][iy][iz]      - phi[ix-1][iy][iz] + 
+	     phi[ix][iy][iz-1]    - phi[ix-1][iy][iz-1] + 
+	     phi[ix][iy-1][iz]    - phi[ix-1][iy-1][iz] + 
+	     phi[ix][iy-1][iz-1]  - phi[ix-1][iy-1][iz-1] );
+
+	  eps_GD[ix][iy][iz][y_] = 0.25*
+	    (phi[ix][iy][iz]     - phi[ix][iy-1][iz] + 
+	     phi[ix][iy][iz-1]   - phi[ix][iy-1][iz-1] + 
+	     phi[ix-1][iy][iz]   - phi[ix-1][iy-1][iz] + 
+	     phi[ix-1][iy][iz-1] - phi[ix-1][iy-1][iz-1]  );  
+
+	  eps_GD[ix][iy][iz][z_] = 0.25*
+	    (phi[ix][iy][iz]     - phi[ix][iy][iz-1] +
+	     phi[ix][iy-1][iz]   - phi[ix][iy-1][iz-1] +
+	     phi[ix-1][iy][iz]   - phi[ix-1][iy][iz-1] +
+	     phi[ix-1][iy-1][iz] - phi[ix-1][iy-1][iz-1] );
+	}
+
+
+    bool doUsePhi = (correctType == "position_estimate_phi");
     for (int pidx = 0; pidx < getNOP(); pidx++) {
       SpeciesParticle* pcl = &_pcls[pidx];
     
@@ -3034,27 +3092,23 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
       const double yp = pcl->get_y();
       const double zp = pcl->get_z();
 
-      // cell center index
-      const int ix = int (floor((xp - xstart) * inv_dx + 0.5));
-      const int iy = int (floor((yp - ystart) * inv_dy + 0.5));
-      const int iz = int (floor((zp - zstart) * inv_dz + 0.5));	    
+      // The closest node index. 
+      const int ix = 1 + int (floor((xp - xstart) * inv_dx + 0.5));
+      const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
+      const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));	    
 
-      double coef = 1./EMf->getRHOcs(ix,iy,iz,ns)*invFourPI*0.25; 
-      eps_D[x_] = -inv_dx*coef*
-	(phi[ix+1][iy][iz]      - phi[ix][iy][iz] + 
-	 phi[ix+1][iy][iz+1]    - phi[ix][iy][iz+1] + 
-	 phi[ix+1][iy+1][iz]    - phi[ix][iy+1][iz] + 
-	 phi[ix+1][iy+1][iz+1]  - phi[ix][iy+1][iz+1] );  
-      eps_D[y_] = -inv_dy*coef*
-	(phi[ix][iy+1][iz]     - phi[ix][iy][iz] + 
-	 phi[ix][iy+1][iz+1]   - phi[ix][iy][iz+1] + 
-	 phi[ix+1][iy+1][iz]   - phi[ix+1][iy][iz] + 
-	 phi[ix+1][iy+1][iz+1] - phi[ix+1][iy][iz+1]  );  
-      eps_D[z_] = -inv_dz*coef*
-	(phi[ix][iy][iz+1]     - phi[ix][iy][iz] +
-	 phi[ix][iy+1][iz+1]   - phi[ix][iy+1][iz] +
-	 phi[ix+1][iy][iz+1]   - phi[ix+1][iy][iz] +
-	 phi[ix+1][iy+1][iz+1] - phi[ix+1][iy+1][iz] );  
+      if(doUsePhi){
+	double coef = -1./EMf->getRHOcs(ix,iy,iz,ns)*invFourPI; 
+	eps_D[x_] = eps_GD[ix][iy][iz][x_]*inv_dx*coef; 
+	eps_D[y_] = eps_GD[ix][iy][iz][y_]*inv_dy*coef; 
+	eps_D[z_] = eps_GD[ix][iy][iz][z_]*inv_dz*coef; 
+      }else{
+	double coef = -0.5;    
+	eps_D[x_] = eps_GD[ix][iy][iz][x_]*coef*dx;
+	eps_D[y_] = eps_GD[ix][iy][iz][y_]*coef*dy;
+	eps_D[z_] = eps_GD[ix][iy][iz][z_]*coef*dz;       
+      }
+      
 
       for(int iDim = 0; iDim<3; iDim++){
 	if(fabs(eps_D[iDim]*inv_dx) > epsMax) epsMax = fabs(eps_D[iDim]*inv_dx);
@@ -3064,9 +3118,6 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
       pcl->set_y(yp + eps_D[1]);
       pcl->set_z(zp + eps_D[2]);            
     }
-
-  }else if(correctType == "position_estimate"){
-    cout<<"correctType = "<<correctType<<" has not been implemented!"<<endl;
   }
 
   double epsMaxLocal = epsMax;

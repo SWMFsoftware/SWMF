@@ -110,6 +110,9 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Exth (nxn, nyn, nzn),
   Eyth (nxn, nyn, nzn),
   Ezth (nxn, nyn, nzn),
+  Exthp(nxn, nyn, nzn),
+  Eythp(nxn, nyn, nzn),
+  Ezthp(nxn, nyn, nzn),
   Bxn  (nxn, nyn, nzn),
   Byn  (nxn, nyn, nzn),
   Bzn  (nxn, nyn, nzn),
@@ -121,6 +124,7 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Jyh  (nxn, nyn, nzn),
   Jzh  (nxn, nyn, nzn),
   divEn(nxn, nyn, nzn),  
+  energyError_G(nxn,nyn,nzn),
   //
   // species-specific quantities
   //
@@ -2865,11 +2869,10 @@ void EMfields3D::calculateE(int cycle)
     sub(Ez, gradPHIZ, nxn, nyn, nzn);
   }                             // end of divergence cleaning
 
-
   if (vct->getCartesian_rank() == 0)
     cout << "*** MAXWELL SOLVER ***" << endl;
-  // prepare the source 
 
+  // prepare the source 
   MaxwellSource(bkrylov);
   phys2solver(xkrylov,Ex,Ey,Ez,inminsolve,inmaxsolve,jnminsolve,jnmaxsolve,knminsolve,knmaxsolve);
   
@@ -2931,7 +2934,6 @@ void EMfields3D::calculateE(int cycle)
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(Exth,Eyth,Ezth,false);
   #endif
 
-
   // apply smoothing to Eth
   smoothE();
 
@@ -2941,14 +2943,12 @@ void EMfields3D::calculateE(int cycle)
   addscale(1 / th, -(1.0 - th) / th, Ex, Exth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ey, Eyth, nxn, nyn, nzn);
   addscale(1 / th, -(1.0 - th) / th, Ez, Ezth, nxn, nyn, nzn);
-
   
   #ifdef BATSRUS
   // Apply BATSRUS boundary condition to E_n+1.
   // It is not necessary for theta == 1.
   if(col->getCase()=="BATSRUS") fixE_BATSRUS(Ex,Ey,Ez,false);
   #endif
-
 
   
   // communicate so the interpolation can have good values
@@ -2970,17 +2970,31 @@ void EMfields3D::calculateE(int cycle)
   communicateCenterBC(nxc, nyc, nzc, divEc, 2, 2, 2, 2, 2, 2, vct, this);
   grid->interpC2N(divEn, divEc);
   
+  const double particleTheta = col->get_particleTheta();
   
+  const double c0 = (th==1? 0:(1-particleTheta)/(1-th));
+  for (int i = 0; i < nxn; i++)
+    for (int j = 0; j < nyn; j++)
+      for(int k = 0; k < nzn; k++){
+	Exthp[i][j][k] = (1-c0)*Ex[i][j][k] + c0*Exth[i][j][k];
+	Eythp[i][j][k] = (1-c0)*Ey[i][j][k] + c0*Eyth[i][j][k];
+	Ezthp[i][j][k] = (1-c0)*Ez[i][j][k] + c0*Ezth[i][j][k];	
+      }
+
+  //calc_energy_error(); 
+  //fix_energy();
+
   // deallocate temporary arrays
   delete[]xkrylov;
   delete[]bkrylov;
   if(doSolveForChange) delete[] dxkrylov;
+
 }
 
 
 //------------------------------------------------------
 void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
-			       int nIter, bool useFloatPHI){
+			       int nIter, bool useFloatPHI, bool doCalcError){
   /*
     Input:
     1) FuncImage: the function to calculate A*x for linear solver. 
@@ -3007,7 +3021,10 @@ void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
   eqValue(0.0, xkrylovPoisson, nSolveCell);
   eqValue(0.0, PHI, nxc, nyc, nzc);
   
-  grid->divN2C(divE, Ex, Ey, Ez);
+  if(doCalcError){
+    grid->divN2C(divE, Ex, Ey, Ez);
+  }
+
   scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
   
   sum(divE, tempC, nxc, nyc, nzc);
@@ -3186,6 +3203,16 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   sum(tempX, Ex, nxn, nyn, nzn);
   sum(tempY, Ey, nxn, nyn, nzn);
   sum(tempZ, Ez, nxn, nyn, nzn);
+
+  MUdot(Dx, Dy, Dz, Ex, Ey, Ez);
+  double particleTheta = col->get_particleTheta();
+  scale(Dx, 2*particleTheta-1, nxn, nyn, nzn);
+  scale(Dy, 2*particleTheta-1, nxn, nyn, nzn);
+  scale(Dz, 2*particleTheta-1, nxn, nyn, nzn);
+  sum(tempX, Dx, nxn, nyn, nzn);
+  sum(tempY, Dy, nxn, nyn, nzn);
+  sum(tempZ, Dz, nxn, nyn, nzn);  
+
   // sum curl(B) + jhat part
   sum(tempX, temp2X, nxn, nyn, nzn);
   sum(tempY, temp2Y, nxn, nyn, nzn);
@@ -3316,11 +3343,24 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   scale(imageZ, -delt * delt - cDiff, nxn, nyn, nzn);
   //------------------------------------------------
 
-  MUdot(Dx, Dy, Dz, vectX, vectY, vectZ);
+
+  // delt*delt*(1-gradRhoRatio)*grad(div(E))--------- (2)  
+  double coefDiffusion = get_col().get_ratioDivC2C();
+  calc_gradDivE(tempX, tempY, tempZ, vectX, vectY, vectZ, coefDiffusion);
 
   double gradRhoRatio = col->get_gradRhoRatio();
+  double coef = delt*delt*(1-gradRhoRatio);  
+  scale(tempX, coef, nxn, nyn, nzn);
+  scale(tempY, coef, nxn, nyn, nzn);
+  scale(tempZ, coef, nxn, nyn, nzn);
+  sum(imageX, tempX, nxn, nyn, nzn);
+  sum(imageY, tempY, nxn, nyn, nzn);
+  sum(imageZ, tempZ, nxn, nyn, nzn);
+  //----------------------------------------
 
-  // -delt*delt*gradRhoRatio*grad(div(D))--------- (2)
+
+  // -delt*delt*gradRhoRatio*grad(div(D))--------- (3)
+  MUdot(Dx, Dy, Dz, vectX, vectY, vectZ);
   grid->divN2C(divC, Dx, Dy, Dz);  
   communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
   grid->gradC2N(tempX, tempY, tempZ, divC);
@@ -3330,24 +3370,13 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   sum(imageX, tempX, nxn, nyn, nzn);
   sum(imageY, tempY, nxn, nyn, nzn);
   sum(imageZ, tempZ, nxn, nyn, nzn);
-  //----------------------------------------------------------
-
-
-  // delt*delt*(1-gradRhoRatio)*grad(div(E))--------- (3)
-  double coef = delt*delt*(1-gradRhoRatio);
-  grid->divN2C(divC, vectX, vectY, vectZ);    
-  communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
-  grid->gradC2N(tempX, tempY, tempZ, divC);    
-  scale(tempX, coef, nxn, nyn, nzn);
-  scale(tempY, coef, nxn, nyn, nzn);
-  scale(tempZ, coef, nxn, nyn, nzn);
-  sum(imageX, tempX, nxn, nyn, nzn);
-  sum(imageY, tempY, nxn, nyn, nzn);
-  sum(imageZ, tempZ, nxn, nyn, nzn);
-  //----------------------------------------
-   
+  //----------------------------------------------------------   
 
   // (1)+(2)+(3)+D
+  double particleTheta = col->get_particleTheta();
+  scale(Dx, 2*particleTheta, nxn, nyn, nzn);
+  scale(Dy, 2*particleTheta, nxn, nyn, nzn);
+  scale(Dz, 2*particleTheta, nxn, nyn, nzn);
   sum(imageX, Dx, nxn, nyn, nzn);
   sum(imageY, Dy, nxn, nyn, nzn);
   sum(imageZ, Dz, nxn, nyn, nzn);
@@ -3391,6 +3420,53 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   
 }
 
+void EMfields3D::calc_gradDivE(arr3_double gradDivEx_G, 
+			       arr3_double gradDivEy_G, 
+			       arr3_double gradDivEz_G, 
+			       arr3_double Ex_G, 
+			       arr3_double Ey_G, 
+			       arr3_double Ez_G,
+			       double coefDiff){
+  /* 
+     output = (1- coefDiff)*grad(div1(E)) + coefDiff*grad(div2(E)), 
+     where div1 is the common compact operator, while div2 is a 
+     diffusive operator.      
+   */
+
+  const Collective *col = &get_col();
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+
+  grid->divN2C(divC, Ex_G, Ey_G, Ez_G);
+  if(coefDiff>0){
+    grid->interpN2C(tempXC,Ex_G);
+    grid->interpN2C(tempYC,Ey_G);
+    grid->interpN2C(tempZC,Ez_G);
+    communicateCenterBC(nxc, nyc, nzc, tempXC, 2, 2, 2, 2, 2, 2, vct, this);
+    communicateCenterBC(nxc, nyc, nzc, tempYC, 2, 2, 2, 2, 2, 2, vct, this);
+    communicateCenterBC(nxc, nyc, nzc, tempZC, 2, 2, 2, 2, 2, 2, vct, this);
+    grid->divC2C(tempC, tempXC, tempYC, tempZC);  
+
+    double coef1, coef2; 
+    coef1 = coefDiff;
+    coef2 = 1- coef1;
+    for (int i = 1; i < nxc - 1; i++)
+      for (int j = 1; j < nyc - 1; j++)
+	for (int k = 1; k < nzc - 1; k++) {
+	  divC[i][j][k] = tempC[i][j][k]*coef1 + divC[i][j][k]*coef2; 
+	}
+  }
+  
+  communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
+  grid->gradC2N(gradDivEx_G, gradDivEy_G, gradDivEz_G, divC);  
+
+  communicateNodeBC(nxn, nyn, nzn, gradDivEx_G, 2, 2, 2, 2, 2, 2, vct, this);
+  communicateNodeBC(nxn, nyn, nzn, gradDivEy_G, 2, 2, 2, 2, 2, 2, vct, this);
+  communicateNodeBC(nxn, nyn, nzn, gradDivEz_G, 2, 2, 2, 2, 2, 2, vct, this);
+
+}
+
+
 /*! Calculate PI dot (vectX, vectY, vectZ) */
 void EMfields3D::PIdot(arr3_double PIdotX, arr3_double PIdotY, arr3_double PIdotZ, const_arr3_double vectX, const_arr3_double vectY, const_arr3_double vectZ, int ns)
 {
@@ -3427,7 +3503,7 @@ void EMfields3D::MUdot(arr3_double MUdotX, arr3_double MUdotY, arr3_double MUdot
     communicateNodeBC(nxn, nyn, nzn, vectY, col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
     communicateNodeBC(nxn, nyn, nzn, vectZ, col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
 
-    double c0 = FourPI/c*delt;
+    double c0 = FourPI*delt/c;
     
     for (int i = 1; i < nxn - 1; i++)
       for (int j = 1; j < nyn - 1; j++)
@@ -3477,6 +3553,34 @@ void EMfields3D::MUdot(arr3_double MUdotX, arr3_double MUdotY, arr3_double MUdot
         }
   }  
 }
+
+void EMfields3D::boxSmooth(arr3_double vector, int nx, int ny, int nz, int nSmooth)
+{
+  const VirtualTopology3D *vct = &get_vct();
+  double ***temp = newArr3(double, nx, ny, nz);
+  communicateNodeBC(nx, ny, nz, vector, 2, 2, 2, 2, 2, 2, vct, this);   
+  for(int iSmooth = 0; iSmooth<nSmooth; iSmooth++){
+    for (int i = 1; i < nx - 1; i++)
+      for (int j = 1; j < ny - 1; j++)
+	for (int k = 1; k < nz - 1; k++){
+	  temp[i][j][k] = 0; 
+	  for(int ii = -1; ii<2; ii++)
+	    for(int jj=-1; jj<2; jj++)
+	      for(int kk=-1; kk<2; kk++)
+		temp[i][j][k] += vector[i+ii][j+jj][k+kk];
+	  temp[i][j][k] *= 1./27;
+	}
+    for (int i = 1; i < nx - 1; i++)
+      for (int j = 1; j < ny - 1; j++)
+	for (int k = 1; k < nz - 1; k++)
+	  vector[i][j][k] = temp[i][j][k];
+
+    communicateNodeBC(nx, ny, nz, vector, 2, 2, 2, 2, 2, 2, vct, this);   
+  }
+  delArr3(temp, nx, ny);
+}
+
+
 /* Interpolation smoothing: Smoothing (vector must already have ghost cells) TO MAKE SMOOTH value as to be different from 1.0 type = 0 --> center based vector ; type = 1 --> node based vector ; */
 void EMfields3D::smooth(arr3_double vector, int type)
 {
@@ -4066,9 +4170,9 @@ void EMfields3D::set_fieldForPcls()
     fieldForPcls[i][j][k][0] = (pfloat) (Bxn[i][j][k] + Bx_ext[i][j][k]);
     fieldForPcls[i][j][k][1] = (pfloat) (Byn[i][j][k] + By_ext[i][j][k]);
     fieldForPcls[i][j][k][2] = (pfloat) (Bzn[i][j][k] + Bz_ext[i][j][k]);
-    fieldForPcls[i][j][k][0+DFIELD_3or4] = (pfloat) Exth[i][j][k];
-    fieldForPcls[i][j][k][1+DFIELD_3or4] = (pfloat) Eyth[i][j][k];
-    fieldForPcls[i][j][k][2+DFIELD_3or4] = (pfloat) Ezth[i][j][k];
+    fieldForPcls[i][j][k][0+DFIELD_3or4] = (pfloat) Exthp[i][j][k];
+    fieldForPcls[i][j][k][1+DFIELD_3or4] = (pfloat) Eythp[i][j][k];
+    fieldForPcls[i][j][k][2+DFIELD_3or4] = (pfloat) Ezthp[i][j][k];
   }
 }
 
@@ -4083,11 +4187,13 @@ void EMfields3D::calculateB()
     cout << "*** B CALCULATION ***" << endl;
 
   // calculate the curl of Eth
-  grid->curlN2C(tempXC, tempYC, tempZC, Exth, Eyth, Ezth);
+  grid->curlN2C(tempXC, tempYC, tempZC, Exth, Eyth, Ezth);  
+  
   // update the magnetic field
   addscale(-c * dt, 1, Bxc, tempXC, nxc, nyc, nzc);
   addscale(-c * dt, 1, Byc, tempYC, nxc, nyc, nzc);
   addscale(-c * dt, 1, Bzc, tempZC, nxc, nyc, nzc);
+
   // communicate ghost 
   communicateCenterBC(nxc, nyc, nzc, Bxc, col->bcBx[0],col->bcBx[1],col->bcBx[2],col->bcBx[3],col->bcBx[4],col->bcBx[5], vct,this);
   communicateCenterBC(nxc, nyc, nzc, Byc, col->bcBy[0],col->bcBy[1],col->bcBy[2],col->bcBy[3],col->bcBy[4],col->bcBy[5], vct,this);
@@ -4121,7 +4227,99 @@ void EMfields3D::calculateB()
 #ifdef BATSRUS
   if (get_col().getCase()=="BATSRUS") fixB_BATSRUS();
 #endif  
+
 }
+
+
+/*
+void EMfields3D::calc_energy_error(){
+  const Collective *col = &get_col();
+  bool doFixEnergy = col->get_doFixEnergy();
+  if(!doFixEnergy) return;   
+
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+  const double invFourPi = 1./FourPI; 
+  
+  eqValue(0.0, energyError_G, nxn, nyn,nzn); 
+
+  if(false){
+    MUdot(Dx, Dy, Dz, Exthp, Eythp, Ezthp);
+    // Coeficient "4*pi*delt/c" is multiplied to M*E inside MUdot. Undo the multiplication.
+    double c1 = 1/(FourPI*delt/c);
+    scale(Dx, c1, nxn, nyn, nzn);
+    scale(Dy, c1, nxn, nyn, nzn);
+    scale(Dz, c1, nxn, nyn, nzn);
+   
+    // Calculate the energy error on each node. 
+    for (int i = 1; i < nxn-1; i++)
+      for (int j = 1; j < nyn-1; j++)
+	for(int k = 1; k < nzn-1; k++){
+	  energyError_G[i][j][k] =
+	    -dt*((Jxh[i][j][k] + Dx[i][j][k])*(Exthp[i][j][k] - Exth[i][j][k]) + 
+		 (Jyh[i][j][k] + Dy[i][j][k])*(Eythp[i][j][k] - Eyth[i][j][k])+ 
+		 (Jzh[i][j][k] + Dz[i][j][k])*(Ezthp[i][j][k] - Ezth[i][j][k]));
+	}     
+
+  }
+
+  double coefDiffusion = get_col().get_ratioDivC2C();
+  
+  if(coefDiffusion != 0){  
+    calc_gradDivE(tempXN, tempYN, tempZN, Exth, Eyth, Ezth, coefDiffusion);
+    calc_gradDivE(tempX, tempY, tempZ, Exth, Eyth, Ezth, 0);
+    for (int i = 1; i < nxn-1; i++)
+      for (int j = 1; j < nyn-1; j++)
+	for(int k = 1; k < nzn-1; k++){
+	  energyError_G[i][j][k] += 2*invFourPi*delt*delt*
+	    ((tempXN[i][j][k]-tempX[i][j][k])*Exth[i][j][k] + 
+	     (tempYN[i][j][k]-tempY[i][j][k])*Eyth[i][j][k] + 
+	     (tempZN[i][j][k]-tempZ[i][j][k])*Ezth[i][j][k]); 
+	}
+  }
+
+  // Smooth the energy errors. 
+  int nSmooth = col->get_nSmoothEnergy();
+  boxSmooth(energyError_G, nxn, nyn, nzn, nSmooth);
+}
+
+void EMfields3D::fix_energy(){
+  const Collective *col = &get_col();
+  bool doFixEnergy = col->get_doFixEnergy();
+
+  if(!doFixEnergy) return;   
+  const VirtualTopology3D *vct = &get_vct();
+  const Grid *grid = &get_grid();
+  const double invFourPi = 1./FourPI; 
+  
+  // Compress or stretch the electric field so that the energy is conserved. 
+  double energyE, energyError, energyENew; 
+  double scaleRatio, scaleRatio1, scaleRatio2; 
+  //double Estatx, Estaty, Estatz, Ewavex, Ewavey, Ewavez; 
+  for (int i = 1; i < nxn-1; i++)
+    for (int j = 1; j < nyn-1; j++)
+      for(int k = 1; k < nzn-1; k++){
+	energyE = 0.5*invFourPi*(Ex[i][j][k] * Ex[i][j][k] + 
+				 Ey[i][j][k] * Ey[i][j][k] + 
+				 Ez[i][j][k] * Ez[i][j][k]);
+	 
+	energyError = energyError_G[i][j][k]; 
+	energyENew = energyError + energyE;
+
+	if(energyENew >= 0){ 
+	  scaleRatio = sqrt((energyENew)/energyE); 
+	  Ex[i][j][k] *=scaleRatio; 
+	  Ey[i][j][k] *=scaleRatio; 
+	  Ez[i][j][k] *=scaleRatio; 
+	}	
+      }   
+
+  communicateNodeBC(nxn, nyn, nzn, Ex,   col->bcEx[0],col->bcEx[1],col->bcEx[2],col->bcEx[3],col->bcEx[4],col->bcEx[5], vct, this);
+  communicateNodeBC(nxn, nyn, nzn, Ey,   col->bcEy[0],col->bcEy[1],col->bcEy[2],col->bcEy[3],col->bcEy[4],col->bcEy[5], vct, this);
+  communicateNodeBC(nxn, nyn, nzn, Ez,   col->bcEz[0],col->bcEz[1],col->bcEz[2],col->bcEz[3],col->bcEz[4],col->bcEz[5], vct, this);
+}
+
+*/
 
 /*! initialize EM field with transverse electric waves 1D and rotate anticlockwise (theta degrees) */
 void EMfields3D::initEM_rotate(double B, double theta)
@@ -4902,9 +5100,9 @@ void EMfields3D::SyncWithFluid(CollectiveIO *col,Grid *grid,VirtualTopology3D *v
 	  fluidEx[i][j][k] = E0_D[x_]*sin(kdotx + phi0);
 	  fluidEy[i][j][k] = E0_D[y_]*sin(kdotx + phi0);
 	  fluidEz[i][j][k] = E0_D[z_]*sin(kdotx + phi0);
-	  fluidBxn[i][j][k] = (k_D[y_]*fluidEz[i][j][k] - k_D[z_]*fluidEy[i][j][k])/k0;
-	  fluidByn[i][j][k] = (k_D[z_]*fluidEx[i][j][k] - k_D[x_]*fluidEz[i][j][k])/k0;
-	  fluidBzn[i][j][k] = (k_D[x_]*fluidEy[i][j][k] - k_D[y_]*fluidEx[i][j][k])/k0;	  	 
+	  fluidBxn[i][j][k] = (k_D[y_]*fluidEz[i][j][k] - k_D[z_]*fluidEy[i][j][k])/k0;// + E0_D[x_];
+	  fluidByn[i][j][k] = (k_D[z_]*fluidEx[i][j][k] - k_D[x_]*fluidEz[i][j][k])/k0;// + E0_D[y_];
+	  fluidBzn[i][j][k] = (k_D[x_]*fluidEy[i][j][k] - k_D[y_]*fluidEx[i][j][k])/k0;// + E0_D[z_];	  	 
 	}
     
   }else{
@@ -5200,9 +5398,6 @@ void EMfields3D::fixPHI_BATSRUS(){
 	}
   }
 }
-
-
-
 
 inline void EMfields3D::fixVarBCcell(arr3_double Var, 
 				     double (CollectiveIO::*fluidVar)(const int, const int,const int, const int)const, int nOverlap, int is){
@@ -5959,6 +6154,10 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
     value *= No2OutV*No2OutB/No2OutL;
   }else if(var.substr(0,3)=="phi"){
     value = PHI[i][j][k];
+  }else if(var.substr(0,10)=="energyDiff"){ 
+    // The unit is [E]^2
+    value = energyError_G[i][j][k];                                          
+    value *= No2OutV*No2OutB*No2OutV*No2OutB; 
   }else if(var.substr(0,2)=="Ex"){
     value = Ex[i][j][k];
     value *= No2OutV*No2OutB;

@@ -427,7 +427,7 @@ void c_Solver::CalculateMoments(bool doCleanDivEIn) {
 				 col->get_divECleanTol(),
 				 col->get_divECleanIter(), true);
 
-	    }else if(divEClean.substr(0,15) != "weight_estimate"){
+	    }else if(divEClean.find("estimate") == string::npos){
 	      EMf->calculate_PHI(iPIC3D_matvec_weight_correction,
 				 col->get_divECleanTol(),
 				 col->get_divECleanIter(), false);
@@ -517,6 +517,8 @@ void c_Solver::CalculateB() {
 /*  -------------- */
 bool c_Solver::ParticlesMover()
 {
+  if(col->getdoTestEMWave()) return false;
+  
   // move all species of particles
   {
     timeTasks_set_main_task(TimeTasks::PARTICLES);

@@ -834,14 +834,14 @@ int Collective::ReadRestart(string inputfile) {
   // verbose on
   //verbose = 1;
 
+  // read dt
+  dataset_id = H5Dopen2(file_id, "/collective/Dt", H5P_DEFAULT); // HDF 1.8.8
+  status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dt);
+  status = H5Dclose(dataset_id);
 
   // if RestartDirName == SaveDirName overwrite dt,Th,Smooth (append to old hdf files)
   if (RestartDirName == SaveDirName) {
     restart_status = 2;
-    // read dt
-    dataset_id = H5Dopen2(file_id, "/collective/Dt", H5P_DEFAULT); // HDF 1.8.8
-    status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dt);
-    status = H5Dclose(dataset_id);
     // read th 
     dataset_id = H5Dopen2(file_id, "/collective/Th", H5P_DEFAULT); // HDF 1.8.8
     status = H5Dread(dataset_id, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &th);
@@ -1647,7 +1647,11 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   useExplicitMover = false; 
   gradRhoRatio = 1.0;
   cDiff = 0; 
+  ratioDivC2C = 0; 
   
+  particleTheta = 0.5; 
+  doFixEnergy = false;
+  nSmoothEnergy = 0; 
 
   // div(E) cleaning
   divECleanType = "";
@@ -1717,6 +1721,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	    
 	 5) #DIVE
 	    position_estimate_phi  divECleanType
+	    
+	    #DIVE
+	    position_estimate      divECleanType
 	    
       */
       
@@ -1812,10 +1819,16 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       read_var(param,"th",           &th);
       read_var(param,"gradRhoRatio", &gradRhoRatio);
       read_var(param,"cDiff", &cDiff);
+      read_var(param,"ratioDivC2C", &ratioDivC2C);
+      particleTheta = th; 
     }
-
-
-
+    else if( Command == "#PARTICLETHETA"){
+      read_var(param, "particleTheta", &particleTheta);
+    }
+    else if( Command == "#FIXENERGY"){
+      read_var(param, "doFixEnergy",   &doFixEnergy );
+      read_var(param, "nSmoothEnergy", &nSmoothEnergy);
+    }
     else if( Command == "#POISSON"){
       bool doCorrection;
       read_var(param, "doPoissonCorrection", &doCorrection);

@@ -223,7 +223,11 @@ class Collective
 
     double get_gradRhoRatio()const{return gradRhoRatio;};
     double get_cDiff()const{return cDiff;};
+    double get_ratioDivC2C()const{return ratioDivC2C;};
     bool get_useIPIC3DSolver()const{return useIPIC3DSolver;};
+    double get_particleTheta()const{return particleTheta;};
+    bool get_doFixEnergy()const{return doFixEnergy;};
+    int get_nSmoothEnergy()const{return nSmoothEnergy;};
     int get_iSpeciesLightest()const{return iSpeciesLightest;}
     
     /*! Boundary condition selection for BCFace for the electric field components */
@@ -487,8 +491,13 @@ class Collective
     // half time stage, and an explicit particle mover will be used. 
     bool useExplicitMover; 
 
+    double particleTheta;
+    bool doFixEnergy; 
+    int nSmoothEnergy; 
+
     double gradRhoRatio;
     double cDiff;
+    double ratioDivC2C;
 
     // Use the iPIC3D linear solver or the SWMF solver; 
     bool useIPIC3DSolver;     
