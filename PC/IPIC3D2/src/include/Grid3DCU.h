@@ -72,6 +72,13 @@ public:
     const_arr3_double vecFieldXN,
     const_arr3_double vecFieldYN,
     const_arr3_double vecFieldZN)const;
+
+  /* Calculate cell centered divergence from cell centered field values. */
+  void divC2C(arr3_double divC,
+	      const_arr3_double vecX,
+	      const_arr3_double vecY,
+	      const_arr3_double vecZ)const;
+
   /** calculate divergence on nodes, given a vector field defined on central points  */
   void divC2N(arr3_double divN,
     const_arr3_double vecFieldXC,

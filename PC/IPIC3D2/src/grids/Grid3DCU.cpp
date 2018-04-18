@@ -320,6 +320,42 @@ void Grid3DCU::divN2C(arr3_double divC, const_arr3_double vecFieldXN, const_arr3
       }
 }
 
+void Grid3DCU::divC2C(arr3_double divC, const_arr3_double vecX, const_arr3_double vecY, const_arr3_double vecZ)const
+{
+  /*
+    Input: vecX, vecY and vecZ, which are the cell centered fields
+    Output: divC, which is the cell centered div(Field). 
+            divC_ijk = (vecX_i+1 - vecX_i-1)/(2*dx) + ....
+   */
+  double compX;
+  double compY;
+  double compZ;
+  for (register int i = 1; i < nxc - 1; i++)
+    for (register int j = 1; j < nyc - 1; j++)
+      for (register int k = 1; k < nzc - 1; k++) {
+	compX = 0;
+	for(int jj = -1; jj<2; jj++)
+	  for(int kk = -1; kk<2; kk++)
+	    compX += vecX[i+1][j+jj][k+kk] - vecX[i-1][j+jj][k+kk];
+	compX *= 0.5*invdx;
+	
+	compY = 0; 
+	for(int ii = -1; ii<2; ii++)
+	  for(int kk = -1; kk<2; kk++)
+	    compY += vecY[i+ii][j+1][k+kk] - vecY[i+ii][j-1][k+kk];
+	compY *= 0.5*invdy;
+
+	compZ = 0; 
+	for(int ii = -1; ii<2; ii++)
+	  for(int jj = -1; jj<2; jj++)
+	    compZ += vecZ[i+ii][j+jj][k+1] - vecZ[i+ii][j+jj][k-1];
+	compZ *= 0.5*invdz; 
+
+        divC[i][j][k] = (compX + compY + compZ)/9;
+      }
+}
+
+
 /** calculate divergence on central points, given a Tensor field defined on nodes  */
 void Grid3DCU::divSymmTensorN2C(arr3_double divCX, arr3_double divCY, arr3_double divCZ, const_arr4_double pXX, const_arr4_double pXY, const_arr4_double pXZ, const_arr4_double pYY, const_arr4_double pYZ, const_arr4_double pZZ, int ns)const
 {
