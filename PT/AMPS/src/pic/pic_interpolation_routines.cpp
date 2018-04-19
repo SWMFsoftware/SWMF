@@ -649,7 +649,7 @@ PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::C
   double w,xLoc[3],dx[3],xMinNode[3],xMaxNode[3];
   PIC::Mesh::cDataCornerNode* CornerNode;
   PIC::Mesh::cDataBlockAMR *block;
-
+  
   if (node==NULL) node=PIC::Mesh::mesh.findTreeNode(x);
 
   memcpy(xMinNode,node->xmin,3*sizeof(double));
@@ -663,12 +663,12 @@ PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::C
   //get the local coordinate for the interpolation point location
   for (idim=0;idim<3;idim++) {
     if ((x[idim]<xMinNode[idim])||(x[idim]>xMaxNode[idim])) exit(__LINE__,__FILE__,"Error: the point is out of block");
-
+    if (fabs(x[idim]-xMaxNode[idim])<1e-10*dx[idim]) x[idim]= xMaxNode[idim]-1e-10*dx[idim];    
     xLoc[idim]=(x[idim]-xMinNode[idim])/dx[idim];
     iX[idim]=(int)(xLoc[idim]);
     xLoc[idim]-=iX[idim];
   }
-
+  
   //build interpolation stencil
   #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   int ThreadOpenMP=omp_get_thread_num();
