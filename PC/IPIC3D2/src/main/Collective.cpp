@@ -99,6 +99,8 @@ void Collective::ReadInput(string inputfile) {
     dt = config.read < double >("dt");
     ncycles = config.read < int >("ncycles");
     th = config.read < double >("th",1.0);
+    particleTheta = th; 
+    doFixEnergy = false;
 
     Smooth = config.read < double >("Smooth",1.0);
     SmoothNiter = config.read < int >("SmoothNiter",6);
@@ -206,6 +208,7 @@ void Collective::ReadInput(string inputfile) {
 
     gradRhoRatio = config.read< double >("gradRhoRatio", 1.0);
     cDiff = config.read< double >("cDiff", 0.0);
+    ratioDivC2C = config.read< double >("ratioDivC2C", 0.0);
   }
 
   //read everything from input file, if restart is true, overwrite the setting - bug fixing

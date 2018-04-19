@@ -517,7 +517,9 @@ void c_Solver::CalculateB() {
 /*  -------------- */
 bool c_Solver::ParticlesMover()
 {
+#ifdef BATSRUS
   if(col->getdoTestEMWave()) return false;
+#endif
   
   // move all species of particles
   {
