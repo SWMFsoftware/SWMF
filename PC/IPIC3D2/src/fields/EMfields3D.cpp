@@ -3204,14 +3204,19 @@ void EMfields3D::MaxwellSource(double *bkrylov)
   sum(tempY, Ey, nxn, nyn, nzn);
   sum(tempZ, Ez, nxn, nyn, nzn);
 
-  MUdot(Dx, Dy, Dz, Ex, Ey, Ez);
-  double particleTheta = col->get_particleTheta();
-  scale(Dx, 2*particleTheta-1, nxn, nyn, nzn);
-  scale(Dy, 2*particleTheta-1, nxn, nyn, nzn);
-  scale(Dz, 2*particleTheta-1, nxn, nyn, nzn);
-  sum(tempX, Dx, nxn, nyn, nzn);
-  sum(tempY, Dy, nxn, nyn, nzn);
-  sum(tempZ, Dz, nxn, nyn, nzn);  
+  
+  // The theta used for particles (pth) may be different from the theta for 
+  // EM field (th). E^(n+pth) = (1-pth/th)*E^n + pth/th*E^(n+th); 
+  double cn = -(1 - col->get_particleTheta()/th);
+  if(fabs(cn)>1e-6){
+    MUdot(Dx, Dy, Dz, Ex, Ey, Ez);
+    scale(Dx, cn, nxn, nyn, nzn);
+    scale(Dy, cn, nxn, nyn, nzn);
+    scale(Dz, cn, nxn, nyn, nzn);
+    sum(tempX, Dx, nxn, nyn, nzn);
+    sum(tempY, Dy, nxn, nyn, nzn);
+    sum(tempZ, Dz, nxn, nyn, nzn);  
+  }
 
   // sum curl(B) + jhat part
   sum(tempX, temp2X, nxn, nyn, nzn);
@@ -3373,10 +3378,12 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   //----------------------------------------------------------   
 
   // (1)+(2)+(3)+D
-  double particleTheta = col->get_particleTheta();
-  scale(Dx, 2*particleTheta, nxn, nyn, nzn);
-  scale(Dy, 2*particleTheta, nxn, nyn, nzn);
-  scale(Dz, 2*particleTheta, nxn, nyn, nzn);
+  // The theta used for particles (pth) may be different from the theta for 
+  // EM field (th). E^(n+pth) = (1-pth/th)*E^n + pth/th*E^(n+th); 
+  double cth = col->get_particleTheta()/th;
+  scale(Dx, cth, nxn, nyn, nzn);
+  scale(Dy, cth, nxn, nyn, nzn);
+  scale(Dz, cth, nxn, nyn, nzn);
   sum(imageX, Dx, nxn, nyn, nzn);
   sum(imageY, Dy, nxn, nyn, nzn);
   sum(imageZ, Dz, nxn, nyn, nzn);
