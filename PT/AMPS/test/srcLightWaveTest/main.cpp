@@ -640,12 +640,12 @@ int main(int argc,char **argv) {
 #if _CURRENT_MODE_==_PIC_MODE_ON_
     //for (int iPar=0;iPar<parSize; iPar++ ){
     if (iCase==0){
-    for (int ii=0;ii<9;ii++){
-      for(int jj=0;jj<9;jj++){
-	for(int kk=0;kk<9;kk++){
+    for (int ii=0;ii<17;ii++){
+      for(int jj=0;jj<17;jj++){
+	for(int kk=0;kk<17;kk++){
 	  double xLocation[3]={ii*0.25-2,jj*0.25-2,kk*0.25-2};
 	  newNode=PIC::Mesh::mesh.findTreeNode(xLocation);
-	  for (int iPar=0;iPar<8;iPar++){
+	  for (int iPar=0;iPar<14;iPar++){
 	    if (newNode->Thread==PIC::ThisThread) {
 	      PIC::Mesh::mesh.fingCellIndex(xLocation,i,j,k,newNode);
 	    
