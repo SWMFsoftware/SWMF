@@ -1652,7 +1652,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   cDiff = 0; 
   ratioDivC2C = 0; 
   
-  particleTheta = 0.5; 
+  particleTheta = th; 
   doFixEnergy = false;
   nSmoothEnergy = 0; 
 
