@@ -1542,6 +1542,9 @@ namespace PIC {
     //check the total particles number
     void CheckParticleList();
 
+    //get signature of an particle
+    unsigned long int GetParticleSignature(long int ptr,bool IncludeListInfo=false);
+
     //the namespace contains data used in case when OpenMP is used
     namespace Thread {
       extern int NTotalThreads;
@@ -3687,8 +3690,14 @@ namespace PIC {
     }
 
     //get check sum of the associated data
-    void GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
-    void GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+    unsigned long int GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+    unsigned long int GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+
+    unsigned long int SaveCornerNodeAssociatedDataSignature(long int nline,const char* fnameSource,const char* fnameOutput,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+    unsigned long int SaveCenterNodeAssociatedDataSignature(long int nline,const char* fnameSource,const char* fnameOutput,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
+
+    //save the block distribution
+    void SaveDomainDecompositionMap(long int nline,const char* fname,int Index);
 
     //get the signature of the particle population
     void GetParticlePopulationSignature(long int nline,const char* fname);
