@@ -790,7 +790,25 @@ void PIC::ParticleBuffer::DeleteAllParticles() {
   }
 }
 
+//==================================================================================================
+//Determine "signature" of a particle
+unsigned long int PIC::ParticleBuffer::GetParticleSignature(long int ptr,bool IncludeListInfo) {
+  CRC32 sig;
 
+  if (IncludeListInfo==true) {
+    sig.add(ParticleDataBuffer+ptr*ParticleDataLength,ParticleDataLength);
+  }
+  else {
+    byte buffer[ParticleDataLength];
+
+    for (int i=0;i<ParticleDataLength;i++) buffer[i]=0;
+
+    CloneParticle(buffer,GetParticleDataPointer(ptr));
+    sig.add(buffer,ParticleDataLength);
+  }
+
+  return sig.checksum();
+}
 
 
 
