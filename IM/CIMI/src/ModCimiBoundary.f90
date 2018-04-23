@@ -16,7 +16,7 @@ Module ModCimiBoundary
 
   !boundary density in m^-3 and temperature in eV
   real, public :: BoundaryDens_IC(nspec,nt)
-  real, public :: BoundaryTemp_IC(nspec,nt),BoundaryTempPar_IC(nspec,nt)
+  real, public :: BoundaryTemp_IC(nspec,nt) = -1e30, BoundaryTempPar_IC(nspec,nt)=-1e30
 
 contains
   !============================================================================
