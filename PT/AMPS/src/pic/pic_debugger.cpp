@@ -317,15 +317,16 @@ void PIC::Sampling::CatchOutLimitSampledValue() {
 
 //==========================================================================================
 //get checksum of the corner and center node associated data
-void PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+unsigned long int PIC::Debugger::SaveCornerNodeAssociatedDataSignature(long int nline,const char* fnameSource,const char* fnameOutput,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
   int i,j,k;
   PIC::Mesh::cDataCornerNode *CornerNode;
   PIC::Mesh::cDataBlockAMR *block;
 
   static int EntryCounter;  //used to ensure the same allocation of the blocks and nodes
-  static CRC32 CheckSum;
+  static CRC32 CheckSum,SingleVectorCheckSum;
   static CMPI_channel pipe(1000000);
   static int initflag=false;
+  static FILE *fout=NULL;
 
   //coundate of the fucntion calls
   static int nCallCounter=0;
@@ -336,6 +337,8 @@ void PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const ch
     CheckSum.clear();
 
     nCallCounter++;
+
+    if ((fnameOutput!=NULL)&&(PIC::ThisThread==0)) fout=fopen(fnameOutput,"w");
 
     if (initflag==false) {
       initflag=true;
@@ -358,21 +361,24 @@ void PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const ch
       block=startNode->block;
 
       for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-        EntryCounter++;
-        CheckSum.add(EntryCounter);
-
         for (j=0;j<_BLOCK_CELLS_Y_+1;j++) {
-          EntryCounter++;
-          CheckSum.add(EntryCounter);
-
           for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
             EntryCounter++;
             CheckSum.add(EntryCounter);
+            SingleVectorCheckSum.clear();
 
             if (startNode->Thread==0) {
               //the associated data is located the the root
               if (block!=NULL) if ((CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
                 CheckSum.add(CornerNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+
+                if (fnameOutput!=NULL) {
+                  SingleVectorCheckSum.add(CornerNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+                }
+              }
+
+              if (fnameOutput!=NULL) {
+                fprintf(fout,"node: id=%i, i=%i, j=%i, k=%i, CheckSum=0x%lx\n",startNode->Temp_ID,i,j,k,SingleVectorCheckSum.checksum());
               }
             }
             else {
@@ -387,6 +393,14 @@ void PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const ch
 
                   ptr=pipe.recvPointer<char>(PIC::Mesh::cDataCornerNode::totalAssociatedDataLength,startNode->Thread);
                   CheckSum.add(ptr,PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+
+                  if (fnameOutput!=NULL) {
+                    SingleVectorCheckSum.add(ptr,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+                  }
+                }
+
+                if (fnameOutput!=NULL) {
+                  fprintf(fout,"node: id=%i, i=%i, j=%i, k=%i, CheckSum=0x%lx\n",startNode->Temp_ID,i,j,k,SingleVectorCheckSum.checksum());
                 }
               }
               else {
@@ -423,7 +437,7 @@ void PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const ch
     //add daugher blocks
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *downNode;
 
-    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) GetCornerNodeAssociatedDataSignature(nline,fname,downNode);
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) SaveCornerNodeAssociatedDataSignature(nline,fnameSource,fnameOutput,downNode);
   }
 
   //output the checksum
@@ -433,21 +447,37 @@ void PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const ch
     if (PIC::ThisThread==0) {
       char msg[500];
 
-      sprintf(msg," line=%ld, file=%s (Call Counter=%i)",nline,fname,nCallCounter);
+      sprintf(msg," line=%ld, file=%s (Call Counter=%i)",nline,fnameSource,nCallCounter);
       CheckSum.PrintChecksumSingleThread(msg);
+
+      if (fnameOutput!=NULL) {
+        fclose(fout);
+        fout=NULL;
+      }
     }
   }
+
+  return CheckSum.checksum();
 }
 
-void PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+unsigned long int PIC::Debugger::GetCornerNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+  return SaveCornerNodeAssociatedDataSignature(nline,fname,NULL,startNode);
+}
+
+unsigned long int PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const char* fname,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
+  return SaveCenterNodeAssociatedDataSignature(nline,fname,NULL,startNode);
+}
+
+unsigned long int PIC::Debugger::SaveCenterNodeAssociatedDataSignature(long int nline,const char* fnameSource,const char* fnameOutput,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode) {
   int i,j,k;
   PIC::Mesh::cDataCenterNode *CenterNode;
   PIC::Mesh::cDataBlockAMR *block;
 
   static int EntryCounter;  //used to ensure the same allocation of the blocks and nodes
-  static CRC32 CheckSum;
+  static CRC32 CheckSum,SingleVectorCheckSum;
   static CMPI_channel pipe(1000000);
   static int initflag=false;
+  static FILE *fout=NULL;
 
   //coundate of the fucntion calls
   static int nCallCounter=0;
@@ -456,6 +486,8 @@ void PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const ch
     startNode=PIC::Mesh::mesh.rootTree;
     EntryCounter=0;
     CheckSum.clear();
+
+    if ((fnameOutput!=NULL)&&(PIC::ThisThread==0)) fout=fopen(fnameOutput,"w");
 
     nCallCounter++;
 
@@ -480,22 +512,26 @@ void PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const ch
       block=startNode->block;
 
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-        EntryCounter++;
-        CheckSum.add(EntryCounter);
-
         for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-          EntryCounter++;
-          CheckSum.add(EntryCounter);
-
           for (i=0;i<_BLOCK_CELLS_X_;i++) {
             EntryCounter++;
             CheckSum.add(EntryCounter);
+            SingleVectorCheckSum.clear();
 
             if (startNode->Thread==0) {
               //the associated data is located the the root
               if (block!=NULL) if ((CenterNode=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k)))!=NULL) {
                 CheckSum.add(CenterNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+
+                if (fnameOutput!=NULL) {
+                  SingleVectorCheckSum.add(CenterNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+                }
               }
+
+              if (fnameOutput!=NULL) {
+                fprintf(fout,"node: id=%i, i=%i, j=%i, k=%i, CheckSum=0x%lx\n",startNode->Temp_ID,i,j,k,SingleVectorCheckSum.checksum());
+              }
+
             }
             else {
               if (PIC::ThisThread==0) {
@@ -509,6 +545,14 @@ void PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const ch
 
                   ptr=pipe.recvPointer<char>(PIC::Mesh::cDataCenterNode::totalAssociatedDataLength,startNode->Thread);
                   CheckSum.add(ptr,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+
+                  if (fnameOutput!=NULL) {
+                    SingleVectorCheckSum.add(ptr,PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+                  }
+                }
+
+                if (fnameOutput!=NULL) {
+                  fprintf(fout,"node: id=%i, i=%i, j=%i, k=%i, CheckSum=0x%lx\n",startNode->Temp_ID,i,j,k,SingleVectorCheckSum.checksum());
                 }
               }
               else {
@@ -545,7 +589,7 @@ void PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const ch
     //add daugher blocks
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *downNode;
 
-    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) GetCenterNodeAssociatedDataSignature(nline,fname,downNode);
+    for (i=0;i<(1<<DIM);i++) if ((downNode=startNode->downNode[i])!=NULL) SaveCenterNodeAssociatedDataSignature(nline,fnameSource,fnameOutput,downNode);
   }
 
   //output the checksum
@@ -555,10 +599,17 @@ void PIC::Debugger::GetCenterNodeAssociatedDataSignature(long int nline,const ch
     if (PIC::ThisThread==0) {
       char msg[500];
 
-      sprintf(msg," line=%ld, file=%s (Call Counter=%i)",nline,fname,nCallCounter);
+      sprintf(msg," line=%ld, file=%s (Call Counter=%i)",nline,fnameSource,nCallCounter);
       CheckSum.PrintChecksumSingleThread(msg);
+
+      if (fnameOutput!=NULL) {
+        fclose(fout);
+        fout=NULL;
+      }
     }
   }
+
+  return CheckSum.checksum();
 }
 
 
@@ -643,6 +694,8 @@ void PIC::Debugger::GetParticlePopulationSignature(long int nline,const char* fn
           ptr=node->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
           while (ptr!=-1) {
+            pipe.send(ParticleDataSend_SIGNAL);
+
             //copy the state vector of the particle without 'next' and 'prev'
             ParticleDataPtr=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
             PIC::ParticleBuffer::CloneParticle(ParticleBuffer,ParticleDataPtr);
@@ -675,6 +728,54 @@ void PIC::Debugger::GetParticlePopulationSignature(long int nline,const char* fn
 
 }
 
+
+//=========================================================================================================
+//save the map of the domain decomposition
+void PIC::Debugger::SaveDomainDecompositionMap(long int nline,const char* fname,int Index) {
+  FILE *fout;
+  char FullFileName[100];
+  int id,i,j,iface,iedge,icorner;
+  cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node,*neibNode;
+
+  sprintf(FullFileName,"DomainDecompositionMap.thread=%i(line=%i,file=%s,Index=%i).dat",PIC::ThisThread,nline,fname,Index);
+  fout=fopen(FullFileName,"w");
+
+  fprintf(fout,"VARIABLES=\"NodeTempID\", \"Thread\", \"Face Neib\", \"Edge Neib\", \"Corner Neib\"\n");
+
+  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+    fprintf(fout,"node->Temp_ID=%i, thread=%i\n",node->Temp_ID,node->Thread);
+
+    //face neib
+    for (iface=0;iface<6;iface++) for (i=0;i<2;i++) for (j=0;j<2;j++) {
+      if ((neibNode=node->GetNeibFace(iface,i,j))!=NULL) id=neibNode->Temp_ID;
+      else id=-1;
+
+      fprintf(fout,"iface=%i,i=%i,j=%i,neib=%i\n",iface,i,j,id);
+    }
+
+    //edge neib
+    for (iedge=0;iedge<12;iedge++) for (i=0;i<2;i++) {
+      if ((neibNode=node->GetNeibEdge(iedge,i))!=NULL) id=neibNode->Temp_ID;
+      else id=-1;
+
+      fprintf(fout,"iedge=%i,i=%i,neib=%i\n",iface,i,id);
+    }
+
+    //corner
+    for (icorner=0;icorner<8;icorner++) {
+      if ((neibNode=node->GetNeibCorner(icorner))!=NULL) id=neibNode->Temp_ID;
+      else id=-1;
+
+      fprintf(fout,"icorner=%i,neib=%i\n",icorner,id);
+    }
+
+    //end the line
+    fprintf(fout,"\n");
+  }
+
+  //close the file
+  fclose(fout);
+}
 
 
 
