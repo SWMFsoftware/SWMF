@@ -2125,7 +2125,7 @@ namespace PIC {
         unsigned char mask=1<<ibit;
         bool res=false;
 
-        if (FlagTableStatusVector&mask==0) {
+        if ((FlagTableStatusVector&mask)==0) {
           FlagTableStatusVector|=mask;
           res=true;
         }
@@ -2430,7 +2430,7 @@ namespace PIC {
          unsigned char mask=1<<ibit;
          bool res=false;
 
-         if (FlagTableStatusVector&mask==0) {
+         if ((FlagTableStatusVector&mask)==0) {
            FlagTableStatusVector|=mask;
            res=true;
          }
