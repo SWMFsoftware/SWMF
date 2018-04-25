@@ -1271,7 +1271,7 @@ void c_Solver:: write_plot_init(){
     // Find out plot variables.
     if(plotString.find("all") !=string::npos){
       // Only include two species.
-      plotVar_I[iPlot] = "qS0 qS1 Bx By Bz Ex Ey Ez kXXS0 kYYS0 kZZS0 kXYS0 kXZS0 kYZS0 kXXS1 kYYS1 kZZS1 kXYS1 kXZS1 kYZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1";
+      plotVar_I[iPlot] = col->expandVariable("{all}");
       nameSnapshot_I[iPlot] += "_all";
     }else if(plotString.find("var") !=string::npos){
       
@@ -1279,7 +1279,7 @@ void c_Solver:: write_plot_init(){
       nameSnapshot_I[iPlot] += "_var";
     }else if(plotString.find("fluid") !=string::npos){
       // Only include two species.
-      plotVar_I[iPlot] = "rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1";
+      plotVar_I[iPlot] = col->expandVariable("{fluid}");
       nameSnapshot_I[iPlot] += "_fluid";
     }else if(plotString.find("particles") !=string::npos){
       doOutputParticles_I[iPlot] = true;

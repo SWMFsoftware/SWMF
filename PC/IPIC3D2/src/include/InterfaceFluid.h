@@ -2594,10 +2594,34 @@ class InterfaceFluid
       inVars.erase(pos1,pos2-pos1+1);
       if(var0=="fluid"){
   	inVars += " rhoS0 rhoS1 Bx By Bz Ex Ey Ez uxS0 uyS0 uzS0 uxS1 uyS1 uzS1 pS0 pS1 pXXS0 pYYS0 pZZS0 pXYS0 pXZS0 pYZS0 pXXS1 pYYS1 pZZS1 pXYS1 pXZS1 pYZS1";
+	for(int is = 2; is<nS; is++){
+	  inVars += addPlasmaVar("rhoS uxS uyS uzS pS pXXS pYYS pZZS pXYS pXZS pYZS", is);
+	}
+      }else if(var0=="all"){
+	inVars += " qS0 qS1 Bx By Bz Ex Ey Ez kXXS0 kYYS0 kZZS0 kXYS0 kXZS0 kYZS0 kXXS1 kYYS1 kZZS1 kXYS1 kXZS1 kYZS1 jxS0 jyS0 jzS0 jxS1 jyS1 jzS1";
+	for(int is = 2; is<nS; is++){
+	  inVars += addPlasmaVar("rhoS jxS jyS jzS kXXS kYYS kZZS kXYS kXZS kYZS", is);
+	}
       }
       pos1 = inVars.find_first_of("{");
     }
     return inVars;
+  }
+
+  inline string addPlasmaVar(string varString, int is)const{
+    string::size_type pos1, pos2;
+    stringstream ss; 
+    ss<<is;
+    string iString = ss.str();
+    varString.insert(0," ");
+
+    pos1 = varString.find_first_of("S");
+    while(pos1 !=string::npos){
+      varString.insert(pos1+1,iString);
+      pos1 = varString.find_first_of("S",pos1+1);
+    }
+    
+    return varString; 
   }
 
   void pic_to_Mhd_Vec(double const *vecIn_D, double *vecOut_D, bool isZeroOrigin=false){
