@@ -188,7 +188,7 @@ namespace iPic3D {
     double ***pointList_IID;// Output location. Indexes:iplot,ipoint,idim
     long *nPoint_I; 
     string *nameSnapshot_I;
-    static const int nVarMax = 50; 
+    static const int nVarMax = 100; 
     string **Var_II;
     int *nVar_I;
     long *nCell_I; // Total number of the output points for this plot.
