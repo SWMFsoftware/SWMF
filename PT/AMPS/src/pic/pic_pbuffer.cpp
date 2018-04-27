@@ -795,8 +795,13 @@ void PIC::ParticleBuffer::DeleteAllParticles() {
 unsigned long int PIC::ParticleBuffer::GetParticleSignature(long int ptr,bool IncludeListInfo) {
   CRC32 sig;
 
+  return GetParticleSignature(ptr,&sig,IncludeListInfo);
+}
+
+
+unsigned long int PIC::ParticleBuffer::GetParticleSignature(long int ptr,CRC32* sig,bool IncludeListInfo) {
   if (IncludeListInfo==true) {
-    sig.add(ParticleDataBuffer+ptr*ParticleDataLength,ParticleDataLength);
+    sig->add(ParticleDataBuffer+ptr*ParticleDataLength,ParticleDataLength);
   }
   else {
     byte buffer[ParticleDataLength];
@@ -804,10 +809,10 @@ unsigned long int PIC::ParticleBuffer::GetParticleSignature(long int ptr,bool In
     for (int i=0;i<ParticleDataLength;i++) buffer[i]=0;
 
     CloneParticle(buffer,GetParticleDataPointer(ptr));
-    sig.add(buffer,ParticleDataLength);
+    sig->add(buffer,ParticleDataLength);
   }
 
-  return sig.checksum();
+  return sig->checksum();
 }
 
 
