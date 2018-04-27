@@ -360,9 +360,9 @@ unsigned long int PIC::Debugger::SaveCornerNodeAssociatedDataSignature(long int 
 
       block=startNode->block;
 
-      for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-        for (j=0;j<_BLOCK_CELLS_Y_+1;j++) {
-          for (i=0;i<_BLOCK_CELLS_X_+1;i++) {
+      for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_+1;k++) {
+        for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_+1;j++) {
+          for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_+1;i++) {
             EntryCounter++;
             CheckSum.add(EntryCounter);
             SingleVectorCheckSum.clear();
@@ -511,9 +511,9 @@ unsigned long int PIC::Debugger::SaveCenterNodeAssociatedDataSignature(long int 
 
       block=startNode->block;
 
-      for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-        for (j=0;j<_BLOCK_CELLS_Y_;j++) {
-          for (i=0;i<_BLOCK_CELLS_X_;i++) {
+      for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;k++) {
+        for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;j++) {
+          for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_;i++) {
             EntryCounter++;
             CheckSum.add(EntryCounter);
             SingleVectorCheckSum.clear();
@@ -777,6 +777,295 @@ void PIC::Debugger::SaveDomainDecompositionMap(long int nline,const char* fname,
   //close the file
   fclose(fout);
 }
+
+
+//====================================================================================================
+//output the debug debug particle data
+list<PIC::Debugger::ParticleDebugData::cDebugData> PIC::Debugger::ParticleDebugData::DebugParticleData;
+
+//method for sorting the debug particle list
+bool PIC::Debugger::ParticleDebugData::CompareParticleDebugData(const PIC::Debugger::ParticleDebugData::cDebugData& first, const PIC::Debugger::ParticleDebugData::cDebugData& second) {
+  return (first.initCheckSum < second.initCheckSum);
+}
+
+//accumulate the partilce debug data
+void PIC::Debugger::ParticleDebugData::AddParticleDebugData(long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,bool InitChckSumMode) {
+  int i,j,k,di,dj,dk;
+  double *x;
+  cDebugData p;
+
+  //add the particle data
+  CRC32 CheckSum;
+
+  if (InitChckSumMode==true) {
+    p.initCheckSum=PIC::ParticleBuffer::GetParticleSignature(ptr);
+
+    x=PIC::ParticleBuffer::GetX(ptr);
+    PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false);
+
+    p.i=i;
+    p.j=j;
+    p.k=k;
+    p.nodeid=node->Temp_ID;
+    p.ptr=ptr;
+  }
+  else {
+    //look for the particle
+    list<cDebugData>::iterator pp;
+
+    for (pp=DebugParticleData.begin();pp!=DebugParticleData.end();pp++) {
+      if (pp->ptr==ptr) {
+        //the particle has been found
+        pp->finalCheckSum=PIC::ParticleBuffer::GetParticleSignature(ptr);
+        return;
+      }
+    }
+
+    //when come to this point --> the particle has not beed found
+    exit(__LINE__,__FILE__,"the particle has not been found");
+  }
+
+  //add checksum of the corner and center nodes
+  for (dk=0;dk<2;dk++) {
+    for (dj=0;dj<2;dj++)  {
+      for (di=0;di<2;di++) {
+        PIC::Mesh::cDataCornerNode *CornerNode;
+
+        if (node->Thread==PIC::ThisThread) {
+          if (node->block!=NULL) {
+            CheckSum.clear();
+
+            CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(p.i+di,p.j+dj,p.k+dk));
+            CheckSum.add(CornerNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+
+            p.CornerNodeChecksum[di][dj][dk]=CheckSum.checksum();
+          }
+        }
+      }
+    }
+  }
+
+
+  for (dk=-1;dk<1;dk++) {
+    for (dj=-1;dj<1;dj++)  {
+      for (di=-1;di<1;di++) {
+        PIC::Mesh::cDataCenterNode *CenterNode;
+
+        if (node->Thread==PIC::ThisThread) {
+          if (node->block!=NULL) {
+            CheckSum.clear();
+
+            CenterNode=node->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(p.i+di,p.j+dj,p.k+dk));
+            CheckSum.add(CenterNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+
+            p.CenterNodeChecksum[1+di][1+dj][1+dk]=CheckSum.checksum();
+          }
+        }
+      }
+    }
+  }
+
+
+  //add the particle data to the list
+  DebugParticleData.push_front(p);
+}
+
+//============================================================================================
+//output particle debug data
+void PIC::Debugger::ParticleDebugData::OutputParticleDebugData(int nLineSource,const char *fNameSource,int Index) {
+  int size;
+  cDebugData p;
+  list<cDebugData>::iterator pp;
+
+  CMPI_channel pipe;
+  pipe.init(1000000);
+
+  if (PIC::ThisThread==0) {
+      pipe.openRecvAll();
+  }
+  else pipe.openSend(0);
+
+  //collect the debug data from all MPI processes
+  if (PIC::ThisThread==0) {
+    for (int thread=1;thread<PIC::nTotalThreads;thread++) {
+      pipe.recv(size,thread);
+
+      for (int i=0;i<size;i++) {
+        pipe.recv(p,thread);
+        DebugParticleData.push_front(p);
+      }
+    }
+
+
+    //sort and output the particle data
+    DebugParticleData.sort(CompareParticleDebugData);
+
+    //output the debug data
+    FILE *fout;
+    char fname[100];
+    int di,dj,dk;
+
+    sprintf(fname,"ParticleDebugData(nline=%i,file=%s).Index=%i.dat",nLineSource,fNameSource,Index);
+    fout=fopen(fname,"w");
+
+    for (pp=DebugParticleData.begin();pp!=DebugParticleData.end();pp++) {
+      fprintf(fout,"particle(init)=0x%lx, particle(final)=0x%lx, nodeid=%i, i=%i, j=%i, k=%i\n",
+        pp->initCheckSum,pp->finalCheckSum,pp->nodeid,pp->i,pp->j,pp->k);
+
+      fprintf(fout,"CenterNodeChecksum:\n");
+
+      for (di=0;di<2;di++) for (dj=0;dj<2;dj++) for (dk=0;dk<2;dk++) {
+        fprintf(fout,"di=%i, dj=%i, dk=%i, CenterNodeChecksum=0x%lx\n",di-1,dj-1,dk-1,pp->CenterNodeChecksum[di][dj][dk]);
+      }
+
+
+      fprintf(fout,"CornerNodeChecksum:\n");
+
+      for (di=0;di<2;di++) for (dj=0;dj<2;dj++) for (dk=0;dk<2;dk++) {
+        fprintf(fout,"di=%i, dj=%i, dk=%i, CornerNodeChecksum=0x%lx\n",di,dj,dk,pp->CornerNodeChecksum[di][dj][dk]);
+      }
+
+      fprintf(fout,"\n");
+    }
+
+    fclose(fout);
+  }
+  else {
+    size=DebugParticleData.size();
+    pipe.send(size);
+
+    for (pp=DebugParticleData.begin();pp!=DebugParticleData.end();pp++) {
+      p=*pp;
+      pipe.send(p);
+    }
+  }
+
+
+   //cloe the pipe
+   if (PIC::ThisThread==0) {
+     pipe.closeRecvAll();
+   }
+   else pipe.closeSend();
+
+   //remove the particle debug data list
+   DebugParticleData.clear();
+}
+
+//========================================================================================================================
+//save signatures of the nodes
+void PIC::Debugger::SaveNodeSignature(int nline,const char *fname) {
+  int i,j,k;
+  static FILE *fout=NULL;
+  static int cnt;
+  static int ncall=0;
+
+  ncall++;
+
+  if ((fout==NULL)&&(PIC::ThisThread==0))  {
+    fout=fopen("SaveNodeSignature.dat","w");
+  }
+
+  unsigned long s=PIC::Debugger::GetCornerNodeAssociatedDataSignature(nline,fname);
+  unsigned long int p=PIC::Debugger::GetParticlePopulationSignature(nline,fname);
+
+  //'corner' data
+  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+    for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_+1;k++) {
+      for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_+1;j++)  {
+        for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_+1;i++) {
+          unsigned long int cs;
+          CRC32 CheckSum;
+          PIC::Mesh::cDataCornerNode *CornerNode;
+
+          if (node->Thread==PIC::ThisThread) {
+            if (node->block!=NULL) {
+              CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+              CheckSum.add(CornerNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCornerNode::totalAssociatedDataLength);
+            }
+
+            cs=CheckSum.checksum();
+
+            if (PIC::ThisThread!=0) {
+              //send the checksum to the root
+              MPI_Send(&cs,1,MPI_UNSIGNED_LONG,0,0,MPI_GLOBAL_COMMUNICATOR);
+            }
+          }
+          else if (PIC::ThisThread==0) {
+            //recieve the checksum
+            MPI_Status status;
+
+            MPI_Recv(&cs,1,MPI_UNSIGNED_LONG,node->Thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+          }
+
+          //print the checksum to a file
+          if (PIC::ThisThread==0) {
+            fprintf(fout,"Corner CheckSum=0x%lx, i=%i, j=%i, k=%i,id=%i, ncall=%i, line=%i,file=%s \n",cs,i,j,k,node->Temp_ID,ncall,nline,fname);
+          }
+        }
+      }
+    }
+  }
+
+  //'center' data
+  for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+    for (k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;k++) {
+      for (j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;j++)  {
+         for (i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_;i++) {
+           unsigned long int cs;
+           CRC32 CheckSum;
+           PIC::Mesh::cDataCenterNode *CenterNode;
+
+           if (node->Thread==PIC::ThisThread) {
+             if (node->block!=NULL) {
+               CenterNode=node->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+               CheckSum.add(CenterNode->GetAssociatedDataBufferPointer(),PIC::Mesh::cDataCenterNode::totalAssociatedDataLength);
+             }
+
+             cs=CheckSum.checksum();
+
+             if (PIC::ThisThread!=0) {
+               //send the checksum to the root
+               MPI_Send(&cs,1,MPI_UNSIGNED_LONG,0,0,MPI_GLOBAL_COMMUNICATOR);
+             }
+           }
+           else if (PIC::ThisThread==0) {
+             //recieve the checksum
+             MPI_Status status;
+
+             MPI_Recv(&cs,1,MPI_UNSIGNED_LONG,node->Thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+           }
+
+           //print the checksum to a file
+           if (PIC::ThisThread==0) {
+             fprintf(fout,"Center CheckSum=0x%lx, i=%i, j=%i, k=%i,id=%i, ncall=%i, line=%i,file=%s \n",cs,i,j,k,node->Temp_ID,ncall,nline,fname);
+           }
+        }
+      }
+    }
+  }
+
+  if (fout!=NULL) {
+    fflush(fout);
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

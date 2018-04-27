@@ -3697,6 +3697,8 @@ namespace PIC {
     unsigned long int SaveCornerNodeAssociatedDataSignature(long int nline,const char* fnameSource,const char* fnameOutput,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
     unsigned long int SaveCenterNodeAssociatedDataSignature(long int nline,const char* fnameSource,const char* fnameOutput,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>  *startNode=NULL);
 
+    void SaveNodeSignature(int nline,const char *fname);
+
     //save the block distribution
     void SaveDomainDecompositionMap(long int nline,const char* fname,int Index);
 
@@ -3727,6 +3729,31 @@ namespace PIC {
 
       return res;
     }
+
+    //output particle debug data
+    namespace ParticleDebugData {
+
+      //the type of the sampled debug data
+      struct cDebugData {
+        unsigned long int initCheckSum,finalCheckSum;
+        unsigned long int CornerNodeChecksum[2][2][2],CenterNodeChecksum[2][2][2];
+        int ptr,i,j,k,nodeid;
+      };
+
+      extern list <cDebugData> DebugParticleData;
+
+      //add data to the 'DebugParticleData' list.
+      //if InitChckSumMode==true  -> initial addition of the particle dat ato the list: 'init' parameters are defined
+      //if InitChckSumMode==false -> 'final' parameters are defined
+      void AddParticleDebugData(long int ptr,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node,bool InitChckSumMode);
+
+      //outout the data and clean the data list
+      void OutputParticleDebugData(int nline,const char *fname,int Index=-1);
+
+      //the method for sorting the list
+      bool CompareParticleDebugData(const cDebugData& first, const cDebugData& second);
+    }
+
   }
 
   namespace Alarm {
