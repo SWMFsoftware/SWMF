@@ -615,7 +615,7 @@ unsigned long int PIC::Debugger::SaveCenterNodeAssociatedDataSignature(long int 
 
 //=====================================================================================
 //get signature describe the particle population
-void PIC::Debugger::GetParticlePopulationSignature(long int nline,const char* fname) {
+unsigned long int PIC::Debugger::GetParticlePopulationSignature(long int nline,const char* fname) {
   CRC32 Checksum;
   PIC::ParticleBuffer::byte *ParticleDataPtr,ParticleBuffer[PIC::ParticleBuffer::ParticleDataLength];
   int i,j,k,ptr;
@@ -726,6 +726,7 @@ void PIC::Debugger::GetParticlePopulationSignature(long int nline,const char* fn
   }
   else pipe.closeSend();
 
+  return Checksum.checksum();
 }
 
 
