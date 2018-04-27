@@ -1543,6 +1543,7 @@ namespace PIC {
     void CheckParticleList();
 
     //get signature of an particle
+    unsigned long int GetParticleSignature(long int ptr,CRC32* sig,bool IncludeListInfo=false);
     unsigned long int GetParticleSignature(long int ptr,bool IncludeListInfo=false);
 
     //the namespace contains data used in case when OpenMP is used
@@ -3700,7 +3701,7 @@ namespace PIC {
     void SaveDomainDecompositionMap(long int nline,const char* fname,int Index);
 
     //get the signature of the particle population
-    void GetParticlePopulationSignature(long int nline,const char* fname);
+    unsigned long int GetParticlePopulationSignature(long int nline,const char* fname);
 
     //get signature of a data buffer
     template <typename  T>
