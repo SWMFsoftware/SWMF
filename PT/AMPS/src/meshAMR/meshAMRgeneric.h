@@ -209,11 +209,11 @@ template <class cCornerNode,class cCenterNode> class cBasicBlockAMR;
 class cAMRnodeID {
 public:
   int ResolutionLevel;
-  unsigned char id[1+3*_MAX_REFINMENT_LEVEL_/8];
+  unsigned char id[1+(int)((3*_MAX_REFINMENT_LEVEL_)/8)];
 
   cAMRnodeID() {
     ResolutionLevel=0;
-    for (int i=0;i<1+3*_MAX_REFINMENT_LEVEL_/8;i++) id[i]=0;
+    for (int i=0;i<1+(int)((3*_MAX_REFINMENT_LEVEL_)/8);i++) id[i]=0;
   }
 
   bool operator == (cAMRnodeID ID) {
