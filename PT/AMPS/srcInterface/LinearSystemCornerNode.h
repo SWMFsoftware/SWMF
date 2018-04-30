@@ -952,18 +952,35 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   RecvExchangeBuffer[PIC::ThisThread]=x;
 
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel default(none)  shared(p) private (iElement,iElementMax,Elements,StencilElement,res,row,cnt)
+   {
+#pragma omp single
+     {
+#endif //_COMPILATION_MODE_
+
+
   for (row=MatrixRowTable,cnt=0;row!=NULL;row=row->next,cnt++) {
-    iElementMax=row->nNonZeroElements;
-    Elements=row->Elements;
+    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+    #pragma omp task default (none) firstprivate (row,cnt) private (iElement,iElementMax,Elements,StencilElement,res) shared (p)
+    #endif
+    {
+      iElementMax=row->nNonZeroElements;
+      Elements=row->Elements;
 
-    for (res=0.0,iElement=0;iElement<iElementMax;iElement++) {
-      memcpy(&StencilElement,Elements+iElement,sizeof(cStencilElement));
+      for (res=0.0,iElement=0;iElement<iElementMax;iElement++) {
+        memcpy(&StencilElement,Elements+iElement,sizeof(cStencilElement));
 
-      res+=StencilElement.MatrixElementValue*RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
+        res+=StencilElement.MatrixElementValue*RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
+      }
+
+       p[cnt]=res;
     }
-
-     p[cnt]=res;
   }
+
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+     }}
+#endif
 
   RecvExchangeBuffer[PIC::ThisThread]=NULL;
 }
