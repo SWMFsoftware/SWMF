@@ -7,18 +7,12 @@
 ! June 01, 2007 correcting normalization
 ! June 08, 2007 correcting source terms
 ! August 18, 2007 Implementing 3-fluids
-! October 23, 2007 more little corrections
 ! January 01-04, 2008 Source terms in point-implicit form - with help
 ! of Gabor Toth
 ! January 08 all source terms for PopI implicit
 ! January 25 comments added
-! January 31-Feb 02
-! April 28, 2008 Michigan visit
 ! May 02-setting the initial conditions to be closer to the
 ! final solution
-! May 30-31
-! June30
-! July 20-WORKED!
 ! July 28-4 neutral fluids
 ! September 28 - source terms as McNutt
 ! February 2011 - PUI fluid
@@ -32,7 +26,9 @@
 ! added #USERSOURCE command to switch explicit/point-implicit user source terms
 ! Tests show that the default explicit evaluation works, while the point-implicit evaluation
 ! is not robust enough. 
-
+! March 2018, Opher Merav fixed calc_source routine for multi-ion
+! and charge neutrality while assuming cold electrons
+! source terms can be printed in tecplot
 module ModUser
 
   use BATL_lib, ONLY: &
@@ -41,7 +37,7 @@ module ModUser
   use ModSize,     ONLY: nI, nJ, nK
   use ModMain
   use ModPhysics
-  use ModAdvance,  ONLY : State_VGB
+  use ModAdvance,  ONLY : State_VGB, Source_VC, ExtraSource_ICB
   use ModGeometry, ONLY : Xyz_DGB, r_BLK, true_cell
   use ModVarIndexes
   use ModProcMH
@@ -132,6 +128,10 @@ module ModUser
        Pu3_Uy=0.0 , Pu3_Uy_dim=0.0 , &
        Pu3_Uz=0.0 , Pu3_Uz_dim=0.0
 
+ ! some extra variables for constant pressure at inner boundary
+  real :: pPUI_30 = 0.0 , &
+          pSolarWind_30 = 0.0
+
   ! Variables for the reflective shape
 
   ! Freeze neutrals (with user_update_states
@@ -139,6 +139,9 @@ module ModUser
 
   ! Use point-implicit user source term
   logical:: UsePointImplUserSource = .false.
+
+    ! variable to hold sources from charge-exchange with neutral fluids
+  real,allocatable :: FluidSource_ICB(:,:,:,:,:)
   
 contains
   !============================================================================
@@ -239,7 +242,7 @@ contains
     ! C.P. edited
     real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, Pmag, PmagEquator
+    real :: pSolarWind,pPUI, p_frac, Ptot, Pmag, PmagEquator
 
     real :: XyzSph_DD(3,3)
 
@@ -286,14 +289,13 @@ contains
 
     ! this method garruntees equal pressure over inner boundary.  Simplier splitting method likely pl
 
-    ! Christina's way is also ok - trying my way
-    !    p_frac = SWH_p/(SWH_p+PU3_p)
-    !! merav    pSolarWind = SWH_p + p_frac*(PmagEquator - Pmag)
-    !! merav    pPUI = PU3_p +(1-p_frac)* (PmagEquator - Pmag)
-
-    !    pSolarWind = SWH_p + PmagEquator - Pmag
     pPUI = PU3_p
+
     pSolarWind = SWH_p
+
+    ! new inner boundary pressures
+    pPUI_30 = pPUI
+    PSolarWind_30 = pSolarWind
 
     ! Apply boundary conditions for ions
     VarsGhostFace_V(SWHRho_)    = SWH_rho
@@ -530,7 +532,7 @@ contains
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     ! C.P. edited
-    use ModPhysics,  ONLY: rBody
+    use ModPhysics,  ONLY: rBody,  No2Si_V, UnitX_
     use ModCoordTransform, ONLY: rot_xyz_sph
     ! C.P. added
     use ModConst, ONLY: cAU
@@ -538,7 +540,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
-    real :: x, y, z, r
+    real :: x, y, z, r, rho0
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
 
@@ -1032,8 +1034,6 @@ contains
     VLISW_p_dim1    = No2Io_V(UnitP_)/Gamma &
          *(VLISW_rho_dim/SWH_rho_dim)*(VLISW_T_dim/SWH_T_dim)
 
-    ! Pressure of plasma = 2*T_ion*rho_ion
-
     VLISW_B_factor = No2Io_V(UnitB_)*sqrt((VLISW_T_dim/SWH_T_dim) &
          *(VLISW_rho_dim/SWH_rho_dim))
 
@@ -1049,10 +1049,7 @@ contains
     VLISW_Bz  = VLISW_Bz_dim*Io2No_V(UnitB_)
 
     SWH_rho = SWH_rho_dim*Io2No_V(UnitRho_)
-    ! Pressure of plasma = 2*T_ion*rho_ion
-
     SWH_p1   = SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
-    SWH_p   = 2.*SWH_T_dim*Io2No_V(UnitTemperature_)*SWH_rho
 
     SWH_Ux  = SWH_Ux_dim*Io2No_V(UnitU_)
     SWH_Uy  = SWH_Uy_dim*Io2No_V(UnitU_)
@@ -1065,9 +1062,13 @@ contains
     PU3_Uy  = PU3_Uy_dim*Io2No_V(UnitU_)
     PU3_Uz  = PU3_Uz_dim*Io2No_V(UnitU_)
     PU3_rho = PU3_rho_dim*Io2No_V(UnitRho_)
-    ! Pressure of sw plasma = 2*T_ion*rho_ion, assume electron pressure  = solar wind press (ok to same order), so no factor of 2 for PUI
     PU3_p1   = PU3_T_dim*Io2No_V(UnitTemperature_)*PU3_rho
     PU3_p   = PU3_T_dim*Io2No_V(UnitTemperature_)*PU3_rho
+
+   !For cold electrons for PUIs with charge neutrality ne=nSW+nPUI
+   !pressure SW = (2nSW+nPUI)*TSW and pressure PUI = nPUI*TPUI
+
+    SWH_p = (2.*SWH_rho + PU3_rho)*SWH_T_dim*Io2No_V(UnitTemperature_)
 
     ! comment from merav = this assumes cold electrons for PUIs
     ! The units of rho_dim are n/cc and unitUSER_rho Gamma/cc
@@ -1114,7 +1115,6 @@ contains
     character(len=*), intent(inout):: NameIdlUnit
     logical,          intent(out)  :: IsFound
 
-
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_plot_var'
     !--------------------------------------------------------------------------
@@ -1126,8 +1126,69 @@ contains
     IsFound = .true.
     select case(NameVar)
     case('srho')
-       NameTecVar = 'Srho'
-       PlotVar_G(1:nI,1:nJ,1:nK) = Source_VC(NeuRho_,:,:,:)
+       NameTecVar = 'srho'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRho_,:,:,:,iBlock)*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRho_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
+    case('srhoux')
+       NameTecVar = 'srhoUx'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUx_,:,:,:,iBlock)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUx_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
+    case('srhouy')
+       NameTecVar = 'srhoUy'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUy_,:,:,:,iBlock)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUy_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+    case('srhouz')
+       NameTecVar = 'srhoUz'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUz_,:,:,:,iBlock)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHRhoUz_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+    case('senergy')
+       NameTecVar = 'senergy'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHEnergy_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(SWHEnergy_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+    case('srhopui')
+       NameTecVar = 'srhoPUI'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3Rho_,:,:,:,iBlock)*No2Si_V(UnitRho_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3Rho_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+    case('srhouxpui')
+       NameTecVar = 'srhoUxPUI'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUx_,:,:,:,iBlock)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUx_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
+    case('srhouypui')
+       NameTecVar = 'srhoUyPUI'
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUy_,:,:,:,iBlock)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUy_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
+   case('srhouzpui')
+          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUz_,:,:,:,iBlock)*No2Si_V(UnitRhoU_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3RhoUz_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
+    case('senergypui')
+!          PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3Energy_,:,:,:,iBlock)*No2Si_V(UnitEnergyDens_)/No2Si_V(UnitT_)
+       PlotVar_G(1:nI,1:nJ,1:nK) = FluidSource_ICB(Pu3Energy_,:,:,:,iBlock)
+       NameIdlUnit = '1/s'
+       NameTecUnit = '1/s'
+
     case('fluid')
        if(UseNeutralFluid)then
           call select_region(iBlock)
@@ -1216,6 +1277,7 @@ contains
     real :: cth
     real :: State_V(nVar)
 
+    real :: x,y,z,r,TempPu3
     real, dimension(nFluid) :: &
          Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
          UThS_I, URelS_I, URelSdim_I, UStar_I=0, Sigma_I, Rate_I=0, &
@@ -1230,8 +1292,9 @@ contains
          UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, &
          I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
          Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
-         Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
+         Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I, EneExch_I
 
+    logical:: UseSourceNe2P = .true., UseEnergySource = .true.
 
     integer :: i, j, k
 
@@ -1253,7 +1316,9 @@ contains
        if(IsPointImplSource) RETURN
     end if
 
-    !  calculating some constants cBoltzmann is J/K
+    !  calculating some constants cBoltzmann is J/K; cth is related to U* and the thermal speed w1
+    ! see Eq (1) in McNutt et al. 1988; w1 = sqrt(cth*T1)
+
     cth = 2.0*cBoltzmann/mNeutrals
 
     ! ALL FLUIDS, including total ion
@@ -1277,19 +1342,24 @@ contains
        U2_I  = Ux_I**2 + Uy_I**2 + Uz_I**2
 
        ! Temperature for the two ionized and four population of neutrals (K)
-       ! T = p/rho
-       ! since P_plasma=2T_proton*rho_ion; T_proton=0.5P_plasma/rho_ion
        Temp_I       = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
-       Temp_I(SWH_) = 0.5*Temp_I(SWH_)
+
+!      For solar wind with charge neutrality TSW= SWH_p/(2nSW+nPUI)
+
+        Temp_I(SWH_)   = (State_V(SWHP_)/(2*State_V(SWHRho_)+State_V(PU3Rho_)))*No2Si_V(UnitTemperature_)
 
        ! Thermal speed (squared) for ionized and three populations of neutrals
        ! UThS units are (m/s)^2
        UThS_I = cth*Temp_I ! array of all thermal speeds here
 
+!      calculus of radius for the Energy Exchange term
+       x = Xyz_DGB(x_,i,j,k,iBlock)
+       y = Xyz_DGB(y_,i,j,k,iBlock)
+       z = Xyz_DGB(z_,i,j,k,iBlock)
+       r = r_BLK(i,j,k,iBlock)
+       r = r /rBody
+
        ! Relative velocity between neutrals and ionized fluid squared
-       !! URelS_I = (Ux_I - Ux_I(1))**2 &
-       !!     +    (Uy_I - Uy_I(1))**2 &
-       !!     +    (Uz_I - Uz_I(1))**2
 
        ! For SW
        URelS_I(SWH_) =0.
@@ -1353,6 +1423,8 @@ contains
 
        !! URelSdim_I  = URelS_I * No2Si_V(UnitU_)**2
 
+      ! Eq. (62) of McNutt et al. 1988 for U*
+
        ! For SW
        UStar_I(SWH_)=0.
        UStar_I(Pu3_)=0.
@@ -1379,7 +1451,8 @@ contains
 
        !!   UStarM_I  = sqrt(URelSdim_I + (64./(9.*cPi))*(UThS_I +UThS_I(SWH_)))
 
-       ! missing factor of 4/pi on the UthS_I speed?
+       ! Eq. (64) of McNutt et al. 1988 for UM*
+
        UStarM_I = 1.0
        UStarM_I(Neu_)  = sqrt(URelSdim_I(Neu_) + (64./(9.*cPi))*(UThS_I(Neu_) +UThS_I(SWH_)))
        UStarM_I(Ne2_)  = sqrt(URelSdim_I(Ne2_) + (64./(9.*cPi))*(UThS_I(Ne2_) +UThS_I(SWH_)))
@@ -1394,7 +1467,6 @@ contains
        UStarMPu3_I(Ne3_)  = sqrt(URelSPu3dim_I(Ne3_) + (64./(9.*cPi))*(UThS_I(Ne3_) +UThS_I(PU3_)))
        UStarMPu3_I(Ne4_)  = sqrt(URelSPu3dim_I(Ne4_) + (64./(9.*cPi))*(UThS_I(Ne4_) +UThS_I(PU3_)))
 
-       ! Maher and Tinsley cross section Sigma
        ! UStar has to have units of cm/s so the factor 100 is to pass m to cm
        ! Sigma has units of units of m^2
 
@@ -1410,22 +1482,8 @@ contains
        SigmaPu3_I(Pu3_)=0.
        SigmaNPu3_I(Pu3_)=0.
 
-       ! Sigma_I(Neu_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
-       ! SigmaN_I(Neu_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
-       ! Sigma_I(Ne2_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
-       ! SigmaN_I(Ne2_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Ne2_)*100.))**2)*(1.E-4)
-       ! Sigma_I(Ne3_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne3_)*100.))**2)*(1.E-4)
-       ! SigmaN_I(Ne3_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Ne3_)*100.))**2)*(1.E-4)
-       ! Sigma_I(Ne4_) =((1.64E-7 - (6.95E-9)*log(UStarM_I(Ne4_)*100.))**2)*(1.E-4)
-       ! SigmaN_I(Ne4_) =((1.64E-7 - (6.95E-9)*log(UStar_I(Ne4_)*100.))**2)*(1.E-4)
-
-       ! New Cross Section from Lindsay and Stebbings, 2005
-       !! Sigma_I =((2.2835E-7 - (1.062E-8)*log(UStarM_I*100.))**2)*(1.E-4)
-       !! SigmaN_I =((2.2835E-7 - (1.062E-8)*log(UStar_I*100.))**2)*(1.E-4)
-       !(4.15-0.531*log(E))^2(1-e^*67.5/E)^4.5 in 10^-16 cm^2, E in keV
-       ! (1-e^a3/E) term ~ 1 at E<10keV
-       !  log(v^2) = 2log(v), but what about the 2.2935E-7 term?  Should be 4.15 ??
-       ! some unit/dimension thing?
+       ! Cross Section from Lindsay and Stebbings, 2005
+       
        Sigma_I(Neu_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Neu_)*100.))**2)*(1.E-4)
        SigmaN_I(Neu_)=((2.2835E-7 - (1.062E-8)*log(UStar_I(Neu_)*100.))**2)*(1.E-4)
        Sigma_I(Ne2_) =((2.2835E-7 - (1.062E-8)*log(UStarM_I(Ne2_)*100.))**2)*(1.E-4)
@@ -1451,8 +1509,6 @@ contains
        ! The charge exhange cross section 100 to change ustar to cm/s
        ! Rate has no units (m^2*m/s*s*m-3 )
 
-       !! Rate_I =Sigma_I*State_V(SWHRho_)*State_V(iRho_I)*UStarM_I  &
-       !!      *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        ! For SW
        Rate_I(SWH_)=0.
        Rate_I(Pu3_)=0.
@@ -1478,9 +1534,6 @@ contains
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
        RatePu3_I(Ne4_) =SigmaPu3_I(Ne4_)*State_V(PU3Rho_)*State_V(iRho_I(Ne4_))*UStarMPu3_I(Ne4_)  &
             *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
-
-       !! RateN_I =SigmaN_I*State_V(Rho_)*State_V(iRho_I)*UStar_I  &
-       !!     *No2Si_V(UnitRho_)*No2Si_V(UnitT_)*(1./cProtonMass)
 
        ! for SW
        RateN_I(SWH_)=0.
@@ -1538,7 +1591,7 @@ contains
        I2px_I  = Rate_I*(UStar_I/UStarM_I)*UThS_I/No2Si_V(UnitU_)**2
 
        ! For PUI's
-       I0xpu3_I = RateNPu3_I! no neutral -> pu3 for now, and this notation doesn't make much sense, would be another pu pop
+       I0xpu3_I = RateNPu3_I
        I0pu3x_I = RateNPu3_I
        I2xpu3_I = RatePu3_I*(UStarPu3_I/UStarMPu3_I)*UThS_I(PU3_)/No2Si_V(UnitU_)**2
        I2pu3x_I = RatePu3_I*(UStarPu3_I/UStarMPu3_I)*UThS_I/No2Si_V(UnitU_)**2
@@ -1624,6 +1677,15 @@ contains
        Kpu3x_I = 0.5*U2_I*RatePu3_I  + I2pu3x_I
 
        Qepu3x_I = Kpu3x_I - Kxpu3_I
+
+!  including energy exchange between PUIs and SW;
+!
+      TempPu3 = 1.E7  !this is the temperature of PUI upstream the TS
+      EneExch_I = 0.
+      EneExch_I(Pu3_) =  State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*Io2No_V(UnitTemperature_)*((r-rBody)/rBody)
+      EneExch_I(SWH_) = -EneExch_I(Pu3_)
+
+
        ! Calculate the source terms for this cell
        call calc_source_cell
 
@@ -1635,28 +1697,25 @@ contains
 
     subroutine calc_source_cell
 
-      ! C.P. needs to work here
-
       ! Calculate source temrs for one cell. The pressures source is
       ! S(p) = (gamma-1)[S(e) - u.S(rhou) + 0.5 u**2 S(rho)]
 
       real:: Source_V(nVar + nFluid)
+      integer:: iVar
 
       !------------------------------------------------------------------------
       Source_V = 0.0
 
-      ! on 8/10 changed some I0xp to I0px, which reflects anayltical equations better, but is mathematically indentical
       do iFluid = Neu_, Ne4_
          if(.not.UseSource_I(iFluid)) CYCLE
          call select_fluid
-         ! have losses to PUI, need sources, I think just a sign change on SW - source in zone 3
          if (iFluid == iFluidProduced_C(i,j,k)) then
             ! iRho etc = change in density etc
-            Source_V(iRho)    = sum(I0xp_I(Neu_:Ne4_))  - I0px_I(iFluid) - I0pu3x_I(iFluid) ! loss from interaction with PU3
-            Source_V(iRhoUx)  = sum(JxpUx_I(Neu_:Ne4_)) - JpxUx_I(iFluid) - Jpu3xUx_I(iFluid)
-            Source_V(iRhoUy)  = sum(JxpUy_I(Neu_:Ne4_)) - JpxUy_I(iFluid) - Jpu3xUy_I(iFluid)
-            Source_V(iRhoUz)  = sum(JxpUz_I(Neu_:Ne4_)) - JpxUz_I(iFluid) - Jpu3xUz_I(iFluid)
-            Source_V(iEnergy) = sum(Kxp_I(Neu_:Ne4_))   - Kpx_I(iFluid) - Kpu3x_I(iFluid)
+            Source_V(iRho)    = sum(I0xp_I(Neu_:Ne4_)) + sum(I0pu3x_I(Neu_:Ne4_)) - I0xp_I(iFluid) - I0xpu3_I(iFluid)
+            Source_V(iRhoUx)  = sum(JxpUx_I(Neu_:Ne4_)) - JpxUx_I(iFluid) + sum(Jxpu3Ux_I(Neu_:Ne4_)) - Jpu3xUx_I(iFluid)
+            Source_V(iRhoUy)  = sum(JxpUy_I(Neu_:Ne4_)) - JpxUy_I(iFluid) + sum(Jxpu3Uy_I(Neu_:Ne4_)) - Jpu3xUy_I(iFluid)
+            Source_V(iRhoUz)  = sum(JxpUz_I(Neu_:Ne4_)) - JpxUz_I(iFluid) + sum(Jxpu3Uz_I(Neu_:Ne4_)) - Jpu3xUz_I(iFluid)
+            Source_V(iEnergy) = sum(Kxp_I(Neu_:Ne4_)) + sum(Kxpu3_I(Neu_:Ne4_)) - Kpx_I(iFluid) - Kpu3x_I(iFluid)
          else
             Source_V(iRho)    = - I0px_I(iFluid) - I0pu3x_I(iFluid)
             Source_V(iRhoUx)  = - JpxUx_I(iFluid) - Jpu3xUx_I(iFluid)
@@ -1671,91 +1730,55 @@ contains
               + 0.5*U2_I(iFluid)*Source_V(iRho) )
       end do
 
-      ! only make Pu3 in region before TS, and no loss of pu3
-      if (Ne3_ == iFluidProduced_C(i,j,k)) then
-         if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
-            Source_V(SWHRho_) = -sum( I0px_I(Neu_:Ne4_))  ! loss to PUIm symetric, so technically I)xp_I
-            Source_V(SWHRhoUx_) = -sum(JxpUx_I(Neu_:Ne4_)) ! QmpxUx_I(Neu_) + QmpxUx_I(Ne2_) + QmpxUx_I(Ne3_) + QmpxUx_I(Ne4_)
-            Source_V(SWHRhoUy_) = -sum(JxpUy_I(Neu_:Ne4_)) ! QmpxUy_I(Neu_) + QmpxUy_I(Ne2_) + QmpxUy_I(Ne3_) + QmpxUy_I(Ne4_)
-            Source_V(SWHRhoUz_) = -sum(JxpUz_I(Neu_:Ne4_)) ! QmpxUz_I(Neu_) + QmpxUz_I(Ne2_) + QmpxUz_I(Ne3_) + QmpxUz_I(Ne4_)
-
-            Source_V(SWHEnergy_)= -sum( Kxp_I(Neu_:Ne4_) )
-
-            ! found mistake here on 7/26 and corrected, and on 10/6
-            ! added to pressure source term due to density source terms on 8/10
+      ! Source terms for the ion populations
+      if(UseSource_I(SWH_) .and. UseSource_I(Pu3_))then
+         ! Region 3: only make Pu3 in region before TS
+       if (Ne3_ == iFluidProduced_C(i,j,k)) then  !!!! You are in Pop III region
+            Source_V(SWHRho_)   = -sum(I0px_I(Neu_:Ne4_))+ I0px_I(Ne3_) + I0xpu3_I(Ne3_)
+            Source_V(SWHRhoUx_) = -sum(JxpUx_I(Neu_:Ne4_))+JpxUx_I(Ne3_) + Jpu3xUx_I(Ne3_)
+            Source_V(SWHRhoUy_) = -sum(JxpUy_I(Neu_:Ne4_))+JpxUy_I(Ne3_) + Jpu3xUy_I(Ne3_)
+            Source_V(SWHRhoUz_) = -sum(JxpUz_I(Neu_:Ne4_))+JpxUz_I(Ne3_) + Jpu3xUz_I(Ne3_)
+            Source_V(SWHEnergy_)= -sum(Kxp_I(Neu_:Ne4_)) + Kpx_I(Ne3_) + Kpu3x_I(Ne3_) + EneExch_I(SWH_)
             Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
                  - Uy_I(SWH_)*Source_V(SWHRhoUx_) &
                  - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
                  - Uz_I(SWH_)*Source_V(SWHRhoUz_) &
                  + 0.5*U2_I(SWH_)*Source_V(SWHRho_) )
-
-            ! C.P. found mistake here on 7/27, with wrong J/K term, should be Jxp, not Jpx
-            ! added to pressure source term due to density source terms on 8/10
-            Source_V(Pu3Rho_) = sum(I0xp_I(Neu_:Ne4_)) - sum(I0xpu3_I(Neu_:Ne4_))
-            Source_V(Pu3RhoUx_) = sum(QmpxUx_I(Neu_:Ne4_)) + sum(JxpUx_I(Neu_:Ne4_))+sum(-Jxpu3Ux_I(Neu_:Ne4_))
-            Source_V(Pu3RhoUy_) = sum(QmpxUy_I(Neu_:Ne4_)) + sum(JxpUy_I(Neu_:Ne4_))+sum(-Jxpu3Uy_I(Neu_:Ne4_))
-            Source_V(Pu3RhoUz_) = sum(QmpxUz_I(Neu_:Ne4_)) + sum(JxpUz_I(Neu_:Ne4_))+sum(-Jxpu3Uz_I(Neu_:Ne4_))
-            Source_V(Pu3Energy_)= sum(Qepx_I(Neu_:Ne4_)) + sum(Kxp_I(Neu_:Ne4_) ) +sum(-Kxpu3_I(Neu_:Ne4_))
+            Source_V(Pu3Rho_) = sum(I0px_I(Neu_:Ne4_)) - I0px_I(Ne3_) - I0xpu3_I(Ne3_)
+            Source_V(Pu3RhoUx_) = sum(Qmpu3xUx_I(Neu_:Ne4_))+ sum(JpxUx_I(Neu_:Ne4_))-JpxUx_I(Ne3_)-Jpu3xUx_I(Ne3_)
+            Source_V(Pu3RhoUy_) = sum(Qmpu3xUy_I(Neu_:Ne4_))+ sum(JpxUy_I(Neu_:Ne4_))-JpxUy_I(Ne3_)-Jpu3xUy_I(Ne3_)
+            Source_V(Pu3RhoUz_) = sum(Qmpu3xUz_I(Neu_:Ne4_))+ sum(JpxUz_I(Neu_:Ne4_))-JpxUz_I(Ne3_)-Jpu3xUz_I(Ne3_)
+            Source_V(Pu3Energy_)= sum(Qepu3x_I(Neu_:Ne4_)) - Kpu3x_I(Ne3_) + sum(Qepx_I(Neu_:Ne4_)) - Kpx_I(Ne3_) + EneExch_I(Pu3_)
             Source_V(Pu3p_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
                  - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
                  - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
                  - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
                  + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_) )
 
-         else if(UseSource_I(SWH_) .and. UseSource_I(PU3_))  then
-            ! this case isn't perfectly valid anymore, as SWH is not total ion fluid
-            Source_V(SWHRho_) = 0.0
-            Source_V(SWHRhoUx_) = sum(QmpxUx_I(Neu_:Ne4_))
-            Source_V(SWHRhoUy_) = sum(QmpxUy_I(Neu_:Ne4_))
-            Source_V(SWHRhoUz_) = sum(QmpxUz_I(Neu_:Ne4_))
-            ! flipped from xp and -px to px and -xp on Oct 4 2011
-            Source_V(SWHEnergy_)=  sum( +Kpx_I(Neu_:Ne4_) )+ sum( -Kxp_I(Neu_:Ne4_) )
-
-            Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
-                 - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
-                 - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
-                 - Uz_I(SWH_)*Source_V(SWHRhoUz_) )
-
-            Source_V(Pu3Rho_)   = sum(-I0xpu3_I(Neu_:Ne4_))
-            Source_V(Pu3RhoUx_) = sum(-Jxpu3Ux_I(Neu_:Ne4_))
-            Source_V(Pu3RhoUy_) = sum(-Jxpu3Uy_I(Neu_:Ne4_))
-            Source_V(Pu3RhoUz_) = sum(-Jxpu3Uz_I(Neu_:Ne4_))
-            Source_V(Pu3Energy_)= sum(-Kxpu3_I(Neu_:Ne4_))
-            Source_V(Pu3p_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
-                 - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
-                 - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
-                 - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
-                 + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_) )
-
-         endif
-         ! otherwise don't do anything in this case,sources not on
-      else if(UseSource_I(SWH_) .and. UseSource_I(PU3_)) then
-         ! Should this assumption be changed, right now acting like only SW interacts with neutrals outside of Region 3, ok approx?
-         Source_V(SWHRho_) = 0.0
-         Source_V(SWHRhoUx_) = sum(QmpxUx_I(Neu_:Ne4_))
-         Source_V(SWHRhoUy_) = sum(QmpxUy_I(Neu_:Ne4_))
-         Source_V(SWHRhoUz_) = sum(QmpxUz_I(Neu_:Ne4_))
-         ! fixed px and xp on Oct 4,2011
-         Source_V(SWHEnergy_)=  sum( +Kpx_I(Neu_:Ne4_) )+ sum( -Kxp_I(Neu_:Ne4_) )
-
+          !end of Region 3
+      else !outside of region 3
+         Source_V(SWHRho_) = sum(I0xpu3_I(Neu_:Ne4_))
+         Source_V(SWHRhoUx_) = sum(QmpxUx_I(Neu_:Ne4_)) + sum(Jpu3xUx_I(Neu_:Ne4_))
+         Source_V(SWHRhoUy_) = sum(QmpxUy_I(Neu_:Ne4_)) + sum(Jpu3xUy_I(Neu_:Ne4_))
+         Source_V(SWHRhoUz_) = sum(QmpxUz_I(Neu_:Ne4_)) + sum(Jpu3xUz_I(Neu_:Ne4_))
+         Source_V(SWHEnergy_)= sum(Qepx_I(Neu_:Ne4_))+ sum(Qepu3x_I(Neu_:Ne4_))
          Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
               - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
               - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
               - Uz_I(SWH_)*Source_V(SWHRhoUz_) )
 
-         Source_V(Pu3Rho_)   = sum(-I0xpu3_I(Neu_:Ne4_))
-         Source_V(Pu3RhoUx_) = sum(-Jxpu3Ux_I(Neu_:Ne4_))
-         Source_V(Pu3RhoUy_) = sum(-Jxpu3Uy_I(Neu_:Ne4_))
-         Source_V(Pu3RhoUz_) = sum(-Jxpu3Uz_I(Neu_:Ne4_))
-         Source_V(Pu3Energy_)= sum(-Kxpu3_I(Neu_:Ne4_))
+         Source_V(Pu3Rho_)   = -sum(I0xpu3_I(Neu_:Ne4_))
+         Source_V(Pu3RhoUx_) = -sum(Jpu3xUx_I(Neu_:Ne4_))
+         Source_V(Pu3RhoUy_) = -sum(Jpu3xUy_I(Neu_:Ne4_))
+         Source_V(Pu3RhoUz_) = -sum(Jpu3xUz_I(Neu_:Ne4_))
+         Source_V(Pu3Energy_)= -sum(Kxpu3_I(Neu_:Ne4_))
          Source_V(Pu3p_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
               - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
               - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
               - Uz_I(Pu3_)*Source_V(Pu3RhoUz_) &
               + 0.5*U2_I(Pu3_)*Source_V(Pu3Rho_))
-
-         ! otherwise do nothing, no ion source on, pui produced
-      endif
+        end if
+      end if
 
       ! Sum up sources for total ion fluid
       Source_V(Rho_) = Source_V(SWHRho_) +  Source_V(Pu3Rho_)
@@ -1765,6 +1788,59 @@ contains
       Source_V(P_) = Source_V(SWHp_) + Source_V(PU3p_)
 
       Source_VC(:,i,j,k) = Source_VC(:,i,j,k) + Source_V
+
+     if(.not.allocated(FluidSource_ICB)) &
+           allocate(FluidSource_ICB(nVar+nFluid,nI,nJ,nK,nBlock))
+      FluidSource_ICB(:,i,j,k,iBlock) = Source_V
+
+      if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest)then
+
+         Source_V = Source_VC(:,i,j,k)
+
+         write(*,*) NameSub, ' iFluidProduced=', iFluidProduced_C(i,j,k)
+         do iVar = 1, nVar + nFLuid
+            write(*,*) ' Source(',NameVar_V(iVar),')=',Source_V(iVar)
+         end do
+         write(*,*) ' Temp_I    ', Temp_I
+         write(*,*) ' Rate_I    ', Rate_I
+         write(*,*) ' RateN_I   ', RateN_I
+         write(*,*) ' Sigma_I   ', Sigma_I
+         write(*,*) ' UStar_I   ', UStar_I
+         write(*,*) ' UStarM_I  ', UStarM_I
+         write(*,*) ' Ux_I      ', Ux_I
+         write(*,*) ' U2_I      ', U2_I
+         write(*,*) ' UTh_I     ', sqrt(UThS_I)
+         write(*,*) ' URelSDim_I ', sqrt(URelSdim_I)
+         write(*,*) ' uDim_I    ', sqrt(U2_I)*No2Io_V(UnitU_)
+         write(*,*) ' I0xp_I    ', I0xp_I
+         write(*,*) ' I0px_I    ', I0px_I
+         write(*,*) ' I2xp_I    ', I2xp_I
+         write(*,*) ' I2px_I    ', I2px_I
+         write(*,*) ' JxpUx_I   ', JxpUx_I
+         write(*,*) ' JpxUx_I   ', JpxUx_I
+         write(*,*) ' QmpxUx_I  ', QmpxUx_I
+         write(*,*) ' Kxp_I     ', Kxp_I
+         write(*,*) ' Kpx_I     ', Kpx_I
+         write(*,*) ' Qepx_I    ', Qepx_I
+         write(*,*) ' EneExch_I ', EneExch_I
+!
+         write(*,*) ' RatePu3_I    ', RatePu3_I
+         write(*,*) ' RateNPu3_I   ', RateNPu3_I
+         write(*,*) ' SigmaPu3_I   ', SigmaPu3_I
+         write(*,*) ' UStarPu3_I   ', UStarPu3_I
+         write(*,*) ' UStarMPu3_I  ', UStarMPu3_I
+         write(*,*) ' UTh_I     ', sqrt(UThS_I)
+         write(*,*) ' URelSPu3dim_I ', sqrt(URelSPu3dim_I)
+         write(*,*) ' uDim_I    ', sqrt(U2_I)*No2Io_V(UnitU_)
+         write(*,*) ' I2xpu3_I    ', I2xpu3_I
+         write(*,*) ' I2pu3x_I    ', I2pu3x_I
+         write(*,*) ' Jxpu3Ux_I   ', Jxpu3Ux_I
+         write(*,*) ' Jpx3Ux_I   ', Jpu3xUx_I
+         write(*,*) ' Qmpu3xUx_I  ', Qmpu3xUx_I
+         write(*,*) ' Kxpu3_I     ', Kxpu3_I
+         write(*,*) ' Kpu3x_I     ', Kpu3x_I
+         write(*,*) ' Qepu3x_I    ', Qepu3x_I
+      end if
 
     end subroutine calc_source_cell
     !==========================================================================
@@ -1816,8 +1892,6 @@ contains
 
        InvRho = 1.0/(State_VGB(SWHRho_,i,j,k,iBlock)+ State_VGB(Pu3Rho_,i,j,k,iBlock)) ! rho is sum of ions density
 
-       InvRhoSW = 1.0/State_VGB(SWHRho_,i,j,k,iBlock)
-
        p      = State_VGB(SWHp_,i,j,k,iBlock) + State_VGB(Pu3p_,i,j,k,iBlock)
 
        pSW = State_VGB(SWHp_,i,j,k,iBlock)
@@ -1835,40 +1909,37 @@ contains
        T_ave = (State_VGB(SWHp_,i,j,k,iBlock) + State_VGB(Pu3p_,i,j,k,iBlock)) &
             /(State_VGB(SWHRho_,i,j,k,iBlock) + State_VGB(Pu3Rho_,i,j,k,iBlock))
 
+      ! rho is the total solar wind rho accounting for electrons
+       rho = 2.*State_VGB(SWHrho_,i,j,k,iBlock) + State_VGB(Pu3rho_,i,j,k,iBlock)
+
+       !InvRhoSW = 1.0/State_VGB(SWHRho_,i,j,k,iBlock)
+
+       InvRhoSW = 1.0/rho
+
        ! merav modifications
-       rho = State_VGB(SWHrho_,i,j,k,iBlock) + State_VGB(Pu3rho_,i,j,k,iBlock)
        B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
        ! Square of Alfven Mach Number
        MachAlfven2 = U2*rho/(B2+1.E-30)
-       ! MachMagneto2 = U2/((1.E-10)+(Gamma*p*InvRho)+(B2*InvRho))
 
        MachMagneto2 = SWHU2/((1.E-10)+(Gamma*T_ave)+(B2*InvRho)) ! U2 or U2DIM?!!
 
-       ! end of merav modifications
        ! Square of Mach number
-       ! Mach2      = U2/(Gamma*p*InvRho)
-       !       Mach2       = U2/(Gamma*T_ave) this is wrong what is supersonic is the SW not PUI
+        Mach2      = U2/(Gamma*p*InvRho)
 
-       Mach2      = U2/(Gamma*pSW*InvRhoSW)
+!!       Mach2      = U2/(Gamma*pSW*InvRhoSW)
 
        ! Temperature in Kelvins
        TempDim = InvRho*p*No2Si_V(UnitTemperature_)
-       ! Account for e- pressure
-       TempDimSW = 1./2.*State_VGB(SWHp_,i,j,k,iBlock)/State_VGB(SWHRho_,i,j,k,iBlock)*No2Si_V(UnitTemperature_)
 
-!!! july12 use sonic Mach number - Berci
+! use sonic Mach number - good for slow Bow Shock (Zieger et al. 2015)
        if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
-!!! october11          if (MachPop4Limit**2 < MachMagneto2 .and. uPop1LimitDim**2 > U2Dim) then
-!!!       if (MachPop4Limit**2 < MachAlfven2 .and. uPop1LimitDim**2 > U2Dim .and. MachPop3Limit**2 < Mach2) then
           ! Outside the bow shock
           iFluidProduced_C(i,j,k) = Ne4_
        elseif( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
           ! add spatial and checking for region 2 qualifications, Oct 26, 2011
           ! Outside the heliopause
-
           iFluidProduced_C(i,j,k) = Neu_
-
        elseif( MachPop2Limit**2 > Mach2 )then
           ! Heliosheath
           iFluidProduced_C(i,j,k) = Ne2_
