@@ -808,7 +808,7 @@ test_swpc_cimi_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputCimi/log_e20140410-000200.log \
 		> test_swpc_cimi_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=2e-6 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputCimi/magnetometers_e20140410-000200.mag \
 		>> test_swpc_cimi_gm.diff)
