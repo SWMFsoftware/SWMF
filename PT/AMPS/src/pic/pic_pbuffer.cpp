@@ -654,7 +654,7 @@ int PIC::ParticleBuffer::InitiateParticle(double *x,double *v,double *WeightCorr
   int ptr,ptrSpec;
   byte* ptrData;
 
-  ptr=PIC::ParticleBuffer::GetNewParticle();
+  ptr=PIC::ParticleBuffer::GetNewParticle(true);
   ptrData=GetParticleDataPointer(ptr);
 
   //default settings
