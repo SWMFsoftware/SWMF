@@ -260,7 +260,7 @@ contains
 
     integer                        :: nLogTeDEM
     integer                        :: iTe, i, j, k
-    real                           :: DxLocal
+    real                           :: DxLocal, Ne
 
     ! Variables to save file.
     character(len=5)               :: TypeFileDEM = 'ascii'
@@ -300,15 +300,14 @@ contains
              if(DoExtendTransitionRegion) DxLocal = DxLocal &
                   /extension_factor(Var_VIII(te_,i,j,k))
 
-             ! DEM value is Ne*N_H *dh/dT in [cm^-5 K^-1]
+             Ne = Var_VIII(rho_,i,j,k)/cProtonMass*1e-6/ProtonElectronRatio
+
+             ! DEM value is Ne**2 *dh/dT in [cm^-5 K^-1]
              DEM_I(iTe) = DEM_I(iTe) + &
-                  (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 &
-                  / ProtonElectronRatio * DxLocal / DLogTeDEM / &
-                  Var_VIII(te_,i,j,k)/log(10.)
-             ! EM value is Ne*N *dV in [cm^-3]
+                  Ne**2 * DxLocal / DLogTeDEM / Var_VIII(te_,i,j,k)/log(10.)
+             ! EM value is Ne**2 *dV in [cm^-3]
              EM_I(iTe) = EM_I(iTe) + &
-                  (Var_VIII(rho_,i,j,k)/cProtonMass*1e-6)**2 &
-                  / ProtonElectronRatio * DxLocal * dy * dz
+                  Ne**2 * DxLocal * dy * dz
           end do
        end do
     end do
