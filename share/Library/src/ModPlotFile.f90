@@ -746,6 +746,8 @@ contains
          read(iUnit, '(a)', ERR=77, END=77) NameVar
       case('tec')
          open(iUnit, file=NameFile, status='old', ERR=66)
+         ! skip title line
+         read(iUnit,'(a)') StringHeader
          ! read NameVar into StringHeader 
          read(iUnit,'(a)') StringHeader
          ! read n_D
@@ -759,9 +761,12 @@ contains
          read(iUnit,'(a16,i3)')     StringMisc, nParam
          read(iUnit,'(a14,i3)')     StringMisc, nVar
          ! read Param_I
+         if(nParam > 0)then
+            allocate(Param_I(nParam))
+         end if
          do i = 1, nParam
             read(iUnit,'(a)') StringMisc
-            read(StringMisc(len_trim(StringMisc)-19:len_trim(StringMisc)-1),&
+            read(StringMisc(len_trim(StringMisc)-18:len_trim(StringMisc)-1),&
                  '(es18.10)') Param_I(i)
          end do
 
