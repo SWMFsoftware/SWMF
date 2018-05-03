@@ -170,7 +170,7 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
-T			DoSaveInitial
+F			DoSaveInitial
 
 #SAVEPLOT
 3			nPlotFile
