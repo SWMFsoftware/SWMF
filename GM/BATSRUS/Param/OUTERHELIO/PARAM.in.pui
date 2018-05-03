@@ -165,7 +165,7 @@ T			DoSaveRestart
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-1			DnSaveLogfile
+10			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
