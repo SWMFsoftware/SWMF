@@ -5813,6 +5813,31 @@ double EMfields3D:: getVar(string var, double iIn, double jIn, double kIn, bool 
       }
     }
     value *= No2OutRho;
+  }else if(var.substr(0,3)=="rgS"){
+    string::size_type pos;
+    stringstream ss;
+    int is;
+    pos = var.find_first_of("0123456789");
+    ss<<var.substr(pos);
+    ss>>is;
+    if(is>=ns){
+      value=0;
+    }else{
+      double p0, rho0,uth=0, Bt=0; 
+
+      p0 = (pXXsn[is][i][j][k] + pYYsn[is][i][j][k] + pZZsn[is][i][j][k])/3;
+      rho0 = rhons[is][i][j][k];
+      if(rho0 !=0) uth = sqrt(p0/rho0);
+      Bt = sqrt(Bxn[i][j][k]*Bxn[i][j][k] + 
+		Byn[i][j][k]*Byn[i][j][k] + 
+		Bzn[i][j][k]*Bzn[i][j][k]);
+      if(Bt !=0){
+	value = uth/Bt/fabs(qom[is]);
+      }else{
+	value = 0; 
+      } 
+    }
+    value *= No2OutL;
   }else if(var.substr(0,2)=="pS"){
     // pS0, pS1...
     bool isFluidP = true;
