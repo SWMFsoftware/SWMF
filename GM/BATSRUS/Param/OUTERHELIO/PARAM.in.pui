@@ -169,7 +169,7 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
-T			DoSaveInitial
+F			DoSaveInitial
 
 #SAVEPLOT
 3			nPlotFile
@@ -332,17 +332,6 @@ mc                      TypeLimiter
 ! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
 #NONCONSERVATIVE
 F                       UseNonConservative
-
-#SAVERESTART
-T                       DoSaveRestart
-1000                    DoSaveRestart
--1.0                    DtSaveRestart
-
-#SAVELOGFILE
-T                       DoSaveLogfile
-RAW                     StringLogfile
-1                       DnSaveLogfile
--1.                     DtSaveLogfile
 
 #USERINPUTBEGIN --------------------------------------------------------
 

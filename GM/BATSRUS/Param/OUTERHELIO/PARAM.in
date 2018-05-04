@@ -166,7 +166,7 @@ T			DoSaveRestart
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-1			DnSaveLogfile
+10			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
@@ -308,17 +308,6 @@ T                       UsePointImplicit
 1.0                     BetaPointImplicit
 T			IsAsymmetric
 T			DoNormalizeCell
-
-#SAVERESTART
-T                       DoSaveRestart
-1000                    DoSaveRestart
--1.0                    DtSaveRestart
-
-#SAVELOGFILE
-T                       DoSaveLogfile
-RAW                     StringLogfile
-1                       DnSaveLogfile
--1.                     DtSaveLogfile
 
 #USERINPUTBEGIN --------------------------------------------------------
 
