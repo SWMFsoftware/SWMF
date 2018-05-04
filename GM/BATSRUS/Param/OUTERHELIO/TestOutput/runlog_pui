@@ -3,12 +3,12 @@
           for 3D Heliospheric Flows
  University of Michigan, 1995-2017
 
- BATSRUS version 9.20 is running as GM on      2 PE(s) with up to  1 OpenMP threads/PE
+ BATSRUS version 9.20 is running as GM on      4 PE(s) with up to  1 OpenMP threads/PE
 
  EQUATIONS:   MHD + PUI and four neutrals
  USER MODULE: Outer Heliosphere with 4 neutrals and 2 ion fluids, Opher & Toth 1.00
 
-ModReadParam::read_file: read and broadcast nLine= 362 lines of text
+ModReadParam::read_file: read and broadcast nLine= 351 lines of text
  ----- Starting Session  1  ------
  GM_set_parameters: READ iSession = 1  iLine= 0  nLine = 1000
 
@@ -178,11 +178,11 @@ T			DoSaveRestart
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-1			DnSaveLogfile
+10			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #SAVEINITIAL
-T			DoSaveInitial
+F			DoSaveInitial
 
 #SAVEPLOT
 3			nPlotFile
@@ -360,10 +360,10 @@ init_mod_field_trace
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  2
+ Available processors: nProc =  4
 
  After initial grid setup:
-   nBlockMax and MaxBlock      =  1614 3500
+   nBlockMax and MaxBlock      =  807 3500
    Total number of blocks used =  3228
    Total number of cells       =  206592
    Total number of true cells  =  206584
@@ -376,37 +376,29 @@ init_mod_field_trace
  y:            -1.50000000E+03  1.50000000E+03
  z:            -1.50000000E+03  1.50000000E+03
 
-saved ifile= 1 type=restart    at n_step=      0
-saved ifile= 6 type=y=0_mhd    at n_step=      0
-saved ifile= 7 type=y=0_var    at n_step=      0
-saved ifile= 8 type=z=0_mhd    at n_step=      0
 -------------------------------------------------------------------------------
 SORTED TIMING at step       0    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                   2.49    100.00         1         1
+BATSRUS                   0.37    100.00         1         1
 -------------------------------------------------------------------------------
-setup                     2.49    100.00         1         1
-save_plot                 0.64     25.49         1         3
-write_restart_files       0.60     23.99         1         1
-exch_msgs                 0.33     13.17         1         2
-batl_pass                 0.11      4.61         1         3
-local_pass                0.11      4.32         1         6
-save_logfile              0.03      1.30         1         1
-integrate_domain          0.01      0.54         1         1
-wait_pass                 0.00      0.16         1         3
-buffer_to_state           0.00      0.12         1         3
+setup                     0.37    100.00         1         1
+exch_msgs                 0.11     29.89         1         2
+batl_pass                 0.05     13.37         1         3
+local_pass                0.04     11.35         1         6
+wait_pass                 0.00      1.34         1         3
+buffer_to_state           0.00      0.55         1         3
 -------------------------------------------------------------------------------
  Resetting timing counters after setup.
- First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.4631773958881959E-07
+ First error for Time step reduction, min(factor) (PE= 0 ) at iter= 1  with value=   1.2734519251619719E-07
 saved ifile= 6 type=y=0_mhd    at n_step=     10
 saved ifile= 7 type=y=0_var    at n_step=     10
 saved ifile= 8 type=z=0_mhd    at n_step=     10
-Speed is  80787.5 c/s/p after     13.7 s at N =      10
+Speed is 179025.6 c/s/p after      3.1 s at N =      10
 saved ifile= 6 type=y=0_mhd    at n_step=     20
 saved ifile= 7 type=y=0_var    at n_step=     20
 saved ifile= 8 type=z=0_mhd    at n_step=     20
-Speed is  81903.2 c/s/p after     27.1 s at N =      20
+Speed is 176754.4 c/s/p after      6.2 s at N =      20
  ----- End of Session    1  ------
  ----- Starting Session  2  ------
  OH_set_parameters: READ iSession = 2  iLine= 293  nLine = 1000
@@ -464,10 +456,10 @@ minmod			TypeLimiter
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  2
+ Available processors: nProc =  4
 
  After initial grid setup:
-   nBlockMax and MaxBlock      =  1614 3500
+   nBlockMax and MaxBlock      =  807 3500
    Total number of blocks used =  3228
    Total number of cells       =  206592
    Total number of true cells  =  206584
@@ -483,15 +475,15 @@ minmod			TypeLimiter
 saved ifile= 6 type=y=0_mhd    at n_step=     30
 saved ifile= 7 type=y=0_var    at n_step=     30
 saved ifile= 8 type=z=0_mhd    at n_step=     30
-Speed is  36278.3 c/s/p after     48.8 s at N =      30
+Speed is  76497.0 c/s/p after     11.3 s at N =      30
 saved ifile= 6 type=y=0_mhd    at n_step=     40
 saved ifile= 7 type=y=0_var    at n_step=     40
 saved ifile= 8 type=z=0_mhd    at n_step=     40
-Speed is  36170.7 c/s/p after     78.3 s at N =      40
+Speed is  75426.8 c/s/p after     18.3 s at N =      40
 saved ifile= 6 type=y=0_mhd    at n_step=     50
 saved ifile= 7 type=y=0_var    at n_step=     50
 saved ifile= 8 type=z=0_mhd    at n_step=     50
-Speed is  35967.6 c/s/p after    107.7 s at N =      50
+Speed is  75536.4 c/s/p after     25.3 s at N =      50
  ----- End of Session    2  ------
  ----- Starting Session  3  ------
  OH_set_parameters: READ iSession = 3  iLine= 304  nLine = 1000
@@ -523,17 +515,6 @@ mc                      TypeLimiter
 
 #NONCONSERVATIVE
 F                       UseNonConservative
-
-#SAVERESTART
-T                       DoSaveRestart
-1000                    DoSaveRestart		DnSaveRestart
--1.0                    DtSaveRestart
-
-#SAVELOGFILE
-T                       DoSaveLogfile
-RAW                     StringLogfile
-1                       DnSaveLogfile
--1.                     DtSaveLogfile
 
 #USERINPUTBEGIN --------------------------------------------------------
 
@@ -595,10 +576,10 @@ T       		UseSourceNe4		UseNe4Source
     Other Runtime Parameters
     ------------------------
 
- Available processors: nProc =  2
+ Available processors: nProc =  4
 
  After initial grid setup:
-   nBlockMax and MaxBlock      =  1614 3500
+   nBlockMax and MaxBlock      =  807 3500
    Total number of blocks used =  3228
    Total number of cells       =  206592
    Total number of true cells  =  206584
@@ -614,11 +595,11 @@ T       		UseSourceNe4		UseNe4Source
 saved ifile= 6 type=y=0_mhd    at n_step=     60
 saved ifile= 7 type=y=0_var    at n_step=     60
 saved ifile= 8 type=z=0_mhd    at n_step=     60
-Speed is  18548.8 c/s/p after    164.6 s at N =      60
+Speed is  64505.7 c/s/p after     33.6 s at N =      60
 saved ifile= 6 type=y=0_mhd    at n_step=     70
 saved ifile= 7 type=y=0_var    at n_step=     70
 saved ifile= 8 type=z=0_mhd    at n_step=     70
-Speed is  18637.5 c/s/p after    221.1 s at N =      70
+Speed is  64337.6 c/s/p after     41.8 s at N =      70
 
     Finished Numerical Simulation
     -----------------------------
@@ -633,37 +614,36 @@ saved ifile= 8 type=z=0_mhd    at n_step=     75
 SORTED TIMING from step       0 to      75    on PE    0
 name                       sec   percent     #iter    #calls
 -------------------------------------------------------------------------------
-BATSRUS                 250.20    100.00         1         1
+BATSRUS                  46.07    100.00         1         1
 -------------------------------------------------------------------------------
-advance                 242.33     96.86        75        75
-calc_fluxes              91.13     36.42        75    201750
-update_state             76.68     30.65        75    201750
-update_point_implici     59.40     23.74        25     40350
-calc_facevalues          24.71      9.88        75    201750
-exch_msgs                24.09      9.63        77       127
-batl_pass                11.30      4.52        77       127
-calc_sources             10.49      4.19        75    201750
-local_pass               10.39      4.15        77       254
-calc_face_bfo             5.39      2.16        75     93750
-save_plot                 5.09      2.03         8        24
-update_check              4.98      1.99        75       125
-calc_fluxes_bfo           3.67      1.47        75     93750
-save_logfile              1.70      0.68        75        75
-integrate_domain          0.73      0.29        75        75
-write_restart_files       0.60      0.24         1         1
-wait_pass                 0.55      0.22        77       127
-send_cons_flux            0.45      0.18        75       125
-buffer_to_state           0.35      0.14        77       127
-barrier-expl2             0.01      0.00        75       125
-barrier-expl1             0.01      0.00        75       125
-set_face_boundary         0.01      0.00        75       500
-init_pass                 0.00      0.00        77       127
+advance                  44.75     97.14        75        75
+calc_fluxes              20.36     44.18        75    100875
+exch_msgs                 8.53     18.52        77       127
+batl_pass                 4.97     10.79        77       127
+calc_facevalues           4.78     10.37        75    100875
+update_state              4.25      9.22        75    100875
+local_pass                4.23      9.18        77       254
+calc_sources              2.42      5.26        75    100875
+update_check              2.14      4.66        75       125
+calc_face_bfo             0.99      2.16        75     46875
+save_plot                 0.91      1.97         8        24
+calc_fluxes_bfo           0.80      1.73        75     46875
+buffer_to_state           0.40      0.88        77       127
+wait_pass                 0.34      0.73        77       127
+update_point_implici      0.31      0.68        25     20175
+barrier-expl2             0.16      0.34        75       125
+send_cons_flux            0.15      0.33        75       125
+write_restart_files       0.11      0.23         1         1
+save_logfile              0.10      0.22         8         8
+barrier-expl1             0.07      0.16        75       125
+integrate_domain          0.03      0.07         8         8
+set_face_boundary         0.00      0.00        75       250
 -------------------------------------------------------------------------------
 clean_mod_advance deallocated arrays
 clean_mod_geometry deallocated arrays
 clean_mod_nodes deallocated arrays
 clean_mod_raytrace deallocated arrays
 Error_report for Time step reduction, min(factor)
- OCCURED first= 1  last= 75  count_max= 105  count_sum= 105
- VALUES min=   1.4631773958881959E-07  max=   0.7399736832316086  mean=   0.1627205907765100  last=   0.6393172543559879  last_sum=   0.6393172543559879
+ OCCURED first= 1  last= 75  count_max= 125  count_sum= 125
+ VALUES min=   1.2734519251619719E-07  max=   0.5533559433183241  mean=   9.7644917169791415E-02  last=   4.5671980700864909E-02  last_sum=   4.5671980700864909E-02
 
