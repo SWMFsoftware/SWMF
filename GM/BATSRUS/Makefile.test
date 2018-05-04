@@ -795,8 +795,8 @@ test_outerhelio_run:
 
 test_outerhelio_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
-		Param/OUTERHELIO/TestOutput/log_n000000.log \
-		${TESTDIR}/RESULTS/OH/log_n000000.log > test_outerhelio.diff)
+		${TESTDIR}/RESULTS/OH/log_n000010.log \
+		Param/OUTERHELIO/TestOutput/log_n000010.log > test_outerhelio.diff)
 	ls -l test_outerhelio.diff
 
 test_outerheliopui:
@@ -826,8 +826,8 @@ test_outerheliopui_run:
 
 test_outerheliopui_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-5 \
-		Param/OUTERHELIO/TestOutput/log_n000000_pui.log \
-		${TESTDIR}/RESULTS/OH/log_n000000.log > test_outerheliopui.diff)
+		${TESTDIR}/RESULTS/OH/log_n000010.log \
+		Param/OUTERHELIO/TestOutput/log_n000010_pui.log > test_outerheliopui.diff)
 	ls -l test_outerheliopui.diff
 
 ### FUNCTIONALITY TEST SUITE ###
