@@ -51,8 +51,8 @@ contains
          correct_face_value
     use ModViscosity,     ONLY: &
          UseViscosity, set_visco_factor_cell, ViscoFactor_C
-    use ModBorisCorrection, ONLY: UseBorisCorrection, &
-         EDotFA_X, EDotFA_Y, EDotFA_Z
+    use ModBorisCorrection, ONLY: UseBorisCorrection, add_boris_source
+
     use ModUserInterface ! user_calc_sources
 
     integer, intent(in):: iBlock
@@ -66,8 +66,7 @@ contains
     real :: CurlB0CrossB_D(3)
 
     ! Variables needed for Boris source terms also used for div(u)
-    real :: FullB_DC(MaxDim,nI,nJ,nK), RhoInv
-    real :: E_D(MaxDim), DivE
+    real :: RhoInv
 
     ! Variables needed for anisotropic pressure
     real :: b_D(MaxDim), GradU_DD(nDim,MaxDim), bDotGradparU
@@ -629,30 +628,10 @@ contains
 
     if(UseB .and. UseBorisCorrection &
          .and. ClightFactor < 0.9999 &
-         .and. index(StringTest,'nodivE')<1) then
-
-       Coef = (ClightFactor**2 - 1.0)*InvClight2
-       FullB_DC = State_VGB(Bx_:Bz_,1:nI,1:nJ,1:nK,iBlock)
-       if(UseB0)FullB_DC = FullB_DC + B0_DGB(:,1:nI,1:nJ,1:nK,iBlock)
-       do k = 1, nK; do j = 1, nJ; do i = 1, nI
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-          E_D = cross_product(FullB_DC(:,i,j,k),&
-               State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/&
-               State_VGB(Rho_,i,j,k,iBlock)
-
-          ! Calculate divergence of electric field
-          DivE =                     EDotFA_X(i+1,j,k) - EDotFA_X(i,j,k)
-          if(nDim > 1) DivE = DivE + EDotFA_Y(i,j+1,k) - EDotFA_Y(i,j,k)
-          if(nDim > 2) DivE = DivE + EDotFA_Z(i,j,k+1) - EDotFA_Z(i,j,k)
-          DivE = DivE/CellVolume_GB(i,j,k,iBlock)
-
-          Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
-               + Coef*DivE*E_D
-
-          if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
-               call write_source('After E div E')
-
-       end do; end do; end do
+         .and. index(StringTest,'nodivE')<1)then
+       call add_boris_source(iBlock)
+       if(DoTest.and.iVarTest>=RhoUx_.and.iVarTest<=RhoUz_) &
+            call write_source('After E div E')
     end if
 
     ! These source terms apply to all the fluids
@@ -892,12 +871,11 @@ contains
       ! This routine calculates the gradient tensor of uPlus_D, which is used
       ! in anisotropic Pe.
 
-      use BATL_lib, ONLY: CellVolume_GB, Dim1_, Dim2_, Dim3_
+      use BATL_lib, ONLY: Dim1_, Dim2_, Dim3_
 
       integer, intent(in) :: i, j, k, iBlock
       real,   intent(out) :: GradU_DD(nDim,MaxDim)
 
-      integer :: iDir
 
       ! uPlus_D on the left and right faces
       real :: uPlusLeft_D(3),  uPlusRight_D(3)

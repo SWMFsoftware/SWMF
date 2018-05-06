@@ -14,6 +14,7 @@ module ModBorisCorrection
   public:: boris_to_mhd        ! from semi-relativistic to classical variables
   public:: mhd_to_boris_simple ! from RhoU to (1+B^2/(Rho*c^2))*RhoU
   public:: boris_simple_to_mhd ! from (1+B^2/(Rho*c^2))*RhoU to RhoU
+  public:: add_boris_source    ! add source term proportional to div(E) 
 
   logical, public:: UseBorisCorrection = .false.
   logical, public:: UseBorisSimple = .false.
@@ -216,6 +217,47 @@ contains
 
   end subroutine boris_simple_to_mhd
   !============================================================================
+  subroutine add_boris_source(iBlock)
+
+    ! Add E div(E)*(1/c0^2 - 1/c^2) source term to the momentum equation
+    ! See eq 28 in Gombosi et al. 2001 JCP, doi:10.1006/jcph.2002.7009
+
+    use ModMain,    ONLY: UseB0
+    use ModB0,      ONLY: B0_DGB
+    use ModAdvance, ONLY: State_VGB, Source_VC
+    use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim
+
+    integer, intent(in):: iBlock
+
+    integer:: i, j, k
+    real:: Coef
+    real :: FullB_D(MaxDim), E_D(MaxDim), DivE
+
+    character(len=*), parameter:: NameSub = 'add_boris_source'
+    !-------------------------------------------------------------------------
+    Coef = (ClightFactor**2 - 1.0)*InvClight2
+    do k = 1, nK; do j = 1, nJ; do i = 1, nI
+       if(.not.Used_GB(i,j,k,iBlock)) CYCLE
+
+       FullB_D = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+       if(UseB0)FullB_D = FullB_D + B0_DGB(:,i,j,k,iBlock)
+
+       E_D = cross_product(FullB_D,&
+            State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))/&
+            State_VGB(Rho_,i,j,k,iBlock)
+
+       ! Calculate divergence of electric field
+       DivE =                     EDotFA_X(i+1,j,k) - EDotFA_X(i,j,k)
+       if(nDim > 1) DivE = DivE + EDotFA_Y(i,j+1,k) - EDotFA_Y(i,j,k)
+       if(nDim > 2) DivE = DivE + EDotFA_Z(i,j,k+1) - EDotFA_Z(i,j,k)
+       DivE = DivE/CellVolume_GB(i,j,k,iBlock)
+
+       Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
+            + Coef*DivE*E_D
+
+     end do; end do; end do
+ 
+  end subroutine add_boris_source
 
 end module ModBorisCorrection
 !==============================================================================
