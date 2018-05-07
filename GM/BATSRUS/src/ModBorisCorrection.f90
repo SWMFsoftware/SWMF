@@ -9,7 +9,8 @@ module ModBorisCorrection
   use ModAdvance, ONLY: State_VGB, Source_VC, LeftState_VX, RightState_VX, &
        LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
   use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
-       x_, y_, z_, get_region_indexes
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_, &
+       get_region_indexes, block_inside_regions
 
   implicit none
   private ! except
@@ -23,6 +24,7 @@ module ModBorisCorrection
   public:: boris_simple_to_mhd ! from (1+B^2/(Rho*c^2))*RhoU to RhoU
   public:: add_boris_source    ! add source term proportional to div(E) 
   public:: boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z ! convert faces
+  public:: calc_boris_factor_g ! calculate (region dependent) boris factor
 
   logical, public:: UseBorisCorrection = .false.
   logical, public:: UseBorisSimple = .false.
@@ -490,6 +492,24 @@ contains
     end do; end do; end do
 
   end subroutine boris_to_mhd_z
+  !===========================================================================
+  subroutine calc_boris_factor_g(iBlock, BorisFactor_G)
 
+    ! Calculate Boris factor in all cell centers including ghost cells
+    
+    integer, intent(in):: iBlock
+    real,    intent(inout):: BorisFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    !-------------------------------------------------------------------------
+    if(allocated(iRegionBoris_I))then
+       call block_inside_regions( &
+            iRegionBoris_I, iBlock, size(BorisFactor_G), 'ghost', &
+            Value_I=BorisFactor_G(MinI,MinJ,MinK))
+       BorisFactor_G = 1 - (1 - ClightFactor)*BorisFactor_G
+    else
+       BorisFactor_G = ClightFactor
+    end if
+
+  end subroutine calc_boris_factor_g
+  
 end module ModBorisCorrection
 !==============================================================================

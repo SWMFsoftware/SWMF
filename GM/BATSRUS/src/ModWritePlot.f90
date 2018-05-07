@@ -965,8 +965,7 @@ contains
     use ModAdvance, ONLY : time_BLK, &
          State_VGB, Energy_GBI, DivB1_GB, IsConserv_CB, UseNonconservative, &
          ExNum_CB, EyNum_CB, EzNum_CB, iTypeAdvance_B, UseElectronPressure, &
-         UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB,&
-         UseAdaptiveLowOrder
+         UseMultiSpecies, LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
     use ModLoadBalance, ONLY: iTypeBalance_A
     use ModB0, ONLY: B0_DGB
     use ModGeometry
@@ -1000,8 +999,9 @@ contains
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
     use ModPIC, ONLY: pic_find_region
+    use ModBorisCorrection, ONLY: calc_boris_factor_g
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
-         iTimeLevel_A, AmrCrit_IB, nAmrCrit, IsCartesian, &
+         iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
          Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB
 
     use ModUserInterface ! user_set_plot_var
@@ -1593,6 +1593,8 @@ contains
        case('balance')
           if(allocated(iTypeBalance_A)) &
                PlotVar(:,:,:,iVar) = iTypeBalance_A(iNode_B(iBlock))
+       case('boris')
+          call calc_boris_factor_g(iBlock, PlotVar(:,:,:,iVar))
        case('loworder')
           if(allocated(iRegionLowOrder_I)) call block_inside_regions( &
                iRegionLowOrder_I, iBlock, size(PlotVar(:,:,:,iVar)), 'ghost', &
