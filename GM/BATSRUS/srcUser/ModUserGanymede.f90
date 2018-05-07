@@ -4,7 +4,7 @@
 module ModUser
 
   use BATL_lib, ONLY: &
-       test_start, test_stop
+       test_start, test_stop, iTest, jTest, kTest, iBlockTest
   ! User module for Ganymede. Inherited from ModUserMercury.f90
   ! Must compile with MHDHypPe equation set.
   use ModUserEmpty,                          &
@@ -56,8 +56,8 @@ contains
 !!! from that. Initialize these to -1. PlanetRadius should be
 !!! in dimensional units.
 
-    if (TypeGeometry /= 'spherical_lnr') &
-         call stop_mpi('ERROR: Correct PARAM.in, need spherical grid.')
+    !if (TypeGeometry /= 'spherical_lnr') &
+    !     call stop_mpi('ERROR: Correct PARAM.in, need spherical grid.')
 
     if(PlanetDensitySi < 0.0) &
          PlanetDensitySi  = 3.0*MassPlanet/(4.0*cPi*RadiusPlanet**3)
@@ -183,7 +183,7 @@ contains
   subroutine user_set_ics(iBlock)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: R_BLK
+    use ModGeometry,   ONLY: Rmin_BLK, R_BLK
     use ModSize,       ONLY: nI, nJ, nK, nG
     use ModVarIndexes, ONLY: Bx_, Bz_, Rho_, P_, Pe_
     use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, &
@@ -200,8 +200,8 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(R_BLK(1,1,1,iBlock) > PlanetRadius) RETURN
-
+    if(Rmin_BLK(iBlock) > PlanetRadius) RETURN
+    
     if(UseSolidState) then
        ! hyzhou: the new logic do not require 2 layers of cells above
        ! I may even not need this: just use set_ICs would be fine.
@@ -215,21 +215,13 @@ contains
              State_VGB(iP,i,j,k,iBlock)   = FaceState_VI(P_,solidBc_)
              ! Test for MhdHypPe
              State_VGB(Pe_,i,j,k,iBlock)  = FaceState_VI(Pe_,solidBc_)
-             ! hyzhou: test for timestep
-             ! State_VGB(iRho,i,j,k,iBlock) = PlanetDensity
-             ! State_VGB(iP,i,j,k,iBlock)   = PlanetPressure
              State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
-          end do; end do; end do
-       end do
-    else
-       ! old logic as Mercury
-       do iFluid = 1, nFluid
-          call select_fluid
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             if(R_BLK(i+nG,j,k,iBlock) > PlanetRadius) CYCLE
-             State_VGB(iRho,i,j,k,iBlock) = PlanetDensity
-             State_VGB(iP,i,j,k,iBlock)   = PlanetPressure
-             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+
+             if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
+                  .and. iBlock==iBlockTest)then
+                write(*,*) 'State_VGB(rho)=',State_VGB(iRho,i,j,k,iBlock)
+             end if
+
           end do; end do; end do
        end do
     end if
@@ -301,48 +293,6 @@ contains
 
              RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
 
-             ! if(RhoUr > 0.0) then
-             !   ! If flow is out of the planet, remove the radial component
-             !   ! of the momentum so that the flow is tangential
-             !   dRhoUr_D = -r_D*RhoUr
-             ! else
-             !   ! If flow is into the planet the flow is absorbed
-             !   dRhoUr_D = 0.0
-             ! end if
-
-             ! Set nG cells inside the planet
-             ! with zero gradient boundary condition
-             ! if(RhoUr > 0.0) then
-             !   do iG = i-nG, i-1
-             !      State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
-             !           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) + dRhoUr_D
-             !      u_D = State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock)/ &
-             !           State_VGB(Rho_,iG,j,k,iBlock)
-
-                   ! Based on my (Yuxi) experience, the time-accurate
-                   ! part-implicit run will crash if fixed density and
-                   ! pressure are used.
-
-                   ! State_VGB(Rho_,iG,j,k,iBlock) = 1.0
-                   ! State_VGB(P_,iG,j,k,iBlock) = PlanetPressure
-
-                    ! float BC for Pressure & density
-              !     State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-              !     State_VGB(P_,iG,j,k,iBlock)   = State_VGB(P_,i,j,k,iBlock)
-                   ! reflect for Rho*Ur
-              !     State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
-              !           u_D*State_VGB(Rho_,iG,j,k,iBlock)
-              !  end do
-             ! else
-                ! Float BC
-             !   do iG = i-nG, i-1
-             !      State_VGB(Rho_,iG,j,k,iBlock) = State_VGB(Rho_,i,j,k,iBlock)
-             !      State_VGB(P_,iG,j,k,iBlock) = State_VGB(P_,i,j,k,iBlock)
-             !      State_VGB(RhoUx_:RhoUz_,iG,j,k,iBlock) = &
-             !           State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)
-             !   end do
-             ! endif
-
              ! Fixed density if UsePlanetDensity=.true.
              if(UsePlanetDensity) then
                 ! Velocity above the surface
@@ -407,28 +357,48 @@ contains
   subroutine user_set_face_boundary(VarsGhostFace_V)
 
     use ModVarIndexes
-    use ModFaceBoundary, ONLY: VarsTrueFace_V, B0Face_D, iBoundary
-    use ModPhysics, ONLY: FaceState_VI
-    use ModMultiFluid, ONLY: iUx, iUz, iUx_I, iUz_I, iFluid, nFluid
+    use ModFaceBoundary, ONLY: VarsTrueFace_V, B0Face_D, iBoundary, &
+         iFace, jFace, kFace, iside, iBlock => iBlockBc
+    use ModPhysics,      ONLY: FaceState_VI
+    use ModMultiFluid,   ONLY: iUx, iUz, iUx_I, iUz_I, iFluid, nFluid
+    use ModAdvance,      ONLY: State_VGB
+    use ModMain,         ONLY: UseHyperbolicDivb
 
     real, intent(out):: VarsGhostFace_V(nVar)
+
+    !integer:: iTrue, jTrue, kTrue, iBody, jBody, kBody
+    integer:: i, j, k
     real ::  bUnit_D(3)
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
     ! If I am trying to use float BC for rho and p, no need for this
-    VarsGhostFace_V = FaceState_VI(:,iBoundary)
-
-    ! VarsGhostFace_V(Hyp_) = 0
-
-    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
+    !VarsGhostFace_V = FaceState_VI(:,iBoundary)
 
     ! Float density and pressure
-    ! VarsGhostFace_V(Rho_) = VarsTrueFace_V(Rho_)
-    ! VarsGhostFace_V(P_) = VarsTrueFace_V(P_)
+    VarsGhostFace_V = VarsTrueFace_V    
+
+    if(UseHyperbolicDivb) &
+         VarsGhostFace_V(Hyp_) = 0
+
+    ! get ghost cell indexes from face indexes
+    i = iFace; j = jFace; k = kFace;
+    select case(iSide)
+    case(1)
+       i = iFace - 1
+    case(3)
+       j = jFace - 1
+    case(5)
+       k = kFace - 1
+    end select
+
+    ! copy the internal cell center value to the face
+    VarsGhostFace_V(Bx_:Bz_) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    
+    ! float for B
+    !VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
 
     ! First use B0Face_D + VarsTrueFace_V
     ! then try B0Face_D + State_VGB(Bx_:Bz_,iGhost,jGhost,kGhost,iBlock)
-
     bUnit_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
     bUnit_D = bUnit_D/max(1e-30, sqrt(sum(bUnit_D**2)))
     do iFluid = 1, nFluid
