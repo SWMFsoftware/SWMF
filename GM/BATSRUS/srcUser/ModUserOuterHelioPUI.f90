@@ -38,7 +38,7 @@ module ModUser
   use ModSize,     ONLY: nI, nJ, nK
   use ModMain
   use ModPhysics
-  use ModAdvance,  ONLY : State_VGB, Source_VC, ExtraSource_ICB
+  use ModAdvance,  ONLY : State_VGB
   use ModGeometry, ONLY : Xyz_DGB, r_BLK, true_cell
   use ModVarIndexes
   use ModProcMH
@@ -67,12 +67,12 @@ module ModUser
   integer, parameter :: SWH_ = 2, Pu3_ = 3, Neu_ = 4, Ne2_ = 5, Ne3_ = 6, Ne4_= 7 ! defined in ModEquation
 
   logical :: UseSource_I(SWH_:Ne4_) = .true.
-  logical :: UsePu3Heating =.true.
  
   real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
 
-  real :: TempPu3, FactorPu3
+  logical :: UsePu3Heating = .false.
+  real :: TempPu3, FactorPu3, HeatPu3
 
   integer :: iTableSolarWind = -1 ! initialization is needed
 
@@ -251,7 +251,7 @@ contains
     ! C.P. edited
     real:: Bsph_D(3), Vsph_D(3), VPUIsph_D(3)
 
-    real :: pSolarWind,pPUI, p_frac, Ptot, Pmag, PmagEquator
+    real :: pSolarWind,pPUI, Pmag, PmagEquator
 
     real :: XyzSph_DD(3,3)
 
@@ -541,7 +541,7 @@ contains
     use ModVarIndexes
     use ModAdvance,  ONLY: State_VGB
     ! C.P. edited
-    use ModPhysics,  ONLY: rBody,  No2Si_V, UnitX_
+    use ModPhysics,  ONLY: rBody
     use ModCoordTransform, ONLY: rot_xyz_sph
     ! C.P. added
     use ModConst, ONLY: cAU
@@ -549,7 +549,7 @@ contains
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
-    real :: x, y, z, r, rho0
+    real :: x, y, z, r
     real :: b_D(3), v_D(3), bSph_D(3), vSph_D(3), vPUI_D(3), vPUISph_D(3)
     real :: SinTheta, SignZ
 
@@ -1111,7 +1111,6 @@ contains
        NameTecVar, NameTecUnit, NameIdlUnit, IsFound)
 
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance,  ONLY: Source_VC
 
     integer,          intent(in)   :: iBlock
     character(len=*), intent(in)   :: NameVar
@@ -1286,7 +1285,7 @@ contains
     real :: cth
     real :: State_V(nVar)
 
-    real :: x,y,z,r
+    real :: r
     real, dimension(nFluid) :: &
          Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
          UThS_I, URelS_I, URelSdim_I, UStar_I=0, Sigma_I, Rate_I=0, &
@@ -1301,9 +1300,7 @@ contains
          UStarMPu3_I, SigmaNPu3_I, RateNPu3_I, &
          I0xpu3_I, I0pu3x_I, I2xpu3_I, I2pu3x_I, &
          Jxpu3Ux_I, Jxpu3Uy_I, Jxpu3Uz_I, Jpu3xUx_I, Jpu3xUy_I, Jpu3xUz_I, &
-         Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I, EneExch_I
-
-    logical:: UseSourceNe2P = .true., UseEnergySource = .true.
+         Kxpu3_I, Kpu3x_I, Qepu3x_I, Qmpu3xUx_I, Qmpu3xUy_I, Qmpu3xUz_I
 
     integer :: i, j, k
 
@@ -1311,8 +1308,9 @@ contains
     character(len=*), parameter:: NameSub = 'user_calc_sources'
     !--------------------------------------------------------------------------
     
-    !This subroutine is not needed when not using the 4 neutral fluids                   
-    if(.not.UseNeutralFluid) call CON_stop(NameSub//': no neutral fluids present')
+    !This subroutine is not needed when not using the 4 neutral fluids 
+    if(.not.UseNeutralFluid) &
+         call CON_stop(NameSub//': no neutral fluids present')
 
     call test_start(NameSub, DoTest, iBlock)
 
@@ -1325,7 +1323,8 @@ contains
        if(IsPointImplSource) RETURN
     end if
 
-    !  calculating some constants cBoltzmann is J/K; cth is related to U* and the thermal speed w1
+    ! calculating some constants cBoltzmann is J/K;
+    ! cth is related to U* and the thermal speed w1
     ! see Eq (1) in McNutt et al. 1988; w1 = sqrt(cth*T1)
 
     cth = 2.0*cBoltzmann/mNeutrals
@@ -1353,19 +1352,15 @@ contains
        ! Temperature for the two ionized and four population of neutrals (K)
        Temp_I       = (State_V(iP_I)/State_V(iRho_I))*No2Si_V(UnitTemperature_)
 
-!      For solar wind with charge neutrality TSW= SWH_p/(2nSW+nPUI)
-
-        Temp_I(SWH_)   = (State_V(SWHP_)/(2*State_V(SWHRho_)+State_V(PU3Rho_)))*No2Si_V(UnitTemperature_)
+       ! For solar wind with charge neutrality TSW= SWH_p/(2nSW+nPUI)
+       Temp_I(SWH_) = (State_V(SWHP_)/(2*State_V(SWHRho_)+State_V(PU3Rho_)))*No2Si_V(UnitTemperature_)
 
        ! Thermal speed (squared) for ionized and three populations of neutrals
        ! UThS units are (m/s)^2
        UThS_I = cth*Temp_I ! array of all thermal speeds here
 
-!      calculus of radius for the Energy Exchange term
-       x = Xyz_DGB(x_,i,j,k,iBlock)
-       y = Xyz_DGB(y_,i,j,k,iBlock)
-       z = Xyz_DGB(z_,i,j,k,iBlock)
-       r = sqrt(x*x + y*y + z*z)
+       ! calculus of radius for heating the PU3 population
+       r = r_BLK(i,j,k,iBlock)
 
        ! Relative velocity between neutrals and ionized fluid squared
 
@@ -1686,18 +1681,10 @@ contains
 
        Qepu3x_I = Kpu3x_I - Kxpu3_I
 
-!  including energy exchange between PUIs and SW;
-
-      EneExch_I = 0.
-      if(UsePu3Heating) &
-      EneExch_I(Pu3_) =  State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*Io2No_V(UnitTemperature_)*(r-rBody)*FactorPu3
-
-      if(r<50.)then
-        write(*,*)'!!! r, rbody, R_BLK=', r, rbody, R_BLK(i,j,k,iBlock)
-        write(*,*)'!!! TempPu3 - Temp_I(PU3_)',TempPu3, Temp_I(PU3_), TempPu3 - Temp_I(PU3_)
-        write(*,*)'!!! EneExch_I(Pu3_)=', EneExch_I(Pu3_)
-        call stop_mpi('DEBUG')
-     end if
+       ! Heating Pu3
+       HeatPu3 = 0.0
+       if(UsePu3Heating) HeatPu3 = &
+            State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*Io2No_V(UnitTemperature_)*(r-rBody)*FactorPu3
 
        ! Calculate the source terms for this cell
        call calc_source_cell
@@ -1761,7 +1748,8 @@ contains
             Source_V(Pu3RhoUx_) = sum(Qmpu3xUx_I(Neu_:Ne4_))+ sum(JpxUx_I(Neu_:Ne4_))-JpxUx_I(Ne3_)-Jpu3xUx_I(Ne3_)
             Source_V(Pu3RhoUy_) = sum(Qmpu3xUy_I(Neu_:Ne4_))+ sum(JpxUy_I(Neu_:Ne4_))-JpxUy_I(Ne3_)-Jpu3xUy_I(Ne3_)
             Source_V(Pu3RhoUz_) = sum(Qmpu3xUz_I(Neu_:Ne4_))+ sum(JpxUz_I(Neu_:Ne4_))-JpxUz_I(Ne3_)-Jpu3xUz_I(Ne3_)
-            Source_V(Pu3Energy_)= sum(Qepu3x_I(Neu_:Ne4_)) - Kpu3x_I(Ne3_) + sum(Qepx_I(Neu_:Ne4_)) - Kpx_I(Ne3_) + EneExch_I(Pu3_)
+            Source_V(Pu3Energy_)= sum(Qepu3x_I(Neu_:Ne4_)) - Kpu3x_I(Ne3_) + sum(Qepx_I(Neu_:Ne4_)) - Kpx_I(Ne3_) &
+                 + HeatPu3
             Source_V(Pu3p_) = (Gamma-1)* ( Source_V(Pu3Energy_) &
                  - Ux_I(Pu3_)*Source_V(Pu3RhoUx_) &
                  - Uy_I(Pu3_)*Source_V(Pu3RhoUy_) &
@@ -1835,7 +1823,7 @@ contains
          write(*,*) ' Kxp_I     ', Kxp_I
          write(*,*) ' Kpx_I     ', Kpx_I
          write(*,*) ' Qepx_I    ', Qepx_I
-         write(*,*) ' EneExch_I ', EneExch_I
+         write(*,*) ' HeatPu3   ', HeatPu3
 !
          write(*,*) ' RatePu3_I    ', RatePu3_I
          write(*,*) ' RateNPu3_I   ', RateNPu3_I
@@ -1881,7 +1869,7 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k
-    real    :: InvRho, U2,SWHU2, p, Mach2, TempDim,TempDimSW, U2Dim, B2, rho, MachAlfven2,T_ave
+    real    :: InvRho, U2,SWHU2, p, Mach2, TempDim, U2Dim, B2, rho, MachAlfven2,T_ave
     ! merav
     real    :: pSW, InvRhoSW
     real    :: MachMagneto2
