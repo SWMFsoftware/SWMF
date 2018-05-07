@@ -13,6 +13,8 @@ module ModFaceValue
   use ModVarIndexes
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder
+
+  use ModBorisCorrection, ONLY: boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z
   use omp_lib
 
   implicit none
@@ -119,9 +121,9 @@ module ModFaceValue
   real, allocatable:: WeightL_II(:,:), WeightR_II(:,:)
 
   ! OpenMP declaration
-!!$omp threadprivate( iVarSmooth_V, iVarSmoothIndex_I ) !questionable?
-!!$omp threadprivate( iRegionLowOrder_I ) !this is questionable? 
-!!$omp threadprivate( iVarLimitRatio_I )
+  !$omp threadprivate( iVarSmooth_V, iVarSmoothIndex_I ) !questionable?
+  !$omp threadprivate( iRegionLowOrder_I ) !this is questionable? 
+  !$omp threadprivate( iVarLimitRatio_I )
   !$omp threadprivate( Primitive_VG )
   !$omp threadprivate( UseTrueCell, IsTrueCell_I )
   !$omp threadprivate( UseLowOrder_I )
@@ -760,7 +762,7 @@ contains
          UseHighResChange
 
     use ModGeometry, ONLY : true_cell, body_BLK
-    use ModPhysics, ONLY: GammaWave, C2light, InvClight2, Gamma_I
+    use ModPhysics, ONLY: GammaWave, C2light
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &
@@ -898,145 +900,112 @@ contains
        else
           B0_DG=0.00
        end if
-       do k = kMinFace, kMaxFace
-          do j = jMinFace, jMaxFace
+    end if
+    if(UseAccurateResChange .or. nOrder==4)then
+       do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
+          call calc_primitives         ! all cells
+       end do; end do; end do
+       if(nOrder == 4 .and. UseVolumeIntegral4)then
+          ! Calculate 4th order accurate cell averaged primitive variables
+
+          ! First get 4th order accurate cell centered conservative vars
+          iMin = MinI + 1; iMax = MaxI - 1
+          jMin = MinJ + jDim_; jMax = MaxJ - jDim_
+          kMin = MinK + kDim_; kMax = MaxK - kDim_
+
+          ! Store primitive and conservative values based on cell averages
+          ! These are used to do the Laplace operators for corrections
+          Prim_VG = Primitive_VG
+
+          ! Convert to pointwise conservative variable (eq. 12)
+          do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
+
+             ! Store cell averaged value
+             State_V = State_VGB(:,i,j,k,iBlock)
+
+             ! Calculate 4th order accurate cell center value (eq 12)
+             Laplace_V = -2*nDim*State_V + &
+                  State_VGB(:,i-1,j,k,iBlock) + State_VGB(:,i+1,j,k,iBlock)
+             if(nJ > 1) Laplace_V = Laplace_V + &
+                  State_VGB(:,i,j-1,k,iBlock) + State_VGB(:,i,j+1,k,iBlock)
+             if(nK > 1) Laplace_V = Laplace_V + &
+                  State_VGB(:,i,j,k-1,iBlock) + State_VGB(:,i,j,k+1,iBlock)
+             State_VGB(:,i,j,k,iBlock) = State_V - c24th*Laplace_V
+
+             do iFluid = 1, nFluid
+                ! Store cell averaged energy
+                Energy = Energy_GBI(i,j,k,iBlock,iFluid)
+
+                ! Calculate 4th order accurate cell center energy
+                Laplace = -2*nDim*Energy &
+                     + Energy_GBI(i-1,j,k,iBlock,iFluid) &
+                     + Energy_GBI(i+1,j,k,iBlock,iFluid)
+                if(nJ > 1) Laplace = Laplace &
+                     + Energy_GBI(i,j-1,k,iBlock,iFluid) &
+                     + Energy_GBI(i,j+1,k,iBlock,iFluid)
+                if(nK > 1) Laplace = Laplace &
+                     + Energy_GBI(i,j,k-1,iBlock,iFluid) &
+                     + Energy_GBI(i,j,k+1,iBlock,iFluid)
+                Energy_GBI(i,j,k,iBlock,iFluid) = Energy - c24th*Laplace
+                ! check positivity !!!
+
+                ! Get 4th order accurate cell center pressure
+                call calc_pressure(i,i,j,j,k,k,iBlock,iFluid,iFluid)
+
+                ! Restore cell averaged energy
+                Energy_GBI(i,j,k,iBlock,iFluid) = Energy
+             end do
+
+             ! Convert to pointwise primitive variables
+             call calc_primitives
+
+             ! Convert to cell averaged primitive variables (eq. 16)
+             Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
+                  - 2*nDim*Prim_VG(:,i,j,k)
+             if(nJ > 1) Laplace_V = Laplace_V &
+                  + Prim_VG(:,i,j-1,k) + Prim_VG(:,i,j+1,k)
+             if(nK > 1) Laplace_V = Laplace_V &
+                  + Prim_VG(:,i,j,k-1) + Prim_VG(:,i,j,k+1)
+
+             Primitive_VG(:,i,j,k) = Primitive_VG(:,i,j,k) + c24th*Laplace_V
+
+             ! Restore cell averaged state
+             State_VGB(:,i,j,k,iBlock) = State_V
+          end do; end do; end do
+       end if
+    else
+       do k=kMinFace,kMaxFace
+          do j=jMinFace,jMaxFace
              do i=1-nStencil,nI+nStencil
-                call calc_primitives_boris    ! needed for x-faces
+                call calc_primitives   ! for x-faces
              end do
           end do
        end do
        if(nJ > 1)then
-          do k = kMinFace, kMaxFace; do i = iMinFace, iMaxFace
+          do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
              do j=1-nStencil,jMinFace-1
-                call calc_primitives_boris    ! additional calculations for
-             end do                           ! y -faces
+                call calc_primitives   ! for lower y-faces
+             end do
              do j=jMaxFace+1,nJ+nStencil
-                call calc_primitives_boris    ! additional calculations for
-             end do	                      ! y-faces
+                call calc_primitives   ! for upper  y-faces
+             end do
           end do; end do
        end if
        if(nK > 1)then
           do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
              do k=1-nStencil,kMinFace-1
-                call calc_primitives_boris    ! additional calculations for
-             end do                           ! z-faces
-             do k=kMaxFace+1,nK+nStencil
-                call calc_primitives_boris    ! additional calculations for
-             end do	                      ! z-faces
-          end do; end do
-       end if
-    else
-       if(UseAccurateResChange .or. nOrder==4)then
-          do k = MinK, MaxK; do j = MinJ, MaxJ; do i = MinI, MaxI
-             call calc_primitives_MHD         ! all cells
-          end do; end do; end do
-          if(nOrder == 4 .and. UseVolumeIntegral4)then
-             ! Calculate 4th order accurate cell averaged primitive variables
-
-             ! First get 4th order accurate cell centered conservative vars
-             iMin = MinI + 1; iMax = MaxI - 1
-             jMin = MinJ + jDim_; jMax = MaxJ - jDim_
-             kMin = MinK + kDim_; kMax = MaxK - kDim_
-
-             ! Store primitive and conservative values based on cell averages
-             ! These are used to do the Laplace operators for corrections
-             Prim_VG = Primitive_VG
-
-             ! Convert to pointwise conservative variable (eq. 12)
-             do k = kMin, kMax; do j = jMin, jMax; do i = iMin, iMax
-
-                ! Store cell averaged value
-                State_V = State_VGB(:,i,j,k,iBlock)
-
-                ! Calculate 4th order accurate cell center value (eq 12)
-                Laplace_V = -2*nDim*State_V + &
-                     State_VGB(:,i-1,j,k,iBlock) + State_VGB(:,i+1,j,k,iBlock)
-                if(nJ > 1) Laplace_V = Laplace_V + &
-                     State_VGB(:,i,j-1,k,iBlock) + State_VGB(:,i,j+1,k,iBlock)
-                if(nK > 1) Laplace_V = Laplace_V + &
-                     State_VGB(:,i,j,k-1,iBlock) + State_VGB(:,i,j,k+1,iBlock)
-                State_VGB(:,i,j,k,iBlock) = State_V - c24th*Laplace_V
-
-                do iFluid = 1, nFluid
-                   ! Store cell averaged energy
-                   Energy = Energy_GBI(i,j,k,iBlock,iFluid)
-
-                   ! Calculate 4th order accurate cell center energy
-                   Laplace = -2*nDim*Energy &
-                        + Energy_GBI(i-1,j,k,iBlock,iFluid) &
-                        + Energy_GBI(i+1,j,k,iBlock,iFluid)
-                   if(nJ > 1) Laplace = Laplace &
-                        + Energy_GBI(i,j-1,k,iBlock,iFluid) &
-                        + Energy_GBI(i,j+1,k,iBlock,iFluid)
-                   if(nK > 1) Laplace = Laplace &
-                        + Energy_GBI(i,j,k-1,iBlock,iFluid) &
-                        + Energy_GBI(i,j,k+1,iBlock,iFluid)
-                   Energy_GBI(i,j,k,iBlock,iFluid) = Energy - c24th*Laplace
-                   ! check positivity !!!
-
-                   ! Get 4th order accurate cell center pressure
-                   call calc_pressure(i,i,j,j,k,k,iBlock,iFluid,iFluid)
-
-                   ! Restore cell averaged energy
-                   Energy_GBI(i,j,k,iBlock,iFluid) = Energy
-                end do
-
-!!! check positivity ???
-                ! Convert to pointwise primitive variables
-                call calc_primitives_MHD
-
-                ! Convert to cell averaged primitive variables (eq. 16)
-                Laplace_V = Prim_VG(:,i-1,j,k) + Prim_VG(:,i+1,j,k) &
-		     - 2*nDim*Prim_VG(:,i,j,k)
-                if(nJ > 1) Laplace_V = Laplace_V &
-                     + Prim_VG(:,i,j-1,k) + Prim_VG(:,i,j+1,k)
-                if(nK > 1) Laplace_V = Laplace_V &
-                     + Prim_VG(:,i,j,k-1) + Prim_VG(:,i,j,k+1)
-
-                Primitive_VG(:,i,j,k) = Primitive_VG(:,i,j,k) + c24th*Laplace_V
-
-                ! Restore cell averaged state
-                State_VGB(:,i,j,k,iBlock) = State_V
-             end do; end do; end do
-          end if
-       else
-          do k=kMinFace,kMaxFace
-             do j=jMinFace,jMaxFace
-                do i=1-nStencil,nI+nStencil
-                   call calc_primitives_MHD   ! needed for x-faces
-                end do
+                call calc_primitives   ! for lower z-faces
              end do
-          end do
-          if(nJ > 1)then
-             do k=kMinFace,kMaxFace; do i=iMinFace,iMaxFace
-                do j=1-nStencil,jMinFace-1
-                   call calc_primitives_MHD   ! additional calculations for
-                end do                        ! y -faces
-                do j=jMaxFace+1,nJ+nStencil
-                   call calc_primitives_MHD   ! additional calculations for
-                end do	                      ! y-faces
-             end do; end do
-          end if
-          if(nK > 1)then
-             do j=jMinFace,jMaxFace; do i=iMinFace,iMaxFace
-                do k=1-nStencil,kMinFace-1
-                   call calc_primitives_MHD   ! additional calculations for
-                end do                        ! z-faces
-                do k=kMaxFace+1,nK+nStencil
-                   call calc_primitives_MHD   ! additional calculations for
-                end do	                      ! z-faces
-             end do; end do
-          end if
+             do k=kMaxFace+1,nK+nStencil
+                call calc_primitives   ! for upper z-faces
+             end do
+          end do; end do
        end if
     end if
 
     if(UseArtificialVisco) call calc_face_div_u(iBlock)
 
-
-
-    !\
     ! Now the first or second order face values are calcuted
-    !/
     select case(nOrder)
     case(1)
        ! First order reconstruction
@@ -1478,31 +1447,43 @@ contains
     end subroutine ptotal_to_p_facez
     !==========================================================================
 
-    subroutine calc_primitives_boris
-      ! momentum is limited
+    subroutine calc_primitives
 
-      ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
-      !            = rhoU + (U B^2 - B U.B)/c^2
-      !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
+      integer:: iVar
       !------------------------------------------------------------------------
-      Primitive_VG(:,i,j,k) = &
-           State_VGB(1:nVar,i,j,k,iBlock)
-      BxFull = B0_DG(x_,i,j,k) + Primitive_VG(Bx_,i,j,k)
-      ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
-      BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
-      B2Full = BxFull**2 + ByFull**2 + BzFull**2
-      RhoC2Inv  = 1/(Primitive_VG(rho_,i,j,k)*C2light)
-      uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
-           Primitive_VG(rhoUy_,i,j,k)*ByFull + &
-           Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
-      Ga2Boris= 1 + B2Full*RhoC2Inv
+      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
 
-      Primitive_VG(Ux_,i,j,k)= Primitive_VG(rhoUx_,i,j,k)*&
-           Ga2Boris - BxFull*uBC2Inv
-      Primitive_VG(Uy_,i,j,k)= Primitive_VG(rhoUy_,i,j,k)*&
-           Ga2Boris - ByFull*uBC2Inv
-      Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
-           Ga2Boris - BzFull*uBC2Inv
+      RhoInv = 1/Primitive_VG(Rho_,i,j,k)
+      if(DoLimitMomentum)then
+         ! momentum is limited
+
+         ! rhoU_Boris = rhoU - ((U x B) x B)/c^2
+         !            = rhoU + (U B^2 - B U.B)/c^2
+         !            = rhoU*(1+BB/(rho*c2)) - B UdotB/c^2
+         BxFull = B0_DG(x_,i,j,k) + Primitive_VG(Bx_,i,j,k)
+         ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
+         BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
+         B2Full = BxFull**2 + ByFull**2 + BzFull**2
+         RhoC2Inv  = RhoInv*C2light
+         uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
+              Primitive_VG(rhoUy_,i,j,k)*ByFull + &
+              Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
+         Ga2Boris= 1 + B2Full*RhoC2Inv
+
+         Primitive_VG(Ux_,i,j,k)= Primitive_VG(rhoUx_,i,j,k)*&
+              Ga2Boris - BxFull*uBC2Inv
+         Primitive_VG(Uy_,i,j,k)= Primitive_VG(rhoUy_,i,j,k)*&
+              Ga2Boris - ByFull*uBC2Inv
+         Primitive_VG(Uz_,i,j,k)= Primitive_VG(rhoUz_,i,j,k)*&
+              Ga2Boris - BzFull*uBC2Inv
+      else
+         Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
+         do iFluid = 2, nFluid
+            iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
+            RhoInv = 1/Primitive_VG(iRho,i,j,k)
+            Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)
+         end do
+      end if
 
       ! Transform p to Ptotal
       if(UsePtotalLimiter)then
@@ -1517,12 +1498,18 @@ contains
       end if
 
       if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
-           Primitive_VG(iVarLimitRatio_I,i,j,k)/Primitive_VG(Rho_,i,j,k)
+           RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
 
-    end subroutine calc_primitives_boris
+      if(UseLogLimiter)then
+         do iVar = 1, nVar
+            if(UseLogLimiter_V(iVar)) &
+                 Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
+         end do
+      end if
+
+    end subroutine calc_primitives
     !==========================================================================
     subroutine get_facex_high(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModAdvance, ONLY: FaceDivU_IX
 
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
       real, allocatable, save:: State_VX(:,:,:,:)
@@ -1676,7 +1663,7 @@ contains
 
       if(TypeLimiter == 'no') RightState_VX = LeftState_VX
 
-      if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1684,7 +1671,6 @@ contains
     end subroutine get_facex_high
     !==========================================================================
     subroutine get_facey_high(iMin,iMax,jMin,jMax,kMin,kMax)
-      use ModAdvance, ONLY: FaceDivU_IY
       integer,intent(in):: iMin,iMax,jMin,jMax,kMin,kMax
 
       real, allocatable, save:: State_VY(:,:,:,:)
@@ -1832,7 +1818,7 @@ contains
       end if
 
       if(TypeLimiter == 'no') RightState_VY = LeftState_VY
-      if(DoLimitMomentum)call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum)call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -1984,7 +1970,7 @@ contains
          end if
       end if
 
-      if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2001,7 +1987,7 @@ contains
          RightState_VX(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
 
-      if(DoLimitMomentum)call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum)call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceX(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2017,7 +2003,7 @@ contains
          RightState_VY(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
 
-      if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceY(&
            iMin,iMax,jMin,jMax,kMin,kMax)
@@ -2033,267 +2019,12 @@ contains
          RightState_VZ(:,i,j,k)=Primitive_VG(:,i,j,k)
       end do; end do; end do
 
-      if(DoLimitMomentum)call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum)call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
 
       if(UseScalarToRhoRatioLtd)call ratio_to_scalar_faceZ(&
            iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facez_first
-    !==========================================================================
-    subroutine calc_primitives_MHD
-      integer:: iVar
-      !------------------------------------------------------------------------
-      Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
-      RhoInv = 1/Primitive_VG(Rho_,i,j,k)
-      Primitive_VG(Ux_:Uz_,i,j,k)=RhoInv*Primitive_VG(RhoUx_:RhoUz_,i,j,k)
-      do iFluid = 2, nFluid
-         iRho = iRho_I(iFluid); iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
-         RhoInv = 1/Primitive_VG(iRho,i,j,k)
-         Primitive_VG(iUx:iUz,i,j,k)=RhoInv*Primitive_VG(iUx:iUz,i,j,k)
-      end do
-
-      if(UsePtotalLimiter)then
-         ! Transform p to Ptotal
-         if(UseElectronPressure)then
-            Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
-                 + Primitive_VG(Pe_,i,j,k)
-         end if
-         if(UseWavePressure)then
-            Primitive_VG(p_,i,j,k) = Primitive_VG(p_,i,j,k) &
-                 + (GammaWave-1)*sum(Primitive_VG(WaveFirst_:WaveLast_,i,j,k))
-         end if
-      end if
-
-      if(UseScalarToRhoRatioLtd) Primitive_VG(iVarLimitRatio_I,i,j,k) = &
-           RhoInv*Primitive_VG(iVarLimitRatio_I,i,j,k)
-
-      if(UseLogLimiter)then
-         do iVar = 1, nVar
-            if(UseLogLimiter_V(iVar)) &
-                 Primitive_VG(iVar,i,j,k) = log(Primitive_VG(iVar,i,j,k))
-         end do
-      end if
-
-    end subroutine calc_primitives_MHD
-    !==========================================================================
-    subroutine BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
-
-      ! Convert face centered Boris momenta to MHD velocities
-
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-      !------------------------------------------------------------------------
-      ! U_Boris=rhoU_Boris/rho
-      ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
-
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-
-         ! Left face values
-         RhoInv = 1/LeftState_VX(rho_,i,j,k)
-         if(UseB0)then
-            BxFull = B0_DX(x_,i,j,k) + LeftState_VX(Bx_,i,j,k)
-            ByFull = B0_DX(y_,i,j,k) + LeftState_VX(By_,i,j,k)
-            BzFull = B0_DX(z_,i,j,k) + LeftState_VX(Bz_,i,j,k)
-         else
-            BxFull = LeftState_VX(Bx_,i,j,k)
-            ByFull = LeftState_VX(By_,i,j,k)
-            BzFull = LeftState_VX(Bz_,i,j,k)
-         end if
-         B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  = InvClight2*RhoInv
-         LeftState_VX(Ux_,i,j,k)=LeftState_VX(Ux_,i,j,k)*RhoInv
-         LeftState_VX(Uy_,i,j,k)=LeftState_VX(Uy_,i,j,k)*RhoInv
-         LeftState_VX(Uz_,i,j,k)=LeftState_VX(Uz_,i,j,k)*RhoInv
-         uBC2Inv= (LeftState_VX(Ux_,i,j,k)*BxFull + &
-              LeftState_VX(Uy_,i,j,k)*ByFull + &
-              LeftState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
-
-         ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris= 1/(1 + B2Full*RhoC2Inv)
-
-         LeftState_VX(Ux_,i,j,k) = &
-              Ga2Boris * (LeftState_VX(Ux_,i,j,k)+uBC2Inv*BxFull)
-         LeftState_VX(Uy_,i,j,k) = &
-              Ga2Boris * (LeftState_VX(Uy_,i,j,k)+uBC2Inv*ByFull)
-         LeftState_VX(Uz_,i,j,k) = &
-              Ga2Boris * (LeftState_VX(Uz_,i,j,k)+uBC2Inv*BzFull)
-
-         ! Right face values
-         RhoInv = 1/RightState_VX(rho_,i,j,k)
-         if(UseB0)then
-            BxFull = B0_DX(x_,i,j,k) + RightState_VX(Bx_,i,j,k)
-            ByFull = B0_DX(y_,i,j,k) + RightState_VX(By_,i,j,k)
-            BzFull = B0_DX(z_,i,j,k) + RightState_VX(Bz_,i,j,k)
-         else
-            BxFull = RightState_VX(Bx_,i,j,k)
-            ByFull = RightState_VX(By_,i,j,k)
-            BzFull = RightState_VX(Bz_,i,j,k)
-         end if
-         B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =InvClight2*RhoInv
-         RightState_VX(Ux_,i,j,k)=RightState_VX(Ux_,i,j,k)*RhoInv
-         RightState_VX(Uy_,i,j,k)=RightState_VX(Uy_,i,j,k)*RhoInv
-         RightState_VX(Uz_,i,j,k)=RightState_VX(Uz_,i,j,k)*RhoInv
-         uBC2Inv= (RightState_VX(Ux_,i,j,k)*BxFull + &
-              RightState_VX(Uy_,i,j,k)*ByFull + &
-              RightState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
-
-         ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
-
-         RightState_VX(Ux_,i,j,k) = &
-              Ga2Boris * (RightState_VX(Ux_,i,j,k)+uBC2Inv*BxFull)
-         RightState_VX(Uy_,i,j,k) = &
-              Ga2Boris * (RightState_VX(Uy_,i,j,k)+uBC2Inv*ByFull)
-         RightState_VX(Uz_,i,j,k) = &
-              Ga2Boris * (RightState_VX(Uz_,i,j,k)+uBC2Inv*BzFull)
-
-      end do; end do; end do
-    end subroutine BorisFaceXtoMHD
-    !==========================================================================
-    subroutine BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-
-      ! U_Boris=rhoU_Boris/rho
-      ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
-
-      !------------------------------------------------------------------------
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-
-         ! Left face values
-         RhoInv = 1/LeftState_VY(rho_,i,j,k)
-         if(UseB0)then
-            BxFull = B0_DY(x_,i,j,k) + LeftState_VY(Bx_,i,j,k)
-            ByFull = B0_DY(y_,i,j,k) + LeftState_VY(By_,i,j,k)
-            BzFull = B0_DY(z_,i,j,k) + LeftState_VY(Bz_,i,j,k)
-         else
-            BxFull = LeftState_VY(Bx_,i,j,k)
-            ByFull = LeftState_VY(By_,i,j,k)
-            BzFull = LeftState_VY(Bz_,i,j,k)
-         end if
-         B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =InvClight2*RhoInv
-         LeftState_VY(Ux_,i,j,k)=LeftState_VY(Ux_,i,j,k)*RhoInv
-         LeftState_VY(Uy_,i,j,k)=LeftState_VY(Uy_,i,j,k)*RhoInv
-         LeftState_VY(Uz_,i,j,k)=LeftState_VY(Uz_,i,j,k)*RhoInv
-         uBC2Inv= (LeftState_VY(Ux_,i,j,k)*BxFull + &
-              LeftState_VY(Uy_,i,j,k)*ByFull + &
-              LeftState_VY(Uz_,i,j,k)*BzFull)*RhoC2Inv
-
-         ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
-
-         LeftState_VY(Ux_,i,j,k) = &
-              Ga2Boris * (LeftState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
-         LeftState_VY(Uy_,i,j,k) = &
-              Ga2Boris * (LeftState_VY(Uy_,i,j,k)+uBC2Inv*ByFull)
-         LeftState_VY(Uz_,i,j,k) = &
-              Ga2Boris * (LeftState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
-
-         ! Right face values
-         RhoInv = 1/RightState_VY(rho_,i,j,k)
-         if(UseB0)then
-            BxFull = B0_DY(x_,i,j,k) + RightState_VY(Bx_,i,j,k)
-            ByFull = B0_DY(y_,i,j,k) + RightState_VY(By_,i,j,k)
-            BzFull = B0_DY(z_,i,j,k) + RightState_VY(Bz_,i,j,k)
-         else
-            BxFull = RightState_VY(Bx_,i,j,k)
-            ByFull = RightState_VY(By_,i,j,k)
-            BzFull = RightState_VY(Bz_,i,j,k)
-         end if
-         B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv=InvClight2*RhoInv
-         RightState_VY(Ux_,i,j,k)=RightState_VY(Ux_,i,j,k)*RhoInv
-         RightState_VY(Uy_,i,j,k)=RightState_VY(Uy_,i,j,k)*RhoInv
-         RightState_VY(Uz_,i,j,k)=RightState_VY(Uz_,i,j,k)*RhoInv
-         uBC2Inv= (RightState_VY(Ux_,i,j,k)*BxFull + &
-              RightState_VY(Uy_,i,j,k)*ByFull + &
-              RightState_VY(Uz_,i,j,k)*BzFull)*RhoC2Inv
-
-         ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
-
-         RightState_VY(Ux_,i,j,k) = &
-              Ga2Boris * (RightState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
-         RightState_VY(Uy_,i,j,k) = &
-              Ga2Boris * (RightState_VY(Uy_,i,j,k)+uBC2Inv*ByFull)
-         RightState_VY(Uz_,i,j,k) = &
-              Ga2Boris * (RightState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
-      end do; end do; end do
-
-    end subroutine BorisFaceYtoMHD
-    !==========================================================================
-    subroutine BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
-      integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
-
-      ! Convert face centered Boris momenta/rho to MHD velocities
-      !------------------------------------------------------------------------
-      ! U_Boris=rhoU_Boris/rho
-      ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
-
-      do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
-
-         ! Left face values
-         RhoInv = 1/LeftState_VZ(rho_,i,j,k)
-         if(UseB0)then
-            BxFull = B0_DZ(x_,i,j,k) + LeftState_VZ(Bx_,i,j,k)
-            ByFull = B0_DZ(y_,i,j,k) + LeftState_VZ(By_,i,j,k)
-            BzFull = B0_DZ(z_,i,j,k) + LeftState_VZ(Bz_,i,j,k)
-         else
-            BxFull = LeftState_VZ(Bx_,i,j,k)
-            ByFull = LeftState_VZ(By_,i,j,k)
-            BzFull = LeftState_VZ(Bz_,i,j,k)
-         end if
-         B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =InvClight2*RhoInv
-         LeftState_VZ(Ux_,i,j,k)=LeftState_VZ(Ux_,i,j,k)*RhoInv
-         LeftState_VZ(Uy_,i,j,k)=LeftState_VZ(Uy_,i,j,k)*RhoInv
-         LeftState_VZ(Uz_,i,j,k)=LeftState_VZ(Uz_,i,j,k)*RhoInv
-         uBC2Inv= (LeftState_VZ(Ux_,i,j,k)*BxFull + &
-              LeftState_VZ(Uy_,i,j,k)*ByFull + &
-              LeftState_VZ(Uz_,i,j,k)*BzFull)*RhoC2Inv
-
-         ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
-
-         LeftState_VZ(Ux_,i,j,k) = &
-              Ga2Boris * (LeftState_VZ(Ux_,i,j,k)+uBC2Inv*BxFull)
-         LeftState_VZ(Uy_,i,j,k) = &
-              Ga2Boris * (LeftState_VZ(Uy_,i,j,k)+uBC2Inv*ByFull)
-         LeftState_VZ(Uz_,i,j,k) = &
-              Ga2Boris * (LeftState_VZ(Uz_,i,j,k)+uBC2Inv*BzFull)
-
-         ! Right face values
-         RhoInv = 1/RightState_VZ(rho_,i,j,k)
-         if(UseB0)then
-            BxFull = B0_DZ(x_,i,j,k) + RightState_VZ(Bx_,i,j,k)
-            ByFull = B0_DZ(y_,i,j,k) + RightState_VZ(By_,i,j,k)
-            BzFull = B0_DZ(z_,i,j,k) + RightState_VZ(Bz_,i,j,k)
-         else
-            BxFull = RightState_VZ(Bx_,i,j,k)
-            ByFull = RightState_VZ(By_,i,j,k)
-            BzFull = RightState_VZ(Bz_,i,j,k)
-         end if
-         B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  =InvClight2*RhoInv
-         RightState_VZ(Ux_,i,j,k)=RightState_VZ(Ux_,i,j,k)*RhoInv
-         RightState_VZ(Uy_,i,j,k)=RightState_VZ(Uy_,i,j,k)*RhoInv
-         RightState_VZ(Uz_,i,j,k)=RightState_VZ(Uz_,i,j,k)*RhoInv
-         uBC2Inv= (RightState_VZ(Ux_,i,j,k)*BxFull + &
-              RightState_VZ(Uy_,i,j,k)*ByFull + &
-              RightState_VZ(Uz_,i,j,k)*BzFull)*RhoC2Inv
-
-         ! gammaA^2 = 1/[1+BB/(rho c^2)]
-         Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
-
-         RightState_VZ(Ux_,i,j,k) = &
-              Ga2Boris * (RightState_VZ(Ux_,i,j,k)+uBC2Inv*BxFull)
-         RightState_VZ(Uy_,i,j,k) = &
-              Ga2Boris * (RightState_VZ(Uy_,i,j,k)+uBC2Inv*ByFull)
-         RightState_VZ(Uz_,i,j,k) = &
-              Ga2Boris * (RightState_VZ(Uz_,i,j,k)+uBC2Inv*BzFull)
-      end do; end do; end do
-
-    end subroutine BorisFaceZtoMHD
     !==========================================================================
     subroutine get_face_accurate3d(iSideIn)
       integer, intent(in):: iSideIn
@@ -2747,7 +2478,7 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call BorisFaceXtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) call boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facex_second
     !==========================================================================
@@ -2790,7 +2521,7 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call BorisFaceYtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) call boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facey_second
     !==========================================================================
@@ -2832,7 +2563,7 @@ contains
          end do
       end do; end do
 
-      if(DoLimitMomentum) call BorisFaceZtoMHD(iMin,iMax,jMin,jMax,kMin,kMax)
+      if(DoLimitMomentum) call boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
 
     end subroutine get_facez_second
     !==========================================================================
@@ -3026,7 +2757,7 @@ contains
     use ModPhysics, ONLY: Gamma_I
     use ModAdvance, ONLY: LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB, &
          State_VGB
-    use BATL_lib, ONLY: block_inside_regions, Unused_B, MaxDim
+    use BATL_lib, ONLY: block_inside_regions, Unused_B
 
     ! Set which faces should use low (up to second) order scheme
     ! Set logicals for the current block
@@ -3133,10 +2864,7 @@ contains
   contains
 
     subroutine set_physics_based_low_order_face
-      use ModMain, ONLY:MaxBlock
       use ModAdvance, ONLY:Vel_IDGB
-      use ModMultiFluid, ONLY: nFluid
-      use ModPhysics, ONLY: Gamma_I
       !--------------------------------------------------------------------
 
       integer :: iFace, jFace, kFace
@@ -3188,7 +2916,7 @@ contains
     end subroutine set_physics_based_low_order_face
     !============================================================================
     real function low_order_face_criteria(State_VI, Vel_II)      
-      use ModMain, ONLY: UseB0, UseB
+      use ModMain, ONLY: UseB
       real, intent(in):: State_VI(nVar,-3:2)
       real, intent(in):: Vel_II(nFluid,-3:2)
 
@@ -3330,18 +3058,16 @@ contains
     ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper 
     ! for more details. 
 
-    use ModAdvance, ONLY: State_VGB, FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ, &
+    use ModAdvance, ONLY: FaceDivU_IX, FaceDivU_IY, FaceDivU_IZ, &
          Vel_IDGB
-    use BATL_size,   ONLY: nDim, MaxDim, iDim_, jDim_, kDim_
-    use BATL_lib, ONLY: Xyz_DGB, IsCartesian
+    use BATL_size,   ONLY: nDim, jDim_, kDim_
     use ModMain,  ONLY: iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, &
          kMaxFace, nIFace, nJFace, nKFace
     integer, intent(in)::iBlock
 
     integer :: iRho, iRhoUx, iRhoUy, iRhoUz
     integer :: iFluid, iFace, jFace, kFace
-    integer :: iMin, iMax, jMin, jMax, kMin, kMax, i, j, k, iDim
-    real :: ijkDir_DD(MaxDim, MaxDim)
+    integer :: iMin, iMax, jMin, jMax, kMin, kMax
 
     real:: Vel_DG(x_:z_,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
 
@@ -3466,9 +3192,9 @@ contains
 
     integer:: l
 
-    real:: sMin, sMax, SoundMin, diff1, diff2_I(3)
+    real:: diff1, diff2_I(3)
 
-    real:: beta = 0.3, r0, RatioVel, FaceLowOrder
+    real:: FaceLowOrder
 
     character(len=*), parameter:: NameSub = 'limiter_mp'
     !--------------------------------------------------------------------------

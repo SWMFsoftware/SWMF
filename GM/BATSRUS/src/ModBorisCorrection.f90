@@ -1,8 +1,15 @@
 module ModBorisCorrection
 
-  use ModVarIndexes,     ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, Bz_, IsMhd
+  use ModVarIndexes,     ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, &
+       Ux_, Uy_, Uz_, IsMhd
   use ModPhysics,        ONLY: c2Light, InvClight2, ClightFactor
   use ModCoordTransform, ONLY: cross_product
+  use ModMain,    ONLY: UseB0
+  use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
+  use ModAdvance, ONLY: State_VGB, Source_VC, LeftState_VX, RightState_VX, &
+       LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
+  use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
+       x_, y_, z_, get_region_indexes
 
   implicit none
   private ! except
@@ -15,6 +22,7 @@ module ModBorisCorrection
   public:: mhd_to_boris_simple ! from RhoU to (1+B^2/(Rho*c^2))*RhoU
   public:: boris_simple_to_mhd ! from (1+B^2/(Rho*c^2))*RhoU to RhoU
   public:: add_boris_source    ! add source term proportional to div(E) 
+  public:: boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z ! convert faces
 
   logical, public:: UseBorisCorrection = .false.
   logical, public:: UseBorisSimple = .false.
@@ -39,7 +47,6 @@ contains
 
     use ModMain, ONLY: &
          iMinFace, iMaxFace, jMinFace, jMaxFace, kMinFace, kMaxFace
-    use BATL_lib, ONLY: nI, nJ, nK, get_region_indexes
     !--------------------------------------------------------------------------
     ! Get signed indexes for Boris region(s)
     call get_region_indexes(StringBorisRegion, iRegionBoris_I)
@@ -100,7 +107,7 @@ contains
        end if
 
     case("#BORISREGION")
-        call read_var('StringBorisRegion', StringBorisRegion)
+       call read_var('StringBorisRegion', StringBorisRegion)
 
     case default
        call stop_mpi(NameSub//': unknown NameCommand='//NameCommand)
@@ -222,11 +229,6 @@ contains
     ! Add E div(E)*(1/c0^2 - 1/c^2) source term to the momentum equation
     ! See eq 28 in Gombosi et al. 2001 JCP, doi:10.1006/jcph.2002.7009
 
-    use ModMain,    ONLY: UseB0
-    use ModB0,      ONLY: B0_DGB
-    use ModAdvance, ONLY: State_VGB, Source_VC
-    use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim
-
     integer, intent(in):: iBlock
 
     integer:: i, j, k
@@ -255,9 +257,239 @@ contains
        Source_VC(RhoUx_:RhoUz_,i,j,k) = Source_VC(RhoUx_:RhoUz_,i,j,k) &
             + Coef*DivE*E_D
 
-     end do; end do; end do
- 
+    end do; end do; end do
+
   end subroutine add_boris_source
+
+  !==========================================================================
+  subroutine boris_to_mhd_x(iMin,iMax,jMin,jMax,kMin,kMax)
+
+    ! Convert face centered Boris momenta to MHD velocities
+
+    integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+
+    integer:: i, j, k
+    real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
+    !------------------------------------------------------------------------
+    ! U_Boris=rhoU_Boris/rho
+    ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
+
+    do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+
+       ! Left face values
+       RhoInv = 1/LeftState_VX(rho_,i,j,k)
+       if(UseB0)then
+          BxFull = B0_DX(x_,i,j,k) + LeftState_VX(Bx_,i,j,k)
+          ByFull = B0_DX(y_,i,j,k) + LeftState_VX(By_,i,j,k)
+          BzFull = B0_DX(z_,i,j,k) + LeftState_VX(Bz_,i,j,k)
+       else
+          BxFull = LeftState_VX(Bx_,i,j,k)
+          ByFull = LeftState_VX(By_,i,j,k)
+          BzFull = LeftState_VX(Bz_,i,j,k)
+       end if
+       B2Full = BxFull**2 + ByFull**2 + BzFull**2
+       RhoC2Inv  = InvClight2*RhoInv
+       LeftState_VX(Ux_,i,j,k)=LeftState_VX(Ux_,i,j,k)*RhoInv
+       LeftState_VX(Uy_,i,j,k)=LeftState_VX(Uy_,i,j,k)*RhoInv
+       LeftState_VX(Uz_,i,j,k)=LeftState_VX(Uz_,i,j,k)*RhoInv
+       uBC2Inv= (LeftState_VX(Ux_,i,j,k)*BxFull + &
+            LeftState_VX(Uy_,i,j,k)*ByFull + &
+            LeftState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
+
+       ! gammaA^2 = 1/[1+BB/(rho c^2)]
+       Ga2Boris= 1/(1 + B2Full*RhoC2Inv)
+
+       LeftState_VX(Ux_,i,j,k) = &
+            Ga2Boris * (LeftState_VX(Ux_,i,j,k)+uBC2Inv*BxFull)
+       LeftState_VX(Uy_,i,j,k) = &
+            Ga2Boris * (LeftState_VX(Uy_,i,j,k)+uBC2Inv*ByFull)
+       LeftState_VX(Uz_,i,j,k) = &
+            Ga2Boris * (LeftState_VX(Uz_,i,j,k)+uBC2Inv*BzFull)
+
+       ! Right face values
+       RhoInv = 1/RightState_VX(rho_,i,j,k)
+       if(UseB0)then
+          BxFull = B0_DX(x_,i,j,k) + RightState_VX(Bx_,i,j,k)
+          ByFull = B0_DX(y_,i,j,k) + RightState_VX(By_,i,j,k)
+          BzFull = B0_DX(z_,i,j,k) + RightState_VX(Bz_,i,j,k)
+       else
+          BxFull = RightState_VX(Bx_,i,j,k)
+          ByFull = RightState_VX(By_,i,j,k)
+          BzFull = RightState_VX(Bz_,i,j,k)
+       end if
+       B2Full = BxFull**2 + ByFull**2 + BzFull**2
+       RhoC2Inv  =InvClight2*RhoInv
+       RightState_VX(Ux_,i,j,k)=RightState_VX(Ux_,i,j,k)*RhoInv
+       RightState_VX(Uy_,i,j,k)=RightState_VX(Uy_,i,j,k)*RhoInv
+       RightState_VX(Uz_,i,j,k)=RightState_VX(Uz_,i,j,k)*RhoInv
+       uBC2Inv= (RightState_VX(Ux_,i,j,k)*BxFull + &
+            RightState_VX(Uy_,i,j,k)*ByFull + &
+            RightState_VX(Uz_,i,j,k)*BzFull)*RhoC2Inv
+
+       ! gammaA^2 = 1/[1+BB/(rho c^2)]
+       Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
+
+       RightState_VX(Ux_,i,j,k) = &
+            Ga2Boris * (RightState_VX(Ux_,i,j,k)+uBC2Inv*BxFull)
+       RightState_VX(Uy_,i,j,k) = &
+            Ga2Boris * (RightState_VX(Uy_,i,j,k)+uBC2Inv*ByFull)
+       RightState_VX(Uz_,i,j,k) = &
+            Ga2Boris * (RightState_VX(Uz_,i,j,k)+uBC2Inv*BzFull)
+
+    end do; end do; end do
+
+  end subroutine boris_to_mhd_x
+  !==========================================================================
+  subroutine boris_to_mhd_y(iMin,iMax,jMin,jMax,kMin,kMax)
+    integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+
+    ! U_Boris=rhoU_Boris/rho
+    ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
+
+    integer:: i, j, k
+    real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
+    !------------------------------------------------------------------------
+    do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+
+       ! Left face values
+       RhoInv = 1/LeftState_VY(rho_,i,j,k)
+       if(UseB0)then
+          BxFull = B0_DY(x_,i,j,k) + LeftState_VY(Bx_,i,j,k)
+          ByFull = B0_DY(y_,i,j,k) + LeftState_VY(By_,i,j,k)
+          BzFull = B0_DY(z_,i,j,k) + LeftState_VY(Bz_,i,j,k)
+       else
+          BxFull = LeftState_VY(Bx_,i,j,k)
+          ByFull = LeftState_VY(By_,i,j,k)
+          BzFull = LeftState_VY(Bz_,i,j,k)
+       end if
+       B2Full = BxFull**2 + ByFull**2 + BzFull**2
+       RhoC2Inv  =InvClight2*RhoInv
+       LeftState_VY(Ux_,i,j,k)=LeftState_VY(Ux_,i,j,k)*RhoInv
+       LeftState_VY(Uy_,i,j,k)=LeftState_VY(Uy_,i,j,k)*RhoInv
+       LeftState_VY(Uz_,i,j,k)=LeftState_VY(Uz_,i,j,k)*RhoInv
+       uBC2Inv= (LeftState_VY(Ux_,i,j,k)*BxFull + &
+            LeftState_VY(Uy_,i,j,k)*ByFull + &
+            LeftState_VY(Uz_,i,j,k)*BzFull)*RhoC2Inv
+
+       ! gammaA^2 = 1/[1+BB/(rho c^2)]
+       Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
+
+       LeftState_VY(Ux_,i,j,k) = &
+            Ga2Boris * (LeftState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
+       LeftState_VY(Uy_,i,j,k) = &
+            Ga2Boris * (LeftState_VY(Uy_,i,j,k)+uBC2Inv*ByFull)
+       LeftState_VY(Uz_,i,j,k) = &
+            Ga2Boris * (LeftState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
+
+       ! Right face values
+       RhoInv = 1/RightState_VY(rho_,i,j,k)
+       if(UseB0)then
+          BxFull = B0_DY(x_,i,j,k) + RightState_VY(Bx_,i,j,k)
+          ByFull = B0_DY(y_,i,j,k) + RightState_VY(By_,i,j,k)
+          BzFull = B0_DY(z_,i,j,k) + RightState_VY(Bz_,i,j,k)
+       else
+          BxFull = RightState_VY(Bx_,i,j,k)
+          ByFull = RightState_VY(By_,i,j,k)
+          BzFull = RightState_VY(Bz_,i,j,k)
+       end if
+       B2Full = BxFull**2 + ByFull**2 + BzFull**2
+       RhoC2Inv=InvClight2*RhoInv
+       RightState_VY(Ux_,i,j,k)=RightState_VY(Ux_,i,j,k)*RhoInv
+       RightState_VY(Uy_,i,j,k)=RightState_VY(Uy_,i,j,k)*RhoInv
+       RightState_VY(Uz_,i,j,k)=RightState_VY(Uz_,i,j,k)*RhoInv
+       uBC2Inv= (RightState_VY(Ux_,i,j,k)*BxFull + &
+            RightState_VY(Uy_,i,j,k)*ByFull + &
+            RightState_VY(Uz_,i,j,k)*BzFull)*RhoC2Inv
+
+       ! gammaA^2 = 1/[1+BB/(rho c^2)]
+       Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
+
+       RightState_VY(Ux_,i,j,k) = &
+            Ga2Boris * (RightState_VY(Ux_,i,j,k)+uBC2Inv*BxFull)
+       RightState_VY(Uy_,i,j,k) = &
+            Ga2Boris * (RightState_VY(Uy_,i,j,k)+uBC2Inv*ByFull)
+       RightState_VY(Uz_,i,j,k) = &
+            Ga2Boris * (RightState_VY(Uz_,i,j,k)+uBC2Inv*BzFull)
+    end do; end do; end do
+
+  end subroutine boris_to_mhd_y
+  !==========================================================================
+  subroutine boris_to_mhd_z(iMin,iMax,jMin,jMax,kMin,kMax)
+
+    integer, intent(in) :: iMin,iMax,jMin,jMax,kMin,kMax
+
+    ! Convert face centered Boris momenta/rho to MHD velocities
+
+    integer:: i, j, k
+    real:: RhoInv, RhoC2Inv, BxFull, ByFull, BzFull, B2Full, uBC2Inv, Ga2Boris
+    !------------------------------------------------------------------------
+    ! U_Boris=rhoU_Boris/rho
+    ! U = 1/[1+BB/(rho c^2)]* (U_Boris + (UBorisdotB/(rho c^2) * B)
+
+    do k=kMin, kMax; do j=jMin, jMax; do i=iMin,iMax
+
+       ! Left face values
+       RhoInv = 1/LeftState_VZ(rho_,i,j,k)
+       if(UseB0)then
+          BxFull = B0_DZ(x_,i,j,k) + LeftState_VZ(Bx_,i,j,k)
+          ByFull = B0_DZ(y_,i,j,k) + LeftState_VZ(By_,i,j,k)
+          BzFull = B0_DZ(z_,i,j,k) + LeftState_VZ(Bz_,i,j,k)
+       else
+          BxFull = LeftState_VZ(Bx_,i,j,k)
+          ByFull = LeftState_VZ(By_,i,j,k)
+          BzFull = LeftState_VZ(Bz_,i,j,k)
+       end if
+       B2Full = BxFull**2 + ByFull**2 + BzFull**2
+       RhoC2Inv  =InvClight2*RhoInv
+       LeftState_VZ(Ux_,i,j,k)=LeftState_VZ(Ux_,i,j,k)*RhoInv
+       LeftState_VZ(Uy_,i,j,k)=LeftState_VZ(Uy_,i,j,k)*RhoInv
+       LeftState_VZ(Uz_,i,j,k)=LeftState_VZ(Uz_,i,j,k)*RhoInv
+       uBC2Inv= (LeftState_VZ(Ux_,i,j,k)*BxFull + &
+            LeftState_VZ(Uy_,i,j,k)*ByFull + &
+            LeftState_VZ(Uz_,i,j,k)*BzFull)*RhoC2Inv
+
+       ! gammaA^2 = 1/[1+BB/(rho c^2)]
+       Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
+
+       LeftState_VZ(Ux_,i,j,k) = &
+            Ga2Boris * (LeftState_VZ(Ux_,i,j,k)+uBC2Inv*BxFull)
+       LeftState_VZ(Uy_,i,j,k) = &
+            Ga2Boris * (LeftState_VZ(Uy_,i,j,k)+uBC2Inv*ByFull)
+       LeftState_VZ(Uz_,i,j,k) = &
+            Ga2Boris * (LeftState_VZ(Uz_,i,j,k)+uBC2Inv*BzFull)
+
+       ! Right face values
+       RhoInv = 1/RightState_VZ(rho_,i,j,k)
+       if(UseB0)then
+          BxFull = B0_DZ(x_,i,j,k) + RightState_VZ(Bx_,i,j,k)
+          ByFull = B0_DZ(y_,i,j,k) + RightState_VZ(By_,i,j,k)
+          BzFull = B0_DZ(z_,i,j,k) + RightState_VZ(Bz_,i,j,k)
+       else
+          BxFull = RightState_VZ(Bx_,i,j,k)
+          ByFull = RightState_VZ(By_,i,j,k)
+          BzFull = RightState_VZ(Bz_,i,j,k)
+       end if
+       B2Full = BxFull**2 + ByFull**2 + BzFull**2
+       RhoC2Inv  =InvClight2*RhoInv
+       RightState_VZ(Ux_,i,j,k)=RightState_VZ(Ux_,i,j,k)*RhoInv
+       RightState_VZ(Uy_,i,j,k)=RightState_VZ(Uy_,i,j,k)*RhoInv
+       RightState_VZ(Uz_,i,j,k)=RightState_VZ(Uz_,i,j,k)*RhoInv
+       uBC2Inv= (RightState_VZ(Ux_,i,j,k)*BxFull + &
+            RightState_VZ(Uy_,i,j,k)*ByFull + &
+            RightState_VZ(Uz_,i,j,k)*BzFull)*RhoC2Inv
+
+       ! gammaA^2 = 1/[1+BB/(rho c^2)]
+       Ga2Boris = 1/(1 + B2Full*RhoC2Inv)
+
+       RightState_VZ(Ux_,i,j,k) = &
+            Ga2Boris * (RightState_VZ(Ux_,i,j,k)+uBC2Inv*BxFull)
+       RightState_VZ(Uy_,i,j,k) = &
+            Ga2Boris * (RightState_VZ(Uy_,i,j,k)+uBC2Inv*ByFull)
+       RightState_VZ(Uz_,i,j,k) = &
+            Ga2Boris * (RightState_VZ(Uz_,i,j,k)+uBC2Inv*BzFull)
+    end do; end do; end do
+
+  end subroutine boris_to_mhd_z
 
 end module ModBorisCorrection
 !==============================================================================
