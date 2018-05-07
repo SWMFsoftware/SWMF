@@ -29,6 +29,7 @@
 ! March 2018, Opher Merav fixed calc_source routine for multi-ion
 ! and charge neutrality while assuming cold electrons
 ! source terms can be printed in tecplot
+! use of energy heating for PUI is optional
 module ModUser
 
   use BATL_lib, ONLY: &
@@ -66,9 +67,12 @@ module ModUser
   integer, parameter :: SWH_ = 2, Pu3_ = 3, Neu_ = 4, Ne2_ = 5, Ne3_ = 6, Ne4_= 7 ! defined in ModEquation
 
   logical :: UseSource_I(SWH_:Ne4_) = .true.
-
+  logical :: UsePu3Heating =.true.
+ 
   real :: OmegaSun   = 0.0  ! normalized angular speed of Sun
   real :: ParkerTilt = 0.0  ! Bphi/Br at the equator at r=rBody
+
+  real :: TempPu3, FactorPu3
 
   integer :: iTableSolarWind = -1 ! initialization is needed
 
@@ -196,6 +200,11 @@ contains
           call read_var('Pu3_Ux_dim' ,Pu3_Ux_dim)
           call read_var('Pu3_Uy_dim' ,Pu3_Uy_dim)
           call read_var('Pu3_Uz_dim' ,Pu3_Uz_dim)
+
+       case("#PU3HEATING")
+          call read_var('UsePu3Heating', UsePu3Heating)
+          call read_var('TempPu3', TempPu3)
+          call read_var('FactorPu3', FactorPu3)
 
           ! This is a flag to define how many populations of Neutrals to run
        case("#SOURCES")
@@ -1277,7 +1286,7 @@ contains
     real :: cth
     real :: State_V(nVar)
 
-    real :: x,y,z,r,TempPu3
+    real :: x,y,z,r
     real, dimension(nFluid) :: &
          Ux_I, Uy_I, Uz_I, U2_I, Temp_I, &
          UThS_I, URelS_I, URelSdim_I, UStar_I=0, Sigma_I, Rate_I=0, &
@@ -1328,7 +1337,7 @@ contains
 
     do k = 1, nK; do j = 1, nJ; do i = 1, nI
 
-       ! Extract conservative variables
+       ! Extrxact conservative variables
        State_V = State_VGB(:, i, j, k, iBlock)
        ! Production rates of neutrals through charge exchange between
        ! sw ions and neutrals, 0 rate for sw ions with other ions
@@ -1356,8 +1365,7 @@ contains
        x = Xyz_DGB(x_,i,j,k,iBlock)
        y = Xyz_DGB(y_,i,j,k,iBlock)
        z = Xyz_DGB(z_,i,j,k,iBlock)
-       r = r_BLK(i,j,k,iBlock)
-       r = r /rBody
+       r = sqrt(x*x + y*y + z*z)
 
        ! Relative velocity between neutrals and ionized fluid squared
 
@@ -1679,12 +1687,17 @@ contains
        Qepu3x_I = Kpu3x_I - Kxpu3_I
 
 !  including energy exchange between PUIs and SW;
-!
-      TempPu3 = 1.E7  !this is the temperature of PUI upstream the TS
-      EneExch_I = 0.
-      EneExch_I(Pu3_) =  State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*Io2No_V(UnitTemperature_)*((r-rBody)/rBody)
-      EneExch_I(SWH_) = -EneExch_I(Pu3_)
 
+      EneExch_I = 0.
+      if(UsePu3Heating) &
+      EneExch_I(Pu3_) =  State_V(PU3Rho_)*(TempPu3 - Temp_I(PU3_))*Io2No_V(UnitTemperature_)*(r-rBody)*FactorPu3
+
+      if(r<50.)then
+        write(*,*)'!!! r, rbody, R_BLK=', r, rbody, R_BLK(i,j,k,iBlock)
+        write(*,*)'!!! TempPu3 - Temp_I(PU3_)',TempPu3, Temp_I(PU3_), TempPu3 - Temp_I(PU3_)
+        write(*,*)'!!! EneExch_I(Pu3_)=', EneExch_I(Pu3_)
+        call stop_mpi('DEBUG')
+     end if
 
        ! Calculate the source terms for this cell
        call calc_source_cell
@@ -1738,7 +1751,7 @@ contains
             Source_V(SWHRhoUx_) = -sum(JxpUx_I(Neu_:Ne4_))+JpxUx_I(Ne3_) + Jpu3xUx_I(Ne3_)
             Source_V(SWHRhoUy_) = -sum(JxpUy_I(Neu_:Ne4_))+JpxUy_I(Ne3_) + Jpu3xUy_I(Ne3_)
             Source_V(SWHRhoUz_) = -sum(JxpUz_I(Neu_:Ne4_))+JpxUz_I(Ne3_) + Jpu3xUz_I(Ne3_)
-            Source_V(SWHEnergy_)= -sum(Kxp_I(Neu_:Ne4_)) + Kpx_I(Ne3_) + Kpu3x_I(Ne3_) + EneExch_I(SWH_)
+            Source_V(SWHEnergy_)= -sum(Kxp_I(Neu_:Ne4_)) + Kpx_I(Ne3_) + Kpu3x_I(Ne3_) 
             Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
                  - Uy_I(SWH_)*Source_V(SWHRhoUx_) &
                  - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
