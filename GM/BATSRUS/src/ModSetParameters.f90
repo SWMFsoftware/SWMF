@@ -49,7 +49,7 @@ contains
     use CON_axes,         ONLY: init_axes, get_axes, &
          dLongitudeHgr, dLongitudeHgrDeg, dLongitudeHgi, dLongitudeHgiDeg
     use ModUtilities,     ONLY: fix_dir_name, check_dir, make_dir, DoFlush, &
-         split_string, join_string, open_file, lower_case
+         split_string, join_string, open_file, lower_case, DoWriteCallSequence
     use CON_planet,       ONLY: get_planet
     use ModTimeConvert,   ONLY: time_int_to_real, time_real_to_int
     use ModReadParam

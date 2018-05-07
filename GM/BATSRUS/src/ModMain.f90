@@ -222,9 +222,6 @@ module ModMain
   ! Shall we be strict about errors in the input parameter file
   logical :: UseStrict=.true.
 
-  ! Create call sequence in stop_mpi
-  logical:: DoWriteCallSequence = .false.
-
   ! Debug logicals
   logical :: okdebug=.false., ShowGhostCells=.true.
 
