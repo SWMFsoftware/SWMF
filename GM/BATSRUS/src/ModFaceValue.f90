@@ -1464,7 +1464,7 @@ contains
          ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
          BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  = RhoInv*C2light
+         RhoC2Inv  = RhoInv/C2light
          uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
               Primitive_VG(rhoUy_,i,j,k)*ByFull + &
               Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
