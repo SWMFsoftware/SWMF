@@ -1,15 +1,17 @@
 module ModBorisCorrection
 
-  use ModVarIndexes,     ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, &
+  use ModVarIndexes, ONLY: nVar, Rho_, RhoUx_, RhoUz_, Bx_, By_, Bz_, &
        Ux_, Uy_, Uz_, IsMhd
-  use ModPhysics,        ONLY: c2Light, InvClight2, ClightFactor
+  use ModConst, ONLY: cLightSpeed
+  use ModPhysics, ONLY: c2Light, InvClight2, ClightFactor, Si2No_V, UnitU_
   use ModCoordTransform, ONLY: cross_product
   use ModMain,    ONLY: UseB0
   use ModB0,      ONLY: B0_DGB, B0_DX, B0_DY, B0_DZ
   use ModAdvance, ONLY: State_VGB, Source_VC, LeftState_VX, RightState_VX, &
        LeftState_VY, RightState_VY, LeftState_VZ, RightState_VZ
   use BATL_lib,   ONLY: CellVolume_GB, Used_GB, nI, nJ, nK, nDim, MaxDim, &
-       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, x_, y_, z_, &
+       MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nINode, nJNode, nKNode, &
+       x_, y_, z_, &
        get_region_indexes, block_inside_regions
 
   implicit none
@@ -24,7 +26,8 @@ module ModBorisCorrection
   public:: boris_simple_to_mhd ! from (1+B^2/(Rho*c^2))*RhoU to RhoU
   public:: add_boris_source    ! add source term proportional to div(E) 
   public:: boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z ! convert faces
-  public:: calc_boris_factor_g ! calculate (region dependent) boris factor
+  public:: set_clight_cell     ! calculate speed of light at cell centers
+  public:: set_clight_face     ! calculate speed of light at cell faces
 
   logical, public:: UseBorisCorrection = .false.
   logical, public:: UseBorisSimple = .false.
@@ -35,6 +38,9 @@ module ModBorisCorrection
 
   !$omp threadprivate(EDotFA_X, EDotFA_Y, EDotFA_Z)
 
+  ! Speed of light at cell centers and cell faces
+  real, allocatable, public:: Clight_G(:,:,:), Clight_DF(:,:,:,:)
+  
   ! Local variables ---------------
 
   ! Description of the region where Boris correction is used
@@ -493,23 +499,51 @@ contains
 
   end subroutine boris_to_mhd_z
   !===========================================================================
-  subroutine calc_boris_factor_g(iBlock, BorisFactor_G)
+  subroutine set_clight_cell(iBlock)
 
-    ! Calculate Boris factor in all cell centers including ghost cells
-    
+    ! Set Clight_G, the reduced speed of light at cell centers
+    ! including ghost cells
+
     integer, intent(in):: iBlock
-    real,    intent(inout):: BorisFactor_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     !-------------------------------------------------------------------------
+    if(.not.allocated(Clight_G)) &
+         allocate(Clight_G(MinI:MaxI,MinJ:MaxJ,MinK:MaxK))
+
     if(allocated(iRegionBoris_I))then
-       call block_inside_regions( &
-            iRegionBoris_I, iBlock, size(BorisFactor_G), 'ghost', &
-            Value_I=BorisFactor_G(MinI,MinJ,MinK))
-       BorisFactor_G = 1 - (1 - ClightFactor)*BorisFactor_G
+       ! Get the Boris factor into Clight_G
+       call block_inside_regions(iRegionBoris_I, iBlock, size(Clight_G), &
+            'ghost', Value_I=Clight_G)
+       ! Convert Boris factor to speed of light
+       Clight_G = cLightSpeed * Si2No_V(UnitU_) * &
+            (1 - (1 - ClightFactor)*Clight_G)
     else
-       BorisFactor_G = ClightFactor
+       Clight_G = cLightSpeed * Si2No_V(UnitU_)
     end if
 
-  end subroutine calc_boris_factor_g
+  end subroutine set_clight_cell
+  !===========================================================================
+  subroutine set_clight_face(iBlock)
+
+    ! Set Clight_DF, the reduced speed of light at cell faces (only nDim sides)
+    
+    integer, intent(in):: iBlock
+    !-------------------------------------------------------------------------
+    if(.not.allocated(Clight_DF)) &
+         allocate(Clight_DF(nDim,nINode,nJNode,nKNode))
+
+    if(allocated(iRegionBoris_I))then
+       ! Get the Boris Factor into Clight_G
+       call block_inside_regions(iRegionBoris_I, iBlock, size(Clight_DF), &
+            'face', Value_I=Clight_DF)
+       ! Convert Boris factor to speed of light
+       Clight_DF = cLightSpeed * Si2No_V(UnitU_) * &
+            (1 - (1 - ClightFactor)*Clight_DF)
+    else
+       Clight_DF = cLightSpeed * Si2No_V(UnitU_)
+    end if
+
+  end subroutine set_clight_face
+  !===========================================================================
   
 end module ModBorisCorrection
 !==============================================================================

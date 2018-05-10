@@ -999,7 +999,7 @@ contains
     use ModViscosity, ONLY: UseViscosity, set_visco_factor_cell, ViscoFactor_C
     use ModFaceValue, ONLY: iRegionLowOrder_I
     use ModPIC, ONLY: pic_find_region
-    use ModBorisCorrection, ONLY: calc_boris_factor_g
+    use ModBorisCorrection, ONLY: set_clight_cell, Clight_G
     use BATL_lib, ONLY: block_inside_regions, iTree_IA, Level_, iNode_B, &
          iTimeLevel_A, AmrCrit_IB, nAmrCrit, &
          Xyz_DGB, iNode_B, CellSize_DB, CellVolume_GB
@@ -1593,8 +1593,9 @@ contains
        case('balance')
           if(allocated(iTypeBalance_A)) &
                PlotVar(:,:,:,iVar) = iTypeBalance_A(iNode_B(iBlock))
-       case('boris')
-          call calc_boris_factor_g(iBlock, PlotVar(:,:,:,iVar))
+       case('clight')
+          call set_clight_cell(iBlock)
+          PlotVar(:,:,:,iVar) = Clight_G
        case('loworder')
           if(allocated(iRegionLowOrder_I)) call block_inside_regions( &
                iRegionLowOrder_I, iBlock, size(PlotVar(:,:,:,iVar)), 'ghost', &
@@ -1725,7 +1726,7 @@ contains
        call extract_fluid_name(String)
 
        ! Set plotvar_inBody to something reasonable for inside the body.
-       ! Load zeros (0) for most values - load something better for rho, p, and T
+       ! Load zeros for most values - load something better for rho, p, and T
        ! We know that U,B,J are okay with zeroes, others should be changed if
        ! necessary.
        ! Note that all variables not set to 0 in set_plotvar should be
@@ -1763,7 +1764,7 @@ contains
        case('eta','visco')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*&
                (No2Si_V(UnitX_)**2/No2Si_V(UnitT_))
-       case('ux','uy','uz','uxrot','uyrot','uzrot')
+       case('ux','uy','uz','uxrot','uyrot','uzrot','clight')
           PlotVar(:,:,:,iVar) = PlotVar(:,:,:,iVar)*No2Io_V(UnitU_)
 
        case('gradpex','gradpey','gradpez','gradper')
