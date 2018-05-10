@@ -2184,8 +2184,7 @@ contains
           call read_wsa_coeff
 
        case("#CORONALHEATING", "#LONGSCALEHEATING", "#ACTIVEREGIONHEATING", &
-            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX", &
-            "#KOLMOGOROV")
+            "#LIMITIMBALANCE","#HEATPARTITIONING", "#POYNTINGFLUX")
           call read_corona_heating(NameCommand)
 
        case("#OPENCLOSEDHEAT")
