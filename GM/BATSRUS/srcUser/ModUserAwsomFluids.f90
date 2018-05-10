@@ -932,7 +932,7 @@ contains
     integer :: i, j, k
     integer :: iRhoUx, iRhoUz, iP, iEnergy, iIon, jIon, iIonFirst, iPpar
     real :: ReducedTemp, CollisionRate, Coef
-    real :: Du2, Phi, Psi, RelativeDrift
+    real :: Du2
     real, dimension(nIonFluid) :: RhoIon_I, ChargeDensIon_I, PparIon_I
     real, dimension(0:nIonFluid) :: Ux_I, Uy_I, Uz_I, P_I, N_I, T_I
     real :: U_D(3), Du_D(3), Me_D(3), B_D(3)
@@ -1010,26 +1010,13 @@ contains
 
              Du2 = sum(Du_D**2)
 
-             if(UseAnisoPressure)then
-                Psi = 1.0
-                Phi = 1.0
-             else
-                RelativeDrift = &
-                     sqrt(Du2/(2.0*ReducedTemp/ReducedMass_II(iIon,jIon)))
-
-                ! Velocity dependent correction factors
-                ! The Phi correction factor is simplified (Nakada, 1970)
-                Psi = exp(-RelativeDrift**2)
-                Phi = 1.0/(1.0 + 0.74*RelativeDrift**3)
-             end if
-
              Coef = N_I(iIon)*ReducedMass_II(iIon,jIon)*CollisionRate
 
              if(iIon == 0)then
-                Me_D = Me_D + Mass_I(0)*N_I(0)*CollisionRate*Du_D*Phi
+                Me_D = Me_D + Mass_I(0)*N_I(0)*CollisionRate*Du_D
              else
                 Source_V(iRhoUx:iRhoUz) = Source_V(iRhoUx:iRhoUz) &
-                     + RhoIon_I(iIon)*CollisionRate*Du_D*Phi
+                     + RhoIon_I(iIon)*CollisionRate*Du_D
 
                 if(UseAnisoPressure)then
                    if(UseB0) then
@@ -1047,8 +1034,8 @@ contains
              end if
 
              Source_V(iP) = Source_V(iP) &
-                  + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon)*Psi &
-                  + (2.0/3.0)*Du2*Phi)
+                  + Coef*(2.0*(T_I(jIon) - T_I(iIon))/Mass_I(jIon) &
+                  + (2.0/3.0)*Du2)
           end do
        end do
 
