@@ -1128,7 +1128,7 @@ contains
     real :: Emajor, EwavePlus, EwaveMinus
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
-    real :: RhoProton, Ppar, Vpar2, ZmajorGyro2
+    real :: RhoProton, Ppar, Vpar2, SignWave
     real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
          CascadeTime_I, Qcascade_I
 
@@ -1178,6 +1178,8 @@ contains
           Emajor = EwavePlus + EwaveMinus
        else
           Emajor = max(EwavePlus, EwaveMinus)
+          ! Sign of fractional cross helicity
+          SignWave = sign(1.0, EwavePlus-EwaveMinus)
        end if
 
        RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
@@ -1202,11 +1204,8 @@ contains
                B/(IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon))/Vperp
           LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
 
-          ! Square of dominant Elsasser variable at ion gyro radius
-          ZmajorGyro2 = 4.0*Emajor/RhoProton/sqrt(LperpInvGyroRad)
-
-          ! For protons the following would be DeltaU
-          DeltaU = 0.5*sqrt(ZmajorGyro2)
+          ! For protons the following would be DeltaU at ion gyro radius
+          DeltaU = sqrt(Emajor/RhoProton/sqrt(LperpInvGyroRad))
 
           ! For other ions, correct for velocity difference between iIon
           ! and protons
@@ -1229,7 +1228,8 @@ contains
              ! We further assumed gyroscale Alfven ratio to be one and
              ! gyroscale fractional cross helicity to be zero (this
              ! is due to equipartition at gyroscale)
-             DeltaU = DeltaU*sqrt((1 - Upar/Valfven)**2 + 0.5*Vpar2/Valfven**2)
+             DeltaU = DeltaU*sqrt((1 - SignWave*Upar/Valfven)**2 &
+                  + 0.5*Vpar2/Valfven**2)
           end if
 
           Epsilon = DeltaU/Vperp
