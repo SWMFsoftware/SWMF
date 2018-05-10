@@ -9,10 +9,11 @@ module ModUser
   ! User module for Ganymede, insulating boundary model from Duling et.al [2014]
   ! B1 is used instead of B1+B0 as input/output to the function.
   ! Must compile with MHDHypPe equation set.
-  use ModUserEmpty,                          &
-       IMPLEMENTED1 => user_set_ics,         &
-       IMPLEMENTED2 => user_set_cell_boundary
-
+  use ModUserEmpty,                           &
+       IMPLEMENTED1 => user_set_ics,          &
+       IMPLEMENTED2 => user_set_cell_boundary,&
+       IMPLEMENTED3 => user_action
+       
   include 'user_module.h' ! list of public methods
   
   real,              parameter :: VersionUserModule = 1.0
@@ -22,7 +23,8 @@ module ModUser
 
   integer :: iProcInner  ! Processor rank for inner boundary
   integer :: nProcInner  ! Number of processors containing the inner boundary
-  integer :: InnerBoundaryComm ! MPI communicator for inner boundary group
+  integer :: iCommInner  ! MPI communicator for inner boundary group
+  integer :: iError
   
 contains
   !============================================================================
@@ -36,31 +38,14 @@ contains
     use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, &
          iRho, iRhoUx, iRhoUz, iRhoUx_I, iRhoUz_I
     use ModPhysics,    ONLY: CellState_VI
-    use ModMain,       ONLY: nBlock
     
     integer, intent(in) :: iBlock
 
-    integer :: InnerBCProc = 0
-    logical, save :: IsFirstCall = .true.
-    integer :: i,j,k, iError
+    integer :: i,j,k
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    ! Ask where this Rmin is calculated and if it contains ghost cells
-
-    if(IsFirstCall) then    
-       if(minval(Rmin_BLK(1:nBlock)) < 1.1*PlanetRadius) &
-          InnerBCProc = 1
-
-       ! Split the communicator based on condition
-       call MPI_Comm_split(iComm,InnerBCProc,iProc,InnerBoundaryComm,iError)
-       call MPI_Comm_rank(InnerBoundaryComm,iProcInner,iError)
-       call MPI_Comm_size(InnerBoundaryComm,nProcInner,iError)
-       
-       IsFirstCall = .false.
-    end if      
+    call test_start(NameSub, DoTest, iBlock)     
     
     ! Modify near planet condition only
     if(Rmin_BLK(iBlock) > 5.0*PlanetRadius) RETURN
@@ -85,7 +70,7 @@ contains
   subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
 
     use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: R_BLK, Rmin_BLK, far_field_BCs_BLK
+    use ModGeometry,   ONLY: r_BLK
     use ModSize,       ONLY: nI, nJ, nK, nG
     use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Pe_, Bx_, Bz_, &
                              iRho_I,iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
@@ -131,7 +116,6 @@ contains
     logical, save :: IsFirstCall=.true.
     integer, save :: MaxInnerBCBlock ! Max block index on each proc for inner BC
     integer :: i,j,k, jIndex, kIndex, blockIndex, iVar
-    integer :: iError
 
     ! Switch to save if constants are calculated
     integer, save :: constants = 0
@@ -275,7 +259,7 @@ contains
     if(iBlock == MaxInnerBCBlock)then
        
        call MPI_Reduce(Br_S,BrAllProc_S,Nt*Np,MPI_REAL,MPI_SUM,&
-            0,InnerBoundaryComm,iError)
+            0,iCommInner,iError)
 
        do i=iMin,iMax
           ! Calculate boundary values at ghost cell radius
@@ -284,9 +268,9 @@ contains
                   GhostCellCoord_D(1,i), BrGhost_S,BtGhost_S,BpGhost_S)
           end if
        
-          call MPI_Bcast(BrGhost_S,Nt*Np,MPI_REAL,0,InnerBoundaryComm,iError)
-          call MPI_Bcast(BtGhost_S,Nt*Np,MPI_REAL,0,InnerBoundaryComm,iError)
-          call MPI_Bcast(BpGhost_S,Nt*Np,MPI_REAL,0,InnerBoundaryComm,iError)
+          call MPI_Bcast(BrGhost_S,Nt*Np,MPI_REAL,0,iCommInner,iError)
+          call MPI_Bcast(BtGhost_S,Nt*Np,MPI_REAL,0,iCommInner,iError)
+          call MPI_Bcast(BpGhost_S,Nt*Np,MPI_REAL,0,iCommInner,iError)
        
           ! (Br,Bt,Bp) --> (Bx,By,Bz) and set layer i ghost cell values
           do kIndex=1,Np; do jIndex=1,Nt
@@ -667,10 +651,38 @@ contains
       lgndrp=p2
       RETURN
       END FUNCTION lgndrp
-
       
     end subroutine user_set_cell_boundary
 !==============================================================================
-  
+
+    subroutine user_action(NameAction)
+
+      use ModMain,       ONLY: nBlock
+      use ModGeometry,   ONLY: Rmin_BLK
+      
+      character(len=*), intent(in):: NameAction
+
+      integer :: iTypeProc ! Proc type: 1 if inner BC contained; 0 otherwise
+      logical :: DoTest
+      character(len=*), parameter:: NameSub = 'user_action'
+      !------------------------------------------------------------------------
+      call test_start(NameSub, DoTest)
+
+      select case(NameAction)
+      case('initial condition done','loadbalancedone')
+         iTypeProc = 0
+         if(minval(Rmin_BLK(1:nBlock)) < 1.1*PlanetRadius) &
+              iTypeProc = 1
+         
+         ! Split the communicator based on inner boundary processor
+         call MPI_Comm_split(iComm,iTypeProc,iProc,iCommInner,iError)
+         call MPI_Comm_rank(iCommInner,iProcInner,iError)
+         call MPI_Comm_size(iCommInner,nProcInner,iError)
+      end select
+      
+      call test_stop(NameSub, DoTest)
+    end subroutine user_action
+    !==========================================================================
+    
 end module ModUser
 !==============================================================================
