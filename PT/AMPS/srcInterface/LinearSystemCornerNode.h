@@ -933,10 +933,21 @@ int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
 int MaxMatrixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
 void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatrixElementParameterTableLength,MaxMatrixElementSupportTableLength>::UpdateRhs(double (*fSetRhs)(int,cRhsSupportTable*,int,cRhsSupportTable*,int)) {
   cMatrixRow* row;
+  int cnt;
 
-  for (row=MatrixRowTable;row!=NULL;row=row->next) if ((row->RhsSupportLength_CornerNodes!=0)||(row->RhsSupportLength_CenterNodes!=0)) {
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+#pragma omp parallel default(none) shared(PIC::nTotalThreadsOpenMP,fSetRhs) private (row,cnt)
+   {
+   int ThisOpenMPThread=omp_get_thread_num();
+#else
+   const int ThisOpenMPThread=0;
+#endif //_COMPILATION_MODE_
+  for (cnt=0,row=MatrixRowTable;row!=NULL;row=row->next,cnt++)  if ( ((cnt%PIC::nTotalThreadsOpenMP)==ThisOpenMPThread) && ((row->RhsSupportLength_CornerNodes!=0)||(row->RhsSupportLength_CenterNodes!=0)) ) {
     row->Rhs=fSetRhs(row->iVar,row->RhsSupportTable_CornerNodes,row->RhsSupportLength_CornerNodes,row->RhsSupportTable_CenterNodes,row->RhsSupportLength_CenterNodes);
   }
+#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
+   }
+#endif
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
@@ -953,33 +964,28 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   RecvExchangeBuffer[PIC::ThisThread]=x;
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel default(none)  shared(p) private (iElement,iElementMax,Elements,StencilElement,res,row,cnt)
+#pragma omp parallel default(none)  shared(p,PIC::nTotalThreadsOpenMP) private (iElement,iElementMax,Elements,StencilElement,res,row,cnt)
    {
-#pragma omp single
-     {
+   int ThisOpenMPThread=omp_get_thread_num();
+#else
+   const int ThisOpenMPThread=0;
 #endif //_COMPILATION_MODE_
 
+  for (row=MatrixRowTable,cnt=0;row!=NULL;row=row->next,cnt++) if ((cnt%PIC::nTotalThreadsOpenMP)==ThisOpenMPThread) {
+    iElementMax=row->nNonZeroElements;
+    Elements=row->Elements;
 
-  for (row=MatrixRowTable,cnt=0;row!=NULL;row=row->next,cnt++) {
-    #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-    #pragma omp task default (none) firstprivate (row,cnt) private (iElement,iElementMax,Elements,StencilElement,res) shared (p)
-    #endif
-    {
-      iElementMax=row->nNonZeroElements;
-      Elements=row->Elements;
+    for (res=0.0,iElement=0;iElement<iElementMax;iElement++) {
+      memcpy(&StencilElement,Elements+iElement,sizeof(cStencilElement));
 
-      for (res=0.0,iElement=0;iElement<iElementMax;iElement++) {
-        memcpy(&StencilElement,Elements+iElement,sizeof(cStencilElement));
-
-        res+=StencilElement.MatrixElementValue*RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
-      }
-
-       p[cnt]=res;
+      res+=StencilElement.MatrixElementValue*RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
     }
+
+     p[cnt]=res;
   }
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-     }}
+  }
 #endif
 
   RecvExchangeBuffer[PIC::ThisThread]=NULL;
