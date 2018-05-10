@@ -5,6 +5,7 @@ module ModUser
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
+  use ModProcMH, ONLY: iProc,iComm
   ! User module for Ganymede, insulating boundary model from Duling et.al [2014]
   ! B1 is used instead of B1+B0 as input/output to the function.
   ! Must compile with MHDHypPe equation set.
@@ -13,12 +14,16 @@ module ModUser
        IMPLEMENTED2 => user_set_cell_boundary
 
   include 'user_module.h' ! list of public methods
-
+  
   real,              parameter :: VersionUserModule = 1.0
   character (len=*), parameter :: NameUserModule = 'Ganymede insulating, Hongyang Zhou'
 
-  real :: PlanetRadius = 1.
+  real, parameter :: PlanetRadius = 1.
 
+  integer :: iProcInner  ! Processor rank for inner boundary
+  integer :: nProcInner  ! Number of processors containing the inner boundary
+  integer :: InnerBoundaryComm ! MPI communicator for inner boundary group
+  
 contains
   !============================================================================
 
@@ -30,18 +35,35 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_, Rho_, P_, Pe_
     use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, &
          iRho, iRhoUx, iRhoUz, iRhoUx_I, iRhoUz_I
-    use ModProcMH,     ONLY: iProc
     use ModPhysics,    ONLY: CellState_VI
-
+    use ModMain,       ONLY: nBlock
+    
     integer, intent(in) :: iBlock
 
-    integer :: i,j,k
+    integer :: InnerBCProc = 0
+    logical, save :: IsFirstCall = .true.
+    integer :: i,j,k, iError
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+
+    ! Ask where this Rmin is calculated and if it contains ghost cells
+
+    if(IsFirstCall) then    
+       if(minval(Rmin_BLK(1:nBlock)) < 1.1*PlanetRadius) &
+          InnerBCProc = 1
+
+       ! Split the communicator based on condition
+       call MPI_Comm_split(iComm,InnerBCProc,iProc,InnerBoundaryComm,iError)
+       call MPI_Comm_rank(InnerBoundaryComm,iProcInner,iError)
+       call MPI_Comm_size(InnerBoundaryComm,nProcInner,iError)
+       
+       IsFirstCall = .false.
+    end if      
     
-    if(Rmin_BLK(iBlock)> 5.0*PlanetRadius) RETURN
+    ! Modify near planet condition only
+    if(Rmin_BLK(iBlock) > 5.0*PlanetRadius) RETURN
     
     do k=1,nK; do j=1,nJ; do i=1,nI
        do iFluid = 1,nFluid
@@ -70,7 +92,6 @@ contains
     use ModEnergy,     ONLY: calc_energy_cell
     use BATL_lib,      ONLY: Xyz_DGB, CellSize_DB, nRoot_D
     use ModMain,       ONLY: nBlock, MaxBlock 
-    use ModProcMH,     ONLY: iProc, iComm
     use ModPhysics,    ONLY: No2Si_V, UnitB_, CellState_VI
     use ModB0,         ONLY: B0_DGB
     use ModMultiFluid, ONLY: iFluid, nFluid, iRhoUx, iRhoUz
@@ -167,7 +188,7 @@ contains
        Np = nRoot_D(3) * nK
 
        ! Initialization on first call
-       if(iProc == 0)then
+       if(iProcInner == 0)then
           if(.not.allocated(lmc)) then
              allocate(lmc(Nt,Np,1:Nl,0:Nl))
              allocate(lms(Nt,Np,1:Nl,0:Nl))
@@ -252,8 +273,9 @@ contains
 
     ! Message pass when all the boundary blocks are found per proc
     if(iBlock == MaxInnerBCBlock)then
-
-       call MPI_Reduce(Br_S,BrAllProc_S,Nt*Np,MPI_REAL,MPI_SUM,0,iComm,iError)
+       
+       call MPI_Reduce(Br_S,BrAllProc_S,Nt*Np,MPI_REAL,MPI_SUM,&
+            0,InnerBoundaryComm,iError)
 
        do i=iMin,iMax
           ! Calculate boundary values at ghost cell radius
@@ -262,9 +284,9 @@ contains
                   GhostCellCoord_D(1,i), BrGhost_S,BtGhost_S,BpGhost_S)
           end if
        
-          call MPI_Bcast(BrGhost_S,Nt*Np,MPI_REAL,0,iComm,iError)
-          call MPI_Bcast(BtGhost_S,Nt*Np,MPI_REAL,0,iComm,iError)
-          call MPI_Bcast(BpGhost_S,Nt*Np,MPI_REAL,0,iComm,iError)
+          call MPI_Bcast(BrGhost_S,Nt*Np,MPI_REAL,0,InnerBoundaryComm,iError)
+          call MPI_Bcast(BtGhost_S,Nt*Np,MPI_REAL,0,InnerBoundaryComm,iError)
+          call MPI_Bcast(BpGhost_S,Nt*Np,MPI_REAL,0,InnerBoundaryComm,iError)
        
           ! (Br,Bt,Bp) --> (Bx,By,Bz) and set layer i ghost cell values
           do kIndex=1,Np; do jIndex=1,Nt
@@ -610,37 +632,36 @@ contains
       INTEGER :: i
 
       IF(m<0 .OR. l<0 .OR. m>l .OR. abs(x)>1.0D0) THEN
-            WRITE(*,*) "Lgndrp: wrong arguments!"
             WRITE(*,*) l,m,x
-            STOP
+            call stop_mpi("Lgndrp: wrong arguments!")
       ENDIF
 
       !P_mm, (l=m) 
-      p0=1.0D0
+      p0=1.0
 
-      m_eins=-1.0D0*SQRT(1.0D0-x*x)
+      m_eins=-1.0*SQRT(1.0-x*x)
       DO i=1,m ! only m>0
-            p0=p0*m_eins*(DBLE(2*i)-1.0D0)
+         p0=p0*m_eins*(2*i-1.0)
       ENDDO
 
       IF(l==m) THEN
-            lgndrp=p0
-            RETURN
+         lgndrp=p0
+         RETURN
       ENDIF
 
       ! P_ml, l=m+1
-      p1=x*DBLE(2*m+1)*p0
+      p1=x*(2*m+1)*p0
 
       IF(l==m+1) THEN
-            lgndrp=p1
-            RETURN
+         lgndrp=p1
+         RETURN
       ENDIF
 
       !P_ml, l>m+1
       DO i=m+2,l
-            p2=(x*DBLE(2*i-1)*p1-DBLE(i+m-1)*p0)/DBLE(i-m)
-            p0=p1
-            p1=p2
+         p2=(x*(2*i-1)*p1-(i+m-1)*p0)/(i-m)
+         p0=p1
+         p1=p2
       ENDDO
 
       lgndrp=p2
