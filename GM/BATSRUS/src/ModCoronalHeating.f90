@@ -88,16 +88,6 @@ module ModCoronalHeating
 
   logical :: DoInit = .true.
 
-  ! The power spectrum of magnetic energy fluctuations in the solar wind
-  ! follows a Kolmogorov spectrum (\vardelta B)^(-5/3) in the inertial range
-  ! of the turbulence. Podesta et al. (2006) found based on in situ
-  ! observations  at 1 AU a spectral index of 3/2 for kinetic energy
-  ! fluctuations.
-  ! If the logical UseKolmogorov is .false., we assume a 3/2 spectral
-  ! index (for the entire solar corona and inner heliosphere) in the
-  ! stochastic heating mechanism, otherwise we assume it to be 5/3
-  logical :: UseKolmogorov = .false.
-
   public :: get_coronal_heat_factor
   public :: get_coronal_heating
   public :: get_cell_heating
@@ -508,9 +498,6 @@ contains
           call stop_mpi('Read_corona_heating: unknown TypeHeatPartitioning = '&
                // TypeHeatPartitioning)
        end select
-
-    case("#KOLMOGOROV")
-       call read_var('UseKolmogorov', UseKolmogorov)
 
     case default
        call stop_mpi('Read_corona_heating: unknown command = ' &
@@ -1136,11 +1123,14 @@ contains
 
     integer :: iIon
     real :: Qtotal, Udiff_D(3), Upar, Valfven, Vperp
-    real :: Ne, B_D(3), B, B2, InvGyroRadius, AlfvenRatio, DeltaU, Epsilon
+    real :: Ne, B_D(3), B, B2, InvGyroRadius, DeltaU, Epsilon
     real :: TeByTp, BetaElectron, BetaProton, Pperp, LperpInvGyroRad
-    real :: Ewave, EwavePlus, EwaveMinus, EkinCascade
+    real :: Emajor, EwavePlus, EwaveMinus
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
-    real :: DampingPerp_I(nIonFluid), DampingTotal
+    real :: DampingPerp_I(nIonFluid), DampingProton
+    real :: RhoProton, Ppar, Vpar2, ZmajorGyro2
+    real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
+         CascadeTime_I, Qcascade_I
 
     character(len=*), parameter:: NameSub = 'apportion_coronal_heating'
     !--------------------------------------------------------------------------
@@ -1181,15 +1171,28 @@ contains
 
        EwavePlus  = State_VGB(WaveFirst_,i,j,k,iBlock)
        EwaveMinus = State_VGB(WaveLast_,i,j,k,iBlock)
-       Ewave = EwavePlus + EwaveMinus
 
-       do iIon = 1, nIonFluid
+       ! Dominant wave
+       if(nIonFluid == 1)then
+          ! This is for backward compatibility
+          Emajor = EwavePlus + EwaveMinus
+       else
+          Emajor = max(EwavePlus, EwaveMinus)
+       end if
+
+       RhoProton = State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+
+       Qcascade_I(nIonFluid) = Qtotal
+
+       ! Loop in reverse order for energy subtraction
+       do iIon = nIonFluid, 1, -1
 
           if(UseAnisoPressure)then
-             Pperp = 0.5*(3*State_VGB(iPIon_I(iIon),i,j,k,iBlock) &
-                  - State_VGB(iPparIon_I(IonFirst_-1+iIon),i,j,k,iBlock))
+             Ppar  = State_VGB(iPparIon_I(IonFirst_-1+iIon),i,j,k,iBlock)
+             Pperp = 0.5*(3*State_VGB(iPIon_I(iIon),i,j,k,iBlock) - Ppar)
           else
-             Pperp = State_VGB(iPIon_I(iIon),i,j,k,iBlock)
+             Ppar  = State_VGB(iPIon_I(iIon),i,j,k,iBlock)
+             Pperp = Ppar
           end if
 
           ! Perpendicular ion thermal speed
@@ -1199,61 +1202,72 @@ contains
                B/(IonMassPerCharge*MassIon_I(iIon)/ChargeIon_I(iIon))/Vperp
           LperpInvGyroRad = InvGyroRadius*LperpTimesSqrtB/sqrt(B)
 
-          if(UseKolmogorov)then
-             EkinCascade = 1.0/LperpInvGyroRad**(2.0/3.0)
-          else
-             EkinCascade = 1.0/sqrt(LperpInvGyroRad)
-          end if
+          ! Square of dominant Elsasser variable at ion gyro radius
+          ZmajorGyro2 = 4.0*Emajor/RhoProton/sqrt(LperpInvGyroRad)
 
-          if(iIon == 1)then
-             DeltaU = sqrt(Ewave/State_VGB(iRhoIon_I(1),i,j,k,iBlock) &
-                  *EkinCascade)
-          else
-             ! difference bulk speed between ions and protons
+          ! For protons the following would be DeltaU
+          DeltaU = 0.5*sqrt(ZmajorGyro2)
+
+          ! For other ions, correct for velocity difference between iIon
+          ! and protons
+          if(iIon > 1)then
+             ! difference bulk speed between iIon and protons
              Udiff_D = &
                   State_VGB(iRhoUxIon_I(iIon):iRhoUzIon_I(iIon),i,j,k,iBlock) &
                   /State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
                   -State_VGB(iRhoUxIon_I(1):iRhoUzIon_I(1),i,j,k,iBlock) &
-                  /State_VGB(iRhoIon_I(1),i,j,k,iBlock)
+                  /RhoProton
              Upar = sum(Udiff_D*B_D)/B
-             Valfven = B/sqrt(State_VGB(iRhoIon_I(1),i,j,k,iBlock))
 
-             ! Alfven ratio at ion gyro scale under the assumption that the
-             ! kinetic and magnetic fluctuation energies at the Lperp scale are
-             ! near equipartition (with a full wave reflection in the
-             ! transition region this would not be true)
-             if(UseKolmogorov)then
-                DeltaU = sqrt( (EwavePlus*(1 - Upar/Valfven)**2 &
-                     + EwaveMinus*(1 + Upar/Valfven)**2) &
-                     *EkinCascade/State_VGB(iRhoIon_I(1),i,j,k,iBlock) )
-             else
-                AlfvenRatio = LperpInvGyroRad**(1.0/6.0)
+             Valfven = B/sqrt(RhoProton)
+             ! parallel ion thermal speed
+             Vpar2 = 2.0*Ppar/State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)
 
-                DeltaU = sqrt(max((AlfvenRatio+(Upar/Valfven)**2)/AlfvenRatio &
-                     *Ewave - 2.0*(Upar/Valfven)*(EwavePlus - EwaveMinus) &
-                     /sqrt(AlfvenRatio), 0.0) &
-                     *EkinCascade/State_VGB(iRhoIon_I(1),i,j,k,iBlock))
-             end if
+             ! The appearance of Vpar2 is due to averaging (using
+             ! distribution function) to avoid that there is no heating
+             ! when Upar = Valfven.
+             ! We further assumed gyroscale Alfven ratio to be one and
+             ! gyroscale fractional cross helicity to be zero (this
+             ! is due to equipartition at gyroscale)
+             DeltaU = DeltaU*sqrt((1 - Upar/Valfven)**2 + 0.5*Vpar2/Valfven**2)
           end if
 
           Epsilon = DeltaU/Vperp
 
-          ! Nonlinear damping/stochastic heating to perpendicular ion heating
-          DampingPerp_I(iIon) = StochasticAmplitude*InvGyroRadius &
-               *State_VGB(iRhoIon_I(iIon),i,j,k,iBlock)*DeltaU**3 &
-               *exp(-StochasticExponent/max(Epsilon,1e-15)) &
-               /max(Qtotal, 1e-30)
+          CascadeTime_I(iIon) = RhoProton*DeltaU**2/max(Qcascade_I(iIon),1e-30)
+
+          ! Damping rate times cascade time
+          DampingPerp_I(iIon) = StochasticAmplitude*DeltaU &
+               *InvGyroRadius*exp(-StochasticExponent/max(Epsilon,1e-15)) &
+               *CascadeTime_I(iIon)
+
+          if(iIon > 1)then
+             HeatFraction_I(iIon) = &
+                  DampingPerp_I(iIon)/(1.0 + DampingPerp_I(iIon))
+
+             ! Subtract energy that is used for stochastic heating of iIon
+             Qcascade_I(iIon-1) = Qcascade_I(iIon)*(1.0 - HeatFraction_I(iIon))
+             Emajor = Emajor*(1.0 - HeatFraction_I(iIon))
+          end if
        end do
 
-       ! The 1+ is due to the fraction of the cascade power that succeeds
-       ! to cascade to the smallest scale (<< proton gyroradius),
-       ! where the dissipation is via interactions with the electrons
-       DampingTotal = 1.0 + DampingElectron &
-            + sum(DampingPar_I) + sum(DampingPerp_I)
+       ! Total damping rate times cascade time around proton gyroscale
+       DampingProton = DampingElectron + sum(DampingPar_I) &
+            + DampingPerp_I(1)
+       HeatFraction_I(1) = DampingProton/(1.0 + DampingProton)
 
-       QPerQtotal_I = (DampingPar_I + DampingPerp_I)/Dampingtotal
-       QparPerQtotal_I = DampingPar_I/Dampingtotal
-       QePerQtotal = (1.0 + DampingElectron)/DampingTotal
+       QparPerQtotal_I = HeatFraction_I(1)*DampingPar_I/DampingProton &
+            *Qcascade_I(1)/Qtotal
+
+       QperpPerQtotal_I(1) = HeatFraction_I(1)*DampingPerp_I(1)/DampingProton &
+            *Qcascade_I(1)/Qtotal
+       if(nIonFluid > 1) QperpPerQtotal_I(2:) = HeatFraction_I(2:) &
+            *Qcascade_I(2:)/Qtotal
+
+       QPerQtotal_I = QperpPerQtotal_I + QparPerQtotal_I
+
+       QePerQtotal = (HeatFraction_I(1)*DampingElectron/DampingProton &
+            + (1.0 - HeatFraction_I(1)))*Qcascade_I(1)/Qtotal
 
     elseif(UseUniformHeatPartition)then
        QPerQtotal_I = QionRatio_I
