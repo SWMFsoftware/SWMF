@@ -10801,6 +10801,132 @@ if (ThisThread==2) if (pow(recvNode->xmin[0]+250.0,2)+pow(recvNode->xmin[1]+500.
     pipe.closeRecv(pipeLastRecvThread);
   }
 
+
+  //verify node connections
+  void VerifyNodeConenctivity(cTreeNodeAMR<cBlockAMR> *node) {
+    cTreeNodeAMR<cBlockAMR> *neibNode;
+    int iface,iedge,icorner,i,j;
+
+    //check connection through faces
+    for (iface=0;iface<6;iface++) for (int i=0;i<2;i++) for (j=0;j<2;j++) if ((neibNode=node->GetNeibFace(iface,i,j))!=NULL) {
+      switch (iface) {
+      case 0:
+        if (neibNode->GetNeibFace(1,i,j)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 1:
+        if (neibNode->GetNeibFace(0,i,j)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+
+      case 2:
+        if (neibNode->GetNeibFace(3,i,j)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 3:
+        if (neibNode->GetNeibFace(2,i,j)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+
+      case 4:
+        if (neibNode->GetNeibFace(5,i,j)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 5:
+        if (neibNode->GetNeibFace(4,i,j)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      }
+    }
+
+    //connection through edges
+    for (iedge=0;iedge<12;iedge++) for (i=0;i<2;i++) if ((neibNode=node->GetNeibEdge(iedge,i))!=NULL) {
+      switch (iedge) {
+      case 0:
+        if (neibNode->GetNeibEdge(2,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 1:
+        if (neibNode->GetNeibEdge(3,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 2:
+        if (neibNode->GetNeibEdge(0,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 3:
+        if (neibNode->GetNeibEdge(1,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+
+      case 4:
+        if (neibNode->GetNeibEdge(6,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 5:
+        if (neibNode->GetNeibEdge(7,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 6:
+        if (neibNode->GetNeibEdge(4,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 7:
+        if (neibNode->GetNeibEdge(5,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+
+      case 8:
+        if (neibNode->GetNeibEdge(10,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 9:
+        if (neibNode->GetNeibEdge(11,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 10:
+        if (neibNode->GetNeibEdge(8,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 11:
+        if (neibNode->GetNeibEdge(9,i)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      }
+    }
+
+    //connection through corners
+    for (icorner=0;icorner<8;icorner++) if ((neibNode=node->GetNeibCorner(icorner))!=NULL) {
+      switch (icorner) {
+      case 0:
+        if (neibNode->GetNeibCorner(6)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 1:
+        if (neibNode->GetNeibCorner(7)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 2:
+        if (neibNode->GetNeibCorner(4)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 3:
+        if (neibNode->GetNeibCorner(5)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+
+      case 4:
+        if (neibNode->GetNeibCorner(2)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 5:
+        if (neibNode->GetNeibCorner(3)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 6:
+        if (neibNode->GetNeibCorner(0)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      case 7:
+        if (neibNode->GetNeibCorner(1)!=node) exit(__LINE__,__FILE__,"Error: block connectivity is not correct");
+        break;
+      }
+    }
+  }
+
+  void VerifyNodeConenctivity() {
+    cTreeNodeAMR<cBlockAMR> *node;
+
+    for (node=BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode) {
+      VerifyNodeConenctivity(node);
+    }
+  }
+
+  void VerifyNodeConenctivityTree(cTreeNodeAMR<cBlockAMR> *node=NULL) {
+    if (node->lastBranchFlag()==_BOTTOM_BRANCH_TREE_) {
+      VerifyNodeConenctivity(node);
+    }
+    else {
+      for (int nDownNode=0;nDownNode<(1<<_MESH_DIMENSION_);nDownNode++) {
+        VerifyNodeConenctivityTree(node->downNode[nDownNode]);
+      }
+    }
+  }
 };
 
 
