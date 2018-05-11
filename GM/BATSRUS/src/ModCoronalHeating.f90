@@ -1226,7 +1226,7 @@ contains
              ! distribution function) to avoid that there is no heating
              ! when Upar = Valfven.
              ! We further assumed gyroscale Alfven ratio to be one and
-             ! gyroscale fractional cross helicity to be zero (this
+             ! gyroscale fractional cross helicity to be 1 or -1 (this
              ! is due to equipartition at gyroscale)
              DeltaU = DeltaU*sqrt((1 - SignWave*Upar/Valfven)**2 &
                   + 0.5*Vpar2/Valfven**2)
@@ -1239,7 +1239,8 @@ contains
           ! Damping rate times cascade time
           DampingPerp_I(iIon) = StochasticAmplitude*DeltaU &
                *InvGyroRadius*exp(-StochasticExponent/max(Epsilon,1e-15)) &
-               *CascadeTime_I(iIon)
+               *CascadeTime_I(iIon)*State_VGB(iRhoIon_I(iIon),i,j,k,iBlock) &
+               /RhoProton
 
           if(iIon > 1)then
              HeatFraction_I(iIon) = &
