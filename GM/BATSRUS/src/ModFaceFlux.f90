@@ -57,6 +57,7 @@ module ModFaceFlux
   use ModCoronalHeating, ONLY: IsNewBlockAlfven
   use ModViscosity, ONLY: UseViscosity, IsNewBlockViscosity, Visco_DDI,&
        get_viscosity_tensor, set_visco_factor_face, ViscoFactor_DF
+  use ModBorisCorrection, ONLY: UseBorisRegion, set_clight_face, Clight_DF
   use omp_lib
   
   implicit none
@@ -161,6 +162,9 @@ module ModFaceFlux
   ! Limit propagation speeds to reduce numerical diffusion
   logical :: UseClimit = .false.
   real    :: ClimitDim = -1.0, rClimit = -1.0
+
+  ! Variables introduced for regional Boris correction
+  real :: InvClightFace, InvClight2Face
 
   ! One of the two possible ways to treat the MHD-like systems
   ! (partially symmetrizable, following the Godunov definition).
@@ -482,6 +486,8 @@ contains
     end if
 
     if(UseViscosity) call set_visco_factor_face(iBlock)
+
+    if(UseBorisRegion) call set_clight_face(iBlock)
 
     if(DoCorrectFace) call calc_simple_cell_flux(iBlock)
     if (DoResChangeOnly) then
@@ -1127,7 +1133,7 @@ contains
 
   subroutine set_cell_values_common
 
-    use ModPhysics, ONLY: Io2No_V, UnitU_
+    use ModPhysics, ONLY: Io2No_V, UnitU_, InvClight, InvClight2
     use ModGeometry, ONLY: r_BLK
     real :: r
     character(len=*), parameter:: NameSub = 'set_cell_values_common'
@@ -1161,6 +1167,16 @@ contains
 
     ViscoCoeff = 0.0
     if(UseViscosity) ViscoCoeff = ViscoFactor_DF(iDimFace,iFace,jFace,kFace)
+
+    if(UseBorisRegion)then
+       ! Calculate local values
+       InvClightFace  = 1/Clight_DF(iDimFace,iFace,jFace,kFace)
+       InvClight2Face = InvClightFace**2
+    else
+       ! Copy global values from ModPhysics
+       InvClightFace  = InvClight
+       InvClight2Face = InvClight2
+    end if
 
     ! Calculate -grad(pe)/(n_e * e) term for Hall MHD if needed
     UseHallGradPe = BiermannCoeff > 0.0 .and. &
@@ -2709,7 +2725,7 @@ contains
 
     subroutine get_boris_flux
 
-      use ModPhysics, ONLY: InvGammaMinus1, InvClight, InvClight2
+      use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
@@ -2738,9 +2754,9 @@ contains
 
       ! Electric field divided by speed of light:
       ! E= - U x B / c = (B x U)/c
-      Ex      = (FullBy*Uz - FullBz*Uy) * InvClight
-      Ey      = (FullBz*Ux - FullBx*Uz) * InvClight
-      Ez      = (FullBx*Uy - FullBy*Ux) * InvClight
+      Ex      = (FullBy*Uz - FullBz*Uy) * InvClightFace
+      Ey      = (FullBz*Ux - FullBx*Uz) * InvClightFace
+      Ez      = (FullBx*Uy - FullBy*Ux) * InvClightFace
 
       ! Electric field squared/c^2
       E2Half  = 0.5*(Ex**2 + Ey**2 + Ez**2)
@@ -2770,9 +2786,9 @@ contains
       ! rhoU_Boris = rhoU - ((U x B) x B)/c^2 = rhoU + (U B^2 - B U.B)/c^2
       uDotB   = Ux*FullBx + Uy*FullBy + Uz*FullBz
       FullB2  = FullBx**2 + FullBy**2 + FullBz**2
-      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*uDotB)*InvClight2
-      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*uDotB)*InvClight2
-      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*uDotB)*InvClight2
+      StateCons_V(RhoUx_)  = Rho*Ux + (Ux*FullB2 - FullBx*uDotB)*InvClight2Face
+      StateCons_V(RhoUy_)  = Rho*Uy + (Uy*FullB2 - FullBy*uDotB)*InvClight2Face
+      StateCons_V(RhoUz_)  = Rho*Uz + (Uz*FullB2 - FullBz*uDotB)*InvClight2Face
 
       ! The full energy contains the electric field energy
       StateCons_V(Energy_) = e + E2Half
@@ -2829,7 +2845,7 @@ contains
 
     subroutine get_mhd_flux
 
-      use ModPhysics, ONLY: InvGammaMinus1, InvClight2
+      use ModPhysics, ONLY: InvGammaMinus1
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       ! Variables for conservative state and flux calculation
@@ -3053,7 +3069,7 @@ contains
 
       if(UseBorisSimple)then
          ! Correct the momentum using the (1+VA2/c^2)
-         Gamma2 = 1.0 + (FullBx**2 + FullBy**2 + FullBz**2)/Rho*InvClight2
+         Gamma2 = 1.0 + (FullBx**2 + FullBy**2 + FullBz**2)/Rho*InvClight2Face
          StateCons_V(RhoUx_:RhoUz_) = StateCons_V(RhoUx_:RhoUz_)*Gamma2
       end if
 
@@ -3641,7 +3657,7 @@ contains
 
     subroutine get_boris_speed
 
-      use ModPhysics, ONLY: Gamma, InvClight2, GammaElectron
+      use ModPhysics, ONLY: Gamma, GammaElectron
       use ModAdvance, ONLY: UseElectronPressure, UseAnisoPressure, UseAnisoPe
 
       real :: InvRho, Sound2, FullBx, FullBy, FullBz, FullBn, FullB2
@@ -3704,15 +3720,15 @@ contains
       Un = State_V(Ux_)*NormalX + State_V(Uy_)*NormalY + State_V(Uz_)*NormalZ
 
       ! "Alfven Lorentz" factor
-      GammaA2 = 1.0/(1.0 + Alfven2*InvClight2)
+      GammaA2 = 1.0/(1.0 + Alfven2*InvClight2Face)
 
       ! 1-gA^2*Un^2/c^2
-      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*InvClight2)
+      GammaU2 = max(0.0, 1.0 - GammaA2*Un**2*InvClight2Face)
 
       ! Modified speeds
-      Sound2Boris        = Sound2        *GammaA2*(1+Alfven2Normal*InvClight2)
-      Alfven2Boris       = Alfven2       *GammaA2*GammaU2
-      Alfven2NormalBoris = Alfven2Normal *GammaA2*GammaU2
+      Sound2Boris        = Sound2*GammaA2*(1+Alfven2Normal*InvClight2Face)
+      Alfven2Boris       = Alfven2*GammaA2*GammaU2
+      Alfven2NormalBoris = Alfven2Normal*GammaA2*GammaU2
 
       ! Approximate slow and fast wave speeds
       Fast2  = Sound2Boris + Alfven2Boris
@@ -3760,7 +3776,7 @@ contains
     subroutine get_mhd_speed
 
       use ModB0,       ONLY: UseCurlB0
-      use ModPhysics,  ONLY: InvClight2, ElectronPressureRatio, &
+      use ModPhysics,  ONLY: ElectronPressureRatio, &
            GammaElectron, GammaMinus1, Gamma_I
       use ModNumConst, ONLY: cPi
       use ModAdvance,  ONLY: State_VGB, eFluid_, UseElectronPressure, &
@@ -4040,8 +4056,7 @@ contains
 
       ! Fast speed multipled by the face area
       if(UseBorisSimple .or. (UseEfield))then
-         Fast = sqrt( 0.5*(Fast2 + Discr) &
-              /       (1.0 + Alfven2*InvClight2) )
+         Fast = sqrt( 0.5*(Fast2 + Discr)/(1 + Alfven2*InvClight2Face) )
       else
          Fast = sqrt( 0.5*(Fast2 + Discr) )
       end if

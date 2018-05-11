@@ -352,7 +352,7 @@ contains
     subroutine update_explicit
 
       use ModBorisCorrection, ONLY: UseBorisCorrection, UseBorisSimple, &
-           mhd_to_boris, boris_to_mhd, mhd_to_boris_simple, boris_simple_to_mhd
+           mhd_to_boris, boris_to_mhd
 
       ! Allocatable storage for classical 4th order Runge-Kutta scheme
       real, allocatable, save:: Rk4_VCB(:,:,:,:,:), Rk4_CBI(:,:,:,:,:)
@@ -361,65 +361,14 @@ contains
       real:: Coeff1, Coeff2
       integer:: iFluid, iRho
       !------------------------------------------------------------------------
-
-      if(UseBorisCorrection) then
-         ! Convert StateOld_VGB and State_VGB from classical MHD variables
-         ! to semi-relativistic MHD variable
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-            if(UseB0)then
-               call mhd_to_boris(StateOld_VGB(:,i,j,k,iBlock), &
-                    EnergyOld_CBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
-               ! State_VGB is not used in 1-stage and HalfStep schemes
-               if(.not.UseHalfStep .and. nStage > 1) &
-                    call mhd_to_boris(State_VGB(:,i,j,k,iBlock), &
-                    Energy_GBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
-            else
-               call mhd_to_boris(StateOld_VGB(:,i,j,k,iBlock), &
-                    EnergyOld_CBI(i,j,k,iBlock,1))
-               ! State_VGB is not used in 1-stage and HalfStep schemes
-               if(.not.UseHalfStep .and. nStage > 1) &
-                    call mhd_to_boris(State_VGB(:,i,j,k,iBlock), &
-                    Energy_GBI(i,j,k,iBlock,1))
-            end if
-         end do; end do; end do
-
+      if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
+         call mhd_to_boris(iBlock)
+         
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after mhd_to_boris                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
               Energy_GBI(iTest,jTest,kTest,iBlock,:)
       endif
-
-      if(UseBorisSimple .and. IsMhd) then
-         ! Update using simplified Boris correction, i.e. update
-         !
-         !    RhoUBorisSimple = (1+B^2/(rho*c^2)) * RhoU
-         !
-         ! instead of RhoU. See Gombosi et al JCP 2002, 177, 176 (eq. 38-39)
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-            if(UseB0)then
-               call mhd_to_boris_simple(StateOld_VGB(:,i,j,k,iBlock), &
-                    B0_DGB(:,i,j,k,iBlock))
-               ! State_VGB is not used in 1-stage and HalfStep schemes
-               if(.not.UseHalfStep .and. nStage > 1) &
-                    call mhd_to_boris_simple(State_VGB(:,i,j,k,iBlock), &
-                    B0_DGB(:,i,j,k,iBlock))
-            else
-               call mhd_to_boris_simple(StateOld_VGB(:,i,j,k,iBlock))
-               ! State_VGB is not used in 1-stage and HalfStep schemes
-               if(.not.UseHalfStep .and. nStage > 1) &
-                    call mhd_to_boris_simple(State_VGB(:,i,j,k,iBlock))
-            end if
-         end do; end do; end do
-
-         if(DoTest)write(*,'(2x,2a,15es20.12)') &
-              NameSub, ' after mhd_to_boris_simple           =', &
-              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-              Energy_GBI(iTest,jTest,kTest,iBlock,:)
-      end if
 
       if(UseElectronPressure .and. UseElectronEntropy)then
          ! Convert electron pressure to entropy
@@ -555,48 +504,9 @@ contains
            State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
            Energy_GBI(iTest,jTest,kTest,iBlock,:)
 
-      if(UseBorisCorrection) then
-         ! Convert StateOld_VGB and State_VGB back from
-         ! semi-relativistic to classical MHD variables
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-            if(UseB0)then
-               call boris_to_mhd(StateOld_VGB(:,i,j,k,iBlock), &
-                    EnergyOld_CBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
-               call boris_to_mhd(State_VGB(:,i,j,k,iBlock), &
-                    Energy_GBI(i,j,k,iBlock,1), B0_DGB(:,i,j,k,iBlock))
-            else
-               call boris_to_mhd(StateOld_VGB(:,i,j,k,iBlock), &
-                    EnergyOld_CBI(i,j,k,iBlock,1))
-               call boris_to_mhd(State_VGB(:,i,j,k,iBlock), &
-                    Energy_GBI(i,j,k,iBlock,1))
-            end if
-         end do; end do; end do
-
-         if(DoTest)write(*,'(2x,2a,15es20.12)') &
-              NameSub, ' after boris_to_mhd                  =', &
-              State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &
-              Energy_GBI(iTest,jTest,kTest,iBlock,:)
-      endif
-
-      if(UseBorisSimple .and. IsMhd) then
-         ! Convert mometum in StateOld_VGB and State_VGB back from
-         ! enhanced momentum
-         do k=1,nK; do j=1,nJ; do i=1,nI
-            if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-            if(UseB0)then
-               call boris_simple_to_mhd(StateOld_VGB(:,i,j,k,iBlock), &
-                    B0_DGB(:,i,j,k,iBlock))
-               call boris_simple_to_mhd(State_VGB(:,i,j,k,iBlock), &
-                    B0_DGB(:,i,j,k,iBlock))
-            else
-               call boris_simple_to_mhd(StateOld_VGB(:,i,j,k,iBlock))
-               call boris_simple_to_mhd(State_VGB(:,i,j,k,iBlock))
-            end if
-         end do; end do; end do
-
+      if(UseBorisCorrection .or. UseBorisSimple .and. IsMhd) then
+         call boris_to_mhd(iBlock)
+      
          if(DoTest)write(*,'(2x,2a,15es20.12)') &
               NameSub, ' after boris_to_mhd                  =', &
               State_VGB(iVarTest,iTest,jTest,kTest,iBlock),       &

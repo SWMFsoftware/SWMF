@@ -14,7 +14,9 @@ module ModFaceValue
   use ModAdvance, ONLY: UseFDFaceFlux, UseLowOrder, &
        UseLowOrderRegion,IsLowOrderOnly_B, UseAdaptiveLowOrder
 
-  use ModBorisCorrection, ONLY: boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z
+  use ModBorisCorrection, ONLY: &
+       boris_to_mhd_x, boris_to_mhd_y, boris_to_mhd_z, &
+       UseBorisRegion, set_clight_cell, set_clight_face, Clight_G
   use omp_lib
 
   implicit none
@@ -777,7 +779,6 @@ contains
          RightState_VZ,     &  ! Face Right Z
          LowOrderCrit_XB, LowOrderCrit_YB, LowOrderCrit_ZB
 
-
     use ModParallel, ONLY : &
          neiLEV,neiLtop,neiLbot,neiLeast,neiLwest,neiLnorth,neiLsouth
 
@@ -899,6 +900,10 @@ contains
           B0_DG=B0_DGB(:,:,:,:,iBlock)
        else
           B0_DG=0.00
+       end if
+       if(UseBorisRegion)then
+          call set_clight_cell(iBlock)
+          call set_clight_face(iBlock)
        end if
     end if
     if(UseAccurateResChange .or. nOrder==4)then
@@ -1449,6 +1454,8 @@ contains
 
     subroutine calc_primitives
 
+      use ModPhysics, ONLY: InvClight2
+      
       integer:: iVar
       !------------------------------------------------------------------------
       Primitive_VG(:,i,j,k) = State_VGB(1:nVar,i,j,k,iBlock)
@@ -1464,7 +1471,11 @@ contains
          ByFull = B0_DG(y_,i,j,k) + Primitive_VG(By_,i,j,k)
          BzFull = B0_DG(z_,i,j,k) + Primitive_VG(Bz_,i,j,k)
          B2Full = BxFull**2 + ByFull**2 + BzFull**2
-         RhoC2Inv  = RhoInv/C2light
+         if(UseBorisRegion)then
+            RhoC2Inv = RhoInv/Clight_G(i,j,k)**2
+         else
+            RhoC2Inv = RhoInv*InvClight2
+         end if
          uBC2Inv= (Primitive_VG(rhoUx_,i,j,k)*BxFull + &
               Primitive_VG(rhoUy_,i,j,k)*ByFull + &
               Primitive_VG(rhoUz_,i,j,k)*BzFull)*RhoC2Inv
@@ -2862,61 +2873,76 @@ contains
     call test_stop(NameSub, DoTest)
 
   contains
-
+    !=========================================================================
     subroutine set_physics_based_low_order_face
+
+      ! Set criteria for low order scheme
+      
       use ModAdvance, ONLY:Vel_IDGB
-      !--------------------------------------------------------------------
 
       integer :: iFace, jFace, kFace
       real:: State_VI(nVar,-3:2)
       logical:: DoTest
-      character(len=*), parameter:: NameSub = 'set_physics_based_low_order_face'
-      !--------------------------------------------------------------------------
+      character(len=*), parameter:: NameSub='set_physics_based_low_order_face'
+      !------------------------------------------------------------------------
 
       call test_start(NameSub, DoTest)
 
       ! Face along x-direction
-      do kFace=kMinFace,kMaxFace; do jFace=jMinFace,jMaxFace; do iFace=1,nIFace
-         State_VI = State_VGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
-         if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
-              B0_DGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
+      do kFace = kMinFace, kMaxFace
+         do jFace = jMinFace, jMaxFace
+            do iFace = 1, nIFace
+               State_VI = State_VGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
+               if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
+                    B0_DGB(:,iFace-3:iFace+2,jFace,kFace,iBlock)
 
-         !write(*,*)'iFace = ',iFace
-         LowOrderCrit_XB(iFace,jFace,kFace,iBlock) = &
-              low_order_face_criteria( State_VI, &
-              Vel_IDGB(:,x_,iFace-3:iFace+2,jFace,kFace,iBlock))
-      enddo; enddo; enddo
+               LowOrderCrit_XB(iFace,jFace,kFace,iBlock) = &
+                    low_order_face_criteria( State_VI, &
+                    Vel_IDGB(:,x_,iFace-3:iFace+2,jFace,kFace,iBlock))
+            enddo
+         enddo
+      enddo
 
       if(nDim>1) then
          ! Face along y-direction
-         do kFace=kMinFace,kMaxFace; do jFace=1,nJFace; do iFace=iMinFace,iMaxFace
-            State_VI = State_VGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
-            if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
-                 B0_DGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
-            LowOrderCrit_YB(iFace,jFace,kFace,iBlock) = &
-                 low_order_face_criteria(State_VI, &
-                 Vel_IDGB(:,y_,iFace,jFace-3:jFace+2,kFace,iBlock))
-         enddo; enddo; enddo
+         do kFace = kMinFace, kMaxFace
+            do jFace = 1, nJFace
+               do iFace=iMinFace,iMaxFace
+                  State_VI = State_VGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
+                  if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
+                       B0_DGB(:,iFace,jFace-3:jFace+2,kFace,iBlock)
+                  LowOrderCrit_YB(iFace,jFace,kFace,iBlock) = &
+                       low_order_face_criteria(State_VI, &
+                       Vel_IDGB(:,y_,iFace,jFace-3:jFace+2,kFace,iBlock))
+               enddo
+            enddo
+         enddo
       endif
 
       if(nDim>2) then
          ! Face along z-direction
-         do kFace=kMinFace,kMaxFace; do jFace=1,nJFace; do iFace=iMinFace,iMaxFace
-            State_VI = State_VGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
-            if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
-                 B0_DGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
-            LowOrderCrit_ZB(iFace,jFace,kFace,iBlock) = &
-                 low_order_face_criteria(State_VI, &
-                 Vel_IDGB(:,z_,iFace,jFace,kFace-3:kFace+2,iBlock))
-         enddo; enddo; enddo       
+         do kFace = 1, nKFace
+            do jFace = jMinFace, jMaxFace
+               do iFace = iMinFace, iMaxFace
+                  State_VI = State_VGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
+                  if(UseB0) State_VI(Bx_:Bz_,:) = State_VI(Bx_:Bz_,:) + &
+                       B0_DGB(:,iFace,jFace,kFace-3:kFace+2,iBlock)
+                  LowOrderCrit_ZB(iFace,jFace,kFace,iBlock) = &
+                       low_order_face_criteria(State_VI, &
+                       Vel_IDGB(:,z_,iFace,jFace,kFace-3:kFace+2,iBlock))
+               enddo
+            enddo
+         enddo
       endif
 
       call test_stop(NameSub, DoTest)
 
     end subroutine set_physics_based_low_order_face
-    !============================================================================
+    !==========================================================================
     real function low_order_face_criteria(State_VI, Vel_II)      
+
       use ModMain, ONLY: UseB
+
       real, intent(in):: State_VI(nVar,-3:2)
       real, intent(in):: Vel_II(nFluid,-3:2)
 
@@ -2966,12 +2992,13 @@ contains
       low_order_face_criteria = crit 
 
     end function low_order_face_criteria
-    !============================================================================
+    !==========================================================================
 
   end subroutine set_low_order_face
   !==========================================================================
 
   subroutine calc_cell_norm_velocity
+
     use ModMain, ONLY: MaxBlock, nBlock
     use BATL_lib, ONLY: Xyz_DGB, IsCartesian, Unused_B, MaxDim, &
          iDim_, jDim_, kDim_
@@ -2991,8 +3018,8 @@ contains
     !--------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-    if(.not. allocated(Vel_IDGB)) &
-         allocate(Vel_IDGB(nFluid,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
+    if(.not. allocated(Vel_IDGB))  allocate( &
+         Vel_IDGB(nFluid,MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 
     iMin = 1 - nG;       iMax = nI + nG
     jMin = 1 - nG*jDim_; jMax = nJ + nG*jDim_
