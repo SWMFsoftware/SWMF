@@ -117,7 +117,6 @@ contains
     use ModProcMH
     use ModMain
     use ModAdvance
-    use ModB0, ONLY: B0_DGB
     use ModPhysics
     use ModGeometry, ONLY: true_cell
     use ModSemiImplVar, ONLY: UseStableImplicit
@@ -1528,7 +1527,7 @@ contains
     ! contant relaxation time, same for different instabilities.
     ! TauGlobal is a constant read from PARAM.in.
 
-    use ModVarIndexes, ONLY: Bx_, Bz_, Ppar_, p_
+    use ModVarIndexes, ONLY: Bx_, Bz_
     use ModMain,    ONLY: nI, nJ, nK, nBlock, Unused_B, UseB0, &
          time_accurate, Cfl, dt
     use ModB0,      ONLY: B0_DGB

@@ -764,7 +764,7 @@ contains
          UseHighResChange
 
     use ModGeometry, ONLY : true_cell, body_BLK
-    use ModPhysics, ONLY: GammaWave, C2light
+    use ModPhysics, ONLY: GammaWave
     use ModB0
     use ModAdvance, ONLY: State_VGB, Energy_GBI, &
          DoInterpolateFlux, FluxLeft_VGD, FluxRight_VGD, &

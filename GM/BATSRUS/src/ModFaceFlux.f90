@@ -893,7 +893,7 @@ contains
       ! P. McCorquodale and P. Colella (2010). See section 2.52 of this paper 
       ! for more details. 
 
-      use ModAdvance, ONLY: State_VGB, Energy_GBI, UseMultiSpecies
+      use ModAdvance, ONLY: State_VGB, Energy_GBI
       use ModPhysics, ONLY: Gamma_I
       real,     intent(inout) :: Flux_V(nFlux)
       real :: Coef
