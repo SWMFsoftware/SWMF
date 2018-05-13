@@ -202,7 +202,7 @@ void PIC::BC::ExternalBoundary::Periodic::ExchangeParticlesMPI(cBlockPairTable& 
           }
 
           //generate a new particle
-          NewParticle=PIC::ParticleBuffer::GetNewParticle(RealBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]);
+          NewParticle=PIC::ParticleBuffer::GetNewParticle(RealBlock->block->FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)],true);
           PIC::ParticleBuffer::CloneParticle(PIC::ParticleBuffer::GetParticleDataPointer(NewParticle),(PIC::ParticleBuffer::byte *)tempParticleData);
           break;
 
