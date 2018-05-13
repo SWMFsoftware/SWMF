@@ -694,92 +694,6 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
         }
       }
 
-
-
-/*      //---------------- OLD --------------------
-      //check whether any neighbour exists. If so, temporarily allocate the current node and find it among the neighbours
-      bool neibfound=false;
-
-      for (iNeighbour=0;iNeighbour<6*4;iNeighbour++) if ((neibNode=node->neibNodeFace[iNeighbour])!=NULL) if (neibNode->block!=NULL) {
-        neibfound=true;
-        break;
-      }
-
-      if (neibfound==false) {
-        for (iNeighbour=0;iNeighbour<8;iNeighbour++) if ((neibNode=node->neibNodeCorner[iNeighbour])!=NULL) if (neibNode->block!=NULL) {
-          neibfound=true;
-          break;
-        }
-      }
-
-      if (neibfound==false) {
-        for (iNeighbour=0;iNeighbour<12*2;iNeighbour++) if ((neibNode=node->neibNodeEdge[iNeighbour])!=NULL) if (neibNode->block!=NULL) {
-          neibfound=true;
-          break;
-        }
-      }
-
-      if (neibfound==false) {
-        //the block has no neighbours -> the requster corner node does not exists
-        res=NULL;
-        return res;
-      }
-
-      //a neighbour exists:
-      //1. temporaraly alloocate 'block'
-      //2. search for the 'corner' node in the neighbours
-      //3. de-allocate 'block'
-      PIC::Mesh::mesh.AllocateBlock(node);
-      block=node->block;
-
-      res=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(iNode,jNode,kNode));
-
-      //check faces
-      for (iNeighbour=0;iNeighbour<6*4;iNeighbour++) if (node->neibNodeFace[iNeighbour]!=NULL) {
-        block=node->neibNodeFace[iNeighbour]->block;
-
-        if (block!=NULL) for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-          if (res==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
-            NodeOut=node->neibNodeFace[iNeighbour];
-            iNode=i,jNode=j,kNode=k;
-
-            PIC::Mesh::mesh.DeallocateBlock(node);
-            return res;
-          }
-        }
-      }
-
-      //check corners
-      for (iNeighbour=0;iNeighbour<8;iNeighbour++) if (node->neibNodeCorner[iNeighbour]!=NULL) {
-        block=node->neibNodeCorner[iNeighbour]->block;
-
-        if (block!=NULL) for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-          if (res==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
-            NodeOut=node->neibNodeCorner[iNeighbour];
-            iNode=i,jNode=j,kNode=k;
-
-            PIC::Mesh::mesh.DeallocateBlock(node);
-            return res;
-          }
-        }
-      }
-
-      //check edges
-      for (iNeighbour=0;iNeighbour<12*2;iNeighbour++) if (node->neibNodeEdge[iNeighbour]!=NULL) {
-        block=node->neibNodeEdge[iNeighbour]->block;
-
-        if (block!=NULL) for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-          if (res==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
-            NodeOut=node->neibNodeEdge[iNeighbour];
-            iNode=i,jNode=j,kNode=k;
-
-            PIC::Mesh::mesh.DeallocateBlock(node);
-            return res;
-          }
-        }
-      }
-
-      PIC::Mesh::mesh.DeallocateBlock(node);*/
     }
 
     res=NULL;
@@ -1069,8 +983,12 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
                 //find all 'ghost' nodes that contains that corner node
                 //check faces
-                for (iNeighbour=0;iNeighbour<6*4;iNeighbour++) if ((neibNode=node->neibNodeFace[iNeighbour])!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
+                for (int iiface=0;iiface<6;iiface++) if ((neibNode=node->GetNeibFace(iiface,0,0))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
                   neibBlock=neibNode->block;
+
+                  if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
+                    exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
+                  }
 
                   for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
                     found=true;
@@ -1080,97 +998,223 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
                   if (found==true) continue;
 
                   if (neibBlock!=NULL) {
-                    for (found=false,ff=0;(ff<6)&&(found==false);ff++) {
-                      for (ii=iFaceMin[ff];(ii<=iFaceMax[ff])&&(found==false);ii++) {
-                        for (jj=jFaceMin[ff];(jj<=jFaceMax[ff])&&(found==false);jj++)  {
-                          for (kk=kFaceMin[ff];(kk<=kFaceMax[ff])&&(found==false);kk++) {
-                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
-                              //a new block has been found that contains tested 'corner' node
-                              BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
-                              BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
-                              BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
-                              BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
-                              BlockTable.BlockTableLength++;
-
-                              found=true;
-                            }
-                          }
-                        }
-                      }
+                    switch (iiface) {
+                    case 0:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j;
+                      kk=k;
+                      break;
+                    case 1:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j;
+                      kk=k;
+                      break;
+                    case 2:
+                      ii=i;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k;
+                      break;
+                    case 3:
+                      ii=i;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k;
+                      break;
+                    case 4:
+                      ii=i;
+                      jj=j;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 5:
+                      ii=i;
+                      jj=j;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
                     }
 
+                    if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)&&(0<=jj)&&(jj<=_BLOCK_CELLS_Y_)&&(0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
+                      if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                        //a new block has been found that contains tested 'corner' node
+                        BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
+                        BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
+                        BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
+                        BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
+                        BlockTable.BlockTableLength++;
+                      }
+                    }
                   }
                 }
 
                 //check corners
-                for (iNeighbour=0;iNeighbour<8;iNeighbour++) if ((neibNode=node->neibNodeCorner[iNeighbour])!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
+                for (int icorner=0;icorner<8;icorner++) if ((neibNode=node->GetNeibCorner(icorner))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
                   neibBlock=neibNode->block;
-
+                    
+                  if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
+                    exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
+                  }
+                    
                   for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
                     found=true;
                     break;
                   }
-
+                      
                   if (found==true) continue;
 
                   if (neibBlock!=NULL) {
-                    for (found=false,ff=0;(ff<6)&&(found==false);ff++) {
-                      for (ii=iFaceMin[ff];(ii<=iFaceMax[ff])&&(found==false);ii++) {
-                        for (jj=jFaceMin[ff];(jj<=jFaceMax[ff])&&(found==false);jj++)  {
-                          for (kk=kFaceMin[ff];(kk<=kFaceMax[ff])&&(found==false);kk++) {
-                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
-                              //a new block has been found that contains tested 'corner' node
-                              BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
-                              BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
-                              BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
-                              BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
-                              BlockTable.BlockTableLength++;
+                    switch (icorner) {
+                    case 0:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 1:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 2:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 3:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
 
-                              found=true;
-                            }
-                          }
-                        }
+                    case 4:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
+                    case 5:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
+                    case 6:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
+                    case 7:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
+                    }
+                          
+                    if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)&&(0<=jj)&&(jj<=_BLOCK_CELLS_Y_)&&(0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
+                      if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                        //a new block has been found that contains tested 'corner' node
+                        BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
+                        BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
+                        BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
+                        BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
+                        BlockTable.BlockTableLength++;
                       }
                     }
-
                   }
                 }
-
+                  
 
                 //check edges
-                for (iNeighbour=0;iNeighbour<12*2;iNeighbour++) if ((neibNode=node->neibNodeEdge[iNeighbour])!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
+                for (int iedge=0;iedge<12;iedge++) if ((neibNode=node->GetNeibEdge(iedge,0))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
                   neibBlock=neibNode->block;
-
+                     
+                  if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
+                    exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
+                  }
+                     
                   for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
                     found=true;
                     break;
                   }
-
+                      
                   if (found==true) continue;
-
+                      
                   if (neibBlock!=NULL) {
-                    for (found=false,ff=0;(ff<6)&&(found==false);ff++) {
-                      for (ii=iFaceMin[ff];(ii<=iFaceMax[ff])&&(found==false);ii++) {
-                        for (jj=jFaceMin[ff];(jj<=jFaceMax[ff])&&(found==false);jj++)  {
-                          for (kk=kFaceMin[ff];(kk<=kFaceMax[ff])&&(found==false);kk++) {
-                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
-                              //a new block has been found that contains tested 'corner' node
-                              BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
-                              BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
-                              BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
-                              BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
-                              BlockTable.BlockTableLength++;
+                    switch (iedge) {
+                    case 0:
+                      ii=i;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 1:
+                      ii=i;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 2:
+                      ii=i;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
+                    case 3:
+                      ii=i;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
 
-                              found=true;
-                            }
-                          }
-                        }
-                      }
+                    case 4:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 5:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j;
+                      kk=k+_BLOCK_CELLS_Z_;
+                      break;
+                    case 6:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
+                    case 7:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j;
+                      kk=k-_BLOCK_CELLS_Z_;
+                      break;
+
+                    case 8:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k;
+                      break;
+                    case 9:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j+_BLOCK_CELLS_Y_;
+                      kk=k;
+                      break;
+                    case 10:
+                      ii=i-_BLOCK_CELLS_X_;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k;
+                      break;
+                    case 11:
+                      ii=i+_BLOCK_CELLS_X_;
+                      jj=j-_BLOCK_CELLS_Y_;
+                      kk=k;
+                      break;
                     }
 
+
+                    if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)&&(0<=jj)&&(jj<=_BLOCK_CELLS_Y_)&&(0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
+                      if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                        //a new block has been found that contains tested 'corner' node
+                        BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
+                        BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
+                        BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
+                        BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
+                        BlockTable.BlockTableLength++;
+                          
+                        found=true;
+                      }
+                    }
                   }
                 }
-
+                  
                 //determine 'real' blocks tha correspond to those in 'BlockTable'
                 for (ii=0;ii<BlockTable.BlockTableLength;ii++) {
                   BlockTable.RealBlockPair[ii]=PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(PIC::Mesh::mesh.findAMRnodeWithID(BlockTable.GhostBloks[ii]))->AMRnodeID;
