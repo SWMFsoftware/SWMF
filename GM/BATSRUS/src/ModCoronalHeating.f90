@@ -1129,6 +1129,7 @@ contains
     real :: DampingElectron, DampingPar_I(nIonFluid) = 0.0
     real :: DampingPerp_I(nIonFluid), DampingProton
     real :: RhoProton, Ppar, Vpar2, SignWave
+    real :: QratioProton
     real, dimension(nIonFluid) :: HeatFraction_I, QperpPerQtotal_I, &
          CascadeTime_I, Qcascade_I
 
@@ -1143,12 +1144,12 @@ contains
           Qtotal = CoronalHeating
        end if
 
-       TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-            /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
-
        if(UseMultiIon)then
           Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
           TeByTp = TeByTp*State_VGB(iRhoIon_I(1),i,j,k,iBlock)/Ne
+       else
+          TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
+               /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
        end if
 
        if(UseB0) then
@@ -1257,18 +1258,20 @@ contains
             + DampingPerp_I(1)
        HeatFraction_I(1) = DampingProton/(1.0 + DampingProton)
 
+       QratioProton = Qcascade_I(1)/max(Qtotal, 1e-30)
+
        QparPerQtotal_I = HeatFraction_I(1)*DampingPar_I/DampingProton &
-            *Qcascade_I(1)/Qtotal
+            *QratioProton
 
        QperpPerQtotal_I(1) = HeatFraction_I(1)*DampingPerp_I(1)/DampingProton &
-            *Qcascade_I(1)/Qtotal
+            *QratioProton
        if(nIonFluid > 1) QperpPerQtotal_I(2:) = HeatFraction_I(2:) &
-            *Qcascade_I(2:)/Qtotal
+            *Qcascade_I(2:)/max(Qtotal, 1e-30)
 
        QPerQtotal_I = QperpPerQtotal_I + QparPerQtotal_I
 
        QePerQtotal = (HeatFraction_I(1)*DampingElectron/DampingProton &
-            + (1.0 - HeatFraction_I(1)))*Qcascade_I(1)/Qtotal
+            + (1.0 - HeatFraction_I(1)))*QratioProton
 
     elseif(UseUniformHeatPartition)then
        QPerQtotal_I = QionRatio_I
