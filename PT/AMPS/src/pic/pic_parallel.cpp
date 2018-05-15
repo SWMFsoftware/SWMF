@@ -638,7 +638,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
             k=kNode-BlockFaceOffsetTable[iface][2];
 
             if ((0<=k)&&(k<=_BLOCK_CELLS_Z_)) {
-              if ((res==neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+              if ((res=neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
                 NodeOut=neibNode;
                 iNode=i,jNode=j,kNode=k;
                 return res;
@@ -661,7 +661,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
             k=kNode-BlockEdgeOffsetTable[iedge][2];
 
             if ((0<=k)&&(k<=_BLOCK_CELLS_Z_)) {
-              if ((res==neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+              if ((res=neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
                 NodeOut=neibNode;
                 iNode=i,jNode=j,kNode=k;
                 return res;
@@ -684,7 +684,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
             k=kNode-BlockCornerOffsetTable[icorner][2];
 
             if ((0<=k)&&(k<=_BLOCK_CELLS_Z_)) {
-              if ((res==neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+              if ((res=neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
                 NodeOut=neibNode;
                 iNode=i,jNode=j,kNode=k;
                 return res;
