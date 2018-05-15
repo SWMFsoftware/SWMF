@@ -1855,7 +1855,8 @@ contains
              end if
           end if
 
-       case("#INNERBOUNDARY", "#POLARBOUNDARY", "#CPCPBOUNDARY", &
+       case("#INNERBOUNDARY", "#INNERBCPE2P", &
+            "#POLARBOUNDARY", "#CPCPBOUNDARY", &
             "#MAGNETICINNERBOUNDARY", "#OUTFLOWCRITERIA", "#YOUNGBOUNDARY")
           call read_face_boundary_param(NameCommand)
 

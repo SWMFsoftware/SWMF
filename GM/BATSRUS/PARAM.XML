@@ -1463,6 +1463,20 @@ spherical coordinates case.
 Default value for TypeBcBody2 is 'none'.
 </command>
 
+<command name="INNERBCPE2P">
+	 <parameter name="RatioPe2P" type="real" default="0"/>
+
+#INNERBCPE2P
+0.1             RatioPe2P
+
+When 'ionosphere', 'polarwind' or 'ionosphereoutflow' inner boundary is used, 
+the electron pressure is set to be float at the inner boundary by default. 
+In order to avoid extremely low electron pressure in the inner magnetosphere, 
+this command ensures the ratio between the electron pressure and ion pressure at 
+the inner boundary is at least RatioRe2P. The default value of RatioPe2P is 0.  
+
+</command>
+
 <command name="OUTFLOWCRITERIA">
   <parameter name="OutflowVelocity" type="real" min="-1" default="-1"/>
   <parameter name="FluxAlpha" type="real" default="2.142E7"/>

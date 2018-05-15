@@ -70,6 +70,10 @@ module ModFaceBoundary
   ! Shall we make B1_radial = 0 at the inner boundary?
   logical:: DoReflectInnerB1 = .false.
 
+  ! The lower bound of pe/p at inner boundary when the electron 
+  ! pressure equation is used. 
+  real :: RatioPe2P = 0
+
 contains
   !============================================================================
   subroutine read_face_boundary_param(NameCommand)
@@ -91,6 +95,9 @@ contains
     case("#INNERBOUNDARY")
        call read_var('TypeBcInner',TypeFaceBc_I(body1_))
        if(UseBody2) call read_var('TypeBcBody2',TypeFaceBc_I(body2_))
+
+    case("#INNERBCPE2P")
+       call read_var('RatioPe2P', RatioPe2P)
 
     case("#OUTFLOWCRITERIA")
        call read_var('OutflowVelocity', OutflowVelocity)
@@ -687,10 +694,10 @@ contains
             if(UseAnisoPressure) VarsGhostFace_V(iPparIon_I) = &
                  VarsTrueFace_V(iPparIon_I)
             if(UseElectronPressure) VarsGhostFace_V(Pe_) = &
-                 VarsTrueFace_V(Pe_)
+                 max(VarsTrueFace_V(Pe_), RatioPe2P*VarsTrueFace_V(iP_I(1)))
             if(UseAnisoPe) VarsGhostFace_V(Pepar_)      = &
                  VarsTrueFace_V(Pepar_)
-
+            
             ! Change sign for velocities (plasma frozen into dipole field)
             VarsGhostFace_V(iUx_I) = -VarsTrueFace_V(iUx_I)
             VarsGhostFace_V(iUy_I) = -VarsTrueFace_V(iUy_I)
