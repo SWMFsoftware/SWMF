@@ -1314,6 +1314,12 @@ void EMfields3D::calc_cell_center_density(const Particles3Dcomm* part,
 }
 
 void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly){
+  /*
+    Calculate cell center densities by particle interpolation. If 
+    doCalcDensityOnly is false, the particle-grid coupling matrix for 
+    divE correction may also need to be calculated (see doCalcMatrix).
+  */
+
   const Collective *col = &get_col();
   const VirtualTopology3D *vct = &get_vct();
 
@@ -1512,7 +1518,7 @@ void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCal
 		    
 		    for (int i2 = iMin; i2 <= iMax; i2++)
 		      for (int j2 = jMin; j2 <= jMax; j2++)
-			for (int k2 = kMin; k2 <= kMax; k2++) {			 
+			for (int k2 = kMin; k2 <= kMax; k2++) {		
 
 			  const double tmp0 = wg_D[0] *
 			    weights_IIID[i2-iMin][j2-jMin][k2-kMin][0];
@@ -1522,23 +1528,12 @@ void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCal
 			    weights_IIID[i2-iMin][j2-jMin][k2-kMin][2];
 			  weight = tmp0 + tmp1 + tmp2; 
 			  
-
-			  // for(int iDim = 0; iDim<nDimMax; iDim++){
-			  //   weight += wg_D[iDim] * 
-			  //     weights_IIID[i2-iMin][j2-jMin][k2-kMin][iDim];
-			  // }
-
-
 			  ip = i2 - i1 + 1;
 			  jp = j2 - j1 + 1;
 			  kp = k2 - k1 + 1;
 			  gp = ip * 9 + jp * 3 + kp;			
 			  M_I[gp] += weight*coef;			
 			  
-			  // cout<<"i1 = "<<i1<<" j1 = "<<j1<<" k1 = "<<k1<<" gp = "<<gp
-			  //     <<" weight = "<<weight<<" M = "<<M_CI[i1][j1][k1][gp]
-			  //     <<endl;
-
 			}// k2
 		  }// k1
 
@@ -1565,47 +1560,10 @@ void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCal
   }
 
 
-  // for(int i =1; i<nxc-1; i++)
-  //   for(int j = 1; j<nyc-1; j++)
-  //     for(int k = 1; k<nzc-1; k++){
-  // 	for(int gp=0; gp<27; gp++){
-  // 	  double m = M_CI[i][j][k][gp];
-	  
-  // 	  if(m !=0) cout<<"0 i = "<<i<<" j = "<<j<<" k = "<<k<<" gp = "<<gp
-  // 			<<" m = "<<m<<endl;
-	  
-  // 	}
-
-	
-  //     }
-
-
-
-
   if(!doCalcDensityOnly){
     communicateSwapAddGhostCell(nxc, nyc, nzc, ngp, M_CI, vct, this);
     communicateCenter_P(nxc, nyc, nzc, ngp, M_CI, vct, this);
   }
-
-
-
-  // for(int i =1; i<nxc-1; i++)
-  //   for(int j = 1; j<nyc-1; j++)
-  //     for(int k = 1; k<nzc-1; k++){
-  // 	for(int gp=0; gp<27; gp++){
-  // 	  double m = M_CI[i][j][k][gp];
-	  
-  // 	  if(m !=0) cout<<"1 i = "<<i<<" j = "<<j<<" k = "<<k<<" gp = "<<gp
-  // 			<<" m = "<<m<<endl;
-	  
-  // 	}
-
-	
-  //     }
-
-
-
-
 
   for(int is = 0; is < ns; is++){
     double ***moment = convert_to_arr3(rhocs[is]);
