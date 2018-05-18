@@ -42,16 +42,17 @@ module ModResistivity
   real, public              :: Si2NoEta
 
   ! Local variables
-  logical            :: UseJouleHeating  = .true.
-  logical            :: DoMessagePassResistivity = .false.
+  logical :: UseJouleHeating  = .true.
+  logical :: DoMessagePassResistivity = .false.
+  logical :: UseCentralDifference = .false.            
 
-  real               :: EtaPerpSpitzerSi = 0.0
-  real               :: CoulombLogarithm = 20.0
-  real               :: Eta0AnomSi=0.0, Eta0Anom
-  real               :: EtaMaxAnomSi=0.0, EtaMaxAnom
-  real               :: JcritAnomSi=1.0, JcritInv
-  real               :: EtaCoeff = 0.0
-  real               :: JoverBCrit = 0.0
+  real :: EtaPerpSpitzerSi = 0.0
+  real :: CoulombLogarithm = 20.0
+  real :: Eta0AnomSi=0.0, Eta0Anom
+  real :: EtaMaxAnomSi=0.0, EtaMaxAnom
+  real :: JcritAnomSi=1.0, JcritInv
+  real :: EtaCoeff = 0.0
+  real :: JoverBCrit = 0.0
 
   ! Description of the region where resistivity is used
   character(len=200):: StringResistRegion ='none'
@@ -119,6 +120,8 @@ contains
                   //TypeResistivity)
           end select
        end if
+    case('#RESISTIVITYSCHEME')
+       call read_var('UseCentralDifference', UseCentralDifference)
     case("#RESISTIVITYREGION", "#RESISTIVEREGION")
        call read_var('StringResistRegion', StringResistRegion)
     case default
@@ -794,7 +797,7 @@ contains
   subroutine get_resistivity_rhs(iBlock, StateImpl_VG, Rhs_VC, IsLinear)
 
     use BATL_lib,        ONLY: store_face_flux, IsCartesian, IsRzGeometry, &
-         Xyz_DGB, CellSize_DB, CellVolume_GB, CellFace_DB, FaceNormal_DDFB
+         Xyz_DGB, CellSize_DB, CellVolume_GB, CellFace_DB, FaceNormal_DDFB, nG
     use ModFaceGradient, ONLY: get_face_curl
     use ModImplicit,     ONLY: nVarSemi, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB
@@ -802,6 +805,7 @@ contains
     use ModSize,         ONLY: x_, y_, z_
     use ModGeometry,     ONLY: true_cell, true_BLK
     use ModHallResist,   ONLY: HallCmaxFactor
+    use ModCellGradient, ONLY: calc_cell_curl_ghost
 
     integer, intent(in) :: iBlock
     real, intent(inout) :: StateImpl_VG(nVarSemi,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
@@ -811,23 +815,32 @@ contains
     ! resistive flux for operator split scheme
     real, allocatable, save :: FluxImpl_VFD(:,:,:,:,:)
 
+    real :: Current_DG(MaxDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real :: div, InvDxHalf, InvDyHalf, InvDzHalf
+    
     integer :: iDim, i, j, k, Di, Dj, Dk
     real    :: Current_D(MaxDim), Jx, InvDy2, FaceNormal_D(nDim)
     real    :: Jnormal, BneNormal
     logical :: IsNewBlock
-    logical:: DoTest
+    logical:: DoTest, DoTestCell
     character(len=*), parameter:: NameSub = 'get_resistivity_rhs'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
+    if(DoTest)write(*,*)NameSub,' true cell=',true_cell(iTest,jTest,ktest,iBlockTest)
 
     IsNewBlock = .true.
 
     Rhs_VC = 0.0
 
-    if(.not. true_BLK(iblock)) RETURN
+    ! Should we keep this or not?
+    !if(.not. true_BLK(iblock)) RETURN
 
     if(.not.allocated(FluxImpl_VFD)) allocate( &
          FluxImpl_VFD(nVarSemi,nI+1,nJ+1,nK+1,nDim))
+
+    if(UseCentralDifference) &
+         call calc_cell_curl_ghost(iBlock, StateImpl_VG, nG, Current_DG, &
+         UseBodyCellIn=.true.)   
 
     ! Loop over face directions
     do iDim = 1, nDim
@@ -839,14 +852,12 @@ contains
 
        ! Loop over cell faces orthogonal to iDim
        do k = 1, nK+Dk; do j = 1, nJ+Dj; do i = 1, nI+Di
-          if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-          call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, StateImpl_VG, &
-               Current_D)
+          if(  .not.true_cell(i,j,k,iBlock) .and. &
+               .not.true_cell(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
 
           FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) = 0.0
-
-          if(UseSemiResistivity)then
+                    
+          if(UseSemiResistivity .and. .not.UseCentralDifference)then
              ! Resistive flux
              ! dB/dt = -curl E
              !       = -sum(FaceNormal x eta*J)
@@ -857,19 +868,20 @@ contains
              if(nDim == 3) FluxImpl_VFD(BxImpl_,i,j,k,iDim) = &
                   + Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(z_) &
                   - Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(y_)
-
+             
              if(nDim < 3) FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
                   - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
              if(nDim == 3)FluxImpl_VFD(ByImpl_,i,j,k,iDim) = &
                   + Eta_DFDB(z_,i,j,k,iDim,iBlock)*Current_D(x_) &
                   - Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(z_)
-
+             
              if(nDim == 1) FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
                   + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_)
              if(nDim > 1) FluxImpl_VFD(BzImpl_,i,j,k,iDim) = &
                   + Eta_DFDB(x_,i,j,k,iDim,iBlock)*Current_D(y_) &
-                  - Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(x_)
+                  - Eta_DFDB(y_,i,j,k,iDim,iBlock)*Current_D(x_)   
           end if
+
           if(UseSemiHallResist)then
              ! Hall MHD flux
              ! dB/dt = -curl E
@@ -907,22 +919,58 @@ contains
     ! Store the fluxes at resolution changes for restoring conservation
     call store_face_flux(iBlock, nVarSemi, FluxImpl_VFD, &
          FluxImpl_VXB, FluxImpl_VYB, FluxImpl_VZB)
+   
 
-    do iDim = 1, nDim
-       Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+    if(.not.UseCentralDifference) then
+       do iDim = 1, nDim
+          Di = i_DD(1,iDim); Dj = i_DD(2,iDim); Dk = i_DD(3,iDim)
+          do k = 1, nK; do j = 1, nJ; do i = 1, nI
+             if(.not.true_cell(i,j,k,iBlock)) CYCLE
+             
+             ! RHS_i += -(Flux_i+1/2 - Flux_i-1/2)                                                                                                          
+             Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) &
+                  -(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
+                  - FluxImpl_VFD(:,i,j,k,iDim))/CellVolume_GB(i,j,k,iBlock)
+          end do; end do; end do
+       end do
+    else
+       ! Central difference scheme calculation of Rhs for contraining divB
+       InvDxHalf = 0.5/CellSize_DB(1,iBlock)
+       InvDyHalf = 0.5/CellSize_DB(2,iBlock)
+       InvDzHalf = 0.5/CellSize_DB(3,iBlock)
+       
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
-
-          ! RHS_i += -(Flux_i+1/2 - Flux_i-1/2)
-          Rhs_VC(:,i,j,k) = Rhs_VC(:,i,j,k) &
-               -(FluxImpl_VFD(:,i+Di,j+Dj,k+Dk,iDim) &
-               - FluxImpl_VFD(:,i,j,k,iDim))/CellVolume_GB(i,j,k,iBlock)
+          
+          Rhs_VC(BxImpl_,i,j,k) = ( &
+               Eta_GB(i,j,k+1,iBlock)*Current_DG(y_,i,j,k+1) -&
+               Eta_GB(i,j,k-1,iBlock)*Current_DG(y_,i,j,k-1) ) &
+               * InvDzHalf - (&
+               Eta_GB(i,j+1,k,iBlock)*Current_DG(z_,i,j+1,k) -&
+               Eta_GB(i,j-1,k,iBlock)*Current_DG(z_,i,j-1,k) ) &
+               * InvDyHalf 
+          
+          Rhs_VC(ByImpl_,i,j,k) = ( &
+               Eta_GB(i+1,j,k,iBlock)*Current_DG(z_,i+1,j,k) -&
+               Eta_GB(i-1,j,k,iBlock)*Current_DG(z_,i-1,j,k) ) &
+               * InvDxHalf - (&
+               Eta_GB(i,j,k+1,iBlock)*Current_DG(x_,i,j,k+1) -&
+               Eta_GB(i,j,k-1,iBlock)*Current_DG(x_,i,j,k-1) ) &
+               * InvDzHalf
+          
+          Rhs_VC(BzImpl_,i,j,k) = ( &
+               Eta_GB(i,j+1,k,iBlock)*Current_DG(x_,i,j+1,k) -&
+               Eta_GB(i,j-1,k,iBlock)*Current_DG(x_,i,j-1,k) ) &
+               * InvDyHalf - (&
+               Eta_GB(i+1,j,k,iBlock)*Current_DG(y_,i+1,j,k) -&
+               Eta_GB(i-1,j,k,iBlock)*Current_DG(y_,i-1,j,k) ) &
+               * InvDxHalf
        end do; end do; end do
-    end do
-
+    end if
+   
     if(IsRzGeometry)then
        InvDy2 = 0.5/CellSize_DB(y_,iBlock)
-
+       
        do k = 1, nK; do j = 1, nJ; do i = 1, nI
           if(.not.true_cell(i,j,k,iBlock)) CYCLE
           ! Jx = Dbz/Dy - Dby/Dz (Jz = Dbphi/Dr in rz-geometry)
@@ -930,19 +978,19 @@ contains
           ! use central difference.
           Jx = ( StateImpl_VG(BzImpl_,i,j+1,k) &
                - StateImpl_VG(BzImpl_,i,j-1,k) )*InvDy2
-
+          
           ! Correct current for rz-geometry: Jz = Jz + Bphi/radius
           Jx = Jx + StateImpl_VG(BzImpl_,i,j,k)/Xyz_DGB(y_,i,j,k,iBlock)
-
+          
           ! in rz-geonetry: Rhs[Bphi] = -eta*Jz / radius
           Rhs_VC(BzImpl_,i,j,k) = Rhs_VC(BzImpl_,i,j,k) &
                - Eta_GB(i,j,k,iBlock)*Jx/Xyz_DGB(y_,i,j,k,iBlock)
        end do; end do; end do
-
+       
        ! Anything to do here for Hall term? !!!
-
+       
     end if
-
+    
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine get_resistivity_rhs
   !============================================================================
