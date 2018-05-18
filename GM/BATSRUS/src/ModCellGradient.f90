@@ -1,9 +1,9 @@
 module ModCellGradient
 
   use BATL_lib, ONLY: &
-       test_start, test_stop, iTest, jTest, kTest
+       test_start, test_stop
 
-  ! Calculate cell centered gradient and divergence
+  ! Calculate cell centered gradient, divergence and curl
 
   use BATL_lib, ONLY: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, nI, nJ, nK, &
        CellSize_DB,  CellFace_DB, FaceNormal_DDFB, CellVolume_GB, &
@@ -18,8 +18,9 @@ module ModCellGradient
 
   public:: calc_divergence ! calculate divergence
   public:: calc_gradient   ! calculate gradient
-  public:: calc_gradient_ghost    ! set gradient in ghost cells too
-
+  public:: calc_gradient_ghost  ! set gradient in ghost cells too
+  public:: calc_cell_curl_ghost ! calculate curl with 1 layer of ghost cells
+  
   real, public, allocatable :: GradVar_DGB(:,:,:,:,:)
 
   ! Local variables -------------
@@ -66,7 +67,9 @@ contains
 
     if(UseBodyCell .or. .not. body_blk(iBlock)) then
        if(IsCartesian)then
+
           ! Simple central differencing
+
           InvDxHalf = 0.5/CellSize_DB(1,iBlock)
           InvDyHalf = 0.5/CellSize_DB(2,iBlock)
           InvDzHalf = 0.5/CellSize_DB(3,iBlock)
@@ -185,21 +188,6 @@ contains
              Div_G(i,j,k) = Div_G(i,j,k)*0.5/CellVolume_GB(i,j,k,iBlock)
           end do; end do; end do
        end if
-    end if
-
-    if(DoTest)then
-       write(*,*) NameSub, 'Var_DG(ijk)=', Var_DG(:,iTest,jTest,kTest)
-       write(*,*) NameSub, 'Var_DG(i-1)=', Var_DG(:,iTest-1,jTest,kTest)
-       write(*,*) NameSub, 'Var_DG(i+1)=', Var_DG(:,iTest+1,jTest,kTest)
-       if(nDim > 1)then
-          write(*,*) NameSub, 'Var_DG(j-1)=', Var_DG(:,iTest,jTest-1,kTest)
-          write(*,*) NameSub, 'Var_DG(j+1)=', Var_DG(:,iTest,jTest+1,kTest)
-       end if
-       if(nDim > 2)then
-          write(*,*) NameSub, 'Var_DG(k-1)=', Var_DG(:,iTest,jTest,kTest-1)
-          write(*,*) NameSub, 'Var_DG(k+1)=', Var_DG(:,iTest,jTest,kTest+1)
-       end if
-       write(*,*) NameSub, ' Div_G=',Div_G(iTest,jTest,kTest)
     end if
 
     call test_stop(NameSub, DoTest, iBlock)
@@ -602,5 +590,66 @@ contains
   end subroutine calc_gradient_ghost
   !============================================================================
 
+  subroutine calc_cell_curl_ghost(iBlock, Var_DG, nG, curl_DG, UseBodyCellIn)
+
+    ! Calculate curl of Var_DG and return it in Curl_DG
+    ! Physical cells and 1 layer of ghost cells are calculated (nG>=2)
+    ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
+    ! Calculate curl of Var_DG on a Cartesian grid. 
+    ! Need to include general coordinates calculation in the future.
+
+    use ModGeometry, ONLY: body_blk, true_cell
+
+    integer, intent(in):: iBlock
+    real, intent(in) :: Var_DG(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    integer, intent(in):: nG ! number of ghost cells in curl_DG
+    real, intent(inout):: &  
+         curl_DG(3,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_)
+    logical, intent(in), optional:: UseBodyCellIn
+
+    logical:: UseBodyCell
+
+    real:: InvDxHalf, InvDyHalf, InvDzHalf
+    integer :: i, j, k
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'calc_cell_curl'
+    !--------------------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)
+    UseBodyCell = .false.
+    if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
+
+    if(UseBodyCell .or. .not. body_blk(iBlock)) then
+       if(IsCartesian)then
+
+          ! Simple central differencing
+          
+          InvDxHalf = 0.5/CellSize_DB(1,iBlock)
+          InvDyHalf = 0.5/CellSize_DB(2,iBlock)
+          InvDzHalf = 0.5/CellSize_DB(3,iBlock)
+          
+          ! Calculate curl for 1 layer of ghost cells
+          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+             curl_DG(x_,i,j,k) = &
+                  InvDyHalf*( Var_DG(z_,i,j+1,k) - Var_DG(z_,i,j-1,k) ) - &
+                  InvDzHalf*( Var_DG(y_,i,j,k+1) - Var_DG(y_,i,j,k-1) )
+             
+             curl_DG(y_,i,j,k) = &
+                  InvDzHalf*( Var_DG(x_,i,j,k+1) - Var_DG(x_,i,j,k-1) ) - &
+                  InvDxHalf*( Var_DG(z_,i+1,j,k) - Var_DG(z_,i-1,j,k) )
+             
+             curl_DG(z_,i,j,k) = &
+                  InvDxHalf*( Var_DG(y_,i+1,j,k) - Var_DG(y_,i-1,j,k) ) - &
+                  InvDyHalf*( Var_DG(x_,i,j+1,k) - Var_DG(x_,i,j-1,k) )
+          end do; end do; end do          
+       else
+          ! Need to be implemented for general coordinates
+       end if
+    end if
+    
+    call test_stop(NameSub, DoTest, iBlock)    
+  end subroutine calc_cell_curl_ghost
+  !============================================================================
+  
 end module ModCellGradient
 !==============================================================================
