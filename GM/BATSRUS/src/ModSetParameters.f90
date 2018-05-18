@@ -587,7 +587,7 @@ contains
 
        case("#RESISTIVITY", "#RESISTIVITYOPTIONS", &
             "#RESISTIVITYREGION", "#RESISTIVEREGION",&
-            '#MESSAGEPASSRESISTIVITY')
+            '#MESSAGEPASSRESISTIVITY','#RESISTIVITYSCHEME')
           call read_resistivity_param(NameCommand)
 
        case("#HALLRESISTIVITY", "#HALLREGION", "#BIERMANNBATTERY")
