@@ -5,33 +5,30 @@ module ModUser
 
   use BATL_lib, ONLY: &
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
-  ! User module for Ganymede. Inherited from ModUserMercury.f90
+  ! User module for Ganymede.
   ! Must compile with MHDHypPe equation set.
   use ModUserEmpty,                          &
        IMPLEMENTED1 => user_init_session,    &
        IMPLEMENTED2 => user_set_ics,         &
        IMPLEMENTED3 => user_set_resistivity, &
        IMPLEMENTED4 => user_read_inputs,     &
-       IMPLEMENTED5 => user_set_cell_boundary,&
-       IMPLEMENTED6 => user_set_face_boundary
+       IMPLEMENTED5 => user_set_face_boundary,&
+       IMPLEMENTED6 => user_set_cell_boundary
 
   include 'user_module.h' ! list of public methods
 
-  real,              parameter :: VersionUserModule = 1.0
+  real,              parameter :: VersionUserModule = 2.0
   character (len=*), parameter :: NameUserModule = 'Ganymede, Hongyang Zhou'
 
-  real :: PlanetDensity=-1., PlanetPressure=-1., PlanetRadius=-1.
+  real :: PlanetRadius=-1.
+  real :: PlanetRadiusSi=-1.
+  character (len=10) :: InitType = 'Boverlap'
 
-  real :: PlanetDensitySi=-1., PlanetPressureSi=-1., PlanetRadiusSi=-1.
-
-  logical :: UsePlanetDensity=.false., UsePlanetPressure=.false.
-
+  integer :: iLayer
   integer :: nLayer =0 ! Number of points in planet resistivity profile
   real, allocatable :: PlanetRadiusSi_I(:),PlanetRadius_I(:),&
        ResistivitySi_I(:),Resistivity_I(:)
   real, allocatable :: ResistivityRate(:)
-
-  integer :: iLayer
 
 contains
   !============================================================================
@@ -52,26 +49,19 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest)
 
-!!! Introduce PlanetDensitySi etc., read those and convert
-!!! from that. Initialize these to -1. PlanetRadius should be
-!!! in dimensional units.
-
-    !if (TypeGeometry /= 'spherical_lnr') &
-    !     call stop_mpi('ERROR: Correct PARAM.in, need spherical grid.')
-
-    if(PlanetDensitySi < 0.0) &
-         PlanetDensitySi  = 3.0*MassPlanet/(4.0*cPi*RadiusPlanet**3)
+    if(iProc==0)then
+       select case(TypeGeometry)
+       case('spherical_lnr')
+          write(*,*) 'Using stretched spherical grid...'
+       case('cartesian')
+          write(*,*) 'Using Cartesian grid...'
+       case default
+          call stop_mpi('ERROR: need stretched spherical/ Cartesian grid!')
+       end select
+    end if
 
     if(PlanetRadius < 0.0) &
          PlanetRadius = RadiusPlanet*Si2No_V(UnitX_)
-
-    if(PlanetPressureSi < 0.0) &
-         ! PlanetPressureSi = 1.0e-8*No2Si_V(UnitP_)
-         PlanetPressureSi = BodyP_I(IonFirst_)*No2Si_V(UnitP_)
-
-    PlanetDensity           = PlanetDensitySi*Si2No_V(UnitRho_)
-    PlanetPressure          = PlanetPressureSi*Si2No_V(UnitP_)
-    PlanetRadiusSi          = PlanetRadius*No2Si_V(UnitX_)
 
     if(nLayer > 1) then
        PlanetRadiusSi_I = PlanetRadius_I*No2Si_V(UnitX_)
@@ -89,8 +79,6 @@ contains
        write(*,*) '   Resistive Planet Model'
        write(*,*) '   ----------------------'
        write(*,*) ''
-       write(*,"(A29,E10.3)") '  Planet density  [kg/m^3] = ',PlanetDensitySi
-       write(*,"(A29,E10.3)") '  Planet pressure [Pa]     = ',PlanetPressureSi
        write(*,"(A29,E10.3)") '  Planet radius   [m]      = ',PlanetRadiusSi
        if(nLayer > 0 ) then
           write(*,*) ''
@@ -125,15 +113,10 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
 
-       case('#PLANETDENSITY')
-          call read_var('UsePlanetDensity',UsePlanetDensity)
-       case('#PLANETPRESSURE')
-          call read_var('UsePlanetPressure',UsePlanetPressure)
        case("#RESISTIVEPLANET")
           UseResistivePlanet = .true.
-          call read_var('PlanetDensitySi'       , PlanetDensitySi)
-          call read_var('PlanetPressureSi'      , PlanetPressureSi)
           call read_var('PlanetRadius'        , PlanetRadius)
+          call read_var('InitType', InitType)
           call read_var('nResistivPoints', nLayer)
           if(nLayer == 1) then
              write(*,*) ' We need minimum 2 points for including resistivity profile'
@@ -156,7 +139,7 @@ contains
              do iLayer=2,nLayer
                 if(PlanetRadius_I(iLayer-1) < &
                      PlanetRadius_I(iLayer)) then
-                   write(*,*) 'ERROR: Shoud be decreasing Radius.'
+                   write(*,*) 'ERROR: Should be decreasing Radius.'
                    call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
                 end if
              end do
@@ -188,9 +171,8 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_, Rho_, P_, Pe_
     use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, &
          iRho, iRhoUx, iRhoUz
-    use ModProcMH,     ONLY: iProc
-    use ModMain,       ONLY: UseSolidState
-    use ModPhysics,    ONLY: FaceState_VI, solidBc_
+    use ModMain,       ONLY: UseSolidState, Coord1MaxBc_, xMinBc_, solidBc_
+    use ModPhysics,    ONLY: FaceState_VI, CellState_VI
 
     integer, intent(in) :: iBlock
 
@@ -200,158 +182,80 @@ contains
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
-    if(Rmin_BLK(iBlock) > PlanetRadius) RETURN
-    
-    if(UseSolidState) then
-       ! hyzhou: the new logic do not require 2 layers of cells above
-       ! I may even not need this: just use set_ICs would be fine.
-       ! I need to look inside the logic
-       ! Instead of PlaneRadius, I may use rsolid to be consistent.
-       do iFluid = 1, nFluid
-          call select_fluid
+    select case(InitType)
+       case('Boverlap')
+          ! Initialize mantle region 
+          if(Rmin_BLK(iBlock) <= PlanetRadius) then
+             do iFluid = 1, nFluid
+                call select_fluid
+                do k=1,nK; do j=1,nJ; do i=1,nI
+                   if(R_BLK(i,j,k,iBlock) > PlanetRadius) CYCLE
+                   State_VGB(iRho,i,j,k,iBlock) = FaceState_VI(Rho_,solidBc_)
+                   State_VGB(iP,i,j,k,iBlock)   = FaceState_VI(P_,solidBc_)
+                   State_VGB(Pe_,i,j,k,iBlock)  = FaceState_VI(Pe_,solidBc_)
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+                end do; end do; end do
+             end do
+          end if
+             
+          ! Magnetic field inside the mantle is dipole
           do k=1,nK; do j=1,nJ; do i=1,nI
-             if(R_BLK(i,j,k,iBlock) > PlanetRadius) CYCLE
-             State_VGB(iRho,i,j,k,iBlock) = FaceState_VI(Rho_,solidBc_)
-             State_VGB(iP,i,j,k,iBlock)   = FaceState_VI(P_,solidBc_)
-             ! Test for MhdHypPe
-             State_VGB(Pe_,i,j,k,iBlock)  = FaceState_VI(Pe_,solidBc_)
-             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
-
-             if(DoTest .and. i==iTest .and. j==jTest .and. k==kTest &
-                  .and. iBlock==iBlockTest)then
-                write(*,*) 'State_VGB(rho)=',State_VGB(iRho,i,j,k,iBlock)
+             if(R_BLK(i,j,k,iBlock) > PlanetRadius)then
+                State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                     CellState_VI(Bx_:Bz_,xMinBc_)
+             else
+                State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
              end if
-
           end do; end do; end do
-       end do
-    end if
+       
+          ! Smooth init for velocity
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             do iFluid=1,nFluid
+                call select_fluid
+                if(R_BLK(i,j,k,iBlock) < 2.5*PlanetRadius)then
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+                elseif(R_BLK(i,j,k,iBlock) < 5.0*PlanetRadius)then
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                        CellState_VI(iRhoUx:iRhoUz,xMinBc_) *&
+                        (R_BLK(i,j,k,iBlock)/2.5 - 1)
+                else
+                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                        CellState_VI(iRhoUx:iRhoUz,xMinBc_)
+                end if
+             end do
+          end do; end do; end do
 
-    ! hyzhou note: may be this is problematic: why should it be 0 in the
-    ! mantle? I think maybe set it to Jovian wind is more reasonable.
-    do k=1,nK; do j=1,nJ; do i=1,nI
-       if(R_BLK(i,j,k,iBlock) > PlanetRadius) CYCLE
-       State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-    end do; end do; end do
+          ! Uniform density
+          State_VGB(Rho_,:,:,:,iBlock) = CellState_VI(Rho_,xMinBc_)
+          ! Uniform pressure
+          State_VGB(p_,:,:,:,iBlock) = CellState_VI(p_,xMinBc_)
+          State_VGB(pe_,:,:,:,iBlock) = CellState_VI(pe_,xMinBc_)
+
+       case('Bzero')
+          ! Magnetic field starts from dipole
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+          end do; end do; end do
+
+          do k=1,nK; do j=1,nJ; do i=1,nI
+             do iFluid=1,nFluid
+                call select_fluid
+                ! Velocity starts from zeros 
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+                ! Uniform density
+                State_VGB(iRho,i,j,k,iBlock) = CellState_VI(rho_,xMinBc_)
+                ! Uniform pressure
+                State_VGB(P_,i,j,k,iBlock) = CellState_VI(P_,xMinBc_)
+                State_VGB(Pe_,i,j,k,iBlock) = CellState_VI(Pe_,xMinBc_)
+             end do
+          end do; end do; end do
+
+       case default
+          call stop_MPI('ERROR: unknown initialization type!')
+    end select
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
-  !============================================================================
-
-  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
-
-    use ModAdvance,    ONLY: State_VGB
-    use ModGeometry,   ONLY: R_BLK, Rmin_BLK
-    use ModSize,       ONLY: nI, nJ, nK, nG
-    use ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, p_, Bx_, Bz_, &
-                             iRho_I,iRhoUx_I, iRhoUy_I, iRhoUz_I, iP_I
-    use ModEnergy,     ONLY: calc_energy_cell
-    use BATL_lib,      ONLY: Xyz_DGB
-    use ModMain,       ONLY: UseResistivePlanet, UseSolidState
-    use ModProcMH,     ONLY: iProc
-    use ModPhysics,    ONLY: BodyRho_I,BodyP_I,BodyNDim_I
-    use ModB0,         ONLY: B0_DGB
-    use ModMultiFluid, ONLY: nFluid
-
-    integer,          intent(in)  :: iBlock, iSide
-    character(len=*), intent(in)  :: TypeBc
-    logical,          intent(out) :: IsFound
-
-    real :: r_D(3), dRhoUr_D(3), RhoUr, u_D(3), b_D(3)
-    ! hyzhou: actually I can call iFluid, iRhoUx, iRhoUz from modmultifluid
-    integer :: i, iG, j, k, iFluid, iRhoUx, iRhoUz
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-
-    if(.not. UseResistivePlanet .or. TypeBc /= 'ResistivePlanet') RETURN
-
-    ! hyzhou: do not apply this cell boundary condition if UseSolidState=.true.
-    if(UseSolidState) RETURN
-
-    if(Rmin_BLK(iBlock) <= PlanetRadius) then
-       do i = 1, nI
-          if(R_BLK(i+nG,1,1,iBlock) >= PlanetRadius) CYCLE
-          do k = 1, nK; do j = 1, nJ;
-             ! Set density, pressure and momentum inside the planet
-             ! and the nG ghost cells to fixed values.
-             State_VGB(Rho_,i,j,k,iBlock) = PlanetDensity
-             State_VGB(P_,i,j,k,iBlock)   = PlanetPressure
-             State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock) = 0.0
-          end do; end do
-       end do
-
-       if(r_BLK(MaxI,1,1,iBlock) >= PlanetRadius)then
-          do i = MaxI, 1, -1
-             ! Find the i index just outside the planet radius
-             if(R_BLK(i-1,1,1,iBlock) < PlanetRadius ) EXIT
-          end do
-
-          do k = MinK, MaxK; do j = MinJ, MaxJ
-             ! Get radial velocity
-             r_D = Xyz_DGB(x_:z_,i,j,k,iBlock)/ r_BLK(i,j,k,iBlock)
-
-             RhoUr = dot_product(State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock),r_D)
-
-             ! Fixed density if UsePlanetDensity=.true.
-             if(UsePlanetDensity) then
-                ! Velocity above the surface
-                u_D = State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock)/ &
-                     State_VGB(Rho_,i,j,k,iBlock)
-                ! Copy velocity but use the planet density for momentum
-                do iG = i-nG, i-1
-                   State_VGB(iRho_I,iG,j,k,iBlock) = BodyRho_I
-                   ! Modify the momentum
-                   State_VGB(iRhoUx_I,iG,j,k,iBlock) = &
-                         u_D(x_)*State_VGB(iRho_I,iG,j,k,iBlock)
-                   State_VGB(iRhoUy_I,iG,j,k,iBlock) = &
-                         u_D(y_)*State_VGB(iRho_I,iG,j,k,iBlock)
-                   State_VGB(iRhoUz_I,iG,j,k,iBlock) = &
-                         u_D(z_)*State_VGB(iRho_I,iG,j,k,iBlock)
-                end do
-             else
-                ! Float density
-                State_VGB(iRho_I,iG,j,k,iBlock) = &
-                     State_VGB(iRho_I,i,j,k,iBlock)
-                ! Float momentum
-                State_VGB(iRhoUx_I,iG,j,k,iBlock) = &
-                     State_VGB(iRhoUx_I,i,j,k,iBlock)
-                State_VGB(iRhoUy_I,iG,j,k,iBlock) = &
-                     State_VGB(iRhoUy_I,i,j,k,iBlock)
-                State_VGB(iRhoUz_I,iG,j,k,iBlock) = &
-                     State_VGB(iRhoUz_I,i,j,k,iBlock)
-             end if
-
-             ! Fixed pressure if UsePlanePressure=.true.
-             if(UsePlanetPressure) then
-                do iG = i-nG, i-1
-                   State_VGB(iP_I,iG,j,k,iBlock) = BodyP_I
-                end do
-             else
-                State_VGB(iP_I,iG,j,k,iBlock) = State_VGB(iP_I,i,j,k,iBlock)
-             end if
-
-             ! Velocity perpendicular to B is float, parallel to B is 0
-             do iG=i-nG,i-1
-                b_D = B0_DGB(:,i,j,k,iBlock) + State_VGB(Bx_:Bz_,i,j,k,iBlock)
-                b_D = b_D/max(1e-30, sqrt(sum(b_D**2)))
-                do iFluid = 1, nFluid
-                   iRhoUx = iRhoUx_I(iFluid); iRhoUz = iRhoUz_I(iFluid)
-                   State_VGB(iRhoUx:iRhoUz,iG,j,k,iBlock) = &
-                        State_VGB(iRhoUx:iRhoUz,iG,j,k,iBlock) - &
-                        sum(b_D*State_VGB(RhoUx_:RhoUz_,i,j,k,iBlock))*b_D
-                end do
-             end do
-          end do; end do
-
-       end if
-
-    end if
-
-    call calc_energy_cell(iBlock)
-
-    call test_stop(NameSub, DoTest, iBlock)
-  end subroutine user_set_cell_boundary
   !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -360,7 +264,7 @@ contains
     use ModFaceBoundary, ONLY: VarsTrueFace_V, B0Face_D, iBoundary, &
          iFace, jFace, kFace, iside, iBlock => iBlockBc
     use ModPhysics,      ONLY: FaceState_VI
-    use ModMultiFluid,   ONLY: iUx, iUz, iUx_I, iUz_I, iFluid, nFluid
+    use ModMultiFluid,   ONLY: iUx, iUz, iUx_I, iUz_I, iFluid, nFluid, iRho, iP
     use ModAdvance,      ONLY: State_VGB
     use ModMain,         ONLY: UseHyperbolicDivb
 
@@ -371,14 +275,12 @@ contains
     real ::  bUnit_D(3)
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
-    ! If I am trying to use float BC for rho and p, no need for this
-    !VarsGhostFace_V = FaceState_VI(:,iBoundary)
 
     ! Float density and pressure
     VarsGhostFace_V = VarsTrueFace_V    
 
-    if(UseHyperbolicDivb) &
-         VarsGhostFace_V(Hyp_) = 0
+    !if(UseHyperbolicDivb) &
+    !     VarsGhostFace_V(Hyp_) = 0
 
     ! get ghost cell indexes from face indexes
     i = iFace; j = jFace; k = kFace;
@@ -394,6 +296,11 @@ contains
     ! copy the internal cell center value to the face
     VarsGhostFace_V(Bx_:Bz_) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
     
+    ! fixed rho and p
+    VarsGhostFace_V(rho_) = FaceState_VI(rho_,iBoundary)
+    VarsGhostFace_V(p_)   = FaceState_VI(p_,iBoundary)
+    VarsGhostFace_V(pe_)  = FaceState_VI(pe_,iBoundary)
+
     ! float for B
     !VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
 
@@ -442,6 +349,16 @@ contains
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_resistivity
   !============================================================================
+
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBC, IsFound)
+
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=*), intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
+    !--------------------------------------------------------------------------
+    return
+
+  end subroutine user_set_cell_boundary
 
 end module ModUser
 !==============================================================================
