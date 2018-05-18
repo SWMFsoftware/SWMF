@@ -495,8 +495,6 @@ contains
        call advance_explicit(.true., -1)
     endif
 
-    if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
-
     ! Adjust Time_Simulation to match TimeSimulationLimit if it is very close
     if(  time_accurate .and. &
          Time_Simulation < TimeSimulationLimit .and. &
@@ -528,6 +526,8 @@ contains
     if(UseIE)call apply_ie_velocity
 
     if(UseDivBDiffusion)call clean_divb
+
+    if(UseSolidState) call fix_geometry(DoSolveSolidIn=.true.)
 
     if(UseLaserHeating) call add_laser_heating
 
