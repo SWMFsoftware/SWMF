@@ -1144,12 +1144,11 @@ contains
           Qtotal = CoronalHeating
        end if
 
+       TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
+            /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
        if(UseMultiIon)then
           Ne = sum(State_VGB(iRhoIon_I,i,j,k,iBlock)*ChargeIon_I/MassIon_I)
           TeByTp = TeByTp*State_VGB(iRhoIon_I(1),i,j,k,iBlock)/Ne
-       else
-          TeByTp = State_VGB(Pe_,i,j,k,iBlock) &
-               /max(State_VGB(iPIon_I(1),i,j,k,iBlock), 1e-15)
        end if
 
        if(UseB0) then
