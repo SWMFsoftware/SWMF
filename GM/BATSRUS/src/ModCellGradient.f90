@@ -601,7 +601,7 @@ contains
     use ModGeometry, ONLY: body_blk, true_cell
 
     integer, intent(in):: iBlock
-    real, intent(in) :: Var_DG(nDim,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real, intent(in) :: Var_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
     integer, intent(in):: nG ! number of ghost cells in curl_DG
     real, intent(inout):: &  
          curl_DG(3,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_)
@@ -627,7 +627,7 @@ contains
           InvDxHalf = 0.5/CellSize_DB(1,iBlock)
           InvDyHalf = 0.5/CellSize_DB(2,iBlock)
           InvDzHalf = 0.5/CellSize_DB(3,iBlock)
-          
+
           ! Calculate curl for 1 layer of ghost cells
           do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
              curl_DG(x_,i,j,k) = &
@@ -641,7 +641,7 @@ contains
              curl_DG(z_,i,j,k) = &
                   InvDxHalf*( Var_DG(y_,i+1,j,k) - Var_DG(y_,i-1,j,k) ) - &
                   InvDyHalf*( Var_DG(x_,i,j+1,k) - Var_DG(x_,i,j-1,k) )
-          end do; end do; end do          
+          end do; end do; end do  
        else
           ! Need to be implemented for general coordinates
        end if
