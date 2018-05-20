@@ -9,7 +9,7 @@ module SP_ModMain
   use SP_ModReadMhData, ONLY: read_mh_data, DoReadMhData
   use SP_ModRestart, ONLY: save_restart, read_restart
   use SP_ModGrid,    ONLY: copy_old_state, LagrID_, X_,  Y_, Z_,  &
-       Rho_, Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_,    &
+       Rho_, Bx_, By_, Bz_, Ux_, Uy_, Uz_, T_, Wave1_, Wave2_, R_,&
        Length_, nBlock, nParticle_B, Shock_, ShockOld_, DLogRho_, &
        RhoOld_, iShock_IB, iNode_B, State_VIB, FootPoint_VB
        
@@ -66,7 +66,7 @@ module SP_ModMain
 
   ! Methods and variables from ModGrid
   public:: &
-       LagrID_,X_, Y_, Z_, Rho_, Bx_, Bz_, Ux_, Uz_, T_, &
+       LagrID_,X_, Y_, Z_, Rho_, Bx_, Bz_, Ux_, Uz_, T_, R_, &
        Wave1_, Wave2_, Length_, nBlock, nParticle_B, Shock_,   &
        ShockOld_, RScMin, RIhMin, RScMax, RIhMax,          &
        iShock_IB, iNode_B, State_VIB, FootPoint_VB
@@ -292,7 +292,6 @@ contains
        call save_plot_all(IsInitialOutputIn = .true.)
        IsFirstCall = .false.
     end if
-
     !\
     ! May need to read background data from files
     !/
@@ -385,7 +384,6 @@ contains
        iShock_IB(Shock_, iBlock) = NoShock_
        RETURN
     end if
-
     ! shock front is assumed to be location of max gradient log(Rho1/Rho2);
     ! shock never moves back
     iShockMin = max(iShock_IB(ShockOld_, iBlock), 1 + nWidth )

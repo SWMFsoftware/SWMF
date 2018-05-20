@@ -3,6 +3,7 @@
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !==================================================================
 module SP_wrapper
+
   use SP_ModUnit, ONLY: EnergyUnit=>UnitParticleEnergy
   use SP_ModMain, ONLY: &
        run, save_restart, &
@@ -14,7 +15,7 @@ module SP_wrapper
        iNode_B, FootPoint_VB, DataInputTime, &
        nParticle_B, Length_,&
        LagrID_,X_, Y_, Z_, Rho_, Bx_, Bz_,  Ux_, Uz_, T_, &
-       Wave1_, Wave2_
+       Wave1_, Wave2_, R_
   use CON_comp_info
   use CON_router, ONLY: IndexPtrType, WeightPtrType
   use CON_coupler, ONLY: &
@@ -398,6 +399,19 @@ contains
        IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
        PARTICLE:do iParticle = 2, iEnd
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
+          ! Exception for particles in the buffer zone in SC:
+          ! not necessarily the outer most particle in the buffer exits to IH;
+          ! in this case we need to AVOID cutting beginning of the line
+          ! before this particle; 
+          ! use previously known value for heliocentric distance to determine,
+          ! whether the particle was in the buffer until now
+          if(  .not. DoAdjustEnd & ! apply only in SC
+               .and. IsMissingCurr .and. &
+               State_VIB(R_, iParticle, iBlock) >= RBufferMin)then
+             IsMissingPrev = .false.
+             R2 = State_VIB(R_, iParticle, iBlock)**2
+             CYCLE PARTICLE
+          end if
 
           if(IsMissingCurr .and. R2 > RBufferMin**2)then
              if(DoAdjustEnd)&
