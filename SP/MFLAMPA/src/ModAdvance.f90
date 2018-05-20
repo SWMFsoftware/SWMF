@@ -37,7 +37,7 @@ module SP_ModAdvance
   integer, public, parameter :: nWidth = 50
   !/
   !\
-  logical:: UseRealDiffusionUpstream = .true.
+  logical:: UseRealDiffusionUpstream = .false.
   logical, public:: DoTraceShock = .true., UseDiffusion = .true.
   !/
   logical :: DoInit = .true.
