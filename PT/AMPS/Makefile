@@ -37,7 +37,7 @@ SEARCH_C=-DMPI_ON -LANG:std -std=c++11 -I${CWD}/${WSD}/pic -I${CWD}/${WSD}/main 
 
 SEARCH_C+=${EXTRACOMPILEROPTIONS}
 
-SEARCH_C_GENERAL=
+SEARCH_C_GENERAL=-LANG:std -std=c++11 
 
 #define the "compile kameleon' flag only when KAMELEON is used (to exclude including of the KAMELEON headers on machimes where KAMELEON is not installed) 
 ifneq ($(KAMELEON),nokameleon)   
