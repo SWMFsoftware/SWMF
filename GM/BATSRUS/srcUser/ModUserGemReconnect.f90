@@ -38,11 +38,11 @@ module ModUser
   real:: xB, Xt            ! Perturbation centers for double current sheet. 
 
   logical:: UseDoubleCurrentSheet = .false.
-  logical:: UseUniformPressure    = .false.
+  logical:: UseGEMReflected       = .false.
 
+  logical:: UseUniformPressure    = .false.
   logical:: UseUniformIonPressure = .true.
   logical:: UseStandardGem        = .true.
-  real   :: n0                    = 1.0
 
 contains
   !============================================================================
@@ -78,7 +78,10 @@ contains
           call read_var('CurrentSheetWidth', Lambda0)
 
        case('#GEMDOUBLE')
-          call read_var('UseDoubleCurrentSheet', UseDoubleCurrentSheet)         
+          call read_var('UseDoubleCurrentSheet', UseDoubleCurrentSheet)
+
+       case('#GEMREFLECTED')
+          call read_var('UseGEMReflected', UseGEMReflected)
 
        case('#GEMPRESSURE')
           call read_var('UseUniformPressure', UseUniformPressure)
@@ -134,8 +137,11 @@ contains
        ySheet = 0.25*WaveLengthY
        xB = -0.25*WaveLengthX
        xT =  0.25*WaveLengthX
-
     endif
+
+    if (UseGEMReflected) then
+       ySheet = 0.5*WaveLengthY
+    end if
 
     call test_stop(NameSub, DoTest)
   end subroutine user_read_inputs
@@ -174,6 +180,17 @@ contains
        State_VGB(Bx_,:,:,:,iBlock) = B0* &
             ( tanh((Xyz_DGB(y_,:,:,:,iBlock) + ySheet)/Lambda0)    &
             - tanh((Xyz_DGB(y_,:,:,:,iBlock) - ySheet)/Lambda0) - 1)
+
+    else if (UseGEMReflected) then
+       do k = 1, nK; do j = 1, nJ; do i = 1, nI
+          if(Xyz_DGB(y_,i,j,k,iBlock)>0) then
+             State_VGB(Bx_,i,j,k,iBlock) = B0* &
+                  tanh((Xyz_DGB(y_,i,j,k,iBlock)-ySheet)/Lambda0)
+          else
+             State_VGB(Bx_,i,j,k,iBlock) = -B0* &
+                  tanh((Xyz_DGB(y_,i,j,k,iBlock)+ySheet)/Lambda0)       
+          end if
+       end do;end do;end do
     else
        ! Single Harris current sheet
        State_VGB(Bx_,:,:,:,iBlock) = B0* &
@@ -222,14 +239,19 @@ contains
           else
              State_VGB(iPIon_I(ElectronFirst_),:,:,:,iBlock) =        &
                   ShockLeftState_V(iPIon_I(ElectronFirst_))*(1.0      &
-                  + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2) &
+                  + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)      &
                   /(ShockLeftState_V(iPIon_I(ElectronFirst_)) +       &
                   ShockLeftState_V(p_)))
 
              State_VGB(p_,:,:,:,iBlock) = ShockLeftState_V(p_)*(1.0 &
                   + 0.5*(B0**2 - State_VGB(Bx_,:,:,:,iBlock)**2)    &
-                  /(ShockLeftState_V(iPIon_I(ElectronFirst_))            &
+                  /(ShockLeftState_V(iPIon_I(ElectronFirst_))       &
                   + ShockLeftState_V(p_)))
+
+             if (UseAnisoPressure) then
+                State_VGB(iPparIon_I,:,:,:,iBlock) =          &
+                     State_VGB(iPIon_I,:,:,:,iBlock)
+             end if
           end if
        end if
     end if
@@ -251,6 +273,12 @@ contains
              Current_D(z_) = -B0/Lambda0*(  &
                   1.0/(cosh((y+ySheet)/Lambda0))**2 -  &
                   1.0/(cosh((y-ySheet)/Lambda0))**2)
+          else if(UseGEMReflected) then
+             if(y>0) then
+                Current_D(z_) = -B0/Lambda0/(cosh((y-ySheet)/Lambda0))**2
+             else
+                Current_D(z_) = B0/Lambda0/(cosh((y+ySheet)/Lambda0))**2
+             end if
           else
              Current_D(z_) = -B0/Lambda0/(cosh(y/Lambda0))**2
           endif
@@ -303,14 +331,29 @@ contains
                - Ky*cos(Kx*(x-xT))*sin(Ky*(y-ySheet))) + &
                a2*(-2*(y+ySheet)*GaussYInv**2*cos(Kx*(x-xB))*cos(Ky*(y+ySheet)) &
                - Ky*cos(Kx*(x-xB))*sin(Ky*(y+ySheet)))
-
+          
           ! By = -dAz/dx
           State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock) + &
                a1*(2*(x-xT)*GaussXInv**2*cos(Kx*(x-xT))*cos(Ky*(y-ySheet)) &
                + Kx*sin(Kx*(x-xT))*cos(Ky*(y-ySheet))) + &
                a2*(2*(x-xB)*GaussXInv**2*cos(Kx*(x-xB))*cos(Ky*(y+ySheet)) &
                + Kx*sin(Kx*(x-xB))*cos(Ky*(y+ySheet)))
-
+       else if(UseGEMReflected) then
+          if (y>0) then
+             State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock)  &
+                  - 2*Apert * B0 * cPi/Ly                               &
+                  *cos(cTwoPi*x/Lx) * sin(2*cPi*(y-ySheet)/Ly)
+             State_VGB(By_,i,j,k,iBlock) = State_VGB(By_,i,j,k,iBlock)  &
+                  + Apert * B0 * cTwoPi/Lx                              &
+                  * sin(cTwoPi*x/Lx) * cos(2*cPi*(y-ySheet)/Ly)
+          else
+             State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock)  &
+                  - 2*Apert * B0 * cPi/Ly                               &
+                  *cos(cTwoPi*x/Lx) * sin(2*cPi*(y-ySheet)/Ly)
+             State_VGB(By_,i,j,k,iBlock) = -State_VGB(By_,i,j,k,iBlock) &
+                  + Apert * B0 * cTwoPi/Lx                              &
+                  * sin(cTwoPi*x/Lx) * cos(2*cPi*(y-ySheet)/Ly)
+          end if
 
        else if (UseStandardGEM) then
           State_VGB(Bx_,i,j,k,iBlock) = State_VGB(Bx_,i,j,k,iBlock) &
