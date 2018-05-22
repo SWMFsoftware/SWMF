@@ -855,6 +855,9 @@ contains
           if(  .not.true_cell(i,j,k,iBlock) .and. &
                .not.true_cell(i-Di,j-Dj,k-Dk,iBlock)) CYCLE
 
+          call get_face_curl(iDim, i, j, k, iBlock, IsNewBlock, StateImpl_VG, &
+               Current_D)
+
           FluxImpl_VFD(BxImpl_:BzImpl_,i,j,k,iDim) = 0.0
                     
           if(UseSemiResistivity .and. .not.UseCentralDifference)then
