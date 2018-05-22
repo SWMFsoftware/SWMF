@@ -79,7 +79,8 @@ contains
   end function te_ti_relaxation
   !===========================
   real function electron_heat_conductivity()
-    use ModConst, ONLY: cBoltzmann, cEV, cElectronMass
+    use ModConst,    ONLY: cBoltzmann, cEV, cElectronMass
+    use ModNumConst, ONLY: cPi
     !----------------------------------
     !The dependence on Z as well as the numerical coefficient
     !are to be modified:
@@ -89,8 +90,11 @@ contains
        return
     end if
 
+    ! The factor ZAv/(ZAv + 3.3) is due to electron-electron collisions
+    ! The max is to avoid division by zero
     electron_heat_conductivity = cBoltzmann * (Te * cEV/cElectronMass) * &
-         (Na * ZAv) /(Z2 * nu_ei()+nu_en())  ![J/(M*s*K)]
+         (Na*ZAv)/(3.0*cPi/128.0*(ZAv + 3.3)/max(ZAv,1.0)*Z2*nu_ei() + nu_en())
+    ![J/(M*s*K)]
   end function electron_heat_conductivity
   !=======================================
   real function nu_en()
