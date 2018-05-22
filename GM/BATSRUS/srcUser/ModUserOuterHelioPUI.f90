@@ -30,6 +30,7 @@
 ! and charge neutrality while assuming cold electrons
 ! source terms can be printed in tecplot
 ! use of energy heating for PUI is optional
+! May 2018 refining select regions criteria for multi-ion 
 module ModUser
 
   use BATL_lib, ONLY: &
@@ -122,6 +123,8 @@ module ModUser
   real :: MachPop3Limit    = 1.5
   real :: MachPop4Limit    = 2.0
   real :: rPop3Limit       = 50.0   ! [AU] it is all Pop3 out to rPop3Limit
+  real :: MachPUIPop3      = 0.9
+  real :: MachSWPop1       = 1.2 
 
   integer :: iFluidProduced_C(nI, nJ, nK)
 
@@ -222,7 +225,9 @@ contains
           call read_var('MachPop3Limit',    MachPop3Limit)
           call read_var('rPop3Limit',       rPop3Limit)
           call read_var('MachPop4Limit',    MachPop4Limit)
-          
+          call read_var('MachPUIPop3',      MachPUIPop3)
+          call read_var('MachSWPop1',       MachSWPop1)       
+
        case("#USERSOURCE")
           call read_var('UsePointImplUserSource', UsePointImplUserSource)
 
@@ -1869,9 +1874,9 @@ contains
     integer, intent(in):: iBlock
 
     integer :: i, j, k
-    real    :: InvRho, U2,SWHU2, p, Mach2, TempDim, U2Dim, B2, rho, MachAlfven2,T_ave
-    ! merav
-    real    :: pSW, InvRhoSW
+    real    :: InvRho, U2,SWHU2, p, Mach2, MachSW2 
+    real    :: rhoT, TempDim, TempSWDim, U2Dim, B2, rho, MachAlfven2,T_ave
+    real    :: pSW, InvRhoSW, MachPUI2, pPUI, InvRhoPUI, rhoPUI, r 
     real    :: MachMagneto2
 
     ! Produce fluid3 at the inner boundary
@@ -1891,11 +1896,13 @@ contains
           CYCLE
        end if
 
-       InvRho = 1.0/(State_VGB(SWHRho_,i,j,k,iBlock)+ State_VGB(Pu3Rho_,i,j,k,iBlock)) ! rho is sum of ions density
-
        p      = State_VGB(SWHp_,i,j,k,iBlock) + State_VGB(Pu3p_,i,j,k,iBlock)
 
        pSW = State_VGB(SWHp_,i,j,k,iBlock)
+
+       pPUI = State_VGB(Pu3p_,i,j,k,iBlock)
+
+       r = r_BLK(i,j,k,iBlock)
 
        U2 = (State_VGB(RhoUx_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**2 &
             + (State_VGB(RhoUy_,i,j,k,iBlock)/State_VGB(Rho_,i,j,k,iBlock))**2 &
@@ -1913,47 +1920,69 @@ contains
       ! rho is the total solar wind rho accounting for electrons
        rho = 2.*State_VGB(SWHrho_,i,j,k,iBlock) + State_VGB(Pu3rho_,i,j,k,iBlock)
 
-       !InvRhoSW = 1.0/State_VGB(SWHRho_,i,j,k,iBlock)
+      ! total rho = rhoSW + rhoPUI 
+       rhoT = rho + State_VGB(Pu3rho_,i,j,k,iBlock)
+
+      ! rho PUI
+       rhoPUI = State_VGB(Pu3rho_,i,j,k,iBlock) 
 
        InvRhoSW = 1.0/rho
 
-       ! merav modifications
+       InvRhoPUI = 1.0/rhoPUI
+       InvRho = 1.0/rhoT
+
        B2 = sum(State_VGB(Bx_:Bz_,i,j,k,iBlock)**2)
 
        ! Square of Alfven Mach Number
        MachAlfven2 = U2*rho/(B2+1.E-30)
 
-       MachMagneto2 = SWHU2/((1.E-10)+(Gamma*T_ave)+(B2*InvRho)) ! U2 or U2DIM?!!
+       MachMagneto2 = SWHU2/((1.E-10)+(Gamma*T_ave)+(B2*InvRho)) ! 
 
        ! Square of Mach number
-        Mach2      = U2/(Gamma*p*InvRho)
+       Mach2  = U2/(Gamma*p*InvRho)
 
-!!       Mach2      = U2/(Gamma*pSW*InvRhoSW)
+       ! Square of PUI Mach number 
+       MachPUI2 = U2/(Gamma*pPUI*InvRhoPUI)     
+ 
+       ! Square of Solar Wind Mach number  
+       MachSW2 = U2/(Gamma*pSW*InvRhoSW)
 
        ! Temperature in Kelvins
        TempDim = InvRho*p*No2Si_V(UnitTemperature_)
 
+       ! Temperature of solar wind in Kelvins
+       TempSWDim = InvRhoSW*pSW*No2Si_V(UnitTemperature_)
+
+ 
 ! use sonic Mach number - good for slow Bow Shock (Zieger et al. 2015)
-       if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
+! singleIon      if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
+      if (MachSW2 > MachPop4Limit**2 .and. U2Dim < uPop1LimitDim**2 ) then 
           ! Outside the bow shock
           iFluidProduced_C(i,j,k) = Ne4_
-       elseif( TempPop1LimitDim > TempDim .and. uPop1LimitDim**2 > U2Dim)then
-          ! add spatial and checking for region 2 qualifications, Oct 26, 2011
+       elseif(TempDim < TempPop1LimitDim .and. U2Dim < uPop1LimitDim**2 .and. MachSW2 < MachSWPop1**2) then
           ! Outside the heliopause
           iFluidProduced_C(i,j,k) = Neu_
-       elseif( MachPop2Limit**2 > Mach2 )then
+! singleIon      elseif( MachPop2Limit**2 > Mach2 )then
+        elseif( MachSW2 < MachPop3Limit**2 )then
           ! Heliosheath
           iFluidProduced_C(i,j,k) = Ne2_
-       elseif( Mach2 > MachPop3Limit**2 )then
+! singleIon     elseif( Mach2 > MachPop3Limit**2 )then
+        elseif( MachSW2 > MachPop3Limit**2 )then
           ! Inside termination shock
           iFluidProduced_C(i,j,k) = Ne3_
        else
           ! No neutrals are produced in this region (but they are destroyed)
           iFluidProduced_C(i,j,k) = 0
        end if
-       ! write(*,*) MachMagneto2, T_ave, No2Si_V(UnitTemperature_), B2, InvRho, &
-       ! U2, U2Dim, No2Io_V(UnitU_), Xyz_DGB(:,i,j,k,iBlock),r_BLK(i,j,k,iBlock), &
-       ! iFluidProduced_C(i,j,k)
+
+! adding more conditions to help with the regions
+
+    if (MachSW2 > MachPop4Limit**2 .and. MachPUI2 < MachPUIPop3**2 ) then
+       iFluidProduced_C(i,j,k) = Ne2_
+    end if
+    if (MachSW2 < MachPop3Limit**2 .and. MachPUI2 > MachPUIPop3**2 .and. r<rPop3Limit) then 
+       iFluidProduced_C(i,j,k) = Ne3_
+    end if
 
     end do; end do; end do
 
