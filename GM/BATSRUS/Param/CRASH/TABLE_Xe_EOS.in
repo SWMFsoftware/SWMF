@@ -5,8 +5,8 @@ Tables/Xe_eos_CRASH.dat		NameFile
 real8				TypeFile
 Mass				NameTableParam
 131.292				TableParam [amu]
-EOS(Te, Na) for Xe		StringDescription
-logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
+CRASH EOS for Xe		StringDescription
+logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2 DPOverDRho DPOverDT DPEOverDRho DPEOverDT
 2                                       nIndex
 201   	      	      	     	nIndex1
 1.0E-2				Index1Min [eV]

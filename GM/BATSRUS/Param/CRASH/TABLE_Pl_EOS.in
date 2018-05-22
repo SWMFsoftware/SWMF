@@ -4,9 +4,9 @@ use param                    	NameCommand
 Tables/Pl_eos_CRASH.dat		NameFile
 real8                   	TypeFile
 Mass				NameTableParam
-9.803444			TableParam [amu]
-EOS(Te, Na) for Pl		StringDescription
-logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2
+9.8034439			TableParam [amu]
+CRASH EOS for Pl		StringDescription
+logTe logNa P E Pe Ee Cv Cve Gamma GammaE TeTi Cond Z Z2 DPOverDRho DPOverDT DPEOverDRho DPEOverDT
 2                                       nIndex
 201                             nIndex1
 1.0E-3				Index1Min [eV]
