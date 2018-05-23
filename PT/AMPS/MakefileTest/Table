@@ -720,6 +720,38 @@ Check=
 <#
 -------------------------------------------------------------------------------
 #>
+Name=test/fast-wave
+Time=3
+
+Outs=
+
+Keys=-link-option=./share/lib/libSHARE.a -compiler-option=-I${PTDIR}/share/Library/src/ -I${PTDIR}/srcInterface/
+
+Compile=
+>>>@echo "test_fast-wave_compile..." >> test_fast-wave.diff
+>>>cd ./share/; mkdir -p lib
+>>>cd ./share/Library/src; make LIB
+>>>./Config.pl -application=test/fast-wave ${TESTfast-waveKEYS} 
+>>>@rm -rf srcTemp
+>>>-@($(MAKE) -j8  amps)
+>>>@echo "test_fast-wave_compile... done" >> test_fast-wave.diff
+
+
+Check=
+>>>@echo "test_fast-wave_check..." >> test_fast-wave$(TESTfast-wave-REF).diff
+
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTfast-waveDIR)/PT/plots/pic.H_PLUS.s=0.out=2.dat \ 
+>>>output/test_fast-wave/pic.H_PLUS.s=0.out=2.ref_np`ls $(TESTfast-waveDIR)/PT/thread* |wc -l |tr -d ' '`  >> test_fast-wave$(TESTfast-wave-REF).diff;)
+
+>>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTfast-waveDIR)/PT/plots/pic.25THELECTRON.s=1.out=2.dat \ 
+>>>output/test_fast-wave/pic.25THELECTRON.s=1.out=2.ref_np`ls $(TESTfast-waveDIR)/PT/thread* |wc -l |tr -d ' '`  >> test_fast-wave$(TESTfast-wave-REF).diff;)
+
+>>>@ls -l test_fast-wave$(TESTfast-wave-REF).diff
+>>>@echo Test test_fast-wave has finished: `date`
+
+<#
+-------------------------------------------------------------------------------
+#>
 Name=test/lightwave-current-off 
 Time=2
 
