@@ -593,7 +593,7 @@ int main(int argc,char **argv) {
   //PIC::FieldSolver::Init();
   PIC::FieldSolver::Electromagnetic::ECSIM::Init_IC();
 
-  totalIter=100;
+  totalIter=60;
      
     switch (_PIC_BC__PERIODIC_MODE_) {
     case _PIC_BC__PERIODIC_MODE_OFF_:
