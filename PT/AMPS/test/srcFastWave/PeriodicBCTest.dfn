@@ -1,0 +1,11 @@
+//$Id$
+//definitions for the periodic boundary condition test
+
+#define _UNIFORM_MESH_    0
+#define _NONUNIFORM_MESH_ 1
+
+#ifndef _TEST_MESH_MODE_
+#define _TEST_MESH_MODE_ _UNIFORM_MESH_
+#endif 
+
+
