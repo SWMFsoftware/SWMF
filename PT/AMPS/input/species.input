@@ -4,6 +4,10 @@
   mass=_ELECTRON__MASS_
   charge=-1
 
+#component=25thELECTRON
+   mass=0.04*_AMU_
+   charge=-1
+
 #component=Na
   mass=3.82E-26
   charge=0
