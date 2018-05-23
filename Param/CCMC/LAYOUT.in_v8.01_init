@@ -1,4 +1,0 @@
-#COMPONENTMAP
-GM   0    999    1      GM runs on all PEs
-IE   0      1    1      IE runs on PE 0 and 1
-#END
