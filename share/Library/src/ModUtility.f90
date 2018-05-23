@@ -131,8 +131,8 @@ contains
 
     if(IsMpiInitialized) call MPI_comm_rank(MPI_COMM_WORLD, iProc, iError)
 
-    write(*,*) 'Aborting execution on processor', iProc, ' with message:'
-    write(*,'(a)') String
+    write(*,*) 'ERROR: aborting execution on processor', iProc, ' with message:'
+    write(*,'(a)') 'ERROR: '//String
     if(present(Value1)) call write_value(Value1)
     if(present(Value2)) call write_value(Value2)
     if(present(Value3)) call write_value(Value3)
