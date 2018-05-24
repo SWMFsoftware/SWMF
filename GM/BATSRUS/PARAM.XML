@@ -6673,6 +6673,25 @@ For multi-ion MHD only the simple Boris scheme is available.
 Default is UseBorisSimple=.false. 
 </command>
 
+<command name="BORISREGION">
+  <parameter name="NameBorisRegion" type="string" length="200"
+	     default="none"/>
+
+#BORISREGION
++nearbody       NameBorisRegion
+
+This command can be used to limit the effect of the (simple)
+Boris correction (see #BORIS and #SIMPLEBORIS) to a region
+defined by one or more #REGION commands. Outside this region
+the semi-relativistic equations are solved with the true speed
+of light, while inside the Boris region the speed of light
+is reduced. It is probably a good idea to use tapering (see
+the #REGION command) so that the speed of light changes gradually
+at the edges of the region.
+
+The default is to use the reduced speed of light everywhere.
+</command>
+
 <command name="USEB0">
 	<parameter name="UseB0" type="logical" default="F"/>
 #USEB0
