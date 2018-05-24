@@ -741,11 +741,15 @@ Check=
 >>>@echo "test_fast-wave_check..." >> test_fast-wave$(TESTfast-wave-REF).diff
 
 >>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTfast-waveDIR)/PT/plots/pic.H_PLUS.s=0.out=2.dat \ 
->>>output/test_fast-wave/pic.H_PLUS.s=0.out=2.ref_np`ls $(TESTfast-waveDIR)/PT/thread* |wc -l |tr -d ' '`  >> test_fast-wave$(TESTfast-wave-REF).diff;)
+>>>output/test_fast-wave/pic.H_PLUS.s=0.out=2.ref_np`ls $(TESTfast-waveDIR)/PT/thread* |wc -l |tr -d ' '`  >> test_fast-wave--protons$(TESTfast-wave-REF).diff;)
 
 >>>-(${SCRIPTDIR}/DiffNum.pl -a=2.0E-14 $(TESTfast-waveDIR)/PT/plots/pic.25THELECTRON.s=1.out=2.dat \ 
->>>output/test_fast-wave/pic.25THELECTRON.s=1.out=2.ref_np`ls $(TESTfast-waveDIR)/PT/thread* |wc -l |tr -d ' '`  >> test_fast-wave$(TESTfast-wave-REF).diff;)
+>>>output/test_fast-wave/pic.25THELECTRON.s=1.out=2.ref_np`ls $(TESTfast-waveDIR)/PT/thread* |wc -l |tr -d ' '`  >> test_fast-wave--electrons$(TESTfast-wave-REF).diff)
 
+>>>@cat test_fast-wave--protons$(TESTfast-wave-REF).diff  test_fast-wave--electrons$(TESTfast-wave-REF).diff > test_fast-wave$(TESTfast-wave-REF).diff 
+
+>>>@ls -l test_fast-wave--protons$(TESTfast-wave-REF).diff
+>>>@ls -l test_fast-wave--electrons$(TESTfast-wave-REF).diff
 >>>@ls -l test_fast-wave$(TESTfast-wave-REF).diff
 >>>@echo Test test_fast-wave has finished: `date`
 
