@@ -5,7 +5,7 @@ DEFAULT_TARGET : pproc
 include ../../Makefile.conf
 include ../../Makefile.local
 
-FLAGC+= -I../../src/meshAMR -I../../src/general -I../../src/pic  ${EXTRACOMPILEROPTIONS}
+FLAGC+= -std=c++11 -I../../src/meshAMR -I../../src/general -I../../src/pic  ${EXTRACOMPILEROPTIONS}
 ifeq ($(COMPILE.c),pgcc)
 FLAGC+=-mp
 else
