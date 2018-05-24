@@ -379,8 +379,20 @@ lcb nul tec             StringPlot  !last closed field line plots
 36                      nLon
 
 #BORIS
-T			UseBorisCorrection
-0.01			BorisClightFactor
+T                       UseBorisCorrection
+0.01                    BorisClightFactor
+
+#REGION
+borisregion             NameArea
+sphere tapered          NameShape
+-4.0                    xPosition
+0.0                     yPosition
+0.0                     zPosition
+14.0                    Radius
+2.0                     Taper
+
+#BORISREGION
+borisregion		NameBorisRegion
 
 #TIMESTEPPING
 1			nStage

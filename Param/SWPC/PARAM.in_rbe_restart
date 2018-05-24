@@ -233,6 +233,18 @@ mc3	                TypeLimiter
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
+#REGION
+borisregion             NameArea
+sphere tapered          NameShape
+-4.0                    xPosition
+0.0                     yPosition
+0.0                     zPosition
+14.0                    Radius
+2.0                     Taper
+
+#BORISREGION
+borisregion		NameBorisRegion
+
 #TIMESTEPPING
 1			nStage
 0.85			CflExpl
