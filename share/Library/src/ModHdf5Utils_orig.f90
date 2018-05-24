@@ -178,7 +178,7 @@ contains
     real, optional, intent(in) :: CoordMin(:), CoordMax(:)
 
     character (len=501) :: HeaderString
-    integer (HID_T) :: FileID, iInteger4
+    integer (HID_T) :: FileID
     integer(HSIZE_T) :: iDimension1D(1), iInteger8
     integer :: IntegerMetaData(16), iLen, iVar, iProc, nProc, iCommOpen, iError
     integer :: LengthOfString, numCells,i,j,k,n, iBlk
@@ -239,13 +239,12 @@ contains
     
     allocate(UnknownNameArray(nVar))
     call split_string(NameUnits,nVar,UnknownNameArray(1:nVar), i)
-    iInteger4 = lNameh5
-    call pad_string_with_null(nVar, iInteger4, UnknownNameArray, UnknownNameArray)
+    call pad_string_with_null(nVar, int(lNameH5), UnknownNameArray, UnknownNameArray)
     iInteger8=nVar
     call write_hdf5_data(FileID, "plotVarUnits", 1,  (/iInteger8/),&
     CharacterData=UnknownNameArray, nStringChars=lNameH5)
 
-    call pad_string_with_null(nVar, iInteger4, NameVar, UnknownNameArray)
+    call pad_string_with_null(nVar, int(lNameH5), NameVar, UnknownNameArray)
     iInteger8=nVar
     call write_hdf5_data(FileID, "plotVarNames", 1,  (/iInteger8/),&
     CharacterData=UnknownNameArray, nStringChars=lNameH5)
@@ -284,8 +283,8 @@ contains
     if (nPlotDim == 3) &
         UnknownNameArray(3) = "Z-Axis"
     end if
-    iInteger4=lNameh5
-    call pad_string_with_null(nVar,iInteger4 , UnknownNameArray, UnknownNameArray)
+
+    call pad_string_with_null(nVar, int(lNameH5) , UnknownNameArray, UnknownNameArray)
     iInteger8=nPlotDim
     call write_hdf5_data(FileID, "Axis Labels", 1,  (/iInteger8/),&
     CharacterData=UnknownNameArray, nStringChars=lNameH5)

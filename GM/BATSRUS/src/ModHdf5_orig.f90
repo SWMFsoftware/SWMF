@@ -736,6 +736,7 @@ contains
     integer :: Error, procIdx, iLen, iVar, nBlocksUsedMax
 
     integer :: labelLeng, i, ii, nBlocksUsedMin
+    integer(HID_T) :: iIntHIDT
 
     real, allocatable :: Coordinates(:,:), BoundingBox(:,:,:),BlockDataExtents(:,:)
     integer, allocatable :: procNum(:)
@@ -790,9 +791,9 @@ contains
 
     allocate(unknownNameArray(nPlotVar))
 
-    call pad_string_with_null(nPlotVar, lNameh5, PlotVarNames, UnknownNameArray)
+    call pad_string_with_null(nPlotVar, int(lNameH5), PlotVarNames, UnknownNameArray)
     iInteger8=nPlotVar
-    iInteger8a=lNameh5
+    iInteger8a=lNameH5
     call write_hdf5_data(FileID, "plotVarNames", 1,  (/iInteger8/),&
          CharacterData=UnknownNameArray, nStringChars=iInteger8a)
 
@@ -907,7 +908,7 @@ contains
          Rank2IntegerData=MinLogicalExtents)
     deallocate(MinLogicalExtents)
 
-    call pad_string_with_null(nPlotVar, lNameh5, PlotVarUnits, UnknownNameArray)
+    call pad_string_with_null(nPlotVar, int(lNameH5), PlotVarUnits, UnknownNameArray)
 
     iInteger8=nPlotVar
     iInteger8a=lNameH5
@@ -970,16 +971,16 @@ contains
        end do
     end if
 
-    iInteger4=nPlotDim
-    call pad_string_with_null(iInteger4, lNameh5, UnknownNameArray, UnknownNameArray)
+    call pad_string_with_null(int(nPlotDim), int(lNameH5), UnknownNameArray, UnknownNameArray)
     iInteger8 = lNameH5
     call write_hdf5_data(FileID, "Axis Labels", 1,  (/nPlotDim/),&
          CharacterData=UnknownNameArray, nStringChars=iInteger8)
-
+    
     deallocate(UnknownNameArray)
-    call write_integer_sim_metadata(fileID, nPlotVar)
+    iIntHIDT = nPlotVar ! Convert to correct data type.
+    call write_integer_sim_metadata(fileID, iIntHIDT)
     call write_real_sim_metadata(FileID,plot_dimensional)
-    call write_integer_plot_metadata(fileID, nPlotVar, isCutFile)
+    call write_integer_plot_metadata(fileID, iIntHIDT, isCutFile)
     if (plotType=='x=0') then
        call write_real_plot_metadata(fileid,plot_dimensional, .true.)
     else
