@@ -233,11 +233,11 @@ long int PrepopulateDomain() {
 
           //inject particles into the cell
           anpart=NumberDensity*CellVolume/ParticleWeight;
-          std::cout<<"CellLoc:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" NumberDensity: "<<NumberDensity<<"cell volume: "<<CellVolume<<"anpart: "<<anpart<<std::endl;
+          //std::cout<<"CellLoc:"<<x[0]<<" "<<x[1]<<" "<<x[2]<<" NumberDensity: "<<NumberDensity<<"cell volume: "<<CellVolume<<"anpart: "<<anpart<<std::endl;
           npart=(int)(anpart);
           //if (rnd()<anpart-npart) npart++;
           nLocalInjectedParticles+=npart*2;
-          std::cout<<"need to inject npart: "<<npart<<std::endl;
+          //std::cout<<"need to inject npart: "<<npart<<std::endl;
           
           while (npart-->0) {
             double xPar[3];
