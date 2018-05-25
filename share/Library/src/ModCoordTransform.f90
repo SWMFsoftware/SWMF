@@ -78,6 +78,7 @@ module ModCoordTransform
   public:: lonlat_to_xyz  ! convert Longitude-Latitude to Cartesian unit vector
   public:: cross_product  ! return the cross product of two vectors
   public:: inverse_matrix ! return the inverse of a 3 by 3 matrix
+  public:: determinant    ! return the determinant of size n matrix
 
   public:: show_rot_matrix      ! write out matrix elements in a nice format
   public:: atan2_check          ! compute atan2 even if both x and y are zero
@@ -150,6 +151,10 @@ module ModCoordTransform
   interface cross_product
      module procedure cross_product11, cross_product13, cross_product31,&
           cross_product33
+  end interface
+
+  interface determinant
+     module procedure determinant33, determinant_nn
   end interface
 
   character(len=*), parameter :: NameMod='ModCoordTransform'
@@ -451,7 +456,8 @@ contains
   !============================================================================
 
   !BOP -------------------------------------------------------------------
-  !IROUTINE: xyz_to_dir - convert Cartesian vector into direction (trigonometric)
+  !IROUTINE: xyz_to_dir - convert Cartesian vector into direction
+  ! (trigonometric)
   !
   !INTERFACE:
   subroutine xyz_to_dir34(x,y,z,SinTheta,CosTheta,SinPhi,CosPhi)
@@ -895,9 +901,50 @@ contains
     end if
 
   end function inverse_matrix
+  !============================================================================
+  
+  function determinant33(a_DD) RESULT(Det)
 
+    ! Calculate determinant of 3 by 3 matrix
+
+    real, intent(in)::a_DD(3,3)
+    real :: Det
+    !--------------------------------------------------------------------------
+    Det = a_DD(1,1)*a_DD(2,2)*a_DD(3,3) &
+         +a_DD(1,2)*a_DD(2,3)*a_DD(3,1) &
+         +a_DD(2,1)*a_DD(3,2)*a_DD(1,3) &
+         -a_DD(1,3)*a_DD(2,2)*a_DD(3,1) &
+         -a_DD(1,1)*a_DD(2,3)*a_DD(3,2) &
+         -a_DD(3,3)*a_DD(1,2)*a_DD(2,1)
+  end function determinant33
   !============================================================================
 
+  recursive function determinant_nn(a_II, n) result(Det)
+
+    ! Calculate determinant of N by N matrix
+
+    integer :: n ! size of matrix
+    real    :: a_II(n,n)
+    real    :: Sub_II(n-1,n-1), Det
+    integer :: i, iSign
+    !--------------------------------------------------------------------------
+
+    if (n == 1) then
+       Det = a_II(1,1)
+    else
+       Det = 0.0
+       iSign = 1
+       do i = 1, n
+          Sub_II(1:n-1,1:i-1) = a_II(2:n,1:i-1)
+          Sub_II(1:n-1,i:n-1) = a_II(2:n,i+1:n)
+          
+          Det = Det + iSign * a_II(1,i) * determinant_nn(Sub_II, n-1)
+          iSign = - iSign
+       enddo
+    endif
+  end function determinant_nn
+  !============================================================================
+  
   subroutine show_rot_matrix(Matrix_DD)
 
     real, intent(in) :: Matrix_DD(3,3)
