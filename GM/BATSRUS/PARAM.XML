@@ -1993,6 +1993,9 @@ of getting nice rational numbers. The PostIDL code unrotates the grid
 and the vector variables so it can be directly compared with 
 a Cartesian simulation. The initial conditions and the boundary conditions,
 however, are not rotated automatically (yet), so they require some attention.
+Note that only the first order schemes (see #SCHEME) will produce identical 
+results on rotated and non-rotated grids because nonlinear limiters produce 
+different face values for the vector components. 
 
 The default is Cartesian geometry.
 </command>
@@ -3455,6 +3458,7 @@ Theta1, Theta2               - colatitude of mapped field line along B and -B
 Phi1, Phi2                   - longitude  of mapped field line along B and -B
 Status                       - field line topology 
         (0: open, 1: closed along B, 2: closed along -B 3: fully closed)
+	(-1: cells inside body, -2: loop ray within block, -3: strange)
 \end{verbatim}
 If the optional NameCoord part is set, the output position, velocity,
 magnetic field or current density vector variables will be written out in 
