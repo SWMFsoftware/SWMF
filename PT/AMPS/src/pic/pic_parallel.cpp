@@ -950,321 +950,329 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
     if (_PIC_BC__PERIODIC_MODE_==_PIC_BC__PERIODIC_MODE_ON_) {
       //In case when the periodic boundary conditions are inforced
       //additional information exchange table need to be generated to link points located at the boundary of the "real" domain
-      list<cStencilPBC> StencilListPBC;
       cBlockTable BlockTable; //contains information of all blocks that containes a given corner node
 
-      ResetProcessedFlag();
 
-      for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode)  {
-        if (PIC::Mesh::mesh.ExternalBoundaryBlock(node)==_EXTERNAL_BOUNDARY_BLOCK_)  {
-          for (iface=0;iface<6;iface++) if (TestRealBoundaryFace(iface,node)==true) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-            //the analysis will be performed by the MPI process that the block belongs to
-            int ii,jj,kk,ff,iNeighbour,BoundaryNodeFlag=false;
-            cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* neibNode;
-            PIC::Mesh::cDataBlockAMR *neibBlock;
-            bool found;
+      //pass twice throug the next loop: during the first pass the value of 'StencilTablePBCLength' will be evaluated, and during the second pass the table will be populated
+      for (int iMainPass=0;iMainPass<2;iMainPass++) {
 
-            if (node->Thread==PIC::ThisThread) {
-              BlockTable.BlockTableLength=0;
-              CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+        if (iMainPass==0) {
+          if (StencilTablePBCLength!=0) {
+            delete [] StencilTablePBC;
 
-              //determine whether the point is at the boundary
-              BoundaryNodeFlag=VerifyBoundaryCornerNode(CornerNode,node);
-
-              if ((BoundaryNodeFlag==true)&&(CornerNode->TestProcessedFlag()==false)) {
-                //the corner node has not been used yet. The set of the corner nodes that are connected due to enforcing the periodic boundary conditions is not determined yet
-
-                BlockTable.iCorner[0]=i;
-                BlockTable.jCorner[0]=j;
-                BlockTable.kCorner[0]=k;
-                BlockTable.GhostBloks[0]=node->AMRnodeID;
-                BlockTable.BlockTableLength=1;
+            StencilTablePBC=NULL;
+            StencilTablePBCLength=0;
+          }
+        }
+        else if (PIC::ThisThread==0) {
+          StencilTablePBC=new cStencilPBC[StencilTablePBCLength];
+          StencilTablePBCLength=0;
+        }
 
 
-                //find all 'ghost' nodes that contains that corner node
-                //check faces
-                static const int FaceNeibBlockOffset[6][3]={
-                    {-_BLOCK_CELLS_X_,0,0}, {_BLOCK_CELLS_X_,0,0},
-                    {0,-_BLOCK_CELLS_Y_,0}, {0,_BLOCK_CELLS_Y_,0},
-                    {0,0,-_BLOCK_CELLS_Z_}, {0,0,_BLOCK_CELLS_Z_}
-                };
+        ResetProcessedFlag();
+
+        for (cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* node=PIC::Mesh::mesh.BranchBottomNodeList;node!=NULL;node=node->nextBranchBottomNode)  {
+          if (PIC::Mesh::mesh.ExternalBoundaryBlock(node)==_EXTERNAL_BOUNDARY_BLOCK_)  {
+            for (iface=0;iface<6;iface++) if (TestRealBoundaryFace(iface,node)==true) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
+              //the analysis will be performed by the MPI process that the block belongs to
+              int ii,jj,kk,ff,iNeighbour,BoundaryNodeFlag=false;
+              cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* neibNode;
+              PIC::Mesh::cDataBlockAMR *neibBlock;
+              bool found;
+
+              if (node->Thread==PIC::ThisThread) {
+                BlockTable.BlockTableLength=0;
+                CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+
+                //determine whether the point is at the boundary
+                BoundaryNodeFlag=VerifyBoundaryCornerNode(CornerNode,node);
+
+                if ((BoundaryNodeFlag==true)&&(CornerNode->TestProcessedFlag()==false)) {
+                  //the corner node has not been used yet. The set of the corner nodes that are connected due to enforcing the periodic boundary conditions is not determined yet
+
+                  BlockTable.iCorner[0]=i;
+                  BlockTable.jCorner[0]=j;
+                  BlockTable.kCorner[0]=k;
+                  BlockTable.GhostBloks[0]=node->AMRnodeID;
+                  BlockTable.BlockTableLength=1;
 
 
-                for (int iiface=0;iiface<6;iiface++) if ((neibNode=node->GetNeibFace(iiface,0,0))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
-                  neibBlock=neibNode->block;
+                  //find all 'ghost' nodes that contains that corner node
+                  //check faces
+                  static const int FaceNeibBlockOffset[6][3]={
+                      {-_BLOCK_CELLS_X_,0,0}, {_BLOCK_CELLS_X_,0,0},
+                      {0,-_BLOCK_CELLS_Y_,0}, {0,_BLOCK_CELLS_Y_,0},
+                      {0,0,-_BLOCK_CELLS_Z_}, {0,0,_BLOCK_CELLS_Z_}
+                  };
 
-                  if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
-                    exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
-                  }
 
-                  for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
-                    found=true;
-                    break;
-                  }
+                  for (int iiface=0;iiface<6;iiface++) if ((neibNode=node->GetNeibFace(iiface,0,0))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
+                    neibBlock=neibNode->block;
 
-                  if (found==true) continue;
+                    if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
+                      exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
+                    }
 
-                  if (neibBlock!=NULL) {
-                    ii=i-FaceNeibBlockOffset[iiface][0];
+                    for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
+                      found=true;
+                      break;
+                    }
 
-                    if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)) {
-                      jj=j-FaceNeibBlockOffset[iiface][1];
+                    if (found==true) continue;
 
-                      if ((0<=jj)&&(jj<=_BLOCK_CELLS_Y_)) {
-                        kk=k-FaceNeibBlockOffset[iiface][2];
+                    if (neibBlock!=NULL) {
+                      ii=i-FaceNeibBlockOffset[iiface][0];
 
-                        if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
-                          if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
-                            //a new block has been found that contains tested 'corner' node
-                            BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
-                            BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
-                            BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
-                            BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
-                            BlockTable.BlockTableLength++;
+                      if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)) {
+                        jj=j-FaceNeibBlockOffset[iiface][1];
+
+                        if ((0<=jj)&&(jj<=_BLOCK_CELLS_Y_)) {
+                          kk=k-FaceNeibBlockOffset[iiface][2];
+
+                          if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
+                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                              //a new block has been found that contains tested 'corner' node
+                              BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
+                              BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
+                              BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
+                              BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
+                              BlockTable.BlockTableLength++;
+                            }
                           }
                         }
                       }
-                    }
 
-                  }
-                }
-
-                //check corners
-                static const int CornerNeibBlockOffset[8][3]={
-                    {-_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
-                    {+_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
-                    {-_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
-                    {+_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
-
-                    {-_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
-                    {+_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
-                    {-_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
-                    {+_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_}
-                };
-
-
-                for (int icorner=0;icorner<8;icorner++) if ((neibNode=node->GetNeibCorner(icorner))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
-                  neibBlock=neibNode->block;
-                    
-                  if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
-                    exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
-                  }
-                    
-                  for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
-                    found=true;
-                    break;
-                  }
-                      
-                  if (found==true) continue;
-
-                  if (neibBlock!=NULL) {
-                    ii=i-CornerNeibBlockOffset[icorner][0];
-
-                    if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)) {
-                      jj=j-CornerNeibBlockOffset[icorner][1];
-
-                      if ((0<=jj)&&(jj<=_BLOCK_CELLS_Y_)) {
-                        kk=k-CornerNeibBlockOffset[icorner][2];
-
-                        if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
-                          if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
-                            //a new block has been found that contains tested 'corner' node
-                            BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
-                            BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
-                            BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
-                            BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
-                            BlockTable.BlockTableLength++;
-                          }
-                        }
-                      }
                     }
                   }
-                }
-                  
 
-                //check edges
-                static const int EdgeNeibBlockOffset[12][3]={
-                    {0,-_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},{0,+_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},{0,+_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},{0,-_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
-                    {-_BLOCK_CELLS_X_,0,-_BLOCK_CELLS_Z_},{+_BLOCK_CELLS_X_,0,-_BLOCK_CELLS_Z_},{+_BLOCK_CELLS_X_,0,+_BLOCK_CELLS_Z_},{-_BLOCK_CELLS_X_,0,+_BLOCK_CELLS_Z_},
-                    {-_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,0},{+_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,0},{+_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,0},{-_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,0}
-                };
+                  //check corners
+                  static const int CornerNeibBlockOffset[8][3]={
+                      {-_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
+                      {+_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
+                      {-_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
+                      {+_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},
 
-                for (int iedge=0;iedge<12;iedge++) if ((neibNode=node->GetNeibEdge(iedge,0))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
-                  neibBlock=neibNode->block;
-                     
-                  if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
-                    exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
-                  }
-                     
-                  for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
-                    found=true;
-                    break;
-                  }
+                      {-_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
+                      {+_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
+                      {-_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
+                      {+_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_}
+                  };
+
+
+                  for (int icorner=0;icorner<8;icorner++) if ((neibNode=node->GetNeibCorner(icorner))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
+                    neibBlock=neibNode->block;
+
+                    if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
+                      exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
+                    }
                       
-                  if (found==true) continue;
-                      
-                  if (neibBlock!=NULL) {
-                    ii=i-EdgeNeibBlockOffset[iedge][0];
+                    for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
+                      found=true;
+                      break;
+                    }
 
-                    if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)) {
-                      jj=j-EdgeNeibBlockOffset[iedge][1];
+                    if (found==true) continue;
 
-                      if ((0<=jj)&&(jj<=_BLOCK_CELLS_Y_)) {
-                        kk=k-EdgeNeibBlockOffset[iedge][2];
+                    if (neibBlock!=NULL) {
+                      ii=i-CornerNeibBlockOffset[icorner][0];
 
-                        if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
-                          if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
-                            //a new block has been found that contains tested 'corner' node
-                            BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
-                            BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
-                            BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
-                            BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
-                            BlockTable.BlockTableLength++;
+                      if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)) {
+                        jj=j-CornerNeibBlockOffset[icorner][1];
+
+                        if ((0<=jj)&&(jj<=_BLOCK_CELLS_Y_)) {
+                          kk=k-CornerNeibBlockOffset[icorner][2];
+
+                          if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
+                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                              //a new block has been found that contains tested 'corner' node
+                              BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
+                              BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
+                              BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
+                              BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
+                              BlockTable.BlockTableLength++;
+                            }
                           }
                         }
                       }
                     }
                   }
-                }
-                  
-                //determine 'real' blocks tha correspond to those in 'BlockTable'
-                for (ii=0;ii<BlockTable.BlockTableLength;ii++) {
-                  BlockTable.RealBlockPair[ii]=PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(PIC::Mesh::mesh.findAMRnodeWithID(BlockTable.GhostBloks[ii]))->AMRnodeID;
-                }
-              }
-            }
 
-            //Broadcast the 'BlockTable' to other MPI processes
-            int iBlock;
-            int DataRequestFlagTable[PIC::nTotalThreads];
-            cNodeSetElement Set;
-            cStencilPBC NewStencilElementPBC;
 
-            MPI_Bcast(&BlockTable,sizeof(cBlockTable),MPI_BYTE,node->Thread,MPI_GLOBAL_COMMUNICATOR);
+                  //check edges
+                  static const int EdgeNeibBlockOffset[12][3]={
+                      {0,-_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},{0,+_BLOCK_CELLS_Y_,-_BLOCK_CELLS_Z_},{0,+_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},{0,-_BLOCK_CELLS_Y_,+_BLOCK_CELLS_Z_},
+                      {-_BLOCK_CELLS_X_,0,-_BLOCK_CELLS_Z_},{+_BLOCK_CELLS_X_,0,-_BLOCK_CELLS_Z_},{+_BLOCK_CELLS_X_,0,+_BLOCK_CELLS_Z_},{-_BLOCK_CELLS_X_,0,+_BLOCK_CELLS_Z_},
+                      {-_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,0},{+_BLOCK_CELLS_X_,-_BLOCK_CELLS_Y_,0},{+_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,0},{-_BLOCK_CELLS_X_,+_BLOCK_CELLS_Y_,0}
+                  };
 
-            NewStencilElementPBC.nStencilPoints=0;
+                  for (int iedge=0;iedge<12;iedge++) if ((neibNode=node->GetNeibEdge(iedge,0))!=NULL) if (PIC::Mesh::mesh.ExternalBoundaryBlock(neibNode)==_EXTERNAL_BOUNDARY_BLOCK_) {
+                    neibBlock=neibNode->block;
 
-            //loop through the 'BlockTable'
-            for (int ipass=0;ipass<2;ipass++) for (iBlock=0;iBlock<((ipass==0) ? 1: BlockTable.BlockTableLength);iBlock++) {
-              switch (ipass) {
-              case 0:
-                Set.i=BlockTable.iCorner[iBlock];
-                Set.j=BlockTable.jCorner[iBlock];
-                Set.k=BlockTable.kCorner[iBlock];
-                Set.nodeid=BlockTable.GhostBloks[iBlock];
-                break;
-              default:
-                Set.i=BlockTable.iCorner[iBlock];
-                Set.j=BlockTable.jCorner[iBlock];
-                Set.k=BlockTable.kCorner[iBlock];
-                Set.nodeid=BlockTable.RealBlockPair[iBlock];
-              }
+                    if (node->RefinmentLevel!=neibNode->RefinmentLevel) {
+                      exit(__LINE__,__FILE__,"Error: blocks has different refinement levels");
+                    }
 
-              //determine whether a corner node descrived by 'Set' exist in the current MPI process
-              //if the corner node exists -> set the processed flag state "true"
-              int CornerNodeExistFlag;
-              int CornerNodeRecvFlagTable[PIC::nTotalThreads],CornerNodeSendFlagTable[PIC::nTotalThreads];
-              PIC::Mesh::cDataCornerNode *CornerNode;
-              cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* NodeOut;
+                    for (found=false,ii=0;ii<BlockTable.BlockTableLength;ii++) if (BlockTable.GhostBloks[ii]==neibNode->AMRnodeID) {
+                      found=true;
+                      break;
+                    }
 
-              CornerNode=GetCornerNode(Set.i,Set.j,Set.k,NodeOut,Set.nodeid);
+                    if (found==true) continue;
 
-              if (CornerNode!=NULL) {
-                //the corner exists in the currect MPI process
-                if (CornerNode->TestProcessedFlag()==false) {
-                  CornerNode->SetProcessedFlag(true);
-                  CornerNodeExistFlag=true;
+                    if (neibBlock!=NULL) {
+                      ii=i-EdgeNeibBlockOffset[iedge][0];
 
-                  Set.nodeid=NodeOut->AMRnodeID;
-                }
-                else CornerNodeExistFlag=false;
-              }
-              else {
-                CornerNodeExistFlag=false;
-              }
+                      if ((0<=ii)&&(ii<=_BLOCK_CELLS_X_)) {
+                        jj=j-EdgeNeibBlockOffset[iedge][1];
 
-              //gather information from all MPI processes at the root MPI process
-              MPI_Gather(&CornerNodeExistFlag,1,MPI_INT,CornerNodeRecvFlagTable,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+                        if ((0<=jj)&&(jj<=_BLOCK_CELLS_Y_)) {
+                          kk=k-EdgeNeibBlockOffset[iedge][2];
 
-              if (PIC::ThisThread==0) {
-                cStencilPoint StencilPoint;
-
-                StencilPoint.ThreadTableLength=0;
-
-                if (CornerNodeRecvFlagTable[0]==true) {
-                  //root thread has the corner node
-                  StencilPoint.NodeSetTable[0]=Set;
-                  StencilPoint.ThreadTable[0]=PIC::ThisThread;
-                  StencilPoint.ThreadTableLength=1;
-                }
-
-                for (thread=1;thread<PIC::nTotalThreads;thread++) if (CornerNodeRecvFlagTable[thread]==true) {
-                  MPI_Status status;
-
-                  MPI_Recv(&Set,sizeof(cNodeSetElement),MPI_BYTE,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
-                  StencilPoint.NodeSetTable[StencilPoint.ThreadTableLength]=Set;
-                  StencilPoint.ThreadTable[StencilPoint.ThreadTableLength]=thread;
-                  StencilPoint.ThreadTableLength++;
-                }
-
-                if (StencilPoint.ThreadTableLength!=0) NewStencilElementPBC.PointTable[NewStencilElementPBC.nStencilPoints++]=StencilPoint;
-              }
-              else if (CornerNodeExistFlag==true) {
-                MPI_Send(&Set,sizeof(cNodeSetElement),MPI_BYTE,0,0,MPI_GLOBAL_COMMUNICATOR);
-              }
-            }
-
-            //create a new entry to the stencil table
-            if ((PIC::ThisThread==0)&&(NewStencilElementPBC.nStencilPoints!=0)) {
-              //determine thread the will process the data
-              NewStencilElementPBC.ProcessingThread=NewStencilElementPBC.PointTable[0].ThreadTable[0];
-
-              //determine thread that is the source of the data for each point of the stencil
-              for (ii=0;ii<NewStencilElementPBC.nStencilPoints;ii++) NewStencilElementPBC.SourceThreadTable[ii]=NewStencilElementPBC.PointTable[ii].ThreadTable[0];
-
-              //determine all threads that are involved into the communications
-              NewStencilElementPBC.InvolvedThreadTableLength=0;
-
-              for (ii=0;ii<NewStencilElementPBC.nStencilPoints;ii++) {
-                for (jj=0;jj<NewStencilElementPBC.PointTable[ii].ThreadTableLength;jj++) {
-                  bool found=false;
-
-                  for (kk=0;kk<NewStencilElementPBC.InvolvedThreadTableLength;kk++) if (NewStencilElementPBC.PointTable[ii].ThreadTable[jj]==NewStencilElementPBC.InvolvedThreadTable[kk]) {
-                    found=true;
-                    break;
+                          if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
+                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                              //a new block has been found that contains tested 'corner' node
+                              BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
+                              BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
+                              BlockTable.kCorner[BlockTable.BlockTableLength]=kk;
+                              BlockTable.GhostBloks[BlockTable.BlockTableLength]=neibNode->AMRnodeID;
+                              BlockTable.BlockTableLength++;
+                            }
+                          }
+                        }
+                      }
+                    }
                   }
 
-                  if (found==false) NewStencilElementPBC.InvolvedThreadTable[NewStencilElementPBC.InvolvedThreadTableLength++]=NewStencilElementPBC.PointTable[ii].ThreadTable[jj];
+                  //determine 'real' blocks tha correspond to those in 'BlockTable'
+                  for (ii=0;ii<BlockTable.BlockTableLength;ii++) {
+                    BlockTable.RealBlockPair[ii]=PIC::BC::ExternalBoundary::Periodic::findCorrespondingRealBlock(PIC::Mesh::mesh.findAMRnodeWithID(BlockTable.GhostBloks[ii]))->AMRnodeID;
+                  }
                 }
               }
 
-              //add the new stencil to the stencil list
-              StencilListPBC.push_front(NewStencilElementPBC);
+              //Broadcast the 'BlockTable' to other MPI processes
+              int iBlock;
+              int DataRequestFlagTable[PIC::nTotalThreads];
+              cNodeSetElement Set;
+              cStencilPBC NewStencilElementPBC;
+
+              MPI_Bcast(&BlockTable,sizeof(cBlockTable),MPI_BYTE,node->Thread,MPI_GLOBAL_COMMUNICATOR);
+
+              NewStencilElementPBC.nStencilPoints=0;
+
+              //loop through the 'BlockTable'
+              for (int ipass=0;ipass<2;ipass++) for (iBlock=0;iBlock<((ipass==0) ? 1: BlockTable.BlockTableLength);iBlock++) {
+                switch (ipass) {
+                case 0:
+                  Set.i=BlockTable.iCorner[iBlock];
+                  Set.j=BlockTable.jCorner[iBlock];
+                  Set.k=BlockTable.kCorner[iBlock];
+                  Set.nodeid=BlockTable.GhostBloks[iBlock];
+                  break;
+                default:
+                  Set.i=BlockTable.iCorner[iBlock];
+                  Set.j=BlockTable.jCorner[iBlock];
+                  Set.k=BlockTable.kCorner[iBlock];
+                  Set.nodeid=BlockTable.RealBlockPair[iBlock];
+                }
+
+                //determine whether a corner node descrived by 'Set' exist in the current MPI process
+                //if the corner node exists -> set the processed flag state "true"
+                int CornerNodeExistFlag;
+                int CornerNodeRecvFlagTable[PIC::nTotalThreads],CornerNodeSendFlagTable[PIC::nTotalThreads];
+                PIC::Mesh::cDataCornerNode *CornerNode;
+                cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>* NodeOut;
+
+                CornerNode=GetCornerNode(Set.i,Set.j,Set.k,NodeOut,Set.nodeid);
+
+                if (CornerNode!=NULL) {
+                  //the corner exists in the currect MPI process
+                  if (CornerNode->TestProcessedFlag()==false) {
+                    CornerNode->SetProcessedFlag(true);
+                    CornerNodeExistFlag=true;
+
+                    Set.nodeid=NodeOut->AMRnodeID;
+                  }
+                  else CornerNodeExistFlag=false;
+                }
+                else {
+                  CornerNodeExistFlag=false;
+                }
+
+                //gather information from all MPI processes at the root MPI process
+                MPI_Gather(&CornerNodeExistFlag,1,MPI_INT,CornerNodeRecvFlagTable,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
+
+                if (PIC::ThisThread==0) {
+                  cStencilPoint StencilPoint;
+
+                  StencilPoint.ThreadTableLength=0;
+
+                  if (CornerNodeRecvFlagTable[0]==true) {
+                    //root thread has the corner node
+                    StencilPoint.NodeSetTable[0]=Set;
+                    StencilPoint.ThreadTable[0]=PIC::ThisThread;
+                    StencilPoint.ThreadTableLength=1;
+                  }
+
+                  for (thread=1;thread<PIC::nTotalThreads;thread++) if (CornerNodeRecvFlagTable[thread]==true) {
+                    MPI_Status status;
+
+                    MPI_Recv(&Set,sizeof(cNodeSetElement),MPI_BYTE,thread,0,MPI_GLOBAL_COMMUNICATOR,&status);
+                    StencilPoint.NodeSetTable[StencilPoint.ThreadTableLength]=Set;
+                    StencilPoint.ThreadTable[StencilPoint.ThreadTableLength]=thread;
+                    StencilPoint.ThreadTableLength++;
+                  }
+
+                  if (StencilPoint.ThreadTableLength!=0) NewStencilElementPBC.PointTable[NewStencilElementPBC.nStencilPoints++]=StencilPoint;
+                }
+                else if (CornerNodeExistFlag==true) {
+                  MPI_Send(&Set,sizeof(cNodeSetElement),MPI_BYTE,0,0,MPI_GLOBAL_COMMUNICATOR);
+                }
+              }
+
+              //create a new entry to the stencil table
+              if ((PIC::ThisThread==0)&&(NewStencilElementPBC.nStencilPoints!=0)) {
+                //determine thread the will process the data
+                NewStencilElementPBC.ProcessingThread=NewStencilElementPBC.PointTable[0].ThreadTable[0];
+
+                //determine thread that is the source of the data for each point of the stencil
+                for (ii=0;ii<NewStencilElementPBC.nStencilPoints;ii++) NewStencilElementPBC.SourceThreadTable[ii]=NewStencilElementPBC.PointTable[ii].ThreadTable[0];
+
+                //determine all threads that are involved into the communications
+                NewStencilElementPBC.InvolvedThreadTableLength=0;
+
+                for (ii=0;ii<NewStencilElementPBC.nStencilPoints;ii++) {
+                  for (jj=0;jj<NewStencilElementPBC.PointTable[ii].ThreadTableLength;jj++) {
+                    bool found=false;
+
+                    for (kk=0;kk<NewStencilElementPBC.InvolvedThreadTableLength;kk++) if (NewStencilElementPBC.PointTable[ii].ThreadTable[jj]==NewStencilElementPBC.InvolvedThreadTable[kk]) {
+                      found=true;
+                      break;
+                    }
+
+                    if (found==false) NewStencilElementPBC.InvolvedThreadTable[NewStencilElementPBC.InvolvedThreadTableLength++]=NewStencilElementPBC.PointTable[ii].ThreadTable[jj];
+                  }
+                }
+
+                //add the new stencil to the stencil list
+                if (iMainPass==0) {
+                  StencilTablePBCLength++;
+                }
+                else {
+                  StencilTablePBC[StencilTablePBCLength++]=NewStencilElementPBC;
+                }
+              }
             }
           }
         }
       }
 
-
-    //now StencilPBC is complete. Convert the list into an array with the communication rules and broadcasr it to other MPI processes
-    if (StencilTablePBCLength!=0) {
-      delete [] StencilTablePBC;
-      StencilTablePBCLength=0;
-    }
-
     if (PIC::ThisThread==0) {
       //create the stencil table
       int i;
-      list<cStencilPBC>::iterator p;
-
-      StencilTablePBCLength=StencilListPBC.size();
-      StencilTablePBC=new cStencilPBC[StencilTablePBCLength];
-
-      for (i=0,p=StencilListPBC.begin();i<StencilTablePBCLength;i++,p++) StencilTablePBC[i]=*p;
 
       MPI_Bcast(&StencilTablePBCLength,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
-
-
 
       CMPI_channel pipe;
 
@@ -1274,16 +1282,11 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       for (i=0;i<StencilTablePBCLength;i++) pipe.send(StencilTablePBC[i]);
 
       pipe.closeBcast();
-
-
-
- //     MPI_Bcast(StencilTablePBC,StencilTablePBCLength*sizeof(cStencilPBC),MPI_BYTE,0,MPI_GLOBAL_COMMUNICATOR);
     }
     else {
       MPI_Bcast(&StencilTablePBCLength,1,MPI_INT,0,MPI_GLOBAL_COMMUNICATOR);
 
       StencilTablePBC=new cStencilPBC[StencilTablePBCLength];
-
 
       CMPI_channel pipe;
 
@@ -1293,9 +1296,6 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       for (i=0;i<StencilTablePBCLength;i++) pipe.recv(StencilTablePBC[i],0);
 
       pipe.closeBcast();
-
-
-//      MPI_Bcast(StencilTablePBC,StencilTablePBCLength*sizeof(cStencilPBC),MPI_BYTE,0,MPI_GLOBAL_COMMUNICATOR);
     }
 
     //prepare data that is needed for a 'fast' performing of the data exchange operation
