@@ -781,7 +781,7 @@ void UpdateJMassMatrix(){
                 vInit[idim] *= length_conv;
 	      }
 
-	      double QdT_over_m,QdT_over_2m,alpha[3][3],chargeQ;
+	      double QdT_over_m,QdT_over_2m,alpha[9],chargeQ;
 	      double * WeightPG;
 	      double c0,QdT_over_2m_squared;
 	      double mass;
@@ -818,6 +818,7 @@ void UpdateJMassMatrix(){
 	      c0=1.0/(1.0+QdT_over_2m_squared*(B[0]*B[0]+B[1]*B[1]+B[2]*B[2]));
 	      
 	      //compute alpha
+              /*
 	      alpha[0][0]=c0*(1.0+BB[0][0]);
 	      alpha[0][1]=c0*(-P[2]+BB[0][1]);
 	      alpha[0][2]=c0*(P[1]+BB[0][2]);
@@ -829,7 +830,20 @@ void UpdateJMassMatrix(){
 	      alpha[2][0]=c0*(-P[1]+BB[2][0]);
 	      alpha[2][1]=c0*(P[0]+BB[2][1]);
 	      alpha[2][2]=c0*(1.0+BB[2][2]);
+              */
+              alpha[0]=c0*(1.0+BB[0][0]);
+	      alpha[1]=c0*(-P[2]+BB[0][1]);
+	      alpha[2]=c0*(P[1]+BB[0][2]);
 	      
+	      alpha[3]=c0*(P[2]+BB[1][0]);
+	      alpha[4]=c0*(1.0+BB[1][1]);
+	      alpha[5]=c0*(-P[0]+BB[1][2]);
+
+	      alpha[6]=c0*(-P[1]+BB[2][0]);
+	      alpha[7]=c0*(P[0]+BB[2][1]);
+	      alpha[8]=c0*(1.0+BB[2][2]);
+
+
 	      //get weight for each corner
 	      // PIC::InterpolationRoutines::CornerBased::cStencil WeightStencil(false);
 	      PIC::InterpolationRoutines::CornerBased::InitStencil(xInit,node);
@@ -873,7 +887,7 @@ void UpdateJMassMatrix(){
 
 	      for (int iDim =0; iDim<3; iDim++){
                 for (int jj=0; jj<3; jj++){
-                  vRot[iDim]+=alpha[iDim][jj]*vInit[jj];
+                  vRot[iDim]+=alpha[3*iDim+jj]*vInit[jj];
                 }
 	      }
 
@@ -888,29 +902,39 @@ void UpdateJMassMatrix(){
                 }
 	      }
 
+              double matrixConst = chargeQ*QdT_over_2m/CellVolume;
 	      for (int iCorner=0; iCorner<8; iCorner++){
+                double tempWeightConst = matrixConst*WeightPG[iCorner];
                 for (int jCorner=0; jCorner<=iCorner; jCorner++){
-                  double tempWeightProduct = WeightPG[iCorner]*WeightPG[jCorner]*chargeQ*QdT_over_2m/CellVolume;
+                  double tempWeightProduct = WeightPG[jCorner]*tempWeightConst;
 
                   if (iCorner==jCorner){
                     double * tmpPtr = MassMatrix_GGD[iCorner][iCorner];
-                    for (int ii=0; ii<3; ii++){
-                      for (int jj=0; jj<3; jj++){
-                        double tmp = alpha[ii][jj]*tempWeightProduct;
-                        //CornerMassMatrixPtr[iCorner][3*ii+jj] += tmp;
-                        tmpPtr[3*ii+jj] +=tmp;
+                    for (int ii=0; ii<9; ii++){
+                    //for (int ii=0; ii<3; ii++){
+                    // for (int jj=0; jj<3; jj++){
+                      //double tmp = alpha[ii][jj]*tempWeightProduct;
+                      double tmp = alpha[ii]*tempWeightProduct;  
+                      //CornerMassMatrixPtr[iCorner][3*ii+jj] += tmp;
+                      tmpPtr[ii] +=tmp;
                         //printf("CornerMassMatrix:%e\n", *(CornerMassMatrixPtr[iCorner]+3*ii+jj));
-                      }
+                        //  }
+                        // }
+
                     }
                   } else {
                     double * tmpPtr =MassMatrix_GGD[iCorner][jCorner];
-                    for (int ii=0; ii<3; ii++){
-                      for (int jj=0; jj<3; jj++){
-                        double tmp = alpha[ii][jj]*tempWeightProduct;
-                        //  CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += tmp;
+                    //for (int ii=0; ii<3; ii++){
+                    // for (int jj=0; jj<3; jj++){
+                    for (int ii=0; ii<9; ii++){   
+                    //double tmp = alpha[ii][jj]*tempWeightProduct;
+                    double tmp = alpha[ii]*tempWeightProduct;   
+                    //  CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += tmp;
                         //CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += tmp;
-                        tmpPtr[3*ii+jj] +=tmp;
-                      }
+                        tmpPtr[ii] +=tmp;
+                        
+                        // }
+                        // }
                     }
                   }
 
