@@ -714,9 +714,19 @@ void UpdateJMassMatrix(){
 
 	    for (int ii=0; ii<8; ii++){
 	      for (int jj=0; jj<3; jj++){
-          Jg[ii][jj]=0.0;
+                Jg[ii][jj]=0.0;
 	      }
 	    }
+            
+            double MassMatrix_GGD[8][8][9];
+            for (int iCorner=0;iCorner<8;iCorner++){
+              for(int jCorner=0;jCorner<8;jCorner++){
+                for (int idim=0;idim<9;idim++){
+                  MassMatrix_GGD[iCorner][jCorner][idim] = 0.0;                  
+                }
+              }
+            }
+            
 	    
 	    double * CornerMassMatrixPtr[8];
 	    double * CornerJPtr[8]; 
@@ -767,8 +777,8 @@ void UpdateJMassMatrix(){
 
 	      //convert from SI to cgs
 	      for (int idim=0; idim<3; idim++){
-          B[idim] *= B_conv;
-          vInit[idim] *= length_conv;
+                B[idim] *= B_conv;
+                vInit[idim] *= length_conv;
 	      }
 
 	      double QdT_over_m,QdT_over_2m,alpha[3][3],chargeQ;
@@ -790,19 +800,19 @@ void UpdateJMassMatrix(){
 
 	      //to calculate alpha, mdv/dt = q(E+v cross B/c)
 	      for (int idim=0; idim<3; idim++){
-          B[idim] /= LightSpeed; //divided by the speed of light
-        }
+                B[idim] /= LightSpeed; //divided by the speed of light
+              }
 	      
 
 	      double BB[3][3],P[3];
 	      
 	      for (int ii=0;ii<3;ii++) {
-          P[ii]=-QdT_over_2m*B[ii];
+                P[ii]=-QdT_over_2m*B[ii];
 
-          for (int jj=0;jj<=ii;jj++) {
-            BB[ii][jj]=QdT_over_2m_squared*B[ii]*B[jj];
-            BB[jj][ii]=BB[ii][jj];
-          }
+                for (int jj=0;jj<=ii;jj++) {
+                  BB[ii][jj]=QdT_over_2m_squared*B[ii]*B[jj];
+                  BB[jj][ii]=BB[ii][jj];
+                }
 	      }
 
 	      c0=1.0/(1.0+QdT_over_2m_squared*(B[0]*B[0]+B[1]*B[1]+B[2]*B[2]));
@@ -862,46 +872,48 @@ void UpdateJMassMatrix(){
 	      double vRot[3]={0.0,0.0,0.0};
 
 	      for (int iDim =0; iDim<3; iDim++){
-          for (int jj=0; jj<3; jj++){
-            vRot[iDim]+=alpha[iDim][jj]*vInit[jj];
-          }
+                for (int jj=0; jj<3; jj++){
+                  vRot[iDim]+=alpha[iDim][jj]*vInit[jj];
+                }
 	      }
 
 	      // printf("vRot[iDim]:%e,%e,%e\n",vRot[0],vRot[1],vRot[2]);
 	      
 	      for (int iCorner=0; iCorner<8; iCorner++){
-          for (int iDim=0; iDim<3; iDim++){
-            Jg[iCorner][iDim]+=chargeQ*vRot[iDim]*WeightPG[iCorner];
+                for (int iDim=0; iDim<3; iDim++){
+                  Jg[iCorner][iDim]+=chargeQ*vRot[iDim]*WeightPG[iCorner];
 
             //  printf("Jg[iCorner][iDim]:%e\n",Jg[iCorner][iDim]);
 
-          }
+                }
 	      }
 
 	      for (int iCorner=0; iCorner<8; iCorner++){
-          for (int jCorner=0; jCorner<=iCorner; jCorner++){
-            double tempWeightProduct = WeightPG[iCorner]*WeightPG[jCorner]*chargeQ*QdT_over_2m/CellVolume;
+                for (int jCorner=0; jCorner<=iCorner; jCorner++){
+                  double tempWeightProduct = WeightPG[iCorner]*WeightPG[jCorner]*chargeQ*QdT_over_2m/CellVolume;
 
-            if (iCorner==jCorner){
-              for (int ii=0; ii<3; ii++){
-                for (int jj=0; jj<3; jj++){
-                  CornerMassMatrixPtr[iCorner][3*ii+jj] += alpha[ii][jj]*tempWeightProduct;
-                  //printf("CornerMassMatrix:%e\n", *(CornerMassMatrixPtr[iCorner]+3*ii+jj));
-                }
-              }
-            } else {
-              for (int ii=0; ii<3; ii++){
-                for (int jj=0; jj<3; jj++){
-                  double tmp = alpha[ii][jj]*tempWeightProduct;
-                  CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += tmp;
-                  CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += tmp;
+                  if (iCorner==jCorner){
+                    for (int ii=0; ii<3; ii++){
+                      for (int jj=0; jj<3; jj++){
+                        double tmp = alpha[ii][jj]*tempWeightProduct;
+                        //CornerMassMatrixPtr[iCorner][3*ii+jj] += tmp;
+                        MassMatrix_GGD[iCorner][iCorner][3*ii+jj] +=tmp;
+                        //printf("CornerMassMatrix:%e\n", *(CornerMassMatrixPtr[iCorner]+3*ii+jj));
+                      }
+                    }
+                  } else {
+                    for (int ii=0; ii<3; ii++){
+                      for (int jj=0; jj<3; jj++){
+                        double tmp = alpha[ii][jj]*tempWeightProduct;
+                        //  CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += tmp;
+                        //CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += tmp;
+                        MassMatrix_GGD[iCorner][jCorner][3*ii+jj] +=tmp;
+                      }
+                    }
+                  }
 
-                }
-              }
-            }
 
-
-          }//jCorner
+                }//jCorner
 	      }//iCorner
 	      
 	      ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);
@@ -910,13 +922,42 @@ void UpdateJMassMatrix(){
 	      if (ptrNext!=-1) {
 	        ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptrNext);
 	      } else {
-          //printf("CellVolume2:%e\n",CellVolume);
-          for (int iCorner=0; iCorner<8; iCorner++){
-            for (int ii=0; ii<3; ii++){
-               CornerJPtr[iCorner][ii] += (Jg[iCorner][ii])/CellVolume;
-            }
+                //collect current
+                for (int iCorner=0; iCorner<8; iCorner++){
+                  for (int ii=0; ii<3; ii++){
+                    CornerJPtr[iCorner][ii] += (Jg[iCorner][ii])/CellVolume;
+                  }                  
+                }
 
-          }
+                //collect massmatrix
+                for (int iCorner=0; iCorner<8; iCorner++){
+                  for (int jCorner=0; jCorner<=iCorner; jCorner++){
+                 
+                    if (iCorner==jCorner){
+                      for (int ii=0; ii<3; ii++){
+                        for (int jj=0; jj<3; jj++){
+                          
+                          CornerMassMatrixPtr[iCorner][3*ii+jj] += MassMatrix_GGD[iCorner][iCorner][3*ii+jj];
+                          // MassMatrix_GGD[iCorner][iCorner][3*ii+jj] +=tmp;
+                          //printf("CornerMassMatrix:%e\n", *(CornerMassMatrixPtr[iCorner]+3*ii+jj));
+                        }
+                      }
+                    } else {
+                    for (int ii=0; ii<3; ii++){
+                      for (int jj=0; jj<3; jj++){
+                       
+                        CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += MassMatrix_GGD[iCorner][jCorner][3*ii+jj];
+                        CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += MassMatrix_GGD[iCorner][jCorner][3*ii+jj];
+                        //MassMatrix_GGD[iCorner][jCorner][3*ii+jj] +=tmp;
+                      }
+                    }
+                  }
+
+                }//jCorner
+	      }//iCorner
+	    
+
+
 	      }
 
 	    }// while (ptrNext!=-1)
