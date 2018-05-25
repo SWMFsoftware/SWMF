@@ -893,21 +893,23 @@ void UpdateJMassMatrix(){
                   double tempWeightProduct = WeightPG[iCorner]*WeightPG[jCorner]*chargeQ*QdT_over_2m/CellVolume;
 
                   if (iCorner==jCorner){
+                    double * tmpPtr = MassMatrix_GGD[iCorner][iCorner];
                     for (int ii=0; ii<3; ii++){
                       for (int jj=0; jj<3; jj++){
                         double tmp = alpha[ii][jj]*tempWeightProduct;
                         //CornerMassMatrixPtr[iCorner][3*ii+jj] += tmp;
-                        MassMatrix_GGD[iCorner][iCorner][3*ii+jj] +=tmp;
+                        tmpPtr[3*ii+jj] +=tmp;
                         //printf("CornerMassMatrix:%e\n", *(CornerMassMatrixPtr[iCorner]+3*ii+jj));
                       }
                     }
                   } else {
+                    double * tmpPtr =MassMatrix_GGD[iCorner][jCorner];
                     for (int ii=0; ii<3; ii++){
                       for (int jj=0; jj<3; jj++){
                         double tmp = alpha[ii][jj]*tempWeightProduct;
                         //  CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += tmp;
                         //CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += tmp;
-                        MassMatrix_GGD[iCorner][jCorner][3*ii+jj] +=tmp;
+                        tmpPtr[3*ii+jj] +=tmp;
                       }
                     }
                   }
