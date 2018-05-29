@@ -1663,6 +1663,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   divECleanIter = 50;
   nIterNonLinear = 1; 
   doCleanDivE = false;
+  correctionRatio = 0.9; 
 
   useUniformPart = false; 
 
@@ -1754,6 +1755,11 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	    <<" is not recognized!"<<endl;
 	abort();
       }
+      if(divECleanType == "position_estimate_phi") correctionRatio = 0.9; 
+      if(divECleanType == "position_estimate") correctionRatio = 0.5; 
+    }
+    else if( Command == "#CORRECTIONRATIO" ){
+      read_var(param,"CorrectionRatio", &correctionRatio);
     }
     else if( Command == "#CELLCENTERDENSITY"){
       read_var(param,"DoCalcRhocDirectly",  &DoCalcRhocDirectly);

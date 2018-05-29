@@ -220,7 +220,8 @@ class Collective
     int get_nPowerWeight()const{return nPowerWeight;}
     int get_nIterNonLinear()const{return nIterNonLinear;}
     bool get_DoCalcRhocDirectly()const{return DoCalcRhocDirectly;}
-
+    double get_correctionRatio()const{return correctionRatio;}
+    
     double get_gradRhoRatio()const{return gradRhoRatio;};
     double get_cDiff()const{return cDiff;};
     double get_ratioDivC2C()const{return ratioDivC2C;};
@@ -473,6 +474,7 @@ class Collective
     double divECleanTol;
     int divECleanIter;
     int nIterNonLinear; // Non-linear iteration # for position correction.
+    double correctionRatio;
 
     // If DoCalcRhocDirectly = true, then calculate cell center density
     // from particles directly, instead of interpolating from node density.

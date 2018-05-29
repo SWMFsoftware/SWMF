@@ -2921,13 +2921,17 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
   const double invFourPI = 1./FourPI;
   double eps_D[3];
   double epsMax=0;
+
+  // Only for rough corrections.
+  double correctionRatio = col->get_correctionRatio();
   
   if(correctType == "position_estimate"){
     for(int i = 0; i<nxc; i++)
       for(int j = 0; j<nyc; j++)
 	for(int k = 0; k<nzc; k++){
+	  // rhoc(n+1) = 0.5*( rhoc(n+3/2) + rhoc(n+1/2) )
 	  phi[i][j][k] = 	    
-	    (EMf->getRHOc(i,j,k) - invFourPI*EMf->getdivEc(i,j,k))
+	    2*(EMf->getRHOc(i,j,k) - invFourPI*EMf->getdivEc(i,j,k))
 	    /EMf->getRHOcs(i,j,k,ns);
 
 	}    
@@ -3097,12 +3101,16 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
       const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));	    
 
       if(doUsePhi){
-	double coef = -1./EMf->getRHOcs(ix,iy,iz,ns)*invFourPI; 
+	double coef = -1./EMf->getRHOcs(ix,iy,iz,ns)*invFourPI*correctionRatio; 
 	eps_D[x_] = eps_GD[ix][iy][iz][x_]*inv_dx*coef; 
 	eps_D[y_] = eps_GD[ix][iy][iz][y_]*inv_dy*coef; 
 	eps_D[z_] = eps_GD[ix][iy][iz][z_]*inv_dz*coef; 
       }else{
-	double coef = -0.5;    
+	// Why 0.5?
+	// eps_GD is essential the error difference of two nearby cell centers. 
+	// If the relative error is E in cell and -E in another, eps_GD = 2E. 
+	// The displacement should be eps_D/dx = 2E/2 = eps_GD/2. 
+	double coef = -0.5*correctionRatio;    
 	eps_D[x_] = eps_GD[ix][iy][iz][x_]*coef*dx;
 	eps_D[y_] = eps_GD[ix][iy][iz][y_]*coef*dy;
 	eps_D[z_] = eps_GD[ix][iy][iz][z_]*coef*dz;       

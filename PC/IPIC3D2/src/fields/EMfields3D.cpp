@@ -3005,7 +3005,7 @@ void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
     // lap(phi) = 2*(divE - rhoc/(4pi))
     //          = 2*divE - (rhoc(n+1/2) + rhoc(n+3/2))/(4pi)
     // The correction density Delt_rhoc(n+3/2) = 4*pi*lap(phi)
-    scale(divE, 2, nxc, nyc, nzc);
+    scale(divE, 2.0, nxc, nyc, nzc);
   }
   
 
