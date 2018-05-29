@@ -15,6 +15,7 @@ module ModThreadedLC
   use ModPhysics,    ONLY: Z => AverageIonCharge
   use ModConst,         ONLY: rSun, mSun, cBoltzmann, cAtomicMass, cGravitation
   use ModGeometry,   ONLY: Xyz_DGB
+  use ModCoordTransform, ONLY: determinant, inverse_matrix
   !\
   !   Hydrostatic equilibrium in an isothermal corona:
   !    d(N_i*k_B*(Z*T_e +T_i) )/dr=G*M_sun*N_I*M_i*d(1/r)/dr
@@ -1007,11 +1008,11 @@ contains
     !/
     character(len=*), parameter:: NameSub = 'tridiag_3by3_block'
     !--------------------------------------------------------------------------
-    if (det(M_VVI(:,:,1)) == 0.0) then
+    if (determinant(M_VVI(:,:,1)) == 0.0) then
        call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
     TildeM_VV = M_VVI(:,:,1)
-    TildeMInv_VV = inverted(TildeM_VV)
+    TildeMInv_VV = inverse_matrix(TildeM_VV)
     !\
     ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     !/
@@ -1027,7 +1028,7 @@ contains
        !/
        TildeM_VV = M_VVI(:,:,j) - &
             matmul(L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j))
-       if (det(TildeM_VV) == 0.0) then
+       if (determinant(TildeM_VV) == 0.0) then
           write(*,*)'j, M_I(j), L_I(j), TildeMInvDotU_I(j) = ',j, &
                M_VVI(:,:,j),L_VVI(:,:,j),TildeMInvDotU_VVI(:,:,j)
           call stop_mpi('3*3 block Tridiag failed')
@@ -1035,7 +1036,7 @@ contains
        !\
        ! Next element of inverted(Tilde(M))
        !/
-       TildeMInv_VV = inverted(TildeM_VV)
+       TildeMInv_VV = inverse_matrix(TildeM_VV)
        !\
        ! Next 2-vector element of the vector, Inverted(tilde(M) + L).R
        ! satisfying the eq. (tilde(M) + L).W = R
@@ -1051,31 +1052,6 @@ contains
        W_VI(:,j) = W_VI(:,j)-matmul(TildeMInvDotU_VVI(:,:,j+1),W_VI(:,j+1))
     end do
   end subroutine tridiag_3by3_block
-  !============================================================================
-  real function det(A_II)
-    real, intent(in)::A_II(3,3)
-    !--------------------------------------------------------------------------
-    det = A_II(1,1)*A_II(2,2)*A_II(3,3) + A_II(1,2)*A_II(2,3)*A_II(3,1)&
-         +A_II(2,1)*A_II(3,2)*A_II(1,3) - A_II(1,3)*A_II(2,2)*A_II(3,1)&
-         -A_II(1,1)*A_II(2,3)*A_II(3,2) - A_II(3,3)*A_II(1,2)*A_II(2,1)
-  end function det
-  !============================================================================
-  function inverted(A_II)RESULT(B_II)
-    real,intent(in)::A_II(3,3)
-    real           ::B_II(3,3)
-    real           ::DetInv
-    !--------------------------------------------------------------------------
-    DetInv = 1/det(A_II)
-    B_II(1,1) = (A_II(2,2)*A_II(3,3) - A_II(3,2)*A_II(2,3))*DetInv
-    B_II(2,2) = (A_II(1,1)*A_II(3,3) - A_II(1,3)*A_II(3,1))*DetInv
-    B_II(3,3) = (A_II(1,1)*A_II(2,2) - A_II(1,2)*A_II(2,1))*DetInv
-    B_II(1,2) = (-A_II(1,2)*A_II(3,3)+ A_II(1,3)*A_II(3,2))*DetInv
-    B_II(1,3) = (A_II(1,2)*A_II(2,3) - A_II(1,3)*A_II(2,2))*DetInv
-    B_II(2,3) = (-A_II(1,1)*A_II(2,3)+ A_II(2,1)*A_II(1,3))*DetInv
-    B_II(2,1) = (-A_II(2,1)*A_II(3,3)+ A_II(3,1)*A_II(2,3))*DetInv
-    B_II(3,1) = (A_II(2,1)*A_II(3,2) - A_II(3,1)*A_II(2,2))*DetInv
-    B_II(3,2) = (-A_II(1,1)*A_II(3,2)+ A_II(1,2)*A_II(3,1))*DetInv
-  end function inverted
   !============================================================================
   subroutine solve_a_plus_minus(nI, ReflCoef_I, Xi_I, AMinusBC,&
        APlusBC, nIterIn)
