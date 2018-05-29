@@ -218,7 +218,6 @@ class Collective
     double get_divECleanTol()const{return divECleanTol;}
     int get_divECleanIter()const{return divECleanIter;}
     int get_nPowerWeight()const{return nPowerWeight;}
-    double get_correctionRatio()const{return correctionRatio;}
     int get_nIterNonLinear()const{return nIterNonLinear;}
     bool get_DoCalcRhocDirectly()const{return DoCalcRhocDirectly;}
 
@@ -470,7 +469,6 @@ class Collective
     // div(E) cleaning.
     string divECleanType;
     int nPowerWeight; // The minimized value is: sum(0.5*dx^2*q^nPowerWeight)
-    double correctionRatio; 
     bool doCleanDivE;
     double divECleanTol;
     int divECleanIter;

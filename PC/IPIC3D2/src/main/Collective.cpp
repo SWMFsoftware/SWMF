@@ -1659,7 +1659,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   // div(E) cleaning
   divECleanType = "";
   nPowerWeight = 2; 
-  correctionRatio = 1.0; 
   divECleanTol = 1e-6;
   divECleanIter = 50;
   nIterNonLinear = 1; 
@@ -1732,7 +1731,6 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
       */
       
       read_var(param,"divECleanType", &divECleanType);
-      read_var(param,"correctionRatio", &correctionRatio);
       if(divECleanType.substr(0,15) !="weight_estimate" &&
 	 divECleanType !="position_estimate"){
 	read_var(param,"nPower",&nPowerWeight);
@@ -1810,17 +1808,17 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
 	useAccurateJ = true;
 	useExplicitMover = true;
 	th = 0.5; 
+	particleTheta = th; 
 	gradRhoRatio = 0; 
       }else{
 	useAccurateJ = false;
 	useExplicitMover = false;
 	th = 1; 	
+	particleTheta = th; 
 	gradRhoRatio = 1; 
       }
     }
     else if( Command == "#DISCRETIZATION"){
-      //read_var(param, "useAccurateJ", &useAccurateJ);
-      //read_var(param, "useExplicitMover", &useExplicitMover);     
       read_var(param,"th",           &th);
       read_var(param,"gradRhoRatio", &gradRhoRatio);
       read_var(param,"cDiff", &cDiff);

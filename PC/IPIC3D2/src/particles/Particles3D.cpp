@@ -2921,9 +2921,7 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
   const double invFourPI = 1./FourPI;
   double eps_D[3];
   double epsMax=0;
-  const double correctionRatio = col->get_correctionRatio();
   
-
   if(correctType == "position_estimate"){
     for(int i = 0; i<nxc; i++)
       for(int j = 0; j<nyc; j++)
@@ -3025,7 +3023,6 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
 
     for(int iDim = 0; iDim<3; iDim++){
       eps_D[iDim] *= coef;      
-      eps_D[iDim] *= correctionRatio;      
     }
 
 
@@ -3111,9 +3108,7 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
 	eps_D[z_] = eps_GD[ix][iy][iz][z_]*coef*dz;       
       }
       
-
       for(int iDim = 0; iDim<3; iDim++){
-	eps_D[iDim] *= correctionRatio;      
 	if(fabs(eps_D[iDim]*inv_dx) > epsMax) epsMax = fabs(eps_D[iDim]*inv_dx);
       }
 

@@ -94,9 +94,9 @@ class EMfields3D                // :public Field
 		       arr3_double Ez_G,
 		       double coefCompact); 
 
-    void matvec_weight_correction(double *vecOut, double *vecIn);
+    void matvec_particle_correction(double *vecOut, double *vecIn);
     /*! Solve PHI for Poisson equation. */
-    void calculate_PHI(MATVEC FuncImage, double krylovTol=1e-6, int nIter=50, bool useFloatPHI=true, bool doCalcError=true); 
+    void calculate_PHI(MATVEC FuncImage, double krylovTol=1e-6, int nIter=50, bool useFloatPHI=true); 
     /*! Image of Poisson Solver (for SOLVER) */
     void PoissonImage(double *image, double *vector, bool doSolveForChange);
     /*! Image of Maxwell Solver (for Solver) */
@@ -166,10 +166,10 @@ class EMfields3D                // :public Field
     void sumMomentsOld(const Particles3Dcomm& pcls);
 
     /* Calculate cell center density from particles. */
-    void sum_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly);
+    void sum_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly, bool isBeforeCorrection);
     
     /* Calculate cell center density from particles or from node density. */
-    void calc_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly);
+    void calc_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly, bool isBeforeCorrection);
     
     /*! add accumulated moments to the moments for a given species */
     //void addToSpeciesMoments(const TenMoments & in, int is);
@@ -558,7 +558,10 @@ class EMfields3D                // :public Field
     array3_double divEn;
     
     /*! Charge density, defined on central points of the cell */
-    array3_double rhoc;
+    array3_double rhoc;    
+    array3_double rhocOld; // Net charge at n+1/2 for ECSIM
+    array3_double rhocNew; // Net charge at n+3/2 for ECSIM
+
     /*! Charge density, defined on nodes */
     array3_double rhon;
     /*! Implicit charge density, defined on central points of the cell */

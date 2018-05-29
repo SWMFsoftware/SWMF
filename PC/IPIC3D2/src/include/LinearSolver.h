@@ -7,7 +7,7 @@
 typedef void (*MATVEC) (double *, double *, int);
 void iPIC3D_MaxwellImage(double *vecIn, double *vecOut, int n);
 void iPIC3D_PoissonImage(double *vecIn, double *vecOut, int n);
-void iPIC3D_matvec_weight_correction(double *vecIn, double *vecOut, int n);
+void iPIC3D_matvec_particle_correction(double *vecIn, double *vecOut, int n);
 
 
 #endif

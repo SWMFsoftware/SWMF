@@ -420,7 +420,7 @@ void c_Solver::CalculateMoments(bool doCleanDivEIn) {
 	      iNonLinear++){
 	    
 	    EMf->setZeroDerivedMoments(); // move this part into calc_cell_center_density!!!!!!!  -- Yuxi
-	    EMf->calc_cell_center_density(part,false);	  
+	    EMf->calc_cell_center_density(part,false, true);	  
 	    
 	    if(divEClean == "position_estimate_phi"){
 	      EMf->calculate_PHI(iPIC3D_PoissonImage,
@@ -428,7 +428,10 @@ void c_Solver::CalculateMoments(bool doCleanDivEIn) {
 				 col->get_divECleanIter(), true);
 
 	    }else if(divEClean.find("estimate") == string::npos){
-	      EMf->calculate_PHI(iPIC3D_matvec_weight_correction,
+	      // NOT '...estimate...' ('position_estimate_phi', 'position_weight',  
+	      // 'weight_estimate') type correction. 
+
+	      EMf->calculate_PHI(iPIC3D_matvec_particle_correction,
 				 col->get_divECleanTol(),
 				 col->get_divECleanIter(), false);
 	    }
@@ -476,7 +479,7 @@ void c_Solver::CalculateMoments(bool doCleanDivEIn) {
 	EMf->ConstantChargePlanet2DPlaneXZ(col->getL_square(),col->getx_center(),col->getz_center());
   }
 
-  EMf->calc_cell_center_density(part,true); 
+  EMf->calc_cell_center_density(part,true,false); 
 
 
 #ifdef BATSRUS
@@ -1898,8 +1901,8 @@ void c_Solver::EM_PoissonImage(double *vecIn, double *vecOut, int n){
   EMf->PoissonImage(vecOut, vecIn, doSolveForChange);
 }
 
-void c_Solver::EM_matvec_weight_correction(double *vecIn, double *vecOut, int n){
-  EMf->matvec_weight_correction(vecOut, vecIn);
+void c_Solver::EM_matvec_particle_correction(double *vecIn, double *vecOut, int n){
+  EMf->matvec_particle_correction(vecOut, vecIn);
 }
 
 #endif

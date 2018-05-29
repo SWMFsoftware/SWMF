@@ -149,6 +149,8 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
   Byc  (nxc, nyc, nzc),
   Bzc  (nxc, nyc, nzc),
   rhoc (nxc, nyc, nzc),
+  rhocOld (nxc, nyc, nzc),
+  rhocNew (nxc, nyc, nzc),
   rhoh (nxc, nyc, nzc),
   divEc(nxc,nyc,nzc),
   
@@ -321,6 +323,10 @@ EMfields3D::EMfields3D(Collective * col, Grid * grid, VirtualTopology3D *vct) :
     moments13Array[i] = new Moments13(nxn,nyn,nzn);
   }
         
+
+  eqValue(0, rhocOld, nxc, nyc, nzc); // Assume net charge is zero at the beigning. 
+  eqValue(0, rhocNew, nxc, nyc, nzc); // Assume net charge is zero at the beigning. 
+
   //----Define MPI Derived Data types for Halo Exchange.   Begin------------------
   // Three Grids:
   //  1) center array (nxc*nyc*nzc)
@@ -1302,22 +1308,26 @@ void EMfields3D::sumMoments_AoS(const Particles3Dcomm* part, bool doCalcMomentsO
 
 
 void EMfields3D::calc_cell_center_density(const Particles3Dcomm* part,
-					  bool doCalcDensityOnly){
+					  bool doCalcDensityOnly,
+					  bool isBeforeCorrection){
   const Collective *col = &get_col();
   if(col->get_DoCalcRhocDirectly()){
     // Calculate cell center densities rhocs from particles
-    sum_cell_center_density(part, doCalcDensityOnly);
+    sum_cell_center_density(part, doCalcDensityOnly,isBeforeCorrection);
   }else{
     // Interpolate rhocs from rhons
     interpDensitiesN2C();	   
   }
 }
 
-void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly){
+void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCalcDensityOnly, bool isBeforeCorrection){
   /*
     Calculate cell center densities by particle interpolation. If 
     doCalcDensityOnly is false, the particle-grid coupling matrix for 
     divE correction may also need to be calculated (see doCalcMatrix).
+
+    If isBeforeCorrection == True, this method is called before particle
+    position/weight correction. 
   */
 
   const Collective *col = &get_col();
@@ -1543,11 +1553,6 @@ void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCal
 
         }// pidx
       
-
-
-      
-      
-      
       for(int i=0;i<nxc;i++)
 	for(int j=0;j<nyc;j++)
 	  for(int k=0;k<nzc;k++){
@@ -1623,14 +1628,25 @@ void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCal
 #endif
   }
 
-
-  eqValue(0,rhon,nxc,nyc,nzc);
+  eqValue(0,rhocNew,nxc,nyc,nzc);
   for (int is = 0; is < ns; is++)
     for (register int i = 0; i < nxc; i++)
       for (register int j = 0; j < nyc; j++)
         for (register int k = 0; k < nzc; k++){
-          rhoc[i][j][k] += rhocs[is][i][j][k];
+          rhocNew[i][j][k] += rhocs[is][i][j][k];
 	}
+
+  if(col->getuseAccurateJ()){
+    /*
+      rhocOld is at n+1/2, and rhocNew is at n+3/2. rhoc is at n+1, which is the
+      same time stage as electric field. 
+     */
+    scaleandsum(rhoc, 0.5, 0.5, rhocOld, rhocNew, nxc, nyc, nzc);
+    if(!isBeforeCorrection) eq(rhocOld, rhocNew, nxc,nyc, nzc);
+  }else{
+    // rhocNew is already at n+1 stage. 
+    eq(rhoc, rhocNew, nxc,nyc, nzc);
+  }
 
 }
 
@@ -2952,7 +2968,7 @@ void EMfields3D::calculateE(int cycle)
 
 //------------------------------------------------------
 void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
-			       int nIter, bool useFloatPHI, bool doCalcError){
+			       int nIter, bool useFloatPHI){
   /*
     Input:
     1) FuncImage: the function to calculate A*x for linear solver. 
@@ -2979,15 +2995,21 @@ void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
   eqValue(0.0, xkrylovPoisson, nSolveCell);
   eqValue(0.0, PHI, nxc, nyc, nzc);
   
-  if(doCalcError){
-    grid->divN2C(divE, Ex, Ey, Ez);
-  }
-
   scale(tempC, rhoc, -FourPI, nxc, nyc, nzc);
+
+  grid->divN2C(divE, Ex, Ey, Ez);
   
   sum(divE, tempC, nxc, nyc, nzc);
-  // move to krylov space
 
+  if(col->getuseAccurateJ()){
+    // lap(phi) = 2*(divE - rhoc/(4pi))
+    //          = 2*divE - (rhoc(n+1/2) + rhoc(n+3/2))/(4pi)
+    // The correction density Delt_rhoc(n+3/2) = 4*pi*lap(phi)
+    scale(divE, 2, nxc, nyc, nzc);
+  }
+  
+
+  // move to krylov space
   phys2solver(bkrylovPoisson, divE, icMinSolve,icMaxSolve,
 	      jcMinSolve,jcMaxSolve,kcMinSolve,kcMaxSolve);
   if (vct->getCartesian_rank() == 0) cout << "*** DIVERGENCE CLEANING ***" << endl;
@@ -3058,7 +3080,7 @@ void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
 }
 
 
-void EMfields3D::matvec_weight_correction(double *image, double *vector){
+void EMfields3D::matvec_particle_correction(double *image, double *vector){
 
   const VirtualTopology3D *vct = &get_vct();
   const Grid *grid = &get_grid();
@@ -3306,7 +3328,6 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   scale(imageZ, -delt * delt - cDiff, nxn, nyn, nzn);
   //------------------------------------------------
 
-
   // delt*delt*(1-gradRhoRatio)*grad(div(E))--------- (2)  
   double coefDiffusion = get_col().get_ratioDivC2C();
   calc_gradDivE(tempX, tempY, tempZ, vectX, vectY, vectZ, coefDiffusion);
@@ -3327,9 +3348,15 @@ void EMfields3D::MaxwellImage(double *im, double* vector, bool doSolveForChange)
   grid->divN2C(divC, Dx, Dy, Dz);  
   communicateCenterBC(nxc, nyc, nzc, divC, 2, 2, 2, 2, 2, 2, vct, this);
   grid->gradC2N(tempX, tempY, tempZ, divC);
-  scale(tempX, -delt*delt*gradRhoRatio, nxn, nyn, nzn);
-  scale(tempY, -delt*delt*gradRhoRatio, nxn, nyn, nzn);
-  scale(tempZ, -delt*delt*gradRhoRatio, nxn, nyn, nzn);
+  if(col->getuseAccurateJ()){
+    // Use rhoc(n+1/2) as rhoh, so coef = 0. 
+    coef = 0; 
+  }else{
+    coef = -delt*delt*gradRhoRatio;
+  }
+  scale(tempX, coef, nxn, nyn, nzn);
+  scale(tempY, coef, nxn, nyn, nzn);
+  scale(tempZ, coef, nxn, nyn, nzn);
   sum(imageX, tempX, nxn, nyn, nzn);
   sum(imageY, tempY, nxn, nyn, nzn);
   sum(imageZ, tempZ, nxn, nyn, nzn);
@@ -4452,11 +4479,19 @@ void EMfields3D::calculateHatFunctions()
   smooth(Jyh, 1);
   smooth(Jzh, 1);
 
-  // calculate rho hat = rho - (dt*theta)div(jhat)
-  grid->divN2C(tempXC, Jxh, Jyh, Jzh);
-  scale(tempXC, -dt * th, nxc, nyc, nzc);
-  sum(tempXC, rhoc, nxc, nyc, nzc);
-  eq(rhoh, tempXC, nxc, nyc, nzc);
+
+  if(!col->getuseAccurateJ()){
+    // calculate rho hat = rho - (dt*theta)div(jhat)
+    grid->divN2C(tempXC, Jxh, Jyh, Jzh);
+    scale(tempXC, -dt * th, nxc, nyc, nzc);
+    sum(tempXC, rhoc, nxc, nyc, nzc);
+    eq(rhoh, tempXC, nxc, nyc, nzc);
+  }else{
+    // use rhoc(n+1/2) as rhoh
+    eq(rhoh, rhoc, nxc, nyc, nzc);
+  }
+
+
 
   // communicate rhoh
   communicateCenterBC_P(nxc, nyc, nzc, rhoh, 2, 2, 2, 2, 2, 2, vct, this);

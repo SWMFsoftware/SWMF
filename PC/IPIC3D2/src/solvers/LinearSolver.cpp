@@ -14,8 +14,8 @@ void iPIC3D_PoissonImage(double *vecIn, double *vecOut, int n){
   SimRun[iIPIC]->EM_PoissonImage(vecIn, vecOut, n);
 }
 
-void iPIC3D_matvec_weight_correction(double *vecIn, double *vecOut, int n){
-  SimRun[iIPIC]->EM_matvec_weight_correction(vecIn, vecOut, n);
+void iPIC3D_matvec_particle_correction(double *vecIn, double *vecOut, int n){
+  SimRun[iIPIC]->EM_matvec_particle_correction(vecIn, vecOut, n);
 }
 
 #endif
