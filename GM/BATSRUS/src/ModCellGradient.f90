@@ -590,64 +590,212 @@ contains
   end subroutine calc_gradient_ghost
   !============================================================================
 
-  subroutine calc_cell_curl_ghost(iBlock, Var_DG, nG, curl_DG, UseBodyCellIn)
+!  subroutine calc_cell_curl_ghost(iBlock, Var_DG, nG, curl_DG, UseBodyCellIn)
+!
+!    ! Calculate curl of Var_DG and return it in Curl_DG
+!    ! Physical cells and 1 layer of ghost cells are calculated (nG>=2)
+!    ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
+!    ! Calculate curl of Var_DG on a Cartesian grid. 
+!    ! Need to include general coordinates calculation in the future.
+!
+!    use ModGeometry, ONLY: body_blk, true_cell
+!    !hyzhou test
+!    use ModAdvance,  ONLY: State_VGB, Bx_, By_, Bz_
+!
+!
+!    integer, intent(in):: iBlock
+!    real, intent(in) :: Var_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+!    integer, intent(in):: nG ! number of ghost cells in curl_DG
+!    real, intent(inout):: &  
+!         curl_DG(3,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_)
+!    logical, intent(in), optional:: UseBodyCellIn
+!
+!    logical:: UseBodyCell
+!
+!    real:: InvDxHalf, InvDyHalf, InvDzHalf
+!    integer :: i, j, k
+!
+!    logical:: DoTest
+!    character(len=*), parameter:: NameSub = 'calc_cell_curl'
+!    !--------------------------------------------------------------------------
+!    call test_start(NameSub, DoTest, iBlock)
+!    UseBodyCell = .false.
+!    if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
+!
+!    if(UseBodyCell .or. .not. body_blk(iBlock)) then
+!       if(IsCartesian)then
+!
+!          ! For test comparison with get_current
+!          !Var_DG = State_VGB(Bx_:Bz_,:,:,:,iBlock)
+!
+!          ! Simple central differencing
+!          
+!          InvDxHalf = 0.5/CellSize_DB(1,iBlock)
+!          InvDyHalf = 0.5/CellSize_DB(2,iBlock)
+!          InvDzHalf = 0.5/CellSize_DB(3,iBlock)
+!
+!          ! Calculate curl for 1 layer of ghost cells
+!          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
+!             curl_DG(x_,i,j,k) = &
+!                  InvDyHalf*( Var_DG(z_,i,j+1,k) - Var_DG(z_,i,j-1,k) ) - &
+!                  InvDzHalf*( Var_DG(y_,i,j,k+1) - Var_DG(y_,i,j,k-1) )
+!             
+!             curl_DG(y_,i,j,k) = &
+!                  InvDzHalf*( Var_DG(x_,i,j,k+1) - Var_DG(x_,i,j,k-1) ) - &
+!                  InvDxHalf*( Var_DG(z_,i+1,j,k) - Var_DG(z_,i-1,j,k) )
+!             
+!             curl_DG(z_,i,j,k) = &
+!                  InvDxHalf*( Var_DG(y_,i+1,j,k) - Var_DG(y_,i-1,j,k) ) - &
+!                  InvDyHalf*( Var_DG(x_,i,j+1,k) - Var_DG(x_,i,j-1,k) )
+!          end do; end do; end do  
+!       else
+!          ! Need to be implemented for general coordinates
+!       end if
+!    end if
+!
+!    call test_stop(NameSub, DoTest, iBlock)    
+!  end subroutine calc_cell_curl_ghost
+  !============================================================================
 
-    ! Calculate curl of Var_DG and return it in Curl_DG
-    ! Physical cells and 1 layer of ghost cells are calculated (nG>=2)
-    ! Body (false) cells are ignored unless UseBodyCellIn is set to true.
-    ! Calculate curl of Var_DG on a Cartesian grid. 
-    ! Need to include general coordinates calculation in the future.
+  ! idea copy from get_current
+  subroutine calc_cell_curl_ghost(i,j,k,iBlock,Vector_DG,Curl_D)
 
-    use ModGeometry, ONLY: body_blk, true_cell
-
-    integer, intent(in):: iBlock
-    real, intent(in) :: Var_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
-    integer, intent(in):: nG ! number of ghost cells in curl_DG
-    real, intent(inout):: &  
-         curl_DG(3,1-nG:nI+nG,1-nG*jDim_:nJ+nG*jDim_,1-nG*kDim_:nK+nG*kDim_)
-    logical, intent(in), optional:: UseBodyCellIn
-
-    logical:: UseBodyCell
-
-    real:: InvDxHalf, InvDyHalf, InvDzHalf
-    integer :: i, j, k
-
-    logical:: DoTest
-    character(len=*), parameter:: NameSub = 'calc_cell_curl'
-    !--------------------------------------------------------------------------
-    call test_start(NameSub, DoTest, iBlock)
-    UseBodyCell = .false.
-    if(present(UseBodyCellIn)) UseBodyCell = UseBodyCellIn
-
-    if(UseBodyCell .or. .not. body_blk(iBlock)) then
-       if(IsCartesian)then
-
-          ! Simple central differencing
-          
-          InvDxHalf = 0.5/CellSize_DB(1,iBlock)
-          InvDyHalf = 0.5/CellSize_DB(2,iBlock)
-          InvDzHalf = 0.5/CellSize_DB(3,iBlock)
-
-          ! Calculate curl for 1 layer of ghost cells
-          do k=0,nK+1; do j=0,nJ+1; do i=0,nI+1
-             curl_DG(x_,i,j,k) = &
-                  InvDyHalf*( Var_DG(z_,i,j+1,k) - Var_DG(z_,i,j-1,k) ) - &
-                  InvDzHalf*( Var_DG(y_,i,j,k+1) - Var_DG(y_,i,j,k-1) )
-             
-             curl_DG(y_,i,j,k) = &
-                  InvDzHalf*( Var_DG(x_,i,j,k+1) - Var_DG(x_,i,j,k-1) ) - &
-                  InvDxHalf*( Var_DG(z_,i+1,j,k) - Var_DG(z_,i-1,j,k) )
-             
-             curl_DG(z_,i,j,k) = &
-                  InvDxHalf*( Var_DG(y_,i+1,j,k) - Var_DG(y_,i-1,j,k) ) - &
-                  InvDyHalf*( Var_DG(x_,i,j+1,k) - Var_DG(x_,i,j-1,k) )
-          end do; end do; end do  
-       else
-          ! Need to be implemented for general coordinates
-       end if
-    end if
+    use BATL_lib, ONLY: IsCartesianGrid, IsRzGeometry, Xyz_DGB, CellSize_DB
+    use ModParallel, ONLY: neiLeast, neiLwest, neiLsouth, &
+         neiLnorth, neiLtop, neiLbot
+    use ModSize,     ONLY: nI, nJ, nK, x_, y_, z_
+    use ModGeometry, ONLY: True_Cell, true_BLK
     
-    call test_stop(NameSub, DoTest, iBlock)    
+    integer, intent(in) :: i, j, k, iBlock
+    real,    intent(in) :: Vector_DG(3,MinI:MaxI,MinJ:MaxJ,MinK:MaxK)
+    real,    intent(out):: Curl_D(3)
+    
+    integer:: iL, iR, jL, jR, kL, kR
+    real   :: Ax, Bx, Cx, Ay, By, Cy, Az, Bz, Cz
+    real   :: InvDx2, InvDy2, InvDz2
+    !--------------------------------------------------------------------------
+!    if(.not.True_Cell(i,j,k,iBlock))then
+!       Curl_D = 0.0
+!       RETURN
+!    endif
+
+    InvDx2 = 0.5/CellSize_DB(x_,iBlock)
+    InvDy2 = 0.5/CellSize_DB(y_,iBlock)
+    InvDz2 = 0.5/CellSize_DB(z_,iBlock)
+
+    ! Central difference
+    iR = i+1; iL = i-1;
+    Ax = -InvDx2; Bx = 0.0; Cx = +InvDx2
+
+    jR = j+1; jL = j-1;
+    Ay = -InvDy2; By = 0.0; Cy = +InvDy2
+
+    kR = k+1; kL = k-1
+    Az = -InvDz2; Bz = 0.0; Cz = +InvDz2
+
+
+    if(IsCartesianGrid)then
+       call calc_cartesian_curl
+    else
+       call calc_gencoord_curl
+    end if
+
+  contains
+    !==========================================================================
+    subroutine calc_cartesian_curl
+
+      !------------------------------------------------------------------------
+      Curl_D(x_) = &
+           + Ay*Vector_DG(z_,i,jL,k ) &
+           + By*Vector_DG(z_,i,j ,k ) &
+           + Cy*Vector_DG(z_,i,jR,k ) &
+           - Az*Vector_DG(y_,i,j ,kL) &
+           - Bz*Vector_DG(y_,i,j ,k ) &
+           - Cz*Vector_DG(y_,i,j ,kR)
+
+      Curl_D(y_) = &
+           + Az*Vector_DG(x_,i ,j,kL) &
+           + Bz*Vector_DG(x_,i ,j,k ) &
+           + Cz*Vector_DG(x_,i ,j,kR) &
+           - Ax*Vector_DG(z_,iL,j,k ) &
+           - Bx*Vector_DG(z_,i ,j,k ) &
+           - Cx*Vector_DG(z_,iR,j,k )
+
+      Curl_D(z_) = &
+           + Ax*Vector_DG(y_,iL,j ,k) &
+           + Bx*Vector_DG(y_,i ,j ,k) &
+           + Cx*Vector_DG(y_,iR,j ,k) &
+           - Ay*Vector_DG(x_,i ,jL,k) &
+           - By*Vector_DG(x_,i ,j ,k) &
+           - Cy*Vector_DG(x_,i ,jR,k)
+
+      ! Correct curl for rz-geometry: Curl(z) = Curl(z) + Bphi/radius
+      if(IsRzGeometry) Curl_D(x_) = Curl_D(x_) &
+           + Vector_DG(z_,i,j,k)/Xyz_DGB(y_,i,j,k,iBlock)
+
+    end subroutine calc_cartesian_curl
+    !==========================================================================
+
+    subroutine calc_gencoord_curl
+
+      use ModCoordTransform, ONLY: inverse_matrix
+
+      real :: DxyzDcoord_DD(3,3), DcoordDxyz_DD(3,3), DbDcoord_DD(3,3)
+
+      ! Get the dCartesian/dGencoord matrix with central difference
+      !------------------------------------------------------------------------
+      DxyzDcoord_DD(:,1) = InvDx2 &
+           *(Xyz_DGB(:,i+1,j,k,iBlock) - Xyz_DGB(:,i-1,j,k,iBlock))
+
+      DxyzDcoord_DD(:,2) = InvDy2 &
+           *(Xyz_DGB(:,i,j+1,k,iBlock) - Xyz_DGB(:,i,j-1,k,iBlock))
+
+      if(nK > 1)then
+         DxyzDcoord_DD(:,3) = InvDz2 &
+              *(Xyz_DGB(:,i,j,k+1,iBlock) - Xyz_DGB(:,i,j,k-1,iBlock))
+      else
+         DxyzDcoord_DD(:,3) = (/ 0., 0., 1./)
+      end if
+
+      DcoordDxyz_DD = inverse_matrix(DxyzDcoord_DD, DoIgnoreSingular=.true.)
+
+      ! Calculate the partial derivatives dB/dGencoord
+      DbDcoord_DD(:,1) = &
+           + Ax*Vector_DG(x_:z_,iL,j,k) &
+           + Bx*Vector_DG(x_:z_,i ,j,k) &
+           + Cx*Vector_DG(x_:z_,iR,j,k)
+
+      DbDcoord_DD(:,2) = &
+           + Ay*Vector_DG(x_:z_,i,jL,k) &
+           + By*Vector_DG(x_:z_,i,j ,k) &
+           + Cy*Vector_DG(x_:z_,i,jR,k)
+
+      if(nK > 1)then
+         DbDcoord_DD(:,3) = &
+              + Az*Vector_DG(x_:z_,i,j,kL) &
+              + Bz*Vector_DG(x_:z_,i,j,k ) &
+              + Cz*Vector_DG(x_:z_,i,j,kR)
+      else
+         DbDcoord_DD(:,3) = 0.0
+      end if
+
+      ! curl_x = Dbz/Dy - Dby/Dz = Dbz/Dcoord.Dcoord/Dy - DBy/Dcoord.Dccord/dz
+      Curl_D(x_) = &
+           + sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,y_)) &
+           - sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,z_))
+
+      ! curl_y = Dbx/Dz - Dbz/Dx
+      Curl_D(y_) = &
+           + sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,z_)) &
+           - sum(DbDcoord_DD(z_,:)*DcoordDxyz_DD(:,x_))
+
+      ! curl_z = Dby/Dx - Dbx/Dy
+      Curl_D(z_) = &
+           + sum(DbDcoord_DD(y_,:)*DcoordDxyz_DD(:,x_)) &
+           - sum(DbDcoord_DD(x_,:)*DcoordDxyz_DD(:,y_))
+
+    end subroutine calc_gencoord_curl
+    !==========================================================================
   end subroutine calc_cell_curl_ghost
   !============================================================================
   
