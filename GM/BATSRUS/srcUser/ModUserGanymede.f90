@@ -7,6 +7,8 @@ module ModUser
        test_start, test_stop, iTest, jTest, kTest, iBlockTest
   ! User module for Ganymede.
   ! Must compile with MHDHypPe equation set.
+  ! Version 2.1 can work with both Cartesian and spherical grid.
+  ! Choose BCs accordingly.
   use ModUserEmpty,                          &
        IMPLEMENTED1 => user_init_session,    &
        IMPLEMENTED2 => user_set_ics,         &
@@ -17,12 +19,12 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  real,              parameter :: VersionUserModule = 2.0
+  real,              parameter :: VersionUserModule = 2.1
   character (len=*), parameter :: NameUserModule = 'Ganymede, Hongyang Zhou'
 
   real :: PlanetRadius=-1.
   real :: PlanetRadiusSi=-1.
-  character (len=10) :: InitType = 'Boverlap'
+  character (len=10) :: InitType = 'B1U1'
 
   integer :: iLayer
   integer :: nLayer =0 ! Number of points in planet resistivity profile
@@ -51,12 +53,12 @@ contains
 
     if(iProc==0)then
        select case(TypeGeometry)
-       case('spherical_lnr')
-          write(*,*) 'Using stretched spherical grid...'
-       case('cartesian')
+       case('spherical_lnr','spherical')
+          write(*,*) 'Using spherical grid...'
+       case('cartesian','rotatedcartesian')
           write(*,*) 'Using Cartesian grid...'
        case default
-          call stop_mpi('ERROR: need stretched spherical/ Cartesian grid!')
+          call stop_mpi('ERROR: need spherical/ Cartesian grid!')
        end select
     end if
 
@@ -89,7 +91,7 @@ contains
                   ResistivitySi_I(iLayer)
           end do
        else
-          write(*,*) 'Conducting Planet (eta =0)'
+          write(*,*) 'Conducting Planet (eta = 0)'
        end if
        write(*,*) ''
        write(*,*) ''
@@ -113,13 +115,16 @@ contains
        if(.not.read_command(NameCommand)) CYCLE
        select case(NameCommand)
 
+       case('#INITTYPE')
+          call read_var('InitType', InitType)
+
        case("#RESISTIVEPLANET")
           UseResistivePlanet = .true.
-          call read_var('PlanetRadius'        , PlanetRadius)
-          call read_var('InitType', InitType)
+          call read_var('PlanetRadius'   , PlanetRadius)
           call read_var('nResistivPoints', nLayer)
           if(nLayer == 1) then
-             write(*,*) ' We need minimum 2 points for including resistivity profile'
+             write(*,*) ' We need minimum 2 points for including resistivity &
+                  &profile'
              call stop_mpi('ERROR: Correct PARAM.in or user_read_inputs!')
           end if
 
@@ -171,91 +176,190 @@ contains
     use ModVarIndexes, ONLY: Bx_, Bz_, Rho_, P_, Pe_
     use ModMultiFluid, ONLY: select_fluid, iFluid, nFluid, iP, &
          iRho, iRhoUx, iRhoUz
-    use ModMain,       ONLY: UseSolidState, Coord1MaxBc_, xMinBc_, solidBc_
+    use ModMain,       ONLY: UseSolidState,Coord1MinBc_,Coord1MaxBc_,solidBc_
     use ModPhysics,    ONLY: FaceState_VI, CellState_VI
+    use BATL_lib,      ONLY: IsCartesian
 
     integer, intent(in) :: iBlock
 
     integer :: i,j,k
+    integer :: Bc_
     logical:: DoTest
     character(len=*), parameter:: NameSub = 'user_set_ics'
     !--------------------------------------------------------------------------
     call test_start(NameSub, DoTest, iBlock)
 
+    if(IsCartesian)then
+       Bc_ = Coord1MinBc_
+    else
+       Bc_ = Coord1MaxBc_
+    end if
+
     select case(InitType)
-       case('Boverlap')
-          ! Initialize mantle region 
-          if(Rmin_BLK(iBlock) <= PlanetRadius) then
-             do iFluid = 1, nFluid
-                call select_fluid
-                do k=1,nK; do j=1,nJ; do i=1,nI
-                   if(R_BLK(i,j,k,iBlock) > PlanetRadius) CYCLE
-                   State_VGB(iRho,i,j,k,iBlock) = FaceState_VI(Rho_,solidBc_)
-                   State_VGB(iP,i,j,k,iBlock)   = FaceState_VI(P_,solidBc_)
-                   State_VGB(Pe_,i,j,k,iBlock)  = FaceState_VI(Pe_,solidBc_)
-                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
-                end do; end do; end do
-             end do
-          end if
-             
-          ! Magnetic field inside the mantle is dipole
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             if(R_BLK(i,j,k,iBlock) > PlanetRadius)then
-                State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
-                     CellState_VI(Bx_:Bz_,xMinBc_)
-             else
-                State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-             end if
-          end do; end do; end do
-       
-          ! Smooth init for velocity
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             do iFluid=1,nFluid
-                call select_fluid
-                if(R_BLK(i,j,k,iBlock) < 2.5*PlanetRadius)then
-                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
-                elseif(R_BLK(i,j,k,iBlock) < 5.0*PlanetRadius)then
-                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                        CellState_VI(iRhoUx:iRhoUz,xMinBc_) *&
-                        (R_BLK(i,j,k,iBlock)/2.5 - 1)
-                else
-                   State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
-                        CellState_VI(iRhoUx:iRhoUz,xMinBc_)
-                end if
-             end do
-          end do; end do; end do
-
-          ! Uniform density
-          State_VGB(Rho_,:,:,:,iBlock) = CellState_VI(Rho_,xMinBc_)
-          ! Uniform pressure
-          State_VGB(p_,:,:,:,iBlock) = CellState_VI(p_,xMinBc_)
-          State_VGB(pe_,:,:,:,iBlock) = CellState_VI(pe_,xMinBc_)
-
-       case('Bzero')
-          ! Magnetic field starts from dipole
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
-          end do; end do; end do
-
-          do k=1,nK; do j=1,nJ; do i=1,nI
-             do iFluid=1,nFluid
-                call select_fluid
-                ! Velocity starts from zeros 
+    case('B!U!')
+       ! Initialize mantle region
+       if(Rmin_BLK(iBlock) <= PlanetRadius) then
+          do iFluid = 1, nFluid
+             call select_fluid
+             do k=1,nK; do j=1,nJ; do i=1,nI
+                if(R_BLK(i,j,k,iBlock) > PlanetRadius) CYCLE
+                State_VGB(iRho,i,j,k,iBlock) = FaceState_VI(Rho_,solidBc_)
+                State_VGB(iP,i,j,k,iBlock)   = FaceState_VI(P_,solidBc_)
+                State_VGB(Pe_,i,j,k,iBlock)  = FaceState_VI(Pe_,solidBc_)
                 State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
-                ! Uniform density
-                State_VGB(iRho,i,j,k,iBlock) = CellState_VI(rho_,xMinBc_)
-                ! Uniform pressure
-                State_VGB(P_,i,j,k,iBlock) = CellState_VI(P_,xMinBc_)
-                State_VGB(Pe_,i,j,k,iBlock) = CellState_VI(Pe_,xMinBc_)
-             end do
-          end do; end do; end do
+             end do; end do; end do
+          end do
+       end if
 
-       case default
-          call stop_MPI('ERROR: unknown initialization type!')
+       ! Magnetic field inside the mantle is dipole
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if(R_BLK(i,j,k,iBlock) > PlanetRadius)then
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  CellState_VI(Bx_:Bz_,Bc_)
+          else
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+          end if
+       end do; end do; end do
+
+       ! Init for velocity
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          do iFluid=1,nFluid
+             call select_fluid
+             if(R_BLK(i,j,k,iBlock) < PlanetRadius)then
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+             else
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                     CellState_VI(iRhoUx:iRhoUz,Bc_)
+             end if
+          end do
+       end do; end do; end do
+
+       ! Uniform density         
+       State_VGB(Rho_,:,:,:,iBlock) = CellState_VI(Rho_,Bc_)
+       ! Uniform pressure                      
+       State_VGB(p_ ,:,:,:,iBlock)  = CellState_VI(p_,Bc_)
+       State_VGB(pe_,:,:,:,iBlock)  = CellState_VI(pe_,Bc_)
+
+    case('B1U01')
+       ! Initialize mantle region 
+       if(Rmin_BLK(iBlock) <= PlanetRadius) then
+          do iFluid = 1, nFluid
+             call select_fluid
+             do k=1,nK; do j=1,nJ; do i=1,nI
+                if(R_BLK(i,j,k,iBlock) > PlanetRadius) CYCLE
+                State_VGB(iRho,i,j,k,iBlock) = FaceState_VI(Rho_,solidBc_)
+                State_VGB(iP,i,j,k,iBlock)   = FaceState_VI(P_,solidBc_)
+                State_VGB(Pe_,i,j,k,iBlock)  = FaceState_VI(Pe_,solidBc_)
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+             end do; end do; end do
+          end do
+       end if
+             
+       ! Magnetic field inside the mantle is dipole
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          if(R_BLK(i,j,k,iBlock) > PlanetRadius)then
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = &
+                  CellState_VI(Bx_:Bz_,Bc_)
+          else
+             State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+          end if
+       end do; end do; end do
+       
+       ! Smooth init for velocity
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          do iFluid=1,nFluid
+             call select_fluid
+             if(R_BLK(i,j,k,iBlock) < 2.5*PlanetRadius)then
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+             elseif(R_BLK(i,j,k,iBlock) < 5.0*PlanetRadius)then
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                     CellState_VI(iRhoUx:iRhoUz,Bc_) *&
+                     (R_BLK(i,j,k,iBlock)/2.5 - 1)
+             else
+                State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = &
+                     CellState_VI(iRhoUx:iRhoUz,Bc_)
+             end if
+          end do
+       end do; end do; end do
+       
+       ! Uniform density
+       State_VGB(Rho_,:,:,:,iBlock) = CellState_VI(Rho_,Bc_)
+       ! Uniform pressure
+       State_VGB(p_ ,:,:,:,iBlock)  = CellState_VI(p_,Bc_)
+       State_VGB(pe_,:,:,:,iBlock)  = CellState_VI(pe_,Bc_)
+
+    case('B0U0') ! Upstream propagation 
+       ! Magnetic field starts from dipole
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          State_VGB(Bx_:Bz_,i,j,k,iBlock) = 0.0
+       end do; end do; end do
+       
+       do k=1,nK; do j=1,nJ; do i=1,nI
+          do iFluid=1,nFluid
+             call select_fluid
+             ! Velocity starts from zeros 
+             State_VGB(iRhoUx:iRhoUz,i,j,k,iBlock) = 0.0
+             ! Uniform density
+             State_VGB(iRho,i,j,k,iBlock) = CellState_VI(rho_,Bc_)
+             ! Uniform pressure
+             State_VGB(P_,i,j,k,iBlock) = CellState_VI(P_,Bc_)
+             State_VGB(Pe_,i,j,k,iBlock) = CellState_VI(Pe_,Bc_)
+          end do
+       end do; end do; end do
+       
+    case default
+       call stop_MPI('ERROR: unknown initialization type!')
     end select
 
     call test_stop(NameSub, DoTest, iBlock)
   end subroutine user_set_ics
+  !============================================================================
+
+  subroutine user_set_cell_boundary(iBlock, iSide, TypeBc, IsFound)
+
+    use ModAdvance,      ONLY: State_VGB
+    use ModCellBoundary, ONLY: iMin, iMax, jMin, jMax, kMin, kMax
+    use BATL_lib,        ONLY: Xyz_DGB
+    use ModPhysics,      ONLY: CellState_VI
+    use ModSize,         ONLY: nI
+
+    integer,          intent(in)  :: iBlock, iSide
+    character(len=*), intent(in)  :: TypeBc
+    logical,          intent(out) :: IsFound
+
+    integer :: i,j,k
+
+    logical:: DoTest
+    character(len=*), parameter:: NameSub = 'user_set_cell_boundary'
+    !--------------------------------------------------------------
+    call test_start(NameSub, DoTest, iBlock)    
+
+    ! This is only used for spherical grid with no outer face BC applied.
+    ! If outer face BC is used, set the second parameter in command
+    ! #OUTERBOUNDARY to none to avoid calling this function.
+
+    ! Outer boundary condition                                             
+    if(iSide == 2)then
+       do k=kMin,kMax; do j=jMin,jMax; do i=iMin,iMax
+          if(Xyz_DGB(1,i,j,k,iBlock) < 0)then
+             ! Upstream fixed                            
+             State_VGB(:,i,j,k,iBlock) = CellState_VI(:,iSide)
+          else
+             ! Downstream float                                       
+             State_VGB(:,i,j,k,iBlock) = State_VGB(:,nI,j,k,iBlock)
+          end if
+       end do; end do; end do
+
+       IsFound = .true.
+       RETURN
+    end if
+    
+    ! What is this actually?
+    call calc_energy_cell(iBlock)
+    
+    call test_stop(NameSub, DoTest, iBlock)
+  end subroutine user_set_cell_boundary
+
   !============================================================================
 
   subroutine user_set_face_boundary(VarsGhostFace_V)
@@ -276,33 +380,39 @@ contains
     character(len=*), parameter:: NameSub = 'user_set_face_boundary'
     !--------------------------------------------------------------------------
 
-    ! Float density and pressure
+    ! Copy everything from physical face to ghost face
+    ! rho, u, b, p, hyp
     VarsGhostFace_V = VarsTrueFace_V    
 
     !if(UseHyperbolicDivb) &
     !     VarsGhostFace_V(Hyp_) = 0
 
-    ! get ghost cell indexes from face indexes
-    i = iFace; j = jFace; k = kFace;
-    select case(iSide)
-    case(1)
-       i = iFace - 1
-    case(3)
-       j = jFace - 1
-    case(5)
-       k = kFace - 1
-    end select
+    ! For 1st order floating BC of magnetic field, the true face value is 
+    ! the same as the first layer of physical cell center values.
+    ! For 2nd order floating BC of magnetic field, extrapolation is needed,
+    ! which requires two layers of physical cells' center values.
+
+    ! Get ghost cell indexes from face indexes
+    !i = iFace; j = jFace; k = kFace;
+    !select case(iSide)
+    !case(1)
+    !   i = iFace - 1
+    !case(3)
+    !   j = jFace - 1
+    !case(5)
+    !   k = kFace - 1
+    !end select
 
     ! copy the internal cell center value to the face
-    VarsGhostFace_V(Bx_:Bz_) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
+    !VarsGhostFace_V(Bx_:Bz_) = State_VGB(Bx_:Bz_,iFace,j,k,iBlock)
+
+    ! Float for B
+    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
     
-    ! fixed rho and p
+    ! Fixed rho and p
     VarsGhostFace_V(rho_) = FaceState_VI(rho_,iBoundary)
     VarsGhostFace_V(p_)   = FaceState_VI(p_,iBoundary)
     VarsGhostFace_V(pe_)  = FaceState_VI(pe_,iBoundary)
-
-    ! float for B
-    !VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
 
     ! First use B0Face_D + VarsTrueFace_V
     ! then try B0Face_D + State_VGB(Bx_:Bz_,iGhost,jGhost,kGhost,iBlock)
@@ -332,14 +442,14 @@ contains
     call test_start(NameSub, DoTest, iBlock)
     Eta_G = Eta0
 
-    if(nLayer <2 ) RETURN
+    if(nLayer < 2) RETURN
     if(Rmin_BLK(iBlock) > PlanetRadius_I(1)) RETURN
 
     do k=MinK,MaxK; do j=MinJ,MaxJ; do i=MinI,MaxI
        do iLayer=nLayer-1,1,-1
           if(R_BLK(i,j,k,iBlock) < PlanetRadius_I(iLayer+1) ) CYCLE
           if(R_BLK(i,j,k,iBlock) > PlanetRadius_I(iLayer) ) CYCLE
-          ! to avoid eta jumps adding Eta_G
+          ! Avoid eta jumps adding Eta_G
           Eta_G(i,j,k) = Eta_G(i,j,k) + Resistivity_I(iLayer+1)+&
                (R_BLK(i,j,k,iBlock)-PlanetRadius_I(iLayer+1))* &
                ResistivityRate(iLayer)
@@ -350,15 +460,15 @@ contains
   end subroutine user_set_resistivity
   !============================================================================
 
-  subroutine user_set_cell_boundary(iBlock, iSide, TypeBC, IsFound)
-
-    integer,          intent(in)  :: iBlock, iSide
-    character(len=*), intent(in)  :: TypeBc
-    logical,          intent(out) :: IsFound
-    !--------------------------------------------------------------------------
-    return
-
-  end subroutine user_set_cell_boundary
+!  subroutine user_set_cell_boundary(iBlock, iSide, TypeBC, IsFound)
+!
+!    integer,          intent(in)  :: iBlock, iSide
+!    character(len=*), intent(in)  :: TypeBc
+!    logical,          intent(out) :: IsFound
+!    !--------------------------------------------------------------------------
+!    return
+!
+!  end subroutine user_set_cell_boundary
 
 end module ModUser
 !==============================================================================
