@@ -8,7 +8,6 @@ module ModUser
   ! User module for Ganymede.
   ! Must compile with MHDHypPe equation set.
   ! Version 2.1 can work with both Cartesian and spherical grid.
-  ! Choose BCs accordingly.
   use ModUserEmpty,                          &
        IMPLEMENTED1 => user_init_session,    &
        IMPLEMENTED2 => user_set_ics,         &
@@ -196,7 +195,7 @@ contains
     end if
 
     select case(InitType)
-    case('B!U!')
+    case('B1U1')
        ! Initialize mantle region
        if(Rmin_BLK(iBlock) <= PlanetRadius) then
           do iFluid = 1, nFluid
@@ -322,6 +321,7 @@ contains
     use BATL_lib,        ONLY: Xyz_DGB
     use ModPhysics,      ONLY: CellState_VI
     use ModSize,         ONLY: nI
+    use ModEnergy,       ONLY: calc_energy_cell
 
     integer,          intent(in)  :: iBlock, iSide
     character(len=*), intent(in)  :: TypeBc
