@@ -1012,7 +1012,7 @@ contains
        call stop_mpi('Error in tridiag: M_I(1)=0')
     end if
     TildeM_VV = M_VVI(:,:,1)
-    TildeMInv_VV = inverse_matrix(TildeM_VV)
+    TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
     !\
     ! First 3-vector element of the vector, Inverted(tilde(M) + L).R
     !/
@@ -1036,7 +1036,7 @@ contains
        !\
        ! Next element of inverted(Tilde(M))
        !/
-       TildeMInv_VV = inverse_matrix(TildeM_VV)
+       TildeMInv_VV = inverse_matrix(TildeM_VV,DoIgnoreSingular=.true.)
        !\
        ! Next 2-vector element of the vector, Inverted(tilde(M) + L).R
        ! satisfying the eq. (tilde(M) + L).W = R
