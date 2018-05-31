@@ -57,7 +57,8 @@ contains
   !============================================================================
   subroutine calc_coarse_axis_timestep(iBlock,iHemisphere)
     use ModSize, ONLY: nI, nJ, nK
-    use ModAdvance, ONLY : VdtFace_x, VdtFace_y, VdtFace_z, time_BLK
+    use ModAdvance,  ONLY: VdtFace_x, VdtFace_y, VdtFace_z, time_BLK
+    use ModGeometry, ONLY: true_cell
     use BATL_lib, ONLY: CellVolume_GB
     integer, intent(in):: iBlock, iHemisphere
     ! Misc
@@ -84,14 +85,18 @@ contains
        do j = 1, nJ/jMerge
           jStart = (j-1)*jMerge + 1; jLast = j*jMerge
           do i = 1,nI
-             Vdt =  sum(max(&
-                  VdtFace_x(i,jStart:jLast,k), VdtFace_x(i+1,jStart:jLast,k)))&
-                  + max(VdtFace_y(i,jStart,k), VdtFace_y(i,jLast+1,k))        &
-                  + sum(max(&
-                  VdtFace_z(i,jStart:jLast,k), VdtFace_z(i,jStart:jLast,k+1) ))
+             if(any(.not. true_cell(i,jStart:jLast,k,iBlock))) then
+                time_BLK(i,jStart:jLast,k,iBlock) = 0
+             else
+                Vdt =  sum(max(VdtFace_x(i,jStart:jLast,k), &
+                     VdtFace_x(i+1,jStart:jLast,k)))&
+                     + max(VdtFace_y(i,jStart,k), VdtFace_y(i,jLast+1,k)) &
+                     + sum(max(VdtFace_z(i,jStart:jLast,k), &
+                     VdtFace_z(i,jStart:jLast,k+1) ))
 
-             time_BLK(i,jStart:jLast,k,iBlock) = &
-                  jMerge*CellVolume_GB(i,jStart,k,iBlock) / Vdt
+                time_BLK(i,jStart:jLast,k,iBlock) = &
+                     jMerge*CellVolume_GB(i,jStart,k,iBlock) / Vdt
+          end if
           end do
        end do
     end do
