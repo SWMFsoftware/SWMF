@@ -890,13 +890,14 @@ contains
 
     DetA= a_DD(1,1)*b_DD(1,1)+a_DD(1,2)*b_DD(2,1)+a_DD(1,3)*b_DD(3,1)
 
-    if(abs(detA) > Limit)then
+    if(DoIgnore)then
        b_DD = b_DD/DetA
-    elseif(DoIgnore)then
-       b_DD = cUnit_DD
+    elseif(abs(detA) > Limit*maxval(abs(a_DD)) )then
+       b_DD = b_DD/DetA
     else
        write(*,*)'Error in ',NameSub,' for matrix:'
        call show_rot_matrix(a_DD)
+       write(*,*)'Determinant=', DetA 
        call CON_stop('Singular matrix in '//NameSub)
     end if
 
