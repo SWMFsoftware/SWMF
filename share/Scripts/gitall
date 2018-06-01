@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+if($ARGV[0] =~ /-h/){
+    print "
+Recursively find all subdirectories that are Git repositories
+and execute the Git command passed in the arguments.
+
+Usage:
+  gitall [-h] GITCOMMAND
+
+Example:
+
+gitall status
+";
+    exit 0;
+}
+
+use strict;
+
+my $gitcmd;                # The variable to receive the git command
+my $verbose=0;
+
+$gitcmd = join(' ',@ARGV);
+
+
+if($gitcmd){
+    $gitcmd .= " --porcelain" if $gitcmd =~ /status/;
+    if ($gitcmd =~ /status -v/){
+	$gitcmd = "status --porcelain";
+	$verbose=1;
+    }
+    my $pwd = `pwd`; chop($pwd);
+    &execute_gitall($pwd);
+}
+
+sub execute_gitall(){
+   my($dir) = @_;
+   opendir(my $DIR,"$dir") or die "gitall can't open directory $dir\n";
+   my @gits= grep { /^.git$/ } readdir($DIR);
+   closedir($DIR);
+   opendir(my $DIR,"$dir") or die "gitall can't open directory $dir\n";
+   my @subdirs = grep { /^[^.]/  && -d "$dir/$_"} readdir($DIR);
+   closedir($DIR);
+   push @subdirs,@gits;
+
+   my $subdir;
+   foreach $subdir (@subdirs){
+       if ($subdir eq ".git"){
+           my $result = `cd $dir; git $gitcmd`;
+           print "=========== $dir:\n $result \n" if $result or $verbose;
+           }else{
+           &execute_gitall("$dir/$subdir");
+       }
+   }
+}
+
+
+
+
+
+
