@@ -153,7 +153,7 @@ contains
     use BATL_lib,       ONLY: CoordMin_DB, nIjk_D, CellSize_DB, xyz_to_coord, &
          MinI, MaxI, MinJ, MaxJ, Mink, MaxK
     use ModPhysics,     ONLY: rBody
-
+    use ModMain,        ONLY: body1
     use ModCoordTransform, ONLY: rot_matrix_x, rot_matrix_y, rot_matrix_z
 
     ! Arguments
@@ -192,7 +192,7 @@ contains
              XyzGm_D = matmul(PlotToGm_DD, XyzRot_D + Xyz0Plot_D)
 
              ! When inside Body keep default plot values
-             if(sqrt(sum(XyzGm_D**2)) < rBody)CYCLE
+             if(sqrt(sum(XyzGm_D**2)) < rBody .and. body1)CYCLE
 
              ! Get generalized coordinates
              call xyz_to_coord(XyzGm_D, Coord_D)
