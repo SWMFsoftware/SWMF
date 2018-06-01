@@ -1738,7 +1738,7 @@ test_fivemoment_shock_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -o RESULTS
 
 test_fivemoment_shock_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e10     \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -r=8e-5 -a=1e-10    \
 		Param/FIVEMOMENT/TestOutput/shock_ref.out \
 		${TESTDIR}/RESULTS/GM/1d*t00000002*out >  \
 		test_fivemoment_shock.diff)
