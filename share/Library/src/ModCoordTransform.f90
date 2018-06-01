@@ -891,7 +891,11 @@ contains
     DetA= a_DD(1,1)*b_DD(1,1)+a_DD(1,2)*b_DD(2,1)+a_DD(1,3)*b_DD(3,1)
 
     if(DoIgnore)then
-       b_DD = b_DD/DetA
+       if(DetA == 0)then
+          b_DD = -777.
+       else
+          b_DD = b_DD/DetA
+       end if
     elseif(abs(detA) > Limit*maxval(abs(a_DD)) )then
        b_DD = b_DD/DetA
     else
