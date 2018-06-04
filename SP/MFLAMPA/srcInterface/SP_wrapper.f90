@@ -54,6 +54,7 @@ module SP_wrapper
   integer :: Model_ = -1
   integer, parameter:: Lower_=0, Upper_=1
   real :: rInterfaceMin, rInterfaceMax
+  real :: rBufferLoMin, rBufferLoMax, rBufferUpMin, rBufferUpMax
   integer, allocatable :: iOffset_B(:)
   logical :: DoCheck = .true.
 contains
@@ -222,22 +223,16 @@ contains
        iBlock = Put%iCB_II(4, iPutStart + iPartial)
        ! interpolation weight
        Weight = W%Weight_I(   iPutStart + iPartial)
-       if(is_in_buffer(State_VIB(X_:Z_,i,iBlock)))then
+       if(is_in_buffer_lower(State_VIB(X_:Z_,i,iBlock)))then
           R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
-          select case(Model_)
-          case(Lower_)
-             Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
-                  RBufferMax - RBufferMin)/(RBufferMax - RBufferMin)))
-          case(Upper_)
-             Aux = 1.0   
-             Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
-                  RBufferMax - RBufferMin)/(RBufferMax-RBufferMin)))
-          case default
-             write(StringError,'(a,i2)') &
-                  ": isn't implemented for interface with component "&
-                  , Model_
-             call CON_stop(NameSub//StringError)
-          end select
+          Aux = 1.0   
+          Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
+               RBufferLoMax - RBufferLoMin)/(RBufferLoMax-RBufferLoMin)))
+       end if
+       if(is_in_buffer_upper(State_VIB(X_:Z_,i,iBlock)))then
+          R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
+          Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
+               RBufferUpMax - RBufferUpMin)/(RBufferUpMax - RBufferUpMin)))
        end if
        ! put the data
        if(DoCoupleVar_V(Density_))&
@@ -292,13 +287,29 @@ contains
          UnitX        = rSun)
   end subroutine SP_set_grid
   !================================
-  subroutine SP_put_coupling_param(iModelIn, rMinIn, rMaxIn, TimeIn)
+  subroutine SP_put_coupling_param(iModelIn, rMinIn, rMaxIn, TimeIn,&
+       rBufferLoIn, rBufferUpIn)
     use SP_ModMain, ONLY: copy_old_state
-    integer, intent(in) :: iModelIn
-    real,    intent(in) :: rMinIn, rMaxIn
-    real,     intent(in)::TimeIn
+    integer,        intent(in) :: iModelIn
+    real,           intent(in) :: rMinIn, rMaxIn
+    real,           intent(in) :: TimeIn
+    real, optional, intent(in) :: rBufferLoIn, rBufferUpIn
     !-----------------
     rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn 
+    if(present(rBufferLoIn))then
+       rBufferLoMin = rMinIn
+       rBufferLoMax = rBufferLoIn
+    else
+       rBufferLoMin = -1
+       rBufferLoMax = -1
+    end if
+    if(present(rBufferUpIn))then
+       rBufferUpMin = rBufferUpIn
+       rBufferUpMax = rMaxIn
+    else
+       rBufferUpMin = -1
+       rBufferUpMax = -1
+    end if
     Model_ = iModelIn
     if(DataInputTime >= TimeIn)RETURN
     !New coupling time, get it and save old state
@@ -561,12 +572,22 @@ contains
   !==============================
   end subroutine SP_adjust_lines
   !============================= 
-  function is_in_buffer(Xyz_D) Result(IsInBuffer)
+  function is_in_buffer_lower(Xyz_D) Result(IsInBuffer)
     real,   intent(in) :: Xyz_D(nDim)
     logical:: IsInBuffer
     real:: R2
     !---------------------------------------------
     R2 = sum(Xyz_D**2)
-    IsInBuffer = R2 >= RBufferMin**2 .and. R2 < RBufferMax**2
-  end function is_in_buffer
+    IsInBuffer = R2 >= rBufferLoMin**2 .and. R2 < rBufferLoMax**2
+  end function is_in_buffer_lower
+  !============================= 
+  function is_in_buffer_upper(Xyz_D) Result(IsInBuffer)
+    real,   intent(in) :: Xyz_D(nDim)
+    logical:: IsInBuffer
+    real:: R2
+    !---------------------------------------------
+    R2 = sum(Xyz_D**2)
+    IsInBuffer = R2 >= rBufferUpMin**2 .and. R2 < rBufferUpMax**2
+  end function is_in_buffer_upper
+
 end module SP_wrapper

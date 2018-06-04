@@ -123,10 +123,12 @@ contains
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_interface_point_coords
   !=======================================
-  subroutine SP_put_coupling_param(iModelIn, rMinIn, rMaxIn, TimeIn)
-    real,     intent(in)::TimeIn
-    integer, intent(in) :: iModelIn
-    real, intent(in):: rMinIn, rMaxIn
+  subroutine SP_put_coupling_param(iModelIn, rMinIn, rMaxIn, TimeIn,&
+       rBufferLoIn, rBufferUpIn)
+    real,           intent(in):: TimeIn
+    integer,        intent(in):: iModelIn
+    real,           intent(in):: rMinIn, rMaxIn
+    real, optional, intent(in):: rBufferLoIn, rBufferUpIn
     character(len=*), parameter:: NameSub='SP_put_coupling_param'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
