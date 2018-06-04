@@ -234,9 +234,19 @@ contains
       if(.not.DoExtract)RETURN
       if(is_proc(SP_))then
          if(use_comp(SC_))then             !^CMP IF SC BEGIN
-            call SP_put_coupling_param(Upper_, RScMax, RIhMax, tNow)
+            call SP_put_coupling_param(&
+                 iModelIn    = Upper_, &
+                 rMinIn      = RScMax, &
+                 rMaxIn      = RIhMax, &
+                 TimeIn      = tNow, &
+                 rBufferUpIn = RIhMin)
          else                              !^CMP END SC
-            call SP_put_coupling_param(Lower_, RIhMin, RIhMax,tNow)
+            call SP_put_coupling_param(&
+                 iModelIn    = Lower_, &
+                 rMinIn      = RIhMin, &
+                 rMaxIn      = RIhMax,&
+                 TimeIn      = tNow,&
+                 rBufferLoIn = RScMax)
          end if                            !^CMP IF SC
       end if
       call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
@@ -276,7 +286,11 @@ contains
 
     tNow=DataInputTime
     if(is_proc(SP_))call SP_put_coupling_param(&
-         Lower_, RScMin, RScMax, DataInputTime)
+         iModelIn    = Lower_, &
+         rMinIn      = RScMin,&
+         rMaxIn      = RScMax,&
+         TimeIn      = DataInputTime,&
+         rBufferUpIn = RIhMin)
     ScToSp_DD=transform_matrix(tNow,&
          Grid_C(SC_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
@@ -387,7 +401,11 @@ contains
     if(.not.RouterIhSp%IsProc)return
     tNow = DataInputTime
     if(is_proc(SP_))call SP_put_coupling_param(&
-         Upper_, RIhMin, RIhMax, DataInputTime)
+         iModelIn    = Upper_, &
+         rMinIn      = RIhMin, &
+         rMaxIn      = RIhMax, &
+         TimeIn      = DataInputTime, &
+         rBufferLoIn = RScMax)
     IhToSp_DD=transform_matrix(tNow,&
          Grid_C(IH_)%TypeCoord, Grid_C(SP_)%TypeCoord)
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
