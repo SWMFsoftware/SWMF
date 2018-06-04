@@ -53,8 +53,13 @@ module SP_wrapper
        'rho p mx my mz bx by bz i01 i02 pe'
   integer :: Model_ = -1
   integer, parameter:: Lower_=0, Upper_=1
+  !\
+  ! coupling parameters: 
+  ! domain boundaries
   real :: rInterfaceMin, rInterfaceMax
-  real :: rBufferLoMin, rBufferLoMax, rBufferUpMin, rBufferUpMax
+  ! buffer boundaries located near lower (Lo) or upper (Up) boudanry of domain
+  real :: rBufferLo, rBufferUp
+  !/
   integer, allocatable :: iOffset_B(:)
   logical :: DoCheck = .true.
 contains
@@ -223,16 +228,16 @@ contains
        iBlock = Put%iCB_II(4, iPutStart + iPartial)
        ! interpolation weight
        Weight = W%Weight_I(   iPutStart + iPartial)
-       if(is_in_buffer_lower(State_VIB(X_:Z_,i,iBlock)))then
+       if(is_in_buffer_xyz(Lower_,State_VIB(X_:Z_,i,iBlock)))then
           R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
           Aux = 1.0   
           Weight = Weight * (0.50 + 0.50*tanh(2*(2*R - &
-               RBufferLoMax - RBufferLoMin)/(RBufferLoMax-RBufferLoMin)))
+               RBufferLo - RInterfaceMin)/(RBufferLo - RInterfaceMin)))
        end if
-       if(is_in_buffer_upper(State_VIB(X_:Z_,i,iBlock)))then
+       if(is_in_buffer_xyz(Upper_,State_VIB(X_:Z_,i,iBlock)))then
           R = sqrt(sum(State_VIB(X_:Z_,i,iBlock)**2))
           Weight = Weight * (0.50 - 0.50*tanh(2*(2*R - &
-               RBufferUpMax - RBufferUpMin)/(RBufferUpMax - RBufferUpMin)))
+               RInterfaceMax - RBufferUp)/(RInterfaceMax - RBufferUp)))
        end if
        ! put the data
        if(DoCoupleVar_V(Density_))&
@@ -295,20 +300,18 @@ contains
     real,           intent(in) :: TimeIn
     real, optional, intent(in) :: rBufferLoIn, rBufferUpIn
     !-----------------
+    ! set domain boundaries
     rInterfaceMin = rMinIn; rInterfaceMax = rMaxIn 
+    ! set buffer boundaries
     if(present(rBufferLoIn))then
-       rBufferLoMin = rMinIn
-       rBufferLoMax = rBufferLoIn
+       rBufferLo = rBufferLoIn
     else
-       rBufferLoMin = -1
-       rBufferLoMax = -1
+       rBufferLo = rMinIn
     end if
     if(present(rBufferUpIn))then
-       rBufferUpMin = rBufferUpIn
-       rBufferUpMax = rMaxIn
+       rBufferUp = rBufferUpIn
     else
-       rBufferUpMin = -1
-       rBufferUpMax = -1
+       rBufferUp = rMaxIn
     end if
     Model_ = iModelIn
     if(DataInputTime >= TimeIn)RETURN
@@ -410,21 +413,22 @@ contains
        IsMissingPrev = all(State_VIB(X_:Z_,1,iBlock)==0.0)
        PARTICLE:do iParticle = 2, iEnd
           IsMissingCurr = all(State_VIB(X_:Z_,iParticle,iBlock)==0.0)
-          ! Exception for particles in the buffer zone in SC:
-          ! not necessarily the outer most particle in the buffer exits to IH;
+          ! Exception for particles in the upper buffer zone:
+          ! not necessarily the outer most particle in the buffer exits 
+          ! to the model located above;
           ! in this case we need to AVOID cutting beginning of the line
           ! before this particle; 
           ! use previously known value for heliocentric distance to determine,
           ! whether the particle was in the buffer until now
-          if(  .not. DoAdjustEnd & ! apply only in SC
+          if(  .not. DoAdjustEnd &
                .and. IsMissingCurr .and. &
-               State_VIB(R_, iParticle, iBlock) >= RBufferMin)then
+               is_in_buffer_r(Upper_, State_VIB(R_, iParticle, iBlock)))then
              IsMissingPrev = .false.
              R2 = State_VIB(R_, iParticle, iBlock)**2
              CYCLE PARTICLE
           end if
 
-          if(IsMissingCurr .and. R2 > RBufferMin**2)then
+          if(IsMissingCurr .and. R2 > RInterfaceMin**2)then
              if(DoAdjustEnd)&
                   nParticle_B(  iBlock) = iParticle - 1
              EXIT PARTICLE
@@ -572,22 +576,28 @@ contains
   !==============================
   end subroutine SP_adjust_lines
   !============================= 
-  function is_in_buffer_lower(Xyz_D) Result(IsInBuffer)
-    real,   intent(in) :: Xyz_D(nDim)
+  function is_in_buffer_r(iBuffer, R) Result(IsInBuffer)
+    integer,intent(in) :: iBuffer
+    real,   intent(in) :: R
     logical:: IsInBuffer
-    real:: R2
     !---------------------------------------------
-    R2 = sum(Xyz_D**2)
-    IsInBuffer = R2 >= rBufferLoMin**2 .and. R2 < rBufferLoMax**2
-  end function is_in_buffer_lower
+    select case(iBuffer)
+    case(Lower_)
+       IsInBuffer = R >= rInterfaceMin .and. R < rBufferLo
+    case(Upper_)
+       IsInBuffer = R >= rBufferUp .and. R < rInterfaceMax
+    case default
+        call CON_stop("ERROR: incorrect call of SP_wrapper:is_in_buffer")
+    end select
+  end function is_in_buffer_r
   !============================= 
-  function is_in_buffer_upper(Xyz_D) Result(IsInBuffer)
+  function is_in_buffer_xyz(iBuffer, Xyz_D) Result(IsInBuffer)
+    integer,intent(in):: iBuffer
     real,   intent(in) :: Xyz_D(nDim)
     logical:: IsInBuffer
-    real:: R2
+    real:: R
     !---------------------------------------------
-    R2 = sum(Xyz_D**2)
-    IsInBuffer = R2 >= rBufferUpMin**2 .and. R2 < rBufferUpMax**2
-  end function is_in_buffer_upper
-
+    R = sqrt(sum(Xyz_D**2))
+    IsInBuffer = is_in_buffer_r(iBuffer, R)
+  end function is_in_buffer_xyz
 end module SP_wrapper
