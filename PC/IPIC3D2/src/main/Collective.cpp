@@ -1664,6 +1664,7 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
   nIterNonLinear = 1; 
   doCleanDivE = false;
   correctionRatio = 0.9; 
+  rhoTheta = 0.51; 
 
   useUniformPart = false; 
 
@@ -1760,6 +1761,9 @@ Collective::Collective(int argc, char **argv, stringstream *param, int iIPIC,
     }
     else if( Command == "#CORRECTIONRATIO" ){
       read_var(param,"CorrectionRatio", &correctionRatio);
+    }
+    else if( Command == "#RHOTHETA" ){
+      read_var(param,"rhoTheta", &rhoTheta);
     }
     else if( Command == "#CELLCENTERDENSITY"){
       read_var(param,"DoCalcRhocDirectly",  &DoCalcRhocDirectly);

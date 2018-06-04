@@ -3052,8 +3052,7 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
       |___|___|___|___|___|__|                                
 
       Particles encircled by the cell centers c1, c2 c3 and c4 (2D) are 
-      displaced with the same displacement (eps_GD), which is decided
-      either by the error at the cell centers (position_estimate) or 
+      displaced by the error at the cell centers (position_estimate) or 
       the phi (position_estimate_phi) obtained by solving the
       Poisson equtaion.       
      */
@@ -3064,28 +3063,32 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
     
     array4_double eps_GD(nxn, nyn, nzn, 3); 
 
-    for(int ix = 1; ix<nxn-1; ix++)
-      for(int iy = 1; iy<nyn-1; iy++)
-	for(int iz = 1; iz<nzn-1; iz++){	  
-	  eps_GD[ix][iy][iz][x_] = 0.25*
-	    (phi[ix][iy][iz]      - phi[ix-1][iy][iz] + 
-	     phi[ix][iy][iz-1]    - phi[ix-1][iy][iz-1] + 
-	     phi[ix][iy-1][iz]    - phi[ix-1][iy-1][iz] + 
-	     phi[ix][iy-1][iz-1]  - phi[ix-1][iy-1][iz-1] );
+    bool use2ndInterp = true; 
 
-	  eps_GD[ix][iy][iz][y_] = 0.25*
-	    (phi[ix][iy][iz]     - phi[ix][iy-1][iz] + 
-	     phi[ix][iy][iz-1]   - phi[ix][iy-1][iz-1] + 
-	     phi[ix-1][iy][iz]   - phi[ix-1][iy-1][iz] + 
-	     phi[ix-1][iy][iz-1] - phi[ix-1][iy-1][iz-1]  );  
+    if(!use2ndInterp){
+      // First-order interpolation.
+      for(int ix = 1; ix<nxn-1; ix++)
+	for(int iy = 1; iy<nyn-1; iy++)
+	  for(int iz = 1; iz<nzn-1; iz++){	  
+	    eps_GD[ix][iy][iz][x_] = 0.25*
+	      (phi[ix][iy][iz]      - phi[ix-1][iy][iz] + 
+	       phi[ix][iy][iz-1]    - phi[ix-1][iy][iz-1] + 
+	       phi[ix][iy-1][iz]    - phi[ix-1][iy-1][iz] + 
+	       phi[ix][iy-1][iz-1]  - phi[ix-1][iy-1][iz-1] );
 
-	  eps_GD[ix][iy][iz][z_] = 0.25*
-	    (phi[ix][iy][iz]     - phi[ix][iy][iz-1] +
-	     phi[ix][iy-1][iz]   - phi[ix][iy-1][iz-1] +
-	     phi[ix-1][iy][iz]   - phi[ix-1][iy][iz-1] +
-	     phi[ix-1][iy-1][iz] - phi[ix-1][iy-1][iz-1] );
-	}
+	    eps_GD[ix][iy][iz][y_] = 0.25*
+	      (phi[ix][iy][iz]     - phi[ix][iy-1][iz] + 
+	       phi[ix][iy][iz-1]   - phi[ix][iy-1][iz-1] + 
+	       phi[ix-1][iy][iz]   - phi[ix-1][iy-1][iz] + 
+	       phi[ix-1][iy][iz-1] - phi[ix-1][iy-1][iz-1]  );  
 
+	    eps_GD[ix][iy][iz][z_] = 0.25*
+	      (phi[ix][iy][iz]     - phi[ix][iy][iz-1] +
+	       phi[ix][iy-1][iz]   - phi[ix][iy-1][iz-1] +
+	       phi[ix-1][iy][iz]   - phi[ix-1][iy][iz-1] +
+	       phi[ix-1][iy-1][iz] - phi[ix-1][iy-1][iz-1] );
+	  }
+    }
 
     bool doUsePhi = (correctType == "position_estimate_phi");
     for (int pidx = 0; pidx < getNOP(); pidx++) {
@@ -3100,20 +3103,51 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
       const int iy = 1 + int (floor((yp - ystart) * inv_dy + 0.5));
       const int iz = 1 + int (floor((zp - zstart) * inv_dz + 0.5));	    
 
+      if(use2ndInterp){
+	const double xi0   = (xp - grid->getXC(ix-1))*inv_dx;
+	const double eta0  = (yp - grid->getYC(iy-1))*inv_dy;
+	const double zeta0 = (zp - grid->getZC(iz-1))*inv_dz;
+
+	eps_D[x_] = interp2D(
+			     phi[ix][iy-1][iz-1]  - phi[ix-1][iy-1][iz-1], 
+			     phi[ix][iy][iz-1]    - phi[ix-1][iy][iz-1], 
+			     phi[ix][iy][iz]      - phi[ix-1][iy][iz], 
+			     phi[ix][iy-1][iz]    - phi[ix-1][iy-1][iz], 
+			     eta0, zeta0);
+
+	eps_D[y_] = interp2D(
+			     phi[ix-1][iy][iz-1] - phi[ix-1][iy-1][iz-1], 
+			     phi[ix][iy][iz-1]   - phi[ix][iy-1][iz-1], 
+			     phi[ix][iy][iz]     - phi[ix][iy-1][iz], 
+			     phi[ix-1][iy][iz]   - phi[ix-1][iy-1][iz], 
+			     xi0, zeta0); 
+	  	
+	eps_D[z_] = interp2D(
+			     phi[ix-1][iy-1][iz] - phi[ix-1][iy-1][iz-1], 
+			     phi[ix][iy-1][iz]   - phi[ix][iy-1][iz-1], 
+			     phi[ix][iy][iz]     - phi[ix][iy][iz-1], 
+			     phi[ix-1][iy][iz]   - phi[ix-1][iy][iz-1], 
+			     xi0, eta0); 	
+      }else{
+	eps_D[x_] = eps_GD[ix][iy][iz][x_];
+	eps_D[y_] = eps_GD[ix][iy][iz][y_];
+	eps_D[z_] = eps_GD[ix][iy][iz][z_];
+      }
+
       if(doUsePhi){
 	double coef = -1./EMf->getRHOcs(ix,iy,iz,ns)*invFourPI*correctionRatio; 
-	eps_D[x_] = eps_GD[ix][iy][iz][x_]*inv_dx*coef; 
-	eps_D[y_] = eps_GD[ix][iy][iz][y_]*inv_dy*coef; 
-	eps_D[z_] = eps_GD[ix][iy][iz][z_]*inv_dz*coef; 
+	eps_D[x_] *= inv_dx*coef; 
+	eps_D[y_] *= inv_dy*coef; 
+	eps_D[z_] *= inv_dz*coef; 
       }else{
 	// Why 0.5?
 	// eps_GD is essential the error difference of two nearby cell centers. 
 	// If the relative error is E in cell and -E in another, eps_GD = 2E. 
 	// The displacement should be eps_D/dx = 2E/2 = eps_GD/2. 
 	double coef = -0.5*correctionRatio;    
-	eps_D[x_] = eps_GD[ix][iy][iz][x_]*coef*dx;
-	eps_D[y_] = eps_GD[ix][iy][iz][y_]*coef*dy;
-	eps_D[z_] = eps_GD[ix][iy][iz][z_]*coef*dz;       
+	eps_D[x_] *= coef*dx;
+	eps_D[y_] *= coef*dy;
+	eps_D[z_] *= coef*dz;       
       }
       
       for(int iDim = 0; iDim<3; iDim++){

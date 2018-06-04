@@ -1638,10 +1638,12 @@ void EMfields3D::sum_cell_center_density(const Particles3Dcomm* part, bool doCal
 
   if(col->getuseAccurateJ()){
     /*
-      rhocOld is at n+1/2, and rhocNew is at n+3/2. rhoc is at n+1, which is the
-      same time stage as electric field. 
+      rhocOld is at n+1/2, and rhocNew is at n+3/2. rhoc is at the 
+      n+1/2+rhoTheta state. Experiments show rhoTheta = 0.5 may generate
+      numerical waves, while rhoTheta = 0.51 is a good choice.
      */
-    scaleandsum(rhoc, 0.5, 0.5, rhocOld, rhocNew, nxc, nyc, nzc);
+    double rhoTheta = col->get_rhoTheta();
+    scaleandsum(rhoc, 1-rhoTheta, rhoTheta, rhocOld, rhocNew, nxc, nyc, nzc);
     if(!isBeforeCorrection) eq(rhocOld, rhocNew, nxc,nyc, nzc);
   }else{
     // rhocNew is already at n+1 stage. 
@@ -3002,10 +3004,12 @@ void EMfields3D::calculate_PHI(MATVEC FuncImage, double krylovTol,
   sum(divE, tempC, nxc, nyc, nzc);
 
   if(col->getuseAccurateJ()){
-    // lap(phi) = 2*(divE - rhoc/(4pi))
-    //          = 2*divE - (rhoc(n+1/2) + rhoc(n+3/2))/(4pi)
+    // lap(phi) = (divE - rhoc/(4pi))/rhoTheta, 
+    // where,
+    // rhoc = (1-rhoTheta)*rhoc(n+1/2) + rhoTheta*rhoc(n+3/2)
     // The correction density Delt_rhoc(n+3/2) = 4*pi*lap(phi)
-    scale(divE, 2.0, nxc, nyc, nzc);
+    double rhoTheta = col->get_rhoTheta();
+    scale(divE, 1./rhoTheta, nxc, nyc, nzc);
   }
   
 

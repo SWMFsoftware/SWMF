@@ -227,6 +227,7 @@ class Collective
     double get_ratioDivC2C()const{return ratioDivC2C;};
     bool get_useIPIC3DSolver()const{return useIPIC3DSolver;};
     double get_particleTheta()const{return particleTheta;};
+    double get_rhoTheta()const{return rhoTheta;};
     bool get_doFixEnergy()const{return doFixEnergy;};
     int get_nSmoothEnergy()const{return nSmoothEnergy;};
     int get_iSpeciesLightest()const{return iSpeciesLightest;}
@@ -494,6 +495,7 @@ class Collective
     bool useExplicitMover; 
 
     double particleTheta;
+    double rhoTheta; 
     bool doFixEnergy; 
     int nSmoothEnergy; 
 

@@ -194,4 +194,22 @@ void loopX(double *b, double z, double x, double y, double a, double zc, double 
 void loopY(double *b, double y, double z, double x, double a, double yc, double zc, double xc, double m);
 void loopZ(double *b, double x, double y, double z, double a, double xc, double yc, double zc, double m);
 
+inline double interp2D(double vmm, double vpm, double vpp, double vmp, double dx, double dy){
+
+  /*Interpolate the value at p from the surounding 4 points. 'p' means plus, and
+    'm' means minus. 
+        vmp----------------vpp
+	|                   |
+	|                   |
+	|----dx-----p       |
+	|           |       |
+	|           dy      |
+	|           |       |
+	vmm----------------vpm
+   */
+
+
+  return vmm*(1-dx)*(1-dy) + vpm*dx*(1-dy) + vpp*dx*dy + vmp*(1-dx)*dy; 
+}
+
 #endif
