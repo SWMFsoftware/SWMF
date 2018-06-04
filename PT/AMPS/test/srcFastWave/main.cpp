@@ -27,7 +27,7 @@
 #include <algorithm>
 #include <sys/time.h>
 #include <sys/resource.h>
-
+#include <ctime>
 
 #include "meshAMRcutcell.h"
 #include "cCutBlockSet.h"
@@ -431,10 +431,17 @@ double BulletLocalResolution(double *x) {
                        
 
 int main(int argc,char **argv) {
+  
+   time_t TimeValue=time(NULL);
+   tm *ct=localtime(&TimeValue);
+  
+   printf("start: (%i/%i %i:%i:%i)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+
+
   PIC::InitMPI();
   PIC::Init_BeforeParser();
 
-
+  
   int RelativeOffset=0;
   
 #ifndef _NONUNIFORM_MESH_
@@ -663,6 +670,12 @@ int main(int argc,char **argv) {
   
 
   MPI_Finalize();
+  
+  TimeValue=time(NULL);
+  ct=localtime(&TimeValue);
+  
+  printf("end: (%i/%i %i:%i:%i)\n",ct->tm_mon+1,ct->tm_mday,ct->tm_hour,ct->tm_min,ct->tm_sec);
+
   cout << "End of the run" << endl;
   return EXIT_SUCCESS;
 
