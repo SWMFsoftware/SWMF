@@ -588,7 +588,7 @@ contains
   !============================================================================
   subroutine semi_impl_matvec(x_I, y_I, MaxN)
 
-    ! Calculate y_I = A.x_I where A is the linearized sem-implicit operator
+    ! Calculate y_I = A.x_I where A is the linearized semi-implicit operator
 
     use ModAdvance,  ONLY: time_BLK
     use ModGeometry, ONLY: far_field_BCs_BLK
