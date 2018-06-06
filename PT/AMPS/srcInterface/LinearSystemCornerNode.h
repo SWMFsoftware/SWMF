@@ -852,9 +852,11 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
   for (To=0;To<PIC::nTotalThreads;To++) if ((To!=PIC::ThisThread)&&(SendExchangeBufferLength[To]!=0)) {
     int i,offset=0;
     double *Buffer=SendExchangeBuffer[To];
+    int *SendElementIndexTable=SendExchangeBufferElementIndex[To];
+    int BufferLength=SendExchangeBufferLength[To];
 
-    for (i=0;i<SendExchangeBufferLength[To];i++) {
-      memcpy(Buffer+offset,x+NodeUnknownVariableVectorLength*SendExchangeBufferElementIndex[To][i],NodeUnknownVariableVectorLength*sizeof(double));
+    for (i=0;i<BufferLength;i++) {
+      memcpy(Buffer+offset,x+NodeUnknownVariableVectorLength*SendElementIndexTable[i],NodeUnknownVariableVectorLength*sizeof(double));
       offset+=NodeUnknownVariableVectorLength;
     }
 
