@@ -36,6 +36,9 @@ public:
     cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
     int UnknownVectorIndex,iVar,Thread;
 
+    //pointer to the intermediate value of the unknown variable
+    double *UnknownVariableCurrentValuePointer;
+
     //the user-model parameters neede for recalculating of the matrix coefficients
     double MatrixElementParameterTable[MaxMatrixElementParameterTableLength];
     int MatrixElementParameterTableLength;
@@ -45,7 +48,7 @@ public:
     int MatrixElementSupportTableLength;
 
     cStencilElement() {
-      node=NULL,CornerNode=NULL;
+      node=NULL,CornerNode=NULL,UnknownVariableCurrentValuePointer=NULL;
       MatrixElementValue=0.0;
       UnknownVectorIndex=-1,iVar=-1,Thread=-1,CornerNodeID=-1;
       MatrixElementParameterTableLength=0,MatrixElementSupportTableLength=0;
@@ -138,6 +141,10 @@ public:
   int nVirtualBlocks,nRealBlocks;
   void ProcessRightDomainBoundary(int *RecvDataPointCounter,void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
 
+  //matrix/vector multiplication
+  bool MatrixReBuiltFlag;
+  double *ThisThreadUnknownLastUnknownVectorPointer;
+  void MultiplyVector(double *p,double *x,int length);
 
   //constructor
   cLinearSystemCornerNode() {
@@ -152,6 +159,8 @@ public:
     SubdomainPartialUnknownsVectorLength=0;
 
     nVirtualBlocks=0,nRealBlocks=0;
+
+    MatrixReBuiltFlag=true,ThisThreadUnknownLastUnknownVectorPointer=NULL;
   }
 
   //void reset the data of the obsect to the default state
@@ -168,9 +177,6 @@ public:
 
   //exchange the data
   void ExchangeIntermediateUnknownsData(double *x);
-
-  //matrix/vector multiplication
-  void MultiplyVector(double *p,double *x,int length);
 
   //call the linear system solver, and unpack the solution afterward
   void Solve(void (*fInitialUnknownValues)(double* x,cCornerNode* CornerNode),void (*fUnpackSolution)(double* x,cCornerNode* CornerNode),double Tol,int nMaxIter);
@@ -799,6 +805,26 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
     delete [] ExchangeList;
   }
 
+  //link stencil elments to the locations in the RecvExchangeBuffer
+  for (Row=MatrixRowTable;Row!=NULL;Row=Row->next)  {
+    int iElementMax=Row->nNonZeroElements;
+    cStencilElement* Elements=Row->Elements;
+
+    for (iElement=0;iElement<iElementMax;iElement++) {
+      cStencilElement* StencilElement=Elements+iElement;
+
+      if (StencilElement->Thread!=PIC::ThisThread) {
+        StencilElement->UnknownVariableCurrentValuePointer=RecvExchangeBuffer[StencilElement->Thread]+(StencilElement->iVar+NodeUnknownVariableVectorLength*StencilElement->UnknownVectorIndex);
+      }
+      else {
+        StencilElement->UnknownVariableCurrentValuePointer=NULL;
+      }
+    }
+  }
+
+  //set the 're-built' flag
+  MatrixReBuiltFlag=true;
+
   //deallocate 'nGlobalDataPointTable'
   delete [] nGlobalDataPointTable;
   delete [] DataExchangeTableCounter;
@@ -955,13 +981,28 @@ int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
 int MaxMatrixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
 void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxStencilLength,MaxRhsSupportLength_CornerNodes,MaxRhsSupportLength_CenterNodes,MaxMatrixElementParameterTableLength,MaxMatrixElementSupportTableLength>::MultiplyVector(double *p,double *x,int length) {
   cMatrixRow* row;
-  cStencilElement StencilElement,*Elements;
+  cStencilElement *StencilElement;
   int cnt,iElement,iElementMax;
   double res;
 
+  //exchange the intermediate values of the unknowns
   ExchangeIntermediateUnknownsData(x);
 
-  RecvExchangeBuffer[PIC::ThisThread]=x;
+  //set pointers to the this-thread unknowns
+  if ((MatrixReBuiltFlag==true)||(ThisThreadUnknownLastUnknownVectorPointer!=x)) {
+    MatrixReBuiltFlag=false;
+    ThisThreadUnknownLastUnknownVectorPointer=x;
+
+    for (row=MatrixRowTable;row!=NULL;row=row->next) {
+      iElementMax=row->nNonZeroElements;
+      StencilElement=row->Elements;
+
+      for (iElement=0;iElement<iElementMax;iElement++,StencilElement++) if (StencilElement->Thread==PIC::ThisThread) {
+        StencilElement->UnknownVariableCurrentValuePointer=x+(StencilElement->iVar+NodeUnknownVariableVectorLength*StencilElement->UnknownVectorIndex);
+      }
+    }
+  }
+
 
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
 #pragma omp parallel default(none)  shared(p,PIC::nTotalThreadsOpenMP) private (iElement,iElementMax,Elements,StencilElement,res,row,cnt)
@@ -973,12 +1014,10 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   for (row=MatrixRowTable,cnt=0;row!=NULL;row=row->next,cnt++) if ((cnt%PIC::nTotalThreadsOpenMP)==ThisOpenMPThread) {
     iElementMax=row->nNonZeroElements;
-    Elements=row->Elements;
+    StencilElement=row->Elements;
 
-    for (res=0.0,iElement=0;iElement<iElementMax;iElement++) {
-      memcpy(&StencilElement,Elements+iElement,sizeof(cStencilElement));
-
-      res+=StencilElement.MatrixElementValue*RecvExchangeBuffer[StencilElement.Thread][StencilElement.iVar+NodeUnknownVariableVectorLength*StencilElement.UnknownVectorIndex];
+    for (res=0.0,iElement=0;iElement<iElementMax;iElement++,StencilElement++) {
+      res+=StencilElement->MatrixElementValue*(*(StencilElement->UnknownVariableCurrentValuePointer));
     }
 
      p[cnt]=res;
@@ -987,8 +1026,6 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   }
 #endif
-
-  RecvExchangeBuffer[PIC::ThisThread]=NULL;
 }
 
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
