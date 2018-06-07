@@ -3825,7 +3825,7 @@ namespace PIC {
 
       void flush() {
         Length=0;
-        for (int i=0;i<nMaxStencilLength;i++) Weight[i]=0.0,cell[i]=NULL;
+//        for (int i=0;i<nMaxStencilLength;i++) Weight[i]=0.0,cell[i]=NULL;
       }
 
       void print() {
