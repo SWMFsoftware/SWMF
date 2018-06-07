@@ -757,6 +757,9 @@ void PIC::DomainBlockDecomposition::UpdateBlockTable() {
 
   //update the domain decomposition table ID
   LastMeshModificationID=PIC::Mesh::mesh.nMeshModificationCounter;
+
+  //rebuld the matrix of the linear equatuion solver that has a 'global' matrix distributed over multiple MPI processes
+  for (auto f : PIC::LinearSolverTable) f->RebuildMatrix();
 }
 
 

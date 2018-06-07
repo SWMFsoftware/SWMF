@@ -81,7 +81,6 @@ $MARKER:SPECIES-MACRO-DEFINIETION-USED-IN-SIMULATION$
 
 #include "meshAMRinternalSurface.h"
 
-
 namespace PIC {
 
   //Global constants of the PIC solver
@@ -104,7 +103,6 @@ namespace PIC {
   //the directory for the input and output files
   extern char OutputDataFileDirectory[_MAX_STRING_LENGTH_PIC_];
   extern char InputDataFileDirectory[_MAX_STRING_LENGTH_PIC_];
-
 
   //the variables that controls the sampling procedure
   //LastSampleLength: the length of the last collected sample
@@ -5496,9 +5494,14 @@ namespace PIC {
 }
 
 //field solver
-#include "../../srcInterface/LinearSystemCornerNode.h"
+#include "LinearSystemCornerNode.h"
 
 namespace PIC {
+
+  //the table containes pointers to the base class of the linear solver class
+  extern list <cRebuildMatrix*> LinearSolverTable;
+  inline void RegisterLinearSolver(cRebuildMatrix* solver) {LinearSolverTable.push_front(solver);}
+
 namespace FieldSolver {
     //electromagnetic field solvers
     namespace Electromagnetic {

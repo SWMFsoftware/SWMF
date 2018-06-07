@@ -79,6 +79,7 @@ bool IsInit=false;
 //The global initialization procedure
 void PIC::FieldSolver::Init() {
   if (IsInit) exit(__LINE__,__FILE__,"Error: The field solver already initialized");
+
   switch (_PIC_FIELD_SOLVER_MODE_) {
   case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
     PIC::FieldSolver::Electromagnetic::ECSIM::Init();
@@ -86,6 +87,7 @@ void PIC::FieldSolver::Init() {
   default:
     exit(__LINE__,__FILE__,"Error: The field solver Init() has been called with an unknown _PIC_FIELD_SOLVER_MODE_ value");
   }
+
   IsInit = true;
 }
 
@@ -97,6 +99,9 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::Init() {
   using namespace PIC::FieldSolver::Electromagnetic::ECSIM;    
 
   CornerNodeAssociatedDataOffsetBegin=PIC::Mesh::cDataCenterNode::totalAssociatedDataLength;
+
+  //register the linear system solver with the core 
+  PIC::RegisterLinearSolver(&Solver); 
 
 
   if (PIC::CPLR::DATAFILE::Offset::MagneticField.active==true) {
