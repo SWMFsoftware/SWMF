@@ -80,7 +80,7 @@ void PIC::VolumeParticleInjection::InitTotalInjectionRate() {
     block=node->block;
 
     for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+      nd=_getCenterNodeLocalNumber(iCell,jCell,kCell);
       cell=block->GetCenterNode(nd);
 
       for (spec=0;spec<PIC::nTotalSpecies;spec++) res[spec]=0.0;
@@ -124,7 +124,7 @@ double PIC::VolumeParticleInjection::GetBlockInjectionRate(int spec,PIC::Mesh::c
   if (nRegistratedInjectionProcesses==0) return 0.0;
 
   for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-    nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+    nd=_getCenterNodeLocalNumber(iCell,jCell,kCell);
     cell=block->GetCenterNode(nd);
 
     res+=GetCellInjectionRate(spec,cell);
@@ -229,7 +229,7 @@ long int PIC::VolumeParticleInjection::InjectParticle() {
     memcpy(cellList,node->block->GetCenterNodeList(),cellListLength*sizeof(PIC::Mesh::cDataCenterNode*));
 
     for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+      nd=_getCenterNodeLocalNumber(iCell,jCell,kCell);
 //      cell=node->block->GetCenterNode(nd);
       cell=cellList[nd];
 
