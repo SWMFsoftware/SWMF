@@ -86,7 +86,7 @@ module ModLinearSolver
   type LinearSolverParamType
      logical          :: DoPrecond        ! Do preconditioning
      character(len=10):: TypePrecondSide  ! Precondition left, right, symmetric
-     character(len=10):: TypePrecond      ! Preconditioner type
+     character(len=11):: TypePrecond      ! Preconditioner type
      real             :: PrecondParam     ! Parameter (mostly for MBILU)
      character(len=10):: TypeKrylov       ! Krylov solver type
      character(len=3) :: TypeStop         ! Stopping criterion type (rel,abs)
