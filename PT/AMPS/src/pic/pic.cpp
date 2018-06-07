@@ -721,12 +721,6 @@ void PIC::Sampling::Sampling() {
   //the total number of the sampled particles to compare with the number of the partticles in the buffer
   long int nTotalSampledParticles=0;
   
-  //temporary buffer for sampled data
-  char  tempSamplingBuffer[PIC::Mesh::sampleSetDataLength]; 
-  
-  //temporaty buffer to store the copy of the particle
-  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
-
   //reset the particle counter
   static int **localSimulatedSpeciesParticleNumber=NULL;
 
@@ -754,7 +748,7 @@ void PIC::Sampling::Sampling() {
 //#endif
 
   //the table of cells' particles
-  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  long int *FirstCellParticleTable;
   
 
 #if _PIC_SAMPLE_PARTICLE_DATA_MODE_ == _PIC_SAMPLE_PARTICLE_DATA_MODE__BETWEEN_ITERATIONS_
@@ -783,11 +777,8 @@ void PIC::Sampling::Sampling() {
     iThreadOpenMP=omp_get_thread_num();
     #endif
 
-//  for (node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];node!=NULL;node=node->nextNodeThisThread) {
     block=node->block;
-    
-    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
-    
+    FirstCellParticleTable=block->FirstCellParticleTable;
     
 #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_PARTICLE_NUMBER_
     int TreeNodeTotalParticleNumber=0;
@@ -806,11 +797,9 @@ void PIC::Sampling::Sampling() {
           ptr=FirstCellParticleTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)];
 
           if (ptr!=-1) {
-            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+            LocalCellNumber=_getCenterNodeLocalNumber(i,j,k);
             cell=block->GetCenterNode(LocalCellNumber);
-	    
             SamplingData=cell->GetAssociatedDataBufferPointer() + PIC::Mesh::collectingCellSampleDataPointerOffset;
-            memcpy((void*)tempSamplingBuffer,(void*)SamplingData,PIC::Mesh::sampleSetDataLength);
 
             #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
             #if _PIC_DEBUGGER_MODE__SAMPLING_BUFFER_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
@@ -861,9 +850,7 @@ void PIC::Sampling::Sampling() {
               TreeNodeTotalParticleNumber++;
               #endif
 
-              memcpy((void*)tempParticleData,(void*)ParticleData,PIC::ParticleBuffer::ParticleDataLength);
-
-              ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);
+              ptrNext=PIC::ParticleBuffer::GetNext(ParticleData);
 
               //================ Prefetch particle data
               if (ptrNext!=-1) {
@@ -922,13 +909,13 @@ void PIC::Sampling::Sampling() {
 	    
               Speed2=0.0;
 
-              s=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData);
-              v=PIC::ParticleBuffer::GetV((PIC::ParticleBuffer::byte*)tempParticleData);
+              s=PIC::ParticleBuffer::GetI(ParticleData);
+              v=PIC::ParticleBuffer::GetV(ParticleData);
 
               localSimulatedSpeciesParticleNumber[iThreadOpenMP][s]++;
 
               LocalParticleWeight=block->GetLocalParticleWeight(s);
-              LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData);
+              LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
 
               #if _PIC_DEBUGGER_MODE_ == _PIC_DEBUGGER_MODE_ON_
               #if _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ == _PIC_DEBUGGER_MODE__VARIABLE_VALUE_RANGE_CHECK_ON_
@@ -991,11 +978,11 @@ void PIC::Sampling::Sampling() {
               *(s+(double*)(SamplingData+IDF::_TOTAL_SAMPLE_PARTICLE_WEIGHT_SAMPLE_DATA_OFFSET_))+=LocalParticleWeight;
 
               //save rotational energy
-              *(s+(double*)(SamplingData+IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_))+=IDF::GetRotE((PIC::ParticleBuffer::byte*)tempParticleData)*LocalParticleWeight;
+              *(s+(double*)(SamplingData+IDF::_ROTATIONAL_ENERGY_SAMPLE_DATA_OFFSET_))+=IDF::GetRotE(ParticleData)*LocalParticleWeight;
 
               //save vibrational evergy
               for (int nmode=0;nmode<IDF::nTotalVibtationalModes[s];nmode++) {
-                *(s+(double*)(SamplingData+IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s]))+=IDF::GetVibE(nmode,(PIC::ParticleBuffer::byte*)tempParticleData)*LocalParticleWeight;
+                *(s+(double*)(SamplingData+IDF::_VIBRATIONAL_ENERGY_SAMPLE_DATA_OFFSET_[s]))+=IDF::GetVibE(nmode,ParticleData)*LocalParticleWeight;
               }
 
               //save the population of the first two vibrational levels for qLB
@@ -1020,12 +1007,12 @@ void PIC::Sampling::Sampling() {
 
               //call sampling procedures of indivudual models
               #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-              ElectricallyChargedDust::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight, SamplingData, s);
+              ElectricallyChargedDust::Sampling::SampleParticleData(ParticleData,LocalParticleWeight, SamplingData, s);
               #endif //_PIC_MODEL__DUST__MODE_
 
               //call sampling procedures of indivudual models
               #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-              PIC::Mover::GuidingCenter::Sampling::SampleParticleData(tempParticleData,LocalParticleWeight, SamplingData, s);//tempSamplingBuffer, s);
+              PIC::Mover::GuidingCenter::Sampling::SampleParticleData(ParticleData,LocalParticleWeight, SamplingData, s);//tempSamplingBuffer, s);
               #endif //_PIC_MOVER_INTEGRATOR_MODE_
 
               #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
@@ -1034,11 +1021,11 @@ void PIC::Sampling::Sampling() {
 
               //call user defined particle sampling procedure
               #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING_
-              _PIC_USER_DEFING_PARTICLE_SAMPLING_(tempParticleData,LocalParticleWeight,SamplingData,s);
+              _PIC_USER_DEFING_PARTICLE_SAMPLING_((char*)ParticleData,LocalParticleWeight,SamplingData,s);
               #endif
 
               #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_ //call a user-defind particle sampling procedure with passing the node information
-              _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_(tempParticleData,LocalParticleWeight,SamplingData,s,node);
+              _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_(ParticleData,LocalParticleWeight,SamplingData,s,node);
               #endif
             }
           }
@@ -1149,7 +1136,7 @@ void PIC::Sampling::Sampling() {
         for (k=0;k<_BLOCK_CELLS_Z_;k++) {
           for (j=0;j<_BLOCK_CELLS_Y_;j++) {
             for (i=0;i<_BLOCK_CELLS_X_;i++) {
-              LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+              LocalCellNumber=_getCenterNodeLocalNumber(i,j,k);
               PIC::Mesh::flushCollectingSamplingBuffer(block->GetCenterNode(LocalCellNumber));
             }
 
@@ -1832,7 +1819,7 @@ void PIC::Init_AfterParser() {
     for (k=0;k<_BLOCK_CELLS_Z_;k++) {
       for (j=0;j<_BLOCK_CELLS_Y_;j++) {
         for (i=0;i<_BLOCK_CELLS_X_;i++) {
-          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+          LocalCellNumber=_getCenterNodeLocalNumber(i,j,k);
           PIC::Mesh::flushCollectingSamplingBuffer(block->GetCenterNode(LocalCellNumber));
           PIC::Mesh::flushCompletedSamplingBuffer(block->GetCenterNode(LocalCellNumber));
         }
