@@ -54,7 +54,16 @@
 #define _AMR_TRUE_ 1
 
 
-
+#if _MESH_DIMENSION_ == 1
+  #define _getCornerNodeLocalNumber(i,j,k) (i+_GHOST_CELLS_X_)
+  #define _getCenterNodeLocalNumber(i,j,k) (i+_GHOST_CELLS_X_)
+#elif _MESH_DIMENSION_ == 2
+  #define _getCornerNodeLocalNumber(i,j,k) (i+_GHOST_CELLS_X_+(1+_TOTAL_BLOCK_CELLS_X_)*(j+_GHOST_CELLS_Y_))
+  #define _getCenterNodeLocalNumber(i,j,k) (i+_GHOST_CELLS_X_+_TOTAL_BLOCK_CELLS_X_*(j+_GHOST_CELLS_Y_))
+#else
+  #define _getCornerNodeLocalNumber(i,j,k) (i+_GHOST_CELLS_X_+(1+_TOTAL_BLOCK_CELLS_X_)*(j+_GHOST_CELLS_Y_+(k+_GHOST_CELLS_Z_)*(1+_TOTAL_BLOCK_CELLS_Y_)))
+  #define _getCenterNodeLocalNumber(i,j,k) (i+_GHOST_CELLS_X_+_TOTAL_BLOCK_CELLS_X_*(j+_GHOST_CELLS_Y_+(k+_GHOST_CELLS_Z_)*_TOTAL_BLOCK_CELLS_Y_))
+#endif
 
 //the limits of the comlutational domain
 extern double _MESH_AMR_XMAX_[3],_MESH_AMR_XMIN_[3];
@@ -958,32 +967,12 @@ public:
     #endif
   }
 
-  inline static long int getCornerNodeLocalNumber(int i,int j,int k) {
-    long int nd;
-
-    #if _MESH_DIMENSION_ == 1
-    nd=i+_GHOST_CELLS_X_;
-    #elif _MESH_DIMENSION_ == 2
-    nd=i+_GHOST_CELLS_X_+(1+_TOTAL_BLOCK_CELLS_X_)*(j+_GHOST_CELLS_Y_);
-    #elif _MESH_DIMENSION_ == 3
-    nd=i+_GHOST_CELLS_X_+(1+_TOTAL_BLOCK_CELLS_X_)*(j+_GHOST_CELLS_Y_+(k+_GHOST_CELLS_Z_)*(1+_TOTAL_BLOCK_CELLS_Y_));
-    #endif
-
-    return nd;
+  inline static int getCornerNodeLocalNumber(int i,int j,int k) {
+    return _getCornerNodeLocalNumber(i,j,k);
   }
 
   inline static long int getCenterNodeLocalNumber(int i,int j,int k) {
-    long int nd;
-
-    #if _MESH_DIMENSION_ == 1
-    nd=i+_GHOST_CELLS_X_;
-    #elif _MESH_DIMENSION_ == 2
-    nd=i+_GHOST_CELLS_X_+_TOTAL_BLOCK_CELLS_X_*(j+_GHOST_CELLS_Y_);
-    #elif _MESH_DIMENSION_ == 3
-    nd=i+_GHOST_CELLS_X_+_TOTAL_BLOCK_CELLS_X_*(j+_GHOST_CELLS_Y_+(k+_GHOST_CELLS_Z_)*_TOTAL_BLOCK_CELLS_Y_);
-    #endif
-
-    return nd;
+    return _getCenterNodeLocalNumber(i,j,k);
   }
 
   inline void getCenterNodeCoordinate(int& i,int& j,int& k,long int nd) {
@@ -1444,31 +1433,11 @@ public:
   }
 
   inline long int getCornerNodeLocalNumber(int i,int j,int k) {
-    long int nd;
-
-    #if _MESH_DIMENSION_ == 1
-    nd=i+_GHOST_CELLS_X_;
-    #elif _MESH_DIMENSION_ == 2
-    nd=i+_GHOST_CELLS_X_+(1+_TOTAL_BLOCK_CELLS_X_)*(j+_GHOST_CELLS_Y_);
-    #elif _MESH_DIMENSION_ == 3
-    nd=i+_GHOST_CELLS_X_+(1+_TOTAL_BLOCK_CELLS_X_)*(j+_GHOST_CELLS_Y_+(k+_GHOST_CELLS_Z_)*(1+_TOTAL_BLOCK_CELLS_Y_));
-    #endif
-
-    return nd;
+    return _getCornerNodeLocalNumber(i,j,k);
   }
 
   inline static long int getCenterNodeLocalNumber(int i,int j,int k) {
-    long int nd;
-
-    #if _MESH_DIMENSION_ == 1
-    nd=i+_GHOST_CELLS_X_;
-    #elif _MESH_DIMENSION_ == 2
-    nd=i+_GHOST_CELLS_X_+_TOTAL_BLOCK_CELLS_X_*(j+_GHOST_CELLS_Y_);
-    #elif _MESH_DIMENSION_ == 3
-    nd=i+_GHOST_CELLS_X_+_TOTAL_BLOCK_CELLS_X_*(j+_GHOST_CELLS_Y_+(k+_GHOST_CELLS_Z_)*_TOTAL_BLOCK_CELLS_Y_);
-    #endif
-
-    return nd;
+    return _getCenterNodeLocalNumber(i,j,k);
   }
 
   inline static void convertCenterNodeLocalNumber2LocalCoordinates(int LocalNumber,int &i,int &j, int &k) {
