@@ -13,6 +13,8 @@
 
 #include "pic.h"
 #include "linear_solver_wrapper_c.h"
+#include <functional>
+#include <iostream>
 
 class cLinearSystemCornerNodeDataRequestListElement {
 public:
@@ -20,10 +22,15 @@ public:
   cAMRnodeID NodeID;
 };
 
+class cRebuildMatrix {
+public:
+  virtual void RebuildMatrix() = 0;
+};
+
 template <class cCornerNode, int NodeUnknownVariableVectorLength,int MaxStencilLength,
 int MaxRhsSupportLength_CornerNodes,int MaxRhsSupportLength_CenterNodes,
 int MaxMatrixElementParameterTableLength,int MaxMatrixElementSupportTableLength>
-class cLinearSystemCornerNode {
+class cLinearSystemCornerNode : public cRebuildMatrix {
 public:
   double *SubdomainPartialRHS,*SubdomainPartialUnknownsVector;
   int SubdomainPartialUnknownsVectorLength;
@@ -148,6 +155,23 @@ public:
   void ProcessRightDomainBoundary(int *RecvDataPointCounter,void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
 
 
+  //void reset the data of the obsect to the default state
+  void DeleteDataBuffers();
+  void Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
+  void Reset();
+
+  //reset indexing of the nodes
+  void ResetUnknownVectorIndex(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
+
+  //build the matrix
+  void(*GetStencil)(int,int,int,int,cMatrixRowNonZeroElementTable*,int&,double&,cRhsSupportTable*,int&,cRhsSupportTable*,int&,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR>*); 
+  void BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
+
+  //re-build the matrix after the domain re-decomposition operation
+  void RebuildMatrix() {
+    if (GetStencil!=NULL) BuildMatrix(GetStencil);
+  }
+
   //constructor
   cLinearSystemCornerNode() {
     MatrixRowTable=NULL,MatrixRowLast=NULL;
@@ -161,19 +185,8 @@ public:
     SubdomainPartialUnknownsVectorLength=0;
 
     nVirtualBlocks=0,nRealBlocks=0;
+    GetStencil=NULL;
   }
-
-  //void reset the data of the obsect to the default state
-  void DeleteDataBuffers();
-  void Reset(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *startNode);
-  void Reset();
-
-
-  //reset indexing of the nodes
-  void ResetUnknownVectorIndex(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node);
-
-  //build the matrix
-  void BuildMatrix(void(*f)(int i,int j,int k,int iVar,cMatrixRowNonZeroElementTable* Set,int& NonZeroElementsFound,double& Rhs,cRhsSupportTable* RhsSupportTable_CornerNodes,int &RhsSupportLength_CornerNodes,cRhsSupportTable* RhsSupportTable_CenterNodes,int &RhsSupportLength_CenterNodes,cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node));
 
   //exchange the data
   void ExchangeIntermediateUnknownsData(double *x);
@@ -478,6 +491,9 @@ void cLinearSystemCornerNode<cCornerNode, NodeUnknownVariableVectorLength,MaxSte
 
   //reset indexing of the nodes
   Reset();
+
+  //save the user-defined build stencil function
+  GetStencil=f;
 
   //allocate the counter of the data points to be recieve
   int RecvDataPointCounter[PIC::nTotalThreads];
