@@ -96,7 +96,7 @@ contains
        call read_var('TypeBcInner',TypeFaceBc_I(body1_))
        if(UseBody2) call read_var('TypeBcBody2',TypeFaceBc_I(body2_))
 
-    case("#INNERBCPE2P")
+    case("#INNERBCPE")
        call read_var('RatioPe2P', RatioPe2P)
 
     case("#OUTFLOWCRITERIA")

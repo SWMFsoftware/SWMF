@@ -1466,7 +1466,7 @@ Default value for TypeBcBody2 is 'none'.
 <command name="INNERBCPE2P">
 	 <parameter name="RatioPe2P" type="real" default="0"/>
 
-#INNERBCPE2P
+#INNERBCPE
 0.1             RatioPe2P
 
 When 'ionosphere', 'polarwind' or 'ionosphereoutflow' inner boundary is used, 
