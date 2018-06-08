@@ -163,10 +163,6 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::Interpolate(PIC::Mesh::cDat
 void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
   int i,j,k,thread;
 
-  //the table of increments for accessing the cells in the block
-  static bool initTableFlag=false;
-  static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
-  static int nTotalCenterNodes=-1;
 
   //sample collisino frequentcy
 //  double TotalProspectiveCollisionParticleWeight[PIC::nTotalSpecies],TotalOccurringCollisionParticleWeight[PIC::nTotalSpecies];
@@ -205,31 +201,6 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
     long int Particle;
     double CollisionTimeFraction;
   };
-
-
-
-  if (initTableFlag==false) {
-    //init thr center node table
-    nTotalCenterNodes=0,initTableFlag=true;
-
-#if DIM == 3
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#elif DIM == 2
-    for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#elif DIM == 1
-    for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#endif
-  }
-
-  int centerNodeIndexTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
-
-  memcpy(centerNodeIndexTable,centerNodeIndexTable_Glabal,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int));
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
   PIC::Mesh::cDataCenterNode *cell;
@@ -341,7 +312,7 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::CollisionProcessor() {
 
 
     {
-          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+          LocalCellNumber=_getCenterNodeLocalNumber(iCell,jCell,kCell);
           cell=block->GetCenterNode(LocalCellNumber);
           if (cell==NULL) continue;
 
@@ -665,37 +636,10 @@ _StartParticleCollisionLoop_:
 void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundParticles() {
 
   //the table of increments for accessing the cells in the block
-  static bool initTableFlag=false;
-  static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
-  static int nTotalCenterNodes=-1;
   long int next,prev,ptr,LocalCellNumber;
   PIC::ParticleBuffer::byte *pdata;
 
-  if (initTableFlag==false) {
-    nTotalCenterNodes=0,initTableFlag=true;
-    int i,j,k;
-
-#if DIM == 3
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#elif DIM == 2
-    for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#elif DIM == 1
-    for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#endif
-  }
-
-  int centerNodeIndexTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
-
-  memcpy(centerNodeIndexTable,centerNodeIndexTable_Glabal,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int));
-
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node=PIC::Mesh::mesh.ParallelNodesDistributionList[PIC::Mesh::mesh.ThisThread];
-
 
   //filter particles
   while (node!=NULL) {
@@ -704,34 +648,36 @@ void PIC::MolecularCollisions::BackgroundAtmosphere::RemoveThermalBackgroundPart
       LocalCellNumber=centerNodeIndexTable[centerNodeIndexCounter];
       ptr=node->block->GetCenterNode(LocalCellNumber)->FirstCellParticle;*/
 
-    for (int kCell=0;kCell<_BLOCK_CELLS_Z_;kCell++)
-       for (int jCell=0;jCell<_BLOCK_CELLS_Y_;jCell++)
-         for (int iCell=0;iCell<_BLOCK_CELLS_X_;iCell++) {
+    PIC::Mesh::cDataBlockAMR *block=node->block;
 
-           LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
-           ptr=node->block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
+    if (block!=NULL) for (int kCell=0;kCell<_BLOCK_CELLS_Z_;kCell++)
+      for (int jCell=0;jCell<_BLOCK_CELLS_Y_;jCell++)
+        for (int iCell=0;iCell<_BLOCK_CELLS_X_;iCell++) {
 
-      while (ptr!=-1) {
-        pdata=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
+          LocalCellNumber=_getCenterNodeLocalNumber(iCell,jCell,kCell);
+          ptr=block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
-        next=PIC::ParticleBuffer::GetNext(pdata);
-        prev=PIC::ParticleBuffer::GetPrev(pdata);
+          while (ptr!=-1) {
+            pdata=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 
-        #if _PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_ == _PIC_MODE_ON_
-        if (KeepConditionModelParticle(pdata)==false) {
-          //the particle should be removed
-          //reconnect particles from the list
-          if (prev==-1) node->block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=next;
-          else PIC::ParticleBuffer::SetNext(next,prev);
+            next=PIC::ParticleBuffer::GetNext(pdata);
+            prev=PIC::ParticleBuffer::GetPrev(pdata);
 
-          if (next!=-1) PIC::ParticleBuffer::SetPrev(prev,next);
+            #if _PIC_BACKGROUND_ATMOSPHERE__MODEL_PARTICLE_REMOVAL_MODE_ == _PIC_MODE_ON_
+            if (KeepConditionModelParticle(pdata)==false) {
+              //the particle should be removed
+              //reconnect particles from the list
+              if (prev==-1) block->FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)]=next;
+              else PIC::ParticleBuffer::SetNext(next,prev);
 
-          PIC::ParticleBuffer::DeleteParticle(ptr);
-        }
-        #endif
+              if (next!=-1) PIC::ParticleBuffer::SetPrev(prev,next);
 
-        ptr=next;
-      }
+              PIC::ParticleBuffer::DeleteParticle(ptr);
+            }
+            #endif
+
+            ptr=next;
+          }
     }
 
     node=node->nextNodeThisThread;
