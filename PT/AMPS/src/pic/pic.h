@@ -3820,6 +3820,7 @@ namespace PIC {
       int Length;
       double Weight[nMaxStencilLength];
       T* cell[nMaxStencilLength];
+      int LocaCellID[nMaxStencilLength];
 
       void flush() {
         Length=0;
@@ -3832,11 +3833,12 @@ namespace PIC {
         printf("\n");
       }
 
-      void AddCell(double w,T* c) {
+      void AddCell(double w,T* c,int id) {
         if (Length==nMaxStencilLength) exit(__LINE__,__FILE__,"Error: the stencil length exeeds 'nMaxStencilLength'. Need to increase 'nMaxStencilLength'");
 
         Weight[Length]=w;
         cell[Length]=c;
+        LocaCellID[Length]=id;
         Length++;
       }
 

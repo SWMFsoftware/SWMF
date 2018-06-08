@@ -82,7 +82,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
 
   //add the cell to the stencil
   if (cell!=NULL) {
-    PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(1.0,cell);
+    PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(1.0,cell,nd);
   }
   else exit(__LINE__,__FILE__,"Error: cell is not initialized");
 
@@ -386,7 +386,8 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
         return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(XyzIn_D,node);
       }
 
-      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(_getCenterNodeLocalNumber(ind[0],ind[1],ind[2])));
+      int nd=_getCenterNodeLocalNumber(ind[0],ind[1],ind[2]);
+      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(nd),nd);
     }
     #else  //_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_ _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_
     exit(__LINE__,__FILE__,"Error: the option is unknown");
@@ -465,7 +466,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
         exit(__LINE__,__FILE__,"Error: the option is not defined");
       }
 
-      StencilTable->AddCell(InterpolationWeight,cell);
+      StencilTable->AddCell(InterpolationWeight,cell,nd);
       totalInterpolationWeight+=InterpolationWeight;
     }
   }
@@ -493,6 +494,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
   const int nStencilElementsMax=64;
   double StencilWeight[nStencilElementsMax],StencilElementWeight,summStencilElementWeight=0.0;
   PIC::Mesh::cDataCenterNode *cell,*StencilCellTable[nStencilElementsMax];
+  int StencilCellIDTable[nStencilElementsMax];
   int StencilElementCounter=0;
 
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *StencilNode=node;
@@ -587,6 +589,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
             //add the cell to the stencil
             if (StencilElementCounter==nStencilElementsMax) exit(__LINE__,__FILE__,"Error: StencilElementCounter==nStencilElementsMax, try to increase nStencilElementsMax");
             StencilCellTable[StencilElementCounter]=cell;
+            StencilCellIDTable[StencilElementCounter]=nd;
             StencilWeight[StencilElementCounter]=StencilElementWeight;
             StencilElementCounter++;
             summStencilElementWeight+=StencilElementWeight;
@@ -610,6 +613,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
               //add the cell to the stencil
               if (StencilElementCounter==nStencilElementsMax) exit(__LINE__,__FILE__,"Error: StencilElementCounter==nStencilElementsMax, try to increase nStencilElementsMax");
               StencilCellTable[StencilElementCounter]=cell;
+              StencilCellIDTable[StencilElementCounter]=nd;
               StencilWeight[StencilElementCounter]=StencilElementWeight/8.0;
               summStencilElementWeight+=StencilElementWeight/8.0;
               StencilElementCounter++;
@@ -637,7 +641,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
   PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].flush();
 
   for (int iCell=0;iCell<StencilElementCounter;iCell++) {
-    PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(StencilWeight[iCell]/summStencilElementWeight,StencilCellTable[iCell]);
+    PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(StencilWeight[iCell]/summStencilElementWeight,StencilCellTable[iCell],StencilCellIDTable[iCell]);
   }
 
 
@@ -728,7 +732,7 @@ PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::C
         exit(__LINE__,__FILE__,"Error: the option is not defined");
       }
 
-      Stencil.AddCell(w,CornerNode);
+      Stencil.AddCell(w,CornerNode,nd);
     }
     else {
       switch (iStencil+2*jStencil+4*kStencil) {
