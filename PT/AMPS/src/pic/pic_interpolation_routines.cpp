@@ -78,7 +78,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
 
   //find cell
   nd = PIC::Mesh::mesh.fingCellIndex(x,i,j,k,node,false);
-  cell=node->block->GetCenterNode(nd);//PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+  cell=node->block->GetCenterNode(nd);//getCenterNodeLocalNumber(i,j,k));
 
   //add the cell to the stencil
   if (cell!=NULL) {
@@ -310,7 +310,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
       k0=(kLoc<0.5) ? -1 : (int)(kLoc-0.50);
 
       for (i=0;(i<2)&&(found==true);i++) for (j=0;(j<2)&&(found==true);j++) for (k=0;(k<2)&&(found==true);k++) {
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i0+i,j0+j,k0+k);
+        nd=_getCenterNodeLocalNumber(i0+i,j0+j,k0+k);
         if (node->block->GetCenterNode(nd)==NULL) found=false;
       }
 
@@ -379,14 +379,14 @@ PIC::InterpolationRoutines::CellCentered::cStencil* PIC::InterpolationRoutines::
         return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(XyzIn_D,node);
       }
 
-      cell=block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(ind[0],ind[1],ind[2]));
+      cell=block->GetCenterNode(_getCenterNodeLocalNumber(ind[0],ind[1],ind[2]));
 
       if (cell==NULL) {
         //there is no enough information to build up linear interpolation -> use constant interpolation
         return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(XyzIn_D,node);
       }
 
-      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(PIC::Mesh::mesh.getCenterNodeLocalNumber(ind[0],ind[1],ind[2])));
+      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(WeightStencil[iCellStencil],INTERFACE::BlockFound[iBlock]->block->GetCenterNode(_getCenterNodeLocalNumber(ind[0],ind[1],ind[2])));
     }
     #else  //_PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE_ _PIC_CELL_CENTERED_LINEAR_INTERPOLATION_ROUTINE__AMPS_
     exit(__LINE__,__FILE__,"Error: the option is unknown");
@@ -413,7 +413,8 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
   #endif
 
   //flush the stencil
-  PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].flush();
+  PIC::InterpolationRoutines::CellCentered::cStencil* StencilTable=PIC::InterpolationRoutines::CellCentered::StencilTable+ThreadOpenMP;
+  StencilTable->flush();
 
   //determine the aray of the cell's pointer that will be used in the interpolation stencil
   double w[3],InterpolationWeight,totalInterpolationWeight=0.0;
@@ -429,7 +430,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
   w[2]=kLoc-(k0+0.5);
 
   for (i=0;i<2;i++) for (j=0;j<2;j++) for (k=0;k<2;k++) {
-    nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i0+i,j0+j,k0+k);
+    nd=_getCenterNodeLocalNumber(i0+i,j0+j,k0+k);
     cell=block->GetCenterNode(nd);
 
     if (cell!=NULL) {
@@ -464,23 +465,23 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
         exit(__LINE__,__FILE__,"Error: the option is not defined");
       }
 
-      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].AddCell(InterpolationWeight,cell);
+      StencilTable->AddCell(InterpolationWeight,cell);
       totalInterpolationWeight+=InterpolationWeight;
     }
   }
 
-  if (PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length==0) {
+  if (StencilTable->Length==0) {
     //no cell have been found -> use a canstarnt interpolation stencil
     return PIC::InterpolationRoutines::CellCentered::Constant::InitStencil(x,node);
   }
-  else if (PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length!=8) {
+  else if (StencilTable->Length!=8) {
     //the interpolated stencil containes less that 8 elements -> the interpolation weights have to be renormalized
-    for (int i=0;i<PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Length;i++) {
-      PIC::InterpolationRoutines::CellCentered::StencilTable[ThreadOpenMP].Weight[i]/=totalInterpolationWeight;
+    for (int i=0;i<StencilTable->Length;i++) {
+      StencilTable->Weight[i]/=totalInterpolationWeight;
     }
   }
 
-  return PIC::InterpolationRoutines::CellCentered::StencilTable+ThreadOpenMP;
+  return StencilTable;
 }
 
 
@@ -580,7 +581,7 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
           //both blocks have the save refinment levels
 
           nd=PIC::Mesh::mesh.fingCellIndex(xStencil,i,j,k,StencilNode,false);
-          cell=StencilNode->block->GetCenterNode(nd);//PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+          cell=StencilNode->block->GetCenterNode(nd);//getCenterNodeLocalNumber(i,j,k));
 
           if (cell!=NULL) {
             //add the cell to the stencil
@@ -602,8 +603,8 @@ PIC::InterpolationRoutines::CellCentered::cStencil *PIC::InterpolationRoutines::
           if ((iCellNeib<0)||(iCellNeib+1>=_BLOCK_CELLS_X_) || (jCellNeib<0)||(jCellNeib+1>=_BLOCK_CELLS_Y_) || (kCellNeib<0)||(kCellNeib+1>=_BLOCK_CELLS_Z_)) exit(__LINE__,__FILE__,"Error: cells's index is out of range");
 
           for (ii=0;ii<2;ii++) for (jj=0;jj<2;jj++) for (kk=0;kk<2;kk++) {
-            nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(ii+iCellNeib,jj+jCellNeib,kk+kCellNeib);
-            cell=StencilNode->block->GetCenterNode(nd);//PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k));
+            nd=_getCenterNodeLocalNumber(ii+iCellNeib,jj+jCellNeib,kk+kCellNeib);
+            cell=StencilNode->block->GetCenterNode(nd);//getCenterNodeLocalNumber(i,j,k));
 
             if (cell!=NULL) {
               //add the cell to the stencil
@@ -684,7 +685,7 @@ PIC::InterpolationRoutines::CornerBased::cStencil *PIC::InterpolationRoutines::C
 
   for (iStencil=0;iStencil<2;iStencil++) for (jStencil=0;jStencil<2;jStencil++) for (kStencil=0;kStencil<2;kStencil++) {
     //get the local ID of the 'corner node'
-    nd=PIC::Mesh::mesh.getCornerNodeLocalNumber(iStencil+iX[0],jStencil+iX[1],kStencil+iX[2]);
+    nd=_getCornerNodeLocalNumber(iStencil+iX[0],jStencil+iX[1],kStencil+iX[2]);
     CornerNode=block->GetCornerNode(nd);
 
     if (CornerNode!=NULL) {
