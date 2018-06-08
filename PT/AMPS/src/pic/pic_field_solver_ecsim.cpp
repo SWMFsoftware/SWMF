@@ -37,6 +37,7 @@ int PIC::FieldSolver::Electromagnetic::ECSIM::ByOffsetIndex=1;
 int PIC::FieldSolver::Electromagnetic::ECSIM::BzOffsetIndex=2;
 int PIC::FieldSolver::Electromagnetic::ECSIM::MassMatrixOffsetIndex;
 
+
 //location of the solver's data in the corner node associated data vector
 int PIC::FieldSolver::Electromagnetic::ECSIM::CornerNodeAssociatedDataOffsetBegin=-1,PIC::FieldSolver::Electromagnetic::ECSIM::CornerNodeAssociatedDataOffsetLast=-1;
 
@@ -662,8 +663,7 @@ void UpdateJMassMatrix(){
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
   long int LocalCellNumber,ptr,ptrNext;    
-  //temporaty buffer to store the copy of the particle
-  char tempParticleData[PIC::ParticleBuffer::ParticleDataLength];
+
   double ParticleEnergy=0.0;
 
   PIC::Mesh::SetCornerNodeAssociatedDataValue(0.0,3,JxOffsetIndex*sizeof(double)+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset);
@@ -731,25 +731,6 @@ void UpdateJMassMatrix(){
             }
             
 	    
-	    double * CornerMassMatrixPtr[8];
-	    double * CornerJPtr[8]; 
-	    char * offset[8];
-
-	    offset[0]=block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-	    offset[1]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,j,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-	    offset[2]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,j+1,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-	    offset[3]=block->GetCornerNode(_getCornerNodeLocalNumber(i,  j+1,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-	    offset[4]=block->GetCornerNode(_getCornerNodeLocalNumber(i,    j,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-	    offset[5]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,  j,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-	    offset[6]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,j+1,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-	    offset[7]=block->GetCornerNode(_getCornerNodeLocalNumber(i,  j+1,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
-
-
-	    for (int ii=0; ii<8; ii++) {
-	      CornerMassMatrixPtr[ii] = ((double*)offset[ii])+MassMatrixOffsetIndex;
-	      CornerJPtr[ii]=((double*)offset[ii])+JxOffsetIndex;
-	    }
-
 	    ptrNext=ptr;
 	    ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptr);
 	  
@@ -758,15 +739,13 @@ void UpdateJMassMatrix(){
 	      double LocalParticleWeight;
 	      ptr=ptrNext;
 	      ParticleData=ParticleDataNext;	  	    
-	      memcpy(tempParticleData,ParticleData,PIC::ParticleBuffer::ParticleDataLength);
-	      
-	      PIC::ParticleBuffer::GetV(vInit,(PIC::ParticleBuffer::byte*)tempParticleData);
-	      PIC::ParticleBuffer::GetX(xInit,(PIC::ParticleBuffer::byte*)tempParticleData);
-	      spec=PIC::ParticleBuffer::GetI((PIC::ParticleBuffer::byte*)tempParticleData);
-
-        LocalParticleWeight=block->GetLocalParticleWeight(spec);
-        LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection((PIC::ParticleBuffer::byte*)tempParticleData);
-
+	     
+              spec=PIC::ParticleBuffer::GetI(ParticleData);
+	      PIC::ParticleBuffer::GetV(vInit,ParticleData);
+	      PIC::ParticleBuffer::GetX(xInit,ParticleData);
+              LocalParticleWeight=block->GetLocalParticleWeight(spec);
+              LocalParticleWeight*=PIC::ParticleBuffer::GetIndividualStatWeightCorrection(ParticleData);
+              ptrNext=PIC::ParticleBuffer::GetNext(ParticleData);
 
 	      double temp[3], B[3]={0.0,0.0,0.0};
 	      PIC::InterpolationRoutines::CellCentered::cStencil MagneticFieldStencil(false);
@@ -910,23 +889,7 @@ void UpdateJMassMatrix(){
                 double tempWeightConst = matrixConst*WeightPG[iCorner];
                 for (int jCorner=0; jCorner<=iCorner; jCorner++){
                   double tempWeightProduct = WeightPG[jCorner]*tempWeightConst;
-
-                  if (iCorner==jCorner){
-                    double * tmpPtr = MassMatrix_GGD[iCorner][iCorner];
-                    for (int ii=0; ii<9; ii++){
-                    //for (int ii=0; ii<3; ii++){
-                    // for (int jj=0; jj<3; jj++){
-                      //double tmp = alpha[ii][jj]*tempWeightProduct;
-                      double tmp = alpha[ii]*tempWeightProduct;  
-                      //CornerMassMatrixPtr[iCorner][3*ii+jj] += tmp;
-                      tmpPtr[ii] +=tmp;
-                        //printf("CornerMassMatrix:%e\n", *(CornerMassMatrixPtr[iCorner]+3*ii+jj));
-                        //  }
-                        // }
-
-                    }
-                  } else {
-                    double * tmpPtr =MassMatrix_GGD[iCorner][jCorner];
+                  double * tmpPtr =MassMatrix_GGD[iCorner][jCorner];
                     //for (int ii=0; ii<3; ii++){
                     // for (int jj=0; jj<3; jj++){
                     for (int ii=0; ii<9; ii++){   
@@ -935,22 +898,34 @@ void UpdateJMassMatrix(){
                     //  CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += tmp;
                         //CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += tmp;
                         tmpPtr[ii] +=tmp;
-                        
-                        // }
-                        // }
                     }
-                  }
-
-
                 }//jCorner
 	      }//iCorner
 	      
-	      ptrNext=PIC::ParticleBuffer::GetNext((PIC::ParticleBuffer::byte*)tempParticleData);
-
             
 	      if (ptrNext!=-1) {
 	        ParticleDataNext=PIC::ParticleBuffer::GetParticleDataPointer(ptrNext);
 	      } else {
+
+                double * CornerMassMatrixPtr[8];
+                double * CornerJPtr[8]; 
+                char * offset[8];
+                
+                offset[0]=block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                offset[1]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,j,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                offset[2]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,j+1,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                offset[3]=block->GetCornerNode(_getCornerNodeLocalNumber(i,  j+1,k))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                offset[4]=block->GetCornerNode(_getCornerNodeLocalNumber(i,    j,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                offset[5]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,  j,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                offset[6]=block->GetCornerNode(_getCornerNodeLocalNumber(i+1,j+1,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                offset[7]=block->GetCornerNode(_getCornerNodeLocalNumber(i,  j+1,k+1))->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset;
+                
+
+                for (int ii=0; ii<8; ii++) {
+                  CornerMassMatrixPtr[ii] = ((double*)offset[ii])+MassMatrixOffsetIndex;
+                  CornerJPtr[ii]=((double*)offset[ii])+JxOffsetIndex;
+                }                
+                
                 //collect current
                 for (int iCorner=0; iCorner<8; iCorner++){
                   for (int ii=0; ii<3; ii++){
@@ -972,20 +947,20 @@ void UpdateJMassMatrix(){
                         }
                       }
                     } else {
-                    for (int ii=0; ii<3; ii++){
-                      for (int jj=0; jj<3; jj++){
+                      for (int ii=0; ii<3; ii++){
+                        for (int jj=0; jj<3; jj++){
                        
-                        CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += MassMatrix_GGD[iCorner][jCorner][3*ii+jj];
-                        CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += MassMatrix_GGD[iCorner][jCorner][3*ii+jj];
-                        //MassMatrix_GGD[iCorner][jCorner][3*ii+jj] +=tmp;
+                          CornerMassMatrixPtr[iCorner][9*IndexMatrix[iCorner][jCorner]+3*ii+jj] += MassMatrix_GGD[iCorner][jCorner][3*ii+jj];
+                          CornerMassMatrixPtr[jCorner][9*IndexMatrix[jCorner][iCorner]+3*ii+jj] += MassMatrix_GGD[iCorner][jCorner][3*ii+jj];
+                          //MassMatrix_GGD[iCorner][jCorner][3*ii+jj] +=tmp;
+                        }
                       }
                     }
-                  }
 
-                }//jCorner
-	      }//iCorner
-	    
-
+                  }//jCorner
+                }//iCorner
+                
+                
 
 	      }
 
@@ -1272,7 +1247,7 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::BuildMatrix() {
 
 void PIC::FieldSolver::Electromagnetic::ECSIM::TimeStep() {
   using namespace PIC::FieldSolver::Electromagnetic::ECSIM;    
-
+  
   //perform the rest of the field solver calculstions
   UpdateJMassMatrix(); 
   Solver.UpdateRhs(UpdateRhs); 
@@ -1282,7 +1257,8 @@ void PIC::FieldSolver::Electromagnetic::ECSIM::TimeStep() {
   Solver.Solve(SetInitialGuess,ProcessFinalSolution,1e-8,200);
   UpdateB();
   UpdateE();
-}
+
+ }
 
 
 //set the initial guess
