@@ -138,7 +138,7 @@ void PIC::CPLR::DATAFILE::TECPLOT::ResetCellProcessingFlag(cTreeNodeAMR<PIC::Mes
 
     for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
       //locate the cell
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      nd=_getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
 
       //reset the flag
@@ -190,7 +190,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CountInterpolatedPointNumber(cTreeNodeAMR<PIC:
       }
 
       //locate the cell
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      nd=_getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
 
       //count the point if it is within the limits of the domain
@@ -265,7 +265,7 @@ int PIC::CPLR::DATAFILE::TECPLOT::CreateScript(const char *ScriptBaseName,const 
       }
 
       //locate the cell
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      nd=_getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
 
       //save the point if it is within the limits of the domain
@@ -391,7 +391,7 @@ void PIC::CPLR::DATAFILE::TECPLOT::LoadDataFile(const char *fname,int nTotalOutp
       }
 
       //locate the cell
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      nd=_getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
       offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
 
@@ -553,7 +553,7 @@ void PIC::CPLR::SaveCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC:
         //locate the cell
         if (startNode->block==NULL) SendCellFlag=false,offset=NULL;
 
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
         if (SendCellFlag==true) {
           if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
           else SendCellFlag=false,offset=NULL;
@@ -647,7 +647,7 @@ void PIC::CPLR::LoadCenterNodeAssociatedData(const char *fname,cTreeNodeAMR<PIC:
       if (savedLoadCellFlag==true) {
         //determine whether the cell data needed to be read
         //locate the cell
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
 
         if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) {
           offset=CenterNode->GetAssociatedDataBufferPointer();
