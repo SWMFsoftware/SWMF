@@ -497,43 +497,10 @@ void PIC::ParticleBuffer::CheckParticleList() {
   int i,j,k; //,LocalCellNumber;
   long int ParticleList;
   cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> *node;
-//  PIC::Mesh::cDataCenterNode *cell;
-
-
-  //the table of increments for accessing the cells in the block
-  static bool initTableFlag=false;
-  static int centerNodeIndexTable_Glabal[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
-  static int nTotalCenterNodes=-1;
-
-//  int centerNodeIndexCounter;
-
-  if (initTableFlag==false) {
-    nTotalCenterNodes=0,initTableFlag=true;
-
-#if DIM == 3
-    for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#elif DIM == 2
-    for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#elif DIM == 1
-    for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-    }
-#endif
-  }
-
-  int centerNodeIndexTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
   PIC::Mesh::cDataBlockAMR block;
 
-  memcpy(centerNodeIndexTable,centerNodeIndexTable_Glabal,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(int));
-
-
   //the tables of the first particles in the cells
-  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_]; //,tempParticleMovingListTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
-
+  long int *FirstCellParticleTable;
 
   #if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
   int nTotalThreads_OpenMP=1,thread_OpenMP;
@@ -554,21 +521,21 @@ void PIC::ParticleBuffer::CheckParticleList() {
     if (node==NULL) continue;
 
     //sample the processor load
-  #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
+    #if _PIC_DYNAMIC_LOAD_BALANCING_MODE_ == _PIC_DYNAMIC_LOAD_BALANCING_EXECUTION_TIME_
     double EndTime,StartTime=MPI_Wtime();
-  #endif
+    #endif
 
     while (node!=NULL) {
+      if (node->block==NULL) {
+        node=node->nextNodeThisThread;
+        continue;
+      }
 
-      memcpy(FirstCellParticleTable,node->block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
-//      memcpy(tempParticleMovingListTable,node->block->tempParticleMovingListTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
-
+      FirstCellParticleTable=node->block->FirstCellParticleTable;
 
       for (k=0;k<_BLOCK_CELLS_Z_;k++) {
          for (j=0;j<_BLOCK_CELLS_Y_;j++) {
             for (i=0;i<_BLOCK_CELLS_X_;i++) {
-              PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
-
                 //check the tempoparyly particle lists
 #if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
                 if (node->block->tempParticleMovingListTable[i+_BLOCK_CELLS_X_*(j+_BLOCK_CELLS_Y_*k)]!=-1) exit(__LINE__,__FILE__,"Error: the temp list is not empty");
@@ -600,33 +567,6 @@ void PIC::ParticleBuffer::CheckParticleList() {
 
                   if (nTotalListParticles>MaxNPart) exit(__LINE__,__FILE__,"Error: the list particles' number exeeds the maximum number of particles that can be stored in the buffer");
                 }
-
-/*
-                //check the allocation flags of the not-active particles
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__MPI_
-                ParticleList=FirstPBufferParticle;
-#elif _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-#pragma omp parallel default(none) private(ParticleList) shared(Thread::FirstPBufferParticle)
-                {
-                int thread;
-
-                thread=omp_get_thread_num();
-                ParticleList=Thread::FirstPBufferParticle[thread];
-
-#endif //_COMPILATION_MODE_
-
-                while (ParticleList!=-1) {
-                  if (PIC::ParticleBuffer::IsParticleAllocated(ParticleList)==true) {
-                     exit(__LINE__,__FILE__,"Error: a NON-active particle is marked as allocated");
-                  }
-
-                  ParticleList=PIC::ParticleBuffer::GetNext(ParticleList);
-                }
-
-#if _COMPILATION_MODE_ == _COMPILATION_MODE__HYBRID_
-                }
-#endif //_COMPILATION_MODE_
-*/
             }
 
             if (DIM==1) break;
