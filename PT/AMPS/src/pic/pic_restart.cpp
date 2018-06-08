@@ -79,7 +79,7 @@ void PIC::Restart::SamplingData::SaveBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
 
       if (node->Thread==PIC::ThisThread) {
         for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+          LocalCellNumber=_getCenterNodeLocalNumber(i,j,k);
           cell=node->block->GetCenterNode(LocalCellNumber);
 
           if (cell!=NULL) nAllocatedCells++;
@@ -96,7 +96,7 @@ void PIC::Restart::SamplingData::SaveBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
       //save the sampling data
       if (node->Thread==PIC::ThisThread) {
         for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-          LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+          LocalCellNumber=_getCenterNodeLocalNumber(i,j,k);
           cell=node->block->GetCenterNode(LocalCellNumber);
 
           if (cell==NULL) continue;
@@ -164,7 +164,7 @@ void PIC::Restart::SamplingData::ReadBlock(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR
 
       //block is allocated -> march through the cells and save them into the restart file
       for (i=0;i<_BLOCK_CELLS_X_;i++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (k=0;k<_BLOCK_CELLS_Z_;k++) {
-        LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        LocalCellNumber=_getCenterNodeLocalNumber(i,j,k);
         cell=node->block->GetCenterNode(LocalCellNumber);
 
         if (cell!=NULL) {

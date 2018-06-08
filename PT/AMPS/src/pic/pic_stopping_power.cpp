@@ -152,15 +152,15 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 
 #if DIM == 3
     for (k=0;k<_BLOCK_CELLS_Z_;k++) for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=_getCenterNodeLocalNumber(i,j,k);
     }
 #elif DIM == 2
     for (j=0;j<_BLOCK_CELLS_Y_;j++) for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=_getCenterNodeLocalNumber(i,j,k);
     }
 #elif DIM == 1
     for (i=0;i<_BLOCK_CELLS_X_;i++) {
-      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      centerNodeIndexTable_Glabal[nTotalCenterNodes++]=_getCenterNodeLocalNumber(i,j,k);
     }
 #endif
   }
@@ -240,7 +240,7 @@ void PIC::MolecularCollisions::StoppingPowerModel::ModelProcessor() {
 
 
     {
-      LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+      LocalCellNumber=_getCenterNodeLocalNumber(iCell,jCell,kCell);
       cell=block->GetCenterNode(LocalCellNumber);
       if (cell==NULL) continue;
 
