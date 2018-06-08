@@ -265,6 +265,24 @@ inline void Particles3D::MaxwellianVelocityFromFluidCell(const double X,  const 
     (*W) = col->getPICUz(X, Y, Z, ns) + Uth * prob * cos(theta);
     
   }
+
+
+  // --------------------------------------------
+  // This part is used for Weibel test only. See paper Lapenta ECSIM paper. 
+  bool doAddVel, doWeibel=false; 
+  // Assume coupled with six-moment, and ns=1 is electron
+  doAddVel = doWeibel && (ns==1); 
+  if(doAddVel){
+    harvest = RANDNUM; 
+    if(harvest>0.5){
+      (*V) += 0.8;
+    }else{
+      (*V) -= 0.8;
+    }
+  }
+  //---------------------------------------------
+
+
 }
 
 void Particles3D::print_particles(string tag){
@@ -2921,6 +2939,7 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
   const double invFourPI = 1./FourPI;
   double eps_D[3];
   double epsMax=0;
+  double epsLimit = 0.1;
 
   // Only for rough corrections.
   double correctionRatio = col->get_correctionRatio();
@@ -3029,6 +3048,15 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
       eps_D[iDim] *= coef;      
     }
 
+    if(fabs(eps_D[x_]*inv_dx) > epsLimit || 
+       fabs(eps_D[y_]*inv_dy) > epsLimit || 
+       fabs(eps_D[z_]*inv_dz) > epsLimit ){
+      // If eps_D is too large, the underlying assumption of the particle 
+      // correction method will be not valid. Comparing each exp_D component
+      // instead of the length dl saves the computational time. 
+      double dl = sqrt(pow(eps_D[x_],2)+pow(eps_D[y_],2)+pow(eps_D[z_],2));
+      for(int iDim = 0; iDim<3; iDim++) eps_D[iDim] *=epsLimit*dx/dl;
+    }
 
     for(int iDim = 0; iDim<3; iDim++){
       if(fabs(eps_D[iDim]*inv_dx) > epsMax) epsMax = fabs(eps_D[iDim]*inv_dx);
@@ -3150,6 +3178,13 @@ void Particles3D::correctPartPos(Field *EMf, string correctType){
 	eps_D[z_] *= coef*dz;       
       }
       
+      if(fabs(eps_D[x_]*inv_dx) > epsLimit || 
+	 fabs(eps_D[y_]*inv_dy) > epsLimit || 
+	 fabs(eps_D[z_]*inv_dz) > epsLimit ){
+	double dl = sqrt(pow(eps_D[x_],2)+pow(eps_D[y_],2)+pow(eps_D[z_],2));
+	for(int iDim = 0; iDim<3; iDim++) eps_D[iDim] *=epsLimit*dx/dl;
+      }
+
       for(int iDim = 0; iDim<3; iDim++){
 	if(fabs(eps_D[iDim]*inv_dx) > epsMax) epsMax = fabs(eps_D[iDim]*inv_dx);
       }
