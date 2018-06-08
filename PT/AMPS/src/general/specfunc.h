@@ -8,8 +8,10 @@
 
 #include <math.h>
 #include <iostream>
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 
 #include "global.h"
 #include "rnd.h"
@@ -18,6 +20,7 @@
 #include <thread>         // std::thread
 #include <mutex>          // std::mutex
 #include <atomic>
+#include <vector>
 
 #define _STDOUT_ERRORLOG_MODE__ON_   0
 #define _STDOUT_ERRORLOG_MODE__OFF_  1
@@ -507,66 +510,42 @@ namespace Relativistic {
   //functions for thread sincronization
 namespace Thread {
   namespace Sync {
+    namespace Spinlock {
+      class cLockData {
+      public:
+        std::atomic_flag flag;
 
-    class cSpinLock {
-    private:
-      std::atomic_flag flag;
-
-    public:
-      cSpinLock(): flag(ATOMIC_FLAG_INIT) {}
-
-      void lock() {
-        while(flag.test_and_set(std::memory_order_acquire));
-      }
-
-      void unlock() {
-        flag.clear(std::memory_order_release);
-      }
-    };
-
-    class cSpinlockBarrier {
-      int nTotalBarrierThreads;
-      cSpinLock lock_enter,lock_exit;
-      int counter;
-
-      int State;
-
-      cSpinlockBarrier() {
-        nTotalBarrierThreads=-1,State=0,counter=0;
-      }
-
-      cSpinlockBarrier(int ntot) {
-        nTotalBarrierThreads=ntot,State=0,counter=0;
-      }
-
-      void Waite() {
-        //aquire lock_enter
-        lock_enter.lock();
-
-        if (State==0) {
-          //this is the first thread the entered the barrier
-          counter=1;
-          State=1;
-
-          //aquire the loc_exit
-          lock_exit.lock();
-          lock_enter.unlock();
-          while (counter!=nTotalBarrierThreads);
-
-          //all threads have entered the barrier
-          State=0;
-          lock_exit.unlock();
+        cLockData() {
+          flag.clear(std::memory_order_release);
         }
-        else {
-          counter++;
-          lock_enter.unlock();
-          lock_exit.lock();
-        }
-      }
-    };
+      };
+
+      void AcquireLock(cLockData* lock);
+      void ReleaseLock(cLockData* lock);
+    }
+
+    namespace SpinlockBarrier {
+      struct cSpinlockBarrier {
+        int nTotalBarrierThreads;
+        std::atomic_flag lock_enter,lock_exit;
+        int State;
+        std::atomic<int> counter;
+
+
+        bool enter_flag,exit_flag;
+      };
+
+      void Init(cSpinlockBarrier* barrier,int ntot);
+      void Wait(cSpinlockBarrier* barrier);
+    }
   }
-}
 
+  //manage threads
+  extern std::vector<pthread_t> ThreadsTable;
+  void CreateThread(void * buildMesh_OneLevelRefinment_External(void*),void* Data);
+  void TerminateThread();
+  void JoinThreads();
+}
 
 
 #endif

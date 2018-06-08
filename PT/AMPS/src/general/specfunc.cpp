@@ -12,6 +12,15 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <pthread.h>
+#include <unistd.h>
+
+
+#include <iostream>
+#include <iostream>
+#include <stdlib.h>
+#include <string.h>
+#include <vector>
 
 #include "rnd.h"
 #include "specfunc.h"
@@ -211,6 +220,89 @@ void Debugger::SaveDataIntoStream(void* data,int length,const char* msg) {
 template <class T>
 void Debugger::SaveDataIntoStream(T data,const char* msg) {
   Debugger::SaveDataIntoStream(&data,sizeof(T),msg);
+}
+
+//=================================================================
+//functionnality to operate POSIX threads
+std::vector<pthread_t> Thread::ThreadsTable;
+
+void Thread::CreateThread(void* (*buildMesh_OneLevelRefinment_External)(void*),void* Data) {
+  pthread_t th;
+
+  pthread_create(&th, NULL, buildMesh_OneLevelRefinment_External,Data);
+  ThreadsTable.push_back(th);
+}
+
+void Thread::JoinThreads() {
+  for (auto th : ThreadsTable) pthread_join(th, NULL);
+
+  ThreadsTable.clear();
+}
+
+
+void Thread::Sync::Spinlock::AcquireLock(cLockData* lock) {
+  while(lock->flag.test_and_set(std::memory_order_acquire)) {
+    sched_yield();
+  }
+}
+
+
+void Thread::Sync::Spinlock::ReleaseLock(cLockData* lock) {
+  lock->flag.clear(std::memory_order_release);
+}
+
+void Thread::Sync::SpinlockBarrier::Init(cSpinlockBarrier* barrier,int ntot) {
+  barrier->nTotalBarrierThreads=ntot;
+  barrier->State=0;
+  barrier->counter=0;
+
+  barrier->enter_flag=true;
+  barrier->exit_flag=false;
+
+
+  barrier->lock_enter.clear(std::memory_order_release);
+  barrier->lock_exit.test_and_set(std::memory_order_acquire);
+}
+
+
+void Thread::Sync::SpinlockBarrier::Wait(cSpinlockBarrier* barrier) {
+  bool enterence_flag=true,exit_flag=false;
+
+  while (barrier->enter_flag==false) {
+    sched_yield();
+  }
+
+  barrier->counter++;
+
+  if (barrier->lock_enter.test_and_set(std::memory_order_acquire)==false) {
+    //this is the first thread that enters the barrier
+    while (barrier->counter!=barrier->nTotalBarrierThreads) {
+      sched_yield();
+    }
+
+    //close enterence into the barrier
+    barrier->enter_flag=false;
+
+    //open exit from the barrier
+    barrier->exit_flag=true;
+
+    while (barrier->counter!=1) {
+      sched_yield();
+    }
+
+    //open enterence into the barrier
+    barrier->lock_enter.clear(std::memory_order_release);
+    barrier->counter=0;
+    barrier->exit_flag=false;
+    barrier->enter_flag=true;
+  }
+  else {
+    while (barrier->exit_flag==false) {
+      sched_yield();
+    }
+
+    barrier->counter--;
+  }
 }
 
 
