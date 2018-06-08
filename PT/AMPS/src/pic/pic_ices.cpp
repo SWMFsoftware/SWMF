@@ -330,7 +330,7 @@ void PIC::CPLR::DATAFILE::ICES::readSWMFdata(const double MeanIonMass,cTreeNodeA
         dataSWMF.E[2]=-(dataSWMF.swVel[0]*dataSWMF.B[1]-dataSWMF.swVel[1]*dataSWMF.B[0]);
 
         //save the data on the mesh node
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
         CenterNode=startNode->block->GetCenterNode(nd);
 
         if (CenterNode==NULL) continue;
@@ -441,7 +441,7 @@ void PIC::CPLR::DATAFILE::ICES::readDSMCdata(cTreeNodeAMR<PIC::Mesh::cDataBlockA
 
       if (startNode->block!=NULL) {
         //save the data on the mesh node
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
         CenterNode=startNode->block->GetCenterNode(nd);
 
         if (CenterNode==NULL) continue;

@@ -309,7 +309,7 @@ void PIC::CPLR::DATAFILE::BATSRUS::LoadDataFile(cTreeNodeAMR<PIC::Mesh::cDataBlo
       //locate the cell
       if (startNode->block==NULL) continue;
 
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      nd=_getCenterNodeLocalNumber(i,j,k);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
       offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
 

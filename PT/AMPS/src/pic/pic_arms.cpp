@@ -242,7 +242,7 @@ void PIC::CPLR::DATAFILE::ARMS::LoadDataFile(const char *fname,cTreeNodeAMR<PIC:
         }
     
         //locate the cell
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
 
         if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
 

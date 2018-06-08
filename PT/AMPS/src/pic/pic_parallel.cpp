@@ -196,7 +196,7 @@ void PIC::Parallel::ExchangeParticleData() {
           Particle=FirstCellParticleTable[iCell+_BLOCK_CELLS_X_*(jCell+_BLOCK_CELLS_Y_*kCell)];
 
           if  (Particle!=-1) {
-            LocalCellNumber=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+            LocalCellNumber=_getCenterNodeLocalNumber(iCell,jCell,kCell);
 
             if (CommunicationInitialed_BLOCK_==false) {
               nodeid=sendNode->AMRnodeID;
@@ -523,7 +523,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       PIC::Mesh::cDataBlockAMR *block=node->block;
 
       if (block!=NULL) for (i=0;i<_BLOCK_CELLS_X_+1;i++) for (j=0;j<_BLOCK_CELLS_Y_+1;j++) for (k=0;k<_BLOCK_CELLS_Z_+1;k++) {
-        PIC::Mesh::cDataCornerNode *CornerNode=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+        PIC::Mesh::cDataCornerNode *CornerNode=block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k));
 
         if (CornerNode!=NULL) CornerNode->SetProcessedFlag(false);
       }
@@ -570,7 +570,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       block=node->neibNodeFace[iNeighbour]->block;
 
       if (block!=NULL) for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-        if (CornerNode==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
+        if (CornerNode==block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))) {
           res=true;
           iNode=i,jNode=j,kNode=k;
           NeibNode=node->neibNodeFace[iNeighbour];
@@ -584,7 +584,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       block=node->neibNodeCorner[iNeighbour]->block;
 
       if (block!=NULL) for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-        if (CornerNode==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
+        if (CornerNode==block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))) {
           res=true;
           iNode=i,jNode=j,kNode=k;
           NeibNode=node->neibNodeCorner[iNeighbour];
@@ -598,7 +598,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
       block=node->neibNodeEdge[iNeighbour]->block;
 
       if (block!=NULL) for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-        if (CornerNode==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
+        if (CornerNode==block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))) {
           res=true;
           iNode=i,jNode=j,kNode=k;
           NeibNode=node->neibNodeEdge[iNeighbour];
@@ -620,7 +620,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
     //check self
     if ((block=node->block)!=NULL) {
-      res=block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(iNode,jNode,kNode));
+      res=block->GetCornerNode(_getCornerNodeLocalNumber(iNode,jNode,kNode));
       NodeOut=node;
       return res;
     }
@@ -638,7 +638,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
             k=kNode-BlockFaceOffsetTable[iface][2];
 
             if ((0<=k)&&(k<=_BLOCK_CELLS_Z_)) {
-              if ((res=neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+              if ((res=neibNode->block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k)))!=NULL) {
                 NodeOut=neibNode;
                 iNode=i,jNode=j,kNode=k;
                 return res;
@@ -661,7 +661,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
             k=kNode-BlockEdgeOffsetTable[iedge][2];
 
             if ((0<=k)&&(k<=_BLOCK_CELLS_Z_)) {
-              if ((res=neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+              if ((res=neibNode->block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k)))!=NULL) {
                 NodeOut=neibNode;
                 iNode=i,jNode=j,kNode=k;
                 return res;
@@ -684,7 +684,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
             k=kNode-BlockCornerOffsetTable[icorner][2];
 
             if ((0<=k)&&(k<=_BLOCK_CELLS_Z_)) {
-              if ((res=neibNode->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k)))!=NULL) {
+              if ((res=neibNode->block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k)))!=NULL) {
                 NodeOut=neibNode;
                 iNode=i,jNode=j,kNode=k;
                 return res;
@@ -717,7 +717,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
       if ( ((EnternalBlockFlag==true)&&(StartBlockExternalFlag==false)) || ((EnternalBlockFlag==false)&&(StartBlockExternalFlag==true)) ) {
         for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-          if (CornerNode==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
+          if (CornerNode==block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))) {
             //the 'corner' node is at the boundary of the 'real' domain
             res=true;
             return res;
@@ -733,7 +733,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
       if ( ((EnternalBlockFlag==true)&&(StartBlockExternalFlag==false)) || ((EnternalBlockFlag==false)&&(StartBlockExternalFlag==true)) ) {
         for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-          if (CornerNode==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
+          if (CornerNode==block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))) {
             //the 'corner' node is at the boundary of the 'real' domain
             res=true;
             return res;
@@ -749,7 +749,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
       if ( ((EnternalBlockFlag==true)&&(StartBlockExternalFlag==false)) || ((EnternalBlockFlag==false)&&(StartBlockExternalFlag==true)) ) {
         for (iface=0;iface<6;iface++) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
-          if (CornerNode==block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k))) {
+          if (CornerNode==block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k))) {
             //the 'corner' node is at the boundary of the 'real' domain
             res=true;
             return res;
@@ -856,7 +856,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
         for (iface=0;iface<6;iface++) if (TestCheckFace(iface,node)==true) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
           //determine whether the corner node has been already processes
           if (node->Thread==PIC::ThisThread) {
-            CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+            CornerNode=node->block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k));
             flag=(CornerNode->TestProcessedFlag()==true) ? 0 : 1;
           }
 
@@ -903,7 +903,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
         for (iface=0;iface<6;iface++) if (TestCheckFace(iface,node)==true) for (i=iFaceMin[iface];i<=iFaceMax[iface];i++) for (j=jFaceMin[iface];j<=jFaceMax[iface];j++) for (k=kFaceMin[iface];k<=kFaceMax[iface];k++) {
           //determine whether the corner node has been already processes
           if (node->Thread==PIC::ThisThread) {
-            CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+            CornerNode=node->block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k));
             flag=(CornerNode->TestProcessedFlag()==true) ? 0 : 1;
           }
 
@@ -983,7 +983,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
               if (node->Thread==PIC::ThisThread) {
                 BlockTable.BlockTableLength=0;
-                CornerNode=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(i,j,k));
+                CornerNode=node->block->GetCornerNode(_getCornerNodeLocalNumber(i,j,k));
 
                 //determine whether the point is at the boundary
                 BoundaryNodeFlag=VerifyBoundaryCornerNode(CornerNode,node);
@@ -1031,7 +1031,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
                           kk=k-FaceNeibBlockOffset[iiface][2];
 
                           if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
-                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                            if (CornerNode==neibBlock->GetCornerNode(_getCornerNodeLocalNumber(ii,jj,kk))) {
                               //a new block has been found that contains tested 'corner' node
                               BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
                               BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
@@ -1084,7 +1084,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
                           kk=k-CornerNeibBlockOffset[icorner][2];
 
                           if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
-                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                            if (CornerNode==neibBlock->GetCornerNode(_getCornerNodeLocalNumber(ii,jj,kk))) {
                               //a new block has been found that contains tested 'corner' node
                               BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
                               BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
@@ -1130,7 +1130,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
                           kk=k-EdgeNeibBlockOffset[iedge][2];
 
                           if ((0<=kk)&&(kk<=_BLOCK_CELLS_Z_)) {
-                            if (CornerNode==neibBlock->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(ii,jj,kk))) {
+                            if (CornerNode==neibBlock->GetCornerNode(_getCornerNodeLocalNumber(ii,jj,kk))) {
                               //a new block has been found that contains tested 'corner' node
                               BlockTable.iCorner[BlockTable.BlockTableLength]=ii;
                               BlockTable.jCorner[BlockTable.BlockTableLength]=jj;
@@ -1321,7 +1321,7 @@ void PIC::Parallel::ProcessCornerBlockBoundaryNodes() {
 
 
               if (node->block!=NULL) {
-                StencilTablePBC[iStencil].PointTable[i].AssociatedDataPointer=node->block->GetCornerNode(PIC::Mesh::mesh.getCornerNodeLocalNumber(Set.i,Set.j,Set.k))->GetAssociatedDataBufferPointer();
+                StencilTablePBC[iStencil].PointTable[i].AssociatedDataPointer=node->block->GetCornerNode(_getCornerNodeLocalNumber(Set.i,Set.j,Set.k))->GetAssociatedDataBufferPointer();
               }
               else {
                 //the block is not allocated => the corner associated data vectors are not definied

@@ -330,7 +330,7 @@ int PIC::BC::ExternalBoundary::OpenFlow::InjectBlock(int spec,cTreeNodeAMR<PIC::
         exit(__LINE__,__FILE__,"Oops.... the face counted is out of range");
       }
 
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+      nd=_getCenterNodeLocalNumber(iCell,jCell,kCell);
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) exit(__LINE__,__FILE__,"Error: the cell is not alocated");
 
       startNode->GetExternalNormal(ExternalNormal,nface);
@@ -492,7 +492,7 @@ int PIC::BC::ExternalBoundary::ExternalBoundaryFlowDirection(int spec, int nface
       exit(__LINE__,__FILE__,"Oops....");
     }
 
-    nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+    nd=_getCenterNodeLocalNumber(iCell,jCell,kCell);
     if ((CenterNode=node->block->GetCenterNode(nd))==NULL) exit(__LINE__,__FILE__,"Error: the cell is not alocated");
 
     CenterNode->GetBulkVelocity(BulkVelocity,spec);

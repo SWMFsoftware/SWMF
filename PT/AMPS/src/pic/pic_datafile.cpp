@@ -513,7 +513,7 @@ void PIC::CPLR::DATAFILE::SaveBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC:
         //locate the cell
         if (startNode->block==NULL) SendCellFlag=false,offset=NULL;
 
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
         if (SendCellFlag==true) {
           if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
           else SendCellFlag=false,offset=NULL;
@@ -615,7 +615,7 @@ void PIC::CPLR::DATAFILE::LoadBinaryFile(const char *fNameBase,cTreeNodeAMR<PIC:
       if (savedLoadCellFlag==true) {
         //determine whether the cell data needed to be read
         //locate the cell
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
 
         if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) {
           offset=CenterNode->GetAssociatedDataBufferPointer();
@@ -885,7 +885,7 @@ void PIC::CPLR::DATAFILE::SaveTestReferenceData(const char *fName,cTreeNodeAMR<P
         //locate the cell
         if (startNode->block==NULL) SendCellFlag=false,offset=NULL;
 
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
         if (SendCellFlag==true) {
           if ((CenterNode=startNode->block->GetCenterNode(nd))!=NULL) offset=CenterNode->GetAssociatedDataBufferPointer();
           else SendCellFlag=false,offset=NULL;
@@ -981,7 +981,7 @@ void PIC::CPLR::DATAFILE::GenerateMagneticFieldGradient(cTreeNodeAMR<PIC::Mesh::
     xCenter[2]=xNodeMin[2]+dXCell[2]*(0.5+k);
 
     //get data storage location
-    nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+    nd=_getCenterNodeLocalNumber(i,j,k);
     if ((CenterNode=node->block->GetCenterNode(nd))==NULL) continue;
 
     offset=CenterNode->GetAssociatedDataBufferPointer()+CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
@@ -1126,7 +1126,7 @@ void PIC::CPLR::DATAFILE::MULTIFILE::CopyCurrDataFile2NextDataFile(cTreeNodeAMR<
       PIC::Mesh::cDataCenterNode *cell;
 
       if (startNode->block!=NULL) for (k=kMin;k<=kMax;k++) for (j=jMin;j<=jMax;j++) for (i=iMin;i<=iMax;i++) {
-        nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+        nd=_getCenterNodeLocalNumber(i,j,k);
         cell=startNode->block->GetCenterNode(nd);
 
         if (cell!=NULL) {

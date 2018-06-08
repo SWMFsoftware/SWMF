@@ -69,7 +69,7 @@ long int PIC::InitialCondition::PrepopulateDomain(int spec,double NumberDensity,
     #endif
 
     for (kCell=0;kCell<kCellMax;kCell++) for (jCell=0;jCell<jCellMax;jCell++) for (iCell=0;iCell<iCellMax;iCell++) {
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(iCell,jCell,kCell);
+      nd=_getCenterNodeLocalNumber(iCell,jCell,kCell);
       cell=cellList[nd];
       xMiddle=cell->GetX();
 

@@ -142,7 +142,7 @@ void PIC::CPLR::DATAFILE::KAMELEON::LoadDataFile(const char *fname,cTreeNodeAMR<
       for (idim=0;idim<3;idim++) x[idim]/=_RADIUS_(_EARTH_);
 
       //locate the cell
-      nd=PIC::Mesh::mesh.getCenterNodeLocalNumber(i,j,k);
+      nd=_getCenterNodeLocalNumber(i,j,k);
       if (startNode->block==NULL) continue;
       if ((CenterNode=startNode->block->GetCenterNode(nd))==NULL) continue;
       offset=CenterNode->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::CenterNodeAssociatedDataOffsetBegin+MULTIFILE::CurrDataFileOffset;
