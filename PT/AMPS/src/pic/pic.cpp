@@ -1007,12 +1007,12 @@ void PIC::Sampling::Sampling() {
 
               //call sampling procedures of indivudual models
               #if _PIC_MODEL__DUST__MODE_ == _PIC_MODEL__DUST__MODE__ON_
-              ElectricallyChargedDust::Sampling::SampleParticleData(ParticleData,LocalParticleWeight, SamplingData, s);
+              ElectricallyChargedDust::Sampling::SampleParticleData((char*)ParticleData,LocalParticleWeight, SamplingData, s);
               #endif //_PIC_MODEL__DUST__MODE_
 
               //call sampling procedures of indivudual models
               #if _PIC_MOVER_INTEGRATOR_MODE_ == _PIC_MOVER_INTEGRATOR_MODE__GUIDING_CENTER_
-              PIC::Mover::GuidingCenter::Sampling::SampleParticleData(ParticleData,LocalParticleWeight, SamplingData, s);//tempSamplingBuffer, s);
+              PIC::Mover::GuidingCenter::Sampling::SampleParticleData((char*)ParticleData,LocalParticleWeight, SamplingData, s);//tempSamplingBuffer, s);
               #endif //_PIC_MOVER_INTEGRATOR_MODE_
 
               #if _PIC_FIELD_LINE_MODE_ == _PIC_MODE_ON_
@@ -1025,7 +1025,7 @@ void PIC::Sampling::Sampling() {
               #endif
 
               #ifdef _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_ //call a user-defind particle sampling procedure with passing the node information
-              _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_(ParticleData,LocalParticleWeight,SamplingData,s,node);
+              _PIC_USER_DEFING_PARTICLE_SAMPLING__NODE_((char*)ParticleData,LocalParticleWeight,SamplingData,s,node);
               #endif
             }
           }
