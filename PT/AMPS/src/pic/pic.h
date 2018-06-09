@@ -3820,7 +3820,7 @@ namespace PIC {
       int Length;
       double Weight[nMaxStencilLength];
       T* cell[nMaxStencilLength];
-      int LocaCellID[nMaxStencilLength];
+      int LocalCellID[nMaxStencilLength];
 
       void flush() {
         Length=0;
@@ -3838,7 +3838,7 @@ namespace PIC {
 
         Weight[Length]=w;
         cell[Length]=c;
-        LocaCellID[Length]=id;
+        LocalCellID[Length]=id;
         Length++;
       }
 
