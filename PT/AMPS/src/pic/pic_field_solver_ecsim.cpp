@@ -658,7 +658,8 @@ void UpdateJMassMatrix(){
   // update J and MassMatrix 
   using namespace PIC::FieldSolver::Electromagnetic::ECSIM; 
   //the table of cells' particles
-  long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  //long int FirstCellParticleTable[_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_];
+  long int *FirstCellParticleTable;
   PIC::ParticleBuffer::byte *ParticleData,*ParticleDataNext;
   PIC::Mesh::cDataCenterNode *cell;
   PIC::Mesh::cDataBlockAMR *block;
@@ -689,11 +690,27 @@ void UpdateJMassMatrix(){
 
     if (node->Thread!=PIC::ThisThread) continue;
      
+
+    double B_Center[_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_*_TOTAL_BLOCK_CELLS_Z_][3];
+    for (int k=-_GHOST_CELLS_Z_;k<_BLOCK_CELLS_Z_+_GHOST_CELLS_Z_;k++) {
+      for (int j=-_GHOST_CELLS_Y_;j<_BLOCK_CELLS_Y_+_GHOST_CELLS_Y_;j++)  {
+        for (int i=-_GHOST_CELLS_X_;i<_BLOCK_CELLS_X_+_GHOST_CELLS_X_;i++) {
+          int LocalCenterId = _getCenterNodeLocalNumber(i,j,k);
+          if (!node->block->GetCenterNode(LocalCenterId)) continue; 
+          char *offset=node->block->GetCenterNode(LocalCenterId)->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset;
+          double * ptr =  (double*)(offset+CurrentBOffset);
+	  //for (int idim=0;idim<3;idim++) B_Center[LocalCenterId][idim]=ptr[idim];
+          memcpy(B_Center[LocalCenterId],ptr,3*sizeof(double));
+        }
+      }
+    }
+
     int nCell[3] = {_BLOCK_CELLS_X_,_BLOCK_CELLS_Y_,_BLOCK_CELLS_Z_};
     
     block=node->block;
     
-    memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+    //memcpy(FirstCellParticleTable,block->FirstCellParticleTable,_BLOCK_CELLS_X_*_BLOCK_CELLS_Y_*_BLOCK_CELLS_Z_*sizeof(long int));
+    FirstCellParticleTable=block->FirstCellParticleTable;
     double CellVolume=1;
     for (int iDim=0; iDim<3;iDim++) CellVolume*=(node->xmax[iDim]-node->xmin[iDim])/nCell[iDim]*length_conv;  
     
@@ -753,8 +770,9 @@ void UpdateJMassMatrix(){
 	      MagneticFieldStencil=*(PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInit,node));
 	      
 	      for (int iStencil=0;iStencil<MagneticFieldStencil.Length;iStencil++) {
-          memcpy(temp,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+CurrentBOffset,3*sizeof(double));
-          for (int idim=0;idim<3;idim++) B[idim]+=MagneticFieldStencil.Weight[iStencil]*temp[idim];
+		//memcpy(temp,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+CurrentBOffset,3*sizeof(double));
+		double * B_temp = B_Center[MagneticFieldStencil.LocalCellID[iStencil]];
+		for (int idim=0;idim<3;idim++) B[idim]+=MagneticFieldStencil.Weight[iStencil]*B_temp[idim];
 	      }
 
 	      //convert from SI to cgs
