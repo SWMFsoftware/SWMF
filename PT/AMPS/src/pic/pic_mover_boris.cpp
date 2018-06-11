@@ -794,7 +794,7 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
   PIC::CPLR::GetBackgroundMagneticField(B);
 
   #else //_PIC_FIELD_SOLVER_MODE__OFF_
-  double t[3];
+
 
   switch ( _PIC_FIELD_SOLVER_MODE_) {
   case _PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_:
@@ -802,18 +802,28 @@ int PIC::Mover::Lapenta2017(long int ptr,double dtTotal,cTreeNodeAMR<PIC::Mesh::
     ElectricFieldStencil=*(PIC::InterpolationRoutines::CornerBased::InitStencil(xInit,startNode));
 
     for (int iStencil=0;iStencil<ElectricFieldStencil.Length;iStencil++) {
-      memcpy(t,ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfTimeStep,3*sizeof(double));
-
-      for (idim=0;idim<3;idim++) E[idim]+=ElectricFieldStencil.Weight[iStencil]*t[idim];
+   
+       double * tempE1=PIC::Mover::E_Corner[ElectricFieldStencil.LocalCellID[iStencil]];  
+       //    char * tempoffset = startNode->block->GetCornerNode(ElectricFieldStencil.LocaCellID[iStencil])->GetAssociatedDataBufferPointer();
+       //double * tempE =(double *)(ElectricFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfTimeStep);
+       //double * tempE2 =(double*)(tempoffset+PIC::CPLR::DATAFILE::Offset::ElectricField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::OffsetE_HalfTimeStep);
+       
+       for (idim=0;idim<3;idim++) {
+         E[idim]+=ElectricFieldStencil.Weight[iStencil]*tempE1[idim];       
+       }
     }
 
     //interpolate the magnetic field (center nodes)
     MagneticFieldStencil=*(PIC::InterpolationRoutines::CellCentered::Linear::InitStencil(xInit,startNode));
 
     for (int iStencil=0;iStencil<MagneticFieldStencil.Length;iStencil++) {
-      memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::PrevBOffset,3*sizeof(double));
-
-      for (idim=0;idim<3;idim++) B[idim]+=MagneticFieldStencil.Weight[iStencil]*t[idim];
+      //      memcpy(t,MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::PrevBOffset,3*sizeof(double));
+      double * tempB1 = PIC::Mover::B_Center[MagneticFieldStencil.LocalCellID[iStencil]];
+      //double * tempB =(double *)(MagneticFieldStencil.cell[iStencil]->GetAssociatedDataBufferPointer()+PIC::CPLR::DATAFILE::Offset::MagneticField.RelativeOffset+PIC::FieldSolver::Electromagnetic::ECSIM::PrevBOffset);
+      for (idim=0;idim<3;idim++) {
+        B[idim]+=MagneticFieldStencil.Weight[iStencil]*tempB1[idim];
+        //if (fabs(tempB1[idim]-tempB[idim])>1e-5) printf("B different, local id:%d, Btest:%e, B_corr:%e\n",MagneticFieldStencil.LocaCellID[iStencil],tempB1[idim],tempB[idim]);
+      }
     }
 
     break;
