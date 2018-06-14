@@ -18,7 +18,7 @@ module ModUser
 
   include 'user_module.h' ! list of public methods
 
-  real,              parameter :: VersionUserModule = 2.1
+  real,              parameter :: VersionUserModule = 2.2
   character (len=*), parameter :: NameUserModule = 'Ganymede, Hongyang Zhou'
 
   real :: PlanetRadius=-1.
@@ -196,6 +196,12 @@ contains
 
     select case(InitType)
     case('B1U1')
+       ! Uniform density         
+       State_VGB(Rho_,:,:,:,iBlock) = CellState_VI(Rho_,Bc_)
+       ! Uniform pressure                      
+       State_VGB(p_ ,:,:,:,iBlock)  = CellState_VI(p_,Bc_)
+       State_VGB(pe_,:,:,:,iBlock)  = CellState_VI(pe_,Bc_)
+
        ! Initialize mantle region
        if(Rmin_BLK(iBlock) <= PlanetRadius) then
           do iFluid = 1, nFluid
@@ -233,13 +239,13 @@ contains
           end do
        end do; end do; end do
 
-       ! Uniform density         
+    case('B1U01')
+       ! Uniform density
        State_VGB(Rho_,:,:,:,iBlock) = CellState_VI(Rho_,Bc_)
-       ! Uniform pressure                      
+       ! Uniform pressure
        State_VGB(p_ ,:,:,:,iBlock)  = CellState_VI(p_,Bc_)
        State_VGB(pe_,:,:,:,iBlock)  = CellState_VI(pe_,Bc_)
 
-    case('B1U01')
        ! Initialize mantle region 
        if(Rmin_BLK(iBlock) <= PlanetRadius) then
           do iFluid = 1, nFluid
@@ -253,7 +259,7 @@ contains
              end do; end do; end do
           end do
        end if
-             
+
        ! Magnetic field inside the mantle is dipole
        do k=1,nK; do j=1,nJ; do i=1,nI
           if(R_BLK(i,j,k,iBlock) > PlanetRadius)then
@@ -281,12 +287,6 @@ contains
           end do
        end do; end do; end do
        
-       ! Uniform density
-       State_VGB(Rho_,:,:,:,iBlock) = CellState_VI(Rho_,Bc_)
-       ! Uniform pressure
-       State_VGB(p_ ,:,:,:,iBlock)  = CellState_VI(p_,Bc_)
-       State_VGB(pe_,:,:,:,iBlock)  = CellState_VI(pe_,Bc_)
-
     case('B0U0') ! Upstream propagation 
        ! Magnetic field starts from dipole
        do k=1,nK; do j=1,nJ; do i=1,nI
@@ -393,7 +393,7 @@ contains
     ! which requires two layers of physical cells' center values.
 
     ! Get ghost cell indexes from face indexes
-    !i = iFace; j = jFace; k = kFace;
+    i = iFace - 1; j = jFace; k = kFace;
     !select case(iSide)
     !case(1)
     !   i = iFace - 1
@@ -404,19 +404,21 @@ contains
     !end select
 
     ! copy the internal cell center value to the face
-    !VarsGhostFace_V(Bx_:Bz_) = State_VGB(Bx_:Bz_,iFace,j,k,iBlock)
+    VarsGhostFace_V(Bx_:Bz_) = State_VGB(Bx_:Bz_,i,j,k,iBlock)
 
     ! Float for B
-    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
+!    VarsGhostFace_V(Bx_:Bz_) = VarsTrueFace_V(Bx_:Bz_)
     
-    ! Fixed rho and p
+    ! Fixed rho 
     VarsGhostFace_V(rho_) = FaceState_VI(rho_,iBoundary)
-    VarsGhostFace_V(p_)   = FaceState_VI(p_,iBoundary)
-    VarsGhostFace_V(pe_)  = FaceState_VI(pe_,iBoundary)
+    
+    ! Commented out for float pressure
+!    VarsGhostFace_V(p_)   = FaceState_VI(p_,iBoundary)
+!    VarsGhostFace_V(pe_)  = FaceState_VI(pe_,iBoundary)
 
     ! First use B0Face_D + VarsTrueFace_V
     ! then try B0Face_D + State_VGB(Bx_:Bz_,iGhost,jGhost,kGhost,iBlock)
-    bUnit_D = B0Face_D + VarsTrueFace_V(Bx_:Bz_)
+    bUnit_D = B0Face_D + VarsGhostFace_V(Bx_:Bz_)
     bUnit_D = bUnit_D/max(1e-30, sqrt(sum(bUnit_D**2)))
     do iFluid = 1, nFluid
        iUx = iUx_I(iFluid); iUz = iUz_I(iFluid)
