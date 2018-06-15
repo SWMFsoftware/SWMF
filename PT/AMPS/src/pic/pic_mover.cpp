@@ -16,8 +16,10 @@ PIC::Mover::fProcessTriangleCutFaceIntersection PIC::Mover::ProcessTriangleCutFa
 
 int PIC::Mover::BackwardTimeIntegrationMode=_PIC_MODE_OFF_;
 
+#if  _PIC_FIELD_SOLVER_MODE_==_PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_
 double PIC::Mover::E_Corner[(_TOTAL_BLOCK_CELLS_X_+1)*(_TOTAL_BLOCK_CELLS_Y_+1)*(_TOTAL_BLOCK_CELLS_Z_+1)][3]; 
 double PIC::Mover::B_Center[_TOTAL_BLOCK_CELLS_X_*_TOTAL_BLOCK_CELLS_Y_*_TOTAL_BLOCK_CELLS_Z_][3];
+#endif
 //====================================================
 //init the particle mover
 void PIC::Mover::Init_BeforeParser(){
@@ -59,6 +61,7 @@ void PIC::Mover::TotalParticleAcceleration_default(double *accl,int spec,long in
 }
 //====================================================
 //Set B for B_Center
+#if  _PIC_FIELD_SOLVER_MODE_==_PIC_FIELD_SOLVER_MODE__ELECTROMAGNETIC__ECSIM_
 void PIC::Mover::SetBlock_B(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * node){
   using namespace PIC::FieldSolver::Electromagnetic::ECSIM;  
   
@@ -92,7 +95,7 @@ void PIC::Mover::SetBlock_E(cTreeNodeAMR<PIC::Mesh::cDataBlockAMR> * node){
     }
 } 
 
-
+#endif
 
 //====================================================
 //move all existing particles
