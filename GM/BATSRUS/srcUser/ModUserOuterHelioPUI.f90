@@ -1767,7 +1767,7 @@ contains
          Source_V(SWHRhoUx_) = sum(QmpxUx_I(Neu_:Ne4_)) + sum(Jpu3xUx_I(Neu_:Ne4_))
          Source_V(SWHRhoUy_) = sum(QmpxUy_I(Neu_:Ne4_)) + sum(Jpu3xUy_I(Neu_:Ne4_))
          Source_V(SWHRhoUz_) = sum(QmpxUz_I(Neu_:Ne4_)) + sum(Jpu3xUz_I(Neu_:Ne4_))
-         Source_V(SWHEnergy_)= sum(Qepx_I(Neu_:Ne4_))+ sum(Qepu3x_I(Neu_:Ne4_))
+         Source_V(SWHEnergy_)= sum(Qepx_I(Neu_:Ne4_))+ sum(Kpu3x_I(Neu_:Ne4_))
          Source_V(SWHp_) = (Gamma-1)* ( Source_V(SWHEnergy_) &
               - Ux_I(SWH_)*Source_V(SWHRhoUx_) &
               - Uy_I(SWH_)*Source_V(SWHRhoUy_) &
@@ -1955,19 +1955,20 @@ contains
 
  
 ! use sonic Mach number - good for slow Bow Shock (Zieger et al. 2015)
-! singleIon      if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
-      if (MachSW2 > MachPop4Limit**2 .and. U2Dim < uPop1LimitDim**2 ) then 
+      if (MachPop4Limit**2 < Mach2 .and. uPop1LimitDim**2 > U2Dim) then
+!!first 10K after heating      if (MachSW2 > MachPop4Limit**2 .and. U2Dim < uPop1LimitDim**2 ) then 
           ! Outside the bow shock
           iFluidProduced_C(i,j,k) = Ne4_
-       elseif(TempDim < TempPop1LimitDim .and. U2Dim < uPop1LimitDim**2 .and. MachSW2 < MachSWPop1**2) then
+!!first 10K after heating   elseif(TempDim < TempPop1LimitDim .and. U2Dim < uPop1LimitDim**2 .and. MachSW2 < MachSWPop1**2) then
+      elseif(TempDim < TempPop1LimitDim .and. U2Dim < uPop1LimitDim**2) then
           ! Outside the heliopause
           iFluidProduced_C(i,j,k) = Neu_
-! singleIon      elseif( MachPop2Limit**2 > Mach2 )then
-        elseif( MachSW2 < MachPop3Limit**2 )then
+      elseif( Mach2 < MachPop2Limit**2 )then
+!!!before 85K     elseif( MachSW2 < MachPop3Limit**2 )then
           ! Heliosheath
           iFluidProduced_C(i,j,k) = Ne2_
-! singleIon     elseif( Mach2 > MachPop3Limit**2 )then
-        elseif( MachSW2 > MachPop3Limit**2 )then
+     elseif( Mach2 > MachPop3Limit**2 )then
+!!before 85K      elseif( MachSW2 > MachPop3Limit**2 )then
           ! Inside termination shock
           iFluidProduced_C(i,j,k) = Ne3_
        else
@@ -1983,6 +1984,7 @@ contains
     if (MachSW2 < MachPop3Limit**2 .and. MachPUI2 > MachPUIPop3**2 .and. r<rPop3Limit) then 
        iFluidProduced_C(i,j,k) = Ne3_
     end if
+! first 10K after heating 
 
     end do; end do; end do
 
