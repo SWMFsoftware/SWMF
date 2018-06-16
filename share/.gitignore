@@ -1,0 +1,13 @@
+*.o
+*~
+*.mod
+*.diff
+*.tmp
+*.out
+*.ref
+*.log
+
+Library/src/Makefile.DEPEND
+Library/src/Makefile.RULES
+Library/src/ModHdf5Utils.f90
+Library/src/ModSpice.f90
