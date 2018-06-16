@@ -14,6 +14,48 @@ our $Code            = 'SWMF';
 our $MakefileDefOrig = 'CON/Makefile.def';
 our @Arguments = @ARGV;
 
+# Hash of model names with corresponding component name
+my %component = ("FSAM"=>"CZ", "BATSRUS"=>"GM", 
+		 "Ridley_serial"=>"IE", 
+		 "CIMI"=>"IM", "CRCM"=>"IM", "HEIDI"=>"IM", "RCM2"=>"IM", 
+		 "ALTOR"=>"PC", "IPIC3D2"=>"PC", 
+		 "DGCPM"=>"PS", 
+		 "AMPS"=>"PT", 
+		 "PWOM"=>"PW", 
+		 "RBE"=>"RB",
+		 "MFLAMPA"=>"SP",
+		 "GITM2"=>"UA");
+my $History;
+my @models;
+foreach (@Arguments){
+    if( /^-install/){
+	if( /^-install=(.*)/){
+	    @models = split(/,/, $1);
+	    my $model;
+	    foreach $model (@models){
+		die "ERROR: Unknown model=$model listed in -install=...\n"
+		    unless $component{$model};
+	    }
+	}else{
+	    @models = sort(keys(%component));
+	}
+    }
+    if( /^-history$/){
+	$History = 1;
+    }
+}
+
+# Create Git clone command
+my $gitclone = "git clone";
+$gitclone .= " --depth=1" unless $History;
+$gitclone .= " herot:/GIT/FRAMEWORK";
+
+my $repo;
+foreach $repo ("share", "util", @models){
+    my $component = ($component{$repo} or ".");
+    `cd $component; $gitclone/$repo` unless -d "$component/$repo";
+}
+
 my $config     = "share/Scripts/Config.pl";
 require $config or die "Could not find $config!\n";
 
@@ -376,7 +418,15 @@ sub print_help{
 
     print 
 #BOC
-"Additional options for SWMF/config.pl:
+"Additional options for SWMF/Config.pl:
+
+-install=MOD1,MOD2 Use git clone to get the models listed during (re)install.
+	       The model names should be separated with commas, but no space.
+	       Models that are already present will not be removed.
+               Default is to get all the models.
+
+-history       Get the models from Git with full development history. 
+               Default is no history to reduce size and download time.
 
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
@@ -398,6 +448,9 @@ sub print_help{
                that are not listed explicitly.
 
 Examples for the SWMF Config.pl:
+
+(Re)install BATSRUS and AMPS with full version history:
+    Config.pl -install=BATSRUS,AMPS -history
 
 Select the empty version for all components except GM/BATSRUS:
 

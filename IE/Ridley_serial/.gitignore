@@ -1,0 +1,11 @@
+*~
+*.o
+*.a
+*.diff
+*.exe
+
+Makefile.conf
+Makefile.def
+src/Makefile.DEPEND
+src/ModSize.f90
+src/Makefile.RULES

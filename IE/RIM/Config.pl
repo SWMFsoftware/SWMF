@@ -3,4 +3,5 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
 our @Arguments       = @ARGV;
+
 require "../../share/Scripts/Config.pl";

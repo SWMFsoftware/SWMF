@@ -13,6 +13,16 @@ our $Code            = 'PWOM';
 our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments       = @ARGV;
 
+my $config     = "share/Scripts/Config.pl";
+
+# get util and share
+my $GITCLONE = "git clone"; my $GITDIR = "herot:/GIT/FRAMEWORK/";
+if (-f $config or -f "../../$config"){
+}else{
+    `$GITCLONE $GITDIR/share.git; $GITCLONE $GITDIR/util.git`;
+}
+
+
 # Planet variables
 my $MakefilePlanet = "Makefile.planet";
 my $Planet;
@@ -21,7 +31,7 @@ my $NewPlanet;
 # Make sure that Makefile.planet exists
 `touch $MakefilePlanet`;
 
-my $config     = "share/Scripts/Config.pl";
+
 if(-f $config){
     require $config;
 }else{
