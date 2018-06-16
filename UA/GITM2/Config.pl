@@ -1,7 +1,8 @@
-#!/usr/bin/perl -i
+#!/usr/bin/perl
 #  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
+
 
 our $Component       = 'UA';
 our $Code            = 'GITM2';
@@ -9,6 +10,30 @@ our $MakefileDefOrig = 'srcMake/Makefile.def';
 our @Arguments       = @ARGV;
 
 my $config     = "share/Scripts/Config.pl";
+
+# get util and share
+my $GITCLONE = "git clone"; 
+my $GITDIR = "herot:/GIT/FRAMEWORK/";
+my $SWMF_data_DIR = "herot:/GIT/data_REPOs/";
+
+if(not -f $config and not -f "../../$config"){
+    `$GITCLONE $GITDIR/share` unless -d "share";
+    `$GITCLONE $GITDIR/util`  unless -d "util";
+}
+
+#check or get SWMF_data git will use
+if (-d "srcData"){
+    print "srcData is installed in GITM\n";
+}elsif (-d $ENV{"HOME"}."/SWMF_data"){
+    print "SWMF_data is installed in the home directory";
+}else{
+    system("git clone $SWMF_data_DIR/GITM_data.git");
+    system("cp -r GITM_data/data/input srcData");
+    system("rm -rf GITM_data");
+}
+
+
+
 if(-f $config){
     require $config;
 }else{
@@ -49,6 +74,8 @@ my $NoFlush;
 $Planet = "Earth" if $Install; # Default planet
 $NoFlush = 0;
 
+#our $gitcmd;
+
 foreach (@Arguments){
     if(/^-LV-426$/i)          {$Planet="LV-426";               next};
     if(/^-Titan$/i)           {$Planet="Titan";                next};
@@ -56,9 +83,9 @@ foreach (@Arguments){
     if(/^-earth$/i)           {$Planet="Earth";                next};
     if(/^-noflush$/i)         {$NoFlush=1     ;                next};
     if(/^-s$/)                {$Show=1;                        next};
-
     warn "WARNING: Unknown flag $_\n" if $Remaining{$_};
 }
+
 
 &modify_utilities if $NoFlush;
 
@@ -74,7 +101,7 @@ print "Config.pl -g=$GridSize\n" if $ShowGridSize and not $Show;
 
 exit 0;
 
-############################################################################
+
 sub modify_utilities{
 
     my $IsDone;
