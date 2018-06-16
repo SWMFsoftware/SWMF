@@ -17,6 +17,17 @@ my $TestRunProcessorNumber=4;
 our $TestName;
 our @Compilers;
 
+
+my $config     = "share/Scripts/Config.pl";
+#check util and share
+my $GITCLONE = "git clone"; my $GITDIR = "herot:/GIT/FRAMEWORK/";
+
+if (-f $config or -f "../../$config"){
+}else{
+    `$GITCLONE $GITDIR/share.git; $GITCLONE $GITDIR/util.git`;
+}
+
+
 #create Makefile.local
 if (! -e "Makefile.local") {
   `touch Makefile.local`;
@@ -34,7 +45,6 @@ foreach (@Arguments) {
 
 
 # Run the shared Config.pl script
-my $config     = "share/Scripts/Config.pl";
 if(-f $config){
     require $config;
 }else{
