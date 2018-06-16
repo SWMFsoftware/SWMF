@@ -3,4 +3,6 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 use strict;
 our @Arguments       = @ARGV;
+
+# get util and share
 require "../../share/Scripts/Config.pl";

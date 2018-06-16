@@ -4,6 +4,8 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 # Allow in-place editing
+# A new line to test email notification
+
 $^I = "";
 
 use strict;
@@ -14,6 +16,18 @@ our $MakefileDefOrig = 'src/Makefile.def';
 our @Arguments = @ARGV;
 
 my $config     = "share/Scripts/Config.pl";
+my $GITCLONE = "git clone"; my $GITDIR = "herot:/GIT/FRAMEWORK/";
+
+if (-f $config or -f "../../$config"){
+}else{
+    `$GITCLONE $GITDIR/share.git; $GITCLONE $GITDIR/util.git`;
+}
+
+if (-d "srcBATL"){
+}else{
+    `$GITCLONE $GITDIR/srcBATL.git`;
+}
+
 if(-f $config){
     require $config;
 }else{
