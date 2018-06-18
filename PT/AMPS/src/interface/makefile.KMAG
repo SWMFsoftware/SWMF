@@ -1,4 +1,0 @@
-KMAG : 
-	${COMPILE.f90} ${Cflag3} KMAG.f 
-	${COMPILE.mpicxx} ${FLAGC} KMAGInterface.cpp -o KMAGInterface.o
-	ar -src KMAG.a KMAG.o KMAGInterface.o 

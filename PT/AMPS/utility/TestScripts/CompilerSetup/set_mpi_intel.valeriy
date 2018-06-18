@@ -1,1 +1,0 @@
-set path=(/usr/local/mpi-intel/bin /usr/local/mpi-intel/lib ${path})

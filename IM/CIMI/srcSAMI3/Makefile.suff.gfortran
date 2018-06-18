@@ -1,4 +1,0 @@
-
-.f.o:
-	${COMPILE.f77} ${Cflag3} -fno-automatic -ffixed-line-length-132 $<
-
