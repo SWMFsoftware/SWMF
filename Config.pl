@@ -15,16 +15,19 @@ our $MakefileDefOrig = 'CON/Makefile.def';
 our @Arguments = @ARGV;
 
 # Hash of model names with corresponding component name
-my %component = ("FSAM"=>"CZ", "BATSRUS"=>"GM", 
-		 "Ridley_serial"=>"IE", 
-		 "CIMI"=>"IM", "CRCM"=>"IM", "HEIDI"=>"IM", "RCM2"=>"IM", 
-		 "ALTOR"=>"PC", "IPIC3D2"=>"PC", 
-		 "DGCPM"=>"PS", 
-		 "AMPS"=>"PT", 
-		 "PWOM"=>"PW", 
-		 "RBE"=>"RB",
-		 "MFLAMPA"=>"SP",
-		 "GITM2"=>"UA");
+my %component = (
+    "HYPRE"=>"util",
+    "FSAM"=>"CZ", "BATSRUS"=>"GM", 
+    "Ridley_serial"=>"IE", 
+    "CIMI"=>"IM", "CRCM"=>"IM", "HEIDI"=>"IM", "RCM2"=>"IM", 
+    "ALTOR"=>"PC", "IPIC3D2"=>"PC", 
+    "DGCPM"=>"PS", 
+    "AMPS"=>"PT", 
+    "PWOM"=>"PW", 
+    "RBE"=>"RB",
+    "MFLAMPA"=>"SP",
+    "GITM2"=>"UA");
+
 my $History;
 my @models;
 foreach (@Arguments){
@@ -39,10 +42,10 @@ foreach (@Arguments){
 	}else{
 	    @models = sort(keys(%component));
 	}
+	next;
     }
-    if( /^-history$/){
-	$History = 1;
-    }
+    if( /^-history$/){$History = 1; next;}
+    if( /^-hypre$/){push @models, "HYPRE"; next;}
 }
 
 # Create Git clone command
