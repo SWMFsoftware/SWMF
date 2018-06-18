@@ -2,6 +2,8 @@
 #  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
+# A new line to test the email notification
+
 #!QUOTE: \clearpage
 #BOP
 #!QUOTE: \section{Makefiles}
