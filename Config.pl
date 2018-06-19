@@ -16,7 +16,6 @@ our @Arguments = @ARGV;
 
 # Hash of model names with corresponding component name
 my %component = (
-    "HYPRE"=>"util",
     "FSAM"=>"CZ", "BATSRUS"=>"GM", 
     "Ridley_serial"=>"IE", 
     "CIMI"=>"IM", "CRCM"=>"IM", "HEIDI"=>"IM", "RCM2"=>"IM", 
@@ -45,7 +44,6 @@ foreach (@Arguments){
 	next;
     }
     if( /^-history$/){$History = 1; next;}
-    if( /^-hypre$/){push @models, "HYPRE"; next;}
 }
 
 # Create Git clone command
