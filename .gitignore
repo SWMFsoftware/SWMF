@@ -10,17 +10,9 @@ Makefile.conf
 Makefile.def
 Makefile.RULES
 Makefile.DEPEND
-stand_alone.f90
-BATL_size.f90
-ModSize.f90
-ModUser.f90
-ModUser.f90.safe
-ModEquation.f90
-ModEquation.f90.safe
-ModHdf5.f90
-ModImplHypre.f90
 Tmp_*
 test_swmf.res
+test_swmf.log
 
 BATL/
 RB/RBE/
@@ -69,8 +61,6 @@ OH/BATSRUS/srcInterface/ModBuffer.f90
 OH/BATSRUS/srcInterface/ModGridDescriptor.f90
 OH/BATSRUS/srcInterface/OH_wrapper.f90
 OH/BATSRUS/srcUser/
-
-
 
 PS/DGCPM/
 PT/AMPS/
