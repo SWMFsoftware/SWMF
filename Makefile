@@ -329,8 +329,6 @@ dist:
 	tar -rf tmp.tar  Makefile.test          #^CMP IF TESTING
 	tar -rf tmp.tar  output                 #^CMP IF TESTING
 	tar -rf tmp.tar  Copyrights
-	tar -rf tmp.tar  CVS*
-	tar -rf tmp.tar  .cvsignore
 	tar -rf tmp.tar  Config.pl
 	tar -rf tmp.tar  doc			#^CMP IF DOC
 	tar -rf tmp.tar  Param
