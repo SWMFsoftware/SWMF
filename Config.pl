@@ -54,7 +54,10 @@ $gitclone .= " herot:/GIT/FRAMEWORK";
 my $repo;
 foreach $repo ("share", "util", @models){
     my $component = ($component{$repo} or ".");
-    `cd $component; $gitclone/$repo` unless -d "$component/$repo";
+    my $model = "$component/$repo";
+    `cd $component; $gitclone/$repo` unless -d $model;
+    `cd GM/BATSRUS; $gitclone/srcBATL` 
+	if $model eq "GM/BATSRUS" and not -d "$model/srcBATL";
 }
 
 my $config     = "share/Scripts/Config.pl";
