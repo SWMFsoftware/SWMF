@@ -157,8 +157,8 @@ contains
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
   end subroutine SP_copy_old_state
   !===========================
-  subroutine SP_adjust_lines(DoInit, DoAdjustStart, DoAdjustEnd)
-    Logical, intent(in):: DoInit, DoAdjustStart, DoAdjustEnd
+  subroutine SP_adjust_lines(DoInit)
+    Logical, intent(in):: DoInit
     character(len=*), parameter:: NameSub='SP_adjust_lines'
     !---------------------------------------------------------------
     call CON_stop('SP:'//NameSub//': cannot call the empty version')
