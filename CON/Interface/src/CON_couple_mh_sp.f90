@@ -296,8 +296,7 @@ contains
     call SC_synchronize_refinement(RouterScSp%iProc0Source,&
          RouterScSp%iCommUnion)
     if(.not.DoInit) call SP_get_lines_from_sc
-    if(is_proc(SP_))call SP_adjust_lines(DoInit,&
-         DoAdjustStart=.true.,DoAdjustEnd=.not.use_comp(IH_))
+    if(is_proc(SP_))call SP_adjust_lines(DoInit)
     ! Set router SC=> SP to  receive MHD data         
     call set_router(&
          GridSource             = SC_Grid                  ,&
@@ -411,8 +410,7 @@ contains
     call IH_synchronize_refinement(RouterIhSp%iProc0Source,&
          RouterIhSp%iCommUnion)  
     if(.not.DoInit) call SP_get_lines_from_ih
-    if(is_proc(SP_))call SP_adjust_lines(DoInit,&
-         DoAdjustStart = .not.use_comp(SC_), DoAdjustEnd = .true.)
+    if(is_proc(SP_))call SP_adjust_lines(DoInit)
     !\
     ! Set router IH=> SP to  receive MHD data
     call set_router(                                            & 
