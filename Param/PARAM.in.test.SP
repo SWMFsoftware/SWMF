@@ -6,6 +6,14 @@ T			DoEcho
 #DESCRIPTION
 Input file for testing SP model for SEPs, uses input files with background data
 
+#STARTTIME
+    2011                     iYear
+       2                     iMonth
+      16                     iDay
+      17                     iHour
+      26                     iMinute
+       0                     iSecond
+ 0.000000000000              FracSecond
 
 #TIMEACCURATE
 T
