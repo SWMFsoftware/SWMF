@@ -16,16 +16,21 @@ our @Arguments = @ARGV;
 
 # Hash of model names with corresponding component name
 my %component = (
-    "FSAM"=>"CZ", "BATSRUS"=>"GM", 
-    "Ridley_serial"=>"IE", 
-    "CIMI"=>"IM", "CRCM"=>"IM", "HEIDI"=>"IM", "RCM2"=>"IM", 
-    "ALTOR"=>"PC", "IPIC3D2"=>"PC", 
-    "DGCPM"=>"PS", 
-    "AMPS"=>"PT", 
-    "PWOM"=>"PW", 
-    "RBE"=>"RB",
-    "MFLAMPA"=>"SP",
-    "GITM2"=>"UA");
+    "FSAM"          => "CZ", 
+    "BATSRUS"       => "GM", 
+    "Ridley_serial" => "IE", 
+    "CIMI"          => "IM", 
+    "CRCM"          => "IM", 
+    "HEIDI"         => "IM", 
+    "RCM2"          => "IM", 
+    "ALTOR"         => "PC", 
+    "IPIC3D2"       => "PC", 
+    "DGCPM"         => "PS", 
+    "AMPS"          => "PT", 
+    "PWOM"          => "PW", 
+    "RBE"           => "RB",
+    "MFLAMPA"       => "SP",
+    "GITM2"         => "UA");
 
 my $History;
 my @models;
