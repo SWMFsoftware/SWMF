@@ -54,6 +54,8 @@ module CON_couple_gm_im
 
   logical, save :: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
 
+  ! Number of fluids in GM (useful as multifluid can have more than 2 fluids)
+  integer, save :: nDensityGM
 contains
 
   !BOP =======================================================================
@@ -66,7 +68,7 @@ contains
     
     use ModProcessVarName,  ONLY: process_var_name
 
-    integer :: nDensityGm, nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm
+    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm
     integer :: nDensityIm, nSpeedIm, nPIm, nPparIm, nWaveIm, nMaterialIm 
 
     ! General error code
@@ -309,8 +311,16 @@ contains
       if(DoTest)write(*,*)NameSub,' starting, iProc=', i_proc()
 
       if(DoMultiFluidIMCoupling) then
-         NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
-         nVarBmin = 10
+         if (nDensityGM == 4) then
+            !case with ionospheric H+ and O+, and SW H+
+            NameVar=&
+                 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:SwRho:Hprho:Oprho:SwP:Hpp:Opp'
+            nVarBmin = 12
+         else
+            !standard multifluid case
+            NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
+            nVarBmin = 10
+         endif
       else if(DoAnisoPressureIMCoupling)then
          NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar'
          nVarBmin = 7
@@ -323,7 +333,7 @@ contains
       ! Get size of field line traces
       !/
       if(is_proc(GM_)) call GM_get_for_im_trace_crcm( &
-           iSize, jSize, NameVar, nVarLine, nPointLine)
+           iSize, jSize, nDensityGM, NameVar, nVarLine, nPointLine)
 
       call transfer_integer(GM_, IM_, nVarLine, nPointLine)
      
@@ -338,7 +348,7 @@ contains
       ! Only GM root returns useful info but all processors should be called
       ! so they can deallocate ray tracing
       if(is_proc0(GM_)) call GM_get_for_im_crcm( &
-           Buffer_IIV, BufferKp, iSize, jSize, nVarBmin, &
+           Buffer_IIV, BufferKp, iSize, jSize, nDensityGM, nVarBmin, &
            BufferLine_VI, nVarLine, nPointLine, NameVar)
 
       call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
