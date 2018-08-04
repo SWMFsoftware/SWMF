@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #INCLUDE
 RESTART.in
 
@@ -34,11 +31,13 @@ CPUTIMEMAX
 28000.0                 CpuTimeMax [sec]
 
 #COUPLEORDER
-5			nCouple
+7			nCouple
 IE GM			NameSourceTarget
 IE IM			NameSourceTarget
+IE RB			NameSourceTarget
 GM IE			NameSourceTarget
 GM IM			NameSourceTarget
+GM RB			NameSourceTarget
 IM GM			NameSourceTarget
 
 #COUPLE2
@@ -56,6 +55,18 @@ GM			NameComp2
 #COUPLE1
 IE			NameComp1
 IM			NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+
+#COUPLE1
+GM			NameComp1
+RB			NameComp2
+-1                      DnCouple
+10.0                    DtCouple
+
+#COUPLE1
+IE			NameComp1
+RB			NameComp2
 -1                      DnCouple
 10.0                    DtCouple
 
@@ -219,6 +230,18 @@ mc3	                TypeLimiter
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
+#REGION
+borisregion             NameArea
+sphere tapered          NameShape
+-4.0                    xPosition
+0.0                     yPosition
+0.0                     zPosition
+14.0                    Radius
+2.0                     Taper
+
+#BORISREGION
+borisregion		NameBorisRegion
+
 #TIMESTEPPING
 1			nStage
 0.85			CflExpl
@@ -274,9 +297,32 @@ aur idl                 StringPlot
 
 #END_COMP IE -----------------------------------------------------------------
 
-STOP
--1			MaxIter
-86400.0			TimeMax
+#BEGIN_COMP RB ---------------------------------------------------------------
+
+#INCLUDE
+RB/restartIN/restart.H
+
+#SAVEPLOT
+60.0		DtSavePlot
+T		UseSeparatePlotFiles
+
+#TIMESTEP
+5.0		Dt
+
+#STARTUPTIME
+0.0		trans
+
+#BMODEL
+MHD		NameModel
+F		UseFixedB
+
+#IEMODEL
+1		iConvect
+
+#PLASMASPHERE
+F		UsePlasmaSphere
+
+#END_COMP RB -----------------------------------------------------------------
 
 #ENDTIME            
 2014			year
