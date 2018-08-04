@@ -256,12 +256,12 @@ contains
   end subroutine GM_get_sat_for_im_crcm
 
   !==============================================================================
-  subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, NameVar, nVarLine, &
-       nPointLine)
+  subroutine GM_get_for_im_trace_crcm(iSizeIn, jSizeIn, nDensityIn, &
+       NameVar, nVarLine, nPointLine)
 
     implicit none
 
-    integer, intent(in)           :: iSizeIn, jSizeIn
+    integer, intent(in)           :: iSizeIn, jSizeIn, nDensityIn
     character (len=*), intent(in) :: NameVar
     integer, intent(out)          :: nVarLine, nPointLine
 
