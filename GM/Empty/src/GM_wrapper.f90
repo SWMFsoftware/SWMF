@@ -272,14 +272,14 @@ contains
   end subroutine GM_get_for_im_trace_crcm
 
   !==============================================================================
-  subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nVarIn, &
-       BufferLine_VI, nVarLine, nPointLine, NameVar)
+  subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nDensity,&
+       nVarIn, BufferLine_VI, nVarLine, nPointLine, NameVar)
 
     implicit none
 
     character (len=*), parameter :: NameSub='GM_get_for_im_crcm'
 
-    integer, intent(in) :: iSizeIn, jSizeIn, nVarIn
+    integer, intent(in) :: iSizeIn, jSizeIn, nDensity, nVarIn
     real, intent(out)   :: Buffer_IIV(iSizeIn,jSizeIn,nVarIn), KpOut
 
     integer, intent(in) :: nPointLine, nVarLine
