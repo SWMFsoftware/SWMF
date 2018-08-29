@@ -34,10 +34,12 @@ my %component = (
 
 my $History;
 my @models;
+my $CloneOnly;
 foreach (@Arguments){
-    if( /^-install/){
-	if( /^-install=(.*)/){
-	    @models = split(/,/, $1);
+    if( /^-(install|clone)/){
+	$CloneOnly = 1 if /^-clone/;
+	if( /^-(install|clone)=(.*)/){
+	    @models = split(/,/, $2);
 	    my $model;
 	    foreach $model (@models){
 		die "ERROR: Unknown model=$model listed in -install=...\n"
@@ -63,6 +65,11 @@ foreach $repo ("share", "util", @models){
     `cd $component; $gitclone/$repo` unless -d $model;
     `cd GM/BATSRUS; $gitclone/srcBATL` 
 	if $model eq "GM/BATSRUS" and not -d "$model/srcBATL";
+}
+
+if($CloneOnly){
+    print "Done cloning git repositories\n";
+    exit 0;
 }
 
 my $config     = "share/Scripts/Config.pl";
@@ -429,10 +436,12 @@ sub print_help{
 #BOC
 "Additional options for SWMF/Config.pl:
 
--install=MOD1,MOD2 Use git clone to get the models listed during (re)install.
+-clone         Use git clone to get all missing models and/or share and util.
+-clone=MOD1,MOD2 Use git clone to get the models listed.
 	       The model names should be separated with commas, but no space.
 	       Models that are already present will not be removed.
-               Default is to get all the models.
+
+-install=MOD1,MOD2 Perform the same as -clone and also (re)install.
 
 -history       Get the models from Git with full development history. 
                Default is no history to reduce size and download time.
@@ -458,7 +467,16 @@ sub print_help{
 
 Examples for the SWMF Config.pl:
 
+Clone share, util and all models with full version history:
+
+    Config.pl -clone -history
+
+Clone share, util and the listed models:
+
+    Config.pl -clone=BATSRUS,Ridley_serial,RCM2,RBE
+
 (Re)install BATSRUS and AMPS with full version history:
+
     Config.pl -install=BATSRUS,AMPS -history
 
 Select the empty version for all components except GM/BATSRUS:
