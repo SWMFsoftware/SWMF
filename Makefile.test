@@ -562,7 +562,7 @@ test_swpc_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	cp ${TESTDIR}/LAYOUT.in_rbe ${TESTDIR}/LAYOUT.in
+	cp ${TESTDIR}/LAYOUT.in_SWPC_v2 ${TESTDIR}/LAYOUT.in
 	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_SWPC_v2_init
 	cp ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in
