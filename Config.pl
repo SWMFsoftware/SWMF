@@ -27,6 +27,7 @@ my %component = (
     "IPIC3D2"       => "PC", 
     "DGCPM"         => "PS", 
     "AMPS"          => "PT", 
+    "AMPS"          => "PC", 
     "PWOM"          => "PW", 
     "RBE"           => "RB",
     "MFLAMPA"       => "SP",
