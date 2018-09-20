@@ -26,8 +26,8 @@ my %component = (
     "ALTOR"         => "PC", 
     "IPIC3D2"       => "PC", 
     "DGCPM"         => "PS", 
-    "AMPS"          => "PT", 
-    "AMPS"          => "PC", 
+    "AMPS_PT"       => "PT", 
+    "AMPS_PC"       => "PC", 
     "PWOM"          => "PW", 
     "RBE"           => "RB",
     "MFLAMPA"       => "SP",
@@ -62,8 +62,10 @@ $gitclone .= " herot:/GIT/FRAMEWORK";
 my $repo;
 foreach $repo ("share", "util", @models){
     my $component = ($component{$repo} or ".");
-    my $model = "$component/$repo";
-    `cd $component; $gitclone/$repo` unless -d $model;
+    my $repo1 = $repo;
+    $repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT
+    my $model = "$component/$repo1";
+    `cd $component; $gitclone/$repo1` unless -d $model;
     `cd GM/BATSRUS; $gitclone/srcBATL` 
 	if $model eq "GM/BATSRUS" and not -d "$model/srcBATL";
 }
@@ -476,9 +478,10 @@ Clone share, util and the listed models:
 
     Config.pl -clone=BATSRUS,Ridley_serial,RCM2,RBE
 
-(Re)install BATSRUS and AMPS with full version history:
+(Re)install BATSRUS and AMPS_PT, which is the AMPS model as a PT component,
+with full version history:
 
-    Config.pl -install=BATSRUS,AMPS -history
+    Config.pl -install=BATSRUS,AMPS_PT -history
 
 Select the empty version for all components except GM/BATSRUS:
 
