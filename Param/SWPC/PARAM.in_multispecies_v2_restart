@@ -2,7 +2,7 @@
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC code selection
+Example file to restart a run for the SWPC v2 code selection
 
 #TIMEACCURATE
 T			DoTimeAccurate
