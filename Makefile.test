@@ -643,15 +643,15 @@ test_swpc_multiion_rundir:
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	cp ${TESTDIR}/LAYOUT.in_test_multiion ${TESTDIR}/LAYOUT.in
 	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_multiion_init
-	cp ${TESTDIR}/PARAM.in_multiion_init ${TESTDIR}/PARAM.in
+	     ${TESTDIR}/PARAM.in_multiion_v2_init
+	cp ${TESTDIR}/PARAM.in_multiion_v2_init ${TESTDIR}/PARAM.in
 
 test_swpc_multiion_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
 
 test_swpc_multiion_restart:
-	cd ${TESTDIR}; cp PARAM.in_multiion_restart PARAM.in
+	cd ${TESTDIR}; cp PARAM.in_multiion_v2_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
@@ -715,17 +715,17 @@ test_swpc_multispecies_rundir:
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	cp ${TESTDIR}/LAYOUT.in_test_multispecies ${TESTDIR}/LAYOUT.in
 	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_multispecies_init
+	     ${TESTDIR}/PARAM.in_multispecies_v2_init
 	perl -pi -e 's/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_multispecies_restart
-	cp ${TESTDIR}/PARAM.in_multispecies_init ${TESTDIR}/PARAM.in
+	     ${TESTDIR}/PARAM.in_multispecies_v2_restart
+	cp ${TESTDIR}/PARAM.in_multispecies_v2_init ${TESTDIR}/PARAM.in
 
 test_swpc_multispecies_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl -i SWMF_RESTART.20140410_000200
 
 test_swpc_multispecies_restart:
-	cd ${TESTDIR}; cp PARAM.in_multispecies_restart PARAM.in
+	cd ${TESTDIR}; cp PARAM.in_multispecies_v2_restart PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
