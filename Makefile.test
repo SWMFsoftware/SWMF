@@ -732,27 +732,27 @@ test_swpc_multispecies_restart:
 test_swpc_multispecies_check:
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
-		Param/SWPC/TestOutputMultispecies/log_e20140410-000200.log \
+		Param/SWPC/TestOutputMultiSpecies/log_e20140410-000200.log \
 		> test_swpc_multispecies_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
-		Param/SWPC/TestOutputMultispecies/magnetometers_e20140410-000200.mag \
+		Param/SWPC/TestOutputMultiSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_multispecies_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
-		Param/SWPC/TestOutputMultispecies/mag_grid_e20140410-000300.out \
+		Param/SWPC/TestOutputMultiSpecies/mag_grid_e20140410-000300.out \
 		>> test_swpc_multispecies_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
-		Param/SWPC/TestOutputMultispecies/geoindex_e20140410-000200.log \
+		Param/SWPC/TestOutputMultiSpecies/geoindex_e20140410-000200.log \
 		>> test_swpc_multispecies_gm.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
-		Param/SWPC/TestOutputMultispecies/IE_t140410_000200.log \
+		Param/SWPC/TestOutputMultiSpecies/IE_t140410_000200.log \
 		> test_swpc_multispecies_ie.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutputMultispecies/it140410_000300_000.idl \
+		Param/SWPC/TestOutputMultiSpecies/it140410_000300_000.idl \
 		>> test_swpc_multispecies_ie.diff)
 	ls -l test_swpc_multispecies_*.diff
 
