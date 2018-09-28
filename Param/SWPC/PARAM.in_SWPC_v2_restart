@@ -190,7 +190,7 @@ T			DoSaveLogfile
 VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst dstflx
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
 3.0			StringRFlux
 
 #SAVEPLOT

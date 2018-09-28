@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #INCLUDE
 RESTART.in
 
