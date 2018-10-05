@@ -1566,7 +1566,7 @@ test15_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe
-	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1,SP:2000,4,4
+	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1,SP:2000
 	${MAKE} SWMF
 	make PIDL
 
@@ -1610,7 +1610,7 @@ test15_check:
 
 test15_sp_compile:
 	./Config.pl -v=Empty,SP/MFLAMPA
-	./Config.pl -g=SP:2000,4,4
+	./Config.pl -g=SP:2000
 	${MAKE} SWMF
 	make PIDL
 
