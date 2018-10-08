@@ -1540,16 +1540,16 @@ test15:
 	${MAKE} test15_sp
 
 test15_scihsp:
-	@echo "test15_compile..." > test15_scihsp.diff
-	${MAKE} test15_compile
-	@echo "test15_rundir..." >> test15_scihsp.diff
-	${MAKE} test15_rundir
-	@echo "test15_run..." >> test15_scihsp.diff
-	${MAKE} test15_run
-	@echo "test15_restart..." >> test15_scihsp.diff
-	${MAKE} test15_restart
-	@echo "test15_check..." >> test15_scihsp.diff
-	${MAKE} test15_check
+	@echo "test15_scihsp_compile..." > test15_scihsp.diff
+	${MAKE} test15_scihsp_compile
+	@echo "test15_scihsp_rundir..." >> test15_scihsp.diff
+	${MAKE} test15_scihsp_rundir
+	@echo "test15_scihsp_run..." >> test15_scihsp.diff
+	${MAKE} test15_scihsp_run
+	@echo "test15_scihsp_restart..." >> test15_scihsp.diff
+	${MAKE} test15_scihsp_restart
+	@echo "test15_scihsp_check..." >> test15_scihsp.diff
+	${MAKE} test15_scihsp_check
 
 test15_sp:
 	@echo "test15_sp_compile..." > test15_sp.diff
@@ -1562,7 +1562,7 @@ test15_sp:
 	${MAKE} test15_sp_check
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
-test15_compile:
+test15_scihsp_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe
@@ -1570,7 +1570,7 @@ test15_compile:
 	${MAKE} SWMF
 	make PIDL
 
-test15_rundir:
+test15_scihsp_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
@@ -1578,19 +1578,19 @@ test15_rundir:
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
 
-test15_run:
+test15_scihsp_run:
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
 	cd ${TESTDIR}; rm -rf RESTART_t0025.0000s
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl
 
-test15_restart:
+test15_scihsp_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
-test15_check:
+test15_scihsp_check:
 	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out

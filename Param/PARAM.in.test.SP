@@ -44,7 +44,7 @@ MH_data/MH_data.H
 
 #SAVEPLOT
 1
-mh1d idl
+mh1d flux idl
 
 #END_COMP SP   ----------------------------------------------------------------
 
