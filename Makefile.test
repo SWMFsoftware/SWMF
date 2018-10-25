@@ -258,7 +258,7 @@ test_psie:
 
 test_psie_compile:
 	./Config.pl -v=Empty,PS/DGCPM,IE/RIM
-	${MAKE} SWMF PIONO
+	${MAKE} SWMF
 
 test_psie_rundir:
 	rm -rf ${TESTDIR}
@@ -303,7 +303,7 @@ test_psgmie:
 
 test_psgmie_compile:
 	./Config.pl -v=Empty,PS/DGCPM,IE/Ridley_serial,GM/BATSRUS
-	${MAKE} SWMF PIONO PIDL PSPH
+	${MAKE} SWMF PIDL
 
 test_psgmie_rundir:
 	rm -rf ${TESTDIR}
@@ -1820,7 +1820,7 @@ test_ccmc_small_check:
 	gunzip -c Param/CCMC/test_RB_small.fls.gz \
                 > ${TESTDIR}/RB/plots/20080903_0000_e.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/plots/20080903_0000_e.fls \
+		${TESTDIR}/RB/plots/20080903_000000_e.fls \
 		${TESTDIR}/RB/plots/20080903_0000_e.ref) > test_ccmc_small_rb.diff
 	ls -l test_ccmc_small*.diff
 
