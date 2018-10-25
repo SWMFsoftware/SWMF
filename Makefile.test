@@ -1329,9 +1329,9 @@ test9_run:
 	cd ${TESTDIR}; ./Restart.pl
 
 test9_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.ChromoIH PARAM.in
+	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; cp Param/PARAM.in.test.restart.ChromoIH PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS
 
 test9_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
