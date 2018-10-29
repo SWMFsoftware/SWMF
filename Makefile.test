@@ -223,7 +223,7 @@ test_ps_rundir:
 	cp ${PSDIR}/Input/kp_test.dat ${TESTDIR}/PS/Input/
 
 test_ps_run:
-	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_ps_check:
@@ -268,7 +268,7 @@ test_psie_rundir:
 	cp ${PSDIR}/Input/IMF_NSturning_10nT.dat ${TESTDIR}/
 
 test_psie_run:
-	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./SWMF.exe > runlog
 	cd ${TESTDIR}/IE; ./pIE
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
@@ -303,7 +303,7 @@ test_psgmie:
 
 test_psgmie_compile:
 	./Config.pl -v=Empty,PS/DGCPM,IE/Ridley_serial,GM/BATSRUS
-	${MAKE} SWMF PIONO PIDL PSPH
+	${MAKE} SWMF PIDL
 
 test_psgmie_rundir:
 	rm -rf ${TESTDIR}
@@ -312,7 +312,7 @@ test_psgmie_rundir:
 	cp Param/LAYOUT.in.test.GMIEPS ${TESTDIR}/LAYOUT.in
 
 test_psgmie_run:
-	cd ${TESTDIR}; ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_psgmie_check:
