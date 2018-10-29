@@ -2,7 +2,7 @@
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for SWPC with IM/CIMI
+Example file to restart a run for SWPC Version 2 with IM/CIMI
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -219,6 +219,18 @@ mc3	                TypeLimiter
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
+#REGION
+borisregion             NameArea
+sphere tapered          NameShape
+-4.0                    xPosition
+0.0                     yPosition
+0.0                     zPosition
+14.0                    Radius
+2.0                     Taper
+
+#BORISREGION
+borisregion		NameBorisRegion
+
 #TIMESTEPPING
 1			nStage
 0.85			CflExpl
@@ -270,6 +282,13 @@ F			UseFakeRegion2
 
 #BOUNDARY
 10.0                    LatBoundary
+
+#AURORALOVAL
+T			UseOval (rest of parameters read if true)
+T			UseOvalShift
+F			UseSubOvalConductance
+T			UseAdvancedOval
+F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
