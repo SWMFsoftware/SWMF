@@ -60,7 +60,7 @@ box                     NameArea
   16.0                  yMaxBox
   16.0                  zMaxBox
 
- Better res at geosync and near tail.
+! Better res at geosync and near tail.
 #GRIDRESOLUTION
 1/4
 box
