@@ -265,6 +265,47 @@ T			DoSaveInitial
 
 #END_COMP SC ----------------------------------------------------------------
 
+#COMPONENT
+IH			NameComp
+F			UseComp
+
+#STOP
+100			MaxIteration
+-1.0			tSimulationMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#TIMEACCURATE
+T
+
+#SAVERESTART
+T                       DoSaveRestart
+-1                      DnSaveRestart
+60                      DtSaveRestart
+
+#COMPONENT
+IH			NameComp
+T			UseComp
+
+#COUPLE1
+SC			NameSource
+IH			NameTarget
+-1			DnCouple
+1.0			DtCouple
+
+#STOP
+-1			MaxIter
+50			TimeMax
+
+#BEGIN_COMP SC ----------------------------------------------------------------
+
+#AMR
+-1			DnRefine
+
+#END_COMP SC   ----------------------------------------------------------------
+
 #BEGIN_COMP IH -------------------------------------------------------------
 
 INCLUDE
@@ -436,47 +477,6 @@ rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------
-
-#COMPONENT
-IH			NameComp
-F			UseComp
-
-#STOP
-100			MaxIteration
--1.0			tSimulationMax
-
-End session: 1
-#RUN ##########################################################################
-Begin session: 2
-
-#BEGIN_COMP SC ----------------------------------------------------------------
-
-#AMR
--1			DnRefine
-
-#END_COMP SC   ----------------------------------------------------------------
-
-#TIMEACCURATE
-T
-
-#SAVERESTART
-T                       DoSaveRestart
--1                      DnSaveRestart
-60                      DtSaveRestart
-
-#COMPONENT
-IH			NameComp
-T			UseComp
-
-#COUPLE1
-SC			NameSource
-IH			NameTarget
--1			DnCouple
-1.0			DtCouple
-
-#STOP
--1			MaxIter
-50			TimeMax
 
 End session: 2
 #END ##########################################################################
