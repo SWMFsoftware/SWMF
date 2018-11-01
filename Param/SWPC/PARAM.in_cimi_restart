@@ -246,8 +246,8 @@ T                       UseDecay
 
 #COMPOSITION
 FIXED                   TypeComposition
-0.8                     DensityFraction H+
-0.2                     DensityFraction O+
+0.7                     DensityFraction H+
+0.3                     DensityFraction O+
 1.0                     DensityFraction e-
 
 #SAVELOG
