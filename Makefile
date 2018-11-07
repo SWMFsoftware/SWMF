@@ -219,6 +219,11 @@ PIDL:	ENV_CHECK
 	cd ${SHAREDIR}; $(MAKE) PIDL
 	@echo ' '
 
+# Convert .out data to .dat 
+2TEC:	ENV_CHECK
+	cd ${SHAREDIR}; $(MAKE) 2TEC
+	@echo ' '
+
 SNAPSHOT: ENV_CHECK
 	cd GM/BATSRUS; $(MAKE) SNAPSHOT
 	@echo ' '
