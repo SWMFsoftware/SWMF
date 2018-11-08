@@ -224,6 +224,11 @@ PIDL:	ENV_CHECK
 	cd ${SHAREDIR}; $(MAKE) 2TEC
 	@echo ' '
 
+# Convert .out data to .vtk
+2VTK:	ENV_CHECK
+	cd ${SHAREDIR}; $(MAKE) 2VTK
+	@echo ' '
+
 SNAPSHOT: ENV_CHECK
 	cd GM/BATSRUS; $(MAKE) SNAPSHOT
 	@echo ' '
