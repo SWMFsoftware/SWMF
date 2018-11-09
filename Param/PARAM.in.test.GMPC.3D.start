@@ -175,6 +175,13 @@ g
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
+
+#ENERGYCONSERVING
+F
+
+#DIVE
+F
+
 #ELECTRON
 -25.0			Charge/mass ratio (qom)
 
