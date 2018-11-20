@@ -85,6 +85,20 @@ contains
   end subroutine PS_save_restart
 
   !============================================================================
+  subroutine PS_get_for_gm(Buffer_IIV,iSizeIn,jSizeIn,nVar,NameVarIn)
+
+    ! INPUT PARAMETERS
+    integer, intent(in)                                  ::iSizeIn,jSizeIn,nVar
+    real,    intent(out), dimension(iSizeIn,jSizeIn,nVar)::Buffer_IIV
+    character(len=*), intent(in)                         :: NameVarIn
+
+    character (len=*),parameter :: NameSub='PS_get_for_gm'
+
+    call CON_stop(NameSub//': Empty version cannot be used!')
+    
+  end subroutine PS_get_for_gm
+
+  !============================================================================
 
   subroutine PS_run(TimeSimulation,TimeSimulationLimit)
 
