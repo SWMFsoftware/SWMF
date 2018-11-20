@@ -28,6 +28,7 @@ module CON_couple_all
   use CON_couple_ih_gm        !^CMP IF IH
   use CON_couple_gm_ie        !^CMP IF IE
   use CON_couple_gm_im        !^CMP IF IM
+  use CON_couple_gm_ps        !^CMP IF PS
   use CON_couple_gm_pt        !^CMP IF PT
   use CON_couple_gm_pc        !^CMP IF PC
   use CON_couple_gm_pw        !^CMP IF PW
@@ -83,6 +84,7 @@ contains
     !                                                     ^CMP IF GM BEGIN
     if(use_comp(GM_).and.use_comp(IE_))call couple_gm_ie_init  !^CMP IF IE
     if(use_comp(GM_).and.use_comp(IM_))call couple_gm_im_init  !^CMP IF IM
+    if(use_comp(GM_).and.use_comp(PS_))call couple_gm_ps_init  !^CMP IF PS
     if(use_comp(GM_).and.use_comp(PW_))call couple_gm_pw_init  !^CMP IF PW
     if(use_comp(GM_).and.use_comp(RB_))call couple_gm_rb_init  !^CMP IF RB
     if(use_comp(IH_).and.use_comp(GM_))call couple_ih_gm_init  !^CMP IF IH
@@ -141,10 +143,9 @@ contains
 
     logical :: DoTest,DoTestMe
     !-------------------------------------------------------------------
-    
     call check_i_comp(iCompSource,NameSub//': source')
     call check_i_comp(iCompTarget,NameSub//': target')
-
+    
     !\
     ! Return if any component is not used or if the PE is
     ! used by neither components.
@@ -268,6 +269,13 @@ contains
        case default
           call error
        end select                             !^CMP END IM
+    case(PS_)                                 !^CMP IF PS BEGIN
+       select case(iCompTarget)
+       case(GM_)                                   !^CMP IF GM
+          call couple_ps_gm(TimeSimulation)        !^CMP IF GM
+       case default
+          call error
+       end select                             !^CMP END PS
     case(PC_)                                 !^CMP IF PC BEGIN
        select case(iCompTarget)
        case(GM_)                                   !^CMP IF GM

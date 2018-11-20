@@ -85,6 +85,7 @@ module CON_coupler
        GM_, RB_, &
        UA_, IE_, &
        IM_, GM_, &
+       PS_, GM_, &
        IM_, IE_, &
        PW_, GM_, &
        IE_, GM_, &
