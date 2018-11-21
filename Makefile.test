@@ -2021,7 +2021,7 @@ test12_iso_run:
 test12_iso_check:
 	gunzip -c output/test12/z=0_all.out.ref.iso.gz \
 	        > ${TESTDIR}/RESULTS/GM/z_n4.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${SCRIPTDIR}/DiffNum.pl -t -a=1e-9 \
 		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
 		${TESTDIR}/RESULTS/GM/z_n4.ref \
 		> test12_iso_gm.diff)
