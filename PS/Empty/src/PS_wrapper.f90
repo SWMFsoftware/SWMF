@@ -19,6 +19,9 @@ module PS_wrapper
   ! coupling with IE
   public:: PS_put_from_ie
 
+  ! coupling with GM
+  public:: PS_get_for_gm
+  
 contains
   !==========================================================================
   subroutine PS_set_param(CompInfo, TypeAction)
