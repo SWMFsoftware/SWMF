@@ -57,7 +57,7 @@ module CON_coupler
 
   public :: MaxCouple           ! Maximum number of couplings
 
-  integer, parameter :: MaxCouple = 30
+  integer, parameter :: MaxCouple = 31
 
   public :: nCouple             ! Actual number of couplings
 
