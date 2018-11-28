@@ -114,12 +114,13 @@ my $Options;
 
 # Set actions based on the switches
 foreach (@Arguments){
-    if(/^-l(ist)?$/)          {$ListVersions=1;                 next};
-    if(/^-s$/)                {$ShowShort=1;                    next};
-    if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next};
-    if(/^-g=(.*)/)            {$GridSize.="$1,";                next};
-    if(/^-o=(.*)/)            {$Options.=",$1";                 next};
-
+    if(/^-l(ist)?$/)          {$ListVersions=1;                 next;}
+    if(/^-s$/)                {$ShowShort=1;                    next;}
+    if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next;}
+    if(/^-g=(.*)/)            {$GridSize.="$1,";                next;}
+    if(/^-o=(.*)/)            {$Options.=",$1";                 next;}
+    if(/^-sleep=\d+/)         {next;}
+    
     print "$WARNING Unknown switch: $_\n" if $Remaining{$_};
 }
 
@@ -454,7 +455,9 @@ sub print_help{
                Default is no history to reduce size and download time.
 
 -sleep=VALUE   Sleep VALUE number of seconds after each git clone, so
-	       the server does not reject the ssh connection.
+	       the server does not reject the ssh connection. Only useful
+	       in combination with the -install and -clone options. 
+               Default is no delay.
 
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
