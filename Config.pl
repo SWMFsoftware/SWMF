@@ -36,6 +36,7 @@ my %component = (
 my $History;
 my @models;
 my $CloneOnly;
+my $Sleep;
 foreach (@Arguments){
     if( /^-(install|clone)/){
 	$CloneOnly = 1 if /^-clone/;
@@ -52,10 +53,13 @@ foreach (@Arguments){
 	next;
     }
     if( /^-history$/){$History = 1; next;}
+    if( /^-sleep=(\d+)/){$Sleep = $1; next;}
 }
 
 # Create Git clone command
-my $gitclone = "git clone";
+my $gitclone;
+$gitclone  = "sleep $Sleep; " if $Sleep;
+$gitclone .= "git clone";
 $gitclone .= " --depth=1" unless $History;
 $gitclone .= " herot:/GIT/FRAMEWORK";
 
@@ -449,6 +453,9 @@ sub print_help{
 -history       Get the models from Git with full development history. 
                Default is no history to reduce size and download time.
 
+-sleep=VALUE   Sleep VALUE number of seconds after each git clone, so
+	       the server does not reject the ssh connection.
+
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
                multiple grid sizes can be given in a comma separated list.
@@ -470,9 +477,9 @@ sub print_help{
 
 Examples for the SWMF Config.pl:
 
-Clone share, util and all models with full version history:
+Clone share, util and all models with full version history, wait 5s in between:
 
-    Config.pl -clone -history
+    Config.pl -clone -history -sleep=5
 
 Clone share, util and the listed models:
 
