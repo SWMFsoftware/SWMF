@@ -1,3 +1,7 @@
+NS- Test to check if restart is proper
+Components : SC and IH. 
+This is STEP 1 - SC is run for 10 steps and coupled with IH. Restart is saved. 
+
 Begin session: 1
 
 #ECHO
@@ -5,6 +9,9 @@ T			DoEcho
 
 #DESCRIPTION
 Input file for creating a steady state solar corona
+
+INCLUDE
+Restart.in
 
 #TIMEACCURATE
 F                       DoTimeAccurate
@@ -17,22 +24,6 @@ F                       DoTimeAccurate
 26			iMinute
 0			iSecond
 0.0			FracSecond
-
-#SAVERESTART
-T			DoSaveRestart
-50000			DnSaveRestart
--1			DtSaveRestart
-
-INCLUDE
-RESTART.in
-
-CPUTIMEMAX
-6600
-
-CHECKSTOP
-T
-2000
--1
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
@@ -52,6 +43,9 @@ T			UseBody
 1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
+
+#BODY
+F			UseBody
 
 READPOTENTIALFIELD
 T			UseMagnetogram
@@ -74,7 +68,7 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #USER_FLAGS
-T			UseUserInnerBcs
+F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
 T			UseUserOuterBcs
@@ -92,24 +86,19 @@ F			UseUserUpdateStates
 0.55e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
-alfvenwavedissipation	TypeCoronalHeating
+turbulentcascade	TypeCoronalHeating
+T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
-0.04			Crefl
 
-HYPERBOLICDIVB
-F			UseHyperbolicDivb
-400.0			SpeedHypDim
-0.1			HypDecay
+#HEATPARTITIONING
+stochasticheating	TypeHeatPartitioning
+0.21			StochasticExponent
+0.18			StochasticAmplitude
 
-#RESISTIVITY
-T			UseResistivity
-user			TypeResistivity
-0.0			Eta0Si     ! not used
-
-#RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
+#ANISOTROPICPRESSURE
+F			UseConstantTau
+-1.0
+1e5			TauGlobalSi
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -118,7 +107,11 @@ spitzer			TypeHeatConduction
 #HEATFLUXREGION
 T			UseHeatFluxRegion
 5.0			rCollisional
-8.0			rCollisionless
+-8.0			rCollisionless
+
+#HEATFLUXCOLLISIONLESS
+T			UseHeatFluxCollisionless
+1.05					CollisionlessAlpha
 
 #TEST
 krylov
@@ -138,7 +131,7 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-RadCoolCorona.dat
+RadCoolCorona_8.0.dat
 ascii			TypeFile
 
 #TRANSITIONREGION
@@ -146,11 +139,16 @@ T			DoExtendTransitionRegion
 2.2e5			TeModSi
 1.0e1			DeltaTeModSi
 
+#COARSEAXIS
+F			UsePoleDiffusion
+T		        UseCoarseAxis
+2		        nCoarseLayer
+
 turn these off when restarting
 ---------------------------------------------------
 #GRIDGEOMETRY
 spherical_genr
-SC/Param/grid_TR.dat
+SC/Param/grid_awsom.dat
 
 ! Use a true sphere, so box is made much larger
 #GRID
@@ -165,7 +163,7 @@ SC/Param/grid_TR.dat
  100.0			zMax
 
 #LIMITRADIUS
-1.0			rMin
+1.001			rMin
 24.0			rMax
 
 ----------------------------------------------------
@@ -194,19 +192,32 @@ initial			NameArea
 
 #DOAMR
 T			DoAmr
-80			DnAmr
+8			DnAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
 #TIMESTEPPING
 2			nStage
-0.8			CflExpl
+0.4			CflExpl
 
 #SCHEME
 2			nOrder (1 or 2)
-Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
+Linde			TypeFlux (Roe, Rusanov, Linde, Sokolov
 mc3			TypeLimiter
 1.2			LimiterBeta
+
+#LIMITER
+T			UseLogRhoLimiter
+T					UseLogPLimiter
+F							UseRhoRatioLimiter
+
+#MINIMUMTEMPERATURE
+5e4			TMinDim  [K] for fluid 1
+5e4				     TeMinDim [K]
+
+#MINIMUMPRESSURE
+1E-9			pMinDim for fluid 1
+1E-9				    PeMinDim
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -223,7 +234,7 @@ RAW			StringLogfile
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
-#INNERBOUNDARY
+INNERBOUNDARY
 user			TypeBcInner
 
 #OUTERBOUNDARY
@@ -234,36 +245,57 @@ float			TypeBc4
 float			TypeBc5
 float			TypeBc6
 
-#SAVEPLOT
-3			nPlotFiles
-x=0 VAR idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
--1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
-y=0 VAR idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
--1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
-z=0 VAR idl		StringPlot
-10			DnSavePlot
--1.			DtSavePlot
--1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
-3d VAR tec
-100000			DnSavePlot
--1.			DtSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
-
-#SAVEINITIAL
+SAVEINITIAL
 T			DoSaveInitial
 
+#SAVEPLOT
+4			nPlotFiles
+x=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+y=0 MHD idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD  idl		StringPlot
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0			DxSavePlot
+3d MHD idl_ascii
+10			DnSavePlot
+-1.			DtSavePlot
+-1.0 			DxSavePlot
+
 #END_COMP SC ----------------------------------------------------------------
+
+#SAVERESTART
+T                       DoSaveRestart
+10                      DnSaveRestart
+-1                      DtSaveRestart
+
+#COMPONENT
+IH			NameComp
+F			UseComp
+
+#STOP
+10			MaxIteration
+-1.0			tSimulationMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#BEGIN_COMP SC ----------------------------------------------------------------
+
+#AMR
+-1			DnRefine
+
+#END_COMP SC   ----------------------------------------------------------------
+
+#COMPONENT
+IH			NameComp
+T			UseComp
 
 #BEGIN_COMP IH -------------------------------------------------------------
 
@@ -271,7 +303,7 @@ INCLUDE
 IH/restartIN/restart.H
 
 #COORDSYSTEM
-HGI			TypeCoordSystem
+HGC			TypeCoordSystem
 
 #BODY
 T			UseBody
@@ -304,18 +336,18 @@ shell0			TypeRegion
 #AMRCRITERIALEVEL
 3			nCriteria
 Level			TypeCriteria
-4			RefineTo
-4			CoarsenTo
+3			RefineTo
+3			CoarsenTo
 Level +OuterShell	TypeCriteria
-5     			RefineTo
-5			CoarsenTo
+4     			RefineTo
+4			CoarsenTo
 currentsheet		TypeCriteria
 0.5			CoarsenLimit
 0.5			RefineLimit
-5			MaxLevel
+4			MaxLevel
 
 #GRIDLEVEL
-5			nLevelArea
+4			nLevelArea
 initial			NameArea
 
 #THINCURRENTSHEET
@@ -362,9 +394,19 @@ T			UseUserInitSession
 F			UseUserUpdateStates
 
 #CORONALHEATING
-alfvenwavedissipation	TypeCoronalHeating
-1.5e5			LperpTimesSqrtBSi
-0.04			Crefl
+turbulentcascade        TypeCoronalHeating
+T                       UseWaveReflection
+1.5e5                   LperpTimesSqrtBSi
+
+#HEATPARTITIONING
+stochasticheating	TypeHeatPartitioning
+0.21					StochasticExponent
+0.18							StochasticAmplitude
+
+#ANISOTROPICPRESSURE
+F			UseConstantTau
+-1.0
+1e5			TauGlobalSi
 
 #RESISTIVITY
 T                       UseResistivity
@@ -376,29 +418,33 @@ F                       UseResistiveFlux
 F                       UseJouleHeating
 T                       UseHeatExchange
 
+#HEATFLUXCOLLISIONLESS
+T			UseHeatFluxCollisionless
+1.05			CollisionlessAlpha
+
 #SCHEME
 2			nOrder
-Sokolov			TypeFlux
+Linde			TypeFlux
 mc3			TypeLimiter
 1.2			LimiterBeta
+
+#MINIMUMPRESSURE
+1E-14			pMinDim
+1E-14					PeMinDim
+
 
 #NONCONSERVATIVE
 T			UseNonConservative
 
 #TIMESTEPPING
 2			nStage
-0.8			CflExpl
+0.4			CflExpl
 
 #DIVB
 T			UseDivbSource
 T			UseDivbDiffusion
 F			UseProjection
 F			UseConstrainB
-
-HYPERBOLICDIVB
-F			UseHyperbolicDivb
-400.0			SpeedHypDim
-0.1			HypDecay
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -410,7 +456,7 @@ RAW			StringLogfile
 T
 
 #SAVEPLOT
-3			nPlotFiles
+4			nPlotFiles
 x=0 VAR idl		StringPlot
 10 			DnSavePlot
 -1.			DtSavePlot
@@ -429,54 +475,24 @@ z=0 VAR idl		StringPlot
 -1.0			DxSavePlot
 rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
-3d VAR tec		StringPlot
-4000			DnSavePlot
+3d VAR idl_ascii		StringPlot
+100			DnSavePlot
 -1.			DtSavePlot
+-1.0			DxSavePlot	
 rho ux uy uz ti te bx by bz I01 I02 p sign
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------
 
-#COMPONENT
-IH			NameComp
-F			UseComp
-
-#STOP
-100			MaxIteration
--1.0			tSimulationMax
-
-End session: 1
-#RUN ##########################################################################
-Begin session: 2
-
-#BEGIN_COMP SC ----------------------------------------------------------------
-
-#AMR
--1			DnRefine
-
-#END_COMP SC   ----------------------------------------------------------------
-
-#TIMEACCURATE
-T
-
-#SAVERESTART
-T                       DoSaveRestart
--1                      DnSaveRestart
-60                      DtSaveRestart
-
-#COMPONENT
-IH			NameComp
-T			UseComp
-
 #COUPLE1
 SC			NameSource
 IH			NameTarget
--1			DnCouple
-1.0			DtCouple
+1			DnCouple
+-1.0			DtCouple
 
 #STOP
--1			MaxIter
-50			TimeMax
+0			MaxIter
+-1			TimeMax
 
 End session: 2
 #END ##########################################################################
@@ -496,15 +512,30 @@ F			UseComp
 
 #DOAMR
 T			DoAmr
-40			DnAmr
+2			DnAmr
 -1.0			DtAmr
 T			IsStrictAmr
 
 #END_COMP IH   ----------------------------------------------------------------
 
 #STOP
-100			MaxIter
+4			MaxIter
 -1.0			TimeMax
 
 End session: 3
-#END ##########################################################################
+#RUN ##########################################################################
+Begin Session: 4
+
+#BEGIN_COMP IH -------------
+
+#AMR
+-1			DnRefine
+
+#END_COMP IH ----------------
+
+#STOP
+100			MaxIter
+-1			TimeMax
+
+End Session: 4
+#END #########################################################################	
