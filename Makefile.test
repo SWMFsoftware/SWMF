@@ -49,7 +49,7 @@ test_help:
 	@echo "    test_pic                   (run GM-IPIC3D test)"
 	@echo "    test_pic2                  (run GM-PC test)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
-
+	@echo "	   test16		      (run SC, save restart and run IH)"
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
@@ -68,13 +68,14 @@ test:
 	-@(${MAKE} test6)
 	-@(${MAKE} test7)
 	-@(${MAKE} test8)
-	-@(${MAKE} test9)
+	#-@(${MAKE} test9)
 	-@(${MAKE} test10)
 	-@(${MAKE} test12)
 	-@(${MAKE} test13)
 	-@(${MAKE} test14)
 	-@(${MAKE} test15)
 	-@(${MAKE} test_check)
+	-@(${MAKE} test16)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
@@ -1311,9 +1312,9 @@ test9:
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
-	./Config.pl -g=SC:6,4,4,1200,1,IH:4,4,4,6800,1
+	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi
+	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
+	./Config.pl -g=SC:6,4,4,1200,1,IH:6,6,6,6800,1 -o=IH:ng=3
 	${MAKE} SWMF
 	make PIDL
 
@@ -1322,24 +1323,32 @@ test9_rundir:
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.start.ChromoIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; mv runlog runlog_start
 	cd ${TESTDIR}; ./Restart.pl
 
 test9_restart:
 	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; cp Param/PARAM.in.test.restart.ChromoIH PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_restart1
+	cd ${TESTDIR}; mv PARAM.in PARAM.in.restart; cp Param/PARAM.in.test.saverestart.ChromoIH PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./Restart.pl
+	#cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run1
+	cd ${TESTDIR}; mv PARAM.in PARAM.in.saverestart; cp Param/PARAM.in.test.newrestart.ChromoIH PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_restart2
 
 test9_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/SC/log_n000000.log \
-		output/test9/SC_log_n000000.log \
+		${TESTDIR}/RESULTS/run_restart1/SC/log_n000001.log \
+		output/test9/SC_log_n000001.log \
 		> test9_sc_chromo.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IH/log_n000000.log \
+		${TESTDIR}/RESULTS/run_restart2/IH/log_n000000.log \
 		output/test9/IH_log_n000000.log \
 		> test9_ih.diff)
 	ls -l test9_*.diff
@@ -1636,6 +1645,60 @@ test15_sp_check:
 		> test15_sp.diff)
 		rm -rf SP/MFLAMPA/data/input/test15/MH_data/
 		ls -l test15*.diff
+
+test16:
+	@echo "test16_compile..." > test16_sc_chromo.diff
+	@echo "test16_compile..." > test16_ih.diff
+	${MAKE} test16_compile
+	@echo "test16_rundir..." >> test16_sc_chromo.diff
+	@echo "test16_rundir..." >> test16_ih.diff
+	${MAKE} test16_rundir
+	@echo "test16_run..." >> test16_sc_chromo.diff
+	@echo "test16_run..." >> test16_ih.diff
+	${MAKE} test16_run
+	@echo "test16_restart..." >> test16_sc_chromo.diff
+	@echo "test16_restart..." >> test16_ih.diff
+	${MAKE} test16_restart
+	@echo "test16_check..." >> test16_sc_chromo.diff
+	@echo "test16_check..." >> test16_ih.diff
+	${MAKE} test16_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test16_compile:
+	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi
+	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
+	./Config.pl -g=SC:6,4,4,1200,1,IH:6,6,6,6800,1 -o=IH:ng=3
+	${MAKE} SWMF
+	make PIDL
+
+test16_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${TESTDIR}
+	cp Param/PARAM.in.test.start.SCIH.new ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
+	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
+
+test16_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; mv runlog runlog_start
+	cd ${TESTDIR}; ./Restart.pl
+
+test16_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; cp Param/PARAM.in.test.restart.SCIH.new PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_restart
+
+test16_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
+		${TESTDIR}/RESULTS/run_restart/SC/log_n000001.log \
+		output/test16/SC_log_n000001.log \
+		> test16_sc_chromo.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_restart/IH/log_n000000.log \
+		output/test16/IH_log_n000000.log \
+		> test16_ih.diff)
+	ls -l test16_*.diff
 
 ### ESMF test ###
 #
