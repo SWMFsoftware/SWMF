@@ -34,9 +34,14 @@ T                       DoSaveIntial
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#PICUNIT
- 1.0                    xUnitPicSi
- 1.0                    uUnitPicSi
+#PICREGIONUNIT
+2               nPicRegion
+1.0		xUnitPicSi [m]
+1		uUnitPicSi [m/s] Speed of light for the first PIC region
+1               ScalingFactor
+1		xUnitPicSi [m]
+2		uUnitPicSi [m/s] Speed of light for the second PIC region
+2               ScalingFactor
 
 #PICREGION
 2                       nPicRegion
@@ -108,12 +113,12 @@ g rbody			NamePars
 #RESTART
 T			DoRrestart
 
-#SAVEPLOT
-PC/plots		SaveDirName
-1			FieldOutputCycle
-10000			ParticlesOutputCycle
-1			DiagnosticsOutputCycle
-shdf5
+#SAVEIDL
+1
+z=0 fluid ascii si			StringPlot
+4   	  				DnOutput
+-1					DtOutput
+1					DxOutput
 
 #END_COMP PC -----------------------------------------------------------------
 

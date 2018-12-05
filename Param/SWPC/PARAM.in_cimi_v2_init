@@ -1,5 +1,5 @@
 #DESCRIPTION
-Example file to start a run for the SWPC v2 code selection
+Example file to start a run for the SWPC Version 2 with IM/CIMI
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -73,42 +73,31 @@ box
 
 ! Close tail and bow shock resolution
 #GRIDRESOLUTION
-1/2                     Resolution
+1/2			Resolution
 box
 -32.0
 -22.0
 -10.0
  20.0
  22.0
- 10.0                   zMaxBox
+ 10.0			zMaxBox
 
 #GRIDRESOLUTION
-1/8                     Resolution
-shell0                  NameArea
-2.5                     r1Shell
-3.5                     r2Shell
+1/8			Resolution
+shell0			NameArea
+2.5			r1Shell
+3.5			r2Shell
 
 #BODY
 T                       UseBody
 2.5                     rBody     (in planet radius)
 3.0                     rCurrents (in planet radius)
-28.0                    BodyNDim  (/cc) H+
+28.0                    BodyNDim  (/cc)
 25000.0                 BodyTDim  (K)
-2.8                     BodyNDim  (/cc) O+
-25000.0                 BodyTDim  (K)
-
-#MULTIFLUIDIM
-T                       DoMultiFluidIMCoupling
-
-#COLLISION
--1.0                    CollisionCoefDim
-1.0e3                   TauCutOffDim [s]
-100.0                   uCutOffDim [km/s] read if TauCutOffDim positive
-2                       nPowerCutOff read if TauCutOffDim positive
 
 #TIMESTEPPING
 1			nStage
-0.30			CflExlp
+0.80			CflExlp
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -121,13 +110,14 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
+#ANISOPRESSUREIM
+T			DoAnisoPressureIMCoupling
+
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
 T                       UseCpcpBc  (rest is read if true)
-28.0                    Rho0Cpcp   [amu/cc]  for H+
+28.0                    Rho0Cpcp   [amu/cc]
 0.1                     RhoPerCpcp [amu/cc / keV]
-8.0			RhoCpcp    [amu/cc]  for O+
-0.3                     RhoPerCpcp [amu/cc / keV]
 
 #SOLARWINDFILE
 T                       UseSolarWindFile
@@ -138,7 +128,7 @@ T			DoReadAgain
 
 #SCHEME
 1			nOrder
-Rusanov			TypeFlux
+Sokolov			TypeFlux
 
 #SAVELOGNAME
 F                       IsLogName_n
@@ -219,11 +209,11 @@ F			UseFakeRegion2
 10.0			LatBoundary
 
 #AURORALOVAL
-T                       UseOval (rest of parameters read if true)
-T                       UseOvalShift
-F                       UseSubOvalConductance
-T                       UseAdvancedOval
-F                       DoFitCircle (read if UseAdvancedOval is true)
+T			UseOval (rest of parameters read if true)
+T			UseOvalShift
+F			UseSubOvalConductance
+T			UseAdvancedOval
+F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
@@ -246,13 +236,13 @@ F			DoAmr
 
 #SCHEME
 2			nOrder
-Rusanov			TypeFlux
+Sokolov			TypeFlux
 mc3                     TypeLimiter
 1.2			BetaLimiter
 
 #TIMESTEPPING
 2			nStage
-0.30			CflExlp
+0.60			CflExlp
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -272,7 +262,7 @@ T			DoTimeAccurate
 #SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart
-600.0                    DtSaveRestart
+60.0                    DtSaveRestart
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
@@ -283,7 +273,7 @@ GM			NameCompCheckKill
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-600.0			DtCheckStop
+60.0			DtCheckStop
 
 CPUTIMEMAX
 28000.0                 CpuTimeMax [sec]
@@ -329,11 +319,6 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#CHECKTIMESTEP
-T			DoCheckTimeStep
-2			nCheckTimeStep
-1e-6			TimeStepMin
-
 #NONCONSERVATIVE
 T                       UseNonConservative
 
@@ -346,7 +331,7 @@ parabola		TypeConservCrit_I
 ! Setting 1
 #IMCOUPLING
 20.0                    TauCoupleIm
-T                       DoImSatTrace
+F                       DoImSatTrace
 T                       DoCoupleImPressure
 T                       DoCoupleImDensity
 0.01			DensityCoupleFloor
@@ -371,8 +356,7 @@ IMCOUPLINGSMOOTH
 
 ! Pressures below pMinDim are replaced with pMinDim.
 #MINIMUMPRESSURE
-1e-5			pMinDim [nPa] H+
-1e-5			pMinDim [nPa] O+
+1e-5			pMinDim [nPa]
 
 #SAVEPLOT
 4                       nPlotFiles
@@ -403,20 +387,59 @@ lcb nul tec             StringPlot  !last closed field line plots
 
 #BORIS
 T			UseBorisCorrection
-0.02			BorisClightFactor
+0.01			BorisClightFactor
+
+#REGION
+borisregion             NameArea
+sphere tapered          NameShape
+-4.0                    xPosition
+0.0                     yPosition
+0.0                     zPosition
+14.0                    Radius
+2.0                     Taper
+
+#BORISREGION
+borisregion		NameBorisRegion
 
 #TIMESTEPPING
 1			nStage
-0.3			CflExpl
+0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
-! Decay for RCM particle densities
+MINIMUMPRESSURETOGM
+1e-2			MinimumPressureToGM
+
+#SAVEPLOT
+60.0			DtOutput
+F			DoSaveFlux
+F			DoSaveDrifts
+F			DoSavePSD
+T			UseSeparatePlotFiles
+
+#TYPEBOUNDARY
+ellipse                TypeBoundary
+
 #DECAY
-T 			UseDecay
-36000. 			DecayTimescale in seconds
+T                       UseDecay
+36000.0                 DecayTimescale [s]
+
+#COMPOSITION
+FIXED                   TypeComposition
+0.7                     DensityFraction H+
+0.3                     DensityFraction O+
+1.0                     DensityFraction e-
+
+#INITIALF2
+F			IsEmptyF2
+T			IsGmInitial
+F			IsDataInitial
+F			IsRBSPData
+
+#SAVELOG
+5.0			DtLogOut
 
 #END_COMP IM -----------------------------------------------------------------
 

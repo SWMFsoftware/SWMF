@@ -144,9 +144,16 @@ dt    = 0.2*dtmax   = 1.066
 T			UseDtFixed
 640/500			DtFixed
 
-#PICUNIT
- 1.0                    xUnitPicSi
- 1.0                    uUnitPicSi
+
+#PICREGIONUNIT
+2               nPicRegion
+1.0		xUnitPicSi [m]
+1		uUnitPicSi [m/s] Speed of light for the first PIC region
+1               ScalingFactor
+1		xUnitPicSi [m]
+2		uUnitPicSi [m/s] Speed of light for the second PIC region
+2               ScalingFactor
+
 
 #PICREGION
 2                       nPicRegion
@@ -218,6 +225,8 @@ g rbody			NamePars
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
+! ECSIM and divE cleaning is on by default from 11/2018.
+
 #ELECTRON
 -25.0			Charge/mass ratio (qom)
 
@@ -229,12 +238,12 @@ g rbody			NamePars
 20			Particles per cell in Y Region 2
 1			Particles per cell in Z Region 2
 
-#SAVEPLOT
-PC/plots		SaveDirName
-1			FieldOutputCycle
-10000			ParticlesOutputCycle
-1			DiagnosticsOutputCycle
-shdf5			WriteMethod
+#SAVEIDL
+1
+z=0 fluid ascii si			StringPlot
+4   	  				DnOutput
+-1					DtOutput
+1					DxOutput
 
 #END_COMP PC -----------------------------------------------------------------
 
