@@ -1,7 +1,6 @@
-NS- Test to check if restart is proper
+Test to check if restart is proper
 
-Restarting SC component, IH is fresh start. 
-Running full IH.
+Step 2 for test9 :Restarting SC, IH is run in 2nd order scheme, then 5th order scheme. 
 
 Begin session: 1
 

@@ -1,6 +1,6 @@
-NS- Test to check if restart is proper
+Test to check if restart is proper
 Components : SC and IH. 
-This is STEP 1 - SC is run for 10 steps and coupled with IH. Restart is saved. 
+This is STEP 1 for test9- SC is run for 10 steps and coupled with IH. Restart is saved. 
 
 Begin session: 1
 
@@ -496,46 +496,3 @@ IH			NameTarget
 
 End session: 2
 #END ##########################################################################
-Begin session: 3
-
-#COUPLE1
-SC			NameSource
-IH			NameTarget
--1			DnCouple
--1.0			DtCouple
-
-#COMPONENT
-SC			NameComp
-F			UseComp
-
-#BEGIN_COMP IH ----------------------------------------------------------------
-
-#DOAMR
-T			DoAmr
-2			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
-
-#END_COMP IH   ----------------------------------------------------------------
-
-#STOP
-4			MaxIter
--1.0			TimeMax
-
-End session: 3
-#RUN ##########################################################################
-Begin Session: 4
-
-#BEGIN_COMP IH -------------
-
-#AMR
--1			DnRefine
-
-#END_COMP IH ----------------
-
-#STOP
-100			MaxIter
--1			TimeMax
-
-End Session: 4
-#END #########################################################################	
