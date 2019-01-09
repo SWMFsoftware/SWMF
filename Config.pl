@@ -308,10 +308,6 @@ sub set_versions{
 	    }
 	}
     }
-#^CMP IF UA BEGIN
-    die "$ERROR non Empty UA version requires non Empty IE version\n"
-        if $Version{UA} ne 'Empty' and $Version{IE} eq 'Empty';
-#^CMP END UA
 #^CMP if PC BEGIN 
     die "$ERROR PC/IPIC3D version requires HDF5 compiler. Use -hdf5.\n"
 	if $Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no';
