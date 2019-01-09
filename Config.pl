@@ -410,11 +410,13 @@ sub set_version_makefile_comp{
     my $File;
     foreach $File (@File){
 	# Set the version based on the file name
-	$File =~ m|^([A-Z][A-Z]/[^/]+)|;
+	$File =~ m|^(([A-Z][A-Z])/[^/]+)|;
 	my $Version = $1;
+	my $Component = $2;
 	# Put the proper include command into $MakefileDef and $MakefileConf
 	&shell_command("echo include $DIR/$MakefileDef > $File");
 	&shell_command("echo MYDIR=$DIR/$Version >> $File");
+	&shell_command("echo COMPONENT=$Component >> $File");
 	&shell_command("echo include $DIR/$MakefileConf > ".
 		       "$Version/$MakefileConf");
     }
