@@ -1947,11 +1947,52 @@ test_ramscb_check:
 ######## test PC/IPIC3D coupled with GM/BATSRUS #########
 
 test12:
+	$(MAKE) test12_aniso_AMPS
 	$(MAKE) test12_aniso
 	$(MAKE) test12_iso
 	$(MAKE) test12_3d
 
 ######## test PC/IPIC3D coupled with GM/BATSRUS #########
+
+
+test12_aniso_AMPS:
+	@echo "test12_aniso_AMPS_compile..." > test12_aniso_AMPS_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_compile
+	@echo "test12_aniso_AMPS_rundir..." > test12_aniso_AMPS_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_rundir
+	@echo "test12_aniso_AMPS_run..." > test12_aniso_AMPS_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_run
+	@echo "test12_aniso_AMPS_check..." > test12_aniso_AMPS_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test12_aniso_AMPS_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
+	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP
+	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on 
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test12_aniso_AMPS_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.GMPC.aniso  ${TESTDIR}/LAYOUT.in
+
+test12_aniso_AMPS_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+
+test12_aniso_AMPS_check:
+	gunzip -c output/test12/3d_aniso.out.gz \
+	        > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+		${TESTDIR}/RESULTS/PC/3d_fluid_Aregion0_0_t00000005_n00000005.out \
+		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
+		> test12_aniso_AMPS_gmpc.diff)
+	ls -l test12_aniso_AMPS_gmpc.diff
+
+#########################################################
 
 test12_aniso:
 	@echo "test12_aniso_compile..." > test12_aniso_gmpc.diff
