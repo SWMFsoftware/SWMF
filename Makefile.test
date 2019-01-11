@@ -1947,10 +1947,10 @@ test_ramscb_check:
 ######## test PC/IPIC3D coupled with GM/BATSRUS #########
 
 test12:
-	$(MAKE) test12_aniso_AMPS
-	$(MAKE) test12_aniso
-	$(MAKE) test12_iso
-	$(MAKE) test12_3d
+	-$(MAKE) test12_aniso_AMPS
+	-$(MAKE) test12_aniso
+	-$(MAKE) test12_iso
+	-$(MAKE) test12_3d
 
 ######## test PC/IPIC3D coupled with GM/BATSRUS #########
 
