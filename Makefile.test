@@ -391,7 +391,7 @@ test1:
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
-	./Config.pl -g=GM:8,8,8,700,100,IE:91,181 -o=GM:u=Default,e=Mhd,PW:Earth
+	./Config.pl -g=GM:8,8,8,700,100,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2,PW:Earth
 	${MAKE} SWMF
 	make PIDL
 
@@ -466,7 +466,7 @@ test2:
 
 test2_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdIons
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdIons,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -557,7 +557,7 @@ test_swpc:
 
 test_swpc_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -636,7 +636,7 @@ test_swpc_multiion:
 
 test_swpc_multiion_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MultiIon
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MultiIon,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -708,7 +708,7 @@ test_swpc_multispecies:
 
 test_swpc_multispecies_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdHpOp
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdHpOp,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -781,7 +781,7 @@ test_swpc_cimi:
 
 test_swpc_cimi_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,ng=2
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
 	make PIDL
@@ -866,7 +866,7 @@ test_swpc_amps:
 
 test_swpc_amps_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE,PT/AMPS
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	./Config.pl -o=PT:application=test/earth-test-swmf,spice-path=nospice,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
@@ -951,7 +951,7 @@ test3:
 
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdAnisoP
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,ng=2
 	./Config.pl -o=IM:GridDefault,EarthHO
 	${MAKE} SWMF
 	make PIDL
@@ -1018,7 +1018,7 @@ test4:
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
-	./Config.pl -g=GM:8,8,8,600,1,IE:91,181 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,600,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -1061,8 +1061,8 @@ test5:
 
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
-	./Config.pl -o=EE:u=Swarm,e=MhdEos
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
+	./Config.pl -o=EE:u=Swarm,e=MhdEos,ng=2
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
 	./Config.pl -g=EE:10,10,10,500,1,SC:4,4,4,1200,1
 	${MAKE} SWMF
 	make PIDL
@@ -1137,7 +1137,7 @@ test6:
 
 test6_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CRCM
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd,IM:EarthHO
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2,IM:EarthHO
 	${MAKE} SWMF
 	make PIDL
 
@@ -1200,7 +1200,7 @@ test7:
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
 	./Config.pl -g=IH:4,4,4,3000,1,OH:4,4,4,3000,1
-	./Config.pl -o=IH:u=Waves,e=Mhd -o=OH:u=Waves,e=Mhd
+	./Config.pl -o=IH:u=Waves,e=Mhd,ng=2 -o=OH:u=Waves,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -1248,8 +1248,8 @@ test8:
 
 test8_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB,ng=2
 	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
@@ -1314,7 +1314,7 @@ test9:
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi
+	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
 	./Config.pl -g=SC:6,4,4,1200,1,IH:6,6,6,6800,1 -o=IH:ng=3
 	${MAKE} SWMF
@@ -1370,7 +1370,7 @@ test9_2:
 
 test9_2_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi
+	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
 	./Config.pl -g=SC:6,4,4,1200,1,IH:6,6,6,6800,1 -o=IH:ng=3
 	${MAKE} SWMF
@@ -1430,8 +1430,8 @@ test10:
 
 test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPeAnisoPi
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPiSignB
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPeAnisoPi,ng=2
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPiSignB,ng=2
 	./Config.pl -g=SC:6,4,4,1200,1,IH:4,4,4,6800,1
 	${MAKE} SWMF
 	make PIDL
@@ -1477,7 +1477,7 @@ test11:
 
 test11_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
-	./Config.pl -g=GM:8,8,8,700,1 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,700,1 -o=GM:u=Default,e=Mhd,ng=2
 	./Config.pl -o=PT:spice-path=nospice,application=coupler-test
 	${MAKE} SWMF
 	make PIDL
@@ -1526,7 +1526,7 @@ test13:
 
 test13_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
-	./Config.pl -g=GM:8,8,8,700,1 -o=GM:u=EuropaSingleMHDPe,e=MhdPe
+	./Config.pl -g=GM:8,8,8,700,1 -o=GM:u=EuropaSingleMHDPe,e=MhdPe,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=europa-test,amps-test=on 
 	${MAKE} SWMF
 
@@ -1565,7 +1565,7 @@ test14:
 
 test14_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelio,e=Mhd
+	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelio,e=Mhd,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
@@ -1631,8 +1631,8 @@ test15_sp:
 
 test15_scihsp_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe
+	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe,ng=2
 	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1,SP:2000
 	${MAKE} SWMF
 	make PIDL
@@ -1722,7 +1722,7 @@ test_esmf:
 
 test_esmf_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} ESMF_SWMF
 
 test_esmf_rundir:
@@ -1777,7 +1777,7 @@ test_ccmc:
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:6,6,6,3800,1,IE:91,181
-	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
+	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd -ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -1852,7 +1852,7 @@ test_ccmc_small:
 test_ccmc_small_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
 	./Config.pl -g=GM:6,6,6,800,1,IE:91,181
-	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd
+	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd -ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -1915,7 +1915,7 @@ test_ramscb:
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
-	./Config.pl -g=GM:8,8,8,800,800,IE:91,181 -o=GM:u=Default,e=Mhd
+	./Config.pl -g=GM:8,8,8,800,800,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -1968,7 +1968,7 @@ test12_aniso_AMPS:
 
 test12_aniso_AMPS_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP
+	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2007,7 +2007,7 @@ test12_aniso:
 
 test12_aniso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP
+	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2056,7 +2056,7 @@ test12_3d:
 
 test12_3d_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
-	./Config.pl -g=GM:4,4,4,2050,1 -o=GM:u=GemReconnect,e=MhdHyp
+	./Config.pl -g=GM:4,4,4,2050,1 -o=GM:u=GemReconnect,e=MhdHyp,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2112,7 +2112,7 @@ test12_iso:
 
 test12_iso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe
+	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
