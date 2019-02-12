@@ -1,4 +1,4 @@
-!All routines here include the following 'param.h' header
+!     All routines here include the following 'param.h' header
 !     integer::nRMax,nMuMax,nPMax
 !     parameter(nRMax=1000,nMuMax=40,nPMax=600)
 
@@ -8,17 +8,17 @@
       subroutine SP_cool
 !DESCRIPTION:
 !Subroutine SP_cool sets pmin,pmax,pinj,dlnp,
-!arrays pp,ww,ee - momentum,speed and energy as a 
+!arrays pp,Speed_I,ee - momentum,speed and energy as a 
 !function of the energetic coordinate.
 !Also sets the scattering length dependence on energy
 !EOP 
       include 'param.h'   
       common /SP_size  / nr,nmu,nw, dim1
       common /SP_partid/ iz,massa,ekpp,xlmbda0
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
       common /SP_energy/ emin,emax,eein,ee(0:nPMax)
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
+      common /SP_scatti/ qex,Scattering_I(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       common /SP_quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
       common /SP_convrt/ cAUKm,hour,valf
@@ -49,14 +49,14 @@ c ----------------------------------- scales:
       wwin = btin*clight*hour/xkm/cAUKm
 
       do 11 k = 0,nw
-      pp(k) = pmin*exp(float(k)*dlnp)
-       etot = sqrt(pp(k)**2+e0**2)
-       beta = pp(k)/etot
-      ee(k) = pp(k)**2/(etot+e0)
-      ww(k) = beta*clight*hour/xkm/cAUKm
+      Momentum_I(k) = pmin*exp(float(k)*dlnp)
+       etot = sqrt(Momentum_I(k)**2+e0**2)
+       beta = Momentum_I(k)/etot
+      ee(k) = Momentum_I(k)**2/(etot+e0)
+      Speed_I(k) = beta*clight*hour/xkm/cAUKm
       qqp(k)= 0.
-       rg   = float(massa)*pp(k)/abs(qz)/gv
-      wsc(k)= ww(k)*rg**expo
+       rg   = float(massa)*Momentum_I(k)/abs(qz)/gv
+      wsc(k)= Speed_I(k)*rg**expo
 
       qqp(k)= exp(-ee(k)/eein)/ppin**3
 
@@ -80,10 +80,10 @@ c  *****************  end subroutine SP_cool     ******************
 !EOP
       include 'param.h'   
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
       common /SP_energy/ emin,emax,eein,ee(0:nPMax)
-      common /SP_speed/  wmin,wmax,wwin,ww(0:nPMax)
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_speed/  wmin,wmax,wwin,Speed_I(0:nPMax)
+      common /SP_scatti/ qex,Scattering_I(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       common /SP_quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
       common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
@@ -94,7 +94,7 @@ c  *****************  end subroutine SP_cool     ******************
       if(DoWriteAll)write(iStdout,*) prefix,
      1      'PEEL-OFF -- what exponent ??',pex
       do 30 k = 0,nw
-      fact = (pp(k)/ppin)**pex
+      fact = (Momentum_I(k)/ppin)**pex
       fpeel(k) = 2./(1.+fact)
       gpeel(k) = pex*fact/(1.+fact)
       if(DoWriteAll)write(iStdout,911) prefix,
@@ -113,14 +113,14 @@ c  *****************  end subroutine SP_cool     ******************
 
 c  *****************  end subroutine SP_peeloff  ******************
 !BOP
-!ROUTINE: SP_pangle - sets \mu, 1-\mu^2, \mu-dependance for scattering
+!ROUTINE: SP_pangle - sets \mu, 1-\mu^2, \mu-dependence for scattering
 !INTERFACE:
       subroutine SP_pangle
 !EOP
       include 'param.h'    
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
+      common /SP_scatti/ qex,Scattering_I(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       include 'stdout.h'
 c     linear grid in mu=cost
@@ -128,33 +128,30 @@ c     linear grid in mu=cost
        m = mm/2
 
       !Uniformly spaced grid, -1<=\mu<=1, index value 0 is for \mu=1
-      !d\mu is positive
+      !index nMu is for \mu=-1, d\mu is positive, 
       dmu = 2./float(mm) 
       do 11 jj=0,m
       jm = mm-jj
-      amu(jj) = 1. - float(jj)*dmu
-      amu(jm) = - amu(jj)
-      !sint=1-(\mu)^2
-      sint(jj) = sqrt(1.-amu(jj)**2)
-      sint(jm) = sint(jj)
+      Mu_I(jj) = 1. - float(jj)*dmu
+      Mu_I(jm) = - Mu_I(jj)
+      SinMu2_I(jj) = 1.-Mu_I(jj)**2
+      SinMu2_I(jm) = SinMu2_I(jj)
 11    continue
-       amu(0) = 1.
-      sint(0) = 0.
-       amu(m) = 0.
-      sint(m) = 1.
-      amu(mm) = -1
-      sint(mm) = 0.
+       Mu_I(0) = 1.
+      SinMu2_I(0) = 0.
+       Mu_I(m) = 0.
+      SinMu2_I(m) = 1.
+      Mu_I(mm) = -1
+      SinMu2_I(mm) = 0.
 c  
       do 21 jj=1,m
       jm = mm-jj+1
-        ccmu = (amu(jj)+amu(jj-1))/2.
+        ccmu = (Mu_I(jj)+Mu_I(jj-1))/2.
         ssmu = 1.-ccmu**2
        absmu = abs(ccmu)
        scatty = ssmu*absmu**qex*3./(1.-qex)/(3.-qex)
-       cmu(jj) =  ccmu
-       scmu(jj) = scatty/dmu**2/2.   
-       cmu(jm) = -ccmu
-       scmu(jm) = scatty/dmu**2/2.
+       Scattering_I(jj) = scatty/dmu**2/2.   
+       Scattering_I(jm) = scatty/dmu**2/2.
 21    continue
       !Diffusion coefficient is as follows:
       !D_{\mu\mu}=xscat(r)*fact(energy)*(1-\mu^2)|\mu|^q
@@ -244,7 +241,7 @@ c **************************  end of INiT ****************
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
       common /SP_quelle/ kinj,einj,winj,qqw(0:nPMax),qqx(0:nRMax)
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_scatti/ qex,Scattering_I(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       common /SP_smile / mp,ni
      1       ,eta(0:6000),exx(0:6000),ezz(0:6000),efi(0:6000)
@@ -440,8 +437,8 @@ c +++++++++++++++++++++++++++++++++++++++++++
 !EOP
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
       common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       common /SP_quelle/ kinj,einj,pinj,qqp(0:nPMax),qqx(0:nRMax)
@@ -464,15 +461,15 @@ c  *****************  end subroutine SP_source   ******************
 !INTERFACE:
       subroutine SP_deltal(dt)                      
 !DESCIPTION
-!Updates the solution of the following equation
+!Advance the solution of the following equation
 !\partial f/\partial t+ v\mu\partial f/\partial s =0
-!throught one time step
+!through a time step
 !EOP
 !!! REWORK DLOGT!!!
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
@@ -490,7 +487,7 @@ c  *****************  end subroutine SP_source   ******************
 c -------------------------------- out direction(s):
       j = jj
        df(0,j,k) = 0.
-      vv =  ww(k)*amu(j)
+      vv =  Speed_I(k)*Mu_I(j)
       do 11 i=1,nr
        ae = 1.+ vv*vl(i)/cau**2
          fact = vv*dt/tll(i)/ae
@@ -504,7 +501,7 @@ c -------------------------------- out direction(s):
       
 c --------------------------------  IN direction(s):
       j = nmu-jj
-      vv = ww(k)*amu(j)
+      vv = Speed_I(k)*Mu_I(j)
        i=nr  
          fact = vv*dt/tll(i)
          df(i,j,k) = df(i,j,k) + fact*f(i,j,k)
@@ -539,8 +536,8 @@ c  *****************  end subroutine SP_deltal  ******************
 !EOP
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu_I(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
@@ -555,7 +552,7 @@ c  *****************  end subroutine SP_deltal  ******************
       do 20 jj=0,m-1
 
       j = jj
-      vv = ww(k)*amu(j)
+      vv = Speed_I(k)*Mu_I(j)
 
       df(0,j,k) = 0.
       do 11 i=1,nr
@@ -571,7 +568,7 @@ c  *****************  end subroutine SP_deltal  ******************
 11    continue
 
       j = mm-jj
-      vv = ww(k)*amu(j)
+      vv = Speed_I(k)*Mu_I(j)
 
       i=nr
         ae = 1.+ vv*vl(i)/cau**2
@@ -603,7 +600,7 @@ c  *****************  end subroutine L-CYCLE  ******************
 !INTERFACE:                      
       subroutine SP_deltamu(i,dt)
 !DESCIPTION
-!Updates the solution of the following equation
+!Advances the solution of the following equation
 !\end{verbatim}
 !\begin{equation}
 !\partial f/\partial t+ (1-\mu^2)\left(-\frac12v\frac{\partial ln B}
@@ -617,12 +614,12 @@ c  *****************  end subroutine L-CYCLE  ******************
 !EOP  
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_scatti/ qex,Scattering_I(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
@@ -635,15 +632,15 @@ ccc   do 11 i=1,nr
       do 31 k=0,nw
       
       fact = xsc(i)*wsc(k)*dt
-      df(i,0,k) = df(i,0,k) + 2.*fact*scmu(1)*(f(i,1,k)-f(i,0,k))
-      df(i,mm,k)= df(i,mm,k)+ 2.*fact*scmu(mm)*(f(i,mm1,k)-f(i,mm,k))
+      df(i,0,k) = df(i,0,k) + 2.*fact*Scattering_I(1)*(f(i,1,k)-f(i,0,k))
+      df(i,mm,k)= df(i,mm,k)+ 2.*fact*Scattering_I(mm)*(f(i,mm1,k)-f(i,mm,k))
 
       do 21 j=1,mm1
-      ae = 1.+ ww(k)*amu(j)*vl(i)/cau**2
+      ae = 1.+ Speed_I(k)*Mu_I(j)*vl(i)/cau**2
       dte= dt/ae
       
-      foc =-sint(j)**2*(0.5*ww(k)*dbdl(i)+dvdt(i)/ww(k) +
-     1                  amu(j)*(dldt(i) + 0.5*dbdt(i)))
+      foc =-SinMu2_I(j)*(0.5*Speed_I(k)*dbdl(i)+dvdt(i)/Speed_I(k) +
+     1                  Mu_I(j)*(dldt(i) + 0.5*dbdt(i)))
       foc = dte/dmu*foc
 
       if (foc.ge.0.) then
@@ -666,8 +663,8 @@ ccc   do 11 i=1,nr
 
 c --- add scattering :
 
-      sc1 = fact/ae*scmu(j)
-      sc2 = fact/ae*scmu(j+1)
+      sc1 = fact/ae*Scattering_I(j)
+      sc2 = fact/ae*Scattering_I(j+1)
       df(i,j,k) = df(i,j,k) +
      1           sc1*(f(i,j-1,k)-f(i,j,k))+sc2*(f(i,j+1,k)-f(i,j,k))
 
@@ -685,9 +682,9 @@ c  *****************  end subroutine DELTA-MU  ******************
 !EOP
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
+      common /SP_scatti/ qex,Scattering_I(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
@@ -701,12 +698,11 @@ c  *****************  end subroutine DELTA-MU  ******************
       nr1 = nr-1
        mm = nmu
       mm1 = mm-1
-ccc   do 11 i=1,nr
       do 31 k=0,nw
        fact = wght*wsc(k)*xsc(i)*dt
 c --  mu = 1  (or j=0)
-       ae = 1.+ww(k)*vl(i)/cau**2
-        sc1 = fact*scmu(1)/ae
+       ae = 1.+Speed_I(k)*vl(i)/cau**2
+        sc1 = fact*Scattering_I(1)/ae
       a2(0) = 0.
       a1(0) = 0.
       bb(0) = 1. + 2.*sc1
@@ -714,8 +710,8 @@ c --  mu = 1  (or j=0)
       c2(0) = 0.
       xy(0) = df(i,0,k)
 c --  mu =-1  (or j=nmu)
-       ae = 1.-ww(k)*vl(i)/cau**2
-        sc1 = fact*scmu(mm)/ae
+       ae = 1.-Speed_I(k)*vl(i)/cau**2
+        sc1 = fact*Scattering_I(mm)/ae
       a2(nmu) = 0.
       a1(nmu) = -2.*sc1
       bb(nmu) = 1. + 2.*sc1
@@ -723,10 +719,10 @@ c --  mu =-1  (or j=nmu)
       c2(nmu) = 0.
       xy(nmu) = df(i,nmu,k)
       do 21 j=1,mm1
-       ae = 1.+ww(k)*vl(i)*amu(j)/cau**2
+       ae = 1.+Speed_I(k)*vl(i)*Mu_I(j)/cau**2
 c --- focusing :
-       foc =-sint(j)**2*(0.5*ww(k)*dbdl(i)+dvdt(i)/ww(k) +
-     1                   amu(j)*(dldt(i) + 0.5*dbdt(i) ))
+       foc =-SinMu2_I(j)*(0.5*Speed_I(k)*dbdl(i)+dvdt(i)/Speed_I(k) +
+     1                   Mu_I(j)*(dldt(i) + 0.5*dbdt(i) ))
        foc = wght*dt/dmu*foc/ae
       if (foc.ge.0.) then
        a2(j) = 0.
@@ -755,8 +751,8 @@ c --- focusing :
       end if
        xy(j) = df(i,j,k)
 c --- add scattering :
-      sc1 = fact*scmu(j)/ae
-      sc2 = fact*scmu(j+1)/ae
+      sc1 = fact*Scattering_I(j)/ae
+      sc2 = fact*Scattering_I(j+1)/ae
       a1(j) = a1(j) -sc1 
       bb(j) = bb(j) + sc1 + sc2
       c1(j) = c1(j) -sc2
@@ -791,9 +787,9 @@ c  *****************  end subroutine MU-CYCLE  ******************
 !EOP  
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
@@ -806,11 +802,11 @@ c  *****************  end subroutine MU-CYCLE  ******************
       nw1 = nw-1
 ccc   do 11 i=1,nr  
       do 21 j=0,nmu
-       acc0= -amu(j)**2*dldt(i) + 0.5*sint(j)**2*dbdt(i)
-       acc1= -amu(j)*dvdt(i)
+       acc0= -Mu_I(j)**2*dldt(i) + 0.5*SinMu2_I(j)*dbdt(i)
+       acc1= -Mu_I(j)*dvdt(i)
       do 31 k=0,nw   
-      ae = 1.+vl(i)*ww(k)*amu(j)/cau**2   
-       acc = dt*(acc0 + acc1/ww(k))/dlnp/ae
+      ae = 1.+vl(i)*Speed_I(k)*Mu_I(j)/cau**2   
+       acc = dt*(acc0 + acc1/Speed_I(k))/dlnp/ae
       if (acc.ge.0.) then
        if (k.eq.0) then
          df(i,j,k) = df(i,j,k) - acc*f(i,j,k)
@@ -847,9 +843,9 @@ c  *****************  end subroutine DELTA-P   ******************
 !EOP
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
@@ -864,12 +860,12 @@ c  *****************  end subroutine DELTA-P   ******************
       nw1 = nw-1
 ccc   do 10 i=1,nr 
       do 20 j=0,mm
-       acc0= - amu(j)**2*dldt(i)+0.5*sint(j)**2*dbdt(i)
-       acc1= - amu(j)*dvdt(i)
+       acc0= - Mu_I(j)**2*dldt(i)+0.5*SinMu2_I(j)**2*dbdt(i)
+       acc1= - Mu_I(j)*dvdt(i)
 
       do 31 k=0,nw
-      ae = 1.+vl(i)*ww(k)*amu(j)/cau**2
-       acc = acc0+acc1/ww(k)
+      ae = 1.+vl(i)*Speed_I(k)*Mu_I(j)/cau**2
+       acc = acc0+acc1/Speed_I(k)
        acc = wght*dt*acc/ae
        pac = acc*gpeel(k)
        acc = acc/dlnp
@@ -916,7 +912,7 @@ c  *****************  end subroutine P-CYCLE   ******************
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
       common /SP_suly  / wghtl,wghtmu,wghtw
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
+      common /SP_scatti/ qex,Scattering_I(nMuMax),wsc(0:nPMax),
      1     xsc(0:nRMax)
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
@@ -1062,8 +1058,8 @@ c ========================  OUTPUT ROUTINES to be revised ========
       common /SP_spiral/ tll(0:nRMax), dbdl(0:nRMax),vl(0:nRMax)
       common /SP_coeff / dvdt(0:nRMax),dldt(0:nRMax),dbdt(0:nRMax),
      1                dndt(0:nRMax)
-      common /SP_scatti/ qex,cmu(nMuMax),scmu(nMuMax),wsc(0:nPMax),
-     1     xsc(0:nRMax)
+      common /SP_scatti/ qex,Scattering_I(nMuMax),
+     1     wsc(0:nPMax),xsc(0:nRMax)
       integer  iFile
       include 'stdout.h'
 
@@ -1124,10 +1120,10 @@ c ****************************    end ALL output ******************
       common /SP_size  / nr,nmu,nw, dim1
       common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
       common /SP_azimut/ fi(0:nRMax)
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
       common /SP_energy/ emin,emax,eein,ee(0:nPMax)
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
       common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
@@ -1159,7 +1155,7 @@ c ****************************    end ALL output ******************
       ss = 0.5*(f(i,0,k)-f(i,nmu,k))
       do 12 j=1,nmu-1
       aa = aa + f(i,j,k)
-      ss = ss + f(i,j,k)*amu(j)
+      ss = ss + f(i,j,k)*Mu_I(j)
 12    continue
       ff(i,k) = aa/float(nmu)
        s(i,k) = ss/float(nmu)
@@ -1181,7 +1177,7 @@ c --  energy spectra:
       do 51 k = 0,nw
       do 52 kk = 1,krmax
        ii = krobs(kk)
-       ffx(kk) = ff(ii,k)*fpeel(k)*pp(k)**2
+       ffx(kk) = ff(ii,k)*fpeel(k)*Momentum_I(k)**2
 52    continue
        write(iFile,111) k,ee(k),(ffx(kk),kk=1,krmax)
 51    continue
@@ -1194,7 +1190,7 @@ c --  radial dependence :
       do 61 i = 0,nr
          do 62 kk = 1,kemax
             ke  = keobs(kk)
-            ffx(kk) = ff(i,ke)*fpeel(ke)*pp(ke)**2
+            ffx(kk) = ff(i,ke)*fpeel(ke)*Momentum_I(ke)**2
  62      continue
          write(iFile,211) i,r(i),fi(i),(ffx(kk),kk=1,kemax)
  61   continue
@@ -1218,7 +1214,7 @@ c --  pitch - angles :
       endif
 
 73    continue
-        write(iFile,311) j,amu(j),(ffx(kk),kk=1,krmax)
+        write(iFile,311) j,Mu_I(j),(ffx(kk),kk=1,krmax)
 72    continue
         write(iFile,*) 
 71    continue
@@ -1246,10 +1242,10 @@ c  *****************  end subroutine SP_csilla   ******************
       include 'param.h'
       common /SP_size  / nr,nmu,nw, dim1
       common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
       common /SP_energy/ emin,emax,eein,ee(0:nPMax)
-      common /SP_speed / wmin,wmax,wwin,ww(0:nPMax)
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,wwin,Speed_I(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
       common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       common /SP_obsrad/ krmax,krobs(5),robs(5)
@@ -1315,10 +1311,10 @@ c  *****************  end subroutine SP_opentime  ******************
       include 'coupler.h'
       common /SP_size  / nr,nmu,nw, dim1
       common /SP_radio / nn,rmin,rshock,rmax,r(0:nRMax)
-      common /SP_impuls/ pmin,pmax,ppin,dlnp,pp(0:nPMax)
+      common /SP_impuls/ pmin,pmax,ppin,dlnp,Momentum_I(0:nPMax)
       common /SP_energy/ emin,emax,eein,ee(0:nPMax)
-      common /SP_speed / wmin,wmax,dlnw,ww(0:nPMax)
-      common /SP_pitch / mm,amu(0:nMuMax),sint(0:nMuMax),dmu
+      common /SP_speed / wmin,wmax,dlnw,Speed_I(0:nPMax)
+      common /SP_pitch / mm,Mu_I(0:nMuMax),SinMu2_I(0:nMuMax),dmu
       common /SP_solutn/ f(0:nRMax,0:nMuMax,0:nPMax),
      1     df(0:nRMax,0:nMuMax,0:nPMax)
       common /SP_peel /  pex,fpeel(0:nPMax),gpeel(0:nPMax)
@@ -1364,7 +1360,7 @@ c  *****************  end subroutine SP_opentime  ******************
 40    continue
       ss1 = ss1/float(nmu)
       ss2 = ss2/float(nmu)
-      ffe(ke)=ff0*(fr2*ss1+fr1*ss2)*fpeel(kk)*pp(kk)**2
+      ffe(ke)=ff0*(fr2*ss1+fr1*ss2)*fpeel(kk)*Momentum_I(kk)**2
 30    continue
       
       vv =  fr2*vr(i1) + fr1*vr(i2)
