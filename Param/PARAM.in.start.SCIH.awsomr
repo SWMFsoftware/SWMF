@@ -257,7 +257,6 @@ RAW			StringLogfile
 -2			MaxBoundary
 
 #COARSEAXIS
-F			UsePoleDiffusion
 T			UseCoarseAxis
 2			nCoarseLayer
 

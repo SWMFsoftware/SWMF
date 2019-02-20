@@ -85,7 +85,6 @@ T			UseBody
 T                       UseUniformAxis
 
 #FIXAXIS
-F                       UsePoleDiffusion
 T                       DoFixAxis
 100.0                   rFixAxis
 1.2                     r2FixAxis

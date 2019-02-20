@@ -178,13 +178,11 @@ T			DoExtendTransitionRegion
 1.0e1			DeltaTeModSi
 
 FIXAXIS
-F			UsePoleDiffusion
 T			DoFixAxis
 24.0			rFixAxis
 0.0			r2FixAxis
 
 #COARSEAXIS
-F			UsePoleDiffusion
 T			UseCoarseAxis
 2			nCoarseLayer
 

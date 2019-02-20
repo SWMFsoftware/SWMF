@@ -138,7 +138,6 @@ T			DoExtendTransitionRegion
 1.0e1			DeltaTeModSi
 
 #COARSEAXIS
-F			UsePoleDiffusion
 T		        UseCoarseAxis
 2		        nCoarseLayer
 
