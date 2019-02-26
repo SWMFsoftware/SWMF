@@ -672,6 +672,7 @@ contains
   subroutine IH_save_global_buffer(nVar, nR, nPhi, nTheta,BufferIn_VG)
 
     use IH_ModMain, ONLY: BufferState_VG
+    use IH_ModMessagePass, ONLY: DoExtraMessagePass
 
     integer,intent(in) :: nVar, nR, nPhi, nTheta
     real,intent(in)    :: BufferIn_VG(nVar,nR,0:nPhi+1,0:nTheta+1)
@@ -681,6 +682,9 @@ contains
     if(.not. allocated(BufferState_VG))&
          allocate(BufferState_VG(nVar, nR, 0:nPhi+1, 0:nTheta+1))
     BufferState_VG = BufferIn_VG
+
+    ! Make sure that ghost cells get filled after 
+    DoExtraMessagePass = .true.
 
   end subroutine IH_save_global_buffer
 

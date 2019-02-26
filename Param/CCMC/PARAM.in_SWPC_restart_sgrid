@@ -64,7 +64,6 @@ GM/restartIN/restart.H
 #MESSAGEPASSACROSSPOLE
 
 #FIXAXIS
-F                       UsePoleDiffusion
 T                       DoFixAxis
 1000.0              	rFixAxis
 1.2                     r2FixAxis

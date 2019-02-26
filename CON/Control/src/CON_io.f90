@@ -1,5 +1,5 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, 
-!  portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 !
 !BOP
@@ -97,8 +97,8 @@ contains
     logical, intent(out) :: IsLastRead ! True if last session was read
 
     !DESCRIPTION:
-    ! Reads the parameters for control, and passes parameters 
-    ! between 
+    ! Reads the parameters for control, and passes parameters
+    ! between
     ! \begin{verbatim}
     ! #BEGIN_COMP PM
     ! ....
@@ -106,17 +106,17 @@ contains
     ! \end{verbatim}
     ! to the physical component PM.
     !
-    ! The parameter file consists of one or more sessions. 
+    ! The parameter file consists of one or more sessions.
     ! The \#RUN command means that the session should be executed.
     ! If the file ends or an \#END command is found, the last session
     ! is executed.
     ! The ordering of the commands is more or less arbitrary
-    ! with the exception of \#PLANET (\#MOON, \#COMET) that must preceed 
+    ! with the exception of \#PLANET (\#MOON, \#COMET) that must preceed
     ! commands that idealize or overwrite the real parameters of the planet.
     !EOP
 
     ! True if first session will be read
-    logical :: IsFirstRead = .true. 
+    logical :: IsFirstRead = .true.
 
     ! Logical for echo of commands
     logical :: DoEcho = .true.
@@ -226,7 +226,7 @@ contains
                 end if
                 ! Initialize ModReadParam
                 call read_init(NameComp, iSession, iLineModule, iLine-1, iUnitOut)
-                
+
                 ! Echo component input on root PE of component
                 if(is_proc0())        call read_echo_set(.false.)
                 if(is_proc0(NameComp))call read_echo_set(DoEcho)
@@ -564,7 +564,7 @@ contains
              call read_var('FracSecond',FracSecond)
              TimeEnd % FracSecond = FracSecond
              call time_int_to_real(TimeEnd)
-             
+
              UseEndTime = .true.
           else
              write(*,*)NameSub// &
@@ -573,7 +573,7 @@ contains
 
        case('#PLANET','#MOON','#COMET', &
             '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS','#MAGNETICCENTER',&
-            '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0')
+            '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0', '#MULTIPOLEB0')
           if(.not.is_first_read())then
              if(UseStrict)RETURN
              CYCLE
@@ -751,9 +751,9 @@ contains
     !DESCRIPTION:
     ! If UseStdout is true tell the components to use STDOUT with
     ! a prefix string.
-    ! If UseStdout is false, open an output file for each component and 
+    ! If UseStdout is false, open an output file for each component and
     ! each PE used by the component in the directory NameStdoutDir.
-    ! Tell each component to write STDOUT into the file, which has 
+    ! Tell each component to write STDOUT into the file, which has
     ! a unique unit number.
     ! Empty files will be deleted if the run ends in a normal fashion.
     !EOP
@@ -855,7 +855,7 @@ contains
        call save_restart_comp(iComp, tSimulation)
     end do
 
-    ! Ensure that all components have written restart state before 
+    ! Ensure that all components have written restart state before
     ! writing the CON restart file (RESTART.out)
     call MPI_barrier(i_comm(), iError)
 

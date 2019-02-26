@@ -190,7 +190,7 @@ T			DoSaveLogfile
 VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst dstflx
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
 3.0			StringRFlux
 
 #SAVEPLOT
@@ -271,13 +271,6 @@ T 			UseDecay
 #RESTART
 T			DoRestart
 
-#AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
-
 #IONOSPHERE
 5                       TypeConductanceModel
 F                       UseFullCurrent
@@ -288,6 +281,13 @@ F			UseFakeRegion2
 
 #BOUNDARY
 10.0                    LatBoundary
+
+#AURORALOVAL
+T			UseOval (rest of parameters read if true)
+T			UseOvalShift
+F			UseSubOvalConductance
+T			UseAdvancedOval
+F			DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile

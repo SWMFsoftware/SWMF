@@ -232,7 +232,6 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #COARSEAXIS
-F			UsePoleDiffusion
 T                       UseCoarseAxis
 2			nCoarseLayer
 
@@ -440,7 +439,7 @@ F			UseDiffusion
 
 #SAVEPLOT
 1
-mh1d idl
+mh1d flux idl
 
 #SAVEINITIAL
 F

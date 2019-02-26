@@ -12,43 +12,33 @@ the SWMF and create the user manual please follow the instructions below.
 # Obtain SWMF #
 ###############
 
-# Get the source code from CVS (UM only) or from the tar balls.
+# Get the source code from Git or from the tar balls.
 
 # The minimim requirement is the SWMF repository. 
 
-# You may also need the SWMF_data repository that contains large data files. 
-# At the UofM the SWMF_data may already be available through a shared disk as
-
-/csem1/SWMF_data 
-
-# If it is not available through the shared disk, the SWMF_data repository 
-# can be put into the home directory or into the SWMF directory.
+# You may also need the SWMF_data repository that contains large data files.
+# It can be put into the home directory or into the SWMF directory.
 
 # Some data files used by the Center for Radiative Shock Hydrodynamics (CRASH)
-# are in the CRASH_data repository. On many machines at the UofM this is 
-# already available through a shared disk as
+# are in the CRASH_data repository.
+# If needed, it has to be placed into the home directory.
 
-/csem1/CRASH_data
-
-# Otherwise it has to be placed into the home directory.
-
-# !!! Getting SWMF from CVS (requires CVS access) !!!
-# Set the CVS environment variables (with your user name)
-
-setenv CVSROOT Your_User_Name_On_Herot@herot.engin.umich.edu:/CVS/FRAMEWORK
-setenv CVS_RSH ssh
+# !!! Getting SWMF from Git (requires access to herot) !!!
+# Read http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf
+# about setting up the "herot" ssh alias, passwordless access to herot,
+# and defining the "gitclone" alias/function. 
 
 # Check out the SWMF distribution
 cd {where_you_want_to_have_the_swmf}
-cvs checkout SWMF
+gitclone SWMF
 
 # Check out the SWMF_data distribution into the home directory if needed
 cd
-cvs checkout SWMF_data
+gitclone SWMF_data
 
 # Check out the CRASH_data distribution into the home directory if needed
 cd
-cvs checkout CRASH_data
+gitclone CRASH_data
 
 # !!! Opening tar balls !!!
 
@@ -108,7 +98,8 @@ ulimit -s unlimited
 ######################
 
 # Please note that creating the PDF manuals requires
-# that LaTex and ps2pdf be installed on your system.
+# that LaTex (available through the command line) and ps2pdf
+# be installed on your system.
 
 # To create the PDF manuals type
 make PDF
@@ -152,14 +143,14 @@ make -j test
 
 # To run the tests on more (up to 8) cores use
 
-make -j test MPIRUN='mpirun -np 4'
+make -j test NP=4
 
 # You can also run an individual test. The list of available SWMF tests
 # can be listed with
 
 make test_help
 
-# For example, to run test3 on a single core use
+# For example, to run test3 without MPI on a single core use
 
 make -j test3 MPIRUN=
 \end{verbatim}

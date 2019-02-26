@@ -26,7 +26,8 @@ my %component = (
     "ALTOR"         => "PC", 
     "IPIC3D2"       => "PC", 
     "DGCPM"         => "PS", 
-    "AMPS"          => "PT", 
+    "AMPS_PT"       => "PT", 
+    "AMPS_PC"       => "PC", 
     "PWOM"          => "PW", 
     "RBE"           => "RB",
     "MFLAMPA"       => "SP",
@@ -35,6 +36,7 @@ my %component = (
 my $History;
 my @models;
 my $CloneOnly;
+my $Sleep;
 foreach (@Arguments){
     if( /^-(install|clone)/){
 	$CloneOnly = 1 if /^-clone/;
@@ -51,18 +53,23 @@ foreach (@Arguments){
 	next;
     }
     if( /^-history$/){$History = 1; next;}
+    if( /^-sleep=(\d+)/){$Sleep = $1; next;}
 }
 
 # Create Git clone command
-my $gitclone = "git clone";
+my $gitclone;
+$gitclone  = "sleep $Sleep; " if $Sleep;
+$gitclone .= "git clone";
 $gitclone .= " --depth=1" unless $History;
 $gitclone .= " herot:/GIT/FRAMEWORK";
 
 my $repo;
 foreach $repo ("share", "util", @models){
     my $component = ($component{$repo} or ".");
-    my $model = "$component/$repo";
-    `cd $component; $gitclone/$repo` unless -d $model;
+    my $repo1 = $repo;
+    $repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT
+    my $model = "$component/$repo1";
+    `cd $component; $gitclone/$repo1` unless -d $model;
     `cd GM/BATSRUS; $gitclone/srcBATL` 
 	if $model eq "GM/BATSRUS" and not -d "$model/srcBATL";
 }
@@ -107,12 +114,13 @@ my $Options;
 
 # Set actions based on the switches
 foreach (@Arguments){
-    if(/^-l(ist)?$/)          {$ListVersions=1;                 next};
-    if(/^-s$/)                {$ShowShort=1;                    next};
-    if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next};
-    if(/^-g=(.*)/)            {$GridSize.="$1,";                next};
-    if(/^-o=(.*)/)            {$Options.=",$1";                 next};
-
+    if(/^-l(ist)?$/)          {$ListVersions=1;                 next;}
+    if(/^-s$/)                {$ShowShort=1;                    next;}
+    if(/^-v=(.*)/)            {push(@NewVersion,split(/,/,$1)); next;}
+    if(/^-g=(.*)/)            {$GridSize.="$1,";                next;}
+    if(/^-o=(.*)/)            {$Options.=",$1";                 next;}
+    if(/^-sleep=\d+/)         {next;}
+    
     print "$WARNING Unknown switch: $_\n" if $Remaining{$_};
 }
 
@@ -300,10 +308,6 @@ sub set_versions{
 	    }
 	}
     }
-#^CMP IF UA BEGIN
-    die "$ERROR non Empty UA version requires non Empty IE version\n"
-        if $Version{UA} ne 'Empty' and $Version{IE} eq 'Empty';
-#^CMP END UA
 #^CMP if PC BEGIN 
     die "$ERROR PC/IPIC3D version requires HDF5 compiler. Use -hdf5.\n"
 	if $Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no';
@@ -402,11 +406,13 @@ sub set_version_makefile_comp{
     my $File;
     foreach $File (@File){
 	# Set the version based on the file name
-	$File =~ m|^([A-Z][A-Z]/[^/]+)|;
+	$File =~ m|^(([A-Z][A-Z])/[^/]+)|;
 	my $Version = $1;
+	my $Component = $2;
 	# Put the proper include command into $MakefileDef and $MakefileConf
 	&shell_command("echo include $DIR/$MakefileDef > $File");
 	&shell_command("echo MYDIR=$DIR/$Version >> $File");
+	&shell_command("echo COMPONENT=$Component >> $File");
 	&shell_command("echo include $DIR/$MakefileConf > ".
 		       "$Version/$MakefileConf");
     }
@@ -446,6 +452,11 @@ sub print_help{
 -history       Get the models from Git with full development history. 
                Default is no history to reduce size and download time.
 
+-sleep=VALUE   Sleep VALUE number of seconds after each git clone, so
+	       the server does not reject the ssh connection. Only useful
+	       in combination with the -install and -clone options. 
+               Default is no delay.
+
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
                multiple grid sizes can be given in a comma separated list.
@@ -467,17 +478,18 @@ sub print_help{
 
 Examples for the SWMF Config.pl:
 
-Clone share, util and all models with full version history:
+Clone share, util and all models with full version history, wait 5s in between:
 
-    Config.pl -clone -history
+    Config.pl -clone -history -sleep=5
 
 Clone share, util and the listed models:
 
     Config.pl -clone=BATSRUS,Ridley_serial,RCM2,RBE
 
-(Re)install BATSRUS and AMPS with full version history:
+(Re)install BATSRUS and AMPS_PT, which is the AMPS model as a PT component,
+with full version history:
 
-    Config.pl -install=BATSRUS,AMPS -history
+    Config.pl -install=BATSRUS,AMPS_PT -history
 
 Select the empty version for all components except GM/BATSRUS:
 

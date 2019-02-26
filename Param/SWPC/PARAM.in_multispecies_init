@@ -1,6 +1,3 @@
-#ECHO
-T			DoEcho
-
 #DESCRIPTION
 Example file to start a run for the SWPC code selection
 
@@ -367,6 +364,7 @@ lcb nul tec             StringPlot  !last closed field line plots
 5.                      Radius
 36                      nLon
 
+For Event 1, Boris factor should be at least 0.03.
 #BORIS
 T			UseBorisCorrection
 0.01			BorisClightFactor

@@ -254,8 +254,40 @@ F			DoSaveInitial
 
 #END_COMP SC ----------------------------------------------------------------
 
-#BEGIN_COMP IH -------------------------------------------------------------
+#COMPONENT
+IH			NameComp
+F			UseComp
 
+#STOP
+60000			MaxIteration
+-1.0			tSimulationMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#COMPONENT
+IH			NameComp
+T			UseComp
+
+#COUPLE1
+SC			NameSource
+IH			NameTarget
+1			DnCouple
+-1.0			DtCouple
+
+#STOP
+60001			MaxIter
+-1			TimeMax
+
+#BEGIN_COMP SC ----------------------------------------------------------------
+
+#AMR
+-1			DnRefine
+
+#END_COMP SC   ----------------------------------------------------------------
+
+#BEGIN_COMP IH -------------------------------------------------------------
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
@@ -411,40 +443,6 @@ T
 
 
 #END_COMP IH ---------------------------------------------------------------
-
-#COMPONENT
-IH			NameComp
-F			UseComp
-
-#STOP
-60000			MaxIteration
--1.0			tSimulationMax
-
-End session: 1
-#RUN ##########################################################################
-Begin session: 2
-
-#BEGIN_COMP SC ----------------------------------------------------------------
-
-#AMR
--1			DnRefine
-
-#END_COMP SC   ----------------------------------------------------------------
-
-
-#COMPONENT
-IH			NameComp
-T			UseComp
-
-#COUPLE1
-SC			NameSource
-IH			NameTarget
-1			DnCouple
--1.0			DtCouple
-
-#STOP
-60001			MaxIter
--1			TimeMax
 
 End session: 2
 #RUN ##########################################################################

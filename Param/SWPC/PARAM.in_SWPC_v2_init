@@ -64,7 +64,7 @@ box                     NameArea
   16.0                  yMaxBox
   16.0                  zMaxBox
 
- Better res at geosync and near tail.
+! Better res at geosync and near tail.
 #GRIDRESOLUTION
 1/4
 box
@@ -149,7 +149,7 @@ T			DoSaveLo5Dgfile
 VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst dstflx
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
 3.0			StringRFlux
 
 #SAVEPLOT

@@ -291,6 +291,19 @@ contains
   end subroutine GM_get_for_im_crcm
 
   !==============================================================================
+  subroutine GM_put_from_ps(Buffer_II,iSizeIn,jSizeIn,nVar,NameVar)
+    implicit none
+
+    integer, intent(in) :: iSizeIn,jSizeIn,nVar
+    real, intent(in) :: Buffer_II(iSizeIn,jSizeIn)
+    character(len=*), intent(in) :: NameVar
+
+    character(len=*), parameter :: NameSub='GM_put_from_ps'
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_put_from_ps
+  
+  !==============================================================================
 
   subroutine GM_get_for_rb_trace(iSize,jSize,NameVar,nVarLine,nPointLine)
     implicit none

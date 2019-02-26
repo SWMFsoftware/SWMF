@@ -265,9 +265,8 @@ z=0 all idl_ascii       StringPlot
 #TIMESTEPPING
 T			UseSWMFDt
 
-#ENERGYCONSERVING
-T                       UseECSIM
-
+#DIVE
+F
 
 #DISCRETIZATION
 0.51		        theta

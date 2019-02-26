@@ -239,7 +239,6 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #COARSEAXIS
-F			UsePoleDiffusion
 T                       UseCoarseAxis
 2			nCoarseLayer
 
