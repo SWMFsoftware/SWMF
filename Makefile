@@ -173,7 +173,7 @@ info:
 	@echo "Python scripts        : `wc -l */*/*/*.py */*/*/*/*.py | tail -1`"
 	@echo "IDL scripts           : `wc -l */*/*/*.pro */*/*/*/*.pro | tail -1`"
 	@echo "Latex documentation   : `wc -l */*/*.tex */*/*/*.tex */*/*/*/*.tex | tail -1`"
-	@echo "XML descriptions      : `wc */*.XML */*/*.XML | tail -1`"
+	@echo "XML descriptions      : `wc -l */*.XML */*/*.XML | tail -1`"
 
 mkdir: ./lib ./bin
 
