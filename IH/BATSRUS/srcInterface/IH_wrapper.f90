@@ -393,13 +393,13 @@ contains
     use CON_comp_param
     use IH_domain_decomposition
     use CON_coupler
-    use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple, &
-         UseParticles
+    use IH_ModMain, ONLY: TypeCoordSystem, nVar, NameVarCouple
     use IH_ModPhysics,ONLY:No2Si_V, UnitX_
     use IH_ModGeometry,   ONLY: RadiusMin, RadiusMax
     use IH_BATL_geometry, ONLY: TypeGeometry, IsGenRadius, LogRGen_I 
     use IH_BATL_lib, ONLY: CoordMin_D, CoordMax_D, Particle_I
-    use IH_ModParticleFieldLine, ONLY: KindReg_
+    use IH_ModParticleFieldLine, ONLY: KindReg_, &
+         UseParticles
     logical:: DoTest,DoTestMe
     logical:: UseParticleLine = .false.
     integer:: nParticle = 0, iError = 0
@@ -1492,7 +1492,7 @@ contains
   subroutine IH_check_ready_for_sp(IsReady)
     use ModMpi
     use CON_coupler, ONLY: is_proc0, i_proc0, i_comm
-    use IH_ModMain, ONLY: UseParticles
+    use IH_ModParticleFieldLine, ONLY: UseParticles
     logical, intent(out):: IsReady
 
     integer :: iError
