@@ -167,12 +167,13 @@ info:
 	@echo "util/EMPIRICIAL/src*  : `wc -l util/EMPIRICAL/src*/*.f* | tail -1`"
 	@echo "CON/*	             : `wc -l CON/*/src/*.f* | tail -1`"
 	@echo "CON/Interface         : `wc -l CON/Interface/src/*.f* | tail -1`"
-	@echo "srcInterface+wrappers : `wc -l ??/*/srcInterface/*.[fc]* ??/*/src/??_wrapper.f90 | tail -1`"
-	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* | tail -1`"	
-	@echo "Perl scripts          : `wc -l *.pl */*.pl */*/*.pl */*/*/*.pl */*/*/*/*.pl | tail -1`"
+	@echo "srcInterface+wrappers : `wc -l ??/*/srcInterface/*.[fch]* ??/*/src/??_wrapper.f90 | tail -1`"
+	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* PT/AMPS/MakefileTest/Table | tail -1`"
+	@echo "Perl scripts          : `wc -l *.pl */*.pl */*/*.pl */*/*/*.pl */*/*/*/*.pl */*/*/*/*/*.pl | tail -1`"
+	@echo "Python scripts        : `wc -l */*/*/*.py */*/*/*/*.py | tail -1`"
 	@echo "IDL scripts           : `wc -l */*/*/*.pro */*/*/*/*.pro | tail -1`"
 	@echo "Latex documentation   : `wc -l */*/*.tex */*/*/*.tex */*/*/*/*.tex | tail -1`"
-	@echo "XML descriptions      : `wc */*.XML */*/*.XML | tail -1`"
+	@echo "XML descriptions      : `wc -l */*.XML */*/*.XML | tail -1`"
 
 mkdir: ./lib ./bin
 
