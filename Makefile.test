@@ -1268,7 +1268,7 @@ test8_run:
 test8_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_threadbc PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; rm -f SC/IO2/PFSSM*; ./PostProc.pl -M -cat RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test8_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
