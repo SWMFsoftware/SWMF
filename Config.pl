@@ -52,7 +52,7 @@ foreach (@Arguments){
 	}
 	next;
     }
-    if( /^-history$/){$History = 1; next;}
+    if( /^-history$/ or /^-date=/){$History = 1; next;}
     if( /^-sleep=(\d+)/){$Sleep = $1; next;}
 }
 
@@ -74,13 +74,13 @@ foreach $repo ("share", "util", @models){
 	if $model eq "GM/BATSRUS" and not -d "$model/srcBATL";
 }
 
+my $config     = "share/Scripts/Config.pl";
+require $config or die "Could not find $config!\n";
+
 if($CloneOnly){
     print "Done cloning git repositories\n";
     exit 0;
 }
-
-my $config     = "share/Scripts/Config.pl";
-require $config or die "Could not find $config!\n";
 
 # These were set by the shared Config.pl script
 our %Remaining;         # Remaining arguments after processed by $Config.pl
@@ -482,9 +482,9 @@ Clone share, util and all models with full version history, wait 5s in between:
 
     Config.pl -clone -history -sleep=5
 
-Clone share, util and the listed models:
+Clone share, util and the listed models and set checkout date:
 
-    Config.pl -clone=BATSRUS,Ridley_serial,RCM2,RBE
+    Config.pl -clone=BATSRUS,Ridley_serial,RCM2,RBE -date='2019-01-01 19:00'
 
 (Re)install BATSRUS and AMPS_PT, which is the AMPS model as a PT component,
 with full version history:
