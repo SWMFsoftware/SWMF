@@ -1276,7 +1276,7 @@ test8_check:
 		output/test8/SC_log_n000000.log \
 		> test8_sc_thread.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
-		${TESTDIR}/RESULTS/SC/rfr_rwi_4_n160_200.outs \
+		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
 		output/test8/SC_rfr.ref \
 		>> test8_sc_thread.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
