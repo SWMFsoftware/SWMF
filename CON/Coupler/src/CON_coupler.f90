@@ -838,7 +838,7 @@ contains
           ! their boundary conditions should be implemented separately. 
           DoCoupleVar_V(MultiFluid_) = .false.
           DoCoupleVar_V(MultiSpecie_)   = .false.
-       else
+       elseif(iCompSource /= IM_ .and. iCompTarget /= IM_) then 
           ! Both components have differing # of multiple densities or speeds 
           write(*,*) 'SWMF error found in ', NameSub
           write(*,*) 'Coupled SWMF components use different # of fluids/species!'
@@ -973,12 +973,12 @@ contains
        write(*,*) '---------------------------------------------'
        write(*,*) 'Coupling flags:'
        write(*,*) 'Magnetic field: ', DoCoupleVar_V(Bfield_)
-       write(*,*) 'Pe: ',             DoCoupleVar_V(ElectronPressure_)
-       write(*,*) 'Ppar: ',           DoCoupleVar_V(AnisoPressure_)
-       write(*,*) 'Ehot: ',           DoCoupleVar_V(CollisionlessHeatFlux_)
-       write(*,*) 'Waves: ',          DoCoupleVar_V(Wave_)
-       write(*,*) 'Neutrals: ',       DoCoupleVar_V(MultiFluid_)
-       write(*,*) 'Ions: ',           DoCoupleVar_V(MultiSpecie_)
+       write(*,*) 'Pe:     ',         DoCoupleVar_V(ElectronPressure_)
+       write(*,*) 'Ppar:   ',         DoCoupleVar_V(AnisoPressure_)
+       write(*,*) 'Ehot:   ',         DoCoupleVar_V(CollisionlessHeatFlux_)
+       write(*,*) 'Waves:  ',         DoCoupleVar_V(Wave_)
+       write(*,*) 'Fluids: ',         DoCoupleVar_V(MultiFluid_)
+       write(*,*) 'Species:',         DoCoupleVar_V(MultiSpecie_)
        write(*,*) '---------------------------------------------'
     end if
     if(DoTestMe) then
