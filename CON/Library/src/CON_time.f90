@@ -135,13 +135,14 @@ contains
   !INTERFACE:
   subroutine get_time(&
        DoTimeAccurateOut, tSimulationOut, TimeStartOut, TimeCurrentOut, &
-       tStartOut, tCurrentOut, nStepOut)
+       TimeEndOut, tStartOut, tCurrentOut, nStepOut)
 
     !OUTPUT ARGUMENTS:
     logical,          optional, intent(out) :: DoTimeAccurateOut
     real,             optional, intent(out) :: tSimulationOut
     type(TimeType),   optional, intent(out) :: TimeStartOut
     type(TimeType),   optional, intent(out) :: TimeCurrentOut
+    type(TimeType),   optional, intent(out) :: TimeEndOut
     real(Real8_),     optional, intent(out) :: tStartOut
     real(Real8_),     optional, intent(out) :: tCurrentOut
     integer,          optional, intent(out) :: nStepOut
@@ -153,6 +154,7 @@ contains
     if(present(TimeStartOut))      TimeStartOut      = TimeStart
     if(present(tStartOut))         tStartOut         = TimeStart % Time
     if(present(nStepOut))          nStepOut          = nStep
+    if(present(TimeEndOut))        TimeEndOut        = TimeEnd
     if(present(tCurrentOut))       tCurrentOut = TimeStart % Time + tSimulation
     if(present(TimeCurrentOut))then
        TimeCurrentOut % Time = TimeStart % Time + tSimulation

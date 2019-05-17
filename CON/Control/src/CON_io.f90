@@ -690,6 +690,10 @@ contains
        ! Determine, when to stop the simulation
        tSimulationMax = TimeEnd % Time - TimeStart % Time
        MaxIteration = -1
+    else
+       ! If not set in PARAM, set TimeEnd using tSimulationMax
+       TimeEnd % Time = TimeStart % Time + tSimulationMax
+       call time_real_to_int(TimeEnd)
     end if
 
     if(UseTiming)then
