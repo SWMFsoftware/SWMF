@@ -1316,7 +1316,7 @@ test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
-	./Config.pl -g=SC:6,4,4,1200,1,IH:6,6,6,6800,1 -o=IH:ng=3
+	./Config.pl -g=SC:6,8,8,9500,1,IH:8,8,8,9500,1 -o=IH:ng=3
 	${MAKE} SWMF
 	make PIDL
 
@@ -1326,6 +1326,7 @@ test9_rundir:
 	cp Param/PARAM.in.test.start.SCIH.new ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
+	cp GM/BATSRUS/Param/CORONA/harmonics_2209_adapt01.dat ${TESTDIR}/harmonics_2209_adapt01.dat
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
