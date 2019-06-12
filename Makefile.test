@@ -2112,7 +2112,7 @@ test12_iso:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_iso_compile:
-	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
+	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -nohdf5
 	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
