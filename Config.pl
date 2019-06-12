@@ -93,7 +93,7 @@ our $Show;
 our $Help;
 our $WARNING;
 our $ERROR;
-our $Hdf5;
+our $NewHdf5;
 
 &print_help if $Help;
 
@@ -136,10 +136,9 @@ if($ListVersions){
 
 &set_versions if @NewVersion;
 
-if($Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no'){
-    @NewVersion = ("PC/Empty");
-    &set_versions;
-    die "Setting PC/Empty because PC/IPIC3D requires HDF5 compiler.\n"
+# Set HDF5 macro for IPIC3D2 if necessary
+if($Version{PC} eq 'IPIC3D2' and ($NewHdf5 or @NewVersion)){
+    &shell_command("cd PC/IPIC3D2; ./Config.pl -sethdf5");
 }
 
 if($Installed){
@@ -308,10 +307,6 @@ sub set_versions{
 	    }
 	}
     }
-#^CMP if PC BEGIN 
-    die "$ERROR PC/IPIC3D version requires HDF5 compiler. Use -hdf5.\n"
-	if $Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no';
-#^CMP END PC
     return unless $change;
 
     # CON/Interface needs to be recompiled (uses modules from component wrappers)
