@@ -200,11 +200,11 @@ contains
 
   !===========================================================================
   subroutine get(Info, iProc, nProc, iComm, iGroup, iFirst, iLast, iStride, &
-       iUnitOut, Use, Name, NameVersion, Version)
+       nThread, iUnitOut, Use, Name, NameVersion, Version)
 
     type(CompInfoType), intent(in) :: Info
     integer,                     optional, intent(out) :: &
-         iProc, nProc, iComm, iGroup,iFirst,  iLast, iStride, iUnitOut
+         iProc, nProc, iComm, iGroup,iFirst,  iLast, iStride, nThread, iUnitOut
     logical,                     optional, intent(out) :: Use
     character(len=lNameComp),    optional, intent(out) :: Name
     character(len=lNameVersion), optional, intent(out) :: NameVersion
@@ -217,6 +217,8 @@ contains
     if( present(iFirst)  ) iFirst  = Info%iMpiParam_I(ProcZero_)
     if( present(iLast)   ) iLast   = Info%iMpiParam_I(ProcLast_)
     if( present(iStride) ) iStride = Info%iMpiParam_I(ProcStride_)
+    if( present(nThread) ) nThread = Info%iMpiParam_I(nThread_)
+
     if( present(iUnitOut)    ) iUnitOut     = Info%iUnitOut
     if( present(Use)         ) Use          = Info%Use
     if( present(Name)        ) Name         = Info%Name

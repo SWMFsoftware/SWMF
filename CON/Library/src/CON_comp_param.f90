@@ -68,11 +68,12 @@ module CON_comp_param
   integer, parameter :: nProc_     = 5 ! the number of processors of the group 
   integer, parameter :: Comm_      = 6 ! the component global communicator
   integer, parameter :: Group_     = 7 ! the component MPI group
+  integer, parameter :: nThread_   = 8 ! the thread number
 
-  integer, parameter :: nMpiParam = 7  ! number of MPI parameters
+  integer, parameter :: nMpiParam = 8  ! number of MPI parameters
 
   ! Name of the processor map file
-  character (len=*), parameter  :: NameMapFile = "LAYOUT.in"
+  character(len=9)   :: NameMapFile = "LAYOUT.in"
 
   !
   !PUBLIC MEMBER FUNCTIONS:

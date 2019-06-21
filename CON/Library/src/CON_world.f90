@@ -13,7 +13,7 @@
 !DESCRIPTION: 
 ! CON\_world reads, stores and provides information about all the
 ! registered components. Components are registered by being listed
-! in the LAYOUT.in file wich is read by the {\bf setup} subroutine.
+! in the LAYOUT.in file which is read by the {\bf setup} subroutine.
 ! The information is stored in the private {\bf CompInfo\_C} array
 ! of derived type CompInfoType which is defined in CON\_comp\_info.
 ! The array is indexed from 1 to the number of registered components
@@ -282,6 +282,17 @@ contains
     ! If the last rank exceeds the number of processors used by SWMF,
     ! it is reduced to the rank of the last processor and a warning
     ! message is printed to STDOUT.
+    !
+    ! If LAYOUT.in is not present, we check if the mapping info exists in
+    ! PARAM.in. The format is
+    !
+    ! Name      First   Last    Stride   nThread
+    ! ==============================
+    ! #COMPONENTMAP                  
+    ! GM       0        9999    1    2   ! GM runs on all PE-s
+    ! IE       0        2       2    1   ! IE runs on PE 0 and 2
+    ! IM       1        1       1    1   ! IM runs of PE 1
+    !
     !EOP
 
     character(len=*), parameter :: NameSub = NameMod//'::setup_from_file' 
@@ -292,13 +303,14 @@ contains
     ! String starting and ending comp layout 
     character (len=*), parameter  :: StringStart = "#COMPONENTMAP"
     character (len=*), parameter  :: StringEnd   = "#END" 
+    character (len=*), parameter  :: StringEmpty   = " " 
 
     ! Current line number
     integer :: nLine 
 
     ! Input fields in the line
     character(len=16) :: Name
-    integer :: iProcZero, iProcLast, iProcStride
+    integer :: iProcZero, iProcLast, iProcStride, nThread
 
     ! Temporary storage for processor ranges
     integer :: iProcRange_IC(ProcZero_:ProcStride_,MaxComp)
@@ -313,15 +325,15 @@ contains
     ! Processor 0 looks for StringStart in NameMapFile
     if(iProcWorld==0)then
        inquire(FILE=NameMapFile, EXIST=IsExisting)
-       if(.not. IsExisting) then
-          write(*,'(4a)')  NameSub,' SWMF_ERROR: the map file ',NameMapFile, &
-               ' does not exist in the current directory'
-          call CON_stop('Please create file '//NameMapFile)
+       if(.not.IsExisting)then
+          write(*,*) 'LAYOUT.in does not exist in the current directory.', &
+               ' Trying to set the mapping from PARAM.in!'
+          NameMapFile = "PARAM.in"
        endif
 
        open(UNITTMP_,file=NameMapFile,iostat=iError,status="old",action="read")
        if(iError/=0) then
-          write(*,'(3a)') NameSub,' SWMF_ERROR: can not open file ',NameMapFile
+          write(*,'(3a)') NameSub,' SWMF_ERROR: cannot open file ',NameMapFile
           call CON_stop('Please check the file permissions of ' &
                //NameMapFile)
        endif
@@ -336,7 +348,7 @@ contains
                   StringStart//' in file '//NameMapFile
              call CON_stop('Please edit file '//NameMapFile)
           end if
-          if (String == StringStart) EXIT
+          if(String == StringStart) EXIT
        end do
     end if
 
@@ -346,36 +358,45 @@ contains
           read(UNITTMP_,'(a)',IOSTAT=iError) String
           if (iError/=0) then
              write(*,'(a,i2,a)')  NameSub// &
-                  ' SWMF_ERROR: can not read line after',&
+                  ' SWMF_ERROR: cannot read line after',&
                   nLine,' lines from the file '//NameMapFile
              call CON_stop('Please edit '//NameMapFile)
           end if
-          nLine          = nLine + 1
+          nLine = nLine + 1
        end if
 
        call MPI_bcast(String,len(String),MPI_CHARACTER,0,iCommWorld,iError)
 
-       if(String == StringEnd) then
-          if (nComp == 0) call CON_stop(NameSub // &
+       if(String == StringEnd .or. String == StringEmpty) then
+          if(nComp == 0) call CON_stop(NameSub // &
                'SWMF_ERROR: no components specified in the file='//NameMapFile)
           exit RECLOOP
        endif
 
        ! Process line in parallel
-       read(String,*,iostat=iError) Name, iProcZero, iProcLast, iProcStride
-       if (iError/=0 .and. iProcWorld==0) then
-          write(*,'(a,i2,a)')  NameSub// &
-               ' SWMF_ERROR: can not read component name and PE range from "'&
-               //trim(String)//'" at line ',nLine, &
-               ' from the file '//NameMapFile
-          call CON_stop('Please edit '//NameMapFile)
+       read(String,*,iostat=iError) Name, iProcZero, iProcLast, iProcStride, &
+            nThread
+
+       if(iError/=0)then
+          nThread = 1
+
+          read(String,*,iostat=iError) Name, iProcZero, iProcLast, iProcStride
+          if(iError/=0 .and. iProcWorld==0) then
+             write(*,'(a,i2,a)')  NameSub// &
+                  ' SWMF_ERROR: cannot read component name and PE range '// &
+                  'from "'&
+                  //trim(String)//'" at line ',nLine, &
+                  ' from the file '//NameMapFile
+             call CON_stop('Please edit '//NameMapFile)
+          end if
+
        end if
 
        Name = adjustl(Name)
-       if (is_valid_comp_name(Name)) then
+       if(is_valid_comp_name(Name)) then
           iComp=i_comp_name(Name) 
        else
-          if (iProcWorld==0) then
+          if(iProcWorld==0) then
 
              write(*,'(a,i2,a)')  NameSub// &
                   ' SWMF_ERROR: invalid component name '//trim(Name)// &
@@ -541,14 +562,14 @@ contains
   !==============================================================
   subroutine get_comp_info_name(NameComp, &
        iProc, nProc, iComm, iGroup, iProcZero, iProcLast, iProcStride, &
-       iUnitOut, Use, Name, NameVersion, Version, CompInfo)
+       nThread, iUnitOut, Use, Name, NameVersion, Version, CompInfo)
 
     character(len=*), parameter :: NameSub = NameMod//'::get_comp_info_name'
 
     character(len=*), intent(in) :: NameComp
     integer, optional, intent(out) :: &
          iProc, nProc, iComm, iGroup, iProcZero,  iProcLast, iProcStride, &
-         iUnitOut
+         nThread, iUnitOut
     logical,                     optional, intent(out) :: Use
     character(len=lNameComp),    optional, intent(out) :: Name
     character(len=lNameVersion), optional, intent(out) :: NameVersion
@@ -559,7 +580,7 @@ contains
 
     call comp_info_get(CompInfo_C(l_comp(NameComp,NameSub)), &
          iProc, nProc, iComm, iGroup, iProcZero, iProcLast, iProcStride, &
-         iUnitOut, Use, Name, NameVersion, Version)
+         nThread, iUnitOut, Use, Name, NameVersion, Version)
 
   end subroutine get_comp_info_name
   !BOP =======================================================================
@@ -567,7 +588,7 @@ contains
   !INTERFACE:
   subroutine get_comp_info_id(iComp, &
        iProc, nProc, iComm, iGroup, iProcZero, iProcLast, iProcStride, &
-       iUnitOut, Use, Name, NameVersion, Version, CompInfo)
+       nThread, iUnitOut, Use, Name, NameVersion, Version, CompInfo)
 
     !INPUT ARGUMENTS:
     integer, intent(in) :: iComp
@@ -575,7 +596,7 @@ contains
     !OUTPUT ARGUMENTS:
     integer, optional, intent(out) :: &
          iProc, nProc, iComm, iGroup, iProcZero,  iProcLast, iProcStride, &
-         iUnitOut
+         nThread, iUnitOut
     logical,                     optional, intent(out) :: Use
     character(len=lNameComp),    optional, intent(out) :: Name
     character(len=lNameVersion), optional, intent(out) :: NameVersion
@@ -593,7 +614,7 @@ contains
 
     call comp_info_get(CompInfo_C(l_comp(iComp,NameSub)), &
          iProc, nProc, iComm, iGroup, iProcZero, iProcLast, iProcStride, &
-         iUnitOut, Use, Name, NameVersion, Version)
+         nThread, iUnitOut, Use, Name, NameVersion, Version)
 
   end subroutine get_comp_info_id
   !BOP ========================================================================
