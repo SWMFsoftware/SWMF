@@ -41,7 +41,7 @@ program swmf
   ! initialize the SWMF 
   ! loop over sessions
   !    read input parameters for the session
-  !    initilize session
+  !    initialize session
   !    execute session
   !    exit from loop if it is the last session
   ! finalize the SWMF
@@ -53,7 +53,7 @@ program swmf
   !---------------------------------------------------------------------------
   !BOC
   call MPI_init(iErrorMpi)
-  if(iErrorMpi  /= MPI_SUCCESS) stop 'SWMF_ERROR: MPI_init FAILED'
+  if(iErrorMpi /= MPI_SUCCESS) stop 'SWMF_ERROR: MPI_init FAILED'
   !\
   ! Initialize SWMF
   !/
