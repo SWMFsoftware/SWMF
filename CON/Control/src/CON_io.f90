@@ -31,7 +31,7 @@ module CON_io
   private ! except
 
   !PUBLIC MEMBER FUNCTIONS:
-  public :: read_inputs  !  read, broadcast and distribute parameters
+  public :: read_inputs  ! read, broadcast and distribute parameters
   public :: save_restart ! save restart information
 
   !REVISION HISTORY:
@@ -597,6 +597,9 @@ contains
           call read_var('dLongitudeHgi', dLongitudeHgiDeg)
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
+       case("#COMPONENTMAP", "#LAYOUT")
+          ! This is already done in CON_WORLD
+          continue
        case default
           if(is_proc0()) write(*,*) NameSub,' ERROR: Invalid command ',&
                trim(NameCommand),' at line',iLine,' in PARAM.in'
