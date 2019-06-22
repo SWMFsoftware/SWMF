@@ -365,7 +365,6 @@ ${RUNDIR}:
 
 rundir: ENV_CHECK
 	mkdir -p ${RUNDIR}/STDOUT
-	cp Param/LAYOUT.DEFAULT       ${RUNDIR}/LAYOUT.in
 	cp Param/PARAM.DEFAULT        ${RUNDIR}/PARAM.in
 	cp share/Scripts/Restart.pl   ${RUNDIR}/Restart.pl
 	cp share/Scripts/PostProc.pl  ${RUNDIR}/PostProc.pl
