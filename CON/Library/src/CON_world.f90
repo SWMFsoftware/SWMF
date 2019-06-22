@@ -258,41 +258,32 @@ contains
   subroutine setup_from_file
 
     !DESCRIPTION:
-    ! Reads LAYOUT.in and registers the listed components. The MPI
+    ! Reads LAYOUT.in or PARAM.in and registers the listed components. The MPI
     ! parameters are initialized using the {\bf init} subroutine from
-    ! CON\_comp\_info. The LAYOUT.in file has the following format:
+    ! CON\_comp\_info. The format is the following:
     ! \begin{verbatim}
     ! remarks
     ! 
-    ! Name	First	Last	Stride
-    ! ==============================
-    ! #COMPONENTMAP
-    ! GM       0        9999    1        ! GM runs on all PE-s
-    ! IE       0        2       2        ! IE runs on PE 0 and 2
-    ! IM       1        1       1        ! IM runs of PE 1
-    ! #END
+    ! Name      First   Last    Stride   nThread
+    ! ============================================
+    ! #COMPONENTMAP                  
+    ! GM       0        9999    8        8   ! GM runs with 8 threads
+    ! IE       0        1       1            ! IE runs on PE 0 and 1
+    ! IM       2        2       1            ! IM runs on PE 2
     !
     ! remarks
     !\end{verbatim}
-    ! The layout information is between the {\bf \#COMPONENTMAP}
-    ! and {\bf \#END} commands. The first column contains the 
-    ! two-character componentn name, the 2nd, 3rd, and 4th columns
+    ! The layout information starts with the {\bf \#COMPONENTMAP} command
+    ! and ends with an empty line. The first column contains the 
+    ! two-character component name, the 2nd, 3rd, and 4th columns
     ! are integers containing the ranks of the first and last processors
     ! used by the component, and the stride between the processor ranks.
+    ! The optional 4th parameter defines the number of OpenMP threads per MPI
+    ! process for models that can use OpenMP. The Stride and nThread are 
+    ! typically equal.
     ! If the last rank exceeds the number of processors used by SWMF,
     ! it is reduced to the rank of the last processor and a warning
     ! message is printed to STDOUT.
-    !
-    ! If LAYOUT.in is not present, we check if the mapping info exists in
-    ! PARAM.in. The format is
-    !
-    ! Name      First   Last    Stride   nThread
-    ! ==============================
-    ! #COMPONENTMAP                  
-    ! GM       0        9999    1    2   ! GM runs on all PE-s
-    ! IE       0        2       2    1   ! IE runs on PE 0 and 2
-    ! IM       1        1       1    1   ! IM runs of PE 1
-    !
     !EOP
 
     character(len=*), parameter :: NameSub = NameMod//'::setup_from_file' 
