@@ -266,14 +266,15 @@ contains
     ! 
     ! Name      First   Last    Stride   nThread
     ! ============================================
-    ! #COMPONENTMAP                  
+    ! #LAYOUT
     ! GM       0        9999    8        8   ! GM runs with 8 threads
     ! IE       0        1       1            ! IE runs on PE 0 and 1
     ! IM       2        2       1            ! IM runs on PE 2
     !
     ! remarks
     !\end{verbatim}
-    ! The layout information starts with the {\bf \#COMPONENTMAP} command
+    ! The layout information starts with the {\bf \#LAYOUT} command
+    ! (or the alternative name {\bf \#COMPONENTMAP})
     ! and ends with an empty line. The first column contains the 
     ! two-character component name, the 2nd, 3rd, and 4th columns
     ! are integers containing the ranks of the first and last processors
@@ -292,9 +293,10 @@ contains
     character (len=100) :: String
 
     ! String starting and ending comp layout 
-    character (len=*), parameter  :: StringStart = "#COMPONENTMAP"
-    character (len=*), parameter  :: StringEnd   = "#END" 
-    character (len=*), parameter  :: StringEmpty   = " " 
+    character (len=*), parameter  :: StringStart  = "#LAYOUT"
+    character (len=*), parameter  :: StringStart2 = "#COMPONENTMAP"
+    character (len=*), parameter  :: StringEnd    = "#END" 
+    character (len=*), parameter  :: StringEnd2   = " " 
 
     ! Current line number
     integer :: nLine 
@@ -316,11 +318,7 @@ contains
     ! Processor 0 looks for StringStart in NameMapFile
     if(iProcWorld==0)then
        inquire(FILE=NameMapFile, EXIST=IsExisting)
-       if(.not.IsExisting)then
-          write(*,*) 'LAYOUT.in does not exist in the current directory.', &
-               ' Trying to set the mapping from PARAM.in!'
-          NameMapFile = "PARAM.in"
-       endif
+       if(.not.IsExisting) NameMapFile = "PARAM.in"
 
        open(UNITTMP_,file=NameMapFile,iostat=iError,status="old",action="read")
        if(iError/=0) then
@@ -336,10 +334,10 @@ contains
           if(iError/=0)then
              close (UNITTMP_)
              write(*,'(a)') NameSub//' SWMF_ERROR: could not find '// &
-                  StringStart//' in file '//NameMapFile
+                  StringStart//' or '//StringStart2//' in file '//NameMapFile
              call CON_stop('Please edit file '//NameMapFile)
           end if
-          if(String == StringStart) EXIT
+          if(String == StringStart .or. String == StringStart2) EXIT
        end do
     end if
 
@@ -358,7 +356,7 @@ contains
 
        call MPI_bcast(String,len(String),MPI_CHARACTER,0,iCommWorld,iError)
 
-       if(String == StringEnd .or. String == StringEmpty) then
+       if(String == StringEnd .or. String == StringEnd2) then
           if(nComp == 0) call CON_stop(NameSub // &
                'SWMF_ERROR: no components specified in the file='//NameMapFile)
           exit RECLOOP
