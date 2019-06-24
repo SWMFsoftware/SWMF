@@ -259,7 +259,7 @@ contains
     character (LEN=lNameVersion) :: NameVersion
     real                         :: Version
 
-    integer :: lComp, iComp, iProc0Comp, nProcComp, iStrideComp
+    integer :: lComp, iComp, iProc0Comp, nProcComp, iStrideComp, nThread
     !--------------------------------------------------------------------------
     ! Get and show framework version
 
@@ -267,11 +267,11 @@ contains
 
     write(*,'(a)')'#'//repeat('=',lWidth)//'#'
     write(*,'(2a)') &
-         '# ID  Version                                               ',&
-         'nproc proc0 stride#'
+         '# ID  Version                                       ',&
+         'nproc proc0 stride nthread#'
     write(*,'(a)')'#'//repeat('-',lWidth)//'#'
-    write(*,'(a,a,f5.2,3i6,a)')&
-         '# CON ',NameVersion//' version',VersionSwmf,n_proc(),0,1,' #'
+    write(*,'(a,a,f5.2,4i6,a)')&
+         '# CON ',NameVersion//' version',VersionSwmf,n_proc(),0,1,1,' #'
     write(*,'(a)')'#'//repeat('-',lWidth)//'#'
 
     ! Show registered components
@@ -280,11 +280,12 @@ contains
 
        call get_comp_info(iComp,&
             NameVersion=NameVersion,Version=Version,&
-            iProcZero=iProc0Comp, nProc=nProcComp, iProcStride=iStrideComp)
+            iProcZero=iProc0Comp, nProc=nProcComp, iProcStride=iStrideComp,&
+            nThread=nThread)
 
-       write(*,'(a,f5.2,3i6,a)')&
+       write(*,'(a,f5.2,4i6,a)')&
             '# '//NameComp_I(iComp)//'  '//NameVersion//' version',Version,&
-            nProcComp,iProc0Comp,iStrideComp,' #'
+            nProcComp,iProc0Comp,iStrideComp,nThread,' #'
     end do
 
     ! Show unregistered but compiled (ON) components

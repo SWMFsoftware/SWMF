@@ -104,11 +104,12 @@ module  CON_world
        lComp_I(MaxComp)      ! Convert named index to list index
 
   !LOCAL VARIABLES:
-  integer :: iProcWorld=-1  ! global PE rank
-  integer :: nProcWorld=0   ! global number of PE-s
-  integer :: iCommWorld=-1  ! global communicator
+  integer :: iProcWorld =-1 ! global PE rank
+  integer :: nProcWorld = 0 ! global number of PE-s
+  integer :: iCommWorld =-1 ! global communicator
   integer :: iGroupWorld=-1 ! global group
-  integer :: iProc0World=0
+  integer :: iProc0World= 0 ! root processor
+  integer :: MaxThread  = 1 ! maximum number of OpenMP threads
 
   integer, save :: iComp_C(MaxComp) ! Convert list index to named index
 
@@ -205,6 +206,8 @@ contains
     call MPI_COMM_GROUP(iCommWorld, iGroupWorld, iError)
     nComp = 0
     nullify(CompInfo_C)
+
+    !$ MaxThread = omp_get_max_threads()
 
   end subroutine world_init
   !============================================================================
@@ -307,6 +310,9 @@ contains
 
     ! Temporary storage for processor ranges
     integer :: iProcRange_IC(ProcZero_:ProcStride_,MaxComp)
+
+    ! Temporary storage for number of threads
+    integer :: nThread_C(MaxComp)
 
     ! Temporary storage for component names
     character (len=lNameComp) :: Name_C(MaxComp)
@@ -415,14 +421,19 @@ contains
        iProcRange_IC(ProcLast_,  nComp) = min(iProcLast,nProcWorld-1)
        iProcRange_IC(ProcStride_,nComp) = max(iProcStride,1)
 
+       ! Negative nThread is interpreted as MaxThread divided by its abs value
+       if(nThread < 0) nThread = MaxThread/abs(nThread)
+       ! Store thread info
+       nThread_C(nComp) = max(min(MaxThread,nThread),1)
+
        if(iProcWorld==0)then
           ! Report adjustments
-          if(iProcRange_IC(ProcZero_,  nComp) /= iProcZero) &
+          if(iProcRange_IC(ProcZero_, nComp) /= iProcZero) &
                write(*,'(a,i4,a,i4)')NameSub//&
                ' SWMF_WARNING for '//trim(Name)// &
                ' iProcZero=',iProcZero,&
                ' changed to ',iProcRange_IC(ProcZero_,  nComp)
-          if(iProcRange_IC(ProcLast_,  nComp) /= iProcLast) &
+          if(iProcRange_IC(ProcLast_, nComp) /= iProcLast) &
                write(*,'(a,i4,a,i4)')NameSub//&
                ' SWMF_WARNING for '//trim(Name)// &
                ' iProcLast=',iProcLast,&
@@ -438,11 +449,11 @@ contains
 
     allocate(CompInfo_C(nComp))
 
-    ! check component names
+    ! Check component names
     do lComp=1,nComp
        call comp_info_init(CompInfo_C(lComp),&
-            Name_C(lComp),iGroupWorld, &
-            iCommWorld, iProcRange_IC(:,lComp),iError)
+            Name_C(lComp), iGroupWorld, iCommWorld, iProcRange_IC(:,lComp),&
+            nThread_C(lComp), iError)
        if(iError>0)then
           if(iProcWorld==0)write(*,'(a,3i4)')NameSub//&
                ' SWMF_ERROR: cannot produce layout for component '// &

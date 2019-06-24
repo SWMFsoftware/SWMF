@@ -51,6 +51,7 @@ module CON_comp_info
      logical                          :: Use
      integer                          :: iUnitOut
      integer, dimension(nMpiParam)    :: iMpiParam_I
+     integer                          :: nThread
   end type CompInfoType
 
   !
@@ -73,14 +74,16 @@ module CON_comp_info
 
 contains
 
-  subroutine init(Info, Name, iGroupWorld, iCommWorld, iProcRange_I, iError)
+  subroutine init(Info, Name, iGroupWorld, iCommWorld, iProcRange_I, nThread, &
+       iError)
 
     type(CompInfoType), intent(inout) :: Info
     character (len=*), intent(in)     :: Name
     integer, intent(in)               :: iGroupWorld,iCommWorld
     ! Processor range contains first rank, last rank and stride
     ! indicating ranks in group or processors to be included in the new group 
-    integer, intent(in)               :: iProcRange_I(ProcZero_:ProcStride_) 
+    integer, intent(in)               :: iProcRange_I(ProcZero_:ProcStride_)
+    integer, intent(in)               :: nThread
     integer, intent(out)              :: iError
 
     ! local variables
@@ -92,8 +95,8 @@ contains
     iError = 0
 
     ! Check if the name of the component is valid
-    if (is_valid_comp_name(Name)) then
-       Info % Name = Name
+    if(is_valid_comp_name(Name)) then
+       Info%Name = Name
     else
        iError = 1
        write(*,'(a)')NameSub//' SWMF_ERROR: invalid component name '//Name
@@ -108,10 +111,10 @@ contains
     endif
 
     ! Check if the range is correct and fits into the world group
-    if ( iProcRange_I(ProcZero_) < 0 .or. &
-         iProcRange_I(ProcZero_) > iProcRange_I(ProcLast_) .or. &
-         iProcRange_I(ProcLast_) > nProcWorld - 1 .or. &
-         iProcRange_I(ProcStride_) < 0  ) then
+    if(iProcRange_I(ProcZero_) < 0 .or. &
+       iProcRange_I(ProcZero_) > iProcRange_I(ProcLast_) .or. &
+       iProcRange_I(ProcLast_) > nProcWorld - 1 .or. &
+       iProcRange_I(ProcStride_) < 0  ) then
        iError = 1
        write(*,'(a,3i4,a,i4,a)')NameSub// &
             ' SWMF_ERROR: incorrect iProcRange_I = ',iProcRange_I,&
@@ -119,7 +122,7 @@ contains
        RETURN
     endif
 
-    !Create the group from the processor range
+    ! Create the group from the processor range
     call MPI_group_range_incl(iGroupWorld, 1, iProcRange_I, &
          Info%iMpiParam_I(Group_), iError)
     if(iError /= 0) then
@@ -135,7 +138,7 @@ contains
          Info%iMpiParam_I(Proc_), iError)
 
     if(iError /= 0) then
-       write(*,'(a)')NameSub//' MPI_ERROR: in  MPI_group_rank'
+       write(*,'(a)')NameSub//' MPI_ERROR: in MPI_group_rank'
        RETURN
     endif
 
@@ -148,11 +151,11 @@ contains
        RETURN
     endif
 
-    ! get  the rank in the world communicator 
+    ! get the rank in the world communicator 
     call MPI_comm_rank(iCommWorld, iProcWorld, iError)
 
     ! Let the root PE of the group calculate the size of the group
-    if (iProcWorld == Info%iMpiParam_I(ProcZero_) ) then
+    if(iProcWorld == Info%iMpiParam_I(ProcZero_) ) then
        call MPI_comm_size(Info%iMpiParam_I(Comm_), &
             Info%iMpiParam_I(nProc_), iError)
 
@@ -170,6 +173,9 @@ contains
        write(*,'(a)')NameSub//' MPI_ERROR: in MPI_bcast '
        RETURN
     endif
+
+    ! Store nThread
+    Info % nThread     = nThread 
 
     Info % iUnitOut    = STDOUT_
     Info % Use         = .true.
@@ -217,7 +223,7 @@ contains
     if( present(iFirst)  ) iFirst  = Info%iMpiParam_I(ProcZero_)
     if( present(iLast)   ) iLast   = Info%iMpiParam_I(ProcLast_)
     if( present(iStride) ) iStride = Info%iMpiParam_I(ProcStride_)
-    if( present(nThread) ) nThread = Info%iMpiParam_I(nThread_)
+    if( present(nThread) ) nThread = Info%nThread
 
     if( present(iUnitOut)    ) iUnitOut     = Info%iUnitOut
     if( present(Use)         ) Use          = Info%Use

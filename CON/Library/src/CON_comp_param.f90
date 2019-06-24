@@ -58,7 +58,7 @@ module CON_comp_param
        RB_=11, SC_=12 ,SP_=13, UA_=14, CZ_=15
 
   ! Length of the version name of the component
-  integer, parameter :: lNameVersion=40 
+  integer, parameter :: lNameVersion=34 
 
   ! Named indexes of the MPI parameters
   integer, parameter :: ProcZero_  = 1 ! the spokesman for the group
@@ -68,9 +68,8 @@ module CON_comp_param
   integer, parameter :: nProc_     = 5 ! the number of processors of the group 
   integer, parameter :: Comm_      = 6 ! the component global communicator
   integer, parameter :: Group_     = 7 ! the component MPI group
-  integer, parameter :: nThread_   = 8 ! the thread number
 
-  integer, parameter :: nMpiParam = 8  ! number of MPI parameters
+  integer, parameter :: nMpiParam = 7  ! number of MPI parameters
 
   ! Name of the processor map file
   character(len=9)   :: NameMapFile = "LAYOUT.in"

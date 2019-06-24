@@ -179,6 +179,8 @@ contains
     ! Check out component information
     call get_comp_info(iComp,CompInfo=CompInfo)
 
+    !$ call omp_set_num_threads(CompInfo%nThread)
+
     select case(iComp)
     case(CZ_)                                     !^CMP IF CZ
        call CZ_set_param(CompInfo,TypeAction)     !^CMP IF CZ
