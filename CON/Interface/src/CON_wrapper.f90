@@ -25,6 +25,7 @@ module CON_wrapper
   use CON_world
   use CON_comp_param
   use CON_comp_info
+  use omp_lib
 
   use CZ_wrapper, ONLY: CZ_set_param, CZ_init_session, &       !^CMP IF CZ
        CZ_run, CZ_finalize, CZ_save_restart                    !^CMP IF CZ
@@ -99,7 +100,7 @@ module CON_wrapper
   !                                    run session, finalize and save restart.
   !EOP ___________________________________________________________________
 
-  integer :: nThread
+  integer :: nThread, MaxThread
   character(len=*),parameter :: NameMod='CON_wrapper'
 
 contains
@@ -219,6 +220,7 @@ contains
     end select
 
     ! Reset the number of threads 
+    !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     ! Store returned component information
@@ -370,7 +372,7 @@ contains
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
     ! Set the number of threads
-    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call get_comp_info(iComp, nThread=nThread)
     !$ call omp_set_num_threads(nThread)
 
     select case(iComp)
@@ -409,6 +411,7 @@ contains
     end select
 
     ! Reset the number of threads 
+    !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
@@ -447,7 +450,7 @@ contains
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
     ! Set the number of threads
-    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call get_comp_info(iComp, nThread=nThread)
     !$ call omp_set_num_threads(nThread)
 
     select case(iComp)
@@ -486,6 +489,7 @@ contains
     end select
 
     ! Reset the number of threads 
+    !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
@@ -523,7 +527,7 @@ contains
          ': Time=', TimeSimulation
 
     ! Set the number of threads
-    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call get_comp_info(iComp, nThread=nThread)
     !$ call omp_set_num_threads(nThread)
 
     select case(iComp)
@@ -562,6 +566,7 @@ contains
     end select
 
     ! Reset the number of threads 
+    !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
@@ -603,7 +608,7 @@ contains
          ': Time, Limit=', TimeSimulation, TimeSimulationLimit
 
     ! Set the number of threads
-    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call get_comp_info(iComp, nThread=nThread)
     !$ call omp_set_num_threads(nThread)
 
     call timing_start(NameComp_I(iComp)//'_run')
@@ -644,6 +649,7 @@ contains
     call timing_stop(NameComp_I(iComp)//'_run')
 
     ! Reset the number of threads 
+    !$ MaxThread = omp_get_max_threads()
     !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
