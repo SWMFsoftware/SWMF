@@ -294,7 +294,8 @@ If NameCompCheckKill is set to the string '??' then all processors check
 for the SWMF.KILL file. This makes sure that the run gets terminated
 essentially immediately. If NameCompCheckKill is set to the string '!!'
 then no check is performed at all. Otherwise NameCompCheckKill should
-contain the component ID of a component present in the LAYOUT.in file.
+contain the component ID of a component present in the LAYOUT.in file or
+#COMPONENTMAP command.
 
 If the code gets killed, no SWMF.SUCCESS or SWMF.DONE files are created.
 
@@ -575,6 +576,37 @@ time. In steady state mode there is no limit on the time step, and
 components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
+<command name="COMPONENTMAP" multiple="F">
+	 <parameter name="NameComp" type="string" input="options">
+                <option name="SC" default="T"/>
+                <option name="IH" />
+			<option name="OH" />
+                <option name="LC" />
+                <option name="SP" />
+                <option name="GM" />
+                <option name="IM" />
+                <option name="LA" />
+                <option name="RB" />
+                <option name="PS" />
+                <option name="IE" />
+                <option name="UA" />
+        </parameter>
+
+#COMPONENTMAP
+GM      0 9999 1 2	! GM runs on all PE-s with 2 threads
+IE      1 2    1 1	! IE runs on 2 PE-s with 1 thread
+PW      3 3    1 1	! PW runs on 1 PE-s with 1 thread
+
+The components used in particular run either has to be listed (registered) in 
+the LAYOUT.in file, or explicitly given in this command. The column contains 
+the component ID, the index of the first (root) processor for the component, 
+the last processor, the stride, and number of threads, respectively. This is 
+going to replace the usage of LAYOUT.in file in future versions.
+
+The number of threads for each component is an optional argument. The default 
+is that all the components runs with 1 thread if OpenMP is used.
+</command>
+
 <command name="COMPONENT" multiple="T">
 	<parameter name="NameComp" type="string" input="options">
 		<option name="SC" default="T"/>
@@ -608,7 +640,7 @@ Unused components should not be coupled, and they should not
 be given any parameters.
 
 The default is that all the components registered in the LAYOUT.in
-file are used.
+file are used or #COMPONENTMAP command.
 </command>
 
 <command name="CYCLE" multiple="T">
