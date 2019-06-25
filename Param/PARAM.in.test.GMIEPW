@@ -1,6 +1,11 @@
 VERBOSE
 100
 
+#COMPONENTMAP
+GM      0 9999 1 2
+IE      1 2    1 1
+PW      3 3    1 1
+
 TEST
 PW_get_for_gm GM_put_from_pw CON_couple_all::couple_two_comp
 

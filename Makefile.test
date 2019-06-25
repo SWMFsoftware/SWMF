@@ -399,7 +399,6 @@ test1_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.GMIEPW ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEPW ${TESTDIR}/LAYOUT.in
 
 test1_run:
 	cd ${TESTDIR}/PW; rm -f log.out restartOUT/* plots/*
