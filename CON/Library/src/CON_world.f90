@@ -189,6 +189,8 @@ contains
     ! If the optional argument is not present, use MPI_COMM_WORLD
     ! and call MPI_init.
     !/
+    use omp_lib
+
     integer, intent(in), optional :: iComm 
 
     integer :: iError
