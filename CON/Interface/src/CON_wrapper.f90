@@ -99,6 +99,7 @@ module CON_wrapper
   !                                    run session, finalize and save restart.
   !EOP ___________________________________________________________________
 
+  integer :: nThread
   character(len=*),parameter :: NameMod='CON_wrapper'
 
 contains
@@ -216,6 +217,9 @@ contains
        call CON_stop(NameSub//' '//TypeAction//&
             ' SWMF_ERROR: not implemented for component'//NameComp_I(iComp))
     end select
+
+    ! Reset the number of threads 
+    !$ call omp_set_num_threads(MaxThread)
 
     ! Store returned component information
     select case(TypeAction)
@@ -365,6 +369,10 @@ contains
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
+    ! Set the number of threads
+    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call omp_set_num_threads(nThread)
+
     select case(iComp)
     case(EE_)                                            !^CMP IF EE
        call EE_init_session(iSession,TimeSimulation)     !^CMP IF EE
@@ -399,6 +407,9 @@ contains
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
+
+    ! Reset the number of threads 
+    !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
@@ -435,6 +446,10 @@ contains
 
     if(.not.use_comp(iComp) .or. .not.is_proc(iComp)) RETURN
 
+    ! Set the number of threads
+    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call omp_set_num_threads(nThread)
+
     select case(iComp)
     case(EE_)                               !^CMP IF EE
        call EE_finalize(TimeSimulation)     !^CMP IF EE
@@ -470,6 +485,9 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
 
+    ! Reset the number of threads 
+    !$ call omp_set_num_threads(MaxThread)
+
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
   end subroutine finalize_comp_id
@@ -503,6 +521,10 @@ contains
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
          ': Time=', TimeSimulation
+
+    ! Set the number of threads
+    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call omp_set_num_threads(nThread)
 
     select case(iComp)
     case(EE_)                                   !^CMP IF EE
@@ -538,6 +560,9 @@ contains
     case default
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
+
+    ! Reset the number of threads 
+    !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
@@ -577,6 +602,10 @@ contains
     if(DoTestMe)write(*,*) NameSub,' starting for ',NameComp_I(iComp),&
          ': Time, Limit=', TimeSimulation, TimeSimulationLimit
 
+    ! Set the number of threads
+    !$ call comp_info_get(iComp, nThread=nThread)
+    !$ call omp_set_num_threads(nThread)
+
     call timing_start(NameComp_I(iComp)//'_run')
     select case(iComp)
     case(EE_)                                               !^CMP IF EE
@@ -613,6 +642,9 @@ contains
        call CON_stop(NameSub//' SWMF_ERROR incorrect iComp value')
     end select
     call timing_stop(NameComp_I(iComp)//'_run')
+
+    ! Reset the number of threads 
+    !$ call omp_set_num_threads(MaxThread)
 
     if(DoTestMe)write(*,*) NameSub,' finished for ',NameComp_I(iComp)
 
