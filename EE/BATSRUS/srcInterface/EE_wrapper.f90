@@ -37,7 +37,7 @@ contains
 
     use CON_comp_info
     use CON_physics, ONLY: get_time
-    use EE_ModProcMH
+    use EE_BATL_lib, ONLY: iProc, nProc, iComm
     use EE_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use EE_ModSetParameters, ONLY: set_parameters
     use EE_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
@@ -223,8 +223,8 @@ contains
   !============================================================================
   subroutine EE_run(TimeSimulation, TimeSimulationLimit)
 
-    use EE_ModProcMH, ONLY: iProc
-    use EE_ModMain,   ONLY: Time_Simulation
+    use EE_BATL_lib, ONLY: iProc
+    use EE_ModMain,  ONLY: Time_Simulation
 
     real, intent(inout):: TimeSimulation   ! current time of component
     real, intent(in):: TimeSimulationLimit ! simulation time not to be exceeded
@@ -304,12 +304,12 @@ contains
     ! Interpolate Data_VI from EE at the list of positions Xyz_DI 
     ! required by SC
 
-    use EE_ModProcMH,  ONLY: iProc
     use EE_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
     use EE_ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
     use EE_ModVarIndexes, ONLY: nVar
     use EE_ModB0,      ONLY: UseB0, get_b0
-    use EE_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
+    use EE_BATL_lib,   ONLY: iProc, nDim, MaxDim, MinIJK_D, MaxIJK_D, &
+         find_grid_block
     use EE_ModIO, ONLY: iUnitOut
     use CON_coupler, ONLY: nVarBuffer, iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector
