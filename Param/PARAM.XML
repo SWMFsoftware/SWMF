@@ -576,27 +576,27 @@ time. In steady state mode there is no limit on the time step, and
 components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
-<command name="COMPONENTMAP" multiple="F">
-	 <parameter name="NameComp" type="string" input="options">
-                <option name="SC" default="T"/>
-                <option name="IH" />
-			<option name="OH" />
-                <option name="LC" />
-                <option name="SP" />
-                <option name="GM" />
-                <option name="IM" />
-                <option name="LA" />
-                <option name="RB" />
-                <option name="PS" />
-                <option name="IE" />
-                <option name="UA" />
+<command name="COMPONENTMAP" multiple="F" alias="LAYOUT">
+	<parameter name="NameComp" type="strings" min="1" max="5">
+		<part name="COMPONENT" type="string" length="2" required="T"/>
+		<part name="ProcFirst" type="integer" min="0" default="0"
+		      		       		     required="T"/>
+		<part name="ProcLast" type="integer" min="$ProcFirst" 
+		      		      		     required="T"/>
+		<part name="Stride" type="integer" default="1" 
+		      		    		    required="T"/>
+		<part name="nThread" type="integer" default="$Stride"
+		      		     		    required="F"/>
         </parameter>
 
+Comp Proc0 ProcEnd Stride nThread
 #COMPONENTMAP
-GM      0 9999 1 2	! GM runs on all PE-s with 2 threads
-IE      1 2    1 1	! IE runs on 2 PE-s with 1 thread
-PW      3 3    1 1	! PW runs on 1 PE-s with 1 thread
+PW   0       31         4      4	! PW runs on PE-s 0..31 with 4 threads
+GM   32    9999         8      8	! GM runs on PE-s 32... with 8 threads
+IE   1        2         1       	! IE runs on 2 PE-s (no threads)
 
+The #COMPONENTMAP (or #LAYOUT) command lists the active components and
+their processor layout, also the number of threads.
 The components used in particular run either has to be listed (registered) in 
 the LAYOUT.in file, or explicitly given in this command. The column contains 
 the component ID, the index of the first (root) processor for the component, 
@@ -604,7 +604,7 @@ the last processor, the stride, and number of threads, respectively. This is
 going to replace the usage of LAYOUT.in file in future versions.
 
 The number of threads for each component is an optional argument. The default 
-is that all the components runs with 1 thread if OpenMP is used.
+is that all the components run with 1 thread if OpenMP is used.
 </command>
 
 <command name="COMPONENT" multiple="T">
