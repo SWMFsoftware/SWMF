@@ -52,12 +52,12 @@ if(not $LayoutFile){
 	$LayoutFile =~ s/\.bak//;
 	# If the LAYOUT file based on the PARAM file name is not found 
 	# try the default
-	$LayoutFile = $LayoutFileDefault 
-	    if (not -f $LayoutFile and -f $LayoutFileDefault);
+	$LayoutFile = $ParamFile if not -f $LayoutFile;
     }else{
 	$LayoutFile = $LayoutFileDefault;
     }
 }
+
 warn "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
 
 die "$ERROR could not find $ConfigPl" unless -f $ConfigPl;
@@ -156,10 +156,10 @@ sub get_layout{
 	if(/^\#COMPONENTMAP/){$start=1; next}
 
 	next unless $start; # Skip lines before #COMPONENTMAP
-	last if /^\#END/;   # Ignore lines after #END
+	last if /^\#END/ or /^$/;   # Ignore lines after #END or empty line
 
 	# extract layout information from one line in the component map
-	/^([A-Z][A-Z])\s+(\d+)\s+(\d+)\s+(\d+)/ or
+	/^([A-Z][A-Z])\s+(\d+)\s+(\d+)\s+(\d+)\s*(\d*)/ or
 	    die "$ERROR incorrect syntax at line $. in $LayoutFile:\n$_";
 
 	die "$ERROR invalid component ID $1 at line $. in $LayoutFile:\n$_"
@@ -169,15 +169,15 @@ sub get_layout{
 	    "at line $. in $LayoutFile:\n$_"
 	    if $Version{$1} eq 'Empty';
 
-	die "$ERROR root PE rank=$3 should not exceed last PE rank=$2\n".
+        die "$ERROR root PE rank=$3 should not exceed last PE rank=$2\n".
 	    "\tat line $. in $LayoutFile:\n$_"
 	    if $2 > $3;
 
-	die "$ERROR stride=$4 must be positive at line $. in $LayoutFile:\n$_"
-	    if $4 < 1;
-
-	$Layout{$1}="$2,$3,$4";
-	
+        if($5){
+	   $Layout{$1}="$2,$3,$4,$5";
+        }else{
+	    $Layout{$1}="$2,$3,$4,1";
+	}
     }
     close(LAYOUT);
     die "$ERROR #COMPONENTMAP was not found in $LayoutFile\n" unless $start;
@@ -193,10 +193,11 @@ sub check_layout{
 	my $Comps; # the components that use PE $iProc
 	my $Comp;
 	foreach $Comp (sort keys %Layout){
-	    my ($RootProc,$LastProc,$StrideProc)=split(/,/,$Layout{$Comp});
+	    my ($RootProc,$LastProc,$StrideProc,$nThread)
+		=split(/,/,$Layout{$Comp});
 
 	    if($iProc >= $RootProc and $iProc <=$LastProc 
-	       and (($iProc-$RootProc) % $StrideProc)==0){
+	       and (($iProc-$RootProc) % $StrideProc)<=$nThread-1){
 		$Comps .= "$Comp,";
 		$nProc{$Comp}++;
 	    }
