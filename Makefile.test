@@ -1947,12 +1947,14 @@ test_ramscb_check:
 
 test12:
 	-$(MAKE) test12_aniso_AMPS
+	./Config.pl -noopenmp -o=PC:openmp=off
+	-$(MAKE) test12_aniso_AMPS_openmp
 	-$(MAKE) test12_aniso
 	-$(MAKE) test12_iso
 	-$(MAKE) test12_3d
 	./Config.pl -nohdf5
 
-######## test PC/IPIC3D coupled with GM/BATSRUS #########
+######## test PC coupled with GM/BATSRUS #########
 
 
 test12_aniso_AMPS:
@@ -1993,6 +1995,46 @@ test12_aniso_AMPS_check:
 	ls -l test12_aniso_AMPS_gmpc.diff
 
 #########################################################
+
+
+test12_aniso_AMPS_openmp:
+	@echo "test12_aniso_AMPS_openmp_compile..." > test12_aniso_AMPS_openmp_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_openmp_compile
+	@echo "test12_aniso_AMPS_openmp_rundir..." > test12_aniso_AMPS_openmp_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_openmp_rundir
+	@echo "test12_aniso_AMPS_openmp_run..." > test12_aniso_AMPS_openmp_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_openmp_run
+	@echo "test12_aniso_AMPS_openmp_check..." > test12_aniso_AMPS_openmp_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_openmp_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test12_aniso_AMPS_openmp_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
+	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -openmp -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on,openmp=on 
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test12_aniso_AMPS_openmp_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	cp Param/PARAM.in.test.GMPC.aniso.openmp.AMPS  ${TESTDIR}/PARAM.in
+
+test12_aniso_AMPS_openmp_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+
+test12_aniso_AMPS_openmp_check:
+	gunzip -c output/test12/3d_aniso.out.gz \
+	        > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+		${TESTDIR}/RESULTS/PC/3d_fluid_Aregion0_0_t00000005_n00000005.out \
+		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
+		> test12_aniso_AMPS_openmp_gmpc.diff)
+	ls -l test12_aniso_AMPS_openmp_gmpc.diff
+
+#########################################################
+
 
 test12_aniso:
 	@echo "test12_aniso_compile..." > test12_aniso_gmpc.diff
