@@ -604,7 +604,9 @@ the last processor, the stride, and number of threads, respectively. This is
 going to replace the usage of LAYOUT.in file in future versions.
 
 The number of threads for each component is an optional argument. The default 
-is that all the components run with 1 thread if OpenMP is used.
+is that all the components run with 1 thread if OpenMP is used. If the OpenMP
+environment variable $OMP_NUM_THREADS is set, all the components cannot run 
+beyond the number of threads defined by $OMP_NUM_THREADS.
 </command>
 
 <command name="COMPONENT" multiple="T">
