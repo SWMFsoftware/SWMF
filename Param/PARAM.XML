@@ -592,21 +592,24 @@ Components which are not used in a session can be switched off.
 Comp Proc0 ProcEnd Stride nThread
 #COMPONENTMAP
 PW   0       31         4      4	! PW runs on PE-s 0..31 with 4 threads
-GM   32    9999         8      8	! GM runs on PE-s 32... with 8 threads
+GM   32    9999        -1     -1	! GM runs on PE-s 32.. with MaxThread
 IE   1        2         1       	! IE runs on 2 PE-s (no threads)
 
 The #COMPONENTMAP (or #LAYOUT) command lists the active components and
 their processor layout, also the number of threads.
-The components used in particular run either has to be listed (registered) in 
-the LAYOUT.in file, or explicitly given in this command. The column contains 
-the component ID, the index of the first (root) processor for the component, 
-the last processor, the stride, and number of threads, respectively. This is 
-going to replace the usage of LAYOUT.in file in future versions.
+The list of components should be ended with an empty line.
 
-The number of threads for each component is an optional argument. The default 
-is that all the components run with 1 thread if OpenMP is used. If the OpenMP
-environment variable $OMP_NUM_THREADS is set, all the components cannot run 
-beyond the number of threads defined by $OMP_NUM_THREADS.
+The columns contain the component ID, the index of the first (root)
+processor for the component, the last processor, the stride, and the
+optional number of threads, respectively. Negative values for the
+stride and number of threads are interpreted as the maximum number of
+threads (defined by $OMP_NUM_THREADS) divided by the absolute
+value. In the example above the GM component runs with the stride and
+number of threads set by $OMP_NUM_THREADS.  The default number of
+threads is 1 and the maximum value is $OMP_NUM_THREADS.
+
+This command is required either in the PARAM.in file or (for sake of backward
+compatibility) in the (now optional) LAYOUT.in file. 
 </command>
 
 <command name="COMPONENT" multiple="T">
