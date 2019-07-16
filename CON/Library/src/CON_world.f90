@@ -421,6 +421,9 @@ contains
 
        iProcRange_IC(ProcZero_,  nComp) = min(iProcZero,iProcLast,nProcWorld-1)
        iProcRange_IC(ProcLast_,  nComp) = min(iProcLast,nProcWorld-1)
+       ! Negative iProcStride is interpreted as MaxThread divided by its abs 
+       ! value
+       if(iProcStride < 0) iProcStride = MaxThread/abs(iProcStride)
        iProcRange_IC(ProcStride_,nComp) = max(iProcStride,1)
 
        ! Negative nThread is interpreted as MaxThread divided by its abs value
