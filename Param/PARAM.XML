@@ -589,27 +589,37 @@ Components which are not used in a session can be switched off.
 		      		     		    required="F"/>
         </parameter>
 
-Comp Proc0 ProcEnd Stride nThread
+ID Proc0 ProcEnd Stride nThread
 #COMPONENTMAP
-PW   0       31         4      4	! PW runs on PE-s 0..31 with 4 threads
-GM   32    9999        -1     -1	! GM runs on PE-s 32.. with MaxThread
-IE   1        2         1       	! IE runs on 2 PE-s (no threads)
+IE    0      0    1         ! IE runs on PE 0
+PW    1     32    4    4    ! PW runs on PEs 1..32 with  4 threads
+GM   33   9999   16   16    ! GM runs on PEs 33... with 16 threads
+
+ID Proc0 ProcEnd Stride nThread
+#LAYOUT
+IM    0      0    1         ! IM runs on PE 0
+IE    0      1    1         ! IE runs on PEs 0 and 1
+GM    2   9999   -2   -2    ! GM runs on PEs 2.. with MaxThread/2 threads
+PC    2   9999   -1   -1    ! PC runs on PEs 2.. with MaxThread threads
 
 The #COMPONENTMAP (or #LAYOUT) command lists the active components and
-their processor layout, also the number of threads.
+their processor layout including the number of OpenMP threads for
+components that can run with OpenMP. To use multithreading,                                                                                                                                                                
+the code needs to be configured with the -openmp flag.
 The list of components should be ended with an empty line.
 
 The columns contain the component ID, the index of the first (root)
 processor for the component, the last processor, the stride, and the
 optional number of threads, respectively. Negative values for the
 stride and number of threads are interpreted as the maximum number of
-threads (defined by $OMP_NUM_THREADS) divided by the absolute
-value. In the example above the GM component runs with the stride and
-number of threads set by $OMP_NUM_THREADS.  The default number of
-threads is 1 and the maximum value is $OMP_NUM_THREADS.
+threads (MaxThread is defined by the OMP_NUM_THREADS environment
+variable) divided by the absolute value of Stride or nThread,
+respectively.  This allows the same layout to be used on different
+nodes with different number of cores per node.  The default number of
+threads is 1 and the maximum value is MaxThread.
 
 This command is required either in the PARAM.in file or (for sake of backward
-compatibility) in the (now optional) LAYOUT.in file. 
+compatibility) in the now optional LAYOUT.in file. 
 </command>
 
 <command name="COMPONENT" multiple="T">
