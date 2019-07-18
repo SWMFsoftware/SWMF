@@ -1947,12 +1947,11 @@ test_ramscb_check:
 
 test12:
 	-$(MAKE) test12_aniso_AMPS
-	./Config.pl -noopenmp -o=PC:openmp=off
 	-$(MAKE) test12_aniso_AMPS_openmp
+	./Config.pl -noopenmp -o=PC:openmp=off
 	-$(MAKE) test12_aniso
 	-$(MAKE) test12_iso
 	-$(MAKE) test12_3d
-	./Config.pl -nohdf5
 
 ######## test PC coupled with GM/BATSRUS #########
 
@@ -2021,7 +2020,7 @@ test12_aniso_AMPS_openmp_rundir:
 	cp Param/PARAM.in.test.GMPC.aniso.openmp.AMPS  ${TESTDIR}/PARAM.in
 
 test12_aniso_AMPS_openmp_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ${OMPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_aniso_AMPS_openmp_check:
@@ -2048,7 +2047,7 @@ test12_aniso:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_aniso_compile:
-	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -nohdf5
+	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
 	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2097,7 +2096,7 @@ test12_3d:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_3d_compile:
-	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
+	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
 	./Config.pl -g=GM:4,4,4,2050,1 -o=GM:u=GemReconnect,e=MhdHyp,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -2153,7 +2152,7 @@ test12_iso:
 	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_iso_compile:
-	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS -hdf5
+	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
 	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
