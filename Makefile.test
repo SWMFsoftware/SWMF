@@ -2017,7 +2017,7 @@ test12_aniso_AMPS_openmp_compile:
 test12_aniso_AMPS_openmp_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
-	cp Param/PARAM.in.test.GMPC.aniso.openmp.AMPS  ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
 
 test12_aniso_AMPS_openmp_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./SWMF.exe > runlog
