@@ -2009,7 +2009,7 @@ test12_aniso_AMPS_openmp:
 test12_aniso_AMPS_openmp_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
 	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
-	./Config.pl -openmp -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on ###,openmp=on 
+	./Config.pl -openmp -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on,openmp=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
