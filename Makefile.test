@@ -1947,6 +1947,7 @@ test_ramscb_check:
 
 test12:
 	-$(MAKE) test12_aniso_AMPS
+	-$(MAKE) test12_aniso_AMPS_dynamic
 	-$(MAKE) test12_aniso_AMPS_openmp
 	./Config.pl -noopenmp -o=PC:openmp=off
 	-$(MAKE) test12_aniso
@@ -1987,7 +1988,7 @@ test12_aniso_AMPS_check:
 	gunzip -c output/test12/3d_aniso.out.gz \
 	        > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/PC/3d_fluid_Aregion0_0_t00000005_n00000005.out \
+		${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000005_n00000005.out \
 		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
 		> test12_aniso_AMPS_gmpc.diff)
 	ls -l test12_aniso_AMPS_gmpc.diff
@@ -2026,7 +2027,7 @@ test12_aniso_AMPS_openmp_check:
 	gunzip -c output/test12/3d_aniso.out.gz \
 	        > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/PC/3d_fluid_Aregion0_0_t00000005_n00000005.out \
+		${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000005_n00000005.out \
 		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
 		> test12_aniso_AMPS_openmp_gmpc.diff)
 	ls -l test12_aniso_AMPS_openmp_gmpc.diff
