@@ -119,7 +119,7 @@ test_batl:
 ### Component tests ###
 
 test_comp:
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /Empty/`; \
 		do ( cd $$i; ${MAKE} test; ); done
 	ls -ltr [A-Z][A-Z]/*/*.diff
 
