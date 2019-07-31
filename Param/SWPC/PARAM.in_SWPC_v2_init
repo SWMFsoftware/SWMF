@@ -184,8 +184,8 @@ SATELLITES.in
 #MAGPERTURBINTEGRAL
 T                       UseSurfaceIntegral
 F                       UseFastFacIntegral
-SMG			TypeCoordIndex
-SMG                     TypeCoordFacGrid
+MAG			TypeCoordIndex
+MAG                     TypeCoordFacGrid
 
 #MAGNETOMETER
 magin_GEM.dat		NameMagInputFile
