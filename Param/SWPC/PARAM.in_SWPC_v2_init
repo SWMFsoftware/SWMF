@@ -183,7 +183,7 @@ SATELLITES.in
 
 #MAGPERTURBINTEGRAL
 T                       UseSurfaceIntegral
-F                       UseFastFacIntegral
+T                       UseFastFacIntegral
 MAG			TypeCoordIndex
 MAG                     TypeCoordFacGrid
 
