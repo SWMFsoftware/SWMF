@@ -351,6 +351,9 @@ RB			NameComp2
 GM			NameComp
 F			DoCoupleOnTime
 
+#UPDATEB0
+5.0			DtUpdateB0
+
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #NONCONSERVATIVE
