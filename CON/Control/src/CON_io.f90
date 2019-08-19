@@ -573,7 +573,7 @@ contains
 
        case('#PLANET','#MOON','#COMET', &
             '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS','#MAGNETICCENTER',&
-            '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0', '#MULTIPOLEB0')
+            '#ROTATION','#NONDIPOLE','#DIPOLE', '#MULTIPOLEB0')
           if(.not.is_first_read())then
              if(UseStrict)RETURN
              CYCLE
@@ -581,6 +581,9 @@ contains
 
           call read_planet_var(NameCommand)
 
+       case("#UPDATEB0")
+          call read_planet_var(NameCommand)
+          
        case("#ROTATEHGR")
           if(.not.is_first_read())then
              if(UseStrict)RETURN
