@@ -452,17 +452,17 @@ contains
        if(iProcWorld==0)then
           ! Report adjustments
           if(iProcRange_IC(ProcZero_, nComp) /= iProcZero) &
-               write(*,'(a,i4,a,i4)')NameSub//&
+               write(*,'(a,i5,a,i5)')NameSub//&
                ' SWMF_WARNING for '//trim(Name)// &
                ' iProcZero=',iProcZero,&
                ' changed to ',iProcRange_IC(ProcZero_,  nComp)
           if(iProcRange_IC(ProcLast_, nComp) /= iProcLast) &
-               write(*,'(a,i4,a,i4)')NameSub//&
+               write(*,'(a,i5,a,i5)')NameSub//&
                ' SWMF_WARNING for '//trim(Name)// &
                ' iProcLast=',iProcLast,&
                ' changed to ',iProcRange_IC(ProcLast_,  nComp)
           if(iProcRange_IC(ProcStride_,nComp) /= iProcStride) &
-               write(*,'(a,i4,a,i4)')NameSub//&
+               write(*,'(a,i5,a,i5)')NameSub//&
                ' SWMF_WARNING for '//trim(Name)// &
                ' iProcStride=',iProcStride,&
                ' changed to ',iProcRange_IC(ProcStride_,nComp)
@@ -478,7 +478,7 @@ contains
             Name_C(lComp), iGroupWorld, iCommWorld, iProcRange_IC(:,lComp),&
             nThread_C(lComp), iError)
        if(iError>0)then
-          if(iProcWorld==0)write(*,'(a,3i4)')NameSub//&
+          if(iProcWorld==0)write(*,'(a,3i5)')NameSub//&
                ' SWMF_ERROR: cannot produce layout for component '// &
                Name_C(lComp)//' using processor range ',&
                iProcRange_IC(:,lComp)
