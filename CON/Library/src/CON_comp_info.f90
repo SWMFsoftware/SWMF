@@ -51,6 +51,7 @@ module CON_comp_info
      logical                          :: Use
      integer                          :: iUnitOut
      integer, dimension(nMpiParam)    :: iMpiParam_I
+     integer                          :: iThread
      integer                          :: nThread
   end type CompInfoType
 
@@ -87,7 +88,7 @@ contains
     integer, intent(out)              :: iError
 
     ! local variables
-    integer :: iProcWorld, nProcWorld
+    integer :: iProcWorld, nProcWorld, iStride
 
     character(len=*), parameter :: NameSub = NameMod//'::init'
     !------------------------------------------------------------------------
@@ -133,7 +134,7 @@ contains
     ! Store the processor range
     Info%iMpiParam_I(ProcZero_:ProcStride_) = iProcRange_I
 
-    ! Get the rank of a PE withing this group
+    ! Get the rank of a PE within this group
     call MPI_group_rank(Info%iMpiParam_I(Group_), &
          Info%iMpiParam_I(Proc_), iError)
 
@@ -175,8 +176,20 @@ contains
     endif
 
     ! Store nThread
-    Info % nThread     = nThread 
+    Info % nThread     = nThread
 
+    ! Calculate and store iThread (assuming that each thread is running
+    ! on a different core).
+    Info%iThread = -1
+    if(  iProcWorld >= iProcRange_I(ProcZero_) .and. &
+         iProcWorld <= iProcRange_I(ProcLast_)) then
+       ! Index of processor within the stride
+       iStride = modulo(iProcWorld - iProcRange_I(ProcZero_), &
+            iProcRange_I(ProcStride_))
+       ! If there are enough threads to cover the stride, then iThride=iStride
+       if(iStride < nThread) Info%iThread = iStride
+    end if
+         
     Info % iUnitOut    = STDOUT_
     Info % Use         = .true.
     Info % NameVersion = 'unset'
