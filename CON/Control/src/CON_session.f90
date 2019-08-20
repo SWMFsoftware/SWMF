@@ -11,7 +11,7 @@ module CON_session
   !USES:
   use CON_comp_param, ONLY: MaxComp, NameComp_I
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
-       i_comp, n_comp, use_comp
+       i_comp, n_comp, use_comp, is_thread
   use CON_variables, ONLY: UseStrict, DnTiming, lVerbose
   use CON_wrapper, ONLY: set_param_comp, init_session_comp, run_comp
   use CON_couple_all, ONLY: couple_two_comp, couple_all_init
@@ -76,6 +76,8 @@ contains
     ! Do timings as needed.
     !EOP
 
+    logical:: UseCore
+    
     character(len=*), parameter :: NameSub=NameMod//'::init_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
@@ -110,23 +112,24 @@ contains
     ! Initialize all couplers. This must involve all PE-s.
     !/
     call couple_all_init
-    !\
+
     ! Figure out which components belong to this PE
-    !/
     IsProc_C = .false.
+    UseCore  = .false.
     do lComp = 1, nComp; iComp = i_comp(lComp)
        if(.not.use_comp(iComp)) CYCLE
        IsProc_C(iComp) = is_proc(iComp)
+       UseCore = UseCore .or. is_thread(iComp)
     end do
-    !\
-    ! Check for unused PE
-    !/
-    if(.not.any(IsProc_C))then
+
+    if(.not.UseCore)then
        write(*,*)NameSub//' WARNING: no component uses iProc=',i_proc()
        if(UseStrict)call CON_stop(NameSub// &
-            'SWMF_ERROR: unused PE. Edit LAYOUT.in!')
-       RETURN
+            'SWMF_ERROR: unused core. Correct layout or number of threads!')
     end if
+
+    if(.not.any(IsProc_C)) RETURN
+
     !\
     ! Couple for the first time
     !/
