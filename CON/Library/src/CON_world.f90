@@ -92,6 +92,9 @@ module  CON_world
   public :: i_proc          ! return processor index in the component group
   public :: n_proc          ! return number of processors used by component
   public :: i_proc0         ! return world processor index of component's root
+  public :: is_thread       ! return true if PE is used by a thread of component
+  public :: i_thread        ! return thread index for a component
+  public :: n_thread        ! return number of threads used by a component
   public :: i_comm          ! return communicator used by component
   public :: i_group         ! return group used by component
   public :: i_proc_stride   ! return the PE stride
@@ -147,13 +150,7 @@ module  CON_world
   end interface
   interface n_proc; module procedure &
        n_proc_name, n_proc_id, n_proc_world
-  end interface
-  interface i_comm; module procedure &
-       i_comm_name, i_comm_id, i_comm_world
-  end interface
-  interface i_group; module procedure &
-       i_group_name, i_group_id, i_group_world
-  end interface
+  end interface n_proc
   interface i_proc_stride
      module procedure i_proc_stride_world
      module procedure i_proc_stride_id
@@ -163,6 +160,21 @@ module  CON_world
      module procedure i_proc_last_world
      module procedure i_proc_last_name
      module procedure i_proc_last_id
+  end interface
+  interface is_thread; module procedure &
+       is_thread_name, is_thread_id
+  end interface is_thread
+  interface i_thread; module procedure &
+       i_thread_name, i_thread_id
+  end interface i_thread
+  interface n_thread; module procedure &
+       n_thread_name, n_thread_id
+  end interface n_thread
+  interface i_comm; module procedure &
+       i_comm_name, i_comm_id, i_comm_world
+  end interface
+  interface i_group; module procedure &
+       i_group_name, i_group_id, i_group_world
   end interface
 
   !REVISION HISTORY: 
@@ -175,6 +187,7 @@ module  CON_world
   !  release 1.0.6, 2002.
   !
   !  July 12 2003 - G. Toth <gtoth@umich.edu> - simplify and add useful methods
+  !  2019 - H. Zhou and G. Toth added thread related methods
   !EOP ------------------------------------------------------------------------
 
   character(len=*),parameter :: NameMod='CON_world'
@@ -273,6 +286,7 @@ contains
     ! ============================================
     ! #LAYOUT
     ! GM       0        9999    8        8   ! GM runs with 8 threads
+    ! PW       0        9999   -1       -1   ! PW runs with MaxThread threads
     ! IE       0        1       1            ! IE runs on PE 0 and 1
     ! IM       2        2       1            ! IM runs on PE 2
     !
@@ -290,6 +304,10 @@ contains
     ! If the last rank exceeds the number of processors used by SWMF,
     ! it is reduced to the rank of the last processor and a warning
     ! message is printed to STDOUT.
+    ! If the stride or the number of threads are negative, they are replaced
+    ! by the maximum number of threads MaxThread divided by their absolute
+    ! values. If the number of threads nThread exceeds MaxThread, it gets
+    ! reduced to MaxThread.
     !EOP
 
     character(len=*), parameter :: NameSub = NameMod//'::setup_from_file' 
@@ -775,6 +793,60 @@ contains
     !-------------------------------------------------------------------------
     i_proc0_id =  CompInfo_C(l_comp(iComp,NameSub)) % iMpiParam_I(ProcZero_)
   end function i_proc0_id
+  !===========================================================================
+  logical function is_thread_name(Name)
+    character(len=*), intent(in) :: Name
+    character(len=*), parameter :: NameSub=NameMod//'::is_thread_name'
+    integer :: lComp
+    !-----------------------------------------------------------------------
+    lComp = l_comp(Name,NameSub,.false.)
+    if(lComp>0)then
+       is_thread_name = CompInfo_C(lComp) % iThread >= 0
+    else
+       is_thread_name = .false.
+    end if
+  end function is_thread_name
+  !===========================================================================
+  logical function is_thread_id(iComp)
+    integer, intent(in) :: iComp
+    character(len=*), parameter :: NameSub=NameMod//'::is_thread_id'
+    integer :: lComp
+    !-----------------------------------------------------------------------
+    lComp = l_comp(iComp,NameSub,.false.)
+    if(lComp>0)then
+       is_thread_id = CompInfo_C(lComp) % iThread >= 0
+    else
+       is_thread_id = .false.
+    end if
+  end function is_thread_id
+  !===========================================================================
+  integer function i_thread_name(Name)
+    character(len=*), intent(in) :: Name
+    character(len=*), parameter :: NameSub=NameMod//'::i_thread_name'
+    !-------------------------------------------------------------------------
+    i_thread_name =  CompInfo_C(l_comp(Name,NameSub)) % iThread
+  end function i_thread_name
+  !===========================================================================
+  integer function i_thread_id(iComp)
+    integer, intent(in) :: iComp
+    character(len=*), parameter :: NameSub=NameMod//'::i_thread_id'
+    !-------------------------------------------------------------------------
+    i_thread_id =  CompInfo_C(l_comp(iComp,NameSub)) % iThread
+  end function i_thread_id
+  !===========================================================================
+  integer function n_thread_name(Name)
+    character(len=*), intent(in) :: Name
+    character(len=*), parameter :: NameSub=NameMod//'::n_thread_name'
+    !-------------------------------------------------------------------------
+    n_thread_name =  CompInfo_C(l_comp(Name,NameSub)) % nThread
+  end function n_thread_name
+  !===========================================================================
+  integer function n_thread_id(iComp)
+    integer, intent(in) :: iComp
+    character(len=*), parameter :: NameSub=NameMod//'::n_thread_id'
+    !-------------------------------------------------------------------------
+    n_thread_id =  CompInfo_C(l_comp(iComp,NameSub)) % nThread
+  end function n_thread_id
   !===========================================================================
   integer function i_comm_name(Name)
     character(len=*), intent(in) :: Name
