@@ -92,7 +92,7 @@ module  CON_world
   public :: i_proc          ! return processor index in the component group
   public :: n_proc          ! return number of processors used by component
   public :: i_proc0         ! return world processor index of component's root
-  public :: is_thread       ! return true if PE is used by a thread of component
+  public :: is_thread       ! return true if PE is used by a component thread
   public :: i_thread        ! return thread index for a component
   public :: n_thread        ! return number of threads used by a component
   public :: i_comm          ! return communicator used by component
