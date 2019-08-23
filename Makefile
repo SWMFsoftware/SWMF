@@ -118,7 +118,8 @@ ENV_CHECK:
 # be copied from share/JobScripts to the run directory when it is created. 
 # The default is the short name of the current machine with the trailing
 # 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
-MACHINE = `hostname | sed -e 's/\..*//; s/[0-9]\?[0-9]$$//'`
+# If the name starts with "login\d*.", it is removed. 
+MACHINE = `hostname | perl -pe 's/^login\d*\.//; s/\..*//; s/\d+$$//'`
 
 #
 # install for the 1st time
