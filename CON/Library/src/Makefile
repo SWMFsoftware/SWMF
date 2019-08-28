@@ -44,7 +44,7 @@ TEST_REGISTRY_OBJ= \
 test_registry.exe: DEPEND ${TEST_REGISTRY_OBJ}
 	cd ${SHAREDIR}; $(MAKE) LIB
 	cd ${LIBRARYDIR}; $(MAKE) LIB
-	${LINK.f90} -o test_registry.exe ${SEARCH} \
+	${LINK.f90} -o test_registry.exe ${SEARCH} ${LflagMpi} \
 		${TEST_REGISTRY_OBJ} -L${LIBDIR} -lLIBRARY -lSHARE
 
 install: 
