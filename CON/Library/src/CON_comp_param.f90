@@ -121,6 +121,8 @@ contains
   end function i_comp_name
   !===========================================================================
   subroutine check_i_comp(iComp,NameCaller)
+    use ModUtilities, ONLY: CON_stop
+
     integer, intent(in) :: iComp
     character (len=*), intent(in) :: NameCaller
     !-------------------------------------------------------------------------
