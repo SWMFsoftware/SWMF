@@ -35,7 +35,7 @@ test_registry: DEPEND
 	cd ${SHAREDIR}; $(MAKE) LIB
 	$(MAKE) LIB
 	$(MAKE) test_registry.exe
-	${PARALLEL} ${NPFLAG} 4 test_registry.exe
+	${OMPIRUN} test_registry.exe
 	cat LAYOUT.in
 
 TEST_REGISTRY_OBJ= \
