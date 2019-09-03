@@ -1,14 +1,16 @@
-!  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+!  Copyright (C) 2002 Regents of the University of Michigan,
+!  portions used with permission 
 !  For more information, see http://csem.engin.umich.edu/tools/swmf
 program test_registry
 
   use CON_world
   use CON_comp_param
   implicit none
+
   logical :: UseMe
   character (len=lNameVersion) :: Name
   real :: Version
-  integer :: iError, lComp, iComp
+  integer :: iError, lComp, iComp, iProc
   !---------------------------------------------------------------------------
   call MPI_init(iError)
 
@@ -16,15 +18,22 @@ program test_registry
 
   call world_setup
 
+  call world_used(IsVerbose=.true.)
+
+  call MPI_barrier(i_comm(), iError)
+
   UseMe = is_proc('GM')
   ! UseMe = is_proc('IX') ! Test wrong name
   ! UseMe = is_proc(53)   ! Test wrong index
 
-  write(*,*)'is_proc(GM,IE,IH,IM), iProcWorld=',&
-       is_proc(GM_),is_proc('IE'),is_proc('IH'),is_proc('IM'),i_proc()
-
-!  if(is_proc('GM'))
-  write(*,*)'GM iProc, iProcWorld=',i_proc('GM'),i_proc()
+  do iProc = 0, n_proc()-1
+     if(iProc == i_proc()) &
+          write(*,*)'iProcWorld, is_proc(GM,IE,IH,IM,CON), iProcUsed=',&
+          i_proc(), &
+          is_proc(GM_), is_proc('IE'), is_proc('IH'), is_proc('IM'), &
+          is_proc('CON'), i_proc(CON_)
+     call MPI_barrier(i_comm(), iError)
+  end do
 
   if(is_proc('IE'))&
      call put_comp_info('IE',NameVersion='Ridley',Version=1.01)
@@ -33,6 +42,34 @@ program test_registry
      write(*,*)'IE ',Name,' ',Version,' iProc=',i_proc()
   end if
 
+  ! Switch off IE
+  call put_comp_info(IE_, Use=.false.)
+  call world_used(IsVerbose=.false.)
+
+  if(is_proc0())then
+     write(*,'(a)') 'Switched off IE'
+     write(*,'(a,i2,a,i2)') 'iProc0Used=', i_proc0(CON_), &
+          ' nProcUsed = ', n_proc(CON_)
+  end if
+  call MPI_barrier(i_comm(), iError)
+
+  do iProc = 0, n_proc()-1
+     if(iProc == i_proc()) &
+          write(*,*)'iProcWorld, is_proc(GM,IE,IH,IM,CON), iProcUsed=',&
+          i_proc(), &
+          is_proc(GM_), is_proc('IE'), is_proc('IH'), is_proc('IM'), &
+          is_proc('CON'), i_proc(CON_)
+     call MPI_barrier(i_comm(), iError)
+  end do
+
+  if(is_proc0())write(*,'(a)') 'GM threads:'
+  do iProc = 0, n_proc()-1
+     if(iProc == i_proc()) write(*,'(a,i3,i3,l3,i8)') &
+             'iProcWorld, i_thread(GM), is_proc(CON), i_proc(GM)=', &
+             i_proc(), i_thread('GM'), is_proc(CON_), i_proc(GM_)
+     call MPI_barrier(i_comm(), iError)
+  end do
+  
   if(is_proc0())then
      do lComp = 1, n_comp()
         iComp = i_comp(lComp)
@@ -44,23 +81,10 @@ program test_registry
         write(*,'(a,l1)')'use_'//NameComp_I(iComp)//' = ',use_comp(iComp)
      end do
   end if
-
+  
   call world_clean
 
   call MPI_finalize(iError)
 
 end program test_registry
 
-subroutine CON_stop(String)
-
-  use ModMpi
-  use CON_world, ONLY: i_proc_world
-  implicit none
-  character(len=*),intent(in) :: String
-  integer :: iError, nError
-  !--------------------------------------------------------------------------
-  write(*,'(a,i3)')'!!! SWMF_ABORT !!! requested by processor ',i_proc_world()
-  write(*,'(a)')String
-  call MPI_abort(MPI_COMM_WORLD, nError, iError)
-  stop
-end subroutine CON_stop
