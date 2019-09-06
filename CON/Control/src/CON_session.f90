@@ -11,8 +11,7 @@ module CON_session
   !USES:
   use CON_comp_param, ONLY: MaxComp, NameComp_I
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
-       i_comp, n_comp, use_comp, n_thread, i_thread, is_thread, &
-       world_used, CON_
+       i_comp, n_comp, use_comp, is_thread, world_used, CON_
 
   use CON_variables, ONLY: UseStrict, DnTiming, lVerbose
   use CON_wrapper, ONLY: set_param_comp, init_session_comp, run_comp
@@ -78,7 +77,6 @@ contains
     !EOP
 
     logical:: UseCore
-    integer:: iUnitOut
     
     character(len=*), parameter :: NameSub=NameMod//'::init_session'
     !--------------------------------------------------------------------------
