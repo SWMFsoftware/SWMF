@@ -11,7 +11,9 @@ module CON_session
   !USES:
   use CON_comp_param, ONLY: MaxComp, NameComp_I
   use CON_world, ONLY: i_comm, is_proc, is_proc0, i_proc, &
-       i_comp, n_comp, use_comp, is_thread
+       i_comp, n_comp, use_comp, n_thread, i_thread, is_thread, &
+       world_used, CON_
+
   use CON_variables, ONLY: UseStrict, DnTiming, lVerbose
   use CON_wrapper, ONLY: set_param_comp, init_session_comp, run_comp
   use CON_couple_all, ONLY: couple_two_comp, couple_all_init
@@ -50,13 +52,12 @@ module CON_session
 
   character (len=*), parameter :: NameMod = 'CON_session'
 
-  !\
-  ! Local variable definitions.
-  !/
+
+  ! Local variables
   integer :: lComp, iComp, nComp
   integer :: iCouple, iCompSource, iCompTarget
   integer :: iError
-  logical :: IsProc_C(MaxComp)
+  logical :: IsProc_C(MaxComp) ! is this PE actively used by a component?
 
   logical :: DoTest, DoTestMe
   !---------------------------------------------------------------------------
@@ -77,14 +78,14 @@ contains
     !EOP
 
     logical:: UseCore
+    integer:: iUnitOut
     
     character(len=*), parameter :: NameSub=NameMod//'::init_session'
     !--------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
     DoTestMe = DoTest .and. is_proc0()
-    !\
+
     ! Time execution (timing parameters were read by read_inputs)
-    !/
     if(iSession==1)then
        call timing_start('SWMF')
        call timing_start('SETUP')
@@ -95,32 +96,33 @@ contains
 
     !BOC
     nComp = n_comp()
-    !\
+
     ! Initialize components for this session.
-    !/
     do lComp = 1, nComp; iComp = i_comp(lComp)
        call init_session_comp(iComp,iSession,tSimulation)
     end do
-    !\
+
     ! Initialize and broadcast grid descriptors to all the components.
     ! This must involve all PE-s.
-    !/
     do lComp = 1, nComp; iComp = i_comp(lComp)
        if(use_comp(iComp)) call set_param_comp(iComp, 'GRID')
     end do
-    !\
+
     ! Initialize all couplers. This must involve all PE-s.
-    !/
     call couple_all_init
 
     ! Figure out which components belong to this PE
     IsProc_C = .false.
     UseCore  = .false.
+    
     do lComp = 1, nComp; iComp = i_comp(lComp)
        if(.not.use_comp(iComp)) CYCLE
        IsProc_C(iComp) = is_proc(iComp)
        UseCore = UseCore .or. is_thread(iComp)
     end do
+
+    ! Create communicator of active PEs
+    call world_used(IsVerbose=.true.)
 
     if(.not.UseCore)then
        write(*,*)NameSub//' WARNING: no component uses iProc=',i_proc()
@@ -128,11 +130,10 @@ contains
             'SWMF_ERROR: unused core. Correct layout or number of threads!')
     end if
 
-    if(.not.any(IsProc_C)) RETURN
+    ! Processors that are inactive (may be used by OpenMP threads) are done
+    if(.not.is_proc(CON_)) RETURN
 
-    !\
     ! Couple for the first time
-    !/
     do iCouple = 1, nCouple
 
        iCompSource = iCompCoupleOrder_II(1,iCouple)
@@ -215,21 +216,19 @@ contains
     end if
 
     !BOC
-    !\
+
     ! If no component uses this PE and init_session did not stop
     ! then set tSimulation to the final time and simply return
-    !/
-    if( .not.any(IsProc_C) ) then
+    if( .not.is_proc(CON_) ) then
        if(DoTimeAccurate .and. tSimulationMax > 0.0) &
             tSimulation = tSimulationMax
+
        RETURN
     end if
 
-    !\
     ! Set initial time for all components to be tSimulation
     ! For steady state mode do this only for the first time,
     ! because the SWMF time does not advance but the component time might.
-    !/
     if(DoTimeAccurate .and. .not.present(tCoupleExtra_C))then
        tSimulation_C = tSimulation
     else
@@ -278,28 +277,22 @@ contains
             ' nIteration, tSimulation, tSimulationMax=',&
             nIteration, tSimulation, tSimulationMax
 
-       !\
        ! Stop this session if stopping conditions are fulfilled
-       !/
        if(MaxIteration >= 0 .and. nIteration >= MaxIteration) &
             EXIT TIMELOOP
        if(DoTimeAccurate .and. tSimulationMax > 0.0 &
             .and. tSimulation + DtTiny >= tSimulationMax) &
             EXIT TIMELOOP
 
-       !\
        ! Exit from time loop and return if an external coupling should be done
        ! Return is used so that iSession is not modified.
-       !/
        if(present(tCoupleExtra_C))then
           if(DoTestMe)write(*,*)NameSub,' checking tCoupleExtra_C'
           if(any(IsProc_C .and. tCoupleExtra_C >= 0.0 &
                .and. tSimulation >= tCoupleExtra_C)) RETURN
        end if
 
-       !\
        ! Check periodically for stop file and cpu time
-       !/
        if(is_time_to(CheckStop, nStep, tSimulation+DtTiny, DoTimeAccurate))then
           if(DoTestMe)write(*,*)NameSub,' checking do_stop_now'
           if(do_stop_now())then
@@ -309,9 +302,7 @@ contains
           end if
        end if
 
-       !\
        ! Check for kill file unless NameCompCheckKill is set to '!!'
-       !/
        if(NameCompCheckKill /= '!!')then
           ! The NameCompCheckKill='??' means that all processors check
           DoKill = NameCompCheckKill == '??'
@@ -324,10 +315,8 @@ contains
           end if
        end if
 
-       !\
        ! Advance step number and iteration (in current run)
        ! Inform the TIMING utility about the new time step
-       !/
        nStep = nStep+1
        nIteration = nIteration+1
        call timing_step(nStep)
@@ -335,12 +324,11 @@ contains
        if(DoTestMe)write(*,*)NameSub,' new nStep, nIteration=',&
             nStep, nIteration
 
-       !\
        ! Calculate next time to synchronize for all local components
-       !/
        if(DoTimeAccurate)then
           do lComp = 1, nComp
              iComp = i_comp(lComp)
+             if(.not.use_comp(iComp)) CYCLE
 
              ! Find the time of the next coupling
              tSimulationCouple = min( &
@@ -435,10 +423,9 @@ contains
           if(.not.IsProc_C(iComp)) CYCLE
 
           if(DoTimeAccurate)then
-             !\
+
              ! In time accurate mode advance the component(s) which
              ! has/have the smallest physical time == tSimulation
-             !/
              if(tSimulation_C(iComp) <= tSimulation) then
 
                 call run_comp(iComp, &
@@ -451,9 +438,7 @@ contains
                      tSimulationLimit_C(iComp)
              end if
           else
-             !\
              ! In steady state mode advance component every DnRun step
-             !/
              if(mod(nStep, DnRun_C(iComp)) == 0) then
                 ! tSimulationLimit=Huge since there is no limit on time step
                 call run_comp(iComp,tSimulation_C(iComp),Huge(1.0))
@@ -512,23 +497,19 @@ contains
                   Couple_CC(iCompSlave,iCompMaster) % DoThis
           end do
        end if
-       !\
+
        ! tSimulation for CON is the minimum of the simulation times of the
        ! components present on this processor
-       !/
        if(DoTimeAccurate) tSimulation = min(&
             minval(tSimulation_C,     MASK=IsProc_C), &
             minval(tSimulationWait_C, MASK=IsProc_C))
 
-       !\
        ! Print progress report at given frequency
-       !/
        call show_progress
 
        if(DoTestMe)write(*,*)NameSub,' couple components'
-       !\
+
        ! Couple components as scheduled
-       !/
        do iCouple = 1, nCouple
 
           iCompSource = iCompCoupleOrder_II(1,iCouple)
@@ -548,9 +529,7 @@ contains
 
        end do
 
-       !\
        ! Save restart files when scheduled
-       !/
        if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate))&
             call save_restart
 
