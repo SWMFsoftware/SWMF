@@ -157,14 +157,10 @@ contains
     !-------------------------------------------------------------------------
     if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
 
-    !\
     ! Proc 0 reads the file and broadcasts to all PE-s
-    !/
     if(IsFirstRead) call read_file(NameParamFile,i_comm())
 
-    !\
     ! Read input data from string array stored in ModReadParam
-    !/
     call read_init('  ',iSession,iLine)
 
     IsLastRead=.true.
@@ -836,7 +832,7 @@ contains
     character(len=*), parameter :: NameSub=NameMod//'::save_restart'
     !------------------------------------------------------------------------
 
-    if(lVerbose>0 .and. is_proc0()) &
+    if(lVerbose>0 .and. is_proc0(CON_)) &
          write(*,*)NameSub,' is called at nStep,tSimulation=',&
          nStep,tSimulation
 
@@ -850,7 +846,7 @@ contains
        else
           NameRestartOutDirNow = NameRestartOutDir
        end if
-       if(is_proc0()) call make_dir(NameRestartOutDirNow)
+       if(is_proc0(CON_)) call make_dir(NameRestartOutDirNow)
     end if
 
     NameRestartOutDirComp = ''
@@ -865,11 +861,12 @@ contains
        call save_restart_comp(iComp, tSimulation)
     end do
 
-    ! Ensure that all components have written restart state before
+    ! Ensure that all active components have written restart state before
     ! writing the CON restart file (RESTART.out)
-    call MPI_barrier(i_comm(), iError)
+    call MPI_barrier(i_comm(CON_), iError)
 
-    if(.not.is_proc0()) RETURN
+    ! Root of CON writes the main RESTART.out file
+    if(.not.is_proc0(CON_)) RETURN
 
     call open_file(FILE=trim(NameRestartOutDirNow)//NameRestartFile)
 
