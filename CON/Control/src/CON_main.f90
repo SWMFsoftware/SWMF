@@ -207,7 +207,7 @@ contains
 
     if(SaveRestart % DoThis)then
        if(UseEndTime)call save_end_time
-       call save_restart
+       if(is_proc(CON_)) call save_restart
     end if
     do lComp = 1,n_comp()
        iComp = i_comp(lComp)
