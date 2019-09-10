@@ -530,7 +530,7 @@ contains
           call MPI_group_union(CompInfo_C(lComp)%iMpiParam_I(Group_), iGroup, &
                iGroupUsed, iError)
        end if
-       call MPI_group_free(iGroup, iError)
+       if(iGroup /= MPI_GROUP_EMPTY) call MPI_group_free(iGroup, iError)
     end do
     if(iProc0Used == nProcWorld) &
          call CON_stop(NameSub//': no used components!')
