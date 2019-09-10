@@ -20,7 +20,7 @@ module CON_session
        Couple_CC, nCouple, iCompCoupleOrder_II, &
        DoCoupleOnTime_C, IsTightCouple_CC
   use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
-       SaveRestart, save_restart, isRestartSaved
+       SaveRestart, save_restart, IsRestartSaved
   use CON_time, ONLY: iSession, DoTimeAccurate, &
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax, &
@@ -314,7 +314,7 @@ contains
        end if
 
        ! For a new step, the restart fiels have not been saved. 
-       isRestartSaved = .false.
+       IsRestartSaved = .false.
 
        ! Advance step number and iteration (in current run)
        ! Inform the TIMING utility about the new time step
@@ -511,7 +511,7 @@ contains
        ! Save restart files when scheduled
        if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate)) then
           call save_restart
-          isRestartSaved = .true.
+          IsRestartSaved = .true.
        endif
 
        if(DoTestMe)write(*,*)NameSub,' couple components'

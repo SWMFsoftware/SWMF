@@ -73,7 +73,7 @@ module CON_io
 
   ! The restart files should not be saved twice (first in the 
   ! subroutint 'do_session', and then in 'finalize') for the same time.
-  logical, public :: isRestartSaved = .false.
+  logical, public :: IsRestartSaved = .false.
 
   ! Showing progress
   integer, public :: DnShowProgressShort = 10
