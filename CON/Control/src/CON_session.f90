@@ -20,7 +20,7 @@ module CON_session
        Couple_CC, nCouple, iCompCoupleOrder_II, &
        DoCoupleOnTime_C, IsTightCouple_CC
   use CON_io, ONLY : DnShowProgressShort, DnShowProgressLong, &
-       SaveRestart, save_restart
+       SaveRestart, save_restart, isRestartSaved
   use CON_time, ONLY: iSession, DoTimeAccurate, &
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax, &
@@ -313,6 +313,9 @@ contains
           end if
        end if
 
+       ! For a new step, the restart fiels have not been saved. 
+       isRestartSaved = .false.
+
        ! Advance step number and iteration (in current run)
        ! Inform the TIMING utility about the new time step
        nStep = nStep+1
@@ -505,6 +508,12 @@ contains
        ! Print progress report at given frequency
        call show_progress
 
+       ! Save restart files when scheduled
+       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate)) then
+          call save_restart
+          isRestartSaved = .true.
+       endif
+
        if(DoTestMe)write(*,*)NameSub,' couple components'
 
        ! Couple components as scheduled
@@ -526,10 +535,6 @@ contains
           end if
 
        end do
-
-       ! Save restart files when scheduled
-       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate))&
-            call save_restart
 
     end do TIMELOOP
 

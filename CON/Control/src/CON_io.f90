@@ -71,6 +71,10 @@ module CON_io
   type(FreqType), public :: &
        SaveRestart = FreqType(.true.,100000,huge(1.0),-1,-1.0)
 
+  ! The restart files should not be saved twice (first in the 
+  ! subroutint 'do_session', and then in 'finalize') for the same time.
+  logical, public :: isRestartSaved = .false.
+
   ! Showing progress
   integer, public :: DnShowProgressShort = 10
   integer, public :: DnShowProgressLong  = 100

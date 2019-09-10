@@ -13,7 +13,7 @@ module CON_main
   use CON_world
   use CON_comp_param
   use CON_wrapper
-  use CON_io, ONLY : SaveRestart, save_restart
+  use CON_io, ONLY : SaveRestart, save_restart, isRestartSaved
 
   use CON_time
   use CON_variables, ONLY: IsStandAlone, iErrorSwmf, lVerbose, DnTiming
@@ -205,7 +205,7 @@ contains
     end if
     if (DnTiming > -2) call timing_report
 
-    if(SaveRestart % DoThis)then
+    if(SaveRestart % DoThis .and. .not. isRestartSaved)then
        if(UseEndTime)call save_end_time
        if(is_proc(CON_)) call save_restart
     end if
