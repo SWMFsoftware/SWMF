@@ -1983,15 +1983,26 @@ test12_aniso_AMPS_rundir:
 
 test12_aniso_AMPS_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/5step
+	cp Param/PARAM.in.test.GMPC.aniso.AMPS.2step  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2step
+	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/2step/RESTART
+	cp Param/PARAM.in.test.GMPC.aniso.AMPS.2step.restart ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
 
 test12_aniso_AMPS_check:
 	gunzip -c output/test12/3d_aniso.out.gz \
-	        > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
+	       > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000005_n00000005.out \
+		${TESTDIR}/RESULTS/5step/PC/3d_fluid_region0_0_t00000005_n00000005.out \
 		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
 		> test12_aniso_AMPS_gmpc.diff)
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+		${TESTDIR}/RESULTS/2restart/PC/3d_fluid_region0_0_t00000005_n00000005.out \
+		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
+		>> test12_aniso_AMPS_gmpc.diff)
 	ls -l test12_aniso_AMPS_gmpc.diff
 
 #########################################################
