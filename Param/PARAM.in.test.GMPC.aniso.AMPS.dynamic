@@ -7,8 +7,8 @@ Run GM and PC in time accurate mode
 #PLANET
 NONE			NamePlanet
 
-SAVERESTART
-T                       DoSaveRestart 
+#SAVERESTART
+F                       DoSaveRestart 
 -1                      DnSaveRestart 
 100                    DtSaveRestart
 
