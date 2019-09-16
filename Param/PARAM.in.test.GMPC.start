@@ -263,7 +263,9 @@ z=0 all idl_ascii       StringPlot
 
 
 #TIMESTEPPING
-T			UseSWMFDt
+F			UseSWMFDt
+T			useFixedDt
+0.5			fixedDt
 
 #DIVE
 F

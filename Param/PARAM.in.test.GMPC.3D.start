@@ -14,10 +14,15 @@ T			DoTimeAccurate
 1			DnShowProgressShort
 1			DnShowProgressLong
 
-#COUPLE2TIGHT
+#COUPLE2
 GM			NameCompMaster
 PC			NameCompSlave
-T			DoCouple
+-1			DnCouple
+0.5			DtCouple
+
+#COUPLETIME
+PC                      NameComp
+F                       DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -175,9 +180,11 @@ g
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
+#TIMESTEPPING
+F			UseSWMFDt
+F			useFixedDt
+0.1			CFL
 
-#ENERGYCONSERVING
-F
 
 #DIVE
 F
@@ -210,8 +217,8 @@ cut all ascii planet		StringPlot
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
-4			MaxIteration
--1.0			tSimulationMax
+-1			MaxIteration
+0.7			tSimulationMax
 
 
 5000.0			tSimulationMax

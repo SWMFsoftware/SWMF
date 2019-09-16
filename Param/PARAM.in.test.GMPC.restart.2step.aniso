@@ -12,10 +12,12 @@ RESTART.in		NameRestartFile
 #SAVERESTART
 F                       DoSaveRestart 
 
-#COUPLE2TIGHT
+#COUPLE2
 GM			NameCompMaster
 PC			NameCompSlave
-T                       DoCouple
+-1			DnCouple
+1.28			DtCouple
+
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -112,6 +114,11 @@ g rbody			NamePars
 
 #RESTART
 T			DoRrestart
+
+#TIMESTEPPING
+F			UseSWMFDt
+T			useFixedDt
+1.28			fixedDt
 
 #SAVEIDL
 1

@@ -12,10 +12,12 @@ T			DoSaveRestart
 -1			DnSaveRestart 
 2.56			DtSaveRestart
 
-#COUPLE2TIGHT
+#COUPLE2
 GM			NameCompMaster
 PC			NameCompSlave
-T                       DoCouple
+-1			DnCouple
+1.28			DtCouple
+
 
 #PROGRESS
 1			DnShowProgressShort
@@ -228,6 +230,11 @@ g rbody			NamePars
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP PC ---------------------------------------------------------------
+
+#TIMESTEPPING
+F			UseSWMFDt
+T			useFixedDt
+1.28			fixedDt
 
 #ELECTRON
 -25.0			Charge/mass ratio (qom)
