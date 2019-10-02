@@ -24,7 +24,7 @@ module CON_session
   use CON_time, ONLY: iSession, DoTimeAccurate, &
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax, &
-       IsForcedStop, NameCompCheckKill
+       IsForcedStop, NameCompCheckKill, UseEndTime, save_end_time
   use ModFreq, ONLY: is_time_to
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
   use CON_transfer_data, ONLY: transfer_real
@@ -509,7 +509,10 @@ contains
        call show_progress
 
        ! Save restart files when scheduled
-       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate)) then
+       if(is_time_to(SaveRestart, nStep, tSimulation+DtTiny, DoTimeAccurate))&
+            then
+          if(UseEndTime .and. tSimulation + DtTiny >= tSimulationMax) &
+               call save_end_time
           call save_restart
           IsRestartSaved = .true.
        endif
