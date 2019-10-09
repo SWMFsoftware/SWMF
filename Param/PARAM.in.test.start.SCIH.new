@@ -203,7 +203,7 @@ currentsheet            TypeCriteria
 1.5                     MaxResolution
 
 #GRIDRESOLUTION
-1.5			nLevelArea
+6.0			nLevelArea
 initial			NameArea
 
 #DOAMR
@@ -373,15 +373,15 @@ Level			TypeCriteria
 3			RefineTo
 3			CoarsenTo
 Level +OuterShell	TypeCriteria
-4     			RefineTo
-4			CoarsenTo
+7     			RefineTo
+7			CoarsenTo
 currentsheet		TypeCriteria
 0.5			CoarsenLimit
 0.5			RefineLimit
-4			MaxLevel
+7			MaxLevel
 
 #GRIDLEVEL
-4			nLevelArea
+7			nLevelArea
 initial			NameArea
 
 #THINCURRENTSHEET
@@ -494,28 +494,28 @@ RAW			StringLogfile
 #SAVEPLOT
 4			nPlotFiles
 x=0 VAR idl		StringPlot
-10			DnSavePlot
+1			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z qrad qheat qebyq qparbyq qperpbyq te ti               NameVars
+{MHD} b1x b1y b1z               NameVars
 g rbody                 NamePars
 y=0 VAR idl		StringPlot
-10 			DnSavePlot
+1 			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z qrad qheat qebyq qparbyq qperpbyq te ti               NameVars
+{MHD} b1x b1y b1z                NameVars
 g rbody                 NamePars
 z=0 VAR idl		StringPlot
-10 			DnSavePlot
+1 			DnSavePlot
 -1.		        DtSavePlot
 -1.0			DxSavePlot
-{MHD} b1x b1y b1z qrad qheat qebyq qparbyq qperpbyq te ti               NameVars
+{MHD} b1x b1y b1z               NameVars
 g rbody                 NamePars
 3d VAR idl              StringPlot
-50   			DnSavePlot
+5   			DnSavePlot
 -1.			DtSavePlot
 -1			DxSavePlot
-{MHD} b1x b1y b1z qrad qheat qebyq qparbyq qperpbyq te ti               NameVars
+{MHD} b1x b1y b1z               NameVars
 g rbody                 NamePars
 
 SATELLITE

@@ -205,7 +205,7 @@ currentsheet            TypeCriteria
 1.5                     MaxResolution
 
 #GRIDRESOLUTION
-1.5			nLevelArea
+6.0			nLevelArea
 initial			NameArea
 
 #DOAMR
@@ -532,14 +532,14 @@ F                       UseComp
 
 #DOAMR
 T                       DoAmr
-1                    DnAmr
+2                    DnAmr
 -1.0                    DtAmr
 T                       IsStrictAmr
 
 #END_COMP IH   ----------------------------------------------------------------
 
 #STOP
-2                    MaxIter
+3                    MaxIter
 -1.0                    TimeMax
 
 End session: 2
@@ -572,7 +572,7 @@ F                       UseRhoRatioLimiter
 #END_COMP IH ----------------
 
 #STOP
-4                       MaxIter
+5                       MaxIter
 -1                      TimeMax
 
 End Session: 3
