@@ -159,7 +159,7 @@ sub get_layout{
 	last if /^\#END/ or /^$/;   # Ignore lines after #END or empty line
 
 	# extract layout information from one line in the component map
-	/^([A-Z][A-Z])\s+(\d+)\s+(\d+)\s+(\d+)\s*(\d*)/ or
+	/^([A-Z][A-Z])\s+(\d+)\s+(\d+)\s+(\-?\d+)\s*(\-?\d*)/ or
 	    die "$ERROR incorrect syntax at line $. in $LayoutFile:\n$_";
 
 	die "$ERROR invalid component ID $1 at line $. in $LayoutFile:\n$_"
