@@ -577,40 +577,39 @@ components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
 <command name="COMPONENTMAP" multiple="F" alias="LAYOUT">
-	<parameter name="NameComp" type="strings" min="1" max="5">
-		<part name="COMPONENT" type="string" length="2" required="T"/>
-		<part name="ProcFirst" type="integer" min="0" default="0"
-		      		       		     required="T"/>
-		<part name="ProcLast" type="integer" min="$ProcFirst" 
-		      		      		     required="T"/>
-		<part name="Stride" type="integer" default="1" 
-		      		    		    required="T"/>
-		<part name="nThread" type="integer" default="$Stride"
-		      		     		    required="F"/>
-        </parameter>
+  <parameter name="CompMap" type="strings" min="1" max="5">
+     <part name="NameComp"  type="string"  length="2" required="T"/>
+     <part name="ProcFirst" type="integer" default="0" required="T"/>
+     <part name="ProcLast"  type="integer" default="$ProcFirst" required="T"/>
+     <part name="Stride"    type="integer" default="1"          required="T"/>
+     <part name="nThread"   type="integer" default="$Stride"    required="F"/>
+  </parameter>
 
-ID Proc0 ProcEnd Stride nThread
+
+ID Proc0 ProcEnd Stride nThread TAB SEPARATED comment
 #COMPONENTMAP
 IE    0      0    1         ! IE runs on PE 0
 PW    1     32    4    4    ! PW runs on PEs 1..32 with  4 threads
-GM   33   9999   16   16    ! GM runs on PEs 33... with 16 threads
+GM   33     -1   16   16    ! GM runs on PEs 33... with 16 threads
 
-ID Proc0 ProcEnd Stride nThread
+ID Proc0 ProcEnd Stride nThread  TAB SEPARATED comment
 #LAYOUT
-IM    0      0    1         ! IM runs on PE 0
-IE    0      1    1         ! IE runs on PEs 0 and 1
-GM    2   9999   -2   -2    ! GM runs on PEs 2.. with MaxThread/2 threads
-PC    2   9999   -1   -1    ! PC runs on PEs 2.. with MaxThread threads
+GM    0     -3   -2   -2    ! GM runs on PEs ..nProc-3 with MaxThread/2 threads
+PC    0     -3   -1   -1    ! PC runs on PEs ..nProc-3 with MaxThread threads
+IM   -2     -2    1         ! IM runs on PE  nProc-2
+IE   -2     -1    1         ! IE runs on PEs nProc-2 and nProc-1
 
 The #COMPONENTMAP (or #LAYOUT) command lists the active components and
 their processor layout including the number of OpenMP threads for
-components that can run with OpenMP. To use multithreading,                                                                                                                                                                
-the code needs to be configured with the -openmp flag.
-The list of components should be ended with an empty line.
+components that can run with OpenMP. To use multithreading, the code
+needs to be configured with the -openmp flag.  The list of components
+should be ended with an empty line.
 
 The columns contain the component ID, the index of the first (root)
 processor for the component, the last processor, the stride, and the
 optional number of threads, respectively. Negative values for the
+root and last processor ranks are taken as counting backwards
+from the total number of processors nProc. Negative values for the
 stride and number of threads are interpreted as the maximum number of
 threads (MaxThread is defined by the OMP_NUM_THREADS environment
 variable) divided by the absolute value of Stride or nThread,
