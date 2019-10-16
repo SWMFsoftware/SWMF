@@ -1,5 +1,6 @@
 #!/usr/bin/perl -s
-#  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+#  Copyright (C) 2002 Regents of the University of Michigan, 
+#  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 
 # Read command line options
@@ -9,6 +10,7 @@ my $HelpXmlParam= $H; undef $H;
 my $HelpXml     = $X; undef $X;
 my $LayoutFile  = $l; undef $l;
 my $nProc       = $n; undef $n;
+my $nThread     = ($t or 1); undef $t;
 my $Verbose     = $v; undef $v;
 
 use strict;
@@ -17,7 +19,10 @@ use strict;
 &print_help if $Help;
 
 # The script and the XML file names to check the parameters
-my $CheckParamScript  = 'share/Scripts/CheckParam.pl';
+my $CheckParamScriptOrig  = 'share/Scripts/CheckParam.pl';
+my $CheckParamScript = $CheckParamScriptOrig;
+$CheckParamScript .= " -D" if $Debug;
+
 my $XMLFile           = 'PARAM.XML';
 my $ConfigPl           = 'Config.pl';
 
@@ -34,29 +39,12 @@ my $IsError;
 
 # Set default values
 my $ParamFileDefault  = 'run/PARAM.in';
-my $LayoutFileDefault = 'run/LAYOUT.in';
 
 # Get the name of the PARAM file 
 my $ParamFile = ($ARGV[0] or $ParamFileDefault);
 die "$ERROR could not find $ParamFile\n" unless -f $ParamFile;
 
-# Try to guess the name of the LAYOUT file if not given
-if(not $LayoutFile){
-    if($ParamFile =~ /PARAM/){
-	$LayoutFile = $ParamFile;
-	# Replace PARAM with LAYOUT
-	$LayoutFile =~ s/PARAM/LAYOUT/;
-	# Replace .expand with .in
-	$LayoutFile =~ s/\.expand/.in/;
-	# Delete .bak
-	$LayoutFile =~ s/\.bak//;
-	# If the LAYOUT file based on the PARAM file name is not found 
-	# try the default
-	$LayoutFile = $ParamFile if not -f $LayoutFile;
-    }else{
-	$LayoutFile = $LayoutFileDefault;
-    }
-}
+$LayoutFile = $ParamFile if not $LayoutFile;
 
 warn "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
 
@@ -78,8 +66,8 @@ if(-f $LayoutFile){
 }
 
 # Check parameters against the XML descriptions
-die "$ERROR could not find executable $CheckParamScript\n"
-    unless -x $CheckParamScript;
+die "$ERROR could not find executable $CheckParamScriptOrig\n"
+    unless -x $CheckParamScriptOrig;
 
 # Check CON parameters
 my $Registered = join(',',sort keys %Layout);
@@ -153,31 +141,39 @@ sub get_layout{
     my $start;
     while(<LAYOUT>){
 
-	if(/^\#COMPONENTMAP/){$start=1; next}
+	if(/^\#(COMPONENTMAP|LAYOUT)/){$start=1; next}
 
 	next unless $start; # Skip lines before #COMPONENTMAP
 	last if /^\#END/ or /^$/;   # Ignore lines after #END or empty line
 
 	# extract layout information from one line in the component map
-	/^([A-Z][A-Z])\s+(\d+)\s+(\d+)\s+(\-?\d+)\s*(\-?\d*)/ or
+	/^([A-Z][A-Z])\s+(\-?\d+)\s+(\-?\d+)\s+(\-?\d+)\s*(\-?\d*)/ or
 	    die "$ERROR incorrect syntax at line $. in $LayoutFile:\n$_";
 
-	die "$ERROR invalid component ID $1 at line $. in $LayoutFile:\n$_"
-	    unless $Version{$1};
+	my $id       = $1;
+	my $proc0    = $2;
+	my $proclast = $3;
+	my $stride   = ($4 or 1);
+	my $thread   = ($5 or 1);
 
-	die "$ERROR $1 component has Empty version ".
+	# Evaluate negative values
+	$proc0    += $nProc if $proc0 < 0;    $proc0    = 0 if $proc0    < 0;
+	$proclast += $nProc if $proclast < 0; $proclast = 0 if $proclast < 0;
+	$stride    = $nThread/abs($stride) if $stride < 0;
+	$thread    = $nThread/abs($thread) if $thread < 0;
+	
+	die "$ERROR invalid component ID $id at line $. in $LayoutFile:\n$_"
+	    unless $Version{$id};
+
+	die "$ERROR $id component has Empty version ".
 	    "at line $. in $LayoutFile:\n$_"
-	    if $Version{$1} eq 'Empty';
+	    if $Version{$id} eq 'Empty';
 
-        die "$ERROR root PE rank=$3 should not exceed last PE rank=$2\n".
-	    "\tat line $. in $LayoutFile:\n$_"
-	    if $2 > $3;
+        die "$ERROR root PE rank=$proc0 should not exceed last PE rank=".
+	    "$proclast\n\tat line $. in $LayoutFile:\n$_"
+	    if $proc0 > $proclast;
 
-        if($5){
-	   $Layout{$1}="$2,$3,$4,$5";
-        }else{
-	    $Layout{$1}="$2,$3,$4,1";
-	}
+	$Layout{$1}="$proc0,$proclast,$stride,$thread";
     }
     close(LAYOUT);
     die "$ERROR #COMPONENTMAP was not found in $LayoutFile\n" unless $start;
@@ -251,7 +247,7 @@ sub print_help{
 Usage:
 
   Scripts/TestParam.pl [-h] [-H] [-X] [-v]
-                       [-l=LAYOUTFILE] [-n=NPROC] [PARAMFILE]
+                       [-l=LAYOUTFILE] [-n=NPROC] [-t=NTHREAD] [PARAMFILE]
 
   -h            print help message and stop
 
@@ -261,14 +257,11 @@ Usage:
 
   -v            print verbose information
 
-  -l=LAYOUTFILE obtain layout from LAYOUTFILE. 
-                Default name of the LAYTOUFILE is obtained from the name
-                of the PARAMFILE: 
-                'PARAM' is replaced with 'LAYOUT' and '.expand' with '.in' 
-                and if that file is not found, run/LAYOUT.in is used 
-                if it exists
+  -l=LAYOUTFILE obtain layout from LAYOUTFILE instead of PARAM.in or LAYOUT.in
 
   -n=NPROC      assume that SWMF will run on NPROC processors
+
+  -t=NTHREAD    assume that SWMF will run with NTHREAD maximum OpenMP threads
 
   PARAMFILE     check parameters in PARAMFILE. Default value is 'run/PARAM.in'
 
@@ -279,9 +272,9 @@ Examples:
 
 Scripts/TestParam.pl
 
-  Check another parameter and layout file for a 16 processor execution:
+  Check another parameter file for a 16-processor and 8-thread execution:
 
-Scripts/TestParam.pl -n=16 run/test.000/PARAM.expand"
+Scripts/TestParam.pl -n=16 -t=8 run/test.000/PARAM.expand"
 #EOC
     ,"\n\n";
     exit 0;
