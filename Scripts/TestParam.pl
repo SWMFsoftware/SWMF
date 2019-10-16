@@ -257,7 +257,7 @@ Usage:
 
   -v            print verbose information
 
-  -l=LAYOUTFILE obtain layout from LAYOUTFILE instead of PARAM.in or LAYOUT.in
+  -l=LAYOUTFILE obtain layout from LAYOUTFILE instead of PARAM.in
 
   -n=NPROC      assume that SWMF will run on NPROC processors
 
