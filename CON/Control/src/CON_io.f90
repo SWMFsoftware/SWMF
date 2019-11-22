@@ -153,11 +153,11 @@ contains
     integer :: iUnitOut
 
     ! Names, indexes and logicals for components
-    integer :: lComp, iComp, iComp1, iComp2, nName, iCouple
+    integer :: lComp, iComp, iComp1, iComp2, nName, iCouple, iError
     logical :: UseComp
     character (len=lNameComp) :: NameComp, NameComp1, NameComp2
     character (len=lNameComp) :: NameSourceTarget_I(2)
-    character (len=lStringLine) :: NameSourceTarget
+    character (len=lStringLine) :: NameSourceTarget, StringLayout
     !-------------------------------------------------------------------------
     if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
 
@@ -601,8 +601,11 @@ contains
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
        case("#COMPONENTMAP", "#LAYOUT")
-          ! This is already done in CON_WORLD
-          continue
+          ! This is already done in CON_WORLD. Hear we just echo back.
+          do
+             call read_in(StringLayout, iError, DoReadWholeLine=.true.)
+             if(StringLayout == '' .or. iError /= 0) EXIT
+          end do
        case default
           if(is_proc0()) write(*,*) NameSub,' ERROR: Invalid command ',&
                trim(NameCommand),' at line',iLine,' in PARAM.in'
