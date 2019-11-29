@@ -8,6 +8,12 @@ $^I = "";
 
 use strict;
 
+# Include current dir perl modules
+# Needed for perl5 change of not including current dir
+use Cwd qw( abs_path );
+use File::Basename qw( dirname );
+use lib dirname(abs_path($0));
+
 # Run the shared Config.pl script first
 our $Component       = '';
 our $Code            = 'SWMF';
