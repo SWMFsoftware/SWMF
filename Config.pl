@@ -26,7 +26,6 @@ my %component = (
     "BATSRUS"       => "GM", 
     "Ridley_serial" => "IE", 
     "CIMI"          => "IM", 
-    "CRCM"          => "IM", 
     "HEIDI"         => "IM", 
     "RCM2"          => "IM", 
     "ALTOR"         => "PC", 
