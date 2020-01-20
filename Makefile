@@ -111,15 +111,6 @@ ENV_CHECK:
 	  exit 1; \
 	fi);
 
-#
-# JOB SUBMISSION SCRIPTS TO COPY TO RUN
-#
-# The MACHINE variable holds the machine name for which scripts should
-# be copied from share/JobScripts to the run directory when it is created. 
-# The default is the short name of the current machine with the trailing
-# 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
-# If the name starts with "login\d*.", it is removed. 
-MACHINE = `hostname | perl -pe 's/^login\d*\.//; s/\..*//; s/\d+$$//'`
 
 #
 # install for the 1st time
