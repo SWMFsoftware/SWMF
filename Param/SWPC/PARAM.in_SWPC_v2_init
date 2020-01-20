@@ -352,7 +352,7 @@ GM			NameComp
 F			DoCoupleOnTime
 
 #UPDATEB0
-5.0			DtUpdateB0
+0.5			DtUpdateB0
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
