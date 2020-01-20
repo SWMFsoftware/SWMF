@@ -35,7 +35,6 @@ test_help:
 	@echo "    test3                      (run GM-IE-CIMI test)"
 	@echo "    test4                      (run GM-IE-HEIDI test)"
 	@echo "    test5                      (run EE-SC test)"
-	@echo "    test6                      (run GM-IE-CRCM test)"
 	@echo "    test7                      (run IH-OH test)"
 	@echo "    test8                      (run Thread SC-IH coupling test)"
 	@echo "    test9                      (run SC-IH coupling test with SC restart)"
@@ -67,7 +66,6 @@ test:
 	-@(${MAKE} test3)
 	-@(${MAKE} test4)
 	-@(${MAKE} test5)
-	-@(${MAKE} test6)
 	-@(${MAKE} test7)
 	-@(${MAKE} test8)
 	-@(${MAKE} test9)
@@ -527,7 +525,7 @@ BUILD=SWPC_build
 test_swpc_build:
 	rm -rf ${BUILD}
 	Scripts/Configure.pl -d=${BUILD}
-	cd ${BUILD}; rm -rf IM/HEIDI IM/CRCM IE/RIM util/HYPRE
+	cd ${BUILD}; rm -rf IM/HEIDI IM/CIMI IE/RIM util/HYPRE
 	cd ${BUILD}; ./Config.pl -install \
 	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd ${BUILD}; make test_swpc
@@ -835,7 +833,7 @@ test_swpc_cimi_check:
 test_swpc_amps_build:
 	rm -rf ${BUILD}
 	Scripts/Configure.pl -d=${BUILD} -on=PT
-	cd ${BUILD}; rm -rf IM/HEIDI IM/CRCM IE/RIM util/HYPRE
+	cd ${BUILD}; rm -rf IM/HEIDI IM/CIMI IE/RIM util/HYPRE
 	cd ${BUILD}; ./Config.pl -install \
 	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd ${BUILD}; make test_swpc_amps
@@ -1108,76 +1106,6 @@ test5_update:
 	cp -f ${TESTDIR}/RESULTS/coupled/SC/log_n000070.log \
 		output/test5/SC.log 
 	${MAKE} test5_check
-
-### Test6: GM+IE+IM=CRCM ###
-
-test6:
-	@echo "test6_compile..." > test6_gm.diff
-	@echo "test6_compile..." > test6_ie.diff
-	@echo "test6_compile..." > test6_im_crcm.diff
-	${MAKE} test6_compile
-	@echo "test6_rundir..." >> test6_gm.diff
-	@echo "test6_rundir..." >> test6_ie.diff
-	@echo "test6_rundir..." >> test6_im_crcm.diff
-	${MAKE} test6_rundir
-	@echo "test6_run..." >> test6_gm.diff
-	@echo "test6_run..." >> test6_ie.diff
-	@echo "test6_run..." >> test6_im_crcm.diff
-	${MAKE} test6_run
-	@echo "test6_restart..." >> test6_gm.diff
-	@echo "test6_restart..." >> test6_ie.diff
-	@echo "test6_restart..." >> test6_im_crcm.diff
-	${MAKE} test6_restart
-	@echo "test6_check..." >> test6_gm.diff
-	@echo "test6_check..." >> test6_ie.diff
-	@echo "test6_check..." >> test6_im_crcm.diff
-	${MAKE} test6_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test6_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CRCM
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2,IM:EarthHO
-	${MAKE} SWMF
-	make PIDL
-
-test6_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.GMIEIMCRCM ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEIMCRCM ${TESTDIR}/LAYOUT.in
-
-test6_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
-test6_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIMCRCM PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
-
-# check last snapshot from CRCM output
-test6_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test6/GM.log \
-		> test6_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE*.log \
-		output/test6/IE.log \
-		> test6_ie.diff)
-	tail -2504 ${TESTDIR}/RESULTS/IM/CRCMeq.outs \
-		> ${TESTDIR}/RESULTS/IM/CRCMeq.out
-	gunzip -c output/test6/IM_eq.out.gz \
-		> ${TESTDIR}/RESULTS/IM/CRCMeq_ref.out
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/CRCMeq.out \
-		${TESTDIR}/RESULTS/IM/CRCMeq_ref.out \
-		> test6_im_crcm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IM/CRCM.log \
-		output/test6/IM.log \
-		> test6_im_crcm_log.diff)
-	ls -l test6_*.diff
 
 ### test7: IH+OH test ###
 
@@ -1948,6 +1876,7 @@ test_ramscb_check:
 
 test12:
 	-$(MAKE) test12_aniso_AMPS
+	-$(MAKE) test12_aniso_AMPS_divE_corr
 	-$(MAKE) test12_aniso_AMPS_dynamic
 	-$(MAKE) test12_aniso_AMPS_openmp
 	./Config.pl -noopenmp -o=PC:openmp=off
@@ -2007,6 +1936,43 @@ test12_aniso_AMPS_check:
 
 #########################################################
 
+test12_aniso_AMPS_divE_corr:
+	@echo "test12_aniso_AMPS_divE_corr_compile..." > test12_aniso_AMPS_divE_corr_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_divE_corr_compile
+	@echo "test12_aniso_AMPS_divE_corr_rundir..." > test12_aniso_AMPS_divE_corr_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_divE_corr_rundir
+	@echo "test12_aniso_AMPS_divE_corr_run..." > test12_aniso_AMPS_divE_corr_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_divE_corr_run
+	@echo "test12_aniso_AMPS_divE_corr_check..." > test12_aniso_AMPS_divE_corr_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_divE_corr_check
+	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
+
+test12_aniso_AMPS_divE_corr_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
+	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler-with-correction,amps-test=on 
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+	
+test12_aniso_AMPS_divE_corr_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	cp Param/PARAM.in.test.GMPC.aniso.AMPS.corr  ${TESTDIR}/PARAM.in
+
+test12_aniso_AMPS_divE_corr_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/5step_corr
+
+test12_aniso_AMPS_divE_corr_check:
+	gunzip -c output/test12/3d_aniso_divE.out.gz \
+	       > ${TESTDIR}/RESULTS/3d_aniso_divE.ref
+	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+		${TESTDIR}/RESULTS/5step_corr/PC/3d_fluid_region0_0_t00000005_n00000005.out \
+		${TESTDIR}/RESULTS/3d_aniso_divE.ref \
+		> test12_aniso_AMPS_divE_corr_gmpc.diff)
+	ls -l test12_aniso_AMPS_divE_corr_gmpc.diff
+
+#########################################################
 
 test12_aniso_AMPS_openmp:
 	@echo "test12_aniso_AMPS_openmp_compile..." > test12_aniso_AMPS_openmp_gmpc.diff

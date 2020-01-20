@@ -1,4 +1,5 @@
-%  Copyright (C) 2002 Regents of the University of Michigan, portions used with permission 
+%  Copyright (C) 2002 Regents of the University of Michigan,
+%  portions used with permission 
 %  For more information, see http://csem.engin.umich.edu/tools/swmf
 \documentclass{article}
 \title{Software Development Standards for CSEM and CRASH}
@@ -187,8 +188,8 @@ but the implementation should be motivated by current needs.
 
 \section{Version control}
 
-We use version control software, in particular the 
-Concurrent Version control System (CVS), to 
+We use version control software, originally the
+Concurrent Version control System (CVS), currently Git, to 
 \begin{itemize}
 \item store previous versions of the source code
 \item document code changes
@@ -200,21 +201,21 @@ Multiple branches result in bugs that are fixed in one version, but not the
 other, features that exist in one version, but not the others, and mergers
 that can be extremely time consuming and frustrating.
 
-\subsection{Committing changes into CVS}
+\subsection{Committing changes into Git}
 
 Having a single version means that the developers have responsibility to 
 keep this version usable for other developers and users of the code. This
 means that changes that may affect other people have to be tested before
-committed to the CVS repository. New features that are not yet used by others
+committed to the Git repository. New features that are not yet used by others
 may be committed in untested/non-functional state as long as they do not 
 interfere with other code.
 
 If there is a substantial change in the source code, the code must be 
 tagged before the changes are made. For example
 \begin{verbatim}
-cvs tag BEFORE_CHANGE_26Sept2008
-cvs commit ...
-cvs tag AFTER_CHANGE_26Sept2008
+git tag BEFORE_CHANGE_26Sept2008
+git commit ...
+git tag AFTER_CHANGE_26Sept2008
 \end{verbatim}
 This allows users to use the previous version in case the new version has
 problems, it also allows reproducing earlier results if the new version is
@@ -230,7 +231,7 @@ CON/Control/src/CON_variables.f90
 \end{verbatim}
 The current value is
 \begin{verbatim}
-  real, parameter :: VersionSwmf = 2.3
+  real, parameter:: VersionSwmf = 2.3
 \end{verbatim}
 There are similar version numbers in the components, user modules, etc.
 For example the MHD code BATS-R-US has its version number defined in
@@ -239,40 +240,38 @@ GM/BATSRUS/src/ModMain.f90
 \end{verbatim}
 and the current value is
 \begin{verbatim}
-  real, parameter :: CodeVersion = 8.01
+  real, parameter:: CodeVersion = 8.01
 \end{verbatim}
 The version number is written to the standard output when the code is 
 running and it may also be stored in restart files. This helps to 
 ensure that the version of the code is known for any particular run
 and restart files are only used with a consistent version of the code.
 
-\subsection{Documenting code changes in CVS}
+\subsection{Documenting code changes in Git}
 
 Each and every commitment must be accompanied with a short but descriptive 
 log message. Multiple files can be committed together only when the changes
-are similar in all the files. When multiple files are committed, the list of
-files should be part of the log message (simply remove the CVS: strings
-from the beginning of the lines listing the files).
+are similar in all the files.
 
-\subsection{Merging code changes with CVS}
+\subsection{Merging code changes with Git}
 
 When a developer attempts to commit a file that has been modified by others
-since the version the developer has started from, CVS will not allow the file
+since the version the developer has started from, Git will not allow the file
 to be committed. It will report a conflict. In this case the developer should 
 \begin{itemize}
 \item move (or copy) his/her version of the file
-\item update (or merge) the file from the HEAD version
+\item update (or merge) the file from the HEAD version (git pull)
 \item check and reconcile the differences between his/her code and 
       the updated (merged) version
 \item check that the merged file still compiles and works correctly
 \item commit the merged file
 \end{itemize}
-Note that CVS does a reasonable job of merging file versions as long as there
+Note that Git does a reasonable job of merging file versions as long as there
 is no overlap in the modified lines. If there is overlap, the result will be
 rather messy, and it is better to do the merge by hand using tools like 
 tkdiff or xdiff.
 
-\subsection{Testing the HEAD version of CVS}
+\subsection{Testing the HEAD version of Git}
 
 %\begin{figure}
 %  \centerline{\epsfig{file=platform_table.eps, width=10.0cm,
@@ -361,7 +360,7 @@ This requires a careful planning of the functionality test suite.
 
 The {\bf input files (if any) and the reference solution must be small 
 ($<1$ Mbyte) ASCII files} so they are platform independent and can be 
-easily stored in CVS.
+easily stored in Git.
 The reference solution typically contains some average values for each
 state variable at each time step, so any change at any grid point at
 any time step creates a difference, but the reference solution can 
@@ -370,7 +369,7 @@ still be stored in a small ASCII file.
 The extended/modified test suite runs nightly on several platforms and 
 compilers. Each machine checks out the latest version of the code, 
 installs, configures, compiles and runs the tests, and compares with
-the reference solutions (also saved into CVS).
+the reference solutions (also saved into Git).
 This procedure guarantees portability of the code and 
 platform independence of the solution. It also verifies
 that new development does not introduce unintended changes in the 
@@ -412,7 +411,7 @@ make test
 \end{verbatim}
 executes all the tests, and
 \begin{verbatim}
-make test MPIRUN='mpirun -np 4'
+make test NP=4
 \end{verbatim}
 executes the parallel tests on 4 processors. Typing
 \begin{verbatim}
@@ -500,12 +499,12 @@ module ModLinearSolver
 
   private ! except
 
-  public :: linear_gmres    ! GMRES iterative solver
-  public :: linear_bicgstab ! BiCGSTAB iterative solver
-  public :: linear_block_lu ! LU preconditioner for up to hepta block-diagonal 
-  public :: linear_upper    ! multiply with upper block triangular matrix
-  public :: linear_lower    ! multiply with lower block triangular matrix
-  public :: test_linear_solver
+  public:: linear_gmres    ! GMRES iterative solver
+  public:: linear_bicgstab ! BiCGSTAB iterative solver
+  public:: linear_block_lu ! LU preconditioner for up to hepta block-diagonal 
+  public:: linear_upper    ! multiply with upper block triangular matrix
+  public:: linear_lower    ! multiply with lower block triangular matrix
+  public:: test_linear_solver
 \end{verbatim}
 This particular module does not have any public variables, but it could.
 Next comes the declaration of local (private) variables and then the 
@@ -563,7 +562,7 @@ coordinates to Cartesian coordinates. The coordinates can be given as
 3 element arrays, or 3 scalars. Instead of defining 4 different public methods
 one can define a single generic method with 4 different argument lists:
 \begin{verbatim}
-  public :: sph_to_xyz     ! convert spherical into Cartesian coordinates
+  public:: sph_to_xyz     ! convert spherical into Cartesian coordinates
   interface sph_to_xyz
      module procedure sph_to_xyz11, sph_to_xyz13, sph_to_xyz31, sph_to_xyz33
   end interface
@@ -640,10 +639,10 @@ the return value array or string depends on the input arguments.
 For example
 \begin{verbatim}
 function add_vector(n, a, b)
-  integer, intent(in) :: n
-  real,    intent(in) :: a(n)
-  real,    intent(in) :: b(n)
-  real, dimension(n)  :: add_vector
+  integer, intent(in):: n
+  real,    intent(in):: a(n)
+  real,    intent(in):: b(n)
+  real, dimension(n) :: add_vector
 \end{verbatim}
 can be replaced with
 \begin{verbatim}
@@ -690,23 +689,23 @@ are used in the most calculation intensive parts of the code.
 For example
 \begin{verbatim}
 type MatrixType
-  integer :: nRow
-  integer :: nColumn
-  type(RowType), allocatable :: Row(:)
+  integer:: nRow
+  integer:: nColumn
+  type(RowType), allocatable:: Row(:)
 end type MatrixType
 \end{verbatim}
 is a really elegant data structure, but performing operations on this
 matrix will be far from optimal. Fortran already has arrays defined,
 so dense matrices can be represented by a simple allocatable array::
 \begin{verbatim}
-  integer :: nRow, nColumn
-  real, allocatable :: Matrix_II(:,:)
+  integer:: nRow, nColumn
+  real, allocatable:: Matrix_II(:,:)
 \end{verbatim}
 Operations on this matrix are likely to be much better optimized. 
 An alternative is to use a pointer
 \begin{verbatim}
-  integer :: nRow, nColumn
-  real, pointer :: Matrix_II(:,:)
+  integer:: nRow, nColumn
+  real, pointer:: Matrix_II(:,:)
 \end{verbatim}
 Both allocatable arrays and pointers can be allocated and deallocated.
 Pointers can be allocated multiple times, which can be useful to create
@@ -715,9 +714,9 @@ instance is needed. In this case the allocatable array is preferred,
 because one can check if the array is allocated or not. A typical
 statement is
 \begin{verbatim}
-   if(.not. allocated(Matrix_II)) allocate(Matrix_II(nColumn, nRow))
+   if(.not. allocated(Matrix_II)) allocate(Matrix_II(nColumn,nRow))
 \end{verbatim}
-The status of pointers is undefined, and one has to initialize them.
+The initial status of uninitialized pointers is undefined.
 Trying to use the {\tt associated} function on an unitialized pointer
 results in a run time error. For this reason the use of allocatable
 arrays is preferred if only a single array is needed.
@@ -725,8 +724,8 @@ arrays is preferred if only a single array is needed.
 If the size of the matrix is known in advance, a static declaration
 may be even better for performance:
 \begin{verbatim}
-  integer, parameter :: nColumn=30, nRow=100
-  real               :: Matrix_II(nColumn, nRow)
+  integer, parameter:: nColumn=30, nRow=100
+  real              :: Matrix_II(nColumn,nRow)
 \end{verbatim}
 On the other hand {\bf large arrays should not be declared with a static 
 allocation}. They use up memory even if that part of the code is not
@@ -740,36 +739,36 @@ or they can be allocated in an initialization subroutine of a module:
 module ModAdvance
 
   use ModEquation, only: nVar
-  use ModGridSize, only: nI, nJ, nK, MaxBlock
-  real, allocatable :: State_VGB(:,:,:,:,:)
+  use BALT_lib, only: MinI, MaxI, MinJ, MaxJ, MinK, MaxK, MaxBlock
+  real, allocatable:: State_VGB(:,:,:,:,:)
 
 contains
   !========================================================================
   subroutine init_mod_advance
 
-     allocate(State_VGB(nVar, -1:nI+2, -1:nJ+2, -1:nK+2, MaxBlock))
+     allocate(State_VGB(nVar,MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock))
 \end{verbatim}
 Another appealing use of derived type is to collect information of
 similar type but different meaning into one variable, for example
 \begin{verbatim}
   type StateType
-    real :: Rho                  ! mass density
-    real :: RhoUx, RhoUy, RhoUz  ! momentum density
-    real :: e                    ! energy density
+    real:: Rho                  ! mass density
+    real:: RhoUx, RhoUy, RhoUz  ! momentum density
+    real:: e                    ! energy density
   end type StateType
-  type(StateType) :: State_GB(-1:nI+2, -1:nJ+2, -1:nK+2, MaxBlock)
+  type(StateType):: State_GB(MinI:MaxI,MinJ:MaxJ,MinK:MaxK,MaxBlock)
 \end{verbatim}
 An alternative way of representing the
 same data is with the use of named indexes (see section~\ref{sec:named}):
 \begin{verbatim}
-  integer, parameter :: Rho_=1, RhoUx_=2, RhoUy_=3, RhoUz_=4, e_=5
+  integer, parameter:: Rho_=1, RhoUx_=2, RhoUy_=3, RhoUz_=4, e_=5
 \end{verbatim}
 While the derived type allows combination of different types, 
 the array allows the use of loops and array syntax. Both approaches
 result in readable code, e.g.
 \begin{verbatim}
-  State_GB(i, j, k, iBlock) % Rho  = 0.0
-  State_VGB(Rho_, i, j, k, iBlock) = 0.0
+  State_GB(i,j,k,iBlock) % Rho = 0.0
+  State_VGB(Rho_,i,j,k,iBlock) = 0.0
 \end{verbatim}
 but the array with named indexes is often easier to use, and is likely
 to produce more efficient code (if efficiency matters for this data).
@@ -831,9 +830,9 @@ subroutine user_set_parameters
    ! Read parameters for the Kelvin-Helmholtz instability
    implicit none
 
-   real :: Velocity0      ! the shear velocity far from the shear layer
-   real :: Width          ! the width of the layer in the Y direction
-   real :: Perturbation   ! the perturbation in the Y component of velocity
+   real:: Velocity0      ! the shear velocity far from the shear layer
+   real:: Width          ! the width of the layer in the Y direction
+   real:: Perturbation   ! the perturbation in the Y component of velocity
 
 \end{verbatim}
 Note that the comments convey information that is not obvious from the 
@@ -848,7 +847,7 @@ using this utility forces the developers to describe the purpose of
 subroutines and functions, the meaning of input and output arguments, 
 list explicitly the public methods and data. On the other hand the use of
 Protex does not guarantee that the source code is well documented. 
-Ultimately it is the developers responsibility to produce a readable, 
+Ultimately it is the developer's responsibility to produce a readable, 
 maintainable, well documented source code.
 
 \section{Guidelines for formatting source code}
@@ -888,7 +887,7 @@ these in future development.
       commas, single or double colons, semi-colons should be followed
       by a single space. Exception: indexes of multi-dimensional arrays
       may be separated by commas without a blank so that the array
-      element remains more compact, e.g. $a_II(1,2) = 3.0$
+      element remains more compact, e.g. $a\_II(1,2) = 3.0$
 \item The $=$ sign, the $+$ and $-$ and the logical operators
       $==$, $/=$, $>$, $<$, $>=$, $<=$ should be surrounded
       by spaces on both sides. Exceptions: the named arguments of a function
@@ -1117,17 +1116,17 @@ English (e.g. nBlock), but the source code is not written English.
 Not having to remember if a particular data name is in singular 
 or plural form is more important than to (sometimes) follow English grammar.
 
-The choics of variable type is also important. As a basic rule:
+The choice of variable type is also important. As a basic rule:
 {\bf numbers should be denoted by numbers, logical values by logical variables,
 and everything else with strings or derived types.}
 Sounds logical, still one can find a lot of examples to the contrary.
 Examples for bad choice for data types:
 \begin{verbatim}
-integer :: iMethods       ! 1 = Roe scheme, 2 = HLL scheme, 3 = Lax-Friedricsh
-integer :: Done           ! 0 = no, 1 = yes
-real    :: cTen           ! = 10.0
-logical :: FirstOrder     ! .true. = first order, .false. = second order
-character(len=4) :: VersionNumber = "8.01"
+integer:: iMethods       ! 1 = Roe scheme, 2 = HLL scheme, 3 = Lax-Friedricsh
+integer:: Done           ! 0 = no, 1 = yes
+real   :: cTen           ! = 10.0
+logical:: FirstOrder     ! .true. = first order, .false. = second order
+character(len=4):: VersionNumber = "8.01"
 \end{verbatim}
 The name of a methods should not be encripted into numbers. One could
 potentially introduce named constants, like {\tt Roe\_=1}, {\tt Hll\_=2} etc,
@@ -1145,8 +1144,9 @@ using a simple number. This may even lead people to write 20 as
 
 Using a logical to select between two possibilities
 is a good idea only if there will never be more than two possibilities.
-It is quite possible that one day we introduce a third or fourth order
-method. At that point the logical {\tt FirstOrder} variable won't be 
+It is quite possible that one day we introduce a third, fourth or fifth order
+method (and in fact, we did).
+At that point the logical {\tt FirstOrder} variable won't be 
 very practical. A better choice is to use an integer. 
 
 Using a character string to store the version number is a good idea,
@@ -1159,11 +1159,11 @@ to an earlier way of reading the restart file.
 
 Here is the above list with a good choice of data types:
 \begin{verbatim}
-character(len=20) :: TypeMethod ! = "Roe", "HLL" or "LF"
-logical           :: Done       ! true or false
-integer           :: nOrder     ! 1 = first order, 2 = second order
-real, parameter   :: VersionNumber = 8.01
-real, parameter   :: cPi = 3.1415926535897932
+character(len=20):: TypeMethod ! = "Roe", "HLL" or "LF"
+logical          :: Done       ! true or false
+integer          :: nOrder     ! 1 = first order, 2 = second order
+real, parameter  :: VersionNumber = 8.01
+real, parameter  :: cPi = 3.1415926535897932
 \end{verbatim}
 An important note about precision of real numbers: we declare
 most real numbers as {\tt real} and set the precision of the
@@ -1205,7 +1205,7 @@ platform to platform.
 % reals at compile time. The MPI library has to know if it is message
 % passing 4 or 8 byte reals. To make this work, we define 
 % \begin{verbatim}
-%   integer, parameter :: iRealPrec = (1.00000000011 - 1.0)*10000000000.0
+%   integer, parameter:: iRealPrec = (1.00000000011 - 1.0)*10000000000.0
 % \end{verbatim}
 % in {\tt share/Library/src/ModMpiConstants.f90} and we slightly modified
 % the MPI header files to change the definition of MPI_REAL, for example:
@@ -1283,20 +1283,21 @@ the appropriate component ID to the names.
 \begin{center}
 \begin{tabular}{ll}
 CON & Control module of the SWMF\\
+CZ &  Convection Zone \\
 EE &  Eruptive Events \\
 GM &  Global Magnetosphere \\
 IE &  Ionosphere Electrodynamics \\
 IH &  Inner Heliosphere \\
 IM &  Inner Magnetosphere \\
-LA &  Lower atmosphere \\
 MH &  Generic MHD component\\
 OH &  Outer Heliosphere \\
+PC &  Particle-in-Cell \\
 PS &  Plasmasphere \\
+PT &  Particle Tracker \\
 PW &  Polar Wind \\
 RB &  Radiation Belt \\
-RT &  Radiation Transfer \\
-SP &  Solar energetic Particles \\
 SC &  Solar Corona \\
+SP &  Solar energetic Particles \\
 UA &  Upper atmosphere
 \end{tabular}
 \end{center}
@@ -1568,7 +1569,7 @@ C    & {\tt 1:MaxComp}                 &  components of the SWMF \\
 D    & {\tt 1:nDim}                    &  dimensions (of the grid) \\
 E    & {\tt 1:2*nDim}                  &  edges (of a block) \\
 F    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  faces (of cells) \\
-G    & {\tt -1:nI+2,-1:nJ+2,-1:nK+2}   &  cell centers including ghost cells \\
+G & {\tt MinI:MaxI,MinJ:MaxJ,MinK:MaxK} & cell centers including ghost cells \\
 I    & {\tt ?:?}                       &  general index (none of the others) \\
 N    & {\tt 1:nI+1,1:nJ+1,1:nK+1}      &  nodes (of grid cells) \\
 P    & {\tt 1:nProc}                   &  processors \\
@@ -1630,10 +1631,10 @@ p_        8       pressure index
 Examples of use:
 \begin{verbatim}
   ! extract state of a grid cell
-  State_V = State_VGB(:, i, j, k, iBlock)
+  State_V = State_VGB(:,i,j,k,iBlock)
 
   ! Assign density flux of the X face
-  Flux_XV(iFace, j, k, Rho_) = State_V(RhoUx_)
+  Flux_XV(iFace,j,k,Rho_) = State_V(RhoUx_)
 \end{verbatim}
 
 \subsubsection{Real type constants}
@@ -1646,12 +1647,12 @@ share/Library/src/ModNumConst.f90
 \end{verbatim}
 module. Some examples
 \begin{verbatim}
-real, parameter :: cPi              = 3.1415926535897932
-real, parameter :: cTwoPi           = 2*cPi
-real, parameter :: cRadToDeg        = 180/cPi
-real, parameter :: cDegToRad        = cPi/180
-real, parameter :: cElectronCharge  = 1.6022E-19
-real, parameter :: cProtonMass      = 1.6726E-27
+real, parameter:: cPi              = 3.1415926535897932
+real, parameter:: cTwoPi           = 2*cPi
+real, parameter:: cRadToDeg        = 180/cPi
+real, parameter:: cDegToRad        = cPi/180
+real, parameter:: cElectronCharge  = 1.6022E-19
+real, parameter:: cProtonMass      = 1.6726E-27
 \end{verbatim}
 
 \subsubsection{Pointer variable names}
