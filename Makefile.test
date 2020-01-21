@@ -46,8 +46,9 @@ test_help:
 	@echo "    test14                     (run OH-PT test)"
 	@echo "    test15                     (run SC-IH-SP test)"
 	@echo "    test15_build               (configure SC-IH-SP, run test)"
-	@echo "    test_pic                   (run GM-IPIC3D test)"
-	@echo "    test_pic2                  (run GM-PC test)"
+	@echo "    test16                     (run GM-FLEKS test: FLEKS uses periodic boundary condition)"	
+	@echo "    test17                     (run GM-FLEKS test: 2D Alfven wave)"
+	@echo "    test18                     (run GM-FLEKS test: 3D reconnection)"		
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 test:
@@ -75,6 +76,9 @@ test:
 	-@(${MAKE} test13)
 	-@(${MAKE} test14)
 	-@(${MAKE} test15)
+	-@(${MAKE} test16)
+	-@(${MAKE} test17)
+	-@(${MAKE} test18)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
