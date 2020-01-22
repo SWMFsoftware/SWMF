@@ -3,7 +3,7 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 SEARCH_EXTRA = -I${COUPLERDIR} -I${LIBRARYDIR} -I../src
 
