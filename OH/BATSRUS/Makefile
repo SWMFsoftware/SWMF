@@ -42,7 +42,6 @@ distclean:
 
 allclean:
 	@(if([ -f Makefile.def ]); then \
-		touch srcInterface/Makefile.DEPEND; \
 		cd srcInterface; make distclean; \
 	fi)
 	rm -rf src srcBATL srcUser srcEquation \
