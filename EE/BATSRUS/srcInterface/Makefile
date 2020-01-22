@@ -5,8 +5,6 @@ include ../../../Makefile.def
 include ../../../Makefile.conf
 -include Makefile.DEPEND
 
-
-
 OBJECTS = \
 	EE_wrapper.o \
 	ModBuffer.o \
@@ -38,6 +36,5 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f   Makefile.DEPEND ModBuffer.f90 ModGridDescriptor.f90 
+	rm -f ModBuffer.f90 ModGridDescriptor.f90 
 
-# keep this line
