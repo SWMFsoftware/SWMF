@@ -3,7 +3,7 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 OBJECTS = \
 	ModBuffer.o\
