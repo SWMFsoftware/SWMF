@@ -7,12 +7,8 @@ check_src:
 		exit 1; \
 	fi)
 
-INSTALLFILES = src/Makefile.DEPEND src/Makefile.RULES srcBATL/Makefile.DEPEND \
-	srcInterface/Makefile.DEPEND
-
 install:
 	@(if([ -f src/Makefile ]); then \
-		touch ${INSTALLFILES}; \
 		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
 		cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90; \
 	fi)
@@ -36,7 +32,6 @@ rundir: check_src
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
-	   touch ${INSTALLFILES}; \
 	   cd src; make clean; cd ..; \
 	   cd srcBATL; make clean; cd ..; \
 	   cd srcInterface; make clean; \

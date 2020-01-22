@@ -11,7 +11,6 @@ SHELL =/bin/sh
 include Makefile.def 
 
 install: Makefile.def.orig
-	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 
 Makefile.def.orig:
 	mv Makefile.def Makefile.def.orig
