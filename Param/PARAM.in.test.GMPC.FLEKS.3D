@@ -1,7 +1,7 @@
 Name     Root Last Stride                                                                   
 #LAYOUT                                                                                     
-GM       0    3     1                                                                  
-PC       0    3     1
+GM       0    99     1                                                                  
+PC       0    7     1
 
 #ECHO
 T			DoEcho
