@@ -1757,7 +1757,7 @@ test18_check:
 	gunzip -c output/test18/3d.ref.gz \
 	       > ${TESTDIR}/RESULTS/PC/3d.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000004_n00000004.out \
+		${TESTDIR}/RESULTS/PC/3d_var_region0_0_t00000004_n00000004.out \
 		${TESTDIR}/RESULTS/PC/3d.ref \
 		> test18.diff)
 	ls -l test18.diff

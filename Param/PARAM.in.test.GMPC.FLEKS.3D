@@ -161,10 +161,11 @@ T                         doReSampling
 
 #SAVEPLOT
 1
-3d fluid ascii planet			StringPlot
+3d var ascii planet			StringPlot
 4   	  				DnOutput
 -1					DtOutput
 1					DxOutput
+{fluid} numS0 numS1
 
 #END_COMP PC -----------------------------------------------------------------
 
