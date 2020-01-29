@@ -1,4 +1,11 @@
-#!/usr/bin/perl -i
+#!/usr/bin/perl
+
+# Allow in-place editing                                                        
+$^I = "";
+
+# Add local directory to search                                                 
+push @INC, ".";
+
 use strict;
 
 our @Arguments       = @ARGV;
