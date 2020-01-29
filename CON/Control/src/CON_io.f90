@@ -225,7 +225,8 @@ contains
                    call get_comp_info(NameComp, iUnitOut=iUnitOut)
                 end if
                 ! Initialize ModReadParam
-                call read_init(NameComp, iSession, iLineModule, iLine-1, iUnitOut)
+                call read_init(&
+                     NameComp, iSession, iLineModule, iLine-1, iUnitOut)
 
                 ! Echo component input on root PE of component
                 if(is_proc0())        call read_echo_set(.false.)
@@ -337,6 +338,12 @@ contains
 
           call read_var('CpuTimeMax', CpuTimeMax)
 
+       case("#CHECKTIMESTEP")
+          
+          call read_var('DoCheckTimeStep', DoCheckTimeStep)
+          call read_var('DnCheckTimeStep', DnCheckTimeStep)
+          call read_var('TimeStepMin'   ,  TimeStepMin)
+          
        case("#CHECKSTOPFILE")
 
           call read_var('DoCheckStopFile', DoCheckStopFile)
@@ -703,6 +710,13 @@ contains
        ! If not set in PARAM, set TimeEnd using tSimulationMax
        TimeEnd % Time = TimeStart % Time + tSimulationMax
        call time_real_to_int(TimeEnd)
+    end if
+
+    if(DoTimeAccurate .and. DoCheckTimeStep)then
+       ! Initialize check time step
+       tSimulationCheck = tSimulation
+       ! Set default minimum time step to remaining simulation time / 10^7
+       if(TimeStepMin < 0) TimeStepMin = (tSimulationMax - tSimulation) / 1e7
     end if
 
     if(UseTiming)then

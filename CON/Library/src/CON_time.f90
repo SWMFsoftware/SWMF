@@ -72,6 +72,12 @@ module CON_time
   real(Real8_) :: CpuTimeSetup    ! Setup time returned by MPI_WTIME
   real :: CpuTimeMax = -1.0       ! Maximum time allowed for the run
 
+  ! Minimum time step (progress made) in time accurate mode
+  logical:: DoCheckTimeStep  = .true. ! Check it?
+  integer:: DnCheckTimeStep  = 10     ! How many time steps to check?
+  real   :: tSimulationCheck = -1.0   ! Simulation time DnCheckTimeStep ago
+  real   :: TimeStepMin      = -1.0   ! Average time step should exceed this
+  
   ! Shall we check for the stop file?
   logical :: DoCheckStopFile = .true.
 
