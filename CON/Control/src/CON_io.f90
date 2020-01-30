@@ -714,6 +714,7 @@ contains
 
     if(DoTimeAccurate .and. DoCheckTimeStep)then
        ! Initialize check time step
+       nIterationCheck  = nIteration
        tSimulationCheck = tSimulation
        ! Set default minimum time step to remaining simulation time / 10^7
        if(TimeStepMin < 0) TimeStepMin = (tSimulationMax - tSimulation) / 1e7

@@ -75,6 +75,7 @@ module CON_time
   ! Minimum time step (progress made) in time accurate mode
   logical:: DoCheckTimeStep  = .true. ! Check it?
   integer:: DnCheckTimeStep  = 10     ! How many time steps to check?
+  integer:: nIterationCheck  = -1     ! Iteration number last checked
   real   :: tSimulationCheck = -1.0   ! Simulation time DnCheckTimeStep ago
   real   :: TimeStepMin      = -1.0   ! Average time step should exceed this
   

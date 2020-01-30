@@ -25,7 +25,8 @@ module CON_session
        nStep, nIteration, MaxIteration, DnRun_C, tSimulation, tSimulationMax, &
        CheckStop, DoCheckStopFile, CpuTimeSetup, CpuTimeStart, CpuTimeMax, &
        IsForcedStop, NameCompCheckKill, DoCheckTimeStep, DnCheckTimeStep, &
-       tSimulationCheck, TimeStepMin, UseEndTime, save_end_time
+       nIterationCheck, tSimulationCheck, TimeStepMin, &
+       UseEndTime, save_end_time
   use ModFreq, ONLY: is_time_to
   use ModUtilities, ONLY: CON_stop
   use ModMpi, ONLY: MPI_WTIME, MPI_LOGICAL
@@ -317,12 +318,12 @@ contains
 
        ! Check if there is sufficient progress
        if(DoTimeAccurate .and. DoCheckTimeStep &
-            .and. nIteration >= DnCheckTimeStep&
-            .and. modulo(nIteration, DnCheckTimeStep) == 0)then
+            .and. nIteration == nIterationCheck + DnCheckTimeStep)then
           if(tSimulation - tSimulationCheck < TimeStepMin*DnCheckTimeStep) &
                call CON_stop(NameSub//': advance too slow in time '// &
                'at nIteration, tSimulation, tSimulationCheck, TimeStepMin=', &
                nIteration, tSimulation, tSimulationCheck, TimeStepMin)
+          nIterationCheck  = nIteration
           tSimulationCheck = tSimulation
        end if
        ! For a new step, the restart fiels have not been saved. 
