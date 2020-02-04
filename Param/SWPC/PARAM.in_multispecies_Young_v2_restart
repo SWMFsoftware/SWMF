@@ -1,16 +1,9 @@
-
-Name Root Last Stride nThread
-#LAYOUT
-GM      0   -3   -1   -1	! GM runs on 0:nProc-3 multithreaded
-IE     -2   -1    1  		! IE runs on last 2 PE-s
-IM     -2   -2    1		! IM runs on nProc-2 PE
-RB     -1   -1    1		! RB runs on nProc-1 PE
-
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC Version 2 code selection
+Example file to restart a run for the SWPC multi-species v2 code with the 
+Young boundary condition.
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -22,7 +15,7 @@ T			DoTimeAccurate
 #SAVERESTART
 T                       DoSaveRestart
 -1                      DnSaveRestart
-60.0                    DtSaveRestart
+600.0                   DtSaveRestart
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
@@ -39,13 +32,11 @@ CPUTIMEMAX
 28000.0                 CpuTimeMax [sec]
 
 #COUPLEORDER
-7			nCouple
+5			nCouple
 IE GM			NameSourceTarget
 IE IM			NameSourceTarget
-IE RB			NameSourceTarget
 GM IE			NameSourceTarget
 GM IM			NameSourceTarget
-GM RB			NameSourceTarget
 IM GM			NameSourceTarget
 
 #COUPLE2
@@ -66,26 +57,16 @@ IM			NameComp2
 -1                      DnCouple
 10.0                    DtCouple
 
-#COUPLE1
-GM			NameComp1
-RB			NameComp2
--1                      DnCouple
-10.0                    DtCouple
-
-#COUPLE1
-IE			NameComp1
-RB			NameComp2
--1                      DnCouple
-10.0                    DtCouple
-
 #COUPLETIME
 GM			NameComp
 F			DoCoupleOnTime
 
-#UPDATEB0
-5.0			DtUpdateB0
-
 #BEGIN_COMP GM ---------------------------------------------------------------
+
+#CHECKTIMESTEP
+T			DoCheckTimeStep
+2			nCheckTimeStep
+1e-6			TimeStepMin
 
 #INCLUDE
 GM/restartIN/restart.H
@@ -94,6 +75,8 @@ GM/restartIN/restart.H
 #NSTEP
 10                      nStep
 
+#MULTIFLUIDIM
+T                       DoMultiFluidIMCoupling
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -106,11 +89,10 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
-! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
-#CPCPBOUNDARY
-T                       UseCpcpBc  (rest is read if true)
-28.0                    Rho0Cpcp   [amu/cc]
-0.1                     RhoPerCpcp [amu/cc / keV]
+! Set the inner boundary density with the Young formula
+#YOUNGBOUNDARY
+T                       UseYoungBc
+275.4                   F107Young
 
 #SOLARWINDFILE
 T                       UseSolarWindFile
@@ -122,12 +104,6 @@ T			DoReadAgain
 ! Satellite trajectories
 #INCLUDE
 SATELLITES.in
-
-#MAGPERTURBINTEGRAL
-T                       UseSurfaceIntegral
-T                       UseFastFacIntegral
-MAG			TypeCoordIndex
-MAG                     TypeCoordFacGrid
 
 #MAGNETOMETER
 magin_GEM.dat		NameMagInputFile
@@ -207,7 +183,7 @@ T			DoSaveLogfile
 VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx ratioyoung cpcpn cpcps
 3.0			StringRFlux
 
 #SAVEPLOT
@@ -247,18 +223,6 @@ mc3	                TypeLimiter
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
-#REGION
-borisregion             NameArea
-sphere tapered          NameShape
--4.0                    xPosition
-0.0                     yPosition
-0.0                     zPosition
-14.0                    Radius
-2.0                     Taper
-
-#BORISREGION
-borisregion		NameBorisRegion
-
 #TIMESTEPPING
 1			nStage
 0.85			CflExpl
@@ -269,12 +233,6 @@ borisregion		NameBorisRegion
 
 #RESTART
 T			DoRestart
-
-! Number density fractions for H+ and O+. Has to add up to 1.0
-#COMPOSITION
-FIXED			 NameCompModel
-0.8                      FractionH
-0.2                      FractionO
 
 ! Decay for RCM particle densities
 #DECAY
@@ -300,11 +258,11 @@ F			UseFakeRegion2
 10.0                    LatBoundary
 
 #AURORALOVAL
-T			UseOval (rest of parameters read if true)
-T			UseOvalShift
-F			UseSubOvalConductance
-T			UseAdvancedOval
-F			DoFitCircle (read if UseAdvancedOval is true)
+T                       UseOval (rest of parameters read if true)
+T                       UseOvalShift
+F                       UseSubOvalConductance
+T                       UseAdvancedOval
+F                       DoFitCircle (read if UseAdvancedOval is true)
 
 #SAVEPLOT
 1			nPlotFile
@@ -314,32 +272,9 @@ aur idl                 StringPlot
 
 #END_COMP IE -----------------------------------------------------------------
 
-#BEGIN_COMP RB ---------------------------------------------------------------
-
-#INCLUDE
-RB/restartIN/restart.H
-
-#SAVEPLOT
-60.0		DtSavePlot
-T		UseSeparatePlotFiles
-
-#TIMESTEP
-5.0		Dt
-
-#STARTUPTIME
-0.0		trans
-
-#BMODEL
-MHD		NameModel
-F		UseFixedB
-
-#IEMODEL
-1		iConvect
-
-#PLASMASPHERE
-F		UsePlasmaSphere
-
-#END_COMP RB -----------------------------------------------------------------
+STOP
+-1			MaxIter
+86400.0			TimeMax
 
 #ENDTIME            
 2014			year

@@ -2,7 +2,6 @@
 include Makefile.def 
 
 install:
-	touch src/Makefile.DEPEND srcInterface/Makefile.DEPEND
 
 LIB:
 	cd src; make LIB

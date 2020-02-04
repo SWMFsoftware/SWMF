@@ -10,7 +10,8 @@ RB     -1   -1    1		! RB runs on nProc-1 PE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC Version 2 code selection
+Example file to restart a run for the SWPC Version 2 code with
+the Young boundary condition.
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -106,11 +107,10 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
-! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
-#CPCPBOUNDARY
-T                       UseCpcpBc  (rest is read if true)
-28.0                    Rho0Cpcp   [amu/cc]
-0.1                     RhoPerCpcp [amu/cc / keV]
+! Set the inner boundary density with the Youn formula
+#YOUNGBOUNDARY
+T                       UseYoungBc
+90.5                    F107Young
 
 #SOLARWINDFILE
 T                       UseSolarWindFile
@@ -207,7 +207,7 @@ T			DoSaveLogfile
 VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx ratioyoung cpcpn cpcps
 3.0			StringRFlux
 
 #SAVEPLOT
@@ -270,11 +270,10 @@ borisregion		NameBorisRegion
 #RESTART
 T			DoRestart
 
-! Number density fractions for H+ and O+. Has to add up to 1.0
+! Number density fractions for H+ and O+, using the Young formula.
 #COMPOSITION
-FIXED			 NameCompModel
-0.8                      FractionH
-0.2                      FractionO
+YOUNG			NameCompModel
+128.3			F107
 
 ! Decay for RCM particle densities
 #DECAY

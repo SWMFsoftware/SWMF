@@ -4,7 +4,7 @@ SHELL =/bin/sh
 include ../../../Makefile.def
 include ../../../Makefile.conf
 
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 # Extra path for include files
 INCL_EXTRA = -I../src

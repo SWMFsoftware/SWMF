@@ -4,7 +4,7 @@ SHELL =/bin/sh
 
 include ../Makefile.def
 include ../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 # Configurable objects
 
@@ -38,6 +38,6 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f ModGridDescriptor.f90 ModBuffer.f90 Makefile.DEPEND 
+	rm -f ModGridDescriptor.f90 ModBuffer.f90 
 
 # keep this line

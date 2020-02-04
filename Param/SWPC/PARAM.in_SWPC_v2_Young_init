@@ -1,5 +1,5 @@
 
-Name Root Last Stride nThread
+Name     Root Last Stride
 #LAYOUT
 GM      0   -3   -1   -1	! GM runs on 0:nProc-3 multithreaded
 IE     -2   -1    1  		! IE runs on last 2 PE-s
@@ -7,7 +7,8 @@ IM     -2   -2    1		! IM runs on nProc-2 PE
 RB     -1   -1    1		! RB runs on nProc-1 PE
 
 #DESCRIPTION
-Example file to start a run for the SWPC Version 2 code selection
+Example file to start a run for the SWPC Version 2 code with the Young 
+boundary condition.
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -105,7 +106,7 @@ shell0			NameArea
 T                       UseBody
 2.5                     rBody     (in planet radius)
 3.0                     rCurrents (in planet radius)
-28.0                    BodyNDim  (/cc)
+7.5                     BodyNDim  (/cc)
 25000.0                 BodyTDim  (K)
 
 #TIMESTEPPING
@@ -123,11 +124,10 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
-! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
-#CPCPBOUNDARY
-T                       UseCpcpBc  (rest is read if true)
-28.0                    Rho0Cpcp   [amu/cc]
-0.1                     RhoPerCpcp [amu/cc / keV]
+! Set the inner boundary density with the Youn formula
+#YOUNGBOUNDARY
+T                       UseYoungBc
+90.5                    F107Young
 
 #SOLARWINDFILE
 T                       UseSolarWindFile
@@ -157,7 +157,7 @@ T			DoSaveLo5Dgfile
 VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx ratioyoung cpcpn cpcps
 3.0			StringRFlux
 
 #SAVEPLOT
@@ -352,7 +352,7 @@ GM			NameComp
 F			DoCoupleOnTime
 
 #UPDATEB0
-0.5			DtUpdateB0
+5.0			DtUpdateB0
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -446,11 +446,10 @@ borisregion		NameBorisRegion
 
 #BEGIN_COMP IM ---------------------------------------------------------------
 
-! Number density fractions for H+ and O+. Has to add up to 1.0
+! Number density fractions for H+ and O+, using the Young formula.
 #COMPOSITION
-FIXED                    NameCompModel
-0.8                      FractionH
-0.2                      FractionO
+YOUNG			NameCompModel
+128.3			F107
 
 ! Decay for RCM particle densities
 #DECAY

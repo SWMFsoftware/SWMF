@@ -295,8 +295,8 @@ contains
     ! #LAYOUT
     ! GM       0        9999    8        8   ! GM runs with 8 threads
     ! PW       0        9999   -1       -1   ! PW runs with MaxThread threads
-    ! IE       0        1       1            ! IE runs on PE 0 and 1
-    ! IM       2        2       1            ! IM runs on PE 2
+    ! IE       -3      -2       1            ! IE runs on nProc-3:nProc-2
+    ! IM       -1      -1       1            ! IM runs on nProc-1
     !
     ! remarks
     !\end{verbatim}
@@ -309,8 +309,9 @@ contains
     ! The optional 4th parameter defines the number of OpenMP threads per MPI
     ! process for models that can use OpenMP. The Stride and nThread are 
     ! typically equal.
-    ! If the last rank exceeds the number of processors used by SWMF,
-    ! it is reduced to the rank of the last processor and a warning
+    ! If the first (or last) rank is negative, it is evaluated as nProc-VALUE.
+    ! If the last rank exceeds the number of processors nProc used by SWMF,
+    ! it is reduced to the rank of the last processor (nProc-1) and a warning
     ! message is printed to STDOUT.
     ! If the stride or the number of threads are negative, they are replaced
     ! by the maximum number of threads MaxThread divided by their absolute
@@ -445,8 +446,13 @@ contains
        iComp_C(nComp)                   = iComp  ! named index for list index
        Name_C(nComp)                    = Name
 
-       iProcRange_IC(ProcZero_,nComp) = min(iProcZero,iProcLast,nProcWorld-1)
-       iProcRange_IC(ProcLast_,nComp) = min(iProcLast,nProcWorld-1)
+       ! Negative iProcZero is interpreted as counting back from the end
+       if(iProcZero < 0) iProcZero = max(0, nProcWorld + iProcZero)
+       ! Negative iProcLast is interpreted as counting back from the end
+       if(iProcLast < 0) iProcLast = max(0, nProcWorld + iProcLast)
+
+       iProcRange_IC(ProcZero_,nComp) = min(iProcZero, iProcLast, nProcWorld-1)
+       iProcRange_IC(ProcLast_,nComp) = min(iProcLast, nProcWorld-1)
        ! Negative iProcStride is interpreted as MaxThread divided by its abs 
        ! value
        if(iProcStride < 0) iProcStride = MaxThread/abs(iProcStride)
