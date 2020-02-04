@@ -146,6 +146,9 @@ contains
     real                   :: VersionNumber
     logical                :: IsOn
 
+    ! True if a component has a BEGIN_COMP section
+    logical :: DoneBeginComp_C(MaxComp)
+
     ! Beginning line number and number of lines for component parameters
     integer :: iLineModule, nLineModule
 
@@ -167,6 +170,7 @@ contains
     ! Read input data from string array stored in ModReadParam
     call read_init('  ',iSession,iLine)
 
+    DoneBeginComp_C = .false.
     IsLastRead=.true.
     do
        if( .not. read_line(StringLine, iLine) )then
@@ -201,10 +205,13 @@ contains
           NameComp=StringLine(13:14)
           if(.not.use_comp(NameComp))then
              if(is_proc0()) write(*,*) NameSub// &
-                  ' SWMF_ERROR unregistered componet name '//trim(NameComp)
+                  ' SWMF_ERROR unregistered component name '//trim(NameComp)
              iErrorSwmf = 11
              RETURN
           end if
+          
+          ! Store that this component read parameters
+          DoneBeginComp_C(i_comp(NameComp)) = .true.
 
           ! Find #END_COMP MODULENAME and read module parameters
           iLineModule = iLine
@@ -616,6 +623,15 @@ contains
 
     call set_stdout
 
+    ! Check that only active components use BEGIN_COMP sections
+    if(is_proc0())then
+       do iComp = 1, MaxComp
+          if(.not. use_comp(iComp) .and. DoneBeginComp_C(iComp)) &
+               call CON_stop(NameSub//' SWMF_ERROR: '// &
+               NameComp_I(iComp)//' cannot read parameters as it is not active')
+       end do
+    end if
+
     !^CMP IF IE BEGIN
     !^CMP IF UA BEGIN
     ! Check if UA is used but IE is not
@@ -639,7 +655,7 @@ contains
     !^CMP END IE
 
     ! Switch off couplings for unused/switched off components
-    do iComp1=1,MaxComp;
+    do iComp1 = 1, MaxComp
        if(use_comp(iComp1)) CYCLE
        Couple_CC(iComp1,:) % DoThis = .false.
        Couple_CC(:,iComp1) % DoThis = .false.
