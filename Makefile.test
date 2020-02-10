@@ -1247,7 +1247,7 @@ test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
-	./Config.pl -g=SC:6,8,8,2500,1,IH:8,8,8,3000,1 -o=IH:ng=3
+	./Config.pl -g=SC:6,8,8,2500/${NP},1,IH:8,8,8,3000/${NP},1 -o=IH:ng=3
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS
