@@ -183,6 +183,7 @@ rmdir:
 #	SWMF
 #
 SWMF:	ENV_CHECK
+	${SCRIPTDIR}/gitall -r=f > ${SHAREDIR}/show_git_info.h
 	@cd ${CONTROLDIR}; $(MAKE) SWMFEXE  
 	@echo ' '
 
