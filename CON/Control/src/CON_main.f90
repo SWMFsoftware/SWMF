@@ -149,7 +149,7 @@ contains
     !\
     ! Show framework and component information
     !/
-    if(is_proc0())call show_all_comp
+    if(is_proc0()) call show_all_comp
 
     !\
     ! Check for illegal overlap of components with shared source code
@@ -245,6 +245,8 @@ contains
     !USES:
     use CON_variables,  ONLY: VersionSwmf
     use CON_comp_param, ONLY: lNameVersion
+    use ModUtilities,   ONLY: show_git_info
+
     !DESCRIPTION:
     ! Show the version information and layout for all registered components.
     ! Show the version information for all working but unregistered components.
@@ -265,6 +267,8 @@ contains
 
     NameVersion  ='SWMF by Univ. of Michigan'
 
+    call show_git_info
+    
     write(*,'(a)')'#'//repeat('=',lWidth)//'#'
     write(*,'(2a)') &
          '# ID  Version                                       ',&
@@ -303,6 +307,7 @@ contains
             '    not registered #'
     end do
     write(*,'(a)')'#'//repeat('=',lWidth)//'#'
+
   end subroutine show_all_comp
 
   !BOP ========================================================================
