@@ -245,7 +245,6 @@ contains
     !USES:
     use CON_variables,  ONLY: VersionSwmf
     use CON_comp_param, ONLY: lNameVersion
-    use ModUtilities,   ONLY: show_git_info
 
     !DESCRIPTION:
     ! Show the version information and layout for all registered components.
