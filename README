@@ -24,6 +24,7 @@ the SWMF and create the user manual please follow the instructions below.
 # If needed, it has to be placed into the home directory.
 
 # !!! Getting SWMF from Git (requires access to herot) !!!
+#
 # Read http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf
 # about setting up the "herot" ssh alias, passwordless access to herot,
 # and defining the "gitclone" alias/function. 
@@ -65,14 +66,14 @@ tar -xzf {path_to_file}/CRASH_data.tgz
 
 Config.pl -install
 
-# On other platforms the Fortan compiler should be explicitly given. 
+# On other platforms the Fortran (and C) compilers should be explicitly given. 
 # To see available choices, type 
 
 Config.pl -compiler
 
-# Then install the code with the selected Fortran compiler, e.g.
+# Then install the code with the selected Fortran (and default C) compiler, e.g.
 
-Config.pl -install -compiler=ifort
+Config.pl -install -compiler=gfortran
 
 # A non-default C compiler can be added after a comma, e.g.
 
