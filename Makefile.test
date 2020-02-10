@@ -1247,36 +1247,43 @@ test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
-	./Config.pl -g=SC:6,8,8,9500,1,IH:8,8,8,9500,1 -o=IH:ng=3
+	./Config.pl -g=SC:6,8,8,2500,1,IH:8,8,8,3000,1 -o=IH:ng=3
 	${MAKE} SWMF
 	make PIDL
+	make FDIPS
 
 test9_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.start.SCIH.new ${TESTDIR}/PARAM.in
+	cp Param/PARAM.in.test.start.SCIH ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
-	cp GM/BATSRUS/Param/CORONA/harmonics_2209_adapt01.dat ${TESTDIR}/harmonics_2209_adapt01.dat
+	cp Param/map_1.out ${TESTDIR}/SC/
+	cp -f ${MAGNETOGRAMDIR}/FDIPS.in.orig ${TESTDIR}/SC/FDIPS.in
+	perl -i -pe 's/dipole11.out/map_1.out/' ${TESTDIR}/SC/FDIPS.in
+	perl -i -pe 's/#(CHANGEPOLARFIELD)/$$1/; s/20/90/ if /n(Theta|Phi)/' ${TESTDIR}/SC/FDIPS.in
+	cd ${TESTDIR}/SC; ${PARALLEL} ${NPFLAG} 4 ./FDIPS.exe > runlog_fdips
+	cd ${TESTDIR}/SC; ${MAGNETOGRAMDIR}/redistribute.pl fdips_bxyz_np010202.out fdips_bxyz.out
+	cd ${TESTDIR}/SC; rm -rf fdips_*_np*.out
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; mv runlog runlog_start
-	cd ${TESTDIR}; ./Restart.pl
-
+	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_start
+	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
+	
 test9_restart:
-	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; cp Param/PARAM.in.test.restart.SCIH.new PARAM.in
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_restart
 
 test9_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_restart/SC/log_n000001.log \
+		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
 		output/test9/SC_log_n000001.log \
 		> test09_sc_chromo.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/run_restart/IH/log_n000000.log \
-		output/test9/IH_log_n000000.log \
+		${TESTDIR}/RESULTS/run_restart/IH/log_n000005.log \
+		output/test9/IH_log_n000005.log \
 		> test09_ih.diff)
 	ls -l test09_*.diff
 
