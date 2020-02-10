@@ -345,7 +345,7 @@ sub set_grid_size{
 
     # Create a %GridSize{CompID} hash from the GridSize string
     my %GridSize;
-    while( $GridSize =~ s/^($ValidComp)[:,]([\d,]+)// ){
+    while( $GridSize =~ s/^($ValidComp)[:,]([\d,\/]+)// ){
 	my $Comp=$1;
 	my $Grid=$2;
 	$Grid =~ s/,$//;            # remove trailing comma

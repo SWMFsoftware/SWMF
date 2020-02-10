@@ -213,6 +213,10 @@ PIDL:	ENV_CHECK
 	cd ${SHAREDIR}; $(MAKE) PIDL
 	@echo ' '
 
+FDIPS:	ENV_CHECK
+	cd ${MAGNETOGRAMDIR}; ${MAKE} FDIPS
+	@echo ' '
+
 # Convert .out data to .dat 
 2TEC:	ENV_CHECK
 	cd ${SHAREDIR}; $(MAKE) 2TEC
