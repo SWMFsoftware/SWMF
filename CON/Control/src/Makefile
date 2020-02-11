@@ -9,8 +9,8 @@ SEARCHDIR = -I${SHAREDIR} -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
-include Makefile.RULES
+-include Makefile.DEPEND
+-include Makefile.RULES
 
 #######################
 # Shared libraries by #
@@ -242,7 +242,6 @@ TMP_DIRS: LIB
 #
 
 clean: cleanfiles
-	rm -rf Tmp_*
+	rm -rf Tmp_* show_git_info.h
 
 distclean: clean
-	rm -f Makefile.DEPEND

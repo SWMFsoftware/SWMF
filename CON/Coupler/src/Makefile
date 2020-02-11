@@ -3,7 +3,7 @@
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 # These modules contain the coupling toolkit of SWMF.
 
@@ -40,7 +40,5 @@ install:
 clean: cleanfiles
 
 distclean: clean
-	rm -f Makefile.DEPEND 
 
-# keep this line
 

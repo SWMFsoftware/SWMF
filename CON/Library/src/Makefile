@@ -3,7 +3,7 @@
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 # These modules provide the "infrastructure" for SWMF.
 
@@ -52,7 +52,4 @@ install:
 clean: cleanfiles
 
 distclean: clean
-	rm -f Makefile.DEPEND 
-
-# keep this line
 
