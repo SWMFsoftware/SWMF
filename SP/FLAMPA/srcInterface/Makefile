@@ -32,6 +32,3 @@ ${MY_LIB}: ${FLAMPA_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f Makefile.DEPEND
-
-# keep this line
