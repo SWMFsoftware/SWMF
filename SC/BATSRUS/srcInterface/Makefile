@@ -36,8 +36,4 @@ ${MY_LIB}: ${BATSRUS_LIB} ${OBJECTS}
 clean: cleanfiles
 
 distclean: clean
-	rm -f   SC_wrapper.f90  ModGridDescriptor.f90 \
-		Makefile.DEPEND ModBuffer.f90 
-
-
-# keep this line
+	rm -f SC_wrapper.f90  ModGridDescriptor.f90 ModBuffer.f90 
