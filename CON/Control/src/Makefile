@@ -242,6 +242,6 @@ TMP_DIRS: LIB
 #
 
 clean: cleanfiles
-	rm -rf Tmp_* show_git_info.h
+	rm -rf Tmp_*
 
 distclean: clean
