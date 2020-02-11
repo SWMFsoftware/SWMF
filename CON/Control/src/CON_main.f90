@@ -110,6 +110,10 @@ contains
        call remove_file('SWMF.STOP')    ! stop the code when it listens
        call remove_file('SWMF.KILL')    ! kill the code ASAP
     end if
+    
+    if(is_proc0())then
+       include 'show_git_info.h'
+    end if
 
     !\
     ! Read component information from LAYOUT.in
@@ -266,8 +270,6 @@ contains
 
     NameVersion  ='SWMF by Univ. of Michigan'
 
-    call show_git_info
-    
     write(*,'(a)')'#'//repeat('=',lWidth)//'#'
     write(*,'(2a)') &
          '# ID  Version                                       ',&
