@@ -567,10 +567,9 @@ test_swpc_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_SWPC_v2_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in_SWPC_v2_restart
 	cp ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in
-	perl -pi -e 's/#BORIS/BORIS/' ${TESTDIR}/PARAM.in_SWPC_v2_restart
 
 test_swpc_run:
 	cd ${TESTDIR}; ${OMPIRUN} ./SWMF.exe > runlog
@@ -645,9 +644,8 @@ test_swpc_multiion_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	cp ${TESTDIR}/LAYOUT.in_test_multiion ${TESTDIR}/LAYOUT.in
-	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_multiion_v2_init
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_multiion_v2_*
 	cp ${TESTDIR}/PARAM.in_multiion_v2_init ${TESTDIR}/PARAM.in
 
 test_swpc_multiion_run:
@@ -717,11 +715,8 @@ test_swpc_multispecies_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	cp ${TESTDIR}/LAYOUT.in_test_multispecies ${TESTDIR}/LAYOUT.in
-	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_multispecies_v2_init
-	perl -pi -e 's/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_multispecies_v2_restart
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_multispecies_v2_*
 	cp ${TESTDIR}/PARAM.in_multispecies_v2_init ${TESTDIR}/PARAM.in
 
 test_swpc_multispecies_run:
@@ -791,11 +786,8 @@ test_swpc_cimi_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	cp ${TESTDIR}/LAYOUT.in_test_cimi ${TESTDIR}/LAYOUT.in
-	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_cimi_v2_init
-	perl -pi -e 's/#BORIS/BORIS/' \
-	     ${TESTDIR}/PARAM.in_cimi_v2_restart
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
+	     ${TESTDIR}/PARAM.in_cimi_v2_*
 	cp ${TESTDIR}/PARAM.in_cimi_v2_init ${TESTDIR}/PARAM.in
 
 test_swpc_cimi_run:
@@ -876,7 +868,6 @@ test_swpc_amps_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	cp ${TESTDIR}/LAYOUT.in_amps ${TESTDIR}/LAYOUT.in
 	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_amps_init
 	cp ${TESTDIR}/PARAM.in_amps_init ${TESTDIR}/PARAM.in
