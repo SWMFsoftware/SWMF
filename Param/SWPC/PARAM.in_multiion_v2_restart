@@ -67,6 +67,10 @@ T			DoCheckTimeStep
 2			nCheckTimeStep
 1e-6			TimeStepMin
 
+#GRIDBLOCKALL
+4000			MaxBlock
+1			MaxBlockImpl
+
 #INCLUDE
 GM/restartIN/restart.H
 

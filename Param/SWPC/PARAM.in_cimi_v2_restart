@@ -62,6 +62,10 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#GRIDBLOCKALL
+4000			MaxBlock
+1			MaxBlockImpl
+
 #INCLUDE
 GM/restartIN/restart.H
 

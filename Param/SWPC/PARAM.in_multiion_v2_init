@@ -29,6 +29,10 @@ IE			NameComp2
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
+#GRIDBLOCKALL
+4000			MaxBlock
+1			MaxBlockImpl
+
 #GRID
 1			nRootBlock_D(x_)
 1			nRootBlock_D(y_)
