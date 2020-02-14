@@ -1189,7 +1189,6 @@ test8_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SCIH_threadbc ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 
 test8_run:
@@ -1245,9 +1244,9 @@ test9:
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
+	./Config.pl -g=SC:6,8,8,500,1,IH:8,8,8,500,1
 	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
-	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
-	./Config.pl -g=SC:6,8,8,2500/${NP},1,IH:8,8,8,3000/${NP},1 -o=IH:ng=3
+	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB,ng=3
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS
@@ -1256,7 +1255,6 @@ test9_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.start.SCIH ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
 	cp Param/map_1.out ${TESTDIR}/SC/
 	cp -f ${MAGNETOGRAMDIR}/FDIPS.in.orig ${TESTDIR}/SC/FDIPS.in
@@ -1319,7 +1317,6 @@ test9_2_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.start.ChromoIH ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
 
 test9_2_run:
@@ -1379,7 +1376,6 @@ test10_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${TESTDIR}
 	cp Param/PARAM.in.test.SCIH_3T ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SCIH ${TESTDIR}/LAYOUT.in
 
 test10_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
