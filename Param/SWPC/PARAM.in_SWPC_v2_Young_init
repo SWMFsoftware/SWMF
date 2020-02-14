@@ -1,10 +1,9 @@
-
-Name     Root Last Stride
-#LAYOUT
-GM      0   -3   -1   -1	! GM runs on 0:nProc-3 multithreaded
-IE     -2   -1    1  		! IE runs on last 2 PE-s
-IM     -2   -2    1		! IM runs on nProc-2 PE
-RB     -1   -1    1		! RB runs on nProc-1 PE
+Name Root Last Stride nThread
+#COMPONENTMAP
+GM  0 -3 -1  -1		! GM runs on 0:nProc-3 multithreaded
+IE -2 -1  1  		! IE runs on last 2 PE-s
+IM -2 -2  1		! IM runs on nProc-2 PE
+RB -1 -1  1		! RB runs on nProc-1 PE
 
 #DESCRIPTION
 Example file to start a run for the SWPC Version 2 code with the Young 
@@ -41,6 +40,10 @@ IE			NameComp2
 -1.0                    DtCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+4000			MaxBlock
+1			MaxBlockImpl
 
 #GRID
 1			nRootBlock_D(x_)
@@ -306,7 +309,7 @@ T			UseComp
 #STRICT
 T			UseStrict
 
-! Allow GM/IM and IE run in parallel. LAYOUT.in has to be properly set!
+! Allow GM/IM and IE run in parallel. #COMPONENTMAP has to be properly set!
 #COUPLEORDER
 7			nCouple
 IE GM			NameSourceTarget

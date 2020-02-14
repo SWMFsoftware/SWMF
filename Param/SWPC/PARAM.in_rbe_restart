@@ -1,3 +1,9 @@
+#COMPONENTMAP
+GM  0 -3  1    ! GM runs on 0:nProc-3
+IE -2 -1  1    ! IE runs on last 2 PE-s
+IM -2 -2  1    ! IM runs on nProc-2 PE
+RB -1 -1  1    ! RB runs on nProc-1 PE
+
 #INCLUDE
 RESTART.in
 
@@ -30,6 +36,7 @@ T			DoCheckStop
 CPUTIMEMAX
 28000.0                 CpuTimeMax [sec]
 
+! Allow GM/IM and IE run in parallel. #COMPONENTMAP has to be properly set!
 #COUPLEORDER
 7			nCouple
 IE GM			NameSourceTarget

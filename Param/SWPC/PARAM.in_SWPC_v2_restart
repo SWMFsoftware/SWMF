@@ -1,14 +1,9 @@
-
 Name Root Last Stride nThread
-#LAYOUT
-GM      0   -3   -1   -1	! GM runs on 0:nProc-3 multithreaded
-IE     -2   -1    1  		! IE runs on last 2 PE-s
-IM     -2   -2    1		! IM runs on nProc-2 PE
-RB     -1   -1    1		! RB runs on nProc-1 PE
-
-#GRIDBLOCKALL
-4000			MaxBlock
-1			MaxBlockImpl
+#COMPONENTMAP
+GM  0 -3 -1  -1		! GM runs on 0:nProc-3 multithreaded
+IE -2 -1  1  		! IE runs on last 2 PE-s
+IM -2 -2  1		! IM runs on nProc-2 PE
+RB -1 -1  1		! RB runs on nProc-1 PE
 
 #INCLUDE
 RESTART.in
@@ -90,6 +85,10 @@ F			DoCoupleOnTime
 5.0			DtUpdateB0
 
 #BEGIN_COMP GM ---------------------------------------------------------------
+
+#GRIDBLOCKALL
+4000			MaxBlock
+1			MaxBlockImpl
 
 #INCLUDE
 GM/restartIN/restart.H

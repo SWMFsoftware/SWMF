@@ -281,7 +281,7 @@ T			UseComp
 #STRICT
 T			UseStrict
 
-! Allow GM/IM and IE run in parallel. LAYOUT.in has to be properly set!
+! Allow GM/IM and IE run in parallel. #COMPONENTMAP has to be properly set!
 #COUPLEORDER
 8			nCouple
 IE GM			NameSourceTarget
