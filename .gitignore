@@ -6,6 +6,7 @@
 *.exe
 *.protex
 
+gitinfo.txt
 CON/Control/src/show_git_info.h
 
 SWPCTEST/
