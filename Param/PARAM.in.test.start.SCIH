@@ -21,8 +21,10 @@ For a three-temperature solar wind simulation, configure SWMF with
 
 Begin session: 1
 
-#ECHO
-T			DoEcho
+ID Proc0 ProcLast Stride
+#COMPONENTMAP
+SC  0  -1  1
+IH  0  -1  1
 
 #DESCRIPTION
 Input file for creating a steady state solar corona
@@ -48,6 +50,10 @@ T                       DoSaveRestart
 -1                      DtSaveRestart
 
 #BEGIN_COMP SC --------------------------------------------------------------
+
+#GRIDBLOCKALL
+2500			MaxBlock
+1			MaxBlockImpl
 
 INCLUDE
 SC/restartIN/restart.H	
@@ -338,6 +344,10 @@ IH			NameComp
 T			UseComp
 
 #BEGIN_COMP IH -------------------------------------------------------------
+
+#GRIDBLOCKALL
+3000			MaxBlock
+1			MaxBlockImpl
 
 INCLUDE
 IH/restartIN/restart.H
