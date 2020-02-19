@@ -3,13 +3,12 @@
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
 #^CMP FILE TESTING
 
-TESTDIR = ${DIR}/run_test
+TESTDIR = run_test
 
 TESTMACHINE = `hostname | sed -e 's/\..*//; s/[0-9]*$$//'`
 
 test_help:
 	@echo "    test                       (run all tests with ${MPIRUN})"
-	@echo "    test KEEP=y                (run tests and keep run directories)"
 	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
 	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
@@ -30,7 +29,7 @@ test_help:
 	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI test for SWPC)"
-	@echo "    test1                      (run GM-IE-PW test)"
+	@echo "    test1 TESTDIR=run_test01   (run GM-IE-PW test in run_test01 directory)"
 	@echo "    test2                      (run multifluid GM-IM coupling test)"
 	@echo "    test3                      (run GM-IE-CIMI test)"
 	@echo "    test4                      (run GM-IE-HEIDI test)"
@@ -38,7 +37,6 @@ test_help:
 	@echo "    test7                      (run IH-OH test)"
 	@echo "    test8                      (run Thread SC-IH coupling test)"
 	@echo "    test9                      (run SC-IH coupling test with SC restart)"
-	#@echo"    test9_2	 	      (run SC-IH, save and do multiple restarts in SC and IH)"
 	@echo "    test10                     (run 3T solar wind test)"
 	@echo "    test11                     (run GM-PT coupler test)"
 	@echo "    test12                     (run GM-PC tests)"
@@ -51,34 +49,35 @@ test_help:
 	@echo "    test18                     (run GM-FLEKS test: 3D reconnection)"		
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
+.NOTPARALLEL: test
+
 test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
 	-@(${MAKE} test_util)
 	-@(${MAKE} test_batl)
 	-@(${MAKE} test_comp)
-	-@(${MAKE} test_ps)
-	-@(${MAKE} test_swpc)
+	-@(${MAKE} test_ps TESTDIR=run_test_ps)
+	-@(${MAKE} test_swpc TESTDIR=run_test_swpc)
 	./Config.pl -noopenmp
-	-@(${MAKE} test_swpc_multiion)
-	-@(${MAKE} test_swpc_multispecies)
-	-@(${MAKE} test_swpc_cimi)
-	-@(${MAKE} test1)
-	-@(${MAKE} test3)
-	-@(${MAKE} test4)
-	-@(${MAKE} test5)
-	-@(${MAKE} test7)
-	-@(${MAKE} test8)
-	-@(${MAKE} test9)
-	#~@(${MAKE} test9_2)
-	-@(${MAKE} test10)
-	-@(${MAKE} test12)
-	-@(${MAKE} test13)
-	-@(${MAKE} test14)
-	-@(${MAKE} test15)
-	-@(${MAKE} test16)
-	-@(${MAKE} test17)
-	-@(${MAKE} test18)
+	-@(${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion)
+	-@(${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies)
+	-@(${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi)
+	-@(${MAKE} test1 TESTDIR=run_test01)
+	-@(${MAKE} test3 TESTDIR=run_test03)
+	-@(${MAKE} test4 TESTDIR=run_test04)
+	-@(${MAKE} test5 TESTDIR=run_test05)
+	-@(${MAKE} test7 TESTDIR=run_test07)
+	-@(${MAKE} test8 TESTDIR=run_test08)
+	-@(${MAKE} test9 TESTDIR=run_test09)
+	-@(${MAKE} test10 TESTDIR=run_test10)
+	-@(${MAKE} test12 TESTDIR=run_test12)
+	-@(${MAKE} test13 TESTDIR=run_test13)
+	-@(${MAKE} test14 TESTDIR=run_test14)
+	-@(${MAKE} test15 TESTDIR=run_test15)
+	-@(${MAKE} test16 TESTDIR=run_test16)
+	-@(${MAKE} test17 TESTDIR=run_test17)
+	-@(${MAKE} test18 TESTDIR=run_test18)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
@@ -140,7 +139,6 @@ test_cz:
 	${MAKE} test_cz_run
 	@echo "test_cz_check..."   >> test_cz.diff
 	${MAKE} test_cz_check
-	@if([ "${KEEP}" ]); then rm -f run_$@; mv ${TESTDIR} run_$@; fi
 
 test_cz_compile:
 	./Config.pl -v=Empty,CZ/FSAM -fishpak
@@ -150,7 +148,7 @@ test_cz_compile:
 
 test_cz_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.CZ ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.CZ ${TESTDIR}/LAYOUT.in
 	cp ${CZDIR}/input/gong.l4b.14 ${TESTDIR}/
@@ -178,7 +176,6 @@ test_pw:
 	${MAKE} test_pw_run
 	@echo "test_pw_check..." >> test_pw.diff
 	${MAKE} test_pw_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_pw_compile:
 	./Config.pl -v=Empty,PW/PWOM -o=PW:Earth
@@ -187,7 +184,7 @@ test_pw_compile:
 
 test_pw_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.PW ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.PW ${TESTDIR}/LAYOUT.in
 
@@ -215,7 +212,6 @@ test_ps:
 	${MAKE} test_ps_run
 	@echo "test_ps_check..." >> test_ps.diff
 	${MAKE} test_ps_check	
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ps_compile:
 	./Config.pl -v=Empty,PS/DGCPM
@@ -223,7 +219,7 @@ test_ps_compile:
 	
 test_ps_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.PS ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.PS ${TESTDIR}/LAYOUT.in
 	cp ${PSDIR}/Input/kp_test.dat ${TESTDIR}/PS/Input/
@@ -260,7 +256,6 @@ test_psie:
 	${MAKE} test_psie_run
 	@echo "test_psie_check..." >> test_psie.diff
 	${MAKE} test_psie_check	
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_psie_compile:
 	./Config.pl -v=Empty,PS/DGCPM,IE/RIM
@@ -268,7 +263,7 @@ test_psie_compile:
 
 test_psie_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.PSIE  ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.PSIE ${TESTDIR}/LAYOUT.in
 	cp ${PSDIR}/Input/IMF_NSturning_10nT.dat ${TESTDIR}/
@@ -305,7 +300,6 @@ test_psgmie:
 	${MAKE} test_psgmie_run
 	@echo "test_psgmie_check..." >> test_psgmie.diff
 	${MAKE} test_psgmie_check	
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_psgmie_compile:
 	./Config.pl -v=Empty,PS/DGCPM,IE/Ridley_serial,GM/BATSRUS
@@ -313,7 +307,7 @@ test_psgmie_compile:
 
 test_psgmie_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIEPS  ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEPS ${TESTDIR}/LAYOUT.in
 
@@ -336,7 +330,6 @@ test_rb:
 	${MAKE} test_rb_run
 	@echo "test_rb_check..." >> test_rb.diff
 	${MAKE} test_rb_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_rb_compile:
 	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
@@ -346,7 +339,7 @@ test_rb_compile:
 
 test_rb_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.RB ${TESTDIR}/LAYOUT.in
 	cp RB/RBE/data/input/TestSat.dat ${TESTDIR}/TestSat.dat
@@ -390,7 +383,6 @@ test1:
 	@echo "test1_check..." >> test01_ie.diff
 	@echo "test1_check..." >> test01_pw.diff
 	${MAKE} test1_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
@@ -400,7 +392,7 @@ test1_compile:
 
 test1_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIEPW ${TESTDIR}/PARAM.in
 
 test1_run:
@@ -464,7 +456,6 @@ test2:
 	@echo "test2_check..." >> test02_ie.diff
 	@echo "test2_check..." >> test02_im_rcm_multi.diff
 	${MAKE} test2_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test2_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
@@ -474,7 +465,7 @@ test2_compile:
 
 test2_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
 
@@ -555,7 +546,6 @@ test_swpc:
 	@echo "test_swpc_check..." >> test_swpc_ie.diff
 	@echo "test_swpc_check..." >> test_swpc_rb.diff
 	${MAKE} test_swpc_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_swpc_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE -openmp
@@ -565,7 +555,7 @@ test_swpc_compile:
 
 test_swpc_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in_SWPC_v2_restart
@@ -632,7 +622,6 @@ test_swpc_multiion:
 	@echo "test_swpc_multiion_check..." >> test_swpc_multiion_gm.diff
 	@echo "test_swpc_multiion_check..." >> test_swpc_multiion_ie.diff
 	${MAKE} test_swpc_multiion_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_swpc_multiion_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
@@ -642,7 +631,7 @@ test_swpc_multiion_compile:
 
 test_swpc_multiion_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_multiion_v2_*
@@ -703,7 +692,6 @@ test_swpc_multispecies:
 	@echo "test_swpc_multispecies_check..." >> test_swpc_multispecies_gm.diff
 	@echo "test_swpc_multispecies_check..." >> test_swpc_multispecies_ie.diff
 	${MAKE} test_swpc_multispecies_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_swpc_multispecies_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
@@ -713,7 +701,7 @@ test_swpc_multispecies_compile:
 
 test_swpc_multispecies_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_multispecies_v2_*
@@ -773,7 +761,6 @@ test_swpc_cimi:
 	@echo "test_swpc_cimi_check..." >> test_swpc_cimi_gm.diff
 	@echo "test_swpc_cimi_check..." >> test_swpc_cimi_ie.diff
 	${MAKE} test_swpc_cimi_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_swpc_cimi_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
@@ -784,7 +771,7 @@ test_swpc_cimi_compile:
 
 test_swpc_cimi_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_cimi_v2_*
@@ -855,7 +842,6 @@ test_swpc_amps:
 	@echo "test_swpc_amps_check..." >> test_swpc_amps_ie.diff
 	@echo "test_swpc_amps_check..." >> test_swpc_amps_rb.diff
 	${MAKE} test_swpc_amps_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_swpc_amps_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE,PT/AMPS
@@ -866,7 +852,7 @@ test_swpc_amps_compile:
 
 test_swpc_amps_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
 	perl -pi -e 'if(/MaxIter/){s/700/70/; s/1500/200/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_amps_init
@@ -939,7 +925,6 @@ test3:
 	@echo "test3_check..." >> test03_ie.diff
 	@echo "test3_check..." >> test03_im_cimi.diff
 	${MAKE} test3_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test3_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
@@ -950,7 +935,7 @@ test3_compile:
 
 test3_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIEIMCIMI ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEIMCIMI ${TESTDIR}/LAYOUT.in
 
@@ -1006,7 +991,6 @@ test4:
 	@echo "test4_check..." >> test04_ie.diff
 	@echo "test4_check..." >> test04_im_heidi.diff
 	${MAKE} test4_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
@@ -1016,7 +1000,7 @@ test4_compile:
 
 test4_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIEHEIDI ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMIEHEIDI ${TESTDIR}/LAYOUT.in
 
@@ -1049,7 +1033,6 @@ test5:
 	${MAKE} test5_run
 	@echo "test5_check..." >> test05_ee.diff
 	${MAKE} test5_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
@@ -1061,7 +1044,7 @@ test5_compile:
 
 test5_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/LAYOUT.in.test.EESC ${TESTDIR}/LAYOUT.in
 	cd ${TESTDIR}; cp ../GM/BATSRUS/data/FLUXEMERGENCE/*Sph.dat .
 	cd ${TESTDIR}; cp ../GM/BATSRUS/data/FLUXEMERGENCE/EOS.* .
@@ -1117,7 +1100,6 @@ test7:
 	@echo "test7_check..." >> test07_ih.diff
 	@echo "test7_check..." >> test07_oh.diff
 	${MAKE} test7_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
@@ -1128,7 +1110,7 @@ test7_compile:
 
 test7_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.IHOH.CoupleSphToXyz ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.IHOH ${TESTDIR}/LAYOUT.in
 
@@ -1166,7 +1148,6 @@ test8:
 	@echo "test8_check..." >> test08_sc_thread.diff
 	@echo "test8_check..." >> test08_ih.diff
 	${MAKE} test8_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test8_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -1178,7 +1159,7 @@ test8_compile:
 
 test8_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIH_threadbc ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 
@@ -1231,7 +1212,6 @@ test9:
 	@echo "test9_check..." >> test09_sc_chromo.diff
 	@echo "test9_check..." >> test09_ih.diff
 	${MAKE} test9_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -1244,7 +1224,7 @@ test9_compile:
 
 test9_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.start.SCIH ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
 	cp Param/map_1.out ${TESTDIR}/SC/
@@ -1276,68 +1256,6 @@ test9_check:
 		> test09_ih.diff)
 	ls -l test09_*.diff
 
-### test9_2: SC + IH with new AWSoM updates. Restarting SC and running IH in 2nd and 5th order schemes, Restarts IH in 5th order scheme- Test not finished, Work in Progress ### 
-
-test9_2:
-	@echo "test9_2_compile..." > test9_2_sc_chromo.diff
-	@echo "test9_2_compile..." > test9_2_ih.diff
-	${MAKE} test9_2_compile
-	@echo "test9_2_rundir..." >> test9_2_sc_chromo.diff
-	@echo "test9_2_rundir..." >> test9_2_ih.diff
-	${MAKE} test9_2_rundir
-	@echo "test9_2_run..." >> test9_2_sc_chromo.diff
-	@echo "test9_2_run..." >> test9_2_ih.diff
-	${MAKE} test9_2_run
-	@echo "test9_2_restart..." >> test9_2_sc_chromo.diff
-	@echo "test9_2_restart..." >> test9_2_ih.diff
-	${MAKE} test9_2_restart
-	@echo "test9_2_check..." >> test9_2_sc_chromo.diff
-	@echo "test9_2_check..." >> test9_2_ih.diff
-	${MAKE} test9_2_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
-
-test9_2_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
-	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
-	./Config.pl -g=SC:6,4,4,1200,1,IH:6,6,6,6800,1 -o=IH:ng=3
-	${MAKE} SWMF
-	make PIDL
-
-test9_2_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
-	cp Param/PARAM.in.test.start.ChromoIH ${TESTDIR}/PARAM.in
-	cp GM/BATSRUS/Param/CORONA/RadCoolCorona_8.0.dat ${TESTDIR}/RadCoolCorona_8.0.dat
-
-test9_2_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; mv runlog runlog_start
-	cd ${TESTDIR}; ./Restart.pl
-
-test9_2_restart:
-	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; cp Param/PARAM.in.test.restart.ChromoIH PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_restart1
-	cd ${TESTDIR}; mv PARAM.in PARAM.in.restart; cp Param/PARAM.in.test.saverestart.ChromoIH PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-	#cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run1
-	cd ${TESTDIR}; mv PARAM.in PARAM.in.saverestart; cp Param/PARAM.in.test.newrestart.ChromoIH PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_restart2
-
-test9_2_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
-		${TESTDIR}/RESULTS/run_restart1/SC/log_n000001.log \
-		output/test9/SC_log_n000001.log \
-		> test09_sc_chromo.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
-		${TESTDIR}/RESULTS/run_restart2/IH/log_n000000.log \
-		output/test9/IH_log_n000000.log \
-		> test09_ih.diff)
-	ls -l test09_*.diff
-
 ### test10: Global Solar Wind Model with three temperatures and Alfven waves
 
 test10:
@@ -1353,7 +1271,6 @@ test10:
 	@echo "test10_check..." >> test10_sc.diff
 	@echo "test10_check..." >> test10_ih.diff
 	${MAKE} test10_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
@@ -1365,7 +1282,7 @@ test10_compile:
 
 test10_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIH_3T ${TESTDIR}/PARAM.in
 
 test10_run:
@@ -1399,7 +1316,6 @@ test11:
 	@echo "test11_check..." >> test11_gm.diff
 	@echo "test11_check..." >> test11_pt.diff
 	${MAKE} test11_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test11_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
@@ -1410,7 +1326,7 @@ test11_compile:
 
 test11_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPT ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPT ${TESTDIR}/LAYOUT.in
 
@@ -1448,7 +1364,6 @@ test13:
 	${MAKE} test13_run
 	@echo "test13_check..." >> test13_pt.diff
 	${MAKE} test13_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test13_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
@@ -1458,7 +1373,7 @@ test13_compile:
 
 test13_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPT.Europa ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPT.Europa ${TESTDIR}/LAYOUT.in
 	cp -r PT/AMPS/data/input/Europa/TestCase/RESTART_n003000 ${TESTDIR}/
@@ -1487,7 +1402,6 @@ test14:
 	${MAKE} test14_run
 	@echo "test14_check..." >> test14_ohpt.diff
 	${MAKE} test14_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test14_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
@@ -1498,7 +1412,7 @@ test14_compile:
 
 test14_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.OHPT ${TESTDIR}/LAYOUT.in
 
@@ -1553,7 +1467,6 @@ test15_sp:
 	${MAKE} test15_sp_run
 	@echo "test15_sp_check..." >> test15_sp.diff
 	${MAKE} test15_sp_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test15_scihsp_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
@@ -1565,7 +1478,7 @@ test15_scihsp_compile:
 
 test15_scihsp_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SCIHSP ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
@@ -1609,7 +1522,7 @@ test15_sp_compile:
 
 test15_sp_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	mkdir ${TESTDIR}/MH_data/
 	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.SP ${TESTDIR}/LAYOUT.in
@@ -1643,7 +1556,6 @@ test16:
 	$(MAKE) test16_run
 	@echo "test16_check..." > test16.diff
 	$(MAKE) test16_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test16_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
@@ -1653,7 +1565,7 @@ test16_compile:
 	
 test16_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.FLEKS.periodic  ${TESTDIR}/PARAM.in
 
 test16_run:
@@ -1681,7 +1593,6 @@ test17:
 	$(MAKE) test17_run
 	@echo "test17_check..." > test17.diff
 	$(MAKE) test17_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test17_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
@@ -1691,7 +1602,7 @@ test17_compile:
 	
 test17_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.FLEKS.2D.2steps  ${TESTDIR}/PARAM.in
 
 test17_run:
@@ -1730,7 +1641,6 @@ test18:
 	$(MAKE) test18_run
 	@echo "test18_check..." > test18.diff
 	$(MAKE) test18_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test18_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
@@ -1740,7 +1650,7 @@ test18_compile:
 	
 test18_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.FLEKS.3D  ${TESTDIR}/PARAM.in
 
 test18_run:
@@ -1771,7 +1681,6 @@ test_esmf:
 	${MAKE} test_esmf_run
 	@echo "test_esmf_check..." >> test_esmf.diff
 	${MAKE} test_esmf_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_esmf_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
@@ -1780,8 +1689,8 @@ test_esmf_compile:
 
 test_esmf_rundir:
 	rm -rf ${TESTDIR};
-	${MAKE} rundir RUNDIR=${TESTDIR}
-	cd ESMF/ESMF_SWMF; ${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cd ESMF/ESMF_SWMF; ${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 
 test_esmf_run: 
 	@cd ${TESTDIR}; rm -f PET*ESMF_LogFile
@@ -1825,7 +1734,6 @@ test_ccmc:
 	${MAKE} test_ccmc_run
 	@echo "test_ccmc_check..." >> test_ccmc.diff
 	${MAKE} test_ccmc_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 ccmc_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
@@ -1837,7 +1745,7 @@ ccmc_compile:
 	
 test_ccmc_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
 	cd ${TESTDIR}; \
 		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
@@ -1900,7 +1808,6 @@ test_ccmc_small:
 	@echo "test_ccmc_small_check..." >> test_ccmc_small_ie.diff
 	@echo "test_ccmc_small_check..." >> test_ccmc_small_rb.diff
 	${MAKE} test_ccmc_small_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ccmc_small_compile: 
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
@@ -1911,7 +1818,7 @@ test_ccmc_small_compile:
 
 test_ccmc_small_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
 	cd ${TESTDIR}; \
 		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
@@ -1964,7 +1871,6 @@ test_ramscb:
 	@echo "test_ramscb_check..." >> test_ramscb_ie.diff
 	@echo "test_ramscb_check..." >> test_ramscb_im.diff
 	${MAKE} test_ramscb_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
@@ -1974,7 +1880,7 @@ test_ramscb_compile:
 
 test_ramscb_rundir:
 	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp ${IMDIR}/input/PARAM.in.test.gmieim.simple ${TESTDIR}/PARAM.in
 	cp ${IMDIR}/input/LAYOUT.in.test.gmieim.simple ${TESTDIR}/LAYOUT.in
 
@@ -2021,7 +1927,6 @@ test12_aniso_AMPS:
 	$(MAKE) test12_aniso_AMPS_run
 	@echo "test12_aniso_AMPS_check..." > test12_aniso_AMPS_gmpc.diff
 	$(MAKE) test12_aniso_AMPS_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_aniso_AMPS_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
@@ -2032,7 +1937,7 @@ test12_aniso_AMPS_compile:
 	
 test12_aniso_AMPS_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
 
 test12_aniso_AMPS_run:
@@ -2070,7 +1975,6 @@ test12_aniso_AMPS_divE_corr:
 	$(MAKE) test12_aniso_AMPS_divE_corr_run
 	@echo "test12_aniso_AMPS_divE_corr_check..." > test12_aniso_AMPS_divE_corr_gmpc.diff
 	$(MAKE) test12_aniso_AMPS_divE_corr_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_aniso_AMPS_divE_corr_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
@@ -2081,7 +1985,7 @@ test12_aniso_AMPS_divE_corr_compile:
 	
 test12_aniso_AMPS_divE_corr_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS.corr  ${TESTDIR}/PARAM.in
 
 test12_aniso_AMPS_divE_corr_run:
@@ -2108,7 +2012,6 @@ test12_aniso_AMPS_openmp:
 	$(MAKE) test12_aniso_AMPS_openmp_run
 	@echo "test12_aniso_AMPS_openmp_check..." > test12_aniso_AMPS_openmp_gmpc.diff
 	$(MAKE) test12_aniso_AMPS_openmp_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_aniso_AMPS_openmp_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
@@ -2119,7 +2022,7 @@ test12_aniso_AMPS_openmp_compile:
 	
 test12_aniso_AMPS_openmp_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS  ${TESTDIR}/PARAM.in
 
 test12_aniso_AMPS_openmp_run:
@@ -2145,7 +2048,6 @@ test12_aniso_AMPS_dynamic:
 	$(MAKE) test12_aniso_AMPS_dynamic_run
 	@echo "test12_aniso_AMPS_dynamic_check..." > test12_aniso_AMPS_dynamic_gmpc.diff
 	$(MAKE) test12_aniso_AMPS_dynamic_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_aniso_AMPS_dynamic_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
@@ -2156,7 +2058,7 @@ test12_aniso_AMPS_dynamic_compile:
 	
 test12_aniso_AMPS_dynamic_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS.dynamic  ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPC.aniso  ${TESTDIR}/LAYOUT.in
 
@@ -2183,7 +2085,6 @@ test12_aniso:
 	$(MAKE) test12_aniso_run
 	@echo "test12_aniso_check..." > test12_aniso_gmpc.diff
 	$(MAKE) test12_aniso_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_aniso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
@@ -2193,7 +2094,7 @@ test12_aniso_compile:
 	
 test12_aniso_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.start.aniso  ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPC.aniso  ${TESTDIR}/LAYOUT.in
 
@@ -2232,7 +2133,6 @@ test12_3d:
 	$(MAKE) test12_3d_run
 	@echo "test12_3d_check..." > test12_3d_gm.diff
 	$(MAKE) test12_3d_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_3d_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
@@ -2242,7 +2142,7 @@ test12_3d_compile:
 	
 test12_3d_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.3D.start  ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
@@ -2288,7 +2188,6 @@ test12_iso:
 	$(MAKE) test12_iso_run
 	@echo "test12_iso_check..." > test12_iso_gm.diff
 	$(MAKE) test12_iso_check
-	@if([ "${KEEP}" ]); then rm -rf run_$@; mv ${TESTDIR} run_$@; fi
 
 test12_iso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
@@ -2298,7 +2197,7 @@ test12_iso_compile:
 	
 test12_iso_rundir:
 	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${TESTDIR} COMPDIR=GM,PC
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.start  ${TESTDIR}/PARAM.in
 	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
