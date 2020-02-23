@@ -18,8 +18,8 @@ test_help:
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
-	@echo "    test_psie		      (run PS/DGCPM-IE/RIM coupling test)"
-	@echo "    test_psgmie		      (run PS/DGCPM-IE/Ridley_serial-GM/BATS-R-US coupling test)"
+	@echo "    test_psie                  (run PS/DGCPM-IE/RIM coupling test)"
+	@echo "    test_psgmie                (run PS/DGCPM-IE/Ridley_serial-GM/BATS-R-US coupling test)"
 	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_esmf                  (run ESMF_SWMF test)"
 	@echo "    test_ccmc                  (run CCMC test)"
@@ -71,7 +71,7 @@ test:
 	-@(${MAKE} test8 TESTDIR=run_test08)
 	-@(${MAKE} test9 TESTDIR=run_test09)
 	-@(${MAKE} test10 TESTDIR=run_test10)
-	-@(${MAKE} test12 TESTDIR=run_test12)
+	-@(${MAKE} test12)
 	-@(${MAKE} test13 TESTDIR=run_test13)
 	-@(${MAKE} test14 TESTDIR=run_test14)
 	-@(${MAKE} test15 TESTDIR=run_test15)
@@ -1544,7 +1544,7 @@ test15_sp_check:
 		ls -l test15*.diff
 
 
-### test16: BATSRUS+FLEKS. BATSRUS only provides the initial condition.
+### test16: GM/BATSRUS+PC/FLEKS. BATSRUS only provides the initial condition.
 ###         FLEKS runs with periodic boundary conditions.
 
 test16:
@@ -1582,7 +1582,7 @@ test16_check:
 	ls -l test16.diff
 
 
-### test17: BATSRUS+FLEKS. 2D Alfven wave
+### test17: GM/BATSRUS+PC/FLEKS. 2D Alfven wave
 
 test17:
 	@echo "test17_compile..." > test17.diff
@@ -1627,7 +1627,6 @@ test17_check:
 		${TESTDIR}/RESULTS/2restart/GM/z=0.ref \
 		>> test17.diff)
 	ls -l test17.diff
-
 
 
 ### test18: BATSRUS+FLEKS. 3D reconnection
@@ -1903,20 +1902,21 @@ test_ramscb_check:
 		> test_ramscb_ie.diff)
 	ls -l test_ramscb*.diff
 
-######## test PC/IPIC3D coupled with GM/BATSRUS #########
+######## test PC/IPIC3D and PC/AMPS coupled with GM/BATSRUS #########
+
+.NOTPARALLEL: test12
 
 test12:
-	-$(MAKE) test12_aniso_AMPS
-	-$(MAKE) test12_aniso_AMPS_divE_corr
-	-$(MAKE) test12_aniso_AMPS_dynamic
-	-$(MAKE) test12_aniso_AMPS_openmp
+	-$(MAKE) test12_aniso_AMPS           TESTDIR=run_test12_aniso_AMPS
+	-$(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr
+	-$(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic
+	-$(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp
 	./Config.pl -noopenmp -o=PC:openmp=off
-	-$(MAKE) test12_aniso
-	-$(MAKE) test12_iso
-	-$(MAKE) test12_3d
+	-$(MAKE) test12_aniso TESTDIR=run_test12_aniso
+	-$(MAKE) test12_iso   TESTDIR=run_test12_iso
+	-$(MAKE) test12_3d    TESTDIR=run_test12_3d
 
 ######## test PC coupled with GM/BATSRUS #########
-
 
 test12_aniso_AMPS:
 	@echo "test12_aniso_AMPS_compile..." > test12_aniso_AMPS_gmpc.diff
