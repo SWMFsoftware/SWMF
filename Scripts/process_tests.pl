@@ -6,7 +6,6 @@ my %WeightMachine = (
     "gfortran"     => "1.0",
     "grid"         => "1.0",
     "mesh"         => "1.0",
-    "bluewaters"   => "0.0",
     );
 
 #    "nyx"          => "1.0",
