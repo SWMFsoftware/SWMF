@@ -1239,7 +1239,7 @@ test9_rundir:
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_start
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_start
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
 	
 test9_restart:
