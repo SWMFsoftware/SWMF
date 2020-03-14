@@ -301,6 +301,49 @@ z=0 VAR idl             StringPlot
 -1.                     DxSavePlot
 {MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq               NameVars
 {default}                 NamePars
+los INS tec             StringPlot
+5                   DnSavePlot
+-1.0                    DtSavePlot
+sta:euvi stb:euvi sdo:aia
+
+#LOOKUPTABLE
+AiaXrt                          NameTable
+load                            TypeAction
+SC/Param/los_tbl.dat            NameFile
+ascii                           TypeFIle
+
+#LOOKUPTABLE
+euv                             NameTable
+load                            TypeAction
+SC/Param/los_Eit_cor.dat        NameFile
+ascii                           TypeFIle
+
+#LOOKUPTABLE
+EuviA                           NameTable
+load                            TypeAction
+SC/Param/los_EuviA.dat          NameFile
+ascii                           TypeFile
+
+#LOOKUPTABLE
+EuviB                           NameTable
+load                            TypeAction
+SC/Param/los_EuviB.dat          NameFIle
+ascii                           TypeFile
+
+#SATELLITE
+3                       nSatellite
+MHD                     StringSatellite
+5000                    DnOutput
+3600.0                  DtOutput [sec]
+earth_traj.dat          NameTrajectoryFile
+MHD                     StringSatellite
+5000                    DnOutput
+3600.0                  DtOutput [sec]
+stereoa.dat             NameTrajectoryFile
+MHD                     StringSatellite
+5000                    DnOutput
+3600.0                  DtOutput [sec]
+stereob.dat             NameTrajectoryFile
 
 #SAVEINITIAL
 T                       DoSaveInitial
@@ -498,31 +541,16 @@ g rbody                 NamePars
 {MHD} b1x b1y b1z               NameVars
 g rbody                 NamePars
 
-SATELLITE
-3			nSatellite
-VAR file		StringSatellite
-5000			DnOutput
-3600.0			DtOutput [sec]
-earth_traj.dat		NameTrajectoryFile
+#SATELLITE
+1                       nSatellite
+VAR trajrange           StringSatellite
+1                       DnOutput
+-1.0                    DtOutput [sec]
+earth_traj.dat          NameTrajectoryFile
+-5 d
+5 d
+1 h
 rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02
-VAR file		StringSatellite
-5000			DnOutput
-3600.0			DtOutput [sec]
-sta_traj.dat		NameTrajectoryFile
-rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02
-VAR file		StringSatellite
-5000			DnOutput
-3600.0			DtOutput [sec]
-stb_traj.dat		NameTrajectoryFile
-rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02
-
-STEADYSTATESATELLITE
--1178293.0		0  days
-1178293.0		27.2753 days
--1178293.0		0  days
-1178293.0		27.2753 days
--1178293.0		0  days
-1178293.0		27.2753 days
 
 #END_COMP IH ---------------------------------------------------------------
 

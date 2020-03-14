@@ -1234,6 +1234,8 @@ test9_rundir:
 	cd ${TESTDIR}/SC; ${PARALLEL} ${NPFLAG} 4 ./FDIPS.exe > runlog_fdips
 	cd ${TESTDIR}/SC; ${MAGNETOGRAMDIR}/redistribute.pl fdips_bxyz_np010202.out fdips_bxyz.out
 	cd ${TESTDIR}/SC; rm -rf fdips_*_np*.out
+	cp GM/BATSRUS/Param/HELIOSPHERE/*.gz ${TESTDIR}/
+	cd ${TESTDIR}; gunzip *.gz
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1243,7 +1245,7 @@ test9_run:
 test9_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -m -cat RESULTS/run_restart
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
 test9_check:
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
@@ -1254,6 +1256,10 @@ test9_check:
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000005.log \
 		output/test9/IH_log_n000005.log \
 		> test09_ih.diff)
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+		${TESTDIR}/RESULTS/run_restart/IH/trj_earth_traj_n00000007.sat \
+		output/test9/IH_trj_earth_traj_n00000007.sat \
+		> test09_ih_trj_earth.diff)
 	ls -l test09_*.diff
 
 ### test10: Global Solar Wind Model with three temperatures and Alfven waves
