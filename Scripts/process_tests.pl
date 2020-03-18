@@ -1,22 +1,21 @@
 #!/usr/bin/perl
 use strict;
 
+# Number of days to show on web page
+my $nday = 7;
+
+# weights for each platform to calculate skill scores
 my %WeightMachine = (
-    "pleiades"     => "1.0",
-    "gfortran"     => "1.0",
-    "grid"         => "1.0",
-    "mesh"         => "1.0",
+    "pleiades"     => "1.0",  # ifort
+    "gfortran"     => "1.0",  # gfortran 
+    "grid"         => "1.0",  # nagfor debug mode
+    "mesh"         => "1.0",  # nagfor optimized
     );
 
-#    "nyx"          => "1.0",
-#    "nyx_gfortran" => "1.0",
-#    "nyx_pgf90"    => "1.0",
-#    "nyx_ifort"    => "1.0",
-
-
-
+# List of platforms
 my @machines = sort keys %WeightMachine;
 
+# List of scores ALL, CCHM (solar), CWMM (magnetospheric), CRASH (HEDP)
 my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
 my %WeightTest = (
 
@@ -82,6 +81,7 @@ my $indexfile = "index.html";
 my $changefile = "test.diff";
 my $codefile = "code.diff";
 my $manerrorfile = "manual.err";
+my $lastpassfile = "./lastpass.txt";
 
 my %tests;
 my %resfile;
@@ -91,7 +91,7 @@ my $day;
 my $machine;
 
 # Take last seven days.
-my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -7`;
+my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -$nday`;
 my @days = split "\n", $days;
 
 # Extract results for all days and convert logfile into an HTML file
@@ -177,6 +177,37 @@ foreach $day (@days){
 }
 
 my $Table = "<hr>\n<center>\n";
+
+our %lastpass;
+my $machine;
+my $key;
+
+# read in last pass information
+require $lastpassfile or die "$ERROR: could not read $lastpassfile\n";
+
+# update information with last day's results
+foreach $machine (@machines){
+    my $test;
+    foreach $test (sort keys %tests){
+	my $day = @days[0];
+	if($result{$day}{$test}{$machine} =~ /passed/i){
+	    my $date = $day; $date =~ s/SWMF_TEST_RESULTS\///;
+	    $key = sprintf("%-50s : %-10s", $test, $machine);
+	    $lastpass{$key} = $date;
+	}
+    }
+}
+
+# save latest information
+open FILE, ">$lastpassfile" or die "$ERROR: could not open $lastpassfile\n";
+print FILE "\%lastpass = (\n";
+foreach $key (sort keys %lastpass){
+    print FILE "'$key' => '$lastpass{$key}',\n";
+}
+print FILE ");\n";
+close FILE;
+
+#exit 0;
 
 my %change;
 foreach $day (@days){
