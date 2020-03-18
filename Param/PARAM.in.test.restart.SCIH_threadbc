@@ -114,7 +114,7 @@ T			UseHeatFluxCollisionless
 1.05            	CollisionlessAlpha  
 
 #TEST
-krylov radiative_cooling
+radiative_cooling write_plot_los
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -197,7 +197,7 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-4			nPlotFiles
+5			nPlotFiles
 x=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
@@ -227,6 +227,50 @@ rfr idl rwi		StringPlot
 4.0			ySizeImage
 100			nPixX
 100			nPixY
+los INS tec             StringPlot
+-1                      DnSavePlot
+10.0                    DtSavePlot
+sta:euvi stb:euvi sdo:aia
+
+#LOOKUPTABLE
+AiaXrt                          NameTable
+load                            TypeAction
+SC/Param/los_tbl.dat            NameFile
+ascii                           TypeFIle
+
+#LOOKUPTABLE
+euv                             NameTable
+load                            TypeAction
+SC/Param/los_Eit_cor.dat        NameFile
+ascii                           TypeFIle
+
+#LOOKUPTABLE
+EuviA                           NameTable
+load                            TypeAction
+SC/Param/los_EuviA.dat          NameFile
+ascii                           TypeFile
+
+#LOOKUPTABLE
+EuviB                           NameTable
+load                            TypeAction
+SC/Param/los_EuviB.dat          NameFIle
+ascii                           TypeFile
+
+
+#SATELLITE
+3                       nSatellite
+MHD                     StringSatellite
+-1                      DnOutput
+-1.0                    DtOutput [sec]
+earth_traj.dat          NameTrajectoryFile
+MHD                     StringSatellite
+5000                    DnOutput
+3600.0                  DtOutput [sec]
+stereoa.dat             NameTrajectoryFile
+MHD                     StringSatellite
+-1                      DnOutput
+-1.0                    DtOutput [sec]
+stereob.dat             NameTrajectoryFile
 
 #END_COMP SC ------------------------------------------------------------------
 
