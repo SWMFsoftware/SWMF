@@ -267,6 +267,8 @@ foreach $day (@days){
 		my $result = $result{$day}{$test}{$machine};
 
 		my $key = sprintf("%-50s : %-10s", $test, $machine);
+		my $lastpass = $lastpass{$key};
+		$lastpass = "?/?/?" unless $lastpass;
 
 		if($result){
 
@@ -319,7 +321,7 @@ foreach $day (@days){
 		# Add HTML link for failed tests
 		$result = 
 		    "<A HREF=\"$day/$machine/$htmlfile\#$test\" ".
-		    "target=swmf_test_results title=$lastpass{$key}>".
+		    "target=swmf_test_results title=$lastpass>".
 		    $result.
 		    "</HREF>" if $result !~ /passed/i;
 
