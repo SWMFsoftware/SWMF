@@ -1162,6 +1162,8 @@ test8_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIH_threadbc ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
+	cp GM/BATSRUS/Param/HELIOSPHERE/*.gz ${TESTDIR}/
+	cd ${TESTDIR}; gunzip *.gz
 
 test8_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
