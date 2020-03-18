@@ -81,7 +81,7 @@ my $indexfile = "index.html";
 my $changefile = "test.diff";
 my $codefile = "code.diff";
 my $manerrorfile = "manual.err";
-my $lastpassfile = "./lastpass.txt";
+my $lastpassfile = "lastpass.txt";
 
 my %tests;
 my %resfile;
@@ -176,11 +176,12 @@ foreach $day (@days){
     chdir "../../../..";
 }
 
-my $Table = "<hr>\n<center>\n";
-
+# update last pass information
 our %lastpass;
 my $machine;
 my $key;
+my $day = @days[0];
+my $date = $day; $date =~ s/SWMF_TEST_RESULTS\///;
 
 # read in last pass information
 require $lastpassfile or die "$ERROR: could not read $lastpassfile\n";
@@ -189,12 +190,13 @@ require $lastpassfile or die "$ERROR: could not read $lastpassfile\n";
 foreach $machine (@machines){
     my $test;
     foreach $test (sort keys %tests){
-	my $day = @days[0];
+	#foreach $day (@days){
 	if($result{$day}{$test}{$machine} =~ /passed/i){
-	    my $date = $day; $date =~ s/SWMF_TEST_RESULTS\///;
 	    $key = sprintf("%-50s : %-10s", $test, $machine);
 	    $lastpass{$key} = $date;
+	    last;
 	}
+	#}
     }
 }
 
@@ -207,7 +209,8 @@ foreach $key (sort keys %lastpass){
 print FILE ");\n";
 close FILE;
 
-#exit 0;
+# Create result table
+my $Table = "<hr>\n<center>\n";
 
 my %change;
 foreach $day (@days){
@@ -263,6 +266,8 @@ foreach $day (@days){
 	    foreach $machine (@machines){
 		my $result = $result{$day}{$test}{$machine};
 
+		my $key = sprintf("%-50s : %-10s", $test, $machine);
+
 		if($result){
 
 		    # Assign numeric value to the result
@@ -314,7 +319,7 @@ foreach $day (@days){
 		# Add HTML link for failed tests
 		$result = 
 		    "<A HREF=\"$day/$machine/$htmlfile\#$test\" ".
-		    "target=swmf_test_results>".
+		    "target=swmf_test_results title=$lastpass{$key}>".
 		    $result.
 		    "</HREF>" if $result !~ /passed/i;
 
