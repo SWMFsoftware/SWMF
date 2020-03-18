@@ -25,7 +25,7 @@ _TABLES_
 <h1><A NAME=EXPLANATIONS>EXPLANATIONS</A></h1>
 </center>
 
-Test results are based on the code checked out from CVS at 7pm EDT
+Test results are based on the code checked out from Git at 7pm EDT
 each night. Results are evaluated the next morning at 8:45am EDT.
 The raw test results are saved into a
 <A HREF=SWMF_TEST_RESULTS>test result archive</A> that contains
@@ -42,15 +42,6 @@ the results per year, month and day.
       <td>MPI library</td>
       <td>HDF library</td>
       <td>Parallel</td>
-  </tr>
-  <tr>
-      <td><b>bluewaters</b></td>
-      <td>Cray XE node</td>
-      <td>ifortftn,intelcc</td>
-      <td>PrgEnv-intel</td>
-      <td>Intel MPI</td>
-      <td>cray-hdf5-parallel/1.8.11</td>
-      <td>aprun -q -n 8</td>
   </tr>
   <tr>
       <td><b>grid</b></td>
@@ -97,7 +88,10 @@ Notation used in the tables:
 <li><FONT COLOR=red>Red text</FONT> shows what failed in a test.<br>
 <li><FONT COLOR=green>Green text</FONT> indicates that a test passed.<br>
 <li>CAPITALIZED text shows results that have changed.<br>
-<li>Click on the <A HREF='#TOP'><FONT COLOR=red>failed tests</FONT></A>, 
+<li>Hoover over the <A HREF='#TOP' TITLE='YEAR/MONTH/DAY'><FONT COLOR=red>failed tests</FONT></A> to see the date when it passed last. ?/?/? is shown 
+if the last pass date was a long time ago.
+<li>Click on the 
+<A HREF='#TOP' TITLE='?/?/?'><FONT COLOR=red>failed tests</FONT></A>, 
 the <A HREF="#TOP">results</A> or the <A HREF="#TOP">log file</A> 
 links under the machine names for more information.
 </ul>
