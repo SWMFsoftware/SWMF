@@ -330,17 +330,17 @@ ascii                           TypeFile
 #SATELLITE
 3                       nSatellite
 MHD                     StringSatellite
--1			DnOutput
--1.0			DtOutput [sec]
-earth.dat		NameTrajectoryFile
+-1                      DnOutput
+-1.0                    DtOutput [sec]
+SC/TRAJECTORY/earth_traj.dat
 MHD                     StringSatellite
--1			DnOutput
--1.0			DtOutput [sec]
-sta.dat			NameTrajectoryFile
+-1                      DnOutput
+-1.0                    DtOutput [sec]
+SC/TRAJECTORY/sta.dat   NameTrajectoryFile
 MHD                     StringSatellite
--1			DnOutput
--1.0			DtOutput [sec]
-stb.dat			NameTrajectoryFile
+-1                      DnOutput
+-1.0                    DtOutput [sec]
+SC/TRAJECTORY/stb.dat   NameTrajectoryFile
 
 #SAVEINITIAL
 F				DoSaveInitial
