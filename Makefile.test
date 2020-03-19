@@ -1162,8 +1162,6 @@ test8_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIH_threadbc ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
-	cp GM/BATSRUS/Param/HELIOSPHERE/*.gz ${TESTDIR}/
-	cd ${TESTDIR}; gunzip *.gz
 
 test8_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1236,7 +1234,6 @@ test9_rundir:
 	cd ${TESTDIR}/SC; ${PARALLEL} ${NPFLAG} 4 ./FDIPS.exe > runlog_fdips
 	cd ${TESTDIR}/SC; ${MAGNETOGRAMDIR}/redistribute.pl fdips_bxyz_np010202.out fdips_bxyz.out
 	cd ${TESTDIR}/SC; rm -rf fdips_*_np*.out
-	cp GM/BATSRUS/data/TRAJECTORY/*dat ${TESTDIR}/
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
