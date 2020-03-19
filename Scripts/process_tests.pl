@@ -1,8 +1,9 @@
-#!/usr/bin/perl
-use strict;
+#!/usr/bin/perl -s
 
 # Number of days to show on web page
-my $nday = 7;
+my $nDay = ($n or $nday or 7);
+
+use strict;
 
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
@@ -91,7 +92,7 @@ my $day;
 my $machine;
 
 # Take last seven days.
-my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -$nday`;
+my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -$nDay`;
 my @days = split "\n", $days;
 
 # Extract results for all days and convert logfile into an HTML file
@@ -117,7 +118,8 @@ foreach $day (@days){
 	    last if /===========/;
             s/Domain Users//;
 	    my @item = split(' ',$_);
-	    my $test = $item[-1]; $test =~ s/\.diff$//;
+	    my $test = $item[-1]; $test =~ s/\.diff$//; 
+	    $test =~ s/test(\d_)/test0$1/; # rename testN to test0N
 	    my $size = $item[4];
 
 	    $tests{$test} = 1;
@@ -184,19 +186,20 @@ my $day = @days[0];
 my $date = $day; $date =~ s/SWMF_TEST_RESULTS\///;
 
 # read in last pass information
-require $lastpassfile or die "$ERROR: could not read $lastpassfile\n";
+require $lastpassfile if -f $lastpassfile;
 
-# update information with last day's results
+# update information with last days' results
 foreach $machine (@machines){
     my $test;
     foreach $test (sort keys %tests){
-	#foreach $day (@days){
-	if($result{$day}{$test}{$machine} =~ /passed/i){
-	    $key = sprintf("%-50s : %-10s", $test, $machine);
-	    $lastpass{$key} = $date;
-	    last;
+	foreach $day (@days){
+	    if($result{$day}{$test}{$machine} =~ /passed/i){
+		$key = sprintf("%-50s : %-10s", $test, $machine);
+		my $date = $day; $date =~ s/SWMF_TEST_RESULTS\///;
+		$lastpass{$key} = $date;
+		last;
+	    }
 	}
-	#}
     }
 }
 
@@ -208,6 +211,9 @@ foreach $key (sort keys %lastpass){
 }
 print FILE ");\n";
 close FILE;
+
+# Avoid creating a gigantic index.html file
+exit 0 if $nDay > 10;
 
 # Create result table
 my $Table = "<hr>\n<center>\n";
