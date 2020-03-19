@@ -30,7 +30,8 @@ rundir: check_src
 		ln -s ${BINDIR}/FDIPS.exe .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
-		ln -s ${DIR}/GM/BATSRUS/Param/CORONA Param
+		ln -s ${DIR}/GM/BATSRUS/Param/CORONA Param; \
+		ln -s ${DIR}/GM/BATSRUS/data/TRAJECTORY .
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
