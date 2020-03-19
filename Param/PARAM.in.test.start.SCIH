@@ -328,19 +328,19 @@ SC/Param/los_EuviB.dat          NameFIle
 ascii                           TypeFile
 
 #SATELLITE
-3                       nSatellite
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-SC/TRAJECTORY/earth_traj.dat
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-SC/TRAJECTORY/sta.dat   NameTrajectoryFile
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-SC/TRAJECTORY/stb.dat   NameTrajectoryFile
+3                       	nSatellite
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/sta.dat   	NameTrajectoryFile
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/stb.dat   	NameTrajectoryFile
 
 #SAVEINITIAL
 F				DoSaveInitial

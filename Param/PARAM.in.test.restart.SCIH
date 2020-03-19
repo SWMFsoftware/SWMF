@@ -331,22 +331,22 @@ SC/Param/los_EuviB.dat          NameFIle
 ascii                           TypeFile
 
 #SATELLITE
-3                       nSatellite
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-SC/TRAJECTORY/earth_traj.dat   NameTrajectoryFile
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-SC/TRAJECTORY/sta.dat   NameTrajectoryFile
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-SC/TRAJECTORY/stb.dat   NameTrajectoryFile
+3				nSatellite
+MHD				StringSatellite
+-1				DnOutput
+-1.0				DtOutput [sec]
+SC/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/sta.dat   	NameTrajectoryFile
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 #SAVEINITIAL
-T                       DoSaveInitial
+T				DoSaveInitial
 
 #END_COMP SC ----------------------------------------------------------------
 
@@ -515,38 +515,38 @@ RAW			StringLogfile
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-4			nPlotFiles
-x=0 VAR idl		StringPlot
-2			DnSavePlot
--1.			DtSavePlot
--1.0			DxSavePlot
-{MHD} b1x b1y b1z       NameVars
-g rbody                 NamePars
-y=0 VAR idl		StringPlot
-2 			DnSavePlot
--1.			DtSavePlot
--1.0			DxSavePlot
-{MHD} b1x b1y b1z                NameVars
-g rbody                 NamePars
-z=0 VAR idl		StringPlot
-2 			DnSavePlot
--1.		        DtSavePlot
--1.0			DxSavePlot
+4				nPlotFiles
+x=0 VAR idl			StringPlot
+2				DnSavePlot
+-1.				DtSavePlot
+-1.0				DxSavePlot
+{MHD} b1x b1y b1z       	NameVars
+g rbody                 	NamePars
+y=0 VAR idl			StringPlot
+2 				DnSavePlot
+-1.				DtSavePlot
+-1.0				DxSavePlot
 {MHD} b1x b1y b1z               NameVars
-g rbody                 NamePars
-3d VAR idl              StringPlot
-2    			DnSavePlot
--1.			DtSavePlot
--1			DxSavePlot
+g rbody                 	NamePars
+z=0 VAR idl			StringPlot
+2 				DnSavePlot
+-1.		        	DtSavePlot
+-1.0				DxSavePlot
 {MHD} b1x b1y b1z               NameVars
-g rbody                 NamePars
+g rbody                 	NamePars
+3d VAR idl			StringPlot
+2				DnSavePlot
+-1.				DtSavePlot
+-1				DxSavePlot
+{MHD} b1x b1y b1z               NameVars
+g rbody	      			NamePars
 
 #SATELLITE
-1                       nSatellite
-VAR trajrange           StringSatellite
-1                       DnOutput
--1.0                    DtOutput [sec]
-IH/TRAJECTORY/earth_traj.dat   NameTrajectoryFile
+1				nSatellite
+VAR trajrange			StringSatellite
+1				DnOutput
+-1.0				DtOutput [sec]
+IH/TRAJECTORY/earth.dat		NameTrajectoryFile
 -5 d
 5 d
 1 h

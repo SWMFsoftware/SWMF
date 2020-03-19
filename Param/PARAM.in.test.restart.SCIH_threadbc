@@ -258,19 +258,19 @@ ascii                           TypeFile
 
 
 #SATELLITE
-3                       nSatellite
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-earth_traj.dat          NameTrajectoryFile
-MHD                     StringSatellite
-5000                    DnOutput
-3600.0                  DtOutput [sec]
-stereoa.dat             NameTrajectoryFile
-MHD                     StringSatellite
--1                      DnOutput
--1.0                    DtOutput [sec]
-stereob.dat             NameTrajectoryFile
+3                       	nSatellite
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD                     	StringSatellite
+5000                    	DnOutput
+3600.0                  	DtOutput [sec]
+SC/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 #END_COMP SC ------------------------------------------------------------------
 

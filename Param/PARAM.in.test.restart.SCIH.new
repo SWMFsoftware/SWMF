@@ -476,32 +476,6 @@ z=0 VAR idl		StringPlot
 {MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq               NameVars
 {default}                NamePars
 
-SATELLITE
-3			nSatellite
-VAR file		StringSatellite
-5000			DnOutput
-3600.0			DtOutput [sec]
-earth_traj.dat		NameTrajectoryFile
-rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02
-VAR file		StringSatellite
-5000			DnOutput
-3600.0			DtOutput [sec]
-sta_traj.dat		NameTrajectoryFile
-rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02
-VAR file		StringSatellite
-5000			DnOutput
-3600.0			DtOutput [sec]
-stb_traj.dat		NameTrajectoryFile
-rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02
-
-STEADYSTATESATELLITE
--1178293.0		0  days
-1178293.0		27.2753 days
--1178293.0		0  days
-1178293.0		27.2753 days
--1178293.0		0  days
-1178293.0		27.2753 days
-
 #END_COMP IH ---------------------------------------------------------------
 
 #COUPLE1

@@ -207,19 +207,12 @@ Sokolov			TypeFlux
 mc			TypeLimiter
 1.2			BetaLimiter
 
-! Sample of the satellite file output for steady-state heliosphere
-! To get IH/earth_traj.dat file with the Earth trajectory 
-!      a. modify IH/EARTH_TRAJ.in file to get a proper reference date and
-!         desired time interval
-!      b. in run directory call the following command in run/IH:
-!          EARTH_TRAJ.exe > earth_traj.dat
-
 #SATELLITE
 1
 MHD file
 100
 36000.0
-IH/earth_traj.dat
+IH/TRAJECTORY/earth.dat
 
 ! The sample trajectory file contains data for -1 to +1 day only
 ! so there will be only 48 hours in the satellite output file.

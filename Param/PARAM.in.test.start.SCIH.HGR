@@ -232,7 +232,7 @@ RAW			StringLogfile
 MHD			StringSatellite
 1000			DnSatellite
 3600.0			DtSatellite
-IH/earth_traj.dat
+IH/TRAJECTORY/earth.dat
 
 #STEADYSTATESATELLITE
 -1.0               
