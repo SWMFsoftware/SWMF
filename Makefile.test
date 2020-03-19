@@ -1259,7 +1259,7 @@ test9_check:
 		> test09_ih.diff)
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/IH/trj_earth_n00000007.sat \
-		output/test9/IH_trj_earth_n00000007.dat \
+		output/test9/IH_trj_earth_n00000007.sat \
 		> test09_ih_trj_earth.diff)
 	ls -l test09_*.diff
 
