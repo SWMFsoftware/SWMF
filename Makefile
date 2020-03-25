@@ -333,6 +333,7 @@ dist:
 	./Config.pl -uninstall
 	-rm -rf */*/run_test
 	tar -cf tmp.tar  README
+	tar -rf tmp.tar  PARAM.XML
 	tar -rf tmp.tar  Makefile 
 	tar -rf tmp.tar  Makefile.test          #^CMP IF TESTING
 	tar -rf tmp.tar  output                 #^CMP IF TESTING
