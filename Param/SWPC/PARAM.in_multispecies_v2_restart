@@ -73,7 +73,7 @@ T			DoCheckTimeStep
 1e-6			TimeStepMin
 
 #GRIDBLOCKALL
-4000			MaxBlock
+5000			MaxBlock
 1			MaxBlockImpl
 
 #INCLUDE
