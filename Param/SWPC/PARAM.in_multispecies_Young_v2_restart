@@ -233,7 +233,7 @@ T			UseBorisCorrection
 0.01			BorisClightFactor
 
 #TIMESTEPPING
-1			nStage
+2			nStage
 0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
