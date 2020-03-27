@@ -6,19 +6,22 @@
 *.exe
 *.protex
 *.xmltex
+*.aux
+*.toc
+*.dvi
 
 gitinfo.txt
 CON/Control/src/show_git_info.h
 
-SWPCTEST/
+BATL/
+SWPCTEST
 
 run*/
-run*
 Makefile.conf
 Makefile.def
 Makefile.RULES
 Makefile.DEPEND
-Tmp_*
+Tmp_*/
 test_swmf.res
 test_swmf.log
 
@@ -30,39 +33,22 @@ doc/SWMF.pdf
 doc/SWPC.pdf
 doc/TESTING.pdf
 doc/Tex/BATSRUS_SCRIPTS.tex
-doc/Tex/MAINTENANCE.aux
-doc/Tex/MAINTENANCE.dvi
 doc/Tex/MAINTENANCE.log
-doc/Tex/MAINTENANCE.toc
 doc/Tex/PHYSICS.aux
 doc/Tex/PHYSICS.log
 doc/Tex/PHYSICS.toc
-doc/Tex/REFERENCE.aux
-doc/Tex/REFERENCE.dvi
 doc/Tex/REFERENCE.log
-doc/Tex/REFERENCE.toc
-doc/Tex/SOFTWARE_STANDARD.aux
 doc/Tex/SOFTWARE_STANDARD.log
-doc/Tex/SOFTWARE_STANDARD.toc
-doc/Tex/SWMF.aux
-doc/Tex/SWMF.dvi
 doc/Tex/SWMF.log
-doc/Tex/SWMF.toc
 doc/Tex/SWMFREF.tex
 doc/Tex/SWMFXML.tex
 doc/Tex/SWPC.XML
-doc/Tex/SWPC.aux
-doc/Tex/SWPC.dvi
 doc/Tex/SWPC.log
-doc/Tex/SWPC.toc
 doc/Tex/SWPCXML.tex
-doc/Tex/TESTING.aux
 doc/Tex/TESTING.log
-doc/Tex/TESTING.toc
 
-BATL/
-RB/RBE/
 CZ/FSAM/
+
 EE/BATSRUS/Config.pl
 EE/BATSRUS/dataCRASH
 EE/BATSRUS/srcBATL/
@@ -73,9 +59,9 @@ EE/BATSRUS/srcEquation/
 EE/BATSRUS/srcInterface/ModBuffer.f90
 EE/BATSRUS/srcInterface/ModGridDescriptor.f90
 EE/BATSRUS/srcUser/
+
 GM/BATSRUS/
-UA/GITM/
-UA/GITM2/
+
 IE/Ridley_serial/
 
 IH/BATSRUS/Config.pl
@@ -108,8 +94,7 @@ OH/BATSRUS/srcInterface/ModGridDescriptor.f90
 OH/BATSRUS/srcInterface/OH_wrapper.f90
 OH/BATSRUS/srcUser/
 
-PS/DGCPM/
-PT/AMPS/
+RB/RBE/
 
 SC/BATSRUS/Config.pl
 SC/BATSRUS/data
@@ -135,6 +120,15 @@ PC/IPIC3D2/
 PC/ALTOR/
 PC/AMPS/
 PC/FLEKS/
+
+PS/DGCPM/
+
+PT/AMPS/
+
 PW/PWOM/
+
+UA/GITM/
+UA/GITM2/
+
 share/
 util/
