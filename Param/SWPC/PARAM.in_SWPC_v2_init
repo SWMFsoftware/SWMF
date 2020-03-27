@@ -41,7 +41,7 @@ IE			NameComp2
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #GRIDBLOCKALL
-4000			MaxBlock
+5000			MaxBlock
 1			MaxBlockImpl
 
 #GRID
@@ -125,6 +125,9 @@ float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner
+
+#MAGNETICINNERBOUNDARY
+T			DoReflectInnerB1
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
