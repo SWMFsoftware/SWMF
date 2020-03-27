@@ -35,7 +35,7 @@ IE			NameComp2
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #GRIDBLOCKALL
-4000			MaxBlock
+5000			MaxBlock
 1			MaxBlockImpl
 
 #GRID
@@ -407,7 +407,7 @@ T			UseBorisCorrection
 0.01			BorisClightFactor
 
 #TIMESTEPPING
-1			nStage
+2			nStage
 0.85			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------

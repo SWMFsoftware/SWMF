@@ -40,9 +40,9 @@ again and again.
 
 The syntax and the content of the input parameter files
 is defined in the PARAM.XML files. The commands controlling
-the whole SWMF are described in the 
+the whole SWMF are described in the main directory in the
 \begin{verbatim}
-  Param/PARAM.XML
+  PARAM.XML
 \end{verbatim}
 file. The component parameters are described by the PARAM.XML
 file in the component version directory. For example the
@@ -319,7 +319,7 @@ F                           DoTimeAccurate
 All the commands which are written into the RESTART.out file and all 
 the planet modifying commands can only occur in the first session.
 These commands contain parameters which should not change during a run.
-In the Param/PARAM.XML file these commands are marked with an 
+In the PARAM.XML file these commands are marked with an 
 {\tt if="\$\_IsFirstSession"} conditional.
 If any of these parameters are attempted to be changed in later sessions, 
 a warning is printed on the screen and the code stops running

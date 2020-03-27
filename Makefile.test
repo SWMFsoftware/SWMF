@@ -549,7 +549,7 @@ test_swpc:
 
 test_swpc_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE -openmp
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
+	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -557,7 +557,7 @@ test_swpc_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in_SWPC_v2_restart
 	cp ${TESTDIR}/PARAM.in_SWPC_v2_init ${TESTDIR}/PARAM.in
 
@@ -625,7 +625,7 @@ test_swpc_multiion:
 
 test_swpc_multiion_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MultiIon,ng=2
+	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=MultiIon,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -633,7 +633,7 @@ test_swpc_multiion_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_multiion_v2_*
 	cp ${TESTDIR}/PARAM.in_multiion_v2_init ${TESTDIR}/PARAM.in
 
@@ -695,7 +695,7 @@ test_swpc_multispecies:
 
 test_swpc_multispecies_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdHpOp,ng=2
+	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=MhdHpOp,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -703,7 +703,7 @@ test_swpc_multispecies_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_multispecies_v2_*
 	cp ${TESTDIR}/PARAM.in_multispecies_v2_init ${TESTDIR}/PARAM.in
 
@@ -764,7 +764,7 @@ test_swpc_cimi:
 
 test_swpc_cimi_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,ng=2
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
 	make PIDL
@@ -773,7 +773,7 @@ test_swpc_cimi_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/4000/300/}; s/#BORIS/BORIS/' \
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/' \
 	     ${TESTDIR}/PARAM.in_cimi_v2_*
 	cp ${TESTDIR}/PARAM.in_cimi_v2_init ${TESTDIR}/PARAM.in
 
@@ -845,7 +845,7 @@ test_swpc_amps:
 
 test_swpc_amps_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE,PT/AMPS
-	./Config.pl -g=GM:8,8,8,400,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
+	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	./Config.pl -o=PT:application=test/earth-test-swmf,spice-path=nospice,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
