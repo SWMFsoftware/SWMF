@@ -67,7 +67,7 @@ my $gitclone;
 $gitclone  = "sleep $Sleep; " if $Sleep;
 $gitclone .= "git clone";
 $gitclone .= " --depth=1" unless $History;
-$gitclone .= " herot:/GIT/FRAMEWORK";
+$gitclone .= " git\@gitlab.umich.edu:swmf_software";
 
 my $repo;
 foreach $repo ("share", "util", @models){
