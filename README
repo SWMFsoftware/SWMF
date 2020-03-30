@@ -23,23 +23,23 @@ the SWMF and create the user manual please follow the instructions below.
 # are in the CRASH_data repository.
 # If needed, it has to be placed into the home directory.
 
-# !!! Getting SWMF from Git (requires access to herot) !!!
+# !!! Getting SWMF from Git (requires access to UM GitLab) !!!
 #
-# Read http://herot.engin.umich.edu/~gtoth/SWMF/doc/Git_instructions.pdf
-# about setting up the "herot" ssh alias, passwordless access to herot,
-# and defining the "gitclone" alias/function. 
+# Read http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf
+# about registering, passwordless access, mail notifications,
+# and defining the "gitlabclone" (or gitclone) alias/function. 
 
 # Check out the SWMF distribution
 cd {where_you_want_to_have_the_swmf}
-gitclone SWMF
+gitlabclone SWMF
 
 # Check out the SWMF_data distribution into the home directory if needed
 cd
-gitclone SWMF_data
+gitlabclone SWMF_data
 
 # Check out the CRASH_data distribution into the home directory if needed
 cd
-gitclone CRASH_data
+gitlabclone CRASH_data
 
 # !!! Opening tar balls !!!
 
