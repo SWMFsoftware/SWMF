@@ -1,4 +1,3 @@
-\begin{verbatim}
 #  Copyright (C) 2002 Regents of the University of Michigan, 
 #  portions used with permission 
 #  For more information, see http://csem.engin.umich.edu/tools/swmf
@@ -154,4 +153,3 @@ make test_help
 # For example, to run test3 without MPI on a single core use
 
 make -j test3 MPIRUN=
-\end{verbatim}
