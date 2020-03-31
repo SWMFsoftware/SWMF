@@ -111,6 +111,9 @@ ENV_CHECK:
 	  exit 1; \
 	fi);
 
+# Regenerate README from the README.markdown file
+README: README.markdown
+	perl -pe '$$_ = "" if /\`\`\`/; s/\`//g' README.markdown > README
 
 #
 # install for the 1st time
