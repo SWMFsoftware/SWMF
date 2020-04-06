@@ -42,6 +42,7 @@ test_help:
 	@echo "    test12                     (run GM-PC tests)"
 	@echo "    test13                     (run GM-PT test: Europa)"
 	@echo "    test14                     (run OH-PT test)"
+	@echo "    test14pui                  (run OH-PT test with PUI)"
 	@echo "    test15                     (run SC-IH-SP test)"
 	@echo "    test15_build               (configure SC-IH-SP, run test)"
 	@echo "    test16                     (run GM-FLEKS test: FLEKS uses periodic boundary condition)"	
@@ -1394,7 +1395,7 @@ test13_check:
 		> test13_pt.diff)
 		ls -l test13*.diff
 
-### test14: OH/BATSRUS standalone model coupled with OuterHelio project in PT 
+### test14: OH/BATSRUS (single-ion) coupled with PT/AMPS
 
 test14:
 	@echo "test14_compile..." > test14_ohpt.diff
@@ -1435,6 +1436,49 @@ test14_check:
 		${TESTDIR}/RESULTS/PT/amps.ref \
 		> test14_ohpt.diff)
 		ls -l test14*.diff
+
+
+### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS
+
+test14pui:
+	@echo "test14pui_compile..." > test14pui_ohpt.diff
+	${MAKE} test14pui_compile
+	@echo "test14pui_rundir..." >> test14pui_ohpt.diff
+	${MAKE} test14pui_rundir
+	@echo "test14pui_run..." >> test14pui_ohpt.diff
+	${MAKE} test14pui_run
+	@echo "test14pui_check..." >> test14pui_ohpt.diff
+	${MAKE} test14pui_check
+
+test14pui_compile:
+	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
+	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelio,e=MultiIon,ng=2
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
+	${MAKE} SWMF
+	make PIDL
+
+test14pui_rundir:
+	rm -rf ${TESTDIR}
+	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
+	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
+	cp Param/LAYOUT.in.test.OHPT ${TESTDIR}/LAYOUT.in
+
+test14pui_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+
+test14pui_check:
+	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-29\
+		${TESTDIR}/RESULTS/OH/log_n000000.log \
+		output/test14pui/OH_log_n000000.log \
+		> test14pui_ohpt.diff)
+	cp output/test14pui/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+	${TESTDIR}//RESULTS/PT/amps.ref
+	-(${SCRIPTDIR}/DiffNum.pl -b \
+		${TESTDIR}/RESULTS/PT/amps.dat \
+		${TESTDIR}/RESULTS/PT/amps.ref \
+		> test14pui_ohpt.diff)
+		ls -l test14pui*.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
 test15_build:
