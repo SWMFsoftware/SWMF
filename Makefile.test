@@ -1418,7 +1418,6 @@ test14_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.OHPT ${TESTDIR}/LAYOUT.in
 
 test14_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1460,8 +1459,7 @@ test14pui_compile:
 test14pui_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.OHPT ${TESTDIR}/LAYOUT.in
+	cp Param/PARAM.in.test.OHPTpui ${TESTDIR}/PARAM.in
 
 test14pui_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
