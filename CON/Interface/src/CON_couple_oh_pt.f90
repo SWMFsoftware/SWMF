@@ -71,10 +71,19 @@ contains
 
     call couple_points_init(CouplerOhToPt)
 
-    CouplerPtToOh%iCompSource = PT_
-    CouplerPtToOh%iCompTarget = OH_
-    CouplerPtToOh%NameVar     = 'Srho Smx Smy Smz Se' ! charge exchange sources
-    CouplerPtToOh%nVar        = 5
+    if(CouplerOhToPt%nVar < 13)then
+       CouplerPtToOh%iCompSource = PT_
+       CouplerPtToOh%iCompTarget = OH_
+       ! charge exchange sources
+       CouplerPtToOh%NameVar     = 'Srho Smx Smy Smz Se' 
+       CouplerPtToOh%nVar        = 5
+    else
+       CouplerPtToOh%iCompSource = PT_
+       CouplerPtToOh%iCompTarget = OH_
+       ! charge exchange sources
+       CouplerPtToOh%NameVar     = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2' 
+       CouplerPtToOh%nVar        = 10
+    end if
 
     call couple_points_init(CouplerPtToOh)
 
@@ -111,7 +120,6 @@ contains
        call transfer_real(OH_,PT_,DtSi)
        if(is_proc(PT_)) call PT_put_from_oh_dt(DtSi)
     endif
-
 
     call couple_points(CouplerOhToPt, OH_get_grid_info, OH_find_points, &
          OH_get_for_pt, PT_get_grid_info, PT_put_from_oh)
