@@ -1,8 +1,9 @@
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+PT       1    2    1   ! PT runs on 1 or 2 PE-s
+OH       0   -1    1   ! OH runs on all PE-s
 
-PLANET
-NONE			NamePlanet
+#DESCRIPTION
+Couple single-ion OH with PT
 
 #TIMEACCURATE           
 F  			IsTimeAccurate
@@ -54,74 +55,74 @@ shell0                  NameArea
 30.2
 
 #GRIDRESOLUTION
-35.937
-box
-0.0
--600
--600
--600
-600
-600
+35.937			Resolution
+box			NameArea  
+0.0			xMinBox	  
+-600.			yMinBox	  
+-600.			zMinBox	  
+-600.			xMaxBox	  
+600.			yMaxBox	  
+600.			zMaxBox   
 
 #GRIDRESOLUTION
-17.969
-box
--153.0
--340.0
--340.0
--600.0
-340.0
-340.0
+17.969			Resolution
+box			NameArea  
+-153.0			xMinBox	  
+-340.0			yMinBox	  
+-340.0			zMinBox	  
+-600.0			xMaxBox	  
+340.0			yMaxBox	  
+340.0			zMaxBox   
 
 #GRIDRESOLUTION
-8.984
-box
--109.0
--200.0
--200.0
--400.0
-200.0
-200.0
+8.984			Resolution
+box			NameArea  
+-109.0			xMinBox	  
+-200.0			yMinBox	  
+-200.0			zMinBox	  
+-400.0			xMaxBox	  
+200.0			yMaxBox	  
+200.0			zMaxBox   
 
 #GRIDRESOLUTION
-4.492
-box
--59.64
--136.0
--136.0
--272.0
-136.0
-136.0
+4.492			Resolution
+box			NameArea  
+-59.64			xMinBox	  
+-136.0			yMinBox	  
+-136.0			zMinBox	  
+-272.0			xMaxBox	  
+136.0			yMaxBox	  
+136.0			zMaxBox   
 
 #GRIDRESOLUTION
-3.0
-box
--71.31
--85.0
--85.0
--170.0
-85.0
-85.0
+3.0			Resolution
+box			NameArea  
+-71.31			xMinBox	  
+-85.0			yMinBox	  
+-85.0			zMinBox	  
+-170.0			xMaxBox	  
+85.0			yMaxBox	  
+85.0			zMaxBox   
 
 #GRIDRESOLUTION
-1.5
-box
--20.00
--42.0
--42.0
--68.0
-42.0
-42.0
+1.5			Resolution
+box			NameArea  
+-20.00			xMinBox	  
+-42.0			yMinBox	  
+-42.0			zMinBox	  
+-68.0			xMaxBox	  
+42.0			yMaxBox	  
+42.0			zMaxBox   
 
 #GRIDRESOLUTION
-0.7
-box
--5.0
--40.0
--40.0
--40.0
-40.0
-40.0
+0.7			Resolution
+box			NameArea  
+-5.0			xMinBox	  
+-40.0			yMinBox	  
+-40.0			zMinBox	  
+-40.0			xMaxBox	  
+40.0			yMaxBox	  
+40.0			zMaxBox   
 
 #INNERBOUNDARY
 user			TypeBcInner
