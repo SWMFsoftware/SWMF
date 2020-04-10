@@ -182,11 +182,15 @@ rmdir:
 	-@rm -rf lib
 	-@rm -rf bin
 
+GITINFO:
+	@(if [ "${GITINFO}" != "NO" ]; then \
+		${SCRIPTDIR}/gitall -r=f > ${CONTROLDIR}/show_git_info.h; \
+	fi)
+
 #
 #	SWMF
 #
-SWMF:	ENV_CHECK
-	${SCRIPTDIR}/gitall -r=f > ${CONTROLDIR}/show_git_info.h
+SWMF:	ENV_CHECK GITINFO
 	@cd ${CONTROLDIR}; $(MAKE) SWMFEXE  
 	@echo ' '
 
