@@ -42,7 +42,7 @@ my %component = (
 my $History;
 my @models;
 my $CloneOnly;
-my $Sleep;
+my $Sleep = $ENV{GITLABSLEEP};
 foreach (@Arguments){
     if( /^-(install|clone)/){
 	$CloneOnly = 1 if /^-clone/;
@@ -456,7 +456,7 @@ sub print_help{
 -sleep=VALUE   Sleep VALUE number of seconds after each git clone, so
 	       the server does not reject the ssh connection. Only useful
 	       in combination with the -install and -clone options. 
-               Default is no delay.
+               Default is set by the \$GITLABSLEEP environment variable.
 
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 
