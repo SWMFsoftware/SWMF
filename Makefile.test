@@ -1036,7 +1036,6 @@ test5_compile:
 test5_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/LAYOUT.in.test.EESC ${TESTDIR}/LAYOUT.in
 	cd ${TESTDIR}; cp ../GM/BATSRUS/data/FLUXEMERGENCE/*Sph.dat .
 	cd ${TESTDIR}; cp ../GM/BATSRUS/data/FLUXEMERGENCE/EOS.* .
 	cd ${TESTDIR}; gunzip *.gz
@@ -1103,7 +1102,6 @@ test7_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.IHOH.CoupleSphToXyz ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.IHOH ${TESTDIR}/LAYOUT.in
 
 test7_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1323,7 +1321,6 @@ test11_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPT ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMPT ${TESTDIR}/LAYOUT.in
 
 test11_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1370,7 +1367,6 @@ test13_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPT.Europa ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMPT.Europa ${TESTDIR}/LAYOUT.in
 	cp -r PT/AMPS/data/input/Europa/TestCase/RESTART_n003000 ${TESTDIR}/
 
 test13_run:
@@ -1516,7 +1512,6 @@ test15_scihsp_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SCIHSP ${TESTDIR}/LAYOUT.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
 
@@ -1561,7 +1556,6 @@ test15_sp_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	mkdir ${TESTDIR}/MH_data/
 	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.SP ${TESTDIR}/LAYOUT.in
 	cp -r SP/MFLAMPA/data/input/test15/MH_data/*.* ${TESTDIR}/MH_data/.
 
 test15_sp_run:
@@ -1747,146 +1741,6 @@ test_esmf_check:
 		>> test_esmf.diff)
 	ls -l test_esmf.diff
 
-#### FOR CCMC ONLY #######################
-# CCMC instalation, compiling, and  PostIDL.exe	generation
-# Use "Config.pl -install" before "${MAKE} ccmc_compile" or "make test_ccmc"
-# Public version. Specific job scripts are to be substituted for generic mpirun
-#
-# This version of the test works only with the SWMF versions after May 2009 
-# Use Config.pl -install -compiler=pgf90
-# Modify the line in test_ccmc_run (see below) 
-
-test_ccmc:
-	@echo "test_ccmc_compile..." > test_ccmc.diff
-	${MAKE} ccmc_compile
-	@echo "test_ccmc_rundir..." >> test_ccmc.diff
-	${MAKE} test_ccmc_rundir
-	@echo "test_ccmc_run..." >> test_ccmc.diff
-	${MAKE} test_ccmc_run
-	@echo "test_ccmc_restart_rundir..." >> test_ccmc.diff
-	${MAKE} test_ccmc_restart_rundir
-	@echo "test_ccmc_run..." >> test_ccmc.diff
-	${MAKE} test_ccmc_run
-	@echo "test_ccmc_check..." >> test_ccmc.diff
-	${MAKE} test_ccmc_check
-
-ccmc_compile: 
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:6,6,6,3800,1,IE:91,181
-	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd -ng=2
-	${MAKE} SWMF
-	make PIDL
-
-	
-test_ccmc_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
-	cd ${TESTDIR}; \
-		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
-		cp -f Param_ccmc/PARAM.in_v8.01_init PARAM.in; \
-		${SCRIPTDIR}/replace_amrinit.pl; \
-		cp SWMF.exe SWMF_run_test.exe; \
-		rm -f SWMF.exe
-
-test_ccmc_run:
-	cd ${TESTDIR}; \
-		${MPIRUN} ./SWMF_run_test.exe > runlog_`date +%y%m%d%H%M`
-	cd ${TESTDIR}/GM; pIDL -ccmc; cd ../IE; pION
-
-# FOR CCMC instead of the line with ${MPIRUN} should be the
-# "tab" ${TESTMACHINE}.bat;"space"\"Enter":
-# The job scripts shortened(hostname}.bat should be added to share/JobScripts,
-# for all machines to be used.
-# Here shortened(hostname) is the hostname with deleted number figures (no 0-9)
-# For example: for lanai1 this would be lanai.bat
-
-
-test_ccmc_restart_rundir:
-	cd ${TESTDIR}; \
-		cp -f Param_ccmc/LAYOUT.in_v8.01_RBE_restart LAYOUT.in; \
-		cp -f Param_ccmc/PARAM.in_v8.01_RBE_restart PARAM.in; \
-		${SCRIPTDIR}/replace_amrinit.pl; \
-		./Restart.pl 
-
-test_ccmc_check:
-	${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
-		${TESTDIR}/GM/IO2/log_n002000.log \
-		Param/CCMC/test_GM.log > test_ccmc.diff
-	ls -l test_ccmc.diff
-
-
-
-#### ccmc_small #######
-test_ccmc_small:
-	@echo "test_ccmc_small_compile..." > test_ccmc_small_gm.diff
-	@echo "test_ccmc_small_compile..." > test_ccmc_small_ie.diff
-	@echo "test_ccmc_small_compile..." > test_ccmc_small_rb.diff
-	${MAKE} test_ccmc_small_compile
-	@echo "test_ccmc_small_rundir..." >> test_ccmc_small_gm.diff
-	@echo "test_ccmc_small_rundir..." >> test_ccmc_small_ie.diff
-	@echo "test_ccmc_small_rundir..." >> test_ccmc_small_rb.diff
-	${MAKE} test_ccmc_small_rundir
-	@echo "test_ccmc_small_run..." >> test_ccmc_small_gm.diff
-	@echo "test_ccmc_small_run..." >> test_ccmc_small_ie.diff
-	@echo "test_ccmc_small_run..." >> test_ccmc_small_rb.diff
-	${MAKE} test_ccmc_small_run
-	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small_gm.diff
-	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small_ie.diff
-	@echo "test_ccmc_small_restart_rundir..." >> test_ccmc_small_rb.diff
-	${MAKE} test_ccmc_small_restart_rundir
-	@echo "test_ccmc_small_run..." >> test_ccmc_small_gm.diff
-	@echo "test_ccmc_small_run..." >> test_ccmc_small_ie.diff
-	@echo "test_ccmc_small_run..." >> test_ccmc_small_rb.diff
-	${MAKE} test_ccmc_small_run
-	@echo "test_ccmc_small_check..." >> test_ccmc_small_gm.diff
-	@echo "test_ccmc_small_check..." >> test_ccmc_small_ie.diff
-	@echo "test_ccmc_small_check..." >> test_ccmc_small_rb.diff
-	${MAKE} test_ccmc_small_check
-
-test_ccmc_small_compile: 
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:6,6,6,800,1,IE:91,181
-	cd GM/BATSRUS; Config.pl -u=CCMC -e=Mhd -ng=2
-	${MAKE} SWMF
-	make PIDL
-
-test_ccmc_small_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp -r Param/CCMC ${TESTDIR}/Param_ccmc
-	cd ${TESTDIR}; \
-		cp -f Param_ccmc/LAYOUT.in_v8.01_init LAYOUT.in; \
-		cp -f Param_ccmc/PARAM.in_v8.01_init_small PARAM.in; \
-		${SCRIPTDIR}/replace_amrinit.pl; \
-		cp SWMF.exe SWMF_run_test.exe; \
-		rm -f SWMF.exe
-
-test_ccmc_small_restart_rundir:
-	cd ${TESTDIR}; \
-		cp -f Param_ccmc/LAYOUT.in_v8.01_RBE_restart LAYOUT.in; \
-		cp -f Param_ccmc/PARAM.in_v8.01_RBE_restart_small PARAM.in; \
-		${SCRIPTDIR}/replace_amrinit.pl; \
-		./Restart.pl 
-
-test_ccmc_small_run:
-	$(MAKE)  test_ccmc_run
-
-test_ccmc_small_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
-		${TESTDIR}/GM/IO2/log_n000400.log \
-		Param/CCMC/test_GM_small.log > test_ccmc_small_gm.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1.0e-5 \
-		${TESTDIR}/IE/ionosphere/IE_t080903_000000.log \
-		Param/CCMC/test_IE_small.log > test_ccmc_small_ie.diff)
-	gunzip -c Param/CCMC/test_RB_small.fls.gz \
-                > ${TESTDIR}/RB/plots/20080903_0000_e.ref
-	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/plots/20080903_000000_e.fls \
-		${TESTDIR}/RB/plots/20080903_0000_e.ref) > test_ccmc_small_rb.diff
-	ls -l test_ccmc_small*.diff
-
-
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
 test_ramscb:
@@ -1917,7 +1771,6 @@ test_ramscb_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp ${IMDIR}/input/PARAM.in.test.gmieim.simple ${TESTDIR}/PARAM.in
-	cp ${IMDIR}/input/LAYOUT.in.test.gmieim.simple ${TESTDIR}/LAYOUT.in
 
 test_ramscb_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -2096,7 +1949,6 @@ test12_aniso_AMPS_dynamic_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.aniso.AMPS.dynamic  ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMPC.aniso  ${TESTDIR}/LAYOUT.in
 
 test12_aniso_AMPS_dynamic_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -2132,7 +1984,6 @@ test12_aniso_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.start.aniso  ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMPC.aniso  ${TESTDIR}/LAYOUT.in
 
 test12_aniso_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -2180,7 +2031,6 @@ test12_3d_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.3D.start  ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
 test12_3d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -2235,7 +2085,6 @@ test12_iso_rundir:
 	rm -rf ${TESTDIR}
 	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
 	cp Param/PARAM.in.test.GMPC.start  ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMPC  ${TESTDIR}/LAYOUT.in
 
 test12_iso_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
