@@ -150,7 +150,6 @@ test_cz_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.CZ ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.CZ ${TESTDIR}/LAYOUT.in
 	cp ${CZDIR}/input/gong.l4b.14 ${TESTDIR}/
 
 test_cz_run:
@@ -186,7 +185,6 @@ test_pw_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.PW ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.PW ${TESTDIR}/LAYOUT.in
 
 test_pw_run:
 	cd ${TESTDIR}/PW; rm -f log.out restartOUT/* plots/*
@@ -221,7 +219,6 @@ test_ps_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.PS ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.PS ${TESTDIR}/LAYOUT.in
 	cp ${PSDIR}/Input/kp_test.dat ${TESTDIR}/PS/Input/
 
 test_ps_run:
@@ -265,7 +262,6 @@ test_psie_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.PSIE  ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.PSIE ${TESTDIR}/LAYOUT.in
 	cp ${PSDIR}/Input/IMF_NSturning_10nT.dat ${TESTDIR}/
 
 test_psie_run:
@@ -309,7 +305,6 @@ test_psgmie_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIEPS  ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEPS ${TESTDIR}/LAYOUT.in
 
 test_psgmie_run:
 	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./SWMF.exe > runlog
@@ -341,7 +336,6 @@ test_rb_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.RB ${TESTDIR}/LAYOUT.in
 	cp RB/RBE/data/input/TestSat.dat ${TESTDIR}/TestSat.dat
 	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/2002_296* .
 test_rb_run:
@@ -467,7 +461,6 @@ test2_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIERCM_Multi ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEIM ${TESTDIR}/LAYOUT.in
 
 test2_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -937,7 +930,6 @@ test3_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIEIMCIMI ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEIMCIMI ${TESTDIR}/LAYOUT.in
 
 test3_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1002,7 +994,6 @@ test4_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMIEHEIDI ${TESTDIR}/PARAM.in
-	cp Param/LAYOUT.in.test.GMIEHEIDI ${TESTDIR}/LAYOUT.in
 
 test4_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
