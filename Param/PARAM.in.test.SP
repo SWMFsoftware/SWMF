@@ -1,7 +1,7 @@
 Begin session: 1
 
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+SP  0 -1  1
 
 #DESCRIPTION
 Input file for testing SP model for SEPs, uses input files with background data

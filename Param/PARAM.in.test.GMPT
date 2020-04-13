@@ -1,5 +1,9 @@
-#ECHO
-T			DoEcho
+GM and PT running on same processors for np = 1, 2, 3
+and different set of processors for      np > 3
+
+#COMPONENTMAP
+GM  0  2  1
+PT  0 -1  1
 
 #DESCRIPTION
 Startup for GM. Solar wind condition based on SC-IH run.
