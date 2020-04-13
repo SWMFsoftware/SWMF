@@ -1,5 +1,6 @@
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+GM  0 -1  1               GM runs on all processors
+RB  1  1  1               RB runs on 1 processor only
 
 #TEST
 RB_put_from_gm

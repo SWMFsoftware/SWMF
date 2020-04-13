@@ -140,6 +140,9 @@ float                   TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
+#MAGNETICINNERBOUNDARY
+T			DoReflectInnerB1
+
 #SAVELOGFILE
 T
 RAW			StringLogfile

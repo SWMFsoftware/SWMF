@@ -1,5 +1,5 @@
-#ECHO
-T
+#COMPONENTMAP
+PW  0 -1  1
 
 #PROGRESS
 1			DnShowProgressShort
