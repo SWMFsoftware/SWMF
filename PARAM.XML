@@ -321,7 +321,7 @@ If NameCompCheckKill is set to the string '??' then all processors check
 for the SWMF.KILL file. This makes sure that the run gets terminated
 essentially immediately. If NameCompCheckKill is set to the string '!!'
 then no check is performed at all. Otherwise NameCompCheckKill should
-contain the component ID of a component present in the LAYOUT.in file or
+contain the component ID of a component present in the
 #COMPONENTMAP command.
 
 If the code gets killed, no SWMF.SUCCESS or SWMF.DONE files are created.
@@ -645,7 +645,7 @@ nodes with different number of cores per node.  The default number of
 threads is 1 and the maximum value is MaxThread.
 
 This command is required either in the PARAM.in file or (for sake of backward
-compatibility) in the now optional LAYOUT.in file. 
+compatibility) in the now depreciated LAYOUT.in file. 
 </command>
 
 <command name="COMPONENT" multiple="T">
@@ -680,8 +680,8 @@ initial sessions some components are not used, and they are turned on later.
 Unused components should not be coupled, and they should not
 be given any parameters.
 
-The default is that all the components registered in the LAYOUT.in
-file are used or #COMPONENTMAP command.
+The default is that all the components listed in the #COMPONENTMAP command
+are used.
 </command>
 
 <command name="CYCLE" multiple="T">
