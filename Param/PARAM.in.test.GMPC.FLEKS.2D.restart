@@ -56,6 +56,13 @@ T			UseNonConservative
 1.25/3			DxPic
 1.25/3			DyPic
 
+#PICADAPTIVE
+T			UseAdaptivePic
+2			nCellPerPatch
+
+#PICGHOST
+1			nGhostPic
+
 #OUTERBOUNDARY
 periodic                TypeBc1
 periodic                TypeBc2

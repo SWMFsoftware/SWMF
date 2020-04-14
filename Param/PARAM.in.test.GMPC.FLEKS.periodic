@@ -192,6 +192,13 @@ T			UseDtFixed
 0.5			DxPic
 0.5			DyPic
 
+#PICADAPTIVE
+T			UseAdaptivePic
+2			nCellPerPatch
+
+#PICGHOST
+1			nGhostPic
+
 #OUTERBOUNDARY
 periodic                TypeBc1
 periodic                TypeBc2

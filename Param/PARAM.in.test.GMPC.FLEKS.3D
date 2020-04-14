@@ -101,6 +101,13 @@ T			UseNonConservative
 0.4                     DyPic
 0.4                     DyPic		DzPic
 
+#PICADAPTIVE
+T			UseAdaptivePic
+2			nCellPerPatch
+
+#PICGHOST
+1			nGhostPic
+
 #USERINPUTBEGIN -----------------
 
 #GEM
