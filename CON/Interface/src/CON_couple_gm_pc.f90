@@ -124,33 +124,32 @@ contains
     ! This subroutine should be called from all PE-s
     !EOP
     !------------------------------------------------------------------------
-
-    !-----Commented this function since the PC part has not been committed.-----
     
-    ! call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
-    ! if(.not.(is_proc(GM_) .or. is_proc(PC_))) RETURN
+    if(.not.(is_proc(GM_) .or. is_proc(PC_))) RETURN
 
-    ! ! Get the number of integers to pass
-    ! if(is_proc(GM_))call GM_get_for_pc_grid_info(nInt)
-    ! call transfer_integer(GM_, PC_, nInt, UseSourceRootOnly=.false., &
-    !      UseTargetRootOnly=.false.)
+    ! Get the number of integers to pass
+    if(is_proc(GM_))call GM_get_for_pc_grid_info(nInt)
+    call transfer_integer(GM_, PC_, nInt, UseSourceRootOnly=.false., &
+         UseTargetRootOnly=.false.)
     
-    ! if(nInt>0) then
-    !    allocate(Int_I(nInt))
+    if(nInt>0) then
+       allocate(Int_I(nInt))
 
-    !    if(is_proc(GM_)) &
-    !         call GM_get_for_pc_grid_info(nInt, Int_I)
+       if(is_proc(GM_)) &
+            call GM_get_for_pc_grid_info(nInt, Int_I)
 
-    !    ! Transfer integers from GM to PC
-    !    call transfer_integer_array(GM_, PC_, nInt, Int_I, &
-    !         UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
+       ! Transfer integers from GM to PC
+       call transfer_integer_array(GM_, PC_, nInt, Int_I, &
+            UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
-    !    if(is_proc(PC_)) &
-    !         call PC_put_from_gm_grid_info(nInt, Int_I)
+       if(is_proc(PC_)) &
+            call PC_put_from_gm_grid_info(nInt, Int_I)
 
-    !    deallocate(Int_I)
-    ! endif
+       deallocate(Int_I)
+    endif
+    
   end subroutine couple_gm_pc_grid_info
     
   !=======================================================================
