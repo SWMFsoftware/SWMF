@@ -8,7 +8,6 @@ my $Debug       = $D; undef $D;
 my $Help        = $h; undef $h;
 my $HelpXmlParam= $H; undef $H;
 my $HelpXml     = $X; undef $X;
-my $LayoutFile  = $l; undef $l;
 my $nProc       = $n; undef $n;
 my $nThread     = ($t or 1); undef $t;
 my $Verbose     = $v; undef $v;
@@ -23,8 +22,8 @@ my $CheckParamScriptOrig  = 'share/Scripts/CheckParam.pl';
 my $CheckParamScript = $CheckParamScriptOrig;
 $CheckParamScript .= " -D" if $Debug;
 
-my $XMLFile           = 'PARAM.XML';
-my $ConfigPl           = 'Config.pl';
+my $XMLFile  = 'PARAM.XML';
+my $ConfigPl = 'Config.pl';
 
 # The -H, -X and -s flags are transferred to CheckParam.pl
 exec("$CheckParamScript -X") if $HelpXml;
@@ -44,10 +43,6 @@ my $ParamFileDefault  = 'run/PARAM.in';
 my $ParamFile = ($ARGV[0] or $ParamFileDefault);
 die "$ERROR could not find $ParamFile\n" unless -f $ParamFile;
 
-$LayoutFile = $ParamFile if not $LayoutFile;
-
-warn "$WARNING No layout file $LayoutFile was found\n" unless -f $LayoutFile;
-
 die "$ERROR could not find $ConfigPl" unless -f $ConfigPl;
 
 # Global variables containing the SWMF settings
@@ -57,13 +52,12 @@ my %GridSize;
 
 &get_settings;
 
-# Read layout info from LAYOUT file and check against the SWMF settings
+# Read layout info from #COMPONENTMAP/#LAYOUT and check against the SWMF settings
 my %Layout;  # Root,Last,Stride for a component ID
 my %nProc;   # Number of PE-s for a component ID
-if(-f $LayoutFile){
-    &get_layout;
-    &check_layout if $nProc;
-}
+
+&get_layout;
+&check_layout if $nProc;
 
 # Check parameters against the XML descriptions
 die "$ERROR could not find executable $CheckParamScriptOrig\n"
@@ -135,8 +129,8 @@ sub get_settings{
 ###############################################################################
 sub get_layout{
 
-    open(LAYOUT,$LayoutFile) or 
-	die "$ERROR could not open layout file $LayoutFile\n";
+    open(LAYOUT, $ParamFile) or
+	die "$ERROR could not open param file $ParamFile\n";
 
     my $start;
     while(<LAYOUT>){
@@ -148,7 +142,7 @@ sub get_layout{
 
 	# extract layout information from one line in the component map
 	/^([A-Z][A-Z])\s+(\-?\d+)\s+(\-?\d+)\s+(\-?\d+)\s*(\-?\d*)/ or
-	    die "$ERROR incorrect syntax at line $. in $LayoutFile:\n$_";
+	    die "$ERROR incorrect syntax at line $. in $ParamFile:\n$_";
 
 	my $id       = $1;
 	my $proc0    = $2;
@@ -162,21 +156,21 @@ sub get_layout{
 	$stride    = $nThread/abs($stride) if $stride < 0;
 	$thread    = $nThread/abs($thread) if $thread < 0;
 	
-	die "$ERROR invalid component ID $id at line $. in $LayoutFile:\n$_"
+	die "$ERROR invalid component ID $id at line $. in $ParamFile:\n$_"
 	    unless $Version{$id};
 
 	die "$ERROR $id component has Empty version ".
-	    "at line $. in $LayoutFile:\n$_"
+	    "at line $. in $ParamFile:\n$_"
 	    if $Version{$id} eq 'Empty';
 
         die "$ERROR root PE rank=$proc0 should not exceed last PE rank=".
-	    "$proclast\n\tat line $. in $LayoutFile:\n$_"
+	    "$proclast\n\tat line $. in $ParamFile:\n$_"
 	    if $proc0 > $proclast;
 
 	$Layout{$1}="$proc0,$proclast,$stride,$thread";
     }
     close(LAYOUT);
-    die "$ERROR #COMPONENTMAP was not found in $LayoutFile\n" unless $start;
+    die "$ERROR #COMPONENTMAP was not found in $ParamFile\n" unless $start;
 
     print "Layout    = ",join('; ',%Layout),"\n" if $Verbose;
 
@@ -199,7 +193,7 @@ sub check_layout{
 	    }
 	}
 	die "$ERROR processor $iProc is not used by any component\n".
-	    "\tfor the layout in $LayoutFile and $nProc processors.\n" 
+	    "\tfor the layout in $ParamFile and $nProc processors.\n" 
 	    unless $Comps;
 
     }
@@ -207,7 +201,7 @@ sub check_layout{
     my $Comp;
     foreach $Comp (sort keys %Layout){
 	die "$ERROR component $Comp would run on 0 processors\n".
-	    "\tfor the layout in $LayoutFile and $nProc processors.\n"
+	    "\tfor the layout in $ParamFile and $nProc processors.\n"
 	    unless $nProc{$Comp}
     }
 
@@ -223,7 +217,8 @@ sub check_layout{
 # SWMF configuration with the layout and input parameters are checked before
 # running the code. The TestParam.pl script does extensive checks and provides
 # detailed warnings and error messages. 
-# The configuration is obtained from Config.pl and it is checked against the LAYOUT file.
+# The configuration is obtained from Config.pl and it is checked against the 
+# component map/layout defined in the PARAM.in file.
 # The parameters of CON and the physics components are checked against the XML
 # descriptions in the PARAM.XML files using the share/Scripts/CheckParam.pl script.
 #
@@ -240,14 +235,13 @@ sub print_help{
 #BOC
 "Purpose:
 
-    Based on the settings shown by Config.pl and the registration and layout 
-    information contained in the layout file, check the consistency of 
+    Based on the settings shown by Config.pl, check the consistency of 
     settings and the correctness of the input parameter file.
 
 Usage:
 
   Scripts/TestParam.pl [-h] [-H] [-X] [-v]
-                       [-l=LAYOUTFILE] [-n=NPROC] [-t=NTHREAD] [PARAMFILE]
+                       [-n=NPROC] [-t=NTHREAD] [PARAMFILE]
 
   -h            print help message and stop
 
@@ -256,8 +250,6 @@ Usage:
   -X            print a short introduction to the XML language and stop
 
   -v            print verbose information
-
-  -l=LAYOUTFILE obtain layout from LAYOUTFILE instead of PARAM.in
 
   -n=NPROC      assume that SWMF will run on NPROC processors
 
@@ -268,7 +260,7 @@ Usage:
 
 Examples:
 
-  Check the default parameter file run/PARAM.in without checking the layout:
+  Check the default parameter file run/PARAM.in:
 
 Scripts/TestParam.pl
 
