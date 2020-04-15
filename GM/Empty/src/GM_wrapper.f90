@@ -494,6 +494,20 @@ contains
 
   end subroutine GM_get_for_pc_init
 
+  !============================================================================
+  subroutine GM_get_for_pc_grid_info(nInt, Int_I)
+    use ModPIC, ONLY: nSizeStatus, Status_I, &
+         UseAdaptivePic, pic_set_cell_status
+        
+    integer, intent(inout) :: nInt
+    integer, optional, intent(out):: Int_I(nInt)
+    character(len=*), parameter :: NameSub='GM_get_for_pc_grid_info'
+    !------------------------------------------
+    
+    call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')
+    
+  end subroutine GM_get_for_pc_grid_info
+
   !==============================================================================
 
   subroutine GM_get_for_pc_dt(DtSi)
