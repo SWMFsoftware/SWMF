@@ -496,11 +496,9 @@ contains
 
   !============================================================================
   subroutine GM_get_for_pc_grid_info(nInt, Int_I)
-    use ModPIC, ONLY: nSizeStatus, Status_I, &
-         UseAdaptivePic, pic_set_cell_status
-        
     integer, intent(inout) :: nInt
     integer, optional, intent(out):: Int_I(nInt)
+    
     character(len=*), parameter :: NameSub='GM_get_for_pc_grid_info'
     !------------------------------------------
     
