@@ -2,6 +2,7 @@
 -include ../Makefile.def
 
 install:
+	cd Control/src; cp show_git_info.h.orig show_git_info.h
 
 clean:
 	cd Control/src;   make clean
