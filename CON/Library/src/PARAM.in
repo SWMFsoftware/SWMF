@@ -1,0 +1,8 @@
+! Edit this file to test the registry
+
+#COMPONENTMAP
+GM 1  3  2  2
+IH 1  3  2  2
+IE 0  1  1
+
+! there can be remarks here too
