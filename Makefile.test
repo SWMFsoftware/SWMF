@@ -80,6 +80,11 @@ test:
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
+# Setting BLESS=YES or Y will copy the solution into the reference solution
+BLESS=NO
+
+DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
+
 DIFF_FILES = share/Library/test/*.diff util/*/src*/*.diff BATL/*.diff ??/*/*.diff *.diff
 
 test_check:
@@ -156,7 +161,7 @@ test_cz_run:
 test_cz_check:
 	grep 'ref error=' ${TESTDIR}/runlog > ${TESTDIR}/runlog.new
 	grep 'ref error=' ${CZDIR}/output/runlog.ref > ${TESTDIR}/runlog.ref
-	-${SCRIPTDIR}/DiffNum.pl -a=1e-5 -t \
+	-${DIFFNUM} -a=1e-5 -t \
 		${TESTDIR}/runlog.new ${TESTDIR}/runlog.ref \
 		> test_cz.diff
 	ls -ltr test_cz.diff
@@ -189,7 +194,7 @@ test_pw_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_pw_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-8 \
 		${TESTDIR}/PW/plots/north_plots_iline0001.out \
 		${PWDIR}/data/output/Earth/north_plots_iline0001.out \
 		> test_pw.diff)
@@ -224,15 +229,15 @@ test_ps_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_ps_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
+	-@(${DIFFNUM} -t -r=1e-8 \
 		${TESTDIR}/RESULTS/PS/dgcpm_t20011021_010000_000.dat \
 		${PSDIR}/Output/dgcpm_t20011021_010000_000.ref \
 		> test_ps.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
+	-@(${DIFFNUM} -t -r=1e-8 \
 		${TESTDIR}/RESULTS/PS/PS_t20011021_000000_000.log \
 		${PSDIR}/Output/PS_t20011021_000000_000.ref \
 		>> test_ps.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8 \
+	-@(${DIFFNUM} -t -r=1e-8 \
 		${TESTDIR}/RESULTS/PS/slice_L6p60_t20011021_000000_000.dat \
 		${PSDIR}/Output/slice_L6p60_t20011021_000000_000.ref \
 		>> test_ps.diff)
@@ -268,15 +273,15 @@ test_psie_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_psie_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8                        \
+	-@(${DIFFNUM} -t -r=1e-8                        \
 	        ${TESTDIR}/RESULTS/IE/IE.log                         \
 		${PSDIR}/Output/IE_test_psie.ref                     \
 		> test_psie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8                        \
+	-@(${DIFFNUM} -t -r=1e-8                        \
 	        ${TESTDIR}/RESULTS/PS/PS_t20000321_104500_000.log    \
 		${PSDIR}/Output/PS_test_psie.ref                     \
 		>> test_psie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -t -r=1e-8                        \
+	-@(${DIFFNUM} -t -r=1e-8                        \
 	        ${TESTDIR}/RESULTS/PS/dgcpm_t20000321_105500_000.dat \
 		${PSDIR}/Output/dgcpm_testpsie.ref                   \
 		>> test_psie.diff)
@@ -341,11 +346,11 @@ test_rb_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_rb_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+	-@(${DIFFNUM} -r=0.001 -a=1e-10 \
 		${TESTDIR}/RB/plots/2002f296_e.fls \
 		${RBDIR}/data/output/2002f296_e.fls.gz \
 		> test_rb.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
+	-@(${DIFFNUM} -r=0.001 -a=1e-10 \
 		${TESTDIR}/RB/plots/sat_TestSat_n000000.sat \
 		${RBDIR}/data/output/sat_TestSat_n000000.sat \
 		> test_rb_sat.diff)
@@ -389,31 +394,31 @@ test1_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test1_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0001.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0001.out \
 		> test01_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-20 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-20 -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0002.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0002.out \
 		>> test01_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0003.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0003.out \
 		>> test01_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0004.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0004.out \
 		>> test01_pw.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test1/GM_log_n000001.log \
 		> test01_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-5 \
+	-@(${DIFFNUM} -b -t -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test01_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=6e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=6e-5 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
@@ -466,23 +471,23 @@ test2_restart:
 		mv runlog_restart RESULTS
 
 test2_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test2/GM_log_n000001.log \
 		> test02_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/magnetometers_n*.mag \
 		output/test2/magnetometers.mag \
 		>> test02_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/geoindex_n*.log \
 		output/test2/GM_geoindex.log \
 		>> test02_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-4 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-4 \
 		${TESTDIR}/RESULTS/RESTART/GM/x_geoindex.rst \
 		output/test2/GM_restart_geoindex.txt \
 		>> test02_gm_multi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test2/IE.log \
 		> test02_ie.diff) 
@@ -490,7 +495,7 @@ test2_check:
 		> ${TESTDIR}/RESULTS/IM/t20.dat
 	cd ${TESTDIR}/RESULTS/IM;\
 		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/t20.txt \
 		${TESTDIR}/RESULTS/IM/t20.dat \
 		> test02_im_rcm_multi.diff)
@@ -557,31 +562,31 @@ test_swpc_restart:
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutput/log_e20140410-000200.log \
 		> test_swpc_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag \
 		>> test_swpc_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out \
 		>> test_swpc_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutput/geoindex_e20140410-000200.log \
 		>> test_swpc_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutput/IE_t140410_000200.log \
 		> test_swpc_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutput/it140410_000300_000.idl \
 		>> test_swpc_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 \
+	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
 		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
 		> test_swpc_rb.diff)
@@ -652,27 +657,27 @@ test_swpc_multiion_restart:
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_multiion_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputMultiIon/log_e20140410-000200.log \
 		> test_swpc_multiion_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputMultiIon/magnetometers_e20140410-000200.mag \
 		>> test_swpc_multiion_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutputMultiIon/mag_grid_e20140410-000300.out \
 		>> test_swpc_multiion_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutputMultiIon/geoindex_e20140410-000200.log \
 		>> test_swpc_multiion_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputMultiIon/IE_t140410_000200.log \
 		> test_swpc_multiion_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputMultiIon/it140410_000300_000.idl \
 		>> test_swpc_multiion_ie.diff)
@@ -740,27 +745,27 @@ test_swpc_multispecies_restart:
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_multispecies_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputMultiSpecies/log_e20140410-000200.log \
 		> test_swpc_multispecies_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputMultiSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_multispecies_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutputMultiSpecies/mag_grid_e20140410-000300.out \
 		>> test_swpc_multispecies_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutputMultiSpecies/geoindex_e20140410-000200.log \
 		>> test_swpc_multispecies_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputMultiSpecies/IE_t140410_000200.log \
 		> test_swpc_multispecies_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputMultiSpecies/it140410_000300_000.idl \
 		>> test_swpc_multispecies_ie.diff)
@@ -830,27 +835,27 @@ test_swpc_cimi_restart:
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_cimi_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputCimi/log_e20140410-000200.log \
 		> test_swpc_cimi_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputCimi/magnetometers_e20140410-000200.mag \
 		>> test_swpc_cimi_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutputCimi/mag_grid_e20140410-000300.out \
 		>> test_swpc_cimi_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutputCimi/geoindex_e20140410-000200.log \
 		>> test_swpc_cimi_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutputCimi/IE_t140410_000200.log \
 		> test_swpc_cimi_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutputCimi/it140410_000300_000.idl \
 		>> test_swpc_cimi_ie.diff)
@@ -934,31 +939,31 @@ test_swpc_amps_restart:
 	cd ${TESTDIR}; ./PostProc.pl -noptec
 
 test_swpc_amps_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutput/log_e20140410-000200.log \
 		> test_swpc__amps_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-8 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag \
 		>> test_swpc_amps_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=2e-4 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=2e-4 -a=1e-8 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out \
 		>> test_swpc_amps_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutput/geoindex_e20140410-000200.log \
 		>> test_swpc_amps_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutput/IE_t140410_000200.log \
 		> test_swpc_amps_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=5e-5 \
+	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutput/it140410_000300_000.idl \
 		>> test_swpc_amps_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 \
+	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
 		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
 		> test_swpc_amps_rb.diff)
@@ -1011,21 +1016,21 @@ test3_restart:
 
 # check last snapshot from CIMI output
 test3_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test3/GM.log \
 		> test03_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test3/IE.log \
 		> test03_ie.diff)
 	tail -2504 ${TESTDIR}/RESULTS/IM/CIMIeq.outs \
 		> ${TESTDIR}/RESULTS/IM/CIMIeq.out
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/CIMIeq.out \
 		output/test3/IM_eq.out.gz \
 		> test03_im_cimi.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IM/CIMI.log \
 		output/test3/IM.log \
 		> test03_im_cimi_log.diff)
@@ -1067,15 +1072,15 @@ test4_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test4_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000000.log \
 		output/test4/GM_log_n000000.log \
 		> test04_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -t -r=1e-5 \
+	-@(${DIFFNUM} -b -t -r=1e-5 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test4/IE.log \
 		> test04_ie.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -t -a=re-3 -a=1e-30 \
+	-@(${DIFFNUM} -b -t -a=re-3 -a=1e-30 \
                 ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
                 output/test4/IM_test1_h_prs.002\
                 > test04_im_heidi.diff)
@@ -1125,11 +1130,11 @@ test5_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/coupled
 
 test5_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -a=4e-16 \
+	-(${DIFFNUM} -b -a=4e-16 \
 		${TESTDIR}/RESULTS/coupled/EE/log_n000010.log \
 		output/test5/EE.log \
 		> test05_ee.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b \
+	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/coupled/SC/log_n000070.log \
 		output/test5/SC.log \
 		> test05_sc.diff)
@@ -1175,11 +1180,11 @@ test7_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test7_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=2e-29\
+	-(${DIFFNUM} -b -r=1e-5 -a=2e-29\
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test7/Sph_IH_log_n000000.log \
 		> test07_ih.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-29\
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test7/Xyz_OH_log_n000000.log \
 		> test07_oh.diff)
@@ -1229,15 +1234,15 @@ test8_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test8_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test8/SC_log_n000000.log \
 		> test08_sc_thread.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-26 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
 		output/test8/SC_rfr.ref \
 		>> test08_sc_thread.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test8/IH_log_n000000.log \
 		> test08_ih.diff)
@@ -1302,15 +1307,15 @@ test9_restart:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
 test9_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
 		output/test9/SC_log_n000001.log \
 		> test09_sc_chromo.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000005.log \
 		output/test9/IH_log_n000005.log \
 		> test09_ih.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/IH/trj_earth_n00000007.sat \
 		output/test9/IH_trj_earth_n00000007.sat \
 		> test09_ih_trj_earth.diff)
@@ -1351,11 +1356,11 @@ test10_run:
 
 
 test10_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-27 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 	        ${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test10/SC_log_n000000.log \
 		> test10_sc.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
+	-(${DIFFNUM} -b -r=1e-5 \
 	        ${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test10/IH_log_n000000.log \
                 > test10_ih.diff)
@@ -1396,7 +1401,7 @@ test11_run:
 # Note: skip columns that depend on number of processors
 #       multiply density column by 1e20 to make it order unity
 test11_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -a=1e-27 \
+	-(${DIFFNUM} -b -a=1e-27 \
 	        ${TESTDIR}/RESULTS/GM/log_n000001.log \
 		output/test11/log_n000001.log \
 		> test11_gm.diff)
@@ -1406,7 +1411,7 @@ test11_check:
 	        cp -f pic.NA.s=0.out=19.dat pic.NA.dat; \
 	        perl -ai -ne 'print "@F[0..3] @F[6..14] ",1e20*$$F[15]," @F[16..$$#F]\n"' \
 			pic.NA.ref pic.NA.dat 
-	-(${SCRIPTDIR}/DiffNum.pl -a=1e-19 -r=1e-6 -b \
+	-(${DIFFNUM} -a=1e-19 -r=1e-6 -b \
 	        ${TESTDIR}/RESULTS/PT/pic.NA.dat \
 		${TESTDIR}/RESULTS/PT/pic.NA.ref \
                 > test11_pt.diff)
@@ -1443,7 +1448,7 @@ test13_run:
 test13_check:
 	cp output/test13/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
 	${TESTDIR}/PT/plots/amps.ref
-	-(${SCRIPTDIR}/DiffNum.pl -b \
+	-(${DIFFNUM} -b \
 		${TESTDIR}/PT/plots/amps.dat \
 		${TESTDIR}/PT/plots/amps.ref \
 		> test13_pt.diff)
@@ -1478,13 +1483,13 @@ test14_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test14_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-29\
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14/OH_log_n000000.log \
 		> test14_ohpt.diff)
 	cp output/test14/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
 	${TESTDIR}//RESULTS/PT/amps.ref
-	-(${SCRIPTDIR}/DiffNum.pl -b \
+	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
 		${TESTDIR}/RESULTS/PT/amps.ref \
 		> test14_ohpt.diff)
@@ -1520,13 +1525,13 @@ test14pui_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test14pui_check:
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-29\
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14pui/OH_log_n000000.log \
 		> test14pui_ohpt.diff)
 	cp output/test14pui/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
 	${TESTDIR}//RESULTS/PT/amps.ref
-	-(${SCRIPTDIR}/DiffNum.pl -b \
+	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
 		${TESTDIR}/RESULTS/PT/amps.ref \
 		> test14pui_ohpt.diff)
@@ -1598,7 +1603,7 @@ test15_scihsp_check:
 	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out
-	-(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-6 -b \
+	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.out \
 		${TESTDIR}/RESULTS/SP/MH_data.ref \
 		> test15_scihsp.diff)
@@ -1633,7 +1638,7 @@ test15_sp_check:
 	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out
-	-(${SCRIPTDIR}/DiffNum.pl -a=1e-6 -r=1e-6 -b \
+	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.out \
 		${TESTDIR}/RESULTS/SP/MH_data.ref \
 		> test15_sp.diff)
@@ -1670,7 +1675,7 @@ test16_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test16_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-6 \
 	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
 	   output/test16/z=0.ref.gz \
 		> test16.diff)
@@ -1709,11 +1714,11 @@ test17_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/2restart	
 
 test17_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-6 \
 	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
 	   output/test17/z=0_PC.ref.gz \
 		> test17.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-6 \
 	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test17/z=0_GM.ref.gz \
 		>> test17.diff)
@@ -1748,7 +1753,7 @@ test18_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test18_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-6 \
 		${TESTDIR}/RESULTS/PC/3d_var_region0_0_t00000004_n00000004.out \
 		output/test18/3d.ref.gz \
 		> test18.diff)
@@ -1788,11 +1793,11 @@ test_esmf_run:
 test_esmf_check:
 	perl -ne 'print if /error/i' ${TESTDIR}/PET*.ESMF_LogFile \
 		> test_esmf.diff
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-12 \
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		ESMF/ESMF_SWMF/output/log_n000001.log \
 		>> test_esmf.diff)
-	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-4 \
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
 		ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
 		>> test_esmf.diff)
@@ -1834,15 +1839,15 @@ test_ramscb_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test_ramscb_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		${IMDIR}/output/test9/GM_log_n000001.log \
 		> test_ramscb_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 -a=1e-8 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/ram/log_n000001.log \
 		${IMDIR}/output/test9/IM_log_n000001.log \
 		> test_ramscb_im.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-6 \
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		${IMDIR}/output/test9/IE.log \
 		> test_ramscb_ie.diff)
@@ -1898,11 +1903,11 @@ test12_aniso_AMPS_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
 
 test12_aniso_AMPS_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+	-@(${DIFFNUM} -b -a=2.0e-3 \
 	   ${TESTDIR}/RESULTS/5step/PC/3d_fluid_region0_0_t00000005_n00000005.out \
 	   output/test12/3d_aniso.out.gz \
 		> test12_aniso_AMPS_gmpc.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+	-@(${DIFFNUM} -b -a=2.0e-3 \
 	   ${TESTDIR}/RESULTS/2restart/PC/3d_fluid_region0_0_t00000005_n00000005.out \
 	   output/test12/3d_aniso.out.gz \
 		>> test12_aniso_AMPS_gmpc.diff)
@@ -1937,7 +1942,7 @@ test12_aniso_AMPS_divE_corr_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/5step_corr
 
 test12_aniso_AMPS_divE_corr_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+	-@(${DIFFNUM} -b -a=2.0e-3 \
 	   ${TESTDIR}/RESULTS/5step_corr/PC/3d_fluid_region0_0_t00000005_n00000005.out \
 	   output/test12/3d_aniso_divE.out.gz \
 		> test12_aniso_AMPS_divE_corr_gmpc.diff)
@@ -1972,7 +1977,7 @@ test12_aniso_AMPS_openmp_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_aniso_AMPS_openmp_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+	-@(${DIFFNUM} -b -a=2.0e-3 \
 	   ${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000005_n00000005.out \
 	   output/test12/3d_aniso.out.gz \
 		> test12_aniso_AMPS_openmp_gmpc.diff)
@@ -2006,7 +2011,7 @@ test12_aniso_AMPS_dynamic_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_aniso_AMPS_dynamic_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+	-@(${DIFFNUM} -b -a=2.0e-3 \
 	   ${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000010_n00000010.out \
 	   output/test12/3d_AMPS_aniso_dynamic_gmpc.out.gz \
 		> test12_aniso_AMPS_dynamic_gmpc.diff)
@@ -2046,11 +2051,11 @@ test12_aniso_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
 
 test12_aniso_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+	-@(${DIFFNUM} -b -a=2.0e-3 \
 	   ${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test12/z=0_var.out.ref.aniso.gz \
 		> test12_aniso_gmpc.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
+	-@(${DIFFNUM} -b -a=2.0e-3 \
 	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test12/z=0_var.out.ref.aniso.gz \
 		>> test12_aniso_gmpc.diff)
@@ -2084,19 +2089,19 @@ test12_3d_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
 
 test12_3d_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${DIFFNUM} -b -a=1e-9 \
 	   ${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
 	   output/test12/x=0_var.out.ref.3d.gz \
 		> test12_3d_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${DIFFNUM} -b -a=1e-9 \
 	   ${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
 	   output/test12/y=0_var.out.ref.3d.gz \
 		>> test12_3d_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${DIFFNUM} -b -a=1e-9 \
 	   ${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
 	   output/test12/z=0_var.out.ref.3d.gz \
 		>> test12_3d_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-7 -r=1e-7 \
+	-@(${DIFFNUM} -b -a=1e-7 -r=1e-7 \
 	   ${TESTDIR}/RESULTS/4step/PC/cut_all_region0_0_t00000000_n00000004.out \
 	   output/test12/cut_all.out.ref.3d.gz \
 		> test12_3d_pc.diff)
@@ -2130,15 +2135,15 @@ test12_iso_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_iso_check:
-	-@(${SCRIPTDIR}/DiffNum.pl -t -a=1e-9 \
+	-@(${DIFFNUM} -t -a=1e-9 \
 	   ${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
 	   output/test12/z=0_all.out.ref.iso.gz \
 		> test12_iso_gm.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-8 \
+	-@(${DIFFNUM} -b -a=1e-8 \
 	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
 	   output/test12/z=0_fluid.out.ref.iso.gz \
 		> test12_iso_pc.diff)
-	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
+	-@(${DIFFNUM} -b -a=1e-9 \
 	   ${TESTDIR}/RESULTS/PC/cut_particles1_region0_1_t00000002_n00000004.out \
 	   output/test12/cut_particles1.out.ref.iso.gz \
 		>> test12_iso_pc.diff)
