@@ -17,16 +17,14 @@ test_help:
 	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_pw                    (run PW/PWOM test)"
+	@echo "    test_pw BLESS=YES          (update test_pw reference solution)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
 	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_swpc                  (run GM-IE-IM test as used by SWPC)"
-	@echo "    test_swpc_bless            (update test_swpc reference solutions)"
-	@echo "    test_swpc_gm_bless         (update test_swpc GM reference solutions)"
 	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
 	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI test for SWPC)"
-	@echo "    test_swpc_cimi_bless       (update test_swpc_cimi reference solutions)"
 	@echo "    test1 TESTDIR=run_test01   (run GM-IE-PW test in run_test01 directory)"
 	@echo "    test2                      (run multifluid GM-IM coupling test)"
 	@echo "    test3                      (run GM-IE-CIMI test)"
@@ -592,28 +590,6 @@ test_swpc_check:
 		> test_swpc_rb.diff)
 	ls -l test_swpc_??.diff
 
-test_swpc_bless: test_swpc_gm_bless test_swpc_ie_bless 
-
-test_swpc_gm_bless:
-	cp ${TESTDIR}/GM/IO2/log_e20140410-000200.log \
-		Param/SWPC/TestOutput/log_e20140410-000200.log
-	cp ${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
-		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag
-	cp ${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
-		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out
-	cp ${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
-		Param/SWPC/TestOutput/geoindex_e20140410-000200.log
-
-test_swpc_ie_bless:
-	cp ${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
-	   Param/SWPC/TestOutput/IE_t140410_000200.log
-	cp ${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutput/it140410_000300_000.idl
-
-test_swpc_rb_bless:
-	gzip -c ${TESTDIR}/RB/plots/20140410_000300_e.fls > \
-	Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz
-
 ### test_swpc_multiion: GM+IE+IM ###
 
 test_swpc_multiion:
@@ -682,25 +658,6 @@ test_swpc_multiion_check:
 		Param/SWPC/TestOutputMultiIon/it140410_000300_000.idl \
 		>> test_swpc_multiion_ie.diff)
 	ls -l test_swpc_multiion_*.diff
-
-test_swpc_multiion_bless: \
-	test_swpc_multiion_gm_bless test_swpc_multiion_ie_bless
-
-test_swpc_multiion_gm_bless:
-	cp ${TESTDIR}/GM/IO2/log_e20140410-000200.log \
-	   Param/SWPC/TestOutputMultiIon/log_e20140410-000200.log
-	cp ${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
-	   Param/SWPC/TestOutputMultiIon/magnetometers_e20140410-000200.mag
-	cp ${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
-	   Param/SWPC/TestOutputMultiIon/mag_grid_e20140410-000300.out
-	cp ${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
-	   Param/SWPC/TestOutputMultiIon/geoindex_e20140410-000200.log
-
-test_swpc_multiion_ie_bless:
-	cp ${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
-	   Param/SWPC/TestOutputMultiIon/IE_t140410_000200.log
-	cp ${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-	   Param/SWPC/TestOutputMultiIon/it140410_000300_000.idl
 
 ### test_swpc_multispecies: GM+IE+IM ###
 
@@ -771,26 +728,6 @@ test_swpc_multispecies_check:
 		>> test_swpc_multispecies_ie.diff)
 	ls -l test_swpc_multispecies_*.diff
 
-
-test_swpc_multispecies_bless: \
-	test_swpc_multispecies_gm_bless test_swpc_multispecies_ie_bless
-
-test_swpc_multispecies_gm_bless:
-	cp ${TESTDIR}/GM/IO2/log_e20140410-000200.log \
-	   Param/SWPC/TestOutputMultiSpecies/log_e20140410-000200.log
-	cp ${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
-	   Param/SWPC/TestOutputMultiSpecies/magnetometers_e20140410-000200.mag
-	cp ${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
-	   Param/SWPC/TestOutputMultiSpecies/mag_grid_e20140410-000300.out
-	cp ${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
-	   Param/SWPC/TestOutputMultiSpecies/geoindex_e20140410-000200.log
-
-test_swpc_multispecies_ie_bless:
-	cp ${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
-	   Param/SWPC/TestOutputMultiSpecies/IE_t140410_000200.log
-	cp ${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-	   Param/SWPC/TestOutputMultiSpecies/it140410_000300_000.idl
-
 ### test_swpc_cimi: GM+IE+IM/CIMI ###
 
 test_swpc_cimi:
@@ -860,25 +797,6 @@ test_swpc_cimi_check:
 		Param/SWPC/TestOutputCimi/it140410_000300_000.idl \
 		>> test_swpc_cimi_ie.diff)
 	ls -l test_swpc_cimi_*.diff
-
-test_swpc_cimi_bless: \
-	test_swpc_cimi_gm_bless test_swpc_cimi_ie_bless
-
-test_swpc_cimi_gm_bless:
-	cp ${TESTDIR}/GM/IO2/log_e20140410-000200.log \
-	   Param/SWPC/TestOutputCimi/log_e20140410-000200.log
-	cp ${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
-	   Param/SWPC/TestOutputCimi/magnetometers_e20140410-000200.mag
-	cp ${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
-	   Param/SWPC/TestOutputCimi/mag_grid_e20140410-000300.out
-	cp ${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
-	   Param/SWPC/TestOutputCimi/geoindex_e20140410-000200.log
-
-test_swpc_cimi_ie_bless:
-	cp ${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
-	   Param/SWPC/TestOutputCimi/IE_t140410_000200.log
-	cp ${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-	   Param/SWPC/TestOutputCimi/it140410_000300_000.idl
 
 ### test_swpc_amps
 
