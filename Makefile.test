@@ -341,17 +341,13 @@ test_rb_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test_rb_check:
-	gunzip -c ${RBDIR}/data/output/2002f296_e.fls.gz \
-		> ${TESTDIR}/2002f296_e.fls.ref
-	cp ${RBDIR}/data/output/sat_TestSat_n000000.sat \
-		  ${TESTDIR}/sat_TestSat_n000000.sat.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/RB/plots/2002f296_e.fls \
-		${TESTDIR}/2002f296_e.fls.ref \
+		${RBDIR}/data/output/2002f296_e.fls.gz \
 		> test_rb.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -r=0.001 -a=1e-10 \
 		${TESTDIR}/RB/plots/sat_TestSat_n000000.sat \
-		${TESTDIR}/sat_TestSat_n000000.sat.ref \
+		${RBDIR}/data/output/sat_TestSat_n000000.sat \
 		> test_rb_sat.diff)
 	ls -l test_rb.diff
 	ls -l test_rb_sat.diff
@@ -417,11 +413,9 @@ test1_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test1/IE.log \
 		> test01_ie.diff)
-	gunzip -c output/test1/IE*.idl.gz \
-	        > ${TESTDIR}/RESULTS/IE/it000321.idl.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=6e-5 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
-		${TESTDIR}/RESULTS/IE/it000321.idl.ref \
+		output/test1/IE*.idl.gz \
 		>> test01_ie.diff)
 	ls -l test01_*.diff
 
@@ -587,11 +581,9 @@ test_swpc_check:
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutput/it140410_000300_000.idl \
 		>> test_swpc_ie.diff)
-	gunzip -c Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
-	        > ${TESTDIR}/RB/plots/20140410_000300_e.fls.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
-		${TESTDIR}/RB/plots/20140410_000300_e.fls.ref \
+		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
 		> test_swpc_rb.diff)
 	ls -l test_swpc_??.diff
 
@@ -966,11 +958,9 @@ test_swpc_amps_check:
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutput/it140410_000300_000.idl \
 		>> test_swpc_amps_ie.diff)
-	gunzip -c Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
-	        > ${TESTDIR}/RB/plots/20140410_000300_e.fls.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
-		${TESTDIR}/RB/plots/20140410_000300_e.fls.ref \
+		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
 		> test_swpc_amps_rb.diff)
 	ls -l test_swpc_amps_??.diff
 
@@ -1031,11 +1021,9 @@ test3_check:
 		> test03_ie.diff)
 	tail -2504 ${TESTDIR}/RESULTS/IM/CIMIeq.outs \
 		> ${TESTDIR}/RESULTS/IM/CIMIeq.out
-	gunzip -c output/test3/IM_eq.out.gz \
-		> ${TESTDIR}/RESULTS/IM/CIMIeq_ref.out
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/RESULTS/IM/CIMIeq.out \
-		${TESTDIR}/RESULTS/IM/CIMIeq_ref.out \
+		output/test3/IM_eq.out.gz \
 		> test03_im_cimi.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IM/CIMI.log \
@@ -1682,11 +1670,9 @@ test16_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test16_check:
-	gunzip -c output/test16/z=0.ref.gz \
-	       > ${TESTDIR}/RESULTS/z=0.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
-		${TESTDIR}/RESULTS/z=0.ref \
+	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
+	   output/test16/z=0.ref.gz \
 		> test16.diff)
 	ls -l test16.diff
 
@@ -1723,17 +1709,13 @@ test17_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/2restart	
 
 test17_check:
-	gunzip -c output/test17/z=0_PC.ref.gz \
-	       > ${TESTDIR}/RESULTS/2restart/PC/z=0.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
-		${TESTDIR}/RESULTS/2restart/PC/z=0.ref \
+	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
+	   output/test17/z=0_PC.ref.gz \
 		> test17.diff)
-	gunzip -c output/test17/z=0_GM.ref.gz \
-	       > ${TESTDIR}/RESULTS/2restart/GM/z=0.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
-		${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
-		${TESTDIR}/RESULTS/2restart/GM/z=0.ref \
+	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
+	   output/test17/z=0_GM.ref.gz \
 		>> test17.diff)
 	ls -l test17.diff
 
@@ -1766,11 +1748,9 @@ test18_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test18_check:
-	gunzip -c output/test18/3d.ref.gz \
-	       > ${TESTDIR}/RESULTS/PC/3d.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -r=1e-6 \
 		${TESTDIR}/RESULTS/PC/3d_var_region0_0_t00000004_n00000004.out \
-		${TESTDIR}/RESULTS/PC/3d.ref \
+		output/test18/3d.ref.gz \
 		> test18.diff)
 	ls -l test18.diff
 
@@ -1812,11 +1792,9 @@ test_esmf_check:
 		${TESTDIR}/RESULTS/GM/log_n000001.log \
 		ESMF/ESMF_SWMF/output/log_n000001.log \
 		>> test_esmf.diff)
-	gunzip -c ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
-		> ${TESTDIR}/it000321_104510_000.idl.ref
 	-(${SCRIPTDIR}/DiffNum.pl -b -r=1e-4 -a=1e-4 \
 		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
-		${TESTDIR}/it000321_104510_000.idl.ref \
+		ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
 		>> test_esmf.diff)
 	ls -l test_esmf.diff
 
@@ -1920,15 +1898,13 @@ test12_aniso_AMPS_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
 
 test12_aniso_AMPS_check:
-	gunzip -c output/test12/3d_aniso.out.gz \
-	       > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/5step/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
+	   ${TESTDIR}/RESULTS/5step/PC/3d_fluid_region0_0_t00000005_n00000005.out \
+	   output/test12/3d_aniso.out.gz \
 		> test12_aniso_AMPS_gmpc.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/2restart/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
+	   ${TESTDIR}/RESULTS/2restart/PC/3d_fluid_region0_0_t00000005_n00000005.out \
+	   output/test12/3d_aniso.out.gz \
 		>> test12_aniso_AMPS_gmpc.diff)
 	ls -l test12_aniso_AMPS_gmpc.diff
 
@@ -1961,11 +1937,9 @@ test12_aniso_AMPS_divE_corr_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/5step_corr
 
 test12_aniso_AMPS_divE_corr_check:
-	gunzip -c output/test12/3d_aniso_divE.out.gz \
-	       > ${TESTDIR}/RESULTS/3d_aniso_divE.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/5step_corr/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-		${TESTDIR}/RESULTS/3d_aniso_divE.ref \
+	   ${TESTDIR}/RESULTS/5step_corr/PC/3d_fluid_region0_0_t00000005_n00000005.out \
+	   output/test12/3d_aniso_divE.out.gz \
 		> test12_aniso_AMPS_divE_corr_gmpc.diff)
 	ls -l test12_aniso_AMPS_divE_corr_gmpc.diff
 
@@ -1998,11 +1972,9 @@ test12_aniso_AMPS_openmp_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_aniso_AMPS_openmp_check:
-	gunzip -c output/test12/3d_aniso.out.gz \
-	        > ${TESTDIR}/RESULTS/3d_aniso_n5.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000005_n00000005.out \
-		${TESTDIR}/RESULTS/3d_aniso_n5.ref \
+	   ${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000005_n00000005.out \
+	   output/test12/3d_aniso.out.gz \
 		> test12_aniso_AMPS_openmp_gmpc.diff)
 	ls -l test12_aniso_AMPS_openmp_gmpc.diff
 
@@ -2034,11 +2006,9 @@ test12_aniso_AMPS_dynamic_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_aniso_AMPS_dynamic_check:
-	gunzip -c output/test12/3d_AMPS_aniso_dynamic_gmpc.out.gz \
-	        > ${TESTDIR}/RESULTS/3d_AMPS_aniso_dynamic_gmpc.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000010_n00000010.out \
-		${TESTDIR}/RESULTS/3d_AMPS_aniso_dynamic_gmpc.ref \
+	   ${TESTDIR}/RESULTS/PC/3d_fluid_region0_0_t00000010_n00000010.out \
+	   output/test12/3d_AMPS_aniso_dynamic_gmpc.out.gz \
 		> test12_aniso_AMPS_dynamic_gmpc.diff)
 	ls -l test12_aniso_AMPS_dynamic_gmpc.diff
 
@@ -2076,15 +2046,13 @@ test12_aniso_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/2restart	
 
 test12_aniso_check:
-	gunzip -c output/test12/z=0_var.out.ref.aniso.gz \
-	        > ${TESTDIR}/RESULTS/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
-		${TESTDIR}/RESULTS/z_n4.ref \
+	   ${TESTDIR}/RESULTS/4step/GM/z=0_var_1_t00000005_n00000004.out \
+	   output/test12/z=0_var.out.ref.aniso.gz \
 		> test12_aniso_gmpc.diff)
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=2.0e-3 \
-		${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out\
-		${TESTDIR}/RESULTS/z_n4.ref \
+	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
+	   output/test12/z=0_var.out.ref.aniso.gz \
 		>> test12_aniso_gmpc.diff)
 	ls -l test12_aniso_gmpc.diff
 
@@ -2116,29 +2084,21 @@ test12_3d_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4step
 
 test12_3d_check:
-	gunzip -c output/test12/x=0_var.out.ref.3d.gz \
-	        > ${TESTDIR}/RESULTS/4step/GM/x_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
-		${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
-		${TESTDIR}/RESULTS/4step/GM/x_n4.ref \
+	   ${TESTDIR}/RESULTS/4step/GM/x=0_var_1_t00000000_n00000004.out \
+	   output/test12/x=0_var.out.ref.3d.gz \
 		> test12_3d_gm.diff)
-	gunzip -c output/test12/y=0_var.out.ref.3d.gz \
-	        > ${TESTDIR}/RESULTS/4step/GM/y_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
-		${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
-		${TESTDIR}/RESULTS/4step/GM/y_n4.ref \
+	   ${TESTDIR}/RESULTS/4step/GM/y=0_var_2_t00000000_n00000004.out \
+	   output/test12/y=0_var.out.ref.3d.gz \
 		>> test12_3d_gm.diff)
-	gunzip -c output/test12/z=0_var.out.ref.3d.gz \
-	        > ${TESTDIR}/RESULTS/4step/GM/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
-		${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
-		${TESTDIR}/RESULTS/4step/GM/z_n4.ref \
+	   ${TESTDIR}/RESULTS/4step/GM/z=0_var_3_t00000000_n00000004.out \
+	   output/test12/z=0_var.out.ref.3d.gz \
 		>> test12_3d_gm.diff)
-	gunzip -c output/test12/cut_all.out.ref.3d.gz \
-                > ${TESTDIR}/RESULTS/4step/PC/cut.ref	
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-7 -r=1e-7 \
-		${TESTDIR}/RESULTS/4step/PC/cut_all_region0_0_t00000000_n00000004.out \
-		${TESTDIR}/RESULTS/4step/PC/cut.ref \
+	   ${TESTDIR}/RESULTS/4step/PC/cut_all_region0_0_t00000000_n00000004.out \
+	   output/test12/cut_all.out.ref.3d.gz \
 		> test12_3d_pc.diff)
 	ls -l test12_3d_*.diff
 
@@ -2170,23 +2130,17 @@ test12_iso_run:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS
 
 test12_iso_check:
-	gunzip -c output/test12/z=0_all.out.ref.iso.gz \
-	        > ${TESTDIR}/RESULTS/GM/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -t -a=1e-9 \
-		${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
-		${TESTDIR}/RESULTS/GM/z_n4.ref \
+	   ${TESTDIR}/RESULTS/GM/z=0_all_1_t00000002_n00000004.out \
+	   output/test12/z=0_all.out.ref.iso.gz \
 		> test12_iso_gm.diff)
-	gunzip -c output/test12/z=0_fluid.out.ref.iso.gz \
-	        > ${TESTDIR}/RESULTS/PC/z_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-8 \
-		${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
-		${TESTDIR}/RESULTS/PC/z_n4.ref \
+	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
+	   output/test12/z=0_fluid.out.ref.iso.gz \
 		> test12_iso_pc.diff)
-	gunzip -c output/test12/cut_particles1.out.ref.iso.gz \
-	        > ${TESTDIR}/RESULTS/PC/cut_n4.ref
 	-@(${SCRIPTDIR}/DiffNum.pl -b -a=1e-9 \
-		${TESTDIR}/RESULTS/PC/cut_particles1_region0_1_t00000002_n00000004.out \
-		${TESTDIR}/RESULTS/PC/cut_n4.ref \
+	   ${TESTDIR}/RESULTS/PC/cut_particles1_region0_1_t00000002_n00000004.out \
+	   output/test12/cut_particles1.out.ref.iso.gz \
 		>> test12_iso_pc.diff)
 	ls -l test12_iso*.diff
 
