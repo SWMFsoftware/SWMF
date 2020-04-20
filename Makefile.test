@@ -1423,7 +1423,7 @@ test14pui:
 
 test14pui_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelio,e=SwPui,ng=2
+	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelioPUI,e=SwPui,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
