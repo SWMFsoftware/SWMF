@@ -157,10 +157,9 @@ test_cz_run:
 	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 6 ./SWMF.exe > runlog
 
 test_cz_check:
-	grep 'ref error=' ${TESTDIR}/runlog > ${TESTDIR}/runlog.new
-	grep 'ref error=' ${CZDIR}/output/runlog.ref > ${TESTDIR}/runlog.ref
-	-${DIFFNUM} -a=1e-5 -t \
-		${TESTDIR}/runlog.new ${TESTDIR}/runlog.ref \
+	-${DIFFNUM} -a=1e-5 -t -p="grep 'ref error='" \
+		${TESTDIR}/runlog \
+		${CZDIR}/output/runlog.ref \
 		> test_cz.diff
 	ls -ltr test_cz.diff
 
@@ -489,13 +488,9 @@ test2_check:
 		${TESTDIR}/RESULTS/IE/IE_t000321_104500.log \
 		output/test2/IE.log \
 		> test02_ie.diff) 
-	gunzip -c output/test2/IM_2d__max_t00000020.dat.gz \
-		> ${TESTDIR}/RESULTS/IM/t20.dat
-	cd ${TESTDIR}/RESULTS/IM;\
-		perl -pi -e 's/AUXDATA SAVEDATE=.*//' t20.dat t20.txt
-	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/t20.txt \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-8 -p="grep -v 'AUXDATA SAVEDATE='" \
 		${TESTDIR}/RESULTS/IM/t20.dat \
+		output/test2/IM_2d__max_t00000020.dat.gz \
 		> test02_im_rcm_multi.diff)
 	ls -l test02_*.diff
 
@@ -1518,22 +1513,19 @@ test15_scihsp_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test15_scihsp_check:
-	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
-	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
-	    ${TESTDIR}/RESULTS/SP/MH_data.out
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
-		${TESTDIR}/RESULTS/SP/MH_data.out \
-		${TESTDIR}/RESULTS/SP/MH_data.ref \
+		${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out \
+		output/test15/MH_data.ref \
 		> test15_scihsp.diff)
-		ls -l test15*.diff
-		rm -rf SP/MFLAMPA/data/input/test15/MH_data/
-		mkdir SP/MFLAMPA/data/input/test15/MH_data/
-		cp ${TESTDIR}/RESULTS/SP/MH_data.lst \
-		SP/MFLAMPA/data/input/test15/MH_data/.
-		cp ${TESTDIR}/RESULTS/SP/MH_data.H \
-		SP/MFLAMPA/data/input/test15/MH_data/.
-		cp ${TESTDIR}/RESULTS/SP/MH_data*n*.out \
-		SP/MFLAMPA/data/input/test15/MH_data/.
+	ls -l test15*.diff
+	rm -rf SP/MFLAMPA/data/input/test15/MH_data/
+	mkdir SP/MFLAMPA/data/input/test15/MH_data/
+	cp ${TESTDIR}/RESULTS/SP/MH_data.lst \
+	SP/MFLAMPA/data/input/test15/MH_data/.
+	cp ${TESTDIR}/RESULTS/SP/MH_data.H \
+	SP/MFLAMPA/data/input/test15/MH_data/.
+	cp ${TESTDIR}/RESULTS/SP/MH_data*n*.out \
+	SP/MFLAMPA/data/input/test15/MH_data/.
 
 test15_sp_compile:
 	./Config.pl -v=Empty,SP/MFLAMPA
