@@ -1,7 +1,7 @@
 Begin session: 1
 
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+SC  0 -1  1		SC running on all PEs
 
 #INCLUDE
 RESTART.in
