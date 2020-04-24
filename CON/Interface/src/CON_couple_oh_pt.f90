@@ -23,7 +23,7 @@ module CON_couple_oh_pt
        OH_get_for_pt_dt
   use PT_wrapper, ONLY: &
        PT_get_grid_info, PT_find_points, PT_get_for_oh, PT_put_from_oh, &
-       PT_put_from_oh_dt
+       PT_put_from_oh_dt,PT_init_component  
 
   implicit none
   save
@@ -86,6 +86,11 @@ contains
     end if
 
     call couple_points_init(CouplerPtToOh)
+
+    ! Init the component
+    if (is_proc(PT_)) then
+      call PT_init_component((Grid_C(OH_)%nVar-3)/5)
+    end if
 
     if(DoTestMe)write(*,*) NameSub,' finished'
 
