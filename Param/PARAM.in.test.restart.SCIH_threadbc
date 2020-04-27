@@ -462,10 +462,6 @@ buf MHD idl		StringPlot
 
 #END_COMP IH ------------------------------------------------------------------
 
-#COMPONENT
-IH			NameComp
-T			UseComp
-
 #COUPLE1
 SC			NameSource
 IH			NameTarget
@@ -476,8 +472,10 @@ IH			NameTarget
 -1			MaxIter
 100.0			TimeMax
 
+#END ##########################################################################
 
-#END
+Possible continuation with SC off
+
 #RUN ##########################################################################
 
 #COMPONENT
