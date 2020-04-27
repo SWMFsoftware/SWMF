@@ -1405,8 +1405,8 @@ test14_check:
 	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
 		${TESTDIR}/RESULTS/PT/amps.ref \
-		> test14_ohpt.diff)
-		ls -l test14*.diff
+		>> test14_ohpt.diff)
+	ls -l test14*.diff
 
 
 ### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS
