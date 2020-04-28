@@ -1,10 +1,7 @@
-Name     Root Last Stride                                                                   
-#LAYOUT                                                                                     
-GM       0    99     1                                                                  
-PC       0    7     1
-
-#ECHO
-T			DoEcho
+ID Root Last Stride
+#COMPONENTMAP
+GM  0 -1  1
+PC  0  7  1
 
 #DESCRIPTION
 Run GM and PC in time accurate mode		StringDescription

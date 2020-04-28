@@ -370,7 +370,7 @@ ${RUNDIR}:
 
 rundir: ENV_CHECK
 	mkdir -p ${RUNDIR}/STDOUT
-	cp Param/PARAM.DEFAULT        ${RUNDIR}/PARAM.in
+	@echo "Copy a working PARAM.in file here" > ${RUNDIR}/PARAM.in
 	cp share/Scripts/Restart.pl   ${RUNDIR}/Restart.pl
 	cp share/Scripts/PostProc.pl  ${RUNDIR}/PostProc.pl
 	touch ${RUNDIR}/core

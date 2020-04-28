@@ -1,6 +1,9 @@
-Parameter file for test7 - launch a blob in IH, advect to OH, calcualte error
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+IH  0 -1  1		IH runs on all PEs
+OH  0 -1  1		OH runs on all PEs
+
+#DESCRIPTION
+launch a blob in IH, advect to OH, calculate error
 
 #STRICT
 F

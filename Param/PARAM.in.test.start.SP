@@ -1,5 +1,5 @@
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+SP 0 0 1
 
 #DESCRIPTION
 Uses flat files for MHD data and starts SP
