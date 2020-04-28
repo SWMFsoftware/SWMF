@@ -1659,7 +1659,7 @@ contains
     ! For unit conversion
     real, allocatable, save:: Si2No_I(:) 
 
-    integer:: i, j, k, iBlock, iPoint
+    integer:: i, j, k, iBlock, iPoint, iVar
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='IH_put_from_pt'
@@ -1701,12 +1701,14 @@ contains
     end if
 
     ! set source terms due to neutral charge exchange
-
     if(.not.allocated(Si2No_I))then
+       ! Set units for density, momentum and energy source terms
        allocate(Si2No_I(nVarData))
-       Si2No_I(1)   = Si2No_V(UnitRho_)/Si2No_V(UnitT_)
-       Si2No_I(2:4) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)
-       Si2No_I(5)   = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+       do iVar = 1, nVarData, 5
+          Si2No_I(iVar)          = Si2No_V(UnitRho_)/Si2No_V(UnitT_)
+          Si2No_I(iVar+1:iVar+3) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)
+          Si2No_I(iVar+4)        = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+       end do
     end if
 
     if(.not.allocated(ExtraSource_ICB)) &
