@@ -31,7 +31,7 @@ T                       UsePic
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi
 
-#PICREGION
+#PICGRID
 1                       nPicRegion
 -80/3              	xMinCut
  80/3               	xMaxCut

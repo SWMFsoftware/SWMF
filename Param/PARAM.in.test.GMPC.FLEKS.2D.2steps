@@ -158,7 +158,7 @@ T			UseDtFixed
 4               ScalingFactor
 
 
-#PICREGION
+#PICGRID
 1                       nPicRegion
 -25.1        	        xMinCut
 -5.0            	xMaxCut
@@ -167,8 +167,11 @@ T			UseDtFixed
 1.25/3			DxPic
 1.25/3			DyPic
 
-#PICADAPTIVE
+#PICADAPT
 T			UseAdaptivePic
+F			DoAdaptPic
+
+#PICPATCH
 2			nCellPerPatch
 
 #PICGHOST

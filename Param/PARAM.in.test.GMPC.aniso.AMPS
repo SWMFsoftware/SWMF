@@ -157,7 +157,7 @@ T			UseDtFixed
 1.0			xUnitPicSi
 1.0			uUnitPicSi
 
-#PICREGION
+#PICGRID
 1                       nPicRegion
 -16        	        xMinCut
  16 	           	xMaxCut

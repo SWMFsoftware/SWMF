@@ -89,7 +89,7 @@ T			UseNonConservative
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi
 
-#PICREGION
+#PICGRID
 1                       nPicRegion
 -6.4  	                xMinCut		xMinPic
 +6.4                    xMaxCut		xMaxPic
@@ -101,8 +101,11 @@ T			UseNonConservative
 0.4                     DyPic
 0.4                     DyPic		DzPic
 
-#PICADAPTIVE
+#PICADAPT
 T			UseAdaptivePic
+F			DoAdaptPic	
+
+#PICPATCH
 2			nCellPerPatch
 
 #PICGHOST
