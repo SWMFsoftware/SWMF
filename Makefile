@@ -151,7 +151,7 @@ install: ENV_CHECK mkdir
 	@echo
 
 info:
-	@echo "NOTE: HYPRE and BATSRUS clones should not be installed!"
+	@echo "NOTE: HYPRE, AMREX, BATSRUS clones and PC/AMPS should not be installed!"
 	@echo "Total lines of Fortran: `wc -l */*/src*/*.f* */*/src*/*/*.f* | tail -1`"
 	@echo "Total lines of C++    : `wc -l */*/src*/*.c* */*/src*/*.h */*/src*/*/*.c* */*/src*/*/*.h | tail -1`"
 	@echo "share/Library/        : `wc -l share/Library/src/*.f* share/Library/test/*.f* | tail -1`"
@@ -163,12 +163,12 @@ info:
 	@echo "CON/*	             : `wc -l CON/*/src/*.f* | tail -1`"
 	@echo "CON/Interface         : `wc -l CON/Interface/src/*.f* | tail -1`"
 	@echo "srcInterface+wrappers : `wc -l ??/*/srcInterface/*.[fch]* ??/*/src/??_wrapper.f90 | tail -1`"
-	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* PT/AMPS/MakefileTest/Table | tail -1`"
+	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* PT/AMPS/MakefileTest/* | tail -1`"
 	@echo "Perl scripts          : `wc -l *.pl */*.pl */*/*.pl */*/*/*.pl */*/*/*/*.pl */*/*/*/*/*.pl | tail -1`"
-	@echo "Python scripts        : `wc -l */*/*/*.py */*/*/*/*.py | tail -1`"
+	@echo "Python scripts        : `wc -l */*/*.py */*/*/*.py */*/*/*/*.py */*/*/*/*/*.py | tail -1`"
 	@echo "IDL scripts           : `wc -l */*/*/*.pro */*/*/*/*.pro | tail -1`"
 	@echo "Latex documentation   : `wc -l */*/*.tex */*/*/*.tex */*/*/*/*.tex | tail -1`"
-	@echo "XML descriptions      : `wc -l */*.XML */*/*.XML | tail -1`"
+	@echo "XML descriptions      : `wc -l PARAM.XML */*/*.XML | tail -1`"
 
 mkdir: ./lib ./bin
 
@@ -370,7 +370,7 @@ ${RUNDIR}:
 
 rundir: ENV_CHECK
 	mkdir -p ${RUNDIR}/STDOUT
-	cp Param/PARAM.DEFAULT        ${RUNDIR}/PARAM.in
+	@echo "Copy a working PARAM.in file here" > ${RUNDIR}/PARAM.in
 	cp share/Scripts/Restart.pl   ${RUNDIR}/Restart.pl
 	cp share/Scripts/PostProc.pl  ${RUNDIR}/PostProc.pl
 	touch ${RUNDIR}/core

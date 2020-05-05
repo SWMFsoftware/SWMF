@@ -1,5 +1,6 @@
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+IH  0 -1 1
+GM  0 -1 1
 
 ! Useful to see the location of the Earth in the heliosphere
 #TEST
