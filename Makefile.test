@@ -1443,11 +1443,11 @@ test14pui_check:
 		output/test14pui/OH_log_n000000.log \
 		> test14pui_ohpt.diff)
 	cp output/test14pui/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-	${TESTDIR}//RESULTS/PT/amps.ref
+	${TESTDIR}/RESULTS/PT/amps.ref
 	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
 		${TESTDIR}/RESULTS/PT/amps.ref \
-		> test14pui_ohpt.diff)
+		>> test14pui_ohpt.diff)
 		ls -l test14pui*.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
