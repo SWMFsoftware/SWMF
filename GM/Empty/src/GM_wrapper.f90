@@ -495,9 +495,9 @@ contains
   end subroutine GM_get_for_pc_init
 
   !============================================================================
-  subroutine GM_get_for_pc_grid_info(nInt, Int_I)
-    integer, intent(inout) :: nInt
-    integer, optional, intent(out):: Int_I(nInt)
+  subroutine GM_get_for_pc_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
+    integer, intent(inout) :: nInt, nPicGrid
+    integer, optional, intent(out):: Int_I(nInt), AccumulatedSize_I(nPicGrid)
     
     character(len=*), parameter :: NameSub='GM_get_for_pc_grid_info'
     !------------------------------------------
