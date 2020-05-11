@@ -70,6 +70,7 @@ test:
 	-@(${MAKE} test12)
 	-@(${MAKE} test13 TESTDIR=run_test13)
 	-@(${MAKE} test14 TESTDIR=run_test14)
+	-@(${MAKE} test14pui TESTDIR=run_test14pui)
 	-@(${MAKE} test15 TESTDIR=run_test15)
 	-@(${MAKE} test16 TESTDIR=run_test16)
 	-@(${MAKE} test17 TESTDIR=run_test17)
@@ -1438,17 +1439,17 @@ test14pui_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test14pui_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
+	-(${DIFFNUM} -b -r=1e-5 -a=1e-21 \
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14pui/OH_log_n000000.log \
 		> test14pui_ohpt.diff)
 	cp output/test14pui/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-	${TESTDIR}//RESULTS/PT/amps.ref
+	${TESTDIR}/RESULTS/PT/amps.ref
 	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
 		${TESTDIR}/RESULTS/PT/amps.ref \
 		>> test14pui_ohpt.diff)
-	ls -l test14pui*.diff
+		ls -l test14pui*.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
 test15_build:
