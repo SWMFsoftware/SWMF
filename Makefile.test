@@ -1447,8 +1447,8 @@ test14pui_check:
 	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
 		${TESTDIR}/RESULTS/PT/amps.ref \
-		> test14pui_ohpt.diff)
-		ls -l test14pui*.diff
+		>> test14pui_ohpt.diff)
+	ls -l test14pui*.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
 test15_build:
