@@ -269,11 +269,10 @@ F                       UseUserUpdateStates
 
 #SCHEME
 2                       nOrder
-Roe                     TypeFlux
-mc                      TypeLimiter
+Linde                   TypeFlux
+mc3                     TypeLimiter
 1.5                     LimiterBeta
 
-! 0.8 works fine for higher resolution
 #TIMESTEPPING
 2                       nStage
 0.4                     CflExpl 

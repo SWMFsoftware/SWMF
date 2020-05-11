@@ -39,19 +39,29 @@ T                       DoSaveIntial
 T			UseNonConservative
 
 #PICREGIONUNIT
-1               nPicRegion
-5.0		xUnitPicSi [m]
-3		uUnitPicSi [m/s] Speed of light for the first PIC region
-4               ScalingFactor
+2			nPicRegion
+5			xUnitPicSi [m]
+3			uUnitPicSi [m/s] Speed of light for the first PIC region
+4               	ScalingFactor
+10			xUnitPicSi [m]
+5			uUnitPicSi [m/s] Speed of light for the second PIC region
+10               	ScalingFactor
 
 #PICGRID
-1                       nPicRegion
+2                       nPicRegion
 -25.1        	        xMinCut
 -5.0            	xMaxCut
 -20.0                   yMinCut
  20.0   	     	yMaxCut
 1.25/3			DxPic
 1.25/3			DyPic
+5        	        xMinCut
+25.1            	xMaxCut
+-20.0                   yMinCut
+ 20.0   	     	yMaxCut
+1.25/3			DxPic
+1.25/3			DyPic
+
 
 #PICADAPT
 T			UseAdaptivePic
@@ -116,7 +126,10 @@ g rbody			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #INCLUDE
-PC/restartIN/restart.H
+PC/restartIN/FLEKS0_restart.H
+
+#INCLUDE
+PC/restartIN/FLEKS1_restart.H
 
 #SAVEPLOT
 1
