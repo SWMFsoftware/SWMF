@@ -117,8 +117,8 @@ contains
     character(len=*), parameter :: NameSub='couple_gm_pc_grid_info'
 
     ! GM sends PC a number of integers and reals
-    integer, allocatable :: Int_I(:)
-    integer :: nInt
+    integer, allocatable :: Int_I(:), AccumulatedSize_I(:)
+    integer :: nInt, nPicGrid
 
     !DESCRIPTION:
     ! This subroutine should be called from all PE-s
@@ -130,24 +130,33 @@ contains
     if(.not.(is_proc(GM_) .or. is_proc(PC_))) RETURN
 
     ! Get the number of integers to pass
-    if(is_proc(GM_))call GM_get_for_pc_grid_info(nInt)
+    if(is_proc(GM_))call GM_get_for_pc_grid_info(nInt, nPicGrid)
     call transfer_integer(GM_, PC_, nInt, UseSourceRootOnly=.false., &
          UseTargetRootOnly=.false.)
+    call transfer_integer(GM_, PC_, nPicGrid, UseSourceRootOnly=.false., &
+         UseTargetRootOnly=.false.)
+
     
     if(nInt>0) then
        allocate(Int_I(nInt))
-
+       allocate(AccumulatedSize_I(nPicGrid))
+       
        if(is_proc(GM_)) &
-            call GM_get_for_pc_grid_info(nInt, Int_I)
+            call GM_get_for_pc_grid_info(nInt, nPicGrid, &
+            AccumulatedSize_I, Int_I)
 
        ! Transfer integers from GM to PC
        call transfer_integer_array(GM_, PC_, nInt, Int_I, &
             UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
+       call transfer_integer_array(GM_, PC_, nPicGrid, AccumulatedSize_I, &
+            UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
 
+       
        if(is_proc(PC_)) &
-            call PC_put_from_gm_grid_info(nInt, Int_I)
+            call PC_put_from_gm_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
 
        deallocate(Int_I)
+       deallocate(AccumulatedSize_I)
     endif
     
   end subroutine couple_gm_pc_grid_info
