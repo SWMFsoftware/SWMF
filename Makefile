@@ -18,6 +18,9 @@ SHELL=/bin/sh
 #BOC
 VERSION = 2.3
 
+# Allow setting CONFIG_PL="./Config.pl -verbose" if desired
+CONFIG_PL = ./Config.pl
+
 #
 # The default target is SWMF so it is listed first
 #
@@ -141,9 +144,9 @@ install: ENV_CHECK mkdir
 			     perl -i -pe 's/GM/IH/' IH/BATSRUS/Config.pl; \
 		fi; \
 	fi
-	@for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
+	@for i in `ls -d [A-Z][A-Z]/*/ | grep -v /Empty/`; \
 		do (if([ -f "$$i/Config.pl" ]); then \
-			echo Installing $$i; cd $$i; ./Config.pl -install=c; \
+			echo Installing $$i; cd $$i; ${CONFIG_PL} -install=c; \
 		    fi); \
 		done
 	@echo
@@ -290,7 +293,7 @@ CLEAN1 = cleanpdf #				^CMP IF NOT MAKEPDF
 clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
+	for i in `ls -d [A-Z][A-Z]/*/`; \
 		do (echo Cleaning $$i; cd $$i; make clean); done
 	-@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make clean; fi #^CMP IF ESMF
 	cd CON;			make clean
@@ -308,15 +311,15 @@ clean: ENV_CHECK
 	@echo
 
 distclean: 
-	./Config.pl -uninstall
+	${CONFIG_PL} -uninstall
 
 allclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/Empty/`; \
 		do (echo Distcleaning $$i; cd $$i; make distclean); done
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
-		do (echo Uninstalling $$i; cd $$i; ./Config.pl -uninstall); done
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v Empty`; \
+		do (echo Uninstalling $$i; cd $$i; ${CONFIG_PL} -uninstall); done
 	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make distclean;fi #^CMP IF ESMF
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
@@ -337,7 +340,7 @@ dist:
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
-	./Config.pl -uninstall
+	${CONFIG_PL} -uninstall
 	-rm -rf */*/run_test
 	tar -cf tmp.tar  README
 	tar -rf tmp.tar  PARAM.XML
@@ -396,7 +399,7 @@ CDATE = `date +%Y%b%d`
 
 rundir_code:
 	make rundir
-	./Config.pl -show > _config_show
+	${CONFIG_PL} -show > _config_show
 	mkdir code_${CDATE}
 	rsync -a --exclude '*.o' --exclude '*.a' --exclude '*.exe' --exclude 'run*' --exclude '*~' --exclude '*.mod' --exclude code_${CDATE} . code_${CDATE}/
 	tar -czf ${RUNDIR}/code_${CDATE}.tgz code_${CDATE}
@@ -450,7 +453,7 @@ EEBATSRUS: EE/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Rename.pl -w -r -common=EE ${EE_SRC}; \
 		touch srcInterface/Makefile.DEPEND; \
 		perl -i -pe 's/GM/EE/' Config.pl; \
-		./Config.pl -install=c -u=Ee -e=MhdEosRad
+		${CONFIG_PL} -install=c -u=Ee -e=MhdEosRad
 
 #^CMP END EE
 
@@ -490,7 +493,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		touch Makefile.DEPEND
 	cd IH/BATSRUS; \
 		perl -i -pe 's/GM/IH/' Config.pl; \
-		./Config.pl -u=Ih -e=Mhd
+		${CONFIG_PL} -u=Ih -e=Mhd
 
 #^CMP END IH
 
@@ -535,7 +538,7 @@ OHBATSRUS: OH/BATSRUS/src/Makefile \
 	touch OH/BATSRUS/srcInterface/Makefile.DEPEND
 	cd OH/BATSRUS; \
 		perl -i -pe 's/GM/OH/' Config.pl; \
-		./Config.pl -install=c -e=OuterHelio -u=OuterHelio
+		${CONFIG_PL} -install=c -e=OuterHelio -u=OuterHelio
 
 
 #^CMP END OH
@@ -581,7 +584,7 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
 	cd SC/BATSRUS; \
 		perl -i -pe 's/GM/SC/' Config.pl; \
-		./Config.pl -install=c -u=Sc -e=MhdCorona
+		${CONFIG_PL} -install=c -u=Sc -e=MhdCorona
 
 #^CMP END SC
 
