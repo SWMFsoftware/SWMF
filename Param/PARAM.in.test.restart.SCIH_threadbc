@@ -290,6 +290,9 @@ SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 #PLOTTHREADS
 T				DoPlotThreads
 10				nGUniform
+T                               DoTriangulation
+T				DoTRCorrection
+
 
 #END_COMP SC ------------------------------------------------------------------
 
