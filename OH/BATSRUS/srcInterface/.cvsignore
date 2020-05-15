@@ -1,5 +1,0 @@
-OH_wrapper.f90
-Mod*.f90
-*.o
-*.mod
-Makefile.DEPEND
