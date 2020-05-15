@@ -160,7 +160,7 @@ T			UseDtFixed
 2               ScalingFactor
 
 
-#PICREGION
+#PICGRID
 2                       nPicRegion
 -25.1        	        xMinCut
 -5.0            	xMaxCut

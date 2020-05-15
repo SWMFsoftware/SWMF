@@ -1,6 +1,6 @@
 #COMPONENTMAP
-PT       1    2    1   ! PT runs on 1 or 2 PE-s
 OH       0   -1    1   ! OH runs on all PE-s
+PT       1    2    1   ! PT runs on 1 or 2 PE-s
 
 #DESCRIPTION
 Couple multi-ion OH with PT
@@ -143,7 +143,7 @@ Linde			TypeFlux
 
 #TIMESTEPPING
 1                       nStage (1 or 2)
-0.80                    CflExpl
+0.4                     CflExpl
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -269,11 +269,10 @@ F                       UseUserUpdateStates
 
 #SCHEME
 2                       nOrder
-Roe                     TypeFlux
-mc                      TypeLimiter
+Linde                   TypeFlux
+mc3                     TypeLimiter
 1.5                     LimiterBeta
 
-! 0.8 works fine for higher resolution
 #TIMESTEPPING
 2                       nStage
 0.4                     CflExpl 
@@ -293,6 +292,7 @@ T			DoNormalizeCell
 
 #SOURCES
 F                       UseIonSource
+F			UsePuiSource
 F                       UseNeuSource
 F                       UseNe2Source
 F                       UseNe3Source

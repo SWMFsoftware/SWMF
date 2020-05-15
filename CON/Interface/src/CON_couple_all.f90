@@ -17,11 +17,13 @@ module CON_couple_all
   !USES:
   use CON_comp_param
   use CON_world,   ONLY: use_comp, is_proc, i_proc, lComp_I
-  use CON_coupler, ONLY: iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
-                         DoCoupleVar_V, DoCoupleVar_VCC, &
-                         nVarBuffer, nVarBuffer_CC, &
-                         iVarSource_V, iVarSource_VCC, &
-                         iVarTarget_V, iVarTarget_VCC
+  use CON_coupler, ONLY: &
+       iCompSourceCouple, iCompTargetCouple, &
+       iVar_V, iVar_VCC, nVarCouple, nVarCouple_CC, &
+       DoCoupleVar_V, DoCoupleVar_VCC, &
+       nVarBuffer, nVarBuffer_CC, &
+       iVarSource_V, iVarSource_VCC, &
+       iVarTarget_V, iVarTarget_VCC
 
   !^CMP IF GM BEGIN
   use CON_couple_ee_gm        !^CMP IF EE
@@ -60,7 +62,7 @@ module CON_couple_all
   !PUBLIC MEMBER FUNCTIONS:
 
   public :: couple_all_init ! initialize all couplers
-  public :: couple_two_comp     ! couple 2 components based on their IDs
+  public :: couple_two_comp ! couple 2 components based on their IDs
 
   !REVISION HISTORY:
   ! 27Aug03 - G. Toth <gtoth@umich.edu> initial prototype/prolog/code
@@ -141,20 +143,19 @@ contains
 
     character(len=*), parameter :: NameSub = NameMod//'::couple_two_comp'
 
-    logical :: DoTest,DoTestMe
+    logical :: DoTest, DoTestMe
     !-------------------------------------------------------------------
     call check_i_comp(iCompSource,NameSub//': source')
     call check_i_comp(iCompTarget,NameSub//': target')
-    
-    !\
-    ! Return if any component is not used or if the PE is
-    ! used by neither components.
-    !/
+
+    ! Return if any component is not used
     if(.not.(use_comp(iCompSource))) RETURN
     if(.not.(use_comp(iCompTarget))) RETURN
+
+    ! Return if the PE is not used by either components
     if(.not.(is_proc(iCompSource).or.is_proc(iCompTarget))) RETURN
 
-    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+    call CON_set_do_test(NameSub, DoTest, DoTestMe)
     if(DoTest)write(*,*)NameSub,': coupling iProc=',i_proc(),' ',&
          NameComp_I(iCompSource),' --> ',NameComp_I(iCompTarget)
 
@@ -165,9 +166,13 @@ contains
     nVarCouple    = nVarCouple_CC(iCompSource,iCompTarget)
     DoCoupleVar_V = DoCoupleVar_VCC(:,iCompSource,iCompTarget)
 
+    ! Make the component indexes public through CON_coupler
+    iCompSourceCouple = iCompSource
+    iCompTargetCouple = iCompTarget
+
     lCompSource = lComp_I(iCompSource)
     lCompTarget = lComp_I(iCompTarget)
-
+    
     if(allocated(iVarSource_VCC))then
        nVarBuffer    = nVarBuffer_CC(lCompSource,lCompTarget)
        iVarSource_V  = iVarSource_VCC(:,lCompSource,lCompTarget)

@@ -71,18 +71,17 @@ contains
 
     call couple_points_init(CouplerOhToPt)
 
-    if(CouplerOhToPt%nVar < 13)then
-       CouplerPtToOh%iCompSource = PT_
-       CouplerPtToOh%iCompTarget = OH_
-       ! charge exchange sources
-       CouplerPtToOh%NameVar     = 'Srho Smx Smy Smz Se' 
-       CouplerPtToOh%nVar        = 5
+    CouplerPtToOh%iCompSource = PT_
+    CouplerPtToOh%iCompTarget = OH_
+
+    ! 5 source terms per fluid. Number of fluids is from number of MHD vars.
+    CouplerPtToOh%nVar    = 5 * (CouplerOhToPt%nVar / 5)
+
+    ! charge exchange sources
+    if(CouplerPtToOh%nVar == 5)then
+       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se' 
     else
-       CouplerPtToOh%iCompSource = PT_
-       CouplerPtToOh%iCompTarget = OH_
-       ! charge exchange sources
-       CouplerPtToOh%NameVar     = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2' 
-       CouplerPtToOh%nVar        = 10
+       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2' 
     end if
 
     call couple_points_init(CouplerPtToOh)

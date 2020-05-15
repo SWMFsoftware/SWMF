@@ -36,7 +36,7 @@ test_registry: DEPEND
 	$(MAKE) LIB
 	$(MAKE) test_registry.exe
 	${OMPIRUN} test_registry.exe
-	cat LAYOUT.in
+	cat PARAM.in
 
 TEST_REGISTRY_OBJ= \
 	test_registry.o

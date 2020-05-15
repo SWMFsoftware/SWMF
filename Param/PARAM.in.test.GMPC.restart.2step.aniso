@@ -2,9 +2,6 @@
 GM  0 -1  1		GM runs on all PE-s
 PC  0  3  1		PC runs on 4 PE-s
 
-#ECHO
-T			DoEcho
-
 ! Restart header for SWMF
 #INCLUDE
 RESTART.in		NameRestartFile
@@ -49,7 +46,7 @@ T			UseNonConservative
 2		uUnitPicSi [m/s] Speed of light for the second PIC region
 2               ScalingFactor
 
-#PICREGION
+#PICGRID
 2                       nPicRegion
 -25.1        	        xMinCut
 -5.0            	xMaxCut

@@ -1,10 +1,7 @@
-Name     Root Last Stride                                                                   
-#LAYOUT                                                                                     
-GM       0    99     1                                                                  
-PC       0    7     1
-
-#ECHO
-T			DoEcho
+ID Root Last Stride
+#COMPONENTMAP
+GM  0 -1  1
+PC  0  7  1
 
 #DESCRIPTION
 Run GM and PC in time accurate mode		StringDescription
@@ -64,9 +61,9 @@ T			UseNonConservative
 100			MinBlockALL
 
 #GRID
-4			nRootBlockX
-2			nRootBlockY
-2			nRootBlockZ
+16			nRootBlockX
+8			nRootBlockY
+8			nRootBlockZ
 -12.8			xMin
  12.8			xMax
 -6.4			yMin
@@ -89,7 +86,7 @@ T			UseNonConservative
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi
 
-#PICREGION
+#PICGRID
 1                       nPicRegion
 -6.4  	                xMinCut		xMinPic
 +6.4                    xMaxCut		xMaxPic
@@ -101,8 +98,11 @@ T			UseNonConservative
 0.4                     DyPic
 0.4                     DyPic		DzPic
 
-#PICADAPTIVE
+#PICADAPT
 T			UseAdaptivePic
+F			DoAdaptPic	
+
+#PICPATCH
 2			nCellPerPatch
 
 #PICGHOST
