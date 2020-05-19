@@ -155,6 +155,9 @@ spherical_lnr
 -100.0			zMin
  100.0			zMax
 
+#GRIDBLOCKALL
+1200			MaxBlock
+
 #LIMITRADIUS
 1.05			rMin
 24.0			rMax
@@ -294,6 +297,9 @@ T			UseBody
  250.0			yMax
 -250.0			zMin
  250.0			zMax
+
+#GRIDBLOCKALL
+6800			MaxBlock
 
 #DOAMR
 F

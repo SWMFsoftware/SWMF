@@ -1,5 +1,4 @@
 #COMPONENTMAP
-EE  0 -1  1		EE runs on all PEs
 SC  0 -1  1		SC runs on all PEs
 
 #DESCRIPTION
@@ -161,6 +160,9 @@ spherical_lnr
 -100.0			zMin
  100.0			zMax
 
+#GRIDBLOCKALL
+1200			MaxBlock
+
 #LIMITRADIUS
 1.05			rMin
 24.0			rMax
@@ -281,10 +283,6 @@ g rbody
 T			DoSaveInitial
 
 #END_COMP SC ----------------------------------------------------------------
-
-#COMPONENT
-EE			NameComp
-F			UseComp
 
 #STOP
 70			MaxIteration

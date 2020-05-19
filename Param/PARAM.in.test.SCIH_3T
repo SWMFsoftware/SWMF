@@ -25,6 +25,9 @@ F                       DoTimeAccurate
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
+#GRIDBLOCKALL
+1200			MaxBlock
+
 INCLUDE
 SC/restartIN/restart.H	
 
@@ -289,6 +292,9 @@ IH			NameTarget
 -1.0			DtCouple
 
 #BEGIN_COMP IH -------------------------------------------------------------
+
+#GRIDBLOCKALL
+6800			MaxBlock
 
 INCLUDE
 IH/restartIN/restart.H

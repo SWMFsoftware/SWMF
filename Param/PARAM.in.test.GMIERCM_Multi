@@ -57,6 +57,9 @@ IE			NameComp2
 -128.			zMin
 128.			zMax
 
+#GRIDBLOCKALL
+700			MaxBlock
+
 ! Maximum resolution initially
 
 #GRIDRESOLUTION
