@@ -131,6 +131,11 @@ PC/restartIN/FLEKS0_restart.H
 #INCLUDE
 PC/restartIN/FLEKS1_restart.H
 
+#EFIELDSOLVER
+1e-13			tol
+200			nIterMax
+
+
 #SAVEPLOT
 1
 z=0 fluid ascii si			StringPlot
