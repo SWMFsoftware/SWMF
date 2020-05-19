@@ -30,12 +30,6 @@ USERMODULE
 Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
 
-#CHECKGRIDSIZE
-       8                nI
-       8                nJ
-       1                nK
-     100                MinBlockALL
-
 #IOUNITS
 NONE			TypeIoUnit
 
@@ -142,6 +136,12 @@ dt    = 0.2*dtmax   = 1.066
  160/4                 	yMax
 -0.5                  	zMin
  0.5                  	zMax
+
+#CHECKGRIDSIZE
+  8			nI
+  8			nJ
+  1			nK
+800			MinBlockALL
 
 #FIXEDTIMESTEP
 T			UseDtFixed

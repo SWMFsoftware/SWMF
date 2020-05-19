@@ -31,10 +31,10 @@ Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
 
 #CHECKGRIDSIZE
-       8                nI
-       8		nJ
-       1		nK
-     100		MinBlockALL
+  8			nI
+  8			nJ
+  1			nK
+800			MinBlockALL
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -239,9 +239,11 @@ g rbody			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEP_FLEKS1
-0.4			dt
+F			useFixedDt
+0.2			cfl
 
 #TIMESTEP_FLEKS0
+T			useFixedDt
 1.28			dt
 
 
@@ -251,6 +253,9 @@ g rbody			NamePars
 #ELECTRON_FLEKS1
 -50.0			Charge/mass ratio (qom)
 
+#EFIELDSOLVER
+1e-13			tol
+200			nIterMax
 
 #PARTICLES
 10			Particles per cell in X Region 1

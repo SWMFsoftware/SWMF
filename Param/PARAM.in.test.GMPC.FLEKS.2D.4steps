@@ -1,9 +1,7 @@
-This tests GM-PC coupling with different layouts.
-This is not meant to be a practical layout.
-
+Name Root Last Stride
 #COMPONENTMAP
-GM  1 -1  1		GM runs on all PE-s except 0
-PC  0  3  1		PC runs on first 4 PE-s
+GM  0 -1  1
+PC  0  -1  1
 
 #DESCRIPTION
 Run GM and PC in time accurate mode
@@ -12,21 +10,15 @@ Run GM and PC in time accurate mode
 NONE			NamePlanet
 
 #SAVERESTART
-F                       DoSaveRestart 
+T                       DoSaveRestart 
 -1                      DnSaveRestart 
-100                    DtSaveRestart
+2.56                    DtSaveRestart
 
-#COUPLE2TIGHT
+#COUPLE2
 GM			NameCompMaster
 PC			NameCompSlave
-T                       DoCouple
-
-
-COUPLE2
-GM
-PC
--1
-1
+-1			DnCouple
+1.28			DtCouple
 
 #PROGRESS
 1			DnShowProgressShort
@@ -37,6 +29,12 @@ PC
 USERMODULE
 Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
+
+#CHECKGRIDSIZE
+       8                nI
+       8		nJ
+       1		nK
+     100		MinBlockALL
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -130,56 +128,60 @@ dt    = 0.2*dtmax   = 1.066
 
 #USERINPUTEND   ----------------
 
-SHOCKPOSITION
+#SHOCKPOSITION
 0.0			ShockPosition
 4/3			ShockSlope
 
 #GRID
-8                    	nRootBlockX
-8                     	nRootBlockY
-8                     	nRootBlockZ
--20			xMin
- 20			xMax
--20                 	yMin
- 20                 	yMax
--20                  	zMin
- 20                  	zMax
-
-#CHECKGRIDSIZE
-   8			nI
-   8			nJ
-   8			nK
-1000			MinBlockALL
+32                    	nRootBlockX
+24                     	nRootBlockY
+1                     	nRootBlockZ
+-160/3                  xMin
+ 160/3  		xMax
+-160/4                 	yMin
+ 160/4                 	yMax
+-0.5                  	zMin
+ 0.5                  	zMax
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-1.0			DtFixed
+640/500			DtFixed
 
-#PICUNIT
- 1.0                    xUnitPicSi
- 1.0                    uUnitPicSi
+
+#PICREGIONUNIT
+2			nPicRegion
+5			xUnitPicSi [m]
+3			uUnitPicSi [m/s] Speed of light for the first PIC region
+4               	ScalingFactor
+10			xUnitPicSi [m]
+5			uUnitPicSi [m/s] Speed of light for the second PIC region
+10               	ScalingFactor
+
 
 #PICGRID
-1                       nPicRegion
--16        	        xMinCut
- 16 	           	xMaxCut
--8                      yMinCut
- 8   	     		yMaxCut
--4                      yMinCut
- 4   	     		yMaxCut
-0.5			Dx
-0.5			Dy
-0.5			Dz
-
-
-
-
- 5.0        	        xMinCut
- 25.0            	xMaxCut
+2                       nPicRegion
+-25.1        	        xMinCut
+-5.0            	xMaxCut
 -20.0                   yMinCut
  20.0   	     	yMaxCut
 1.25/3			DxPic
 1.25/3			DyPic
+5        	        xMinCut
+25.1            	xMaxCut
+-20.0                   yMinCut
+ 20.0   	     	yMaxCut
+1.25/3			DxPic
+1.25/3			DyPic
+
+#PICADAPT
+T			UseAdaptivePic
+F			DoAdaptPic
+
+#PICPATCH
+2			nCellPerPatch
+
+#PICGHOST
+1			nGhostPic
 
 #OUTERBOUNDARY
 periodic                TypeBc1
@@ -236,67 +238,42 @@ g rbody			NamePars
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
-#TIMESTEPPING
-F               useSWMFDt
-T		useFixedDt
-1               dt
+#TIMESTEP_FLEKS1
+F			useFixedDt
+0.2			cfl
 
-#ELECTRON
--25
+#TIMESTEP_FLEKS0
+T			useFixedDt
+1.28			dt
+
+
+#ELECTRON_FLEKS0		
+-25.0			Charge/mass ratio (qom)
+
+#ELECTRON_FLEKS1
+-50.0			Charge/mass ratio (qom)
 
 #EFIELDSOLVER
-1e-8                     EFieldTol
-200                      EFieldIter
-
-
-#ENERGYCONSERVING
-T
-
-
-#DISCRETIZATION
-0.5                        theta
-0.0                        gradRhoRatio
-0.0                        cDiff
-0.0                        ratioDivC2C
-
-#DIVE
-F
+1e-13			tol
+200			nIterMax
 
 #PARTICLES
-5			Particles per cell in X Region 1
-6			Particles per cell in Y Region 1
+10			Particles per cell in X Region 1
+10			Particles per cell in Y Region 1
 1			Particles per cell in Z Region 1
 
-#SAVEIDL
+#SAVEPLOT
 1
-3d fluid ascii pic			StringPlot
-1   	  				DnOutput
+z=0 fluid ascii si			StringPlot
+4   	  				DnOutput
 -1					DtOutput
 1					DxOutput
-3d fluid ascii si			StringPlot
-1   	  				DnOutput
--1					DtOutput
-1					DxOutput
-
-
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
 -1			MaxIteration
-10			tSimulationMax
+5.12
 
-
-#END
-#RUN
-
-#COMPONENT
-GM
-F
-
-
-#STOP
--1			MaxIteration
-15			tSimulationMax
 
 

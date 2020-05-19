@@ -24,7 +24,6 @@ EARTH			NamePlanet
 
 #IDEALAXES
 
-
 #SAVERESTART
 F			DoSaveRestart
 
@@ -80,6 +79,9 @@ idl z=0 FUL			StringPlot
  22.			yMax
 -22.			zMin
  22.			zMax
+
+#GRIDBLOCKALL
+600			MaxBlock
 
 ! Maximum resolution initially
 #GRIDRESOLUTION

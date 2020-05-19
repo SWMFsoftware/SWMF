@@ -19,15 +19,12 @@ test_help:
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_pw BLESS=YES          (update test_pw reference solution)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
-	@echo "    test_rb                    (run RB/RBE test)"
 	@echo "    test_swpc                  (run GM-IE-IM test as used by SWPC)"
 	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
 	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
 	@echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI test for SWPC)"
 	@echo "    test1 TESTDIR=run_test01   (run GM-IE-PW test in run_test01 directory)"
-	@echo "    test2                      (run multifluid GM-IM coupling test)"
-	@echo "    test3                      (run GM-IE-CIMI test)"
 	@echo "    test4                      (run GM-IE-HEIDI test)"
 	@echo "    test5                      (run EE-SC test)"
 	@echo "    test7                      (run IH-OH test)"
@@ -60,7 +57,6 @@ test:
 	-@(${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies)
 	-@(${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi)
 	-@(${MAKE} test1 TESTDIR=run_test01)
-	-@(${MAKE} test3 TESTDIR=run_test03)
 	-@(${MAKE} test4 TESTDIR=run_test04)
 	-@(${MAKE} test5 TESTDIR=run_test05)
 	-@(${MAKE} test7 TESTDIR=run_test07)
@@ -285,76 +281,6 @@ test_psie_check:
 		>> test_psie.diff)
 	ls -ltr test_psie*.diff
 	
-#### Plasmasphere-Ionosphere Coupling: PS-IE/DGCPM-RIM ###
-
-test_psgmie:
-	@echo "starting..." > test_psgmie.diff
-	@echo "test_psgmie_compile..." >> test_psgmie.diff
-	${MAKE} test_psgmie_compile
-	@echo "test_psgmie_rundir..." >> test_psgmie.diff
-	${MAKE} test_psgmie_rundir
-	@echo "test_psgmie_run..." >> test_psgmie.diff
-	${MAKE} test_psgmie_run
-	@echo "test_psgmie_check..." >> test_psgmie.diff
-	${MAKE} test_psgmie_check	
-
-test_psgmie_compile:
-	./Config.pl -v=Empty,PS/DGCPM,IE/Ridley_serial,GM/BATSRUS
-	${MAKE} SWMF PIDL
-
-test_psgmie_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMIEPS  ${TESTDIR}/PARAM.in
-
-test_psgmie_run:
-	cd ${TESTDIR}; ${PARALLEL} ${NPFLAG} 1 ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test_psgmie_check:
-	ls -ltr test_psgmie*.diff
-
-#### Radiation belt model test ###
-
-test_rb:
-	@echo "starting..." > test_rb.diff
-	@echo "test_rb_compile..." >> test_rb.diff
-	${MAKE} test_rb_compile
-	@echo "test_rb_rundir..." >> test_rb.diff
-	${MAKE} test_rb_rundir
-	@echo "test_rb_run..." >> test_rb.diff
-	${MAKE} test_rb_run
-	@echo "test_rb_check..." >> test_rb.diff
-	${MAKE} test_rb_check
-
-test_rb_compile:
-	./Config.pl -v=Empty,RB/RBE,GM/BATSRUS
-	./Config.pl -g=GM:8,8,8,770,1 -o=GM:e=Mhd,u=Default
-	${MAKE} SWMF
-	make PIDL
-
-test_rb_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.RB ${TESTDIR}/PARAM.in
-	cp RB/RBE/data/input/TestSat.dat ${TESTDIR}/TestSat.dat
-	cd ${TESTDIR}/RB/; ln -s ${RBDIR}/input/2002_296* .
-test_rb_run:
-	cd ${TESTDIR}/RB; rm -f 2002f296_e.fls
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-
-test_rb_check:
-	-@(${DIFFNUM} -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/plots/2002f296_e.fls \
-		${RBDIR}/data/output/2002f296_e.fls.gz \
-		> test_rb.diff)
-	-@(${DIFFNUM} -r=0.001 -a=1e-10 \
-		${TESTDIR}/RB/plots/sat_TestSat_n000000.sat \
-		${RBDIR}/data/output/sat_TestSat_n000000.sat \
-		> test_rb_sat.diff)
-	ls -l test_rb.diff
-	ls -l test_rb_sat.diff
-
 ### Test1: PW+IE+GM ###
 
 test1:
@@ -377,7 +303,7 @@ test1:
 
 test1_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,PW/PWOM
-	./Config.pl -g=GM:8,8,8,700,100,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2,PW:Earth
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2,PW:Earth
 	${MAKE} SWMF
 	make PIDL
 
@@ -448,7 +374,7 @@ test2:
 
 test2_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdIons,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=MhdIons,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -533,7 +459,7 @@ test_swpc:
 
 test_swpc_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE
-	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -607,7 +533,7 @@ test_swpc_multiion:
 
 test_swpc_multiion_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=MultiIon,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=MultiIon,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -676,7 +602,7 @@ test_swpc_multispecies:
 
 test_swpc_multispecies_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2
-	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=MhdHpOp,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=MhdHpOp,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -745,7 +671,7 @@ test_swpc_cimi:
 
 test_swpc_cimi_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
-	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,ng=2
 	./Config.pl -o=IM:EarthHO,GridExpanded
 	${MAKE} SWMF
 	make PIDL
@@ -828,7 +754,7 @@ test_swpc_amps:
 
 test_swpc_amps_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RCM2,RB/RBE,PT/AMPS
-	./Config.pl -g=GM:8,8,8,10,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	./Config.pl -o=PT:application=test/earth-test-swmf,spice-path=nospice,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
@@ -883,73 +809,6 @@ test_swpc_amps_check:
 		> test_swpc_amps_rb.diff)
 	ls -l test_swpc_amps_??.diff
 
-### Test3: GM+IE+IM=CIMI ###
-
-test3:
-	@echo "test3_compile..." > test03_gm.diff
-	@echo "test3_compile..." > test03_ie.diff
-	@echo "test3_compile..." > test03_im_cimi.diff
-	${MAKE} test3_compile
-	@echo "test3_rundir..." >> test03_gm.diff
-	@echo "test3_rundir..." >> test03_ie.diff
-	@echo "test3_rundir..." >> test03_im_cimi.diff
-	${MAKE} test3_rundir
-	@echo "test3_run..." >> test03_gm.diff
-	@echo "test3_run..." >> test03_ie.diff
-	@echo "test3_run..." >> test03_im_cimi.diff
-	${MAKE} test3_run
-	@echo "test3_restart..." >> test03_gm.diff
-	@echo "test3_restart..." >> test03_ie.diff
-	@echo "test3_restart..." >> test03_im_cimi.diff
-	${MAKE} test3_restart
-	@echo "test3_check..." >> test03_gm.diff
-	@echo "test3_check..." >> test03_ie.diff
-	@echo "test3_check..." >> test03_im_cimi.diff
-	${MAKE} test3_check
-
-test3_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/CIMI
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=MhdAnisoP,ng=2
-	./Config.pl -o=IM:GridDefault,EarthHO
-	${MAKE} SWMF
-	make PIDL
-
-test3_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.GMIEIMCIMI ${TESTDIR}/PARAM.in
-
-test3_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./Restart.pl
-
-test3_restart:
-	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIEIMCIMI PARAM.in
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
-	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS; mv runlog_restart RESULTS
-
-# check last snapshot from CIMI output
-test3_check:
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		output/test3/GM.log \
-		> test03_gm.diff)
-	-@(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IE/IE*.log \
-		output/test3/IE.log \
-		> test03_ie.diff)
-	tail -2504 ${TESTDIR}/RESULTS/IM/CIMIeq.outs \
-		> ${TESTDIR}/RESULTS/IM/CIMIeq.out
-	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
-		${TESTDIR}/RESULTS/IM/CIMIeq.out \
-		output/test3/IM_eq.out.gz \
-		> test03_im_cimi.diff)
-	-@(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/IM/CIMI.log \
-		output/test3/IM.log \
-		> test03_im_cimi_log.diff)
-	ls -l test03_*.diff
-
 ### Test4: GM+IE+HEIDI ###############
 
 test4:
@@ -972,7 +831,7 @@ test4:
 
 test4_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/HEIDI
-	./Config.pl -g=GM:8,8,8,600,1,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -1015,7 +874,7 @@ test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
 	./Config.pl -o=EE:u=Swarm,e=MhdEos,ng=2
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
-	./Config.pl -g=EE:10,10,10,500,1,SC:4,4,4,1200,1
+	./Config.pl -g=EE:10,10,10,SC:4,4,4
 	${MAKE} SWMF
 	make PIDL
 
@@ -1079,7 +938,7 @@ test7:
 
 test7_compile:
 	./Config.pl -v=Empty,IH/BATSRUS,OH/BATSRUS
-	./Config.pl -g=IH:4,4,4,3000,1,OH:4,4,4,3000,1
+	./Config.pl -g=IH:4,4,4,OH:4,4,4
 	./Config.pl -o=IH:u=Waves,e=Mhd,ng=2 -o=OH:u=Waves,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
@@ -1128,7 +987,7 @@ test8_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB,ng=2
-	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1
+	./Config.pl -g=SC:4,4,4,IH:4,4,4
 	${MAKE} SWMF
 	make PIDL
 
@@ -1190,7 +1049,7 @@ test9:
 
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -g=SC:6,8,8,500,1,IH:8,8,8,500,1
+	./Config.pl -g=SC:6,8,8,IH:8,8,8
 	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB,ng=3
 	${MAKE} SWMF
@@ -1255,7 +1114,7 @@ test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPiSignB,ng=2
-	./Config.pl -g=SC:6,4,4,1200,1,IH:4,4,4,6800,1
+	./Config.pl -g=SC:6,4,4,IH:4,4,4
 	${MAKE} SWMF
 	make PIDL
 
@@ -1298,7 +1157,7 @@ test11:
 
 test11_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
-	./Config.pl -g=GM:8,8,8,700,1 -o=GM:u=Default,e=Mhd,ng=2
+	./Config.pl -g=GM:8,8,8 -o=GM:u=Default,e=Mhd,ng=2
 	./Config.pl -o=PT:spice-path=nospice,application=coupler-test
 	${MAKE} SWMF
 	make PIDL
@@ -1345,7 +1204,7 @@ test13:
 
 test13_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PT/AMPS
-	./Config.pl -g=GM:8,8,8,700,1 -o=GM:u=EuropaSingleMHDPe,e=MhdPe,ng=2
+	./Config.pl -g=GM:8,8,8 -o=GM:u=EuropaSingleMHDPe,e=MhdPe,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=europa-test,amps-test=on 
 	${MAKE} SWMF
 
@@ -1382,7 +1241,7 @@ test14:
 
 test14_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelio,e=Mhd,ng=2
+	./Config.pl -g=OH:4,4,4 -o=OH:u=OuterHelio,e=Mhd,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
@@ -1424,7 +1283,7 @@ test14pui:
 
 test14pui_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -g=OH:4,4,4,3500,1 -o=OH:u=OuterHelioPUI,e=SwhPui,ng=2
+	./Config.pl -g=OH:4,4,4 -o=OH:u=OuterHelioPUI,e=SwhPui,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on 
 	${MAKE} SWMF
 	make PIDL
@@ -1490,7 +1349,7 @@ test15_scihsp_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe,ng=2
-	./Config.pl -g=SC:4,4,4,1200,1,IH:4,4,4,6800,1,SP:2000
+	./Config.pl -g=SC:4,4,4,IH:4,4,4,SP:2000
 	${MAKE} SWMF
 	make PIDL
 
@@ -1572,7 +1431,7 @@ test16:
 
 test16_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe,ng=2
+	./Config.pl -g=GM:8,8,1 -o=GM:u=Waves,e=MultiIonPe,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -1586,10 +1445,14 @@ test16_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test16_check:
-	-@(${DIFFNUM} -b -r=1e-6 \
-	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000004.out \
+	-@(${DIFFNUM} -b -r=1e-12 \
+	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
 	   output/test16/z=0.ref.gz \
 		> test16.diff)
+	-@(${DIFFNUM} -b -r=1e-12 \
+	   ${TESTDIR}/RESULTS/PC/log_n00000000.log \
+	   output/test16/PC.log \
+		>> test16.diff)		
 	ls -l test16.diff
 
 
@@ -1607,7 +1470,7 @@ test17:
 
 test17_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,1 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -1622,17 +1485,38 @@ test17_run:
 	cd ${TESTDIR}; ./Restart.pl -v -i RESULTS/2step/RESTART
 	cp Param/PARAM.in.test.GMPC.FLEKS.2D.restart ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/2restart	
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/2restart
+	cp Param/PARAM.in.test.GMPC.FLEKS.2D.4steps  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/4steps
+	
 
 test17_check:
-	-@(${DIFFNUM} -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
-	   output/test17/z=0_PC.ref.gz \
+	   output/test17/z=0_FLEKS0.ref.gz \
 		> test17.diff)
-	-@(${DIFFNUM} -b -r=1e-6 \
+	-@(${DIFFNUM} -b -r=1e-7 \
+	   ${TESTDIR}/RESULTS/2restart/PC/z=0_fluid_region1_0_t00000004_n00000007.out \
+	   output/test17/z=0_FLEKS1.ref.gz \
+		>> test17.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+	   ${TESTDIR}/RESULTS/4steps/PC/z=0_fluid_region0_0_t00000005_n00000004.out \
+	   output/test17/z=0_FLEKS0.ref.gz \
+		>> test17.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+	   ${TESTDIR}/RESULTS/4steps/PC/z=0_fluid_region1_0_t00000004_n00000007.out \
+	   output/test17/z=0_FLEKS1.ref.gz \
+		>> test17.diff)					
+	-@(${DIFFNUM} -b -r=1e-7 \
 	   ${TESTDIR}/RESULTS/2restart/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test17/z=0_GM.ref.gz \
 		>> test17.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+	   ${TESTDIR}/RESULTS/4steps/GM/z=0_var_1_t00000005_n00000004.out \
+	   output/test17/z=0_GM.ref.gz \
+		>> test17.diff)
+
 	ls -l test17.diff
 
 
@@ -1650,7 +1534,7 @@ test18:
 
 test18_compile:
 	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -g=GM:4,4,4,2050,1 -o=GM:u=GemReconnect,e=MhdHyp,ng=2
+	./Config.pl -g=GM:4,4,4 -o=GM:u=GemReconnect,e=MhdHyp,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -1670,49 +1554,6 @@ test18_check:
 		> test18.diff)
 	ls -l test18.diff
 
-
-### ESMF test ###
-#
-#       Targets for the ESMF compatible executable
-#
-
-test_esmf:
-	@echo "test_esmf_compile..." > test_esmf.diff
-	${MAKE} test_esmf_compile
-	@echo "test_esmf_rundir..." >> test_esmf.diff
-	${MAKE} test_esmf_rundir
-	@echo "test_esmf_run..." >> test_esmf.diff
-	${MAKE} test_esmf_run
-	@echo "test_esmf_check..." >> test_esmf.diff
-	${MAKE} test_esmf_check
-
-test_esmf_compile:
-	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial
-	./Config.pl -g=GM:8,8,8,400,100,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
-	${MAKE} ESMF_SWMF
-
-test_esmf_rundir:
-	rm -rf ${TESTDIR};
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cd ESMF/ESMF_SWMF; ${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-
-test_esmf_run: 
-	@cd ${TESTDIR}; rm -f PET*ESMF_LogFile
-	@cd ${TESTDIR}; ${MPIRUN} ESMF_SWMF.exe > runlog
-	@cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-test_esmf_check:
-	perl -ne 'print if /error/i' ${TESTDIR}/PET*.ESMF_LogFile \
-		> test_esmf.diff
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-12 \
-		${TESTDIR}/RESULTS/GM/log_n000001.log \
-		ESMF/ESMF_SWMF/output/log_n000001.log \
-		>> test_esmf.diff)
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-4 \
-		${TESTDIR}/RESULTS/IE/it000321_104510_000.idl \
-		ESMF/ESMF_SWMF/output/it000321_104510_000.idl.gz \
-		>> test_esmf.diff)
-	ls -l test_esmf.diff
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
@@ -1736,7 +1577,7 @@ test_ramscb:
 
 test_ramscb_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,IE/Ridley_serial,IM/RAM_SCB
-	./Config.pl -g=GM:8,8,8,800,800,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
+	./Config.pl -g=GM:8,8,8,IE:91,181 -o=GM:u=Default,e=Mhd,ng=2
 	${MAKE} SWMF
 	make PIDL
 
@@ -1792,7 +1633,7 @@ test12_aniso_AMPS:
 
 test12_aniso_AMPS_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,8 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -1838,7 +1679,7 @@ test12_aniso_AMPS_divE_corr:
 
 test12_aniso_AMPS_divE_corr_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,8 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler-with-correction,amps-test=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -1873,7 +1714,7 @@ test12_aniso_AMPS_openmp:
 
 test12_aniso_AMPS_openmp_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -g=GM:8,8,8,400,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,8 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	./Config.pl -openmp -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler,amps-test=on,openmp=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -1907,7 +1748,7 @@ test12_aniso_AMPS_dynamic:
 
 test12_aniso_AMPS_dynamic_compile:
 	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
-	./Config.pl -g=GM:8,8,8,1000,400 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,8 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluid-pic-coupler-dynamic,amps-test=on 
 	$(MAKE) SWMF
 	$(MAKE) PIDL
@@ -1941,7 +1782,7 @@ test12_aniso:
 
 test12_aniso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MhdAnisoP,ng=2
+	./Config.pl -g=GM:8,8,1 -o=GM:u=Waves,e=MhdAnisoP,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -1986,7 +1827,7 @@ test12_3d:
 
 test12_3d_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -g=GM:4,4,4,2050,1 -o=GM:u=GemReconnect,e=MhdHyp,ng=2
+	./Config.pl -g=GM:4,4,4 -o=GM:u=GemReconnect,e=MhdHyp,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	
@@ -2032,7 +1873,7 @@ test12_iso:
 
 test12_iso_compile:
 	./Config.pl -v=Empty,PC/IPIC3D2,GM/BATSRUS
-	./Config.pl -g=GM:8,8,1,800,800 -o=GM:u=Waves,e=MultiIonPe,ng=2
+	./Config.pl -g=GM:8,8,1 -o=GM:u=Waves,e=MultiIonPe,ng=2
 	$(MAKE) SWMF
 	$(MAKE) PIDL
 	

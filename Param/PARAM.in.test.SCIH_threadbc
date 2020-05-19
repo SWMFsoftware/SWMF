@@ -35,6 +35,11 @@ HGR			TypeCoordSystem
 1.0			AverageIonCharge [e]
 1.0			ElectronTemperatureRatio
 
+#CHROMOSPHERE
+F			UseChromosphereHeating
+3.125e11                NumberDensChromosphereCgs
+3.2e4			TeChromosphereSi
+
 #FIELDLINETHREAD
 T                       UseFieldLineThreads
 400                      nPointInThreadMax
@@ -156,6 +161,9 @@ spherical_lnr
  100.0			yMax
 -100.0			zMin
  100.0			zMax
+
+#GRIDBLOCKALL
+1200			MaxBlock
 
 #LIMITRADIUS
 1.15			rMin
@@ -346,6 +354,9 @@ T			UseBody
  250.0			yMax
 -250.0			zMin
  250.0			zMax
+
+#GRIDBLOCKALL
+6800			MaxBlock
 
 #AMRREGION
 OuterShell	  	NameRegion

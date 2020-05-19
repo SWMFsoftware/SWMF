@@ -36,7 +36,6 @@ IE			NameComp2
 
 #GRIDBLOCKALL
 5000			MaxBlock
-1			MaxBlockImpl
 
 #GRID
 1			nRootBlock_D(x_)

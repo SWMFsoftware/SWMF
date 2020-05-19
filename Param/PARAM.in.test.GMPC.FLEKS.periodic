@@ -29,12 +29,6 @@ F                       DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-#CHECKGRIDSIZE
-       8                nI
-       8                nJ
-       1                nK
-     100                MinBlockALL
-
 #IOUNITS
 NONE			TypeIoUnit
 
@@ -159,7 +153,6 @@ total Pe+Pi1+Pi2 constant
 
 #USERINPUTEND   ----------------
 
-
 #GRID
 32                    	nRootBlockX
 24                     	nRootBlockY
@@ -171,10 +164,15 @@ total Pe+Pi1+Pi2 constant
 -0.5                  	zMin
  0.5                  	zMax
 
+#CHECKGRIDSIZE
+  8			nI
+  8                	nJ
+  1                	nK
+800                	MinBlockALL
+
 #FIXEDTIMESTEP
 T			UseDtFixed
 0.5			DtFixed
-
 
 #PICUNIT
  1.0                    xUnitPicSi
@@ -267,7 +265,8 @@ z=0 all idl_ascii       StringPlot
 1			nz
 
 #TIMESTEPPING
-0.5			fixedDt
+F			useFixedDt			
+0.2			fixedDt
 
 #DIVE
 F			useDiv
@@ -281,6 +280,9 @@ T			isPeriodicZ
 0.5		        theta
 0.0			ratioDivC2C
 
+#EFIELDSOLVER
+1e-13
+200
 
 #PARTICLES
 10			Particles per cell in X

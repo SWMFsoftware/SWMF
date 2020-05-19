@@ -39,6 +39,11 @@ HGR			TypeCoordSystem
 1.0			AverageIonCharge [e]
 1.0			ElectronTemperatureRatio
 
+#CHROMOSPHERE
+F			UseChromosphereHeating
+3.125e11                  NumberDensChromosphereCgs
+3.2e4			TeChromosphereSi
+
 #FIELDLINETHREAD
 T                       UseFieldLineThreads
 400                     nPointInThreadMax

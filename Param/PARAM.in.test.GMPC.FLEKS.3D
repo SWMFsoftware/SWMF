@@ -58,7 +58,7 @@ T			UseNonConservative
 4			nI
 4			nJ
 4			nK
-100			MinBlockALL
+2050			MinBlockALL
 
 #GRID
 16			nRootBlockX
@@ -159,20 +159,21 @@ F		        DoSaveInitial
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEPPING
-1                                     fixedDt
+T			useFixedDt		
+1         		fixedDt
 
 #RESAMPLING
-T                         doReSampling
-0.95                      reSamplingLowLimit  (0.8 is a typical value)
-1.1                       reSamplingHighLimit (3 is a typical value)
+T                       doReSampling
+0.95                    reSamplingLowLimit  (0.8 is a typical value)
+1.1                     reSamplingHighLimit (3 is a typical value)
 
 #SAVEPLOT
 1
-3d var ascii planet			StringPlot
-4   	  				DnOutput
--1					DtOutput
-1					DxOutput
-{fluid} numS0 numS1
+3d var ascii planet	StringPlot
+4   	  		DnOutput
+-1			DtOutput
+1			DxOutput
+{fluid} numS0 numS1	Vars
 
 #END_COMP PC -----------------------------------------------------------------
 

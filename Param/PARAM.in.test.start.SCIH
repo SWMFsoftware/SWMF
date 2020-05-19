@@ -53,7 +53,6 @@ T                       DoSaveRestart
 
 #GRIDBLOCKALL
 2500			MaxBlock
-1			MaxBlockImpl
 
 INCLUDE
 SC/restartIN/restart.H	
@@ -390,7 +389,6 @@ T			UseComp
 
 #GRIDBLOCKALL
 3000			MaxBlock
-1			MaxBlockImpl
 
 INCLUDE
 IH/restartIN/restart.H

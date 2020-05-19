@@ -36,13 +36,13 @@ rotatedcartesian	NameGeometry
 
 USERMODULE
 Waves and GEM, Yingjuan Ma
- 1.30                  VersionUserModule
+ 1.30            	VersionUserModule
 
 #CHECKGRIDSIZE
-       8                nI
-       8                nJ
-       1                nK
-     100                MinBlockALL
+  8			nI
+  8			nJ
+  1			nK
+800			MinBlockALL
 
 #IOUNITS
 NONE			TypeIoUnit
