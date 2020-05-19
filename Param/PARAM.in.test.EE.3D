@@ -2,7 +2,6 @@ Begin session: 1
 
 #COMPONENTMAP
 EE  0 -1  1		EE runs on all PEs
-SC  0 -1  1		SC runs on all PEs
 
 #TIMEACCURATE
 T			DoTimeAccurate 
@@ -33,6 +32,9 @@ spherical
  2.0			yMax
 -2.0			zMin
  2.0			zMax
+
+#GRIDBLOCKALL
+500			MaxBlock
 
 #GRIDLEVEL
 2			nLevel
@@ -143,10 +145,6 @@ g rbody
 T
 
 #END_COMP EE ----------------------------------------------------------------
-
-#COMPONENT
-SC			NameComp
-F			UseComp
 
 #STOP
 10			MaxIteration

@@ -3,19 +3,19 @@ For a single-temperature solar wind simulation, configure SWMF with
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 ./Config.pl -o=SC:u=AwsomFluids,e=MhdWaves
 ./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesSignB
-./Config.pl -g=SC:6,4,4,400,1,IH:4,4,4,400,1
+./Config.pl -g=SC:6,4,4,IH:4,4,4
 
 For a two-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 ./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPe
 ./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeSignB
-./Config.pl -g=SC:6,4,4,400,1,IH:4,4,4,400,1
+./Config.pl -g=SC:6,4,4,IH:4,4,4
 
 For a three-temperature solar wind simulation with 5th order scheme use
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -g=SC:6,8,8,400,1,IH:8,8,8,400,1
+./Config.pl -g=SC:6,8,8,IH:8,8,8
 ./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=3
 ./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB,ng=3
 
@@ -54,9 +54,9 @@ T                       DoSaveRestart
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
+Needed for AMR
 #GRIDBLOCKALL
 2500			MaxBlock
-1			MaxBlockImpl
 
 #INCLUDE
 SC/restartIN/restart.H	
@@ -352,9 +352,9 @@ T				DoSaveInitial
 
 #BEGIN_COMP IH -------------------------------------------------------------
 
+Needed for AMR
 #GRIDBLOCKALL
 3000			MaxBlock
-1			MaxBlockImpl
 
 #INCLUDE
 IH/restartIN/restart.H

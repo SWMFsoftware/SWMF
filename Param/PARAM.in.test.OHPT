@@ -40,6 +40,10 @@ year                   NameMaxTimeUnit
 -1500.0			zMin
  1500.0			zMax
 
+
+#GRIDBLOCKALL
+3500			MaxBlock
+
 #GRIDLEVEL
 2			nLevelArea
 all			NameArea

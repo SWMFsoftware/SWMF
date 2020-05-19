@@ -97,6 +97,9 @@ F			UseUniformAxis
 -1290.0                 zMin
  1290.0                 zMax
 
+#GRIDBLOCKALL
+3000			MaxBlock
+
 #LIMITRADIUS
 50.			rMin
 2580.			rMax
@@ -229,6 +232,9 @@ T
 7.			yMax
 -7.			zMin
 7.			zMax
+
+#GRIDBLOCKALL
+3000			MaxBlock
 
 #GRIDLEVEL
 3			nLevelArea
