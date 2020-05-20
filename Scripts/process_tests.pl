@@ -236,11 +236,16 @@ foreach $day (@days){
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
-	"   <td>test / machine</td>";
+	"   <td><b>compiler/options/platform</b><br><br>test</td>";
     my $machine;
     foreach $machine (@machines){
 	my $file = "$day/$machine/$htmlfile";
-	$Table .= "    <td><b>$machine</b></br>\n";
+	my $machinename = $machine;
+	$machinename = "gfortran<br>debug" if $machine eq "gfortran";
+	$machinename = "nagfor<br>debug" if $machine eq "grid";
+	$machinename = "nagfor<br>optimized" if $machine eq "mesh";
+	$machinename = "pleiades<br>ifort" if $machine eq "pleiades";
+	$Table .= "    <td><b>$machinename</b></br>\n";
 	if(-s $file){
 	    $Table .= "    <A HREF=$file TARGET=swmf_test_results>results".
 		"</A></br>\n";
