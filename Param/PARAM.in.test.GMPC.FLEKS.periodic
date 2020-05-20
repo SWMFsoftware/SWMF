@@ -265,7 +265,8 @@ z=0 all idl_ascii       StringPlot
 1			nz
 
 #TIMESTEPPING
-0.5			fixedDt
+F			useFixedDt			
+0.2			fixedDt
 
 #DIVE
 F			useDiv
@@ -279,6 +280,9 @@ T			isPeriodicZ
 0.5		        theta
 0.0			ratioDivC2C
 
+#EFIELDSOLVER
+1e-13
+200
 
 #PARTICLES
 10			Particles per cell in X
