@@ -48,7 +48,8 @@ help:
 	@echo '    install     (to be used via Config.pl only)'
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
-	@echo '    PDF         (make PDF  version of the documentation)' #^CMP IF DOC
+	@echo '    MANUAL      (make all manuals)'          #^CMP IF DOC
+	@echo '    PDF         (make PDF manuals for SWMF)' #^CMP IF DOC
 	@#^CMP END  REMOVEDOCTEX
 	@#^CFG IF TESTING BEGIN
 	@echo '    test        (run all tests for the SWMF)'
@@ -279,6 +280,12 @@ GUI_stop:
 #					^CMP IF DOC BEGIN
 #	Create the documentation files      ^CMP IF NOT REMOVEDOCTEX BEGIN
 #	
+MANUAL: ENV_CHECK
+	@cd doc/Tex; make cleanpdf; make PDF
+	@if([ -d "util/CRASH" ]); then cd util/CRASH/doc/Tex; make PDF; fi
+	@if([ -d "GM/BATSRUS" ]); then cd GM/BATSRUS; make PDF; fi #^CMP IF GM
+	@if([ -d "PW/PWOM"    ]); then cd PW/PWOM;    make PDF; fi #^CMP IF PW
+
 PDF:	ENV_CHECK
 	@cd doc/Tex; make cleanpdf; make PDF
 
