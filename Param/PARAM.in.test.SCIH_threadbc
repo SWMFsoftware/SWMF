@@ -156,7 +156,6 @@ T                       UseWaveReflection
 uniform			TypeHeatPartitioning
 0.6			QionRatio
 
-
 #HEATCONDUCTION
 T			UseHeatConduction
 spitzer			TypeHeatConduction
@@ -213,7 +212,6 @@ ascii			TypeFile
 5.0e4
 5.0e4
 
-
 #SCHEME
 2			nOrder (1 or 2)
 Sokolov			TypeFlux (Roe, Rusanov, Linde, Sokolov
@@ -227,7 +225,6 @@ F
 
 #NONCONSERVATIVE
 T			UseNonConservative
-
 
 #MESSAGEPASS
 all			TypeMessagePass

@@ -202,7 +202,7 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-6			nPlotFiles
+7			nPlotFiles
 x=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
@@ -232,9 +232,13 @@ rfr idl rwi		StringPlot
 4.0			ySizeImage
 100			nPixX
 100			nPixY
-los INS tec             StringPlot
+los ins tec             StringPlot
 -1                      DnSavePlot
-10.0                    DtSavePlot
+100.0                    DtSavePlot
+sta:euvi stb:euvi sdo:aia
+los ins idl_ascii             StringPlot
+-1                      DnSavePlot
+100.0                    DtSavePlot
 sta:euvi stb:euvi sdo:aia
 shl VAR idl_ascii       StringPlot
 10                      DnSavePlot
