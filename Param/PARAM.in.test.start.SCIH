@@ -297,7 +297,7 @@ z=0 VAR idl             StringPlot
 -1.                     DxSavePlot
 {MHD} b1x b1y b1z qheat qebyq qparbyq qperpbyq               NameVars
 {default}                 NamePars
-los INS tec             StringPlot
+los ins idl_ascii         StringPlot
 5                   DnSavePlot
 -1.0                    DtSavePlot
 sta:euvi stb:euvi sdo:aia
