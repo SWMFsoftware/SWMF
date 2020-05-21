@@ -7,10 +7,18 @@ use strict;
 
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
-    "pleiades"     => "1.0",  # ifort
-    "gfortran"     => "1.0",  # gfortran 
-    "grid"         => "1.0",  # nagfor debug mode
+    "pleiades"     => "1.0",  # ifort pleiades
+    "gfortran"     => "1.0",  # gfortran debug
+    "grid"         => "1.0",  # nagfor debug
     "mesh"         => "1.0",  # nagfor optimized
+    );
+
+# Describe machine in the Html table
+my %HtmlMachine = (
+    "pleiades"     => "ifort<br>pleiades",
+    "gfortran"     => "gfortran<br>debug",
+    "grid"         => "nagfor<br>debug",
+    "mesh"         => "nagfor<br>optimized",
     );
 
 # List of platforms
@@ -240,12 +248,7 @@ foreach $day (@days){
     my $machine;
     foreach $machine (@machines){
 	my $file = "$day/$machine/$htmlfile";
-	my $machinename = $machine;
-	$machinename = "gfortran<br>debug" if $machine eq "gfortran";
-	$machinename = "nagfor<br>debug" if $machine eq "grid";
-	$machinename = "nagfor<br>optimized" if $machine eq "mesh";
-	$machinename = "pleiades<br>ifort" if $machine eq "pleiades";
-	$Table .= "    <td><b>$machinename</b></br>\n";
+	$Table .= "    <td><b>$HtmlMachine{$machine}</b></br>\n";
 	if(-s $file){
 	    $Table .= "    <A HREF=$file TARGET=swmf_test_results>results".
 		"</A></br>\n";
