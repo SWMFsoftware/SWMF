@@ -1049,9 +1049,6 @@ test9:
 	${MAKE} test9_restart
 	@echo "test9_check..." >> test09_sc_chromo.diff
 	@echo "test9_check..." >> test09_ih.diff
-	@echo "test9_check..." >> test09_sc_los_sdo_aia.diff
-	@echo "test9_check..." >> test09_sc_los_sta_euvi.diff
-	@echo "test9_check..." >> test09_sc_los_stb_euvi.diff
 	${MAKE} test9_check
 
 test9_compile:
@@ -1099,19 +1096,19 @@ test9_check:
 		${TESTDIR}/RESULTS/run_restart/IH/trj_earth_n00000007.sat \
 		output/test9/IH_trj_earth_n00000007.sat \
 		> test09_ih_trj_earth.diff)
-	ls -l test09_*.diff
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_7_n0000005.out \
                 output/test9/SC_los_sdo_aia_7_n0000005.out \
-                > test09_sc_los_sdo_aia.diff)
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+                > test09_sc_los.diff)
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_5_n0000005.out \
                 output/test9/SC_los_sta_euvi_5_n0000005.out \
-                > test09_sc_los_stb_euvi.diff)
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+                >> test09_sc_los.diff)
+	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_6_n0000005.out \
                 output/test9/SC_los_stb_euvi_6_n0000005.out \
-                > test09_sc_los_sta_euvi.diff)
+                >> test09_sc_los.diff)
+	ls -l test09_*.diff
 
 ### test10: Global Solar Wind Model with three temperatures and Alfven waves
 
