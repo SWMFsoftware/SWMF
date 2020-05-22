@@ -43,9 +43,6 @@ spherical_lnr
 -100.0			zMin
  100.0			zMax
 
-#GRIDBLOCKALL
-1200			MaxBlock
-
 #LIMITRADIUS
 1.15			rMin
 24.0			rMax
@@ -105,6 +102,9 @@ T                       UseFieldLineThreads
 T	  UseAlignedVelocity
 T         DoConvergenceCheck
 limited   TypeBc
+
+#GRIDBLOCKALL
+1200			MaxBlock
 
 #BODY
 T			UseBody
