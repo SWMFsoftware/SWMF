@@ -143,6 +143,9 @@ dt    = 0.2*dtmax   = 1.066
 -0.5                  	zMin
  0.5                  	zMax
 
+#GRIDBLOCKALL
+800			MaxBlock
+
 #FIXEDTIMESTEP
 T			UseDtFixed
 640/500			DtFixed
