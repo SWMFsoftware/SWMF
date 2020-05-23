@@ -1629,6 +1629,7 @@ test12:
 	-$(MAKE) test12_aniso_AMPS           TESTDIR=run_test12_aniso_AMPS
 	-$(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr
 	-$(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic
+#-$(MAKE) test12_aniso_AMPS_dynamic_fluxrope   TESTDIR=run_test12_aniso_AMPS_dynamic_fluxrope
 	-$(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp
 	./Config.pl -noopenmp -o=PC:openmp=off
 	-$(MAKE) test12_aniso TESTDIR=run_test12_aniso
@@ -1636,6 +1637,43 @@ test12:
 	-$(MAKE) test12_3d    TESTDIR=run_test12_3d
 
 ######## test PC coupled with GM/BATSRUS #########
+test12_aniso_AMPS_dynamic_fluxrope:
+	@echo "test12_aniso_AMPS_dynamic_fluxrope_compile..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_compile
+	@echo "test12_aniso_AMPS_dynamic_fluxrope_rundir..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_rundir
+	@echo "test12_aniso_AMPS_dynamic_fluxrope_run..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_run
+	@echo "test12_aniso_AMPS_dynamic_fluxrope_check..." > test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
+	$(MAKE) test12_aniso_AMPS_dynamic_fluxrope_check
+
+test12_aniso_AMPS_dynamic_fluxrope_compile:
+	./Config.pl -v=Empty,GM/BATSRUS,PC/AMPS
+	./Config.pl -g=GM:8,8,4 -o=GM:u=FluxRope,e=MhdHypPe,ng=2
+	./Config.pl -o=PC:spice-path=nospice,spice-kernels=nospice,application=fluxrope-dynamic,amps-test=on,avx=256
+	$(MAKE) SWMF
+	$(MAKE) PIDL
+
+	
+test12_aniso_AMPS_dynamic_fluxrope_rundir:
+	rm -rf ${TESTDIR}
+	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
+	cp Param/PARAM.in.test.GMPC.aniso.AMPS.fluxrope  ${TESTDIR}/PARAM.in
+
+test12_aniso_AMPS_dynamic_fluxrope_run:
+	cd ${TESTDIR}; mpirun -np 8 ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/fluxrope
+
+test12_aniso_AMPS_dynamic_fluxrope_check:
+	-@(${DIFFNUM} -b -a=2.0e-3 \
+	   ${TESTDIR}/RESULTS/fluxrope/PC/z\=0_var_region0_0_t00000000_n00000010.out  \
+	   output/test12/3d_aniso_fluxrope.out.gz \
+		> test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff)
+	ls -l test12_aniso_AMPS_dynamic_fluxrope_gmpc.diff
+
+
+#############################################################################
+
 
 test12_aniso_AMPS:
 	@echo "test12_aniso_AMPS_compile..." > test12_aniso_AMPS_gmpc.diff
