@@ -1085,6 +1085,7 @@ test9_restart:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
 test9_check:
+	cd ${TESTDIR}; tar -xzvf ../output/test9/ref.tgz
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
 		output/test9/SC_log_n000001.log \
@@ -1099,15 +1100,15 @@ test9_check:
 		> test09_ih_trj_earth.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_7_n0000005.out \
-                output/test9/SC_los_sdo_aia_7_n0000005.out \
+                ${TESTDIR}/SC_los_sdo_aia.out \
                 > test09_sc_los.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_5_n0000005.out \
-                output/test9/SC_los_sta_euvi_5_n0000005.out \
+                ${TESTDIR}/SC_los_sta_euvi.out \
                 >> test09_sc_los.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_6_n0000005.out \
-                output/test9/SC_los_stb_euvi_6_n0000005.out \
+                ${TESTDIR}/SC_los_stb_euvi.out \
                 >> test09_sc_los.diff)
 	ls -l test09_*.diff
 
