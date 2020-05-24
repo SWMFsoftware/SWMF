@@ -1,0 +1,296 @@
+ID Proc0 ProcEnd Stride nThread
+#COMPONENTMAP
+GM 1     7     1      -1	! GM runs on PEs 1... with MaxThread threads
+PC 0     7    1       1	! PC runs on PEs 0..3 with 1 thread
+
+#DESCRIPTION
+Run GM and PC in time accurate mode
+
+#PLANET
+NONE			NamePlanet
+
+#TIMEACCURATE
+T                       DoTimeAccurate
+
+
+SAVERESTART
+T			DoSaveRestart 
+-1			DnSaveRestart 
+100.0			DtSaveRestart
+
+#SAVERESTART
+F
+
+COUPLE2TIGHT
+GM			NameCompMaster
+PC			NameCompSlave
+T                       DoCouple
+
+#COUPLE2
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+0.05			DtCouple
+
+
+#COUPLETIME
+PC			NameComp
+F			DoCoupleOnTime
+
+
+#PROGRESS
+10			DnShowProgressShort
+100			DnShowProgressLong
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#IOUNITS
+NONE			TypeIoUnit
+
+#NORMALIZATION
+NONE			TypeNormalization
+
+#IOUNITS
+NONE			NameIoUnits
+
+#NORMALIZATION
+NONE			NameNormalization
+
+#UPDATECHECK
+F                       UseUpdateCheck
+
+#NONCONSERVATIVE
+T			UseNonConservative
+
+#CHECKGRIDSIZE
+8			nI
+8			nJ
+4			nK
+1000			MinBlockALL
+
+#GRID
+32			nRootBlockX
+32			nRootBlockY
+1			nRootBlockZ
+-16			xMin
+ 16			xMax
+-16			yMin
+ 16			yMax
+-3			zMin
+ 3			zMax
+
+
+#GRIDRESOLUTION
+1./16			Resolution
+initial			NameArea
+
+
+#GRIDRESOLUTION
+1./16
+box
+-4.0                  xMinBox
+-4.0                   yMinBox
+-1.0
+ 4.0                   xMaxBox
+ 4.0                   yMaxBox
+1.0
+
+#UNIFORMSTATE
+100			Rho
+0.005			Ux
+0.0025			Uy
+0.0                     Uz
+0.0			Bx
+0.0			By
+0.0			Bz
+0.0			Hyp
+5e-4			Pe
+2.5e-3			P
+
+#PLASMA
+1.0                     IonMass
+1.0                     IonCharge
+0.2                     ElectronTemperatureRatio
+
+#USERINPUTBEGIN -----------------
+
+FLUXROPES
+2
+-0.64				xCenter
+-0.82				yCenter
+1.0				radius
+0.5				Amplitude
+-0.64				xCenter
+0.18				yCenter
+1.0 				radius
+0.5				Amplitude
+
+
+#FLUXROPES
+2
+-1.28				xCenter
+-1.64				yCenter
+1.0				radius
+0.5				Amplitude
+-1.28				xCenter
+0.36				yCenter
+1.0 				radius
+0.5				Amplitude
+
+
+
+#USERINPUTEND ---------------------
+
+#OUTERBOUNDARY
+float		xMinBc
+float		xMaxBc
+float			yMinBc
+float			yMaxBc
+float			zMinBc
+float			zMaxBc
+
+
+
+#PICUNIT
+1.0                     xUnitPicSi  
+1.0	                uUnitPicSi 
+
+
+
+#PICGRID
+1			nPicRegion
+-2.56			xMinCut
+2.56			xMaxCut
+-2.56			yMinCut
+ 2.56			yMaxCut
+-2.56
+2.56
+0.02			DxPic
+0.02			DyPic
+0.02			DzPic
+
+
+#SCHEME
+2			nOrder
+Rusanov			TypeFlux
+minmod			TypeLimiter
+1.5			LimiterBeta
+
+#HYPERBOLICDIVB
+T			UseHyperbolicDivb
+10.0			SpeedHypDim
+0.1			HypDecay
+
+#TIMESTEPPING
+2                       nStage
+0.6                     CflExpl
+
+HALLRESISTIVITY
+F			UseHallResist (rest of parameters read only if true)
+1.0			HallFactor  (m/e = 1/sqrt(4*pi))
+1.0			HallCmaxFactor
+
+RESISTIVITY
+T			UseResistivity
+constant		TypeResistivity
+0.01			Eta0Si
+
+#HALLRESISTIVITY
+T			UseHallResist (rest of parameters read only if true)
+1.0			HallFactor  (m/e = 1/sqrt(4*pi))
+0.1			HallCmaxFactor
+
+#SEMIIMPLICIT
+T                       UseSemiImplicit
+resistivity               TypeSemiImplicit (read if UseSemiImplicit is true)
+
+
+#SAVELOGFILE
+T			DoSaveLogfile
+var			StringLogfile
+1			DnSaveLogfile
+-1.0			DtSaveLogfile
+dt rho mx my mz bx by bz e Pmin Pmax 
+g
+
+#SAVEINITIAL
+T		        DoSaveInitial
+
+#SAVEPLOT
+1			nPlotfile
+z=0 VAR idl_ascii       PlotString
+-1           	        DnSavePlot
+0.5            		DtSavePlot
+-1	        	DxSavePlot
+rho ux uy uz bx by bz p jx jy jz absdivb
+g
+3d VAR tec              PlotString
+-1           	        DnSavePlot
+10            		DtSavePlot
+0	        	DxSavePlot
+rho ux uy uz bx by bz p jx jy jz
+g
+
+
+
+
+#END_COMP GM -----------------------------------------------------------------
+
+#STOP
+-1
+0.5
+
+
+#BEGIN_COMP PC ---------------------------------------------------------------
+
+#TIMESTEPPING
+F			UseSWMFDt
+T			UseFixedDt
+0.05			Dt
+
+#ELECTRON
+-100			ElectronChargePerMass
+
+#EFIELDSOLVER
+1e-7			EFieldTol
+200			EFieldIter
+
+#ENERGYCONSERVING
+T			UseECSIM
+
+#DISCRETIZATION
+0.6			Theta
+0.0                     GradRhoRatio
+0.0                     cDiff
+0.0                     RatioDivC2C
+
+#DIVE
+T			DivECleanType
+
+#PARTICLES
+5			Particles per cell in X Region 1
+2			Particles per cell in Y Region 1
+1			Particles per cell in Z Region 1
+
+#SAVEIDL
+1			nPlotFile
+z=0 var real4 si 			PlotString
+-1                     			DnOutput
+0.5                                	DtOutput
+0                                       DxOutput
+{fluid} qc divEc qc0 qc1 numS0 numS1
+
+3d fluid ascii pic	StringPlot
+1   	  		DnOutput
+-1.0			DtOutput
+1			DxOutput
+3d fluid ascii si	StringPlot
+1   	  		DnOutput
+-1.0			DtOutput
+1			DxOutput
+
+#END_COMP PC -----------------------------------------------------------------
+
+
+
+
