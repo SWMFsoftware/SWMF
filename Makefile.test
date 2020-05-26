@@ -1007,14 +1007,13 @@ test8_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
 test8_check:
-	cd ${TESTDIR}; tar -xzvf ../output/test8/ref.tgz
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/log_n000000.log \
 		output/test8/SC_log_n000000.log \
 		> test08_sc_thread.diff)
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-26 \
 		${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs \
-		${TESTDIR}/SC_rfr.ref \
+		output/test8/SC_rfr.ref.gz \
 		>> test08_sc_thread.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/IH/log_n000000.log \
@@ -1022,7 +1021,7 @@ test8_check:
 		> test08_ih.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/SC/los_sdo_aia_10_t00000140_n0000200.out \
-		${TESTDIR}/SC_los_sdo_aia.out \
+		output/test8/SC_los_sdo_aia.out.gz \
 		> test08_sc_los.diff)
 	ls -l test08_*.diff
 
@@ -1099,16 +1098,12 @@ test9_check:
 		output/test9/IH_trj_earth_n00000007.sat \
 		> test09_ih_trj_earth.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
-                ${TESTDIR}/RESULTS/run_start/SC/los_sdo_aia_7_n0000005.out \
-                ${TESTDIR}/SC_los_sdo_aia.out \
-                > test09_sc_los.diff)
-	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_sta_euvi_5_n0000005.out \
-                ${TESTDIR}/SC_los_sta_euvi.out \
+                output/test9/SC_los_sta_euvi_5_n0000005.out.gz \
                 >> test09_sc_los.diff)
 	-(${DIFFNUM} -b -r=1e-4 -a=1e-27 \
                 ${TESTDIR}/RESULTS/run_start/SC/los_stb_euvi_6_n0000005.out \
-                ${TESTDIR}/SC_los_stb_euvi.out \
+                output/test9/SC_los_stb_euvi_6_n0000005.out.gz \
                 >> test09_sc_los.diff)
 	ls -l test09_*.diff
 
