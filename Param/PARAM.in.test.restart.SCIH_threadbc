@@ -296,12 +296,11 @@ MHD                     	StringSatellite
 SC/TRAJECTORY/stb.dat		NameTrajectoryFile
 
 
-#PLOTTHREADS
+PLOTTHREADS
 T				DoPlotThreads
 10				nGUniform
 T                               DoTriangulation
-T				DoTRCorrection
-
+T				DoTRCorrectio
 
 #END_COMP SC ------------------------------------------------------------------
 
