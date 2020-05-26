@@ -1084,7 +1084,6 @@ test9_restart:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
 test9_check:
-	cd ${TESTDIR}; tar -xzvf ../output/test9/ref.tgz
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
 		output/test9/SC_log_n000001.log \
