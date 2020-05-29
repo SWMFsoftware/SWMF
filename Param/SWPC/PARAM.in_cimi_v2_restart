@@ -1,7 +1,17 @@
+For few cores (like nightly test) use this
+
 #COMPONENTMAP
-IM  0 23  1   ! IM runs on up to 24 PE-s
-IE  0  1  1   ! IE runs on up to 2 PE-s
-GM  0 -1  1   ! GM runs on all PE-s
+GM  0 -1  1		GM runs on all PE-s
+IM  0 24  1		IM runs on up to 24 PE-s
+IE  0  1  1		IE runs on up to 2 PE-s
+
+
+For 128 or more cores use this instead (add #):
+
+COMPONENTMAP
+GM  0 -26 -1 -1		GM runs on 0 to nProc-26 PE-s
+IM  1 -25 -2		IM runs on nProc-25 to nProc-2
+IE  0  -1 -1		IE runs on the last PE
 
 #INCLUDE
 RESTART.in
