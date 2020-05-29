@@ -1020,7 +1020,7 @@ test8_check:
 		output/test8/IH_log_n000000.log \
 		> test08_ih.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/los_sdo_aia_10_t00000140_n0000200.out \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
 		output/test8/SC_los_sdo_aia.out.gz \
 		> test08_sc_los.diff)
 	ls -l test08_*.diff
@@ -1084,7 +1084,6 @@ test9_restart:
 	cd ${TESTDIR}; ./PostProc.pl -m RESULTS/run_restart
 
 test9_check:
-	cd ${TESTDIR}; tar -xzvf ../output/test9/ref.tgz
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_start/SC/log_n000001.log \
 		output/test9/SC_log_n000001.log \
