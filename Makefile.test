@@ -41,7 +41,6 @@ test_help:
 	@echo "    test16                     (run GM-FLEKS test: FLEKS uses periodic boundary condition)"	
 	@echo "    test17                     (run GM-FLEKS test: 2D Alfven wave)"
 	@echo "    test18                     (run GM-FLEKS test: 3D reconnection)"
-	@echo "    test19                     (run GM-FLEKS test: 2D Alfven wave with PIC Adaptation)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 .NOTPARALLEL: test
@@ -72,7 +71,6 @@ test:
 	-@(${MAKE} test16 TESTDIR=run_test16)
 	-@(${MAKE} test17 TESTDIR=run_test17)
 	-@(${MAKE} test18 TESTDIR=run_test18)
-	-@(${MAKE} test19 TESTDIR=run_test19)
 	-@(${MAKE} test_check)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
@@ -1503,6 +1501,9 @@ test17_run:
 	cp Param/PARAM.in.test.GMPC.FLEKS.2D.4steps  ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl RESULTS/4steps
+	cp Param/PARAM.in.test.GMPC.FLEKS.2D.adapt  ${TESTDIR}/PARAM.in
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
+	cd ${TESTDIR}; ./PostProc.pl RESULTS/adapt
 	
 
 test17_check:
@@ -1530,6 +1531,14 @@ test17_check:
 	   ${TESTDIR}/RESULTS/4steps/GM/z=0_var_1_t00000005_n00000004.out \
 	   output/test17/z=0_GM.ref.gz \
 		>> test17.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+           ${TESTDIR}/RESULTS/adapt/PC/z=0_fluid_region0_0_t00000010_n00000008.out \
+           output/test17/z=0_FLEKS_adapt.ref.gz \
+                > test17.diff)
+	-@(${DIFFNUM} -b -r=1e-7 \
+           ${TESTDIR}/RESULTS/adapt/GM/z=0_var_1_t00000010_n00000008.out \
+           output/test17/z=0_GM_adapt.ref.gz \
+                >> test17.diff)
 
 	ls -l test17.diff
 
@@ -1567,47 +1576,6 @@ test18_check:
 		output/test18/3d.ref.gz \
 		> test18.diff)
 	ls -l test18.diff
-
-
-### test19: GM/BATSRUS+PC/FLEKS. 2D Alfven wave with PIC Adaptation
-
-test19:
-	@echo "test19_compile..." > test19.diff
-	$(MAKE) test19_compile
-	@echo "test19_rundir..." > test19.diff
-	$(MAKE) test19_rundir
-	@echo "test19_run..." > test19.diff
-	$(MAKE) test19_run
-	@echo "test19_check..." > test19.diff
-	$(MAKE) test19_check
-
-test19_compile:
-	./Config.pl -v=Empty,PC/FLEKS,GM/BATSRUS -amrex
-	./Config.pl -g=GM:8,8,1 -o=GM:u=Waves,e=MhdAnisoP,ng=2
-	$(MAKE) SWMF
-	$(MAKE) PIDL
-
-test19_rundir:
-	rm -rf ${TESTDIR}
-	$(MAKE) rundir RUNDIR=${DIR}/${TESTDIR} COMPDIR=GM,PC
-	cp Param/PARAM.in.test.GMPC.FLEKS.2D.adapt  ${TESTDIR}/PARAM.in
-
-test19_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl RESULTS/adapt
-
-test19_check:
-	-@(${DIFFNUM} -b -r=1e-7 \
-           ${TESTDIR}/RESULTS/adapt/PC/z=0_fluid_region0_0_t00000010_n00000008.out \
-           output/test19/z=0_FLEKS.ref.gz \
-                > test19.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
-           ${TESTDIR}/RESULTS/adapt/GM/z=0_var_1_t00000010_n00000008.out \
-           output/test19/z=0_GM.ref.gz \
-                >> test19.diff)
-
-	ls -l test19.diff
-	
 
 ### test_ramscb: GM+IE+IM/RAMSCB ###
 
