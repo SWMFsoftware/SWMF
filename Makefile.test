@@ -995,6 +995,7 @@ test8_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIH_threadbc ${TESTDIR}/PARAM.in
+	#perl -i -pe 's/^1/3/ if /DsThreadMin/i' ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 
 test8_run:
@@ -1003,6 +1004,7 @@ test8_run:
 
 test8_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_threadbc PARAM.in
+	#perl -i -pe 's/^1/3/ if /DsThreadMin/i' ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS
 
@@ -1020,7 +1022,7 @@ test8_check:
 		output/test8/IH_log_n000000.log \
 		> test08_ih.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
-		${TESTDIR}/RESULTS/SC/los_sdo_aia_10_t00000140_n0000200.out \
+		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
 		output/test8/SC_los_sdo_aia.out.gz \
 		> test08_sc_los.diff)
 	ls -l test08_*.diff
