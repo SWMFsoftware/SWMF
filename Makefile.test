@@ -1092,7 +1092,7 @@ test9_check:
 		${TESTDIR}/RESULTS/run_restart/IH/log_n000005.log \
 		output/test9/IH_log_n000005.log \
 		> test09_ih.diff)
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
+	-(${DIFFNUM} -b -r=2e-5 -a=1e-27 \
 		${TESTDIR}/RESULTS/run_restart/IH/trj_earth_n00000007.sat \
 		output/test9/IH_trj_earth_n00000007.sat \
 		> test09_ih_trj_earth.diff)
