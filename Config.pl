@@ -19,6 +19,7 @@ our $Component       = '';
 our $Code            = 'SWMF';
 our $MakefileDefOrig = 'CON/Makefile.def';
 our @Arguments = @ARGV;
+our $CloneOnly;
 
 # Hash of model names with corresponding component name
 my %component = (
@@ -41,7 +42,6 @@ my %component = (
 
 my $History;
 my @models;
-my $CloneOnly;
 my $Sleep = $ENV{GITLABSLEEP};
 foreach (@Arguments){
     if( /^-(install|clone)/){
@@ -84,6 +84,7 @@ my $config     = "share/Scripts/Config.pl";
 require $config or die "Could not find $config!\n";
 
 if($CloneOnly){
+    # The share/Scripts/Config.pl is needed before this to possibly set date
     print "Done cloning git repositories\n";
     exit 0;
 }
