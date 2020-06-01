@@ -1,0 +1,41 @@
+#
+# This job script should be executed from bin/test_swmf
+#
+# set the number of CPU-s by changing select: nProc = select*mpiprocs
+#PBS -N BATS_pfe
+
+#PBS -q normal
+#PBS -l select=1:ncpus=8:mpiprocs=8:model=bro
+### PBS -l select=1:ncpus=8:mpiprocs=8:ompthreads=2:model=bro
+
+#PBS -l walltime=8:00:00
+
+#PBS -j oe
+#PBS -m e
+
+# Specify group if necessary g26135 
+#PBS -W group_list=g26135
+
+# cd into the test directory
+cd /u/gtoth1/Tmp/BATSRUS
+
+# Needed for HDF5 library 
+setenv MPI_TYPE_DEPTH 20
+
+# For OpenMP runs
+setenv MPI_DSM_DISTRIBUTE 0
+setenv KMP_AFFINITY disabled
+
+# run BATSRUS tests with the same number of CPU-s as defined above in -l ncpus=...
+#make test GITINFO=NO NP=8 NTHREAD=2 SERIAL='mpiexec -n 1' OMPIRUN='mpiexec -n 8 omplace' >& test_bats.log
+#make test GITINFO=NO NP=8 NTHREAD=2 SERIAL='mpiexec -n 1' OMPIRUN='mpiexec -n 8' >& test_bats.log
+make test GITINFO=NO NP=8 SERIAL='mpiexec -n 1' OMPIRUN='mpiexec -n 8' OPENMP= >& test_bats.log
+
+# copy over results into the ../SWMF directory
+rsync -a *.diff test_func.speed test_bats.log ../SWMF/GM/BATSRUS/
+
+#
+# scp back the test results is done in a separate crontab
+# because scp/rsync etc. do not work on the compute nodes
+#
+#scp test_swmf.??? gtoth@herot.engin.umich.edu:Sites/Current/pleiades/
