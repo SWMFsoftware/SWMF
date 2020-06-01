@@ -75,7 +75,7 @@ float			TypeBc6
 ionosphere		TyepBcInner
 
 #MAGNETICINNERBOUNDARY
-F			DoReflectInnerB1
+1.0			B1rCoef
 
 #SCHEME
 1			nOrder

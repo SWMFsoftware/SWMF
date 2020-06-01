@@ -125,9 +125,6 @@ float			TypeBc6
 #INNERBOUNDARY
 ionosphere		TypeBcInner
 
-#MAGNETICINNERBOUNDARY
-T			DoReflectInnerB1
-
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
 T                       UseCpcpBc  (rest is read if true)

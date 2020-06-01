@@ -143,7 +143,7 @@ float                   TypeBc6
 ionosphere		TypeBcInner
 
 #MAGNETICINNERBOUNDARY
-F			DoReflectInnerB1
+1.0			B1rCoef
 
 #SAVELOGFILE
 T
