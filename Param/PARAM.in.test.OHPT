@@ -20,9 +20,6 @@ T                       UseBody
 0.01                    BodyNDim(1) [/cc] number density for ions
 1.09E5                  BodyTDim(1) [K] temperature for ions
 
-#IOUNITS
-USER
-
 #NORMALIZATION
 USER
 
@@ -194,7 +191,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #USERINPUTBEGIN --------------------------------------------------------
@@ -263,7 +260,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #SCHEME
