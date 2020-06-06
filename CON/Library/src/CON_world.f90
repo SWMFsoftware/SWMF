@@ -372,7 +372,8 @@ contains
                   StringStart//' or '//StringStart2//' in file '//NameMapFile
              call CON_stop('Please edit file '//NameMapFile)
           end if
-          if(String == StringStart .or. String == StringStart2) EXIT
+          if(  String(1:len(StringStart))  == StringStart .or. &
+               String(1:len(StringStart2)) == StringStart2) EXIT
        end do
     end if
 
