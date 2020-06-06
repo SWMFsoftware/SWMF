@@ -22,9 +22,6 @@ T                       UseBody
 9.45E-4			BodyNDim(2) for PUIs
 8.20E6                  BodyTdim(2) 
 
-#IOUNITS
-USER
-
 #NORMALIZATION
 USER			TypeNormalization
 
@@ -191,7 +188,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #USERINPUTBEGIN --------------------------------------------------------
@@ -267,7 +264,7 @@ T                       UseUserWritePlot
 F                       UseUserAMR
 F                       UseUserEchoInput
 F                       UseUserB0
-F                       UseUserInitSession
+T                       UseUserInitSession
 F                       UseUserUpdateStates
 
 #SCHEME
