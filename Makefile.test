@@ -680,7 +680,7 @@ test_swpc_cimi_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/SWPC/*.in* Param/SWPC/*.dat ${TESTDIR}/
-	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/'; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' \
+	perl -pi -e 'if(/MaxIter|MaxBlock/){s/700/70/; s/1500/200/; s/5000/350/}; s/#BORIS/BORIS/; s/^\#(COMPONENTMAP.*production)/$$1/i; s/^(COMPONENTMAP.*nightly)/\#$$1/i' \
 	     ${TESTDIR}/PARAM.in_cimi_v2_*
 	cp ${TESTDIR}/PARAM.in_cimi_v2_init ${TESTDIR}/PARAM.in
 
