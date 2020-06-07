@@ -41,7 +41,7 @@ T			DoCheckStop
 1 min			DtCheckStop
 
 CPUTIMEMAX
-47.5 hour			CpuTimeMax [sec]
+47.5 hour		CpuTimeMax [sec]
 
 #COUPLEORDER
 7			nCouple
@@ -110,7 +110,7 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere			TypeBcInner
+ionosphere		TypeBcInner
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
@@ -136,7 +136,7 @@ MAG			TypeCoordIndex
 MAG			TypeCoordFacGrid
 
 #MAGNETOMETER
-magin_GEM.dat			NameMagInputFile
+magin_GEM.dat		NameMagInputFile
 single			TypeFileOut
 -1			DnOutput
 1 min			DtOutput
@@ -162,7 +162,7 @@ T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola			TypeConservCrit_I
+parabola		TypeConservCrit_I
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
@@ -210,7 +210,7 @@ date			TimeUnitMax
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step date			StringLogfile
+VAR step date		StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
@@ -218,11 +218,11 @@ dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
 
 #SAVEPLOT
 4			nPlotFiles
-y=0 MHD idl			StringPlot
+y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl			StringPlot
+z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
@@ -237,7 +237,7 @@ GEO			TypeCoordPlot
 10.			dLon
 0.			LatMin
 0.			LatMax
-lcb nul tec			StringPlot  !last closed field line plots
+lcb nul tec		StringPlot  !last closed field line plots
 -1  			DnSavePlot  !Tecplot (ONLY!)
 5 min			DtSavePlot
 5.			Radius
@@ -254,8 +254,8 @@ T			UseBorisCorrection
 0.01			BorisClightFactor
 
 #REGION
-borisregion			NameArea
-sphere tapered			NameShape
+borisregion		NameArea
+sphere tapered		NameShape
 -4.0			xPosition
 0.0			yPosition
 0.0			zPosition
@@ -263,7 +263,7 @@ sphere tapered			NameShape
 2.0			Taper
 
 #BORISREGION
-borisregion			NameBorisRegion
+borisregion		NameBorisRegion
 
 #TIMESTEPPING
 1			nStage
@@ -311,7 +311,8 @@ T			UseOvalShift
 F			UseSubOvalConductance
 T			UseAdvancedOval
 F			DoFitCircle (read if UseAdvancedOval is true)
-			#SAVEPLOT
+
+#SAVEPLOT
 1			nPlotFile
 aur idl			StringPlot
 -1			DnSavePlot
