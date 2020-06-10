@@ -36,7 +36,7 @@ test_help:
 	@echo "    test13                     (run GM-PT test: Europa)"
 	@echo "    test14                     (run OH-PT test)"
 	@echo "    test14pui                  (run OH-PT test with PUI)"
-	@echo "	   test14shocktube	      (run OH-PT test with PUI in shock tube)"
+	@echo "	   test14pui1d	      (run OH-PT test with PUI in shock tube)"
 	@echo "    test15                     (run SC-IH-SP test)"
 	@echo "    test15_build               (configure SC-IH-SP, run test)"
 	@echo "    test16                     (run GM-FLEKS test: FLEKS uses periodic boundary condition)"	
@@ -68,7 +68,7 @@ test:
 	-@(${MAKE} test13 TESTDIR=run_test13)
 	-@(${MAKE} test14 TESTDIR=run_test14)
 	-@(${MAKE} test14pui TESTDIR=run_test14pui)
-	-@(${MAKE} test14shocktube TESTDIR=run_test14shocktube)
+	-@(${MAKE} test14pui1d TESTDIR=run_test14pui1d)
 	-@(${MAKE} test15 TESTDIR=run_test15)
 	-@(${MAKE} test16 TESTDIR=run_test16)
 	-@(${MAKE} test17 TESTDIR=run_test17)
@@ -1320,47 +1320,44 @@ test14pui_check:
 	ls -l test14pui_??.diff
 
 
-### test14puishocktube: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube
+### test14pui1d: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube
 
-test14puishocktube:
-	@echo "test14puishocktube_compile..." > test14puishocktube_ohpt.diff
-	${MAKE} test14puishocktube_compile
-	@echo "test14puishocktube_rundir..." >> test14puishocktube_ohpt.diff
-	${MAKE} test14puishocktube_rundir
-	@echo "test14puishocktube_run..." >> test14puishocktube_ohpt.diff
-	${MAKE} test14puishocktube_run
-	@echo "test14puishocktube_check..." >> test14puishocktube_ohpt.diff
-	${MAKE} test14puishocktube_check
+test14pui1d:
+	@echo "test14pui1d_compile..." > test14pui1d_oh.diff
+	${MAKE} test14pui1d_compile
+	@echo "test14pui1d_rundir..." >> test14pui1d_oh.diff
+	${MAKE} test14pui1d_rundir
+	@echo "test14pui1d_run..." >> test14pui1d_oh.diff
+	${MAKE} test14pui1d_run
+	@echo "test14pui1d_check..." >> test14pui1d_oh.diff
+	${MAKE} test14pui1d_check
 
-test14puishocktube_compile:
+test14pui1d_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
 	./Config.pl -g=OH:4,4,4 -o=OH:u=OuterHelioPUI,e=SwhPui,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on
 	${MAKE} SWMF
 	make PIDL
 
-test14puishocktube_rundir:
+test14pui1d_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.OHPTpuishocktube ${TESTDIR}/PARAM.in
 
-test14puishocktube_run:
+test14pui1d_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
-test14puishocktube_check:
+test14pui1d_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-21 \
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14puishocktube/OH_log_n000000.log \
-                > test14puishocktube_ohpt.diff)
-	cp output/test14puishocktube/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-        ${TESTDIR}/RESULTS/PT/amps.ref
+                output/test14pui1d/OH_log_n000000.log \
+                > test14pui1d_oh.diff)
 	-(${DIFFNUM} -b \
                 ${TESTDIR}/RESULTS/PT/amps.dat \
-                ${TESTDIR}/RESULTS/PT/amps.ref \
-                >> test14puishocktube_ohpt.diff)
-		ls -l test14puishocktube*.diff
-
+		output/test14pui1d/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+                > test14pui1d_pt.diff)
+	ls -l test14pui1d_??.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
 
