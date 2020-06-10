@@ -1,0 +1,191 @@
+#COMPONENTMAP
+OH       0   -1    1   ! OH runs on all PE-s
+PT       1    2    1   ! PT runs on 1 or 2 PE-s
+
+#DESCRIPTION
+Couple multi-ion OH with PT
+
+#TIMEACCURATE           
+T  			IsTimeAccurate
+
+#COUPLE2
+OH                      NameComp1
+PT                      NameComp2
+-1                      DnCouple
+275568                    DtCouple
+
+#BEGIN_COMP OH ===========================================================
+
+#GRAVITY
+F                       UseGravity (rest of parameters read if true)
+0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+#IOUNITS
+USER
+
+NORMALIZATION
+USER			TypeNormalization
+
+#NORMALIZATION
+READ                    TypeNormalization
+1000.0                  No2SiUnitX   (only read if TypeNormalization=READ)
+1000.0                  No2SiUnitU   (only read if TypeNormalization=READ)
+1.67e-21                  No2SiUnitRho (only read if TypeNormalization=READ)
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
+
+GRID
+2
+1
+1
+-5.
+5.
+-1.
+1.
+-1.
+1.
+
+#GRID
+2                       nRootBlockX
+1                       nRootBlockY
+1                       nRootBlockZ
+-1.5E9                    xMin
+1.5E9                     xMax
+-7.5E8                    yMin
+7.5E8                     yMax
+-7.5E8                    zMin
+7.5E8                     zMax
+
+#OUTERBOUNDARY
+periodic			TypeBc1
+periodic			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
+
+#SCHEME
+2			nOrder
+Linde			TypeFlux
+mc3
+1.5
+
+#TIMESTEPPING
+2                       nStage (1 or 2)
+0.4                     CflExpl
+
+#NONCONSERVATIVE
+F			UseNonConservative
+
+#CONSERVATIVECRITERIA
+0			nConsCrit
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+-1			DnSaveLogfile
+1 year			DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+2			nPlotFile
+y=0 MHD idl		StringPlot
+-1			DnOutput
+1 year			DtOuput
+-1.0			DxOutput
+z=0 MHD idl		StringPlot
+-1			DnOutput
+1 year			DtOuput
+-1.0			DxOutput
+
+#USERFLAGS
+F                       UseUserInnerBcs
+T                       UseUserSource
+F                       UseUserPerturbation
+F                       UseUserOuterBcs
+F                       UseUserICs
+F                       UseUserSpecifyRefinement
+F                       UseUserLogFiles
+T                       UseUserWritePlot
+F                       UseUserAMR
+F                       UseUserEchoInput
+F                       UseUserB0
+F                       UseUserInitSession
+F                       UseUserUpdateStates
+
+#UNIFORMSTATE
+0.01
+-100
+0
+0
+0
+0
+0
+2.6E-13
+1E-3
+100
+0
+0
+1.01E-12
+1E-30
+0
+0
+0
+1E-30
+1E-30
+0
+0
+0
+1E-30
+1E-30
+0
+0
+0
+1E-30
+0.18
+-100
+0
+0
+1E-30
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH
+0.00874			SWH_N_dim [/cc]
+1.0868E5       		SWH_T_dim [K] 
+417.07                  SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+7.17E-03                SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4			 PU3_rho_dim [n/cc]
+8.20E6                 	 PU3_T_dim [K]
+417.07                   PU3_Ux_dim [km/s]
+0                        PU3_Uy_dim [km/s]
+0                        PU3_Uz_dim [km/s]
+
+#VLISW                  
+0.06            	VLISW_N_dim [n/cc]
+6519.0               	VLISW_T_dim
+26.3               	VLISW_Ux_dim
+0.0                	VLISW_Uy_dim
+-2.3              	VLISW_Uz_dim
+0.3093            	VLISW_Bx_dim
+-0.080            	VLISW_By_dim
+-0.2988           	VLISW_Bz_dim
+
+#USERINPUTEND ----------------------------------------------------------
+
+#END_COMP OH ===========================================================
+
+#STOP
+-1			MaxIteration
+5 years			tSimulationMax
+
+#END
