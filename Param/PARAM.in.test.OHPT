@@ -308,4 +308,22 @@ PT                      NameComp2
 140			MaxIteration
 -1.0			tSimulationMax
 
-#END
+#RUN ###################################################################
+
+#TIMEACCURATE
+T			IsTimeAccurate
+
+#SAVERESTART
+T			DoSaveRestart 
+-1			DoSaveRestart 
+5.0			DtSaveRestart
+
+#COUPLE2
+OH			NameComp1
+PT			NameComp2
+-1			DnCouple
+1.0			DtCouple
+
+#STOP
+-1			MaxIteration
+3.0			tSimulationMax
