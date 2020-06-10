@@ -1242,13 +1242,13 @@ test13_check:
 ### test14: OH/BATSRUS (single-ion) coupled with PT/AMPS
 
 test14:
-	@echo "test14_compile..." > test14_ohpt.diff
+	@echo "test14_compile..." > test14_oh.diff
 	${MAKE} test14_compile
-	@echo "test14_rundir..." >> test14_ohpt.diff
+	@echo "test14_rundir..." >> test14_oh.diff
 	${MAKE} test14_rundir
-	@echo "test14_run..." >> test14_ohpt.diff
+	@echo "test14_run..." >> test14_oh.diff
 	${MAKE} test14_run
-	@echo "test14_check..." >> test14_ohpt.diff
+	@echo "test14_check..." >> test14_oh.diff
 	${MAKE} test14_check
 
 test14_compile:
@@ -1271,26 +1271,23 @@ test14_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14/OH_log_n000000.log \
-		> test14_ohpt.diff)
-	cp output/test14/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-	${TESTDIR}//RESULTS/PT/amps.ref
+		> test14_oh.diff)
 	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
-		${TESTDIR}/RESULTS/PT/amps.ref \
-		>> test14_ohpt.diff)
-	ls -l test14*.diff
-
+		output/test14/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+		> test14_pt.diff)
+	ls -l test14_??.diff
 
 ### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS
 
 test14pui:
-	@echo "test14pui_compile..." > test14pui_ohpt.diff
+	@echo "test14pui_compile..." > test14pui_oh.diff
 	${MAKE} test14pui_compile
-	@echo "test14pui_rundir..." >> test14pui_ohpt.diff
+	@echo "test14pui_rundir..." >> test14pui_oh.diff
 	${MAKE} test14pui_rundir
-	@echo "test14pui_run..." >> test14pui_ohpt.diff
+	@echo "test14pui_run..." >> test14pui_oh.diff
 	${MAKE} test14pui_run
-	@echo "test14pui_check..." >> test14pui_ohpt.diff
+	@echo "test14pui_check..." >> test14pui_oh.diff
 	${MAKE} test14pui_check
 
 test14pui_compile:
@@ -1313,22 +1310,23 @@ test14pui_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-21 \
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14pui/OH_log_n000000.log \
-		> test14pui_ohpt.diff)
-	cp output/test14pui/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-	${TESTDIR}/RESULTS/PT/amps.ref
+		> test14pui_oh.diff)
 	-(${DIFFNUM} -b \
 		${TESTDIR}/RESULTS/PT/amps.dat \
-		${TESTDIR}/RESULTS/PT/amps.ref \
-		>> test14pui_ohpt.diff)
-		ls -l test14pui*.diff
+		output/test14pui/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+		> test14pui_pt.diff)
+	ls -l test14pui_??.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
+
 test15_build:
 	rm -rf SP_build
 	Scripts/Configure.pl -on=SP,SC,IH -off=IM,IE,RB -d=SP_build
 	cd SP_build; ./Config.pl -install \
 	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd SP_build; make test15
+
+.NOTPARALLEL: test15
 
 test15:
 	rm -f test15*.diff
