@@ -1335,7 +1335,7 @@ test14pui1d:
 test14pui1d_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
 	./Config.pl -g=OH:4,4,4 -o=OH:u=OuterHelioPUI,e=SwhPui,ng=2
-	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=oh,amps-test=on
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.shocktube,amps-test=on
 	${MAKE} SWMF
 	make PIDL
 
