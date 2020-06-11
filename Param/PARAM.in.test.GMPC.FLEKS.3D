@@ -94,19 +94,28 @@ T			UseNonConservative
 +3.2                    yMaxCut		yMaxPic
 -2.4                    zMinCut		zMinPic
 +2.4                    zMaxCut		zMaxPic
-0.4                     DxPic
-0.4                     DyPic
-0.4                     DyPic		DzPic
+0.8                     DxPic
+0.8                     DyPic
+0.8                     DyPic		DzPic
 
 #PICADAPT
 T			UseAdaptivePic
-F			DoAdaptPic	
+T			DoAdaptPic
+-1			Dn
+1			Dt
+
 
 #PICPATCH
 2			nCellPerPatch
 
 #PICGHOST
 1			nGhostPic
+
+#PICCRITERIA
+1			nCritera
+rho			NameCriteria
+10000			CriteriaMin
+-1			CriteriaMax
 
 #USERINPUTBEGIN -----------------
 
@@ -181,3 +190,54 @@ T                       doReSampling
 #STOP
 -1			MaxIteration
 4			tSimulationMax
+
+#RUN
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#PICCRITERIA
+1			nCritera
+rho			NameCriteria
+-1			CriteriaMin
+1000			CriteriaMax
+
+#END_COMP GM ---------------------------------------------------------
+
+#STOP
+-1			MaxIteration
+8			tSimulationMax
+
+#RUN
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#PICCRITERIA
+1			nCritera
+rho			NameCriteria
+10000			CriteriaMin
+-1			CriteriaMax
+
+#END_COMP GM ---------------------------------------------------------
+
+#STOP
+-1			MaxIteration
+12			tSimulationMax
+
+#RUN
+
+#BEGIN_COMP GM ---------------------------------------------------------------
+
+#PICCRITERIA
+1			nCritera
+rho			NameCriteria
+-1			CriteriaMin
+1000			CriteriaMax
+
+#END_COMP GM ---------------------------------------------------------
+
+#STOP
+-1			MaxIteration
+16			tSimulationMax
+
+
+
