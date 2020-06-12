@@ -76,11 +76,14 @@ setenv OMP_NUM_THREADS 1
 setenv NEWTESTDIR Sites/SWMF_TEST_RESULTS/`date +%Y/%m/%d`/gfortran
 
 #
-# Select one of the following options:
+# Run tests
 #
-#make -j test MPIRUN= >>& test_swmf.log # Compile parallel but run on 1 processor
-#make -j test >>& test_swmf.log #	  Run the tests on 2 processors
-#make -j test NP=4 >>& test_swmf.log #	  Run the tests on 4 processors
+#make -j test >>& test_swmf.log                # Run the tests on 2 processors with 2 threads
+#make -j test NP=4 NTHREAD=3 >>& test_swmf.log # Run the tests on 4 processors with 3 threads
+#make -j test MPIRUN= >>& test_swmf.log        # Run without MPI
+#make -j test OPENMP= >>& test_swmf.log        # Run without OpenMP threads
+#make -j test NPFLAG='--oversubsrcribe -n'     # OpenMPI library may need this flag
+#make -j=4 test                                # Compile with up to 4 parallelism
 
 # Run with aprun -q (quiet) on 8 cores, serial tests are run with aprun -n 1
 make -j test PARALLEL='aprun -q' NP=8 SERIAL='aprun -q -n 1' 
