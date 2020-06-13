@@ -1032,6 +1032,12 @@ test8_update:
 		output/test8/SC_log_n000000.log 
 	cp -f ${TESTDIR}/RESULTS/IH/log_n000000.log \
 		output/test8/IH_log_n000000.log
+	rm -f output/test8/SC_rfr.ref.gz 
+	cp ${TESTDIR}/RESULTS/SC/rfr_rwi_4_*.outs output/test8/SC_rfr.ref
+	cd output/test8/; gzip SC_rfr.ref
+	rm -f output/test8/SC_los_sdo_aia.out.gz
+	cp ${TESTDIR}/RESULTS/SC/los_sdo_aia*.out output/test8/SC_los_sdo_aia.out
+	cd output/test8/; gzip SC_los_sdo_aia.out
 	${MAKE} test8_check
 
 ### test9: SC + IH with new AWSoM updates. Restarting SC and running IH in 2nd and 5th order schemes ### 
