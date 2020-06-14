@@ -100,7 +100,7 @@ T                       UseFieldLineThreads
 
 #THREADEDBC
 T	  UseAlignedVelocity
-F         DoConvergenceCheck
+T         DoConvergenceCheck
 limited   TypeBc
 
 #GRIDBLOCKALL
@@ -151,8 +151,6 @@ F			UseUserUpdateStates
 turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
-
-
 1.27			rMinWaveReflection
 
 #HEATPARTITIONING
