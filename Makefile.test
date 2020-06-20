@@ -329,7 +329,7 @@ test1_check:
 		${TESTDIR}/RESULTS/PW/north_plots_iline0002.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0002.out \
 		>> test01_pw.diff)
-	-@(${DIFFNUM} -b -r=1e-7 \
+	-@(${DIFFNUM} -b -r=2e-7 \
 		${TESTDIR}/RESULTS/PW/north_plots_iline0003.out \
 		PW/PWOM/data/output/Earth/PW_north_plots_iline0003.out \
 		>> test01_pw.diff)
