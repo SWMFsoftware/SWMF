@@ -1297,7 +1297,7 @@ test14pui_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test14pui_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-21 \
+	-(${DIFFNUM} -b -r=1e-5 -a=2e-21 \
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14pui/OH_log_n000000.log \
 		> test14pui_oh.diff)
