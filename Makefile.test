@@ -562,7 +562,7 @@ test_swpc_multiion_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputMultiIon/log_e20140410-000200.log \
 		> test_swpc_multiion_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputMultiIon/magnetometers_e20140410-000200.mag \
 		>> test_swpc_multiion_gm.diff)
@@ -631,7 +631,7 @@ test_swpc_multispecies_check:
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutputMultiSpecies/log_e20140410-000200.log \
 		> test_swpc_multispecies_gm.diff)
-	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
+	-@(${DIFFNUM} -b -r=1e-3 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutputMultiSpecies/magnetometers_e20140410-000200.mag \
 		>> test_swpc_multispecies_gm.diff)
