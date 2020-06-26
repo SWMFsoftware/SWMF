@@ -6,16 +6,13 @@ PT       1    2    1   ! PT runs on 1 or 2 PE-s
 Couple multi-ion OH with PT
 
 #TIMEACCURATE
-T
+T			DoTimeAccurate
 
 #COUPLE2
-OH
-PT
--1
-315576
-
-#TEST
-OH_user_init_session 
+OH			NameComp1
+PT			NameComp2
+-1			DnCouple
+0.01 year		DtCouple
 
 #BEGIN_COMP OH ===========================================================
 
@@ -25,15 +22,6 @@ F                       UseGravity
 #BODY
 F			UseBody
 
-#IOUNITS
-USER
-
-#NORMALIZATION
-READ                    TypeNormalization
-1000.0                  No2SiUnitX   (only read if TypeNormalization=READ)
-1000.0                  No2SiUnitU   (only read if TypeNormalization=READ)
-1.67e-21                  No2SiUnitRho (only read if TypeNormalization=READ)
-
 #PLOTFILENAME
 year                   NameMaxTimeUnit
 
@@ -41,12 +29,12 @@ year                   NameMaxTimeUnit
 1			nRootBlockX
 1			nRootBlockY
 1			nRootBlockZ
--3e10			xMin
-3e10			xMax
--3e10			yMin
-3e10			yMax
--3e10			zMin
-3e10			zMax
+-200			xMin
+200			xMax
+-200			yMin
+200			yMax
+-200			zMin
+200			zMax
 
 #OUTERBOUNDARY
 periodic		TypeCellBc
@@ -76,20 +64,18 @@ F                       UseNonConservative
 #SAVELOGFILE
 T			DoSaveLogfile
 RAW			StringLogfile
-1			DnSaveLogfile
--1.   			DtSaveLogfile
+-1			DnSaveLogfile
+0.1 year		DtSaveLogfile
 
 #SAVEINITIAL
 T			DoSaveInitial
 
 #SAVEPLOT
 1			nPlotFile
-y=0 VAR idl		StringPlot
+y=0 MHD idl		StringPlot
 -1			DnOutput
 0.1 year		DtOuput
-0.0			DxOutput
-{MHD} fluid		NamePlotVar
-{default}		NamePlotParam
+-1.0			DxOutput
 
 #USERFLAGS
 F			UseUserInnerBcs
@@ -119,7 +105,7 @@ F			UseUserUpdateStates
 -100			Pu3Ux
 0			Pu3Uy
 0			Pu3Uz
-1.01E-12		        Pu3P
+1.01E-12	        Pu3P
 1E-5			NeuRho
 0			NeuUx 
 0			NeuUy 
