@@ -906,7 +906,7 @@ test5_run:
 	cd ${TESTDIR}; ./PostProc.pl -M -cat RESULTS/coupled
 
 test5_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-15 \
+	-(${DIFFNUM} -b -r=1e-5 -a=2e-15 \
 		${TESTDIR}/RESULTS/coupled/EE/log_n000010.log \
 		output/test5/EE.log \
 		> test05_ee.diff)
