@@ -100,8 +100,10 @@ T                       UseFieldLineThreads
 
 #THREADEDBC
 T	  UseAlignedVelocity
-F         DoConvergenceCheck
+T         DoConvergenceCheck
 limited   TypeBc
+40
+1.0e-6
 
 #GRIDBLOCKALL
 1200			MaxBlock
