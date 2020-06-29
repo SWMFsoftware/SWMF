@@ -1413,9 +1413,11 @@ test15_scihsp_restart:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test15_scihsp_check:
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out \
+	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
-		${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out \
-		output/test15/MH_data.ref \
+		${TESTDIR}/RESULTS/SP/MH_data.outs \
+		output/test15/MH_data.ref.gz \
 		> test15_scihsp.diff)
 	ls -l test15*.diff
 	rm -rf SP/MFLAMPA/data/input/test15/MH_data/
@@ -1445,12 +1447,11 @@ test15_sp_run:
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
 test15_sp_check:
-	cp output/test15/MH_data.ref ${TESTDIR}/RESULTS/SP/MH_data.ref
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
 	    ${TESTDIR}/RESULTS/SP/MH_data.out
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.out \
-		${TESTDIR}/RESULTS/SP/MH_data.ref \
+		output/test15/MH_data.ref.gz \
 		> test15_sp.diff)
 		rm -rf SP/MFLAMPA/data/input/test15/MH_data/
 		ls -l test15*.diff
