@@ -19,6 +19,7 @@ test_help:
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_pw BLESS=YES          (update test_pw reference solution)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
+	@echo "    test_sp                    (run SP/MFLAMPA test)"
 	@echo "    test_swpc                  (run GM-IE-IM test as used by SWPC)"
 	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
 	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
@@ -53,6 +54,7 @@ test:
 	-@(${MAKE} test_batl)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_ps TESTDIR=run_test_ps)
+	-@(${MAKE} test_sp TESTDIR=run_test_sp)
 	-@(${MAKE} test_swpc TESTDIR=run_test_swpc)
 	-@(${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion)
 	-@(${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies)
@@ -1356,36 +1358,20 @@ test15_build:
 	   	     	-compiler=${FORTRAN_COMPILER_NAME},${C_COMPILER_NAME}
 	cd SP_build; make test15
 
-.NOTPARALLEL: test15
-
 test15:
-	rm -f test15*.diff
-	${MAKE} test15_scihsp
-	${MAKE} test15_sp
+	rm -f test15.diff
+	@echo "test15_compile..." > test15.diff
+	${MAKE} test15_compile
+	@echo "test15_rundir..." >> test15.diff
+	${MAKE} test15_rundir
+	@echo "test15_run..." >> test15.diff
+	${MAKE} test15_run
+	@echo "test15_restart..." >> test15.diff
+	${MAKE} test15_restart
+	@echo "test15_check..." >> test15.diff
+	${MAKE} test15_check
 
-test15_scihsp:
-	@echo "test15_scihsp_compile..." > test15_scihsp.diff
-	${MAKE} test15_scihsp_compile
-	@echo "test15_scihsp_rundir..." >> test15_scihsp.diff
-	${MAKE} test15_scihsp_rundir
-	@echo "test15_scihsp_run..." >> test15_scihsp.diff
-	${MAKE} test15_scihsp_run
-	@echo "test15_scihsp_restart..." >> test15_scihsp.diff
-	${MAKE} test15_scihsp_restart
-	@echo "test15_scihsp_check..." >> test15_scihsp.diff
-	${MAKE} test15_scihsp_check
-
-test15_sp:
-	@echo "test15_sp_compile..." > test15_sp.diff
-	${MAKE} test15_sp_compile
-	@echo "test15_sp_rundir..." >> test15_sp.diff
-	${MAKE} test15_sp_rundir
-	@echo "test15_sp_run..." >> test15_sp.diff
-	${MAKE} test15_sp_run
-	@echo "test15_sp_check..." >> test15_sp.diff
-	${MAKE} test15_sp_check
-
-test15_scihsp_compile:
+test15_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
 	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe,ng=2
@@ -1393,68 +1379,71 @@ test15_scihsp_compile:
 	${MAKE} SWMF
 	make PIDL
 
-test15_scihsp_rundir:
+test15_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
 
-test15_scihsp_run:
+test15_run:
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
 	cd ${TESTDIR}; rm -rf RESTART_t0025.0000s
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl
 
-test15_scihsp_restart:
+test15_restart:
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
-test15_scihsp_check:
+test15_check:
 	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out \
 	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.outs \
 		output/test15/MH_data.ref.gz \
-		> test15_scihsp.diff)
-	ls -l test15*.diff
-	rm -rf SP/MFLAMPA/data/input/test15/MH_data/
-	mkdir SP/MFLAMPA/data/input/test15/MH_data/
-	cp ${TESTDIR}/RESULTS/SP/MH_data.lst \
-	SP/MFLAMPA/data/input/test15/MH_data/.
-	cp ${TESTDIR}/RESULTS/SP/MH_data.H \
-	SP/MFLAMPA/data/input/test15/MH_data/.
-	cp ${TESTDIR}/RESULTS/SP/MH_data*n*.out \
-	SP/MFLAMPA/data/input/test15/MH_data/.
+		> test15.diff)
+	ls -l test15.diff
 
-test15_sp_compile:
+# test for MFLAMPA inside the SWMF
+
+test_sp:
+	@echo "test_sp_compile..." > test_sp.diff
+	${MAKE} test_sp_compile
+	@echo "test_sp_rundir..." >> test_sp.diff
+	${MAKE} test_sp_rundir
+	@echo "test_sp_run..." >> test_sp.diff
+	${MAKE} test_sp_run
+	@echo "test_sp_check..." >> test_sp.diff
+	${MAKE} test_sp_check
+
+test_sp_compile:
 	./Config.pl -v=Empty,SP/MFLAMPA
 	./Config.pl -g=SP:2000
 	${MAKE} SWMF
 	make PIDL
 
-test15_sp_rundir:
+test_sp_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	mkdir ${TESTDIR}/MH_data/
 	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
 	cp -r SP/MFLAMPA/data/input/test15/MH_data/*.* ${TESTDIR}/MH_data/.
 
-test15_sp_run:
+test_sp_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
 
-test15_sp_check:
-	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out > \
-	    ${TESTDIR}/RESULTS/SP/MH_data.out
+test_sp_check:
+	cat ${TESTDIR}/RESULTS/SP/MH_data_*_*_t00000030_n000010.out \
+	    > ${TESTDIR}/RESULTS/SP/MH_data.outs
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
-		${TESTDIR}/RESULTS/SP/MH_data.out \
-		output/test15/MH_data.ref.gz \
-		> test15_sp.diff)
-		rm -rf SP/MFLAMPA/data/input/test15/MH_data/
-		ls -l test15*.diff
+		${TESTDIR}/RESULTS/SP/MH_data.outs \
+		SP/MFLAMPA/output/MH_data.outs.ref.gz \
+		> test_sp.diff)
+	ls -l test_sp.diff
 
 
 ### test16: GM/BATSRUS+PC/FLEKS. BATSRUS only provides the initial condition.
