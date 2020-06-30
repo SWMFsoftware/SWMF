@@ -1359,16 +1359,16 @@ test15_build:
 	cd SP_build; make test15
 
 test15:
-	rm -f test15.diff
-	@echo "test15_compile..." > test15.diff
+	rm -f test15_scihsp.diff
+	@echo "test15_compile..." > test15_scihsp.diff
 	${MAKE} test15_compile
-	@echo "test15_rundir..." >> test15.diff
+	@echo "test15_rundir..." >> test15_scihsp.diff
 	${MAKE} test15_rundir
-	@echo "test15_run..." >> test15.diff
+	@echo "test15_run..." >> test15_scihsp.diff
 	${MAKE} test15_run
-	@echo "test15_restart..." >> test15.diff
+	@echo "test15_restart..." >> test15_scihsp.diff
 	${MAKE} test15_restart
-	@echo "test15_check..." >> test15.diff
+	@echo "test15_check..." >> test15_scihsp.diff
 	${MAKE} test15_check
 
 test15_compile:
@@ -1404,8 +1404,8 @@ test15_check:
 	-(${DIFFNUM} -a=1e-6 -r=1e-6 -b \
 		${TESTDIR}/RESULTS/SP/MH_data.outs \
 		output/test15/MH_data.ref.gz \
-		> test15.diff)
-	ls -l test15.diff
+		> test15_scihsp.diff)
+	ls -l test15_scihsp.diff
 
 # test for MFLAMPA inside the SWMF
 
