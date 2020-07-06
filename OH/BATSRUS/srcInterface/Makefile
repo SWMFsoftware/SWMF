@@ -3,8 +3,7 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
-
+-include Makefile.DEPEND
 
 
 OBJECTS = \
@@ -45,6 +44,4 @@ distclean: clean
 	ModRadioWaveRaytracing.f90 \
 	ModDensityAndGradient.f90 \
 	OH_get_for_mh_with_xyz.f90 \
-	OH_wrapper.f90 Makefile.DEPEND  
-
-# keep this line
+	OH_wrapper.f90

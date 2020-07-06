@@ -4,18 +4,18 @@
 
 The control module of SWMF controls the execution and coupling of
 components. The control module is controlled by the user through the
-component layout file LAYOUT.in and the input parameter file PARAM.in.
-Defining the most efficient layout, execution and coupling control
+input parameter file PARAM.in.
+Defining the most efficient component layout, execution and coupling control
 is not an obvious task. In the current version of SWMF the processor
 layout of the components is static. This restriction is somewhat
 mitigated by the possibility of restart, which allows to change
 the processor layout from one run to another.
 
-\subsection{Processor Layout: LAYOUT.in}
+\subsection{Processor Layout}
 
 Within one run the layout is determined by the \#COMPONENTMAP
-command in the LAYOUT.in file. The exact syntax of this file
-is documented in the reference manual of the CON\_world class.
+command in the PARAM.in file. The command
+is documented in the PARAM.XML file.
 Here we provide several examples which will help to develop
 a sense of using optimal layouts.  An optimal layout is one that 
 maximizes the use of all processors and does not leave processors
@@ -34,18 +34,15 @@ run on 3 processors with ranks 4, 6 and 8.
 \subsubsection{One component}
 
 In the simplest case a single component, say the Global
-Magnetosphere (GM) is running. The LAYOUT.in file should be
+Magnetosphere (GM) is running. The layout should be
 the following
 \begin{verbatim}
-ID   proc0 last stride
+ID   Proc0 ProcEnd Stride
 #COMPONENTMAP
-GM    0     999    1
-#END
+GM   0     -1    1
 \end{verbatim}
-If the SWMF is run on less than 999 processors (which is likely),
-the rank of the last processor will be reduced to the maximum
-rank of the processors, which is $N-1$ if the SWMF is running on $N$
-processors.
+Here the -1 is interpreted as the rank of the last processor,
+which is $N-1$ if the SWMF is running on $N$ processors.
 
 \subsubsection{One serial and one parallel component}
 
@@ -56,8 +53,7 @@ Inner Magnetosphere (IM) components is
 ID   proc0 last stride
 #COMPONENTMAP
 IM    0       0    1
-GM    0     999    1
-#END
+GM    0      -1    1
 \end{verbatim}
 When the component layouts overlap, the two components can run
 sequentially only. Since IM is using a single processor only
@@ -69,8 +65,7 @@ A more efficient execution can be achieved with a non-overlapping layout:
 ID   proc0 last stride
 #COMPONENTMAP
 IM    0       0    1
-GM    1     999    1
-#END
+GM    1      -1    1
 \end{verbatim}
 Note that this layout file will work for any number 
 of processors from 2 and up.
@@ -94,9 +89,8 @@ with good scaling. The following layout can be optimal:
 \begin{verbatim}
 ID   proc0 last stride
 #COMPONENTMAP
-IH    0     999    1
-SC    0     999    1
-#END
+IH    0    -1    1
+SC    0    -1    1
 \end{verbatim}
 Although IH and SC will execute sequentially, they both
 use all the available CPU-s, so no CPU is left waiting for the others.
@@ -108,9 +102,8 @@ on the same number of processors, the optimal layout can be
 \begin{verbatim}
 ID   proc0 last stride
 #COMPONENTMAP
-GM    0     999    2
-SC    1     999    2
-#END
+GM    0     -1    2
+SC    1     -1    2
 \end{verbatim}
 Here GM is running on the processors with even rank,
 while SC is running on the processors with odd ranks.
@@ -146,7 +139,6 @@ IM    0       0    1
 IE    0       1    1
 UA    2      33    1
 GM   34     999    1
-#END
 \end{verbatim}
 This layout will be optimal in terms of speed for a large 
 (more than 100) number of PE-s, and actually the maximum
@@ -160,8 +152,43 @@ IM    0       0    1
 IE    1       2    1
 UA    0      31    1
 GM    3     999    1
-#END
 \end{verbatim}
+
+\subsubsection{Using OpenMP threads}
+
+Some of the models, such as \BATSRUS, can use OpenMP threads
+in addition to the MPI paralelization. Typically one should
+run one OpenMP thread on each core, and the number of MPI
+processes should be 1 or 2 (or possibly more) for each node.
+The most efficient arrangement depends on the hardware architecture
+and the model. The number of maximum threads MaxThread is set by the
+environment variable OMP\_NUM\_THREADS. Typically one wants
+to use nThread=MaxThread threads for the components that can use
+OpenMP. This can be easily achieved by setting the stried and the
+number of threads in the last (optional) column to -1:
+\begin{verbatim}
+ID   proc0 last stride nthread
+#COMPONENTMAP
+GM    0      -1    -1      -1
+\end{verbatim}
+For example, if the node has 56 cores split to two independent
+slots, the optimal setting is likely to be OMP\_NUM\_THREADS=28.
+In this case both stride and nthread will be 28.
+
+If OMP\_NUM\_THREADS is not in advance, it is best to set
+the root of the multithreaded component to proc0=0, so
+that the stride is properly aligned with the cores of
+the nodes. This means that other components that can
+only use a fixed number of processors should be put
+to the last processors, for example
+\begin{verbatim}
+ID   proc0 last stride nthread
+#COMPONENTMAP
+GM    0      -3    -1      -1
+IE   -2      -1     1
+\end{verbatim}
+In this layout GM is running with multiple threads on
+cores 0 to $N-3$, while IE is using cores $N-2$ and $N-1$.
 
 \subsection{Steady State vs. Time Accurate Execution}
 

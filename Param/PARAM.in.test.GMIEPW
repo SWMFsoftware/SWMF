@@ -1,6 +1,11 @@
 VERBOSE
 100
 
+#COMPONENTMAP
+GM      0 9999 1 2
+IE      1 2    1 1
+PW      3 3    1 1
+
 TEST
 PW_get_for_gm GM_put_from_pw CON_couple_all::couple_two_comp
 
@@ -55,10 +60,12 @@ T                       UseBody
 -128.			zMin
  128.			zMax
 
+#GRIDBLOCKALL
+700			MaxBlock
+
 #GRIDRESOLUTION
 2.0                     Resolution
 initial                 NameArea
-
 
 !refine inside 1.5*rcurrents, rcurrents = 3.5
 #GRIDRESOLUTION
@@ -134,6 +141,9 @@ float                   TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TypeBcInner
+
+#MAGNETICINNERBOUNDARY
+1.0			B1rCoef
 
 #SAVELOGFILE
 T

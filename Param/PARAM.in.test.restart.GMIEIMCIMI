@@ -1,7 +1,9 @@
 Begin session: 1
 
-#ECHO
-T
+#COMPONENTMAP
+GM  0 -1  1		GM runs on all PE-s
+IE  1  1  1		IE runs on 1 PE
+IM  2 -1  1		IM runs on many PE-s
 
 #TIMEACCURATE
 T			DoTimeAccurate
@@ -71,6 +73,9 @@ float			TypeBc6
 
 #INNERBOUNDARY
 ionosphere		TyepBcInner
+
+#MAGNETICINNERBOUNDARY
+1.0			B1rCoef
 
 #SCHEME
 1			nOrder

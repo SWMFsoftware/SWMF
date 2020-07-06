@@ -31,7 +31,7 @@ module CON_io
   private ! except
 
   !PUBLIC MEMBER FUNCTIONS:
-  public :: read_inputs  !  read, broadcast and distribute parameters
+  public :: read_inputs  ! read, broadcast and distribute parameters
   public :: save_restart ! save restart information
 
   !REVISION HISTORY:
@@ -70,6 +70,10 @@ module CON_io
   ! Default: every 100000 time steps huge(1) seconds (ie at the end of the run)
   type(FreqType), public :: &
        SaveRestart = FreqType(.true.,100000,huge(1.0),-1,-1.0)
+
+  ! The restart files should not be saved twice (first in the 
+  ! subroutint 'do_session', and then in 'finalize') for the same time.
+  logical, public :: IsRestartSaved = .false.
 
   ! Showing progress
   integer, public :: DnShowProgressShort = 10
@@ -142,6 +146,9 @@ contains
     real                   :: VersionNumber
     logical                :: IsOn
 
+    ! True if a component has a BEGIN_COMP section
+    logical :: DoneBeginComp_C(MaxComp)
+
     ! Beginning line number and number of lines for component parameters
     integer :: iLineModule, nLineModule
 
@@ -149,24 +156,21 @@ contains
     integer :: iUnitOut
 
     ! Names, indexes and logicals for components
-    integer :: lComp, iComp, iComp1, iComp2, nName, iCouple
+    integer :: lComp, iComp, iComp1, iComp2, nName, iCouple, iError
     logical :: UseComp
     character (len=lNameComp) :: NameComp, NameComp1, NameComp2
     character (len=lNameComp) :: NameSourceTarget_I(2)
-    character (len=lStringLine) :: NameSourceTarget
+    character (len=lStringLine) :: NameSourceTarget, StringLayout
     !-------------------------------------------------------------------------
     if(is_proc0())write(*,'(a,i3)')NameSub//': iSession=',iSession
 
-    !\
     ! Proc 0 reads the file and broadcasts to all PE-s
-    !/
     if(IsFirstRead) call read_file(NameParamFile,i_comm())
 
-    !\
     ! Read input data from string array stored in ModReadParam
-    !/
     call read_init('  ',iSession,iLine)
 
+    DoneBeginComp_C = .false.
     IsLastRead=.true.
     do
        if( .not. read_line(StringLine, iLine) )then
@@ -201,10 +205,13 @@ contains
           NameComp=StringLine(13:14)
           if(.not.use_comp(NameComp))then
              if(is_proc0()) write(*,*) NameSub// &
-                  ' SWMF_ERROR unregistered componet name '//trim(NameComp)
+                  ' SWMF_ERROR unregistered component name '//trim(NameComp)
              iErrorSwmf = 11
              RETURN
           end if
+          
+          ! Store that this component read parameters
+          DoneBeginComp_C(i_comp(NameComp)) = .true.
 
           ! Find #END_COMP MODULENAME and read module parameters
           iLineModule = iLine
@@ -225,7 +232,8 @@ contains
                    call get_comp_info(NameComp, iUnitOut=iUnitOut)
                 end if
                 ! Initialize ModReadParam
-                call read_init(NameComp, iSession, iLineModule, iLine-1, iUnitOut)
+                call read_init(&
+                     NameComp, iSession, iLineModule, iLine-1, iUnitOut)
 
                 ! Echo component input on root PE of component
                 if(is_proc0())        call read_echo_set(.false.)
@@ -337,6 +345,12 @@ contains
 
           call read_var('CpuTimeMax', CpuTimeMax)
 
+       case("#CHECKTIMESTEP")
+          
+          call read_var('DoCheckTimeStep', DoCheckTimeStep)
+          call read_var('DnCheckTimeStep', DnCheckTimeStep)
+          call read_var('TimeStepMin'   ,  TimeStepMin)
+          
        case("#CHECKSTOPFILE")
 
           call read_var('DoCheckStopFile', DoCheckStopFile)
@@ -573,7 +587,7 @@ contains
 
        case('#PLANET','#MOON','#COMET', &
             '#IDEALAXES','#ROTATIONAXIS','#MAGNETICAXIS','#MAGNETICCENTER',&
-            '#ROTATION','#NONDIPOLE','#DIPOLE','#UPDATEB0', '#MULTIPOLEB0')
+            '#ROTATION','#NONDIPOLE','#DIPOLE', '#MULTIPOLEB0')
           if(.not.is_first_read())then
              if(UseStrict)RETURN
              CYCLE
@@ -581,6 +595,9 @@ contains
 
           call read_planet_var(NameCommand)
 
+       case("#UPDATEB0")
+          call read_planet_var(NameCommand)
+          
        case("#ROTATEHGR")
           if(.not.is_first_read())then
              if(UseStrict)RETURN
@@ -597,6 +614,12 @@ contains
           call read_var('dLongitudeHgi', dLongitudeHgiDeg)
           dLongitudeHgi = dLongitudeHgiDeg * cDegToRad
 
+       case("#COMPONENTMAP", "#LAYOUT")
+          ! This is already done in CON_WORLD. Hear we just echo back.
+          do
+             call read_in(StringLayout, iError, DoReadWholeLine=.true.)
+             if(StringLayout == '' .or. iError /= 0) EXIT
+          end do
        case default
           if(is_proc0()) write(*,*) NameSub,' ERROR: Invalid command ',&
                trim(NameCommand),' at line',iLine,' in PARAM.in'
@@ -609,6 +632,15 @@ contains
     ! end reading parameters
 
     call set_stdout
+
+    ! Check that only active components use BEGIN_COMP sections
+    if(is_proc0())then
+       do iComp = 1, MaxComp
+          if(.not. use_comp(iComp) .and. DoneBeginComp_C(iComp)) &
+               call CON_stop(NameSub//' SWMF_ERROR: '// &
+               NameComp_I(iComp)//' cannot read parameters as it is not active')
+       end do
+    end if
 
     !^CMP IF IE BEGIN
     !^CMP IF UA BEGIN
@@ -633,7 +665,7 @@ contains
     !^CMP END IE
 
     ! Switch off couplings for unused/switched off components
-    do iComp1=1,MaxComp;
+    do iComp1 = 1, MaxComp
        if(use_comp(iComp1)) CYCLE
        Couple_CC(iComp1,:) % DoThis = .false.
        Couple_CC(:,iComp1) % DoThis = .false.
@@ -690,6 +722,18 @@ contains
        ! Determine, when to stop the simulation
        tSimulationMax = TimeEnd % Time - TimeStart % Time
        MaxIteration = -1
+    else
+       ! If not set in PARAM, set TimeEnd using tSimulationMax
+       TimeEnd % Time = TimeStart % Time + tSimulationMax
+       call time_real_to_int(TimeEnd)
+    end if
+
+    if(DoTimeAccurate .and. DoCheckTimeStep)then
+       ! Initialize check time step
+       nIterationCheck  = nIteration
+       tSimulationCheck = tSimulation
+       ! Set default minimum time step to remaining simulation time / 10^7
+       if(TimeStepMin < 0) TimeStepMin = (tSimulationMax - tSimulation) / 1e7
     end if
 
     if(UseTiming)then
@@ -826,7 +870,7 @@ contains
     character(len=*), parameter :: NameSub=NameMod//'::save_restart'
     !------------------------------------------------------------------------
 
-    if(lVerbose>0 .and. is_proc0()) &
+    if(lVerbose>0 .and. is_proc0(CON_)) &
          write(*,*)NameSub,' is called at nStep,tSimulation=',&
          nStep,tSimulation
 
@@ -840,7 +884,7 @@ contains
        else
           NameRestartOutDirNow = NameRestartOutDir
        end if
-       if(is_proc0()) call make_dir(NameRestartOutDirNow)
+       if(is_proc0(CON_)) call make_dir(NameRestartOutDirNow)
     end if
 
     NameRestartOutDirComp = ''
@@ -855,11 +899,12 @@ contains
        call save_restart_comp(iComp, tSimulation)
     end do
 
-    ! Ensure that all components have written restart state before
+    ! Ensure that all active components have written restart state before
     ! writing the CON restart file (RESTART.out)
-    call MPI_barrier(i_comm(), iError)
+    call MPI_barrier(i_comm(CON_), iError)
 
-    if(.not.is_proc0()) RETURN
+    ! Root of CON writes the main RESTART.out file
+    if(.not.is_proc0(CON_)) RETURN
 
     call open_file(FILE=trim(NameRestartOutDirNow)//NameRestartFile)
 

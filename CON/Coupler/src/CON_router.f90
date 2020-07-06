@@ -1349,9 +1349,22 @@ contains
                 nImage         = nImage, &
                 Weight_I       = Weight_I)
         end if
+        if(nImage<1)then
+           Write(*,*)'Interpolation in CON_router failed on Source PE=',iProc
+           write(*,*)'Point Coords=', CoordSource_D, ' nImage=',nImage
+           call CON_stop('Failure!!!')
+        end if
         nImagePart = count(iIndexGet_II(0,1:nImage)==iProc)
         Router%nGet_P(iProcTo) = Router%nGet_P(iProcTo) + nImagePart
-        if(nImagePart==0)call CON_stop('No image on the requested PE')
+        if(nImagePart==0)then
+           Write(*,*)'Interpolation in CON_router failed on Source PE=', iProc
+           write(*,*)'Point Coords=', CoordSource_D,  ' nImage=',nImage
+           write(*,*)' iProc  iBlock iCell'
+           do iImage = 1, nImage
+              write(*,*) iIndexGet_II(:, iImage)
+           end do
+           call CON_stop('No image on the requested PE')
+        end if
         ! indices
         do iImage=1,nImage
            if(iProc==iIndexGet_II(0,iImage))then

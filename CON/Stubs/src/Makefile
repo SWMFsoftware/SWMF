@@ -8,7 +8,7 @@ include ../../../Makefile.def
 SEARCHDIR = -I${SHAREDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 DEPEND:
 	@perl ${SCRIPTDIR}/depend.pl ${SEARCHDIR} ${MODULES}
@@ -32,4 +32,3 @@ ${MY_LIB}: ${MODULES} ${MAKEFILE_COMP_SELECT}
 clean: cleanfiles
 
 distclean: clean
-	rm -f Makefile.DEPEND

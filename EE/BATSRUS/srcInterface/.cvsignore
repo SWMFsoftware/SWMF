@@ -1,4 +1,0 @@
-Makefile.DEPEND
-*.mod
-ModBuffer.f90
-ModGridDescriptor.f90

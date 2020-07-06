@@ -218,8 +218,7 @@ finalization of components.  The execution is done in sessions. In
 each session the parameters of the framework and the components can be
 changed. The list of usable (non-empty) components and their 
 processor layout (the array of processors used by that component)
-are defined in the {\tt LAYOUT.in} file.
-The input parameters are read from the {\tt PARAM.in} file, which
+and all other input parameters are read from the {\tt PARAM.in} file, which
 may contain further included parameter files.  These parameters are
 read and broadcast by CON and the component specific parameters are
 sent to the components. The structure of the parameter file will be
@@ -337,7 +336,7 @@ The top level directory contains the following subdirectories:
 \item {\tt Copyrights} - copyright files
 \item {\tt ESMF}    - the ESMF wrapper for the SWMF
 \item {\tt CZ, EE, ... UA} - component directories
-\item {\tt Param}   - description of CON parameters, parameter and layout files
+\item {\tt Param}   - example input parameter files
 \item {\tt Scripts} - shell and Perl scripts
 \item {\tt doc}     - the documentation directory %^CMP IF DOC
 \item {\tt output}  - reference test results for the SWMF tests
@@ -347,6 +346,7 @@ The top level directory contains the following subdirectories:
 and the following files
 \begin{itemize}\itemsep=0pt
 \item {\tt README}        - a short instruction on installation and usage
+\item {\tt PARAM.XML}     - description of CON parameters
 \item {\tt Makefile}      - the main makefile
 \item {\tt Makefile.test} - the makefile containing the tests %#^CMP IF TESTING
 \item {\tt Config.pl}     - Perl script for (un)installation and configuration
@@ -373,7 +373,7 @@ make help
 The input commands used in the {\tt PARAM.in} and their meaning are 
 described in the {\tt PARAM.XML} files. For the SWMF itself it is found in
 \begin{verbatim}
-Param/PARAM.XML
+PARAM.XML
 \end{verbatim}
 while the files for the physics components are found in the component's
 subdirectory.  For example, the file for the GM/BATSRUS component can
@@ -428,7 +428,7 @@ The installation instructions are described in the README file.
 To keep this user manual more up-to-date and consistent, 
 the README file is quoted verbatim below.
 
-\input ../../README
+\verbinput{../../README}
 
 \section{Platform specific information}
 
@@ -550,14 +550,14 @@ To run the SWMF change directory into the {\tt run} directory
 \begin{verbatim}
   cd run_halloween2
 \end{verbatim}
-In order to run the SWMF you must have two input files:  LAYOUT.in and
-PARAM.in.  The LAYOUT.in file defines the processor
-layout for the components involved in the future run.  The PARAM.in
-file contains the detailed commands for controlling what you want the
+In order to run the SWMF you must have the input file PARAM.in.
+The required \#COMPONENTMAP command in the PARAM.in file defines the processor
+layout for the components involved in the future run.  In addition,
+the PARAM.in file contains the detailed commands for controlling what you want the
 code to do during the run.  The {\tt Param} directory contains many
 example input files. Many of these are used by the nightly test suite.
 
-An example processor map file LAYOUT.in to run the executable with
+An example processor map to run the executable with
 five components on 16 processors is:
 \begin{verbatim}
 ID  First Last Stride
@@ -567,20 +567,18 @@ IE    5    6    1
 IH    7   10    1
 IM   11   11    1
 UA   12   15    1
-#END
 \end{verbatim}
-The file syntax is simple. It must start with the directive
-\#COMPONENTMAP and end with another directive \#END. Each line between
-these directives specifies the label for component, i.e. IE, GM and
-etc., its first and last processor, all relatively to the world
+The syntax is simple. It must start with the directive
+\#COMPONENTMAP followed by the processor layout of active components.
+Each line specifies the label for component, i.e. IE, GM and
+etc., its first and last processors, all relative to the world
 communicator, and the stride. Thus GM will run on 5 processors from 0
 to 4, and IM will run on only 1 processor, the processor 11.  If
 stride is not equal to 1, the processors for the component will not be
 neighboring processors.
 
-It is strongly recommended to check the validity of the {\tt PARAM.in} and 
-{\tt LAYOUT.in} files before running the code. If the
-code will be run on 16 processors, type
+It is strongly recommended to check the validity of the {\tt PARAM.in} 
+file before running the code. If the code will be run on 16 processors, type
 \begin{verbatim}
 Scripts/TestParam.pl -n=16 run_halloween2/PARAM.in
 \end{verbatim}
@@ -592,7 +590,7 @@ if it is possible on your computer, you can run the code interactively.  For
 example, to run the SWMF interactively:
 \begin{verbatim}
 cd run_halloween2
-mpirun -np 16 SWMF.exe | tee runlog
+mpiexec -n 16 SWMF.exe | tee runlog
 \end{verbatim}
 The {\tt | tee runlog} splits the output and send it to the screen
 as well as into the {\tt runlog} file.

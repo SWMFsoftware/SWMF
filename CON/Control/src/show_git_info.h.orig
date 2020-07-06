@@ -1,0 +1,4 @@
+
+  write(*,'(100(a/))') &
+       'Git repo=git@gitlab.umich.edu:swmf_software/SWMF', &
+       '  GIT REFERENCES HAVE NOT BEEN OBTAINED!'

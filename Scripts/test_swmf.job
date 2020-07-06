@@ -24,22 +24,17 @@ echo `which mpif90`
 # Go to the GFORTRAN test directory
 cd Tmp_gfortran
 
-# Either check out the code from scratch or just update and reinstall
-# cd SWMF; Config.pl -uninstall; cvs update -d; Config.pl -install
-# cd BATL; Config.pl -uninstall; cvs update -d; Config.pl -install
-# cd ..
-
 # Remove the previous test directory if necessary
 rm -rf SWMF
 
-# Checkout and install the latest code
-cvs co -D "`date +%m/%d/%Y` 19:00" SWMF BATL HYPRE > /dev/null 2>&1
-mv BATL SWMF/
-mv HYPRE SWMF/util
+# Checkout and install the latest SWMF and BATL
+gitclone SWMF --depth 1 >& /dev/null
+gitclone BATL --depth 1 SWMF/BATL >& /dev/null
+
 cd SWMF
-./Config.pl -install -compiler=gfortran -hypre > test_swmf.log 2>&1
+./Config.pl -install -sleep=10 -compiler=gfortran -hypre > test_swmf.log 2>&1
 cd BATL
-./Config.pl -install -compiler=gfortran >> ../test_swmf.log 2>&1
+./Config.pl -install -sleep=10 -compiler=gfortran >> ../test_swmf.log 2>&1
 cd ..
 
 # Directory on herot

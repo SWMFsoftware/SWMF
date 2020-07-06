@@ -219,13 +219,13 @@ To include a new physics component which covers a new physics domain
 \item Add the new component and the new couplings in all 
       input command definitions 
       which list the components or couplings explicitly in 
-      {\tt Param/PARAM.XML};
+      {\tt PARAM.XML};
 
 \item Add the new component into the \$ValidComp variable in
       {\tt Config.pl} and in {\tt share/Scripts/CheckParam.pl};
 
 \item List the new component and the new couplings in a few 
-      commands in {\tt Param/PARAM.XML};
+      commands in {\tt PARAM.XML};
 
 \item Do all the steps described in the previous subsection.
 \end{itemize}
@@ -371,7 +371,7 @@ doc/Tex/Makefile
 New or modified input parameters should be described in the XML files. 
 For the control module parameters this file is
 \begin{verbatim}
-Param/PARAM.XML
+PARAM.XML
 \end{verbatim}
 For the component versions the XML file is located in the top level
 of the component version directory named like

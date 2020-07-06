@@ -1,3 +1,7 @@
+#COMPONENTMAP
+SC  0 -1  1
+IH  0 -1  1
+
 #DESCRIPTION
 Time accurate SC-IH run with SC switched off in second session
 
@@ -15,7 +19,6 @@ T                       DoTimeAccurate
 
 #SAVERESTART
 F                       DoSaveRestart
-
 
 #INCLUDE
 RESTART.in
@@ -36,6 +39,11 @@ HGR			TypeCoordSystem
 1.0			AverageIonCharge [e]
 1.0			ElectronTemperatureRatio
 
+#CHROMOSPHERE
+F			UseChromosphereHeating
+3.125e11                  NumberDensChromosphereCgs
+3.2e4			TeChromosphereSi
+
 #FIELDLINETHREAD
 T                       UseFieldLineThreads
 400                     nPointInThreadMax
@@ -45,6 +53,8 @@ T                       UseFieldLineThreads
 T			UseAlignedVelocity
 T			DoConvergenceCheck
 limited			TypeBc
+40
+1.0e-6
 
 #BODY
 T			UseBody
@@ -91,6 +101,7 @@ F			UseUserUpdateStates
 turbulentcascade        TypeCoronalHeating
 T                       UseWaveReflection
 1.5e5                   LperpTimesSqrtBSi
+1.1			rMinWaveReflection
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
@@ -111,7 +122,7 @@ T			UseHeatFluxCollisionless
 1.05            	CollisionlessAlpha  
 
 #TEST
-krylov radiative_cooling
+radiative_cooling write_plot_los
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -194,7 +205,7 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-4			nPlotFiles
+6			nPlotFiles
 x=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
@@ -224,6 +235,71 @@ rfr idl rwi		StringPlot
 4.0			ySizeImage
 100			nPixX
 100			nPixY
+los ins idl_ascii             StringPlot
+-1                      DnSavePlot
+100.0                    DtSavePlot
+sta:euvi stb:euvi sdo:aia
+shl VAR idl_ascii       StringPlot
+10                      DnSavePlot
+-1                      DtSavePlot
+HGR                     TypeCoordPlot
+1.03                    rMin
+1.03                    rMax
+2.0                     LonMin
+358.0                   LonMax
+4.0                     dLon
+-88.0                   LatMin
+88.0                    LatMax
+4.0                     dLat
+{HD} te ti
+{default}
+
+#LOOKUPTABLE
+AiaXrt                          NameTable
+load                            TypeAction
+SC/Param/los_tbl.dat            NameFile
+ascii                           TypeFIle
+
+#LOOKUPTABLE
+euv                             NameTable
+load                            TypeAction
+SC/Param/los_Eit_cor.dat        NameFile
+ascii                           TypeFIle
+
+#LOOKUPTABLE
+EuviA                           NameTable
+load                            TypeAction
+SC/Param/los_EuviA.dat          NameFile
+ascii                           TypeFile
+
+#LOOKUPTABLE
+EuviB                           NameTable
+load                            TypeAction
+SC/Param/los_EuviB.dat          NameFIle
+ascii                           TypeFile
+
+
+#SATELLITE
+3                       	nSatellite
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/earth.dat		NameTrajectoryFile
+MHD                     	StringSatellite
+5000                    	DnOutput
+3600.0                  	DtOutput [sec]
+SC/TRAJECTORY/sta.dat		NameTrajectoryFile
+MHD                     	StringSatellite
+-1                      	DnOutput
+-1.0                    	DtOutput [sec]
+SC/TRAJECTORY/stb.dat		NameTrajectoryFile
+
+
+PLOTTHREADS
+T				DoPlotThreads
+10				nGUniform
+T                               DoTriangulation
+T				DoTRCorrectio
 
 #END_COMP SC ------------------------------------------------------------------
 
@@ -396,10 +472,6 @@ buf MHD idl		StringPlot
 
 #END_COMP IH ------------------------------------------------------------------
 
-#COMPONENT
-IH			NameComp
-T			UseComp
-
 #COUPLE1
 SC			NameSource
 IH			NameTarget
@@ -409,6 +481,10 @@ IH			NameTarget
 #STOP
 -1			MaxIter
 100.0			TimeMax
+
+#END ##########################################################################
+
+Possible continuation with SC off
 
 #RUN ##########################################################################
 

@@ -31,6 +31,7 @@ module CON_couple_gm_pc
   public :: couple_gm_pc_init ! initialize both couplings
   public :: couple_gm_pc      ! couple GM to PC
   public :: couple_pc_gm      ! couple PC to GM
+  public :: couple_gm_pc_grid_info ! send grid information from GM to PC
 
   !REVISION HISTORY:
   ! 09/24/2013 G.Toth <gtoth@umich.edu> - initial version
@@ -85,7 +86,7 @@ contains
 
     ! Get the number of integer and real parameters to pass
     if(is_proc(GM_))call GM_get_for_pc_init(nParamInt, nParamReal)
-    call transfer_integer(GM_, PC_, nParamInt, nParamReal, &
+     call transfer_integer(GM_, PC_, nParamInt, nParamReal, &
          UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
     allocate(iParam_I(nParamInt), Param_I(nParamReal))
 
@@ -108,6 +109,59 @@ contains
   end subroutine couple_gm_pc_init
 
   !=======================================================================
+  subroutine couple_gm_pc_grid_info()
+    use CON_transfer_data, ONLY: &
+         transfer_integer, transfer_integer_array
+
+    logical :: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='couple_gm_pc_grid_info'
+
+    ! GM sends PC a number of integers and reals
+    integer, allocatable :: Int_I(:), AccumulatedSize_I(:)
+    integer :: nInt, nPicGrid
+
+    !DESCRIPTION:
+    ! This subroutine should be called from all PE-s
+    !EOP
+    !------------------------------------------------------------------------
+    
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    if(.not.(is_proc(GM_) .or. is_proc(PC_))) RETURN
+
+    ! Get the number of integers to pass
+    if(is_proc(GM_))call GM_get_for_pc_grid_info(nInt, nPicGrid)
+    call transfer_integer(GM_, PC_, nInt, UseSourceRootOnly=.false., &
+         UseTargetRootOnly=.false.)
+    call transfer_integer(GM_, PC_, nPicGrid, UseSourceRootOnly=.false., &
+         UseTargetRootOnly=.false.)
+
+    
+    if(nInt>0) then
+       allocate(Int_I(nInt))
+       allocate(AccumulatedSize_I(nPicGrid))
+       
+       if(is_proc(GM_)) &
+            call GM_get_for_pc_grid_info(nInt, nPicGrid, &
+            AccumulatedSize_I, Int_I)
+
+       ! Transfer integers from GM to PC
+       call transfer_integer_array(GM_, PC_, nInt, Int_I, &
+            UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
+       call transfer_integer_array(GM_, PC_, nPicGrid, AccumulatedSize_I, &
+            UseSourceRootOnly=.false., UseTargetRootOnly=.false.)
+
+       
+       if(is_proc(PC_)) &
+            call PC_put_from_gm_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
+
+       deallocate(Int_I)
+       deallocate(AccumulatedSize_I)
+    endif
+    
+  end subroutine couple_gm_pc_grid_info
+    
+  !=======================================================================
   subroutine couple_gm_pc(tSimulation)
 
     use CON_transfer_data, ONLY: transfer_real
@@ -126,6 +180,8 @@ contains
 
     call CON_set_do_test(NameSub, DoTest, DoTestMe)
 
+    call couple_gm_pc_grid_info
+    
     if(DoTest)write(*,*)NameSub,' starting iProc=', i_proc()
 
     if(IsTightCouple_CC(GM_,PC_)) then 

@@ -1,5 +1,7 @@
-#ECHO
-T			DoEcho
+ID Proc0 ProcEnd Stride nThread
+#COMPONENTMAP
+GM 1     999    1      -1	! GM runs on PEs 1... with MaxThread threads
+PC 0       3    1       1	! PC runs on PEs 0..3 with 1 thread
 
 #DESCRIPTION
 Run GM and PC in time accurate mode
@@ -8,9 +10,9 @@ Run GM and PC in time accurate mode
 NONE			NamePlanet
 
 SAVERESTART
-T                       DoSaveRestart 
--1                      DnSaveRestart 
-100                    DtSaveRestart
+T			DoSaveRestart 
+-1			DnSaveRestart 
+100.0			DtSaveRestart
 
 #COUPLE2TIGHT
 GM			NameCompMaster
@@ -19,10 +21,10 @@ T                       DoCouple
 
 
 COUPLE2
-GM
-PC
--1
-1
+GM			NameComp1
+PC			NameComp2
+-1			DnCouple
+1.0			DtCouple
 
 #PROGRESS
 1			DnShowProgressShort
@@ -33,12 +35,6 @@ PC
 USERMODULE
 Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
-
-#CHECKGRIDSIZE
-       8                nI
-       8		nJ
-       8		nK
-     100		MinBlockALL
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -140,22 +136,28 @@ SHOCKPOSITION
 4                    	nRootBlockX
 4                     	nRootBlockY
 4                     	nRootBlockZ
--50                  xMin
- 50  		xMax
--50                 	yMin
- 50                 	yMax
--50                  	zMin
- 50                  	zMax
+-50.0			xMin
+ 50.0			xMax
+-50.0			yMin
+ 50.0			yMax
+-50.0			zMin
+ 50.0			zMax
+
+#CHECKGRIDSIZE
+  8			nI
+  8			nJ
+  8			nK
+400			MinBlockALL
 
 #FIXEDTIMESTEP
 T			UseDtFixed
 1.0			DtFixed
 
 #PICUNIT
- 1.0                    xUnitPicSi
- 1.0                    uUnitPicSi
+1.0			xUnitPicSi
+1.0			uUnitPicSi
 
-#PICREGION
+#PICGRID
 1                       nPicRegion
 -16        	        xMinCut
  16 	           	xMaxCut
@@ -233,30 +235,28 @@ g rbody			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEPPING
-F               useSWMFDt
-T		useFixedDt
-1               dt
+F			UseSWMFDt
+T			UseFixedDt
+1.0			Dt
 
 #ELECTRON
--25
+-25			ElectronChargePerMass
 
 #EFIELDSOLVER
-1e-8                     EFieldTol
-200                      EFieldIter
-
+1e-8			EFieldTol
+200			EFieldIter
 
 #ENERGYCONSERVING
-T
-
+T			UseECSIM
 
 #DISCRETIZATION
-0.5                        theta
-0.0                        gradRhoRatio
-0.0                        cDiff
-0.0                        ratioDivC2C
+0.5			Theta
+0.0                     GradRhoRatio
+0.0                     cDiff
+0.0                     RatioDivC2C
 
 #DIVE
-F
+F			DivECleanType
 
 #PARTICLES
 5			Particles per cell in X Region 1
@@ -264,17 +264,15 @@ F
 1			Particles per cell in Z Region 1
 
 #SAVEIDL
-2
-3d fluid ascii pic			StringPlot
-1   	  				DnOutput
--1					DtOutput
-1					DxOutput
-3d fluid ascii si			StringPlot
-1   	  				DnOutput
--1					DtOutput
-1					DxOutput
-
-
+2			nPlotFile
+3d fluid ascii pic	StringPlot
+1   	  		DnOutput
+-1.0			DtOutput
+1			DxOutput
+3d fluid ascii si	StringPlot
+1   	  		DnOutput
+-1.0			DtOutput
+1			DxOutput
 
 #END_COMP PC -----------------------------------------------------------------
 
@@ -283,13 +281,13 @@ F
 5			tSimulationMax
 
 
-#END
-#RUN
+#END #########################################################################
+
+#RUN #########################################################################
 
 #COMPONENT
-GM
-F
-
+GM			NameComp
+F			UseComp
 
 #STOP
 -1			MaxIteration

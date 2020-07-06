@@ -73,8 +73,16 @@ contains
 
     CouplerPtToOh%iCompSource = PT_
     CouplerPtToOh%iCompTarget = OH_
-    CouplerPtToOh%NameVar     = 'Srho Smx Smy Smz Se' ! charge exchange sources
-    CouplerPtToOh%nVar        = 5
+
+    ! 5 source terms per fluid. Number of fluids is from number of MHD vars.
+    CouplerPtToOh%nVar    = 5 * (CouplerOhToPt%nVar / 5)
+
+    ! charge exchange sources
+    if(CouplerPtToOh%nVar == 5)then
+       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se' 
+    else
+       CouplerPtToOh%NameVar = 'Srho Smx Smy Smz Se Srho2 Smx2 Smy2 Smz2 Se2' 
+    end if
 
     call couple_points_init(CouplerPtToOh)
 
@@ -111,7 +119,6 @@ contains
        call transfer_real(OH_,PT_,DtSi)
        if(is_proc(PT_)) call PT_put_from_oh_dt(DtSi)
     endif
-
 
     call couple_points(CouplerOhToPt, OH_get_grid_info, OH_find_points, &
          OH_get_for_pt, PT_get_grid_info, PT_put_from_oh)

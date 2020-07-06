@@ -4,7 +4,7 @@
 SHELL =/bin/sh
 include ../Makefile.def
 include ../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 
 OBJECTS = ModLogAdvection.o \
@@ -67,4 +67,3 @@ SEP_for_Darwin:
 clean: cleanfiles
 
 distclean: clean
-	rm -f Makefile.DEPEND

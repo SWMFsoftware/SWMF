@@ -1,14 +1,15 @@
 Begin session: 1
 
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+SC  0 -1  1
+IH  0 -1  1
+SP  0 -1  2
 
 #DESCRIPTION
 Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line
 
-
 #TIMEACCURATE
-T
+T			IsTimeAccurate
 
 #SAVERESTART
 F                       DoSaveRestart

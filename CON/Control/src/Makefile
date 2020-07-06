@@ -9,8 +9,8 @@ SEARCHDIR = -I${SHAREDIR} -I${INTERFACEDIR} -I${LIBRARYDIR} -I${COUPLERDIR}
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
-include Makefile.RULES
+-include Makefile.DEPEND
+-include Makefile.RULES
 
 #######################
 # Shared libraries by #
@@ -137,7 +137,7 @@ EXEOBJECT = swmf.o
 SWMFEXE:
 	make TMP_DIRS
 	@$(MAKE) ${EXEOBJECT}
-	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${Lflag1} \
+	${LINK.f90} -o ${SWMFEXE} ${EXEOBJECT} Tmp_*/*.o ${LBLAS} ${LflagMpi} \
 		${HYPRELIB} ${SPICELIB} ${FORTRANLIB}
 	@echo
 	@echo Program ${SWMFEXE} has been brought up to date.
@@ -245,4 +245,3 @@ clean: cleanfiles
 	rm -rf Tmp_*
 
 distclean: clean
-	rm -f Makefile.DEPEND

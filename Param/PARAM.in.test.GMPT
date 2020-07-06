@@ -1,5 +1,9 @@
-#ECHO
-T			DoEcho
+GM and PT running on same processors for np = 1, 2, 3
+and different set of processors for      np > 3
+
+#COMPONENTMAP
+GM  0  2  1
+PT  0 -1  1
 
 #DESCRIPTION
 Startup for GM. Solar wind condition based on SC-IH run.
@@ -34,18 +38,18 @@ T			DoSaveRestart
 8			nI
 8			nJ
 8			nK
-100			MinBlockALL
+700			MinBlockALL
 
 #GRID
 1			nRootBlockX
 1			nRootBlockY
 1			nRootBlockZ
--16.                   xMin
-+16.                   xMax
--16.                   yMin
-+16.                   yMax
--16.                   zMin
-+16.                   zMax
+-16.                   	xMin
++16.                   	xMax
+-16.                   	yMin
++16.                   	yMax
+-16.                   	zMin
++16.			zMax
 
 !refine inner magnetosphere
 #GRIDRESOLUTION

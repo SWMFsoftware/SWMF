@@ -1,5 +1,5 @@
-#ECHO
-T					DoEcho
+#COMPONENTMAP
+CZ  0 -1  1				CZ runs on all PEs
 
 #PROGRESS
 10					DnProgressShort

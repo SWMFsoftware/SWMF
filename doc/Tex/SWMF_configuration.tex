@@ -18,9 +18,9 @@ Inclusion of components can be controlled using one of several methods:
 \item The user may select which version of a physics component,
       including the Empty version,
       should be compiled.  This is controlled using the Config.pl script.
-\item When submitting a run, a subset of the non-empty (compiled) 
-      components can be
-      registered to participate in the run in the LAYOUT.in file.
+\item When submitting a run, a subset of the non-empty components can be
+      registered to participate in the run with the \#COMPONENTMAP command
+      in the PARAM.in file.
 \item Registered components can be turned off and on with the \#COMPONENT
       command in the PARAM.in file.
 \end{itemize}
@@ -132,36 +132,42 @@ Config.pl -uninstall
 \end{verbatim}
 command. 
 
-\subsection{Registering components with LAYOUT.in}
+\subsection{Registering components with the \#COMPONENTMAP command}
 
 The components used in particular run has to be listed (registered)
-in the LAYOUT.in file. 
+with the \#COMPONENTMAP command in the PARAM.in file. 
 Note that empty component versions cannot be registered at all.
 Component registration allows to run the same executable with different 
 subsets of the components. For example the GM and IE components 
-can be selected with the following LAYOUT.in file
+can be selected with the following command:
 \begin{verbatim}
-ID   first last  stride
+ID Proc0 ProcEnd Stride nThread
 #COMPONENTMAP
-IE     0      1     1
-GM     2   9999     1
-#END
+IE     0       1      1
+GM     2      -1      1
 \end{verbatim}
-The first column contains the component ID, the second is the index
-of the first (root) processor for the component, the third column is the
-last processor and the last column contains the stride 
-that is typically set to 1.
-In the example above IE will run on the first 2 PE-s,
-while GM will run on the rest of the available PE-s.
-Changing the LAYOUT.in file to
+The columns contain the component ID, the index of the first (root)
+processor for the component, the last processor, the stride, and the
+optional number of threads, respectively. Negative values for the
+root and last processor ranks are taken as counting backwards
+from the total number of processors nProc. Negative values for the
+stride and number of threads are interpreted as the maximum number of
+threads (MaxThread is defined by the OMP\_NUM\_THREADS environment
+variable) divided by the absolute value of Stride or nThread,
+respectively.  This allows the same layout to be used on different
+nodes with different number of cores per node.  The default number of
+threads is 1 and the maximum value is MaxThread.
+
+The example above has IE running on the first 2 cores, and GM
+running on the rest of the cores. Changing the command to
 \begin{verbatim}
-ID   first last  stride
+ID Proc0 ProcEnd Stride nThread
 #COMPONENTMAP
-GM     0    999     1
-#END
+GM     0      -1     -1      -1
 \end{verbatim}
 will still use the same executable, but will not allow the IE 
-physics component to participate in the run.
+physics component to participate in the run, on the other hand,
+GM can possibly use multithreading with one thread per core.
 
 \subsection{Switching models on and off with PARAM.in}
 
@@ -280,7 +286,7 @@ at the coupling time, so the PE-s need to synchronize, but
 for the coupling itself. 
 
 The stub components help development of the SWMF core, but it also
-allows an efficient optimization of the LAYOUT and coupling
+allows an efficient optimization of the component layout and coupling
 schedules for an actual run, where the physical time steps
 and the CPU time needed by the components is approximately known.
 In the test runs with the Stubs, one can reduce the CPU times by 

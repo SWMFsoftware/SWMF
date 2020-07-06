@@ -1,16 +1,9 @@
 # defines OS
-include ../Makefile.def
-
-INSTALL_FILES = \
-	Control/src/Makefile.DEPEND \
-	Control/src/Makefile.RULES \
-	Library/src/Makefile.DEPEND \
-	Coupler/src/Makefile.DEPEND \
-	Interface/src/Makefile.DEPEND \
-	Stubs/src/Makefile.DEPEND
+-include ../Makefile.def
 
 install:
-	touch ${INSTALL_FILES}
+	cd Control/src; cp show_git_info.h.orig show_git_info.h
+
 clean:
 	cd Control/src;   make clean
 	cd Library/src;   make clean
@@ -19,4 +12,3 @@ clean:
 	cd Stubs/src;     make clean
 
 distclean: clean
-	rm -f ${INSTALL_FILES} *~

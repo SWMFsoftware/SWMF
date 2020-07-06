@@ -1,8 +1,14 @@
+Name Root Last Stride nThread
+#COMPONENTMAP
+GM  0 -3 -1  -1		! GM runs on 0:nProc-3 multithreaded
+IE -2 -1  1  		! IE runs on last 2 PE-s
+IM -2 -2  1		! IM runs on nProc-2 PE
+
 #DESCRIPTION
 Example file to start a run for the SWPC code selection
 
 #TIMEACCURATE
-F			DoTimeAccurate
+F			IsTimeAccurate
 
 #STARTTIME            
 2014			year
@@ -18,14 +24,14 @@ F			DoTimeAccurate
 F			UseStrict
 
 #COMPONENT
-IM                      NameComp
-F                       UseComp
+IM			NameComp
+F			UseComp
 
 #COUPLE2
 GM			NameComp1
 IE			NameComp2
-10                      DnCouple
--1.0                    DtCouple
+10			DnCouple
+-1.0			DtCouple
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -51,14 +57,14 @@ initial			NameArea
 all			NameArea
 
 #GRIDRESOLUTION
-1.0                     Resolution
-box                     NameArea
- -20.0                  xMinBox
- -16.0                  yMinBox
- -16.0                  zMinBox
-  20.0                  xMaxBox
-  16.0                  yMaxBox
-  16.0                  zMaxBox
+1.0			Resolution
+box			NameArea
+ -20.0			xMinBox
+ -16.0			yMinBox
+ -16.0			zMinBox
+  20.0			xMaxBox
+  16.0			yMaxBox
+  16.0			zMaxBox
 
 #GRIDRESOLUTION
 1/4			Resolution
@@ -67,15 +73,15 @@ shell0			NameArea
 8			r2Shell
 
 #BODY
-T                       UseBody
-2.5                     rBody     (in planet radius)
-3.0                     rCurrents (in planet radius)
-28.0                    BodyNDim  (/cc) H+
-2.8                     BodyNDim  (/cc) O+
-25000.0                 BodyTDim  (K)
+T			UseBody
+2.5			rBody     (in planet radius)
+3.0			rCurrents (in planet radius)
+28.0			BodyNDim  (/cc) H+
+2.8			BodyNDim  (/cc) O+
+25000.0			BodyTDim  (K)
 
 #MULTIFLUIDIM
-T                       DoMultiFluidIMCoupling
+T			DoMultiFluidIMCoupling
 
 #TIMESTEPPING
 1			nStage
@@ -90,18 +96,18 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner
+ionosphere			TypeBcInner
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
-T                       UseCpcpBc  (rest is read if true)
-28.0                    Rho0Cpcp   [amu/cc]  for H+
-0.1                     RhoPerCpcp [amu/cc / keV]
+T			UseCpcpBc  (rest is read if true)
+28.0			Rho0Cpcp   [amu/cc]  for H+
+0.1			RhoPerCpcp [amu/cc / keV]
 8.0			RhoCpcp    [amu/cc]  for O+
-0.3                     RhoPerCpcp [amu/cc / keV]
+0.3			RhoPerCpcp [amu/cc / keV]
 
 #SOLARWINDFILE
-T                       UseSolarWindFile
+T			UseSolarWindFile
 IMF.dat			NameSolarWindFile
 
 #REFRESHSOLARWINDFILE
@@ -112,35 +118,35 @@ T			DoReadAgain
 Sokolov			TypeFlux
 
 #SAVELOGNAME
-F                       IsLogName_n
-T                       IsLogName_e
+F			IsLogNameNstep
+T			IsLogNameEvent
 
 #SAVEPLOTNAME
-F                       IsPlotName_n
-F                       IsPlotName_t
-T                       IsPlotName_e
+F			IsPlotNameNstep
+F			IsPlotNameTime
+T			IsPlotNameEvent
 
 #PLOTFILENAME
 date			TimeUnitMax
 
 #SAVELOGFILE
 T			DoSaveLo5Dgfile
-VAR step date		StringLogfile
+VAR step date			StringLogfile
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
 dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
 3.0			StringRFlux
 
 #SAVEPLOT
-2                       nPlotFiles
+2			nPlotFiles
 y=0 MHD idl             StringPlot
-2500                    DnSavePlot
--1.                     DtSavePlot
--1.                     DxSavePlot
+2500			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 z=0 MHD idl             StringPlot
-2500                    DnSavePlot
--1.                     DtSavePlot
--1.                     DxSavePlot
+2500			DnSavePlot
+-1.			DtSavePlot
+-1.			DxSavePlot
 
 #DOAMR
 T			DoAmr
@@ -153,14 +159,14 @@ T			IsStrictAmr
 SATELLITES.in
 
 #MAGNETOMETER
-magin_GEM.dat		NameMagInputFile
+magin_GEM.dat			NameMagInputFile
 single			TypeFileOut
 -1			DnOutput
-60.0			DtOutput
+1 min			DtOutput
 
 #GEOMAGINDICES
 180			nSizeKpWindow [min]
-60.0			DtOutput      [sec]
+1 min			DtOutput
 
 #MAGNETOMETERGRID
 ascii			TypeFileMagGrid
@@ -172,33 +178,33 @@ GEO			TypeCoordMagGrid
 -80.			LatMinMagGrid
 80.			LatMaxMagGrid
 -1			DnSaveMagGrid
-60.0			DtSaveMagGrid
+1 min			DtSaveMagGrid
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #IONOSPHERE
-5                       TypeConductanceModel
-F                       UseFullCurrent
+5			TypeConductanceModel
+F			UseFullCurrent
 F			UseFakeRegion2
-178.0                   F107Flux
-1.0                     StarLightPedConductance
-0.25                    PolarCapPedConductance
+178.0			F107Flux
+1.0			StarLightPedConductance
+0.25			PolarCapPedConductance
 
 #BOUNDARY
 10.0			LatBoundary
 
 #SAVEPLOT
 1			nPlotFile
-min idl                 StringPlot
-100                     DnSavePlot
+min idl			StringPlot
+100			DnSavePlot
 -1.0			DtSavePlot
 
 #END_COMP IE -----------------------------------------------------------------
 
 #STOP
-700                     MaxIter
+700			MaxIter
 -1.			TimeMax
 
 #RUN	######################################################################
@@ -211,7 +217,7 @@ F			DoAmr
 #SCHEME
 2			nOrder
 Sokolov			TypeFlux
-mc3                     TypeLimiter
+mc3			TypeLimiter
 1.2			BetaLimiter
 
 #TIMESTEPPING
@@ -221,22 +227,22 @@ mc3                     TypeLimiter
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
-1500                    MaxIter
+1500			MaxIter
 -1.			TimeMax
 
 #RUN	######################################################################
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #PROGRESS
 1			DnProgressShort
 100			DnProgressLong
 
 #SAVERESTART
-T                       DoSaveRestart
--1                      DnSaveRestart
-600.0                    DtSaveRestart
+T			DoSaveRestart
+-1			DnSaveRestart
+10 min			DtSaveRestart
 
 #RESTARTOUTDIR
 SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
@@ -247,10 +253,10 @@ GM			NameCompCheckKill
 #CHECKSTOP
 T			DoCheckStop
 -1			DnCheckStop
-600.0			DtCheckStop
+10 min			DtCheckStop
 
 CPUTIMEMAX
-28000.0                 CpuTimeMax [sec]
+47.5 hour			CpuTimeMax
 
 #COMPONENT
 IM			NameComp
@@ -260,7 +266,7 @@ T			UseComp
 #STRICT
 T			UseStrict
 
-! Allow GM/IM and IE run in parallel. LAYOUT.in has to be properly set!
+! Allow GM/IM and IE run in parallel. #COMPONENTMAP has to be properly set!
 #COUPLEORDER
 5			nCouple
 IE GM			NameSourceTarget
@@ -272,20 +278,20 @@ IM GM			NameSourceTarget
 #COUPLE2
 GM			NameComp1
 IE			NameComp2
--1                      DnCouple
-5.0                     DtCouple
+-1			DnCouple
+5.0			DtCouple
 
 #COUPLE2
 IM			NameComp1
 GM			NameComp2
--1                      DnCouple
-10.0                    DtCouple
+-1			DnCouple
+10.0			DtCouple
 
 #COUPLE1
 IE			NameComp1
 IM			NameComp2
--1                      DnCouple
-10.0                    DtCouple
+-1			DnCouple
+10.0			DtCouple
 
 #COUPLETIME
 GM			NameComp
@@ -299,38 +305,38 @@ T			DoCheckTimeStep
 1e-6			TimeStepMin
 
 #NONCONSERVATIVE
-T                       UseNonConservative
+T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola		TypeConservCrit_I
+parabola			TypeConservCrit_I
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
 ! Setting 1
 #IMCOUPLING
-20.0                    TauCoupleIm
-T                       DoImSatTrace
-T                       DoCoupleImPressure
-T                       DoCoupleImDensity
+20.0			TauCoupleIm
+T			DoImSatTrace
+T			DoCoupleImPressure
+T			DoCoupleImDensity
 0.01			DensityCoupleFloor
-F                       DoFixPolarRegion
+F			DoFixPolarRegion
 ! end of setting 1
 
 ! Setting 2
 IMCOUPLING
-20.0                    TauCoupleIm
-T                       DoImSatTrace
-T                       DoCoupleImPressure
-T                       DoCoupleImDensity
+20.0			TauCoupleIm
+T			DoImSatTrace
+T			DoCoupleImPressure
+T			DoCoupleImDensity
 0.01			DensityCoupleFloor
-T                       DoFixPolarRegion
-5.0                     rFixPolarRegion
-56.0                    PolarNDim [amu/cc]
-50000.0                 PolarTDim [K]
+T			DoFixPolarRegion
+5.0			rFixPolarRegion
+56.0			PolarNDim [amu/cc]
+50000.0			PolarTDim [K]
 
 IMCOUPLINGSMOOTH
-10.0                    dLatSmoothIm [deg]
+10.0			dLatSmoothIm [deg]
 ! end of setting 2
 
 ! Pressures below pMinDim are replaced with pMinDim.
@@ -338,18 +344,18 @@ IMCOUPLINGSMOOTH
 1e-5			pMinDim [nPa]
 
 #SAVEPLOT
-4                       nPlotFiles
+4			nPlotFiles
 y=0 MHD idl             StringPlot
--1                      DnSavePlot
-300.			DtSavePlot
+-1			DnSavePlot
+5 min			DtSavePlot
 -1.0			DxSavePlot
 z=0 MHD idl             StringPlot
--1                      DnSavePlot
-300.			DtSavePlot
+-1			DnSavePlot
+5 min			DtSavePlot
 -1.0			DxSavePlot
 shl MHD idl_ascii	StringPlot
 -1  			DnSavePlot
-60.			DtSavePlot
+1 min			DtSavePlot
 GEO			TypeCoordPlot
 6.6			rMin
 6.6			rMax
@@ -359,10 +365,10 @@ GEO			TypeCoordPlot
 0.			LatMin
 0.			LatMax
 lcb nul tec             StringPlot  !last closed field line plots
--1                      DnSavePlot  !Tecplot (ONLY!)
-300.                    DtSavePlot
-5.                      Radius
-36                      nLon
+-1			DnSavePlot  !Tecplot (ONLY!)
+5 min			DtSavePlot
+5.			Radius
+36			nLon
 
 For Event 1, Boris factor should be at least 0.03.
 #BORIS
@@ -380,7 +386,7 @@ T			UseBorisCorrection
 ! Decay for RCM particle densities
 #DECAY
 T 			UseDecay
-36000. 			DecayTimescale in seconds
+10 hour			DecayTimescale
 
 #END_COMP IM -----------------------------------------------------------------
 
@@ -388,9 +394,9 @@ T 			UseDecay
 
 #SAVEPLOT
 1			nPlotFile
-aur idl                 StringPlot
--1                      DnSavePlot
-60.0			DtSavePlot
+aur idl			StringPlot
+-1			DnSavePlot
+1 min			DtSavePlot
 
 #END_COMP IE -----------------------------------------------------------------
 
@@ -415,31 +421,31 @@ STOP
 
 #SATELLITE
 7			nSatellite
-MHD time date		StringSatellite
+MHD time date			StringSatellite
 -1			DnOutput
 3.			DtOutput
 Satellites/goes11.dat
-MHD time date		StringSatellite
+MHD time date			StringSatellite
 -1			DnOutput
 3.			DtOutput
 Satellites/goes12.dat
-MHD time date		StringSatellite
+MHD time date			StringSatellite
 -1			DnOutput
 3.  			DtOutput
 Satellites/lanl89.dat
-MHD time date		StringSatellite
+MHD time date			StringSatellite
 -1			DnOutput
 3.  			DtOutput
 Satellites/lanl94.dat
-MHD time date		StringSatellite
+MHD time date			StringSatellite
 -1			DnOutput
 3.  			DtOutput
 Satellites/lanl97.dat
-MHD time date		StringSatellite
+MHD time date			StringSatellite
 -1			DnOutput
 3.  			DtOutput
 Satellites/lanl01.dat
-MHD time date		StringSatellite
+MHD time date			StringSatellite
 -1			DnOutput
 3.  			DtOutput
 Satellites/lanl02.dat

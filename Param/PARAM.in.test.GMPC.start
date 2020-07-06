@@ -1,5 +1,9 @@
-#ECHO
-T			DoEcho
+This tests GM-PC with identical layouts up on 4 processors,
+and different layout when run on different processors.
+
+#COMPONENTMAP
+GM  0 -1  1		GM runs on all PE-s
+PC  0  3  1		PC runs on 4 PE-s
 
 #DESCRIPTION
 Run GM and PC in time accurate mode
@@ -32,13 +36,13 @@ rotatedcartesian	NameGeometry
 
 USERMODULE
 Waves and GEM, Yingjuan Ma
- 1.30                  VersionUserModule
+ 1.30            	VersionUserModule
 
 #CHECKGRIDSIZE
-       8                nI
-       8                nJ
-       1                nK
-     100                MinBlockALL
+  8			nI
+  8			nJ
+  1			nK
+800			MinBlockALL
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -190,7 +194,7 @@ T			UseDtFixed
  1.0                    xUnitPicSi
  1.0                    uUnitPicSi
 
-#PICREGION
+#PICGRID
 1                       nPicRegion
 -26.458333333           xMinCut
  26.458333333         	xMaxCut
@@ -263,7 +267,9 @@ z=0 all idl_ascii       StringPlot
 
 
 #TIMESTEPPING
-T			UseSWMFDt
+F			UseSWMFDt
+T			useFixedDt
+0.5			fixedDt
 
 #DIVE
 F

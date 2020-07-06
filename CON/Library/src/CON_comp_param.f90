@@ -19,6 +19,7 @@
 ! (listed in alphabetical order): 
 !
 !\begin{itemize}
+!\item[CZ] Convection Zone
 !\item[EE] Eruptive Event
 !\item[GM] Global Magnetosphere
 !\item[IE] Ionospheric Electrodynamics
@@ -33,7 +34,6 @@
 !\item[SC] Solar Corona
 !\item[SP] Solar Energetic Particles
 !\item[UA] Upper Atmosphere
-!\item[CZ] Convection Zone
 !\end{itemize}
 
 !INTERFACE:	
@@ -54,11 +54,11 @@ module CON_comp_param
 
   ! Named indexes for the components
   integer, parameter :: &
-       EE_=1, GM_=2, IE_=3, IH_=4 , IM_=5, OH_=6, PC_=7, PS_=8, PT_=9, PW_=10, &
+       EE_=1, GM_=2, IE_=3, IH_=4 , IM_=5, OH_=6, PC_=7, PS_=8, PT_=9, PW_=10,&
        RB_=11, SC_=12 ,SP_=13, UA_=14, CZ_=15
 
   ! Length of the version name of the component
-  integer, parameter :: lNameVersion=40 
+  integer, parameter :: lNameVersion=34 
 
   ! Named indexes of the MPI parameters
   integer, parameter :: ProcZero_  = 1 ! the spokesman for the group
@@ -72,7 +72,7 @@ module CON_comp_param
   integer, parameter :: nMpiParam = 7  ! number of MPI parameters
 
   ! Name of the processor map file
-  character (len=*), parameter  :: NameMapFile = "LAYOUT.in"
+  character(len=9)   :: NameMapFile = "LAYOUT.in"
 
   !
   !PUBLIC MEMBER FUNCTIONS:
@@ -121,6 +121,8 @@ contains
   end function i_comp_name
   !===========================================================================
   subroutine check_i_comp(iComp,NameCaller)
+    use ModUtilities, ONLY: CON_stop
+
     integer, intent(in) :: iComp
     character (len=*), intent(in) :: NameCaller
     !-------------------------------------------------------------------------

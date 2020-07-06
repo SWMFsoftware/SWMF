@@ -6,7 +6,7 @@ SHELL =/bin/sh
 
 include ../../../Makefile.def
 include ../../../Makefile.conf
-include Makefile.DEPEND
+-include Makefile.DEPEND
 
 SEARCHDIR = -I${SHAREDIR} -I${COUPLERDIR} -I${LIBRARYDIR}
 
@@ -67,4 +67,3 @@ ${MY_LIB}: ${MODULES}
 clean: cleanfiles
 
 distclean: clean
-	rm -rf Makefile.DEPEND

@@ -19,6 +19,7 @@ module PC_wrapper
   public:: PC_get_for_gm
   public:: PC_get_grid_info
   public:: PC_put_from_gm
+  public:: PC_put_from_gm_grid_info
   public:: PC_put_from_gm_dt
   public:: PC_put_from_gm_init
 
@@ -179,6 +180,18 @@ contains
 
   !============================================================================
 
+  subroutine PC_put_from_gm_grid_info(nInt, nPicGrid, AccumulatedSize_I, Int_I)
+    integer, intent(in)         :: nInt, nPicGrid
+    integer, intent(in)         :: Int_I(nInt), AccumulatedSize_I(nPicGrid)    
+    character(len=*), parameter :: NameSub='PC_put_from_gm_grid_info'
+    !--------------------------------------------------------------------------
+
+    call CON_stop(NameSub//': PC_ERROR: empty version cannot be used!')
+
+  end subroutine PC_put_from_gm_grid_info
+  
+  !============================================================================
+  
   subroutine PC_put_from_gm_dt(DtSi)
 
     real,    intent(in) :: DtSi

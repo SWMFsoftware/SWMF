@@ -1,5 +1,6 @@
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+GM  0 -1  1		GM runs on all PE-s
+PC  0  3  1		PC runs on 4 PE-s
 
 ! Restart header for SWMF
 #INCLUDE
@@ -12,10 +13,12 @@ RESTART.in		NameRestartFile
 #SAVERESTART
 F                       DoSaveRestart 
 
-#COUPLE2TIGHT
+#COUPLE2
 GM			NameCompMaster
 PC			NameCompSlave
-T                       DoCouple
+-1			DnCouple
+1.28			DtCouple
+
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -43,7 +46,7 @@ T			UseNonConservative
 2		uUnitPicSi [m/s] Speed of light for the second PIC region
 2               ScalingFactor
 
-#PICREGION
+#PICGRID
 2                       nPicRegion
 -25.1        	        xMinCut
 -5.0            	xMaxCut
@@ -112,6 +115,11 @@ g rbody			NamePars
 
 #RESTART
 T			DoRrestart
+
+#TIMESTEPPING
+F			UseSWMFDt
+T			useFixedDt
+1.28			fixedDt
 
 #SAVEIDL
 1

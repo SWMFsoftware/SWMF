@@ -18,6 +18,9 @@ SHELL=/bin/sh
 #BOC
 VERSION = 2.3
 
+# Allow setting CONFIG_PL="./Config.pl -verbose" if desired
+CONFIG_PL = ./Config.pl
+
 #
 # The default target is SWMF so it is listed first
 #
@@ -45,7 +48,8 @@ help:
 	@echo '    install     (to be used via Config.pl only)'
 	@#^CMP IF NOT REMOVEDOCTEX BEGIN
 	@echo ' '
-	@echo '    PDF         (make PDF  version of the documentation)' #^CMP IF DOC
+	@echo '    MANUAL      (make all manuals)'          #^CMP IF DOC
+	@echo '    PDF         (make PDF manuals for SWMF)' #^CMP IF DOC
 	@#^CMP END  REMOVEDOCTEX
 	@#^CFG IF TESTING BEGIN
 	@echo '    test        (run all tests for the SWMF)'
@@ -111,14 +115,9 @@ ENV_CHECK:
 	  exit 1; \
 	fi);
 
-#
-# JOB SUBMISSION SCRIPTS TO COPY TO RUN
-#
-# The MACHINE variable holds the machine name for which scripts should
-# be copied from share/JobScripts to the run directory when it is created. 
-# The default is the short name of the current machine with the trailing
-# 1 or 2 numbers removed (so 'pfe23' and 'pfe20' are both converted to 'pfe')
-MACHINE = `hostname | sed -e 's/\..*//; s/[0-9]\?[0-9]$$//'`
+# Regenerate README from the README.markdown file
+README: README.markdown
+	perl -pe '$$_ = "" if /\`\`\`/; s/\`//g' README.markdown > README
 
 #
 # install for the 1st time
@@ -146,9 +145,9 @@ install: ENV_CHECK mkdir
 			     perl -i -pe 's/GM/IH/' IH/BATSRUS/Config.pl; \
 		fi; \
 	fi
-	@for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v /Empty/`; \
+	@for i in `ls -d [A-Z][A-Z]/*/ | grep -v /Empty/`; \
 		do (if([ -f "$$i/Config.pl" ]); then \
-			echo Installing $$i; cd $$i; ./Config.pl -install=c; \
+			echo Installing $$i; cd $$i; ${CONFIG_PL} -install=c; \
 		    fi); \
 		done
 	@echo
@@ -156,7 +155,7 @@ install: ENV_CHECK mkdir
 	@echo
 
 info:
-	@echo "NOTE: HYPRE and BATSRUS clones should not be installed!"
+	@echo "NOTE: HYPRE, AMREX, BATSRUS clones and PC/AMPS should not be installed!"
 	@echo "Total lines of Fortran: `wc -l */*/src*/*.f* */*/src*/*/*.f* | tail -1`"
 	@echo "Total lines of C++    : `wc -l */*/src*/*.c* */*/src*/*.h */*/src*/*/*.c* */*/src*/*/*.h | tail -1`"
 	@echo "share/Library/        : `wc -l share/Library/src/*.f* share/Library/test/*.f* | tail -1`"
@@ -168,12 +167,12 @@ info:
 	@echo "CON/*	             : `wc -l CON/*/src/*.f* | tail -1`"
 	@echo "CON/Interface         : `wc -l CON/Interface/src/*.f* | tail -1`"
 	@echo "srcInterface+wrappers : `wc -l ??/*/srcInterface/*.[fch]* ??/*/src/??_wrapper.f90 | tail -1`"
-	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* PT/AMPS/MakefileTest/Table | tail -1`"
+	@echo "Makefile-s            : `wc -l Makefile* */[mM]akefile* */*/[mM]akefile* */*/*/[mM]akefile* */*/*/*/[mM]akefile* */*/*/*/*/[mM]akefile* PT/AMPS/MakefileTest/* | tail -1`"
 	@echo "Perl scripts          : `wc -l *.pl */*.pl */*/*.pl */*/*/*.pl */*/*/*/*.pl */*/*/*/*/*.pl | tail -1`"
-	@echo "Python scripts        : `wc -l */*/*/*.py */*/*/*/*.py | tail -1`"
+	@echo "Python scripts        : `wc -l */*/*.py */*/*/*.py */*/*/*/*.py */*/*/*/*/*.py | tail -1`"
 	@echo "IDL scripts           : `wc -l */*/*/*.pro */*/*/*/*.pro | tail -1`"
 	@echo "Latex documentation   : `wc -l */*/*.tex */*/*/*.tex */*/*/*/*.tex | tail -1`"
-	@echo "XML descriptions      : `wc -l */*.XML */*/*.XML | tail -1`"
+	@echo "XML descriptions      : `wc -l PARAM.XML */*/*.XML | tail -1`"
 
 mkdir: ./lib ./bin
 
@@ -187,10 +186,15 @@ rmdir:
 	-@rm -rf lib
 	-@rm -rf bin
 
+GITINFO:
+	@(if [ "${GITINFO}" != "NO" ]; then \
+		${SCRIPTDIR}/gitall -r=f > ${CONTROLDIR}/show_git_info.h; \
+	fi)
+
 #
 #	SWMF
 #
-SWMF:	ENV_CHECK
+SWMF:	ENV_CHECK GITINFO
 	@cd ${CONTROLDIR}; $(MAKE) SWMFEXE  
 	@echo ' '
 
@@ -218,6 +222,10 @@ NOMPI: ENV_CHECK
 #
 PIDL:	ENV_CHECK
 	cd ${SHAREDIR}; $(MAKE) PIDL
+	@echo ' '
+
+FDIPS:	ENV_CHECK
+	cd ${MAGNETOGRAMDIR}; ${MAKE} FDIPS
 	@echo ' '
 
 # Convert .out data to .dat 
@@ -272,6 +280,12 @@ GUI_stop:
 #					^CMP IF DOC BEGIN
 #	Create the documentation files      ^CMP IF NOT REMOVEDOCTEX BEGIN
 #	
+MANUAL: ENV_CHECK
+	@cd doc/Tex; make cleanpdf; make PDF
+	@if([ -d "util/CRASH" ]); then cd util/CRASH/doc/Tex; make PDF; fi
+	@if([ -d "GM/BATSRUS" ]); then cd GM/BATSRUS; make PDF; fi #^CMP IF GM
+	@if([ -d "PW/PWOM"    ]); then cd PW/PWOM;    make PDF; fi #^CMP IF PW
+
 PDF:	ENV_CHECK
 	@cd doc/Tex; make cleanpdf; make PDF
 
@@ -286,7 +300,7 @@ CLEAN1 = cleanpdf #				^CMP IF NOT MAKEPDF
 clean: ENV_CHECK
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/`; \
+	for i in `ls -d [A-Z][A-Z]/*/`; \
 		do (echo Cleaning $$i; cd $$i; make clean); done
 	-@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make clean; fi #^CMP IF ESMF
 	cd CON;			make clean
@@ -304,15 +318,15 @@ clean: ENV_CHECK
 	@echo
 
 distclean: 
-	./Config.pl -uninstall
+	${CONFIG_PL} -uninstall
 
 allclean: ENV_CHECK rmdir
 	@echo
 	rm -rf *~ doc/*~ Param/*~ TAGS
 	for i in `ls -d [A-Z][A-Z]/Empty/`; \
 		do (echo Distcleaning $$i; cd $$i; make distclean); done
-	for i in `ls -d [A-Z][A-Z]/*/ | grep -v /CVS/ | grep -v Empty`; \
-		do (echo Uninstalling $$i; cd $$i; ./Config.pl -uninstall); done
+	for i in `ls -d [A-Z][A-Z]/*/ | grep -v Empty`; \
+		do (echo Uninstalling $$i; cd $$i; ${CONFIG_PL} -uninstall); done
 	@if([ -d ESMF ]); then cd ESMF/ESMF_SWMF;make distclean;fi #^CMP IF ESMF
 	cd CON;			make distclean
 	@#^CMP IF DOC BEGIN
@@ -333,9 +347,10 @@ dist:
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
-	./Config.pl -uninstall
+	${CONFIG_PL} -uninstall
 	-rm -rf */*/run_test
 	tar -cf tmp.tar  README
+	tar -rf tmp.tar  PARAM.XML
 	tar -rf tmp.tar  Makefile 
 	tar -rf tmp.tar  Makefile.test          #^CMP IF TESTING
 	tar -rf tmp.tar  output                 #^CMP IF TESTING
@@ -365,8 +380,7 @@ ${RUNDIR}:
 
 rundir: ENV_CHECK
 	mkdir -p ${RUNDIR}/STDOUT
-	cp Param/LAYOUT.DEFAULT       ${RUNDIR}/LAYOUT.in
-	cp Param/PARAM.DEFAULT        ${RUNDIR}/PARAM.in
+	@echo "Copy a working PARAM.in file here" > ${RUNDIR}/PARAM.in
 	cp share/Scripts/Restart.pl   ${RUNDIR}/Restart.pl
 	cp share/Scripts/PostProc.pl  ${RUNDIR}/PostProc.pl
 	touch ${RUNDIR}/core
@@ -392,7 +406,7 @@ CDATE = `date +%Y%b%d`
 
 rundir_code:
 	make rundir
-	./Config.pl -show > _config_show
+	${CONFIG_PL} -show > _config_show
 	mkdir code_${CDATE}
 	rsync -a --exclude '*.o' --exclude '*.a' --exclude '*.exe' --exclude 'run*' --exclude '*~' --exclude '*.mod' --exclude code_${CDATE} . code_${CDATE}/
 	tar -czf ${RUNDIR}/code_${CDATE}.tgz code_${CDATE}
@@ -446,7 +460,7 @@ EEBATSRUS: EE/BATSRUS/src/Makefile \
 		${SCRIPTDIR}/Rename.pl -w -r -common=EE ${EE_SRC}; \
 		touch srcInterface/Makefile.DEPEND; \
 		perl -i -pe 's/GM/EE/' Config.pl; \
-		./Config.pl -install=c -u=Ee -e=MhdEosRad
+		${CONFIG_PL} -install=c -u=Ee -e=MhdEosRad
 
 #^CMP END EE
 
@@ -486,7 +500,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		touch Makefile.DEPEND
 	cd IH/BATSRUS; \
 		perl -i -pe 's/GM/IH/' Config.pl; \
-		./Config.pl -u=Ih -e=Mhd
+		${CONFIG_PL} -u=Ih -e=Mhd
 
 #^CMP END IH
 
@@ -531,7 +545,7 @@ OHBATSRUS: OH/BATSRUS/src/Makefile \
 	touch OH/BATSRUS/srcInterface/Makefile.DEPEND
 	cd OH/BATSRUS; \
 		perl -i -pe 's/GM/OH/' Config.pl; \
-		./Config.pl -install=c -e=OuterHelio -u=OuterHelio
+		${CONFIG_PL} -install=c -e=OuterHelio -u=OuterHelio
 
 
 #^CMP END OH
@@ -577,7 +591,7 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
 	cd SC/BATSRUS; \
 		perl -i -pe 's/GM/SC/' Config.pl; \
-		./Config.pl -install=c -u=Sc -e=MhdCorona
+		${CONFIG_PL} -install=c -u=Sc -e=MhdCorona
 
 #^CMP END SC
 

@@ -1,5 +1,9 @@
-#ECHO
-T			DoEcho
+This tests GM-PC coupling with different layouts.
+This is not meant to be a practical layout.
+
+#COMPONENTMAP
+GM  1 -1  1		GM runs on all PE-s except 0
+PC  0  3  1		PC runs on first 4 PE-s
 
 #DESCRIPTION
 Run GM and PC in time accurate mode
@@ -12,10 +16,11 @@ T                       DoSaveRestart
 -1                      DnSaveRestart 
 2.56                    DtSaveRestart
 
-#COUPLE2TIGHT
+#COUPLE2
 GM			NameCompMaster
 PC			NameCompSlave
-T                       DoCouple
+-1			DnCouple
+1.28			DtCouple
 
 #PROGRESS
 1			DnShowProgressShort
@@ -26,12 +31,6 @@ T                       DoCouple
 USERMODULE
 Waves and GEM, Yingjuan Ma
  1.30                  VersionUserModule
-
-#CHECKGRIDSIZE
-       8                nI
-       8		nJ
-       1		nK
-     100		MinBlockALL
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -140,10 +139,15 @@ dt    = 0.2*dtmax   = 1.066
 -0.5                  	zMin
  0.5                  	zMax
 
+#CHECKGRIDSIZE
+  8			nI
+  8			nJ
+  1			nK
+800			MinBlockALL
+
 #FIXEDTIMESTEP
 T			UseDtFixed
 640/500			DtFixed
-
 
 #PICREGIONUNIT
 2               nPicRegion
@@ -155,7 +159,7 @@ T			UseDtFixed
 2               ScalingFactor
 
 
-#PICREGION
+#PICGRID
 2                       nPicRegion
 -25.1        	        xMinCut
 -5.0            	xMaxCut
@@ -226,6 +230,12 @@ g rbody			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 ! ECSIM and divE cleaning is on by default from 11/2018.
+
+#TIMESTEPPING
+F			UseSWMFDt
+T			useFixedDt
+1.28			fixedDt
+
 
 #ELECTRON
 -25.0			Charge/mass ratio (qom)

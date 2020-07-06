@@ -7,12 +7,8 @@ check_src:
 		exit 1; \
 	fi)
 
-INSTALLFILES = src/Makefile.DEPEND src/Makefile.RULES srcBATL/Makefile.DEPEND \
-	srcInterface/Makefile.DEPEND
-
 install:
 	@(if([ -f src/Makefile ]); then \
-		touch ${INSTALLFILES}; \
 		cp -f src/ModSize_orig.f90 src/ModSize.f90; \
 		cp -f srcBATL/BATL_size_orig.f90 srcBATL/BATL_size.f90; \
 	fi)
@@ -34,11 +30,11 @@ rundir: check_src
 		ln -s ${BINDIR}/EARTH_TRAJ.exe .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
-		ln -s ${DIR}/GM/BATSRUS/Param/HELIOSPHERE Param
+		ln -s ${DIR}/GM/BATSRUS/Param/HELIOSPHERE Param; \
+		ln -s ${DIR}/GM/BATSRUS/data/TRAJECTORY .
 
 clean:  
 	@(if([ -f src/Makefile ]); then \
-	   touch ${INSTALLFILES}; \
 	   cd src; make clean; cd ..; \
 	   cd srcBATL; make clean; cd ..; \
 	   cd srcInterface; make clean; \
@@ -49,7 +45,6 @@ distclean:
 
 allclean:
 	@(if([ -f Makefile.def ]); then \
-		touch srcInterface/Makefile.DEPEND; \
 		cd srcInterface; make distclean; \
 	fi)
 	rm -rf src srcBATL srcUser srcEquation \

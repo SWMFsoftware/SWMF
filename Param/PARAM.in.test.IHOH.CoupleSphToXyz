@@ -1,6 +1,9 @@
-Parameter file for test7 - launch a blob in IH, advect to OH, calcualte error
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+IH  0 -1  1		IH runs on all PEs
+OH  0 -1  1		OH runs on all PEs
+
+#DESCRIPTION
+launch a blob in IH, advect to OH, calculate error
 
 #SAVERESTART
 F			DoSaveRestart
@@ -93,6 +96,9 @@ F			UseUniformAxis
  1290.0                 yMax
 -1290.0                 zMin
  1290.0                 zMax
+
+#GRIDBLOCKALL
+3000			MaxBlock
 
 #LIMITRADIUS
 50.			rMin
@@ -226,6 +232,9 @@ T
 7.			yMax
 -7.			zMin
 7.			zMax
+
+#GRIDBLOCKALL
+3000			MaxBlock
 
 #GRIDLEVEL
 3			nLevelArea

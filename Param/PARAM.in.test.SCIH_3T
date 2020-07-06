@@ -1,10 +1,15 @@
 Begin session: 1
 
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+SC  0 -1  1
+IH  0 -1  1
 
 #DESCRIPTION
 Input file for creating a steady state solar corona
+
+#COMPONENT
+IH			NameComp
+F			UseComp
 
 #TIMEACCURATE
 F                       DoTimeAccurate
@@ -20,11 +25,65 @@ F                       DoTimeAccurate
 
 #BEGIN_COMP SC --------------------------------------------------------------
 
+#GRIDBLOCKALL
+1200			MaxBlock
+
 INCLUDE
 SC/restartIN/restart.H	
 
+turn these off when restarting
+---------------------------------------------------
+#GRIDGEOMETRY
+spherical_genr
+SC/Param/grid_TR.dat
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlockX
+2			nRootBlockY
+1			nRootBlockZ
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#LIMITRADIUS
+1.0			rMin
+24.0			rMax
+
 #COORDSYSTEM
 HGR			TypeCoordSystem
+
+#AMRREGION
+InnerShell		NameRegion
+shell0			TypeRegion
+1.0			Radius1
+1.7			Radius2
+
+#AMRCRITERIALEVEL
+3			nCriteria
+Level			TypeCriteria
+2			RefineTo
+2			CoarsenTo
+Level +InnerShell		TypeCriteria
+5     			RefineTo
+5			CoarsenTo
+currentsheet		TypeCriteria
+0.5			CoarsenLimit
+0.5			RefineLimit
+5			MaxLevel
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
+
+#DOAMR
+T			DoAmr
+30			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
 
 #PLASMA
 1.0			IonMass [amu]
@@ -134,58 +193,6 @@ T			DoExtendTransitionRegion
 2.2e5			TeModSi
 1.0e1			DeltaTeModSi
 
-turn these off when restarting
----------------------------------------------------
-#GRIDGEOMETRY
-spherical_genr
-SC/Param/grid_TR.dat
-
-! Use a true sphere, so box is made much larger
-#GRID
-1			nRootBlockX
-2			nRootBlockY
-1			nRootBlockZ
--100.0			xMin
- 100.0			xMax
--100.0			yMin
- 100.0			yMax
--100.0			zMin
- 100.0			zMax
-
-#LIMITRADIUS
-1.0			rMin
-24.0			rMax
-
-----------------------------------------------------
-#AMRREGION
-InnerShell		NameRegion
-shell0			TypeRegion
-1.0			Radius1
-1.7			Radius2
-
-#AMRCRITERIALEVEL
-3			nCriteria
-Level			TypeCriteria
-2			RefineTo
-2			CoarsenTo
-Level +InnerShell		TypeCriteria
-5     			RefineTo
-5			CoarsenTo
-currentsheet		TypeCriteria
-0.5			CoarsenLimit
-0.5			RefineLimit
-5			MaxLevel
-
-#GRIDLEVEL
-2			nLevelArea
-initial			NameArea
-
-#DOAMR
-T			DoAmr
-30			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -259,7 +266,35 @@ T			DoSaveInitial
 
 #END_COMP SC ----------------------------------------------------------------
 
+#STOP
+50			MaxIteration
+-1.0			tSimulationMax
+
+End session: 1
+#RUN ##########################################################################
+Begin session: 2
+
+#BEGIN_COMP SC ----------------------------------------------------------------
+
+#AMR
+-1			DnRefine
+
+#END_COMP SC   ----------------------------------------------------------------
+
+#COMPONENT
+IH			NameComp
+T			UseComp
+
+#COUPLE1
+SC			NameSource
+IH			NameTarget
+1			DnCouple
+-1.0			DtCouple
+
 #BEGIN_COMP IH -------------------------------------------------------------
+
+#GRIDBLOCKALL
+6800			MaxBlock
 
 INCLUDE
 IH/restartIN/restart.H
@@ -434,35 +469,6 @@ rho ux uy uz ti te bx by bz I01 I02 p ppar pe ehot sign
 g rbody
 
 #END_COMP IH ---------------------------------------------------------------
-
-#COMPONENT
-IH			NameComp
-F			UseComp
-
-#STOP
-50			MaxIteration
--1.0			tSimulationMax
-
-End session: 1
-#RUN ##########################################################################
-Begin session: 2
-
-#BEGIN_COMP SC ----------------------------------------------------------------
-
-#AMR
--1			DnRefine
-
-#END_COMP SC   ----------------------------------------------------------------
-
-#COMPONENT
-IH			NameComp
-T			UseComp
-
-#COUPLE1
-SC			NameSource
-IH			NameTarget
-1			DnCouple
--1.0			DtCouple
 
 #STOP
 51			MaxIter

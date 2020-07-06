@@ -8,11 +8,18 @@ $^I = "";
 
 use strict;
 
+# Include current dir perl modules
+# Needed for perl5 change of not including current dir
+use Cwd qw( abs_path );
+use File::Basename qw( dirname );
+use lib dirname(abs_path($0));
+
 # Run the shared Config.pl script first
 our $Component       = '';
 our $Code            = 'SWMF';
 our $MakefileDefOrig = 'CON/Makefile.def';
 our @Arguments = @ARGV;
+our $CloneOnly;
 
 # Hash of model names with corresponding component name
 my %component = (
@@ -20,11 +27,11 @@ my %component = (
     "BATSRUS"       => "GM", 
     "Ridley_serial" => "IE", 
     "CIMI"          => "IM", 
-    "CRCM"          => "IM", 
     "HEIDI"         => "IM", 
     "RCM2"          => "IM", 
     "ALTOR"         => "PC", 
-    "IPIC3D2"       => "PC", 
+    "IPIC3D2"       => "PC",
+    "FLEKS"         => "PC", 
     "DGCPM"         => "PS", 
     "AMPS_PT"       => "PT", 
     "AMPS_PC"       => "PC", 
@@ -35,8 +42,7 @@ my %component = (
 
 my $History;
 my @models;
-my $CloneOnly;
-my $Sleep;
+my $Sleep = $ENV{GITLABSLEEP};
 foreach (@Arguments){
     if( /^-(install|clone)/){
 	$CloneOnly = 1 if /^-clone/;
@@ -61,7 +67,7 @@ my $gitclone;
 $gitclone  = "sleep $Sleep; " if $Sleep;
 $gitclone .= "git clone";
 $gitclone .= " --depth=1" unless $History;
-$gitclone .= " herot:/GIT/FRAMEWORK";
+$gitclone .= " git\@gitlab.umich.edu:swmf_software";
 
 my $repo;
 foreach $repo ("share", "util", @models){
@@ -78,6 +84,7 @@ my $config     = "share/Scripts/Config.pl";
 require $config or die "Could not find $config!\n";
 
 if($CloneOnly){
+    # The share/Scripts/Config.pl is needed before this to possibly set date
     print "Done cloning git repositories\n";
     exit 0;
 }
@@ -93,7 +100,7 @@ our $Show;
 our $Help;
 our $WARNING;
 our $ERROR;
-our $Hdf5;
+our $NewHdf5;
 
 &print_help if $Help;
 
@@ -136,10 +143,9 @@ if($ListVersions){
 
 &set_versions if @NewVersion;
 
-if($Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no'){
-    @NewVersion = ("PC/Empty");
-    &set_versions;
-    die "Setting PC/Empty because PC/IPIC3D requires HDF5 compiler.\n"
+# Set HDF5 macro for IPIC3D2 if necessary
+if($Version{PC} eq 'IPIC3D2' and ($NewHdf5 or @NewVersion)){
+    &shell_command("cd PC/IPIC3D2; ./Config.pl -sethdf5");
 }
 
 if($Installed){
@@ -308,10 +314,6 @@ sub set_versions{
 	    }
 	}
     }
-#^CMP if PC BEGIN 
-    die "$ERROR PC/IPIC3D version requires HDF5 compiler. Use -hdf5.\n"
-	if $Version{PC} eq 'IPIC3D' and $Hdf5 eq 'no';
-#^CMP END PC
     return unless $change;
 
     # CON/Interface needs to be recompiled (uses modules from component wrappers)
@@ -344,7 +346,7 @@ sub set_grid_size{
 
     # Create a %GridSize{CompID} hash from the GridSize string
     my %GridSize;
-    while( $GridSize =~ s/^($ValidComp)[:,]([\d,]+)// ){
+    while( $GridSize =~ s/^($ValidComp)[:,]([\d,\/]+)// ){
 	my $Comp=$1;
 	my $Grid=$2;
 	$Grid =~ s/,$//;            # remove trailing comma
@@ -455,7 +457,7 @@ sub print_help{
 -sleep=VALUE   Sleep VALUE number of seconds after each git clone, so
 	       the server does not reject the ssh connection. Only useful
 	       in combination with the -install and -clone options. 
-               Default is no delay.
+               Default is set by the \$GITLABSLEEP environment variable.
 
 -g=ID:GRIDSIZE set the size of the grid to GRIDSIZE for the component 
                identified with ID. This flag can occur multiple times and/or 

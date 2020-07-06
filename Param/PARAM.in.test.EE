@@ -1,5 +1,5 @@
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+EE  0 -1  1		EE runs on all PEs
 
 #INCLUDE
 RESTART.in
@@ -129,10 +129,6 @@ SAVEINITIAL
 T
 
 #END_COMP EE ----------------------------------------------------------------
-
-#COMPONENT
-SC			NameComp
-F			UseComp
 
 #STOP
 10			MaxIteration

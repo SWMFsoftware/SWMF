@@ -1,5 +1,5 @@
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+SC  0 -1  1		SC runs on all PEs
 
 #DESCRIPTION
 Input file for creating a steady state solar corona with Threaded-Field-Line LC
@@ -23,6 +23,61 @@ T			DoSaveRestart
 
 
 #BEGIN_COMP SC --------------------------------------------------------------
+
+#GRIDGEOMETRY
+spherical_lnr		TypeGeometry
+
+! Use a true sphere, so box is made much larger
+#GRID
+1			nRootBlockX
+2			nRootBlockY
+1			nRootBlockZ
+-100.0			xMin
+ 100.0			xMax
+-100.0			yMin
+ 100.0			yMax
+-100.0			zMin
+ 100.0			zMax
+
+#GRIDBLOCKALL
+1200			MaxBlock
+
+#LIMITRADIUS
+1.05			rMin
+24.0			rMax
+
+#DOAMR
+T			DoAmr
+60			DnAmr
+-1.0			DtAmr
+T			IsStrictAmr
+
+#AMRREGION
+InnerShell		NameRegion
+box_gen			TypeRegion
+1.05			Radius1
+0.0
+-70.0
+1.7			Radius2
+360.0
+70.0
+
+#AMRCRITERIALEVEL
+3			nCriteria
+Level			TypeCriteria
+2			RefineTo
+2			CoarsenTo
+Level +InnerShell	TypeCriteria
+5     			RefineTo
+5			CoarsenTo
+currentsheet		TypeCriteria
+0.5			CoarsenLimit
+0.5			RefineLimit
+5			MaxLevel
+
+#GRIDLEVEL
+2			nLevelArea
+initial			NameArea
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
@@ -144,60 +199,6 @@ load			NameCommand
 SC/Param/AW_TR.dat
 ascii			TypeFile
 
----------------------------------------------------
-#GRIDGEOMETRY
-spherical_lnr
-
-! Use a true sphere, so box is made much larger
-#GRID
-1			nRootBlockX
-2			nRootBlockY
-1			nRootBlockZ
--100.0			xMin
- 100.0			xMax
--100.0			yMin
- 100.0			yMax
--100.0			zMin
- 100.0			zMax
-
-#LIMITRADIUS
-1.05			rMin
-24.0			rMax
-
-----------------------------------------------------
-#AMRREGION
-InnerShell		NameRegion
-box_gen			TypeRegion
-1.05			Radius1
-0.0
--70.0
-1.7			Radius2
-360.0
-70.0
-
-#AMRCRITERIALEVEL
-3			nCriteria
-Level			TypeCriteria
-2			RefineTo
-2			CoarsenTo
-Level +InnerShell	TypeCriteria
-5     			RefineTo
-5			CoarsenTo
-currentsheet		TypeCriteria
-0.5			CoarsenLimit
-0.5			RefineLimit
-5			MaxLevel
-
-#GRIDLEVEL
-2			nLevelArea
-initial			NameArea
-
-#DOAMR
-T			DoAmr
-60			DnAmr
--1.0			DtAmr
-T			IsStrictAmr
-
 #TIMESTEPPING
 2			nStage
 0.8			CflExpl
@@ -280,10 +281,6 @@ g rbody
 T			DoSaveInitial
 
 #END_COMP SC ----------------------------------------------------------------
-
-#COMPONENT
-EE			NameComp
-F			UseComp
 
 #STOP
 70			MaxIteration

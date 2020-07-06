@@ -21,38 +21,29 @@ endif
 
 # Get current version of SWMF and make it unreadable for the web
 gitclone SWMF
-cd SWMF; Config.pl -install -compiler=gfortran; Config.pl -uninstall
+cd SWMF; Config.pl -clone
 cd $HOME/Sites
 chmod -R go-r SWMF
 
+# Create diff file excluding .git directories
 touch code.diff
 if(-d SWMF_yesterday)then
     # Compare the current SWMF with yesterday's version
-    diff -r SWMF SWMF_yesterday >& code.diff
+    diff -r -x .git SWMF SWMF_yesterday >& code.diff
 endif
 
 # Create manuals
 cd ~/Sites/SWMF
 Config.pl -install -compiler=gfortran >& ~/Sites/manual.log
-make PDF           >>& ~/Sites/manual.log
-#make HTML          >>& ~/Sites/manual.log
+make MANUAL >>& ~/Sites/manual.log
+
 chmod -R go+r doc/ Copyrights/
 chmod -R go-r doc/Tex
-
-# Commented out due to LATEX style/class files not found
-cd ~/Sites/SWMF/util/CRASH/doc/Tex
-make PDF           >>& ~/Sites/manual.log
-chmod go+r ../*.pdf ../index.html ../RELEASENOTES
-
-cd ~/Sites/SWMF/GM/BATSRUS
-make PDF           >>& ~/Sites/manual.log
-#make HTML          >>& ~/Sites/manual.log
-chmod -R go+r Doc/
-chmod -R go-r Doc/Tex
-
-cd ~/Sites/SWMF/PW/PWOM
-make PDF           >>& ~/Sites/manual.log
-chmod go+r doc/PWOM.pdf
+chmod -R go+r GM/BATSRUS/Doc/
+chmod -R go-r GM/BATSRUS/Doc/Tex
+chmod go+r PW/PWOM/doc/PWOM.pdf
+chmod go+r share/IDL/doc/idl.pdf
+chmod go+r util/CRASH/doc/*
 
 cd ~/Sites/SWMF
 make clean         >>& ~/Sites/manual.log

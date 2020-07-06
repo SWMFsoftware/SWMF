@@ -1,36 +1,43 @@
-#!/usr/bin/perl
+#!/usr/bin/perl -s
+
+# Number of days to show on web page
+my $nDay = ($n or $nday or 7);
+
 use strict;
 
+# weights for each platform to calculate skill scores
 my %WeightMachine = (
-    "pleiades"     => "1.0",
-    "gfortran"     => "1.0",
-    "grid"         => "1.0",
-    "mesh"         => "1.0",
-    "bluewaters"   => "0.0",
+    "pleiades"     => "1.0",  # ifort pleiades
+    "gfortran"     => "1.0",  # gfortran debug
+    "grid"         => "1.0",  # nagfor debug
+    "mesh"         => "1.0",  # nagfor optimized
     );
 
-#    "nyx"          => "1.0",
-#    "nyx_gfortran" => "1.0",
-#    "nyx_pgf90"    => "1.0",
-#    "nyx_ifort"    => "1.0",
+# Describe machine in the Html table
+my %HtmlMachine = (
+    "pleiades"     => "ifort<br>pleiades",
+    "gfortran"     => "gfortran<br>debug",
+    "grid"         => "nagfor<br>debug",
+    "mesh"         => "nagfor<br>optimized",
+    );
 
-
-
+# List of platforms
 my @machines = sort keys %WeightMachine;
 
+# List of scores ALL, CCHM (solar), CWMM (magnetospheric), CRASH (HEDP)
 my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
 my %WeightTest = (
 
-    "CCHM:test2_gm"                       => "1.0",
-    "CCHM:test2_sc"                       => "0.5",
-    "CCHM:test2_ih"                       => "0.5",
-    "CCHM:test5_ee"                       => "1.0",
-    "CCHM:test7_ih"                       => "1.0",
-    "CCHM:test7_oh"                       => "1.0",
-    "CCHM:test9_ih"                       => "1.0",
-    "CCHM:test9_sc_chromo"                => "1.0",
-    "CCHM:test9th_ih"                     => "1.0",
-    "CCHM:test9th_sc_thread"              => "1.0",
+    "CCHM:test02_gm"                      => "1.0",
+    "CCHM:test02_sc"                      => "0.5",
+    "CCHM:test02_ih"                      => "0.5",
+    "CCHM:test05_ee"                      => "1.0",
+    "CCHM:test07_ih"                      => "1.0",
+    "CCHM:test07_oh"                      => "1.0",
+    "CCHM:test08_ih"                      => "1.0",
+    "CCHM:test08_sc_thread"               => "1.0",
+    "CCHM:test09_ih"                      => "1.0",
+    "CCHM:test09_sc_chromo"               => "1.0",
     "CCHM:test10_ih"                      => "1.0",
     "CCHM:test10_sc"                      => "1.0",
     "CCHM:GM/BATSRUS/test_corona"         => "1.0",    
@@ -38,21 +45,21 @@ my %WeightTest = (
     "CCHM:GM/BATSRUS/test_fluxemergence"  => "1.0",
     "CCHM:GM/BATSRUS/test_outerhelio"     => "1.0",
 
-    "CWMM:test1_gm"                       => "1.0",
-    "CWMM:test1_ie"                       => "1.0",
-    "CWMM:test1_pw"                       => "1.0",
-    "CWMM:test3_gm"                       => "1.0",
-    "CWMM:test3_ie"                       => "1.0",
-    "CWMM:test3_im_rcm"                   => "1.0",
-    "CWMM:test4_gm"                       => "1.0",
-    "CWMM:test4_ie_rim"                   => "1.0",
-    "CWMM:test4_im_heidi"                 => "1.0",
-    "CWMM:test6_gm"                       => "1.0",
-    "CWMM:test6_ie"                       => "1.0",
-    "CWMM:test6_im_crcm"                  => "1.0",
-    "CWMM:test8_gm_multi"                 => "1.0",
-    "CWMM:test8_ie"                       => "1.0",
-    "CWMM:test8_im_rcm_multi"             => "1.0",
+    "CWMM:test01_gm"                      => "1.0",
+    "CWMM:test01_ie"                      => "1.0",
+    "CWMM:test01_pw"                      => "1.0",
+    "CWMM:test03_gm"                      => "1.0",
+    "CWMM:test03_ie"                      => "1.0",
+    "CWMM:test03_im_rcm"                  => "1.0",
+    "CWMM:test04_gm"                      => "1.0",
+    "CWMM:test04_ie_rim"                  => "1.0",
+    "CWMM:test04_im_heidi"                => "1.0",
+    "CWMM:test06_gm"                      => "1.0",
+    "CWMM:test06_ie"                      => "1.0",
+    "CWMM:test06_im_crcm"                 => "1.0",
+    "CWMM:test08_gm_multi"                => "1.0",
+    "CWMM:test08_ie"                      => "1.0",
+    "CWMM:test08_im_rcm_multi"            => "1.0",
     "CWMM:test_ccmc_small_gm"             => "1.0",
     "CWMM:test_ccmc_small_ie"             => "1.0",
     "CWMM:test_ccmc_small_rb"             => "1.0",
@@ -83,6 +90,7 @@ my $indexfile = "index.html";
 my $changefile = "test.diff";
 my $codefile = "code.diff";
 my $manerrorfile = "manual.err";
+my $lastpassfile = "lastpass.txt";
 
 my %tests;
 my %resfile;
@@ -92,7 +100,7 @@ my $day;
 my $machine;
 
 # Take last seven days.
-my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -7`;
+my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -$nDay`;
 my @days = split "\n", $days;
 
 # Extract results for all days and convert logfile into an HTML file
@@ -118,8 +126,10 @@ foreach $day (@days){
 	    last if /===========/;
             s/Domain Users//;
 	    my @item = split(' ',$_);
-	    my $test = $item[-1]; $test =~ s/\.diff$//;
+	    my $test = $item[-1]; $test =~ s/\.diff$//; 
+	    $test =~ s/test(\d_)/test0$1/; # rename testN to test0N
 	    my $size = $item[4];
+
 	    $tests{$test} = 1;
 	    if($size){
 		$result{$day}{$test}{$machine}=
@@ -176,6 +186,44 @@ foreach $day (@days){
     chdir "../../../..";
 }
 
+# update last pass information
+our %lastpass;
+my $machine;
+my $key;
+my $day = @days[0];
+my $date = $day; $date =~ s/SWMF_TEST_RESULTS\///;
+
+# read in last pass information
+require $lastpassfile if -f $lastpassfile;
+
+# update information with last days' results
+foreach $machine (@machines){
+    my $test;
+    foreach $test (sort keys %tests){
+	foreach $day (@days){
+	    if($result{$day}{$test}{$machine} =~ /passed/i){
+		$key = sprintf("%-50s : %-10s", $test, $machine);
+		my $date = $day; $date =~ s/SWMF_TEST_RESULTS\///;
+		$lastpass{$key} = $date;
+		last;
+	    }
+	}
+    }
+}
+
+# save latest information
+open FILE, ">$lastpassfile" or die "$ERROR: could not open $lastpassfile\n";
+print FILE "\%lastpass = (\n";
+foreach $key (sort keys %lastpass){
+    print FILE "'$key' => '$lastpass{$key}',\n";
+}
+print FILE ");\n";
+close FILE;
+
+# Avoid creating a gigantic index.html file
+exit 0 if $nDay > 10;
+
+# Create result table
 my $Table = "<hr>\n<center>\n";
 
 my %change;
@@ -196,11 +244,11 @@ foreach $day (@days){
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
-	"   <td>test / machine</td>";
+	"   <td><b>compiler/options/platform</b><br><br>test</td>";
     my $machine;
     foreach $machine (@machines){
 	my $file = "$day/$machine/$htmlfile";
-	$Table .= "    <td><b>$machine</b></br>\n";
+	$Table .= "    <td><b>$HtmlMachine{$machine}</b></br>\n";
 	if(-s $file){
 	    $Table .= "    <A HREF=$file TARGET=swmf_test_results>results".
 		"</A></br>\n";
@@ -231,6 +279,10 @@ foreach $day (@days){
 	if($test !~ /notest|see_gm_batsrus/){
 	    foreach $machine (@machines){
 		my $result = $result{$day}{$test}{$machine};
+
+		my $key = sprintf("%-50s : %-10s", $test, $machine);
+		my $lastpass = $lastpass{$key};
+		$lastpass = "?/?/?" unless $lastpass;
 
 		if($result){
 
@@ -283,7 +335,7 @@ foreach $day (@days){
 		# Add HTML link for failed tests
 		$result = 
 		    "<A HREF=\"$day/$machine/$htmlfile\#$test\" ".
-		    "target=swmf_test_results>".
+		    "target=swmf_test_results title=$lastpass>".
 		    $result.
 		    "</HREF>" if $result !~ /passed/i;
 

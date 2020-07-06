@@ -1,7 +1,8 @@
 !- PARAM.in:  Example input file for EUROPA Layered Single Fluid MHD --
 
-#ECHO
-T                       DoEcho
+#COMPONENTMAP
+GM  0 -1  1   
+PT  1  2  1  
 
 #PLANET
 EUROPA			NamePlanet

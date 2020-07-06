@@ -97,7 +97,7 @@ contains
   subroutine IH_set_param(CompInfo, TypeAction)
 
     use CON_comp_info
-    use IH_ModProcMH
+    use IH_BATL_lib, ONLY: iProc, nProc, iComm
     use IH_ModIO, ONLY: iUnitOut, StringPrefix, STDOUT_, NamePlotDir
     use IH_ModSetParameters, ONLY: set_parameters
     use IH_ModRestartFile, ONLY: NameRestartInDir, NameRestartOutDir
@@ -196,7 +196,7 @@ contains
 
   subroutine IH_run(TimeSimulation,TimeSimulationLimit)
 
-    use IH_ModProcMH, ONLY: iProc
+    use IH_BATL_lib, ONLY: iProc
     use IH_ModMain, ONLY: Time_Simulation
 
     !INPUT/OUTPUT ARGUMENTS:
@@ -284,12 +284,12 @@ contains
     ! If DoSendAllVar is true, send all variables in State_VGB
     ! Otherwise send the variables defined by iVarSource_V
 
-    use IH_ModProcMH,  ONLY: iProc
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
     use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
-    use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
+    use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
+         find_grid_block
     use IH_ModIO, ONLY: iUnitOut
     use CON_coupler,    ONLY: iVarSource_V
     use ModInterpolate, ONLY: interpolate_vector
@@ -693,11 +693,10 @@ contains
 
     use IH_ModMessagePass, ONLY: exchange_messages, fill_in_from_buffer
     use IH_ModGeometry,ONLY:R_BLK
-    use IH_BATL_lib,  ONLY: Xyz_DGB
+    use IH_BATL_lib,  ONLY: Xyz_DGB, iProc
     use IH_ModMain,   ONLY:&
          nI,nJ,nK, BufferMax_D, MaxDim,nBlock, Unused_B
     use IH_ModAdvance,ONLY:nVar,State_VGB,rho_,rhoUx_,rhoUz_,Ux_,Uz_
-    use IH_ModProcMH, ONLY:iProc
     use IH_ModIO,     ONLY:IsRestartCoupler
 
     character(len=*), parameter :: NameSub='IH_match_ibc'
@@ -789,7 +788,6 @@ contains
     ! 30Dec2011 R. Oran   - initial version
 
     !USES:
-    use IH_ModProcMH,         ONLY: iProc
     use IH_ModSize,           ONLY: nI, nJ, nK
     use IH_ModMain,           ONLY: UseB0, BuffR_, BuffPhi_, BuffTheta_
     use IH_ModAdvance,        ONLY: &
@@ -811,7 +809,7 @@ contains
          CollisionlessHeatFlux_
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModInterpolate,    ONLY: trilinear
-    use IH_BATL_lib,       ONLY: &
+    use IH_BATL_lib,       ONLY: iProc, &
          find_grid_block, xyz_to_coord, CoordMin_DB, CellSize_DB, nDim
 
     !INPUT ARGUMENTS:
@@ -1661,7 +1659,7 @@ contains
     ! For unit conversion
     real, allocatable, save:: Si2No_I(:) 
 
-    integer:: i, j, k, iBlock, iPoint
+    integer:: i, j, k, iBlock, iPoint, iVar
 
     logical:: DoTest, DoTestMe
     character(len=*), parameter :: NameSub='IH_put_from_pt'
@@ -1703,12 +1701,14 @@ contains
     end if
 
     ! set source terms due to neutral charge exchange
-
     if(.not.allocated(Si2No_I))then
+       ! Set units for density, momentum and energy source terms
        allocate(Si2No_I(nVarData))
-       Si2No_I(1)   = Si2No_V(UnitRho_)/Si2No_V(UnitT_)
-       Si2No_I(2:4) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)
-       Si2No_I(5)   = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+       do iVar = 1, nVarData, 5
+          Si2No_I(iVar)          = Si2No_V(UnitRho_)/Si2No_V(UnitT_)
+          Si2No_I(iVar+1:iVar+3) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)
+          Si2No_I(iVar+4)        = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+       end do
     end if
 
     if(.not.allocated(ExtraSource_ICB)) &
@@ -1751,12 +1751,12 @@ contains
     ! Interpolate Data_VI from EE at the list of positions Xyz_DI 
     ! required by SC
 
-    use IH_ModProcMH,  ONLY: iProc
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
     use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
-    use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, find_grid_block
+    use IH_BATL_lib,   ONLY: iProc, nDim, MaxDim, MinIJK_D, MaxIJK_D, &
+         find_grid_block
     use IH_ModIO, ONLY: iUnitOut
     use ModInterpolate, ONLY: interpolate_vector
 

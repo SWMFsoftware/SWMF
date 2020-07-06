@@ -1,7 +1,9 @@
 Begin session: 1
 
-#ECHO
-T			DoEcho
+#COMPONENTMAP
+GM  0 -1  1		GM runs on all PE-s
+IE  1  2  1		IE runs on 2 PE-s
+IM  3  3  1		IM runs on 1 PE
 
 #TIMEACCURATE
 F			DoTimeAccurate
@@ -54,6 +56,9 @@ IE			NameComp2
 128.			yMax
 -128.			zMin
 128.			zMax
+
+#GRIDBLOCKALL
+700			MaxBlock
 
 ! Maximum resolution initially
 
