@@ -21,7 +21,7 @@ module CON_couple_gm_im
   use GM_wrapper, ONLY: GM_get_for_im, GM_get_for_im_line, &
        GM_get_for_im_trace, GM_satinit_for_im, GM_get_sat_for_im, &
        GM_get_for_im_crcm, GM_get_for_im_trace_crcm, GM_get_sat_for_im_crcm, &
-       GM_put_from_im
+       GM_put_from_im, GM_put_from_im_cimi
 
   use IM_wrapper, ONLY: IM_get_for_gm, IM_put_from_gm, &
        IM_put_from_gm_line, IM_put_from_gm_crcm, IM_put_sat_from_gm
@@ -47,15 +47,19 @@ module CON_couple_gm_im
   logical :: IsInitialized = .false.
 
   ! Size of the 2D spherical structured (possibly non-uniform) IM grid
-  integer, save :: iSize, jSize
+  integer:: iSize = 0, jSize = 0
 
   ! Number of satellites in GM that will also be traced in IM
-  integer, save :: nShareSats
+  integer:: nShareSats = 0
 
+  ! Number of coupled density and pressure variables
+  integer :: nRhoPCoupled = 0
+  
   logical, save :: DoMultiFluidIMCoupling, DoAnisoPressureIMCoupling
 
   ! Number of fluids in GM (useful as multifluid can have more than 2 fluids)
-  integer, save :: nDensityGM
+  integer:: nDensityGM = 0
+
 contains
 
   !BOP =======================================================================
@@ -82,7 +86,19 @@ contains
     ! This works for a regular IM grid only
     iSize = Grid_C(IM_) % nCoord_D(1)
     jSize = Grid_C(IM_) % nCoord_D(2)
+    
+    call set_couple_var_info(GM_,IM_)
+    nRhoPCoupled = nVarBuffer
+    if(is_proc0(GM_))then
+       write(*,*)'(GM_)%NameVar    =', Grid_C(GM_)%NameVar
+       write(*,*)'(IM_)%NameVar    =', Grid_C(IM_)%NameVar
+       write(*,*)'nVarBuffer       =', nVarBuffer
+       write(*,*)'iVarSource_V     =', iVarSource_V(1:12)
+       write(*,*)'iVarTarget_V     =', iVarTarget_V(1:12)
+!       call con_stop('')
+    end if
 
+    ! this will likely be removed when coupling generalization if done
     call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
          nPGm, nPparGm, nWaveGm, nMaterialGm)
     call process_var_name(Grid_C(IM_)%NameVar, nDensityIm, nSpeedIm, &
@@ -292,8 +308,11 @@ contains
       character (len=100) :: NameVar
 
       ! Buffer for the variables on the 2D IM grid and line data
-      real, allocatable:: Buffer_IIV(:,:,:), BufferLine_VI(:,:)
+      real, allocatable :: Buffer_IIV(:,:,:), BufferLine_VI(:,:)
 
+      ! Buffer for passing the solar wind variables
+      real :: BufferSolarWind_V(8)
+      
       ! Buffer for satellite locations   
       real, allocatable :: SatPos_DII(:,:,:)
 
@@ -310,25 +329,12 @@ contains
 
       if(DoTest)write(*,*)NameSub,' starting, iProc=', i_proc()
 
-      if(DoMultiFluidIMCoupling) then
-         if (nDensityGM == 4) then
-            !case with ionospheric H+ and O+, and SW H+
-            NameVar=&
-                 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p:SwRho:Hprho:Oprho:SwP:Hpp:Opp'
-            nVarBmin = 12
-         else
-            !standard multifluid case
-            NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:Hprho:Oprho:Hpp:Opp'
-            nVarBmin = 10
-         endif
-      else if(DoAnisoPressureIMCoupling)then
-         NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p:ppar'
-         nVarBmin = 7
-      else
-         NameVar='x:y:bmin:I_I:S_I:R_I:B_I:rho:p'
-         nVarBmin = 6
-      endif
+      ! Number of variables in Buffer_IIV indexed by Lon, Lat
+      ! x, y, B, densities and pressures at the min B surface
+      nVarBmin = nRhoPCoupled + 3
 
+      NameVar = 'x:y:bmin:I_I:S_I:R_I:B_I:rho:p'      
+      
       !\
       ! Get size of field line traces
       !/
@@ -349,15 +355,17 @@ contains
       ! so they can deallocate ray tracing
       if(is_proc0(GM_)) call GM_get_for_im_crcm( &
            Buffer_IIV, BufferKp, iSize, jSize, nDensityGM, nVarBmin, &
-           BufferLine_VI, nVarLine, nPointLine, NameVar)
+           BufferLine_VI, nVarLine, nPointLine, BufferSolarWind_V, NameVar)
 
       call transfer_real_array(GM_, IM_, size(Buffer_IIV), Buffer_IIV)
       call transfer_real_array(GM_, IM_, size(BufferLine_VI), BufferLine_VI)
+      call transfer_real_array(GM_, IM_, size(BufferSolarWind_V), BufferSolarWind_V)
       call transfer_real(GM_,IM_, BufferKp)
       
       if(is_proc(IM_)) call IM_put_from_gm_crcm(&
-           Buffer_IIV, BufferKp, iSize, jSize, nVarBmin,&
-           BufferLine_VI, nVarLine, nPointLine, NameVar, tSimulation)
+           Buffer_IIV, BufferKp, iSize, jSize, nVarBmin, &
+           BufferLine_VI, nVarLine, nPointLine, NameVar, &
+           BufferSolarWind_V, tSimulation)
 
       deallocate(Buffer_IIV, BufferLine_VI)
 
@@ -386,6 +394,8 @@ contains
   !IROUTINE: couple_im_gm - couple IM to GM component
   !INTERFACE:
   subroutine couple_im_gm(tSimulation)
+    use CON_world, ONLY: get_comp_info
+    use CON_comp_param, ONLY: lNameVersion
 
     !INPUT ARGUMENTS:
     real, intent(in) :: tSimulation     ! simulation time at coupling
@@ -398,6 +408,30 @@ contains
     ! Send pressure from IM to GM.
     !EOP
 
+    ! Which IM model is used?
+    character(len=lNameVersion):: NameVersionIm
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='couple_im_gm'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    call get_comp_info(IM_,NameVersion=NameVersionIm)
+
+    select case(NameVersionIm(1:3))
+    case('RCM', 'RAM','CRC')
+       call couple_im_gm_default
+    case('CIM')
+       call couple_im_gm_cimi
+    case default
+       call CON_stop(NameSub//': unknown IM version='//NameVersionIm)
+    end select
+
+    if(DoTest)write(*,*)NameSub,' finished, iProc=', i_proc()
+
+  contains
+    subroutine couple_im_gm_default
+    
     ! Number of variables to pass
     integer:: nVarImGm
 
@@ -408,7 +442,7 @@ contains
     real, allocatable:: Buffer_IIV(:,:,:)
 
     logical:: DoTest, DoTestMe
-    character(len=*), parameter :: NameSub='couple_im_gm'
+    character(len=*), parameter :: NameSub='couple_im_gm_default'
     !-------------------------------------------------------------------------
     call CON_set_do_test(NameSub,DoTest,DoTestMe)
 
@@ -434,7 +468,43 @@ contains
     deallocate(Buffer_IIV)
 
     if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
+  end subroutine couple_im_gm_default
 
-  end subroutine couple_im_gm
+  !=============================================================================
+  subroutine couple_im_gm_cimi
+    ! Number of variables to pass
+    integer:: nVarImGm
+    
+    ! Names of variables to pass
+    character(len=100) :: NameVar
+
+    ! Buffer for the variables on the 2D IM grid
+    real, allocatable:: Buffer_IIV(:,:,:)
+
+    logical:: DoTest, DoTestMe
+    character(len=*), parameter :: NameSub='couple_im_gm_default'
+    !-------------------------------------------------------------------------
+    call CON_set_do_test(NameSub,DoTest,DoTestMe)
+
+    if(DoTest)write(*,*)NameSub,' starting, iProc=',i_proc()
+
+    !get number of variable coupled from IM to GM from the grid descriptor
+    !add 1 since we need also the minimum B which we tack onto the end
+    nVarImGm = Grid_C(IM_)%nVar+1
+
+    !for now pass in the IM namevar although this is not really needed
+    NameVar = Grid_C(IM_)%NameVar
+
+    allocate(Buffer_IIV(iSize,jSize,nVarImGm))
+    if(is_proc0(IM_)) &
+         call IM_get_for_gm(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+    call transfer_real_array(IM_, GM_, size(Buffer_IIV), Buffer_IIV)
+    if(is_proc(GM_)) &
+         call GM_put_from_im_cimi(Buffer_IIV, iSize, jSize, nVarImGm, NameVar)
+    deallocate(Buffer_IIV)
+
+    if(DoTest)write(*,*)NameSub,': finished iProc=', i_proc()
+  end subroutine couple_im_gm_cimi
+end subroutine couple_im_gm
 
 end module CON_couple_gm_im
