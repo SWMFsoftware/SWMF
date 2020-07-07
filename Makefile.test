@@ -16,6 +16,7 @@ test_help:
 	@echo "    test_util                  (run util/ tests)"
 	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
 	@echo "    test_comp                  (run component tests)"
+	@echo "    test_swmf                  (run SWMF tests below)"
 	@echo "    test_pw                    (run PW/PWOM test)"
 	@echo "    test_pw BLESS=YES          (update test_pw reference solution)"
 	@echo "    test_ps                    (run PS/DGCPM test)"
@@ -37,7 +38,7 @@ test_help:
 	@echo "    test13                     (run GM-PT test: Europa)"
 	@echo "    test14                     (run OH-PT test)"
 	@echo "    test14pui                  (run OH-PT test with PUI)"
-	@echo "	   test14pui1d	      (run OH-PT test with PUI in shock tube)"
+	@echo "    test14pui1d                (run OH-PT test with PUI in shock tube)"
 	@echo "    test15                     (run SC-IH-SP test)"
 	@echo "    test15_build               (configure SC-IH-SP, run test)"
 	@echo "    test16                     (run GM-FLEKS test: FLEKS uses periodic boundary condition)"	
@@ -53,6 +54,13 @@ test:
 	-@(${MAKE} test_util)
 	-@(${MAKE} test_batl)
 	-@(${MAKE} test_comp)
+	-@(${MAKE} test_swmf)
+	-@(${MAKE} test_check)
+
+
+.NOTPARALLEL: test_swmf
+
+test_swmf:
 	-@(${MAKE} test_ps TESTDIR=run_test_ps)
 	-@(${MAKE} test_sp TESTDIR=run_test_sp)
 	-@(${MAKE} test_swpc TESTDIR=run_test_swpc)
@@ -74,7 +82,6 @@ test:
 	-@(${MAKE} test16 TESTDIR=run_test16)
 	-@(${MAKE} test17 TESTDIR=run_test17)
 	-@(${MAKE} test18 TESTDIR=run_test18)
-	-@(${MAKE} test_check)
 
 ###	-@(${MAKE} test14pui1d TESTDIR=run_test14pui1d)
 
