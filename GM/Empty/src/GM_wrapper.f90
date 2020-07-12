@@ -217,7 +217,21 @@ contains
 
     call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
   end subroutine GM_put_from_im
+  !==============================================================================
+  subroutine GM_put_from_im_cimi(Buffer_IIV,iSizeIn,jSizeIn,nVarIm,NameVarIm)
+    implicit none
 
+    integer, intent(in) :: iSizeIn,jSizeIn,nVarIm
+    real, intent(in) :: Buffer_IIV(iSizeIn,jSizeIn,nVarIm)
+    character(len=*), intent(in) :: NameVarIm
+
+    character(len=*), parameter :: NameSub='GM_put_from_im'
+
+    call CON_stop(NameSub//': GM_ERROR: empty version cannot be used!')
+  end subroutine GM_put_from_im_cimi
+
+
+  
   !==============================================================================
 
   subroutine GM_satinit_for_im(nSats)
@@ -273,7 +287,7 @@ contains
 
   !==============================================================================
   subroutine GM_get_for_im_crcm(Buffer_IIV, KpOut,iSizeIn, jSizeIn, nDensity,&
-       nVarIn, BufferLine_VI, nVarLine, nPointLine, NameVar)
+       nVarIn, BufferLine_VI, nVarLine, nPointLine, BufferSolarWind_V, NameVar)
 
     implicit none
 
@@ -284,6 +298,7 @@ contains
 
     integer, intent(in) :: nPointLine, nVarLine
     real, intent(out)   :: BufferLine_VI(nVarLine, nPointLine)
+    real,    intent(out):: BufferSolarWind_V(8)
     character(len=*), intent(in):: NameVar
 
     call CON_stop(NameSub//'GM_ERROR: empty version cannot be used!')  

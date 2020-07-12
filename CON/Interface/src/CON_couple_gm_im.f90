@@ -89,14 +89,14 @@ contains
     
     call set_couple_var_info(GM_,IM_)
     nRhoPCoupled = nVarBuffer
-    if(is_proc0(GM_))then
-       write(*,*)'(GM_)%NameVar    =', Grid_C(GM_)%NameVar
-       write(*,*)'(IM_)%NameVar    =', Grid_C(IM_)%NameVar
-       write(*,*)'nVarBuffer       =', nVarBuffer
-       write(*,*)'iVarSource_V     =', iVarSource_V(1:12)
-       write(*,*)'iVarTarget_V     =', iVarTarget_V(1:12)
-!       call con_stop('')
-    end if
+    !if(is_proc0(GM_))then
+    !   write(*,*)'(GM_)%NameVar    =', Grid_C(GM_)%NameVar
+    !   write(*,*)'(IM_)%NameVar    =', Grid_C(IM_)%NameVar
+    !   write(*,*)'nVarBuffer       =', nVarBuffer
+    !   write(*,*)'iVarSource_V     =', iVarSource_V(1:12)
+    !   write(*,*)'iVarTarget_V     =', iVarTarget_V(1:12)
+!   !    call con_stop('')
+    !end if
 
     ! this will likely be removed when coupling generalization if done
     call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
