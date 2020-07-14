@@ -256,6 +256,9 @@ z=0 all idl_ascii       StringPlot
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
+#PARTICLESTAGGERING
+F			Staggered
+
 #ELECTRON
 -100.0		        Charge/mass ratio (qom)
 
