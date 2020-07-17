@@ -100,7 +100,7 @@ HELIODIPOLE
 2.8e-4			HelioDipoleStrengthSi
 0.0			HelioDipoleTilt
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
@@ -472,7 +472,7 @@ float			TypeBc6
 #RESCHANGE
 T			UseAccurateResChange
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

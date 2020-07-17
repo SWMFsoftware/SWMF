@@ -35,7 +35,7 @@ T                       UseBody
 #BODY
 F
 
-#USERFLAGS
+USERFLAGS
 F                       UseUserInnerBcs
 F                       UseUserSource
 F                       UseUserPerturbation
@@ -161,7 +161,7 @@ F
 F                       UseGravity (rest of parameters read if true)
 0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
-#USERFLAGS
+USERFLAGS
 F                       UseUserInnerBcs
 F                       UseUserSource
 F                       UseUserPerturbation

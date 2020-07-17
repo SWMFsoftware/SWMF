@@ -179,7 +179,7 @@ z=0 MHD idl		StringPlot
 -1.0			DtOuput
 -1.0			DxOutput
 
-#USERFLAGS
+USERFLAGS
 T                       UseUserInnerBcs
 F                       UseUserSource
 F                       UseUserPerturbation
@@ -248,7 +248,7 @@ T                       DoSaveRestart
 
 #BEGIN_COMP OH ========================================================
 
-#USERFLAGS
+USERFLAGS
 T                       UseUserInnerBcs
 T                       UseUserSource
 F                       UseUserPerturbation
