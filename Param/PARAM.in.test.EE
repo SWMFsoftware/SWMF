@@ -25,7 +25,7 @@ periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 T			UseUserSource
 T			UseUserPerturbation

@@ -120,7 +120,7 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

@@ -64,7 +64,7 @@ periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
-#USERFLAGS
+USERFLAGS
 F			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation
@@ -202,7 +202,7 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-#USER_FLAGS
+USERFLAGS
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation

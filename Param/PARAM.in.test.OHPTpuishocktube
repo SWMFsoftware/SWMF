@@ -77,7 +77,10 @@ y=0 MHD idl		StringPlot
 0.1 year		DtOuput
 -1.0			DxOutput
 
-#USERFLAGS
+#USERSWITCH
+-ic -perturb -update
+
+USERFLAGS
 F			UseUserInnerBcs
 T			UseUserSource
 F			UseUserPerturbation

@@ -179,7 +179,10 @@ z=0 MHD idl		StringPlot
 -1.0			DtOuput
 -1.0			DxOutput
 
-#USERFLAGS
+#USERSWITCH
+-source -perturb
+
+USERFLAGS
 T                       UseUserInnerBcs
 F                       UseUserSource
 F                       UseUserPerturbation
@@ -248,7 +251,10 @@ T                       DoSaveRestart
 
 #BEGIN_COMP OH ========================================================
 
-#USERFLAGS
+#USERSWITCH
++Sexpl -progress	StringUserSwitch
+
+USERFLAGS
 T                       UseUserInnerBcs
 T                       UseUserSource
 F                       UseUserPerturbation

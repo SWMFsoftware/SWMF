@@ -128,7 +128,7 @@ T			UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-#USERFLAGS
+USERFLAGS
 T                       UseUserInnerBcs
 T                       UseUserSource
 F                       UseUserPerturbation
