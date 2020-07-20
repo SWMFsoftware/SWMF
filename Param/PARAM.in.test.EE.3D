@@ -45,29 +45,17 @@ all			NameArea
 initial			NameArea
 
 #OUTERBOUNDARY
-fixvalue		TypeBc1
-no_inflow		TypeBc2
+userfixvalue		TypeBc1
+usernoinflow		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-T			UseUserPerturbation
-T			UseUserOuterBcs 
-T			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-T			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchInput
-F			UseUserB0
-T			UseUserInitSession
-T			UseUserUpdateStates
+#USERSWITCH
+-b0 +perturb
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN  ----------------------
 
 #RADMHD
 1.0			r_photo
@@ -84,7 +72,7 @@ F			UseEnergyPert
 0.			InitialBphi
 6e5			NumberDensFloor
 
-#USERINPUTEND
+#USERINPUTEND  ------------------------
 
 CORONALHEATING
 unsignedflux		TypeCoronalHeating

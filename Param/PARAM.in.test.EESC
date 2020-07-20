@@ -57,29 +57,17 @@ spherical
 initial                 NameArea
 
 #OUTERBOUNDARY
-fixvalue		TypeBc1
-no_inflow		TypeBc2
+userfixvalue		TypeBc1
+usernoinflow		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-T			UseUserOuterBcs 
-T			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-T			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchInput
-F			UseUserB0
-T			UseUserInitSession
-T			UseUserUpdateStates
+#USERSWITCH
+-b0			StringSwitch
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN  --------------
 
 #RADMHD
 1.0			r_photo
@@ -96,7 +84,7 @@ F			UseEnergyPert
 0.			InitialBphi
 6e5			NumberDensFloor
 
-#USERINPUTEND
+#USERINPUTEND  ---------------
 
 #CORONALHEATING
 unsignedflux		TypeCoronalHeating
@@ -202,20 +190,8 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-T			UseUserICs
-F			UseUserSpecifyRefinement
-T			UseUserLogFiles
-T			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
+#USERSWITCH
+-b0			StringSwitch
 
 #POYNTINGFLUX
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]

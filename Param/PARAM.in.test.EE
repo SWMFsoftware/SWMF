@@ -18,29 +18,17 @@ EE/restartIN/restart.H
 0.0			RotationPeriodStar
 
 #OUTERBOUNDARY
-fixvalue		TypeBc1
-no_inflow		TypeBc2
+userfixvalue		TypeBc1
+usernoinflow		TypeBc2
 periodic		TypeBc3
 periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-T			UseUserPerturbation
-T			UseUserOuterBcs 
-T			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-T			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchInput
-F			UseUserB0
-T			UseUserInitSession
-T			UseUserUpdateStates
+#USERSWITCH
+-b0 +perturb		StringSwitch
 
-#USERINPUTBEGIN
+#USERINPUTBEGIN -----------------------------
 
 #RADMHD
 1.0			r_photo
@@ -68,7 +56,7 @@ T			UseRope
 1.0			buoyancy
 1.0e5			b0_rope Gauss
 
-#USERINPUTEND
+#USERINPUTEND --------------------------------
 
 #CORONALHEATING
 unsignedflux		TypeCoronalHeating
