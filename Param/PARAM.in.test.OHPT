@@ -180,22 +180,7 @@ z=0 MHD idl		StringPlot
 -1.0			DxOutput
 
 #USERSWITCH
--source -perturb
-
-USERFLAGS
-T                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-T                       UseUserOuterBcs
-T                       UseUserICs
-T                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
+-all +init +ic +progress	StringSwitch
 
 #USERINPUTBEGIN --------------------------------------------------------
 
@@ -252,22 +237,7 @@ T                       DoSaveRestart
 #BEGIN_COMP OH ========================================================
 
 #USERSWITCH
-+Sexpl -progress	StringUserSwitch
-
-USERFLAGS
-T                       UseUserInnerBcs
-T                       UseUserSource
-F                       UseUserPerturbation
-T                       UseUserOuterBcs
-F                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
++source_expl -progress		StringUserSwitch
 
 #SCHEME
 2                       nOrder

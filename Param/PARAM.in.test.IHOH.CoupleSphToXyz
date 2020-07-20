@@ -29,21 +29,6 @@ T                       UseBody
 #BODY
 F			UseBody
 
-USERFLAGS
-F                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
-
 #USERINPUTBEGIN -----------------------------------------------------------
 
 #USERPROBLEM
@@ -179,21 +164,6 @@ F			UseBody
 #GRAVITY
 F                       UseGravity (rest of parameters read if true)
 0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
-
-USERFLAGS
-F                       UseUserInnerBcs
-F                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-F                       UseUserInitSession
-F                       UseUserUpdateStates
 
 #USERINPUTBEGIN --------------------------------------------------------
 

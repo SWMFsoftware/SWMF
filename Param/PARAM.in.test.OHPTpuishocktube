@@ -78,22 +78,7 @@ y=0 MHD idl		StringPlot
 -1.0			DxOutput
 
 #USERSWITCH
--ic -perturb -update
-
-USERFLAGS
-F			UseUserInnerBcs
-T			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
+-all +init +Sexpl	StringSwitch
 
 #UNIFORMSTATE
 0.01			Rho

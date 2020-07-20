@@ -120,20 +120,8 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-USERFLAGS
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-T			UseUserICs
-F			UseUserSpecifyRefinement
-T			UseUserLogFiles
-T			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
+#USERSWITCH
+-all +init +ic		StringSwitch
 
 #POYNTINGFLUX
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]

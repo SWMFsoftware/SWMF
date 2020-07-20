@@ -103,6 +103,9 @@ float			TypeBc4
 float			TypeBc5
 float			TypeBc6
 
+#INNERBOUNDARY
+user			TypeBcInner
+
 #MINIMUMDENSITY
 1E-4			RhoMin
 
@@ -128,20 +131,8 @@ T			UseNonConservative
 #CONSERVATIVECRITERIA
 0
 
-USERFLAGS
-T                       UseUserInnerBcs
-T                       UseUserSource
-F                       UseUserPerturbation
-F                       UseUserOuterBcs
-T                       UseUserICs
-F                       UseUserSpecifyRefinement
-F                       UseUserLogFiles
-T                       UseUserWritePlot
-F                       UseUserAMR
-F                       UseUserEchoInput
-F                       UseUserB0
-T                       UseUserInitSession
-F                       UseUserUpdateStates
+#USERSWITCH
+-all +init +ic +source		StringSwitch
 
 #SAVEINITIAL
 T			DoSaveInitial
