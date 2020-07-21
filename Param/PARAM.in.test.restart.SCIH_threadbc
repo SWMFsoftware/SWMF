@@ -79,6 +79,7 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
+<<<<<<< HEAD
 USERFLAGS
 #USERSWITCH
 -all +init +ics
@@ -96,6 +97,10 @@ F			UseUserEchoInput
 F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
+=======
+#USERSWITCH
+-all +init +ic
+>>>>>>> 07a1d76cffbb27f1c387e5dd8ef95b9309c81ec4
 
 #POYNTINGFLUX
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
@@ -387,6 +392,7 @@ float			TypeBc6
 #RESCHANGE
 T			UseAccurateResChange
 
+<<<<<<< HEAD
 USERFLAGS
 
 #USERSWITCH
@@ -405,6 +411,10 @@ F			UseUserEchoInput
 F			UseUserB0
 T			UseUserInitSession
 F			UseUserUpdateStates
+=======
+#USERSWITCH
+-all +init		StringSwitch
+>>>>>>> 07a1d76cffbb27f1c387e5dd8ef95b9309c81ec4
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
