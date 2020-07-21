@@ -99,11 +99,11 @@ T                       UseFieldLineThreads
 1.0e-3                  DsThreadMin
 
 #THREADEDBC
-T	  UseAlignedVelocity
-T         DoConvergenceCheck
-limited   TypeBc
-1.0e-6    cTol
-40	  nIter
+T			UseAlignedVelocity
+T         		DoConvergenceCheck
+limited   		TypeBc
+1.0e-6    		cTol
+40	  		nIter
 
 
 #GRIDBLOCKALL
@@ -132,24 +132,10 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-USERFLAGS
+
 #USERSWITCH
 -all +init +ics
 
-
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-T			UseUserICs
-F			UseUserSpecifyRefinement
-T			UseUserLogFiles
-T			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
 
 #POYNTINGFLUX
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
@@ -412,25 +398,9 @@ float			TypeBc6
 #RESCHANGE
 T			UseAccurateResChange
 
-USERFLAGS
 
 #USERSWITCH
 -all +init
-
-F			UseUserInnerBcs
-F			UseUserSource
-F			UseUserPerturbation
-F			UseUserOuterBcs
-F			UseUserICs
-F			UseUserSpecifyRefinement
-F			UseUserLogFiles
-F			UseUserWritePlot
-F			UseUserAMR
-F			UseUserEchoInput
-F			UseUserB0
-T			UseUserInitSession
-F			UseUserUpdateStates
-
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
