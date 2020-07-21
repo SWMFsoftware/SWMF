@@ -102,8 +102,9 @@ T                       UseFieldLineThreads
 T	  UseAlignedVelocity
 T         DoConvergenceCheck
 limited   TypeBc
-40
-1.0e-6
+1.0e-6    cTol
+40	  nIter
+
 
 #GRIDBLOCKALL
 1200			MaxBlock
@@ -131,8 +132,10 @@ SC/Param/CR2077_GNG.dat		NameMagnetogramFile
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
+
 #USERSWITCH
--all +init +ic		StringSwitch
+-all +init +ics
+
 
 #POYNTINGFLUX
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
@@ -395,8 +398,9 @@ float			TypeBc6
 #RESCHANGE
 T			UseAccurateResChange
 
+
 #USERSWITCH
--all +init		StringSwitch
+-all +init
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
