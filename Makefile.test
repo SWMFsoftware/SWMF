@@ -1482,7 +1482,7 @@ test16_run:
 	cd ${TESTDIR}; ./PostProc.pl RESULTS
 
 test16_check:
-	-@(${DIFFNUM} -b -r=1e-12 \
+	-@(${DIFFNUM} -b -r=1e-7 \
 	   ${TESTDIR}/RESULTS/PC/z=0_fluid_region0_0_t00000002_n00000007.out \
 	   output/test16/z=0.ref.gz \
 		> test16.diff)
