@@ -1,0 +1,156 @@
+#COMPONENTMAP
+OH       0   -1    1   ! OH runs on all PE-s
+PT       1    2    1   ! PT runs on 1 or 2 PE-s
+
+#DESCRIPTION
+Couple multi-ion OH with PT
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#COUPLE2
+OH			NameComp1
+PT			NameComp2
+-1			DnCouple
+0.01 year		DtCouple
+
+#BEGIN_COMP OH ===========================================================
+
+#GRAVITY
+F                       UseGravity
+
+#BODY
+F			UseBody
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-200			xMin
+200			xMax
+-200			yMin
+200			yMax
+-200			zMin
+200			zMax
+
+#OUTERBOUNDARY
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#FIXEDTIMESTEP
+T			UseFixedDt
+0.01 year		DtFixed
+
+#UPDATECHECK
+F			UseUpdateCheck
+
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#CONSERVATIVECRITERIA
+0                       nConsCrit
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+-1			DnSaveLogfile
+0.1 year		DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD idl		StringPlot
+-1			DnOutput
+0.1 year		DtOuput
+-1.0			DxOutput
+
+#USERSWITCH
+-all +init +Sexpl	StringSwitch
+
+#UNIFORMSTATE
+0.01			Rho
+-100			Ux
+0			Uy
+0			Uz
+0.01			Bx
+0.0			By
+0			Bz
+2.6E-13			P
+1E-3			Pu3Rho
+-100			Pu3Ux
+0			Pu3Uy
+0			Pu3Uz
+1.01E-12	        Pu3P
+1E-5			NeuRho
+0			NeuUx 
+0			NeuUy 
+0			NeuUz 
+1E-16			NeuP  
+1E-5			Ne2Rho
+0			Ne2Ux 
+0			Ne2Uy 
+0			Ne2Uz 
+1E-16			Ne2P  
+1E-5			Ne3Rho
+0			Ne3Ux 
+0			Ne3Uy 
+0			Ne3Uz 
+1E-16			Ne3P  
+0.18			Ne4Rho
+100			Ne4Ux 
+0			Ne4Uy 
+0			Ne4Uz 
+1.6E-13			Ne4P  
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH
+0.00874			SWH_rho_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07                 	SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+7.17E-03                SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
+
+#PICKUPION3
+9.45E-4                  PU3_rho_dim [n/cc]
+8.20E6                   PU3_T_dim [K]
+417.07                   PU3_Ux_dim [km/s]
+0                        PU3_Uy_dim [km/s]
+0                        PU3_Uz_dim [km/s]
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0              	VLISW_T_dim
+26.3               	VLISW_Ux_dim
+0.3                	VLISW_Uy_dim
+-2.3              	VLISW_Uz_dim
+0.411			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
+
+#USERINPUTEND ----------------------------------------------------------
+
+#END_COMP OH ===========================================================
+
+#STOP
+-1			MaxIteration
+5 year			tSimulationMax
+
+#END
+
