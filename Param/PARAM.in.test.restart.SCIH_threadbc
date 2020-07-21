@@ -53,8 +53,8 @@ T                       UseFieldLineThreads
 T			UseAlignedVelocity
 T			DoConvergenceCheck
 limited			TypeBc
-40
-1.0e-6
+1.0e-6			cTol
+40			nIter
 
 #BODY
 T			UseBody
@@ -80,6 +80,9 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 USERFLAGS
+#USERSWITCH
+-all +init +ics
+
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
@@ -385,6 +388,10 @@ float			TypeBc6
 T			UseAccurateResChange
 
 USERFLAGS
+
+#USERSWITCH
+-all +init
+
 F			UseUserInnerBcs
 F			UseUserSource
 F			UseUserPerturbation
