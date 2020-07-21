@@ -28,6 +28,7 @@ rundir: check_src
 		ln -s ${BINDIR}/PostIDL.exe .; \
 		ln -s ${BINDIR}/PostSPH.exe .; \
 		ln -s ${BINDIR}/FDIPS.exe .; \
+		ln -s ${BINDIR}/HARMONICS.exe .; \
 		cp    ${DIR}/share/Scripts/pIDL .; \
 		cp    ${DIR}/GM/BATSRUS/Scripts/TEC/pTEC .; \
 		ln -s ${DIR}/GM/BATSRUS/Param/CORONA Param; \
