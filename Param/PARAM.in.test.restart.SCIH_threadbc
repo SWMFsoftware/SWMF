@@ -80,8 +80,7 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #USERSWITCH
--all +init +ic
-
++init +ic
 
 #POYNTINGFLUX
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
@@ -373,11 +372,8 @@ float			TypeBc6
 #RESCHANGE
 T			UseAccurateResChange
 
-
-
 #USERSWITCH
--all +init
-
++init			StringSwitch
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating

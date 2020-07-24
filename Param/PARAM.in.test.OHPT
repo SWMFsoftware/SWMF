@@ -180,7 +180,7 @@ z=0 MHD idl		StringPlot
 -1.0			DxOutput
 
 #USERSWITCH
--all +init +ic +progress	StringSwitch
++init +ic +progress	StringSwitch
 
 #USERINPUTBEGIN --------------------------------------------------------
 

@@ -121,7 +121,7 @@ T			UseCurlB0
 2.5			rCurrentFreeB0
 
 #USERSWITCH
--all +init +ic		StringSwitch
++init +ic		StringSwitch
 
 #POYNTINGFLUX
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]

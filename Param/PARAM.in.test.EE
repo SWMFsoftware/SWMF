@@ -26,7 +26,7 @@ periodic		TypeBc5
 periodic		TypeBc6
 
 #USERSWITCH
--b0 +perturb		StringSwitch
++init +ic +perturb +source +update		StringSwitch
 
 #USERINPUTBEGIN -----------------------------
 
