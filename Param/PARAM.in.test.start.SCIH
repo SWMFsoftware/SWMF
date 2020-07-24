@@ -101,7 +101,7 @@ HELIODIPOLE
 0.0			HelioDipoleTilt
 
 #USERSWITCH
--all +init +ic		StringSwitch
++init +ic		StringSwitch
 
 #POYNTINGFLUX
 1.0e6			PoyntingFluxPerBSi [J/m^2/s/T]
@@ -461,7 +461,7 @@ float			TypeBc6
 T			UseAccurateResChange
 
 #USERSWITCH
--all +init		StringSwitch
++init		StringSwitch
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating

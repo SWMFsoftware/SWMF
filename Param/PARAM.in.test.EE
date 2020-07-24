@@ -25,8 +25,11 @@ periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
 
+USERSWITCH
++all -b0
+
 #USERSWITCH
--b0 +perturb		StringSwitch
++init +ic +perturb +source +update		StringSwitch
 
 #USERINPUTBEGIN -----------------------------
 

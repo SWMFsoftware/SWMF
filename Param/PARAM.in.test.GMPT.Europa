@@ -132,7 +132,7 @@ T			UseNonConservative
 0
 
 #USERSWITCH
--all +init +ic +source		StringSwitch
++init +ic +source		StringSwitch
 
 #SAVEINITIAL
 T			DoSaveInitial
