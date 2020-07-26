@@ -373,7 +373,7 @@ float			TypeBc6
 T			UseAccurateResChange
 
 #USERSWITCH
-+init		StringSwitch
++init			StringSwitch
 
 #CORONALHEATING
 turbulentcascade        TypeCoronalHeating
