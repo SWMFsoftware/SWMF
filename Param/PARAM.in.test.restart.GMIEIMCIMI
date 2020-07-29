@@ -141,13 +141,6 @@ IM/restartIN/restart.H
 T			DoRestart
 T			DoReadRestartSatellite
 
-#SAVEPLOT
-1.0			DtOutput
-F			DoSaveFlux
-F			DoSaveDrifts
-F			DoSavePSD
-F			UseSeparatePlotFiles
-
 #TYPEBOUNDARY
 circle                  TypeBoundary
 
