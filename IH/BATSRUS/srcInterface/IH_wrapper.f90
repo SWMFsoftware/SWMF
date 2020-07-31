@@ -788,14 +788,12 @@ contains
     ! 30Dec2011 R. Oran   - initial version
 
     !USES:
-    use IH_ModSize,           ONLY: nI, nJ, nK
-    use IH_ModMain,           ONLY: UseB0, BuffR_, BuffPhi_, BuffTheta_
-    use IH_ModAdvance,        ONLY: &
-         State_VGB, UseElectronPressure
+    use IH_ModSize, ONLY: nI, nJ, nK, MinI, MaxI, MinJ, MaxJ, MinK, MaxK
+    use IH_ModMain, ONLY: UseB0, BuffR_, BuffPhi_, BuffTheta_
+    use IH_ModAdvance, ONLY: State_VGB, UseElectronPressure
     use IH_ModB0, ONLY: B0_DGB
-    use IH_ModPhysics,        ONLY: &
-         No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, &
-         UnitEnergyDens_
+    use IH_ModPhysics, ONLY: &
+         No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitEnergyDens_
     use IH_ModVarIndexes,     ONLY: &
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
          Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar
@@ -935,7 +933,7 @@ contains
           ! Interpolate from the modified state in the block 
           ! to the buffer grid point
           StateInPoint_V = &
-               trilinear(State_VG, nVar, -1, nI+2, -1, nJ+2, -1, nK+2, &
+               trilinear(State_VG, nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
                BufferNorm_D) !, DoExtrapolate = .TRUE.)
 
        else
@@ -943,7 +941,7 @@ contains
           ! Interpolate from the true solution block to the buffer grid point
           StateInPoint_V = &
                trilinear(State_VGB(:,:,:,:,iBlock), &
-               nVar, -1, nI+2, -1, nJ+2, -1, nK+2, &
+               nVar, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
                BufferNorm_D) !, DoExtrapolate = .TRUE.)
        end if
 
@@ -957,7 +955,7 @@ contains
           if(UseB0)then
              B0_D = &
                   trilinear(B0_DGB(:,:,:,:,iBlock), &
-                  3, -1, nI+2, -1, nJ+2, -1, nK+2, &
+                  3, MinI, MaxI, MinJ, MaxJ, MinK, MaxK, &
                   BufferNorm_D, DoExtrapolate = .TRUE.)
              Buffer_V(iBxCouple:iBzCouple) = &
                   StateInPoint_V(Bx_:Bz_) + B0_D
