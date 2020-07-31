@@ -18,6 +18,7 @@ CON/Control/src/show_git_info.h
 
 BATL/
 SWPCTEST
+SWMFSOLAR
 
 run*/
 Makefile.conf
