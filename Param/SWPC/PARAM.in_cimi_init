@@ -376,13 +376,6 @@ T			UseBorisCorrection
 MINIMUMPRESSURETOGM
 1e-2			MinimumPressureToGM
 
-#SAVEPLOT
-1 min			DtOutput
-F			DoSaveFlux
-F			DoSaveDrifts
-F			DoSavePSD
-T			UseSeparatePlotFiles
-
 #TYPEBOUNDARY
 ellipse			TypeBoundary
 

@@ -53,8 +53,8 @@ T                       UseFieldLineThreads
 T			UseAlignedVelocity
 T			DoConvergenceCheck
 limited			TypeBc
-40
-1.0e-6
+1.0e-6			Tolerance
+40			MaxIter
 
 #BODY
 T			UseBody

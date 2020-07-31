@@ -427,11 +427,10 @@ borisregion			NameBorisRegion
 MINIMUMPRESSURETOGM
 1e-2			MinimumPressureToGM
 
-#SAVEPLOT
+SAVEPLOT
+1			nCimiPlotType
+2d both			StringPlot
 1 min			DtOutput
-F			DoSaveFlux
-F			DoSaveDrifts
-F			DoSavePSD
 T			UseSeparatePlotFiles
 
 #TYPEBOUNDARY
