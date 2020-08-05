@@ -235,6 +235,9 @@ T			UseBorisCorrection
 2			nStage
 0.85			CflExpl
 
+#IE
+T			DoRayTraceIE
+
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP IM ---------------------------------------------------------------
@@ -255,7 +258,7 @@ T 			UseDecay
 T			DoRestart
 
 #IONOSPHERE
-5			TypeConductanceModel
+8			TypeConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 178.0			F107Flux
