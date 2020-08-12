@@ -5,6 +5,8 @@ my $nDay = ($n or $nday or 7);
 
 use strict;
 
+my $SiteDir = `pwd`; chop($SiteDir);
+
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
     "pleiades"     => "1.0",  # ifort pleiades
@@ -101,13 +103,16 @@ my $machine;
 
 # Take last seven days.
 my $days = `ls -r -d SWMF_TEST_RESULTS/*/*/* | head -$nDay`;
+
 my @days = split "\n", $days;
 
 # Extract results for all days and convert logfile into an HTML file
 foreach $day (@days){
 
+    #print "day = $day\n";
     next unless -d $day;
     chdir $day;
+    #print "pwd = ",`pwd`,"\n";
 
     foreach $machine (@machines){
 	my $file = "$machine/$resfile";
@@ -183,7 +188,7 @@ foreach $day (@days){
 	close RESULTS;
 	close HTML;
     }
-    chdir "../../../..";
+    chdir $SiteDir;
 }
 
 # update last pass information
@@ -212,13 +217,13 @@ foreach $machine (@machines){
 }
 
 # save latest information
-open FILE, ">$lastpassfile" or die "$ERROR: could not open $lastpassfile\n";
-print FILE "\%lastpass = (\n";
+open LASTPASS, ">$lastpassfile" or die "$ERROR: could not open $lastpassfile\n";
+print LASTPASS "\%lastpass = (\n";
 foreach $key (sort keys %lastpass){
-    print FILE "'$key' => '$lastpass{$key}',\n";
+    print LASTPASS "'$key' => '$lastpass{$key}',\n";
 }
-print FILE ");\n";
-close FILE;
+print LASTPASS ");\n";
+close LASTPASS;
 
 # Avoid creating a gigantic index.html file
 exit 0 if $nDay > 10;
@@ -364,9 +369,9 @@ foreach $day (@days){
 }
 $Table .= "</center>\n";
 
-open FILE, ">$changefile" or die "$ERROR: could not open $changefile\n";
-print FILE sort keys %change;
-close FILE;
+open CHANGE, ">$changefile" or die "$ERROR: could not open $changefile\n";
+print CHANGE sort keys %change;
+close CHANGE;
 
 open FILE, ">$indexfile" or die "$ERROR: could not open $indexfile\n";
 
