@@ -429,9 +429,6 @@ currentsheet		TypeCriteria
 6			nLevelArea
 initial			NameArea
 
-#THINCURRENTSHEET
-T			DoThinCurrentSheet
-
 #SAVEINITIAL
 F                       DoSaveInitial
 
