@@ -181,11 +181,6 @@ load			NameCommand
 SC/Param/TR.dat
 ascii			TypeFile
 
-#LOOKUPTABLE
-AW_TR			NameTable
-load			NameCommand
-SC/Param/AW_TR.dat
-ascii			TypeFile
 
 #TIMESTEPPING
 2			nStage
