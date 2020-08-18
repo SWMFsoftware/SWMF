@@ -8,6 +8,8 @@ git etiquette
 
 Before contributing it will be wise to read the [gitlab instructions](doc/GitLab_instructions.pdf).
 
+Before making a commit, run `git status` and make sure you are not adding any large files (>10MB) unless absolutely necessary. Fix the issue and rebase in your local repository before running `git push` as commits stay in history.
+
 Code of Conduct
 ---------------
 
