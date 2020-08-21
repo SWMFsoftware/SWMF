@@ -11,6 +11,7 @@ my $HelpXml     = $X; undef $X;
 my $nProc       = $n; undef $n;
 my $nThread     = ($t or 1); undef $t;
 my $Verbose     = $v; undef $v;
+my $Format      = $F; undef $F;
 
 use strict;
 
@@ -21,6 +22,7 @@ use strict;
 my $CheckParamScriptOrig  = 'share/Scripts/CheckParam.pl';
 my $CheckParamScript = $CheckParamScriptOrig;
 $CheckParamScript .= " -D" if $Debug;
+$CheckParamScript .= " -F" if $Format;
 
 my $XMLFile  = 'PARAM.XML';
 my $ConfigPl = 'Config.pl';
