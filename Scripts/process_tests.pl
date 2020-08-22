@@ -10,7 +10,7 @@ my $SiteDir = `pwd`; chop($SiteDir);
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
     "pleiades"     => "1.0",  # ifort pleiades
-    "gfortran"     => "1.0",  # gfortran debug
+    "gfortran"     => "1.0",  # gfortran optimized
     "grid"         => "1.0",  # nagfor debug
     "mesh"         => "1.0",  # nagfor optimized
     );
@@ -18,7 +18,7 @@ my %WeightMachine = (
 # Describe machine in the Html table
 my %HtmlMachine = (
     "pleiades"     => "ifort<br>pleiades",
-    "gfortran"     => "gfortran<br>debug",
+    "gfortran"     => "gfortran<br>optimized",
     "grid"         => "nagfor<br>debug",
     "mesh"         => "nagfor<br>optimized",
     );
