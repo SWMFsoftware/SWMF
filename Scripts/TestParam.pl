@@ -101,7 +101,7 @@ foreach $Comp (sort keys %Layout){
     }
 }
 
-print "TestParam.pl: mv $_ $_","_orig_\n" foreach (split /,/, $Files);
+print "TestParam: mv $_ $_","_orig_\n" foreach (split /,/, $Files);
 
 exit $IsError;
 
@@ -174,9 +174,10 @@ sub get_layout{
 	    "at line $. in $ParamFile:\n$_"
 	    if $Version{$id} eq 'Empty';
 
-        die "$ERROR root PE rank=$proc0 should not exceed last PE rank=".
-	    "$proclast\n\tat line $. in $ParamFile:\n$_"
-	    if $proc0 > $proclast;
+	# If root PE exceeds nProc, it will be pushed down. Not an error.
+        #die "$ERROR root PE rank=$proc0 should not exceed last PE rank=".
+	#    "$proclast\n\tat line $. in $ParamFile:\n$_"
+	#    if $proc0 > $proclast;
 
 	$Layout{$1}="$proc0,$proclast,$stride,$thread";
     }
