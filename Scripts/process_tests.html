@@ -31,7 +31,7 @@ The raw test results are saved into a
 <A HREF=SWMF_TEST_RESULTS>test result archive</A> that contains
 the results per year, month and day.
 
-<h2>Platforms, Fortran compilers, MPI and HDF5 libraries</h2>
+<h2>Platforms, Fortran compilers and MPI libraries</h2>
 
 <table border=1>
   <tr>
@@ -40,34 +40,31 @@ the results per year, month and day.
       <td>-compiler=</td>
       <td>compiler version and options</td>
       <td>MPI library</td>
-      <td>HDF library</td>
       <td>Parallel</td>
+      <td>Environment settings</td>
   </tr>
   <tr>
       <td><b>grid</b></td>
       <td>iMac with quad-core Intel i7 CPU</td>
-      <td>nagfor,gcc (=clang)</td>
-      <td>NAGFOR v6.2(6207) with clang-900.0.39.2, debug mode</td>
+      <td>nagfor,gcc</td>
+      <td>NAGFOR v6.2(6207) with gcc 6.5.0, debug mode</td>
       <td>mpich-3.2.1</td>
-      <td>hdf5-1.8.13</td>
       <td>NP=2</td>
   </tr>
   <tr>
       <td><b>gfortran</b></td>
       <td>iMac with quad-core Intel i7 CPU</td>
-      <td>gfortran,gcc (=clang)</td>
-      <td>gfortran 6.4.0 debug mode</td>
+      <td>gfortran,gcc</td>
+      <td>gfortran 6.5.0</td>
       <td>openmpi 3.0.0</td>
-      <td>hdf5-1.8.18</td>
       <td>serial</td>
   </tr>
   <tr>
       <td><b>mesh</b></td>
       <td>iMac with quad-core Intel i7 CPU</td>
-      <td>nagfor,gcc (=clang)</td>
-      <td>NAGFOR 6.2 (6106) with clang-900.0.39.2</td>
+      <td>nagfor,gcc</td>
+      <td>NAGFOR 6.2 (6106) with gcc 6.5.0</td>
       <td>mpich-3.2.1</td>
-      <td>hdf5-1.8.13</td>
       <td>NP=4</td>
   </tr>
   <tr>
@@ -76,8 +73,8 @@ the results per year, month and day.
       <td>ifort,icc</td>
       <td>comp-intel/2018.3.222, gcc/6.2</td>
       <td><font color=RED></font>mpi-sgi/mpt.2.15r20</td>
-      <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
       <td>NP=8</td>
+      <td><font color=RED>MPICC_CC=icc, MPICXX_CXX=icpc</font></td>
   </tr>
 </table>
 <hr>
