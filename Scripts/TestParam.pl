@@ -71,6 +71,10 @@ my $check =
     "$CheckParamScript -C=$Registered -n=$nProc -p=$Precision $ParamFile";
 print "$check\n" if $Verbose;
 my $Error = `$check`;
+
+# Extract list of files from the output: "CheckParam.pl: mv FILE FIE_orig_\n"
+my $Files;
+$Files .= "$1," while $Error =~ s/CheckParam.pl: mv (\S+) \1_orig_\n//;
 if($Error){
     $IsError = 1;
     warn "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n";
@@ -84,15 +88,20 @@ foreach $Comp (sort keys %Layout){
 	warn "$WARNING could not find XML description $xml\n";
 	next;
     }
-    my $check = "$CheckParamScript -c=$Comp -n=$nProc{$Comp} -p=$Precision ".
+    my $check = 
+	"$CheckParamScript -f=$Files -c=$Comp -n=$nProc{$Comp} -p=$Precision ".
 	"-x=$xml -g=$GridSize{$Comp} $ParamFile";
     print "$check\n" if $Verbose;
     $Error = `$check`;
+    # Append list of modified files
+    $Files .= "$1," while $Error =~ s/CheckParam.pl: mv (\S+) \1_orig_\n//;
     if($Error){
 	$IsError = 1;
 	warn "$ERROR parameter errors for $Comp:\n\n$Error\n";
     }
 }
+
+print "TestParam.pl: mv $_ $_","_orig_\n" foreach (split /,/, $Files);
 
 exit $IsError;
 
@@ -242,7 +251,7 @@ sub print_help{
 
 Usage:
 
-  Scripts/TestParam.pl [-h] [-H] [-X] [-v]
+  Scripts/TestParam.pl [-h] [-H] [-X] [-v] [-F]
                        [-n=NPROC] [-t=NTHREAD] [PARAMFILE]
 
   -h            print help message and stop
@@ -253,6 +262,9 @@ Usage:
 
   -v            print verbose information
 
+  -F            format the PARAMFILE and the included files. 
+                The original files are copied into FILENAME_orig_.
+
   -n=NPROC      assume that SWMF will run on NPROC processors
 
   -t=NTHREAD    assume that SWMF will run with NTHREAD maximum OpenMP threads
@@ -262,9 +274,9 @@ Usage:
 
 Examples:
 
-  Check the default parameter file run/PARAM.in:
+  Check and format the default parameter file run/PARAM.in:
 
-Scripts/TestParam.pl
+Scripts/TestParam.pl -F
 
   Check another parameter file for a 16-processor and 8-thread execution:
 
