@@ -40,7 +40,7 @@ The only restriction is that the length of the lines cannot exceed
 100 characters (extra characters will be ignored).
 
 <!-- Initial defaults which are needed for rules -->
-<set name="DoTimeAccurate" type="logical" value="T" />
+<set name="IsTimeAccurate" type="logical" value="T" />
 
 <commandgroup name="GENERAL COMMANDS">
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -130,13 +130,13 @@ the end of the PARAM.in file makes CON execute the last session.
 </command>
 
 <command name="TIMEACCURATE">
-	<parameter name="DoTimeAccurate" type="logical" default="T" />
+	<parameter name="IsTimeAccurate" type="logical" default="T" />
 
 #TIMEACCURATE
-F		DoTimeAccurate
+F		IsTimeAccurate
 
-If DoTimeAccurate is set to true, the SWMF is solving
-a time dependent problem. If DoTimeAccurate is false, a steady-state
+If IsTimeAccurate is set to true, the SWMF is solving
+a time dependent problem. If IsTimeAccurate is false, a steady-state
 solution is sought for. It is possible to use steady-state mode
 in the first few sessions to obtain a steady state solution,
 and then to switch to time accurate mode in the following sessions.
