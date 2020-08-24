@@ -1,21 +1,21 @@
 Name Root Last Stride nThread
 #COMPONENTMAP		For production run
-GM  0 -3 -1  -1		GM runs on 0:nProc-3 multithreaded
-IE -2 -1  1  		IE runs on last 2 PE-s
-IM -2 -2  1		IM runs on nProc-2 PE
-RB -1 -1  1		RB runs on nProc-1 PE
+GM  0 -3 -1  -1		CompMap 0:nProc-3 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+RB -1 -1  1		CompMap nProc-1 PE
 
-#COMPONENTMAP		For nightly test
-GM  0 -1 -1 -1		GM runs on 0:nProc-3 multithreaded
-IE -2 -1  1  		IE runs on last 2 PE-s
-IM -2 -2  1		IM runs on nProc-2 PE
-RB -1 -1  1		RB runs on nProc-1 PE
+COMPONENTMAP		For nightly test
+GM  0 -1 -1 -1		CompMap 0:nProc-1 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+RB -1 -1  1		CompMap nProc-1 PE
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC Version 2 code selection
+Example file to restart a run for the SWPC Version 2 code selection		StringDescription
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -30,7 +30,7 @@ T			DoSaveRestart
 1 min			DtSaveRestart
 
 #RESTARTOUTDIR
-SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
+SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
 
 #CHECKKILL
 GM			NameCompCheckKill
@@ -66,20 +66,20 @@ GM			NameComp2
 10.0			DtCouple
 
 #COUPLE1
-IE			NameComp1
-IM			NameComp2
+IE			NameSource
+IM			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
 #COUPLE1
-GM			NameComp1
-RB			NameComp2
+GM			NameSource
+RB			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
 #COUPLE1
-IE			NameComp1
-RB			NameComp2
+IE			NameSource
+RB			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
@@ -110,7 +110,7 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner
+ionosphere		TypeBcBody
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
@@ -120,7 +120,7 @@ T			UseCpcpBc  (rest is read if true)
 
 #SOLARWINDFILE
 T			UseSolarWindFile
-IMF.dat         	NameSolarWindFile
+IMF.dat			NameSolarWindFile
 
 #REFRESHSOLARWINDFILE
 T			DoReadAgain
@@ -162,7 +162,7 @@ T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola		TypeConservCrit_I
+parabola		TypeConservCrit
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
@@ -197,27 +197,27 @@ IMCOUPLINGSMOOTH
 1e-5			pMinDim [nPa]
 
 #SAVELOGNAME
-F			IsLogNameNstep
-T			IsLogNameEvent
+F			UseLogNameStep
+T			UseLogNameDateTime
 
 #SAVEPLOTNAME
-F			IsPlotNameNstep
-F			IsPlotNameTime
-T			IsPlotNameEvent
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
 
 #PLOTFILENAME
-date			TimeUnitMax
+date			NameMaxTimeUnit
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step date		StringLogfile
+VAR step date		StringLog
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
-3.0			StringRFlux
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
+3.0			StringLogRadii
 
 #SAVEPLOT
-4			nPlotFiles
+4			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
@@ -226,10 +226,10 @@ z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-shl MHD idl_ascii	StringPlot
+shl MHD idl_ascii		StringPlot
 -1			DnSavePlot
 1 min			DtSavePlot
-GEO			TypeCoordPlot
+GEO			TypeCoord
 6.6			rMin
 6.6			rMax
 0.			LonMin
@@ -247,15 +247,15 @@ lcb nul tec		StringPlot  !last closed field line plots
 2			nOrder
 Sokolov			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #BORIS
 T			UseBorisCorrection
 0.01			BorisClightFactor
 
 #REGION
-borisregion		NameArea
-sphere tapered		NameShape
+borisregion		NameRegion
+sphere tapered		StringShape
 -4.0			xPosition
 0.0			yPosition
 0.0			zPosition
@@ -295,7 +295,7 @@ T 			UseDecay
 T			DoRestart
 
 #IONOSPHERE
-5			TypeConductanceModel
+5			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 178.0			F107Flux
@@ -333,7 +333,7 @@ T			UseSeparatePlotFiles
 5.0			Dt
 
 #STARTUPTIME
-0.0			tStart
+0.0			tStartup
 
 #BMODEL
 MHD			NameModel
@@ -347,13 +347,13 @@ F			UsePlasmaSphere
 
 #END_COMP RB -----------------------------------------------------------------
 
-#ENDTIME            
-2014			year
-04              	month
-10              	day
-00			hour
-03             		minute
-00              	second
+#ENDTIME
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+03			iMinute
+00			iSecond
 0.0			FracSecond
 
 #END ############################################################
