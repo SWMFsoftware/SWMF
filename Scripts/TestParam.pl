@@ -101,7 +101,14 @@ foreach $Comp (sort keys %Layout){
     }
 }
 
-print "TestParam: mv $_ $_","_orig_\n" foreach (split /,/, $Files);
+foreach my $File (split(/,/, $Files)){
+    my $Orig = $File."_orig_";
+    if(`diff $File $Orig`){
+	print "TestParam: mv $File $Orig\n";
+    }else{
+	unlink $Orig;
+    }
+}
 
 exit $IsError;
 
