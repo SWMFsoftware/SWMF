@@ -3,4 +3,4 @@
 MHD time date		StringSatellite
 -1			DnOutput
 30.0			DtOutput
-sat01.dat		NameSatFile
+sat01.dat		NameTrajectoryFile

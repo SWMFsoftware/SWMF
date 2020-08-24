@@ -1,29 +1,29 @@
 Name Root Last Stride nThread
 #COMPONENTMAP		For production run
-GM  0 -3 -1  -1		GM runs on 0:nProc-3 multithreaded
-IE -2 -1  1  		IE runs on last 2 PE-s
-IM -2 -2  1		IM runs on nProc-2 PE
-RB -1 -1  1		RB runs on nProc-1 PE
+GM  0 -3 -1  -1		CompMap 0:nProc-3 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+RB -1 -1  1		CompMap nProc-1 PE
 
-#COMPONENTMAP		For nightly test
-GM  0 -1 -1 -1		GM runs on 0:nProc-3 multithreaded
-IE -2 -1  1  		IE runs on last 2 PE-s
-IM -2 -2  1		IM runs on nProc-2 PE
-RB -1 -1  1		RB runs on nProc-1 PE
+COMPONENTMAP		For nightly test
+GM  0 -1 -1 -1		CompMap 0:nProc-1 multithreaded
+IE -2 -1  1  		CompMap last 2 PE-s
+IM -2 -2  1		CompMap nProc-2 PE
+RB -1 -1  1		CompMap nProc-1 PE
 
 #DESCRIPTION
-Example file to start a run for the SWPC Version 2 code selection
+Example file to start a run for the SWPC Version 2 code selection		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate
 
-#STARTTIME            
-2014			year
-04			month
-10			day
-00			hour
-00			minute
-00			second
+#STARTTIME
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+00			iMinute
+00			iSecond
 0.0			FracSecond
 
 #COMPONENT
@@ -59,16 +59,16 @@ IE			NameComp2
 ! Maximum resolution initially
 #GRIDRESOLUTION
 2.0			Resolution
-initial			NameArea
+initial			StringShape
 
 ! Minimum resolution in the computational domain
 #GRIDRESOLUTION
 8.0			Resolution
-all			NameArea
+all			StringShape
 
 #GRIDRESOLUTION
 1.0			Resolution
-box			NameArea
+box			StringShape
 -100.0			xMinBox
  -16.0			yMinBox
  -16.0			zMinBox
@@ -79,7 +79,7 @@ box			NameArea
 ! Better res at geosync and near tail.
 #GRIDRESOLUTION
 1/4			Resolution
-box			NameArea
+box			StringShape
 -20.0			xMinBox
 -8.0			yMinBox
 -8.0			zMinBox
@@ -90,7 +90,7 @@ box			NameArea
 ! Close tail and bow shock resolution
 #GRIDRESOLUTION
 1/2			Resolution
-box			NameArea
+box			StringShape
 -32.0			xMinBox
 -22.0			yMinBox
 -10.0			zMinBox
@@ -101,9 +101,9 @@ box			NameArea
 
 #GRIDRESOLUTION
 1/8			Resolution
-shell0			NameArea
-2.5			r1Shell
-3.5			r2Shell
+shell0			StringShape
+2.5			RadiusInner
+3.5			Radius
 
 #BODY
 T			UseBody
@@ -114,7 +114,7 @@ T			UseBody
 
 #TIMESTEPPING
 1			nStage
-0.80			CflExlp
+0.80			CflExpl
 
 #OUTERBOUNDARY
 outflow			TypeBc1
@@ -125,7 +125,7 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere			TypeBcInner
+ionosphere		TypeBcBody
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
@@ -145,32 +145,32 @@ T			DoReadAgain
 Sokolov			TypeFlux
 
 #SAVELOGNAME
-F			IsLogNameNstep
-T			IsLogNameEvent
+F			UseLogNameStep
+T			UseLogNameDateTime
 
 #SAVEPLOTNAME
-F			IsPlotNameNstep
-F			IsPlotNameTime
-T			IsPlotNameEvent
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
 
 #PLOTFILENAME
-date			TimeUnitMax
+date			NameMaxTimeUnit
 
 #SAVELOGFILE
-T			DoSaveLo5Dgfile
-VAR step date			StringLogfile
+T			DoSaveLogfile
+VAR step date		StringLog
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
-3.0			StringRFlux
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
+3.0			StringLogRadii
 
 #SAVEPLOT
-2			nPlotFiles
-y=0 MHD idl			StringPlot
+2			nPlotFile
+y=0 MHD idl		StringPlot
 2500			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
-z=0 MHD idl			StringPlot
+z=0 MHD idl		StringPlot
 2500			DnSavePlot
 -1.			DtSavePlot
 -1.			DxSavePlot
@@ -192,7 +192,7 @@ MAG			TypeCoordIndex
 MAG			TypeCoordFacGrid
 
 #MAGNETOMETER
-magin_GEM.dat			NameMagInputFile
+magin_GEM.dat		NameMagInputFile
 single			TypeFileOut
 -1			DnOutput
 1 min			DtOutput
@@ -218,7 +218,7 @@ GEO			TypeCoordMagGrid
 #BEGIN_COMP IE ---------------------------------------------------------------
 
 #IONOSPHERE
-5			TypeConductanceModel
+5			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 178.0			F107Flux
@@ -247,7 +247,7 @@ min idl			StringPlot
 700			MaxIter
 -1.			TimeMax
 
-#RUN	######################################################################
+#RUN ##########################################################################
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -258,11 +258,11 @@ F			DoAmr
 2			nOrder
 Sokolov			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #TIMESTEPPING
 2			nStage
-0.6			CflExlp
+0.6			CflExpl
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -270,7 +270,7 @@ mc3			TypeLimiter
 1500			MaxIter
 -1.			TimeMax
 
-#RUN	######################################################################
+#RUN ##########################################################################
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -285,7 +285,7 @@ T			DoSaveRestart
 1 min			DtSaveRestart
 
 #RESTARTOUTDIR
-SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
+SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
 
 #CHECKKILL
 GM			NameCompCheckKill
@@ -296,7 +296,7 @@ T			DoCheckStop
 1 min			DtCheckStop
 
 CPUTIMEMAX
-47.5 hour			CpuTimeMax [sec]
+47.5 hour		CpuTimeMax [sec]
 
 #COMPONENT
 IM			NameComp
@@ -330,20 +330,20 @@ GM			NameComp2
 10.0			DtCouple
 
 #COUPLE1
-IE			NameComp1
-IM			NameComp2
+IE			NameSource
+IM			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
 #COUPLE1
-GM			NameComp1
-RB			NameComp2
+GM			NameSource
+RB			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
 #COUPLE1
-IE			NameComp1
-RB			NameComp2
+IE			NameSource
+RB			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
@@ -361,7 +361,7 @@ T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola			TypeConservCrit_I
+parabola		TypeConservCrit
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
@@ -396,19 +396,19 @@ IMCOUPLINGSMOOTH
 1e-5			pMinDim [nPa]
 
 #SAVEPLOT
-4			nPlotFiles
-y=0 MHD idl			StringPlot
+4			nPlotFile
+y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl			StringPlot
+z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-shl MHD idl_ascii	StringPlot
+shl MHD idl_ascii		StringPlot
 -1			DnSavePlot
 1 min			DtSavePlot
-GEO			TypeCoordPlot
+GEO			TypeCoord
 6.6			rMin
 6.6			rMax
 0.			LonMin
@@ -416,7 +416,7 @@ GEO			TypeCoordPlot
 10.			dLon
 0.			LatMin
 0.			LatMax
-lcb nul tec			StringPlot  !last closed field line plots
+lcb nul tec		StringPlot  !last closed field line plots
 -1  			DnSavePlot  !Tecplot (ONLY!)
 5 min			DtSavePlot
 5.			Radius
@@ -427,8 +427,8 @@ T			UseBorisCorrection
 0.01			BorisClightFactor
 
 #REGION
-borisregion			NameArea
-sphere tapered			NameShape
+borisregion		NameRegion
+sphere tapered		StringShape
 -4.0			xPosition
 0.0			yPosition
 0.0			zPosition
@@ -436,7 +436,7 @@ sphere tapered			NameShape
 2.0			Taper
 
 #BORISREGION
-borisregion			NameBorisRegion
+borisregion		NameBorisRegion
 
 #TIMESTEPPING
 1			nStage
@@ -482,7 +482,7 @@ T			UseSeparatePlotFiles
 5.0			Dt
 
 #STARTUPTIME
-0.0			tStart
+0.0			tStartup
 
 #BMODEL
 MHD			NameModel
@@ -496,13 +496,13 @@ F			UsePlasmaSphere
 
 #END_COMP RB -----------------------------------------------------------------
 
-#ENDTIME            
-2014			year
-04              	month
-10              	day
-00			hour
-02             		minute
-00              	second
+#ENDTIME
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+02			iMinute
+00			iSecond
 0.0			FracSecond
 
 #END ############################################################
