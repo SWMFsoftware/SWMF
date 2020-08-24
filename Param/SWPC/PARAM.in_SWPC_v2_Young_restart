@@ -9,7 +9,7 @@ RB -1 -1  1		! RB runs on nProc-1 PE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC Version 2 code with
+Param/SWPC/PARAM.in_SWPC_v2_Young_restart: Example file to restart a run for the SWPC Version 2 code with
 the Young boundary condition.
 
 #TIMEACCURATE

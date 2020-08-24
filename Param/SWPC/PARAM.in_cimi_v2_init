@@ -11,7 +11,7 @@ IM -25 -2  1			IM runs on nProc-25 to nProc-2
 IE  -1 -1  1			IE runs on the last PE
 
 #DESCRIPTION
-Example file to start a run for the SWPC Version 2 with IM/CIMI
+Param/SWPC/PARAM.in_cimi_v2_init: Example file to start a run for the SWPC Version 2 with IM/CIMI
 
 #TIMEACCURATE
 F			IsTimeAccurate

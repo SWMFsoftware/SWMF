@@ -14,7 +14,7 @@ IE  -1 -1  1			IE runs on the last PE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for SWPC Version 2 with IM/CIMI
+Param/SWPC/PARAM.in_cimi_v2_restart: Example file to restart a run for SWPC Version 2 with IM/CIMI
 
 #PROGRESS
 1			DnProgressShort

@@ -4,6 +4,9 @@ EE  0 -1  1		EE runs on all PEs
 #INCLUDE
 RESTART.in
 
+#DESCRIPTION
+Param/PARAM.in.test.EE: restart EE only
+
 #TIMEACCURATE
 T			DoTimeAccurate 
 

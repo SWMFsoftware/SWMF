@@ -1,6 +1,9 @@
 #COMPONENTMAP
 CZ  0 -1  1				CZ runs on all PEs
 
+#DESCRIPTION
+Param/PARAM.in.test.CZ: CZ run under the SWMF
+
 #PROGRESS
 10					DnProgressShort
 50					DnProgressLong

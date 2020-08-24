@@ -6,7 +6,7 @@ IH    1   -1    1
 F			UseStdOut
 
 #DESCRIPTION
-Test SWMF with stub IH and SP components
+Param/PARAM.in.test.stubs: Test SWMF with stub IH and SP components
 
 #STOP
 -1			MaxIteration

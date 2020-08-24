@@ -4,7 +4,7 @@ GM  0 -1  1
 PC  0  7  1
 
 #DESCRIPTION
-Run GM and PC in time accurate mode		StringDescription
+Param/PARAM.in.test.GMPC.FLEKS.3D: Run GM and PC in time accurate mode		StringDescription
 
 #PLANET
 NONE			NamePlanet

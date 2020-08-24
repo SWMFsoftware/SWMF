@@ -3,7 +3,7 @@ OH       0   -1    1   ! OH runs on all PE-s
 PT       1    2    1   ! PT runs on 1 or 2 PE-s
 
 #DESCRIPTION
-Couple single-ion OH with PT
+Param/PARAM.in.test.OHPT: Couple single-ion OH with PT
 
 #TIMEACCURATE           
 F  			IsTimeAccurate

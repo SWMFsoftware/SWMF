@@ -6,7 +6,7 @@ GM  0  2  1
 PT  0 -1  1
 
 #DESCRIPTION
-Startup for GM. Solar wind condition based on SC-IH run.
+Param/PARAM.in.test.GMPT: Startup for GM. Solar wind condition based on SC-IH run.
 
 #PLANET
 EARTH			NamePlanet

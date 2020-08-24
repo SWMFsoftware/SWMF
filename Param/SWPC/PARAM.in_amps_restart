@@ -9,7 +9,7 @@ PT  2 -1  1   ! PT runs on remaining PE-s
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC code selection
+Param/SWPC/PARAM.in_amps_restart: Example file to restart a run for the SWPC code selection
 
 #TIMEACCURATE
 T			IsTimeAccurate

@@ -27,7 +27,7 @@ SC  0  -1  1
 IH  0  -1  1
 
 #DESCRIPTION
-Input file for creating a steady state solar corona
+Param/PARAM.in.test.start.SCIH: Input file for creating a steady state solar corona
 
 INCLUDE
 RESTART.in

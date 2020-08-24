@@ -4,7 +4,7 @@ Begin session: 1
 SP  0 -1  1
 
 #DESCRIPTION
-Input file for testing SP model for SEPs, uses input files with background data
+Param/PARAM.in.test.SP: Input file for testing SP model for SEPs, uses input files with background data
 
 #STARTTIME
     2011                     iYear

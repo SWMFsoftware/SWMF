@@ -6,6 +6,9 @@ PC  0  3  1		PC runs on 4 PE-s
 #INCLUDE
 RESTART.in		NameRestartFile
 
+#DESCRIPTION
+Param/PARAM.in.test.GMPC.restart.2step.aniso: 
+
 #PROGRESS
 1			DnShowProgressShort
 1			DnShowProgressLong

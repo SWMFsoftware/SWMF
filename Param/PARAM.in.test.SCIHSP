@@ -6,7 +6,7 @@ IH  0 -1  1
 SP  0 -1  2
 
 #DESCRIPTION
-Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line
+Param/PARAM.in.test.SCIHSP: Input file for testing SC-IH-SP model for SEPs, includes Threaded-Field-Line
 
 #TIMEACCURATE
 T			IsTimeAccurate

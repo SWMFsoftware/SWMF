@@ -3,7 +3,7 @@ SC  0 -1  1
 IH  0 -1  1
 
 #DESCRIPTION
-Time accurate SC-IH run with SC switched off in second session
+Param/PARAM.in.test.restart.SCIH_threadbc: Time accurate SC-IH run with SC switched off in second session
 
 #TIMEACCURATE
 T                       DoTimeAccurate

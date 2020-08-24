@@ -5,7 +5,7 @@ IE -2 -1  1  		! IE runs on last 2 PE-s
 IM -2 -2  1		! IM runs on nProc-2 PE
 
 #DESCRIPTION
-Example file to start a run for the SWPC code selection
+Param/SWPC/PARAM.in_multispecies_init: Example file to start a run for the SWPC code selection
 
 #TIMEACCURATE
 F			IsTimeAccurate

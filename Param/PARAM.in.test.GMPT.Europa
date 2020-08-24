@@ -7,6 +7,9 @@ PT  1  2  1
 #PLANET
 EUROPA			NamePlanet
 
+#DESCRIPTION
+Param/PARAM.in.test.GMPT.Europa: 
+
 #INCLUDE
 RESTART.in
 

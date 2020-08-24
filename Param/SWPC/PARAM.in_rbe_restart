@@ -8,7 +8,7 @@ RB -1 -1  1    ! RB runs on nProc-1 PE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC code selection
+Param/SWPC/PARAM.in_rbe_restart: Example file to restart a run for the SWPC code selection
 
 #TIMEACCURATE
 T			IsTimeAccurate

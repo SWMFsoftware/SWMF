@@ -6,7 +6,7 @@ IM -2 -2  1		! IM runs on nProc-2 PE
 RB -1 -1  1		! RB runs on nProc-1 PE
 
 #DESCRIPTION
-Example file to start a run for the SWPC Version 2 code with the Young 
+Param/SWPC/PARAM.in_SWPC_v2_Young_init: Example file to start a run for the SWPC Version 2 code with the Young 
 boundary condition.
 
 #TIMEACCURATE

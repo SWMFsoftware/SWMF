@@ -17,7 +17,7 @@ Overwrite the start time
 0.0			FracSecond
 
 #DESCRIPTION
-Create LOS images
+Param/PARAM.in.restart.SC.plot_los: Create LOS images
 
 #TIMEACCURATE
 F                       DoTimeAccurate

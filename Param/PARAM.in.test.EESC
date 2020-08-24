@@ -19,6 +19,9 @@ T			DoTimeAccurate
 #INCLUDE
 RESTART.in
 
+#DESCRIPTION
+Param/PARAM.in.test.EESC: restart EE+SC
+
 #BEGIN_COMP EE --------------------------------------------------------------
 
 #INCLUDE

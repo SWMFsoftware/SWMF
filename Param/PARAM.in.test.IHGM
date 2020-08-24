@@ -10,7 +10,7 @@ CON_axes::init_axes
 RESTART.in
 
 #DESCRIPTION
-Couple IH to GM
+Param/PARAM.in.test.IHGM: Couple IH to GM
 
 #TIMEACCURATE
 F			DoTimeAccurate

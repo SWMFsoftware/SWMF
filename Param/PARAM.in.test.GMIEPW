@@ -14,7 +14,7 @@ PW_get_for_gm GM_put_from_pw CON_couple_all::couple_two_comp
 100			DnShowProgressLong
 
 #DESCRIPTION
-Run GM and IE and PW in time accurate mode
+Param/PARAM.in.test.GMIEPW: Run GM and IE and PW in time accurate mode
 
 #PLANET
 EARTH			NamePlanet

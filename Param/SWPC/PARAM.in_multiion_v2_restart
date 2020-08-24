@@ -7,7 +7,7 @@ GM  0 -1  1   ! GM runs on all PE-s
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC v2 code selection
+Param/SWPC/PARAM.in_multiion_v2_restart: Example file to restart a run for the SWPC v2 code selection
 
 #TIMEACCURATE
 T			IsTimeAccurate

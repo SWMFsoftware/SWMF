@@ -6,7 +6,7 @@ GM  2 -1  1   ! GM runs on remaining PE-s
 PT  2 -1  1   ! PT runs on remaining PE-s
 
 #DESCRIPTION
-Example file to start a run for the SWPC code selection
+Param/SWPC/PARAM.in_amps_init: Example file to start a run for the SWPC code selection
 
 #TIMEACCURATE
 F			IsTimeAccurate

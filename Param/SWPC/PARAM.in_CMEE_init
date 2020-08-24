@@ -4,7 +4,7 @@ IE  0  1  1   ! IE runs on up to 2 PE-s
 GM  2 -1  1   ! GM runs on rest of PE-s
 
 #DESCRIPTION
-Example file to start a run for the SWPC code selection using CMEE
+Param/SWPC/PARAM.in_CMEE_init: Example file to start a run for the SWPC code selection using CMEE
 
 #TIMEACCURATE
 F			IsTimeAccurate

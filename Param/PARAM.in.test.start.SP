@@ -2,7 +2,7 @@
 SP 0 0 1
 
 #DESCRIPTION
-Uses flat files for MHD data and starts SP
+Param/PARAM.in.test.start.SP: Uses flat files for MHD data and starts SP
 
 #TIMEACCURATE
 T			DoTimeAccurate

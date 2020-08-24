@@ -12,7 +12,7 @@ IM -2 -2  1		CompMap nProc-2 PE
 RB -1 -1  1		CompMap nProc-1 PE
 
 #DESCRIPTION
-Example file to start a run for the SWPC Version 2 code selection		StringDescription
+Param/SWPC/PARAM.in_SWPC_v2_init: Example file to start a run for the SWPC Version 2 code selection		StringDescription
 
 #TIMEACCURATE
 F			IsTimeAccurate

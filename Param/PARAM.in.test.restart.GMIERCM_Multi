@@ -17,7 +17,7 @@ write_geoind_restart read_geoind_restart
 RESTART.in		NameRestartFile
 
 #DESCRIPTION
-Restart test for GM-IM-IE, multifluid GM-IM coupling
+Param/PARAM.in.test.restart.GMIERCM_Multi: Restart test for GM-IM-IE, multifluid GM-IM coupling
 
 #ROTATION
 F			UseRotation

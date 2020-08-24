@@ -2,7 +2,7 @@
 SC  0 -1  1		SC runs on all PEs
 
 #DESCRIPTION
-Input file for creating a steady state solar corona with Threaded-Field-Line LC
+Param/PARAM.in.test.SC: Input file for creating a steady state solar corona with Threaded-Field-Line LC
 
 #TIMEACCURATE
 F                       DoTimeAccurate

@@ -3,6 +3,9 @@ Begin session: 1
 #COMPONENTMAP
 EE  0 -1  1		EE runs on all PEs
 
+#DESCRIPTION
+Param/PARAM.in.test.EE.3D: 
+
 #TIMEACCURATE
 T			DoTimeAccurate 
 

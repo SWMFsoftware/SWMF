@@ -6,7 +6,7 @@ GM  1 -1  1		GM runs on all PE-s except 0
 PC  0  3  1		PC runs on first 4 PE-s
 
 #DESCRIPTION
-Run GM and PC in time accurate mode
+Param/PARAM.in.test.GMPC.start.aniso: Run GM and PC in time accurate mode
 
 #PLANET
 NONE			NamePlanet

@@ -13,7 +13,7 @@ F			DoTimeAccurate
 100			DnShowProgressLong
 
 #DESCRIPTION
-Test for GM-IM-IE, multifluid GM-IM coupling	StringDescription
+Param/PARAM.in.test.GMIERCM_Multi: Test for GM-IM-IE, multifluid GM-IM coupling	StringDescription
 
 #PLANET
 EARTH			NamePlanet

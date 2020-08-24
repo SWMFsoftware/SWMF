@@ -5,7 +5,7 @@ IM -2 -2  1    ! IM runs on nProc-2 PE
 RB -1 -1  1    ! RB runs on nProc-1 PE
 
 #DESCRIPTION
-Example file to start a run for the SWPC code selection
+Param/SWPC/PARAM.in_rbe_init: Example file to start a run for the SWPC code selection
 
 #TIMEACCURATE
 F			IsTimeAccurate

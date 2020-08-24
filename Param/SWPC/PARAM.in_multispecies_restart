@@ -8,7 +8,7 @@ IM -2 -2  1		! IM runs on nProc-2 PE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC code selection
+Param/SWPC/PARAM.in_multispecies_restart: Example file to restart a run for the SWPC code selection
 
 #TIMEACCURATE
 T			IsTimeAccurate

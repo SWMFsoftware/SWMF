@@ -15,7 +15,7 @@ RB -1 -1  1		CompMap nProc-1 PE
 RESTART.in
 
 #DESCRIPTION
-Example file to restart a run for the SWPC Version 2 code selection		StringDescription
+Param/SWPC/PARAM.in_SWPC_v2_restart: Example file to restart a run for the SWPC Version 2 code selection		StringDescription
 
 #TIMEACCURATE
 T			IsTimeAccurate

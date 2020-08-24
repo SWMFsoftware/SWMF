@@ -10,7 +10,7 @@ IE_get_for_ps PS_put_from_ie
 50000                   DnShowProgressLong
 
 #DESCRIPTION
-Test IE and PS in time accurate mode using Weimer2K
+Param/PARAM.in.test.PSIE: Test IE and PS in time accurate mode using Weimer2K
 
 #PLANET
 EARTH

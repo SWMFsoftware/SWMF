@@ -3,7 +3,7 @@ IH  0 -1  1		IH runs on all PEs
 OH  0 -1  1		OH runs on all PEs
 
 #DESCRIPTION
-launch a blob in IH, advect to OH, calculate error
+Param/PARAM.in.test.IHOH.CoupleSphToXyz: launch a blob in IH, advect to OH, calculate error
 
 #SAVERESTART
 F			DoSaveRestart

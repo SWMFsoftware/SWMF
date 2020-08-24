@@ -6,7 +6,7 @@ PW  0 -1  1
 100			DnShowProgressLong
 
 #DESCRIPTION
-PW test
+Param/PARAM.in.test.PW: PW test
 
 #SAVERESTART
 T                       DoSaveRestart
