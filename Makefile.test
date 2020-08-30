@@ -77,14 +77,14 @@ test_swmf:
 	-@(${MAKE} test10 TESTDIR=run_test10)
 	-@(${MAKE} test12)
 	-@(${MAKE} test13 TESTDIR=run_test13)
+	-@(${MAKE} test14 TESTDIR=run_test14)
+	-@(${MAKE} test14pui TESTDIR=run_test14pui)
 	-@(${MAKE} test14pui1d TESTDIR=run_test14pui1d)
 	-@(${MAKE} test15 TESTDIR=run_test15)
 	-@(${MAKE} test16 TESTDIR=run_test16)
 	-@(${MAKE} test17 TESTDIR=run_test17)
 	-@(${MAKE} test18 TESTDIR=run_test18)
 
-	-@(${MAKE} test14 TESTDIR=run_test14)
-	-@(${MAKE} test14pui TESTDIR=run_test14pui)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
