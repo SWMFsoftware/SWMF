@@ -83,9 +83,8 @@ test_swmf:
 	-@(${MAKE} test17 TESTDIR=run_test17)
 	-@(${MAKE} test18 TESTDIR=run_test18)
 
-# These tests are too slow. To be fixed by Valeriy Tenishev
-#	-@(${MAKE} test14 TESTDIR=run_test14)
-#	-@(${MAKE} test14pui TESTDIR=run_test14pui)
+	-@(${MAKE} test14 TESTDIR=run_test14)
+	-@(${MAKE} test14pui TESTDIR=run_test14pui)
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
