@@ -45,7 +45,6 @@ test_help:
 	@echo "    test17                     (run GM-FLEKS test: 2D Alfven wave)"
 	@echo "    test18                     (run GM-FLEKS test: 3D reconnection)"
 	@echo "    test_check                 (collect test results into test_swmf.res)"
-	./Config.pl -noamrex
 
 .NOTPARALLEL: test
 
@@ -84,7 +83,7 @@ test_swmf:
 	-@(${MAKE} test16 TESTDIR=run_test16)
 	-@(${MAKE} test17 TESTDIR=run_test17)
 	-@(${MAKE} test18 TESTDIR=run_test18)
-
+	./Config.pl -noamrex
 
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
