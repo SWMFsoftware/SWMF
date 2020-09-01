@@ -1236,7 +1236,7 @@ One common option is to have the planet in the -X,Z plane.
 Another option would be to move an active region into an appropriate plane.
 
 <command name="ROTATEHGR"  if="$_IsFirstSession">
-	<parameter name="dLongitudeHgr" type="real" min="-360" max="360"
+	<parameter name="dLongitudeHgr" type="real" min="-1" max="360"
 							default="0"/>
 #ROTATEHGR
 145.6			dLongitudeHgr [deg]
@@ -1248,7 +1248,7 @@ Default value is 0, i.e. the true HGR system is used.
 </command>
 
 <command name="ROTATEHGI" if="$_IsFirstSession">
-	<parameter name="dLongitudeHgi" type="real" min="-360" max="360"
+	<parameter name="dLongitudeHgi" type="real" min="-1" max="360"
 							default="0"/>
 #ROTATEHGI
 -1.0			dLongitudeHgi [deg]
