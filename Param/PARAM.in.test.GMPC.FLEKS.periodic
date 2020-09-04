@@ -259,17 +259,13 @@ z=0 all idl_ascii       StringPlot
 #PARTICLESTAGGERING
 F			Staggered
 
-#ELECTRON
--100.0		        Charge/mass ratio (qom)
+#SMOOTHE
+F			doSmoothE
 
 #MAXBLOCKSIZE
 16			nx
 8			ny
 1			nz
-
-#TIMESTEPPING
-F			useFixedDt			
-0.2			fixedDt
 
 #DIVE
 F			useDiv
