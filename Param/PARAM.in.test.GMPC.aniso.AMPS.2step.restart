@@ -1,7 +1,7 @@
 ID Proc0 ProcEnd Stride nThread
 #COMPONENTMAP
-GM 1     999    1      -1	! GM runs on PEs 1... with MaxThread threads
-PC 0       3    1       1	! PC runs on PEs 0..3 with 1 thread
+GM 1 -1 1 -1		CompMap runs on PEs 1... with MaxThread threads
+PC 0  3 1  1		CompMap runs on PEs 0..3 with 1 thread
 
 DESCRIPTION
 Run GM and PC in time accurate mode

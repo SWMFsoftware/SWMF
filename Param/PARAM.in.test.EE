@@ -1,16 +1,16 @@
 #COMPONENTMAP
-EE  0 -1  1		EE runs on all PEs
+EE  0 -1  1		CompMap runs on all PEs
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Param/PARAM.in.test.EE: restart EE only
+Param/PARAM.in.test.EE: restart EE only		StringDescription
 
 #TIMEACCURATE
-T			DoTimeAccurate 
+T			IsTimeAccurate
 
-#BEGIN_COMP EE --------------------------------------------------------------
+#BEGIN_COMP EE ---------------------------------------------------------------
 
 #INCLUDE
 EE/restartIN/restart.H
@@ -31,7 +31,7 @@ periodic		TypeBc6
 #USERSWITCH
 +init +ic +perturb +source +update		StringSwitch
 
-#USERINPUTBEGIN -----------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #RADMHD
 1.0			r_photo
@@ -59,17 +59,17 @@ T			UseRope
 1.0			buoyancy
 1.0e5			b0_rope Gauss
 
-#USERINPUTEND --------------------------------
+#USERINPUTEND -------------------------------------
 
 #CORONALHEATING
 unsignedflux		TypeCoronalHeating
-0.7			Decaylength
+0.7			DecayLength
 1.			HeatNormalization
 
 #LOOKUPTABLE
 RhoExtraEP(R)		NameTable
 load			NameCommand
-InitialStateSph.dat	NameFile
+InitialStateSph.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
@@ -81,7 +81,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCoolCorona.dat
+SC/Param/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #SCHEME
@@ -95,7 +95,7 @@ mc3			TypeLimiter
 0.8			CflExpl
 
 #SAVERESTART
-T			DoSaveRestart  
+T			DoSaveRestart
 -1			DnSaveRestart
 300.			DtSaveRestart
 
@@ -104,23 +104,23 @@ T			DoSaveLogfile
 VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho Ux Uy Uz E Pmin Pmax	NameLogVars
-4.0  10.0      	    	rLog
+rho Ux Uy Uz E Pmin Pmax		NameLogVars
+4.0  10.0		rLog
 
 #SAVEPLOT
-1			nPlotFiles
+1			nPlotFile
 x=0 VAR idl		StringPlot
 -1  			DnSavePlot
 10.0			DtSavePlot
 0			DxSavePlot
-rho ux uy uz bx by bz tempe p
-g rbody
+rho ux uy uz bx by bz tempe p		NameVars
+g rbody			NamePars
 
 SAVEINITIAL
 T
 
-#END_COMP EE ----------------------------------------------------------------
+#END_COMP EE -----------------------------------------------------------------
 
 #STOP
-10			MaxIteration
--1.			tSimulationMax
+10			MaxIter
+-1.			TimeMax

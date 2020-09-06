@@ -1,23 +1,23 @@
 ID Proc0 ProcEnd Stride nThread
 #COMPONENTMAP
-GM 1     999    1      -1	! GM runs on PEs 1... with MaxThread threads
-PC 0       3    1       1	! PC runs on PEs 0..3 with 1 thread
+GM 1 -1 1 -1		CompMap runs on PEs 1... with MaxThread threads
+PC 0  3 1  1		CompMap runs on PEs 0..3 with 1 thread
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.aniso.AMPS.corr: Run GM and PC in time accurate mode
+Param/PARAM.in.test.GMPC.aniso.AMPS.corr: Run GM and PC in time accurate mode		StringDescription
 
 #PLANET
 NONE			NamePlanet
 
 SAVERESTART
-T			DoSaveRestart 
--1			DnSaveRestart 
+T			DoSaveRestart
+-1			DnSaveRestart
 100.0			DtSaveRestart
 
 #COUPLE2TIGHT
-GM			NameCompMaster
-PC			NameCompSlave
-T                       DoCouple
+GM			NameMaster
+PC			NameSlave
+T			DoCouple
 
 
 COUPLE2
@@ -27,14 +27,14 @@ PC			NameComp2
 1.0			DtCouple
 
 #PROGRESS
-1			DnShowProgressShort
-1			DnShowProgressLong
+1			DnProgressShort
+1			DnProgressLong
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 USERMODULE
 Waves and GEM, Yingjuan Ma
- 1.30                  VersionUserModule
+ 1.30			VersionUserModule
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -44,7 +44,7 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass [amu]
-1.0			IonCharge [e]  
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 
@@ -53,8 +53,8 @@ T			UseNonConservative
 
 
 #UNIFORMSTATE
-1.0			Rho
-0.0			Ux
+1.0			Var1
+0.0			Var2
 0.0			Uy
 0.0			Uz
 0.0			Bx
@@ -63,23 +63,23 @@ T			UseNonConservative
 4.5e-4			Ppar
 4.5e-4			p
 
-rho   = 1
-By    = 0.04
-cA    = By/sqrt(rho)   = 0.04
-cS    = sqrt(2*p/rho)  = 0.03
-cF    = sqrt(cA^2+cS^2)= 0.05
+rho			= 1
+By			= 0.04
+cA			= By/sqrt(rho)   = 0.04
+cS			= sqrt(2*p/rho)  = 0.03
+cF			= sqrt(cA^2+cS^2)= 0.05
 lambda= 32
-t     = lambda/(cF) = 640.0
+t			= lambda/(cF) = 640.0
 
 p = pe = 2.25e-4
-vth   = sqrt(p/rho) = 0.015
+vth			= sqrt(p/rho) = 0.015
 me = mi/25
-vthe  = 5*vth       = 0.075 
+vthe  = 5*vth		= 0.075
 dx = 0.4
-dtmax = dx/vthe     = 5.333
-dt    = 0.2*dtmax   = 1.066
+dtmax = dx/vthe		= 5.333
+dt			= 0.2*dtmax   = 1.066
 
-#USERINPUTBEGIN ----------------
+#USERINPUTBEGIN -----------------------------------
 
 #WAVE
 1			Rho_
@@ -126,16 +126,16 @@ dt    = 0.2*dtmax   = 1.066
 -1.0			LambdaZ
 0.0			Phase
 
-#USERINPUTEND   ----------------
+#USERINPUTEND -------------------------------------
 
 SHOCKPOSITION
 0.0			ShockPosition
 4/3			ShockSlope
 
 #GRID
-4                    	nRootBlockX
-4                     	nRootBlockY
-4                     	nRootBlockZ
+4			nRootBlock1
+4			nRootBlock2
+4			nRootBlock3
 -50.0			xMin
  50.0			xMax
 -50.0			yMin
@@ -151,20 +151,20 @@ SHOCKPOSITION
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-1.0			DtFixed
+1.0			DtFixedDim
 
 #PICUNIT
 1.0			xUnitPicSi
 1.0			uUnitPicSi
 
 #PICGRID
-1                       nPicRegion
--8        	        xMinCut
- 8 	           	xMaxCut
--8                      yMinCut
- 8   	     		yMaxCut
--8                      yMinCut
- 8   	     		yMaxCut
+1			nPicRegion
+-8			xMinCut
+ 8 			xMaxCut
+-8			yMinCut
+ 8			yMaxCut
+-8			yMinCut
+ 8			yMaxCut
 1.0			Dx
 1.0			Dy
 1.0			Dz
@@ -172,20 +172,20 @@ T			UseDtFixed
 
 
 
- 5.0        	        xMinCut
- 25.0            	xMaxCut
--20.0                   yMinCut
- 20.0   	     	yMaxCut
+ 5.0			xMinCut
+ 25.0			xMaxCut
+-20.0			yMinCut
+ 20.0			yMaxCut
 1.25/3			DxPic
 1.25/3			DyPic
 
 #OUTERBOUNDARY
-periodic                TypeBc1
-periodic                TypeBc2
-periodic                TypeBc3
-periodic                TypeBc4
-float                   TypeBc5
-float                   TypeBc6
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 HALLRESISTIVITY
 T			UseHallResistFlux
@@ -193,7 +193,7 @@ T			UseHallResistFlux
 0.0			HallCmaxFactor
 
 #TEST
-init_hall_resist	TestString
+init_hall_resist		TestString
 
 #DIVBSOURCE
 F			UseB0Source
@@ -202,15 +202,15 @@ F			UseB0Source
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-1.5			BetaLimiter
+1.5			LimiterBeta
 
 RK
 3			nStage
 0.8			CflExpl
 
 #TIMESTEPPING
-2                       nStage
-0.8                     CflExpl
+2			nStage
+0.8			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -222,12 +222,12 @@ raw			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-1
-z=0 var idl_ascii       StringPlot
-1			DnOutput
--0.05			DtOutput
-0.			DxOutput
-rho mx my bx by p       NameVars
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+1			DnSavePlot
+-0.05			DtSavePlot
+0.			DxSavePlot
+rho mx my bx by p		NameVars
 g rbody			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
@@ -251,9 +251,9 @@ T			UseECSIM
 
 #DISCRETIZATION
 0.5			Theta
-0.0                     GradRhoRatio
-0.0                     cDiff
-0.1                     RatioDivC2C
+0.0			GradRhoRatio
+0.0			cDiff
+0.1			RatioDivC2C
 
 #DIVE
 T			DivECleanType
@@ -265,20 +265,20 @@ T			DivECleanType
 
 #SAVEIDL
 2			nPlotFile
-3d fluid ascii pic	StringPlot
-1   	  		DnOutput
+3d fluid ascii pic		StringPlot
+1			DnOutput
 -1.0			DtOutput
 1			DxOutput
-3d fluid ascii si	StringPlot
-1   	  		DnOutput
+3d fluid ascii si		StringPlot
+1			DnOutput
 -1.0			DtOutput
 1			DxOutput
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-5			tSimulationMax
+-1			MaxIter
+5			TimeMax
 
 
 #END #########################################################################

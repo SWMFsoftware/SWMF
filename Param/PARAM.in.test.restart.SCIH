@@ -38,15 +38,6 @@ RESTART.in
 #TIMEACCURATE
 F                       DoTimeAccurate
 
-#STARTTIME
-2018			iYear
-10			iMonth
-13			iDay
-06			iHour
-00			iMinute
-00			iSecond
-0.0			FracSecond
-
 #SAVERESTART
 T                       DoSaveRestart
 2                      DnSaveRestart

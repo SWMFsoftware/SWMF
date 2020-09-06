@@ -1,15 +1,15 @@
 Begin session: 1
 
 #COMPONENTMAP
-EE  0 -1  1		EE runs on all PEs
+EE  0 -1  1		CompMap runs on all PEs
 
 #DESCRIPTION
-Param/PARAM.in.test.EE.3D: 
+Param/PARAM.in.test.EE.3D:		StringDescription
 
 #TIMEACCURATE
-T			DoTimeAccurate 
+T			IsTimeAccurate
 
-#BEGIN_COMP EE --------------------------------------------------------------
+#BEGIN_COMP EE ---------------------------------------------------------------
 
 #STAR
 1.0			RadiusStar
@@ -17,18 +17,18 @@ T			DoTimeAccurate
 0.0			RotationPeriodStar
 
 #GRIDGEOMETRYLIMIT
-spherical
-0.9512			rMin
-1.2312			rMax
-82.0			LongitudeMin
-98.0			LongitudeMax
--4.0			LatitudeMin
- 4.0			LatitudeMax
+spherical		TypeGeometry
+0.9512			Coord1Min
+1.2312			Coord1Max
+82.0			Coord2Min
+98.0			Coord2Max
+-4.0			Coord3Min
+ 4.0			Coord3Max
 
 #GRID
-7			nRootBlockX
-1			nRootBlockY
-1                       nRootBlockZ
+7			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -2.0			xMin
  2.0			xMax
 -2.0			yMin
@@ -41,11 +41,11 @@ spherical
 
 #GRIDLEVEL
 2			nLevel
-all			NameArea
+all			StringShape
 
 #GRIDLEVEL
 2			nLevel
-initial			NameArea
+initial			StringShape
 
 #OUTERBOUNDARY
 userfixvalue		TypeBc1
@@ -58,7 +58,7 @@ periodic		TypeBc6
 #USERSWITCH
 +init +ic +perturb +source +update		StringSwitch
 
-#USERINPUTBEGIN  ----------------------
+#USERINPUTBEGIN -----------------------------------
 
 #RADMHD
 1.0			r_photo
@@ -75,7 +75,7 @@ F			UseEnergyPert
 0.			InitialBphi
 6e5			NumberDensFloor
 
-#USERINPUTEND  ------------------------
+#USERINPUTEND -------------------------------------
 
 CORONALHEATING
 unsignedflux		TypeCoronalHeating
@@ -85,7 +85,7 @@ unsignedflux		TypeCoronalHeating
 #LOOKUPTABLE
 RhoExtraEP(R)		NameTable
 load			NameCommand
-InitialStateSph.dat	NameFile
+InitialStateSph.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
@@ -97,7 +97,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCoolCorona.dat
+SC/Param/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #SCHEME
@@ -111,7 +111,7 @@ mc3			TypeLimiter
 0.8			CflExpl
 
 #SAVERESTART
-T			DoSaveRestart  
+T			DoSaveRestart
 -1			DnSaveRestart
 300.			DtSaveRestart
 
@@ -120,25 +120,25 @@ T			DoSaveLogfile
 VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho Ux Uy Uz E Pmin Pmax	NameLogVars
-4.0  10.0      	    	rLog
+rho Ux Uy Uz E Pmin Pmax		NameLogVars
+4.0  10.0		rLog
 
 #SAVEPLOT
-1			nPlotFiles
+1			nPlotFile
 x=0 VAR idl		StringPlot
 -1  			DnSavePlot
 12.0			DtSavePlot
 0			DxSavePlot
-rho ux uy uz bx by bz tempe p
-g rbody
+rho ux uy uz bx by bz tempe p		NameVars
+g rbody			NamePars
 
 #SAVEINITIAL
-T
+T			DoSaveInitial
 
-#END_COMP EE ----------------------------------------------------------------
+#END_COMP EE -----------------------------------------------------------------
 
 #STOP
-10			MaxIteration
--1.			tSimulationMax
+10			MaxIter
+-1.			TimeMax
 
 End session: 1

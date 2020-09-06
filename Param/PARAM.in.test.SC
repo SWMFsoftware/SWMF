@@ -1,11 +1,11 @@
 #COMPONENTMAP
-SC  0 -1  1		SC runs on all PEs
+SC  0 -1  1		CompMap runs on all PEs
 
 #DESCRIPTION
-Param/PARAM.in.test.SC: Input file for creating a steady state solar corona with Threaded-Field-Line LC
+Param/PARAM.in.test.SC: Input file for creating a steady state solar corona with Threaded-Field-Line LC		StringDescription
 
 #TIMEACCURATE
-F                       DoTimeAccurate
+F			IsTimeAccurate
 
 #STARTTIME
 2011			iYear
@@ -22,16 +22,16 @@ T			DoSaveRestart
 -1			DtSaveRestart
 
 
-#BEGIN_COMP SC --------------------------------------------------------------
+#BEGIN_COMP SC ---------------------------------------------------------------
 
 #GRIDGEOMETRY
 spherical_lnr		TypeGeometry
 
 ! Use a true sphere, so box is made much larger
 #GRID
-1			nRootBlockX
-2			nRootBlockY
-1			nRootBlockZ
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
 -100.0			xMin
  100.0			xMax
 -100.0			yMin
@@ -54,51 +54,51 @@ T			IsStrictAmr
 
 #AMRREGION
 InnerShell		NameRegion
-box_gen			TypeRegion
-1.05			Radius1
-0.0
--70.0
-1.7			Radius2
-360.0
-70.0
+box_gen			StringShape
+1.05			xMinBox
+0.0			yMinBox
+-70.0			zMinBox
+1.7			xMaxBox
+360.0			yMaxBox
+70.0			zMaxBox
 
 #AMRCRITERIALEVEL
-3			nCriteria
-Level			TypeCriteria
+3			nRefineCrit
+Level			StringRefine
 2			RefineTo
-2			CoarsenTo
-Level +InnerShell	TypeCriteria
-5     			RefineTo
-5			CoarsenTo
-currentsheet		TypeCriteria
+2			CoarsenFrom
+Level +InnerShell		StringRefine
+5			RefineTo
+5			CoarsenFrom
+currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
 5			MaxLevel
 
 #GRIDLEVEL
-2			nLevelArea
-initial			NameArea
+2			nLevel
+initial			StringShape
 
 #COORDSYSTEM
 HGR			TypeCoordSystem
 
 #PLASMA
-1.0			IonMass [amu]
-1.0			AverageIonCharge [e]
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 #FIELDLINETHREAD
-T                       UseFieldLineThreads
-45                      nPointInThreadMax
-3.0e-3                  DsThreadMin
+T			UseFieldLineThreads
+45			nPointThreadMax
+3.0e-3			DsThreadMin
 
 #THREADEDBC
-T	  UseAlignedVelocity
-T         DoConvergenceCheck
-second    TypeBc
-
-#BODY
-T			UseBody
+T			UseAlignedVelocity
+T			DoConvergenceCheck
+second			TypeBc
+			Tolerance
+#BODY			MaxIter
+T			UseThomasAlg
 1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
@@ -111,7 +111,7 @@ T			UseMagnetogram
 1.0			rMagnetogram
 2.5			rSourceSurface
 0.0			HeightInnerBc
-SC/Param/CR2077_GNG.dat		NameMagnetogramFile
+SC/Param/CR2077_GNG.dat		NameHarmonicsFile
 12			nHeaderLine
 0.0			PhiShift
 2.0			UnitB
@@ -127,12 +127,12 @@ T			UseCurlB0
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
-turbulentcascade        TypeCoronalHeating
-T                       UseWaveReflection
-1.5e5                   LperpTimesSqrtBSi
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
 
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
+stochasticheating		TypeHeatPartitioning
 0.34			StochasticExponent
 0.18			StochasticAmplitude
 
@@ -147,11 +147,11 @@ T			UseHeatFluxRegion
 -8.0			rCollisionless
 
 #HEATFLUXCOLLISIONLESS
-T            UseHeatFluxCollisionless
-1.05            CollisionlessAlpha  
+T			UseHeatFluxCollisionless
+1.05			CollisionlessAlpha
 
 #TEST
-krylov radiative_cooling
+krylov radiative_cooling		TestString
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -163,8 +163,8 @@ GMRES			TypeKrylov
 10			MaxMatvecKrylov
 
 #PRECONDITIONER
-left            TypePrecondSide (left, symmetric, right)
-bilu            TypePrecond (MBILU)
+left			TypePrecondSide (left, symmetric, right)
+bilu			TypePrecond (MBILU)
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -172,13 +172,13 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCoolCorona.dat
+SC/Param/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
 TR			NameTable
 load			NameCommand
-SC/Param/TR.dat
+SC/Param/TR.dat		NameFile
 ascii			TypeFile
 
 
@@ -191,7 +191,7 @@ ascii			TypeFile
 1.0e-9			peMinDim
 
 #MINIMUMTEMPERATURE
-5.0e4
+5.0e4			TminDim
 5.0e4
 
 
@@ -202,9 +202,9 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #LIMITER
-T
-T
-F
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -214,20 +214,20 @@ T			UseNonConservative
 all			TypeMessagePass
 
 #TVDRESCHANGE
-T			UseTVDResChange
+T			UseTvdReschange
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #COARSEAXIS
-T                       UseCoarseAxis
+T			UseCoarseAxis
 2			nCoarseLayer
 
 #OUTERBOUNDARY
-fieldlinethreads	TypeBc1   user for spherical and user_outerbcs
+fieldlinethreads		TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2
 float			TypeBc3
 float			TypeBc4
@@ -235,25 +235,25 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-3			nPlotFiles
+3			nPlotFile
 x=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
 y=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
 z=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
 3d VAR tec
 100000			DnSavePlot
 -1.			DtSavePlot
@@ -263,8 +263,8 @@ g rbody
 #SAVEINITIAL
 T			DoSaveInitial
 
-#END_COMP SC ----------------------------------------------------------------
+#END_COMP SC -----------------------------------------------------------------
 
 #STOP
-70			MaxIteration
--1.0			tSimulationMax
+70			MaxIter
+-1.0			TimeMax

@@ -2,31 +2,31 @@ This tests GM-PC with identical layouts up on 4 processors,
 and different layout when run on different processors.
 
 #COMPONENTMAP
-GM  0 -1  1		GM runs on all PE-s
-PC  0  3  1             PC runs on 4 PE-s
+GM  0 -1  1		CompMap runs on all PE-s
+PC  0  3  1		PC runs on 4 PE-s
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.3D.start: Run GM and PC in time accurate mode
+Param/PARAM.in.test.GMPC.3D.start: Run GM and PC in time accurate mode		StringDescription
 
 #PLANET
 NONE			NamePlanet
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #PROGRESS
-1			DnShowProgressShort
-1			DnShowProgressLong
+1			DnProgressShort
+1			DnProgressLong
 
 #COUPLE2
-GM			NameCompMaster
-PC			NameCompSlave
+GM			NameComp1
+PC			NameComp2
 -1			DnCouple
 0.5			DtCouple
 
 #COUPLETIME
-PC                      NameComp
-F                       DoCoupleOnTime
+PC			NameComp
+F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -38,17 +38,17 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass [amu]
-1.0             	IonCharge [e]  
-1.0             	ElectronTemperatureRatio
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
 
 #IOUNITS
-NONE			NameIoUnits
+NONE			TypeIoUnit
 
 #NORMALIZATION
-NONE			NameNormalization
+NONE			TypeNormalization
 
 #UPDATECHECK
-F                       UseUpdateCheck
+F			UseUpdateCheck
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -60,9 +60,9 @@ T			UseNonConservative
 2050			MinBlockALL
 
 #GRID
-16			nRootBlockX
-16			nRootBlockY
-8			nRootBlockZ
+16			nRootBlock1
+16			nRootBlock2
+8			nRootBlock3
 -12.8			xMin
  12.8			xMax
 -6.4			yMin
@@ -71,10 +71,10 @@ T			UseNonConservative
  1.6			zMax
 
 #UNIFORMSTATE
-1.0			rho
-0.0			Ux
+1.0			Var1
+0.0			Var2
 0.0			Uy
-0.0			Uz	 
+0.0			Uz
 0.0			Bx
 0.0			By
 0.015			Bz
@@ -82,22 +82,22 @@ T			UseNonConservative
 0.000157080		p
 
 #PICUNIT
- 1.0                    xUnitPicSi
- 1.0                    uUnitPicSi
+ 1.0			xUnitPicSi
+ 1.0			uUnitPicSi
 
 #PICGRID
-1                       nPicRegion
--8.6  	                xMinCut
-+8.6                    xMaxCut
--2.6                    yMinCut
-+2.6                    yMaxCut
--1.0                    zMinCut
-+1.0                    zMaxCut
-0.2                     DxPic
-0.1                     DyPic
-0.1                     DyPic
+1			nPicRegion
+-8.6  			xMinCut
++8.6			xMaxCut
+-2.6			yMinCut
++2.6			yMaxCut
+-1.0			zMinCut
++1.0			zMaxCut
+0.2			DxPic
+0.1			DyPic
+0.1			DyPic
 
-#USERINPUTBEGIN -----------------
+#USERINPUTBEGIN -----------------------------------
 
 #GEM
 0.2			Apert
@@ -113,15 +113,15 @@ T			UseNonConservative
 25.6			WaveLengthX
 25.6			WaveLengthY
 
-#USERINPUTEND ---------------------
+#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
-periodic		xMinBc
-periodic		xMaxBc
-float			yMinBc
-float			yMaxBc
-float			zMinBc
-float			zMaxBc
+periodic		TypeBc1
+periodic		TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #SCHEME
 2			nOrder
@@ -135,8 +135,8 @@ T			UseHyperbolicDivb
 0.1			HypDecay
 
 #TIMESTEPPING
-2                       nStage
-0.1                     CflExpl
+2			nStage
+0.1			CflExpl
 
 HALLRESISTIVITY
 T			UseHallResist (rest of parameters read only if true)
@@ -150,35 +150,35 @@ constant		TypeResistivity
 
 #SAVELOGFILE
 T			DoSaveLogfile
-var			StringLogfile
+var			StringLog
 1			DnSaveLogfile
 -1.0			DtSaveLogfile
-dt rho mx my mz bx by bz e Pmin Pmax byflux
+dt rho mx my mz bx by bz e Pmin Pmax byflux		NameLogVars
 g
 
 #SAVEINITIAL
-T		        DoSaveInitial
+T			DoSaveInitial
 
 #SAVEPLOT
-3			nPlotfile
-x=0 VAR idl_ascii       PlotString
-4           	        DnSavePlot
--20.0             	DtSavePlot
-0.0	        	DxSavePlot
-rho ux uy uz bx by bz p jx jy jz absdivb
-g
-y=0 VAR idl_ascii        PlotString
-4           	        DnSavePlot
--20.0             	DtSavePlot
-0.0	        	DxSavePlot
-rho ux uy uz bx by bz p jx jy jz absdivb
-g
-z=0 VAR idl_ascii        PlotString
-4           	        DnSavePlot
--20.0             	DtSavePlot
-0.0	        	DxSavePlot
-rho ux uy uz bx by bz p jx jy jz absdivb
-g
+3			nPlotFile
+x=0 VAR idl_ascii		StringPlot
+4			DnSavePlot
+-20.0			DtSavePlot
+0.0			DxSavePlot
+rho ux uy uz bx by bz p jx jy jz absdivb		NameVars
+g			NamePars
+y=0 VAR idl_ascii		StringPlot
+4			DnSavePlot
+-20.0			DtSavePlot
+0.0			DxSavePlot
+rho ux uy uz bx by bz p jx jy jz absdivb		NameVars
+g			NamePars
+z=0 VAR idl_ascii		StringPlot
+4			DnSavePlot
+-20.0			DtSavePlot
+0.0			DxSavePlot
+rho ux uy uz bx by bz p jx jy jz absdivb		NameVars
+g			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -191,38 +191,38 @@ F			useFixedDt
 
 
 #DIVE
-F
-
-#ELECTRON
--25.0			Charge/mass ratio (qom)
-
+F			divECleanType
+			nPower
+#ELECTRON		divECleanTol
+-25.0			divECleanIter ratio (qom)
+			nIterNonLinear
 #PARTICLES
 3			Particles per cell in X
 3			Particles per cell in Y
 3			Particles per cell in Z
 
 #EFIELDSOLVER
-1e-8			Tol
-200			NIterMax
+1e-8			EFieldTol
+200			EFieldIter
 
 #SAVEIDL
-1				nPlot
+1			nPlot
 cut all ascii planet		StringPlot
-1				DnOutput
--1				DtOutput
--2				xMin
-2				xMax
--1				yMin
-1				yMax
--0.5				zMin
-0.5				zMax
-2				DxOutput
+1			DnOutput
+-1			DtOutput
+-2			xMin
+2			xMax
+-1			yMin
+1			yMax
+-0.5			zMin
+0.5			zMax
+2			DxOutput
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-0.7			tSimulationMax
+-1			MaxIter
+0.7			TimeMax
 
 
 5000.0			tSimulationMax

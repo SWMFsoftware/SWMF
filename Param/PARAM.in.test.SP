@@ -1,27 +1,27 @@
 Begin session: 1
 
 #COMPONENTMAP
-SP  0 -1  1
+SP  0 -1  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.SP: Input file for testing SP model for SEPs, uses input files with background data
+Param/PARAM.in.test.SP: Input file for testing SP model for SEPs, uses input files with background data		StringDescription
 
 #STARTTIME
-    2011                     iYear
-       2                     iMonth
-      16                     iDay
-      17                     iHour
-      26                     iMinute
-       0                     iSecond
- 0.000000000000              FracSecond
+    2011		iYear
+       2		iMonth
+      16		iDay
+      17		iHour
+      26		iMinute
+       0		iSecond
+ 0.000000000000		FracSecond
 
 #TIMEACCURATE
-T
+T			IsTimeAccurate
 
-#BEGIN_COMP SP ----------------------------------------------------------------
+#BEGIN_COMP SP ---------------------------------------------------------------
 
 #DORUN
-F
+F			DoRun
 
 #TEST
 F			DoTraceShock
@@ -35,7 +35,7 @@ F			UseDiffusion
 
 
 #READMHDATA
-T
+T			DoReadMhData
 MH_data
 ascii
 
@@ -46,7 +46,7 @@ MH_data/MH_data.H
 1
 mh1d flux idl
 
-#END_COMP SP   ----------------------------------------------------------------
+#END_COMP SP -----------------------------------------------------------------
 
 #STOP
 -1			MaxIter

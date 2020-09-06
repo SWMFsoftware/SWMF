@@ -1,35 +1,35 @@
 #COMPONENTMAP
-IH  0 -1  1		IH runs on all PEs
-OH  0 -1  1		OH runs on all PEs
+IH  0 -1  1		CompMap runs on all PEs
+OH  0 -1  1		CompMap runs on all PEs
 
 #DESCRIPTION
-Param/PARAM.in.test.IHOH.CoupleSphToXyz: launch a blob in IH, advect to OH, calculate error
+Param/PARAM.in.test.IHOH.CoupleSphToXyz: launch a blob in IH, advect to OH, calculate error		StringDescription
 
 #SAVERESTART
 F			DoSaveRestart
 
 #TEST
-OH_fill_buffer_only
+OH_fill_buffer_only		StringTest
 
-#BEGIN_COMP IH --------------------------------------------------------------
+#BEGIN_COMP IH ---------------------------------------------------------------
 
 #COORDSYSTEM
-HGI                     TypeCoordSystem
+HGI			TypeCoordSystem
 
 #GRAVITY
-F                       UseGravity (rest of parameters read if true)
-0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+F			UseGravity (rest of parameters read if true)
+0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
 #BODY
-T                       UseBody
-50.0                    rBody (Rs)
-1.00e3                  BodyNDim(1) [/cc] number density for ions
-1.00E5                  BodyTDim(1) [K] temperature for ions
+T			UseBody
+50.0			rBody (Rs)
+1e3			BodyNDim [/cc] number density for ions
+1E5			BodyTDim [K] temperature for ions
 
 #BODY
 F			UseBody
 
-#USERINPUTBEGIN -----------------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #USERPROBLEM
 AdvectSphere
@@ -40,8 +40,8 @@ rSun
 
 #ADVECTSPHERE
 T			DoInitSphere
-1.0e3			NumDensBackgrndIo
-.00001	        	pBackgrndIo
+1e3			NumDensBackgrndIo
+1e-5			pBackgrndIo
 20000.0			uBackgrndIo
 90.0			FlowAngleTheta (Deg)
 0.0			FlowAnglePhi (Deg)
@@ -54,15 +54,15 @@ T			DoInitSphere
 #ANALYTIC
 T
 
-#USERINPUTEND -------------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
-float			TypeBcXMin
-float    		TypeBcXMax
-float			TypeBcYMin
-float			TypeBcYMax
-float			TypeBcZMin
-float			TypeBzZMax
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #GRIDGEOMETRY
 spherical		TypeGeometry
@@ -72,15 +72,15 @@ Allow resolution change around the axis
 F			UseUniformAxis
 
 #GRID
-1                     	nRootBlockX
-2                     	nRootBlockY
-1                     	nRootBlockZ
--1290.0	                xMin
- 2600.0                 xMax
--1290.0                 yMin
- 1290.0                 yMax
--1290.0                 zMin
- 1290.0                 zMax
+1			nRootBlock1
+2			nRootBlock2
+1			nRootBlock3
+-1290.0			xMin
+ 2600.0			xMax
+-1290.0			yMin
+ 1290.0			yMax
+-1290.0			zMin
+ 1290.0			zMax
 
 #GRIDBLOCKALL
 3000			MaxBlock
@@ -90,16 +90,16 @@ F			UseUniformAxis
 2580.			rMax
 
 #GRIDLEVEL
-3			nLevelArea
-initial			NameArea
+3			nLevel
+initial			StringShape
 
 #GRIDLEVEL
-1                       nLevelArea
-all                     NameArea
+1			nLevel
+all			StringShape
 
 #GRIDLEVEL
-3			nLevelIh
-box_gen			NameArea
+3			nLevel
+box_gen			StringShape
 50.0			xMinBox
 320.			yMinBox
 -40.			zMinBox
@@ -108,8 +108,8 @@ box_gen			NameArea
 40.			zMaxBox
 
 #GRIDLEVEL
-3			nLevelIh
-box_gen			NameArea
+3			nLevel
+box_gen			StringShape
 50.0			xMinBox
 0.			yMinBox
 -40.			zMinBox
@@ -125,47 +125,47 @@ box_gen			NameArea
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-2.0			BetaLimiter
+2.0			LimiterBeta
 
 #SAVEINITIAL
 T			DoSaveInitial
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 -1			DnSaveLogfile
 1.			DtSaveLogfile
 
 #SAVEPLOT
-1			nPlotFiles
-z=0 VAR idl		StringOutput
--1			DnOutput
-350.			DtOutput
--1.			DxOutput
-rho ux uy uz mach p rhoexact rhoerr
-g rbody
+1			nPlotFile
+z=0 VAR idl		StringPlot
+-1			DnSavePlot
+350.			DtSavePlot
+-1.			DxSavePlot
+rho ux uy uz mach p rhoexact rhoerr		NameVars
+g rbody			NamePars
 
 #END_COMP IH -----------------------------------------------------------------
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
 #COORDSYSTEM
-HGI			NameCoordSystem
+HGI			TypeCoordSystem
 
 #BODY
-T                       UseBody
-3.0                     rBody (AU)
-1.00e3                  BodyNDim [/cc] number density for ions
-1.00E5                  BodyTDim [K] temperature for ions
+T			UseBody
+3.0			rBody (AU)
+1e3			BodyNDim [/cc] number density for ions
+1E5			BodyTDim [K] temperature for ions
 
 #BODY
 F			UseBody
 
 #GRAVITY
-F                       UseGravity (rest of parameters read if true)
-0                       iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+F			UseGravity (rest of parameters read if true)
+0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
 
-#USERINPUTBEGIN --------------------------------------------------------
+#USERINPUTBEGIN -----------------------------------
 
 #USERPROBLEM
 AdvectSphere
@@ -176,8 +176,8 @@ rSun
 
 #ADVECTSPHERE
 F			DoInitSphere
-1.0e3			NumDensBackgrndIo
-.00001	        	pBackgrndIo
+1e3			NumDensBackgrndIo
+1e-5			pBackgrndIo
 20000.0			uBackgrndIo
 90.0			FlowAngleTheta (Deg)
 0.0			FlowAnglePhi   (Deg)
@@ -190,12 +190,12 @@ F			DoInitSphere
 #ANALYTIC
 T
 
-#USERINPUTEND ----------------------------------------------------------
+#USERINPUTEND -------------------------------------
 
 #GRID
-1			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -7.			xMin
 12.			xMax
 -7.			yMin
@@ -207,16 +207,16 @@ T
 3000			MaxBlock
 
 #GRIDLEVEL
-3			nLevelArea
-initial			NameArea
+3			nLevel
+initial			StringShape
 
 #GRIDLEVEL
-1			nLevelArea
-all			NameArea
+1			nLevel
+all			StringShape
 
 #GRIDLEVEL
-3			nLevelArea
-box			NameArea
+3			nLevel
+box			StringShape
 0.			xMinBox
 -3.			yMinBox
 -3.			zMinBox
@@ -225,7 +225,7 @@ box			NameArea
 3.			zMaxBox
 
 #INNERBOUNDARY
-buffergrid		TypeBcInner
+buffergrid		TypeBcBody
 
 #BUFFERGRID
 2			nRBuff
@@ -239,26 +239,26 @@ buffergrid		TypeBcInner
 90.			LatBuffMax
 
 #OUTERBOUNDARY
-float			TypeBcXMin
-float    		TypeBcXMax
-float			TypeBcYMin
-float			TypeBcYMax
-float			TypeBcZMin
-float			TypeBzZMax
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #SCHEME
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-2.0			BetaLimiter
+2.0			LimiterBeta
 
 #TIMESTEPPING
-2                       nStage
-0.80                    CflExpl
+2			nStage
+0.80			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
@@ -268,13 +268,13 @@ T			DoSaveInitial
 #SAVEPLOT
 1			nPlotFile
 z=0 VAR idl		StringPlot
--1			DnOutput
-350.	        	DtOutput
--1.			DxOutput
-rho ux uy uz mach p rhoexact rhoerr
-g rbody
+-1			DnSavePlot
+350.			DtSavePlot
+-1.			DxSavePlot
+rho ux uy uz mach p rhoexact rhoerr		NameVars
+g rbody			NamePars
 
-#END_COMP OH -----------------------------------------------------------
+#END_COMP OH -----------------------------------------------------------------
 
 #COUPLE1
 IH			NameSource
@@ -283,5 +283,5 @@ OH			NameTarget
 70.			DtCouple
 
 #STOP
--1			MaxIteration
-50000.0			tSimulationMax
+-1			MaxIter
+50000.0			TimeMax
