@@ -91,7 +91,7 @@ The default is strict mode.
 </command>
 
 <command name="DESCRIPTION" multiple="T">
-	<parameter name="StringDescription" type="string" length="100" />
+	<parameter name="StringDescription" type="string" length="400" />
 
 #DESCRIPTION
 This is a test run for GM-IE-UA coupling.
@@ -413,7 +413,7 @@ in the #CHECKSTOP command.
 !!!!!!!!!!!!!!!!!!!!!!!!  TESTING AND TIMING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 <command name="TEST">
-	<parameter name="StringTest" type="string" length="100"/>
+	<parameter name="StringTest" type="string" length="200"/>
 
 #TEST
 CON_session::do_session		StringTest
