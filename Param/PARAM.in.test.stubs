@@ -1,6 +1,6 @@
 #COMPONENTMAP
-SP    0    0    1
-IH    1   -1    1
+SP  0  0  1		CompMap
+IH  1 -1  1		CompMap
 
 #STDOUT
 F			UseStdOut

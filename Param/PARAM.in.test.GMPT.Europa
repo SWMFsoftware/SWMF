@@ -1,8 +1,8 @@
 !- PARAM.in:  Example input file for EUROPA Layered Single Fluid MHD --
 
 #COMPONENTMAP
-GM  0 -1  1   
-PT  1  2  1  
+GM  0 -1  1		CompMap
+PT  1  2  1		CompMap  
 
 #PLANET
 EUROPA			NamePlanet
