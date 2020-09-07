@@ -1471,8 +1471,8 @@ test_sp_rundir:
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	mkdir ${TESTDIR}/MH_data/
 	cp Param/PARAM.in.test.SP ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; tar xzf ../SP/MFLAMPA/data/input/test15/MH_data.tgz
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test_sp_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
