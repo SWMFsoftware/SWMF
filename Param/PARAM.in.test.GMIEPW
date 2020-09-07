@@ -260,14 +260,14 @@ T			DoAutoRefine
 #AMRCRITERIA
 3			nRefineCrit
 curlB			TypeRefine
--1.0			CoarsenLimit
--1.0			RefineLimit
+0.0			CoarsenLimit
+0.0			RefineLimit
 gradlogP		TypeRefine
--1.0			CoarsenLimit
--1.0			RefineLimit
+0.0			CoarsenLimit
+0.0			RefineLimit
 Rcurrents		TypeRefine
--1.0			CoarsenLimit
--1.0			RefineLimit
+0.0			CoarsenLimit
+0.0			RefineLimit
 
 
 #SCHEME
