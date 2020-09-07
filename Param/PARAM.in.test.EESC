@@ -7,15 +7,6 @@ SC  0 -1  1		SC runs on all PEs
 #TIMEACCURATE
 T			DoTimeAccurate 
 
-#STARTTIME
-2011			iYear
-2			iMonth
-16			iDay
-17			iHour
-26			iMinute
-0			iSecond
-0.0			FracSecond
-
 #INCLUDE
 RESTART.in
 
@@ -27,37 +18,10 @@ Param/PARAM.in.test.EESC: restart EE+SC
 #INCLUDE
 EE/restartIN/restart.H
 
-#TIMESIMULATION
-0.0
-
 #STAR
 1.0			RadiusStar
 1.0			MassStar
 0.0			RotationPeriodStar
-
-#GRIDGEOMETRYLIMIT
-spherical
-0.9512			rMin
-1.2312			rMax
-82.0			LongitudeMin
-98.0			LongitudeMax
--4.0			LatitudeMin
- 4.0			LatitudeMax
-
-#GRID
-7			nRootBlockX
-1			nRootBlockY
-1                       nRootBlockZ
--2.0			xMin
- 2.0			xMax
--2.0			yMin
- 2.0			yMax
--2.0			zMin
- 2.0			zMax
-
-#GRIDLEVEL
-2                       nLevel
-initial                 NameArea
 
 #OUTERBOUNDARY
 userfixvalue		TypeBc1
@@ -148,12 +112,6 @@ T
 
 #INCLUDE
 SC/restartIN/restart.H
-
-#TIMESIMULATION
-0.0
-
-#COORDSYSTEM
-HGR			TypeCoordSystem
 
 #PLASMA
 1.0			IonMass [amu]
