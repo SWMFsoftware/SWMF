@@ -248,8 +248,7 @@ T			UseFixedDt
 1e-8			EFieldTol
 200			EFieldIter
 
-#ENERGYCONSERVING
-T			UseECSIM
+
 
 #DISCRETIZATION
 0.5			Theta
