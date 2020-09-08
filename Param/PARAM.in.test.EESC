@@ -1,22 +1,33 @@
 Begin session: 1
 
 #COMPONENTMAP
-EE  0 -1  1		EE runs on all PEs
+EE  0 -1  1		CompMap runs on all PEs
 SC  0 -1  1		SC runs on all PEs
 
 #TIMEACCURATE
-T			DoTimeAccurate 
+T			IsTimeAccurate
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Param/PARAM.in.test.EESC: restart EE+SC
+Param/PARAM.in.test.EESC: restart EE+SC		StringDescription
 
-#BEGIN_COMP EE --------------------------------------------------------------
+#BEGIN_COMP EE ---------------------------------------------------------------
 
 #INCLUDE
 EE/restartIN/restart.H
+
+#STARTTIME
+    2011		iYear
+       2		iMonth
+      16		iDay
+      17		iHour
+      26		iMinute
+       0		iSecond
+
+#TIMESIMULATION
+0.0			tSimulation
 
 #STAR
 1.0			RadiusStar
@@ -34,7 +45,7 @@ periodic		TypeBc6
 #USERSWITCH
 +init +ic +source +update		StringSwitch
 
-#USERINPUTBEGIN  --------------
+#USERINPUTBEGIN -----------------------------------
 
 #RADMHD
 1.0			r_photo
@@ -51,17 +62,17 @@ F			UseEnergyPert
 0.			InitialBphi
 6e5			NumberDensFloor
 
-#USERINPUTEND  ---------------
+#USERINPUTEND -------------------------------------
 
 #CORONALHEATING
 unsignedflux		TypeCoronalHeating
-0.7			Decaylength
+0.7			DecayLength
 1.			HeatNormalization
 
 #LOOKUPTABLE
 RhoExtraEP(R)		NameTable
 load			NameCommand
-InitialStateSph.dat	NameFile
+InitialStateSph.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
@@ -73,7 +84,7 @@ ascii			TypeFile
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCoolCorona.dat
+SC/Param/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #SCHEME
@@ -91,45 +102,45 @@ T			DoSaveLogfile
 VAR			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
-rho Ux Uy Uz E Pmin Pmax	NameLogVars
-4.0  10.0      	    	rLog
+rho Ux Uy Uz E Pmin Pmax		NameLogVars
+4.0  10.0		rLog
 
 #SAVEPLOT
-1			nPlotFiles
+1			nPlotFile
 x=0 VAR idl		StringPlot
 -1  			DnSavePlot
 12.0			DtSavePlot
 0			DxSavePlot
-rho ux uy uz bx by bz tempe p eint
-g rbody
+rho ux uy uz bx by bz tempe p eint		NameVars
+g rbody			NamePars
 
 #SAVEINITIAL
-T
+T			DoSaveInitial
 
-#END_COMP EE ----------------------------------------------------------------
+#END_COMP EE -----------------------------------------------------------------
 
-#BEGIN_COMP SC --------------------------------------------------------------
+#BEGIN_COMP SC ---------------------------------------------------------------
 
 #INCLUDE
 SC/restartIN/restart.H
 
 #PLASMA
-1.0			IonMass [amu]
-1.0			AverageIonCharge [e]
+1.0			FluidMass [amu]
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 #FIELDLINETHREAD
-T                       UseFieldLineThreads
-45                      nPointInThreadMax
-3.0e-3                  DsThreadMin
+T			UseFieldLineThreads
+45			nPointThreadMax
+3.0e-3			DsThreadMin
 
 #THREADEDBC
 T			UseAlignedVelocity
 T			DoConvergenceCheck
 second			TypeBc
-
-#BODY
-T			UseBody
+			Tolerance
+#BODY			MaxIter
+T			UseThomasAlg
 1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
@@ -142,7 +153,7 @@ T			UseMagnetogram
 1.0			rMagnetogram
 2.5			rSourceSurface
 0.0			HeightInnerBc
-SC/Param/CR2077_GNG.dat		NameMagnetogramFile
+SC/Param/CR2077_GNG.dat		NameHarmonicsFile
 12			nHeaderLine
 0.0			PhiShift
 2.0			UnitB
@@ -158,12 +169,12 @@ T			UseCurlB0
 1.1e6			PoyntingFluxPerBSi [J/m^2/s/T]
 
 #CORONALHEATING
-turbulentcascade        TypeCoronalHeating
-T                       UseWaveReflection
-1.5e5                   LperpTimesSqrtBSi
-
+turbulentcascade		TypeCoronalHeating
+T			UseWaveReflection
+1.5e5			LperpTimesSqrtBSi
+			rMinWaveReflection
 #HEATPARTITIONING
-stochasticheating	TypeHeatPartitioning
+stochasticheating		TypeHeatPartitioning
 0.34			StochasticExponent
 0.18			StochasticAmplitude
 
@@ -179,10 +190,10 @@ T			UseHeatFluxRegion
 
 #HEATFLUXCOLLISIONLESS
 T			UseHeatFluxCollisionless
-1.05			CollisionlessAlpha  
+1.05			CollisionlessAlpha
 
 #TEST
-krylov radiative_cooling
+krylov radiative_cooling		StringTest
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -203,13 +214,13 @@ T			UseRadCooling
 #LOOKUPTABLE
 radcool			NameTable
 load			NameCommand
-SC/Param/RadCoolCorona.dat
+SC/Param/RadCoolCorona.dat		NameFile
 ascii			TypeFile
 
 #LOOKUPTABLE
 TR			NameTable
 load			NameCommand
-SC/Param/TR.dat
+SC/Param/TR.dat		NameFile
 ascii			TypeFile
 
 
@@ -222,7 +233,7 @@ ascii			TypeFile
 1.0e-9			peMinDim
 
 #MINIMUMTEMPERATURE
-5.0e4
+5.0e4			TminDim
 5.0e4
 
 #SCHEME
@@ -232,9 +243,9 @@ mc3			TypeLimiter
 1.2			LimiterBeta
 
 #LIMITER
-T
-T
-F
+T			UseLogRhoLimiter
+T			UseLogPLimiter
+F			UseRhoRatioLimiter
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -243,20 +254,20 @@ T			UseNonConservative
 all			TypeMessagePass
 
 #TVDRESCHANGE
-T			UseTVDResChange
+T			UseTvdReschange
 
 #SAVELOGFILE
 T			DoSaveLogfile
-RAW			StringLogfile
+RAW			StringLog
 1			DnSaveLogfile
 -1.			DtSaveLogfile
 
 #COARSEAXIS
-T                       UseCoarseAxis
+T			UseCoarseAxis
 2			nCoarseLayer
 
 #OUTERBOUNDARY
-fieldlinethreads	TypeBc1   user for spherical and user_outerbcs
+fieldlinethreads		TypeBc1   user for spherical and user_outerbcs
 float			TypeBc2
 float			TypeBc3
 float			TypeBc4
@@ -264,37 +275,37 @@ float			TypeBc5
 float			TypeBc6
 
 #SAVEPLOT
-3			nPlotFiles
+3			nPlotFile
 x=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
 y=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
 z=0 VAR idl		StringPlot
 10			DnSavePlot
 -1.			DtSavePlot
 -1.0			DxSavePlot
-rho ux uy uz ti te bx by bz I01 I02 p
-g rbody
+rho ux uy uz ti te bx by bz I01 I02 p		NameVars
+g rbody			NamePars
 
 #SAVEINITIAL
 T			DoSaveInitial
 
-#END_COMP SC ----------------------------------------------------------------
+#END_COMP SC -----------------------------------------------------------------
 
 #COUPLE2
-EE			NameSource
-SC			NameTarget
+EE			NameComp1
+SC			NameComp2
 -1			DnCouple
 0.1			DtCouple
 
 #STOP
-10			MaxIteration
--1.0			tSimulationMax
+10			MaxIter
+-1.0			TimeMax
