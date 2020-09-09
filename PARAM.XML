@@ -156,7 +156,7 @@ thus they can converge to steady state more optimally (see the #CYCLE command).
 The default value is the time accurate mode.
 </command>
 
-<command name="STARTTIME" if="$_IsFirstSession">
+<command name="STARTTIME" if="$_IsFirstSession" multiple="T">
 	<parameter name="iYear"   type="integer" default="2000" />
 	<parameter name="iMonth"  type="integer" min="1" max="12" default="3"/>
 	<parameter name="iDay"   type="integer" min="1" max="31" default="21"/>
@@ -176,7 +176,8 @@ The default value is the time accurate mode.
 
 The #STARTTIME command sets the initial date and time for the
 simulation in Greenwich Mean Time (GMT) or Universal Time (UT).
-This time is stored in the restart files. 
+This time is stored in the restart files. It can be overwritten
+with another #STARTTIME command if necessary.
 
 The default values are shown above.  This is a date and time when, for
 the Earth, both the rotational and the magnetic axes have
@@ -216,21 +217,22 @@ restarted runs.
 There is no default value.
 </command>
 
-<command name="TIMESIMULATION" if="$_IsFirstSession">
+<command name="TIMESIMULATION" if="$_IsFirstSession" multiple="T">
 	<parameter name="tSimulation" type="real" min="0" default="0.0" />
 
 #TIMESIMULATION
-3600.0			tSimulation [sec]
+1 hour			tSimulation [sec]
 
 The tSimulation variable contains the simulation time in seconds
 relative to the initial time set by the #STARTTIME command.
 The #TIMESIMULATION command and tSimulation are saved into the restart file, 
 so that the simulation can continue from the same time when the 
-restart was saved.  
+restart was saved.   It can be overwritten
+with another #TIMESIMULATION command if necessary.
 The default value is tSimulation=0.
 </command>
 
-<command name="NSTEP" if="$_IsFirstSession">
+<command name="NSTEP" if="$_IsFirstSession" multiple="T">
 	<parameter name="nStep" type="integer" min="0" default="0" />
 
 #NSTEP
@@ -240,7 +242,8 @@ The nStep variable contains the number of time steps since the
 beginning of the simulation (including all restarts). 
 The #NSTEP command and the nStep variable  are saved into the restart file, 
 so that the simulation can continue from the same time step when
-the restart was saved.
+the restart was saved. It can be overwritten with another #NSTEP 
+command if necessary.
 The default value is nStep=0.
 </command>
 
@@ -390,7 +393,7 @@ is .false.).
 	<parameter name="CpuTimeMax" type="real" min="-1" default="-1" />
 
 #CPUTIMEMAX
-3600.0                   CpuTimeMax [sec]
+7.5 hours                   CpuTimeMax [sec]
 
 The CpuTimeMax variable contains the maximum allowed CPU time (wall clock
 time) for the execution of the current run. If the CPU time reaches
@@ -1236,7 +1239,7 @@ One common option is to have the planet in the -X,Z plane.
 Another option would be to move an active region into an appropriate plane.
 
 <command name="ROTATEHGR"  if="$_IsFirstSession">
-	<parameter name="dLongitudeHgr" type="real" min="-1" max="360"
+	<parameter name="dLongitudeHgr" type="real" min="-360" max="360"
 							default="0"/>
 #ROTATEHGR
 145.6			dLongitudeHgr [deg]
@@ -1248,7 +1251,7 @@ Default value is 0, i.e. the true HGR system is used.
 </command>
 
 <command name="ROTATEHGI" if="$_IsFirstSession">
-	<parameter name="dLongitudeHgi" type="real" min="-1" max="360"
+	<parameter name="dLongitudeHgi" type="real" min="-360" max="360"
 							default="0"/>
 #ROTATEHGI
 -1.0			dLongitudeHgi [deg]
