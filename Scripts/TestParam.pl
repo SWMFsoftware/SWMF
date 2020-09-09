@@ -72,9 +72,9 @@ my $check =
 print "$check\n" if $Verbose;
 my $Error = `$check`;
 
-# Extract list of files from the output: "CheckParam.pl: mv FILE FIE_orig_\n"
+# Extract list of files from the output: "CheckParam.pl: cp FILE FIE_orig_\n"
 my $Files;
-$Files .= "$1," while $Error =~ s/CheckParam.pl: mv (\S+) \1_orig_\n//;
+$Files .= "$1," while $Error =~ s/CheckParam.pl: cp (\S+) \1_orig_\n//;
 if($Error){
     $IsError = 1;
     warn "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n";
@@ -94,7 +94,7 @@ foreach $Comp (sort keys %Layout){
     print "$check\n" if $Verbose;
     $Error = `$check`;
     # Append list of modified files
-    $Files .= "$1," while $Error =~ s/CheckParam.pl: mv (\S+) \1_orig_\n//;
+    $Files .= "$1," while $Error =~ s/CheckParam.pl: cp (\S+) \1_orig_\n//;
     if($Error){
 	$IsError = 1;
 	warn "$ERROR parameter errors for $Comp:\n\n$Error\n";
@@ -104,7 +104,7 @@ foreach $Comp (sort keys %Layout){
 foreach my $File (split(/,/, $Files)){
     my $Orig = $File."_orig_";
     if(`diff $File $Orig`){
-	print "TestParam: mv $File $Orig\n";
+	print "TestParam: cp $File $Orig\n";
     }else{
 	unlink $Orig;
     }
