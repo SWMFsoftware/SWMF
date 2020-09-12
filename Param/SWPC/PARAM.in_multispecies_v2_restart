@@ -1,13 +1,13 @@
 #COMPONENTMAP
-IM  0  0  1   ! IM runs on up 1 PE
-IE  0  1  1   ! IE runs on up to 2 PE-s
-GM  0 -1  1   ! GM runs on all PE-s
+IM  0  0  1		CompMap runs on 1 PE
+IE  0  1  1		CompMap runs on up to 2 PE-s
+GM  0 -1  1		CompMap runs on all PE-s
 
 #INCLUDE
 RESTART.in
 
 #DESCRIPTION
-Param/SWPC/PARAM.in_multispecies_v2_restart: Example file to restart a run for the SWPC v2 code selection
+Param/SWPC/PARAM.in_multispecies_v2_restart: Example file to restart a run for the SWPC v2 code selection		StringDescription
 
 #TIMEACCURATE
 T			IsTimeAccurate
@@ -22,7 +22,7 @@ T			DoSaveRestart
 10 min			DtSaveRestart
 
 #RESTARTOUTDIR
-SWMF_RESTART.YYYYMMDD_HHMMSS            NameRestartOutDir
+SWMF_RESTART.YYYYMMDD_HHMMSS		NameRestartOutDir
 
 #CHECKKILL
 GM			NameCompCheckKill
@@ -56,8 +56,8 @@ GM			NameComp2
 10.0			DtCouple
 
 #COUPLE1
-IE			NameComp1
-IM			NameComp2
+IE			NameSource
+IM			NameTarget
 -1			DnCouple
 10.0			DtCouple
 
@@ -69,7 +69,7 @@ F			DoCoupleOnTime
 
 #CHECKTIMESTEP
 T			DoCheckTimeStep
-2			nCheckTimeStep
+2			DnCheckTimeStep
 1e-6			TimeStepMin
 
 
@@ -92,7 +92,7 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-ionosphere		TypeBcInner
+ionosphere		TypeBcBody
 
 ! Set the inner boundary density as Rho0Cpcp + RhoPerCpcp*CPCP[keV]
 #CPCPBOUNDARY
@@ -140,7 +140,7 @@ T			UseNonConservative
 
 #CONSERVATIVECRITERIA
 1			nConservCrit
-parabola			TypeConservCrit_I
+parabola		TypeConservCrit
  5.0			xParabolaConserv
 15.0			yParabolaConserv
 
@@ -175,39 +175,39 @@ IMCOUPLINGSMOOTH
 1e-5			pMinDim [nPa]
 
 #SAVELOGNAME
-F			IsLogNameNstep
-T			IsLogNameEvent
+F			UseLogNameStep
+T			UseLogNameDateTime
 
 #SAVEPLOTNAME
-F			IsPlotNameNstep
-F			IsPlotNameTime
-T			IsPlotNameEvent
+F			UsePlotNameStep
+F			UsePlotNameTime
+T			UsePlotNameDateTime
 
 #PLOTFILENAME
-date			TimeUnitMax
+date			NameMaxTimeUnit
 
 #SAVELOGFILE
 T			DoSaveLogfile
-VAR step date		StringLogfile
+VAR step date		StringLog
 -1			DnSaveLogfile
 5.0			DtSaveLogfile
-dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx
-3.0			StringRFlux
+dt rho mx my mz p bx by bz pmin pmax dst_sm dstflx		NameLogVars
+3.0			StringLogRadii
 
 #SAVEPLOT
-4			nPlotFiles
-y=0 MHD idl             StringPlot
+4			nPlotFile
+y=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-z=0 MHD idl             StringPlot
+z=0 MHD idl		StringPlot
 -1			DnSavePlot
 5 min			DtSavePlot
 -1.0			DxSavePlot
-shl MHD idl_ascii	StringPlot
+shl MHD idl_ascii		StringPlot
 -1  			DnSavePlot
 1 min			DtSavePlot
-GEO			TypeCoordPlot
+GEO			TypeCoord
 6.6			rMin
 6.6			rMax
 0.			LonMin
@@ -215,7 +215,7 @@ GEO			TypeCoordPlot
 10.			dLon
 0.			LatMin
 0.			LatMax
-lcb nul tec             StringPlot  !last closed field line plots
+lcb nul tec		StringPlot  !last closed field line plots
 -1			DnSavePlot  !Tecplot (ONLY!)
 5 min			DtSavePlot
 5.			Radius
@@ -225,7 +225,7 @@ lcb nul tec             StringPlot  !last closed field line plots
 2			nOrder
 Sokolov			TypeFlux
 mc3			TypeLimiter
-1.2			BetaLimiter
+1.2			LimiterBeta
 
 #BORIS
 T			UseBorisCorrection
@@ -236,7 +236,7 @@ T			UseBorisCorrection
 0.85			CflExpl
 
 #IE
-T			DoRayTraceIE
+T			DoTraceIE
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -258,7 +258,7 @@ T 			UseDecay
 T			DoRestart
 
 #IONOSPHERE
-8			TypeConductanceModel
+8			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 178.0			F107Flux
@@ -287,13 +287,13 @@ STOP
 -1			MaxIter
 86400.0			TimeMax
 
-#ENDTIME            
-2014			year
-04			month
-10			day
-00			hour
-03			minute
-00			second
+#ENDTIME
+2014			iYear
+04			iMonth
+10			iDay
+00			iHour
+03			iMinute
+00			iSecond
 0.0			FracSecond
 
 #END ############################################################
