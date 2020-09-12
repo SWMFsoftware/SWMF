@@ -1250,11 +1250,11 @@ test13_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.GMPT.Europa ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cp -r PT/AMPS/data/input/Europa/TestCase/RESTART_n003000 ${TESTDIR}/
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_n003000
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test13_run:
-	cd ${TESTDIR}; ./Restart.pl -i RESTART_n003000
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test13_check:
@@ -1421,14 +1421,12 @@ test15_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
 	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cp GM/BATSRUS/Param/CORONA/RadCoolCorona.dat ${TESTDIR}/RadCoolCorona.dat
 	cp -r SP/MFLAMPA/data/input/test15/RESTART_t0020.0000s ${TESTDIR}/
+	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test15_run:
-	cp Param/PARAM.in.test.SCIHSP ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-	cd ${TESTDIR}; ./Restart.pl -i RESTART_t0020.0000s
 	cd ${TESTDIR}; rm -rf RESTART_t0025.0000s
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 	cd ${TESTDIR}; ./Restart.pl
