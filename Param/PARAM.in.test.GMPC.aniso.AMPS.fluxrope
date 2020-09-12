@@ -4,27 +4,27 @@ GM 1 7 1 -1		CompMap runs on PEs 1..7 with MaxThread threads
 PC 0 7 1  1		CompMap runs on PEs 0..7 with 1 thread
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.aniso.AMPS.fluxrope: Run GM and PC in time accurate mode
+Param/PARAM.in.test.GMPC.aniso.AMPS.fluxrope: Run GM and PC in time accurate mode		StringDescription
 
 #PLANET
 NONE			NamePlanet
 
 #TIMEACCURATE
-T                       DoTimeAccurate
+T			IsTimeAccurate
 
 
 SAVERESTART
-T			DoSaveRestart 
--1			DnSaveRestart 
+T			DoSaveRestart
+-1			DnSaveRestart
 100.0			DtSaveRestart
 
 #SAVERESTART
-F
+F			DoSaveRestart
 
 COUPLE2TIGHT
 GM			NameCompMaster
 PC			NameCompSlave
-T                       DoCouple
+T			DoCouple
 
 #COUPLE2
 GM			NameComp1
@@ -39,8 +39,8 @@ F			DoCoupleOnTime
 
 
 #PROGRESS
-10			DnShowProgressShort
-100			DnShowProgressLong
+10			DnProgressShort
+100			DnProgressLong
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -50,14 +50,8 @@ NONE			TypeIoUnit
 #NORMALIZATION
 NONE			TypeNormalization
 
-#IOUNITS
-NONE			NameIoUnits
-
-#NORMALIZATION
-NONE			NameNormalization
-
 #UPDATECHECK
-F                       UseUpdateCheck
+F			UseUpdateCheck
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -69,9 +63,9 @@ T			UseNonConservative
 1000			MinBlockALL
 
 #GRID
-32			nRootBlockX
-32			nRootBlockY
-1			nRootBlockZ
+32			nRootBlock1
+32			nRootBlock2
+1			nRootBlock3
 -16			xMin
  16			xMax
 -16			yMin
@@ -82,24 +76,24 @@ T			UseNonConservative
 
 #GRIDRESOLUTION
 1./16			Resolution
-initial			NameArea
+initial			StringShape
 
 
 #GRIDRESOLUTION
-1./16
-box
--4.0                  xMinBox
--4.0                   yMinBox
--1.0
- 4.0                   xMaxBox
- 4.0                   yMaxBox
-1.0
+1./16			Resolution
+box			StringShape
+-4.0			xMinBox
+-4.0			yMinBox
+-1.0			zMinBox
+ 4.0			xMaxBox
+ 4.0			yMaxBox
+1.0			zMaxBox
 
 #UNIFORMSTATE
 100			Rho
 0.005			Ux
 0.0025			Uy
-0.0                     Uz
+0.0			Uz
 0.0			Bx
 0.0			By
 0.0			Bz
@@ -108,63 +102,63 @@ box
 2.5e-3			P
 
 #PLASMA
-1.0                     IonMass
-1.0                     IonCharge
-0.2                     ElectronTemperatureRatio
+1.0			FluidMass
+1.0			IonCharge
+0.2			ElectronTemperatureRatio
 
-#USERINPUTBEGIN -----------------
+#USERINPUTBEGIN -----------------------------------
 
 FLUXROPES
 2
--0.64				xCenter
--0.82				yCenter
-1.0				radius
-0.5				Amplitude
--0.64				xCenter
-0.18				yCenter
-1.0 				radius
-0.5				Amplitude
+-0.64			xCenter
+-0.82			yCenter
+1.0			radius
+0.5			Amplitude
+-0.64			xCenter
+0.18			yCenter
+1.0 			radius
+0.5			Amplitude
 
 
 #FLUXROPES
 2
--1.28				xCenter
--1.64				yCenter
-1.0				radius
-0.5				Amplitude
--1.28				xCenter
-0.36				yCenter
-1.0 				radius
-0.5				Amplitude
+-1.28			xCenter
+-1.64			yCenter
+1.0			radius
+0.5			Amplitude
+-1.28			xCenter
+0.36			yCenter
+1.0 			radius
+0.5			Amplitude
 
 
 
-#USERINPUTEND ---------------------
+#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
-float		xMinBc
-float		xMaxBc
-float			yMinBc
-float			yMaxBc
-float			zMinBc
-float			zMaxBc
+float			TypeBc1
+float			TypeBc2
+float			TypeBc3
+float			TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 
 
 #PICUNIT
-1.0                     xUnitPicSi  
-1.0	                uUnitPicSi 
+1.0			xUnitPicSi
+1.0			uUnitPicSi
 
 
 
 #PICGRID
 1			nPicRegion
--2.56			xMinCut
-2.56			xMaxCut
--2.56			yMinCut
- 2.56			yMaxCut
--2.56
-2.56
+-2.56			xMinPic
+2.56			xMaxPic
+-2.56			yMinPic
+ 2.56			yMaxPic
+-2.56			zMinPic
+2.56			zMaxPic
 0.02			DxPic
 0.02			DyPic
 0.02			DzPic
@@ -182,8 +176,8 @@ T			UseHyperbolicDivb
 0.1			HypDecay
 
 #TIMESTEPPING
-2                       nStage
-0.6                     CflExpl
+2			nStage
+0.6			CflExpl
 
 HALLRESISTIVITY
 F			UseHallResist (rest of parameters read only if true)
@@ -197,37 +191,37 @@ constant		TypeResistivity
 
 #HALLRESISTIVITY
 T			UseHallResist (rest of parameters read only if true)
-1.0			HallFactor  (m/e = 1/sqrt(4*pi))
+1.0			HallFactorMax  (m/e = 1/sqrt(4*pi))
 0.1			HallCmaxFactor
 
 #SEMIIMPLICIT
-T                       UseSemiImplicit
-resistivity               TypeSemiImplicit (read if UseSemiImplicit is true)
+T			UseSemiImplicit
+resistivity		TypeSemiImplicit (read if UseSemiImplicit is true)
 
 
 #SAVELOGFILE
 T			DoSaveLogfile
-var			StringLogfile
+var			StringLog
 1			DnSaveLogfile
 -1.0			DtSaveLogfile
-dt rho mx my mz bx by bz e Pmin Pmax 
+dt rho mx my mz bx by bz e Pmin Pmax		NameLogVars
 g
 
 #SAVEINITIAL
-T		        DoSaveInitial
+T			DoSaveInitial
 
 #SAVEPLOT
-1			nPlotfile
-z=0 VAR idl_ascii       PlotString
--1           	        DnSavePlot
-0.5            		DtSavePlot
--1	        	DxSavePlot
-rho ux uy uz bx by bz p jx jy jz absdivb
-g
-3d VAR tec              PlotString
--1           	        DnSavePlot
-10            		DtSavePlot
-0	        	DxSavePlot
+1			nPlotFile
+z=0 VAR idl_ascii		StringPlot
+-1			DnSavePlot
+0.5			DtSavePlot
+-1			DxSavePlot
+rho ux uy uz bx by bz p jx jy jz absdivb		NameVars
+g			NamePars
+3d VAR tec		PlotString
+-1			DnSavePlot
+10			DtSavePlot
+0			DxSavePlot
 rho ux uy uz bx by bz p jx jy jz
 g
 
@@ -237,16 +231,16 @@ g
 #END_COMP GM -----------------------------------------------------------------
 
 #STOP
--1
-0.5
+-1			MaxIter
+0.5			TimeMax
 
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEPPING
-F			UseSWMFDt
-T			UseFixedDt
-0.05			Dt
+F			useSWMFDt
+T			useFixedDt
+0.05			fixedDt
 
 #ELECTRON
 -100			ElectronChargePerMass
@@ -258,33 +252,33 @@ T			UseFixedDt
 
 
 #DISCRETIZATION
-0.6			Theta
-0.0                     GradRhoRatio
-0.0                     cDiff
-0.0                     RatioDivC2C
+0.6			theta
+0.0			gradRhoRatio
+0.0			cDiff
+0.0			ratioDivC2C
 
 #DIVE
-T			DivECleanType
+T			doCorrectDivE
 
 #PARTICLES
-5			Particles per cell in X Region 1
-2			Particles per cell in Y Region 1
-1			Particles per cell in Z Region 1
+5			nPclx per cell in X Region 1
+2			nPcly per cell in Y Region 1
+1			nPclz per cell in Z Region 1
 
 #SAVEIDL
 1			nPlotFile
-z=0 var real4 si 			PlotString
--1                     			DnOutput
-0.5                                	DtOutput
-0                                       DxOutput
-{fluid} qc divEc qc0 qc1 numS0 numS1
+z=0 var real4 si 		StringPlot
+-1			DnSavePlot
+0.5			DtSavePlot
+0			DxSavePlot
+{fluid} qc divEc qc0 qc1 numS0 numS1		NameVars
 
-3d fluid ascii pic	StringPlot
-1   	  		DnOutput
+3d fluid ascii pic		StringPlot
+1			DnOutput
 -1.0			DtOutput
 1			DxOutput
-3d fluid ascii si	StringPlot
-1   	  		DnOutput
+3d fluid ascii si		StringPlot
+1			DnOutput
 -1.0			DtOutput
 1			DxOutput
 

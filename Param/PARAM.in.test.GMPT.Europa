@@ -2,25 +2,22 @@
 
 #COMPONENTMAP
 GM  0 -1  1		CompMap
-PT  1  2  1		CompMap  
-
-#PLANET
-EUROPA			NamePlanet
+PT  1  2  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPT.Europa: 
+Param/PARAM.in.test.GMPT.Europa: GM coupled with AMPS for Europa		StringDescription
 
 #INCLUDE
 RESTART.in
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #ROTATION
-F                       UseRotation
+F			UseRotation
 
 #DIPOLE
-0.0E-9			abs Magn. Field [T]
+0.0E-9			DipoleStrength Magn. Field [T]
 
 #MAGNETICAXIS
 T			IsMagAxisPrimary (rest of parameters read if true)
@@ -28,70 +25,50 @@ T			IsMagAxisPrimary (rest of parameters read if true)
 288.0			MagAxisPhi   [degree] tilt from x-axis clockwise
 
 #TEST
-CON_axes::init_axes CON_axes::set_axes 
+CON_axes::init_axes CON_axes::set_axes		StringTest
 
 #PROGRESS
-1                     DnProgress1 (frequency of short reports to STDOUT)
-10                    DnProgress2 (frequency of summaries to STDOUT)
+1			DnProgressShort (frequency of short reports to STDOUT)
+10			DnProgressLong (frequency of summaries to STDOUT)
 
 #CHECKSTOPFILE
-T
+T			DoCheckStopFile
 
 #CHECKSTOP
-T
--1
-10.0
+T			DoCheckStop
+-1			DnCheckStop
+10.0			DtCheckStop
 
 #CPUTIMEMAX
-1720000.0
+1720000.0		CpuTimeMax
 
-#BEGIN_COMP PT ---------------------------------------
+#BEGIN_COMP PT ---------------------------------------------------------------
 
 #TEST
 T			DoTest
 
-#END_COMP PT
+#END_COMP PT -----------------------------------------------------------------
 
-#BEGIN_COMP GM ---------------------------------------
+#BEGIN_COMP GM ---------------------------------------------------------------
 
 #INCLUDE
 GM/restartIN/restart.H
 
 #TESTVAR
-7			iVarTest (Bz)
-
-#COORDSYSTEM
-GSE			TypeCoordSystem
-
-#SOLARWIND
-15.0			SW_rho_dim [n/cc]
-1.044e6			SW_T_dim [K] | 90eV
--100.			SW_Ux_dim [km/s] | corotation speed
-0.0			SW_Uy_dim [km/s]
-0.0			SW_Uz_dim [km/s]
-0.0			SW_Bx_dim [nT]
-0.0			SW_By_dim [nT]
--425.			SW_Bz_dim [nT]
+Bz			NameTestVar
 
 #PLASMA
-20.0			IonMass O [amu]
+20.0			FluidMass O [amu]
 1.0			IonCharge O [e]
 0.6			ElectronTemperatureRatio
 
-#BODY
-T			UseBody
-1.0			rBody
-0.0			rCurrents
-10000.0			BodyRhoDim (1/ccm)
-600.0			BodyTDim (K) temperature for fixed BC for P_BLK
-
 #UNIFORMAXIS
-T                       UseUniformAxis
+T			UseUniformAxis
 
 #FIXAXIS
-T                       DoFixAxis
-100.0                   rFixAxis
-1.2                     r2FixAxis
+T			DoFixAxis
+100.0			rFixAxis
+1.2			r2FixAxis
 
 #TESTXYZ
 2.0			xTest
@@ -107,18 +84,18 @@ float			TypeBc5
 float			TypeBc6
 
 #INNERBOUNDARY
-user			TypeBcInner
+user			TypeBcBody
 
 #MINIMUMDENSITY
-1E-4			RhoMin
+1E-4			RhoMinDim
 
 #MINIMUMPRESSURE
-1e-8			pMin
+1e-8			pMinDim
 1e-8			PeMin
 
 #TIMESTEPPING
-1			nSTAGE
-1.0			Cfl
+1			nStage
+1.0			CflExpl
 
 #SCHEME
 2			nOrder
@@ -126,22 +103,19 @@ Linde			TypeFlux | only for nOrder=2
 minmod			TypeLimiter
 
 #RESTARTOUTFILE
-one			TypeRestartOutFile
+one			StringRestartOutFile
 
 #NONCONSERVATIVE
 T			UseNonConservative
 
 #CONSERVATIVECRITERIA
-0
+0			nConservCrit
 
 #USERSWITCH
 +init +ic +source		StringSwitch
 
-#SAVEINITIAL
-T			DoSaveInitial
-
 #SAVEPLOT
-3
+3			nPlotFile
 x=0 MHD idl		StringPlot
 -1  			DnSavePlot
 20.0			DtSavePlot
@@ -156,16 +130,13 @@ z=0 MHD idl		StringPlot
 -1.0			DxSavePlot
 
 #SAVELOGFILE
-T                       DoSaveLogfile, rest of parameters read if true
-VAR step date time      StringLog
-1                       DnSaveLogfile
--1.                     DtSaveLogfile [sec]
-rho Ux Uy Uz Bx By Bz p rhopnt Uxpnt Uypnt Uzpnt ppnt Pmin Pmax
+T			DoSaveLogfile rest of parameters read if true
+VAR step date time		StringLog
+1			DnSaveLogfile
+-1.			DtSaveLogfile [sec]
+rho Ux Uy Uz Bx By Bz p rhopnt Uxpnt Uypnt Uzpnt ppnt Pmin Pmax		NameLogVars
 
-#SAVEINITIAL
-F			DoSaveInitial
-
-#USERINPUTBEGIN --------------------
+#USERINPUTBEGIN -----------------------------------
 
 ! See Shematovich (2005)
 #EUROPA
@@ -194,18 +165,18 @@ float			! innerbcs_b
 100.0			Body number deisnty (in /cc) on downstream
 600.0			Body temperature (in K) on downstream
 
-#USERINPUTEND ----------------------
+#USERINPUTEND -------------------------------------
 
-#END_COMP GM -------------------------------------
+#END_COMP GM -----------------------------------------------------------------
 
 #COUPLE1
-GM                      NameComp1
-PT                      NameComp2
--1                      DnCouple
-50.0			Dtcouple
+GM			NameSource
+PT			NameTarget
+-1			DnCouple
+50.0			DtCouple
 
 #STOP
--1			MaxIteration
-200.0			tSimulationMax
+-1			MaxIter
+200.0			TimeMax
 
 #END

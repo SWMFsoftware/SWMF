@@ -53,8 +53,8 @@ T			UseNonConservative
 
 
 #UNIFORMSTATE
-1.0			Var1
-0.0			Var2
+1.0			Rho
+0.0			Ux
 0.0			Uy
 0.0			Uz
 0.0			Bx
@@ -159,15 +159,15 @@ T			UseDtFixed
 
 #PICGRID
 1			nPicRegion
--8			xMinCut
- 8 			xMaxCut
--8			yMinCut
- 8			yMaxCut
--8			yMinCut
- 8			yMaxCut
-1.0			Dx
-1.0			Dy
-1.0			Dz
+-8			xMinPic
+ 8 			xMaxPic
+-8			yMinPic
+ 8			yMaxPic
+-8			zMinPic
+ 8			zMaxPic
+1.0			DxPic
+1.0			DyPic
+1.0			DzPic
 
 
 
@@ -193,7 +193,7 @@ T			UseHallResistFlux
 0.0			HallCmaxFactor
 
 #TEST
-init_hall_resist		TestString
+init_hall_resist		StringTest
 
 #DIVBSOURCE
 F			UseB0Source
@@ -235,9 +235,9 @@ g rbody			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEPPING
-F			UseSWMFDt
-T			UseFixedDt
-1.0			Dt
+F			useSWMFDt
+T			useFixedDt
+1.0			fixedDt
 
 #ELECTRON
 -25			ElectronChargePerMass
@@ -249,29 +249,29 @@ T			UseFixedDt
 
 
 #DISCRETIZATION
-0.5			Theta
-0.0			GradRhoRatio
+0.5			theta
+0.0			gradRhoRatio
 0.0			cDiff
-0.1			RatioDivC2C
+0.1			ratioDivC2C
 
 #DIVE
-T			DivECleanType
+T			doCorrectDivE
 
 #PARTICLES
-5			Particles per cell in X Region 1
-6			Particles per cell in Y Region 1
-1			Particles per cell in Z Region 1
+5			nPclx per cell in X Region 1
+6			nPcly per cell in Y Region 1
+1			nPclz per cell in Z Region 1
 
 #SAVEIDL
 2			nPlotFile
 3d fluid ascii pic		StringPlot
-1			DnOutput
--1.0			DtOutput
-1			DxOutput
+1			DnSavePlot
+-1.0			DtSavePlot
+1			DxSavePlot
 3d fluid ascii si		StringPlot
-1			DnOutput
--1.0			DtOutput
-1			DxOutput
+1			DnSavePlot
+-1.0			DtSavePlot
+1			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------
 

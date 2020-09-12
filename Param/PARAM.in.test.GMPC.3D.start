@@ -3,7 +3,7 @@ and different layout when run on different processors.
 
 #COMPONENTMAP
 GM  0 -1  1		CompMap runs on all PE-s
-PC  0  3  1		PC runs on 4 PE-s
+PC  0  3  1		CompMap runs on 4 PE-s
 
 #DESCRIPTION
 Param/PARAM.in.test.GMPC.3D.start: Run GM and PC in time accurate mode		StringDescription
@@ -41,12 +41,6 @@ NONE			TypeNormalization
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#IOUNITS
-NONE			TypeIoUnit
-
-#NORMALIZATION
-NONE			TypeNormalization
-
 #UPDATECHECK
 F			UseUpdateCheck
 
@@ -71,8 +65,8 @@ T			UseNonConservative
  1.6			zMax
 
 #UNIFORMSTATE
-1.0			Var1
-0.0			Var2
+1.0			Rho
+0.0			Ux
 0.0			Uy
 0.0			Uz
 0.0			Bx
@@ -87,15 +81,15 @@ T			UseNonConservative
 
 #PICGRID
 1			nPicRegion
--8.6  			xMinCut
-+8.6			xMaxCut
--2.6			yMinCut
-+2.6			yMaxCut
--1.0			zMinCut
-+1.0			zMaxCut
+-8.6  			xMinPic
++8.6			xMaxPic
+-2.6			yMinPic
++2.6			yMaxPic
+-1.0			zMinPic
++1.0			zMaxPic
 0.2			DxPic
 0.1			DyPic
-0.1			DyPic
+0.1			DzPic
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -163,19 +157,19 @@ T			DoSaveInitial
 3			nPlotFile
 x=0 VAR idl_ascii		StringPlot
 4			DnSavePlot
--20.0			DtSavePlot
+-1.0			DtSavePlot
 0.0			DxSavePlot
 rho ux uy uz bx by bz p jx jy jz absdivb		NameVars
 g			NamePars
 y=0 VAR idl_ascii		StringPlot
 4			DnSavePlot
--20.0			DtSavePlot
+-1.0			DtSavePlot
 0.0			DxSavePlot
 rho ux uy uz bx by bz p jx jy jz absdivb		NameVars
 g			NamePars
 z=0 VAR idl_ascii		StringPlot
 4			DnSavePlot
--20.0			DtSavePlot
+-1.0			DtSavePlot
 0.0			DxSavePlot
 rho ux uy uz bx by bz p jx jy jz absdivb		NameVars
 g			NamePars
@@ -185,7 +179,7 @@ g			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEPPING
-F			UseSWMFDt
+F			useSWMFDt
 F			useFixedDt
 0.1			CFL
 
@@ -194,12 +188,12 @@ F			useFixedDt
 F			divECleanType
 			nPower
 #ELECTRON		divECleanTol
--25.0			divECleanIter ratio (qom)
+-25.0			ElectronChargePerMass ratio (qom)
 			nIterNonLinear
 #PARTICLES
-3			Particles per cell in X
-3			Particles per cell in Y
-3			Particles per cell in Z
+3			nParticleX per cell in X
+3			nParticleY per cell in Y
+3			nParticleZ per cell in Z
 
 #EFIELDSOLVER
 1e-8			EFieldTol

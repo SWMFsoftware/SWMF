@@ -2,35 +2,35 @@ This tests GM-PC coupling with different layouts.
 This is not meant to be a practical layout.
 
 #COMPONENTMAP
-GM  1 -1  1		GM runs on all PE-s except 0
+GM  1 -1  1		CompMap runs on all PE-s except 0
 PC  0  3  1		PC runs on first 4 PE-s
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.start.aniso: Run GM and PC in time accurate mode
+Param/PARAM.in.test.GMPC.start.aniso: Run GM and PC in time accurate mode		StringDescription
 
 #PLANET
 NONE			NamePlanet
 
 #SAVERESTART
-T                       DoSaveRestart 
--1                      DnSaveRestart 
-2.56                    DtSaveRestart
+T			DoSaveRestart
+-1			DnSaveRestart
+2.56			DtSaveRestart
 
 #COUPLE2
-GM			NameCompMaster
-PC			NameCompSlave
+GM			NameComp1
+PC			NameComp2
 -1			DnCouple
 1.28			DtCouple
 
 #PROGRESS
-1			DnShowProgressShort
-1			DnShowProgressLong
+1			DnProgressShort
+1			DnProgressLong
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 USERMODULE
 Waves and GEM, Yingjuan Ma
- 1.30                  VersionUserModule
+ 1.30			VersionUserModule
 
 #IOUNITS
 NONE			TypeIoUnit
@@ -40,7 +40,7 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass [amu]
-1.0			IonCharge [e]  
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 
@@ -59,23 +59,23 @@ T			UseNonConservative
 4.5e-4			Ppar
 4.5e-4			p
 
-rho   = 1
-By    = 0.04
-cA    = By/sqrt(rho)   = 0.04
-cS    = sqrt(2*p/rho)  = 0.03
-cF    = sqrt(cA^2+cS^2)= 0.05
+rho			= 1
+By			= 0.04
+cA			= By/sqrt(rho)   = 0.04
+cS			= sqrt(2*p/rho)  = 0.03
+cF			= sqrt(cA^2+cS^2)= 0.05
 lambda= 32
-t     = lambda/(cF) = 640.0
+t			= lambda/(cF) = 640.0
 
 p = pe = 2.25e-4
-vth   = sqrt(p/rho) = 0.015
+vth			= sqrt(p/rho) = 0.015
 me = mi/25
-vthe  = 5*vth       = 0.075 
+vthe  = 5*vth		= 0.075
 dx = 0.4
-dtmax = dx/vthe     = 5.333
-dt    = 0.2*dtmax   = 1.066
+dtmax = dx/vthe		= 5.333
+dt			= 0.2*dtmax   = 1.066
 
-#USERINPUTBEGIN ----------------
+#USERINPUTBEGIN -----------------------------------
 
 #WAVE
 1			Rho_
@@ -122,22 +122,22 @@ dt    = 0.2*dtmax   = 1.066
 -1.0			LambdaZ
 0.0			Phase
 
-#USERINPUTEND   ----------------
+#USERINPUTEND -------------------------------------
 
 #SHOCKPOSITION
 0.0			ShockPosition
 4/3			ShockSlope
 
 #GRID
-32                    	nRootBlockX
-24                     	nRootBlockY
-1                     	nRootBlockZ
--160/3                  xMin
+32			nRootBlock1
+24			nRootBlock2
+1			nRootBlock3
+-160/3			xMin
  160/3  		xMax
--160/4                 	yMin
- 160/4                 	yMax
--0.5                  	zMin
- 0.5                  	zMax
+-160/4			yMin
+ 160/4			yMax
+-0.5			zMin
+ 0.5			zMax
 
 #CHECKGRIDSIZE
   8			nI
@@ -147,40 +147,40 @@ dt    = 0.2*dtmax   = 1.066
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-640/500			DtFixed
+640/500			DtFixedDim
 
 #PICREGIONUNIT
-2               nPicRegion
-1.0		xUnitPicSi [m]
-1		uUnitPicSi [m/s] Speed of light for the first PIC region
-1               ScalingFactor
-1		xUnitPicSi [m]
-2		uUnitPicSi [m/s] Speed of light for the second PIC region
-2               ScalingFactor
+2			nPicRegion
+1.0			xUnitPicSi [m]
+1			uUnitPicSi [m/s] Speed of light for the first PIC region
+1			ScalingFactor
+1			xUnitPicSi [m]
+2			uUnitPicSi [m/s] Speed of light for the second PIC region
+2			ScalingFactor
 
 
 #PICGRID
-2                       nPicRegion
--25.1        	        xMinCut
--5.0            	xMaxCut
--20.0                   yMinCut
- 20.0   	     	yMaxCut
+2			nPicRegion
+-25.1			xMinPic
+-5.0			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
 1.25/3			DxPic
 1.25/3			DyPic
- 5.0        	        xMinCut
- 25.0            	xMaxCut
--20.0                   yMinCut
- 20.0   	     	yMaxCut
+ 5.0			xMinPic
+ 25.0			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
 1.25/3			DxPic
 1.25/3			DyPic
 
 #OUTERBOUNDARY
-periodic                TypeBc1
-periodic                TypeBc2
-periodic                TypeBc3
-periodic                TypeBc4
-float                   TypeBc5
-float                   TypeBc6
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 HALLRESISTIVITY
 T			UseHallResistFlux
@@ -188,7 +188,7 @@ T			UseHallResistFlux
 0.0			HallCmaxFactor
 
 #TEST
-init_hall_resist	TestString
+init_hall_resist		StringTest
 
 #DIVBSOURCE
 F			UseB0Source
@@ -197,15 +197,15 @@ F			UseB0Source
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-1.5			BetaLimiter
+1.5			LimiterBeta
 
 RK
 3			nStage
 0.8			CflExpl
 
 #TIMESTEPPING
-2                       nStage
-0.8                     CflExpl
+2			nStage
+0.8			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -217,12 +217,12 @@ raw			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-1
-z=0 var idl_ascii       StringPlot
-1			DnOutput
--0.05			DtOutput
-0.			DxOutput
-rho mx my bx by p       NameVars
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+1			DnSavePlot
+-0.05			DtSavePlot
+0.			DxSavePlot
+rho mx my bx by p		NameVars
 g rbody			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
@@ -232,33 +232,33 @@ g rbody			NamePars
 ! ECSIM and divE cleaning is on by default from 11/2018.
 
 #TIMESTEPPING
-F			UseSWMFDt
+F			useSWMFDt
 T			useFixedDt
-1.28			fixedDt
+1.28			dt
 
 
 #ELECTRON
--25.0			Charge/mass ratio (qom)
+-25.0			ElectronChargePerMass
 
 #PARTICLES
-10			Particles per cell in X Region 1
-10			Particles per cell in Y Region 1
-1			Particles per cell in Z Region 1
-20			Particles per cell in X Region 2
-20			Particles per cell in Y Region 2
-1			Particles per cell in Z Region 2
+10			nParticleX in Region 1
+10			nParticleY
+1			nParticleZ
+20			nParticleX in Region 2
+20			nParticleY
+1			nParticleZ
 
 #SAVEIDL
 1
-z=0 fluid ascii si			StringPlot
-4   	  				DnOutput
--1					DtOutput
-1					DxOutput
+z=0 fluid ascii si		StringPlot
+4			DnOutput
+-1			DtOutput
+1			DxOutput
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-5.12			tSimulationMax
+-1			MaxIter
+5.12			TimeMax
 
 
