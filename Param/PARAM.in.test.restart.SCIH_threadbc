@@ -46,7 +46,8 @@ T			DoConvergenceCheck
 limited			TypeBc
 1.0e-6			Tolerance
 40			MaxIter
-			UseThomasAlg
+F			UseThomasAlg
+
 #BODY
 T			UseBody
 1.00			rBody
@@ -370,7 +371,8 @@ T			UseAccurateReschange
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
-			rMinWaveReflection
+0.0			rMinWaveReflection
+
 #RESISTIVITY
 T			UseResistivity
 user			TypeResistivity

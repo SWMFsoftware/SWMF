@@ -39,9 +39,12 @@ T			UseFieldLineThreads
 T			UseAlignedVelocity
 T			DoConvergenceCheck
 second			TypeBc
-			Tolerance
-#BODY			MaxIter
-T			UseThomasAlg
+1e-6			Tolerance
+20			MaxIter
+F			UseThomasAlg
+
+#BODY
+T			UseBody
 1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim

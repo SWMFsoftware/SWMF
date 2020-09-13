@@ -1,40 +1,40 @@
 Name Root Last Stride
 #COMPONENTMAP
-GM  0 -1  1
-PC  0  0  1
+GM  0 -1  1		CompMap
+PC  0  0  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.2D.adapt: Run GM and PC in time accurate mode
+Param/PARAM.in.test.GMPC.FLEKS.2D.adapt: Run GM and PC in time accurate mode		StringDescription
 
 #PLANET
 NONE			NamePlanet
 
 #SAVERESTART
-T                       DoSaveRestart 
--1                      DnSaveRestart 
-2.56                    DtSaveRestart
+T			DoSaveRestart
+-1			DnSaveRestart
+2.56			DtSaveRestart
 
 #COUPLE2
-GM			NameCompMaster
-PC			NameCompSlave
+GM			NameComp1
+PC			NameComp2
 -1			DnCouple
 1.28			DtCouple
 
 #PROGRESS
-1			DnShowProgressShort
-1			DnShowProgressLong
+1			DnProgressShort
+1			DnProgressLong
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 USERMODULE
 Waves and GEM, Yingjuan Ma
- 1.30                  VersionUserModule
+ 1.30			VersionUserModule
 
 #GRIDBLOCKALL
 800			MaxBlock
 
 #CHECKGRIDSIZE
-       8                nI
+       8		nI
        8		nJ
        1		nK
      100		MinBlockALL
@@ -47,7 +47,7 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass [amu]
-1.0			IonCharge [e]  
+1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
 
@@ -66,23 +66,23 @@ T			UseNonConservative
 4.5e-4			Ppar
 4.5e-4			p
 
-rho   = 1
-By    = 0.04
-cA    = By/sqrt(rho)   = 0.04
-cS    = sqrt(2*p/rho)  = 0.03
-cF    = sqrt(cA^2+cS^2)= 0.05
+rho			= 1
+By			= 0.04
+cA			= By/sqrt(rho)   = 0.04
+cS			= sqrt(2*p/rho)  = 0.03
+cF			= sqrt(cA^2+cS^2)= 0.05
 lambda= 32
-t     = lambda/(cF) = 640.0
+t			= lambda/(cF) = 640.0
 
 p = pe = 2.25e-4
-vth   = sqrt(p/rho) = 0.015
+vth			= sqrt(p/rho) = 0.015
 me = mi/25
-vthe  = 5*vth       = 0.075 
+vthe  = 5*vth		= 0.075
 dx = 0.4
-dtmax = dx/vthe     = 5.333
-dt    = 0.2*dtmax   = 1.066
+dtmax = dx/vthe		= 5.333
+dt			= 0.2*dtmax   = 1.066
 
-#USERINPUTBEGIN ----------------
+#USERINPUTBEGIN -----------------------------------
 
 #WAVE
 1			Rho_
@@ -129,56 +129,56 @@ dt    = 0.2*dtmax   = 1.066
 -1.0			LambdaZ
 0.0			Phase
 
-#USERINPUTEND   ----------------
+#USERINPUTEND -------------------------------------
 
 #SHOCKPOSITION
 0.0			ShockPosition
 4/3			ShockSlope
 
 #GRID
-32                    	nRootBlockX
-24                     	nRootBlockY
-1                     	nRootBlockZ
--160/3                  xMin
+32			nRootBlock1
+24			nRootBlock2
+1			nRootBlock3
+-160/3			xMin
  160/3  		xMax
--160/4                 	yMin
- 160/4                 	yMax
--0.5                  	zMin
- 0.5                  	zMax
+-160/4			yMin
+ 160/4			yMax
+-0.5			zMin
+ 0.5			zMax
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-640/500			DtFixed
+640/500			DtFixedDim
 
 
 #PICREGIONUNIT
 1			nPicRegion
 5			xUnitPicSi [m]
 3			uUnitPicSi [m/s] Speed of light for the first PIC region
-4               	ScalingFactor
+4			ScalingFactor
 
 #PICGRID
-1                       nPicRegion
--25.1        	        xMinCut
-20.0			xMaxCut
--20.0                   yMinCut
- 20.0   	     	yMaxCut
+1			nPicRegion
+-25.1			xMinPic
+20.0			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
 1.25/3			DxPic
 1.25/3			DyPic
 
 #REGION
-pic_max
-box
--25.1
--20
--5.0
-20
+pic_max			NameRegion
+box			StringShape
+-25.1			xMinBox
+-20			yMinBox
+-5.0			xMaxBox
+20			yMaxBox
 
 #REGION
-pic_min
-shell0
-2
-8
+pic_min			NameRegion
+shell0			StringShape
+2			RadiusInner
+8			Radius
 
 #PICREGIONMIN
 +pic_min
@@ -210,12 +210,12 @@ T			DoAdaptPic
 1			nGhostPic
 
 #OUTERBOUNDARY
-periodic                TypeBc1
-periodic                TypeBc2
-periodic                TypeBc3
-periodic                TypeBc4
-float                   TypeBc5
-float                   TypeBc6
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 HALLRESISTIVITY
 T			UseHallResistFlux
@@ -223,7 +223,7 @@ T			UseHallResistFlux
 0.0			HallCmaxFactor
 
 #TEST
-init_hall_resist	TestString
+init_hall_resist		StringTest
 
 #DIVBSOURCE
 F			UseB0Source
@@ -232,15 +232,15 @@ F			UseB0Source
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-1.5			BetaLimiter
+1.5			LimiterBeta
 
 RK
 3			nStage
 0.8			CflExpl
 
 #TIMESTEPPING
-2                       nStage
-0.8                     CflExpl
+2			nStage
+0.8			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -252,12 +252,12 @@ raw			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-1
-z=0 var idl_ascii       StringPlot
-1			DnOutput
--0.05			DtOutput
-0.			DxOutput
-rho mx my bx by p pic pic_active pic_crit       NameVars
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+1			DnSavePlot
+-0.05			DtSavePlot
+0.			DxSavePlot
+rho mx my bx by p pic pic_active pic_crit		NameVars
 g rbody			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
@@ -268,25 +268,25 @@ g rbody			NamePars
 T			UseFixedDt
 1.28			dt
 
-#ELECTRON_FLEKS0		
--25.0			Charge/mass ratio (qom)
+#ELECTRON_FLEKS0
+-25.0			ElectronChargePerMass
 
 #PARTICLES
-10			Particles per cell in X Region 1
-10			Particles per cell in Y Region 1
-1			Particles per cell in Z Region 1
+10			nParticleX Region 1
+10			nParticleY
+1			nParticleZ
 
 #SAVEPLOT
-1
-z=0 fluid ascii si			StringPlot
-4   	  				DnOutput
--1					DtOutput
-1					DxOutput
+1			nPlotFile
+z=0 fluid ascii si		StringPlot
+4			DnSavePlot
+-1			DtSavePlot
+1			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-10.24			tSimulationMax
+-1			MaxIter
+10.24			TimeMax
 
 

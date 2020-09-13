@@ -365,8 +365,8 @@ F			UseDiffusion
 90			LatMax
 
 #SAVEPLOT
-1
-mh1d flux idl
+1			nFileOut
+mh1d flux idl		StringPlot
 
 #USEDATETIME
 T			UseDateTime

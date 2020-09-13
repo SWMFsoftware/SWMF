@@ -1,31 +1,31 @@
 ID Root Last Stride
 #COMPONENTMAP
-GM  0 -1  1
-PC  0  7  1
+GM  0 -1  1		CompMap
+PC  0  7  1		CompMap
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.periodic: Run GM and PC in time accurate mode
+Param/PARAM.in.test.GMPC.FLEKS.periodic: Run GM and PC in time accurate mode		StringDescription
 
 #PLANET
 NONE			NamePlanet
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #PROGRESS
-1			DnShowProgressShort
-1			DnShowProgressLong
+1			DnProgressShort
+1			DnProgressLong
 
 
 #COUPLE2
-GM			NameCompMaster
-PC			NameCompSlave
+GM			NameComp1
+PC			NameComp2
 -1			DnCouple
 0.5			DtCouple
 
 #COUPLETIME
-GM                      NameComp
-F                       DoCoupleOnTime
+GM			NameComp
+F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -37,16 +37,16 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass 1 [amu]
-4.0			FluidMass 2 [amu]
-1.0             	IonCharge 1 [e]
+4.0			IonCharge 2 [amu]
+1.0			ElectronTemperatureRatio 1 [e]
 1.0			IonCharge 2 [e]
-1.0             	ElectronTemperatureRatio
+1.0			ElectronTemperatureRatio
 
 #NONCONSERVATIVE
 T			UseNonConservative
 
 #UNIFORMSTATE
-0.5			Rho1
+0.5			Rho
 0.03			Ux1
 0.04			Uy1
 0.0			Uz1
@@ -61,157 +61,157 @@ T			UseNonConservative
 0.0			Uz2
 2.56e-4			p2
 
-#USERINPUTBEGIN ----------------
+#USERINPUTBEGIN -----------------------------------
 
 Whistler wave is cirularly polarized
 for both ion fluids.
 
 #WAVE
-3                       UyIon1
-10000.0                 Width
--0.0090663280           Amplitude  -0.01 for Alfven
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
--90.0                   Phase
+3			UyIon1
+10000.0			Width
+-0.0090663280		Amplitude  -0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
 
 #WAVE
-4                       UzIon1
-1000.0                  Width
-+0.0090663280           Amplitude  +0.01 for Alfven
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-180.0                   Phase
+4			UzIon1
+1000.0			Width
++0.0090663280		Amplitude  +0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
 
 #WAVE
-12                      UyIon2
-10000.0                 Width
--0.0090663280           Amplitude  -0.01 for Alfven
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
--90.0                   Phase
+12			UyIon2
+10000.0			Width
+-0.0090663280		Amplitude  -0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
 
 #WAVE
-13                      UzIon2
-1000.0                  Width
-+0.0090663280           Amplitude  +0.01 for Alfven
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-180.0                   Phase
+13			UzIon2
+1000.0			Width
++0.0090663280		Amplitude  +0.01 for Alfven
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
 
 #WAVE
-6                       By_
-1000.0                  Width
-0.01                    Amplitude
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
--90.0                   Phase
+6			By_
+1000.0			Width
+0.01			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+-90.0			Phase
 
 #WAVE
-7                       Bz_
-1000.0                  Width
--0.01                   Amplitude
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-180.0                   Phase
+7			Bz_
+1000.0			Width
+-0.01			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
 
 Put perturbations into pressures, but keep
 total Pe+Pi1+Pi2 constant
 
 #WAVE
-8                       Pe_
-1000.0                  Width
-1e-4                    Amplitude
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-180.0                   Phase
+8			Pe_
+1000.0			Width
+1e-4			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+180.0			Phase
 
 #WAVE
-9                       Pion1
-1000.0                  Width
-0.5e-4                  Amplitude
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-0.0                     Phase
+9			Pion1
+1000.0			Width
+0.5e-4			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
 
 #WAVE
-14                      Pion2
-1000.0                  Width
-0.5e-4                  Amplitude
-32.0                    LambdaX
--1.0                    LambdaY
--1.0                    LambdaZ
-0.0                     Phase
+14			Pion2
+1000.0			Width
+0.5e-4			Amplitude
+32.0			LambdaX
+-1.0			LambdaY
+-1.0			LambdaZ
+0.0			Phase
 
 
-#USERINPUTEND   ----------------
+#USERINPUTEND -------------------------------------
 
 #GRID
-32                    	nRootBlockX
-24                     	nRootBlockY
-1                     	nRootBlockZ
--64                  	xMin
+32			nRootBlock1
+24			nRootBlock2
+1			nRootBlock3
+-64			xMin
  64  			xMax
--48                 	yMin
- 48                 	yMax
--0.5                  	zMin
- 0.5                  	zMax
+-48			yMin
+ 48			yMax
+-0.5			zMin
+ 0.5			zMax
 
 #CHECKGRIDSIZE
   8			nI
-  8                	nJ
-  1                	nK
-800                	MinBlockALL
+  8			nJ
+  1			nK
+800			MinBlockALL
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-0.5			DtFixed
+0.5			DtFixedDim
 
 #PICUNIT
- 1.0                    xUnitPicSi
- 1.0                    uUnitPicSi
+ 1.0			xUnitPicSi
+ 1.0			uUnitPicSi
 
 #PICGRID
-1                       nPicRegion
--32           		xMinCut
- 32         		xMaxCut
--20           		yMinCut
- 20	     		yMaxCut
+1			nPicRegion
+-32			xMinPic
+ 32			xMaxPic
+-20			yMinPic
+ 20			yMaxPic
 0.5			DxPic
 0.5			DyPic
 
 #PICADAPT
 T			UseAdaptivePic
-F			DoAdaptPic			
+F			DoAdaptPic
 
 #PICPATCH
-2			nCellPerPatch	
+2			nCellPerPatch
 
 #PICGHOST
 1			nGhostPic
 
 #OUTERBOUNDARY
-periodic                TypeBc1
-periodic                TypeBc2
-periodic                TypeBc3
-periodic                TypeBc4
-float                   TypeBc5
-float                   TypeBc6
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 #HALLRESISTIVITY
-T			UseHallResistFlux
-1.0			HallFactor
+T			UseHallResist
+1.0			HallFactorMax
 0.0			HallCmaxFactor
 
 #TEST
-init_hall_resist	TestString
+init_hall_resist		StringTest
 
 #DIVBSOURCE
 F			UseB0Source
@@ -220,21 +220,21 @@ F			UseB0Source
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-1.5			BetaLimiter
+1.5			LimiterBeta
 
 RK
 3			nStage
 0.8			CflExpl
 
 #TIMESTEPPING
-2                       nStage
-0.8                     CflExpl
+2			nStage
+0.8			CflExpl
 
 #IMPLICIT
-F                       UsePointImplicit
-F                       UsePartImplicit
-T                       UseFullImplicit
-100.0                   ImplCFL
+F			UsePointImplicit
+F			UsePartImplicit
+T			UseFullImplicit
+100.0			CflImpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -246,11 +246,11 @@ raw			StringLog
 T			DoSaveInitial
 
 #SAVEPLOT
-1
-z=0 all idl_ascii       StringPlot
-1			DnOutput
--0.05			DtOutput
-0.			DxOutput
+1			nPlotFile
+z=0 all idl_ascii		StringPlot
+1			DnSavePlot
+-0.05			DtSavePlot
+0.			DxSavePlot
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -268,7 +268,7 @@ F			doSmoothE
 1			nz
 
 #DIVE
-F			useDiv
+F			doCorrectDivE
 
 #PERIODICITY
 T			isPeriodicX
@@ -276,12 +276,12 @@ T			isPeriodicY
 T			isPeriodicZ
 
 #DISCRETIZATION
-0.5		        theta
+0.5			theta
 0.0			ratioDivC2C
 
 #EFIELDSOLVER
-1e-13
-200
+1e-13			EFieldTol
+200			EFieldIter
 
 #PARTICLES
 10			Particles per cell in X
@@ -289,26 +289,26 @@ T			isPeriodicZ
 1			Particles per cell in Z
 
 #SAVEPLOT
-1
-z=0 fluid ascii si			StringPlot
-4   	  				DnOutput
--1					DtOutput
-0					DxOutput
+1			nPlotFile
+z=0 fluid ascii si		StringPlot
+4			DnSavePlot
+-1			DtSavePlot
+0			DxSavePlot
 
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
 0			MaxIter
-0     			TimeMax
+0			TimeMax
 
-#RUN
+#RUN ##########################################################################
 
 #COMPONENT
-GM			Component
+GM			NameComp
 F			UseComp
 
 #STOP
 -1			MaxIter
-2.0     		TimeMax
+2.0			TimeMax
 

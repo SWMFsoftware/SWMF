@@ -1,7 +1,7 @@
 ID Root Last Stride
 #COMPONENTMAP
-GM  0 -1  1
-PC  0  7  1
+GM  0 -1  1		CompMap
+PC  0  7  1		CompMap
 
 #DESCRIPTION
 Param/PARAM.in.test.GMPC.FLEKS.3D: Run GM and PC in time accurate mode		StringDescription
@@ -10,24 +10,24 @@ Param/PARAM.in.test.GMPC.FLEKS.3D: Run GM and PC in time accurate mode		StringDe
 NONE			NamePlanet
 
 #TIMEACCURATE
-T			DoTimeAccurate
+T			IsTimeAccurate
 
 #SAVERESTART
-F		DoSaveRestart
+F			DoSaveRestart
 
 #PROGRESS
-1			DnShowProgressShort
-1			DnShowProgressLong
+1			DnProgressShort
+1			DnProgressLong
 
 #COUPLE2
-GM			NameCompMaster		NameSource
-PC			NameCompSlave		NameTarget
+GM			NameComp1		NameSource
+PC			NameComp2		NameTarget
 -1			DnCouple
 0.5			DtCouple
 
 #COUPLETIME
-PC                      NameComp
-F                       DoCoupleOnTime
+PC			NameComp
+F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -39,17 +39,11 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass [amu]		MassFluid
-1.0             	IonCharge [e]		ChargeIon
-1.0             	ElectronTemperatureRatio
-
-#IOUNITS
-NONE			NameIoUnits		TypeIoUnit
-
-#NORMALIZATION
-NONE			NameNormalization		TypeNormalization
+1.0			IonCharge [e]		ChargeIon
+1.0			ElectronTemperatureRatio
 
 #UPDATECHECK
-F                       UseUpdateCheck
+F			UseUpdateCheck
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -61,9 +55,9 @@ T			UseNonConservative
 2050			MinBlockALL
 
 #GRID
-16			nRootBlockX
-8			nRootBlockY
-8			nRootBlockZ
+16			nRootBlock1
+8			nRootBlock2
+8			nRootBlock3
 -12.8			xMin
  12.8			xMax
 -6.4			yMin
@@ -72,7 +66,7 @@ T			UseNonConservative
  6.4			zMax
 
 #UNIFORMSTATE
-1.0			rho		Rho
+1.0			Rho		Rho
 0.0			Ux
 0.0			Uy
 0.0			Uz			Uz
@@ -83,20 +77,20 @@ T			UseNonConservative
 0.000157080		p		P
 
 #PICUNIT
- 1.0                    xUnitPicSi
- 1.0                    uUnitPicSi
+ 1.0			xUnitPicSi
+ 1.0			uUnitPicSi
 
 #PICGRID
-1                       nPicRegion
--6.4  	                xMinCut		xMinPic
-+6.4                    xMaxCut		xMaxPic
--3.2                    yMinCut		yMinPic
-+3.2                    yMaxCut		yMaxPic
--2.4                    zMinCut		zMinPic
-+2.4                    zMaxCut		zMaxPic
-0.8                     DxPic
-0.8                     DyPic
-0.8                     DyPic		DzPic
+1			nPicRegion
+-6.4  			xMinPic		xMinPic
++6.4			xMaxPic		xMaxPic
+-3.2			yMinPic		yMinPic
++3.2			yMaxPic		yMaxPic
+-2.4			zMinPic		zMinPic
++2.4			zMaxPic		zMaxPic
+0.8			DxPic
+0.8			DyPic
+0.8			DzPic		DzPic
 
 #PICADAPT
 T			UseAdaptivePic
@@ -117,7 +111,7 @@ rho			NameCriteria
 10000			CriteriaMin
 -1			CriteriaMax
 
-#USERINPUTBEGIN -----------------
+#USERINPUTBEGIN -----------------------------------
 
 #GEM
 0.2			Apert		Amplitude
@@ -133,15 +127,15 @@ rho			NameCriteria
 25.6			WaveLengthX
 25.6			WaveLengthY
 
-#USERINPUTEND ---------------------
+#USERINPUTEND -------------------------------------
 
 #OUTERBOUNDARY
-periodic		xMinBc		TypeCellBc
-periodic		xMaxBc		TypeCellBc
-float			yMinBc		TypeCellBc
-float			yMaxBc		TypeCellBc
-float			zMinBc		TypeCellBc
-float			zMaxBc		TypeCellBc
+periodic		TypeBc1		TypeCellBc
+periodic		TypeBc2		TypeCellBc
+float			TypeBc3		TypeCellBc
+float			TypeBc4		TypeCellBc
+float			TypeBc5		TypeCellBc
+float			TypeBc6		TypeCellBc
 
 #SCHEME
 2			nOrder
@@ -154,44 +148,44 @@ T			UseHyperbolicDivb		UseHyperbolicDivB
 0.1			HypDecay
 
 #TIMESTEPPING
-2                       nStage
-0.1                     CflExpl
+2			nStage
+0.1			CflExpl
 
 #SAVELOGFILE
 F			DoSaveLogfile
 
 #SAVEINITIAL
-F		        DoSaveInitial
+F			DoSaveInitial
 
 #END_COMP GM -----------------------------------------------------------------
 
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEPPING
-T			useFixedDt		
-1         		fixedDt
+T			dt
+1			fixedDt
 
 #RESAMPLING
-T                       doReSampling
-0.95                    reSamplingLowLimit  (0.8 is a typical value)
-1.1                     reSamplingHighLimit (3 is a typical value)
+T			doReSampling
+0.95			reSamplingLowLimit  (0.8 is a typical value)
+1.1			reSamplingHighLimit (3 is a typical value)
 
 #SAVEPLOT
-1
-3d var ascii planet	StringPlot
-4   	  		DnOutput
--1			DtOutput
-1			DxOutput
-{fluid} numS0 numS1	Vars
+1			nPlotFile
+3d var ascii planet		StringPlot
+4			DnSavePlot
+-1			DtSavePlot
+1			DxSavePlot
+{fluid} numS0 numS1		NameVars
 
 #END_COMP PC -----------------------------------------------------------------
 
 
 #STOP
--1			MaxIteration
-4			tSimulationMax
+-1			MaxIter
+4			TimeMax
 
-#RUN
+#RUN ##########################################################################
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -201,13 +195,13 @@ rho			NameCriteria
 -1			CriteriaMin
 1000			CriteriaMax
 
-#END_COMP GM ---------------------------------------------------------
+#END_COMP GM -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-8			tSimulationMax
+-1			MaxIter
+8			TimeMax
 
-#RUN
+#RUN ##########################################################################
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -217,13 +211,13 @@ rho			NameCriteria
 10000			CriteriaMin
 -1			CriteriaMax
 
-#END_COMP GM ---------------------------------------------------------
+#END_COMP GM -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-12			tSimulationMax
+-1			MaxIter
+12			TimeMax
 
-#RUN
+#RUN ##########################################################################
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
@@ -233,11 +227,11 @@ rho			NameCriteria
 -1			CriteriaMin
 1000			CriteriaMax
 
-#END_COMP GM ---------------------------------------------------------
+#END_COMP GM -----------------------------------------------------------------
 
 #STOP
--1			MaxIteration
-16			tSimulationMax
+-1			MaxIter
+16			TimeMax
 
 
 

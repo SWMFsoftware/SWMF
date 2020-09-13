@@ -126,7 +126,8 @@ T			UseCurlB0
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
-			rMinWaveReflection
+0.0			rMinWaveReflection
+
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
 0.17			StochasticExponent
@@ -370,7 +371,8 @@ T			UseAccurateReschange
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
-			rMinWaveReflection
+0.0			rMinWaveReflection
+
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
 0.17			StochasticExponent

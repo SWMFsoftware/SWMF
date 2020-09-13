@@ -3,21 +3,16 @@ ID Proc0 ProcEnd Stride nThread
 GM 1 -1 1 -1		CompMap runs on PEs 1... with MaxThread threads
 PC 0  3 1  1		CompMap runs on PEs 0..3 with 1 thread
 
-DESCRIPTION
-Run GM and PC in time accurate mode
+#INCLUDE
+RESTART.in              NameRestartFile
 
-#PLANET
-NONE			NamePlanet
+#DESCRIPTION
+Param/PARAM.in.test.GMPC.aniso.AMPS.2step.restart: restart GM and PC/AMPS
 
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
 2.0			DtSaveRestart
-
-COUPLE2TIGHT
-GM			NameCompMaster
-PC			NameCompSlave
-T			DoCouple
 
 #COUPLE2
 GM			NameComp1
@@ -29,17 +24,10 @@ PC			NameComp2
 1			DnProgressShort
 1			DnProgressLong
 
-#INCLUDE
-RESTART.in              NameRestartFile
-
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #INCLUDE
 GM/restartIN/restart.H
-
-USERMODULE
-Waves and GEM, Yingjuan Ma
- 1.30			VersionUserModule
 
 #PLASMA
 1.0			FluidMass [amu]
@@ -69,16 +57,6 @@ T			UseDtFixed
 1.0			DyPic
 1.0			DzPic
 
-
-
-
- 5.0			xMinCut
- 25.0			xMaxCut
--20.0			yMinCut
- 20.0			yMaxCut
-1.25/3			DxPic
-1.25/3			DyPic
-
 #OUTERBOUNDARY
 periodic		TypeBc1
 periodic		TypeBc2
@@ -86,14 +64,6 @@ periodic		TypeBc3
 periodic		TypeBc4
 float			TypeBc5
 float			TypeBc6
-
-HALLRESISTIVITY
-T			UseHallResistFlux
-1.0			HallFactor
-0.0			HallCmaxFactor
-
-#TEST
-init_hall_resist		StringTest
 
 #DIVBSOURCE
 F			UseB0Source
@@ -103,10 +73,6 @@ F			UseB0Source
 Rusanov			TypeFlux
 mc			TypeLimiter
 1.5			LimiterBeta
-
-RK
-3			nStage
-0.8			CflExpl
 
 #TIMESTEPPING
 2			nStage
@@ -146,8 +112,6 @@ T			useFixedDt
 1e-8			EFieldTol
 200			EFieldIter
 
-
-
 #DISCRETIZATION
 0.5			theta
 0.0			gradRhoRatio
@@ -180,8 +144,7 @@ T			isRestart
 
 #STOP
 -1			MaxIter
-5			TimeMax
-
+5.0			TimeMax
 
 #END #########################################################################
 
@@ -192,7 +155,5 @@ GM			NameComp
 F			UseComp
 
 #STOP
--1			MaxIteration
-15			tSimulationMax
-
-
+-1			MaxIter
+15.0			TimeMax

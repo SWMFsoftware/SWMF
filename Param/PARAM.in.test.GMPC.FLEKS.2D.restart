@@ -1,25 +1,25 @@
 ID Root Last Stride
 #COMPONENTMAP
-GM  0 -1  1
-PC  0  4  1
+GM  0 -1  1		CompMap
+PC  0  4  1		CompMap
 
 ! Restart header for SWMF
 #INCLUDE
 RESTART.in		NameRestartFile
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.FLEKS.2D.restart: 
+Param/PARAM.in.test.GMPC.FLEKS.2D.restart: restart GM and PC/AMPS		StringDescription
 
 #PROGRESS
-1			DnShowProgressShort
-1			DnShowProgressLong
+1			DnProgressShort
+1			DnProgressLong
 
 #SAVERESTART
-F                       DoSaveRestart 
+F			DoSaveRestart
 
 #COUPLE2
-GM			NameCompMaster
-PC			NameCompSlave
+GM			NameComp1
+PC			NameComp2
 -1			DnCouple
 1.28			DtCouple
 
@@ -31,12 +31,12 @@ PC			NameCompSlave
 GM/restartIN/restart.H
 
 #SAVEINITIAL
-T                       DoSaveIntial
+T			DoSaveInitial
 
 #PLASMA
 1.0			FluidMass [amu]
-1.0             	IonCharge [e]  
-1.0             	ElectronTemperatureRatio
+1.0			IonCharge [e]
+1.0			ElectronTemperatureRatio
 
 #NONCONSERVATIVE
 T			UseNonConservative
@@ -45,30 +45,29 @@ T			UseNonConservative
 2			nPicRegion
 5			xUnitPicSi [m]
 3			uUnitPicSi [m/s] Speed of light for the first PIC region
-4               	ScalingFactor
+4			ScalingFactor
 10			xUnitPicSi [m]
 5			uUnitPicSi [m/s] Speed of light for the second PIC region
-10               	ScalingFactor
+10			ScalingFactor
 
 #PICGRID
-2                       nPicRegion
--25.1        	        xMinCut
--5.0            	xMaxCut
--20.0                   yMinCut
- 20.0   	     	yMaxCut
+2			nPicRegion
+-25.1			xMinPic
+-5.0			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
 1.25/3			DxPic
 1.25/3			DyPic
-5        	        xMinCut
-25.1            	xMaxCut
--20.0                   yMinCut
- 20.0   	     	yMaxCut
+5			xMinPic
+25.1			xMaxPic
+-20.0			yMinPic
+ 20.0			yMaxPic
 1.25/3			DxPic
 1.25/3			DyPic
-
 
 #PICADAPT
 T			UseAdaptivePic
-F			DoAdaptPic	
+F			DoAdaptPic
 
 #PICPATCH
 2			nCellPerPatch
@@ -77,20 +76,20 @@ F			DoAdaptPic
 1			nGhostPic
 
 #OUTERBOUNDARY
-periodic                TypeBc1
-periodic                TypeBc2
-periodic                TypeBc3
-periodic                TypeBc4
-float                   TypeBc5
-float                   TypeBc6
+periodic		TypeBc1
+periodic		TypeBc2
+periodic		TypeBc3
+periodic		TypeBc4
+float			TypeBc5
+float			TypeBc6
 
 HALLRESISTIVITY
 T			UseHallResistFlux
 1.0			HallFactor
 0.0			HallCmaxFactor
 
-#TEST
-init_hall_resist	TestString
+TEST
+init_hall_resist		StringTest
 
 #DIVBSOURCE
 F			UseB0Source
@@ -99,15 +98,15 @@ F			UseB0Source
 2			nOrder
 Rusanov			TypeFlux
 mc			TypeLimiter
-1.5			BetaLimiter
+1.5			LimiterBeta
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-640/500			DtFixed
+640/500			DtFixedDim
 
 #TIMESTEPPING
-2                       nStage
-0.8                     CflExpl
+2			nStage
+0.8			CflExpl
 
 #SAVELOGFILE
 T			DoSaveLogfile
@@ -116,12 +115,12 @@ raw			StringLog
 -1.			DtSaveLogfile
 
 #SAVEPLOT
-1
-z=0 var idl_ascii       StringPlot
-1			DnOutput
--0.05			DtOutput
-0.			DxOutput
-rho mx my bx by p       NameVars
+1			nPlotFile
+z=0 var idl_ascii		StringPlot
+1			DnSavePlot
+-0.05			DtSavePlot
+0.			DxSavePlot
+rho mx my bx by p		NameVars
 g rbody			NamePars
 
 #END_COMP GM -----------------------------------------------------------------
@@ -135,19 +134,18 @@ PC/restartIN/FLEKS0_restart.H
 PC/restartIN/FLEKS1_restart.H
 
 #EFIELDSOLVER
-1e-13			tol
-200			nIterMax
-
+1e-13			EFieldTol
+200			EFieldIter
 
 #SAVEPLOT
-1
-z=0 fluid ascii si			StringPlot
-4   	  				DnOutput
--1					DtOutput
-1					DxOutput
+1			nPlotFile
+z=0 fluid ascii si		StringPlot
+4			DnSavePlot
+-1			DtSavePlot
+1			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------
 
 #STOP
--8			MaxIteration
-5.12			tSimulationMax
+-1			MaxIter
+5.12			TimeMax
