@@ -125,11 +125,11 @@ T			useFixedDt
 1.28			dt
 
 #SAVEIDL
-1
+1			nPlotFile
 z=0 fluid ascii si		StringPlot
-4			DnOutput
--1			DtOutput
-1			DxOutput
+4			DnSavePlot
+-1			DtSavePlot
+1			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------
 

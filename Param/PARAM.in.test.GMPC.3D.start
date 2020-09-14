@@ -200,17 +200,17 @@ F			divECleanType
 200			EFieldIter
 
 #SAVEIDL
-1			nPlot
+1			nPlotFile
 cut all ascii planet		StringPlot
-1			DnOutput
--1			DtOutput
--2			xMin
-2			xMax
--1			yMin
-1			yMax
--0.5			zMin
-0.5			zMax
-2			DxOutput
+1			DnSavePlot
+-1			DtSavePlot
+-2			xMinCut
+2			xMaxCut
+-1			yMinCut
+1			yMaxCut
+-0.5			zMinCut
+0.5			zMaxCut
+2			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------
 

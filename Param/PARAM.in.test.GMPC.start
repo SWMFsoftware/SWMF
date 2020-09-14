@@ -287,28 +287,21 @@ F			divECleanType
 1			nParticleZ per cell in Z
 
 #SAVEIDL
-2
+2			nPlotFile
 z=0 fluid ascii si		StringPlot
-4			DnOutput
--1			DtOutput
-0			DxOutput
+4			DnSavePlot
+-1			DtSavePlot
+0			DxSavePlot
 cut particles1 ascii planet		StringPlot
-4			DnOutput
--1			DtOutput
--1			xMin
-3			xMax
-0			yMin
-2			yMax
--1			zMin
-1			zMax
-1			DxOutput
-
-#SAVEPLOT
-PC/plots		SaveDirName
-1			FieldOutputCycle
-0			ParticlesOutputCycle
-1			DiagnosticsOutputCycle
-shdf5			WriteMethod
+4			DnSavePlot
+-1			DtSavePlot
+-1			xMinCut
+3			xMaxCut
+0			yMinCut
+2			yMaxCut
+-1			zMinCut
+1			zMaxCut
+1			DxSavePlot
 
 #END_COMP PC -----------------------------------------------------------------
 
