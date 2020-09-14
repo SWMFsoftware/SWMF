@@ -285,7 +285,7 @@ contains
     ! Otherwise send the variables defined by iVarSource_V
 
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
-    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
+    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
     use IH_BATL_lib,   ONLY: nDim, MaxDim, MinIJK_D, MaxIJK_D, iProc, &
@@ -796,7 +796,8 @@ contains
          No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_, UnitEnergyDens_
     use IH_ModVarIndexes,     ONLY: &
          Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, Pe_, &
-         Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar
+         Ppar_, WaveFirst_, WaveLast_, Ehot_, nVar, &
+         ChargeStateFirst_, ChargeStateLast_
     use IH_ModBuffer, ONLY:iVar_V, DoCoupleVar_V, nVarCouple
     use CON_coupler,       ONLY: &
          RhoCouple_, RhoUxCouple_,&
@@ -804,7 +805,8 @@ contains
          PeCouple_, PparCouple_, WaveFirstCouple_,  &
          WaveLastCouple_, Bfield_, Wave_, EhotCouple_, &
          AnisoPressure_, ElectronPressure_,&
-         CollisionlessHeatFlux_
+         CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
+         ChargeStateLastCouple_, ChargeState_
     use ModCoordTransform, ONLY: sph_to_xyz
     use ModInterpolate,    ONLY: trilinear
     use IH_BATL_lib,       ONLY: iProc, &
@@ -843,16 +845,18 @@ contains
 
     ! variable indices in buffer
     integer   :: &
-         iRhoCouple,       &
-         iRhoUxCouple,     &
-         iRhoUzCouple,     &   
-         iPCouple,         &       
-         iPeCouple,        &      
-         iPparCouple,      &    
-         iBxCouple,        &      
-         iBzCouple,        &      
-         iWaveFirstCouple, &
-         iWaveLastCouple,  &
+         iRhoCouple,              &
+         iRhoUxCouple,            &
+         iRhoUzCouple,            &   
+         iPCouple,                &       
+         iPeCouple,               &      
+         iPparCouple,             &    
+         iBxCouple,               &      
+         iBzCouple,               &      
+         iWaveFirstCouple,        &
+         iWaveLastCouple,         &
+         iChargeStateFirstCouple, &
+         iChargeStateLastCouple,  &
          iEhotCouple
 
 
@@ -874,17 +878,19 @@ contains
     Buffer_VG = 0.0
 
     ! get variable indices in buffer
-    iRhoCouple       = iVar_V(RhoCouple_)
-    iRhoUxCouple     = iVar_V(RhoUxCouple_)
-    iRhoUzCouple     = iVar_V(RhoUzCouple_)
-    iPCouple         = iVar_V(PCouple_)
-    iPeCouple        = iVar_V(PeCouple_)
-    iPparCouple      = iVar_V(PparCouple_)
-    iBxCouple        = iVar_V(BxCouple_)
-    iBzCouple        = iVar_V(BzCouple_)
-    iWaveFirstCouple = iVar_V(WaveFirstCouple_)
-    iWaveLastCouple  = iVar_V(WaveLastCouple_)
-    iEhotCouple      = iVar_V(EhotCouple_)
+    iRhoCouple              = iVar_V(RhoCouple_)
+    iRhoUxCouple            = iVar_V(RhoUxCouple_)
+    iRhoUzCouple            = iVar_V(RhoUzCouple_)
+    iPCouple                = iVar_V(PCouple_)
+    iPeCouple               = iVar_V(PeCouple_)
+    iPparCouple             = iVar_V(PparCouple_)
+    iBxCouple               = iVar_V(BxCouple_)
+    iBzCouple               = iVar_V(BzCouple_)
+    iWaveFirstCouple        = iVar_V(WaveFirstCouple_)
+    iWaveLastCouple         = iVar_V(WaveLastCouple_)
+    iEhotCouple             = iVar_V(EhotCouple_)
+    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
+    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
 
     ! Calculate buffer grid spacing
     nCell_D  = (/nR, nPhi, nTheta/)
@@ -969,6 +975,10 @@ contains
             Buffer_V(iWaveFirstCouple:iWaveLastCouple) = &
             StateInPoint_V(WaveFirst_:WaveLast_)
 
+       if(DoCoupleVar_V(ChargeState_)) &
+            Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+            StateInPoint_V(ChargeStateFirst_:ChargeStateLast_)
+
        Buffer_V(iPCouple)  = StateInPoint_V(p_) 
 
        if(DoCoupleVar_V(ElectronPressure_))then
@@ -998,6 +1008,11 @@ contains
             Buffer_V(iWaveFirstCouple:iWaveLastCouple) &
             * No2Si_V(UnitEnergyDens_)
 
+       if(DoCoupleVar_V(ChargeState_)) &
+            Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+            Buffer_V(iChargeStateFirstCouple:iChargeStateLastCouple) &
+            * No2Si_V(UnitRho_)
+       
        if(DoCoupleVar_V(ElectronPressure_)) Buffer_V(iPeCouple) = &
             Buffer_V(iPeCouple)*No2Si_V(UnitP_)
 
@@ -1061,7 +1076,7 @@ contains
     use IH_ModPhysics, ONLY: No2Si_V, UnitRho_, UnitP_, UnitRhoU_, UnitB_
     use IH_ModPhysics, ONLY: UnitEnergyDens_
     use IH_ModAdvance, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, WaveFirst_, &
-         WaveLast_, Pe_, Ppar_, Ehot_
+         WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, ChargeStateLast_
     use IH_ModMain,    ONLY: UseB0
 
     use CON_router, ONLY: IndexPtrType, WeightPtrType
@@ -1070,7 +1085,8 @@ contains
          RhoUzCouple_, PCouple_, BxCouple_, BzCouple_, PeCouple_, PparCouple_,&
          WaveFirstCouple_, WaveLastCouple_, Bfield_, Wave_, AnisoPressure_, &
          ElectronPressure_, EhotCouple_, Momentum_, &
-         CollisionlessHeatFlux_
+         CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
+         ChargeStateLastCouple_, ChargeState_
 
     !INPUT ARGUMENTS:
     integer,intent(in)              ::nPartial,iGetStart,nVar
@@ -1081,16 +1097,18 @@ contains
     integer   :: iGet, i, j, k, iBlock
     real      :: Weight
     integer   :: &
-         iRhoCouple,       &
-         iRhoUxCouple,     &
-         iRhoUzCouple,     &   
-         iPCouple,         &       
-         iPeCouple,        &      
-         iPparCouple,      &    
-         iBxCouple,        &      
-         iBzCouple,        &      
-         iWaveFirstCouple, &
-         iWaveLastCouple,  &
+         iRhoCouple,              &
+         iRhoUxCouple,            &
+         iRhoUzCouple,            &   
+         iPCouple,                &       
+         iPeCouple,               &      
+         iPparCouple,             &    
+         iBxCouple,               &      
+         iBzCouple,               &      
+         iWaveFirstCouple,        &
+         iWaveLastCouple,         &
+         iChargeStateFirstCouple, &
+         iChargeStateLastCouple,  &
          iEhotCouple
 
     character (len=*), parameter :: NameSub='IH_get_for_mh'
@@ -1109,6 +1127,8 @@ contains
     iBzCouple        = iVar_V(BzCouple_)
     iWaveFirstCouple = iVar_V(WaveFirstCouple_)
     iWaveLastCouple  = iVar_V(WaveLastCouple_)
+    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
+    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
     iEhotCouple      = iVar_V(EhotCouple_)
 
     i      = Get%iCB_II(1,iGetStart)
@@ -1135,6 +1155,10 @@ contains
          State_V(iWaveFirstCouple:iWaveLastCouple) = &
          State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Weight
 
+    if(DoCoupleVar_V(ChargeState_)) &
+         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+         State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock)*Weight
+    
     State_V(iPCouple)  = State_VGB(p_,i,j,k,iBlock) *Weight
 
     if(DoCoupleVar_V(ElectronPressure_))then
@@ -1182,6 +1206,11 @@ contains
             State_V(iWaveFirstCouple:iWaveLastCouple) + &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock)*Weight
 
+       if(DoCoupleVar_V(ChargeState_)) &
+            State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+            State_V(iChargeStateFirstCouple:iChargeStateLastCouple) + &
+            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock)*Weight
+       
        if(DoCoupleVar_V(AnisoPressure_)) State_V(iPparCouple) = &
             State_V(iPparCouple) + &
             State_VGB(Ppar_,i,j,k,iBlock)*Weight
@@ -1221,6 +1250,11 @@ contains
          State_V(iWaveFirstCouple:iWaveLastCouple) &
          * No2Si_V(UnitEnergyDens_)
 
+    if(DoCoupleVar_V(ChargeState_)) &
+         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) &
+         * No2Si_V(UnitRho_)
+    
     if(DoCoupleVar_V(ElectronPressure_)) State_V(iPeCouple) = &
          State_V(iPeCouple)*No2Si_V(UnitP_)
 
@@ -1306,7 +1340,8 @@ contains
          PCouple_, BxCouple_, BzCouple_, PeCouple_, EhotCouple_, &
          PparCouple_, WaveFirstCouple_, WaveLastCouple_, &
          Bfield_, Wave_, ElectronPressure_, AnisoPressure_, &
-         CollisionlessHeatFlux_      
+         CollisionlessHeatFlux_, ChargeStateFirstCouple_, &
+         ChargeStateLastCouple_, ChargeState_
     use IH_ModAdvance,    ONLY: State_VGB, UseElectronPressure, &
          UseAnisoPressure
     use IH_ModB0,         ONLY: B0_DGB
@@ -1314,7 +1349,8 @@ contains
          UnitEnergyDens_
     use IH_ModMain,       ONLY: UseB0
     use IH_ModVarIndexes, ONLY: Rho_, RhoUx_, RhoUz_, Bx_, Bz_, P_, &
-         WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_
+         WaveFirst_, WaveLast_, Pe_, Ppar_, Ehot_, ChargeStateFirst_, &
+         ChargeStateLast_
 
     !INPUT ARGUMENTS:
     integer,intent(in)::nPartial,iPutStart,nVar
@@ -1340,16 +1376,18 @@ contains
     real,dimension(nVar)::State_V
     integer             :: i, j, k, iBlock
     integer   :: &
-         iRhoCouple,       &
-         iRhoUxCouple,     &
-         iRhoUzCouple,     &
-         iPCouple,         &
-         iPeCouple,        &
-         iPparCouple,      &
-         iBxCouple,        &
-         iBzCouple,        &
-         iWaveFirstCouple, &
-         iWaveLastCouple,  &
+         iRhoCouple,              &
+         iRhoUxCouple,            &
+         iRhoUzCouple,            &
+         iPCouple,                &
+         iPeCouple,               &
+         iPparCouple,             &
+         iBxCouple,               &
+         iBzCouple,               &
+         iWaveFirstCouple,        &
+         iWaveLastCouple,         &
+         iChargeStateFirstCouple, &
+         iChargeStateLastCouple,  &
          iEhotCouple
 
     !--------------------------------------------------------------------------
@@ -1364,6 +1402,8 @@ contains
     iBzCouple        = iVar_V(BzCouple_)
     iWaveFirstCouple = iVar_V(WaveFirstCouple_)
     iWaveLastCouple  = iVar_V(WaveLastCouple_)
+    iChargeStateFirstCouple = iVar_V(ChargeStateFirstCouple_)
+    iChargeStateLastCouple  = iVar_V(ChargeStateLastCouple_)
     iEhotCouple      = iVar_V(EhotCouple_)
 
     ! Convert state variable in buffer to nirmalized units.
@@ -1381,6 +1421,11 @@ contains
          State_V(iWaveFirstCouple:iWaveLastCouple) = &
          StateSI_V(iWaveFirstCouple:iWaveLastCouple) &
          * Si2No_V(UnitEnergyDens_)
+
+    if(DoCoupleVar_V(ChargeState_)) &
+         State_V(iChargeStateFirstCouple:iChargeStateLastCouple) = &
+         StateSI_V(iChargeStateFirstCouple:iChargeStateLastCouple) &
+         * Si2No_V(UnitRho_)
 
     if(DoCoupleVar_V(ElectronPressure_))State_V(iPeCouple) = &
          StateSI_V(iPeCouple)*Si2No_V(UnitP_)
@@ -1413,6 +1458,11 @@ contains
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
             State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) + &
             State_V(iWaveFirstCouple:iWaveLastCouple)
+
+       if(DoCoupleVar_V(ChargeState_)) &
+            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock) = &
+            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock) + &
+            State_V(iChargeStateFirstCouple:iChargeStateLastCouple)
 
        if(DoCoupleVar_V(ElectronPressure_))then
           State_VGB(Pe_,i,j,k,iBlock) = &
@@ -1463,6 +1513,10 @@ contains
        if(DoCoupleVar_V(Wave_))State_VGB(WaveFirst_:WaveLast_,i,j,k,iBlock) = &
             State_V(iWaveFirstCouple:iWaveLastCouple)
 
+       if(DoCoupleVar_V(ChargeState_))&
+            State_VGB(ChargeStateFirst_:ChargeStateLast_,i,j,k,iBlock) = &
+            State_V(iChargeStateFirstCouple:iChargeStateLastCouple)
+       
        State_VGB(p_,i,j,k,iBlock) = State_V(iPCouple)
        if(DoCoupleVar_V(AnisoPressure_))then
           State_VGB(Ppar_,i,j,k,iBlock) = State_V(iPparCouple)
@@ -1750,7 +1804,7 @@ contains
     ! required by SC
 
     use IH_ModPhysics, ONLY: Si2No_V, UnitX_, No2Si_V, iUnitCons_V
-    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_, nVar
+    use IH_ModAdvance, ONLY: State_VGB, Bx_, Bz_
     use IH_ModVarIndexes, ONLY: nVar
     use IH_ModB0,      ONLY: UseB0, get_b0
     use IH_BATL_lib,   ONLY: iProc, nDim, MaxDim, MinIJK_D, MaxIJK_D, &

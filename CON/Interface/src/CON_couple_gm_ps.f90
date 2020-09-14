@@ -51,7 +51,7 @@ contains
     !EOP
     use ModProcessVarName,  ONLY: process_var_name
 
-    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm
+    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm
 
     !------------------------------------------------------------------------
     ! Set initialization status:
@@ -66,7 +66,7 @@ contains
 
     ! Get information on number of fluids used in GM:
     call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
-         nPGm, nPparGm, nWaveGm, nMaterialGm)
+         nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm)
 
     DoMultiFluidPSCoupling = nDensityGm > 1
     !write(*,*)'!!!!DEBUG: DoMultiFluidPSCoupling = ', DoMultiFluidPSCoupling

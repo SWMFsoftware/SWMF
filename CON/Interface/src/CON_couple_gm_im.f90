@@ -72,8 +72,9 @@ contains
     
     use ModProcessVarName,  ONLY: process_var_name
 
-    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm
-    integer :: nDensityIm, nSpeedIm, nPIm, nPparIm, nWaveIm, nMaterialIm 
+    integer :: nSpeedGm, nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm
+    integer :: nDensityIm, nSpeedIm, nPIm, nPparIm, nWaveIm, nMaterialIm, &
+         nChargeStateAllIm 
 
     ! General error code
     !------------------------------------------------------------------------
@@ -100,9 +101,9 @@ contains
 
     ! this will likely be removed when coupling generalization if done
     call process_var_name(Grid_C(GM_)%NameVar, nDensityGm, nSpeedGm, &
-         nPGm, nPparGm, nWaveGm, nMaterialGm)
+         nPGm, nPparGm, nWaveGm, nMaterialGm, nChargeStateAllGm)
     call process_var_name(Grid_C(IM_)%NameVar, nDensityIm, nSpeedIm, &
-         nPIm, nPparIm, nWaveIm, nMaterialIm)
+         nPIm, nPparIm, nWaveIm, nMaterialIm, nChargeStateAllIm)
 
     DoMultiFluidIMCoupling = nDensityGm > 1 .and. nDensityIm > 1
     

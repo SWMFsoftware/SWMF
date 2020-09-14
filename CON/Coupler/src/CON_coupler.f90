@@ -118,7 +118,7 @@ module CON_coupler
   integer, public :: nVarCouple, nVarCouple_CC(MaxComp,MaxComp)
 
   ! no. of state variable groups for which coupling is implemented
-  integer, parameter, public     :: nCoupleVarGroup = 11
+  integer, parameter, public     :: nCoupleVarGroup = 12
 
   ! named indices for variable groups for coupling
   integer, parameter, public :: &
@@ -132,30 +132,33 @@ module CON_coupler
        MultiFluid_            =  8, &
        MultiSpecie_           =  9, &
        Material_              = 10, &
-       CollisionlessHeatFlux_ = 11
+       ChargeState_           = 11, &
+       CollisionlessHeatFlux_ = 12
 
   logical, public :: &
        DoCoupleVar_V(nCoupleVarGroup) = .false. , &
        DoCoupleVar_VCC(nCoupleVarGroup,MaxComp,MaxComp) = .false.
 
   ! number of variable types known to the coupler
-  integer, parameter, public  :: nVarIndexCouple = 13
+  integer, parameter, public  :: nVarIndexCouple = 15
 
   ! Fixed indices for mapping actual variable indices
-  integer, parameter,public ::     &
-       RhoCouple_           = 1,  &
-       RhoUxCouple_         = 2,  &
-       RhoUzCouple_         = 3,  &
-       BxCouple_            = 4,  &
-       BzCouple_            = 5,  &
-       PCouple_             = 6,  &
-       PeCouple_            = 7,  &
-       PparCouple_          = 8,  &
-       WaveFirstCouple_     = 9,  &
-       WaveLastCouple_      = 10, &
-       MaterialFirstCouple_ = 11, &
-       MaterialLastCouple_  = 12, &
-       EhotCouple_          = 13
+  integer, parameter,public :: &
+       RhoCouple_              = 1,  &
+       RhoUxCouple_            = 2,  &
+       RhoUzCouple_            = 3,  &
+       BxCouple_               = 4,  &
+       BzCouple_               = 5,  &
+       PCouple_                = 6,  &
+       PeCouple_               = 7,  &
+       PparCouple_             = 8,  &
+       WaveFirstCouple_        = 9,  &
+       WaveLastCouple_         = 10, &
+       MaterialFirstCouple_    = 11, &
+       MaterialLastCouple_     = 12, &
+       ChargeStateFirstCouple_ = 13, &
+       ChargeStateLastCouple_  = 14, &
+       EhotCouple_             = 15
 
   ! vector storing the actual values of variable indices inside a
   ! coupled component 
@@ -590,7 +593,7 @@ contains
     integer      :: nPparSource, nPparTarget, nPparCouple
     integer      :: nWaveSource, nWaveTarget, nWaveCouple 
     integer      :: nMaterialSource, nMaterialTarget, nMaterialCouple
-
+    integer      :: nChargeStateSource,nChargeStateTarget,nChargeStateCouple
     integer:: lCompSource, lCompTarget
 
     logical      :: DoTest, DoTestMe
@@ -617,13 +620,15 @@ contains
     ! MultiFluid_        :  Both use the same neutral fluids
     ! MultiSpecie_       :  Both use the same species     
     ! Material_          :  Both use the same # of materials
+    ! ChargeState_       :  Both use the same elements' charge states
 
-    nDensitySource  = 0 ; nDensityTarget  = 0 ; nDensityCouple  = 0
-    nSpeedSource    = 0 ; nSpeedTarget    = 0 ; nSpeedCouple    = 0
-    nPSource        = 0 ; nPTarget        = 0 ; nPCouple        = 0
-    nPparSource     = 0 ; nPpartarget     = 0 ; nPparCouple     = 0
-    nWaveSource     = 0 ; nWaveTarget     = 0 ; nWaveCouple     = 0
-    nMaterialSource = 0 ; nMaterialTarget = 0 ; nMaterialCouple = 0
+    nDensitySource     = 0 ; nDensityTarget     = 0 ; nDensityCouple     = 0
+    nSpeedSource       = 0 ; nSpeedTarget       = 0 ; nSpeedCouple       = 0
+    nPSource           = 0 ; nPTarget           = 0 ; nPCouple           = 0
+    nPparSource        = 0 ; nPpartarget        = 0 ; nPparCouple        = 0
+    nWaveSource        = 0 ; nWaveTarget        = 0 ; nWaveCouple        = 0
+    nMaterialSource    = 0 ; nMaterialTarget    = 0 ; nMaterialCouple    = 0
+    nChargeStateSource = 0 ; nChargeStateTarget = 0 ; nChargeStateCouple = 0
 
     !\        
     ! process variable names
@@ -635,7 +640,8 @@ contains
     ! are given to the same physical quantity. This is especially relevant to
     ! multi fluid/specie models.                                              
     ! The subroutine also returns the number of distinct densities and speeds,
-    ! pressure (total and parallel), number of waves and material.
+    ! pressure (total and parallel), number of waves and material, and
+    ! elemental charge states.
     ! See description inside the subroutine for more details.            
 
     NameVarSource = ' '//Grid_C(iCompSource)%NameVar
@@ -659,7 +665,7 @@ contains
     end if
     call process_var_name(nVarSource, NameVarSource_V, &
          nDensitySource, nSpeedSource, nPSource, nPparSource, &
-         nWaveSource, nMaterialSource)
+         nWaveSource, nMaterialSource, nChargeStateSource)
     call join_string(nVarSource, NameVarSource_V,NameVarSource)
     if(DoTestMe) then
        write(*,*) ' '
@@ -675,8 +681,8 @@ contains
     end if
     call process_var_name(nVarTarget, NameVarTarget_V, &
          nDensityTarget, nSpeedTarget, nPTarget, nPparTarget, &
-         nWaveTarget, nMaterialTarget)
-    call join_string(nVarTarget, NameVarTarget_V,NameVarTarget)
+         nWaveTarget, nMaterialTarget, nChargeStateTarget)
+    call join_string(nVarTarget, NameVarTarget_V, NameVarTarget)
     if (DoTestMe) then
        write(*,*) ' '
        write(*,*) NameComp_I(iCompTarget), ': variabale names used by coupler:'
@@ -739,7 +745,6 @@ contains
           ! Coupling components with and without waves is allowed.             
           ! If waves are present in both source and target, they should have 
           ! the same number. Otherwise a CON_stop is issued.                
-
           if(nWaveSource == nWaveTarget)then
              nWaveCouple  = nWaveSource
              DoCoupleVar_V(Wave_) = .true.
@@ -764,14 +769,36 @@ contains
              call CON_stop(NameSub//': change nMaterial (use Config.pl).')
           end if
 
+       case('h1','he1','li1','be1','b1','c1','n1','o1','f01','ne01','na01',&
+            'mg01','al01','si01','p01','s01','cl01','ar01','k01','ca01','sc01',&
+            'ti01','v01','cr01','mn01','fe01','co01','ni01','cu01','zn01')
+          ! Verify if source charge state variables are all found in the target
+          if(.not.any(NameVarSource_V(iVarSource) == &
+               NameVarTarget_V(1:nVarTarget)))&
+               call CON_stop(NameSub&
+               //'charge states do not match:'//NameVarSource_V(iVarSource))
+          ! Order of elements are enforced at configuration     
+          ! Verify target has the same number of charge state variables
+          if(nChargeStateSource == nChargeStateTarget)then
+             DoCoupleVar_V(ChargeState_) = .true.
+             nChargeStateCouple = nChargeStateSource
+             
+          else
+             write(*,*) 'SWMF error found by ',NameSub
+             write(*,*) &
+                  'Cannot couple components with different nChargeState!'
+             call CON_stop(NameSub//': change Element list (Config.pl).')
+          end if
+          
        case default
           ! The only variable names that are left are associated with either:
           !   - a neutral/ionized fluid other than the main (M)HD component.
           !   - additional waves.                 
-          !   - additional materials.         
-
+          !   - additional materials.
+          !   - charge states of elements.
           if(nDensitySource == 1 .and. &
-               nWaveSource < 1 .and. nMaterialSource < 1) then
+               nWaveSource < 1 .and. nMaterialSource < 1 .and. &
+               nChargeStateSource < 1) then
              ! Source variable name is unknown, stop.                        
              write(*,*) 'SWMF error found in ', NameSub
              write(*,*) 'Coupling of variable ', NameVarSource_V(iVarSource)
@@ -792,6 +819,9 @@ contains
          IsFoundVarSource_V(WaveFirstCouple_:WaveLastCouple_) = .true.
     if (nMaterialSource >= 1) &
          IsFoundVarSource_V(MaterialFirstCouple_:MaterialLastCouple_) = .true.
+    if (nChargeStateSource >= 1) &
+         IsFoundVarSource_V(ChargeStateFirstCouple_:ChargeStateLastCouple_) =&
+         .true.
 
     !\                                                    
     ! Check multi fluid/specie variables.
@@ -899,11 +929,18 @@ contains
        nVarCouple = iVar_V(WaveLastCouple_)
     end if
 
-    if (DoCoupleVar_V( Material_)) then
+    if (DoCoupleVar_V(Material_)) then
        iVar_V(MaterialFirstCouple_) = nVarCouple + 1
        iVar_V(MaterialLastCouple_)  = &
             nVarCouple + nMaterialSource
        nVarCouple = iVar_V(MaterialLastCouple_)
+    end if
+
+    if (DoCoupleVar_V(ChargeState_)) then
+       iVar_V(ChargeStateFirstCouple_) = nVarCouple + 1
+       iVar_V(ChargeStateLastCouple_)  = &
+            nVarCouple + nChargeStateSource
+       nVarCouple = iVar_V(ChargeStateLastCouple_)
     end if
 
     if (DoCoupleVar_V(CollisionlessHeatFlux_)) then
@@ -975,12 +1012,13 @@ contains
        write(*,*) '---------------------------------------------'
        write(*,*) 'Coupling flags:'
        write(*,*) 'Magnetic field: ', DoCoupleVar_V(Bfield_)
-       write(*,*) 'Pe:     ',         DoCoupleVar_V(ElectronPressure_)
-       write(*,*) 'Ppar:   ',         DoCoupleVar_V(AnisoPressure_)
-       write(*,*) 'Ehot:   ',         DoCoupleVar_V(CollisionlessHeatFlux_)
-       write(*,*) 'Waves:  ',         DoCoupleVar_V(Wave_)
-       write(*,*) 'Fluids: ',         DoCoupleVar_V(MultiFluid_)
-       write(*,*) 'Species:',         DoCoupleVar_V(MultiSpecie_)
+       write(*,*) 'Pe:             ', DoCoupleVar_V(ElectronPressure_)
+       write(*,*) 'Ppar:           ', DoCoupleVar_V(AnisoPressure_)
+       write(*,*) 'Ehot:           ', DoCoupleVar_V(CollisionlessHeatFlux_)
+       write(*,*) 'Waves:          ', DoCoupleVar_V(Wave_)
+       write(*,*) 'ChargeStates:   ', DoCoupleVar_V(ChargeState_)
+       write(*,*) 'Fluids:         ', DoCoupleVar_V(MultiFluid_)
+       write(*,*) 'Species:        ', DoCoupleVar_V(MultiSpecie_)
        write(*,*) '---------------------------------------------'
     end if
     if(DoTestMe) then
@@ -996,6 +1034,8 @@ contains
        write(*,*) 'Ehot: ',     iVar_V(EhotCouple_)
        write(*,*) 'WaveFirst: ',iVar_V(WaveFirstCouple_)
        write(*,*) 'WaveLast: ', iVar_V(WaveLastCouple_)
+       write(*,*) 'ChargeStateFirst: ',iVar_V(ChargeStateFirstCouple_)
+       write(*,*) 'ChargeStateLast: ',iVar_V(ChargeStateLastCouple_)
        write(*,*) 'nVarCouple: ',nVarCouple
        write(*,*) '---------------------------------------------'
 
