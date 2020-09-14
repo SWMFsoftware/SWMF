@@ -72,7 +72,7 @@ my $check =
 print "$check\n" if $Verbose;
 my $Error = `$check`;
 
-# Extract list of files from the output: "CheckParam.pl: cp FILE FIE_orig_\n"
+# Extract list of files from the output: "CheckParam.pl: cp FILE FILE_orig_\n"
 my $Files;
 $Files .= "$1," while $Error =~ s/CheckParam.pl: cp (\S+) \1_orig_\n//;
 if($Error){
