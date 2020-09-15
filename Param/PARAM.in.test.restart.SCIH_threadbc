@@ -1,6 +1,6 @@
 #COMPONENTMAP
 SC  0 -1  1		CompMap
-IH  0 -1  1
+IH  0 -1  1		CompMap
 
 #INCLUDE
 RESTART.in
@@ -102,7 +102,7 @@ T			UseHeatFluxCollisionless
 1.05			CollisionlessAlpha
 
 #TEST
-radiative_cooling write_plot_los		TestString
+radiative_cooling write_plot_los		StringTest
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -137,10 +137,6 @@ ascii			TypeFile
 
 #AMR
 -1			DnRefine
-
-#GRIDLEVEL
-2			nLevel
-initial			StringShape
 
 #TIMESTEPPING
 2			nStage
@@ -288,30 +284,10 @@ T			DoTRCorrectio
 #INCLUDE
 IH/restartIN/restart.H
 
-#COORDSYSTEM
-HGR			TypeCoordSystem
-
-#BODY
-T			UseBody
-18.			rBody
-3.0E+8			BodyNDim
-3.5E+6			BodyTDim
-
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
-
-#GRID
-1			nRootBlock1
-1			nRootBlock2
-1			nRootBlock3
--250.0			xMin
- 250.0			xMax
--250.0			yMin
- 250.0			yMax
--250.0			zMin
- 250.0			zMax
 
 #AMRREGION
 OuterShell		NameRegion
@@ -331,10 +307,6 @@ currentsheet		StringRefine
 0.5			CoarsenLimit
 0.5			RefineLimit
 5			MaxLevel
-
-#GRIDLEVEL
-5			nLevel
-initial			StringShape
 
 #THINCURRENTSHEET
 T			DoThinCurrentSheet

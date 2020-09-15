@@ -289,19 +289,19 @@ z=0 VAR idl		StringPlot
 los ins idl_ascii		StringPlot
 5			DnSavePlot
 -1.0			DtSavePlot
-sta:euvi stb:euvi sdo:aia		StringInstrument
+sta:euvi stb:euvi sdo:aia		StringsInstrument
 
 #LOOKUPTABLE
-AiaXrt                          NameTable
-load                            TypeAction
-SC/Param/los_tbl.dat            NameFile
-ascii                           TypeFIle
+AiaXrt			NameTable
+load			NameCommand
+SC/Param/los_tbl.dat		NameFile
+ascii			TypeFile
 
 #LOOKUPTABLE
-euv                             NameTable
-load                            TypeAction
-SC/Param/los_Eit_cor.dat        NameFile
-ascii                           TypeFIle
+euv			NameTable
+load			NameCommand
+SC/Param/los_Eit_cor.dat		NameFile
+ascii			TypeFile
 
 #LOOKUPTABLE
 EuviA			NameTable

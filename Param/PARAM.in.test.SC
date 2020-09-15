@@ -101,7 +101,7 @@ second			TypeBc
 F			UseThomasAlg
 			Tolerance
 #BODY			MaxIter
-T			UseThomasAlg
+T			UseBody
 1.0			rBody
 1.5e8			BodyNDim
 1.5e6			BodyTDim
@@ -133,12 +133,12 @@ T			UseCurlB0
 turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
+0.0			rMinWaveReflection
 
 #HEATPARTITIONING
 stochasticheating		TypeHeatPartitioning
 0.34			StochasticExponent
 0.18			StochasticAmplitude
-
 
 #HEATCONDUCTION
 T			UseHeatConduction
@@ -154,7 +154,7 @@ T			UseHeatFluxCollisionless
 1.05			CollisionlessAlpha
 
 #TEST
-krylov radiative_cooling		TestString
+krylov radiative_cooling		StringTest
 
 #SEMIIMPLICIT
 T			UseSemiImplicit

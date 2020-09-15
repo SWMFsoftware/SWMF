@@ -36,15 +36,14 @@ F			UseDiffusion
 
 #READMHDATA
 T			DoReadMhData
-MH_data
-ascii
+MH_data			NameInputDir
 
 #INCLUDE
 MH_data/MH_data.H
 
 #SAVEPLOT
-1
-mh1d flux idl
+1			nFileOut
+mh1d flux idl		StringPlot
 
 #END_COMP SP -----------------------------------------------------------------
 
