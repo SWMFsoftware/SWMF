@@ -387,7 +387,7 @@ z=0 MHD idl		StringPlot
 shl MHD idl_ascii		StringPlot
 -1  			DnSavePlot
 1 min			DtSavePlot
-GEO			TypeCoord
+GEO			TypeCoordPlot
 6.6			rMin
 6.6			rMax
 0.			LonMin
