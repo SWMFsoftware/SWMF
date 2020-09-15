@@ -151,14 +151,14 @@ T			UseDtFixed
 640/500			DtFixedDim
 
 
-#PICREGIONUNIT
-1			nPicRegion
+#PICGRIDUNIT
+1			nPicGrid
 5			xUnitPicSi [m]
 3			uUnitPicSi [m/s] Speed of light for the first PIC region
 4			ScalingFactor
 
 #PICGRID
-1			nPicRegion
+1			nPicGrid
 -25.1			xMinPic
 20.0			xMaxPic
 -20.0			yMinPic
@@ -200,14 +200,11 @@ T			DoAdaptPic
 1.28			DtAdaptPic
 
 #PICPATCH
-2			nCellPerPatch
+2			PatchSize
 
 #PICPATCHEXTEND
 2
 2
-
-#PICGHOST
-1			nGhostPic
 
 #OUTERBOUNDARY
 periodic		TypeBc1
@@ -265,11 +262,11 @@ g rbody			NamePars
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEP_FLEKS0
-T			UseFixedDt
+T			useFixedDt
 1.28			dt
 
 #ELECTRON_FLEKS0
--25.0			ElectronChargePerMass
+-25.0			electronChargePerMass
 
 #PARTICLES
 10			nParticleX Region 1

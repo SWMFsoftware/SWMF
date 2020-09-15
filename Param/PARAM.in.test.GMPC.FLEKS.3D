@@ -66,44 +66,40 @@ T			UseNonConservative
  6.4			zMax
 
 #UNIFORMSTATE
-1.0			Rho		Rho
+1.0			Rho
 0.0			Ux
 0.0			Uy
-0.0			Uz			Uz
+0.0			Uz
 0.0			Bx
 0.0			By
 0.015			Bz
 0.0			Hyp
-0.000157080		p		P
+0.000157080		p
 
 #PICUNIT
  1.0			xUnitPicSi
  1.0			uUnitPicSi
 
 #PICGRID
-1			nPicRegion
--6.4  			xMinPic		xMinPic
-+6.4			xMaxPic		xMaxPic
--3.2			yMinPic		yMinPic
-+3.2			yMaxPic		yMaxPic
--2.4			zMinPic		zMinPic
-+2.4			zMaxPic		zMaxPic
+1			nPicGrid
+-6.4  			xMinPic
++6.4			xMaxPic
+-3.2			yMinPic
++3.2			yMaxPic
+-2.4			zMinPic
++2.4			zMaxPic
 0.8			DxPic
 0.8			DyPic
-0.8			DzPic		DzPic
+0.8			DzPic
 
 #PICADAPT
 T			UseAdaptivePic
 T			DoAdaptPic
--1			Dn
-1			Dt
-
+-1			DnAdaptPic
+1			DtAdaptPic
 
 #PICPATCH
-2			nCellPerPatch
-
-#PICGHOST
-1			nGhostPic
+2			PatchSize
 
 #PICCRITERIA
 1			nCritera
@@ -162,13 +158,13 @@ F			DoSaveInitial
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #TIMESTEPPING
-T			dt
-1			fixedDt
+T			useFixedDt
+1			dt
 
 #RESAMPLING
 T			doReSampling
-0.95			reSamplingLowLimit  (0.8 is a typical value)
-1.1			reSamplingHighLimit (3 is a typical value)
+0.95			splittingLimit  (0.8 is a typical value)
+1.1			mergingLimit (3 is a typical value)
 
 #SAVEPLOT
 1			nPlotFile

@@ -179,7 +179,7 @@ T			UseDtFixed
  1.0			uUnitPicSi
 
 #PICGRID
-1			nPicRegion
+1			nPicGrid
 -32			xMinPic
  32			xMaxPic
 -20			yMinPic
@@ -192,10 +192,7 @@ T			UseAdaptivePic
 F			DoAdaptPic
 
 #PICPATCH
-2			nCellPerPatch
-
-#PICGHOST
-1			nGhostPic
+2			PatchSize
 
 #OUTERBOUNDARY
 periodic		TypeBc1
@@ -257,15 +254,15 @@ z=0 all idl_ascii		StringPlot
 #BEGIN_COMP PC ---------------------------------------------------------------
 
 #PARTICLESTAGGERING
-F			Staggered
+F			isStaggered
 
 #SMOOTHE
 F			doSmoothE
 
 #MAXBLOCKSIZE
-16			nx
-8			ny
-1			nz
+16			nCellX
+8			nCellY
+1			nCellZ
 
 #DIVE
 F			doCorrectDivE
@@ -284,9 +281,9 @@ T			isPeriodicZ
 200			EFieldIter
 
 #PARTICLES
-10			Particles per cell in X
-10			Particles per cell in Y
-1			Particles per cell in Z
+10			nParticleX per cell in X
+10			nParticleY per cell in Y
+1			nParticleZ per cell in Z
 
 #SAVEPLOT
 1			nPlotFile
