@@ -76,6 +76,7 @@ module CON_coupler
        SC_, SP_, & ! The order of these two couplings is mandatory
        IH_, SP_, & ! Do not modify them, please.
        IH_, GM_, &
+       IH_, PT_, &
        GM_, EE_, &
        GM_, IE_, &
        GM_, IM_, &

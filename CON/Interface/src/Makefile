@@ -34,6 +34,7 @@ MOD13 = CON_couple_ie_rb.o	#^CMP IF RB
 #^CMP IF IH BEGIN
 MOD07 = CON_couple_ih_sc.o	#^CMP IF SC
 MOD14 = CON_couple_ih_oh.o	#^CMP IF OH
+MOD22 = CON_couple_ih_pt.o      #^CMP IF PT 
 #^CMP END IH
 #^CMP IF SC BEGIN
 MOD16 = CON_couple_ee_sc.o	#^CMP IF EE
@@ -48,7 +49,7 @@ MOD08 = CON_couple_mh_sp.o	#^CMP IF SP
 MODULES = \
 	${MOD01} ${MOD03} ${MOD04} ${MOD05} ${MOD06} ${MOD07} ${MOD08} \
 	${MOD09} ${MOD10} ${MOD11} ${MOD12} ${MOD13} ${MOD14} ${MOD16} \
-	${MOD17} ${MOD18} ${MOD19} ${MOD20} ${MOD21} \
+	${MOD17} ${MOD18} ${MOD19} ${MOD20} ${MOD21} ${MOD22} \
 	CON_wrapper.o \
 	CON_couple_all.o
 

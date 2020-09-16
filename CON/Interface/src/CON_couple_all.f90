@@ -46,6 +46,7 @@ module CON_couple_all
   !^CMP IF IH BEGIN
   use CON_couple_ih_sc        !^CMP IF SC
   use CON_couple_ih_oh        !^CMP IF OH
+  use CON_couple_ih_pt        !^CMP IF PT 
   !^CMP END IH
   !^CMP IF SC BEGIN
   use CON_couple_ee_sc        !^CMP IF EE
@@ -72,6 +73,7 @@ module CON_couple_all
   ! 24Sep13 - G. Toth added GM-PT coupling
   ! 18Feb14 - L. Daldorff added GM-PC coupling
   ! 12Mar15 - A. Michael added OH-PT coupling
+  ! 15Sep20 - V. Tenishev added IH-PT coupling
   !EOP
   character(len=*), parameter :: NameMod='CON_couple_all'
 
@@ -104,6 +106,7 @@ contains
     !                                                     ^CMP IF IH BEGIN
     if(use_comp(IH_).and.use_comp(SC_))call couple_ih_sc_init  !^CMP IF SC
     if(use_comp(IH_).and.use_comp(OH_))call couple_ih_oh_init  !^CMP IF OH
+    if(use_comp(IH_).and.use_comp(PT_))call couple_ih_pt_init  !^CMP IF PT 
     !                                                     ^CMP END IH
     !                                                     ^CMP IF SC BEGIN
     if(use_comp(SC_).and.use_comp(EE_))call couple_ee_sc_init  !^CMP IF EE
@@ -208,6 +211,8 @@ contains
           call couple_ih_sc(TimeSimulation)        !^CMP IF SC
        case(OH_)                                   !^CMP IF OH
           call couple_ih_oh(TimeSimulation)        !^CMP IF OH
+       case(PT_)                                   !^CMP IF PT 
+          call couple_ih_pt(TimeSimulation)        !^CMP IF PT 
        case(SP_)                                   !^CMP IF SP
           call couple_ih_sp(TimeSimulation)        !^CMP IF SP
        case default
