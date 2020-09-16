@@ -152,7 +152,7 @@ float			TypeBc6
 
 
 #PICGRID
-1			nPicRegion
+1			nPicGrid
 -2.56			xMinPic
 2.56			xMaxPic
 -2.56			yMinPic

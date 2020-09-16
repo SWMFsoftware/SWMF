@@ -40,8 +40,8 @@ T			DoSaveInitial
 #NONCONSERVATIVE
 T			UseNonConservative
 
-#PICREGIONUNIT
-2			nPicRegion
+#PICGRIDUNIT
+2			nPicGrid
 1.0			xUnitPicSi [m]
 1			uUnitPicSi [m/s] Speed of light for the first PIC region
 1			ScalingFactor
@@ -50,7 +50,7 @@ T			UseNonConservative
 2			ScalingFactor
 
 #PICGRID
-2			nPicRegion
+2			nPicGrid
 -25.1			xMinPic
 -5.0			xMaxPic
 -20.0			yMinPic

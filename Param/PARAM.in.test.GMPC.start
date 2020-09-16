@@ -195,7 +195,7 @@ T			UseDtFixed
  1.0			uUnitPicSi
 
 #PICGRID
-1			nPicRegion
+1			nPicGrid
 -26.458333333		xMinPic
  26.458333333		xMaxPic
 -19.791666667		yMinPic

@@ -7,7 +7,7 @@ PC 0  3 1  1		CompMap runs on PEs 0..3 with 1 thread
 RESTART.in              NameRestartFile
 
 #DESCRIPTION
-Param/PARAM.in.test.GMPC.aniso.AMPS.2step.restart: restart GM and PC/AMPS
+Param/PARAM.in.test.GMPC.aniso.AMPS.2step.restart: restart GM and PC/AMPS		StringDescription
 
 #SAVERESTART
 T			DoSaveRestart
@@ -46,7 +46,7 @@ T			UseDtFixed
 1.0			uUnitPicSi
 
 #PICGRID
-1			nPicRegion
+1			nPicGrid
 -16			xMinPic
  16 			xMaxPic
 -8			yMinPic
