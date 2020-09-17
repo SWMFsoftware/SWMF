@@ -129,7 +129,7 @@ ulimit -s unlimited
 Create the manuals
 ------------------
 
-Please note that creating the PDF manuals requires that LaTex
+Please note that creating the PDF manuals requires that LaTeX
 (available through the command line) and ps2pdf be installed on your
 system.
 
