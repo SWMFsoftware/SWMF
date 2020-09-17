@@ -1,9 +1,10 @@
 stages:
   - deploy
 
-
 create_manual:
   stage: deploy
+  only:
+    - schedules
   image: aergus/latex
   script:
     - cd doc/Tex; make PDF
