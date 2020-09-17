@@ -1,8 +1,8 @@
 stages:
-  - deploy
+  - create_manual
 
 
-compile_pdf:
+create_manual:
   image: aergus/latex
   script:
     - cd doc/Tex; make PDF
