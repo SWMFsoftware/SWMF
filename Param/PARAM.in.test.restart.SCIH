@@ -513,10 +513,10 @@ VAR trajrange		StringSatellite
 1			DnOutput
 -1.0			DtOutput [sec]
 IH/TRAJECTORY/earth.dat		NameTrajectoryFile
--5 d			NameSatelliteVars
-5 d
-1 h
-rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02
+-5 d			StartTimeTraj
+5 d			EndTimeTraj
+1 h			DtTraj
+rho ux uy uz bx by bz p ppar pperp pe ehot I01 I02		NameSatelliteVars
 
 #END_COMP IH -----------------------------------------------------------------
 

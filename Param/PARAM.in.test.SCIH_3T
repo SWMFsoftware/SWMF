@@ -157,7 +157,7 @@ T			UseHeatFluxCollisionless
 1.05			CollisionlessAlpha
 
 #TEST
-krylov			TestString
+krylov			StringTest
 
 #SEMIIMPLICIT
 T			UseSemiImplicit
@@ -303,9 +303,9 @@ T			UseBody
 1.0			ElectronTemperatureRatio
 
 #GRID
-1			nRootBlockX
-1			nRootBlockY
-1			nRootBlockZ
+1			nRootBlock1
+1			nRootBlock2
+1			nRootBlock3
 -250.0			xMin
  250.0			xMax
 -250.0			yMin

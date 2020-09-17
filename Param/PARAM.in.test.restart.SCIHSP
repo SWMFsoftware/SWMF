@@ -232,37 +232,13 @@ T			DoSaveInitial
 #INCLUDE
 IH/restartIN/restart.H
 
-#COORDSYSTEM
-HGR			TypeCoordSystem
-
-#BODY
-T			UseBody
-18.			rBody
-3.0E+8			BodyNDim
-3.5E+6			BodyTDim
-
 #PLASMA
 1.0			FluidMass [amu]
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#GRID
-1			nRootBlock1
-1			nRootBlock2
-1			nRootBlock3
--250.0			xMin
- 250.0			xMax
--250.0			yMin
- 250.0			yMax
--250.0			zMin
- 250.0			zMax
-
 #DOAMR
 F			DoAmr
-
-#GRIDLEVEL
-5			nLevel
-initial			StringShape
 
 #INNERBOUNDARY
 buffergrid		TypeBcBody
@@ -385,8 +361,8 @@ F			UseDiffusion
 90			LatMax
 
 #SAVEPLOT
-1
-mh1d flux idl
+1			nFileOut
+mh1d flux idl		StringPlot
 
 #SAVEINITIAL
 F			DoSaveInitial

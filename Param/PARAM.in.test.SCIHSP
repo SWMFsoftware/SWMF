@@ -342,7 +342,7 @@ pnt mhd tec		StringPlot
 #BEGIN_COMP SP ---------------------------------------------------------------
 
 #NSTEP
-0
+0			nStep
 
 #DORUN
 F			DoRun
