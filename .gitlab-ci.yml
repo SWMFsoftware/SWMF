@@ -1,0 +1,17 @@
+stages:
+  - deploy
+
+
+compile_pdf:
+  image: aergus/latex
+  script:
+    - cd doc/Tex; make PDF
+  artifacts:
+    paths:
+      - ./doc/SWMF.pdf
+      - ./doc/SWPC.pdf
+      - ./doc/TESTING.pdf
+      - ./doc/REFERENCE.pdf
+      - ./doc/MAINTENANCE.pdf
+      - ./doc/PHYSICS.pdf
+      - ./doc/SOFTWARE_STANDARD.pdf
