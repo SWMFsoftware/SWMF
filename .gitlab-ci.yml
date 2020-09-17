@@ -5,8 +5,10 @@ create_manual:
   stage: deploy
   only:
     - schedules
-  image: aergus/latex
+  #image: aergus/latex
   script:
+    - docker pull aergus/latex
+    - latex --version
     - cd doc/Tex; make PDF
   artifacts:
     paths:
