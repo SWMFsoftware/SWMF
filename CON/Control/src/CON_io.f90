@@ -850,6 +850,7 @@ contains
 
     use CON_coupler, ONLY: NameRestartOutDirComp
     use CON_time, ONLY: get_time, TimeType
+    use ModUtilities, ONLY: write_string_tabs_name, cTab
 
     !DESCRIPTION:
     ! Save restart information for all components.
@@ -909,48 +910,48 @@ contains
     call open_file(FILE=trim(NameRestartOutDirNow)//NameRestartFile)
 
     write(UnitTmp_,'(a)')'#DESCRIPTION'
-    write(UnitTmp_,'(a)')trim(StringDescription)
+    call write_string_tabs_name(StringDescription, 'StringDescription')
     write(UnitTmp_,*)
     if(NamePlanet == 'NEW')then
        write(UnitTmp_,'(a)')'!!! PLANET'
     else
        write(UnitTmp_,'(a)')'#PLANET'
     end if
-    write(UnitTmp_,'(a25,a15)') NamePlanet,         '     NamePlanet'
+    call write_string_tabs_name(NamePlanet, 'NamePlanet')
     write(UnitTmp_,*)
     if(i_line_command("#IDEALAXES", iSessionIn=1) > 0)then
        write(UnitTmp_,'(a)')'#IDEALAXES'
        write(UnitTmp_,*)
     end if
     write(UnitTmp_,'(a)')'#STARTTIME'
-    write(UnitTmp_,'(i8,a32)')TimeStart % iYear,         'iYear      '
-    write(UnitTmp_,'(i8,a32)')TimeStart % iMonth,        'iMonth     '
-    write(UnitTmp_,'(i8,a32)')TimeStart % iDay,          'iDay       '
-    write(UnitTmp_,'(i8,a32)')TimeStart % iHour,         'iHour      '
-    write(UnitTmp_,'(i8,a32)')TimeStart % iMinute,       'iMinute    '
-    write(UnitTmp_,'(i8,a32)')TimeStart % iSecond,       'iSecond    '
-    write(UnitTmp_,'(f15.12,a25)')TimeStart % FracSecond,'FracSecond '
+    write(UnitTmp_,'(i8,a)')TimeStart % iYear,   cTab//cTab//'iYear'
+    write(UnitTmp_,'(i8,a)')TimeStart % iMonth,  cTab//cTab//'iMonth'
+    write(UnitTmp_,'(i8,a)')TimeStart % iDay,    cTab//cTab//'iDay'
+    write(UnitTmp_,'(i8,a)')TimeStart % iHour,   cTab//cTab//'iHour'
+    write(UnitTmp_,'(i8,a)')TimeStart % iMinute, cTab//cTab//'iMinute'
+    write(UnitTmp_,'(i8,a)')TimeStart % iSecond, cTab//cTab//'iSecond'
+    write(UnitTmp_,'(f15.12,a)')TimeStart%FracSecond, cTab//cTab//'FracSecond'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#NSTEP'
-    write(UnitTmp_,'(i8,a32)')nStep,                     'nStep      '
+    write(UnitTmp_,'(i8,a)')nStep, cTab//cTab//'nStep'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#TIMESIMULATION'
-    write(UnitTmp_,'(es15.8,a25)')tSimulation,           'tSimulation'
+    write(UnitTmp_,'(es15.8,a)')tSimulation, cTab//cTab//'tSimulation'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#VERSION'
-    write(UnitTmp_,'(f5.2,a35)')VersionSwmf,             'VersionSwmf'
+    write(UnitTmp_,'(f5.2,a)')VersionSwmf, cTab//cTab//cTab//'VersionSwmf'
     write(UnitTmp_,*)
     write(UnitTmp_,'(a)')'#PRECISION'
-    write(UnitTmp_,'(i1,a39)')nByteReal,                 'nByteReal  '
+    write(UnitTmp_,'(i1,a)')nByteReal, cTab//cTab//cTab//'nByteReal'
     write(UnitTmp_,*)
     if(dLongitudeHgr /= 0.0)then
        write(UnitTmp_,'(a)')'#ROTATEHGR'
-       write(UnitTmp_,'(es15.8,a27)')dLongitudeHgrDeg,   'dLongitudeHgr'
+       write(UnitTmp_,'(es15.8,a)')dLongitudeHgrDeg,cTab//cTab//'dLongitudeHgr'
        write(UnitTmp_,*)
     endif
     if(dLongitudeHgi /= 0.0)then
        write(UnitTmp_,'(a)')'#ROTATEHGI'
-       write(UnitTmp_,'(es15.8,a27)')dLongitudeHgiDeg,   'dLongitudeHgi'
+       write(UnitTmp_,'(es15.8,a)')dLongitudeHgiDeg,cTab//cTab//'dLongitudeHgi'
        write(UnitTmp_,*)
     endif
 
