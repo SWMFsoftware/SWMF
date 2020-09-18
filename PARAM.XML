@@ -607,14 +607,15 @@ components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
 <command name="COMPONENTMAP" multiple="F" alias="LAYOUT">
-  <parameter name="CompMap" type="strings" min="1" max="5">
-     <part name="NameComp"  type="string"  length="2" required="T"/>
-     <part name="ProcFirst" type="integer" default="0" required="T"/>
-     <part name="ProcLast"  type="integer" default="$ProcFirst" required="T"/>
-     <part name="Stride"    type="integer" default="1"          required="T"/>
-     <part name="nThread"   type="integer" default="$Stride"    required="F"/>
-  </parameter>
-
+  <foreach name="Name" values="$_Components">
+    <parameter name="CompMap" type="strings" min="1" max="5">
+      <part name="NameComp"  type="string"  length="2" required="T"/>
+      <part name="ProcFirst" type="integer" default="0" required="T"/>
+      <part name="ProcLast"  type="integer" default="$ProcFirst" required="T"/>
+      <part name="Stride"    type="integer" default="1"          required="T"/>
+      <part name="nThread"   type="integer" default="$Stride"    required="F"/>
+    </parameter>
+  </foreach>
 
 ID Proc0 ProcEnd Stride nThread TAB SEPARATED comment
 #COMPONENTMAP
