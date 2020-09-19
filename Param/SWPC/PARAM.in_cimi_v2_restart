@@ -17,8 +17,8 @@ RESTART.in
 Param/SWPC/PARAM.in_cimi_v2_restart: Example file to restart a run for SWPC Version 2 with IM/CIMI		StringDescription
 
 #PROGRESS
-1			DnProgressShort
-100			DnProgressLong
+100			DnProgressShort
+1000			DnProgressLong
 
 #SAVERESTART
 T			DoSaveRestart
@@ -265,10 +265,10 @@ T			UseDecay
 10 hour			DecayTimescale [s]
 
 #COMPOSITION
-FIXED			NameCompModel
-0.7			FractionH H+
-0.3			FractionO O+
-1.0			FractionElectron e-
+FIXED			TypeComposition
+0.7			DensityFraction H+
+0.3			DensityFraction O+
+1.0			DensityFraction e-
 
 #SAVELOG
 5.0			DtLogOut

@@ -271,8 +271,8 @@ mc3			TypeLimiter
 T			IsTimeAccurate
 
 #PROGRESS
-1			DnProgressShort
-100			DnProgressLong
+100			DnProgressShort
+1000			DnProgressLong
 
 #SAVERESTART
 T			DoSaveRestart
@@ -441,14 +441,14 @@ T			UseDecay
 10 hour			DecayTimescale [s]
 
 #COMPOSITION
-FIXED			NameCompModel
-0.7			FractionH H+
-0.3			FractionO O+
-1.0			FractionElectron e-
+FIXED			TypeComposition
+0.7			DensityFraction H+
+0.3			DensityFraction O+
+1.0			DensityFraction e-
 
 #INITIALF2
-F			IsEmptyF2
-T			IsGMInitial
+F			IsEmptyInitial
+T			IsGmInitial
 F			IsDataInitial
 F			IsRBSPData
 
