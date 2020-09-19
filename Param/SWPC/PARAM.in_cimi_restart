@@ -13,8 +13,8 @@ Param/SWPC/PARAM.in_cimi_restart: Example file to restart a run for SWPC with IM
 T			IsTimeAccurate
 
 #PROGRESS
-1			DnProgressShort
-100			DnProgressLong
+100			DnProgressShort
+1000			DnProgressLong
 
 #SAVERESTART
 T			DoSaveRestart

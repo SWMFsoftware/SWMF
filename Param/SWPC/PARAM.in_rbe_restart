@@ -14,8 +14,8 @@ Param/SWPC/PARAM.in_rbe_restart: Example file to restart a run for the SWPC code
 T			IsTimeAccurate
 
 #PROGRESS
-1			DnProgressShort
-100			DnProgressLong
+100			DnProgressShort
+1000			DnProgressLong
 
 #SAVERESTART
 T			DoSaveRestart
