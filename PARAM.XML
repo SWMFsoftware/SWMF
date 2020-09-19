@@ -576,12 +576,12 @@ the real numbers is not checked.
 </command>
 
 <command name="VERSION" if="$_IsFirstSession">
-	<parameter name="CodeVersion" min="0" default="1.0" type="real" />
+	<parameter name="VersionSwmf" min="0" default="1.0" type="real" />
 
 #VERSION
-1.0                    Version
+1.0                    VersionSwmf
 
-The Version variable contains the version number of SWMF. This command
+The VersionSwmf variable contains the version number of SWMF. This command
 serves to check consistency for restarted runs. The #VERSION command
 and the Version variable are saved into the restart file.
 
