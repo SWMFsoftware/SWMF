@@ -3,7 +3,7 @@ and different layout when run on different processors.
 
 #COMPONENTMAP
 GM  0 -1  1		CompMap runs on all PE-s
-PC  0  3  1		PC runs on 4 PE-s
+PC  0  3  1		CompMap runs on 4 PE-s
 
 #DESCRIPTION
 Param/PARAM.in.test.GMPC.start: Run GM and PC in time accurate mode		StringDescription
