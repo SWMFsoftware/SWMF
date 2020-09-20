@@ -181,17 +181,17 @@ shell0			StringShape
 8			Radius
 
 #PICREGIONMIN
-+pic_min
++pic_min		StringPicRegionMin
 
 #PICREGIONMAX
-+pic_max
++pic_max		StringPicRegionMax
 
 
 #PICCRITERIA
-1
-rho
-0.9
-0.95
+1			nPicCriteria
+rho			StringPicCriteria
+0.9			MinCriteriaValue
+0.95			MaxCriteriaValue
 
 #PICADAPT
 T			UseAdaptivePic
@@ -203,8 +203,8 @@ T			DoAdaptPic
 2			PatchSize
 
 #PICPATCHEXTEND
-2
-2
+2			NxExtend
+2			NyExtend
 
 #OUTERBOUNDARY
 periodic		TypeBc1
