@@ -102,10 +102,10 @@ T			DoAdaptPic
 2			PatchSize
 
 #PICCRITERIA
-1			nCritera
-rho			NameCriteria
-10000			CriteriaMin
--1			CriteriaMax
+1			nPicCriteria
+rho			StringPicCriteria
+10000			MinCriteriaValue
+-1			MaxCriteriaValue
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -186,10 +186,10 @@ T			doReSampling
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #PICCRITERIA
-1			nCritera
-rho			NameCriteria
--1			CriteriaMin
-1000			CriteriaMax
+1			nPicCriteria
+rho			StringPicCriteria
+-1			MinCriteriaValue
+1000			MaxCriteriaValue
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -202,10 +202,10 @@ rho			NameCriteria
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #PICCRITERIA
-1			nCritera
-rho			NameCriteria
-10000			CriteriaMin
--1			CriteriaMax
+1			nPicCriteria
+rho			StringPicCriteria
+10000			MinCriteriaValue
+-1			MaxCriteriaValue
 
 #END_COMP GM -----------------------------------------------------------------
 
@@ -218,10 +218,10 @@ rho			NameCriteria
 #BEGIN_COMP GM ---------------------------------------------------------------
 
 #PICCRITERIA
-1			nCritera
-rho			NameCriteria
--1			CriteriaMin
-1000			CriteriaMax
+1			nPicCriteria
+rho			StringPicCriteria
+-1			MinCriteriaValue
+1000			MaxCriteriaValue
 
 #END_COMP GM -----------------------------------------------------------------
 
