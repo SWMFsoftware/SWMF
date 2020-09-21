@@ -104,8 +104,8 @@ T			DoAdaptPic
 #PICCRITERIA
 1			nPicCriteria
 rho			StringPicCriteria
-10000			MinCriteriaValue
--1			MaxCriteriaValue
+0			MinCriteriaValue
+0			MaxCriteriaValue
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -204,8 +204,8 @@ rho			StringPicCriteria
 #PICCRITERIA
 1			nPicCriteria
 rho			StringPicCriteria
-10000			MinCriteriaValue
--1			MaxCriteriaValue
+0			MinCriteriaValue
+0			MaxCriteriaValue
 
 #END_COMP GM -----------------------------------------------------------------
 
