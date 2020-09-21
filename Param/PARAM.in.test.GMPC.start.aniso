@@ -3,7 +3,7 @@ This is not meant to be a practical layout.
 
 #COMPONENTMAP
 GM  1 -1  1		CompMap runs on all PE-s except 0
-PC  0  3  1		PC runs on first 4 PE-s
+PC  0  3  1		CompMap runs on first 4 PE-s
 
 #DESCRIPTION
 Param/PARAM.in.test.GMPC.start.aniso: Run GM and PC in time accurate mode		StringDescription

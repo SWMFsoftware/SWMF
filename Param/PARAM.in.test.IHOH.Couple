@@ -1,6 +1,6 @@
 #COMPONENTMAP
-IH  0 -1  1		IH runs on all PEs
-OH  0 -1  1		OH runs on all PEs
+IH  0 -1  1		CompMap runs on all PEs
+OH  0 -1  1		CompMap runs on all PEs
 
 #DESCRIPTION
 Param/PARAM.in.test.IHOH.Couple: launch a blob in IH, advect to OH, calculate error

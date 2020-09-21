@@ -32,7 +32,7 @@ HGR			TypeCoordSystem
 
 #CHROMOSPHERE
 F			UseChromosphereHeating
-3.125e11		NumberDensChromosphereCgs
+3.125e11		NeChromosphereCgs
 3.2e4			TeChromosphereSi
 
 #FIELDLINETHREAD

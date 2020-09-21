@@ -1,9 +1,9 @@
 Begin session: 1
 
 #COMPONENTMAP
-GM  0 -1  1		GM runs on all PE-s
-IE  1  2  1		IE runs on 2 PE-s
-IM  3  3  1		IM runs on 1 PE
+GM  0 -1  1		CompMap runs on all PE-s
+IE  1  2  1		CompMap runs on 2 PE-s
+IM  3  3  1		CompMap runs on 1 PE
 
 #TIMEACCURATE
 F			DoTimeAccurate

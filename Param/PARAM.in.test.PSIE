@@ -1,6 +1,6 @@
 #COMPONENTMAP
-PS  0  0  1		PS runs on one PE
-IE  0 -1  1		IE runs on many PEs
+PS  0  0  1		CompMap runs on root PE
+IE  0 -1  1		CompMap runs on all PEs
 
 #TEST
 IE_get_for_ps PS_put_from_ie
