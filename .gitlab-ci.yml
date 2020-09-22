@@ -3,13 +3,14 @@ stages:
 
 create_manual:
   stage: deploy
-  only:
-    - schedules
+  #only:
+  #  - schedules
   #image: aergus/latex
-  image: ubuntu:latest
   before_script:
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
-    - apt-get install -y make latex
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+    - apt-get install -y make
+    - apt-get install -y texlive
     - latex --version
   script:
     - cd doc/Tex; make PDF
