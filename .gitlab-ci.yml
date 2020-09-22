@@ -21,6 +21,9 @@ create_manual:
     - chmod 700 ~/.ssh
     - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
+    - git config --global user.email "csem@umich.edu"
+    - git config --global user.name "GitLab Runner"
+
   script:
     - perl -e '$a=`find * -type f -size +20M`; die "Files exceeding 20M size limit $a\n" if $a; exit 0'
     - ./Config.pl -install=BATSRUS -compiler=gfortran 
