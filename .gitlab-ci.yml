@@ -12,7 +12,6 @@ create_manual:
     - apt-get install -y make
     - apt-get install -y texlive
     - apt-get install -y ghostscript
-    - latex --version
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
     - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
@@ -24,7 +23,7 @@ create_manual:
     - chmod 644 ~/.ssh/known_hosts
   script:
     - perl -e '$a=`find * -type f -size +20M`; die "Files exceeding 20M size limit $a\n" if $a; exit 0'
-    - ./Config.pl -compiler=gfortran -install=BATSRUS
+    - ./Config.pl -install=BATSRUS -compiler=gfortran 
     - make PDF
   artifacts:
     paths:
