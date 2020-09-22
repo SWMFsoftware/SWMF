@@ -22,7 +22,7 @@ create_manual:
     - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
     - chmod 644 ~/.ssh/known_hosts
   script:
-    - perl -e '$a=`find * -type f -size +1M`; die "Files exceeding 1M size limit $a\n" if $a; exit 0'
+    - perl -e '$a=`find * -type f -size +20M`; die "Files exceeding 20M size limit $a\n" if $a; exit 0'
     - ./Config.pl -compiler=gfortran -install=BATSRUS
     - make PDF
   artifacts:
