@@ -6,9 +6,12 @@ create_manual:
   only:
     - schedules
   #image: aergus/latex
-  script:
-    - docker pull aergus/latex
+  image: ubuntu:latest
+  before_script:
+    - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
+    - apt-get install -y make latex
     - latex --version
+  script:
     - cd doc/Tex; make PDF
   artifacts:
     paths:
