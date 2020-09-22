@@ -12,8 +12,18 @@ create_manual:
     - apt-get install -y make
     - apt-get install -y texlive
     - latex --version
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY_BATL" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
+    - chmod 644 ~/.ssh/known_hosts
   script:
-    - cd doc/Tex; make PDF
+    - perl -e '$a=`find * -type f -size +1M`; die "Files exceeding 1M size limit $a\n" if $a; exit 0'
+    - ./Config.pl -compiler=gfortran -install
+    - make PDF
   artifacts:
     paths:
       - ./doc/SWMF.pdf
