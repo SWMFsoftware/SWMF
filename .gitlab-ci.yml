@@ -15,6 +15,7 @@ create_manual:
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
     - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY_BATSRUS" | tr -d '\r' | ssh-add -
     - echo "$SSH_PRIVATE_KEY_BATL" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
@@ -22,7 +23,7 @@ create_manual:
     - chmod 644 ~/.ssh/known_hosts
   script:
     - perl -e '$a=`find * -type f -size +1M`; die "Files exceeding 1M size limit $a\n" if $a; exit 0'
-    - ./Config.pl -compiler=gfortran -install
+    - ./Config.pl -compiler=gfortran -install=BATSRUS
     - make PDF
   artifacts:
     paths:
