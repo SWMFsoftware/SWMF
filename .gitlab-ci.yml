@@ -15,8 +15,8 @@ create_manual:
     - eval $(ssh-agent -s)
     - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
     - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
-    #- echo "$SSH_PRIVATE_KEY_BATSRUS" | tr -d '\r' | ssh-add -
-    #- echo "$SSH_PRIVATE_KEY_BATL" | tr -d '\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY_BATSRUS" | tr -d '\r' | ssh-add -
+    - echo "$SSH_PRIVATE_KEY_BATL" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
@@ -27,8 +27,9 @@ create_manual:
   script:
     - perl -e '$a=`find * -type f -size +20M`; die "Files exceeding 20M size limit $a\n" if $a; exit 0'
     - ssh git@gitlab.umich.edu
+    - git clone git@gitlab.umich.edu:swmf_software/share.git    
     - git clone git@gitlab.umich.edu:swmf_software/util.git
-    - git clone git@gitlab.umich.edu:swmf_software/share.git
+    - git clone git@gitlab.umich.edu:swmf_software/srcBATL.git
     - ./Config.pl -install=BATSRUS -compiler=gfortran 
     - make PDF
   artifacts:
