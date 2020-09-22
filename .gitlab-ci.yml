@@ -13,7 +13,7 @@ create_manual:
     - apt-get install -y texlive
     - apt-get install -y ghostscript
     - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
+    #- echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
     - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
     #- echo "$SSH_PRIVATE_KEY_BATSRUS" | tr -d '\r' | ssh-add -
     #- echo "$SSH_PRIVATE_KEY_BATL" | tr -d '\r' | ssh-add -
