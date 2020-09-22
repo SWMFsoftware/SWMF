@@ -50,6 +50,7 @@ module CON_couple_all
   !^CMP END IH
   !^CMP IF SC BEGIN
   use CON_couple_ee_sc        !^CMP IF EE
+  use CON_couple_sc_pt        !^CMP IF PT 
   !^CMP END SC
   use CON_couple_mh_sp        !^CMP IF SP
   !^CMP IF OH BEGIN
@@ -110,6 +111,7 @@ contains
     !                                                     ^CMP END IH
     !                                                     ^CMP IF SC BEGIN
     if(use_comp(SC_).and.use_comp(EE_))call couple_ee_sc_init  !^CMP IF EE
+    if(use_comp(SC_).and.use_comp(PT_))call couple_sc_pt_init  !^CMP IF PT 
     !                                                     ^CMP END SC
     if((&                                                 !^CMP IF SP BEGIN
          use_comp(IH_).or.&                               !^CMP IF IH
@@ -200,6 +202,8 @@ contains
           call couple_sc_sp(TimeSimulation)   !^CMP IF SP
        case(EE_)                              !^CMP IF EE
           call couple_sc_ee(TimeSimulation)   !^CMP IF EE
+       case(PT_)                              !^CMP IF PT 
+          call couple_sc_pt(TimeSimulation)   !^CMP IF PT 
        case default                           
           call error
        end select                             !^CMP END SC

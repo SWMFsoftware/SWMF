@@ -146,6 +146,23 @@ contains
 
   end subroutine PT_put_from_ih
 
+  subroutine PT_put_from_sc( &
+       NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
+
+    character(len=*), intent(inout):: NameVar ! List of variables
+    integer,          intent(inout):: nVar    ! Number of variables in Data_VI
+    integer,          intent(inout):: nPoint  ! Number of points in Pos_DI
+    real,    intent(in), optional:: Data_VI(:,:)        ! Recv data array
+    integer, intent(in), optional:: iPoint_I(nPoint)    ! Order of data
+    real, intent(out), optional, allocatable:: Pos_DI(:,:) ! Positions
+
+    character(len=*), parameter :: NameSub='PT_put_from_sc'
+
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+
+  end subroutine PT_put_from_sc 
+
+
   !============================================================================
   subroutine PT_put_from_oh( &
        NameVar, nVar, nPoint, Data_VI, iPoint_I, Pos_DI)
@@ -179,6 +196,15 @@ contains
     !--------------------------------------------------------------------------
     call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
   end subroutine PT_put_from_ih_dt
+
+  subroutine PT_put_from_sc_dt(Dt)
+    implicit none
+    real,    intent(in):: Dt
+    character(len=*), parameter :: NameSub='PT_put_from_sc_dt'
+    !--------------------------------------------------------------------------
+    call CON_stop(NameSub//': PT_ERROR: empty version cannot be used!')
+  end subroutine PT_put_from_sc_dt
+
   !============================================================================
 
   subroutine PT_get_for_oh(IsNew, NameVar, nVarIn, nDimIn, nPoint, Xyz_DI, &
