@@ -31,7 +31,7 @@ create_manual:
     # Check ssh connection
     - ssh git@gitlab.umich.edu
     # Clone repos
-    - ./Config.pl -install=BATSRUS -compiler=gfortran 
+    - ./Config.pl -install=BATSRUS,Ridley_serial -compiler=gfortran 
     - make PDF
   artifacts:
     paths:
