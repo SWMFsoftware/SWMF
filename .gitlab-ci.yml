@@ -13,6 +13,7 @@ create_manual:
     - apt-get install -y texlive
     - apt-get install -y ghostscript
     - eval $(ssh-agent -s)
+    # add private keys
     - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
     - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
     - echo "$SSH_PRIVATE_KEY_BATSRUS" | tr -d '\r' | ssh-add -
@@ -25,12 +26,11 @@ create_manual:
     - git config --global user.name "GitLab Runner"
 
   script:
+    # Check large files
     - perl -e '$a=`find * -type f -size +20M`; die "Files exceeding 20M size limit $a\n" if $a; exit 0'
+    # Check ssh connection
     - ssh git@gitlab.umich.edu
-    - git clone git@gitlab.umich.edu:swmf_software/share.git
-    - sleep 5
-    - git clone git@gitlab.umich.edu:swmf_software/util.git
-    - git clone git@gitlab.umich.edu:swmf_software/srcBATL.git
+    # Clone repos
     - ./Config.pl -install=BATSRUS -compiler=gfortran 
     - make PDF
   artifacts:
