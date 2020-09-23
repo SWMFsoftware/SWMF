@@ -1340,7 +1340,7 @@ test14_1d_run:
 test14_1d_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14pui1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+                output/test14_1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
 		> test14_1d_oh.diff)
 	-(${DIFFNUM} -b \
                 ${TESTDIR}/RESULTS/PT/amps.dat \
