@@ -1,0 +1,144 @@
+#COMPONENTMAP
+OH 0 -1  1              CompMap runs on all PE-s
+PT 1  2  1              CompMap runs on 1 or 2 PE-s
+
+#DESCRIPTION
+Param/PARAM.in.test.OHPTshocktube: Couple single-ion OH with PT
+
+#TIMEACCURATE
+T			DoTimeAccurate
+
+#COUPLE2
+OH			NameComp1
+PT			NameComp2
+-1			DnCouple
+1 year  		DtCouple
+
+#BEGIN_COMP OH ===========================================================
+
+#GRAVITY
+F                       UseGravity
+
+#BODY
+F			UseBody
+
+#PLOTFILENAME
+year                   NameMaxTimeUnit
+
+#GRID
+1			nRootBlockX
+1			nRootBlockY
+1			nRootBlockZ
+-200			xMin
+200			xMax
+-200			yMin
+200			yMax
+-200			zMin
+200			zMax
+
+#OUTERBOUNDARY
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+periodic		TypeCellBc
+
+#SCHEME
+1			nOrder
+Rusanov			TypeFlux
+
+#FIXEDTIMESTEP
+T			UseFixedDt
+1 year  		DtFixed
+
+#UPDATECHECK
+F			UseUpdateCheck
+
+#NONCONSERVATIVE
+F                       UseNonConservative
+
+#CONSERVATIVECRITERIA
+0                       nConsCrit
+
+#SAVELOGFILE
+T			DoSaveLogfile
+RAW			StringLogfile
+-1			DnSaveLogfile
+1 year  		DtSaveLogfile
+
+#SAVEINITIAL
+T			DoSaveInitial
+
+#SAVEPLOT
+1			nPlotFile
+y=0 MHD idl		StringPlot
+-1			DnOutput
+1 year   		DtOuput
+-1.0			DxOutput
+
+#USERSWITCH
++init +Sexpl	StringSwitch
+
+#UNIFORMSTATE
+0.01			Rho
+-100			Ux
+0			Uy
+0			Uz
+0.01			Bx
+0.0			By
+0			Bz
+5.2E-13			P
+1E-5			NeuRho
+0			NeuUx 
+0			NeuUy 
+0			NeuUz 
+1E-16			NeuP  
+1E-5			Ne2Rho
+0			Ne2Ux 
+0			Ne2Uy 
+0			Ne2Uz 
+1E-16			Ne2P  
+1E-5			Ne3Rho
+0			Ne3Ux 
+0			Ne3Uy 
+0			Ne3Uz 
+1E-16			Ne3P  
+0.18			Ne4Rho
+0			Ne4Ux 
+0			Ne4Uy 
+0			Ne4Uz 
+1.6E-13			Ne4P  
+
+#USERINPUTBEGIN --------------------------------------------------------
+
+#SOLARWINDH
+0.00874			SWH_rho_dim [n/cc]
+1.0868E5		SWH_T_dim [K]
+417.07                 	SWH_Ux_dim [km/s]
+0.0                     SWH_Uy_dim [km/s]
+0.0                     SWH_Uz_dim [km/s]
+7.17E-03                SWH_Bx_dim [nT]
+0.0                     SWH_By_dim [nT]
+0.0                     SWH_Bz_dim [nT]
+
+#VLISW
+0.06			VLISW_rho_dim [n/cc]
+6519.0              	VLISW_T_dim
+0.0               	VLISW_Ux_dim
+0.0                	VLISW_Uy_dim
+0.0              	VLISW_Uz_dim
+0.411			VLISW_Bx_dim
+-0.0748			VLISW_By_dim
+-0.1296			VLISW_Bz_dim
+
+#USERINPUTEND ----------------------------------------------------------
+
+#END_COMP OH ===========================================================
+
+#STOP
+-1			MaxIteration
+5 year			tSimulationMax
+
+#END
+
