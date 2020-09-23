@@ -12,7 +12,7 @@ T			IsTimeAccurate
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
-0.01 year		DtCouple
+1 year   		DtCouple
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
@@ -50,7 +50,7 @@ Rusanov			TypeFlux
 
 #FIXEDTIMESTEP
 T			UseDtFixed
-0.01 year		DtFixedDim
+1 year  		DtFixedDim
 
 #UPDATECHECK
 F			UseUpdateCheck
@@ -65,7 +65,7 @@ F			UseNonConservative
 T			DoSaveLogfile
 RAW			StringLog
 -1			DnSaveLogfile
-0.1 year		DtSaveLogfile
+1 year  		DtSaveLogfile
 
 #SAVEINITIAL
 T			DoSaveInitial
@@ -74,7 +74,7 @@ T			DoSaveInitial
 1			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
-0.1 year		DtSavePlot
+1 year	         	DtSavePlot
 -1.0			DxSavePlot
 
 #USERSWITCH
