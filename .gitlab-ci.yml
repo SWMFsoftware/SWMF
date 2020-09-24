@@ -15,9 +15,6 @@ create_manual:
     - eval $(ssh-agent -s)
     # add private keys
     - echo "$SSH_PRIVATE_KEY_SHARE" | tr -d '\r' | ssh-add -
-    - echo "$SSH_PRIVATE_KEY_UTIL" | tr -d '\r' | ssh-add -
-    - echo "$SSH_PRIVATE_KEY_BATSRUS" | tr -d '\r' | ssh-add -
-    - echo "$SSH_PRIVATE_KEY_BATL" | tr -d '\r' | ssh-add -
     - mkdir -p ~/.ssh
     - chmod 700 ~/.ssh
     - ssh-keyscan gitlab.umich.edu >> ~/.ssh/known_hosts
@@ -27,7 +24,7 @@ create_manual:
 
   script:
     # Check large files
-    - perl -e '$a=`find * -type f -size +20M`; die "Files exceeding 20M size limit $a\n" if $a; exit 0'
+    - perl -e '$a=`find * -type f -size +6M`; die "Files exceeding 6M size limit $a\n" if $a; exit 0'
     # Check ssh connection
     - ssh git@gitlab.umich.edu
     # Clone repos
@@ -38,7 +35,6 @@ create_manual:
       - ./doc/SWMF.pdf
       - ./doc/SWPC.pdf
       - ./doc/TESTING.pdf
-      - ./doc/REFERENCE.pdf
       - ./doc/MAINTENANCE.pdf
       - ./doc/PHYSICS.pdf
       - ./doc/SOFTWARE_STANDARD.pdf
