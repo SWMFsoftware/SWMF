@@ -526,7 +526,7 @@ test_swpc_check:
 		> test_swpc_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutput/it140410_000300_000.idl \
+		Param/SWPC/TestOutput/it140410_000300_000.idl.gz \
 		>> test_swpc_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
@@ -601,7 +601,7 @@ test_swpc_multiion_check:
 		> test_swpc_multiion_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutputMultiIon/it140410_000300_000.idl \
+		Param/SWPC/TestOutputMultiIon/it140410_000300_000.idl.gz \
 		>> test_swpc_multiion_ie.diff)
 	ls -l test_swpc_multiion_*.diff
 
@@ -672,7 +672,7 @@ test_swpc_multispecies_check:
 		> test_swpc_multispecies_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutputMultiSpecies/it140410_000300_000.idl \
+		Param/SWPC/TestOutputMultiSpecies/it140410_000300_000.idl.gz \
 		>> test_swpc_multispecies_ie.diff)
 	ls -l test_swpc_multispecies_*.diff
 
@@ -744,7 +744,7 @@ test_swpc_cimi_check:
 		> test_swpc_cimi_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutputCimi/it140410_000300_000.idl \
+		Param/SWPC/TestOutputCimi/it140410_000300_000.idl.gz \
 		>> test_swpc_cimi_ie.diff)
 	ls -l test_swpc_cimi_*.diff
 
@@ -830,7 +830,7 @@ test_swpc_amps_check:
 		> test_swpc_amps_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
-		Param/SWPC/TestOutput/it140410_000300_000.idl \
+		Param/SWPC/TestOutput/it140410_000300_000.idl.gz \
 		>> test_swpc_amps_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
