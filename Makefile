@@ -56,23 +56,11 @@ help:
 	@echo '    test_help   (show all options for running the tests)'
 	@echo ' '
 	@#^CFG END TESTING
-	@#^CMP IF IH BEGIN
-	@echo '    IHBATSRUS   (copy and rename GM/BATSRUS source into IH/BATSRUS)'
-	@#^CMP END IH
-	@#^CMP IF OH BEGIN
-	@echo '    OHBATSRUS   (copy and rename GM/BATSRUS source into OH/BATSRUS)'
-	@#^CMP END OH
-	@#^CMP IF SC BEGIN
-	@echo '    SCBATSRUS   (configure and rename GM/BATSRUS source into SC/BATSRUS)'
-	@#^CMP END SC
 	@echo ' '
 	@echo '    LIB         (lib/libSWMF.a the SWMF library)'
 	@echo '    NOMPI       (lib/libNOMPI.a for single node execution with no MPI)'
 	@echo ' '
 	@echo '    SWMF        (bin/SWMF.exe the main executable for SWMF)'
-	@#^CMP IF ESMF BEGIN
-	@echo '    ESMF_SWMF   (bin/ESMF_SWMF.exe the ESMF compatible executable)'
-	@#^CMP END ESMF
 	@#^CMP IF IE BEGIN
 	@echo '    PIONO       (bin/PostIONO.exe creates ionosphere tec file from idl files)'
 	@#^CMP END IE
@@ -86,7 +74,7 @@ help:
 	@echo ' '
 	@echo '    rundir      (create run directory "run/")'
 	@echo '    rundir RUNDIR=run_test  (create run directory "run_test/")'
-	@echo '    rundir MACHINE=columbia (select job scripts for columbia)'
+	@echo '    rundir MACHINE=frontera (select job scripts for frontera)'
 	@echo '    rundir_code (saves code archive in run directory)'
 	@echo ' '
 	@echo '    parallelrun (make SWMF and run SWMF.exe on ${NP} PEs)'
@@ -94,7 +82,7 @@ help:
 	@echo '    serialrun   (make SWMF and run it on 1 processor)'
 	@echo ' '
 	@echo '    clean       (remove files: *~ *.o *.kmo *.mod *.T *.lst core)'
-	@echo '    cleanclones (remove src/Makefile-s from BATSRUS clones)'
+	@echo '    cleanclones (remove src/Makefile-s from EE,IH,OH,SC/BATSRUS clones)'
 	@echo '    distclean   (equivalent to: Config.pl -uninstall)'
 	@echo '    dist        (create source distribution tar file)'
 	@echo ' '
