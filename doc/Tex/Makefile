@@ -174,8 +174,8 @@ REFERENCE.pdf:\
 	SWMFREF.tex
 
 MAINTENANCE.pdf:\
-	PM_wrapper.protex \
-	PM_XY_coupler.protex
+	PM_wrapper.tex \
+	PM_XY_coupler.tex
 
 SWPCXML:
 	@rm -f SWPC.XML SWPCXML.tex
