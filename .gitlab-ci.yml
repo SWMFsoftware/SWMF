@@ -3,8 +3,8 @@ stages:
 
 create_manual:
   stage: deploy
-  #only:
-  #  - schedules
+  only:
+    - schedules
   #image: aergus/latex
   before_script:
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
@@ -24,13 +24,14 @@ create_manual:
 
   script:
     # Check large files
-    - perl -e '$a=`find * -type f -size +6M`; die "Files exceeding 6M size limit $a\n" if $a; exit 0'
+    - perl -e '$a=`find * -type f -size +6M -exec ls -hl {} \\;`; die "Files exceeding 6M size limit $a\n" if $a; exit 0'
     # Check ssh connection
     - ssh git@gitlab.umich.edu
     # Clone repos
     - ./Config.pl -install -compiler=gfortran 
     - make PDF
   artifacts:
+    name: manuals
     paths:
       - ./doc/SWMF.pdf
       - ./doc/SWPC.pdf
@@ -38,3 +39,4 @@ create_manual:
       - ./doc/MAINTENANCE.pdf
       - ./doc/PHYSICS.pdf
       - ./doc/SOFTWARE_STANDARD.pdf
+    expire_in: 1 day
