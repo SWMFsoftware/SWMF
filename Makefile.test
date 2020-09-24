@@ -1052,7 +1052,7 @@ test8_check:
 		> test08_ih.diff)
 	-(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/RESULTS/SC/los_sdo_aia*.out \
-		output/test8/SC_los_sdo_aia.out.gz \
+		SC/BATSRUS/data/test8/SC_los_sdo_aia.out.gz \
 		> test08_sc_los.diff)
 	ls -l test08_*.diff
 
