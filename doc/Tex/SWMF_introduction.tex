@@ -34,7 +34,8 @@ The core of the SWMF and most of the models are implemented in Fortran 90.
 Some models are written in Fortran 77, and others are written in C++.
 A few features of Fortran 2003 and 2008 are also used.
 The parallel communications use the Message Passing Interface (MPI) library. 
-The SWMF creates a single executable. Note, however, that the
+Some models can also take advantage of multi-threaded execution using the 
+OpenMP library. The SWMF creates a single executable. Note, however, that the
 models in the SWMF can still be compiled into stand-alone executables.
 This means that the models preserve their individuality while being
 compatible with the SWMF.
@@ -75,8 +76,7 @@ Empirical models were added in a systematic way.
 The shared libraries and utilities have been greatly extended.
 The SWMF has been coupled to the Earth System Modeling Framework (ESMF).
 
-The current physics 
-models were developed by the following research groups
+The current physics models were developed by the following research groups
 and individuals:
 \begin{itemize}
 \item
@@ -96,7 +96,7 @@ The Global Magnetosphere model was developed by
 Darren De Zeeuw, Gabor Toth, Aaron Ridley and many others.
 The physics based Eruptive Even Generator model is also based on
 \BATSRUS. It is developed by Fang Fang, Chip Manchester and Bart van
-der Holst. The EE model alrady works as a stand-alone code, and
+der Holst. The EE model already works as a stand-alone code, and
 it will by coupled to other components in the SWMF in the future.
 
 \item
@@ -114,24 +114,34 @@ others at Rice University, also modified by Darren De Zeeuw at the
 University of Michigan. The current version of the model with oxygen and loss
 is named RCM2. The RCM code is 2-dimensional in space 
 (plus one dimension for energy) and serial. There are 3 more IM models.
-The CRCM model was developed by Mei-Ching Fok, Natasha Buzulukova and 
+The Comprehensive Inner Magnetosphere and Ionosphere (CIMI) model 
+was developed by Mei-Ching Fok, Natasha Buzulukova and 
 Alex Glocer at the NASA Goddard Space Flight Center.
+In addition to inner magnetosphere, CIMI also includes the high
+energy electrons of the radiation belt
 The HEIDI model was developed by Mike Liemohn and Raluca Ilie 
 at the University of Michigan.
 The RAM-SCB model was developed by Vania Jordanova, Sorin Zaharia and
-Dan Welling. RAM-SCB is currently only available at Los Alamos National
-Laboratory. The CRCM, HEIDI and RAM-SCB models are also 2 dimensional
+Dan Welling. The CIMI, HEIDI and RAM-SCB models are also 2 dimensional
 in space, but they resolve energy as well as pitch angle.
 
 \item
-The Particle-in-Cell (PC) model is the implicit PIC code iPIC3D
-developed by Stefano Markidis and his group at KTH Sweden
+There are three Particle-in-Cell (PC) models in the SWMF. 
+All of them use an energy conserving semi-implicit PIC algorithm.
+The iPIC3D code was originally developed by Stefano Markidis and his group at KTH Sweden
 and Giovanni Lapenta and his group at KU Leuven, Belgium.
 The code was adapted, integrated into the SWMF and coupled
-with BATS-R-US by Lars Daldorff and Gabor Toth.
+with BATS-R-US by Lars Daldorff and Gabor Toth. 
 iPIC3D solves for the electric and magnetic fields on 
 a 3D Cartesian grid and the motion of electron and ion
 macroparticles. iPIC3D is a parallel code written in C++. 
+Further improvements were made by Yuxi Chen and Gabor Toth 
+to make it energy and charge conserving.
+The Adaptive Mesh Particle Solver (AMPS) code, was developed by 
+Valeriy Tenishev. It was modified into a PIC solver by Valeriy Tenishev
+and Yinsi Shou with help from Yuxi Chen. The Flexible Exascale Kinetic
+Solver (FLEKS) was developed by Yuxi Chen. Both AMPS and FLEKS allow
+the PIC region to be adapted during the run.
 
 \item
 The Polar Wind (PW) component is the Polar Wind Outflow Model (PWOM)
@@ -148,7 +158,8 @@ adaptive grid. AMPS is a parallel code written in C++.
 \item
 The Radiation Belt Environment (RBE) model is developed by Meiching Fok
 and Alex Glocer at NASA Goddard. It is a spatially 2-dimensional code with 
-extra two dimensions for pitch angle and energy. 
+extra two dimensions for pitch angle and energy. It is essentially the
+same as the energetic electron solver in the CIMI inner magnetosphere model.
 
 \item
 One of the Solar Energetic Particle (SP) models is the
@@ -156,8 +167,9 @@ K\'ota's SEP model by Joseph Kota at the University of Arizona.
 It solves the equations for the advection and acceleration of
 energetic particles along a magnetic field line in a 3D phase space
 using energy and pitch angle as the extra two dimensions.
-The other SP model is the Field Line AdvectionFLAMPA Model for 
-Particle Acceleration (FLAMPA) by Igor Sokolov. FLAMPA also solves
+The other SP model is the Multiple Field Line Advection model for 
+Particle Acceleration (MFLAMPA) by Igor Sokolov and Dmitry Borovikov. 
+MFLAMPA also solves
 for energy distribution but assumes an isotropic pitch angle distribution.
 
 \item
@@ -287,11 +299,13 @@ requirements apply.
 \item The SWMF runs only under the UNIX/Linux operating systems.  This now
   includes Macintosh system 10.x because it is based on BSD UNIX.  The
   SWMF does not run under any Microsoft Windows operating system.
-\item A FORTRAN compiler must be installed.
+\item A FORTRAN 2008 compiler must be installed.
 \item A C/C++ compiler must be installed.
 \item The Perl interpreter must be installed.
 \item A version of the Message Passing Interface (MPI) library must be
   installed for parallel execution.
+\item Some models can use the OpenMP library. The Fortran and C++ compilers
+  need to contain OpenMP to use this feature.
 \item Some models use HDF5 output. For these the parallel version of 
   the HDF5 library has to be installed. The {\tt share/Scripts/install\_hdf5.sh}
   shell script can be used to do that.
@@ -310,13 +324,13 @@ Very large runs require many more processors.
 
 The framework has been ported to many platforms using many different
 compilers and MPI libraries. The list of Fortran compilers includes
-Absoft, gfortran, ifort, Lahey, NAG, PGF90, and XLF90.
-The list of C compilers include gcc, clang, icc, pgcc, mpxlc.
+Absoft, GNU gfortran, Intel ifort, Lahey, NAG nagfor, PGI pgf90, NVIDIA nvfortran, and IBM xlf90.
+The list of C compilers include GNU gcc, Apple clang, Intel icc, PGI pgcc, IBM mpxlc.
 The MPI libraries used so far include many versions of MPICH, MVAPICH and 
-OpenMpi. 
+OpenMPI. 
 
 In addition to the above requirements, the SWMF output is typically
-visualized using IDL, Tecplot, python (SpacePy) or VisIt. 
+visualized using IDL, Tecplot, python (SpacePy), VisIt, Paraview or yt.
 Other visualization packages may also be used, but the output file
 formats and scripts have been designed for these visualization softwares.
 
@@ -359,7 +373,7 @@ and the following files
 Most of the Perl and shell scripts that are distributed with the SWMF
 provide help which can be accessed wit the {\tt -h} flag. For example, 
 \begin{verbatim}
-  Config.pl -h
+  ./Config.pl -h
 \end{verbatim}
 will provide a detailed listing of the options and capabilities of the
 {\tt Config.pl} script.  In addition, you can find all the possible
@@ -469,11 +483,9 @@ The default configuration uses the Empty version for all components.
 The grid size of several components can also be set with the {\tt -g}
 flag of the {\tt Config.pl} script. For example the 
 \begin{verbatim}
-  Config.pl -g=GM:8,8,8,400,100
+  Config.pl -g=GM:8,8,8
 \end{verbatim}
-command sets the block size for the GM component to $8\times 8\times 8$ cells, 
-the maximum number of blocks per processor to 400, 
-and the maximum number of implicit blocks per processor to 100.
+command sets the block size for the GM component to $8\times 8\times 8$ cells.
 The main SWMF Config.pl script actually runs the individual Config.pl
 scripts in the component versions. These scripts can be run directly,
 For example try
@@ -506,14 +518,10 @@ The -j flag allows parallel compilation, which can reduce the compilation
 time considerably.
 Depending on the configuration, the compiler settings and the machine, 
 compiling the code can take several minutes. 
-In addition, the post processing codes for BATSRUS can be compiled with
+In addition, the PostIDL.exe post processing code can be compiled with
 \begin{verbatim}
-  make PSPH
   make PIDL
 \end{verbatim} 
-These two commands will create the codes {\tt bin/PostSPH.exe}, for post
-processing spherical Tecplot files, and {\tt bin/PostIDL.exe} 
-for post processing IDL files.
 
 The {\tt SWMF.exe} executable should be run in a sub-directory, 
 since a large number of files are created in each run.  
@@ -562,11 +570,11 @@ five components on 16 processors is:
 \begin{verbatim}
 ID  First Last Stride
 #COMPONENTMAP
-GM    0    4    1
-IE    5    6    1
-IH    7   10    1
-IM   11   11    1
-UA   12   15    1
+GM  0  4  1       CompMap
+IE  5  6  1       CompMap
+IH  7 10  1       CompMap
+IM 11 11  1       CompMap
+UA 12 15  1       CompMap
 \end{verbatim}
 The syntax is simple. It must start with the directive
 \#COMPONENTMAP followed by the processor layout of active components.
@@ -752,7 +760,7 @@ We suggest that you read all of chapter \ref{chapter:basics}, which
 outlines the basic features of the SWMF as well as some things you
 really must know in order to use the SWMF.  Once you have done this you
 are ready to experiment.  Chapter \ref{chapter:examples} gives several 
-examples which are intended to make you familiar with the use of the
-SWMF.  We suggest that you try them!
+examples which are intended to make you familiar with the use of the SWMF.
+We suggest that you try them!
 
 %\end{document}

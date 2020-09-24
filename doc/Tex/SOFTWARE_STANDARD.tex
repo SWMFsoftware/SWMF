@@ -45,7 +45,6 @@ be useful in achieving the above goals:
 \item use of object oriented ideas as long as they do not significantly
       compromise the efficiency 
 \item use of consistent data naming
-\item use of Protex for documenting source code
 \end{itemize}
 This document aims at introducing further steps to improve the quality of the
 software developed at CSEM and CRASH. These are
@@ -839,16 +838,16 @@ Note that the comments convey information that is not obvious from the
 source code itself. It is especially important to comment complicated
 expressions, tricks, and counter-intuitive solutions. 
 
-During the SWMF development we used the Protex utility (a Perl script) 
-to generate a Latex reference manual from the source code and 
-specially formatted comments. Although the reference manual itself is of 
-dubious value (one might as well read the original code), 
-using this utility forces the developers to describe the purpose of 
-subroutines and functions, the meaning of input and output arguments, 
-list explicitly the public methods and data. On the other hand the use of
-Protex does not guarantee that the source code is well documented. 
-Ultimately it is the developer's responsibility to produce a readable, 
-maintainable, well documented source code.
+% During the SWMF development we used the Protex utility (a Perl script) 
+% to generate a Latex reference manual from the source code and 
+% specially formatted comments. Although the reference manual itself is of 
+% dubious value (one might as well read the original code), 
+% using this utility forces the developers to describe the purpose of 
+% subroutines and functions, the meaning of input and output arguments, 
+% list explicitly the public methods and data. On the other hand the use of
+% Protex does not guarantee that the source code is well documented. 
+% Ultimately it is the developer's responsibility to produce a readable, 
+% maintainable, well documented source code.
 
 \section{Guidelines for formatting source code}
 

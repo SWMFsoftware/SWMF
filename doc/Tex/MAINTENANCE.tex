@@ -278,7 +278,7 @@ The PM component wrapper provides the following six subroutines
 which will be described in detail below. All these subroutines are 
 called by the control module from {\tt CON/Interface/src/CON\_wrapper}.
 
-\input PM_wrapper.protex
+\input PM_wrapper.tex
 
 \parskip 10pt
 
@@ -341,7 +341,7 @@ The following example shows a one way coupling with plain MPI calls.
 For the use of the SWMF coupling toolkit, please see the appropriate
 part of the reference manual and the examples in the SWMF source code.
 
-\input PM_XY_coupler.protex
+\input PM_XY_coupler.tex
 
 \parskip 10pt
 \newpage
@@ -350,23 +350,23 @@ part of the reference manual and the examples in the SWMF source code.
 %%%
 \section{Documentation}
 
-New source code should be documented with the Protex utility.
-Examples for the protex style documentation can be found in the 
-{\tt share/Prologs} directory. To get a description and examples
-\begin{verbatim}
-cd share/Prologs
-make PDF
-acroread README.pdf
-\end{verbatim}
-There are several F90 files in the {\tt share/Prologs} directory
-that can be used as templates.
-The source code documentation is turned into Latex documentation
-by the {\tt share/Scripts/protex.pl} script.
-The file containing the documented source code should be listed
-in the appropriate part of the
-\begin{verbatim}
-doc/Tex/Makefile
-\end{verbatim}
+% New source code should be documented with the Protex utility.
+% Examples for the protex style documentation can be found in the 
+% {\tt share/Prologs} directory. To get a description and examples
+% \begin{verbatim}
+% cd share/Prologs
+% make PDF
+% acroread README.pdf
+% \end{verbatim}
+% There are several F90 files in the {\tt share/Prologs} directory
+% that can be used as templates.
+% The source code documentation is turned into Latex documentation
+% by the {\tt share/Scripts/protex.pl} script.
+% The file containing the documented source code should be listed
+% in the appropriate part of the
+% \begin{verbatim}
+% doc/Tex/Makefile
+% \end{verbatim}
 
 New or modified input parameters should be described in the XML files. 
 For the control module parameters this file is

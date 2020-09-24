@@ -161,7 +161,7 @@ SWMFXML:
 	@perl -e 'for $$i (glob("../../PARAM.XML ../../[A-Z][A-Z]/*/PARAM.XML")){`${SCRIPTDIR}/XmlToTex.pl $$i >> SWMFXML.tex` unless $$i =~ /BATSRUS/ and $$i !~ /GM\/BATSRUS/}'
 	@echo "${SCRIPTDIR}/XmlToTex.pl */PARAM.XML > SWMFXML.tex"
 
-SWMF.dvi: \
+SWMF.pdf: \
 	SWMF.tex \
 	HEADER.tex \
 	SWMF_introduction.tex \
@@ -170,10 +170,10 @@ SWMF.dvi: \
 	SWMF_control.tex \
 	SWMFXML
 
-REFERENCE.dvi:\
+REFERENCE.pdf:\
 	SWMFREF.tex
 
-MAINTENANCE.dvi:\
+MAINTENANCE.pdf:\
 	PM_wrapper.protex \
 	PM_XY_coupler.protex
 
@@ -184,7 +184,7 @@ SWPCXML:
 		Param/SWPC/PARAM.in_SWPC_restart
 	${SCRIPTDIR}/XmlToTex.pl SWPC.XML > SWPCXML.tex	
 
-SWPC.dvi: \
+SWPC.pdf: \
 	HEADER.tex \
 	SWPC.tex \
 	SWMF_introduction.tex \
