@@ -193,7 +193,7 @@ SWPC.dvi: \
 	SWMF_control.tex \
 	SWPCXML
 
-PDF_FILES = SWMF.pdf SWPC.pdf TESTING.pdf REFERENCE.pdf \
+PDF_FILES = SWMF.pdf SWPC.pdf TESTING.pdf \
 		MAINTENANCE.pdf PHYSICS.pdf \
 		SOFTWARE_STANDARD.pdf
 
