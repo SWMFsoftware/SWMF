@@ -425,8 +425,7 @@ EE/BATSRUS/src/Makefile:
 		rm -rf src srcBATL srcUser srcEquation; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../EE/BATSRUS/src
-	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
-						  ../../../EE/BATSRUS/srcBATL
+	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../EE/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		../../../EE/BATSRUS/srcInterface
@@ -463,8 +462,7 @@ IH/BATSRUS/src/Makefile:
 		rm -rf src srcBATL srcUser srcEquation srcInterface/Mod*.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../IH/BATSRUS/src
-	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
-					../../../IH/BATSRUS/srcBATL
+	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* ../../../IH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		../../../IH/BATSRUS/srcInterface
@@ -503,8 +501,7 @@ OH/BATSRUS/src/Makefile:
 			srcInterface/OH_wrapper.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../OH/BATSRUS/src
-	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
-					../../../OH/BATSRUS/srcBATL
+	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../OH/BATSRUS/srcBATL
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		../../../OH/BATSRUS/srcInterface/
@@ -549,8 +546,7 @@ SC/BATSRUS/src/Makefile:
 		       srcInterface/SC_wrapper.f90; \
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../SC/BATSRUS/src
-	cd GM/BATSRUS/srcBATL; cp BATL*.f90 Makefile* \
-						  ../../../SC/BATSRUS/srcBATL
+	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../SC/BATSRUS/srcBATL
 	cp GM/BATSRUS/srcUser/*.f90 SC/BATSRUS/srcUser/	  
 	cp GM/BATSRUS/srcEquation/*.f90 SC/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
