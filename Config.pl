@@ -380,7 +380,7 @@ sub set_options{
     for ($i=1; $i<=$#Options; $i+=2){
 	my $Comp = $Options[$i];
 	my $Option = $Options[$i+1];
-	$Option =~ s/,/ \-/g;   # Replace comma with ' -' for multiple options
+	$Option =~ s/,([a-z])/ \-$1/ig;  # Replace ',x' with ' -x' for multiple options
 	$Options{$Comp}=$Option;
     }
 
