@@ -136,7 +136,7 @@ contains
     if(is_proc(EE_)) Grid_C(EE_)%State_VGB => State_VGB
 
     if(is_proc(EE_))then
-       ! Initialize the local grid
+       ! set the local grid
        call init_decomposition(&
             Domain = MH_Domain, &
             CompID_ = EE_, &
