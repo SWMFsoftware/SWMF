@@ -1322,7 +1322,7 @@ test14_1d:
 
 test14_1d_compile:
 	./Config.pl -v=Empty,OH/BATSRUS,PT/AMPS
-	./Config.pl -g=OH:4,4,4 -o=OH:u=OuterHelio,e=Mhd,ng=2
+	./Config.pl -g=OH:4,4,4 -o=OH:u=OuterHelio,e=Swh,ng=2
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.shocktube,amps-test=on
 	${MAKE} SWMF
 	make PIDL
