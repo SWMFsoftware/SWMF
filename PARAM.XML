@@ -607,7 +607,7 @@ components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
 <command name="COMPONENTMAP" multiple="F" alias="LAYOUT">
-  <foreach name="Name" values="$_Components">
+  <foreach values="$_Components">
     <parameter name="CompMap" type="strings" min="1" max="5">
       <part name="NameComp"  type="string"  length="2" required="T"/>
       <part name="ProcFirst" type="integer" default="0" required="T"/>
@@ -725,7 +725,7 @@ The default is DnRun = 1 for all the active components.
 <command name="COUPLEORDER">
 	<parameter name="nCouple" type="integer" min="0" max="30" 
 		   default="10"/>
-	<for name="iCouple" from="1" to="$nCouple">
+	<for from="1" to="$nCouple">
 	    <parameter name="NameSourceTarget" type="string" length="5"/>
 	</for>
 
