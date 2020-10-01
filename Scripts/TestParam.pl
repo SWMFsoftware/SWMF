@@ -72,9 +72,11 @@ my $check =
 print "$check\n" if $Verbose;
 my $Error = `$check`;
 
-# Extract list of files from the output: "CheckParam.pl: cp FILE FILE_orig_\n"
-my $Files;
-$Files .= "$1," while $Error =~ s/CheckParam.pl: cp (\S+) \1_orig_\n//;
+# Extract list of reformatted files from the output: "CheckParam.pl: diff FILE FILE_orig_\n"
+my %Formatted;
+$Formatted{$1} = 1 while $Error =~ s/CheckParam.pl: diff (\S+) \1_orig_\n//;
+
+# If there is any error left, show it
 if($Error){
     $IsError = 1;
     warn "$ERROR parameter errors for CON in $ParamFile:\n\n$Error\n";
@@ -89,22 +91,23 @@ foreach $Comp (sort keys %Layout){
 	next;
     }
     my $check = 
-	"$CheckParamScript -f=$Files -c=$Comp -n=$nProc{$Comp} -p=$Precision ".
+	"$CheckParamScript -c=$Comp -n=$nProc{$Comp} -p=$Precision ".
 	"-x=$xml -g=$GridSize{$Comp} $ParamFile";
     print "$check\n" if $Verbose;
     $Error = `$check`;
-    # Append list of modified files
-    $Files .= "$1," while $Error =~ s/CheckParam.pl: cp (\S+) \1_orig_\n//;
+    # Hash of reformatted files
+    $Formatted{$1} = 1 while $Error =~ s/CheckParam.pl: diff (\S+) \1_orig_\n//;
+    # Show error if anything is left
     if($Error){
 	$IsError = 1;
 	warn "$ERROR parameter errors for $Comp:\n\n$Error\n";
     }
 }
 
-foreach my $File (split(/,/, $Files)){
+foreach my $File (sort keys %Formatted){
     my $Orig = $File."_orig_";
     if(`diff $File $Orig`){
-	print "TestParam: cp $File $Orig\n";
+	print "TestParam formatting: diff $File $Orig\n";
     }else{
 	unlink $Orig;
     }
