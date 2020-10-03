@@ -1301,12 +1301,8 @@ test14_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14/OH_log_n000000.log \
-		> test14_oh.diff)
-	-(${DIFFNUM} -b \
-		${TESTDIR}/RESULTS/PT/amps.dat \
-		output/test14/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-		> test14_pt.diff)
-	ls -l test14_??.diff
+		> test14_ohpt.diff)
+	ls -l test14_ohpt.diff
 
 ### test14_1d: OH/BATSRUS (single-ion) coupled with PT/AMPS
 
@@ -1341,12 +1337,8 @@ test14_1d_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
                 output/test14_1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-		> test14_1d_oh.diff)
-	-(${DIFFNUM} -b \
-                ${TESTDIR}/RESULTS/PT/amps.dat \
-                output/test14_1d/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-                > test14_1d_pt.diff)
-	ls -l test14_1d_??.diff
+		> test14_1d_ohpt.diff)
+	ls -l test14_1d_ohpt.diff
 
 ### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS
 
@@ -1381,13 +1373,8 @@ test14pui_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=2e-21 \
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
 		output/test14pui/OH_log_n000000.log \
-		> test14pui_oh.diff)
-	-(${DIFFNUM} -b \
-		${TESTDIR}/RESULTS/PT/amps.dat \
-		output/test14pui/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-		> test14pui_pt.diff)
-	ls -l test14pui_??.diff
-
+		> test14pui_ohpt.diff)
+	ls -l test14pui_ohpt.diff
 
 ### test14pui1d: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube
 
@@ -1422,12 +1409,8 @@ test14pui1d_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-21 \
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
                 output/test14pui1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-                > test14pui1d_oh.diff)
-	-(${DIFFNUM} -b \
-                ${TESTDIR}/RESULTS/PT/amps.dat \
-		output/test14pui1d/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-                > test14pui1d_pt.diff)
-	ls -l test14pui1d_??.diff
+                > test14pui1d_ohpt.diff)
+	ls -l test14pui1d_ohpt.diff
 
 ### test15: SP/MFLAMPA model coupled with SC and IH models
 
