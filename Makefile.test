@@ -457,25 +457,25 @@ test_swpc_build:
 	cd ${BUILD}; make test_swpc
 
 test_swpc:
-	@echo "test_swpc_compile..." > test_swpc_gm.diff
-	@echo "test_swpc_compile..." > test_swpc_ie.diff
-	@echo "test_swpc_compile..." > test_swpc_rb.diff
+	@echo "test_swpc_compile..." > test_swpc_rcm_gm.diff
+	@echo "test_swpc_compile..." > test_swpc_rcm_ie.diff
+	@echo "test_swpc_compile..." > test_swpc_rcm_rb.diff
 	${MAKE} test_swpc_compile
-	@echo "test_swpc_rundir..." >> test_swpc_gm.diff
-	@echo "test_swpc_rundir..." >> test_swpc_ie.diff
-	@echo "test_swpc_rundir..." >> test_swpc_rb.diff
+	@echo "test_swpc_rundir..." >> test_swpc_rcm_gm.diff
+	@echo "test_swpc_rundir..." >> test_swpc_rcm_ie.diff
+	@echo "test_swpc_rundir..." >> test_swpc_rcm_rb.diff
 	${MAKE} test_swpc_rundir
-	@echo "test_swpc_run..." >> test_swpc_gm.diff
-	@echo "test_swpc_run..." >> test_swpc_ie.diff
-	@echo "test_swpc_run..." >> test_swpc_rb.diff
+	@echo "test_swpc_run..." >> test_swpc_rcm_gm.diff
+	@echo "test_swpc_run..." >> test_swpc_rcm_ie.diff
+	@echo "test_swpc_run..." >> test_swpc_rcm_rb.diff
 	${MAKE} test_swpc_run
-	@echo "test_swpc_restart..." >> test_swpc_gm.diff
-	@echo "test_swpc_restart..." >> test_swpc_ie.diff
-	@echo "test_swpc_restart..." >> test_swpc_rb.diff
+	@echo "test_swpc_restart..." >> test_swpc_rcm_gm.diff
+	@echo "test_swpc_restart..." >> test_swpc_rcm_ie.diff
+	@echo "test_swpc_restart..." >> test_swpc_rcm_rb.diff
 	${MAKE} test_swpc_restart
-	@echo "test_swpc_check..." >> test_swpc_gm.diff
-	@echo "test_swpc_check..." >> test_swpc_ie.diff
-	@echo "test_swpc_check..." >> test_swpc_rb.diff
+	@echo "test_swpc_check..." >> test_swpc_rcm_gm.diff
+	@echo "test_swpc_check..." >> test_swpc_rcm_ie.diff
+	@echo "test_swpc_check..." >> test_swpc_rcm_rb.diff
 	${MAKE} test_swpc_check
 
 test_swpc_compile:
@@ -507,32 +507,32 @@ test_swpc_check:
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/log_e20140410-000200.log \
 		Param/SWPC/TestOutput/log_e20140410-000200.log \
-		> test_swpc_gm.diff)
+		> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/magnetometers_e20140410-000200.mag \
 		Param/SWPC/TestOutput/magnetometers_e20140410-000200.mag \
-		>> test_swpc_gm.diff)
+		>> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=2e-4 -a=1e-5 \
 		${TESTDIR}/GM/IO2/mag_grid_e20140410-000300.out \
 		Param/SWPC/TestOutput/mag_grid_e20140410-000300.out \
-		>> test_swpc_gm.diff)
+		>> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 -a=1e-8 \
 		${TESTDIR}/GM/IO2/geoindex_e20140410-000200.log \
 		Param/SWPC/TestOutput/geoindex_e20140410-000200.log \
-		>> test_swpc_gm.diff)
+		>> test_swpc_rcm_gm.diff)
 	-@(${DIFFNUM} -b -r=1e-5 \
 		${TESTDIR}/IE/ionosphere/IE_t140410_000200.log \
 		Param/SWPC/TestOutput/IE_t140410_000200.log \
-		> test_swpc_ie.diff)
+		> test_swpc_rcm_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-4 -a=5e-5 \
 		${TESTDIR}/IE/ionosphere/it140410_000300_000.idl \
 		Param/SWPC/TestOutput/it140410_000300_000.idl.gz \
-		>> test_swpc_ie.diff)
+		>> test_swpc_rcm_ie.diff)
 	-@(${DIFFNUM} -b -r=1e-3 \
                 ${TESTDIR}/RB/plots/20140410_000300_e.fls \
 		Param/SWPC/TestOutput/RB_20140410_000300_e.fls.gz \
-		> test_swpc_rb.diff)
-	ls -l test_swpc_??.diff
+		> test_swpc_rcm_rb.diff)
+	ls -l test_swpc_rcm_??.diff
 
 ### test_swpc_multiion: GM+IE+IM ###
 
