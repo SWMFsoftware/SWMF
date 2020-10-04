@@ -439,7 +439,7 @@ in the SWMF. Default value is 0.
 </command>
 
 <command name="VERBOSE">
-	<parameter name="iVarTest" type="integer" input="select">
+	<parameter name="lVerbose" type="integer" input="select">
 		<option name="errors and warnings only" value="0" />
 		<option name="normal"                   value="1" default="T"/>
 		<option name="calls on test processor"  value="10" />
@@ -606,7 +606,7 @@ time. In steady state mode there is no limit on the time step, and
 components can be called at different frequencies.
 Components which are not used in a session can be switched off.
 
-<command name="COMPONENTMAP" multiple="F" alias="LAYOUT">
+<command name="#COMPONENTMAP" multiple="F" alias="LAYOUT">
   <foreach values="$_Components">
     <parameter name="CompMap" type="strings" min="1" max="5">
       <part name="NameComp"  type="string"  length="2" required="T"/>
@@ -653,7 +653,7 @@ compatibility) in the now depreciated LAYOUT.in file.
 </command>
 
 <command name="COMPONENT" multiple="T">
-	<parameter name="NameComp" type="string" input="options">
+	<parameter name="NameComp" type="string" input="select">
 		<option name="SC" default="T"/>
 		<option name="IH" />
 		<option name="OH" />
@@ -689,7 +689,7 @@ are used.
 </command>
 
 <command name="CYCLE" multiple="T">
-	<parameter name="NameComp" type="string" input="options">
+	<parameter name="NameComp" type="string" input="select">
 		<option name="SC" default="T"/>
 		<option name="IH" />
 		<option name="OH" />
@@ -1019,7 +1019,7 @@ The default is no coupling between the components.
 </command>
 
 <command name="COUPLETIME" multiple="T">
-	<parameter name="NameComp" type="string" input="options">
+	<parameter name="NameComp" type="string" input="select">
 		<option name="SC" default="T"/>
 		<option name="IH" />
 		<option name="OH" />
