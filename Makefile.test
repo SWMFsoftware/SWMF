@@ -1271,13 +1271,13 @@ test13_check:
 ### test14: OH/BATSRUS (single-ion) coupled with PT/AMPS
 
 test14:
-	@echo "test14_compile..." > test14_oh.diff
+	@echo "test14_compile..." > test14_ohpt.diff
 	${MAKE} test14_compile
-	@echo "test14_rundir..." >> test14_oh.diff
+	@echo "test14_rundir..." >> test14_ohpt.diff
 	${MAKE} test14_rundir
-	@echo "test14_run..." >> test14_oh.diff
+	@echo "test14_run..." >> test14_ohpt.diff
 	${MAKE} test14_run
-	@echo "test14_check..." >> test14_oh.diff
+	@echo "test14_check..." >> test14_ohpt.diff
 	${MAKE} test14_check
 
 test14_compile:
@@ -1307,13 +1307,13 @@ test14_check:
 ### test14_1d: OH/BATSRUS (single-ion) coupled with PT/AMPS
 
 test14_1d:
-	@echo "test14_1d_compile..." > test14_1d_oh.diff
+	@echo "test14_1d_compile..." > test14_1d_ohpt.diff
 	${MAKE} test14_1d_compile
-	@echo "test14_1d_rundir..." >> test14_1d_oh.diff
+	@echo "test14_1d_rundir..." >> test14_1d_ohpt.diff
 	${MAKE} test14_1d_rundir
-	@echo "test14_1d_run..." >> test14_1d_oh.diff
+	@echo "test14_1d_run..." >> test14_1d_ohpt.diff
 	${MAKE} test14_1d_run
-	@echo "test14_1d_check..." >> test14_1d_oh.diff
+	@echo "test14_1d_check..." >> test14_1d_ohpt.diff
 	${MAKE} test14_1d_check
 
 test14_1d_compile:
@@ -1343,13 +1343,13 @@ test14_1d_check:
 ### test14pui: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS
 
 test14pui:
-	@echo "test14pui_compile..." > test14pui_oh.diff
+	@echo "test14pui_compile..." > test14pui_ohpt.diff
 	${MAKE} test14pui_compile
-	@echo "test14pui_rundir..." >> test14pui_oh.diff
+	@echo "test14pui_rundir..." >> test14pui_ohpt.diff
 	${MAKE} test14pui_rundir
-	@echo "test14pui_run..." >> test14pui_oh.diff
+	@echo "test14pui_run..." >> test14pui_ohpt.diff
 	${MAKE} test14pui_run
-	@echo "test14pui_check..." >> test14pui_oh.diff
+	@echo "test14pui_check..." >> test14pui_ohpt.diff
 	${MAKE} test14pui_check
 
 test14pui_compile:
@@ -1379,13 +1379,13 @@ test14pui_check:
 ### test14pui1d: OH/BATSRUS with PUI (multi-ion) coupled with PT/AMPS in shock tube
 
 test14pui1d:
-	@echo "test14pui1d_compile..." > test14pui1d_oh.diff
+	@echo "test14pui1d_compile..." > test14pui1d_ohpt.diff
 	${MAKE} test14pui1d_compile
-	@echo "test14pui1d_rundir..." >> test14pui1d_oh.diff
+	@echo "test14pui1d_rundir..." >> test14pui1d_ohpt.diff
 	${MAKE} test14pui1d_rundir
-	@echo "test14pui1d_run..." >> test14pui1d_oh.diff
+	@echo "test14pui1d_run..." >> test14pui1d_ohpt.diff
 	${MAKE} test14pui1d_run
-	@echo "test14pui1d_check..." >> test14pui1d_oh.diff
+	@echo "test14pui1d_check..." >> test14pui1d_ohpt.diff
 	${MAKE} test14pui1d_check
 
 test14pui1d_compile:
