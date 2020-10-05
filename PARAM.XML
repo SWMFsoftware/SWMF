@@ -653,25 +653,28 @@ compatibility) in the now depreciated LAYOUT.in file.
 </command>
 
 <command name="COMPONENT" multiple="T">
-	<parameter name="NameComp" type="string" input="select">
-		<option name="SC" default="T"/>
-		<option name="IH" />
-		<option name="OH" />
-		<option name="LC" />
-		<option name="SP" />
-		<option name="GM" />
-		<option name="IM" />
-		<option name="LA" />
-		<option name="RB" />
-		<option name="PS" />
-		<option name="IE" />
-		<option name="UA" />
-	</parameter>
-	<parameter name="UseComp" type="logical" default="T"/>
-	<rule expr="$_Registered{$NameComp} or not $_Components">
-		Component must be registered.
-	</rule>
-	<set name="_UsedComp{$NameComp}" type="logical" value="$UseComp"/>
+  <parameter name="NameComp" type="string" input="select">
+    <option name="CZ" />
+    <option name="EE" />
+    <option name="GM" default="T"/>
+    <option name="IE" />
+    <option name="IH" />
+    <option name="IM" />
+    <option name="OH" />
+    <option name="PC" />
+    <option name="PS" />
+    <option name="PT" />
+    <option name="PW" />
+    <option name="RB" />
+    <option name="SC" />
+    <option name="SP" />
+    <option name="UA" />
+  </parameter>
+  <parameter name="UseComp" type="logical" default="T"/>
+  <rule expr="$_Registered{$NameComp} or not $_Components">
+    Component must be registered.
+  </rule>
+  <set name="_UsedComp{$NameComp}" type="logical" value="$UseComp"/>
 
 #COMPONENT
 IE			NameComp
@@ -689,21 +692,24 @@ are used.
 </command>
 
 <command name="CYCLE" multiple="T">
-	<parameter name="NameComp" type="string" input="select">
-		<option name="SC" default="T"/>
-		<option name="IH" />
-		<option name="OH" />
-		<option name="LC" />
-		<option name="SP" />
-		<option name="GM" />
-		<option name="IM" />
-		<option name="LA" />
-		<option name="RB" />
-		<option name="PS" />
-		<option name="IE" />
-		<option name="UA" />
-        </parameter>
-	<parameter name="DnRun" type="integer" min="1" default="1"/>
+  <parameter name="NameComp" type="string" input="select">
+    <option name="CZ" />
+    <option name="EE" />
+    <option name="GM" default="T"/>
+    <option name="IE" />
+    <option name="IH" />
+    <option name="IM" />
+    <option name="OH" />
+    <option name="PC" />
+    <option name="PS" />
+    <option name="PT" />
+    <option name="PW" />
+    <option name="RB" />
+    <option name="SC" />
+    <option name="SP" />
+    <option name="UA" />
+  </parameter>
+  <parameter name="DnRun" type="integer" min="1" default="1"/>
 
 #CYCLE
 IH			NameComp
@@ -1019,22 +1025,24 @@ The default is no coupling between the components.
 </command>
 
 <command name="COUPLETIME" multiple="T">
-	<parameter name="NameComp" type="string" input="select">
-		<option name="SC" default="T"/>
-		<option name="IH" />
-		<option name="OH" />
-		<option name="LC" />
-		<option name="SP" />
-		<option name="GM" />
-		<option name="IM" />
-		<option name="LA" />
-		<option name="RB" />
-		<option name="PS" />
-		<option name="IE" />
-		<option name="UA" />
-		<option name="PC" />
-	</parameter>
-	<parameter name="DoCoupleOnTime" type="logical" default="T"/>
+  <parameter name="NameComp" type="string" input="select">
+    <option name="CZ" />
+    <option name="EE" />
+    <option name="GM" default="T"/>
+    <option name="IE" />
+    <option name="IH" />
+    <option name="IM" />
+    <option name="OH" />
+    <option name="PC" />
+    <option name="PS" />
+    <option name="PT" />
+    <option name="PW" />
+    <option name="RB" />
+    <option name="SC" />
+    <option name="SP" />
+    <option name="UA" />
+  </parameter>
+  <parameter name="DoCoupleOnTime" type="logical" default="T"/>
 
 #COUPLETIME
 GM			NameComp
