@@ -1032,6 +1032,7 @@ The default is no coupling between the components.
 		<option name="PS" />
 		<option name="IE" />
 		<option name="UA" />
+		<option name="PC" />
 	</parameter>
 	<parameter name="DoCoupleOnTime" type="logical" default="T"/>
 
