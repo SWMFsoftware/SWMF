@@ -16,14 +16,8 @@ PT			NameComp2
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
-#GRAVITY
-F			UseGravity
-
-#BODY
-F			UseBody
-
-#PLOTFILENAME
-year			NameMaxTimeUnit
+#GRIDBLOCK
+2			MaxBlock
 
 #GRID
 1			nRootBlock1
@@ -36,6 +30,9 @@ year			NameMaxTimeUnit
 -200			zMin
 200			zMax
 
+#BODY
+F			UseBody
+
 #OUTERBOUNDARY
 periodic		TypeBc1
 periodic		TypeBc2
@@ -43,6 +40,12 @@ periodic		TypeBc3
 periodic		TypeBc4
 periodic		TypeBc5
 periodic		TypeBc6
+
+#GRAVITY
+F			UseGravity
+
+#PLOTFILENAME
+year			NameMaxTimeUnit
 
 #SCHEME
 1			nOrder
