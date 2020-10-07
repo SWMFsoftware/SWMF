@@ -10,6 +10,13 @@ F  			IsTimeAccurate
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)

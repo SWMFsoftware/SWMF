@@ -25,6 +25,13 @@ F			IsTimeAccurate
 
 #BEGIN_COMP SC ---------------------------------------------------------------
 
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
+
 #GRIDBLOCKALL
 1200			MaxBlock
 
@@ -281,6 +288,13 @@ IH			NameTarget
 -1.0			DtCouple
 
 #BEGIN_COMP IH ---------------------------------------------------------------
+
+#UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
 
 #GRIDBLOCKALL
 6800			MaxBlock
