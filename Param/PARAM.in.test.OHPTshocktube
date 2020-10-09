@@ -55,9 +55,6 @@ Rusanov			TypeFlux
 T			UseDtFixed
 1 year  		DtFixedDim
 
-#UPDATECHECK
-F			UseUpdateCheck
-
 #NONCONSERVATIVE
 F			UseNonConservative
 

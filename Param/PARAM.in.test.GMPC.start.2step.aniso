@@ -141,7 +141,7 @@ dt			= 0.2*dtmax   = 1.066
   8			nI
   8			nJ
   1			nK
-800			MinBlockALL
+800			MinBlockAll
 
 #FIXEDTIMESTEP
 T			UseDtFixed

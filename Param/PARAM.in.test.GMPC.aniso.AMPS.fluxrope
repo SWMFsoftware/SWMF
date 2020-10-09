@@ -50,9 +50,6 @@ NONE			TypeIoUnit
 #NORMALIZATION
 NONE			TypeNormalization
 
-#UPDATECHECK
-F			UseUpdateCheck
-
 #NONCONSERVATIVE
 T			UseNonConservative
 
@@ -60,7 +57,7 @@ T			UseNonConservative
 8			nI
 8			nJ
 4			nK
-1000			MinBlockALL
+1000			MinBlockAll
 
 #GRID
 32			nRootBlock1

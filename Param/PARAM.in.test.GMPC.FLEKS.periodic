@@ -168,7 +168,7 @@ total Pe+Pi1+Pi2 constant
   8			nI
   8			nJ
   1			nK
-800			MinBlockALL
+800			MinBlockAll
 
 #FIXEDTIMESTEP
 T			UseDtFixed

@@ -41,9 +41,6 @@ NONE			TypeNormalization
 1.0			IonCharge [e]
 1.0			ElectronTemperatureRatio
 
-#UPDATECHECK
-F			UseUpdateCheck
-
 #NONCONSERVATIVE
 T			UseNonConservative
 
@@ -51,7 +48,7 @@ T			UseNonConservative
 4			nI
 4			nJ
 4			nK
-2050			MinBlockALL
+2050			MinBlockAll
 
 #GRID
 16			nRootBlock1

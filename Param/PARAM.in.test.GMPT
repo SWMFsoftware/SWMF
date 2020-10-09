@@ -38,7 +38,7 @@ T			DoSaveRestart
 8			nI
 8			nJ
 8			nK
-700			MinBlockALL
+700			MinBlockAll
 
 #GRID
 1			nRootBlockX

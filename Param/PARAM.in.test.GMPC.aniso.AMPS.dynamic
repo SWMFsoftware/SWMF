@@ -149,7 +149,7 @@ SHOCKPOSITION
    8			nI
    8			nJ
    8			nK
-1000			MinBlockALL
+1000			MinBlockAll
 
 #FIXEDTIMESTEP
 T			UseDtFixed
