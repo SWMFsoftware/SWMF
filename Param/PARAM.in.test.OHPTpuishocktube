@@ -12,7 +12,7 @@ T			IsTimeAccurate
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
-1 year   		DtCouple
+1 year			DtCouple
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
@@ -74,7 +74,7 @@ T			DoSaveInitial
 1			nPlotFile
 y=0 MHD idl		StringPlot
 -1			DnSavePlot
-1 year	         	DtSavePlot
+1 year			DtSavePlot
 -1.0			DxSavePlot
 
 #USERSWITCH
