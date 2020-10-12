@@ -92,6 +92,7 @@ my $indexfile = "index.html";
 my $changefile = "test.diff";
 my $codefile = "code.diff";
 my $manerrorfile = "manual.err";
+my $paramerrorfile = "param.err";
 my $lastpassfile = "lastpass.txt";
 
 my %tests;
@@ -263,18 +264,13 @@ foreach $day (@days){
 	# Make a row for the log files
     	$file = "$day/$machine/$logfile";
     	if(-s $file){
-    	    $Table .= "    <A HREF=$file TARGET=swmf_test_log>log file".
-    		"</A></td>\n";
+    	    $Table .= "    <A HREF=$file TARGET=swmf_test_log>log file</A>"
+		. "</td>\n";
     	}else{
     	    $Table .= "    <font color=red>no log</font></td>\n";
     	};
     }
     $Table .= "  </tr>\n";
-
-    #$Table .= "  <tr>\n<td>log files</td>\n";
-    #foreach $machine (@machines){
-    #}
-
     
     # Print a row for each test
     my $test;
@@ -379,6 +375,27 @@ open TEMPLATEFILE, $templatefile;
 while(<TEMPLATEFILE>){
     last  if /_TABLES_/;
     print FILE $_;
+}
+
+# Check for errors in PARAM.in and PARAM.XML files
+foreach my $machine (@machines){
+    my $file = $days[0]."/$machine/$logfile";
+    next unless -s $file;
+    my $Error = `grep -C2 '^Error at line' $file`;
+    $Error .= `grep -C2 '^TestParam_ERROR' $file`;
+    $Error .= `grep -C2 '^XML ERROR' $file`;
+    $Error .= `grep -C2 'PARAM.in_orig_' $file`;
+    next unless $Error;
+    open ERR, ">$paramerrorfile";
+    print ERR $Error;
+    close ERR;    
+    print FILE "
+<h3><A HREF=$paramerrorfile TARGET=swmf_param_error>
+<font color=red>Errors in PARAM.in and/or PARAM.XML files</font></A> See the 
+<A HREF=$file TARGET=swmf_test_log>logfile</A> for more info.
+</h3>
+";
+    last;
 }
 
 if(-s $manerrorfile){
