@@ -49,8 +49,8 @@ die "$ERROR could not find $ConfigPl" unless -f $ConfigPl;
 
 # Global variables containing the SWMF settings
 my $Precision;
-my %Version;
-my %GridSize;
+my %Version;  # per component
+my %Settings; # per component
 
 &get_settings;
 
@@ -92,7 +92,7 @@ foreach $Comp (sort keys %Layout){
     }
     my $check = 
 	"$CheckParamScript -c=$Comp -n=$nProc{$Comp} -p=$Precision ".
-	"-x=$xml -g=$GridSize{$Comp} $ParamFile";
+	"-x=$xml -s=$Settings{$Comp} $ParamFile";
     print "$check\n" if $Verbose;
     $Error = `$check`;
     # Hash of reformatted files
@@ -119,19 +119,27 @@ exit $IsError;
 
 sub get_settings{
 
-    my $Settings = `./$ConfigPl -show | head -10; ./$ConfigPl -s`;
+    my $Settings = `./$ConfigPl`;
 
-    die "$ERROR $ConfigPl -s did not provide the settings\n" unless $Settings;
+    die "$ERROR $ConfigPl did not provide the settings\n" unless $Settings;
 
     my $Installed;
+    my $Comp;
     foreach (split(/\n/,$Settings)){
 	$Installed = 1  if /is installed/;
 	$Precision = $1 if /(single|double) precision/;
-	if(/^\t([A-Z][A-Z])\/(\w+)/){
-	    my $Comp=$1; my $Version=$2;
-	    $Version{$Comp}  = $Version;
-	    $GridSize{$Comp} = $1 if /grid:\s*(.*)/i;
+	$Comp = "" if /^([A-Z][A-Z])\/Empty$/;  # Empty version
+	if(/^([A-Z][A-Z])\/(\w+):$/){
+	    $Comp = $1;
+	    $Version{$Comp} = $2;
 	}
+	if($Comp and s/.*://){
+	    $Settings{$Comp} .= "$1:$2," while s/(\w+)\s*=\s*(\d+)//;
+	}
+    }
+    # Remove trailing commas
+    foreach $Comp (keys %Settings){
+	chop $Settings{$Comp};
     }
 
     die "$ERROR SWMF is not installed based on $Settings" unless $Installed;
@@ -143,7 +151,7 @@ sub get_settings{
        "Installed = $Installed\n".
        "Precision = $Precision\n".
        "Versions  = ",join('; ',%Version),"\n".
-       "GridSize  = ",join('; ',%GridSize),"\n" if $Verbose;
+       "Settings  = ",join('; ',%Settings),"\n" if $Verbose;
 
 }
 
