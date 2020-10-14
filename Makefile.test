@@ -1078,8 +1078,8 @@ test9:
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -g=SC:6,8,8,IH:8,8,8
-	./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi,ng=2
-	./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB,ng=3
+	./Config.pl -o=SC:u=Awsom,e=MhdWavesPeAnisoPi,ng=2
+	./Config.pl -o=IH:u=Awsom,e=MhdWavesPeAnisoPiSignB,ng=3
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS

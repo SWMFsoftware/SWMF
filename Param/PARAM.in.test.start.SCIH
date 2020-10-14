@@ -1,22 +1,22 @@
 For a single-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=AwsomFluids,e=MhdWaves
-./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesSignB
+./Config.pl -o=SC:u=Awsom,e=MhdWaves
+./Config.pl -o=IH:u=Awsom,e=MhdWavesSignB
 ./Config.pl -g=SC:6,4,4,400,1,IH:4,4,4,400,1
 
 For a two-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPe
-./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeSignB
+./Config.pl -o=SC:u=Awsom,e=MhdWavesPe
+./Config.pl -o=IH:u=Awsom,e=MhdWavesPeSignB
 ./Config.pl -g=SC:6,4,4,400,1,IH:4,4,4,400,1
 
 For a three-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=AwsomFluids,e=MhdWavesPeAnisoPi
-./Config.pl -o=IH:u=AwsomFluids,e=MhdWavesPeAnisoPiSignB
+./Config.pl -o=SC:u=Awsom,e=MhdWavesPeAnisoPi
+./Config.pl -o=IH:u=Awsom,e=MhdWavesPeAnisoPiSignB
 ./Config.pl -g=SC:6,8,8,400,1,IH:8,8,8,400,1
 
 Begin session: 1
