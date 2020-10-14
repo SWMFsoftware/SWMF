@@ -2,14 +2,14 @@ For a single-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 ./Config.pl -o=SC:u=Awsom,e=MhdWaves
-./Config.pl -o=IH:u=Awsom,e=MhdWavesSignB
+./Config.pl -o=IH:u=Awsom,e=MhdWaves
 ./Config.pl -g=SC:6,4,4,IH:4,4,4
 
 For a two-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 ./Config.pl -o=SC:u=Awsom,e=MhdWavesPe
-./Config.pl -o=IH:u=Awsom,e=MhdWavesPeSignB
+./Config.pl -o=IH:u=Awsom,e=MhdWavesPe
 ./Config.pl -g=SC:6,4,4,IH:4,4,4
 
 For a three-temperature solar wind simulation with 5th order scheme use
@@ -17,7 +17,7 @@ For a three-temperature solar wind simulation with 5th order scheme use
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 ./Config.pl -g=SC:6,8,8,IH:8,8,8
 ./Config.pl -o=SC:u=Awsom,e=MhdWavesPeAnisoPi,ng=3
-./Config.pl -o=IH:u=Awsom,e=MhdWavesPeAnisoPiSignB,ng=3
+./Config.pl -o=IH:u=Awsom,e=MhdWavesPeAnisoPi,ng=3
 
 RESTART SC for boundary & couple with IH for 0 steps
 RESTART IH to run 5th order scheme
