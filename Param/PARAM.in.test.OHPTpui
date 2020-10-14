@@ -26,8 +26,8 @@ T			UseBody
 30.0			rBody (AU)
 0.01			BodyNDim [/cc] number density for ions
 1.09E5			BodyTDim [K] temperature for ions
-9.45E-4			BodyNDim(2) for PUIs
-8.20E6			BodyTdim(2)
+9.45E-4			BodyNDim for PUIs
+8.20E6			BodyTDim
 
 #NORMALIZATION
 USER			TypeNormalization

@@ -52,8 +52,8 @@ NONE			TypeNormalization
 
 #PLASMA
 1.0			FluidMass 1 [amu]
-4.0			IonCharge 2 [amu]
-1.0			ElectronTemperatureRatio 1 [e]
+4.0			FluidMass 2 [amu]
+1.0			IonCharge 1 [e]
 1.0			IonCharge 2 [e]
 1.0			ElectronTemperatureRatio
 
