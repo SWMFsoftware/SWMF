@@ -28,7 +28,7 @@ module CON_coupler
   public :: CoordSystemType ! Extend grid descriptor type with coordinate info
   integer, parameter :: lTypeCoord    = 3
   integer, parameter :: lTypeGeometry = 15
-  integer, parameter :: lNameVar      = 200
+  integer, parameter :: lNameVar      = 500
 
   type CoordSystemType    
      real, dimension(:),pointer    :: Coord1_I, Coord2_I, Coord3_I
