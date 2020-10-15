@@ -350,9 +350,6 @@ currentsheet		StringRefine
 5			nLevel
 initial			StringShape
 
-#THINCURRENTSHEET
-T			DoThinCurrentSheet
-
 #INNERBOUNDARY
 buffergrid		TypeBcBody
 

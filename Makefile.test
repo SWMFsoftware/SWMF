@@ -1151,7 +1151,7 @@ test10:
 test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPeAnisoPi,ng=2
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPiSignB,ng=2
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPi,ng=2
 	./Config.pl -g=SC:6,4,4,IH:4,4,4
 	${MAKE} SWMF
 	make PIDL
