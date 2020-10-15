@@ -1015,7 +1015,7 @@ test8:
 test8_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeSignB,ng=2
+	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe,ng=2
 	./Config.pl -g=SC:4,4,4,IH:4,4,4
 	${MAKE} SWMF
 	make PIDL
