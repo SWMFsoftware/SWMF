@@ -91,7 +91,7 @@ user			TypeBcBody
 
 #MINIMUMPRESSURE
 1e-8			pMinDim
-1e-8			PeMin
+1e-8			PeMinDim
 
 #TIMESTEPPING
 1			nStage

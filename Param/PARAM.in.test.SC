@@ -191,11 +191,11 @@ ascii			TypeFile
 
 #MINIMUMPRESSURE
 1.0E-9			pMinDim
-1.0e-9			peMinDim
+1.0e-9			PeMinDim
 
 #MINIMUMTEMPERATURE
 5.0e4			TminDim
-5.0e4
+5.0e4			TeMinDim
 
 
 #SCHEME
