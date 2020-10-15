@@ -21,24 +21,39 @@ our $MakefileDefOrig = 'CON/Makefile.def';
 our @Arguments = @ARGV;
 our $CloneOnly;
 
+# Figure out remote git server
+my $remote = `git config remote.origin.url`; $remote =~ s/\/SWMF\n//;
+my $umichgitlab = ($remote eq 'git@gitlab.umich.edu:swmf_software');
+
 # Hash of model names with corresponding component name
-my %component = (
-    "FSAM"          => "CZ", 
-    "BATSRUS"       => "GM", 
-    "Ridley_serial" => "IE", 
-    "CIMI2"         => "IM", 
-    "HEIDI"         => "IM", 
-    "RCM2"          => "IM", 
-    "ALTOR"         => "PC", 
-    "IPIC3D2"       => "PC",
-    "FLEKS"         => "PC", 
-    "DGCPM"         => "PS", 
-    "AMPS_PT"       => "PT", 
-    "AMPS_PC"       => "PC", 
-    "PWOM"          => "PW", 
-    "RBE"           => "RB",
-    "MFLAMPA"       => "SP",
-    "GITM2"         => "UA");
+my %component;
+
+if($umichgitlab){
+    %component = (
+	"FSAM"          => "CZ", 
+	"BATSRUS"       => "GM", 
+	"Ridley_serial" => "IE", 
+	"CIMI2"         => "IM", 
+	"HEIDI"         => "IM", 
+	"RCM2"          => "IM", 
+	"ALTOR"         => "PC", 
+	"IPIC3D2"       => "PC",
+	"FLEKS"         => "PC", 
+	"DGCPM"         => "PS", 
+	"AMPS_PT"       => "PT", 
+	"AMPS_PC"       => "PC", 
+	"PWOM"          => "PW", 
+	"RBE"           => "RB",
+	"MFLAMPA"       => "SP",
+	"GITM2"         => "UA");
+}else{
+    %component = (
+	"BATSRUS"       => "GM", 
+	"Ridley_serial" => "IE", 
+	"RBE"           => "RB",
+	"CIMI2"         => "IM", 
+	"RCM2"          => "IM");
+}	
 
 my $History;
 my @models;
@@ -63,11 +78,12 @@ foreach (@Arguments){
 }
 
 # Create Git clone command
+
 my $gitclone;
 $gitclone  = "sleep $Sleep; " if $Sleep;
 $gitclone .= "git clone";
 $gitclone .= " --depth=1" unless $History;
-$gitclone .= " git\@gitlab.umich.edu:swmf_software";
+$gitclone .= ' '.$remote;
 
 my $repo;
 foreach $repo ("share", "util", @models){
@@ -76,8 +92,12 @@ foreach $repo ("share", "util", @models){
     $repo1 =~ s/AMPS_P[TC]/AMPS/; # remove _PC, _PT
     my $model = "$component/$repo1";
     `cd $component; $gitclone/$repo1` unless -d $model;
-    `cd GM/BATSRUS; $gitclone/srcBATL` 
-	if $model eq "GM/BATSRUS" and not -d "$model/srcBATL";
+    if($model eq "GM/BATSRUS"){
+	`cd GM/BATSRUS; $gitclone/srcBATL` 
+			    if not -d "$model/srcBATL";
+	#`cd GM/BATSRUS; $gitclone/srcUserExtra` 
+	#		    if not -d "$model/srUserExtra" and $umichgitlab;
+    }
 }
 
 my $config     = "share/Scripts/Config.pl";
