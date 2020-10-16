@@ -22,8 +22,10 @@ our @Arguments = @ARGV;
 our $CloneOnly;
 
 # Figure out remote git server
-my $remote = `git config remote.origin.url`; $remote =~ s/\/SWMF.git\n//;
-my $umichgitlab = (index($remote, "lab.umich.edu") != -1);
+my $remote = `git config remote.origin.url`; $remote =~ s/\/SWMF(\.git)?\n//;
+my $umichgitlab = ($remote =~ /gitlab\.umich\.edu/);
+
+#print "remote=$remote umichgitlab=$umichgitlab\n";
 
 # Hash of model names with corresponding component name
 my %component;
