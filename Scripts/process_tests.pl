@@ -384,7 +384,7 @@ foreach my $machine (@machines){
     my $Error = `grep -C2 '^Error at line' $file`;
     $Error .= `grep -C2 '^TestParam_ERROR' $file`;
     $Error .= `grep -C2 '^XML ERROR' $file`;
-    $Error .= `grep -C2 'PARAM.in_orig_' $file`;
+    $Error .= `grep -C2 '/PARAM.in_orig_' $file`;
     next unless $Error;
     open ERR, ">$paramerrorfile";
     print ERR $Error;
