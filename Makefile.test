@@ -408,6 +408,7 @@ test2_run:
 	cd ${TESTDIR}; ./Restart.pl
 
 test2_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.GMIERCM_Multi PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
@@ -1032,6 +1033,7 @@ test8_run:
 	cd ${TESTDIR}; ./Restart.pl
 
 test8_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH_threadbc PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
@@ -1104,6 +1106,7 @@ test9_run:
 	cd ${TESTDIR}; ./Restart.pl -i RESULTS/run_start/RESTART
 	
 test9_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIH PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
@@ -1457,6 +1460,7 @@ test15_run:
 	cd ${TESTDIR}; ./Restart.pl
 
 test15_restart:
+	cd ${TESTDIR}; mv PARAM.in PARAM.in_start; rm -f PARAM.in_orig_
 	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.SCIHSP PARAM.in
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_restart
