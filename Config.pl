@@ -372,15 +372,21 @@ sub set_options{
 
     # Create a %Options{CompID} hash from the Options string
     my %Options;
+    my $ChargeStateString;
+    if($Options =~ /cs=(.*)/) {$ChargeStateString=$1};
+    if($Options =~ /cs=(.*),.*=/) {$ChargeStateString=$1};
+    my $ChargeStateOrig = $ChargeStateString;
+    $ChargeStateString =~ s/,/\;$1/g;
+    $Options =~ s/$ChargeStateOrig/$ChargeStateString/;
     my @Options = split( /,($ValidComp):/, $Options);
-
     die "$ERROR -o=...$Options has incorrect format\n" unless @Options;
-
+    
     my $i;
     for ($i=1; $i<=$#Options; $i+=2){
 	my $Comp = $Options[$i];
 	my $Option = $Options[$i+1];
 	$Option =~ s/,([a-z])/ \-$1/ig;  # Replace ',x' with ' -x' for multiple options
+	$Option =~ s/$ChargeStateString/$ChargeStateOrig/;
 	$Options{$Comp}=$Option;
     }
 
