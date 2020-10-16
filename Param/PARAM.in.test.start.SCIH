@@ -119,7 +119,7 @@ stochasticheating		TypeHeatPartitioning
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
--1.0			TauGLobalSi
+-1.0			TauInstabilitySi
 1e5			TauGlobalSi
 
 #HEATCONDUCTION
@@ -474,8 +474,8 @@ stochasticheating		TypeHeatPartitioning
 
 #ANISOTROPICPRESSURE
 F			UseConstantTau
--1.0			TauGLobalSi
-1e5			TauGlobalSi
+-1.0			TauInstabilitySi
+1e5			TauGLobalSi
 
 #RESISTIVITY
 T			UseResistivity
