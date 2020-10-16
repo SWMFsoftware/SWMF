@@ -97,8 +97,8 @@ foreach $repo ("share", "util", @models){
     if($model eq "GM/BATSRUS"){
 	`cd GM/BATSRUS; $gitclone/srcBATL` 
 			    if not -d "$model/srcBATL";
-	#`cd GM/BATSRUS; $gitclone/srcUserExtra` 
-	#		    if not -d "$model/srUserExtra" and $umichgitlab;
+	`cd GM/BATSRUS; $gitclone/srcUserExtra` 
+			    if not -d "$model/srUserExtra" and $umichgitlab;
     }
 }
 
