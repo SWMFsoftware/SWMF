@@ -332,29 +332,22 @@ cleanclones: ENV_CHECK
 	rm -f ??/BATSRUS/src/Makefile
 	mv GM/BATSRUS/src/Makefile.safe GM/BATSRUS/src/Makefile
 
+TAR = tar --exclude .git -rf tmp.tar
+
 dist:
 	@echo ' '
 	@echo ' NOTE: All "run" or other created directories not included!'
 	@echo ' '
 	${CONFIG_PL} -uninstall
 	-rm -rf */*/run_test
-	tar -cf tmp.tar  README
-	tar -rf tmp.tar  PARAM.XML
-	tar -rf tmp.tar  Makefile 
-	tar -rf tmp.tar  Makefile.test          #^CMP IF TESTING
-	tar -rf tmp.tar  output                 #^CMP IF TESTING
-	tar -rf tmp.tar  Copyrights
-	tar -rf tmp.tar  Config.pl
-	tar -rf tmp.tar  doc			#^CMP IF DOC
-	tar -rf tmp.tar  Param
-	tar -rf tmp.tar  Scripts
-	tar -rf tmp.tar  share
-	tar -rf tmp.tar  util
-	if([ -d gui ]); then tar -rf tmp.tar  gui; fi
-	tar -rf tmp.tar  CON
-	@if([ -d ESMF ]); then tar -rf tmp.tar  ESMF; fi #^CMP IF ESMF
+	tar -cf tmp.tar README README.markdown PARAM.XML LICENSE.txt Config.pl Makefile
+	${TAR} Makefile.test output		#^CMP IF TESTING
+	${TAR} doc				#^CMP IF DOC
+	${TAR} Copyrights Param Scripts CON share util
+	if([ -d gui ]); then ${TAR} gui; fi
+	@if([ -d ESMF ]); then ${TAR} ESMF; fi #^CMP IF ESMF
 	for i in `ls -d [A-Z][A-Z]`; \
-		do (echo Tarring $$i; tar -rf tmp.tar $$i); done
+		do (echo Tarring $$i; ${TAR} $$i); done
 	@echo ' '
 	gzip tmp.tar
 	mv tmp.tar.gz SWMF_v${VERSION}_`date +%Y%b%d_%H%M.tgz`
