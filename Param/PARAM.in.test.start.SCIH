@@ -8,15 +8,15 @@ For a single-temperature solar wind simulation, configure SWMF with
 For a two-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=MhdWavesPe
-./Config.pl -o=IH:u=Awsom,e=MhdWavesPe
+./Config.pl -o=SC:u=Awsom,e=Awsom
+./Config.pl -o=IH:u=Awsom,e=Awsom
 ./Config.pl -g=SC:6,4,4,IH:4,4,4
 
 For a three-temperature solar wind simulation, configure SWMF with
 
 ./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-./Config.pl -o=SC:u=Awsom,e=MhdWavesPeAnisoPi
-./Config.pl -o=IH:u=Awsom,e=MhdWavesPeAnisoPi
+./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi
+./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi
 ./Config.pl -g=SC:6,8,8,IH:8,8,8
 
 Begin session: 1
