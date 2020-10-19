@@ -904,7 +904,7 @@ test5:
 test5_compile:
 	./Config.pl -v=Empty,EE/BATSRUS,SC/BATSRUS
 	./Config.pl -o=EE:u=Swarm,e=MhdEos,ng=2
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
+	./Config.pl -o=SC:u=AwsomR,e=Awsom,ng=2
 	./Config.pl -g=EE:10,10,10,SC:4,4,4
 	${MAKE} SWMF
 	make PIDL
@@ -1015,8 +1015,8 @@ test8:
 
 test8_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe,ng=2
+	./Config.pl -o=SC:u=AwsomR,e=Awsom,ng=2
+	./Config.pl -o=IH:u=AwsomR,e=Awsom,ng=2
 	./Config.pl -g=SC:4,4,4,IH:4,4,4
 	${MAKE} SWMF
 	make PIDL
@@ -1080,8 +1080,8 @@ test9:
 test9_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
 	./Config.pl -g=SC:6,8,8,IH:8,8,8
-	./Config.pl -o=SC:u=Awsom,e=MhdWavesPeAnisoPi,ng=2
-	./Config.pl -o=IH:u=Awsom,e=MhdWavesPeAnisoPi,ng=3
+	./Config.pl -o=SC:u=Awsom,e=AwsomAnisoPi,ng=2
+	./Config.pl -o=IH:u=Awsom,e=AwsomAnisoPi,ng=3
 	${MAKE} SWMF
 	make PIDL
 	make FDIPS
@@ -1153,8 +1153,8 @@ test10:
 
 test10_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPeAnisoPi,ng=2
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPeAnisoPi,ng=2
+	./Config.pl -o=SC:u=AwsomR,e=AwsomAnisoPi,ng=2
+	./Config.pl -o=IH:u=AwsomR,e=AwsomAnisoPi,ng=2
 	./Config.pl -g=SC:6,4,4,IH:4,4,4
 	${MAKE} SWMF
 	make PIDL
@@ -1439,8 +1439,8 @@ test15:
 
 test15_compile:
 	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS,SP/MFLAMPA
-	./Config.pl -o=SC:u=ScChromo,e=MhdWavesPe,ng=2
-	./Config.pl -o=IH:u=ScChromo,e=MhdWavesPe,ng=2
+	./Config.pl -o=SC:u=AwsomR,e=Awsom,ng=2
+	./Config.pl -o=IH:u=AwsomR,e=Awsom,ng=2
 	./Config.pl -g=SC:4,4,4,IH:4,4,4,SP:2000
 	${MAKE} SWMF
 	make PIDL
