@@ -53,7 +53,6 @@ if($umichgitlab){
 	"BATSRUS"       => "GM", 
 	"Ridley_serial" => "IE", 
 	"RBE"           => "RB",
-	"CIMI2"         => "IM", 
 	"RCM2"          => "IM");
 }	
 
