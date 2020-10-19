@@ -480,7 +480,7 @@ IHBATSRUS: IH/BATSRUS/src/Makefile \
 		touch Makefile.DEPEND
 	cd IH/BATSRUS; \
 		perl -i -pe 's/GM/IH/' Config.pl; \
-		${CONFIG_PL} -u=Ih -e=Mhd
+		${CONFIG_PL} -u=Awsom -e=Awsom
 
 #^CMP END IH
 
@@ -569,7 +569,7 @@ SCBATSRUS: SC/BATSRUS/src/Makefile \
 	touch SC/BATSRUS/srcInterface/Makefile.DEPEND
 	cd SC/BATSRUS; \
 		perl -i -pe 's/GM/SC/' Config.pl; \
-		${CONFIG_PL} -install=c -u=Sc -e=MhdCorona
+		${CONFIG_PL} -install=c -u=Awsom -e=Awsom
 
 #^CMP END SC
 
