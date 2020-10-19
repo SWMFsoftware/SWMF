@@ -1516,7 +1516,7 @@ test_sp_check:
 
 
 ### test16: GM/BATSRUS+PC/FLEKS. BATSRUS only provides the initial condition.
-###         FLEKS runs with periodic boundary conditions.
+###         FLEKS runs with periodic boundary conditions. 
 
 test16:
 	@echo "test16_compile..." > test16.diff
