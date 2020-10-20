@@ -15,6 +15,9 @@ if(-d SWMF)then
     cd SWMF
     # uninstall now to remove the manuals created yesterday
     ./Config.pl -uninstall
+    # There were created after clone during install and normally kept after uninstall
+    rm -rf gitinfo.txt PC/ALTOR/srcBATL_orig UA/GITM2/srcData GM/BATSRUS/src/ModUser.f90.safe \
+	    share/Python/swmfpy
     cd ..
     mv SWMF SWMF_yesterday
 endif
