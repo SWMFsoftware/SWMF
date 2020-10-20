@@ -844,19 +844,15 @@ test_swpc_amps_check:
 test4:
 	@echo "test4_compile..." > test04_gm.diff
 	@echo "test4_compile..." > test04_ie.diff
-	@echo "test4_compile..." > test04_im_heidi.diff
 	${MAKE} test4_compile
 	@echo "test4_rundir..." >> test04_gm.diff
 	@echo "test4_rundir..." >> test04_ie.diff
-	@echo "test4_rundir..." >> test04_im_heidi.diff
 	${MAKE} test4_rundir
 	@echo "test4_run..." >> test04_gm.diff
 	@echo "test4_run..." >> test04_ie.diff
-	@echo "test4_run..." >> test04_im_heidi.diff
 	${MAKE} test4_run
 	@echo "test4_check..." >> test04_gm.diff
 	@echo "test4_check..." >> test04_ie.diff
-	@echo "test4_check..." >> test04_im_heidi.diff
 	${MAKE} test4_check
 
 test4_compile:
@@ -884,10 +880,6 @@ test4_check:
 		${TESTDIR}/RESULTS/IE/IE*.log \
 		output/test4/IE.log \
 		> test04_ie.diff)
-	-@(${DIFFNUM} -b -t -a=re-3 -a=1e-30 \
-                ${TESTDIR}/RESULTS/IM/hydrogen/test1_h_prs.002 \
-                output/test4/IM_test1_h_prs.002\
-                > test04_im_heidi.diff)
 	ls -l test04_*.diff
 
 ### test5: Eruptive Event generator coupled to the corona ###
