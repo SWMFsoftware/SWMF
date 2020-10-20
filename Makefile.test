@@ -74,7 +74,6 @@ test_swmf:
 	-@(${MAKE} test7 TESTDIR=run_test07)
 	-@(${MAKE} test8 TESTDIR=run_test08)
 	-@(${MAKE} test9 TESTDIR=run_test09)
-	-@(${MAKE} test10 TESTDIR=run_test10)
 	-@(${MAKE} test12)
 	-@(${MAKE} test13 TESTDIR=run_test13)
 	-@(${MAKE} test14 TESTDIR=run_test14)
