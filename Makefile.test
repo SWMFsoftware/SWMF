@@ -1255,11 +1255,9 @@ test13_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
 
 test13_check:
-	cp output/test13/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
-	${TESTDIR}/PT/plots/amps.ref
 	-(${DIFFNUM} -b \
 		${TESTDIR}/PT/plots/amps.dat \
-		${TESTDIR}/PT/plots/amps.ref \
+		output/test13/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
 		> test13_pt.diff)
 		ls -l test13*.diff
 
