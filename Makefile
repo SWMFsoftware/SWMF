@@ -423,7 +423,11 @@ EE/BATSRUS/src/Makefile:
 	cd GM/BATSRUS/srcInterface/; \
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		../../../EE/BATSRUS/srcInterface
-	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/	  
+	cp GM/BATSRUS/srcUser/*.f90 EE/BATSRUS/srcUser/
+	if [ -d GM/BATSRUS/srcUserExtra ]; then \
+		cp GM/BATSRUS/srcUserExtra/ModUserEe*.f90 \
+		   GM/BATSRUS/srcUserExtra/ModUserSwarm*.f90 EE/BATSRUS/srcUser/; \
+	fi
 	cp GM/BATSRUS/srcEquation/*.f90 EE/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
@@ -461,6 +465,10 @@ IH/BATSRUS/src/Makefile:
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		../../../IH/BATSRUS/srcInterface
 	cp GM/BATSRUS/srcUser/*.f90 IH/BATSRUS/srcUser/
+	if [ -d GM/BATSRUS/srcUserExtra ]; then \
+		cp GM/BATSRUS/srcUserExtra/ModUserAwsom*.f90 \
+		   GM/BATSRUS/srcUserExtra/ModUserIh*.f90 IH/BATSRUS/srcUser/; \
+	fi
 	cp GM/BATSRUS/srcEquation/*.f90 IH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
@@ -500,6 +508,10 @@ OH/BATSRUS/src/Makefile:
 		cp ModGridDescriptor.f90 ModBuffer.f90 \
 		../../../OH/BATSRUS/srcInterface/
 	cp GM/BATSRUS/srcUser/*.f90 OH/BATSRUS/srcUser/
+	if [ -d GM/BATSRUS/srcUserExtra ]; then \
+		cp GM/BATSRUS/srcUserExtra/ModUserOuterHelio*.f90 \
+		   GM/BATSRUS/srcUserExtra/ModUserOh*.f90 OH/BATSRUS/srcUser/; \
+	fi
 	cp GM/BATSRUS/srcEquation/*.f90 OH/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
@@ -541,7 +553,11 @@ SC/BATSRUS/src/Makefile:
 		mkdir src srcBATL srcUser srcEquation
 	cd GM/BATSRUS/src; cp *.f90 *.h Makefile* ../../../SC/BATSRUS/src
 	cd GM/BATSRUS/srcBATL; cp *.f90 Makefile* ../../../SC/BATSRUS/srcBATL
-	cp GM/BATSRUS/srcUser/*.f90 SC/BATSRUS/srcUser/	  
+	cp GM/BATSRUS/srcUser/*.f90 SC/BATSRUS/srcUser/
+	if [ -d GM/BATSRUS/srcUserExtra ]; then \
+		cp GM/BATSRUS/srcUserExtra/ModUserAwsom*.f90 \
+		   GM/BATSRUS/srcUserExtra/ModUserSc*.f90 SC/BATSRUS/srcUser/; \
+	fi
 	cp GM/BATSRUS/srcEquation/*.f90 SC/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
 		cp Makefile.def Makefile.conf PARAM.XML Config.pl \
