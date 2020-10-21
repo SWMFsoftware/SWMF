@@ -258,7 +258,7 @@ T 			UseDecay
 T			DoRestart
 
 #IONOSPHERE
-8			iConductanceModel
+5			iConductanceModel
 F			UseFullCurrent
 F			UseFakeRegion2
 178.0			F107Flux
