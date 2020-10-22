@@ -438,7 +438,7 @@ ellipse			TypeBoundary
 
 #SETBOUNDARYPARAMS
 2.0			DeltaRmax
-2.0			MltLimit
+2.0			DeltaMLTmax
 
 #DECAY
 T			UseDecay
