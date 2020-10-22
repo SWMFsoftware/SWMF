@@ -436,6 +436,10 @@ T			UseSeparatePlotFiles
 #TYPEBOUNDARY
 ellipse			TypeBoundary
 
+#SETBOUNDARYPARAMS
+0.75			DeltaRmax
+1.0			MltLimit
+
 #DECAY
 T			UseDecay
 10 hour			DecayTimescale [s]
