@@ -437,8 +437,8 @@ T			UseSeparatePlotFiles
 ellipse			TypeBoundary
 
 #SETBOUNDARYPARAMS
-0.75			DeltaRmax
-1.0			MltLimit
+2.0			DeltaRmax
+2.0			MltLimit
 
 #DECAY
 T			UseDecay

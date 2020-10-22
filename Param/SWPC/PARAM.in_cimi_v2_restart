@@ -71,7 +71,6 @@ F			DoCoupleOnTime
 
 #BEGIN_COMP GM ---------------------------------------------------------------
 
-
 #INCLUDE
 GM/restartIN/restart.H
 
@@ -259,6 +258,10 @@ T			UseSeparatePlotFiles
 
 #TYPEBOUNDARY
 ellipse			TypeBoundary
+
+#SETBOUNDARYPARAMS
+2.0			DeltaRmax
+2.0			MltLimit
 
 #DECAY
 T			UseDecay
