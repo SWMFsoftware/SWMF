@@ -12,39 +12,43 @@ test_help:
 	@echo "    test MPIRUN=               (run tests serially)"
 	@echo "    test NPFLAG=-n NP=3        (run tests with ${PARALLEL} -n 3)"
 	@echo "    test PARALLEL='mpiexec'    (run tests with mpiexec)"
+	@echo "    test8_compile              (configure and compile test8)"
+	@echo "    test8_rundir               (create run directory for test8)"
+	@echo "    test8_run NP=4             (run test8 with 4 MPI )"
+	@echo "    test8_check                (check test8 results)"
+	@echo "    test8_check BLESS=YES      (bless test8 resutls = update references)"
+	@echo "    test8 TESTDIR=run_test08   (run test8 in run_test08 directory)"
 	@echo "    test_share_library         (run share/Library tests)"
 	@echo "    test_util                  (run util/ tests)"
 	@echo "    test_batl                  (run BATL tests if BATL/ is present)"
 	@echo "    test_comp                  (run component tests)"
 	@echo "    test_swmf                  (run SWMF tests below)"
-	@echo "    test_pw                    (run PW/PWOM test)"
-	@echo "    test_pw BLESS=YES          (update test_pw reference solution)"
-	@echo "    test_ps                    (run PS/DGCPM test)"
-	@echo "    test_sp                    (run SP/MFLAMPA test)"
-	@echo "    test_swpc                  (run GM-IE-IM test as used by SWPC)"
-	@echo "    test_swpc_build            (create SWPC_build and run test_swpc)"
-	@echo "    test_swpc_multiion         (run multiion GM-IE-IM test for SWPC)"
-	@echo "    test_swpc_multispecies     (run multispecies GM-IE-IM test for SWPC)"
-	@echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI test for SWPC)"
-	@echo "    test1 TESTDIR=run_test01   (run GM-IE-PW test in run_test01 directory)"
-	@echo "    test4                      (run GM-IE-HEIDI test)"
-	@echo "    test5                      (run EE-SC test)"
-	@echo "    test7                      (run IH-OH test)"
-	@echo "    test8                      (run Thread SC-IH coupling test)"
-	@echo "    test9                      (run SC-IH coupling test with SC restart)"
-	@echo "    test10                     (run 3T solar wind test)"
-	@echo "    test11                     (run GM-PT coupler test)"
-	@echo "    test12                     (run GM-PC tests)"
-	@echo "    test13                     (run GM-PT test: Europa)"
-	@echo "    test14                     (run OH-PT test)"
-	@echo "    test14_1d                  (run OH-PT test in shock tube)"
-	@echo "    test14pui                  (run OH-PT test with PUI)"
-	@echo "    test14pui1d                (run OH-PT test with PUI in shock tube)"
-	@echo "    test15                     (run SC-IH-SP test)"
-	@echo "    test15_build               (configure SC-IH-SP, run test)"
-	@echo "    test16                     (run GM-FLEKS test: FLEKS uses periodic boundary condition)"	
-	@echo "    test17                     (run GM-FLEKS test: 2D Alfven wave)"
-	@echo "    test18                     (run GM-FLEKS test: 3D reconnection)"
+	@(if [ -d PW/PWOM    ]; then echo "    test_pw                    (run PW/PWOM test)"; fi)
+	@(if [ -d PS/DGCPM   ]; then echo "    test_ps                    (run PS/DGCPM test)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test_sp                    (run SP/MFLAMPA test)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc                  (run GM-IE-IM/RCM2 test as used by SWPC)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_build            (create SWPC_build and run test_swpc)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multiion         (run multiion GM-IE-IM/RCM2 SWPC test)"; fi)
+	@(if [ -d IM/RCM2    ]; then echo "    test_swpc_multispecies     (run multispecies GM-IE-IM/RCM2 SWPC test)"; fi)
+	@(if [ -d IM/CIMI2   ]; then echo "    test_swpc_cimi             (run anisotropic GM-IE-IM/CIMI2 SWPC test)"; fi)
+	@(if [ -d PW/PWOM    ]; then echo "    test1                      (run GM-IE-PW/PWOM test)"; fi)
+	@(if [ -d IM/HEIDI   ]; then echo "    test4                      (run GM-IE-IM/HEIDI test)"; fi)
+	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test5                      (run EE-SC test)"; fi)
+	@(if [ -d GM/BATSRUS/srcUserExtra ]; then echo "    test7                      (run IH-OH test)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test8                      (run SC-IH coupling test with AWSoM-R)"; fi)
+	@(if [ -d GM/BATSRUS ]; then echo "    test9                      (run SC-IH coupling test with AWSoM)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test11                     (run GM-PT/AMPS coupler test)"; fi)
+	@(if [ -d PC/AMPS    ]; then echo "    test12                     (run GM-PC/AMPS and IPIC3D2 tests)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test13                     (run GM-PT/AMPS test: Europa)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test14                     (run OH-PT/AMPS test)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test14_1d                  (run OH-PT/AMPS test in 1D)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test14pui                  (run OH-PT/AMPS test with PUI)"; fi)
+	@(if [ -d PT/AMPS    ]; then echo "    test14pui1d                (run OH-PT/AMPS test with PUI in 1D)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test15                     (run SC-IH-SP/MFLAMPA test)"; fi)
+	@(if [ -d SP/MFLAMPA ]; then echo "    test15_build               (configure SC-IH-SP/MFLAMPA, run test15)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test16                     (run GM-PC/FLEKS test: periodic FLEKS)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test17                     (run GM-PC/FLEKS test: 2D Alfven wave)"; fi)
+	@(if [ -d PC/FLEKS   ]; then echo "    test18                     (run GM-PC/FLEKS test: 3D reconnection)"; fi)
 	@echo "    test_check                 (collect test results into test_swmf.res)"
 
 .NOTPARALLEL: test
@@ -53,55 +57,56 @@ test:
 	@rm -f *.diff
 	-@(${MAKE} test_share_library)
 	-@(${MAKE} test_util)
-	-@(${MAKE} test_batl)
 	-@(${MAKE} test_comp)
 	-@(${MAKE} test_swmf)
+	-@(if [ -d BATL ]; then ${MAKE} test_batl; fi)
 	-@(${MAKE} test_check)
-
 
 .NOTPARALLEL: test_swmf
 
 test_swmf:
-	-@(${MAKE} test_ps TESTDIR=run_test_ps)
-	-@(${MAKE} test_sp TESTDIR=run_test_sp)
-	-@(${MAKE} test_swpc TESTDIR=run_test_swpc)
-	-@(${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion)
-	-@(${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies)
-	-@(${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi)
-	-@(${MAKE} test1 TESTDIR=run_test01)
-	-@(${MAKE} test4 TESTDIR=run_test04)
-	-@(${MAKE} test5 TESTDIR=run_test05)
-	-@(${MAKE} test7 TESTDIR=run_test07)
-	-@(${MAKE} test8 TESTDIR=run_test08)
-	-@(${MAKE} test9 TESTDIR=run_test09)
+	-@(if [ -d PS/DGCPM   ]; then ${MAKE} test_ps TESTDIR=run_test_ps; fi)
+	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test_sp TESTDIR=run_test_sp; fi)
+	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc TESTDIR=run_test_swpc; fi)
+	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multiion TESTDIR=run_test_swpc_multiion; fi)
+	-@(if [ -d IM/RCM2    ]; then ${MAKE} test_swpc_multispecies TESTDIR=run_test_swpc_multispecies; fi)
+	-@(if [ -d IM/CIMI2   ]; then ${MAKE} test_swpc_cimi TESTDIR=run_test_swpc_cimi; fi)
+	-@(if [ -d PW/PWOM    ]; then ${MAKE} test1 TESTDIR=run_test01; fi)
+	-@(if [ -d IM/HEIDI   ]; then ${MAKE} test4 TESTDIR=run_test04; fi)
+	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test5 TESTDIR=run_test05; fi)
+	-@(if [ -d GM/BATSRUS/srcUserExtra ]; then ${MAKE} test7 TESTDIR=run_test07; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test8 TESTDIR=run_test08; fi)
+	-@(if [ -d GM/BATSRUS ]; then ${MAKE} test9 TESTDIR=run_test09; fi)
 	-@(${MAKE} test12)
-	-@(${MAKE} test13 TESTDIR=run_test13)
-	-@(${MAKE} test14 TESTDIR=run_test14)
-	-@(${MAKE} test14_1d TESTDIR=run_test14_1d)
-	-@(${MAKE} test14pui TESTDIR=run_test14pui)
-	-@(${MAKE} test14pui1d TESTDIR=run_test14pui1d)
-	-@(${MAKE} test15 TESTDIR=run_test15)
-	-@(${MAKE} test16 TESTDIR=run_test16)
-	-@(${MAKE} test17 TESTDIR=run_test17)
-	-@(${MAKE} test18 TESTDIR=run_test18)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test13 TESTDIR=run_test13; fi)	
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14 TESTDIR=run_test14; fi)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14_1d TESTDIR=run_test14_1d; fi)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui TESTDIR=run_test14pui; fi)
+	-@(if [ -d PT/AMPS    ]; then ${MAKE} test14pui1d TESTDIR=run_test14pui1d; fi)
+	-@(if [ -d SP/MFLAMPA ]; then ${MAKE} test15 TESTDIR=run_test15; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test16 TESTDIR=run_test16; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test17 TESTDIR=run_test17; fi)
+	-@(if [ -d PC/FLEKS   ]; then ${MAKE} test18 TESTDIR=run_test18; fi)
 	./Config.pl -noamrex
-
-# Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
 # Setting BLESS=YES or Y will copy the solution into the reference solution
 BLESS=NO
 
 DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
-DIFF_FILES = share/Library/test/*.diff util/*/src*/*.diff BATL/*.diff ??/*/*.diff *.diff
+DIFF_FILES = share/Library/test/*.diff util/*/src*/*.diff ??/*/*.diff *.diff
+
+# Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
 test_check:
 	-@cat ${DIFF_FILES} > /dev/null
 	-@ls -ltr  ${DIFF_FILES} > test_swmf.res
+	-@(if [ -f BATL/test11.diff ]; then ls -ltr BATL/*.diff >> test_swmf.res; fi)
 	@cat test_swmf.res
 	@echo '=============================================================='\
 		>> test_swmf.res
 	-@head -100 ${DIFF_FILES} >> test_swmf.res
+	-@(if [ -f BATL/test11.diff ]; then head -100 BATL/*.diff >> test_swmf.res; fi)
 	@echo ' '
 	@echo 'See test_swmf.res and test_swmf.log for more detail...'
 	@echo ' '
@@ -125,9 +130,7 @@ test_util:
 ### Unit tests of the BATL library
 
 test_batl:
-	@if([ -d BATL ]); then \
-		cd BATL; ${MAKE} test; \
-	fi
+	cd BATL; ${MAKE} test
 
 ### Component tests ###
 
@@ -1715,15 +1718,14 @@ test_ramscb_check:
 .NOTPARALLEL: test12
 
 test12:
-	-$(MAKE) test12_aniso_AMPS           TESTDIR=run_test12_aniso_AMPS
-	-$(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr
-	-$(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic
-#-$(MAKE) test12_aniso_AMPS_dynamic_fluxrope   TESTDIR=run_test12_aniso_AMPS_dynamic_fluxrope
-	-$(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp
-	./Config.pl -noopenmp -o=PC:openmp=off
-	-$(MAKE) test12_aniso TESTDIR=run_test12_aniso
-	-$(MAKE) test12_iso   TESTDIR=run_test12_iso
-	-$(MAKE) test12_3d    TESTDIR=run_test12_3d
+	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS TESTDIR=run_test12_aniso_AMPS; fi)
+	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_divE_corr TESTDIR=run_test12_aniso_AMPS_divE_corr; fi)
+	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_dynamic   TESTDIR=run_test12_aniso_AMPS_dynamic; fi)
+	-@(if [ -d PC/AMPS ]; then $(MAKE) test12_aniso_AMPS_openmp    TESTDIR=run_test12_aniso_AMPS_openmp; fi)
+	-@(if [ -d PC/AMPS ]; then ./Config.pl -noopenmp -o=PC:openmp=off; fi)
+	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_aniso TESTDIR=run_test12_aniso; fi)
+	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_iso   TESTDIR=run_test12_iso;   fi)
+	-@(if [ -d PC/IPIC3D2 ]; then $(MAKE) test12_3d    TESTDIR=run_test12_3d;    fi)
 
 ######## test PC coupled with GM/BATSRUS #########
 test12_aniso_AMPS_dynamic_fluxrope:
