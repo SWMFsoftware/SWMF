@@ -26,61 +26,6 @@ my %HtmlMachine = (
 # List of platforms
 my @machines = sort keys %WeightMachine;
 
-# List of scores ALL, CCHM (solar), CWMM (magnetospheric), CRASH (HEDP)
-my @ScoreTypes = ("ALL", "CCHM", "CWMM", "CRASH");
-my %WeightTest = (
-
-    "CCHM:test02_gm"                      => "1.0",
-    "CCHM:test02_sc"                      => "0.5",
-    "CCHM:test02_ih"                      => "0.5",
-    "CCHM:test05_ee"                      => "1.0",
-    "CCHM:test07_ih"                      => "1.0",
-    "CCHM:test07_oh"                      => "1.0",
-    "CCHM:test08_ih"                      => "1.0",
-    "CCHM:test08_sc_thread"               => "1.0",
-    "CCHM:test09_ih"                      => "1.0",
-    "CCHM:test09_sc_chromo"               => "1.0",
-    "CCHM:test10_ih"                      => "1.0",
-    "CCHM:test10_sc"                      => "1.0",
-    "CCHM:GM/BATSRUS/test_corona"         => "1.0",    
-    "CCHM:GM/BATSRUS/test_coronasph"      => "1.0",
-    "CCHM:GM/BATSRUS/test_fluxemergence"  => "1.0",
-    "CCHM:GM/BATSRUS/test_outerhelio"     => "1.0",
-
-    "CWMM:test01_gm"                      => "1.0",
-    "CWMM:test01_ie"                      => "1.0",
-    "CWMM:test01_pw"                      => "1.0",
-    "CWMM:test03_gm"                      => "1.0",
-    "CWMM:test03_ie"                      => "1.0",
-    "CWMM:test03_im_rcm"                  => "1.0",
-    "CWMM:test04_gm"                      => "1.0",
-    "CWMM:test04_ie_rim"                  => "1.0",
-    "CWMM:test04_im_heidi"                => "1.0",
-    "CWMM:test06_gm"                      => "1.0",
-    "CWMM:test06_ie"                      => "1.0",
-    "CWMM:test06_im_crcm"                 => "1.0",
-    "CWMM:test08_gm_multi"                => "1.0",
-    "CWMM:test08_ie"                      => "1.0",
-    "CWMM:test08_im_rcm_multi"            => "1.0",
-    "CWMM:test_ccmc_small_gm"             => "1.0",
-    "CWMM:test_ccmc_small_ie"             => "1.0",
-    "CWMM:test_ccmc_small_rb"             => "1.0",
-    "CWMM:test_pw"                        => "0.5",
-    "CWMM:test_rb"                        => "0.5",
-    "CWMM:GM/BATSRUS/test_earthsph"       => "0.1",
-    "CWMM:GM/BATSRUS/test_magnetometer"   => "0.1",
-    "CWMM:IM/HEIDI/test"                  => "0.5",
-    "CWMM:PW/PWOM/test_Earth"             => "0.5",
-    "CWMM:RB/RBE/test"                    => "0.5",
-
-    "CRASH:GM/BATSRUS/test_eosgodunov"    => "1.0",
-    "CRASH:GM/BATSRUS/test_graydiffusion" => "1.0", 
-    "CRASH:GM/BATSRUS/test_hyades2d"      => "1.0",
-    "CRASH:GM/BATSRUS/test_laserpackage"  => "1.0",
-    "CRASH:GM/BATSRUS/test_levelset"      => "1.0",
-
-    );
-
 my $ERROR = "ERROR in process_tests.pl";
 
 my $templatefile = "process_tests.html";
@@ -239,14 +184,15 @@ foreach $day (@days){
 
     my $dayname = $day;
     $dayname =~ 
-	s/SWMF_TEST_RESULTS\/\d\d\d\d\//Test results and scores for 7pm /;
+	s/SWMF_TEST_RESULTS\/\d\d\d\d\//Test results for 7pm /;
+    $dayname .= '. Score: ';
 
-    my %MaxScores;
-    my %Scores;
+    my $MaxScores;
+    my $Scores;
 
     # Start table with first row containing the machine names
     $Table .=	
-	"<h3>$dayname<br><FONT COLOR=GREEN>_SCORE_</FONT></h3>\n".
+	"<h3>$dayname<FONT COLOR=GREEN>_SCORE_</FONT></h3>\n".
 	"<p>\n".
 	"<table border=3>\n".
 	"  <tr>".
@@ -304,13 +250,8 @@ foreach $day (@days){
 
 		    # Add up results multiplied by various weights
 		    my $WeightMachine = $WeightMachine{$machine};
-		    $MaxScores{"ALL"} += $WeightMachine;
-		    $Scores{"ALL"}    += $WeightMachine*$score;
-		    foreach my $type (@ScoreTypes){
-			$MaxScore = $WeightMachine*$WeightTest{"$type:$test"};
-			$MaxScores{$type} += $MaxScore;
-			$Scores{$type}    += $MaxScore*$score;
-		    }
+		    $MaxScores += $WeightMachine;
+		    $Scores    += $WeightMachine*$score;
 		}
 
 		if($day eq $days[0] or $day eq $days[1]){
@@ -347,18 +288,13 @@ foreach $day (@days){
     }
 
     # Calculate score per centages and save them into file and table
-    my $score; 
-    foreach my $type (@ScoreTypes){
-	$score .= "$type: " 
-	    . sprintf("%.1f", 100*$Scores{$type}/($MaxScores{$type}+1e-30))
-	    . '%, ';
-    }
-    chop($score); chop($score);
+    my $score = sprintf("%.1f", 100*$Scores/($MaxScores+1e-30)). '%';
+
     $Table =~ s/_SCORE_/$score/;
 
     open SCORE, ">$day/all_scores.txt";
     $score =~ s/, /\n/g;
-    print SCORE "$score\n";
+    print SCORE "ALL: $score\n";
     close SCORE;
 
     $Table .= "  </tr>\n</table>\n";
@@ -444,21 +380,6 @@ foreach my $machine (sort keys %WeightMachine){
 }
 
 
-my $oldtype;
-foreach my $typetest (sort keys %WeightTest){
-    my $test = $typetest;
-    $test =~ s/(\w+)://;
-    my $type = $1;
-    if($type ne $oldtype){
-	print FILE "
-PROJECT $type:
-   weight - test
-   ---------------------------------------
-";
-	$oldtype = $type;
-    }
-    print FILE "      $WeightTest{$typetest} - $test\n";
-}
 print FILE "</pre></b>\n";
 close FILE;
 
