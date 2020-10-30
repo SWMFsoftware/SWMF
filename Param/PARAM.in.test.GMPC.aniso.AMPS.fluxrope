@@ -87,16 +87,16 @@ box			StringShape
 1.0			zMaxBox
 
 #UNIFORMSTATE
-100			Rho
-0.005			Ux
-0.0025			Uy
-0.0			Uz
-0.0			Bx
-0.0			By
-0.0			Bz
-0.0			Hyp
-5e-4			Pe
-2.5e-3			P
+100			StateVar Rho
+0.005			StateVar Ux
+0.0025			StateVar Uy
+0.0			StateVar Uz
+0.0			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+0.0			StateVar Hyp
+5e-4			StateVar Pe
+2.5e-3			StateVar P
 
 #PLASMA
 1.0			FluidMass

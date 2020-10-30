@@ -61,20 +61,20 @@ NONE			TypeNormalization
 T			UseNonConservative
 
 #UNIFORMSTATE
-0.5			Rho
-0.03			Ux1
-0.04			Uy1
-0.0			Uz1
-0.2			Bx
-0.0			By
-0.0			Bz
-5.12E-4			Pe
-2.56e-4			p1
-0.5			Rho2
-0.03			Ux2
-0.04			Uy2
-0.0			Uz2
-2.56e-4			p2
+0.5			StateVar Rho
+0.03			StateVar Ux1
+0.04			StateVar Uy1
+0.0			StateVar Uz1
+0.2			StateVar Bx
+0.0			StateVar By
+0.0			StateVar Bz
+5.12E-4			StateVar Pe
+2.56e-4			StateVar p1
+0.5			StateVar Rho2
+0.03			StateVar Ux2
+0.04			StateVar Uy2
+0.0			StateVar Uz2
+2.56e-4			StateVar p2
 
 #USERINPUTBEGIN -----------------------------------
 

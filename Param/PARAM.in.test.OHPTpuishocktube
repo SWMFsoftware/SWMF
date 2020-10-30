@@ -81,39 +81,39 @@ y=0 MHD idl		StringPlot
 +init +Sexpl		StringSwitch
 
 #UNIFORMSTATE
-0.01			Rho
--100			Ux
-0			Uy
-0			Uz
-0.01			Bx
-0.0			By
-0			Bz
-2.6E-13			P
-1E-3			Pu3Rho
--100			Pu3Ux
-0			Pu3Uy
-0			Pu3Uz
-1.01E-12		Pu3P
-1E-5			NeuRho
-0			NeuUx
-0			NeuUy
-0			NeuUz
-1E-16			NeuP
-1E-5			Ne2Rho
-0			Ne2Ux
-0			Ne2Uy
-0			Ne2Uz
-1E-16			Ne2P
-1E-5			Ne3Rho
-0			Ne3Ux
-0			Ne3Uy
-0			Ne3Uz
-1E-16			Ne3P
-0.18			Ne4Rho
-100			Ne4Ux
-0			Ne4Uy
-0			Ne4Uz
-1.6E-13			Ne4P
+0.01			StateVar Rho
+-100			StateVar Ux
+0			StateVar Uy
+0			StateVar Uz
+0.01			StateVar Bx
+0.0			StateVar By
+0			StateVar Bz
+2.6E-13			StateVar P
+1E-3			StateVar Pu3Rho
+-100			StateVar Pu3Ux
+0			StateVar Pu3Uy
+0			StateVar Pu3Uz
+1.01E-12		StateVar Pu3P
+1E-5			StateVar NeuRho
+0			StateVar NeuUx
+0			StateVar NeuUy
+0			StateVar NeuUz
+1E-16			StateVar NeuP
+1E-5			StateVar Ne2Rho
+0			StateVar Ne2Ux
+0			StateVar Ne2Uy
+0			StateVar Ne2Uz
+1E-16			StateVar Ne2P
+1E-5			StateVar Ne3Rho
+0			StateVar Ne3Ux
+0			StateVar Ne3Uy
+0			StateVar Ne3Uz
+1E-16			StateVar Ne3P
+0.18			StateVar Ne4Rho
+100			StateVar Ne4Ux
+0			StateVar Ne4Uy
+0			StateVar Ne4Uz
+1.6E-13			StateVar Ne4P
 
 #USERINPUTBEGIN -----------------------------------
 
