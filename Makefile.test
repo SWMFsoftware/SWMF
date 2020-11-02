@@ -1329,7 +1329,7 @@ test14_1d_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test14_1d_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
+	-(${DIFFNUM} -b -r=1e-3 -a=1e-21\
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
                 output/test14_1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
 		> test14_1d_ohpt.diff)
@@ -1401,7 +1401,7 @@ test14pui1d_run:
 	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
 
 test14pui1d_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-21 \
+	-(${DIFFNUM} -b -r=1e-3 -a=1e-21 \
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
                 output/test14pui1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
                 > test14pui1d_ohpt.diff)
