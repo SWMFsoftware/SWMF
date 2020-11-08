@@ -1091,8 +1091,6 @@ test9_rundir:
 	perl -i -pe 's/dipole11.out/map_1.out/' ${TESTDIR}/SC/FDIPS.in
 	perl -i -pe 's/#(CHANGEPOLARFIELD)/$$1/; s/20/90/ if /n(Theta|Phi)/' ${TESTDIR}/SC/FDIPS.in
 	cd ${TESTDIR}/SC; ${PARALLEL} ${NPFLAG} 4 ./FDIPS.exe > runlog_fdips
-	cd ${TESTDIR}/SC; ${MAGNETOGRAMDIR}/redistribute.pl fdips_bxyz_np010202.out fdips_bxyz.out
-	cd ${TESTDIR}/SC; rm -rf fdips_*_np*.out
 
 test9_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
