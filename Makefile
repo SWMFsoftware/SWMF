@@ -103,10 +103,6 @@ ENV_CHECK:
 	  exit 1; \
 	fi);
 
-# Regenerate README from the README.markdown file
-README: README.markdown
-	perl -pe '$$_ = "" if /\`\`\`/; s/\`//g' README.markdown > README
-
 #
 # install for the 1st time
 #
@@ -340,7 +336,7 @@ dist:
 	@echo ' '
 	${CONFIG_PL} -uninstall
 	-rm -rf */*/run_test
-	tar -cf tmp.tar README README.markdown PARAM.XML LICENSE.txt Config.pl Makefile
+	tar -cf tmp.tar README.md PARAM.XML LICENSE.txt Config.pl Makefile
 	${TAR} Makefile.test output		#^CMP IF TESTING
 	${TAR} doc				#^CMP IF DOC
 	${TAR} Copyrights Param Scripts CON share util
