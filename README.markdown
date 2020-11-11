@@ -21,8 +21,20 @@ Some data files used by the Center for Radiative Shock Hydrodynamics
 (CRASH) are in the `CRASH_data` repository.  If needed, it has to be
 placed into the home directory.
 
-Getting SWMF from Git (requires access to UM GitLab)
-----------------------------------------------------
+Getting the open-source MSTEM-QUDA from GitHub
+----------------------------------------------------------------
+Clone the SWMF from GitHub
+
+```bash
+cd {where_you_want_to_have_mstem-quda}
+git clone https://github.com/MSTEM-QUDA/SWMF
+```
+
+The rest of the repositories (share, util, BATSRUS ...)
+will be cloned from GitHub during the installation.
+
+Getting the full SWMF from UM GitLab (requires access)
+----------------------------------------------------------------
 
 Read the
 [GitLab instructions](http://herot.engin.umich.edu/~gtoth/SWMF/doc/GitLab_instructions.pdf)
@@ -82,14 +94,14 @@ scripts in the SWMF. For these platform/compiler combinations
 installation is very simple:
 
 ```bash
-Config.pl -install
+./Config.pl -install
 ```
 
 On other platforms the Fortran (and C) compilers should be explicitly
 given.  To see available choices, type
 
 ```bash
-Config.pl -compiler
+./Config.pl -compiler
 ```
 
 Then install the code with the selected Fortran (and default C)
@@ -102,13 +114,13 @@ Config.pl -install -compiler=gfortran
 A non-default C compiler can be added after a comma, e.g.
 
 ```bash
-Config.pl -install -compiler=mpxlf90,mpxlc
+./Config.pl -install -compiler=mpxlf90,mpxlc
 ```
 
 For machines with no MPI library, use
 
 ```bash
-Config.pl -install -nompi -compiler=....
+./Config.pl -install -nompi -compiler=....
 ```
 
 This will only allow serial execution, of course.
@@ -130,8 +142,7 @@ Create the manuals
 ------------------
 
 Please note that creating the PDF manuals requires that LaTeX
-(available through the command line) and ps2pdf be installed on your
-system.
+(available through the command line) is installed on your system.
 
 To create the PDF manuals type
 
@@ -198,10 +209,10 @@ You can also run an individual test. The list of available SWMF tests can be lis
 make test_help
 ```
 
-For example, to run test3 without MPI on a single core use
+For example, to run test1 without MPI on a single core use
 
 ```bash
-make -j test3 MPIRUN=
+make -j test1 MPIRUN=
 ```
 
 Copyright (C) 2002 Regents of the University of Michigan, portions
