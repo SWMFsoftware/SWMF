@@ -299,14 +299,27 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-5.0			DtSaveRestart
+1.0 year			DtSaveRestart
 
 #COUPLE2
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
-1.0			DtCouple
+1.0 year			DtCouple
+
+#BEGIN_COMP OH
+
+#SAVEPLOT
+1
+y=0 MHD tec
+-1
+1.0 year
+
+#UPDATECHECK
+F
+
+#END_COMP OH
 
 #STOP
 -1			MaxIter
-3.0			TimeMax
+10.0 year			TimeMax
