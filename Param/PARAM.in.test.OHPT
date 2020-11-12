@@ -299,27 +299,27 @@ T			IsTimeAccurate
 #SAVERESTART
 T			DoSaveRestart
 -1			DnSaveRestart
-1.0 year			DtSaveRestart
+1.0 year		DtSaveRestart
 
 #COUPLE2
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
-1.0 year			DtCouple
+1.0 year		DtCouple
 
-#BEGIN_COMP OH
+#BEGIN_COMP OH ---------------------------------------------------------------
 
 #SAVEPLOT
-1
-y=0 MHD tec
--1
-1.0 year
+1			nPlotFile
+y=0 MHD tec		StringPlot
+-1			DnSavePlot
+1.0 year		DtSavePlot
 
 #UPDATECHECK
-F
+F			UseUpdateCheck
 
-#END_COMP OH
+#END_COMP OH -----------------------------------------------------------------
 
 #STOP
 -1			MaxIter
-10.0 year			TimeMax
+10.0 year		TimeMax
