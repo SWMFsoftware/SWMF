@@ -624,7 +624,7 @@ contains
          (DnShowProgressLong >0 .and.  mod(nStep,DnShowProgressLong)==0))) then
 
        call get_time(TimeCurrentOut = TimeCurrent)
-       write(*,'(a,i8,a,g14.6,a,f10.2,a)')          &
+       write(*,'(a,i8,a,es14.6,a,f10.2,a)')         &
             'Progress:',                            &
             nStep,' steps,',                        &
             tSimulation,' s simulation time,',      &
