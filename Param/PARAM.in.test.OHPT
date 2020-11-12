@@ -10,13 +10,6 @@ F  			IsTimeAccurate
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
-#UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
@@ -248,8 +241,9 @@ T			DoSaveRestart
 
 #SCHEME
 2			nOrder
-Roe			TypeFlux
-mc			TypeLimiter
+Linde			TypeFlux
+minmod			TypeLimiter
+
 1.5			LimiterBeta
 
 ! 0.8 works fine for higher resolution
@@ -310,10 +304,15 @@ PT			NameComp2
 #BEGIN_COMP OH ---------------------------------------------------------------
 
 #SAVEPLOT
-1			nPlotFile
-y=0 MHD tec		StringPlot
+2			nPlotFile
+y=0 MHD idl		StringPlot
 -1			DnSavePlot
 1.0 year		DtSavePlot
+-1.0			DxSavePlot
+z=0 MHD idl		StringPlot
+-1			DnSavePlot
+1.0 year		DtSavePlot
+-1.0			DxSavePlot
 
 #UPDATECHECK
 F			UseUpdateCheck
