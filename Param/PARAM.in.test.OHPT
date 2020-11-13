@@ -1,6 +1,6 @@
 #COMPONENTMAP
 OH 0 -1 1		CompMap runs on all PE-s
-PT 1  2 1		CompMap runs on 1 or 2 PE-s
+PT 0  0 1		CompMap runs on 1 or 2 PE-s
 
 #DESCRIPTION
 Param/PARAM.in.test.OHPT: Couple single-ion OH with PT		StringDescription
@@ -9,6 +9,13 @@ Param/PARAM.in.test.OHPT: Couple single-ion OH with PT		StringDescription
 F  			IsTimeAccurate
 
 #BEGIN_COMP OH ---------------------------------------------------------------
+
+UPDATECHECK
+T			UseUpdateCheck
+40.			RhoMinPercent
+400.			RhoMaxPercent
+40.			pMinPercent
+400.			pMaxPercent
 
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
@@ -240,10 +247,11 @@ T			DoSaveRestart
 +source_expl -progress		StringSwitch
 
 #SCHEME
-2			nOrder
+1			nOrder
 Linde			TypeFlux
-minmod			TypeLimiter
 
+
+minmod			TypeLimiter
 1.5			LimiterBeta
 
 ! 0.8 works fine for higher resolution
@@ -252,7 +260,7 @@ minmod			TypeLimiter
 0.4			CflExpl
 
 ! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
-#NONCONSERVATIVE
+NONCONSERVATIVE
 F			UseNonConservative
 
 ! Point implicit does not seem to help stability
@@ -291,7 +299,7 @@ PT			NameComp2
 T			IsTimeAccurate
 
 #SAVERESTART
-T			DoSaveRestart
+F			DoSaveRestart
 -1			DnSaveRestart
 1.0 year		DtSaveRestart
 
@@ -299,19 +307,19 @@ T			DoSaveRestart
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
-1.0 year		DtCouple
+0.1 year		DtCouple
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
 #SAVEPLOT
 2			nPlotFile
 y=0 MHD idl		StringPlot
--1			DnSavePlot
-1.0 year		DtSavePlot
+1			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
 z=0 MHD idl		StringPlot
--1			DnSavePlot
-1.0 year		DtSavePlot
+1			DnSavePlot
+-1.0			DtSavePlot
 -1.0			DxSavePlot
 
 #UPDATECHECK
