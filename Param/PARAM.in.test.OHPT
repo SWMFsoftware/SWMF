@@ -1,6 +1,8 @@
+! Running PT on more than 1 cores does not work in this test
+
 #COMPONENTMAP
 OH 0 -1 1		CompMap runs on all PE-s
-PT 0  0 1		CompMap runs on 1 or 2 PE-s
+PT 1  1 1		CompMap runs on 1 PE
 
 #DESCRIPTION
 Param/PARAM.in.test.OHPT: Couple single-ion OH with PT		StringDescription
@@ -10,16 +12,15 @@ F  			IsTimeAccurate
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
-UPDATECHECK
-T			UseUpdateCheck
-40.			RhoMinPercent
-400.			RhoMaxPercent
-40.			pMinPercent
-400.			pMaxPercent
-
 #GRAVITY
 F			UseGravity (rest of parameters read if true)
 0			iDirGravity(0 - central, 1 - X, 2 - Y, 3 - Z direction)
+
+MINIMUMDENSITY
+1e-7			RhoMin
+
+MINIMUMPRESSURE
+1e-20			pMin
 
 #BODY
 T			UseBody
@@ -223,7 +224,7 @@ z=0 MHD idl		StringPlot
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
-#SCHEME
+SCHEME
 2			nOrder
 Linde			TypeFlux
 minmod			TypeLimiter
@@ -246,40 +247,23 @@ T			DoSaveRestart
 #USERSWITCH
 +source_expl -progress		StringSwitch
 
-#SCHEME
-1			nOrder
+! Second order scheme does not work in this test
+SCHEME
+2			nOrder
 Linde			TypeFlux
-
-
-minmod			TypeLimiter
-1.5			LimiterBeta
+mc3			TypeLimiter
+1.2			LimiterBeta
 
 ! 0.8 works fine for higher resolution
-#TIMESTEPPING
+TIMESTEPPING
 2			nStage
 0.4			CflExpl
 
 ! Applies to the ions only if DoConserveNeutrals is false in #MULTIFLUID
+! Disables, because conservative fails in first step when switching to
+! time accurate
 NONCONSERVATIVE
 F			UseNonConservative
-
-! Point implicit does not seem to help stability
-POINTIMPLICIT
-F			UsePointImplicit
-1.0			BetaPointImplicit
-T			IsAsymmetric
-T			DoNormalizeCell
-
-#USERINPUTBEGIN -----------------------------------
-
-#SOURCES
-F			UseIonSource
-F			UseNeuSource
-F			UseNe2Source
-F			UseNe3Source
-F			UseNe4Source
-
-#USERINPUTEND -------------------------------------
 
 #END_COMP OH -----------------------------------------------------------------
 
@@ -299,33 +283,17 @@ PT			NameComp2
 T			IsTimeAccurate
 
 #SAVERESTART
-F			DoSaveRestart
+T			DoSaveRestart
 -1			DnSaveRestart
-1.0 year		DtSaveRestart
+5.0 year		DtSaveRestart
+
+! coupling with 1.0 year does not work
 
 #COUPLE2
 OH			NameComp1
 PT			NameComp2
 -1			DnCouple
 0.1 year		DtCouple
-
-#BEGIN_COMP OH ---------------------------------------------------------------
-
-#SAVEPLOT
-2			nPlotFile
-y=0 MHD idl		StringPlot
-1			DnSavePlot
--1.0			DtSavePlot
--1.0			DxSavePlot
-z=0 MHD idl		StringPlot
-1			DnSavePlot
--1.0			DtSavePlot
--1.0			DxSavePlot
-
-#UPDATECHECK
-F			UseUpdateCheck
-
-#END_COMP OH -----------------------------------------------------------------
 
 #STOP
 -1			MaxIter
