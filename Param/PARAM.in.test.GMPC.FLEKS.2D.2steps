@@ -174,7 +174,6 @@ T			UseDtFixed
 1.25/3			DyPic
 
 #PICADAPT
-T			UseAdaptivePic
 F			DoAdaptPic
 
 #OUTERBOUNDARY

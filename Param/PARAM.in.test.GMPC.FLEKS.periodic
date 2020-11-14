@@ -188,7 +188,6 @@ T			UseDtFixed
 0.5			DyPic
 
 #PICADAPT
-T			UseAdaptivePic
 F			DoAdaptPic
 
 #PICPATCH

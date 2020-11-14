@@ -90,7 +90,6 @@ T			UseNonConservative
 0.8			DzPic
 
 #PICADAPT
-T			UseAdaptivePic
 T			DoAdaptPic
 -1			DnAdaptPic
 1			DtAdaptPic

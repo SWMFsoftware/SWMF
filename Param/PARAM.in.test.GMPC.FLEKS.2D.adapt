@@ -194,7 +194,6 @@ rho			StringPicCriteria
 0.95			MaxCriteriaValue
 
 #PICADAPT
-T			UseAdaptivePic
 T			DoAdaptPic
 -1			DnAdaptPic
 1.28			DtAdaptPic
