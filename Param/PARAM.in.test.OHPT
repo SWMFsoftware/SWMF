@@ -2,7 +2,7 @@
 
 #COMPONENTMAP
 OH 0 -1 1		CompMap runs on all PE-s
-PT 1  1 1		CompMap runs on 1 PE
+PT 1  2 1		CompMap runs on 1 PE
 
 #DESCRIPTION
 Param/PARAM.in.test.OHPT: Couple single-ion OH with PT		StringDescription
