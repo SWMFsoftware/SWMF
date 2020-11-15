@@ -227,7 +227,7 @@ z=0 MHD idl		StringPlot
 
 #BEGIN_COMP OH ---------------------------------------------------------------
 
-#SCHEME
+SCHEME
 2			nOrder
 Linde			TypeFlux
 minmod			TypeLimiter
@@ -250,7 +250,7 @@ T			DoSaveRestart
 #USERSWITCH
 +source_expl -progress		StringSwitch
 
-#SCHEME
+SCHEME
 2			nOrder
 Linde			TypeFlux
 mc3			TypeLimiter
