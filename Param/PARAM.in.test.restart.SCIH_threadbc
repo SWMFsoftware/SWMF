@@ -57,15 +57,11 @@ T			UseBody
 #BODY
 F			UseBody
 
-#MAGNETOGRAM
-T			UseMagnetogram
-1.0			rMagnetogram
-2.5			rSourceSurface
-0.0			HeightInnerBc
-SC/Param/CR2077_GNG.dat		NameHarmonicsFile
-12			nHeaderLine
-0.0			PhiShift
-2.0			UnitB
+#LOOKUPTABLE
+B0			NameTable
+load			NameCommand
+harmonics_bxyz.out		NameFile
+real8			TypeFile
 
 #USECURLB0
 T			UseCurlB0
@@ -82,6 +78,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 1.1			rMinWaveReflection
+F			UseSurfaceWaveRefl
 
 #HEATPARTITIONING
 uniform			TypeHeatPartitioning
@@ -341,6 +338,7 @@ turbulentcascade		TypeCoronalHeating
 T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
+F			UseSurfaceWaveRefl
 
 #RESISTIVITY
 T			UseResistivity
