@@ -28,8 +28,13 @@ create_manual:
     # Check ssh connection
     - ssh git@gitlab.umich.edu
     # Clone repos
-    - ./Config.pl -install -compiler=gfortran 
+    - ./Config.pl -install -compiler=gfortran
+    # Create manual
     - make PDF
+    # check that basic things still compile
+    - make test8_compile
+    - make test9_compile
+    - make test_swpc_compile
   artifacts:
     name: manuals
     paths:
