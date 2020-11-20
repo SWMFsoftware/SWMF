@@ -132,12 +132,12 @@ B0			NameTable
 use			NameCommand
 harmonics_bxyz.out		NameFile
 real8			TypeFile
-B0 from harmonics		Description
+B0 from harmonics		StringDescription
 r lon lat bx by bz		NameVar
 3			nIndex
 31			nIndex1 r
 1.0			Index1Min
-2.5			Index2Max
+2.5			Index1Max
 91			nIndex2 Lon
 0.0			Index2Min
 360.0			Index2Max
