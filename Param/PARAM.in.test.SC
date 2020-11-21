@@ -166,10 +166,6 @@ GMRES			TypeKrylov
 1.0e-5			ErrorMaxKrylov
 10			MaxMatvecKrylov
 
-#PRECONDITIONER
-left			TypePrecondSide (left, symmetric, right)
-bilu			TypePrecond (MBILU)
-
 #RADIATIVECOOLING
 T			UseRadCooling
 
