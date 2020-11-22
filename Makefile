@@ -552,7 +552,7 @@ SC/BATSRUS/src/Makefile:
 	cp GM/BATSRUS/srcUser/*.f90 SC/BATSRUS/srcUser/
 	if [ -d GM/BATSRUS/srcUserExtra ]; then \
 		cp GM/BATSRUS/srcUserExtra/ModUserAwsom*.f90 \
-		   GM/BATSRUS/srcUserExtra/ModUserSc*.f90 SC/BATSRUS/srcUser/; \
+		   SC/BATSRUS/srcUser/; \
 	fi
 	cp GM/BATSRUS/srcEquation/*.f90 SC/BATSRUS/srcEquation/
 	cd GM/BATSRUS; \
