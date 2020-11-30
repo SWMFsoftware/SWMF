@@ -61,7 +61,7 @@ F			UseBody
 B0			NameTable
 load			NameCommand
 harmonics_bxyz.out		NameFile
-real8			TypeFile
+real4			TypeFile
 
 #USECURLB0
 T			UseCurlB0
