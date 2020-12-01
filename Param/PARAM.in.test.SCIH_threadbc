@@ -11,11 +11,11 @@ Param/PARAM.in.test.SCIH_threadbc: create steady state solar corona with Threade
 F			IsTimeAccurate
 
 #STARTTIME
-2011			iYear
-2			iMonth
-16			iDay
-17			iHour
-26			iMinute
+2008			iYear
+11			iMonth
+20			iDay
+6			iHour
+0			iMinute
 0			iSecond
 0.0			FracSecond
 
@@ -117,38 +117,21 @@ T			UseBody
 #BODY
 F			UseBody
 
-#MAGNETOGRAM
-T			UseMagnetogram
+#HARMONICSFILE
+SC/Param/CR2077_GNG.dat		NameHarmonicsFile
+
+#HARMONICSGRID
 1.0			rMagnetogram
 2.5			rSourceSurface
-0.0			HeightInnerBc
-SC/Param/CR2077_GNG.dat		NameHarmonicsFile
-12			nHeaderLine
-0.0			PhiShift
-2.0			UnitB
-
-#LOOKUPTABLE
-B0			NameTable
-use			NameCommand
-harmonics_bxyz.out		NameFile
-real8			TypeFile
-B0 from harmonics		StringDescription
-r lon lat bx by bz		NameVar
-3			nIndex
-31			nIndex1 r
-1.0			Index1Min
-2.5			Index1Max
-91			nIndex2 Lon
-0.0			Index2Min
-360.0			Index2Max
-92			nIndex3 Lat
--90.0			Index3Min
-+90.0			Index3Max
+F			IsLogRadius
+30			MaxOrder
+30			nR
+90			nLon
+90			nLat
 
 #USECURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
-
 
 #USERSWITCH
 +init +ic		StringSwitch
