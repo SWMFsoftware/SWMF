@@ -109,15 +109,8 @@ potentialfield.out		NamePotentialFieldFile
 0.0			HeightInnerBc
 2.0			UnitB 1.0
 
-#MAGNETOGRAM
-T			UseMagnetogram
-1.0			rMagnetogram
-2.5			rSourceSurface
-0.0			HeightInnerBc
+#HARMONICSFILE
 SC/Param/CR2077_GNG.dat		NameHarmonicsFile
-12			nHeaderLine
-0.0			PhiShift
-2.0			UnitB
 
 #USECURLB0
 T			UseCurlB0

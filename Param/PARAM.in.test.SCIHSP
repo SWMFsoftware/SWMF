@@ -46,15 +46,8 @@ T			UseBody
 #BODY
 F			UseBody
 
-#MAGNETOGRAM
-T			UseMagnetogram
-1.0			rMagnetogram
-2.5			rSourceSurface
-0.0			HeightInnerBc
+#HARMONICSFILE
 SC/Param/CR2077_GNG.dat		NameHarmonicsFile
-12			nHeaderLine
-0.0			PhiShift
-2.0			UnitB
 
 #USECURLB0
 T			UseCurlB0

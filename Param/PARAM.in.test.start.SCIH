@@ -80,22 +80,13 @@ load			NameCommand
 SC/fdips_bxyz.out		NameFile
 real8			TypeFile
 
-MAGNETOGRAM
-T			UseMagnetogram
-1.0			rMagnetogram
-2.5			rSourceSurface
-0.0			HeightInnerBc
-harmonics_2209_adapt01.dat		NameMagnetogramFile
-12			nHeaderLine
-0.0			PhiShift
-1.0			UnitB
-
 #USECURLB0
 T			UseCurlB0
 2.5			rCurrentFreeB0
 
-To run the dipole test, switch UseCurlB0 and UseMagnetogram to false
+To run the dipole test, deactivate LOOKUPTABLE B0 and USECURLB0 commands above
 and activate the HELIODIPOLE command below
+
 HELIODIPOLE
 2.8e-4			HelioDipoleStrengthSi
 0.0			HelioDipoleTilt
