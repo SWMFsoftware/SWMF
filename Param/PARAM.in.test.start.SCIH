@@ -78,7 +78,7 @@ F			UseBody
 B0			NameTable
 load			NameCommand
 SC/fdips_bxyz.out		NameFile
-real8			TypeFile
+real4			TypeFile
 
 #USECURLB0
 T			UseCurlB0
