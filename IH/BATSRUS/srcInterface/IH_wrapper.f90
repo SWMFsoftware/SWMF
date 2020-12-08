@@ -1696,7 +1696,7 @@ contains
          nDim, nBlock, MaxBlock, Unused_B, nI, nJ, nK, Xyz_DGB, &
          iTest, jTest, kTest, iBlockTest
     use IH_ModPhysics, ONLY: &
-         No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitRhoU_, UnitEnergyDens_, UnitT_
+         No2Si_V, Si2No_V, UnitX_, UnitRho_, UnitN_, UnitRhoU_, UnitEnergyDens_, UnitT_
     use IH_ModGeometry, ONLY: true_cell
     use IH_ModAdvance, ONLY: ExtraSource_ICB
 
@@ -1757,9 +1757,9 @@ contains
        ! Set units for density, momentum and energy source terms
        allocate(Si2No_I(nVarData))
        do iVar = 1, nVarData, 5
-          Si2No_I(iVar)          = Si2No_V(UnitRho_)/Si2No_V(UnitT_)
-          Si2No_I(iVar+1:iVar+3) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)
-          Si2No_I(iVar+4)        = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)
+          Si2No_I(iVar)          = Si2No_V(UnitRho_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
+          Si2No_I(iVar+1:iVar+3) = Si2No_V(UnitRhoU_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
+          Si2No_I(iVar+4)        = Si2No_V(UnitEnergyDens_)/Si2No_V(UnitT_)/Si2No_V(UnitN_)
        end do
     end if
 
