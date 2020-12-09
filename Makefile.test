@@ -1293,7 +1293,7 @@ test14_run:
 test14_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test14/OH_log_n000000.log \
+		output/test14/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
 		> test14_ohpt.diff)
 	ls -l test14_ohpt.diff
 
