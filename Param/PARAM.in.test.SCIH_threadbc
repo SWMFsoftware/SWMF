@@ -150,34 +150,13 @@ F			UseSurfaceWaveRefl
 uniform			TypeHeatPartitioning
 0.6			QionRatio
 
-#HEATCONDUCTION
-T			UseHeatConduction
-spitzer			TypeHeatConduction
-
-#HEATFLUXREGION
-T			UseHeatFluxRegion
-5.0			rCollisional
--8.0			rCollisionless
-
-#HEATFLUXCOLLISIONLESS
-T			UseHeatFluxCollisionless
-1.05			CollisionlessAlpha
-
 #TEST
 krylov radiative_cooling		StringTest
-
-#SEMIIMPLICIT
-T			UseSemiImplicit
-parcond			TypeSemiImplicit
 
 #SEMIKRYLOV
 GMRES			TypeKrylov
 1.0e-5			ErrorMaxKrylov
 10			MaxMatvecKrylov
-
-#PRECONDITIONER
-left			TypePrecondSide (left, symmetric, right)
-bilu			TypePrecond (MBILU)
 
 #RADIATIVECOOLING
 T			UseRadCooling
@@ -395,7 +374,6 @@ float			TypeBc6
 #RESCHANGE
 T			UseAccurateReschange
 
-
 #USERSWITCH
 +init			StringSwitch
 
@@ -405,20 +383,6 @@ T			UseWaveReflection
 1.5e5			LperpTimesSqrtBSi
 0.0			rMinWaveReflection
 F			UseSurfaceWaveRefl
-
-#RESISTIVITY
-T			UseResistivity
-user			TypeResistivity
-0.0			Eta0Si     ! not used
-
-#RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
-
-#HEATFLUXCOLLISIONLESS
-T			UseHeatFluxCollisionless
-1.05			CollisionlessAlpha
 
 #SCHEME
 2			nOrder

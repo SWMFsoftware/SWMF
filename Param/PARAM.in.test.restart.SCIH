@@ -104,30 +104,8 @@ stochasticheating		TypeHeatPartitioning
 0.21			StochasticExponent
 0.18			StochasticAmplitude
 
-#ANISOTROPICPRESSURE
-F			UseConstantTau
--1.0			TauInstabilitySi
-1e5			TauGlobalSi
-
-#HEATCONDUCTION
-T			UseHeatConduction
-spitzer			TypeHeatConduction
-
-#HEATFLUXREGION
-T			UseHeatFluxRegion
-5.0			rCollisional
--8.0			rCollisionless
-
-#HEATFLUXCOLLISIONLESS
-T			UseHeatFluxCollisionless
-1.05			CollisionlessAlpha
-
 TEST
 krylov
-
-#SEMIIMPLICIT
-T			UseSemiImplicit
-parcond			TypeSemiImplicit
 
 #SEMIKRYLOV
 GMRES			TypeKrylov
@@ -421,25 +399,6 @@ F			UseSurfaceWaveRefl
 stochasticheating		TypeHeatPartitioning
 0.21			StochasticExponent
 0.18			StochasticAmplitude
-
-#ANISOTROPICPRESSURE
-F			UseConstantTau
--1.0			TauInstabilitySi
-1e5			TauGlobalSi
-
-#RESISTIVITY
-T			UseResistivity
-user			TypeResistivity
-0.0			Eta0Si     ! not used
-
-#RESISTIVITYOPTIONS
-F			UseResistiveFlux
-F			UseJouleHeating
-T			UseHeatExchange
-
-#HEATFLUXCOLLISIONLESS
-T			UseHeatFluxCollisionless
-1.05			CollisionlessAlpha
 
 #SCHEME
 2			nOrder
