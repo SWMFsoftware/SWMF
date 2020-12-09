@@ -297,4 +297,4 @@ PT			NameComp2
 
 #STOP
 -1			MaxIter
-10.0 year		TimeMax
+5.0 year		TimeMax
