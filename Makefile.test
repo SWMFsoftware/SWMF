@@ -1295,7 +1295,7 @@ test14_rundir:
 test14_run:
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_start
 	cd ${TESTDIR}; ./Restart.pl
-	mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig
+	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig
 
 test14_restart:
 	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.restart,amps-test=on
