@@ -264,25 +264,6 @@ mc3			TypeLimiter
 #NONCONSERVATIVE
 F			UseNonConservative
 
-! Point implicit does not seem to help stability
-POINTIMPLICIT
-F			UsePointImplicit
-1.0			BetaPointImplicit
-T			IsAsymmetric
-T			DoNormalizeCell
-
-#USERINPUTBEGIN -----------------------------------
-
-#SOURCES
-F			UseIonSource
-F			UsePuiSource
-F			UseNeuSource
-F			UseNe2Source
-F			UseNe3Source
-F			UseNe4Source
-
-#USERINPUTEND -------------------------------------
-
 #END_COMP OH -----------------------------------------------------------------
 
 #COUPLE2
