@@ -96,6 +96,10 @@ DIFFNUM = ${SCRIPTDIR}/DiffNum.pl -BLESS=${BLESS}
 
 DIFF_FILES = share/Library/test/*.diff util/*/src*/*.diff ??/*/*.diff *.diff
 
+# This expression provides the number of AMPS processes used in a test
+# Unfortunately AMPS results depend on the number of processors
+NAMPS = `ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '`
+
 # Note: the "cat ... > /dev/null" makes sure that file sizes are correct on nyx
 
 test_check:
@@ -1257,7 +1261,7 @@ test13_run:
 test13_check:
 	-(${DIFFNUM} -b \
 		${TESTDIR}/PT/plots/amps.dat \
-		output/test13/amps.ref_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+		output/test13/amps.ref_np${NAMPS} \
 		> test13_pt.diff)
 		ls -l test13*.diff
 
@@ -1304,7 +1308,7 @@ test14_restart:
 test14_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
 		${TESTDIR}/RESULTS/OH/log_n000000.log \
-		output/test14/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+		output/test14/OH_log_n000000.log_np${NAMPS} \
 		> test14_ohpt.diff)
 	ls -l test14_ohpt.diff
 
@@ -1340,7 +1344,7 @@ test14_1d_run:
 test14_1d_check:
 	-(${DIFFNUM} -b -r=1e-3 -a=1e-21\
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14_1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+                output/test14_1d/OH_log_n000000.log_np${NAMPS} \
 		> test14_1d_ohpt.diff)
 	ls -l test14_1d_ohpt.diff
 
@@ -1412,7 +1416,7 @@ test14pui1d_run:
 test14pui1d_check:
 	-(${DIFFNUM} -b -r=1e-3 -a=1e-21 \
                 ${TESTDIR}/RESULTS/OH/log_n000000.log \
-                output/test14pui1d/OH_log_n000000.log_np`ls ${TESTDIR}/PT/thread* | wc -l | tr -d ' '` \
+                output/test14pui1d/OH_log_n000000.log_np${NAMPS} \
                 > test14pui1d_ohpt.diff)
 	ls -l test14pui1d_ohpt.diff
 
