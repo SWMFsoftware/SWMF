@@ -1270,6 +1270,8 @@ test14:
 	${MAKE} test14_rundir
 	@echo "test14_run..." >> test14_ohpt.diff
 	${MAKE} test14_run
+	@echo "test14_restart..." >> test14_ohpt.diff
+	${MAKE} test14_restart
 	@echo "test14_check..." >> test14_ohpt.diff
 	${MAKE} test14_check
 
@@ -1287,8 +1289,17 @@ test14_rundir:
 	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test14_run:
+	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_start
+	cd ${TESTDIR}; ./Restart.pl
+	mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig
+
+test14_restart:
+	./Config.pl -o=PT:spice-path=nospice,spice-kernels=nospice,application=test/oh.restart,amps-test=on
+	${MAKE} SWMF
+	cd ${TESTDIR}; cp Param/PARAM.in.test.restart.OHPT PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M RESULTS
+	cd ${TESTDIR}; rm -rf RESULTS; ./PostProc.pl -M -cat RESULTS
 
 test14_check:
 	-(${DIFFNUM} -b -r=1e-5 -a=1e-29\
