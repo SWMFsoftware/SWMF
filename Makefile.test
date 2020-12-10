@@ -1289,12 +1289,12 @@ test14_compile:
 test14_rundir:
 	rm -rf ${TESTDIR}
 	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 
 test14_run:
+	cp Param/PARAM.in.test.OHPT ${TESTDIR}/PARAM.in
+	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
 	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog_start
-	cd ${TESTDIR}; ./Restart.pl
+	cd ${TESTDIR}; rm -rf RESTART_n000120; ./Restart.pl
 	cd ${TESTDIR}; mv PARAM.in PARAM.in.start; rm -f PARAM.in_orig
 
 test14_restart:
