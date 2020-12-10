@@ -179,7 +179,7 @@ z=0 MHD idl		StringPlot
 -1.0			DxSavePlot
 
 #USERSWITCH
-+source_expl +init +ic	StringSwitch
++source_expl +init +ic		StringSwitch
 
 #USERINPUTBEGIN -----------------------------------
 
@@ -214,10 +214,10 @@ PT			NameComp2
 -1.0			DtCouple
 
 #STOP
-20
--1.0
+20			MaxIter
+-1.0			TimeMax
 
-#RUN #########################################################################
+#RUN ##########################################################################
 
 #TIMEACCURATE
 T			IsTimeAccurate
