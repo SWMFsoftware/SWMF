@@ -164,7 +164,7 @@ T			UseNonConservative
 
 #SAVERESTART
 T			DoSaveRestart
-1000			DnSaveRestart
+20			DnSaveRestart
 -1.0			DtSaveRestart
 
 #SAVELOGFILE
@@ -239,7 +239,7 @@ minmod			TypeLimiter
 
 #SAVERESTART
 T			DoSaveRestart
-1000			DnSaveRestart
+20			DnSaveRestart
 -1.0			DtSaveRestart
 
 #BEGIN_COMP OH ---------------------------------------------------------------
@@ -274,27 +274,5 @@ PT			NameComp2
 -1.0			DtCouple
 
 #STOP
-140			MaxIter
+120			MaxIter
 -1.0			TimeMax
-
-#RUN ##########################################################################
-
-#TIMEACCURATE
-T			IsTimeAccurate
-
-#SAVERESTART
-T			DoSaveRestart
--1			DnSaveRestart
-5.0 year		DtSaveRestart
-
-! coupling with 1.0 year does not work
-
-#COUPLE2
-OH			NameComp1
-PT			NameComp2
--1			DnCouple
-0.1 year		DtCouple
-
-#STOP
--1			MaxIter
-5.0 year		TimeMax
