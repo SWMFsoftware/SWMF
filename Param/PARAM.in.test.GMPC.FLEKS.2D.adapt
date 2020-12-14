@@ -189,9 +189,10 @@ shell0			StringShape
 
 #PICCRITERIA
 1			nPicCriteria
-rho			StringPicCriteria
-0.9			MinCriteriaValue
-0.95			MaxCriteriaValue
+j/b			StringPicCriteria
+0.0			MinCriteriaValue
+2.5e-3			MaxCriteriaValue
+0.0			CriteriaB1
 
 #PICADAPT
 T			DoAdaptPic
