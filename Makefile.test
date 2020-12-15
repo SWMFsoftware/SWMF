@@ -1131,51 +1131,6 @@ test9_check:
                 >> test09_sc_los.diff)
 	ls -l test09_*.diff
 
-### test10: Global Solar Wind Model with three temperatures and Alfven waves
-
-test10:
-	@echo "test10_compile..." > test10_sc.diff
-	@echo "test10_compile..." > test10_ih.diff
-	${MAKE} test10_compile
-	@echo "test10_rundir..." >> test10_sc.diff
-	@echo "test10_rundir..." >> test10_ih.diff
-	${MAKE} test10_rundir
-	@echo "test10_run..." >> test10_sc.diff
-	@echo "test10_run..." >> test10_ih.diff
-	${MAKE} test10_run
-	@echo "test10_check..." >> test10_sc.diff
-	@echo "test10_check..." >> test10_ih.diff
-	${MAKE} test10_check
-
-test10_compile:
-	./Config.pl -v=Empty,SC/BATSRUS,IH/BATSRUS
-	./Config.pl -o=SC:u=AwsomR,e=AwsomAnisoPi,ng=2
-	./Config.pl -o=IH:u=AwsomR,e=AwsomAnisoPi,ng=2
-	./Config.pl -g=SC:6,4,4,IH:4,4,4
-	${MAKE} SWMF
-	make PIDL
-
-test10_rundir:
-	rm -rf ${TESTDIR}
-	${MAKE} rundir RUNDIR=${DIR}/${TESTDIR}
-	cp Param/PARAM.in.test.SCIH_3T ${TESTDIR}/PARAM.in
-	-Scripts/TestParam.pl -F ${TESTDIR}/PARAM.in
-
-test10_run:
-	cd ${TESTDIR}; ${MPIRUN} ./SWMF.exe > runlog
-	cd ${TESTDIR}; ./PostProc.pl -M RESULTS
-
-
-test10_check:
-	-(${DIFFNUM} -b -r=1e-5 -a=1e-27 \
-	        ${TESTDIR}/RESULTS/SC/log_n000000.log \
-		output/test10/SC_log_n000000.log \
-		> test10_sc.diff)
-	-(${DIFFNUM} -b -r=1e-5 \
-	        ${TESTDIR}/RESULTS/IH/log_n000000.log \
-		output/test10/IH_log_n000000.log \
-                > test10_ih.diff)
-		ls -l test10*.diff
 
 ### test11: Dipole field with solar wind coupled with an exosphere model, to test the GM/PT coupler
 
