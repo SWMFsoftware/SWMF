@@ -112,11 +112,6 @@ stochasticheating		TypeHeatPartitioning
 TEST
 krylov
 
-#SEMIKRYLOV
-GMRES			TypeKrylov
-1.0e-5			ErrorMaxKrylov
-10			MaxMatvecKrylov
-
 #RADIATIVECOOLING
 T			UseRadCooling
 

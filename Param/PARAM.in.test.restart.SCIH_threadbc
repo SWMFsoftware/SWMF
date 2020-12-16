@@ -87,11 +87,6 @@ uniform			TypeHeatPartitioning
 #TEST
 radiative_cooling write_plot_los		StringTest
 
-#SEMIKRYLOV
-GMRES			TypeKrylov
-1.0e-5			ErrorMaxKrylov
-10			MaxMatvecKrylov
-
 #USERINPUTBEGIN -----------------------------------
 
 #RADIOEMISSION
