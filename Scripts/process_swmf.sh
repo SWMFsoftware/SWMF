@@ -22,9 +22,11 @@ if(-d SWMF)then
     mv SWMF SWMF_yesterday
 endif
 
-# Get current version of SWMF and make it unreadable for the web
+# Get current version of SWMF+BATL and make it unreadable for the web
 gitclone SWMF
 cd SWMF; Config.pl -clone
+gitclone BATL
+cd BATL; Config.pl -clone
 cd $HOME/Sites
 chmod -R go-r SWMF
 
