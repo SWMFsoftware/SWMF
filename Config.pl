@@ -436,12 +436,12 @@ sub set_version_makefile_comp{
 	$File =~ m|^(([A-Z][A-Z])/[^/]+)|;
 	my $Version = $1;
 	my $Component = $2;
-	# Put the proper include command into $MakefileDef and $MakefileConf
-	`echo include $pwd/$MakefileDef > $File`;
+	# Write correct information into Makefile.def
+	`echo include $pwd/Makefile.def > $File`;
 	`echo MYDIR=$pwd/$Version >> $File`;
 	`echo COMPONENT=$Component >> $File`;
 	# If there is Makefile.def, there should be a Makefile.conf too
-	`echo include $pwd/$MakefileConf > $Version/Makefile.conf`;
+	`echo include $pwd/Makefile.conf > $Version/Makefile.conf`;
     }
 }
 
