@@ -27,6 +27,9 @@ my $umichgitlab = ($remote =~ /gitlab\.umich\.edu/);
 
 #print "remote=$remote umichgitlab=$umichgitlab\n";
 
+# Fix component Makefile.def and .conf files if they exist
+&set_version_makefile_comp;
+
 # Hash of model names with corresponding component name
 my %component;
 
@@ -420,12 +423,13 @@ sub set_options{
 
 sub set_version_makefile_comp{
 
-    # Set $MakefileDef (if it exists) in all component versions
+    # Fix Makefile.def and .conf (if they exist) in all component versions
 
-    # Collect all $MakefileDef files in all component versions
+    # Collect Makefile.def files in all component versions
     my @File;
-    @File = glob("[A-Z][A-Z]/*/$MakefileDef");
+    @File = glob("[A-Z][A-Z]/*/Makefile.def");
 
+    my $pwd = `pwd`; chop $pwd;
     my $File;
     foreach $File (@File){
 	# Set the version based on the file name
@@ -433,11 +437,11 @@ sub set_version_makefile_comp{
 	my $Version = $1;
 	my $Component = $2;
 	# Put the proper include command into $MakefileDef and $MakefileConf
-	&shell_command("echo include $DIR/$MakefileDef > $File");
-	&shell_command("echo MYDIR=$DIR/$Version >> $File");
-	&shell_command("echo COMPONENT=$Component >> $File");
-	&shell_command("echo include $DIR/$MakefileConf > ".
-		       "$Version/$MakefileConf");
+	`echo include $pwd/$MakefileDef > $File`;
+	`echo MYDIR=$pwd/$Version >> $File`;
+	`echo COMPONENT=$Component >> $File`;
+	# If there is Makefile.def, there should be a Makefile.conf too
+	`echo include $pwd/$MakefileConf > $Version/Makefile.conf`;
     }
 }
 
