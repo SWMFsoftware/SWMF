@@ -17,6 +17,8 @@ use lib dirname(abs_path($0));
 # Run the shared Config.pl script first
 our $Component       = '';
 our $Code            = 'SWMF';
+our $MakefileDef     = 'Makefile.def';
+our $MakefileConf    = 'Makefile.conf';
 our $MakefileDefOrig = 'CON/Makefile.def';
 our @Arguments = @ARGV;
 our $CloneOnly;
@@ -116,8 +118,6 @@ if($CloneOnly){
 # These were set by the shared Config.pl script
 our %Remaining;         # Remaining arguments after processed by $Config.pl
 our $DryRun;
-our $MakefileDef;
-our $MakefileConf;
 our $DIR;
 our $Installed;
 our $Show;
@@ -423,11 +423,11 @@ sub set_options{
 
 sub set_version_makefile_comp{
 
-    # Fix Makefile.def and .conf (if they exist) in all component versions
+    # Fix $MakefileDef and .conf (if they exist) in all component versions
 
-    # Collect Makefile.def files in all component versions
+    # Collect $MakefileDef files in all component versions
     my @File;
-    @File = glob("[A-Z][A-Z]/*/Makefile.def");
+    @File = glob("[A-Z][A-Z]/*/$MakefileDef");
 
     my $pwd = `pwd`; chop $pwd;
     my $File;
@@ -436,12 +436,22 @@ sub set_version_makefile_comp{
 	$File =~ m|^(([A-Z][A-Z])/[^/]+)|;
 	my $Version = $1;
 	my $Component = $2;
-	# Write correct information into Makefile.def
-	`echo include $pwd/Makefile.def > $File`;
+	# Write correct information into $MakefileDef
+	`echo include $pwd/$MakefileDef > $File`;
 	`echo MYDIR=$pwd/$Version >> $File`;
 	`echo COMPONENT=$Component >> $File`;
-	# If there is Makefile.def, there should be a Makefile.conf too
-	`echo include $pwd/Makefile.conf > $Version/Makefile.conf`;
+	# If there is $MakefileDef, there should be a $MakefileConf too
+	`echo include $pwd/$MakefileConf > $Version/$MakefileConf`;
+    }
+
+    # Fix DIR and OS settings
+    if(-f $MakefileDef){
+	@ARGV = ($MakefileDef);
+	while(<>){
+	    s/^((MY)?DIR\s*=).*/$1 $pwd/;
+	    s/^(OS\s*=).*\n/"$1 ".`uname`/e;
+	    print;
+	}
     }
 }
 
