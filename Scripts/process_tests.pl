@@ -306,7 +306,7 @@ foreach $day (@days){
     }else{
 	$Table =~ s/GREEN\>_SCORE_/RED\>$score/;
     }
-#    $merge_stable = '';
+    $merge_stable = '';
     open SCORE, ">$day/all_scores.txt";
     $score =~ s/, /\n/g;
     print SCORE "ALL: $score\n";
