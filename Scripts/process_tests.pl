@@ -7,6 +7,12 @@ use strict;
 
 my $SiteDir = `pwd`; chop($SiteDir);
 
+# Conditions for merging into stable branch
+my $MinScore = 600;  # minimum for total score: most tests ran
+my $MinRate  = 0.95; # minimum 95% success rate
+my $merge_stable =   # command to merge master into stable branch
+    'cd SWMF/GM/BATSRUS; git pull --depth=10000; git checkout stable; git merge master; git push';
+
 # weights for each platform to calculate skill scores
 my %WeightMachine = (
     "pleiades"     => "1.0",  # ifort pleiades
@@ -289,6 +295,15 @@ foreach $day (@days){
 
     # Calculate score per centages and save them into file and table
     my $score = sprintf("%.1f", 100*$Scores/($MaxScores+1e-30)). '%';
+
+    if($merge_stable){
+	print "day=$day score=$score MaxScores=$MaxScores\n";
+	if($MaxScores > $MinScore and $Scores > $MinRate*$MaxScores){
+	    print "$merge_stable\n";
+	    `$merge_stable`;
+	}
+	$merge_stable = '';
+    }
 
     $Table =~ s/_SCORE_/$score/;
 
