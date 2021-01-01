@@ -11,7 +11,7 @@ create_manual:
   #image: aergus/latex
   before_script:
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
-    - DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata openmpi-bin libopenmpi-dev
     - apt-get install -y gcc gfortran g++ make
     - apt-get install -y texlive
     - apt-get install -y ghostscript
