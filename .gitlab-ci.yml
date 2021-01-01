@@ -1,3 +1,6 @@
+variables:
+  GCC_V: 9
+
 stages:
   - deploy
 
@@ -9,7 +12,7 @@ create_manual:
   before_script:
     - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client git -y )'
     - DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata
-    - apt-get install -y make
+    - apt-get install -y gcc gfortran g++ make
     - apt-get install -y texlive
     - apt-get install -y ghostscript
     - eval $(ssh-agent -s)
